@@ -57,8 +57,12 @@ export const TravelHeroExtras: React.FC<{
         ]}
       >
         <QuickFacts travel={travel} onCategoryPress={handleCategoryPress} />
-        {/* Ряд действий: статус растягивается остатком строки, чип встаёт справа, а на
-            узком экране переносится под него — без отдельной mobile-верстки. */}
+        {/* Ряд действий: статус растягивается остатком строки, чип встаёт справа.
+            #1673: на узком экране перенос давал две пилюли одна под другой, и
+            офлайн читался вторым главным действием. Поэтому на мобильном чип
+            сжимается до иконки, а статус теряет 240-px базу — оба контрола
+            помещаются в одну строку. Развилка по ширине, а не по платформе:
+            mobile web, Android и iPhone получают одну и ту же раскладку. */}
         <View style={actionStyles.row}>
           <TravelStatusButton
             travelId={travel.id}
@@ -68,14 +72,15 @@ export const TravelHeroExtras: React.FC<{
             travelCountry={travel.countryName}
             travelYear={travel.year}
             travelMonthName={travel.monthName}
-            style={actionStyles.status}
+            style={[actionStyles.status, isMobile && actionStyles.statusMobile]}
           />
           {travel.id ? (
             <OfflineSaveControl
               type="travel"
               sourceId={travel.id}
               onSave={handleSaveOffline}
-              style={actionStyles.offline}
+              compact={isMobile}
+              style={[actionStyles.offline, isMobile && actionStyles.offlineMobile]}
             />
           ) : null}
         </View>
@@ -115,9 +120,23 @@ const actionStyles = StyleSheet.create({
     flexBasis: 240,
     flexGrow: 1,
   },
+  statusMobile: {
+    // Рядом стоит иконочный чип, поэтому запас в 240px больше не страхует
+    // читаемость, а только выталкивает статус в отдельную строку на 320–390pt.
+    // flexShrink здесь несущий: по умолчанию он 0, и статус с базой по контенту
+    // («Планирую · дата», длинная локаль, системное укрупнение шрифта) снова
+    // уносил бы ряд в две строки. С ним лишнее отдаёт подпись, а не строка.
+    flexBasis: 'auto',
+    flexShrink: 1,
+    minWidth: 0,
+  },
   offline: {
     alignSelf: 'center',
     marginBottom: 0,
+  },
+  offlineMobile: {
+    // Иконка сохраняет тач-таргет и не сжимается, когда статус занимает остаток.
+    flexShrink: 0,
   },
 })
 

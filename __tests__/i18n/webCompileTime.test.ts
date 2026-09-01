@@ -122,11 +122,9 @@ describe('web compile-time localization', () => {
     const inlinedNamespaces = new Set(
       Array.from(inlined.keys(), (key) => key.slice(0, key.indexOf(':'))),
     )
+    const runtimeNamespaces = new Set(Object.keys(ruResources))
 
-    const missing = Object.keys(ruResources).filter(
-      (namespace) => !inlinedNamespaces.has(namespace),
-    )
-    expect(missing).toEqual([])
+    expect(inlinedNamespaces).toEqual(runtimeNamespaces)
   })
 
   it('inlines the quest share namespace the sheet actually asks for', () => {

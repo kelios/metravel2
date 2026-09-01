@@ -23,13 +23,12 @@ export function useQuestWizardResponsiveModel() {
   // мобильной ветке — `isMobile`, `compactNav` и `screenW < 600` истинны при
   // любой реальной ширине. Следующий кадр приходит с настоящей шириной и
   // перекладывает шапку:
-  //   * счётчик прогресса 9 → 22 px. Ветку выбирает проп `isMobile`
-  //     `QuestProgressSummary` (`questWizardShell.tsx`; раньше это был
-  //     `showText`, гасивший счётчик на телефоне целиком): мобильная ветка
-  //     ставит счётчик В СТРОКУ с полосой, десктопная — под неё и добавляет
-  //     разбор по `showBreakdown`, поэтому высоты у веток разные
-  //     (`questWizardStyles/headerStyles.ts`, `progressRowMobile`/`progressBar`/
-  //     `progressText`);
+  //   * блок прогресса 9 → 22 px. Мобильный `QuestProgressSummary` оставляет
+  //     только полосу (`showCounter` и `showBreakdown` выключены), а счётчик
+  //     живёт в `headerActionRowMobile`; десктопный summary добавляет под
+  //     полосой счётчик и, при `countModel.source === 'explicit'`, разбор, поэтому
+  //     высоты веток разные
+  //     (`questWizardShell.tsx`, `questWizardStyles/headerStyles.ts`);
   //   * лента шагов 1 → 44 px. Ветка `screenW < 600` в `questWizardShell.tsx`
   //     рисует точки вместо пилюль. Оговорка: по стилям обе ветки заявляют 44 px
   //     (`questWizardStyles/stepsNavStyles.ts` — `stepDotTarget` 44x44 и
@@ -46,7 +45,7 @@ export function useQuestWizardResponsiveModel() {
   // стартует с `loading: true`. В статическом HTML прода разметки визарда нет
   // (только «Загружаем квест…»), поэтому hydration mismatch (#418) невозможен.
   //
-  // Отвергнутая альтернатива: зафиксировать ленте шагов и счётчику `minHeight`
+  // Отвергнутая альтернатива: зафиксировать ленте шагов и блоку прогресса `minHeight`
   // под финальную геометрию. Не годится — высота ленты зависит от числа шагов и
   // длины названий, а горизонтальный padding контейнера всё равно переключается
   // 16 → 24 по тому же `isMobile`.

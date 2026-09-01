@@ -1,4 +1,4 @@
-import { Platform } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
 import { render, screen } from '@testing-library/react-native'
 
 import { TravelHeroExtras } from '@/components/travel/details/TravelHeroExtras'
@@ -170,6 +170,59 @@ describe('TravelHeroExtras', () => {
     const { onSave } = mockOfflineSaveControl.mock.calls[0][0]
     await onSave(true)
     expect(mockSaveTravelOffline).toHaveBeenCalledWith(travel, { pinned: true, includePhotos: true })
+  })
+
+  // #1673: на узком экране ряд действий переносился, и офлайн читался второй
+  // главной кнопкой во всю ширину. Компактный чип оставляет оба действия в одной
+  // строке; на широком экране раскладка ряда прежняя.
+  it('сжимает офлайн-чип до иконки только на узком экране', () => {
+    const travel: any = { id: 7, slug: 'grodno', name: 'Гродно за 1 день' }
+
+    render(
+      <TravelHeroExtras travel={travel} isMobile sectionLinks={[]} onQuickJump={jest.fn()} />
+    )
+    expect(mockOfflineSaveControl).toHaveBeenCalledWith(
+      expect.objectContaining({ compact: true })
+    )
+
+    mockOfflineSaveControl.mockClear()
+    render(
+      <TravelHeroExtras
+        travel={travel}
+        isMobile={false}
+        sectionLinks={[]}
+        onQuickJump={jest.fn()}
+      />
+    )
+    expect(mockOfflineSaveControl).toHaveBeenCalledWith(
+      expect.objectContaining({ compact: false })
+    )
+  })
+
+  // Вторая половина того же фикса: без снятой 240-px базы и без flexShrink ряд
+  // переносится независимо от того, сжат чип или нет — статус с базой по
+  // контенту не отдаёт место соседу и уходит на свою строку.
+  it('на узком экране статус теряет 240-px базу и умеет отдавать ширину', () => {
+    const travel: any = { id: 7, slug: 'grodno', name: 'Гродно за 1 день' }
+
+    render(
+      <TravelHeroExtras travel={travel} isMobile sectionLinks={[]} onQuickJump={jest.fn()} />
+    )
+    const mobileStatus = StyleSheet.flatten(mockTravelStatusButton.mock.calls[0][0].style)
+    expect(mobileStatus.flexBasis).toBe('auto')
+    expect(mobileStatus.flexShrink).toBe(1)
+
+    mockTravelStatusButton.mockClear()
+    render(
+      <TravelHeroExtras
+        travel={travel}
+        isMobile={false}
+        sectionLinks={[]}
+        onQuickJump={jest.fn()}
+      />
+    )
+    const desktopStatus = StyleSheet.flatten(mockTravelStatusButton.mock.calls[0][0].style)
+    expect(desktopStatus.flexBasis).toBe(240)
   })
 
   it('не рендерит «Сохранить офлайн» без id маршрута', () => {

@@ -163,9 +163,8 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         minWidth: 0,
     },
     progressContainer: { marginBottom: SPACING.xs },
-    // На мобильном счётчик заданий стоит В СТРОКУ с полосой прогресса, а не под
-    // ней: своей строки он не стоит, а из ряда действий его пришлось убрать —
-    // там он отнимал 77px и выдавливал первую иконку за левый край экрана.
+    // На мобильном здесь остаётся только полоса прогресса: счётчик заданий
+    // живёт в ряду действий и сжимается рядом с четырьмя 44dp-кнопками.
     progressRowMobile: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -200,15 +199,6 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         fontWeight: '700',
         letterSpacing: -0.1,
     },
-    // Рядом с полосой текст перестаёт быть подписью под ней и читается как
-    // значение: 11px на телефоне для этого мелковат.
-    progressTextMobile: {
-        fontSize: 12,
-        lineHeight: 16,
-        textAlign: 'right',
-        flexShrink: 0,
-    },
-
     headerActionRow: {
         flex: 1,
         minWidth: 0,
@@ -232,7 +222,7 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         // уезжала за край экрана срезанной. Перенос — единственный способ не
         // потерять контрол: 44dp съезжать некуда, это минимум тач-таргета (#1274).
         flexWrap: 'wrap',
-        // Зазор 3px вместо базовых `SPACING.xs`: с четырьмя семь кнопок по 44dp
+        // Зазор 3px вместо базовых `SPACING.xs`: с 4px семь кнопок по 44dp
         // требовали 332px при 328px ширины на 360px-экране (самый ходовой
         // Android) и срывались на вторую строку из-за четырёх пикселей. Ноль
         // поставить нельзя — соседние кружки слипаются в сплошную полосу.

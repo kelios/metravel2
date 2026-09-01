@@ -130,8 +130,13 @@ const downloadingOperation = {
   startedAt: 1,
 };
 
-const renderControl = (onSave = jest.fn(() => Promise.resolve())) => {
-  const view = render(<OfflineSaveControl type="travel" sourceId={42} onSave={onSave} />);
+const renderControl = (
+  onSave = jest.fn(() => Promise.resolve()),
+  props: { compact?: boolean } = {},
+) => {
+  const view = render(
+    <OfflineSaveControl type="travel" sourceId={42} onSave={onSave} {...props} />,
+  );
   return { ...view, onSave };
 };
 
@@ -264,5 +269,30 @@ describe('OfflineSaveControl', () => {
     mockUseResponsive.mockReturnValue({ isHydrated: true, isMobile: false });
     renderControl();
     expect(chipHeight()).toBeGreaterThanOrEqual(44);
+  });
+
+  // #1673: рядом со статусом под галереей чип стоит в одной строке, поэтому
+  // теряет подпись — но не действие, не состояние и не доступное имя.
+  it('в компактном виде прячет подпись, но остаётся квадратным тач-таргетом с тем же действием', () => {
+    renderControl(undefined, { compact: true });
+
+    expect(screen.queryByText('offline:saveOffline')).toBeNull();
+
+    const chip = screen.getByLabelText('offline:saveOffline');
+    const flattened = require('react-native').StyleSheet.flatten(chip.props.style);
+    expect(flattened.minHeight).toBeGreaterThanOrEqual(44);
+    expect(flattened.width).toBe(flattened.minHeight);
+    expect(flattened.paddingHorizontal).toBe(0);
+
+    fireEvent.press(chip);
+    expect(screen.getByText('offline:saveTitle')).toBeTruthy();
+  });
+
+  it('в компактном виде продолжает показывать состояние сохранённой копии', () => {
+    mockUseOfflineCatalog.mockReturnValue({ ...baseCatalogState, items: [savedManifest] });
+
+    renderControl(undefined, { compact: true });
+
+    expect(screen.getByLabelText('offline:savedOffline')).toBeTruthy();
   });
 });

@@ -11,7 +11,7 @@
  * тач-таргета (#1274), его держит `questWizardTouchTargets.test.tsx`.
  *
  * Гард держит арифметику, а не конкретные значения свойств: любой набор стилей,
- * проходящий все три проверки, шапку не ломает.
+ * проходящий все тесты ниже, шапку не ломает.
  *
  * #1669 сократил видимый ряд до четырёх контролов: редкие действия (печать,
  * GPX, «открыть в приложении», сброс) переехали в лист «Ещё». Арифметика та же,
@@ -32,6 +32,8 @@ import { getThemedColors } from '@/constants/designSystem'
  */
 const CONTROL_COUNT = 4
 const CONTROL_SIZE = 44
+/** Пять элементов (счётчик + 4 кнопки) образуют четыре промежутка. */
+const ROW_GAP_COUNT = CONTROL_COUNT
 /**
  * Счётчик заданий — пятый элемент ряда, и формула обязана его видеть: в первой
  * редакции #1669 она считала только кнопки, а приёмка нашла перенос «Ещё» на
@@ -67,7 +69,7 @@ describe('шапка квеста — ряд действий на телефо�
   })
 
   it('вмещает все контролы в одну строку на 360px', () => {
-    const required = CONTROL_COUNT * CONTROL_SIZE + (CONTROL_COUNT - 1) * rowGap
+    const required = CONTROL_COUNT * CONTROL_SIZE + ROW_GAP_COUNT * rowGap
 
     expect(required).toBeLessThanOrEqual(contentWidth(COMMON_ANDROID_WIDTH))
   })
@@ -89,10 +91,16 @@ describe('шапка квеста — ряд действий на телефо�
     expect(counter.flexShrink).toBeGreaterThan(0)
     expect(counter.minWidth).toBe(0)
 
-    const buttons = CONTROL_COUNT * CONTROL_SIZE + CONTROL_COUNT * rowGap
+    const buttons = CONTROL_COUNT * CONTROL_SIZE + ROW_GAP_COUNT * rowGap
+    const available = contentWidth(NARROWEST_MOBILE_WIDTH)
+    const naturalRowWidth = buttons + COUNTER_WIDTH
 
-    expect(buttons).toBeLessThanOrEqual(contentWidth(NARROWEST_MOBILE_WIDTH))
-    expect(buttons + COUNTER_WIDTH).toBeGreaterThan(contentWidth(NARROWEST_MOBILE_WIDTH))
+    expect(buttons).toBeLessThanOrEqual(available)
+    if (naturalRowWidth <= available) {
+      throw new Error(
+        `Счётчик больше не нужно сжимать: ${naturalRowWidth}px <= ${available}px. Пересчитай COUNTER_WIDTH`,
+      )
+    }
   })
 
   it('не раздаёт свободное место между кнопками на верхней границе мобильной ветки', () => {

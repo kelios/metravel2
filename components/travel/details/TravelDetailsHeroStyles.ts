@@ -56,24 +56,6 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       marginBottom: 0,
       width: '100%',
     },
-    quickJumpScrollWrap: {
-      position: 'relative' as any,
-      width: '100%',
-    },
-    quickJumpScrollFade: {
-      position: 'absolute' as any,
-      top: 0,
-      bottom: 0,
-      right: 0,
-      width: 28,
-      zIndex: 2,
-      pointerEvents: 'none' as any,
-      ...(Platform.OS === 'web'
-        ? ({
-            backgroundImage: `linear-gradient(to right, rgba(255,255,255,0), ${colors.surface})`,
-          } as any)
-        : {}),
-    },
     quickJumpScroll: {
       flexGrow: 0,
     },

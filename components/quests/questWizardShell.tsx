@@ -10,6 +10,7 @@ import {
 } from './questWizardNavigation'
 import { QuestCompactExcursions } from './questWizardSections'
 import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet'
+import EdgeFadeScrollRow from '@/components/ui/EdgeFadeScrollRow'
 import {
   QUEST_FONT_SCALE_STEPS,
   useQuestFontScaleStore,
@@ -235,15 +236,13 @@ function ActiveScrollNav({
   }, [activeIdx, screenW])
 
   return (
-    <ScrollView
+    <EdgeFadeScrollRow
       ref={scrollRef}
-      horizontal
-      showsHorizontalScrollIndicator={false}
       style={style}
       contentContainerStyle={contentContainerStyle}
     >
       {children}
-    </ScrollView>
+    </EdgeFadeScrollRow>
   )
 }
 
@@ -262,7 +261,10 @@ function QuestProgressSummary({
   completedCount: number
   stepsCount: number
   countModel: QuestCountModel
-  /** На телефоне счётчик встаёт в строку с полосой, чтобы не отнимать высоту. */
+  /**
+   * Включает горизонтальную компоновку; мобильный caller отдельно
+   * скрывает обе подписи флагами ниже.
+   */
   isMobile?: boolean
   /**
    * #1669: на телефоне счётчик уехал в ряд действий — там после переезда редких
@@ -279,7 +281,7 @@ function QuestProgressSummary({
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
       {showCounter && (
-        <Text style={[styles.progressText, isMobile && styles.progressTextMobile]}>
+        <Text style={styles.progressText}>
           {i18nT('quests:components.quests.questWizardShell.progressTasks', {
             completed: completedCount,
             total: stepsCount,

@@ -319,6 +319,121 @@ describe('useRouting - Safety Tests', () => {
   });
 
   describe('Response Validation', () => {
+    it('accepts a legacy routed server response without is_optimal', async () => {
+      const points: [number, number][] = [
+        [26.25, 55.998381],
+        [26.274319, 55.993965],
+      ];
+      const routedGeometry: [number, number][] = [
+        points[0],
+        [26.258, 55.996],
+        points[1],
+      ];
+
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          geometry: routedGeometry,
+          distance_m: 2100,
+          duration_s: 510,
+          provider: 'ors',
+        }),
+      });
+
+      const { result } = renderHook(() => useRouting(points, 'car', undefined));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+        expect(result.current.error).toBe(false);
+        expect(result.current.coords).toEqual(routedGeometry);
+      });
+
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(routeCache.get(points, 'car')?.coords).toEqual(routedGeometry);
+    });
+
+    it('continues to OSRM when the server returns a direct-line fallback', async () => {
+      const points: [number, number][] = [
+        [26.25, 55.998381],
+        [26.274319, 55.993965],
+      ];
+      const routedGeometry: [number, number][] = [
+        points[0],
+        [26.258, 55.996],
+        [26.267, 55.9945],
+        points[1],
+      ];
+
+      ;(global.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            geometry: points,
+            distance_m: 1628,
+            duration_s: 388,
+            provider: 'direct',
+            is_optimal: false,
+            fallback_reason: 'routing_provider_unavailable',
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            routes: [{
+              geometry: { coordinates: routedGeometry },
+              distance: 2100,
+              duration: 510,
+            }],
+          }),
+        });
+
+      const { result } = renderHook(() => useRouting(points, 'car', undefined));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+        expect(result.current.error).toBe(false);
+        expect(result.current.coords).toEqual(routedGeometry);
+      });
+
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(routeCache.get(points, 'car')?.coords).toEqual(routedGeometry);
+    });
+
+    it('keeps a server direct-line fallback degraded when every provider fails', async () => {
+      const points: [number, number][] = [
+        [26.25, 55.998381],
+        [26.274319, 55.993965],
+      ];
+
+      ;(global.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            geometry: points,
+            distance_m: 1628,
+            duration_s: 388,
+            provider: 'direct',
+            is_optimal: false,
+            fallback_reason: 'routing_provider_unavailable',
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          text: jest.fn().mockResolvedValue('OSRM unavailable'),
+        });
+
+      const { result } = renderHook(() => useRouting(points, 'car', undefined));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+        expect(result.current.error).toBeTruthy();
+        expect(result.current.coords).toEqual(points);
+      });
+
+      expect(routeCache.get(points, 'car')).toBeNull();
+    });
+
     it('handles empty response', async () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,

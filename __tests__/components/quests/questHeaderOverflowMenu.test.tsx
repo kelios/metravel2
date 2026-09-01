@@ -82,6 +82,14 @@ const renderHeader = (overrides: { isMobile: boolean; offlineMapPointsCount?: nu
 afterEach(cleanup)
 
 describe('шапка квеста — меню «Ещё» на телефоне', () => {
+  it('держит счётчик заданий однострочным', () => {
+    const { getByText } = renderHeader({ isMobile: true })
+
+    // Ищем счётчик по содержимому, а не по позиции среди Text-узлов: он обязан
+    // оставаться однострочным, иначе на узкой UK-локали ломается геометрия ряда.
+    expect(getByText('Задания: 1 / 2').props.numberOfLines).toBe(1)
+  })
+
   it('убирает редкие действия из ряда, но отдаёт их листу', () => {
     const { queryByLabelText, getByLabelText } = renderHeader({ isMobile: true })
 

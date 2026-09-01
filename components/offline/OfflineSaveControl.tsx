@@ -32,6 +32,15 @@ type OfflineSaveControlProps = {
   type: OfflineContentType;
   sourceId: string | number;
   onSave: (includePhotos: boolean) => Promise<unknown>;
+  /**
+   * #1673: иконка без подписи. Нужен там, где чип стоит рядом с основным
+   * действием в одной строке: с полной подписью («Сохранить офлайн» — самая
+   * длинная строка контрола во всех локалях) ряд на 390pt переносился, и офлайн
+   * читался второй главной кнопкой во всю ширину. Состояние остаётся видимым —
+   * его несут иконка и тон, а полный текст живёт в accessibilityLabel,
+   * web-тултипе и заголовке шита.
+   */
+  compact?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -47,6 +56,7 @@ export default function OfflineSaveControl({
   type,
   sourceId,
   onSave,
+  compact = false,
   style,
 }: OfflineSaveControlProps) {
   const { t } = useTranslation();
@@ -191,6 +201,9 @@ export default function OfflineSaveControl({
               backgroundColor: hovered && state !== 'busy' ? tone.hoverBackground : tone.background,
               borderColor: hovered && state !== 'busy' ? tone.hoverBorder : tone.border,
             },
+            // Без подписи чип становится квадратной пилюлей ровно в тач-таргет:
+            // горизонтальный padding под текст здесь только раздувал бы иконку.
+            compact && { width: controlHeight, paddingHorizontal: 0 },
             pressed && styles.chipPressed,
           ]}
         >
@@ -211,15 +224,17 @@ export default function OfflineSaveControl({
             ) : (
               <Feather name={iconName} size={ICON_SIZE} color={tone.accent} />
             )}
-            <Text
-              style={[
-                styles.label,
-                { color: tone.label, fontSize: isMobile ? DESIGN_TOKENS.typography.sizes.sm : 13 },
-              ]}
-              numberOfLines={1}
-            >
-              {label}
-            </Text>
+            {compact ? null : (
+              <Text
+                style={[
+                  styles.label,
+                  { color: tone.label, fontSize: isMobile ? DESIGN_TOKENS.typography.sizes.sm : 13 },
+                ]}
+                numberOfLines={1}
+              >
+                {label}
+              </Text>
+            )}
           </View>
         </CardActionPressable>
 

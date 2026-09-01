@@ -1,7 +1,8 @@
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { memo, useCallback, useMemo, useRef } from 'react'
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
+import { getScrollableWebNode, useHorizontalScrollEdges } from '@/hooks/useHorizontalScrollEdges'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
@@ -12,8 +13,6 @@ const IS_WEB = Platform.OS === 'web'
 // зрения — так пользователь не теряет контекст между страницами рельсы.
 const SCROLL_PAGE_RATIO = 0.85
 const MIN_SCROLL_STEP = 240
-// Субпиксельные хвосты scrollLeft не должны зажигать стрелку в крайнем положении.
-const EDGE_EPSILON = 4
 
 type Props = {
   children: React.ReactNode
@@ -80,93 +79,23 @@ function CardRail({
   )
 
   const scrollRef = useRef<ScrollView>(null)
-  const offsetX = useRef(0)
-  const contentWidth = useRef(0)
-  const layoutWidth = useRef(0)
-
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
+  const { canScrollLeft, canScrollRight, metricsRef, recompute, edgeScrollProps } =
+    useHorizontalScrollEdges(scrollRef, children)
 
   // Стрелки — только десктопный веб: на тач-устройствах есть родной свайп.
   const arrowsEnabled = IS_WEB && !isMobile && !hideArrows
 
-  // На вебе меряем сам DOM-узел: onLayout/onContentSizeChange от RNW для
-  // горизонтального ScrollView приходят не всегда и не с теми размерами,
-  // из-за чего стрелки не показывались вовсе.
-  const getWebNode = useCallback((): HTMLElement | null => {
-    if (!IS_WEB) return null
-    const host = scrollRef.current as unknown as { getScrollableNode?: () => unknown } | null
-    const node = host?.getScrollableNode?.() as HTMLElement | undefined
-    return node && typeof node.scrollWidth === 'number' ? node : null
-  }, [])
-
-  // Считаем всегда, а показ стрелок гейтим на рендере: размеры приходят раньше,
-  // чем useResponsive отдаёт финальный breakpoint.
-  const recompute = useCallback(() => {
-    const node = getWebNode()
-    if (node) {
-      offsetX.current = node.scrollLeft
-      layoutWidth.current = node.clientWidth
-      contentWidth.current = node.scrollWidth
-    }
-    const x = offsetX.current
-    const content = contentWidth.current
-    const layout = layoutWidth.current
-    setCanScrollLeft(x > EDGE_EPSILON)
-    setCanScrollRight(layout > 0 && x + layout < content - EDGE_EPSILON)
-  }, [getWebNode])
-
-  // Контент рельсы приезжает асинхронно (данные + картинки), поэтому досчитываем
-  // ещё несколько раз после маунта — иначе стрелка не появится до первого скролла.
-  useEffect(() => {
-    recompute()
-    if (!IS_WEB) return
-    const raf = requestAnimationFrame(recompute)
-    const timers = [120, 400, 1000].map((ms) => setTimeout(recompute, ms))
-    return () => {
-      cancelAnimationFrame(raf)
-      timers.forEach(clearTimeout)
-    }
-  }, [recompute, children])
-
-  const handleScroll = useCallback(
-    (event: any) => {
-      const nativeEvent = event?.nativeEvent
-      if (!nativeEvent) return
-      offsetX.current = nativeEvent.contentOffset?.x ?? 0
-      contentWidth.current = nativeEvent.contentSize?.width ?? contentWidth.current
-      layoutWidth.current = nativeEvent.layoutMeasurement?.width ?? layoutWidth.current
-      recompute()
-    },
-    [recompute],
-  )
-
-  const handleLayout = useCallback(
-    (event: any) => {
-      layoutWidth.current = event?.nativeEvent?.layout?.width ?? 0
-      recompute()
-    },
-    [recompute],
-  )
-
-  const handleContentSizeChange = useCallback(
-    (width: number) => {
-      contentWidth.current = width
-      recompute()
-    },
-    [recompute],
-  )
-
   const scrollByPage = useCallback((direction: 1 | -1) => {
-    const step = Math.max(MIN_SCROLL_STEP, layoutWidth.current * SCROLL_PAGE_RATIO) * direction
-    const maxOffset = Math.max(0, contentWidth.current - layoutWidth.current)
-    const next = Math.min(maxOffset, Math.max(0, offsetX.current + step))
+    const { offsetX, contentWidth, layoutWidth } = metricsRef.current
+    const step = Math.max(MIN_SCROLL_STEP, layoutWidth * SCROLL_PAGE_RATIO) * direction
+    const maxOffset = Math.max(0, contentWidth - layoutWidth)
+    const next = Math.min(maxOffset, Math.max(0, offsetX + step))
 
     // На вебе двигаем scrollLeft напрямую. Всё остальное здесь не работает:
     // RNW перезаписывает scrollTo и на DOM-узле, и на рефе своей RN-сигнатурой
     // (y, x, animated), а любую плавную программную прокрутку (scroll-behavior
     // smooth / scrollBy behavior:'smooth') отменяет scroll-snap на контейнере.
-    const node = getWebNode()
+    const node = getScrollableWebNode(scrollRef.current)
     if (node) {
       node.scrollLeft = next
     } else {
@@ -175,9 +104,9 @@ function CardRail({
 
     // onScroll во время анимации может не успеть обновить состояние стрелок,
     // поэтому двигаем известную позицию сразу.
-    offsetX.current = next
+    metricsRef.current.offsetX = next
     recompute()
-  }, [getWebNode, recompute])
+  }, [metricsRef, recompute])
 
   return (
     <View style={styles.wrapper} testID={testID}>
@@ -187,10 +116,7 @@ function CardRail({
         showsHorizontalScrollIndicator={false}
         style={styles.scroll}
         contentContainerStyle={styles.content}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        onLayout={handleLayout}
-        onContentSizeChange={handleContentSizeChange}
+        {...edgeScrollProps}
         accessibilityLabel={accessibilityLabel}
       >
         {children}

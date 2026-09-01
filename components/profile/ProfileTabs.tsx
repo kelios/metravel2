@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import EdgeFadeScrollRow from '@/components/ui/EdgeFadeScrollRow';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -266,18 +267,18 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
         useCompactMobileRow ? (
           <View style={styles.compactMobileTabRow}>{tabs.map(renderTab)}</View>
         ) : (
-          <ScrollView
+          <EdgeFadeScrollRow
             ref={scrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
+            fadeColor={colors.background}
             contentContainerStyle={[styles.tabRow, styles.mobileTabRow]}
+            contentKey={tabs.length}
             onLayout={(event) => {
               scrollViewportWidthRef.current = event.nativeEvent.layout.width;
               scrollActiveTabIntoView(false);
             }}
           >
             {tabs.map(renderTab)}
-          </ScrollView>
+          </EdgeFadeScrollRow>
         )
       ) : (
         <View style={[styles.tabRow, styles.desktopTabRow]}>{tabs.map(renderTab)}</View>

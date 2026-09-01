@@ -6,10 +6,11 @@ export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _sc
         flexDirection: 'row',
         marginTop: SPACING.xs,
         marginBottom: SPACING.xs,
+        // Затухание у краёв рисует EdgeFadeScrollRow и только с той стороны, где
+        // есть куда прокручивать: статическая маска гасила первый шаг даже
+        // тогда, когда лента помещалась целиком (#1672).
         ...Platform.select({
             web: {
-                maskImage: 'linear-gradient(to right, transparent 0, black 12px, black calc(100% - 32px), transparent 100%)',
-                WebkitMaskImage: 'linear-gradient(to right, transparent 0, black 12px, black calc(100% - 32px), transparent 100%)',
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none',
             } as any,

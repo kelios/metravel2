@@ -622,6 +622,13 @@ prod→data-file обязан это учитывать, иначе всё пр�
    — прогресс прохождения ключуется по `step_id`. Точечные правки текстов/полей
    существующих шагов — `scripts/sync-quest-to-prod.js` (PATCH по step_id,
    поддерживает `poi_info`; `--reorder` только явно).
+   **Ловушка: `sync-quest-to-prod.js` НЕ патчит `quest.title`** — он ходит только
+   по `/api/quest-steps/` и `/api/quest-finales/`, поэтому смена заголовка квеста
+   в data-файле молча не доезжает до прода (кейс hel-fishermen 01.09.2026: интро,
+   14 шагов и финал обновились, а в каталоге и в SEO-мете остался старый
+   заголовок). Заголовок правится отдельным
+   `PATCH /api/quests/<numeric id>/ {"title": "…"}`; после синка ОБЯЗАТЕЛЬНО
+   сверяй `title` через `GET /api/quests/by-quest-id/<quest_id>/`.
 6. **Залей на прод:**
    `NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/migrate-quest-from-file.js --source-file=… --api-url=https://metravel.by`
    (токен из `~/.metravel_token` или `--token=`; если протух (HTTP 401) — свежий

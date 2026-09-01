@@ -147,11 +147,27 @@ export const useRouting = (
             throw new Error(i18nT('map:components.MapPage.useRouting.pustoy_marshrut_ot_servera_marshrutizatsii_76b3ee86'))
         }
 
+        // The canonical endpoint returns HTTP 200 for its own direct-line
+        // fallback. That is a valid response envelope, but not a routed road:
+        // accepting it here would cache the waypoint line as healthy and make
+        // planner previews claim «route built along roads». Continue through
+        // the client fallback chain on either explicit degradation signal,
+        // while keeping compatibility with older successful responses that did
+        // not include `is_optimal` yet.
+        if (data?.provider === 'direct' || data?.is_optimal === false) {
+            throw createRoutingError(
+                typeof data?.fallback_reason === 'string' && data.fallback_reason
+                    ? data.fallback_reason
+                    : i18nT('map:components.MapPage.useRouting.ne_udalos_postroit_marshrut_2d05f3d6'),
+                'provider_unavailable',
+            )
+        }
+
         return {
             coords: geometry as [number, number][],
             distance: Number(data.distance_m) || 0,
             duration: Number(data.duration_s) || 0,
-            isOptimal: Boolean(data.is_optimal),
+            isOptimal: true,
         }
     }, [])
 

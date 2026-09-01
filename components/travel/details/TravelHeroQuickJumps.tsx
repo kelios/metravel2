@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react'
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
+import { Platform, Pressable, Text } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
+import EdgeFadeScrollRow from '@/components/ui/EdgeFadeScrollRow'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 
@@ -32,6 +33,7 @@ export function TravelHeroQuickJumps({
   activeKey?: string
 }) {
   const styles = useTravelDetailsHeroStyles()
+  const colors = useThemedColors()
 
   // Подсвечиваем активную секцию (scroll-spy); если её нет среди чипов —
   // подсвечиваем первый чип, чтобы навигация всегда имела явный акцент.
@@ -52,23 +54,21 @@ export function TravelHeroQuickJumps({
   if (!isMobile) return <>{chips}</>
 
   return (
-    <View style={styles.quickJumpScrollWrap}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyboardShouldPersistTaps="always"
-        nestedScrollEnabled
-        contentContainerStyle={styles.quickJumpScrollContent}
-        style={styles.quickJumpScroll}
-        {...(Platform.OS === 'web' ? { role: 'navigation' as const } : null)}
-        accessibilityLabel={i18nT('travel:components.travel.details.TravelHeroQuickJumps.bystraya_navigatsiya_po_razdelam_3bb6e8cb')}
-      >
-        {chips}
-      </ScrollView>
-      {Platform.OS === 'web' ? (
-        <View style={styles.quickJumpScrollFade} pointerEvents="none" />
-      ) : null}
-    </View>
+    <EdgeFadeScrollRow
+      keyboardShouldPersistTaps="always"
+      nestedScrollEnabled
+      contentContainerStyle={styles.quickJumpScrollContent}
+      style={styles.quickJumpScroll}
+      // Ряд лежит на закреплённой полосе `colors.background` (и на вебе, и на
+      // нативе), а не на карточной `surface`: в тёмной теме это #1a1a1a против
+      // #2a2a2a, и затухание в `surface` рисовало бы у края светлую полосу.
+      fadeColor={colors.background}
+      contentKey={links.length}
+      {...(Platform.OS === 'web' ? { role: 'navigation' as const } : null)}
+      accessibilityLabel={i18nT('travel:components.travel.details.TravelHeroQuickJumps.bystraya_navigatsiya_po_razdelam_3bb6e8cb')}
+    >
+      {chips}
+    </EdgeFadeScrollRow>
   )
 }
 

@@ -7,6 +7,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useRichMediaVisibility } from '@/components/ui/richMediaViewport'
 import NavigationIcon from '@/components/layout/NavigationIcon'
 import type { NavigationIconName } from '@/constants/navigationIcons'
+import { useBreakpoints } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useTrackedImpression } from '@/hooks/useTrackedImpression'
 import { formatDistance } from '@/utils/distanceCalculator'
@@ -86,6 +87,19 @@ export function QuestForCityCard({
 }: Props) {
   const router = useRouter()
   const colors = useThemedColors()
+  // #1673: карточка — горизонтальный ряд с квадратной плиткой 132 и стрелкой 40,
+  // поэтому на 390pt тексту оставалось 148px и название резалось на второй строке
+  // (замер: все шесть заголовков блока «Квесты по этому городу и рядом» требовали
+  // четырёх строк). Ширина — та же величина, что решает раскладку, поэтому и
+  // развилка по ней; `useBreakpoints` подписан только на ширину и не перерисовывает
+  // карточку на скролле мобильного веба.
+  //
+  // `clientOnly` обязателен: без него первый кадр каждой карточки видит ширину 0 и
+  // рисует узкий вариант. Замер на 1280 показал ровно это — шесть карточек
+  // появлялись без стрелок и через ~50 мс дорисовывали их. Разметки карточки нет в
+  // статическом HTML (секция лениво подгружается и ждёт данные квестов), поэтому
+  // mismatch невозможен и ждать собственный commit незачем.
+  const { isMobile, isSmallPhone } = useBreakpoints({ clientOnly: true })
   const styles = useMemo(() => createStyles(colors), [colors])
   const difficultyLabels = createDifficultyLabels()
   const mediaVisibility = useRichMediaVisibility(QUEST_TILE_MEDIA_HEIGHT)
@@ -190,7 +204,11 @@ export function QuestForCityCard({
         </Text>
         <Text
           style={styles.title}
-          numberOfLines={2}
+          // Лимит строк идёт за шириной колонки, потому что режет именно она:
+          // 664px на десктопе держат заголовок в одну строку, ~200px на телефоне
+          // — в две-три, а ~140px на 320pt требуют четырёх. Верхняя граница нужна
+          // против аномально длинного названия, а не как фиксированная высота.
+          numberOfLines={isSmallPhone ? 4 : isMobile ? 3 : 2}
           accessibilityRole={Platform.OS === 'web' ? ('heading' as any) : undefined}
           aria-level={3 as any}
         >
@@ -215,9 +233,14 @@ export function QuestForCityCard({
         )}
       </View>
 
-      <View style={styles.arrow}>
-        <Feather name="arrow-right" size={18} color={colors.primary} />
-      </View>
+      {/* Стрелка — декоративная подсказка «это ссылка» для указателя: нажимается вся
+          карточка, и на тач-экране она ничего не добавляет. На узкой колонке её
+          40px вместе с отступом отдаются заголовку, ради которого заведён #1673. */}
+      {isMobile ? null : (
+        <View style={styles.arrow} testID="quest-card-arrow">
+          <Feather name="arrow-right" size={18} color={colors.primary} />
+        </View>
+      )}
     </Pressable>
   )
 }
