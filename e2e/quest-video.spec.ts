@@ -5,11 +5,37 @@ import { preacceptCookies } from './helpers/navigation'
 
 const QUEST_ID = 'e2e-video-quest'
 const YOUTUBE_ID = 'dQw4w9WgXcQ'
+const QUEST_CITY_ID = '1'
 
-const questBundle = {
+const questMeta = {
   id: 91_004,
   quest_id: QUEST_ID,
   title: 'E2E-квест с видео',
+  points: 1,
+  city_id: QUEST_CITY_ID,
+  city_name: 'Минск',
+  country_id: '1',
+  country_name: 'Беларусь',
+  country_code: 'BY',
+  lat: 53.9023,
+  lng: 27.5619,
+  duration_min: 45,
+  difficulty: 'easy',
+  tags: {},
+  pet_friendly: true,
+  cover_url: null,
+  rating_avg: null,
+  rating_count: 0,
+  user_rating: null,
+  completions_count: 0,
+  is_completed_by_me: false,
+  first_completer: null,
+}
+
+const questBundle = {
+  id: questMeta.id,
+  quest_id: QUEST_ID,
+  title: questMeta.title,
   cover_url: null,
   steps: [
     {
@@ -69,6 +95,12 @@ const mockQuestApis = async (page: Page) => {
     if (pathname.includes(`/quests/quest${QUEST_ID}/reviews/`)) {
       return fulfillJson(route, [])
     }
+    if (pathname.endsWith('/quests/near-location/')) {
+      return fulfillJson(route, { results: [], count: 0 })
+    }
+    if (pathname.endsWith('/quests/')) {
+      return fulfillJson(route, [questMeta])
+    }
 
     return fulfillJson(route, {})
   })
@@ -96,7 +128,16 @@ test.describe('Quest finale video', () => {
     await page.setViewportSize({ width: 1280, height: 900 })
     await mockQuestApis(page)
 
-    await page.goto(`/quests/minsk/${QUEST_ID}`, { waitUntil: 'domcontentloaded' })
+    // This fixture does not exist in the static export. Enter it through the real
+    // catalog link so the test exercises the same client-side route as a user,
+    // instead of hydrating generic index HTML at a fabricated detail URL.
+    await page.goto('/quests', { waitUntil: 'domcontentloaded' })
+    const questCard = page.getByTestId(`quest-card-${QUEST_ID}`)
+    await expect(questCard).toBeVisible({ timeout: 30_000 })
+    await expect(questCard).toHaveAttribute('href', `/quests/${QUEST_CITY_ID}/${QUEST_ID}`)
+    await expect(questCard).toHaveJSProperty('tagName', 'A')
+    await questCard.click()
+    await expect(page).toHaveURL(new RegExp(`/quests/${QUEST_CITY_ID}/${QUEST_ID}$`))
 
     await page.getByRole('button', { name: 'Начать квест', exact: true }).click()
 
