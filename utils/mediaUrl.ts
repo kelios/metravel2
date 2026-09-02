@@ -1,4 +1,5 @@
 import { unwrapWeservImageUrl } from '@/utils/weservImageUrl';
+import { hasWebLocation } from '@/utils/hasWebLocation';
 
 export const isPrivateOrLocalHost = (host: string): boolean => {
   const normalized = String(host || '').trim().toLowerCase();
@@ -126,7 +127,7 @@ export const normalizeMediaUrl = (url?: string | null): string => {
 
   const baseRaw =
     process.env.EXPO_PUBLIC_API_URL ||
-    (typeof window !== 'undefined' ? window.location.origin : '');
+    (hasWebLocation() ? window.location.origin : '');
 
   const hostWithoutApi = baseRaw.replace(/\/+$/, '').replace(/\/api$/i, '');
   const prefix = hostWithoutApi || baseRaw.replace(/\/+$/, '');

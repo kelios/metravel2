@@ -233,7 +233,9 @@ export function formatDate(date: string | Date): string {
 
 // ✅ ОПТИМИЗАЦИЯ: Проверка поддержки WebP
 export function supportsWebP(): boolean {
-  if (typeof window === 'undefined') return false;
+  // Гард именно по `document`: `window` на native существует (RN: global.window
+  // = global), а `document` — нет, и `createElement` бросал бы ReferenceError.
+  if (typeof document === 'undefined') return false;
   
   const canvas = document.createElement('canvas');
   if (canvas.getContext && canvas.getContext('2d')) {

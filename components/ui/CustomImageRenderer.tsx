@@ -94,11 +94,13 @@ const normalizeUrl = (url: string) => {
   let u = (url || "").trim();
   if (!u) return u;
   if (u.startsWith("//")) {
-    const proto = typeof window !== "undefined" ? window.location.protocol : "https:";
+    // RN объявляет `global.window = global` (setUpGlobals.js:17), поэтому
+    // `typeof window` здесь ИСТИНА и на Android, а `window.location` — undefined.
+    const proto = Platform.OS === "web" ? window.location.protocol : "https:";
     u = `${proto}${u}`;
   }
   try {
-    const parsed = new URL(u, typeof window !== "undefined" ? window.location.href : "http://localhost");
+    const parsed = new URL(u, Platform.OS === "web" ? window.location.href : "http://localhost");
     if (!isPrivateHost(parsed.hostname) && parsed.protocol === "http:") {
       parsed.protocol = "https:";
       return parsed.toString();

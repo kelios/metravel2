@@ -1,4 +1,5 @@
 import type { GalleryItem } from './types'
+import { hasWebLocation } from '@/utils/hasWebLocation';
 
 // Общий список web-расширений загрузки: валидация в ImageGallery и accept-карта
 // dropzone в WebGalleryDropzoneControls должны совпадать.
@@ -111,7 +112,7 @@ export const ensureAbsoluteUrl = (value: string): string => {
 
   const base =
     API_BASE_URL?.replace(/\/api\/?$/, '') ||
-    (typeof window !== 'undefined' ? window.location.origin : undefined)
+    (hasWebLocation() ? window.location.origin : undefined)
   if (!base) return value
 
   try {

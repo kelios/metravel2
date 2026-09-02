@@ -1,3 +1,5 @@
+import { hasWebLocation } from '@/utils/hasWebLocation';
+
 export function validateYoutubeId(id: string): boolean {
   if (!id || id.length !== 11) {
     return false;
@@ -66,8 +68,10 @@ export function createSafeImageUrl(
   try {
     const url = new URL(trimmed);
     try {
+      // Бросок здесь ловил внешний catch и молча отменял апгрейд http -> https.
+      // Вне web локального хоста не бывает по определению.
       const isLocalhost =
-        typeof window !== 'undefined' &&
+        hasWebLocation() &&
         /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
       const isPrivateIp = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(url.hostname);
       if (isLocalhost && isPrivateIp) {
