@@ -16,13 +16,6 @@ import { TRAVEL_DETAILS_SECTION_RHYTHM } from './travelDetailsSectionRhythm'
  * `_colors` остаётся в сигнатуре: агрегат зовёт все фрагменты одинаково.
  */
 export const createTravelDetailsLayoutStyles = (_colors: ThemedColors) => ({
-  lazySectionReserved: {
-    width: '100%',
-    minHeight: Platform.select({
-      web: 560,
-      default: 520,
-    }),
-  },
   webDeferredSection: Platform.select({
     web: {
       // Defer render/paint for below-the-fold sections without CLS.
