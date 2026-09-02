@@ -6,6 +6,8 @@ import { buildArticleEditorNativeHtml } from '@/components/article/articleEditor
 const build = (variant: 'default' | 'compact' = 'default') =>
   buildArticleEditorNativeHtml({
     borderColor: '#e0e0e0',
+    codeBackgroundColor: '#f5f4f2',
+    linkColor: '#547769',
     placeholder: JSON.stringify('Напишите текст'),
     initialContent: JSON.stringify('<p>hello</p>'),
     surfaceColor: '#ffffff',

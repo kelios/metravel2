@@ -4,6 +4,8 @@ import { QUILL_JS, QUILL_SNOW_CSS } from '@/utils/quillInlineAsset';
 
 type NativeEditorHtmlParams = {
   borderColor: string;
+  codeBackgroundColor: string;
+  linkColor: string;
   placeholder: string;
   initialContent: string;
   surfaceColor: string;
@@ -15,6 +17,8 @@ type NativeEditorHtmlParams = {
 
 export function buildArticleEditorNativeHtml({
   borderColor,
+  codeBackgroundColor,
+  linkColor,
   placeholder,
   initialContent,
   surfaceColor,
@@ -86,6 +90,71 @@ export function buildArticleEditorNativeHtml({
     .ql-editor.ql-blank::before {
       color: ${textSecondaryColor};
       font-style: normal;
+    }
+    /* Тема quill.snow нарисована под светлый фон: иконки панели #444, ссылки #06c,
+       рамки #ccc/#000, подложка кода #f0f0f0 и белый тултип. На тёмной теме панель
+       пропадает (#444 на тёмной подложке — около 1.4:1), поэтому вся эта палитра
+       переопределяется токенами темы. */
+    .ql-toolbar .ql-stroke,
+    .ql-toolbar .ql-stroke-miter {
+      stroke: ${textSecondaryColor};
+    }
+    .ql-toolbar .ql-fill,
+    .ql-toolbar .ql-stroke.ql-fill {
+      fill: ${textSecondaryColor};
+    }
+    .ql-toolbar button,
+    .ql-toolbar .ql-picker,
+    .ql-toolbar .ql-picker-label,
+    .ql-toolbar .ql-picker-item {
+      color: ${textSecondaryColor};
+    }
+    .ql-toolbar button.ql-active,
+    .ql-toolbar .ql-picker-label.ql-active,
+    .ql-toolbar .ql-picker-item.ql-selected {
+      color: ${linkColor};
+    }
+    .ql-toolbar button.ql-active .ql-stroke,
+    .ql-toolbar .ql-picker-label.ql-active .ql-stroke {
+      stroke: ${linkColor};
+    }
+    .ql-toolbar button.ql-active .ql-fill,
+    .ql-toolbar .ql-picker-label.ql-active .ql-fill {
+      fill: ${linkColor};
+    }
+    .ql-toolbar .ql-picker-options {
+      background-color: ${surfaceElevatedColor};
+      border-color: ${borderColor};
+    }
+    .ql-editor a {
+      color: ${linkColor};
+    }
+    .ql-editor blockquote {
+      border-left-color: ${borderColor};
+      color: ${textSecondaryColor};
+    }
+    .ql-editor code {
+      background-color: ${codeBackgroundColor};
+      color: ${textColor};
+    }
+    .ql-editor td {
+      border-color: ${textSecondaryColor};
+    }
+    .ql-editor li > .ql-ui {
+      color: ${textSecondaryColor};
+    }
+    .ql-snow .ql-tooltip {
+      background-color: ${surfaceElevatedColor};
+      border-color: ${borderColor};
+      color: ${textColor};
+    }
+    .ql-snow .ql-tooltip a {
+      color: ${linkColor};
+    }
+    .ql-snow .ql-tooltip input[type=text] {
+      background-color: ${surfaceColor};
+      border-color: ${borderColor};
+      color: ${textColor};
     }
     ${compactToolbarCss}
   </style>

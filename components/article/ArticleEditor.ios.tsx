@@ -108,6 +108,8 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   // Quill HTML template with dynamic theme colors
   const quillHTML = useMemo(() => buildArticleEditorNativeHtml({
     borderColor: colors.border,
+    codeBackgroundColor: colors.backgroundTertiary,
+    linkColor: colors.primaryText,
     placeholder: safePlaceholder,
     initialContent: safeInitialContent,
     surfaceColor: colors.surface,
@@ -116,7 +118,9 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
     textSecondaryColor: colors.textSecondary,
     variant,
   }), [
+    colors.backgroundTertiary,
     colors.border,
+    colors.primaryText,
     colors.surface,
     colors.surfaceElevated,
     colors.text,

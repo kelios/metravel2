@@ -159,6 +159,51 @@ export const ARTICLE_EDITOR_QUILL_WEB_CSS = `
   border-color: var(--color-borderStrong);
   box-shadow: var(--shadow-medium);
 }
+/* Тема quill.snow задаёт тело редактора светлыми константами: чёрный текст,
+   rgba(0,0,0,.6) в плейсхолдере, ссылки #06c, границы #ccc/#000 и белый тултип.
+   В тёмной теме это 1.3–2.6:1, поэтому тело редактора красится токенами — так же,
+   как WebView-редактор в articleEditorNativeHtml.ts. */
+[data-editor-chrome="article-editor"] .ql-editor {
+  color: var(--color-text);
+}
+[data-editor-chrome="article-editor"] .ql-editor.ql-blank::before {
+  color: var(--color-textMuted);
+  font-style: normal;
+}
+[data-editor-chrome="article-editor"] .ql-editor a {
+  color: var(--color-primaryText);
+}
+[data-editor-chrome="article-editor"] .ql-snow .ql-editor blockquote {
+  border-left-color: var(--color-borderStrong);
+  color: var(--color-textMuted);
+}
+[data-editor-chrome="article-editor"] .ql-snow .ql-editor code {
+  background-color: var(--color-backgroundTertiary);
+  color: var(--color-text);
+}
+[data-editor-chrome="article-editor"] .ql-editor td {
+  border-color: var(--color-textSubtle);
+}
+[data-editor-chrome="article-editor"] .ql-snow .ql-editor li > .ql-ui {
+  color: var(--color-textMuted);
+}
+[data-editor-chrome="article-editor"] .ql-snow .ql-tooltip {
+  background-color: var(--color-surfaceElevated);
+  border-color: var(--color-borderStrong);
+  box-shadow: var(--shadow-medium);
+  color: var(--color-text);
+}
+[data-editor-chrome="article-editor"] .ql-snow .ql-tooltip a {
+  color: var(--color-primaryText);
+}
+[data-editor-chrome="article-editor"] .ql-snow .ql-tooltip input[type=text] {
+  background-color: var(--color-surface);
+  border-color: var(--color-borderStrong);
+  color: var(--color-text);
+}
+[data-editor-chrome="article-editor"] .ql-snow .ql-tooltip a.ql-action::after {
+  border-right-color: var(--color-borderStrong);
+}
 [data-editor-chrome="article-editor"] .ql-container.ql-snow {
   display: flex;
   flex: 1 1 auto;
