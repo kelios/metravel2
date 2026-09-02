@@ -13,11 +13,10 @@
 // именно СВЕТЛАЯ палитра напрямую, а не `useThemedColors()`/`var(--color-surface)`:
 // оба следуют теме, и подложка снова уехала бы в тёмное.
 //
-// Native использует эту подложку всегда, web — только для светлой темы. В web
-// dark mode вместо нетематизируемого iframe показывается компактная app-owned
-// CTA; это не превращает фотографии в негатив через CSS filter и не оставляет
-// большое белое полотно. Значение берётся из `DESIGN_COLORS`, а не из палитры
-// напрямую: `designSystem.ts` — её единственный разрешённый импортёр.
+// Обе платформы (`BelkrajWidget.tsx` и `BelkrajWidget.native.tsx`) читают эту
+// константу, чтобы фон виджета не разошёлся между web, Android и iOS. Значение
+// берётся из `DESIGN_COLORS`, а не из палитры напрямую: `designSystem.ts` — её
+// единственный разрешённый импортёр (правило там же, у `getThemedColors`).
 import { DESIGN_COLORS } from '@/constants/designSystem'
 
 export const BELKRAJ_WIDGET_SURFACE: string = DESIGN_COLORS.staticLightSurface

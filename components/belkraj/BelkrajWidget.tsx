@@ -1,20 +1,13 @@
 // components/belkraj/BelkrajWidget.tsx
-import Feather from '@expo/vector-icons/Feather';
-import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { View } from 'react-native';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
     canRenderBelkrajWidget,
     parseBelkrajCoord,
     resolveBelkrajCountryCode,
 } from './belkrajAvailability';
 import { BELKRAJ_WIDGET_SURFACE } from './belkrajWidgetSurface';
-import Button from '@/components/ui/Button';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
-import { useTheme, useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
-import { useTranslation } from '@/i18n/LocaleProvider';
-import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 
 interface TravelAddress {
@@ -37,7 +30,6 @@ type Props = {
 
 const BELKRAJ_ORIGIN = 'https://belkraj.by';
 const MIN_WIDGET_HEIGHT = 320;
-const DARK_THEME_CTA_HEIGHT = 160;
 
 // width приходит из useResponsiveWidth (hydration-safe): на сервере и до конца
 // гидрации он 0 → возвращаем стабильный fallback 980, совпадающий с SSR-HTML.
@@ -64,18 +56,15 @@ const getEstimatedWidgetHeight = (cardsCount: number, width: number) => {
 };
 
 function BelkrajWidget({
-    points,
-    countryCode,
-    collapsedHeight,
-    expandedHeight = 1200,
-    className,
-    allowScroll = false,
-    cardsCount = 6,
-}: Props) {
+                                          points,
+                                          countryCode,
+                                          collapsedHeight,
+                                          expandedHeight = 1200,
+                                          className,
+                                          allowScroll = false,
+                                          cardsCount = 6,
+                                      }: Props) {
     const expanded = false;
-    const { isDark } = useTheme();
-    const colors = useThemedColors();
-    const { t } = useTranslation();
     const iframeRef = useRef<HTMLIFrameElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const resizeSyncTimeoutsRef = useRef<number[]>([]);
@@ -131,21 +120,12 @@ function BelkrajWidget({
         return `https://belkraj.by/partner/widget?${params.toString()}`;
     }, [firstCoord, resolvedCountryCode, cardsCount, widgetId]);
 
-    const handleOpenPartnerCatalog = useCallback(() => {
-        if (!iframeSrc) return;
-        void openExternalUrlInNewTab(iframeSrc, {
-            allowedProtocols: ['https:'],
-            windowFeatures: 'noopener',
-        });
-    }, [iframeSrc]);
-
     useEffect(() => {
-        if (isDark) return;
         setMeasuredHeight(finalCollapsedHeight);
-    }, [finalCollapsedHeight, iframeSrc, isDark]);
+    }, [finalCollapsedHeight, iframeSrc]);
 
     useEffect(() => {
-        if (isDark || !canRender || typeof window === 'undefined' || shouldLoad) return undefined;
+        if (typeof window === 'undefined' || shouldLoad) return undefined;
         const node = containerRef.current;
         if (!node) return undefined;
         if (typeof IntersectionObserver === 'undefined') {
@@ -163,10 +143,10 @@ function BelkrajWidget({
         );
         observer.observe(node);
         return () => observer.disconnect();
-    }, [canRender, iframeSrc, isDark, shouldLoad]);
+    }, [shouldLoad, iframeSrc]);
 
     useEffect(() => {
-        if (isDark || !canRender || typeof window === 'undefined') return undefined;
+        if (typeof window === 'undefined') return undefined;
 
         const syncHeight = () => {
             iframeRef.current?.contentWindow?.postMessage(
@@ -207,7 +187,7 @@ function BelkrajWidget({
             resizeSyncTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
             resizeSyncTimeoutsRef.current = [];
         };
-    }, [canRender, isDark, widgetId]);
+    }, [widgetId]);
 
     const handleIframeLoad = () => {
         if (typeof window === 'undefined') return;
@@ -229,14 +209,6 @@ function BelkrajWidget({
     // Не рендерим ничего, если нет координат либо страна вне каталога партнёра
     if (!canRender || !iframeSrc) return null;
 
-    // Belkraj отдаёт cross-origin страницу с фиксированной светлой палитрой и не
-    // поддерживает dark scheme. В web-тёмной теме не рисуем большое белое полотно:
-    // компактная app-owned CTA сохраняет доступ к тому же city-level каталогу.
-    // Светлая тема продолжает показывать полноценный iframe; native живёт в
-    // BelkrajWidget.native.tsx и сохраняет собственный контракт читаемости.
-    const rendersDarkThemeCta = isDark;
-    const contentHeight = rendersDarkThemeCta ? DARK_THEME_CTA_HEIGHT : finalHeight;
-
     return (
         <div
             ref={containerRef}
@@ -247,48 +219,38 @@ function BelkrajWidget({
                 overflowX: 'hidden',
                 overflowY: allowScroll ? 'auto' : 'hidden',
                 border: '1px solid var(--color-border)',
-                background: rendersDarkThemeCta ? colors.surface : BELKRAJ_WIDGET_SURFACE,
-                colorScheme: rendersDarkThemeCta ? 'dark' : 'light',
+                // Не `var(--color-surface)`: в тёмной теме он тёмный, а iframe
+                // партнёра прозрачный и светлый — см. `belkrajWidgetSurface.ts`.
+                background: BELKRAJ_WIDGET_SURFACE,
+                // Одного `background` мало: `app/+html.tsx` ставит на <html>
+                // `color-scheme: dark`, свойство наследуется до этого слота, и под
+                // кросс-доменным iframe подложку рисует уже UA, поверх нашего фона
+                // (тот же механизм разобран в GoogleSignInButton.web.tsx). Пиним
+                // светлую схему на слоте — она наследуется в iframe и заодно
+                // держит светлыми UA-скроллбары над светлой страницей партнёра.
+                colorScheme: 'light',
                 boxShadow: 'var(--shadow-light, 0 1px 4px rgba(0,0,0,0.06))',
                 ...(allowScroll ? {
-                    height: contentHeight,
-                    maxHeight: contentHeight,
+                    height: finalHeight,
+                    maxHeight: finalHeight,
                     WebkitOverflowScrolling: 'touch',
-                } : { height: contentHeight }),
+                } : { height: finalHeight }),
             }}
         >
-            {rendersDarkThemeCta ? (
-                <View
-                    testID="belkraj-dark-theme-cta"
-                    style={{
-                        minHeight: DARK_THEME_CTA_HEIGHT,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: DESIGN_TOKENS.spacing.lg,
-                        backgroundColor: colors.surface,
-                    }}
-                >
-                    <Button
-                        testID="belkraj-open-partner-catalog"
-                        label={t('sharedStatic:affiliate.tours.cta')}
-                        onPress={handleOpenPartnerCatalog}
-                        icon={<Feather name="external-link" size={18} color={colors.textOnPrimary} />}
-                    />
-                </View>
-            ) : shouldLoad ? (
+            {shouldLoad ? (
                 <iframe
                     ref={iframeRef}
                     src={iframeSrc}
                     title={i18nT('shared:components.belkraj.BelkrajWidget.belkraj_partner_offers_b193ce0d')}
                     width="100%"
-                    height={contentHeight}
+                    height={finalHeight}
                     loading="lazy"
                     scrolling={allowScroll ? 'yes' : 'no'}
                     frameBorder={0}
                     onLoad={handleIframeLoad}
                     style={{
                         width: '100%',
-                        height: `${contentHeight}px`,
+                        height: `${finalHeight}px`,
                         display: 'block',
                         border: 'none',
                         pointerEvents: 'auto',

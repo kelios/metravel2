@@ -7,7 +7,7 @@
  * палитру: без этого проверка бессмысленна — в светлой теме `colors.surface`
  * и так белый, и старый код проходил бы тест.
  */
-import { fireEvent, render } from '@testing-library/react-native'
+import { render } from '@testing-library/react-native'
 
 import {
   MODERN_MATTE_PALETTE,
@@ -20,11 +20,8 @@ import BelkrajWidgetNative from '@/components/belkraj/BelkrajWidget.native'
 // подложки между платформами и проверяется. Тот же приём: export-web-mobile-guard.
 import BelkrajWidgetWeb from '@/components/belkraj/BelkrajWidget.tsx'
 
-const mockOpenExternalUrlInNewTab = jest.fn()
-let mockIsDark = true
-
 jest.mock('@/utils/externalLinks', () => ({
-  openExternalUrlInNewTab: (...args: unknown[]) => mockOpenExternalUrlInNewTab(...args),
+  openExternalUrlInNewTab: jest.fn(),
 }))
 
 jest.mock('@/hooks/useTheme', () => {
@@ -43,20 +40,8 @@ jest.mock('@/hooks/useTheme', () => {
   }
 
   return {
-    useTheme: () => ({
-      theme: mockIsDark ? 'dark' : 'light',
-      isDark: mockIsDark,
-      setTheme: jest.fn(),
-      toggleTheme: jest.fn(),
-    }),
-    useThemedColors: () => mockIsDark
-      ? darkColors
-      : {
-          ...require('@/constants/modernMattePalette').MODERN_MATTE_PALETTE,
-          shadows: require('@/constants/modernMattePalette').MODERN_MATTE_SHADOWS,
-          boxShadows: require('@/constants/modernMattePalette').MODERN_MATTE_BOX_SHADOWS,
-          gradients: require('@/constants/modernMattePalette').MODERN_MATTE_GRADIENTS,
-        },
+    useTheme: () => ({ theme: 'dark', isDark: true, setTheme: jest.fn(), toggleTheme: jest.fn() }),
+    useThemedColors: () => darkColors,
     getThemedColors: () => darkColors,
   }
 })
@@ -69,8 +54,6 @@ const originalNodeEnv = process.env.NODE_ENV
 
 beforeEach(() => {
   process.env.NODE_ENV = 'production'
-  mockIsDark = true
-  mockOpenExternalUrlInNewTab.mockClear()
 })
 
 afterEach(() => {
@@ -82,7 +65,7 @@ const flattenStyle = (style: unknown): Record<string, unknown> =>
     ? style.reduce<Record<string, unknown>>((acc, item) => ({ ...acc, ...flattenStyle(item) }), {})
     : ((style ?? {}) as Record<string, unknown>)
 
-describe('BelkrajWidget — web dark theme не показывает светлое полотно', () => {
+describe('BelkrajWidget — подложка стороннего виджета не следует тёмной теме (#1697)', () => {
   it('контейнер на native красится светлой подложкой, а не тёмным colors.surface', () => {
     const { getByTestId } = render(
       <BelkrajWidgetNative countryCode="BY" points={MINSK} cardsCount={6} />,
@@ -113,46 +96,20 @@ describe('BelkrajWidget — web dark theme не показывает светл�
     expect(getByTestId('belkraj-native-webview').props.forceDarkOn).toBe(false)
   })
 
-  it('web-вариант заменяет светлый iframe компактной тематической CTA', () => {
-    const { getByTestId, UNSAFE_queryAllByType } = render(
-      <BelkrajWidgetWeb countryCode="BY" points={MINSK} cardsCount={6} />,
-    )
-
-    expect(getByTestId('belkraj-dark-theme-cta')).toBeTruthy()
-    expect(getByTestId('belkraj-open-partner-catalog')).toBeTruthy()
-    expect(UNSAFE_queryAllByType('iframe')).toHaveLength(0)
-  })
-
-  it('CTA открывает тот же city-level каталог через внешний chokepoint', () => {
-    const { getByTestId } = render(
-      <BelkrajWidgetWeb countryCode="BY" points={MINSK} cardsCount={6} />,
-    )
-
-    fireEvent.press(getByTestId('belkraj-open-partner-catalog'))
-
-    expect(mockOpenExternalUrlInNewTab).toHaveBeenCalledTimes(1)
-    const [rawUrl, options] = mockOpenExternalUrlInNewTab.mock.calls[0]
-    const partnerUrl = new URL(rawUrl)
-
-    expect(`${partnerUrl.origin}${partnerUrl.pathname}`).toBe('https://belkraj.by/partner/widget')
-    expect(Object.fromEntries(partnerUrl.searchParams)).toMatchObject({
-      lat: '53.9',
-      lng: '27.56',
-      term: 'place',
-      country: 'BY',
-      size: '6',
-    })
-    expect(options).toEqual(expect.objectContaining({ allowedProtocols: ['https:'] }))
-  })
-
-  it('светлая web-тема сохраняет исходную светлую подложку iframe', () => {
-    mockIsDark = false
-
+  it('web-вариант берёт ту же подложку, что и native — платформы не расходятся', () => {
     const tree = render(
       <BelkrajWidgetWeb countryCode="BY" points={MINSK} cardsCount={6} />,
     ).toJSON() as { props: { style?: Record<string, unknown> } } | null
 
     expect(tree?.props?.style?.background).toBe(BELKRAJ_WIDGET_SURFACE)
+    expect(tree?.props?.style?.background).not.toBe('var(--color-surface)')
+  })
+
+  it('web-слот пинит светлую color-scheme — иначе UA красит подложку кросс-доменного iframe сам', () => {
+    const tree = render(
+      <BelkrajWidgetWeb countryCode="BY" points={MINSK} cardsCount={6} />,
+    ).toJSON() as { props: { style?: Record<string, unknown> } } | null
+
     expect(tree?.props?.style?.colorScheme).toBe('light')
   })
 
