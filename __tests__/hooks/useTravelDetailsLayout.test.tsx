@@ -5,8 +5,8 @@ import { useTravelDetailsLayout } from '@/hooks/useTravelDetailsLayout'
 import {
   HEADER_OFFSET_DESKTOP,
   HEADER_OFFSET_MOBILE,
-  getTravelDetailsStyles,
-} from '@/components/travel/details/TravelDetailsStyles'
+  getTravelDetailsShellStyles,
+} from '@/components/travel/details/TravelDetailsShellStyles'
 import { getThemedColors } from '@/hooks/useTheme'
 
 describe('useTravelDetailsLayout', () => {
@@ -42,7 +42,8 @@ describe('useTravelDetailsLayout', () => {
   })
 
   it('uses web and native side menu styles', () => {
-    const baseStyles = getTravelDetailsStyles(getThemedColors(false))
+    // #1711: хук берёт стили из shell-набора — сверяемся с ним, а не с агрегатом.
+    const baseStyles = getTravelDetailsShellStyles(getThemedColors(false))
     let result = renderHook(() =>
       useTravelDetailsLayout({ isMobile: false, screenWidth: 1200 })
     ).result

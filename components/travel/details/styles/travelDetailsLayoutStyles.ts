@@ -1,37 +1,21 @@
 import { Platform } from 'react-native'
 
-import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { type ThemedColors } from '@/hooks/useTheme'
-
-import {
-  HEADER_OFFSET_DESKTOP,
-  HEADER_OFFSET_MOBILE,
-} from '../TravelDetailsStyleFragments'
 
 import { TRAVEL_DETAILS_SECTION_RHYTHM } from './travelDetailsSectionRhythm'
 
-const JOURNAL_FONT_FAMILY = "'Georgia', 'Times New Roman', 'Inter', serif"
-
-export const createTravelDetailsLayoutStyles = (colors: ThemedColors) => ({
-  // ✅ РЕДИЗАЙН: Светлый современный фон
-  wrapper: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: { flex: 1 },
-  mainContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    maxWidth: 1600,
-    width: '100%',
-    marginHorizontal: 'auto' as any,
-  },
-  mainContainerMobile: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    maxWidth: '100%',
-    marginHorizontal: 0 as any,
-  },
+/**
+ * Фрагмент агрегата `useTravelDetailsStyles`: только то, что читают секции.
+ *
+ * Оболочку страницы — обёртку, safe area, боковое меню, скролл и контентные
+ * контейнеры — этот фрагмент не описывает: их владелец `TravelDetailsShellStyles`,
+ * и до #1711 те же тринадцать имён лежали здесь второй копией, которую не читал
+ * никто (`sideMenuBase` и `scrollContent` уже успели разойтись по значению).
+ * Инвариант держит гейт `travelDetailsStyleKeyOwnership`.
+ *
+ * `_colors` остаётся в сигнатуре: агрегат зовёт все фрагменты одинаково.
+ */
+export const createTravelDetailsLayoutStyles = (_colors: ThemedColors) => ({
   lazySectionReserved: {
     width: '100%',
     minHeight: Platform.select({
@@ -59,72 +43,5 @@ export const createTravelDetailsLayoutStyles = (colors: ThemedColors) => ({
     } as any,
     default: {},
   }),
-
-  // ✅ РЕДИЗАЙН: Адаптивное боковое меню
-  sideMenuBase: {
-    backgroundColor: colors.surface,
-    borderRightWidth: 1,
-    borderRightColor: colors.borderStrong,
-    borderStyle: 'solid',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: Platform.select({
-      default: DESIGN_TOKENS.spacing.xxl,
-      web: DESIGN_TOKENS.spacing.lg,
-    }),
-  },
   ...TRAVEL_DETAILS_SECTION_RHYTHM,
-
-  contentOuter: {
-    flex: 1,
-  },
-
-  contentWrapper: {
-    flex: 1,
-    ...(Platform.OS === 'web'
-      ? ({
-          fontFamily: JOURNAL_FONT_FAMILY,
-        } as any)
-      : {}),
-  },
-
-  sectionTabsContainer: {
-    marginBottom: DESIGN_TOKENS.spacing.md,
-  },
-
-  sideMenuNative: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-  },
-  sideMenuWebDesktop: {
-    position: 'sticky' as any,
-    top: HEADER_OFFSET_DESKTOP as any,
-    backgroundColor: colors.surface,
-    backdropFilter: 'blur(10px)' as any,
-    // Ensure the sidebar can scroll independently on long menus
-    maxHeight: `calc(100vh - ${HEADER_OFFSET_DESKTOP}px)` as any,
-    overflowY: 'auto' as any,
-    overflowX: 'hidden' as any,
-    overscrollBehavior: 'contain' as any,
-    display: 'flex' as any,
-    flexDirection: 'column' as any,
-    minHeight: 0 as any,
-  },
-  sideMenuWebMobile: {
-    position: 'fixed' as any,
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.surface,
-    borderRightWidth: 0,
-    maxHeight: '100vh' as any,
-    overflowY: 'auto' as any,
-    paddingTop: HEADER_OFFSET_MOBILE + DESIGN_TOKENS.spacing.xl,
-  },
 }) as const

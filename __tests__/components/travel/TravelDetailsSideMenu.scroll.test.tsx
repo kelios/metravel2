@@ -1,10 +1,11 @@
-import { getTravelDetailsStyles } from '@/components/travel/details/TravelDetailsStyles';
+import { getTravelDetailsShellStyles } from '@/components/travel/details/TravelDetailsShellStyles';
 import { getThemedColors } from '@/hooks/useTheme';
 
 describe('TravelDetails side menu (web desktop)', () => {
   it('has overflowY auto and a constrained maxHeight so the menu can scroll', () => {
     const colors = getThemedColors(false);
-    const styles = getTravelDetailsStyles(colors);
+    // #1711: боковое меню рисует shell-набор — агрегат этих имён больше не знает.
+    const styles = getTravelDetailsShellStyles(colors);
     const desktop = styles.sideMenuWebDesktop as any;
 
     expect(desktop).toBeTruthy();

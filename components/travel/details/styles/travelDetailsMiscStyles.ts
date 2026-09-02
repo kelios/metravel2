@@ -3,6 +3,14 @@ import { Platform } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { type ThemedColors } from '@/hooks/useTheme'
 
+/**
+ * Фрагмент агрегата `useTravelDetailsStyles`: разное, что читают секции.
+ *
+ * Экраны ошибок детали путешествия сюда не входят: их пять имён (`errorContainer`,
+ * `errorTitle`, `errorText`, `errorButton`, `errorButtonText`) объявляет
+ * `TravelDetailsShellStyles`, откуда `TravelDetailsErrorStates` и получает
+ * `styles`. До #1711 копии лежали и здесь, и не читал их никто.
+ */
 export const createTravelDetailsMiscStyles = (colors: ThemedColors) => ({
   mapEmptyState: {
     width: '100%',
@@ -66,47 +74,6 @@ export const createTravelDetailsMiscStyles = (colors: ThemedColors) => ({
       default: 520,
     }),
     justifyContent: 'center',
-  },
-
-  // ✅ УЛУЧШЕНИЕ: Стили для страницы ошибки
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingVertical: DESIGN_TOKENS.spacing.xl + DESIGN_TOKENS.spacing.xs,
-  },
-  errorTitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: DESIGN_TOKENS.spacing.lg,
-    marginBottom: DESIGN_TOKENS.spacing.xs,
-    textAlign: 'center',
-  },
-  errorText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginBottom: DESIGN_TOKENS.spacing.xl,
-    lineHeight: 24,
-  },
-  errorButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
-    borderRadius: 8,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
-  },
-  errorButtonText: {
-    color: colors.textOnPrimary,
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: '600',
   },
 
   // 5.5: Стили для состояния загрузки (skeleton)

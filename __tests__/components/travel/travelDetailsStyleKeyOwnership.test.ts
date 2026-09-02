@@ -22,12 +22,12 @@
  * девять `error*`/`loadingSkeleton*` (fragments против `miscStyles`), обе копии
  * побайтово совпадали с победившими и обе были сняты вместе с гейтом.
  *
- * Исключений два. Первое — общий фрагмент, который наборы раскладывают спредом:
- * у него одно определение по построению, поэтому его ключи разрешено видеть в
+ * Исключение одно — общий фрагмент, который наборы раскладывают спредом: у него
+ * одно определение по построению, поэтому его ключи разрешено видеть в
  * нескольких наборах, но значение обязано совпадать с фрагментом, иначе кто-то
- * переобъявил ключ поверх спреда. Второе — `KNOWN_OPEN_DUPLICATES`: восемнадцать
- * имён shell-набора, продублированных в агрегате ещё до #1708. Они пришпилены
- * поимённо, а не пропущены: новый дубль падает, снятый — тоже.
+ * переобъявил ключ поверх спреда. Пришпиленного долга больше нет: восемнадцать
+ * имён shell-набора, продублированных в агрегате ещё до #1708, сняты в #1711,
+ * и гейт держит инвариант без исключений.
  */
 
 import { getThemedColors } from '@/constants/designSystem'
@@ -71,37 +71,39 @@ const findDuplicateStyleKeys = (
 }
 
 /**
- * Долг, унаследованный до #1708 и снаружи его scope: `TravelDetailsShellStyles`
- * повторяет тринадцать имён `travelDetailsLayoutStyles` и пять
- * `travelDetailsMiscStyles`. Копии уже разошлись (`sideMenuBase` в shell —
+ * Восемнадцать имён оболочки страницы: контейнер, safe area, боковое меню,
+ * скролл, контентные обёртки и экраны ошибок. Владелец один —
+ * `TravelDetailsShellStyles`: его читают `TravelDetailsContainer`,
+ * `TravelDetailsScrollRuntime` и `useTravelDetailsLayout`, а дальше он уходит
+ * пропом `styles` в `TravelDetailsCriticalShell` и `TravelDetailsErrorStates`.
+ *
+ * До #1711 те же имена лежали второй копией в `travelDetailsLayoutStyles` и
+ * `travelDetailsMiscStyles`, и копии успели разойтись (`sideMenuBase` в shell —
  * `surfaceMuted` и `dashed`, в layout — `surface` и `solid`; у `scrollContent`
- * на web в shell `calc(max(var(--mt-dock-h)…))`, в layout `spacing.lg`), а
- * читает эти имена только shell-набор: контейнер, скролл-рантайм,
- * `useTravelDetailsLayout` и экраны ошибок берут стили из
- * `getTravelDetailsShellStyles`. Снимать копии из агрегата — отдельная карточка
- * (файлы вне scope #1708), поэтому здесь они пришпилены поимённо: гейт не
- * пропускает ни новый дубль, ни молча снятый.
+ * на web в shell `calc(max(var(--mt-dock-h)…))`, в layout `spacing.lg`). Не
+ * рисовалась ни одна: их не читал никто. Здесь владение проверяется поимённо —
+ * возврат копии в агрегат роняет тест, даже если значения совпадут.
  */
-const KNOWN_OPEN_DUPLICATES: Record<string, string[]> = {
-  wrapper: ['layout', 'shell'],
-  safeArea: ['layout', 'shell'],
-  mainContainer: ['layout', 'shell'],
-  mainContainerMobile: ['layout', 'shell'],
-  sideMenuBase: ['layout', 'shell'],
-  scrollView: ['layout', 'shell'],
-  scrollContent: ['layout', 'shell'],
-  contentOuter: ['layout', 'shell'],
-  contentWrapper: ['layout', 'shell'],
-  sectionTabsContainer: ['layout', 'shell'],
-  sideMenuNative: ['layout', 'shell'],
-  sideMenuWebDesktop: ['layout', 'shell'],
-  sideMenuWebMobile: ['layout', 'shell'],
-  errorContainer: ['misc', 'shell'],
-  errorTitle: ['misc', 'shell'],
-  errorText: ['misc', 'shell'],
-  errorButton: ['misc', 'shell'],
-  errorButtonText: ['misc', 'shell'],
-}
+const SHELL_OWNED_KEYS = [
+  'wrapper',
+  'safeArea',
+  'mainContainer',
+  'mainContainerMobile',
+  'sideMenuBase',
+  'sideMenuNative',
+  'sideMenuWebDesktop',
+  'sideMenuWebMobile',
+  'scrollView',
+  'scrollContent',
+  'contentOuter',
+  'contentWrapper',
+  'sectionTabsContainer',
+  'errorContainer',
+  'errorTitle',
+  'errorText',
+  'errorButton',
+  'errorButtonText',
+]
 
 /** Фрагменты, которые агрегат `getTravelDetailsStyles` раскладывает спредом. */
 const loadAggregateFragments = (colors: ThemedColors) => ({
@@ -140,22 +142,20 @@ describe('владение ключами стилей travel details', () => {
     expect(actual.filter((key) => !listed.has(key))).toEqual([])
   })
 
-  it('ни одно имя ключа не объявлено в двух наборах сразу, кроме пришпиленного долга', () => {
-    const duplicates = findDuplicateStyleKeys(loadStyleSets())
-    const unexpected = Object.fromEntries(
-      Object.entries(duplicates).filter(([key]) => !(key in KNOWN_OPEN_DUPLICATES)),
-    )
-
-    expect(unexpected).toEqual({})
+  it('ни одно имя ключа не объявлено в двух наборах сразу', () => {
+    expect(findDuplicateStyleKeys(loadStyleSets())).toEqual({})
   })
 
-  it('пришпиленный долг shell-набора не рассасывается молча', () => {
-    const duplicates = findDuplicateStyleKeys(loadStyleSets())
-    const pinned = Object.fromEntries(
-      Object.keys(KNOWN_OPEN_DUPLICATES).map((key) => [key, duplicates[key]]),
-    )
+  it('восемнадцать ключей оболочки #1711 остались только в shell-наборе', () => {
+    const sets = loadStyleSets()
 
-    expect(pinned).toEqual(KNOWN_OPEN_DUPLICATES)
+    for (const key of SHELL_OWNED_KEYS) {
+      const sources = Object.entries(sets)
+        .filter(([, styleSet]) => key in styleSet)
+        .map(([source]) => source)
+
+      expect([key, sources]).toEqual([key, ['shell']])
+    }
   })
 
   it('падает на искусственно заведённом дубле и называет оба источника', () => {
