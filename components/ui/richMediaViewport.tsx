@@ -77,9 +77,15 @@ const RichMediaViewportContext = createContext<RichMediaViewportGate | null>(nul
 
 export function RichMediaViewportProvider({
   scrollY,
+  settledOffsetY,
   children,
 }: {
   scrollY: Animated.Value
+  /**
+   * Смещение скролла из обычного JS-колбэка (`onScrollEndDrag` /
+   * `onMomentumScrollEnd`). Обязательный второй источник: см. эффект ниже.
+   */
+  settledOffsetY?: number
   children: React.ReactNode
 }) {
   const entriesRef = useRef(new Set<GateEntry>())
@@ -164,6 +170,28 @@ export function RichMediaViewportProvider({
       if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
     }
   }, [evaluateAll, isEnabled, remeasureAll, scrollY])
+
+  // Второй, надёжный источник положения скролла.
+  //
+  // `Animated.event` для этого экрана создаётся с `useNativeDriver: true`
+  // (`useTravelDetailsContainerViewModel.ts:187`), а JS-слушатель такого
+  // значения обновлений на Android не получает. Из-за этого `offsetRef`
+  // оставался нулём, `evaluateAll` после регистрации не вызывался ни разу, и
+  // любое фото, не попавшее в стартовую полосу видимости, не монтировалось
+  // НИКОГДА: пустая серая рамка и ноль сетевых запросов, сколько ни скролль.
+  // Страховочный таймер здесь не помогал — он срабатывает только при
+  // `windowY == null`, а измерение как раз проходило успешно.
+  //
+  // `onScrollEndDrag`/`onMomentumScrollEnd` — обычные JS-колбэки и приходят
+  // всегда. Полагаться на них достаточно: полоса монтирования размером с
+  // вьюпорт, и гейт и так задуман как «досчитать, когда жест успокоился».
+  useEffect(() => {
+    if (!isEnabled) return
+    if (typeof settledOffsetY !== 'number' || !Number.isFinite(settledOffsetY)) return
+    offsetRef.current = settledOffsetY
+    lastEvaluatedOffsetRef.current = settledOffsetY
+    remeasureAll()
+  }, [isEnabled, remeasureAll, settledOffsetY])
 
   const gate = useMemo<RichMediaViewportGate | null>(
     () => (isEnabled ? { register, measure } : null),

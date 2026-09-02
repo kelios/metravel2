@@ -29,6 +29,59 @@ describe('useRichMediaVisibility', () => {
     jest.useRealTimers()
   })
 
+  // Регрессия прод-сборки 21 (03.09.2026): фото в описании статьи оставались
+  // пустыми серыми рамками, и в logcat не было НИ ОДНОГО сетевого запроса,
+  // сколько ни скролль. `Animated.event` этого экрана создан с
+  // `useNativeDriver: true` (`useTravelDetailsContainerViewModel.ts:187`),
+  // поэтому JS-слушатель `scrollY` на Android не получал обновлений вовсе:
+  // кадр, измеренный ниже стартовой полосы, застревал скрытым навсегда.
+  // Страховочный таймер не спасал — он срабатывает только при `windowY == null`,
+  // а измерение проходило успешно. Здесь `scrollY` намеренно остаётся нулём:
+  // проверяется, что гейт открывается по settled-смещению обычного JS-колбэка
+  // (`onScrollEndDrag`/`onMomentumScrollEnd`).
+  it('раскрывает кадр по settledOffsetY, когда обновления Animated не приходят', () => {
+    ;(Platform as { OS: string }).OS = 'android'
+    const scrollY = new Animated.Value(0)
+    let captured: ReturnType<typeof useRichMediaVisibility> | null = null
+    // Кадр далеко под вьюпортом, пока экран не проскроллен.
+    let windowY = 4000
+
+    const Frame = () => {
+      const gate = useRichMediaVisibility(200)
+      captured = gate
+      // В jest ref попадает на инстанс RN-компонента, чей measureInWindow
+      // координат не отдаёт (см. тест про fallback-таймер ниже), поэтому
+      // измерение подменяется здесь — иначе проверять было бы нечего.
+      if (!gate.ref.current) {
+        gate.ref.current = {
+          measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) =>
+            cb(0, windowY, 360, 200),
+        } as never
+      }
+      return <Text testID="frame">{gate.visible ? 'visible' : 'hidden'}</Text>
+    }
+
+    const view = render(
+      <RichMediaViewportProvider scrollY={scrollY} settledOffsetY={0}>
+        <Frame />
+      </RichMediaViewportProvider>,
+    )
+    expect(view.getByTestId('frame').props.children).toBe('hidden')
+
+    // Жест закончился — кадр приехал во вьюпорт. Ни одного события `scrollY`.
+    windowY = 200
+    act(() => {
+      view.rerender(
+        <RichMediaViewportProvider scrollY={scrollY} settledOffsetY={3800}>
+          <Frame />
+        </RichMediaViewportProvider>,
+      )
+    })
+
+    expect(view.getByTestId('frame').props.children).toBe('visible')
+    expect(captured!.visible).toBe(true)
+  })
+
   it('без провайдера медиа всегда монтируется (web, статьи, тесты)', () => {
     const { getByTestId } = render(<Probe />)
     expect(getByTestId('probe').props.children).toBe('visible')

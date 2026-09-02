@@ -413,7 +413,7 @@ export default function TravelDetailsContainer() {
         showSkipToContentLink={showSkipToContentLink}
       />
 
-      <RichMediaViewportProvider scrollY={scrollY}>
+      <RichMediaViewportProvider scrollY={scrollY} settledOffsetY={nativeSettledScrollOffsetY}>
         <TravelDetailsCriticalShell
           travel={travel}
           isMobile={isMobile}
