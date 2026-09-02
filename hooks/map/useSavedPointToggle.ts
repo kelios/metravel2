@@ -194,6 +194,10 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
           // от `prefetchQuery`), а чтение коллекции — это 14 страниц под
           // `Promise.all` без ретраев: падение любой из них не должно
           // превращать успешное сохранение в «не удалось сохранить».
+          // Инвалидация обязательна: без неё кэш остаётся пустым, кнопка так и
+          // висит «＋» под success-тостом, а повторный тап проходит мимо
+          // idempotency-guard (он читает кэш) и создаёт дубль.
+          invalidate();
           return;
         }
         queryClient.setQueryData<ImportedPoint[]>(key, (old) => {

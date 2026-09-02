@@ -220,6 +220,9 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     // Кэш не подменён «коллекцией» из одной точки.
     const cached = client.getQueryData(['userPointsAll']);
     expect(cached === undefined || (cached as ImportedPoint[]).length !== 1).toBe(true);
+    // Чтение перезапускается: иначе кнопка осталась бы «＋» под success-тостом,
+    // а повторный тап прошёл бы мимо idempotency-guard и создал дубль.
+    await waitFor(() => expect(mockedApi.getAllPoints.mock.calls.length).toBeGreaterThan(1));
   });
 
   it('rolls back to not-saved when createPoint fails', async () => {
