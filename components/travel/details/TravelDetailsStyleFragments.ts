@@ -3,8 +3,21 @@ import { Platform } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
 
+/**
+ * Константы наборов стилей детали путешествия объявляются ТОЛЬКО здесь.
+ *
+ * Смещение шапки читает `TravelDetailsShellStyles` (боковое меню на web) и
+ * через него `useTravelDetailsLayout`; журнальный шрифт — тот же shell-набор и
+ * `components/travel/CTASection`. До #1712 каждый из них объявлял свою копию:
+ * значения совпадали, поэтому правка одной копии не меняла экран целиком и
+ * искать причину пришлось бы не там. Инвариант держит гейт
+ * `travelDetailsStyleKeyOwnership` — он сверяет не только ключи объектов
+ * стилей, но и объявления констант в модулях наборов.
+ */
 export const HEADER_OFFSET_DESKTOP = 72
 export const HEADER_OFFSET_MOBILE = 56
+export const JOURNAL_FONT_FAMILY =
+  "'Georgia', 'Times New Roman', 'Inter', serif"
 
 export const COMPACT_SPACING = {
   hero: {

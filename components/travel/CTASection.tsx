@@ -21,10 +21,7 @@ import { devWarn } from '@/utils/logger';
 import { buildTripPlanCreateHref } from '@/utils/tripPlanLinks';
 import { translate as i18nT } from '@/i18n'
 import { buildTravelPath } from '@/utils/travelSeo'
-
-
-const JOURNAL_FONT_FAMILY =
-  "'Georgia', 'Times New Roman', 'Inter', serif";
+import { JOURNAL_FONT_FAMILY } from '@/components/travel/details/TravelDetailsStyleFragments'
 
 interface CTASectionProps {
   travel: Travel;

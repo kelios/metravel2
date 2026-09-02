@@ -3,11 +3,15 @@ import { useMemo } from 'react'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import {
+  HEADER_OFFSET_DESKTOP,
+  HEADER_OFFSET_MOBILE,
+  JOURNAL_FONT_FAMILY,
+} from './TravelDetailsStyleFragments'
 
-export const HEADER_OFFSET_DESKTOP = 72
-export const HEADER_OFFSET_MOBILE = 56
-const JOURNAL_FONT_FAMILY =
-  "'Georgia', 'Times New Roman', 'Inter', serif"
+// Реэкспорт, а не второе объявление: `useTravelDetailsLayout` берёт смещение
+// отсюда, владелец значения — `TravelDetailsStyleFragments` (#1712).
+export { HEADER_OFFSET_DESKTOP, HEADER_OFFSET_MOBILE }
 
 export const getTravelDetailsShellStyles = (colors: ThemedColors) =>
   StyleSheet.create({
