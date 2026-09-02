@@ -1,9 +1,11 @@
 import { useCallback, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
+import { useSavedPointsCollection } from '@/hooks/useSavedPointsCollection';
+import { markPointsCollectionComplete } from '@/api/userPointsCollectionCache';
 import type { ImportedPoint } from '@/types/userPoints';
 
 /**
@@ -107,17 +109,10 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  // Same key/queryFn the «Мои точки» page uses, so the saved-state is shared and
-  // a save/remove here reflects there (and vice versa) once invalidated.
-  const pointsQuery = useQuery({
-    queryKey: queryKeys.userPointsAll(),
-    // #1706: только полная коллекция. Одиночный `perPage: 1000` возвращал первые
-    // 200 точек (серверный потолок, #752), и всё сохранённое за их пределами
-    // показывалось как несохранённое — кнопка предлагала сохранить дубль.
-    queryFn: () => userPointsApi.getAllPoints(),
-    enabled: enabled && isAuthenticated,
-    staleTime: 10 * 60 * 1000,
-  });
+  // Общий с «Моими точками» кэш-ключ, поэтому сохранение/снятие здесь видно там
+  // (и наоборот). Полнота коллекции — контракт `useSavedPointsCollection`
+  // (#1706, #1709), общий с карточкой путешествия.
+  const pointsQuery = useSavedPointsCollection({ enabled: enabled && isAuthenticated });
 
   const points = useMemo(() => readPointsFromUnknown(pointsQuery.data), [pointsQuery.data]);
 
@@ -189,6 +184,10 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
             queryKey: key,
             queryFn: () => userPointsApi.getAllPoints(),
           });
+          // Коллекция прочитана целиком в обход `useSavedPointsCollection` —
+          // отметку полноты (#1709) ставим сами, иначе прерванный ранее стрим
+          // так и держал бы кэш «частичным».
+          markPointsCollectionComplete(queryClient);
         } catch {
           // Точка УЖЕ создана на сервере. `ensureQueryData` реджектится (в отличие
           // от `prefetchQuery`), а чтение коллекции — это 14 страниц под

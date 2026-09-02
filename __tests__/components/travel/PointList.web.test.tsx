@@ -38,8 +38,14 @@ jest.mock('@tanstack/react-query', () => ({
     isLoading: false,
     error: null,
   })),
+  // Заглушка клиента должна отвечать на всё, что дерево реально дёргает:
+  // #1709 добавил чтение признака полноты коллекции прямо на рендере.
   useQueryClient: () => ({
     invalidateQueries: mockInvalidate,
+    getQueryData: jest.fn(() => undefined),
+    setQueryData: jest.fn(),
+    cancelQueries: jest.fn(async () => undefined),
+    ensureQueryData: jest.fn(async () => []),
   }),
 }));
 

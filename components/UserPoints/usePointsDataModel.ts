@@ -2,6 +2,12 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
+import {
+  USER_POINTS_COLLECTION_STALE_TIME_MS,
+  readPointsPaginationState,
+  writePointsPaginationState,
+  type PointsPaginationState,
+} from '@/api/userPointsCollectionCache';
 import type { ImportedPoint } from '@/types/userPoints';
 import { useFilterOptions } from '@/hooks/useFilterOptions';
 import type { PointFilters } from '@/types/userPoints';
@@ -18,11 +24,6 @@ type Params = {
   searchQuery: string;
   currentLocation: { lat?: number; lng?: number } | null;
   defaultPointColors: string[];
-};
-
-type PointsPaginationState = {
-  nextPage: number;
-  complete: boolean;
 };
 
 export const usePointsDataModel = ({
@@ -68,7 +69,10 @@ export const usePointsDataModel = ({
     queryKey: queryKeys.userPointsAll(),
     queryFn: async () => {
       const { items } = await userPointsApi.getPointsPage(1, defaultPerPage);
-      queryClient.setQueryData<PointsPaginationState>(queryKeys.userPointsPagination(), {
+      // #1709: пока докачка не закончилась, в кэше лежит ПРЕФИКС коллекции.
+      // Отметка полноты — часть контракта общего ключа: потребители, которым
+      // нужна вся коллекция, обязаны её прочитать прежде, чем поверить кэшу.
+      writePointsPaginationState(queryClient, {
         nextPage: 2,
         // A short page is the end. An oversized page means the backend ignored
         // perPage and returned the complete set in one response (#752).
@@ -76,7 +80,7 @@ export const usePointsDataModel = ({
       });
       return items;
     },
-    staleTime: 10 * 60 * 1000,
+    staleTime: USER_POINTS_COLLECTION_STALE_TIME_MS,
   });
 
   const points = useMemo(() => {
@@ -94,11 +98,11 @@ export const usePointsDataModel = ({
     if (pointsQuery.isLoading || pointsQuery.error) return;
     const cached = queryClient.getQueryData<ImportedPoint[]>(queryKeys.userPointsAll());
     const count = Array.isArray(cached) ? cached.length : 0;
-    let pagination = queryClient.getQueryData<PointsPaginationState>(queryKeys.userPointsPagination());
+    let pagination: PointsPaginationState | undefined = readPointsPaginationState(queryClient);
     if (!pagination) {
       if (count !== defaultPerPage) return;
       pagination = { nextPage: 2, complete: false };
-      queryClient.setQueryData(queryKeys.userPointsPagination(), pagination);
+      writePointsPaginationState(queryClient, pagination);
     }
     if (pagination.complete) return;
     if (backgroundLoadRef.current.running) return;
@@ -131,17 +135,11 @@ export const usePointsDataModel = ({
           // paginating (returns the full set every time, see #752) or we are
           // past the end — stop instead of re-downloading the same payload.
           if (!hasMore || added === 0) {
-            queryClient.setQueryData<PointsPaginationState>(queryKeys.userPointsPagination(), {
-              nextPage: page,
-              complete: true,
-            });
+            writePointsPaginationState(queryClient, { nextPage: page, complete: true });
             break;
           }
           page += 1;
-          queryClient.setQueryData<PointsPaginationState>(queryKeys.userPointsPagination(), {
-            nextPage: page,
-            complete: false,
-          });
+          writePointsPaginationState(queryClient, { nextPage: page, complete: false });
         }
       } finally {
         if (backgroundLoadRef.current.token === token) {

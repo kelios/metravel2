@@ -1,9 +1,7 @@
 import { useCallback, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 
-import { userPointsApi } from '@/api/userPoints';
-import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
+import { useSavedPointsCollection } from '@/hooks/useSavedPointsCollection';
 import {
   buildSavedPointCoordIndex,
   findSavedPointInIndex,
@@ -35,14 +33,10 @@ function readPointsFromUnknown(data: unknown): ImportedPoint[] {
 export function usePointListSavedModel() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  const pointsQuery = useQuery({
-    queryKey: queryKeys.userPointsAll(),
-    // #1706: см. `useSavedPointToggle` — одна страница отдавала максимум 200
-    // точек из коллекции, и отметка «сохранено» терялась на всём хвосте.
-    queryFn: () => userPointsApi.getAllPoints(),
-    enabled: isAuthenticated,
-    staleTime: 10 * 60 * 1000,
-  });
+  // Контракт полноты коллекции — общий с map-попапом (#1706: одна страница
+  // отдавала максимум 200 точек и отметка «сохранено» терялась на хвосте;
+  // #1709: недокачанный префикс от экрана «Мои точки» — не полная коллекция).
+  const pointsQuery = useSavedPointsCollection({ enabled: isAuthenticated });
 
   const points = useMemo(() => readPointsFromUnknown(pointsQuery.data), [pointsQuery.data]);
   const coordIndex = useMemo(() => buildSavedPointCoordIndex(points), [points]);
