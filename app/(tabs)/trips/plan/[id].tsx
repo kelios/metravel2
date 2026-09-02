@@ -724,9 +724,10 @@ export default function PlannedTripScreen() {
 
             {activeTab === 'route' ? (
               <View style={styles.panel} testID="trip-plan-panel-route">
-                {/* #1495: на телефоне карта — главный элемент вкладки, а панель
-                    маршрута уезжает в шторку. Раскладку выбирает экран, а не
-                    RouteBuilder: так desktop и тесты остаются на стеке. */}
+                {/* #1495/#1691: на телефоне карта — главный элемент вкладки: она
+                    идёт первым блоком, панель маршрута лежит обычным контентом
+                    под ней. Раскладку выбирает экран, а не RouteBuilder: так
+                    desktop и тесты остаются на стеке. */}
                 <RouteBuilder
                   trip={trip}
                   layout={isMobile ? 'mapFirst' : 'stack'}
