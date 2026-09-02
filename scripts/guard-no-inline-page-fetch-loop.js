@@ -22,11 +22,13 @@ const OUTPUT_CONTRACT_VERSION = 1
 // расчёт, guard падает — значит правило переехало, и гейт ослеп бы молча.
 const CANONICAL_FILE = 'utils/fetchAllPages.ts'
 
-// Исключения по конвенции соседних guard'ов. Пуст и должен таким остаться:
-// своя обвязка докачки допустима, но расчёт числа страниц она обязана брать из
-// `resolveTotalPages()` — так живёт `api/quests.ts` с его спекулятивными
-// страницами и 404-как-концом каталога.
-const ALLOWED_FILES = new Set()
+// Исключения: путь → причина. Пуст, и это не случайность — своя обвязка докачки
+// допустима, но расчёт числа страниц она обязана брать из `resolveTotalPages()`
+// (так живёт `api/quests.ts` с его спекулятивными страницами и 404-как-концом
+// каталога). Отдушина всё же нужна: гейт эвристический, и найденное ложное
+// срабатывание не должно требовать отключения всей проверки. Цена входа —
+// написанная причина, её наличие проверяет тест.
+const ALLOWED_FILES = new Map()
 
 const IGNORED_DIRS = new Set([
   '.git',
@@ -72,8 +74,22 @@ const TOTAL_OPERAND_REGEX = /\b(?:total|count|totalItems|totalCount)\b/i
 // гейт на чисто отрисовочном коде, и погасить его было бы нечем.
 const PAGE_FETCH_MARKER_REGEX =
   /\b(?:loadPage|getPage|fetchPage|fetchPages|fetchAllPages|perPage|per_page|page_size|pageSize|pageNumber)\s*[(:=,)]|[?&]page=/i
-// Вторая форма того же признака: параллельный заход по диапазону страниц.
-const PARALLEL_RANGE_REGEX = /Promise\.all(?:Settled)?\s*\(\s*(?:\/\/[^\n]*\n\s*)*Array\.from\s*\(\s*\{\s*length/
+
+// Вторая форма того же признака: параллельный заход по диапазону. Два условия
+// проверяются ОТДЕЛЬНО и не обязаны быть вложены друг в друга — иначе признак
+// зависел бы от форматирования: вынесенный в переменную диапазон
+// (`const rest = Array.from({length: n}, …); await Promise.all(rest.map(load))`)
+// читается естественнее вложенного и снимал бы защиту.
+const PARALLEL_FANOUT_REGEX = /Promise\.all(?:Settled)?\s*\(/
+const RANGE_CONSTRUCTOR_REGEX = /Array\.from\s*\(\s*\{\s*length|\[\s*\.\.\.\s*Array\s*\(/
+
+// Числовой делитель сам по себе ничего не говорит: `Math.ceil(count / 3)` — это
+// раскладка по колонкам, а не страницы. Литерал засчитывается, только если ровно
+// это же число рядом объявлено размером страницы (`perPage: 100` + `total / 100` —
+// то самое деление на ЗАПРОШЕННЫЙ размер, из-за которого терялся хвост).
+const NUMERIC_DIVISOR_REGEX = /^\s*(\d+)\s*$/
+const PAGE_SIZE_DECLARATION_SOURCE = '(?:perPage|per_page|page_size|pageSize|PAGE_SIZE)[^\\n]{0,40}?\\b'
+
 const FETCH_CONTEXT_RADIUS = 30
 
 const normalizePath = (value) => String(value || '').replace(/\\/g, '/')
@@ -120,11 +136,22 @@ const isPageCountExpression = (expression) => {
   return TOTAL_OPERAND_REGEX.test(numerator) && denominator.trim().length > 0
 }
 
-const hasFetchContext = (lines, lineIndex) => {
+const readContextWindow = (lines, lineIndex) => {
   const from = Math.max(0, lineIndex - FETCH_CONTEXT_RADIUS)
   const to = Math.min(lines.length, lineIndex + FETCH_CONTEXT_RADIUS + 1)
-  const window = lines.slice(from, to).filter((line) => !isCommentLine(line)).join('\n')
-  return PAGE_FETCH_MARKER_REGEX.test(window) || PARALLEL_RANGE_REGEX.test(window)
+  return lines.slice(from, to).filter((line) => !isCommentLine(line)).join('\n')
+}
+
+const hasFetchContext = (contextWindow) =>
+  PAGE_FETCH_MARKER_REGEX.test(contextWindow) ||
+  (PARALLEL_FANOUT_REGEX.test(contextWindow) && RANGE_CONSTRUCTOR_REGEX.test(contextWindow))
+
+// Литерал в делителе засчитывается только как объявленный рядом размер страницы.
+const isDivisorMeaningful = (expression, contextWindow) => {
+  const operands = splitTopLevelDivision(expression)
+  const literal = operands && NUMERIC_DIVISOR_REGEX.exec(operands[1])
+  if (!literal) return true
+  return new RegExp(`${PAGE_SIZE_DECLARATION_SOURCE}${literal[1]}\\b`, 'i').test(contextWindow)
 }
 
 const findPageCountLines = ({ content }) => {
@@ -137,7 +164,7 @@ const findPageCountLines = ({ content }) => {
     let match = PAGE_COUNT_REGEX.exec(line)
     while (match) {
       if (isPageCountExpression(match[1])) {
-        hits.push({ line: index + 1, snippet: line.trim(), lineIndex: index })
+        hits.push({ line: index + 1, snippet: line.trim(), lineIndex: index, expression: match[1] })
         break
       }
       match = PAGE_COUNT_REGEX.exec(line)
@@ -153,7 +180,10 @@ const findViolationsInSource = ({ filePath, content }) => {
 
   const { lines, hits } = findPageCountLines({ content })
   return hits
-    .filter((hit) => hasFetchContext(lines, hit.lineIndex))
+    .filter((hit) => {
+      const contextWindow = readContextWindow(lines, hit.lineIndex)
+      return hasFetchContext(contextWindow) && isDivisorMeaningful(hit.expression, contextWindow)
+    })
     .map((hit) => ({ file: normalizedPath, line: hit.line, snippet: hit.snippet }))
 }
 
@@ -273,10 +303,14 @@ module.exports = {
   SOURCE_EXTENSIONS,
   PAGE_COUNT_REGEX,
   PAGE_FETCH_MARKER_REGEX,
+  PARALLEL_FANOUT_REGEX,
+  RANGE_CONSTRUCTOR_REGEX,
   parseArgs,
   shouldScanFile,
   isCommentLine,
   isPageCountExpression,
+  isDivisorMeaningful,
+  hasFetchContext,
   findViolationsInSource,
   evaluateGuard,
   buildJsonResult,

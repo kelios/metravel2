@@ -73,6 +73,57 @@ describe('guard-no-inline-page-fetch-loop', () => {
     expect(violations).toHaveLength(1)
   })
 
+  // Признак параллельной докачки не должен зависеть от форматирования: обе
+  // записи ниже — тот же цикл, просто диапазон вынесен или собран через spread.
+  it.each([
+    [
+      'диапазон вынесен в переменную',
+      [
+        'const restPages = Array.from({ length: pages - 1 }, (_, i) => i + 2)',
+        'const rest = await Promise.all(restPages.map((p) => loadItems({ page: p })))',
+      ],
+    ],
+    [
+      'диапазон собран через [...Array(n)]',
+      ['const rest = await Promise.all([...Array(pages - 1)].map((_, i) => loadItems({ page: i + 2 })))'],
+    ],
+  ])('ловит параллельную докачку, где %s', (_label, tail) => {
+    const violations = findViolationsInSource({
+      filePath: 'hooks/useExampleAll.ts',
+      content: [
+        'const first = await loadItems({ page: 1 })',
+        'const pages = Math.ceil(first.total / first.items.length)',
+        ...tail,
+      ].join('\n'),
+    })
+
+    expect(violations).toHaveLength(1)
+  })
+
+  // Числовой делитель сам по себе ничего не значит: `count / 3` — это раскладка
+  // по колонкам, и краснеть на ней только из-за слова `pageSize` рядом нельзя.
+  it.each([
+    ['раскладку по колонкам', ['const pageSize = 20', 'const rows = Math.ceil(count / 3)']],
+    ['половину от total', ['const half = Math.ceil(total / 2)', 'const onMore = () => loadPage(2)']],
+  ])('не считает нарушением %s', (_label, content) => {
+    expect(findViolationsInSource({ filePath: 'components/Example.tsx', content: content.join('\n') })).toEqual([])
+  })
+
+  // Зато деление на ЗАПРОШЕННЫЙ размер страницы — ровно дефект #1705: сервер
+  // урезал страницу своим потолком, а клиент поделил на то, что просил.
+  it('ловит деление на запрошенный размер страницы, объявленный рядом', () => {
+    const violations = findViolationsInSource({
+      filePath: 'api/exampleList.ts',
+      content: [
+        'const perPage = 100',
+        'const pages = Math.ceil(total / 100)',
+        'await loadPage(2)',
+      ].join('\n'),
+    })
+
+    expect(violations).toHaveLength(1)
+  })
+
   // Голый `await` маркером быть не может: первый же асинхронный хендлер в
   // отрисовочном пагинаторе покрасил бы гейт, и погасить его было бы нечем.
   it('не краснеет на пагинаторе, рядом с которым появился асинхронный хендлер', () => {
@@ -175,10 +226,15 @@ describe('guard-no-inline-page-fetch-loop', () => {
     expect(result.reason).toContain(CANONICAL_FILE)
   })
 
-  // Исключений у гейта нет и быть не должно: своя обвязка докачки допустима,
-  // но расчёт числа страниц она обязана брать из `resolveTotalPages()`.
-  it('не держит рантайм-исключений', () => {
-    expect(Array.from(ALLOWED_FILES)).toEqual([])
+  // Отдушина есть (гейт эвристический), но платная: у каждой записи обязана
+  // быть написанная причина. Сейчас список пуст — своя обвязка докачки
+  // допустима, но расчёт числа страниц она берёт из `resolveTotalPages()`.
+  it('держит исключения только с написанной причиной', () => {
+    expect(Array.from(ALLOWED_FILES.keys())).toEqual([])
+    for (const [file, reason] of ALLOWED_FILES) {
+      expect(typeof reason === 'string' && reason.trim().length > 0).toBe(true)
+      expect(file).toEqual(expect.any(String))
+    }
   })
 
   it.each([
