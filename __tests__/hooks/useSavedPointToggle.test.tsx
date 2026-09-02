@@ -8,7 +8,7 @@ import type { ImportedPoint } from '@/types/userPoints';
 
 jest.mock('@/api/userPoints', () => ({
   userPointsApi: {
-    getPoints: jest.fn(),
+    getAllPoints: jest.fn(),
     createPoint: jest.fn(),
     deletePoint: jest.fn(),
   },
@@ -73,7 +73,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
   afterEach(() => queryClient.clear());
 
   it('derives isSaved from the shared userPointsAll cache', async () => {
-    mockedApi.getPoints.mockResolvedValue([makePoint()]);
+    mockedApi.getAllPoints.mockResolvedValue([makePoint()]);
     const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
     await waitFor(() => expect(result.current.isSaved).toBe(true));
     expect(result.current.savedPointId).toBe(42);
@@ -82,7 +82,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
   it('createPoint flips isSaved to true immediately, before the server responds', async () => {
     // Сначала ничего не сохранено; после создания рефетч (invalidate) отдаёт
     // созданную точку — как реальный сервер.
-    mockedApi.getPoints.mockResolvedValueOnce([]).mockResolvedValue([makePoint({ id: 777 })]);
+    mockedApi.getAllPoints.mockResolvedValueOnce([]).mockResolvedValue([makePoint({ id: 777 })]);
     const created = deferred<ImportedPoint>();
     mockedApi.createPoint.mockReturnValue(created.promise as any);
 
@@ -113,7 +113,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
   });
 
   it('rolls back to not-saved when createPoint fails', async () => {
-    mockedApi.getPoints.mockResolvedValue([]);
+    mockedApi.getAllPoints.mockResolvedValue([]);
     mockedApi.createPoint.mockRejectedValue(new Error('network'));
 
     const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
@@ -129,7 +129,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
   });
 
   it('removeSaved flips isSaved to false immediately, before the server responds', async () => {
-    mockedApi.getPoints.mockResolvedValue([makePoint()]);
+    mockedApi.getAllPoints.mockResolvedValue([makePoint()]);
     const removed = deferred<unknown>();
     mockedApi.deletePoint.mockReturnValue(removed.promise as any);
 
@@ -153,8 +153,8 @@ describe('useSavedPointToggle — optimistic toggle', () => {
   });
 
   it('resyncs (point returns) when removeSaved fails', async () => {
-    // Первый getPoints — точка есть; после провала delete инвалидация рефетчит и точка возвращается.
-    mockedApi.getPoints.mockResolvedValue([makePoint()]);
+    // Первый getAllPoints — точка есть; после провала delete инвалидация рефетчит и точка возвращается.
+    mockedApi.getAllPoints.mockResolvedValue([makePoint()]);
     mockedApi.deletePoint.mockRejectedValue(new Error('boom'));
 
     const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });

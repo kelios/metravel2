@@ -15,6 +15,7 @@ import type {
 } from '@/types/userPoints';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 import { translate as i18nT } from '@/i18n';
+import { fetchAllPages, type PaginatedPage } from '@/utils/fetchAllPages';
 
 type FileInput = File | DocumentPickerAsset;
 
@@ -25,6 +26,73 @@ export interface ImportOptions {
 }
 
  const USER_POINTS_LIST_TIMEOUT_MS = 30000;
+
+/**
+ * Серверный потолок страницы `/api/user-points/` (`UserPointPaginator.max_page_size`,
+ * #752). Просить больше бессмысленно: ответ всё равно урежется до 200, а клиент,
+ * не сверивший длину с `count`, молча потеряет хвост (#1706).
+ */
+const USER_POINTS_MAX_PAGE_SIZE = 200;
+
+const buildPointsEndpoint = (filters?: PointFilters): string => {
+  const params = new URLSearchParams();
+
+  if (filters?.colors && filters.colors.length > 0) {
+    params.append('colors', filters.colors.join(','));
+  }
+  if (filters?.statuses && filters.statuses.length > 0) {
+    params.append('statuses', filters.statuses.join(','));
+  }
+  if (filters?.search) {
+    params.append('search', filters.search);
+  }
+  if (filters?.sortBy) {
+    params.append('sortBy', filters.sortBy);
+  }
+  if (filters?.sortOrder) {
+    params.append('sortOrder', filters.sortOrder);
+  }
+
+  if (typeof filters?.page === 'number' && Number.isFinite(filters.page) && filters.page > 0) {
+    params.append('page', String(filters.page));
+  }
+  if (
+    typeof filters?.perPage === 'number' &&
+    Number.isFinite(filters.perPage) &&
+    filters.perPage > 0
+  ) {
+    params.append('perPage', String(filters.perPage));
+  }
+
+  const queryString = params.toString();
+  return queryString ? `/user-points/?${queryString}` : '/user-points/';
+};
+
+/**
+ * Разбирает ответ списка точек, сохраняя `count`/`total`. Эндпоинт отвечает
+ * по-разному: голым массивом (когда пагинационных параметров нет вовсе) или
+ * конвертом `{ count, next, previous, results }`. Без пагинации весь набор уже
+ * в массиве, поэтому `total` — его длина.
+ */
+const readPointsPayload = (raw: unknown): PaginatedPage<ImportedPoint> => {
+  if (Array.isArray(raw)) {
+    const items = raw as ImportedPoint[];
+    return { items, total: items.length };
+  }
+  if (raw && typeof raw === 'object') {
+    const rec = raw as Record<string, unknown>;
+    const items = Array.isArray(rec.data)
+      ? (rec.data as ImportedPoint[])
+      : Array.isArray(rec.results)
+        ? (rec.results as ImportedPoint[])
+        : [];
+    const rawTotal = rec.count ?? rec.total;
+    const total =
+      typeof rawTotal === 'number' && Number.isFinite(rawTotal) ? rawTotal : items.length;
+    return { items, total };
+  }
+  return { items: [], total: 0 };
+};
 
 const normalizeImportPointsResult = (raw: unknown): ImportPointsResult => {
   if (!raw || typeof raw !== 'object') {
@@ -230,46 +298,31 @@ export const userPointsApi = {
   },
 
   async getPoints(filters?: PointFilters) {
-    const params = new URLSearchParams();
-    
-    if (filters?.colors && filters.colors.length > 0) {
-      params.append('colors', filters.colors.join(','));
-    }
-    if (filters?.statuses && filters.statuses.length > 0) {
-      params.append('statuses', filters.statuses.join(','));
-    }
-    if (filters?.search) {
-      params.append('search', filters.search);
-    }
-    if (filters?.sortBy) {
-      params.append('sortBy', filters.sortBy);
-    }
-    if (filters?.sortOrder) {
-      params.append('sortOrder', filters.sortOrder);
-    }
+    const raw = await apiClient.get<unknown>(
+      buildPointsEndpoint(filters),
+      USER_POINTS_LIST_TIMEOUT_MS,
+    );
+    return readPointsPayload(raw).items;
+  },
 
-    if (typeof filters?.page === 'number' && Number.isFinite(filters.page) && filters.page > 0) {
-      params.append('page', String(filters.page));
-    }
-    if (
-      typeof filters?.perPage === 'number' &&
-      Number.isFinite(filters.perPage) &&
-      filters.perPage > 0
-    ) {
-      params.append('perPage', String(filters.perPage));
-    }
-    
-    const queryString = params.toString();
-    const endpoint = queryString ? `/user-points/?${queryString}` : '/user-points/';
-
-    const raw = await apiClient.get<unknown>(endpoint, USER_POINTS_LIST_TIMEOUT_MS);
-    if (Array.isArray(raw)) return raw as ImportedPoint[];
-    if (raw && typeof raw === 'object') {
-      const rec = raw as Record<string, unknown>;
-      if (Array.isArray(rec.data)) return rec.data as ImportedPoint[];
-      if (Array.isArray(rec.results)) return rec.results as ImportedPoint[];
-    }
-    return [] as ImportedPoint[];
+  /**
+   * Полная коллекция точек пользователя без потолка страницы.
+   *
+   * `/api/user-points/` режет страницу серверным `max_page_size = 200` (#752),
+   * поэтому «взять всё одним запросом» через `perPage: 1000` молча отдавало
+   * только первые 200 записей (#1706). Просим ровно серверный потолок и
+   * дочитываем остаток по `count` общим хелпером; если потолок на сервере
+   * изменится, `fetchAllPages` посчитает страницы по фактически отданному
+   * размеру и всё равно дочитает всё.
+   */
+  async getAllPoints(filters?: Omit<PointFilters, 'page' | 'perPage'>): Promise<ImportedPoint[]> {
+    return fetchAllPages<ImportedPoint>(async (page) => {
+      const raw = await apiClient.get<unknown>(
+        buildPointsEndpoint({ ...filters, page, perPage: USER_POINTS_MAX_PAGE_SIZE }),
+        USER_POINTS_LIST_TIMEOUT_MS,
+      );
+      return readPointsPayload(raw);
+    });
   },
 
   /**

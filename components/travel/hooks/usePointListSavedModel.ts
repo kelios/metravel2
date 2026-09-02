@@ -37,7 +37,9 @@ export function usePointListSavedModel() {
 
   const pointsQuery = useQuery({
     queryKey: queryKeys.userPointsAll(),
-    queryFn: () => userPointsApi.getPoints({ page: 1, perPage: 1000 }),
+    // #1706: см. `useSavedPointToggle` — одна страница отдавала максимум 200
+    // точек из коллекции, и отметка «сохранено» терялась на всём хвосте.
+    queryFn: () => userPointsApi.getAllPoints(),
     enabled: isAuthenticated,
     staleTime: 10 * 60 * 1000,
   });

@@ -111,7 +111,10 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
   // a save/remove here reflects there (and vice versa) once invalidated.
   const pointsQuery = useQuery({
     queryKey: queryKeys.userPointsAll(),
-    queryFn: () => userPointsApi.getPoints({ page: 1, perPage: 1000 }),
+    // #1706: только полная коллекция. Одиночный `perPage: 1000` возвращал первые
+    // 200 точек (серверный потолок, #752), и всё сохранённое за их пределами
+    // показывалось как несохранённое — кнопка предлагала сохранить дубль.
+    queryFn: () => userPointsApi.getAllPoints(),
     enabled: enabled && isAuthenticated,
     staleTime: 10 * 60 * 1000,
   });
