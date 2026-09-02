@@ -277,21 +277,25 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
       : estimateRouteDurationSeconds(distanceMeters, transportMode)
   // Ярус не должен пустеть между второй точкой и ответом роутинга: `addPoint`
   // обнуляет геометрию (stores/routeStore.ts), а выбор старта к этому моменту
-  // уже уступил слот. Пока маршрут считается, строку держит статус без цифр.
-  const routeAwaitingGeometry =
-    isRouteMode && routePointCount >= 2 && !hasRouteDistance && !!routingLoading
+  // уже уступил слот. Признак «геометрии ещё нет» — именно `null` из стора
+  // (MapMobileLayout: `route?.distance ?? null`), а НЕ `routingLoading`: тот
+  // включается только после дебаунса запроса (useRouting.ts, ROUTE_DEBOUNCE_MS),
+  // и на это окно ярус снова пустел бы, дёргая смещение поповеров на 50dp.
+  const routeAwaitingGeometry = isRouteMode && routePointCount >= 2 && routeDistance == null
   const routeSummaryKey = hasRouteDistance
     ? `${transportMode}:${Math.round(distanceMeters)}:${Math.round(durationSeconds)}`
-    : routeAwaitingGeometry
-      ? 'pending'
-      : ''
+    : ''
   const [dismissedRouteSummaryKey, setDismissedRouteSummaryKey] = useState('')
+  // Крестик есть только у готовой сводки: ярус ожидания транзитный, а его
+  // dismiss пришлось бы хранить отдельным ключом — один раз закрытое ожидание
+  // гасило бы ярус и у всех последующих построений маршрута.
   const showRouteSummary =
-    (hasRouteDistance || routeAwaitingGeometry) && dismissedRouteSummaryKey !== routeSummaryKey
+    routeAwaitingGeometry || (hasRouteDistance && dismissedRouteSummaryKey !== routeSummaryKey)
   const routeDistanceText = formatRouteDistance(distanceMeters)
   const routeDurationText = formatRouteDuration(durationSeconds)
-  const routeSummaryStatus =
-    routingError === ROUTING_DIRECT_LINE
+  const routeSummaryStatus = routeAwaitingGeometry
+    ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.marshrut_obnovlyaetsya_eab45ca3')
+    : routingError === ROUTING_DIRECT_LINE
       ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pryamaya_liniya_79c7e056')
       : routingLoading
         ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.marshrut_obnovlyaetsya_eab45ca3')
@@ -654,11 +658,9 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
           </View>
         )}
 
+        {/* Одна строка вместо карточки в два яруса; контракт яруса —
+            docs/features/map.md → «Route mobile chrome contract» (#1699). */}
         {showRouteSummary && (
-          // Одна строка вместо карточки в два яруса: статус усекается первым
-          // (flexShrink), метрики держат ширину — цифры важнее подписи (#1699).
-          // Подпись «прямая линия» из метрик убрана: тот же смысл уже стоит
-          // статусом строки, дублировать его в одном ряду незачем.
           <View
             style={[styles.routeSummaryCard, { maxWidth: routeRowWidth }]}
             pointerEvents="auto"
@@ -693,19 +695,21 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 )}
               </View>
             </View>
-            <Pressable
-              testID="map-mobile-route-summary-close"
-              onPress={() => setDismissedRouteSummaryKey(routeSummaryKey)}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.skryt_svodku_marshruta_9d781c25')}
-              style={styles.routeSummaryCloseTouch}
-            >
-              {({ pressed }) => (
-                <View style={[styles.routeSummaryClose, pressed && styles.routeSummaryClosePressed]}>
-                  <Feather name="x" size={15} color={colors.textMuted} />
-                </View>
-              )}
-            </Pressable>
+            {!routeAwaitingGeometry && (
+              <Pressable
+                testID="map-mobile-route-summary-close"
+                onPress={() => setDismissedRouteSummaryKey(routeSummaryKey)}
+                accessibilityRole="button"
+                accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.skryt_svodku_marshruta_9d781c25')}
+                style={styles.routeSummaryCloseTouch}
+              >
+                {({ pressed }) => (
+                  <View style={[styles.routeSummaryClose, pressed && styles.routeSummaryClosePressed]}>
+                    <Feather name="x" size={15} color={colors.textMuted} />
+                  </View>
+                )}
+              </Pressable>
+            )}
           </View>
         )}
       </View>

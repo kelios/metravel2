@@ -169,8 +169,8 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
-        routeDistance={0}
-        routeDuration={0}
+        routeDistance={null}
+        routeDuration={null}
         routingLoading
       />,
     )
@@ -181,6 +181,78 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     // Пустых чипов метрик в этом состоянии быть не должно.
     expect(queryByText(/км|м$/)).toBeNull()
     expect(queryByText(/мин|ч$/)).toBeNull()
+  })
+
+  it('ярус занят и в дебаунс-окне, пока routingLoading ещё не включился', () => {
+    // useRouting запускает запрос через setTimeout(ROUTE_DEBOUNCE_MS): между
+    // второй точкой и включением loading есть окно, в котором ярус пустел бы,
+    // а смещение поповеров прыгало на 50dp и обратно. Признак ожидания —
+    // отсутствие геометрии в сторе (`route?.distance ?? null`), не loading.
+    const { getByTestId, queryByTestId, getByText } = render(
+      <MapMobileTopOverlay
+        {...(routeProps as any)}
+        routePointCount={2}
+        routeDistance={null}
+        routeDuration={null}
+      />,
+    )
+
+    expect(getByTestId('map-mobile-route-summary')).toBeTruthy()
+    expect(queryByTestId('map-mobile-route-start-selector')).toBeNull()
+    expect(getByText('Маршрут обновляется')).toBeTruthy()
+  })
+
+  it('у яруса ожидания нет крестика: закрыть можно только готовую сводку', () => {
+    // Иначе dismiss ожидания пришлось бы хранить отдельным ключом, и один раз
+    // закрытое ожидание гасило бы ярус у всех последующих построений маршрута.
+    const pending = render(
+      <MapMobileTopOverlay
+        {...(routeProps as any)}
+        routePointCount={2}
+        routeDistance={null}
+        routeDuration={null}
+        routingLoading
+      />,
+    )
+    expect(pending.queryByTestId('map-mobile-route-summary-close')).toBeNull()
+    pending.unmount()
+
+    const ready = render(
+      <MapMobileTopOverlay
+        {...(routeProps as any)}
+        routePointCount={2}
+        routeDistance={3600}
+        routeDuration={660}
+      />,
+    )
+    expect(ready.getByTestId('map-mobile-route-summary-close')).toBeTruthy()
+  })
+
+  it('закрытая сводка не гасит ярус ожидания у следующего маршрута', () => {
+    const { getByTestId, queryByTestId, getByText, rerender } = render(
+      <MapMobileTopOverlay
+        {...(routeProps as any)}
+        routePointCount={2}
+        routeDistance={3600}
+        routeDuration={660}
+      />,
+    )
+
+    fireEvent.press(getByTestId('map-mobile-route-summary-close'))
+    expect(queryByTestId('map-mobile-route-summary')).toBeNull()
+
+    // Точку сдвинули — геометрия обнулилась, идёт новый расчёт.
+    rerender(
+      <MapMobileTopOverlay
+        {...(routeProps as any)}
+        routePointCount={2}
+        routeDistance={null}
+        routeDuration={null}
+        routingLoading
+      />,
+    )
+    expect(getByTestId('map-mobile-route-summary')).toBeTruthy()
+    expect(getByText('Маршрут обновляется')).toBeTruthy()
   })
 
   it('крестик скрывает сводку, а новый маршрут показывает её снова', () => {
