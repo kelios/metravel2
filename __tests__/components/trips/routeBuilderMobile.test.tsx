@@ -52,10 +52,31 @@ jest.mock('@/components/trips/planning/TripRoutePreviewEngine', () => {
   }
 })
 
+// Карта заглушена, но отдаёт наружу то, чем управляет раскладка: растянута ли
+// она на сцену (`fill`) и какую точку её попросили показать (`focusPoint`).
 jest.mock('@/components/trips/planning/TripPlanRouteMap', () => {
-  return function TripPlanRouteMap() {
-    const { View } = require('react-native')
-    return <View testID="trip-plan-route-map" />
+  return function TripPlanRouteMap({
+    fill,
+    focusPoint,
+    onAddPointFromMap,
+  }: {
+    fill?: boolean
+    focusPoint?: { lat: number; lng: number; token: number } | null
+    onAddPointFromMap?: (coords: { lat: number; lng: number }) => void
+  }) {
+    const { Pressable, Text, View } = require('react-native')
+    return (
+      <View testID="trip-plan-route-map">
+        <Text testID="route-map-fill">{String(!!fill)}</Text>
+        <Text testID="route-map-focus">
+          {focusPoint ? `${focusPoint.lat},${focusPoint.lng}` : 'none'}
+        </Text>
+        <Pressable
+          testID="route-map-click"
+          onPress={() => onAddPointFromMap?.({ lat: 53.95, lng: 27.61 })}
+        />
+      </View>
+    )
   }
 })
 
@@ -223,5 +244,67 @@ describe('RouteBuilder — мобильная раскладка вкладки 
     expect(
       within(getByTestId('route-builder-point-1')).queryByTestId('route-builder-edit-form'),
     ).toBeNull()
+  })
+})
+
+// #1495/#1691: раскладку `mapFirst` собирает уже не шторка, а RouteBuilderMobile —
+// карта блоком в потоке страницы. Выше держится контракт самой раскладки, здесь —
+// связка «карта ↔ панель»: чем карту растянули, куда сфокусировали и доводит ли
+// тап по ней новую точку до формы правки.
+describe('RouteBuilder layout=mapFirst — связка карты и панели', () => {
+  it('растягивает карту и держит панель обычным контентом под ней', () => {
+    const { getByTestId, queryByTestId } = renderMobile()
+
+    expect(getByTestId('route-map-fill').props.children).toBe('true')
+    expect(getByTestId('route-mobile-map')).toBeTruthy()
+    // Транспорт, точки и добавление доехали до панели целиком.
+    expect(getByTestId('route-builder-transport-control')).toBeTruthy()
+    expect(getByTestId('route-builder-point-0')).toBeTruthy()
+    // Добавление раскрывается по запросу: длинная форма не вытесняет точки и
+    // итог, пока пользователь не выбрал это действие.
+    expect(getByTestId('route-builder-add-action')).toBeTruthy()
+    expect(queryByTestId('route-builder-add-form')).toBeNull()
+    expect(queryByTestId('route-builder-site-search')).toBeNull()
+
+    fireEvent.press(getByTestId('route-builder-add-action'))
+
+    // Первый тип — «место», поэтому раскрытая add-форма показывает поиск, а не
+    // ручной submit `route-builder-add`.
+    expect(getByTestId('route-builder-add-form')).toBeTruthy()
+    expect(getByTestId('route-builder-site-search')).toBeTruthy()
+    expect(getByTestId('route-summary')).toBeTruthy()
+    // #1491: кнопка действия появляется только при несохранённых правках,
+    // поэтому на нетронутом маршруте её нет ни в стеке, ни в мобильной панели.
+    expect(queryByTestId('route-builder-save')).toBeNull()
+  })
+
+  it('тап по точке в списке центрует карту на её координатах', () => {
+    const { getByTestId } = renderMobile()
+
+    expect(getByTestId('route-map-focus').props.children).toBe('none')
+
+    fireEvent.press(getByTestId('route-builder-focus-1'))
+
+    expect(getByTestId('route-map-focus').props.children).toBe('53.93,27.52')
+  })
+
+  it('точка, добавленная тапом по карте, открывает форму переименования', () => {
+    const { getByTestId } = renderMobile()
+
+    fireEvent.press(getByTestId('route-map-click'))
+
+    expect(getByTestId('route-builder-edit-form')).toBeTruthy()
+    expect(getByTestId('route-builder-edit-lat').props.value).toBe('53.95')
+    expect(getByTestId('route-builder-edit-lng').props.value).toBe('27.61')
+  })
+
+  it('вертикальная раскладка остаётся без мобильного блока и без центрирования по тапу', () => {
+    const { getByTestId, queryByTestId } = render(<RouteBuilder trip={makeTrip()} />, {
+      wrapper: createQueryWrapper().Wrapper,
+    })
+
+    expect(queryByTestId('route-mobile-map')).toBeNull()
+    expect(queryByTestId('route-builder-focus-1')).toBeNull()
+    expect(getByTestId('route-map-fill').props.children).toBe('false')
   })
 })
