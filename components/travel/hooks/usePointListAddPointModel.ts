@@ -3,7 +3,7 @@ import * as ReactQuery from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { DESIGN_COLORS } from '@/constants/designSystem';
 import { useAuth } from '@/context/AuthContext';
 import type { ImportedPoint } from '@/types/userPoints';
 import { PointStatus } from '@/types/userPoints';
@@ -24,7 +24,11 @@ type PointLike = {
   categoryName?: string | { name?: string } | Array<string | { name?: string }>;
 };
 
-const DEFAULT_TRAVEL_POINT_COLOR = DESIGN_TOKENS.colors.travelPoint;
+// Сырой hex, а НЕ `DESIGN_TOKENS.colors.travelPoint`: на web токен разворачивается
+// в `var(--color-travelPoint, #ff922b)` (33 символа), а у поля `color` на бэке
+// `max_length=16` — сохранение падало 400. Соседние места сохранения точки
+// (`createMapPopupComponent`, `useAddressListItemActions`) шлют именно hex.
+const DEFAULT_TRAVEL_POINT_COLOR = DESIGN_COLORS.travelPoint;
 const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
 export function usePointListAddPointModel({

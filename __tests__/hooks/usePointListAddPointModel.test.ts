@@ -160,6 +160,33 @@ describe('usePointListAddPointModel', () => {
    * (`utils/rateLimiter.ts:58`, 60 запросов в минуту), и серия сохранений
    * упиралась бы в ложное 429. Серверная запись уже легла в кэш — рефетч лишний.
    */
+  /**
+   * Поле `color` на бэке — CharField(max_length=16). На web `DESIGN_TOKENS` отдаёт
+   * `var(--color-travelPoint, #ff922b)` (33 символа), из-за чего POST падал 400
+   * и «Сохранить» в списке точек путешествия не работало вовсе.
+   */
+  it('шлёт цвет сырым hex, а не CSS-переменной темы', async () => {
+    mockCreatePoint.mockResolvedValue({ id: 12, latitude: 53.9, longitude: 27.56 });
+
+    const { result } = renderHook(() =>
+      usePointListAddPointModel({
+        baseUrl: 'https://example.com/travel',
+        categoryIdToName: new Map(),
+        categoryNameToIds: new Map(),
+        travelName: 'Маршрут',
+      })
+    );
+
+    await act(async () => {
+      await result.current.handleAddPoint({ id: '4', address: 'Минск', coord: '53.9,27.56' });
+    });
+
+    await waitFor(() => expect(mockCreatePoint).toHaveBeenCalledTimes(1));
+    const { color } = mockCreatePoint.mock.calls[0][0];
+    expect(color).toMatch(/^#[0-9a-fA-F]{6}$/);
+    expect(color.length).toBeLessThanOrEqual(16);
+  });
+
   it('не рефетчит всю коллекцию, когда серверная запись уже записана в кэш', async () => {
     mockCreatePoint.mockResolvedValue({ id: 11, latitude: 53.9, longitude: 27.56 });
 
