@@ -82,13 +82,19 @@ const PAGE_FETCH_MARKER_REGEX =
 // читается естественнее вложенного и снимал бы защиту.
 const PARALLEL_FANOUT_REGEX = /Promise\.all(?:Settled)?\s*\(/
 const RANGE_CONSTRUCTOR_REGEX = /Array\.from\s*\(\s*\{\s*length|\[\s*\.\.\.\s*Array\s*\(/
+// ...но и не «где угодно в окне»: сетка со скелетонами `Array.from({length: 6})`
+// и не связанным с ней `Promise.all([preloadA(), preloadB()])` — не докачка.
+// У настоящего fan-out по страницам диапазон либо в самом вызове, либо в строке
+// над ним, поэтому признак засчитывается только при соседстве.
+const PARALLEL_RANGE_PROXIMITY = 3
 
 // Числовой делитель сам по себе ничего не говорит: `Math.ceil(count / 3)` — это
 // раскладка по колонкам, а не страницы. Литерал засчитывается, только если ровно
 // это же число рядом объявлено размером страницы (`perPage: 100` + `total / 100` —
 // то самое деление на ЗАПРОШЕННЫЙ размер, из-за которого терялся хвост).
 const NUMERIC_DIVISOR_REGEX = /^\s*(\d+)\s*$/
-const PAGE_SIZE_DECLARATION_SOURCE = '(?:perPage|per_page|page_size|pageSize|PAGE_SIZE)[^\\n]{0,40}?\\b'
+const PAGE_SIZE_DECLARATION_SOURCE =
+  '(?:perPage|per_page|page_size|pageSize|PAGE_SIZE|\\bsize\\b|\\bchunk\\b|\\blimit\\b)[^\\n]{0,40}?\\b'
 
 const FETCH_CONTEXT_RADIUS = 30
 
@@ -139,19 +145,29 @@ const isPageCountExpression = (expression) => {
 const readContextWindow = (lines, lineIndex) => {
   const from = Math.max(0, lineIndex - FETCH_CONTEXT_RADIUS)
   const to = Math.min(lines.length, lineIndex + FETCH_CONTEXT_RADIUS + 1)
-  return lines.slice(from, to).filter((line) => !isCommentLine(line)).join('\n')
+  return lines.slice(from, to).filter((line) => !isCommentLine(line))
 }
 
-const hasFetchContext = (contextWindow) =>
-  PAGE_FETCH_MARKER_REGEX.test(contextWindow) ||
-  (PARALLEL_FANOUT_REGEX.test(contextWindow) && RANGE_CONSTRUCTOR_REGEX.test(contextWindow))
+const hasParallelRangeFanout = (windowLines) => {
+  const fanout = []
+  const ranges = []
+  windowLines.forEach((line, index) => {
+    if (PARALLEL_FANOUT_REGEX.test(line)) fanout.push(index)
+    if (RANGE_CONSTRUCTOR_REGEX.test(line)) ranges.push(index)
+  })
+  return fanout.some((a) => ranges.some((b) => Math.abs(a - b) <= PARALLEL_RANGE_PROXIMITY))
+}
+
+const hasFetchContext = (windowLines) =>
+  windowLines.some((line) => PAGE_FETCH_MARKER_REGEX.test(line)) || hasParallelRangeFanout(windowLines)
 
 // Литерал в делителе засчитывается только как объявленный рядом размер страницы.
-const isDivisorMeaningful = (expression, contextWindow) => {
+const isDivisorMeaningful = (expression, windowLines) => {
   const operands = splitTopLevelDivision(expression)
   const literal = operands && NUMERIC_DIVISOR_REGEX.exec(operands[1])
   if (!literal) return true
-  return new RegExp(`${PAGE_SIZE_DECLARATION_SOURCE}${literal[1]}\\b`, 'i').test(contextWindow)
+  const declaration = new RegExp(`${PAGE_SIZE_DECLARATION_SOURCE}${literal[1]}\\b`, 'i')
+  return windowLines.some((line) => declaration.test(line))
 }
 
 const findPageCountLines = ({ content }) => {
@@ -187,7 +203,26 @@ const findViolationsInSource = ({ filePath, content }) => {
     .map((hit) => ({ file: normalizedPath, line: hit.line, snippet: hit.snippet }))
 }
 
+// Контракт отдушины исполняется гейтом, а не только тестом: запись без
+// написанной причины валит проверку так же, как нарушение.
+const findAllowlistProblems = (allowed = ALLOWED_FILES) => {
+  const problems = []
+  for (const [file, reason] of allowed) {
+    if (typeof reason !== 'string' || reason.trim().length === 0) problems.push(file)
+  }
+  return problems
+}
+
 const evaluateGuard = ({ sources = [] } = {}) => {
+  const allowlistProblems = findAllowlistProblems()
+  if (allowlistProblems.length > 0) {
+    return {
+      ok: false,
+      reason: `Allowlisted files without a written reason: ${allowlistProblems.join(', ')}`,
+      violations: [],
+    }
+  }
+
   const violations = []
   for (const source of sources) {
     violations.push(...findViolationsInSource(source))
@@ -305,12 +340,15 @@ module.exports = {
   PAGE_FETCH_MARKER_REGEX,
   PARALLEL_FANOUT_REGEX,
   RANGE_CONSTRUCTOR_REGEX,
+  PARALLEL_RANGE_PROXIMITY,
+  findAllowlistProblems,
   parseArgs,
   shouldScanFile,
   isCommentLine,
   isPageCountExpression,
   isDivisorMeaningful,
   hasFetchContext,
+  readContextWindow,
   findViolationsInSource,
   evaluateGuard,
   buildJsonResult,

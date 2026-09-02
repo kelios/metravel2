@@ -1,6 +1,7 @@
 const {
   ALLOWED_FILES,
   CANONICAL_FILE,
+  findAllowlistProblems,
   evaluateGuard,
   findViolationsInSource,
   isPageCountExpression,
@@ -105,23 +106,36 @@ describe('guard-no-inline-page-fetch-loop', () => {
   it.each([
     ['раскладку по колонкам', ['const pageSize = 20', 'const rows = Math.ceil(count / 3)']],
     ['половину от total', ['const half = Math.ceil(total / 2)', 'const onMore = () => loadPage(2)']],
+    // Сетка со скелетонами `Array.from({length: 6})` и НЕ связанным с ней
+    // `Promise.all` прелоада — не докачка: у настоящего fan-out по страницам
+    // диапазон стоит вплотную к вызову.
+    [
+      'сетку со скелетонами и прелоадом',
+      [
+        'const columns = 3',
+        'const totalPages = Math.ceil(totalItems / columns)',
+        'const skeletons = Array.from({ length: 6 }, (_, index) => index)',
+        'const a = 1',
+        'const b = 2',
+        'const c = 3',
+        'void Promise.all([preloadCovers(), preloadAvatars()])',
+      ],
+    ],
   ])('не считает нарушением %s', (_label, content) => {
     expect(findViolationsInSource({ filePath: 'components/Example.tsx', content: content.join('\n') })).toEqual([])
   })
 
   // Зато деление на ЗАПРОШЕННЫЙ размер страницы — ровно дефект #1705: сервер
   // урезал страницу своим потолком, а клиент поделил на то, что просил.
-  it('ловит деление на запрошенный размер страницы, объявленный рядом', () => {
-    const violations = findViolationsInSource({
-      filePath: 'api/exampleList.ts',
-      content: [
-        'const perPage = 100',
-        'const pages = Math.ceil(total / 100)',
-        'await loadPage(2)',
-      ].join('\n'),
-    })
-
-    expect(violations).toHaveLength(1)
+  // Словарь имён размера страницы обязан покрывать те же написания, что и в
+  // рассуждении выше: страницу зовут `perPage`, `size`, `chunk` и `limit`.
+  it.each([
+    ['perPage', ['const perPage = 100', 'const pages = Math.ceil(total / 100)', 'await loadPage(2)']],
+    ['chunk', ['const chunk = 100', 'const first = await loadPage(1)', 'const pages = Math.ceil(first.total / 100)']],
+    ['limit', ['const limit = 20', 'const pages = Math.ceil(count / 20)', 'await getPage(2)']],
+    ['per_page инлайн-параметром', ['const r = await api.get(url, { per_page: 100 })', 'const pages = Math.ceil(r.total / 100)']],
+  ])('ловит деление на запрошенный размер страницы, объявленный рядом как «%s»', (_label, content) => {
+    expect(findViolationsInSource({ filePath: 'api/exampleList.ts', content: content.join('\n') })).toHaveLength(1)
   })
 
   // Голый `await` маркером быть не может: первый же асинхронный хендлер в
@@ -226,15 +240,37 @@ describe('guard-no-inline-page-fetch-loop', () => {
     expect(result.reason).toContain(CANONICAL_FILE)
   })
 
-  // Отдушина есть (гейт эвристический), но платная: у каждой записи обязана
-  // быть написанная причина. Сейчас список пуст — своя обвязка докачки
-  // допустима, но расчёт числа страниц она берёт из `resolveTotalPages()`.
-  it('держит исключения только с написанной причиной', () => {
-    expect(Array.from(ALLOWED_FILES.keys())).toEqual([])
-    for (const [file, reason] of ALLOWED_FILES) {
-      expect(typeof reason === 'string' && reason.trim().length > 0).toBe(true)
-      expect(file).toEqual(expect.any(String))
+  // Отдушина есть (гейт эвристический), но платная: у каждой записи обязана быть
+  // написанная причина, и требует её сам гейт, а не только этот тест. Проверять
+  // контракт на живом списке нельзя — он пуст, и цикл по нему не сделал бы ни
+  // одной итерации, оставив зелёный тест, который ничего не доказывает.
+  it('считает нарушением запись исключения без написанной причины', () => {
+    expect(
+      findAllowlistProblems(
+        new Map([
+          ['components/WithReason.tsx', 'ложное срабатывание на скелетонах, #9999'],
+          ['components/NoReason.tsx', '   '],
+          ['components/Undefined.tsx', undefined],
+        ]),
+      ),
+    ).toEqual(['components/NoReason.tsx', 'components/Undefined.tsx'])
+  })
+
+  it('валит гейт целиком, пока у исключения нет причины', () => {
+    const withoutReason = new Map([['components/NoReason.tsx', '']])
+    ALLOWED_FILES.set('components/NoReason.tsx', '')
+    try {
+      const result = evaluateGuard({ sources: [canonicalSource] })
+      expect(result.ok).toBe(false)
+      expect(result.reason).toContain('components/NoReason.tsx')
+      expect(findAllowlistProblems(withoutReason)).toEqual(['components/NoReason.tsx'])
+    } finally {
+      ALLOWED_FILES.delete('components/NoReason.tsx')
     }
+  })
+
+  it('на живом списке исключений нарушений контракта нет', () => {
+    expect(findAllowlistProblems()).toEqual([])
   })
 
   it.each([
