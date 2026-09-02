@@ -2952,6 +2952,65 @@ function writeFileSafe(filePath, content) {
   fs.writeFileSync(filePath, content, 'utf8');
 }
 
+/**
+ * Both forms the deploy serves for one travel route key, in one place: the flat
+ * file that `/travels/<slug>` falls through to (nginx `try_files
+ * /travels/<slug>.html =404`) and the directory index. Writers and the
+ * completeness gate below MUST read the layout from here — a gate describing a
+ * layout the writer no longer produces is exactly how #1688 stayed green.
+ */
+function travelStaticPagePaths(distDir, routeKey) {
+  return [
+    path.join(distDir, 'travels', `${routeKey}.html`),
+    path.join(distDir, 'travels', routeKey, 'index.html'),
+  ];
+}
+
+/**
+ * Refuse a successful build when an API-published travel is absent from the
+ * static output. The deploy serves both file and directory-index forms, so a
+ * complete snapshot must contain both variants for every expected route key.
+ *
+ * The route key mirrors the generation loop exactly (`slug || String(id)`, both
+ * truthy-checked): a key the loop never writes must not be demanded here, or the
+ * gate would fail a legitimate build.
+ */
+function assertTravelStaticPagesComplete(travels, distDir, deps = {}) {
+  const fileSystem = deps.fs || fs;
+  const expected = [];
+  const seen = new Set();
+
+  for (const travel of Array.isArray(travels) ? travels : []) {
+    const routeKey = travel?.slug || (travel?.id ? String(travel.id) : '');
+    if (!routeKey || seen.has(routeKey)) continue;
+    seen.add(routeKey);
+    expected.push({ id: travel?.id, routeKey });
+  }
+
+  const missing = [];
+  for (const { id, routeKey } of expected) {
+    for (const filePath of travelStaticPagePaths(distDir, routeKey)) {
+      if (!fileSystem.existsSync(filePath)) {
+        missing.push({ id, routeKey, filePath });
+      }
+    }
+  }
+
+  if (missing.length > 0) {
+    const details = missing
+      .map(({ id, routeKey, filePath }) => {
+        const identity = id != null ? `id ${id}, slug ${routeKey}` : `slug ${routeKey}`;
+        return `${identity}: ${path.relative(distDir, filePath)}`;
+      })
+      .join('; ');
+    throw new Error(
+      `Travel static output is incomplete: ${missing.length} file(s) missing for ${expected.length} published travel(s): ${details}`
+    );
+  }
+
+  return { expected: expected.length, missing: 0 };
+}
+
 /** A country page must hydrate with its own Expo route bundle. */
 function readRequiredQuestCountryTemplate(filePath, fileSystem = fs) {
   if (!fileSystem.existsSync(filePath)) {
@@ -3630,8 +3689,9 @@ async function main() {
       // Write both explicit-file and directory-index variants.
       // NOTE: we intentionally avoid writing an extensionless file because
       // it conflicts with creating `${routeKey}/index.html` on POSIX filesystems.
-      writeFileSafe(path.join(DIST_DIR, 'travels', `${routeKey}.html`), finalTravelHtml);
-      writeFileSafe(path.join(DIST_DIR, 'travels', routeKey, 'index.html'), finalTravelHtml);
+      for (const filePath of travelStaticPagePaths(DIST_DIR, routeKey)) {
+        writeFileSafe(filePath, finalTravelHtml);
+      }
 
       generated++;
     }
@@ -3924,12 +3984,24 @@ async function main() {
         continue;
       }
       const stub = buildRedirectStubHtml(to);
-      writeFileSafe(path.join(DIST_DIR, 'travels', `${from}.html`), stub);
-      writeFileSafe(path.join(DIST_DIR, 'travels', from, 'index.html'), stub);
+      for (const filePath of travelStaticPagePaths(DIST_DIR, from)) {
+        writeFileSafe(filePath, stub);
+      }
       redirected++;
     }
     totalPages += redirected;
     console.log(`  ✅ Redirect stubs: ${redirected}${clashes ? ` (skipped ${clashes} live-slug clash)` : ''}`);
+  }
+
+  // --- 6. Output completeness gate ---
+  // Последним шагом, а не сразу после цикла генерации: между ними лежат патч
+  // fallback-шаблонов и запись redirect-стабов, которые тоже пишут в
+  // `travels/`. Гейт обязан описывать ИТОГОВЫЙ каталог, иначе всё, что придёт
+  // после него, снова окажется непроверенным — это ровно тот класс, из-за
+  // которого #1688 уехал в прод молча.
+  if (travels.length > 0) {
+    const coverage = assertTravelStaticPagesComplete(travels, DIST_DIR);
+    console.log(`\n✅ Static output coverage: ${coverage.expected}/${coverage.expected} published travels present in both page forms`);
   }
 
   console.log(`\n🎉 Done! Generated ${totalPages} SEO pages in ${DIST_DIR}`);
@@ -3947,6 +4019,8 @@ if (typeof module !== 'undefined' && module.exports) {
     QUEST_DETAIL_CONCURRENCY,
     MAX_DETAIL_FAILURES_BEFORE_ABORT,
     assertTravelDetailsComplete,
+    assertTravelStaticPagesComplete,
+    travelStaticPagePaths,
     batchAsync,
     createRequestPacer,
     fetchTravelDetail,

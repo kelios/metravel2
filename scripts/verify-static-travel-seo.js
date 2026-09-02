@@ -109,11 +109,100 @@ function verifyTravelHtml(html, routeKey) {
   return issues
 }
 
+/**
+ * Обе формы страницы обязательны, и плоская — важнее.
+ *
+ * Голый `/travels/<slug>` — адрес из sitemap, по которому ходит краулер, —
+ * резолвит Django: `public_travel_slug_view` отвечает `X-Accel-Redirect:
+ * /__internal/travel-ssr/<slug>`, а этот internal-location в nginx делает
+ * `try_files /travels/<slug>.html =404` (nginx/nginx.conf:493,510). Каталожный
+ * `index.html` на этом пути не пробуется вовсе, поэтому статья с целым
+ * `<slug>/index.html`, но без плоского файла отдаёт краулеру 404 и выпадает из
+ * индекса.
+ *
+ * Это и есть механизм #1688, а не «неустановленный сбой прогона». Travel 583 и
+ * 584 лежат на позициях 21 и 20 первой страницы каталога (проба прод-API
+ * 01.09.2026), то есть внутри окна, которое гейт успевал проверить даже со
+ * старой поломанной пагинацией. Деплой 01.09 13:34 прошёл, значит гейт по обеим
+ * статьям был ЗЕЛЁНЫМ — он смотрел на существовавший `<slug>/index.html`, тогда
+ * как отсутствовал плоский файл, единственный, который отдаётся по адресу из
+ * sitemap. Тем же слепым пятном страдает и sample-проверка `<h1>` в
+ * build-prod.sh: она обходит `find dist/prod/travels -name index.html`.
+ */
+function travelPageVariants(distDir, routeKey) {
+  return [
+    { role: 'flat', filePath: path.join(distDir, 'travels', `${routeKey}.html`) },
+    { role: 'directory-index', filePath: path.join(distDir, 'travels', routeKey, 'index.html') },
+  ]
+}
+
+/**
+ * Бэкенд режет страницу до 100 записей и молча игнорирует больший `perPage`
+ * (проба 01.09.2026: `perPage=500` → 100 items, `total=408`, `next` заполнен),
+ * поэтому прежнее условие `matchedTravels.length === perPage` не выполнялось
+ * никогда: гейт проверял первую сотню из 408 и печатал «Verified all 100».
+ *
+ * Ведущий признак — курсор `next` в ответе DRF, как в generate-seo-pages.js.
+ * Ключ `next` присутствует всегда и на последней странице равен `null`, поэтому
+ * его наличие и решает: сравнение с `total` — запасной путь только для ответа
+ * без курсора.
+ *
+ * Считаются СЫРЫЕ записи страницы, а не пережившие фильтр `slug || id`: фильтр
+ * не должен управлять пагинацией ни в одну сторону. Страница, целиком отсеянная
+ * фильтром, иначе останавливала бы обход, и гейт печатал бы «Verified all N» по
+ * усечённому каталогу — ровно тот fail-open, из-за которого #1688 уехал молча.
+ * А в запасном пути каждая отброшенная запись держала бы `collected < total` и
+ * заставила бы запросить страницу за последней: она отдаёт HTTP 404 и уронила
+ * бы сборку чужой ошибкой. `total` при этом всегда считает записи каталога, а
+ * не выживших после фильтра.
+ */
+function shouldFetchNextPage(payload, { fetchedCount, pageItemCount, total }) {
+  if (pageItemCount <= 0) return false
+  const isObject = Boolean(payload) && typeof payload === 'object'
+  const hasCursorKey = isObject && ('next' in payload || 'next_page_url' in payload)
+  if (hasCursorKey) return Boolean(payload.next || payload.next_page_url)
+  return fetchedCount < total
+}
+
+/**
+ * Обе формы читаются и валидируются полностью, хотя writer пишет в них один и
+ * тот же байт-в-байт документ. Дешевле было бы сверять вторую по размеру, но
+ * замер не оправдывает усложнение: на реальных прод-страницах (5 статей,
+ * средняя 256 КБ) обе формы стоят 2.78 мс на статью, то есть ~1.14 с на весь
+ * каталог из 408 против ~0.14 с у прежнего охвата в 100 статей одной формы.
+ * Секунда на шаге прод-сборки, идущем десятки минут, не стоит ветки «сверяем
+ * размер, а полный разбор только когда копии разошлись» — а именно разошедшиеся
+ * копии этот гейт и обязан ловить.
+ */
+function collectTravelPageFailures(travels, distDir, deps = {}) {
+  const fileSystem = deps.fs || fs
+  const failures = []
+
+  for (const travel of travels) {
+    const routeKey = String(travel.slug || travel.id)
+
+    for (const { role, filePath } of travelPageVariants(distDir, routeKey)) {
+      if (!fileSystem.existsSync(filePath)) {
+        failures.push(`${routeKey}: missing ${role} file ${path.relative(distDir, filePath)}`)
+        continue
+      }
+
+      const issues = verifyTravelHtml(fileSystem.readFileSync(filePath, 'utf8'), routeKey)
+      if (issues.length > 0) {
+        failures.push(`${routeKey} (${role}): ${issues.join(', ')}`)
+      }
+    }
+  }
+
+  return failures
+}
+
 async function main() {
   const allTravels = []
   const perPage = SAMPLE_SIZE === null ? 500 : Math.max(SAMPLE_SIZE, 10)
   let page = 1
   let hasMore = true
+  let fetchedCount = 0
 
   while (hasMore) {
     const params = new URLSearchParams({
@@ -123,8 +212,10 @@ async function main() {
     })
     const url = `${API_BASE}/api/travels/?${params}`
     const payload = await fetchJson(url)
-    const matchedTravels = extractItems(payload).filter((travel) => travel && (travel.slug || travel.id))
+    const pageItems = extractItems(payload)
+    const matchedTravels = pageItems.filter((travel) => travel && (travel.slug || travel.id))
 
+    fetchedCount += pageItems.length
     allTravels.push(...matchedTravels)
 
     if (SAMPLE_SIZE !== null) {
@@ -138,10 +229,14 @@ async function main() {
           ? payload.total
           : typeof payload.count === 'number'
             ? payload.count
-            : matchedTravels.length
-        : matchedTravels.length
+            : pageItems.length
+        : pageItems.length
 
-    hasMore = allTravels.length < total && matchedTravels.length === perPage
+    hasMore = shouldFetchNextPage(payload, {
+      fetchedCount,
+      pageItemCount: pageItems.length,
+      total,
+    })
     page += 1
   }
 
@@ -151,23 +246,7 @@ async function main() {
     throw new Error('No published travels returned by API for SEO verification')
   }
 
-  const failures = []
-
-  for (const travel of travels) {
-    const routeKey = String(travel.slug || travel.id)
-    const filePath = path.join(DIST_DIR, 'travels', routeKey, 'index.html')
-
-    if (!fs.existsSync(filePath)) {
-      failures.push(`${routeKey}: missing file ${path.relative(DIST_DIR, filePath)}`)
-      continue
-    }
-
-    const html = fs.readFileSync(filePath, 'utf8')
-    const issues = verifyTravelHtml(html, routeKey)
-    if (issues.length > 0) {
-      failures.push(`${routeKey}: ${issues.join(', ')}`)
-    }
-  }
+  const failures = collectTravelPageFailures(travels, DIST_DIR)
 
   if (failures.length > 0) {
     const message = failures.map((failure) => ` - ${failure}`).join('\n')
@@ -181,8 +260,11 @@ async function main() {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    collectTravelPageFailures,
     countTag,
     extractItems,
+    shouldFetchNextPage,
+    travelPageVariants,
     hasArticleJsonLd,
     hasTravelSsgHeading,
     hasVisibleTravelSsgHeading,

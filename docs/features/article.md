@@ -220,15 +220,18 @@ YouTube и Instagram рендерятся фасадами, а не живыми
 
 | Гейт | Где | Что ловит |
 | --- | --- | --- |
-| body-injected | `build-prod.sh:402-410` | ни один файл `travels/**` не содержит `ssg-travel-article` → сборка падает |
-| единственный `<h1>` | `build-prod.sh:412-428` | выборка 20 страниц, ровно один `<h1>` |
-| `verify-static-travel-seo.js` | `build-prod.sh:431` | generic title, отсутствующий/дублированный description, canonical ≠ ожидаемого, нет `og:image`/Article JSON-LD |
+| body-injected | `build-prod.sh:417-423` | ни один файл `travels/**` не содержит `ssg-travel-article` → сборка падает |
+| единственный `<h1>` | `build-prod.sh:427-443` | выборка 20 страниц, ровно один `<h1>`. Обходит `find … -name index.html`, то есть плоскую форму не видит |
+| полнота выхода (`assertTravelStaticPagesComplete`) | `generate-seo-pages.js`, шаг 6 `main()` | опубликованный travel, у которого в срезе нет `travels/<slug>.html` ИЛИ `travels/<slug>/index.html` → сборка падает со списком недостающих слагов. Стоит последним шагом, после redirect-стабов, поэтому описывает итоговый каталог |
+| `verify-static-travel-seo.js` | `build-prod.sh:446` | обе формы страницы по всему каталогу: отсутствие файла, generic title, отсутствующий/дублированный description, canonical ≠ ожидаемого, нет `og:image`/Article JSON-LD |
 | `post-deploy-seo-check.js` | `npm run test:seo:postdeploy` | длина description вне 80–170, отсутствие SSR-маркеров на проде |
 | `post-deploy-media-check.js` | `npm run test:media:postdeploy` | нерабочие ступени `media.article_body[*].srcset` |
 
 Юнит- и e2e-покрытие: `__tests__/scripts/ssg-skeletons.test.ts` (санитайзер,
 клэмп, `$`-паттерны из авторского текста), `__tests__/scripts/generate-seo-pages.test.ts`
-(meta, редиректы slug), `__tests__/components/ArticleEditor.web.autosave.test.tsx`
+(meta, редиректы slug), `__tests__/scripts/generate-seo-pages.output-coverage.test.ts`
+и `__tests__/scripts/verify-static-travel-seo.test.ts` (полнота выхода: обе формы
+страницы, обход всего каталога), `__tests__/components/ArticleEditor.web.autosave.test.tsx`
 (контур автосейва), `__tests__/hooks/useDraftRecovery.test.ts`,
 `e2e/draft-recovery.spec.ts`, `__tests__/api/misc.behavior.test.ts`.
 
