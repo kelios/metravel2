@@ -8,6 +8,7 @@ import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { indexMediaImage } from '@/utils/mediaPlaceholderIndex';
 import { retry } from '@/utils/retry';
 import { isUsableRouteSegment } from '@/utils/routePaths';
+import { resolveTotalPages } from '@/utils/fetchAllPages';
 import {
     readCachedQuestBundle,
     writeCachedQuestBundle,
@@ -386,7 +387,7 @@ function adaptQuestReview(raw: ApiQuestReview): QuestReview {
  */
 export async function fetchQuestReviews(questId: string): Promise<QuestReview[]> {
     try {
-        const list = await fetchAllPages<ApiQuestReview>(`/quests/quest${questId}/reviews/`);
+        const list = await fetchAllQuestPages<ApiQuestReview>(`/quests/quest${questId}/reviews/`);
         return list.map(adaptQuestReview);
     } catch (err: unknown) {
         // Пусто — это утверждение о квесте, а не о состоянии сети, поэтому в
@@ -416,7 +417,7 @@ type PaginatedEnvelope<T> = {
 };
 
 /**
- * Списочные эндпоинты отдают по 20 записей на страницу, а `fetchAllPages`
+ * Списочные эндпоинты отдают по 20 записей на страницу, а `fetchAllQuestPages`
  * дочитывает их до конца: каталог из 139 квестов уходил семью последовательными
  * запросами (~405 КБ) на каждый экран, которому нужен список. Просим максимум,
  * который разрешает пагинация бэкенда (max_page_size = 100, проверено на проде):
@@ -465,8 +466,16 @@ const CATALOG_EAGER_PAGES = 2;
  * дальше число страниц берётся из размера выборки первого ответа, и остаток
  * тоже читается одним заходом. Ответ без размера выборки читается по-старому,
  * страница за страницей.
+ *
+ * Почему это не общий `utils/fetchAllPages` (#1710): тот принимает загрузчик
+ * страницы и возвращает список, а здесь на ту же ось намотаны три вещи, которых
+ * у остальных потребителей нет — спекулятивные страницы до ответа первой,
+ * 404-как-конец-каталога вместо отказа и последовательное дочитывание по ссылке
+ * `next`, когда размер выборки разошёлся с отданным. Общее у двух обвязок ровно
+ * одно — правило «сколько страниц читать», и оно берётся из `resolveTotalPages`
+ * общего хелпера, а не считается здесь заново.
  */
-async function fetchAllPages<T>(
+async function fetchAllQuestPages<T>(
     path: string,
     maxPages = 20,
     options?: { signal?: AbortSignal; eagerPages?: number },
@@ -526,7 +535,7 @@ async function fetchAllPages<T>(
     if (total !== null && pageSize > 0) {
         // Размер страницы берём фактический, а не запрошенный: бэкенд вправе
         // урезать `page_size` своим максимумом, и тогда страниц окажется больше.
-        const lastPage = Math.min(Math.ceil(total / pageSize), maxPages);
+        const lastPage = resolveTotalPages({ total, pageSize, maxPages });
         // Именно `allSettled`: `all` отвергается первым попавшимся отказом, а
         // решать, конец это каталога или потеря страницы, надо по тому, какая
         // страница отказала первой ПО ПОРЯДКУ.
@@ -573,7 +582,7 @@ async function fetchAllPages<T>(
  */
 export async function fetchQuestsList(options?: { signal?: AbortSignal }): Promise<ApiQuestMeta[]> {
     try {
-        const list = await fetchAllPages<ApiQuestMeta>('/quests/', 20, { ...options, eagerPages: CATALOG_EAGER_PAGES });
+        const list = await fetchAllQuestPages<ApiQuestMeta>('/quests/', 20, { ...options, eagerPages: CATALOG_EAGER_PAGES });
         const withDefaults = list.map(withQuestMetaDefaults);
         void writeCachedQuestsList(withDefaults);
         return withDefaults;
@@ -629,7 +638,7 @@ export async function fetchQuestsCompactCatalog(
     options?: { signal?: AbortSignal },
 ): Promise<ApiQuestMeta[]> {
     try {
-        const list = await fetchAllPages<ApiQuestMeta>('/quests/?compact=1', 20, { ...options, eagerPages: CATALOG_EAGER_PAGES });
+        const list = await fetchAllQuestPages<ApiQuestMeta>('/quests/?compact=1', 20, { ...options, eagerPages: CATALOG_EAGER_PAGES });
         return list.map(withQuestMetaDefaults);
     } catch (err) {
         // Офлайн-контракт тот же, что у полного списка: лучше показать кэш

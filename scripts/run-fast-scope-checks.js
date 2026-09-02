@@ -270,6 +270,15 @@ const main = () => {
       process.exit(typeDebtGuardStatus)
     }
 
+    // Гейт безусловный, а не по изменённым файлам: четвёртая копия правила
+    // докачки страниц (#1710, класс API-PAGE-SIZE-CAP-001) появляется в НОВОМ
+    // файле рядом со старыми, и проверка «только изменённого» увидела бы её
+    // лишь в том прогоне, где этот файл и правили.
+    const pageFetchLoopGuardStatus = runCommand('npm', ['run', 'guard:no-inline-page-fetch-loop'])
+    if (pageFetchLoopGuardStatus !== 0) {
+      process.exit(pageFetchLoopGuardStatus)
+    }
+
     const questAnswerEvalGuardStatus = runCommand('npm', ['run', 'guard:quest-answer-eval'])
     if (questAnswerEvalGuardStatus !== 0) {
       process.exit(questAnswerEvalGuardStatus)

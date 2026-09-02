@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext'
 import { queryKeys } from '@/api/queryKeys'
 import { getActiveQueryClient } from '@/api/activeQueryClient'
 import { translate as i18nT } from '@/i18n'
+import { fetchAllPages } from '@/utils/fetchAllPages'
 
 
 const getUserApi = async () => import('@/api/user')
@@ -348,28 +349,7 @@ const fetchAuthoredTravelStatusEntries = async (userId: string | number): Promis
     return unwrapMyTravelsPayload(payload)
   }
 
-  const firstPage = await loadPage(1)
-  // Копия обязательна: unwrap отдаёт сам массив из ответа, и push дописывал бы
-  // записи следующих страниц прямо в объект первого ответа.
-  const items = [...firstPage.items]
-
-  // Число страниц считаем по фактически отданным записям, а не по запрошенному
-  // perPage: сервер вправе урезать его своим максимумом, и деление на
-  // запрошенное снова тихо потеряло бы хвост. Ответ, где записей не больше
-  // отданных (в том числе непагинированный массив с total === items.length),
-  // остаётся одним запросом.
-  const pageSize = items.length
-  const totalPages = pageSize > 0 && firstPage.total > pageSize
-    ? Math.min(Math.ceil(firstPage.total / pageSize), AUTHORED_TRAVELS_MAX_PAGES)
-    : 1
-
-  if (totalPages > 1) {
-    // Хвост уходит одним заходом: последовательное чтение сложило бы RTT страниц.
-    const restPages = await Promise.all(
-      Array.from({ length: totalPages - 1 }, (_, index) => loadPage(index + 2)),
-    )
-    restPages.forEach((restPage) => items.push(...restPage.items))
-  }
+  const items = await fetchAllPages(loadPage, { maxPages: AUTHORED_TRAVELS_MAX_PAGES })
 
   return items
     .map(normalizeAuthoredTravelEntry)

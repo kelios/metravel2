@@ -151,6 +151,8 @@
     "guard:no-direct-linking-openurl:json": "node scripts/guard-no-direct-linking-openurl.js --json",
     "guard:no-direct-window-open": "node scripts/guard-no-direct-window-open.js",
     "guard:no-direct-window-open:json": "node scripts/guard-no-direct-window-open.js --json",
+    "guard:no-inline-page-fetch-loop": "node scripts/guard-no-inline-page-fetch-loop.js",
+    "guard:no-inline-page-fetch-loop:json": "node scripts/guard-no-inline-page-fetch-loop.js --json",
     "guard:no-direct-osm-tiles": "node scripts/guard-no-direct-osm-tiles.js",
     "guard:container-names": "node scripts/guard-container-names.js",
     "guard:container-names:json": "node scripts/guard-container-names.js --json",
