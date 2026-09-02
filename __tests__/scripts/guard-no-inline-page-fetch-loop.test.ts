@@ -1,4 +1,5 @@
 const {
+  ALLOWED_FILES,
   CANONICAL_FILE,
   evaluateGuard,
   findViolationsInSource,
@@ -51,6 +52,42 @@ describe('guard-no-inline-page-fetch-loop', () => {
     })
 
     expect(violations).toHaveLength(1)
+  })
+
+  // Словарь имён делителя копию не ловил: размер страницы зовут и `pageSize`,
+  // и `size`, и `chunk`. Отсечка идёт по числителю и по контексту, а не по имени.
+  it.each([
+    ['size', 'const size = first.items.length', 'Math.ceil(first.total / size)'],
+    ['chunk', 'const chunk = first.items.length', 'Math.ceil(first.count / chunk)'],
+  ])('ловит копию, где размер страницы назван «%s»', (_label, sizeLine, countLine) => {
+    const violations = findViolationsInSource({
+      filePath: 'hooks/useExampleAll.ts',
+      content: [
+        'const first = await loadPage(1)',
+        sizeLine,
+        `const pages = ${countLine}`,
+        'const rest = await Promise.all(Array.from({ length: pages - 1 }, (_, i) => loadPage(i + 2)))',
+      ].join('\n'),
+    })
+
+    expect(violations).toHaveLength(1)
+  })
+
+  // Голый `await` маркером быть не может: первый же асинхронный хендлер в
+  // отрисовочном пагинаторе покрасил бы гейт, и погасить его было бы нечем.
+  it('не краснеет на пагинаторе, рядом с которым появился асинхронный хендлер', () => {
+    const violations = findViolationsInSource({
+      filePath: 'components/ui/ExamplePagination.tsx',
+      content: [
+        'const onExport = useCallback(async () => { await fetch("/export") }, [])',
+        'const pageCount = useMemo(',
+        '  () => Math.max(1, Math.ceil((totalItems || 0) / (itemsPerPage || 1))),',
+        '  [totalItems, itemsPerPage],',
+        ')',
+      ].join('\n'),
+    })
+
+    expect(violations).toEqual([])
   })
 
   // Пагинатор считает номерки для отрисовки и ничего не грузит — это не тот
@@ -138,13 +175,20 @@ describe('guard-no-inline-page-fetch-loop', () => {
     expect(result.reason).toContain(CANONICAL_FILE)
   })
 
+  // Исключений у гейта нет и быть не должно: своя обвязка докачки допустима,
+  // но расчёт числа страниц она обязана брать из `resolveTotalPages()`.
+  it('не держит рантайм-исключений', () => {
+    expect(Array.from(ALLOWED_FILES)).toEqual([])
+  })
+
   it.each([
     ['total / pageSize', true],
     ['count / perPage', true],
     ['firstPage.total / items.length', true],
+    ['first.total / size', true],
     ['wordCount / 200', false],
     ['durationMs / 1000', false],
-    ['total / 2', false],
+    ['total / 2', true],
   ])('распознаёт «%s» как расчёт числа страниц: %s', (expression, expected) => {
     expect(isPageCountExpression(expression)).toBe(expected)
   })

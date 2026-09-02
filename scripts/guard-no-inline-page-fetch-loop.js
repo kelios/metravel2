@@ -22,6 +22,12 @@ const OUTPUT_CONTRACT_VERSION = 1
 // расчёт, guard падает — значит правило переехало, и гейт ослеп бы молча.
 const CANONICAL_FILE = 'utils/fetchAllPages.ts'
 
+// Исключения по конвенции соседних guard'ов. Пуст и должен таким остаться:
+// своя обвязка докачки допустима, но расчёт числа страниц она обязана брать из
+// `resolveTotalPages()` — так живёт `api/quests.ts` с его спекулятивными
+// страницами и 404-как-концом каталога.
+const ALLOWED_FILES = new Set()
+
 const IGNORED_DIRS = new Set([
   '.git',
   '.expo',
@@ -53,16 +59,21 @@ const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs']
 // одной минифицированной строкой: искать в них наш паттерн бессмысленно.
 const MAX_SCANNED_LINE_LENGTH = 400
 
-// Расчёт числа страниц: `Math.ceil(<что-то про total> / <что-то про размер>)`.
+// Расчёт числа страниц: `Math.ceil(<что-то про total> / <делитель>)`.
+// Делитель намеренно НЕ сверяется со словарём имён: размер страницы зовут и
+// `pageSize`, и `size`, и `chunk`, и словарь такую копию пропускал бы. Отсечку
+// даёт числитель (`total`/`count`) плюс контекст ниже.
 const PAGE_COUNT_REGEX = /Math\.ceil\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g
 const TOTAL_OPERAND_REGEX = /\b(?:total|count|totalItems|totalCount)\b/i
-const PAGE_SIZE_OPERAND_REGEX = /\b(?:pageSize|page_size|perPage|per_page|itemsPerPage|limit)\b|\.length\b/i
 
 // Признак того, что расчёт кормит сетевую докачку, а не отрисовку пагинатора:
-// рядом читают страницы. Без него сюда попадал бы `PaginationComponent`,
-// который считает число страниц для номерков и ничего не грузит.
+// рядом читают страницы ПО НОМЕРУ. Голый `await` в маркеры не годится — тогда
+// первый же асинхронный хендлер, добавленный в `PaginationComponent`, красил бы
+// гейт на чисто отрисовочном коде, и погасить его было бы нечем.
 const PAGE_FETCH_MARKER_REGEX =
-  /\bawait\b|Promise\.(?:all|allSettled|race)\b|\bfetch\s*\(|\bapiClient\b|\bloadPage\b|\bgetPage\b/
+  /\b(?:loadPage|getPage|fetchPage|fetchPages|fetchAllPages|perPage|per_page|page_size|pageSize|pageNumber)\s*[(:=,)]|[?&]page=/i
+// Вторая форма того же признака: параллельный заход по диапазону страниц.
+const PARALLEL_RANGE_REGEX = /Promise\.all(?:Settled)?\s*\(\s*(?:\/\/[^\n]*\n\s*)*Array\.from\s*\(\s*\{\s*length/
 const FETCH_CONTEXT_RADIUS = 30
 
 const normalizePath = (value) => String(value || '').replace(/\\/g, '/')
@@ -106,18 +117,14 @@ const isPageCountExpression = (expression) => {
   const operands = splitTopLevelDivision(expression)
   if (!operands) return false
   const [numerator, denominator] = operands
-  return TOTAL_OPERAND_REGEX.test(numerator) && PAGE_SIZE_OPERAND_REGEX.test(denominator)
+  return TOTAL_OPERAND_REGEX.test(numerator) && denominator.trim().length > 0
 }
 
 const hasFetchContext = (lines, lineIndex) => {
   const from = Math.max(0, lineIndex - FETCH_CONTEXT_RADIUS)
   const to = Math.min(lines.length, lineIndex + FETCH_CONTEXT_RADIUS + 1)
-  for (let i = from; i < to; i += 1) {
-    const line = lines[i]
-    if (isCommentLine(line)) continue
-    if (PAGE_FETCH_MARKER_REGEX.test(line)) return true
-  }
-  return false
+  const window = lines.slice(from, to).filter((line) => !isCommentLine(line)).join('\n')
+  return PAGE_FETCH_MARKER_REGEX.test(window) || PARALLEL_RANGE_REGEX.test(window)
 }
 
 const findPageCountLines = ({ content }) => {
@@ -142,6 +149,7 @@ const findPageCountLines = ({ content }) => {
 const findViolationsInSource = ({ filePath, content }) => {
   const normalizedPath = normalizePath(filePath)
   if (normalizedPath === CANONICAL_FILE) return []
+  if (ALLOWED_FILES.has(normalizedPath)) return []
 
   const { lines, hits } = findPageCountLines({ content })
   return hits
@@ -260,9 +268,11 @@ if (require.main === module) {
 module.exports = {
   OUTPUT_CONTRACT_VERSION,
   CANONICAL_FILE,
+  ALLOWED_FILES,
   IGNORED_DIRS,
   SOURCE_EXTENSIONS,
   PAGE_COUNT_REGEX,
+  PAGE_FETCH_MARKER_REGEX,
   parseArgs,
   shouldScanFile,
   isCommentLine,
