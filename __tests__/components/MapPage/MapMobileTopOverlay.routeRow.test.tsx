@@ -161,6 +161,28 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     expect(loading.getByText('Маршрут обновляется')).toBeTruthy()
   })
 
+  it('ярус не пустеет, пока роутинг ещё считает геометрию', () => {
+    // `addPoint` обнуляет геометрию (stores/routeStore.ts), а выбор старта к
+    // этому моменту уже уступил слот: без отдельного состояния ряд исчезал бы
+    // на всё время сетевого запроса и возвращался сводкой.
+    const { getByTestId, queryByTestId, getByText, queryByText } = render(
+      <MapMobileTopOverlay
+        {...(routeProps as any)}
+        routePointCount={2}
+        routeDistance={0}
+        routeDuration={0}
+        routingLoading
+      />,
+    )
+
+    expect(getByTestId('map-mobile-route-summary')).toBeTruthy()
+    expect(queryByTestId('map-mobile-route-start-selector')).toBeNull()
+    expect(getByText('Маршрут обновляется')).toBeTruthy()
+    // Пустых чипов метрик в этом состоянии быть не должно.
+    expect(queryByText(/км|м$/)).toBeNull()
+    expect(queryByText(/мин|ч$/)).toBeNull()
+  })
+
   it('крестик скрывает сводку, а новый маршрут показывает её снова', () => {
     const { getByTestId, queryByTestId, rerender } = render(
       <MapMobileTopOverlay

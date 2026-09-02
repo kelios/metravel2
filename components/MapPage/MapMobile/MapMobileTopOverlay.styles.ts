@@ -39,6 +39,28 @@ const ROUTE_SUMMARY_CLOSE_TOUCH_INSET =
  * не влезает без роста контейнера, 44dp — принятый в проекте floor.
  */
 const ROUTE_CONTROL_TOUCH_TARGET_SIZE = 44
+/** Зазор между ярусами правого стека (`toolbarStack`). */
+const TOOLBAR_STACK_GAP = 6
+/**
+ * #1699 — под тулбаром живёт РОВНО один ярус маршрута: выбор старта, пока
+ * заданы не оба конца, и сводка, как только маршрут построен. Раньше ярусов
+ * было два (селектор 44dp + карточка сводки 68dp), и вместе с зазором они
+ * съедали 118dp полотна карты. На столько же поповеры и подсказка уезжают вниз,
+ * когда ярус занят; значение считается из высоты ряда и зазора стека, чтобы у
+ * вертикали был один источник правды (тот же приём, что в `mapFilterChips.ts`).
+ */
+export const MAP_ROUTE_ROW_STACK_OFFSET = ROUTE_CONTROL_TOUCH_TARGET_SIZE + TOOLBAR_STACK_GAP
+/**
+ * Ряд маршрута стоит справа, слева от него — круглая кнопка локации (38px) +
+ * отступы root (10+10). Прежний хардкод 292px был УЖЕ содержимого ряда (~302px
+ * при 390px вьюпорта), поэтому «На карте» уезжало за правый край. Считаем
+ * реально доступную ширину; на совсем узких экранах содержимое ужимается
+ * (flexShrink) вместо обрезки. Для сводки это ПОТОЛОК, а не ширина: готовая
+ * строка короче ряда выбора старта и закрывает меньше карты.
+ */
+export const MAP_ROUTE_ROW_RESERVED = 62
+export const MAP_ROUTE_ROW_MAX_WIDTH = 340
+export const MAP_ROUTE_ROW_MIN_WIDTH = 200
 /** Вертикальные поля плашки подсказки — их же компенсирует действие. */
 const ROUTE_HINT_PADDING_VERTICAL = 6
 
@@ -85,7 +107,7 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
     },
     toolbarStack: {
       alignItems: 'flex-end' as const,
-      gap: 6,
+      gap: TOOLBAR_STACK_GAP,
     },
     routeToolbar: {
       flexDirection: 'row',

@@ -29,20 +29,26 @@ import { ROUTING_DIRECT_LINE } from '../RoutingStatus'
 import {
   TRANSPORT_ICON,
   getTransportLabel,
-  TRANSPORT_SPEED_KMH,
   type TransportMode,
 } from '../transportModes'
 import {
   getMapMobileTopOverlayStyles,
+  MAP_ROUTE_ROW_MAX_WIDTH,
+  MAP_ROUTE_ROW_MIN_WIDTH,
+  MAP_ROUTE_ROW_RESERVED,
+  MAP_ROUTE_ROW_STACK_OFFSET,
   MAP_TOOLBAR_TOUCH_PADDING,
   MAP_TOOLBAR_TOUCH_TARGET_SIZE,
 } from './MapMobileTopOverlay.styles'
 import { MapMobileRadiusPopover } from './MapMobileRadiusPopover'
 import { MapMobileLayersPopover } from './MapMobileLayersPopover'
 import { MapMobileTransportPopover } from './MapMobileTransportPopover'
-import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
 import { translate as i18nT } from '@/i18n'
-import { formatInteger } from '@/i18n/format'
+import {
+  estimateRouteDurationSeconds,
+  formatRouteDistance,
+  formatRouteDuration,
+} from './routeSummaryFormat'
 
 
 type ActivePopover = 'radius' | 'layers' | 'transport' | null
@@ -76,45 +82,6 @@ function clampPopoverRight(anchorRight: number, width: number, viewportWidth: nu
 
 /** How long the «tap to build» hint stays visible after entering route mode. */
 const ROUTE_HINT_TIMEOUT_MS = 6000
-/**
- * #1699 — под тулбаром живёт РОВНО один ярус маршрута: выбор старта, пока
- * заданы не оба конца, и сводка, как только маршрут построен. Раньше ярусов
- * было два (селектор 44dp + карточка сводки 68dp), и вместе с зазором они
- * съедали 118dp полотна карты. Смещение = высота ряда (44) + зазор стека (6).
- */
-const ROUTE_ROW_OFFSET = 50
-/**
- * Ряд маршрута стоит справа, слева от него — круглая кнопка локации (38px) +
- * отступы root (10+10). Прежний хардкод 292px был УЖЕ содержимого ряда (~302px
- * при 390px вьюпорта), поэтому «На карте» уезжало за правый край. Считаем
- * реально доступную ширину; на совсем узких экранах содержимое ужимается
- * (flexShrink) вместо обрезки. Для сводки это ПОТОЛОК, а не ширина: готовая
- * строка короче ряда выбора старта и закрывает меньше карты.
- */
-const ROUTE_ROW_RESERVED = 62
-const ROUTE_ROW_MAX_WIDTH = 340
-const ROUTE_ROW_MIN_WIDTH = 200
-
-function formatRouteDistance(meters: number): string {
-  if (!Number.isFinite(meters) || meters <= 0) return ''
-  return formatDistanceMeters(meters, ROUTE_DISTANCE_FORMAT)
-}
-
-function estimateRouteDurationSeconds(meters: number, mode: TransportMode): number {
-  if (!Number.isFinite(meters) || meters <= 0) return 0
-  const speed = TRANSPORT_SPEED_KMH[mode] ?? TRANSPORT_SPEED_KMH.car
-  return Math.round((meters / 1000 / speed) * 3600)
-}
-
-function formatRouteDuration(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return ''
-  const totalMinutes = Math.max(1, Math.round(seconds / 60))
-  if (totalMinutes < 60) return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_min_b586289b', { value1: formatInteger(totalMinutes) })
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  if (minutes === 0) return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_ch_53da1ce7', { value1: formatInteger(hours) })
-  return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_ch_value2_min_0833ca5d', { value1: formatInteger(hours), value2: formatInteger(minutes) })
-}
 
 interface MapMobileTopOverlayProps {
   colors: ThemedColors
@@ -244,8 +211,8 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   // точки и возвращает карту в режим мест (#1699).
   const showRouteStartSelector = isRouteMode && routePointCount < 2
   const routeRowWidth = Math.max(
-    ROUTE_ROW_MIN_WIDTH,
-    Math.min(ROUTE_ROW_MAX_WIDTH, viewportWidth - ROUTE_ROW_RESERVED),
+    MAP_ROUTE_ROW_MIN_WIDTH,
+    Math.min(MAP_ROUTE_ROW_MAX_WIDTH, viewportWidth - MAP_ROUTE_ROW_RESERVED),
   )
   const visibleActiveFilters = useMemo(
     () => getVisibleMapFilterChips(activeFilters),
@@ -308,12 +275,19 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
     typeof routeDuration === 'number' && Number.isFinite(routeDuration) && routeDuration > 0
       ? routeDuration
       : estimateRouteDurationSeconds(distanceMeters, transportMode)
+  // Ярус не должен пустеть между второй точкой и ответом роутинга: `addPoint`
+  // обнуляет геометрию (stores/routeStore.ts), а выбор старта к этому моменту
+  // уже уступил слот. Пока маршрут считается, строку держит статус без цифр.
+  const routeAwaitingGeometry =
+    isRouteMode && routePointCount >= 2 && !hasRouteDistance && !!routingLoading
   const routeSummaryKey = hasRouteDistance
     ? `${transportMode}:${Math.round(distanceMeters)}:${Math.round(durationSeconds)}`
-    : ''
+    : routeAwaitingGeometry
+      ? 'pending'
+      : ''
   const [dismissedRouteSummaryKey, setDismissedRouteSummaryKey] = useState('')
   const showRouteSummary =
-    hasRouteDistance && dismissedRouteSummaryKey !== routeSummaryKey
+    (hasRouteDistance || routeAwaitingGeometry) && dismissedRouteSummaryKey !== routeSummaryKey
   const routeDistanceText = formatRouteDistance(distanceMeters)
   const routeDurationText = formatRouteDuration(durationSeconds)
   const routeSummaryStatus =
@@ -348,7 +322,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
     toolbarPaddingTop + MAP_TOOLBAR_TOUCH_TARGET_SIZE + 6 + activeFiltersOffset
   // Селектор старта и сводка взаимоисключают друг друга и занимают один и тот
   // же ярус, поэтому смещение считается один раз, а не складывается (#1699).
-  const routeRowOffset = showRouteStartSelector || showRouteSummary ? ROUTE_ROW_OFFSET : 0
+  const routeRowOffset = showRouteStartSelector || showRouteSummary ? MAP_ROUTE_ROW_STACK_OFFSET : 0
   const popoverTop = basePopoverTop + routeRowOffset
   const routePopoverTop = popoverTop
   // В route-режиме иконка «Слои» уезжает на 4 шага влево (появляется ряд
@@ -701,12 +675,14 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 {routeSummaryStatus}
               </RNText>
               <View style={styles.routeSummaryMetrics}>
-                <View style={styles.routeSummaryMetric}>
-                  <Feather name="map" size={12} color={colors.primary} />
-                  <RNText style={styles.routeSummaryMetricText} numberOfLines={1}>
-                    {routeDistanceText}
-                  </RNText>
-                </View>
+                {!!routeDistanceText && (
+                  <View style={styles.routeSummaryMetric}>
+                    <Feather name="map" size={12} color={colors.primary} />
+                    <RNText style={styles.routeSummaryMetricText} numberOfLines={1}>
+                      {routeDistanceText}
+                    </RNText>
+                  </View>
+                )}
                 {!!routeDurationText && (
                   <View style={styles.routeSummaryMetric}>
                     <Feather name="clock" size={12} color={colors.primary} />
