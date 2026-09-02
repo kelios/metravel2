@@ -278,7 +278,7 @@ export const createMapPopupComponent = ({
     // #334 — saved-state for the «Сохранить место» button. Reads the user's
     // collection (shared `userPointsAll` cache) and matches by coordinates so the
     // button shows «Сохранено» and a second tap removes the point (toggle).
-    const { isSaved, removeSaved, createPoint } = useSavedPointToggle({
+    const { isSaved, isReady: isSavedPointsReady, removeSaved, createPoint } = useSavedPointToggle({
       coord: normalizedCoord,
       enabled: isAuthenticated,
     });
@@ -424,6 +424,7 @@ export const createMapPopupComponent = ({
         void showToast({ type: 'info', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.voydite_chtoby_sohranit_tochku_17cbe5b6'), position: 'bottom' });
         return;
       }
+      if (!isSavedPointsReady) return;
       if (isAdding) return;
       if (!normalizedCoord) {
         void showToast({ type: 'info', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_raspoznat_koordinaty_706f0bec'), position: 'bottom' });
@@ -491,6 +492,7 @@ export const createMapPopupComponent = ({
     }, [
       authReady,
       isAuthenticated,
+      isSavedPointsReady,
       isAdding,
       isSaved,
       removeSaved,
@@ -587,12 +589,14 @@ export const createMapPopupComponent = ({
                 }
               : undefined
           }
-          addDisabled={!authReady || !normalizedCoord || isAdding}
+          addDisabled={!authReady || !normalizedCoord || !isSavedPointsReady || isAdding}
           isSaved={isQuest ? false : isSaved}
           addLabel={!isQuest && isSaved ? i18nT('map:components.MapPage.Map.createMapPopupComponent.v_tochkah_a582e74c') : i18nT('map:components.MapPage.Map.createMapPopupComponent.moi_tochki_df7be800')}
           addTooltip={
             !authReady
               ? i18nT('map:components.MapPage.Map.createMapPopupComponent.zagruzka_80ba0ae0')
+              : !isSavedPointsReady
+                ? i18nT('map:components.MapPage.Map.createMapPopupComponent.zagruzka_80ba0ae0')
               : !isAuthenticated
                 ? i18nT('map:components.MapPage.Map.createMapPopupComponent.voydite_chtoby_sohranit_tochku_17cbe5b6')
                 : !normalizedCoord
@@ -601,7 +605,7 @@ export const createMapPopupComponent = ({
                     ? i18nT('map:components.MapPage.Map.createMapPopupComponent.ubrat_iz_moih_tochek_87bf91bc')
                     : i18nT('map:components.MapPage.Map.createMapPopupComponent.sohranit_v_moi_tochki_d74b4957')
           }
-          isAdding={isAdding}
+          isAdding={isAdding || (isAuthenticated && !isSavedPointsReady)}
           compactLayout={compactLayout}
           fullscreenOnMobile={fullscreenOnMobile}
           imageHeight={bottomCardImageHeight}

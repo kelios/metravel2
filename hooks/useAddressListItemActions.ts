@@ -87,7 +87,12 @@ export function useAddressListItemActions(travel: TravelCoords) {
     const lng = Number(travel.lng);
     return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
   }, [travel.lat, travel.lng]);
-  const { isSaved, removeSaved, createPoint } = useSavedPointToggle({ coord: toggleCoord });
+  const {
+    isSaved,
+    isReady: isSavedPointsReady,
+    removeSaved,
+    createPoint,
+  } = useSavedPointToggle({ coord: toggleCoord });
 
   const rawCategoryName = useMemo(() => {
     if (categoryName) return String(categoryName);
@@ -143,6 +148,7 @@ export function useAddressListItemActions(travel: TravelCoords) {
   const handleAddPoint = useCallback(async () => {
     if (!authReady) return;
     if (!isAuthenticated) { void showToast({ type: 'info', text1: i18nT('shared:hooks.useAddressListItemActions.voydite_chtoby_sohranit_tochku_990d6c7e'), position: 'bottom' }); return; }
+    if (!isSavedPointsReady) return;
     if (isAddingPoint) return;
     const lat = Number(travel.lat);
     const lng = Number(travel.lng);
@@ -172,10 +178,10 @@ export function useAddressListItemActions(travel: TravelCoords) {
     } catch {
       void showToast({ type: 'error', text1: i18nT('shared:hooks.useAddressListItemActions.ne_udalos_sohranit_tochku_3c69cb31'), position: 'bottom' });
     } finally { setIsAddingPoint(false); }
-  }, [address, articleUrl, authReady, rawCategoryName, isAddingPoint, isAuthenticated, isSaved, removeSaved, createPoint, travel.lat, travel.lng, travelImageThumbUrl, urlTravel]);
+  }, [address, articleUrl, authReady, rawCategoryName, isAddingPoint, isAuthenticated, isSavedPointsReady, isSaved, removeSaved, createPoint, travel.lat, travel.lng, travelImageThumbUrl, urlTravel]);
 
   return {
-    rawCategoryName, categories, isAddingPoint, pointAdded: isSaved, isAuthenticated, authReady,
+    rawCategoryName, categories, isAddingPoint, pointAdded: isSaved, isSavedPointsReady, isAuthenticated, authReady,
     copyCoords, openTelegram, openMap, openArticle, handleAddPoint,
   };
 }

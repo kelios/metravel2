@@ -3,6 +3,10 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
+import {
+  isPointsCollectionPartial,
+  markPointsCollectionComplete,
+} from '@/api/userPointsCollectionCache';
 import { useAuthStore } from '@/stores/authStore';
 import { useSavedPointsCollection } from '@/hooks/useSavedPointsCollection';
 import type { ImportedPoint } from '@/types/userPoints';
@@ -27,9 +31,16 @@ import type { ImportedPoint } from '@/types/userPoints';
 
 const COORD_EPSILON = 1e-5; // ~1.1 m по широте — достаточно для матча «та же точка»
 
-// Синтетический id для оптимистичной точки в кэше `userPointsAll`, пока сервер не
-// вернул реальную запись. Отрицательный, чтобы не столкнуться с реальными id.
-const OPTIMISTIC_POINT_ID = -1;
+// Each in-flight create needs its own synthetic id. Reusing one `-1` made the
+// first response replace every concurrent optimistic point and lose the later
+// server records. Negative ids do not overlap backend ids.
+let nextOptimisticPointId = -1;
+
+const allocateOptimisticPointId = (): number => {
+  const id = nextOptimisticPointId;
+  nextOptimisticPointId -= 1;
+  return id;
+};
 
 function readPointsFromUnknown(data: unknown): ImportedPoint[] {
   if (Array.isArray(data)) return data as ImportedPoint[];
@@ -163,59 +174,59 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
     async (payload: Partial<ImportedPoint>) => {
       // Idempotency guard: backend has no remove-by-coordinate, so if the cache
       // already shows this point as saved we never POST a duplicate.
-      if (savedPoint) {
-        invalidate();
-        return;
-      }
+      if (savedPoint) return;
       const key = queryKeys.userPointsAll();
       const hasCollection = queryClient.getQueryData(key) !== undefined;
-      if (!hasCollection) {
-        // Коллекция ещё читается (14 страниц на крупном аккаунте). Отменять её
-        // здесь нельзя: `cancelQueries` откатывает данные к предыдущему
-        // состоянию, а это `undefined` — в кэше осталась бы ОДНА точка, свежая
-        // на весь staleTime, и все прочие сохранённые стали бы «не сохранено».
-        // Инвалидация тоже не годится: во время летящего чтения она
-        // дедуплицируется и молча теряется. Поэтому сохраняем, дожидаемся того
-        // же самого чтения (без лишнего запроса) и дописываем созданную точку.
-        const createdFirst = await userPointsApi.createPoint(payload);
-        try {
-          await queryClient.ensureQueryData({
-            queryKey: key,
-            queryFn: () => userPointsApi.getAllPoints(),
-          });
-          // Полноту здесь НЕ отмечаем: `ensureQueryData` дедуплицируется на уже
-          // летящее чтение того же ключа, а им может быть первая страница
-          // `usePointsDataModel` — отметка выдала бы 200-точечный префикс за всю
-          // коллекцию и заодно погасила бы фоновую докачку. Признак снимет
-          // `useSavedPointsCollection` после собственного `getAllPoints()`.
-        } catch {
-          // Точка УЖЕ создана на сервере. `ensureQueryData` реджектится (в отличие
-          // от `prefetchQuery`), а чтение коллекции — это 14 страниц под
-          // `Promise.all` без ретраев: падение любой из них не должно
-          // превращать успешное сохранение в «не удалось сохранить».
-          // Инвалидация обязательна: без неё кэш остаётся пустым, кнопка так и
-          // висит «＋» под success-тостом, а повторный тап проходит мимо
-          // idempotency-guard (он читает кэш) и создаёт дубль.
-          invalidate();
-          return;
-        }
-        queryClient.setQueryData<ImportedPoint[]>(key, (old) => {
-          // Никогда не создаём коллекцию из одной точки: пустой кэш, дополненный
-          // созданной записью, выглядел бы как полная коллекция и повторил бы
-          // дефект схлопывания.
-          if (old === undefined) return old;
-          const arr = readPointsFromUnknown(old);
-          return arr.some((p) => p?.id === createdFirst?.id) ? arr : [...arr, createdFirst];
+      const collectionPartial = isPointsCollectionPartial(queryClient);
+      const targetLat = Number(payload.latitude ?? coord?.lat);
+      const targetLng = Number(payload.longitude ?? coord?.lng);
+      if (!hasCollection || collectionPartial) {
+        // The cache cannot prove absence while its first full read is pending or
+        // while it contains a streamed prefix (#1709). Join the active full
+        // read (Query.fetch deduplicates it), then repeat the coordinate guard
+        // before POST. Failing closed is intentional: creating before this check
+        // can duplicate a point which exists beyond the cached prefix.
+        let completePoints = await queryClient.fetchQuery<ImportedPoint[]>({
+          queryKey: key,
+          queryFn: async () => {
+            const allPoints = await userPointsApi.getAllPoints();
+            markPointsCollectionComplete(queryClient);
+            return allPoints;
+          },
+          staleTime: 0,
         });
-        return;
+        // A full-read consumer can mount while `usePointsDataModel` is fetching
+        // page 1 under the same key. React Query joins that request, whose result
+        // is only a prefix. Once it settles, run the required full query.
+        if (isPointsCollectionPartial(queryClient)) {
+          completePoints = await queryClient.fetchQuery<ImportedPoint[]>({
+            queryKey: key,
+            queryFn: async () => {
+              const allPoints = await userPointsApi.getAllPoints();
+              markPointsCollectionComplete(queryClient);
+              return allPoints;
+            },
+            staleTime: 0,
+          });
+          if (isPointsCollectionPartial(queryClient)) {
+            throw new Error('Saved points collection is still partial');
+          }
+        }
+        if (findSavedPointByCoord(completePoints, targetLat, targetLng)) return;
       }
       // См. `removeSaved`: летящее постраничное чтение затёрло бы оптимистичную
       // точку, пользователь увидел бы «не сохранено» и создал дубль — сервер не
       // умеет дедуплицировать по координатам.
       await queryClient.cancelQueries({ queryKey: key });
+      // Re-read after the async boundary. Another mounted card may have created
+      // this coordinate while both calls were waiting for the shared collection
+      // read or cancelQueries; its optimistic entry deduplicates this POST.
+      const latestPoints = readPointsFromUnknown(queryClient.getQueryData(key));
+      if (findSavedPointByCoord(latestPoints, targetLat, targetLng)) return;
       // Оптимистично добавляем синтетическую точку (матчится по координатам в
       // `findSavedPointByCoord`), чтобы иконка ＋→✓ переключилась мгновенно.
-      const optimistic = { ...(payload as ImportedPoint), id: OPTIMISTIC_POINT_ID };
+      const optimisticPointId = allocateOptimisticPointId();
+      const optimistic = { ...(payload as ImportedPoint), id: optimisticPointId };
       queryClient.setQueryData<ImportedPoint[]>(key, (old) => [
         ...readPointsFromUnknown(old),
         optimistic,
@@ -226,23 +237,23 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
       } catch (e) {
         // Откат: убираем оптимистичную точку.
         queryClient.setQueryData<ImportedPoint[]>(key, (old) =>
-          readPointsFromUnknown(old).filter((p) => p.id !== OPTIMISTIC_POINT_ID),
+          readPointsFromUnknown(old).filter((p) => p.id !== optimisticPointId),
         );
         throw e;
       }
       // Заменяем оптимистичную запись реальной (с серверным id). Полного рефетча
       // на успехе нет — см. `removeSaved`: кэш уже держит серверную запись.
       queryClient.setQueryData<ImportedPoint[]>(key, (old) =>
-        readPointsFromUnknown(old).map((p) => (p.id === OPTIMISTIC_POINT_ID ? created : p)),
+        readPointsFromUnknown(old).map((p) => (p.id === optimisticPointId ? created : p)),
       );
     },
-    [invalidate, queryClient, savedPoint],
+    [coord, queryClient, savedPoint],
   );
 
   return {
     isSaved: !!savedPoint,
     savedPointId: savedPoint?.id ?? null,
-    isReady: !pointsQuery.isLoading,
+    isReady: pointsQuery.isTrusted,
     removeSaved,
     createPoint,
   };

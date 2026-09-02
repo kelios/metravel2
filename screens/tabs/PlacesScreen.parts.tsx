@@ -164,7 +164,7 @@ export const PlaceCard = React.memo(function PlaceCard({
     return { lat, lng }
   }, [place.coord])
 
-  const { isSaved, removeSaved, createPoint } = useSavedPointToggle({
+  const { isSaved, isReady: isSavedPointsReady, removeSaved, createPoint } = useSavedPointToggle({
     coord: normalizedCoord,
     enabled: isAuthenticated,
   })
@@ -195,6 +195,7 @@ export const PlaceCard = React.memo(function PlaceCard({
       void showToast({ type: 'info', text1: i18nT('map:screens.tabs.PlacesScreen_parts.voydite_chtoby_sohranit_tochku_cbf7d9b3'), position: 'bottom' })
       return
     }
+    if (!isSavedPointsReady) return
     if (isAdding || !normalizedCoord) return
 
     // #334 toggle parity: a second tap on an already-saved point removes it.
@@ -237,6 +238,7 @@ export const PlaceCard = React.memo(function PlaceCard({
   }, [
     authReady,
     isAuthenticated,
+    isSavedPointsReady,
     isAdding,
     isSaved,
     normalizedCoord,
@@ -318,8 +320,8 @@ export const PlaceCard = React.memo(function PlaceCard({
         onShare={normalizedCoord ? handleShare : undefined}
         onAddPoint={normalizedCoord ? handleAddPoint : undefined}
         addLabel={isSaved ? i18nT('map:screens.tabs.PlacesScreen_parts.v_tochkah_53f65e25') : i18nT('map:screens.tabs.PlacesScreen_parts.moi_tochki_df71d705')}
-        addDisabled={!authReady || !normalizedCoord || isAdding}
-        isAdding={isAdding}
+        addDisabled={!authReady || !normalizedCoord || !isSavedPointsReady || isAdding}
+        isAdding={isAdding || (isAuthenticated && !isSavedPointsReady)}
         imageHeight={isMobileCard ? 240 : 280}
         eagerImage={priority}
         width={compactCardWidth}

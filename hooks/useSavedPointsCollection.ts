@@ -28,11 +28,11 @@ import type { ImportedPoint } from '@/types/userPoints';
 export function useSavedPointsCollection({ enabled }: { enabled: boolean }) {
   const queryClient = useQueryClient();
 
-  // Читается на каждый рендер, но решает ровно в момент монтирования: именно там
-  // React Query сверяет свежесть и решает, идти ли за данными.
+  // Read on every query-driven render: it controls both initial freshness and
+  // whether the currently cached array is complete enough to trust.
   const partial = isPointsCollectionPartial(queryClient);
 
-  return useQuery<ImportedPoint[]>({
+  const query = useQuery<ImportedPoint[]>({
     queryKey: queryKeys.userPointsAll(),
     queryFn: async () => {
       const points = await userPointsApi.getAllPoints();
@@ -44,4 +44,16 @@ export function useSavedPointsCollection({ enabled }: { enabled: boolean }) {
     enabled,
     staleTime: partial ? 0 : USER_POINTS_COLLECTION_STALE_TIME_MS,
   });
+
+  return {
+    ...query,
+    // Existing partial data makes React Query report `isLoading=false` while
+    // the completeness consumer is refetching the full collection. During that
+    // window the prefix cannot answer whether an arbitrary coordinate is saved.
+    // Disabled consumers do not need collection readiness (guest actions still
+    // need to remain clickable so they can show the login hint). When enabled,
+    // absence can be trusted only after some complete data exists; an initial
+    // fetch error with `data === undefined` must stay fail-closed.
+    isTrusted: !enabled || (query.data !== undefined && !partial),
+  };
 }

@@ -59,6 +59,7 @@ type Props = {
   isAuthenticated: boolean
   isAddingPoint: boolean
   pointAdded: boolean
+  isSavedPointsReady: boolean
   cardImageHeight: number
   cardWidth?: number
 }
@@ -99,6 +100,7 @@ const AddressListItemCard: React.FC<Props> = ({
   isAuthenticated,
   isAddingPoint,
   pointAdded,
+  isSavedPointsReady,
   cardImageHeight,
   cardWidth,
 }) => {
@@ -133,8 +135,8 @@ const AddressListItemCard: React.FC<Props> = ({
       quickActions={quickActions}
       inlineActions={inlineActions}
       onAddPoint={handleAddPoint}
-      addDisabled={!authReady || !isAuthenticated || isAddingPoint}
-      isAdding={isAddingPoint}
+      addDisabled={!authReady || !isAuthenticated || !isSavedPointsReady || isAddingPoint}
+      isAdding={isAddingPoint || (isAuthenticated && !isSavedPointsReady)}
       imageHeight={cardImageHeight}
       width={cardWidth}
       addLabel={pointAdded ? i18nT('map:components.MapPage.AddressListItem.AddressListItemCard.dobavleno_e6c744c6') : i18nT('map:components.MapPage.AddressListItem.AddressListItemCard.sohranit_06fb5b11')}

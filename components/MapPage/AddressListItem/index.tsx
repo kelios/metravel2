@@ -59,6 +59,7 @@ const AddressListItem: React.FC<Props> = ({
     categories,
     isAddingPoint,
     pointAdded,
+    isSavedPointsReady,
     isAuthenticated,
     authReady,
     openTelegram,
@@ -283,6 +284,7 @@ const AddressListItem: React.FC<Props> = ({
       isAuthenticated={isAuthenticated}
       isAddingPoint={isAddingPoint}
       pointAdded={pointAdded}
+      isSavedPointsReady={isSavedPointsReady}
       cardImageHeight={cardImageHeight}
       cardWidth={cardWidth}
     />
