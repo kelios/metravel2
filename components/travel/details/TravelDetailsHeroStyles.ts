@@ -6,6 +6,14 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 import { TRAVEL_DETAILS_SECTION_RHYTHM } from './styles/travelDetailsSectionRhythm'
 
+/**
+ * Hero-набор стилей детали путешествия. Ключи `sliderContainer` и
+ * `heroFavoriteBtn*` живут ТОЛЬКО здесь: копии в агрегате
+ * `useTravelDetailsStyles` не читал никто, зато они разошлись по значению и
+ * ловили правку на себя (#1708). Владение ключами держит гейт
+ * `__tests__/components/travel/travelDetailsStyleKeyOwnership.test.ts`; общее с
+ * агрегатом идёт спредом из `TRAVEL_DETAILS_SECTION_RHYTHM`, а не копией.
+ */
 export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     ...TRAVEL_DETAILS_SECTION_RHYTHM,
@@ -108,26 +116,6 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
     quickJumpLabelPrimary: {
       color: colors.textOnPrimary,
       fontWeight: '800' as any,
-    },
-    sectionHeaderText: {
-      fontSize: Platform.select({
-        default: 18,
-        web: 20,
-      }),
-      fontWeight: '600' as any,
-      color: colors.text,
-      letterSpacing: 0,
-      lineHeight: Platform.select({
-        default: 24,
-        web: 26,
-      }),
-      flexShrink: 1,
-    },
-    sectionSubtitle: {
-      fontSize: Platform.select({ default: 13, web: 14 }),
-      color: colors.textMuted,
-      marginTop: DESIGN_TOKENS.spacing.xs,
-      lineHeight: Platform.select({ default: 20, web: 22 }),
     },
     sliderContainer: {
       width: '100%',

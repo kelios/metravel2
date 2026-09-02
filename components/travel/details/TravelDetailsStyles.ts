@@ -2,12 +2,7 @@ import { StyleSheet } from 'react-native'
 import { useMemo } from 'react'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
-import {
-  createTravelDetailsDecisionSummaryStyles,
-  createTravelDetailsHeroStyles,
-  createTravelDetailsMobileInsightStyles,
-  createTravelDetailsStatusStyles,
-} from './TravelDetailsStyleFragments'
+import { createTravelDetailsDecisionSummaryStyles } from './TravelDetailsStyleFragments'
 import { createTravelDetailsLayoutStyles } from './styles/travelDetailsLayoutStyles'
 import { createTravelDetailsNavStyles } from './styles/travelDetailsNavStyles'
 import { createTravelDetailsSectionHeaderStyles } from './styles/travelDetailsSectionHeaderStyles'
@@ -27,9 +22,6 @@ export {
 export const getTravelDetailsStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     ...createTravelDetailsDecisionSummaryStyles(colors),
-    ...createTravelDetailsHeroStyles(colors),
-    ...createTravelDetailsMobileInsightStyles(colors),
-    ...createTravelDetailsStatusStyles(colors),
     ...createTravelDetailsLayoutStyles(colors),
     ...createTravelDetailsNavStyles(colors),
     ...createTravelDetailsSectionHeaderStyles(colors),
