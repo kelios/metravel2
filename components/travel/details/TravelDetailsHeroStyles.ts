@@ -121,9 +121,6 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       color: colors.textOnPrimary,
       fontWeight: '800' as any,
     },
-    authorCardContainer: {
-      marginBottom: DESIGN_TOKENS.spacing.md,
-    },
     sectionHeaderText: {
       fontSize: Platform.select({
         default: 18,
