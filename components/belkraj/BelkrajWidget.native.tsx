@@ -8,6 +8,7 @@ import {
   parseBelkrajCoord,
   resolveBelkrajCountryCode,
 } from './belkrajAvailability'
+import { BELKRAJ_WIDGET_SURFACE } from './belkrajWidgetSurface'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
@@ -119,7 +120,7 @@ function BelkrajWidget({
   if (!canRender || !widgetUrl) return null
 
   return (
-    <View style={[styles.container, { height: finalHeight }]}>
+    <View testID="belkraj-native-container" style={[styles.container, { height: finalHeight }]}>
       <WebView
         testID="belkraj-native-webview"
         source={{ uri: widgetUrl }}
@@ -133,6 +134,14 @@ function BelkrajWidget({
         javaScriptCanOpenWindowsAutomatically={false}
         mixedContentMode="compatibility"
         androidLayerType="hardware"
+        // Без явного значения RNW не трогает настройку, и на Android 10–12
+        // остаётся системный FORCE_DARK_AUTO: тема приложения DayNight
+        // (android/app/src/main/res/values/styles.xml) в ночном режиме даёт
+        // isLightTheme=false, и WebView алгоритмически инвертирует чужую
+        // страницу — её тёмный текст стал бы светлым уже поверх нашей светлой
+        // подложки. Палитра партнёра фиксированно светлая, поэтому OS-инверсию
+        // выключаем: страница показывается ровно такой, какой её отдали.
+        forceDarkOn={false}
         onShouldStartLoadWithRequest={handleShouldStartLoad}
         accessibilityLabel={i18nT('shared:components.belkraj.BelkrajWidget.belkraj_partner_offers_b193ce0d')}
       />
@@ -147,11 +156,18 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.borderLight,
-    backgroundColor: colors.surface,
+    // Не `colors.surface`: в тёмной теме он тёмный, а страница партнёра светлая
+    // и прозрачная — см. `belkrajWidgetSurface.ts`.
+    backgroundColor: BELKRAJ_WIDGET_SURFACE,
   },
   webview: {
     flex: 1,
-    backgroundColor: 'transparent',
+    // Красить контейнер мало: RNCWebViewImpl.setBackgroundColor выводит из
+    // alpha флаг `opaque` (alpha < 1 → opaque = NO). С прежним `transparent`
+    // WKWebView становился прозрачным окном в родителя, и прозрачный body
+    // партнёра постоянно показывал тёмный фон под своим тёмным текстом — это и
+    // есть репорт #1697. Непрозрачная светлая заливка возвращает opaque = YES.
+    backgroundColor: BELKRAJ_WIDGET_SURFACE,
   },
 })
 

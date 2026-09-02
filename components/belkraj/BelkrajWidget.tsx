@@ -5,6 +5,7 @@ import {
     parseBelkrajCoord,
     resolveBelkrajCountryCode,
 } from './belkrajAvailability';
+import { BELKRAJ_WIDGET_SURFACE } from './belkrajWidgetSurface';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
 import { translate as i18nT } from '@/i18n'
 
@@ -218,7 +219,16 @@ function BelkrajWidget({
                 overflowX: 'hidden',
                 overflowY: allowScroll ? 'auto' : 'hidden',
                 border: '1px solid var(--color-border)',
-                background: 'var(--color-surface)',
+                // Не `var(--color-surface)`: в тёмной теме он тёмный, а iframe
+                // партнёра прозрачный и светлый — см. `belkrajWidgetSurface.ts`.
+                background: BELKRAJ_WIDGET_SURFACE,
+                // Одного `background` мало: `app/+html.tsx` ставит на <html>
+                // `color-scheme: dark`, свойство наследуется до этого слота, и под
+                // кросс-доменным iframe подложку рисует уже UA, поверх нашего фона
+                // (тот же механизм разобран в GoogleSignInButton.web.tsx). Пиним
+                // светлую схему на слоте — она наследуется в iframe и заодно
+                // держит светлыми UA-скроллбары над светлой страницей партнёра.
+                colorScheme: 'light',
                 boxShadow: 'var(--shadow-light, 0 1px 4px rgba(0,0,0,0.06))',
                 ...(allowScroll ? {
                     height: finalHeight,
