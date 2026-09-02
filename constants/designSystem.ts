@@ -32,6 +32,13 @@ export const DESIGN_COLORS = {
   criticalBgTertiaryDark: MODERN_MATTE_PALETTE_DARK.backgroundTertiary,
   criticalSurfaceLight: MODERN_MATTE_PALETTE.surface,
   criticalSurfaceDark: MODERN_MATTE_PALETTE_DARK.surface,
+
+  // Светлая поверхность, СОЗНАТЕЛЬНО не следующая теме: подложка под сторонние
+  // embed'ы, которые отдают прозрачный фон и фиксированно светлый текст. Тему им
+  // не передать, поэтому в тёмной теме их текст лёг бы на тёмный фон (#1697).
+  // Отличается от `criticalSurfaceLight` назначением: тот — plain-fallback для
+  // critical CSS веб-шелла, здесь же цвет доезжает до рантайма обеих платформ.
+  staticLightSurface: MODERN_MATTE_PALETTE.surface,
   criticalFocusLight: MODERN_MATTE_PALETTE.focusStrong,
   criticalFocusDark: MODERN_MATTE_PALETTE_DARK.focusStrong,
 

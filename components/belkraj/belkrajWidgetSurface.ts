@@ -14,7 +14,9 @@
 // оба следуют теме, и подложка снова уехала бы в тёмное.
 //
 // Обе платформы (`BelkrajWidget.tsx` и `BelkrajWidget.native.tsx`) читают эту
-// константу, чтобы фон виджета не разошёлся между web, Android и iOS.
-import { MODERN_MATTE_PALETTE } from '@/constants/modernMattePalette'
+// константу, чтобы фон виджета не разошёлся между web, Android и iOS. Значение
+// берётся из `DESIGN_COLORS`, а не из палитры напрямую: `designSystem.ts` — её
+// единственный разрешённый импортёр (правило там же, у `getThemedColors`).
+import { DESIGN_COLORS } from '@/constants/designSystem'
 
-export const BELKRAJ_WIDGET_SURFACE: string = MODERN_MATTE_PALETTE.surface
+export const BELKRAJ_WIDGET_SURFACE: string = DESIGN_COLORS.staticLightSurface
