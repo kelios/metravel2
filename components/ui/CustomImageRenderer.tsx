@@ -197,12 +197,13 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
   // Дальние от вьюпорта фото тела статьи не монтируем на Android: там у
   // expo-image нет lazy-загрузки по вьюпорту, поэтому 90+ картинок статьи сразу
   // вытесняют друг друга из Glide bitmap-кэша и грузят текстуры на каждом кадре
-  // скролла (#1035). На iOS само фото монтируем сразу: measure/unmount lifecycle
-  // оставлял inline-фото пустым до тапа. Общий native-гейт при этом остаётся для
-  // тяжёлых Instagram WebView, карточек точек и квестов; рамка сохраняет высоту.
+  // скролла (#1035). Платформу решает сам гейт (Android-only, #1696): без
+  // активного гейта хук сразу отдаёт `visible`, поэтому на iOS и web фото
+  // монтируется на первом кадре. Своей платформенной ветки здесь нет намеренно —
+  // вторая копия политики и разошлась с гейтом в #1666. Рамка держит высоту,
+  // пока фото не смонтировано.
   const { ref: frameRef, visible: isNearViewport, onLayout: handleFrameLayout } =
     useRichMediaVisibility(boxHeight);
-  const shouldRenderMedia = Platform.OS !== 'android' || isNearViewport;
 
   const needsMeasure = Boolean(src) && !isSmallIcon && !attrAR;
   const isWebFrameNearViewport = useWebMeasureGate(frameRef, needsMeasure);
@@ -284,7 +285,7 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
       collapsable={false}
       style={{ width: boxWidth, height: boxHeight, position: 'relative' }}
     >
-      {(!shouldRenderMedia || !imageLoaded) && !err && (
+      {(!isNearViewport || !imageLoaded) && !err && (
         <View
           style={[
             StyleSheet.absoluteFillObject,
@@ -297,7 +298,7 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
         </View>
       )}
 
-      {shouldRenderMedia && (
+      {isNearViewport && (
         <ImageCardMedia
           src={displaySrc}
           alt={alt}

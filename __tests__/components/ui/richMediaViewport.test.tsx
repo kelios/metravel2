@@ -53,7 +53,14 @@ describe('useRichMediaVisibility', () => {
     expect(getByTestId('probe').props.children).toBe('visible')
   })
 
-  it('на iOS монтирует body-image сразу, сохраняя native-гейт для остальных медиа', () => {
+  it('на iOS провайдер прозрачен: гейт не держит НИ ОДНО медиа пустым', () => {
+    // #1696: #1666 включила гейт на всём native и вывела из-под него только фото
+    // тела статьи. Плитки квестов остались гейтящимися и приехали пустыми в
+    // билд 1.0.5 (6) — на симуляторе iPhone 17 секция «Квесты по этому городу и
+    // рядом» показывала три пустых квадрата, и обложки появлялись только после
+    // ещё одного жеста скролла. Гейт заведён под Glide, поэтому на iOS его нет
+    // совсем: и `Probe` (плитка квеста, карточка точки, Instagram-эмбед), и фото
+    // тела статьи монтируются сразу.
     ;(Platform as { OS: string }).OS = 'ios'
     jest.useFakeTimers()
     const scrollY = new Animated.Value(0)
@@ -73,9 +80,7 @@ describe('useRichMediaVisibility', () => {
       </RichMediaViewportProvider>,
     )
 
-    // Провайдер остаётся активным на iOS: WebView/карточки по-прежнему ленивые.
-    expect(getByTestId('probe').props.children).toBe('hidden')
-    // Только фото тела статьи обходит этот гейт и не остаётся пустой рамкой.
+    expect(getByTestId('probe').props.children).toBe('visible')
     expect(mockImageCardMedia).toHaveBeenCalledTimes(1)
   })
 

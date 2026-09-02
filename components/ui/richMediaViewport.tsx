@@ -10,10 +10,10 @@ import React, {
 import { Animated, Dimensions, Platform, View } from 'react-native'
 
 /**
- * Native-only viewport gate for rich-text media (#1035).
+ * Android-only viewport gate for rich-text media (#1035).
  *
  * A long travel article carries dozens of body photos (travel #564 has 94). On
- * native every mounted `expo-image` starts its Glide request as soon as the view
+ * Android every mounted `expo-image` starts its Glide request as soon as the view
  * is attached — there is no viewport-based laziness like `loading="lazy"` on web.
  * All of them therefore decode at once, blow past Glide's bitmap cache and the
  * cache then re-decodes/re-uploads textures on every scroll frame: Android marks
@@ -26,8 +26,21 @@ import { Animated, Dimensions, Platform, View } from 'react-native'
  * re-lays out and shortly after scrolling settles, so deferred sections mounting
  * above the description cannot leave stale coordinates behind.
  *
- * Without a provider the hook reports "always visible", so web, article details
- * and tests keep the current behaviour.
+ * iOS is deliberately excluded. #1666 turned the provider on for all native and
+ * exempted only the article body photo; the consumers that stayed gated broke in
+ * the very next build. Замер симулятора iPhone 17 / iOS 26.5 на travel 630
+ * (main с #1666): секция «Квесты по этому городу и рядом» приезжает с тремя
+ * пустыми плитками и остаётся пустой, пока рамки стоят во вьюпорте; обложки
+ * появляются только после ЕЩЁ одного жеста скролла (#1696). Тот же симптом
+ * #1666 описал для inline-фото: «пустым до тапа». Общее у случаев то, что
+ * рамка регистрируется в гейте не в момент раскладки: секция ждёт данные и
+ * монтируется после них. Какое именно звено iOS-жизненного цикла отдаёт
+ * несовпадающую геометрию, не измерялось — гейт заведён под Glide, у которого
+ * на iOS нет аналога, поэтому лечение не в том, чтобы чинить измерение, а в том,
+ * чтобы вернуть гейт туда, где он нужен и проверен.
+ *
+ * Without an active gate the hook reports "always visible", so iOS, web, article
+ * details and tests keep the current behaviour.
  */
 
 type MeasurableView = View & {
@@ -74,7 +87,9 @@ export function RichMediaViewportProvider({
   const lastEvaluatedOffsetRef = useRef(Number.NaN)
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const isEnabled = Platform.OS !== 'web'
+  // Только Android: на iOS этот же measure/unmount-цикл оставляет рамку пустой
+  // (inline-фото — #1666, плитки квестов — #1696), а выигрыша Glide там нет.
+  const isEnabled = Platform.OS === 'android'
 
   const applyVisibility = useCallback((entry: GateEntry) => {
     if (entry.windowY == null) return
@@ -165,7 +180,7 @@ export function RichMediaViewportProvider({
 /**
  * Returns a ref/onLayout pair to attach to the media frame plus whether the frame
  * is close enough to the viewport to mount its image. Reports `true` when no gate
- * is mounted above (web, article details, tests).
+ * is active above (iOS, web, article details, tests).
  */
 export function useRichMediaVisibility(estimatedHeight: number) {
   const gate = useContext(RichMediaViewportContext)
