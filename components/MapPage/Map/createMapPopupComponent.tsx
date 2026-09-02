@@ -91,7 +91,6 @@ interface CreatePopupComponentArgs {
   shareInActionRow?: boolean;
   fullscreenTopInset?: number;
   fullscreenBottomInset?: number;
-  invalidateUserPoints?: () => void;
   colors: ThemedColors;
   themeContextValue: ThemeContextType;
 }
@@ -109,7 +108,6 @@ export const createMapPopupComponent = ({
   shareInActionRow = false,
   fullscreenTopInset = 0,
   fullscreenBottomInset = 0,
-  invalidateUserPoints,
   colors,
   themeContextValue,
 }: CreatePopupComponentArgs) => {
@@ -439,7 +437,6 @@ export const createMapPopupComponent = ({
         try {
           await removeSaved();
           void showToast({ type: 'success', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.tochka_ubrana_iz_moih_tochek_577546f5'), position: 'bottom' });
-          invalidateUserPoints?.();
         } catch {
           void showToast({ type: 'error', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_ubrat_tochku_110b4219'), position: 'bottom' });
         } finally {
@@ -484,7 +481,6 @@ export const createMapPopupComponent = ({
       try {
         await createPoint(payload);
         void showToast({ type: 'success', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.tochka_dobavlena_v_moi_tochki_9a63cfc3'), position: 'bottom' });
-        invalidateUserPoints?.();
         // Не закрываем попап: пользователь должен увидеть, что кнопка стала
         // «Сохранено», чтобы понять про un-save (toggle, #334).
       } catch {

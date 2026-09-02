@@ -9,12 +9,10 @@ import {
   View,
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
-import { useQueryClient } from '@tanstack/react-query'
 
 import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { queryKeys } from '@/api/queryKeys'
 import { createMapPopupComponent } from './Map/createMapPopupComponent'
 import { useUserLocationSignal } from './Map/userLocationSignal'
 import type { Point } from './Map/types'
@@ -108,7 +106,6 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
   const colors = useThemedColors()
   const themeContextValue = useTheme()
   const insets = useSafeAreaInsets()
-  const queryClient = useQueryClient()
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions()
   // On mobile web the card uses a BOUNDED bottom sheet (maps.me-style): the map
   // stays visible above it, the photo is a fixed hero, and the caption/actions
@@ -170,11 +167,8 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
         // title-row share icon and drop it from the «Навигация и действия» sheet.
         shareInActionRow: true,
         userLocationSignal,
-        invalidateUserPoints: () => {
-          void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() })
-        },
       }),
-    [colors, themeContextValue, queryClient, isFullscreenWeb, nativeHeroHeight, userLocationSignal],
+    [colors, themeContextValue, isFullscreenWeb, nativeHeroHeight, userLocationSignal],
   )
 
   // On the mobile sheet the close button wires BOTH RN-Web `onPress` and a native

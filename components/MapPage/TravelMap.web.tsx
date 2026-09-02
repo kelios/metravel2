@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Platform, View, useWindowDimensions } from 'react-native'
-import { useQueryClient } from '@tanstack/react-query'
 
 import { useLeafletLoader } from '@/hooks/useLeafletLoader'
 import { useMapMarkers } from '@/hooks/useMapMarkers'
@@ -23,7 +22,6 @@ import {
 } from './Map/travelMapGeometry'
 import { LAYOUT } from '@/constants/layout'
 import { normalizePoint } from '@/components/map-core/types'
-import { queryKeys } from '@/api/queryKeys'
 import { getOsmTileUrl, getOsmTileCrossOrigin, OSM_PROXY_ATTRIBUTION, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers'
 const IS_WEB = Platform.OS === 'web'
 
@@ -75,7 +73,6 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   routeLineCoords: routeLineCoordsProp,
   routeLines: routeLinesProp,
 }) => {
-  const queryClient = useQueryClient()
   const colors = useThemedColors()
   const themeContextValue = useTheme()
   const { width: viewportWidth } = useWindowDimensions()
@@ -198,11 +195,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       fullscreenOnMobile: true,
       fullscreenTopInset: LAYOUT.headerHeight,
       fullscreenBottomInset: LAYOUT.tabBarHeight,
-      invalidateUserPoints: () => {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() })
-      },
     })
-  }, [colors, compact, queryClient, rl, themeContextValue])
+  }, [colors, compact, rl, themeContextValue])
 
   const handlePopupOpen = useCallback((e: any) => {
     const popupEl: HTMLElement | null = e?.popup?.getElement?.()

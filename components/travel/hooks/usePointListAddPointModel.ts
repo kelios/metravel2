@@ -146,9 +146,12 @@ export function usePointListAddPointModel({
       setAddingPointId(point.id);
       try {
         const created = await userPointsApi.createPoint(payload);
+        // Летящее постраничное чтение коллекции (#1706) резолвится долго и
+        // затёрло бы оптимистичную запись ниже — отменяем его заранее.
+        await queryClient.cancelQueries({ queryKey: queryKeys.userPointsAll() });
         // #839: оптимистично добавляем созданную точку в общий кэш `userPointsAll`,
         // чтобы координатный матчер (isPointSaved) сразу отдал true и карточка
-        // переключилась в «Сохранено» без перезагрузки — до рефетча коллекции.
+        // переключилась в «Сохранено» без перезагрузки.
         const cachedOptimistically =
           !!created && Number.isFinite(Number((created as any).latitude));
         if (cachedOptimistically) {

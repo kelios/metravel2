@@ -6,6 +6,7 @@ const mockCreatePoint = jest.fn();
 const mockShowToast = jest.fn();
 const mockInvalidateQueries = jest.fn();
 const mockSetQueryData = jest.fn();
+const mockCancelQueries = jest.fn(async () => undefined);
 const mockUseAuth = jest.fn();
 
 jest.mock('@/api/userPoints', () => ({
@@ -26,6 +27,7 @@ jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({
     invalidateQueries: (...args: any[]) => mockInvalidateQueries(...args),
     setQueryData: (...args: any[]) => mockSetQueryData(...args),
+    cancelQueries: (...args: any[]) => mockCancelQueries(...args),
   }),
 }));
 
@@ -35,6 +37,7 @@ describe('usePointListAddPointModel', () => {
     mockShowToast.mockReset();
     mockInvalidateQueries.mockReset();
     mockSetQueryData.mockReset();
+    mockCancelQueries.mockClear();
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue({ isAuthenticated: true, authReady: true });
   });
@@ -183,6 +186,12 @@ describe('usePointListAddPointModel', () => {
 
     expect(mockSetQueryData).toHaveBeenCalledWith(['userPointsAll'], expect.any(Function));
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
+    // Летящее постраничное чтение обязано быть отменено ДО оптимистичной записи,
+    // иначе его ответ затрёт только что созданную точку (#1706).
+    expect(mockCancelQueries).toHaveBeenCalledWith({ queryKey: ['userPointsAll'] });
+    expect(mockCancelQueries.mock.invocationCallOrder[0]).toBeLessThan(
+      mockSetQueryData.mock.invocationCallOrder[0],
+    );
     expect(mockShowToast).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'success',

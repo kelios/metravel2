@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
-import { useQueryClient } from '@tanstack/react-query'
 
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
@@ -38,7 +37,6 @@ import {
   getSafeCenter,
   normalizeLngLatWithHint as normalizeLngLatWithHintHelper,
 } from './Map/mapWebGeometry'
-import { queryKeys } from '@/api/queryKeys'
 import { beginProgrammaticMapMove, isProgrammaticMapMoveActive } from './Map/programmaticMoveSignal'
 
 type ReactLeafletNS = typeof import('react-leaflet')
@@ -207,7 +205,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const colors = useThemedColors()
   const themeContextValue = useTheme()
-  const queryClient = useQueryClient()
   const styles = useMemo(() => getStyles(colors), [colors])
   const popupBottomOffset = useBottomSheetStore((s) => s.getControlsBottomOffset())
   const bottomSheetState = useBottomSheetStore((s) => s.state)
@@ -829,11 +826,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
       fullscreenTopInset: LAYOUT.headerHeight,
       fullscreenBottomInset: LAYOUT.tabBarHeight,
       userLocationSignal,
-      invalidateUserPoints: () => {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() })
-      },
     })
-  }, [colors, queryClient, rl, themeContextValue, useCompactPopupLayout, userLocationSignal])
+  }, [colors, rl, themeContextValue, useCompactPopupLayout, userLocationSignal])
 
   const shouldShowLoadingOverlay = IS_WEB
     ? !!leafletError || !canRenderMap

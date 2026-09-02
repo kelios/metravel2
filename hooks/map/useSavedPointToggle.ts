@@ -138,6 +138,10 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
     if (!savedPoint) return;
     const key = queryKeys.userPointsAll();
     const targetId = savedPoint.id;
+    // Отменяем летящее чтение коллекции: она читается постранично (#1706) и
+    // резолвится долго, поэтому её ответ пришёл бы ПОСЛЕ оптимистичной записи и
+    // вернул бы удалённую точку. Трейлингового рефетча, который это чинил, больше нет.
+    await queryClient.cancelQueries({ queryKey: key });
     // Оптимистично убираем точку из кэша, чтобы `isSaved` (и иконка ✓→＋)
     // переключились сразу, не дожидаясь рефетча всей коллекции.
     queryClient.setQueryData<ImportedPoint[]>(key, (old) =>
@@ -165,6 +169,10 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
         return;
       }
       const key = queryKeys.userPointsAll();
+      // См. `removeSaved`: летящее постраничное чтение затёрло бы оптимистичную
+      // точку, пользователь увидел бы «не сохранено» и создал дубль — сервер не
+      // умеет дедуплицировать по координатам.
+      await queryClient.cancelQueries({ queryKey: key });
       // Оптимистично добавляем синтетическую точку (матчится по координатам в
       // `findSavedPointByCoord`), чтобы иконка ＋→✓ переключилась мгновенно.
       const optimistic = { ...(payload as ImportedPoint), id: OPTIMISTIC_POINT_ID };
