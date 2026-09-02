@@ -141,7 +141,12 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
     // Отменяем летящее чтение коллекции: она читается постранично (#1706) и
     // резолвится долго, поэтому её ответ пришёл бы ПОСЛЕ оптимистичной записи и
     // вернул бы удалённую точку. Трейлингового рефетча, который это чинил, больше нет.
-    await queryClient.cancelQueries({ queryKey: key });
+    // Только при уже загруженной коллекции: `cancelQueries` откатывает данные к
+    // предыдущему состоянию, и на ПЕРВОМ чтении это `undefined` — оптимистичная
+    // запись оставила бы кэш из одной точки, свежий на весь staleTime.
+    if (queryClient.getQueryData(key) !== undefined) {
+      await queryClient.cancelQueries({ queryKey: key });
+    }
     // Оптимистично убираем точку из кэша, чтобы `isSaved` (и иконка ✓→＋)
     // переключились сразу, не дожидаясь рефетча всей коллекции.
     queryClient.setQueryData<ImportedPoint[]>(key, (old) =>
@@ -169,6 +174,26 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
         return;
       }
       const key = queryKeys.userPointsAll();
+      const hasCollection = queryClient.getQueryData(key) !== undefined;
+      if (!hasCollection) {
+        // Коллекция ещё читается (14 страниц на крупном аккаунте). Отменять её
+        // здесь нельзя: `cancelQueries` откатывает данные к предыдущему
+        // состоянию, а это `undefined` — в кэше осталась бы ОДНА точка, свежая
+        // на весь staleTime, и все прочие сохранённые стали бы «не сохранено».
+        // Инвалидация тоже не годится: во время летящего чтения она
+        // дедуплицируется и молча теряется. Поэтому сохраняем, дожидаемся того
+        // же самого чтения (без лишнего запроса) и дописываем созданную точку.
+        const createdFirst = await userPointsApi.createPoint(payload);
+        await queryClient.ensureQueryData({
+          queryKey: key,
+          queryFn: () => userPointsApi.getAllPoints(),
+        });
+        queryClient.setQueryData<ImportedPoint[]>(key, (old) => {
+          const arr = readPointsFromUnknown(old);
+          return arr.some((p) => p?.id === createdFirst?.id) ? arr : [...arr, createdFirst];
+        });
+        return;
+      }
       // См. `removeSaved`: летящее постраничное чтение затёрло бы оптимистичную
       // точку, пользователь увидел бы «не сохранено» и создал дубль — сервер не
       // умеет дедуплицировать по координатам.

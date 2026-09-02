@@ -7,6 +7,8 @@ const mockShowToast = jest.fn();
 const mockInvalidateQueries = jest.fn();
 const mockSetQueryData = jest.fn();
 const mockCancelQueries = jest.fn(async () => undefined);
+// Коллекция уже прочитана — иначе хук уходит в ветку «сохранить и перечитать».
+const mockGetQueryData = jest.fn(() => [] as unknown[]);
 const mockUseAuth = jest.fn();
 
 jest.mock('@/api/userPoints', () => ({
@@ -28,6 +30,7 @@ jest.mock('@tanstack/react-query', () => ({
     invalidateQueries: (...args: any[]) => mockInvalidateQueries(...args),
     setQueryData: (...args: any[]) => mockSetQueryData(...args),
     cancelQueries: (...args: any[]) => mockCancelQueries(...args),
+    getQueryData: (...args: any[]) => mockGetQueryData(...args),
   }),
 }));
 
@@ -38,6 +41,8 @@ describe('usePointListAddPointModel', () => {
     mockInvalidateQueries.mockReset();
     mockSetQueryData.mockReset();
     mockCancelQueries.mockClear();
+    mockGetQueryData.mockClear();
+    mockGetQueryData.mockReturnValue([]);
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue({ isAuthenticated: true, authReady: true });
   });

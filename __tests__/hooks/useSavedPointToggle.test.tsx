@@ -141,6 +141,54 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     expect(mockedApi.getAllPoints).toHaveBeenCalledTimes(1);
   });
 
+  /**
+   * #1706 P1: тап «Сохранить» в первые секунды, пока коллекция (14 страниц) ещё
+   * читается. `cancelQueries` откатывает данные к предыдущему состоянию, а на
+   * первом чтении это `undefined` — оптимистичная запись оставила бы в общем
+   * кэше ОДНУ точку, помеченную свежей на весь staleTime, и все остальные
+   * сохранённые точки молча стали бы «не сохранено».
+   */
+  it('не схлопывает коллекцию, если сохранить во время её первой загрузки', async () => {
+    const firstRead = deferred<ImportedPoint[]>();
+    mockedApi.getAllPoints.mockReturnValueOnce(firstRead.promise as any);
+    const wholeCollection = Array.from({ length: 300 }, (_, i) =>
+      makePoint({ id: 1000 + i, latitude: 10 + i / 1000, longitude: 20 + i / 1000 }),
+    );
+    mockedApi.createPoint.mockResolvedValue(makePoint({ id: 777 }) as any);
+
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+    });
+    const localWrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), {
+      wrapper: localWrapper,
+    });
+
+    // Коллекция ещё летит — сохраняем прямо сейчас, не дожидаясь её.
+    let pending: Promise<unknown>;
+    act(() => {
+      pending = result.current.createPoint({ latitude: COORD.lat, longitude: COORD.lng });
+    });
+    firstRead.resolve(wholeCollection);
+    await act(async () => {
+      await pending;
+    });
+
+    // Кэш обязан содержать всю коллекцию, а не только что созданную точку.
+    await waitFor(() => {
+      const cached = client.getQueryData(['userPointsAll']) as ImportedPoint[] | undefined;
+      expect(Array.isArray(cached) && cached.length).toBeGreaterThan(1);
+    });
+    // Вся коллекция на месте, и созданная точка дописана — без лишнего запроса.
+    const cached = client.getQueryData(['userPointsAll']) as ImportedPoint[];
+    expect(cached).toHaveLength(wholeCollection.length + 1);
+    expect(mockedApi.getAllPoints).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(result.current.isSaved).toBe(true));
+  });
+
   it('rolls back to not-saved when createPoint fails', async () => {
     mockedApi.getAllPoints.mockResolvedValue([]);
     mockedApi.createPoint.mockRejectedValue(new Error('network'));

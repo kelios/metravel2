@@ -151,8 +151,23 @@ export function usePointListAddPointModel({
       try {
         const created = await userPointsApi.createPoint(payload);
         // Летящее постраничное чтение коллекции (#1706) резолвится долго и
-        // затёрло бы оптимистичную запись ниже — отменяем его заранее.
-        await queryClient.cancelQueries({ queryKey: queryKeys.userPointsAll() });
+        // затёрло бы оптимистичную запись ниже — отменяем его заранее. Только
+        // если коллекция уже прочитана: `cancelQueries` откатывает данные к
+        // предыдущему состоянию, и на первом чтении это `undefined` — в кэше
+        // осталась бы одна точка, свежая на весь staleTime.
+        const hasCollection =
+          queryClient.getQueryData(queryKeys.userPointsAll()) !== undefined;
+        if (hasCollection) {
+          await queryClient.cancelQueries({ queryKey: queryKeys.userPointsAll() });
+        } else {
+          // Коллекция ещё читается: дожидаемся того же самого чтения (запрос
+          // дедуплицируется), иначе запись ниже была бы затёрта его ответом, а
+          // инвалидация во время летящего чтения теряется.
+          await queryClient.ensureQueryData({
+            queryKey: queryKeys.userPointsAll(),
+            queryFn: () => userPointsApi.getAllPoints(),
+          });
+        }
         // #839: оптимистично добавляем созданную точку в общий кэш `userPointsAll`,
         // чтобы координатный матчер (isPointSaved) сразу отдал true и карточка
         // переключилась в «Сохранено» без перезагрузки.
