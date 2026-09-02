@@ -5,7 +5,6 @@ import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 import { useSavedPointsCollection } from '@/hooks/useSavedPointsCollection';
-import { markPointsCollectionComplete } from '@/api/userPointsCollectionCache';
 import type { ImportedPoint } from '@/types/userPoints';
 
 /**
@@ -184,10 +183,11 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
             queryKey: key,
             queryFn: () => userPointsApi.getAllPoints(),
           });
-          // Коллекция прочитана целиком в обход `useSavedPointsCollection` —
-          // отметку полноты (#1709) ставим сами, иначе прерванный ранее стрим
-          // так и держал бы кэш «частичным».
-          markPointsCollectionComplete(queryClient);
+          // Полноту здесь НЕ отмечаем: `ensureQueryData` дедуплицируется на уже
+          // летящее чтение того же ключа, а им может быть первая страница
+          // `usePointsDataModel` — отметка выдала бы 200-точечный префикс за всю
+          // коллекцию и заодно погасила бы фоновую докачку. Признак снимет
+          // `useSavedPointsCollection` после собственного `getAllPoints()`.
         } catch {
           // Точка УЖЕ создана на сервере. `ensureQueryData` реджектится (в отличие
           // от `prefetchQuery`), а чтение коллекции — это 14 страниц под

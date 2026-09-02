@@ -3,7 +3,6 @@ import * as ReactQuery from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
-import { markPointsCollectionComplete } from '@/api/userPointsCollectionCache';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { useAuth } from '@/context/AuthContext';
 import type { ImportedPoint } from '@/types/userPoints';
@@ -171,10 +170,9 @@ export function usePointListAddPointModel({
               queryKey: queryKeys.userPointsAll(),
               queryFn: () => userPointsApi.getAllPoints(),
             });
-            // Коллекция прочитана целиком в обход `useSavedPointsCollection` —
-            // отметку полноты (#1709) ставим сами, иначе прерванный ранее стрим
-            // так и держал бы кэш «частичным».
-            markPointsCollectionComplete(queryClient);
+            // Полноту здесь НЕ отмечаем: `ensureQueryData` дедуплицируется на
+            // летящее чтение того же ключа, и им может быть первая страница
+            // `usePointsDataModel` — префикс сошёл бы за всю коллекцию (#1709).
             collectionReady = true;
           } catch {
             collectionReady = false;

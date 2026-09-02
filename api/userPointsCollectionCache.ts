@@ -36,6 +36,12 @@ export const writePointsPaginationState = (
   queryClient: QueryClient,
   state: PointsPaginationState,
 ): void => {
+  // Отметка обязана пережить сами данные. Её запись — это `setQueryData` без
+  // наблюдателей и без фетчей, а `gcTime` React Query продлевает только на
+  // подписке и на фетче: с общим 10-минутным `gcTime` метаданные исчезли бы
+  // раньше частичного префикса, и он снова сошёл бы за полную коллекцию.
+  // Дефолты применяются при СОЗДАНИИ записи, поэтому ставим их до первой записи.
+  queryClient.setQueryDefaults(queryKeys.userPointsPagination(), { gcTime: Infinity });
   queryClient.setQueryData<PointsPaginationState>(queryKeys.userPointsPagination(), state);
 };
 

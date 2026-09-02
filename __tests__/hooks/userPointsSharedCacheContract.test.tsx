@@ -35,6 +35,10 @@ jest.mock('@/api/userPoints', () => ({
 }));
 
 import { userPointsApi } from '@/api/userPoints';
+import {
+  isPointsCollectionPartial,
+  writePointsPaginationState,
+} from '@/api/userPointsCollectionCache';
 import { usePointsDataModel } from '@/components/UserPoints/usePointsDataModel';
 import { useSavedPointToggle } from '@/hooks/map/useSavedPointToggle';
 import type { ImportedPoint } from '@/types/userPoints';
@@ -138,6 +142,19 @@ describe('#1709 общий кэш userPointsAll: частичный стрим �
 
     const toggle = renderToggleFor(POINT_INSIDE_PREFIX);
     await waitFor(() => expect(toggle.result.current.isSaved).toBe(true));
+  });
+
+  it('отметка полноты переживает сами данные: у неё бесконечный gcTime', () => {
+    // Запись метаданных идёт без наблюдателей и без фетчей, а React Query
+    // продлевает gcTime только на подписке и на фетче. С общим 10-минутным
+    // gcTime отметка исчезла бы раньше частичного префикса, и он снова сошёл бы
+    // за полную коллекцию.
+    writePointsPaginationState(queryClient, { nextPage: 3, complete: false });
+    const meta = queryClient.getQueryCache().find({ queryKey: ['userPointsAll', 'pagination'] });
+    expect(meta?.gcTime).toBe(Infinity);
+    expect(isPointsCollectionPartial(queryClient)).toBe(true);
+    writePointsPaginationState(queryClient, { nextPage: 3, complete: true });
+    expect(isPointsCollectionPartial(queryClient)).toBe(false);
   });
 
   it('контроль: непрерванный стрим отдаёт полную коллекцию без лишнего запроса', async () => {
