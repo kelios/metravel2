@@ -96,4 +96,28 @@ describe('buildArticleEditorNativeHtml', () => {
     // Нижний запас редактора: последняя строка не прилипает к панели.
     expect(html).toContain('padding: 16px 16px 72px')
   })
+
+  // Регрессия: инлайненная тема quill.snow нарисована под светлый фон — иконки
+  // панели #444, ссылки #06c, рамки #ccc/#000, подложка кода #f0f0f0 и белый
+  // тултип. На тёмной теме панель пропадала (#444 на тёмной подложке ≈ 1.4:1).
+  it('repaints the vendor quill palette with theme tokens', () => {
+    const html = build()
+
+    expect(html).toContain('stroke: #777777;')
+    expect(html).toContain('fill: #777777;')
+    expect(html).toContain('.ql-editor a {\n      color: #547769;')
+    expect(html).toContain('.ql-snow .ql-editor code {\n      background-color: #f5f4f2;')
+    expect(html).toContain('.ql-editor td {\n      border-color: #777777;')
+    expect(html).toContain('.ql-snow .ql-tooltip {\n      background-color: #fafafa;')
+  })
+
+  // Вендорные правила `.ql-snow .ql-editor <тег>` весомее голого `.ql-editor <тег>`,
+  // поэтому переопределения обязаны нести в селекторе ещё и `.ql-snow`.
+  it('outweighs the vendor rules that already carry .ql-snow', () => {
+    const html = build()
+
+    for (const selector of ['blockquote', 'code', 'li > .ql-ui']) {
+      expect(html).toContain(`.ql-snow .ql-editor ${selector} {`)
+    }
+  })
 })

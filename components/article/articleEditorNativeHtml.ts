@@ -129,18 +129,18 @@ export function buildArticleEditorNativeHtml({
     .ql-editor a {
       color: ${linkColor};
     }
-    .ql-editor blockquote {
+    .ql-snow .ql-editor blockquote {
       border-left-color: ${borderColor};
       color: ${textSecondaryColor};
     }
-    .ql-editor code {
+    .ql-snow .ql-editor code {
       background-color: ${codeBackgroundColor};
       color: ${textColor};
     }
     .ql-editor td {
       border-color: ${textSecondaryColor};
     }
-    .ql-editor li > .ql-ui {
+    .ql-snow .ql-editor li > .ql-ui {
       color: ${textSecondaryColor};
     }
     .ql-snow .ql-tooltip {
