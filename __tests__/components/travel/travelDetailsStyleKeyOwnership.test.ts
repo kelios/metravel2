@@ -28,10 +28,25 @@
  * переобъявил ключ поверх спреда. Пришпиленного долга больше нет: восемнадцать
  * имён shell-набора, продублированных в агрегате ещё до #1708, сняты в #1711,
  * и гейт держит инвариант без исключений.
+ *
+ * Второй носитель того же инварианта — константы модулей рядом со стилями
+ * (#1712). Их не видно в объектах стилей, поэтому проверка ключей про них не
+ * знала вовсе: `HEADER_OFFSET_DESKTOP`/`HEADER_OFFSET_MOBILE` были объявлены и
+ * в фрагментах, и в shell-наборе, а `JOURNAL_FONT_FAMILY` — в shell-наборе и в
+ * `components/travel/CTASection`. Значения совпадали, так что правка одной
+ * копии двигала половину экрана и молчала. Ниже это проверяется по исходникам,
+ * а не по рантайму: реэкспорт `export { X } from` — законный способ отдать
+ * чужую константу, второе `const X =` — нет.
  */
+
+import fs from 'fs'
+import path from 'path'
 
 import { getThemedColors } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
+import * as travelDetailsStyleFragments from '@/components/travel/details/TravelDetailsStyleFragments'
+import * as travelDetailsShellStyles from '@/components/travel/details/TravelDetailsShellStyles'
+import * as travelDetailsStyles from '@/components/travel/details/TravelDetailsStyles'
 import { createTravelDetailsDecisionSummaryStyles } from '@/components/travel/details/TravelDetailsStyleFragments'
 import { getTravelDetailsHeroStyles } from '@/components/travel/details/TravelDetailsHeroStyles'
 import { getTravelDetailsShellStyles } from '@/components/travel/details/TravelDetailsShellStyles'
@@ -71,6 +86,25 @@ const findDuplicateStyleKeys = (
 }
 
 /**
+ * Владение поимённо: имя обязано встречаться ровно в одном наборе, и именно в
+ * ожидаемом. Роняется в обе стороны — и на возвращённой копии в чужом наборе,
+ * и на ключе, пропавшем у владельца.
+ */
+const expectOwnedOnlyBy = (
+  setsBySource: Record<string, StyleSet>,
+  keys: readonly string[],
+  owner: string,
+) => {
+  for (const key of keys) {
+    const sources = Object.entries(setsBySource)
+      .filter(([, styleSet]) => key in styleSet)
+      .map(([source]) => source)
+
+    expect([key, sources]).toEqual([key, [owner]])
+  }
+}
+
+/**
  * Восемнадцать имён оболочки страницы: контейнер, safe area, боковое меню,
  * скролл, контентные обёртки и экраны ошибок. Владелец один —
  * `TravelDetailsShellStyles`: его читают `TravelDetailsContainer`,
@@ -84,6 +118,16 @@ const findDuplicateStyleKeys = (
  * рисовалась ни одна: их не читал никто. Здесь владение проверяется поимённо —
  * возврат копии в агрегат роняет тест, даже если значения совпадут.
  */
+/** Шесть имён hero-набора, чьи копии в агрегате сняты в #1708. */
+const HERO_OWNED_KEYS = [
+  'sliderContainer',
+  'heroFavoriteBtn',
+  'heroFavoriteBtnActive',
+  'heroFavoriteBtnMobile',
+  'heroFavoriteBtnLabel',
+  'heroFavoriteBtnLabelActive',
+]
+
 const SHELL_OWNED_KEYS = [
   'wrapper',
   'safeArea',
@@ -147,15 +191,7 @@ describe('владение ключами стилей travel details', () => {
   })
 
   it('восемнадцать ключей оболочки #1711 остались только в shell-наборе', () => {
-    const sets = loadStyleSets()
-
-    for (const key of SHELL_OWNED_KEYS) {
-      const sources = Object.entries(sets)
-        .filter(([, styleSet]) => key in styleSet)
-        .map(([source]) => source)
-
-      expect([key, sources]).toEqual([key, ['shell']])
-    }
+    expectOwnedOnlyBy(loadStyleSets(), SHELL_OWNED_KEYS, 'shell')
   })
 
   it('падает на искусственно заведённом дубле и называет оба источника', () => {
@@ -191,22 +227,151 @@ describe('владение ключами стилей travel details', () => {
   })
 
   it('шесть hero-ключей #1708 остались только в hero-наборе', () => {
-    const sets = loadStyleSets()
-    const owned = [
-      'sliderContainer',
-      'heroFavoriteBtn',
-      'heroFavoriteBtnActive',
-      'heroFavoriteBtnMobile',
-      'heroFavoriteBtnLabel',
-      'heroFavoriteBtnLabelActive',
-    ]
+    expectOwnedOnlyBy(loadStyleSets(), HERO_OWNED_KEYS, 'hero')
+  })
+})
 
-    for (const key of owned) {
-      const sources = Object.entries(sets)
-        .filter(([, styleSet]) => key in styleSet)
-        .map(([source]) => source)
+const REPO_ROOT = path.resolve(__dirname, '../../..')
 
-      expect([key, sources]).toEqual([key, ['hero']])
+/**
+ * Модули наборов: агрегат, его фрагменты, hero- и shell-набор.
+ *
+ * Список берётся с диска, а не пишется руками: восьмой файл стилей, добавленный
+ * рядом, попадёт под гейт сам. Пришпиленный перечень уже один раз отстал от
+ * кода — на нём и держалось молчание #1711.
+ */
+const listStyleModuleFiles = (): string[] => {
+  const detailsDir = path.join(REPO_ROOT, 'components/travel/details')
+  const fragmentsDir = path.join(detailsDir, 'styles')
+
+  return [
+    ...fs
+      .readdirSync(detailsDir)
+      .filter((name) => /(Styles|StyleFragments)\.ts$/.test(name))
+      .map((name) => path.join(detailsDir, name)),
+    ...fs
+      .readdirSync(fragmentsDir)
+      .filter((name) => name.endsWith('.ts'))
+      .map((name) => path.join(fragmentsDir, name)),
+  ].sort()
+}
+
+/**
+ * Объявление константы модуля — строка без отступа: вложенные `const` внутри
+ * фабрик стилей не в счёт. `import` и `export { X } from` под него не подходят,
+ * поэтому реэкспорт чужой константы гейт дублем не считает.
+ */
+const TOP_LEVEL_CONST = /^(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*(?::[^=]*)?=/
+
+const declaredConstants = (source: string): string[] =>
+  source
+    .split('\n')
+    .map((line) => TOP_LEVEL_CONST.exec(line)?.[1])
+    .filter((name): name is string => Boolean(name))
+
+/** Имена констант, объявленные более чем в одном модуле. */
+const findDuplicateConstants = (
+  sourcesByModule: Record<string, string>,
+): Record<string, string[]> => {
+  const modulesByName = new Map<string, string[]>()
+
+  for (const [module, source] of Object.entries(sourcesByModule)) {
+    for (const name of declaredConstants(source)) {
+      modulesByName.set(name, [...(modulesByName.get(name) ?? []), module])
+    }
+  }
+
+  return Object.fromEntries(
+    [...modulesByName].filter(([, modules]) => modules.length > 1),
+  )
+}
+
+const loadStyleModuleSources = (): Record<string, string> =>
+  Object.fromEntries(
+    listStyleModuleFiles().map((file) => [
+      path.relative(REPO_ROOT, file),
+      fs.readFileSync(file, 'utf8'),
+    ]),
+  )
+
+const listFeatureSourceFiles = (): string[] => {
+  const walk = (dir: string): string[] =>
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) return walk(full)
+      return /\.tsx?$/.test(entry.name) ? [full] : []
+    })
+
+  return [
+    ...walk(path.join(REPO_ROOT, 'components/travel')),
+    ...walk(path.join(REPO_ROOT, 'hooks')),
+  ]
+}
+
+describe('владение константами стилей travel details', () => {
+  it('ни одна константа не объявлена в двух модулях наборов сразу', () => {
+    expect(findDuplicateConstants(loadStyleModuleSources())).toEqual({})
+  })
+
+  it('падает на второй копии константы и называет оба модуля', () => {
+    const duplicates = findDuplicateConstants({
+      'TravelDetailsStyleFragments.ts': 'export const HEADER_OFFSET_DESKTOP = 72\n',
+      'TravelDetailsShellStyles.ts': 'export const HEADER_OFFSET_DESKTOP = 80\n',
+      'travelDetailsNavStyles.ts': 'const NAV_GAP = 8\n',
+    })
+
+    expect(duplicates).toEqual({
+      HEADER_OFFSET_DESKTOP: [
+        'TravelDetailsStyleFragments.ts',
+        'TravelDetailsShellStyles.ts',
+      ],
+    })
+  })
+
+  it('не считает дублем реэкспорт чужой константы', () => {
+    expect(
+      findDuplicateConstants({
+        'TravelDetailsStyleFragments.ts': 'export const HEADER_OFFSET_DESKTOP = 72\n',
+        'TravelDetailsShellStyles.ts':
+          "export { HEADER_OFFSET_DESKTOP } from './TravelDetailsStyleFragments'\n",
+      }),
+    ).toEqual({})
+  })
+
+  it('три константы #1712 объявлены во всём travel ровно один раз', () => {
+    // Носитель дубля не обязан быть модулем стилей: `JOURNAL_FONT_FAMILY` вторым
+    // объявлением лежал в `components/travel/CTASection`, куда проверка наборов
+    // не заглядывает.
+    const owners: Record<string, string[]> = {
+      HEADER_OFFSET_DESKTOP: [],
+      HEADER_OFFSET_MOBILE: [],
+      JOURNAL_FONT_FAMILY: [],
+    }
+
+    for (const file of listFeatureSourceFiles()) {
+      for (const name of declaredConstants(fs.readFileSync(file, 'utf8'))) {
+        owners[name]?.push(path.relative(REPO_ROOT, file))
+      }
+    }
+
+    expect(owners).toEqual({
+      HEADER_OFFSET_DESKTOP: ['components/travel/details/TravelDetailsStyleFragments.ts'],
+      HEADER_OFFSET_MOBILE: ['components/travel/details/TravelDetailsStyleFragments.ts'],
+      JOURNAL_FONT_FAMILY: ['components/travel/details/TravelDetailsStyleFragments.ts'],
+    })
+  })
+
+  it('shell-набор и агрегат отдают значение владельца, а не своё', () => {
+    // Страховка на случай объявления, которое разбор исходника не разглядит:
+    // у экрана два пути к «одному» числу, и разойтись они не имеют права.
+    for (const name of ['HEADER_OFFSET_DESKTOP', 'HEADER_OFFSET_MOBILE'] as const) {
+      const owned = travelDetailsStyleFragments[name]
+
+      expect([name, travelDetailsShellStyles[name], travelDetailsStyles[name]]).toEqual([
+        name,
+        owned,
+        owned,
+      ])
     }
   })
 })
