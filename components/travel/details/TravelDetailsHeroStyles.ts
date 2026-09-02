@@ -4,23 +4,11 @@ import { useMemo } from 'react'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
-const COMPACT_SECTION_DESKTOP = 24
+import { TRAVEL_DETAILS_SECTION_RHYTHM } from './styles/travelDetailsSectionRhythm'
 
 export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
   StyleSheet.create({
-    sectionContainer: {
-      marginBottom: Platform.select({
-        default: COMPACT_SECTION_DESKTOP + 8,
-        web: COMPACT_SECTION_DESKTOP + 16,
-      }),
-      width: '100%',
-    },
-    contentStable: {
-      minHeight: DESIGN_TOKENS.spacing.xxl,
-    },
-    quickFactsContainer: {
-      marginBottom: DESIGN_TOKENS.spacing.xs,
-    },
+    ...TRAVEL_DETAILS_SECTION_RHYTHM,
     quickJumpWrapper: {
       flexDirection: 'row',
       flexWrap: 'wrap',

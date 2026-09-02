@@ -4,10 +4,11 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { type ThemedColors } from '@/hooks/useTheme'
 
 import {
-  COMPACT_SPACING,
   HEADER_OFFSET_DESKTOP,
   HEADER_OFFSET_MOBILE,
 } from '../TravelDetailsStyleFragments'
+
+import { TRAVEL_DETAILS_SECTION_RHYTHM } from './travelDetailsSectionRhythm'
 
 const JOURNAL_FONT_FAMILY = "'Georgia', 'Times New Roman', 'Inter', serif"
 
@@ -75,18 +76,7 @@ export const createTravelDetailsLayoutStyles = (colors: ThemedColors) => ({
       web: DESIGN_TOKENS.spacing.lg,
     }),
   },
-  sectionContainer: {
-    marginBottom: Platform.select({
-      default: COMPACT_SPACING.section.desktop + 8, // 32px — больше воздуха между секциями
-      web: COMPACT_SPACING.section.desktop + 8, // 32px — плотнее на desktop (UI-review #7)
-    }),
-    width: '100%',
-  },
-
-  contentStable: {
-    // Предотвращает layout shift при загрузке контента
-    minHeight: DESIGN_TOKENS.spacing.xxl,
-  },
+  ...TRAVEL_DETAILS_SECTION_RHYTHM,
 
   contentOuter: {
     flex: 1,
@@ -103,10 +93,6 @@ export const createTravelDetailsLayoutStyles = (colors: ThemedColors) => ({
 
   sectionTabsContainer: {
     marginBottom: DESIGN_TOKENS.spacing.md,
-  },
-
-  quickFactsContainer: {
-    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
 
   sideMenuNative: {
