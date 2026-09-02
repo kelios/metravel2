@@ -288,6 +288,23 @@ describe('RouteBuilder layout=mapFirst — связка карты и панел
     expect(getByTestId('route-map-focus').props.children).toBe('53.93,27.52')
   })
 
+  // #1700: гость-участник попадает не в RouteBuilderMobile, а в readonly-ветку —
+  // экран отдаёт `mapFirst` независимо от владения, а проверка `!trip.isOwner`
+  // стоит раньше. Строку точки там рендерит тот же renderPoint, значит и обещание
+  // «тап центрует карту» там то же: карта обязана получить focusPoint.
+  it('гостю-участнику тап по точке тоже центрует карту', () => {
+    const { getByTestId } = render(
+      <RouteBuilder trip={makeTrip({ isOwner: false })} layout="mapFirst" />,
+      { wrapper: createQueryWrapper().Wrapper },
+    )
+
+    expect(getByTestId('route-map-focus').props.children).toBe('none')
+
+    fireEvent.press(getByTestId('route-builder-focus-1'))
+
+    expect(getByTestId('route-map-focus').props.children).toBe('53.93,27.52')
+  })
+
   it('точка, добавленная тапом по карте, открывает форму переименования', () => {
     const { getByTestId } = renderMobile()
 

@@ -537,10 +537,10 @@ function RouteBuilder({
   );
 
   // #1495: тап по точке в списке панели центрует карту на этой точке — только в
-  // раскладке `mapFirst` и только у владельца: в `stack` строка точки получает
-  // `onFocus=undefined`, а readonly-ветка рисует карту без `focusPoint`. Токен
-  // растёт на каждый тап, поэтому повторный тап по той же точке возвращает карту
-  // к ней даже после ручного панорамирования.
+  // раскладке `mapFirst`: в `stack` строка точки получает `onFocus=undefined`.
+  // Владелец и гость здесь равны (#1700): обе ветки отдают карте один и тот же
+  // `focusPoint`. Токен растёт на каждый тап, поэтому повторный тап по той же
+  // точке возвращает карту к ней даже после ручного панорамирования.
   const [focusPoint, setFocusPoint] = useState<MapFocusPoint | null>(null);
   const focusTokenRef = useRef(0);
   const handleFocusPoint = useCallback(
@@ -982,6 +982,7 @@ function RouteBuilder({
           transport={trip.transport}
           readonly
           activeIndex={editingIndex}
+          focusPoint={focusPoint}
           onEditPoint={handleEditPoint}
         />
         {elevationProfileSection}
