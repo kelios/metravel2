@@ -86,8 +86,10 @@ export const createRoutePanelStyles = (colors: ThemedColors) =>
     ctaBlock: { gap: 6 },
 
     // ── Раскладка ──────────────────────────────────────────────────────────
-    // Mobile остаётся одной колонкой: карта, затем шаги. Раскладку `mapFirst`
-    // собирает RouteBuilderMobile (#1691) — эти стили её не касаются.
+    // Desktop-раскладка `stack`: панель слева, карта справа — `workspace` всегда
+    // применяется вместе с `workspaceSplit`, одноколоночного пути здесь нет.
+    // Раскладку `mapFirst` собирает RouteBuilderMobile (#1691) — эти стили её
+    // не касаются.
     workspace: { gap: 12 },
     workspaceSplit: {
       flexDirection: 'row',
