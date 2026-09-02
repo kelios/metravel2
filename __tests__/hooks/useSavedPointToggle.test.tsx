@@ -189,6 +189,39 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     await waitFor(() => expect(result.current.isSaved).toBe(true));
   });
 
+  /**
+   * #1706: чтение коллекции — 14 страниц под `Promise.all` без ретраев, и
+   * `ensureQueryData` реджектится (в отличие от `prefetchQuery`). Упавшая
+   * страница не должна превращать УЖЕ созданную на сервере точку в «не удалось
+   * сохранить», а пустой кэш не должен превратиться в коллекцию из одной точки.
+   */
+  it('успешное сохранение не падает из-за упавшего чтения коллекции', async () => {
+    mockedApi.getAllPoints.mockRejectedValue(new Error('page 7 timeout'));
+    mockedApi.createPoint.mockResolvedValue(makePoint({ id: 777 }) as any);
+
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+    });
+    const localWrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), {
+      wrapper: localWrapper,
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.createPoint({ latitude: COORD.lat, longitude: COORD.lng }),
+      ).resolves.toBeUndefined();
+    });
+
+    expect(mockedApi.createPoint).toHaveBeenCalledTimes(1);
+    // Кэш не подменён «коллекцией» из одной точки.
+    const cached = client.getQueryData(['userPointsAll']);
+    expect(cached === undefined || (cached as ImportedPoint[]).length !== 1).toBe(true);
+  });
+
   it('rolls back to not-saved when createPoint fails', async () => {
     mockedApi.getAllPoints.mockResolvedValue([]);
     mockedApi.createPoint.mockRejectedValue(new Error('network'));

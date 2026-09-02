@@ -184,11 +184,23 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
         // дедуплицируется и молча теряется. Поэтому сохраняем, дожидаемся того
         // же самого чтения (без лишнего запроса) и дописываем созданную точку.
         const createdFirst = await userPointsApi.createPoint(payload);
-        await queryClient.ensureQueryData({
-          queryKey: key,
-          queryFn: () => userPointsApi.getAllPoints(),
-        });
+        try {
+          await queryClient.ensureQueryData({
+            queryKey: key,
+            queryFn: () => userPointsApi.getAllPoints(),
+          });
+        } catch {
+          // Точка УЖЕ создана на сервере. `ensureQueryData` реджектится (в отличие
+          // от `prefetchQuery`), а чтение коллекции — это 14 страниц под
+          // `Promise.all` без ретраев: падение любой из них не должно
+          // превращать успешное сохранение в «не удалось сохранить».
+          return;
+        }
         queryClient.setQueryData<ImportedPoint[]>(key, (old) => {
+          // Никогда не создаём коллекцию из одной точки: пустой кэш, дополненный
+          // созданной записью, выглядел бы как полная коллекция и повторил бы
+          // дефект схлопывания.
+          if (old === undefined) return old;
           const arr = readPointsFromUnknown(old);
           return arr.some((p) => p?.id === createdFirst?.id) ? arr : [...arr, createdFirst];
         });

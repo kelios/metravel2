@@ -155,24 +155,31 @@ export function usePointListAddPointModel({
         // если коллекция уже прочитана: `cancelQueries` откатывает данные к
         // предыдущему состоянию, и на первом чтении это `undefined` — в кэше
         // осталась бы одна точка, свежая на весь staleTime.
-        const hasCollection =
+        let collectionReady =
           queryClient.getQueryData(queryKeys.userPointsAll()) !== undefined;
-        if (hasCollection) {
+        if (collectionReady) {
           await queryClient.cancelQueries({ queryKey: queryKeys.userPointsAll() });
         } else {
           // Коллекция ещё читается: дожидаемся того же самого чтения (запрос
           // дедуплицируется), иначе запись ниже была бы затёрта его ответом, а
-          // инвалидация во время летящего чтения теряется.
-          await queryClient.ensureQueryData({
-            queryKey: queryKeys.userPointsAll(),
-            queryFn: () => userPointsApi.getAllPoints(),
-          });
+          // инвалидация во время летящего чтения теряется. Падение чтения не
+          // должно превращать УЖЕ созданную точку в «не удалось сохранить»,
+          // поэтому ошибка гасится, а кэш остаётся нетронутым.
+          try {
+            await queryClient.ensureQueryData({
+              queryKey: queryKeys.userPointsAll(),
+              queryFn: () => userPointsApi.getAllPoints(),
+            });
+            collectionReady = true;
+          } catch {
+            collectionReady = false;
+          }
         }
         // #839: оптимистично добавляем созданную точку в общий кэш `userPointsAll`,
         // чтобы координатный матчер (isPointSaved) сразу отдал true и карточка
         // переключилась в «Сохранено» без перезагрузки.
         const cachedOptimistically =
-          !!created && Number.isFinite(Number((created as any).latitude));
+          collectionReady && !!created && Number.isFinite(Number((created as any).latitude));
         if (cachedOptimistically) {
           queryClient.setQueryData<ImportedPoint[]>(queryKeys.userPointsAll(), (old) => {
             const arr = Array.isArray(old) ? old : [];
