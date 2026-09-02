@@ -1,4 +1,7 @@
 import { fetchAllPages } from '@/utils/fetchAllPages';
+import { devWarn } from '@/utils/logger';
+
+jest.mock('@/utils/logger', () => ({ devWarn: jest.fn() }));
 
 /**
  * #1706 / класс `API-PAGE-SIZE-CAP-001`: сервер режет страницу
@@ -6,6 +9,10 @@ import { fetchAllPages } from '@/utils/fetchAllPages';
  * отданному размеру, а не по запрошенному `perPage`.
  */
 describe('fetchAllPages', () => {
+  beforeEach(() => {
+    (devWarn as jest.Mock).mockClear();
+  });
+
   const makeItems = (from: number, count: number) =>
     Array.from({ length: count }, (_, i) => ({ id: from + i }));
 
@@ -53,13 +60,15 @@ describe('fetchAllPages', () => {
     expect(loadPage).toHaveBeenCalledTimes(1);
   });
 
-  it('ограничивает число страниц предохранителем maxPages', async () => {
+  it('ограничивает число страниц предохранителем maxPages и делает это громко', async () => {
     const loadPage = jest.fn(async () => ({ items: makeItems(1, 10), total: 1_000_000 }));
 
     const items = await fetchAllPages(loadPage, { maxPages: 3 });
 
     expect(loadPage).toHaveBeenCalledTimes(3);
     expect(items).toHaveLength(30);
+    // Молча урезанная коллекция — тот самый дефект, который хелпер закрывает.
+    expect(devWarn).toHaveBeenCalledWith(expect.stringContaining('maxPages=3'));
   });
 
   it('не мутирует массив первой страницы', async () => {

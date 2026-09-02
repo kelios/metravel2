@@ -149,7 +149,11 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
       invalidate(); // запрос упал — синхронизируем кэш с сервером (точка вернётся)
       throw e;
     }
-    invalidate();
+    // Рефетча на успехе нет намеренно: DELETE прошёл, кэш уже совпадает с сервером.
+    // #1706 — коллекция читается постранично, и полный рефетч стоил бы
+    // ceil(count/200) запросов на каждое снятие. Клиентский лимитер считает
+    // `/user-points/` одним ключом (`utils/rateLimiter.ts:58`, 60 запросов в
+    // минуту), поэтому серия сохранений упиралась бы в ложное 429.
   }, [invalidate, queryClient, savedPoint]);
 
   const createPoint = useCallback(
@@ -178,11 +182,11 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
         );
         throw e;
       }
-      // Заменяем оптимистичную запись реальной (с серверным id), затем рефетч.
+      // Заменяем оптимистичную запись реальной (с серверным id). Полного рефетча
+      // на успехе нет — см. `removeSaved`: кэш уже держит серверную запись.
       queryClient.setQueryData<ImportedPoint[]>(key, (old) =>
         readPointsFromUnknown(old).map((p) => (p.id === OPTIMISTIC_POINT_ID ? created : p)),
       );
-      invalidate();
     },
     [invalidate, queryClient, savedPoint],
   );

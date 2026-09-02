@@ -5,6 +5,7 @@ import { usePointListAddPointModel } from '@/components/travel/hooks/usePointLis
 const mockCreatePoint = jest.fn();
 const mockShowToast = jest.fn();
 const mockInvalidateQueries = jest.fn();
+const mockSetQueryData = jest.fn();
 const mockUseAuth = jest.fn();
 
 jest.mock('@/api/userPoints', () => ({
@@ -24,6 +25,7 @@ jest.mock('@/context/AuthContext', () => ({
 jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({
     invalidateQueries: (...args: any[]) => mockInvalidateQueries(...args),
+    setQueryData: (...args: any[]) => mockSetQueryData(...args),
   }),
 }));
 
@@ -32,6 +34,7 @@ describe('usePointListAddPointModel', () => {
     mockCreatePoint.mockReset();
     mockShowToast.mockReset();
     mockInvalidateQueries.mockReset();
+    mockSetQueryData.mockReset();
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue({ isAuthenticated: true, authReady: true });
   });
@@ -92,7 +95,7 @@ describe('usePointListAddPointModel', () => {
     );
   });
 
-  it('creates point, preserves payload fields and invalidates user points query', async () => {
+  it('падает на рефетч коллекции, когда сервер не вернул координаты новой точки', async () => {
     mockCreatePoint.mockResolvedValue({ id: 11 });
 
     const { result } = renderHook(() =>
@@ -145,6 +148,41 @@ describe('usePointListAddPointModel', () => {
     );
 
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['userPointsAll'] });
+  });
+
+  /**
+   * #1706: коллекция точек читается постранично (серверный потолок 200), поэтому
+   * безусловный рефетч после каждого добавления стоил бы ceil(count/200)
+   * запросов. Клиентский лимитер считает `/user-points/` одним ключом
+   * (`utils/rateLimiter.ts:58`, 60 запросов в минуту), и серия сохранений
+   * упиралась бы в ложное 429. Серверная запись уже легла в кэш — рефетч лишний.
+   */
+  it('не рефетчит всю коллекцию, когда серверная запись уже записана в кэш', async () => {
+    mockCreatePoint.mockResolvedValue({ id: 11, latitude: 53.9, longitude: 27.56 });
+
+    const { result } = renderHook(() =>
+      usePointListAddPointModel({
+        baseUrl: 'https://example.com/travel',
+        categoryIdToName: new Map(),
+        categoryNameToIds: new Map(),
+        travelName: 'Маршрут',
+      })
+    );
+
+    await act(async () => {
+      await result.current.handleAddPoint({
+        id: '3',
+        address: 'Минск, Беларусь',
+        coord: '53.9,27.56',
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockCreatePoint).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockSetQueryData).toHaveBeenCalledWith(['userPointsAll'], expect.any(Function));
+    expect(mockInvalidateQueries).not.toHaveBeenCalled();
     expect(mockShowToast).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'success',

@@ -12,6 +12,8 @@
  * потеряло бы хвост, если сервер урезал страницу своим потолком.
  */
 
+import { devWarn } from '@/utils/logger';
+
 export type PaginatedPage<T> = {
   items: T[];
   /** Общее число записей на сервере (`count`/`total` из ответа). */
@@ -44,7 +46,16 @@ export async function fetchAllPages<T>(
   const pageSize = items.length;
   if (pageSize === 0 || firstPage.total <= pageSize) return items;
 
-  const totalPages = Math.min(Math.ceil(firstPage.total / pageSize), maxPages);
+  const neededPages = Math.ceil(firstPage.total / pageSize);
+  const totalPages = Math.min(neededPages, maxPages);
+  if (neededPages > maxPages) {
+    // Предохранитель обязан быть громким: молча урезанная коллекция — ровно тот
+    // дефект, который хелпер и закрывает.
+    devWarn(
+      `fetchAllPages: предохранитель maxPages=${maxPages} обрезал коллекцию — ` +
+        `нужно ${neededPages} страниц по ${pageSize} записей (total=${firstPage.total}).`,
+    );
+  }
   if (totalPages <= 1) return items;
 
   const restPages = await Promise.all(

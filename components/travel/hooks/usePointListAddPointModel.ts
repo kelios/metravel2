@@ -149,7 +149,9 @@ export function usePointListAddPointModel({
         // #839: оптимистично добавляем созданную точку в общий кэш `userPointsAll`,
         // чтобы координатный матчер (isPointSaved) сразу отдал true и карточка
         // переключилась в «Сохранено» без перезагрузки — до рефетча коллекции.
-        if (created && Number.isFinite(Number((created as any).latitude))) {
+        const cachedOptimistically =
+          !!created && Number.isFinite(Number((created as any).latitude));
+        if (cachedOptimistically) {
           queryClient.setQueryData<ImportedPoint[]>(queryKeys.userPointsAll(), (old) => {
             const arr = Array.isArray(old) ? old : [];
             if (arr.some((p) => p?.id === created.id)) return arr;
@@ -165,7 +167,13 @@ export function usePointListAddPointModel({
           text1: i18nT('travel:components.travel.hooks.usePointListAddPointModel.tochka_dobavlena_v_moi_tochki_6e103965'),
           position: 'bottom',
         });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });
+        // Рефетч только если оптимистичной записи не случилось (сервер не вернул
+        // координаты). #1706: коллекция читается постранично, и безусловный
+        // рефетч стоил бы ceil(count/200) запросов на каждое добавление — серия
+        // сохранений упиралась бы в клиентский лимитер `/user-points/`.
+        if (!cachedOptimistically) {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });
+        }
       } catch (error) {
         if (__DEV__) {
           console.error('Не удалось добавить точку из маршрута в мои точки', error);

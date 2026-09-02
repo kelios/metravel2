@@ -80,8 +80,8 @@ describe('useSavedPointToggle — optimistic toggle', () => {
   });
 
   it('createPoint flips isSaved to true immediately, before the server responds', async () => {
-    // Сначала ничего не сохранено; после создания рефетч (invalidate) отдаёт
-    // созданную точку — как реальный сервер.
+    // Сначала ничего не сохранено; сервер отдаёт созданную точку с реальным id,
+    // и она ложится в кэш без рефетча коллекции (#1706).
     mockedApi.getAllPoints.mockResolvedValueOnce([]).mockResolvedValue([makePoint({ id: 777 })]);
     const created = deferred<ImportedPoint>();
     mockedApi.createPoint.mockReturnValue(created.promise as any);
@@ -110,6 +110,35 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     // После ответа сервера остаётся сохранено с реальным id.
     await waitFor(() => expect(result.current.savedPointId).toBe(777));
     expect(result.current.isSaved).toBe(true);
+  });
+
+  /**
+   * #1706: коллекция читается постранично (серверный потолок 200), поэтому полный
+   * рефетч после каждого toggle стоил бы ceil(count/200) запросов. Лимитер считает
+   * `/user-points/` одним ключом (`utils/rateLimiter.ts:58`, 60 запросов в минуту),
+   * и серия сохранений на карте упиралась бы в ложное 429.
+   */
+  it('не перечитывает коллекцию после успешных createPoint и removeSaved', async () => {
+    mockedApi.getAllPoints.mockResolvedValue([]);
+    mockedApi.createPoint.mockResolvedValue(makePoint({ id: 777 }) as any);
+    mockedApi.deletePoint.mockResolvedValue(undefined as any);
+
+    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    await waitFor(() => expect(result.current.isReady).toBe(true));
+    expect(mockedApi.getAllPoints).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await result.current.createPoint({ latitude: COORD.lat, longitude: COORD.lng });
+    });
+    await waitFor(() => expect(result.current.savedPointId).toBe(777));
+
+    await act(async () => {
+      await result.current.removeSaved();
+    });
+    await waitFor(() => expect(result.current.isSaved).toBe(false));
+
+    // Ни одно из двух успешных действий не потянуло коллекцию заново.
+    expect(mockedApi.getAllPoints).toHaveBeenCalledTimes(1);
   });
 
   it('rolls back to not-saved when createPoint fails', async () => {
