@@ -325,16 +325,52 @@ const mergeStatusAndAuthoredEntries = (
   return Array.from(mergedById.values())
 }
 
+// Бэкенд режет perPage до `max_page_size = 100` (metravel/common/view_paginator.py),
+// поэтому запрос «отдай всё одним махом» молча возвращал первую сотню: календарь
+// показывал «Был (100)» вместо реальных 318. Листаем страницы по размеру,
+// который сервер точно отдаёт целиком, пока не соберём весь `count`.
+const AUTHORED_TRAVELS_PAGE_SIZE = 100
+// Страховка от неадекватного `count`: 50 страниц по 100 записей перекрывают
+// потолок самого бэкенда (`engagement_summary_travel_limit = 5000`).
+const AUTHORED_TRAVELS_MAX_PAGES = 50
+
 const fetchAuthoredTravelStatusEntries = async (userId: string | number): Promise<TravelStatusEntry[]> => {
   const { fetchMyTravels, unwrapMyTravelsPayload } = await getTravelUserApi()
-  const payload = await fetchMyTravels({
-    user_id: userId,
-    page: 1,
-    perPage: 9999,
-    includeDrafts: true,
-    throwOnError: true,
-  })
-  const { items } = unwrapMyTravelsPayload(payload)
+
+  const loadPage = async (page: number) => {
+    const payload = await fetchMyTravels({
+      user_id: userId,
+      page,
+      perPage: AUTHORED_TRAVELS_PAGE_SIZE,
+      includeDrafts: true,
+      throwOnError: true,
+    })
+    return unwrapMyTravelsPayload(payload)
+  }
+
+  const firstPage = await loadPage(1)
+  // Копия обязательна: unwrap отдаёт сам массив из ответа, и push дописывал бы
+  // записи следующих страниц прямо в объект первого ответа.
+  const items = [...firstPage.items]
+
+  // Число страниц считаем по фактически отданным записям, а не по запрошенному
+  // perPage: сервер вправе урезать его своим максимумом, и деление на
+  // запрошенное снова тихо потеряло бы хвост. Ответ, где записей не больше
+  // отданных (в том числе непагинированный массив с total === items.length),
+  // остаётся одним запросом.
+  const pageSize = items.length
+  const totalPages = pageSize > 0 && firstPage.total > pageSize
+    ? Math.min(Math.ceil(firstPage.total / pageSize), AUTHORED_TRAVELS_MAX_PAGES)
+    : 1
+
+  if (totalPages > 1) {
+    // Хвост уходит одним заходом: последовательное чтение сложило бы RTT страниц.
+    const restPages = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, index) => loadPage(index + 2)),
+    )
+    restPages.forEach((restPage) => items.push(...restPage.items))
+  }
+
   return items
     .map(normalizeAuthoredTravelEntry)
     .filter((item): item is TravelStatusEntry => item !== null)
@@ -454,7 +490,8 @@ export async function loadTravelStatus(userId: string | null): Promise<void> {
   if (!getActiveQueryClient()) return
 
   // Фолбэк явных статусов — текущий кэш (как локальные в старом loadLocal).
-  let explicitEntries: TravelStatusEntry[] = readEntries(userId)
+  const cachedEntries = readEntries(userId)
+  let explicitEntries: TravelStatusEntry[] = cachedEntries
   try {
     const { fetchUserTravelStatuses } = await getUserApi()
     explicitEntries = (await fetchUserTravelStatuses(userId, { perPage: 9999 }))
@@ -464,10 +501,15 @@ export async function loadTravelStatus(userId: string | null): Promise<void> {
     devWarn('Не удалось синхронизировать явные статусы путешествий с сервером:', error)
   }
 
-  let authoredEntries: TravelStatusEntry[] = []
+  // Авторский список читается несколькими страницами, и отказ любой из них
+  // отменяет весь список. Результат уезжает в persist-кэш, поэтому пустой
+  // фолбэк обнулял бы вкладку «Был» из-за одного транзиентного сбоя — держим
+  // последний известный набор, как и для явных статусов выше.
+  let authoredEntries: TravelStatusEntry[]
   try {
     authoredEntries = await fetchAuthoredTravelStatusEntries(userId)
   } catch (error) {
+    authoredEntries = cachedEntries.filter((entry) => entry.isAuthoredTravel)
     devWarn('Не удалось загрузить авторские путешествия для календаря:', error)
   }
 

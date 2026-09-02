@@ -305,7 +305,7 @@ describe('loadTravelStatus', () => {
     await loadTravelStatus('77')
 
     expect(fetchMyTravels).toHaveBeenCalledWith({
-      user_id: '77', page: 1, perPage: 9999, includeDrafts: true, throwOnError: true,
+      user_id: '77', page: 1, perPage: 100, includeDrafts: true, throwOnError: true,
     })
 
     const entries = entriesOf('77')
@@ -318,6 +318,86 @@ describe('loadTravelStatus', () => {
     expect(byId['202']).toEqual(expect.objectContaining({
       status: 'planned', plannedDate: '2026-05-21', title: 'Explicit planned', travelYear: '2026', travelMonth: ['5'], travelMonthName: 'Май', isAuthoredTravel: true,
     }))
+  })
+
+  // Бэкенд урезает perPage до 100, поэтому «одним запросом» календарь видел
+  // только первую сотню авторских путешествий и показывал «Был (100)» из 318.
+  it('дочитывает все страницы авторских путешествий, когда их больше одной страницы', async () => {
+    const page = (from: number, to: number) => ({
+      data: Array.from({ length: to - from + 1 }, (_, index) => ({
+        id: from + index,
+        name: `Authored ${from + index}`,
+        slug: `authored-${from + index}`,
+        year: 2024,
+        month: [7],
+        monthName: 'Июль',
+      })),
+      total: 250,
+    })
+    fetchMyTravels
+      .mockResolvedValueOnce(page(1, 100))
+      .mockResolvedValueOnce(page(101, 200))
+      .mockResolvedValueOnce(page(201, 250))
+
+    await loadTravelStatus('77')
+
+    expect(fetchMyTravels).toHaveBeenCalledTimes(3)
+    expect(fetchMyTravels).toHaveBeenNthCalledWith(2, expect.objectContaining({ page: 2, perPage: 100 }))
+    expect(fetchMyTravels).toHaveBeenNthCalledWith(3, expect.objectContaining({ page: 3, perPage: 100 }))
+    expect(entriesOf('77')).toHaveLength(250)
+  })
+
+  it('не запрашивает вторую страницу, когда сервер отдал все записи', async () => {
+    fetchMyTravels.mockResolvedValueOnce({
+      data: Array.from({ length: 100 }, (_, index) => ({ id: index + 1, name: `Authored ${index + 1}`, year: 2024, month: [7], monthName: 'Июль' })),
+      total: 100,
+    })
+
+    await loadTravelStatus('77')
+
+    expect(fetchMyTravels).toHaveBeenCalledTimes(1)
+    expect(entriesOf('77')).toHaveLength(100)
+  })
+
+  // Число страниц считается по фактически отданным записям: если сервер урежет
+  // perPage сильнее запрошенного, деление на запрошенное снова потеряло бы хвост.
+  it('считает страницы по фактическому размеру ответа, а не по запрошенному perPage', async () => {
+    const authoredPage = (from: number, to: number) => ({
+      data: Array.from({ length: to - from + 1 }, (_, index) => ({
+        id: from + index, name: `Authored ${from + index}`, year: 2024, month: [7], monthName: 'Июль',
+      })),
+      total: 120,
+    })
+    fetchMyTravels
+      .mockResolvedValueOnce(authoredPage(1, 50))
+      .mockResolvedValueOnce(authoredPage(51, 100))
+      .mockResolvedValueOnce(authoredPage(101, 120))
+
+    await loadTravelStatus('77')
+
+    expect(fetchMyTravels).toHaveBeenCalledTimes(3)
+    expect(entriesOf('77')).toHaveLength(120)
+  })
+
+  // Страниц теперь несколько, и отказ любой отменяет весь авторский список.
+  // Результат пишется в persist-кэш, поэтому пустой фолбэк стирал бы «Был».
+  it('сохраняет ранее загруженные авторские путешествия, если страница не догрузилась', async () => {
+    qc.setQueryData(queryKeys.travelStatus('77'), [
+      { id: 5, type: 'travel', title: 'Авторский поход', url: '/travels/5', status: 'visited', isAuthoredTravel: true, addedAt: 1 },
+    ])
+    fetchMyTravels
+      .mockResolvedValueOnce({
+        data: Array.from({ length: 100 }, (_, index) => ({ id: index + 1, name: `Authored ${index + 1}`, year: 2024, month: [7], monthName: 'Июль' })),
+        total: 250,
+      })
+      .mockRejectedValueOnce(new Error('500 Internal Server Error'))
+      .mockRejectedValueOnce(new Error('500 Internal Server Error'))
+
+    await expect(loadTravelStatus('77')).resolves.not.toThrow()
+
+    expect(entriesOf('77')).toEqual([
+      expect.objectContaining({ id: 5, title: 'Авторский поход', isAuthoredTravel: true }),
+    ])
   })
 
   it('авторское путешествие с будущим годом попадает в «Планирую»', async () => {
