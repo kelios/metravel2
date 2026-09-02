@@ -48,7 +48,7 @@ describe('buildTravelSectionLinks', () => {
     ['another video host', 'https://vimeo.com/76979871', false],
     ['an empty string', '', false],
     ['null', null, false],
-  ] as const)('video link for %s -> %s', (_label, youtube_link, expected) => {
+  ] as const)('gates the video link on %s', (_label, youtube_link, expected) => {
     const links = buildTravelSectionLinks({ ...travelWithPoints, youtube_link } as any)
 
     expect(links.map((link) => link.key).includes('video')).toBe(expected)

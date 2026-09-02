@@ -155,7 +155,7 @@ describe('CompactSideBarTravel', () => {
   it('should render navigation links', () => {
     const travel = createMockTravel({
       gallery: [{ id: 1, url: 'test.jpg' }],
-      youtube_link: 'https://youtube.com/test',
+      youtube_link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       description: 'Test description',
     } as any);
 

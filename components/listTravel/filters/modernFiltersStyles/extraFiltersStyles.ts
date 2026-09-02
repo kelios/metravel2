@@ -89,8 +89,11 @@ export const createExtraFiltersStyles = (ctx: StylesCtx) => {
       borderWidth: 1,
       borderColor: 'transparent',
       ...Platform.select({
+        // `as const`: без литерала cursor расширяется до string, и стиль перестаёт
+        // быть присваиваемым StyleProp<ViewStyle> у любого потребителя, который
+        // принимает эти стили пропом (StatusToggleRow) — `tsc --noEmit` падает.
         web: {
-          cursor: 'pointer',
+          cursor: 'pointer' as const,
         },
       }),
     },
