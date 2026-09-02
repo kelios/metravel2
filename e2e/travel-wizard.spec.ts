@@ -648,7 +648,7 @@ const verifyGalleryLoads = async (page: Page, viewport: 'desktop' | 'mobile') =>
 
   await page.getByRole('button', { name: 'Добавить точку вручную' }).click();
   await page.getByPlaceholder('49.609645, 18.845693').fill('41.7151377, 44.827096');
-  await page.getByRole('button', { name: 'Добавить', exact: true }).click();
+  await page.getByTestId('travel-wizard.step-route.manual.add').click();
   await expect(page.getByText(/Точек:\s*1/)).toBeVisible({ timeout: 15_000 });
   await maybeDismissRouteCoachmark(page);
 
@@ -962,7 +962,7 @@ test.describe('Создание путешествия - Полный flow', () 
       const coords = page.getByPlaceholder('49.609645, 18.845693');
       await expect(coords).toBeVisible({ timeout: 10_000 });
       await coords.fill('41.7151377, 44.827096');
-      await page.getByRole('button', { name: 'Добавить', exact: true }).click();
+      await page.getByTestId('travel-wizard.step-route.manual.add').click();
       await expect(page.locator('text=Точек: 1')).toBeVisible({ timeout: 15_000 });
 
       // Coachmark can re-appear after interactions; ensure it's dismissed before clicking next.

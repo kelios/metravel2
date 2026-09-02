@@ -73,7 +73,7 @@ const TOTAL_OPERAND_REGEX = /\b(?:total|count|totalItems|totalCount)\b/i
 // первый же асинхронный хендлер, добавленный в `PaginationComponent`, красил бы
 // гейт на чисто отрисовочном коде, и погасить его было бы нечем.
 const PAGE_FETCH_MARKER_REGEX =
-  /\b(?:loadPage|getPage|fetchPage|fetchPages|fetchAllPages|perPage|per_page|page_size|pageSize|pageNumber)\s*[(:=,)]|[?&]page=/i
+  /\b(?:loadPage|getPage|fetchPage|fetchPages|fetchAllPages|perPage|per_page|page_size|pageSize|pageNumber)\s*[(:=,)]|[?&]page=|\bpage\s*[:=]\s*[^=]/i
 
 // Вторая форма того же признака: параллельный заход по диапазону. Два условия
 // проверяются ОТДЕЛЬНО и не обязаны быть вложены друг в друга — иначе признак
@@ -93,8 +93,12 @@ const PARALLEL_RANGE_PROXIMITY = 3
 // это же число рядом объявлено размером страницы (`perPage: 100` + `total / 100` —
 // то самое деление на ЗАПРОШЕННЫЙ размер, из-за которого терялся хвост).
 const NUMERIC_DIVISOR_REGEX = /^\s*(\d+)\s*$/
+// У «страничных» имён достаточно соседства (`perPage: 100`, `page_size=100`),
+// а у общеупотребительных (`size`, `chunk`, `limit`) обязательно присваивание:
+// иначе `<Icon size={24} />` рядом с `Math.ceil(count / 24)` стал бы находкой.
 const PAGE_SIZE_DECLARATION_SOURCE =
-  '(?:perPage|per_page|page_size|pageSize|PAGE_SIZE|\\bsize\\b|\\bchunk\\b|\\blimit\\b)[^\\n]{0,40}?\\b'
+  '(?:(?:perPage|per_page|page_size|pageSize|PAGE_SIZE)[^\\n]{0,40}?\\b' +
+  '|\\b(?:size|chunk|limit)\\s*[:=]\\s*)'
 
 const FETCH_CONTEXT_RADIUS = 30
 
@@ -148,12 +152,27 @@ const readContextWindow = (lines, lineIndex) => {
   return lines.slice(from, to).filter((line) => !isCommentLine(line))
 }
 
+// Оба признака ищутся по срезу «строка плюс две следующие»: prettier проекта
+// разносит `Array.from(\n  { length: n },\n  …\n)` на три строки, и построчная
+// проверка такой диапазон не увидела бы вовсе.
+const MULTILINE_MATCH_SPAN = 3
+
+// Но засчитывается признак ровно за ту строку, где конструкция НАЧИНАЕТСЯ.
+// Иначе одно и то же `Array.from` числилось бы ещё и за двумя строками выше,
+// соседство раздувалось бы на ширину среза, и сетка со скелетонами вместе с
+// несвязанным `Promise.all` прелоада снова стала бы находкой.
+const startsMatchOnLine = (regex, windowLines, index) => {
+  const slice = windowLines.slice(index, index + MULTILINE_MATCH_SPAN).join('\n')
+  const position = slice.search(regex)
+  return position >= 0 && position < windowLines[index].length
+}
+
 const hasParallelRangeFanout = (windowLines) => {
   const fanout = []
   const ranges = []
-  windowLines.forEach((line, index) => {
-    if (PARALLEL_FANOUT_REGEX.test(line)) fanout.push(index)
-    if (RANGE_CONSTRUCTOR_REGEX.test(line)) ranges.push(index)
+  windowLines.forEach((_line, index) => {
+    if (startsMatchOnLine(PARALLEL_FANOUT_REGEX, windowLines, index)) fanout.push(index)
+    if (startsMatchOnLine(RANGE_CONSTRUCTOR_REGEX, windowLines, index)) ranges.push(index)
   })
   return fanout.some((a) => ranges.some((b) => Math.abs(a - b) <= PARALLEL_RANGE_PROXIMITY))
 }
@@ -341,6 +360,7 @@ module.exports = {
   PARALLEL_FANOUT_REGEX,
   RANGE_CONSTRUCTOR_REGEX,
   PARALLEL_RANGE_PROXIMITY,
+  MULTILINE_MATCH_SPAN,
   findAllowlistProblems,
   parseArgs,
   shouldScanFile,

@@ -34,6 +34,24 @@ const contentTypes = {
 
 const compressibleExts = new Set(['.html', '.js', '.css', '.json', '.svg', '.map'])
 
+const DYNAMIC_SEGMENT_REGEX = /^\[[^/]+\]$/
+
+function listDirEntries(dir) {
+  try {
+    return fs.readdirSync(dir, { withFileTypes: true })
+  } catch {
+    return []
+  }
+}
+
+// Expo Router exports a dynamic route under its literal `[name]` file or folder,
+// and production nginx maps a request onto it segment by segment
+// (`/quests/<city>/<questId>` -> `/quests/[city]/[questId].html`, nginx.conf:685).
+// Имена сегментов берутся из самой сборки, а не из списка в этом файле: со
+// списком `['[param]', '[id]']` маршрут с любым другим именем (`[city]`,
+// `[questId]`) молча уезжал в `index.html`, и тест мерил домашнюю оболочку
+// вместо своей страницы. Литеральный сегмент проверяется раньше динамического —
+// тот же приоритет, что у `try_files $uri.html ... /quests/[city]/[questId].html`.
 function getDynamicRouteFallbackCandidates(pathname, resolvedPath) {
   const ext = path.extname(pathname)
   if (ext) return []
@@ -42,22 +60,37 @@ function getDynamicRouteFallbackCandidates(pathname, resolvedPath) {
   if (segments.length === 0) return []
 
   const candidates = []
-  const dynamicNames = ['[param]', '[id]']
+  const seen = new Set()
 
-  for (let i = segments.length - 1; i >= 0; i -= 1) {
-    for (const dynamicName of dynamicNames) {
-      const nextSegments = segments.slice()
-      nextSegments[i] = dynamicName
-      const candidatePath = path.join(buildDir, ...nextSegments) + '.html'
-      if (candidatePath === `${resolvedPath}.html`) continue
-      candidates.push({
-        filePath: candidatePath,
-        replacements: {
-          [dynamicName]: segments[i],
-        },
-      })
+  const pushCandidate = (filePath, replacements) => {
+    if (filePath === `${resolvedPath}.html`) return
+    if (seen.has(filePath)) return
+    seen.add(filePath)
+    candidates.push({ filePath, replacements })
+  }
+
+  const walk = (dir, index, replacements) => {
+    const segment = segments[index]
+
+    if (index === segments.length - 1) {
+      for (const entry of listDirEntries(dir)) {
+        if (!entry.isFile() || !entry.name.endsWith('.html')) continue
+        const token = entry.name.slice(0, -'.html'.length)
+        if (!DYNAMIC_SEGMENT_REGEX.test(token)) continue
+        pushCandidate(path.join(dir, entry.name), { ...replacements, [token]: segment })
+      }
+      return
+    }
+
+    walk(path.join(dir, segment), index + 1, replacements)
+
+    for (const entry of listDirEntries(dir)) {
+      if (!entry.isDirectory() || !DYNAMIC_SEGMENT_REGEX.test(entry.name)) continue
+      walk(path.join(dir, entry.name), index + 1, { ...replacements, [entry.name]: segment })
     }
   }
+
+  walk(buildDir, 0, {})
 
   return candidates
 }
@@ -549,4 +582,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { isExpectedProxyTransportFailure }
+module.exports = { getDynamicRouteFallbackCandidates, isExpectedProxyTransportFailure }
