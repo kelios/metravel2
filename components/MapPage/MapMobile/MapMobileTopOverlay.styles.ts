@@ -25,7 +25,9 @@ const ROUTE_SUMMARY_CLOSE_SIZE = 26
 /**
  * Тач-таргет того же крестика. Тот же приём, что и у тулбара: кликабельна
  * прозрачная рамка, а не видимый круг. Рамка вынесена в отрицательные поля,
- * поэтому шапка карточки маршрута остаётся прежней высоты (26dp).
+ * поэтому она не раздувает ряд сводки: по вертикали таргет ограничен высотой
+ * самого ряда (ROUTE_CONTROL_TOUCH_TARGET_SIZE — принятый floor 44dp, тот же,
+ * что у пилюль выбора старта), по горизонтали работают все 48dp.
  */
 const ROUTE_SUMMARY_CLOSE_TOUCH_SIZE = MAP_TOOLBAR_TOUCH_TARGET_SIZE
 const ROUTE_SUMMARY_CLOSE_TOUCH_INSET =
@@ -269,35 +271,46 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       fontWeight: '700' as const,
       color: colors.textOnPrimary,
     },
+    // #1699 — сводка живёт в том же одном ярусе, что и селектор старта: строка
+    // высотой ROUTE_CONTROL_TOUCH_TARGET_SIZE вместо карточки в два яруса (68dp).
+    // Ширину даёт содержимое (компонент ограничивает её тем же максимумом, что
+    // и у селектора): готовая сводка короче ряда выбора старта, поэтому пилюля
+    // закрывает меньше карты, чем фиксированная ширина.
     routeSummaryCard: {
-      width: 244,
-      maxWidth: '100%' as any,
+      minHeight: ROUTE_CONTROL_TOUCH_TARGET_SIZE,
       // Компенсация уменьшенного padding у root (см. activeFiltersRow).
       marginRight: MAP_TOOLBAR_TOUCH_PADDING,
-      paddingVertical: 9,
-      paddingHorizontal: 11,
-      borderRadius: 12,
+      flexDirection: 'row',
+      alignItems: 'center' as const,
+      gap: 6,
+      // Вертикального поля нет: высоту держит minHeight, иначе 48dp-рамка
+      // крестика раздула бы ряд (тот же приём, что и у routeStartSelector).
+      paddingVertical: 0,
+      paddingLeft: 12,
+      // Справа поля больше: отрицательные поля рамки крестика съедают 11dp,
+      // остаток отводит видимый круг от скруглённого края пилюли.
+      paddingRight: 14,
+      borderRadius: 22,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
       ...(Platform.OS === 'web' ? shadowWeb : shadowNative),
     },
-    routeSummaryHeader: {
-      flexDirection: 'row',
-      alignItems: 'center' as const,
-      justifyContent: 'space-between' as const,
-      gap: 8,
-      marginBottom: 7,
-    },
-    routeSummaryTitleRow: {
-      flex: 1,
+    // Единственный ужимаемый выход ряда: крестик стоит СНАРУЖИ него и потому
+    // всегда остаётся внутри пилюли. Внутри выхода первым сдаёт подпись
+    // состояния (flexShrink), а если её уже нет — метрики не выезжают на карту,
+    // а обрезаются по краю выхода.
+    routeSummaryContent: {
+      flexShrink: 1,
       minWidth: 0,
+      overflow: 'hidden' as const,
       flexDirection: 'row',
       alignItems: 'center' as const,
       gap: 6,
     },
+    // Усекается первым: цифры маршрута важнее подписи состояния.
     routeSummaryTitle: {
-      flex: 1,
+      flexShrink: 1,
       minWidth: 0,
       fontSize: 12,
       lineHeight: 15,
@@ -305,7 +318,9 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       color: colors.text,
     },
     // Кликабельная область крестика: прозрачная рамка 48×48dp. Отрицательные
-    // поля возвращают шапке прежнюю высоту, поэтому карточка не выросла.
+    // поля съедают её на краях, поэтому ряд остаётся одноярусным (44dp), а
+    // правое поле пилюли (14dp) держит рамку внутри её границ — иначе часть
+    // таргета вышла бы за родителя, где тап уже не доходит до потомка (#1274).
     routeSummaryCloseTouch: {
       width: ROUTE_SUMMARY_CLOSE_TOUCH_SIZE,
       height: ROUTE_SUMMARY_CLOSE_TOUCH_SIZE,
@@ -330,7 +345,10 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
     routeSummaryMetrics: {
       flexDirection: 'row',
       alignItems: 'center' as const,
-      flexWrap: 'wrap' as const,
+      // Один ярус держит отсутствие flexWrap (было 'wrap' — метрики уезжали
+      // вторым этажом). flexShrink: 0 — про другое: цифры не ужимаются, пока в
+      // ряду есть подпись состояния, которую можно усечь (#1699).
+      flexShrink: 0,
       gap: 6,
     },
     routeSummaryMetric: {
@@ -349,13 +367,5 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
       lineHeight: 14,
       fontWeight: '700' as const,
       color: colors.primaryDark,
-    },
-    routeSummaryNote: {
-      flexShrink: 1,
-      minWidth: 0,
-      fontSize: 11,
-      lineHeight: 14,
-      fontWeight: '600' as const,
-      color: colors.textMuted,
     },
   })

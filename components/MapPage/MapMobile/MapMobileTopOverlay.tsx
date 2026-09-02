@@ -76,18 +76,24 @@ function clampPopoverRight(anchorRight: number, width: number, viewportWidth: nu
 
 /** How long the «tap to build» hint stays visible after entering route mode. */
 const ROUTE_HINT_TIMEOUT_MS = 6000
-const ROUTE_SUMMARY_POPOVER_OFFSET = 88
-const ROUTE_START_SELECTOR_OFFSET = 50
 /**
- * Ряд «Старт · Моё местоположение · На карте» стоит справа, слева от него —
- * круглая кнопка локации (38px) + отступы root (10+10). Прежний хардкод 292px
- * был УЖЕ содержимого ряда (~302px при 390px вьюпорта), поэтому «На карте»
- * уезжало за правый край. Считаем реально доступную ширину; на совсем узких
- * экранах опции ужимаются (flexShrink) вместо обрезки.
+ * #1699 — под тулбаром живёт РОВНО один ярус маршрута: выбор старта, пока
+ * заданы не оба конца, и сводка, как только маршрут построен. Раньше ярусов
+ * было два (селектор 44dp + карточка сводки 68dp), и вместе с зазором они
+ * съедали 118dp полотна карты. Смещение = высота ряда (44) + зазор стека (6).
  */
-const ROUTE_START_SELECTOR_RESERVED = 62
-const ROUTE_START_SELECTOR_MAX_WIDTH = 340
-const ROUTE_START_SELECTOR_MIN_WIDTH = 200
+const ROUTE_ROW_OFFSET = 50
+/**
+ * Ряд маршрута стоит справа, слева от него — круглая кнопка локации (38px) +
+ * отступы root (10+10). Прежний хардкод 292px был УЖЕ содержимого ряда (~302px
+ * при 390px вьюпорта), поэтому «На карте» уезжало за правый край. Считаем
+ * реально доступную ширину; на совсем узких экранах содержимое ужимается
+ * (flexShrink) вместо обрезки. Для сводки это ПОТОЛОК, а не ширина: готовая
+ * строка короче ряда выбора старта и закрывает меньше карты.
+ */
+const ROUTE_ROW_RESERVED = 62
+const ROUTE_ROW_MAX_WIDTH = 340
+const ROUTE_ROW_MIN_WIDTH = 200
 
 function formatRouteDistance(meters: number): string {
   if (!Number.isFinite(meters) || meters <= 0) return ''
@@ -230,9 +236,16 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   const { width: viewportWidth } = useWindowDimensions()
   const isRouteMode = mode === 'route'
   const showRouteStartLabel = viewportWidth > 340
-  const routeStartSelectorWidth = Math.max(
-    ROUTE_START_SELECTOR_MIN_WIDTH,
-    Math.min(ROUTE_START_SELECTOR_MAX_WIDTH, viewportWidth - ROUTE_START_SELECTOR_RESERVED),
+  // Выбор старта — контрол ФАЗЫ ПОСТРОЕНИЯ: обе его пилюли начинают маршрут
+  // заново (`clearRouteAndSetMode` в MapMobileLayout), поэтому рядом с готовым
+  // маршрутом это не нужный контрол, а «уничтожить маршрут» в один тап. Как
+  // только оба конца заданы, ярус отдаётся сводке; выбор старта возвращается на
+  // следующем входе в режим маршрута — «Очистить маршрут» в тулбаре сбрасывает
+  // точки и возвращает карту в режим мест (#1699).
+  const showRouteStartSelector = isRouteMode && routePointCount < 2
+  const routeRowWidth = Math.max(
+    ROUTE_ROW_MIN_WIDTH,
+    Math.min(ROUTE_ROW_MAX_WIDTH, viewportWidth - ROUTE_ROW_RESERVED),
   )
   const visibleActiveFilters = useMemo(
     () => getVisibleMapFilterChips(activeFilters),
@@ -278,6 +291,13 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   useEffect(() => {
     if (routePointCount >= 2) setHintVisible(false)
   }, [routePointCount])
+  // Правило «подсказка уходит на двух точках» держит РЕНДЕР, а не только эффект
+  // выше: у эффекта в зависимостях один `routePointCount`, поэтому вход в режим
+  // маршрута с уже готовыми двумя точками (persisted points после возврата на
+  // карту) не сбрасывает `hintVisible`. Раньше залипшая подсказка просто висела
+  // третьим ярусом ниже сводки, теперь ярус ОДИН и она легла бы прямо на неё
+  // (#1699): плашка подсказки стоит на том же `popoverTop`.
+  const showRouteHint = isRouteMode && hintVisible && routePointCount < 2
 
   const distanceMeters =
     typeof routeDistance === 'number' && Number.isFinite(routeDistance)
@@ -326,9 +346,10 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   const activeFiltersOffset = showActiveFiltersRow ? MAP_FILTER_CHIPS_STACK_OFFSET : 0
   const basePopoverTop =
     toolbarPaddingTop + MAP_TOOLBAR_TOUCH_TARGET_SIZE + 6 + activeFiltersOffset
-  const routeStartSelectorOffset = isRouteMode ? ROUTE_START_SELECTOR_OFFSET : 0
-  const popoverTop =
-    basePopoverTop + routeStartSelectorOffset + (showRouteSummary ? ROUTE_SUMMARY_POPOVER_OFFSET : 0)
+  // Селектор старта и сводка взаимоисключают друг друга и занимают один и тот
+  // же ярус, поэтому смещение считается один раз, а не складывается (#1699).
+  const routeRowOffset = showRouteStartSelector || showRouteSummary ? ROUTE_ROW_OFFSET : 0
+  const popoverTop = basePopoverTop + routeRowOffset
   const routePopoverTop = popoverTop
   // В route-режиме иконка «Слои» уезжает на 4 шага влево (появляется ряд
   // маршрута), поэтому якорь у неё далеко от правого края — карточка шириной
@@ -572,7 +593,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             Один ряд, горизонтальный скролл при большом количестве фильтров. */}
         {showActiveFiltersRow && (
           <View
-            style={[styles.activeFiltersRow, { maxWidth: routeStartSelectorWidth }]}
+            style={[styles.activeFiltersRow, { maxWidth: routeRowWidth }]}
             pointerEvents="auto"
           >
             <ActiveFiltersBar
@@ -586,9 +607,9 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
           </View>
         )}
 
-        {isRouteMode && (
+        {showRouteStartSelector && (
           <View
-            style={[styles.routeStartSelector, { width: routeStartSelectorWidth }]}
+            style={[styles.routeStartSelector, { width: routeRowWidth }]}
             testID="map-mobile-route-start-selector"
           >
             {showRouteStartLabel && (
@@ -660,53 +681,55 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         )}
 
         {showRouteSummary && (
+          // Одна строка вместо карточки в два яруса: статус усекается первым
+          // (flexShrink), метрики держат ширину — цифры важнее подписи (#1699).
+          // Подпись «прямая линия» из метрик убрана: тот же смысл уже стоит
+          // статусом строки, дублировать его в одном ряду незачем.
           <View
-            style={styles.routeSummaryCard}
+            style={[styles.routeSummaryCard, { maxWidth: routeRowWidth }]}
             pointerEvents="auto"
             testID="map-mobile-route-summary"
             accessibilityLiveRegion="polite"
           >
-            <View style={styles.routeSummaryHeader}>
-              <View style={styles.routeSummaryTitleRow}>
-                <Feather name="navigation" size={13} color={colors.primaryDark} />
-                <RNText style={styles.routeSummaryTitle} numberOfLines={1}>
-                  {routeSummaryStatus}
-                </RNText>
-              </View>
-              <Pressable
-                testID="map-mobile-route-summary-close"
-                onPress={() => setDismissedRouteSummaryKey(routeSummaryKey)}
-                accessibilityRole="button"
-                accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.skryt_svodku_marshruta_9d781c25')}
-                style={styles.routeSummaryCloseTouch}
-              >
-                {({ pressed }) => (
-                  <View style={[styles.routeSummaryClose, pressed && styles.routeSummaryClosePressed]}>
-                    <Feather name="x" size={15} color={colors.textMuted} />
-                  </View>
-                )}
-              </Pressable>
-            </View>
-            <View style={styles.routeSummaryMetrics}>
-              <View style={styles.routeSummaryMetric}>
-                <Feather name="map" size={12} color={colors.primary} />
-                <RNText style={styles.routeSummaryMetricText} numberOfLines={1}>
-                  {routeDistanceText}
-                </RNText>
-              </View>
-              {!!routeDurationText && (
+            {/* Содержимое собрано в один ужимаемый выход, крестик — вне его:
+                иначе на узком экране (длинная локаль времени, крупный системный
+                шрифт) неужимаемые метрики вытолкнули бы крестик за край пилюли
+                и экрана, и сводку стало бы нечем закрыть. */}
+            <View style={styles.routeSummaryContent}>
+              <Feather name="navigation" size={13} color={colors.primaryDark} />
+              <RNText style={styles.routeSummaryTitle} numberOfLines={1}>
+                {routeSummaryStatus}
+              </RNText>
+              <View style={styles.routeSummaryMetrics}>
                 <View style={styles.routeSummaryMetric}>
-                  <Feather name="clock" size={12} color={colors.primary} />
+                  <Feather name="map" size={12} color={colors.primary} />
                   <RNText style={styles.routeSummaryMetricText} numberOfLines={1}>
-                    {routeDurationText}
+                    {routeDistanceText}
                   </RNText>
                 </View>
-              )}
-              {routingError === ROUTING_DIRECT_LINE && (
-                <RNText style={styles.routeSummaryNote} numberOfLines={1}>
-                  {i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pryamaya_liniya_e561a708')}</RNText>
-              )}
+                {!!routeDurationText && (
+                  <View style={styles.routeSummaryMetric}>
+                    <Feather name="clock" size={12} color={colors.primary} />
+                    <RNText style={styles.routeSummaryMetricText} numberOfLines={1}>
+                      {routeDurationText}
+                    </RNText>
+                  </View>
+                )}
+              </View>
             </View>
+            <Pressable
+              testID="map-mobile-route-summary-close"
+              onPress={() => setDismissedRouteSummaryKey(routeSummaryKey)}
+              accessibilityRole="button"
+              accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.skryt_svodku_marshruta_9d781c25')}
+              style={styles.routeSummaryCloseTouch}
+            >
+              {({ pressed }) => (
+                <View style={[styles.routeSummaryClose, pressed && styles.routeSummaryClosePressed]}>
+                  <Feather name="x" size={15} color={colors.textMuted} />
+                </View>
+              )}
+            </Pressable>
           </View>
         )}
       </View>
@@ -753,7 +776,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         />
       )}
 
-      {isRouteMode && hintVisible && !activePopover && (
+      {showRouteHint && !activePopover && (
         <View
           style={[styles.routeHint, { top: routePopoverTop }]}
           pointerEvents={needsRouteStartChoice ? 'box-none' : 'none'}

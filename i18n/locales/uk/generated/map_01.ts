@@ -283,7 +283,6 @@ export const mapGenerated1 = {
   "components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_da7efcc5": "Побудувати маршрут",
   "components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_vybrano_value1_iz_2_tochek_926447de": "Побудувати маршрут: обрано {{value1}} з 2 точок",
   "components.MapPage.MapMobile.MapMobileTopOverlay.pryamaya_liniya_79c7e056": "Пряма лінія",
-  "components.MapPage.MapMobile.MapMobileTopOverlay.pryamaya_liniya_e561a708": "пряма лінія",
   "components.MapPage.MapMobile.MapMobileTopOverlay.radius_value1_760a1afd": "Радіус{{value1}}",
   "components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_b419aad0": "Дозволити",
   "components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_geolokatsiyu_dlya_marshruta_027a0102": "Дозволити геолокацію для маршруту",

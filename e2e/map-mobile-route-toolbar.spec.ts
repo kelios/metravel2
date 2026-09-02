@@ -164,6 +164,9 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
       await expect(page.getByText('11,4 км', { exact: true })).toBeVisible()
       await expect(page.getByText('27 мин', { exact: true })).toBeVisible()
       await expect(page.getByText('2/2', { exact: true })).toBeVisible()
+      // #1699 — сводка ЗАНИМАЕТ ярус выбора старта, а не встаёт вторым ярусом:
+      // поверх карты в режиме маршрута всегда ровно одна строка под тулбаром.
+      await expect(byTid(page, 'map-mobile-route-start-selector')).toHaveCount(0)
       await byTid(page, 'map-mobile-route-clear-button').click({ force: true })
       await expect(radiusBtn).toBeVisible({ timeout: 15_000 })
     })

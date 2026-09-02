@@ -283,7 +283,6 @@ export const mapGenerated1 = {
   "components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_da7efcc5": "Build a route",
   "components.MapPage.MapMobile.MapMobileTopOverlay.postroit_marshrut_vybrano_value1_iz_2_tochek_926447de": "Build route: {{value1}} selected from 2 points",
   "components.MapPage.MapMobile.MapMobileTopOverlay.pryamaya_liniya_79c7e056": "Straight line",
-  "components.MapPage.MapMobile.MapMobileTopOverlay.pryamaya_liniya_e561a708": "straight line",
   "components.MapPage.MapMobile.MapMobileTopOverlay.radius_value1_760a1afd": "Radius{{value1}}",
   "components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_b419aad0": "Allow",
   "components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_geolokatsiyu_dlya_marshruta_027a0102": "Allow geolocation for route",
