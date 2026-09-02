@@ -31,9 +31,11 @@
  */
 
 import { getThemedColors } from '@/constants/designSystem'
+import type { ThemedColors } from '@/hooks/useTheme'
 import { createTravelDetailsDecisionSummaryStyles } from '@/components/travel/details/TravelDetailsStyleFragments'
 import { getTravelDetailsHeroStyles } from '@/components/travel/details/TravelDetailsHeroStyles'
 import { getTravelDetailsShellStyles } from '@/components/travel/details/TravelDetailsShellStyles'
+import { getTravelDetailsStyles } from '@/components/travel/details/TravelDetailsStyles'
 import { createTravelDetailsHeroMediaStyles } from '@/components/travel/details/styles/travelDetailsHeroMediaStyles'
 import { createTravelDetailsInsightStyles } from '@/components/travel/details/styles/travelDetailsInsightStyles'
 import { createTravelDetailsLayoutStyles } from '@/components/travel/details/styles/travelDetailsLayoutStyles'
@@ -101,18 +103,23 @@ const KNOWN_OPEN_DUPLICATES: Record<string, string[]> = {
   errorButtonText: ['misc', 'shell'],
 }
 
+/** Фрагменты, которые агрегат `getTravelDetailsStyles` раскладывает спредом. */
+const loadAggregateFragments = (colors: ThemedColors) => ({
+  // Порядок — как в `TravelDetailsStyles.ts`.
+  decisionSummary: createTravelDetailsDecisionSummaryStyles(colors) as StyleSet,
+  layout: createTravelDetailsLayoutStyles(colors) as StyleSet,
+  nav: createTravelDetailsNavStyles(colors) as StyleSet,
+  sectionHeader: createTravelDetailsSectionHeaderStyles(colors) as StyleSet,
+  heroMedia: createTravelDetailsHeroMediaStyles(colors) as StyleSet,
+  insight: createTravelDetailsInsightStyles(colors) as StyleSet,
+  misc: createTravelDetailsMiscStyles(colors) as StyleSet,
+})
+
 const loadStyleSets = () => {
   const colors = getThemedColors(false)
 
   return {
-    // Спредятся в агрегат `getTravelDetailsStyles`, порядок — как там.
-    decisionSummary: createTravelDetailsDecisionSummaryStyles(colors) as StyleSet,
-    layout: createTravelDetailsLayoutStyles(colors) as StyleSet,
-    nav: createTravelDetailsNavStyles(colors) as StyleSet,
-    sectionHeader: createTravelDetailsSectionHeaderStyles(colors) as StyleSet,
-    heroMedia: createTravelDetailsHeroMediaStyles(colors) as StyleSet,
-    insight: createTravelDetailsInsightStyles(colors) as StyleSet,
-    misc: createTravelDetailsMiscStyles(colors) as StyleSet,
+    ...loadAggregateFragments(colors),
     // Второй и третий наборы экрана, мимо агрегата.
     hero: getTravelDetailsHeroStyles(colors) as unknown as StyleSet,
     shell: getTravelDetailsShellStyles(colors) as unknown as StyleSet,
@@ -120,6 +127,19 @@ const loadStyleSets = () => {
 }
 
 describe('владение ключами стилей travel details', () => {
+  it('перечень фрагментов не отстаёт от самого агрегата', () => {
+    // Иначе восьмой фрагмент, добавленный в `TravelDetailsStyles.ts`, остался бы
+    // вне гейта и принёс бы свои дубли молча — ровно тот класс молчания, из-за
+    // которого и понадобилась цепочка #1702 → #1708.
+    const colors = getThemedColors(false)
+    const listed = new Set(
+      Object.values(loadAggregateFragments(colors)).flatMap((set) => Object.keys(set)),
+    )
+    const actual = Object.keys(getTravelDetailsStyles(colors) as unknown as StyleSet)
+
+    expect(actual.filter((key) => !listed.has(key))).toEqual([])
+  })
+
   it('ни одно имя ключа не объявлено в двух наборах сразу, кроме пришпиленного долга', () => {
     const duplicates = findDuplicateStyleKeys(loadStyleSets())
     const unexpected = Object.fromEntries(
