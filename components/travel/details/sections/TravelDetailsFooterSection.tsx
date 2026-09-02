@@ -73,12 +73,7 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
         testID="travel-details-telegram"
         accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsFooterSection.obsuzhdenie_v_telegram_63bdc570')}
         accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
-        style={[
-          styles.sectionContainer,
-          styles.authorCardContainer,
-          footerStyles.compactSection,
-          footerStyles.leadSection,
-        ]}
+        style={[styles.sectionContainer, footerStyles.compactSection, footerStyles.leadSection]}
       >
         <TelegramDiscussionSection travel={travel} />
       </View>
@@ -88,7 +83,7 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
           testID="travel-details-share"
           accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsFooterSection.podelitsya_marshrutom_18019d80')}
           accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
-          style={[styles.sectionContainer, styles.shareButtonsContainer, footerStyles.compactSection]}
+          style={[styles.sectionContainer, footerStyles.compactSection]}
         >
           <View style={footerStyles.combinedCard}>
             <View style={footerStyles.sharePane}>
