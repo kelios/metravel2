@@ -21,6 +21,7 @@ import { applyBackwardFloatWrap } from '@/utils/richTextImageLayout';
 import { useStableContentWebEffects } from '@/components/travel/stableContent/useWebEffects';
 import {
   getWebRichTextStyles,
+  supportsWebContainerQueries,
   WEB_RICH_TEXT_CLASS,
   WEB_RICH_TEXT_FULL_WIDTH_CLASS,
 } from '@/components/travel/stableContent/webStyles';
@@ -51,7 +52,13 @@ interface StableContentProps {
 
 const StableContent: React.FC<StableContentProps> = memo(({ html, fullWidth = false, serverSanitized = false, articleBodyMedia = null }) => {
   const colors = useThemedColors();
-  const webRichTextStyles = useMemo(() => getWebRichTextStyles(colors), [colors]);
+  const supportsContainerQueries = supportsWebContainerQueries(
+    typeof CSS === 'undefined' ? undefined : CSS,
+  );
+  const webRichTextStyles = useMemo(
+    () => getWebRichTextStyles(colors, supportsContainerQueries),
+    [colors, supportsContainerQueries],
+  );
   const [lightboxGallery, setLightboxGallery] = useState<LightboxGallery | null>(null);
   const webRootRef = useRef<HTMLDivElement | null>(null);
   // #1623: backward float wrap is render-only — applied here, after

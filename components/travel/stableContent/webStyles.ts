@@ -12,11 +12,23 @@ export const WEB_RICH_TEXT_CLASS = 'travel-rich-text'
 export const WEB_RICH_TEXT_FULL_WIDTH_CLASS = 'travel-rich-text--full-width'
 export const WEB_RICH_TEXT_STYLES_ID = 'travel-rich-text-styles'
 
-export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) =>
+type CssSupportsApi = {
+  supports?: (property: string, value: string) => boolean
+}
+
+export const supportsWebContainerQueries = (
+  cssApi: CssSupportsApi | undefined,
+): boolean =>
+  typeof cssApi?.supports === 'function' && cssApi.supports('container-type', 'inline-size')
+
+export const getWebRichTextStyles = (
+  colors: ReturnType<typeof useThemedColors>,
+  supportsContainerQueries = true,
+) =>
   baseStyles(colors, WEB_RICH_TEXT_CLASS, WEB_RICH_TEXT_FULL_WIDTH_CLASS) +
   // Раньше `responsiveStyles`: мобильный блок гасит обтекание (`float: none`),
   // и при обратном порядке одиночный портрет уезжал бы в обтекание на телефоне.
-  floatStyles(colors, WEB_RICH_TEXT_CLASS) +
+  floatStyles(colors, WEB_RICH_TEXT_CLASS, supportsContainerQueries) +
   imageGridStyles(colors, WEB_RICH_TEXT_CLASS) +
   typographyStyles(colors, WEB_RICH_TEXT_CLASS) +
   instagramStyles(colors, WEB_RICH_TEXT_CLASS) +

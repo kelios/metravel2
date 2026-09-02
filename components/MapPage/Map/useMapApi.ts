@@ -141,6 +141,22 @@ export function useMapApi({
   const api = useMemo<MapUiApi | null>(() => {
     if (!map || !L) return null;
 
+    const warnAndDiscardPendingOverlayToggles = () => {
+      const unresolvedLayerIds = Array.from(pendingOverlayTogglesRef.current.keys());
+      try {
+        console.warn(
+          '[useMapApi] Layer not found after retry exhaustion:',
+          unresolvedLayerIds,
+          'Available layers:',
+          Array.from(leafletOverlayLayersRef.current.keys())
+        );
+      } catch {
+        // Logging must not keep an exhausted queue alive.
+      }
+      pendingOverlayTogglesRef.current.clear();
+      pendingOverlayAttemptsRef.current = 0;
+    };
+
     const schedulePendingOverlayFlush = () => {
       try {
         if (pendingOverlayTimerRef.current) return;
@@ -153,8 +169,7 @@ export function useMapApi({
               if (pendingOverlayAttemptsRef.current < 10) {
                 schedulePendingOverlayFlush();
               } else {
-                pendingOverlayTogglesRef.current.clear();
-                pendingOverlayAttemptsRef.current = 0;
+                warnAndDiscardPendingOverlayToggles();
               }
               return;
             }
@@ -197,8 +212,7 @@ export function useMapApi({
               if (pendingOverlayAttemptsRef.current < 10) {
                 schedulePendingOverlayFlush();
               } else {
-                pendingOverlayTogglesRef.current.clear();
-                pendingOverlayAttemptsRef.current = 0;
+                warnAndDiscardPendingOverlayToggles();
               }
             } else {
               pendingOverlayAttemptsRef.current = 0;
@@ -386,13 +400,19 @@ export function useMapApi({
           if (!layer) {
             pendingOverlayTogglesRef.current.set(id, enabled);
             schedulePendingOverlayFlush();
-            console.warn(
-              '[useMapApi] Layer not found (queued):',
-              id,
-              'Available layers:',
-              Array.from(leafletOverlayLayersRef.current.keys())
-            );
             return;
+          }
+
+          // A newer command can arrive after the layer registers but before the
+          // queued flush runs. Drop the stale queued value so it cannot overwrite
+          // the state applied below (for example queued `true`, then direct `false`).
+          pendingOverlayTogglesRef.current.delete(id);
+          if (pendingOverlayTogglesRef.current.size === 0) {
+            pendingOverlayAttemptsRef.current = 0;
+            if (pendingOverlayTimerRef.current) {
+              clearTimeout(pendingOverlayTimerRef.current);
+              pendingOverlayTimerRef.current = null;
+            }
           }
 
           if (enabled) {

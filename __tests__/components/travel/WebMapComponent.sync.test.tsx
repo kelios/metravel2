@@ -68,6 +68,14 @@ jest.mock('@/components/travel/PhotoUploadWithPreview', () => {
   };
 });
 
+// Category selection has dedicated component coverage. This suite exercises
+// marker synchronization and edit persistence, so keep RN field primitives out
+// of its DOM-only renderer (the selected category remains in modal state).
+jest.mock('@/components/forms/MultiSelectField', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 // Popup behavior has dedicated coverage. Keeping it out of this marker-sync
 // suite avoids rendering React Native popup primitives through a DOM-only
 // react-leaflet stub, which produces irrelevant unknown-prop warnings.

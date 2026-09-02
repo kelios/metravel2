@@ -159,10 +159,10 @@ export const ARTICLE_EDITOR_QUILL_WEB_CSS = `
   border-color: var(--color-borderStrong);
   box-shadow: var(--shadow-medium);
 }
-/* Тема quill.snow задаёт тело редактора светлыми константами: чёрный текст,
-   rgba(0,0,0,.6) в плейсхолдере, ссылки #06c, границы #ccc/#000 и белый тултип.
-   В тёмной теме это 1.3–2.6:1, поэтому тело редактора красится токенами — так же,
-   как WebView-редактор в articleEditorNativeHtml.ts. */
+/* The quill.snow theme uses light-only constants for the editor body: black text,
+   an rgba(0,0,0,.6) placeholder, #06c links, #ccc/#000 borders, and a white tooltip.
+   Those reach only 1.3–2.6:1 in dark mode, so the editor body uses the same tokens
+   as the WebView editor in articleEditorNativeHtml.ts. */
 [data-editor-chrome="article-editor"] .ql-editor {
   color: var(--color-text);
 }

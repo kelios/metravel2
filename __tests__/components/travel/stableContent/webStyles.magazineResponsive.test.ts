@@ -1,6 +1,9 @@
 import { floatStyles } from '@/components/travel/stableContent/webStyles/floats'
 import { responsiveStyles } from '@/components/travel/stableContent/webStyles/responsive'
-import { getWebRichTextStyles } from '@/components/travel/stableContent/webStyles'
+import {
+  getWebRichTextStyles,
+  supportsWebContainerQueries,
+} from '@/components/travel/stableContent/webStyles'
 
 /**
  * Мобильный контракт журнальной раскладки.
@@ -20,6 +23,7 @@ const COLORS = {
 } as never
 
 const CLS = 'travel-rich-text'
+const CONTAINER_QUERY = '@container (max-width: 560px)'
 
 const MAGAZINE_WRAPPERS = [
   'img-row-2',
@@ -72,6 +76,38 @@ describe('обтекание одиночного фото на desktop', () => 
     expect(desktopCss).toContain('container-type: inline-size')
     expect(desktopCss).toContain('@container (max-width: 560px)')
     expect(desktopCss).not.toContain('justify-content: flex-end')
+  })
+})
+
+describe('совместимость container queries', () => {
+  it('выбирает fallback при SSR или отсутствии CSS.supports', () => {
+    expect(supportsWebContainerQueries(undefined)).toBe(false)
+    expect(supportsWebContainerQueries({})).toBe(false)
+  })
+
+  it.each([true, false])('проверяет поддержку container-type через CSS.supports (%s)', (supported) => {
+    const supports = jest.fn(() => supported)
+
+    expect(supportsWebContainerQueries({ supports })).toBe(supported)
+    expect(supports).toHaveBeenCalledWith('container-type', 'inline-size')
+  })
+
+  it.each([
+    ['по умолчанию', floatStyles(COLORS, CLS), getWebRichTextStyles(COLORS)],
+    ['при явном true', floatStyles(COLORS, CLS, true), getWebRichTextStyles(COLORS, true)],
+  ])('сохраняет @container блок %s', (_mode, floatCss, sheet) => {
+    expect(floatCss).toContain(CONTAINER_QUERY)
+    expect(sheet).toContain(CONTAINER_QUERY)
+  })
+
+  it('исключает только @container блок для движка без его поддержки', () => {
+    const floatCss = floatStyles(COLORS, CLS, false)
+    const sheet = getWebRichTextStyles(COLORS, false)
+
+    expect(floatCss).not.toContain(CONTAINER_QUERY)
+    expect(sheet).not.toContain(CONTAINER_QUERY)
+    expect(floatCss).toContain(`.${CLS} .img-float-right {\n    float: right`)
+    expect(floatCss).toContain(`.${CLS} .img-float-left {\n    float: left`)
   })
 })
 

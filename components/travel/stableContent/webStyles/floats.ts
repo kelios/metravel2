@@ -3,6 +3,7 @@ import type { useThemedColors } from '@/hooks/useTheme'
 export const floatStyles = (
   colors: ReturnType<typeof useThemedColors>,
   cls: string,
+  supportsContainerQueries = true,
 ): string => `
 .${cls} {
   container-type: inline-size;
@@ -101,7 +102,7 @@ export const floatStyles = (
   }
 }
 
-/* A desktop viewport can still contain a narrow article column (sidebar/split
+${supportsContainerQueries ? `/* A desktop viewport can still contain a narrow article column (sidebar/split
    view). In that case the available column, not the window, disables wrapping. */
 @container (max-width: 560px) {
   .${cls} .img-float-right,
@@ -113,5 +114,5 @@ export const floatStyles = (
     margin: 1em 0;
     clear: both;
   }
-}
+}` : ''}
 `

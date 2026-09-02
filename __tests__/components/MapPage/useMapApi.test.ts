@@ -17,6 +17,148 @@ jest.mock('@/utils/mapWebLayers', () => ({
 }));
 
 describe('useMapApi', () => {
+  it('queues a late overlay without warning and applies it when the layer registers', async () => {
+    jest.useFakeTimers();
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const addTo = jest.fn();
+    const overlayLayers = new Map<string, any>();
+    const onMapUiApiReady = jest.fn();
+    let unmount: (() => void) | undefined;
+
+    try {
+      ({ unmount } = renderHook(() =>
+        useMapApi({
+          map: { hasLayer: jest.fn(), removeLayer: jest.fn() },
+          L: {},
+          onMapUiApiReady,
+          travelData: [],
+          userLocation: null,
+          routePoints: [],
+          leafletBaseLayerRef: { current: null },
+          leafletOverlayLayersRef: { current: overlayLayers },
+          leafletControlRef: { current: null },
+        })
+      ));
+
+      await act(async () => {});
+      const api = onMapUiApiReady.mock.calls.find((c: any[]) => c[0] != null)?.[0];
+      expect(api).toBeTruthy();
+
+      act(() => {
+        api.setOverlayEnabled('late-layer', true);
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
+
+      overlayLayers.set('late-layer', { addTo, getTileUrl: jest.fn() });
+      act(() => {
+        jest.advanceTimersByTime(220);
+      });
+
+      expect(addTo).toHaveBeenCalledTimes(1);
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      unmount?.();
+      warnSpy.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+
+  it('warns only after an overlay exhausts the retry queue', async () => {
+    jest.useFakeTimers();
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const onMapUiApiReady = jest.fn();
+    let unmount: (() => void) | undefined;
+
+    try {
+      ({ unmount } = renderHook(() =>
+        useMapApi({
+          map: { hasLayer: jest.fn(), removeLayer: jest.fn() },
+          L: {},
+          onMapUiApiReady,
+          travelData: [],
+          userLocation: null,
+          routePoints: [],
+          leafletBaseLayerRef: { current: null },
+          leafletOverlayLayersRef: { current: new Map() },
+          leafletControlRef: { current: null },
+        })
+      ));
+
+      await act(async () => {});
+      const api = onMapUiApiReady.mock.calls.find((c: any[]) => c[0] != null)?.[0];
+      expect(api).toBeTruthy();
+
+      act(() => {
+        api.setOverlayEnabled('missing-layer', true);
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
+
+      act(() => {
+        jest.advanceTimersByTime(2200);
+      });
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[useMapApi] Layer not found after retry exhaustion:',
+        ['missing-layer'],
+        'Available layers:',
+        [],
+      );
+    } finally {
+      unmount?.();
+      warnSpy.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+
+  it('does not replay a stale queued toggle after a newer direct command', async () => {
+    jest.useFakeTimers();
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const layer = { addTo: jest.fn(), getTileUrl: jest.fn() };
+    const overlayLayers = new Map<string, any>();
+    const map = { hasLayer: jest.fn(() => true), removeLayer: jest.fn() };
+    const onMapUiApiReady = jest.fn();
+    let unmount: (() => void) | undefined;
+
+    try {
+      ({ unmount } = renderHook(() =>
+        useMapApi({
+          map,
+          L: {},
+          onMapUiApiReady,
+          travelData: [],
+          userLocation: null,
+          routePoints: [],
+          leafletBaseLayerRef: { current: null },
+          leafletOverlayLayersRef: { current: overlayLayers },
+          leafletControlRef: { current: null },
+        })
+      ));
+
+      await act(async () => {});
+      const api = onMapUiApiReady.mock.calls.find((c: any[]) => c[0] != null)?.[0];
+      expect(api).toBeTruthy();
+
+      act(() => {
+        api.setOverlayEnabled('late-layer', true);
+      });
+
+      overlayLayers.set('late-layer', layer);
+      act(() => {
+        api.setOverlayEnabled('late-layer', false);
+        jest.advanceTimersByTime(220);
+      });
+
+      expect(map.removeLayer).toHaveBeenCalledWith(layer);
+      expect(layer.addTo).not.toHaveBeenCalled();
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      unmount?.();
+      warnSpy.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+
   it('centerOnUser keeps compact web focus clear of floating controls', async () => {
     Platform.OS = 'web';
 

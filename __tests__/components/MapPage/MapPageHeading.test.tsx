@@ -1,5 +1,5 @@
 import React from 'react'
-import { render } from '@testing-library/react'
+import { render, within } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
 jest.mock('@/constants/mapSeo', () => ({
@@ -27,14 +27,13 @@ const MapPageHeading = loadMapPageHeading()
 
 // This harness maps `react-native` to the NATIVE implementation (see
 // `jest.config.js` moduleNameMapper), so react-native-web never runs and no RN
-// primitive is ever translated into a DOM tag: a `Heading level={1}` renders as
-// `<text accessibilityrole="header" aria-level="1">`, not as `<h1>`, and
-// `dataSet` never becomes `data-*`. The translation itself is react-native-web's
-// contract, not this component's, and the real `<h1>` on /map is asserted in a
-// browser by `e2e/map-page.spec.ts` ('desktop: SEO title and canonical are set
-// for /map'). What stays this suite's job is the input side of that contract —
-// the heading semantics the component emits — plus the DOM teardown it owns.
-const HEADING = '[accessibilityrole="header"][aria-level="1"]'
+// primitive is translated into a DOM tag. Inspect the native props directly:
+// the translation into a real `<h1>` and `data-map-page-heading` is
+// react-native-web's contract and is asserted in `e2e/map-page.spec.ts`
+// ('desktop: SEO title and canonical are set for /map'). What stays this suite's
+// job is the input side of that contract plus the static DOM teardown it owns.
+const getLevelOneHeadings = (view: ReturnType<typeof render>) =>
+  view.queryAllByRole('header').filter((node) => node.props['aria-level'] === 1)
 
 const styles = {
   pageHeadingInPanel: { fontSize: 17, textAlign: 'left' as const },
@@ -60,9 +59,9 @@ describe('MapPageHeading (#1640)', () => {
   it('renders level-1 heading semantics without the site-name suffix', () => {
     const view = render(<MapPageHeading anchor="panel-head" styles={styles} />)
 
-    const headings = view.container.querySelectorAll(HEADING)
+    const headings = getLevelOneHeadings(view)
     expect(headings).toHaveLength(1)
-    expect(headings[0].textContent).toBe('Карта маршрутов и достопримечательностей Беларуси')
+    expect(String(headings[0].props.children)).toBe('Карта маршрутов и достопримечательностей Беларуси')
   })
 
   it('adopts the static heading only when it mounts, not on a timer', () => {
@@ -74,44 +73,44 @@ describe('MapPageHeading (#1640)', () => {
     // The static node is gone and its replacement is already rendered — the
     // page never passes through zero headings or two.
     expect(document.querySelector('h1[data-ssg-travel-h1="true"]')).toBeNull()
-    expect(view.container.querySelectorAll(HEADING)).toHaveLength(1)
-    expect(view.container.querySelector(HEADING)?.textContent).toBe(
+    expect(getLevelOneHeadings(view)).toHaveLength(1)
+    expect(String(view.getByRole('header').props.children)).toBe(
       'Карта маршрутов и достопримечательностей Беларуси',
     )
   })
 
   it('keeps exactly one heading when the anchor switches', () => {
     const view = render(<MapPageHeading anchor="panel-head" styles={styles} />)
-    expect(view.container.querySelectorAll(HEADING)).toHaveLength(1)
+    expect(getLevelOneHeadings(view)).toHaveLength(1)
 
     view.rerender(<MapPageHeading anchor="map-corner" styles={styles} />)
 
     // Sampled synchronously right after the commit, without waitFor: a second
     // heading must never be observable during the swap.
-    expect(view.container.querySelectorAll(HEADING)).toHaveLength(1)
+    expect(getLevelOneHeadings(view)).toHaveLength(1)
 
     view.rerender(<MapPageHeading anchor="panel-head" styles={styles} />)
-    expect(view.container.querySelectorAll(HEADING)).toHaveLength(1)
+    expect(getLevelOneHeadings(view)).toHaveLength(1)
   })
 
   it('does not let the map-corner capsule intercept map interaction', () => {
     const view = render(<MapPageHeading anchor="map-corner" styles={styles} />)
 
-    const capsule = view.container.querySelector('[pointer-events="none"]')
-    expect(capsule).not.toBeNull()
+    const capsule = view.UNSAFE_getByProps({ pointerEvents: 'none' })
     // The capsule wraps the heading rather than sitting beside it, so the
     // `pointerEvents` opt-out covers the whole label.
-    expect(capsule?.querySelector(HEADING)).not.toBeNull()
+    expect(within(capsule).getByRole('header').props['aria-level']).toBe(1)
   })
 
   it('marks both anchors with the dataSet hook react-native-web turns into data-map-page-heading', () => {
-    // `dataSet` serialises opaquely here (`dataset="[object Object]"`), so this
-    // only guards that the prop still reaches the element; the resulting
-    // `data-map-page-heading` attribute is react-native-web's output.
+    // The resulting `data-map-page-heading` attribute is react-native-web's
+    // output; this unit test guards the input prop and exact anchor value.
     const panel = render(<MapPageHeading anchor="panel-head" styles={styles} />)
-    expect(panel.container.querySelector('[dataset]')).not.toBeNull()
+    expect(panel.getByRole('header').props.dataSet).toEqual({ mapPageHeading: 'panel-head' })
 
     const corner = render(<MapPageHeading anchor="map-corner" styles={styles} />)
-    expect(corner.container.querySelector('[dataset]')).not.toBeNull()
+    expect(corner.UNSAFE_getByProps({ pointerEvents: 'none' }).props.dataSet).toEqual({
+      mapPageHeading: 'map-corner',
+    })
   })
 })
