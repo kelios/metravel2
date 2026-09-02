@@ -1,6 +1,7 @@
 // components/trips/planning/routePanelStyles.ts
 // Стили панели маршрута планировщика (#1491): нумерованные шаги «1 Транспорт →
-// 2 Точки маршрута → 3 Итог» и desktop-раскладка «панель слева, карта справа».
+// 2 Точки маршрута → 3 Итог» и не-мобильная раскладка (ширина ≥768px) «панель
+// слева, карта справа».
 //
 // Четыре слота `block/header/number/title` — контракт `RouteStepBlock`, того же
 // компонента, которым нумерует шаги /map. Разметка общая, токены свои: панель
@@ -10,7 +11,7 @@ import { Platform, StyleSheet } from 'react-native';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { webViewStyle } from '@/utils/webProps';
 
-/** Ширина колонки панели на desktop: та же, что у шторки фильтров /map. */
+/** Ширина колонки панели при ширине ≥768px: та же, что у шторки фильтров /map. */
 const PANEL_COLUMN_WIDTH = 380;
 const COLUMN_GAP = 16;
 
