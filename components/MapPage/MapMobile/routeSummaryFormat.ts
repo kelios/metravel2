@@ -33,3 +33,36 @@ export function formatRouteDuration(seconds: number): string {
   if (minutes === 0) return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_ch_53da1ce7', { value1: formatInteger(hours) })
   return i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.value1_ch_value2_min_0833ca5d', { value1: formatInteger(hours), value2: formatInteger(minutes) })
 }
+
+/**
+ * Полная фраза сводки для скринридера. На экране подпись нормального состояния
+ * не рисуется (её смысл несут цифры), но озвучивать ряд как «3,6 км, 11 мин»
+ * без «Маршрут готов» — терять состояние, поэтому здесь она всегда есть.
+ */
+export function buildRouteSummaryLabel(
+  status: string | null,
+  distanceText: string,
+  durationText: string,
+): string {
+  return [status, distanceText, durationText].filter(Boolean).join(', ')
+}
+
+/** Метрики сводки из сырых значений стора: дистанция и время + их подписи. */
+export function resolveRouteMetrics(
+  routeDistance: number | null | undefined,
+  routeDuration: number | null | undefined,
+  transportMode: TransportMode,
+) {
+  const distanceMeters =
+    typeof routeDistance === 'number' && Number.isFinite(routeDistance) ? routeDistance : 0
+  const durationSeconds =
+    typeof routeDuration === 'number' && Number.isFinite(routeDuration) && routeDuration > 0
+      ? routeDuration
+      : estimateRouteDurationSeconds(distanceMeters, transportMode)
+  return {
+    distanceMeters,
+    durationSeconds,
+    distanceText: formatRouteDistance(distanceMeters),
+    durationText: formatRouteDuration(durationSeconds),
+  }
+}

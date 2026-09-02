@@ -44,11 +44,7 @@ import { MapMobileRadiusPopover } from './MapMobileRadiusPopover'
 import { MapMobileLayersPopover } from './MapMobileLayersPopover'
 import { MapMobileTransportPopover } from './MapMobileTransportPopover'
 import { translate as i18nT } from '@/i18n'
-import {
-  estimateRouteDurationSeconds,
-  formatRouteDistance,
-  formatRouteDuration,
-} from './routeSummaryFormat'
+import { buildRouteSummaryLabel, resolveRouteMetrics } from './routeSummaryFormat'
 
 
 type ActivePopover = 'radius' | 'layers' | 'transport' | null
@@ -259,47 +255,46 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
     if (routePointCount >= 2) setHintVisible(false)
   }, [routePointCount])
   // Правило «подсказка уходит на двух точках» держит РЕНДЕР, а не только эффект
-  // выше: у эффекта в зависимостях один `routePointCount`, поэтому вход в режим
-  // маршрута с уже готовыми двумя точками (persisted points после возврата на
-  // карту) не сбрасывает `hintVisible`. Раньше залипшая подсказка просто висела
-  // третьим ярусом ниже сводки, теперь ярус ОДИН и она легла бы прямо на неё
-  // (#1699): плашка подсказки стоит на том же `popoverTop`.
+  // выше: у того в зависимостях один `routePointCount`, поэтому вход в режим с
+  // уже готовыми двумя точками не сбрасывает `hintVisible`. Ярус теперь ОДИН, и
+  // залипшая подсказка легла бы прямо на сводку — она на том же `popoverTop`.
   const showRouteHint = isRouteMode && hintVisible && routePointCount < 2
 
-  const distanceMeters =
-    typeof routeDistance === 'number' && Number.isFinite(routeDistance)
-      ? routeDistance
-      : 0
+  const {
+    distanceMeters,
+    durationSeconds,
+    distanceText: routeDistanceText,
+    durationText: routeDurationText,
+  } = resolveRouteMetrics(routeDistance, routeDuration, transportMode)
   const hasRouteDistance = isRouteMode && distanceMeters > 0
-  const durationSeconds =
-    typeof routeDuration === 'number' && Number.isFinite(routeDuration) && routeDuration > 0
-      ? routeDuration
-      : estimateRouteDurationSeconds(distanceMeters, transportMode)
-  // Ярус не должен пустеть между второй точкой и ответом роутинга: `addPoint`
-  // обнуляет геометрию (stores/routeStore.ts), а выбор старта к этому моменту
-  // уже уступил слот. Признак «геометрии ещё нет» — именно `null` из стора
-  // (MapMobileLayout: `route?.distance ?? null`), а НЕ `routingLoading`: тот
-  // включается только после дебаунса запроса (useRouting.ts, ROUTE_DEBOUNCE_MS),
-  // и на это окно ярус снова пустел бы, дёргая смещение поповеров на 50dp.
-  const routeAwaitingGeometry = isRouteMode && routePointCount >= 2 && routeDistance == null
+  // Ярус не пустеет между второй точкой и ответом роутинга. Признак ожидания —
+  // ТОЛЬКО отсутствие дистанции: ни `routingLoading` (включается после дебаунса,
+  // useRouting.ts), ни `route === null` (адаптер кладёт в стор `distance: 0`,
+  // useRouteStoreAdapter.ts:158) окно не закрывают — проверено пробой (#1699).
+  const routeAwaitingGeometry = isRouteMode && routePointCount >= 2 && !hasRouteDistance
   const routeSummaryKey = hasRouteDistance
     ? `${transportMode}:${Math.round(distanceMeters)}:${Math.round(durationSeconds)}`
     : ''
   const [dismissedRouteSummaryKey, setDismissedRouteSummaryKey] = useState('')
-  // Крестик есть только у готовой сводки: ярус ожидания транзитный, а его
-  // dismiss пришлось бы хранить отдельным ключом — один раз закрытое ожидание
-  // гасило бы ярус и у всех последующих построений маршрута.
+  // Крестик есть только у готовой сводки: dismiss транзитного яруса ожидания
+  // пришлось бы хранить ключом, который гасил бы его и у следующих маршрутов.
   const showRouteSummary =
     routeAwaitingGeometry || (hasRouteDistance && dismissedRouteSummaryKey !== routeSummaryKey)
-  const routeDistanceText = formatRouteDistance(distanceMeters)
-  const routeDurationText = formatRouteDuration(durationSeconds)
+  // Подпись — только у НЕнормальных состояний: «Маршрут готов» рядом с
+  // «3,6 км · 11 мин» ничего не добавляет, зато на 375dp усекается до
+  // бессмысленного «Маршрут …» (браузерная проба #1699).
   const routeSummaryStatus = routeAwaitingGeometry
     ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.marshrut_obnovlyaetsya_eab45ca3')
     : routingError === ROUTING_DIRECT_LINE
       ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pryamaya_liniya_79c7e056')
       : routingLoading
         ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.marshrut_obnovlyaetsya_eab45ca3')
-        : i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.marshrut_gotov_e4454e9a')
+        : null
+  const routeSummaryLabel = buildRouteSummaryLabel(
+    routeSummaryStatus ?? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.marshrut_gotov_e4454e9a'),
+    routeDistanceText,
+    routeDurationText,
+  )
 
   // R-1 — глобальной шапки на табе карты больше нет, поэтому overlay сам отвечает
   // за отступ под статус-бар/нотч. Берём safe-area top, но держим небольшой пол,
@@ -666,6 +661,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             pointerEvents="auto"
             testID="map-mobile-route-summary"
             accessibilityLiveRegion="polite"
+            accessibilityLabel={routeSummaryLabel}
           >
             {/* Содержимое собрано в один ужимаемый выход, крестик — вне его:
                 иначе на узком экране (длинная локаль времени, крупный системный
@@ -673,9 +669,11 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 и экрана, и сводку стало бы нечем закрыть. */}
             <View style={styles.routeSummaryContent}>
               <Feather name="navigation" size={13} color={colors.primaryDark} />
-              <RNText style={styles.routeSummaryTitle} numberOfLines={1}>
-                {routeSummaryStatus}
-              </RNText>
+              {!!routeSummaryStatus && (
+                <RNText style={styles.routeSummaryTitle} numberOfLines={1}>
+                  {routeSummaryStatus}
+                </RNText>
+              )}
               <View style={styles.routeSummaryMetrics}>
                 {!!routeDistanceText && (
                   <View style={styles.routeSummaryMetric}>

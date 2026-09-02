@@ -754,7 +754,13 @@ describe('MapMobileLayout', () => {
         )
 
         expect(screen.getByTestId('map-mobile-route-summary')).toBeTruthy()
-        expect(screen.getByText('Маршрут готов')).toBeTruthy()
+        // #1699: подпись нормального состояния на экране не рисуется — рядом с
+        // цифрами она ничего не добавляла, а ряд на узком экране усекала. Для
+        // скринридера состояние осталось в accessibilityLabel строки.
+        expect(screen.queryByText('Маршрут готов')).toBeNull()
+        expect(
+          screen.getByTestId('map-mobile-route-summary').props.accessibilityLabel,
+        ).toBe('Маршрут готов, 12,5 км, 30 мин')
         // #1440/#1449: расстояние печатает канонический форматтер — в RU-локали
         // разделитель дроби запятая, а не английская точка.
         expect(screen.getByText('12,5 км')).toBeTruthy()

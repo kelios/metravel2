@@ -132,6 +132,26 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     expect(styles.routeSummaryCloseTouch.flexShrink).toBe(0)
   })
 
+  it('подпись нормального состояния не рисуется, но остаётся для скринридера', () => {
+    // «Маршрут готов» рядом с «3,6 км · 11 мин» ничего не добавляет, а на 375dp
+    // усекается до бессмысленного «Маршрут …» (браузерная проба #1699).
+    const { getByTestId, queryByText, getByText } = render(
+      <MapMobileTopOverlay
+        {...(routeProps as any)}
+        routePointCount={2}
+        routeDistance={3600}
+        routeDuration={660}
+      />,
+    )
+
+    expect(queryByText('Маршрут готов')).toBeNull()
+    expect(getByText('3,6 км')).toBeTruthy()
+    expect(getByText('11 мин')).toBeTruthy()
+    expect(getByTestId('map-mobile-route-summary').props.accessibilityLabel).toBe(
+      'Маршрут готов, 3,6 км, 11 мин',
+    )
+  })
+
   it('состояния сводки остались в одной строке: «прямая линия» больше не дубль', () => {
     const direct = render(
       <MapMobileTopOverlay
@@ -147,6 +167,10 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     // с ней удалён и её ключ локализации.
     expect(direct.getByText('Прямая линия')).toBeTruthy()
     expect(direct.queryByText('прямая линия')).toBeNull()
+    // Ненормальное состояние остаётся видимым: его смысл цифры не несут.
+    expect(direct.getByTestId('map-mobile-route-summary').props.accessibilityLabel).toBe(
+      'Прямая линия, 3,6 км, 11 мин',
+    )
     direct.unmount()
 
     const loading = render(
@@ -183,17 +207,22 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     expect(queryByText(/мин|ч$/)).toBeNull()
   })
 
-  it('ярус занят и в дебаунс-окне, пока routingLoading ещё не включился', () => {
+  it.each([
+    ['геометрии ещё нет вовсе', null],
+    ['адаптер уже положил маршрут с distance: 0', 0],
+  ])('ярус занят и в дебаунс-окне (%s)', (_label, distance) => {
     // useRouting запускает запрос через setTimeout(ROUTE_DEBOUNCE_MS): между
-    // второй точкой и включением loading есть окно, в котором ярус пустел бы,
-    // а смещение поповеров прыгало на 50dp и обратно. Признак ожидания —
-    // отсутствие геометрии в сторе (`route?.distance ?? null`), не loading.
+    // второй точкой и включением loading есть окно, в котором ярус пустел бы, а
+    // смещение поповеров прыгало на 50dp и обратно. Ни loading, ни `route ===
+    // null` это окно не закрывают: useRouteStoreAdapter.ts:158 успевает
+    // положить в стор маршрут с нулевой дистанцией (браузерная проба #1699 —
+    // ярус пустел всё время запроса). Признак один — нет дистанции.
     const { getByTestId, queryByTestId, getByText } = render(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
-        routeDistance={null}
-        routeDuration={null}
+        routeDistance={distance}
+        routeDuration={distance}
       />,
     )
 
