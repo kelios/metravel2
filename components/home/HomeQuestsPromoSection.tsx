@@ -102,12 +102,20 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
               {i18nT('quests:components.home.HomeQuestsPromoSection.scenarioSubtitle')}
             </Text>
           </View>
-          <View style={styles.scenarioCta}>
-            <Text style={styles.scenarioCtaText}>
-              {i18nT('quests:components.home.HomeQuestsPromoSection.scenarioCta')}
-            </Text>
-            <Feather name="arrow-right" size={16} color={colors.primaryDark} />
-          </View>
+          {/* #1563-adjacent: на native скрытый через `display:'none'` узел никогда
+              не проходит layout (YogaLayoutableShadowNode.cpp:731 не спускается в
+              display:none), его `hasNewLayout` остаётся непотреблённым и переживает
+              поколение клонов — дальше Yoga ловит владельца от прошлой ревизии
+              родителя. На устройстве это давало аборт на главной. Поэтому вне web
+              узел не создаём вовсе; на web раскладка остаётся прежней, CSS-скрытием. */}
+          {Platform.OS !== 'web' && isMobile ? null : (
+            <View style={styles.scenarioCta}>
+              <Text style={styles.scenarioCtaText}>
+                {i18nT('quests:components.home.HomeQuestsPromoSection.scenarioCta')}
+              </Text>
+              <Feather name="arrow-right" size={16} color={colors.primaryDark} />
+            </View>
+          )}
         </Pressable>
 
         <View style={styles.ctaRow}>
