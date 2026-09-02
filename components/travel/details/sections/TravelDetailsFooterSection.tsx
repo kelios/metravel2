@@ -25,6 +25,12 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
         compactSection: {
           marginBottom: DESIGN_TOKENS.spacing.md,
         },
+        // Блок обсуждения открывает футер и стоит сразу за секцией комментариев,
+        // у которой нет нижнего отступа. Собственный marginTop держит ритм секций
+        // страницы (см. sectionContainer) независимо от соседа сверху.
+        leadSection: {
+          marginTop: DESIGN_TOKENS.spacing.xl,
+        },
         combinedCard: {
           width: '100%',
           backgroundColor: colors.surface,
@@ -67,7 +73,12 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
         testID="travel-details-telegram"
         accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsFooterSection.obsuzhdenie_v_telegram_63bdc570')}
         accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
-        style={[styles.sectionContainer, styles.authorCardContainer, footerStyles.compactSection]}
+        style={[
+          styles.sectionContainer,
+          styles.authorCardContainer,
+          footerStyles.compactSection,
+          footerStyles.leadSection,
+        ]}
       >
         <TelegramDiscussionSection travel={travel} />
       </View>

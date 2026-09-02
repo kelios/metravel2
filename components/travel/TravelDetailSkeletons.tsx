@@ -116,7 +116,14 @@ const staticStyles = StyleSheet.create({
   ratingBox: { flex: 1, minWidth: 220, gap: DESIGN_TOKENS.spacing.sm },
   sidebarContainer: { width: '100%', gap: DESIGN_TOKENS.spacing.xl },
   sidebarSection: { width: '100%', gap: DESIGN_TOKENS.spacing.sm },
-  footerContainer: { width: '100%', gap: DESIGN_TOKENS.spacing.lg },
+  // marginTop повторяет отступ первой секции футера (leadSection в
+  // TravelDetailsFooterSection), чтобы подмена скелетона на реальный футер
+  // не сдвигала страницу.
+  footerContainer: {
+    width: '100%',
+    gap: DESIGN_TOKENS.spacing.lg,
+    marginTop: DESIGN_TOKENS.spacing.xl,
+  },
   footerSection: { width: '100%', gap: DESIGN_TOKENS.spacing.sm },
   footerButtonRow: {
     flexDirection: 'row',

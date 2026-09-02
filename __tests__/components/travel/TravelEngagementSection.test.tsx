@@ -4,7 +4,10 @@
 
 import React, { Suspense } from 'react';
 import { render, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { TravelDetailsFooterSection } from '@/components/travel/details/sections/TravelDetailsFooterSection';
+import { FooterSectionSkeleton } from '@/components/travel/TravelDetailSkeletons';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 // Stub heavy child components to simple markers
 jest.mock('@/components/travel/TelegramDiscussionSection', () => {
@@ -64,5 +67,37 @@ describe('TravelDetailsFooterSection', () => {
     await waitFor(() => {
       expect(mobile.queryByTestId('travel-details-share')).toBeNull();
     });
+  });
+
+  // #1698: секция комментариев над футером не имеет нижнего отступа, поэтому
+  // блок обсуждения прилипал к ней вплотную. Отступ обязан жить на самом блоке,
+  // иначе зазор снова начнёт зависеть от соседа сверху.
+  it('keeps its own top spacing on the leading Telegram block', async () => {
+    const result = render(
+      <TravelDetailsFooterSection travel={baseTravel} isMobile={false} />,
+      { wrapper: Wrapper }
+    );
+
+    const telegram = await result.findByTestId('travel-details-telegram');
+    const telegramStyle = StyleSheet.flatten(telegram.props.style);
+
+    expect(telegramStyle.marginTop).toBe(DESIGN_TOKENS.spacing.xl);
+  });
+
+  // Скелетон футера подменяется реальным футером поверх той же строки раскладки:
+  // разошедшийся верхний отступ двигает страницу в момент подмены (CLS).
+  it('matches the footer skeleton top spacing so the swap does not shift the page', async () => {
+    const result = render(
+      <TravelDetailsFooterSection travel={baseTravel} isMobile={false} />,
+      { wrapper: Wrapper }
+    );
+    const telegram = await result.findByTestId('travel-details-telegram');
+    const runtimeMarginTop = StyleSheet.flatten(telegram.props.style).marginTop;
+
+    const skeleton = render(<FooterSectionSkeleton isMobile={false} />);
+    const skeletonRoot = skeleton.toJSON() as { props: { style?: unknown } };
+    const skeletonMarginTop = StyleSheet.flatten(skeletonRoot.props.style as never)?.marginTop;
+
+    expect(skeletonMarginTop).toBe(runtimeMarginTop);
   });
 });
