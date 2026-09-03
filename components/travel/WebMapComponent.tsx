@@ -7,7 +7,7 @@ import { extractGpsFromImageFile } from '@/utils/exifGps';
 import { showToastMessage } from '@/utils/toast';
 import { registerPendingImageFile, removePendingImageFile, getPendingImageFile } from '@/utils/pendingImageFiles';
 import { prepareWebImageFileForUpload } from '@/utils/webImageUpload';
-import { matchCountryId, buildAddressFromGeocode } from '@/utils/geocodeHelpers';
+import { matchCountryId, buildAddressFromGeocode, buildPointTitleFromGeocode } from '@/utils/geocodeHelpers';
 import { fetchReverseGeocode } from '@/api/geoQueries';
 import { bigDataCloudReverse } from '@/api/external/bigdatacloud';
 import { buildLeafletPopupCss, createWebMapStyles } from '@/components/travel/WebMapComponent.styles';
@@ -424,7 +424,7 @@ const WebMapComponent = ({
             ? countrylist.find((c: any) => Number(c?.country_id) === matchedId)
             : null;
 
-        const address = buildAddressFromGeocode(geocodeData, latlng, matchedCountry);
+        const address = buildPointTitleFromGeocode(geocodeData, latlng, matchedCountry);
 
         const newMarker = {
             id: null,

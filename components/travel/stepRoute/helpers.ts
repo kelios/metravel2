@@ -66,15 +66,6 @@ export const isValidCoordinate = (lat: number, lng: number) => (
   lng <= 180
 )
 
-export const getSearchResultAddress = (result: any) => {
-  const displayName = typeof result?.display_name === 'string' ? result.display_name.trim() : ''
-  if (displayName) return displayName
-
-  const address = result?.address ?? {}
-  const locality = address.city || address.town || address.village
-  return [locality, address.state, address.country].filter(Boolean).join(', ')
-}
-
 export const getMatchedCountry = (countryId: string | null, countries: TravelFilters['countries']) => {
   if (!countryId) return null
   return (countries || []).find((country: any) => Number(country?.country_id) === Number(countryId)) ?? null

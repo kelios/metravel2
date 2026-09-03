@@ -510,7 +510,10 @@ describe('WebMapComponent marker sync', () => {
           lng: 20,
           id: null,
           country: 268,
-          address: expect.stringContaining('Тбилиси'),
+          // #1717: подпись точки — короткое имя объекта, а не цепочка
+          // геокодера. У этого ответа объекта нет, но есть улица, поэтому
+          // именем становится она, а «Тбилиси · Грузия» в название не уезжает.
+          address: 'Rustaveli Avenue',
         }),
       );
     });

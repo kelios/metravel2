@@ -22,7 +22,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import type { MarkerData, TravelFormData } from '@/types/types'
 import { extractGpsFromImageFile } from '@/utils/exifGps'
 import { hasToastBeenShown } from '@/utils/errorHelpers'
-import { buildAddressFromGeocode, matchCountryId } from '@/utils/geocodeHelpers'
+import { buildPointTitleFromGeocode, matchCountryId } from '@/utils/geocodeHelpers'
 import { registerPendingImageFile } from '@/utils/pendingImageFiles'
 import { showToastMessage } from '@/utils/toast'
 import { buildQuickDraftRoute } from '@/utils/travelQuickDraftNavigation'
@@ -36,7 +36,6 @@ import {
   getMatchedCountry,
   getProgressPercent,
   getReverseGeocodeCountry,
-  getSearchResultAddress,
   isValidCoordinate,
   KEYBOARD_BEHAVIOR,
   parseCoordinate,
@@ -327,7 +326,10 @@ function TravelWizardStepRoute({
       id: null,
       lat,
       lng,
-      address: getSearchResultAddress(result),
+      // Место из поиска даёт ту же полную строку геокодера, только через
+      // запятую (#1717) — короткое имя берётся тем же разбором, что и у тапа
+      // по карте, иначе два пути создания точки дают два разных формата.
+      address: buildPointTitleFromGeocode(result, { lat, lng }),
       country: derivedCountryId,
       categories: [],
       image: null,
@@ -364,7 +366,7 @@ function TravelWizardStepRoute({
           if (matchedId != null) derivedCountryId = String(matchedId)
         }
 
-        address = buildAddressFromGeocode(
+        address = buildPointTitleFromGeocode(
           data,
           { lat, lng },
           getMatchedCountry(derivedCountryId, countries),

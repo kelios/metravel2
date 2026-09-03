@@ -58,14 +58,24 @@ export const matchCountryId = (
     return null;
 };
 
-export const buildAddressFromGeocode = (
-    geocodeData: any,
-    latlng: any,
-    matchedCountry?: any,
-) => {
-    const parts: string[] = [];
+export type GeocodeParts = {
+    /** Имя самого объекта: музей, приют, перевал. Это и есть человеческое название точки. */
+    poi: string;
+    /** Улица с домом. Дом БЕЗ улицы сюда не попадает — «332» названием быть не может. */
+    streetLine: string;
+    city: string;
+    adminRegion: string;
+    adminArea: string;
+    countryLabel: string;
+};
 
-    const poi = 
+/**
+ * Разбор ответа геокодера на части. Форм ответа две: Nominatim (`address.*`) и
+ * bigdatacloud (`localityInfo`), поэтому каждое поле собирается по цепочке
+ * альтернатив, а не по одному ключу.
+ */
+export const buildGeocodeParts = (geocodeData: any, matchedCountry?: any): GeocodeParts => {
+    const poi =
         geocodeData?.name ||
         geocodeData?.address?.name ||
         geocodeData?.address?.tourism ||
@@ -77,7 +87,9 @@ export const buildAddressFromGeocode = (
 
     const road = geocodeData?.address?.road || geocodeData?.locality;
     const house = geocodeData?.address?.house_number;
-    const streetLine = [road, house].filter(Boolean).join(' ');
+    // Номер дома без улицы — не строка адреса, а обрывок: именно так рождалось
+    // название «332 · Soblówka · …» (#1717). Без улицы дом отбрасывается.
+    const streetLine = road ? [road, house].filter(Boolean).join(' ') : '';
 
     const city =
         geocodeData?.city ||
@@ -104,6 +116,74 @@ export const buildAddressFromGeocode = (
         geocodeData?.countryName ||
         geocodeData?.address?.country ||
         '';
+
+    return {
+        poi: poi || '',
+        streetLine,
+        city: city || '',
+        adminRegion: adminRegion || '',
+        adminArea: adminArea || '',
+        countryLabel,
+    };
+};
+
+/** Сегмент из `display_name`, который названием быть не может: голый номер. */
+const isBareNumber = (value: string) => /^\d+[a-zA-Z]?$/.test(value.trim());
+
+/**
+ * Короткое название точки маршрута (#1717).
+ *
+ * Раньше сюда попадала вся цепочка обратного геокодирования, и читатель видел
+ * «332 · Soblówka · Силезское воеводство · Живецкий повят · Польша» вместо
+ * «Соблувка». Внутри одной статьи такие подписи почти не отличались друг от
+ * друга — совпадал весь административный хвост, а он же уезжал в `cityName`
+ * шапки статьи (бэкенд берёт адрес ПЕРВОЙ точки как есть,
+ * `travels/serializers.py:371`).
+ *
+ * Административный хвост сознательно не показывается вовсе: страна у статьи
+ * уже есть отдельным полем, а место видно на карте. Отдельного поля под хвост
+ * в `travelAddress[]` нет, и заводить его значило бы менять контракт API.
+ */
+export const buildPointTitleFromGeocode = (
+    geocodeData: any,
+    latlng: any,
+    matchedCountry?: any,
+) => {
+    const { poi, streetLine, city, adminArea, adminRegion, countryLabel } = buildGeocodeParts(
+        geocodeData,
+        matchedCountry,
+    );
+
+    const title = poi || streetLine || city || adminArea || adminRegion || countryLabel;
+    if (title) return title;
+
+    if (geocodeData?.display_name) {
+        // Первый непустой сегмент — обычно и есть объект. Голый номер дома
+        // пропускаем: он остаётся частью адреса, но названием не становится.
+        const segment = String(geocodeData.display_name)
+            .split(',')
+            .map((part: string) => part.trim())
+            .find((part: string) => part && !isBareNumber(part));
+        if (segment) return segment;
+    }
+    return `${latlng.lat}, ${latlng.lng}`;
+};
+
+/**
+ * Полная строка адреса. Остаётся у «Моих точек» (`components/UserPoints`), где
+ * это именно адрес сохранённого места, а не подпись на карте маршрута.
+ */
+export const buildAddressFromGeocode = (
+    geocodeData: any,
+    latlng: any,
+    matchedCountry?: any,
+) => {
+    const { poi, streetLine, city, adminRegion, adminArea, countryLabel } = buildGeocodeParts(
+        geocodeData,
+        matchedCountry,
+    );
+    const road = geocodeData?.address?.road || geocodeData?.locality;
+    const parts: string[] = [];
 
     if (poi && poi !== city && poi !== road) parts.push(poi);
     if (streetLine && streetLine !== city && streetLine !== poi) parts.push(streetLine);
