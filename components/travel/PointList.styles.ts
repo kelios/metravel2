@@ -814,6 +814,12 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    // 44 — минимум тач-таргета. Измерено в браузере до правки: 25×95 px (#1733).
+    // Гейт `scripts/guard-touch-targets.js` эту кнопку не видит и увидеть не
+    // может: он сравнивает только ОБЪЯВЛЕННЫЕ числовые размеры, а высота здесь
+    // набиралась паддингом, рамкой и шрифтом. Расширение INTERACTIVE_ELEMENTS
+    // на `CardActionPressable` (#1734) это тоже не чинит — проверено прогоном.
+    minHeight: 44,
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 7,
