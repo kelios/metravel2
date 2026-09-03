@@ -10,13 +10,30 @@
  * `heroMeta` и `lazySectionReserved` (#1713).
  *
  * Здесь инвариант другой: у объявленного ключа обязан быть хотя бы один
- * читатель. Читатели ищутся по исходникам `components/`, `hooks/`, `app/` —
- * обращением `.<ключ>`. Такой поиск законен ровно потому, что других способов
- * достать стиль в этом дереве нет, и это проверено на 02.09.2026: ни
- * деструктуризации набора, ни спреда его в чужой объект, ни вычисляемого
- * `styles[имя]` во всём `components/`, `hooks/`, `app/` не встречается.
- * Появится такой способ — гейт начнёт врать в сторону «мёртв», то есть упадёт,
- * а не промолчит.
+ * читатель — обращение `.<ключ>` в исходниках.
+ *
+ * КЛЮЧЕВОЕ: читатель ищется не «где угодно в дереве», а только там, куда набор
+ * детали физически доезжает. Первая редакция гейта собирала все имена после
+ * точки по 1282 файлам `components/`, `hooks/`, `app/` — и любой ключ, чьё имя
+ * совпало с обращением в ЧУЖОМ компоненте с его собственным локальным набором,
+ * молча считался живым. Так гейт не поймал бы `heroTitle` — один из четырёх
+ * мёртвых ключей, ради которых он и заводился: `.heroTitle` есть в
+ * `components/home/HomeInspirationSection.tsx`, `components/listTravel/`
+ * `BelarusTravelHub.web.tsx` и `components/screens/roulette/RouletteScreen.tsx`,
+ * и каждый читает там свой `styles`. Тем же способом от гейта прятался мёртвый
+ * `sectionBadgeText` при мёртвой же родне `sectionBadge*`.
+ *
+ * Поэтому область чтения = граф детали: весь `components/travel/**` (внутри
+ * него набор ходит пропом `styles` вниз по секциям, поэтому читатель не обязан
+ * импортировать модуль набора) ПЛЮС любой файл `components/`/`hooks/`/`app/`,
+ * который импортирует модуль набора напрямую (так в область попадает
+ * `hooks/useTravelDetailsLayout.ts`, и так же попадёт будущий внешний
+ * потребитель — список не пришпилен).
+ *
+ * Остаточный риск назван честно: если набор детали передадут пропом в компонент
+ * ВНЕ `components/travel/**`, не импортирующий модуль набора, его ключи станут
+ * «мёртвыми» — гейт упадёт, а не промолчит. Это безопасное направление ошибки,
+ * и лечится оно одной строкой в области чтения.
  *
  * Комментарии из исходников вырезаются: упоминание ключа в документации —
  * не читатель. Сами модули наборов из поиска исключены по той же причине.
@@ -30,44 +47,78 @@ import type { ThemedColors } from '@/hooks/useTheme'
 import { createTravelDetailsDecisionSummaryStyles } from '@/components/travel/details/TravelDetailsStyleFragments'
 import { getTravelDetailsHeroStyles } from '@/components/travel/details/TravelDetailsHeroStyles'
 import { getTravelDetailsShellStyles } from '@/components/travel/details/TravelDetailsShellStyles'
-import { createTravelDetailsLayoutStyles } from '@/components/travel/details/styles/travelDetailsLayoutStyles'
-import { createTravelDetailsNavStyles } from '@/components/travel/details/styles/travelDetailsNavStyles'
-import { createTravelDetailsSectionHeaderStyles } from '@/components/travel/details/styles/travelDetailsSectionHeaderStyles'
-import { createTravelDetailsHeroMediaStyles } from '@/components/travel/details/styles/travelDetailsHeroMediaStyles'
-import { createTravelDetailsInsightStyles } from '@/components/travel/details/styles/travelDetailsInsightStyles'
-import { createTravelDetailsMiscStyles } from '@/components/travel/details/styles/travelDetailsMiscStyles'
 
 const REPO_ROOT = path.resolve(__dirname, '../../..')
 
-/** Дерево, в котором вообще возможен читатель стиля детали путешествия. */
-const READER_ROOTS = ['components', 'hooks', 'app']
+/**
+ * Каталог фичи: внутри него набор ходит пропом `styles` вниз по секциям, и
+ * читатель не обязан импортировать модуль набора.
+ */
+const DETAIL_FEATURE_DIR = 'components/travel'
+
+/** Корни, где ищется внешний файл, импортирующий модуль набора напрямую. */
+const IMPORTER_ROOTS = ['components', 'hooks', 'app']
 
 /**
  * Модули, объявляющие наборы. Их собственный текст читателем не считается:
  * иначе объявление и доккоммент назначали бы ключ живым сами себе.
+ *
+ * Каталог фрагментов читается С ДИСКА, а не пришпилен: пришпиленный перечень
+ * наборов уже отставал от кода в #1711, и новый модуль в `styles/` тогда не
+ * проверялся бы вовсе. Корневые модули перечислены поимённо — они лежат вперемешку
+ * с компонентами, и отбирать их приходится по имени.
  */
-const STYLE_MODULE_DIRS = [
-  'components/travel/details/styles',
-]
-const STYLE_MODULE_FILES = [
+const STYLE_MODULE_DIR = 'components/travel/details/styles'
+const ROOT_STYLE_MODULE_FILES = [
   'components/travel/details/TravelDetailsStyleFragments.ts',
   'components/travel/details/TravelDetailsStyles.ts',
   'components/travel/details/TravelDetailsHeroStyles.ts',
   'components/travel/details/TravelDetailsShellStyles.ts',
 ]
 
-/** Все наборы экрана: семь фрагментов агрегата плюс hero- и shell-набор. */
-const loadStyleSets = (colors: ThemedColors): Record<string, object> => ({
-  decisionSummary: createTravelDetailsDecisionSummaryStyles(colors),
-  layout: createTravelDetailsLayoutStyles(colors),
-  nav: createTravelDetailsNavStyles(colors),
-  sectionHeader: createTravelDetailsSectionHeaderStyles(colors),
-  heroMedia: createTravelDetailsHeroMediaStyles(colors),
-  insight: createTravelDetailsInsightStyles(colors),
-  misc: createTravelDetailsMiscStyles(colors),
-  hero: getTravelDetailsHeroStyles(colors) as unknown as object,
-  shell: getTravelDetailsShellStyles(colors) as unknown as object,
-})
+const listStyleModuleFiles = (): string[] => [
+  ...ROOT_STYLE_MODULE_FILES,
+  ...fs
+    .readdirSync(path.join(REPO_ROOT, STYLE_MODULE_DIR))
+    .filter((name) => /\.ts$/.test(name))
+    .map((name) => `${STYLE_MODULE_DIR}/${name}`),
+]
+
+/**
+ * Все наборы экрана. Фабрики берутся из модулей `styles/` глобом, а не списком:
+ * новый фрагмент попадает под гейт сам. Модуль без фабрики (`travelDetailsSectionRhythm.ts`
+ * — это константы ритма, а не набор) в наборы не превращается: отбор идёт по
+ * сигнатуре имени `create*Styles`.
+ */
+const STYLE_FACTORY_NAME = /^create[A-Za-z]*Styles$/
+
+const loadStyleSets = (colors: ThemedColors): Record<string, object> => {
+  const sets: Record<string, object> = {
+    decisionSummary: createTravelDetailsDecisionSummaryStyles(colors),
+    hero: getTravelDetailsHeroStyles(colors) as unknown as object,
+    shell: getTravelDetailsShellStyles(colors) as unknown as object,
+  }
+
+  for (const relative of listStyleModuleFiles()) {
+    if (!relative.startsWith(`${STYLE_MODULE_DIR}/`)) continue
+
+    const moduleExports = require(path.join(REPO_ROOT, relative)) as Record<string, unknown>
+
+    for (const [exportName, value] of Object.entries(moduleExports)) {
+      if (!STYLE_FACTORY_NAME.test(exportName) || typeof value !== 'function') continue
+
+      const setName = path
+        .basename(relative, '.ts')
+        .replace(/^travelDetails/, '')
+        .replace(/Styles$/, '')
+      sets[setName.charAt(0).toLowerCase() + setName.slice(1)] = (
+        value as (c: ThemedColors) => object
+      )(colors)
+    }
+  }
+
+  return sets
+}
 
 /** Владелец каждого объявленного ключа — для внятного текста падения. */
 const loadOwnersByKey = (): Map<string, string> => {
@@ -83,10 +134,25 @@ const loadOwnersByKey = (): Map<string, string> => {
 }
 
 const isStyleModule = (relative: string): boolean =>
-  STYLE_MODULE_FILES.includes(relative) ||
-  STYLE_MODULE_DIRS.some((dir) => relative.startsWith(`${dir}/`))
+  listStyleModuleFiles().includes(relative)
 
-const listReaderFiles = (): string[] => {
+const stripComments = (source: string): string =>
+  source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ')
+
+/**
+ * Импорт модуля набора — пропуск в область чтения для файла вне фичи. Спецификаторы
+ * берутся из тех же имён модулей, что и наборы, поэтому новый модуль расширяет
+ * область сам.
+ */
+const importsStyleModule = (source: string): boolean =>
+  listStyleModuleFiles().some((relative) => {
+    const moduleName = path.basename(relative, '.ts')
+    return new RegExp(
+      `(?:from|require\\()\\s*['"\`][^'"\`]*\\b${moduleName}['"\`]`,
+    ).test(source)
+  })
+
+const listCandidateFiles = (): string[] => {
   const walk = (dir: string): string[] =>
     fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
       const full = path.join(dir, entry.name)
@@ -94,15 +160,39 @@ const listReaderFiles = (): string[] => {
       return /\.tsx?$/.test(entry.name) ? [full] : []
     })
 
-  return READER_ROOTS.flatMap((root) => walk(path.join(REPO_ROOT, root))).filter(
+  return IMPORTER_ROOTS.flatMap((root) => walk(path.join(REPO_ROOT, root))).filter(
     (file) => !isStyleModule(path.relative(REPO_ROOT, file)),
   )
 }
 
-const stripComments = (source: string): string =>
-  source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ')
+/**
+ * Область чтения: граф детали. Диск обходится и читается РОВНО ОДИН РАЗ на прогон
+ * файла — обе проверки ниже берут один и тот же результат, а не ходят по дереву
+ * каждая за себя.
+ */
+let readerSourcesCache: { files: string[]; sources: string[] } | null = null
 
-/** Все имена, к которым в дереве хоть где-то обращаются через точку. */
+const loadReaderSources = (): { files: string[]; sources: string[] } => {
+  if (readerSourcesCache) return readerSourcesCache
+
+  const files: string[] = []
+  const sources: string[] = []
+
+  for (const file of listCandidateFiles()) {
+    const relative = path.relative(REPO_ROOT, file)
+    const source = stripComments(fs.readFileSync(file, 'utf8'))
+
+    if (!relative.startsWith(`${DETAIL_FEATURE_DIR}/`) && !importsStyleModule(source)) continue
+
+    files.push(relative)
+    sources.push(source)
+  }
+
+  readerSourcesCache = { files, sources }
+  return readerSourcesCache
+}
+
+/** Все имена, к которым обращаются через точку внутри области чтения. */
 const collectReadNames = (sources: readonly string[]): Set<string> => {
   const names = new Set<string>()
 
@@ -170,6 +260,7 @@ const KNOWN_UNREAD_KEYS = [
   'sectionBadgePill',
   'sectionBadgePopular',
   'sectionBadgeRow',
+  'sectionBadgeText',
   'sectionBadgeTextNear',
   'sectionBadgeTextPopular',
   'travelListFallback',
@@ -177,9 +268,10 @@ const KNOWN_UNREAD_KEYS = [
 
 describe('читаемость ключей стилей travel details', () => {
   it('у каждого ключа набора есть читатель — кроме известного наследства', () => {
-    const unread = findUnreadKeys(loadOwnersByKey(), collectReadNames(
-      listReaderFiles().map((file) => fs.readFileSync(file, 'utf8')),
-    ))
+    const unread = findUnreadKeys(
+      loadOwnersByKey(),
+      collectReadNames(loadReaderSources().sources),
+    )
 
     const unexpected = Object.fromEntries(
       Object.entries(unread).filter(([key]) => !KNOWN_UNREAD_KEYS.includes(key)),
@@ -190,9 +282,7 @@ describe('читаемость ключей стилей travel details', () => 
 
   it('список наследства не отстаёт: в нём только реально мёртвые ключи', () => {
     const ownersByKey = loadOwnersByKey()
-    const unread = findUnreadKeys(ownersByKey, collectReadNames(
-      listReaderFiles().map((file) => fs.readFileSync(file, 'utf8')),
-    ))
+    const unread = findUnreadKeys(ownersByKey, collectReadNames(loadReaderSources().sources))
 
     // Ключ, который удалили или которому нашли читателя, обязан уйти из списка.
     const stale = KNOWN_UNREAD_KEYS.filter((key) => !(key in unread)).map((key) => [
@@ -223,6 +313,56 @@ describe('читаемость ключей стилей travel details', () => 
       false,
       false,
     ])
+  })
+
+  it('чужой компонент со своим набором читателем не считается', () => {
+    // Тот самый промах первой редакции: `.heroTitle` есть в трёх чужих компонентах,
+    // и по «любой точке во всём дереве» ключ #1713 выглядел бы живым. Область
+    // чтения обязана этих файлов не содержать.
+    const foreign = [
+      'components/home/HomeInspirationSection.tsx',
+      'components/profile/ProfileTravelEngagementSection.tsx',
+      'components/listTravel/BelarusTravelHub.web.tsx',
+      'components/screens/roulette/RouletteScreen.tsx',
+    ]
+
+    expect(loadReaderSources().files.filter((file) => foreign.includes(file))).toEqual([])
+  })
+
+  it('в область чтения входят и фича, и внешний импортёр набора', () => {
+    const { files } = loadReaderSources()
+
+    expect([
+      // прополз пропом, модуль набора не импортирует
+      files.includes('components/travel/details/sections/AffiliateSection.tsx'),
+      // вне фичи, но импортирует shell-набор напрямую
+      files.includes('hooks/useTravelDetailsLayout.ts'),
+    ]).toEqual([true, true])
+  })
+
+  it('новый модуль наборов попадает под гейт сам, без правки списка', () => {
+    const discovered = Object.keys(loadStyleSets(getThemedColors(false)))
+    const onDisk = listStyleModuleFiles()
+      .filter((relative) => relative.startsWith('components/travel/details/styles/'))
+      .map((relative) => path.basename(relative, '.ts'))
+
+    // Каждый модуль с фабрикой `create*Styles` обязан дать набор. Модуль без
+    // фабрики (ритм секций — это константы) набором не притворяется.
+    const withFactory = onDisk.filter((moduleName) => {
+      const moduleExports = require(
+        path.join(REPO_ROOT, 'components/travel/details/styles', `${moduleName}.ts`),
+      ) as Record<string, unknown>
+
+      return Object.keys(moduleExports).some((name) => STYLE_FACTORY_NAME.test(name))
+    })
+
+    expect(
+      withFactory.map((moduleName) =>
+        moduleName.replace(/^travelDetails/, '').replace(/Styles$/, ''),
+      ).map((name) => name.charAt(0).toLowerCase() + name.slice(1)).filter(
+        (name) => !discovered.includes(name),
+      ),
+    ).toEqual([])
   })
 
   it('четыре ключа #1713 удалены из наборов, а не просто потеряли читателя', () => {
