@@ -14,8 +14,18 @@ jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => mockUseFavorites(),
 }));
 
+// Ширина реальная: от неё зависит не только сетка, но и владелец «Назад» —
+// мобильную ветку HeaderContextBar выбирает isPhone/isLargePhone (#1726).
 jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => (global as any).__mockResponsive ?? { width: 390 },
+  useResponsive: () => {
+    const override = (global as any).__mockResponsive ?? { width: 390 };
+    const width = override.width ?? 390;
+    return {
+      isPhone: width >= 360 && width < 480,
+      isLargePhone: width >= 480 && width < 768,
+      ...override,
+    };
+  },
 }));
 
 const tabTravelCardProps: any[] = [];

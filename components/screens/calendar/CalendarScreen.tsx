@@ -25,12 +25,6 @@ import EmptyState from '@/components/ui/EmptyState'
 import ProfileCollectionHeader, {
   type ProfileCollectionBreadcrumb,
 } from '@/components/profile/ProfileCollectionHeader'
-
-// На native глобальный HeaderContextBar сам даёт «Назад» + заголовок для
-// кабинетных коллекций, на web он для них скрыт (см.
-// components/layout/topLevelSections.ts). Тот же приём, что в
-// components/screens/history/HistoryScreen.tsx.
-const HAS_GLOBAL_HEADER = Platform.OS !== 'web'
 import MiniCalendar from '@/components/calendar/MiniCalendar'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildLoginHref } from '@/utils/authNavigation'
@@ -64,6 +58,7 @@ import {
   SelectedDateFilter,
 } from '@/components/screens/calendar/calendarScreen.parts'
 import { translate as i18nT } from '@/i18n'
+import { useCollectionBackAffordanceGlobal } from '@/components/layout/useCollectionBackAffordance'
 
 
 async function confirmRemoveFromCalendar(title: string, onConfirm: () => void) {
@@ -190,6 +185,12 @@ export default function CalendarScreen() {
     router.replace('/profile')
     return true
   }, [router])
+
+  // Кто рисует «Назад» — одна точка для всех кабинетных коллекций (#1726):
+  // когда глобальный HeaderContextBar показан и владеет «Назад», своя шапка
+  // молчит во ВСЕХ состояниях (гость / загрузка / список); на web и на native
+  // вне мобильной ветки бара шапка — единственная навигация.
+  const hasGlobalHeader = useCollectionBackAffordanceGlobal('/calendar')
 
   const handleBreadcrumbPress = useCallback((path: string) => {
     router.push(path as any)
@@ -379,7 +380,14 @@ export default function CalendarScreen() {
   }, [router])
 
   if (!authReady) {
-    return <CalendarSkeleton styles={styles} seoBlock={seoBlock} onBackPress={handleBackToProfile} />
+    return (
+      <CalendarSkeleton
+        styles={styles}
+        showHeader={!hasGlobalHeader}
+        seoBlock={seoBlock}
+        onBackPress={handleBackToProfile}
+      />
+    )
   }
 
   if (!isAuthenticated) {
@@ -388,8 +396,8 @@ export default function CalendarScreen() {
         {seoBlock}
         {/* Только web: на native глобальный HeaderContextBar уже даёт «Назад»
             для кабинетных коллекций, и вторая шапка была бы второй навигацией
-            назад на одном экране (#799). См. HAS_GLOBAL_HEADER ниже. */}
-        {!HAS_GLOBAL_HEADER && (
+            назад на одном экране (#799, #1726). См. hasGlobalHeader выше. */}
+        {!hasGlobalHeader && (
           <ProfileCollectionHeader
             title={i18nT('calendar:app.tabs.calendar.moy_kalendar_f9da1dd3')}
             onBackPress={handleBackToProfile}
@@ -410,7 +418,7 @@ export default function CalendarScreen() {
     return (
       <CalendarSkeleton
         styles={styles}
-        showHeader
+        showHeader={!hasGlobalHeader}
         seoBlock={seoBlock}
         onBackPress={handleBackToProfile}
         breadcrumbs={CALENDAR_BREADCRUMBS}
@@ -427,14 +435,15 @@ export default function CalendarScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {seoBlock}
-      <ProfileCollectionHeader
-        title={i18nT('calendar:app.tabs.calendar.moy_kalendar_f9da1dd3')}
-        onBackPress={handleBackToProfile}
-        breadcrumbs={CALENDAR_BREADCRUMBS}
-        onBreadcrumbPress={handleBreadcrumbPress}
-        dense
-      />
-
+      {!hasGlobalHeader && (
+        <ProfileCollectionHeader
+          title={i18nT('calendar:app.tabs.calendar.moy_kalendar_f9da1dd3')}
+          onBackPress={handleBackToProfile}
+          breadcrumbs={CALENDAR_BREADCRUMBS}
+          onBreadcrumbPress={handleBreadcrumbPress}
+          dense
+        />
+      )}
       <CalendarTabs
         activeTab={activeTab}
         counts={tabCounts}

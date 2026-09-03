@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { View, StyleSheet, Platform, ScrollView, Text, Pressable } from 'react-native';
+import { View, StyleSheet, Platform, ScrollView, Text } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
@@ -24,19 +24,20 @@ import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
 import { formatRelativeTime } from '@/utils/relativeTime';
 import { pluralizeRu } from '@/utils/pluralize';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
+import CollectionNativeClearButton from '@/components/profile/CollectionNativeClearButton';
+import { useCollectionBackAffordanceGlobal } from '@/components/layout/useCollectionBackAffordance';
 import { goBackOrReplace } from '@/utils/backNavigation';
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { refreshViewHistory, type ViewHistoryItem } from '@/hooks/useViewHistory';
 import { translate as i18nT } from '@/i18n'
 
 
-// На native глобальный HeaderContextBar уже показывает «Назад» + заголовок «История»
-// для /history (см. components/layout/customHeaderModel.ts), поэтому in-page шапку
-// не рендерим — иначе дублируется. На web этот бар для /history скрыт (top-level path),
-// поэтому там оставляем компактную ProfileCollectionHeader как единственную навигацию.
-const hasGlobalHeader = Platform.OS !== 'web';
-
 export default function HistoryScreen() {
+    // Кто рисует «Назад» на этом экране — решает одна точка для всех кабинетных
+    // коллекций (#836 → #1726): когда глобальный HeaderContextBar показан и
+    // владеет «Назад», in-page шапка молчит во ВСЕХ состояниях; на web и на
+    // native вне мобильной ветки бара шапка — единственная навигация.
+    const hasGlobalHeader = useCollectionBackAffordanceGlobal('/history');
     const router = useRouter();
     const isFocused = useIsFocused();
     const { width } = useResponsive();
@@ -81,22 +82,6 @@ export default function HistoryScreen() {
             paddingHorizontal: 16,
             paddingBottom: 24,
             paddingTop: 12,
-        },
-        nativeClearRow: {
-            flexDirection: 'row',
-            justifyContent: 'flex-end',
-            paddingHorizontal: 16,
-            paddingTop: 8,
-        },
-        nativeClearButton: {
-            width: 44,
-            height: 44,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: DESIGN_TOKENS.radii.md,
-            borderWidth: 1,
-            borderColor: colors.danger,
-            backgroundColor: colors.surface,
         },
         webGrid: {
             flexDirection: 'row',
@@ -331,16 +316,11 @@ export default function HistoryScreen() {
                 if (!showClear) return null;
 
                 return (
-                    <View style={styles.nativeClearRow}>
-                        <Pressable
-                            style={styles.nativeClearButton}
-                            onPress={handleClear}
-                            accessibilityRole="button"
-                            accessibilityLabel={i18nT('shared:app.tabs.history.ochistit_istoriyu_prosmotrov_9a61aea8')}
-                        >
-                            <Feather name="trash-2" size={16} color={colors.danger} />
-                        </Pressable>
-                    </View>
+                    <CollectionNativeClearButton
+                        onPress={handleClear}
+                        accessibilityLabel={i18nT('shared:app.tabs.history.ochistit_istoriyu_prosmotrov_9a61aea8')}
+                        testID="history-native-clear"
+                    />
                 );
             }
 
@@ -356,7 +336,7 @@ export default function HistoryScreen() {
                 />
             );
         },
-        [colors.danger, handleBackToProfile, handleClear, styles]
+        [hasGlobalHeader, handleBackToProfile, handleClear]
     );
 
     const renderHistorySummary = useCallback(

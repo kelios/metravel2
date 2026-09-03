@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 
-import { shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
+import { isCollectionBackAffordanceGlobal, shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
+import { SELF_HEADED_COLLECTION_PATHS } from '@/components/layout/topLevelSections';
 
 describe('shouldShowHeaderContextBar (web)', () => {
   const prevOS = Platform.OS;
@@ -122,6 +123,54 @@ describe('shouldShowHeaderContextBar (web)', () => {
         expect(shouldShowHeaderContextBar(path, true)).toBe(true);
       },
     );
+  });
+});
+
+describe('владелец «Назад» на кабинетных коллекциях (#1726)', () => {
+  // Семья NATIVE-DUP-BACK-AFFORDANCE-001 (#234 → #799 → #836 → #1726): на одном
+  // экране ровно один владелец навигации назад. Набор перечислен явно — новая
+  // кабинетная коллекция обязана попасть сюда, иначе тест не защищает её.
+  const prevOS = Platform.OS;
+  afterEach(() => {
+    (Platform.OS as any) = prevOS;
+  });
+
+  it('набор кабинетных коллекций перечислен явно', () => {
+    expect([...SELF_HEADED_COLLECTION_PATHS].sort()).toEqual(['/calendar', '/favorites', '/history']);
+  });
+
+  it.each(['android', 'ios'])('%s: в мобильной ветке бар показан и владеет «Назад» на каждой коллекции', (os) => {
+    (Platform.OS as any) = os;
+    for (const path of SELF_HEADED_COLLECTION_PATHS) {
+      expect(shouldShowHeaderContextBar(path, true)).toBe(true);
+      expect(isCollectionBackAffordanceGlobal(path, true)).toBe(true);
+    }
+  });
+
+  // Планшет и ландшафт телефона: бар уходит в desktop-ветку, а крошек у этих
+  // путей нет (`showBreadcrumbs: false`) — видимого «Назад» бар не даёт, и
+  // шапка экрана обязана остаться. Тот же инвариант, сорванный в другую сторону.
+  it.each(['android', 'ios'])('%s: вне мобильной ветки владельцем остаётся шапка экрана', (os) => {
+    (Platform.OS as any) = os;
+    for (const path of SELF_HEADED_COLLECTION_PATHS) {
+      expect(isCollectionBackAffordanceGlobal(path, false)).toBe(false);
+    }
+  });
+
+  it('web: глобальный бар скрыт на каждой коллекции, «Назад» рисует шапка экрана', () => {
+    (Platform.OS as any) = 'web';
+    for (const path of SELF_HEADED_COLLECTION_PATHS) {
+      expect(shouldShowHeaderContextBar(path, true)).toBe(false);
+      expect(shouldShowHeaderContextBar(path, false)).toBe(false);
+      expect(isCollectionBackAffordanceGlobal(path, true)).toBe(false);
+      expect(isCollectionBackAffordanceGlobal(path, false)).toBe(false);
+    }
+  });
+
+  it.each(['android', 'web'])('%s: путь вне набора не считается коллекцией с глобальным владельцем', (os) => {
+    (Platform.OS as any) = os;
+    expect(isCollectionBackAffordanceGlobal('/about', true)).toBe(false);
+    expect(isCollectionBackAffordanceGlobal('/userpoints', true)).toBe(false);
   });
 });
 

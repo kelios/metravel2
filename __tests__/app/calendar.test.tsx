@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native'
-import { Alert } from 'react-native'
+import { Alert, Platform } from 'react-native'
 
 import CalendarScreen from '@/app/(tabs)/calendar'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
@@ -131,6 +131,32 @@ describe('CalendarScreen status editor', () => {
     jest.restoreAllMocks()
   })
 
+  // #1726 / NATIVE-DUP-BACK-AFFORDANCE-001: основной список на native не рисует
+  // свою шапку — «Назад» уже даёт глобальный HeaderContextBar.
+  it.each(['android', 'ios'])('%s: в основном списке нет второго «Назад»', async (os) => {
+    const prevOS = Platform.OS
+    ;(Platform.OS as any) = os
+    try {
+      render(<CalendarScreen />)
+      await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
+      expect(screen.queryByText('Назад')).toBeNull()
+    } finally {
+      ;(Platform.OS as any) = prevOS
+    }
+  })
+
+  it('web: в основном списке своя шапка с «Назад» одна', async () => {
+    const prevOS = Platform.OS
+    ;(Platform.OS as any) = 'web'
+    try {
+      render(<CalendarScreen />)
+      await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
+      expect(screen.getAllByText('Назад')).toHaveLength(1)
+    } finally {
+      ;(Platform.OS as any) = prevOS
+    }
+  })
+
   it('allows changing calendar status from planned to visited', async () => {
     render(<CalendarScreen />)
 
@@ -201,13 +227,21 @@ describe('CalendarScreen status editor', () => {
   })
 
   it('returns to profile even when calendar has no useful history entry', async () => {
-    render(<CalendarScreen />)
+    // Своя шапка с «Назад» есть только на web (#1726); на native кнопку рисует
+    // глобальный HeaderContextBar вне этого экрана.
+    const prevOS = Platform.OS
+    ;(Platform.OS as any) = 'web'
+    try {
+      render(<CalendarScreen />)
 
-    await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
-    fireEvent.press(screen.getByRole('button', { name: 'Назад' }))
+      await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
+      fireEvent.press(screen.getByRole('button', { name: 'Назад' }))
 
-    expect(mockReplace).toHaveBeenCalledWith('/profile')
-    expect(mockBack).not.toHaveBeenCalled()
+      expect(mockReplace).toHaveBeenCalledWith('/profile')
+      expect(mockBack).not.toHaveBeenCalled()
+    } finally {
+      ;(Platform.OS as any) = prevOS
+    }
   })
 
   it('shows empty state when the user has no explicit travel statuses', async () => {

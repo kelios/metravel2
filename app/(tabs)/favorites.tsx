@@ -23,14 +23,8 @@ import { buildCanonicalUrl } from '@/utils/seo';
 import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader'
 import { goBackOrReplace } from '@/utils/backNavigation'
-
-// На native глобальный HeaderContextBar сам даёт «Назад» + заголовок для
-// кабинетных коллекций, на web он для них скрыт (см.
-// components/layout/topLevelSections.ts). Поэтому шапку в состояниях БЕЗ
-// собственных действий («войдите в аккаунт», «пока пусто») рендерим только на
-// web — иначе на телефоне вышли бы две навигации назад на одном экране (#799).
-// Тот же приём, что в components/screens/history/HistoryScreen.tsx.
-const HAS_GLOBAL_HEADER = Platform.OS !== 'web'
+import CollectionNativeClearButton from '@/components/profile/CollectionNativeClearButton'
+import { useCollectionBackAffordanceGlobal } from '@/components/layout/useCollectionBackAffordance'
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { translate as i18nT } from '@/i18n'
 import { refreshFavoritesFromServer } from '@/hooks/useFavoritesData';
@@ -64,6 +58,13 @@ export default function FavoritesScreen() {
     const handleBackToProfile = useCallback(() => {
         goBackOrReplace(router, '/profile');
     }, [router]);
+
+    // Кто рисует «Назад» — одна точка для всех кабинетных коллекций (#1726):
+    // когда бар показан и владеет «Назад», своя шапка молчит во ВСЕХ состояниях
+    // (гость / загрузка / пусто / список), а «Очистить» на native остаётся
+    // компактной кнопкой. На web — и на native вне мобильной ветки бара
+    // (планшет, ландшафт) — бар «Назад» не даёт, и шапка обязана быть.
+    const hasGlobalHeader = useCollectionBackAffordanceGlobal('/favorites');
 
     const styles = useMemo(() => StyleSheet.create({
         container: {
@@ -210,7 +211,7 @@ export default function FavoritesScreen() {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 {seoBlock}
-                {!HAS_GLOBAL_HEADER && (
+                {!hasGlobalHeader && (
                     <ProfileCollectionHeader title={i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117')} onBackPress={handleBackToProfile} />
                 )}
                 <EmptyState
@@ -230,7 +231,9 @@ export default function FavoritesScreen() {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 {seoBlock}
-                <ProfileCollectionHeader title={i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117')} onBackPress={handleBackToProfile} />
+                {!hasGlobalHeader && (
+                    <ProfileCollectionHeader title={i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117')} onBackPress={handleBackToProfile} />
+                )}
                 <View style={styles.listContent}>
                     {Array.from({ length: 3 }).map((_, index) => (
                         <View key={index} style={styles.cardWrap}>
@@ -246,7 +249,7 @@ export default function FavoritesScreen() {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 {seoBlock}
-                {!HAS_GLOBAL_HEADER && (
+                {!hasGlobalHeader && (
                     <ProfileCollectionHeader title={i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117')} onBackPress={handleBackToProfile} />
                 )}
                 <EmptyState
@@ -270,13 +273,23 @@ export default function FavoritesScreen() {
     return (
         <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
             {seoBlock}
-            <ProfileCollectionHeader
-                title={i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117')}
-                onBackPress={handleBackToProfile}
-                showClearButton={typeof clearFavorites === 'function' && data.length > 0}
-                onClearPress={handleClearAll}
-                clearAccessibilityLabel={i18nT('shared:app.tabs.favorites.ochistit_hochu_poehat_250e6c33')}
-            />
+            {hasGlobalHeader ? (
+                typeof clearFavorites === 'function' && data.length > 0 ? (
+                    <CollectionNativeClearButton
+                        onPress={handleClearAll}
+                        accessibilityLabel={i18nT('shared:app.tabs.favorites.ochistit_hochu_poehat_250e6c33')}
+                        testID="favorites-native-clear"
+                    />
+                ) : null
+            ) : (
+                <ProfileCollectionHeader
+                    title={i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117')}
+                    onBackPress={handleBackToProfile}
+                    showClearButton={typeof clearFavorites === 'function' && data.length > 0}
+                    onClearPress={handleClearAll}
+                    clearAccessibilityLabel={i18nT('shared:app.tabs.favorites.ochistit_hochu_poehat_250e6c33')}
+                />
+            )}
 
             {Platform.OS === 'web' ? (
                 <ScrollView
