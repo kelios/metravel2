@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { WebView } from 'react-native-webview'
 import Feather from '@expo/vector-icons/Feather'
+import Button from '@/components/ui/Button'
 
 import { buildBirdMarkerHtml } from '@/components/MapPage/Map/mapMarkerStyles'
 import { DEFAULT_CENTER } from '@/components/MapPage/Map/travelMapGeometry'
@@ -205,44 +206,34 @@ export const NativeRoutePickerMap = React.memo(
           {i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.hint')}
         </Text>
         <View style={styles.actionsRow}>
-          <Pressable
+          {/* #1723 — обе кнопки ряда из общего примитива Button: заливка, тач-таргет,
+              disabled/pressed и спиннер приходят из дизайн-системы, а не
+              переписываются здесь. Контракты тестов #1722 (testID,
+              accessibilityState.disabled до MAP_READY, hint, одна строка подписи,
+              flex: 1) сохранены. */}
+          <Button
+            label={i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.addPoint')}
             onPress={addPointAtCenter}
             disabled={!isMapReady}
-            style={({ pressed }) => [
-              styles.addButton,
-              { backgroundColor: colors.primary },
-              !isMapReady && { opacity: 0.5 },
-              pressed && { opacity: 0.8 },
-            ]}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !isMapReady }}
-            accessibilityLabel={i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.addPoint')}
+            size="sm"
+            icon={<Feather name="plus" size={16} color={colors.textOnPrimary} />}
             accessibilityHint={i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.addPointHint')}
             testID="travel-wizard.step-route.add-point"
-          >
-            <Feather name="plus" size={16} color={colors.textOnPrimary} />
-            <Text style={[styles.addLabel, { color: colors.textOnPrimary }]} numberOfLines={1}>
-              {i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.addPoint')}
-            </Text>
-          </Pressable>
-          <Pressable
+            style={styles.addButton}
+            labelStyle={styles.addLabel}
+            labelNumberOfLines={1}
+          />
+          <Button
+            label={i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.myLocation')}
             onPress={handleMyLocation}
-            disabled={isLocating}
-            style={({ pressed }) => [
-              styles.locationButton,
-              { borderColor: colors.border, backgroundColor: colors.background },
-              pressed && { opacity: 0.7 },
-            ]}
-            accessibilityRole="button"
+            loading={isLocating}
+            variant="outline"
+            size="sm"
+            iconOnly
+            icon={<Feather name="crosshair" size={18} color={colors.primaryDark} />}
             accessibilityLabel={i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.myLocation')}
             testID="travel-wizard.step-route.my-location"
-          >
-            {isLocating ? (
-              <ActivityIndicator size="small" color={colors.primaryDark} />
-            ) : (
-              <Feather name="crosshair" size={18} color={colors.primaryDark} />
-            )}
-          </Pressable>
+          />
         </View>
       </View>
 
@@ -317,28 +308,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.sm,
   },
+  // Только доля ряда: заливка, паддинги, минимальная высота и состояния — у
+  // Button (`size="sm"` уже даёт paddingHorizontal spacing.md).
   addButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: DESIGN_TOKENS.spacing.xs,
-    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
   },
   addLabel: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: '700',
-  },
-  locationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: DESIGN_TOKENS.touchTarget.minHeight,
-    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    borderWidth: 1,
   },
 })

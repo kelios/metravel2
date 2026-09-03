@@ -74,6 +74,31 @@ describe('NativeRoutePickerMap', () => {
     }))
   })
 
+  // #1723 — оба действия ряда переведены на общий `Button`, и после этого
+  // структурный гард `scripts/guard-touch-targets.js` их не видит: он ищет
+  // `Pressable`/перечисленные обёртки, а `Button` объявлен через
+  // `forwardRef(...)` и в список не попал. Тач-таргет 44dp здесь больше нечем
+  // держать, кроме этой проверки: `style` потребителя применяется ПОСЛЕ
+  // `sizeStyles`, поэтому любая будущая правка раскладки может ужать высоту.
+  it('keeps both row actions at the minimum touch target after moving to the shared Button', () => {
+    const screen = renderMap()
+
+    const resolveStyle = (testID: string) => {
+      const node = screen.getByTestId(testID)
+      const style = typeof node.props.style === 'function'
+        ? node.props.style({ pressed: false, hovered: false })
+        : node.props.style
+      return StyleSheet.flatten(style) as { minHeight?: number; minWidth?: number }
+    }
+
+    const addStyle = resolveStyle('travel-wizard.step-route.add-point')
+    expect(addStyle.minHeight).toBeGreaterThanOrEqual(44)
+
+    const locationStyle = resolveStyle('travel-wizard.step-route.my-location')
+    expect(locationStyle.minHeight).toBeGreaterThanOrEqual(44)
+    expect(locationStyle.minWidth).toBeGreaterThanOrEqual(44)
+  })
+
   // Главная регрессия #1722: подсказка и действия были ПОДВАЛОМ под полотном в
   // 380 пт, поэтому на 375×812 в видимую полосу шага не попадал ни один способ
   // добавить точку — тестировщик видел только карту. Порядок узлов и есть фикс.
