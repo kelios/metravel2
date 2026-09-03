@@ -3,6 +3,18 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { CARD_HOVER_TRANSITION } from '@/components/ui/unifiedTravelCardTokens';
 
+/**
+ * Прежний видимый размер desktop-кнопки «редактировать/удалить» (#1740).
+ *
+ * Ширина сходится с вёрсткой (иконка 14 + паддинги по 8), а высота — НЕТ:
+ * 14 + 2·2 даёт 18, тогда как отрисованная кнопка была 19. Лишний пиксель
+ * приносит строчный бокс иконочного шрифта, который выше номинального size.
+ * Поэтому оба числа — замер, а не арифметика: пересчитывать их «из паддингов»
+ * нельзя, иначе пилюля уедет на пиксель; проверять только новым замером.
+ */
+const ADMIN_BTN_DESKTOP_WIDTH = 30
+const ADMIN_BTN_DESKTOP_HEIGHT = 19
+
 // Inline meta-text scale: bodySmall on web, caption on native.
 const META_TEXT_FONT_SIZE =
   Platform.OS === 'web'
@@ -150,7 +162,18 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
         : {}),
     },
 
+    // Desktop: видимое тело кнопки было ADMIN_BTN_DESKTOP_WIDTH×HEIGHT (30×19),
+    // размер не был объявлен, и гейт тач-таргетов кнопку не видел по построению
+    // (#1740). Рамка 44×44 объявлена явно, а отрицательные поля возвращают
+    // пилюле прежние 31 по высоте и прежнюю ширину: рамки соседей через
+    // разделитель (8 + 1 + 8) не пересекаются (7 + 7 < 17).
+    // Внешний размер теперь задаёт рамка, а не паддинги (контент 14 меньше 44),
+    // и на mobile поля/паддинги перебивает `adminBtnMobile` (#1734).
     adminBtn: {
+      minWidth: DESIGN_TOKENS.touchTarget.minWidth,
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      marginVertical: -(DESIGN_TOKENS.touchTarget.minHeight - ADMIN_BTN_DESKTOP_HEIGHT) / 2,
+      marginHorizontal: -(DESIGN_TOKENS.touchTarget.minWidth - ADMIN_BTN_DESKTOP_WIDTH) / 2,
       paddingHorizontal: DESIGN_TOKENS.spacing.xs,
       paddingVertical: DESIGN_TOKENS.spacing.xs * 0.25,
       borderRadius: DESIGN_TOKENS.radii.full,
