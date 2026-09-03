@@ -1,6 +1,6 @@
 import React from 'react'
 import { StyleSheet, useWindowDimensions } from 'react-native'
-import { fireEvent, render } from '@testing-library/react-native'
+import { fireEvent, render, type RenderAPI } from '@testing-library/react-native'
 
 import {
   resolveRoutePickerMapHeight,
@@ -47,6 +47,13 @@ describe('NativeRoutePickerMap', () => {
       />,
     )
 
+  // Карта считается готовой не по монтированию, а по MAP_READY из WebView:
+  // только к этому моменту в документе определён `__mtRouteAddCenterPoint`.
+  const reportMapReady = (screen: RenderAPI) =>
+    fireEvent(screen.getByTestId('travel-wizard.step-route.native-map'), 'message', {
+      nativeEvent: { data: JSON.stringify({ type: 'MAP_READY' }) },
+    })
+
   it('stacks the hint above a full-width primary add action on narrow native screens', () => {
     const screen = renderMap()
 
@@ -84,17 +91,46 @@ describe('NativeRoutePickerMap', () => {
 
   it('adds a point at the map centre through the existing POINT_ADD bridge', () => {
     const screen = renderMap()
+    reportMapReady(screen)
 
     fireEvent.press(screen.getByTestId('travel-wizard.step-route.add-point'))
 
     expect(mockInjectJavaScript).toHaveBeenCalledWith('window.__mtRouteAddCenterPoint();true;')
   })
 
+  // Пока MAP_READY не пришёл, моста в документе ещё нет: инъекция упала бы
+  // внутри WebView молча, и кнопка «сработала» бы вхолостую — ровно то «нажал
+  // и ничего не произошло», из-за которого заведена задача.
+  it('keeps the add action inert and visibly disabled until the map reports ready', () => {
+    const screen = renderMap()
+
+    const addButton = screen.getByTestId('travel-wizard.step-route.add-point')
+    expect(addButton.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }))
+
+    fireEvent.press(addButton)
+    expect(mockInjectJavaScript).not.toHaveBeenCalled()
+
+    reportMapReady(screen)
+
+    expect(screen.getByTestId('travel-wizard.step-route.add-point').props.accessibilityState)
+      .toEqual(expect.objectContaining({ disabled: false }))
+  })
+
+  it('does not fire the bridge from the point list before the map is ready', () => {
+    const ref = React.createRef<NativeRoutePickerMapHandle>()
+    renderMap(ref)
+
+    ref.current?.addPointAtCenter()
+
+    expect(mockInjectJavaScript).not.toHaveBeenCalled()
+  })
+
   // Тот же путь отдан наружу: у списка точек под картой своя кнопка, и она
   // обязана вести не в копию логики, а ровно сюда.
   it('exposes addPointAtCenter to the point list below the map', () => {
     const ref = React.createRef<NativeRoutePickerMapHandle>()
-    renderMap(ref)
+    const screen = renderMap(ref)
+    reportMapReady(screen)
 
     ref.current?.addPointAtCenter()
 

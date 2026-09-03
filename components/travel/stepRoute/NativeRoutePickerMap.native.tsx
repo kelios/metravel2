@@ -61,7 +61,11 @@ export const NativeRoutePickerMap = React.memo(
   const webViewRef = useRef<WebView>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isLocating, setIsLocating] = useState(false)
+  // Готовность карты нужна в двух режимах: ref — чтобы `pushPoints` увидел её в
+  // том же обработчике, где она наступила (состояние там ещё старое), state —
+  // чтобы кнопка «Добавить точку» перерисовалась и перестала быть мёртвой.
   const isMapReadyRef = useRef(false)
+  const [isMapReady, setIsMapReady] = useState(false)
   const hasFittedRef = useRef(false)
 
   // Стартовый вид фиксируем на первом рендере: он не должен менять html (иначе
@@ -111,6 +115,7 @@ export const NativeRoutePickerMap = React.memo(
         const parsed = JSON.parse(raw)
         if (parsed?.type === 'MAP_READY') {
           isMapReadyRef.current = true
+          setIsMapReady(true)
           const shouldFit = markers.length > 0
           pushPoints(shouldFit)
           if (shouldFit) hasFittedRef.current = true
@@ -150,6 +155,10 @@ export const NativeRoutePickerMap = React.memo(
   // берёт сам WebView и присылает обычным POINT_ADD, поэтому обратный геокодер,
   // нумерация и автосейв у кнопки и у тапа по карте общие.
   const addPointAtCenter = useCallback(() => {
+    // До MAP_READY функции в WebView ещё нет: инъекция упала бы внутри WebView
+    // молча, кнопка «сработала» бы вхолостую и точка не появилась. Ровно тот
+    // сценарий «нажал и ничего», из-за которого заведена #1722.
+    if (!isMapReadyRef.current) return
     webViewRef.current?.injectJavaScript('window.__mtRouteAddCenterPoint();true;')
   }, [])
 
@@ -198,12 +207,15 @@ export const NativeRoutePickerMap = React.memo(
         <View style={styles.actionsRow}>
           <Pressable
             onPress={addPointAtCenter}
+            disabled={!isMapReady}
             style={({ pressed }) => [
               styles.addButton,
               { backgroundColor: colors.primary },
+              !isMapReady && { opacity: 0.5 },
               pressed && { opacity: 0.8 },
             ]}
             accessibilityRole="button"
+            accessibilityState={{ disabled: !isMapReady }}
             accessibilityLabel={i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.addPoint')}
             accessibilityHint={i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.addPointHint')}
             testID="travel-wizard.step-route.add-point"
