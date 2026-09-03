@@ -15,10 +15,17 @@ import { Platform } from 'react-native'
 import { sendQuestAnswerAttempts, type QuestAnswerAttemptPayload } from '@/api/quests'
 import { ApiError } from '@/api/client'
 import { getActiveLocale } from '@/i18n'
+import { queueAnalyticsEvent } from '@/utils/analytics'
 import { devWarn } from '@/utils/logger'
 
 export const QUEST_ATTEMPTS_QUEUE_KEY = 'quest_attempts_queue_v1'
 export const QUEST_ATTEMPTS_SESSION_KEY = 'quest_attempts_session_v1'
+/**
+ * Карантин отвергнутых событий (#1719). До него отказ сервера был виден только
+ * в `devWarn`, который в проде никуда не пишется, и прохождение без единой
+ * строки телеметрии было неотличимо от «игрок молчал».
+ */
+export const QUEST_ATTEMPTS_REJECTED_KEY = 'quest_attempts_rejected_v1'
 
 /** Потолок очереди: переполнение дропает самые старые события. */
 export const QUEUE_MAX_EVENTS = 500
@@ -226,6 +233,119 @@ export async function recordQuestAnswerAttempt(input: RecordQuestAttemptInput): 
   if (events.length >= FLUSH_BATCH_SIZE && !retryTimer) void flushQuestAnswerAttempts()
 }
 
+/** Потолок карантина: он диагностика, а не вторая очередь доставки. */
+export const REJECTED_MAX_EVENTS = 50
+
+export type QuestAttemptRejectionLog = {
+  /** Сколько событий сервер отверг за всё время жизни установки. */
+  total: number
+  lastAt: string | null
+  lastStatus: number | null
+  /** Имя поля → сколько раз оно было причиной отказа. */
+  reasons: Record<string, number>
+  events: QueuedQuestAttempt[]
+}
+
+const emptyRejectionLog = (): QuestAttemptRejectionLog => ({
+  total: 0,
+  lastAt: null,
+  lastStatus: null,
+  reasons: {},
+  events: [],
+})
+
+/** Карантин читается «по требованию» — в горячем пути доставки его нет. */
+export async function readQuestAttemptRejections(): Promise<QuestAttemptRejectionLog> {
+  try {
+    const raw = await AsyncStorage.getItem(QUEST_ATTEMPTS_REJECTED_KEY)
+    const parsed = raw ? JSON.parse(raw) : null
+    if (!parsed || typeof parsed !== 'object') return emptyRejectionLog()
+    const log = parsed as Partial<QuestAttemptRejectionLog>
+    return {
+      total: Number.isFinite(log.total) ? Number(log.total) : 0,
+      lastAt: typeof log.lastAt === 'string' ? log.lastAt : null,
+      lastStatus: Number.isFinite(log.lastStatus) ? Number(log.lastStatus) : null,
+      reasons: log.reasons && typeof log.reasons === 'object' ? { ...log.reasons } : {},
+      events: Array.isArray(log.events) ? log.events.filter(isQueuedAttempt) : [],
+    }
+  } catch {
+    return emptyRejectionLog()
+  }
+}
+
+/**
+ * DRF отдаёт ошибки списка ПОЗИЦИОННО: `{"attempts": [{}, {"platform": [...]}, {}]}`.
+ * Непустой элемент — отвергнутое событие, пустой — принятое бы. Это позволяет
+ * снять с очереди ровно виновные события, а не весь батч: до #1719 одно
+ * негодное поле уносило с собой девять исправных.
+ */
+const readRejectedIndexes = (data: unknown, batchSize: number): number[] | null => {
+  if (!data || typeof data !== 'object') return null
+  const attempts = (data as { attempts?: unknown }).attempts
+  if (!Array.isArray(attempts) || attempts.length !== batchSize) return null
+
+  const rejected: number[] = []
+  attempts.forEach((item, index) => {
+    const hasError = Array.isArray(item)
+      ? item.length > 0
+      : !!item && typeof item === 'object' && Object.keys(item).length > 0
+    if (hasError) rejected.push(index)
+  })
+  return rejected.length ? rejected : null
+}
+
+/** Имена полей, из-за которых сервер отверг событие, — без значений ввода. */
+const readRejectionReasons = (data: unknown): string[] => {
+  if (!data || typeof data !== 'object') return []
+  const attempts = (data as { attempts?: unknown }).attempts
+  const source = Array.isArray(attempts) ? attempts : [data]
+  const fields = new Set<string>()
+  source.forEach((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return
+    Object.keys(item as Record<string, unknown>).forEach((key) => fields.add(key))
+  })
+  return [...fields].sort()
+}
+
+/**
+ * Снимает события с очереди в карантин и оставляет след, который переживает
+ * закрытие приложения. Аналитика тут — второй эшелон: на native
+ * `sendAnalyticsEvent` намеренно no-op, поэтому единственный след, доступный на
+ * телефоне, — сам карантин.
+ */
+const quarantineRejected = async (
+  events: QueuedQuestAttempt[],
+  status: number,
+  data: unknown,
+): Promise<void> => {
+  if (!events.length) return
+
+  const reasons = readRejectionReasons(data)
+  const log = await readQuestAttemptRejections()
+  log.total += events.length
+  log.lastAt = new Date().toISOString()
+  log.lastStatus = status
+  reasons.forEach((field) => {
+    log.reasons[field] = (log.reasons[field] ?? 0) + 1
+  })
+  log.events = [...log.events, ...events].slice(-REJECTED_MAX_EVENTS)
+
+  try {
+    await AsyncStorage.setItem(QUEST_ATTEMPTS_REJECTED_KEY, JSON.stringify(log))
+  } catch {
+    // Хранилище недоступно — остаётся аналитика и devWarn.
+  }
+
+  queueAnalyticsEvent('quest_attempt_batch_rejected', {
+    status,
+    dropped: events.length,
+    quest_id: events[0].quest_id,
+    platform: events[0].platform,
+    reasons: reasons.join(','),
+  })
+  devWarn('Quest attempt batch rejected, quarantined:', status, reasons.join(','))
+}
+
 const drainQueue = async (): Promise<void> => {
   await loadQueue()
   if (!queue?.length) return
@@ -251,10 +371,15 @@ const drainQueue = async (): Promise<void> => {
     } catch (error) {
       const status = error instanceof ApiError ? error.status : undefined
       // 4xx кроме 429 — событие серверу не подходит и не подойдёт никогда;
-      // оставить его в очереди значит навсегда заткнуть ею доставку.
+      // оставить его в очереди значит навсегда заткнуть ею доставку. Но снимаем
+      // РОВНО виновные события, а не весь батч (#1719), и кладём их в карантин,
+      // а не выбрасываем молча.
       if (typeof status === 'number' && status >= 400 && status < 500 && status !== 429) {
-        devWarn('Quest attempt batch rejected, dropping:', status)
-        dropDelivered(batch)
+        const data = error instanceof ApiError ? error.data : undefined
+        const rejectedIndexes = readRejectedIndexes(data, batch.length)
+        const doomed = rejectedIndexes ? rejectedIndexes.map((index) => batch[index]) : batch
+        await quarantineRejected(doomed, status, data)
+        dropDelivered(doomed)
         await persistQueue()
         continue
       }

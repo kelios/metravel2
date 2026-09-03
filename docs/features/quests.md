@@ -243,7 +243,7 @@ tripvenue резолвит по ближайшему городу каталог
 | `useQuestWizardProgress` | `components/quests/useQuestWizardProgress.ts` | `currentIndex`, `unlockedIndex`, `answers`, `attempts`, `hints`, `showMap`, `skipped`, `earlyFinish` + производные пороги |
 | AsyncStorage (авториз.) | ключ = `{bundle.storage_key}__u{userId}` (`utils/questProgressStorage.ts`); пока `userId` не подтянулся — `__u:pending` | локальный снапшот прогресса, включая `skipped`/`earlyFinish`/`updatedAt`/`answeredAt`. Привязка к аккаунту (#1456): на общем устройстве запись предыдущего пользователя не находится и не сливается с прогрессом следующего. Записи под старым ключом без `__u` не мигрируются — владельца у них нет |
 | AsyncStorage (гость) | `guestQuestProgress:v1:{questId}`, ключ визарда `guest_{storageKey}` | гостевой прогресс до логина |
-| AsyncStorage (телеметрия) | `quest_attempts_queue_v1`, `quest_attempts_session_v1` | очередь попыток и ключ сессии прохождения |
+| AsyncStorage (телеметрия) | `quest_attempts_queue_v1`, `quest_attempts_session_v1`, `quest_attempts_rejected_v1` | очередь попыток, ключ сессии прохождения и карантин отвергнутых событий (счётчик, статус, причины, последние 50 событий; читается `readQuestAttemptRejections()`) |
 | AsyncStorage (каталог) | `STORAGE_SELECTED_CITY` | выбранный город каталога |
 | Zustand | `stores/questFontScaleStore.ts` (persist) | масштаб шрифта визарда |
 | Модульное состояние | `questWizardStepCard.tsx` (`stepCooldowns`), `questAnswerTelemetry.ts` | паузы между попытками и очередь доставки — переживают перемонтирование карточки |
@@ -387,8 +387,12 @@ tripvenue резолвит по ближайшему городу каталог
   очередь (`QUEUE_MAX_EVENTS = 500`, `FLUSH_BATCH_SIZE = 10`), доставка —
   `POST /api/quest-answer-attempts/bulk/` с `client_attempt_id` (повтор
   схлопывается сервером в `duplicates`). Флаш на переходе шага, на уходе с
-  экрана и при финале; бэкофф 2 с → 60 с; 4xx кроме 429 дропает батч, чтобы он
-  не заткнул очередь навсегда.
+  экрана и при финале, а на web ещё и на уходе со страницы
+  (`visibilitychange`/`pagehide`: cleanup-эффект при закрытии вкладки не
+  выполняется); бэкофф 2 с → 60 с. 4xx кроме 429 снимает с очереди РОВНО
+  виновные события — ошибки DRF по списку приходят позиционно — и кладёт их в
+  карантин `quest_attempts_rejected_v1`, а не выбрасывает молча (#1719).
+  Батч целиком снимается только тогда, когда позиционных данных в ответе нет.
 - **Приватность:** для `any_text`/`any` сырой ввод не покидает устройство —
   уходит только `answer_length` (второй эшелон к серверному правилу #1275).
 - Ключ сессии общий для гостя и залогиненного: логин посреди квеста не рвёт
@@ -399,7 +403,9 @@ tripvenue резолвит по ближайшему городу каталог
   `quest_finish` (с `early`/`partial`/`passed_count`/`steps_count`),
   `quest_completion_credited`, `quest_guest_gate_view`,
   `quest_guest_gate_login_click`, `quest_guest_gate_register_click`,
-  `quest_guest_progress_migrated`.
+  `quest_guest_progress_migrated`, `quest_attempt_batch_rejected` (#1719:
+  `status`, `dropped`, `quest_id`, `platform`, имена полей-причин; на native
+  аналитика намеренно no-op, поэтому там след даёт только карантин).
 - **Пошаговая воронка (#1498).** `quest_step_view` (`quest_id`, `step_index`) —
   игрок открыл точку; `quest_answer_submit` (`+ is_correct`, `attempt_no`) — одна
   на каждое нажатие «Проверить»; `quest_hint` (`+ attempt_no`) — раскрытие

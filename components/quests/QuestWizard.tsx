@@ -44,6 +44,7 @@ import { fetchQuestByQuestId } from '@/api/quests';
 import { saveQuestOffline } from '@/services/offline/questOfflineAdapter';
 import { useOfflineCatalog } from '@/hooks/useOfflineCatalog';
 import { queueAnalyticsEvent } from '@/utils/analytics';
+import { addPageHideListener, addVisibilityChangeListener } from '@/utils/beforeunloadGuard';
 import { flushQuestAnswerAttempts } from '@/utils/questAnswerTelemetry';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestFontScaleStore } from '@/stores/questFontScaleStore';
@@ -272,6 +273,28 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
     useEffect(() => {
         return () => {
             void flushQuestAnswerAttempts();
+        };
+    }, []);
+
+    // #1719: на web закрытие вкладки cleanup-эффект НЕ выполняет, и очередь
+    // оставалась в хранилище до следующего открытия квеста — а игрок,
+    // прошедший квест и закрывший вкладку, второй раз его не открывает.
+    // `visibilitychange → hidden` приходит раньше `pagehide` и раньше выгрузки,
+    // поэтому у запроса ещё есть шанс уйти; `pagehide` оставлен как второй
+    // рубеж для браузеров, которые скрытие не отдают (bfcache на iOS Safari).
+    useEffect(() => {
+        const flush = () => {
+            void flushQuestAnswerAttempts();
+        };
+        // Хелперы из utils/beforeunloadGuard.ts уже несут guard по платформе,
+        // фильтр `visibilityState === 'hidden'` и безопасное снятие — своя копия
+        // означала бы, что будущая правка детекта ухода (freeze, bfcache) до
+        // квеста не доедет.
+        const detachVisibility = addVisibilityChangeListener(flush);
+        const detachPageHide = addPageHideListener(flush);
+        return () => {
+            detachVisibility?.();
+            detachPageHide?.();
         };
     }, []);
 

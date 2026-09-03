@@ -17,6 +17,7 @@ import {
   __resetQuestAnswerTelemetry,
   createClientAttemptId,
   flushQuestAnswerAttempts,
+  readQuestAttemptRejections,
   recordQuestAnswerAttempt,
 } from '@/utils/questAnswerTelemetry'
 
@@ -152,6 +153,65 @@ describe('очередь переживает офлайн', () => {
 
     expect(await readQueue()).toHaveLength(0)
     expect(mockSendQuestAnswerAttempts).toHaveBeenCalledTimes(2)
+  })
+
+  // #1719: прохождение без единой строки телеметрии было неотличимо от «игрок
+  // молчал» — единственным следом был devWarn, который в проде никуда не пишется.
+  it('отвергнутый батч уходит в карантин, а не исчезает: остаётся счётчик, статус и причина', async () => {
+    mockSendQuestAnswerAttempts.mockRejectedValue(
+      new ApiError(400, 'bad payload', { attempts: [{ platform: ['"ios" is not a valid choice.'] }] }),
+    )
+
+    await recordQuestAnswerAttempt(attempt())
+    await flushQuestAnswerAttempts()
+
+    expect(await readQueue()).toHaveLength(0)
+    const log = await readQuestAttemptRejections()
+    expect(log.total).toBe(1)
+    expect(log.lastStatus).toBe(400)
+    expect(log.lastAt).toEqual(expect.any(String))
+    expect(log.reasons).toEqual({ platform: 1 })
+    expect(log.events).toHaveLength(1)
+    expect(log.events[0].step_id).toBe('3-pobeda')
+  })
+
+  // Ошибки DRF по списку приходят позиционно, поэтому одно негодное поле не
+  // обязано уносить с собой исправные события того же батча.
+  it('позиционный отказ снимает только виновное событие, остальные уходят следующим батчем', async () => {
+    const rejection = new ApiError(400, 'bad payload', {
+      attempts: [{}, { attempt_no: ['Ensure this value is greater than or equal to 1.'] }, {}],
+    })
+    mockSendQuestAnswerAttempts
+      .mockRejectedValueOnce(rejection)
+      .mockResolvedValueOnce({ accepted: 2, duplicates: 0, rejected: 0 })
+
+    await recordQuestAnswerAttempt(attempt({ stepId: 'step-a' }))
+    await recordQuestAnswerAttempt(attempt({ stepId: 'step-b', attemptNo: 0 }))
+    await recordQuestAnswerAttempt(attempt({ stepId: 'step-c' }))
+    await flushQuestAnswerAttempts()
+
+    expect(await readQueue()).toHaveLength(0)
+    const secondCall = mockSendQuestAnswerAttempts.mock.calls[1][0]
+    expect(secondCall.attempts.map((event: any) => event.step_id)).toEqual(['step-a', 'step-c'])
+
+    const log = await readQuestAttemptRejections()
+    expect(log.total).toBe(1)
+    expect(log.events.map((event) => event.step_id)).toEqual(['step-b'])
+  })
+
+  it('отказ без позиционных данных снимает батч целиком, но тоже в карантин', async () => {
+    mockSendQuestAnswerAttempts.mockRejectedValue(
+      new ApiError(400, 'bad payload', { session_key: ['Expected UUIDv4.'] }),
+    )
+
+    await recordQuestAnswerAttempt(attempt({ stepId: 'step-a' }))
+    await recordQuestAnswerAttempt(attempt({ stepId: 'step-b' }))
+    await flushQuestAnswerAttempts()
+
+    expect(await readQueue()).toHaveLength(0)
+    const log = await readQuestAttemptRejections()
+    expect(log.total).toBe(2)
+    expect(log.reasons).toEqual({ session_key: 1 })
   })
 
   it('429 придерживает батч: события остаются до следующей попытки', async () => {
