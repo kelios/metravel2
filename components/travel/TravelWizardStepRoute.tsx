@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 
+import type { LocationSearchResult } from '@/api/geoQueries'
 import LocationSearchInput from '@/components/travel/LocationSearchInput'
 import TravelRouteFilesPanel from '@/components/travel/TravelRouteFilesPanel'
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader'
@@ -311,7 +312,7 @@ function TravelWizardStepRoute({
     scheduleAddPointSave(payload.markers, nextCountries)
   }, [scheduleAddPointSave, selectedCountryIds])
 
-  const handleLocationSelect = useCallback((result: any) => {
+  const handleLocationSelect = useCallback((result: LocationSearchResult) => {
     const lat = Number(result?.lat)
     const lng = Number(result?.lon)
     if (!isValidCoordinate(lat, lng)) return

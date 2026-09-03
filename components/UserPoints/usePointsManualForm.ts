@@ -4,7 +4,7 @@ import type { QueryClient } from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
-import { buildAddressFromGeocode } from '@/utils/geocodeHelpers';
+import { buildAddressFromGeocode, buildPointTitleFromGeocode } from '@/utils/geocodeHelpers';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { PointStatus } from '@/types/userPoints';
 import { bigDataCloudReverse } from '@/api/external/bigdatacloud';
@@ -32,25 +32,19 @@ const parseCoordinate = (value: string): number | null => {
   return num;
 };
 
+/**
+ * Имя ручной точки — тем же разбором, что и у точек маршрута
+ * (`buildPointTitleFromGeocode`, #1717): вторая копия списка ключей объекта
+ * здесь разъезжалась бы с оригиналом при следующей правке (#1736). Когда
+ * геокодер не дал ничего, разбор отдаёт координаты — для ручной точки это не
+ * имя, а фолбэк «Новая точка».
+ */
 const getPrimaryPlaceName = (geocodeData: unknown, lat: number, lng: number): string => {
-  const data = (geocodeData ?? {}) as Record<string, unknown>;
-  const address = (data.address ?? {}) as Record<string, unknown>;
-
-  const poi =
-    data.name ??
-    address.name ??
-    address.tourism ??
-    address.amenity ??
-    address.historic ??
-    address.leisure ??
-    address.place_of_worship ??
-    address.building;
-
-  if (poi && String(poi).trim()) return String(poi).trim();
-
-  const builtAddress = buildAddressFromGeocode(geocodeData, { lat, lng });
-  const firstPart = String(builtAddress || '').split('·')[0]?.trim();
-  return firstPart || String(builtAddress || '').trim() || i18nT('map:components.UserPoints.usePointsManualForm.novaya_tochka_4d3f685d');
+  const title = String(buildPointTitleFromGeocode(geocodeData, { lat, lng }) || '').trim();
+  if (!title || title === `${lat}, ${lng}`) {
+    return i18nT('map:components.UserPoints.usePointsManualForm.novaya_tochka_4d3f685d');
+  }
+  return title;
 };
 
 const reverseGeocode = async (lat: number, lng: number): Promise<unknown | null> => {

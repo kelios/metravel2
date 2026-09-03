@@ -18,18 +18,41 @@ const getNominatimLocaleOptions = () => {
   }
 }
 
+/**
+ * Ответ Nominatim `/search?addressdetails=1`. Помимо страны и населённого
+ * пункта отдаёт имя объекта (`name`) и ключи объекта в `address` — именно на
+ * них держится имя точки в `buildGeocodeParts` (#1736; форма снята пробой
+ * живого API 03.09.2026).
+ */
 export interface LocationSearchResult {
   place_id: string
   display_name: string
   lat: string
   lon: string
+  name?: string
   address?: {
     country?: string
     country_code?: string
     city?: string
     town?: string
     village?: string
+    municipality?: string
+    suburb?: string
+    county?: string
     state?: string
+    // Альтернатива `state` в `buildGeocodeParts` (`utils/geocodeHelpers.ts`):
+    // часть стран отдаёт регион именно этим ключом.
+    region?: string
+    // Ключи объекта: значение — имя объекта данного класса.
+    name?: string
+    tourism?: string
+    amenity?: string
+    historic?: string
+    leisure?: string
+    place_of_worship?: string
+    building?: string
+    road?: string
+    house_number?: string
   }
   type?: string
   importance?: number
