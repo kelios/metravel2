@@ -307,13 +307,15 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
   manualScrollContent: {
     padding: DESIGN_TOKENS.spacing.md,
   },
-  // Вертикальный запас под нажимаемую рамку 44dp чипа (#1744): рамка вынесена
-  // в отрицательные поля, а на native тап доходит до потомка только внутри
-  // границ родителя. Зазор 8 > inset 6 — рамки соседей не заходят на круг.
+  // Запас под нажимаемую рамку 44dp чипа со всех четырёх сторон (#1744):
+  // ColorChip выносит рамку в отрицательные поля `margin: -inset`, а на native
+  // тап доходит до потомка только внутри границ родителя — без паддинга
+  // крайние чипы строки теряли бы 6dp по горизонтали. Видимые круги при этом
+  // не сдвигаются; зазор 8 > inset 6 — рамки соседей не заходят на круг.
   manualColorRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingVertical: MANUAL_COLOR_CHIP_FRAME_INSET,
+    padding: MANUAL_COLOR_CHIP_FRAME_INSET,
     gap: 8,
   },
   manualInput: {
