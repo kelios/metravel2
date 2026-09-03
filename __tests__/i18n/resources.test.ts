@@ -113,6 +113,34 @@ describe('i18n resources', () => {
     }
   })
 
+  // #1745: на телефоне у /favorites и /calendar нет собственной шапки (#1726),
+  // поэтому подпись строки возврата (`navigationStatic:breadcrumb.*` через
+  // `hooks/useBreadcrumbModel.ts`) — единственное имя экрана и обязана совпадать
+  // с заголовком самого экрана. Значение продублировано в двух словарях (крошка
+  // рисуется до подгрузки generated-неймспейсов), так что расхождение молча
+  // вернёт пользователю два разных названия одного экрана.
+  // Набор путей — `SELF_HEADED_COLLECTION_PATHS` (/favorites, /history, /calendar).
+  it('names self-headed collection screens the same way in breadcrumbs and screen titles', () => {
+    for (const locale of ['ru', 'be', 'uk', 'pl', 'en'] as const) {
+      const bundle = resources[locale]
+      expect({
+        locale,
+        favorites: bundle.navigationStatic['breadcrumb.favorites'],
+        history: bundle.navigationStatic['breadcrumb.history'],
+        calendar: bundle.navigationStatic['breadcrumb.calendar'],
+      }).toEqual({
+        locale,
+        favorites: bundle.shared['app.tabs.favorites.hochu_poehat_d89b6117'],
+        history: bundle.shared['app.tabs.history.vy_smotreli_e2be38ed'],
+        calendar: bundle.calendar['app.tabs.calendar.moy_kalendar_f9da1dd3'],
+      })
+      // CalendarScreen читает заголовок из static-словаря до подгрузки generated.
+      expect(bundle.calendarStatic['app.tabs.calendar.moy_kalendar_f9da1dd3']).toBe(
+        bundle.calendar['app.tabs.calendar.moy_kalendar_f9da1dd3'],
+      )
+    }
+  })
+
   it('keeps layout and executable templates out of translation resources', () => {
     const violations: string[] = []
     for (const [locale, localeResources] of Object.entries(resources)) {
