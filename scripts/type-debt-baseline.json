@@ -2443,13 +2443,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/travel/PointCard.tsx": {
-      "styleCast": 1,
-      "logicCast": 4,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/travel/PointList.styles.ts": {
       "styleCast": 52,
       "logicCast": 0,
