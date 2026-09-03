@@ -8,8 +8,7 @@ import { showToastMessage } from '@/utils/toast';
 import { registerPendingImageFile, removePendingImageFile, getPendingImageFile } from '@/utils/pendingImageFiles';
 import { prepareWebImageFileForUpload } from '@/utils/webImageUpload';
 import { matchCountryId, buildAddressFromGeocode, buildPointTitleFromGeocode } from '@/utils/geocodeHelpers';
-import { fetchReverseGeocode } from '@/api/geoQueries';
-import { bigDataCloudReverse } from '@/api/external/bigdatacloud';
+import { reverseGeocodePoint } from '@/api/geoQueries';
 import { buildLeafletPopupCss, createWebMapStyles } from '@/components/travel/WebMapComponent.styles';
 import WebMapMarkerPopup from '@/components/travel/WebMapMarkerPopup';
 // #992 — общий web-движок карты: MapContainer + единый OSM tile-провайдер.
@@ -25,45 +24,19 @@ import {
     loadingStyle,
     mapHeightStyle,
 } from '@/components/travel/WebMapLeafletLayers';
-import { DEFAULT_LOCALE, i18n, translate as i18nT } from '@/i18n'
+import { translate as i18nT } from '@/i18n'
 
 
 type LeafletNS = any;
 type ReactLeafletNS = typeof import('react-leaflet');
 
-const reverseGeocode = async (latlng: any) => {
-    // Пробуем несколько сервисов для получения наиболее точного адреса.
-    // Этот шаг нужен и на web: точка из фото должна сначала получить адрес/страну,
-    // затем сохраниться, и только после выдачи backend id можно грузить фото точки.
-
-    // 1. Nominatim с zoom=18 для максимальной детализации (через слой React Query)
-    try {
-        const data = await fetchReverseGeocode(Number(latlng.lat), Number(latlng.lng));
-        // Если есть конкретное название места, используем Nominatim
-        if (data) {
-            return data;
-        }
-    } catch (error) {
-        console.warn('Nominatim geocoding failed:', error);
-    }
-
-    // 2. BigDataCloud как fallback
-    try {
-        const bigdata = await bigDataCloudReverse(
-            Number(latlng.lat),
-            Number(latlng.lng),
-            i18n.resolvedLanguage || DEFAULT_LOCALE,
-        );
-        if (bigdata.ok) {
-            const data = await bigdata.json();
-            return data;
-        }
-    } catch (error) {
-        console.warn('BigDataCloud geocoding failed:', error);
-    }
-
-    return null;
-};
+// Разбор общий с визардом (#1738): порядок сервисов и фолбэк живут в
+// `api/geoQueries.ts`. Раньше эта копия работала на web, а копия визарда
+// возвращала там `null` — и ручной ввод координат называл точку цифрами.
+// Шаг нужен и на web: точка из фото сначала получает адрес и страну, потом
+// сохраняется, и только по выданному backend id грузится её фото.
+const reverseGeocode = async (latlng: any) =>
+    reverseGeocodePoint(Number(latlng.lat), Number(latlng.lng));
 
 export { matchCountryId, buildAddressFromGeocode };
 

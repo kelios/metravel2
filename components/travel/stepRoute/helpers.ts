@@ -1,8 +1,6 @@
-import { Platform } from 'react-native'
-
 import type { TravelFilters } from '@/hooks/useTravelFilters'
 import { removePendingImageFile } from '@/utils/pendingImageFiles'
-import { getMapGeocoderLanguage } from '@/utils/mapLocale'
+import { reverseGeocodePoint } from '@/api/geoQueries'
 import { translate as i18nT } from '@/i18n'
 
 import type { ManualPointState } from './types'
@@ -97,28 +95,18 @@ export function revokeManualPreview(previewUrl: string | null) {
   }
 }
 
+/**
+ * Обратный геокод точки — тонкая обёртка над общим разбором (#1738).
+ *
+ * Здесь была своя реализация с безусловным `if (Platform.OS === 'web') return null`,
+ * поэтому ручной ввод координат на сайте не спрашивал геокодер вовсе и точка
+ * получала названием сами координаты — «49.4881, 19.1234», — а они уезжали
+ * дальше в `cityName` шапки статьи и в виджет погоды. Тап по карте работал,
+ * потому что шёл через вторую, web-совместимую копию в `WebMapComponent`.
+ * Копий больше нет: разбор один на все поверхности, и разойтись им негде.
+ */
 export async function reverseGeocode(lat: number, lng: number) {
-  if (Platform.OS === 'web') return null
-  const geocoderLanguage = getMapGeocoderLanguage()
-
-  try {
-    const primary = await fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=${encodeURIComponent(geocoderLanguage)}`,
-    )
-    if (primary.ok) return await primary.json()
-  } catch {
-    // ignore and fall back
-  }
-
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=${encodeURIComponent(geocoderLanguage)}`,
-    )
-    if (!response.ok) return null
-    return await response.json()
-  } catch {
-    return null
-  }
+  return reverseGeocodePoint(lat, lng)
 }
 
 // #1722 — высота полотна native-пикера. Фиксированные 380 пт занимали видимую
