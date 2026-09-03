@@ -72,7 +72,10 @@ describe('guard-no-inline-page-fetch-loop', () => {
   // же `Array.from` числилось бы ещё и за двумя строками выше, соседство
   // раздувалось бы на ширину среза, и сетка со скелетонами снова стала бы находкой.
   it('не растягивает соседство признаков на ширину многострочного среза', () => {
-    const gap = Array.from({ length: MULTILINE_MATCH_SPAN + 3 }, (_, index) => `const filler${index} = ${index}`)
+    // Ровно `MULTILINE_MATCH_SPAN + 1`: на этом расстоянии реализация с привязкой
+    // к строке начала даёт 0, а наивная («совпало где угодно в срезе») — 1. При
+    // разрыве пошире тест проходил бы на обеих и ничего не проверял.
+    const gap = Array.from({ length: MULTILINE_MATCH_SPAN + 1 }, (_, index) => `const filler${index} = ${index}`)
 
     expect(
       findViolationsInSource({
@@ -113,14 +116,38 @@ describe('guard-no-inline-page-fetch-loop', () => {
     expect(violations).toHaveLength(1)
   })
 
+  // Размер страницы пишут по-разному, и требование «литерал вплотную к знаку»
+  // резало живые формы: все четыре давали 0 нарушений, пока отсечкой не стала
+  // фигурная скобка (её несёт JSX-проп) вместо расстояния до литерала.
+  it.each([
+    ['аннотацию типа', 'const size: number = 100'],
+    ['значение по умолчанию через ??', 'const size = opts.size ?? 100'],
+    ['приведение с ||', 'const limit = Number(opts.limit) || 100'],
+    ['ограничение хвоста', 'const chunk = Math.min(rest, 100)'],
+  ])('ловит деление на запрошенный размер страницы, объявленный через %s', (_label, declaration) => {
+    expect(
+      findViolationsInSource({
+        filePath: 'stores/exampleStore.ts',
+        content: [
+          declaration,
+          'const first = await loadPage(1)',
+          'const pages = Math.ceil(first.count / 100)',
+        ].join('\n'),
+      }),
+    ).toHaveLength(1)
+  })
+
   // Общеупотребительное имя без присваивания размером страницы не считается:
   // иначе `<Icon size={24} />` рядом с `Math.ceil(count / 24)` стал бы находкой.
-  it('не считает нарушением общеупотребительное имя без присваивания', () => {
+  it.each([
+    ['JSX-проп размера иконки', '<Icon size={24} />'],
+    ['JSX-проп размера чипа', '<Chip size={24} />'],
+  ])('не считает нарушением %s', (_label, declaration) => {
     expect(
       findViolationsInSource({
         filePath: 'components/IconRow.tsx',
         content: [
-          '<Icon size={24} />',
+          declaration,
           'const rows = Math.ceil(count / 24)',
           'const items = Array.from({ length: rows }, (_, index) => index)',
           'void Promise.all(items.map((index) => preload(index)))',

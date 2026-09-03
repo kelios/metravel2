@@ -72,6 +72,15 @@ const TOTAL_OPERAND_REGEX = /\b(?:total|count|totalItems|totalCount)\b/i
 // рядом читают страницы ПО НОМЕРУ. Голый `await` в маркеры не годится — тогда
 // первый же асинхронный хендлер, добавленный в `PaginationComponent`, красил бы
 // гейт на чисто отрисовочном коде, и погасить его было бы нечем.
+//
+// Размен, принятый осознанно: `\bpage\s*[:=]` шире остальных маркеров и ловит
+// не только `{ params: { page: p } }` DRF-клиента, но и отрисовочный проп
+// `({ page = 1 })`, поле стора `{ page: 1 }` и TS-аннотацию `page: number`.
+// Взято это ради формы, где соседство диапазона и `Promise.all` разорвано guard
+// clause и другого признака не остаётся. Само по себе слово `page` находкой не
+// делает: нужен ещё числитель `total`/`count` в `Math.ceil` и осмысленный
+// делитель — поэтому 39 файлов дерева, где маркер встречается, гейт не красят.
+// Станет красить — гасится отдушиной `ALLOWED_FILES` с написанной причиной.
 const PAGE_FETCH_MARKER_REGEX =
   /\b(?:loadPage|getPage|fetchPage|fetchPages|fetchAllPages|perPage|per_page|page_size|pageSize|pageNumber)\s*[(:=,)]|[?&]page=|\bpage\s*[:=]\s*[^=]/i
 
@@ -96,9 +105,13 @@ const NUMERIC_DIVISOR_REGEX = /^\s*(\d+)\s*$/
 // У «страничных» имён достаточно соседства (`perPage: 100`, `page_size=100`),
 // а у общеупотребительных (`size`, `chunk`, `limit`) обязательно присваивание:
 // иначе `<Icon size={24} />` рядом с `Math.ceil(count / 24)` стал бы находкой.
+// Отсекает именно фигурная скобка, а не «литерал вплотную к знаку»: JSX-проп
+// пишется как `size={24}`, а размер страницы — как угодно, включая
+// `const size: number = 100`, `opts.size ?? 100`, `Number(limit) || 100` и
+// `Math.min(rest, 100)`. Требование вплотную гасило все четыре.
 const PAGE_SIZE_DECLARATION_SOURCE =
   '(?:(?:perPage|per_page|page_size|pageSize|PAGE_SIZE)[^\\n]{0,40}?\\b' +
-  '|\\b(?:size|chunk|limit)\\s*[:=]\\s*)'
+  '|\\b(?:size|chunk|limit)\\s*[:=][^\\n{]{0,40}?\\b)'
 
 const FETCH_CONTEXT_RADIUS = 30
 
