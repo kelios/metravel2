@@ -97,6 +97,33 @@ function isSafePreservedSearch(search: string): boolean {
   }
 }
 
+/**
+ * Статические экраны, которые приложение открывает по ссылке ЛЮБОГО
+ * происхождения. #1724: семейство `/trips/*` сюда не входило вовсе, поэтому
+ * `https://metravel.by/trips` и `/trips/my` отбраковывались этой таблицей, а
+ * `redirectSystemPath` возвращал `null` — на холодном старте это и есть
+ * «открылась главная».
+ */
+const PUBLIC_STATIC_ROUTES = new Set<string>([
+  '/map',
+  '/trips',
+  '/trips/my',
+  '/trips/community',
+]);
+
+/**
+ * Экраны, которые открываются только «изнутри» — кастомной схемой и
+ * уведомлением. Их веб-адреса приложение перехватывать не должно: серверный
+ * AASA их не объявляет, и тап по такой ссылке остаётся в браузере.
+ */
+const IN_APP_STATIC_ROUTES = new Set<string>(['search', 'favorites', 'messages']);
+
+/** Одноуровневые маршруты со свободным сегментом-слагом. */
+const SLUG_ROUTE_PARENTS = new Set<string>(['travels', 'article', 'user']);
+
+const isPositiveIntegerSegment = (segment: string): boolean =>
+  /^[1-9]\d*$/.test(segment);
+
 function isSupportedRoute(
   pathname: string,
   source: 'https' | 'custom-scheme' | 'notification',
@@ -109,34 +136,43 @@ function isSupportedRoute(
     return false;
   }
 
+  if (PUBLIC_STATIC_ROUTES.has(pathname)) return true;
+
+  const isInAppSource = source === 'custom-scheme' || source === 'notification';
+
   if (segments.length === 2) {
-    return (
-      segments[1] === 'map' ||
-      ((source === 'custom-scheme' || source === 'notification') &&
-        ['search', 'favorites', 'messages'].includes(segments[1]))
-    );
+    return isInAppSource && IN_APP_STATIC_ROUTES.has(segments[1]);
   }
 
   if (segments.length === 3) {
-    return (
-      ['travels', 'article', 'user'].includes(segments[1]) &&
+    if (
+      SLUG_ROUTE_PARENTS.has(segments[1]) &&
       isSafeDynamicSegment(segments[2])
-    ) || (
-      source === 'notification' &&
-      segments[1] === 'trips' &&
-      /^[1-9]\d*$/.test(segments[2])
-    );
+    ) {
+      return true;
+    }
+    // Деталь поездки: только числовой id. `/trips/my` и `/trips/community`
+    // разобраны выше как статические экраны того же семейства.
+    return segments[1] === 'trips' && isPositiveIntegerSegment(segments[2]);
   }
 
   if (segments.length === 4) {
+    if (
+      segments[1] === 'quests' &&
+      isSafeDynamicSegment(segments[2]) &&
+      isSafeDynamicSegment(segments[3])
+    ) {
+      return true;
+    }
+    // `/trips/plan/<id>` — ссылка, которую приложение само раздаёт на шаринг
+    // (`utils/tripPlanLinks.ts` → `buildTripPlanUrl`/`buildTripTelegramShareUrl`),
+    // поэтому она обязана открываться и по https, а не только по кастомной схеме.
+    // `/trips/plan` и `/trips/plan/create` сюда СОЗНАТЕЛЬНО не входят: это
+    // раздел и начало сценария создания, ссылками наружу они не раздаются.
     return (
-      (segments[1] === 'quests' &&
-        isSafeDynamicSegment(segments[2]) &&
-        isSafeDynamicSegment(segments[3])) ||
-      ((source === 'custom-scheme' || source === 'notification') &&
-        segments[1] === 'trips' &&
-        segments[2] === 'plan' &&
-        /^[1-9]\d*$/.test(segments[3]))
+      segments[1] === 'trips' &&
+      segments[2] === 'plan' &&
+      isPositiveIntegerSegment(segments[3])
     );
   }
 
@@ -146,6 +182,14 @@ function isSupportedRoute(
 /**
  * Maps an OS-delivered MeTravel URL to the exact native route policy.
  * HTTPS mirrors AASA; the custom scheme keeps explicit tracked native fallbacks.
+ *
+ * ВНИМАНИЕ (#1724): «зеркало AASA» — договорённость, а не автоматика. Серверный
+ * `https://metravel.by/.well-known/apple-app-site-association` перечисляет
+ * компоненты списком, и семейства `/trips` в нём сейчас нет. Пока backend его
+ * не добавит, тап по ссылке `/trips*` из чужого приложения на iPhone до
+ * приложения не доходит вовсе; эта таблица закрывает второй слой — роутинг
+ * ВНУТРИ приложения (`--payload-url`, кастомная схема, уведомления и Android
+ * App Links, где проверка идёт по `assetlinks.json` на уровне хоста).
  * Unsupported input returns null so warm links leave the current screen untouched.
  * Native hash navigation is intentionally excluded; the path and query are preserved.
  */

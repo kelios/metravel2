@@ -64,6 +64,15 @@ describe('mapIncomingAppLinkToHref', () => {
     ['metravel:///trips/plan/31?edit=1', '/trips/plan/31?edit=1'],
     ['metravel:///search', '/search'],
     ['metravel:///favorites', '/favorites'],
+    // #1724: семейство /trips полностью отсутствовало в таблице маршрутов,
+    // поэтому ссылка на поездку открывала главную.
+    ['https://metravel.by/trips', '/trips'],
+    ['https://metravel.by/trips/my', '/trips/my'],
+    ['https://metravel.by/trips/community', '/trips/community'],
+    ['https://metravel.by/trips/31?from=telegram', '/trips/31?from=telegram'],
+    ['https://metravel.by/trips/plan/31?edit=1#notes', '/trips/plan/31?edit=1'],
+    ['metravel:///trips', '/trips'],
+    ['metravel:///trips/my', '/trips/my'],
   ])('normalizes %s', (url, expected) => {
     expect(mapIncomingAppLinkToHref(url)).toBe(expected);
   });
@@ -78,7 +87,14 @@ describe('mapIncomingAppLinkToHref', () => {
     'https://metravel.by/profile',
     'https://metravel.by/search',
     'https://metravel.by/favorites',
-    'https://metravel.by/trips/plan/31',
+    // Раздел и начало сценария создания ссылками наружу не раздаются (#1724).
+    'https://metravel.by/trips/plan',
+    'https://metravel.by/trips/plan/create',
+    'https://metravel.by/trips/plan/0',
+    'https://metravel.by/trips/plan/31/extra',
+    'https://metravel.by/trips/0',
+    'https://metravel.by/trips/not-an-id',
+    'https://metravel.by/trips/my/extra',
     'https://metravel.by/travels/test-slug/extra',
     'https://metravel.by/article/42/extra',
     'https://metravel.by/quests/krakow/krakow-dragon/extra',
