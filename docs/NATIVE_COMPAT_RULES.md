@@ -87,9 +87,18 @@ resizable-window, portrait и landscape режимах.
 ## 6. Web-API только под guard (классика)
 
 - `window`, `document`, `localStorage`, `navigator`, observers, DOM-события —
-  только в `.web.tsx` или под `Platform.OS === 'web'` / `typeof window !== 'undefined'`
-  **на уровне эффекта/функции**. Систематический поиск —
-  `$metravel-android-developer` + governance test.
+  только в `.web.tsx` или под `Platform.OS === 'web'` **на уровне эффекта или
+  функции**. Систематический поиск — `$metravel-android-developer` +
+  governance test.
+- **`typeof window !== 'undefined'` гардом НЕ является.** RN выполняет
+  `global.window = global` (`react-native/Libraries/Core/setUpGlobals.js:17`),
+  поэтому проверка истинна и на телефоне. Гардить ею `window.location` — прямой
+  путь к `TypeError` на native: `location` RN не полифиллит вовсе. Так были
+  сломаны четыре места сразу (03.09.2026, коммит `219d00393`), и правило в этом
+  файле их же и разрешало. Работают: `Platform.OS === 'web'`, суффикс `.web.tsx`
+  или проверка формы объекта (`utils/hasWebLocation.ts`) там, где тянуть
+  `react-native` в модуль нельзя из-за бюджета web-чанка.
+- `typeof document === 'undefined'` — рабочий гард: `document` RN не объявляет.
 
 ## 7. Отладка и Android release — только локальная сборка
 

@@ -58,14 +58,34 @@ Read-only проверки (`ios:environment:check`, `ios:release:guard`, инс
 
 1. **Готовность.** `main`, чистое дерево, известный source revision.
    `npm run ios:environment:check` — Xcode/SDK, пригодный симулятор, Pods.
+   - **Чистое дерево — не формальность:** и `ios-build.sh`, и `ios-submit.sh`
+     отказываются работать при любом незакоммиченном файле, включая чужие. Чужое
+     не выбрасывать: закоммитить как есть отдельным коммитом или согласовать с
+     владельцем.
+   - **Сначала `eas build:list --platform ios`, потом сборка.** EAS-квота
+     ограничена и принадлежит владельцу. Проверить, нет ли уже готовой сборки на
+     нужном коммите, и показать владельцу таблицу «что есть / чего в ней нет»
+     ДО запуска: 03.09.2026 сборка 7 стартовала, когда сборка 6 уже лежала
+     готовой, и владелец справедливо спросил, зачем тратится ещё одна. Ответ
+     «в 6 нет сегодняшних краш-фиксов» был верным, но прозвучать он обязан был
+     заранее, а не после.
 2. **Версия.** Решить marketing version и поднять `expo.ios.buildNumber` (строго
    больше последнего использованного в App Store Connect).
 3. **Гейт.** `npm run ios:release:guard` — до зелёного. Красное чинит
    `ios-expert`, а не ослабление гейта.
 4. **Контент релиза.** `ios-analyst` подтверждает метаданные и privacy-ответы,
    `ios-designer` — иконку, splash и скриншоты. Открытые блокеры комплаенса
-   (сейчас — отсутствие Sign in with Apple при живых Google/Facebook login,
-   Guideline 4.8) закрываются до сборки кандидата, а не после.
+   закрываются до сборки кандидата, а не после.
+   - Guideline 4.8 (Sign in with Apple при живых Google/Facebook login) **по коду
+     закрыт**, проверено 03.09.2026: entitlement `com.apple.developer.applesignin`
+     лежит в трекаемом `ios/metravel/metravel.entitlements`, есть
+     `components/auth/AppleSignInButton.native.tsx`, `api/appleAuth.ts`,
+     `expo-apple-authentication` и `usesAppleSignIn: true`; `ios:release:guard`
+     это стережёт. Отстали ДОКУМЕНТЫ: `openspec/changes/launch-ios-app-store/`
+     держит задачу 3.1 как `[ ]`, а `design.md:11` описывает состояние до правки.
+   - Статус комплаенса проверять **по коду и entitlements**, а не по чек-боксам
+     в OpenSpec: у проекта bare-проект `ios/`, и config-плагины туда не доезжают,
+     поэтому `app.json` тоже не источник истины.
 5. **Сборка кандидата** — только по команде владельца: `ios-deployer`,
    `npm run ios:build:prod`. Зафиксировать source revision, version/build,
    signing, entitlements без секретов.
