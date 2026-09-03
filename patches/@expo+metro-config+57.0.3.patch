@@ -1,5 +1,5 @@
 diff --git a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
-index 1e5c598..c847812 100644
+index 1e5c598..2cb4bb0 100644
 --- a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
 +++ b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
 @@ -58,14 +58,10 @@ async function graphToSerialAssetsAsync(config, serializeChunkOptions, ...props)
@@ -118,7 +118,7 @@ index 1e5c598..c847812 100644
          };
          const assets = [jsAsset];
          // debugId is passed into `sourceMapString` so the bundler-map path
-@@ -524,36 +580,232 @@ function removeEntryDepsFromAsyncChunks(entryChunk, chunks) {
+@@ -524,36 +580,226 @@ function removeEntryDepsFromAsyncChunks(entryChunk, chunks) {
          }
      }
  }
@@ -178,10 +178,6 @@ index 1e5c598..c847812 100644
 +    // raw на худший маршрут и подводило eager-brotli к самому потолку (772 из
 +    // 775), а 0.35 давало 31 запрос, то есть ХУЖЕ 0.4. Метрика по маршрутам
 +    // ограничивает расширение доставки напрямую, а не надеется на прокси.
-+    const estimateDependencySize = (dep) => dep.output.reduce((total, output) => {
-+        const code = output?.data?.code;
-+        return total + (typeof code === 'string' ? code.length : 0);
-+    }, 0);
 +    // Маршрутное покрытие — то же правило, что и у слияния одинаковых наборов
 +    // ниже: entry-путь выбирает маршруты, в которых он может быть точкой входа,
 +    // а expo-router строит эти цепочки по каталогам (layout — точка входа всех
@@ -232,7 +228,6 @@ index 1e5c598..c847812 100644
 +    const sharedGroups = [...groups.values()].map((group) => ({
 +        owners: new Set(group.owners),
 +        deps: group.deps,
-+        size: group.deps.reduce((total, dep) => total + estimateDependencySize(dep), 0),
 +    }));
 +    // Потолка на размер кластера здесь нет намеренно: расширение доставки теперь
 +    // ограничивает сама метрика, а размер сам по себе ничего не говорит — набор
@@ -260,7 +255,6 @@ index 1e5c598..c847812 100644
 +        sharedGroups[bestLeft] = {
 +            owners: new Set([...leftGroup.owners, ...rightGroup.owners]),
 +            deps: [...leftGroup.deps, ...rightGroup.deps],
-+            size: leftGroup.size + rightGroup.size,
 +        };
 +        routeSets[bestLeft] = new Set([...routeSets[bestLeft], ...routeSets[bestRight]]);
 +        sharedGroups.splice(bestRight, 1);
@@ -307,8 +301,9 @@ index 1e5c598..c847812 100644
 +    // METRAVEL_MERGE_IDENTICAL_ROUTE_SETS (#1543): groups whose owners resolve to
 +    // the SAME set of HTML routes always ship together, so keeping them in separate
 +    // files buys nothing but round-trips and worse compression. The similarity pass
-+    // above cannot merge them: its Jaccard score is computed over async owner chunks,
-+    // and the 512 KiB ceiling refuses every merge once a cluster has grown. Measured
++    // above cannot catch all of them even though it now measures route sets too
++    // (#1721): the sync-edge closure between the two passes widens owners, so groups
++    // that looked different during merging can end up on the same routes. Measured
 +    // 2026-08-24 on a clean main: 26 chunks rode the same 979 HTML routes and 9 more
 +    // rode the same 971, so index.html carried 44 <script> tags instead of 10.
 +    // Merging cannot widen delivery: the union of two identical route sets is that
@@ -335,7 +330,6 @@ index 1e5c598..c847812 100644
 +            merged.owners.add(owner);
 +        }
 +        merged.deps.push(...group.deps);
-+        merged.size += group.size;
 +        for (const dep of group.deps) {
 +            groupByDependency.set(dep, merged);
 +        }
@@ -372,7 +366,7 @@ index 1e5c598..c847812 100644
                      chunk.deps.delete(dep);
                  }
              }
-@@ -577,6 +829,9 @@ function createRuntimeChunk(entryChunk, chunks, graph, options) {
+@@ -577,6 +823,9 @@ function createRuntimeChunk(entryChunk, chunks, graph, options) {
      for (const chunk of chunks) {
          // Runtime chunk has to load before any other a.k.a all chunks require it.
          chunk.requiredChunks.add(runtimeChunk);
