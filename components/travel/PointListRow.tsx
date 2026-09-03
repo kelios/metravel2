@@ -127,15 +127,17 @@ const PointListRow = React.memo(function PointListRow({
 
         {point.coord ? (
           <CardActionPressable
-            style={[styles.listRowCoordChip, globalFocusStyles.focusable]}
+            style={[styles.listRowCoordTouchFrame, globalFocusStyles.focusable]}
             onPress={openMapFromLink}
             accessibilityLabel={i18nT('travel:components.travel.PointListRow.koordinaty_value1_591481b3', { value1: point.coord })}
             title={i18nT('travel:components.travel.PointListRow.otkryt_koordinaty_v_google_maps_2d3dbad0')}
           >
-            <Feather name="map-pin" size={12} color={colors.textMuted} />
-            <Text style={styles.listRowCoordText} numberOfLines={1}>
-              {point.coord}
-            </Text>
+            <View style={styles.listRowCoordChip}>
+              <Feather name="map-pin" size={12} color={colors.textMuted} />
+              <Text style={styles.listRowCoordText} numberOfLines={1}>
+                {point.coord}
+              </Text>
+            </View>
           </CardActionPressable>
         ) : null}
 
@@ -153,17 +155,21 @@ const PointListRow = React.memo(function PointListRow({
                 accessibilityLabel={i18nT('travel:components.travel.PointListRow.skopirovat_koordinaty_b49dd414')}
                 onPress={() => onCopy(point.coord)}
                 title={i18nT('travel:components.travel.PointListRow.skopirovat_koordinaty_b49dd414')}
-                style={styles.listRowIconBtn}
+                style={styles.listRowIconTouchFrame}
               >
-                <Feather name="copy" size={14} color={colors.textMuted} />
+                <View style={styles.listRowIconBtn}>
+                  <Feather name="copy" size={14} color={colors.textMuted} />
+                </View>
               </CardActionPressable>
               <CardActionPressable
                 accessibilityLabel={i18nT('travel:components.travel.PointListRow.podelitsya_v_telegram_ee5e5b6b')}
                 onPress={() => onShare(point.coord)}
                 title={i18nT('travel:components.travel.PointListRow.telegram_7701804c')}
-                style={styles.listRowIconBtn}
+                style={styles.listRowIconTouchFrame}
               >
-                <Feather name="send" size={14} color={colors.textMuted} />
+                <View style={styles.listRowIconBtn}>
+                  <Feather name="send" size={14} color={colors.textMuted} />
+                </View>
               </CardActionPressable>
 
               <View

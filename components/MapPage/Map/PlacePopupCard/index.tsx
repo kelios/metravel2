@@ -435,9 +435,11 @@ const PlacePopupCard: React.FC<Props> = ({
             onPress={onShareTelegram}
             title={popupTooltips.shareTelegram}
             enableWebClickFallback
-            style={({ pressed }) => [styles.titleShareBtn, pressed && styles.iconActionBtnPressed]}
+            style={({ pressed }) => [styles.titleShareTouchFrame, pressed && styles.iconActionBtnPressed]}
           >
-            <Feather name="send" size={18} color={colors.primaryDark} />
+            <View style={styles.titleShareBtn}>
+              <Feather name="send" size={18} color={colors.primaryDark} />
+            </View>
           </CardActionPressable>
         ) : null}
       </View>
@@ -569,9 +571,11 @@ const PlacePopupCard: React.FC<Props> = ({
                       onPress={() => void onCopyCoord()}
                       title={popupTooltips.copyCoords}
                       enableWebClickFallback
-                      style={({ pressed }) => [styles.heroCaptionIconBtn, pressed && styles.iconActionBtnPressed]}
+                      style={({ pressed }) => [styles.heroCaptionIconTouchFrame, pressed && styles.iconActionBtnPressed]}
                     >
-                      <Feather name="copy" size={13} color={colors.textOnDark} />
+                      <View style={styles.heroCaptionIconBtn}>
+                        <Feather name="copy" size={13} color={colors.textOnDark} />
+                      </View>
                     </CardActionPressable>
                   ) : null}
                 </>
@@ -583,12 +587,16 @@ const PlacePopupCard: React.FC<Props> = ({
                   title={popupTooltips.shareTelegram}
                   enableWebClickFallback
                   style={({ pressed }) => [
-                    styles.heroCaptionIconBtn,
+                    styles.heroCaptionIconTouchFrame,
+                    // `marginLeft: 'auto'` прижимает рамку вправо поверх её
+                    // отрицательного поля: видимый круг остаётся у правого края.
                     styles.heroCaptionShareBtn,
                     pressed && styles.iconActionBtnPressed,
                   ]}
                 >
-                  <Feather name="send" size={13} color={colors.textOnDark} />
+                  <View style={styles.heroCaptionIconBtn}>
+                    <Feather name="send" size={13} color={colors.textOnDark} />
+                  </View>
                 </CardActionPressable>
               ) : null}
             </View>
@@ -724,9 +732,11 @@ const PlacePopupCard: React.FC<Props> = ({
               onPress={() => void onCopyCoord()}
               title={popupTooltips.copyCoords}
               enableWebClickFallback
-              style={({ pressed }) => [styles.coordCopyButton, pressed && styles.iconActionBtnPressed]}
+              style={({ pressed }) => [styles.coordCopyTouchFrame, pressed && styles.iconActionBtnPressed]}
             >
-              <Feather name="copy" size={13} color={colors.textMuted} />
+              <View style={styles.coordCopyButton}>
+                <Feather name="copy" size={13} color={colors.textMuted} />
+              </View>
             </CardActionPressable>
           ) : null}
         </View>

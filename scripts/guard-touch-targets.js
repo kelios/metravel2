@@ -57,6 +57,13 @@ const IGNORED_DIRS = new Set([
 // размеров примитива и может перебить их в меньшую сторону. Без этого пункта
 // гард видит только «сырые» Pressable и пропускает целый слой мест, где
 // сабминимальный таргет приходит из стиля вызывающего экрана.
+//
+// Список — не справочник «на глаз», а контракт: `findUnlistedWrappers` ниже
+// находит каждую экспортированную обёртку проекта, которая пробрасывает `style`
+// в интерактивный элемент и используется из другого файла, и гард падает, если
+// её здесь нет (#1734). Иначе следующая обёртка выпадает молча — так
+// `CardActionPressable` с 53 вызовами в 18 файлах прожил вне проверки, а зелёный
+// гейт всё это время означал «не проверяли», а не «в норме».
 const INTERACTIVE_ELEMENTS = new Set([
   'Pressable',
   'TouchableOpacity',
@@ -64,7 +71,37 @@ const INTERACTIVE_ELEMENTS = new Set([
   'TouchableWithoutFeedback',
   'TouchableNativeFeedback',
   'IconButton',
+  // Тот же `IconButton` под алиасом импорта (редактор статьи): гард сверяет
+  // имя тега, поэтому алиас — отдельная запись.
+  'UiIconButton',
+  // Обёртки проекта: имя — как его пишут потребители в JSX (для default-экспорта
+  // это имя импорта, а не внутреннее имя компонента).
+  'CardActionPressable',
+  'Chip',
+  'ColorChip',
+  'Toggle',
+  'SubscribeButton',
+  'FavoriteButton',
+  'TravelStatusButton',
+  'DeleteAction',
+  'PeerBadgeGiveButton',
+  'PlaceFirstBadgeCard',
+  'QuestForCityCard',
+  'UserSafetyMenu',
 ])
+
+// Дешёвый фильтр «в файле вообще есть интерактивный элемент» перед разбором AST.
+//
+// ИЗВЕСТНОЕ СЛЕПОЕ ПЯТНО: файл, где единственная кнопка — `<IconButton
+// style={...}>` или `<Chip style={...}>`, слова `Pressable` не содержит и в
+// скан не попадает. Расширение фильтра на имена обёрток находит ещё пять
+// сабминимальных стилей поверх `IconButton`/`ColorChip` (RouteBuilder,
+// lightPointRemove, calendarButton, colorChip), а их починка требует режима
+// прозрачной рамки в самих примитивах — это отдельная задача, см. #1734 → follow-up.
+const INTERACTIVE_HINT = /Pressable|Touchable/
+// Для поиска экспортированных обёрток фильтр шире: сама обёртка содержит
+// `Pressable`, а её потребитель — только имя обёртки.
+const WRAPPER_HINT = new RegExp(['Pressable', 'Touchable', ...INTERACTIVE_ELEMENTS].join('|'))
 
 // Ключи, которыми вью задаёт собственный размер. `maxWidth`/`maxHeight`
 // намеренно не входят: они ограничивают, но не назначают тач-таргет.
@@ -466,7 +503,7 @@ const collectInteractiveStyleNames = (sourceFile, out = new Set()) => {
 }
 
 const scanFile = ({ rootDir, filePath, content }) => {
-  if (!/Pressable|Touchable/.test(content)) return []
+  if (!INTERACTIVE_HINT.test(content)) return []
   const sourceFile = parseSource(filePath, content)
   const styleTables = resolveStyleTables(rootDir, filePath, sourceFile)
   const wrappers = collectStyleForwardingWrappers(sourceFile)
@@ -576,7 +613,7 @@ const scanTouchTargets = (rootDir) => {
   for (const filePath of files) {
     if (path.extname(filePath) !== '.tsx') continue
     const content = readFile(filePath)
-    if (!/Pressable|Touchable/.test(content)) continue
+    if (!INTERACTIVE_HINT.test(content)) continue
     collectInteractiveStyleNames(parseSource(filePath, content), interactiveNames)
     findings.push(...scanFile({ rootDir, filePath, content }))
   }
@@ -587,6 +624,147 @@ const scanTouchTargets = (rootDir) => {
   }
 
   return findings
+}
+
+/**
+ * Имена, которые файл экспортирует: `default` → идентификатор default-экспорта
+ * (сквозь `memo(X)`, `React.memo(X)`, `forwardRef(...)`), остальные — как есть.
+ */
+const collectExportedNames = (sourceFile) => {
+  const named = new Set()
+  let defaultName = null
+  const visit = (node) => {
+    if (ts.isExportAssignment(node) && !node.isExportEquals) {
+      let expression = node.expression
+      while (ts.isCallExpression(expression) && expression.arguments.length > 0) {
+        expression = expression.arguments[0]
+      }
+      if (ts.isIdentifier(expression)) defaultName = expression.text
+    } else if (ts.isExportDeclaration(node) && node.exportClause && ts.isNamedExports(node.exportClause)) {
+      for (const element of node.exportClause.elements) {
+        const local = (element.propertyName || element.name).text
+        if (element.name.text === 'default') defaultName = local
+        else named.add(local)
+      }
+    } else {
+      const modifiers = ts.canHaveModifiers(node) ? ts.getModifiers(node) : undefined
+      const exported = !!modifiers && modifiers.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
+      const isDefault = !!modifiers && modifiers.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword)
+      if (exported && ts.isFunctionDeclaration(node) && node.name) {
+        if (isDefault) defaultName = node.name.text
+        else named.add(node.name.text)
+      } else if (exported && ts.isVariableStatement(node)) {
+        for (const declaration of node.declarationList.declarations) {
+          if (ts.isIdentifier(declaration.name)) named.add(declaration.name.text)
+        }
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sourceFile)
+  return { named, defaultName }
+}
+
+/**
+ * Резолв спецификатора импорта в путь файла проекта (относительно `rootDir`).
+ * Пакеты и неизвестные алиасы дают `null` — их обёртки не наши.
+ */
+const resolveImportPath = (rootDir, fromFile, specifier) => {
+  let base
+  if (specifier.startsWith('@/')) base = path.join(rootDir, specifier.slice(2))
+  else if (specifier.startsWith('.')) base = path.resolve(rootDir, path.dirname(fromFile), specifier)
+  else return null
+  for (const candidate of [base, `${base}.tsx`, `${base}.ts`, path.join(base, 'index.tsx'), path.join(base, 'index.ts')]) {
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+      return normalizePath(path.relative(rootDir, candidate))
+    }
+  }
+  return null
+}
+
+/** `{ localName: { file, exportName } }` для default- и именованных импортов. */
+const collectImportBindings = (rootDir, filePath, sourceFile) => {
+  const bindings = {}
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || !statement.importClause) continue
+    if (!ts.isStringLiteral(statement.moduleSpecifier)) continue
+    const file = resolveImportPath(rootDir, filePath, statement.moduleSpecifier.text)
+    if (!file) continue
+    const clause = statement.importClause
+    if (clause.name) bindings[clause.name.text] = { file, exportName: 'default' }
+    if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+      for (const element of clause.namedBindings.elements) {
+        bindings[element.name.text] = { file, exportName: (element.propertyName || element.name).text }
+      }
+    }
+  }
+  return bindings
+}
+
+/**
+ * Обёртки над интерактивным элементом, которые файл ЭКСПОРТИРУЕТ:
+ * `{ named: Set<string>, defaultName: string | null }`, оба — только имена,
+ * пробрасывающие `style` внутрь (`collectStyleForwardingWrappers`).
+ */
+const collectExportedWrappers = (sourceFile) => {
+  const wrappers = collectStyleForwardingWrappers(sourceFile)
+  const exportsInfo = collectExportedNames(sourceFile)
+  const named = new Set([...exportsInfo.named].filter((name) => wrappers.has(name)))
+  const defaultName =
+    exportsInfo.defaultName && wrappers.has(exportsInfo.defaultName) ? exportsInfo.defaultName : null
+  return { named, defaultName }
+}
+
+/**
+ * Обёртки, которые гард НЕ видит: экспортированы из одного файла, используются
+ * тегом JSX в другом и не входят в `INTERACTIVE_ELEMENTS` под тем именем, каким
+ * их пишет потребитель. Локальные обёртки сюда не попадают — их закрывает
+ * `collectStyleForwardingWrappers` внутри файла.
+ *
+ * Возвращает `[{ name, declaredIn, usedIn }]`, отсортированный и без дублей по
+ * `name::usedIn`. Список не baseline-ится: пропущенная обёртка — это не
+ * «находка, которую можно заморозить», а дыра в самой проверке (#1734).
+ */
+const findUnlistedWrappers = (rootDir) => {
+  const files = collectSourceFiles(rootDir).filter((filePath) => path.extname(filePath) === '.tsx')
+  const parsed = new Map()
+  const exportedByFile = new Map()
+  for (const filePath of files) {
+    const content = fs.readFileSync(path.join(rootDir, filePath), 'utf8')
+    const sourceFile = parseSource(filePath, content)
+    parsed.set(filePath, sourceFile)
+    if (!WRAPPER_HINT.test(content)) continue
+    const exported = collectExportedWrappers(sourceFile)
+    if (exported.named.size > 0 || exported.defaultName) exportedByFile.set(filePath, exported)
+  }
+  if (exportedByFile.size === 0) return []
+
+  const unlisted = new Map()
+  for (const [filePath, sourceFile] of parsed) {
+    const bindings = collectImportBindings(rootDir, filePath, sourceFile)
+    const wrapperTags = {}
+    for (const [localName, binding] of Object.entries(bindings)) {
+      const exported = exportedByFile.get(binding.file)
+      if (!exported) continue
+      const isWrapper =
+        binding.exportName === 'default' ? !!exported.defaultName : exported.named.has(binding.exportName)
+      if (isWrapper) wrapperTags[localName] = binding.file
+    }
+    if (Object.keys(wrapperTags).length === 0) continue
+    const visit = (node) => {
+      if (isJsxElement(node)) {
+        const name = elementName(node)
+        if (wrapperTags[name] && !INTERACTIVE_ELEMENTS.has(name)) {
+          unlisted.set(`${name}::${filePath}`, { name, declaredIn: wrapperTags[name], usedIn: filePath })
+        }
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(sourceFile)
+  }
+  return [...unlisted.values()].sort((left, right) =>
+    left.name.localeCompare(right.name) || left.usedIn.localeCompare(right.usedIn),
+  )
 }
 
 /** Baseline хранит по одному худшему размеру на `file::style`. */
@@ -682,6 +860,9 @@ const run = (args = parseArgs([])) => {
   }
 
   const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'))
+  // Полнота самой проверки — раньше её результата: находки в файлах, которые
+  // гард не смотрит, не существуют, и зелёный прогон ничего бы не значил.
+  const unlistedWrappers = findUnlistedWrappers(args.root)
   const findings = scanTouchTargets(args.root)
   const violations = compareToBaseline(findings, baseline)
   const result = {
@@ -690,10 +871,22 @@ const run = (args = parseArgs([])) => {
     findingCount: findings.length,
     violationCount: violations.length,
     violations,
+    unlistedWrappers,
   }
 
   if (args.json) {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+  } else if (unlistedWrappers.length > 0) {
+    process.stderr.write(
+      `Touch-target guard found ${unlistedWrappers.length} interactive wrapper usage(s) outside INTERACTIVE_ELEMENTS:\n`,
+    )
+    for (const wrapper of unlistedWrappers) {
+      process.stderr.write(`- <${wrapper.name}> from ${wrapper.declaredIn} used in ${wrapper.usedIn}\n`)
+    }
+    process.stderr.write(
+      'A component that forwards its `style` prop into a Pressable is a touch target itself; ' +
+      'add its JSX name to INTERACTIVE_ELEMENTS in scripts/guard-touch-targets.js so its callers are checked.\n',
+    )
   } else if (violations.length === 0) {
     process.stdout.write(
       `Touch-target guard passed. min=${MIN_TOUCH_TARGET}dp baseline=${Object.keys(baseline.entries || {}).length}\n`,
@@ -711,7 +904,7 @@ const run = (args = parseArgs([])) => {
     )
   }
 
-  return violations.length === 0 ? 0 : 1
+  return violations.length === 0 && unlistedWrappers.length === 0 ? 0 : 1
 }
 
 if (require.main === module) {
@@ -729,6 +922,10 @@ module.exports = {
   collectInlineStyleDims,
   collectInteractiveStyleNames,
   collectStyleForwardingWrappers,
+  collectExportedNames,
+  collectExportedWrappers,
+  collectImportBindings,
+  findUnlistedWrappers,
   findSmallestDeclaredSize,
   isStyleModule,
   numericValue,

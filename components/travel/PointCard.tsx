@@ -331,11 +331,13 @@ const PointCard = React.memo(function PointCard({
                 title={i18nT('travel:components.travel.PointCard.skopirovat_koordinaty_ef85ad09')}
                 onPress={() => onCopy(point.coord)}
                 style={({ pressed }) => [
-                  styles.cardInfoIconButton,
+                  styles.cardInfoIconTouchFrame,
                   pressed && styles.actionBtnPressed,
                 ]}
               >
-                <Feather name="copy" size={17} color={cardTextColor} />
+                <View style={styles.cardInfoIconButton}>
+                  <Feather name="copy" size={17} color={cardTextColor} />
+                </View>
               </CardActionPressable>
             </View>
 

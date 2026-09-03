@@ -10,6 +10,7 @@ const {
   collectStyleSizes,
   collectStyleReferences,
   collectInteractiveStyleNames,
+  findUnlistedWrappers,
   isStyleModule,
   scanFile,
   scanStyleModule,
@@ -282,6 +283,20 @@ describe('guard-touch-targets', () => {
       expect(findings.map((finding: any) => finding.style)).toContain('backButton')
     })
 
+    it('sees CardActionPressable as an interactive element (#1734)', () => {
+      // 53 кнопки в 18 файлах жили вне проверки: обёртка проекта над Pressable
+      // размера не назначает, а в списке интерактивных элементов не была.
+      const findings = scan(`
+        import { StyleSheet } from 'react-native'
+        import CardActionPressable from '@/components/ui/CardActionPressable'
+        const styles = StyleSheet.create({ clear: { width: 26, height: 26 } })
+        export const Probe = () => <CardActionPressable style={styles.clear} onPress={() => {}} />
+      `)
+
+      expect(findings).toHaveLength(1)
+      expect(findings[0]).toMatchObject({ style: 'clear', size: 26, element: 'CardActionPressable' })
+    })
+
     it('does not treat a wrapper without a style prop as interactive', () => {
       const findings = scan(`
         import { Pressable, StyleSheet, View } from 'react-native'
@@ -316,6 +331,116 @@ describe('guard-touch-targets', () => {
       } finally {
         removeDir(rootDir)
       }
+    })
+  })
+
+  describe('exported wrappers outside INTERACTIVE_ELEMENTS (#1734)', () => {
+    // Класс дефекта: обёртка над Pressable экспортируется из одного файла,
+    // используется тегом в другом и в список не попала — её вызовы гард не
+    // смотрит, а зелёный прогон ничем не отличается от «не проверяли».
+    const wrapperSource = `
+      import { Pressable } from 'react-native'
+      const Wrap = ({ style, onPress, children }) => (
+        <Pressable style={style} onPress={onPress}>{children}</Pressable>
+      )
+      export default Wrap
+    `
+    // Потребитель импортирует `Pressable` только ради фильтра-подсказки гарда:
+    // файл без этого слова в скан не попадает вовсе (известное слепое пятно,
+    // #1739), а здесь проверяется список, а не фильтр.
+    const consumerSource = (tag: string, from: string) => `
+      import { Pressable, StyleSheet } from 'react-native'
+      import ${tag} from '${from}'
+      const styles = StyleSheet.create({ tiny: { width: 20, height: 20 } })
+      export const Screen = () => <${tag} style={styles.tiny} onPress={() => {}} />
+    `
+
+    const withRepo = (files: Record<string, string>, probe: (rootDir: string) => void) => {
+      const rootDir = makeTempDir('guard-touch-targets-wrappers-')
+      try {
+        for (const [relative, content] of Object.entries(files)) {
+          const absolute = path.join(rootDir, relative)
+          fs.mkdirSync(path.dirname(absolute), { recursive: true })
+          fs.writeFileSync(absolute, content, 'utf8')
+        }
+        probe(rootDir)
+      } finally {
+        removeDir(rootDir)
+      }
+    }
+
+    it('reports a cross-file wrapper that the list does not know', () => {
+      withRepo(
+        {
+          'components/ui/Wrap.tsx': wrapperSource,
+          'components/Screen.tsx': consumerSource('Wrap', '@/components/ui/Wrap'),
+        },
+        (rootDir) => {
+          expect(findUnlistedWrappers(rootDir)).toEqual([
+            { name: 'Wrap', declaredIn: 'components/ui/Wrap.tsx', usedIn: 'components/Screen.tsx' },
+          ])
+          // Пока обёртка не в списке, её сабминимальный вызов невидим — это и
+          // есть дыра, которую закрывает проверка выше.
+          expect(scanTouchTargets(rootDir)).toEqual([])
+        },
+      )
+    })
+
+    it('matches the JSX name the consumer writes, not the internal component name', () => {
+      // Default-экспорт импортируется под любым именем; гард сверяет тег.
+      withRepo(
+        {
+          'components/ui/Wrap.tsx': wrapperSource,
+          'components/Screen.tsx': consumerSource('IconButton', '../components/ui/Wrap'),
+        },
+        (rootDir) => {
+          expect(findUnlistedWrappers(rootDir)).toEqual([])
+          expect(scanTouchTargets(rootDir).map((finding: any) => finding.style)).toEqual(['tiny'])
+        },
+      )
+    })
+
+    it('ignores wrappers used only inside their own file', () => {
+      withRepo(
+        {
+          'components/Local.tsx': `${wrapperSource}
+            export const Screen = () => <Wrap style={{ width: 20 }} onPress={() => {}} />`,
+        },
+        (rootDir) => {
+          expect(findUnlistedWrappers(rootDir)).toEqual([])
+        },
+      )
+    })
+
+    it('fails the CLI run without touching the baseline', () => {
+      withRepo(
+        {
+          'components/ui/Wrap.tsx': wrapperSource,
+          'components/Screen.tsx': consumerSource('Wrap', '@/components/ui/Wrap'),
+          'scripts/touch-targets-baseline.json': JSON.stringify({
+            contractVersion: CONTRACT_VERSION,
+            minTouchTarget: MIN_TOUCH_TARGET,
+            scope: [...SCAN_DIRS],
+            entries: {},
+          }),
+        },
+        (rootDir) => {
+          const { run } = require('@/scripts/guard-touch-targets')
+          const stderr = jest.spyOn(process.stderr, 'write').mockImplementation(() => true)
+          try {
+            expect(run(parseArgs(['--root', rootDir]))).toBe(1)
+            expect(stderr.mock.calls.map(String).join('')).toMatch(/<Wrap> from components\/ui\/Wrap\.tsx/)
+          } finally {
+            stderr.mockRestore()
+          }
+        },
+      )
+    })
+
+    it('knows every exported wrapper in the repository', () => {
+      // Регрессионный контроль класса: новая обёртка над Pressable, не внесённая
+      // в INTERACTIVE_ELEMENTS, валит обычный прогон тестов.
+      expect(findUnlistedWrappers(process.cwd())).toEqual([])
     })
   })
 

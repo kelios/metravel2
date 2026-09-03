@@ -646,6 +646,35 @@ export const getStyles = (
       opacity: 0.7,
       transform: [{ scale: 0.94 }],
     },
+    // Тач-таргеты иконочных кнопок карточки (#1734): кликабельна прозрачная
+    // рамка 44dp, видимый круг (`titleShareBtn`, `heroCaptionIconBtn`,
+    // `coordCopyButton`) остаётся прежним внутри неё. Рамка вынесена в
+    // отрицательные поля, поэтому ряды заголовка, подписи героя и координат не
+    // растут; `hitSlop` тут не помог бы — ряды обтягивают кнопки вплотную.
+    titleShareTouchFrame: {
+      width: DESIGN_TOKENS.touchTarget.minWidth,
+      height: DESIGN_TOKENS.touchTarget.minHeight,
+      margin: -(DESIGN_TOKENS.touchTarget.minWidth - 36) / 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    heroCaptionIconTouchFrame: {
+      width: DESIGN_TOKENS.touchTarget.minWidth,
+      height: DESIGN_TOKENS.touchTarget.minHeight,
+      margin: -(DESIGN_TOKENS.touchTarget.minWidth - 30) / 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    coordCopyTouchFrame: {
+      width: DESIGN_TOKENS.touchTarget.minWidth,
+      height: DESIGN_TOKENS.touchTarget.minHeight,
+      margin: -(DESIGN_TOKENS.touchTarget.minWidth - (bottomCardLayout ? 28 : 30)) / 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
     iconActionLabelRow: {
       flexDirection: 'row',
       alignItems: 'center',

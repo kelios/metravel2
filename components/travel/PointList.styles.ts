@@ -508,6 +508,14 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     fontWeight: '500',
     letterSpacing: 0,
   },
+  /** Тач-таргет 44dp вокруг видимого круга 34 (`cardInfoIconButton`, #1734). */
+  cardInfoIconTouchFrame: {
+    width: DESIGN_TOKENS.touchTarget.minWidth,
+    height: DESIGN_TOKENS.touchTarget.minHeight,
+    margin: -(DESIGN_TOKENS.touchTarget.minWidth - 34) / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cardInfoIconButton: {
     width: 34,
     height: 34,
@@ -734,12 +742,38 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     fontSize: 11,
     color: colors.textMuted,
   },
+  /**
+   * Тач-таргет чипа координат (#1734): сама пилюля ~18dp и ей нельзя расти,
+   * поэтому кликабельна прозрачная рамка 44dp вокруг неё. Рамка вынесена в
+   * отрицательные поля, строка списка не растёт; соседние кнопки действий идут
+   * позже в дереве и на пересечении выигрывают они, а не чип.
+   */
+  listRowCoordTouchFrame: {
+    alignSelf: 'flex-start',
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+    marginVertical: -12,
+    justifyContent: 'center',
+  },
   listRowActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 4,
     marginTop: 2,
+  },
+  /**
+   * Тач-таргет иконок «копировать»/«поделиться» (#1734): рамка 44dp вокруг
+   * видимого квадрата 36 (`listRowIconBtn`). По вертикали поля отрицательные
+   * целиком (ряд не растёт), по горизонтали — только на ширину зазора, чтобы
+   * рамки соседних кнопок не пересекались.
+   */
+  listRowIconTouchFrame: {
+    width: DESIGN_TOKENS.touchTarget.minWidth,
+    height: DESIGN_TOKENS.touchTarget.minHeight,
+    marginVertical: -(DESIGN_TOKENS.touchTarget.minHeight - 36) / 2,
+    marginHorizontal: -2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listRowNavigationMenu: {
     flexBasis: '100%',

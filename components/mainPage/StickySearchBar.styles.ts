@@ -173,9 +173,12 @@ export const useStickySearchBarStyles = (colors: ReturnType<typeof useThemedColo
       web: webViewStyle({ overflowX: 'auto', paddingBottom: 2 }),
     }),
   },
+  // Чип — единая нажимаемая пилюля, прозрачной рамки вокруг неё не сделать, поэтому
+  // floor 44dp держит сама пилюля (собственный minHeight `Chip`); прежний
+  // `minHeight: 36` перебивал его в меньшую сторону (#1734).
   quickChip: {
     flexShrink: 0,
-    minHeight: 36,
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
   },
   actions: {
     flexDirection: 'row',

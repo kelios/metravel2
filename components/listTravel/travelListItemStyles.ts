@@ -159,9 +159,16 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
     },
 
+    // Тач-таргет 44dp при прежней стеклянной пилюле (#1734): видимого тела у
+    // кнопки нет — только иконка, поэтому рамка прозрачна сама по себе, а
+    // отрицательные поля возвращают пилюле прежнюю высоту (30) и почти прежнюю
+    // ширину. По горизонтали поле меньше (−3), чтобы рамки «редактировать» и
+    // «удалить» не наезжали друг на друга через разделитель.
     adminBtnMobile: {
-      minWidth: 30,
-      minHeight: 30,
+      minWidth: DESIGN_TOKENS.touchTarget.minWidth,
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      marginVertical: -(DESIGN_TOKENS.touchTarget.minHeight - 30) / 2,
+      marginHorizontal: -3,
       paddingHorizontal: 5,
       paddingVertical: 5,
     },
