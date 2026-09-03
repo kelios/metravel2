@@ -131,6 +131,22 @@ export const buildGeocodeParts = (geocodeData: any, matchedCountry?: any): Geoco
 const isBareNumber = (value: string) => /^\d+[a-zA-Z]?$/.test(value.trim());
 
 /**
+ * Первый сегмент `display_name`, который годится в название (#1717). Голый
+ * номер дома пропускается: он остаётся частью адреса, но названием не
+ * становится — иначе точка подписывается «332». Правило одно на всех
+ * потребителей `display_name`-фолбэка.
+ */
+export const pickDisplayNameSegment = (displayName: unknown): string | null => {
+    if (typeof displayName !== 'string') return null;
+    return (
+        displayName
+            .split(',')
+            .map((part: string) => part.trim())
+            .find((part: string) => part && !isBareNumber(part)) || null
+    );
+};
+
+/**
  * Короткое название точки маршрута (#1717).
  *
  * Раньше сюда попадала вся цепочка обратного геокодирования, и читатель видел
@@ -157,15 +173,9 @@ export const buildPointTitleFromGeocode = (
     const title = poi || streetLine || city || adminArea || adminRegion || countryLabel;
     if (title) return title;
 
-    if (geocodeData?.display_name) {
-        // Первый непустой сегмент — обычно и есть объект. Голый номер дома
-        // пропускаем: он остаётся частью адреса, но названием не становится.
-        const segment = String(geocodeData.display_name)
-            .split(',')
-            .map((part: string) => part.trim())
-            .find((part: string) => part && !isBareNumber(part));
-        if (segment) return segment;
-    }
+    // Первый годный сегмент — обычно и есть объект.
+    const segment = pickDisplayNameSegment(geocodeData?.display_name);
+    if (segment) return segment;
     return `${latlng.lat}, ${latlng.lng}`;
 };
 

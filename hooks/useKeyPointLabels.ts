@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import type { ParsedRoutePreview } from '@/types/travelRoutes'
-import { nominatimReverse } from '@/api/external/nominatim'
-import { bigDataCloudReverse } from '@/api/external/bigdatacloud'
+import { reverseGeocodePoint, type ReverseGeocodePointResult } from '@/api/geoQueries'
 import { overpassQuery } from '@/api/external/overpass'
+import { buildGeocodeParts, pickDisplayNameSegment } from '@/utils/geocodeHelpers'
 
 interface KeyPointLabels {
   startName?: string | null
@@ -19,45 +19,31 @@ const parseCoord = (coord: string): { lat: number; lng: number } | null => {
   return { lat, lng }
 }
 
+/**
+ * Подпись ключевой точки — населённый пункт, а не объект: «Соблувка», а не
+ * «приют Соблувка». Геокод один на все поверхности — `reverseGeocodePoint`
+ * (#1738): язык из активной локали, Nominatim → BigDataCloud, кэш React Query.
+ * Раньше здесь жила третья копия с жёсткой `'ru'` и своим web-guard (#1742).
+ */
+const pickLocalityName = (data: ReverseGeocodePointResult | null): string | null => {
+  if (!data) return null
+  const { city, adminRegion } = buildGeocodeParts(data)
+  const locality =
+    city ||
+    data.address?.hamlet ||
+    // BigDataCloud: `locality` — населённый пункт (в `buildGeocodeParts` он читается как улица).
+    data.locality ||
+    data.name ||
+    // Голый номер дома названием не становится — правило общее (#1717).
+    pickDisplayNameSegment(data.display_name) ||
+    adminRegion ||
+    null
+  return locality ? String(locality) : null
+}
+
 const fetchReverseName = async (lat: number, lng: number): Promise<string | null> => {
   try {
-    const nominatim = await nominatimReverse({ lat, lng, addressdetails: 1, acceptLanguage: 'ru' })
-    if (nominatim.ok) {
-      const data = await nominatim.json()
-      const addr = data?.address ?? {}
-      const locality =
-        addr.city ||
-        addr.town ||
-        addr.village ||
-        addr.municipality ||
-        addr.suburb ||
-        addr.hamlet ||
-        data?.name ||
-        (typeof data?.display_name === 'string' ? String(data.display_name).split(',')[0]?.trim() : null) ||
-        null
-      if (locality) return String(locality)
-    }
-  } catch {
-    // fallback below
-  }
-
-  // bigdatacloud.net is intentionally blocked by CSP on web.
-  if (Platform.OS === 'web') return null
-
-  try {
-    const primary = await bigDataCloudReverse(lat, lng, 'ru')
-    if (!primary.ok) return null
-    const data = await primary.json()
-    return (
-      data?.city ||
-      data?.locality ||
-      data?.principalSubdivision ||
-      data?.address?.city ||
-      data?.address?.town ||
-      data?.address?.village ||
-      data?.address?.municipality ||
-      null
-    )
+    return pickLocalityName(await reverseGeocodePoint(lat, lng))
   } catch {
     return null
   }
@@ -95,7 +81,9 @@ export function useKeyPointLabels(primaryRoutePreview: ParsedRoutePreview | null
       ? (primaryRoutePreview?.linePoints as RoutePoint[])
       : []
     if (!linePoints || linePoints.length < 2) {
-      setKeyPointLabels({})
+      // Без смены ссылки на уже пустой объект: новый `{}` на каждый прогон
+      // эффекта зацикливал бы рендер у потребителя с нестабильным preview.
+      setKeyPointLabels((prev) => (Object.keys(prev).length === 0 ? prev : {}))
       return () => {
         active = false
       }
