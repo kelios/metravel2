@@ -23,17 +23,17 @@
  * и каждый читает там свой `styles`. Тем же способом от гейта прятался мёртвый
  * `sectionBadgeText` при мёртвой же родне `sectionBadge*`.
  *
- * Поэтому область чтения = граф детали: весь `components/travel/**` (внутри
- * него набор ходит пропом `styles` вниз по секциям, поэтому читатель не обязан
- * импортировать модуль набора) ПЛЮС любой файл `components/`/`hooks/`/`app/`,
+ * Поэтому область чтения = граф детали: весь `components/travel/details/**`
+ * (внутри него набор ходит пропом `styles` вниз по секциям, поэтому читатель не
+ * обязан импортировать модуль набора) ПЛЮС любой файл `components/`/`hooks/`/`app/`,
  * который импортирует модуль набора напрямую (так в область попадает
  * `hooks/useTravelDetailsLayout.ts`, и так же попадёт будущий внешний
  * потребитель — список не пришпилен).
  *
  * Остаточный риск назван честно: если набор детали передадут пропом в компонент
- * ВНЕ `components/travel/**`, не импортирующий модуль набора, его ключи станут
- * «мёртвыми» — гейт упадёт, а не промолчит. Это безопасное направление ошибки,
- * и лечится оно одной строкой в области чтения.
+ * ВНЕ `components/travel/details/**`, не импортирующий модуль набора, его ключи
+ * станут «мёртвыми» — гейт упадёт, а не промолчит. Это безопасное направление
+ * ошибки, и лечится оно одной строкой в области чтения.
  *
  * Комментарии из исходников вырезаются: упоминание ключа в документации —
  * не читатель. Сами модули наборов из поиска исключены по той же причине.
@@ -44,9 +44,6 @@ import path from 'path'
 
 import { getThemedColors } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
-import { createTravelDetailsDecisionSummaryStyles } from '@/components/travel/details/TravelDetailsStyleFragments'
-import { getTravelDetailsHeroStyles } from '@/components/travel/details/TravelDetailsHeroStyles'
-import { getTravelDetailsShellStyles } from '@/components/travel/details/TravelDetailsShellStyles'
 
 const REPO_ROOT = path.resolve(__dirname, '../../..')
 
@@ -79,8 +76,11 @@ const STYLE_MODULE_DIR = 'components/travel/details/styles'
 const DETAIL_ROOT_DIR = 'components/travel/details'
 const ROOT_STYLE_MODULE_NAME = /(Styles|StyleFragments)\.ts$/
 
+let styleModuleFilesCache: string[] | null = null
+
+/** Список неизменен в пределах прогона, а спрашивают его на каждый из 1293 файлов. */
 const listStyleModuleFiles = (): string[] =>
-  [
+  (styleModuleFilesCache ??= [
     ...fs
       .readdirSync(path.join(REPO_ROOT, DETAIL_ROOT_DIR))
       .filter((name) => ROOT_STYLE_MODULE_NAME.test(name))
@@ -89,38 +89,40 @@ const listStyleModuleFiles = (): string[] =>
       .readdirSync(path.join(REPO_ROOT, STYLE_MODULE_DIR))
       .filter((name) => /\.ts$/.test(name))
       .map((name) => `${STYLE_MODULE_DIR}/${name}`),
-  ].sort()
+  ].sort())
 
 /**
- * Все наборы экрана. Фабрики берутся из модулей `styles/` глобом, а не списком:
- * новый фрагмент попадает под гейт сам. Модуль без фабрики (`travelDetailsSectionRhythm.ts`
- * — это константы ритма, а не набор) в наборы не превращается: отбор идёт по
- * сигнатуре имени `create*Styles`.
+ * Все наборы экрана. Фабрики берутся глобом из ОБОИХ каталогов — и `styles/`, и
+ * корня `details/`: новый набор попадает под гейт сам, где бы его ни завели.
+ * Пришпиливать здесь особенно нечего: два последних набора этого экрана (hero и
+ * shell) заведены именно в корне, а не в `styles/`, так что «а вдруг заведут в
+ * корне» — это история, а не гипотеза.
+ *
+ * Отбор по сигнатуре имени: `createTravelDetails<Имя>Styles` или
+ * `getTravelDetails<Имя>Styles`. Модуль без фабрики (`travelDetailsSectionRhythm.ts`
+ * — это константы ритма) набором не притворяется, а хуки `use*` не вызываются
+ * вовсе: вне React они бы упали. Имя набора берётся из имени фабрики, а не из
+ * имени файла, — иначе корневые и фрагментные модули пришлось бы разбирать
+ * разными правилами.
  */
-const STYLE_FACTORY_NAME = /^create[A-Za-z]*Styles$/
+const STYLE_FACTORY_NAME = /^(?:create|get)TravelDetails([A-Za-z]*)Styles$/
 
 const loadStyleSets = (colors: ThemedColors): Record<string, object> => {
-  const sets: Record<string, object> = {
-    decisionSummary: createTravelDetailsDecisionSummaryStyles(colors),
-    hero: getTravelDetailsHeroStyles(colors) as unknown as object,
-    shell: getTravelDetailsShellStyles(colors) as unknown as object,
-  }
+  const sets: Record<string, object> = {}
 
   for (const relative of listStyleModuleFiles()) {
-    if (!relative.startsWith(`${STYLE_MODULE_DIR}/`)) continue
-
     const moduleExports = require(path.join(REPO_ROOT, relative)) as Record<string, unknown>
 
     for (const [exportName, value] of Object.entries(moduleExports)) {
-      if (!STYLE_FACTORY_NAME.test(exportName) || typeof value !== 'function') continue
+      const match = STYLE_FACTORY_NAME.exec(exportName)
+      if (!match || typeof value !== 'function') continue
 
-      const setName = path
-        .basename(relative, '.ts')
-        .replace(/^travelDetails/, '')
-        .replace(/Styles$/, '')
-      sets[setName.charAt(0).toLowerCase() + setName.slice(1)] = (
-        value as (c: ThemedColors) => object
-      )(colors)
+      // `getTravelDetailsStyles` — агрегат, у него имени набора нет: он и так
+      // раскладывает спредом все фрагменты, новых ключей не приносит.
+      const name = match[1]
+      const setName = name ? name.charAt(0).toLowerCase() + name.slice(1) : 'aggregate'
+
+      sets[setName] = (value as (c: ThemedColors) => object)(colors)
     }
   }
 
@@ -347,29 +349,29 @@ describe('читаемость ключей стилей travel details', () => 
     ]).toEqual([true, true])
   })
 
-  it('новый модуль наборов попадает под гейт сам, без правки списка', () => {
+  it('новый модуль наборов попадает под гейт сам — в ОБОИХ каталогах', () => {
+    // Два последних набора экрана (hero и shell) заведены в корне `details/`, а
+    // не в `styles/`, поэтому проверка обязана покрывать оба каталога: пока
+    // корень был исключён, набор нового корневого модуля не гейтился вовсе.
     const discovered = Object.keys(loadStyleSets(getThemedColors(false)))
-    const onDisk = listStyleModuleFiles()
-      .filter((relative) => relative.startsWith('components/travel/details/styles/'))
-      .map((relative) => path.basename(relative, '.ts'))
 
-    // Каждый модуль с фабрикой `create*Styles` обязан дать набор. Модуль без
-    // фабрики (ритм секций — это константы) набором не притворяется.
-    const withFactory = onDisk.filter((moduleName) => {
-      const moduleExports = require(
-        path.join(REPO_ROOT, 'components/travel/details/styles', `${moduleName}.ts`),
-      ) as Record<string, unknown>
+    const expected = listStyleModuleFiles().flatMap((relative) => {
+      const moduleExports = require(path.join(REPO_ROOT, relative)) as Record<string, unknown>
 
-      return Object.keys(moduleExports).some((name) => STYLE_FACTORY_NAME.test(name))
+      return Object.entries(moduleExports).flatMap(([exportName, value]) => {
+        const match = STYLE_FACTORY_NAME.exec(exportName)
+        if (!match || typeof value !== 'function') return []
+
+        const name = match[1]
+        return [name ? name.charAt(0).toLowerCase() + name.slice(1) : 'aggregate']
+      })
     })
 
-    expect(
-      withFactory.map((moduleName) =>
-        moduleName.replace(/^travelDetails/, '').replace(/Styles$/, ''),
-      ).map((name) => name.charAt(0).toLowerCase() + name.slice(1)).filter(
-        (name) => !discovered.includes(name),
-      ),
-    ).toEqual([])
+    // Оба каталога должны быть представлены — иначе проверка зелена вхолостую.
+    expect([
+      expected.filter((name) => !discovered.includes(name)),
+      expected.includes('shell') && expected.includes('layout'),
+    ]).toEqual([[], true])
   })
 
   it('четыре ключа #1713 удалены из наборов, а не просто потеряли читателя', () => {
