@@ -290,7 +290,7 @@ function safePayloadSegment(value: unknown): string | null {
 function positiveIntegerPayloadSegment(value: unknown): string | null {
   if (typeof value !== 'string' && typeof value !== 'number') return null;
   const normalized = String(value);
-  return /^[1-9]\d*$/.test(normalized) ? normalized : null;
+  return isPositiveIntegerSegment(normalized) ? normalized : null;
 }
 
 /**
