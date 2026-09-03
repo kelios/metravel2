@@ -57,3 +57,35 @@ describe('reverseGeocodePoint (#1738)', () => {
     await expect(reverseGeocodePoint(49.7, 19.4)).resolves.toBeNull()
   })
 })
+
+/**
+ * #1746 — модульный `queryClient` из `api/queryClient` никогда не монтируется,
+ * значит не подписан на `onlineManager` и не возобновляет `paused`-запросы.
+ * С наследуемым `networkMode: 'online'` вызов в момент `isOnline() === false`
+ * висел бесконечно, и `addPointAtCoords` визарда не добавлял точку. Императивный
+ * геокод обязан завершаться и офлайн — ответом сервиса или `null`.
+ */
+describe('reverseGeocodePoint while onlineManager reports offline (#1746)', () => {
+  const { onlineManager } = require('@tanstack/react-query') as typeof import('@tanstack/react-query')
+
+  beforeEach(() => {
+    nominatimReverse.mockReset()
+    bigDataCloudReverse.mockReset()
+    onlineManager.setOnline(false)
+  })
+
+  afterEach(() => {
+    onlineManager.setOnline(true)
+  })
+
+  it('does not pause the unmounted module client: resolves instead of hanging', async () => {
+    nominatimReverse.mockResolvedValue(jsonResponse({ name: 'Zadział', address: { country: 'Polska' } }))
+
+    const hang = new Promise<'hang'>((resolve) => setTimeout(() => resolve('hang'), 1000))
+    const result = await Promise.race([reverseGeocodePoint(49.8, 19.5), hang])
+
+    expect(result).not.toBe('hang')
+    expect(result).toMatchObject({ name: 'Zadział' })
+    expect(nominatimReverse).toHaveBeenCalledTimes(1)
+  })
+})

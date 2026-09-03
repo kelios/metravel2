@@ -239,6 +239,14 @@ export function fetchReverseGeocode(lat: number, lng: number): Promise<ReverseGe
     staleTime: GEO_STALE_TIME_MS,
     gcTime: GEO_GC_TIME_MS,
     retry: false,
+    // #1746 — `networkMode: 'always'`, а не наследуемый 'online'. Модульный
+    // `queryClient` никогда не монтируется в React-дерево, поэтому не подписан на
+    // `onlineManager` и не умеет возобновлять свои `paused`-запросы: запрос,
+    // стартовавший в момент `isOnline() === false`, висел бы вечно, а с ним —
+    // `addPointAtCoords` визарда (точка так и не добавлялась). Для императивного
+    // потока «пользователь нажал добавить» правильный ответ офлайн — быстрый отказ
+    // и фолбэк вызывающего (координаты вместо названия), как было до #1738.
+    networkMode: 'always',
     queryFn: reverseGeocodeQueryFn,
   })
 }

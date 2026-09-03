@@ -29,6 +29,7 @@ const CATEGORY_DEFINITIONS = [
       '__tests__/api/travelRating.test.ts',
       '__tests__/components/listTravel/ListTravel.integration.test.tsx',
       '__tests__/components/travel/TravelDetailsLazy.test.tsx',
+      '__tests__/components/TravelWizardStepRoute.test.tsx',
       '__tests__/components/travel/TravelDetailsContainer.skeleton.web.test.tsx',
       '__tests__/components/travel/UpsertTravel.integration.test.tsx',
       '__tests__/hooks/useTravelDetails.test.ts',
