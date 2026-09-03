@@ -14,6 +14,8 @@
 // синхронный импорт и прежнее поведение без кадра-заглушки, а web этот файл просто
 // не видит. Пропсы объявлены локально — как в `ThemedPaperProvider.web.tsx`, чтобы
 // web-ветка не тянула типы из native-файла.
+import React from 'react';
+
 type NativeRoutePickerMapProps = {
   markers: unknown[];
   onAddPoint: (lat: number, lng: number) => void;
@@ -21,8 +23,17 @@ type NativeRoutePickerMapProps = {
   onSelectPoint: (index: number) => void;
 };
 
-export function NativeRoutePickerMap(_props: NativeRoutePickerMapProps) {
-  return null;
+/** #1722 — тот же императивный контракт, что у native-ветки: web его не вызывает. */
+export interface NativeRoutePickerMapHandle {
+  addPointAtCenter: () => void;
 }
+
+export const NativeRoutePickerMap = React.forwardRef<
+  NativeRoutePickerMapHandle,
+  NativeRoutePickerMapProps
+>(function NativeRoutePickerMap(_props, ref) {
+  React.useImperativeHandle(ref, () => ({ addPointAtCenter: () => undefined }), []);
+  return null;
+});
 
 export default NativeRoutePickerMap;

@@ -15,6 +15,10 @@ type NativePointListProps = {
   // #1040 — открыть полный редактор точки (адрес/категории/фото). Редактор один
   // и тот же для кнопки «Изменить» здесь и для тапа по маркеру на карте.
   onRequestEdit: (index: number) => void
+  // #1722 — добавить точку, не возвращаясь к шапке карты: докрутив до списка,
+  // пользователь кнопку над полотном уже не видит. Ведёт в тот же путь
+  // добавления, что и она (точка в центре карты).
+  onAddPoint?: () => void
 }
 
 const HIT = { top: 6, bottom: 6, left: 6, right: 6 }
@@ -27,6 +31,7 @@ export const NativePointList = React.memo(function NativePointList({
   markers,
   onChange,
   onRequestEdit,
+  onAddPoint,
 }: NativePointListProps) {
   const colors = useThemedColors()
 
@@ -96,9 +101,37 @@ export const NativePointList = React.memo(function NativePointList({
 
   return (
     <View style={{ marginTop: 12, gap: 8 }} testID="travel-wizard.step-route.native-point-list">
-      <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
-        {i18nT('travel:components.travel.stepRoute.NativePointList.title')} · {markers.length}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: colors.text }}>
+          {i18nT('travel:components.travel.stepRoute.NativePointList.title')} · {markers.length}
+        </Text>
+        {onAddPoint ? (
+          <Pressable
+            onPress={onAddPoint}
+            hitSlop={HIT}
+            accessibilityRole="button"
+            accessibilityLabel={i18nT('travel:components.travel.stepRoute.NativePointList.addPoint')}
+            testID="travel-wizard.step-route.point-list-add"
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              minHeight: 44,
+              paddingHorizontal: 12,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: colors.primary,
+              backgroundColor: colors.surface,
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Feather name="plus" size={16} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
+              {i18nT('travel:components.travel.stepRoute.NativePointList.addPoint')}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
 
       {markers.map((m, index) => (
         <View

@@ -129,3 +129,26 @@ export async function reverseGeocode(lat: number, lng: number) {
     return null
   }
 }
+
+// #1722 — высота полотна native-пикера. Фиксированные 380 пт занимали видимую
+// полосу шага мастера на iPhone 12/13 mini (375×812, полоса ~420 пт) целиком:
+// ни подсказка, ни кнопки в кадр не попадали, и тестировщик не нашёл ни одного
+// способа добавить точку. Считаем от высоты окна, оставляя контролам над картой
+// ~140 пт, и упираемся в прежние 380 на крупных экранах.
+//
+// Живёт здесь, а не в `NativeRoutePickerMap.native.tsx`: `moduleSuffixes` в
+// tsconfig разрешает `./NativeRoutePickerMap` в web-заглушку, поэтому тест не
+// смог бы импортировать функцию из платформенного файла по общему пути.
+export const ROUTE_PICKER_MAP_HEIGHT_MAX = 380
+export const ROUTE_PICKER_MAP_HEIGHT_MIN = 240
+export const ROUTE_PICKER_MAP_HEIGHT_WINDOW_RATIO = 0.34
+
+export const resolveRoutePickerMapHeight = (windowHeight: number): number => {
+  if (!Number.isFinite(windowHeight) || windowHeight <= 0) return ROUTE_PICKER_MAP_HEIGHT_MAX
+  return Math.round(
+    Math.min(
+      ROUTE_PICKER_MAP_HEIGHT_MAX,
+      Math.max(ROUTE_PICKER_MAP_HEIGHT_MIN, windowHeight * ROUTE_PICKER_MAP_HEIGHT_WINDOW_RATIO),
+    ),
+  )
+}

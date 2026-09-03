@@ -9,7 +9,8 @@
 // HTML. Это принципиально: пересборка HTML на каждую правку перезагружала бы
 // WebView и сбрасывала позицию/зум карты после каждого добавления точки.
 //
-// Мост RN → WebView: __mtRouteSetPoints / __mtRouteFlyTo / __mtRouteFit.
+// Мост RN → WebView: __mtRouteSetPoints / __mtRouteFlyTo / __mtRouteFit /
+//                    __mtRouteAddCenterPoint (#1722).
 // Мост WebView → RN: POINT_ADD / POINT_MOVE / POINT_SELECT / MAP_READY.
 import { buildLeafletWebViewHtml } from '@/components/map-core/leafletWebViewHtml';
 import {
@@ -131,6 +132,18 @@ export const buildRoutePickerNativeHtml = ({
                 map.fitBounds(bounds.pad(0.15), { padding: [40, 40], maxZoom: 15, animate: false });
               }
             }
+          } catch (e) {}
+        };
+
+        // #1722 — явное действие «Добавить точку» в шапке карты: точка ставится
+        // в текущий центр полотна. Отдельного типа сообщения не заводим — путь
+        // тот же POINT_ADD, что и у тапа, поэтому обратный геокодер, нумерация и
+        // автосейв на стороне RN остаются одни на оба способа.
+        window.__mtRouteAddCenterPoint = function () {
+          try {
+            const c = map.getCenter();
+            if (!c || !isFinite(c.lat) || !isFinite(c.lng)) return;
+            post({ type: 'POINT_ADD', lat: c.lat, lng: c.lng });
           } catch (e) {}
         };
 

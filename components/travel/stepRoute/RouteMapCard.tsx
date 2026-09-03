@@ -1,9 +1,9 @@
-import React, { Suspense, useCallback, useState } from 'react'
+import React, { Suspense, useCallback, useRef, useState } from 'react'
 import { Platform, Text, View } from 'react-native'
 
 import { ROUTE_MARKERS_ANCHOR_ID } from './helpers'
 import { NativePointList } from './NativePointList'
-import { NativeRoutePickerMap } from './NativeRoutePickerMap'
+import { NativeRoutePickerMap, type NativeRoutePickerMapHandle } from './NativeRoutePickerMap'
 import { PointEditorSheet } from './PointEditorSheet'
 import type { RouteMapCardProps } from './types'
 import { translate as i18nT } from '@/i18n'
@@ -33,6 +33,14 @@ export const RouteMapCard = React.memo(function RouteMapCard({
   // и кнопкой «Изменить» в списке точек.
   const [editorIndex, setEditorIndex] = useState<number | null>(null)
   const closeEditor = useCallback(() => setEditorIndex(null), [])
+
+  // #1722 — «Добавить точку» есть и в шапке карты, и в списке точек под ней:
+  // докрутив до списка, пользователь шапки уже не видит. Обе кнопки дёргают
+  // один и тот же императивный метод карты, чтобы путь добавления был один.
+  const mapRef = useRef<NativeRoutePickerMapHandle | null>(null)
+  const handleAddPointFromList = useCallback(() => {
+    mapRef.current?.addPointAtCenter()
+  }, [])
 
   const handlePointSave = useCallback(
     (index: number, payload: { address: string; categories: number[]; image: string | null }) => {
@@ -79,6 +87,7 @@ export const RouteMapCard = React.memo(function RouteMapCard({
           </Suspense>
         ) : (
           <NativeRoutePickerMap
+            ref={mapRef}
             markers={markers}
             onAddPoint={onMapPointAdd}
             onMovePoint={onMapPointMove}
@@ -92,6 +101,7 @@ export const RouteMapCard = React.memo(function RouteMapCard({
             markers={markers}
             onChange={onMarkerEditSave}
             onRequestEdit={setEditorIndex}
+            onAddPoint={handleAddPointFromList}
           />
           <PointEditorSheet
             visible={editorIndex != null}

@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { WebView } from 'react-native-webview'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -14,10 +14,10 @@ import { openExternalUrl } from '@/utils/externalLinks'
 import { showToastMessage } from '@/utils/toast'
 import { translate as i18nT } from '@/i18n'
 
+import { resolveRoutePickerMapHeight } from './helpers'
 import { buildRoutePickerNativeHtml } from './routePickerNativeHtml'
 
 const BIRD_MARKER_HTML = buildBirdMarkerHtml()
-const MAP_HEIGHT = 380
 
 interface NativeRoutePickerMapProps {
   markers: MarkerData[]
@@ -30,21 +30,34 @@ interface NativeRoutePickerMapProps {
 }
 
 /**
- * #1040 — Интерактивная карта выбора точек маршрута для native (Android).
- * Раньше здесь была статичная заглушка «Карта доступна в браузере», из-за чего
- * с телефона нельзя было поставить точку на карте.
+ * #1722 — то же действие «Добавить точку» нужно и списку точек под картой:
+ * докрутив до списка, пользователь уже не видит шапку карты. Отдаём его
+ * императивно, чтобы обе кнопки вели в один и тот же путь POINT_ADD.
+ */
+export interface NativeRoutePickerMapHandle {
+  addPointAtCenter: () => void
+}
+
+/**
+ * #1040 — Интерактивная карта выбора точек маршрута для native (Android; с
+ * #1722 приёмка распространена и на iOS). Раньше здесь была статичная заглушка
+ * «Карта доступна в браузере», из-за чего с телефона нельзя было поставить
+ * точку на карте.
  *
  * HTML строится ОДИН раз (центр фиксируется на первом рендере), а точки
  * доставляются в WebView через injectJavaScript — иначе пересборка html
  * перезагружала бы WebView и сбрасывала позицию/зум после каждой правки.
  */
-export const NativeRoutePickerMap = React.memo(function NativeRoutePickerMap({
+export const NativeRoutePickerMap = React.memo(
+  React.forwardRef<NativeRoutePickerMapHandle, NativeRoutePickerMapProps>(function NativeRoutePickerMap({
   markers,
   onAddPoint,
   onMovePoint,
   onSelectPoint,
-}: NativeRoutePickerMapProps) {
+}: NativeRoutePickerMapProps, ref) {
   const colors = useThemedColors()
+  const { height: windowHeight } = useWindowDimensions()
+  const mapHeight = useMemo(() => resolveRoutePickerMapHeight(windowHeight), [windowHeight])
   const webViewRef = useRef<WebView>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isLocating, setIsLocating] = useState(false)
@@ -133,6 +146,15 @@ export const NativeRoutePickerMap = React.memo(function NativeRoutePickerMap({
     [markers.length, onAddPoint, onMovePoint, onSelectPoint, pushPoints],
   )
 
+  // #1722 — «Добавить точку» ставит точку в текущий центр полотна. Координаты
+  // берёт сам WebView и присылает обычным POINT_ADD, поэтому обратный геокодер,
+  // нумерация и автосейв у кнопки и у тапа по карте общие.
+  const addPointAtCenter = useCallback(() => {
+    webViewRef.current?.injectJavaScript('window.__mtRouteAddCenterPoint();true;')
+  }, [])
+
+  useImperativeHandle(ref, () => ({ addPointAtCenter }), [addPointAtCenter])
+
   const handleMyLocation = useCallback(async () => {
     if (isLocating) return
     setIsLocating(true)
@@ -166,7 +188,53 @@ export const NativeRoutePickerMap = React.memo(function NativeRoutePickerMap({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <View style={styles.mapBox}>
+      {/* #1722 — подсказка и действия ВЫШЕ полотна. Пока они были подвалом под
+          картой в 380 пт, на 375×812 в видимую полосу шага не попадал ни один
+          способ добавить точку: экран показывал только карту. */}
+      <View style={styles.controls} testID="travel-wizard.step-route.native-map-controls">
+        <Text style={[styles.hint, { color: colors.textMuted }]}>
+          {i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.hint')}
+        </Text>
+        <View style={styles.actionsRow}>
+          <Pressable
+            onPress={addPointAtCenter}
+            style={({ pressed }) => [
+              styles.addButton,
+              { backgroundColor: colors.primary },
+              pressed && { opacity: 0.8 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.addPoint')}
+            accessibilityHint={i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.addPointHint')}
+            testID="travel-wizard.step-route.add-point"
+          >
+            <Feather name="plus" size={16} color={colors.textOnPrimary} />
+            <Text style={[styles.addLabel, { color: colors.textOnPrimary }]} numberOfLines={1}>
+              {i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.addPoint')}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={handleMyLocation}
+            disabled={isLocating}
+            style={({ pressed }) => [
+              styles.locationButton,
+              { borderColor: colors.border, backgroundColor: colors.background },
+              pressed && { opacity: 0.7 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.myLocation')}
+            testID="travel-wizard.step-route.my-location"
+          >
+            {isLocating ? (
+              <ActivityIndicator size="small" color={colors.primaryDark} />
+            ) : (
+              <Feather name="crosshair" size={18} color={colors.primaryDark} />
+            )}
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={[styles.mapBox, { height: mapHeight }]} testID="travel-wizard.step-route.native-map-canvas">
         {isLoading && (
           <View style={[styles.loader, { backgroundColor: colors.backgroundSecondary }]}>
             <ActivityIndicator size="large" color={colors.primaryDark} />
@@ -188,36 +256,10 @@ export const NativeRoutePickerMap = React.memo(function NativeRoutePickerMap({
           testID="travel-wizard.step-route.native-map"
         />
       </View>
-
-      <View style={styles.footer} testID="travel-wizard.step-route.native-map-footer">
-        <Text style={[styles.hint, { color: colors.textMuted }]}>
-          {i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.hint')}
-        </Text>
-        <Pressable
-          onPress={handleMyLocation}
-          disabled={isLocating}
-          style={({ pressed }) => [
-            styles.locationButton,
-            { borderColor: colors.border, backgroundColor: colors.background },
-            pressed && { opacity: 0.7 },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.myLocation')}
-          testID="travel-wizard.step-route.my-location"
-        >
-          {isLocating ? (
-            <ActivityIndicator size="small" color={colors.primaryDark} />
-          ) : (
-            <Feather name="crosshair" size={16} color={colors.primaryDark} />
-          )}
-          <Text style={[styles.locationLabel, { color: colors.primaryDark }]} numberOfLines={1}>
-            {i18nT('travel:components.travel.stepRoute.NativeRoutePickerMap.myLocation')}
-          </Text>
-        </Pressable>
-      </View>
     </View>
   )
-})
+}),
+)
 
 export default NativeRoutePickerMap
 
@@ -228,7 +270,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   mapBox: {
-    height: MAP_HEIGHT,
+    // Высота приходит из `resolveRoutePickerMapHeight` — она зависит от окна.
     width: '100%',
     position: 'relative',
   },
@@ -243,7 +285,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 10,
   },
-  footer: {
+  controls: {
     flexDirection: 'column',
     alignItems: 'stretch',
     gap: DESIGN_TOKENS.spacing.sm,
@@ -255,19 +297,36 @@ const styles = StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     lineHeight: 18,
   },
-  locationButton: {
+  // Действия в один ряд: подпись несёт только основное «Добавить точку», а
+  // геолокация ужата до иконки — два ряда кнопок по 48 пт снова вытолкнули бы
+  // карту из видимой полосы шага, ради чего всё и переносилось (#1722).
+  actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'stretch',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  addButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
     gap: DESIGN_TOKENS.spacing.xs,
     minHeight: DESIGN_TOKENS.touchTarget.minHeight,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     borderRadius: DESIGN_TOKENS.radii.md,
-    borderWidth: 1,
   },
-  locationLabel: {
+  addLabel: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: DESIGN_TOKENS.touchTarget.minHeight,
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    borderWidth: 1,
   },
 })
