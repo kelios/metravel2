@@ -293,7 +293,7 @@ for (const file of files) {
   // budgets so a 300-byte manifest does not look like feature-code growth.
   const source = buf.toString('utf8')
   const budgetSource = source.replace(
-    /^globalThis\.__METRAVEL_CHUNK_DEPS__\?\?=\{};globalThis\.__METRAVEL_CHUNK_DEPS__\[[^\]]+\]=\[[0-9,]*\];/,
+    /^globalThis\.__METRAVEL_CHUNK_DEPS__\?\?=\{};globalThis\.__METRAVEL_CHUNK_DEPS__\[[^\]]+\]=\[(?:"[^"]*"|[0-9]+)(?:,(?:"[^"]*"|[0-9]+))*\];/,
     '',
   )
   const budgetBuf = budgetSource.length === source.length ? buf : Buffer.from(budgetSource)

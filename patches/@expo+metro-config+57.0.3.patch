@@ -1,5 +1,5 @@
 diff --git a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
-index 1e5c598..2cb4bb0 100644
+index 1e5c598..90e3eb1 100644
 --- a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
 +++ b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
 @@ -58,14 +58,10 @@ async function graphToSerialAssetsAsync(config, serializeChunkOptions, ...props)
@@ -33,10 +33,18 @@ index 1e5c598..2cb4bb0 100644
      constructor(name, entries, graph, options, isAsync = false, isVendor = false, isEntry = false) {
          this.name = name;
          this.entries = entries;
-@@ -184,6 +186,14 @@ class Chunk {
-         if (this.options.includeAsyncPaths) {
-             return targets;
+@@ -181,6 +183,22 @@ class Chunk {
          }
+         const targets = new Set();
+         this._asyncTargets = targets;
++        // METRAVEL_CHUNK_DEPS_BY_PATH: the shared chunks this chunk requires take
++        // part in its filename hash even when async paths are emitted. Upstream
++        // returns early here for `includeAsyncPaths` (production web export), so a
++        // route/section chunk kept its hashed name while the shared chunks it needed
++        // were regrouped underneath it. A browser holding that chunk under the
++        // immutable cache header then evaluated a stale dependency manifest and
++        // fetched the wrong shared chunks: "Requiring unknown module" on every
++        // return visit after a regroup (#1721 rollout, 04.09.2026).
 +        for (const requiredChunk of this.requiredChunks) {
 +            if (requiredChunk.isAsync)
 +                targets.add(requiredChunk);
@@ -45,23 +53,32 @@ index 1e5c598..2cb4bb0 100644
 +            if (filenameDependency.isAsync)
 +                targets.add(filenameDependency);
 +        }
-         for (const module of this.deps) {
-             for (const dep of module.dependencies.values()) {
-                 if ((0, isResolvedDependency_1.isResolvedDependency)(dep) && dep.data.data.asyncType) {
-@@ -295,6 +305,47 @@ class Chunk {
+         if (this.options.includeAsyncPaths) {
+             return targets;
+         }
+@@ -295,6 +313,56 @@ class Chunk {
              preModules: new Set(finalPreModules),
          });
          const relativeEntry = path_1.default.relative(this.options.projectRoot, this.name);
 +        const baseUrl = getBaseUrlOption(this.graph, this.options);
 +        const requiredAsyncChunks = [...this.requiredChunks]
 +            .filter((chunk) => chunk.isAsync)
-+        const requiredAsyncIds = requiredAsyncChunks.map((chunk) => {
++        // METRAVEL_CHUNK_DEPS_BY_PATH: the manifest names the required shared chunks
++        // by their hashed path, never by `sharedIndex`. The index is an ordinal of the
++        // current build's group list and is not part of any content hash, so a chunk
++        // reused under an unchanged filename would carry indices of a previous build
++        // and resolve them against the current `__METRAVEL_SHARED_CHUNKS__` list. The
++        // hashed path is content-addressed: whatever a cached chunk names is the
++        // exact file it was serialized against.
++        const requiredAsyncPaths = requiredAsyncChunks.map((chunk) => {
 +            (0, assert_1.default)(Number.isInteger(chunk.sharedIndex), 'Required async chunk is missing its shared index: ' + chunk.name);
-+            return chunk.sharedIndex;
++            const filename = filenamesByChunk.get(chunk);
++            (0, assert_1.default)(filename, 'Precomputed filename missing for required shared chunk: ' + chunk.name);
++            return (baseUrl ?? '/') + filename;
 +        });
 +        const ownBundlePath = (baseUrl ?? '/') + outputFile;
-+        const dependencyRegistration = this.isAsync && requiredAsyncIds.length
-+            ? `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__[${JSON.stringify(ownBundlePath)}]=${JSON.stringify(requiredAsyncIds)};`
++        const dependencyRegistration = this.isAsync && requiredAsyncPaths.length
++            ? `globalThis.__METRAVEL_CHUNK_DEPS__??={};globalThis.__METRAVEL_CHUNK_DEPS__[${JSON.stringify(ownBundlePath)}]=${JSON.stringify(requiredAsyncPaths)};`
 +            : '';
 +        const sharedManifestRegistration = this.name === '/__expo-metro-runtime.js'
 +            ? (() => {
@@ -96,7 +113,7 @@ index 1e5c598..2cb4bb0 100644
          const jsAsset = {
              filename: outputFile,
              originFilename: relativeEntry,
-@@ -308,14 +359,19 @@ class Chunk {
+@@ -308,14 +376,19 @@ class Chunk {
                  }),
                  // Provide a list of module paths that can be used for matching chunks to routes.
                  // TODO: Move HTML serializing closer to this code so we can reduce passing this much data around.
@@ -118,7 +135,7 @@ index 1e5c598..2cb4bb0 100644
          };
          const assets = [jsAsset];
          // debugId is passed into `sourceMapString` so the bundler-map path
-@@ -524,36 +580,226 @@ function removeEntryDepsFromAsyncChunks(entryChunk, chunks) {
+@@ -524,36 +597,226 @@ function removeEntryDepsFromAsyncChunks(entryChunk, chunks) {
          }
      }
  }
@@ -366,7 +383,7 @@ index 1e5c598..2cb4bb0 100644
                      chunk.deps.delete(dep);
                  }
              }
-@@ -577,6 +823,9 @@ function createRuntimeChunk(entryChunk, chunks, graph, options) {
+@@ -577,6 +840,9 @@ function createRuntimeChunk(entryChunk, chunks, graph, options) {
      for (const chunk of chunks) {
          // Runtime chunk has to load before any other a.k.a all chunks require it.
          chunk.requiredChunks.add(runtimeChunk);

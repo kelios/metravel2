@@ -118,6 +118,32 @@ describe('PERF-014 gesture-handler web stub — metro.config resolver', () => {
     expect(installedRuntime).toContain('Promise.all(pending)')
   })
 
+  it('names required shared chunks by hashed path and hashes them into the chunk filename', () => {
+    // A cached chunk under an unchanged filename must resolve the exact shared
+    // chunks it was serialized against: ordinals into the current build's group
+    // list drift after a regroup and produced "Requiring unknown module" on prod.
+    const installedSerializer = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_SERIALIZER_REL), 'utf8')
+    const installedRuntime = fs.readFileSync(path.join(ROOT, EXPO_ASYNC_RUNTIME_REL), 'utf8')
+    const patch = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_PATCH_REL), 'utf8')
+    const runtimePatch = fs.readFileSync(path.join(ROOT, EXPO_ASYNC_RUNTIME_PATCH_REL), 'utf8')
+
+    for (const text of [patch, installedSerializer, runtimePatch, installedRuntime]) {
+      expect(text).toContain('METRAVEL_CHUNK_DEPS_BY_PATH')
+    }
+    expect(installedSerializer).toContain('__METRAVEL_CHUNK_DEPS__[${JSON.stringify(ownBundlePath)}]=${JSON.stringify(requiredAsyncPaths)}')
+    expect(installedSerializer).not.toContain('JSON.stringify(requiredAsyncIds)')
+    expect(installedRuntime).toContain("typeof id === 'string' ? id : sharedChunks?.[id]")
+
+    // Required shared chunks join the filename hash before the includeAsyncPaths
+    // early return, otherwise production web export ignores them.
+    const targets = installedSerializer.indexOf('getAsyncChunkTargets(chunkByPath) {')
+    const requiredLoop = installedSerializer.indexOf('for (const requiredChunk of this.requiredChunks)', targets)
+    const earlyReturn = installedSerializer.indexOf('if (this.options.includeAsyncPaths) {', targets)
+    expect(targets).toBeGreaterThan(-1)
+    expect(requiredLoop).toBeGreaterThan(targets)
+    expect(earlyReturn).toBeGreaterThan(requiredLoop)
+  })
+
   // #1340: the runtime may only await shared chunks that are not on the page yet.
   // Awaiting one that the HTML already shipped as a <script> pushes the route module
   // past the start of hydration, React.lazy suspends, and the route Suspense boundary
