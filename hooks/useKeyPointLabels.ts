@@ -127,7 +127,12 @@ export function useKeyPointLabels(primaryRoutePreview: ParsedRoutePreview | null
     }
   }, [primaryRoutePreview])
 
-  const resetKeyPointLabels = useCallback(() => setKeyPointLabels({}), [])
+  // Та же дисциплина, что у эффекта: уже пустой объект не пересоздаём — иначе
+  // useMemo списка карт у потребителя пересчитывается на каждый переход между статьями.
+  const resetKeyPointLabels = useCallback(
+    () => setKeyPointLabels((prev) => (Object.keys(prev).length === 0 ? prev : {})),
+    [],
+  )
 
   return { keyPointLabels, resetKeyPointLabels }
 }
