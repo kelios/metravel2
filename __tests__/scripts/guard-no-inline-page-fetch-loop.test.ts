@@ -1,6 +1,7 @@
 const {
   ALLOWED_FILES,
   CANONICAL_FILE,
+  MULTILINE_MATCH_SPAN,
   findAllowlistProblems,
   evaluateGuard,
   findViolationsInSource,
@@ -37,6 +38,95 @@ describe('guard-no-inline-page-fetch-loop', () => {
     expect(violations).toEqual([
       expect.objectContaining({ file: 'stores/exampleStore.ts', line: 3 }),
     ])
+  })
+
+  // Диапазон, разнесённый prettier'ом на три строки, — та самая форма, которую
+  // печатает сам проект. Пока признак искался построчно, `Array.from(` и
+  // `{ length: … }` оказывались на разных строках, и копия проходила молча.
+  it('ловит копию, у которой prettier разнёс диапазон на три строки', () => {
+    // Ни `loadPage`, ни `pageSize` в тексте нет: единственный признак — диапазон
+    // вплотную к `Promise.all`. Пока он искался построчно, `Array.from(` и
+    // `{ length: … }` стояли на разных строках, и копия проходила молча
+    // (проверено на версии гейта до правки: 0 нарушений против 1 сейчас).
+    const violations = findViolationsInSource({
+      filePath: 'stores/prettierStore.ts',
+      content: [
+        'const first = await http.get(endpoint)',
+        'const size = first.items.length',
+        'const totalPages = Math.ceil(first.total / size)',
+        'const rest = await Promise.all(',
+        '  Array.from(',
+        '    { length: totalPages - 1 },',
+        '    (_, index) => http.get(`${endpoint}?p=${index + 2}`),',
+        '  ),',
+        ')',
+      ].join('\n'),
+    })
+
+    expect(violations).toEqual([
+      expect.objectContaining({ file: 'stores/prettierStore.ts', line: 3 }),
+    ])
+  })
+
+  // Признак засчитывается за строку, где конструкция НАЧИНАЕТСЯ. Иначе одно и то
+  // же `Array.from` числилось бы ещё и за двумя строками выше, соседство
+  // раздувалось бы на ширину среза, и сетка со скелетонами снова стала бы находкой.
+  it('не растягивает соседство признаков на ширину многострочного среза', () => {
+    const gap = Array.from({ length: MULTILINE_MATCH_SPAN + 3 }, (_, index) => `const filler${index} = ${index}`)
+
+    expect(
+      findViolationsInSource({
+        filePath: 'components/Grid.tsx',
+        content: [
+          'const columns = 3',
+          'const totalPages = Math.ceil(totalItems / columns)',
+          'const skeletons = Array.from({ length: 6 }, (_, index) => index)',
+          ...gap,
+          'void Promise.all([preloadCovers(), preloadAvatars()])',
+        ].join('\n'),
+      }),
+    ).toEqual([])
+  })
+
+  // Имя параметра `page` в теле запроса — обычная форма DRF-клиента, и без него
+  // маркер чтения страниц пропускал копию, у которой между диапазоном и
+  // `Promise.all` вклинился guard clause.
+  it('считает чтением страниц параметр `page` в теле запроса', () => {
+    // Признак fan-out здесь не работает: между диапазоном и `Promise.all`
+    // вклинились guard clause и две строки, соседство разорвано. Держит копию
+    // ровно маркер `page:` в параметрах запроса — обычная форма DRF-клиента
+    // (до правки словарь маркеров его не знал: 0 нарушений против 1 сейчас).
+    const violations = findViolationsInSource({
+      filePath: 'api/exampleClient.ts',
+      content: [
+        'const first = await http.get(endpoint, { params: { page: 1 } })',
+        'const size = first.data.results.length',
+        'const totalPages = Math.ceil(first.data.count / size)',
+        'const restPages = Array.from({ length: totalPages - 1 }, (_, i) => i + 2)',
+        'if (restPages.length === 0) return first.data.results',
+        'const a = 1',
+        'const b = 2',
+        'const rest = await Promise.all(restPages.map((p) => http.get(endpoint, { params: { page: p } })))',
+      ].join('\n'),
+    })
+
+    expect(violations).toHaveLength(1)
+  })
+
+  // Общеупотребительное имя без присваивания размером страницы не считается:
+  // иначе `<Icon size={24} />` рядом с `Math.ceil(count / 24)` стал бы находкой.
+  it('не считает нарушением общеупотребительное имя без присваивания', () => {
+    expect(
+      findViolationsInSource({
+        filePath: 'components/IconRow.tsx',
+        content: [
+          '<Icon size={24} />',
+          'const rows = Math.ceil(count / 24)',
+          'const items = Array.from({ length: rows }, (_, index) => index)',
+          'void Promise.all(items.map((index) => preload(index)))',
+        ].join('\n'),
+      }),
+    ).toEqual([])
   })
 
   // Последовательная копия теряет хвост ровно так же, поэтому «не Promise.all»
