@@ -16,7 +16,6 @@ const {
   detectEncodingCorruption,
   detectFieldMismatch,
   detectStoredTextCorruption,
-  findUnverifiableFields,
   isTextCorruptionError,
   TextCorruptionError,
 } = require('@/scripts/lib/textIntegrity')
@@ -98,16 +97,18 @@ describe('detectStoredTextCorruption', () => {
   })
 })
 
-describe('findUnverifiableFields', () => {
-  it('называет отправленные поля, которых нет в ответе, и не путает их с пустыми', () => {
+describe('detectStoredTextCorruption — граница undefined/null', () => {
+  it('отсутствующее в ответе поле не порча, а пустое — порча', () => {
     expect(
-      findUnverifiableFields([
-        { label: 'description', sent: CLEAN, stored: CLEAN },
+      detectStoredTextCorruption([
         { label: 'meta_description', sent: 'мета', stored: undefined, exact: true },
-        { label: 'name', sent: 'имя', stored: null, exact: true },
-        { label: 'slug', sent: null, stored: undefined, exact: true },
       ]),
-    ).toEqual(['meta_description'])
+    ).toEqual([])
+    expect(
+      detectStoredTextCorruption([
+        { label: 'name', sent: 'имя', stored: null, exact: true },
+      ]),
+    ).toHaveLength(1)
   })
 })
 

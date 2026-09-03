@@ -274,16 +274,11 @@ function detectCorruption(after, { description = null, meta = null, name = null 
   // detectRegression() already covers this shape ("description did not persist
   // as written") and keeps it a per-article rollback.
   if (!after || typeof after !== 'object' || after.id == null) return [];
-  return detectStoredTextCorruption(verifiableFields(after, { description, meta, name }));
-}
-
-/** Поля круговой проверки. Вынесено, чтобы список не разъехался между двумя вызовами. */
-function verifiableFields(after, { description = null, meta = null, name = null } = {}) {
-  return [
+  return detectStoredTextCorruption([
     { label: 'description', sent: description, stored: after.description },
     { label: 'meta_description', sent: meta, stored: after.meta_description, exact: true },
     { label: 'name', sent: name, stored: after.name, exact: true },
-  ];
+  ]);
 }
 
 function backupFileName(id, ts) {
@@ -422,7 +417,6 @@ async function main() {
   console.log(`  publish=${detail.publish} moderation=${detail.moderation} ` +
     `gallery=${(detail.gallery || []).length} points=${(detail.coordsMeTravel || []).length}`);
   console.log(`  desc: ${oldDesc.length} → ${newDesc.length} chars (+${newDesc.length - oldDesc.length})`);
-  if (meta != null) console.log(`  meta_description: ${JSON.stringify(meta)}`);
 
   if (dryRun) { console.log('DRY RUN — nothing written.'); return; }
 
