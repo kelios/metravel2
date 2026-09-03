@@ -1,5 +1,5 @@
 diff --git a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
-index 1e5c598..3ab293b 100644
+index 1e5c598..c847812 100644
 --- a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
 +++ b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
 @@ -58,14 +58,10 @@ async function graphToSerialAssetsAsync(config, serializeChunkOptions, ...props)
@@ -118,7 +118,7 @@ index 1e5c598..3ab293b 100644
          };
          const assets = [jsAsset];
          // debugId is passed into `sourceMapString` so the bundler-map path
-@@ -524,36 +580,222 @@ function removeEntryDepsFromAsyncChunks(entryChunk, chunks) {
+@@ -524,36 +580,232 @@ function removeEntryDepsFromAsyncChunks(entryChunk, chunks) {
          }
      }
  }
@@ -165,18 +165,66 @@ index 1e5c598..3ab293b 100644
 +            owner.deps.delete(dep);
 +        }
 +    }
-+    // Exact owner sets can produce hundreds of tiny files. Merge highly similar
-+    // sets while capping each cluster at ~512 KiB transformed source. The 0.4
-+    // Jaccard floor keeps the chunks route-scoped; it also cuts compression and
-+    // request overhead without recreating a global eager payload.
++    // METRAVEL_ROUTE_SET_SIMILARITY (#1721): точные наборы владельцев дают сотни
++    // мелких файлов, и их надо слить. Слияние меряется ПО МАРШРУТАМ ДОСТАВКИ, а
++    // не по async-чанкам-владельцам: доставку определяет маршрут, и два набора с
++    // почти одинаковыми маршрутами едут вместе почти всегда — их разделение
++    // покупает только лишние запросы и худшее сжатие.
++    //
++    // Раньше метрикой было сходство владельцев с полом 0.4 и потолком 512 KiB.
++    // Обе величины оказались негодными: потолок вообще не связывал (удвоение до
++    // 1 MiB дало побайтно тот же выпуск), а пол 0.4 связан с доставкой лишь
++    // косвенно — понижение до 0.3 роняло запросы с 28 до 20, но добавляло ~600 KB
++    // raw на худший маршрут и подводило eager-brotli к самому потолку (772 из
++    // 775), а 0.35 давало 31 запрос, то есть ХУЖЕ 0.4. Метрика по маршрутам
++    // ограничивает расширение доставки напрямую, а не надеется на прокси.
 +    const estimateDependencySize = (dep) => dep.output.reduce((total, output) => {
 +        const code = output?.data?.code;
 +        return total + (typeof code === 'string' ? code.length : 0);
 +    }, 0);
-+    const ownerSimilarity = (left, right) => {
++    // Маршрутное покрытие — то же правило, что и у слияния одинаковых наборов
++    // ниже: entry-путь выбирает маршруты, в которых он может быть точкой входа,
++    // а expo-router строит эти цепочки по каталогам (layout — точка входа всех
++    // маршрутов под ним, обычный файл маршрута — только себя).
++    const allEntryPaths = new Set();
++    for (const chunk of chunks) {
++        for (const entry of chunk.entries) {
++            allEntryPaths.add(entry.path);
++        }
++    }
++    const APP_PATH = /(^|\/)app\//;
++    const LAYOUT_PATH = /\/_layout(\.[^/]+)?\.[jt]sx?$/;
++    const routeModulePaths = [...allEntryPaths].filter((path) => APP_PATH.test(path) && !LAYOUT_PATH.test(path));
++    const coverageOf = (path) => {
++        if (!APP_PATH.test(path))
++            return [];
++        if (!LAYOUT_PATH.test(path))
++            return [path];
++        const dir = path.slice(0, path.lastIndexOf('/') + 1);
++        return routeModulePaths.filter((route) => route.startsWith(dir));
++    };
++    const routesOf = (group) => {
++        const matched = new Set();
++        const add = (path) => {
++            for (const route of coverageOf(path))
++                matched.add(route);
++        };
++        for (const owner of group.owners) {
++            for (const entry of owner.entries) {
++                add(entry.path);
++            }
++        }
++        for (const dep of group.deps) {
++            if (allEntryPaths.has(dep.path)) {
++                add(dep.path);
++            }
++        }
++        return matched;
++    };
++    const setSimilarity = (left, right) => {
 +        let intersection = 0;
-+        for (const owner of left) {
-+            if (right.has(owner))
++        for (const value of left) {
++            if (right.has(value))
 +                intersection += 1;
 +        }
 +        return intersection / (left.size + right.size - intersection || 1);
@@ -186,19 +234,18 @@ index 1e5c598..3ab293b 100644
 +        deps: group.deps,
 +        size: group.deps.reduce((total, dep) => total + estimateDependencySize(dep), 0),
 +    }));
-+    const MAX_SHARED_GROUP_SIZE = 512 * 1024;
-+    const MIN_OWNER_SIMILARITY = 0.4;
++    // Потолка на размер кластера здесь нет намеренно: расширение доставки теперь
++    // ограничивает сама метрика, а размер сам по себе ничего не говорит — набор
++    // в мегабайт, едущий ровно на те же маршруты, лучше держать одним файлом.
++    const MIN_ROUTE_SIMILARITY = 0.4;
++    let routeSets = sharedGroups.map((group) => routesOf(group));
 +    while (true) {
 +        let bestLeft = -1;
 +        let bestRight = -1;
-+        let bestSimilarity = MIN_OWNER_SIMILARITY;
++        let bestSimilarity = MIN_ROUTE_SIMILARITY;
 +        for (let left = 0; left < sharedGroups.length; left += 1) {
 +            for (let right = left + 1; right < sharedGroups.length; right += 1) {
-+                const leftGroup = sharedGroups[left];
-+                const rightGroup = sharedGroups[right];
-+                if (leftGroup.size + rightGroup.size > MAX_SHARED_GROUP_SIZE)
-+                    continue;
-+                const similarity = ownerSimilarity(leftGroup.owners, rightGroup.owners);
++                const similarity = setSimilarity(routeSets[left], routeSets[right]);
 +                if (similarity > bestSimilarity) {
 +                    bestLeft = left;
 +                    bestRight = right;
@@ -215,7 +262,9 @@ index 1e5c598..3ab293b 100644
 +            deps: [...leftGroup.deps, ...rightGroup.deps],
 +            size: leftGroup.size + rightGroup.size,
 +        };
++        routeSets[bestLeft] = new Set([...routeSets[bestLeft], ...routeSets[bestRight]]);
 +        sharedGroups.splice(bestRight, 1);
++        routeSets.splice(bestRight, 1);
 +    }
 +    // A merged chunk can be selected for a route through any of its original
 +    // owner sets. Propagate that expanded ownership through synchronous module
@@ -271,48 +320,9 @@ index 1e5c598..3ab293b 100644
 +    // two groups sharing it land on exactly the same HTML routes. Deps matter as
 +    // much as owners here — a group that carries a layout module is pulled onto
 +    // every route through that dep, not through its owners.
-+    const allEntryPaths = new Set();
-+    for (const chunk of chunks) {
-+        for (const entry of chunk.entries) {
-+            allEntryPaths.add(entry.path);
-+        }
-+    }
-+    // An entry path only selects routes it can appear in as a route entry point,
-+    // and expo-router builds those chains by directory: a layout is an entry point of
-+    // every route below it, any other route file is an entry point of itself alone.
-+    // Expanding layouts to the routes they cover is what lets a group owned by the
-+    // root layout and a group owned by every route module recognise each other as
-+    // the same delivery set. Paths outside `app/` can never be a route entry point,
-+    // so they cannot pull a chunk onto a page and are dropped from the key.
-+    const APP_PATH = /(^|\/)app\//;
-+    const LAYOUT_PATH = /\/_layout(\.[^/]+)?\.[jt]sx?$/;
-+    const routeModulePaths = [...allEntryPaths].filter((path) => APP_PATH.test(path) && !LAYOUT_PATH.test(path));
-+    const coverageOf = (path) => {
-+        if (!APP_PATH.test(path))
-+            return [];
-+        if (!LAYOUT_PATH.test(path))
-+            return [path];
-+        const dir = path.slice(0, path.lastIndexOf('/') + 1);
-+        return routeModulePaths.filter((route) => route.startsWith(dir));
-+    };
-+    const routeKeyOf = (group) => {
-+        const matched = new Set();
-+        const add = (path) => {
-+            for (const route of coverageOf(path))
-+                matched.add(route);
-+        };
-+        for (const owner of group.owners) {
-+            for (const entry of owner.entries) {
-+                add(entry.path);
-+            }
-+        }
-+        for (const dep of group.deps) {
-+            if (allEntryPaths.has(dep.path)) {
-+                add(dep.path);
-+            }
-+        }
-+        return [...matched].sort().join('|');
-+    };
++    // Хелперы маршрутного покрытия объявлены выше — их же использует слияние по
++    // сходству наборов маршрутов (#1721). Здесь нужен только ключ.
++    const routeKeyOf = (group) => [...routesOf(group)].sort().join('|');
 +    const groupsByRouteKey = new Map();
 +    for (const group of sharedGroups) {
 +        const routeKey = routeKeyOf(group);
@@ -362,7 +372,7 @@ index 1e5c598..3ab293b 100644
                      chunk.deps.delete(dep);
                  }
              }
-@@ -577,6 +819,9 @@ function createRuntimeChunk(entryChunk, chunks, graph, options) {
+@@ -577,6 +829,9 @@ function createRuntimeChunk(entryChunk, chunks, graph, options) {
      for (const chunk of chunks) {
          // Runtime chunk has to load before any other a.k.a all chunks require it.
          chunk.requiredChunks.add(runtimeChunk);
