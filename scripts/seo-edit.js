@@ -4,8 +4,9 @@
  *
  * Unlike the draft engine (metravel_publish.py), this never knocks an article
  * offline: it echoes back every real field from GET and changes ONLY the
- * description (lead / appended blocks) and the meta_description field. Safety
- * rails:
+ * description (lead / appended blocks). `--meta` is refused before the write:
+ * the upsert serializer does not declare meta_description, so the API drops it
+ * on validation (#1716, backend side #1737). Safety rails:
  *   1. BACKUP   — the full original GET payload is written to disk before any
  *                 write, so every edit is reversible (`--restore`).
  *   2. VERIFY   — after PUT it re-GETs and checks publish/moderation/slug/
@@ -35,8 +36,9 @@ const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 const { detectStoredTextCorruption, findUnverifiableFields } = require('./lib/textIntegrity');
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
-// Маркер черновика визарда. Скрипт его больше НЕ пишет (#1716) — только
-// узнаёт в чужих данных; экспортируется для тестов и вызывающих.
+// Маркер черновика визарда. Скрипт его больше НЕ пишет (#1716); константа
+// остаётся объявлением того, чего в payload быть не должно, и это же
+// утверждает тест.
 const SENTINEL = '__draft_placeholder__';
 const DEFAULT_BACKUP_DIR = path.join(__dirname, '.seo-backups');
 
@@ -53,7 +55,7 @@ Options:
   --prepend-file <path>  HTML prepended as the lead (with --id)
   --append-file <path>   HTML appended after the body (with --id)
   --desc-file <path>     HTML replacing the whole body (with --id)
-  --meta <text>          new meta_description (with --id)
+  --meta <text>          REFUSED: the API drops meta_description on validation (#1737)
   --dry-run              print the plan, write nothing (with --id)
   --backup-dir <path>    where backups are written and read (default scripts/.seo-backups)
   --help, -h             print this help and exit
@@ -416,6 +418,20 @@ async function main() {
   console.log(`  desc: ${oldDesc.length} → ${newDesc.length} chars (+${newDesc.length - oldDesc.length})`);
   if (meta != null) console.log(`  meta_description: ${JSON.stringify(meta)}`);
 
+  // Отказ ДО записи, а не предупреждение после (#1716). `TravelUpsertSerializer`
+  // поле `meta_description` не объявляет, поэтому DRF срезает его на валидации:
+  // до `UpsertTravelService.NON_RELATION_FIELDS` доезжает не значение, а его
+  // отсутствие. Наличие поля в списке сервиса доказывает намерение, но не приём.
+  // Молча писать описание и рапортовать «OK» о невыполненной части просьбы —
+  // то же самое враньё, что и откат по ложной тревоге, только тише.
+  if (meta != null) {
+    console.error('❌ --meta не поддерживается сервером: PUT /travels/upsert/ срезает ' +
+      'meta_description на валидации (TravelUpsertSerializer поле не объявляет), ' +
+      'и значение до статьи не доезжает.');
+    console.error('   Ждёт бэкенд-задачи #1737. Описание правится тем же вызовом без --meta.');
+    process.exit(1);
+  }
+
   if (dryRun) { console.log('DRY RUN — nothing written.'); return; }
 
   const backupFile = saveBackup(backupDir, detail);
@@ -448,11 +464,11 @@ async function main() {
     // a detected regression is a failed run, not a bad invocation (#1391).
     process.exit(1);
   }
-  // Говорим вслух, что круг замкнуть не удалось. Молчаливое «OK» на поле,
-  // которого нет в ответе, — то же самое fail-open, что и ложная тревога до
-  // #1716, только с другой стороны.
+  // Круг проверки не замкнулся: поля нет в ответе GET. Сегодня сюда попасть
+  // нельзя — `--meta` отвергается выше, — но список полей сверки ещё вырастет,
+  // и следующее непроверяемое поле должно быть названо, а не пропущено молча.
   if (unverifiable.length) {
-    console.log(`⚠️  записано, но не проверено: ${unverifiable.join(', ')} — ` +
+    console.log(`⚠️  не проверено: ${unverifiable.join(', ')} — ` +
       'API не возвращает это поле в GET /api/travels/<id>/, круговая сверка невозможна');
   }
   console.log(`✅ OK — still published, gallery=${(after.gallery || []).length}, ` +
