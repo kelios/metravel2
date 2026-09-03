@@ -160,8 +160,14 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
   actionsRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: compact ? 4 : 8,
+    // Зазор не меньше двух отступов рамки: рамки соседей касаются, но не
+    // заезжают на видимый круг друг друга — иначе тап по правому краю
+    // «поменять местами» ловила бы поздняя в DOM «очистить маршрут» (#1739).
+    gap: Math.max(compact ? 4 : 8, 2 * actionFrameInset(compact)),
     marginBottom: compact ? 2 : 8,
+    // Запас только по вертикали: горизонтальная полоска рамки крайней кнопки
+    // выходит за ряд и на native мертва (тач не идёт за границы родителя);
+    // сдвигать круги внутрь ради неё не стали — по горизонтали выигрыш web-only.
     paddingVertical: actionFrameInset(compact),
   },
   addressInputWrapper: {

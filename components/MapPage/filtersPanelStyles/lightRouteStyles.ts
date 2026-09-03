@@ -109,6 +109,8 @@ export const getLightRouteStyles = ({ colors, isMobile }: FiltersPanelStyleConte
     },
     // Видимый круг «удалить точку» без фона; размер задаёт `visualSize` в
     // FiltersPanelRouteSection, тач-таргет — рамка 44 самого IconButton (#1739).
+    // `lightPointRow` держит paddingVertical 6 = отступ рамки; по горизонтали
+    // (paddingHorizontal 4) правая полоска рамки за рядом на native мертва.
     lightPointRemove: {
       backgroundColor: 'transparent',
     },
