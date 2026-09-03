@@ -279,6 +279,14 @@ const main = () => {
       process.exit(pageFetchLoopGuardStatus)
     }
 
+    // Та же логика для навигации «назад» (#1727): рукописная копия
+    // `canGoBack() ? back() : replace(...)` появляется в новом экране, а не в
+    // изменённом, поэтому гейт безусловный.
+    const backNavigationGuardStatus = runCommand('npm', ['run', 'guard:no-inline-back-navigation'])
+    if (backNavigationGuardStatus !== 0) {
+      process.exit(backNavigationGuardStatus)
+    }
+
     const questAnswerEvalGuardStatus = runCommand('npm', ['run', 'guard:quest-answer-eval'])
     if (questAnswerEvalGuardStatus !== 0) {
       process.exit(questAnswerEvalGuardStatus)

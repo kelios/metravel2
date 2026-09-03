@@ -9,6 +9,7 @@ import {
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { goBackOrReplace } from '@/utils/backNavigation'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Article } from '@/types/types'
 import ArticleActivationCtaSection from '@/components/article/ArticleActivationCtaSection'
@@ -68,28 +69,14 @@ export default function ArticleDetails() {
   })
 
   const handleBack = useCallback(() => {
-    if (returnHref) {
-      if (router.canGoBack()) {
-        router.back()
-        return
-      }
-      router.replace(returnHref)
-      return
-    }
-    if (router.canGoBack()) {
-      router.back()
-      return
-    }
-    router.replace('/articles')
+    goBackOrReplace(router, returnHref ?? '/articles')
   }, [returnHref, router])
 
+  // Аппаратная кнопка перехватывается только при явном returnHref; без него
+  // работает штатное поведение навигатора.
   const handleAndroidBack = useCallback(() => {
     if (!returnHref) return false
-    if (router.canGoBack()) {
-      router.back()
-      return true
-    }
-    router.replace(returnHref)
+    goBackOrReplace(router, returnHref)
     return true
   }, [returnHref, router])
 

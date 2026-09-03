@@ -3,6 +3,7 @@ import { Platform, BackHandler } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useNavigation, useLocalSearchParams } from 'expo-router';
 import { trackWizardEvent } from '@/utils/analytics';
+import { goBackOrReplace } from '@/utils/backNavigation';
 import type { ValidationError, ModerationIssue } from '@/utils/formValidation';
 import type { TravelFormData } from '@/types/types';
 import { showToastMessage } from '@/utils/toast';
@@ -413,10 +414,8 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
       isLeavingRef.current = true;
       if (exitReturnTo) {
         router.replace(exitReturnTo as Parameters<typeof router.replace>[0]);
-      } else if (router.canGoBack()) {
-        router.back();
       } else {
-        router.replace('/metravel');
+        goBackOrReplace(router, '/metravel');
       }
     };
     void confirmLeaveWizard(leave, leave);

@@ -8,6 +8,7 @@ import React, { useCallback } from 'react'
 import { Platform, Pressable, StyleSheet, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
+import { goBackOrReplace } from '@/utils/backNavigation'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useThemedColors } from '@/hooks/useTheme'
@@ -19,13 +20,7 @@ function TravelDetailsBackButton() {
   const colors = useThemedColors()
   const insets = useSafeAreaInsets()
 
-  const onPress = useCallback(() => {
-    if (router.canGoBack()) {
-      router.back()
-    } else {
-      router.replace('/')
-    }
-  }, [router])
+  const onPress = useCallback(() => goBackOrReplace(router, '/'), [router])
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { top: insets.top + 8 }]}>

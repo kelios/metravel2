@@ -25,6 +25,7 @@ import type { PublicTrip, PublicTripsFilters } from '@/api/publicTrips';
 import { usePublicTrips } from '@/hooks/usePublicTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { trackTripCatalogViewed } from '@/utils/tripAnalytics';
+import { goBackOrReplace } from '@/utils/backNavigation';
 import {
   filterPublicTripsBySearch,
   hasActivePublicTripFilters,
@@ -79,13 +80,9 @@ function PublicTripsCatalog() {
     ((filterOptionTrips.length > 0) || hasActiveFilters || hasActiveSearch);
 
   const openTrip = (trip: PublicTrip) => router.push(`/trips/${trip.id}`);
-  const goBack = () => {
-    if (typeof router.canGoBack === 'function' && router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.push('/');
-  };
+  // Запасной путь кладётся поверх каталога (`push`), как и до #1727: с главной
+  // браузерное «Назад» возвращает в каталог поездок.
+  const goBack = () => goBackOrReplace(router, '/', { fallbackMode: 'push' });
   const resetFilters = () => setFilters({});
   const resetSearchAndFilters = () => {
     setSearchQuery('');

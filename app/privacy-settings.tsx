@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { goBackOrReplace } from '@/utils/backNavigation';
 import EmptyState from '@/components/ui/EmptyState';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -33,12 +34,7 @@ export default function PrivacySettingsScreen() {
             return true;
         }
 
-        if (router.canGoBack()) {
-            router.back();
-            return true;
-        }
-
-        router.replace('/profile' as any);
+        goBackOrReplace(router, '/profile');
         return true;
     }, [cameFromProfile, router]);
 
