@@ -1,0 +1,102 @@
+// #1720: скан ложного обещания «нажми Пропустить».
+//
+// Ссылка «Пропустить» в мастере значит «отложить точку — иначе квест не
+// засчитается» (#1633), а не «этот вопрос можно не отвечать». Шаг
+// `khotomlya-emerald-lakes / 1-pustoe` обещал игроку выход, которого нет:
+// обязательный `exact_any`, гейтящий финал, и «просто нажми „Пропустить“» прямо
+// в задании.
+//
+// У инструмента ровно два способа стать бесполезным, и оба закрыты здесь:
+//
+//   1. Начать ловить обычное значение «не заметить». Формы «его не пропустишь»,
+//      «чтобы не пропустить», «её легко пропустить» стоят в тексте десятков
+//      шагов (контрольные 409, 239, 1607, 203). Скан, который валится на них,
+//      выключат первым же прогоном, и настоящее обещание уедет вместе с шумом.
+//   2. Перестать отличать шаг с проверяемым ответом от свободного. На `any` и
+//      `any_text` игрок закрывает шаг тем, что видит, и «пропустить» ему не
+//      нужно — находка там была бы ложной тревогой.
+const { FREE_TYPES, findSkipPromises, scanQuests } = require('@/scripts/scan-quest-skip-promise')
+
+const step = (over: Record<string, unknown> = {}) => ({
+  id: 1,
+  step_id: 'x',
+  task: '',
+  story: '',
+  hint: '',
+  answer_pattern: { type: 'exact_any', value: JSON.stringify(['лавка']) },
+  ...over,
+})
+
+const quest = (steps: unknown[]) => [{ id: 158, quest_id: 'q', steps }]
+
+describe('findSkipPromises — кнопка против «не заметить»', () => {
+  it('ловит приглашение нажать кнопку в кавычках (задание шага 1589 до правки)', () => {
+    const hits = findSkipPromises(
+      'Назови её одним словом. Если ничего такого не осталось — просто нажми «Пропустить».',
+    )
+    expect(hits).toHaveLength(1)
+    expect(hits[0].via).toBe('quote+action')
+  })
+
+  it('ловит приглашение без кавычек, по глаголу действия', () => {
+    const hits = findSkipPromises('Если объекта нет — жми Пропустить и иди дальше.')
+    expect(hits).toHaveLength(1)
+    expect(hits[0].via).toBe('action')
+  })
+
+  it('ловит цитату подписи кнопки без глагола рядом', () => {
+    expect(findSkipPromises('Внизу карточки есть «Пропустить» — она для таких случаев.')).toHaveLength(1)
+  })
+
+  // Контрольные шаги прода: слово стоит в значении «не заметить». Если хоть
+  // один из них начнёт валить скан, гейт станет шумом.
+  it.each([
+    ['409 narikala', 'Его не пропустишь — единственное целое здание внутри крепости, с крестом над входом.'],
+    ['239 flisak', 'Обойди фонтан кругом, чтобы не пропустить тех, что с дальней стороны.'],
+    ['1607 zver', 'Фигура небольшая, стоит внутри беседки, её легко пропустить.'],
+    ['203 ratusz', 'Обойди ратушу полностью, чтобы не пропустить ни одного проезда.'],
+  ])('%s: «не заметить» находкой не считается', (_name, text) => {
+    expect(findSkipPromises(text)).toEqual([])
+  })
+
+  it('пустое поле не разбирается', () => {
+    expect(findSkipPromises(undefined)).toEqual([])
+    expect(findSkipPromises('')).toEqual([])
+  })
+})
+
+describe('scanQuests — область охвата', () => {
+  it('валит обязательный шаг с проверяемым ответом и приглашением пропустить', () => {
+    const { findings } = scanQuests(
+      quest([step({ id: 1589, step_id: '1-pustoe', task: 'Назови её. Если нет — нажми «Пропустить».' })]),
+    )
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toMatchObject({ step_db_id: 1589, field: 'task', answer_type: 'exact_any' })
+  })
+
+  it.each([...FREE_TYPES] as string[])(
+    'шаг со свободным ответом (%s) находкой не считается: пропускать там нечего',
+    (type) => {
+      const { findings } = scanQuests(
+        quest([step({ answer_pattern: { type, value: '' }, task: 'Опиши. Если нет — нажми «Пропустить».' })]),
+      )
+      expect(findings).toEqual([])
+    },
+  )
+
+  // Обещание в story и hint ломает игрока ровно так же, как в задании: он
+  // читает их на той же карточке и до попытки.
+  it.each(['task', 'story', 'hint'])('поле %s читается', (field) => {
+    const { findings } = scanQuests(quest([step({ [field]: 'Не нашёл — нажми «Пропустить».' })]))
+    expect(findings).toHaveLength(1)
+    expect(findings[0].field).toBe(field)
+  })
+
+  it('интро в скан не входит и в счётчик шагов тоже', () => {
+    const { findings, scannedSteps } = scanQuests(
+      quest([step({ is_intro: true, task: 'Нажми «Пропустить», чтобы начать.' })]),
+    )
+    expect(findings).toEqual([])
+    expect(scannedSteps).toBe(0)
+  })
+})

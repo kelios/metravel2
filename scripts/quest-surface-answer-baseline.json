@@ -396,7 +396,8 @@
       "luxembourg-melusina|13-neumunster|dict-color|чёрная дева мария",
       "luxembourg-melusina|13-neumunster|dict-color|чёрная мадонна",
       "luxembourg-melusina|13-neumunster|dict-color|чёрного цвета",
-      "luxembourg-melusina|13-neumunster|dict-color|чёрный цвет"
+      "luxembourg-melusina|13-neumunster|dict-color|чёрный цвет",
+      "luxembourg-melusina|3-cathedrale|task-color-word|посередине"
     ],
     "scripts/malbork-quest-data.js": [
       "malbork-marienburg|6-madonna|dict-color|zloto",
@@ -449,9 +450,6 @@
       "minsk-loshitsa|4-melnica|dict-material-surface|красный кирпич",
       "minsk-loshitsa|4-melnica|task-asks-material|формулировка",
       "minsk-loshitsa|6-magnolia|task-color-word|сохранившееся"
-    ],
-    "scripts/minsk-teens-oktyabrskaya-quest-data.js": [
-      "minsk-teens-oktyabrskaya|9-amigos|task-color-word|желтых"
     ],
     "scripts/mogilev-teens-symbol-code-quest-data.js": [
       "mogilev-teens-symbol-code|3-red-courtyard|dict-color|красного",
@@ -567,7 +565,6 @@
       "poznan-goats|fara|dict-color|терракотовый"
     ],
     "scripts/riga-quest-data.js": [
-      "riga-unfinished-city|12-brivibas-piemineklis|task-color-word|золотые",
       "riga-unfinished-city|9-kaku-nams|task-color-word|черных"
     ],
     "scripts/sasino-quest-data.js": [
