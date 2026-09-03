@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 
 const NAMED_COLORS: Record<string, string> = {
@@ -65,8 +65,26 @@ type ColorChipProps = {
   chipSize?: number;
   dotSize?: number;
   dotBorderWidth?: number;
+  /**
+   * Стиль ВИДИМОГО чипа (рамка, радиус, тень), а не нажимаемой области: с
+   * появлением `touchTargetSize` это разные вью (#1739). Размер сюда не
+   * писать — он приходит из `chipSize`, иначе видимый круг разъедется с
+   * тач-таргетом.
+   */
   style?: StyleProp<ViewStyle>;
+  /** Как `style`, но только для `selected`; тоже про видимый чип. */
   selectedStyle?: StyleProp<ViewStyle>;
+  /**
+   * Тач-таргет крупнее видимого чипа (#1739): нажимаемая рамка этого размера
+   * вокруг круга `chipSize`, прозрачная и вынесенная в отрицательные поля, так
+   * что в ряду чип по-прежнему занимает `chipSize`. Значение `<= chipSize`
+   * ничего не меняет.
+   *
+   * Родитель должен дать запас `(touchTargetSize - chipSize) / 2`: за его
+   * границы нажатие не выходит («touch area never extends past the parent view
+   * bounds», как у `hitSlop` в RN).
+   */
+  touchTargetSize?: number;
 };
 
 const DEFAULT_CHIP_SIZE = 32;
@@ -82,11 +100,14 @@ const ColorChip = ({
   dotBorderWidth = 2,
   style,
   selectedStyle,
+  touchTargetSize,
 }: ColorChipProps) => {
   const colors = useThemedColors();
   const chipRadius = chipSize / 2;
   const dotRadius = dotSize / 2;
   const dotBorderColor = isLightColor(color) ? colors.textMuted : colors.border;
+  const frameSize = Math.max(touchTargetSize ?? 0, chipSize);
+  const frameInset = (frameSize - chipSize) / 2;
 
   return (
     <Pressable
@@ -94,38 +115,56 @@ const ColorChip = ({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? `Цвет ${color}`}
       style={[
-        styles.chip,
-        {
-          width: chipSize,
-          height: chipSize,
-          borderRadius: chipRadius,
-          borderColor: colors.border,
-          backgroundColor: colors.surface,
-        },
-        selected && styles.chipSelected,
-        selected && { borderColor: colors.primary },
-        selected && selectedStyle,
-        style,
+        styles.frame,
+        { width: frameSize, height: frameSize },
+        frameInset > 0 && { margin: -frameInset },
       ]}
     >
       <View
         style={[
-          styles.dot,
+          styles.chip,
           {
-            width: dotSize,
-            height: dotSize,
-            borderRadius: dotRadius,
-            backgroundColor: color,
-            borderColor: dotBorderColor,
-            borderWidth: dotBorderWidth,
+            width: chipSize,
+            height: chipSize,
+            borderRadius: chipRadius,
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
           },
+          selected && styles.chipSelected,
+          selected && { borderColor: colors.primary },
+          selected && selectedStyle,
+          style,
         ]}
-      />
+      >
+        <View
+          style={[
+            styles.dot,
+            {
+              width: dotSize,
+              height: dotSize,
+              borderRadius: dotRadius,
+              backgroundColor: color,
+              borderColor: dotBorderColor,
+              borderWidth: dotBorderWidth,
+            },
+          ]}
+        />
+      </View>
     </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
+  // Нажимаемая рамка; при `touchTargetSize` не заданном она равна чипу.
+  frame: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
+  },
   chip: {
     alignItems: 'center',
     justifyContent: 'center',

@@ -297,6 +297,24 @@ describe('guard-touch-targets', () => {
       expect(findings[0]).toMatchObject({ style: 'clear', size: 26, element: 'CardActionPressable' })
     })
 
+    it('opens a file whose only interactive element is a listed wrapper, not a Pressable (#1739)', () => {
+      // Фильтр-подсказка был рукописным `/Pressable|Touchable/`: файл, где
+      // единственная кнопка — `<IconButton style={...}>`, в скан не попадал, и
+      // пять сабминимальных стилей жили за зелёным гейтом. Теперь подсказка
+      // выводится из INTERACTIVE_ELEMENTS и отстать от списка не может.
+      const source = `
+        import { StyleSheet } from 'react-native'
+        import IconButton from '@/components/ui/IconButton'
+        const styles = StyleSheet.create({ compact: { width: 20, height: 20 } })
+        export const Probe = () => <IconButton icon={null} label="x" style={styles.compact} />
+      `
+      expect(source).not.toMatch(/Pressable|Touchable/)
+
+      const findings = scan(source)
+      expect(findings).toHaveLength(1)
+      expect(findings[0]).toMatchObject({ style: 'compact', size: 20, element: 'IconButton' })
+    })
+
     it('does not treat a wrapper without a style prop as interactive', () => {
       const findings = scan(`
         import { Pressable, StyleSheet, View } from 'react-native'

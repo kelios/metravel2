@@ -22,6 +22,13 @@ import {
 import { translate as i18nT } from '@/i18n'
 
 
+/**
+ * Видимый круг «удалить точку» в лёгком списке; нажимаемая рамка — 44dp (#1739).
+ * Запас (44 - 32) / 2 = 6 даёт `lightPointRow` своим `paddingVertical: 6`, иначе
+ * рамка вышла бы за границы ряда и на Android тач по ней бы не проходил.
+ */
+const LIGHT_POINT_REMOVE_VISUAL_SIZE = 32
+
 function toRad(deg: number) {
   return (deg * Math.PI) / 180
 }
@@ -293,14 +300,13 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
                     icon={<MapIcon name="close" size={14} color={colors.textMuted} />}
                     label={i18nT('map:components.MapPage.FiltersPanelRouteSection.udalit_tochku_value1_928ec407', { value1: label })}
                     size="sm"
+                    visualSize={LIGHT_POINT_REMOVE_VISUAL_SIZE}
                     disabled={!canRemove}
                     onPress={() => {
                       if (canRemove) onRemoveRoutePoint?.(String(p.id))
                     }}
-                    style={[
-                      styles.lightPointRemove,
-                      !canRemove && styles.lightPointRemoveDisabled,
-                    ]}
+                    visualStyle={styles.lightPointRemove}
+                    style={!canRemove && styles.lightPointRemoveDisabled}
                     testID={`route-point-remove-${key}`}
                   />
                 </View>

@@ -12,6 +12,14 @@ import { formatInteger } from '@/i18n/format'
 
 const RADIUS_OPTIONS: Array<number | null> = [100, 150, 200, 300, 500, null]; // null = all points
 const PILL_RADIUS = DESIGN_TOKENS.radii.pill;
+/** Видимый цветной чип фильтра; нажимаемая рамка — 44dp (#1739). */
+const COLOR_CHIP_SIZE = 28;
+/**
+ * Ряды чипов держат вертикальный запас под рамку: она вынесена в
+ * отрицательные поля, а на native тап доходит до потомка только внутри границ
+ * родителя — без паддинга полоски рамки над и под чипом были бы мёртвыми.
+ */
+const COLOR_CHIP_FRAME_INSET = (DESIGN_TOKENS.touchTarget.minWidth - COLOR_CHIP_SIZE) / 2;
 
 const getRadiusLabel = (km: number | null) => {
   if (km === null) return i18nT('map:components.UserPoints.PointFilters.vse_tochki_c09f7775');
@@ -122,6 +130,8 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
                 selected={isSelected}
                 onPress={() => toggleColor(color)}
                 accessibilityLabel={i18nT('map:components.UserPoints.PointFilters.tsvet_value1_db023932', { value1: color })}
+                chipSize={COLOR_CHIP_SIZE}
+                touchTargetSize={DESIGN_TOKENS.touchTarget.minWidth}
                 style={styles.colorChip}
                 selectedStyle={styles.colorChipSelected}
               />
@@ -173,6 +183,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'center',
     paddingRight: DESIGN_TOKENS.spacing.md,
+    paddingVertical: COLOR_CHIP_FRAME_INSET,
     gap: 8,
   },
   chipWrapRow: {
@@ -180,19 +191,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
+    paddingVertical: COLOR_CHIP_FRAME_INSET,
     gap: 8,
   },
   chipItem: {
     // gap handles spacing now
   },
+  // Размер чипа — `chipSize`, тач-таргет — `touchTargetSize` самого ColorChip (#1739).
   colorChip: {
     borderWidth: 2,
     borderRadius: PILL_RADIUS,
-    width: 28,
-    height: 28,
     ...(Platform.OS === 'web' ? ({
       transition: 'transform 100ms ease, box-shadow 150ms ease',
-      cursor: 'pointer',
     } as any) : null),
   },
   colorChipSelected: {

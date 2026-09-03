@@ -7,6 +7,9 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { parseTravelStatusDateParts } from '@/stores/travelStatusStore';
 
+/** Видимый круг кнопки календаря на web; нажимаемая рамка — 44dp (#1739). */
+const CALENDAR_BUTTON_VISUAL_SIZE = 36;
+
 interface TravelVisitedDateInputProps {
     value: string;
     onChange: (value: string) => void;
@@ -168,7 +171,8 @@ const TravelVisitedDateInput: React.FC<TravelVisitedDateInputProps> = ({
                         icon={<Feather name="calendar" size={18} color={colors.text} />}
                         label={calendarLabel}
                         onPress={openCalendar}
-                        size="sm"
+                        size={Platform.OS === 'android' ? 'md' : 'sm'}
+                        visualSize={Platform.OS === 'android' ? undefined : CALENDAR_BUTTON_VISUAL_SIZE}
                         style={styles.calendarButton}
                         testID="travel-visited-date-calendar-button"
                         tooltipPlacement="left"
@@ -229,18 +233,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     inputWithCalendar: {
         paddingRight: 52,
     },
+    // Android: полноразмерная кнопка 48 (`size="md"`) в поле высотой 48.
+    // Web: видимый круг 36 в поле 42, тач-таргет — рамка 44 IconButton в режиме
+    // `visualSize`; смещения считаются от видимого круга (#1739).
     calendarButton: {
         position: 'absolute',
         right: Platform.OS === 'android' ? 0 : 3,
         top: Platform.OS === 'android' ? 0 : 3,
-        width: Platform.OS === 'android' ? 48 : 36,
-        height: Platform.OS === 'android' ? 48 : 36,
-        minWidth: Platform.OS === 'android' ? 48 : 36,
-        minHeight: Platform.OS === 'android' ? 48 : 36,
-        marginHorizontal: 0,
-        backgroundColor: colors.surface,
-        shadowOpacity: 0,
-        elevation: 0,
+        ...(Platform.OS === 'android'
+            ? { marginHorizontal: 0, backgroundColor: colors.surface, shadowOpacity: 0, elevation: 0 }
+            : null),
     },
     errorText: {
         marginTop: DESIGN_TOKENS.spacing.xs,

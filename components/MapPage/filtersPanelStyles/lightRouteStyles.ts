@@ -1,4 +1,4 @@
-import { Platform, StyleSheet } from 'react-native'
+import { StyleSheet } from 'react-native'
 import {
   CONTROL_RADIUS,
   PILL_RADIUS,
@@ -107,19 +107,10 @@ export const getLightRouteStyles = ({ colors, isMobile }: FiltersPanelStyleConte
       fontWeight: '500',
       color: colors.text,
     },
+    // Видимый круг «удалить точку» без фона; размер задаёт `visualSize` в
+    // FiltersPanelRouteSection, тач-таргет — рамка 44 самого IconButton (#1739).
     lightPointRemove: {
-      width: 32,
-      height: 32,
-      borderRadius: PILL_RADIUS,
       backgroundColor: 'transparent',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginHorizontal: 0,
-      shadowColor: 'transparent',
-      shadowOpacity: 0,
-      shadowRadius: 0,
-      elevation: 0,
-      ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
     },
     lightPointRemoveDisabled: {
       opacity: 0.3,

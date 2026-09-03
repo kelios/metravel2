@@ -16,6 +16,26 @@ interface IconButtonProps {
   showLabel?: boolean;
   showTooltip?: boolean;
   tooltipPlacement?: 'bottom' | 'left';
+  /**
+   * Режим «видимый круг меньше тач-таргета» (#1739): сама кнопка остаётся
+   * рамкой `size` (44/48dp), а видимой поверхностью становится плоский круг
+   * `visualSize` внутри неё. Рамка прозрачна и вынесена в отрицательные поля,
+   * поэтому в layout кнопка занимает ровно `visualSize` — ряды не растут, как
+   * не растут они у потребителей `hitSlop`, но в отличие от него нажатие
+   * ловится всей рамкой. Значение `>= size` игнорируется.
+   *
+   * ВАЖНО про родителя: «touch area never extends past the parent view bounds»
+   * (та же оговорка, что у `hitSlop` в документации RN), поэтому часть рамки,
+   * вышедшая за границы родителя, нажатие не поймает. Родитель обязан дать
+   * запас `(size - visualSize) / 2` отступом или свободным местом — так это
+   * сделано у `lightPointRow` (paddingVertical 6 при visualSize 32). Ряд без
+   * padding обрезает рамку до видимого круга, и выигрыш остаётся только на web.
+   *
+   * В режиме `showLabel` проп не действует: там кнопка и так растянута подписью.
+   */
+  visualSize?: number;
+  /** Стиль видимого круга в режиме `visualSize` (фон и т.п.); `style` при этом — стиль рамки. */
+  visualStyle?: StyleProp<ViewStyle>;
 }
 
 const spacing = DESIGN_TOKENS.spacing;
@@ -33,7 +53,8 @@ const radii = DESIGN_TOKENS.radii;
  * ВАЖНО: проп `style` потребителя применяется ПОСЛЕ этих значений и может их
  * перебить в меньшую сторону. Такие места ловит `npm run guard:touch-targets`.
  */
-const TOUCH_TARGET_BY_SIZE = { sm: 44, md: 48 } as const;
+export const ICON_BUTTON_TOUCH_TARGET_BY_SIZE = { sm: 44, md: 48 } as const;
+const TOUCH_TARGET_BY_SIZE = ICON_BUTTON_TOUCH_TARGET_BY_SIZE;
 
 const getBoxShadows = (colors: ThemedColors) => {
   const themed = colors as unknown as { boxShadows?: typeof DESIGN_TOKENS.shadows };
@@ -52,12 +73,18 @@ function IconButton({
   showLabel = false,
   showTooltip = true,
   tooltipPlacement = 'bottom',
+  visualSize,
+  visualStyle,
 }: IconButtonProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [hovered, setHovered] = useState(false);
   const dimension = TOUCH_TARGET_BY_SIZE[size];
   const handlePress = disabled ? undefined : onPress
+  const visualInset = visualSize != null && visualSize < dimension ? (dimension - visualSize) / 2 : 0;
+  const hasVisualFrame = visualInset > 0;
+  const surfaceColor = active ? colors.primary : colors.surface;
+  const isHovered = !disabled && hovered && Platform.OS === 'web';
 
   if (showLabel) {
     return (
@@ -109,24 +136,46 @@ function IconButton({
       onHoverIn={Platform.OS === 'web' ? () => setHovered(true) : undefined}
       onHoverOut={Platform.OS === 'web' ? () => setHovered(false) : undefined}
       style={({ pressed }) => [
-        styles.base,
+        hasVisualFrame ? styles.frame : styles.base,
         globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
         {
           width: dimension,
           height: dimension,
           minWidth: dimension, // ✅ ИСПРАВЛЕНИЕ: Минимальная ширина для touch-целей
           minHeight: dimension, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
-          borderRadius: radii.lg,
-          backgroundColor: active ? colors.primary : colors.surface,
-          // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
         },
+        hasVisualFrame
+          ? { margin: -visualInset }
+          : {
+              borderRadius: radii.lg,
+              backgroundColor: surfaceColor,
+              // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
+            },
         style,
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
-        !disabled && hovered && Platform.OS === 'web' && styles.hovered,
+        isHovered && styles.hovered,
       ]}
     >
-      <View style={styles.icon}>{icon}</View>
+      {hasVisualFrame ? (
+        <View
+          testID={testID ? `${testID}-visual` : undefined}
+          style={[
+            styles.visual,
+            {
+              width: visualSize,
+              height: visualSize,
+              borderRadius: radii.pill,
+              backgroundColor: isHovered ? colors.primarySoft : surfaceColor,
+            },
+            visualStyle,
+          ]}
+        >
+          <View style={styles.icon}>{icon}</View>
+        </View>
+      ) : (
+        <View style={styles.icon}>{icon}</View>
+      )}
       {Platform.OS === 'web' && showTooltip && hovered && !disabled ? (
         <View
           style={[
@@ -191,6 +240,30 @@ const getStyles = (colors: ThemedColors) => {
             backgroundColor: colors.primarySoft,
             transform: 'scale(1.05)',
           },
+        },
+      }),
+    },
+    // Прозрачная рамка тач-таргета режима `visualSize`: без фона и тени, сам
+    // видимый круг — `visual` ниже. `overflow: visible` — чтобы тултип не резался.
+    frame: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'transparent',
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          overflow: 'visible',
+        },
+      }),
+    },
+    // Видимый круг плоский: он живёт внутри панелей и полей ввода, где тень
+    // «парящей» кнопки не нужна; фон переопределяется через `visualStyle`.
+    visual: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...Platform.select({
+        web: {
+          transition: 'background-color 0.2s ease',
         },
       }),
     },

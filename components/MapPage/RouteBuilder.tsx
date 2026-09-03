@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import AddressSearch from '@/components/MapPage/AddressSearch';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { LatLng } from '@/types/coordinates';
 import MapIcon from './MapIcon';
-import IconButton from '@/components/ui/IconButton';
+import IconButton, { ICON_BUTTON_TOUCH_TARGET_BY_SIZE } from '@/components/ui/IconButton';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -30,6 +30,9 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors, compact), [colors, compact]);
 
+  // Видимый круг обеих кнопок ряда — один размер; тач-таргет даёт IconButton (#1739).
+  const actionVisualSize = ACTION_VISUAL_SIZE(compact);
+
   const hasRoute = Boolean(startAddress && endAddress);
   const hasAnyAddress = Boolean(startAddress || endAddress);
 
@@ -43,8 +46,9 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
               icon={<MapIcon name="swap-vert" size={compact ? 16 : 18} color={colors.primaryDark} />}
               label={i18nT('map:components.MapPage.RouteBuilder.pomenyat_start_i_finish_mestami_1bd61586')}
               size={compact ? 'sm' : 'md'}
+              visualSize={actionVisualSize}
               onPress={onSwap}
-              style={styles.swapActionButton}
+              visualStyle={styles.swapActionSurface}
             />
           )}
           {onClear && (
@@ -53,8 +57,9 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
               icon={<MapIcon name="close" size={compact ? 16 : 18} color={colors.textMuted} />}
               label={i18nT('map:components.MapPage.RouteBuilder.ochistit_marshrut_c7535487')}
               size={compact ? 'sm' : 'md'}
+              visualSize={actionVisualSize}
               onPress={onClear}
-              style={styles.iconButton}
+              visualStyle={styles.clearActionSurface}
             />
           )}
         </View>
@@ -110,25 +115,25 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
   );
 };
 
+/**
+ * Ряд действий держит вертикальный запас под рамку тач-таргета кнопок: рамка
+ * IconButton в режиме `visualSize` вынесена в отрицательные поля, а на native
+ * тап доходит до потомка только внутри границ родителя — без паддинга верхняя
+ * и нижняя полоски рамки были бы мёртвыми (#1739, тот же эффект у
+ * MapMobileTopOverlay). Видимые круги при этом не двигаются.
+ */
+const ACTION_VISUAL_SIZE = (compact: boolean) => (compact ? 26 : 32);
+const actionFrameInset = (compact: boolean) =>
+  (ICON_BUTTON_TOUCH_TARGET_BY_SIZE[compact ? 'sm' : 'md'] - ACTION_VISUAL_SIZE(compact)) / 2;
+
 const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create({
   routeBuilder: {
     gap: compact ? 4 : 12,
   },
-  iconButton: {
-    width: compact ? 26 : 32,
-    height: compact ? 26 : 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: compact ? 13 : 16,
+  // Видимые круги «очистить»/«поменять» прежние (26/32), тач-таргет — рамка
+  // 44/48 самого IconButton в режиме `visualSize` (#1739); размер здесь не задаётся.
+  clearActionSurface: {
     backgroundColor: colors.backgroundSecondary,
-    borderWidth: 0,
-    borderColor: 'transparent',
-    marginHorizontal: 0,
-    shadowColor: 'transparent',
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-    ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
   },
   addressContainer: {
     gap: 0,
@@ -157,6 +162,7 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     justifyContent: 'flex-end',
     gap: compact ? 4 : 8,
     marginBottom: compact ? 2 : 8,
+    paddingVertical: actionFrameInset(compact),
   },
   addressInputWrapper: {
     flex: 1,
@@ -177,19 +183,8 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     left: 0,
     top: 0,
   },
-  swapActionButton: {
-    width: compact ? 26 : 32,
-    height: compact ? 26 : 32,
-    borderRadius: compact ? 13 : 16,
-    marginHorizontal: 0,
+  swapActionSurface: {
     backgroundColor: colors.primarySoft,
-    borderWidth: 0,
-    borderColor: 'transparent',
-    shadowColor: 'transparent',
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-    ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
   },
   hint: {
     fontSize: compact ? 10 : 11,

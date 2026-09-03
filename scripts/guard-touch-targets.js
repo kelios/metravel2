@@ -91,17 +91,13 @@ const INTERACTIVE_ELEMENTS = new Set([
 ])
 
 // Дешёвый фильтр «в файле вообще есть интерактивный элемент» перед разбором AST.
-//
-// ИЗВЕСТНОЕ СЛЕПОЕ ПЯТНО: файл, где единственная кнопка — `<IconButton
-// style={...}>` или `<Chip style={...}>`, слова `Pressable` не содержит и в
-// скан не попадает. Расширение фильтра на имена обёрток находит ещё пять
-// сабминимальных стилей поверх `IconButton`/`ColorChip` (RouteBuilder,
-// lightPointRemove, calendarButton, colorChip), а их починка требует режима
-// прозрачной рамки в самих примитивах — это отдельная задача, см. #1734 → follow-up.
-const INTERACTIVE_HINT = /Pressable|Touchable/
-// Для поиска экспортированных обёрток фильтр шире: сама обёртка содержит
-// `Pressable`, а её потребитель — только имя обёртки.
-const WRAPPER_HINT = new RegExp(['Pressable', 'Touchable', ...INTERACTIVE_ELEMENTS].join('|'))
+// Выводится из `INTERACTIVE_ELEMENTS`, а не пишется руками: рукописный
+// `/Pressable|Touchable/` не открывал файлы, где единственная кнопка —
+// `<IconButton style={...}>`, и пять сабминимальных стилей поверх
+// `IconButton`/`ColorChip` жили вне проверки при зелёном гейте (#1739).
+// Тот же фильтр служит поиску экспортированных обёрток: сама обёртка содержит
+// `Pressable`, а её потребитель — только имя обёртки из списка.
+const INTERACTIVE_HINT = new RegExp([...INTERACTIVE_ELEMENTS].join('|'))
 
 // Ключи, которыми вью задаёт собственный размер. `maxWidth`/`maxHeight`
 // намеренно не входят: они ограничивают, но не назначают тач-таргет.
@@ -733,7 +729,7 @@ const findUnlistedWrappers = (rootDir) => {
     const content = fs.readFileSync(path.join(rootDir, filePath), 'utf8')
     const sourceFile = parseSource(filePath, content)
     parsed.set(filePath, sourceFile)
-    if (!WRAPPER_HINT.test(content)) continue
+    if (!INTERACTIVE_HINT.test(content)) continue
     const exported = collectExportedWrappers(sourceFile)
     if (exported.named.size > 0 || exported.defaultName) exportedByFile.set(filePath, exported)
   }

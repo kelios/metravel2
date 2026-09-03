@@ -114,6 +114,42 @@ describe('IconButton', () => {
     expect(flat.minHeight).toBeGreaterThanOrEqual(44)
   })
 
+  it('visualSize: рамка держит тач-таргет size, видимый круг — заданный размер (#1739)', () => {
+    // Пять потребителей (панель маршрута, лёгкий список точек, календарь даты,
+    // цветные чипы) ужимали `style` до 26–36dp и жили вне гейта. Режим
+    // `visualSize` даёт им прежний круг внутри полной рамки: рамка не меньше
+    // 44, а в layout занимает ровно круг за счёт отрицательного поля.
+    const flatten = (node: any) =>
+      Array.isArray(node.props.style)
+        ? Object.assign({}, ...node.props.style.filter(Boolean))
+        : node.props.style
+
+    const { getByRole, getByTestId } = renderIconButton({
+      size: 'sm',
+      visualSize: 26,
+      testID: 'compact',
+      visualStyle: { backgroundColor: 'rgb(1, 2, 3)' },
+    })
+    const frame = flatten(getByRole('button'))
+    expect(frame.width).toBeGreaterThanOrEqual(44)
+    expect(frame.height).toBe(frame.width)
+    expect(frame.margin).toBe(-(frame.width - 26) / 2)
+    expect(frame.backgroundColor).toBe('transparent')
+
+    const visual = flatten(getByTestId('compact-visual'))
+    expect(visual.width).toBe(26)
+    expect(visual.height).toBe(26)
+    expect(visual.backgroundColor).toBe('rgb(1, 2, 3)')
+  })
+
+  it('visualSize не меньше рамки игнорируется — обычная кнопка без внутреннего круга', () => {
+    const { getByRole, queryByTestId } = renderIconButton({ size: 'sm', visualSize: 44, testID: 'plain' })
+    const style = getByRole('button').props.style
+    const flat = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style
+    expect(flat.margin).toBeUndefined()
+    expect(queryByTestId('plain-visual')).toBeNull()
+  })
+
   it('forwards testID prop to Pressable', () => {
     const { getByTestId } = renderIconButton({ testID: 'icon-button' })
 
