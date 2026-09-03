@@ -16,11 +16,12 @@ const {
   detectEncodingCorruption,
   detectFieldMismatch,
   detectStoredTextCorruption,
+  findUnverifiableFields,
   isTextCorruptionError,
   TextCorruptionError,
 } = require('@/scripts/lib/textIntegrity')
 
-const { detectCorruption, detectRegression } = require('@/scripts/seo-edit')
+const { detectCorruption, detectRegression, detectUnverifiable } = require('@/scripts/seo-edit')
 
 /** «Голубые озёра» with the ё mangled the way a split chunk mangles it */
 const CLEAN = 'Голубые озёра: маршрут по Беларуси'
@@ -97,6 +98,19 @@ describe('detectStoredTextCorruption', () => {
   })
 })
 
+describe('findUnverifiableFields', () => {
+  it('называет отправленные поля, которых нет в ответе, и не путает их с пустыми', () => {
+    expect(
+      findUnverifiableFields([
+        { label: 'description', sent: CLEAN, stored: CLEAN },
+        { label: 'meta_description', sent: 'мета', stored: undefined, exact: true },
+        { label: 'name', sent: 'имя', stored: null, exact: true },
+        { label: 'slug', sent: null, stored: undefined, exact: true },
+      ]),
+    ).toEqual(['meta_description'])
+  })
+})
+
 describe('TextCorruptionError', () => {
   it('is distinguishable from an ordinary failure so a batch can stop', () => {
     const error = new TextCorruptionError(['description came back mangled'], '#520')
@@ -147,6 +161,36 @@ describe('seo-edit detectCorruption', () => {
   it('says nothing when the caller sent nothing', () => {
     expect(detectCorruption(after(), {})).toEqual([])
     expect(detectCorruption(null, {})).toEqual([])
+  })
+
+  // #1716. `GET /api/travels/<id>/` не сериализует `meta_description` ни у одной
+  // статьи, хотя upsert поле принимает и хранит. Байт-сравнение с пустой строкой
+  // объявляло порчей КАЖДУЮ запись меты, а откат уносил вместе с ней всё
+  // описание — регламентная правка тела теряла тысячи символов при HTTP 200.
+  it('не считает порчей поле, которого нет в ответе GET', () => {
+    const stored = after()
+    delete (stored as Record<string, unknown>).meta_description
+
+    expect(detectCorruption(stored, { description: CLEAN, meta: 'Маршрут по Беларуси' })).toEqual([])
+    expect(detectUnverifiable(stored, { description: CLEAN, meta: 'Маршрут по Беларуси' })).toEqual([
+      'meta_description',
+    ])
+  })
+
+  // Граница: `null` — это ответ «поле пустое», а не «поля нет». Расхождение с
+  // отправленным текстом там настоящее и по-прежнему обязано ронять запись.
+  it('null в ответе остаётся расхождением, а не непроверяемостью', () => {
+    const stored = after({ meta_description: null })
+
+    expect(detectCorruption(stored, { meta: 'Маршрут по Беларуси' })).toHaveLength(1)
+    expect(detectUnverifiable(stored, { meta: 'Маршрут по Беларуси' })).toEqual([])
+  })
+
+  it('непроверяемым считается только то, что мы реально отправляли', () => {
+    const stored = after()
+    delete (stored as Record<string, unknown>).meta_description
+
+    expect(detectUnverifiable(stored, { description: CLEAN })).toEqual([])
   })
 
   // A failed re-read makes every field look missing, and the byte-exact

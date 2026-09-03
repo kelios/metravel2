@@ -32,10 +32,12 @@ const http = require('http');
 
 const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
-const { detectStoredTextCorruption } = require('./lib/textIntegrity');
+const { detectStoredTextCorruption, findUnverifiableFields } = require('./lib/textIntegrity');
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
-const SENTINEL = '__draft_placeholder__'; // app's "empty" marker; API rejects blank strings
+// Маркер черновика визарда. Скрипт его больше НЕ пишет (#1716) — только
+// узнаёт в чужих данных; экспортируется для тестов и вызывающих.
+const SENTINEL = '__draft_placeholder__';
 const DEFAULT_BACKUP_DIR = path.join(__dirname, '.seo-backups');
 
 const USAGE = `Safe editor for live published travels — metravel.by
@@ -163,8 +165,8 @@ function composeDescription(oldDesc, { prepend = '', append = '', replace = null
  * Echo every real field from the GET detail; override only description +
  * meta_description. gallery/travelAddress are sent empty on purpose: the
  * backend treats empty arrays as "leave unchanged" (photos live in the media
- * collection; points are carried by coordsMeTravel). Empty text fields fall
- * back to the sentinel because the API rejects blank values.
+ * collection; points are carried by coordsMeTravel). Empty text fields go out as
+ * `null`: the API rejects a blank STRING but accepts and stores null (#1716).
  */
 function buildUpsertPayload(detail, { description, meta } = {}) {
   const d = detail || {};
@@ -187,9 +189,16 @@ function buildUpsertPayload(detail, { description, meta } = {}) {
     thumbs200ForCollectionArr: [],
     travelImageThumbUrlArr: [],
     travelImageAddress: [],
-    plus: d.plus || SENTINEL,
-    minus: d.minus || SENTINEL,
-    recommendation: d.recommendation || SENTINEL,
+    // Пусто — это `null`, а не сентинел (#1716). `plus`/`minus`/`recommendation`
+    // объявлены как `CharField(allow_null=True)` без `allow_blank`, то есть API
+    // отвергает пустую СТРОКУ, но `null` принимает и хранит — ровно как у
+    // `youtube_link` ниже. Подставляя `__draft_placeholder__`, скрипт писал в
+    // изначально пустое поле маркер черновика визарда, от которого потом
+    // защищаются `utils/travelFormUtils.ts` и `components/travel/sectionLinks.ts`,
+    // а после отката мусор оставался в статье навсегда.
+    plus: d.plus || null,
+    minus: d.minus || null,
+    recommendation: d.recommendation || null,
     // Сентинел здесь не нужен: upsert принимает и хранит `youtube_link: null`
     // (проверено на 583/584). Подставлять его — значит записывать в чистое поле
     // мусор, от которого потом защищаются нормализатор (`api/travelsNormalize.ts`)
@@ -263,11 +272,28 @@ function detectCorruption(after, { description = null, meta = null, name = null 
   // detectRegression() already covers this shape ("description did not persist
   // as written") and keeps it a per-article rollback.
   if (!after || typeof after !== 'object' || after.id == null) return [];
-  return detectStoredTextCorruption([
+  return detectStoredTextCorruption(verifiableFields(after, { description, meta, name }));
+}
+
+/** Поля круговой проверки. Вынесено, чтобы список не разъехался между двумя вызовами. */
+function verifiableFields(after, { description = null, meta = null, name = null } = {}) {
+  return [
     { label: 'description', sent: description, stored: after.description },
     { label: 'meta_description', sent: meta, stored: after.meta_description, exact: true },
     { label: 'name', sent: name, stored: after.name, exact: true },
-  ]);
+  ];
+}
+
+/**
+ * Поля, которые записали, но круг замкнуть не смогли: ответ GET не содержит
+ * ключа (#1716). Сегодня это ровно `meta_description` — `GET /api/travels/<id>/`
+ * не отдаёт его ни у одной статьи, хотя `PUT /travels/upsert/` поле принимает и
+ * хранит (`UpsertTravelService.NON_RELATION_FIELDS`). До правки такой ответ
+ * считался порчей текста, и откат уносил вместе с метой всё описание.
+ */
+function detectUnverifiable(after, { description = null, meta = null, name = null } = {}) {
+  if (!after || typeof after !== 'object' || after.id == null) return [];
+  return findUnverifiableFields(verifiableFields(after, { description, meta, name }));
 }
 
 function backupFileName(id, ts) {
@@ -401,6 +427,7 @@ async function main() {
   if (status !== 200 && status !== 201) { console.error(text.slice(0, 500)); process.exit(1); }
 
   const after = await getTravel(id);
+  const unverifiable = detectUnverifiable(after, { description: newDesc, meta });
   const corruption = detectCorruption(after, { description: newDesc, meta });
   if (corruption.length) {
     console.error(`❌ TEXT CORRUPTION: ${corruption.join('; ')}`);
@@ -421,6 +448,13 @@ async function main() {
     // a detected regression is a failed run, not a bad invocation (#1391).
     process.exit(1);
   }
+  // Говорим вслух, что круг замкнуть не удалось. Молчаливое «OK» на поле,
+  // которого нет в ответе, — то же самое fail-open, что и ложная тревога до
+  // #1716, только с другой стороны.
+  if (unverifiable.length) {
+    console.log(`⚠️  записано, но не проверено: ${unverifiable.join(', ')} — ` +
+      'API не возвращает это поле в GET /api/travels/<id>/, круговая сверка невозможна');
+  }
   console.log(`✅ OK — still published, gallery=${(after.gallery || []).length}, ` +
     `points=${(after.coordsMeTravel || []).length}, desc=${(after.description || '').length} chars`);
 }
@@ -434,6 +468,7 @@ if (typeof module !== 'undefined' && module.exports) {
     composeDescription,
     buildUpsertPayload,
     detectCorruption,
+    detectUnverifiable,
     detectRegression,
     backupFileName,
     latestBackup,

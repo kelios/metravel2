@@ -414,6 +414,12 @@ METRAVEL_TOKEN=… node scripts/seo-edit.js --id <ID> --desc-file new.html
 `seo-edit.js` делает бэкап в `scripts/.seo-backups/`, PUT, re-GET и авто-откат
 при регрессии. Откат вручную: `node scripts/seo-edit.js --restore <ID>`.
 
+`--meta` работает: `PUT /travels/upsert/` принимает и хранит `meta_description`.
+Но круговую сверку по нему замкнуть нельзя — `GET /api/travels/<id>/` это поле
+не возвращает ни у одной статьи, поэтому скрипт печатает «записано, но не
+проверено» и идёт дальше (#1716; сериализация поля — задача бэкенда). Раньше он
+на этом месте объявлял порчу текста и откатывал вместе с метой всё описание.
+
 `seo-edit` меняет ТОЛЬКО `description` и `meta_description`. Название/slug он не
 трогает. `plus` / `minus` / `recommendation` он переносит как есть — если там
 сентинел `__draft_placeholder__`, заполняй отдельным PUT поверх

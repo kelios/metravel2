@@ -83,6 +83,13 @@ const detectStoredTextCorruption = (fields = []) => {
   const problems = []
   for (const field of fields) {
     if (!field || field.sent == null) continue
+    // Ключа нет в ответе вовсе (#1716). Это «проверить нечем», а не «испорчено»:
+    // `meta_description` API не сериализует ни у одной статьи, и байт-сравнение
+    // с пустой строкой объявляло порчей КАЖДУЮ запись меты, после чего откат
+    // уносил вместе с ней всё описание на тысячи символов. Отсутствующее поле
+    // называет `findUnverifiableFields`, и вызывающий обязан о нём сказать
+    // вслух — молчание здесь так же плохо, как ложная тревога.
+    if (field.stored === undefined) continue
     const corruption = detectEncodingCorruption(field.sent, field.stored, field.label)
     if (corruption) {
       problems.push(corruption)
@@ -95,6 +102,23 @@ const detectStoredTextCorruption = (fields = []) => {
   }
   return problems
 }
+
+/**
+ * Поля, которые отправили, но проверить не смогли: ответ GET не содержит ключа
+ * вовсе (`undefined`). `null` сюда НЕ попадает — это ответ «поле пустое», и
+ * расхождение с отправленным текстом там настоящее.
+ *
+ * Отделено от `detectStoredTextCorruption` намеренно: у этих двух списков
+ * разные последствия. Порча — повод откатить запись, непроверяемость — повод
+ * предупредить редактора, что круг замкнуть не удалось.
+ *
+ * @param {Array<{label: string, sent: *, stored: *, exact?: boolean}>} fields
+ * @returns {string[]} метки полей, отсутствующих в ответе
+ */
+const findUnverifiableFields = (fields = []) =>
+  fields
+    .filter((field) => field && field.sent != null && field.stored === undefined)
+    .map((field) => field.label)
 
 /**
  * Thrown instead of a plain Error so a batch loop can tell "this article
@@ -117,6 +141,7 @@ module.exports = {
   detectEncodingCorruption,
   detectFieldMismatch,
   detectStoredTextCorruption,
+  findUnverifiableFields,
   firstDifferenceIndex,
   isTextCorruptionError,
 }

@@ -126,9 +126,20 @@ describe('buildUpsertPayload', () => {
     expect(p.travelAddress).toEqual([]);
   });
 
-  it('falls back to the sentinel for blank rich-text fields (API rejects blank)', () => {
-    const p = buildUpsertPayload(live, { description: '<p>new</p>' });
-    expect(p.recommendation).toBe(SENTINEL);
+  // #1716: сентинел в plus/minus/recommendation — тот же записанный мусор, что
+  // и в youtube_link. Сериализатор объявляет их `CharField(allow_null=True)` без
+  // `allow_blank`: пустую строку API отвергает, `null` принимает и хранит.
+  it('leaves blank rich-text fields as null instead of stamping the sentinel', () => {
+    for (const blank of [null, undefined, '']) {
+      const p = buildUpsertPayload(
+        { ...live, plus: blank, minus: blank, recommendation: blank },
+        { description: '<p>new</p>' },
+      );
+      expect(p.plus).toBeNull();
+      expect(p.minus).toBeNull();
+      expect(p.recommendation).toBeNull();
+      expect(JSON.stringify(p)).not.toContain(SENTINEL);
+    }
   });
 
   // Сентинел в youtube_link — записанный мусор: upsert принимает и хранит null,
