@@ -4,9 +4,9 @@
  *
  * Unlike the draft engine (metravel_publish.py), this never knocks an article
  * offline: it echoes back every real field from GET and changes ONLY the
- * description (lead / appended blocks). `--meta` is refused before the write:
- * the upsert serializer does not declare meta_description, so the API drops it
- * on validation (#1716, backend side #1737). Safety rails:
+ * description (lead / appended blocks). `--meta` is refused before the first
+ * request: the upsert serializer does not declare meta_description, so the API
+ * drops it on validation (#1716, backend side #1737). Safety rails:
  *   1. BACKUP   — the full original GET payload is written to disk before any
  *                 write, so every edit is reversible (`--restore`).
  *   2. VERIFY   — after PUT it re-GETs and checks publish/moderation/slug/
@@ -31,9 +31,9 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 
-const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract');
+const { parseCliArgs, runSeoCli, UsageError } = require('./lib/seo-cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
-const { detectStoredTextCorruption, findUnverifiableFields } = require('./lib/textIntegrity');
+const { detectStoredTextCorruption } = require('./lib/textIntegrity');
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
 // Маркер черновика визарда. Скрипт его больше НЕ пишет (#1716); константа
@@ -55,7 +55,7 @@ Options:
   --prepend-file <path>  HTML prepended as the lead (with --id)
   --append-file <path>   HTML appended after the body (with --id)
   --desc-file <path>     HTML replacing the whole body (with --id)
-  --meta <text>          REFUSED: the API drops meta_description on validation (#1737)
+  --meta <text>          REFUSED (exit 2): the API drops meta_description on validation (#1737)
   --dry-run              print the plan, write nothing (with --id)
   --backup-dir <path>    where backups are written and read (default scripts/.seo-backups)
   --help, -h             print this help and exit
@@ -286,18 +286,6 @@ function verifiableFields(after, { description = null, meta = null, name = null 
   ];
 }
 
-/**
- * Поля, которые записали, но круг замкнуть не смогли: ответ GET не содержит
- * ключа (#1716). Сегодня это ровно `meta_description` — `GET /api/travels/<id>/`
- * не отдаёт его ни у одной статьи, хотя `PUT /travels/upsert/` поле принимает и
- * хранит (`UpsertTravelService.NON_RELATION_FIELDS`). До правки такой ответ
- * считался порчей текста, и откат уносил вместе с метой всё описание.
- */
-function detectUnverifiable(after, { description = null, meta = null, name = null } = {}) {
-  if (!after || typeof after !== 'object' || after.id == null) return [];
-  return findUnverifiableFields(verifiableFields(after, { description, meta, name }));
-}
-
 function backupFileName(id, ts) {
   return `${id}-${ts}.json`;
 }
@@ -404,6 +392,24 @@ async function main() {
   const meta = args.meta;
   const dryRun = args.dryRun;
 
+  // Отказ до первого сетевого вызова (#1716). `TravelUpsertSerializer` поле
+  // `meta_description` не объявляет, поэтому DRF срезает его на валидации: до
+  // `UpsertTravelService.NON_RELATION_FIELDS` доезжает не значение, а его
+  // отсутствие. Наличие поля в списке сервиса доказывает намерение, но не
+  // приём. Молча писать описание и рапортовать «OK» о невыполненной части
+  // просьбы — то же враньё, что и откат по ложной тревоге, только тише.
+  //
+  // Именно `UsageError`, а не `exit(1)`: по контракту #1391 код 2 значит
+  // «вызвали неверно», а 1 — «прогон упал по дороге». Здесь прогон не начался,
+  // и код 1 отправил бы оператора искать бэкап, которого нет.
+  if (meta != null) {
+    throw new UsageError(
+      '--meta не поддерживается сервером: PUT /travels/upsert/ срезает meta_description ' +
+      'на валидации (TravelUpsertSerializer поле не объявляет), и значение до статьи не ' +
+      'доезжает. Ждёт бэкенд-задачи #1737; тело правится тем же вызовом без --meta',
+    );
+  }
+
   const detail = await getTravel(id);
   const oldDesc = detail.description || '';
   const newDesc = composeDescription(oldDesc, {
@@ -418,20 +424,6 @@ async function main() {
   console.log(`  desc: ${oldDesc.length} → ${newDesc.length} chars (+${newDesc.length - oldDesc.length})`);
   if (meta != null) console.log(`  meta_description: ${JSON.stringify(meta)}`);
 
-  // Отказ ДО записи, а не предупреждение после (#1716). `TravelUpsertSerializer`
-  // поле `meta_description` не объявляет, поэтому DRF срезает его на валидации:
-  // до `UpsertTravelService.NON_RELATION_FIELDS` доезжает не значение, а его
-  // отсутствие. Наличие поля в списке сервиса доказывает намерение, но не приём.
-  // Молча писать описание и рапортовать «OK» о невыполненной части просьбы —
-  // то же самое враньё, что и откат по ложной тревоге, только тише.
-  if (meta != null) {
-    console.error('❌ --meta не поддерживается сервером: PUT /travels/upsert/ срезает ' +
-      'meta_description на валидации (TravelUpsertSerializer поле не объявляет), ' +
-      'и значение до статьи не доезжает.');
-    console.error('   Ждёт бэкенд-задачи #1737. Описание правится тем же вызовом без --meta.');
-    process.exit(1);
-  }
-
   if (dryRun) { console.log('DRY RUN — nothing written.'); return; }
 
   const backupFile = saveBackup(backupDir, detail);
@@ -443,7 +435,6 @@ async function main() {
   if (status !== 200 && status !== 201) { console.error(text.slice(0, 500)); process.exit(1); }
 
   const after = await getTravel(id);
-  const unverifiable = detectUnverifiable(after, { description: newDesc, meta });
   const corruption = detectCorruption(after, { description: newDesc, meta });
   if (corruption.length) {
     console.error(`❌ TEXT CORRUPTION: ${corruption.join('; ')}`);
@@ -464,13 +455,6 @@ async function main() {
     // a detected regression is a failed run, not a bad invocation (#1391).
     process.exit(1);
   }
-  // Круг проверки не замкнулся: поля нет в ответе GET. Сегодня сюда попасть
-  // нельзя — `--meta` отвергается выше, — но список полей сверки ещё вырастет,
-  // и следующее непроверяемое поле должно быть названо, а не пропущено молча.
-  if (unverifiable.length) {
-    console.log(`⚠️  не проверено: ${unverifiable.join(', ')} — ` +
-      'API не возвращает это поле в GET /api/travels/<id>/, круговая сверка невозможна');
-  }
   console.log(`✅ OK — still published, gallery=${(after.gallery || []).length}, ` +
     `points=${(after.coordsMeTravel || []).length}, desc=${(after.description || '').length} chars`);
 }
@@ -484,7 +468,6 @@ if (typeof module !== 'undefined' && module.exports) {
     composeDescription,
     buildUpsertPayload,
     detectCorruption,
-    detectUnverifiable,
     detectRegression,
     backupFileName,
     latestBackup,

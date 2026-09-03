@@ -21,7 +21,7 @@ const {
   TextCorruptionError,
 } = require('@/scripts/lib/textIntegrity')
 
-const { detectCorruption, detectRegression, detectUnverifiable } = require('@/scripts/seo-edit')
+const { detectCorruption, detectRegression } = require('@/scripts/seo-edit')
 
 /** «Голубые озёра» with the ё mangled the way a split chunk mangles it */
 const CLEAN = 'Голубые озёра: маршрут по Беларуси'
@@ -172,9 +172,6 @@ describe('seo-edit detectCorruption', () => {
     delete (stored as Record<string, unknown>).meta_description
 
     expect(detectCorruption(stored, { description: CLEAN, meta: 'Маршрут по Беларуси' })).toEqual([])
-    expect(detectUnverifiable(stored, { description: CLEAN, meta: 'Маршрут по Беларуси' })).toEqual([
-      'meta_description',
-    ])
   })
 
   // Граница: `null` — это ответ «поле пустое», а не «поля нет». Расхождение с
@@ -183,14 +180,13 @@ describe('seo-edit detectCorruption', () => {
     const stored = after({ meta_description: null })
 
     expect(detectCorruption(stored, { meta: 'Маршрут по Беларуси' })).toHaveLength(1)
-    expect(detectUnverifiable(stored, { meta: 'Маршрут по Беларуси' })).toEqual([])
   })
 
-  it('непроверяемым считается только то, что мы реально отправляли', () => {
+  it('поле, которого не отправляли, отсутствие в ответе не задевает', () => {
     const stored = after()
     delete (stored as Record<string, unknown>).meta_description
 
-    expect(detectUnverifiable(stored, { description: CLEAN })).toEqual([])
+    expect(detectCorruption(stored, { description: CLEAN })).toEqual([])
   })
 
   // A failed re-read makes every field look missing, and the byte-exact
