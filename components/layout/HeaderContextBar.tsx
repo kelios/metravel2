@@ -21,23 +21,12 @@ import {
   resolveHeaderContextBarAction,
   resolveHeaderContextBarIsMobile,
 } from './headerContextBarModel';
+import { goBackOrReplace } from '@/utils/backNavigation';
 import { isTravelUpsertHeaderPath } from './customHeaderModel';
-import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
-import { BOTTOM_DOCK_ITEM_DEFS } from './bottomDockModel';
+import { isTopLevelSectionPath } from './topLevelSections';
+import { useHasListFilterQuery } from './useListFilterQuery';
 import { translate as i18nT } from '@/i18n'
 
-
-// Top-level tab routes that already show their identity in the bottom dock — for those we
-// suppress the mobile context bar to avoid stealing 52px of vertical space for a redundant
-// "back to /" affordance. `/profile` есть только в нижнем доке (не в HEADER_NAV_ITEMS),
-// поэтому маршруты дока добавляем явно.
-const TOP_LEVEL_TAB_PATHS = new Set<string>(
-  ['/']
-    .concat(HEADER_NAV_ITEMS.filter((item) => !item.external).map((item) => item.path))
-    .concat(
-      BOTTOM_DOCK_ITEM_DEFS.filter((item) => !item.isMore).map((item) => String(item.route)),
-    ),
-);
 
 const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
 
@@ -88,6 +77,9 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const { isPhone, isLargePhone, width } = useResponsive();
   const isMobile = resolveHeaderContextBarIsMobile({ width, isPhone, isLargePhone });
   const requestOpen = useTravelSectionsStore((s) => s.requestOpen);
+  // Бар монтируется только после гидратации (CustomHeader держит его за
+  // `isHydrated`), поэтому параметры запроса тут можно читать без оговорок.
+  const hasListFilterQuery = useHasListFilterQuery();
   const consumeOpen = useTravelSectionsStore((s) => s.consumeOpen);
 
   // Смена экрана гасит невостребованный запрос «Разделы»: иначе тап на статье
@@ -118,23 +110,9 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
     ? ({ 'aria-current': 'page' } as any)
     : {};
 
-  const handleBackPress = () => {
-    // #573: prefer real navigation history so «Назад» returns to the screen the
-    // user came from (search/feed/related lists), not the breadcrumb default
-    // (which falls back to Home for any non-top-level origin). Use backToPath only
-    // when there is no in-app history to pop (deep link / fresh tab open).
-    if (typeof router.canGoBack === 'function' && router.canGoBack()) {
-      router.back();
-      return;
-    }
-
-    if (model.backToPath) {
-      navigateTo(model.backToPath, true);
-      return;
-    }
-
-    navigateTo('/', true);
-  };
+  // #573: сначала настоящая история переходов, и только на прямом входе —
+  // крошка-родитель (для не-верхнего экрана она по умолчанию «Главная»).
+  const handleBackPress = () => goBackOrReplace(router, model.backToPath ?? '/');
 
   const containerStyle = useMemo(() => {
     return [styles.container, isMobile && styles.containerMobile];
@@ -142,9 +120,10 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
 
   if (isMobile) {
     const mobileAction = resolveHeaderContextBarAction(pathname);
-    const isTopLevelTab = !!pathname && TOP_LEVEL_TAB_PATHS.has(pathname);
-    // On top-level tabs the bottom dock already names the active section and there's nowhere
-    // meaningful to go "back" to — hide the bar but keep emitting BreadcrumbsJsonLd for SEO.
+    const isTopLevelTab = !!pathname && isTopLevelSectionPath(pathname, hasListFilterQuery);
+    // On top-level sections the bottom dock already names the active section and there's
+    // nowhere meaningful to go "back" to — hide the bar but keep emitting BreadcrumbsJsonLd
+    // for SEO. Отфильтрованный список разделом не считается (#1725).
     if (isTopLevelTab && mobileAction === 'none') {
       return <BreadcrumbsJsonLd model={model} pathname={pathname} />;
     }

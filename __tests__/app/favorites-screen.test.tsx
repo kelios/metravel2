@@ -8,6 +8,8 @@ const mockUseAuth = jest.fn();
 const mockUseFavorites = jest.fn();
 const mockPush = jest.fn();
 const mockBack = jest.fn();
+const mockReplace = jest.fn();
+const mockCanGoBack = jest.fn(() => true);
 const mockRefreshFavoritesFromServer = jest.fn();
 
 jest.mock('@/context/AuthContext', () => ({
@@ -23,7 +25,12 @@ jest.mock('@/hooks/useFavoritesData', () => ({
 }));
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: mockPush, back: mockBack }),
+  useRouter: () => ({
+    push: mockPush,
+    back: mockBack,
+    replace: mockReplace,
+    canGoBack: mockCanGoBack,
+  }),
 }));
 
 jest.mock('@/hooks/useResponsive', () => ({
@@ -113,6 +120,30 @@ describe('FavoritesScreen', () => {
     fireEvent.press(utils.getByText('Назад'));
 
     expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  // #1725: на прямом входе по ссылке истории нет, и голый router.back() на web
+  // уводит с сайта — «Назад» обязан привести на /profile.
+  it('falls back to the profile screen when there is no history to pop', async () => {
+    mockCanGoBack.mockReturnValueOnce(false);
+    mockUseFavorites.mockReturnValue({
+      favorites: [
+        { id: 1, type: 'travel', title: 'T1', url: '/travels/1', imageUrl: null, city: null, countryName: 'Belarus' },
+      ],
+      removeFavorite: jest.fn(),
+      clearFavorites: jest.fn(),
+    });
+
+    const utils = render(<FavoritesScreen />);
+
+    await act(async () => {
+      jest.advanceTimersByTime(350);
+    });
+
+    fireEvent.press(utils.getByText('Назад'));
+
+    expect(mockBack).not.toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenCalledWith('/profile');
   });
 
   it('runs the real server refresh for native pull-to-refresh', async () => {

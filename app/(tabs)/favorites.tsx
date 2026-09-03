@@ -22,6 +22,15 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader'
+import { goBackOrReplace } from '@/utils/backNavigation'
+
+// На native глобальный HeaderContextBar сам даёт «Назад» + заголовок для
+// кабинетных коллекций, на web он для них скрыт (см.
+// components/layout/topLevelSections.ts). Поэтому шапку в состояниях БЕЗ
+// собственных действий («войдите в аккаунт», «пока пусто») рендерим только на
+// web — иначе на телефоне вышли бы две навигации назад на одном экране (#799).
+// Тот же приём, что в components/screens/history/HistoryScreen.tsx.
+const HAS_GLOBAL_HEADER = Platform.OS !== 'web'
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { translate as i18nT } from '@/i18n'
 import { refreshFavoritesFromServer } from '@/hooks/useFavoritesData';
@@ -53,7 +62,7 @@ export default function FavoritesScreen() {
     }, [isAuthenticated, refreshing, userId]);
 
     const handleBackToProfile = useCallback(() => {
-        router.back();
+        goBackOrReplace(router, '/profile');
     }, [router]);
 
     const styles = useMemo(() => StyleSheet.create({
@@ -201,6 +210,9 @@ export default function FavoritesScreen() {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 {seoBlock}
+                {!HAS_GLOBAL_HEADER && (
+                    <ProfileCollectionHeader title={i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117')} onBackPress={handleBackToProfile} />
+                )}
                 <EmptyState
                     icon="heart"
                     title={i18nT('shared:app.tabs.favorites.voydite_v_akkaunt_b6b6d6dd')}
@@ -234,6 +246,9 @@ export default function FavoritesScreen() {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 {seoBlock}
+                {!HAS_GLOBAL_HEADER && (
+                    <ProfileCollectionHeader title={i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117')} onBackPress={handleBackToProfile} />
+                )}
                 <EmptyState
                     icon="heart"
                     title={i18nT('shared:app.tabs.favorites.v_hochu_poehat_poka_pusto_e39c47ea')}

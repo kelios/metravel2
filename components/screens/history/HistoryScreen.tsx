@@ -24,6 +24,7 @@ import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
 import { formatRelativeTime } from '@/utils/relativeTime';
 import { pluralizeRu } from '@/utils/pluralize';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
+import { goBackOrReplace } from '@/utils/backNavigation';
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { refreshViewHistory, type ViewHistoryItem } from '@/hooks/useViewHistory';
 import { translate as i18nT } from '@/i18n'
@@ -68,7 +69,7 @@ export default function HistoryScreen() {
     }, [isAuthenticated, refreshing, userId]);
 
     const handleBackToProfile = useCallback(() => {
-        router.back();
+        goBackOrReplace(router, '/profile');
     }, [router]);
 
     const styles = useMemo(() => StyleSheet.create({
@@ -438,6 +439,7 @@ export default function HistoryScreen() {
     if (!isAuthenticated) {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+                {renderHeader(false)}
                 <EmptyState
                     icon="clock"
                     title={i18nT('shared:app.tabs.history.voydite_v_akkaunt_329ef9aa')}
@@ -469,6 +471,7 @@ export default function HistoryScreen() {
     if (data.length === 0) {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+                {renderHeader(false)}
                 <EmptyState
                     icon="clock"
                     title={i18nT('shared:app.tabs.history.ty_esche_ne_otkryval_marshruty_e7f97c1c')}

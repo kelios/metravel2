@@ -25,6 +25,12 @@ import EmptyState from '@/components/ui/EmptyState'
 import ProfileCollectionHeader, {
   type ProfileCollectionBreadcrumb,
 } from '@/components/profile/ProfileCollectionHeader'
+
+// На native глобальный HeaderContextBar сам даёт «Назад» + заголовок для
+// кабинетных коллекций, на web он для них скрыт (см.
+// components/layout/topLevelSections.ts). Тот же приём, что в
+// components/screens/history/HistoryScreen.tsx.
+const HAS_GLOBAL_HEADER = Platform.OS !== 'web'
 import MiniCalendar from '@/components/calendar/MiniCalendar'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildLoginHref } from '@/utils/authNavigation'
@@ -380,6 +386,16 @@ export default function CalendarScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         {seoBlock}
+        {/* Только web: на native глобальный HeaderContextBar уже даёт «Назад»
+            для кабинетных коллекций, и вторая шапка была бы второй навигацией
+            назад на одном экране (#799). См. HAS_GLOBAL_HEADER ниже. */}
+        {!HAS_GLOBAL_HEADER && (
+          <ProfileCollectionHeader
+            title={i18nT('calendar:app.tabs.calendar.moy_kalendar_f9da1dd3')}
+            onBackPress={handleBackToProfile}
+            dense
+          />
+        )}
         <EmptyState
           icon="calendar"
           title={i18nT('calendar:app.tabs.calendar.voydite_v_akkaunt_0eab41f5')}

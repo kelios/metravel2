@@ -4,6 +4,7 @@ import { useGlobalSearchParams, useLocalSearchParams, usePathname } from 'expo-r
 import { useQuery } from '@tanstack/react-query';
 import type { Article, Travel } from '@/types/types';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
+import { hasListFilterQuery, needsGlobalBackAffordance } from '@/components/layout/topLevelSections';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles';
 import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
@@ -110,7 +111,8 @@ const SETTINGS_CRUMB: BreadcrumbModelItem = { get label() { return i18nT('shared
 // через «Профиль» (при необходимости — ещё и через «Настройки»).
 // Экраны с собственной шапкой (ProfileCollectionHeader): /favorites, /history,
 // /calendar — здесь НЕ перечислены, чтобы не было двойной шапки
-// (их бар подавляется в customHeaderModel.TOP_LEVEL_PATHS_NO_CONTEXT_BAR).
+// (их бар подавляется через SELF_HEADED_COLLECTION_PATHS в
+// components/layout/topLevelSections.ts).
 // /userpoints свою шапку убрал — крошки «Профиль › Мои точки» показывает бар.
 const CABINET_ROUTE_CRUMBS: Record<string, BreadcrumbModelItem[]> = {
   '/profile': [PROFILE_CRUMB],
@@ -229,6 +231,11 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   const globalParams = useGlobalSearchParamsSafe();
   const localParams = useLocalSearchParamsSafe();
   const returnTo = globalParams.returnTo ?? localParams.returnTo;
+
+  // #1725: `/search?categoryTravelAddress=33,43` — это подборка, открытая
+  // переходом, а не раздел «Маршруты»: ей нужна крошка «Главная › Маршруты».
+  const hasFilterQuery = hasListFilterQuery(globalParams as Record<string, unknown>)
+    || hasListFilterQuery(localParams as Record<string, unknown>);
 
   const normalizedReturnToParam = useMemo(() => {
     if (typeof returnTo === 'string') return returnTo;
@@ -471,8 +478,11 @@ export function useBreadcrumbModel(): BreadcrumbModel {
         };
       }
 
-      // Информационные/правовые страницы: одна крошка под «Главная».
-      if (INFO_ROUTES.has(p)) {
+      // Одна крошка под «Главная» — информационным/правовым страницам и любому
+      // одноуровневому экрану, которого нет в навигации: попасть туда можно
+      // только переходом, значит вернуться должно быть куда (#1725). Кабинетные
+      // коллекции со своей шапкой сюда не попадают — у них свой «Назад».
+      if (INFO_ROUTES.has(p) || needsGlobalBackAffordance(p, hasFilterQuery)) {
         const items: BreadcrumbModelItem[] = [{ label: pageContextTitle, path: p }];
         return {
           items,
@@ -484,7 +494,8 @@ export function useBreadcrumbModel(): BreadcrumbModel {
         };
       }
 
-      // По умолчанию одноуровневые страницы (топ-навигация) не показывают breadcrumbs.
+      // Разделы навигации без параметров крошек не показывают: их идентичность
+      // уже несут меню и нижний док.
       return {
         items: [],
         depth: 1,
@@ -770,7 +781,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       backToPath,
       showBreadcrumbs: computed.length >= 1,
     };
-  }, [resolvedPathname, normalizedReturnToParam, travelData, travelSlug, questApiTitle, questCityName, questCountryName, userProfileName, articleTitle, plannedTripData, publicTripData]);
+  }, [resolvedPathname, hasFilterQuery, normalizedReturnToParam, travelData, travelSlug, questApiTitle, questCityName, questCountryName, userProfileName, articleTitle, plannedTripData, publicTripData]);
 }
 
 export default useBreadcrumbModel;

@@ -31,7 +31,7 @@ describe('shouldShowHeaderContextBar (web)', () => {
       },
     );
 
-    it.each(['/', '/index', '/search', '/travelsby', '/map', '/places', '/trips', '/roulette', '/quests', '/login', '/registration', '/set-password', '/metravel'])(
+    it.each(['/', '/index', '/search', '/travelsby', '/map', '/places', '/trips', '/roulette', '/quests'])(
       'keeps the context bar collapsed on top-level nav page %s',
       (path) => {
         expect(shouldShowHeaderContextBar(path, false)).toBe(false);
@@ -44,6 +44,24 @@ describe('shouldShowHeaderContextBar (web)', () => {
         expect(shouldShowHeaderContextBar(path, false)).toBe(false);
       },
     );
+
+    // #1725: эти экраны в навигации не значатся — попасть на них можно только
+    // переходом, и вернуться с них должно быть куда.
+    it.each(['/metravel', '/login', '/registration', '/set-password'])(
+      'shows the context bar on entered-only page %s',
+      (path) => {
+        expect(shouldShowHeaderContextBar(path, false)).toBe(true);
+      },
+    );
+
+    it('shows the context bar on a filtered list route', () => {
+      expect(shouldShowHeaderContextBar('/search', false, true)).toBe(true);
+      expect(shouldShowHeaderContextBar('/travelsby', false, true)).toBe(true);
+    });
+
+    it('keeps the context bar collapsed on the same route without a filter', () => {
+      expect(shouldShowHeaderContextBar('/search', false, false)).toBe(false);
+    });
 
     it('shows the context bar with breadcrumbs on /userpoints (no local header)', () => {
       expect(shouldShowHeaderContextBar('/userpoints', false)).toBe(true);
@@ -70,12 +88,29 @@ describe('shouldShowHeaderContextBar (web)', () => {
       },
     );
 
-    it.each(['/', '/search', '/travelsby', '/quests', '/trips', '/favorites', '/history', '/calendar', '/profile', '/login', '/registration', '/set-password', '/metravel'])(
+    it.each(['/', '/search', '/travelsby', '/quests', '/trips', '/favorites', '/history', '/calendar', '/profile'])(
       'keeps the bar collapsed on nav / self-headed page %s',
       (path) => {
         expect(shouldShowHeaderContextBar(path, true)).toBe(false);
       },
     );
+
+    it.each(['/metravel', '/login', '/registration', '/set-password'])(
+      'shows the back+title bar on entered-only page %s',
+      (path) => {
+        expect(shouldShowHeaderContextBar(path, true)).toBe(true);
+      },
+    );
+
+    // #1725: «Замки» с главной ведут на /search?categoryTravelAddress=33,43 —
+    // это подборка, а не раздел «Маршруты» из дока.
+    it('shows the back+title bar on a filtered list route', () => {
+      expect(shouldShowHeaderContextBar('/search', true, true)).toBe(true);
+    });
+
+    it('keeps the map route collapsed even with a filter query', () => {
+      expect(shouldShowHeaderContextBar('/map', true, true)).toBe(false);
+    });
 
     it('hides the bar on the map route', () => {
       expect(shouldShowHeaderContextBar('/map', true)).toBe(false);

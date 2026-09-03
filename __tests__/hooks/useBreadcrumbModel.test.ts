@@ -237,6 +237,44 @@ describe('useBreadcrumbModel', () => {
     }
   });
 
+  // #1725: экран, которого нет в навигации, — результат перехода, и крошка
+  // «Главная › …» на нём обязана быть.
+  it.each(['/metravel', '/login', '/articles'])(
+    'builds a single crumb under Home for entered-only page %s',
+    async (path) => {
+      usePathname.mockReturnValue(path);
+      useLocalSearchParams.mockReturnValue({});
+
+      const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+      await waitFor(() => expect(result.current).toBeTruthy());
+      expect(result.current.showBreadcrumbs).toBe(true);
+      expect(result.current.items).toHaveLength(1);
+      expect(result.current.items[0].path).toBe(path);
+      expect(result.current.backToPath).toBe('/');
+    },
+  );
+
+  it('keeps a navigation section without a trail, but adds one once it is filtered', async () => {
+    usePathname.mockReturnValue('/search');
+    useLocalSearchParams.mockReturnValue({});
+
+    const plain = renderHook(() => useBreadcrumbModel(), { wrapper });
+    await waitFor(() => expect(plain.result.current).toBeTruthy());
+    expect(plain.result.current.showBreadcrumbs).toBe(false);
+
+    // «Замки» с главной: /search?categoryTravelAddress=33,43
+    useLocalSearchParams.mockReturnValue({ categoryTravelAddress: '33,43' });
+
+    const filtered = renderHook(() => useBreadcrumbModel(), { wrapper });
+    await waitFor(() => expect(filtered.result.current).toBeTruthy());
+    expect(filtered.result.current.showBreadcrumbs).toBe(true);
+    expect(filtered.result.current.items).toEqual([
+      { label: filtered.result.current.currentTitle, path: '/search' },
+    ]);
+    expect(filtered.result.current.backToPath).toBe('/');
+  });
+
   it('builds breadcrumbs for /userpoints under profile (own header removed)', async () => {
     usePathname.mockReturnValue('/userpoints');
     useLocalSearchParams.mockReturnValue({});

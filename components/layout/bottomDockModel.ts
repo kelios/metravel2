@@ -1,5 +1,6 @@
 import { Platform } from 'react-native'
 import type { Href } from 'expo-router'
+import { BOTTOM_DOCK_ROUTES } from '@/constants/bottomDockRoutes'
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import { translate as i18nT } from '@/i18n'
 
@@ -37,11 +38,26 @@ export type BottomDockMoreMenuSection = {
   items: BottomDockMoreMenuItem[]
 }
 
+/**
+ * Пять пунктов дока. Пункта «Главная» здесь СОЗНАТЕЛЬНО нет: ключ `home` ведёт
+ * на `/search` («Маршруты») — это и есть основной вход в продукт с телефона, а
+ * шестой пункт разрушил бы ширину строки на 360 pt.
+ *
+ * #1725: раньше отсутствие «Главной» ничем не компенсировалось — контекст-бар
+ * прятали на «верхних разделах» под обещание, что раздел назван в доке, и с
+ * `/search?categoryTravelAddress=33,43` вернуться было некуда. Выбран второй
+ * вариант из двух: состав дока не трогаем, а решение «показывать ли строку
+ * возврата» больше не опирается на док — оно опирается на то, попали ли на
+ * экран переходом (`components/layout/topLevelSections.ts`).
+ *
+ * Набор маршрутов дока при этом остаётся частью определения «раздел навигации»:
+ * `/profile` есть только здесь и в основном меню отсутствует.
+ */
 export const BOTTOM_DOCK_ITEM_DEFS: BottomDockItemDef[] = [
-  { key: 'home', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.marshruty_b92d1480') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.marshruty_b92d1480') }, route: '/search', iconName: 'route-walk' },
-  { key: 'map', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.karta_909db565') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.karta_909db565') }, route: '/map', iconName: 'map-fold' },
-  { key: 'quests', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.kvesty_c1acc754') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.kvesty_c1acc754') }, route: '/quests', iconName: 'quest-map-person' },
-  { key: 'favorites', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.profil_1f899ea9') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.profil_1f899ea9') }, route: '/profile', iconName: 'user' },
+  { key: 'home', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.marshruty_b92d1480') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.marshruty_b92d1480') }, route: BOTTOM_DOCK_ROUTES.home, iconName: 'route-walk' },
+  { key: 'map', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.karta_909db565') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.karta_909db565') }, route: BOTTOM_DOCK_ROUTES.map, iconName: 'map-fold' },
+  { key: 'quests', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.kvesty_c1acc754') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.kvesty_c1acc754') }, route: BOTTOM_DOCK_ROUTES.quests, iconName: 'quest-map-person' },
+  { key: 'favorites', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.profil_1f899ea9') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.profil_1f899ea9') }, route: BOTTOM_DOCK_ROUTES.favorites, iconName: 'user' },
   { key: 'more', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.esche_6ad6f662') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.esche_6ad6f662') }, route: '/more', iconName: 'more-horizontal', isMore: true },
 ]
 

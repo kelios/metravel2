@@ -182,7 +182,8 @@ export default function CustomHeaderMobileMenu({
       ]
 
   // «Статьи» добавлены локально (не в HEADER_NAV_ITEMS): попадание в HEADER_NAV_ITEMS
-  // включило бы /articles в TOP_LEVEL_TAB_PATHS и скрыло контекст-бар с кнопкой «Назад».
+  // сделало бы /articles разделом навигации (TOP_LEVEL_SECTION_PATHS в
+  // components/layout/topLevelSections.ts) и скрыло контекст-бар с кнопкой «Назад».
   const articlesNavItem: HeaderNavItem = {
     path: '/articles',
     label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.stati_bb6d41b4'),

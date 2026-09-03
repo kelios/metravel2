@@ -12,6 +12,7 @@ import {
     type HeaderVariant,
     type HeaderViewportBand,
 } from '@/components/layout/headerLayoutContract';
+import { useHasListFilterQuery } from '@/components/layout/useListFilterQuery';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { readViewportWidth } from '@/utils/viewportMetrics';
 
@@ -24,13 +25,20 @@ const getHeaderHeightCacheKey = (variant: HeaderVariant) => `mt:header-height:${
 // travel-детали. Кэш сбрасывается на `resize`/`orientationchange`, поэтому
 // значение остаётся точным. Непригодное чтение (нет окна, 0/NaN) даёт
 // `compactRow` — тот же fallback, что стоял здесь для не-web.
-const getHeaderVariant = (pathname: string): HeaderVariant => {
+// #1725: отфильтрованный список несёт строку возврата, то есть у него ДРУГОЙ
+// вариант шапки, а вариант служит ключом кэша измеренной высоты — иначе высота
+// бара уехала бы в ключ варианта без бара. `hasFilterQuery` приходит ПАРАМЕТРОМ,
+// из тех же параметров роутера, по которым решает `CustomHeader`: читать здесь
+// `window.location.search` нельзя, `ListTravelBase` синхронизирует `search`/`sort`
+// через `history.replaceState`, и адрес расходится с параметрами роутера —
+// резерв высоты тогда обещал бы бар, которого на экране нет.
+const getHeaderVariant = (pathname: string, hasFilterQuery: boolean): HeaderVariant => {
     const width =
         Platform.OS === 'web'
             ? readViewportWidth() ?? HEADER_LAYOUT_BREAKPOINTS.compactRow
             : HEADER_LAYOUT_BREAKPOINTS.compactRow;
     const isCompact = width < HEADER_LAYOUT_BREAKPOINTS.compactRow;
-    const hasBar = shouldShowHeaderContextBar(pathname || '/', isCompact);
+    const hasBar = shouldShowHeaderContextBar(pathname || '/', isCompact, hasFilterQuery);
     return getHeaderVariantForWidth(width, hasBar);
 };
 
@@ -79,6 +87,9 @@ const shouldHideHeaderForMap = (pathname: string): boolean => {
 const Header = React.memo(function Header({ isNavigationTarget }: { isNavigationTarget: boolean }) {
     const pathname = usePathname() || '/';
     const hydrationReady = useHydrationReady();
+    // До гидратации всегда `false`: статический HTML один и тот же для `/search`
+    // и `/search?categoryTravelAddress=33,43` (#1725).
+    const hasFilterQuery = useHasListFilterQuery(hydrationReady);
     const [, setVariant] = useState<HeaderVariant>(() => getStaticHeaderVariant(pathname));
     // Mobile-only: re-evaluate header suppression on resize/route so the map tab
     // drops the global header bar once we know the viewport is mobile.
@@ -100,16 +111,16 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
 
     useEffect(() => {
         if (!hydrationReady) return;
-        const next = getHeaderVariant(pathname);
+        const next = getHeaderVariant(pathname, hasFilterQuery);
         setVariant(next);
         setMeasuredHeight(readCachedHeaderHeight(next));
         setHideForMap(shouldHideHeaderForMap(pathname));
-    }, [hydrationReady, pathname]);
+    }, [hasFilterQuery, hydrationReady, pathname]);
 
     useEffect(() => {
         if (!hydrationReady || Platform.OS !== 'web' || typeof window === 'undefined') return;
         const onResize = () => {
-            const next = getHeaderVariant(pathname);
+            const next = getHeaderVariant(pathname, hasFilterQuery);
             setVariant((prev) => {
                 if (prev === next) return prev;
                 setMeasuredHeight(readCachedHeaderHeight(next));
@@ -122,7 +133,7 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
         };
         window.addEventListener('resize', onResize);
         return () => window.removeEventListener('resize', onResize);
-    }, [hydrationReady, pathname]);
+    }, [hasFilterQuery, hydrationReady, pathname]);
 
     const handleHeaderHeight = useCallback((h: number) => {
         // The SSR/first-client placeholder can report a route-specific interim
@@ -133,13 +144,13 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
         setMeasuredHeight((prev) => (prev === h ? prev : h));
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
             try {
-                const v = getHeaderVariant(pathname);
+                const v = getHeaderVariant(pathname, hasFilterQuery);
                 window.sessionStorage?.setItem(getHeaderHeightCacheKey(v), String(Math.round(h)));
             } catch {
                 /* noop */
             }
         }
-    }, [hydrationReady, pathname]);
+    }, [hasFilterQuery, hydrationReady, pathname]);
 
     // R-1 — на табе карты (мобильный) шапки нет вовсе: ни самой шапки, ни
     // зарезервированной высоты-обёртки, иначе сверху осталась бы пустая «дырка».
@@ -157,6 +168,9 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
         // разметка одинакова на сервере и клиенте, а нужный размер выбирает CSS ещё до
         // первого кадра. Инлайновую высоту ставим только после гидрации — тогда она уже
         // основана на реальном измерении и совпадает с зарезервированной.
+        // Параметры запроса сюда НЕ входят намеренно: это до-гидратационный
+        // резерв, а статический HTML один и тот же для `/search` и
+        // `/search?categoryTravelAddress=33,43` (#1725).
         const hasCompactContextBar = shouldShowHeaderContextBar(pathname || '/', true);
         const hasWideContextBar = shouldShowHeaderContextBar(pathname || '/', false);
         const heightForBand = (band: HeaderViewportBand, hasBar: boolean) =>

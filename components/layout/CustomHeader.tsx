@@ -19,6 +19,7 @@ import {
 } from './customHeaderModel'
 import { createCustomHeaderStyles, webStickyStyle } from './customHeaderStyles'
 import { useHeaderContextBarFallbackVisibility } from './useHeaderContextBarFallbackVisibility'
+import { useHasListFilterQuery } from './useListFilterQuery'
 import { webDataSetProps } from '@/utils/webProps'
 import Logo from './Logo'
 import LanguageSwitcher from './LanguageSwitcher'
@@ -70,7 +71,11 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
   const contextFallbackProps = webContextFallbackKind
     ? webDataSetProps({ headerContextFallback: webContextFallbackKind })
     : null
-  const showHeaderContextBar = shouldShowHeaderContextBar(pathname, isMobile)
+  // #1725: отфильтрованный список — не раздел навигации, а результат перехода,
+  // и на нём обязана быть строка возврата. До гидратации ответ всегда «нет»:
+  // статический HTML не знает параметров запроса (см. useHasListFilterQuery).
+  const hasListFilterQuery = useHasListFilterQuery(isHydrated)
+  const showHeaderContextBar = shouldShowHeaderContextBar(pathname, isMobile, hasListFilterQuery)
 
   // Predict whether the lazy HeaderContextBar will actually render visible UI
   // (mirrors HeaderContextBar conditions). Native needs this to reserve height;

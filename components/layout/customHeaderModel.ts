@@ -2,6 +2,7 @@ import { Platform } from 'react-native'
 
 import { METRICS } from '@/constants/layout'
 import { isCompactHeaderWidth } from './headerLayoutContract'
+import { needsGlobalBackAffordance } from './topLevelSections'
 
 export const isHeaderTestEnv =
   typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined
@@ -35,35 +36,25 @@ export const getHeaderActivePath = (pathname: string) => {
   return match ?? pathname
 }
 
-// Страницы, где HeaderContextBar свёрнут до JSON-LD (нет видимого бара):
-//  1) верхняя навигация — её идентичность уже есть в основном меню (desktop) / доке (mobile);
-//  2) кабинетные экраны с собственной шапкой (ProfileCollectionHeader: заголовок + «Назад»)
-//     — глобальный контекст-бар/крошки дублировали бы её.
-// Кабинетные без своей шапки (/settings, /messages, /subscriptions, /export, …) и
-// информационные/правовые (/about, /terms, …) страницы тут СПЕЦИАЛЬНО отсутствуют —
-// на них показываются хлебные крошки (см. useBreadcrumbModel).
+// Страницы, где HeaderContextBar свёрнут до JSON-LD (нет видимого бара), —
+// это ровно то, что `needsGlobalBackAffordance` считает НЕ нуждающимся в
+// глобальной строке возврата:
+//  1) разделы верхней навигации — их идентичность уже есть в основном меню
+//     (desktop) / доке (mobile), и «предыдущего» экрана у них нет. Набор берётся
+//     из самой навигации (`topLevelSections.ts`), руками пути туда не дописываем:
+//     #1725 — ровно про то, что рукописный список разошёлся с навигацией;
+//  2) кабинетные коллекции с собственной шапкой (ProfileCollectionHeader:
+//     заголовок + «Назад») — глобальный бар дублировал бы её (#799).
+// Кабинетные без своей шапки (/settings, /messages, /subscriptions, /export, …),
+// информационные/правовые (/about, /terms, …), экраны входа и /metravel строку
+// возврата получают: попасть туда можно только переходом.
 // Keep in sync with HeaderContextBar.tsx render branches.
-const TOP_LEVEL_PATHS_NO_CONTEXT_BAR = new Set<string>([
-  '/',
-  '/index',
-  '/search',
-  '/travelsby',
-  '/map',
-  '/places',
-  '/trips',
-  '/roulette',
-  '/quests',
-  '/favorites',
-  '/history',
-  '/calendar',
-  '/profile',
-  '/login',
-  '/registration',
-  '/set-password',
-  '/metravel',
-])
 
-export const shouldShowHeaderContextBar = (pathname: string, isMobile: boolean) => {
+export const shouldShowHeaderContextBar = (
+  pathname: string,
+  isMobile: boolean,
+  hasFilterQuery: boolean = false,
+) => {
   const isTravelDetailRoute = pathname.startsWith('/travels/')
   const isMapRoute = pathname === '/map' || pathname.startsWith('/map/')
   const isUserPointsRoute = pathname === '/userpoints'
@@ -85,12 +76,10 @@ export const shouldShowHeaderContextBar = (pathname: string, isMobile: boolean) 
   if (isMobile) {
     if (isTravelDetailRoute) return true
     if (isMapRoute) return false
-    if (TOP_LEVEL_PATHS_NO_CONTEXT_BAR.has(pathname)) return false
-    return true
+    return needsGlobalBackAffordance(pathname, hasFilterQuery)
   }
 
-  // Desktop: hidden on travel detail (own nav) and top-level tabs (no breadcrumbs).
+  // Desktop: hidden on travel detail (own nav) and top-level sections (no breadcrumbs).
   if (isTravelDetailRoute) return false
-  if (TOP_LEVEL_PATHS_NO_CONTEXT_BAR.has(pathname)) return false
-  return true
+  return needsGlobalBackAffordance(pathname, hasFilterQuery)
 }
