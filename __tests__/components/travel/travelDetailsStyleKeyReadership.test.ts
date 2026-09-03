@@ -117,12 +117,17 @@ const loadStyleSets = (colors: ThemedColors): Record<string, object> => {
       const match = STYLE_FACTORY_NAME.exec(exportName)
       if (!match || typeof value !== 'function') continue
 
-      // `getTravelDetailsStyles` — агрегат, у него имени набора нет: он и так
-      // раскладывает спредом все фрагменты, новых ключей не приносит.
+      // `getTravelDetailsStyles` — агрегат: имени набора у него нет, новых ключей
+      // он не приносит (спредит те же фрагменты), а регистрировать его нельзя.
+      // Сортировка ставит его первым, и владельцем шести фрагментов стал бы он —
+      // текст падения называл бы `aggregate` вместо `misc`/`layout`, то есть
+      // отправлял бы читателя не в тот файл.
       const name = match[1]
-      const setName = name ? name.charAt(0).toLowerCase() + name.slice(1) : 'aggregate'
+      if (!name) continue
 
-      sets[setName] = (value as (c: ThemedColors) => object)(colors)
+      sets[name.charAt(0).toLowerCase() + name.slice(1)] = (
+        value as (c: ThemedColors) => object
+      )(colors)
     }
   }
 
@@ -355,23 +360,38 @@ describe('читаемость ключей стилей travel details', () => 
     // корень был исключён, набор нового корневого модуля не гейтился вовсе.
     const discovered = Object.keys(loadStyleSets(getThemedColors(false)))
 
-    const expected = listStyleModuleFiles().flatMap((relative) => {
+    const expected: string[] = []
+    // Широкая форма имени фабрики — страховка от самой строгой регулярки:
+    // считать `expected` только ею значило бы, что набор, которого она не
+    // распознала, отсутствует в обеих частях сравнения и проверка молчит.
+    // Фабрика без префикса `TravelDetails` (`createFooterStyles` в модуле, чьё
+    // имя префикс уже несёт) — ровно такой случай.
+    const dropped: string[] = []
+
+    for (const relative of listStyleModuleFiles()) {
       const moduleExports = require(path.join(REPO_ROOT, relative)) as Record<string, unknown>
 
-      return Object.entries(moduleExports).flatMap(([exportName, value]) => {
-        const match = STYLE_FACTORY_NAME.exec(exportName)
-        if (!match || typeof value !== 'function') return []
+      for (const [exportName, value] of Object.entries(moduleExports)) {
+        if (typeof value !== 'function' || !/^(?:create|get)[A-Za-z]*Styles$/.test(exportName)) {
+          continue
+        }
 
-        const name = match[1]
-        return [name ? name.charAt(0).toLowerCase() + name.slice(1) : 'aggregate']
-      })
-    })
+        const match = STYLE_FACTORY_NAME.exec(exportName)
+        if (!match) {
+          dropped.push(`${relative}: ${exportName}`)
+          continue
+        }
+
+        if (match[1]) expected.push(match[1].charAt(0).toLowerCase() + match[1].slice(1))
+      }
+    }
 
     // Оба каталога должны быть представлены — иначе проверка зелена вхолостую.
     expect([
       expected.filter((name) => !discovered.includes(name)),
+      dropped,
       expected.includes('shell') && expected.includes('layout'),
-    ]).toEqual([[], true])
+    ]).toEqual([[], [], true])
   })
 
   it('четыре ключа #1713 удалены из наборов, а не просто потеряли читателя', () => {
