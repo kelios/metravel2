@@ -366,17 +366,22 @@ describe('владение константами стилей travel details', 
     })
   })
 
-  it('shell-набор и агрегат отдают значение владельца, а не своё', () => {
-    // Страховка на случай объявления, которое разбор исходника не разглядит:
-    // у экрана два пути к «одному» числу, и разойтись они не имеют права.
+  it('shell-набор отдаёт значение владельца, а не своё', () => {
+    // Страховка на случай объявления, которое разбор исходника не разглядит.
     for (const name of ['HEADER_OFFSET_DESKTOP', 'HEADER_OFFSET_MOBILE'] as const) {
       const owned = travelDetailsStyleFragments[name]
 
-      expect([name, travelDetailsShellStyles[name], travelDetailsStyles[name]]).toEqual([
-        name,
-        owned,
-        owned,
-      ])
+      expect([name, travelDetailsShellStyles[name]]).toEqual([name, owned])
     }
+  })
+
+  it('агрегат второго пути к числам шапки не открывает', () => {
+    // Мёртвый реэкспорт снят в #1712: путей к одному числу снова один, и
+    // разъезжаться нечему. Вернётся реэкспорт — вернётся и вторая точка правды.
+    expect(
+      ['HEADER_OFFSET_DESKTOP', 'HEADER_OFFSET_MOBILE'].filter(
+        (name) => name in travelDetailsStyles,
+      ),
+    ).toEqual([])
   })
 })

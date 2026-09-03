@@ -51,10 +51,18 @@ import { getTravelDetailsShellStyles } from '@/components/travel/details/TravelD
 const REPO_ROOT = path.resolve(__dirname, '../../..')
 
 /**
- * Каталог фичи: внутри него набор ходит пропом `styles` вниз по секциям, и
+ * Каталог детали: внутри него набор ходит пропом `styles` вниз по секциям, и
  * читатель не обязан импортировать модуль набора.
+ *
+ * Именно `details`, а не весь `components/travel`: набор детали не доезжает до
+ * `upsert/`, `sliderParts/`, `gallery/` и прочих соседей — у каждого свой
+ * локальный `StyleSheet`, и одиннадцать объявленных имён (`errorText`,
+ * `wrapper`, `scrollContent`, `errorContainer`, `errorTitle`, …) там уже
+ * встречаются. Сегодня ни один ключ они ложно не оживляют, но семья `error*`
+ * наполовину мертва, и осиротевший завтра `errorText` был бы зачтён живым —
+ * тот же механизм молчания, только радиусом поменьше.
  */
-const DETAIL_FEATURE_DIR = 'components/travel'
+const DETAIL_FEATURE_DIR = 'components/travel/details'
 
 /** Корни, где ищется внешний файл, импортирующий модуль набора напрямую. */
 const IMPORTER_ROOTS = ['components', 'hooks', 'app']
@@ -63,26 +71,25 @@ const IMPORTER_ROOTS = ['components', 'hooks', 'app']
  * Модули, объявляющие наборы. Их собственный текст читателем не считается:
  * иначе объявление и доккоммент назначали бы ключ живым сами себе.
  *
- * Каталог фрагментов читается С ДИСКА, а не пришпилен: пришпиленный перечень
- * наборов уже отставал от кода в #1711, и новый модуль в `styles/` тогда не
- * проверялся бы вовсе. Корневые модули перечислены поимённо — они лежат вперемешку
- * с компонентами, и отбирать их приходится по имени.
+ * Оба каталога читаются С ДИСКА, а не пришпилены: пришпиленный перечень наборов
+ * уже отставал от кода в #1711. Корневые модули лежат вперемешку с компонентами,
+ * поэтому отбираются по имени — тем же правилом, что и в соседнем гейте владения.
  */
 const STYLE_MODULE_DIR = 'components/travel/details/styles'
-const ROOT_STYLE_MODULE_FILES = [
-  'components/travel/details/TravelDetailsStyleFragments.ts',
-  'components/travel/details/TravelDetailsStyles.ts',
-  'components/travel/details/TravelDetailsHeroStyles.ts',
-  'components/travel/details/TravelDetailsShellStyles.ts',
-]
+const DETAIL_ROOT_DIR = 'components/travel/details'
+const ROOT_STYLE_MODULE_NAME = /(Styles|StyleFragments)\.ts$/
 
-const listStyleModuleFiles = (): string[] => [
-  ...ROOT_STYLE_MODULE_FILES,
-  ...fs
-    .readdirSync(path.join(REPO_ROOT, STYLE_MODULE_DIR))
-    .filter((name) => /\.ts$/.test(name))
-    .map((name) => `${STYLE_MODULE_DIR}/${name}`),
-]
+const listStyleModuleFiles = (): string[] =>
+  [
+    ...fs
+      .readdirSync(path.join(REPO_ROOT, DETAIL_ROOT_DIR))
+      .filter((name) => ROOT_STYLE_MODULE_NAME.test(name))
+      .map((name) => `${DETAIL_ROOT_DIR}/${name}`),
+    ...fs
+      .readdirSync(path.join(REPO_ROOT, STYLE_MODULE_DIR))
+      .filter((name) => /\.ts$/.test(name))
+      .map((name) => `${STYLE_MODULE_DIR}/${name}`),
+  ].sort()
 
 /**
  * Все наборы экрана. Фабрики берутся из модулей `styles/` глобом, а не списком:
@@ -214,7 +221,7 @@ const findUnreadKeys = (
   )
 
 /**
- * Мёртвая поверхность, доставшаяся в наследство: тридцать восемь ключей,
+ * Мёртвая поверхность, доставшаяся в наследство: тридцать девять ключей,
  * которые не читал никто уже на момент заведения гейта (#1713). Снести их
  * одним заходом — отдельная работа с отдельной визуальной приёмкой, поэтому
  * здесь они перечислены явно, а не прощены молча.
