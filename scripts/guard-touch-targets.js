@@ -103,6 +103,19 @@ const INTERACTIVE_HINT = new RegExp([...INTERACTIVE_ELEMENTS].join('|'))
 // намеренно не входят: они ограничивают, но не назначают тач-таргет.
 const SIZE_KEYS = Object.freeze(['width', 'height', 'minWidth', 'minHeight'])
 
+// Примитивы, у которых нажимаемая область задаётся не `style`, а числовым
+// пропом. `ColorChip` рисует круг `chipSize` (по умолчанию 32) и без
+// `touchTargetSize` нажимается ровно в этом круге; до `style` размер не доходит,
+// и по ключам `width/height` гард такого потребителя не видел — третий способ
+// спрятать сабминимальную кнопку после обёртки вне списка (#1734) и файла без
+// слова Pressable (#1739). Для каждого элемента: проп размера, его значение по
+// умолчанию в примитиве и проп, расширяющий рамку до `max(target, size)`.
+// `IconButton.visualSize` сюда не входит: его рамка не опускается ниже 44
+// независимо от значения (#1280).
+const NUMERIC_SIZE_PROPS = Object.freeze({
+  ColorChip: Object.freeze({ sizeProp: 'chipSize', defaultSize: 32, targetProp: 'touchTargetSize' }),
+})
+
 const normalizePath = (value) => String(value || '').replace(/\\/g, '/')
 
 const shouldIgnoreDir = (name) => IGNORED_DIRS.has(name) || name.startsWith('dist-')
@@ -316,6 +329,100 @@ const jsxAttribute = (node, name) => {
   return null
 }
 
+/**
+ * Число из выражения пропа. Литералы, `as`, унарный минус и тернар литералов
+ * разбирает общий `numericValue` (там же живёт правило «ветка тернара — худший
+ * случай»); сверх него здесь резолвятся имена: локальная константа
+ * `const X = 28` того же файла и импортированная из модуля проекта
+ * `export const X = 32`. Всё остальное (`DESIGN_TOKENS.touchTarget.minWidth`,
+ * проп родителя) статически не выводится — `null`.
+ *
+ * Импорт разобран не ради полноты: размер чипа и вертикальный запас родителя
+ * обязаны считаться от ОДНОЙ константы, поэтому в JSX стоит не литерал, а имя
+ * из соседнего `*.styles.ts` (#1744). Без резолва импорта гард молчал бы ровно
+ * на том вызове, ради которого заведён: удаление `touchTargetSize` из модалки
+ * «Моих точек» не давало ни одной находки (проверено пробой).
+ */
+const resolveNumericExpression = (expression, sourceFile, resolveImported, depth = 0) => {
+  if (!expression || depth > 4) return null
+  const direct = numericValue(expression)
+  if (direct !== null) return direct
+  if (ts.isParenthesizedExpression(expression) || ts.isAsExpression(expression)) {
+    return resolveNumericExpression(expression.expression, sourceFile, resolveImported, depth + 1)
+  }
+  if (!ts.isIdentifier(expression)) return null
+  const local = declaredNumericConst(sourceFile, expression.text, resolveImported, depth)
+  if (local !== null) return local
+  return resolveImported ? resolveImported(expression.text, depth) : null
+}
+
+/** Значение объявления `const <name> = ...` в этом файле; иначе `null`. */
+const declaredNumericConst = (sourceFile, name, resolveImported, depth) => {
+  let value = null
+  const visit = (node) => {
+    if (value !== null) return
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === name &&
+      node.initializer
+    ) {
+      value = resolveNumericExpression(node.initializer, sourceFile, resolveImported, depth + 1)
+      return
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sourceFile)
+  return value
+}
+
+/**
+ * Значение именованного импорта файла, если импортированный модуль объявляет
+ * его числом. Дальше одного модуля цепочка не идёт: следующий импорт уже
+ * означает, что размер собирается не константой, а логикой.
+ */
+const importedNumericConst = (rootDir, filePath, sourceFile, name, depth = 0) => {
+  if (depth > 4) return null
+  const binding = collectImportBindings(rootDir, filePath, sourceFile)[name]
+  if (!binding || binding.exportName === 'default') return null
+  const absolute = path.join(rootDir, binding.file)
+  if (!fs.existsSync(absolute)) return null
+  const imported = parseSource(binding.file, fs.readFileSync(absolute, 'utf8'))
+  return declaredNumericConst(imported, binding.exportName, null, depth + 1)
+}
+
+/** `{ present, value }` числового пропа JSX; `value` — `null`, если не выводится. */
+const readNumericProp = (node, name, sourceFile, resolveImported) => {
+  const attribute = jsxAttribute(node, name)
+  if (!attribute) return { present: false, value: null }
+  const initializer = attribute.initializer
+  if (initializer && ts.isJsxExpression(initializer)) {
+    return { present: true, value: resolveNumericExpression(initializer.expression, sourceFile, resolveImported) }
+  }
+  return { present: true, value: null }
+}
+
+/**
+ * Сабминимальный тач-таргет элемента из `NUMERIC_SIZE_PROPS`, выведенный из
+ * его пропов (#1744): `max(targetProp, sizeProp ?? default)`. Расширитель с
+ * невыводимым значением (`touchTargetSize={DESIGN_TOKENS.touchTarget.minWidth}`)
+ * считается намеренной рамкой и не оценивается; отсутствующий расширитель —
+ * это рамка размером с видимый круг, и тогда пропущенный `sizeProp` значит
+ * дефолт примитива, а не «размера нет».
+ */
+const numericPropTarget = (node, sourceFile, resolveImported) => {
+  const contract = NUMERIC_SIZE_PROPS[elementName(node)]
+  if (!contract) return null
+  const target = readNumericProp(node, contract.targetProp, sourceFile, resolveImported)
+  if (target.present && target.value === null) return null
+  const size = readNumericProp(node, contract.sizeProp, sourceFile, resolveImported)
+  const visible = size.present ? size.value : contract.defaultSize
+  if (visible === null) return null
+  const effective = Math.max(target.value ?? 0, visible)
+  if (effective >= MIN_TOUCH_TARGET) return null
+  return { prop: target.value !== null && target.value >= visible ? contract.targetProp : contract.sizeProp, size: effective }
+}
+
 /** Имена параметров функции, включая деструктуризацию `({ style })`. */
 const parameterNames = (declaration) => {
   const names = new Set()
@@ -503,6 +610,7 @@ const scanFile = ({ rootDir, filePath, content }) => {
   const sourceFile = parseSource(filePath, content)
   const styleTables = resolveStyleTables(rootDir, filePath, sourceFile)
   const wrappers = collectStyleForwardingWrappers(sourceFile)
+  const resolveImported = (name, depth) => importedNumericConst(rootDir, filePath, sourceFile, name, depth)
   const findings = []
 
   const visit = (node) => {
@@ -528,8 +636,24 @@ const scanFile = ({ rootDir, filePath, content }) => {
         const inline = smallestOf(inlineDims)
         const useInline = inline && (!named || inline.size < named.size)
         const smallest = useInline ? inline : named
+        const numeric = numericPropTarget(node, sourceFile, resolveImported)
+        const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1
 
-        if (smallest) {
+        if (numeric && (!smallest || numeric.size < smallest.size)) {
+          // Размер объявлен пропом в самом JSX — ключ, как у инлайнового стиля,
+          // адресуется файлу потребителя и несёт сам размер, а не номер строки.
+          findings.push({
+            file: filePath,
+            key: `${filePath}::${name}(${numeric.prop}=${numeric.size})`,
+            style: `${name}(${numeric.prop}=${numeric.size})`,
+            dimension: numeric.prop,
+            size: numeric.size,
+            element: name,
+            hitSlop: hasHitSlop,
+            usedIn: filePath,
+            line,
+          })
+        } else if (smallest) {
           // Инлайновый размер объявлен в самом JSX, именованный — в своём файле
           // стилей; ключ всегда указывает туда, где правится размер.
           const declaredIn = useInline ? filePath : smallest.file
@@ -547,7 +671,7 @@ const scanFile = ({ rootDir, filePath, content }) => {
             element: name,
             hitSlop: hasHitSlop,
             usedIn: filePath,
-            line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
+            line,
           })
         }
       }
@@ -912,6 +1036,7 @@ module.exports = {
   MIN_TOUCH_TARGET,
   SCAN_DIRS,
   SIZE_KEYS,
+  NUMERIC_SIZE_PROPS,
   INTERACTIVE_ELEMENTS,
   collectStyleSizes,
   collectStyleReferences,

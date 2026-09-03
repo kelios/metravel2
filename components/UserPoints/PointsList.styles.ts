@@ -5,6 +5,15 @@ import type { useThemedColors } from '@/hooks/useTheme'
 const PANEL_RADIUS = DESIGN_TOKENS.radii.lg
 const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm
 
+/**
+ * Видимый цветной чип модалки ручной точки; нажимаемая рамка — 44dp через
+ * `touchTargetSize` (#1744). Запас под рамку держит `manualColorRow`: рамка
+ * вынесена в отрицательные поля, а на native тап доходит до потомка только
+ * внутри границ родителя.
+ */
+export const MANUAL_COLOR_CHIP_SIZE = 32
+const MANUAL_COLOR_CHIP_FRAME_INSET = (DESIGN_TOKENS.touchTarget.minWidth - MANUAL_COLOR_CHIP_SIZE) / 2
+
 export const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     flex: 1,
@@ -298,9 +307,13 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
   manualScrollContent: {
     padding: DESIGN_TOKENS.spacing.md,
   },
+  // Вертикальный запас под нажимаемую рамку 44dp чипа (#1744): рамка вынесена
+  // в отрицательные поля, а на native тап доходит до потомка только внутри
+  // границ родителя. Зазор 8 > inset 6 — рамки соседей не заходят на круг.
   manualColorRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    paddingVertical: MANUAL_COLOR_CHIP_FRAME_INSET,
     gap: 8,
   },
   manualInput: {

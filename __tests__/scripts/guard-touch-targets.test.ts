@@ -7,6 +7,7 @@ const {
   MIN_TOUCH_TARGET,
   CONTRACT_VERSION,
   SCAN_DIRS,
+  NUMERIC_SIZE_PROPS,
   collectStyleSizes,
   collectStyleReferences,
   collectInteractiveStyleNames,
@@ -349,6 +350,107 @@ describe('guard-touch-targets', () => {
       } finally {
         removeDir(rootDir)
       }
+    })
+  })
+
+  describe('size declared by a numeric prop, not by style (#1744)', () => {
+    // `ColorChip` рисует круг `chipSize` и без `touchTargetSize` нажимается
+    // ровно в нём; до `style` этот размер не доходит, и гард по ключам
+    // `width/height` потребителя не видел — так модалка «Моих точек» жила с
+    // 32dp при зелёном гейте.
+    const chip = (props: string, prelude = '') => `
+      import React from 'react'
+      import ColorChip from '@/components/ui/ColorChip'
+      ${prelude}
+      export const Probe = () => <ColorChip color="red" onPress={() => {}} ${props} />
+    `
+
+    it('flags a chipSize below the minimum when no touch frame is requested (negative probe)', () => {
+      const findings = scan(chip('chipSize={32}'))
+
+      expect(findings).toHaveLength(1)
+      expect(findings[0]).toMatchObject({
+        file: 'components/Probe.tsx',
+        key: 'components/Probe.tsx::ColorChip(chipSize=32)',
+        dimension: 'chipSize',
+        size: 32,
+        element: 'ColorChip',
+      })
+    })
+
+    it('reads the primitive default when chipSize is omitted', () => {
+      const findings = scan(chip(''))
+      expect(findings).toHaveLength(1)
+      expect(findings[0]).toMatchObject({ dimension: 'chipSize', size: NUMERIC_SIZE_PROPS.ColorChip.defaultSize })
+    })
+
+    it('resolves a same-file constant as the chip size', () => {
+      const findings = scan(chip('chipSize={COLOR_CHIP_SIZE}', 'const COLOR_CHIP_SIZE = 28'))
+      expect(findings).toHaveLength(1)
+      expect(findings[0]).toMatchObject({ size: 28 })
+    })
+
+    it('resolves the chip size imported from a sibling module', () => {
+      // Размер чипа и вертикальный запас родителя обязаны считаться от одной
+      // константы, поэтому в JSX стоит имя из `*.styles.ts`, а не литерал.
+      // Пока гард читал только литералы, он молчал ровно на том вызове, ради
+      // которого заведён (#1744).
+      const rootDir = makeTempDir('guard-touch-targets-')
+      try {
+        fs.mkdirSync(path.join(rootDir, 'components'), { recursive: true })
+        fs.writeFileSync(
+          path.join(rootDir, 'components', 'Probe.styles.ts'),
+          'export const MANUAL_COLOR_CHIP_SIZE = 32\n',
+          'utf8',
+        )
+
+        const findings = scanFile({
+          rootDir,
+          filePath: 'components/Probe.tsx',
+          content: `
+            import ColorChip from '@/components/ui/ColorChip'
+            import { MANUAL_COLOR_CHIP_SIZE } from './Probe.styles'
+            export const Probe = () => <ColorChip color="red" chipSize={MANUAL_COLOR_CHIP_SIZE} />
+          `,
+        })
+
+        expect(findings).toHaveLength(1)
+        expect(findings[0]).toMatchObject({ dimension: 'chipSize', size: 32 })
+      } finally {
+        removeDir(rootDir)
+      }
+    })
+
+    it('takes the worst branch of an adaptive chip size', () => {
+      const findings = scan(chip('chipSize={isMobile ? 24 : 48}', 'const isMobile = true'))
+      expect(findings).toHaveLength(1)
+      expect(findings[0]).toMatchObject({ size: 24 })
+    })
+
+    it('passes a chip whose touch frame reaches the minimum (control)', () => {
+      expect(scan(chip(`chipSize={20} touchTargetSize={${MIN_TOUCH_TARGET}}`))).toEqual([])
+    })
+
+    it('flags a touch frame that is itself below the minimum', () => {
+      const findings = scan(chip('chipSize={32} touchTargetSize={40}'))
+      expect(findings).toHaveLength(1)
+      expect(findings[0]).toMatchObject({ dimension: 'touchTargetSize', size: 40 })
+    })
+
+    it('treats a token-valued touch frame as intentional and does not guess it', () => {
+      expect(scan(chip('chipSize={32} touchTargetSize={DESIGN_TOKENS.touchTarget.minWidth}'))).toEqual([])
+    })
+
+    it('keeps the worst of prop size and style size', () => {
+      const source = `
+        import { StyleSheet } from 'react-native'
+        import ColorChip from '@/components/ui/ColorChip'
+        const styles = StyleSheet.create({ chip: { width: 24, height: 24 } })
+        export const Probe = () => <ColorChip color="red" chipSize={32} style={styles.chip} />
+      `
+      const findings = scan(source)
+      expect(findings).toHaveLength(1)
+      expect(findings[0]).toMatchObject({ style: 'chip', size: 24 })
     })
   })
 

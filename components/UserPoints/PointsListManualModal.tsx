@@ -5,6 +5,7 @@ import SimpleMultiSelect from '@/components/forms/SimpleMultiSelect';
 import Button from '@/components/ui/Button';
 import ColorChip from '@/components/ui/ColorChip';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { MANUAL_COLOR_CHIP_SIZE } from './PointsList.styles';
 import { PointsListStyles } from './types';
 import { translate as i18nT } from '@/i18n'
 
@@ -150,9 +151,10 @@ export const PointsListManualModal: React.FC<PointsListManualModalProps> = ({
                       selected={isSelected}
                       onPress={() => onChangeColor(color)}
                       accessibilityLabel={i18nT('map:components.UserPoints.PointsListManualModal.tsvet_value1_5d6679c3', { value1: color })}
-                      chipSize={32}
+                      chipSize={MANUAL_COLOR_CHIP_SIZE}
                       dotSize={20}
                       dotBorderWidth={1}
+                      touchTargetSize={DESIGN_TOKENS.touchTarget.minWidth}
                     />
                   );
                 })}
