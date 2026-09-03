@@ -42,7 +42,8 @@
 **отфильтровывает** (`item.path !== '/trips'`), так что в этой навигационной
 секции подраздел не отображается совсем. `components/layout/bottomDockModel.ts:91` подсвечивает
 весь подраздел одним пунктом: `startsWith('/trips') → '/trips'`.
-`customHeaderModel.ts` держит `/trips` в `TOP_LEVEL_PATHS_NO_CONTEXT_BAR`, а
+`/trips` — раздел навигации (`TOP_LEVEL_SECTION_PATHS` в
+`components/layout/topLevelSections.ts`), поэтому контекст-бара на нём нет, а
 вложенные `/trips/*` получают крошки из `hooks/useBreadcrumbModel.ts`.
 
 | Путь | Web-вариант | Native-вариант | Отличие |
