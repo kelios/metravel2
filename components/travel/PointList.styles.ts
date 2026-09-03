@@ -561,7 +561,12 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
   addButton: {
     backgroundColor: colors.primary,
     borderRadius: DESIGN_TOKENS.radii.lg,
-    minHeight: 40,
+    // 44 — фактический floor тач-таргета в проекте (`docs/DESIGN_SYSTEM.md`).
+    // Число литералом, а не `DESIGN_TOKENS.touchTarget.minHeight`: гейт
+    // `scripts/guard-touch-targets.js` читает только числовые литералы и
+    // ссылку на токен молча пропускает — соседние стили травела (#1731)
+    // держат тот же литерал ровно поэтому.
+    minHeight: 44,
     paddingVertical: DESIGN_TOKENS.spacing.sm,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     flexDirection: 'row',
