@@ -45,6 +45,8 @@ node scripts/seo-audit.js --user-id 1 --limit 50 --min-words 500
 | `thin-content` | < 400 слов | слабая релевантность и время на странице |
 | `no-headings` | 0 × h2/h3 | нет структуры под подзапросы |
 | `no-internal-links` | 0 ссылок на `/travels/` | теряется ссылочный вес и обход |
+| `lead-noise` | тело начинается с вывода скрипта (`DUP found`, `[object Object]`, traceback) | этой строкой открывается сниппет в выдаче |
+| `faq-markup-lost` | FAQ-блок есть, `<details>`/`<summary>` нет | `buildTravelFaqJsonLd` отдаёт `null`: блок виден на странице, а `FAQPage` в выдачу не попадает |
 
 **Важно про сниппет:** поле `meta_description` фронтендом/SSG НЕ используется —
 сниппет в выдаче строится из первых ~160 символов тела описания

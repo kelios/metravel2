@@ -1642,6 +1642,14 @@ function buildTravelArticleJsonLd({ headline, description, canonical, image, tra
 }
 
 /**
+ * The FAQ wrapper the editor writes. Exported so scripts/seo-audit.js can ask
+ * "does this body have a FAQ block?" against the same definition that decides
+ * what gets read here — one source of truth, or the auditor reports a clean
+ * zero over exactly the articles a widened wrapper would newly cover.
+ */
+const FAQ_SECTION_OPEN_TAG = '<section[^>]*(?:class="[^"]*seo-faq[^"]*"|data-faq="metravel-seo")[^>]*>';
+
+/**
  * Pull the Q/A pairs out of an article body's FAQ block.
  *
  * The editor stores them as microdata (`<section class="seo-faq">` with
@@ -1658,7 +1666,7 @@ function extractFaqEntries(descriptionHtml) {
 
   // Prefer the FAQ section when present so an unrelated <details> elsewhere in
   // the body is not advertised as an FAQ answer.
-  const faqSections = html.match(/<section[^>]*(?:class="[^"]*seo-faq[^"]*"|data-faq="metravel-seo")[^>]*>[\s\S]*?<\/section>/gi);
+  const faqSections = html.match(new RegExp(`${FAQ_SECTION_OPEN_TAG}[\\s\\S]*?<\\/section>`, 'gi'));
   const scopes = faqSections && faqSections.length ? faqSections : [html];
 
   const entries = [];
@@ -4145,6 +4153,7 @@ if (typeof module !== 'undefined' && module.exports) {
     disableExpoRouterHydration,
     injectJsonLd,
     buildTravelArticleJsonLd,
+    FAQ_SECTION_OPEN_TAG,
     extractFaqEntries,
     buildTravelFaqJsonLd,
     injectBreadcrumbJsonLd,

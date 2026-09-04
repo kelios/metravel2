@@ -56,7 +56,8 @@ model: sonnet
 - статус страницы в индексе — `npm run stats:index:json` (GSC URL Inspection);
 - контент-проблемы — только вывод `node scripts/seo-audit.js --user-id 1 --json
   <путь>`: `thin`, `weak-lead`, `lead-noise`, `title-too-long`,
-  `no-headings`, `no-internal-links`. «Статья слабая» — не находка;
+  `no-headings`, `no-internal-links`, `faq-markup-lost`. «Статья слабая» — не
+  находка;
 - дубли лидов и повторов — `node scripts/seo-find-dupes.js --user-id 1`;
 - каждый добавленный факт (дата, имя, стиль, цена, часы) — WebSearch/WebFetch с
   URL источника; спорную авторскую цифру не затирать, дать обе с пометкой;

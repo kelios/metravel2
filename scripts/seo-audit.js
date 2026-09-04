@@ -37,7 +37,7 @@ const {
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 // The FAQ check asks the generator itself whether a body still yields FAQPage,
 // instead of re-implementing its markup contract here (see analyzeFaqMarkup).
-const { extractFaqEntries } = require('./generate-seo-pages');
+const { extractFaqEntries, FAQ_SECTION_OPEN_TAG } = require('./generate-seo-pages');
 
 // ---------------------------------------------------------------------------
 // Thresholds (kept in sync with scripts/generate-seo-pages.js SEO rules)
@@ -206,12 +206,22 @@ function analyzeLeadNoise(descriptionHtml) {
  * Detecting the wrapper alone would report a clean zero over every article still
  * holding the older one — the same silence this check exists to end.
  */
-const FAQ_SECTION_PATTERN = /<section[^>]*(?:class="[^"]*seo-faq[^"]*"|data-faq="metravel-seo")[^>]*>/i;
+const FAQ_SECTION_PATTERN = new RegExp(FAQ_SECTION_OPEN_TAG, 'i');
 const FAQ_HEADING_PATTERN = /<h[23][^>]*>\s*(?:<[^>]+>\s*)*(?:частые вопросы|часто задаваемые|faq)/i;
+// A heading on its own is not a FAQ block. The corpus writes the pairs as
+// `<details>`, as `<h3>Вопрос</h3>` or as `<p><strong>Вопрос</strong>`; without
+// one of them after the heading, "Частые вопросы — пишите в комментариях" would
+// be flagged with nothing to fix and would take a priority bump into the
+// worklist. The wrapper shape needs no such check — it is written by the editor
+// and never wraps prose.
+const FAQ_PAIR_PATTERN = /<details|<strong|<h3/i;
 
 function analyzeFaqMarkup(descriptionHtml) {
   const html = String(descriptionHtml || '');
-  const hasFaqBlock = FAQ_SECTION_PATTERN.test(html) || FAQ_HEADING_PATTERN.test(html);
+  const heading = html.match(FAQ_HEADING_PATTERN);
+  const hasFaqBlock =
+    FAQ_SECTION_PATTERN.test(html) ||
+    (!!heading && FAQ_PAIR_PATTERN.test(html.slice(heading.index + heading[0].length)));
   // Counted unconditionally: the generator also reads `<details itemprop="mainEntity">`
   // pairs that carry no wrapper at all, and a body-wide zero here would misreport
   // `faqEntries` in the --json report for articles whose FAQPage is in fact emitted.

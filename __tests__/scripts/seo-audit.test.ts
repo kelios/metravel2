@@ -262,6 +262,19 @@ describe('analyzeFaqMarkup (FAQ block the SSG cannot read — #1761)', () => {
     expect(r.markupLost).toBe(true);
   });
 
+  it('flags the two shapes the corpus actually stores the pairs in', () => {
+    // 198/562 — <p><strong>Вопрос</strong>Ответ</p>; 682 — <h3>Вопрос</h3><p>Ответ</p>.
+    expect(analyzeFaqMarkup('<h2>Частые вопросы: X</h2><p><strong>Вопрос?</strong>Ответ.</p>').markupLost).toBe(true);
+    expect(analyzeFaqMarkup('<h2>Частые вопросы: X</h2><h3>Вопрос?</h3><p>Ответ.</p>').markupLost).toBe(true);
+  });
+
+  it('does not flag a heading with no pairs under it — there is nothing to fix', () => {
+    // Иначе статья уезжает в worklist с поднятым priority и пустой находкой.
+    const r = analyzeFaqMarkup('<h2>Частые вопросы</h2><p>Пишите в комментариях, отвечу каждому.</p>');
+    expect(r.hasFaqBlock).toBe(false);
+    expect(r.markupLost).toBe(false);
+  });
+
   it('accepts details pairs the generator reads without any wrapper', () => {
     // Генератор берёт такие пары фолбэком по itemprop, FAQPage выходит —
     // значит и entries обязаны показывать реальное число, а не ноль «нет секции».
