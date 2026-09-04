@@ -304,7 +304,17 @@ describe('post-deploy media check: цель uploads/** (фото тела ста
       collectRichTextMediaUrls({
         description: `<p><img data-src="data:image/gif;base64,R0lGOD" src="${S3}/uploads/1591977314DSC_0375.JPG"></p>`,
       })
-    ).toEqual([`${S3}/uploads/1591977314DSC_0375.JPG`, 'data:image/gif;base64,R0lGOD'])
+    ).toEqual([`${S3}/uploads/1591977314DSC_0375.JPG`])
+
+    // И обратный перекос: адрес у кадра ОДИН — тот, который возьмёт рендер.
+    // Складывать в кандидаты все атрибуты тега значит строить цель по ключу,
+    // которого читатель не запрашивает: устаревший `data-src` дал бы гейту
+    // ошибку по кадру, которого на странице нет.
+    expect(
+      collectRichTextMediaUrls({
+        description: `<img src="${SITE}/travel-description-image/9/x.webp" data-src="${S3}/uploads/stale.jpg">`,
+      })
+    ).toEqual([`${SITE}/travel-description-image/9/x.webp`])
 
     // Кадр без `src` серверный санитайзер выбрасывает целиком, поэтому в сыром
     // слепке адрес остаётся только в ленивом атрибуте — терять его нельзя.
@@ -343,6 +353,11 @@ describe('post-deploy media check: цель uploads/** (фото тела ста
       expect(notice.severity).toBe('info')
       expect(notice.code).toBe('media.uploads_class_absent')
       expect(notice.message).toContain('116, 171, 220, 290')
+      // Доказательная база — опорный набор плюс до 12 статей сечений, поэтому
+      // «класса нет на всём сайте» сообщение утверждать не вправе: снятие
+      // семейства с гейта требует полного пересчёта ссылок.
+      expect(notice.message).toContain('полного пересчёта ссылок')
+      expect(notice.message).not.toMatch(/можно снимать с гейта/)
     })
 
     it('опорные статьи недоступны — предупреждение гейта, а не пропуск', () => {

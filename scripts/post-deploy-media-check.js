@@ -505,10 +505,13 @@ function collectRichTextMediaUrls(detail) {
           const key = name.toLowerCase()
           if (!attributes.has(key)) attributes.set(key, doubleQuoted ?? singleQuoted ?? '')
         }
-        for (const attribute of RICH_TEXT_IMG_SRC_ATTRIBUTES) {
-          const value = attributes.get(attribute)
-          if (value) urls.push(value.replace(/&amp;/gi, '&'))
-        }
+        // Один кадр — один адрес. Рендер берёт по цепочке `||` ПЕРВЫЙ непустой и
+        // остальные не запрашивает вовсе, поэтому класть в кандидаты все атрибуты
+        // тега нельзя: устаревший `data-src` с ключом `uploads/**` рядом с живым
+        // каноническим `src` дал бы цель, которой у читателя нет, и гейт отчитался
+        // бы ошибкой по несуществующему кадру.
+        const source = RICH_TEXT_IMG_SRC_ATTRIBUTES.map((name) => attributes.get(name)).find(Boolean)
+        if (source) urls.push(source.replace(/&amp;/gi, '&'))
       }
     }
   }
@@ -1110,6 +1113,12 @@ function hasUploadsTarget(detail) {
  * Возвращает не только детали, но и то, чем закончился поиск. Без этого «класс
  * ушёл с сайта» и «цель не удалось получить» печатаются одной строкой, и потеря
  * покрытия неотличима от честного отсутствия класса (#1758).
+ *
+ * Этот же набор деталей питает цель `travel-description-image`, поэтому ранний
+ * выход его сужает: в удачной ветке остаются первая статья каталога и опорная.
+ * Обе — опубликованные travel с манифестом, и прогон против прода 2026-09-04 даёт
+ * все 7 семейств; если манифест опустеет у обеих, семейство пропадёт из набора
+ * молча — своего notice у него нет (вне Scope #1758).
  */
 async function collectUploadsScanDetails(softFetch, travels) {
   const details = []
@@ -1171,9 +1180,10 @@ function uploadsTargetNotice({ hasTarget, anchorsReachable }) {
     severity: 'info',
     code: 'media.uploads_class_absent',
     message:
-      `Класса uploads/** на сайте больше нет: опорные статьи (${anchors}) прочитаны и ключей не ` +
-      'содержат, фолбэк по сечениям каталога цели тоже не дал — семейство media-resize-uploads ' +
-      'можно снимать с гейта',
+      `Ключей uploads/** нет: опорные статьи (${anchors}) прочитаны и ключей не содержат, фолбэк по ` +
+      'сечениям каталога цели тоже не дал. Пропуск законный, но это ещё не доказательство, что класс ' +
+      'ушёл со всего сайта: сечения смотрят до 12 статей из каталога. Снимать семейство с гейта — ' +
+      'после полного пересчёта ссылок',
   }
 }
 
