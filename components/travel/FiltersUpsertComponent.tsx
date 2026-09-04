@@ -488,7 +488,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginBottom: 12,
     },
     floatingIconButton: {
-        minWidth: 40,
+        // 44 — минимальный тач-таргет; подпись делает кнопку шире в любом случае,
+        // так что видимого изменения нет, а гейт видит кнопку с #1748.
+        minWidth: 44,
         borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',

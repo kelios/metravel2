@@ -88,6 +88,16 @@ const INTERACTIVE_ELEMENTS = new Set([
   'PlaceFirstBadgeCard',
   'QuestForCityCard',
   'UserSafetyMenu',
+  // Общая кнопка проекта: `forwardRef` над `Pressable`, проп `style`
+  // потребителя ложится ПОСЛЕ размеров варианта и может ужать таргет (#1748).
+  // `ButtonBase` — тот же default-экспорт под алиасом импорта рядом с
+  // Paper-кнопкой; Paper `Button` тоже пробрасывает `style` в свой Touchable,
+  // так что одна запись `Button` закрывает обе.
+  'Button',
+  'ButtonBase',
+  'UIButton',
+  // Обёртка над `Button`, отдающая `style` дальше (#1748).
+  'AdminGrantRareAward',
 ])
 
 // Дешёвый фильтр «в файле вообще есть интерактивный элемент» перед разбором AST.
@@ -448,6 +458,40 @@ const parameterNames = (declaration) => {
  *
  * По той же причине в `INTERACTIVE_ELEMENTS` заведён `IconButton` (#1280).
  */
+const COMPONENT_FACTORIES = new Set(['forwardRef', 'memo'])
+
+/**
+ * Снимает фабрики компонентов с инициализатора: `forwardRef(cb)`, `memo(cb)`,
+ * `React.forwardRef(cb)`, `memo(forwardRef(cb))` → `cb`. Без этого обёртка,
+ * объявленная не голой функцией, а вызовом, для гарда не существовала: так
+ * `components/ui/Button` (`forwardRef` ради `ref` на `View`) не попадал ни в
+ * список интерактивных элементов, ни в отчёт незарегистрированных обёрток, и
+ * любой `<Button style={...}>` мог быть ужат ниже минимума при зелёном гейте
+ * (#1748, четвёртое слепое пятно после #1734/#1739/#1744).
+ */
+const unwrapComponentFactory = (expression) => {
+  let node = expression
+  for (;;) {
+    if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression?.(node)) {
+      node = node.expression
+      continue
+    }
+    if (ts.isCallExpression(node) && node.arguments.length > 0) {
+      const callee = node.expression
+      const name = ts.isIdentifier(callee)
+        ? callee.text
+        : ts.isPropertyAccessExpression(callee)
+          ? callee.name.text
+          : null
+      if (name && COMPONENT_FACTORIES.has(name)) {
+        node = node.arguments[0]
+        continue
+      }
+    }
+    return node
+  }
+}
+
 const collectStyleForwardingWrappers = (sourceFile) => {
   const wrappers = new Set()
 
@@ -485,7 +529,7 @@ const collectStyleForwardingWrappers = (sourceFile) => {
       wrappers.add(node.name.text)
     }
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
-      const initializer = node.initializer
+      const initializer = unwrapComponentFactory(node.initializer)
       if (
         (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer)) &&
         forwardsStyle(initializer)
@@ -1043,6 +1087,7 @@ module.exports = {
   collectInlineStyleDims,
   collectInteractiveStyleNames,
   collectStyleForwardingWrappers,
+  unwrapComponentFactory,
   collectExportedNames,
   collectExportedWrappers,
   collectImportBindings,

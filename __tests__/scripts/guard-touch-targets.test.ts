@@ -12,6 +12,8 @@ const {
   collectStyleReferences,
   collectInteractiveStyleNames,
   findUnlistedWrappers,
+  collectStyleForwardingWrappers,
+  unwrapComponentFactory,
   isStyleModule,
   scanFile,
   scanStyleModule,
@@ -646,6 +648,93 @@ describe('guard-touch-targets', () => {
       expect(() => compareToBaseline([], { ...baseline, contractVersion: 0 })).toThrow(/contractVersion/)
       expect(() => compareToBaseline([], { ...baseline, scope: ['app'] })).toThrow(/scope/)
       expect(() => compareToBaseline([], { ...baseline, minTouchTarget: 48 })).toThrow(/minTouchTarget/)
+    })
+  })
+
+  describe('wrappers declared through forwardRef / memo (#1748)', () => {
+    // Четвёртое слепое пятно семейства: обёртка объявлена не голой функцией, а
+    // вызовом фабрики — `const Button = forwardRef((props, ref) => …)`. Такой
+    // инициализатор не ArrowFunction и не FunctionExpression, и гард не видел
+    // ни саму обёртку, ни её потребителей, ни пропуск в INTERACTIVE_ELEMENTS.
+    const wrappersIn = (code: string) => [...collectStyleForwardingWrappers(parse(code))]
+
+    it('unwraps forwardRef, memo, React.* and their nesting down to the callback', () => {
+      const callbackOf = (code: string) => {
+        const source = parse(`const X = ${code}`)
+        const declaration = source.statements[0].declarationList.declarations[0]
+        return unwrapComponentFactory(declaration.initializer)
+      }
+      expect(ts.isArrowFunction(callbackOf('forwardRef((props, ref) => null)'))).toBe(true)
+      expect(ts.isArrowFunction(callbackOf('React.forwardRef<View, Props>((props, ref) => null)'))).toBe(true)
+      expect(ts.isFunctionExpression(callbackOf('memo(function Inner(props) { return null })'))).toBe(true)
+      expect(ts.isArrowFunction(callbackOf('memo(forwardRef((props, ref) => null))'))).toBe(true)
+      expect(ts.isArrowFunction(callbackOf('(forwardRef((props, ref) => null))'))).toBe(true)
+      // Чужой вызов фабрикой не считается: `styled(...)`/`connect(...)` не разворачиваем.
+      expect(ts.isCallExpression(callbackOf('styled((props) => null)'))).toBe(true)
+    })
+
+    it('sees a forwardRef wrapper that forwards style into a Pressable', () => {
+      expect(
+        wrappersIn(`
+          import { forwardRef } from 'react'
+          import { Pressable } from 'react-native'
+          const Button = forwardRef<View, Props>(({ style, onPress, children }, ref) => (
+            <Pressable ref={ref} style={[base, style]} onPress={onPress}>{children}</Pressable>
+          ))
+          export default Button
+        `),
+      ).toEqual(['Button'])
+    })
+
+    it('sees memo(forwardRef(...)) and React.memo(...) wrappers', () => {
+      expect(
+        wrappersIn(`
+          const A = memo(forwardRef(({ style }, ref) => <Pressable ref={ref} style={style} />))
+          const B = React.memo(({ style }) => <Pressable style={style} />)
+          const C = React.memo(({ label }) => <Pressable style={fixed} />)
+        `).sort(),
+      ).toEqual(['A', 'B'])
+    })
+
+    it('flags a shared Button squeezed by the consumer style (negative probe)', () => {
+      const findings = scan(`
+        import { StyleSheet } from 'react-native'
+        import Button from '@/components/ui/Button'
+        export const Probe = () => <Button label="x" style={{ height: 30 }} onPress={() => {}} />
+      `)
+
+      expect(findings).toHaveLength(1)
+      expect(findings[0]).toMatchObject({ element: 'Button', size: 30, dimension: 'height' })
+    })
+
+    it('reports an exported forwardRef wrapper that the list does not know', () => {
+      const rootDir = makeTempDir('guard-touch-targets-forwardref-')
+      try {
+        const files: Record<string, string> = {
+          'components/ui/Tap.tsx': `
+            import { forwardRef } from 'react'
+            import { Pressable } from 'react-native'
+            const Tap = forwardRef(({ style, onPress }, ref) => <Pressable ref={ref} style={style} onPress={onPress} />)
+            export default Tap
+          `,
+          'components/Screen.tsx': `
+            import { Pressable, StyleSheet } from 'react-native'
+            import Tap from '@/components/ui/Tap'
+            const styles = StyleSheet.create({ tiny: { width: 20, height: 20 } })
+            export const Screen = () => <Tap style={styles.tiny} onPress={() => {}} />
+          `,
+        }
+        for (const [relative, content] of Object.entries(files)) {
+          const absolute = path.join(rootDir, relative)
+          fs.mkdirSync(path.dirname(absolute), { recursive: true })
+          fs.writeFileSync(absolute, content, 'utf8')
+        }
+        expect(findUnlistedWrappers(rootDir)).toEqual([
+          { name: 'Tap', declaredIn: 'components/ui/Tap.tsx', usedIn: 'components/Screen.tsx' },
+        ])
+      } finally {
+        removeDir(rootDir)
+      }
     })
   })
 
