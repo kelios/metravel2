@@ -377,9 +377,50 @@ URL приходит по `http://` и БЕЗ сегмента `/<id>/descriptio
   слаг перед вставкой проверяй `curl -o /dev/null -w "%{http_code}"
   https://metravel.by/travels/<slug>` — битые внутренние ссылки уже были
   отдельным багом. Ссылки давай без `?returnTo=`.
-- **FAQ** — `<section class="seo-faq" …>` со schema.org FAQPage, 5–6 вопросов из
-  реальных запросов («сколько времени», «сколько стоит», «как добраться»,
-  «можно ли с собакой», «когда ехать»). От ПЕРВОГО лица.
+- **FAQ** — 5–6 вопросов из реальных запросов («сколько времени», «сколько
+  стоит», «как добраться», «можно ли с собакой», «когда ехать»). От ПЕРВОГО
+  лица. Разметка — строго по образцу ниже, иначе `FAQPage` не появится вовсе.
+
+#### FAQ пишется только `<details>/<summary>` — иначе разметка молчит
+
+`extractFaqEntries` (`scripts/generate-seo-pages.js`) читает пары **только** из
+`<details>` внутри FAQ-секции: первой же строкой он выходит на
+`if (!html.includes('<details')) return []`. FAQ, записанный привычным
+`<h2>Частые вопросы</h2><p><strong>Вопрос?</strong>Ответ</p>` или
+`<h3>Вопрос?</h3><p>Ответ</p>`, на странице **выглядит точно так же**, ничего не
+падает — и `FAQPage` в прод-HTML не попадает совсем. Так вышли без разметки
+восемь опубликованных статей (#1765), потому что три исходника
+(`abandoned-hub`, `brest-guide`, `weekend-minsk-hub`) были написаны плоско.
+
+Канонический вид, копировать дословно:
+
+```html
+<section class="seo-faq" data-faq="metravel-seo" itemscope itemtype="https://schema.org/FAQPage">
+<h2>Частые вопросы: …</h2>
+<details itemprop="mainEntity" itemscope itemtype="https://schema.org/Question">
+<summary itemprop="name"><strong>Вопрос?</strong></summary>
+<div itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><div itemprop="text">
+<p>Ответ.</p>
+</div></div>
+</details>
+</section>
+```
+
+Эталоны в репозитории: `scripts/vitebsk-guide-content.html`,
+`scripts/grodno-guide-content.html`, `scripts/mogilev-guide-content.html`.
+
+Проверка до публикации — на самом генераторе, а не глазами:
+
+```bash
+node -e 'const{buildTravelFaqJsonLd}=require("./scripts/generate-seo-pages");
+const h=require("fs").readFileSync(process.argv[1],"utf8");
+const j=buildTravelFaqJsonLd(h);console.log(j?j.mainEntity.length+" вопросов":"FAQPage НЕ БУДЕТ")' scripts/<файл>-content.html
+```
+
+Ноль вопросов при видимом на странице FAQ-блоке = статью публиковать нельзя.
+По уже опубликованному корпусу то же самое ловит
+`node scripts/seo-audit.js --user-id 1` строкой
+`FAQ block without FAQPage markup:` — она обязана быть нулевой.
 
 ### Блок квестов — эталон статьи 619 (Бытом)
 
