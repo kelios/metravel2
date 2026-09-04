@@ -228,17 +228,14 @@ const findUnreadKeys = (
   )
 
 /**
- * Мёртвая поверхность, доставшаяся в наследство: тридцать девять ключей,
- * которые не читал никто уже на момент заведения гейта (#1713). Снести их
- * одним заходом — отдельная работа с отдельной визуальной приёмкой, поэтому
- * здесь они перечислены явно, а не прощены молча.
- *
- * Список самоосушающийся: он проверяется в обе стороны. Ключ, который удалили
- * или у которого появился читатель, обязан из списка исчезнуть — иначе гейт
- * падает. Отстать от кода незаметно, как отстал пришпиленный перечень в #1711,
- * он поэтому не может.
+ * Наследство слито (#1714): тридцать девять ключей, которые не читал никто уже
+ * на момент заведения гейта (#1713), удалены из наборов вместе с фрагментом
+ * `decisionSummary` целиком. Список нужен только затем, чтобы удаление было
+ * удалением, а не потерей читателя: ключ из этого перечня, снова объявленный в
+ * любом наборе, роняет гейт по имени. Оговорки «известное наследство» у гейта
+ * больше нет — у каждого объявленного ключа обязан быть читатель, без исключений.
  */
-const KNOWN_UNREAD_KEYS = [
+const REMOVED_LEGACY_KEYS = [
   'backToTopText',
   'backToTopWrapper',
   'decisionSummaryBadge',
@@ -281,30 +278,19 @@ const KNOWN_UNREAD_KEYS = [
 ]
 
 describe('читаемость ключей стилей travel details', () => {
-  it('у каждого ключа набора есть читатель — кроме известного наследства', () => {
+  it('у каждого ключа набора есть читатель — без исключений', () => {
     const unread = findUnreadKeys(
       loadOwnersByKey(),
       collectReadNames(loadReaderSources().sources),
     )
 
-    const unexpected = Object.fromEntries(
-      Object.entries(unread).filter(([key]) => !KNOWN_UNREAD_KEYS.includes(key)),
-    )
-
-    expect(unexpected).toEqual({})
+    expect(unread).toEqual({})
   })
 
-  it('список наследства не отстаёт: в нём только реально мёртвые ключи', () => {
-    const ownersByKey = loadOwnersByKey()
-    const unread = findUnreadKeys(ownersByKey, collectReadNames(loadReaderSources().sources))
+  it('тридцать девять ключей наследства #1714 удалены из наборов, а не просто потеряли читателя', () => {
+    const declared = loadOwnersByKey()
 
-    // Ключ, который удалили или которому нашли читателя, обязан уйти из списка.
-    const stale = KNOWN_UNREAD_KEYS.filter((key) => !(key in unread)).map((key) => [
-      key,
-      ownersByKey.has(key) ? 'у ключа появился читатель' : 'ключ удалён из наборов',
-    ])
-
-    expect(stale).toEqual([])
+    expect(REMOVED_LEGACY_KEYS.filter((key) => declared.has(key))).toEqual([])
   })
 
   it('падает на заведомо никем не читаемом ключе и называет его владельца', () => {

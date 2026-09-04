@@ -23,24 +23,6 @@ export const createTravelDetailsHeroMediaStyles = (colors: ThemedColors) => ({
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
     backgroundColor: colors.overlay,
   },
-  neutralActionButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.backgroundSecondary,
-  },
-  neutralActionButtonPressed: {
-    opacity: 0.92,
-    backgroundColor: colors.backgroundTertiary,
-  },
-  neutralActionButtonText: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '600' as any,
-  },
   videoHintText: {
     color: colors.textOnDark,
     fontSize: 14,

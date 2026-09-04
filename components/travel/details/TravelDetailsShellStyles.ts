@@ -120,22 +120,6 @@ export const getTravelDetailsShellStyles = (colors: ThemedColors) =>
       marginBottom: DESIGN_TOKENS.spacing.xl,
       lineHeight: 24,
     },
-    errorButton: {
-      backgroundColor: colors.primary,
-      paddingHorizontal: DESIGN_TOKENS.spacing.xl,
-      paddingVertical: DESIGN_TOKENS.spacing.sm,
-      borderRadius: 8,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer',
-        },
-      }),
-    },
-    errorButtonText: {
-      color: colors.textOnPrimary,
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
-      fontWeight: '600',
-    },
   })
 
 export const useTravelDetailsShellStyles = () => {

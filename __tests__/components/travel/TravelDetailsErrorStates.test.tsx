@@ -7,8 +7,6 @@ const styles = {
   errorContainer: {},
   errorTitle: {},
   errorText: {},
-  errorButton: {},
-  errorButtonText: {},
 }
 
 describe('TravelDetailsErrorStates', () => {

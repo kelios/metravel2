@@ -52,7 +52,6 @@ import type { ThemedColors } from '@/hooks/useTheme'
 import * as travelDetailsStyleFragments from '@/components/travel/details/TravelDetailsStyleFragments'
 import * as travelDetailsShellStyles from '@/components/travel/details/TravelDetailsShellStyles'
 import * as travelDetailsStyles from '@/components/travel/details/TravelDetailsStyles'
-import { createTravelDetailsDecisionSummaryStyles } from '@/components/travel/details/TravelDetailsStyleFragments'
 import { getTravelDetailsHeroStyles } from '@/components/travel/details/TravelDetailsHeroStyles'
 import { getTravelDetailsShellStyles } from '@/components/travel/details/TravelDetailsShellStyles'
 import { getTravelDetailsStyles } from '@/components/travel/details/TravelDetailsStyles'
@@ -150,14 +149,11 @@ const SHELL_OWNED_KEYS = [
   'errorContainer',
   'errorTitle',
   'errorText',
-  'errorButton',
-  'errorButtonText',
 ]
 
 /** Фрагменты, которые агрегат `getTravelDetailsStyles` раскладывает спредом. */
 const loadAggregateFragments = (colors: ThemedColors) => ({
   // Порядок — как в `TravelDetailsStyles.ts`.
-  decisionSummary: createTravelDetailsDecisionSummaryStyles(colors) as StyleSet,
   layout: createTravelDetailsLayoutStyles(colors) as StyleSet,
   nav: createTravelDetailsNavStyles(colors) as StyleSet,
   sectionHeader: createTravelDetailsSectionHeaderStyles(colors) as StyleSet,

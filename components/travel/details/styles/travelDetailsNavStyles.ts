@@ -21,16 +21,6 @@ export const createTravelDetailsNavStyles = (colors: ThemedColors) => ({
     letterSpacing: 0,
   },
 
-  backToTopWrapper: {
-    alignItems: 'center',
-    paddingVertical: DESIGN_TOKENS.spacing.lg,
-  },
-
-  backToTopText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.textMuted,
-  },
-
   navigationArrowsContainer: {
     marginBottom: DESIGN_TOKENS.spacing.xl,
   },

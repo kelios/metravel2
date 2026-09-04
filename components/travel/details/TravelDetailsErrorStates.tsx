@@ -10,8 +10,6 @@ interface ErrorStateStyles {
   errorContainer: object
   errorTitle: object
   errorText: object
-  errorButton: object
-  errorButtonText: object
 }
 
 interface MissingParamErrorProps {
