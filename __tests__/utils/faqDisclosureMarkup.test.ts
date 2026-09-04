@@ -1,11 +1,18 @@
-import { countFaqDisclosureBlocks } from '@/utils/faqDisclosureMarkup'
+import {
+  FAQ_SECTION_OPEN_TAG,
+  countFaqDisclosureBlocks,
+  countFaqSectionWrappers,
+  losesFaqMarkup,
+} from '@/utils/faqDisclosureMarkup'
+
+const FAQ_SECTION = (inner: string) =>
+  `<section class="seo-faq" data-faq="metravel-seo" itemscope itemtype="https://schema.org/FAQPage">${inner}</section>`
+
+const QA = '<details><summary>Q</summary><p>A</p></details>'
 
 describe('countFaqDisclosureBlocks', () => {
   it('считает пары details/summary', () => {
-    const html =
-      '<details><summary>Q1</summary><p>A1</p></details>' +
-      '<details><summary>Q2</summary><p>A2</p></details>'
-    expect(countFaqDisclosureBlocks(html)).toBe(2)
+    expect(countFaqDisclosureBlocks(QA + QA)).toBe(2)
   })
 
   it('не считает атрибуты и регистр помехой', () => {
@@ -19,7 +26,7 @@ describe('countFaqDisclosureBlocks', () => {
   // ничего не даёт выдаче.
   it('берёт минимум, а не число одних только details', () => {
     expect(countFaqDisclosureBlocks('<details><p>без summary</p></details>')).toBe(0)
-    expect(countFaqDisclosureBlocks('<details><summary>Q</summary></details><details></details>')).toBe(1)
+    expect(countFaqDisclosureBlocks(QA + '<details></details>')).toBe(1)
   })
 
   it('на пустом и отсутствующем значении даёт ноль', () => {
@@ -27,5 +34,48 @@ describe('countFaqDisclosureBlocks', () => {
     expect(countFaqDisclosureBlocks(null)).toBe(0)
     expect(countFaqDisclosureBlocks(undefined)).toBe(0)
     expect(countFaqDisclosureBlocks('<p>обычный текст</p>')).toBe(0)
+  })
+})
+
+describe('countFaqSectionWrappers', () => {
+  it('считает секцию и по class, и по data-faq', () => {
+    expect(countFaqSectionWrappers(FAQ_SECTION(QA))).toBe(1)
+    expect(countFaqSectionWrappers('<section data-faq="metravel-seo">x</section>')).toBe(1)
+    expect(countFaqSectionWrappers('<section class="hero seo-faq wide">x</section>')).toBe(1)
+  })
+
+  it('не считает посторонние секции', () => {
+    expect(countFaqSectionWrappers('<section class="gallery">x</section>')).toBe(0)
+    expect(countFaqSectionWrappers('<p>текст</p>')).toBe(0)
+  })
+
+  // Определение секции живёт в генераторе — он единственный решает, что уйдёт в
+  // FAQPage. Копия в приложении существует только потому, что генератор
+  // CJS-скрипт сборки и в бандл не импортируется; разъехаться копиям нельзя.
+  it('совпадает с определением генератора', () => {
+    const generator = require('../../scripts/generate-seo-pages')
+    expect(FAQ_SECTION_OPEN_TAG).toBe(generator.FAQ_SECTION_OPEN_TAG)
+  })
+})
+
+describe('losesFaqMarkup', () => {
+  it('видит потерю пар details/summary', () => {
+    expect(losesFaqMarkup(FAQ_SECTION(QA), FAQ_SECTION('<strong>Q</strong><p>A</p>'))).toBe(true)
+  })
+
+  // Ровно та дыра, из-за которой счёта одних `<details>` мало: микроразметку
+  // `itemprop="mainEntity"` санитайзер снимает всегда, поэтому без обёртки
+  // генератор перестаёт узнавать в блоке FAQ — при неизменном числе пар.
+  it('видит потерю секции-обёртки при уцелевших details', () => {
+    expect(losesFaqMarkup(FAQ_SECTION(QA), QA)).toBe(true)
+  })
+
+  it('молчит, когда разметка на месте', () => {
+    expect(losesFaqMarkup(FAQ_SECTION(QA), FAQ_SECTION(QA))).toBe(false)
+    expect(losesFaqMarkup('<p>текст</p>', '<p>текст</p>')).toBe(false)
+  })
+
+  it('молчит, когда разметки не было вовсе', () => {
+    expect(losesFaqMarkup('<p>было</p>', '<p>стало</p>')).toBe(false)
   })
 })

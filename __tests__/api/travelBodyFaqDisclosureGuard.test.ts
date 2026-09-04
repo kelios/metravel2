@@ -18,6 +18,8 @@ import type { TravelFormData } from '@/types/types'
 
 /** Включает поведение allowlist'а до 26.07.2026: disclosure-теги снимаются. */
 let mockFlattenDisclosureTags = false
+/** Моделирует уход `section`/`class` из allowlist: обёртка снята, пары целы. */
+let mockDropFaqSection = false
 
 const mockGetSecureItem = jest.fn()
 const mockApiClientRequest = jest.fn()
@@ -48,8 +50,10 @@ jest.mock('@/utils/sanitizeRichText', () => {
   return {
     ...actual,
     sanitizeRichText: (html?: string | null) => {
-      const clean = actual.sanitizeRichText(html)
-      return mockFlattenDisclosureTags ? clean.replace(/<\/?(details|summary)\b[^>]*>/gi, '') : clean
+      let clean = actual.sanitizeRichText(html)
+      if (mockFlattenDisclosureTags) clean = clean.replace(/<\/?(details|summary)\b[^>]*>/gi, '')
+      if (mockDropFaqSection) clean = clean.replace(/<\/?section\b[^>]*>/gi, '')
+      return clean
     },
   }
 })
@@ -92,6 +96,7 @@ describe('запись тела статьи не теряет FAQ-размет�
   beforeEach(() => {
     jest.clearAllMocks()
     mockFlattenDisclosureTags = false
+    mockDropFaqSection = false
     mockGetSecureItem.mockResolvedValue('token')
     mockApiClientRequest.mockResolvedValue({ ...baseForm })
   })
@@ -108,6 +113,16 @@ describe('запись тела статьи не теряет FAQ-размет�
 
     it('останавливает сохранение, если санитайзер схлопнул disclosure-разметку', async () => {
       mockFlattenDisclosureTags = true
+
+      await expect(saveFormData(baseForm)).rejects.toThrow(guardMessage())
+      expect(mockApiClientRequest).not.toHaveBeenCalled()
+    })
+
+    // Микроразметку `itemprop="mainEntity"` санитайзер снимает всегда, поэтому
+    // без обёртки генератор перестаёт узнавать в блоке FAQ — при неизменном
+    // числе пар `<details>/<summary>`. Счёт одних пар такую запись пропустил бы.
+    it('останавливает сохранение, если снята секция-обёртка, а пары целы', async () => {
+      mockDropFaqSection = true
 
       await expect(saveFormData(baseForm)).rejects.toThrow(guardMessage())
       expect(mockApiClientRequest).not.toHaveBeenCalled()

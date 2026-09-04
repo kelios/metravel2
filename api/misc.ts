@@ -3,7 +3,7 @@ import { devError } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { sanitizeInput } from '@/utils/security';
 import { stripBase64Images } from '@/utils/htmlUtils';
-import { countFaqDisclosureBlocks } from '@/utils/faqDisclosureMarkup';
+import { losesFaqMarkup } from '@/utils/faqDisclosureMarkup';
 import { validateAIMessage, validateImageFile } from '@/utils/aiValidation';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getSecureItem } from '@/utils/secureStorage';
@@ -136,14 +136,15 @@ const makeUniqueSlug = (value?: string): string => {
  *
  * Убрать санитайзер с записи нельзя: своей очистки rich-text у бэкенда нет, и
  * тогда в базу поедет сырой HTML из редактора. Поэтому инвариант обратный —
- * запись, которая теряет структуру FAQ, не уходит на сервер вообще. Гейт
- * симметричен рендеру (`utils/serverSafeHtml.ts`) и пользуется тем же счётом.
+ * запись, которая теряет структуру FAQ, не уходит на сервер вообще. Что считать
+ * структурой, знает `utils/faqDisclosureMarkup.ts` — тот же счёт, которым
+ * рендер (`utils/serverSafeHtml.ts`) выбирает неиспорченный источник.
  */
 const sanitizeTravelBodyForWrite = async (html: string): Promise<string> => {
   const { sanitizeRichText } = await import('@/utils/sanitizeRichText');
   const source = stripBase64Images(html);
   const sanitized = sanitizeRichText(source);
-  if (countFaqDisclosureBlocks(sanitized) < countFaqDisclosureBlocks(source)) {
+  if (losesFaqMarkup(source, sanitized)) {
     throw new Error(i18nT('errorsStatic:api.misc.faqMarkupWouldBeLost'));
   }
   return sanitized;
