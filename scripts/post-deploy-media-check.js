@@ -157,8 +157,12 @@ function widthsFor(family) {
  * `derivative-missing` и `source-pass-through` продолжают валить гейт, то есть
  * возврат класса к 400/404 будет пойман.
  *
- * Запись снимается вместе с backfill производных для `uploads/**` (#1222):
- * когда они появятся, семейство возвращается в общий строгий набор.
+ * Условие снятия — не backfill производных: он закрыт как ненужный (#1222
+ * `wont_do`, «backfill uploads/** снят миграцией #1245»). Запись уходит вместе с
+ * последним ключом класса в телах статей: миграция #1245 переливает их в
+ * канонический `travel-description-image`, и на 2026-09-04 остаток — 8 ссылок в
+ * статьях 116, 171, 220, 290 и один PDF в 525. Когда остаток обнулится, цель
+ * `media-resize-uploads` перестанет строиться вовсе и эта запись станет мёртвой.
  */
 const DECLARED_MASTER_FALLBACK_FAMILIES = new Map([
   [
@@ -190,15 +194,6 @@ const FIRST_PARTY_MEDIA_ROUTE =
 
 /** Расширения, которые legacy-роут вообще обслуживает (`LEGACY_IMAGE_EXTENSIONS` в `utils/mediaUrl.ts`). */
 const LEGACY_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp'])
-
-/**
- * Дубль `LEGACY_UPLOAD_FIXED_WIDTH` из `constants/imageContract.ts`: гейт —
- * CommonJS и TS-константу не импортирует, как и правило маршрутизации выше.
- * Расхождение с контрактом ловит `__tests__/scripts/post-deploy-media-check.test.ts`
- * (сверяет ширину цели с импортированной TS-константой), а расхождение ступеней
- * таблицы — `__tests__/scripts/postDeployMediaWidths.test.ts`.
- */
-const LEGACY_UPLOAD_FIXED_WIDTH = 800
 
 /**
  * Accept ровно как у Chrome: бэкенд ветвится по нему, и гейт обязан щупать ту
@@ -415,8 +410,14 @@ function toLegacyTarget(site, familyUrl) {
  * этот формат объявлен у `legacy_upload` как `unsupported_format` и отвечает
  * 400, то есть гейт с ним щупал URL, который живой фронт больше не строит, и
  * валил бы деплой на заведомо мёртвой ветке. Фронт спрашивает класс одной
- * шириной без `f` (`LEGACY_UPLOAD_FIXED_WIDTH`), и ответ приходит по политике
+ * шириной без `f`, и ответ приходит по политике
  * `missing_derivative: v1_then_master_no_transform`.
+ *
+ * Ширина берётся из `WIDTHS_BY_FAMILY` — того же источника, из которого её потом
+ * подставляет `withWidth` на каждой пробе. Второй копии числа в файле быть не
+ * должно: в сеть уходят ступени таблицы, и отдельная константа цели сторожила бы
+ * значение, которого нет ни в одном запросе. Сверку таблицы с TS-контрактом
+ * (`LEGACY_UPLOAD_FIXED_WIDTH`) держит `__tests__/scripts/postDeployMediaWidths.test.ts`.
  */
 function toUploadsTarget(site, rawUrl) {
   const value = String(rawUrl || '').trim()
@@ -433,7 +434,7 @@ function toUploadsTarget(site, rawUrl) {
   if (parts.some((part) => !part || part === '.' || part === '..')) return null
   const extension = String(parts[parts.length - 1].split('.').pop() || '').toLowerCase()
   if (!LEGACY_IMAGE_EXTENSIONS.has(extension)) return null
-  return `${site}/media-resize/${key}?w=${LEGACY_UPLOAD_FIXED_WIDTH}`
+  return `${site}/media-resize/${key}?w=${widthsFor('media-resize-uploads').large}`
 }
 
 /** URL'ы медиа тела статьи из BE-манифеста: обложка + галерея. */

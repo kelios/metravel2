@@ -156,11 +156,11 @@ describe('post-deploy media check: цель uploads/** (фото тела ста
     expect(toUploadsTarget(SITE, `${S3}/uploads/1593619453IMG_6420.JPG`)).toBe(
       `${SITE}/media-resize/uploads/1593619453IMG_6420.JPG?w=800`
     )
-    // Ширина в цели — КОПИЯ `LEGACY_UPLOAD_FIXED_WIDTH` из TS-контракта: гейт
-    // CommonJS и импортировать его не может. Литерал выше пиннит форму URL, эта
-    // строка — совпадение с контрактом. Без неё копия расходилась с фронтом
-    // молча: литерал `?w=800` зелен и тогда, когда фронт просит уже другую
-    // ширину, и гейт щупал бы URL, которого у читателя нет.
+    // Ширина в цели берётся из `WIDTHS_BY_FAMILY` — из того же источника, из
+    // которого её подставляет `withWidth` на каждой пробе. Эта строка сверяет её
+    // с TS-контрактом (гейт CommonJS и импортировать его не может): без сверки
+    // литерал `?w=800` оставался бы зелёным и тогда, когда фронт просит уже
+    // другую ширину, и гейт щупал бы URL, которого у читателя нет.
     expect(toUploadsTarget(SITE, '/uploads/articles/legacy.jpg')).toBe(
       `${SITE}/media-resize/uploads/articles/legacy.jpg?w=${LEGACY_UPLOAD_FIXED_WIDTH}`
     )
