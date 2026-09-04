@@ -2,7 +2,7 @@
 
 const { validateIosRelease } = require('./ios-release-guard-lib');
 
-const errors = validateIosRelease(process.cwd());
+const errors = validateIosRelease(process.cwd(), { checkLiveAasa: true });
 if (errors.length) {
   console.error('iOS release configuration FAILED:');
   for (const error of errors) console.error(`- ${error.code}: ${error.detail}`);

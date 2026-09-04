@@ -183,14 +183,11 @@ function isSupportedRoute(
  * Maps an OS-delivered MeTravel URL to the exact native route policy.
  * HTTPS mirrors AASA; the custom scheme keeps explicit tracked native fallbacks.
  *
- * ВНИМАНИЕ (#1724): «зеркало AASA» — договорённость, а не автоматика. Серверный
- * `https://metravel.by/.well-known/apple-app-site-association` перечисляет
- * компоненты списком, и семейства `/trips` в нём сейчас нет. Пока backend его
- * не добавит, тап по ссылке `/trips*` из чужого приложения на iPhone до
- * приложения не доходит вовсе; эта таблица закрывает второй слой — роутинг
- * ВНУТРИ приложения (`--payload-url`, кастомная схема, уведомления и Android
- * App Links, где проверка идёт по `assetlinks.json` на уровне хоста).
- * Unsupported input returns null so warm links leave the current screen untouched.
+ * ВНИМАНИЕ (#1724 / #1413): «зеркало AASA» — договорённость, а не автоматика.
+ * С 2026-09-04 production AASA отдаёт `appIDs` + `components` и включает
+ * семейство `/trips` (листинг, деталь по id, `/trips/plan/<id>`). Таблица ниже
+ * должна оставаться согласованной с этими компонентами. Неподдерживаемый вход
+ * возвращает null, чтобы warm-ссылка не сбивала текущий экран.
  * Native hash navigation is intentionally excluded; the path and query are preserved.
  */
 export function mapIncomingAppLinkToHref(url: unknown): string | null {

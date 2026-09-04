@@ -1,3 +1,4 @@
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -168,6 +169,102 @@ function jsonEqual(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+const PRODUCTION_AASA_ORIGIN =
+  'https://metravel.by/.well-known/apple-app-site-association';
+const PRODUCTION_AASA_APPLE_CDN =
+  'https://app-site-association.cdn-apple.com/a/v1/metravel.by';
+
+/**
+ * TN3155: modern AASA is `appIDs` (array) + `components`. Mixing in legacy
+ * `appID` (string) or `paths` leaves Universal Links associated-domain
+ * inactive — the #1414 recurrence after #1413 first shipped a mixed file.
+ */
+function validateAppleAppSiteAssociationDocument(data, expectedBundleId = EXPECTED.bundleIdentifier) {
+  const errors = [];
+  const fail = (code, detail) => errors.push({ code, detail });
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    fail('IOS_AASA_JSON', 'document is not an object');
+    return errors;
+  }
+  const applinks = data.applinks;
+  if (!applinks || typeof applinks !== 'object' || Array.isArray(applinks)) {
+    fail('IOS_AASA_APPLINKS', 'applinks object is missing');
+    return errors;
+  }
+  if (Object.prototype.hasOwnProperty.call(applinks, 'apps') &&
+      (!Array.isArray(applinks.apps) || applinks.apps.length > 0)) {
+    fail(
+      'IOS_AASA_MIXED_FORMAT',
+      'applinks.apps must be an empty array when using details.appIDs + components'
+    );
+  }
+  const details = applinks.details;
+  if (!Array.isArray(details) || details.length < 1) {
+    fail('IOS_AASA_DETAILS', 'applinks.details must be a non-empty array');
+    return errors;
+  }
+  const appIdPattern = new RegExp(`^[A-Z0-9]+\\.${expectedBundleId.replace(/\./g, '\\.')}$`);
+  details.forEach((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      fail('IOS_AASA_DETAILS', `details[${index}] is not an object`);
+      return;
+    }
+    if (Object.prototype.hasOwnProperty.call(item, 'appID')) {
+      fail(
+        'IOS_AASA_MIXED_FORMAT',
+        `details[${index}] has legacy appID; TN3155 forbids mixing it with components`
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(item, 'paths')) {
+      fail(
+        'IOS_AASA_MIXED_FORMAT',
+        `details[${index}] has legacy paths; TN3155 forbids mixing them with components`
+      );
+    }
+    if (!Array.isArray(item.appIDs) || item.appIDs.length < 1) {
+      fail('IOS_AASA_APPIDS', `details[${index}] must have a non-empty appIDs array`);
+    } else if (!item.appIDs.some((id) => typeof id === 'string' && appIdPattern.test(id))) {
+      fail(
+        'IOS_AASA_APPIDS',
+        `details[${index}] appIDs must include <TEAM>.${expectedBundleId}`
+      );
+    }
+    if (!Array.isArray(item.components) || item.components.length < 1) {
+      fail('IOS_AASA_COMPONENTS', `details[${index}] must have a non-empty components array`);
+    }
+  });
+  return errors;
+}
+
+function readProductionAasaJson(url) {
+  const raw = execFileSync(
+    'curl',
+    ['-fsS', '--max-redirs', '0', '--max-time', '20', '-H', 'Accept: application/json', url],
+    { encoding: 'utf8' }
+  );
+  return JSON.parse(raw);
+}
+
+function checkLiveProductionAasa(options = {}) {
+  const fetchJson = options.fetchAasaJson || readProductionAasaJson;
+  try {
+    const origin = fetchJson(PRODUCTION_AASA_ORIGIN);
+    const cdn = fetchJson(PRODUCTION_AASA_APPLE_CDN);
+    if (!jsonEqual(origin, cdn)) {
+      return [{
+        code: 'IOS_AASA_CDN_MISMATCH',
+        detail: 'origin and Apple CDN AASA documents differ',
+      }];
+    }
+    return validateAppleAppSiteAssociationDocument(origin);
+  } catch (error) {
+    return [{
+      code: 'IOS_AASA_FETCH',
+      detail: error && error.message ? error.message : String(error),
+    }];
+  }
+}
+
 function pngDimensions(buffer) {
   if (buffer.length < 33 || buffer.toString('hex', 0, 8) !== '89504e470d0a1a0a') {
     return null;
@@ -190,7 +287,7 @@ function pngDimensions(buffer) {
   return null;
 }
 
-function validateIosRelease(root = process.cwd()) {
+function validateIosRelease(root = process.cwd(), options = {}) {
   const errors = [];
   const fail = (code, detail) => errors.push({ code, detail });
   let app;
@@ -857,6 +954,10 @@ function validateIosRelease(root = process.cwd()) {
     if (scanned.some(source => pattern.test(source))) fail(code, 'forbidden release value found');
   }
 
+  if (options.checkLiveAasa) {
+    errors.push(...checkLiveProductionAasa(options));
+  }
+
   return errors;
 }
 
@@ -865,5 +966,9 @@ module.exports = {
   IOS_IPAD_ORIENTATIONS,
   IOS_PURPOSE_STRINGS,
   LOCALIZED_PURPOSE_STRINGS,
+  PRODUCTION_AASA_APPLE_CDN,
+  PRODUCTION_AASA_ORIGIN,
+  checkLiveProductionAasa,
+  validateAppleAppSiteAssociationDocument,
   validateIosRelease,
 };
