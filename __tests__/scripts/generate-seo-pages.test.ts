@@ -29,6 +29,7 @@ const {
   injectBreadcrumbJsonLd,
   disableExpoRouterHydration,
   injectQuestIntroSection,
+  buildQuestDetailLinksIndex,
   injectQuestLinksIndex,
   injectHomeQuestsSection,
   injectQuestScenarioContent,
@@ -58,6 +59,7 @@ const {
   readRequiredQuestCountryTemplate,
 } = require('@/scripts/generate-seo-pages');
 const { injectSkeletonShell } = require('@/scripts/ssg-skeletons');
+const { questRouteKey } = require('@/utils/questCityAlias');
 
 const fs = require('fs');
 const path = require('path');
@@ -1326,6 +1328,140 @@ describe('travel SSR SEO helpers', () => {
     expect(second).toContain('html.rnw-styles-ready [data-ssg-quest-intro="true"]')
     expect(second).toContain("'Segoe UI'")
     expect(second).not.toContain('system-ui,-apple-system,"Segoe UI"')
+  })
+
+  // SEO-QUESTS #1756: до этой правки SSG-срез детальной страницы не содержал ни
+  // одной внутренней ссылки — вход с посадочной города был, выхода не было.
+  it('injectQuestIntroSection links the detail page back to its city, siblings and travels', () => {
+    const links = {
+      cityLabel: 'Краков',
+      landingPath: '/quests/krakow',
+      siblings: [{ path: '/quests/1/krakow-kazimierz', title: 'Казимеж: еврейский квартал' }],
+      nearbyCities: [{ segment: 'wroclaw', name: 'Вроцлав', questCount: 2, distanceKm: 271.4 }],
+      travelLinks: [{ path: '/travels/krakow-weekend', title: 'Краков за выходные' }],
+    }
+
+    const html = injectQuestIntroSection(MINIMAL_BASE, {
+      title: 'Краковский дракон',
+      description: 'Пеший квест по Кракову.',
+      quest: { title: 'Краковский дракон', city_name: 'Краков', points: 7 },
+      bundle: null,
+      links,
+    })
+
+    expect(html).toContain('data-ssg-quest-links="true"')
+    expect(html).toContain('href="/quests/krakow"')
+    expect(html).toContain('Все квесты города: Краков')
+    expect(html).toContain('href="/quests/1/krakow-kazimierz"')
+    expect(html).toContain('href="/quests/wroclaw"')
+    expect(html).toContain('271 км')
+    expect(html).toContain('href="/travels/krakow-weekend"')
+    expect(html).toContain('href="/quests"')
+  })
+
+  it('injectQuestIntroSection keeps the section valid when the quest has no links model', () => {
+    const html = injectQuestIntroSection(MINIMAL_BASE, {
+      title: 'Краковский дракон',
+      description: 'Пеший квест по Кракову.',
+      quest: { title: 'Краковский дракон', city_name: 'Краков', points: 7 },
+      bundle: null,
+      links: null,
+    })
+
+    expect(html).toContain('data-ssg-quest-intro="true"')
+    expect(html).not.toContain('data-ssg-quest-links="true"')
+  })
+})
+
+describe('buildQuestDetailLinksIndex', () => {
+  const cityLandingModel = [
+    {
+      cityId: '1',
+      name: 'Краков',
+      landingPath: '/quests/krakow',
+      quests: [
+        { path: '/quests/1/krakow-dragon', title: 'Краковский дракон' },
+        { path: '/quests/1/krakow-kazimierz', title: 'Казимеж: еврейский квартал' },
+      ],
+      nearbyCities: [{ segment: 'wroclaw', name: 'Вроцлав', questCount: 2, distanceKm: 271 }],
+      travelLinks: [{ path: '/travels/krakow-weekend', title: 'Краков за выходные' }],
+    },
+  ]
+
+  it('gives every quest its city landing and its siblings without itself', () => {
+    const index = buildQuestDetailLinksIndex(cityLandingModel)
+    const entry = index.get('/quests/1/krakow-dragon')
+
+    expect(entry?.landingPath).toBe('/quests/krakow')
+    expect(entry?.cityLabel).toBe('Краков')
+    expect(entry?.siblings.map((quest: { path: string }) => quest.path)).toEqual([
+      '/quests/1/krakow-kazimierz',
+    ])
+    expect(entry?.nearbyCities).toHaveLength(1)
+    expect(entry?.travelLinks).toHaveLength(1)
+  })
+
+  // Индекс адресуется тем же questRouteKey(quest).path, которым генератор
+  // называет файл детальной страницы. Разъедутся ключи — перелинковка исчезнет
+  // молча со всех страниц сразу, и это будет видно только в GSC через месяц.
+  it('is addressable by the same route key the detail page loop uses', () => {
+    const quests = [
+      {
+        quest_id: 'rome-forum',
+        city_id: '121',
+        city_name: 'Рим',
+        country_name: 'Италия',
+        country_code: 'it',
+        title: 'Квест по Риму: Форум',
+        points: 8,
+        lat: 41.89,
+        lng: 12.49,
+      },
+      {
+        quest_id: 'rome-trastevere',
+        city_id: '121',
+        city_name: 'Рим',
+        country_name: 'Италия',
+        country_code: 'it',
+        title: 'Квест по Риму: Трастевере',
+        points: 6,
+        lat: 41.89,
+        lng: 12.47,
+      },
+    ]
+
+    const index = buildQuestDetailLinksIndex(buildQuestCityLandingModel(quests, undefined, []))
+
+    for (const quest of quests) {
+      const route = questRouteKey(quest)
+      expect({ path: route.path, hasLinks: index.has(route.path) }).toEqual({
+        path: route.path,
+        hasLinks: true,
+      })
+    }
+  })
+
+  it('caps siblings so a city with many quests does not bloat every detail page', () => {
+    const crowded = [
+      {
+        cityId: '2',
+        name: 'Минск',
+        landingPath: '/quests/minsk',
+        quests: Array.from({ length: 12 }, (_, i) => ({
+          path: `/quests/2/minsk-${i}`,
+          title: `Квест ${i}`,
+        })),
+        nearbyCities: [],
+        travelLinks: [],
+      },
+    ]
+
+    const entry = buildQuestDetailLinksIndex(crowded).get('/quests/2/minsk-0')
+
+    expect(entry?.siblings).toHaveLength(6)
+    expect(entry?.siblings.map((quest: { path: string }) => quest.path)).not.toContain(
+      '/quests/2/minsk-0',
+    )
   })
 })
 

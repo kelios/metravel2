@@ -4,7 +4,10 @@ import {
 } from '@/utils/questSeo'
 
 describe('quest SEO metadata', () => {
-  it('targets city sightseeing demand without repeating a city-prefixed quest title', () => {
+  // SEO-QUESTS #1756: формула «<Город>: что посмотреть» отменена. За 28 дней она
+  // не принесла ни одного клика (74 пары запрос×URL, 110 показов, ср. позиция
+  // 65,4) — кластер «что посмотреть» на сайте держат статьи /travels.
+  it('keeps a quest title that already names its city as the whole SERP title', () => {
     const seo = buildQuestSeoMetadata({
       title: 'Витебск: столица авангарда',
       cityName: 'Витебск',
@@ -12,22 +15,47 @@ describe('quest SEO metadata', () => {
       durationMin: 120,
     })
 
-    expect(seo.title).toBe('Витебск: что посмотреть — столица авангарда | Metravel')
+    expect(seo.title).toBe('Витебск: столица авангарда | Metravel')
+    expect(seo.title).not.toContain('что посмотреть')
     expect(seo.description).toContain('Город Витебск: бесплатный пеший маршрут «столица авангарда»')
     expect(seo.description).toContain('8 точек. Примерно 2 ч.')
     expect(encodedAttributeLength(seo.description)).toBeLessThanOrEqual(160)
   })
 
-  it('keeps same-city quests unique and clips long SERP titles on a word boundary', () => {
+  it('prefixes the city only when the quest title is silent about it', () => {
     const seo = buildQuestSeoMetadata({
       title: 'Тайна Свислочского Цмока: Легенда оживает',
       cityName: 'Минск',
       points: 12,
     })
 
-    expect(seo.title).toBe('Минск: что посмотреть — Тайна Свислочского Цмока: Легенда…')
+    expect(seo.title).toBe('Минск — Тайна Свислочского Цмока: Легенда оживает | Metravel')
     expect(seo.title.length).toBeLessThanOrEqual(60)
     expect(seo.title).not.toContain('Минск: Минск')
+  })
+
+  // «Квест по Лунинцу» и «Квест по Гервятам» называют город в косвенном падеже —
+  // точное вхождение его бы не увидело и приклеило второй раз.
+  it('recognizes an inflected city name inside the quest title', () => {
+    for (const [title, cityName] of [
+      ['Квест по Лунинцу: город, который построила железная дорога', 'Лунинец'],
+      ['Квест по Гервятам: костёл, каких в Беларуси больше нет', 'Гервяты'],
+      ['Квест по Лиде: замок Гедимина', 'Лида'],
+    ] as const) {
+      expect(buildQuestSeoMetadata({ title, cityName }).title.startsWith('Квест по')).toBe(true)
+    }
+  })
+
+  // Тип населённого пункта и район в скобках ответа на запрос не дают, а бюджет
+  // в 60 символов съедают.
+  it('strips the settlement type and the district note from a prefixed city', () => {
+    const seo = buildQuestSeoMetadata({
+      title: 'Огонёк и семь знаков Аллеи фонарей',
+      cityName: 'д.Вашково (Ушачского района)',
+      points: 6,
+    })
+
+    expect(seo.title).toBe('Вашково — Огонёк и семь знаков Аллеи фонарей | Metravel')
   })
 
   it('keeps encoded descriptions within the static SEO attribute limit', () => {

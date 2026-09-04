@@ -42,6 +42,32 @@ function buildBrandedSeoTitle(base, maxLength = SEO_TITLE_MAX_LENGTH) {
   return buildSeoTitle(normalizeText(base), maxLength);
 }
 
+// Имя города для заголовка выдачи: «д.Вашково (Ушачского района)» → «Вашково».
+// Тип населённого пункта и уточнение района ответа на запрос не дают, а бюджет
+// в 60 символов съедают.
+function questCitySerpLabel(cityName) {
+  return normalizeText(cityName)
+    .replace(/\s*\([^)]*\)\s*/gu, ' ')
+    .replace(/^(?:урочище|болото|озеро|оз\.|д\.|г\.|с\.)\s*/iu, '')
+    .replace(/\s+/gu, ' ')
+    .trim();
+}
+
+// Называет ли заголовок квеста свой город. В заголовках город стоит в косвенном
+// падеже — «Квест по Пинску», «Квест по Гервятам», «Квест по Лунинцу», — поэтому
+// сравниваем по корню каждого слова названия города, а не по точному вхождению.
+// Из 165 квестов каталога 145 называют город сами, и префикс им был бы повтором.
+function questTitleNamesCity(title, cityLabel) {
+  const haystack = normalizeText(title).toLowerCase();
+  if (!haystack) return false;
+
+  return cityLabel
+    .toLowerCase()
+    .split(/[\s-]+/u)
+    .filter((word) => word.length >= 3)
+    .some((word) => haystack.includes(word.slice(0, Math.max(3, word.length - 2))));
+}
+
 function encodedAttributeLength(value) {
   return String(value)
     .replace(/&/g, '&amp;')
@@ -89,9 +115,18 @@ function buildQuestSeoMetadata({
   const questTitle = normalizeText(title, translate('seo:utils.questSeo.gorodskoy_kvest_2737d6fc'));
   const city = normalizeText(cityName);
   const shortTitle = stripRepeatedCityPrefix(questTitle, city);
-  const searchTitle = city
-    ? translate('seo:utils.questSeo.value1_chto_posmotret_value2_c7c9b7ba', { value1: city, value2: shortTitle ? ` — ${shortTitle}` : '' })
-    : translate('seo:utils.questSeo.value1_chto_posmotret_3257ff8c', { value1: questTitle });
+  // SEO-QUESTS #1756: заголовок больше не открывается формулой «<Город>: что
+  // посмотреть». Замер GSC 05.08–01.09.2026 показал, что кластер «что посмотреть
+  // / куда сходить / достопримечательности» на сайте держат статьи /travels
+  // (1 181 показ, 48 кликов, ср. позиция 14,7), а квест-URL стоят в нём на 65-й
+  // позиции и за 28 дней не дали ни одного клика. Вдобавок формула сталкивала
+  // детальную страницу с посадочной города: 19 запросов выставляли оба URL
+  // сразу — 411 показов из 845, половину видимости раздела. Заголовок строится
+  // вокруг названия квеста, город добавляется только когда название молчит о нём.
+  const cityLabel = questCitySerpLabel(city);
+  const searchTitle = cityLabel && !questTitleNamesCity(questTitle, cityLabel)
+    ? translate('seo:utils.questSeo.city_prefixed_quest_title', { value1: cityLabel, value2: questTitle })
+    : questTitle;
 
   const descriptionParts = [
     city

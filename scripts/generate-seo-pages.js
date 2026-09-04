@@ -2067,7 +2067,73 @@ function buildQuestIntroSectionModel(quest, bundle) {
   return { city, points, durationLabel, startLocation, facts, introParagraphs };
 }
 
-function injectQuestIntroSection(baseHtml, { title, description, quest, bundle }) {
+/**
+ * Куда ведёт SSG-срез детальной страницы квеста.
+ *
+ * SEO-QUESTS #1756: до этой правки срез детальной не содержал ни одной
+ * внутренней ссылки — ни на посадочную своего города, ни на соседние квесты,
+ * ни на /quests (проверено на проде на шести URL: `/quests/17/nesvizh-radziwill`,
+ * `/quests/32/kaunas-capital`, `/quests/40/oshmyany-crossroads`,
+ * `/quests/61/baranovichi-dva-goroda`, `/quests/62/gervyaty-kostel`,
+ * `/quests/94/luninets-railway` — 0 ссылок на каждом). Городская посадочная на
+ * квест ссылается, обратно не вело ничего: краулер входил и упирался в тупик.
+ *
+ * Набор ссылок берём из модели посадочной, чтобы два места не разъезжались.
+ */
+function buildQuestDetailLinksIndex(cityLandingModel, { siblingLimit = 6 } = {}) {
+  const index = new Map();
+  for (const city of Array.isArray(cityLandingModel) ? cityLandingModel : []) {
+    const cityLabel = city.name || `Город ${city.cityId}`;
+    for (const quest of city.quests) {
+      index.set(quest.path, {
+        cityLabel,
+        landingPath: city.landingPath,
+        siblings: city.quests.filter((other) => other.path !== quest.path).slice(0, siblingLimit),
+        nearbyCities: Array.isArray(city.nearbyCities) ? city.nearbyCities : [],
+        travelLinks: Array.isArray(city.travelLinks) ? city.travelLinks : [],
+      });
+    }
+  }
+  return index;
+}
+
+/** Блок перелинковки для секции детальной страницы квеста. */
+function buildQuestDetailLinksHtml(links, { h2Style, pStyle, ulStyle, backStyle }) {
+  if (!links) return '';
+
+  const item = (href, text, tail = '') =>
+    `<li style="margin:0 0 3px"><a href="${escapeAttr(href)}">${escapeAttr(text)}</a>${tail}</li>`;
+
+  const siblings = links.siblings.map((quest) => item(quest.path, quest.title)).join('');
+  const nearby = links.nearbyCities
+    .map((city) => item(
+      `/quests/${city.segment}`,
+      city.name || city.segment,
+      ` — ${city.questCount} ${pluralizeRu(city.questCount, 'квест', 'квеста', 'квестов')}, ${Math.round(city.distanceKm)} км`,
+    ))
+    .join('');
+  const travels = links.travelLinks.map((travel) => item(travel.path, travel.title)).join('');
+
+  return [
+    `<div data-ssg-quest-links="true">`,
+    `<h2 style="${h2Style}">Куда дальше</h2>`,
+    `<p style="${pStyle}">Этот маршрут — часть городских квестов Metravel. Ниже — остальные квесты этого города и города с квестами рядом.</p>`,
+    `<ul style="${ulStyle}">`,
+    item(links.landingPath, `Все квесты города: ${links.cityLabel}`),
+    siblings,
+    '</ul>',
+    nearby
+      ? `<h2 style="${h2Style}">Квесты в соседних городах</h2><ul style="${ulStyle}">${nearby}</ul>`
+      : '',
+    travels
+      ? `<h2 style="${h2Style}">Путешествия: ${escapeAttr(links.cityLabel)}</h2><p style="${pStyle}">Статьи путешественников по этому городу помогут дополнить прогулку.</p><ul style="${ulStyle}">${travels}</ul>`
+      : '',
+    `<p style="${backStyle}"><a href="/quests">Все городские квесты</a></p>`,
+    '</div>',
+  ].join('');
+}
+
+function injectQuestIntroSection(baseHtml, { title, description, quest, bundle, links }) {
   const cleanTitle = String(title || quest?.title || 'Городской квест').replace(/\s+\|\s*Metravel$/i, '').trim();
   const cleanDescription = String(description || buildQuestSeoDescription(quest)).trim();
   const model = buildQuestIntroSectionModel(quest, bundle);
@@ -2125,6 +2191,13 @@ function injectQuestIntroSection(baseHtml, { title, description, quest, bundle }
     '@media(max-width:640px){[data-ssg-quest-intro="true"]{margin:12px;padding:16px 14px}[data-ssg-quest-intro="true"] h1{font-size:23px!important}}',
     '</style>',
   ].join('');
+  const linksHtml = buildQuestDetailLinksHtml(links, {
+    h2Style: `margin:20px 0 8px;font:800 20px/1.25 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`,
+    pStyle: 'margin:0 0 10px;color:var(--color-text,#22332c)',
+    ulStyle: 'margin:0;padding:0 0 0 18px;color:var(--color-text,#22332c)',
+    backStyle: 'margin:12px 0 0;font-weight:700',
+  });
+
   const section = [
     `<section data-ssg-quest-intro="true" aria-label="Описание городского квеста" style="${sectionStyle}">`,
     `<p style="${kickerStyle}">Городской квест Metravel</p>`,
@@ -2132,6 +2205,7 @@ function injectQuestIntroSection(baseHtml, { title, description, quest, bundle }
     `<p style="${textStyle}">${escapeAttr(lead)}</p>`,
     introParagraphs,
     facts ? `<ul style="${listStyle}">${facts}</ul>` : '',
+    linksHtml,
     '</section>',
   ].join('');
 
@@ -3717,10 +3791,15 @@ async function main() {
       ? fs.readFileSync(questTemplatePath, 'utf8')
       : baseHtml;
     const questCityAliasMap = buildQuestCityAliasMap(quests);
+    // Модель посадочных нужна раньше самих посадочных: из неё детальные страницы
+    // берут перелинковку (#1756), иначе их SSG-срез остаётся тупиком графа.
+    const cityLandingModel = buildQuestCityLandingModel(quests, questCityAliasMap, travels);
+    const questDetailLinksIndex = buildQuestDetailLinksIndex(cityLandingModel);
 
     console.log(`\n🧩 Generating ${quests.length} quest pages...`);
     let questGenerated = 0;
     let questAliasesGenerated = 0;
+    let questsWithLinks = 0;
     for (const quest of quests) {
       const route = questRouteKey(quest);
       if (!route) continue;
@@ -3759,7 +3838,15 @@ async function main() {
       });
 
       html = injectJsonLd(html, buildQuestJsonLd({ title, description, canonical, image, quest: questBundle || quest }), 'quest');
-      html = injectQuestIntroSection(html, { title: name, description, quest, bundle: questBundle });
+      const detailLinks = questDetailLinksIndex.get(route.path) || null;
+      if (detailLinks) questsWithLinks++;
+      html = injectQuestIntroSection(html, {
+        title: name,
+        description,
+        quest,
+        bundle: questBundle,
+        links: detailLinks,
+      });
 
       const routeVariants = questRouteVariants(quest, questCityAliasMap);
       for (const variant of routeVariants) {
@@ -3813,7 +3900,6 @@ async function main() {
     const cityLandingBaseHtml = fs.existsSync(cityLandingTemplatePath)
       ? fs.readFileSync(cityLandingTemplatePath, 'utf8')
       : questBaseHtml;
-    const cityLandingModel = buildQuestCityLandingModel(quests, questCityAliasMap, travels);
     const writtenCityLandingPaths = new Set();
     for (const city of cityLandingModel) {
       const cityHtml = buildQuestCityLandingHtml(cityLandingBaseHtml, city);
@@ -3843,6 +3929,14 @@ async function main() {
 
     totalPages += questGenerated + cityLandingsGenerated + countryLandingsGenerated;
     console.log(`  ✅ Generated: ${questGenerated} quest pages + ${questAliasesGenerated} city aliases + ${cityLandingsGenerated} city landings + ${countryLandingsGenerated} country landings + crawlable listing`);
+    console.log(`  🔗 Detail pages with internal links: ${questsWithLinks}/${questGenerated}`);
+    // Ключ индекса — questRouteKey(quest).path, тот же, из которого построена
+    // модель посадочной. Если он разойдётся, перелинковка молча исчезнет со всех
+    // детальных страниц и они снова станут тупиком графа (#1756), — поэтому
+    // расхождение должно быть слышно на сборке, а не в GSC через месяц.
+    if (questGenerated > 0 && questsWithLinks < questGenerated) {
+      console.warn(`  ⚠️  ${questGenerated - questsWithLinks} quest page(s) got no internal links — the city landing model and questRouteKey disagree.`);
+    }
   }
 
   // --- 3. Article pages ---
@@ -4069,6 +4163,7 @@ if (typeof module !== 'undefined' && module.exports) {
     injectTravelRegisterCtaSection,
     finalizeTravelPageHtml,
     injectQuestIntroSection,
+    buildQuestDetailLinksIndex,
     injectQuestLinksIndex,
     injectHomeQuestsSection,
     buildQuestsListingModel,

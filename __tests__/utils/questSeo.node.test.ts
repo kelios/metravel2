@@ -11,6 +11,6 @@ describe('quest SEO raw Node compatibility', () => {
       { cwd: process.cwd(), encoding: 'utf8' },
     )
 
-    expect(output).toContain('Минск: что посмотреть')
+    expect(output).toContain('Минск — Городской квест')
   })
 })
