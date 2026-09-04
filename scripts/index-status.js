@@ -338,13 +338,21 @@ function pickListRows(res) {
   return Array.isArray(rows) ? rows : []
 }
 
-// List the author's published+moderated travels (paginated).
-async function listTravels(apiBase, userId) {
+// Бэкенд режет страницу до 100 записей и молча игнорирует больший `perPage`.
+// Шаг запроса и порог недобора обязаны читать одно число — иначе признак конца
+// разъедется с реальным ответом. #1766: страница ЗА последней на проде —
+// HTTP 404 «Invalid page», а не пустой список, поэтому конец считается ДО
+// следующего запроса. Ведущий признак — курсор `next`; `total`/`count` и
+// недобор строк остаются запасными путями для легаси-конверта без курсора.
+const TRAVELS_PER_PAGE = 100
+
+async function listTravels(apiBase, userId, deps = {}) {
+  const loadJson = deps.fetchJson || fetchJson
   const where = JSON.stringify({ user_id: userId, publish: 1, moderation: 1 })
   const out = []
   for (let page = 1; page <= 50; page++) {
-    const u = `${apiBase}/api/travels/?where=${encodeURIComponent(where)}&page=${page}&perPage=100`
-    const res = await fetchJson(u)
+    const u = `${apiBase}/api/travels/?where=${encodeURIComponent(where)}&page=${page}&perPage=${TRAVELS_PER_PAGE}`
+    const res = await loadJson(u)
     const rows = pickListRows(res)
     if (!rows.length) break
     for (const t of rows) {
@@ -356,7 +364,14 @@ async function listTravels(apiBase, userId) {
         .replace(/^travels\//, '')
       if (seg) out.push({ id: t.id, name: t.name || t.title || '', slug: seg })
     }
-    if (rows.length < 100) break
+    const envelope = res && typeof res === 'object' && !Array.isArray(res) ? res : null
+    if (envelope && 'next' in envelope) {
+      if (!envelope.next) break
+      continue
+    }
+    const total = Number(envelope ? envelope.total ?? envelope.count : undefined)
+    if (Number.isFinite(total) && total > 0 && out.length >= total) break
+    if (rows.length < TRAVELS_PER_PAGE) break
   }
   return out
 }
@@ -748,10 +763,12 @@ module.exports = {
   createTokenSource,
   inspect,
   inspectionOutcome,
+  listTravels,
   parseArgs,
   parseSitemap,
   pickListRows,
   readCheckpoint,
   resolveSection,
   summarizeItems,
+  TRAVELS_PER_PAGE,
 }

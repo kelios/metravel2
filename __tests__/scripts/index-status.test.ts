@@ -24,6 +24,7 @@ const {
   KIND_LABELS,
   SECTIONS,
   TOKEN_MAX_AGE_MS,
+  TRAVELS_PER_PAGE,
   USAGE,
   assertCompleteSummary,
   assertInspectionCanContinue,
@@ -34,6 +35,7 @@ const {
   createTokenSource,
   inspect,
   inspectionOutcome,
+  listTravels,
   parseArgs,
   parseSitemap,
   pickListRows,
@@ -483,5 +485,49 @@ describe('classify', () => {
   it('falls back to UNKNOWN on an empty response instead of throwing', () => {
     expect(classify({}).verdict).toBe('UNKNOWN')
     expect(classify(null).coverageState).toBe('Unknown')
+  })
+})
+
+describe('listTravels pagination (#1766)', () => {
+  const page = (asked: number, total: number, size = TRAVELS_PER_PAGE) => {
+    const first = (asked - 1) * size
+    return Array.from({ length: Math.max(0, Math.min(size, total - first)) }, (_, i) => ({
+      id: first + i + 1,
+      url: `/travels/slug-${first + i + 1}`,
+      name: `Travel ${first + i + 1}`,
+    }))
+  }
+
+  const drfApi = (total: number, size = TRAVELS_PER_PAGE) => {
+    const pages = Math.max(1, Math.ceil(total / size))
+    return jest.fn(async (url: string) => {
+      const asked = Number(new URL(url).searchParams.get('page'))
+      if (asked > pages) throw new Error(`HTTP 404 ${url}`)
+      return {
+        count: total,
+        next: asked < pages ? `https://metravel.by/api/travels/?page=${asked + 1}` : null,
+        results: page(asked, total, size),
+      }
+    })
+  }
+
+  it('stops on the last page when the count is an exact multiple of the page size', async () => {
+    const fetchJson = drfApi(300)
+    await expect(listTravels('https://metravel.by', 1, { fetchJson })).resolves.toHaveLength(300)
+    expect(fetchJson).toHaveBeenCalledTimes(3)
+  })
+
+  it('reads every page when the last one is short', async () => {
+    const fetchJson = drfApi(320)
+    await expect(listTravels('https://metravel.by', 1, { fetchJson })).resolves.toHaveLength(320)
+    expect(fetchJson).toHaveBeenCalledTimes(4)
+  })
+
+  it('asks for exactly the page size it checks against', async () => {
+    const fetchJson = drfApi(320)
+    await listTravels('https://metravel.by', 1, { fetchJson })
+    for (const [url] of fetchJson.mock.calls) {
+      expect(new URL(String(url)).searchParams.get('perPage')).toBe(String(TRAVELS_PER_PAGE))
+    }
   })
 })
