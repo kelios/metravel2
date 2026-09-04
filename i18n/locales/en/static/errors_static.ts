@@ -71,6 +71,7 @@ export const errorsStaticResources = {
   "api.messages.threadUnavailable": "This conversation is unavailable: the other user was deleted. Sending messages is disabled.",
   "api.misc.authRequired": "User is not authorized",
   "api.misc.blankPayloadBlocked": "Save cancelled: the form is empty, the travel data did not load. Reload the page — saving an empty form would erase the article.",
+  "api.misc.faqMarkupWouldBeLost": "Save cancelled: HTML clean-up would strip the article's FAQ block markup, and it would stop appearing in search. Nothing was written — please report this.",
   "api.misc.titleRequired": "Title is required",
   "api.misc.titleTooShort": "The name must contain at least 3 characters",
   "api.misc.titleTooLong": "Title is too long (maximum 200 characters)",

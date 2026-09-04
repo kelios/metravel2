@@ -3,6 +3,7 @@ import { devError } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { sanitizeInput } from '@/utils/security';
 import { stripBase64Images } from '@/utils/htmlUtils';
+import { countFaqDisclosureBlocks } from '@/utils/faqDisclosureMarkup';
 import { validateAIMessage, validateImageFile } from '@/utils/aiValidation';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getSecureItem } from '@/utils/secureStorage';
@@ -120,6 +121,34 @@ const makeUniqueSlug = (value?: string): string => {
   return base ? `${base}-${suffix}` : `travel-${suffix}`;
 };
 
+/**
+ * Тело статьи, готовое к записи — или ошибка, если санитайзер снял с него
+ * FAQ-разметку (#1764).
+ *
+ * `sanitizeRichText` — render-time allowlist, но стоит он на пути ЗАПИСИ (оба
+ * контракта ниже), поэтому всё, чего в allowlist нет, он вычёркивает не из
+ * кадра, а из ХРАНИМОГО тела — необратимо и молча. До ad2fdc9eb (26.07.2026)
+ * `details`/`summary` в allowlist не было: `disallowedTagsMode: 'discard'`
+ * оставлял текст вопросов и выбрасывал сами теги, и блок «Частые вопросы»
+ * превращался в плоские `<strong>`. Так статьи 554 и 134 потеряли FAQPage между
+ * 05.07 и 25.07.2026 — сохранённое тело в `scripts/.seo-backups/554-2026-07-25*`
+ * совпадает с выходом тогдашнего санитайзера по этому же исходнику.
+ *
+ * Убрать санитайзер с записи нельзя: своей очистки rich-text у бэкенда нет, и
+ * тогда в базу поедет сырой HTML из редактора. Поэтому инвариант обратный —
+ * запись, которая теряет структуру FAQ, не уходит на сервер вообще. Гейт
+ * симметричен рендеру (`utils/serverSafeHtml.ts`) и пользуется тем же счётом.
+ */
+const sanitizeTravelBodyForWrite = async (html: string): Promise<string> => {
+  const { sanitizeRichText } = await import('@/utils/sanitizeRichText');
+  const source = stripBase64Images(html);
+  const sanitized = sanitizeRichText(source);
+  if (countFaqDisclosureBlocks(sanitized) < countFaqDisclosureBlocks(source)) {
+    throw new Error(i18nT('errorsStatic:api.misc.faqMarkupWouldBeLost'));
+  }
+  return sanitized;
+};
+
 export type SaveFormDataIntent = 'autosave' | 'save' | 'publish';
 
 export const saveFormData = async (
@@ -195,8 +224,7 @@ export const saveFormData = async (
 
     let sanitizedDescription: unknown = data.description;
     if (typeof data.description === 'string') {
-      const { sanitizeRichText } = await import('@/utils/sanitizeRichText');
-      sanitizedDescription = sanitizeRichText(stripBase64Images(data.description));
+      sanitizedDescription = await sanitizeTravelBodyForWrite(data.description);
     }
 
     // ✅ FIX: Санитизация данных перед отправкой
@@ -288,8 +316,7 @@ export const saveTravelContent = async (
     }
 
     if (typeof fields.description === 'string') {
-      const { sanitizeRichText } = await import('@/utils/sanitizeRichText');
-      payload.description = sanitizeRichText(stripBase64Images(fields.description));
+      payload.description = await sanitizeTravelBodyForWrite(fields.description);
     }
 
     (['plus', 'minus', 'recommendation'] as const).forEach((field) => {
