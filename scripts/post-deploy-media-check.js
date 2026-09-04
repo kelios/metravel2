@@ -19,6 +19,10 @@
  * Usage:
  *   node scripts/post-deploy-media-check.js [--url https://metravel.by]
  *     [--allow-known-broken] [--json] [--verbose] [--insecure]
+ *
+ * `--json` — режим для машины: в stdout уходит один отчёт и ничего больше,
+ * поэтому весь вывод целиком парсится `JSON.parse`. Всё человекочитаемое в этом
+ * режиме молчит, а диагностика источников по-прежнему идёт в stderr (#1760).
  */
 
 const https = require('https')
@@ -1355,7 +1359,17 @@ function printArticleBodySummary(articleBody) {
   }
 }
 
+/**
+ * Итог режима раздачи — только для человека.
+ *
+ * В `--json` не печатает ничего: те же данные уже лежат в `summary.coverage`, а
+ * лишняя строка в stdout ломает `JSON.parse` у машинного потребителя (#1760).
+ * Гейт стоит внутри функции, а не на вызове, — ровно как у `printSummary`, —
+ * чтобы контракт вывода не зависел от того, кто её позовёт.
+ */
 function printCoverageSummary(coverage) {
+  if (JSON_OUTPUT) return
+
   if (!coverage || !coverage.families.length) {
     console.log('\n⚠️  Режим раздачи не проверен: proxy-contract недоступен или пуст')
     return
