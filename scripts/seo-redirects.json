@@ -51,7 +51,7 @@
     },
     {
       "from": "marshrut-na-odin-den-v-grodnenskuyu-oblast-usadba-grobovskih-usadba-svyatopolk-chetvertinskih-usadebno-parkovyy-kompleks-laskovichey-usadba-hodkevichey",
-      "to": "usadby-grodnenshchiny-grobovskikh-i-khodkevichei"
+      "to": "zheludok-i-usadby-grodnenshchiny-kak-dobratsia"
     },
     {
       "from": "marshrut-na-odin-den-dvorcovo-parkovyy-kompleks-slacvinskih-memorialnyy-kompleks-partizanskoy-brigady-razgrom-usadebnyy-dom-potockih-1",
@@ -903,27 +903,35 @@
     },
     {
       "from": "marshrut-na-dva-dnya-novyy-sverzhen-nesvizh-mir",
-      "to": "marshrut-na-dva-dnia-novyi-sverzhen-nesvizh-mir"
-    },
-    {
-      "from": "nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
-      "to": "marshrut-na-dva-dnia-novyi-sverzhen-nesvizh-mir"
+      "to": "nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia"
     },
     {
       "from": "ekotropa-v-minskoy-oblasti-rodniki-svyatye-krinicy",
-      "to": "ekotropa-v-minskoi-oblasti-rodniki-sviatye-krinitsy"
-    },
-    {
-      "from": "rodniki-sviatye-krinitsy-ekotropa-v-37-km-ot-minska",
-      "to": "ekotropa-v-minskoi-oblasti-rodniki-sviatye-krinitsy"
+      "to": "rodniki-sviatye-krinitsy-ekotropa-v-37-km-ot-minska"
     },
     {
       "from": "kasprovyy-verh",
-      "to": "kasprovyi-verkh-kasprowy-wierch-1987m"
+      "to": "kasprovy-verkh-vysota-1987-m-podem-i-kak-dobratsia"
     },
     {
-      "from": "kasprovy-verkh-vysota-1987-m-podem-i-kak-dobratsia",
-      "to": "kasprovyi-verkh-kasprowy-wierch-1987m"
+      "from": "naroch-eko-tropa-golubye-ozera-lyntupy",
+      "to": "golubye-ozera-rasstoianie-ot-minska-i-ekotropa-naroch"
+    },
+    {
+      "from": "marshrut-na-dva-dnia-novyi-sverzhen-nesvizh-mir",
+      "to": "nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia"
+    },
+    {
+      "from": "ekotropa-v-minskoi-oblasti-rodniki-sviatye-krinitsy",
+      "to": "rodniki-sviatye-krinitsy-ekotropa-v-37-km-ot-minska"
+    },
+    {
+      "from": "usadby-grodnenshchiny-grobovskikh-i-khodkevichei",
+      "to": "zheludok-i-usadby-grodnenshchiny-kak-dobratsia"
+    },
+    {
+      "from": "kasprovyi-verkh-kasprowy-wierch-1987m",
+      "to": "kasprovy-verkh-vysota-1987-m-podem-i-kak-dobratsia"
     }
   ]
 }
