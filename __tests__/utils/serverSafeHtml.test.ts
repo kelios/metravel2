@@ -95,15 +95,16 @@ describe('resolveServerRichTextHtml', () => {
     })
   })
 
-  it('falls back to legacy html when canonical markup flattened an FAQ disclosure', () => {
+  it('keeps canonical safe_html even when legacy still has more FAQ markup (#1769)', () => {
     const legacy =
       '<details><summary>Когда ехать?</summary><p>Весной.</p></details>'
+    const canonical = '<p><strong>Когда ехать?</strong></p><p>Весной.</p>'
     const resolved = resolveServerRichTextHtml(
-      { safe_html: '<p><strong>Когда ехать?</strong></p><p>Весной.</p>', plain_text: 'Когда ехать? Весной.' },
+      { safe_html: canonical, plain_text: 'Когда ехать? Весной.' },
       legacy,
     )
 
-    expect(resolved).toEqual({ html: legacy, serverSanitized: false })
+    expect(resolved).toEqual({ html: canonical, serverSanitized: true })
   })
 
   it('keeps canonical html when both sources preserve disclosure markup', () => {
@@ -116,7 +117,7 @@ describe('resolveServerRichTextHtml', () => {
     })
   })
 
-  it('falls back when canonical html preserved only part of the disclosure list', () => {
+  it('keeps partial canonical disclosure instead of swapping in the full legacy list (#1769)', () => {
     const legacy = [
       '<details><summary>Первый?</summary><p>Первый ответ.</p></details>',
       '<details><summary>Второй?</summary><p>Второй ответ.</p></details>',
@@ -129,7 +130,7 @@ describe('resolveServerRichTextHtml', () => {
         { safe_html: partialCanonical, plain_text: 'Первый? Первый ответ. Второй? Второй ответ.' },
         legacy,
       ),
-    ).toEqual({ html: legacy, serverSanitized: false })
+    ).toEqual({ html: partialCanonical, serverSanitized: true })
   })
 
   it('normalizes nullish legacy html to empty string', () => {

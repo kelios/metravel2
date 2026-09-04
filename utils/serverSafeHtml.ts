@@ -1,4 +1,3 @@
-import { countFaqDisclosureBlocks } from '@/utils/faqDisclosureMarkup'
 import type { ServerRichTextBlock } from '@/types/types'
 
 // #710/#709: серверный canonical rich-text (rich_text.*.safe_html).
@@ -59,16 +58,10 @@ export const resolveServerRichTextHtml = (
   fallbackHtml: string | null | undefined,
 ): ResolvedRichTextHtml => {
   const safeHtml = typeof block?.safe_html === 'string' ? block.safe_html : ''
-  const legacyHtml = typeof fallbackHtml === 'string' ? fallbackHtml : ''
 
-  // Older backend sanitizer versions flatten native disclosure markup:
-  // the canonical safe_html keeps the FAQ text but drops <details>/<summary>.
-  // Prefer the legacy source only for this observable semantic loss; the caller
-  // will run it through the full client sanitizer before rendering.
-  if (countFaqDisclosureBlocks(legacyHtml) > countFaqDisclosureBlocks(safeHtml)) {
-    return { html: legacyHtml, serverSanitized: false }
-  }
-
+  // #1769: origin/master `e2290d4` сохраняет `<details>`/`<summary>`/`<section class="seo-faq">`
+  // в canonical `safe_html`. Обход «если сервер схлопнул FAQ — взять legacy description»
+  // больше не нужен и прятал бы каноническое поле.
   if (safeHtml.trim()) {
     return { html: safeHtml, serverSanitized: true }
   }
