@@ -410,6 +410,14 @@ install_deps
 
 build_env "$ENV"
 
+# Целостность разбиения на чанки. Выпуск может быть «зелёным» по размеру и
+# SEO и при этом падать в рантайме: shared-чанк, который приезжает как цель
+# `import()`, обязан тянуть за собой соседей, чьи определения требуют его
+# фабрики. Без этой проверки #1749 доехал до прода и убивал /map сообщением
+# «Requiring unknown module».
+echo "Проверка замыкания чанков..."
+node scripts/guard-chunk-closure.js "dist/$ENV"
+
 echo "Генерация SEO-страниц..."
 node scripts/generate-seo-pages.js --dist "dist/$ENV" --api https://metravel.by
 

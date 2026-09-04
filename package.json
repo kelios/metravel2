@@ -95,6 +95,7 @@
     "seo:404": "node scripts/report-travel-404.js",
     "seo:404:json": "node scripts/report-travel-404.js --json",
     "fetch:lasy-data": "node scripts/fetch-lasy-wfs-data.js",
+    "guard:chunk-closure": "node scripts/guard-chunk-closure.js",
     "guard:bundle-budget": "node scripts/guard-bundle-budget.js",
     "guard:bundle-budget:fail": "node scripts/guard-bundle-budget.js --fail",
     "guard:bundle-budget:update": "node scripts/guard-bundle-budget.js --update",

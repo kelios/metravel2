@@ -1,8 +1,8 @@
 diff --git a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
-index 1e5c598..90e3eb1 100644
+index 1e5c598..e2009d4 100644
 --- a/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
 +++ b/node_modules/@expo/metro-config/build/serializer/serializeChunks.js
-@@ -58,14 +58,10 @@ async function graphToSerialAssetsAsync(config, serializeChunkOptions, ...props)
+@@ -58,14 +58,11 @@ async function graphToSerialAssetsAsync(config, serializeChunkOptions, ...props)
      const entryChunk = findEntryChunk(chunks, entryFile);
      if (entryChunk) {
          removeEntryDepsFromAsyncChunks(entryChunk, chunks);
@@ -16,11 +16,12 @@ index 1e5c598..90e3eb1 100644
 +        deduplicateAgainstKnownChunks(chunks, entryChunk);
          removeEmptyChunks(chunks);
 -        if (commonChunk) {
++        linkSharedChunkDependencies(sharedChunks, graph);
 +        if (sharedChunks.length) {
              createRuntimeChunk(entryChunk, chunks, graph, options);
          }
      }
-@@ -111,6 +107,12 @@ class Chunk {
+@@ -111,6 +108,18 @@ class Chunk {
      // Chunks that are required to be loaded synchronously before this chunk.
      // These are included in the HTML as <script> tags.
      requiredChunks = new Set();
@@ -30,10 +31,16 @@ index 1e5c598..90e3eb1 100644
 +    sharedIndex = null;
 +    // Filename-only edges participate in cache hashes without becoming script requires.
 +    filenameDependencies = new Set();
++    // METRAVEL_SHARED_CHUNK_SYNC_DEPS: other shared chunks whose definitions this
++    // chunk's factories require synchronously. They belong in the runtime manifest and
++    // in the filename hash, but never in `metadata.requires`: the HTML serializer
++    // topologically sorts that field and throws on a cycle, and shared chunks reference
++    // each other in both directions as soon as the module graph has one.
++    sharedDependencies = new Set();
      constructor(name, entries, graph, options, isAsync = false, isVendor = false, isEntry = false) {
          this.name = name;
          this.entries = entries;
-@@ -181,6 +183,22 @@ class Chunk {
+@@ -181,6 +190,26 @@ class Chunk {
          }
          const targets = new Set();
          this._asyncTargets = targets;
@@ -53,15 +60,19 @@ index 1e5c598..90e3eb1 100644
 +            if (filenameDependency.isAsync)
 +                targets.add(filenameDependency);
 +        }
++        for (const sharedDependency of this.sharedDependencies) {
++            if (sharedDependency.isAsync)
++                targets.add(sharedDependency);
++        }
          if (this.options.includeAsyncPaths) {
              return targets;
          }
-@@ -295,6 +313,56 @@ class Chunk {
+@@ -295,6 +324,56 @@ class Chunk {
              preModules: new Set(finalPreModules),
          });
          const relativeEntry = path_1.default.relative(this.options.projectRoot, this.name);
 +        const baseUrl = getBaseUrlOption(this.graph, this.options);
-+        const requiredAsyncChunks = [...this.requiredChunks]
++        const requiredAsyncChunks = [...new Set([...this.requiredChunks, ...this.sharedDependencies])]
 +            .filter((chunk) => chunk.isAsync)
 +        // METRAVEL_CHUNK_DEPS_BY_PATH: the manifest names the required shared chunks
 +        // by their hashed path, never by `sharedIndex`. The index is an ordinal of the
@@ -113,7 +124,7 @@ index 1e5c598..90e3eb1 100644
          const jsAsset = {
              filename: outputFile,
              originFilename: relativeEntry,
-@@ -308,14 +376,19 @@ class Chunk {
+@@ -308,14 +387,19 @@ class Chunk {
                  }),
                  // Provide a list of module paths that can be used for matching chunks to routes.
                  // TODO: Move HTML serializing closer to this code so we can reduce passing this much data around.
@@ -135,7 +146,7 @@ index 1e5c598..90e3eb1 100644
          };
          const assets = [jsAsset];
          // debugId is passed into `sourceMapString` so the bundler-map path
-@@ -524,36 +597,226 @@ function removeEntryDepsFromAsyncChunks(entryChunk, chunks) {
+@@ -524,36 +608,295 @@ function removeEntryDepsFromAsyncChunks(entryChunk, chunks) {
          }
      }
  }
@@ -150,6 +161,96 @@ index 1e5c598..90e3eb1 100644
 -                for (const dep of commonDeps) {
 -                    chunk.deps.delete(dep);
 -                    chunk2.deps.delete(dep);
++// METRAVEL_SHARED_CHUNK_SYNC_DEPS: a shared chunk is not only delivered through its
++// owners. When an `import()` target module lands inside a shared group, the async
++// dependency path of that import points at the shared chunk, and the runtime loads it
++// on demand on routes whose HTML never shipped it. Such a load must also bring the
++// other shared chunks that its factories require synchronously — nothing else will.
++// The map's `useMapDataController` was such a target: it required `useMapTravels` from
++// a neighbouring shared chunk that no route loaded, so /map died in the root
++// ErrorBoundary with «Requiring unknown module "1947"» whenever the map data
++// controller was reached (#1749).
++//
++// The manifest lists the TRANSITIVE closure: the runtime reads the manifest of the
++// chunk it was asked for and loads exactly what is listed, it never walks the manifests
++// of the chunks it just loaded.
++function linkSharedChunkDependencies(sharedChunks, graph) {
++    const liveChunks = sharedChunks.filter((chunk) => chunk.deps.size > 0);
++    if (liveChunks.length < 2)
++        return;
++    const chunkByModule = new Map();
++    for (const chunk of liveChunks) {
++        for (const dep of chunk.deps) {
++            chunkByModule.set(dep, chunk);
++        }
++    }
++    const reachable = new Map(liveChunks.map((chunk) => [chunk, new Set()]));
++    for (const chunk of liveChunks) {
++        const targets = reachable.get(chunk);
++        for (const module of chunk.deps) {
++            for (const dependency of module.dependencies.values()) {
++                if (!(0, isResolvedDependency_1.isResolvedDependency)(dependency) || dependency.data.data.asyncType)
++                    continue;
++                const dependencyModule = graph.dependencies.get(dependency.absolutePath);
++                const target = dependencyModule ? chunkByModule.get(dependencyModule) : undefined;
++                if (!target || target === chunk)
++                    continue;
++                targets.add(target);
++            }
++        }
++    }
++    let changed = true;
++    while (changed) {
++        changed = false;
++        for (const chunk of liveChunks) {
++            const targets = reachable.get(chunk);
++            for (const target of [...targets]) {
++                for (const nested of reachable.get(target) ?? []) {
++                    if (nested !== chunk && !targets.has(nested)) {
++                        targets.add(nested);
++                        changed = true;
++                    }
++                }
++            }
++        }
++    }
++    for (const chunk of liveChunks) {
++        for (const target of reachable.get(chunk)) {
++            chunk.sharedDependencies.add(target);
++        }
++    }
++}
++function propagateOwnersThroughSyncEdges(sharedGroups, graph) {
++    const groupByDependency = new Map();
++    for (const group of sharedGroups) {
++        for (const dep of group.deps) {
++            groupByDependency.set(dep, group);
++        }
++    }
++    let ownersChanged = true;
++    while (ownersChanged) {
++        ownersChanged = false;
++        for (const group of sharedGroups) {
++            for (const module of group.deps) {
++                for (const dependency of module.dependencies.values()) {
++                    if (!(0, isResolvedDependency_1.isResolvedDependency)(dependency) || dependency.data.data.asyncType)
++                        continue;
++                    const dependencyModule = graph.dependencies.get(dependency.absolutePath);
++                    const dependencyGroup = dependencyModule ? groupByDependency.get(dependencyModule) : undefined;
++                    if (!dependencyGroup || dependencyGroup === group)
++                        continue;
++                    for (const owner of group.owners) {
++                        if (!dependencyGroup.owners.has(owner)) {
++                            dependencyGroup.owners.add(owner);
++                            ownersChanged = true;
++                        }
++                    }
++                }
++            }
++        }
++    }
++    return groupByDependency;
++}
 +function extractSharedChunks(chunks, graph, options) {
 +    const asyncChunks = [...chunks.values()].filter((chunk) => chunk.isAsync);
 +    if (asyncChunks.length < 2) {
@@ -262,9 +363,10 @@ index 1e5c598..90e3eb1 100644
 +                    bestLeft = left;
 +                    bestRight = right;
 +                    bestSimilarity = similarity;
-+                }
-+            }
-+        }
+                 }
+-                commonDependencies.push(...commonDeps);
+             }
+         }
 +        if (bestLeft < 0)
 +            break;
 +        const leftGroup = sharedGroups[bestLeft];
@@ -282,39 +384,7 @@ index 1e5c598..90e3eb1 100644
 +    // edges so every definition required by an executed factory is present.
 +    // Without this closure, a route could preload a merged module but miss one
 +    // of its dependencies and fail with "Requiring unknown module".
-+    const groupByDependency = new Map();
-+    for (const group of sharedGroups) {
-+        for (const dep of group.deps) {
-+            groupByDependency.set(dep, group);
-+        }
-+    }
-+    let ownersChanged = true;
-+    while (ownersChanged) {
-+        ownersChanged = false;
-+        for (const group of sharedGroups) {
-+            for (const module of group.deps) {
-+                for (const dependency of module.dependencies.values()) {
-+                    if (!(0, isResolvedDependency_1.isResolvedDependency)(dependency) || dependency.data.data.asyncType)
-+                        continue;
-+                    const dependencyModule = graph.dependencies.get(dependency.absolutePath);
-+                    const dependencyGroup = dependencyModule ? groupByDependency.get(dependencyModule) : undefined;
-+                    if (!dependencyGroup || dependencyGroup === group)
-+                        continue;
-+                    for (const owner of group.owners) {
-+                        if (!dependencyGroup.owners.has(owner)) {
-+                            dependencyGroup.owners.add(owner);
-+                            ownersChanged = true;
-+                        }
-+                    }
-                 }
--                commonDependencies.push(...commonDeps);
-             }
-         }
-     }
--    // If common dependencies were found, extract them to the shared chunk.
--    if (commonDependencies.length) {
--        const commonDependenciesUnique = [...new Set(commonDependencies)];
--        return new Chunk('/__common.js', commonDependenciesUnique, graph, options, false, true);
++    const groupByDependency = propagateOwnersThroughSyncEdges(sharedGroups, graph);
 +    // METRAVEL_MERGE_IDENTICAL_ROUTE_SETS (#1543): groups whose owners resolve to
 +    // the SAME set of HTML routes always ship together, so keeping them in separate
 +    // files buys nothing but round-trips and worse compression. The similarity pass
@@ -350,8 +420,18 @@ index 1e5c598..90e3eb1 100644
 +        for (const dep of group.deps) {
 +            groupByDependency.set(dep, merged);
 +        }
-+    }
+     }
+-    // If common dependencies were found, extract them to the shared chunk.
+-    if (commonDependencies.length) {
+-        const commonDependenciesUnique = [...new Set(commonDependencies)];
+-        return new Chunk('/__common.js', commonDependenciesUnique, graph, options, false, true);
 +    const routeScopedGroups = [...groupsByRouteKey.values()];
++    // METRAVEL_SHARED_OWNERS_AFTER_MERGE: the merge above unions owners, so a group
++    // that took another group's owners now owes them to everything its modules require
++    // synchronously. The closure ran before the merge and cannot know about that union;
++    // running it once more is the only thing that keeps the invariant true for the
++    // groups that were actually emitted.
++    propagateOwnersThroughSyncEdges(routeScopedGroups, graph);
 +    const sharedChunks = [];
 +    let groupIndex = 0;
 +    for (const group of routeScopedGroups) {
@@ -383,7 +463,7 @@ index 1e5c598..90e3eb1 100644
                      chunk.deps.delete(dep);
                  }
              }
-@@ -577,6 +840,9 @@ function createRuntimeChunk(entryChunk, chunks, graph, options) {
+@@ -577,6 +920,9 @@ function createRuntimeChunk(entryChunk, chunks, graph, options) {
      for (const chunk of chunks) {
          // Runtime chunk has to load before any other a.k.a all chunks require it.
          chunk.requiredChunks.add(runtimeChunk);

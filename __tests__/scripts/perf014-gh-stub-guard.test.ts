@@ -144,6 +144,50 @@ describe('PERF-014 gesture-handler web stub — metro.config resolver', () => {
     expect(earlyReturn).toBeGreaterThan(requiredLoop)
   })
 
+  it('gives a shared chunk the sync dependencies it needs when it is loaded as an import() target', () => {
+    // #1749: an `import()` target can land inside a shared chunk, and the runtime then
+    // fetches that shared chunk on a route whose HTML never shipped it. Without its own
+    // manifest the neighbours its factories require synchronously never arrive and /map
+    // died with «Requiring unknown module "1947"». The manifest edges must stay out of
+    // `metadata.requires`: the HTML serializer topologically sorts that field and throws
+    // on the cycles shared chunks form.
+    const installedSerializer = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_SERIALIZER_REL), 'utf8')
+    const patch = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_PATCH_REL), 'utf8')
+
+    for (const text of [patch, installedSerializer]) {
+      expect(text).toContain('METRAVEL_SHARED_CHUNK_SYNC_DEPS')
+      expect(text).toContain('linkSharedChunkDependencies')
+      expect(text).toContain('sharedDependencies')
+    }
+    expect(installedSerializer).toContain(
+      '[...new Set([...this.requiredChunks, ...this.sharedDependencies])]',
+    )
+    // metadata.requires must keep listing requiredChunks only.
+    expect(installedSerializer).toContain(
+      'requires: [...this.requiredChunks.values()].map((chunk) => {',
+    )
+    // The pass runs after empty chunks are dropped, so no edge can name a removed chunk.
+    const dedupe = installedSerializer.indexOf('removeEmptyChunks(chunks);')
+    const link = installedSerializer.indexOf('linkSharedChunkDependencies(sharedChunks, graph);')
+    expect(dedupe).toBeGreaterThan(-1)
+    expect(link).toBeGreaterThan(dedupe)
+  })
+
+  it('re-runs the owner closure after shared groups with identical route sets are merged', () => {
+    // #1749: that merge unions owners, and the group merged in owes its owners to
+    // everything the other half requires synchronously. Running the closure only before
+    // the merge leaves those groups off the routes that execute them.
+    const installedSerializer = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_SERIALIZER_REL), 'utf8')
+    const first = installedSerializer.indexOf('propagateOwnersThroughSyncEdges(sharedGroups, graph)')
+    const merge = installedSerializer.indexOf('const groupsByRouteKey = new Map();')
+    const second = installedSerializer.indexOf(
+      'propagateOwnersThroughSyncEdges(routeScopedGroups, graph)',
+    )
+    expect(first).toBeGreaterThan(-1)
+    expect(merge).toBeGreaterThan(first)
+    expect(second).toBeGreaterThan(merge)
+  })
+
   // #1340: the runtime may only await shared chunks that are not on the page yet.
   // Awaiting one that the HTML already shipped as a <script> pushes the route module
   // past the start of hydration, React.lazy suspends, and the route Suspense boundary
