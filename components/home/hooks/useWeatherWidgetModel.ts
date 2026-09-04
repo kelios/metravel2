@@ -3,6 +3,7 @@ import Feather from '@expo/vector-icons/Feather';
 
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { translate as i18nT } from '@/i18n'
+import { isChainNoiseSegment, splitGeocodeChain } from '@/utils/geocodeHelpers';
 
 
 type WeatherPoint = {
@@ -41,9 +42,20 @@ export function useWeatherWidgetModel({
         if (!primaryAddress && !normalizedCountryName) {
             return primaryCoord ? i18nT('home:components.home.hooks.useWeatherWidgetModel.tochke_marshruta_50fd9f66') : '';
         }
-        const addressParts = primaryAddress.split(',').map((part) => part.trim());
-        const locationParts = addressParts.slice(0, 3).filter(Boolean);
-        if (normalizedCountryName) locationParts.push(normalizedCountryName);
+        // Адрес точки бывает целой цепочкой геокодера, в том числе через ` · `
+        // и с номером дома первым сегментом: без разбора заголовок выглядел как
+        // «Погода в 30110 · Адршпа · Краловеградецкий край · Чехия, Чехия» (#1750).
+        const locationParts = splitGeocodeChain(primaryAddress)
+            .filter((part) => !isChainNoiseSegment(part))
+            .slice(0, 3);
+        if (
+            normalizedCountryName &&
+            !locationParts.some(
+                (part) => part.localeCompare(normalizedCountryName, undefined, { sensitivity: 'accent' }) === 0,
+            )
+        ) {
+            locationParts.push(normalizedCountryName);
+        }
         return locationParts.join(', ');
     }, [normalizedCountryName, primaryAddress, primaryCoord]);
 

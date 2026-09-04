@@ -3,7 +3,7 @@ import { Platform } from 'react-native'
 import type { ParsedRoutePreview } from '@/types/travelRoutes'
 import { reverseGeocodePoint, type ReverseGeocodePointResult } from '@/api/geoQueries'
 import { overpassQuery } from '@/api/external/overpass'
-import { buildGeocodeParts, pickDisplayNameSegment } from '@/utils/geocodeHelpers'
+import { buildGeocodeParts, pickFirstNamedSegment } from '@/utils/geocodeHelpers'
 
 interface KeyPointLabels {
   startName?: string | null
@@ -35,7 +35,7 @@ const pickLocalityName = (data: ReverseGeocodePointResult | null): string | null
     data.locality ||
     data.name ||
     // Голый номер дома названием не становится — правило общее (#1717).
-    pickDisplayNameSegment(data.display_name) ||
+    pickFirstNamedSegment(data.display_name) ||
     adminRegion ||
     null
   return locality ? String(locality) : null

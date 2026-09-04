@@ -13,6 +13,8 @@
 // квест подстрокой именно по нему. Поэтому чистка живёт на границе отображения:
 // сторы и кэши хранят то, что прислал бэкенд, а отбрасывает адрес тот, кто рисует.
 
+import { pickFirstNamedSegment } from '@/utils/geocodeHelpers';
+
 /**
  * Разделители, которыми геокодер сшивает уровни адреса, плюс пунктуация подписей
  * объектов («Дикушки: усадьба Гробовских», «Река Ислочь — стоянка «…»»).
@@ -51,4 +53,24 @@ export function resolveTravelCityName(cityName: string | null | undefined): stri
     const trimmed = cityName?.trim();
     if (!trimmed) return undefined;
     return isAddressLikeCityName(trimmed) ? undefined : trimmed;
+}
+
+/**
+ * Подпись точки маршрута для показа (#1750).
+ *
+ * `travel_address.address` у статей, сохранённых до #1717, несёт всю цепочку
+ * обратного геокодирования — 2054 строки из 2453 на замере 03.09.2026. Данные
+ * чинит разовая миграция (#1735), но читателю подпись нужна короткой уже
+ * сейчас, поэтому цепочка разбирается тем же правилом, что и при записи:
+ * первый сегмент, который не является голым номером дома или индексом.
+ *
+ * Идемпотентно: короткое название без разделителей возвращается как есть, так
+ * что после миграции функция просто перестанет что-либо менять. Сырое значение
+ * при этом остаётся в сторах и в payload сохранения точки — укорачивает только
+ * тот, кто рисует.
+ */
+export function resolveTravelPointLabel(address: string | null | undefined): string | undefined {
+    const trimmed = address?.trim();
+    if (!trimmed) return undefined;
+    return pickFirstNamedSegment(trimmed) ?? trimmed;
 }

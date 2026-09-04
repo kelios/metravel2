@@ -1,4 +1,5 @@
 import { translate as i18nT } from '@/i18n'
+import { isChainNoiseSegment, splitGeocodeChain } from '@/utils/geocodeHelpers'
 /**
  * Shared title/subtitle derivation for map places.
  *
@@ -40,48 +41,37 @@ export const stripCountryFromCategoryString = (raw: unknown, address?: string | 
   return filtered.join(', ')
 }
 
-/**
- * Splits a comma-separated address into trimmed, non-empty segments and removes
- * duplicate tokens (case/accent-insensitive). Reverse-geocoded addresses often
- * repeat a place name in two languages or list the same district twice, e.g.
- * «Wawel, Podzamcze, Old Town, Stare Miasto, Old Town, Краков, …». We keep the
- * first occurrence and drop any later repeat (not just consecutive ones).
- */
-export const dedupeAddressSegments = (rawAddress: string): string[] => {
-  const seen = new Set<string>()
-  const out: string[] = []
-  for (const part of rawAddress.split(',').map((p) => p.trim())) {
-    if (!part) continue
-    const key = part.toLocaleLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-    out.push(part)
-  }
-  return out
+/** Индекс первого сегмента, который годится в заголовок: номер дома или индекс пропускается. */
+const headSegmentIndex = (segments: string[]): number => {
+  const index = segments.findIndex((s) => !isChainNoiseSegment(s))
+  return index >= 0 ? index : 0
 }
-
-// Segments that are pure postal codes / house numbers — not a meaningful name.
-export const isNoiseSegment = (segment: string): boolean => /^[\d\s-]+$/.test(segment)
 
 export const buildPlaceTitleParts = (point: PlaceTitleSource): PlaceTitleParts => {
   const rawName = String(point?.name ?? '').trim()
   const rawAddress = String(point?.address ?? '').trim()
 
-  const addressSegments = rawAddress ? dedupeAddressSegments(rawAddress) : []
+  const addressSegments = rawAddress ? splitGeocodeChain(rawAddress) : []
   const dedupedAddress = addressSegments.join(', ')
+
+  // Имя точки тоже бывает целой цепочкой геокодера — так писали до #1717, и так
+  // лежат 84 % сохранённых точек. Заголовком берём его первый значимый сегмент,
+  // цепочка целиком остаётся во второй строке (#1750).
+  const nameSegments = rawName ? splitGeocodeChain(rawName) : []
+  const name = nameSegments.length > 1 ? nameSegments[headSegmentIndex(nameSegments)]! : rawName
 
   // Explicit name that differs from the address → use it as the title and show
   // the (deduped) full address as the secondary line.
   if (
-    rawName &&
+    name &&
     dedupedAddress &&
-    rawName.localeCompare(dedupedAddress, undefined, { sensitivity: 'accent' }) !== 0
+    name.localeCompare(dedupedAddress, undefined, { sensitivity: 'accent' }) !== 0
   ) {
-    return { title: rawName, subtitle: dedupedAddress }
+    return { title: name, subtitle: dedupedAddress }
   }
 
-  if (rawName) {
-    return { title: rawName }
+  if (name) {
+    return { title: name }
   }
 
   if (addressSegments.length === 0) {
@@ -90,8 +80,8 @@ export const buildPlaceTitleParts = (point: PlaceTitleSource): PlaceTitleParts =
 
   // No name: take the first meaningful segment as the title (skipping pure
   // numeric noise like postal codes), keep the rest as the secondary address.
-  const headIndex = addressSegments.findIndex((s) => !isNoiseSegment(s))
-  const title = headIndex >= 0 ? addressSegments[headIndex]! : addressSegments[0]!
+  const headIndex = headSegmentIndex(addressSegments)
+  const title = addressSegments[headIndex]!
   const subtitle = addressSegments
     .filter((_, i) => i !== headIndex)
     .join(', ')

@@ -5,6 +5,7 @@ import { Platform, View } from 'react-native'
 import PlaceListCard from '@/components/places/PlaceListCard'
 import { useRichMediaVisibility } from '@/components/ui/richMediaViewport'
 import { translate as i18nT } from '@/i18n'
+import { resolveTravelPointLabel } from '@/utils/travelDisplayLocation';
 
 
 type PointLike = {
@@ -116,7 +117,7 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
       ]}
     >
       <PlaceListCard
-        title={item.address}
+        title={resolveTravelPointLabel(item.address) ?? item.address}
         imageUrl={mediaVisibility.visible ? itemModel.imageUrl : undefined}
         placeholderColor={placeholderColor}
         placeholderBlurhash={placeholderBlurhash}

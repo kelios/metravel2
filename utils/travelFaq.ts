@@ -1,5 +1,6 @@
 import type { Travel, TravelAddressItem } from '@/types/types'
 import { selectPlural, translate as i18nT } from '@/i18n'
+import { resolveTravelPointLabel } from '@/utils/travelDisplayLocation'
 
 
 /**
@@ -49,9 +50,15 @@ const pluralizeDays = (n: number): string => {
   })
 }
 
+/**
+ * Подпись точки для FAQ. У статей, сохранённых до #1717, в поле лежит вся
+ * цепочка геокодера, поэтому она укорачивается на границе отображения (#1750):
+ * иначе ответ «Какие места посмотреть» превращается в список адресов.
+ */
 const getPointName = (item: TravelAddressItem): string => {
-  if (typeof item === 'string') return item.trim()
-  if (item && typeof item === 'object' && typeof item.name === 'string') return item.name.trim()
+  if (typeof item === 'string') return resolveTravelPointLabel(item) ?? ''
+  if (item && typeof item === 'object' && typeof item.name === 'string')
+    return resolveTravelPointLabel(item.name) ?? ''
   return ''
 }
 

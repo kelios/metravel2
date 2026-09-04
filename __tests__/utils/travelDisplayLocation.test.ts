@@ -1,4 +1,8 @@
-import { isAddressLikeCityName, resolveTravelCityName } from '@/utils/travelDisplayLocation';
+import {
+    isAddressLikeCityName,
+    resolveTravelCityName,
+    resolveTravelPointLabel,
+} from '@/utils/travelDisplayLocation';
 
 // Реальные значения `cityName` из прод-API (GET /api/travels/?page=1&perPage=60).
 // В выборке из 120 записей настоящего названия города не встретилось ни разу:
@@ -90,5 +94,34 @@ describe('resolveTravelCityName', () => {
     expect(resolveTravelCityName(null)).toBeUndefined();
     expect(resolveTravelCityName('')).toBeUndefined();
     expect(resolveTravelCityName('   ')).toBeUndefined();
+  });
+});
+
+describe('resolveTravelPointLabel (#1750)', () => {
+  it('укорачивает оба формата сохранённой цепочки до имени объекта', () => {
+    expect(resolveTravelPointLabel('332 · Soblówka · Силезское воеводство · Живецкий повят · Польша')).toBe(
+        'Soblówka',
+    );
+    expect(
+        resolveTravelPointLabel(
+            'Alcazaba de Málaga, Calle Guillén Sotelo, Ensanche Centro, Малага, 29015, Испания',
+        ),
+    ).toBe('Alcazaba de Málaga');
+    expect(resolveTravelPointLabel(PRODUCTION_ADDRESSES[1])).toBe('Parking Zamkowy');
+  });
+
+  it('идемпотентен: короткое имя проходит насквозь и после миграции #1735 ничего не изменит', () => {
+    expect(resolveTravelPointLabel('Bacówka PTTK na Rycerzowej')).toBe('Bacówka PTTK na Rycerzowej');
+    expect(resolveTravelPointLabel('  Przełęcz Przegibek  ')).toBe('Przełęcz Przegibek');
+  });
+
+  it('не превращает точку в номер дома: голый номер первым сегментом пропускается', () => {
+    expect(resolveTravelPointLabel('450 · Soblówka · Польша')).toBe('Soblówka');
+  });
+
+  it('пустое значение оставляет вызывающему коду прежний фолбэк', () => {
+    expect(resolveTravelPointLabel(undefined)).toBeUndefined();
+    expect(resolveTravelPointLabel(null)).toBeUndefined();
+    expect(resolveTravelPointLabel('   ')).toBeUndefined();
   });
 });

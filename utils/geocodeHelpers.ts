@@ -127,24 +127,52 @@ export const buildGeocodeParts = (geocodeData: any, matchedCountry?: any): Geoco
     };
 };
 
-/** Сегмент из `display_name`, который названием быть не может: голый номер. */
-const isBareNumber = (value: string) => /^\d+[a-zA-Z]?$/.test(value.trim());
+/**
+ * Сегмент цепочки, который названием быть не может: номер дома, почтовый индекс,
+ * кадастровый номер — «332», «31-042», «1832/0», «48H».
+ */
+export const isChainNoiseSegment = (value: string): boolean =>
+    /^[\d\s\-/]+[a-zA-Z]?$/.test(value.trim());
 
 /**
- * Первый сегмент `display_name`, который годится в название (#1717). Голый
- * номер дома пропускается: он остаётся частью адреса, но названием не
- * становится — иначе точка подписывается «332». Правило одно на всех
- * потребителей `display_name`-фолбэка.
+ * Разделители, которыми цепочка геокодера сшивается в одну строку: запятая у
+ * `display_name` Nominatim и ` · ` у подписи, собранной тапом по карте до #1717.
+ * Без второго разделителя такая подпись оставалась одним сегментом, и читатель
+ * видел её целиком (#1750).
  */
-export const pickDisplayNameSegment = (displayName: unknown): string | null => {
-    if (typeof displayName !== 'string') return null;
-    return (
-        displayName
-            .split(',')
-            .map((part: string) => part.trim())
-            .find((part: string) => part && !isBareNumber(part)) || null
-    );
+const CHAIN_SEPARATORS = /\s·\s|,/;
+
+/**
+ * Сегменты цепочки геокодера: тримленные, непустые, без повторов. Обратное
+ * геокодирование часто повторяет название на двух языках или дважды перечисляет
+ * район — «Wawel, Podzamcze, Old Town, Stare Miasto, Old Town, Краков»; остаётся
+ * первое вхождение. Правило одно на всех потребителей цепочки.
+ */
+export const splitGeocodeChain = (value: unknown): string[] => {
+    if (typeof value !== 'string') return [];
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const part of value.split(CHAIN_SEPARATORS).map((p: string) => p.trim())) {
+        if (!part) continue;
+        const key = part.toLocaleLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(part);
+    }
+    return out;
 };
+
+/**
+ * Первый сегмент цепочки, который годится в название (#1717). Номер дома
+ * пропускается: он остаётся частью адреса, но названием не становится — иначе
+ * точка подписывается «332». Одно правило и на `display_name`-фолбэк при
+ * записи, и на укорачивание уже сохранённых подписей при отрисовке (#1750).
+ *
+ * Строка без разделителей возвращается как есть, поэтому вызов идемпотентен:
+ * после миграции данных (#1735) он просто перестанет что-либо менять.
+ */
+export const pickFirstNamedSegment = (value: unknown): string | null =>
+    splitGeocodeChain(value).find((part) => !isChainNoiseSegment(part)) ?? null;
 
 /**
  * Короткое название точки маршрута (#1717).
@@ -174,7 +202,7 @@ export const buildPointTitleFromGeocode = (
     if (title) return title;
 
     // Первый годный сегмент — обычно и есть объект.
-    const segment = pickDisplayNameSegment(geocodeData?.display_name);
+    const segment = pickFirstNamedSegment(geocodeData?.display_name);
     if (segment) return segment;
     return `${latlng.lat}, ${latlng.lng}`;
 };

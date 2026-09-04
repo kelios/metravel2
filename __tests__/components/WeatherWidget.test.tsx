@@ -103,4 +103,15 @@ describe('WeatherWidget', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(onSettled).toHaveBeenCalledTimes(2))
   })
+
+  it('разбирает цепочку геокодера через « · » и не дублирует страну (#1750)', () => {
+    const { getByText } = render(
+      <WeatherWidget
+        points={[{ coord: '50.6, 16.1', address: '30110 · Адршпа · Краловеградецкий край · Чехия' }]}
+        countryName="Чехия"
+      />,
+    )
+    // Номер дома/индекс не попадает в заголовок, страна не повторяется дважды.
+    expect(getByText(/Погода в Адршпа, Краловеградецкий край, Чехия$/)).toBeTruthy()
+  })
 })

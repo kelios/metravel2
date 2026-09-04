@@ -37,3 +37,25 @@ describe('buildPlaceTitleParts (#224 — clean nearby-place titles)', () => {
     expect(buildPlaceTitleParts({})).toEqual({ title: 'Точка маршрута' })
   })
 })
+
+describe('buildPlaceTitleParts (#1750 — цепочка геокодера через « · »)', () => {
+  const DOT_CHAIN = '332 · Soblówka · Силезское воеводство · Живецкий повят · Польша'
+
+  it('разбирает точку, сохранённую до #1717: заголовок — имя объекта, а не вся цепочка', () => {
+    const parts = buildPlaceTitleParts({ address: DOT_CHAIN })
+    expect(parts.title).toBe('Soblówka')
+    expect(parts.subtitle).toBe('332, Силезское воеводство, Живецкий повят, Польша')
+  })
+
+  it('укорачивает и `name`, если цепочкой оказалось оно', () => {
+    const parts = buildPlaceTitleParts({ name: DOT_CHAIN, address: DOT_CHAIN })
+    expect(parts.title).toBe('Soblówka')
+  })
+
+  it('короткое название без разделителей не трогает — вызов идемпотентен', () => {
+    expect(buildPlaceTitleParts({ name: 'Soblówka' })).toEqual({ title: 'Soblówka' })
+    expect(buildPlaceTitleParts({ address: 'Bacówka PTTK na Rycerzowej' })).toEqual({
+      title: 'Bacówka PTTK na Rycerzowej',
+    })
+  })
+})
