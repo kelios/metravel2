@@ -228,6 +228,27 @@ describe('post-deploy SEO check helpers', () => {
       ])
     })
 
+    // #1762: страновой лендинг квестов идёт в выдачу, только если собирает
+    // больше одного города, — на 04.09.2026 это 13 адресов из 32, а остальные
+    // 19 несут `noindex, follow`. Все 32 лежат в sitemap.xml, который этот гейт
+    // обходит целиком, поэтому без исключения деплой падал бы девятнадцатью
+    // `robots.noindex`. Кто именно из них обязан быть закрыт, здесь неизвестно:
+    // это знает каталог, и сверяет verify-static-quest-seo.js до деплоя.
+    it('leaves the quest country family to the build-time gate, in both directions', () => {
+      expect(codes(CLOSED, 'page', 'https://metravel.by/quests/country/france')).toEqual([])
+      expect(codes(OPEN, 'page', 'https://metravel.by/quests/country/belarus')).toEqual([])
+      expect(codes('<title>x</title>', 'page', 'https://metravel.by/quests/country/poland')).toEqual([])
+    })
+
+    it('does not extend that exception to the rest of the quests section', () => {
+      expect(codes(CLOSED, 'page', 'https://metravel.by/quests')).toEqual(['robots.noindex'])
+      expect(codes(CLOSED, 'page', 'https://metravel.by/quests/country')).toEqual(['robots.noindex'])
+      expect(codes(CLOSED, 'page', 'https://metravel.by/quests/grodno')).toEqual(['robots.noindex'])
+      expect(codes(CLOSED, 'page', 'https://metravel.by/quests/94/luninets-railway')).toEqual([
+        'robots.noindex',
+      ])
+    })
+
     it('keeps the auth contract and falls back to strict when the URL is unknown', () => {
       expect(codes('<title>x</title>', 'auth', 'https://metravel.by/login')).toEqual([
         'robots.auth',

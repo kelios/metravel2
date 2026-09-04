@@ -1,10 +1,6 @@
 ---
 name: review-architecture
-description: >-
-  Архитектурное ревью MeTravel: соответствие контрактам AGENTS.md (ImageCardMedia,
-  UnifiedTravelCard, externalLinks, React Query/Zustand), слои и зависимости,
-  god-файлы, дублирование механизмов; нарушения исправляются. Триггеры:
-  «архитектурное ревью», «проверь архитектуру», «соответствие правилам проекта».
+description: "Архитектурное ревью: контракты проекта, слои и зависимости, god-файлы, дублирование механизмов; нарушения исправляются. Триггеры: «архитектурное ревью», «соответствие правилам проекта»."
 ---
 
 # review-architecture
@@ -17,7 +13,7 @@ description: >-
 1. **Гварды** — прогнать `npm run guard:external-links`, `guard:file-complexity`,
    `check:image-architecture` (это машинная часть; падения чинить по регламенту
    агента guard-enforcer).
-2. **Контракты AGENTS.md** — делегируй `review-auditor`:
+2. **Контракты CLAUDE.md** — делегируй `review-auditor`:
    - прямой `expo-image` / `Linking.openURL` / `window.open` вне разрешённых мест;
    - travel-карточки мимо `UnifiedTravelCard`; изображения мимо `ImageCardMedia`;
    - серверный стейт мимо React Query (fetch в компонентах/Zustand), клиентский —

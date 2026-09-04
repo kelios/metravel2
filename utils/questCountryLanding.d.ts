@@ -15,6 +15,10 @@ export type QuestCountryLandingGroup<T = unknown> = {
 };
 
 export const ISO_ALPHA2_CODES: Set<string>;
+export const QUEST_COUNTRY_LANDING_MIN_CITIES: number;
+export function questCountryLandingIsIndexable(
+  country: { cities?: unknown[] } | null | undefined,
+): boolean;
 export function normalizeIsoCountryCode(value: unknown): string | null;
 export function getIsoCountryDisplayName(
   countryCode: unknown,

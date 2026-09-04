@@ -1,11 +1,6 @@
 ---
 name: metravel-slider-perf-guard
-description: >-
-  Двусторонняя верификация «свайп hero-галереи travel ↔ web-перформанс
-  travel-details»: любая перф-оптимизация проверяется на живой свайп, любой фикс
-  свайпа — на LCP/TBT/бандл. Оба стража зелёные = done. Триггеры: «оптимизировал
-  travel — проверь слайдер», «почини свайп галереи не уронив перформанс»,
-  «слайдер опять не листается после оптимизаций», «перф-правка travel-details».
+description: "Двусторонняя верификация «свайп hero-галереи travel ↔ перформанс travel-details»: оба стража зелёные = done. Триггеры: «оптимизировал travel — проверь слайдер», «перф-правка travel-details»."
 ---
 
 # metravel-slider-perf-guard
@@ -18,7 +13,7 @@ description: >-
 перед сдачей**.
 
 Контекст-корни мёртвого свайпа и все стражи — memory `[[gallery-dead-swipe]]`.
-Load-bearing правило — `AGENTS.md` → «Архитектурные правила (web-перформанс)» п.3.
+Load-bearing правило — `CLAUDE.md` → «Архитектурные правила (web-перформанс)» п.3.
 
 ## Когда обязателен
 
@@ -59,7 +54,8 @@ Load-bearing правило — `AGENTS.md` → «Архитектурные п�
 2. **Живой браузер (mobile 390, честная проба своими руками — не перекладывать):**
    Expo web против обновлённого локального бэкенда `http://localhost:8000`
    (`docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек»); связка с прод-API
-   (`Api Proxy 4620` + `Expo Web ProxyApi 8089`) — когда нужны прод-данные. Дальше `preview_resize` mobile,
+   (`Api Proxy 4620` + `Expo Web ProxyApi 8089`) — когда нужны прод-данные или медиа
+   старых статей. Дальше `preview_resize` mobile,
    открыть реальный `/travels/<slug>`. Свайп проверять **pointer-drag на реальном
    верхнем узле** через `document.elementFromPoint(cx, cy)` (обычно `slider-slide-0`),
    а НЕ на контейнере-предке `travel-details-hero-slider-container` — события не идут

@@ -35,6 +35,7 @@ const {
   injectQuestScenarioContent,
   injectQuestCityLandingSection,
   injectQuestsListingContent,
+  buildQuestCountryLinksHtml,
   buildQuestsListingModel,
   buildQuestScenarioFaqJsonLd,
   buildQuestScenarioHowToJsonLd,
@@ -2289,6 +2290,76 @@ describe('catalog-derived quest country landings', () => {
       'utf8',
     )
   })
+
+  // #1762. Замер 04.09.2026: из 32 живых страновых лендингов 19 собирали ровно
+  // один город, и ни один из 32 не был проиндексирован — lastCrawlTime пуст на
+  // всех, 11 адресов Google не знает вовсе. Страна с одним городом повторяет
+  // посадочную этого города, поэтому в выдачу она не идёт.
+  it('keeps a single-city country landing out of the index and a multi-city one in it', () => {
+    const countries = buildQuestCountryLandingModel(quests)
+    const belarus = countries.find((country: { countryAlias: string }) => country.countryAlias === 'belarus')
+    const poland = countries.find((country: { countryAlias: string }) => country.countryAlias === 'poland')
+
+    expect(belarus.cities).toHaveLength(2)
+    expect(poland.cities).toHaveLength(1)
+
+    const belarusHtml = buildQuestCountryLandingHtml(MINIMAL_BASE, belarus)
+    const polandHtml = buildQuestCountryLandingHtml(MINIMAL_BASE, poland)
+
+    expect(polandHtml).toContain('<meta data-rh="true" name="robots" content="noindex, follow"/>')
+    expect(belarusHtml).not.toContain('content="noindex, follow"')
+    // follow, а не nofollow: ссылки на город и квесты со страницы обязаны
+    // работать — иначе одностраничная страна становится ещё и тупиком графа.
+    expect(polandHtml).not.toContain('nofollow')
+    // Тело страницы не режем: по прямой ссылке человек по-прежнему видит города.
+    expect(polandHtml).toContain('data-ssg-quest-country-cities="true"')
+    expect(polandHtml).toContain('href="/quests/krakow"')
+  })
+
+  it('lists only indexable country landings in the /quests hub block', () => {
+    const countries = buildQuestCountryLandingModel(quests)
+    const linksHtml = buildQuestCountryLinksHtml(countries, {
+      h2Style: 'h2',
+      pStyle: 'p',
+      ulStyle: 'ul',
+    })
+
+    expect(linksHtml).toContain('href="/quests/country/belarus"')
+    expect(linksHtml).not.toContain('href="/quests/country/poland"')
+    expect(linksHtml).toContain('Квесты по странам')
+
+    const listing = injectQuestsListingContent(MINIMAL_BASE, quests, undefined, countries)
+    expect(listing).toContain('data-ssg-quests-countries="true"')
+    expect(listing).toContain('href="/quests/country/belarus"')
+    expect(listing).not.toContain('href="/quests/country/poland"')
+  })
+
+  it('drops the hub block entirely when no country landing qualifies', () => {
+    const singleCityOnly = buildQuestCountryLandingModel(quests).filter(
+      (country: { countryAlias: string }) => country.countryAlias === 'poland',
+    )
+
+    expect(buildQuestCountryLinksHtml(singleCityOnly, { h2Style: '', pStyle: '', ulStyle: '' })).toBe('')
+    expect(injectQuestsListingContent(MINIMAL_BASE, quests, undefined, singleCityOnly)).not.toContain(
+      'data-ssg-quests-countries="true"',
+    )
+  })
+
+  // Единственный вход на страновой лендинг до #1762 — sitemap.xml: хаб
+  // перечисляет города напрямую, крошки города идут мимо страны. Ссылка вверх с
+  // посадочной города и есть то, чего краулеру не хватало.
+  it('links a city landing up to its country only when that country is indexable', () => {
+    const countries = buildQuestCountryLandingModel(quests)
+    const belarus = countries.find((country: { countryAlias: string }) => country.countryAlias === 'belarus')
+    const minsk = buildQuestCityLandingModel(quests, undefined, []).find(
+      (city: { alias: string }) => city.alias === 'minsk',
+    )
+
+    expect(buildQuestCityLandingHtml(MINIMAL_BASE, minsk, belarus)).toContain(
+      'href="/quests/country/belarus"',
+    )
+    expect(buildQuestCityLandingHtml(MINIMAL_BASE, minsk, null)).not.toContain('/quests/country/')
+  })
 })
 
 // Регресс: URL hero-картинки главной известен только из JS-бандла, поэтому запрос
@@ -2785,5 +2856,340 @@ describe('gateAppScriptsBehindHero (#1479)', () => {
     r.timeouts.forEach((cb) => cb()); // late timeout must be a no-op
     (r.docListeners.pointerdown || []).forEach((cb) => cb());
     expect(r.injected).toHaveLength(3); // exactly once
+  });
+});
+
+describe('SSG-срез маршрута квеста (#1763)', () => {
+  const {
+    splitQuestStorySentences,
+    questAnswerLiterals,
+    selectQuestSafeSentences,
+    buildQuestPointFacts,
+    trimQuestPointTitle,
+    buildQuestRouteDigest,
+    buildQuestRouteDigestHtml,
+    findQuestSpoilerLeaks,
+    injectQuestIntroSection,
+  } = require('../../scripts/generate-seo-pages.js');
+
+  const STYLES = { h2Style: 'h2', h3Style: 'h3', pStyle: 'p', factStyle: 'f' };
+
+  describe('отбор безопасных предложений', () => {
+    it('снимает предложение, обращённое к игроку, и оставляет описание объекта', () => {
+      const story =
+        'Ратуша на рыночной площади — старейшая сохранившаяся в Беларуси. ' +
+        'Остановись на дамбе и дай замку себя рассмотреть.';
+      expect(selectQuestSafeSentences(story, [])).toEqual([
+        'Ратуша на рыночной площади — старейшая сохранившаяся в Беларуси.',
+      ]);
+    });
+
+    it('снимает предложение со вторым лицом даже без глагола-указания', () => {
+      expect(selectQuestSafeSentences('Перед тобой брама. Браму возвели в 1600 году.', [])).toEqual([
+        'Браму возвели в 1600 году.',
+      ]);
+    });
+
+    it('публикует предложения дословно — новый текст не сочиняется', () => {
+      const story = 'Костёл возвели в 1593 году. Это первый барочный храм Речи Посполитой.';
+      for (const sentence of selectQuestSafeSentences(story, [])) {
+        expect(story).toContain(sentence);
+      }
+    });
+
+    it('снимает служебную формулу точки «по желанию» и доходит до описания места', () => {
+      // Одна и та же формула стоит у 49 точек: без этого фильтра 40 страниц
+      // несли бы одинаковый текст вместо своего.
+      const story =
+        'Необязательная точка — не загадка, а рекомендация.\n\n' +
+        'Рядом с маршрутом есть место, ради которого стоит сделать крюк.\n\n' +
+        'Изысканная польская кухня прямо на Главном рынке.';
+      expect(selectQuestSafeSentences(story, [])).toEqual([
+        'Изысканная польская кухня прямо на Главном рынке.',
+      ]);
+    });
+
+    it('точка без уцелевших предложений остаётся без описания, а не падает', () => {
+      expect(selectQuestSafeSentences('Найди табличку. Посчитай окна.', [])).toEqual([]);
+      expect(selectQuestSafeSentences('', [])).toEqual([]);
+      expect(selectQuestSafeSentences(null, [])).toEqual([]);
+    });
+  });
+
+  describe('ответы не раскрываются', () => {
+    it('разбирает все типы answer_pattern', () => {
+      expect(questAnswerLiterals({ type: 'exact_any', value: '["орел","орёл"]' })).toEqual(['орел', 'орёл']);
+      expect(questAnswerLiterals({ type: 'exact', value: '5' })).toEqual(['5']);
+      expect(questAnswerLiterals({ type: 'range', value: '{"min":6,"max":8}' })).toEqual(['6', '7', '8']);
+      expect(questAnswerLiterals({ type: 'any_text', value: '{"min_length":8}' })).toEqual([]);
+      expect(questAnswerLiterals({ type: 'any', value: '' })).toEqual([]);
+      expect(questAnswerLiterals({ type: 'any_number', value: '' })).toEqual([]);
+      expect(questAnswerLiterals(null)).toEqual([]);
+    });
+
+    it('не перечисляет диапазон, который задаёт меру, а не ответ', () => {
+      expect(questAnswerLiterals({ type: 'range', value: '{"min":1,"max":5000}' })).toEqual([]);
+    });
+
+    it('снимает предложение с ответом из закрытого списка, не глядя на регистр и ё', () => {
+      const story = 'На гербе изображён Орёл. Барбакан построили в 1499 году.';
+      expect(selectQuestSafeSentences(story, ['орел'])).toEqual(['Барбакан построили в 1499 году.']);
+    });
+
+    it('снимает предложение с числом из диапазона', () => {
+      const story = 'В окне 7 витражей. Костёл стоит на холме.';
+      expect(selectQuestSafeSentences(story, ['6', '7', '8'])).toEqual(['Костёл стоит на холме.']);
+    });
+  });
+
+  describe('лимиты объёма', () => {
+    it('берёт не больше двух предложений', () => {
+      const story = 'Первое здание. Второе здание. Третье здание.';
+      expect(selectQuestSafeSentences(story, [])).toEqual(['Первое здание.', 'Второе здание.']);
+    });
+
+    it('обрывает по границе предложения, а не по счётчику слов', () => {
+      const long = `${'слово '.repeat(58).trim()}.`;
+      const kept = selectQuestSafeSentences(`${long} Короткое второе предложение здесь.`, []);
+      expect(kept).toEqual([long]);
+    });
+
+    it('берёт первое предложение, даже когда оно длиннее лимита слов', () => {
+      const long = `${'слово '.repeat(80).trim()}.`;
+      expect(selectQuestSafeSentences(long, [])).toEqual([long]);
+    });
+  });
+
+  describe('название точки', () => {
+    it('обрезает хвост после тире, когда он выдаёт ответ', () => {
+      expect(trimQuestPointTitle('Памятник Тысячелетия — ангел над городом', ['ангел']))
+        .toBe('Памятник Тысячелетия');
+    });
+
+    it('оставляет название целиком, когда хвост ответа не несёт', () => {
+      expect(trimQuestPointTitle('Площадь Свободы — сердце города', ['ратуша']))
+        .toBe('Площадь Свободы — сердце города');
+    });
+
+    it('не режет название, в котором ответ и есть имя объекта', () => {
+      expect(trimQuestPointTitle('Прикуривающий', ['прикуривающий'])).toBe('Прикуривающий');
+    });
+  });
+
+  describe('практическая справка', () => {
+    it('показывает часы и цену', () => {
+      expect(buildQuestPointFacts({ opening_hours: 'Ежедневно 9:00–18:00', ticket_price: '22 BYN' }))
+        .toEqual(['Часы работы: Ежедневно 9:00–18:00', 'Билет: 22 BYN']);
+    });
+
+    it('не выдумывает подписи, когда данных нет', () => {
+      expect(buildQuestPointFacts({ is_museum: true, website: 'https://example.by' })).toEqual([]);
+      expect(buildQuestPointFacts(null)).toEqual([]);
+    });
+  });
+
+  describe('модель и разметка блока', () => {
+    const bundle = {
+      steps: [
+        {
+          step_id: 'castle',
+          title: 'Несвижский замок',
+          location: 'Несвижский замок',
+          story: 'Комплекс Радзивиллов строился с конца XVI века. Найди дату над аркой.',
+          task: 'Опиши, каким замок предстаёт перед тобой сегодня утром.',
+          hint: 'Не ищи одну деталь — окинь взглядом всю картину целиком.',
+          answer_pattern: { type: 'any_text', value: '{"min_length":8}' },
+          poi_info: { opening_hours: 'Ежедневно', ticket_price: '22 BYN' },
+        },
+      ],
+    };
+
+    it('несёт название, описание и практику, но не задание, подсказку и ответ', () => {
+      const digest = buildQuestRouteDigest(bundle);
+      expect(digest).toEqual([
+        {
+          stepId: 'castle',
+          title: 'Несвижский замок',
+          location: '',
+          sentences: ['Комплекс Радзивиллов строился с конца XVI века.'],
+          facts: ['Часы работы: Ежедневно', 'Билет: 22 BYN'],
+        },
+      ]);
+      const html = buildQuestRouteDigestHtml(digest, STYLES);
+      expect(html).toContain('Несвижский замок');
+      expect(html).toContain('Комплекс Радзивиллов');
+      expect(html).not.toContain('Опиши, каким замок');
+      expect(html).not.toContain('окинь взглядом');
+      expect(html).not.toContain('Найди дату');
+    });
+
+    // Место повторяет полное название на 14 точках корпуса, поэтому обрезка
+    // названия ради ответа обязана распространяться и на него: иначе снятый
+    // хвост возвращается в заголовок вторым куском.
+    it('не возвращает ответ в заголовок через место, повторяющее название', () => {
+      const spoiled = {
+        steps: [
+          {
+            step_id: 'mon',
+            title: 'Памятник Тысячелетия — ангел над городом',
+            location: 'Памятник Тысячелетия — ангел над городом',
+            story: 'Монумент поставили в 2001 году.',
+            answer_pattern: { type: 'exact_any', value: '["ангел"]' },
+          },
+        ],
+      };
+      const digest = buildQuestRouteDigest(spoiled);
+      expect(digest[0].title).toBe('Памятник Тысячелетия');
+      expect(digest[0].location).toBe('');
+      expect(buildQuestRouteDigestHtml(digest, STYLES)).not.toContain('ангел');
+    });
+
+    it('не заикается названием, когда место содержит его целиком', () => {
+      const digest = buildQuestRouteDigest({
+        steps: [{ step_id: 'w', title: 'Зимний сад', location: 'Зимний сад (Гомель)', story: 'Оранжерею построили при дворце.' }],
+      });
+      expect(digest[0]).toMatchObject({ title: 'Зимний сад (Гомель)', location: '' });
+      expect(buildQuestRouteDigestHtml(digest, STYLES)).not.toContain('Зимний сад — Зимний сад');
+    });
+
+    // Номер дома, совпавший с числовым ответом, — не спойлер: адрес остаётся на
+    // странице, а редактор получает предупреждение, а не упавшую сборку.
+    it('оставляет адрес, который лишь делит число с ответом', () => {
+      const digest = buildQuestRouteDigest({
+        steps: [
+          {
+            step_id: 'g',
+            title: 'Губернаторский дворец',
+            location: 'Дворец, ул. Советская, 18',
+            story: 'Дворец построили в конце столетия.',
+            answer_pattern: { type: 'exact_any', value: '["18"]' },
+          },
+        ],
+      });
+      expect(digest[0].location).toBe('Дворец, ул. Советская, 18');
+    });
+
+    it('не рендерит блок без точек', () => {
+      expect(buildQuestRouteDigestHtml([], STYLES)).toBe('');
+      expect(buildQuestRouteDigestHtml(null, STYLES)).toBe('');
+    });
+
+    it('точка без описания и без практики публикуется одним названием', () => {
+      const html = buildQuestRouteDigestHtml(
+        buildQuestRouteDigest({ steps: [{ step_id: 'x', title: 'Ратуша', story: 'Найди герб.' }] }),
+        STYLES,
+      );
+      const item = html.slice(html.indexOf('<li'), html.indexOf('</li>'));
+      expect(item).toContain('Ратуша');
+      expect(item).not.toContain('<p');
+    });
+
+    it('срез страницы получает точки маршрута', () => {
+      const html = injectQuestIntroSection('<html><head></head><body></body></html>', {
+        title: 'Несвиж',
+        description: 'Пеший квест',
+        quest: { city_name: 'Несвиж' },
+        bundle,
+        links: null,
+      });
+      expect(html).toContain('data-ssg-quest-route="true"');
+      expect(html).toContain('Что на маршруте');
+      expect(html).toContain('Несвижский замок');
+    });
+
+    it('срез без бандла собирается как прежде, без блока маршрута', () => {
+      const html = injectQuestIntroSection('<html><head></head><body></body></html>', {
+        title: 'Несвиж',
+        description: 'Пеший квест',
+        quest: { city_name: 'Несвиж' },
+        bundle: null,
+        links: null,
+      });
+      expect(html).toContain('data-ssg-quest-intro="true"');
+      expect(html).not.toContain('data-ssg-quest-route="true"');
+    });
+  });
+
+  describe('гейт сборки', () => {
+    const bundle = {
+      steps: [
+        {
+          step_id: 'castle',
+          title: 'Несвижский замок',
+          story: 'Комплекс Радзивиллов строился с конца XVI века.',
+          task: 'Опиши, каким замок предстаёт перед тобой сегодня утром.',
+          hint: 'Не ищи одну деталь — окинь взглядом всю картину целиком.',
+          answer_pattern: { type: 'exact_any', value: '["брама"]' },
+        },
+      ],
+    };
+
+    it('пропускает чистую страницу', () => {
+      const digest = buildQuestRouteDigest(bundle);
+      const html = buildQuestRouteDigestHtml(digest, STYLES);
+      expect(findQuestSpoilerLeaks(html, bundle, digest)).toEqual({ errors: [], warnings: [] });
+    });
+
+    it('ловит опубликованное задание', () => {
+      const digest = buildQuestRouteDigest(bundle);
+      const leaked = `<p>Опиши, каким замок предстаёт перед тобой сегодня утром.</p>`;
+      expect(findQuestSpoilerLeaks(leaked, bundle, digest).errors).toEqual(['castle: опубликован task']);
+    });
+
+    it('ловит опубликованную подсказку', () => {
+      const digest = buildQuestRouteDigest(bundle);
+      const leaked = `<p>Не ищи одну деталь — окинь взглядом всю картину целиком.</p>`;
+      expect(findQuestSpoilerLeaks(leaked, bundle, digest).errors).toEqual(['castle: опубликован hint']);
+    });
+
+    it('ловит ответ, просочившийся в описание мимо фильтра', () => {
+      const digest = [{ stepId: 'castle', title: 'Замок', location: '', sentences: ['Здесь стоит брама.'], facts: [] }];
+      expect(findQuestSpoilerLeaks('<p>Здесь стоит брама.</p>', bundle, digest).errors)
+        .toEqual(['castle: описание раскрывает ответ']);
+    });
+
+    it('ответ в самом названии точки — предупреждение, а не остановка сборки', () => {
+      const digest = [{ stepId: 'castle', title: 'Брама', location: '', sentences: [], facts: [] }];
+      const leaks = findQuestSpoilerLeaks('<h3>Брама</h3>', bundle, digest);
+      expect(leaks.errors).toEqual([]);
+      expect(leaks.warnings).toEqual(['castle: ответ звучит в названии или месте точки']);
+    });
+
+    // Ключ точки у модели и у сверки обязан совпадать. Пока модель брала
+    // обрезанное название, а сверка — исходное, шаг без `step_id` терял пару, и
+    // проверка ответа для него не выполнялась вовсе — молча, без единой строки.
+    it('сверяет ответ и у точки без step_id', () => {
+      const noId = {
+        steps: [
+          {
+            title: 'Памятник Тысячелетия — ангел над городом',
+            story: 'Монумент поставили в 2001 году.',
+            answer_pattern: { type: 'exact_any', value: '["ангел"]' },
+          },
+        ],
+      };
+      const digest = buildQuestRouteDigest(noId);
+      expect(digest[0].stepId).toBe('точка 1');
+      const forged = [{ ...digest[0], sentences: ['Здесь стоит ангел.'] }];
+      expect(findQuestSpoilerLeaks('<p>Здесь стоит ангел.</p>', noId, forged).errors).toEqual([
+        'точка 1: описание раскрывает ответ',
+      ]);
+    });
+
+    it('не считает спойлером число из общего шаблона страницы', () => {
+      // «Маршрут: 7 точек» не раскрывает ответ «7» — проверка ответов идёт по
+      // опубликованному описанию, а не по всему HTML.
+      const numeric = { steps: [{ step_id: 'p', title: 'Мост', story: 'Мост построен в камне.', task: '', hint: '', answer_pattern: { type: 'range', value: '{"min":6,"max":8}' } }] };
+      const digest = buildQuestRouteDigest(numeric);
+      const html = `<ul><li>Маршрут: 7 точек</li></ul>${buildQuestRouteDigestHtml(digest, STYLES)}`;
+      expect(findQuestSpoilerLeaks(html, numeric, digest).errors).toEqual([]);
+    });
+  });
+
+  describe('splitQuestStorySentences', () => {
+    it('схлопывает абзацы в общий поток предложений', () => {
+      expect(splitQuestStorySentences('Первое.\n\nВторое!  Третье?')).toEqual(['Первое.', 'Второе!', 'Третье?']);
+      expect(splitQuestStorySentences('')).toEqual([]);
+    });
   });
 });

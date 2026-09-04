@@ -1,11 +1,6 @@
 ---
 name: ticket-flow
-description: >-
-  Прогон фронтенд-тикета через общий MCP task board MeTravel: взять задачу с борда
-  (или завести), провести через discovery → implement → review → test → release силами
-  профильных FE-агентов, двигая статус на борде на каждом шаге. Зеркалит ролевой пайплайн
-  бэка (.codex/team). Триггеры: «возьми тикет в работу», «прогони задачу N по пайплайну»,
-  «обработай очередь front todo».
+description: "Прогон фронтенд-тикета через MCP task board: discovery → implement → review → test → release силами профильных FE-агентов. Триггеры: «возьми тикет в работу», «прогони задачу N по пайплайну»."
 ---
 
 # ticket-flow
@@ -33,13 +28,18 @@ description: >-
 | Роль (как на бэке) | Исполнитель в этом репо |
 |---|---|
 | task-watcher / manager | агент `ticket-board` (борд: create/list/update/sync) |
-| refinement / BA | оркестратор: уточнить Goal/AC, при нехватке — `task-author` оформит детали |
+| refinement / BA | оркестратор: уточнить Goal/AC, при нехватке — `task-author` оформит детали; для App Store scope и Apple-требований — `ios-analyst` |
+| architect (мобильный/платформенный scope) | `ios-architect` для iOS/shared границ и плана валидации |
+| designer | `ios-designer` (HIG, safe area, скриншоты стора, паритет трёх поверхностей) |
 | developer (FE) | `travel-expert`, `map-expert`, `metravel-seo-expert`, `refactor-surgeon`, `dev-loop` |
+| developer (мобильный) | `android-expert` (Android/native), `ios-expert` (iPhone/iOS-платформа) |
 | content / SEO | `travel-writer`, `metravel-seo-expert`, `index-doctor` |
-| tester | `test-author` (Jest unit + Playwright e2e) |
-| reviewer | `/code-review` или агент `review-auditor` |
+| tester | `test-author` (Jest unit + Playwright e2e); устройство — `android-expert` (adb) и `ios-tester` (simulator/physical/TestFlight) |
+| reviewer (гейт `review → testing`) | агент `code-review-gate` — ОБЯЗАТЕЛЕН, без его вердикта борд не пустит задачу в `testing` |
+| reviewer (доп. фокус) | `/code-review`, `review-auditor` (углублённый аудит), `browser-reviewer` (видимые web-изменения) |
+| reviewer (iOS-диффы) | `ios-reviewer` — независимый review-and-fix перед iPhone-тестированием |
 | acceptance (приёмка спринта) | агент `board-reviewer` / skill `/sprint-review` — Done gate → `done` |
-| releaser | preflight (`/preflight`) + `frontend-deployer` по явному target env |
+| releaser | preflight (`/preflight`) + `frontend-deployer` по явному target env; сторы — `android-publisher` (Google Play) и `ios-deployer` (TestFlight/App Store), каждый по отдельной явной команде владельца |
 
 Бэкенд-тикеты (`area=back`) этот скилл НЕ реализует — только заводит/трекает через
 `ticket-board`; реализация в `../metravel-backend` (владелец/бэкендер).
@@ -57,25 +57,41 @@ description: >-
      из `docs/TASK_BOARD_MCP.md`). При нехватке проверяемых AC или контракта — ОДИН
      компактный уточняющий вопрос пользователю, не выдумывай критерии.
 3. **In progress.** `ticket-board`: `status=in_progress`, `assignee=<агент-исполнитель>`.
-   Делегируй реализацию профильному FE-агенту из таблицы. Соблюдай контракты AGENTS.md
+   Делегируй реализацию профильному FE-агенту из таблицы. Соблюдай контракты CLAUDE.md
    (ImageCardMedia, UnifiedTravelCard, externalLinks, React Query/Zustand, TS strict).
-4. **Review.** `/code-review` или `review-auditor` по diff. Подтверждённые находки —
-   чинит исполнитель, цикл повторяется. На борде — `status=review`, evidence = вердикт ревью.
-   После вердикта `pass` diff задачи коммитится ЯВНЫМИ путями и пушится в `main`
-   (`git add <пути задачи>` → `git commit` → `git push origin main`; `git add -A` в общем
-   чекауте запрещён), sha — в `description`, и только потом статус меняется на `testing`:
-   приёмка и dev-deploy проверяют запушенный код, а не рабочее дерево.
-5. **Test / QA.** Делегируй `test-author`: unit/e2e на новое поведение. Видимые/web-изменения —
-   ОБЯЗАТЕЛЬНО браузерная проверка (Playwright/preview), как требует AGENTS.md. На борде
-   `testing` означает только активную проверку или повторный замер с exact параметром,
-   threshold/trigger и временем. Завершённая проверка закрывает current acceptance в `done`;
-   подтверждённый отдельный дефект → `problem-memory` + create/reuse связанной bug/task.
-   Missing device/access/env/active gate → остановиться, запросить exact unblock у владельца
-   и затем продолжить тот же acceptance без финального `verify pending` handoff.
-6. **Release.** Только по явному запросу и target env: `/preflight` → `frontend-deployer`
-   (деплой строго через `scripts/fix-prod.sh`). На борде — `status=done` с changed files +
-   validation evidence + (если деплой) прод-health. Без деплоя — `done` после зелёного
-   review + локальной верификации, пометь «deploy pending».
+4. **Review — обязательный гейт, запускается сам.** Как только реализация готова и тикет
+   переведён в `status=review`, PostToolUse-ветка хука `.claude/hooks/review-gate.mjs` требует
+   немедленно вызвать агента `code-review-gate` — не жди просьбы пользователя и не откладывай
+   на конец сессии (`/review-gate <id>` нужен только для повторного прогона). Он читает diff и
+   ищет дубли существующих компонентов/хуков, неоптимальный код, противоречия правилам проекта
+   и собственным контрактам, регрессии. Вердикт:
+   - `changes_requested` (любой P1/P2) → агент сам возвращает тикет в `in_progress` с findings в
+     `description`; чинит исполнитель, затем ревью прогоняется заново;
+   - `pass` (чисто или только P3) → агент записывает вердикт, коммитит diff задачи ЯВНЫМИ
+     путями и пушит его в `main` (`git add <пути задачи>` → `git commit` → `git push origin main`;
+     `git add -A` и commit без путей в общем чекауте запрещены), дописывает sha коммита в
+     `description` и только после этого переводит тикет в `testing`.
+
+   Гейт принудительный и в обратную сторону: PreToolUse-ветка того же хука блокирует
+   `metravel_task_update(status="testing")`, пока для тикета нет свежего вердикта `pass`; вердикт
+   протухает, если код доправили после ревью. Углублённый аудит (`review-auditor`,
+   `browser-reviewer`, `/review-security`) подключай дополнительно по фокусу задачи, он гейт не заменяет.
+5. **Test / QA — тоже запускается сам.** Переход в `status=testing` (его делает гейт-агент)
+   тем же хуком требует продолжить приёмку тем же проходом:
+   - нужна развёрнутая среда для evidence → сначала выложи на dev (`/dev-deploy`, `dev-deployer`);
+     прод-деплой, EAS и публикацию в стор без явной команды владельца не запускай;
+   - делегируй `test-author` unit/e2e на новое поведение; видимые/web-изменения — ОБЯЗАТЕЛЬНО
+     браузерная проверка (Playwright/preview), как требует CLAUDE.md;
+   - вызови `board-reviewer` с id тикета: он сверяет Done gate реальными пробами и при завершении
+     закрывает current acceptance в `done`. Подтверждённый отдельный дефект → `problem-memory`
+     + create/reuse связанной bug/task через `ticket-board`; current acceptance не парковать.
+     `testing` между turns допустим только для конкретного повторного замера с exact параметром,
+     threshold/trigger и временем. Missing device/access/env/active gate → остановиться, запросить
+     у владельца exact unblock и затем продолжить тот же acceptance без финального handoff.
+   Назад в `review` из `testing` не возвращай: это заново поднимет код-ревью того же diff'а.
+6. **Release.** Прод-деплой — только по явному запросу и target env: `/preflight` →
+   `frontend-deployer`. Приёмка на dev не ждёт прода: FE закрывается в `done` с пометкой target env,
+   а прод-выкладка при необходимости идёт отдельной release-задачей.
 7. **Закрытие.** `ticket-board` дописывает в `description`: changed files, validation, reviewer,
    release-note. Если задача порождает новую (бэкенд-правка) — заведи её на борде `area=back`.
    Перед `done` сверяй `Done gate` из `Task Contract`: FE-задача с BE-зависимостью закрывается
@@ -86,13 +102,27 @@ description: >-
 
 - Каждый переход статуса отражается на борде — борд не должен отставать от реальности.
   Профильные FE-агенты (`travel-expert`, `map-expert`, `quest-expert`, `profile-expert`,
-  `achievements-expert`, `android-expert`, `refactor-surgeon`, `test-author`) теперь САМИ
+  `achievements-expert`, `android-expert`, `ios-expert`, `ios-designer`, `refactor-surgeon`,
+  `test-author`) теперь САМИ
   держат WIP-статус своего тикета (`in_progress` в начале → `review` с evidence в конце) —
   у них есть board-инструменты `metravel_task_get/update/tasks_list/task_board` и протокол
   «Статус на борде». Оркестратор это подстраховывает: при batch/параллельной раздаче СНАЧАЛА
   переведи раздаваемые тикеты в `in_progress` (одним вызовом `ticket-board`), затем дай работу —
   чтобы WIP был виден, даже если агент не успел сам. Создание/структура новых тикетов и
   спринтов — по-прежнему ТОЛЬКО через `ticket-board`.
+- **`review → testing` только через `code-review-gate`.** Ни оркестратор, ни исполнитель, ни
+  `ticket-board` не ставят `testing` руками: хук `.claude/hooks/review-gate.mjs` откажет, и это
+  правильно — сначала вердикт ревью. Аварийный обход `REVIEW_GATE_BYPASS=1` применим только по
+  явной просьбе пользователя и фиксируется в `description` тикета.
+- **В `testing` уходит только запушенный код.** Коммит явными путями + `git push origin main`
+  выполняются ПОСЛЕ вердикта `pass` и ДО смены статуса: приёмка, dev-deploy и любая
+  последующая проба берут код из `main`, а не из общего рабочего дерева. Коммит и push
+  вердикт не ломают. Чужой набор в `npm run check:preflight:dry` → узкие проверки своих путей
+  и `SKIP_PREFLIGHT=1 git push origin main` с пометкой в тикете. Протокол —
+  `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`».
+- **Ревью и приёмка — не «по требованию».** Их поднимает статус на борде: `review` → `code-review-gate`,
+  `testing` → `board-reviewer`. Оба субагента запускаются автоматически board pipeline;
+  «пользователь не просил ревью» не основание оставить тикет висеть в `review`/`testing`.
 - `todo`/`in_progress` означают реальную оставшуюся implementation/refinement/ops работу;
   `testing` — только активную проверку или exact timed recheck, не парковку.
 - Статус другой задачи на борде не является доказательством сам по себе. Если BE помечен `done`,
@@ -100,11 +130,6 @@ description: >-
   `problem-memory`/`ticket-board`; current acceptance не возвращай и не паркуй.
 - Один тикет — один активный исполнитель. Не запускай конфликтующие правки одного файла.
 - Не печатай секреты/токены. Деплой — только по явному target, не по умолчанию.
-- Конкретный Task Contract, который перечисляет URL и действие GSC URL Inspection →
-  «Запросить индексирование», уже разрешает это действие для перечисленных URL на уровне
-  проекта. Выполняй его через доступную авторизованную браузерную сессию и фиксируй точный
-  UI-результат; не добавляй отдельный вопрос-подтверждение от `ticket-flow`. Это разрешение
-  не распространяется на другие URL или действия в сторонних кабинетах.
 
 ## Выход
 

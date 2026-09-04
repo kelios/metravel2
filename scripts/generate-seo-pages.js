@@ -33,7 +33,10 @@ const {
   findNearbyQuestCityGroups,
   questRouteVariants,
 } = require('../utils/questCityAlias');
-const { buildQuestCountryLandingGroups } = require('../utils/questCountryLanding');
+const {
+  buildQuestCountryLandingGroups,
+  questCountryLandingIsIndexable,
+} = require('../utils/questCountryLanding');
 const {
   QUESTS_INTRO_TITLE_RU,
   QUESTS_INTRO_LEAD_RU,
@@ -2043,6 +2046,289 @@ function formatQuestDuration(durationMin) {
   return `${mins} мин`;
 }
 
+// ---------------------------------------------------------------------------
+// Безопасный пересказ маршрута для SSG-среза (#1763)
+// ---------------------------------------------------------------------------
+
+/**
+ * Сколько авторского текста точки уходит в статический HTML.
+ *
+ * Замер по всем 165 квестам прода (04.09.2026): 1 предложение на точку даёт
+ * 133 слова уникального текста на квест, 2 — 297, 3 — 450, весь отфильтрованный
+ * `story` — 968. При сегодняшних 104–291 слове вне общего шаблона лимит в два
+ * предложения лечит тонкость среза и оставляет страницу анонсом маршрута, а не
+ * полной публикацией контента квеста (корпус `story` целиком — 221 285 слов).
+ * Лимит по словам страхует случай, когда два предложения оказались абзацем.
+ */
+const QUEST_DIGEST_MAX_SENTENCES = 2;
+const QUEST_DIGEST_MAX_WORDS = 60;
+
+/**
+ * Приметы предложения, обращённого к игроку.
+ *
+ * Отбор идёт по предложениям, а не по абзацам: гипотеза «первый абзац `story`
+ * описывает объект, наводки идут дальше» на корпусе НЕ подтвердилась —
+ * обращение к игроку встречается в первом абзаце даже чаще, чем в последующих
+ * (506/1601 = 31,6% против 853/3460 = 24,7%). Абзац как единица публикации
+ * протаскивал бы наводки на трети точек.
+ */
+const QUEST_PLAYER_ADDRESSED_RE = new RegExp(
+  '(?:^|[^а-яёa-z])(?:' +
+    'остановись|найди|отыщи|обрати|посмотри|подойди|встань|пройди|поверни|загляни|' +
+    'сосчитай|посчитай|прочитай|вглядись|оглядись|присмотрись|запомни|дойди|сверни|' +
+    'поднимись|спустись|ищи|смотри|обойди|двигайся|иди|идём|идем|дай|' +
+    'ты|тебя|тебе|тобой|твой|твоя|твои|твоё|твое|твоего|твоей' +
+  ')(?:[^а-яёa-z]|$)',
+  'i',
+);
+
+/**
+ * Служебные формулы, которыми открываются точки «по желанию».
+ *
+ * Одна и та же фраза стоит у 49 точек в 40 квестах, а настоящее описание места
+ * («Изысканная польская кухня прямо на Главном рынке…») идёт следующим абзацем.
+ * Без этого фильтра лимит в два предложения съедал бы ровно шаблон, и 40
+ * страниц несли бы одинаковый текст вместо своего.
+ */
+// `\b` в JS считает границей только латиницу и цифры, поэтому после кириллицы
+// он не срабатывает вовсе — конец слова проверяем явным «дальше не буква».
+const QUEST_BOILERPLATE_RE = /^(?:необязательн(?:ая|ое|ый)|рядом с маршрутом есть место|лучшие открытия в путешествии)(?![а-яё])/i;
+
+/** Разбор описания точки на предложения; абзацы схлопываются в общий поток. */
+function splitQuestStorySentences(text) {
+  return String(text || '')
+    .replace(/\s+/g, ' ')
+    .split(/(?<=[.!?…])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Конкретные ответы, которые нельзя раскрывать.
+ *
+ * `any`, `any_text` и `any_number` конкретного ответа не задают — раскрывать у
+ * них нечего. У `range` спойлер — любое число диапазона, а не только границы.
+ */
+function questAnswerLiterals(answerPattern) {
+  const pattern = parseQuestJsonField(answerPattern, null);
+  if (!pattern || typeof pattern !== 'object') return [];
+  const value = parseQuestJsonField(pattern.value, pattern.value);
+
+  if (pattern.type === 'exact_any') {
+    return Array.isArray(value) ? value.map((item) => String(item)) : [];
+  }
+  if (pattern.type === 'exact') {
+    return value === null || value === undefined || value === '' ? [] : [String(value)];
+  }
+  if (pattern.type === 'range' && value && typeof value === 'object') {
+    const min = Number(value.min);
+    const max = Number(value.max);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || max < min) return [];
+    // Диапазон шире сотни — не ответ, а мера; перечислять его бессмысленно.
+    if (max - min > 100) return [];
+    const literals = [];
+    for (let n = min; n <= max; n++) literals.push(String(n));
+    return literals;
+  }
+  return [];
+}
+
+/** Нормализация для сверки: регистр, ё/е и пунктуация не должны прятать совпадение. */
+function normalizeQuestText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+/**
+ * Содержит ли текст ответ целиком (все слова ответа как отдельные токены).
+ *
+ * Сверка идёт по токенам, а не подстрокой, как в `scan-quest-hint-leak.js`, и
+ * это не рассинхрон, а разная цена ошибки: у скана есть baseline и редактор,
+ * который разбирает находку, а здесь совпадение молча выбрасывает предложение
+ * из публикации. Подстрочное правило на корпусе даёт 4 совпадения, и 3 из них —
+ * внутри чужого слова («кот» в «который», «три» в «смотрители», «лев» в
+ * «уцелевшие»), то есть три выброшенных описания на ровном месте.
+ */
+function questTextRevealsAnswer(text, answerLiterals) {
+  const tokens = new Set(normalizeQuestText(text).split(' ').filter(Boolean));
+  if (!tokens.size) return false;
+  return answerLiterals.some((literal) => {
+    const words = normalizeQuestText(literal).split(' ').filter(Boolean);
+    return words.length > 0 && words.every((word) => tokens.has(word));
+  });
+}
+
+/**
+ * Описание точки для статического HTML: подмножество авторского `story`.
+ *
+ * Новый текст не сочиняется — берутся только те предложения, что не обращены к
+ * игроку и не содержат ответа. На корпусе фильтр снимает 1 732 предложения из
+ * 11 164 (16%) и 17 предложений с дословным ответом, не оставляя без текста ни
+ * одной из 1 436 точек.
+ */
+function selectQuestSafeSentences(story, answerLiterals, options = {}) {
+  const maxSentences = options.maxSentences ?? QUEST_DIGEST_MAX_SENTENCES;
+  const maxWords = options.maxWords ?? QUEST_DIGEST_MAX_WORDS;
+  const kept = [];
+  let words = 0;
+
+  for (const sentence of splitQuestStorySentences(story)) {
+    if (kept.length >= maxSentences) break;
+    if (QUEST_BOILERPLATE_RE.test(sentence)) continue;
+    if (QUEST_PLAYER_ADDRESSED_RE.test(sentence)) continue;
+    if (questTextRevealsAnswer(sentence, answerLiterals)) continue;
+    const sentenceWords = sentence.split(/\s+/).filter(Boolean).length;
+    // Обрыв только по границе предложения: половина фразы в HTML хуже, чем её
+    // отсутствие. Первое предложение берём даже если оно длиннее лимита —
+    // иначе точка с одним длинным предложением осталась бы без описания.
+    if (kept.length > 0 && words + sentenceWords > maxWords) break;
+    kept.push(sentence);
+    words += sentenceWords;
+  }
+
+  return kept;
+}
+
+/** Практическая справка о точке: только заполненные поля, без пустых подписей. */
+function buildQuestPointFacts(poiInfo) {
+  const poi = parseQuestJsonField(poiInfo, null);
+  if (!poi || typeof poi !== 'object') return [];
+  const facts = [];
+  const hours = String(poi.opening_hours || poi.openingHours || '').trim();
+  const price = String(poi.ticket_price || poi.ticketPrice || '').trim();
+  if (hours) facts.push(`Часы работы: ${hours}`);
+  if (price) facts.push(`Билет: ${price}`);
+  return facts;
+}
+
+/**
+ * Название точки без хвоста, который выдаёт ответ.
+ *
+ * Названия сделаны по образцу «Объект — деталь», и деталь порой и есть ответ
+ * («Памятник Тысячелетия — ангел над городом» при ответе «ангел»). На корпусе
+ * ответ попадает в название у 15 точек; обрезка по тире лечит 9 из них,
+ * сохраняя идентификацию объекта. Оставшиеся 6 — те, где ответ и есть имя
+ * объекта («Прикуривающий»): там обрезать нечего, и это разбирает редактор по
+ * предупреждению сборки, а не код.
+ */
+function trimQuestPointTitle(title, answerLiterals) {
+  const full = String(title || '').trim();
+  if (!full || !answerLiterals.length) return full;
+  const head = full.split(/\s+[—–-]\s+/)[0].trim();
+  if (!head || head === full) return full;
+  if (!questTextRevealsAnswer(full, answerLiterals)) return full;
+  return questTextRevealsAnswer(head, answerLiterals) ? full : head;
+}
+
+/**
+ * Ключ точки, общий для модели и сверки.
+ *
+ * Оба места обязаны считать его из СЫРЫХ полей шага. Возьми модель обрезанное
+ * название, а сверка — исходное, и ключи разойдутся ровно на той точке, ради
+ * которой обрезка и сделана: сверка не найдёт опубликованное описание и молча
+ * пропустит проверку ответа. Порядковый номер как запасной ключ ещё и уникален —
+ * два одноимённых объекта без `step_id` не схлопнутся в одну запись.
+ */
+function questPointId(step, index) {
+  const explicit = String(step?.step_id || step?.id || '').trim();
+  return explicit || `точка ${index + 1}`;
+}
+
+/**
+ * Модель блока маршрута: что именно краулер узнаёт о точках.
+ *
+ * `task`, `hint` и `answer_pattern` сюда не попадают ни в каком виде — модель
+ * несёт только название, место, отобранные предложения и практику.
+ */
+function buildQuestRouteDigest(bundle) {
+  return getQuestSteps(bundle)
+    .map((step, index) => {
+      if (!step || typeof step !== 'object') return null;
+      const answerLiterals = questAnswerLiterals(step.answer_pattern);
+      const title = trimQuestPointTitle(step.title, answerLiterals);
+      // Место обрезаем тем же правилом, что и название. Иначе точка, у которой
+      // место повторяет полное название («Памятник Тысячелетия — ангел над
+      // городом» в обоих полях), вернула бы в заголовок ровно тот хвост с
+      // ответом, ради которого название и обрезано.
+      const location = trimQuestPointTitle(step.location, answerLiterals);
+      if (!title && !location) return null;
+      // Место чаще повторяет объект названия, чем дополняет его: на 14 точках
+      // корпуса заголовок читался заиканием («Зимний сад — Зимний сад
+      // (Гомель)»). Место, содержащее название целиком, — это и есть полный
+      // заголовок точки, и повторять название перед ним незачем.
+      const locationCoversTitle =
+        Boolean(location) && normalizeQuestText(location).startsWith(normalizeQuestText(title));
+      return {
+        stepId: questPointId(step, index),
+        title: locationCoversTitle ? location : title || location,
+        location: locationCoversTitle || location === title ? '' : location,
+        sentences: selectQuestSafeSentences(step.story, answerLiterals),
+        facts: buildQuestPointFacts(step.poi_info),
+      };
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Сверка готовой страницы с сырыми полями бандла.
+ *
+ * Задание и подсказка проверяются по ИТОГОВОМУ HTML и сырым полям бандла:
+ * проверка независима от отбора, поэтому ошибка в самом фильтре ею ловится, а
+ * не маскируется. Слишком короткие задания не проверяются на вхождение целиком
+ * — фраза в пару слов совпала бы случайно.
+ *
+ * Ответ ищется в опубликованном описании точки, а не во всём HTML: у 194 точек
+ * ответ числовой, и число вроде «7» неизбежно встречается в общем шаблоне
+ * страницы («Маршрут: 7 точек»). Проверять там значило бы валить сборку на
+ * совпадении, которое ничего не раскрывает.
+ *
+ * Возвращает `{ errors, warnings }`: ошибка — то, что натворил код, и она
+ * останавливает сборку; предупреждение — данность контента (ответ вплетён в
+ * само название объекта), и его разбирает редактор.
+ */
+function findQuestSpoilerLeaks(html, bundle, digest = []) {
+  const haystack = normalizeQuestText(html);
+  const errors = [];
+  const warnings = [];
+  if (!haystack) return { errors, warnings };
+
+  const intro = getQuestIntro(bundle);
+  const points = [
+    ...(intro && typeof intro === 'object' ? [{ point: intro, pointId: 'intro' }] : []),
+    ...getQuestSteps(bundle).map((step, index) => ({ point: step, pointId: questPointId(step, index) })),
+  ];
+  const digestById = new Map(digest.map((point) => [point.stepId, point]));
+
+  for (const { point, pointId } of points) {
+    if (!point || typeof point !== 'object') continue;
+
+    for (const field of ['task', 'hint']) {
+      const normalized = normalizeQuestText(point[field]);
+      if (normalized.split(' ').filter(Boolean).length < 6) continue;
+      if (haystack.includes(normalized)) errors.push(`${pointId}: опубликован ${field}`);
+    }
+
+    const literals = questAnswerLiterals(point.answer_pattern);
+    if (!literals.length) continue;
+    // Ключ общий (`questPointId`), поэтому промах здесь означает ровно одно:
+    // точка в блок не попала (нет ни названия, ни места) — проверять нечего.
+    const published = digestById.get(pointId);
+    if (!published) continue;
+
+    if (questTextRevealsAnswer(published.sentences.join(' '), literals)) {
+      errors.push(`${pointId}: описание раскрывает ответ`);
+    }
+    if (questTextRevealsAnswer(`${published.title} ${published.location}`, literals)) {
+      warnings.push(`${pointId}: ответ звучит в названии или месте точки`);
+    }
+  }
+
+  return { errors, warnings };
+}
+
 function buildQuestIntroSectionModel(quest, bundle) {
   const steps = getQuestSteps(bundle);
   const intro = getQuestIntro(bundle);
@@ -2103,6 +2389,40 @@ function buildQuestDetailLinksIndex(cityLandingModel, { siblingLimit = 6 } = {})
     }
   }
   return index;
+}
+
+/**
+ * Блок маршрута для секции детальной страницы квеста.
+ *
+ * До #1763 срез обрывался на «Загружаем квест…»: точек в статическом HTML не
+ * было вовсе, и краулер видел 162–378 слов на 165 URL. Здесь появляется ответ
+ * на вопрос «что это за маршрут» — без заданий, подсказок и ответов.
+ */
+function buildQuestRouteDigestHtml(digest, { h2Style, h3Style, pStyle, factStyle }) {
+  if (!Array.isArray(digest) || !digest.length) return '';
+
+  const items = digest
+    .map((point) => {
+      const heading = point.location
+        ? `${point.title} — ${point.location}`
+        : point.title;
+      const description = point.sentences.length
+        ? `<p style="${pStyle}">${escapeAttr(point.sentences.join(' '))}</p>`
+        : '';
+      const facts = point.facts.length
+        ? `<p style="${factStyle}">${escapeAttr(point.facts.join(' · '))}</p>`
+        : '';
+      return `<li style="margin:0 0 14px"><h3 style="${h3Style}">${escapeAttr(heading)}</h3>${description}${facts}</li>`;
+    })
+    .join('');
+
+  return [
+    '<div data-ssg-quest-route="true">',
+    `<h2 style="${h2Style}">Что на маршруте</h2>`,
+    `<p style="${pStyle}">Точки маршрута по порядку — что это за места и чем они интересны. Задания и ответы остаются в самом квесте.</p>`,
+    `<ol style="margin:0;padding:0 0 0 18px">${items}</ol>`,
+    '</div>',
+  ].join('');
 }
 
 /** Блок перелинковки для секции детальной страницы квеста. */
@@ -2199,11 +2519,18 @@ function injectQuestIntroSection(baseHtml, { title, description, quest, bundle, 
     '@media(max-width:640px){[data-ssg-quest-intro="true"]{margin:12px;padding:16px 14px}[data-ssg-quest-intro="true"] h1{font-size:23px!important}}',
     '</style>',
   ].join('');
+  const h2Style = `margin:20px 0 8px;font:800 20px/1.25 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`;
   const linksHtml = buildQuestDetailLinksHtml(links, {
-    h2Style: `margin:20px 0 8px;font:800 20px/1.25 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`,
+    h2Style,
     pStyle: 'margin:0 0 10px;color:var(--color-text,#22332c)',
     ulStyle: 'margin:0;padding:0 0 0 18px;color:var(--color-text,#22332c)',
     backStyle: 'margin:12px 0 0;font-weight:700',
+  });
+  const routeHtml = buildQuestRouteDigestHtml(buildQuestRouteDigest(bundle), {
+    h2Style,
+    h3Style: `margin:0 0 4px;font:700 17px/1.3 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`,
+    pStyle: 'margin:0 0 6px;color:var(--color-text,#22332c)',
+    factStyle: 'margin:0;font-size:14px;color:var(--color-text-muted,#5f756c)',
   });
 
   const section = [
@@ -2213,6 +2540,7 @@ function injectQuestIntroSection(baseHtml, { title, description, quest, bundle, 
     `<p style="${textStyle}">${escapeAttr(lead)}</p>`,
     introParagraphs,
     facts ? `<ul style="${listStyle}">${facts}</ul>` : '',
+    routeHtml,
     linksHtml,
     '</section>',
   ].join('');
@@ -2587,8 +2915,44 @@ function injectHomeQuestsSection(baseHtml, quests) {
   return `${section}${html}`;
 }
 
+/**
+ * Ссылки на лендинги стран для SSG-среза `/quests`.
+ *
+ * До #1762 на страновые лендинги не ссылалась ни одна страница сайта: хаб
+ * перечисляет 117 городов напрямую, хлебные крошки города идут «Главная →
+ * Квесты → Город» мимо страны. Единственным входом был sitemap.xml, и URL
+ * Inspection 04.09.2026 показал результат: 0 из 32 адресов обойдено, 11 из них
+ * Google вообще не знает. Страница без входящих ссылок — не «страница со слабым
+ * спросом», а страница, до которой краулер не дошёл.
+ */
+function buildQuestCountryLinksHtml(countryLandings, { h2Style, pStyle, ulStyle }) {
+  const indexable = (Array.isArray(countryLandings) ? countryLandings : [])
+    .filter((country) => questCountryLandingIsIndexable(country));
+  if (!indexable.length) return '';
+
+  const links = indexable
+    .map((country) => {
+      const questCount = Array.isArray(country.quests) ? country.quests.length : 0;
+      const cityCount = Array.isArray(country.cities) ? country.cities.length : 0;
+      const label = String(country.countryName || country.countryAlias || '').trim();
+      if (!label || !country.landingPath) return '';
+      return `<li style="margin:0 0 3px"><a href="${escapeAttr(country.landingPath)}">${escapeAttr(label)}</a> — ${questCount} ${pluralizeRu(questCount, 'квест', 'квеста', 'квестов')} в ${cityCount} ${pluralizeRu(cityCount, 'городе', 'городах', 'городах')}</li>`;
+    })
+    .filter(Boolean)
+    .join('');
+  if (!links) return '';
+
+  return [
+    '<div data-ssg-quests-countries="true">',
+    `<h2 style="${h2Style}">Квесты по странам</h2>`,
+    `<p style="${pStyle}">Страны, где маршруты есть больше чем в одном городе. Внутри — список городов страны и все её квесты.</p>`,
+    `<ul style="${ulStyle}">${links}</ul>`,
+    '</div>',
+  ].join('');
+}
+
 /** Rich static intro + per-city links + FAQ for the /quests listing page. */
-function injectQuestsListingContent(baseHtml, quests, cityAliasMap) {
+function injectQuestsListingContent(baseHtml, quests, cityAliasMap, countryLandings = []) {
   const cities = buildQuestsListingModel(quests, cityAliasMap);
   if (!cities.length) return injectQuestLinksIndex(baseHtml, quests);
 
@@ -2629,11 +2993,14 @@ function injectQuestsListingContent(baseHtml, quests, cityAliasMap) {
     .map((item) => `<h3 style="${h3Style}">${escapeAttr(item.q)}</h3><p style="${pStyle}">${escapeAttr(item.a)}</p>`)
     .join('');
 
+  const countriesHtml = buildQuestCountryLinksHtml(countryLandings, { h2Style, pStyle, ulStyle });
+
   const section = [
     `<section data-ssg-quests-listing="true" aria-label="О городских квестах Metravel" style="${sectionStyle}">`,
     `<h1 style="${h1Style}">${escapeAttr(QUESTS_INTRO_TITLE_RU)}</h1>`,
     `<p style="${leadStyle}">${escapeAttr(QUESTS_INTRO_LEAD_RU)}</p>`,
     `<p style="${landingLinkStyle}"><a href="/quests/scenario">Готовый сценарий квеста — распечатать бесплатно</a></p>`,
+    countriesHtml,
     cityGroupsHtml,
     `<h2 style="${h2Style}">Частые вопросы о городских квестах</h2>`,
     faqHtml,
@@ -2660,7 +3027,7 @@ function injectQuestsListingContent(baseHtml, quests, cityAliasMap) {
 }
 
 /** Visible crawlable body for a single /quests/<city> landing. */
-function injectQuestCityLandingSection(baseHtml, city, cityLabel, lead) {
+function injectQuestCityLandingSection(baseHtml, city, cityLabel, lead, countryLanding = null) {
   const sectionStyle = [
     'box-sizing:border-box',
     'max-width:840px',
@@ -2704,6 +3071,13 @@ function injectQuestCityLandingSection(baseHtml, city, cityLabel, lead) {
     .map((travel) => `<li style="margin:0 0 3px"><a href="${escapeAttr(travel.path)}">${escapeAttr(travel.title)}</a></li>`)
     .join('');
 
+  // Родитель города в иерархии раздела. Ставим ссылку только на индексируемый
+  // лендинг: страна с одним городом — это сам этот город, и ссылка вела бы на
+  // копию текущей страницы (#1762).
+  const countryLandingLink = countryLanding && countryLanding.landingPath && countryLanding.countryName
+    ? `<p style="${backStyle}"><a href="${escapeAttr(countryLanding.landingPath)}">Все квесты страны: ${escapeAttr(countryLanding.countryName)}</a></p>`
+    : '';
+
   const section = [
     `<section data-ssg-quest-city="true" aria-label="Городские квесты: ${escapeAttr(cityLabel)}" style="${sectionStyle}">`,
     `<h1 style="${h1Style}">Городские квесты: ${escapeAttr(cityLabel)}</h1>`,
@@ -2718,6 +3092,7 @@ function injectQuestCityLandingSection(baseHtml, city, cityLabel, lead) {
     travelLinks
       ? `<div data-ssg-quest-city-travels="true"><h2 style="${h2Style}">Путешествия: ${escapeAttr(cityLabel)}</h2><p style="${pStyle}">Статьи и готовые маршруты путешественников помогут дополнить прогулку.</p><ul style="${ulStyle}">${travelLinks}</ul></div>`
       : '',
+    countryLandingLink,
     `<p style="${backStyle}"><a href="/quests">Все городские квесты</a></p>`,
     '</section>',
   ].join('');
@@ -2740,7 +3115,7 @@ function injectQuestCityLandingSection(baseHtml, city, cityLabel, lead) {
 }
 
 /** Build the final HTML for one /quests/<city> landing (alias = canonical). */
-function buildQuestCityLandingHtml(cityBaseHtml, city) {
+function buildQuestCityLandingHtml(cityBaseHtml, city, countryLanding = null) {
   const cityLabel = city.name || `Город ${city.cityId}`;
   const count = city.quests.length;
   const canonicalSegment = city.alias || city.cityId;
@@ -2779,7 +3154,7 @@ function buildQuestCityLandingHtml(cityBaseHtml, city) {
     },
     'quest-city',
   );
-  html = injectQuestCityLandingSection(html, city, cityLabel, lead);
+  html = injectQuestCityLandingSection(html, city, cityLabel, lead, countryLanding);
   return html;
 }
 
@@ -2853,7 +3228,19 @@ function buildQuestCountryLandingHtml(countryBaseHtml, country) {
   const lead = `${country.countryName}: на одной странице собраны ${count} ${pluralizeRu(count, 'квест', 'квеста', 'квестов')} с заданиями по реальным местам. Выберите город или маршрут и поделитесь подборкой.`;
   const image = country.cover ? toAbsoluteUrl(country.cover) : OG_IMAGE;
 
-  let html = injectMeta(countryBaseHtml, { title, description, canonical, image, ogType: 'website' });
+  // Страна с одним городом уходит из выдачи: её лендинг повторяет посадочную
+  // этого города и не может добавить к ней ничего (#1762). `follow` оставляем —
+  // ссылки со страницы по-прежнему ведут краулер к городу и квестам.
+  const indexable = questCountryLandingIsIndexable(country);
+
+  let html = injectMeta(countryBaseHtml, {
+    title,
+    description,
+    canonical,
+    image,
+    ogType: 'website',
+    ...(indexable ? {} : { robots: 'noindex, follow' }),
+  });
   html = injectBreadcrumbJsonLd(html, {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -3803,11 +4190,22 @@ async function main() {
     // берут перелинковку (#1756), иначе их SSG-срез остаётся тупиком графа.
     const cityLandingModel = buildQuestCityLandingModel(quests, questCityAliasMap, travels);
     const questDetailLinksIndex = buildQuestDetailLinksIndex(cityLandingModel);
+    // Модель стран нужна раньше собственных страниц: на неё ссылаются хаб
+    // `/quests` и посадочные городов, иначе страновые лендинги остаются вне
+    // графа ссылок и краулер до них не доходит (#1762).
+    const countryLandingModel = buildQuestCountryLandingModel(quests, 'ru');
+    const indexableCountryLandings = new Map(
+      countryLandingModel
+        .filter((country) => questCountryLandingIsIndexable(country))
+        .map((country) => [String(country.countryCode || '').toUpperCase(), country]),
+    );
 
     console.log(`\n🧩 Generating ${quests.length} quest pages...`);
     let questGenerated = 0;
     let questAliasesGenerated = 0;
     let questsWithLinks = 0;
+    let questSpoilerChecked = 0;
+    const questAnswerInTitle = [];
     for (const quest of quests) {
       const route = questRouteKey(quest);
       if (!route) continue;
@@ -3856,6 +4254,22 @@ async function main() {
         links: detailLinks,
       });
 
+      // #1763: страница уходит в индекс с пересказом маршрута, поэтому перед
+      // записью она сверяется с сырыми полями бандла. Раскрытая игровая часть
+      // — это дефект кода, и он останавливает сборку, а не уезжает на прод.
+      if (questBundle) {
+        const spoilers = findQuestSpoilerLeaks(html, questBundle, buildQuestRouteDigest(questBundle));
+        if (spoilers.errors.length) {
+          throw new Error(
+            `quest ${route.questId}: SSG-срез раскрывает игровую часть — ${spoilers.errors.join('; ')}`
+          );
+        }
+        questSpoilerChecked++;
+        if (spoilers.warnings.length) {
+          questAnswerInTitle.push(`${route.questId} (${spoilers.warnings.join('; ')})`);
+        }
+      }
+
       const routeVariants = questRouteVariants(quest, questCityAliasMap);
       for (const variant of routeVariants) {
         writeFileSafe(path.join(DIST_DIR, 'quests', variant.cityId, `${variant.questId}.html`), html);
@@ -3876,7 +4290,12 @@ async function main() {
     ];
     for (const variant of questsListingVariants) {
       if (!fs.existsSync(variant)) continue;
-      const listHtml = injectQuestsListingContent(fs.readFileSync(variant, 'utf8'), quests, questCityAliasMap);
+      const listHtml = injectQuestsListingContent(
+        fs.readFileSync(variant, 'utf8'),
+        quests,
+        questCityAliasMap,
+        countryLandingModel,
+      );
       writeFileSafe(variant, listHtml);
     }
 
@@ -3909,8 +4328,12 @@ async function main() {
       ? fs.readFileSync(cityLandingTemplatePath, 'utf8')
       : questBaseHtml;
     const writtenCityLandingPaths = new Set();
+    let cityLandingsWithCountryLink = 0;
     for (const city of cityLandingModel) {
-      const cityHtml = buildQuestCityLandingHtml(cityLandingBaseHtml, city);
+      const countryLanding =
+        indexableCountryLandings.get(String(city.countryCode || '').toUpperCase()) || null;
+      if (countryLanding) cityLandingsWithCountryLink += 1;
+      const cityHtml = buildQuestCityLandingHtml(cityLandingBaseHtml, city, countryLanding);
       for (const segment of [...city.cityIds, city.segment]) {
         const relativePath = path.join('quests', segment, 'index.html');
         if (writtenCityLandingPaths.has(relativePath)) continue;
@@ -3924,7 +4347,6 @@ async function main() {
     // decides which countries exist; the ISO source decides their stable URL.
     const countryLandingTemplatePath = path.join(DIST_DIR, 'quests', 'country', '[country].html');
     const countryLandingBaseHtml = readRequiredQuestCountryTemplate(countryLandingTemplatePath);
-    const countryLandingModel = buildQuestCountryLandingModel(quests, 'ru');
     let countryLandingsGenerated = 0;
     for (const country of countryLandingModel) {
       const countryHtml = buildQuestCountryLandingHtml(countryLandingBaseHtml, country);
@@ -3938,6 +4360,24 @@ async function main() {
     totalPages += questGenerated + cityLandingsGenerated + countryLandingsGenerated;
     console.log(`  ✅ Generated: ${questGenerated} quest pages + ${questAliasesGenerated} city aliases + ${cityLandingsGenerated} city landings + ${countryLandingsGenerated} country landings + crawlable listing`);
     console.log(`  🔗 Detail pages with internal links: ${questsWithLinks}/${questGenerated}`);
+    // Отдельной строкой, потому что оба числа — про то, дойдёт ли краулер до
+    // страновых лендингов вообще. Ноль в любом из них означает, что они снова
+    // вне графа ссылок, как 04.09.2026 (#1762).
+    console.log(
+      `  🌍 Indexable country landings: ${indexableCountryLandings.size}/${countryLandingsGenerated}` +
+        ` (остальные noindex — один город), city landings linking up: ${cityLandingsWithCountryLink}/${cityLandingModel.length}`,
+    );
+    if (countryLandingsGenerated > 0 && indexableCountryLandings.size > 0 && cityLandingsWithCountryLink === 0) {
+      console.warn(
+        '  ⚠️  Ни одна посадочная города не ссылается на свою страну — сверьте countryCode в модели города и страны.',
+      );
+    }
+    console.log(`  🔒 Проверено на раскрытие заданий и ответов: ${questSpoilerChecked}/${questGenerated}`);
+    if (questAnswerInTitle.length) {
+      // Не дефект генератора: ответ звучит в самом названии объекта, и решает
+      // это редактор в тексте квеста, а не сборка.
+      console.warn(`  ⚠️  ${questAnswerInTitle.length} quest(s): ответ слышен в названии или месте точки — ${questAnswerInTitle.join(', ')}`);
+    }
     // Ключ индекса — questRouteKey(quest).path, тот же, из которого построена
     // модель посадочной. Если он разойдётся, перелинковка молча исчезнет со всех
     // детальных страниц и они снова станут тупиком графа (#1756), — поэтому
@@ -4172,12 +4612,21 @@ if (typeof module !== 'undefined' && module.exports) {
     injectTravelRegisterCtaSection,
     finalizeTravelPageHtml,
     injectQuestIntroSection,
+    splitQuestStorySentences,
+    questAnswerLiterals,
+    selectQuestSafeSentences,
+    buildQuestPointFacts,
+    trimQuestPointTitle,
+    buildQuestRouteDigest,
+    buildQuestRouteDigestHtml,
+    findQuestSpoilerLeaks,
     buildQuestDetailLinksIndex,
     injectQuestLinksIndex,
     injectHomeQuestsSection,
     buildQuestsListingModel,
     buildQuestCityLandingModel,
     buildQuestCountryLandingModel,
+    buildQuestCountryLinksHtml,
     findQuestCityTravelLinks,
     buildQuestsFaqJsonLd,
     buildQuestsListItemListJsonLd,

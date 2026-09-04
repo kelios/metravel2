@@ -276,6 +276,28 @@ describe('quest country landing verification', () => {
     ]))
   })
 
+  // #1762: правило «страна с одним городом не идёт в выдачу» живёт в
+  // генераторе, а сюда приходит уже отрисованный HTML. Без этой проверки
+  // расхождение между правилом и страницей заметил бы только GSC — через месяц.
+  it('demands noindex exactly on the single-city country landings', () => {
+    const noindexHtml = html.replace(
+      '</head>',
+      '<meta name="robots" content="noindex, follow" /></head>',
+    )
+    const cityPaths = ['/quests/minsk', '/quests/gomel']
+    const questPaths = ['/quests/4/minsk-center', '/quests/19/gomel-park']
+
+    expect(verifyQuestCountryHtml(noindexHtml, canonical, cityPaths, questPaths, '', false)).toEqual([])
+    expect(verifyQuestCountryHtml(html, canonical, cityPaths, questPaths, '', true)).toEqual([])
+
+    expect(verifyQuestCountryHtml(html, canonical, cityPaths, questPaths, '', false)).toEqual(
+      expect.arrayContaining(['single-city country landing is missing noindex']),
+    )
+    expect(verifyQuestCountryHtml(noindexHtml, canonical, cityPaths, questPaths, '', true)).toEqual(
+      expect.arrayContaining(['multi-city country landing is noindex: noindex, follow']),
+    )
+  })
+
   it('rejects duplicate head tags and an Open Graph URL that is not self-canonical', () => {
     const broken = html
       .replace(

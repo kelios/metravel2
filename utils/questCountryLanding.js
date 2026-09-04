@@ -143,6 +143,22 @@ function buildQuestCountryLandingGroups(quests, options = {}) {
   );
 }
 
+// Сколько городов страна обязана собрать, чтобы её лендинг имел смысл в выдаче.
+// Страна с одним городом — обёртка вокруг посадочной этого города: те же квесты,
+// те же ссылки, свой URL. Замер 04.09.2026 (#1762): из 32 живых лендингов 19
+// собирали ровно один город, и ни один из 32 не был проиндексирован.
+const QUEST_COUNTRY_LANDING_MIN_CITIES = 2;
+
+/**
+ * Показываем ли лендинг страны поиску. Правило считается по данным каталога, а не
+ * по списку стран: как только у страны появляется второй город, лендинг сам
+ * становится индексируемым, и наоборот.
+ */
+function questCountryLandingIsIndexable(country) {
+  const cities = country?.cities;
+  return Array.isArray(cities) && cities.length >= QUEST_COUNTRY_LANDING_MIN_CITIES;
+}
+
 function resolveQuestCountryAlias(countryParam, quests, options = {}) {
   const alias = String(countryParam ?? '').trim().toLowerCase();
   if (!alias) return null;
@@ -152,10 +168,12 @@ function resolveQuestCountryAlias(countryParam, quests, options = {}) {
 
 module.exports = {
   ISO_ALPHA2_CODES,
+  QUEST_COUNTRY_LANDING_MIN_CITIES,
   buildQuestCountryLandingGroups,
   getIsoCountryDisplayName,
   getQuestCountryAlias,
   normalizeIsoCountryCode,
+  questCountryLandingIsIndexable,
   resolveQuestCountryAlias,
   stableTextCompare,
 };

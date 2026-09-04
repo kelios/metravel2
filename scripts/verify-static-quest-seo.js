@@ -27,7 +27,10 @@ const {
   buildQuestCityLandingGroups,
   questRouteVariants,
 } = require('../utils/questCityAlias')
-const { buildQuestCountryLandingGroups } = require('../utils/questCountryLanding')
+const {
+  buildQuestCountryLandingGroups,
+  questCountryLandingIsIndexable,
+} = require('../utils/questCountryLanding')
 
 const args = process.argv.slice(2)
 
@@ -190,6 +193,7 @@ function verifyQuestCountryHtml(
   expectedCityPaths = [],
   expectedQuestPaths = [],
   childHtml = '',
+  expectIndexable = true,
 ) {
   const title = getTitle(html)
   const description = getMetaContent(html, 'name', 'description')
@@ -220,6 +224,19 @@ function verifyQuestCountryHtml(
   if (!hasQuestCountryLandingSection(html)) issues.push('missing crawlable quest-country section')
   if (!hasQuestCountryStandaloneContent(html)) {
     issues.push('missing independent country overview/cities/practical content')
+  }
+
+  // #1762: страна с одним городом уходит из выдачи — её лендинг повторяет
+  // посадочную этого города. Правило живёт в генераторе, но проверяется здесь,
+  // на реальном HTML: расхождение иначе всплывёт в GSC через месяц, а не на
+  // сборке.
+  const robots = getMetaContent(html, 'name', 'robots') || ''
+  const isNoindex = /\bnoindex\b/i.test(robots)
+  if (!expectIndexable && !isNoindex) {
+    issues.push('single-city country landing is missing noindex')
+  }
+  if (expectIndexable && isNoindex) {
+    issues.push(`multi-city country landing is noindex: ${robots}`)
   }
 
   for (const cityPath of expectedCityPaths) {
@@ -543,6 +560,7 @@ async function main() {
       expectedCityPaths,
       expectedQuestPaths,
       childHtml,
+      questCountryLandingIsIndexable(country),
     )
     if (issues.length > 0) {
       failures.push(`country landing /quests/country/${country.countryAlias}: ${issues.join(', ')}`)

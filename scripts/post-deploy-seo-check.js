@@ -335,21 +335,56 @@ function validateSocialMeta(html, title, desc, canonical, pageType) {
  */
 const INTENTIONALLY_NOINDEX_PATHS = new Set(['/articles', '/article', '/places'])
 
-function isIntentionallyNoindex(url) {
-  if (!url) return false
-  let pathname
+/**
+ * Семейства, где ОБА состояния robots законны, а какое именно верно для
+ * конкретного URL — решает каталог.
+ *
+ * `/quests/country/<alias>`: с #1762 лендинг страны идёт в выдачу, только если
+ * собирает больше одного города; страна с одним городом повторяет посадочную
+ * этого города и получает `noindex, follow`. На 04.09.2026 это 19 адресов из 32,
+ * и все 32 лежат в sitemap.xml, который этот гейт и обходит, — без исключения он
+ * валил бы каждый деплой девятнадцатью `robots.noindex` подряд.
+ *
+ * Инвариант при этом не теряется, он проверяется строже и раньше: число городов
+ * известно только каталогу, поэтому «этот лендинг обязан быть noindex, а тот
+ * обязан им не быть» сверяет `scripts/verify-static-quest-seo.js` по живому
+ * каталогу на реальном HTML — и делает это в `build-prod.sh` ДО деплоя.
+ * Здесь же остаются все прочие проверки страницы: title, description, canonical.
+ */
+const CATALOG_DECIDED_INDEXABILITY_PREFIXES = ['/quests/country/']
+
+function pathnameOf(url) {
+  if (!url) return null
   try {
-    pathname = new URL(url).pathname
+    const pathname = new URL(url).pathname
+    return pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
   } catch {
-    return false
+    return null
   }
-  const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+}
+
+function hasCatalogDecidedIndexability(url) {
+  const normalized = pathnameOf(url)
+  if (!normalized) return false
+  return CATALOG_DECIDED_INDEXABILITY_PREFIXES.some(
+    (prefix) => normalized.startsWith(prefix) && normalized.length > prefix.length,
+  )
+}
+
+function isIntentionallyNoindex(url) {
+  const normalized = pathnameOf(url)
+  if (!normalized) return false
   return INTENTIONALLY_NOINDEX_PATHS.has(normalized) || normalized.startsWith('/article/')
 }
 
 function validateRobots(html, pageType, url) {
-  const robots = extractMetaContents(html, 'name', 'robots')[0] || ''
   const issues = []
+  // Ни «обязан быть индексируемым», ни «обязан быть закрытым» — обе проверки
+  // ниже задают вопрос, ответ на который здесь неизвестен (см. комментарий у
+  // CATALOG_DECIDED_INDEXABILITY_PREFIXES). Отвечает на него build-time гейт.
+  if (hasCatalogDecidedIndexability(url)) return issues
+
+  const robots = extractMetaContents(html, 'name', 'robots')[0] || ''
   const deliberatelyClosed = isIntentionallyNoindex(url)
   if ((pageType === 'home' || pageType === 'search' || pageType === 'map' || pageType === 'page' || pageType === 'travel' || pageType === 'article') &&
       /noindex/i.test(robots) && !deliberatelyClosed) {
@@ -711,6 +746,7 @@ if (typeof module !== 'undefined' && module.exports) {
     USAGE,
     parseArgs,
     detectPageType,
+    hasCatalogDecidedIndexability,
     extractTitle,
     extractCanonical,
     extractMetaContents,
