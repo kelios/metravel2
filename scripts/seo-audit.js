@@ -8,6 +8,7 @@
  *   - empty meta_description (search snippet is auto-generated / generic)
  *   - thin body content (low word count → weak topical relevance & dwell time)
  *   - no internal links to other travels (lost link equity / crawl depth)
+ *   - FAQ block the SSG cannot read (block present, no FAQPage rich result)
  *
  * The heavy lifting lives in small pure functions (analyzeTitle, analyzeContent,
  * analyzeMeta, auditTravel, summarizeAudit) that are unit-tested. main() is the
@@ -34,6 +35,9 @@ const {
   runSeoCli,
 } = require('./lib/seo-cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
+// The FAQ check asks the generator itself whether a body still yields FAQPage,
+// instead of re-implementing its markup contract here (see analyzeFaqMarkup).
+const { extractFaqEntries } = require('./generate-seo-pages');
 
 // ---------------------------------------------------------------------------
 // Thresholds (kept in sync with scripts/generate-seo-pages.js SEO rules)
@@ -180,6 +184,41 @@ function analyzeLeadNoise(descriptionHtml) {
   return { lead, noisy: LEAD_NOISE_PATTERN.test(lead) };
 }
 
+/**
+ * A FAQ block the SSG silently drops.
+ *
+ * `scripts/generate-seo-pages.js → extractFaqEntries` reads the Q/A pairs only
+ * from `<details>/<summary>` inside the FAQ section. A body that keeps the
+ * section but stores the pairs flat (`<strong>Вопрос</strong><div><div><p>…`)
+ * still LOOKS right on the page and loses the FAQPage rich result entirely —
+ * `buildTravelFaqJsonLd` returns null and nothing is emitted. Nothing failed,
+ * so the loss was only visible by auditing articles one at a time: #1138 fixed
+ * the generator, #1755/#1761 then found two articles (134, 554) still holding
+ * the pre-#1138 flat form.
+ *
+ * The verdict comes from the generator's own extractor, so the two cannot drift:
+ * this fires exactly when the SSG would emit no FAQPage for a body that has one.
+ *
+ * Both FAQ shapes of the corpus count as "has a FAQ block", because the loss is
+ * identical in both: the `<section class="seo-faq">` wrapper the editor writes,
+ * and the older bare `<h2>Частые вопросы</h2>` + flat `<strong>Вопрос</strong>`
+ * pairs (the second shape is named in scripts/seo-find-dupes.js → stripFaqSection).
+ * Detecting the wrapper alone would report a clean zero over every article still
+ * holding the older one — the same silence this check exists to end.
+ */
+const FAQ_SECTION_PATTERN = /<section[^>]*(?:class="[^"]*seo-faq[^"]*"|data-faq="metravel-seo")[^>]*>/i;
+const FAQ_HEADING_PATTERN = /<h[23][^>]*>\s*(?:<[^>]+>\s*)*(?:частые вопросы|часто задаваемые|faq)/i;
+
+function analyzeFaqMarkup(descriptionHtml) {
+  const html = String(descriptionHtml || '');
+  const hasFaqBlock = FAQ_SECTION_PATTERN.test(html) || FAQ_HEADING_PATTERN.test(html);
+  // Counted unconditionally: the generator also reads `<details itemprop="mainEntity">`
+  // pairs that carry no wrapper at all, and a body-wide zero here would misreport
+  // `faqEntries` in the --json report for articles whose FAQPage is in fact emitted.
+  const entries = extractFaqEntries(html).length;
+  return { hasFaqBlock, entries, markupLost: hasFaqBlock && entries === 0 };
+}
+
 function analyzeContent(descriptionHtml, minWords = THIN_WORDS) {
   const html = String(descriptionHtml || '');
   const words = countWords(html);
@@ -211,6 +250,7 @@ function auditTravel(listItem, detail = {}, opts = {}) {
   const leadA = analyzeLead(listItem.name, detail.description);
   const leadNoiseA = analyzeLeadNoise(detail.description);
   const contentA = analyzeContent(detail.description, minWords);
+  const faqA = analyzeFaqMarkup(detail.description);
 
   const issues = [];
   if (titleA.tooLong) issues.push('title-too-long');
@@ -224,6 +264,7 @@ function auditTravel(listItem, detail = {}, opts = {}) {
     if (contentA.thin) issues.push('thin-content');
     if (contentA.noHeadings) issues.push('no-headings');
     if (contentA.noInternalLinks) issues.push('no-internal-links');
+    if (faqA.markupLost) issues.push('faq-markup-lost');
   }
 
   const views = Number(listItem.countUnicIpView) || 0;
@@ -245,6 +286,8 @@ function auditTravel(listItem, detail = {}, opts = {}) {
     internalLinks: detailUnavailable ? null : contentA.internalLinks,
     weakLead: detailUnavailable ? null : leadA.weak,
     leadNoise: detailUnavailable ? null : leadNoiseA.noisy,
+    faqEntries: detailUnavailable ? null : faqA.entries,
+    faqMarkupLost: detailUnavailable ? null : faqA.markupLost,
     detailFetchFailed: detailUnavailable,
     issues,
     priority,
@@ -262,6 +305,7 @@ function summarizeAudit(rows) {
     thinContent: 0,
     noHeadings: 0,
     noInternalLinks: 0,
+    faqMarkupLost: 0,
     clean: 0,
   };
   for (const r of rows) {
@@ -273,6 +317,7 @@ function summarizeAudit(rows) {
     if (r.issues.includes('thin-content')) counts.thinContent++;
     if (r.issues.includes('no-headings')) counts.noHeadings++;
     if (r.issues.includes('no-internal-links')) counts.noInternalLinks++;
+    if (r.issues.includes('faq-markup-lost')) counts.faqMarkupLost++;
   }
   const worklist = rows
     .filter((r) => r.issues.length > 0)
@@ -419,6 +464,7 @@ async function main(argv = process.argv, deps = {}) {
   console.log(`  lead noise (script output in body): ${counts.leadNoise}`);
   console.log(`  thin (<${minWords} words): ${counts.thinContent}`);
   console.log(`  no headings: ${counts.noHeadings} | no internal links: ${counts.noInternalLinks}`);
+  console.log(`  FAQ block without FAQPage markup: ${counts.faqMarkupLost}`);
 
   console.log('\n=== Top 25 worklist (by priority) ===');
   console.log('prio  views words id    issues / title');
@@ -462,6 +508,7 @@ if (typeof module !== 'undefined' && module.exports) {
     analyzeLead,
     analyzeLeadNoise,
     analyzeContent,
+    analyzeFaqMarkup,
     auditTravel,
     summarizeAudit,
     TITLE_MAX,

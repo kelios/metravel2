@@ -17,6 +17,7 @@ const {
   analyzeLead,
   analyzeLeadNoise,
   analyzeContent,
+  analyzeFaqMarkup,
   auditTravel,
   main,
   summarizeAudit,
@@ -214,6 +215,92 @@ describe('analyzeContent', () => {
     expect(r.words).toBe(0);
     expect(r.thin).toBe(true);
     expect(r.noHeadings).toBe(true);
+  });
+});
+
+describe('analyzeFaqMarkup (FAQ block the SSG cannot read — #1761)', () => {
+  const faqSection = (body: string) =>
+    '<h2>Маршрут</h2><p>текст</p>' +
+    '<section class="seo-faq" data-faq="metravel-seo" itemscope itemtype="https://schema.org/FAQPage">' +
+    '<h2>Частые вопросы</h2>' + body +
+    '</section>';
+
+  const markedUpPair =
+    '<details itemprop="mainEntity" itemscope itemtype="https://schema.org/Question">\n' +
+    '<summary itemprop="name"><strong>Как доехать до озера?</strong></summary>\n' +
+    '<div itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><div itemprop="text">\n' +
+    '<p>Поездом до Катовице, дальше автобусом.</p>\n' +
+    '</div></div>\n</details>';
+
+  // Ровно та форма, в которой хранились статьи 134 и 554: секция на месте,
+  // пары записаны плоско — на странице видно, в выдаче нет.
+  const flatPair =
+    '<strong>Как доехать до озера?</strong>\n<div><div>\n' +
+    '<p>Поездом до Катовице, дальше автобусом.</p>\n</div></div>';
+
+  it('accepts a FAQ section the generator can read', () => {
+    const r = analyzeFaqMarkup(faqSection(markedUpPair));
+    expect(r.hasFaqBlock).toBe(true);
+    expect(r.entries).toBe(1);
+    expect(r.markupLost).toBe(false);
+  });
+
+  it('flags a FAQ section whose pairs lost the details/summary markup', () => {
+    const r = analyzeFaqMarkup(faqSection(flatPair));
+    expect(r.hasFaqBlock).toBe(true);
+    expect(r.entries).toBe(0);
+    expect(r.markupLost).toBe(true);
+  });
+
+  // Вторая форма корпуса (scripts/seo-find-dupes.js → stripFaqSection): секции нет,
+  // блок опознаётся только по заголовку. FAQPage теряется так же, значит и ловиться
+  // должен так же — иначе аудит рапортует чистый ноль поверх целой семьи статей.
+  it('flags a bare "Частые вопросы" heading whose pairs are flat', () => {
+    const r = analyzeFaqMarkup('<h2>Маршрут</h2><p>текст</p><h2>Частые вопросы</h2>' + flatPair);
+    expect(r.hasFaqBlock).toBe(true);
+    expect(r.entries).toBe(0);
+    expect(r.markupLost).toBe(true);
+  });
+
+  it('accepts details pairs the generator reads without any wrapper', () => {
+    // Генератор берёт такие пары фолбэком по itemprop, FAQPage выходит —
+    // значит и entries обязаны показывать реальное число, а не ноль «нет секции».
+    const r = analyzeFaqMarkup('<h2>Маршрут</h2><p>текст</p>' + markedUpPair);
+    expect(r.entries).toBe(1);
+    expect(r.markupLost).toBe(false);
+  });
+
+  it('stays silent for a body with no FAQ block at all', () => {
+    expect(analyzeFaqMarkup('<h2>Маршрут</h2><p>текст</p>').markupLost).toBe(false);
+    expect(analyzeFaqMarkup('').markupLost).toBe(false);
+    expect(analyzeFaqMarkup(null).markupLost).toBe(false);
+    // Слово «вопрос» в прозе — не FAQ-блок.
+    expect(analyzeFaqMarkup('<h2>Маршрут</h2><p>Частые вопросы читателей мы собрали ниже.</p>').markupLost).toBe(
+      false,
+    );
+  });
+
+  it('reaches auditTravel and the summary counts', () => {
+    const body = '<p>' + 'слово '.repeat(450) + '</p><a href="/travels/x">см.</a>';
+    const broken = auditTravel(
+      { id: 554, name: 'Из Кракова к озеру Попроцаны и дворцу в Промницах', countUnicIpView: 300 },
+      { description: body + faqSection(flatPair) },
+    );
+    const fixed = auditTravel(
+      { id: 554, name: 'Из Кракова к озеру Попроцаны и дворцу в Промницах', countUnicIpView: 300 },
+      { description: body + faqSection(markedUpPair) },
+    );
+    expect(broken.issues).toContain('faq-markup-lost');
+    expect(broken.faqMarkupLost).toBe(true);
+    expect(fixed.issues).not.toContain('faq-markup-lost');
+    expect(fixed.faqEntries).toBe(1);
+    expect(summarizeAudit([broken, fixed]).counts.faqMarkupLost).toBe(1);
+  });
+
+  it('does not flag a travel whose detail fetch failed', () => {
+    const r = auditTravel({ id: 9, name: 'Озеро Глубокое и окрестности', countUnicIpView: 0 }, { __fetchFailed: true });
+    expect(r.issues).not.toContain('faq-markup-lost');
+    expect(r.faqMarkupLost).toBeNull();
   });
 });
 
