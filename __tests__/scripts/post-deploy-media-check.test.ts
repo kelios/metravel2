@@ -7,6 +7,9 @@ const {
   auditDerivativeCoverage,
   collectArticleBodyMediaUrls,
   collectArticleBodyRungs,
+  collectLegacyUploadCandidates,
+  collectRichTextMediaUrls,
+  collectUploadsScanDetails,
   extractTargetsFromPayloads,
   familyOfMediaUrl,
   isBackpressureResponse,
@@ -15,7 +18,9 @@ const {
   toTargetUrl,
   toTargetUrlWithQuery,
   toUploadsTarget,
+  UPLOADS_ANCHOR_TRAVEL_IDS,
   uploadsScanPages,
+  uploadsTargetNotice,
   validateTarget,
   widthsFor,
   withWidth,
@@ -230,6 +235,182 @@ describe('post-deploy media check: цель uploads/** (фото тела ста
 
     expect(pages).toEqual([10, 15, 5])
     expect(uploadsScanPages({})).toEqual([1])
+  })
+
+  it('берёт ключ из rich-text HTML: в манифесте класса не осталось вовсе (#1758)', () => {
+    // Замер 2026-09-04 по travel 116: `media.article_body` целиком канонический
+    // (`travel-description-image`), а единственные ссылки `uploads/**` лежат в
+    // `recommendation` и его слепке `rich_text.recommendation.safe_html`. Пока
+    // кандидаты брались только из манифеста, цель не строилась НИ ИЗ ОДНОЙ статьи
+    // каталога — гейт пропускал семейство не изредка, а всегда.
+    const detail = {
+      recommendation:
+        `<p style="margin: 0"><img src="${S3}/uploads/1620061579IMG_6533.JPG" alt=""><br></p>`,
+      rich_text: {
+        recommendation: {
+          safe_html: `<p><img loading="lazy" src="${S3}/uploads/1620061579IMG_6533.JPG"></p>`,
+        },
+      },
+      media: {
+        article_body: {
+          cover: { src: `${SITE}/travel-description-image/763b.jpg.webp?pv=2&w=800` },
+          gallery: [],
+        },
+      },
+    }
+
+    expect(collectRichTextMediaUrls(detail)).toEqual([
+      `${S3}/uploads/1620061579IMG_6533.JPG`,
+      `${S3}/uploads/1620061579IMG_6533.JPG`,
+    ])
+    // Манифест из кандидатов не выпал: класс может вернуться в него, если бэкенд
+    // снова начнёт отдавать legacy-ключи слотом тела статьи.
+    expect(collectLegacyUploadCandidates(detail)[0]).toBe(
+      `${SITE}/travel-description-image/763b.jpg.webp?pv=2&w=800`
+    )
+
+    const targets = extractTargetsFromPayloads(SITE, {
+      travels: { results: [{ id: 682, travel_image_thumb_url: `${SITE}/travel-image/682/conversions/c.webp` }] },
+      travelDetails: [detail],
+    })
+
+    expect(targets.find((item: { family: string }) => item.family === 'media-resize-uploads')?.url).toBe(
+      `${SITE}/media-resize/uploads/1620061579IMG_6533.JPG?w=800`
+    )
+  })
+
+  it('rich-text без картинок класса цель не выдумывает', () => {
+    expect(
+      collectRichTextMediaUrls({
+        description: `<p><img src="${SITE}/travel-description-image/9/x.webp"></p>`,
+      })
+    ).toEqual([`${SITE}/travel-description-image/9/x.webp`])
+    expect(collectRichTextMediaUrls(null)).toEqual([])
+    expect(collectRichTextMediaUrls({ description: 42 })).toEqual([])
+    // Серверный санитайзер экранирует значения атрибутов (`html.escape`), поэтому
+    // амперсанд в query приходит как `&amp;` и обязан быть развёрнут обратно.
+    expect(
+      collectRichTextMediaUrls({ description: `<img src="${SITE}/x.webp?pv=2&amp;w=800">` })
+    ).toEqual([`${SITE}/x.webp?pv=2&w=800`])
+  })
+
+  it('ленивый кадр: ключ берётся из src, а не из идущего первым data-src', () => {
+    // `utils/sanitizeRichText.ts` держит для legacy-полей fallback
+    // `src || data-src || data-original || data-lazy-src` — такая разметка в телах
+    // старых статей есть. Разбор одним `\bsrc` цеплялся за `data-src` (граница
+    // слова после дефиса) и терял настоящий ключ вместе с ним: гейт напечатал бы
+    // «класса больше нет» при живом классе.
+    expect(
+      collectRichTextMediaUrls({
+        description: `<p><img data-src="data:image/gif;base64,R0lGOD" src="${S3}/uploads/1591977314DSC_0375.JPG"></p>`,
+      })
+    ).toEqual([`${S3}/uploads/1591977314DSC_0375.JPG`, 'data:image/gif;base64,R0lGOD'])
+
+    // Кадр без `src` серверный санитайзер выбрасывает целиком, поэтому в сыром
+    // слепке адрес остаётся только в ленивом атрибуте — терять его нельзя.
+    expect(collectRichTextMediaUrls({ description: `<img data-lazy-src='${S3}/uploads/a.jpg'>` })).toEqual([
+      `${S3}/uploads/a.jpg`,
+    ])
+  })
+
+  it('слепки в порядке рендера: canonical safe_html вперёд legacy-поля', () => {
+    // Читатель получает `safe_html` (`resolveServerRichTextHtml`), значит и цель
+    // строится из него; legacy-поле остаётся резервом.
+    expect(
+      collectRichTextMediaUrls({
+        description: `<img src="${S3}/uploads/legacy.jpg">`,
+        rich_text: { description: { safe_html: `<img src="${S3}/uploads/canonical.jpg">` } },
+      })
+    ).toEqual([`${S3}/uploads/canonical.jpg`, `${S3}/uploads/legacy.jpg`])
+  })
+
+  it('опорный набор — те статьи, где класс реально остался', () => {
+    // Обход 2026-09-04: восемь ссылок `uploads/**` ровно в четырёх опубликованных
+    // статьях. Набор — перепись класса, поэтому его пустота и есть довод «класса
+    // больше нет», а не «не нашли».
+    expect(UPLOADS_ANCHOR_TRAVEL_IDS).toEqual([116, 171, 220, 290])
+  })
+
+  describe('исход поиска цели: «класса нет» и «цель не нашлась» — разные сообщения', () => {
+    it('цель построена — сообщения нет', () => {
+      expect(uploadsTargetNotice({ hasTarget: true, anchorsReachable: true })).toBeNull()
+      expect(uploadsTargetNotice({ hasTarget: true, anchorsReachable: false })).toBeNull()
+    })
+
+    it('опорные статьи прочитаны и пусты — класса нет, это законный пропуск', () => {
+      const notice = uploadsTargetNotice({ hasTarget: false, anchorsReachable: true })
+
+      expect(notice.severity).toBe('info')
+      expect(notice.code).toBe('media.uploads_class_absent')
+      expect(notice.message).toContain('116, 171, 220, 290')
+    })
+
+    it('опорные статьи недоступны — предупреждение гейта, а не пропуск', () => {
+      const notice = uploadsTargetNotice({ hasTarget: false, anchorsReachable: false })
+
+      expect(notice.severity).toBe('warning')
+      expect(notice.code).toBe('media.uploads_target_unresolved')
+    })
+  })
+
+  describe('обход за целью: опорные статьи вперёд сечений каталога', () => {
+    const travels = { count: 397, results: new Array(20).fill({ id: 700 }) }
+    const withUploads = (id: number) => ({
+      id,
+      rich_text: { recommendation: { safe_html: `<img src="${S3}/uploads/${id}.jpg">` } },
+    })
+    const withoutUploads = (id: number) => ({
+      id,
+      rich_text: { recommendation: { safe_html: `<img src="${SITE}/travel-description-image/${id}/x.webp">` } },
+    })
+
+    it('останавливается на первой опорной статье с ключом — каталог не читается', async () => {
+      // Ради этого правку и делали: раньше сюда уходило до 15 запросов сечениями,
+      // и ключ всё равно не находился.
+      const requested: string[] = []
+      const softFetch = async (url: string) => {
+        requested.push(url)
+        return url.endsWith('/api/travels/116/') ? withUploads(116) : null
+      }
+
+      const { details, anchorsReachable } = await collectUploadsScanDetails(softFetch, travels)
+
+      expect(requested).toEqual([`${SITE}/api/travels/116/`])
+      expect(anchorsReachable).toBe(true)
+      expect(details).toEqual([withUploads(116)])
+    })
+
+    it('опорные статьи прочитаны и пусты — падает в сечения каталога', async () => {
+      const requested: string[] = []
+      const softFetch = async (url: string) => {
+        requested.push(url)
+        const anchor = /\/api\/travels\/(116|171|220|290)\/$/.exec(url)
+        if (anchor) return withoutUploads(Number(anchor[1]))
+        if (url.includes('page=')) return { results: [{ id: 901 }] }
+        return withUploads(901)
+      }
+
+      const { details, anchorsReachable } = await collectUploadsScanDetails(softFetch, travels)
+
+      expect(requested.slice(0, 4)).toEqual(
+        UPLOADS_ANCHOR_TRAVEL_IDS.map((id: number) => `${SITE}/api/travels/${id}/`)
+      )
+      expect(requested).toContain(`${SITE}/api/travels/?page=10`)
+      expect(anchorsReachable).toBe(true)
+      expect(details[details.length - 1]).toEqual(withUploads(901))
+    })
+
+    it('опорная статья недоступна — исход «покрытие потеряно», а не «класса нет»', async () => {
+      const softFetch = async (url: string) => (url.includes('page=') ? { results: [] } : null)
+
+      const { details, anchorsReachable } = await collectUploadsScanDetails(softFetch, travels)
+
+      expect(details).toEqual([])
+      expect(anchorsReachable).toBe(false)
+      expect(uploadsTargetNotice({ hasTarget: false, anchorsReachable }).code).toBe(
+        'media.uploads_target_unresolved'
+      )
+    })
   })
 })
 

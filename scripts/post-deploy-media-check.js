@@ -13,6 +13,8 @@
  *
  * URL берутся из публичного API (`/api/travels/`, `/api/quests/`), а не
  * хардкодятся: гейт не должен протухать вместе с id конкретной записи.
+ * Единственное исключение — `UPLOADS_ANCHOR_TRAVEL_IDS`: там зафиксировано, ГДЕ
+ * читать статью, а сам URL по-прежнему строится из её payload (#1758).
  *
  * Usage:
  *   node scripts/post-deploy-media-check.js [--url https://metravel.by]
@@ -449,6 +451,72 @@ function collectArticleBodyMediaUrls(detail) {
 }
 
 /**
+ * Поля rich text, в которых лежит HTML тела статьи.
+ *
+ * Тот же набор отдаёт в рендер `TravelDetailsContentSection`
+ * (`components/travel/details/sections`): именно эти четыре строки проходят
+ * через `resolveServerRichTextHtml` и превращаются в `<img>` у читателя.
+ */
+const RICH_TEXT_FIELDS = ['description', 'plus', 'minus', 'recommendation']
+
+/**
+ * Атрибуты `<img>`, в которых может лежать адрес кадра, — в порядке приоритета
+ * `utils/sanitizeRichText.ts` (`src || data-src || data-original || data-lazy-src`).
+ *
+ * Одного `src` мало: ленивые атрибуты живут в legacy-полях, ради них у фронта и
+ * заведён этот fallback. Брать их надо ПОСЛЕ `src`, иначе `<img data-src="…"
+ * src="…/uploads/x.jpg">` отдаёт placeholder, а настоящий ключ теряется и гейт
+ * печатает «класса больше нет» вместо непроверенного класса.
+ */
+const RICH_TEXT_IMG_SRC_ATTRIBUTES = ['src', 'data-src', 'data-original', 'data-lazy-src']
+
+const RICH_TEXT_IMG_TAG_RE = /<img\b[^>]*>/gi
+const RICH_TEXT_IMG_ATTRIBUTE_RE = /([-\w]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
+
+/**
+ * Адреса картинок из rich-text HTML статьи.
+ *
+ * Манифеста у этих кадров нет, и класс `uploads/**` остался ТОЛЬКО здесь. Обход
+ * 2026-09-04 по четырём статьям, где класс ещё жив (travel 116, 171, 220, 290):
+ * все восемь ссылок лежат в `recommendation`/`description`, а
+ * `media.article_body` у них целиком канонический (`travel-description-image`).
+ * Значит поиск цели по одному манифесту не находил класс НИ В ОДНОЙ статье
+ * каталога — не «редко», а никогда (#1758).
+ *
+ * Порядок слепков повторяет `resolveServerRichTextHtml`: сначала canonical
+ * `rich_text.<field>.safe_html` — его и рендерит страница, — потом legacy-поле.
+ * Так цель строится из URL, который читатель реально запрашивает; legacy-поле
+ * остаётся резервом, потому что серверный санитайзер выбрасывает `<img>` без
+ * `src` и кадр может быть виден только в сыром слепке.
+ */
+function collectRichTextMediaUrls(detail) {
+  if (!detail) return []
+  const urls = []
+  for (const field of RICH_TEXT_FIELDS) {
+    for (const chunk of [detail.rich_text?.[field]?.safe_html, detail[field]]) {
+      if (typeof chunk !== 'string' || !chunk) continue
+      for (const [tag] of chunk.matchAll(RICH_TEXT_IMG_TAG_RE)) {
+        const attributes = new Map()
+        for (const [, name, doubleQuoted, singleQuoted] of tag.matchAll(RICH_TEXT_IMG_ATTRIBUTE_RE)) {
+          const key = name.toLowerCase()
+          if (!attributes.has(key)) attributes.set(key, doubleQuoted ?? singleQuoted ?? '')
+        }
+        for (const attribute of RICH_TEXT_IMG_SRC_ATTRIBUTES) {
+          const value = attributes.get(attribute)
+          if (value) urls.push(value.replace(/&amp;/gi, '&'))
+        }
+      }
+    }
+  }
+  return urls
+}
+
+/** Кандидаты в цель `uploads/**`: манифест плюс rich-text HTML тела статьи. */
+function collectLegacyUploadCandidates(detail) {
+  return [...collectArticleBodyMediaUrls(detail), ...collectRichTextMediaUrls(detail)]
+}
+
+/**
  * Семейство по адресу медиа: первый сегмент пути, у legacy-роутов — второй.
  *
  * Совпадает с ключами `WIDTHS_BY_FAMILY`, поэтому потолок берётся оттуда же,
@@ -662,11 +730,13 @@ function extractTargetsFromPayloads(site, { travels, travelDetail, travelDetails
   // Фото тела старых статей. Именно этой цели не хватало, когда fail-closed
   // чтение производных включили без покрытия `uploads/**` (#1222): гейт был
   // зелёным, а 4381 фото в 215 из 397 опубликованных статей отдавало 404.
+  // #1758: кандидаты берём из тела статьи целиком, а не из одного манифеста —
+  // в манифесте класса не осталось вовсе, он выжил только в rich-text HTML.
   const uploadsUrl = details
-    .flatMap(collectArticleBodyMediaUrls)
+    .flatMap(collectLegacyUploadCandidates)
     .map((candidate) => toUploadsTarget(site, candidate))
     .find(Boolean)
-  push('media-resize-uploads', uploadsUrl, 'media.article_body опубликованных travel')
+  push('media-resize-uploads', uploadsUrl, 'тело опубликованных travel (манифест + rich text)')
 
   // Фото тела статей нового пайплайна. Ступени для семейства в таблице были с
   // самого начала, но цель не строилась ни разу: `article_body` разбирался
@@ -988,7 +1058,24 @@ async function mapWithConcurrency(items, limit, worker) {
 const UPLOADS_SCAN_DETAILS_PER_PAGE = 4
 
 /**
- * Страницы каталога, в которых стоит искать legacy-ключ.
+ * Опорные статьи класса `uploads/**` — известное место вместо случайной выборки.
+ *
+ * Полный обход каталога 2026-09-04 (461 travel, включая черновики) нашёл класс
+ * ровно в этих четырёх опубликованных статьях: восемь ссылок примерно на 1%
+ * каталога. Сечения такую редкость не ловят — двенадцать деталей накрывают одну
+ * из четырёх статей с вероятностью ниже 12%, и на живых прогонах семейство
+ * пропускалось деплой за деплоем (#1758).
+ *
+ * Хардкод id не нарушает правило «URL не хардкодятся»: id ведёт к живой статье
+ * прода, а цель из неё СТРОИТСЯ общим разбором. Переведут статью на канонический
+ * пайплайн — ключ пропадёт, и гейт скажет об этом отдельным сообщением
+ * (`uploadsTargetNotice`), а не молча.
+ */
+const UPLOADS_ANCHOR_TRAVEL_IDS = [116, 171, 220, 290]
+
+/**
+ * Страницы каталога, в которых стоит искать legacy-ключ, — фолбэк к опорному
+ * набору на случай, если класс где-то ещё жив или опорные статьи изменились.
  *
  * «Первые N» тут не работают: у свежих статей `uploads/**` нет вообще (новый
  * пайплайн), у самых старых — тоже. Замер 2026-08-03 по всем 397
@@ -1008,24 +1095,82 @@ function uploadsScanPages(travels) {
   return [...new Set(candidates)].filter((page) => page >= 1 && page <= lastPage)
 }
 
-/** Детали travel до первой, в теле которой действительно есть ключ `uploads/**`. */
+/** Строится ли из детали статьи цель `media-resize-uploads`. */
+function hasUploadsTarget(detail) {
+  return collectLegacyUploadCandidates(unwrapItem(detail)).some((url) => toUploadsTarget(SITE, url))
+}
+
+/**
+ * Детали travel для цели `uploads/**`: сначала опорный набор, потом сечения.
+ *
+ * Возвращает не только детали, но и то, чем закончился поиск. Без этого «класс
+ * ушёл с сайта» и «цель не удалось получить» печатаются одной строкой, и потеря
+ * покрытия неотличима от честного отсутствия класса (#1758).
+ */
 async function collectUploadsScanDetails(softFetch, travels) {
   const details = []
+  let anchorsReachable = true
+
+  for (const id of UPLOADS_ANCHOR_TRAVEL_IDS) {
+    const detail = await softFetch(`${SITE}/api/travels/${id}/`)
+    if (!detail) {
+      anchorsReachable = false
+      continue
+    }
+    details.push(detail)
+    if (hasUploadsTarget(detail)) return { details, anchorsReachable }
+  }
+
   for (const page of uploadsScanPages(travels)) {
     const list = await softFetch(`${SITE}/api/travels/?page=${page}`)
     const ids = unwrapList(list)
       .map((item) => item?.id)
       .filter(Boolean)
       .slice(0, UPLOADS_SCAN_DETAILS_PER_PAGE)
-    const fetched = await Promise.all(ids.map((id) => softFetch(`${SITE}/api/travels/${id}/`)))
-    details.push(...fetched.filter(Boolean))
+    const fetched = (await Promise.all(ids.map((id) => softFetch(`${SITE}/api/travels/${id}/`)))).filter(Boolean)
+    details.push(...fetched)
 
-    const found = details.some((item) =>
-      collectArticleBodyMediaUrls(unwrapItem(item)).some((url) => toUploadsTarget(SITE, url))
-    )
-    if (found) break
+    // Разбираем только что прочитанное: у прежних деталей ключа заведомо нет
+    // (иначе цикл бы уже вышел), а тела статей большие — перепроверять их HTML
+    // на каждой странице значит гонять regex по десяткам килобайт впустую.
+    if (fetched.some((item) => hasUploadsTarget(item))) break
   }
-  return details
+
+  return { details, anchorsReachable }
+}
+
+/**
+ * Что сказать про цель `uploads/**`, когда её нет.
+ *
+ * Исходов два, и они противоположны по смыслу: класса больше нет на сайте —
+ * законный повод не проверять и повод снять семейство с гейта; цель не удалось
+ * получить — потеря покрытия, видимая только здесь. До #1758 оба печатали одну и
+ * ту же строку `ℹ️`, и второй исход выглядел как «всё хорошо».
+ *
+ * Вердикт «класса нет» опирается на опорный набор: он и есть перепись класса,
+ * поэтому «все опорные статьи прочитаны и ключей не содержат» — утверждение об
+ * их состоянии, а не о недоступности API.
+ */
+function uploadsTargetNotice({ hasTarget, anchorsReachable }) {
+  if (hasTarget) return null
+  const anchors = UPLOADS_ANCHOR_TRAVEL_IDS.join(', ')
+  if (!anchorsReachable) {
+    return {
+      severity: 'warning',
+      code: 'media.uploads_target_unresolved',
+      message:
+        `Цель media-resize-uploads не построена: опорные статьи (${anchors}) недоступны, ` +
+        'класс не проверен — это потеря покрытия, а не отсутствие класса',
+    }
+  }
+  return {
+    severity: 'info',
+    code: 'media.uploads_class_absent',
+    message:
+      `Класса uploads/** на сайте больше нет: опорные статьи (${anchors}) прочитаны и ключей не ` +
+      'содержат, фолбэк по сечениям каталога цели тоже не дал — семейство media-resize-uploads ' +
+      'можно снимать с гейта',
+  }
 }
 
 /**
@@ -1125,19 +1270,22 @@ async function collectTargets() {
     ? await softFetch(`${SITE}/api/travels/${firstTravel.id}/`)
     : null
 
-  const travelDetails = await collectUploadsScanDetails(softFetch, travels)
+  const { details: travelDetails, anchorsReachable } = await collectUploadsScanDetails(
+    softFetch,
+    travels,
+  )
 
   const targets = extractTargetsFromPayloads(SITE, { travels, travelDetail, travelDetails, quests })
 
-  if (!targets.some((target) => target.family === 'media-resize-uploads')) {
-    // Не ошибка: когда legacy-фото уйдут из тел статей, цели не станет по-честному.
-    // Но молчать нельзя — иначе потеря покрытия неотличима от «всё хорошо».
-    console.error(
-      'ℹ️  Ключей uploads/** в просмотренных статьях нет — цель media-resize-uploads пропущена'
-    )
+  const notice = uploadsTargetNotice({
+    hasTarget: targets.some((target) => target.family === 'media-resize-uploads'),
+    anchorsReachable,
+  })
+  if (notice) {
+    console.error(`${notice.severity === 'warning' ? '⚠️ ' : 'ℹ️ '} ${notice.message}`)
   }
 
-  return { targets, travels, softFetch }
+  return { targets, travels, softFetch, notices: notice ? [notice] : [] }
 }
 
 function withWidth(url, width) {
@@ -1249,7 +1397,7 @@ async function main() {
     }
   }
 
-  const { targets, travels, softFetch } = await collectTargets()
+  const { targets, travels, softFetch, notices } = await collectTargets()
   if (targets.length === 0) {
     console.error('❌ Публичный API не отдал ни одного медиа-URL — проверять нечего, гейт считается упавшим')
     process.exit(1)
@@ -1312,8 +1460,12 @@ async function main() {
         0
       ) +
       articleBodyIssues.filter((issue) => issue.severity === 'warning').length +
-      coverageIssues.filter((issue) => issue.severity === 'warning').length,
+      coverageIssues.filter((issue) => issue.severity === 'warning').length +
+      notices.filter((issue) => issue.severity === 'warning').length,
     targets: checked,
+    // Состояние поиска цели `uploads/**`: непостроенная цель обязана быть видна в
+    // отчёте, а не только в stderr, иначе `--json`-потребитель её не увидит (#1758).
+    targetNotices: notices,
     articleBody,
     coverage,
   }
@@ -1338,6 +1490,9 @@ if (typeof module !== 'undefined' && module.exports) {
     isBackpressureResponse,
     collectArticleBodyMediaUrls,
     collectArticleBodyRungs,
+    collectLegacyUploadCandidates,
+    collectRichTextMediaUrls,
+    collectUploadsScanDetails,
     familyOfMediaUrl,
     isLegacyBucketUrl,
     mapWithConcurrency,
@@ -1346,7 +1501,9 @@ if (typeof module !== 'undefined' && module.exports) {
     toLegacyTarget,
     toTargetUrl,
     toUploadsTarget,
+    UPLOADS_ANCHOR_TRAVEL_IDS,
     uploadsScanPages,
+    uploadsTargetNotice,
     unwrapItem,
     unwrapList,
     validateTarget,
