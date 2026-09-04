@@ -209,12 +209,14 @@ function analyzeLeadNoise(descriptionHtml) {
 const FAQ_SECTION_PATTERN = new RegExp(FAQ_SECTION_OPEN_TAG, 'i');
 const FAQ_HEADING_PATTERN = /<h[23][^>]*>\s*(?:<[^>]+>\s*)*(?:частые вопросы|часто задаваемые|faq)/i;
 // A heading on its own is not a FAQ block. The corpus writes the pairs as
-// `<details>`, as `<h3>Вопрос</h3>` or as `<p><strong>Вопрос</strong>`; without
+// `<details>`, as `<h3>Вопрос</h3>` or as `<p><strong>Вопрос</strong>` (the
+// editor keeps `<b>` too — utils/articleEditorSanitize.ts:7); without
 // one of them after the heading, "Частые вопросы — пишите в комментариях" would
 // be flagged with nothing to fix and would take a priority bump into the
 // worklist. The wrapper shape needs no such check — it is written by the editor
 // and never wraps prose.
-const FAQ_PAIR_PATTERN = /<details|<strong|<h3/i;
+// `<b[\s>]` and not a bare `<b`: the latter also matches <br>, <blockquote>, <body>.
+const FAQ_PAIR_PATTERN = /<details|<strong|<h3|<b[\s>]/i;
 
 function analyzeFaqMarkup(descriptionHtml) {
   const html = String(descriptionHtml || '');

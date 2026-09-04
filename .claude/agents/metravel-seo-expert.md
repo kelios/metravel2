@@ -55,9 +55,9 @@ model: sonnet
   позиция за окно), а не догадка «эта статья популярная»;
 - статус страницы в индексе — `npm run stats:index:json` (GSC URL Inspection);
 - контент-проблемы — только вывод `node scripts/seo-audit.js --user-id 1 --json
-  <путь>`: `thin`, `weak-lead`, `lead-noise`, `title-too-long`,
-  `no-headings`, `no-internal-links`, `faq-markup-lost`. «Статья слабая» — не
-  находка;
+  <путь>`: `thin-content`, `weak-lead`, `lead-noise`, `title-too-long`,
+  `title-too-short`, `no-headings`, `no-internal-links`, `faq-markup-lost`.
+  «Статья слабая» — не находка;
 - дубли лидов и повторов — `node scripts/seo-find-dupes.js --user-id 1`;
 - каждый добавленный факт (дата, имя, стиль, цена, часы) — WebSearch/WebFetch с
   URL источника; спорную авторскую цифру не затирать, дать обе с пометкой;

@@ -266,6 +266,12 @@ describe('analyzeFaqMarkup (FAQ block the SSG cannot read — #1761)', () => {
     // 198/562 — <p><strong>Вопрос</strong>Ответ</p>; 682 — <h3>Вопрос</h3><p>Ответ</p>.
     expect(analyzeFaqMarkup('<h2>Частые вопросы: X</h2><p><strong>Вопрос?</strong>Ответ.</p>').markupLost).toBe(true);
     expect(analyzeFaqMarkup('<h2>Частые вопросы: X</h2><h3>Вопрос?</h3><p>Ответ.</p>').markupLost).toBe(true);
+    // <b> редактор сохраняет наравне со <strong> (utils/articleEditorSanitize.ts:7).
+    expect(analyzeFaqMarkup('<h2>Частые вопросы: X</h2><p><b>Вопрос?</b>Ответ.</p>').markupLost).toBe(true);
+    // …но <br> в прозе под заголовком парой не считается.
+    expect(analyzeFaqMarkup('<h2>Частые вопросы</h2><p>Пишите в комментариях.<br>Отвечу.</p>').markupLost).toBe(
+      false,
+    );
   });
 
   it('does not flag a heading with no pairs under it — there is nothing to fix', () => {
