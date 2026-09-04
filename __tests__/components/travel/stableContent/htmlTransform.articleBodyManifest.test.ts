@@ -213,13 +213,13 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
 
       expect(out).not.toContain('metravelprod.s3')
       expect(out).toContain('/media-resize/uploads/1591620319350_original.jpg')
-      expect(out).toContain('f=jpeg')
+      expect(out).not.toMatch(/[?&](?:amp;)?f=/)
     })
 
     // Манифест сегодня отдаёт `uploads/**` пустой `srcset`, но отбраковка держится
-    // на КЛЮЧЕ, а не на этом факте: у класса нет durable-производных, и живой ответ
-    // даёт только явный `f=jpeg` от клиентской ветки. Появись у него лестница в
-    // манифесте — её подстановка вернула бы 404 на 5 044 кадрах (#1233).
+    // на КЛЮЧЕ, а не на этом факте: durable-производных у класса нет, любая ступень
+    // отдаёт мастер целиком (v16, `v1_then_master_no_transform`). Появись у него
+    // лестница в манифесте — она обещала бы вес, которого не будет (#1233, #1753).
     it('ignores manifest rungs for the uploads class even when the backend fills srcset', () => {
       const resized = 'https://metravel.by/media-resize/uploads/1591620319350_original.jpg'
       const filled = {
@@ -230,7 +230,7 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
       const out = withWebViewport(1920, 1, () => prepare(ARTICLE_BODY_LEGACY_UPLOAD_URL, media))
 
       expect(media).toBeNull()
-      expect(out).toContain('f=jpeg')
+      expect(out).not.toMatch(/[?&](?:amp;)?f=/)
       expect(Array.from(out.matchAll(/[?&]w=(\d+)/g), (m) => m[1])).toEqual(['800'])
     })
 

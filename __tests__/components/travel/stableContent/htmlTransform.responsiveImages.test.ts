@@ -292,7 +292,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     expect(out).not.toContain('images.weserv.nl')
     expect(out).not.toContain('metravelprod.s3')
     expect(out).toContain(
-      `src="https://metravel.by/media-resize/uploads/legacy-photo.jpg?w=800${AMP}q=80${AMP}fit=contain${AMP}f=jpeg"`,
+      `src="https://metravel.by/media-resize/uploads/legacy-photo.jpg?w=800${AMP}q=80${AMP}fit=contain"`,
     )
   })
 
@@ -318,25 +318,27 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     expect(out).not.toContain('metravelprod.s3')
     expect(out).not.toContain('images.weserv.nl')
     expect(out).toContain(
-      `src="https://metravel.by/media-resize/uploads/1591620319350_original.jpg?w=800${AMP}q=80${AMP}fit=contain${AMP}f=jpeg"`,
+      `src="https://metravel.by/media-resize/uploads/1591620319350_original.jpg?w=800${AMP}q=80${AMP}fit=contain"`,
     )
   })
 
-  // #1233: класс `uploads/**` — единственный без durable-производных, и после
-  // fail-closed чтения ВСЯ его лестница отвечала 404 `derivative-missing`: фото
-  // пропали в телах 259 из 397 статей (5 044 кадра, обход прода 2026-08-04).
-  // Замер того же дня, `uploads/1642189225IMG_6113.jpg`: w=320|480|640|800|960|1600
-  // → 404, `w=1920` → 200 `stored-master` 216 786 B на кадре 800×533. Явный
-  // `f=jpeg` уводит роут в `dynamic-transform`: 22 142 B на w=320, 200 и immutable.
-  describe('legacy uploads class asks for the transform branch that actually answers (#1233)', () => {
+  // #1753: класс `uploads/**` спрашивается БЕЗ параметра формата. Обход #1233
+  // просил его явным `f=jpeg`, пока proxy-contract объявлял для `legacy_upload`
+  // `explicit_format_overrides: {jpeg: transform}`. В v16 то же поле объявлено как
+  // `unsupported_format`: замер прода 2026-09-04,
+  // `uploads/1620061579IMG_6533.JPG?w=800&q=80&fit=contain` — с `&f=jpeg` 400
+  // `unsupported-format`, без него 200 `stored-master-fallback` 190 060 B. На живой
+  // опубликованной странице обход давал 17 запросов и 17 ответов 400.
+  describe('legacy uploads class asks the branch that actually answers (#1753)', () => {
     const LEGACY = 'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/1642189225IMG_6113.jpg'
 
-    it('asks the transform branch on the single width it emits', () => {
+    it('emits the single width without a format override', () => {
       const out = prepareStableContentHtml(`<p><img src="${LEGACY}" /></p>`)
       const src = out.match(/\bsrc="([^"]+)"/i)?.[1] ?? ''
 
       expect(src).toContain('/media-resize/uploads/')
-      expect(src).toContain(`${AMP}f=jpeg`)
+      expect(src).toContain(`w=800`)
+      expect(src).not.toContain('f=')
     })
 
     // Лестница у класса `uploads/**` бессмысленна: обмер 160 мастеров 2026-08-04 —
@@ -374,10 +376,12 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
       expect(buildStableContentPrefetchUrl(extractFirstImgSrc(prepared)!)).toBe(src)
     })
 
-    // Карве-аут обязан остаться точечным: у conversion-ключей производные
+    // #1753: карве-аута больше нет — `f` не ставится НИ ОДНОМУ классу, и эти два
+    // случая держат границу с другой стороны: попытка вернуть точечный обход не
+    // должна расползтись на здоровые роуты. У conversion-ключей производные
     // забэкфиллены и вся лестница отвечает 200 `stored-derivative` (замер
-    // 2026-08-04, `legacy/5741/…-detail_hd.jpg`). Увести и их в jpeg — значит
-    // променять webp-производную на динамическую конвертацию без причины.
+    // 2026-08-04, `legacy/5741/…-detail_hd.jpg`), то есть явный формат тут был бы
+    // чистой потерей webp-производной.
     it('leaves the healthy legacy conversions route on the default webp branch', () => {
       const out = prepareStableContentHtml(
         '<p><img src="https://metravelprod.s3.eu-north-1.amazonaws.com/3994/conversions/HcQK-detail_hd.jpg" /></p>',
@@ -484,7 +488,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     expect(out).not.toContain('metravelprod.s3')
     expect(out).not.toContain('X-Amz-')
     expect(out).toContain(
-      `src="https://metravel.by/media-resize/uploads/%D0%98%D0%B7%D0%BE%D0%B1%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5%201.jpg?v=42${AMP}w=800${AMP}q=80${AMP}fit=contain${AMP}f=jpeg"`,
+      `src="https://metravel.by/media-resize/uploads/%D0%98%D0%B7%D0%BE%D0%B1%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5%201.jpg?v=42${AMP}w=800${AMP}q=80${AMP}fit=contain"`,
     )
   })
 

@@ -2,14 +2,10 @@
 // J4: Image URL proxy/optimization (extracted from imageOptimization.ts)
 
 import { Platform } from 'react-native';
-import {
-  familyDerivativeCeiling,
-  LEGACY_UPLOAD_TRANSFORM_FORMAT,
-} from '@/constants/imageContract';
+import { familyDerivativeCeiling } from '@/constants/imageContract';
 import {
   normalizeAbsoluteMediaUrl,
   familyRouteOfMediaUrl,
-  isLegacyUploadResizeUrl,
   isPrivateOrLocalHost,
   toLegacyResizePath,
   resolveLegacyResizeOrigin,
@@ -310,16 +306,13 @@ export function optimizeImageUrl(
         if (!servedFromDurableFamily && options.quality != null) {
           proxyParams.set('q', String(snapQuality(options.quality)));
         }
-        // #1233: класс `uploads/**` без durable-производных отвечает 404 на любую
-        // ступень, поэтому по умолчанию спрашивается явным `f=jpeg` —
-        // `dynamic-transform`. Явный формат от вызывающего кода уважается: обход
-        // задаёт дефолт, а не отбирает выбор. Обоснование —
-        // `LEGACY_UPLOAD_TRANSFORM_FORMAT`.
-        const legacyUploadFormat = isLegacyUploadResizeUrl(parsedUrl.pathname)
-          ? LEGACY_UPLOAD_TRANSFORM_FORMAT
-          : undefined;
-        const format =
-          options.format && options.format !== 'auto' ? options.format : legacyUploadFormat;
+        // #1753: формат ставится только по явному запросу вызывающего кода.
+        // Дефолтный `f=jpeg` для класса `uploads/**` (обход #1233) снят: в
+        // proxy-contract v16 у `legacy_upload` объявлено
+        // `explicit_format_overrides: {"jpeg": "unsupported_format"}`, и такой
+        // запрос отвечает 400 вместо картинки. Класс обслуживается объявленной
+        // политикой `missing_derivative: v1_then_master_no_transform`.
+        const format = options.format && options.format !== 'auto' ? options.format : undefined;
         if (format) proxyParams.set('f', format);
         if (!servedFromDurableFamily && options.fit) proxyParams.set('fit', options.fit);
       }

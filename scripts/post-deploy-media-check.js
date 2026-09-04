@@ -73,8 +73,9 @@ const WIDTHS_BY_FAMILY = new Map([
   ['media-resize-legacy', { small: 96, large: 1600 }],
   /**
    * Ключи `uploads/**` — фото тела старых статей. Лестницы у класса нет: durable-
-   * производных ноль, живой ответ даёт только явный `f=jpeg` (`dynamic-transform`),
-   * и фронт просит у него РОВНО одну ширину — `LEGACY_UPLOAD_FIXED_WIDTH` = 800.
+   * производных ноль, любая ширина отдаёт мастер по объявленной политике
+   * `v1_then_master_no_transform`, и фронт просит у него РОВНО одну ширину —
+   * `LEGACY_UPLOAD_FIXED_WIDTH` = 800 (#1753).
    * Поэтому верхняя ступень здесь 800, а не потолок профиля `articleBody`: мерить
    * класс шириной, которой у него нет и которую никто не запрашивает, — это ровно
    * та ложная тревога, из-за которой гейт перестают читать (#1373).
@@ -140,6 +141,33 @@ function widthsFor(family) {
 }
 
 /**
+ * Семейства, у которых мастер вместо производной и `no-store` — ОБЪЯВЛЕННОЕ
+ * контрактом поведение, а не поломка (#1753).
+ *
+ * У класса `uploads/**` durable-производных нет ни на одной ступени, и
+ * proxy-contract v16 описывает для него отдельную политику
+ * `legacy_upload.missing_derivative = v1_then_master_no_transform`: любая ширина
+ * отдаёт мастер целиком с `cache-control: no-store`. Замер прода 2026-09-04,
+ * `uploads/1620061579IMG_6533.JPG`: w=320|480|640|800|960|1200|1600 → 200,
+ * 190 060 B на каждой ступени.
+ *
+ * Поэтому три проверки, написанные под durable-семейства — «мастер вместо
+ * производной», «кэш не public» и инвариант веса по ширине — здесь дают ложную
+ * тревогу на объявленном поведении. Остальные остаются: статус, тип контента,
+ * `derivative-missing` и `source-pass-through` продолжают валить гейт, то есть
+ * возврат класса к 400/404 будет пойман.
+ *
+ * Запись снимается вместе с backfill производных для `uploads/**` (#1222):
+ * когда они появятся, семейство возвращается в общий строгий набор.
+ */
+const DECLARED_MASTER_FALLBACK_FAMILIES = new Map([
+  [
+    'media-resize-uploads',
+    'proxy-contract v16: legacy_upload.missing_derivative = v1_then_master_no_transform',
+  ],
+])
+
+/**
  * Семейства, про которые уже известно, что они сломаны, — с задачей-владельцем.
  * Список ЯВНЫЙ и сокращается по мере закрытия #1195; пустой список = гейт строгий
  * ко всем семействам. С `--allow-known-broken` ошибки этих семейств понижаются до
@@ -164,18 +192,17 @@ const FIRST_PARTY_MEDIA_ROUTE =
 const LEGACY_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp'])
 
 /**
- * Дубль `LEGACY_UPLOAD_TRANSFORM_FORMAT` из `constants/imageContract.ts`: гейт —
+ * Дубль `LEGACY_UPLOAD_FIXED_WIDTH` из `constants/imageContract.ts`: гейт —
  * CommonJS и TS-константу не импортирует, как и правило маршрутизации выше.
- * Расхождение ловит `__tests__/scripts/post-deploy-media-check.test.ts`.
+ * Расхождение с контрактом ловит `__tests__/scripts/post-deploy-media-check.test.ts`
+ * (сверяет ширину цели с импортированной TS-константой), а расхождение ступеней
+ * таблицы — `__tests__/scripts/postDeployMediaWidths.test.ts`.
  */
-const LEGACY_UPLOAD_TRANSFORM_FORMAT = 'jpeg'
+const LEGACY_UPLOAD_FIXED_WIDTH = 800
 
 /**
- * Accept ровно как у Chrome. Без него бэк уходит в jpeg-ветку
- * (`explicit_format_overrides: {jpeg: transform}` в proxy-contract), которая
- * ресайзится даже когда дефолтный webp-путь отдаёт мастер. Гейт с дефолтным
- * `Accept` зеленел бы на формате, который живой браузер не запрашивает, — то
- * есть проверял бы не ту ветку, что видит пользователь.
+ * Accept ровно как у Chrome: бэкенд ветвится по нему, и гейт обязан щупать ту
+ * ветку, которую видит читатель, а не ту, что удобнее зеленеет.
  */
 const BROWSER_IMAGE_ACCEPT = 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
 
@@ -384,13 +411,12 @@ function toLegacyTarget(site, familyUrl) {
  * сюда намеренно не попадают: манифест их не отдаёт, а угадывать имя бакета в
  * гейте — способ получить цель, которой нет на проверяемом origin.
  *
- * #1233: цель несёт `f=jpeg`, потому что именно так фронт теперь спрашивает этот
- * класс (`LEGACY_UPLOAD_TRANSFORM_FORMAT`): durable-производных у `uploads/**`
- * нет, дефолтная webp-ветка отвечает 404 на КАЖДОЙ ступени. Гейт обязан щупать
- * ту ветку, которую видит читатель, иначе он либо валит деплой на URL, который
- * никто не запрашивает, либо зеленеет не на том. `format_precedence` контракта
- * ставит явный `f` выше `Accept`, поэтому обе Accept-ветки придут в jpeg — это
- * ожидаемо ровно для этого семейства и снимается вместе с карве-аутом.
+ * #1753: цель больше НЕ несёт `f=jpeg`. Обход #1233 снят: в proxy-contract v16
+ * этот формат объявлен у `legacy_upload` как `unsupported_format` и отвечает
+ * 400, то есть гейт с ним щупал URL, который живой фронт больше не строит, и
+ * валил бы деплой на заведомо мёртвой ветке. Фронт спрашивает класс одной
+ * шириной без `f` (`LEGACY_UPLOAD_FIXED_WIDTH`), и ответ приходит по политике
+ * `missing_derivative: v1_then_master_no_transform`.
  */
 function toUploadsTarget(site, rawUrl) {
   const value = String(rawUrl || '').trim()
@@ -407,7 +433,7 @@ function toUploadsTarget(site, rawUrl) {
   if (parts.some((part) => !part || part === '.' || part === '..')) return null
   const extension = String(parts[parts.length - 1].split('.').pop() || '').toLowerCase()
   if (!LEGACY_IMAGE_EXTENSIONS.has(extension)) return null
-  return `${site}/media-resize/${key}?f=${LEGACY_UPLOAD_TRANSFORM_FORMAT}`
+  return `${site}/media-resize/${key}?w=${LEGACY_UPLOAD_FIXED_WIDTH}`
 }
 
 /** URL'ы медиа тела статьи из BE-манифеста: обложка + галерея. */
@@ -667,6 +693,7 @@ function extractTargetsFromPayloads(site, { travels, travelDetail, travelDetails
 function validateTarget(target, probes, options = {}) {
   const allowKnownBroken = Boolean(options.allowKnownBroken)
   const knownBroken = KNOWN_BROKEN_FAMILIES.get(target.family)
+  const declaredMasterFallback = DECLARED_MASTER_FALLBACK_FAMILIES.get(target.family)
   const { small: smallWidth, large: largeWidth } = widthsFor(target.family)
   const issues = []
 
@@ -722,7 +749,7 @@ function validateTarget(target, probes, options = {}) {
       // #1219, #1215). Смягчение до предупреждения осталось только у семейств вне
       // таблицы: их ступени взяты из `DEFAULT_WIDTHS` наугад, и верхняя может
       // честно не существовать.
-      if (/stored-master/i.test(transform)) {
+      if (/stored-master/i.test(transform) && !declaredMasterFallback) {
         add(
           'media.master_instead_of_derivative',
           `${scope} w=${width}: отдан мастер (transform="${transform}", ${response.bytes} B) вместо производной`,
@@ -730,7 +757,19 @@ function validateTarget(target, probes, options = {}) {
         )
       }
       const cacheControl = getHeaderValue(response.headers, 'cache-control')
-      if (/no-store/i.test(cacheControl)) {
+      if (declaredMasterFallback) {
+        // Семейство обслуживается объявленным фолбэком: кэш-заголовок и вес по
+        // ширине контрактом не обещаны, поэтому проверяется само поведение —
+        // ответ обязан оставаться отдачей мастера или производной, а не пустым
+        // прокси-ответом неизвестной природы.
+        if (!/stored-(master|derivative)/i.test(transform)) {
+          add(
+            'media.declared_fallback_broken',
+            `${scope} w=${width}: x-metravel-image-transform="${transform || '(нет)'}" — ` +
+              `${declaredMasterFallback} обещает stored-master-fallback либо производную`
+          )
+        }
+      } else if (/no-store/i.test(cacheControl)) {
         add(
           'media.cache_control.no_store',
           `${scope} w=${width}: cache-control="${cacheControl}" — раздача не кэшируется`
@@ -745,7 +784,7 @@ function validateTarget(target, probes, options = {}) {
 
     // Главный инвариант: разные `w` обязаны давать разный вес. Именно он ловит
     // тихую подмену ступени мастером, при которой все заголовки могут быть в норме.
-    if (probe.small.status === 200 && probe.large.status === 200) {
+    if (probe.small.status === 200 && probe.large.status === 200 && !declaredMasterFallback) {
       if (probe.small.bytes === probe.large.bytes) {
         add(
           'media.width_invariant',

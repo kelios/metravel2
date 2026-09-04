@@ -123,6 +123,8 @@ describe('Android потребляет тот же media.article_body, что и
 
     expect(out).not.toContain('metravelprod.s3')
     expect(out).toContain('/media-resize/uploads/1591620319350_original.jpg')
-    expect(out).toContain('f=jpeg')
+    // Формата в запросе нет ни в каком виде: `?f=`, `&f=` и HTML-экранированный
+    // `&amp;f=`. Голое `toContain('f=')` цеплялось бы и за `href=` в теле статьи.
+    expect(out).not.toMatch(/[?&](?:amp;)?f=/)
   })
 })

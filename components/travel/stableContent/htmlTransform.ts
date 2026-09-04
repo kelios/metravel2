@@ -10,7 +10,6 @@ import {
   IMAGE_QUALITY,
   IMAGE_WIDTHS,
   LEGACY_UPLOAD_FIXED_WIDTH,
-  LEGACY_UPLOAD_TRANSFORM_FORMAT,
   UNKNOWN_FAMILY_DERIVATIVE_CEILING,
 } from '@/constants/imageContract'
 import { replaceInstagramEmbedsWithCards } from '@/utils/instagramRichText'
@@ -336,14 +335,12 @@ const buildMetravelSizedUrl = (base: URL, width: number): string => {
   url.searchParams.set('w', String(width))
   url.searchParams.set('q', String(RESPONSIVE_QUALITY))
   url.searchParams.set('fit', 'contain')
-  // #1233: у legacy-класса `uploads/**` durable-производных нет, и после
-  // fail-closed чтения ВСЯ лестница отвечает 404 — фото легаси-статей пропали
-  // (5 044 кадра в 259 из 397 статей, обход 2026-08-04). Явный `f=jpeg` уводит
-  // класс в `dynamic-transform` и возвращает лестницу в строй; обоснование и
-  // условие снятия — у `LEGACY_UPLOAD_TRANSFORM_FORMAT`.
-  if (isLegacyUploadResizeUrl(url.pathname)) {
-    url.searchParams.set('f', LEGACY_UPLOAD_TRANSFORM_FORMAT)
-  }
+  // #1753: `f=jpeg` для класса `uploads/**` (обход #1233) снят. В
+  // proxy-contract v16 этот формат объявлен у `legacy_upload` как
+  // `unsupported_format`, и запрос отвечает 400 — на живой опубликованной
+  // странице это были 17 из 17 обращений и три невидимых фото (access-log
+  // прода за 72 часа, 2026-09-04). Без `f` тот же URL отдаёт 200
+  // `stored-master-fallback` по политике `v1_then_master_no_transform`.
   return url.toString()
 }
 

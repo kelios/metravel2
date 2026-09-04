@@ -381,9 +381,12 @@ export const familyRouteOfMediaUrl = (value: string): string | undefined => {
  *
  * Отделён от `/media-resize/legacy/` намеренно: у conversion-ключей производные
  * забэкфиллены и вся лестница отвечает 200 `stored-derivative` (замер прода
- * 2026-08-04, `legacy/5741/…-detail_hd.jpg`: w=320…1600 → 200). Ломается ровно
- * класс `uploads/**`, поэтому и обход по нему точечный — см.
- * `LEGACY_UPLOAD_TRANSFORM_FORMAT`.
+ * 2026-08-04, `legacy/5741/…-detail_hd.jpg`: w=320…1600 → 200). У класса
+ * `uploads/**` производных нет ни на одной ступени, и он держится на объявленной
+ * proxy-contract v16 политике `missing_derivative: v1_then_master_no_transform`:
+ * ответ приходит, но это мастер целиком с `no-store` (замер 2026-09-04,
+ * `uploads/1620061579IMG_6533.JPG`: w=320…1600 → 200, 190 060 B на каждой
+ * ступени). Отсюда единственная ширина класса — см. `LEGACY_UPLOAD_FIXED_WIDTH`.
  */
 export const isLegacyUploadResizeUrl = (url: string): boolean => {
   const value = String(url || '').trim();

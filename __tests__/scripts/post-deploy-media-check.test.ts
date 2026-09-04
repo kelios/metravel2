@@ -1,3 +1,5 @@
+import { LEGACY_UPLOAD_FIXED_WIDTH } from '@/constants/imageContract'
+
 const {
   KNOWN_BROKEN_FAMILIES,
   legacyKeyExtension,
@@ -147,15 +149,20 @@ describe('post-deploy media check: цель uploads/** (фото тела ста
     // Правило `isLegacyUploadKey` из `utils/mediaUrl.ts`: класс `uploads/**`
     // обслуживает `/media-resize/<key>`, а не `/media-resize/legacy/<key>`.
     //
-    // #1233: цель несёт `f=jpeg` — ровно ту ветку, которой этот класс теперь
-    // спрашивается фронтом (`LEGACY_UPLOAD_TRANSFORM_FORMAT`). Гейт обязан щупать
-    // URL читателя: дефолтная webp-ветка у `uploads/**` отвечает 404 на каждой
-    // ступени, и без `f` гейт валил бы деплой на URL, который никто не запрашивает.
+    // #1753: цель несёт `w=800` и НЕ несёт `f=jpeg`. Гейт обязан щупать URL
+    // читателя, а фронт после снятия обхода #1233 просит класс одной шириной без
+    // формата: в proxy-contract v16 явный `f=jpeg` объявлен у `legacy_upload`
+    // как `unsupported_format` и отвечает 400.
     expect(toUploadsTarget(SITE, `${S3}/uploads/1593619453IMG_6420.JPG`)).toBe(
-      `${SITE}/media-resize/uploads/1593619453IMG_6420.JPG?f=jpeg`
+      `${SITE}/media-resize/uploads/1593619453IMG_6420.JPG?w=800`
     )
+    // Ширина в цели — КОПИЯ `LEGACY_UPLOAD_FIXED_WIDTH` из TS-контракта: гейт
+    // CommonJS и импортировать его не может. Литерал выше пиннит форму URL, эта
+    // строка — совпадение с контрактом. Без неё копия расходилась с фронтом
+    // молча: литерал `?w=800` зелен и тогда, когда фронт просит уже другую
+    // ширину, и гейт щупал бы URL, которого у читателя нет.
     expect(toUploadsTarget(SITE, '/uploads/articles/legacy.jpg')).toBe(
-      `${SITE}/media-resize/uploads/articles/legacy.jpg?f=jpeg`
+      `${SITE}/media-resize/uploads/articles/legacy.jpg?w=${LEGACY_UPLOAD_FIXED_WIDTH}`
     )
   })
 
@@ -204,7 +211,7 @@ describe('post-deploy media check: цель uploads/** (фото тела ста
     })
 
     expect(targets.find((item: { family: string }) => item.family === 'media-resize-uploads')?.url).toBe(
-      `${SITE}/media-resize/uploads/1591977314DSC_0375.JPG?f=jpeg`
+      `${SITE}/media-resize/uploads/1591977314DSC_0375.JPG?w=800`
     )
   })
 
@@ -283,9 +290,9 @@ describe('post-deploy media check: проверки ответа', () => {
   // вовсе (контрактный тест `postDeployMediaWidths`) — мастер тут провал бюджета
   // на любой из ступеней, мягкой градации не осталось (#1215/#1373).
   it('мастер вместо производной: у семейства из контракта ошибка на обеих ступенях', () => {
-    const { small, large } = widthsFor('media-resize-uploads')
+    const { small, large } = widthsFor('travel-image')
     const result = validateTarget(
-      target('media-resize-uploads'),
+      target('travel-image'),
       probes({ transform: 'stored-master' }, { transform: 'stored-master' })
     )
 
@@ -295,6 +302,107 @@ describe('post-deploy media check: проверки ответа', () => {
     expect(master).toHaveLength(2)
     expect(master.find((issue: { message: string }) => issue.message.includes(`w=${small}`))?.severity).toBe('error')
     expect(master.find((issue: { message: string }) => issue.message.includes(`w=${large}`))?.severity).toBe('error')
+  })
+
+  // #1753: у класса `uploads/**` мастер и `no-store` — ОБЪЯВЛЕННОЕ поведение
+  // (`legacy_upload.missing_derivative = v1_then_master_no_transform` в
+  // proxy-contract v16), durable-производных у него нет ни на одной ступени.
+  // Замер прода 2026-09-04: w=320…1600 → 200, 190 060 B на каждой ступени.
+  // Мерить его правилами durable-семейств — ложная тревога на объявленном
+  // контракте; проверки, которые действительно ловят поломку, остаются.
+  describe('класс uploads/**: объявленный фолбэк на мастер не считается поломкой', () => {
+    it('мастер, no-store и одинаковый вес ступеней проходят гейт', () => {
+      const result = validateTarget(
+        target('media-resize-uploads'),
+        probes(
+          { transform: 'stored-master-fallback', cacheControl: 'no-store', bytes: 190060 },
+          { transform: 'stored-master-fallback', cacheControl: 'no-store', bytes: 190060 }
+        )
+      )
+
+      expect(result.issues).toEqual([])
+    })
+
+    it('НЕГАТИВНАЯ ПРОБА: ответ не мастер и не производная — гейт валится', () => {
+      const result = validateTarget(
+        target('media-resize-uploads'),
+        probes({ transform: '' }, { transform: '' })
+      )
+
+      const codes = result.issues.map((issue: { code: string }) => issue.code)
+      expect(codes).toContain('media.declared_fallback_broken')
+      expect(
+        result.issues.every((issue: { severity: string }) => issue.severity === 'error')
+      ).toBe(true)
+    })
+
+    it('НЕГАТИВНАЯ ПРОБА: source-pass-through не попадает под карве-аут', () => {
+      // Карве-аут снимает ТРИ проверки, а не «строгость семейства». Отдача
+      // мастера мимо роута (`source-pass-through`) — это уже не объявленный
+      // фолбэк, а обход ресайза, и валить гейт он обязан по-прежнему: ровно на
+      // это ссылаются комментарий `DECLARED_MASTER_FALLBACK_FAMILIES` и §6 docs.
+      const result = validateTarget(
+        target('media-resize-uploads'),
+        probes(
+          { transform: 'source-pass-through', cacheControl: 'no-store', bytes: 190060 },
+          { transform: 'source-pass-through', cacheControl: 'no-store', bytes: 190060 }
+        )
+      )
+
+      const codes = result.issues.map((issue: { code: string }) => issue.code)
+      expect(codes).toContain('media.source_pass_through')
+      expect(
+        result.issues
+          .filter((issue: { code: string }) => issue.code === 'media.source_pass_through')
+          .every((issue: { severity: string }) => issue.severity === 'error')
+      ).toBe(true)
+    })
+
+    it('НЕГАТИВНАЯ ПРОБА: derivative-missing на объявленной ветке всё так же валит гейт', () => {
+      // Возврат класса к fail-closed 404 — это битое фото у читателя, и карве-аут
+      // его не прикрывает: статус и `derivative-missing` живут до него.
+      const result = validateTarget(
+        target('media-resize-uploads'),
+        probes(
+          { status: 404, bytes: 0, contentType: 'text/html', transform: 'derivative-missing', cacheControl: 'no-store' },
+          { status: 404, bytes: 0, contentType: 'text/html', transform: 'derivative-missing', cacheControl: 'no-store' }
+        )
+      )
+
+      const codes = result.issues.map((issue: { code: string }) => issue.code)
+      expect(codes).toContain('media.derivative_missing')
+      expect(codes).toContain('media.status')
+    })
+
+    it('карве-аут не расползается: у durable-семейства мастер и no-store валят гейт', () => {
+      // Граница карве-аута — ключ Map, а не «legacy-роуты вообще». Тот же ответ
+      // на `travel-image` обязан дать и «мастер вместо производной», и no-store.
+      const result = validateTarget(
+        target('travel-image'),
+        probes(
+          { transform: 'stored-master-fallback', cacheControl: 'no-store', bytes: 190060 },
+          { transform: 'stored-master-fallback', cacheControl: 'no-store', bytes: 190060 }
+        )
+      )
+
+      const codes = result.issues.map((issue: { code: string }) => issue.code)
+      expect(codes).toContain('media.master_instead_of_derivative')
+      expect(codes).toContain('media.cache_control.no_store')
+      expect(codes).toContain('media.width_invariant')
+      expect(codes).not.toContain('media.declared_fallback_broken')
+    })
+
+    it('НЕГАТИВНАЯ ПРОБА: 400 на объявленной ветке всё так же валит гейт', () => {
+      const result = validateTarget(
+        target('media-resize-uploads'),
+        probes(
+          { status: 400, bytes: 24, contentType: 'application/json', transform: 'unsupported-format', cacheControl: 'no-store' },
+          { status: 400, bytes: 24, contentType: 'application/json', transform: 'unsupported-format', cacheControl: 'no-store' }
+        )
+      )
+
+      expect(result.issues.map((issue: { code: string }) => issue.code)).toContain('media.status')
+    })
   })
 
   // Семейство вне таблицы меряется `DEFAULT_WIDTHS`, то есть ступенями наугад:

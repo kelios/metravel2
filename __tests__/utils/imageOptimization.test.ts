@@ -484,12 +484,13 @@ describe('utils/imageOptimization', () => {
           { width: 300, quality: 80 },
         )!
         expect(uploads).not.toContain('metravelprod.s3')
-        // #1233: `f=jpeg` — не украшение, а единственная ветка роута с ответом 200:
-        // durable-производных у класса `uploads/**` нет, дефолтный webp-путь отдаёт
-        // 404 `derivative-missing` на каждой ступени. Класс `conversions/**` ниже
-        // остаётся на дефолтной ветке — там производные забэкфиллены.
+        // #1753: параметра формата в URL нет. Обход #1233 просил класс `uploads/**`
+        // явным `f=jpeg`, но в proxy-contract v16 этот формат объявлен у
+        // `legacy_upload` как `unsupported_format` и отвечает 400 — то есть обход
+        // стал ровно тем, от чего защищал. Класс обслуживается объявленной
+        // политикой `v1_then_master_no_transform`.
         expect(uploads).toBe(
-          'https://metravel.by/media-resize/uploads/1591620319350_original.jpg?w=320&q=80&f=jpeg',
+          'https://metravel.by/media-resize/uploads/1591620319350_original.jpg?w=320&q=80',
         )
 
         const conversions = optimizeImageUrl(
@@ -504,13 +505,13 @@ describe('utils/imageOptimization', () => {
           'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/wrapped.jpg?X-Amz-Signature=secret'
         const wrapped = `https://images.weserv.nl/?url=${encodeURIComponent(wrappedOrigin)}&w=1600`
         expect(optimizeImageUrl(wrapped, { width: 300 })).toBe(
-          'https://metravel.by/media-resize/uploads/wrapped.jpg?w=320&f=jpeg',
+          'https://metravel.by/media-resize/uploads/wrapped.jpg?w=320',
         )
 
         // `/media-resize` never leaves the frontend without an explicit canonical
         // width, even if a dynamic caller has not measured its slot yet.
         expect(optimizeImageUrl(wrapped, {})).toBe(
-          'https://metravel.by/media-resize/uploads/wrapped.jpg?w=800&f=jpeg',
+          'https://metravel.by/media-resize/uploads/wrapped.jpg?w=800',
         )
 
         // Класса без legacy-роута быть переписанным не должно: `responsive-images`
@@ -522,22 +523,27 @@ describe('utils/imageOptimization', () => {
       }
     })
 
-    // #1233: карве-аут `f=jpeg` — обход отсутствующих durable-производных у класса
-    // `uploads/**`, а не новая политика формата. Границы фиксируем тестом: он не
-    // расползается на здоровые роуты и не отбирает выбор у вызывающего кода.
-    it('keeps the legacy-uploads jpeg carve-out narrow', () => {
+    // #1753: карве-аут `f=jpeg` для класса `uploads/**` снят — v16 отвечает на него
+    // 400 `unsupported-format`. Тест держит границу с двух сторон: дефолтного формата
+    // не появляется ни у одного класса, а явный выбор вызывающего кода уважается.
+    it('never defaults a format for legacy uploads, keeps explicit caller format', () => {
       const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
       process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api'
       try {
         const uploads = 'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/legacy.jpg'
 
-        // Явный формат вызывающего кода сильнее дефолта обхода.
+        // Дефолтного формата у класса больше нет: URL уходит голым по ширине.
+        expect(optimizeImageUrl(uploads, { width: 320 })).toBe(
+          'https://metravel.by/media-resize/uploads/legacy.jpg?w=320',
+        )
+
+        // Явный формат вызывающего кода по-прежнему уважается.
         expect(optimizeImageUrl(uploads, { width: 320, format: 'webp' })).toBe(
           'https://metravel.by/media-resize/uploads/legacy.jpg?w=320&f=webp',
         )
 
         // Здоровые семейства остаются на дефолтной webp-ветке: у них производные
-        // забэкфиллены, и динамическая конвертация тут была бы чистой потерей.
+        // забэкфиллены, и явный формат тут был бы чистой потерей.
         expect(optimizeImageUrl('https://metravel.by/gallery/540/gallery/x.webp', { width: 320 }))
           .not.toContain('f=')
         expect(
