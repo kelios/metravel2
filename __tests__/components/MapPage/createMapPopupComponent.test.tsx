@@ -118,4 +118,34 @@ describe('createMapPopupComponent saved-points readiness', () => {
     });
     expect(createPoint).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps the raw geocoder chain in the save payload and shortens the popup title (#1750)', async () => {
+    const raw = '332 · Soblówka · Силезское воеводство · Живецкий повят · Польша';
+    mockUseSavedPointToggle.mockReturnValue({
+      isSaved: false,
+      isReady: true,
+      removeSaved,
+      createPoint,
+    });
+    const Popup = createMapPopupComponent({
+      userLocation: null,
+      colors: {},
+      themeContextValue: {},
+    });
+
+    renderer.act(() => {
+      renderer.create(<Popup point={{ id: 7, coord: '49.416,19.027', address: raw }} />);
+    });
+
+    expect(mockPlacePopupCard).toHaveBeenLastCalledWith(
+      expect.objectContaining({ title: 'Soblówka' }),
+    );
+
+    await renderer.act(async () => {
+      await mockPlacePopupCard.mock.calls.at(-1)?.[0].onAddPoint();
+    });
+    expect(createPoint).toHaveBeenCalledWith(
+      expect.objectContaining({ address: raw, name: raw }),
+    );
+  });
 });

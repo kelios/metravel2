@@ -29,6 +29,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useRouteStore } from '@/stores/routeStore';
 import { ThemeContext, type ThemeContextType, type ThemedColors } from '@/hooks/useTheme';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
+import { resolveTravelPointLabel } from '@/utils/travelDisplayLocation';
 import { osrmRoute } from '@/api/external/osrm';
 import { buildPlaceTitleParts, stripCountryFromCategoryString } from './placeTitle';
 import { useHasUserLocation, type UserLocationSignal } from './userLocationSignal';
@@ -409,7 +410,9 @@ export const createMapPopupComponent = ({
       }
 
       const routeStore = useRouteStore.getState();
-      const destinationLabel = String(point.address ?? popupTitle.title ?? '').trim() ||
+      const destinationLabel =
+        resolveTravelPointLabel(point.address) ||
+        String(popupTitle.title ?? '').trim() ||
         CoordinateConverter.formatCoordinates({ lat: normalizedCoord.lat, lng: normalizedCoord.lng });
 
       routeStore.clearRouteAndSetMode('route');

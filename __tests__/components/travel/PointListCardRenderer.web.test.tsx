@@ -37,13 +37,13 @@ describe('PointListCardRenderer (web) — mobile-parity compact card', () => {
     { key: 'waze', icon: 'navigation' as const, label: 'Waze', title: 'Открыть точку в Waze', onPress: noop },
   ];
 
-  const renderCard = () =>
+  const renderCard = (address = 'Брестская крепость (Цитадель)') =>
     render(
       <PointListCardRenderer
         colors={{ textOnDark: colors.textOnDark, textOnPrimary: colors.textOnPrimary }}
         isMobile={false}
         isWebGrid
-        item={{ id: '1', address: 'Брестская крепость (Цитадель)', coord: '52.0826,23.6558' }}
+        item={{ id: '1', address, coord: '52.0826,23.6558' }}
         itemModel={{
           addDisabled: false,
           categoryLabel: 'Достопримечательность',
@@ -78,6 +78,12 @@ describe('PointListCardRenderer (web) — mobile-parity compact card', () => {
     // The map-app buttons are NOT laid out inline anymore (they moved into the popup).
     expect(screen.queryByLabelText('Открыть точку в Google Maps')).toBeNull();
     expect(screen.queryByLabelText('Открыть точку в Organic Maps')).toBeNull();
+  })
+
+  it('shortens a pre-#1717 geocoder chain on the card title (#1750)', () => {
+    renderCard('332 · Soblówka · Силезское воеводство · Живецкий повят · Польша')
+    expect(screen.getByText('Soblówka')).toBeTruthy()
+    expect(screen.queryByText(/Силезское воеводство/)).toBeNull()
   });
 
   it('keeps the coord + save affordances visible like the mobile card', () => {
