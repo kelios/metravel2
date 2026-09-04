@@ -99,7 +99,10 @@ function distributionSigningFixture() {
     'aps-environment': 'production',
     'beta-reports-active': true,
     'com.apple.developer.applesignin': ['Default'],
-    'com.apple.developer.associated-domains': ['applinks:metravel.by'],
+    'com.apple.developer.associated-domains': [
+      'applinks:metravel.by',
+      'applinks:metravel.by?mode=developer',
+    ],
     'com.apple.developer.team-identifier': teamIdentifier,
     'get-task-allow': false,
   };

@@ -30,7 +30,8 @@
       },
       "usesAppleSignIn": true,
       "associatedDomains": [
-        "applinks:metravel.by"
+        "applinks:metravel.by",
+        "applinks:metravel.by?mode=developer"
       ]
     },
     "android": {

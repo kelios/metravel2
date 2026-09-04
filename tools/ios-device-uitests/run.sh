@@ -19,6 +19,7 @@ fi
 
 rm -rf "$OUT/$LABEL.xcresult"
 TEST_RUNNER_QA_SCRIPT="$QA_SCRIPT_JSON" \
+TEST_RUNNER_QA_BUNDLE="${QA_BUNDLE:-by.metravel.app}" \
 xcodebuild test \
   -project "$ROOT/MetravelDeviceUITests.xcodeproj" \
   -scheme MetravelDeviceUITests \

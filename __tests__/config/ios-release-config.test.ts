@@ -109,7 +109,10 @@ describe('iOS release configuration', () => {
     expect(ios.entitlements).toEqual({
       'aps-environment': 'production',
       'com.apple.developer.applesignin': ['Default'],
-      'com.apple.developer.associated-domains': ['applinks:metravel.by'],
+      'com.apple.developer.associated-domains': [
+        'applinks:metravel.by',
+        'applinks:metravel.by?mode=developer',
+      ],
     });
     expect(ios.infoPlist.UIBackgroundModes).toBeUndefined();
     expect(ios.infoPlist.NSMotionUsageDescription).toBe(

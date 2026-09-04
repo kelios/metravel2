@@ -44,6 +44,9 @@ final class RunScriptTests: XCTestCase {
             case "tap":   tapPoint(step)
             case "tapId": tapQuery(app.descendants(matching: .any).matching(identifier: step["id"] as? String ?? ""), what: step["id"] as? String ?? "")
             case "tapText": tapText(step["text"] as? String ?? "")
+            case "longPressText": longPressText(step["text"] as? String ?? "", duration: step["sec"] as? Double ?? 1.2)
+            case "ensureSwitch": ensureSwitch(id: step["id"] as? String ?? "", on: (step["on"] as? Bool) ?? true)
+            case "typePlaceholder": typePlaceholder(step["placeholder"] as? String ?? "", text: step["text"] as? String ?? "")
             case "swipe": swipe(step)
             case "type":  app.typeText(step["text"] as? String ?? "")
             // Форма связана returnKeyType="next"/onSubmitEditing: переход по полям клавишей
@@ -155,6 +158,59 @@ final class RunScriptTests: XCTestCase {
         let q = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS[c] %@ OR identifier CONTAINS[c] %@", text, text))
         tapQuery(q, what: text)
+    }
+
+    private func longPressText(_ text: String, duration: TimeInterval) {
+        let q = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS[c] %@ OR identifier CONTAINS[c] %@", text, text))
+        guard q.count > 0 else { XCTFail("не найден элемент \(text)"); return }
+        var element = q.element(boundBy: 0)
+        for index in 0..<min(q.count, 8) {
+            let candidate = q.element(boundBy: index)
+            if candidate.isHittable { element = candidate; break }
+        }
+        scrollTo(element)
+        guard element.isHittable else {
+            XCTFail("элемент \(text) есть в дереве, но не доступен для long-press"); return
+        }
+        element.press(forDuration: duration)
+    }
+
+    private func ensureSwitch(id: String, on: Bool) {
+        let switches = app.switches.matching(identifier: id)
+        let fallback = app.descendants(matching: .any).matching(identifier: id)
+        let query = switches.count > 0 ? switches : fallback
+        guard query.count > 0 else { XCTFail("не найден элемент \(id)"); return }
+        let element = query.element(boundBy: 0)
+        scrollTo(element)
+        guard element.isHittable else {
+            XCTFail("переключатель \(id) есть в дереве, но не доступен для тапа"); return
+        }
+        let raw = ((element.value as? String) ?? "").lowercased()
+        let isOn = raw == "1" || raw == "true" || raw == "on"
+        print("QA-SWITCH \(id) value=\(raw) wantOn=\(on)")
+        if isOn != on { element.tap() }
+    }
+
+    private func typePlaceholder(_ placeholder: String, text: String) {
+        let predicate = NSPredicate(
+            format: "placeholderValue CONTAINS[c] %@ OR value CONTAINS[c] %@",
+            placeholder,
+            placeholder
+        )
+        let fields = app.descendants(matching: .any).matching(predicate)
+        guard fields.count > 0 else { XCTFail("не найдено поле \(placeholder)"); return }
+        let field = fields.element(boundBy: 0)
+        scrollTo(field)
+        guard field.isHittable else {
+            XCTFail("поле \(placeholder) недоступно для ввода"); return
+        }
+        field.tap()
+        let current = (field.value as? String) ?? ""
+        if !current.isEmpty && current.lowercased() != placeholder.lowercased() {
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count + 5))
+        }
+        field.typeText(text)
     }
 
     private func swipe(_ step: [String: Any]) {

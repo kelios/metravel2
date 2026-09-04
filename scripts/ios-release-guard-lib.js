@@ -9,6 +9,10 @@ const xcode = require('xcode');
 const EXPECTED = Object.freeze({
   apnsEnvironment: 'production',
   appIconSha256: '86ebbd3444649460bfbc39a172c9d2200ed79f286b67f8e7b3cdc2f5ba4b4a72',
+  associatedDomains: Object.freeze([
+    'applinks:metravel.by',
+    'applinks:metravel.by?mode=developer',
+  ]),
   bundleIdentifier: 'by.metravel.app',
   buildNumber: '7',
   deploymentTarget: '16.4',
@@ -495,7 +499,7 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   if (!packageJson.dependencies?.['expo-apple-authentication']) {
     fail('IOS_APPLE_SIGN_IN_SCOPE', 'expo-apple-authentication must remain a runtime dependency of the Apple sign-in flow');
   }
-  if (!jsonEqual(app.ios?.associatedDomains, ['applinks:metravel.by'])) {
+  if (!jsonEqual(app.ios?.associatedDomains, EXPECTED.associatedDomains)) {
     fail('IOS_ASSOCIATED_DOMAIN_EXPO', JSON.stringify(app.ios?.associatedDomains));
   }
   if (app.icon !== './assets/images/icon.png' ||
@@ -684,7 +688,7 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   const entitlementKeys = Object.keys(entitlementsConfig).sort();
   if (!jsonEqual(entitlementKeys, ['aps-environment', 'com.apple.developer.applesignin', 'com.apple.developer.associated-domains']) ||
       entitlementsConfig['aps-environment'] !== EXPECTED.apnsEnvironment ||
-      !jsonEqual(entitlementsConfig['com.apple.developer.associated-domains'], ['applinks:metravel.by']) ||
+      !jsonEqual(entitlementsConfig['com.apple.developer.associated-domains'], EXPECTED.associatedDomains) ||
       !jsonEqual(entitlementsConfig['com.apple.developer.applesignin'], ['Default'])) {
     fail(
       'IOS_ENTITLEMENT_SCOPE',

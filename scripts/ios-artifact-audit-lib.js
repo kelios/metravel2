@@ -13,7 +13,7 @@ const {
 const EXPECTED_ENTITLEMENTS = Object.freeze({
   'aps-environment': EXPECTED.apnsEnvironment,
   'com.apple.developer.applesignin': ['Default'],
-  'com.apple.developer.associated-domains': ['applinks:metravel.by'],
+  'com.apple.developer.associated-domains': EXPECTED.associatedDomains,
 });
 
 const EXPECTED_SIGNED_ENTITLEMENT_KEYS = Object.freeze([
