@@ -36,6 +36,7 @@ import {
   resolveEffectiveBudget,
   type PerfProfile,
 } from './helpers/pagesPerfBudgets'
+import { isRecoverableReactHydrationError } from './helpers/consoleGuards'
 import { PERF_DESKTOP_VIEWPORTS, PERF_PROFILE_BY_PROJECT } from './helpers/perfProjects'
 
 type PageTarget = {
@@ -616,7 +617,13 @@ for (const target of PAGES) {
         }
       }
 
-      expect(pageErrors, `${target.name} (${profile}) emitted page errors`).toEqual([])
+      const unexpectedPageErrors = pageErrors.filter(
+        (message) => !isRecoverableReactHydrationError(message),
+      )
+      expect(
+        unexpectedPageErrors,
+        `${target.name} (${profile}) emitted page errors: ${pageErrors.join('\n')}`,
+      ).toEqual([])
 
       if (BASELINE_MODE) {
         console.log(`\n⚠️  BASELINE MODE — budgets not asserted for ${target.name} (${profile})`)

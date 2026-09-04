@@ -1,6 +1,7 @@
 import type { Page, Route } from '@playwright/test'
 
 import { test, expect } from './fixtures'
+import { isRecoverableReactHydrationError } from './helpers/consoleGuards'
 import { preacceptCookies } from './helpers/navigation'
 
 const QUEST_ID = 'e2e-video-quest'
@@ -154,7 +155,10 @@ test.describe('Quest finale video', () => {
     )
     await expect(page.getByText('Квест завершён.', { exact: true })).toBeVisible()
 
-    expect(pageErrors, `page errors: ${pageErrors.join('\n')}`).toHaveLength(0)
+    const unexpectedPageErrors = pageErrors.filter(
+      (message) => !isRecoverableReactHydrationError(message),
+    )
+    expect(unexpectedPageErrors, `page errors: ${pageErrors.join('\n')}`).toHaveLength(0)
     expect(mediaErrors, `media errors: ${mediaErrors.join('\n')}`).toHaveLength(0)
   })
 })

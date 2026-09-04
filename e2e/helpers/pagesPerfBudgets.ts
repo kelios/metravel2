@@ -205,7 +205,7 @@ export const PAGE_BUDGETS: BudgetTable = {
       firstScreenElementsMax: 175, // measured 141
       lcpMaxMs: LCP_FAST,
       jsTransferKBMax: 1500, // measured 1228
-      totalTransferKBMax: 1900, // measured 1566
+      totalTransferKBMax: 2300, // measured 1918 (mobile DPR image variants)
       requestsMax: 115, // measured 97
       ...TIMING,
     },

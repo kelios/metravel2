@@ -97,7 +97,9 @@ ${body.replace(/^\n+/, '').replace(/\s*$/, '')}
 
 // Чистое ядро: на вход — три плоских списка `{ path, content }`, на выход —
 // план правок. Без файловой системы, чтобы гейт и тест считали одно и то же.
-const planSync = ({ sourceSkillFiles = [], commandFiles = [], targetFiles = [] } = {}) => {
+// `commandFiles` не передан — проверка команд выключена (скилл-only план в
+// тестах). Пустой массив — все MIRRORED_COMMANDS пропали, CLI так и считает.
+const planSync = ({ sourceSkillFiles = [], commandFiles, targetFiles = [] } = {}) => {
   const expected = new Map()
 
   for (const file of sourceSkillFiles) {
@@ -106,7 +108,8 @@ const planSync = ({ sourceSkillFiles = [], commandFiles = [], targetFiles = [] }
     expected.set(relativePath, { content: file.content, origin: `${toPosix(SOURCE_SKILLS_DIR)}/${relativePath}` })
   }
 
-  const commandsByName = new Map(commandFiles.map((file) => [toPosix(file.path).replace(/\.md$/, ''), file.content]))
+  const providedCommandFiles = commandFiles ?? []
+  const commandsByName = new Map(providedCommandFiles.map((file) => [toPosix(file.path).replace(/\.md$/, ''), file.content]))
   for (const command of MIRRORED_COMMANDS) {
     if (!commandsByName.has(command)) continue
     const relativePath = `${COMMAND_SKILL_PREFIX}${command}/SKILL.md`
@@ -116,7 +119,9 @@ const planSync = ({ sourceSkillFiles = [], commandFiles = [], targetFiles = [] }
     })
   }
 
-  const missingCommands = MIRRORED_COMMANDS.filter((command) => !commandsByName.has(command))
+  const missingCommands = commandFiles == null
+    ? []
+    : MIRRORED_COMMANDS.filter((command) => !commandsByName.has(command))
 
   const targetByPath = new Map(targetFiles.map((file) => [toPosix(file.path), file.content]))
   const writes = []
