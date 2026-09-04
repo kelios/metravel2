@@ -24,6 +24,15 @@ Grok уже подхватывает `AGENTS.md`, `CLAUDE.md`, `.agents/skills/`
 node .grok/scripts/sync-agents.mjs
 ```
 
+После изменения `.claude/skills/**` или `.claude/commands/{auto-dev,changed-summary,check-fast,guard-all,preflight}.md` зеркало для Codex/Grok собирается из `.claude` как единственного источника правды:
+
+```bash
+npm run sync:agent-skills
+npm run sync:agent-skills:check
+```
+
+`.agents/skills/**` руками не править: расхождение ловит `sync:agent-skills:check` в `npm run lint`. Vendor-owned `openspec-*` не зеркалируются.
+
 Не клади полный skill/agent body в `.grok/`. Не меняй Codex/Claude контракты
 через Grok-обёртку: правь канон, затем sync.
 
