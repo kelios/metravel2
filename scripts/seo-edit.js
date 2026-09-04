@@ -4,15 +4,23 @@
  *
  * Unlike the draft engine (metravel_publish.py), this never knocks an article
  * offline: it echoes back every real field from GET and changes ONLY the
- * description (lead / appended blocks). `--meta` is refused before the first
- * request: the upsert serializer does not declare meta_description, so the API
- * drops it on validation (#1716, backend side #1737). Safety rails:
+ * description (lead / appended blocks) and, with `--meta`, meta_description.
+ * `--meta` used to be refused before the first request: the upsert serializer
+ * did not declare meta_description, so DRF dropped it on validation and the
+ * script would have reported "OK" about a half-done request (#1716). #1737
+ * declared the field and made GET serialise it back, so the flag writes again
+ * and its round trip is verifiable (#1759). Safety rails:
  *   1. BACKUP   — the full original GET payload is written to disk before any
  *                 write, so every edit is reversible (`--restore`).
  *   2. VERIFY   — after PUT it re-GETs and checks publish/moderation/slug/
- *                 gallery/points/description did not regress.
+ *                 gallery/points/description did not regress, and that a
+ *                 `--meta` value came back byte-exact.
  *   3. ROLLBACK — on a detected regression it automatically PUTs the original
  *                 description back and exits non-zero.
+ *   4. UNVERIFIED — a re-read that omits meta_description entirely leaves
+ *                 nothing to compare `--meta` against: the run exits non-zero
+ *                 with a warning and deliberately does NOT roll back, because
+ *                 the body it wrote is intact and already verified.
  *
  * The heavy lifting is in pure functions (composeDescription, buildUpsertPayload,
  * detectRegression) that are unit-tested. main() is the thin I/O shell.
@@ -31,7 +39,7 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 
-const { parseCliArgs, runSeoCli, UsageError } = require('./lib/seo-cli-contract');
+const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 const { detectStoredTextCorruption } = require('./lib/textIntegrity');
 
@@ -55,7 +63,7 @@ Options:
   --prepend-file <path>  HTML prepended as the lead (with --id)
   --append-file <path>   HTML appended after the body (with --id)
   --desc-file <path>     HTML replacing the whole body (with --id)
-  --meta <text>          REFUSED (exit 2): the API drops meta_description on validation (#1737)
+  --meta <text>          replace meta_description, verified on re-read (with --id)
   --dry-run              print the plan, write nothing (with --id)
   --backup-dir <path>    where backups are written and read (default scripts/.seo-backups)
   --help, -h             print this help and exit
@@ -387,24 +395,6 @@ async function main() {
   const meta = args.meta;
   const dryRun = args.dryRun;
 
-  // Отказ до первого сетевого вызова (#1716). `TravelUpsertSerializer` поле
-  // `meta_description` не объявляет, поэтому DRF срезает его на валидации: до
-  // `UpsertTravelService.NON_RELATION_FIELDS` доезжает не значение, а его
-  // отсутствие. Наличие поля в списке сервиса доказывает намерение, но не
-  // приём. Молча писать описание и рапортовать «OK» о невыполненной части
-  // просьбы — то же враньё, что и откат по ложной тревоге, только тише.
-  //
-  // Именно `UsageError`, а не `exit(1)`: по контракту #1391 код 2 значит
-  // «вызвали неверно», а 1 — «прогон упал по дороге». Здесь прогон не начался,
-  // и код 1 отправил бы оператора искать бэкап, которого нет.
-  if (meta != null) {
-    throw new UsageError(
-      '--meta не поддерживается сервером: PUT /travels/upsert/ срезает meta_description ' +
-      'на валидации (TravelUpsertSerializer поле не объявляет), и значение до статьи не ' +
-      'доезжает. Ждёт бэкенд-задачи #1737; тело правится тем же вызовом без --meta',
-    );
-  }
-
   const detail = await getTravel(id);
   const oldDesc = detail.description || '';
   const newDesc = composeDescription(oldDesc, {
@@ -417,6 +407,20 @@ async function main() {
   console.log(`  publish=${detail.publish} moderation=${detail.moderation} ` +
     `gallery=${(detail.gallery || []).length} points=${(detail.coordsMeTravel || []).length}`);
   console.log(`  desc: ${oldDesc.length} → ${newDesc.length} chars (+${newDesc.length - oldDesc.length})`);
+  if (meta != null) {
+    // Мета — короткий скаляр, поэтому в план она идёт целиком: оператор должен
+    // увидеть сам текст до записи, а не его длину. `JSON.stringify` показывает
+    // границы значения и отличает пустое поле (null) от пустой строки.
+    //
+    // Отсутствие ключа печатается отдельной пометкой, а не как `null`: именно
+    // оно после записи даёт «записано, но не проверено» (ниже). Такой ответ
+    // отдаёт хост без #1737 — например отставший локальный бэкенд, — и узнать
+    // об этом на репетиции дешевле, чем после живого PUT.
+    const oldMeta = detail.meta_description === undefined
+      ? '<ключа нет в ответе GET>'
+      : JSON.stringify(detail.meta_description == null ? null : String(detail.meta_description));
+    console.log(`  meta: ${oldMeta} → ${JSON.stringify(meta)}`);
+  }
 
   if (dryRun) { console.log('DRY RUN — nothing written.'); return; }
 
@@ -449,8 +453,22 @@ async function main() {
     // a detected regression is a failed run, not a bad invocation (#1391).
     process.exit(1);
   }
+  // Круговая сверка меты (#1759). Расхождение значений уже поймал
+  // `detectCorruption` выше (`exact: true`) и откатил правку. Здесь остаётся
+  // ровно один случай, о котором та проверка молчит намеренно: ключа нет в
+  // ответе вовсе — сравнивать не с чем. До #1737 так отвечал GET у каждой
+  // статьи, и байт-сравнение с пустотой уносило откатом всё описание; теперь
+  // поле сериализуется, и его отсутствие значит «просьбу выполнили наполовину,
+  // а подтвердить нечем». Молчать об этом нельзя — ради этого стоял отказ
+  // #1716. Откат не нужен: тело записано и проверено, чинить нечего.
+  if (meta != null && after.meta_description === undefined) {
+    console.error('⚠️  meta_description записано, но не проверено: GET не вернул поле, ' +
+      'подтвердить значение в статье нечем. Тело правки записано и проверено, откат не нужен.');
+    process.exit(1);
+  }
+  const metaNote = meta != null ? `, meta=${(after.meta_description || '').length} chars` : '';
   console.log(`✅ OK — still published, gallery=${(after.gallery || []).length}, ` +
-    `points=${(after.coordsMeTravel || []).length}, desc=${(after.description || '').length} chars`);
+    `points=${(after.coordsMeTravel || []).length}, desc=${(after.description || '').length} chars${metaNote}`);
 }
 
 // ---------------------------------------------------------------------------

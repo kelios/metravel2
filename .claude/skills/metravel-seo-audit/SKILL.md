@@ -94,8 +94,9 @@ node scripts/seo-audit.js --user-id 1 --limit 50 --min-words 500
    ```bash
    node scripts/seo-edit.js --id <ID> --desc-file full.html --dry-run
    node scripts/seo-edit.js --id <ID> --desc-file full.html
-   # --meta не передавать: API срезает meta_description на валидации,
-   # и вызов отвергается целиком, вместе с правкой тела (#1716 → #1737)
+   # --meta снова работает (#1759): значение пишется тем же upsert и сверяется
+   # на пере-чтении. Сниппет в выдаче оно НЕ меняет — мету SSG берёт из лида.
+   #
    # лид + финальные блоки (без контекстного перемещения):
    node scripts/seo-edit.js --id <ID> --prepend-file lead.html --append-file blocks.html --dry-run
    node scripts/seo-edit.js --restore <ID>   # откатить из последнего бэкапа
