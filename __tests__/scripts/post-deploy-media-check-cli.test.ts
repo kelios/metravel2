@@ -98,13 +98,16 @@ describe('post-deploy-media-check: контракт вывода CLI', () => {
   const run = (origin: string, ...flags: string[]) =>
     runNodeCli([SCRIPT, '--url', origin, '--article-body-scan', '0', ...flags])
 
+  // Стабы поднимаются по очереди, а не через `Promise.all`: тот отклоняется на
+  // первом падении, присваивание не выполняется вовсе — и уже слушающий второй
+  // процесс остаётся висеть на эфемерном порту, пережив выход jest-воркера.
+  // Здесь каждый пойманный сервер попадает в переменную сразу, и `afterAll`
+  // гасит всё, что успело подняться.
   beforeAll(async () => {
     servedDir = makeTempDir('post-deploy-media-check-cli-')
     unreadableDir = makeTempDir('post-deploy-media-check-cli-no-contract-')
-    ;[served, unreadable] = await Promise.all([
-      startStubServer(serverSource(COVERAGE_CONTRACT), servedDir),
-      startStubServer(serverSource(null), unreadableDir),
-    ])
+    served = await startStubServer(serverSource(COVERAGE_CONTRACT), servedDir)
+    unreadable = await startStubServer(serverSource(null), unreadableDir)
   })
 
   afterAll(() => {
