@@ -73,4 +73,14 @@ describe('htmlUtils sanitizeHtml', () => {
     const html = '<p>Before</p><iframe class="ql-video" src="https://evil.example/embed/x"></iframe><p>After</p>'
     expect(sanitizeArticleEditorHtml(html)).toBe('<p>Before</p><p>After</p>')
   })
+
+  it('keeps FAQ disclosure markup that the wizard must round-trip (#1768)', () => {
+    const html =
+      '<section class="seo-faq" data-faq="metravel-seo"><details><summary>Q</summary><p>A</p></details></section>'
+    const out = sanitizeArticleEditorHtml(html)
+    expect(out).toContain('<details>')
+    expect(out).toContain('<summary>')
+    expect(out).toContain('seo-faq')
+    expect(out).toContain('data-faq="metravel-seo"')
+  })
 })

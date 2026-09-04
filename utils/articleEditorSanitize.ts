@@ -25,6 +25,9 @@ const ARTICLE_ALLOWED_TAGS = [
   'figure',
   'figcaption',
   'iframe',
+  'section',
+  'details',
+  'summary',
 ] as const;
 
 const ARTICLE_ALLOWED_ATTRIBUTES: sanitizeHtmlLib.IOptions['allowedAttributes'] = {
@@ -32,6 +35,9 @@ const ARTICLE_ALLOWED_ATTRIBUTES: sanitizeHtmlLib.IOptions['allowedAttributes'] 
   span: ['id'],
   img: ['src', 'alt', 'title', 'width', 'height', 'loading', 'decoding'],
   iframe: ['src', 'title', 'allow', 'allowfullscreen', 'frameborder', 'width', 'height', 'class'],
+  section: ['class', 'data-faq', 'itemscope', 'itemtype'],
+  details: ['open', 'itemscope', 'itemtype', 'itemprop'],
+  summary: ['itemprop'],
 };
 
 const ARTICLE_ALLOWED_IFRAME_HOSTS = [

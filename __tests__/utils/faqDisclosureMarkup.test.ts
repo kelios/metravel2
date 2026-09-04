@@ -2,7 +2,9 @@ import {
   FAQ_SECTION_OPEN_TAG,
   countFaqDisclosureBlocks,
   countFaqSectionWrappers,
+  extractFaqMarkup,
   losesFaqMarkup,
+  restoreFaqMarkupIfLost,
 } from '@/utils/faqDisclosureMarkup'
 
 const FAQ_SECTION = (inner: string) =>
@@ -77,5 +79,21 @@ describe('losesFaqMarkup', () => {
 
   it('молчит, когда разметки не было вовсе', () => {
     expect(losesFaqMarkup('<p>было</p>', '<p>стало</p>')).toBe(false)
+  })
+})
+
+describe('restoreFaqMarkupIfLost', () => {
+  it('возвращает FAQ-секцию, если Quill схлопнул details в плоский текст', () => {
+    const source = `<p>Лид статьи</p>${FAQ_SECTION(QA)}`
+    const fromQuill = '<p>Лид статьи</p><p>Q</p><p>A</p>'
+    const restored = restoreFaqMarkupIfLost(source, fromQuill)
+    expect(losesFaqMarkup(source, restored)).toBe(false)
+    expect(extractFaqMarkup(restored)).toContain('<details>')
+    expect(restored).toContain('Лид статьи')
+  })
+
+  it('не дублирует блок, если разметка на месте', () => {
+    const source = `<p>Лид</p>${FAQ_SECTION(QA)}`
+    expect(restoreFaqMarkupIfLost(source, source)).toBe(source)
   })
 })

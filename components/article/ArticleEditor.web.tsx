@@ -11,6 +11,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useDebounce } from '@/hooks/useDebounce';
 import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize';
+import { restoreFaqMarkupIfLost } from '@/utils/faqDisclosureMarkup';
 import {
     trackArticleEditorAutosaveFailed,
     trackArticleEditorAutosaveSucceeded,
@@ -391,7 +392,10 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             const raw = typeof val === 'string' ? val : '';
             if (raw === htmlRef.current) return;
 
-            const cleanForEmit = sanitizeArticleEditorHtml(raw);
+            const cleanForEmit = restoreFaqMarkupIfLost(
+                lastExternalContentRef.current,
+                sanitizeArticleEditorHtml(raw),
+            );
 
             if (selection) {
                 pendingSelectionRestoreRef.current = selection;
@@ -438,7 +442,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [showHtml]);
 
     const getSafeEditorHtml = useCallback(() => {
-        const fromQuillRef = getSafeEditorHtmlFrom(() => quillRef.current?.getEditor?.());
+        const withFaq = (html: string) =>
+            restoreFaqMarkupIfLost(lastExternalContentRef.current, html)
+        const fromQuillRef = withFaq(getSafeEditorHtmlFrom(() => quillRef.current?.getEditor?.()));
         if (fromQuillRef.trim().length > 0) return fromQuillRef;
 
         try {
@@ -448,7 +454,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 ? document.querySelector('[data-editor-surface="article-editor"] .ql-editor') as HTMLElement | null
                 : null;
             const root = rootFromViewport ?? rootFromDocument;
-            const fromDom = normalizeArticleEditorHtmlForOutput(String(root?.innerHTML ?? ''));
+            const fromDom = withFaq(
+                normalizeArticleEditorHtmlForOutput(String(root?.innerHTML ?? '')),
+            );
             if (fromDom.trim().length > 0) return fromDom;
         } catch {
             // noop

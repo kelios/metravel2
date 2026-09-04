@@ -1,4 +1,5 @@
 import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize';
+import { restoreFaqMarkupIfLost } from '@/utils/faqDisclosureMarkup';
 import { normalizeHtmlForQuill, stripBase64Images } from '@/utils/htmlUtils';
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
 import { safeGetYoutubeId } from '@/utils/travelMedia';
@@ -162,8 +163,12 @@ export function normalizeArticleEditorHtmlForInput(html: string): string {
   );
 }
 
-export function normalizeArticleEditorHtmlForOutput(html: string): string {
-  return sanitizeArticleEditorHtml(normalizeArticleEditorHtmlForInput(html));
+export function normalizeArticleEditorHtmlForOutput(
+  html: string,
+  faqBaseline?: string,
+): string {
+  const sanitized = sanitizeArticleEditorHtml(normalizeArticleEditorHtmlForInput(html))
+  return faqBaseline ? restoreFaqMarkupIfLost(faqBaseline, sanitized) : sanitized
 }
 
 export function sanitizeArticleEditorNativeContent(html: string): string {

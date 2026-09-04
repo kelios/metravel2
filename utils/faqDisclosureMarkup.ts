@@ -67,3 +67,38 @@ export const losesFaqMarkup = (
 ): boolean =>
   countFaqDisclosureBlocks(after) < countFaqDisclosureBlocks(before) ||
   countFaqSectionWrappers(after) < countFaqSectionWrappers(before)
+
+const FAQ_SECTION_BLOCK_RE = new RegExp(
+  `${FAQ_SECTION_OPEN_TAG}[\\s\\S]*?<\\/section>`,
+  'gi',
+)
+const FAQ_DETAILS_BLOCK_RE = /<details\b[\s\S]*?<\/details>/gi
+
+/** FAQ-разметка, которую редактор/санитайзер не должен терять при правке абзаца рядом. */
+export const extractFaqMarkup = (html: string | null | undefined): string => {
+  const source = String(html ?? '')
+  if (!source) return ''
+  const sections = source.match(FAQ_SECTION_BLOCK_RE)
+  if (sections?.length) return sections.join('')
+  const details = source.match(FAQ_DETAILS_BLOCK_RE) ?? []
+  return details.filter((block) => /<summary\b/i.test(block)).join('')
+}
+
+/**
+ * Quill не умеет `<details>`: pasteHTML схлопывает блок в плоский текст ещё до
+ * санитайзера. Если выход редактора потерял FAQ относительно исходного тела,
+ * возвращаем исходную разметку блока, а правки вне него оставляем.
+ */
+export const restoreFaqMarkupIfLost = (
+  before: string | null | undefined,
+  after: string | null | undefined,
+): string => {
+  const previous = String(before ?? '')
+  const next = String(after ?? '')
+  if (!losesFaqMarkup(previous, next)) return next
+  const originalFaq = extractFaqMarkup(previous)
+  if (!originalFaq) return next
+  const leftoverFaq = extractFaqMarkup(next)
+  const body = leftoverFaq ? next.replace(leftoverFaq, '') : next
+  return `${body.replace(/\s+$/u, '')}\n${originalFaq}`
+}
