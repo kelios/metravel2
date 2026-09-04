@@ -667,9 +667,10 @@ export const registerPushTokenApi = async (pushToken: string): Promise<boolean> 
 };
 
 /**
- * Idempotent future backend contract for removing this device token before the
- * authenticated session is cleared. Until the linked backend task is deployed,
- * non-2xx is reported as false and must never be treated as success.
+ * Idempotent DELETE /api/user/push-token/ (#1680). Removes only this device
+ * token while the auth credential is still live. Backend contract is
+ * `{ push_token }` and 204; extra fields are not part of the unregister
+ * serializer. Non-2xx is never reported as success.
  */
 export const deletePushTokenApi = async (pushToken: string): Promise<boolean> => {
     try {
@@ -686,11 +687,10 @@ export const deletePushTokenApi = async (pushToken: string): Promise<boolean> =>
             },
             body: JSON.stringify({
                 push_token: pushToken,
-                platform: Platform.OS,
             }),
         }, DEFAULT_TIMEOUT);
 
-        return response.ok;
+        return response.status === 204 || response.ok;
     } catch {
         devWarn('Push token removal unavailable');
         return false;

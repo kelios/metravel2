@@ -41,16 +41,13 @@ describe('push-token API adapter', () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatformOS });
   });
 
-  it.each([
-    ['POST', registerPushTokenApi],
-    ['DELETE', deletePushTokenApi],
-  ])('sends %s with the authenticated iOS payload', async (method, operation) => {
-    await expect(operation('ExponentPushToken[device]')).resolves.toBe(true);
+  it('sends POST with the authenticated iOS registration payload', async () => {
+    await expect(registerPushTokenApi('ExponentPushToken[device]')).resolves.toBe(true);
 
     expect(mockFetchWithTimeout).toHaveBeenCalledWith(
       expect.stringMatching(/\/user\/push-token\/$/),
       expect.objectContaining({
-        method,
+        method: 'POST',
         headers: expect.objectContaining({
           Authorization: 'Token session-secret',
           'Content-Type': 'application/json',
@@ -62,6 +59,30 @@ describe('push-token API adapter', () => {
       }),
       expect.any(Number),
     );
+  });
+
+  it('sends DELETE with only push_token and treats 204 as success', async () => {
+    mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 204 });
+
+    await expect(deletePushTokenApi('ExponentPushToken[device]')).resolves.toBe(true);
+
+    expect(mockFetchWithTimeout).toHaveBeenCalledWith(
+      expect.stringMatching(/\/user\/push-token\/$/),
+      expect.objectContaining({
+        method: 'DELETE',
+        headers: expect.objectContaining({
+          Authorization: 'Token session-secret',
+          'Content-Type': 'application/json',
+        }),
+        body: JSON.stringify({
+          push_token: 'ExponentPushToken[device]',
+        }),
+      }),
+      expect.any(Number),
+    );
+    const [, init] = mockFetchWithTimeout.mock.calls[0] as [string, { body: string }];
+    expect(JSON.parse(init.body)).toEqual({ push_token: 'ExponentPushToken[device]' });
+    expect(JSON.parse(init.body)).not.toHaveProperty('platform');
   });
 
   it.each([

@@ -550,8 +550,8 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     logout: async () => {
         try {
             // Push-token DELETE must run while the native auth credential still
-            // exists. The adapter is best-effort because the linked backend
-            // contract may be unavailable, but it never reports fake success.
+            // exists. The adapter is best-effort: a failed unregister never
+            // blocks local logout, and it never reports fake success.
             const { unregisterPushBeforeLogout } = await getPushRegistration();
             await unregisterPushBeforeLogout();
         } catch {

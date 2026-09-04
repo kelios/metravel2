@@ -209,8 +209,8 @@ export function startPushTokenRotationSync(
 
 /**
  * Best-effort remote removal while the auth credential is still available.
- * Local token ownership is cleared even if the linked DELETE contract is not
- * deployed yet; a non-2xx result is never reported as success.
+ * Local token ownership is always cleared. A non-2xx DELETE is never reported
+ * as success; logout still continues.
  */
 export async function unregisterPushBeforeLogout(): Promise<boolean> {
   // Suspend first: a rotation event delivered while logout is awaiting the
