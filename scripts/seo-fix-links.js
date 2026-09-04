@@ -145,17 +145,39 @@ function getJson(urlPath, baseUrl = API_BASE) {
   });
 }
 
-async function listTravels(userId) {
+/** Бэкенд режет страницу до 100 записей и молча игнорирует больший `perPage`
+ *  (проба 01.09.2026, см. scripts/verify-static-travel-seo.js), поэтому шаг
+ *  пагинации и признак недобора обязаны читать одно и то же число. */
+const TRAVELS_PER_PAGE = 100;
+
+async function listTravels(userId, deps = {}) {
+  const fetchJson = deps.getJson || getJson;
   const where = encodeURIComponent(JSON.stringify({ user_id: userId, publish: 1, moderation: 1 }));
   const out = [];
   for (let page = 1; page <= 50; page++) {
-    const res = await getJson(`/travels/?where=${where}&page=${page}&perPage=100`);
+    const res = await fetchJson(`/travels/?where=${where}&page=${page}&perPage=${TRAVELS_PER_PAGE}`);
     // `results` first: /api/travels/ answers {count, next, results}. Reading only
     // the legacy keys is literally #1325 — the list came back empty and the run
     // reported "Scanning 0 published travels…" as a clean pass.
     const rows = res.results || res.data || res.items || res.rows || (Array.isArray(res) ? res : []);
     if (!rows.length) break;
     out.push(...rows);
+    // #1755: страницу ЗА последней DRF отдаёт не пустым списком, а HTTP 404
+    // «Invalid page», и getJson валит весь прогон уже после того, как все статьи
+    // прочитаны. Значит, конец считается ДО запроса следующей страницы.
+    // Ведущий признак — курсор `next`: он есть в ответе всегда и на последней
+    // странице равен null. Недобора строк для этого мало: когда количество
+    // кратно 100 (у автора 1 их 320, станет 400), последняя страница полна,
+    // и следующий запрос — тот же 404. `total`/`count` и недобор остаются
+    // запасными путями для легаси-конверта без курсора.
+    const envelope = res && typeof res === 'object' && !Array.isArray(res) ? res : null;
+    if (envelope && 'next' in envelope) {
+      if (!envelope.next) break;
+      continue;
+    }
+    const total = Number(envelope ? envelope.total ?? envelope.count : undefined);
+    if (Number.isFinite(total) && total > 0 && out.length >= total) break;
+    if (rows.length < TRAVELS_PER_PAGE) break;
   }
   return out;
 }
@@ -243,7 +265,7 @@ async function main(argv = process.argv, deps = {}) {
   });
 
   console.log(`${dryRun ? '🧪 DRY-RUN ' : '🔗 '}Fixing stale internal links (${slugMap.size} renamed slugs) for user ${userId} via ${API_BASE}\n`);
-  const travels = requireNonEmptySelection(await io.listTravels(userId), {
+  const travels = requireNonEmptySelection(await io.listTravels(userId, io), {
     what: 'published travels',
     source: `${API_BASE}/travels/`,
     hint: `user_id=${userId}, publish=1, moderation=1 — nothing would be scanned`,
@@ -313,4 +335,4 @@ if (require.main === module) {
   runSeoCli(main, { name: 'seo-fix-links', usage: USAGE });
 }
 
-module.exports = { CLI_SPEC, USAGE, detectRegression, getJson, main, rewriteLinks };
+module.exports = { CLI_SPEC, USAGE, detectRegression, getJson, listTravels, main, rewriteLinks };

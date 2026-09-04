@@ -6,7 +6,7 @@
  */
 import http from 'http'
 
-const { getJson, main } = require('@/scripts/seo-fix-links')
+const { getJson, listTravels, main } = require('@/scripts/seo-fix-links')
 
 describe('seo-fix-links batch exit contract', () => {
   it('rejects a JSON error response instead of treating it as a travel detail', async () => {
@@ -53,5 +53,82 @@ describe('seo-fix-links batch exit contract', () => {
       warnSpy.mockRestore()
       logSpy.mockRestore()
     }
+  })
+})
+
+/**
+ * Пагинация автора (#1755).
+ *
+ * DRF отвечает на страницу за последней не пустым списком, а HTTP 404 «Invalid
+ * page», поэтому конец перечисления обязан считаться ДО запроса следующей
+ * страницы. Признака «страница недобрала строк» для этого не хватает: при
+ * количестве статей, кратном размеру страницы, последняя страница полна.
+ */
+describe('seo-fix-links author pagination', () => {
+  const page = (index: number, total: number, size = 100) => {
+    const first = (index - 1) * size
+    const rows = Array.from({ length: Math.max(0, Math.min(size, total - first)) }, (_, i) => ({
+      id: first + i + 1,
+    }))
+    return rows
+  }
+
+  /** DRF: {count, next, results}; страница за последней — 404, как на проде. */
+  const drfApi = (total: number, size = 100) => {
+    const pages = Math.max(1, Math.ceil(total / size))
+    return jest.fn(async (urlPath: string) => {
+      const asked = Number(new URLSearchParams(urlPath.split('?')[1]).get('page'))
+      if (asked > pages) throw new Error(`HTTP 404 /travels/?page=${asked}`)
+      return {
+        count: total,
+        next: asked < pages ? `https://metravel.by/api/travels/?page=${asked + 1}` : null,
+        results: page(asked, total, size),
+      }
+    })
+  }
+
+  it('stops on the last page when the count is an exact multiple of the page size', async () => {
+    const getJsonStub = drfApi(300)
+
+    await expect(listTravels(1, { getJson: getJsonStub })).resolves.toHaveLength(300)
+    expect(getJsonStub).toHaveBeenCalledTimes(3)
+  })
+
+  it('reads every page when the last one is short', async () => {
+    const getJsonStub = drfApi(320)
+
+    await expect(listTravels(1, { getJson: getJsonStub })).resolves.toHaveLength(320)
+    expect(getJsonStub).toHaveBeenCalledTimes(4)
+  })
+
+  it('asks for exactly the page size it checks against', async () => {
+    const getJsonStub = drfApi(320)
+
+    await listTravels(1, { getJson: getJsonStub })
+
+    for (const [urlPath] of getJsonStub.mock.calls) {
+      expect(new URLSearchParams(String(urlPath).split('?')[1]).get('perPage')).toBe('100')
+    }
+  })
+
+  it('falls back to total for a legacy envelope without the next cursor', async () => {
+    const getJsonStub = jest.fn(async (urlPath: string) => {
+      const asked = Number(new URLSearchParams(urlPath.split('?')[1]).get('page'))
+      if (asked > 2) throw new Error(`HTTP 404 /travels/?page=${asked}`)
+      return { total: 200, data: page(asked, 200) }
+    })
+
+    await expect(listTravels(1, { getJson: getJsonStub })).resolves.toHaveLength(200)
+    expect(getJsonStub).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not mistake a null count for an exhausted list', async () => {
+    const getJsonStub = jest.fn(async (urlPath: string) => {
+      const asked = Number(new URLSearchParams(urlPath.split('?')[1]).get('page'))
+      if (asked > 2) throw new Error(`HTTP 404 /travels/?page=${asked}`)
+      return { total: null, count: null, data: page(asked, 150) }
+    })
+
+    await expect(listTravels(1, { getJson: getJsonStub })).resolves.toHaveLength(150)
   })
 })
