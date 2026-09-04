@@ -99,10 +99,7 @@ function distributionSigningFixture() {
     'aps-environment': 'production',
     'beta-reports-active': true,
     'com.apple.developer.applesignin': ['Default'],
-    'com.apple.developer.associated-domains': [
-      'applinks:metravel.by',
-      'applinks:metravel.by?mode=developer',
-    ],
+    'com.apple.developer.associated-domains': ['applinks:metravel.by'],
     'com.apple.developer.team-identifier': teamIdentifier,
     'get-task-allow': false,
   };
@@ -278,6 +275,17 @@ describe('iOS signed artifact audit', () => {
     )).toBe(false);
     expect(distributionSigningMatchesReleaseContract(
       { ...entitlements, 'aps-environment': 'development' },
+      profile,
+      new Date('2029-01-01T00:00:00.000Z')
+    )).toBe(false);
+    expect(distributionSigningMatchesReleaseContract(
+      {
+        ...entitlements,
+        'com.apple.developer.associated-domains': [
+          'applinks:metravel.by',
+          'applinks:metravel.by?mode=developer',
+        ],
+      },
       profile,
       new Date('2029-01-01T00:00:00.000Z')
     )).toBe(false);

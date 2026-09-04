@@ -109,10 +109,7 @@ describe('iOS release configuration', () => {
     expect(ios.entitlements).toEqual({
       'aps-environment': 'production',
       'com.apple.developer.applesignin': ['Default'],
-      'com.apple.developer.associated-domains': [
-        'applinks:metravel.by',
-        'applinks:metravel.by?mode=developer',
-      ],
+      'com.apple.developer.associated-domains': ['applinks:metravel.by'],
     });
     expect(ios.infoPlist.UIBackgroundModes).toBeUndefined();
     expect(ios.infoPlist.NSMotionUsageDescription).toBe(
@@ -157,6 +154,29 @@ describe('iOS release configuration', () => {
     });
     expect(validateIosRelease(testRoot)).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'IOS_BUNDLE_ID_XCODE' })])
+    );
+  });
+
+  it('rejects the development alternate mode from distribution release inputs', () => {
+    const alternateModeEntry = '\n        "applinks:metravel.by?mode=developer"';
+    const expoRoot = fixture({
+      'app.json': value => value.replace(
+        '"applinks:metravel.by"',
+        `"applinks:metravel.by",${alternateModeEntry}`
+      ),
+    });
+    const nativeRoot = fixture({
+      'ios/metravel/metravel.entitlements': value => value.replace(
+        '<string>applinks:metravel.by</string>',
+        '<string>applinks:metravel.by</string>\n      <string>applinks:metravel.by?mode=developer</string>'
+      ),
+    });
+
+    expect(validateIosRelease(expoRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_ASSOCIATED_DOMAIN_EXPO' })])
+    );
+    expect(validateIosRelease(nativeRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_ENTITLEMENT_SCOPE' })])
     );
   });
 

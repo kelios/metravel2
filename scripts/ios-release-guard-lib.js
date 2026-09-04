@@ -9,9 +9,10 @@ const xcode = require('xcode');
 const EXPECTED = Object.freeze({
   apnsEnvironment: 'production',
   appIconSha256: '86ebbd3444649460bfbc39a172c9d2200ed79f286b67f8e7b3cdc2f5ba4b4a72',
+  // TestFlight is distribution-signed. Apple's alternate developer mode is
+  // only available to development-profile builds and must not enter release entitlements.
   associatedDomains: Object.freeze([
     'applinks:metravel.by',
-    'applinks:metravel.by?mode=developer',
   ]),
   bundleIdentifier: 'by.metravel.app',
   buildNumber: '8',
