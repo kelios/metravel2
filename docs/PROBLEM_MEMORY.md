@@ -1123,6 +1123,18 @@ guard, падающий в CI на попытке обойти этот конт
 - **Controls:** unit-тесты `extractFaqEntries`/`buildTravelFaqJsonLd`, прод-проба
   маркера `data-seo-jsonld="travel-faq"`, guard `lead-noise` в `seo:audit`,
   unit на полный текст статьи в шелле (`SSG_ARTICLE_BODY_MAX_CHARS`, `#1324`).
+- **Замечание про терминологию (2026-09-04, `#1759`):** «meta description» в
+  карточках значит две разные вещи, и их регулярно путают. Хранимое поле
+  `travel.meta_description` в сборке сниппета НЕ участвует:
+  `buildTravelSeoDescription` (`scripts/generate-seo-pages.js:441-442`, вызов
+  `:3681`) строит `description`/`og:description`/`twitter:description` из тела
+  статьи — `stripHtmlToSnippet(detail.description, 160)`. Поле читают только
+  бэкенд-рассылки: дайджест маршрутов (`send_routes_digest.py:55`) и уведомления
+  о контенте (`content_notifications.py:139`), лимит 255 задан моделью
+  (`travels/models.py:456`). Известно с `#678` (2026-07-03) и записано
+  комментарием в `scripts/seo-audit.js:147`. Рычаг правки сниппета —
+  `seo-edit.js --desc-file` (тело/лид), а не `--meta`; жалоба «мета не долетает
+  до сниппета» закрывается этой записью как not-a-defect, без повторного разбора.
 - **Решение для новой жалобы:** пропала разметка из тела статьи — `reopen #1138`;
   мусор в сниппете — сначала прогнать `seo:audit` и смотреть `lead-noise`/`weak-lead`,
   затем `create-linked` к `#1139`; текст статьи в HTML обрывается на середине —
