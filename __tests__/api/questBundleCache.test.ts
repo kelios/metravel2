@@ -18,7 +18,7 @@ jest.mock('@/services/offline/packageStore', () => ({
 }))
 
 import { apiClient } from '@/api/client'
-import { fetchQuestByQuestId, fetchQuestsList } from '@/api/quests'
+import { fetchQuestByQuestId, fetchQuestsCompactCatalog, fetchQuestsList } from '@/api/quests'
 import type { ApiQuestBundle, ApiQuestMeta } from '@/api/quests'
 import {
   readCachedQuestBundle,
@@ -213,5 +213,61 @@ describe('questsList offline round-trip', () => {
   it('rethrows when the list fetch fails and there is no cache', async () => {
     mockedGet.mockRejectedValue(new Error('offline'))
     await expect(fetchQuestsList()).rejects.toThrow('offline')
+  })
+})
+
+// #1793: ключ каталога один на устройство, поэтому персональные поля не должны
+// ни попадать в него, ни выходить из него — иначе после выхода или смены
+// аккаунта следующий пользователь видит чужие «Пройден» и чужую оценку.
+describe('questsList cache keeps personal fields out of device-shared storage', () => {
+  const makeCompletedMeta = (): ApiQuestMeta[] =>
+    makeRawMeta().map((meta) => ({ ...meta, is_completed_by_me: true, user_rating: 5 as const }))
+
+  const writeLegacyEnvelope = async (list: ApiQuestMeta[]) => {
+    await AsyncStorage.setItem(
+      QUEST_LIST_CACHE_KEY,
+      JSON.stringify({ version: 1, savedAt: 1_700_000_000_000, list }),
+    )
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    AsyncStorage.__reset?.()
+    mockOfflinePackages.clear()
+  })
+
+  it('does not persist the personal flag or rating', async () => {
+    await writeCachedQuestsList(makeCompletedMeta())
+
+    const stored = JSON.parse((await AsyncStorage.getItem(QUEST_LIST_CACHE_KEY)) as string)
+    expect(stored.list[0].is_completed_by_me).toBe(false)
+    expect(stored.list[0].user_rating).toBeNull()
+    // Общие поля остаются: офлайн-карточка по-прежнему знает рейтинг и счётчик.
+    expect(stored.list[0].rating_avg).toBe(4.5)
+    expect(stored.list[0].completions_count).toBe(3)
+  })
+
+  it('drops the personal flag from a cache written by an older client', async () => {
+    await writeLegacyEnvelope(makeCompletedMeta())
+
+    const cached = await readCachedQuestsList()
+    expect(cached?.[0]?.is_completed_by_me).toBe(false)
+    expect(cached?.[0]?.user_rating).toBeNull()
+  })
+
+  it('does not show the previous account completions in the offline catalog', async () => {
+    await writeLegacyEnvelope(makeCompletedMeta())
+    mockedGet.mockRejectedValue(new Error('offline'))
+
+    const list = await fetchQuestsList()
+    expect(list[0].is_completed_by_me).toBe(false)
+  })
+
+  it('does not show them in the offline compact catalog either', async () => {
+    await writeLegacyEnvelope(makeCompletedMeta())
+    mockedGet.mockRejectedValue(new Error('offline'))
+
+    const list = await fetchQuestsCompactCatalog()
+    expect(list[0].is_completed_by_me).toBe(false)
   })
 })

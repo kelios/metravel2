@@ -67,7 +67,26 @@ type CachedQuestsListEnvelope = {
     list: ApiQuestMeta[];
 };
 
-/** Читает сырой список квестов из офлайн-кэша (null — если нет/повреждён/другая версия). */
+/**
+ * Снимает персональные поля каталога. Ключ `QUEST_LIST_CACHE_KEY` один на
+ * устройство, а не на аккаунт: после выхода или входа под другим пользователем
+ * прежний владелец отдавал бы следующему свои «Пройден» и свою оценку (#1793).
+ *
+ * Чистим и при записи (персональное не попадает в хранилище вовсе), и при
+ * чтении — кэши, записанные прежними версиями клиента, иначе продолжали бы
+ * отдавать чужой статус до первого удачного онлайн-обновления.
+ *
+ * Общие поля (`rating_avg`, `rating_count`, `completions_count`,
+ * `first_completer`) одинаковы для всех и остаются в кэше.
+ */
+function stripPersonalQuestFields(list: ApiQuestMeta[]): ApiQuestMeta[] {
+    return list.map((quest) => ({ ...quest, is_completed_by_me: false, user_rating: null }));
+}
+
+/**
+ * Читает сырой список квестов из офлайн-кэша (null — если нет/повреждён/другая
+ * версия). Персональные поля снимаются: см. `stripPersonalQuestFields`.
+ */
 export async function readCachedQuestsList(): Promise<ApiQuestMeta[] | null> {
     try {
         const raw = await AsyncStorage.getItem(QUEST_LIST_CACHE_KEY);
@@ -76,14 +95,17 @@ export async function readCachedQuestsList(): Promise<ApiQuestMeta[] | null> {
         if (!parsed || parsed.version !== QUEST_LIST_CACHE_VERSION || !Array.isArray(parsed.list)) {
             return null;
         }
-        return parsed.list;
+        return stripPersonalQuestFields(parsed.list);
     } catch {
         // Приватный режим / повреждённый JSON — ведём себя как без кэша.
         return null;
     }
 }
 
-/** Пишет сырой список квестов в офлайн-кэш (best-effort, ошибки записи глушим). */
+/**
+ * Пишет сырой список квестов в офлайн-кэш (best-effort, ошибки записи глушим).
+ * Персональные поля не сохраняются: см. `stripPersonalQuestFields`.
+ */
 export async function writeCachedQuestsList(
     list: ApiQuestMeta[],
     savedAt: number = Date.now(),
@@ -91,7 +113,7 @@ export async function writeCachedQuestsList(
     const envelope: CachedQuestsListEnvelope = {
         version: QUEST_LIST_CACHE_VERSION,
         savedAt,
-        list,
+        list: stripPersonalQuestFields(list),
     };
     try {
         await AsyncStorage.setItem(QUEST_LIST_CACHE_KEY, JSON.stringify(envelope));

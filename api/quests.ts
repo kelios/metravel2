@@ -579,6 +579,9 @@ async function fetchAllQuestPages<T>(
  * Получить список всех квестов (метаданные).
  * При успехе кэширует сырой список в AsyncStorage (fire-and-forget) для офлайна.
  * При сетевом фейле возвращает кэш, если он есть, — иначе пробрасывает ошибку.
+ *
+ * Кэш общий на устройство, поэтому персональных полей (`is_completed_by_me`,
+ * `user_rating`) в офлайн-ответе нет: их снимает слой кэша (#1793).
  */
 export async function fetchQuestsList(options?: { signal?: AbortSignal }): Promise<ApiQuestMeta[]> {
     try {
@@ -632,7 +635,8 @@ export async function fetchQuestsPreview(
  * `is_completed_by_me` приходит по текущему пользователю: серверный кэш
  * списка объявлен `Vary: Authorization`, поэтому чужое прохождение не
  * подставится. У гостя флаг всегда `false` — только что закрытый квест
- * докладывает вызывающий (см. `buildQuestCityCollection`).
+ * докладывает вызывающий (см. `buildQuestCityCollection`). В офлайне флага
+ * нет вовсе: общий на устройство кэш каталога персональных полей не хранит.
  */
 export async function fetchQuestsCompactCatalog(
     options?: { signal?: AbortSignal },
@@ -642,11 +646,11 @@ export async function fetchQuestsCompactCatalog(
         return list.map(withQuestMetaDefaults);
     } catch (err) {
         // Офлайн-контракт тот же, что у полного списка: лучше показать кэш
-        // каталога, чем спрятать блок следующего шага. Полный кэш исторически
-        // общий для устройства, поэтому персональный флаг из него не переносим:
+        // каталога, чем спрятать блок следующего шага. Персональный флаг из
+        // кэша не придёт — он снимается в `readCachedQuestsList` (#1793),
         // иначе после смены аккаунта коллекция показывала чужие прохождения.
         const cached = await readCachedQuestsList();
-        if (cached) return cached.map((quest) => ({ ...quest, is_completed_by_me: false }));
+        if (cached) return cached;
         throw err;
     }
 }
