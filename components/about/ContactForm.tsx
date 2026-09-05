@@ -175,7 +175,12 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         onBlur={onBlurMessage}
         onSubmitEditing={Platform.OS !== 'web' ? () => onSubmit() : undefined}
       />
-      <Text style={styles.helperText}>{i18nT('home:components.about.ContactForm.shift_enter_novaya_stroka_enter_otpravit_web_26a15cc6')}</Text>
+      {/* Подсказка описывает клавиатурный сабмит из onKeyPress, а он есть только
+          на web: в приложении Enter просто переносит строку, и текст про
+          «Shift+Enter» вводил тестировщика в заблуждение (TestFlight 1.0.5 (4)). */}
+      {Platform.OS === 'web' ? (
+        <Text style={styles.helperText}>{i18nT('home:components.about.ContactForm.shift_enter_novaya_stroka_enter_otpravit_web_26a15cc6')}</Text>
+      ) : null}
       {invalidMessage && (
         <View style={styles.errorContainer}>
           <Text style={styles.fieldErr}>{i18nT('home:components.about.ContactForm.napishite_soobschenie_6a0a05bf')}</Text>
