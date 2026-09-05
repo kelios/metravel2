@@ -197,6 +197,30 @@ const QUESTS = [
     { questId: 'split-dioklecijanova-palaca', dir: 'splitDioklecijanovaPalaca', city: 'Сплит', finaleId: 164 },
     { questId: 'ogulin-grad-bajki', dir: 'ogulinGradBajki', city: 'Огулин', finaleId: 165 },
     { questId: 'slunj-rastoke-selo-na-slapovima', dir: 'slunjRastokeSeloNaSlapovima', city: 'Слунь', finaleId: 166 },
+    // Озёра, велоквесты и Явожно (2026-09-02)
+    { questId: 'khotomlya-emerald-lakes', dir: 'khotomlyaEmeraldLakes', city: 'Озеро Хотомля', finaleId: 158 },
+    { questId: 'jaworzno-grodek', dir: 'jaworznoGrodek', city: 'Явожно', finaleId: 159 },
+    { questId: 'baranovichi-bike-manors', dir: 'baranovichiBikeManors', city: 'Барановичи', finaleId: 160 },
+    { questId: 'krakow-zakrzowek', dir: 'krakowZakrzowek', city: 'Краков', finaleId: 161 },
+    { questId: 'grodno-bike-forts', dir: 'grodnoBikeForts', city: 'Гродно', finaleId: 162 },
+    // Средняя Азия, Чехия, Германия, Россия (2026-09-05)
+    { questId: 'bukhara-tower-and-nasreddin', dir: 'bukharaTowerAndNasreddin', city: 'Бухара', finaleId: 167 },
+    { questId: 'turkestan-yasawi', dir: 'turkestanYasawi', city: 'Туркестан', finaleId: 168 },
+    { questId: 'samarkand-timur-legends', dir: 'samarkandTimurLegends', city: 'Самарканд', finaleId: 169 },
+    { questId: 'cesky-krumlov-white-lady', dir: 'ceskyKrumlovWhiteLady', city: 'Чески-Крумлов', finaleId: 170 },
+    { questId: 'almaty-apple-city', dir: 'almatyAppleCity', city: 'Алматы', finaleId: 171 },
+    { questId: 'prague-vysehrad-libuse', dir: 'pragueVysehradLibuse', city: 'Прага', finaleId: 172 },
+    { questId: 'khiva-ichan-kala', dir: 'khivaIchanKala', city: 'Хива', finaleId: 173 },
+    { questId: 'astana-samruk-tree', dir: 'astanaSamrukTree', city: 'Астана', finaleId: 174 },
+    { questId: 'brno-dragon-and-wheel', dir: 'brnoDragonAndWheel', city: 'Брно', finaleId: 175 },
+    { questId: 'kutna-hora-silver', dir: 'kutnaHoraSilver', city: 'Кутна-Гора', finaleId: 176 },
+    { questId: 'karlovy-vary-deer-leap', dir: 'karlovyVaryDeerLeap', city: 'Карловы Вары', finaleId: 177 },
+    { questId: 'cologne-heinzelmaennchen', dir: 'cologneHeinzelmaennchen', city: 'Кёльн', finaleId: 178 },
+    { questId: 'kazan-zilant-syuyumbike', dir: 'kazanZilantSyuyumbike', city: 'Казань', finaleId: 179 },
+    { questId: 'moscow-kremlin-legends', dir: 'moscowKremlinLegends', city: 'Москва', finaleId: 180 },
+    { questId: 'kaliningrad-kant-bridges', dir: 'kaliningradKantBridges', city: 'Калининград', finaleId: 181 },
+    { questId: 'munich-devils-footstep', dir: 'munichDevilsFootstep', city: 'Мюнхен', finaleId: 182 },
+    { questId: 'bremen-town-musicians', dir: 'bremenTownMusicians', city: 'Бремен', finaleId: 183 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
