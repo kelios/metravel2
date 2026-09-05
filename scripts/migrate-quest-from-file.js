@@ -93,8 +93,18 @@ function finaleText(finale) {
 // point_role: бэкенд (quests/models.py, миграция 0023) требует структурную роль у
 // каждого нумерованного шага активного квеста: 'required' | 'optional' | 'final';
 // интро — 'start'. Явное поле point_role в data-файле имеет приоритет; иначе
-// роль выводится: answer_pattern.type === 'any' → optional, последний шаг → final.
+// роль выводится по тому же правилу, что чинит прод и стережёт гвардия, —
+// `scripts/lib/questPointRoles.js`: точка «по желанию» → optional, последняя →
+// final, остальные → required.
+//
+// Раньше здесь стояла собственная эвристика «answer_pattern.type === 'any' →
+// optional». На новом контенте она давала тот же ответ (у всех optional-точек
+// свежих квестов «(по желанию)» написано в заголовке), но на старом расходилась
+// с продом: в квестах из статей (#1652) `any` стоял на ОБЯЗАТЕЛЬНЫХ точках с
+// плохими вопросами, и перезаливка такого квеста выкинула бы их из зачёта
+// (#1802).
 const POINT_ROLES = ['required', 'optional', 'final'];
+const { isOptionalByTitle } = require('./lib/questPointRoles');
 function pointRoleFor(step, index, steps) {
     const explicit = step.point_role || step.pointRole;
     if (explicit) {
@@ -103,8 +113,7 @@ function pointRoleFor(step, index, steps) {
         }
         return explicit;
     }
-    const type = step.answer_pattern && step.answer_pattern.type;
-    if (type === 'any') return 'optional';
+    if (isOptionalByTitle(step)) return 'optional';
     return index === steps.length - 1 ? 'final' : 'required';
 }
 
