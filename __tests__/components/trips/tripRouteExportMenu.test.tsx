@@ -75,12 +75,14 @@ jest.mock('@/components/trips/planning/TripRoutePreviewEngine', () => {
 jest.mock('@/components/ui/Button', () => {
   return function Button({
     label,
+    accessibilityLabel,
     onPress,
     disabled,
     loading,
     testID,
   }: {
     label: string;
+    accessibilityLabel?: string;
     onPress?: () => void;
     disabled?: boolean;
     loading?: boolean;
@@ -90,7 +92,9 @@ jest.mock('@/components/ui/Button', () => {
     return (
       <Pressable
         testID={testID}
-        accessibilityLabel={label}
+        // Видимая подпись и доступное имя различаются в compact-ряду (#1414):
+        // мок обязан различать их так же, иначе тест доказывает только `label`.
+        accessibilityLabel={accessibilityLabel ?? label}
         accessibilityState={{ disabled: Boolean(disabled || loading) }}
         disabled={disabled || loading}
         onPress={onPress}
@@ -166,7 +170,7 @@ describe('TripRouteExportMenu', () => {
   it('keeps supported export and navigator actions visible on Android', () => {
     setPlatformOS('android');
 
-    const { getByTestId, getByText } = render(<TripRouteExportMenu trip={trip} />);
+    const { getByTestId, getByText, getByLabelText } = render(<TripRouteExportMenu trip={trip} />);
 
     expect(shouldRenderTripRouteExportMenu('android')).toBe(true);
     expect(getByTestId('trip-route-export')).toBeTruthy();
@@ -174,7 +178,13 @@ describe('TripRouteExportMenu', () => {
     expect(getByText('Google Maps')).toBeTruthy();
     expect(getByText('Apple Maps')).toBeTruthy();
     expect(getByText('Garmin Connect')).toBeTruthy();
-    expect(getByText('Поделиться GPX')).toBeTruthy();
+    // #1414: на телефоне у трёх кнопок экспорта одна и та же иконка `download`,
+    // поэтому формат файла остаётся видимым текстом, а полное название действия
+    // — доступным именем кнопки.
+    expect(getByText('GPX')).toBeTruthy();
+    expect(getByText('KML')).toBeTruthy();
+    expect(getByLabelText('Поделиться GPX')).toBeTruthy();
+    expect(getByLabelText('Поделиться KML')).toBeTruthy();
     expect(getByTestId('trip-route-export-native-import-hint')).toBeTruthy();
   });
 

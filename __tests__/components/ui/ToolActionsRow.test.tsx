@@ -50,6 +50,67 @@ describe('ui/ToolActionsRow', () => {
     expect(compactStyle).toMatchObject({ minWidth: 44, minHeight: 44 })
   })
 
+  // #1414 (TestFlight 1.0.5 (8)): «иконки непонятные что они значат» — три
+  // кнопки экспорта несут одну и ту же иконку `download`, поэтому в compact-ряду
+  // им нужна короткая видимая подпись, а полное имя остаётся у screen reader.
+  it('keeps a short visible caption for actions that share one icon on mobile', () => {
+    mockResponsive = { isHydrated: true, isMobile: true }
+    const { getByText, queryByText, getByLabelText } = render(
+      <ToolActionsRow
+        actions={[
+          {
+            key: 'gpx',
+            label: 'Поделиться GPX',
+            compactLabel: 'GPX',
+            icon: <Text>download</Text>,
+          },
+          {
+            key: 'kml',
+            label: 'Поделиться KML',
+            compactLabel: 'KML',
+            icon: <Text>download</Text>,
+          },
+          { key: 'import', label: 'Импорт текста', icon: <Text>upload</Text> },
+        ]}
+      />,
+    )
+
+    expect(getByText('GPX')).toBeTruthy()
+    expect(getByText('KML')).toBeTruthy()
+    expect(queryByText('Поделиться GPX')).toBeNull()
+    expect(getByLabelText('Поделиться GPX')).toBeTruthy()
+    expect(getByLabelText('Поделиться KML')).toBeTruthy()
+
+    // Действие без `compactLabel` остаётся icon-only — шаблон не меняется.
+    expect(queryByText('Импорт текста')).toBeNull()
+    expect(
+      StyleSheet.flatten(getByLabelText('Импорт текста').props.style),
+    ).toMatchObject({ minWidth: 44, minHeight: 44 })
+
+    // Тач-таргет подписанной кнопки держит высота: ширину задаёт слово.
+    expect(
+      StyleSheet.flatten(getByLabelText('Поделиться GPX').props.style),
+    ).toMatchObject({ minHeight: 44 })
+  })
+
+  it('shows the full label instead of the compact one on desktop', () => {
+    const { getByText, queryByText } = render(
+      <ToolActionsRow
+        actions={[
+          {
+            key: 'gpx',
+            label: 'Скачать GPX',
+            compactLabel: 'GPX',
+            icon: <Text>download</Text>,
+          },
+        ]}
+      />,
+    )
+
+    expect(getByText('Скачать GPX')).toBeTruthy()
+    expect(queryByText('GPX')).toBeNull()
+  })
+
   it('keeps labels until the web viewport is hydrated', () => {
     mockResponsive = { isHydrated: false, isMobile: true }
     const { getByText } = render(<ToolActionsRow actions={buildActions()} />)

@@ -9,6 +9,19 @@ export type ToolAction = {
   key: string;
   /** Осмысленный текст действия: подпись на desktop и accessibilityLabel в icon-only режиме. */
   label: string;
+  /**
+   * Короткая подпись для compact-режима (mobile web / Android / iPhone).
+   *
+   * Нужна там, где иконка НЕ «говорящая» и одна на несколько действий: три
+   * кнопки с одинаковым `download` (GPX / KML / оригинал) в icon-only виде
+   * неразличимы — TestFlight 1.0.5 (8), «иконки непонятные что они значат».
+   * `docs/DESIGN_SYSTEM.md` для такого случая прямо требует подпись.
+   *
+   * Слово должно быть коротким (`GPX`, `KML`, `Оригинал`): ряд остаётся одной
+   * строкой, а полное название действия по-прежнему уходит в
+   * `accessibilityLabel`. Без этого поля поведение прежнее — icon-only.
+   */
+  compactLabel?: string;
   icon: React.ReactNode;
   onPress?: () => void;
   disabled?: boolean;
@@ -34,8 +47,10 @@ type ToolActionsRowProps = {
  *
  * Шаблон один для всех поверхностей:
  * - desktop web — icon + подпись;
- * - mobile web и Android — icon-only 44/48dp в ОДНУ строку, подпись уходит в
- *   accessibilityLabel.
+ * - mobile web, Android и iPhone — icon-only 44/48dp в ОДНУ строку, подпись
+ *   уходит в accessibilityLabel;
+ * - действие с `compactLabel` остаётся подписанным и на телефоне: короткое
+ *   слово рядом с иконкой, ряд по-прежнему одна строка.
  *
  * Так вспомогательные действия не съедают экран телефона тремя полноразмерными
  * кнопками с подписями. Первичное действие шага (Сохранить/Далее) сюда не
@@ -50,22 +65,33 @@ function ToolActionsRow({ actions, size = 'sm', style, compact }: ToolActionsRow
 
   return (
     <View style={[styles.row, isCompact && styles.rowCompact, style]}>
-      {visibleActions.map((action) => (
-        <Button
-          key={action.key}
-          size={size}
-          variant={action.variant ?? 'outline'}
-          label={action.label}
-          accessibilityLabel={action.label}
-          icon={action.icon}
-          iconOnly={isCompact}
-          loading={action.loading}
-          disabled={action.disabled}
-          onPress={action.onPress}
-          testID={action.testID}
-          style={isCompact ? styles.compactButton : styles.button}
-        />
-      ))}
+      {visibleActions.map((action) => {
+        const compactLabelled = isCompact && !!action.compactLabel;
+        return (
+          <Button
+            key={action.key}
+            size={size}
+            variant={action.variant ?? 'outline'}
+            label={compactLabelled ? (action.compactLabel as string) : action.label}
+            // Полное название действия остаётся именем кнопки для VoiceOver и
+            // TalkBack даже тогда, когда видимая подпись сокращена до «GPX».
+            accessibilityLabel={action.label}
+            icon={action.icon}
+            iconOnly={isCompact && !compactLabelled}
+            loading={action.loading}
+            disabled={action.disabled}
+            onPress={action.onPress}
+            testID={action.testID}
+            style={
+              isCompact
+                ? compactLabelled
+                  ? styles.compactLabelledButton
+                  : styles.compactButton
+                : styles.button
+            }
+          />
+        );
+      })}
     </View>
   );
 }
@@ -90,6 +116,16 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     flexShrink: 0,
     minWidth: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minWidth,
+    minHeight: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minHeight,
+  },
+  // Подписанная кнопка в compact-ряду: ширину задаёт короткое слово, поэтому
+  // floor тач-таргета держит только высота. `flexShrink: 1` и узкие
+  // горизонтальные паддинги (перебивают `sizeStyles.sm` кнопки, они применяются
+  // раньше `style`) оставляют ряд одной строкой и на 320dp.
+  compactLabelledButton: {
+    flexGrow: 0,
+    flexShrink: 1,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
     minHeight: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minHeight,
   },
 });
