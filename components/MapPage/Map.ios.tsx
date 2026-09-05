@@ -138,6 +138,11 @@ const DEFAULT_LNG = 27.7273595;
 // Семафор на сетевые загрузки тайлов: #807 nginx zone режет бурст → 429/серо.
 const MAX_TILE_FETCH = 3;
 
+
+/** #1773 — предел ожидания первого тайла, после которого индикатор снимаем. */
+const FIRST_TILE_LOADER_TIMEOUT_MS = 3000;
+
+
 const withAlpha = (color: string, alpha: number) => {
   if (!color || color.startsWith('rgba') || color.startsWith('rgb')) {
     return color;
@@ -371,13 +376,24 @@ const Map: React.FC<TravelProps> = ({
     if (next) next();
   }, []);
 
+  // #1773 — пока не приехал первый тайл, WebView показывает пустой холст Leaflet
+  // (#ddd). На «Моих точках» это читалось как «карта не открылась». Держим
+  // индикатор загрузки до первого тайла (или короткого таймаута ниже).
+  const firstTileSettledRef = useRef(false);
+  const markFirstTileSettled = useCallback(() => {
+    if (firstTileSettledRef.current) return;
+    firstTileSettledRef.current = true;
+    setIsLoading(false);
+  }, []);
+
   const setWebViewTile = useCallback(
     (key: string, dataUrl: string) => {
+      markFirstTileSettled();
       injectMapCommand(
         `window.__metravelSetTile && window.__metravelSetTile(${serializeForInlineScript(key)}, ${serializeForInlineScript(dataUrl)})`,
       );
     },
-    [injectMapCommand],
+    [injectMapCommand, markFirstTileSettled],
   );
 
   // #1561 — один промах сети НЕ должен навсегда оставлять серую клетку. Слот
@@ -553,11 +569,18 @@ const Map: React.FC<TravelProps> = ({
     ],
   );
 
+  // #1773 — всплеск renderPoints. Готовность приезжает дважды (onLoadEnd + READY),
+  // и каждое обновление центра/вьюпорта пересобирает payload заново: на «Моих
+  // точках» WebView получал ~11 команд подряд и не успевал отрисовать даже
+  // подложку. Байт-в-байт повтор не шлём вовсе (перерисовывать нечего).
+  const lastPayloadRef = useRef<string | null>(null);
+
   const pushPayload = useCallback(() => {
     if (!isReadyRef.current) return;
-    injectMapCommand(
-      `window.__metravelRenderPoints && window.__metravelRenderPoints(${serializeForInlineScript(mapPayload)})`,
-    );
+    const serialized = serializeForInlineScript(mapPayload);
+    if (serialized === lastPayloadRef.current) return;
+    lastPayloadRef.current = serialized;
+    injectMapCommand(`window.__metravelRenderPoints && window.__metravelRenderPoints(${serialized})`);
   }, [injectMapCommand, mapPayload]);
 
   // Реальная гео пользователя для маркера «вы здесь». null когда координаты
@@ -715,7 +738,9 @@ const Map: React.FC<TravelProps> = ({
         domStorageEnabled={true}
         startInLoadingState={true}
         onLoadEnd={() => {
-          setIsLoading(false);
+          // #1773 — индикатор снимаем по первому тайлу, а не по загрузке HTML;
+          // страховка на случай, когда тайлов нет вовсе (офлайн, пустой ответ).
+          setTimeout(markFirstTileSettled, FIRST_TILE_LOADER_TIMEOUT_MS);
           handleReady();
         }}
         onMessage={async (event) => {

@@ -112,7 +112,12 @@ describe('Map.ios Component', () => {
       webView.props.onLoadEnd();
     });
     expect(mockInjectJavaScript).toHaveBeenCalled();
-    return mockInjectJavaScript.mock.calls.at(-1)?.[0] as string;
+    // #1773 — payload больше не дублируется байт-в-байт, поэтому последним
+    // вызовом может быть маркер геопозиции. Берём последнюю команду рендера точек.
+    const renderCalls = mockInjectJavaScript.mock.calls
+      .map((call) => call?.[0] as string)
+      .filter((script) => typeof script === 'string' && script.includes('__metravelRenderPoints'));
+    return renderCalls.at(-1) as string;
   };
 
   it('should render without crashing', () => {
@@ -460,6 +465,58 @@ describe('Map.ios Component', () => {
     // резолва выбора, а WebView и так возвращал его через String(point.id).
     expect(injectedScript).toContain('"id":"1"');
     expect(injectedScript).toContain('"id":"2"');
+  });
+
+  // #1773 — «Мои точки» на iPhone открывались пустым серым холстом: WebView
+  // получал ~11 команд renderPoints подряд (готовность приходит дважды, плюс
+  // каждое обновление центра пересобирает payload) и на каждой заново строил 869
+  // маркеров, поэтому уже приехавшие тайлы не успевали отрисоваться.
+  it('не повторяет renderPoints с байт-в-байт тем же payload', () => {
+    const bigTravel = {
+      travelAddress: {
+        data: Array.from({ length: 840 }, (_, index) => ({
+          id: index + 1,
+          lat: String(53.5 + (index % 40) * 0.01),
+          lng: String(27.2 + Math.floor(index / 40) * 0.01),
+          coord: `${53.5 + (index % 40) * 0.01},${27.2 + Math.floor(index / 40) * 0.01}`,
+          address: `Точка ${index + 1}`,
+          categoryName: 'Attraction',
+        })),
+      },
+    };
+
+    const rendered = render(<Map travel={bigTravel} coordinates={mockCoordinates} />);
+    const webView = getWebView(rendered);
+    act(() => {
+      webView.props.onLoadEnd();
+    });
+    // Вторая готовность (READY из моста) приходит на том же наборе точек.
+    act(() => {
+      webView.props.onLoadEnd();
+    });
+    rendered.rerender(<Map travel={bigTravel} coordinates={mockCoordinates} />);
+
+    const renderCalls = mockInjectJavaScript.mock.calls
+      .map((call) => call?.[0] as string)
+      .filter((script) => typeof script === 'string' && script.includes('__metravelRenderPoints'));
+    expect(renderCalls).toHaveLength(1);
+    expect(renderCalls[0]).toContain('"id":"840"');
+  });
+
+  it('рисует маркеры порциями и не перестраивает их на том же наборе точек', () => {
+    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+    const html = getWebViewHtml(rendered);
+
+    // Порционная отрисовка: между порциями отдаём кадр, иначе большой набор
+    // держит JS WebView и подложка не рисуется.
+    expect(html).toContain('const MARKER_CHUNK = 100;');
+    expect(html).toContain('window.requestAnimationFrame(fn);');
+    expect(html).toContain('if (!samePoints) scheduleChunk(function() { renderMarkerChunk(0); });');
+    // Тот же набор точек не чистит и не перестраивает слой маркеров.
+    expect(html).toContain('const samePoints = window.__metravelLastPointsJson === pointsJson;');
+    expect(html).toContain('if (!samePoints) {\n              markersLayer.clearLayers();');
+    // Хвост предыдущей порционной отрисовки обязан останавливаться.
+    expect(html).toContain('if (window.__metravelRenderGeneration !== renderGeneration) return;');
   });
 
   it('requests server clusters from native viewport bbox and filters', () => {

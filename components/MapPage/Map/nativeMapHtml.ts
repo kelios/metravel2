@@ -373,10 +373,26 @@ ${ESCAPE_HTML_FN_SCRIPT}
               map.__userCenter = [data.center.lat, data.center.lng];
             }
 
-            markersLayer.clearLayers();
             clustersLayer.clearLayers();
             routeLayer.clearLayers();
             const bounds = L.latLngBounds();
+
+            // #1773 — RN шлёт renderPoints и при изменениях, которые маркеров не
+            // касаются (центр, маршрут, вьюпорт): на «Моих точках» это давало ~11
+            // полных перестроек 869 маркеров за первые секунды. Если набор точек
+            // тот же — маркеры не трогаем, незавершённая порционная отрисовка
+            // предыдущего вызова продолжается.
+            const pointsJson = JSON.stringify(points);
+            const samePoints = window.__metravelLastPointsJson === pointsJson;
+            window.__metravelLastPointsJson = pointsJson;
+            if (!samePoints) {
+              markersLayer.clearLayers();
+              // Поколение рендера: маркеры добавляются порциями через setTimeout,
+              // поэтому хвост предыдущего набора обязан остановиться — иначе он
+              // дорисует старые маркеры уже ПОСЛЕ clearLayers().
+              window.__metravelRenderGeneration = (window.__metravelRenderGeneration || 0) + 1;
+            }
+            const renderGeneration = window.__metravelRenderGeneration;
 
             clusters.forEach(function(cluster) {
               if (!cluster || !Array.isArray(cluster.center) || cluster.center.length < 2) return;
@@ -400,7 +416,7 @@ ${ESCAPE_HTML_FN_SCRIPT}
             // одно физическое место, один Leaflet-маркер, один hit target. RN шлёт
             // сюда узкую проекцию (placeKey/id/coord/categoryName/sourceCount), а не
             // полные записи: массив источников места здесь не нужен и не сериализуется.
-            points.forEach(function(point, pointIndex) {
+            const addPointMarker = function(point, pointIndex) {
               if (!point || !point.coord) return;
               const parts = String(point.coord).split(',').map(Number);
               const lat = parts[0];
@@ -452,9 +468,43 @@ ${ESCAPE_HTML_FN_SCRIPT}
                   }
                 } catch (err) {}
               });
+            };
 
-              bounds.extend([lat, lng]);
+            // #1773 — границы считаем отдельным числовым проходом (без DOM), чтобы
+            // fitBounds ниже работал сразу, ещё до отрисовки самих маркеров.
+            points.forEach(function(point) {
+              if (!point || !point.coord) return;
+              const parts = String(point.coord).split(',').map(Number);
+              if (!isFinite(parts[0]) || !isFinite(parts[1])) return;
+              bounds.extend([parts[0], parts[1]]);
             });
+
+            // #1773 — «Мои точки» на iPhone открывались пустым серым холстом: 869
+            // маркеров добавлялись в DOM одним синхронным проходом и держали JS
+            // WebView ~10 с, а тайлы приезжают в тот же поток инъекцией
+            // __metravelSetTile из RN и просто ждали своей очереди. Рисуем порциями
+            // и отдаём поток между ними: подложка появляется сразу, маркеры
+            // дорисовываются следом. Итоговый набор маркеров не меняется.
+            const MARKER_CHUNK = 100;
+            const scheduleChunk = function(fn) {
+              if (typeof window.requestAnimationFrame === 'function') {
+                // rAF отдаёт кадр между порциями — тайлы успевают отрисоваться.
+                window.requestAnimationFrame(fn);
+                return;
+              }
+              setTimeout(fn, 0);
+            };
+            const renderMarkerChunk = function(start) {
+              if (window.__metravelRenderGeneration !== renderGeneration) return;
+              const end = Math.min(start + MARKER_CHUNK, points.length);
+              for (var i = start; i < end; i += 1) {
+                addPointMarker(points[i], i);
+              }
+              if (end < points.length) {
+                scheduleChunk(function() { renderMarkerChunk(end); });
+              }
+            };
+            if (!samePoints) scheduleChunk(function() { renderMarkerChunk(0); });
 
             if (routeMode === 'route' && routePoints.length >= 1) {
               const routeBounds = L.latLngBounds();
