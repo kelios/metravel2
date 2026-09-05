@@ -74,4 +74,17 @@ describe('ContactForm honeypot boundary', () => {
 
     expect(getByTestId('contact-form-honeypot', { includeHiddenElements: true })).toBeTruthy()
   })
+
+  it.each(['web', 'ios', 'android'])('shows the keyboard shortcut hint only on web (%s)', (os) => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: os })
+
+    const { queryByText } = render(<ContactForm {...props} />)
+    const hint = queryByText('home:components.about.ContactForm.shift_enter_novaya_stroka_enter_otpravit_web_26a15cc6')
+
+    if (os === 'web') {
+      expect(hint).toBeTruthy()
+    } else {
+      expect(hint).toBeNull()
+    }
+  })
 })
