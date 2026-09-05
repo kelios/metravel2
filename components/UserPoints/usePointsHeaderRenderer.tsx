@@ -19,6 +19,7 @@ type Params = {
   hideViewToggle?: boolean;
   showFilters: boolean;
   onToggleFilters: () => void;
+  canShowMapSettings: boolean;
   showMapSettings: boolean;
   onToggleMapSettings: () => void;
   showingRecommendations: boolean;
@@ -50,6 +51,7 @@ export const usePointsHeaderRenderer = ({
   hideViewToggle,
   showFilters,
   onToggleFilters,
+  canShowMapSettings,
   showMapSettings,
   onToggleMapSettings,
   showingRecommendations,
@@ -82,6 +84,7 @@ export const usePointsHeaderRenderer = ({
         hideViewToggle={hideViewToggle}
         showFilters={showFilters}
         onToggleFilters={onToggleFilters}
+        canShowMapSettings={canShowMapSettings}
         showMapSettings={showMapSettings}
         onToggleMapSettings={onToggleMapSettings}
         showingRecommendations={showingRecommendations}
@@ -125,6 +128,7 @@ export const usePointsHeaderRenderer = ({
     searchQuery,
     showFilters,
     showingRecommendations,
+    canShowMapSettings,
     showMapSettings,
     siteCategoryOptions,
     styles,

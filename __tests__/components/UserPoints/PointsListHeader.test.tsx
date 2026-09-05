@@ -5,8 +5,8 @@
 // Механизм промаха: подпись действия гасилась пропом `isMobile`, а он в
 // `PointsList.tsx:81` равен `Platform.OS !== 'web'`, а не ширине вьюпорта.
 // Из-за этого mobile web показывал подписанные кнопки, а Android и iPhone —
-// три одинаковых кружка settings/filter/sliders. Тест держит контракт mobile
-// parity: подпись видима на любой поверхности.
+// одинаковые кружки settings/filter/sliders. Тест держит контракт mobile
+// parity: доступные действия подписаны; недоступные настройки скрыты (#1787).
 
 import React from 'react'
 import { Platform, StyleSheet } from 'react-native'
@@ -46,6 +46,7 @@ const renderHeader = (overrides: Record<string, unknown> = {}) =>
       hideViewToggle
       showFilters={false}
       onToggleFilters={noop}
+      canShowMapSettings={false}
       showMapSettings={false}
       onToggleMapSettings={noop}
       showingRecommendations={false}
@@ -61,16 +62,21 @@ const renderHeader = (overrides: Record<string, unknown> = {}) =>
   )
 
 describe('PointsListHeader — actions row', () => {
-  it('names every action with visible text on a phone, not three bare icons', () => {
-    const { getByText } = renderHeader()
+  it('names every available action with visible text on a phone', () => {
+    const { getByText, queryByTestId } = renderHeader()
 
     expect(getByText('Управление точками')).toBeTruthy()
     expect(getByText('Показать фильтры')).toBeTruthy()
+    expect(queryByTestId('userpoints-map-settings-toggle')).toBeNull()
+  })
+
+  it('shows a labelled settings action when the map supports it', () => {
+    const { getByText } = renderHeader({ canShowMapSettings: true })
     expect(getByText('Показать настройки карты')).toBeTruthy()
   })
 
   it('keeps the visible caption in sync with the toggled state', () => {
-    const { getByText } = renderHeader({ showFilters: true, showMapSettings: true })
+    const { getByText } = renderHeader({ canShowMapSettings: true, showFilters: true, showMapSettings: true })
 
     expect(getByText('Скрыть фильтры')).toBeTruthy()
     expect(getByText('Скрыть настройки карты')).toBeTruthy()
@@ -81,6 +87,7 @@ describe('PointsListHeader — actions row', () => {
     const onToggleFilters = jest.fn()
     const onToggleMapSettings = jest.fn()
     const { getByTestId } = renderHeader({
+      canShowMapSettings: true,
       onOpenActions,
       onToggleFilters,
       onToggleMapSettings,
@@ -101,7 +108,6 @@ describe('PointsListHeader — actions row', () => {
     for (const testID of [
       'userpoints-actions-open',
       'userpoints-filters-toggle',
-      'userpoints-map-settings-toggle',
     ]) {
       const style = StyleSheet.flatten(getByTestId(testID).props.style)
       expect(style).toMatchObject({ width: '100%', minHeight: 44 })

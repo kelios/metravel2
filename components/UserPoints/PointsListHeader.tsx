@@ -51,6 +51,7 @@ type PointsListHeaderProps = {
   showFilters: boolean
   onToggleFilters: () => void
 
+  canShowMapSettings: boolean
   showMapSettings: boolean
   onToggleMapSettings: () => void
   showingRecommendations: boolean
@@ -90,6 +91,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   hideViewToggle,
   showFilters,
   onToggleFilters,
+  canShowMapSettings,
   showMapSettings,
   onToggleMapSettings,
   showingRecommendations,
@@ -220,16 +222,18 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
             style={local.actionButton}
           />
 
-          <IconButton
-            icon={<Feather name="sliders" size={18} color={colors.text} />}
-            label={showMapSettings ? i18nT('map:components.UserPoints.PointsListHeader.skryt_nastroyki_karty_10b1129b') : i18nT('map:components.UserPoints.PointsListHeader.pokazat_nastroyki_karty_b3396a43')}
-            onPress={onToggleMapSettings}
-            active={showMapSettings}
-            size="sm"
-            testID="userpoints-map-settings-toggle"
-            showLabel
-            style={local.actionButton}
-          />
+          {canShowMapSettings ? (
+            <IconButton
+              icon={<Feather name="sliders" size={18} color={colors.text} />}
+              label={showMapSettings ? i18nT('map:components.UserPoints.PointsListHeader.skryt_nastroyki_karty_10b1129b') : i18nT('map:components.UserPoints.PointsListHeader.pokazat_nastroyki_karty_b3396a43')}
+              onPress={onToggleMapSettings}
+              active={showMapSettings}
+              size="sm"
+              testID="userpoints-map-settings-toggle"
+              showLabel
+              style={local.actionButton}
+            />
+          ) : null}
         </View>
       </View>
 

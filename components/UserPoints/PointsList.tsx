@@ -80,6 +80,10 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const isNarrow = windowWidth < 420;
   const isMobile = Platform.OS !== 'web';
   const isWideScreenWeb = Platform.OS === 'web' && windowWidth >= 1024;
+  // Only desktop map mode mounts the settings panel alongside a live map.
+  // Native has no MapUiApi bridge; narrow layouts unmount the map on Filters.
+  const canShowMapSettings = isWideScreenWeb && viewMode === 'map';
+  const mapSettingsVisible = canShowMapSettings && showMapSettings;
 
   const queryClient = useQueryClient();
 
@@ -297,7 +301,8 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     hideViewToggle: !isWideScreenWeb,
     showFilters,
     onToggleFilters: () => setShowFilters((prev) => !prev),
-    showMapSettings,
+    canShowMapSettings,
+    showMapSettings: mapSettingsVisible,
     onToggleMapSettings: () => setShowMapSettings((v) => !v),
     showingRecommendations,
     onOpenActions: handleOpenActions,
@@ -431,7 +436,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         onSearch={handleSearch}
         hasFilters={hasActiveFilters}
         onResetFilters={handleResetFilters}
-        showMapSettings={showMapSettings}
+        showMapSettings={mapSettingsVisible}
       />
 
       <PointsListActionsModal
