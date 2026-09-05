@@ -189,13 +189,23 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
             </View>
           ) : null}
 
+          {/*
+            #1414 (TestFlight 1.0.5 (8)): подпись действия обязательна на любой
+            ширине. `showLabel={!isMobile}` гасил её, а `isMobile` здесь — не
+            вьюпорт, а `Platform.OS !== 'web'` (`PointsList.tsx:81`), поэтому
+            mobile web видел три подписанные кнопки, а Android и iPhone — три
+            одинаковых кружка settings/filter/sliders без единой буквы. Иконки
+            здесь не «говорящие» в смысле `docs/DESIGN_SYSTEM.md`
+            («Mobile pattern: secondary tool actions»), значит действию нужна
+            подпись, а не icon-only ряд.
+          */}
           <IconButton
             icon={<Feather name="settings" size={18} color={colors.text} />}
             label={i18nT('map:components.UserPoints.PointsListHeader.upravlenie_tochkami_f2146a1d')}
             onPress={onOpenActions}
             size="sm"
             testID="userpoints-actions-open"
-            showLabel={!isMobile}
+            showLabel
             style={local.actionButton}
           />
 
@@ -205,7 +215,8 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
             onPress={onToggleFilters}
             active={showFilters}
             size="sm"
-            showLabel={!isMobile}
+            testID="userpoints-filters-toggle"
+            showLabel
             style={local.actionButton}
           />
 
@@ -215,7 +226,8 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
             onPress={onToggleMapSettings}
             active={showMapSettings}
             size="sm"
-            showLabel={!isMobile}
+            testID="userpoints-map-settings-toggle"
+            showLabel
             style={local.actionButton}
           />
         </View>
@@ -400,14 +412,16 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     lineHeight: 18,
     color: colors.textMuted,
   },
+  // Раскладка ряда действий одна на всех поверхностях: строка во всю ширину с
+  // иконкой и подписью слева. На web так было и раньше, native повторяет её
+  // один в один — иначе mobile web и iPhone расходятся (mobile parity,
+  // `docs/RULES.md`). Полная ширина здесь же снимает вопрос обрезания подписи
+  // на длинных BE/PL/UK: строке остаётся ~300dp против ~170dp самой длинной
+  // локализованной подписи.
   actionButton: {
     marginHorizontal: 0,
-    ...(Platform.OS === 'web'
-      ? ({
-          width: '100%',
-          justifyContent: 'flex-start',
-        } as any)
-      : null),
+    width: '100%',
+    justifyContent: 'flex-start',
   },
   searchBlock: {
     marginBottom: DESIGN_TOKENS.spacing.sm,

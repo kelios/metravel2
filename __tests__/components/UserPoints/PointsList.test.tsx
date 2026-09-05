@@ -228,8 +228,11 @@ describe('PointsList (manual create)', () => {
       expect(mockGetPoints).toHaveBeenCalled();
     });
 
-    fireEvent.press(screen.getByLabelText('Управление точками'));
-    expect(screen.getByText('Управление точками')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('userpoints-actions-open'));
+    // #1414: подпись действия видима в шапке списка на любой ширине, поэтому
+    // текст «Управление точками» есть и на кнопке, и в заголовке открытой
+    // модалки — ровно два вхождения.
+    expect(screen.getAllByText('Управление точками')).toHaveLength(2);
     expect(screen.getByLabelText('Закрыть меню действий')).toBeTruthy();
     fireEvent.press(screen.getByText('Удалить все точки'));
     await screen.findByText('Удалить все точки?');
