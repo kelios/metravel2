@@ -9,6 +9,7 @@ import { indexMediaImage } from '@/utils/mediaPlaceholderIndex';
 import { retry } from '@/utils/retry';
 import { isUsableRouteSegment } from '@/utils/routePaths';
 import { resolveTotalPages } from '@/utils/fetchAllPages';
+import { QUEST_POPULARITY_SORT, selectPopularQuests } from '@/utils/questPopularity';
 import {
     readCachedQuestBundle,
     writeCachedQuestBundle,
@@ -33,6 +34,12 @@ type ApiQuestRatingSnapshot = {
     completions_count: number;
     is_completed_by_me: boolean;
     first_completer: ApiQuestFirstCompleter | null;
+    /**
+     * Уникальные просмотры квеста. Бэкенд отдаёт поле в списке каталога и
+     * ломает им ничью по прохождениям в `?sort=popular`; на клиенте оно нужно
+     * только правилу популярности, поэтому необязательное.
+     */
+    views_count?: number;
 };
 
 type ApiQuestOptionalRatingSnapshot = Partial<ApiQuestRatingSnapshot>;
@@ -597,10 +604,12 @@ export async function fetchQuestsList(options?: { signal?: AbortSignal }): Promi
 }
 
 /**
- * Первые N квестов каталога ОДНИМ запросом — для промо-блоков, которым нужна
- * пара карточек (главная показывает две). Через полный `fetchQuestsList` такой
- * блок вытягивал весь каталог: 139 квестов и ~405 КБ на страницу, где видно два.
- * Порядок совпадает с первой страницей полного списка.
+ * N самых популярных квестов каталога ОДНИМ запросом — для промо-блоков,
+ * которым нужна пара карточек. Через полный `fetchQuestsList` такой блок
+ * вытягивал весь каталог: 139 квестов и ~405 КБ на страницу, где видно два
+ * (#1239), поэтому отбор делает бэкенд: `?sort=popular` — это прохождения по
+ * убыванию, просмотры, id (`quests/catalog.py`). Раньше здесь была просто
+ * первая страница, то есть витрина показывала квесты с наименьшими id.
  *
  * Ответ намеренно НЕ пишется в офлайн-кэш каталога: это срез, и он затёр бы
  * полный список, на который опираются экран квестов и офлайн-режим.
@@ -609,19 +618,34 @@ export async function fetchQuestsPreview(
     limit: number,
     options?: { signal?: AbortSignal },
 ): Promise<ApiQuestMeta[]> {
-    try {
-        const res = await apiClient.get<ApiQuestMeta[] | PaginatedEnvelope<ApiQuestMeta>>(
-            `/quests/?page_size=${limit}`,
+    const signalOption = options?.signal ? { signal: options.signal } : undefined;
+    const request = (query: string) =>
+        apiClient.get<ApiQuestMeta[] | PaginatedEnvelope<ApiQuestMeta>>(
+            `/quests/?${query}`,
             undefined,
-            options?.signal ? { signal: options.signal } : undefined,
+            signalOption,
         );
+    const pageQuery = `page_size=${limit}`;
+
+    try {
+        let res: ApiQuestMeta[] | PaginatedEnvelope<ApiQuestMeta>;
+        try {
+            res = await request(`sort=${QUEST_POPULARITY_SORT}&${pageQuery}`);
+        } catch (err) {
+            // Бэкенд без каталожной сортировки отвечает на неизвестный `sort`
+            // валидационной 400. Промо-блок не должен из-за этого исчезать:
+            // повторяем запрос без параметра и показываем прежний порядок.
+            if (!(err instanceof ApiError) || err.status !== 400) throw err;
+            res = await request(pageQuery);
+        }
         const list = Array.isArray(res) ? res : unwrapList<ApiQuestMeta>(res);
         return list.slice(0, limit).map(withQuestMetaDefaults);
     } catch (err) {
         // Офлайн-контракт тот же, что у полного списка: лучше показать кэш
-        // каталога, чем пустой промо-блок.
+        // каталога, чем пустой промо-блок. Сортировать его приходится самим —
+        // в кэше лежит полный каталог в порядке id.
         const cached = await readCachedQuestsList();
-        if (cached) return cached.slice(0, limit);
+        if (cached) return selectPopularQuests(cached, limit);
         throw err;
     }
 }

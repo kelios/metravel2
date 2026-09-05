@@ -76,8 +76,9 @@ type CachedQuestsListEnvelope = {
  * чтении — кэши, записанные прежними версиями клиента, иначе продолжали бы
  * отдавать чужой статус до первого удачного онлайн-обновления.
  *
- * Общие поля (`rating_avg`, `rating_count`, `completions_count`,
- * `first_completer`) одинаковы для всех и остаются в кэше.
+ * Общие поля (`rating_avg`, `rating_count`, `completions_count`, `views_count`,
+ * `first_completer`) одинаковы для всех и остаются в кэше — на `completions_count`
+ * и `views_count` опирается офлайн-отбор популярных для промо-блока (#1798).
  */
 function stripPersonalQuestFields(list: ApiQuestMeta[]): ApiQuestMeta[] {
     return list.map((quest) => ({ ...quest, is_completed_by_me: false, user_rating: null }));

@@ -1,6 +1,6 @@
 # Фича: quests
 
-**Последняя актуализация:** 2026-08-27
+**Последняя актуализация:** 2026-09-06
 
 **Ответственный домен:** frontend quests (агент `quest-expert`; контент —
 `quest-editor`, гео — `quest-geo-verifier`, трение — `quest-friction-analyst`)
@@ -43,7 +43,7 @@ runtime-доказательствами под задачу, а не налич
 | `/quests/{city}` | `app/(tabs)/quests/[city]/index.tsx` (229 LOC) | лендинг города: сегмент — numeric `city_id` ИЛИ alias (`minsk`); неизвестный сегмент → `router.replace('/quests')` |
 | `/quests/country/{country}` | `app/(tabs)/quests/country/[country]/index.tsx` | web-лендинг страны: валидный ISO alpha-2 из каталога → стабильный alias (`BY → belarus`, `PL → poland`); неизвестный alias → `/quests` |
 | `/quests/{city}/{questId}` | `app/(tabs)/quests/[city]/[questId].tsx` (688 LOC) | деталь и прохождение: bundle, прогресс, гость/consent, SEO+JSON-LD, модалка отзывов |
-| Промо на главной | `components/home/HomeQuestsPromoSection.tsx` | сразу после hero: 6 карточек (desktop) / 4 (mobile) через `useQuestsPreview(6)` + подарочный вход-блок → `/quests/scenario`; SSG-двойник — `injectHomeQuestsSection` в `scripts/generate-seo-pages.js` (crawlable `data-ssg-home-quests`) |
+| Промо на главной | `components/home/HomeQuestsPromoSection.tsx` | сразу после hero: 6 карточек (desktop) / 4 (mobile) через `useQuestsPreview(6)` + подарочный вход-блок → `/quests/scenario`; отбор — популярные (`?sort=popular`: прохождения, просмотры, id), а не первые по id (#1798); SSG-двойник — `injectHomeQuestsSection` в `scripts/generate-seo-pages.js` (crawlable `data-ssg-home-quests`, те же 8 ссылок тем же правилом) |
 | Промо в travel-детали | `components/travel/details/sections/QuestForCitySection.tsx` (+ `Deferred*.tsx` / `Deferred*.web.tsx`) | «квест по этому городу» на странице путешествия |
 
 Отдельного city-alias route на уровне Expo Router нет: alias — это тот же
@@ -164,6 +164,7 @@ tripvenue резолвит по ближайшему городу каталог
 | `utils/questAudience.ts` | 92 | теги `kids/teens/age-*`, `bike`/`velo`, `loop`/`circular` |
 | `utils/questCityAlias.js` | 87 | alias городов; общий модуль для SSG-скриптов и роута |
 | `utils/guestQuestProgress.ts` | 83 | гостевой прогресс в AsyncStorage, `GUEST_QUEST_FREE_STEPS = 2` |
+| `utils/questPopularity.js` | 67 | правило популярности (зеркало серверного `?sort=popular`); общий модуль для приложения и SSG |
 | `stores/questFontScaleStore.ts` | 53 | zustand+persist: масштаб шрифта визарда (1 / 1.15 / 1.3) |
 | `utils/questCompletionPolicy.ts` | 42 | порог зачёта ⌈2/3⌉ обязательных точек |
 
@@ -221,7 +222,7 @@ tripvenue резолвит по ближайшему городу каталог
 | Query / Mutation | Файл | Ключ | Примечания |
 | --- | --- | --- | --- |
 | `useQuestsList` | `hooks/useQuestsApi.ts` + `hooks/questsListQuery.ts` | `['quests']` | единственное определение запроса; `staleTime` 30 мин, `gcTime` 60 мин (`hooks/questsListCachePolicy.ts`) |
-| `useQuestsPreview(limit)` | `hooks/useQuestsApi.ts` | `['quests','preview',limit]` | `initialData` — срез из `['quests']` с наследованием `dataUpdatedAt` |
+| `useQuestsPreview(limit)` | `hooks/useQuestsApi.ts` | `['quests','preview',limit]` | `GET /quests/?sort=popular&page_size=N` одним запросом (при `400` — повтор без `sort`); `initialData` — топ-N по популярности из `['quests']` с наследованием `dataUpdatedAt` |
 | `useQuestRatingMeta` / `useQuestCompletionMeta` / `useQuestPioneerMeta` | `hooks/useQuest*Meta.ts` | `['quests']` (+ засев `['quest', id]`) | бандл не несёт rating/completions/first_completer — берутся из каталога |
 | `useQuestReviews` | `hooks/useQuestsApi.ts` | `['quest', questId, 'reviews']` | `staleTime` 60 с |
 | `useQuestReview` | `hooks/useQuestReview.ts` | `['questUserReview', userId, id]` | один `POST /quest-reviews/`; personal review изолирован по аккаунту, после успеха инвалидируются каталог/detail/публичная читалка |
@@ -262,8 +263,12 @@ tripvenue резолвит по ближайшему городу каталог
   (`is_completed_by_me`, `user_rating`) снимаются и при записи, и при чтении
   (`stripPersonalQuestFields`, #1793): иначе после выхода или смены аккаунта
   офлайн-каталог показывал чужие «Пройден». Общие поля (`rating_avg`,
-  `rating_count`, `completions_count`, `first_completer`) в кэше остаются, и
-  офлайн-ветка `fetchQuestsCompactCatalog` полагается на эту же гарантию.
+  `rating_count`, `completions_count`, `views_count`, `first_completer`) в кэше
+  остаются, и на эту же гарантию полагаются офлайн-ветка
+  `fetchQuestsCompactCatalog` и офлайн-отбор популярных для промо-блока.
+- Офлайн-фолбэк превью отдаёт не первые N кэша, а топ-N по популярности
+  (`selectPopularQuests`, #1798): в кэше лежит каталог в порядке id, серверной
+  сортировки в этой ветке нет.
 - Бандл: `readCachedQuestBundle` сначала спрашивает единый `OfflineCatalog`
   (`services/offline/questOfflineAdapter.ts`, `schemaVersion: 1`), затем —
   легаси-конверт `quest-bundle:{questId}` c
@@ -519,6 +524,12 @@ native-геозоны используют только координаты ш�
 - Статическая копия интро/FAQ каталога — `utils/questContent.js`; она обязана
   совпадать с RU-значениями ключей `quests:screens.tabs.QuestsSeoIntroFaq.*`,
   иначе краулер видит не то, что читает пользователь после гидрации.
+- Правило отбора популярных — `utils/questPopularity.js` (CommonJS, общий для
+  приложения и генератора) и оно обязано совпадать с серверным `?sort=popular`
+  (`-completions_count`, `-views_count`, `id`): приложение берёт порядок у
+  бэкенда одним запросом, `injectHomeQuestsSection` сортирует уже выкачанный
+  каталог локально, иначе краулер и человек видят на главной разные подборки
+  (#1798).
 - Гейт сборки: `node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api
   https://metravel.by` в `build-prod.sh` — падает до rsync. Городские HTML
   проверяются в `dist`, а alias-membership — в живом backend-owned
@@ -553,7 +564,8 @@ native-геозоны используют только координаты ш�
 - адаптеры и правила — `__tests__/utils/questAdapters*.test.ts`,
   `questAnswerEvaluation`, `questCompletionPolicy`, `questProgressMerge`,
   `questAudience`, `questForLocation(+Coverage)`, `questImagePrefetch`,
-  `questSeo(.node)`, `questAnswerTelemetry`;
+  `questSeo(.node)`, `questAnswerTelemetry`, `questPopularity` (правило
+  популярности + паритет промо-блока и его SSG-двойника);
 - API — `__tests__/api/quests.test.ts`, `questBundleCache`, `questRating`,
   `questReview`;
 - хуки — `useQuestsApi`, `useQuestWizardProgress`, `useQuestProgressSync.offline`,

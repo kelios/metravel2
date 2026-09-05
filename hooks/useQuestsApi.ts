@@ -22,6 +22,7 @@ import {
     adaptMeta,
     adaptBundle,
 } from '@/utils/questAdapters';
+import { selectPopularQuests } from '@/utils/questPopularity';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import {
     hasQuestProgressStarted,
@@ -109,8 +110,11 @@ export function useQuestsPreview(limit: number, opts?: { enabled?: boolean }) {
         staleTime: QUESTS_LIST_STALE_TIME,
         gcTime: QUESTS_LIST_GC_TIME,
         initialData: () => {
+            // Полный каталог в кэше лежит в порядке id, а промо-блок показывает
+            // популярные (#1798): без пересортировки блок мигал бы выборкой по
+            // id всякий раз, когда главную открывают после экрана квестов.
             const fullList = queryClient.getQueryData<ApiQuestMeta[]>(queryKeys.quests());
-            return fullList?.length ? fullList.slice(0, limit) : undefined;
+            return fullList?.length ? selectPopularQuests(fullList, limit) : undefined;
         },
         // Возраст среза = возраст каталога, из которого он взят: иначе свежий
         // initialData вечно считался бы актуальным и промо-блок не обновлялся.

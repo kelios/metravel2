@@ -48,6 +48,7 @@ const {
   QUEST_SCENARIO_OCCASIONS_RU,
   QUEST_SCENARIO_FAQ_RU,
 } = require('../utils/questContent');
+const { selectPopularQuests } = require('../utils/questPopularity');
 
 // ---------------------------------------------------------------------------
 // CLI args
@@ -2845,12 +2846,19 @@ const HOME_QUESTS_FEATURED_LIMIT = 8;
  * text-only (no <img>) to avoid adding LCP-competing image loads to the home
  * first screen; covers live in the hydrated React card grid. Hidden once RNW
  * styles are ready, exactly like the sibling /quests and city-landing blocks.
+ *
+ * The featured slice is picked by popularity, by the same rule the hydrated
+ * promo block gets from the backend's `?sort=popular` (#1798) — see
+ * utils/questPopularity. The catalog is already in memory here, so it is sorted
+ * locally instead of spending another request. The app renders the top 6 (4 on
+ * mobile), so its grid is a prefix of these 8 links: crawler and human see one
+ * selection, not two.
  */
 function injectHomeQuestsSection(baseHtml, quests) {
   const routable = (Array.isArray(quests) ? quests : []).filter((quest) => questRouteKey(quest));
   if (!routable.length) return baseHtml;
 
-  const featured = routable.slice(0, HOME_QUESTS_FEATURED_LIMIT);
+  const featured = selectPopularQuests(routable, HOME_QUESTS_FEATURED_LIMIT);
 
   const sectionStyle = [
     'box-sizing:border-box',

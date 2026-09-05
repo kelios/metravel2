@@ -1,4 +1,5 @@
 import { apiClient, ApiError } from '@/api/client';
+import { readCachedQuestsList } from '@/api/questBundleCache';
 import {
   fetchQuestsList,
   fetchQuestsPreview,
@@ -47,6 +48,9 @@ const mockedGet = apiClient.get as jest.MockedFunction<typeof apiClient.get>;
 const mockedPost = apiClient.post as jest.MockedFunction<typeof apiClient.post>;
 const mockedPatch = apiClient.patch as jest.MockedFunction<typeof apiClient.patch>;
 const mockedDelete = apiClient.delete as jest.MockedFunction<typeof apiClient.delete>;
+const mockedReadCachedQuestsList = readCachedQuestsList as jest.MockedFunction<
+  typeof readCachedQuestsList
+>;
 
 /** Даёт отработать уже поставленным в очередь промисам, ничего не резолвя за них. */
 const flushMicrotasks = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -311,8 +315,68 @@ describe('api/quests', () => {
       const result = await fetchQuestsPreview(2);
 
       expect(mockedGet).toHaveBeenCalledTimes(1);
-      expect(mockedGet).toHaveBeenCalledWith('/quests/?page_size=2', undefined, undefined);
+      expect(mockedGet).toHaveBeenCalledWith(
+        '/quests/?sort=popular&page_size=2',
+        undefined,
+        undefined,
+      );
       expect(result.map((quest) => quest.quest_id)).toEqual(['krakow-dragon', 'pakocim-voices']);
+    });
+
+    // #1798: отбор по популярности делает бэкенд, иначе витрина главной
+    // показывала бы квесты с наименьшими id.
+    it('asks the backend for the popular ordering, not the first page by id', async () => {
+      mockedGet.mockResolvedValueOnce({ results: [{ id: 32, quest_id: 'grodno-lights' }], next: null });
+
+      await fetchQuestsPreview(1);
+
+      expect(mockedGet.mock.calls[0][0]).toContain('sort=popular');
+    });
+
+    // Бэкенд без каталожной сортировки отвечает 400 на неизвестный `sort`.
+    // Блок обязан остаться на странице, а не исчезнуть.
+    it('falls back to the plain page when the backend rejects the sort parameter', async () => {
+      mockedGet
+        .mockRejectedValueOnce(new (ApiError as any)(400, 'Expected one of: id.'))
+        .mockResolvedValueOnce({ results: [{ id: 1, quest_id: 'krakow-dragon' }], next: null });
+
+      const result = await fetchQuestsPreview(1);
+
+      expect(mockedGet).toHaveBeenCalledTimes(2);
+      expect(mockedGet).toHaveBeenNthCalledWith(
+        2,
+        '/quests/?page_size=1',
+        undefined,
+        undefined,
+      );
+      expect(result.map((quest) => quest.quest_id)).toEqual(['krakow-dragon']);
+    });
+
+    // Ретрай только на валидационную 400: серверная ошибка должна дойти до
+    // офлайн-ветки, а не удваивать запрос.
+    it('does not retry without the sort parameter on a server failure', async () => {
+      mockedGet.mockRejectedValueOnce(new (ApiError as any)(500, 'Ошибка запроса: HTTP 500'));
+
+      await expect(fetchQuestsPreview(1)).rejects.toMatchObject({ status: 500 });
+
+      expect(mockedGet).toHaveBeenCalledTimes(1);
+    });
+
+    // Офлайн-ветка отдаёт не первые N кэша, а популярные: в AsyncStorage лежит
+    // полный каталог в порядке id, сортировать его больше некому (#1798).
+    it('ranks the offline cache by popularity instead of taking the first ids', async () => {
+      mockedGet.mockRejectedValueOnce(new (ApiError as any)(0, 'Нет сети', { offline: true }));
+      mockedReadCachedQuestsList.mockResolvedValueOnce([
+        { id: 1, quest_id: 'oldest', completions_count: 0, views_count: 3 },
+        { id: 2, quest_id: 'seen-more', completions_count: 0, views_count: 9 },
+        { id: 3, quest_id: 'played', completions_count: 2, views_count: 1 },
+      ] as any);
+
+      const result = await fetchQuestsPreview(2);
+
+      expect(result.map((quest) => quest.quest_id)).toEqual(['played', 'seen-more']);
+      // Одна попытка: офлайн — не валидационная 400, повторять запрос незачем.
+      expect(mockedGet).toHaveBeenCalledTimes(1);
     });
 
     it('never returns more than the requested limit', async () => {
