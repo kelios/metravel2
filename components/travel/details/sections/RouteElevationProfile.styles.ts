@@ -82,9 +82,16 @@ export const createRouteElevationProfileStyles = (colors: ThemedColors) =>
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       paddingVertical: DESIGN_TOKENS.spacing.sm,
     },
+    // `flexShrink: 1` здесь не косметика: в RN значение по умолчанию — 0, и ряд
+    // из трёх плиток надеялся только на `flexBasis: 0`. На iOS (TestFlight
+    // 1.0.5 (8)) третья плитка «Перепад» всё равно уезжала за правый край
+    // карточки, хотя на web та же раскладка меряется ровно (три плитки по 109 px
+    // в контейнере 336 px). Разрешение сжиматься делает ряд независимым от того,
+    // как платформа резолвит базис.
     summaryCardCompact: {
       minWidth: 0,
       flexBasis: 0,
+      flexShrink: 1,
       paddingHorizontal: DESIGN_TOKENS.spacing.xs,
       paddingVertical: DESIGN_TOKENS.spacing.xs,
     },
@@ -242,8 +249,14 @@ export const createRouteElevationProfileStyles = (colors: ThemedColors) =>
       alignSelf: 'stretch',
       marginTop: DESIGN_TOKENS.spacing.sm,
     },
+    // Компакт складывает карточки в столбец ЯВНО. Раньше стопка держалась на
+    // `flexBasis: '100%'` у карточки внутри wrap-ряда: на web это переносит
+    // каждую карточку на свою строку, а на iOS все три остались одним рядом —
+    // подпись схлопывалась до «Т…», а высота («180 м») вылезала за границу чипа
+    // (TestFlight 1.0.5 (8)). Столбец не зависит от резолва процентного базиса.
     pointCardsGridCompact: {
-      flexDirection: 'row',
+      flexDirection: 'column',
+      flexWrap: 'nowrap',
     },
     pointCard: {
       minWidth: 150,
@@ -261,7 +274,12 @@ export const createRouteElevationProfileStyles = (colors: ThemedColors) =>
     // высоте выходит даже меньше прежних трёх строк.
     pointCardCompact: {
       minWidth: 0,
-      flexBasis: '100%',
+      // Гасим `flex: 1` базовой карточки явными значениями: в столбце карточка
+      // не растёт и не сжимается, а ширину берёт от `alignSelf: 'stretch'`.
+      flexGrow: 0,
+      flexShrink: 0,
+      flexBasis: 'auto',
+      alignSelf: 'stretch',
       flexDirection: 'row',
       alignItems: 'center',
       gap: DESIGN_TOKENS.spacing.xs,
