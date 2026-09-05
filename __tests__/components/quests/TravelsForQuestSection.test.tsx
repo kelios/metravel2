@@ -1,7 +1,22 @@
 import React from 'react'
+import { StyleSheet } from 'react-native'
 import { render } from '@testing-library/react-native'
 
 import { TravelsForQuestSection } from '@/components/quests/TravelsForQuestSection'
+
+// Раскладку секции решает ширина вьюпорта, а не платформа.
+let mockResponsive: { isHydrated: boolean; isMobile: boolean } = {
+  isHydrated: true,
+  isMobile: false,
+}
+
+jest.mock('@/hooks/useResponsive', () => {
+  const actual = jest.requireActual('@/hooks/useResponsive')
+  return {
+    ...actual,
+    useResponsive: () => ({ ...actual.useResponsive(), ...mockResponsive }),
+  }
+})
 
 const mockUnifiedTravelCard = jest.fn((props: any) => {
   const { View } = require('react-native')
@@ -49,6 +64,35 @@ jest.mock('@/hooks/useTravelsForQuest', () => ({
 describe('TravelsForQuestSection', () => {
   beforeEach(() => {
     mockUnifiedTravelCard.mockClear()
+    mockResponsive = { isHydrated: true, isMobile: false }
+  })
+
+  // #1414: потолок ширины карточки снимается только на узкой раскладке, и
+  // только ПОСЛЕ гидратации. До неё `useResponsive` отдаёт SSR-снимок нулевой
+  // ширины, который проходит проверку `isMobile`, — без гейта десктопный первый
+  // кадр рисовал бы карточки во всю ширину ряда и следующий кадр возвращал их к
+  // 320 (CLS #1282).
+  describe('ширина карточки', () => {
+    const renderCardWrapper = () => {
+      const { getByTestId } = render(
+        <TravelsForQuestSection cityName="Ошмяны" countryName="Беларусь" />,
+      )
+      return StyleSheet.flatten(getByTestId('quest-travel-card-slot-196').props.style)
+    }
+
+    it('держит потолок 320 на широкой раскладке', () => {
+      expect(renderCardWrapper()).toMatchObject({ maxWidth: 320 })
+    })
+
+    it('отдаёт карточке весь ряд на узкой раскладке', () => {
+      mockResponsive = { isHydrated: true, isMobile: true }
+      expect(renderCardWrapper().maxWidth).toBeUndefined()
+    })
+
+    it('до гидратации остаётся на широкой раскладке, а не на нулевой ширине', () => {
+      mockResponsive = { isHydrated: false, isMobile: true }
+      expect(renderCardWrapper()).toMatchObject({ maxWidth: 320 })
+    })
   })
 
   it('uses contain media with one source for the sharp image and blurred fill', () => {

@@ -145,11 +145,14 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
     alignSelf: 'center',
     letterSpacing: 0.2,
   },
+  // На телефоне шапка секции вместе с padding рамки занимала ~256 px — почти
+  // треть экрана до первой карточки (отзыв TestFlight 1.0.5 (8)). Вертикальные
+  // поля срезаны втрое; на десктопе воздух оставлен как был.
   heroHeader: {
     alignItems: 'center',
-    paddingTop: isMobile ? 40 : 64,
-    paddingBottom: isMobile ? 28 : 48,
-    gap: isMobile ? 10 : 14,
+    paddingTop: isMobile ? 8 : 64,
+    paddingBottom: isMobile ? 16 : 48,
+    gap: isMobile ? 8 : 14,
   },
   showcaseGrid: {
     gap: isMobile ? 12 : 14,

@@ -8,12 +8,15 @@ jest.mock('@tanstack/react-query')
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
 }))
+// Ширина вьюпорта решает раскладку секции; по умолчанию — телефон 390.
+let mockViewport: { isPhone: boolean; isLargePhone: boolean; width: number } = {
+  isPhone: true,
+  isLargePhone: false,
+  width: 390,
+}
+
 jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => ({
-    isPhone: true,
-    isLargePhone: false,
-    width: 390,
-  }),
+  useResponsive: () => ({ ...mockViewport }),
 }))
 jest.mock('@/hooks/useTheme', () => ({
   useThemedColors: () => ({
@@ -48,6 +51,7 @@ const mockUseQuery = useQuery as jest.MockedFunction<typeof useQuery>
 
 describe('HomeInspirationSection mobile weekend showcase', () => {
   beforeEach(() => {
+    mockViewport = { isPhone: true, isLargePhone: false, width: 390 }
     mockUseQuery.mockReturnValue({
       data: {
         results: [
@@ -82,6 +86,29 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
     expect(screen.getByText('Маршрут 2')).toBeTruthy()
     expect(screen.getByText('Маршрут 3')).toBeTruthy()
     expect(screen.getByText('Маршрут 4')).toBeTruthy()
+  })
+
+  // #1414 (TestFlight 1.0.5 (8)): бейдж секции дублировал её же заголовок и
+  // вместе с ним съедал экран до первой карточки. На телефоне он снят, на
+  // широком экране остаётся — обе стороны контракта держим тестом.
+  it('drops the section badge on a phone and keeps it on a wide viewport', () => {
+    const section = (
+      <HomeInspirationSection
+        title="Идеи для ближайших выходных"
+        subtitle="Реальные маршруты без долгого планирования"
+        queryKey="home-travels-of-month"
+        fetchFn={jest.fn()}
+      />
+    )
+
+    const phone = render(section)
+    expect(phone.queryByText('Подборка выходного дня')).toBeNull()
+    expect(phone.getByText('Идеи для ближайших выходных')).toBeTruthy()
+    phone.unmount()
+
+    mockViewport = { isPhone: false, isLargePhone: false, width: 1280 }
+    const wide = render(section)
+    expect(wide.getByText('Подборка выходного дня')).toBeTruthy()
   })
 
   it('shows a working "Все маршруты" CTA that navigates to the catalog', () => {

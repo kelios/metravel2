@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Platform, StyleSheet, Text, View } from 'react-native'
+import { Platform, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import Feather from '@expo/vector-icons/Feather'
@@ -35,6 +35,10 @@ interface HomeSectionProps {
 
 const IS_WEB = Platform.OS === 'web'
 const NAV_FEEDBACK_MS = 700
+// Рельса на мобильной ширине: карточка = измеренная ширина рельсы минус peek.
+const RAIL_PEEK_WIDTH = 44
+const RAIL_CARD_MIN_WIDTH = 240
+const RAIL_CARD_MAX_WIDTH = 320
 
 const EMPTY_STATE_TEXT: Record<string, { title: string; subtitle: string }> = {
   'home-travels-of-month': {
@@ -286,7 +290,11 @@ export function HomeInspirationSection({
     <View style={[styles.section, isMobile && styles.sectionMobile]}>
       <View style={[styles.sectionFrame, isWeekendShowcase && styles.showcaseSectionFrame]}>
         <View style={[styles.heroHeader, { marginBottom: isMobile ? 20 : 32 }]}>
-          {sectionBadge && (
+          {/* На мобиле бейдж дублировал заголовок слово в слово («НОВИНКИ» над
+              «Новые маршруты», «ПОПУЛЯРНОЕ» над «Популярное у путешественников»)
+              и вместе с крупным заголовком съедал экран до первой карточки —
+              отзыв TestFlight 1.0.5 (8). На десктопе места хватает, бейдж остаётся. */}
+          {sectionBadge && !isMobile && (
             <View style={styles.sectionBadge}>
               <Feather
                 name="star"
@@ -537,23 +545,44 @@ function Rail({
   viewportWidth,
   cardWidth,
 }: GridListProps & { cardWidth: number }) {
+  // Ширину рельсы меряем, а не считаем от вьюпорта: карточка жила по формуле
+  // 78% ОКНА, а лежит внутри секции с отступами (поле страницы + padding рамки).
+  // На 402 pt это давало карточку 314 в контентной коробке 330 — она прижималась
+  // влево, справа оставалось 14 pt пустоты, следующая карточка не выглядывала, и
+  // блок читался как «съехавший» (отзыв TestFlight 1.0.5 (8): «Блок смещен
+  // визуально»). От измеренной ширины карточка получает предсказуемый peek.
+  const [railWidth, setRailWidth] = useState(0)
+  const handleRailLayout = useCallback((event: LayoutChangeEvent) => {
+    const next = Math.round(event.nativeEvent.layout.width)
+    setRailWidth((prev) => (prev === next ? prev : next))
+  }, [])
+
+  const effectiveCardWidth = useMemo(() => {
+    if (!isMobile || railWidth <= 0) return cardWidth
+    // 44 = зазор между карточками (12) + видимый край следующей (32): столько
+    // нужно, чтобы рельса читалась как рельса, а не как одна кривая карточка.
+    return Math.max(RAIL_CARD_MIN_WIDTH, Math.min(RAIL_CARD_MAX_WIDTH, railWidth - RAIL_PEEK_WIDTH))
+  }, [cardWidth, isMobile, railWidth])
+
   return (
-    <CardRail gap={isMobile ? 12 : 16} contentPaddingHorizontal={isMobile ? 0 : 2}>
-      {items.map((item: any, index: number) => (
-        <View key={getItemKey(item, queryKey, index)} style={[styles.railCard, { width: cardWidth }]}>
-          <RenderTravelItem
-            item={item}
-            index={index}
-            isMobile={isMobile}
-            cardWidth={cardWidth}
-            hideAuthor={hideAuthor}
-            viewportWidth={viewportWidth}
-            visualVariant="home-featured"
-            mediaLoading="lazy"
-          />
-        </View>
-      ))}
-    </CardRail>
+    <View onLayout={handleRailLayout}>
+      <CardRail gap={isMobile ? 12 : 16} contentPaddingHorizontal={isMobile ? 0 : 2}>
+        {items.map((item: any, index: number) => (
+          <View key={getItemKey(item, queryKey, index)} style={[styles.railCard, { width: effectiveCardWidth }]}>
+            <RenderTravelItem
+              item={item}
+              index={index}
+              isMobile={isMobile}
+              cardWidth={effectiveCardWidth}
+              hideAuthor={hideAuthor}
+              viewportWidth={viewportWidth}
+              visualVariant="home-featured"
+              mediaLoading="lazy"
+            />
+          </View>
+        ))}
+      </CardRail>
+    </View>
   )
 }
 

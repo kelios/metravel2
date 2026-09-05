@@ -3,6 +3,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
+import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useTravelsForQuest } from '@/hooks/useTravelsForQuest'
 import type { TravelLocationQuery } from '@/utils/travelForLocation'
@@ -27,7 +28,15 @@ type Props = {
 export function TravelsForQuestSection({ cityName, countryName, countryCode, coords }: Props) {
   const router = useRouter()
   const colors = useThemedColors()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  // Узкая раскладка включается только ПОСЛЕ гидратации. До неё `useResponsive`
+  // отдаёт SSR-снимок {0,0}, а нулевая ширина проходит проверку `isMobile`, —
+  // на десктопе первый кадр рисовал бы карточки во всю ширину ряда и следующий
+  // кадр возвращал их к потолку 320 (тот самый «нулевой» кадр из #1282). При
+  // тёплом кэше `useTravelsForQuest` карточки на этом кадре уже есть, так что
+  // скачок видимый. На native `isHydrated` истинен сразу, поведение прежнее.
+  const { isHydrated, isMobile } = useResponsive()
+  const isNarrowLayout = isHydrated && isMobile
+  const styles = useMemo(() => createStyles(colors, isNarrowLayout), [colors, isNarrowLayout])
 
   const query = useMemo<TravelLocationQuery>(
     () => ({ cityName, countryName, countryCode, coords }),
@@ -65,7 +74,11 @@ export function TravelsForQuestSection({ cityName, countryName, countryCode, coo
             resolveTravelCityName(travel.cityName) ||
             (countries.length ? countries.join(', ') : null)
           return (
-            <View key={String(travel.id)} style={styles.cardWrapper}>
+            <View
+              key={String(travel.id)}
+              style={styles.cardWrapper}
+              testID={`quest-travel-card-slot-${travel.id}`}
+            >
               <UnifiedTravelCard
                 testID={`quest-travel-card-${travel.id}`}
                 title={travel.name}
@@ -91,7 +104,7 @@ export function TravelsForQuestSection({ cityName, countryName, countryCode, coo
   )
 }
 
-function createStyles(colors: ThemedColors) {
+function createStyles(colors: ThemedColors, isNarrowLayout: boolean) {
   return StyleSheet.create({
     section: {
       marginTop: 24,
@@ -116,7 +129,11 @@ function createStyles(colors: ThemedColors) {
       flexGrow: 1,
       flexBasis: 220,
       minWidth: 200,
-      maxWidth: 320,
+      // Потолок ширины нужен многоколоночной сетке на десктопе. На телефоне в
+      // ряду всегда одна карточка, и потолок 320 оставлял её прижатой влево, а
+      // справа — полосу пустоты (отзыв TestFlight 1.0.5 (8) «Блок смещен
+      // визуально»). На узкой раскладке карточка занимает ряд целиком.
+      maxWidth: isNarrowLayout ? undefined : 320,
     },
     card: {
       backgroundColor: colors.surface,
