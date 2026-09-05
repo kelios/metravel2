@@ -95,6 +95,36 @@ export const normalizeQuestProgressSnapshot = (
     answeredAt: asRecord<number>(raw?.answeredAt),
 })
 
+/**
+ * Снапшот описывает НАЧАТОЕ прохождение, а не просто открытый экран (#1803).
+ *
+ * До #1803 строка прохождения создавалась при загрузке экрана квеста, и восемь
+ * записей прода из сорока восьми оказались просмотрами без единого действия.
+ * Признак старта — любой след действия игрока: ответ (включая «Начать квест»,
+ * который пишет ключ `intro`), неверная попытка, открытая подсказка, пропуск
+ * точки, досрочный финиш, зачёт или уход с нулевого шага.
+ *
+ * `showMap` в признак НЕ входит: карта показывается по умолчанию
+ * (`normalizeQuestProgressSnapshot` считает её включённой, пока не сказано
+ * обратное), и её переключение прохождением не является.
+ */
+export const hasQuestProgressStarted = (
+    raw: Partial<QuestProgressSnapshot> | null | undefined,
+): boolean => {
+    if (!raw) return false
+    const snapshot = normalizeQuestProgressSnapshot(raw)
+    return (
+        countAnsweredSteps(snapshot.answers) > 0 ||
+        Object.keys(snapshot.attempts).length > 0 ||
+        Object.values(snapshot.hints).some(Boolean) ||
+        Object.values(snapshot.skipped).some(Boolean) ||
+        snapshot.completed ||
+        snapshot.earlyFinish ||
+        snapshot.currentIndex > 0 ||
+        snapshot.unlockedIndex > 0
+    )
+}
+
 /** ISO-время серверной записи → epoch ms (0, если разобрать не удалось). */
 export const parseServerUpdatedAt = (isoDate: string | null | undefined): number => {
     if (!isoDate) return 0

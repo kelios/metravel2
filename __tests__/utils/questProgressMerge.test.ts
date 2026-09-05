@@ -1,4 +1,5 @@
 import {
+  hasQuestProgressStarted,
   mergeQuestProgress,
   normalizeQuestProgressSnapshot,
   snapshotFromServerProgress,
@@ -347,5 +348,51 @@ describe('mergeQuestProgress', () => {
     expect(merged.answers).toEqual({})
     expect(merged.currentIndex).toBe(0)
     expect(merged.unlockedIndex).toBe(4)
+  })
+})
+
+// Признак «прохождение начато»: до #1803 строка на сервере появлялась от одного
+// открытия экрана, и восемь записей прода из сорока восьми были просмотрами.
+describe('hasQuestProgressStarted', () => {
+  const UNTOUCHED = {
+    currentIndex: 0,
+    unlockedIndex: 0,
+    answers: {},
+    attempts: {},
+    hints: {},
+    showMap: true,
+  }
+
+  it('не считает стартом пустой снапшот только что открытого экрана', () => {
+    expect(hasQuestProgressStarted(UNTOUCHED)).toBe(false)
+    expect(hasQuestProgressStarted(undefined)).toBe(false)
+    expect(hasQuestProgressStarted(null)).toBe(false)
+  })
+
+  it('не считает стартом переключение карты: она видна по умолчанию', () => {
+    expect(hasQuestProgressStarted({ ...UNTOUCHED, showMap: false })).toBe(false)
+  })
+
+  it('считает стартом ответ на intro — это нажатие «Начать квест»', () => {
+    expect(hasQuestProgressStarted({ ...UNTOUCHED, answers: { intro: 'start' } })).toBe(true)
+  })
+
+  it('не считает стартом пустое значение ответа', () => {
+    expect(hasQuestProgressStarted({ ...UNTOUCHED, answers: { intro: '' } })).toBe(false)
+  })
+
+  it('считает стартом любой другой след действия игрока', () => {
+    expect(hasQuestProgressStarted({ ...UNTOUCHED, attempts: { 'step-1': 1 } })).toBe(true)
+    expect(hasQuestProgressStarted({ ...UNTOUCHED, hints: { 'step-1': true } })).toBe(true)
+    expect(hasQuestProgressStarted({ ...UNTOUCHED, skipped: { 'step-1': true } })).toBe(true)
+    expect(hasQuestProgressStarted({ ...UNTOUCHED, currentIndex: 1 })).toBe(true)
+    expect(hasQuestProgressStarted({ ...UNTOUCHED, unlockedIndex: 1 })).toBe(true)
+    expect(hasQuestProgressStarted({ ...UNTOUCHED, earlyFinish: true })).toBe(true)
+    expect(hasQuestProgressStarted({ ...UNTOUCHED, completed: true })).toBe(true)
+  })
+
+  it('не считает стартом словари с выключенными значениями', () => {
+    expect(hasQuestProgressStarted({ ...UNTOUCHED, hints: { 'step-1': false } })).toBe(false)
+    expect(hasQuestProgressStarted({ ...UNTOUCHED, skipped: { 'step-1': false } })).toBe(false)
   })
 })

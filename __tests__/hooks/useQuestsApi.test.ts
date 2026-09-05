@@ -19,6 +19,7 @@ const mockFetchQuestsPreview = jest.fn();
 const mockFetchQuestByQuestId = jest.fn();
 const mockFetchOrCreateProgress = jest.fn();
 const mockUpdateProgress = jest.fn();
+const mockFetchQuestProgress = jest.fn();
 const mockDeleteProgress = jest.fn();
 
 jest.mock('@/api/quests', () => ({
@@ -26,6 +27,7 @@ jest.mock('@/api/quests', () => ({
   fetchQuestsPreview: (...args: any[]) => mockFetchQuestsPreview(...args),
   fetchQuestByQuestId: (...args: any[]) => mockFetchQuestByQuestId(...args),
   fetchOrCreateProgress: (...args: any[]) => mockFetchOrCreateProgress(...args),
+  fetchQuestProgress: (...args: any[]) => mockFetchQuestProgress(...args),
   updateProgress: (...args: any[]) => mockUpdateProgress(...args),
   deleteProgress: (...args: any[]) => mockDeleteProgress(...args),
 }));
@@ -116,6 +118,7 @@ describe('useQuestsApi hooks', () => {
       mockFetchQuestsPreview,
       mockFetchQuestByQuestId,
       mockFetchOrCreateProgress,
+      mockFetchQuestProgress,
       mockUpdateProgress,
       mockDeleteProgress,
     ].forEach((mock) => mock.mockReset());
@@ -325,7 +328,7 @@ describe('useQuestsApi hooks', () => {
 
   describe('useQuestProgressSync', () => {
     it('loads progress for authenticated user', async () => {
-      mockFetchOrCreateProgress.mockResolvedValueOnce(API_PROGRESS);
+      mockFetchQuestProgress.mockResolvedValueOnce(API_PROGRESS);
 
       const { result } = renderHook(() =>
         useQuestProgressSync('krakow-dragon', true),
@@ -334,7 +337,9 @@ describe('useQuestsApi hooks', () => {
       await waitFor(() => expect(result.current.progressLoading).toBe(false));
 
       expect(result.current.progress).toEqual(API_PROGRESS);
-      expect(mockFetchOrCreateProgress).toHaveBeenCalledWith('krakow-dragon');
+      expect(mockFetchQuestProgress).toHaveBeenCalledWith('krakow-dragon');
+      // Открытие экрана только читает: строку создаёт первое действие (#1803).
+      expect(mockFetchOrCreateProgress).not.toHaveBeenCalled();
     });
 
     it('does not load progress for unauthenticated user', async () => {
@@ -345,7 +350,7 @@ describe('useQuestsApi hooks', () => {
       await waitFor(() => expect(result.current.progressLoading).toBe(false));
 
       expect(result.current.progress).toBeNull();
-      expect(mockFetchOrCreateProgress).not.toHaveBeenCalled();
+      expect(mockFetchQuestProgress).not.toHaveBeenCalled();
     });
 
     it('does not load progress when questId is undefined', async () => {
@@ -356,11 +361,11 @@ describe('useQuestsApi hooks', () => {
       await waitFor(() => expect(result.current.progressLoading).toBe(false));
 
       expect(result.current.progress).toBeNull();
-      expect(mockFetchOrCreateProgress).not.toHaveBeenCalled();
+      expect(mockFetchQuestProgress).not.toHaveBeenCalled();
     });
 
     it('handles progress load failure gracefully', async () => {
-      mockFetchOrCreateProgress.mockRejectedValueOnce(new Error('Server down'));
+      mockFetchQuestProgress.mockRejectedValueOnce(new Error('Server down'));
 
       const { result } = renderHook(() =>
         useQuestProgressSync('krakow-dragon', true),
@@ -397,6 +402,7 @@ describe('useQuestsApi hooks', () => {
     it('flushes a pending debounced save on unmount instead of dropping it', async () => {
       // Флаш на размонтировании тоже идёт через слияние (GET → merge → PATCH),
       // поэтому он асинхронный и серверная запись нужна обоим вызовам.
+      mockFetchQuestProgress.mockResolvedValue(API_PROGRESS);
       mockFetchOrCreateProgress.mockResolvedValue(API_PROGRESS);
       mockUpdateProgress.mockResolvedValue(API_PROGRESS);
 
@@ -432,7 +438,7 @@ describe('useQuestsApi hooks', () => {
     });
 
     it('resetProgress calls deleteProgress for authenticated user with progress', async () => {
-      mockFetchOrCreateProgress.mockResolvedValueOnce(API_PROGRESS);
+      mockFetchQuestProgress.mockResolvedValueOnce(API_PROGRESS);
       mockDeleteProgress.mockResolvedValueOnce(undefined);
 
       const { result } = renderHook(() =>

@@ -10,6 +10,7 @@ import {
     fetchQuestsPreview,
     fetchQuestByQuestId,
     fetchOrCreateProgress,
+    fetchQuestProgress,
     fetchQuestReviews,
     updateProgress as apiUpdateProgress,
     deleteProgress as apiDeleteProgress,
@@ -23,6 +24,7 @@ import {
 } from '@/utils/questAdapters';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import {
+    hasQuestProgressStarted,
     mergeQuestProgress,
     normalizeQuestProgressSnapshot,
     snapshotFromServerProgress,
@@ -296,7 +298,9 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         void flushSyncRef.current?.();
     }, []);
 
-    // Загрузка прогресса при маунте
+    // Чтение прогресса при маунте. Именно чтение: создавать строку здесь нельзя —
+    // открытие экрана прохождением не является (#1803). Пока игрок ничего не
+    // сделал, `progressIdRef` остаётся пустым, и на сервере записи нет.
     useEffect(() => {
         if (!questId || !isAuthenticated) {
             setProgressLoading(false);
@@ -305,12 +309,13 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
 
         let cancelled = false;
         setProgressLoading(true);
-        fetchOrCreateProgress(questId)
+        fetchQuestProgress(questId)
             .then((data) => {
                 if (!cancelled) {
                     setProgress(data);
-                    progressIdRef.current = data.id;
-                    // Ответы, сделанные пока запрос был в полёте, ждут id — дожимаем.
+                    progressIdRef.current = data?.id ?? null;
+                    // Ответы, сделанные пока запрос был в полёте, ждут отправки —
+                    // дожимаем. Строку создаст сам флаш, если игрок уже начал.
                     flushPendingNow();
                 }
             })
@@ -356,7 +361,10 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         clearRetryTimer();
 
         const data = pendingDataRef.current;
-        if (!data || !isAuthenticatedRef.current || !progressIdRef.current || !questId) return;
+        if (!data || !isAuthenticatedRef.current || !questId) return;
+        // Нет id и игрок ещё ничего не сделал — отправлять нечего, а создавать
+        // строку под пустой снапшот нельзя (#1803).
+        if (!progressIdRef.current && !hasQuestProgressStarted(data)) return;
 
         // Параллельный флаш (дебаунс + ретрай/AppState) не должен слать дубль:
         // дожмём очередь после текущего запроса.
@@ -425,7 +433,8 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             }
             const data = pendingDataRef.current;
             const pendingQuestId = questIdRef.current;
-            if (!data || !isAuthenticatedRef.current || !progressIdRef.current || !pendingQuestId) return;
+            if (!data || !isAuthenticatedRef.current || !pendingQuestId) return;
+            if (!progressIdRef.current && !hasQuestProgressStarted(data)) return;
             void pushMergedProgress(pendingQuestId, data).catch((err) => {
                 devWarn('Could not flush quest progress on unmount:', err);
             });
@@ -436,11 +445,13 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     const saveProgress = useCallback((data: PendingQuestProgressData) => {
         if (!isAuthenticated) return;
 
-        // Ставим в очередь даже до получения progress id: если fetchOrCreateProgress
+        // Ставим в очередь даже до получения progress id: если чтение прогресса
         // ещё в полёте, ответ игрока не должен пропасть — флаш уйдёт, как только
         // id появится (см. загрузку прогресса выше).
         pendingDataRef.current = data;
-        if (!progressIdRef.current) return;
+        // Пока прохождение не начато, ждём первого действия: строка на сервере
+        // создаётся первым же значимым снапшотом, а не открытием экрана (#1803).
+        if (!progressIdRef.current && !hasQuestProgressStarted(data)) return;
 
         if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = setTimeout(() => {

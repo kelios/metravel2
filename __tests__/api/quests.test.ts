@@ -4,6 +4,7 @@ import {
   fetchQuestsPreview,
   fetchQuestByQuestId,
   fetchOrCreateProgress,
+  fetchQuestProgress,
   createProgress,
   updateProgress,
   deleteProgress,
@@ -389,6 +390,37 @@ describe('api/quests', () => {
       const result = await fetchAllProgress();
       expect(mockedGet).toHaveBeenCalledWith('/quest-progress/');
       expect(result).toEqual([MOCK_PROGRESS]);
+    });
+  });
+
+  describe('fetchQuestProgress', () => {
+    it('returns existing progress without creating anything', async () => {
+      mockedGet.mockResolvedValueOnce(MOCK_PROGRESS);
+
+      const result = await fetchQuestProgress('krakow-dragon');
+
+      expect(mockedGet).toHaveBeenCalledWith('/quest-progress/quest/krakow-dragon/');
+      expect(mockedPost).not.toHaveBeenCalled();
+      expect(result).toEqual(MOCK_PROGRESS);
+    });
+
+    it('returns null on 404 and never creates the row (#1803)', async () => {
+      mockedGet.mockRejectedValueOnce(new (ApiError as any)(404, 'Not found'));
+
+      const result = await fetchQuestProgress('krakow-dragon');
+
+      expect(result).toBeNull();
+      // Ни запроса числового id квеста, ни POST: открытие экрана прохождением
+      // не является.
+      expect(mockedGet).toHaveBeenCalledTimes(1);
+      expect(mockedPost).not.toHaveBeenCalled();
+    });
+
+    it('re-throws non-404 errors', async () => {
+      mockedGet.mockRejectedValueOnce(new (ApiError as any)(500, 'Server error'));
+
+      await expect(fetchQuestProgress('krakow-dragon')).rejects.toThrow('Server error');
+      expect(mockedPost).not.toHaveBeenCalled();
     });
   });
 

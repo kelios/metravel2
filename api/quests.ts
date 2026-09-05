@@ -783,23 +783,37 @@ export async function fetchAllProgress(): Promise<ApiQuestProgress[]> {
     return apiClient.get<ApiQuestProgress[]>('/quest-progress/');
 }
 
-/** Получить или создать прогресс по quest_id */
-export async function fetchOrCreateProgress(questId: string): Promise<ApiQuestProgress> {
-    assertUsableQuestId(questId, 'fetchOrCreateProgress');
+/**
+ * Прочитать прогресс, НЕ создавая его. `null` — прохождения ещё нет.
+ *
+ * Отдельно от `fetchOrCreateProgress`, потому что открытие экрана квеста не
+ * должно оставлять строку прохождения: до #1803 каждый просмотр создавал
+ * пустую запись, и восьмая часть «стартов» на проде оказалась просмотрами.
+ */
+export async function fetchQuestProgress(questId: string): Promise<ApiQuestProgress | null> {
+    assertUsableQuestId(questId, 'fetchQuestProgress');
     try {
         return await apiClient.get<ApiQuestProgress>(`/quest-progress/quest/${questId}/`);
     } catch (err: unknown) {
-        // If progress doesn't exist yet (404), create it
         const status = err instanceof ApiError ? err.status : undefined;
-        if (status === 404) {
-            // Need numeric quest ID for creation — fetch the quest first
-            const quest = await apiClient.get<{ id: number }>(`/quests/by-quest-id/${questId}/`);
-            return apiClient.post<ApiQuestProgress>('/quest-progress/', {
-                quest: quest.id,
-            });
-        }
+        if (status === 404) return null;
         throw err;
     }
+}
+
+/**
+ * Получить или создать прогресс по quest_id. Зовётся только там, где игрок уже
+ * начал прохождение и строку создать НАДО (отправка снапшота), — на чтении при
+ * открытии экрана используется `fetchQuestProgress`.
+ */
+export async function fetchOrCreateProgress(questId: string): Promise<ApiQuestProgress> {
+    const existing = await fetchQuestProgress(questId);
+    if (existing) return existing;
+    // Создание требует числового id квеста — забираем его отдельным запросом.
+    const quest = await apiClient.get<{ id: number }>(`/quests/by-quest-id/${questId}/`);
+    return apiClient.post<ApiQuestProgress>('/quest-progress/', {
+        quest: quest.id,
+    });
 }
 
 /** Создать прогресс */

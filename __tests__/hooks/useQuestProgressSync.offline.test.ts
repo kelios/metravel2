@@ -20,6 +20,7 @@ jest.mock('@/hooks/useNetworkStatus', () => ({
 }));
 
 const mockFetchOrCreateProgress = jest.fn();
+const mockFetchQuestProgress = jest.fn();
 const mockUpdateProgress = jest.fn();
 
 jest.mock('@/api/quests', () => ({
@@ -27,6 +28,7 @@ jest.mock('@/api/quests', () => ({
   fetchQuestByQuestId: jest.fn(),
   fetchQuestReviews: jest.fn(),
   fetchOrCreateProgress: (...args: any[]) => mockFetchOrCreateProgress(...args),
+  fetchQuestProgress: (...args: any[]) => mockFetchQuestProgress(...args),
   updateProgress: (...args: any[]) => mockUpdateProgress(...args),
   deleteProgress: jest.fn(),
 }));
@@ -105,7 +107,11 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     mockFetchOrCreateProgress.mockReset();
+    mockFetchQuestProgress.mockReset();
     mockUpdateProgress.mockReset();
+    // Чтение при маунте отдаёт существующую запись: эти тесты про уже начатое
+    // прохождение. Сценарии «прогресса ещё нет» живут отдельным describe ниже.
+    mockFetchQuestProgress.mockResolvedValue(API_PROGRESS);
     // Перед каждым PATCH хук забирает актуальное серверное состояние (защита от
     // затирания параллельного устройства) — GET должен отвечать на любом флаше.
     mockFetchOrCreateProgress.mockResolvedValue(API_PROGRESS);
@@ -300,12 +306,13 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
     }));
   });
 
-  it('queues an answer made before the progress id arrives', async () => {
-    // Ответ до ответа fetchOrCreateProgress раньше молча выбрасывался
-    // (saveProgress выходил по !progressIdRef.current).
-    let resolveProgress: (value: unknown) => void = () => {};
-    mockFetchOrCreateProgress.mockImplementationOnce(
-      () => new Promise((resolve) => { resolveProgress = resolve; }),
+  it('does not drop an answer made before the read of the progress returns', async () => {
+    // Ответ, сделанный пока чтение прогресса ещё в полёте, раньше молча
+    // выбрасывался (saveProgress выходил по !progressIdRef.current). Теперь он
+    // уходит своим флашем: строку создаст сам флаш, ждать чтения незачем.
+    let resolveRead: (value: unknown) => void = () => {};
+    mockFetchQuestProgress.mockImplementationOnce(
+      () => new Promise((resolve) => { resolveRead = resolve; }),
     );
 
     const { result } = renderHook(() => useQuestProgressSync('krakow-dragon', true));
@@ -315,16 +322,120 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
       result.current.saveProgress(OFFLINE_ANSWER);
     });
     await advance(2000);
-    expect(mockUpdateProgress).not.toHaveBeenCalled();
-
-    await act(async () => {
-      resolveProgress(API_PROGRESS);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
 
     expect(mockUpdateProgress).toHaveBeenCalledWith(42, expect.objectContaining({
       answers: OFFLINE_ANSWER.answers,
     }));
+
+    // Запоздавшее чтение не плодит второй PATCH: очередь уже пуста.
+    await act(async () => {
+      resolveRead(API_PROGRESS);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await advance(2000);
+    expect(mockUpdateProgress).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Открытие экрана квеста прохождением не является: до #1803 строка
+// `quest_progress` создавалась при загрузке экрана, и 8 записей прода из 48
+// оказались просмотрами без единого действия игрока.
+describe('useQuestProgressSync — экран открыт, прохождение не начато', () => {
+  const EMPTY_SNAPSHOT = {
+    currentIndex: 0,
+    unlockedIndex: 0,
+    answers: {},
+    attempts: {},
+    hints: {},
+    showMap: true,
+  };
+
+  const FIRST_ANSWER = {
+    ...EMPTY_SNAPSHOT,
+    answers: { intro: 'start' },
+    updatedAt: SERVER_UPDATED_AT + 60_000,
+    answeredAt: { intro: SERVER_UPDATED_AT + 60_000 },
+  };
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    mockFetchOrCreateProgress.mockReset();
+    mockFetchQuestProgress.mockReset();
+    mockUpdateProgress.mockReset();
+    // Прохождения ещё нет: чтение отвечает пустотой, а не создаёт запись.
+    mockFetchQuestProgress.mockResolvedValue(null);
+    mockFetchOrCreateProgress.mockResolvedValue({
+      ...API_PROGRESS,
+      current_index: 0,
+      unlocked_index: 0,
+      answers: {},
+      attempts: {},
+    });
+    mockUpdateProgress.mockResolvedValue(API_PROGRESS);
+    mockIsConnected = true;
+  });
+
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
+  it('reads the progress on mount and never creates it', async () => {
+    const { result } = renderHook(() => useQuestProgressSync('krakow-dragon', true));
+    await flushMicrotasks();
+
+    expect(mockFetchQuestProgress).toHaveBeenCalledWith('krakow-dragon');
+    expect(mockFetchOrCreateProgress).not.toHaveBeenCalled();
+    expect(result.current.progress).toBeNull();
+  });
+
+  it('keeps the empty snapshot of an untouched screen off the server', async () => {
+    const { result } = renderHook(() => useQuestProgressSync('krakow-dragon', true));
+    await flushMicrotasks();
+
+    // Ровно то, что шлёт визард первым рендером: нули и пустые словари.
+    act(() => {
+      result.current.saveProgress(EMPTY_SNAPSHOT);
+    });
+    await advance(2000);
+    await advance(120000);
+
+    expect(mockFetchOrCreateProgress).not.toHaveBeenCalled();
+    expect(mockUpdateProgress).not.toHaveBeenCalled();
+  });
+
+  it('creates the row on the first real action', async () => {
+    const { result } = renderHook(() => useQuestProgressSync('krakow-dragon', true));
+    await flushMicrotasks();
+
+    act(() => {
+      result.current.saveProgress(EMPTY_SNAPSHOT);
+    });
+    await advance(2000);
+    expect(mockFetchOrCreateProgress).not.toHaveBeenCalled();
+
+    // Игрок нажал «Начать квест» — визард пишет ответ на intro.
+    act(() => {
+      result.current.saveProgress(FIRST_ANSWER);
+    });
+    await advance(2000);
+
+    expect(mockFetchOrCreateProgress).toHaveBeenCalledWith('krakow-dragon');
+    expect(mockUpdateProgress).toHaveBeenCalledWith(42, expect.objectContaining({
+      answers: { intro: 'start' },
+    }));
+  });
+
+  it('treats moving off the first step as a start even without answers', async () => {
+    const { result } = renderHook(() => useQuestProgressSync('krakow-dragon', true));
+    await flushMicrotasks();
+
+    act(() => {
+      result.current.saveProgress({ ...EMPTY_SNAPSHOT, currentIndex: 1, unlockedIndex: 1 });
+    });
+    await advance(2000);
+
+    expect(mockFetchOrCreateProgress).toHaveBeenCalledWith('krakow-dragon');
   });
 });
