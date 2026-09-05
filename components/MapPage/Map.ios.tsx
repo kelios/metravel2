@@ -380,6 +380,7 @@ const Map: React.FC<TravelProps> = ({
   // (#ddd). На «Моих точках» это читалось как «карта не открылась». Держим
   // индикатор загрузки до первого тайла (или короткого таймаута ниже).
   const firstTileSettledRef = useRef(false);
+  const firstTileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const markFirstTileSettled = useCallback(() => {
     if (firstTileSettledRef.current) return;
     firstTileSettledRef.current = true;
@@ -722,7 +723,16 @@ const Map: React.FC<TravelProps> = ({
   useEffect(() => {
     lastPayloadRef.current = null;
     firstTileSettledRef.current = false;
+    // Свежая страница ещё не готова: инъекции до её onLoadEnd уходят в мёртвый
+    // документ, но занимали бы кэш отправки.
+    isReadyRef.current = false;
+    if (firstTileTimerRef.current) clearTimeout(firstTileTimerRef.current);
+    firstTileTimerRef.current = null;
     setIsLoading(true);
+    return () => {
+      if (firstTileTimerRef.current) clearTimeout(firstTileTimerRef.current);
+      firstTileTimerRef.current = null;
+    };
   }, [htmlContent]);
 
   return (
@@ -751,7 +761,10 @@ const Map: React.FC<TravelProps> = ({
         onLoadEnd={() => {
           // #1773 — индикатор снимаем по первому тайлу, а не по загрузке HTML;
           // страховка на случай, когда тайлов нет вовсе (офлайн, пустой ответ).
-          setTimeout(markFirstTileSettled, FIRST_TILE_LOADER_TIMEOUT_MS);
+          // Таймер держим в ref: иначе страховка мёртвой страницы снимет
+          // индикатор уже на перезагруженной, до её первого тайла.
+          if (firstTileTimerRef.current) clearTimeout(firstTileTimerRef.current);
+          firstTileTimerRef.current = setTimeout(markFirstTileSettled, FIRST_TILE_LOADER_TIMEOUT_MS);
           handleReady();
         }}
         onMessage={async (event) => {
