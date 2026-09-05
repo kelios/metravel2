@@ -326,17 +326,17 @@ const PlacePopupCard: React.FC<Props> = ({
   }, []);
 
   // Bottom-card chrome (mobile web sheet + native bottom card share ONE contract, per
-  // docs/features/map.md §Mobile parity contract): ♥ + trip status live in the hero
-  // corner, the save chip reads «Сохранить/Сохранено», and a divider precedes the
-  // action row. The desktop Leaflet popup (isBottomCardLayout === false) keeps its own
-  // inline layout otherwise.
-  const useBottomCardChrome = isBottomCardLayout;
-  // Bottom-card hero caption: title/address/chips/coordinates are drawn ON the
-  // photo (gradient scrim), so the region below the hero holds only the status
-  // row + action row and the whole card fits without scrolling. Applies to the
-  // mobile web sheet, the native bottom card and the >560 tablet card; the
-  // desktop Leaflet popup and the fullscreen mobile overlay keep topInfoSlot.
-  const useHeroCaption = useBottomCardChrome && !!imageUrl;
+  // docs/features/map.md §Mobile parity contract): ♥ + trip status live on the hero,
+  // the save chip reads «Сохранить/Сохранено», and a divider precedes the action row.
+  // The desktop Leaflet popup (isBottomCardLayout === false) keeps its own inline
+  // layout otherwise.
+  //
+  // Hero caption: title/address/chips/coordinates AND the ♥/trip-status pair are drawn
+  // ON the photo (gradient scrim), so the region below the hero holds only the
+  // point-action row and the whole card fits without scrolling. Applies to the mobile
+  // web sheet, the native bottom card and the >560 tablet card; the desktop Leaflet
+  // popup and the fullscreen mobile overlay keep topInfoSlot.
+  const useHeroCaption = isBottomCardLayout && !!imageUrl;
   // Route the secondary navigation (Google/Apple/Organic/Waze/Яндекс/OSM) into the
   // ActionListSheet (a selectable list modal) on EVERY surface — mobile (native bottom
   // card + fullscreen overlay) AND the desktop Leaflet popup. The old desktop path
@@ -500,6 +500,36 @@ const PlacePopupCard: React.FC<Props> = ({
     useCompactLayout,
   ]);
 
+  // Превью для ♥/статуса принадлежит связанной статье, а не активному материалу
+  // pager'а (иначе в избранное ушло бы фото из чужой статьи).
+  const relatedTravelFallbackImageUrl = relatedTravelImageUrl ?? imageUrl;
+
+  // Desktop Leaflet popup keeps this as a hero overlay. Bottom cards render the
+  // same stack with its visible «Был / Хочу / Планирую» label — on the photo when
+  // there is one (hero caption), inline in the footer meta row otherwise.
+  const relatedTravelActionStack = useMemo(() => {
+    if (!relatedTravelUrl) return null;
+    return (
+      <RelatedTravelActionStack
+        relatedTravelUrl={relatedTravelUrl}
+        fallbackTitle={title}
+        fallbackImageUrl={relatedTravelFallbackImageUrl}
+        fallbackCountry={relatedTravelCountry}
+        fallbackCity={relatedTravelCity}
+        style={isBottomCardLayout ? styles.relatedTravelActionsInline : undefined}
+        variant={isBottomCardLayout ? 'inline' : 'overlay'}
+      />
+    );
+  }, [
+    relatedTravelFallbackImageUrl,
+    isBottomCardLayout,
+    relatedTravelCity,
+    relatedTravelCountry,
+    relatedTravelUrl,
+    styles.relatedTravelActionsInline,
+    title,
+  ]);
+
   // Caption drawn on the hero photo (bottom-card layouts). It is a SIBLING of the
   // hero pressable, not a child: the web hero uses capture-phase handlers to open
   // the fullscreen viewer, and nesting the copy/share buttons inside would make
@@ -601,11 +631,21 @@ const PlacePopupCard: React.FC<Props> = ({
               ) : null}
             </View>
           ) : null}
+
+          {/* #1779: ♥ + «Был / Хочу / Планирую» на нижней кромке фото, вплотную к
+              ряду действий с точкой. Отдельного полноширинного ряда под фото у этой
+              пары больше нет — карточка короче ровно на его высоту. */}
+          {relatedTravelActionStack ? (
+            <View style={styles.heroCaptionActionsRow} pointerEvents="box-none">
+              {relatedTravelActionStack}
+            </View>
+          ) : null}
         </LinearGradient>
       </View>
     );
   }, [
     useHeroCaption,
+    relatedTravelActionStack,
     categoryLabel,
     isDrivingLoading,
     hasDrivingInfo,
@@ -663,84 +703,39 @@ const PlacePopupCard: React.FC<Props> = ({
     imageUrl,
   ]);
 
-  // Превью для ♥/статуса принадлежит связанной статье, а не активному материалу
-  // pager'а (иначе в избранное ушло бы фото из чужой статьи).
-  const relatedTravelFallbackImageUrl = relatedTravelImageUrl ?? imageUrl;
-
-  // Desktop Leaflet popup keeps this as a hero overlay. Bottom cards render the
-  // same stack inline in the footer so trip statuses stay visible as text.
-  const relatedTravelActionStack = useMemo(() => {
-    if (!relatedTravelUrl) return null;
-    return (
-      <RelatedTravelActionStack
-        relatedTravelUrl={relatedTravelUrl}
-        fallbackTitle={title}
-        fallbackImageUrl={relatedTravelFallbackImageUrl}
-        fallbackCountry={relatedTravelCountry}
-        fallbackCity={relatedTravelCity}
-        style={isBottomCardLayout ? styles.relatedTravelActionsInline : undefined}
-        variant={isBottomCardLayout ? 'inline' : 'overlay'}
-      />
-    );
-  }, [
-    relatedTravelFallbackImageUrl,
-    isBottomCardLayout,
-    relatedTravelCity,
-    relatedTravelCountry,
-    relatedTravelUrl,
-    styles.relatedTravelActionsInline,
-    title,
-  ]);
-
-  // Desktop overlay only. Bottom-card status controls are rendered inline below
-  // the title/meta so the labels remain visible on mobile web and native.
-  const heroActionOverlay = useMemo(() => {
-    if (isBottomCardLayout || !useBottomCardChrome || !relatedTravelUrl) return null;
-    return (
-      <View style={styles.heroFavoriteOverlay} pointerEvents="box-none">
-        <RelatedTravelActionStack
-          relatedTravelUrl={relatedTravelUrl}
-          fallbackTitle={title}
-          fallbackImageUrl={relatedTravelFallbackImageUrl}
-          fallbackCountry={relatedTravelCountry}
-          fallbackCity={relatedTravelCity}
-          variant="overlay"
-        />
-      </View>
-    );
-  }, [
-    relatedTravelFallbackImageUrl,
-    relatedTravelCity,
-    relatedTravelCountry,
-    relatedTravelUrl,
-    styles.heroFavoriteOverlay,
-    title,
-    isBottomCardLayout,
-    useBottomCardChrome,
-  ]);
-
   const footerSlot = useMemo(() => (
     <View style={styles.footerStack}>
-      {/* Hero-caption mode shows coordinates (with copy) on the photo itself. */}
-      {hasCoord && !useHeroCaption && (
-        <View style={styles.coordRow}>
-          <Feather name="map-pin" size={13} color={colors.textMuted} style={{ flexShrink: 0 } as any} />
-          <Text style={styles.coordText} numberOfLines={1} selectable>{displayCoord}</Text>
-          {onCopyCoord ? (
-            <CardActionPressable
-              accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.index.skopirovat_koordinaty_662a5c44')}
-              onPress={() => void onCopyCoord()}
-              title={popupTooltips.copyCoords}
-              enableWebClickFallback
-              style={({ pressed }) => [styles.coordCopyTouchFrame, pressed && styles.iconActionBtnPressed]}
-            >
-              <View style={styles.coordCopyButton}>
-                <Feather name="copy" size={13} color={colors.textMuted} />
-              </View>
-            </CardActionPressable>
+      {/* #1779: координаты и ♥/статус делят ОДИН ряд. Hero-caption mode рисует и
+          то, и другое на самом фото, поэтому под фото этого ряда нет вовсе. */}
+      {!useHeroCaption && (hasCoord || (isBottomCardLayout && !!relatedTravelActionStack)) ? (
+        <View style={styles.metaActionsRow}>
+          {hasCoord ? (
+            <View style={styles.coordRow}>
+              <Feather name="map-pin" size={13} color={colors.textMuted} style={{ flexShrink: 0 } as any} />
+              <Text style={styles.coordText} numberOfLines={1} selectable>{displayCoord}</Text>
+              {onCopyCoord ? (
+                <CardActionPressable
+                  accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.index.skopirovat_koordinaty_662a5c44')}
+                  onPress={() => void onCopyCoord()}
+                  title={popupTooltips.copyCoords}
+                  enableWebClickFallback
+                  style={({ pressed }) => [styles.coordCopyTouchFrame, pressed && styles.iconActionBtnPressed]}
+                >
+                  <View style={styles.coordCopyButton}>
+                    <Feather name="copy" size={13} color={colors.textMuted} />
+                  </View>
+                </CardActionPressable>
+              ) : null}
+            </View>
+          ) : null}
+
+          {isBottomCardLayout && relatedTravelActionStack ? (
+            <View style={styles.relatedTravelInlineSection}>
+              {relatedTravelActionStack}
+            </View>
           ) : null}
         </View>
-      )}
+      ) : null}
 
       <View style={styles.actionsStack}>
         {primaryActionOverride && primaryAction ? (
@@ -762,11 +757,6 @@ const PlacePopupCard: React.FC<Props> = ({
           </CardActionPressable>
         ) : (
           <>
-            {isBottomCardLayout && relatedTravelActionStack ? (
-              <View style={styles.relatedTravelInlineSection}>
-                {relatedTravelActionStack}
-              </View>
-            ) : null}
             {useNavSheet ? <View style={styles.blockDivider} /> : null}
             <View style={styles.actionGroup}>
               <View style={styles.iconActionRow}>
@@ -1181,7 +1171,6 @@ const PlacePopupCard: React.FC<Props> = ({
             {heroImage}
             {sourcePagerSlot}
             {heroCaptionSlot}
-            {heroActionOverlay}
             {closeControl}
           </View>
           {/* Hero-caption mode: the info lives on the photo, no scroll region —
@@ -1333,7 +1322,6 @@ const PlacePopupCard: React.FC<Props> = ({
             </>
           )}
           {heroCaptionSlot}
-          {heroActionOverlay}
 
           {/* Hero-caption mode (native bottom card / >560 tablet card): the info
               is on the photo; the hero stays the only flow child so the absolute

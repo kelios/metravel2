@@ -123,18 +123,19 @@ describe('MapPlaceBottomCard native layout', () => {
     // Panel sits flush on the dock: bottomChromeInset(80) − DOCK_BREATHING_GAP(16) = 64.
     expect(panelStyle.marginBottom).toBe(64)
 
-    // Hero-caption relayout — title/address/coords live ON the photo, so below the
-    // hero only the status row + 4-icon action row remain (reserve 414 → 224) and
-    // the hero grows: max(180, min(round(844*0.56)=473, 728-224=504)) = 473.
+    // Hero-caption relayout — title/address/coords AND (#1779) ♥/«Был здесь» live ON
+    // the photo, so below the hero only the 4-icon action row remains (reserve
+    // 414 → 224 → 176) and the hero grows: max(180, min(round(844*0.56)=473,
+    // 728-176=552)) = 473.
     expect(mockCreatePopupArgs[0]?.bottomCardImageHeight).toBe(473)
     expect(mockCreatePopupArgs[0]?.shareInActionRow).toBe(true)
 
     // Budget guard: after the header row (~40) and the hero, the panel must still
-    // leave room for the status row + full action row (≈192px measured) so they are
-    // not forced into the ScrollView overflow on the standard 390×844 screen.
+    // leave room for the full action row (≈120px measured) so it is not forced into
+    // the ScrollView overflow on the standard 390×844 screen.
     const HANDLE_ROW = 40
     const heroHeight = mockCreatePopupArgs[0]?.bottomCardImageHeight as number
-    expect(728 - HANDLE_ROW - heroHeight).toBeGreaterThanOrEqual(200)
+    expect(728 - HANDLE_ROW - heroHeight).toBeGreaterThanOrEqual(140)
 
     // One content-driven ScrollView fallback for tall content.
     const scrolls = tree.root.findAllByType(require('react-native').ScrollView)

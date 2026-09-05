@@ -65,6 +65,27 @@ const findHeroExpandButton = (tree: any) => tree.root.findAll((node: any) => (
   node.props?.['aria-hidden'] === 'true'
 ))[0];
 
+const ancestorsOf = (node: any) => {
+  const chain: any[] = [];
+  let parent = node?.parent;
+  while (parent) {
+    chain.push(parent);
+    parent = parent.parent;
+  }
+  return chain;
+};
+
+const nearestSharedAncestor = (a: any, b: any) => {
+  const seen = new Set(ancestorsOf(a));
+  return ancestorsOf(b).find((node) => seen.has(node)) ?? null;
+};
+
+const findRelatedTravelStack = (tree: any) =>
+  tree.root.findAll((node: any) => node.type === 'related-travel-action-stack')[0];
+
+const findTextNode = (tree: any, text: string) =>
+  tree.root.findAll((node: any) => node.props?.children === text)[0];
+
 describe('PlacePopupCard', () => {
   const originalPlatform = Platform.OS;
   const originalWindowDimensions = require('react-native').useWindowDimensions;
@@ -778,5 +799,110 @@ describe('PlacePopupCard', () => {
     expect(
       tree.root.findAll((node: any) => node.props?.children === longTitle && node.props?.numberOfLines === 2).length,
     ).toBeGreaterThan(0);
+  });
+
+  // #1779 — карточка места на телефоне тратила три подряд полноширинных ряда на
+  // координаты, пару ♥/«Был здесь» и ряд действий. Оба теста ниже фиксируют, что
+  // рядов стало на один меньше в каждой из двух конфигураций точки, а все шесть
+  // действий остались на месте.
+  it('draws the travel actions on the hero photo instead of a separate row below it (#1779)', () => {
+    require('react-native').useWindowDimensions = jest.fn(() => ({ width: 375, height: 812, scale: 1, fontScale: 1 }));
+
+    let tree: any;
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Живой музей обважанка (Żywe Muzeum Obwarzanka)"
+          subtitle="Краков, Малопольское воеводство, Польша"
+          coord="50.06659, 19.94098"
+          imageUrl="https://example.com/photo.jpg"
+          relatedTravelUrl="/travel/42"
+          articleHref="/travels/test"
+          onOpenArticle={jest.fn()}
+          onBuildRoute={jest.fn()}
+          onAddPoint={jest.fn()}
+          onCopyCoord={jest.fn()}
+          onOpenGoogleMaps={jest.fn()}
+          width={375}
+          compactLayout
+        />
+      );
+    });
+
+    const stack = findRelatedTravelStack(tree);
+    expect(stack).toBeTruthy();
+    // Подпись статуса остаётся видимой — на скрим она переехала целиком, а не
+    // выродилась в иконку без текста.
+    expect(stack.props.variant).toBe('inline');
+    expect(JSON.stringify(tree.toJSON())).toContain('Был / Хочу / Планирую');
+
+    // ♥/статус живут внутри подписи героя (absolute, прижата к низу фото),
+    // а не отдельным рядом в потоке карточки.
+    const caption = ancestorsOf(stack).find((node: any) => {
+      const style = StyleSheet.flatten(node.props?.style);
+      return style?.position === 'absolute' && style?.bottom === 0 && style?.left === 0 && style?.right === 0;
+    });
+    expect(caption).toBeTruthy();
+
+    // Координаты тоже на фото: под героем их строки нет.
+    const coordText = findTextNode(tree, '50.06659, 19.94098');
+    expect(coordText).toBeTruthy();
+    expect(
+      ancestorsOf(coordText).some((node: any) => {
+        const style = StyleSheet.flatten(node.props?.style);
+        return style?.position === 'absolute' && style?.bottom === 0;
+      }),
+    ).toBe(true);
+
+    // Все шесть действий на месте.
+    expect(tree.root.findByProps({ accessibilityLabel: 'Скопировать координаты' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Построить маршрут от моего местоположения' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Открыть статью' })).toBeTruthy();
+    expect(tree.root.findAll((node: any) => node.props?.children === 'Сохранить').length).toBeGreaterThan(0);
+    expect(tree.root.findByProps({ accessibilityLabel: 'Открыть способы навигации' })).toBeTruthy();
+  });
+
+  it('shares one row between the coordinates and the travel actions when the point has no photo (#1779)', () => {
+    require('react-native').useWindowDimensions = jest.fn(() => ({ width: 375, height: 812, scale: 1, fontScale: 1 }));
+
+    let tree: any;
+    renderer.act(() => {
+      tree = renderer.create(
+        <PlacePopupCard
+          colors={mockColors as any}
+          title="Река Ислочь"
+          coord="53.98326, 26.98798"
+          relatedTravelUrl="/travel/42"
+          articleHref="/travels/test"
+          onOpenArticle={jest.fn()}
+          onBuildRoute={jest.fn()}
+          onAddPoint={jest.fn()}
+          onCopyCoord={jest.fn()}
+          onOpenGoogleMaps={jest.fn()}
+          width={375}
+          compactLayout
+        />
+      );
+    });
+
+    const coordText = findTextNode(tree, '53.98326, 26.98798');
+    const stack = findRelatedTravelStack(tree);
+    expect(coordText).toBeTruthy();
+    expect(stack).toBeTruthy();
+
+    // Ближайший общий предок — один горизонтальный ряд: раньше это были два
+    // независимых полноширинных блока в колонке футера.
+    const shared = nearestSharedAncestor(coordText, stack);
+    expect(shared).toBeTruthy();
+    expect(StyleSheet.flatten(shared.props?.style)).toEqual(
+      expect.objectContaining({ flexDirection: 'row', alignItems: 'center' }),
+    );
+
+    expect(tree.root.findByProps({ accessibilityLabel: 'Скопировать координаты' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Построить маршрут от моего местоположения' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Открыть статью' })).toBeTruthy();
+    expect(tree.root.findAll((node: any) => node.props?.children === 'Сохранить').length).toBeGreaterThan(0);
+    expect(tree.root.findByProps({ accessibilityLabel: 'Открыть способы навигации' })).toBeTruthy();
   });
 });

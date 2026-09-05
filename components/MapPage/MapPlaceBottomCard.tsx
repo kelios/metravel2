@@ -67,11 +67,12 @@ const NATIVE_CARD_OVERLAY_ELEVATION = 32
 // Native bottom sheet: vertical budget the block below the hero needs, so the
 // hero can take the rest without forcing a scroll on tall content.
 // Hero-caption relayout: title/address/chips/coordinates moved ONTO the photo
-// (PlacePopupCard hero caption), so below the hero only the status row + the
-// 4-icon action row remain. Recomputed: handle row ~44 + footer paddings ~18 +
-// status row ~44 + divider ~9 + action row (44 bubble + label) ~73 + body pad
-// ~12 ≈ 200; 224 keeps slack for the future inline rating row (#986).
-const NATIVE_CONTENT_RESERVE = 224
+// (PlacePopupCard hero caption). #1779 moved the ♥/«Был здесь» pair there too, so
+// below the hero only the 4-icon action row remains. Recomputed: handle row ~44 +
+// footer paddings ~18 + divider ~9 + action row (44 bubble + label) ~73 + body pad
+// ~12 ≈ 156; 176 keeps slack for the future inline rating row (#986). Оставить
+// прежние 224 значило бы и дальше резать фото под ряд, которого уже нет.
+const NATIVE_CONTENT_RESERVE = 176
 
 type MapPlaceBottomCardProps = {
   /** Selected single marker; when null the card is not rendered. */

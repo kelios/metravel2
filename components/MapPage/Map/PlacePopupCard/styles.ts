@@ -211,17 +211,9 @@ export const getStyles = (
       justifyContent: 'center',
       gap: bottomCardLayout ? 6 : 8,
     },
-    // ♥ favorite + compact trip-status icon stacked on the hero photo, top-LEFT
-    // (native bottom card only), away from ✕ (top-right) and ⤢ expand (bottom-right).
-    heroFavoriteOverlay: {
-      position: 'absolute',
-      top: 10,
-      left: 10,
-      zIndex: 7,
-    },
     // Bottom-card hero caption: place info drawn ON the photo over a static dark
     // gradient (not live blur — mobile GPU rule), so the sheet below the hero only
-    // hosts status + actions and never needs a scroll region. White-on-scrim text
+    // hosts the point-action row and never needs a scroll region. White-on-scrim text
     // is theme-invariant by design (photo backdrop, both themes).
     heroCaption: {
       position: 'absolute',
@@ -304,6 +296,16 @@ export const getStyles = (
     heroCaptionShareBtn: {
       marginLeft: 'auto',
     },
+    // #1779: ♥ + «Был / Хочу / Планирую» переехали на нижнюю кромку фото — под
+    // координаты и вплотную к ряду действий с точкой. Раньше эта пара занимала
+    // отдельный полноширинный ряд ПОД фото, то есть съедала высоту карточки; на
+    // скриме она бесплатна и остаётся с видимой подписью (в отличие от compact-
+    // варианта, который на мобильном прячет текст статуса).
+    heroCaptionActionsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 2,
+    },
     // Hero-caption mode moves the ⤢ expand affordance to the photo's top-right
     // corner (the caption owns the bottom edge). `bottom:'auto'` clears the base
     // offset on both RN and RN-Web.
@@ -342,10 +344,17 @@ export const getStyles = (
       opacity: 0.72,
       transform: [{ scale: 0.94 }],
     },
-    relatedTravelInlineSection: {
-      width: '100%',
+    // #1779: общий ряд «метаданные + действия со статьёй». Координаты слева
+    // (тянутся), ♥/статус справа — вместо двух отдельных полноширинных рядов.
+    metaActionsRow: {
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
+      gap: bottomCardLayout ? 8 : 10,
+    },
+    relatedTravelInlineSection: {
+      flexShrink: 0,
+      alignItems: 'center',
+      justifyContent: 'flex-end',
       paddingBottom: bottomCardLayout ? 2 : 0,
     },
     actionGroup: {
@@ -568,7 +577,12 @@ export const getStyles = (
       gap: 5,
       flexWrap: 'wrap',
     },
+    // #1779: строка живёт внутри `metaActionsRow`, поэтому тянется (`flex: 1`) и
+    // делит ряд с ♥/статусом вместо собственного полноширинного ряда. Без соседа
+    // (десктопный попап) она по-прежнему занимает всю ширину — геометрия там та же.
     coordRow: {
+      flex: 1,
+      minWidth: 0,
       flexDirection: 'row',
       alignItems: 'center',
       gap: compactLayout ? 5 : 6,
