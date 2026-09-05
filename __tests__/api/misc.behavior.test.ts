@@ -12,6 +12,7 @@ import {
 } from '@/api/misc'
 import type { TravelFormData } from '@/types/types'
 import { getEmptyFormData } from '@/utils/travelFormUtils'
+import { i18n } from '@/i18n'
 
 let mockIsWebPlatform = false
 const mockGetSecureItem = jest.fn()
@@ -121,8 +122,9 @@ describe('api/misc', () => {
     ;(global as any).File = class FakeFile {}
   })
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.restoreAllMocks()
+    await i18n.changeLanguage('ru')
   })
 
   it('saveFormData requires auth and propagates non-ok responses', async () => {
@@ -525,6 +527,67 @@ describe('api/misc', () => {
     mockFetchWithTimeout.mockResolvedValue({ ok: false })
     mockSafeJsonParse.mockResolvedValue({ message: 'oops' })
     await expect(sendFeedback('A', 'b@c.com', 'Hi')).rejects.toThrow('oops')
+  })
+
+  describe('sendFeedback success localization (#1808)', () => {
+    const localizedSuccess = [
+      ['ru', 'Сообщение успешно отправлено'],
+      ['be', 'Паведамленне паспяхова адпраўлена'],
+      ['uk', 'Повідомлення успішно надіслано'],
+      ['pl', 'Wiadomość wysłana pomyślnie'],
+      ['en', 'Message sent successfully'],
+    ] as const
+
+    it.each(localizedSuccess)('localizes both known response shapes and the fallback in %s', async (locale, expected) => {
+      await i18n.changeLanguage(locale)
+      mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 200 })
+
+      for (const payload of ['Сообщение успешно отправлено', { message: 'Сообщение успешно отправлено' }, {}, null, { message: [] }]) {
+        mockSafeJsonParse.mockResolvedValueOnce(payload)
+        await expect(sendFeedback('A', 'b@c.com', 'Hi')).resolves.toBe(expected)
+      }
+    })
+
+    it.each(['Спасибо, номер обращения 1808', 'Сообщение успешно отправлено оператору', ''])(
+      'preserves unknown API text verbatim: %s', async (message) => {
+        await i18n.changeLanguage('be')
+        mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 200 })
+        for (const payload of [message, { message }]) {
+          mockSafeJsonParse.mockResolvedValueOnce(payload)
+          await expect(sendFeedback('A', 'b@c.com', 'Hi')).resolves.toBe(message)
+        }
+      },
+    )
+
+    it('uses the locale active when the response is processed, without reimporting the helper', async () => {
+      await i18n.changeLanguage('ru')
+      mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 200 })
+      mockSafeJsonParse.mockResolvedValue('Сообщение успешно отправлено')
+      await expect(sendFeedback('A', 'b@c.com', 'Hi')).resolves.toBe('Сообщение успешно отправлено')
+
+      mockSafeJsonParse.mockImplementationOnce(async () => {
+        await i18n.changeLanguage('be')
+        return { message: 'Сообщение успешно отправлено' }
+      })
+      await expect(sendFeedback('A', 'b@c.com', 'Hi')).resolves.toBe('Паведамленне паспяхова адпраўлена')
+      await i18n.changeLanguage('en')
+      await expect(sendFeedback('A', 'b@c.com', 'Hi')).resolves.toBe('Message sent successfully')
+    })
+
+    it.each([400, 401, 403, 451])('rejects HTTP %s even when its body contains the known success text', async (status) => {
+      await i18n.changeLanguage('be')
+      mockFetchWithTimeout.mockResolvedValue({ ok: false, status })
+      for (const payload of ['Сообщение успешно отправлено', { message: 'Сообщение успешно отправлено' }]) {
+        mockSafeJsonParse.mockResolvedValueOnce(payload)
+        await expect(sendFeedback('A', 'b@c.com', 'Hi')).rejects.toThrow()
+      }
+    })
+
+    it('keeps network failures on the error path', async () => {
+      await i18n.changeLanguage('be')
+      mockFetchWithTimeout.mockRejectedValue(new Error('Network unavailable'))
+      await expect(sendFeedback('A', 'b@c.com', 'Hi')).rejects.toThrow('Network unavailable')
+    })
   })
 
   it('sendFeedback keeps the public POST cookie-less and auth-less on native', async () => {

@@ -759,9 +759,12 @@ export const sendFeedback = async (
       throw new Error(firstError);
     }
 
-    return typeof json === 'string'
+    const responseMessage = typeof json === 'string'
       ? json
-      : (typeof json?.message === 'string' ? json.message : i18nT('errorsStatic:api.misc.messageSent'));
+      : (typeof json?.message === 'string' ? json.message : undefined);
+    return responseMessage === undefined || responseMessage === 'Сообщение успешно отправлено'
+      ? i18nT('errorsStatic:api.misc.messageSent')
+      : responseMessage;
   } catch (e: unknown) {
     if (__DEV__) {
       console.error('Ошибка при отправке обратной связи:', e);

@@ -2,12 +2,14 @@ import React from 'react';
 import { render, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import AboutScreen from '@/app/(tabs)/about';
+import ContactScreen from '@/app/contact';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from 'expo-router';
 import { sendFeedback } from '@/api/misc';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore';
 import { trackAppDownloadClicked } from '@/utils/growthFunnelAnalytics';
+import { showToast } from '@/utils/toast';
 
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
@@ -28,6 +30,8 @@ jest.mock('@/utils/growthFunnelAnalytics', () => ({
 }));
 
 jest.mock('@/components/seo/InstantSEO', () => () => null);
+jest.mock('@/components/layout/CustomHeader', () => () => null);
+jest.mock('@/utils/toast', () => ({ showToast: jest.fn() }));
 
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ width: 1200, isPhone: false, isLargePhone: false }),
@@ -52,6 +56,7 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
 const mockUseIsFocused = useIsFocused as jest.MockedFunction<typeof useIsFocused>;
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
 const mockSendFeedback = sendFeedback as jest.MockedFunction<typeof sendFeedback>;
+const mockShowToast = showToast as jest.MockedFunction<typeof showToast>;
 const mockOpenExternalUrl = openExternalUrl as jest.MockedFunction<typeof openExternalUrl>;
 const mockTrackAppDownloadClicked = trackAppDownloadClicked as jest.MockedFunction<
   typeof trackAppDownloadClicked
@@ -124,22 +129,50 @@ describe('AboutScreen', () => {
     },
   );
 
-  it('submits contact form with valid data', async () => {
-    mockSendFeedback.mockResolvedValueOnce('Сообщение успешно отправлено');
-    const { getByPlaceholderText, getByText } = render(<AboutScreen />);
+  describe.each([
+    ['about', AboutScreen],
+    ['contact', ContactScreen],
+  ] as const)('%s feedback form', (_route, Screen) => {
+    function fillAndSubmit() {
+      const view = render(<Screen />);
+      fireEvent.changeText(view.getByPlaceholderText('Имя'), 'Alice');
+      fireEvent.changeText(view.getByPlaceholderText('Email'), 'alice@example.com');
+      fireEvent.changeText(view.getByPlaceholderText('Сообщение'), 'Hello!');
+      fireEvent.press(view.getByText('Согласен(на) на обработку персональных данных'));
+      fireEvent.press(view.getByText('Отправить'));
+      return view;
+    }
 
-    fireEvent.changeText(getByPlaceholderText('Имя'), 'Alice');
-    fireEvent.changeText(getByPlaceholderText('Email'), 'alice@example.com');
-    fireEvent.changeText(getByPlaceholderText('Сообщение'), 'Hello!');
+    it('displays the returned confirmation and clears the submitted fields', async () => {
+      const confirmation = 'Обращение принято: спасибо за ваше сообщение';
+      mockSendFeedback.mockResolvedValueOnce(confirmation);
+      const view = fillAndSubmit();
 
-    fireEvent.press(getByText('Согласен(на) на обработку персональных данных'));
-    fireEvent.press(getByText('Отправить'));
-
-    await waitFor(() => {
+      await waitFor(() => {
+        expect(view.getByText(confirmation)).toBeTruthy();
+      });
+      expect(mockSendFeedback).toHaveBeenCalledTimes(1);
       expect(mockSendFeedback).toHaveBeenCalledWith('Alice', 'alice@example.com', 'Hello!');
+      expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
+      expect(view.getByPlaceholderText('Имя').props.value).toBe('');
+      expect(view.getByPlaceholderText('Email').props.value).toBe('');
+      expect(view.getByPlaceholderText('Сообщение').props.value).toBe('');
     });
-    await waitFor(() => {
-      expect(getByText(/Сообщение успешно отправлено/i)).toBeTruthy();
+
+    it('displays a rejected error without reporting success or losing the draft', async () => {
+      const errorMessage = 'Не удалось отправить сообщение';
+      mockSendFeedback.mockRejectedValueOnce(new Error(errorMessage));
+      const view = fillAndSubmit();
+
+      await waitFor(() => {
+        expect(view.getByText(errorMessage)).toBeTruthy();
+      });
+      expect(mockSendFeedback).toHaveBeenCalledTimes(1);
+      expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
+      expect(mockShowToast).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
+      expect(view.getByPlaceholderText('Имя').props.value).toBe('Alice');
+      expect(view.getByPlaceholderText('Email').props.value).toBe('alice@example.com');
+      expect(view.getByPlaceholderText('Сообщение').props.value).toBe('Hello!');
     });
   });
 
@@ -164,6 +197,7 @@ describe('AboutScreen', () => {
   });
 
   it('shows web keyboard hint in contact form', () => {
+    (Platform as { OS: string }).OS = 'web';
     const { getByText } = render(<AboutScreen />);
     expect(getByText('Shift+Enter — новая строка, Enter — отправить (web)')).toBeTruthy();
   });
