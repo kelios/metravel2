@@ -258,6 +258,12 @@ tripvenue резолвит по ближайшему городу каталог
 - `fetchQuestsList` / `fetchQuestsPreview` пишут сырой каталог в AsyncStorage
   (`quest-list:v1`, `QUEST_LIST_CACHE_VERSION = 1`) и читают его при сетевом
   фейле. Превью в кэш каталога НЕ пишет (это срез, он затёр бы полный список).
+- Ключ каталога общий на устройство, а не на аккаунт, поэтому персональные поля
+  (`is_completed_by_me`, `user_rating`) снимаются и при записи, и при чтении
+  (`stripPersonalQuestFields`, #1793): иначе после выхода или смены аккаунта
+  офлайн-каталог показывал чужие «Пройден». Общие поля (`rating_avg`,
+  `rating_count`, `completions_count`, `first_completer`) в кэше остаются, и
+  офлайн-ветка `fetchQuestsCompactCatalog` полагается на эту же гарантию.
 - Бандл: `readCachedQuestBundle` сначала спрашивает единый `OfflineCatalog`
   (`services/offline/questOfflineAdapter.ts`, `schemaVersion: 1`), затем —
   легаси-конверт `quest-bundle:{questId}` c
