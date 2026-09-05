@@ -127,6 +127,12 @@ const QUEST_COVERS = [
   { quest_id: 'brno-dragon-and-wheel', assetsDir: 'brnoDragonAndWheel', cover: 'cover.png' },
   { quest_id: 'kutna-hora-silver', assetsDir: 'kutnaHoraSilver', cover: 'cover.png' },
   { quest_id: 'karlovy-vary-deer-leap', assetsDir: 'karlovyVaryDeerLeap', cover: 'cover.png' },
+  { quest_id: 'cologne-heinzelmaennchen', assetsDir: 'cologneHeinzelmaennchen', cover: 'cover.png' },
+  { quest_id: 'kazan-zilant-syuyumbike', assetsDir: 'kazanZilantSyuyumbike', cover: 'cover.png' },
+  { quest_id: 'moscow-kremlin-legends', assetsDir: 'moscowKremlinLegends', cover: 'cover.png' },
+  { quest_id: 'kaliningrad-kant-bridges', assetsDir: 'kaliningradKantBridges', cover: 'cover.png' },
+  { quest_id: 'munich-devils-footstep', assetsDir: 'munichDevilsFootstep', cover: 'cover.png' },
+  { quest_id: 'bremen-town-musicians', assetsDir: 'bremenTownMusicians', cover: 'cover.png' },
 ];
 
 function getMime(filePath) {
