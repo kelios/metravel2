@@ -43,6 +43,18 @@ jest.mock('react-native-webview', () => {
   };
 });
 
+// #1773 — смена темы пересобирает HTML карты и перезагружает страницу WebView.
+// Мутируемый цвет позволяет воспроизвести именно этот путь.
+let mockThemeSurface = '#ffffff';
+
+jest.mock('@/hooks/useTheme', () => {
+  const actual = jest.requireActual('@/hooks/useTheme');
+  return {
+    ...actual,
+    useThemedColors: () => ({ ...actual.useThemedColors(), surface: mockThemeSurface }),
+  };
+});
+
 describe('Map.ios Component', () => {
   let Map: any;
 
@@ -51,6 +63,7 @@ describe('Map.ios Component', () => {
   });
 
   beforeEach(() => {
+    mockThemeSurface = '#ffffff';
     mockIsConnected = true;
     mockInjectJavaScript.mockClear();
     mockUseMapClusters.mockClear();
@@ -503,20 +516,29 @@ describe('Map.ios Component', () => {
     expect(renderCalls[0]).toContain('"id":"840"');
   });
 
-  it('рисует маркеры порциями и не перестраивает их на том же наборе точек', () => {
+  it('пересылает точки заново после перезагрузки страницы WebView', () => {
     const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
-    const html = getWebViewHtml(rendered);
+    const renderPointsCalls = () =>
+      mockInjectJavaScript.mock.calls
+        .map((call) => call?.[0] as string)
+        .filter((script) => typeof script === 'string' && script.includes('__metravelRenderPoints'));
 
-    // Порционная отрисовка: между порциями отдаём кадр, иначе большой набор
-    // держит JS WebView и подложка не рисуется.
-    expect(html).toContain('const MARKER_CHUNK = 100;');
-    expect(html).toContain('window.requestAnimationFrame(fn);');
-    expect(html).toContain('if (!samePoints) scheduleChunk(function() { renderMarkerChunk(0); });');
-    // Тот же набор точек не чистит и не перестраивает слой маркеров.
-    expect(html).toContain('const samePoints = window.__metravelLastPointsJson === pointsJson;');
-    expect(html).toContain('if (!samePoints) {\n              markersLayer.clearLayers();');
-    // Хвост предыдущей порционной отрисовки обязан останавливаться.
-    expect(html).toContain('if (window.__metravelRenderGeneration !== renderGeneration) return;');
+    act(() => {
+      getWebView(rendered).props.onLoadEnd();
+    });
+    expect(renderPointsCalls()).toHaveLength(1);
+
+    // Смена темы пересобирает HTML → WKWebView грузит страницу заново и теряет
+    // маркеры. Дедупликация payload не должна оставить свежую страницу пустой.
+    const htmlBefore = getWebViewHtml(rendered);
+    mockThemeSurface = '#101014';
+    rendered.rerender(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+    expect(getWebViewHtml(rendered)).not.toBe(htmlBefore);
+
+    act(() => {
+      getWebView(rendered).props.onLoadEnd();
+    });
+    expect(renderPointsCalls()).toHaveLength(2);
   });
 
   it('requests server clusters from native viewport bbox and filters', () => {

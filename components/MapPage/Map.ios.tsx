@@ -714,6 +714,17 @@ const Map: React.FC<TravelProps> = ({
     [themeColors, markerShadowColor],
   );
 
+  // #1773 — пересборка HTML (смена темы) ПЕРЕЗАГРУЖАЕТ страницу WebView: она
+  // теряет и маркеры, и тайлы. Сбрасываем кэш отправленного payload и защёлку
+  // первого тайла, иначе дедупликация не даст переслать точки в свежую страницу
+  // (там, где payload не зависит от вьюпорта — каталог квестов, режим маршрута,
+  // офлайн — карта осталась бы пустой), а индикатор загрузки не вернулся бы.
+  useEffect(() => {
+    lastPayloadRef.current = null;
+    firstTileSettledRef.current = false;
+    setIsLoading(true);
+  }, [htmlContent]);
+
   return (
     <View
       style={[styles.container, { backgroundColor: themeColors.surface }]}
