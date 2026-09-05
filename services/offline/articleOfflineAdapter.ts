@@ -34,7 +34,6 @@ export function buildArticleOfflineSnapshot(article: Article): ArticleOfflineSna
     article_type: source.article_type,
     ...(source.rating != null ? { rating: source.rating } : {}),
     ...(source.rating_count != null ? { rating_count: source.rating_count } : {}),
-    ...(source.user_rating != null ? { user_rating: source.user_rating } : {}),
     ...(source.userName != null ? { userName: source.userName } : {}),
     ...(source.user_name != null ? { user_name: source.user_name } : {}),
     ...(source.authorName != null ? { authorName: source.authorName } : {}),
@@ -157,5 +156,10 @@ export async function readArticleOffline(
     const routeIdentifier = decodeURIComponent(item.route.split('/').filter(Boolean).pop() ?? '');
     return routeIdentifier === normalized;
   });
-  return match ? offlineCatalog.read<Article>(match.key) : null;
+  const snapshot = match ? await offlineCatalog.read<Article>(match.key) : null;
+  if (!snapshot) return null;
+  // Legacy public packages may contain the previous account's rating (#1799).
+  const publicSnapshot = { ...snapshot };
+  delete publicSnapshot.user_rating;
+  return publicSnapshot;
 }

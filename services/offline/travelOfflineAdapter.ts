@@ -124,7 +124,6 @@ export function buildTravelOfflineSnapshot(travel: Travel): TravelOfflineSnapsho
     countUnicIpView: source.countUnicIpView,
     ...(source.rating != null ? { rating: source.rating } : {}),
     ...(source.rating_count != null ? { rating_count: source.rating_count } : {}),
-    ...(source.user_rating != null ? { user_rating: source.user_rating } : {}),
     ...(source.comment_count != null ? { comment_count: source.comment_count } : {}),
     ...(source.comments_count != null ? { comments_count: source.comments_count } : {}),
     ...(source.thread_id != null ? { thread_id: source.thread_id } : {}),
@@ -253,5 +252,10 @@ export async function readTravelOffline(
     const routeIdentifier = decodeURIComponent(item.route.split('/').filter(Boolean).pop() ?? '');
     return routeIdentifier === normalized;
   });
-  return match ? offlineCatalog.read<Travel>(match.key) : null;
+  const snapshot = match ? await offlineCatalog.read<Travel>(match.key) : null;
+  if (!snapshot) return null;
+  // Legacy public packages may contain the previous account's rating (#1799).
+  const publicSnapshot = { ...snapshot };
+  delete publicSnapshot.user_rating;
+  return publicSnapshot;
 }

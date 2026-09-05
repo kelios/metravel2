@@ -977,6 +977,32 @@ guard, падающий в CI на попытке обойти этот конт
 - **Последняя проверка:** 2026-07-28; recurrence confirmed, structural sprint
   planned.
 
+### OFFLINE-002 — персональные данные в общем кэше устройства
+
+- **Инвариант:** публичный offline payload не содержит состояние текущего
+  аккаунта; после выхода A или входа B чужая оценка/прогресс не появляется.
+  Общий рейтинг, его количество и счётчики комментариев сохраняются.
+- **Surface/owner:** shared frontend persistence; ключи прогресса квестов,
+  `api/questBundleCache.ts`, travel/article adapters в `services/offline/`.
+- **Цепочка:** `#1456` (прогресс квеста без user-scoped ключа) → `#1793`
+  (персональные поля каталога квестов) → `#1799` (travel/article `user_rating`).
+  Это одно семейство изоляции аккаунтов с разными носителями данных.
+- **Подтверждённая причина #1799:** оба builder явно переносили `user_rating`
+  в `authScope: public`, а оба reader возвращали legacy snapshot без фильтра.
+  Исправление каталога квестов в #1793 эти адаптеры не покрывало.
+- **Permanent control:** исключать персональные поля из allowlist записи и
+  снимать их из копии при чтении старого пакета. Публичные авторские metadata
+  и агрегаты не являются состоянием читателя. Для travel/article regression —
+  `__tests__/services/offlineContentSnapshots.test.ts`: write/read по id и slug,
+  legacy `user_rating` (5/0/null), сохранность агрегатов и online-объекта.
+- **Testing gate:** на локальном стеке A оценивает и сохраняет оба материала;
+  после logout и отдельно login B реальное отключение сети в загруженном
+  приложении не показывает «Ваша оценка». Затем reconnect: своя оценка A и
+  повторная отправка работают. API-ответы не подменяются.
+- **Решение при рецидиве:** для тех же travel/article adapters переоткрывать
+  #1799; другой носитель персонального состояния оформлять linked task с
+  отдельной причиной и проверкой write/read legacy.
+
 ### TRAVEL-SAVE-001 — destructive full-replace autosave
 
 - **Инвариант:** частично hydrated или устаревший frontend snapshot не удаляет

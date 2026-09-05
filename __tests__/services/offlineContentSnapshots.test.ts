@@ -1,14 +1,30 @@
 import {
   buildTravelAssetSources,
   buildTravelOfflineSnapshot,
+  readTravelOffline,
+  saveTravelOffline,
 } from '@/services/offline/travelOfflineAdapter';
 import {
   buildArticleAssetSources,
   buildArticleOfflineSnapshot,
+  readArticleOffline,
+  saveArticleOffline,
 } from '@/services/offline/articleOfflineAdapter';
 import { buildQuestAssetSources } from '@/services/offline/questOfflineAdapter';
 import type { ApiQuestBundle } from '@/api/quests';
 import type { Article, Travel } from '@/types/types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { offlineCatalog } from '@/services/offline/offlineCatalog';
+import packageStore from '@/services/offline/packageStore';
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
+// Exercise real JSON persistence without the native filesystem test stub.
+jest.mock('@/services/offline/packageStore', () =>
+  jest.requireActual('@/services/offline/packageStore.ts'),
+);
 
 const travelFixture = {
   id: 42,
@@ -63,6 +79,78 @@ const articleFixture = {
 } as unknown as Article;
 
 describe('typed public offline content snapshots', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+  });
+
+  describe.each([
+    {
+      type: 'travel' as const,
+      fixture: { ...travelFixture, rating: 4.2, rating_count: 12, comment_count: 3, comments_count: 3 },
+      build: (value: Travel | Article) => buildTravelOfflineSnapshot(value as Travel),
+      save: (value: Travel | Article) => saveTravelOffline(value as Travel),
+      read: readTravelOffline,
+      route: '/travels/public-route',
+    },
+    {
+      type: 'article' as const,
+      fixture: { ...articleFixture, rating: 4.2, rating_count: 12 },
+      build: (value: Travel | Article) => buildArticleOfflineSnapshot(value as Article),
+      save: (value: Travel | Article) => saveArticleOffline(value as Article),
+      read: readArticleOffline,
+      route: '/article/public-article',
+    },
+  ])('$type personal rating isolation', ({ type, fixture, build, save, read, route }) => {
+    it('excludes account A rating on write and keeps the online response unchanged', async () => {
+      const online = Object.freeze({ ...fixture, user_rating: 5 });
+      const publicSnapshot = build(online);
+      expect(publicSnapshot).not.toHaveProperty('user_rating');
+      expect(publicSnapshot).toMatchObject({ rating: 4.2, rating_count: 12 });
+      if (type === 'travel') {
+        expect(publicSnapshot).toMatchObject({ comment_count: 3, comments_count: 3 });
+      }
+
+      const manifest = await save(online);
+      expect(manifest).toMatchObject({ authScope: 'public', status: 'ready' });
+      const stored = await packageStore.read(manifest!.key);
+      expect(stored!.snapshot).not.toHaveProperty('user_rating');
+      // Adapters have no identity argument: guest and account B use this same read.
+      for (const identifier of [fixture.id!, fixture.slug!]) {
+        expect(await read(identifier)).toEqual(publicSnapshot);
+      }
+      expect(online.user_rating).toBe(5);
+    });
+
+    it.each([5, 0, null])('strips legacy user_rating=%s for id and slug reads without losing public data', async (userRating) => {
+      const publicSnapshot = build(fixture);
+      const legacy = { ...publicSnapshot, user_rating: userRating };
+      const manifest = await offlineCatalog.save({
+        key: `${type}:${fixture.id}`,
+        type,
+        sourceId: fixture.id!,
+        authScope: 'public',
+        route,
+        title: fixture.name,
+        snapshot: legacy,
+      });
+      for (const identifier of [fixture.id!, fixture.slug!]) {
+        const result = await read(identifier);
+        expect(result).not.toHaveProperty('user_rating');
+        expect(result).toEqual(publicSnapshot);
+      }
+      // Sanitizing a read must not mutate objects held by other callers.
+      expect(legacy.user_rating).toBe(userRating);
+      expect((await packageStore.read(manifest.key))!.snapshot).toEqual(legacy);
+    });
+
+    it('returns null for an absent or missing package', async () => {
+      await expect(read(fixture.slug!)).resolves.toBeNull();
+      const manifest = await save(fixture);
+      await packageStore.remove(manifest!.key);
+      await expect(read(fixture.id!)).resolves.toBeNull();
+    });
+  });
+
   it('constructs a sanitized travel snapshot without gallery/private extras', () => {
     const snapshot = buildTravelOfflineSnapshot(travelFixture);
 
