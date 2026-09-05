@@ -33,6 +33,8 @@ import {
     NEARBY_ID,
     KIDS_FILTER_ID,
     BIKE_FILTER_ID,
+    REVIEWED_FILTER_ID,
+    filterReviewedQuests,
     buildQuestCityCatalog,
     filterBikeQuests,
     filterKidsQuests,
@@ -78,8 +80,9 @@ export default function QuestsScreen() {
     const selectionChangedRef = useRef(false);
 
     // API data
-    const { quests: ALL_QUESTS, loading: questsLoading } = useQuestsList();
+    const { quests: ALL_QUESTS, loading: questsLoading, error: questsError } = useQuestsList();
     const dataLoaded = !questsLoading;
+    const reviewedQuests = useMemo(() => filterReviewedQuests(ALL_QUESTS), [ALL_QUESTS]);
     const cityCatalog = useMemo(
         () => buildQuestCityCatalog<QuestMeta>(ALL_QUESTS),
         [ALL_QUESTS],
@@ -187,7 +190,7 @@ export default function QuestsScreen() {
     // Без сохранённого/валидного выбора показываем явное состояние «Все
     // квесты». Оно не должно визуально маскироваться под геофильтр «Рядом».
     useEffect(() => {
-        if (!dataLoaded || !CITIES.length) return;
+        if (!dataLoaded || questsError) return;
         const canonicalCityId = selectedCityId ? cityCatalog.canonicalCityIdById[selectedCityId] : null;
         if (canonicalCityId && canonicalCityId !== selectedCityId) {
             setSelectedCityId(canonicalCityId);
@@ -199,11 +202,12 @@ export default function QuestsScreen() {
             || selectedCityId === NEARBY_ID
             || selectedCityId === KIDS_FILTER_ID
             || selectedCityId === BIKE_FILTER_ID
+            || (selectedCityId === REVIEWED_FILTER_ID && reviewedQuests.length > 0)
             || (selectedCityId ? validIds.has(selectedCityId) : false);
         if (isValid) return;
         setSelectedCityId(ALL_QUESTS_ID);
         void AsyncStorage.setItem(STORAGE_SELECTED_CITY, ALL_QUESTS_ID);
-    }, [CITIES, cityCatalog.canonicalCityIdById, dataLoaded, selectedCityId]);
+    }, [CITIES, cityCatalog.canonicalCityIdById, dataLoaded, questsError, selectedCityId, reviewedQuests.length]);
 
     // Один владелец location-запроса: выбор «Рядом» и открытие карты не должны
     // запускать параллельные permission/current-position вызовы.
@@ -295,8 +299,9 @@ export default function QuestsScreen() {
         if (nearbyCount != null) counts[NEARBY_ID] = nearbyCount;
         counts[KIDS_FILTER_ID] = kidsQuests.length;
         counts[BIKE_FILTER_ID] = bikeQuests.length;
+        counts[REVIEWED_FILTER_ID] = reviewedQuests.length;
         return counts;
-    }, [CITIES, nearbyCount, cityQuests, kidsQuests.length, bikeQuests.length]);
+    }, [CITIES, nearbyCount, cityQuests, kidsQuests.length, bikeQuests.length, reviewedQuests.length]);
 
     // Group cities by country
     const citiesByCountry = useMemo(() => {
@@ -390,6 +395,9 @@ export default function QuestsScreen() {
         if (selectedCityId === BIKE_FILTER_ID) {
             return bikeQuests.map((q) => ({ ...q }));
         }
+        if (selectedCityId === REVIEWED_FILTER_ID) {
+            return reviewedQuests.map((q) => ({ ...q }));
+        }
         if (selectedCityId === NEARBY_ID) {
             return filterNearbyQuests(ALL_QUESTS, userLoc, nearbyRadiusKm);
         }
@@ -405,6 +413,7 @@ export default function QuestsScreen() {
         cityQuests,
         kidsQuests,
         bikeQuests,
+        reviewedQuests,
     ]);
 
     const catalogModel = useQuestCatalogResponsiveModel(questsAll.length);
@@ -450,7 +459,7 @@ export default function QuestsScreen() {
     }, [dataLoaded, selectedCityId, questsAll, searchTerm]);
 
     const mapCenter = useMemo(() => {
-        const virtualFilterCenter = selectedCityId === KIDS_FILTER_ID || selectedCityId === BIKE_FILTER_ID
+        const virtualFilterCenter = selectedCityId === KIDS_FILTER_ID || selectedCityId === BIKE_FILTER_ID || selectedCityId === REVIEWED_FILTER_ID
             ? getAverageQuestMapPointCenter(mapPoints)
             : null;
         const selectedCity = virtualFilterCenter
@@ -532,6 +541,9 @@ export default function QuestsScreen() {
         }
         if (selectedCityId === BIKE_FILTER_ID) {
             return i18nT('quests:screens.tabs.QuestsScreen.veloTitle', { value1: bikeQuests.length, value2: i18nT('quests:screens.tabs.QuestsScreen.questNoun', { count: bikeQuests.length }) });
+        }
+        if (selectedCityId === REVIEWED_FILTER_ID) {
+            return i18nT('quests:screens.tabs.QuestsScreen.reviewedSeoTitle');
         }
         // #1618: the unfiltered catalog (selectedCityId === ALL_QUESTS_ID, the
         // initial state) must match scripts/generate-seo-pages.js's static

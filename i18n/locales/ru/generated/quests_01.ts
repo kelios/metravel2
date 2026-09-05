@@ -325,7 +325,6 @@ export const questsGenerated1 = {
   "components.quests.useQuestRouteGeometry.marshrutizatsiya_otklyuchena_v_testovoy_sred_8985ac7a": "Маршрутизация отключена в тестовой среде",
   "hooks.useQuestsApi.kvest_ne_nayden_af9ac6a4": "Квест не найден",
   "hooks.useQuestsApi.oshibka_zagruzki_kvestov_cdefd63b": "Ошибка загрузки квестов",
-  "screens.tabs.QuestCard.0_otzyvov_d0eb25eb": "0 отзывов",
   "screens.tabs.QuestCard.1_2_ch_59b7a35e": "1–2 ч",
   "screens.tabs.QuestCard.esche_nikto_ne_prohodil_341ee9f0": "Ещё никто не проходил",
   "screens.tabs.QuestCard.legko_3e670625": "Легко",

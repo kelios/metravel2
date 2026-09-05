@@ -91,6 +91,11 @@ export const DEFAULT_NEARBY_RADIUS_KM = 30;
 export const ALL_QUESTS_ID = '__all__';
 export const NEARBY_ID = '__nearby__';
 export const KIDS_FILTER_ID = '__kids__';
+export const REVIEWED_FILTER_ID = '__reviewed__';
+
+export function filterReviewedQuests<T extends { ratingCount: number }>(quests: T[]): T[] {
+    return quests.filter((quest) => quest.ratingCount > 0);
+}
 
 /**
  * «Рядом» требует свежей геолокации и поэтому не восстанавливается между

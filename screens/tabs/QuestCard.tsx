@@ -89,18 +89,15 @@ export default function QuestCard({
     const distanceText = nearby && typeof quest._distanceKm === 'number'
         ? formatDistance(quest._distanceKm)
         : null;
-    // Паритет с native: на устройстве чип «Посмотреть отзывы (0)» виден всегда —
-    // web (включая mobile web) ведёт себя так же.
-    const showReviewsAction = true;
+    // Вход в читалку доступен только при наличии отзывов на всех платформах.
+    const showReviewsAction = quest.ratingCount > 0;
     // Агрегированная оценка — только за достаточную выборку (#1486). Вход в
     // читалку живёт по своему правилу выше: количество отзывов — факт, а
     // усреднённая оценка по одному отзыву — вымысел.
     const showAggregateRating = hasPublicQuestRating(quest.ratingCount);
     const questPath = buildQuestPath(cityId, quest.id);
     const questLinkLabel = i18nT('quests:screens.tabs.QuestCard.nachat_priklyuchenie_value1_43ad4b32', { value1: quest.title });
-    const reviewsLabel = quest.ratingCount > 0
-        ? `${quest.ratingCount} ${pluralizeRu(quest.ratingCount, i18nT('quests:screens.tabs.QuestCard.otzyv_9b980975'), i18nT('quests:screens.tabs.QuestCard.otzyva_7e8267a2'), i18nT('quests:screens.tabs.QuestCard.otzyvov_5a06b55c'))}`
-        : i18nT('quests:screens.tabs.QuestCard.0_otzyvov_d0eb25eb');
+    const reviewsLabel = `${quest.ratingCount} ${pluralizeRu(quest.ratingCount, i18nT('quests:screens.tabs.QuestCard.otzyv_9b980975'), i18nT('quests:screens.tabs.QuestCard.otzyva_7e8267a2'), i18nT('quests:screens.tabs.QuestCard.otzyvov_5a06b55c'))}`;
 
     const imageUrl = typeof quest.cover === 'string' ? quest.cover : null;
     const cacheKey = imageUrl ? String(imageUrl).trim() : '';

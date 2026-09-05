@@ -9,6 +9,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 
 import type { City, NearbyCity } from './questsShared';
 import { pluralizeQuest } from './questsShared';
+import { REVIEWED_FILTER_ID } from './QuestsScreen.helpers';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -161,6 +162,8 @@ export default function QuestsSidebar({
     const isNearbySelected = selectedCityId === nearbyId;
     const isKidsSelected = selectedCityId === kidsFilterId;
     const isBikeSelected = selectedCityId === bikeFilterId;
+    const reviewedQuestCount = cityQuestCountById[REVIEWED_FILTER_ID] || 0;
+    const isReviewedSelected = selectedCityId === REVIEWED_FILTER_ID;
     const mapActionActive = viewMode === 'map';
     const mapActionLabel = viewMode === 'map' ? i18nT('quests:screens.tabs.QuestsSidebar.pokazat_kvesty_spiskom_0029a3b3') : i18nT('quests:screens.tabs.QuestsSidebar.pokazat_kvesty_na_karte_d06a6df4');
     const toggleAllLabel = areAllCountryGroupsCollapsed ? i18nT('quests:screens.tabs.QuestsSidebar.razvernut_vse_strany_58a7fc2c') : i18nT('quests:screens.tabs.QuestsSidebar.svernut_vse_strany_ee35b08d');
@@ -260,6 +263,30 @@ export default function QuestsSidebar({
                 contentContainerStyle={{ paddingBottom: spacingMd }}
                 showsVerticalScrollIndicator
             >
+                {reviewedQuestCount > 0 && (
+                    <Pressable
+                        onPress={() => onSelectCity(REVIEWED_FILTER_ID)}
+                        style={[styles.cityItem, isReviewedSelected && styles.cityItemActive]}
+                        accessibilityRole="button"
+                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.reviewedA11y', { value1: pluralizeQuest(reviewedQuestCount) })}
+                        accessibilityState={{ selected: isReviewedSelected }}
+                        testID="quests-sidebar-reviewed-button"
+                    >
+                        <View style={styles.cityItemLeft}>
+                            <View style={[styles.cityItemIcon, isReviewedSelected && styles.cityItemIconActive]}>
+                                <Feather name="message-circle" size={iconSize} color={isReviewedSelected ? colors.textOnPrimary : colors.textMuted} />
+                            </View>
+                            <Text style={[styles.cityItemText, isReviewedSelected && styles.cityItemTextActive]}>
+                                {i18nT('quests:screens.tabs.QuestsSidebar.reviewedLabel')}
+                            </Text>
+                        </View>
+                        <View style={[styles.cityItemCount, isReviewedSelected && styles.cityItemCountActive]}>
+                            <Text style={[styles.cityItemCountText, isReviewedSelected && styles.cityItemCountTextActive]}>
+                                {reviewedQuestCount}
+                            </Text>
+                        </View>
+                    </Pressable>
+                )}
                 {citiesByCountry.map((group) => {
                     const isCollapsed = collapsedCountryCodes[group.code] ?? false;
                     const countryQuestCount = group.cities.reduce((acc, city) => acc + (cityQuestCountById[city.id] || 0), 0);

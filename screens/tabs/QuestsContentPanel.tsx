@@ -20,6 +20,7 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import type { MapMovePayload } from '@/components/MapPage/Map/types';
 
 import QuestCard from './QuestCard';
+import { REVIEWED_FILTER_ID } from './QuestsScreen.helpers';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
 import { pluralizeQuest, type QuestMeta } from './questsShared';
 import { translate as i18nT } from '@/i18n'
@@ -195,9 +196,11 @@ export default function QuestsContentPanel({
                                         ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_dlya_detey_fbda5ab0')
                                         : selectedCityId === bikeFilterId
                                             ? i18nT('quests:screens.tabs.QuestsContentPanel.veloTitle')
-                                            : selectedCityName
-                                                ? i18nT('quests:screens.tabs.QuestsContentPanel.locationTitle', { value1: selectedCityName })
-                                                : i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
+                                            : selectedCityId === REVIEWED_FILTER_ID
+                                                ? i18nT('quests:screens.tabs.QuestsScreen.reviewedTitle')
+                                                : selectedCityName
+                                                    ? i18nT('quests:screens.tabs.QuestsContentPanel.locationTitle', { value1: selectedCityName })
+                                                    : i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
                     </Text>
                     <View style={styles.contentCountRow}>
                         {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}

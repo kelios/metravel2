@@ -100,6 +100,29 @@ describe('QuestCard', () => {
         (Platform as { OS: string }).OS = 'web';
     });
 
+    describe.each(['web', 'android', 'ios'])('reviews action on %s', (platform) => {
+        it.each([true, false])('hides zero reviews and opens positive reviews (phone=%s)', (isPhone) => {
+            (Platform as { OS: string }).OS = platform;
+            mockIsPhone = isPhone;
+            const card = (ratingCount: number) => (
+                <QuestCard styles={styles} cardWidth={380} cityId="krakow" quest={makeQuest({ ratingCount })} />
+            );
+            const client = createTestQueryClient();
+            const { queryByTestId, getByTestId, rerender } = render(
+                <QueryClientProvider client={client}>{card(0)}</QueryClientProvider>,
+            );
+            expect(queryByTestId('quest-card-reviews-krakow-dragon')).toBeNull();
+            expect(queryByTestId('quest-card-rating-krakow-dragon')).toBeNull();
+
+            rerender(<QueryClientProvider client={client}>{card(1)}</QueryClientProvider>);
+            expect(queryByTestId('quest-card-rating-krakow-dragon')).toBeNull();
+            expect(getByTestId('quest-card-reviews-krakow-dragon').props.accessibilityLabel).toBe('Посмотреть отзывы: 1 отзыв');
+            fireEvent.press(getByTestId('quest-card-reviews-krakow-dragon'));
+            expect(getByTestId('quest-reviews-modal')).toBeTruthy();
+            expect(mockPush).not.toHaveBeenCalled();
+        });
+    });
+
     it('renders mobile quest media with a sharp cover and no zero-completions badge', () => {
         const { queryByTestId, queryByText } = renderWithQueryClient(
             <QuestCard

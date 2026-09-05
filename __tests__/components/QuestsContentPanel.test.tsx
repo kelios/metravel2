@@ -121,6 +121,13 @@ describe('QuestsContentPanel', () => {
         onSearchMapArea: () => {},
     });
 
+    it('names the reviews slice without treating it as a city', () => {
+        const { getByTestId } = render(
+            <QuestsContentPanel {...makeBaseProps()} selectedCityId="__reviewed__" selectedCityName={null} />,
+        );
+        expect(getByTestId('quests-content-title').props.children).toBe('Квесты с отзывами');
+    });
+
     it('removes only the marked no-JS quest listing and its associated style on web mount', () => {
         (Platform as { OS: string }).OS = 'web';
         document.body.innerHTML = [

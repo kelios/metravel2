@@ -325,7 +325,6 @@ export const questsGenerated1 = {
   "components.quests.useQuestRouteGeometry.marshrutizatsiya_otklyuchena_v_testovoy_sred_8985ac7a": "Routing wyłączony w środowisku testowym",
   "hooks.useQuestsApi.kvest_ne_nayden_af9ac6a4": "Nie znaleziono zadania",
   "hooks.useQuestsApi.oshibka_zagruzki_kvestov_cdefd63b": "Błąd podczas ładowania zadań",
-  "screens.tabs.QuestCard.0_otzyvov_d0eb25eb": "0 recenzji",
   "screens.tabs.QuestCard.1_2_ch_59b7a35e": "1–2 godziny",
   "screens.tabs.QuestCard.esche_nikto_ne_prohodil_341ee9f0": "Nikt jeszcze nie przeszedł",
   "screens.tabs.QuestCard.legko_3e670625": "Łatwe",
