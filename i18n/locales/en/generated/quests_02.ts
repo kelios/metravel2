@@ -269,6 +269,7 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.catalogTitleDefault": "City quests and routes with tasks | Metravel",
   "components.quests.QuestReviewInvite.cta": "Leave a review",
   "components.quests.QuestReviewInvite.modalTitle": "Quest review",
+  "components.quests.QuestReviewInvite.overlayClose": "Close the review form",
   "components.quests.QuestReviewInvite.close": "Close",
   "components.quests.QuestReviewPromptBanner.title": "How was the quest?",
   "components.quests.QuestReviewPromptBanner.titleWithQuest": "How was “{{value1}}”?",

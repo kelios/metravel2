@@ -1,10 +1,10 @@
 import { memo, useMemo } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import Feather from '@expo/vector-icons/Feather'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import StarRating from '@/components/ui/StarRating'
 import UserAvatar from '@/components/layout/UserAvatar'
+import QuestModalSheet from '@/components/quests/QuestModalSheet'
 import { useQuestReviews } from '@/hooks/useQuestsApi'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -100,102 +100,52 @@ function QuestReviewsModal({ questId, visible, onClose }: Props) {
   const reviews = data ?? []
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel={i18nT('quests:components.quests.QuestReviewsModal.zakryt_otzyvy_3d58b380')}>
-        <Pressable
-          style={styles.sheet}
-          onPress={(e) => e.stopPropagation()}
-          testID="quest-reviews-modal"
+    <QuestModalSheet
+      visible={visible}
+      onClose={onClose}
+      title={i18nT('quests:components.quests.QuestReviewsModal.otzyvy_o_kveste_0e87f487')}
+      closeLabel={i18nT('quests:components.quests.QuestReviewsModal.zakryt_bc1e31bc')}
+      overlayLabel={i18nT('quests:components.quests.QuestReviewsModal.zakryt_otzyvy_3d58b380')}
+      testID="quest-reviews-modal"
+      closeTestID="quest-reviews-close"
+    >
+      {isLoading ? (
+        <View style={styles.stateBox} testID="quest-reviews-loading">
+          <ActivityIndicator color={colors.primaryDark} />
+        </View>
+      ) : isError ? (
+        <View style={styles.stateBox} testID="quest-reviews-error">
+          <Text style={styles.stateText}>{i18nT('quests:components.quests.QuestReviewsModal.ne_udalos_zagruzit_otzyvy_651269a8')}</Text>
+          <Pressable
+            onPress={() => refetch()}
+            style={styles.retryButton}
+            accessibilityRole="button"
+            accessibilityLabel={i18nT('quests:components.quests.QuestReviewsModal.povtorit_5faeeb55')}
+          >
+            <Text style={styles.retryText}>{i18nT('quests:components.quests.QuestReviewsModal.povtorit_5faeeb55')}</Text>
+          </Pressable>
+        </View>
+      ) : reviews.length === 0 ? (
+        <View style={styles.stateBox} testID="quest-reviews-empty">
+          <Text style={styles.stateText}>{i18nT('quests:components.quests.QuestReviewsModal.poka_net_otzyvov_5b24df62')}</Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
-            <Text style={styles.title}>{i18nT('quests:components.quests.QuestReviewsModal.otzyvy_o_kveste_0e87f487')}</Text>
-            <Pressable
-              onPress={onClose}
-              hitSlop={10}
-              style={styles.closeButton}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('quests:components.quests.QuestReviewsModal.zakryt_bc1e31bc')}
-              testID="quest-reviews-close"
-            >
-              <Feather name="x" size={20} color={colors.text} />
-            </Pressable>
-          </View>
-
-          {isLoading ? (
-            <View style={styles.stateBox} testID="quest-reviews-loading">
-              <ActivityIndicator color={colors.primaryDark} />
-            </View>
-          ) : isError ? (
-            <View style={styles.stateBox} testID="quest-reviews-error">
-              <Text style={styles.stateText}>{i18nT('quests:components.quests.QuestReviewsModal.ne_udalos_zagruzit_otzyvy_651269a8')}</Text>
-              <Pressable
-                onPress={() => refetch()}
-                style={styles.retryButton}
-                accessibilityRole="button"
-                accessibilityLabel={i18nT('quests:components.quests.QuestReviewsModal.povtorit_5faeeb55')}
-              >
-                <Text style={styles.retryText}>{i18nT('quests:components.quests.QuestReviewsModal.povtorit_5faeeb55')}</Text>
-              </Pressable>
-            </View>
-          ) : reviews.length === 0 ? (
-            <View style={styles.stateBox} testID="quest-reviews-empty">
-              <Text style={styles.stateText}>{i18nT('quests:components.quests.QuestReviewsModal.poka_net_otzyvov_5b24df62')}</Text>
-            </View>
-          ) : (
-            <ScrollView
-              style={styles.list}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {reviews.map((review) => (
-                <ReviewItem key={review.id} review={review} styles={styles} />
-              ))}
-            </ScrollView>
-          )}
-        </Pressable>
-      </Pressable>
-    </Modal>
+          {reviews.map((review) => (
+            <ReviewItem key={review.id} review={review} styles={styles} />
+          ))}
+        </ScrollView>
+      )}
+    </QuestModalSheet>
   )
 }
 
 const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
-    overlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.55)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 16,
-    },
-    sheet: {
-      width: '100%',
-      maxWidth: 520,
-      maxHeight: '85%',
-      backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.lg,
-      paddingHorizontal: 18,
-      paddingTop: 16,
-      paddingBottom: 8,
-      gap: 12,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    title: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    closeButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.backgroundSecondary,
-    },
     list: {
       width: '100%',
     },

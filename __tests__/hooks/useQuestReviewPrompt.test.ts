@@ -12,6 +12,9 @@ import {
 import {
   RETURN_VISIT_WINDOW_MS,
   markQuestReviewLeft,
+  markQuestReviewPrompted,
+  markQuestReturnReminderScheduled,
+  markReturnVisitReported,
   questFinishRecordKey,
   readQuestFinishRecord,
 } from '@/utils/questReturnVisit'
@@ -85,5 +88,55 @@ describe('markQuestReviewLeft', () => {
 
     const stored = await readQuestFinishRecord(record.ownerId)
     expect(stored?.reviewPromptedAt).toBeUndefined()
+  })
+})
+
+describe('общая запись финиша: флаги возврата и просьбы не затирают друг друга', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear()
+  })
+
+  it('сохраняет оба флага, когда возврат пишется снимком без reviewPromptedAt', async () => {
+    // Ровно то, что делают два хука на одном монтировании каталога: каждый
+    // держит СВОЙ снимок записи, прочитанный до чужой записи.
+    await AsyncStorage.setItem(questFinishRecordKey(record.ownerId), JSON.stringify(record))
+    const staleSnapshot = { ...record }
+
+    await markQuestReviewPrompted(record, record.finishedAt + DAY)
+    await markReturnVisitReported(staleSnapshot)
+
+    const stored = await readQuestFinishRecord(record.ownerId)
+    expect(stored?.reviewPromptedAt).toBe(record.finishedAt + DAY)
+    expect(stored?.returnReported).toBe(true)
+  })
+
+  it('сохраняет оба флага при обратном порядке записи', async () => {
+    await AsyncStorage.setItem(questFinishRecordKey(record.ownerId), JSON.stringify(record))
+    const staleSnapshot = { ...record }
+
+    await markReturnVisitReported(record)
+    await markQuestReviewPrompted(staleSnapshot, record.finishedAt + DAY)
+
+    const stored = await readQuestFinishRecord(record.ownerId)
+    expect(stored?.returnReported).toBe(true)
+    expect(stored?.reviewPromptedAt).toBe(record.finishedAt + DAY)
+  })
+
+  it('не переносит флаг на запись СЛЕДУЮЩЕГО прохождения', async () => {
+    const staleSnapshot = { ...record }
+    const nextFinish = {
+      ...record,
+      questId: 'grodno-lisy',
+      finishedAt: record.finishedAt + 3 * DAY,
+    }
+    await AsyncStorage.setItem(questFinishRecordKey(record.ownerId), JSON.stringify(nextFinish))
+
+    await markQuestReviewPrompted(staleSnapshot, record.finishedAt + DAY)
+    await markQuestReturnReminderScheduled(staleSnapshot, record.finishedAt + DAY)
+
+    const stored = await readQuestFinishRecord(record.ownerId)
+    expect(stored?.questId).toBe('grodno-lisy')
+    expect(stored?.reviewPromptedAt).toBeUndefined()
+    expect(stored?.reminderScheduledAt).toBeUndefined()
   })
 })

@@ -269,6 +269,7 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.catalogTitleDefault": "Міські квести та маршрути із завданнями | Metravel",
   "components.quests.QuestReviewInvite.cta": "Залишити відгук",
   "components.quests.QuestReviewInvite.modalTitle": "Відгук про квест",
+  "components.quests.QuestReviewInvite.overlayClose": "Закрити форму відгуку",
   "components.quests.QuestReviewInvite.close": "Закрити",
   "components.quests.QuestReviewPromptBanner.title": "Як вам квест?",
   "components.quests.QuestReviewPromptBanner.titleWithQuest": "Як вам квест «{{value1}}»?",

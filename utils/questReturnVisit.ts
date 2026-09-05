@@ -106,15 +106,32 @@ export async function rememberQuestFinish(record: {
   }
 }
 
-export async function markReturnVisitReported(record: QuestFinishRecord): Promise<void> {
+/**
+ * Патч ОДНОЙ записи финиша с чтением непосредственно перед записью (#1795).
+ * Запись общая у возврата (#1484) и у просьбы об отзыве, а оба флага ставятся с
+ * одного монтирования каталога: запись целиком из снимка вызывающего затирала
+ * чужой флаг, поставленный секундой раньше. Патч применяется только к той же
+ * записи (тот же квест и тот же финиш) — новое прохождение не трогаем.
+ */
+async function updateQuestFinishRecord(
+  record: QuestFinishRecord,
+  patch: Partial<QuestFinishRecord>,
+): Promise<void> {
   try {
+    const stored = await readQuestFinishRecord(record.ownerId)
+    const base = stored ?? record
+    if (base.questId !== record.questId || base.finishedAt !== record.finishedAt) return
     await AsyncStorage.setItem(
       questFinishRecordKey(record.ownerId),
-      JSON.stringify({ ...record, returnReported: true } satisfies QuestFinishRecord),
+      JSON.stringify({ ...base, ...patch } satisfies QuestFinishRecord),
     )
   } catch (error) {
-    devWarn('[questReturnVisit] failed to mark return visit:', error)
+    devWarn('[questReturnVisit] failed to update finish record:', error)
   }
+}
+
+export async function markReturnVisitReported(record: QuestFinishRecord): Promise<void> {
+  await updateQuestFinishRecord(record, { returnReported: true })
 }
 
 /**
@@ -125,14 +142,7 @@ export async function markQuestReviewPrompted(
   record: QuestFinishRecord,
   promptedAt: number,
 ): Promise<void> {
-  try {
-    await AsyncStorage.setItem(
-      questFinishRecordKey(record.ownerId),
-      JSON.stringify({ ...record, reviewPromptedAt: promptedAt } satisfies QuestFinishRecord),
-    )
-  } catch (error) {
-    devWarn('[questReturnVisit] failed to mark review prompt:', error)
-  }
+  await updateQuestFinishRecord(record, { reviewPromptedAt: promptedAt })
 }
 
 /**
@@ -149,14 +159,7 @@ export async function markQuestReturnReminderScheduled(
   record: QuestFinishRecord,
   scheduledAt: number,
 ): Promise<void> {
-  try {
-    await AsyncStorage.setItem(
-      questFinishRecordKey(record.ownerId),
-      JSON.stringify({ ...record, reminderScheduledAt: scheduledAt } satisfies QuestFinishRecord),
-    )
-  } catch (error) {
-    devWarn('[questReturnVisit] failed to mark reminder:', error)
-  }
+  await updateQuestFinishRecord(record, { reminderScheduledAt: scheduledAt })
 }
 
 export async function clearQuestFinishRecord(ownerId: string): Promise<void> {

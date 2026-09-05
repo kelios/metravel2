@@ -269,6 +269,7 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.catalogTitleDefault": "Гарадскія квэсты і маршруты з заданнямі | Metravel",
   "components.quests.QuestReviewInvite.cta": "Пакінуць водгук",
   "components.quests.QuestReviewInvite.modalTitle": "Водгук пра квест",
+  "components.quests.QuestReviewInvite.overlayClose": "Закрыць форму водгуку",
   "components.quests.QuestReviewInvite.close": "Закрыць",
   "components.quests.QuestReviewPromptBanner.title": "Як вам квест?",
   "components.quests.QuestReviewPromptBanner.titleWithQuest": "Як вам квест «{{value1}}»?",

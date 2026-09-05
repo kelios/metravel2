@@ -7,9 +7,10 @@
 // (`QuestReviewSection`) в модальном окне — новый транспорт не заводим.
 
 import { memo, useCallback, useMemo, useState } from 'react'
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
+import QuestModalSheet from '@/components/quests/QuestModalSheet'
 import QuestReviewSection from '@/components/quests/QuestReviewSection'
 import { useQuestReview } from '@/hooks/useQuestReview'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
@@ -35,6 +36,10 @@ function QuestReviewInvite({
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const [visible, setVisible] = useState(false)
+  // Форма живёт отдельно от кнопки: после отправки отзыв появляется в кэше, и
+  // общий гейт `review` снял бы открытое окно вместе с экраном «Спасибо за
+  // отзыв» и с загрузкой прикреплённых фото (она стартует уже ПОСЛЕ сохранения).
+  const [opened, setOpened] = useState(false)
 
   // Тот же ключ react-query, что и у формы: повторного запроса не будет.
   const { review, isLoading } = useQuestReview({
@@ -46,70 +51,55 @@ function QuestReviewInvite({
 
   const handleOpen = useCallback(() => {
     trackQuestReviewPromptClick({ questId, cityId, source: 'quest_page' })
+    setOpened(true)
     setVisible(true)
   }, [cityId, questId])
 
   const handleClose = useCallback(() => setVisible(false), [])
 
-  // Отзыв уже оставлен — второй вход не нужен. Пока префилл грузится, кнопку не
-  // показываем: мигание «оставьте отзыв» тому, кто его уже написал, хуже паузы.
-  if (!questNumericId || isLoading || review) return null
+  if (!questNumericId) return null
 
+  // Кнопка-вход прячется, когда отзыв уже есть; пока префилл грузится (в том
+  // числе на фоновом refetch), кнопкой не мигаем. На открытое окно этот гейт НЕ
+  // распространяется — иначе форма закрывалась бы прямо во время набора.
+  const showCta = !isLoading && !review
   const ctaLabel = i18nT('quests:components.quests.QuestReviewInvite.cta')
 
   return (
     <>
-      <Pressable
-        onPress={handleOpen}
-        style={styles.cta}
-        accessibilityRole="button"
-        accessibilityLabel={ctaLabel}
-        testID={testID}
-      >
-        <Feather name="star" size={13} color={colors.primaryDark} />
-        <Text style={styles.ctaText}>{ctaLabel}</Text>
-      </Pressable>
+      {showCta ? (
+        <Pressable
+          onPress={handleOpen}
+          style={styles.cta}
+          accessibilityRole="button"
+          accessibilityLabel={ctaLabel}
+          testID={testID}
+        >
+          <Feather name="star" size={13} color={colors.primaryDark} />
+          <Text style={styles.ctaText}>{ctaLabel}</Text>
+        </Pressable>
+      ) : null}
 
-      <Modal
-        visible={visible}
-        animationType="slide"
-        transparent
-        onRequestClose={handleClose}
-        statusBarTranslucent
-      >
-        <View style={styles.backdrop}>
-          <View style={styles.sheet} testID={`${testID}-modal`}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle} numberOfLines={1}>
-                {i18nT('quests:components.quests.QuestReviewInvite.modalTitle')}
-              </Text>
-              <Pressable
-                onPress={handleClose}
-                style={styles.closeButton}
-                accessibilityRole="button"
-                accessibilityLabel={i18nT('quests:components.quests.QuestReviewInvite.close')}
-                testID={`${testID}-close`}
-                hitSlop={8}
-              >
-                <Feather name="x" size={20} color={colors.text} />
-              </Pressable>
-            </View>
-
-            <ScrollView
-              style={styles.sheetBody}
-              contentContainerStyle={styles.sheetBodyContent}
-              keyboardShouldPersistTaps="handled"
-            >
-              <QuestReviewSection
-                questId={questId}
-                questNumericId={questNumericId}
-                cityId={cityId}
-                testID={`${testID}-form`}
-              />
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      {opened ? (
+        <QuestModalSheet
+          visible={visible}
+          onClose={handleClose}
+          title={i18nT('quests:components.quests.QuestReviewInvite.modalTitle')}
+          closeLabel={i18nT('quests:components.quests.QuestReviewInvite.close')}
+          overlayLabel={i18nT('quests:components.quests.QuestReviewInvite.overlayClose')}
+          testID={`${testID}-modal`}
+          closeTestID={`${testID}-close`}
+        >
+          <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled">
+            <QuestReviewSection
+              questId={questId}
+              questNumericId={questNumericId}
+              cityId={cityId}
+              testID={`${testID}-form`}
+            />
+          </ScrollView>
+        </QuestModalSheet>
+      ) : null}
     </>
   )
 }
@@ -132,43 +122,11 @@ const createStyles = (colors: ThemedColors) =>
       fontWeight: '600',
       color: colors.primaryDark,
     },
-    backdrop: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.45)',
-      justifyContent: 'flex-end',
+    body: {
+      width: '100%',
     },
-    sheet: {
-      maxHeight: '90%',
-      backgroundColor: colors.background,
-      borderTopLeftRadius: DESIGN_TOKENS.radii.lg,
-      borderTopRightRadius: DESIGN_TOKENS.radii.lg,
-      overflow: 'hidden',
-    },
-    sheetHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: DESIGN_TOKENS.spacing.sm,
-      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-      paddingVertical: DESIGN_TOKENS.spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    sheetTitle: {
-      flex: 1,
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    closeButton: {
-      padding: 4,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-    },
-    sheetBody: {
-      maxHeight: 560,
-    },
-    sheetBodyContent: {
-      padding: DESIGN_TOKENS.spacing.lg,
+    bodyContent: {
+      paddingBottom: DESIGN_TOKENS.spacing.sm,
     },
   })
 
