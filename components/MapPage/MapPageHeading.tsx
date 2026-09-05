@@ -1,5 +1,5 @@
 import React, { memo, useLayoutEffect } from 'react'
-import { Platform, View } from 'react-native'
+import { Platform } from 'react-native'
 
 import { Heading } from '@/components/ui/Typography'
 import { getMapSeoTitle } from '@/constants/mapSeo'
@@ -10,9 +10,9 @@ import { webDataSetProps } from '@/utils/webProps'
  *
  * - `panel-head` — a heading line inside the desktop side panel header, above
  *   the tab row. Only available while the panel is expanded.
- * - `map-corner` — a compact capsule pinned inside the map area, used whenever
- *   the panel header does not exist: desktop with a collapsed panel, mobile web
- *   and the desktop data-error screen.
+ * - `map-corner` — a visually hidden SEO heading used whenever the panel
+ *   header does not exist: desktop with a collapsed panel, mobile web and the
+ *   desktop data-error screen.
  */
 export type MapPageHeadingAnchor = 'panel-head' | 'map-corner'
 
@@ -92,15 +92,13 @@ function MapPageHeadingImpl({ anchor, styles }: MapPageHeadingProps) {
   }
 
   return (
-    <View
-      style={styles.pageHeadingCapsule}
-      pointerEvents="none"
+    <Heading
+      level={1}
+      style={styles.pageHeadingVisuallyHidden}
       {...MAP_CORNER_DATA_SET}
     >
-      <Heading level={1} style={styles.pageHeadingCapsuleText}>
-        {text}
-      </Heading>
-    </View>
+      {text}
+    </Heading>
   )
 }
 

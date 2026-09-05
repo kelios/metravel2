@@ -1,6 +1,6 @@
 import React from 'react'
-import { render, within } from '@testing-library/react-native'
-import { Platform } from 'react-native'
+import { render } from '@testing-library/react-native'
+import { Platform, StyleSheet } from 'react-native'
 
 jest.mock('@/constants/mapSeo', () => ({
   getMapSeoTitle: () => 'Карта маршрутов и достопримечательностей Беларуси | Metravel',
@@ -37,8 +37,12 @@ const getLevelOneHeadings = (view: ReturnType<typeof render>) =>
 
 const styles = {
   pageHeadingInPanel: { fontSize: 17, textAlign: 'left' as const },
-  pageHeadingCapsule: { position: 'absolute' as const, top: 67, left: 8 },
-  pageHeadingCapsuleText: { fontSize: 15, textAlign: 'left' as const },
+  pageHeadingVisuallyHidden: {
+    position: 'absolute' as const,
+    width: 1,
+    height: 1,
+    overflow: 'hidden' as const,
+  },
 }
 
 const mountStaticHeading = () => {
@@ -93,13 +97,17 @@ describe('MapPageHeading (#1640)', () => {
     expect(getLevelOneHeadings(view)).toHaveLength(1)
   })
 
-  it('does not let the map-corner capsule intercept map interaction', () => {
+  it('keeps the map-corner heading semantic but visually hidden', () => {
     const view = render(<MapPageHeading anchor="map-corner" styles={styles} />)
 
-    const capsule = view.UNSAFE_getByProps({ pointerEvents: 'none' })
-    // The capsule wraps the heading rather than sitting beside it, so the
-    // `pointerEvents` opt-out covers the whole label.
-    expect(within(capsule).getByRole('header').props['aria-level']).toBe(1)
+    const heading = view.getByRole('header')
+    expect(heading.props['aria-level']).toBe(1)
+    expect(StyleSheet.flatten(heading.props.style)).toMatchObject({
+      position: 'absolute',
+      width: 1,
+      height: 1,
+      overflow: 'hidden',
+    })
   })
 
   it('marks both anchors with the dataSet hook react-native-web turns into data-map-page-heading', () => {
@@ -109,7 +117,7 @@ describe('MapPageHeading (#1640)', () => {
     expect(panel.getByRole('header').props.dataSet).toEqual({ mapPageHeading: 'panel-head' })
 
     const corner = render(<MapPageHeading anchor="map-corner" styles={styles} />)
-    expect(corner.UNSAFE_getByProps({ pointerEvents: 'none' }).props.dataSet).toEqual({
+    expect(corner.getByRole('header').props.dataSet).toEqual({
       mapPageHeading: 'map-corner',
     })
   })

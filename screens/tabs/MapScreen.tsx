@@ -494,7 +494,7 @@ export default function MapScreen() {
 
   // #1640 — single source of truth for where the page <h1> is mounted. The
   // panel header only exists on desktop web with the panel expanded; every
-  // other state falls back to the map-corner capsule. Exactly one anchor is
+  // other state falls back to the visually hidden map-corner heading. Exactly one anchor is
   // rendered, so the swap happens inside one React commit and the document is
   // never observably left with two headings or none.
   const headingAnchor: 'panel-head' | 'map-corner' =

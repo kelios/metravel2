@@ -116,6 +116,17 @@ const QUEST_COVERS = [
   { quest_id: 'jaworzno-grodek', assetsDir: 'jaworznoGrodek', cover: 'cover.png' },
   { quest_id: 'baranovichi-bike-manors', assetsDir: 'baranovichiBikeManors', cover: 'cover.png' },
   { quest_id: 'krakow-zakrzowek', assetsDir: 'krakowZakrzowek', cover: 'cover.png' },
+  { quest_id: 'bukhara-tower-and-nasreddin', assetsDir: 'bukharaTowerAndNasreddin', cover: 'cover.png' },
+  { quest_id: 'turkestan-yasawi', assetsDir: 'turkestanYasawi', cover: 'cover.png' },
+  { quest_id: 'samarkand-timur-legends', assetsDir: 'samarkandTimurLegends', cover: 'cover.png' },
+  { quest_id: 'cesky-krumlov-white-lady', assetsDir: 'ceskyKrumlovWhiteLady', cover: 'cover.png' },
+  { quest_id: 'almaty-apple-city', assetsDir: 'almatyAppleCity', cover: 'cover.png' },
+  { quest_id: 'prague-vysehrad-libuse', assetsDir: 'pragueVysehradLibuse', cover: 'cover.png' },
+  { quest_id: 'khiva-ichan-kala', assetsDir: 'khivaIchanKala', cover: 'cover.png' },
+  { quest_id: 'astana-samruk-tree', assetsDir: 'astanaSamrukTree', cover: 'cover.png' },
+  { quest_id: 'brno-dragon-and-wheel', assetsDir: 'brnoDragonAndWheel', cover: 'cover.png' },
+  { quest_id: 'kutna-hora-silver', assetsDir: 'kutnaHoraSilver', cover: 'cover.png' },
+  { quest_id: 'karlovy-vary-deer-leap', assetsDir: 'karlovyVaryDeerLeap', cover: 'cover.png' },
 ];
 
 function getMime(filePath) {

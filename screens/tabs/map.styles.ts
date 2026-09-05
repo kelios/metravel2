@@ -2,7 +2,7 @@
 import { Platform, StyleSheet } from 'react-native';
 import { LAYOUT, METRICS } from '@/constants/layout';
 import type { ThemedColors } from '@/hooks/useTheme';
-import { webViewStyle } from '@/utils/webProps';
+import { webTextStyle } from '@/utils/webProps';
 
 // ✅ Токенизация: базируемся на 8pt-системе METRICS
 const PANEL_WIDTH_DESKTOP = METRICS.baseUnit * 45; // 360px
@@ -22,11 +22,6 @@ const PANEL_RADIUS = 20;
 const CONTROL_RADIUS = 12;
 // Размер вью иконочных контролов карты и есть их тач-таргет — floor проекта 44dp.
 const CONTROL_SIZE = 44;
-// Mobile map chrome floats a row of 48dp controls at the top of the map area
-// (11px inset + 48px button). The page heading capsule clears it instead of
-// sitting on top of it; it is `pointerEvents: none`, so an overlap would not
-// eat taps, but it would hide the controls.
-const MAP_MOBILE_TOP_CONTROLS_RESERVE = 11 + 48 + METRICS.spacing.s;
 
 export const getStyles = (
   isMobile: boolean,
@@ -205,42 +200,19 @@ export const getStyles = (
         marginHorizontal: 0,
         width: '100%',
       },
-      // Fallback anchor for every state without a panel header: desktop with a
-      // collapsed panel, mobile web, and the desktop data-error screen.
-      // Opaque surface rather than the translucent `radiusPill` recipe — 40%
-      // alpha over arbitrary tiles does not guarantee 4.5:1, and live blur on
-      // the mobile map is already banned for GPU reasons (see tabsContainer).
-      pageHeadingCapsule: {
+      // Keep one semantic H1 for SEO and assistive technology when the visible
+      // desktop panel heading is unavailable, without covering the map canvas.
+      pageHeadingVisuallyHidden: webTextStyle({
         position: 'absolute',
-        // Mobile: below the floating control row, which is a full-bleed strip of
-        // seven 48dp buttons at y=11..59 with no free slot inside it. Measured,
-        // not guessed — see MAP_MOBILE_TOP_CONTROLS_RESERVE.
-        top: isMobile ? MAP_MOBILE_TOP_CONTROLS_RESERVE : METRICS.spacing.m,
-        left: isMobile ? METRICS.spacing.s : METRICS.spacing.m,
-        // Wide enough to hold the RU title in two lines at 15px; longer
-        // translations wrap further rather than truncate.
-        maxWidth: isMobile ? '80%' : 360,
-        // Same padding/radius as radiusPill so the two floating map labels read
-        // as one family.
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        backgroundColor: themedColors.surface,
-        borderRadius: 999,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: themedColors.borderLight,
-        zIndex: 1004,
-        ...(Platform.OS === 'web'
-          ? webViewStyle({ boxShadow: themedColors.boxShadows.card })
-          : shadowMedium),
-      },
-      pageHeadingCapsuleText: {
-        fontSize: 15,
-        lineHeight: 22,
-        letterSpacing: 0,
-        fontWeight: '700',
-        color: themedColors.text,
-        textAlign: 'left',
-      },
+        width: 1,
+        height: 1,
+        padding: 0,
+        margin: -1,
+        overflow: 'hidden',
+        clip: 'rect(0,0,0,0)',
+        whiteSpace: 'nowrap',
+        borderWidth: 0,
+      }),
       // #1640 — a column so the page H1 can sit above the tab row inside the
       // same surface and the same single hairline border. The row itself moved
       // to `tabsRow`; padding, background and border stay here so the header
