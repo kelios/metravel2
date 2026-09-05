@@ -90,6 +90,24 @@ function finaleText(finale) {
     return finale.text || finale.story || '';
 }
 
+// point_role: бэкенд (quests/models.py, миграция 0023) требует структурную роль у
+// каждого нумерованного шага активного квеста: 'required' | 'optional' | 'final';
+// интро — 'start'. Явное поле point_role в data-файле имеет приоритет; иначе
+// роль выводится: answer_pattern.type === 'any' → optional, последний шаг → final.
+const POINT_ROLES = ['required', 'optional', 'final'];
+function pointRoleFor(step, index, steps) {
+    const explicit = step.point_role || step.pointRole;
+    if (explicit) {
+        if (!POINT_ROLES.includes(explicit)) {
+            throw new Error(`point_role шага ${step.step_id}: недопустимое значение "${explicit}" (разрешены: ${POINT_ROLES.join(', ')})`);
+        }
+        return explicit;
+    }
+    const type = step.answer_pattern && step.answer_pattern.type;
+    if (type === 'any') return 'optional';
+    return index === steps.length - 1 ? 'final' : 'required';
+}
+
 // poi_info: бэкенд принимает строго {is_museum: bool(об.), opening_hours?, ticket_price?, website?}
 const POI_INFO_ALLOWED = ['is_museum', 'opening_hours', 'ticket_price', 'website'];
 function poiInfoPayload(step) {
@@ -228,6 +246,7 @@ async function main() {
                     input_type: 'text',
                     order: 0,
                     is_intro: true,
+                    point_role: 'start',
                 });
                 console.log(`  ✅ Intro step`);
             } catch (e) {
@@ -260,6 +279,7 @@ async function main() {
                     input_type: s.inputType || (s.answer_pattern && (s.answer_pattern.type === 'range' || s.answer_pattern.type === 'exact' || s.answer_pattern.type === 'any_number') ? 'number' : 'text'),
                     order: i + 1,
                     is_intro: false,
+                    point_role: pointRoleFor(s, i, q.steps),
                 };
                 const poiInfo = poiInfoPayload(s);
                 if (poiInfo) stepPayload.poi_info = poiInfo;

@@ -68,6 +68,9 @@ function stepPayload(s, order) {
     // opening_hours/ticket_price/website опц.); отсутствует в данных — поле не трогаем
     const poiInfo = s.poi_info || s.poiInfo;
     if (poiInfo !== undefined) payload.poi_info = poiInfo;
+    // point_role ('required' | 'optional' | 'final') синкается только если задан явно
+    const pointRole = s.point_role || s.pointRole;
+    if (pointRole !== undefined) payload.point_role = pointRole;
     if (order !== undefined) payload.order = order;
     return payload;
 }

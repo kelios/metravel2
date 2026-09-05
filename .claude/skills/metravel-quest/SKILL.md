@@ -393,6 +393,21 @@ description: "Создание/обновление городских квес�
    (`--kinds=museum,gallery,kosher,cafe,attraction`). Опциональная точка не
    блокирует прохождение.
 
+## point_role — структурная роль точки (бэкенд-контракт с 09.2026)
+
+Бэкенд (`quests/models.py`, миграция `0023_queststep_point_role`) отклоняет
+POST/PATCH нумерованного шага активного квеста без роли:
+`{"point_role": ["Active quest numbered steps require a point role."]}`.
+Значения: интро — `start`; нумерованные шаги — `required` | `optional` |
+`final`. `migrate-quest-from-file.js` ставит роль сам: явное поле
+`point_role` в шаге data-файла имеет приоритет, иначе `answer_pattern.type ===
+'any'` → `optional`, последний шаг → `final`, остальные → `required`.
+Опциональная точка с проверяемым ответом (`any_text` «по желанию») роль
+`optional` автоматически НЕ получит — задай `point_role: 'optional'` явно.
+`sync-quest-to-prod.js` патчит `point_role` только когда поле задано явно.
+Фронт использует роли для счётчика «обязательных» точек и подписей на карте
+(`utils/questAdapters.ts` → `pointRole`).
+
 ## poi_info — информация для посетителей (бэкенд-контракт)
 
 У шага квеста есть JSON-поле `poi_info` (nullable). Заполняй его на:
