@@ -39,6 +39,8 @@ export type QuestFinishRecord = {
   returnReported?: boolean
   /** Возвратное OS-уведомление уже поставлено для этого точного финиша. */
   reminderScheduledAt?: number
+  /** Мягкая просьба об отзыве по этому финишу уже показана (#1795): один раз на квест. */
+  reviewPromptedAt?: number
 }
 
 function isRecord(value: unknown): value is QuestFinishRecord {
@@ -113,6 +115,34 @@ export async function markReturnVisitReported(record: QuestFinishRecord): Promis
   } catch (error) {
     devWarn('[questReturnVisit] failed to mark return visit:', error)
   }
+}
+
+/**
+ * Просьба об отзыве по этому финишу показана. Отдельное поле, а не удаление
+ * записи: возврат (#1484) меряется по той же записи и после просьбы.
+ */
+export async function markQuestReviewPrompted(
+  record: QuestFinishRecord,
+  promptedAt: number,
+): Promise<void> {
+  try {
+    await AsyncStorage.setItem(
+      questFinishRecordKey(record.ownerId),
+      JSON.stringify({ ...record, reviewPromptedAt: promptedAt } satisfies QuestFinishRecord),
+    )
+  } catch (error) {
+    devWarn('[questReturnVisit] failed to mark review prompt:', error)
+  }
+}
+
+/**
+ * Отзыв о квесте оставлен — просьбу по его записи гасим, чтобы каталог не
+ * просил повторно. Чужой квест в записи не трогаем.
+ */
+export async function markQuestReviewLeft(ownerId: string, questId: string): Promise<void> {
+  const record = await readQuestFinishRecord(ownerId)
+  if (!record || record.questId !== questId || record.reviewPromptedAt) return
+  await markQuestReviewPrompted(record, Date.now())
 }
 
 export async function markQuestReturnReminderScheduled(

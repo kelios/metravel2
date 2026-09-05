@@ -267,4 +267,12 @@ export const questsGenerated2 = {
   "components.quests.QuestNextStepSection.eyebrow": "Міський квест · поруч",
   "components.quests.QuestNextStepSection.eyebrowOtherCity": "{{value1}} · поруч",
   "screens.tabs.QuestsScreen.catalogTitleDefault": "Міські квести та маршрути із завданнями | Metravel",
+  "components.quests.QuestReviewInvite.cta": "Залишити відгук",
+  "components.quests.QuestReviewInvite.modalTitle": "Відгук про квест",
+  "components.quests.QuestReviewInvite.close": "Закрити",
+  "components.quests.QuestReviewPromptBanner.title": "Як вам квест?",
+  "components.quests.QuestReviewPromptBanner.titleWithQuest": "Як вам квест «{{value1}}»?",
+  "components.quests.QuestReviewPromptBanner.subtitle": "Кілька слів допоможуть іншим обрати маршрут",
+  "components.quests.QuestReviewPromptBanner.cta": "Залишити відгук",
+  "components.quests.QuestReviewPromptBanner.dismiss": "Сховати",
 } as const

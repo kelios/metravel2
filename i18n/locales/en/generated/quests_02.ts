@@ -267,4 +267,12 @@ export const questsGenerated2 = {
   "components.quests.QuestNextStepSection.eyebrow": "City quest · nearby",
   "components.quests.QuestNextStepSection.eyebrowOtherCity": "{{value1}} · nearby",
   "screens.tabs.QuestsScreen.catalogTitleDefault": "City quests and routes with tasks | Metravel",
+  "components.quests.QuestReviewInvite.cta": "Leave a review",
+  "components.quests.QuestReviewInvite.modalTitle": "Quest review",
+  "components.quests.QuestReviewInvite.close": "Close",
+  "components.quests.QuestReviewPromptBanner.title": "How was the quest?",
+  "components.quests.QuestReviewPromptBanner.titleWithQuest": "How was “{{value1}}”?",
+  "components.quests.QuestReviewPromptBanner.subtitle": "A couple of words help others pick a route",
+  "components.quests.QuestReviewPromptBanner.cta": "Leave a review",
+  "components.quests.QuestReviewPromptBanner.dismiss": "Dismiss",
 } as const

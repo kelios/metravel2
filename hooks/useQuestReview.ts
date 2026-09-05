@@ -13,6 +13,7 @@ import {
 import { useAuth } from '@/context/AuthContext'
 import { trackQuestReviewSubmit } from '@/utils/questReviewAnalytics'
 import { queryKeys } from '@/api/queryKeys'
+import { markQuestReviewLeft, questRetentionOwnerId } from '@/utils/questReturnVisit'
 
 type SubmitInput = {
   rating: number
@@ -99,6 +100,11 @@ export function useQuestReview({
         rating: record.rating,
         hasText: !!(record.liked?.trim() || record.disliked?.trim()),
       })
+      // #1795 — просьба об отзыве по этому квесту больше не нужна: гасим её в
+      // записи финиша, иначе каталог позовёт писать отзыв уже написавшему.
+      if (questSlug) {
+        void markQuestReviewLeft(questRetentionOwnerId(userId), questSlug)
+      }
     },
   })
 

@@ -19,6 +19,8 @@ import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiv
 import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestsList } from '@/hooks/useQuestsApi';
 import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit';
+import { useQuestReviewPrompt } from '@/hooks/useQuestReviewPrompt';
+import QuestReviewPromptBanner from '@/components/quests/QuestReviewPromptBanner';
 import QuestsContentPanel from './QuestsContentPanel';
 import QuestsSidebar from './QuestsSidebar';
 import { getQuestFaqItems } from './QuestsSeoIntroFaq';
@@ -61,6 +63,9 @@ export default function QuestsScreen() {
     // #1484: заход в каталог после ранее завершённого квеста — это и есть
     // возврат, который меряет петля. Событие уходит один раз на прохождение.
     useQuestReturnVisit();
+    // #1795 — просьба об отзыве по последнему пройденному квесту: один раз на
+    // квест и не сразу после финиша (там форма и так на экране финала).
+    const { prompt: reviewPrompt, dismiss: dismissReviewPrompt } = useQuestReviewPrompt();
 
     const [selectedCityId, setSelectedCityId] = useState<string | null>(ALL_QUESTS_ID);
     // Свободный текстовый поиск по всему каталогу (название/город/страна/теги).
@@ -607,6 +612,19 @@ export default function QuestsScreen() {
     );
 
     // ── Render (Two-column layout) ──
+    const reviewPromptSlot = useMemo(() => {
+        if (!reviewPrompt) return null;
+        const promptedQuest = ALL_QUESTS.find((quest) => quest.id === reviewPrompt.questId);
+        return (
+            <QuestReviewPromptBanner
+                questId={reviewPrompt.questId}
+                cityId={reviewPrompt.cityId ?? promptedQuest?.cityId}
+                questTitle={promptedQuest?.title}
+                onDismiss={dismissReviewPrompt}
+            />
+        );
+    }, [ALL_QUESTS, dismissReviewPrompt, reviewPrompt]);
+
     return (
         <View style={s.root as ViewStyle} testID="quests-root">
             {isFocused && (
@@ -684,6 +702,7 @@ export default function QuestsScreen() {
             </View>
 
             <QuestsContentPanel
+                noticeSlot={reviewPromptSlot}
                 styles={s}
                 colors={colors}
                 dataLoaded={dataLoaded}

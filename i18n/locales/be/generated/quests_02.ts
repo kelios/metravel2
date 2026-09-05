@@ -267,4 +267,12 @@ export const questsGenerated2 = {
   "components.quests.QuestNextStepSection.eyebrow": "Гарадскі квэст · побач",
   "components.quests.QuestNextStepSection.eyebrowOtherCity": "{{value1}} · побач",
   "screens.tabs.QuestsScreen.catalogTitleDefault": "Гарадскія квэсты і маршруты з заданнямі | Metravel",
+  "components.quests.QuestReviewInvite.cta": "Пакінуць водгук",
+  "components.quests.QuestReviewInvite.modalTitle": "Водгук пра квест",
+  "components.quests.QuestReviewInvite.close": "Закрыць",
+  "components.quests.QuestReviewPromptBanner.title": "Як вам квест?",
+  "components.quests.QuestReviewPromptBanner.titleWithQuest": "Як вам квест «{{value1}}»?",
+  "components.quests.QuestReviewPromptBanner.subtitle": "Некалькі слоў дапамогуць іншым выбраць маршрут",
+  "components.quests.QuestReviewPromptBanner.cta": "Пакінуць водгук",
+  "components.quests.QuestReviewPromptBanner.dismiss": "Схаваць",
 } as const

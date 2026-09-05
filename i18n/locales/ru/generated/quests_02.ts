@@ -267,4 +267,12 @@ export const questsGenerated2 = {
   "components.quests.QuestNextStepSection.eyebrow": "Городской квест · рядом",
   "components.quests.QuestNextStepSection.eyebrowOtherCity": "{{value1}} · рядом",
   "screens.tabs.QuestsScreen.catalogTitleDefault": "Городские квесты и маршруты с заданиями | Metravel",
+  "components.quests.QuestReviewInvite.cta": "Оставить отзыв",
+  "components.quests.QuestReviewInvite.modalTitle": "Отзыв о квесте",
+  "components.quests.QuestReviewInvite.close": "Закрыть",
+  "components.quests.QuestReviewPromptBanner.title": "Как вам квест?",
+  "components.quests.QuestReviewPromptBanner.titleWithQuest": "Как вам квест «{{value1}}»?",
+  "components.quests.QuestReviewPromptBanner.subtitle": "Пара слов помогут другим выбрать маршрут",
+  "components.quests.QuestReviewPromptBanner.cta": "Оставить отзыв",
+  "components.quests.QuestReviewPromptBanner.dismiss": "Скрыть",
 } as const

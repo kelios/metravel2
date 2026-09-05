@@ -79,6 +79,8 @@ type QuestsContentPanelProps = {
     onMapUserLocationChange: (loc: { latitude: number; longitude: number } | null) => void;
     onMapMove: (center: MapMovePayload) => void;
     onSearchMapArea: () => void;
+    /** Мягкое уведомление над списком (сейчас — просьба об отзыве, #1795). */
+    noticeSlot?: React.ReactNode;
 };
 
 type QuestListItem = QuestMeta & { _distanceKm?: number };
@@ -117,6 +119,7 @@ export default function QuestsContentPanel({
     onMapUserLocationChange,
     onMapMove,
     onSearchMapArea,
+    noticeSlot = null,
 }: QuestsContentPanelProps) {
     const router = useRouter();
     const searchActive = searchQuery.trim().length > 0;
@@ -334,6 +337,8 @@ export default function QuestsContentPanel({
     const inner = (
         <>
             {contentHeader}
+
+            {noticeSlot}
 
             <View
                 style={[styles.contentBody, viewMode === 'map' && isMobile && styles.contentBodyMap]}

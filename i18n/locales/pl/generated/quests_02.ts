@@ -267,4 +267,12 @@ export const questsGenerated2 = {
   "components.quests.QuestNextStepSection.eyebrow": "Zadanie miejskie · w pobliżu",
   "components.quests.QuestNextStepSection.eyebrowOtherCity": "{{value1}} · w pobliżu",
   "screens.tabs.QuestsScreen.catalogTitleDefault": "Questy miejskie i trasy z zadaniami | Metravel",
+  "components.quests.QuestReviewInvite.cta": "Zostaw opinię",
+  "components.quests.QuestReviewInvite.modalTitle": "Opinia o queście",
+  "components.quests.QuestReviewInvite.close": "Zamknij",
+  "components.quests.QuestReviewPromptBanner.title": "Jak Ci się podobał quest?",
+  "components.quests.QuestReviewPromptBanner.titleWithQuest": "Jak Ci się podobał quest „{{value1}}”?",
+  "components.quests.QuestReviewPromptBanner.subtitle": "Kilka słów pomoże innym wybrać trasę",
+  "components.quests.QuestReviewPromptBanner.cta": "Zostaw opinię",
+  "components.quests.QuestReviewPromptBanner.dismiss": "Ukryj",
 } as const

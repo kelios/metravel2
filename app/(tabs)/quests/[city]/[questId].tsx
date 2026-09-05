@@ -9,6 +9,7 @@ import QuestConsentGate from '@/components/quests/QuestConsentGate';
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection';
 import QuestCompletionBadge from '@/components/quests/QuestCompletionBadge';
 import QuestReviewsModal from '@/components/quests/QuestReviewsModal';
+import QuestReviewInvite from '@/components/quests/QuestReviewInvite';
 import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useAuth } from '@/context/AuthContext';
@@ -356,13 +357,28 @@ export default function QuestByIdScreen() {
   const completionSlot = useMemo(() => {
     if (!completionMeta.isCompletedByMe && completionMeta.completionsCount <= 0) return null;
     return (
-      <QuestCompletionBadge
-        isCompleted={completionMeta.isCompletedByMe}
-        completionsCount={completionMeta.completionsCount}
-        variant="detail"
-      />
+      <View style={styles.completionRow}>
+        <QuestCompletionBadge
+          isCompleted={completionMeta.isCompletedByMe}
+          completionsCount={completionMeta.completionsCount}
+          variant="detail"
+        />
+        {/* #1795 — второй вход в отзыв: форма на финале ловила игрока ровно в
+            тот момент, когда он уже уходит с телефона, поэтому отзывов не было
+            вовсе. Кнопка живёт рядом с бейджем «Пройден» и открывает ту же форму. */}
+        {completionMeta.isCompletedByMe && questId ? (
+          <QuestReviewInvite questId={questId} questNumericId={bundle?.id} cityId={cityId || undefined} />
+        ) : null}
+      </View>
     );
-  }, [completionMeta.isCompletedByMe, completionMeta.completionsCount]);
+  }, [
+    bundle?.id,
+    cityId,
+    completionMeta.isCompletedByMe,
+    completionMeta.completionsCount,
+    questId,
+    styles.completionRow,
+  ]);
 
   const isLoading =
     isQuestLoading ||
@@ -657,6 +673,13 @@ export default function QuestByIdScreen() {
 }
 
 const createStyles = (colors: Colors) => StyleSheet.create({
+  // #1795 — бейдж «Пройден» и кнопка отзыва идут одной строкой под заголовком.
+  completionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   page: {
     flex: 1,
     backgroundColor: colors.background,
