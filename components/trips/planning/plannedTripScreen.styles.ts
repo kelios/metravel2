@@ -133,6 +133,25 @@ export const createStyles = (colors: ThemedColors, isMobile: boolean) =>
     datePickerHint: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
     datePickerCalendar: { marginHorizontal: -16 },
     optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    // Компактный выбор транспорта на мобильной ширине: заголовок поля и рядом
+    // название выбранного варианта — единственный текст, который называет выбор,
+    // когда сегменты icon-only. Зеркалит `TripCreateForm`, чтобы один и тот же
+    // выбор на двух экранах выглядел одинаково.
+    labelRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    // `flexShrink` обязателен: длинная BE/PL/UK строка иначе меряется по
+    // интринзик-ширине и обрезается в row-контейнере (NATIVE-TEXT-ROW-001).
+    labelValue: {
+      flexShrink: 1,
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.primaryText,
+      textAlign: 'right',
+    },
     editActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
     editError: { fontSize: 13, lineHeight: 18, color: colors.danger, fontWeight: '600' },
     tabBar: {

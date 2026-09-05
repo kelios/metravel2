@@ -20,6 +20,8 @@ import type {
 } from '@/api/plannedTrips';
 import { useCreateTrip } from '@/hooks/usePlannedTripsApi';
 import MapIcon from '@/components/MapPage/MapIcon';
+import SegmentedControl from '@/components/MapPage/SegmentedControl';
+import { useResponsive } from '@/hooks/useResponsive';
 import {
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
@@ -159,6 +161,19 @@ const buildStartPoint = (values: FormValues): RoutePoint | null => {
 function TripCreateForm({ onCreated, initialValues }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  // Режим берётся из вьюпорта, а не из `Platform.OS`: mobile web, Android и
+  // iPhone обязаны получить один и тот же ряд (mobile parity, `docs/RULES.md`).
+  // До гидратации web остаётся на широкой раскладке — иначе SSR-разметка и
+  // первый клиентский кадр расходятся.
+  const { isHydrated, isMobile } = useResponsive();
+  const compactTransport = isHydrated && isMobile;
+  // Без мемоизации: `TRANSPORT_LABEL` — геттеры поверх активной локали, и
+  // замороженный массив пережил бы смену языка.
+  const transportOptions = TRANSPORT_OPTIONS.map((option) => ({
+    key: option,
+    label: TRANSPORT_LABEL[option],
+    icon: TRANSPORT_ICON_NAME[option],
+  }));
   const webDateInputStyle = useMemo<React.CSSProperties>(
     () => ({
       width: '100%',
@@ -388,33 +403,74 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
         </View>
       </View>
 
-      <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripCreateForm.transport_3e664411')}</Text>
-      <View style={styles.chips}>
-        {TRANSPORT_OPTIONS.map((option) => {
-          const active = values.transport === option;
-          return (
-            <Pressable
-              key={option}
-              onPress={() => setField('transport', option)}
-              style={[styles.chip, active && styles.chipActive]}
-              testID={`trip-create-transport-${option}`}
-            >
-              <MapIcon
-                name={TRANSPORT_ICON_NAME[option]}
-                size={13}
-                color={active ? colors.primary : colors.textSecondary}
-              />
-              <Text
-                numberOfLines={1}
-                textBreakStrategy="simple"
-                style={[styles.chipText, active && styles.chipTextActive]}
-              >
-                {TRANSPORT_LABEL[option]}
-              </Text>
-            </Pressable>
-          );
-        })}
+      {/*
+        #1414 (TestFlight 1.0.5 (8)): пять чипов с подписями раскладывались на
+        телефоне в четыре ряда. На мобильной ширине выбор транспорта рисует тот
+        же `SegmentedControl compact dense`, что и конструктор маршрута
+        (`RouteBuilder.tsx:1041`) — четвёртой самодельной раскладки в проекте
+        быть не должно. Иконки без подписей допустимы только потому, что
+        выбранный транспорт назван текстом рядом с заголовком поля, а каждый
+        сегмент несёт accessibilityLabel с человеческим названием (и `title` —
+        тултип на web).
+
+        Почему подписи в сегментах не включаются даже на desktop: сегменты
+        `flex: 1` равноширокие и подстраиваются под самую длинную подпись
+        («Общественный транспорт» ≈ 137dp при fontSize 12), поэтому пять
+        подписанных сегментов требуют ≈820dp — больше, чем 640dp контейнера
+        формы (`app/(tabs)/trips/plan/create.tsx` → `inner.maxWidth`), и
+        обрезались бы `overflow: hidden`. Поэтому на широком экране остаются
+        прежние чипы с подписями, а компактный ряд — ровно на мобильной ширине.
+      */}
+      <View style={styles.labelRow}>
+        <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripCreateForm.transport_3e664411')}</Text>
+        {compactTransport ? (
+          <Text style={styles.labelValue} numberOfLines={1}>
+            {TRANSPORT_LABEL[values.transport]}
+          </Text>
+        ) : null}
       </View>
+      {compactTransport ? (
+        <View testID="trip-create-transport">
+          <SegmentedControl
+            options={transportOptions}
+            value={values.transport}
+            onChange={(key) => setField('transport', key as TripTransport)}
+            accessibilityLabel={i18nT('trips:components.trips.planning.TripCreateForm.transport_3e664411')}
+            compact
+            dense
+            noOuterMargins
+            minTouchHeight={44}
+            iconOnly
+          />
+        </View>
+      ) : (
+        <View style={styles.chips}>
+          {TRANSPORT_OPTIONS.map((option) => {
+            const active = values.transport === option;
+            return (
+              <Pressable
+                key={option}
+                onPress={() => setField('transport', option)}
+                style={[styles.chip, active && styles.chipActive]}
+                testID={`trip-create-transport-${option}`}
+              >
+                <MapIcon
+                  name={TRANSPORT_ICON_NAME[option]}
+                  size={13}
+                  color={active ? colors.primary : colors.textSecondary}
+                />
+                <Text
+                  numberOfLines={1}
+                  textBreakStrategy="simple"
+                  style={[styles.chipText, active && styles.chipTextActive]}
+                >
+                  {TRANSPORT_LABEL[option]}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripCreateForm.vidimost_7bd64d56')}</Text>
       <View style={styles.chips}>
@@ -544,6 +600,23 @@ const createStyles = (colors: ThemedColors) =>
     wrap: { gap: 10 },
     heading: { fontSize: 18, fontWeight: '700', color: colors.text },
     label: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: 4 },
+    labelRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    // Название выбранного транспорта рядом с заголовком поля: единственный
+    // текст, который называет текущий выбор, когда сегменты icon-only.
+    // `flexShrink` обязателен — иначе длинная BE/PL/UK строка меряется по
+    // интринзик-ширине и обрезается в row-контейнере (NATIVE-TEXT-ROW-001).
+    labelValue: {
+      flexShrink: 1,
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.primaryText,
+      textAlign: 'right',
+    },
     input: {
       borderWidth: 1,
       borderColor: colors.border,

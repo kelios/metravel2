@@ -17,6 +17,21 @@ jest.mock('@/hooks/usePlannedTripsApi', () => ({
   }),
 }))
 
+// Ширина вьюпорта решает, какой контрол транспорта рисует форма (#1414).
+// По умолчанию — широкий экран, чтобы остальные тесты видели прежнюю раскладку.
+let mockResponsiveOverride: { isHydrated: boolean; isMobile: boolean } = {
+  isHydrated: true,
+  isMobile: false,
+}
+
+jest.mock('@/hooks/useResponsive', () => {
+  const actual = jest.requireActual('@/hooks/useResponsive')
+  return {
+    ...actual,
+    useResponsive: () => ({ ...actual.useResponsive(), ...mockResponsiveOverride }),
+  }
+})
+
 jest.mock('@/hooks/useActionConsent', () => ({
   useActionConsent: () => ({
     hasConsent: false,
@@ -95,7 +110,46 @@ function changeStartDate(view: RenderedForm, value: string) {
 
 beforeEach(() => {
   ;(Platform as { OS: string }).OS = 'web'
+  mockResponsiveOverride = { isHydrated: true, isMobile: false }
   mockMutate.mockClear()
+})
+
+// #1414 (TestFlight 1.0.5 (8)): «Я бы тут сделала компактнее с мобильной версии
+// только иконки каким транспортом» — пять подписанных чипов раскладывались на
+// телефоне в четыре ряда.
+describe('TripCreateForm — transport control', () => {
+  it('keeps labelled chips on the wide layout', () => {
+    const view = render(<TripCreateForm />)
+
+    expect(view.getByTestId('trip-create-transport-car')).toBeTruthy()
+    expect(view.getByText('Общественный транспорт')).toBeTruthy()
+    expect(view.queryByTestId('trip-create-transport')).toBeNull()
+  })
+
+  it('switches to the shared icon-only segmented control on mobile width', () => {
+    mockResponsiveOverride = { isHydrated: true, isMobile: true }
+    const view = render(<TripCreateForm />)
+
+    expect(view.getByTestId('trip-create-transport')).toBeTruthy()
+    expect(view.queryByTestId('trip-create-transport-car')).toBeNull()
+
+    // Icon-only допустим только с человеческим доступным именем у каждой опции.
+    for (const label of [
+      'На машине',
+      'На велосипеде',
+      'Пешком',
+      'Общественный транспорт',
+      'Смешанный',
+    ]) {
+      expect(view.getByLabelText(label)).toBeTruthy()
+    }
+
+    // Выбранный транспорт назван текстом рядом с заголовком поля: иначе ряд
+    // иконок не сообщает, что именно выбрано.
+    expect(view.getByText('На машине')).toBeTruthy()
+    fireEvent.press(view.getByTestId('segmented-foot'))
+    expect(view.getByText('Пешком')).toBeTruthy()
+  })
 })
 
 describe('TripCreateForm — consent gate', () => {

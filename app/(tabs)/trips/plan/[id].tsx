@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
 import MapIcon from '@/components/MapPage/MapIcon';
+import SegmentedControl from '@/components/MapPage/SegmentedControl';
 
 import Button from '@/components/ui/Button';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -102,7 +103,17 @@ const initialEditValues = (trip: PlannedTrip) => ({
 
 export default function PlannedTripScreen() {
   const colors = useThemedColors();
-  const { isMobile } = useResponsive();
+  // Режим берётся из вьюпорта, а не из `Platform.OS`; до гидратации web остаётся
+  // на широкой раскладке, иначе SSR-разметка и первый клиентский кадр расходятся.
+  const { isHydrated, isMobile } = useResponsive();
+  const compactTransport = isHydrated && isMobile;
+  // Без мемоизации: `TRANSPORT_LABEL` — геттеры поверх активной локали, и
+  // замороженный массив пережил бы смену языка.
+  const transportSegments = TRANSPORT_OPTIONS.map((option) => ({
+    key: option,
+    label: TRANSPORT_LABEL[option],
+    icon: TRANSPORT_ICON_NAME[option],
+  }));
   const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile]);
   const webDateInputStyle = useMemo<CSSProperties>(
     () => ({
@@ -614,30 +625,61 @@ export default function PlannedTripScreen() {
                   </View>
                 </View>
 
-                <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.transport_dd5df49c')}</Text>
-                <View style={styles.optionRow}>
-                  {TRANSPORT_OPTIONS.map((option) => {
-                    const active = editValues.transport === option;
-                    return (
-                      <Button
-                        key={option}
-                        label={TRANSPORT_LABEL[option]}
-                        variant={active ? 'primary' : 'secondary'}
-                        size="sm"
-                        disabled={updateTrip.isPending}
-                        onPress={() => setEditValues((prev) => prev ? { ...prev, transport: option } : prev)}
-                        icon={
-                          <MapIcon
-                            name={TRANSPORT_ICON_NAME[option]}
-                            size={16}
-                            color={active ? colors.textOnPrimary : colors.primaryDark}
-                          />
-                        }
-                        testID={`trip-plan-edit-transport-${option}`}
-                      />
-                    );
-                  })}
+                {/* Пять подписанных чипов вставали на телефоне в четыре ряда
+                    (отзыв TestFlight 1.0.5 (8): «сделала бы компактнее, с
+                    мобильной версии только иконки каким транспортом»). На узкой
+                    ширине — тот же icon-only ряд, что и в форме создания
+                    поездки: одинаковый выбор не должен выглядеть по-разному на
+                    двух экранах. Название выбранного варианта уходит в строку
+                    заголовка, у каждого сегмента остаётся человеческое
+                    accessibilityLabel. */}
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.transport_dd5df49c')}</Text>
+                  {compactTransport ? (
+                    <Text style={styles.labelValue} numberOfLines={1}>
+                      {TRANSPORT_LABEL[editValues.transport]}
+                    </Text>
+                  ) : null}
                 </View>
+                {compactTransport ? (
+                  <View testID="trip-plan-edit-transport">
+                    <SegmentedControl
+                      options={transportSegments}
+                      value={editValues.transport}
+                      onChange={(key) => setEditValues((prev) => prev ? { ...prev, transport: key as TripTransport } : prev)}
+                      accessibilityLabel={i18nT('trips:app.tabs.trips.plan.id.transport_dd5df49c')}
+                      compact
+                      dense
+                      noOuterMargins
+                      minTouchHeight={44}
+                      iconOnly
+                    />
+                  </View>
+                ) : (
+                  <View style={styles.optionRow}>
+                    {TRANSPORT_OPTIONS.map((option) => {
+                      const active = editValues.transport === option;
+                      return (
+                        <Button
+                          key={option}
+                          label={TRANSPORT_LABEL[option]}
+                          variant={active ? 'primary' : 'secondary'}
+                          size="sm"
+                          disabled={updateTrip.isPending}
+                          onPress={() => setEditValues((prev) => prev ? { ...prev, transport: option } : prev)}
+                          icon={
+                            <MapIcon
+                              name={TRANSPORT_ICON_NAME[option]}
+                              size={16}
+                              color={active ? colors.textOnPrimary : colors.primaryDark}
+                            />
+                          }
+                          testID={`trip-plan-edit-transport-${option}`}
+                        />
+                      );
+                    })}
+                  </View>
+                )}
 
                 <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.vidimost_bf1dd24d')}</Text>
                 <View style={styles.optionRow}>
