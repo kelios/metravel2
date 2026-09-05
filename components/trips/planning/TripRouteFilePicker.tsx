@@ -6,6 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 import ToolActionsRow from '@/components/ui/ToolActionsRow';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useTranslation } from '@/i18n/LocaleProvider';
 import type {
   PickedTripRouteFileUpload,
   TripRouteFilePickerProps,
@@ -51,6 +52,7 @@ function TripRouteFilePicker({
   testID = 'trip-route-import-picker',
 }: TripRouteFilePickerProps) {
   const colors = useThemedColors();
+  const { t } = useTranslation();
   const requestIdRef = useRef(0);
 
   useEffect(() => () => {
@@ -141,6 +143,7 @@ function TripRouteFilePicker({
         actions={[{
           key: 'import-route',
           label,
+          compactLabel: t('tripsStatic:route.importCompact'),
           icon: <Feather name="upload" size={18} color={colors.text} />,
           onPress: () => { void handlePress(); },
           disabled: disabled || loading,

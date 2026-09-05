@@ -117,6 +117,7 @@ export const tripsStaticResources = {
   "route.originalShare": "Падзяліцца арыгіналам",
   "route.originalDownloadHint": "Зыходны файл маршруту: {{value}}",
   "route.originalDownloadError": "Не атрымалася атрымаць арыгінальны файл маршруту.",
+  "route.importCompact": "Імпарт",
   "route.exportFormatGpx": "GPX",
   "route.exportFormatKml": "KML",
   "route.originalCompact": "Арыгінал",

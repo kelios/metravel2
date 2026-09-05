@@ -117,6 +117,7 @@ export const tripsStaticResources = {
   "route.originalShare": "Udostępnij oryginał",
   "route.originalDownloadHint": "Źródłowy plik trasy: {{value}}",
   "route.originalDownloadError": "Nie udało się pobrać oryginalnego pliku trasy.",
+  "route.importCompact": "Import",
   "route.exportFormatGpx": "GPX",
   "route.exportFormatKml": "KML",
   "route.originalCompact": "Oryginał",

@@ -2,6 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import TripRouteFilePicker from '@/components/trips/planning/TripRouteFilePicker';
+import { i18n } from '@/i18n';
 
 jest.mock('@expo/vector-icons/Feather', () => () => null);
 jest.mock('@/hooks/useResponsive', () => ({
@@ -55,6 +56,31 @@ const renderPicker = () => {
 };
 
 describe('TripRouteFilePicker native adapter', () => {
+  afterEach(async () => {
+    await act(async () => { await i18n.changeLanguage('ru'); });
+  });
+
+  it.each([
+    ['ru', 'Импорт'], ['be', 'Імпарт'], ['uk', 'Імпорт'],
+    ['pl', 'Import'], ['en', 'Import'],
+  ])('shows a visible compact import label in %s with the full accessible name', async (locale, caption) => {
+    await act(async () => { await i18n.changeLanguage(locale); });
+    const { getByText, getByLabelText, props } = renderPicker();
+
+    expect(getByText(caption)).toBeTruthy();
+    expect(getByLabelText(props.label)).toBeTruthy();
+  });
+
+  it('updates the compact caption when the locale changes while mounted', async () => {
+    await act(async () => { await i18n.changeLanguage('ru'); });
+    const { getByText, queryByText } = renderPicker();
+    expect(getByText('Импорт')).toBeTruthy();
+
+    await act(async () => { await i18n.changeLanguage('en'); });
+    expect(getByText('Import')).toBeTruthy();
+    expect(queryByText('Импорт')).toBeNull();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     FileSystem.readAsStringAsync.mockResolvedValue('<gpx />');
