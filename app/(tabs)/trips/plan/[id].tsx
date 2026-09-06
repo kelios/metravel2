@@ -63,7 +63,9 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import type { PlannedTrip, TripTransport, TripVisibility } from '@/api/plannedTrips';
+import { ApiError } from '@/api/clientErrors';
 import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider';
 import { createStyles } from '@/components/trips/planning/plannedTripScreen.styles';
 
 
@@ -148,7 +150,8 @@ export default function PlannedTripScreen() {
     RouteBuilderDisplayState & { tripId: number }
   ) | null>(null);
   const persistedTransportRef = useRef<TripTransport | null>(null);
-  const { data: trip, isLoading, isError } = usePlannedTrip(
+  const { t } = useTranslation();
+  const { data: trip, isLoading, isError, error } = usePlannedTrip(
     Number.isFinite(tripId) ? tripId : null,
   );
   const deleteTrip = useDeletePlannedTrip();
@@ -344,7 +347,13 @@ export default function PlannedTripScreen() {
           {isLoading ? (
             <ActivityIndicator style={styles.loader} />
           ) : isError || !trip ? (
-            <Text style={styles.error}>{i18nT('trips:app.tabs.trips.plan.id.ne_udalos_zagruzit_poezdku_b321e113')}</Text>
+            <Text style={styles.error}>
+              {error instanceof ApiError && error.status === 429
+                ? t('errorsStatic:api.misc.tooManyAttempts')
+                : error instanceof ApiError && error.status === 404
+                  ? t('trips:components.trips.PublicTripDetail.poezdka_ne_naydena_9fc200e6')
+                  : t('trips:app.tabs.trips.plan.id.ne_udalos_zagruzit_poezdku_b321e113')}
+            </Text>
           ) : (
             <>
             {/* ── Compact header: identity + route status at a glance ── */}

@@ -1,7 +1,9 @@
 import { act, render, fireEvent } from '@testing-library/react-native';
-import { Platform } from 'react-native';
+import { ActivityIndicator, Platform } from 'react-native';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
+import { ApiError } from '@/api/clientErrors';
+import { translate as i18nT } from '@/i18n';
 
 /**
  * Acceptance coverage for the planned-trip planner workspace (FE-trip-planner #876
@@ -215,6 +217,19 @@ describe('PlannedTripScreen — planner states', () => {
 
   const mockTrip = (trip: PlannedTrip) =>
     mockUsePlannedTrip.mockReturnValue({ data: trip, isLoading: false, isError: false });
+
+  it.each([
+    [429, 'errorsStatic:api.misc.tooManyAttempts'],
+    [404, 'trips:components.trips.PublicTripDetail.poezdka_ne_naydena_9fc200e6'],
+    [400, 'trips:app.tabs.trips.plan.id.ne_udalos_zagruzit_poezdku_b321e113'],
+  ] as const)('renders the terminal HTTP %s message instead of the loading indicator', (status, key) => {
+    mockUsePlannedTrip.mockReturnValue({
+      data: undefined, isLoading: false, isError: true, error: new ApiError(status, 'Server error'),
+    });
+    const { getByText, UNSAFE_queryByType } = renderScreen();
+    expect(getByText(i18nT(key))).toBeTruthy();
+    expect(UNSAFE_queryByType(ActivityIndicator)).toBeNull();
+  });
 
   it('renders a routed success state without an approximate warning', () => {
     mockTrip(makeTrip());

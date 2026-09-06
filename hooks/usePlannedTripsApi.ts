@@ -41,7 +41,7 @@ import {
   type UpdateTripTransportInput,
   type UpdateRouteInput,
 } from '@/api/plannedTrips';
-import { ApiError, isTimeoutError } from '@/api/client';
+import { ApiError, isTimeoutError } from '@/api/clientErrors';
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 import {
@@ -52,11 +52,23 @@ import {
 
 const STALE_TIME = 5 * 60 * 1000;
 
-const isAuthError = (error: unknown): boolean =>
-  error instanceof ApiError && (error.status === 401 || error.status === 403);
-
-const retry = (failureCount: number, error: unknown): boolean =>
-  !isAuthError(error) && !isTimeoutError(error) && failureCount < 2;
+const retry = (failureCount: number, error: unknown): boolean => {
+  if (failureCount >= 2) return false;
+  if (error instanceof ApiError) {
+    // HTTP status wins over message text (e.g. a 408/504 mentioning timeout).
+    return error.status === 0 || error.status === 408 || (error.status >= 500 && error.status < 600);
+  }
+  if (!(error instanceof Error) || error.name === 'AbortError' || isTimeoutError(error)) return false;
+  // Unlike UI offline detection, retry must not classify every Error as network
+  // merely because navigator.onLine is false (normalization can fail too).
+  // fetchWithTimeout preserves the browser's original rejection as a cause.
+  const networkFailure = /failed to fetch|network request failed|network failed/i;
+  return [error, error.cause].some((candidate) => candidate instanceof Error && (
+    networkFailure.test(candidate.message)
+    || (candidate instanceof TypeError
+      && /^(Load failed|NetworkError when attempting to fetch resource\.?)$/i.test(candidate.message))
+  ));
+};
 
 // Пересчёт маршрута на бэке переписывает сводку без высот, поэтому кэш профиля
 // больше не относится к текущему маршруту.
