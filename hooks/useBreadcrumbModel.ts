@@ -1,11 +1,10 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 import { useGlobalSearchParams, useLocalSearchParams, usePathname } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { hashKey, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Article, Travel } from '@/types/types';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { hasListFilterQuery, needsGlobalBackAffordance } from '@/components/layout/topLevelSections';
-import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles';
 import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
 // #1552: крошки живут в шапке КАЖДОГО маршрута, поэтому статический импорт
@@ -223,6 +222,37 @@ function getTravelReturnContext(normalizedReturnTo: string, travelData: Travel |
   };
 }
 
+/**
+ * #1801: подписка на кэш travel-деталей БЕЗ создания наблюдателя запроса.
+ *
+ * `useQuery` на чужом ключе — это не только чтение: наблюдатель пишет свои
+ * опции в сам запрос и может первым запустить загрузку. Крошкам достаточно
+ * значения, поэтому подписка идёт напрямую на кэш.
+ */
+function useCachedTravelData(cacheKey: number | string | null): Travel | undefined {
+  const queryClient = useQueryClient();
+  const queryHash = useMemo(
+    () => (cacheKey != null ? hashKey(queryKeys.travel(cacheKey)) : null),
+    [cacheKey],
+  );
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      if (queryHash == null) return () => {};
+      return queryClient.getQueryCache().subscribe((event) => {
+        if (event.query.queryHash === queryHash) onStoreChange();
+      });
+    },
+    [queryClient, queryHash],
+  );
+  const getSnapshot = useCallback(
+    () => (queryHash == null
+      ? undefined
+      : queryClient.getQueryCache().get<Travel>(queryHash)?.state.data),
+    [queryClient, queryHash],
+  );
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
 export function useBreadcrumbModel(): BreadcrumbModel {
   const pathname = usePathname();
   const resolvedPathname = getResolvedPathname(pathname);
@@ -266,20 +296,20 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     return consumePreloadedTravel(travelSlug, isId, idNum, { consume: false });
   }, [travelSlug]);
 
-  const { data: travelData } = useQuery<Travel | null>({
-    queryKey: travelCacheKey != null ? queryKeys.travel(travelCacheKey) : queryKeys.travel('missing'),
-    queryFn: ({ signal }) => {
-      if (!travelSlug) return null;
-      const idNum = Number(travelSlug);
-      const isId = !Number.isNaN(idNum);
-      return isId ? fetchTravel(idNum, { signal }) : fetchTravelBySlug(travelSlug, { signal });
-    },
-    enabled: travelCacheKey != null,
-    initialData: initialTravelData,
-    initialDataUpdatedAt: initialTravelData ? Date.now() : undefined,
-    staleTime: 600_000,
-    gcTime: 10 * 60 * 1000,
-  });
+  // #1801: ключом `travel:<id|slug>` владеет экран деталей — он один умеет
+  // читать локальный офлайн-пакет (`networkMode: 'always'` + офлайн-ветка в
+  // `queryFn`). Крошки держали на ТОМ ЖЕ ключе второго наблюдателя со своим
+  // сетевым `queryFn` и дефолтным `networkMode: 'online'`. Шапка монтируется
+  // раньше содержимого маршрута, поэтому офлайн-переход стартовал загрузку
+  // именно её опциями: query-core парковал retryer в `fetchStatus: 'paused'`,
+  // а `queryFn` экрана деталей после этого не исполнялся уже никогда — страница
+  // висела на skeleton до возврата сети.
+  //
+  // Крошкам данные нужны только ради подписи, поэтому здесь остаётся ЧТЕНИЕ
+  // кэша без собственного наблюдателя: своих опций у ключа больше нет, а
+  // заголовок появляется ровно тогда, когда экран деталей положил данные.
+  const cachedTravel = useCachedTravelData(travelCacheKey);
+  const travelData = cachedTravel ?? initialTravelData ?? null;
 
   // Quest title from API (for breadcrumbs on quest detail pages)
   const questSlugForBreadcrumb = useMemo(() => {

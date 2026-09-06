@@ -4,6 +4,7 @@ import React from 'react';
 import { Platform } from 'react-native';
 
 import { useBreadcrumbModel } from '@/hooks/useBreadcrumbModel';
+import { queryKeys } from '@/queryKeys';
 
 jest.mock('expo-router', () => ({
   usePathname: jest.fn(),
@@ -48,24 +49,30 @@ describe('useBreadcrumbModel', () => {
     fetchPublicTrip: jest.Mock;
   };
 
-  const wrapper = ({ children }: { children: React.ReactNode }) => {
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 0 } },
-    });
-    return React.createElement(QueryClientProvider, { client: queryClient }, children);
-  };
+  // #1801: клиент обязан пережить перерендеры — крошки больше не владеют
+  // загрузкой travel-ключа и читают то, что в кэш положил экран деталей.
+  let queryClient: QueryClient;
+
+  const wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children);
 
   beforeEach(() => {
     jest.clearAllMocks();
     (global as any).window = undefined;
     (Platform.OS as any) = 'ios';
+    // gcTime по умолчанию: у travel-ключа больше нет собственного наблюдателя от
+    // крошек, а при `gcTime: 0` посеянные данные вычищались бы до чтения.
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
   });
 
   it('should build breadcrumbs and backToPath from returnTo on travel details', async () => {
     usePathname.mockReturnValue('/travels/test-slug');
     useLocalSearchParams.mockReturnValue({ returnTo: '/metravel' });
 
-    fetchTravelBySlug.mockResolvedValue({ name: 'Длинное описание' });
+    // Данные ключа кладёт экран деталей; крошка их только читает.
+    queryClient.setQueryData(queryKeys.travel('test-slug'), { name: 'Длинное описание' });
 
     const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
 
@@ -79,6 +86,7 @@ describe('useBreadcrumbModel', () => {
       { label: 'Мои путешествия', path: '/metravel' },
       { label: 'Длинное описание', path: '/travels/test-slug' },
     ]);
+    expect(fetchTravelBySlug).not.toHaveBeenCalled();
   });
 
   it('uses static travel preload for travel breadcrumbs without fetching by slug', async () => {
@@ -115,7 +123,10 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/travels/croatia-slug');
     useLocalSearchParams.mockReturnValue({ returnTo: '/travelsby' });
 
-    fetchTravelBySlug.mockResolvedValue({ name: 'Маршрут по Велебиту', countryName: 'Хорватия' });
+    queryClient.setQueryData(queryKeys.travel('croatia-slug'), {
+      name: 'Маршрут по Велебиту',
+      countryName: 'Хорватия',
+    });
 
     const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
 
@@ -129,6 +140,7 @@ describe('useBreadcrumbModel', () => {
       { label: 'Хорватия', path: '/search' },
       { label: 'Маршрут по Велебиту', path: '/travels/croatia-slug' },
     ]);
+    expect(fetchTravelBySlug).not.toHaveBeenCalled();
   });
 
   it.each([
