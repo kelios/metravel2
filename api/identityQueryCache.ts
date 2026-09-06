@@ -8,27 +8,36 @@ import type { Query, QueryClient } from '@tanstack/react-query'
  * ключей не может быть единственной защитой: любой новый ключ без владельца
  * снова открыл бы личные данные следующему вошедшему. Сброс закрывает класс
  * целиком и не зависит от этой полноты, поэтому он умышленно устроен от
- * запрета: сносится всё, кроме явных исключений. Лишний сброс публичных данных
- * стоит одного запроса, пропущенный личный ключ — утечки.
+ * запрета: сносится всё, кроме единственного исключения. Лишний сброс
+ * публичных данных стоит одного запроса, пропущенный личный ключ — утечки.
  *
- * Единственное исключение — каталог квестов: у него уже есть собственный
- * механизм смены личности (`api/questsCatalogInvalidation.ts`), который держит
- * публичную часть списка на экране и снимает с неё только личные поля. Снос
- * каталога отсюда сломал бы его и вернул пустой экран на время запроса.
+ * Исключение ровно одно и ровно точное — сам каталог квестов `['quests']`. У
+ * него есть собственный механизм смены личности
+ * (`api/questsCatalogInvalidation.ts`), который держит публичную часть списка на
+ * экране и снимает с неё личные поля; снос каталога отсюда сломал бы его и
+ * вернул пустой экран на время запроса. Срезы под тем же корнем
+ * (`questsPreview`, `questsCompactCatalog`, `questProgressAll`) под этот
+ * механизм НЕ попадают — `catalogFilter` в нём `exact: true`, — а личные поля
+ * `is_completed_by_me`/`user_rating` в них лежат. Поэтому исключение сверяет всю
+ * форму ключа, а не только его корень.
  */
-const IDENTITY_EXEMPT_KEY_ROOTS = new Set<string>(['quests'])
+const QUESTS_CATALOG_KEY_ROOT = 'quests'
 
-const isDroppedOnIdentityChange = (query: Query): boolean => {
-  const root = Array.isArray(query.queryKey) ? query.queryKey[0] : query.queryKey
-  return !(typeof root === 'string' && IDENTITY_EXEMPT_KEY_ROOTS.has(root))
-}
+/** Что переживает смену владельца сессии. Экспортировано ради проверки состава. */
+export const survivesIdentityChange = (queryKey: unknown): boolean =>
+  Array.isArray(queryKey) && queryKey.length === 1 && queryKey[0] === QUESTS_CATALOG_KEY_ROOT
+
+const isDroppedOnIdentityChange = (query: Query): boolean => !survivesIdentityChange(query.queryKey)
 
 /**
  * Второй проход после `credentialsReady` закрывает гонку выхода: запрос,
  * стартовавший до сброса, мог долететь ещё со старой сессией и заново положить
  * в кэш данные ушедшего пользователя. Он выполняется только если личность с
  * момента сброса не сменилась снова — иначе он снёс бы данные уже нового
- * вошедшего.
+ * вошедшего. Оставшееся окно (ответ старой сессии лёг в кэш, и следующий
+ * пользователь вошёл раньше, чем закрылась предыдущая сессия) закрывает сам
+ * вызывающий: вход тоже считается сменой владельца, если в этом процессе уже
+ * был вошедший пользователь.
  */
 export function dropQueryCacheForIdentityChange(
   client: QueryClient,
@@ -43,6 +52,3 @@ export function dropQueryCacheForIdentityChange(
     client.removeQueries(filter)
   })
 }
-
-/** Только для тестов и governance-проверок: что переживает смену владельца. */
-export const identityExemptKeyRoots = (): readonly string[] => [...IDENTITY_EXEMPT_KEY_ROOTS]

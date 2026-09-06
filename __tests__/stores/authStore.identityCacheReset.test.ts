@@ -7,6 +7,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/api/queryKeys'
 import { setActiveQueryClient } from '@/api/activeQueryClient'
+import { survivesIdentityChange } from '@/api/identityQueryCache'
 
 jest.mock('@/api/quests', () => ({ fetchQuestsList: jest.fn() }))
 jest.mock('@/api/auth', () => ({
@@ -135,6 +136,48 @@ describe('#1829 смена владельца сессии сбрасывает 
     useAuthStore.getState().applyConfirmedAccountSession({ userId: 'B' })
 
     expect(client.getQueryData(queryKeys.quests())).toEqual([{ quest_id: 'q', title: 'Quest' }])
+  })
+
+  // Механизм каталога бьёт по ТОЧНОМУ ключу ['quests'] (`catalogFilter` там
+  // `exact: true`), поэтому срезы под тем же корнем он не чистит — а личные поля
+  // `is_completed_by_me`/`user_rating` в них лежат. Под исключение они попадать
+  // не имеют права.
+  it('срезы под корнем quests исключением не прикрыты', async () => {
+    useAuthStore.getState().applyConfirmedAccountSession({ userId: 'A' })
+    await tick()
+    const personal = [{ quest_id: 'q', title: 'Quest', is_completed_by_me: true, user_rating: 5 }]
+    client.setQueryData(queryKeys.questsPreview(2), personal)
+    client.setQueryData(queryKeys.questsCompactCatalog('A'), personal)
+    client.setQueryData(queryKeys.questProgressAll('A'), { q: 'done' })
+
+    useAuthStore.getState().applyConfirmedAccountSession({ userId: 'B' })
+
+    expect({
+      preview: client.getQueryData(queryKeys.questsPreview(2)),
+      compact: client.getQueryData(queryKeys.questsCompactCatalog('A')),
+      progress: client.getQueryData(queryKeys.questProgressAll('A')),
+    }).toEqual({ preview: undefined, compact: undefined, progress: undefined })
+  })
+
+  it('исключение — ровно один точный ключ, а не префикс', () => {
+    expect(survivesIdentityChange(queryKeys.quests())).toBe(true)
+    expect(survivesIdentityChange(queryKeys.questsPreview(2))).toBe(false)
+    expect(survivesIdentityChange(queryKeys.questsCompactCatalog('A'))).toBe(false)
+    expect(survivesIdentityChange(queryKeys.privacySettings())).toBe(false)
+  })
+
+  // Между сбросом на выходе и входом следующего ответ старой сессии мог лечь в
+  // кэш: вход обязан сбросить его, а не унаследовать.
+  it('вход следующего пользователя сбрасывает то, что легло после выхода', async () => {
+    useAuthStore.getState().applyConfirmedAccountSession({ userId: 'A' })
+    await tick()
+    useAuthStore.getState().invalidateAuthState()
+    await tick()
+    client.setQueryData(queryKeys.privacySettings(), { matrix: 'A' })
+
+    useAuthStore.getState().applyConfirmedAccountSession({ userId: 'B' })
+
+    expect(client.getQueryData(queryKeys.privacySettings())).toBeUndefined()
   })
 
   it('ответ, долетевший со старой сессией после сброса, снимается вторым проходом', async () => {

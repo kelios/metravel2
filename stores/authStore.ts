@@ -117,6 +117,9 @@ export type { AuthState, AuthStore } from '@/stores/authState';
 let authEpoch = 0;
 let logoutCredentialsReady: Promise<void> | undefined;
 let catalogIdentityVersion = 0;
+// #1829: был ли в этом процессе вошедший пользователь. Отличает холодный старт
+// (сбрасывать нечего) от входа следующего пользователя после чужого выхода.
+let sessionHadIdentity = false;
 
 export const useAuthStore = create<AuthStore>((set, get) => {
     // Общий финиш нативного социального входа (Google/Facebook/Apple): токены в
@@ -627,15 +630,22 @@ useAuthStore.subscribe((state, previous) => {
     // запросы на повторную загрузку, и каталог квестов не должен уехать за
     // данными раньше, чем сессия действительно закрыта.
     void refreshQuestsCatalogIdentity(client, isCurrentIdentity, credentialsReady);
-    // #1829: чужой кэш не переживает смену владельца сессии. Холодный старт
-    // (null → пользователь) сбросом не задет: там сбрасывать нечего, а
-    // восстановленный офлайн-персист (`utils/queryPersist.ts`) он бы снёс.
-    if (previousIdentity !== null) {
+    // #1829: чужой кэш не переживает смену владельца сессии. Вход тоже считается
+    // сменой, если в этом процессе уже был вошедший пользователь: между сбросом
+    // на выходе и входом следующего в кэш мог лечь ответ, стартовавший ещё со
+    // старой сессией, и второй проход сброса его не снимет, если к тому моменту
+    // личность сменилась. Холодный старт (первый вход в процессе) сбросом не
+    // задет: там сбрасывать нечего, а восстановленный офлайн-персист
+    // (`utils/queryPersist.ts`) он бы снёс и заставил перезапросить всё.
+    const hadOwnerBefore = previousIdentity !== null || sessionHadIdentity;
+    if (identity !== null) sessionHadIdentity = true;
+    if (hadOwnerBefore) {
         void dropQueryCacheForIdentityChange(client, isCurrentIdentity, credentialsReady);
     }
 });
 
 export const resetAuthStoreForTests = () => {
     authEpoch = 0;
+    sessionHadIdentity = false;
     useAuthStore.setState(INITIAL_AUTH_STATE);
 };
