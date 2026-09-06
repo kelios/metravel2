@@ -22,6 +22,7 @@ import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit';
 import { useQuestReviewPrompt } from '@/hooks/useQuestReviewPrompt';
 import QuestReviewPromptBanner from '@/components/quests/QuestReviewPromptBanner';
 import QuestsContentPanel from './QuestsContentPanel';
+import { useQuestPersonalSlices } from './useQuestPersonalSlices';
 import QuestsSidebar from './QuestsSidebar';
 import { getQuestFaqItems } from './QuestsSeoIntroFaq';
 import type { QuestMeta } from './questsShared';
@@ -36,6 +37,8 @@ import {
     KIDS_FILTER_ID,
     BIKE_FILTER_ID,
     REVIEWED_FILTER_ID,
+    COMPLETED_FILTER_ID,
+    UNCOMPLETED_FILTER_ID,
     filterReviewedQuests,
     buildQuestCityCatalog,
     filterBikeQuests,
@@ -90,6 +93,9 @@ export default function QuestsScreen() {
     const { quests: ALL_QUESTS, loading: questsLoading, error: questsError } = useQuestsList();
     const dataLoaded = !questsLoading;
     const reviewedQuests = useMemo(() => filterReviewedQuests(ALL_QUESTS), [ALL_QUESTS]);
+    // Личные срезы «Пройденные»/«Не пройденные» (#1791) — один связный концерн
+    // со своей авторизационной границей, поэтому он живёт отдельным хуком.
+    const personalSlices = useQuestPersonalSlices(ALL_QUESTS);
     const cityCatalog = useMemo(
         () => buildQuestCityCatalog<QuestMeta>(ALL_QUESTS),
         [ALL_QUESTS],
@@ -205,7 +211,8 @@ export default function QuestsScreen() {
             return;
         }
         const validIds = new Set(CITIES.map((c) => c.id));
-        const isValid = selectedCityId === ALL_QUESTS_ID
+        const isValid = personalSlices.isSelectionValid(selectedCityId)
+            || selectedCityId === ALL_QUESTS_ID
             || selectedCityId === NEARBY_ID
             || selectedCityId === KIDS_FILTER_ID
             || selectedCityId === BIKE_FILTER_ID
@@ -214,7 +221,7 @@ export default function QuestsScreen() {
         if (isValid) return;
         setSelectedCityId(ALL_QUESTS_ID);
         void AsyncStorage.setItem(STORAGE_SELECTED_CITY, ALL_QUESTS_ID);
-    }, [CITIES, cityCatalog.canonicalCityIdById, dataLoaded, questsError, selectedCityId, reviewedQuests.length]);
+    }, [CITIES, cityCatalog.canonicalCityIdById, dataLoaded, questsError, selectedCityId, reviewedQuests.length, personalSlices]);
 
     // Один владелец location-запроса: выбор «Рядом» и открытие карты не должны
     // запускать параллельные permission/current-position вызовы.
@@ -307,8 +314,9 @@ export default function QuestsScreen() {
         counts[KIDS_FILTER_ID] = kidsQuests.length;
         counts[BIKE_FILTER_ID] = bikeQuests.length;
         counts[REVIEWED_FILTER_ID] = reviewedQuests.length;
+        Object.assign(counts, personalSlices.counts);
         return counts;
-    }, [CITIES, nearbyCount, cityQuests, kidsQuests.length, bikeQuests.length, reviewedQuests.length]);
+    }, [CITIES, nearbyCount, cityQuests, kidsQuests.length, bikeQuests.length, reviewedQuests.length, personalSlices]);
 
     // Group cities by country
     const citiesByCountry = useMemo(() => {
@@ -405,6 +413,8 @@ export default function QuestsScreen() {
         if (selectedCityId === REVIEWED_FILTER_ID) {
             return reviewedQuests.map((q) => ({ ...q }));
         }
+        const personalSlice = personalSlices.sliceFor(selectedCityId);
+        if (personalSlice) return personalSlice.map((q) => ({ ...q }));
         if (selectedCityId === NEARBY_ID) {
             return filterNearbyQuests(ALL_QUESTS, userLoc, nearbyRadiusKm);
         }
@@ -421,6 +431,7 @@ export default function QuestsScreen() {
         kidsQuests,
         bikeQuests,
         reviewedQuests,
+        personalSlices,
     ]);
 
     // «Популярные» — тот же порядок, которым бэкенд отвечает на `?sort=popular`
@@ -490,7 +501,10 @@ export default function QuestsScreen() {
     }, [dataLoaded, selectedCityId, questsAll, searchTerm]);
 
     const mapCenter = useMemo(() => {
-        const virtualFilterCenter = selectedCityId === KIDS_FILTER_ID || selectedCityId === BIKE_FILTER_ID || selectedCityId === REVIEWED_FILTER_ID
+        const virtualFilterCenter = selectedCityId === KIDS_FILTER_ID
+            || selectedCityId === BIKE_FILTER_ID
+            || selectedCityId === REVIEWED_FILTER_ID
+            || personalSlices.isPersonalSliceId(selectedCityId)
             ? getAverageQuestMapPointCenter(mapPoints)
             : null;
         const selectedCity = virtualFilterCenter
@@ -503,7 +517,7 @@ export default function QuestsScreen() {
             userLoc,
             selectedCity,
         });
-    }, [CITIES, mapPoints, searchTerm, selectedCityId, userLoc, activeMapAreaCenter]);
+    }, [CITIES, mapPoints, searchTerm, selectedCityId, userLoc, activeMapAreaCenter, personalSlices]);
 
     const handleMapUserLocationChange = useCallback((loc: { latitude: number; longitude: number } | null) => {
         if (!loc) return;
@@ -575,6 +589,12 @@ export default function QuestsScreen() {
         }
         if (selectedCityId === REVIEWED_FILTER_ID) {
             return i18nT('quests:screens.tabs.QuestsScreen.reviewedSeoTitle');
+        }
+        if (selectedCityId === COMPLETED_FILTER_ID) {
+            return i18nT('quests:screens.tabs.QuestsScreen.completedSeoTitle');
+        }
+        if (selectedCityId === UNCOMPLETED_FILTER_ID) {
+            return i18nT('quests:screens.tabs.QuestsScreen.uncompletedSeoTitle');
         }
         // #1618: the unfiltered catalog (selectedCityId === ALL_QUESTS_ID, the
         // initial state) must match scripts/generate-seo-pages.js's static
@@ -684,6 +704,8 @@ export default function QuestsScreen() {
                             nearbyId={NEARBY_ID}
                             kidsFilterId={KIDS_FILTER_ID}
                             bikeFilterId={BIKE_FILTER_ID}
+                            showCompletedFilter={personalSlices.showCompletedFilter}
+                            showUncompletedFilter={personalSlices.showUncompletedFilter}
                             areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
                             collapsedCountryCodes={collapsedCountryCodes}
                             citiesByCountry={citiesByCountry}
@@ -714,6 +736,8 @@ export default function QuestsScreen() {
                         nearbyId={NEARBY_ID}
                         kidsFilterId={KIDS_FILTER_ID}
                         bikeFilterId={BIKE_FILTER_ID}
+                        showCompletedFilter={personalSlices.showCompletedFilter}
+                        showUncompletedFilter={personalSlices.showUncompletedFilter}
                         areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
                         collapsedCountryCodes={collapsedCountryCodes}
                         citiesByCountry={citiesByCountry}

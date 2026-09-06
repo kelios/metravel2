@@ -20,7 +20,7 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import type { MapMovePayload } from '@/components/MapPage/Map/types';
 
 import QuestCard from './QuestCard';
-import { REVIEWED_FILTER_ID } from './QuestsScreen.helpers';
+import { COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID } from './QuestsScreen.helpers';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
 import { pluralizeQuest, type QuestMeta } from './questsShared';
 import { translate as i18nT } from '@/i18n'
@@ -208,9 +208,13 @@ export default function QuestsContentPanel({
                                             ? i18nT('quests:screens.tabs.QuestsContentPanel.veloTitle')
                                             : selectedCityId === REVIEWED_FILTER_ID
                                                 ? i18nT('quests:screens.tabs.QuestsScreen.reviewedTitle')
-                                                : selectedCityName
-                                                    ? i18nT('quests:screens.tabs.QuestsContentPanel.locationTitle', { value1: selectedCityName })
-                                                    : i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
+                                                : selectedCityId === COMPLETED_FILTER_ID
+                                                    ? i18nT('quests:screens.tabs.QuestsContentPanel.completedTitle')
+                                                    : selectedCityId === UNCOMPLETED_FILTER_ID
+                                                        ? i18nT('quests:screens.tabs.QuestsContentPanel.uncompletedTitle')
+                                                        : selectedCityName
+                                                            ? i18nT('quests:screens.tabs.QuestsContentPanel.locationTitle', { value1: selectedCityName })
+                                                            : i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
                     </Text>
                     <View style={styles.contentCountRow}>
                         {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
@@ -354,6 +358,27 @@ export default function QuestsContentPanel({
             </View>
         </View>
     );
+
+    // «Пройденные» — единственный срез, который может оказаться пустым при
+    // живом фильтре: он показывается любому вошедшему игроку, в том числе тому,
+    // кто ещё ничего не прошёл. Пустая сетка без объяснения выглядела бы как
+    // сломанный каталог, поэтому здесь явное состояние с выходом обратно.
+    const completedEmptyState = !searchActive
+        && !isMapAreaActive
+        && selectedCityId === COMPLETED_FILTER_ID
+        && dataLoaded ? (
+            <EmptyState
+                icon="check-circle"
+                title={i18nT('quests:screens.tabs.QuestsContentPanel.completedEmptyTitle')}
+                description={i18nT('quests:screens.tabs.QuestsContentPanel.completedEmptyDescription')}
+                variant="empty"
+                iconSize={48}
+                action={{
+                    label: i18nT('quests:screens.tabs.QuestsContentPanel.completedEmptyAction'),
+                    onPress: onResetFilters,
+                }}
+            />
+        ) : null;
 
     const geoMessageBlock = geoMessage ? (
         <View style={styles.nearbyCtaBlock}>
@@ -511,6 +536,8 @@ export default function QuestsContentPanel({
                             />
                         )}
 
+                        {questsAll.length === 0 && completedEmptyState}
+
                         {!dataLoaded && (
                             <View style={styles.skeletonGrid}>
                                 {Array.from({ length: isMobile ? 2 : 4 }).map((_, i) => (
@@ -595,6 +622,8 @@ export default function QuestsContentPanel({
                     iconSize={48}
                 />
             )}
+
+            {completedEmptyState}
 
             {!dataLoaded && (
                 <View style={styles.skeletonGrid}>

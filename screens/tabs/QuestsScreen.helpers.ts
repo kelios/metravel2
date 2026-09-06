@@ -92,9 +92,27 @@ export const ALL_QUESTS_ID = '__all__';
 export const NEARBY_ID = '__nearby__';
 export const KIDS_FILTER_ID = '__kids__';
 export const REVIEWED_FILTER_ID = '__reviewed__';
+// Личные срезы каталога: «что я уже прошёл» и «что ещё не проходил». Оба
+// существуют только для вошедшего игрока — у гостя `is_completed_by_me`
+// приходит `false` на каждом квесте, поэтому «Пройденные» гарантированно
+// пусты, а «Не пройденные» дословно повторяют весь каталог.
+export const COMPLETED_FILTER_ID = '__completed__';
+export const UNCOMPLETED_FILTER_ID = '__uncompleted__';
 
 export function filterReviewedQuests<T extends { ratingCount: number }>(quests: T[]): T[] {
     return quests.filter((quest) => quest.ratingCount > 0);
+}
+
+/**
+ * Срез каталога по личному статусу прохождения. Флаг приходит в каждом
+ * элементе `/quests/` (`is_completed_by_me` → `isCompletedByMe`), поэтому
+ * отдельного запроса срез не стоит.
+ */
+export function filterQuestsByCompletion<T extends { isCompletedByMe?: boolean }>(
+    quests: T[],
+    completed: boolean,
+): T[] {
+    return quests.filter((quest) => Boolean(quest.isCompletedByMe) === completed);
 }
 
 /**

@@ -9,7 +9,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 
 import type { City, NearbyCity } from './questsShared';
 import { pluralizeQuest } from './questsShared';
-import { REVIEWED_FILTER_ID } from './QuestsScreen.helpers';
+import { COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID } from './QuestsScreen.helpers';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -107,6 +107,61 @@ function SidebarActionButton({
     );
 }
 
+type SidebarFilterRowProps = {
+    styles: any;
+    colors: ThemedColors;
+    iconSize: number;
+    icon: React.ComponentProps<typeof Feather>['name'];
+    label: string;
+    count: number;
+    active: boolean;
+    onPress: () => void;
+    accessibilityLabel: string;
+    testID: string;
+};
+
+// Виртуальный срез каталога в списке городов: та же строка, что и город, но с
+// собственной иконкой. Отдельным компонентом — потому что таких срезов уже
+// три (отзывы, пройденные, не пройденные), и порознь они разъезжались бы в
+// разметке и состояниях.
+function SidebarFilterRow({
+    styles,
+    colors,
+    iconSize,
+    icon,
+    label,
+    count,
+    active,
+    onPress,
+    accessibilityLabel,
+    testID,
+}: SidebarFilterRowProps) {
+    return (
+        <Pressable
+            onPress={onPress}
+            style={[styles.cityItem, active && styles.cityItemActive]}
+            accessibilityRole="button"
+            accessibilityLabel={accessibilityLabel}
+            accessibilityState={{ selected: active }}
+            testID={testID}
+        >
+            <View style={styles.cityItemLeft}>
+                <View style={[styles.cityItemIcon, active && styles.cityItemIconActive]}>
+                    <Feather name={icon} size={iconSize} color={active ? colors.textOnPrimary : colors.textMuted} />
+                </View>
+                <Text style={[styles.cityItemText, active && styles.cityItemTextActive]}>
+                    {label}
+                </Text>
+            </View>
+            <View style={[styles.cityItemCount, active && styles.cityItemCountActive]}>
+                <Text style={[styles.cityItemCountText, active && styles.cityItemCountTextActive]}>
+                    {count}
+                </Text>
+            </View>
+        </Pressable>
+    );
+}
+
 type CountryGroup = {
     code: string;
     name: string;
@@ -123,6 +178,9 @@ type QuestsSidebarProps = {
     nearbyId: string;
     kidsFilterId: string;
     bikeFilterId: string;
+    /** Личные срезы каталога показываются только вошедшему игроку (#1791). */
+    showCompletedFilter?: boolean;
+    showUncompletedFilter?: boolean;
     areAllCountryGroupsCollapsed: boolean;
     collapsedCountryCodes: Record<string, boolean>;
     citiesByCountry: CountryGroup[];
@@ -145,6 +203,8 @@ export default function QuestsSidebar({
     nearbyId,
     kidsFilterId,
     bikeFilterId,
+    showCompletedFilter = false,
+    showUncompletedFilter = false,
     areAllCountryGroupsCollapsed,
     collapsedCountryCodes,
     citiesByCountry,
@@ -164,6 +224,10 @@ export default function QuestsSidebar({
     const isBikeSelected = selectedCityId === bikeFilterId;
     const reviewedQuestCount = cityQuestCountById[REVIEWED_FILTER_ID] || 0;
     const isReviewedSelected = selectedCityId === REVIEWED_FILTER_ID;
+    const completedQuestCount = cityQuestCountById[COMPLETED_FILTER_ID] || 0;
+    const uncompletedQuestCount = cityQuestCountById[UNCOMPLETED_FILTER_ID] || 0;
+    const isCompletedSelected = selectedCityId === COMPLETED_FILTER_ID;
+    const isUncompletedSelected = selectedCityId === UNCOMPLETED_FILTER_ID;
     const mapActionActive = viewMode === 'map';
     const mapActionLabel = viewMode === 'map' ? i18nT('quests:screens.tabs.QuestsSidebar.pokazat_kvesty_spiskom_0029a3b3') : i18nT('quests:screens.tabs.QuestsSidebar.pokazat_kvesty_na_karte_d06a6df4');
     const toggleAllLabel = areAllCountryGroupsCollapsed ? i18nT('quests:screens.tabs.QuestsSidebar.razvernut_vse_strany_58a7fc2c') : i18nT('quests:screens.tabs.QuestsSidebar.svernut_vse_strany_ee35b08d');
@@ -264,28 +328,46 @@ export default function QuestsSidebar({
                 showsVerticalScrollIndicator
             >
                 {reviewedQuestCount > 0 && (
-                    <Pressable
+                    <SidebarFilterRow
+                        styles={styles}
+                        colors={colors}
+                        iconSize={iconSize}
+                        icon="message-circle"
+                        label={i18nT('quests:screens.tabs.QuestsSidebar.reviewedLabel')}
+                        count={reviewedQuestCount}
+                        active={isReviewedSelected}
                         onPress={() => onSelectCity(REVIEWED_FILTER_ID)}
-                        style={[styles.cityItem, isReviewedSelected && styles.cityItemActive]}
-                        accessibilityRole="button"
                         accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.reviewedA11y', { value1: pluralizeQuest(reviewedQuestCount) })}
-                        accessibilityState={{ selected: isReviewedSelected }}
                         testID="quests-sidebar-reviewed-button"
-                    >
-                        <View style={styles.cityItemLeft}>
-                            <View style={[styles.cityItemIcon, isReviewedSelected && styles.cityItemIconActive]}>
-                                <Feather name="message-circle" size={iconSize} color={isReviewedSelected ? colors.textOnPrimary : colors.textMuted} />
-                            </View>
-                            <Text style={[styles.cityItemText, isReviewedSelected && styles.cityItemTextActive]}>
-                                {i18nT('quests:screens.tabs.QuestsSidebar.reviewedLabel')}
-                            </Text>
-                        </View>
-                        <View style={[styles.cityItemCount, isReviewedSelected && styles.cityItemCountActive]}>
-                            <Text style={[styles.cityItemCountText, isReviewedSelected && styles.cityItemCountTextActive]}>
-                                {reviewedQuestCount}
-                            </Text>
-                        </View>
-                    </Pressable>
+                    />
+                )}
+                {showCompletedFilter && (
+                    <SidebarFilterRow
+                        styles={styles}
+                        colors={colors}
+                        iconSize={iconSize}
+                        icon="check-circle"
+                        label={i18nT('quests:screens.tabs.QuestsSidebar.completedLabel')}
+                        count={completedQuestCount}
+                        active={isCompletedSelected}
+                        onPress={() => onSelectCity(COMPLETED_FILTER_ID)}
+                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.completedA11y', { value1: pluralizeQuest(completedQuestCount) })}
+                        testID="quests-sidebar-completed-button"
+                    />
+                )}
+                {showUncompletedFilter && (
+                    <SidebarFilterRow
+                        styles={styles}
+                        colors={colors}
+                        iconSize={iconSize}
+                        icon="circle"
+                        label={i18nT('quests:screens.tabs.QuestsSidebar.uncompletedLabel')}
+                        count={uncompletedQuestCount}
+                        active={isUncompletedSelected}
+                        onPress={() => onSelectCity(UNCOMPLETED_FILTER_ID)}
+                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.uncompletedA11y', { value1: pluralizeQuest(uncompletedQuestCount) })}
+                        testID="quests-sidebar-uncompleted-button"
+                    />
                 )}
                 {citiesByCountry.map((group) => {
                     const isCollapsed = collapsedCountryCodes[group.code] ?? false;

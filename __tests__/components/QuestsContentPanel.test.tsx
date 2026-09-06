@@ -179,6 +179,52 @@ describe('QuestsContentPanel', () => {
         });
     });
 
+    /**
+     * #1791: «Пройденные» видит любой вошедший игрок, в том числе тот, кто
+     * ещё ничего не прошёл, — пустая сетка без объяснения читалась бы как
+     * сломанный каталог.
+     */
+    it('explains an empty personal slice and offers the way back to the catalog', () => {
+        const onResetFilters = jest.fn();
+        const { getByText } = render(
+            <QuestsContentPanel
+                {...makeBaseProps()}
+                selectedCityId="__completed__"
+                selectedCityName={null}
+                questsAll={[]}
+                onResetFilters={onResetFilters}
+            />,
+        );
+
+        expect(getByText('Пройденные квесты')).toBeTruthy();
+        expect(getByText('Вы ещё не прошли ни одного квеста')).toBeTruthy();
+        fireEvent.press(getByText('Выбрать первый квест'));
+        expect(onResetFilters).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the empty-slice explanation away from a slice that has results', () => {
+        const { queryByText, getByTestId, rerender } = render(
+            <QuestsContentPanel {...makeBaseProps()} selectedCityId="__completed__" selectedCityName={null} />,
+        );
+
+        expect(getByTestId('quests-content-title').props.children).toBe('Пройденные квесты');
+        expect(queryByText('Вы ещё не прошли ни одного квеста')).toBeNull();
+
+        // Пустой срез «Не пройденные» — не тот же случай: объяснение про
+        // «ни одного квеста» там было бы ложью, поэтому оно к нему не липнет.
+        rerender(
+            <QuestsContentPanel
+                {...makeBaseProps()}
+                selectedCityId="__uncompleted__"
+                selectedCityName={null}
+                questsAll={[]}
+            />,
+        );
+
+        expect(getByTestId('quests-content-title').props.children).toBe('Ещё не пройденные');
+        expect(queryByText('Вы ещё не прошли ни одного квеста')).toBeNull();
+    });
+
     it('names the reviews slice without treating it as a city', () => {
         const { getByTestId } = render(
             <QuestsContentPanel {...makeBaseProps()} selectedCityId="__reviewed__" selectedCityName={null} />,
