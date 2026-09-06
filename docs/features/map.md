@@ -185,10 +185,7 @@ invariants` в `__tests__/components/map-core/leafletWebViewHtml.test.ts`.
 Позиция пользователя на Android следует атомарному визуальному контракту:
 
 - явный trusted target одной WebView-командой сначала создаёт accuracy-круг и
-  общий с mobile web GPS-маркер (размер и цвет — `USER_LOCATION_MARKER_SIZE` /
-  `USER_LOCATION_MARKER_COLOR` в `mapMarkerStyles.ts`, #1780: синяя точка в белом
-  кольце, намеренно не бренд-оранжевая, чтобы «я» не путалось с POI-пином), а
-  затем центрирует карту по той же координате;
+  общий 30px GPS-маркер, а затем центрирует карту по той же координате;
 - user-location pane находится выше POI/cluster `markerPane`, но ниже tooltip и
   popup, поэтому «Вы здесь» не скрывается маркерами и не перекрывает подсказки;
 - сам GPS-маркер не перехватывает события, поэтому совпадающие POI/кластеры

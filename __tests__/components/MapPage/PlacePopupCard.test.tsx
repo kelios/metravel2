@@ -833,9 +833,10 @@ describe('PlacePopupCard', () => {
     const stack = findRelatedTravelStack(tree);
     expect(stack).toBeTruthy();
     // Подпись статуса остаётся видимой — на скрим она переехала целиком, а не
-    // выродилась в иконку без текста.
+    // выродилась в иконку без текста (`compact` на мобильном прячет текст).
+    // Сам лейбл — контракт RelatedTravelActionStack, он закрыт его собственным
+    // тестом; здесь проверяем только что вариант не подменили на compact.
     expect(stack.props.variant).toBe('inline');
-    expect(JSON.stringify(tree.toJSON())).toContain('Был / Хочу / Планирую');
 
     // ♥/статус живут внутри подписи героя (absolute, прижата к низу фото),
     // а не отдельным рядом в потоке карточки.
