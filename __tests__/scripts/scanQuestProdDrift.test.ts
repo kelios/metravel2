@@ -113,13 +113,13 @@ describe('isMissingOnProd', () => {
 })
 
 describe('reportText', () => {
-  const capture = (rows: unknown[], files: number) => {
+  const capture = (rows: unknown[], files: number, compared?: number) => {
     const lines: string[] = []
     const spy = jest.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
       lines.push(args.join(' '))
     })
     try {
-      reportText(rows, files)
+      reportText(rows, files, compared)
     } finally {
       spy.mockRestore()
     }
@@ -130,12 +130,13 @@ describe('reportText', () => {
     const out = capture(
       [{ file: 'scripts/ozero-glubokoe-quest-data.js', quest_id: 'ozero-glubokoe-crystal', missingOnProd: true, drifted: false }],
       130,
+      178,
     )
 
     expect(out).toContain('Сравнивать не с чем — на проде нет квеста с таким слагом: 1')
     expect(out).toContain('scripts/ozero-glubokoe-quest-data.js [ozero-glubokoe-crystal]')
     // Он не расхождение полей и не расхождение состава шагов — обе сводки о нём молчат.
-    expect(out).toContain('Расхождений с продом нет.')
+    expect(out).toContain('Расхождений с продом нет')
     expect(out).not.toContain('Разошёлся состав шагов')
   })
 
@@ -156,10 +157,27 @@ describe('reportText', () => {
         },
       ],
       130,
+      1,
     )
 
     expect(out).toContain('Сравнивать не с чем — на проде нет квеста с таким слагом: 1')
     expect(out).toContain('Разошлись с продом: 1 квестов, 1 шагов')
+  })
+
+  it('печатает охват рядом с вердиктом: «чисто» после одного сравнения не зелёное', () => {
+    // Находка гейта #1811: частичный охват (свой бэкенд с парой засеянных
+    // квестов, отставший прод) вердикт не валит, поэтому число сравнённых
+    // обязано стоять в той же строке, а не теряться выше по отчёту.
+    const missingRows = Array.from({ length: 178 }, (_, i) => ({
+      file: `scripts/q${i}-quest-data.js`,
+      quest_id: `q${i}`,
+      missingOnProd: true,
+      drifted: false,
+    }))
+
+    expect(capture(missingRows, 179, 1)).toContain('Расхождений с продом нет (сравнено 1 из 179 квестов).')
+    // Полный охват без пропусков читается как раньше — лишнего шума нет.
+    expect(capture([], 179, 179)).toContain('Расхождений с продом нет (сравнено 179 из 179 квестов).')
   })
 })
 
@@ -199,7 +217,7 @@ describe('main — корпусный прогон, который ничего 
       /не нашлось ни одного из 2 квестов корпуса/,
     )
     // Отчёт не напечатан вовсе: «Расхождений с продом нет» здесь было бы ложью.
-    expect(logs.join('\n')).not.toContain('Расхождений с продом нет.')
+    expect(logs.join('\n')).not.toContain('Расхождений с продом нет')
   })
 
   it('не падает, когда хоть один квест корпуса сравнился', async () => {
@@ -214,7 +232,7 @@ describe('main — корпусный прогон, который ничего 
     await expect(run([])).resolves.toBeUndefined()
 
     expect(logs.join('\n')).toContain('Сравнивать не с чем — на проде нет квеста с таким слагом: 1')
-    expect(logs.join('\n')).toContain('Расхождений с продом нет.')
+    expect(logs.join('\n')).toContain('Расхождений с продом нет')
     expect(process.exitCode).toBe(originalExitCode)
   })
 
@@ -225,7 +243,7 @@ describe('main — корпусный прогон, который ничего 
     await expect(run(['--source=scripts/ozero-glubokoe-quest-data.js'])).resolves.toBeUndefined()
 
     expect(scanBaseline.localQuestDataFiles).not.toHaveBeenCalled()
-    expect(logs.join('\n')).toContain('Расхождений с продом нет.')
+    expect(logs.join('\n')).toContain('Расхождений с продом нет')
     expect(process.exitCode).toBe(originalExitCode)
   })
 })

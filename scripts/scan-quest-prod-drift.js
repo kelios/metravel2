@@ -117,7 +117,7 @@ function parseArgs(argv) {
   }
 }
 
-function reportText(rows, files) {
+function reportText(rows, files, compared) {
   console.log(`Сверка локальных data-файлов с продом: ${files} файлов, поля ${comparableFields.join(', ')}`)
 
   const missing = rows.filter((r) => r.missingOnProd)
@@ -141,9 +141,16 @@ function reportText(rows, files) {
   const steps = drifted.reduce((n, r) => n + r.changed.length, 0)
   const infoOnly = diffRows.length - drifted.length
   if (infoOnly) console.log(`\nРазошёлся состав шагов (заливка его не применяет, гейт не валит): ${infoOnly} квестов`)
+  // Охват печатается всегда и рядом с вердиктом: «расхождений нет» после
+  // сравнения одного квеста из корпуса — это не чистота, а несравнённый
+  // корпус. Нулевой охват `main()` уже валит, но частичный (свой бэкенд с
+  // парой засеянных квестов, отставший прод) вердикт не красит, и молча он
+  // читался бы как зелёный.
+  const visited = Number.isFinite(compared) ? compared + missing.length : null
+  const coverage = visited ? ` (сравнено ${compared} из ${visited} квестов)` : ''
   console.log(drifted.length
-    ? `\nРазошлись с продом: ${drifted.length} квестов, ${steps} шагов. Перенести прод в файл — node scripts/sync-quest-data-from-prod.js --all`
-    : '\nРасхождений с продом нет.')
+    ? `\nРазошлись с продом: ${drifted.length} квестов, ${steps} шагов${coverage}. Перенести прод в файл — node scripts/sync-quest-data-from-prod.js --all`
+    : `\nРасхождений с продом нет${coverage}.`)
 }
 
 async function main() {
@@ -173,7 +180,7 @@ async function main() {
   }
 
   if (args.json) console.log(JSON.stringify({ files: files.length, rows }, null, 2))
-  else reportText(rows, files.length)
+  else reportText(rows, files.length, compared)
 
   if (rows.some((r) => r.drifted)) process.exitCode = 1
 }
