@@ -27,10 +27,9 @@ import {
 } from '@/components/MapPage/MapScreenParts/MapScreenDesktop'
 import { MapScreenShell } from '@/components/MapPage/MapScreenParts/MapScreenShell'
 import { MapPageHeading } from '@/components/MapPage/MapPageHeading'
-import {
-  isMapFilterChipsRowVisible,
-  MAP_FILTER_CHIPS_STACK_OFFSET,
-} from '@/components/MapPage/mapFilterChips'
+import { isMapFilterChipsRowVisible } from '@/components/MapPage/mapFilterChips'
+import { getMapTopStackOffsets } from '@/components/MapPage/MapMobile/MapMobileTopOverlay.styles'
+import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
 
 const IS_WEB = Platform.OS === 'web'
 const CAN_PRELOAD_LEAFLET = IS_WEB && typeof window !== 'undefined'
@@ -347,7 +346,21 @@ export default function MapScreen() {
       }),
     [isMobile, currentMode, activeFilterItems],
   )
-  const geoBannerStackOffset = mobileFilterChipsVisible ? MAP_FILTER_CHIPS_STACK_OFFSET : 0
+  // #1812 — ярусы под тулбаром считает один модуль: кроме ряда чипов, свой ярус
+  // держат ряд маршрута и плашка «нет сети». Без ряда маршрута плашка уходила бы
+  // из-под кнопок прямо на «Старт»/сводку, а без собственного яруса плашки она с
+  // гео-баннером целилась в одну точку.
+  const insets = useSafeAreaInsetsSafe()
+  const { offlineIndicatorTop, geoBannerStackOffset, locationQualityStackOffset } = useMemo(
+    () =>
+      getMapTopStackOffsets({
+        topInset: insets.top,
+        filterChipsVisible: mobileFilterChipsVisible,
+        offlineIndicatorVisible: isMobile && !isConnected,
+        routeRowVisible: isMobileRouteMode,
+      }),
+    [insets.top, mobileFilterChipsVisible, isMobile, isConnected, isMobileRouteMode],
+  )
 
   // Radius всегда имеет непустое дефолтное значение, поэтому активность считаем
   // ТОЛЬКО по категориям + текстовому поиску (как ActiveFiltersBar исключает
@@ -450,6 +463,7 @@ export default function MapScreen() {
         shouldShowFloatingRadiusPill={shouldShowFloatingRadiusPill}
         showGeoBanner={showGeoBanner}
         geoBannerStackOffset={geoBannerStackOffset}
+        locationQualityStackOffset={locationQualityStackOffset}
         locationState={locationState}
         coordinatesSource={coordinatesSource}
         dismissGeoBanner={dismissGeoBanner}
@@ -478,6 +492,7 @@ export default function MapScreen() {
       styles,
       showGeoBanner,
       geoBannerStackOffset,
+      locationQualityStackOffset,
       locationState,
       coordinatesSource,
       dismissGeoBanner,
@@ -546,6 +561,7 @@ export default function MapScreen() {
       handleRemoveActiveFilter={handleRemoveActiveFilter}
       handleExpandRadius={handleExpandRadius}
       isConnected={isConnected}
+      offlineIndicatorTop={offlineIndicatorTop}
       shouldLoadOnboarding={shouldLoadOnboarding}
       isWeb={isWeb}
       isMobile={isMobile}

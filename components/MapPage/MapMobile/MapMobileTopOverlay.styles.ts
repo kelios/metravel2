@@ -2,6 +2,7 @@ import { Platform, StyleSheet } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
+import { MAP_FILTER_CHIPS_STACK_OFFSET } from '@/components/MapPage/mapFilterChips'
 
 /** Диаметр видимого круга кнопки. */
 const BUTTON_SIZE = 38
@@ -83,6 +84,21 @@ export const getMapToolbarBottom = (topInset: number) =>
  * прозрачными полями тач-таргета, поэтому значения намеренно разные.
  */
 export const MAP_TOOLBAR_STACK_GAP = 8
+
+/**
+ * #1812 — высота плашки «нет сети» (`MapOfflineIndicator`). Объявлена здесь, а
+ * не в самом компоненте: вертикаль под тулбаром собирается вручную (слои разные,
+ * общего потока нет, см. `mapFilterChips.ts`), поэтому все её ярусы обязаны быть
+ * известны одному модулю. Компонент задаёт пилюле ровно этот `minHeight` без
+ * вертикальных полей (тот же приём, что у `routeStartSelector`/
+ * `routeSummaryCard`), чтобы при системном масштабе шрифта пилюля росла вместе с
+ * текстом, а не обрезала его — при обычном масштабе ярус совпадает с нарисованным.
+ */
+export const MAP_OFFLINE_INDICATOR_HEIGHT = 28
+/** Насколько плашка «нет сети» опускает то, что стоит под ней. */
+export const MAP_OFFLINE_INDICATOR_STACK_OFFSET =
+  MAP_OFFLINE_INDICATOR_HEIGHT + MAP_TOOLBAR_STACK_GAP
+
 /**
  * #1699 — под тулбаром живёт РОВНО один ярус маршрута: выбор старта, пока
  * заданы не оба конца, и сводка, как только маршрут построен. Раньше ярусов
@@ -92,6 +108,76 @@ export const MAP_TOOLBAR_STACK_GAP = 8
  * вертикали был один источник правды (тот же приём, что в `mapFilterChips.ts`).
  */
 export const MAP_ROUTE_ROW_STACK_OFFSET = ROUTE_CONTROL_TOUCH_TARGET_SIZE + TOOLBAR_STACK_GAP
+
+/**
+ * #1780 — ярус пилюли качества геолокации под верхним рядом кнопок. Больше
+ * зазора гео-баннера намеренно: пилюля — фоновая подсказка, а не действие.
+ * #1812 — константа переехала сюда из `map.styles.ts`: пилюля делит полосу с
+ * плашкой «нет сети», значит её вертикаль обязан знать тот же модуль, который
+ * собирает стек, иначе плашка ложится на неё в комбинированных состояниях.
+ */
+export const MAP_LOCATION_QUALITY_PILL_STACK_OFFSET = 41
+
+/**
+ * #1812 — единственное место, где собирается вертикальный стек под верхним рядом
+ * кнопок карты для ЧУЖИХ поддеревьев. Ярусы сверху вниз: ряд кнопок → ряд чипов
+ * активных фильтров ИЛИ ряд маршрута → плашка «нет сети» → гео-баннер. Ровно те
+ * же ярусы внутри overlay-слоя считает `MapMobileTopOverlay` для своих поповеров
+ * (`basePopoverTop` + `routeRowOffset`), поэтому набор слагаемых обязан
+ * совпадать: иначе плашка уходит из-под кнопок прямо на ряд маршрута.
+ *
+ * До этой правки плашка «нет сети» стояла хардкодом `topInset={56}`
+ * (`MapScreenMobile`), то есть игнорировала safe-area: на iPhone с вырезом ряд
+ * кнопок кончается на 98–110, а плашка держалась на 66 и лежала на кнопках. Свой
+ * ярус у неё тоже не был учтён — при «нет сети + геолокация запрещена» она и
+ * гео-баннер целились в одну и ту же точку (66 против 67 при нулевой safe-area).
+ */
+export function getMapTopStackOffsets(params: {
+  topInset: number
+  filterChipsVisible: boolean
+  offlineIndicatorVisible: boolean
+  /**
+   * Ряд маршрута (выбор старта ИЛИ сводка) занимает свой ярус сразу под
+   * тулбаром. Ряд чипов в route-режиме скрыт (`isMapFilterChipsRowVisible`),
+   * поэтому на практике слагаемые взаимоисключающие, но складываются честно —
+   * формула не должна держаться на этом совпадении.
+   */
+  routeRowVisible: boolean
+}): {
+  offlineIndicatorTop: number
+  geoBannerStackOffset: number
+  locationQualityStackOffset: number
+} {
+  const { topInset, filterChipsVisible, offlineIndicatorVisible, routeRowVisible } = params
+  const rowsOffset =
+    (filterChipsVisible ? MAP_FILTER_CHIPS_STACK_OFFSET : 0) +
+    (routeRowVisible ? MAP_ROUTE_ROW_STACK_OFFSET : 0)
+  const offlineIndicatorTop = getMapToolbarBottom(topInset) + MAP_TOOLBAR_STACK_GAP + rowsOffset
+
+  const offlineIndicatorBottom = offlineIndicatorTop + MAP_OFFLINE_INDICATOR_HEIGHT
+
+  return {
+    offlineIndicatorTop,
+    // Гео-баннер позиционируется от тулбара своим `top` в `map.styles.ts`, а
+    // ярусы над ним приходят сюда сдвигом (`marginTop` в `MapCanvas`).
+    geoBannerStackOffset:
+      rowsOffset + (offlineIndicatorVisible ? MAP_OFFLINE_INDICATOR_STACK_OFFSET : 0),
+    // Пилюля качества геолокации живёт при `status === 'current'`, то есть
+    // СОВМЕСТИМА с офлайном: GPS работает без сети. Её собственный ярус (41) не
+    // сдвигается рядами чипов и маршрута, поэтому сдвиг считается не суммой
+    // ярусов, а фактическим перекрытием с плашкой — иначе в состояниях «офлайн +
+    // чипы» и «офлайн + маршрут» тёмная плашка (zIndex 1015) легла бы на неё.
+    locationQualityStackOffset: offlineIndicatorVisible
+      ? Math.max(
+          0,
+          offlineIndicatorBottom +
+            MAP_TOOLBAR_STACK_GAP -
+            (getMapToolbarBottom(topInset) + MAP_LOCATION_QUALITY_PILL_STACK_OFFSET),
+        )
+      : 0,
+  }
+}
+
 /**
  * Ряд маршрута стоит справа, слева от него — круглая кнопка локации (38px) +
  * отступы root (10+10). Прежний хардкод 292px был УЖЕ содержимого ряда (~302px

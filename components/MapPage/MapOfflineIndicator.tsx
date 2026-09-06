@@ -7,19 +7,28 @@ import React, { useMemo } from 'react'
 import { Platform, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
+import { MAP_OFFLINE_INDICATOR_HEIGHT } from '@/components/MapPage/MapMobile/MapMobileTopOverlay.styles'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
 
 
+/**
+ * #1812 — воздух от верхнего края карты там, где над плашкой ничего не стоит
+ * (десктоп). На мобиле позицию считает `getMapTopStackOffsets` и передаёт
+ * целиком: скрытое слагаемое внутри компонента заставляло вычитать его на
+ * стороне вызова.
+ */
+const DEFAULT_TOP = 10
+
 interface MapOfflineIndicatorProps {
   visible: boolean
-  /** Доп. верхний отступ (под header/safe-area), по умолчанию 0. */
-  topInset?: number
+  /** Позиция плашки от верха карты целиком, включая safe-area и ярусы над ней. */
+  top?: number
 }
 
 const MapOfflineIndicatorInner: React.FC<MapOfflineIndicatorProps> = ({
   visible,
-  topInset = 0,
+  top = DEFAULT_TOP,
 }) => {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
@@ -29,7 +38,7 @@ const MapOfflineIndicatorInner: React.FC<MapOfflineIndicatorProps> = ({
   return (
     <View
       pointerEvents="none"
-      style={[styles.wrap, { top: topInset + 10 }]}
+      style={[styles.wrap, { top }]}
       testID="map-offline-indicator"
       accessibilityRole="alert"
       accessibilityLabel={i18nT('map:components.MapPage.MapOfflineIndicator.net_podklyucheniya_k_internetu_karta_rabotae_edb3f192')}
@@ -57,7 +66,13 @@ const getStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       gap: 6,
       paddingHorizontal: 12,
-      paddingVertical: 6,
+      // #1812 — высота объявлена в источнике правды по вертикали карты: под
+      // плашкой стоит гео-баннер, и его сдвиг обязан считаться от РЕАЛЬНОЙ
+      // высоты пилюли, а не от суммы паддингов «на глаз». Это ПОЛ, а не
+      // фиксированная высота: вертикальных полей нет, поэтому при обычном
+      // масштабе шрифта пилюля ровно такая, как заявлено, а при системном
+      // укрупнении текста растёт, вместо того чтобы обрезать сообщение.
+      minHeight: MAP_OFFLINE_INDICATOR_HEIGHT,
       borderRadius: 999,
       backgroundColor: colors.textMuted,
       ...(Platform.OS === 'web'

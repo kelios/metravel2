@@ -65,6 +65,8 @@ type MapCanvasProps = {
    * сдвиг передаётся явно. 0 на десктопе и когда чипов нет.
    */
   geoBannerStackOffset?: number
+  /** #1812 — сдвиг пилюли качества под плашку «нет сети», см. getMapTopStackOffsets. */
+  locationQualityStackOffset?: number
   locationState: MapLocationState
   coordinatesSource: CoordinatesSource
   dismissGeoBanner: () => void
@@ -90,6 +92,7 @@ export function MapCanvas({
   shouldShowFloatingRadiusPill,
   showGeoBanner,
   geoBannerStackOffset = 0,
+  locationQualityStackOffset = 0,
   locationState,
   coordinatesSource,
   dismissGeoBanner,
@@ -210,7 +213,13 @@ export function MapCanvas({
       )}
       {!!locationQualityMessage && (
         <View
-          style={styles.locationQualityPill}
+          // marginTop сдвигает absolute-пилюлю вниз тем же приёмом, что и
+          // гео-баннер: её `top` собран в map.styles.ts из safe-area и высоты
+          // тулбара, а ярусы над ней приходят снаружи.
+          style={[
+            styles.locationQualityPill,
+            locationQualityStackOffset > 0 ? { marginTop: locationQualityStackOffset } : null,
+          ]}
           testID="map-location-quality"
           accessibilityLiveRegion="polite"
         >

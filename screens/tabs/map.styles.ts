@@ -3,6 +3,7 @@ import { Platform, StyleSheet } from 'react-native';
 import { LAYOUT, METRICS } from '@/constants/layout';
 import {
   getMapToolbarBottom,
+  MAP_LOCATION_QUALITY_PILL_STACK_OFFSET,
   MAP_TOOLBAR_STACK_GAP,
 } from '@/components/MapPage/MapMobile/MapMobileTopOverlay.styles';
 import type { ThemedColors } from '@/hooks/useTheme';
@@ -23,11 +24,6 @@ export const WEB_HEADER_RESERVED_HEIGHT = 88;
 const WEB_TABLET_HEADER_AND_DOCK_RESERVED_HEIGHT =
   LAYOUT.headerHeight + LAYOUT.tabBarHeight + METRICS.spacing.s;
 const PANEL_RADIUS = 20;
-/**
- * Ярус пилюли качества геолокации под верхним рядом кнопок карты. Больше
- * зазора гео-баннера намеренно: пилюля — фоновая подсказка, а не действие.
- */
-const LOCATION_QUALITY_PILL_STACK_OFFSET = 41;
 const CONTROL_RADIUS = 12;
 // Размер вью иконочных контролов карты и есть их тач-таргет — floor проекта 44dp.
 const CONTROL_SIZE = 44;
@@ -676,7 +672,7 @@ export const getStyles = (
         // (пилюля живёт при status === 'current', баннер — при остальных), и
         // держать её ниже баннера — осознанный выбор, а не следствие геометрии.
         top: isMobile
-          ? getMapToolbarBottom(insetTop) + LOCATION_QUALITY_PILL_STACK_OFFSET
+          ? getMapToolbarBottom(insetTop) + MAP_LOCATION_QUALITY_PILL_STACK_OFFSET
           : 20,
         left: isMobile ? 10 : 16,
         right: isMobile ? 10 : undefined,

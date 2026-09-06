@@ -31,6 +31,8 @@ type MapScreenMobileProps = {
   handleRemoveActiveFilter?: (key: string) => void
   handleExpandRadius: () => void
   isConnected: boolean
+  /** Позиция плашки «нет сети» под верхним рядом кнопок — см. getMapTopStackOffsets. */
+  offlineIndicatorTop: number
   shouldLoadOnboarding: boolean
   isWeb: boolean
   isMobile: boolean
@@ -70,6 +72,7 @@ export function MapScreenMobile({
   handleRemoveActiveFilter,
   handleExpandRadius,
   isConnected,
+  offlineIndicatorTop,
   shouldLoadOnboarding,
   isWeb,
   isMobile,
@@ -133,8 +136,10 @@ export function MapScreenMobile({
         />
       </Suspense>
 
-      {/* topInset уводит плашку ниже верхнего ряда плавающих контролов карты */}
-      <MapOfflineIndicator visible={!isConnected} topInset={56} />
+      {/* #1812 — позиция приходит из общего стека под тулбаром: прежний хардкод
+          56 не знал про safe-area и на устройствах с вырезом клал плашку прямо
+          на ряд кнопок. */}
+      <MapOfflineIndicator visible={!isConnected} top={offlineIndicatorTop} />
 
       {/* Онбординг монтируется и на мобильном: иначе restartMapOnboarding()
           (кнопка «?») не имеет зарегистрированного _restartCb и ничего не показывает. */}
