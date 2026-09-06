@@ -21,6 +21,7 @@ import { fetchUserProfile, resolveProfileFullName, type UserProfileDto } from '@
 import type { PlannedTrip } from '@/api/plannedTrips';
 import type { PublicTrip } from '@/api/publicTrips';
 import { queryKeys } from '@/queryKeys';
+import { normalizeTravelRouteSegment } from '@/utils/travelRouteSegment';
 import { getActiveLocale, translate as i18nT } from '@/i18n'
 
 
@@ -279,7 +280,9 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     const parts = p.split('/').filter(Boolean);
     const idx = parts.indexOf('travels');
     const raw = idx >= 0 && parts[idx + 1] ? String(parts[idx + 1]) : null;
-    return normalizeSlugPart(raw);
+    // #1801: ключ обязан совпасть с ключом владельца — экрана деталей, поэтому
+    // сегмент считается тем же хелпером, включая однократное декодирование.
+    return raw ? (normalizeTravelRouteSegment(raw) || null) : null;
   }, [resolvedPathname]);
 
   const travelCacheKey = useMemo(() => {

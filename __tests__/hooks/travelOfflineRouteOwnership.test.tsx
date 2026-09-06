@@ -54,6 +54,12 @@ jest.mock('@/api/publicTrips', () => ({ fetchPublicTrip: jest.fn() }));
 
 const TRAVEL_ID = 672;
 const TRAVEL_SLUG = 'marshruty-vykhodnogo-dnia-iz-minska-13-poezdok';
+const SECOND_ID = 682;
+const SECOND_SLUG = 'vtoroi-marshrut';
+const SECOND_NAME = 'Второй маршрут';
+const ENCODED_ID = 693;
+const ENCODED_SLUG = 'маршрут-по-минску';
+const ENCODED_NAME = 'Маршрут по Минску';
 
 const travelFixture = {
   id: TRAVEL_ID,
@@ -87,9 +93,18 @@ describe('#1801 офлайн-переход на сохранённый марш
   // содержимого маршрута и подписывается на ключ первой.
   const renderRoute = () =>
     renderHook(() => {
-      useBreadcrumbModel();
-      return useTravelDetails();
+      const crumbs = useBreadcrumbModel();
+      const details = useTravelDetails();
+      return { crumbs, details };
     }, { wrapper });
+
+  const openRoute = (pathname: string, param: string) => {
+    usePathname.mockReturnValue(pathname);
+    useLocalSearchParams.mockReturnValue({ param, returnTo: '/metravel' });
+  };
+
+  const crumbLabels = (crumbs: { items: Array<{ label: string }> }) =>
+    crumbs.items.map((item) => item.label);
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -112,13 +127,12 @@ describe('#1801 офлайн-переход на сохранённый марш
     ['slug → id', `/travels/${TRAVEL_ID}`, String(TRAVEL_ID), queryKeys.travel(TRAVEL_ID)],
     ['id → slug', `/travels/${TRAVEL_SLUG}`, TRAVEL_SLUG, queryKeys.travel(TRAVEL_SLUG)],
   ])('%s: отдаёт сохранённый пакет, а не зависает на загрузке', async (_label, pathname, param, key) => {
-    usePathname.mockReturnValue(pathname);
-    useLocalSearchParams.mockReturnValue({ param, returnTo: '/metravel' });
+    openRoute(pathname, param);
 
     const { result } = renderRoute();
 
-    await waitFor(() => expect(result.current.travel?.id).toBe(TRAVEL_ID));
-    expect(result.current.isLoading).toBe(false);
+    await waitFor(() => expect(result.current.details.travel?.id).toBe(TRAVEL_ID));
+    expect(result.current.details.isLoading).toBe(false);
     // Ключевая гарантия: загрузку ведут опции экрана деталей. Наблюдатель с
     // `networkMode: 'online'` припарковал бы её офлайн навсегда.
     expect(queryClient.getQueryCache().find({ queryKey: key })?.state.fetchStatus).not.toBe('paused');
@@ -127,13 +141,60 @@ describe('#1801 офлайн-переход на сохранённый марш
   });
 
   it('повторный офлайн-переход на несохранённый маршрут даёт конечное состояние, а не бесконечную загрузку', async () => {
-    usePathname.mockReturnValue('/travels/682');
-    useLocalSearchParams.mockReturnValue({ param: '682', returnTo: '/metravel' });
+    openRoute('/travels/682', '682');
 
     const { result } = renderRoute();
 
-    await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(result.current.error?.message).toBe('OFFLINE_CONTENT_NOT_SAVED');
-    expect(result.current.isLoading).toBe(false);
+    await waitFor(() => expect(result.current.details.isError).toBe(true));
+    expect(result.current.details.error?.message).toBe('OFFLINE_CONTENT_NOT_SAVED');
+    expect(result.current.details.isLoading).toBe(false);
+  });
+  it('повторный офлайн-переход на смонтированной шапке переключает крошку на новый маршрут', async () => {
+    onlineManager.setOnline(true);
+    await saveTravelOffline({
+      ...travelFixture,
+      id: SECOND_ID,
+      slug: SECOND_SLUG,
+      name: SECOND_NAME,
+      url: `/travels/${SECOND_SLUG}`,
+    } as unknown as Travel);
+    onlineManager.setOnline(false);
+
+    openRoute(`/travels/${TRAVEL_ID}`, String(TRAVEL_ID));
+    const { result, rerender } = renderRoute();
+    await waitFor(() => expect(result.current.details.travel?.id).toBe(TRAVEL_ID));
+    expect(crumbLabels(result.current.crumbs)).toContain(travelFixture.name);
+
+    // Шапка НЕ размонтируется между маршрутами: подписка обязана переехать на
+    // новый ключ, иначе крошка навсегда останется на предыдущем маршруте.
+    openRoute(`/travels/${SECOND_SLUG}`, SECOND_SLUG);
+    rerender(undefined as never);
+
+    await waitFor(() => expect(result.current.details.travel?.id).toBe(SECOND_ID));
+    await waitFor(() => expect(crumbLabels(result.current.crumbs)).toContain(SECOND_NAME));
+    expect(fetchTravel).not.toHaveBeenCalled();
+    expect(fetchTravelBySlug).not.toHaveBeenCalled();
+  });
+
+  it('percent-encoded сегмент даёт крошке и экрану ОДИН ключ, а не два', async () => {
+    onlineManager.setOnline(true);
+    await saveTravelOffline({
+      ...travelFixture,
+      id: ENCODED_ID,
+      slug: ENCODED_SLUG,
+      name: ENCODED_NAME,
+      url: `/travels/${ENCODED_SLUG}`,
+    } as unknown as Travel);
+    onlineManager.setOnline(false);
+
+    // expo-router на web отдаёт сегмент пути закодированным.
+    openRoute(`/travels/${encodeURIComponent(ENCODED_SLUG)}`, encodeURIComponent(ENCODED_SLUG));
+    const { result } = renderRoute();
+
+    await waitFor(() => expect(result.current.details.travel?.id).toBe(ENCODED_ID));
+    // Крошка читает ключ владельца: разошедшаяся нормализация оставила бы её
+    // без имени маршрута.
+    await waitFor(() => expect(crumbLabels(result.current.crumbs)).toContain(ENCODED_NAME));
+    expect(fetchTravelBySlug).not.toHaveBeenCalled();
   });
 });
