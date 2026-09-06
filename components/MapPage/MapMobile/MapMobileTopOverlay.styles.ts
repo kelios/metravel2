@@ -18,7 +18,7 @@ const BUTTON_SIZE = 38
  */
 export const MAP_TOOLBAR_TOUCH_TARGET_SIZE = 48
 /** Прозрачные поля вокруг видимого круга — по ним и добирается тач-таргет. */
-export const MAP_TOOLBAR_TOUCH_PADDING = (MAP_TOOLBAR_TOUCH_TARGET_SIZE - BUTTON_SIZE) / 2
+const MAP_TOOLBAR_TOUCH_PADDING = (MAP_TOOLBAR_TOUCH_TARGET_SIZE - BUTTON_SIZE) / 2
 
 /** Видимый круг «скрыть сводку маршрута» — размер не меняется. */
 const ROUTE_SUMMARY_CLOSE_SIZE = 26

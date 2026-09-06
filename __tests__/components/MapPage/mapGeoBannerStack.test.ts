@@ -124,3 +124,19 @@ describe('#1780 — маркер «вы здесь» отличим от POI', (
     expect(userHtml).toContain(`width: ${USER_LOCATION_MARKER_SIZE}px`)
   })
 })
+
+describe('#1780 — пилюля качества геолокации читает тот же источник вертикали', () => {
+  it.each(TOP_INSETS)('safe-area top = %ipt: пилюля ниже ряда кнопок', (insetTop) => {
+    const flat = StyleSheet.flatten(getStyles(true, insetTop, themedColors).locationQualityPill)
+
+    expect(flat?.top as number).toBeGreaterThan(getMapToolbarBottom(insetTop))
+  })
+
+  it('позиция не изменилась при переходе на общий источник (прежние insetTop+92)', () => {
+    TOP_INSETS.forEach((insetTop) => {
+      const flat = StyleSheet.flatten(getStyles(true, insetTop, themedColors).locationQualityPill)
+
+      expect(flat?.top).toBe(Math.max(insetTop, 8) + 92)
+    })
+  })
+})

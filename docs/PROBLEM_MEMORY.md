@@ -2828,7 +2828,9 @@ guard, падающий в CI на попытке обойти этот конт
   который оставался DOM hit target и перекрывал POI из нижнего `markerPane`,
   даже когда сам GPS-маркер был `interactive: false`.
 - **Controls:** dedicated pane z-index 625 (выше POI, ниже tooltip/popup),
-  общий 30px `buildUserLocationHtml`, неинтерактивный pane/маркер (включая
+  общий `buildUserLocationHtml` (размер и цвет — `USER_LOCATION_MARKER_SIZE` /
+  `USER_LOCATION_MARKER_COLOR`, число здесь намеренно не дублируется: #1780
+  укрупнил маркер и сменил цвет), неинтерактивный pane/маркер (включая
   viewport-sized accuracy canvas) и атомарная команда render→commit→center.
   Исполняемый WebView regression test
   проверяет замену без дублей, fail-closed и запрет `setView` после

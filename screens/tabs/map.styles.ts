@@ -23,6 +23,11 @@ export const WEB_HEADER_RESERVED_HEIGHT = 88;
 const WEB_TABLET_HEADER_AND_DOCK_RESERVED_HEIGHT =
   LAYOUT.headerHeight + LAYOUT.tabBarHeight + METRICS.spacing.s;
 const PANEL_RADIUS = 20;
+/**
+ * Ярус пилюли качества геолокации под верхним рядом кнопок карты. Больше
+ * зазора гео-баннера намеренно: пилюля — фоновая подсказка, а не действие.
+ */
+const LOCATION_QUALITY_PILL_STACK_OFFSET = 41;
 const CONTROL_RADIUS = 12;
 // Размер вью иконочных контролов карты и есть их тач-таргет — floor проекта 44dp.
 const CONTROL_SIZE = 44;
@@ -663,7 +668,16 @@ export const getStyles = (
       },
       locationQualityPill: {
         position: 'absolute',
-        top: isMobile ? Math.max(insetTop, 8) + 92 : 20,
+        // #1780 — пилюля тоже целится под ряд кнопок, поэтому её вертикаль
+        // читает тот же источник правды, что и баннер, а не свою копию высоты
+        // тулбара (было `Math.max(insetTop, 8) + 92`). Позиция не изменилась:
+        // getMapToolbarBottom даёт max(insetTop,8)+51, ярус добавляет прежние 41.
+        // Ярус СВОЙ, а не MAP_TOOLBAR_STACK_GAP: пилюля и баннер взаимоисключены
+        // (пилюля живёт при status === 'current', баннер — при остальных), и
+        // держать её ниже баннера — осознанный выбор, а не следствие геометрии.
+        top: isMobile
+          ? getMapToolbarBottom(insetTop) + LOCATION_QUALITY_PILL_STACK_OFFSET
+          : 20,
         left: isMobile ? 10 : 16,
         right: isMobile ? 10 : undefined,
         maxWidth: isMobile ? undefined : 360,
