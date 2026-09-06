@@ -6,6 +6,25 @@ const lockModule = require('@/scripts/quality-gate-lock')
 describe('quality-gate-lock', () => {
   const originalOwned = process.env.MT_QUALITY_GATE_LOCK_OWNED
 
+  /**
+   * Обе проверки «занятого гейта» требуют, чтобы гейт кто-то держал. Раньше это
+   * молча обеспечивал внешний прогон jest — и тест падал ровно у того, кто
+   * следует правилу проекта «занятый гейт не ждём, гоним с
+   * MT_QUALITY_GATE_LOCK_OWNED=1»: такой прогон гейт не берёт, конкурента нет,
+   * SKIPPED не наступает. Теперь конкуренцию обеспечивает сам тест: берём
+   * гейт, а если он уже занят внешним прогоном — этого и достаточно.
+   * `releaseQualityGateLock` в afterEach безопасен: он no-op, когда мы не
+   * захватывали, и снимает лок только у своего же pid.
+   */
+  const ensureGateHeld = () => {
+    delete process.env.MT_QUALITY_GATE_LOCK_OWNED
+    try {
+      lockModule.acquireQualityGateLock({ name: 'owner', detectProcesses: false })
+    } catch {
+      // гейт уже держит внешний прогон — конкуренция и так есть
+    }
+  }
+
   afterEach(() => {
     lockModule.releaseQualityGateLock()
     if (originalOwned === undefined) delete process.env.MT_QUALITY_GATE_LOCK_OWNED
@@ -63,6 +82,7 @@ describe('quality-gate-lock', () => {
 
   it('returns a neutral skipped result instead of waiting or rerunning through the wrapper', () => {
     const wrapperPath = require.resolve('@/scripts/run-with-quality-gate-lock')
+    ensureGateHeld()
     const result = runNodeCli(
       [wrapperPath, 'concurrent-test', '--', process.execPath, '-e', 'process.exit(41)'],
       { MT_QUALITY_GATE_LOCK_OWNED: '' }
@@ -75,6 +95,7 @@ describe('quality-gate-lock', () => {
 
   it('returns the same skipped result for direct Jest setup contention', () => {
     const setupPath = require.resolve('@/scripts/jest-quality-gate-setup')
+    ensureGateHeld()
     const result = runNodeCli(
       [
         '-e',
