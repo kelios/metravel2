@@ -57,8 +57,9 @@ description: "Прогон фронтенд-тикета через MCP task boa
      из `docs/TASK_BOARD_MCP.md`). При нехватке проверяемых AC или контракта — ОДИН
      компактный уточняющий вопрос пользователю, не выдумывай критерии.
 3. **In progress.** `ticket-board`: `status=in_progress`, `assignee=<агент-исполнитель>`.
-   Делегируй реализацию профильному FE-агенту из таблицы. Соблюдай контракты CLAUDE.md
-   (ImageCardMedia, UnifiedTravelCard, externalLinks, React Query/Zustand, TS strict).
+   Делегируй реализацию профильному FE-агенту из таблицы. Соблюдай контракты
+   `docs/RULES.md` (ImageCardMedia, UnifiedTravelCard, external link policy,
+   React Query/Zustand, TS strict) — в `CLAUDE.md` их нет.
 4. **Review — обязательный гейт, запускается сам.** Как только реализация готова и тикет
    переведён в `status=review`, PostToolUse-ветка хука `.claude/hooks/review-gate.mjs` требует
    немедленно вызвать агента `code-review-gate` — не жди просьбы пользователя и не откладывай
@@ -68,7 +69,9 @@ description: "Прогон фронтенд-тикета через MCP task boa
    - `changes_requested` (любой P1/P2) → агент сам возвращает тикет в `in_progress` с findings в
      `description`; чинит исполнитель, затем ревью прогоняется заново;
    - `pass` (чисто или только P3) → агент записывает вердикт, коммитит diff задачи ЯВНЫМИ
-     путями и пушит его в `main` (`git add <пути задачи>` → `git commit` → `git push origin main`;
+     путями и пушит его в `main` (`git add <пути задачи>` → `git commit` →
+     `PREFLIGHT_SKIP_E2E=1 git push origin main` — переменная на этом переходе обязательна,
+     `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`»;
      `git add -A` и commit без путей в общем чекауте запрещены), дописывает sha коммита в
      `description` и только после этого переводит тикет в `testing`.
 
@@ -114,7 +117,8 @@ description: "Прогон фронтенд-тикета через MCP task boa
   `ticket-board` не ставят `testing` руками: хук `.claude/hooks/review-gate.mjs` откажет, и это
   правильно — сначала вердикт ревью. Аварийный обход `REVIEW_GATE_BYPASS=1` применим только по
   явной просьбе пользователя и фиксируется в `description` тикета.
-- **В `testing` уходит только запушенный код.** Коммит явными путями + `git push origin main`
+- **В `testing` уходит только запушенный код.** Коммит явными путями +
+  `PREFLIGHT_SKIP_E2E=1 git push origin main`
   выполняются ПОСЛЕ вердикта `pass` и ДО смены статуса: приёмка, dev-deploy и любая
   последующая проба берут код из `main`, а не из общего рабочего дерева. Коммит и push
   вердикт не ломают. Чужой набор в `npm run check:preflight:dry` → узкие проверки своих путей

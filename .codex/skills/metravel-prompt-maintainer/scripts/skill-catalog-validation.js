@@ -13,6 +13,9 @@ const OPENSPEC_VENDOR_SKILLS = new Set([
   'openspec-sync-specs',
   'openspec-update-change',
 ])
+// spec-kit regenerates `.github/skills/speckit-*` and tracks their hashes in
+// `.specify/integrations/copilot.manifest.json`; the project budget is not theirs to satisfy.
+const isVendorSkill = (name) => OPENSPEC_VENDOR_SKILLS.has(name) || name.startsWith('speckit-')
 
 const yamlScalar = (frontmatter, key) => {
   const lines = frontmatter.split(/\r?\n/)
@@ -65,7 +68,7 @@ const auditSkillFamily = (root, canonicalRoot) => {
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue
     result.count += 1
-    const vendor = OPENSPEC_VENDOR_SKILLS.has(entry.name)
+    const vendor = isVendorSkill(entry.name)
     if (vendor) result.vendorCount += 1
     const file = path.join(root, entry.name, 'SKILL.md')
     if (!fs.existsSync(file)) {

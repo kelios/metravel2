@@ -72,28 +72,19 @@
     not stay there. When the task is done, port the changes to the primary
     checkout, commit them on `main`, and leave no commits on the worktree
     branch that are absent from `main`.
-- Commit and push the task diff before a board task moves to `testing`:
-  - the `review → testing` gate is a `pass` verdict **plus** the reviewed diff
-    committed and pushed to `main`; the ticket is moved only after
-    `PREFLIGHT_SKIP_E2E=1 git push origin main` succeeds. Order: record the
-    verdict → `git add <task paths>` → `git commit` →
-    `PREFLIGHT_SKIP_E2E=1 git push origin main` → `status=testing`. This keeps
-    static/unit pre-push checks while deferring Playwright to `testing`;
-  - stage explicit task paths. `git add -A` and a pathless `git commit` are
-    forbidden in this shared checkout: they sweep other sessions' unfinished
-    files and ship them past their own review gate;
+- Commit and push the task diff before a board task moves to `testing`. The
+  `review → testing` gate is a `pass` verdict **plus** the reviewed diff committed and
+  pushed to `main`, in this order: record the verdict → `git add <task paths>` →
+  `git commit` → `PREFLIGHT_SKIP_E2E=1 git push origin main` → `status=testing`. Full
+  protocol, escape hatches and exceptions: `docs/TASK_BOARD_MCP.md` → «Коммит и пуш —
+  часть перехода `review → testing`». Binding invariants:
+  - stage explicit task paths. `git add -A` and a pathless `git commit` are forbidden in
+    this shared checkout: they sweep other sessions' unfinished files and ship them past
+    their own review gate;
   - push `main` only; never push a `claude/*` auto-worktree branch;
-  - `githooks/pre-push` runs preflight over the working tree, not over your
-    commit. When `npm run check:preflight:dry` reports another session's file
-    set, validate your own set narrowly (lint/jest on your paths) and push with
-    `SKIP_PREFLIGHT=1 git push origin main` — the documented escape hatch of
-    that hook — then say so in the ticket and in the report to the owner;
-  - record the commit sha in the ticket `description`: acceptance, dev deploy,
-    and any later analysis read the pushed code, not somebody's working tree;
-  - having nothing of your own to commit (the code is already in `origin/main`)
-    is a valid outcome — write it in the ticket and move the status on. Full
-    protocol: `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода
-    `review → testing`».
+  - record the commit sha in the ticket `description`: acceptance, dev deploy and any
+    later analysis read the pushed code, not somebody's working tree. Having nothing of
+    your own to commit is a valid outcome — write it in the ticket and move the status on.
 - Protected project/release files (`eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml`, `entry.js`) require an explicit user request that puts the file or its behavior in scope. Do not change them as incidental cleanup.
 - Before deploying to production, validate the local code in production-like conditions:
   - build a production web export (`dist/prod`)
@@ -143,40 +134,41 @@ npm run test:run
 - Authenticated QA (allowed):
   - for QA/testing that requires a signed-in user, you may sign in using the dedicated end-to-end test account from `.env.e2e` (`E2E_EMAIL` / `E2E_PASSWORD`);
   - prefer the e2e auth mechanism — the Playwright auth setup or a programmatic login (login API → `Authorization: Token <token>` injected into the store/headers) — over hand-typing credentials into UI fields, and reuse the e2e session where possible;
-  - this is scoped to local/preview QA against the dev server only; never use it for destructive or irreversible actions;
+  - the default scope is local/preview QA. Creating, checking and deleting the e2e account's own test entities on production is separately and permanently permitted by the owner (`docs/WORKFLOW_OPERATIONS.md` → «3.1.1 Тестовые данные на production»); that permission never extends to other users' articles, quests, travels or settings. Never use these credentials for destructive or irreversible actions;
   - never print, echo, log, screenshot, or commit the credential values — keep them only in `.env.e2e`.
-- Android build/testing policy (mandatory):
+- Android build/testing policy (mandatory). Full procedure — `docs/WORKFLOW_OPERATIONS.md`
+  → «3.2 Android device testing and builds». Binding invariants:
   - Android EAS/cloud builds and submits are disabled: never run
     `eas build --platform android`, `eas submit --platform android` or an EAS
-    `--platform all` command. Build Android locally with the project Gradle
-    wrapper and publish only through the production-only Google Play API script;
-  - the active closed-testing surfaces (`alpha`, `internal`, `beta`, testers,
-    countries and their releases) are protected and must not be changed by the
-    production release automation;
-  - when Android-specific observable behavior, configuration, or runtime is in
-    scope, Android device QA requires a locally built Android app installed over
-    USB on the connected phone, for example `cd android && ./gradlew
-    :app:installDebug` or `:app:assembleDebug` plus `adb install -r ...`;
-  - do not substitute mobile web viewport evidence, Expo web export, EAS preview/development/production builds, or dev-client/export flows for Android device validation without explicit user approval;
-  - if local build/install is blocked, report the exact command, result, and next safe step instead of claiming Android verification passed.
-- iOS validation policy (mandatory):
-  - local Xcode/simulator/device QA is a normal path for assigned iOS-specific
-    observable behavior, configuration, or runtime; common/shared code alone does
-    not create an iPhone/iPad gate;
-  - simulator evidence covers compilation and basic UI, but not hardware,
-    signing, TestFlight, APNs delivery, Universal Links, HEIC, biometrics, or
-    production embedded configuration;
-  - physical iPhone evidence is required for device capabilities and lifecycle;
-    physical iPad/TestFlight evidence is required for exact tablet window and
-    rotation acceptance; the exact processed TestFlight build is the App Store
-    acceptance boundary;
-  - signed distribution build, App Store Connect/TestFlight upload, App Review
-    submission, and storefront release are separate operations, each requiring
-    an explicit current user command. Never infer or automate the next gate.
-- Task-board token recovery (mandatory):
-  - if `/api/tasks/`, `/api/tasks/board/`, `/api/sprints/`, or the MCP `ticket-board` tools return `HTTP 401`, first refresh the staff DRF token with a programmatic login using the credentials from `.env.e2e` and the procedure in `docs/TASK_BOARD_MCP.md`;
-  - write the refreshed token only to `.secrets/metravel-task-board.env`, never to chat, screenshots, committed files, or shell logs, then retry the board endpoints;
-  - a local fallback draft is allowed only after token refresh fails or the refreshed token is not authorized, and it must still be synced to the board before handoff when access is restored.
+    `--platform all` command. Android is built locally with the project Gradle wrapper and
+    published only through the production-only Google Play API script; the active
+    closed-testing surfaces (`alpha`, `internal`, `beta`, testers, countries and their
+    releases) must not be touched by the production release automation;
+  - Android device QA requires a locally built app installed over USB on the connected
+    phone. Mobile web viewport evidence, Expo web export, EAS preview/development/production
+    builds and dev-client/export flows are not substitutes without explicit user approval;
+    a blocked build/install is reported with the exact command, result and next safe step,
+    never as a passed verification.
+- iOS validation policy (mandatory). Full procedure — `docs/WORKFLOW_OPERATIONS.md` →
+  «3.2.1 iOS testing and release operations». Binding invariants:
+  - local Xcode/simulator/device QA is a normal path for assigned iOS-specific observable
+    behavior, configuration or runtime; common/shared code alone does not create an
+    iPhone/iPad gate;
+  - simulator evidence never covers hardware, signing, TestFlight, APNs delivery, Universal
+    Links, HEIC, biometrics or production embedded configuration; physical iPhone evidence
+    is required for device capabilities and lifecycle, physical iPad/TestFlight evidence for
+    tablet window and rotation acceptance, and the exact processed TestFlight build is the
+    App Store acceptance boundary;
+  - signed distribution build, App Store Connect/TestFlight upload, App Review submission
+    and storefront release are four separate operations, each requiring an explicit current
+    user command. Never infer or automate the next gate.
+- Task-board token recovery (mandatory): on `HTTP 401` from `/api/tasks/`,
+  `/api/tasks/board/`, `/api/sprints/` or the MCP `ticket-board` tools, refresh the staff
+  DRF token by the procedure in `docs/TASK_BOARD_MCP.md` → «Troubleshooting» before
+  anything else. The refreshed token is written only to `.secrets/metravel-task-board.env`
+  and never to chat, screenshots, committed files or shell logs. A local fallback draft is
+  allowed only after the refresh itself fails or the refreshed token is not authorized, and
+  must still be synced to the board before handoff when access is restored.
 - Dev media caveat:
   - in local dev, article/travel images may fail to load because content can come from production data while media files remain tied to production storage/CDN access;
   - do not treat this alone as a frontend bug and do not change app code only to “fix” dev-only missing production media;
@@ -185,17 +177,13 @@ npm run test:run
 - Always verify the changed scope before finishing the task.
   - For small, isolated changes, this can be a targeted lint/test check instead of the full suite.
   - For larger changes, use the full `npm run lint` and `npm run test:run` pass.
-- Long-running operation coordination is mandatory:
-  - deploys, release/build commands, production web builds, Android local/EAS builds or installs, server rebuilds/restarts, full/preflight checks, Playwright/e2e, Lighthouse, and any command that writes shared build/test artifacts are exclusive by operation type and target;
-  - before starting one, check active processes and known locks for the same target, for example `ps`/`pgrep -af` matches for `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `eas build`, `eas submit`, `gradlew`, `expo run:android`, `adb install`, `xcodebuild`, `simctl`, `expo run:ios`, `docker compose`, `nginx`, `systemctl`, plus lock files such as `dist/.prod-build.lock` or `.codex-temp/ops/*.lock`;
-  - if another agent or terminal already runs the same deploy/build/rebuild target, do not start a duplicate. Reuse the active operation, wait only when its result is required by your scope, or report a blocker with PID, command, target, and the next safe action;
-  - test/quality gates use a stricter non-waiting contract: when a live `.codex-temp/ops/quality-gate.lock` or active quality process exists, stop the attempted validation immediately. Do not wait, poll, monitor completion, retry after the lock is released, or start a narrower bypass test;
-  - when the active gate's scope covers the current task and automated tests are its only remaining Done-gate step, report `validation delegated: active gate pid/name` only as coordination evidence. Do not claim `passed` or close from delegation alone; stop the acceptance decision, request the active owner's result, and resume when it is available. The active owner must fix real failures and rerun;
-  - when the active gate does not cover the touched scope, or deploy/browser/API/device/another validation step remains, `validation skipped: active gate pid/name` is only coordination evidence. Do not make a final board decision or park the task in `testing`: stop and request the exact owner result/unblock action, then resume acceptance. Other chats do not duplicate the active owner's work;
-  - do not kill, restart, or replace another agent's process unless the user explicitly asked for it or a documented safe wrapper owns that cleanup;
-  - if a lock is stale, confirm the process is gone or the lock exceeded its documented stale window before removing it;
-  - broad gates (`npm run release:check`, `npm run check:preflight`, full `npm run test:run`, Playwright/e2e) are exclusive per workspace. Narrow unit tests may run only when they do not share the same server/build/output and no broad gate is already active.
-  - project-owned test wrappers return exit code `0` with an explicit `SKIPPED` message when a live owner already holds the quality gate. This zero code is a coordination outcome, not green validation evidence; it can support `validation delegated` only under the conditions above.
+- Long-running operation coordination is mandatory. The full protocol (process/lock
+  checklist, `validation delegated` vs `validation skipped`, wrapper contract) lives in
+  `docs/WORKFLOW_OPERATIONS.md` → «3.4 Координация долгих операций». Binding invariants:
+  - deploys, release/build commands, production web builds, Android/iOS local or EAS builds and installs, server rebuilds/restarts, full/preflight checks, Playwright/e2e, Lighthouse, and any command that writes shared build/test artifacts are exclusive by operation type and target. Check running processes (`ps`/`pgrep -af`) and locks (`dist/.prod-build.lock`, `.codex-temp/ops/*.lock`) first and never start a duplicate of an active one;
+  - test/quality gates are non-waiting: a live `.codex-temp/ops/quality-gate.lock` or active quality process stops your attempt immediately — no waiting, polling, monitoring, retry after release, or narrower bypass test. Broad gates (`release:check`, `check:preflight`, full `test:run`, Playwright/e2e) are exclusive per workspace, and narrow unit tests may run only when they share no server/build/output with an active gate;
+  - a project-owned wrapper's exit code `0` with `SKIPPED` is coordination evidence, never green validation and never a final board verdict. Request the active owner's result and resume the same acceptance pass; do not close or park the task on delegation alone;
+  - do not kill, restart, or replace another agent's process unless the user explicitly asked for it or a documented safe wrapper owns that cleanup; remove a lock only after confirming the process is gone or the documented stale window has passed.
 - Store temporary debugging artifacts only in ignored local folders such as `.codex-temp/` or `.codex-debug/`.
   - Do not put ad-hoc screenshots, traces, logs, JSON reports, or throwaway QA output in tracked project folders.
   - Keep only artifacts that are still useful for the current task, and delete stale or unnecessary debug output before handoff.
@@ -208,82 +196,59 @@ npm run test:run
   - such files must not be committed to git;
   - use ignored locations like `tmp/`, `artifacts/`, `test-results/`, `playwright-report/` or keep them outside the repository;
   - if a temporary debug file already appeared in the root or in git, remove it in the same task instead of leaving it behind.
-- Task board tracking (mandatory):
-  - before creating, reopening, or splitting a task, run the problem-history
-    preflight from `docs/PROBLEM_MEMORY.md` through
-    `$metravel-problem-memory`; search all board statuses, including `done` and
-    `wont_do`, and record `reuse | reopen | create-linked | create-new`;
-  - reuse an existing open task for the same work; reopen the canonical task
-    when the same confirmed root cause/invariant failed again; create a linked
-    task only when the confirmed cause or corrective owner differs;
-  - recurring problems must append a dated `Recurrence Log` with the prior task,
-    failed invariant, cause comparison, previous Done-gate gap, corrective layer
-    and new regression control. Do not infer reopen counts from
-    `created_at`/`updated_at` when immutable status history is unavailable;
-  - frontend, backend, and cross-functional work items must be created on the shared MCP task board through `ticket-board`; see `docs/TASK_BOARD_MCP.md`;
-  - task `area` is only `front` or `back` for active workflow: Android/native app
-    bugs are `area=front` with `[AND-...]` context, iOS app bugs are `area=front`
-    with `[IOS-...]` context, and shared/common responsive tasks name desktop-web
-    and mobile-web validation; add Android/iPhone/iPad device evidence only for
-    platform-specific scope. Use `area=back` only for backend/API/server work;
-  - `todo` means implementation/refinement/ops work remains; `in_progress` means
-    that work is happening; `testing` means implementation is complete and an
-    in-scope QA pass is active or an exact repeated measurement/temporal
-    observation is scheduled; `done` means all
-    work is complete and all available mandatory in-scope checks are green.
-    Irrelevant or out-of-scope evidence does not block `done`;
-  - `blocked_by` is only for a task that cannot start or continue because a concrete hard dependency is unresolved. A completed implementation waiting for code review stays in `review`; `testing` is used only while QA is active or while an exact remeasurement trigger is pending. Missing backend/deploy/production/API/browser/device access pauses acceptance and requires an unblock request, not a parked final status; unfinished owner work returns to `todo` or `in_progress` according to whether it has started;
-  - never use `blocked_by` merely because a Done gate is incomplete, a reviewer/tester has not run yet, or production verification is pending. Link the true blocker task/gate only when it prevents implementation work itself;
-  - when the user explicitly asks to accept `area=back` tasks, validate only with
-    available relevant backend source/API/production probes. Device/browser
-    client evidence belongs to a linked `area=front` task and is not a backend
-    Done gate. If backend/refinement/ops work remains, move the task to `todo`; if
-    implementation is complete but a defined observation period has not elapsed,
-    keep it in `testing`; if backend work is complete and all available mandatory
-    in-scope probes are green, move it to `done` even when irrelevant or
-    out-of-scope evidence cannot be collected;
-  - `testing` is never a final parking outcome after an attempted acceptance.
-    A ticket may remain there only with an executable retest record containing
-    the exact parameter, expected threshold, current measured value,
-    trigger/earliest recheck, and command/scenario. A completed pass moves the
-    current ticket to `done`. If completed implementation exposes a separate
-    confirmed defect, run the Problem Memory preflight and create/reuse a linked
-    bug/task; do not park the accepted ticket. If its own promised work is still
-    incomplete, return it to `todo`/`in_progress` with the concrete owner action;
-  - every `area=front` or `area=back` board task must include the required Task Contract, sprint, dependencies, blockers, validation, and Done gate;
-  - every board task description is written in Russian, in plain language, and in the seven
-    mandatory sections, in order: `## Простыми словами` (what happens now / what it should be /
-    who it affects), `## В чём проблема`, `## Из-за чего возникла`, `## Что должно быть
-    сделано`, `## Что уже сделано`, `## Что блокирует`, `## Как протестировать` — Problem
-    History and the contract follow them. Never drop a section: when there is nothing to say,
-    say why. Never invent a root cause. `## Что блокирует` must agree with
-    `blocked_by`/`depends_on`, and `## Что уже сделано` is updated on every status move. Contract headings (`## Problem History`, `## Task Contract`), its
-    field names, paths, commands, and board statuses stay untranslated as identifiers; English
-    prose paragraphs and loan-phrases in the description are rejected the same way an empty
-    contract is. Full rule: `docs/TASK_BOARD_MCP.md` → «Правило: описание задачи — по-русски и
-    человеческим языком»;
-  - every new board task, including Android/native QA bugs filed as `area=front`, must be assigned to the current active sprint unless `docs/TASK_BOARD_MCP.md` defines a more specific active sprint rule;
-  - do not create new local `tasks/*.md` task files as the normal workflow; local task files are only a temporary fallback/migration draft when the board is unavailable, and must be imported/synced to the board before handoff;
-  - do not create ad-hoc backend task notes outside the board workflow.
-- Validation evidence quality (mandatory) — full rationale and the incident behind
-  each rule is in `docs/TASK_BOARD_MCP.md` → `#### Качество evidence`:
-  - measure a quantity, not the absence of an error: `200 OK`, "page opened" or "no
-    crash" is not evidence. A task about a transform, size, count or order must record
-    the before/after number (bytes, request count, rendered width, duration);
-  - fail-open is forbidden both as behaviour and as validation: an unsupported input
-    must be observably distinguishable from a valid one, never silently degraded to a
-    heavy or generic result. `Validation` must include that negative probe;
-  - a build-time or deploy-time check does not satisfy the Done gate for a
-    user/crawler-visible production surface; a recurring production probe that fails on
-    regression is required;
-  - a test that mocks the primitive under investigation is not contract evidence: when
-    the defect is in how a value is constructed (URL, payload, cache key), at least one
-    test must exercise the real construction path;
-  - a consolidation task does not close without naming the CI guard that fails when the
-    new single contract is bypassed;
-  - from the third recurrence in one problem family, a further point fix is only
-    acceptable as a temporary mitigation with an owner and a removal condition, and the
-    structural task must exist and be linked.
+- Task board tracking (mandatory). The shared MCP task board is the only permanent
+  backlog. Each of these is defined once in `docs/TASK_BOARD_MCP.md` — load the relevant
+  section before a board mutation or acceptance instead of working from memory: column
+  semantics («Семантика колонок и владельцы переходов»), the `area=back` acceptance rule
+  («Правило: `area=back` не проверяется без прямого запроса»), the seven description
+  sections («Правило: описание задачи — по-русски и человеческим языком»), the contract
+  template («Правило: у каждой FE/BE задачи есть контракт») and the enforced card gate
+  («Гейт качества карточки»). Binding invariants:
+  - before creating, reopening, or splitting a task, run the problem-history preflight
+    (`docs/PROBLEM_MEMORY.md` through `$metravel-problem-memory`) across all board
+    statuses including `done` and `wont_do`, and record
+    `reuse | reopen | create-linked | create-new`; a recurrence appends a dated
+    `Recurrence Log` to the canonical task;
+  - frontend, backend, and cross-functional work items are created on the board through
+    `ticket-board`. Task `area` is only `front` or `back`: Android app bugs are
+    `area=front` with `[AND-...]` context, iOS app bugs are `area=front` with `[IOS-...]`
+    context, `area=back` is backend/API/server only. Device evidence is added only for
+    platform-specific scope;
+  - every `area=front`/`area=back` task carries the Task Contract, an active sprint,
+    dependencies, blockers, validation and a Done gate, and its description is written in
+    Russian in the seven mandatory sections; contract headings and field names stay
+    untranslated as identifiers. Enforced by `.claude/hooks/task-quality-gate.mjs` and
+    `npm run board:audit`;
+  - status follows the actual work: `todo`/`in_progress` for remaining or ongoing work,
+    `review` while a completed implementation waits for code review, `testing` only while
+    an in-scope QA pass is active or an exact retest/temporal record is pending, `done`
+    when all available mandatory in-scope checks are green. Irrelevant or out-of-scope
+    evidence neither blocks `done` nor holds a ticket in `testing`;
+  - `blocked_by` is only a concrete unresolved hard dependency that prevents the work
+    itself — never an incomplete Done gate, a pending reviewer, or missing access;
+  - `testing` is never a parking outcome after an attempted acceptance: pass → `done`;
+    the ticket's own unfinished work → `todo`/`in_progress`; a separate confirmed defect →
+    a linked ticket after the Problem Memory preflight. Missing access, device or gate
+    result stops the turn with a concrete unblock request and the same pass resumes;
+  - do not create new local `tasks/*.md` files as the normal workflow; they are only a
+    temporary fallback when the board is unavailable and must be synced before handoff.
+    Do not create ad-hoc backend task notes outside the board workflow.
+- Validation evidence quality (mandatory) — each rule below is the headline of a case
+  where a green check let a recurrence through; the incident behind it and the full
+  wording are in `docs/TASK_BOARD_MCP.md` → `#### Качество evidence`:
+  - measure a quantity, not the absence of an error — a transform/size/count/order task
+    records the before/after number, never `200 OK` or "page opened";
+  - fail-open is forbidden as behaviour and as validation; `Validation` must contain the
+    negative probe that distinguishes an unsupported input from a valid one;
+  - a build- or deploy-time check does not satisfy the Done gate for a user/crawler-visible
+    production surface: a recurring production probe that fails on regression is required;
+  - a test that mocks the primitive under investigation is not contract evidence — at least
+    one test must exercise the real construction path (URL, payload, cache key);
+  - a consolidation task does not close without naming the CI guard that fails when the new
+    single contract is bypassed;
+  - from the third recurrence in one problem family, a further point fix is acceptable only
+    as a temporary mitigation with an owner and a removal condition, and the linked
+    structural task must exist.
 - For performance checks (Lighthouse), run against a production web export:
 
 ```bash
@@ -552,6 +517,16 @@ npx serve dist/prod -l 3000 -s
   configuration, or runtime. Platform files may adapt technical map engines,
   safe areas, or native APIs, but must not introduce different UX, block order,
   primary actions, hero proportions, or tap behavior.
+- **No web-only visual branching inside the mobile viewport.** Serif faces and
+  hover-only affordances are desktop-only (`!isMobile`). Content elements —
+  chips, badges, buttons — must not be hidden behind `Platform.OS === 'web'`
+  when the same element is visible on a device: that produces two different
+  products under one flow and is the parity rule above, violated in code.
+- **Theming goes through `useThemedColors()`.** On themed surfaces do not read
+  `DESIGN_TOKENS.colors.*` directly: on web those are live CSS variables, on
+  native they collapse to a static light fallback, so a themed screen silently
+  stops following the theme on Android and iPhone. Values that must reach an API
+  payload use `DESIGN_COLORS`, never a `var(--…)` token.
 - Map/place/travel-point surfaces must reuse one point/place template whenever possible. The mobile popup/card contract is fullscreen inside the app content area with app header/footer still visible; the hero image takes about 70% of the card; below it are title/meta, coordinates with copy, article/page action when available, expandable navigation system choices, and existing save/add/share/route actions.
 - The point/place navigation set must explicitly include Google Maps, Apple Maps, Organic Maps/offline, Waze, Яндекс Карты, Яндекс Навигатор, and OpenStreetMap where coordinates are available. Telegram/share is extra and must not replace map/navigation choices.
 - Related travel state actions must be visible as text, not only as an unlabeled icon: "Был здесь", "Хочу поехать", "Планирую" or a compact "Был / Хочу / Планирую" affordance that opens those choices.

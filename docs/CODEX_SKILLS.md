@@ -75,6 +75,11 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
   сохраняются как совместимые копии. `audit:prompts` проверяет их metadata и
   совпадение текста. OpenSpec сохраняет vendor-различия адаптеров; это не дубли
   для механического удаления.
+- `.github/skills/metravel-*` — снимки для Copilot, маршрутизируемые по имени из
+  `.github/copilot-instructions.md`. Генератора у них нет, поэтому они отстают от
+  `.codex/skills` молча; `audit:prompts` проверяет только их metadata, а
+  расхождение текста — решение ревью. `speckit-*` там vendor spec-kit
+  (`.specify/integrations/copilot.manifest.json`), руками не править.
 - `.claude/agents` — источник ролей, `.grok/agents` генерируется через
   `node .grok/scripts/sync-agents.mjs`. Команды служат короткими входами в skills.
 - Metadata-аудит не доказывает согласованность полномочий, окружений и стадий:

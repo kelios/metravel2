@@ -40,13 +40,13 @@
 
 | Query / Mutation | Файл | Ключ | Инвалидации |
 |------------------|------|------|-------------|
-| `useTravelListQuery` | `api/travel/Queries.ts` | `['travel','list', filters]` | мутации: ... |
+| `useXxxListQuery` | `api/<фича>/queries.ts` | `['<фича>','list', filters]` | мутации: ... |
 
 ### Клиентский стейт (Zustand)
 
 | Store | Файл | Отвечает за |
 |-------|------|-------------|
-| `travelFiltersStore` | `stores/travelFiltersStore.ts` | локальные фильтры списка |
+| `xxxFiltersStore` | `stores/<фича>FiltersStore.ts` | локальные фильтры списка |
 
 ### Контексты
 

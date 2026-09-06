@@ -27,7 +27,8 @@ nginx-контейнер bind-mount'ит **именно этот путь** в �
 (`docker-compose-local.app.yaml`: `./static/dist:/usr/local/metravel/static/dist:ro`;
 конфиг `deploy/local/nginx/nginx.conf`: `root /usr/local/metravel/static/dist; try_files $uri /index.html =404`).
 Поэтому скрипт и инфра совместимы. После подмены каталога обязателен
-`docker compose restart nginx` — скрипт это делает сам.
+`docker compose restart app nginx` — скрипт делает это сам (`build-dev.sh:101`,
+перезапускаются ОБА контейнера, не только nginx).
 
 SSH: `sergey@192.168.50.36`, вход по ключу. Пароль в чат не просить.
 
@@ -60,7 +61,7 @@ SSH: `sergey@192.168.50.36`, вход по ключу. Пароль в чат н
   `ssh sergey@192.168.50.36 'docker ps --format "{{.Names}}\t{{.Status}}"'`. Дождаться, что
   `nginx`/`app` в `Up`, повторить curl.
 - **502** — обычно `app`-контейнер (`:8000`) не поднялся/нездоров; смотреть `docker compose logs app`.
-- **Старый фронт после деплоя** — не перезапущен nginx: `docker compose restart nginx`.
+- **Старый фронт после деплоя** — не перезапущены контейнеры: `docker compose restart app nginx`.
 - Инфру (compose/nginx-конфиг/тома) сами не правим — read-only диагностика + тикет на бэк.
 
 ## Границы

@@ -20,8 +20,8 @@ description: "Регламент релиза iPhone: bump → гейт → sign
 - Universal iPhone/iPad v1: `supportsTablet: true`; iPad screenshots и
   full-screen/adaptive-window acceptance входят в release scope.
 - Штатные команды: `npm run ios:environment:check`, `npm run ios:prebuild`,
-  `npm run ios:release:guard`, `npm run ios:build:dev|preview|prod`,
-  `npm run ios:submit <BUILD_ID>`.
+  `npm run ios:release:guard`, `npm run ios:artifact:audit`,
+  `npm run ios:build:dev|preview|prod`, `npm run ios:submit <BUILD_ID>`.
 
 ## Гейт №0 — что требует явной команды владельца
 
@@ -106,6 +106,11 @@ Read-only проверки (`ios:environment:check`, `ios:release:guard`, инс
    релиз принимается только на exact processed TestFlight build.
 7. **Upload** — отдельная команда владельца: `npm run ios:submit <BUILD_ID>`.
    Один раз, дождаться processing, дубли не слать.
+   - **`ios:artifact:audit` обязателен перед каждым upload** (`docs/WORKFLOW_OPERATIONS.md`
+     → «Signed distribution»): compiled Info.plist, minimum OS, purpose strings, privacy
+     resources, production bundle, provisioning, подпись и signed entitlements.
+     `ios:release:guard` его не заменяет — тот проверяет источник, а не IPA. Upload wrapper
+     поднимает гейт сам и останавливается до транспорта в App Store Connect.
    - **Пока артефакт не загружен — репозиторий не трогать.**
      `ios-eas-artifact-download.js:21` требует `metadata.gitCommitHash ===`
      текущий HEAD, поэтому ЛЮБОЙ коммит после старта сборки ломает загрузку:

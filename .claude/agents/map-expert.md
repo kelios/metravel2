@@ -119,14 +119,18 @@ handoff и выполняются только после code-review pass в `t
 
 ## Крупные файлы (нужен split)
 
-LOC сверяй перед работой: `npm run guard:file-complexity` (порог 800 LOC),
-цифры ниже — снимок, а не источник правды.
+Конкретные LOC не держи в голове и не бери из промта — снимай перед работой
+`npm run guard:file-complexity` (порог 800 LOC). Устойчиво только то, какие
+файлы карты в этот список попадают:
 
-- `components/MapPage/Map/PlacePopupCard/index.tsx` (~1300 LOC) — приоритет 1 на
-  распил; часть карточки уже вынесена в соседние модули той же папки
-  (`placePopupModel.ts`, `usePopupActions.ts`, `usePopupLayout.ts`, `styles.ts`).
-- `components/MapPage/Map.web.tsx` (~1050 LOC), `components/MapPage/MapMobileLayout.tsx`
-  (~940 LOC), `components/MapPage/Map/nativeMapHtml.ts` (~845 LOC).
+- `components/MapPage/Map/PlacePopupCard/index.tsx` — приоритет 1 на распил;
+  часть карточки уже вынесена в соседние модули той же папки
+  (`placePopupModel.ts`, `usePopupActions.ts`, `usePopupLayout.ts`, `styles.ts`),
+  и сам `styles.ts` тоже уже перерос порог — режь его отдельно от логики.
+- `components/MapPage/Map.web.tsx`, `components/MapPage/Map.ios.tsx`,
+  `components/MapPage/MapMobileLayout.tsx`,
+  `components/MapPage/Map/nativeMapHtml.ts`, `api/map.ts`,
+  `hooks/map/useMapCoordinates.ts`, `screens/tabs/map.styles.ts`.
 
 ## Тесты
 
@@ -164,15 +168,16 @@ LOC сверяй перед работой: `npm run guard:file-complexity` (п�
 
 ## Статус на борде (WIP-видимость) — load-bearing
 
-Когда тебе передали тикет борда (есть id, напр. «возьми #573» / «почини #545»), держи борд в актуальном состоянии — чтобы было видно, над чем идёт работа:
+Раздел включается, только когда тебе передали id тикета («возьми #573» /
+«почини #545»); без id борд не трогай вообще. Статусные детали и исключения —
+`docs/TASK_BOARD_MCP.md`.
 
-- **В начале работы:** переведи тикет в `in_progress` и поставь `assignee` = своё имя агента (`metravel_task_update`). Сделай это ДО первой правки кода. MCP-схемы борда при необходимости подгружай через `ToolSearch` (`select:mcp__metravel-task-board__metravel_task_update,...`).
-- **В конце работы:** переведи тикет в `review` и допиши evidence: корень проблемы, изменённые файлы (`path:line`), пройденные code-level checks и exact runtime-QA handoff для `testing`. НЕ ставь `done` сам.
-- **Review handoff:** передай полный task diff агенту `code-review-gate` через родителя; дополнительное разрешение на запуск не нужно. Переход `review → testing`, commit/push и evidence выполняются по `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`». Findings возвращаются исполнителю в `in_progress`.
-- **Заблокирован** (нужен бэк / нет данных / не воспроизводится) → `blocked_by` + короткая blocker-заметка в `description`. Заведение связанных тикетов (BE-задача и т.п.) и любых НОВЫХ тикетов/спринтов — только через агента `ticket-board` (единый источник правды), сам их не создавай.
-- **Один тикет — один исполнитель.** Не трогай статус/описание чужих тикетов; меняй только тот, что тебе назначен.
-- **Без тикета** (прямая правка по просьбе, без id на борде) — борд не трогай.
-- Если борд недоступен (MCP не отвечает) — не блокируйся, сделай работу и явно отметь в ответе «борд не обновлён, нужен ticket-board».
+- **ДО первой правки кода:** `metravel_task_update` → `in_progress` плюс `assignee` = имя твоего агента. MCP-схемы борда подгружай через `ToolSearch` (`select:mcp__metravel-task-board__metravel_task_update,...`).
+- **После работы:** → `review`, а в `description` допиши evidence: корень проблемы, изменённые файлы (`path:line`), пройденные code-level checks, exact runtime-QA handoff для `testing`. `done` сам НЕ ставишь.
+- **Review handoff:** полный task diff → агенту `code-review-gate` через родителя, разрешения не спрашивай. Commit, push и переход `review → testing` — по `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`». Findings возвращают тикет исполнителю в `in_progress`.
+- **Блокер** (нужен бэк / нет данных / не воспроизводится) → `blocked_by` + короткая причина в `description`. НОВЫЕ и связанные тикеты/спринты заводит только агент `ticket-board`, сам не создавай.
+- **Один тикет — один исполнитель:** чужие статусы и описания не трогай.
+- **Борд не отвечает** — не блокируйся: сделай работу и явно напиши в ответе «борд не обновлён, нужен ticket-board».
 
 ## Проверка по platform impact (обязательное правило)
 

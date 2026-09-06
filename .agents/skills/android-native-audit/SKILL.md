@@ -62,7 +62,7 @@ native Android. Цель — закрыть краши **до** local build, а 
 4. Проверка: `npm run typecheck`, `npm run lint`; убедиться, что **оба** бандла
    (web и native) собираются — web-only импорт не утёк в native и наоборот.
 5. Реальные краши, не видимые статикой, ловятся прогоном dev-client на
-   устройстве (через `android-release` / `android-builder`).
+   устройстве (через `android-release` / `android-publisher`).
 
 ## Формат отчёта
 

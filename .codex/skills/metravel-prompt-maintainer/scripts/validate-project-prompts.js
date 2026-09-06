@@ -10,6 +10,7 @@ const skillsRoot = path.join(repoRoot, '.codex', 'skills')
 const claudeAgentsRoot = path.join(repoRoot, '.claude', 'agents')
 const sharedSkillsRoot = path.join(repoRoot, '.agents', 'skills')
 const claudeSkillsRoot = path.join(repoRoot, '.claude', 'skills')
+const copilotSkillsRoot = path.join(repoRoot, '.github', 'skills')
 const errors = []
 let skillCount = 0
 let claudeAgentCount = 0
@@ -88,7 +89,11 @@ for (const entry of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
 
 const sharedSkills = auditSkillFamily(sharedSkillsRoot)
 const claudeSkills = auditSkillFamily(claudeSkillsRoot, sharedSkillsRoot)
-for (const result of [sharedSkills, claudeSkills]) {
+// `.github/skills` is a Copilot-side surface routed by name from `.github/copilot-instructions.md`.
+// Its `metravel-*` entries are hand-maintained snapshots that legitimately lag `.codex/skills`,
+// so only their metadata is enforced here; text drift is a review decision, not an audit failure.
+const copilotSkills = auditSkillFamily(copilotSkillsRoot)
+for (const result of [sharedSkills, claudeSkills, copilotSkills]) {
   for (const { file, message } of result.errors) fail(file, message)
 }
 
@@ -132,5 +137,5 @@ if (errors.length > 0) {
   for (const error of errors) console.error(`- ${error}`)
   process.exitCode = 1
 } else {
-  console.info(`prompt-audit: passed (${skillCount} .codex skills; ${sharedSkills.count} .agents skills (${sharedSkills.vendorCount} vendor); ${claudeSkills.count} .claude skills (${claudeSkills.vendorCount} vendor, ${claudeSkills.mirrorCount} mirrors checked); ${claudeAgentCount} Claude agents; ${promptCount} prompt artifacts)`)
+  console.info(`prompt-audit: passed (${skillCount} .codex skills; ${sharedSkills.count} .agents skills (${sharedSkills.vendorCount} vendor); ${claudeSkills.count} .claude skills (${claudeSkills.vendorCount} vendor, ${claudeSkills.mirrorCount} mirrors checked); ${copilotSkills.count} .github skills (${copilotSkills.vendorCount} vendor); ${claudeAgentCount} Claude agents; ${promptCount} prompt artifacts)`)
 }

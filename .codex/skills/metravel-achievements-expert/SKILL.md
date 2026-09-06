@@ -12,15 +12,21 @@ plus only the API/UI/i18n/media headings implicated by the task.
 
 ## Scope
 
-- `api/achievements.ts`, `api/achievementsMock.ts`, `api/queryKeys.ts`
-- `hooks/useAchievementsApi.ts`
+- `api/achievements.ts` (7-line re-export facade — import from it, do not grow it),
+  `api/achievementsTypes.ts`, `api/achievementsNormalizers.ts`,
+  `api/achievementsRequests.ts`, `api/achievementsShare.ts`,
+  `api/achievementsMock.ts`, `api/queryKeys.ts`
+- `hooks/useAchievementsApi.ts`, `hooks/useGamification.ts`
 - `components/achievements/**`
 - `__tests__/achievements/**`
 - Embeds in `app/(tabs)/profile.tsx`, `app/(tabs)/user/[id].tsx`, and `components/travel/AuthorCard.tsx`
 
 ## Rules
 
-- Treat `api/achievements.ts` as the backend contract source for frontend types and DTO mapping.
+- The backend contract lives in `api/achievementsTypes.ts` (domain types) and
+  `api/achievementsNormalizers.ts` (snake_case DTO → domain, legacy branches);
+  fetch/timeout/mock boundaries live in `api/achievementsRequests.ts`.
+  `api/achievements.ts` only re-exports them.
 - Keep mock fallback explicit through `EXPO_PUBLIC_ACHIEVEMENTS_MOCK=true` or documented dev fallback only.
 - Keep peer badge mutations optimistic but rollback-safe.
 - Use `ImageCardMedia` for badge images; do not invent fake image URLs.

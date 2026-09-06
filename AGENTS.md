@@ -6,8 +6,8 @@
 ## 1. Источники и экономия контекста
 
 - `docs/RULES.md` — канонические технические и операционные правила.
-- `docs/README.md` — карта документации, не обязательное чтение перед каждой
-  задачей.
+- `docs/INDEX.md` — классификация всех файлов `docs/`; `docs/README.md` — quick
+  start и карта API-семейств. Ни то, ни другое не обязательно перед задачей.
 - `docs/CODEX.md` — ленивый router skills/агентов и validation matrix.
 - `docs/CODEX_SKILLS.md` — machine-audited registry; читать только при изменении
   или аудите каталога skills.
@@ -108,8 +108,12 @@ Validation:
 - Проверочный таргет по умолчанию — ЛОКАЛЬНЫЙ стек этой машины: бэкенд
   `bash /Users/juliasavran/Sites/metravel/run-backend.sh` (Django на :8000,
   PostGIS 17-3.5 и redis в docker, данные — свежая копия прод-базы) и фронт
-  `EXPO_PUBLIC_API_URL=http://localhost:8000 npx expo start --web`. Дефолты
-  `.env` и metro-прокси уже указывают туда. Дев-стенд `192.168.50.36` и прод
+  `EXPO_PUBLIC_API_URL=http://localhost:8000 npx expo start --web`. `.env`
+  проверенным дефолтом не является: `build-prod.sh:42` копирует `.env.prod`
+  поверх него, а metro-прокси предпочитает `EXPO_PUBLIC_API_URL` своему
+  `DEFAULT_DEV_API_HOST` (`metro.config.js:318`), поэтому строку читают перед
+  первой пробой и при необходимости возвращают на `http://localhost:8000`.
+  Дев-стенд `192.168.50.36` и прод
   `metravel.by` подключаются точечной переменной окружения и ТОЛЬКО по явному
   запросу владельца; деплой на них по-прежнему проходит operation gate
   `docs/WORKFLOW_OPERATIONS.md`. Локально бакет S3 — `metravellocal`, поэтому у

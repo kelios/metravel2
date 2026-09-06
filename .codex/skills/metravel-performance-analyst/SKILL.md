@@ -50,9 +50,12 @@ also read the relevant part of `docs/TRAVEL_PERFORMANCE_REFACTOR.md`.
 
 For changes in `components/travel/sliderParts/**`, `components/travel/details/**`, `ImageCardMedia`, hero overlays/decode gates, travel-details lazy loading, bundle priority, or responsive image layout:
 
-1. Run the swipe guard through the shared quality-gate lock: `node scripts/run-with-quality-gate-lock.js verify:slider -- npm run verify:slider`, plus the targeted pointer-drag unit test when relevant.
+1. Run the swipe guard with `npm run verify:slider` — the script already wraps
+   itself in `scripts/run-with-quality-gate-lock.js`, so do not add a second
+   wrapper. Add the targeted pointer-drag unit test when relevant.
 2. Verify the real mobile-web slider with an actual pointer/touch drag on the rendered slide, including vertical-scroll and tap-vs-drag behavior.
-3. Run the combined production-build budget through the shared lock: `node scripts/run-with-quality-gate-lock.js verify:slider-perf -- npm run verify:slider-perf`.
+3. Run the combined production-build budget with `npm run verify:slider-perf` — it
+   carries the same built-in lock wrapper.
 4. Do not add web hero `content-visibility`, offscreen/lazy slide skipping, interaction-gated mounting, or a pointer-blocking overlay without the existing bounded unmount contract.
 5. Report both swipe evidence and performance numbers; one green side is not a pass.
 

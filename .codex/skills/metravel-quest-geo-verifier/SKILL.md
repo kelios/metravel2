@@ -22,7 +22,6 @@ script/doc; use the docs index only if that artifact cannot be located.
 - Do not write production quest content; return suggested patches/evidence only.
 - Do not edit task/hint copy except to explain why a coordinate is ambiguous; route content edits to `$metravel-quest-editor`.
 - Respect public geocoding rate limits and cache/reuse local evidence when available.
-- Do not print secrets.
 - Prefer `node scripts/quest-geocheck.js` when available.
 
 ## Workflow

@@ -18,6 +18,12 @@ when routing or project-wide documentation also changes.
 - `.agents/skills/*/SKILL.md`: shared project procedures; matching
   `.claude/skills` files are compatibility copies. Keep non-vendor copies in
   sync; preserve OpenSpec adapter differences.
+- `.github/skills/metravel-*/SKILL.md`: hand-maintained Copilot-side snapshots
+  routed by name from `.github/copilot-instructions.md`. They are not generated,
+  so they silently lag `.codex/skills`; when you change a skill that has a
+  `.github` twin, refresh it or state that the lag is deliberate. `speckit-*`
+  there is vendor output of spec-kit, hashed in
+  `.specify/integrations/copilot.manifest.json` — never hand-edit it.
 - `.claude/agents/*.md` and `.claude/commands/*.md`: role prompts and command
   entry points. `.grok/agents` is generated, not an editing source.
 
@@ -71,8 +77,17 @@ python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py .codex/s
 
 Validate each changed skill (including compatibility copies). If the system
 Python lacks PyYAML, use `uv run --with pyyaml python` for the same validator.
-After agent changes, run `node .grok/scripts/sync-agents.mjs`. For audit-script
-changes, run its focused regression tests as well.
+After agent changes, run `node .grok/scripts/sync-agents.mjs`. After changing the
+audit scripts, also run their regression suite — project Jest does not collect it
+(`jest.config.js` `testMatch` is `**/__tests__/**/*.test.ts(x)`), so run it directly:
+
+```bash
+node --test .codex/skills/metravel-prompt-maintainer/scripts/skill-catalog-validation.test.js
+```
+
+`audit:prompts` failing on a `.claude/skills` mirror is usually another session's
+uncommitted edit, not your change: compare the two families at `HEAD` before
+touching files you do not own.
 
 Report inspected families, canonical sources changed, size/count delta when
 optimization was requested, validation, and deliberately retained legacy text.

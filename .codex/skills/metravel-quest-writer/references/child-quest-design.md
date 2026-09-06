@@ -8,11 +8,15 @@ Use this reference for child, family, fairy-tale, park, amusement, or teen quest
 - Record reading independence, expected adult accompaniment, group size, season, paid-access tolerance, stroller or mobility needs, and sensory constraints when known.
 - Keep the self-guided route adult-accompanied unless the product and local safety review explicitly support otherwise. Never imply that a child should cross streets, approach water, enter a venue, or meet a stranger alone.
 
+Step counts, distance and time below mirror the load-bearing age grid in
+`.claude/skills/metravel-quest/SKILL.md` → `### Возрастная сетка (load-bearing)`.
+If they ever disagree, that grid wins and this table is the stale copy.
+
 | Primary age | Core steps | Target time | Walking target | Reading and puzzle contract |
 | --- | ---: | ---: | ---: | --- |
-| 5–7 | 5–6 | 40–60 min | 0.8–1.5 km | Adult reads; use a visible helper character, movement, matching, colour/shape recognition, and one decision per step. Keep answers to a tap, choice, or one familiar word. |
-| 8–10 | 6–8 | 60–90 min | 1.5–2.5 km | Mix independent and adult reading; collect clues, assign team roles, and use one- or two-stage observation puzzles with frequent physical activity. |
-| 11–14 | 7–10 | 75–120 min | 2–4 km | Use a non-baby detective, expedition, science, urban-culture, or historical mystery tone; allow ciphers, navigation, competing hypotheses, choices, and a final meta-puzzle. |
+| 5–7 | 6–8 | 45–60 min | ≤1.5 km | Adult reads; use a visible helper character, movement, matching, colour/shape recognition, and one decision per step. Keep answers to a tap, choice, or one familiar word. One park or pedestrian street, no roadway crossings. |
+| 8–10 | 7–9 | 60–90 min | ≤2.5 km | Mix independent and adult reading; collect clues, assign team roles, and use one- or two-stage observation puzzles with frequent physical activity. Pedestrian zones, minimal signalled crossings. |
+| 11–14 | 8–10 | 90–120 min | ≤4 km | Use a non-baby detective, expedition, science, urban-culture, or historical mystery tone; allow ciphers, navigation, competing hypotheses, choices, and a final meta-puzzle. |
 
 Adjust distance downward for crowds, heat, snow, hills, ticket queues, mobility needs, or dense street crossings. Do not pad a young-child quest to the general 8–12-step adult default.
 
@@ -62,21 +66,18 @@ Keep prose proportional to the band: short read-aloud beats for 5–7, compact p
 - Never require touching monuments, feeding animals, picking plants, entering restricted areas, photographing children, sharing personal data, or buying an item to prove completion.
 - Test the answer at the child's eye level and likely viewpoint. Keep hints progressive: where to look, what category to notice, then a recovery path; do not reveal the final word immediately.
 
-## Minsk research seeds — revalidate after 2026-07-14
+## City research seeds
 
-Use these only as starting clusters. Reopen current official sources and verify the exact route, public access, schedules, tickets, age limits, and observable details before any creative draft.
+This reference carries no city-specific seed table. The previous Minsk table
+expired on 2026-07-14 and its Gorky Park/Planetarium and Upper City/Trinity
+Suburb clusters have since shipped as `scripts/minsk-kids-zvezdochka-quest-data.js`
+and `scripts/minsk-kids-quest-data.js`.
 
-| Cluster | Best starting band | Non-creative route direction and theme families | Access warning |
-| --- | --- | --- | --- |
-| Circus sculptures + Gorky Park + Planetarium | 5–7 or 8–10 | Keep the existing bronze-animal idea for younger players, or use a space/observation mission contained around the park. | Planetarium sessions and rides are time/weather dependent; keep them optional or make a booked edition. |
-| Chelyuskintsev Park + Children's Railway + Botanical Garden | 8–10 | Use transport, signals, forest messages, plant adaptation, or expedition roles in one compact green district. | Railway and garden are seasonal/ticketed; do not require both in a public park route. |
-| Minsk Zoo + DinoPark | 5–7 or 8–10 | Use animal evidence, habitats, tracks, or a palaeontology expedition inside one managed venue. | Create only as a ticketed venue quest; never depend on animal position or behaviour. |
-| Upper City + Trinity Suburb + city-museum cluster | 8–10 or 11–14 | Use bronze characters for younger players; use an urban code, trade, archaeology, or changing-city mystery for older players. | Separate the free street route from museum opening hours and tickets. |
-| Loshitsa Park + estate museum | 11–14 | Use an archive, garden, estate, map, or verified local-history mystery with clearly labelled legends. | Keep the park as the public core and the museum as optional/booked; audit water and low-light sections. |
-| Dynamo area + Skate Museum / creative-city stops | 11–14 | Use design, movement, subculture history, media, or a city-without-boredom investigation without childish mascots. | Confirm every outdoor art object and private-venue session before use. |
-| Quantum, Two Oceans, Legendarium, Prizma Park, or commercial quest rooms | Choose per operator rule | Use as indoor benchmarking or a separate booked venue edition; borrow pacing, team roles, progressive hints, and tactile interaction, not protected stories. | Private, paid, schedule-sensitive, and sometimes facilitator-led; never insert as a mandatory stop in a general city walk. |
-
-Starting sources to reopen include the current metravel quest page/API, `minskmuseum.by`, `cbg.org.by`, `minsk.rw.by` Children's Railway pages, `minskzoo.by`, the official Minsk Planetarium channel, `minsk8museum.by`, `kvantumminsk.by`, `ocean-minsk.by`, and each private venue's own rules page. Treat directories and map reviews as discovery only, not as final evidence.
+Before any creative draft, reopen current official sources for the target city and
+verify the exact route, public access, schedules, tickets, age limits, and
+observable details. Check the live metravel quest list first so you do not rebuild
+a shipped route; treat directories and map reviews as discovery only, never as
+final evidence.
 
 ## Child quest handoff checklist
 

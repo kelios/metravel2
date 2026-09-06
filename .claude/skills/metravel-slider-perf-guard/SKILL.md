@@ -55,7 +55,7 @@ Load-bearing правило — `CLAUDE.md` → «Архитектурные п�
    Expo web против обновлённого локального бэкенда `http://localhost:8000`
    (`docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек»); связка с прод-API
    (`Api Proxy 4620` + `Expo Web ProxyApi 8089`) — когда нужны прод-данные или медиа
-   старых статей. Дальше `preview_resize` mobile,
+   старых статей. Дальше `resize_window` (preset `mobile`),
    открыть реальный `/travels/<slug>`. Свайп проверять **pointer-drag на реальном
    верхнем узле** через `document.elementFromPoint(cx, cy)` (обычно `slider-slide-0`),
    а НЕ на контейнере-предке `travel-details-hero-slider-container` — события не идут

@@ -27,9 +27,10 @@ them as input, not as open questions:
   `eas.json` sets `autoIncrement: false` — every candidate needs a manual bump.
 - The app already offers Google and Facebook login (`components/auth/**`), so
   App Review Guideline 4.8 makes Sign in with Apple a launch requirement, not an
-  enhancement. Today `expo.ios.usesAppleSignIn` is `false` and no Apple auth
-  client exists — treat this as an open release blocker with a linked
-  `area=back` dependency for token verification and account linking.
+  enhancement. It has shipped: `expo.ios.usesAppleSignIn` is `true`, the client
+  is `api/appleAuth.ts` + `components/auth/AppleSignInButton*.tsx`, and the
+  backend serves `POST /api/user/apple-login/`. Do not re-open it as a blocker;
+  verify the three together before claiming a 4.8 regression.
 - Account deletion must stay reachable inside the app (Guideline 5.1.1(v)).
 - No in-app purchases, subscriptions or monetization in v1, and
   `ITSAppUsesNonExemptEncryption: false` is the declared encryption answer.

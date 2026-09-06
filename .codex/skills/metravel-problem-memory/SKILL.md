@@ -29,8 +29,8 @@ board mutation.
      P1 card was filed for 404 non-existent breakages).
    - Run a control on a position known to be healthy. A method that flags working
      things as broken is the thing that is broken.
-   - Explain any disagreement with a standard project check (`sweep`, guards,
-     `npm run seo:404`, post-deploy checks) before filing. An unexplained
+   - Explain any disagreement with a standard project check (`npm run check:fast`,
+     guards, `npm run seo:404`, post-deploy checks) before filing. An unexplained
      discrepancy means there is no finding yet.
    - Separate a real defect from a race or a cache: check `updated_at` of the
      affected rows, when you measured, and when static was last deployed.

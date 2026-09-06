@@ -60,6 +60,14 @@ id блокера, чего конкретно ждём и что произой
 то-то. Опиши и пустое состояние, и ошибку, а не только удачный путь. Точные команды и
 пробы для гейта живут ниже, в `Validation`.
 
+## Problem History
+
+Problem key:
+Historical matches:
+Verdict: reuse | reopen | create-linked | create-new
+Canonical task:
+Root-cause delta:
+
 ## Task Contract
 
 Scope:

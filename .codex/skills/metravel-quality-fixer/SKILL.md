@@ -28,7 +28,6 @@ Use this skill when the task is to validate the repository broadly and fix what 
 
 ## Repo specifics
 
-- Keep temporary traces, screenshots, and reports only in ignored folders such as `playwright-report/`, `test-results/`, `.codex-temp/`, or `.codex-debug/`.
 - For governance-sensitive fixes, rerun `npm run guard:external-links` or `npm run governance:verify`.
 - For flaky `e2e`, capture the exact failing spec, rerun it narrowly, fix the root cause, and then return to the broader suite.
 - If a failure is unrelated and cannot be safely fixed in this task, report the exact command, failing test/spec, risk, and next verification step.

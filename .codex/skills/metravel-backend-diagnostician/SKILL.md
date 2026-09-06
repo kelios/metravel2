@@ -25,7 +25,6 @@ only the backend ownership or board sections needed from `docs/RULES.md` and
   task for the owner.
 - If a fix is needed, create/update an `area=back` board task with evidence instead of changing backend files locally.
 - Production probes must be read-only GET/HEAD unless the user explicitly approved a safe test write.
-- Do not print tokens from `.env*` or `.secrets`.
 - Board writes are limited to status/evidence or backend task creation following `$metravel-task-contract`.
 
 ## Diagnosis Workflow

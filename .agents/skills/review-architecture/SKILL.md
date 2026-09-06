@@ -13,7 +13,7 @@ description: "Архитектурное ревью: контракты прое
 1. **Гварды** — прогнать `npm run guard:external-links`, `guard:file-complexity`,
    `check:image-architecture` (это машинная часть; падения чинить по регламенту
    агента guard-enforcer).
-2. **Контракты CLAUDE.md** — делегируй `review-auditor`:
+2. **Контракты `docs/RULES.md`** — делегируй `review-auditor`:
    - прямой `expo-image` / `Linking.openURL` / `window.open` вне разрешённых мест;
    - travel-карточки мимо `UnifiedTravelCard`; изображения мимо `ImageCardMedia`;
    - серверный стейт мимо React Query (fetch в компонентах/Zustand), клиентский —
@@ -24,7 +24,8 @@ description: "Архитектурное ревью: контракты прое
    - неправильная высота фикса: special-case в фиче там, где должен быть общий механизм;
    - цикличные/обратные зависимости (`components/ui` импортирует фичу, `utils` импортирует
      компоненты), web-only API в общем коде без `Platform`-гейта;
-   - god-файлы >800 LOC (кандидаты на `$split-component` — только предложить).
+   - god-файлы >800 LOC (кандидаты на `/split-component` — только предложить;
+     это Claude-команда `.claude/commands/split-component.md`, в `$`-каталоге Codex её нет).
 4. **Чини** подтверждённое: мелкое — сразу (с тестами/lint/typecheck); крупное
    (распил god-файла, слияние механизмов) — не делать молча, предложить план.
 5. **Отчёт**: нарушение → контракт, который оно ломает → что сделано/предложено.

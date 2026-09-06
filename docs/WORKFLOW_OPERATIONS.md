@@ -12,13 +12,14 @@
 - создание/удаление тестовых сущностей на проде → «3.1.1 Тестовые данные на production»;
 - сборка и прогон на USB-устройстве → «3.2 Android device testing and builds»;
 - Xcode/iPhone+iPad simulator/physical Apple device/TestFlight → «3.2.1 iOS testing and release operations»;
+- матрица разрешений iOS и QA удаления аккаунта → «3.2.2 iOS permission matrix и account-deletion QA»;
 - baseline/after на живом URL, закрытие perf/media/network задач → «3.3.1 Production-target validation and task closure»;
 - deploy/build/e2e/Lighthouse и общие locks → «3.4 Координация долгих операций».
 
 Обязательный минимум остаётся в `AGENTS.md`: common/shared responsive UI
 проверяется desktop web + mobile web, а device gate применяется только к
-platform-specific behavior/config/runtime (§3.3); правило quality-gate lock —
-в §3, шаг 9.
+platform-specific behavior/config/runtime (§2 «Обязательный preflight»); правило
+quality-gate lock — в §5 «Validation и handoff».
 
 ### 3.0 Локальный стек и обновление бэкенда перед тестированием
 
@@ -94,9 +95,11 @@ EXPO_PUBLIC_IS_LOCAL_API=false
 ```
 
 Фронт против него — `npx expo start --web` или готовый launch-конфиг
-`Local Stack Web 8081` из `.claude/launch.json` (`preview_start`): дефолты `.env`
-(`EXPO_PUBLIC_API_URL=http://localhost:8000`) и `DEFAULT_DEV_API_HOST` в
-`metro.config.js` уже смотрят на локальный бэк. На web держать
+`Local Stack Web 8081` из `.claude/launch.json` (`preview_start`). Дефолтом
+`localhost:8000` служит только `DEFAULT_DEV_API_HOST` в `metro.config.js:36`, и
+он проигрывает: прокси берёт `EXPO_PUBLIC_API_URL` из `.env`, когда тот задан
+(`metro.config.js:318`). Поэтому строка `.env` проверяется каждый раз — замер
+06.09.2026 застал там `https://metravel.by`. На web держать
 `EXPO_PUBLIC_IS_LOCAL_API=false`: с `true` запросы уходят в CORS-прокси Metro,
 тот теряет порт бэкенда и ссылки на картинки уезжают на `http://localhost/...`.
 Именно `localhost`, а не `127.0.0.1` — cookie `authToken` приходит
@@ -342,7 +345,7 @@ deny → allow → Settings → retry снимают на свежепостав
   iOS simulator/archive/EAS/upload/submit, server rebuild/restart,
   full/preflight проверки, Playwright/e2e, Lighthouse и другие долгие операции
   с общими артефактами считаются эксклюзивными.
-- Перед запуском такой операции проверь, не идет ли уже операция того же типа и target: активные процессы (`ps`/`pgrep -af` по `build-prod.sh`, `deploy-frontend.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `eas build`, `eas submit`, `gradlew`, `expo run:android`, `adb install`, `xcodebuild`, `simctl`, `expo run:ios`, `docker compose`, `nginx`, `systemctl`) и lock-файлы вроде `dist/.prod-build.lock` или `.codex-temp/ops/*.lock`, если они есть.
+- Перед запуском такой операции проверь, не идет ли уже операция того же типа и target: активные процессы (`ps`/`pgrep -af` по `build-prod.sh`, `build-dev.sh`, `npm run`, `playwright`, `lighthouse`, `expo export`, `eas build`, `eas submit`, `gradlew`, `expo run:android`, `adb install`, `xcodebuild`, `simctl`, `expo run:ios`, `docker compose`, `nginx`, `systemctl`) и lock-файлы вроде `dist/.prod-build.lock` или `.codex-temp/ops/*.lock`, если они есть.
 - Если другой агент уже запустил deploy/build/rebuild для того же target, не запускай второй экземпляр: используй уже идущую операцию, дождись её только когда результат обязателен для твоего scope, либо зафиксируй blocker с PID, командой и target.
 - Для test/quality gate действует отдельное non-waiting правило: если живой `.codex-temp/ops/quality-gate.lock` или активный quality-процесс уже существует, текущий чат сразу прекращает свой запуск. Не жди, не poll'и, не следи за завершением, не повторяй команду после освобождения lock и не запускай более узкий обходной тест.
 - Если активный gate по своему scope покрывает проверки текущей задачи,

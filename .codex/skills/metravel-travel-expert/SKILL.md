@@ -1,6 +1,6 @@
 ---
 name: metravel-travel-expert
-description: Expert for metravel travel list, travel details, wizard, author cards, route points, and export/PDF flows. Use for work in `components/travel/**`, `components/listTravel/**`, `app/travel/**`, `app/(tabs)/travel*`, `hooks/useTravel*`, `api/travel/**`, `utils/travelDetails*`, or `stores/*travel*`.
+description: Expert for metravel travel list, travel details, wizard, author cards, route points, and export/PDF flows. Use for work in `components/travel/**`, `components/listTravel/**`, `app/(tabs)/travel*`, `hooks/useTravel*`, `api/travel*.ts`, `api/travels*.ts`, `utils/travelDetails*`, or `stores/*travel*`.
 ---
 
 # Metravel Travel Expert
@@ -14,9 +14,9 @@ UI/media/API heading implicated by the task, and
 ## Scope
 
 - `components/travel/**`, `components/listTravel/**`, `components/travel/details/**`
-- `app/(tabs)/travel*`, `app/travel/**`
+- `app/(tabs)/travel*`, `app/(tabs)/travels*`
 - `hooks/useTravel*`, `utils/travelDetails*`
-- `api/travel/**` and related TanStack Query hooks
+- `api/travel*.ts`, `api/travels*.ts` and related TanStack Query hooks
 - travel-related stores and route point/photo flows
 
 ## Rules

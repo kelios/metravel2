@@ -1,6 +1,6 @@
 ---
 name: metravel-map-expert
-description: Expert for metravel map and places work, including MapPage, map popups, Leaflet web, native map/WebView surfaces, ORS routing, and place cards. Use for `components/MapPage/**`, `components/map/**`, `app/map*`, `app/(tabs)/map*`, `hooks/useMap*`, `screens/tabs/PlacesScreen.tsx`, or `api/places.ts`.
+description: Expert for metravel map and places work, including MapPage, map popups, Leaflet web, native map/WebView surfaces, ORS routing, and place cards. Use for `components/MapPage/**`, `components/map/**`, `app/(tabs)/map*`, `hooks/useMap*`, `screens/tabs/PlacesScreen.tsx`, or `api/places.ts`.
 ---
 
 # Metravel Map Expert
@@ -14,7 +14,7 @@ implicated by the task; add the affected native section for native map changes.
 ## Scope
 
 - `components/MapPage/**`, `components/map/**`
-- `app/map*`, `app/(tabs)/map*`
+- `app/(tabs)/map*`, `app/(tabs)/quests/map.tsx`
 - `hooks/useMap*`, map utilities, ORS integration
 - `screens/tabs/PlacesScreen.tsx`, `api/places.ts`
 
@@ -49,8 +49,9 @@ implicated by the task; add the affected native section for native map changes.
 3. For visible map UI/popup changes, define the browser scenario and hand it to
    `$metravel-browser-reviewer` only after code review in `testing`.
 4. For native-only behavior, implementation belongs to
-   `$metravel-android-developer`; device QA belongs to
-   `$metravel-mobile-tester` in `testing`.
+   `$metravel-android-developer` or `$metravel-ios-developer`; device QA belongs
+   to `$metravel-mobile-tester`, and iPhone-specific QA to
+   `$metravel-ios-tester`, in `testing`.
 5. Before review, run targeted code-level tests/checks only. Browser/device
    evidence is collected afterward by testing.
 

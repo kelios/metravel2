@@ -74,6 +74,20 @@ test('OpenSpec vendor variants skip drift and budget but retain required metadat
   assert.match(auditSkillFamily(claude, shared).errors[0].message, /description must be <=380/)
 })
 
+test('spec-kit vendor skills skip the budget while project .github skills keep it', (t) => {
+  const { claude, write } = fixture(t)
+  write(claude, 'speckit-plan', skill('speckit-plan', 'x'.repeat(500)))
+  assert.deepEqual(auditSkillFamily(claude), { count: 1, vendorCount: 1, mirrorCount: 0, errors: [] })
+  write(claude, 'speckit-plan', skill('renamed-by-hand'))
+  assert.deepEqual(auditSkillFamily(claude).errors.map((error) => error.message), [
+    'frontmatter name must match folder (speckit-plan)',
+  ])
+  write(claude, 'metravel-feature-builder', skill('metravel-feature-builder', 'z'.repeat(500)))
+  const messages = auditSkillFamily(claude).errors.map((error) => error.message)
+  assert.equal(messages.length, 2)
+  assert.ok(messages.some((message) => /description must be <=380/.test(message)))
+})
+
 test('missing family directories or SKILL.md are actionable failures', (t) => {
   const { shared } = fixture(t)
   assert.match(auditSkillFamily(path.join(shared, 'absent')).errors[0].message, /missing skill directory/)

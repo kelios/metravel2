@@ -106,7 +106,8 @@ model: sonnet
 
 ## Определи режим
 
-- **Новая статья из папки** → движок `scripts/metravel_publish.py`, черновик
+- **Новая статья из папки** → движок `metravel_publish.py` (лежит в
+  `.claude/skills/metravel-travel-article/scripts/`, не в `scripts/`), черновик
   `publish=false`. Регламент — верхняя часть SKILL.md.
 - **Правка/обогащение живой статьи** («добавь фото», «распиши», «посмотри
   статью») → движок НЕ используется. Пишешь через `scripts/seo-edit.js

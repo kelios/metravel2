@@ -73,8 +73,9 @@ pdf-lib НЕТ** — не добавляй их, генератор отдаёт
 | Страницы | `runtime/coverPage.ts`, `runtime/travelContentPage.ts`, `runtime/travelPhotoPage.ts`, `runtime/atlasPages.ts` (+`atlas/`), `runtime/pdfSectionRenderers.ts` (TOC, чек-лист), `runtime/renderers/{GalleryPageRenderer,MapPageRenderer,FinalPageRenderer}.ts` | Рендереры конкретных разделов (HTML-строки) |
 | Сборка/markup | `runtime/pdfPageAssembly.ts`, `runtime/pdfRuntimeMarkup.ts` (+`pdfRuntimeMarkup/`), `runtime/pdfVisualHelpers.ts` | DOCTYPE, печатный CSS, склейка страниц, running header |
 | Контент | `services/pdf-export/parsers/ContentParser.ts`, `services/pdf-export/renderers/BlockRenderer.ts` | Парс/рендер блоков описания (plus/minus/recommendation) |
-| Темы | `services/pdf-export/themes/PdfThemeConfig.ts` (реестр), `themes/types.ts` (`PdfThemeConfig`), `themes/configs/*.ts` (18 тем) | Цвета/типографика/отступы темы |
-| Имя темы | `components/export/ThemePreview.tsx` (экспорт `PdfThemeName`) | Союз допустимых тем |
+| Темы | `services/pdf-export/themes/PdfThemeConfig.ts` (реестр), `themes/types.ts` (`PdfThemeConfig`), `themes/configs/*.ts` (20 тем) | Цвета/типографика/отступы темы |
+| Имя темы | `services/pdf-export/themes/types.ts` — канонический `PdfThemeName` (20 имён), реэкспорт из `PdfThemeConfig.ts`. ⚠️ В `components/export/ThemePreview.tsx:10` лежит ВТОРОЙ, рассинхронизированный союз на 19 имён без `illustrated` | Союз допустимых тем |
+| Premium-доступ | `hooks/usePdfPremium.ts` → `services/pdf-export/entitlement/PdfEntitlementSource`, потребитель `components/export/BookSettingsModal.tsx` | Тир, paywall-аналитика |
 | Пресеты | `types/pdf-presets.ts` (`BOOK_PRESETS`, `getPresetById`) | Готовые наборы настроек |
 | Типы | `types/pdf-export.ts` (`ExportStage`, `ExportConfig`), `types/book.ts`, `types/pdf-gallery.ts` | Енумы/модели |
 | Утилиты | `services/pdf-export/utils/htmlUtils.ts` (escape/safe-url), `services/pdf-export/generators/v2/processors/ImageProcessor.ts`, `services/pdf-export/quotes/travelQuotes.ts`, `utils/openBookPreviewWindow.ts` | Безопасность, картинки, цитаты, открытие окна |
@@ -85,9 +86,10 @@ pdf-lib НЕТ** — не добавляй их, генератор отдаёт
 
 - `title`, `subtitle`
 - `coverType`: `'auto' | 'first-photo' | 'gradient' | 'custom'` (+ `coverImage`)
-- `template`: `PdfThemeName` — одна из 18 тем (`minimal`, `classic`, `modern`,
+- `template`: `PdfThemeName` — одна из 20 тем (`minimal`, `classic`, `modern`,
   `romantic`, `adventure`, `travel-magazine`, `ocean`, `forest`, `sepia`, `newspaper`,
-  `nordic`, `retro`, `tropical`, `illustrated`, `dark`, `light`, `black-white`, `sunset`)
+  `nordic`, `retro`, `tropical`, `illustrated`, `dark`, `light`, `black-white`, `sunset`,
+  `editorial-luxe`, `watercolor`)
 - `sortOrder`: `'manual' | 'date-desc' | 'date-asc' | 'country' | 'alphabetical'`
 - секции: `includeToc`, `includeGallery`, `includeMap` (+`showCoordinatesOnMapPage`),
   `includeChecklists` (+`checklistSections`: clothing/food/electronics/documents/medicine)
@@ -126,7 +128,7 @@ pdf-lib НЕТ** — не добавляй их, генератор отдаёт
 Гибко управляется именно ВКЛЮЧЕНИЕ разделов, и оно работает: `includeToc` /
 `includeGallery` / `includeMap` / `includeChecklists`
 (`hasGallery = includeGallery && photos.length`, `hasMap = includeMap && locations.length` —
-`runtime/bookData.ts:98,112`; `includeToc`/`includeChecklists` — `pdfPageAssembly.ts:64,112`).
+`runtime/bookData.ts:101,115`; `includeToc`/`includeChecklists` — `pdfPageAssembly.ts:64,112`).
 Полноценный reorder + UI заводить ТОЛЬКО по явному запросу владельца отдельным тикетом.
 
 ### Починить превью/печать
@@ -147,7 +149,8 @@ pdf-lib НЕТ** — не добавляй их, генератор отдаёт
   работает (регресс обязателен).
 - **Premium:** все дизайнерские темы (`romantic`, `travel-magazine`, `illustrated`,
   `sepia`, `newspaper`, `ocean`, `forest`, `sunset`, `nordic`, `retro`, `tropical`,
-  `modern`, `adventure`) + 2 новых флагмана (`editorial-luxe`, `watercolor`), снятие
+  `modern`, `adventure`) + 2 флагмана `editorial-luxe` и `watercolor` (уже в дереве:
+  `themes/configs/editorialLuxe.ts`, `configs/watercolor.ts`, оба в `PDF_THEMES`), снятие
   водяного знака, кастомная обложка, журнальные раскладки галереи.
 
 **Модель доступа (entitlement):**
@@ -161,11 +164,13 @@ pdf-lib НЕТ** — не добавляй их, генератор отдаёт
 - earned-путь (≥20) не зависит от биллинга → реальный гейтинг можно включить до оплаты.
 
 **Архитектура (pluggable):** тир (`free`/`premium`) у каждой темы/пресета +
-entitlement-слой `usePdfPremium` с интерфейсом источника. Меняется только источник
-(стаб → бэк → платёж), UI и генератор не трогаются. Подробности задач — на борде.
+entitlement-слой `hooks/usePdfPremium.ts` (уже в дереве, FE-8.2/#294) с интерфейсом
+источника `services/pdf-export/entitlement/PdfEntitlementSource`; потребитель —
+`components/export/BookSettingsModal.tsx`. Меняется только источник (стаб → бэк → платёж),
+UI и генератор не трогаются. Подробности задач — на борде.
 
 **Карта тикетов:** эпик **#37**; FE: **#292** тиры тем · **#294** entitlement+стаб ·
-**#296** paywall-UI · **#297** гейт+водяной знак · **#295** 2 новые темы ·
+**#296** paywall-UI · **#297** гейт+водяной знак · **#295** 2 новые темы (сделано) ·
 **#298** премиум-фичи. BE: **#293** `is_premium` (≥20 OR оплата). Платформа — web-only.
 
 ## Серверная / headless генерация PDF (в коде ПОКА НЕТ)

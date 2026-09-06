@@ -18,7 +18,8 @@ created or reviewed.
 ## Scope
 
 - `metravel_task_board`, `metravel_tasks_list`, `metravel_task_get`, `metravel_task_create`, `metravel_task_update`, `metravel_task_delete`
-- `metravel_sprints_list`, `metravel_sprint_get`, `metravel_sprint_create`, `metravel_sprint_update`
+- `metravel_task_board_options` — the source of truth for `task_statuses` / `task_areas` / `task_kinds` / `task_urgencies` / `sprint_statuses`; check enums with it instead of guessing
+- `metravel_sprints_list`, `metravel_sprint_get`, `metravel_sprint_create`, `metravel_sprint_update`, `metravel_sprint_delete`
 - Task Contract creation/review, active sprint assignment, dependency/blocker links, evidence updates
 
 ## Rules
@@ -67,8 +68,14 @@ created or reviewed.
 
 ## Status Semantics
 
-Use the canonical status map from `docs/TASK_BOARD_MCP.md`:
+Use the canonical status map from `docs/TASK_BOARD_MCP.md`. The full enum is
+`backlog → todo → in_progress → review → testing → done`, plus `blocked_by` and
+`wont_do`:
 
+- `backlog`: not yet prioritized or not ready to execute; the analyst/owner still
+  has to settle the contract and priority.
+- `wont_do`: work deliberately cancelled with a recorded reason; only the owner or
+  board operator sets it.
 - `todo`: implementation, refinement, deploy/configuration, data, or other owner
   work remains; it may be not started or returned with a concrete action.
 - `in_progress`: implementation/fix work is active.

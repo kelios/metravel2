@@ -39,7 +39,6 @@ guidance only when the task needs it.
 - Keep external navigation inside `utils/externalLinks.ts` helpers.
 - Follow `$metravel-i18n-guardrails` for user-facing text. Shared/native copy
   uses the common resources; do not add Android-only hardcoded strings or manual locale formatting.
-- Do not print secrets from `.env*`, EAS, Google Play, or device logs.
 - Do not edit `app.json`, `eas.json`, `plugins/**`, or release scripts unless the user explicitly asks for build/config changes.
 - Android EAS/cloud builds and submits are disabled. Never run an EAS Android or
   `--platform all` command. Local Android production/store work belongs to

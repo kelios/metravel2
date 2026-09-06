@@ -7,7 +7,7 @@ module.exports = [
     {
         quest_id: "yerevan-ararat",
         title: "Квест по Еревану: город у подножия Арарата",
-        city: { name: "Ереван", lat: 40.1872, lng: 44.5152, country: 11 },
+        city: { name: "Ереван", lat: 40.1872, lng: 44.5152, country: 6 },
         meta: {
             lat: 40.1872,
             lng: 44.5152,

@@ -31,23 +31,11 @@ Risks:
 Open questions:
 ```
 
-When the brief will become a FE/BE board task, also draft the mandatory task-board contract
-from `docs/TASK_BOARD_MCP.md`:
-
-```md
-## Task Contract
-
-Scope:
-User-visible result:
-Data/API contract:
-Platform impact:
-Localization impact:
-Dependencies:
-Fallback/mock policy:
-Validation:
-Regression control:
-Done gate:
-```
+When the brief will become a FE/BE board task, copy the mandatory blocks from
+`docs/TASK_BOARD_MCP.md` — the Russian description sections, then `## Problem
+History` (obligatory before create/reopen/split), then `## Task Contract`. Do not
+retype them from memory: this skill deliberately keeps no local copy, because an
+older inline copy here was already missing `Problem History`.
 
 ## Rules
 

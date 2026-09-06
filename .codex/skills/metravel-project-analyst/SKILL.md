@@ -47,6 +47,5 @@ Blockers / unknowns:
 
 - Stay read-only unless the user explicitly asks to update docs or code after the analysis.
 - Prefer evidence from files, commands, and docs over broad guesses.
-- Do not print secrets from `.env`, `.env.e2e`, deployment configs, or local auth artifacts.
 - Do not create one-off reports by default; summarize in the handoff unless the user asks for a persistent doc.
 - If the analysis discovers a concrete bug in scope, route it to `$metravel-feature-builder` or `$metravel-qa-agent` instead of silently folding it into generic debt.

@@ -44,7 +44,7 @@ description: "Гео-сверка точек квеста через OSM/Nominat
    зоне. АНТИПАТТЕРН: 1→2→3 на юг, потом 4 возвращает к точке 1, потом 5 снова на
    юг. Нашёл возврат — предложи новый `order` (greedy nearest-neighbor от старта).
    Реордер прод-квеста применяют, меняя только поле `order` (не `step_id`, прогресс
-   сохраняется) — см. `metravel-quest` шаг 4b/4c.
+   сохраняется) — см. `metravel-quest` шаг 5d.
 
 ## Инструмент
 
@@ -78,8 +78,14 @@ NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/quest-geocheck.js --quest-id=<quest_
 # Все квесты с прода (длинно — Nominatim троттлинг)
 NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/quest-geocheck.js
 
-# Опции: --threshold=<m> (дефолт 60; плотный центр 80–100; точечный POI 40)
-#        --limit=<n> кандидатов (дефолт 3) · --json машинный вывод
+# Опции: --api-url=<url> · --quest-id=<id> · --source-file=<путь>
+#        --threshold=<m> (дефолт 60; плотный центр 80–100; точечный POI 40)
+#        --limit=<n> кандидатов (дефолт 3) · --delay-ms=<ms> (минимум 1100)
+#        --json машинный вывод
+# Геометрия маршрута (считает сам скрипт, руками не надо):
+#        --route-only только проверка маршрута, без гео-сверки объектов
+#        --backtrack-m=<m> возврат назад (дефолт 150) · --max-route-m=<m> (дефолт 4000)
+#        --max-leg-m=<m> длина одного перегона (дефолт 1200)
 ```
 
 ## Вердикты
@@ -100,9 +106,12 @@ NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/quest-geocheck.js
 3. **Разбор** каждого WARN/FAIL вручную: подтверди объект веб-поиском и прямым
    Nominatim (`/search?format=jsonv2&q=...`, `/reverse?format=jsonv2&zoom=18&lat=..&lon=..`,
    `User-Agent`, пауза ≥1.1 с). Смотри `class/type` — не остановка ли.
-4. **Патчи** `{ step_db_id, lat, lng, maps_url, source, note }`: координаты —
-   6 знаков, `maps_url = https://maps.google.com/?q=<lat>,<lng>`, на каждую —
-   источник.
+4. **Патчи** — формат, который принимает `scripts/apply-quest-patches.js`:
+   `{quest_id, step_db_id, step_id, changes: {lat, lng, maps_url}}`. Правки живут ТОЛЬКО
+   внутри `changes` — плоский патч тот же скрипт валит ошибкой «пустые changes», а поля
+   вне allowlist (`source`, `note`) — ошибкой «запрещённое поле». Координаты — 6 знаков,
+   `maps_url = https://maps.google.com/?q=<lat>,<lng>`; источник указывай в отчёте,
+   а не в патче.
 5. **Применение** (не в этом скилле):
    - новый квест → впиши `lat/lng/mapsUrl` в `scripts/<city>-quest-data.js`,
      перепрогони geocheck по файлу → 0 реальных проблем → дальше миграция

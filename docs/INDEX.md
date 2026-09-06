@@ -1,6 +1,6 @@
 # Docs index
 
-Актуализировано: 2026-08-28.
+Актуализировано: 2026-09-06.
 
 `docs/RULES.md` определяет обязательные правила. Не каждый файл в `docs/`
 является source of truth: dated snapshots и legacy adapters классифицированы
@@ -64,8 +64,11 @@
   читать ДО любой правки, касающейся картинок, чтобы не переизобретать пайплайн;
 - `docs/features/social-trips-gamification-roadmap.md` — current social
   trips/gamification feature map, не backlog;
-- `docs/features/map-current-location-route-mobile-mock.svg` — mobile map state
-  mock;
+- макеты состояний рядом с feature maps:
+  `docs/features/map-current-location-route-mobile-mock.svg`,
+  `docs/features/article-image-text-wrap-mock.md`,
+  `docs/features/trips-plan-description-editor-mock.md`,
+  `docs/features/trips-route-point-search-mock.md`;
 - `docs/TRAVEL_SAVE_MODERATION_CONTRACT.md` — save ≠ moderation;
 - `docs/TRAVEL_DRAFT_RECOVERY.md` — local draft persistence/recovery;
 - `docs/TRAVEL_PERFORMANCE_REFACTOR.md` — current travel details performance
@@ -88,7 +91,15 @@
 - `docs/adr/0001-no-direct-linking-openurl.md`;
 - `docs/adr/0002-images-via-image-card-media.md`;
 - `docs/adr/0003-root-runtime-patches-and-metro-stubs.md`;
+- `docs/adr/0004-country-offline-map-packages.md`;
 - `docs/adr/TEMPLATE.md` — шаблон ADR.
+
+## Design specs
+
+`docs/design/**` — нормативные макеты отдельных экранов, на которые ссылается
+`Design evidence` в карточках борда: `QUEST_COVER_TILE_SQUARE_VARIANT.md`,
+`QUEST_REVIEW_FILTER_1792.md`, `contact-feedback-success.md`,
+`userpoints-map-settings-1787.md`.
 
 ## Native/store operations
 

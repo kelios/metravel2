@@ -70,7 +70,6 @@ API target. This skill does not grant permission to message other people.
   exact connect/unlock/RSA action and continue; do not finish with a pending
   verdict.
 - Prefer Maestro flows in `e2e/maestro/` for repeatable native regressions when Java/Maestro are available; if Maestro itself is blocked, run the matching manual device steps.
-- Store screenshots, traces, logs, and temporary captures only in ignored folders such as `.codex-temp/`, `.codex-debug/`, `test-results/`, or `playwright-report/`.
 - Never print `.env.e2e` credentials, auth tokens, EAS secrets, or Google Play keys.
 
 ## Android USB Device Flow

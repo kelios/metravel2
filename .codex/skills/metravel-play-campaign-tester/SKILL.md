@@ -1,6 +1,6 @@
 ---
 name: metravel-play-campaign-tester
-description: "Run the configured Google Play reciprocity campaign on USB Android: daily app interaction, assignments, updates, crashes, evidence, and campaign log. No purchases, reviews, uninstall, messaging, or account changes."
+description: "Run the configured Google Play reciprocity campaign on USB Android: daily app interaction, assignments, updates, crashes, evidence, and campaign log. Refuses to run unless the config campaign is active. No purchases, reviews, uninstall, messaging, or account changes."
 ---
 
 # Metravel Play Campaign Tester
@@ -16,10 +16,15 @@ The directory name is legacy; Codex and Claude intentionally share the same camp
 
 ## Device Gate
 
-1. Read the campaign dates, device serial, package lists, and paths from config.
-2. Run `adb devices -l`; operate only the configured device in status `device`.
-3. Wake/dismiss the keyguard only when no PIN/password entry is required. A locked or unavailable device is a blocker, not permission to guess credentials.
-4. Store captures only under the configured ignored evidence directory.
+1. Blocking first check — read `campaign.status` from config. If it is not
+   `active`, or today falls outside `campaign.start`/`campaign.end`, refuse the
+   run and report that: do not open apps "just in case". Only the owner reopens a
+   campaign by setting `status="active"` with new dates and targets. As of
+   2026-09-06 the config reads `status: "closed"`, `closed_on: "2026-07-26"`.
+2. Read the campaign dates, device serial, package lists, and paths from config.
+3. Run `adb devices -l`; operate only the configured device in status `device`.
+4. Wake/dismiss the keyguard only when no PIN/password entry is required. A locked or unavailable device is a blocker, not permission to guess credentials.
+5. Store captures only under the configured ignored evidence directory.
 
 ## Daily Pass
 

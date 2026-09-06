@@ -31,7 +31,6 @@ API target. This skill does not grant permission to message other people.
 - Use `.env.e2e` credentials when present and never print secrets.
 - Prefer the narrowest Playwright spec or `--grep` scope that proves the scenario.
 - For visible web UI, check browser console errors and confirm the final state with screenshot or trace evidence when useful.
-- Store traces, screenshots, videos, and temporary reports only in ignored folders such as `.codex-temp/`, `playwright-report/`, or `test-results/`.
 - If the scenario is blocked by local server health or external instability, report the blocker and the next concrete re-run step.
 
 ## Repo specifics

@@ -29,7 +29,6 @@ Use this skill when the main job is to run tests rather than write product code.
 - The chat that starts a gate owns its failures and rerun. It must fix real failures; if it cannot, it reopens the affected task or records a blocker. Do not take over or duplicate failures from another chat's active gate.
 - Do not accept `.skip`, `it.skip`, `test.skip`, `describe.skip`, `xit`, or `xtest` as a workaround.
 - If a failure is clearly unrelated, report the exact command, failing test, risk, and why it was not fixed.
-- Keep logs and ad-hoc output only in ignored local folders such as `.codex-temp/` or `.codex-debug/`.
 
 ## Repo specifics
 

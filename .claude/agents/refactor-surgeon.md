@@ -88,20 +88,18 @@ model: opus
 
 ## Целевые файлы (приоритет распила)
 
-Список ниже — снимок; актуальный набор нарушителей всегда берётся из
-`npm run guard:file-complexity` (порог 800 LOC), потому что часть прежних целей
-уже распилена и цифры устаревают между сессиями.
+Список целей не хранится в промте: он устаревает между сессиями (часть прежних
+целей уже распилена, новые god-файлы появляются). Актуальный набор нарушителей
+всегда берётся прогоном `npm run guard:file-complexity` (порог 800 LOC) — вывод
+уже отсортирован по убыванию LOC, это и есть приоритет.
 
-1. `components/MapPage/Map/PlacePopupCard/index.tsx` (~1304 LOC)
-2. `components/ui/ImageCardMedia.tsx` (~1156 LOC)
-3. `components/MapPage/Map.web.tsx` (~1052 LOC)
-4. `components/trips/planning/RouteBuilder.tsx` (~979 LOC)
-5. `components/MapPage/MapMobileLayout.tsx` (~940 LOC)
-6. `components/travel/ContentUpsertSection.tsx` (~900 LOC)
-7. `api/client.ts` (~848 LOC), `components/MapPage/Map/nativeMapHtml.ts` (~846 LOC)
-8. `components/article/ArticleEditor.web.tsx` (~817 LOC),
-   `components/screens/profile/ProfileScreen.tsx` (~816 LOC),
-   `components/quests/QuestWizard.tsx` (~813 LOC)
+Приоритет внутри вывода, если задача не называет файл явно:
+
+1. Файлы >1000 LOC — сначала они.
+2. При равном LOC — экран/компонент с живой фичей вперёд `*.styles.ts`:
+   стилевой god-файл режется механически и почти не даёт риска регрессии.
+3. Файл, который уже начали резать (рядом лежат модули той же папки), —
+   доводится до конца раньше, чем открывается новый.
 
 ## Процедура распила
 
@@ -144,15 +142,16 @@ model: opus
 
 ## Статус на борде (WIP-видимость) — load-bearing
 
-Когда тебе передали тикет борда (есть id, напр. «возьми #573» / «почини #545»), держи борд в актуальном состоянии — чтобы было видно, над чем идёт работа:
+Раздел включается, только когда тебе передали id тикета («возьми #573» /
+«почини #545»); без id борд не трогай вообще. Статусные детали и исключения —
+`docs/TASK_BOARD_MCP.md`.
 
-- **В начале работы:** переведи тикет в `in_progress` и поставь `assignee` = своё имя агента (`metravel_task_update`). Сделай это ДО первой правки кода. MCP-схемы борда при необходимости подгружай через `ToolSearch` (`select:mcp__metravel-task-board__metravel_task_update,...`).
-- **В конце работы:** переведи тикет в `review` и допиши evidence: корень проблемы, изменённые файлы (`path:line`), пройденные code-level checks и exact runtime-QA handoff для `testing`. НЕ ставь `done` сам.
-- **Review handoff:** передай полный task diff агенту `code-review-gate` через родителя; дополнительное разрешение на запуск не нужно. Переход `review → testing`, commit/push и evidence выполняются по `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`». Findings возвращаются исполнителю в `in_progress`.
-- **Заблокирован** (нужен бэк / нет данных / не воспроизводится) → `blocked_by` + короткая blocker-заметка в `description`. Заведение связанных тикетов (BE-задача и т.п.) и любых НОВЫХ тикетов/спринтов — только через агента `ticket-board` (единый источник правды), сам их не создавай.
-- **Один тикет — один исполнитель.** Не трогай статус/описание чужих тикетов; меняй только тот, что тебе назначен.
-- **Без тикета** (прямая правка по просьбе, без id на борде) — борд не трогай.
-- Если борд недоступен (MCP не отвечает) — не блокируйся, сделай работу и явно отметь в ответе «борд не обновлён, нужен ticket-board».
+- **ДО первой правки кода:** `metravel_task_update` → `in_progress` плюс `assignee` = имя твоего агента. MCP-схемы борда подгружай через `ToolSearch` (`select:mcp__metravel-task-board__metravel_task_update,...`).
+- **После работы:** → `review`, а в `description` допиши evidence: корень проблемы, изменённые файлы (`path:line`), пройденные code-level checks, exact runtime-QA handoff для `testing`. `done` сам НЕ ставишь.
+- **Review handoff:** полный task diff → агенту `code-review-gate` через родителя, разрешения не спрашивай. Commit, push и переход `review → testing` — по `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`». Findings возвращают тикет исполнителю в `in_progress`.
+- **Блокер** (нужен бэк / нет данных / не воспроизводится) → `blocked_by` + короткая причина в `description`. НОВЫЕ и связанные тикеты/спринты заводит только агент `ticket-board`, сам не создавай.
+- **Один тикет — один исполнитель:** чужие статусы и описания не трогай.
+- **Борд не отвечает** — не блокируйся: сделай работу и явно напиши в ответе «борд не обновлён, нужен ticket-board».
 
 ## Проверка по platform impact (обязательное правило)
 

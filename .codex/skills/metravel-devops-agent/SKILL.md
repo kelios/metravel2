@@ -30,7 +30,6 @@ Rules:
 
 - Work from repo root only.
 - Stay on `main`; if not on `main`, stop and ask.
-- Never print secrets from `.env.*`, `.env.e2e`, SSH configs, EAS, or server logs.
 - Before an authorized server write, apply `docs/RULES.md` →
   `Production Git-tracked file immutability (mandatory)`: inspect status and
   classify intended paths with `git ls-files`. A dirty production checkout
@@ -38,7 +37,12 @@ Rules:
   Leave tracked backend files and cleanup to the backend owner.
 - Project-owned frontend release scripts may write only their documented
   untracked runtime/static targets such as `static/dist`.
-- Do not modify production server paths, SSL paths, Nginx roots, aliases, includes, or proxy targets unless the target host path existence has been verified.
+- Nginx is backend-owned without exception: the source of truth is
+  `deploy/prod/nginx/nginx.conf` in `../metravel-backend` and this repo's
+  `nginx/nginx.conf` is a read-only local copy. Any CSP/header/cache/redirect
+  change becomes an `area=back` task — see `docs/RULES.md` → `Nginx config
+  ownership (mandatory)`. Do not modify production server paths, SSL paths, or
+  proxy targets from this workspace either.
 - Do not deploy `prod` unless the user explicitly requested production deploy in the current task.
 - Mobile store work belongs to the Android/iOS release operator for the explicitly authorized stage. Android EAS/cloud builds and submits remain prohibited.
 - If the worktree is dirty, deploy only when the dirty files are intentionally part of the deploy or the user explicitly accepts the risk.
@@ -49,7 +53,7 @@ Rules:
 
 Choose the smallest safe preflight for the target:
 
-- Dev deploy smoke: `npm run check:fast`, then `./build-dev.sh` for the LAN dev server (`192.168.50.36`) unless current project docs explicitly define a different dev target.
+- Dev deploy smoke: `npm run check:fast`, then `bash build-dev.sh` for the LAN dev server (`192.168.50.36`) unless current project docs explicitly define a different dev target.
 - Production deploy: prefer `npm run release:check` before deploy.
 - Production build-only verification: `DEPLOY=0 ./build-prod.sh prod`.
 - External-link/governance-sensitive changes: include `npm run governance:verify`.
@@ -64,7 +68,7 @@ Use the existing scripts and documented ops wrapper; do not invent parallel depl
 Build without deploy:
 
 ```bash
-DEPLOY=0 ./build-dev.sh
+DEPLOY=0 bash build-dev.sh
 DEPLOY=0 ./build-prod.sh preprod
 DEPLOY=0 ./build-prod.sh prod
 ```
@@ -72,12 +76,12 @@ DEPLOY=0 ./build-prod.sh prod
 Deploy:
 
 ```bash
-./build-dev.sh
+bash build-dev.sh
 ./build-prod.sh preprod
 ./build-prod.sh prod
 ```
 
-Dev server deploy uses the documented `./build-dev.sh` path: it performs a clean dependency reinstall, builds `dist/dev`, uploads frontend static assets to `192.168.50.36`, swaps `static/dist`, and restarts `app` + `nginx`. Do not use `./build-prod.sh dev` as a substitute for the LAN dev-server deploy unless project docs have been updated to define that target.
+Dev server deploy uses the documented `bash build-dev.sh` path: it performs a clean dependency reinstall, builds `dist/dev`, uploads frontend static assets to `192.168.50.36`, swaps `static/dist`, and restarts `app` + `nginx`. Do not use `./build-prod.sh dev` as a substitute for the LAN dev-server deploy unless project docs have been updated to define that target.
 
 ### Transport and recovery
 

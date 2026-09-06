@@ -1,6 +1,7 @@
 # Фича: travel
 
-**Последняя актуализация:** 2026-07-14
+**Последняя актуализация:** 2026-09-06 (сверены владельцы стейта; остальные
+разделы правились позже заявленной даты — точная история в `git log -- <файл>`)
 
 **Ответственный домен:** frontend travel
 
@@ -243,9 +244,9 @@ fallback. Backend blockers оформляются как `area=back` задач�
 | Owner | Роль |
 | --- | --- |
 | React Query | lists, detail, facets, ratings, route files и server mutations |
-| `stores/favoritesStore.ts` | локальный favorites cache/sync |
-| `stores/recommendationsStore.ts` | recommendations client cache |
-| `stores/viewHistoryStore.ts` | история просмотров |
+| `hooks/useFavoritesData.ts` | favorites cache/sync (React Query, #994) |
+| `hooks/useRecommendedTravels.ts` | recommendations cache (React Query, #994) |
+| `hooks/useViewHistory.ts` | история просмотров (React Query, #994) |
 | `stores/travelSectionsStore.ts` | commands для detail sections |
 | `stores/travelStatusStore.ts` | `visited/planned/wishlist` и calendar state |
 | wizard hooks/component state | текущий step, draft/autosave, local form/media state |

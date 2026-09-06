@@ -140,7 +140,8 @@ curl -s -H "Authorization: Token $METRAVEL_TASK_BOARD_API_TOKEN" https://metrave
   `metravel_sprints_*`, `metravel_task_board_options`.
 - **Skill `/ticket-flow`** (команда `/ticket`) — прогон фронт-тикета по пайплайну
   discovery → implement → review → test → release силами профильных FE-агентов, со сдвигом
-  статуса на борде на каждом шаге. Зеркалит ролевой пайплайн бэка (`.codex/team`).
+  статуса на борде на каждом шаге. Зеркалит ролевой пайплайн бэка
+  (`../metravel-backend/.codex/team`; в этом репозитории такого каталога нет).
 
 ### Обязательный pre-create problem-history gate
 
@@ -748,12 +749,16 @@ evidence требуется только при соответствующем p
 он создаст дубликаты. Новые задачи создаются через `ticket-board`, backend
 evidence собирается read-only и записывается в `area=back` task.
 
-В `tasks/` остаются только README и template для временного fallback после
-неуспешного token refresh. Постоянный backlog и история статусов живут на board.
+Из `tasks/` рабочим остаются только `README.md` и `000-template.md` — временный
+fallback после неуспешного token refresh. Замер 06.09.2026: рядом лежат ещё восемь
+файлов (`1012-*`, `1137-*`, шесть `draft-2026*`) — это исторические черновики, а не
+состояние задач; читать их как backlog нельзя. Постоянный backlog и история статусов
+живут на board.
 
 ## Безопасность
 
 - Токен — staff/admin, даёт запись в борд. Хранить только в `.secrets/` (gitignored) или env.
 - Никогда не коммитить токен и не печатать в чат/логи. При утечке немедленно
   отозвать токен и оформить security incident на board.
-- `.mcp.json` секретов не содержит (только `${...}`-ссылка) — его можно коммитить.
+- `.mcp.json` секретов не содержит: обёртка лишь сорсит gitignored
+  `.secrets/metravel-task-board.env`, значения токена в файле нет — его можно коммитить.

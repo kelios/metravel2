@@ -28,8 +28,10 @@ release). `sprint-review` — это батч-гейт на конце: проб
 1. **Подключение к борду.** `ticket-board`: показать доску, найти активный спринт
    (`metravel_sprints_list` → `status=active`) или взять спринт из `$ARGUMENTS`. Борд недоступен —
    стоп, сослаться на `docs/TASK_BOARD_MCP.md`. Не приниматься вслепую.
-2. **Собрать очередь приёмки.** `metravel_tasks_list(sprint=<N>, status=testing)`.
-   Раздели области `front`/`back`/`android`/`ios`. Другие статусы в runtime-приёмку
+2. **Собрать очередь приёмки.** `metravel_tasks_list(sprint_id=<N>, status=testing)` —
+   параметр называется `sprint_id` и он целочисленный; `sprint=` борд молча игнорирует
+   и вернёт весь список. Раздели области `front`/`back` (legacy `android`/`ios` может
+   встретиться в старых карточках, но новые ими не размечаются). Другие статусы в runtime-приёмку
    не идут: `review` требует code review и перехода в `testing` по
    `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`».
 
@@ -47,7 +49,7 @@ release). `sprint-review` — это батч-гейт на конце: проб
      «contract incomplete», это refinement-долг);
    - выполнить `Done gate` + `Validation` + AC реальными проверками. **Браузер — основное
      доказательство:** пройти реальный пользовательский флоу из AC на target env через preview
-     (`preview_start`/`click`/`fill`/`snapshot`/`console`/`network`/`screenshot`), убедиться, что
+     (`preview_start`/`navigate`/`computer`/`form_input`/`read_page`/`read_console_messages`/`read_network_requests`), убедиться, что
      в UI реальные данные с BE (не mock/пусто/ошибка) и network идёт на правильный endpoint.
      Узкие тест-прогоны (`npm run test:run -- <scope>`, `typecheck`, e2e) — вспомогательно,
      **авторизованные `curl`-пробы** контрактного endpoint/field/event на target env

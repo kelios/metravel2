@@ -1,6 +1,8 @@
 # Архитектура и функциональность Metravel
 
-Актуально на: 2026-07-16.
+Актуально на: 2026-09-06 — в этот день сверены таблицы стора и контекстов.
+Остальные разделы правились позже заявленной даты; точная история правок —
+`git log -- docs/ARCHITECTURE.md`, она не врёт, а эта строка может отстать.
 
 Этот документ описывает архитектуру локального репозитория `metravel2`, основные
 слои приложения, пользовательский функционал, frontend-модули и интеграцию с
@@ -10,6 +12,28 @@ backend API.
 Web приложение. Исходного кода backend-сервера здесь нет. Поэтому разделы про
 backend описывают не внутреннюю серверную реализацию, а API-контракты, клиентские
 модули, нормализацию DTO, mock/fallback-логику и ожидания фронта.
+
+## Разделы
+
+Документ большой: читайте нужный раздел, а не файл целиком —
+`awk '/^## <название>/,/^## /' docs/ARCHITECTURE.md`.
+
+- `Статус И Границы Документа`
+- `Карта Проекта`
+- `Технологический Стек`
+- `Запуск Приложения`
+- `Маршруты И Экраны`
+- `Ответственность Слоев`
+- `Потоки Данных`
+- `Карта Контрактов Backend API`
+- `Статус Функциональных Областей`
+- `Карта Frontend Функциональности`
+- `Платформенные Различия`
+- `Сборка И Деплой`
+- `Поверхность Проверок`
+- `Validation boundaries`
+- `Архитектурные правила`
+- `Карта документации`
 
 ## Статус И Границы Документа
 
@@ -325,9 +349,9 @@ React Query отвечает за server state. Zustand/context отвечают
 | Store/context | Ответственность |
 | --- | --- |
 | `stores/authStore.ts` + `context/AuthContext.tsx` | auth readiness, login/logout, profile bootstrap, auth invalidation |
-| `stores/favoritesStore.ts` + `context/FavoritesContext.tsx` | favorites cache and sync |
-| `stores/viewHistoryStore.ts` | local/server view history |
-| `stores/recommendationsStore.ts` | recommendation cache |
+| `hooks/useFavoritesData.ts` + `context/FavoritesContext.tsx` | favorites cache and sync |
+| `hooks/useViewHistory.ts` | local/server view history |
+| `hooks/useRecommendedTravels.ts` | recommendation cache |
 | `stores/travelStatusStore.ts` | `visited/planned/wishlist` state и calendar dates |
 | `stores/mapPanelStore.ts` | состояние map panel |
 | `stores/routeStore.ts` | route builder state |
@@ -685,7 +709,7 @@ fallback в `app/+html.tsx` для первого paint и runtime `LazyInstantS
 
 ### Favorites, history, calendar
 
-Основные файлы: `FavoritesContext`, `favoritesStore`, `viewHistoryStore`,
+Основные файлы: `FavoritesContext`, `useFavoritesData`, `useViewHistory`,
 `travelStatusStore`, routes `/favorites`, `/history`, `/calendar`,
 `components/calendar/MiniCalendar.tsx`, `components/travel/TravelStatusButton.tsx`.
 

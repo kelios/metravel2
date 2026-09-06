@@ -73,6 +73,14 @@ id блокера, чего конкретно ждём и что произой
 увидеть то-то. Плюс команды, если есть. Это инструкция для человека; точные команды и
 пробы для гейта живут ниже, в `Validation`.
 
+## Problem History
+
+Problem key:
+Historical matches:
+Verdict: reuse | reopen | create-linked | create-new
+Canonical task:
+Root-cause delta:
+
 ## Task Contract
 
 Scope:
