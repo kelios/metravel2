@@ -96,26 +96,31 @@ describe('общая запись финиша: флаги возврата и �
     await AsyncStorage.clear()
   })
 
-  it('сохраняет оба флага, когда возврат пишется снимком без reviewPromptedAt', async () => {
-    // Ровно то, что делают два хука на одном монтировании каталога: каждый
-    // держит СВОЙ снимок записи, прочитанный до чужой записи.
+  it('сохраняет оба флага при ОДНОВРЕМЕННОЙ записи двух хуков', async () => {
+    // Ровно то, что делают `useQuestReturnVisit` и `useQuestReviewPrompt` на
+    // одном монтировании каталога: обе ветки стартуют в одном коммите эффектов и
+    // каждая держит СВОЙ снимок записи, прочитанный до чужой записи.
     await AsyncStorage.setItem(questFinishRecordKey(record.ownerId), JSON.stringify(record))
     const staleSnapshot = { ...record }
 
-    await markQuestReviewPrompted(record, record.finishedAt + DAY)
-    await markReturnVisitReported(staleSnapshot)
+    await Promise.all([
+      markQuestReviewPrompted(record, record.finishedAt + DAY),
+      markReturnVisitReported(staleSnapshot),
+    ])
 
     const stored = await readQuestFinishRecord(record.ownerId)
     expect(stored?.reviewPromptedAt).toBe(record.finishedAt + DAY)
     expect(stored?.returnReported).toBe(true)
   })
 
-  it('сохраняет оба флага при обратном порядке записи', async () => {
+  it('сохраняет оба флага при обратном порядке одновременных записей', async () => {
     await AsyncStorage.setItem(questFinishRecordKey(record.ownerId), JSON.stringify(record))
     const staleSnapshot = { ...record }
 
-    await markReturnVisitReported(record)
-    await markQuestReviewPrompted(staleSnapshot, record.finishedAt + DAY)
+    await Promise.all([
+      markReturnVisitReported(record),
+      markQuestReviewPrompted(staleSnapshot, record.finishedAt + DAY),
+    ])
 
     const stored = await readQuestFinishRecord(record.ownerId)
     expect(stored?.returnReported).toBe(true)

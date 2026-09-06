@@ -54,6 +54,21 @@ function isRecord(value: unknown): value is QuestFinishRecord {
   )
 }
 
+/**
+ * Очередь записей одной и той же записи финиша (#1795 review).
+ * Возврат (#1484) и просьба об отзыве стартуют в одном коммите эффектов каталога,
+ * а между чтением и `setItem` есть `await`: на web промисы AsyncStorage
+ * резолвятся синхронно, поэтому вторая ветка успевала прочитать запись ДО чужой
+ * записи и затирала чужой флаг. Сериализуем все мутации записи в одну цепочку.
+ */
+let finishRecordWriteChain: Promise<unknown> = Promise.resolve()
+
+const serializeFinishRecordWrite = <T>(operation: () => Promise<T>): Promise<T> => {
+  const next = finishRecordWriteChain.then(operation, operation)
+  finishRecordWriteChain = next.catch(() => undefined)
+  return next
+}
+
 export async function readQuestFinishRecord(ownerId: string): Promise<QuestFinishRecord | null> {
   try {
     // v1 не имел владельца и небезопасен при смене аккаунта — только удаляем.
@@ -83,6 +98,7 @@ export async function rememberQuestFinish(record: {
   const ownerId = String(record.ownerId || '').trim()
   const questId = String(record.questId || '').trim()
   if (!ownerId || !questId || !Number.isFinite(record.finishedAt)) return null
+  return serializeFinishRecordWrite(async () => {
   try {
     const previous = await readQuestFinishRecord(ownerId)
     // Тот же квест в том же прохождении: финал перерисовывается на каждом
@@ -104,6 +120,7 @@ export async function rememberQuestFinish(record: {
     devWarn('[questReturnVisit] failed to store finish record:', error)
     return null
   }
+  })
 }
 
 /**
@@ -117,17 +134,19 @@ async function updateQuestFinishRecord(
   record: QuestFinishRecord,
   patch: Partial<QuestFinishRecord>,
 ): Promise<void> {
-  try {
-    const stored = await readQuestFinishRecord(record.ownerId)
-    const base = stored ?? record
-    if (base.questId !== record.questId || base.finishedAt !== record.finishedAt) return
-    await AsyncStorage.setItem(
-      questFinishRecordKey(record.ownerId),
-      JSON.stringify({ ...base, ...patch } satisfies QuestFinishRecord),
-    )
-  } catch (error) {
-    devWarn('[questReturnVisit] failed to update finish record:', error)
-  }
+  await serializeFinishRecordWrite(async () => {
+    try {
+      const stored = await readQuestFinishRecord(record.ownerId)
+      const base = stored ?? record
+      if (base.questId !== record.questId || base.finishedAt !== record.finishedAt) return
+      await AsyncStorage.setItem(
+        questFinishRecordKey(record.ownerId),
+        JSON.stringify({ ...base, ...patch } satisfies QuestFinishRecord),
+      )
+    } catch (error) {
+      devWarn('[questReturnVisit] failed to update finish record:', error)
+    }
+  })
 }
 
 export async function markReturnVisitReported(record: QuestFinishRecord): Promise<void> {
@@ -163,11 +182,13 @@ export async function markQuestReturnReminderScheduled(
 }
 
 export async function clearQuestFinishRecord(ownerId: string): Promise<void> {
-  try {
-    await AsyncStorage.removeItem(questFinishRecordKey(ownerId))
-  } catch (error) {
-    devWarn('[questReturnVisit] failed to clear finish record:', error)
-  }
+  await serializeFinishRecordWrite(async () => {
+    try {
+      await AsyncStorage.removeItem(questFinishRecordKey(ownerId))
+    } catch (error) {
+      devWarn('[questReturnVisit] failed to clear finish record:', error)
+    }
+  })
 }
 
 export type ReturnVisitDecision =

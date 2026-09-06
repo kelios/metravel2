@@ -21,6 +21,8 @@ type Props = {
   /** Подпись подложки: тап по ней закрывает лист. */
   overlayLabel: string
   animationType?: 'none' | 'fade' | 'slide'
+  /** Android: рисовать оверлей под статус-баром (нижний лист формы). */
+  statusBarTranslucent?: boolean
   sheetStyle?: StyleProp<ViewStyle>
   testID?: string
   closeTestID?: string
@@ -34,6 +36,7 @@ function QuestModalSheet({
   closeLabel,
   overlayLabel,
   animationType = 'fade',
+  statusBarTranslucent = false,
   sheetStyle,
   testID,
   closeTestID,
@@ -43,9 +46,23 @@ function QuestModalSheet({
   const styles = useMemo(() => createStyles(colors), [colors])
 
   return (
-    <Modal visible={visible} transparent animationType={animationType} onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType={animationType}
+      statusBarTranslucent={statusBarTranslucent}
+      onRequestClose={onClose}
+    >
       <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel={overlayLabel}>
-        <Pressable style={[styles.sheet, sheetStyle]} onPress={(e) => e.stopPropagation()} testID={testID}>
+        {/* Лист — Pressable только чтобы гасить тап по подложке. `accessible`
+            у Pressable по умолчанию true и схлопнул бы всё содержимое в один
+            элемент скринридера (звёзды и поля формы отзыва). */}
+        <Pressable
+          style={[styles.sheet, sheetStyle]}
+          onPress={(e) => e.stopPropagation()}
+          accessible={false}
+          testID={testID}
+        >
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
             <Pressable

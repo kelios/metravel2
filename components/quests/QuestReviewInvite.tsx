@@ -84,6 +84,8 @@ function QuestReviewInvite({
         <QuestModalSheet
           visible={visible}
           onClose={handleClose}
+          animationType="slide"
+          statusBarTranslucent
           title={i18nT('quests:components.quests.QuestReviewInvite.modalTitle')}
           closeLabel={i18nT('quests:components.quests.QuestReviewInvite.close')}
           overlayLabel={i18nT('quests:components.quests.QuestReviewInvite.overlayClose')}
