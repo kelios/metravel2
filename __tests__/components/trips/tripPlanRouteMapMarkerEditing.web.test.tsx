@@ -107,6 +107,49 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
     expect(mockFitBounds).toHaveBeenCalledTimes(1)
   })
 
+  it('снова подгоняет кадр, когда маршрут заменён целиком', async () => {
+    const { rerender } = render(<TripPlanRouteMap route={route} onMovePoint={jest.fn()} />)
+
+    await waitFor(() => expect(markerProps).toHaveLength(2))
+    expect(mockFitBounds).toHaveBeenCalledTimes(1)
+
+    dragEndAt(1, 53.95, 27.7)
+    const movedRoute: RoutePoint[] = [
+      route[0],
+      { ...route[1], coordinates: [27.7, 53.95] },
+    ]
+    rerender(<TripPlanRouteMap route={movedRoute} onMovePoint={jest.fn()} />)
+    expect(mockFitBounds).toHaveBeenCalledTimes(1)
+
+    // Шаблон или импортированный трек не оставляет ни одной прежней точки:
+    // иначе новый маршрут навсегда остался бы за пределами кадра.
+    const importedRoute: RoutePoint[] = [
+      { id: 'i1', type: 'custom', name: 'Прага', description: null, coordinates: [14.43, 50.07], placeId: null },
+      { id: 'i2', type: 'custom', name: 'Брно', description: null, coordinates: [16.6, 49.19], placeId: null },
+    ]
+    rerender(<TripPlanRouteMap route={importedRoute} onMovePoint={jest.fn()} />)
+
+    expect(mockFitBounds).toHaveBeenCalledTimes(2)
+  })
+
+  it('не снимает защёлку кадра, когда перетащили единственную точку маршрута', async () => {
+    const single: RoutePoint[] = [route[0]]
+    const { rerender } = render(<TripPlanRouteMap route={single} onMovePoint={jest.fn()} />)
+
+    await waitFor(() => expect(markerProps).toHaveLength(1))
+    expect(mockSetView).toHaveBeenCalledTimes(1)
+
+    dragEndAt(0, 53.95, 27.7)
+    rerender(
+      <TripPlanRouteMap
+        route={[{ ...single[0], coordinates: [27.7, 53.95] }]}
+        onMovePoint={jest.fn()}
+      />,
+    )
+
+    expect(mockSetView).toHaveBeenCalledTimes(1)
+  })
+
   it('даёт владельцу удалить точку из popup её маркера, не теряя редактирование', async () => {
     const onDeletePoint = jest.fn()
     const screen = render(

@@ -259,4 +259,47 @@ describe('#1781 native-карта — точки маршрута правятс
     expect(harness.map.__metravelRouteFitLocked).toBe(true);
     expect(harness.fitBoundsCalls).toHaveLength(1);
   });
+
+  it('снимает защёлку кадра, когда маршрут заменён целиком', () => {
+    const harness = createHarness();
+    harness.renderPoints(routePayload(true));
+    harness.routeMarkers[0].handlers.dragstart();
+    harness.routeMarkers[0].handlers.dragend({
+      target: { getLatLng: () => ({ lat: 53.95, lng: 27.7 }) },
+    });
+    // Тот же маршрут со сдвинутой точкой кадр не трогает.
+    harness.renderPoints({
+      ...routePayload(true),
+      routePoints: [[53.95, 27.7], [53.91, 27.6]],
+    });
+    expect(harness.fitBoundsCalls).toHaveLength(1);
+
+    // Импортированный трек не оставляет ни одной прежней точки: без снятия
+    // защёлки он остался бы за пределами кадра до пересоздания карты.
+    harness.renderPoints({
+      ...routePayload(true),
+      routePoints: [[50.07, 14.43], [49.19, 16.6]],
+      routeLine: [[50.07, 14.43], [49.19, 16.6]],
+    });
+
+    expect(harness.map.__metravelRouteFitLocked).toBe(false);
+    expect(harness.fitBoundsCalls).toHaveLength(2);
+  });
+
+  it('не снимает защёлку, когда перетащили единственную точку маршрута', () => {
+    const harness = createHarness();
+    const single = {
+      ...routePayload(true),
+      routePoints: [[53.9, 27.56]],
+      routeLine: [],
+    };
+    harness.renderPoints(single);
+    harness.routeMarkers[0].handlers.dragstart();
+    harness.routeMarkers[0].handlers.dragend({
+      target: { getLatLng: () => ({ lat: 53.95, lng: 27.7 }) },
+    });
+    harness.renderPoints({ ...single, routePoints: [[53.95, 27.7]] });
+
+    expect(harness.map.__metravelRouteFitLocked).toBe(true);
+  });
 });

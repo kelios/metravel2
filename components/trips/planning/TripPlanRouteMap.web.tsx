@@ -108,18 +108,24 @@ const routePositions = (route: RoutePoint[]): Array<[number, number]> =>
 function FitRouteBounds({
   L,
   positions,
+  markerKeys,
   useMap,
   fitToken,
   fittedTokenRef,
-  lockedRef,
+  lockedKeysRef,
 }: {
   L: LeafletNS;
   positions: Array<[number, number]>;
+  /** Ключи текущих точек маршрута — по ним снимается защёлка кадра. */
+  markerKeys: string[];
   useMap: ReactLeafletNS['useMap'];
   fitToken: string;
   fittedTokenRef: React.MutableRefObject<string | null>;
-  /** #1781: пользователь уже наводил кадр руками — подгонка больше не двигает вид. */
-  lockedRef: React.MutableRefObject<boolean>;
+  /**
+   * #1781: пользователь уже наводил кадр руками — подгонка больше не двигает
+   * вид. Хранятся ключи точек на момент защёлки: `null` значит «не заперто».
+   */
+  lockedKeysRef: React.MutableRefObject<Set<string> | null>;
 }) {
   const map = useMap();
 
@@ -133,21 +139,29 @@ function FitRouteBounds({
   }, [map]);
 
   useEffect(() => {
+    // #1781: защёлка держится, пока на карте остаётся хоть одна из точек, ради
+    // которых её поставили. Оптовая замена маршрута — шаблон или импорт GPX —
+    // не оставляет ни одной, и новый маршрут обязан попасть в кадр: иначе он
+    // остаётся за пределами вида до размонтирования карты.
+    const lockedKeys = lockedKeysRef.current;
+    if (lockedKeys && !markerKeys.some((key) => lockedKeys.has(key))) {
+      lockedKeysRef.current = null;
+    }
     if (!positions.length) return;
     if (fittedTokenRef.current === fitToken) return;
     fittedTokenRef.current = fitToken;
-    // #1781: перетаскивание маркера меняет и точки, и (через 500 мс) геометрию,
-    // то есть токен обновляется дважды подряд. Подгонка кадра в этот момент
-    // отменяла бы ровно ту точность, ради которой пользователь и тянул маркер,
-    // поэтому после первого ручного перемещения токен только запоминается.
-    if (lockedRef.current) return;
+    // Перетаскивание маркера меняет и точки, и (через 500 мс) геометрию, то есть
+    // токен обновляется дважды подряд. Подгонка кадра в этот момент отменяла бы
+    // ровно ту точность, ради которой пользователь и тянул маркер, поэтому после
+    // ручного перемещения токен только запоминается.
+    if (lockedKeysRef.current) return;
     if (positions.length === 1) {
       map.setView(positions[0], 12);
       return;
     }
     const bounds = L.latLngBounds(positions);
     map.fitBounds(bounds, { padding: [28, 28], maxZoom: 13 });
-  }, [L, fitToken, fittedTokenRef, lockedRef, map, positions]);
+  }, [L, fitToken, fittedTokenRef, lockedKeysRef, map, markerKeys, positions]);
 
   return null;
 }
@@ -238,9 +252,11 @@ export default function TripPlanRouteMap({
   const mapRef = useRef<{ getCenter: () => { lat: number; lng: number }; getZoom: () => number } | null>(null);
   const restoredViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const fittedTokenRef = useRef<string | null>(null);
-  // #1781: ставится первым же перетаскиванием маркера и живёт до размонтирования
-  // карты — дальше кадром управляет пользователь, а не форма маршрута.
-  const fitLockedRef = useRef(false);
+  // #1781: ставится первым же перетаскиванием маркера — дальше кадром управляет
+  // пользователь, а не форма маршрута. Внутри — ключи точек на момент защёлки:
+  // когда не остаётся ни одной из них, маршрут заменили целиком и подгонка
+  // снова разрешена.
+  const fitLockedKeysRef = useRef<Set<string> | null>(null);
   // Тот же leaflet-инстанс, но состоянием: слои и MapUiApi монтируются хуками
   // /map, а им нужен ререндер после готовности карты (ref его не даёт).
   const [mapInstance, setMapInstance] = useState<unknown>(null);
@@ -306,6 +322,12 @@ export default function TripPlanRouteMap({
   }, []);
 
   const markerPositions = useMemo(() => routePositions(route), [route]);
+  // Ключ точки — её координаты: id у карты нет, а перетаскивание меняет ровно
+  // одну точку, так что пересечение с прежним набором остаётся непустым.
+  const markerKeys = useMemo(
+    () => markerPositions.map((position) => position.join(',')),
+    [markerPositions],
+  );
   const routedGeometry = useMemo(
     () => (hasUsableRouteGeometry(routeGeometry) ? routeGeometry : null),
     [routeGeometry],
@@ -415,10 +437,14 @@ export default function TripPlanRouteMap({
       if (!position) return;
       const { lat, lng } = position;
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-      fitLockedRef.current = true;
+      // Ключи снимаются уже с местом дропа: иначе перетаскивание единственной
+      // точки маршрута само же и сняло бы защёлку следующим рендером.
+      fitLockedKeysRef.current = new Set(
+        markerKeys.map((key, keyIndex) => (keyIndex === index ? [lat, lng].join(',') : key)),
+      );
       onMovePoint?.({ index, lat, lng });
     },
-    [onMovePoint],
+    [markerKeys, onMovePoint],
   );
 
   if (!L || !RL || !markerIcon || !activeMarkerIcon) {
@@ -590,7 +616,8 @@ export default function TripPlanRouteMap({
               useMap={useMap}
               fitToken={fitToken}
               fittedTokenRef={fittedTokenRef}
-              lockedRef={fitLockedRef}
+              markerKeys={markerKeys}
+              lockedKeysRef={fitLockedKeysRef}
             />
           ) : null}
           {trackPositions.length > 1 ? (
