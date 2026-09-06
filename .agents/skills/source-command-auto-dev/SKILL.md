@@ -1,6 +1,6 @@
 ---
 name: "source-command-auto-dev"
-description: "Одна итерация непрерывного цикла разработка→тест→багфикс (для /loop)"
+description: "Одна итерация code-level разработка → проверка → фикс"
 ---
 
 # source-command-auto-dev

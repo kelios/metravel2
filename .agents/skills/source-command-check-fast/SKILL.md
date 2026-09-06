@@ -1,6 +1,6 @@
 ---
 name: "source-command-check-fast"
-description: "Selective lint+typecheck+tests на изменённом scope"
+description: "Selective static/unit checks текущего task scope"
 ---
 
 # source-command-check-fast

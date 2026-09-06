@@ -2,8 +2,16 @@
 description: Selective static/unit checks текущего task scope
 ---
 
-Прочитай `.agents/skills/source-command-check-fast/SKILL.md` и используй его как канонический workflow.
+Запусти `npm run check:fast` и разберись с найденным.
 
-Проверь текущий task scope и устрани подтверждённые нарушения в его пределах. Чужие изменения сохраняй. После code changes нужен независимый review-and-fix; runtime QA не входит в эту команду.
+Последовательность:
+1. `git status --short` и `git diff --stat` — выдели task scope; чужие изменения
+   не исправляй. Проверь operation gate по `docs/WORKFLOW_OPERATIONS.md` →
+   «3.4 Координация долгих операций».
+2. `npm run check:fast` — прогон selective-проверок.
+3. Если упало — прочитай вывод, найди виновные файлы, почини. Не игнорируй warning'и у изменённых файлов.
+4. Прогон повторно до зелёного.
 
-Аргументы: `$ARGUMENTS`
+После code changes передай task diff на `$metravel-code-reviewer`.
+
+Не запускай полный test suite или полный lint — для этого есть отдельные команды.

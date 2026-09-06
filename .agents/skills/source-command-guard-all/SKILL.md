@@ -1,6 +1,6 @@
 ---
 name: "source-command-guard-all"
-description: "Прогон всех guard-скриптов проекта"
+description: "Guard-проверки проекта и устранение подтверждённых нарушений"
 ---
 
 # source-command-guard-all

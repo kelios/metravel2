@@ -1,6 +1,6 @@
 ---
 name: "source-command-preflight"
-description: "Полная preflight-проверка перед push"
+description: "Preflight с operation gate и правильной стадией QA"
 ---
 
 # source-command-preflight

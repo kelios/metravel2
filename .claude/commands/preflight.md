@@ -2,8 +2,18 @@
 description: Preflight с operation gate и правильной стадией QA
 ---
 
-Прочитай `.agents/skills/source-command-preflight/SKILL.md` и используй его как канонический workflow.
+Выбери code-level или полный preflight по стадии задачи и
+`docs/WORKFLOW_OPERATIONS.md` → «3.4 Координация долгих операций».
 
-Проверь текущий task scope по `$ARGUMENTS`. Сначала пройди operation gate `docs/WORKFLOW_OPERATIONS.md`; runtime/e2e выполняются только в `testing` после code review. Живой процесс или lock не дублируй. Отчитай фактические результаты и блокеры.
+1. Проверь `main`, `git status --short` и task-owned paths; сохрани чужие изменения.
+2. До завершения code review выполняй только static/unit/guard checks. При push
+   в рамках перехода `review → testing` используй `PREFLIGHT_SKIP_E2E=1` по
+   `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`».
+3. Полный `npm run check:preflight` с runtime/e2e запускай в `testing` после review
+   и operation gate. Перед первой локальной пробой выполни процедуру обновления
+   бэкенда из `docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек и обновление
+   бэкенда перед тестированием».
+4. Исправляй подтверждённую причину в task scope; code changes возвращаются на
+   review. Не используй `--no-verify` для обхода.
 
-Аргументы: `$ARGUMENTS`
+По завершении кратко отчитайся: что прошло, что упало, что починил.
