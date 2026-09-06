@@ -1,5 +1,5 @@
 import React from 'react'
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native'
+import { fireEvent, render, waitFor } from '@testing-library/react-native'
 
 import AddressSearch from '@/components/MapPage/AddressSearch'
 import { nominatimSearch } from '@/api/external/nominatim'
@@ -40,8 +40,9 @@ describe('AddressSearch: результаты поиска точки маршр
     query = createQueryWrapper()
   })
 
+  // Размонтирование остаётся за авто-cleanup RNTL: он ждёт `unmountAsync`,
+  // а синхронный `cleanup()` бросает тот же act и роняет следующий `render`.
   afterEach(() => {
-    cleanup()
     query.queryClient.clear()
   })
 
@@ -57,7 +58,7 @@ describe('AddressSearch: результаты поиска точки маршр
       })
       fireEvent.changeText(view.getByPlaceholderText('Search'), 'Острава')
       await waitFor(() => expect(view.getByText(`Ostrava (${locale})`)).toBeTruthy())
-      view.unmount()
+      await view.unmountAsync()
     }
 
     expect(mockSearch).toHaveBeenCalledTimes(5)
