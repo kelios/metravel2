@@ -5,6 +5,8 @@ export type QuestPopularityInput = {
   completionsCount?: number | string | null;
   views_count?: number | string | null;
   viewsCount?: number | string | null;
+  /** Числовой id адаптированной меты, где `id` — слаг квеста. */
+  numericId?: number | string | null;
 };
 
 /** Значение параметра `sort`, которым бэкенд отдаёт этот же порядок. */

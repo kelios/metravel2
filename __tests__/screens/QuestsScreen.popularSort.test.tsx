@@ -39,6 +39,17 @@ jest.mock('@/screens/tabs/QuestsContentPanel', () => (props: ContentProps) => {
     return <Pressable testID="toggle-popular" onPress={props.onTogglePopularSort} />;
 });
 
+// Числовые id бэкенда намеренно НЕ повторяют ни порядок каталога, ни порядок
+// популярности: тай-брейк обязан быть виден отдельно от обоих.
+const NUMERIC_IDS: Record<string, number> = {
+    cold: 40,
+    'played-twice-few-views': 12,
+    'played-thrice': 32,
+    'played-twice-many-views': 51,
+    'far-and-popular': 7,
+    'near-and-cold': 9,
+};
+
 const quest = (
     id: string,
     completionsCount: number,
@@ -46,6 +57,7 @@ const quest = (
     coords: { lat: number; lng: number } = { lat: 53.9, lng: 27.56 },
 ): QuestMeta => ({
     id,
+    numericId: NUMERIC_IDS[id] ?? 0,
     title: id,
     cityId: 'minsk',
     cityName: 'Минск',

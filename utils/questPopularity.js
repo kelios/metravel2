@@ -44,6 +44,23 @@ function numericField(quest, snakeKey, camelKey) {
 }
 
 /**
+ * Числовой id квеста — последний ключ порядка, тот же, что у бэкенда.
+ *
+ * У сырого ответа API он лежит в `id`, а у адаптированной меты каталога `id` —
+ * это слаг (`minsk-cipher`), и число уезжает в `numericId`. Без второго чтения
+ * третий ключ на адаптированном списке всегда давал бы 0, и совпадение с
+ * серверным порядком держалось бы только на стабильности `Array.prototype.sort`
+ * и на том, что каталог пришёл в порядке id, — то есть развалилось бы на первом
+ * источнике с другим порядком.
+ */
+function questNumericId(quest) {
+  const direct = Number(quest && quest.id);
+  if (Number.isFinite(direct)) return direct;
+  const adapted = Number(quest && quest.numericId);
+  return Number.isFinite(adapted) ? adapted : 0;
+}
+
+/**
  * Компаратор популярности. Читает и snake_case (сырой ответ API, кэш каталога),
  * и camelCase (адаптированные метаданные) — генератор в остальных местах уже
  * допускает обе формы одного поля.
@@ -58,7 +75,7 @@ function compareQuestPopularity(a, b) {
     numericField(b, 'views_count', 'viewsCount') - numericField(a, 'views_count', 'viewsCount');
   if (byViews !== 0) return byViews;
 
-  return numericField(a, 'id', 'id') - numericField(b, 'id', 'id');
+  return questNumericId(a) - questNumericId(b);
 }
 
 /** Копия списка, отсортированная по популярности (исходный массив не трогаем). */

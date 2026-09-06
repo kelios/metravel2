@@ -88,6 +88,25 @@ describe('quest popularity rule', () => {
     expect(ranked.map((quest) => quest.id)).toEqual([2, 1])
   })
 
+  it('breaks a full tie by numeric id even when the catalog id is a slug', () => {
+    // Адаптированная мета каталога: `id` — слаг, число живёт в `numericId`.
+    // Порядок входа обратный ожидаемому, иначе тест прошёл бы на одной
+    // стабильности сортировки, ничего не проверив.
+    const ranked = sortQuestsByPopularity([
+      { id: 'minsk-cipher', numericId: 32, completionsCount: 2, viewsCount: 15 },
+      { id: 'barkovshchina-spirits', numericId: 3, completionsCount: 2, viewsCount: 15 },
+    ] as any[])
+    expect(ranked.map((quest) => quest.id)).toEqual(['barkovshchina-spirits', 'minsk-cipher'])
+  })
+
+  it('keeps a slug-only quest in place instead of sorting it by NaN', () => {
+    const ranked = sortQuestsByPopularity([
+      { id: 'no-number-first', completionsCount: 1 },
+      { id: 'no-number-second', completionsCount: 1 },
+    ] as any[])
+    expect(ranked.map((quest) => quest.id)).toEqual(['no-number-first', 'no-number-second'])
+  })
+
   it('keeps the block filled when nothing has been completed yet', () => {
     const flat = CATALOG.map((quest) => ({ ...quest, completions_count: 0, views_count: 0 }))
     expect(selectPopularQuests(flat, HOME_PROMO_DESKTOP)).toHaveLength(HOME_PROMO_DESKTOP)

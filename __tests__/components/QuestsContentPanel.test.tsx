@@ -82,6 +82,7 @@ describe('QuestsContentPanel', () => {
 
     const makeQuest = (index: number): QuestMeta => ({
         id: `quest-${index}`,
+        numericId: index + 1,
         title: `Quest ${index}`,
         points: 3,
         cityId: 'warsaw',

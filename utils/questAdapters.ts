@@ -75,6 +75,12 @@ function adaptPoiInfo(apiStep: ApiQuestStep): QuestStep['poiInfo'] {
 /** Метаданные квеста для каталогов/поиска (фронтенд формат) */
 export type QuestMeta = {
     id: string;
+    /**
+     * Числовой id квеста из бэкенда. `id` каталога — слаг, а порядок
+     * популярности (`utils/questPopularity`) ломает ничью именно числовым id,
+     * как это делает серверный `?sort=popular`.
+     */
+    numericId: number;
     title: string;
     points: number;
     cityId: string;
@@ -649,6 +655,7 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
 
     return {
         id: apiMeta.quest_id,
+        numericId: apiMeta.id,
         title: apiMeta.title,
         points: parseInt(String(apiMeta.points), 10) || 0,
         cityId: apiMeta.city_id,
