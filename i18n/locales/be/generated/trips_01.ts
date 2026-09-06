@@ -145,6 +145,7 @@ export const tripsGenerated1 = {
   "components.trips.planning.RouteBuilder.marshrut_poka_ne_postroen_fbdcf5ed": "Маршрут пакуль не пабудаваны.",
   "components.trips.planning.RouteBuilder.mesto_3991f739": "Месца",
   "components.trips.planning.RouteBuilder.nayti_mesto_ili_puteshestvie_na_metravel_8780d31c": "Знайсці месца ці падарожжа на MeTravel",
+  "components.trips.planning.RouteBuilder.nayti_mesto_po_nazvaniyu_ili_adresu_fa7745e0": "Знайсці месца па назве ці адрасе",
   "components.trips.planning.RouteBuilder.nazvanie_tochki_0cdacb0f": "Назва кропкі",
   "components.trips.planning.RouteBuilder.ne_udalos_perestroit_marshrut_poprobuyte_esche_raz_9c4be156": "Не атрымалася перабудаваць маршрут. Паспрабуйце яшчэ раз.",
   "components.trips.planning.RouteBuilder.ne_udalos_zagruzit_varianty_a38206ee": "Не атрымалася загрузіць варыянты.",

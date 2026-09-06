@@ -177,6 +177,14 @@ const formatCoordinateInput = (value: number): string => {
   return rounded.replace(/\.?0+$/, '');
 };
 
+// #1491/#1782: адресный поиск отдаёт полный адрес до страны. Голова адреса
+// становится названием точки, весь адрес остаётся под рукой для описания.
+const addressPointName = (address: string): string => {
+  const full = address.trim();
+  const [head] = full.split(',');
+  return head.trim() || full;
+};
+
 const coordinatesFromFields = (
   latValue: string,
   lngValue: string,
@@ -752,30 +760,60 @@ function RouteBuilder({
   // #1491: шаг «Точки маршрута» умеет то же, что и /map, — искать адрес. Поиск
   // переиспользован целиком (`AddressSearch`, Nominatim + разбор координат);
   // здесь только раскладка результата в доменную точку маршрута.
+  // #1782: выбор результата больше не выбрасывает уже введённое. Раньше он
+  // всегда клал `custom` с именем из адреса, поэтому выбранный чип «Ночёвка» и
+  // набранные название с описанием исчезали молча.
   const handleAddAddressPoint = useCallback(
     (address: string, coords: { lat: number; lng: number }) => {
       const full = address.trim();
       if (!full || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return;
-      // Nominatim отдаёт полный адрес до страны; в названии точки остаётся
-      // голова, весь адрес уходит в описание и виден в карточке точки.
-      const [head] = full.split(',');
-      const name = head.trim() || full;
+      // #1532: `place` без `placeId` бэкенд отклоняет вместе со всем маршрутом,
+      // а адресная точка привязки к месту MeTravel не имеет.
+      const isSiteMode = newType === 'place';
+      const type: RoutePointType = isSiteMode ? 'custom' : newType;
+      // В режиме «Место» форма показывает только поиск по MeTravel
+      // (`RoutePointAddForm`), полей названия и описания на экране нет. Их
+      // прежнее значение — невидимый остаток прошлой попытки, а не ввод
+      // пользователя, поэтому имя тогда берётся из адреса.
+      const typedName = isSiteMode ? '' : newName.trim();
+      const typedDescription = isSiteMode ? '' : newDescription.trim();
+      const name = typedName || addressPointName(full);
 
       setRoute((prev) => [
         ...prev,
         {
           id: `address-${prev.length}-${name}`,
-          type: 'custom',
+          type,
           name,
-          description: full === name ? null : full,
+          description: typedDescription || (full === name ? null : full),
           coordinates: [coords.lng, coords.lat],
           placeId: null,
         },
       ]);
-      trackRoutePointAdded(trip.id, 'custom');
+      trackRoutePointAdded(trip.id, type);
+      setNewName('');
+      setNewLat('');
+      setNewLng('');
+      setNewDescription('');
       setIsAddPointOpen(false);
     },
-    [trip.id],
+    [newDescription, newName, newType, trip.id],
+  );
+
+  // #1782: правку точки тоже нельзя было довести без точных координат —
+  // тестировщик видел только два числовых поля. Тот же `AddressSearch`, что и в
+  // добавлении, подставляет сюда координаты; ручной ввод остаётся рабочим.
+  const handleEditAddressSelect = useCallback(
+    (address: string, coords: { lat: number; lng: number }) => {
+      if (!Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return;
+      setEditLat(formatCoordinateInput(coords.lat));
+      setEditLng(formatCoordinateInput(coords.lng));
+      // Имя принадлежит пользователю: «Ночёвка у Пети» не должна превратиться в
+      // адрес из-за уточнения координат. Поиск заполняет его только пустым.
+      setEditName((prev) => (prev.trim() ? prev : addressPointName(address)));
+      setEditError(null);
+    },
+    [],
   );
 
   const handleApplyTemplate = (points: Array<Omit<RoutePoint, 'id'>>) => {
@@ -1138,6 +1176,18 @@ function RouteBuilder({
             );
           })}
         </View>
+        {/* #1782: поиск места по названию. Координаты приходят из результата,
+            поля широты и долготы ниже остаются доступны для ручного ввода. */}
+        <AddressSearch
+          // Переход к правке соседней точки обязан сбрасывать строку поиска:
+          // в десктопной раскладке форма живёт на одном месте и без ключа
+          // сохранила бы запрос от предыдущей точки.
+          key={`edit-address-${editingIndex}`}
+          onAddressSelect={handleEditAddressSelect}
+          placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nayti_mesto_po_nazvaniyu_ili_adresu_fa7745e0')}
+          enableCoordinateInput
+          dense
+        />
         <TextInput
           value={editName}
           onChangeText={setEditName}
@@ -1244,7 +1294,12 @@ function RouteBuilder({
     <RoutePointAddForm
       styles={styles}
       addressSlot={
-        <AddressSearch onAddressSelect={handleAddAddressPoint} enableCoordinateInput dense />
+        <AddressSearch
+          onAddressSelect={handleAddAddressPoint}
+          placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nayti_mesto_po_nazvaniyu_ili_adresu_fa7745e0')}
+          enableCoordinateInput
+          dense
+        />
       }
       colors={colors}
       pointTypes={POINT_TYPES}

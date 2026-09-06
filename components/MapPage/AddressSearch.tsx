@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, type QueryFunctionContext } from '@tanstack/react-query'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
@@ -19,8 +19,10 @@ import type { LatLng } from '@/types/coordinates'
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import MapIcon from './MapIcon'
 import IconButton from '@/components/ui/IconButton'
-import { translate as i18nT } from '@/i18n'
+import { getActiveLocaleDefinition, translate as i18nT } from '@/i18n'
 
+
+type AddressSearchKey = ReturnType<typeof queryKeys.addressSearch>
 
 const MIN_QUERY_LENGTH = 3
 const SEARCH_DEBOUNCE_MS = 500
@@ -104,6 +106,10 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   const [showResults, setShowResults] = useState(false)
   const [searchEnabled, setSearchEnabled] = useState(false)
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS)
+  // #1742/#1782: геокодер отвечает на языке интерфейса, а не на языке страны
+  // объекта. Локаль читается на рендере, поэтому переключение языка меняет и
+  // ключ запроса — подсказки не приходят из кэша чужого языка.
+  const geocoderLanguage = getActiveLocaleDefinition().geocoderLanguage
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors, dense), [colors, dense])
 
@@ -112,17 +118,22 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
     isFetching: loading,
     isError,
     refetch,
-  } = useQuery<SearchResult[]>({
-    queryKey: queryKeys.addressSearch(debouncedQuery),
+  } = useQuery<SearchResult[], Error, SearchResult[], AddressSearchKey>({
+    queryKey: queryKeys.addressSearch(debouncedQuery, geocoderLanguage),
     enabled: searchEnabled && debouncedQuery.length >= MIN_QUERY_LENGTH,
     retry: false,
     staleTime: SEARCH_STALE_TIME_MS,
     gcTime: SEARCH_GC_TIME_MS,
-    queryFn: async ({ signal, queryKey } = {} as any) => {
-      const q = (queryKey?.[queryKey.length - 1] ?? '') as string
+    queryFn: async ({ signal, queryKey }: QueryFunctionContext<AddressSearchKey>) => {
+      // И строка, и язык берутся из ключа: тогда язык ответа заведомо совпадает
+      // с языком, под которым ответ ляжет в кэш.
+      const [, language, q] = queryKey
       const response = await nominatimSearch(
-        { q, limit: SEARCH_LIMIT, addressdetails: 1 },
-        { signal, headers: { 'User-Agent': 'MeTravel/1.0' } },
+        { q, limit: SEARCH_LIMIT, addressdetails: 1, acceptLanguage: language },
+        {
+          signal,
+          headers: { 'User-Agent': 'MeTravel/1.0', 'Accept-Language': language },
+        },
       )
       if (!response.ok) throw new Error(i18nT('map:components.MapPage.AddressSearch.oshibka_poiska_adresa_ce9e23a9'))
       return response.json()

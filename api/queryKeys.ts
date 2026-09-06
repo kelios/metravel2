@@ -49,7 +49,10 @@ export const queryKeys = {
   mapPlaceSourcesAll: () => ['map-place-sources'] as const,
   articles: (params: { page: number; itemsPerPage: number; user_id?: string }) =>
     ['articles', params] as const,
-  addressSearch: (query: string) => ['address-search', query] as const,
+  // Язык ответа геокодера зависит от локали интерфейса (#1742/#1782), поэтому
+  // локаль входит в ключ: иначе кэш отдал бы чужой язык подсказок.
+  addressSearch: (query: string, language: string) =>
+    ['address-search', language, query] as const,
   locationSearch: (query: string, locale: string) => ['location-search', locale, query] as const,
   reverseGeocode: (lat: number, lng: number, locale: string) =>
     ['reverse-geocode', locale, lat, lng] as const,

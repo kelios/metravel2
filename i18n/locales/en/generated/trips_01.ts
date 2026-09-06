@@ -145,6 +145,7 @@ export const tripsGenerated1 = {
   "components.trips.planning.RouteBuilder.marshrut_poka_ne_postroen_fbdcf5ed": "The route has not yet been built.",
   "components.trips.planning.RouteBuilder.mesto_3991f739": "Place",
   "components.trips.planning.RouteBuilder.nayti_mesto_ili_puteshestvie_na_metravel_8780d31c": "Find a place or trip on MeTravel",
+  "components.trips.planning.RouteBuilder.nayti_mesto_po_nazvaniyu_ili_adresu_fa7745e0": "Find a place by name or address",
   "components.trips.planning.RouteBuilder.nazvanie_tochki_0cdacb0f": "Point name",
   "components.trips.planning.RouteBuilder.ne_udalos_perestroit_marshrut_poprobuyte_esche_raz_9c4be156": "Failed to rebuild the route. Please try again.",
   "components.trips.planning.RouteBuilder.ne_udalos_zagruzit_varianty_a38206ee": "Failed to load options.",
