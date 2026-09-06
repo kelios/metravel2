@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import NavigationIcon from '@/components/layout/NavigationIcon';
 import type { NavigationIconName } from '@/constants/navigationIcons';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useBreakpoints } from '@/hooks/useResponsive';
 import type { ThemedColors } from '@/hooks/useTheme';
 
 import type { City, NearbyCity } from './questsShared';
@@ -194,7 +194,7 @@ type QuestsSidebarProps = {
     onCloseDrawer?: () => void;
 };
 
-export default function QuestsSidebar({
+function QuestsSidebar({
     styles,
     colors,
     testID,
@@ -218,7 +218,9 @@ export default function QuestsSidebar({
     onToggleAllCountryGroups,
     onCloseDrawer,
 }: QuestsSidebarProps) {
-    const { isMobile } = useResponsive();
+    // #1826: только ширина — высоту сайдбар не читает, а подписка на неё
+    // перерисовывала его на каждый кадр изменения вьюпорта.
+    const { isMobile } = useBreakpoints();
     const iconSize = isMobile ? 16 : 18;
     const hasCountryGroups = citiesByCountry.length > 0;
     const isNearbySelected = selectedCityId === nearbyId;
@@ -448,3 +450,10 @@ export default function QuestsSidebar({
         </View>
     );
 }
+
+/**
+ * #1826: сайдбар не зависит от строки поиска, но перерисовывался на каждое
+ * нажатие вместе со всем экраном. Пропсы приходят из мемоизированных значений
+ * экрана, поэтому граница мемоизации здесь действительно держит.
+ */
+export default memo(QuestsSidebar)

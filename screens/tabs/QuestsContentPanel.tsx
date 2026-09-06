@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useLayoutEffect } from 'react';
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -9,7 +9,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
-import type { ListRenderItemInfo } from 'react-native';
+import type { ListRenderItemInfo, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
@@ -89,6 +89,11 @@ type QuestsContentPanelProps = {
 
 type QuestListItem = QuestMeta & { _distanceKm?: number };
 
+/** Сколько карточек каталога уходит в кадр за раз и когда подрастает окно. */
+const QUEST_GRID_PAGE_SIZE = 24;
+const QUEST_GRID_REVEAL_DISTANCE = 800;
+const QUEST_GRID_SCROLL_THROTTLE = 32;
+
 export default function QuestsContentPanel({
     styles,
     colors,
@@ -128,6 +133,37 @@ export default function QuestsContentPanel({
     onSearchMapArea,
     noticeSlot = null,
 }: QuestsContentPanelProps) {
+    // #1826: на web сетка каталога не виртуализирована — 177 карточек уходили в
+    // первый кадр одним `map`. `FlatList` здесь не годится: он списочный, а
+    // каталог — сетка с переносом, и её вёрстка менять нельзя. Поэтому окно
+    // растёт по мере прокрутки. Ссылки на все квесты в статическом HTML это не
+    // задевает: их кладёт отдельный скрытый индекс сборки
+    // (`scripts/generate-seo-pages.js:injectQuestLinksIndex`), а не сама сетка.
+    const [visibleCount, setVisibleCount] = useState(QUEST_GRID_PAGE_SIZE);
+
+    // Смена набора (город, фильтр, поиск) начинает окно заново — иначе после
+    // «все квесты» узкий срез рисовался бы с раздутым окном.
+    useEffect(() => {
+        setVisibleCount(QUEST_GRID_PAGE_SIZE);
+    }, [questsAll]);
+
+    const visibleQuests = useMemo(
+        () => (questsAll.length <= visibleCount ? questsAll : questsAll.slice(0, visibleCount)),
+        [questsAll, visibleCount],
+    );
+
+    const revealMoreQuests = useCallback(() => {
+        setVisibleCount((current) => (
+            current >= questsAll.length ? current : current + QUEST_GRID_PAGE_SIZE
+        ));
+    }, [questsAll.length]);
+
+    const handleGridScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+        const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+        const distanceToEnd = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+        if (distanceToEnd <= QUEST_GRID_REVEAL_DISTANCE) revealMoreQuests();
+    }, [revealMoreQuests]);
+
     const router = useRouter();
     const searchActive = searchQuery.trim().length > 0;
 
@@ -552,7 +588,7 @@ export default function QuestsContentPanel({
 
                         {dataLoaded && questsAll.length > 0 && (
                             <View style={styles.questsGrid}>
-                                {questsAll.map((quest, index) => (
+                                {visibleQuests.map((quest, index) => (
                                     <QuestCard
                                         key={quest.id}
                                         styles={styles}
@@ -685,6 +721,8 @@ export default function QuestsContentPanel({
             contentContainerStyle={{ flexGrow: 1 }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            onScroll={handleGridScroll}
+            scrollEventThrottle={QUEST_GRID_SCROLL_THROTTLE}
             testID="quests-content"
         >
             {inner}

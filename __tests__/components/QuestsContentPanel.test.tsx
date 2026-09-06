@@ -8,6 +8,16 @@ let mockIsMobile = false;
 
 jest.mock('@/hooks/useResponsive', () => ({
     useResponsive: () => ({ isMobile: mockIsMobile }),
+    // #1826: дерево каталога переведено на ширинную подписку — мок обязан
+    // отдавать её тоже, иначе набор падает не на поведении, а на форме модуля.
+    useBreakpoints: () => ({
+        isMobile: mockIsMobile,
+        isSmallPhone: false,
+        isPhone: mockIsMobile,
+        isTablet: false,
+        isLargeTablet: false,
+        width: mockIsMobile ? 390 : 1440,
+    }),
 }));
 
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
@@ -575,7 +585,10 @@ describe('QuestsContentPanel', () => {
         expect(queryByText('Ничего не найдено')).toBeTruthy();
     });
 
-    it('keeps the existing non-virtualized grid path on web', () => {
+    // #1826: сетка на web осталась сеткой (не FlatList), но в первый кадр
+    // уходит окно, а не весь каталог: 177 карточек одним `map` рвали ввод в
+    // поиске. Окно растёт по прокрутке.
+    it('renders a first window of the web grid and grows it on scroll', () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
         const LazyQuestMap = jest.fn(() => null);
@@ -615,9 +628,80 @@ describe('QuestsContentPanel', () => {
 
         expect(queryByTestId('quests-virtualized-list')).toBeNull();
         expect(getByTestId('quest-card-quest-0').props.accessibilityHint).toBe('0');
-        expect(getByTestId('quest-card-quest-1').props.accessibilityHint).toBe('1');
-        expect(getByTestId('quest-card-quest-2').props.accessibilityHint).toBe('2');
+        expect(getByTestId('quest-card-quest-23').props.accessibilityHint).toBe('23');
+        expect(queryByTestId('quest-card-quest-24')).toBeNull();
+        expect(queryByTestId('quest-card-quest-53')).toBeNull();
+
+        const scrollToEnd = () => fireEvent.scroll(getByTestId('quests-content'), {
+            nativeEvent: {
+                contentOffset: { y: 10000 },
+                contentSize: { height: 10400, width: 390 },
+                layoutMeasurement: { height: 800, width: 390 },
+            },
+        });
+
+        scrollToEnd();
+        expect(getByTestId('quest-card-quest-24').props.accessibilityHint).toBe('24');
+        expect(queryByTestId('quest-card-quest-48')).toBeNull();
+
+        scrollToEnd();
         expect(getByTestId('quest-card-quest-53').props.accessibilityHint).toBe('53');
+    });
+
+    // Смена набора обязана начинать окно заново: иначе узкий срез после «всех
+    // квестов» рисовался бы с раздутым окном.
+    it('restarts the web grid window when the catalog changes', () => {
+        mockIsMobile = true;
+        (Platform as { OS: string }).OS = 'web';
+        const LazyQuestMap = jest.fn(() => null);
+        const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
+
+        const panel = (data: QuestMeta[]) => (
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="list"
+                selectedCityId="warsaw"
+                selectedCityName="Warsaw"
+                nearbyId="__nearby__"
+                nearbyRadiusKm={15}
+                questsAll={data}
+                questCardWidth={320}
+                mapPoints={[]}
+                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
+                userLoc={null}
+                isMapAreaActive={false}
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch={false}
+                radiiLg={24}
+                LazyQuestMap={LazyQuestMap}
+                isMobile
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+                onSetRadius={() => {}}
+                onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
+            />
+        );
+
+        const { getByTestId, queryByTestId, rerender } = render(panel(quests));
+
+        fireEvent.scroll(getByTestId('quests-content'), {
+            nativeEvent: {
+                contentOffset: { y: 10000 },
+                contentSize: { height: 10400, width: 390 },
+                layoutMeasurement: { height: 800, width: 390 },
+            },
+        });
+        expect(getByTestId('quest-card-quest-24')).toBeTruthy();
+
+        rerender(panel(quests.slice(0, 40)));
+        expect(queryByTestId('quest-card-quest-24')).toBeNull();
+        expect(getByTestId('quest-card-quest-23')).toBeTruthy();
     });
 
     it('exposes the mobile nearby CTA and geolocation message in list mode', () => {

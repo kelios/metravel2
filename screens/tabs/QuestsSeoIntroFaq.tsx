@@ -14,7 +14,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
-import { useResponsive } from '@/hooks/useResponsive'
+import { useBreakpoints } from '@/hooks/useResponsive'
 import { translate as i18nT } from '@/i18n'
 
 const IS_WEB = Platform.OS === 'web'
@@ -132,7 +132,8 @@ function QuestsSeoIntroFaq({
   testID?: string
 }) {
   const colors = useThemedColors()
-  const { isSmallPhone, isPhone } = useResponsive()
+  // #1826: высоту этот блок не читает — подписка только на ширину.
+  const { isSmallPhone, isPhone } = useBreakpoints()
   const isMobile = isSmallPhone || isPhone
   const [openIndex, setOpenIndex] = useState<number | null>(null)
 

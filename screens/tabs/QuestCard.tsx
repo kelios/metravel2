@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import type {
     CSSProperties,
     KeyboardEvent as ReactKeyboardEvent,
@@ -13,7 +13,7 @@ import NavigationIcon from '@/components/layout/NavigationIcon';
 import UserAvatar from '@/components/layout/UserAvatar';
 import QuestReviewsModal from '@/components/quests/QuestReviewsModal';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useBreakpoints } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -66,7 +66,7 @@ type QuestCardProps = {
     index?: number;
 };
 
-export default function QuestCard({
+function QuestCard({
     styles,
     cardWidth,
     cityId,
@@ -75,7 +75,7 @@ export default function QuestCard({
     index,
 }: QuestCardProps) {
     const colors = useThemedColors();
-    const { isPhone } = useResponsive();
+    const { isPhone } = useBreakpoints();
     const [isHovered, setIsHovered] = useState(false);
     const [reviewsOpen, setReviewsOpen] = useState(false);
 
@@ -518,3 +518,12 @@ export default function QuestCard({
         </View>
     );
 }
+
+/**
+ * #1826: каталог на web рисует до 177 карточек одним `map`, а состояние экрана
+ * меняется на каждое нажатие в поиске. Без границы мемоизации один символ
+ * перерисовывал ~12 000 элементов. Все пропсы карточки стабильны по ссылке:
+ * `styles` — мемоизированный объект экрана, `quest` — элемент мемоизированного
+ * каталога (спреды-копии сняты в `QuestsScreen`), остальное примитивы.
+ */
+export default memo(QuestCard)

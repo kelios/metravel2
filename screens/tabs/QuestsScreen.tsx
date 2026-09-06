@@ -14,6 +14,7 @@ import { getQuestAgeSearchTerms } from '@/utils/questAudience';
 import { useIsFocused } from 'expo-router';
 import { useBreakpoints } from '@/hooks/useResponsive';
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useQuestsList } from '@/hooks/useQuestsApi';
 import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit';
@@ -57,6 +58,10 @@ import { useQuestCatalogHandoff } from './useQuestCatalogHandoff';
 import { createCollator, translate as i18nT } from '@/i18n'
 
 const { spacing, radii } = DESIGN_TOKENS;
+
+// #1826: пустой каталог — одна и та же ссылка. Новый `[]` на каждом пересчёте
+// ломал бы мемоизацию карточек ровно так же, как снятые отсюда спреды-копии.
+const EMPTY_QUESTS: (QuestMeta & { _distanceKm?: number })[] = [];
 
 const LazyQuestMap = React.lazy(() => import('@/components/MapPage/Map.web'));
 
@@ -374,10 +379,13 @@ export default function QuestsScreen() {
         });
     }, [areAllCountryGroupsCollapsed, citiesByCountry]);
 
-    const searchTerm = searchQuery.trim().toLowerCase();
+    // #1826: поле ввода остаётся мгновенным (`searchQuery` — состояние экрана),
+    // а пересчёт каталога отстаёт на паузу в наборе. Без этого каждый символ
+    // перестраивал `questsAll` новым массивом и обнулял мемоизацию карточек.
+    const searchTerm = useDebouncedValue(searchQuery.trim().toLowerCase(), 200);
 
     const questsAll: (QuestMeta & { _distanceKm?: number })[] = useMemo(() => {
-        if (!dataLoaded) return [];
+        if (!dataLoaded) return EMPTY_QUESTS;
         // Свободный поиск перекрывает город/«Рядом»: ищем по всему каталогу.
         if (searchTerm) {
             return ALL_QUESTS
@@ -393,32 +401,31 @@ export default function QuestsScreen() {
                         .join(' ')
                         .toLowerCase();
                     return haystack.includes(searchTerm);
-                })
-                .map((q) => ({ ...q }));
+                });
         }
-        if (!selectedCityId) return [];
+        if (!selectedCityId) return EMPTY_QUESTS;
         if (activeMapAreaCenter) {
             // «Искать в этой области» — отдельный фильтр, не «Рядом со мной».
             return filterQuestsByMapSearchArea(ALL_QUESTS, activeMapAreaCenter, nearbyRadiusKm);
         }
         if (selectedCityId === ALL_QUESTS_ID) {
-            return ALL_QUESTS.map((q) => ({ ...q }));
+            return ALL_QUESTS;
         }
         if (selectedCityId === KIDS_FILTER_ID) {
-            return kidsQuests.map((q) => ({ ...q }));
+            return kidsQuests;
         }
         if (selectedCityId === BIKE_FILTER_ID) {
-            return bikeQuests.map((q) => ({ ...q }));
+            return bikeQuests;
         }
         if (selectedCityId === REVIEWED_FILTER_ID) {
-            return reviewedQuests.map((q) => ({ ...q }));
+            return reviewedQuests;
         }
         const personalSlice = personalSlices.sliceFor(selectedCityId);
-        if (personalSlice) return personalSlice.map((q) => ({ ...q }));
+        if (personalSlice) return personalSlice;
         if (selectedCityId === NEARBY_ID) {
             return filterNearbyQuests(ALL_QUESTS, userLoc, nearbyRadiusKm);
         }
-        return (cityQuests[selectedCityId] || []).map((q) => ({ ...q }));
+        return cityQuests[selectedCityId] || EMPTY_QUESTS;
     }, [
         selectedCityId,
         userLoc,

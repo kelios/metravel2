@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useResponsive } from './useResponsive'
+import { useBreakpoints } from './useResponsive'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 const { spacing } = DESIGN_TOKENS
@@ -20,7 +20,12 @@ export type QuestCatalogResponsiveModel = {
 }
 
 export function useQuestCatalogResponsiveModel(questCount: number) {
-  const { width, isMobile, isTablet, isLargeTablet } = useResponsive()
+  // #1826: только ширина. `useResponsive()` подписывает на полный снимок и
+  // возвращает `true` на изменении ОДНОЙ высоты, а на мобильном вебе высота
+  // меняется покадрово от клавиатуры и адресной строки — экран каталога
+  // перерисовывался на каждый кадр и рвал ввод в поиске. Высоту эта модель не
+  // читает ни разу, так что подписка на неё была чистой платой без пользы.
+  const { width, isMobile, isTablet, isLargeTablet } = useBreakpoints()
 
   return useMemo<QuestCatalogResponsiveModel>(() => {
     const isSmallPhone = width < 360
