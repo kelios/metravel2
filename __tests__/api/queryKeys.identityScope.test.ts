@@ -21,13 +21,48 @@ const factories: Factory[] = [
 ].map(([, name, args, body]) => ({ name, args, body: body.replace(/\s+/g, ' ').trim() }))
 
 /**
- * Личный ключ виден по имени или по сегменту `me` в самом ключе. Эвристика
- * умышленно не пытается угадать все личные ключи — она ловит ровно те формы,
- * которыми личные ключи заводят в этом файле, чтобы новый такой ключ без
- * владельца не проехал молча.
+ * Корни, под которыми в этом файле лежат исключительно личные данные. Имя ключа
+ * их не выдаёт: `privacySettings` и `stravaStatus` личные, но ни `my`, ни `me` в
+ * них нет. Каталоги и справочники под этими корнями не живут.
  */
-const looksPersonal = ({ name, body }: Factory): boolean =>
-  /^my[A-Z]/.test(name) || name.endsWith('Me') || name.endsWith('Mine') || /'me'/.test(body)
+const PERSONAL_KEY_ROOTS = new Set<string>([
+  'contact-requests',
+  'my-subscribers',
+  'my-subscriptions',
+  'privacy',
+  'security',
+  'strava',
+  'telegram-link',
+  'trip-notifications',
+  'user-blocked',
+  'user-verifications',
+  'userPointsAll',
+])
+
+const keyRoot = ({ body }: Factory): string | null => /^\[\s*'([^']+)'/.exec(body)?.[1] ?? null
+
+/**
+ * Личный ключ виден либо по имени (`my*`, `*Me`, `*Mine`, сегмент `'me'`), либо
+ * по корню из списка выше. Хелперы инвалидации по префиксу (`*All`, `*Root`)
+ * данных не держат — под ними ничего не лежит, они только адресуют поддерево.
+ *
+ * Эвристика не претендует на то, чтобы угадать любой личный ключ: она ловит те
+ * формы, которыми личные ключи заводят в этом файле. Утечку закрывает не она, а
+ * сброс кэша на смене владельца (`api/identityQueryCache.ts`) — он устроен от
+ * запрета и сносит всё, кроме точного ключа каталога квестов.
+ */
+const looksPersonal = (factory: Factory): boolean => {
+  const { name, body } = factory
+  if (name.endsWith('All') || name.endsWith('Root')) return false
+  const root = keyRoot(factory)
+  return (
+    /^my[A-Z]/.test(name) ||
+    name.endsWith('Me') ||
+    name.endsWith('Mine') ||
+    /'me'/.test(body) ||
+    (root !== null && PERSONAL_KEY_ROOTS.has(root))
+  )
+}
 
 const carriesOwner = ({ args }: Factory): boolean => /\buserId\b/.test(args)
 
@@ -51,11 +86,14 @@ const PERSONAL_KEYS_WITHOUT_OWNER = [
   'plannedTripsMine',
   'privacySettings',
   'securityJournal',
+  'stravaActivities',
+  'stravaActivity',
   'stravaStatus',
   'tripChatMessages',
   'tripMyApplications',
   'tripNotifications',
   'userPointsAll',
+  'userPointsPagination',
 ].sort()
 
 describe('#1829 владелец в ключах кэша', () => {
@@ -75,6 +113,19 @@ describe('#1829 владелец в ключах кэша', () => {
 
   // Список долга — чеклист, а не свалка: имя в нём обязано существовать и
   // действительно не нести владельца, иначе оно останется там после починки.
+  // Эвристика — это и есть правило; если она перестанет узнавать личные формы,
+  // гейт молча пропустит следующий ключ без владельца.
+  it('эвристика узнаёт личные ключи и по имени, и по корню', () => {
+    const byName = new Map(factories.map((factory) => [factory.name, factory]))
+    const personal = ['achievementsMe', 'mySubscriptions', 'plannedTripsMine', 'privacySettings', 'stravaStatus']
+    const notPersonal = ['travels', 'questDetail', 'filterOptions', 'contactRequestsAll', 'stravaActivitiesRoot']
+
+    expect({
+      personal: personal.filter((name) => !looksPersonal(byName.get(name)!)),
+      notPersonal: notPersonal.filter((name) => looksPersonal(byName.get(name)!)),
+    }).toEqual({ personal: [], notPersonal: [] })
+  })
+
   it('список долга не содержит ни выдуманных, ни уже починенных ключей', () => {
     const byName = new Map(factories.map((factory) => [factory.name, factory]))
     const stale = PERSONAL_KEYS_WITHOUT_OWNER.filter((name) => {

@@ -337,6 +337,17 @@ export const useAuthStore = create<AuthStore>((set, get) => {
                 isPremium: verifiedWebProfile?.is_premium ?? false,
             });
 
+            // Профиль уже получен выше через общий кэш ради дедупликации с
+            // useUserProfile. Смена владельца (#1829) сбрасывает кэш синхронно
+            // внутри `set` выше, поэтому свежий профиль возвращается обратно —
+            // иначе экран профиля запросил бы его вторым запросом.
+            if (verifiedWebProfile && storageData.userId) {
+                getActiveQueryClient()?.setQueryData(
+                    queryKeys.userProfile(storageData.userId),
+                    verifiedWebProfile,
+                );
+            }
+
             // Always fetch profile in background to ensure avatar + premium flag are up-to-date.
             // Route through the mounted QueryClient + shared queryKey so this request
             // dedupes with useUserProfile (the profile screen) instead of firing twice.
