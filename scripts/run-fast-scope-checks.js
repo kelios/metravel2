@@ -49,6 +49,7 @@ const {
 const { BASELINE_PATH: QUEST_HINT_LEAK_BASELINE_PATH } = require('./scan-quest-hint-leak')
 const { BASELINE_PATH: QUEST_SURFACE_ANSWER_BASELINE_PATH } = require('./scan-quest-surface-answer')
 const { BASELINE_PATH: QUEST_COMPOUND_SPELLING_BASELINE_PATH } = require('./scan-quest-compound-spelling-gap')
+const { BASELINE_PATH: QUEST_POINT_ROLES_BASELINE_PATH } = require('./scan-quest-point-roles')
 const ESLINT_CACHE_LOCATION = 'node_modules/.cache/eslint/check-fast/.eslintcache'
 const ESLINT_BIN_PATH = path.resolve(process.cwd(), 'node_modules/eslint/bin/eslint.js')
 const MINIMATCH_OPTIONS = Object.freeze({ dot: true })
@@ -381,6 +382,22 @@ const main = () => {
       ], { shell: false })
       if (surfaceAnswerStatus !== 0) {
         process.exit(surfaceAnswerStatus)
+      }
+
+      // #1810 — структурная роль точки: необязательность обещает игроку сам
+      // заголовок, а не тип ответа. До заливки проверяемо именно это — роли в
+      // авторском файле ещё нет, её проставит заливщик. Прод-режим той же
+      // гвардии (`npm run quest:scan-point-roles`) сверяет уже проставленное
+      // поле. Baseline держит четыре привала, названные без «(по желанию)» до
+      // появления правила: переписывать чужие заголовки задним числом скрипт не
+      // должен, а новая такая точка валит гейт сразу.
+      const pointRolesStatus = runCommand('node', [
+        'scripts/scan-quest-point-roles.js',
+        `--source=${questDataFile}`,
+        `--baseline=${QUEST_POINT_ROLES_BASELINE_PATH}`,
+      ], { shell: false })
+      if (pointRolesStatus !== 0) {
+        process.exit(pointRolesStatus)
       }
     }
 

@@ -1,0 +1,18 @@
+{
+  "contractVersion": 1,
+  "note": "Осознанные исключения: точка-привал, необязательность которой держится на типе ответа, а не на словах в заголовке. Такие заголовки написаны до правила, и переписывать их задним числом скрипт не должен. Снимается по файлам данных в РАБОЧЕМ ДЕРЕВЕ, поэтому обновлять надо на дереве без чужих незавершённых правок: иначе чужая точка уедет в файл как принятое исключение и перестанет ронять гейт молча. Обновлять: npm run quest:scan-point-roles:baseline",
+  "known": {
+    "scripts/ogulin-quest-data.js": [
+      "ogulin-grad-bajki|4-privel"
+    ],
+    "scripts/slunj-quest-data.js": [
+      "slunj-rastoke-selo-na-slapovima|5-konoba"
+    ],
+    "scripts/split-quest-data.js": [
+      "split-dioklecijanova-palaca|6-korta"
+    ],
+    "scripts/zagreb-quest-data.js": [
+      "zagreb-gric-vjestice|4-la-struk"
+    ]
+  }
+}

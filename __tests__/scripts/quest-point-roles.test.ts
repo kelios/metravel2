@@ -5,7 +5,10 @@ const {
   isOptionalByTitle,
   expectedRoles,
   findRoleMismatches,
+  findAuthoringRoleIssues,
   endsWithOptional,
+  orderedSteps,
+  stepKey,
 } = require('@/scripts/lib/questPointRoles')
 
 const step = (over: Record<string, unknown> = {}) => ({
@@ -28,6 +31,14 @@ describe('isOptionalByTitle', () => {
 
   it('не считает необязательной обычную точку маршрута', () => {
     expect(isOptionalByTitle(step({ title: 'Ратуша и её часы' }))).toBe(false)
+  })
+
+  // #1810 — 🍦 и 🍨 суррогатные пары: без флага `u` класс символов содержал их
+  // половинки, и заголовок с мороженым маркером не опознавался.
+  it('видит эмодзи-привал целиком, а не половину суррогатной пары', () => {
+    const free = '{"type":"any","value":""}'
+    expect(isOptionalByTitle(step({ title: '🍦 Мороженое у фонтана', answer_pattern: free }))).toBe(true)
+    expect(isOptionalByTitle(step({ title: '🍨 Пломбир на набережной', answer_pattern: free }))).toBe(true)
   })
 
   it('принимает иконку привала только вместе со свободным ответом', () => {
@@ -96,5 +107,202 @@ describe('findRoleMismatches', () => {
       step({ id: 41, step_id: '1-a', order: 1, point_role: null }),
     ])
     expect(rows).toEqual([expect.objectContaining({ have: null, want: 'final' })])
+  })
+})
+
+
+/**
+ * #1810 — вторая форма входа. Локальный `scripts/<city>-quest-data.js` несёт
+ * только авторские поля: ни `id`, ни `order`, ни `is_intro`, ни `point_role`.
+ * Правило рассчитывали на прод-бандл, и на этой форме оно врало: `Map` по
+ * `step.id` схлопывался в одну запись с ключом `undefined`, а компаратор
+ * `Number(a.order) - Number(b.order)` возвращал `NaN` на каждой паре.
+ */
+const localStep = (over: Record<string, unknown> = {}) => ({
+  step_id: 'point-1',
+  title: 'Обычная точка',
+  answer_pattern: '{"type":"exact_any","value":["1"]}',
+  ...over,
+})
+
+describe('#1810 — форма локального файла квеста (без id/order/point_role)', () => {
+  const localSteps = [
+    localStep({ step_id: '1-mechet', title: 'Центральная мечеть' }),
+    localStep({ step_id: '2-bazar', title: 'Зелёный базар' }),
+    localStep({
+      step_id: '3-privat',
+      title: 'Привал на полпути (по желанию)',
+      answer_pattern: '{"type":"any","value":""}',
+    }),
+    localStep({ step_id: '4-teatr', title: 'Театр' }),
+  ]
+
+  it('каждый шаг получает СВОЙ ключ, а не общий undefined', () => {
+    const roles = expectedRoles(localSteps)
+
+    expect(roles.size).toBe(localSteps.length)
+    expect([...roles.values()]).toEqual(['required', 'required', 'optional', 'final'])
+  })
+
+  it('ключ берётся из step_id, когда первичного id нет', () => {
+    expect(stepKey({ id: 77, step_id: 'slug' })).toBe(77)
+    expect(stepKey(localStep({ step_id: 'slug' }))).toBe('slug:slug')
+    expect(stepKey(localStep({ step_id: 'a' }))).not.toBe(stepKey(localStep({ step_id: 'b' })))
+  })
+
+  it('порядок задаёт сам файл, когда order нет ни у одного шага', () => {
+    expect(orderedSteps(localSteps).map((s: any) => s.step_id)).toEqual([
+      '1-mechet',
+      '2-bazar',
+      '3-privat',
+      '4-teatr',
+    ])
+    // Финал — последняя точка файла, а не «какая попадётся после NaN-сортировки».
+    expect(expectedRoles(localSteps).get('slug:4-teatr')).toBe('final')
+  })
+
+  it('финал не уезжает на точку «по желанию», стоящую последней', () => {
+    const endsOptional = [
+      localStep({ step_id: '1-a', title: 'Первая' }),
+      localStep({
+        step_id: '2-bar',
+        title: '✨ Бар (по желанию)',
+        answer_pattern: '{"type":"any","value":""}',
+      }),
+    ]
+
+    expect(endsWithOptional(endsOptional)).toBe(true)
+    expect(expectedRoles(endsOptional).get('slug:2-bar')).toBe('optional')
+  })
+
+  it('order у прод-бандла по-прежнему главнее позиции в массиве', () => {
+    const shuffled = [
+      step({ id: 3, order: 3, title: 'Третья' }),
+      step({ id: 1, order: 1, title: 'Первая' }),
+      step({ id: 2, order: 2, title: 'Вторая' }),
+    ]
+
+    expect(orderedSteps(shuffled).map((s: any) => s.id)).toEqual([1, 2, 3])
+  })
+
+  it('расхождение по локальной форме считается по слагу, а не по пустому id', () => {
+    const rows = findRoleMismatches({ quest_id: 'demo' }, [
+      localStep({ step_id: '1-a', title: 'Первая' }),
+      localStep({ step_id: '2-b', title: 'Вторая' }),
+    ])
+
+    // Все шаги остаются различимыми: раньше сюда приходило «null → final» на
+    // каждый шаг, потому что ожидаемая роль читалась одним общим ключом.
+    expect(rows.map((row: any) => [row.stepId, row.want])).toEqual([
+      ['1-a', 'required'],
+      ['2-b', 'final'],
+    ])
+    // `order` в авторском файле нет — печатать «NaN» вместо номера нечестно.
+    expect(rows.every((row: any) => row.order === null)).toBe(true)
+  })
+})
+
+describe('#1810 — findAuthoringRoleIssues: что проверяемо ДО заливки', () => {
+  const bundle = { quest_id: 'demo-quest' }
+
+  it('молчит на здоровом файле: пустая роль — не находка', () => {
+    expect(
+      findAuthoringRoleIssues(bundle, [
+        localStep({ step_id: '1-a', title: 'Первая точка' }),
+        localStep({
+          step_id: '2-privat',
+          title: 'Привал на полпути (по желанию)',
+          answer_pattern: '{"type":"any","value":""}',
+        }),
+        localStep({ step_id: '3-b', title: 'Финальная точка' }),
+      ]),
+    ).toEqual([])
+  })
+
+  it('показывает ровно ту точку, необязательность которой выведена косвенно', () => {
+    const rows = findAuthoringRoleIssues(bundle, [
+      localStep({ step_id: '1-a', title: 'Первая точка' }),
+      localStep({
+        step_id: '2-privat',
+        // «(по желанию)» из заголовка убрано, свободный ответ оставлен: игрок
+        // читает заголовок и не узнаёт, что точку можно пропустить.
+        title: 'Привал на полпути',
+        answer_pattern: '{"type":"any","value":""}',
+      }),
+      localStep({ step_id: '3-b', title: 'Финальная точка' }),
+    ])
+
+    expect(rows.map((row: any) => row.stepId)).toEqual(['2-privat'])
+    expect(rows[0]).toEqual(
+      expect.objectContaining({ questId: 'demo-quest', have: 'implicit-optional' }),
+    )
+  })
+
+  it('обычные точки маршрута находкой не считает', () => {
+    expect(
+      findAuthoringRoleIssues(bundle, [
+        localStep({ step_id: '1-a', title: 'Ратуша и её часы' }),
+        localStep({ step_id: '2-b', title: 'Кофейня на углу' }),
+      ]),
+    ).toEqual([])
+  })
+
+  /**
+   * Второй путь к подписи «Необязательная точка»: `point_role` прямо в шаге
+   * data-файла. Заливщик (`migrate-quest-from-file.js` → `pointRoleFor`) отдаёт
+   * его на бэкенд как есть, не глядя на заголовок, — значит проверять заголовок
+   * обязана гвардия. Так помечают опциональную точку с проверяемым ответом, где
+   * иконка привала и свободный ответ не сработают.
+   */
+  it('видит объявленный point_role: optional при заголовке, который молчит', () => {
+    const rows = findAuthoringRoleIssues(bundle, [
+      localStep({ step_id: '1-a', title: 'Первая точка' }),
+      localStep({
+        step_id: '2-muzey',
+        title: 'Национальный музей — подарок императрицы под стеклом',
+        point_role: 'optional',
+      }),
+    ])
+
+    expect(rows.map((row: any) => row.stepId)).toEqual(['2-muzey'])
+    expect(rows[0]).toEqual(expect.objectContaining({ have: 'point_role: optional' }))
+  })
+
+  it('объявленный point_role: optional с «(по желанию)» в заголовке — норма', () => {
+    expect(
+      findAuthoringRoleIssues(bundle, [
+        localStep({
+          step_id: '2-muzey',
+          title: 'Национальный музей (по желанию)',
+          point_role: 'optional',
+        }),
+      ]),
+    ).toEqual([])
+  })
+
+  it('point_role: required находкой не делает даже при свободном ответе', () => {
+    expect(
+      findAuthoringRoleIssues(bundle, [
+        localStep({
+          step_id: '2-vopros',
+          title: 'Точка с плохим вопросом',
+          point_role: 'required',
+          answer_pattern: '{"type":"any","value":""}',
+        }),
+      ]),
+    ).toEqual([])
+  })
+
+  it('точка не удваивается, когда сработали оба признака сразу', () => {
+    const rows = findAuthoringRoleIssues(bundle, [
+      localStep({
+        step_id: '2-privat',
+        title: 'Привал на полпути',
+        point_role: 'optional',
+        answer_pattern: '{"type":"any","value":""}',
+      }),
+    ])
+
+    expect(rows).toHaveLength(1)
   })
 })

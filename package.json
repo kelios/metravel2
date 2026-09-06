@@ -184,6 +184,7 @@
     "quest:scan-step-numbering:json": "node scripts/scan-quest-step-numbering.js --json",
     "quest:scan-point-roles": "node scripts/scan-quest-point-roles.js",
     "quest:scan-point-roles:json": "node scripts/scan-quest-point-roles.js --json",
+    "quest:scan-point-roles:baseline": "node scripts/scan-quest-point-roles.js --update-baseline",
     "quest:backfill-point-roles": "node scripts/backfill-quest-point-roles.js",
     "quest:scan-prod-drift": "node scripts/scan-quest-prod-drift.js",
     "quest:scan-prod-drift:json": "node scripts/scan-quest-prod-drift.js --json",
