@@ -39,12 +39,19 @@ export function useTripChat(tripId: string | number | null | undefined) {
   })
 }
 
-/** Сообщения треда (#422). */
+/**
+ * Сообщения треда (#422).
+ *
+ * #1829: гейт по авторизации обязателен, как и у `useTripChat`. Без него живой
+ * `threadId`, оставшийся в памяти от предыдущего пользователя, отрисовывал бы
+ * тела сообщений чужой поездки следующему вошедшему или гостю.
+ */
 export function useTripChatMessages(threadId: string | number | null | undefined) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   return useQuery<TripChatMessage[]>({
     queryKey: queryKeys.tripChatMessages(threadId),
     queryFn: () => fetchTripChatMessages(threadId as string | number),
-    enabled: threadId != null && threadId !== '',
+    enabled: isAuthenticated && threadId != null && threadId !== '',
     staleTime: STALE_TIME,
     retry,
   })

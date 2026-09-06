@@ -13,6 +13,7 @@ import {
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import { getActiveQueryClient } from '@/api/activeQueryClient';
 import { refreshQuestsCatalogIdentity } from '@/api/questsCatalogInvalidation';
+import { dropQueryCacheForIdentityChange } from '@/api/identityQueryCache';
 import { queryKeys } from '@/api/queryKeys';
 import type { UserProfileDto } from '@/api/user';
 import type { FacebookAuthResult } from '@/api/auth';
@@ -617,10 +618,21 @@ useAuthStore.subscribe((state, previous) => {
     const version = ++catalogIdentityVersion;
     const client = getActiveQueryClient();
     if (!client) return;
-    void refreshQuestsCatalogIdentity(client, () => {
+    const isCurrentIdentity = () => {
         const current = useAuthStore.getState();
         return version === catalogIdentityVersion && (current.isAuthenticated ? current.userId : null) === identity;
-    }, identity === null ? logoutCredentialsReady : undefined);
+    };
+    const credentialsReady = identity === null ? logoutCredentialsReady : undefined;
+    // Барьер учётных данных регистрируется до сброса: сброс поднимет активные
+    // запросы на повторную загрузку, и каталог квестов не должен уехать за
+    // данными раньше, чем сессия действительно закрыта.
+    void refreshQuestsCatalogIdentity(client, isCurrentIdentity, credentialsReady);
+    // #1829: чужой кэш не переживает смену владельца сессии. Холодный старт
+    // (null → пользователь) сбросом не задет: там сбрасывать нечего, а
+    // восстановленный офлайн-персист (`utils/queryPersist.ts`) он бы снёс.
+    if (previousIdentity !== null) {
+        void dropQueryCacheForIdentityChange(client, isCurrentIdentity, credentialsReady);
+    }
 });
 
 export const resetAuthStoreForTests = () => {
