@@ -17,6 +17,7 @@ import React from 'react';
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useBreadcrumbModel } from '@/hooks/useBreadcrumbModel';
 import { useTravelDetails } from '@/hooks/useTravelDetails';
@@ -54,7 +55,7 @@ jest.mock('@/api/publicTrips', () => ({ fetchPublicTrip: jest.fn() }));
 
 const TRAVEL_ID = 672;
 const TRAVEL_SLUG = 'marshruty-vykhodnogo-dnia-iz-minska-13-poezdok';
-const SECOND_ID = 682;
+const SECOND_ID = 683;
 const SECOND_SLUG = 'vtoroi-marshrut';
 const SECOND_NAME = 'Второй маршрут';
 const ENCODED_ID = 693;
@@ -108,6 +109,10 @@ describe('#1801 офлайн-переход на сохранённый марш
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    // Хранилище мока AsyncStorage живёт на уровне модуля и переживает кейсы, а
+    // `clearAllMocks` стирает вызовы, но не данные. Без явной очистки «маршрут
+    // не сохранён» держался бы только на порядке объявления тестов.
+    await AsyncStorage.clear();
     (Platform.OS as string) = 'web';
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
     fetchTravel.mockRejectedValue(new Error('OFFLINE_NETWORK_MUST_NOT_BE_USED'));
