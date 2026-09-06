@@ -191,7 +191,14 @@ function findAuthoringRoleIssues(bundle, steps) {
   const rows = []
   numbered.forEach((step) => {
     if (isExplicitlyOptional(step)) return
-    const declaredOptional = declaredRole(step) === 'optional'
+    const declared = declaredRole(step)
+    const declaredOptional = declared === 'optional'
+    // Объявленная НЕ-optional роль снимает косвенный признак: заливщик отдаёт
+    // явное поле как есть (`migrate-quest-from-file.js` → `pointRoleFor`), игрок
+    // увидит «Обязательная точка», и противоречия между словами и подписью нет.
+    // Без этой оговорки гвардия падала бы на корректном файле — ровно тот класс
+    // ложной тревоги, ради которого заведён #1810.
+    if (declared && !declaredOptional) return
     if (!declaredOptional && !isOptionalByTitle(step)) return
     rows.push({
       questId: bundle && bundle.quest_id,

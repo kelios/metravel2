@@ -238,6 +238,21 @@ describe('#1810 — findAuthoringRoleIssues: что проверяемо ДО з
     )
   })
 
+  it('объявленная не-optional роль снимает косвенный признак', () => {
+    // Заливщик отдаёт явное поле как есть, игрок увидит «Обязательная точка» —
+    // противоречия между словами заголовка и подписью нет, падать не на чем.
+    expect(
+      findAuthoringRoleIssues(bundle, [
+        localStep({
+          step_id: '2-cafe',
+          title: '☕ Кофейня Zeppelin — где стоял дирижабль',
+          point_role: 'required',
+          answer_pattern: '{"type":"any","value":""}',
+        }),
+      ]),
+    ).toEqual([])
+  })
+
   it('обычные точки маршрута находкой не считает', () => {
     expect(
       findAuthoringRoleIssues(bundle, [
