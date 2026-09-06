@@ -75,8 +75,9 @@ describe('Layout mode governance (docs/RULES.md — один responsive-UX)', ()
     );
 
     // Именно clientOnly-вариант: без него первый web-кадр приходит с width=0 и
-    // десктоп мигает мобильной раскладкой (#1282).
-    expect(source).toContain("useBreakpoints({ clientOnly: true })");
+    // десктоп мигает мобильной раскладкой (#1282). Сверяем смысл, а не
+    // форматирование: перенос аргумента на новую строку — не регрессия.
+    expect(source).toMatch(/useBreakpoints\(\s*\{\s*clientOnly:\s*true\s*\}\s*\)/);
     expect(PLATFORM_DECIDES_MODE.test(source)).toBe(false);
   });
 
