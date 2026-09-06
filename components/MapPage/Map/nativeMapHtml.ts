@@ -545,17 +545,22 @@ ${ESCAPE_HTML_FN_SCRIPT}
               // из точек, ради которых её поставили. Оптовая замена маршрута
               // (шаблон, импорт трека) не оставляет ни одной, и новый маршрут
               // обязан попасть в кадр: иначе он остаётся за пределами вида до
-              // пересоздания карты. Ключ точки — её координаты: перетаскивание
-              // меняет ровно одну, пересечение с прежним набором не пустеет.
-              const routePointKeys = routePoints
-                .filter(function(point) {
-                  return Array.isArray(point) && isFinite(point[0]) && isFinite(point[1]);
-                })
-                .map(function(point) { return point[0] + ',' + point[1]; });
+              // пересоздания карты. Ключ точки — её координаты (id сюда не
+              // доезжает), огрублённые до шести знаков: RouteBuilder округляет
+              // координаты дропа тем же шагом, и сырой ключ не совпал бы с
+              // сохранённым никогда. Индексация — по ПОЛНОМУ набору, тому же,
+              // по которому нумеруются маркеры: фильтрация сдвинула бы слоты.
+              const routePointKey = function(lat, lng) {
+                return lat.toFixed(6) + ',' + lng.toFixed(6);
+              };
+              const routePointKeys = routePoints.map(function(point) {
+                if (!Array.isArray(point) || !isFinite(point[0]) || !isFinite(point[1])) return '';
+                return routePointKey(point[0], point[1]);
+              });
               if (map.__metravelRouteFitLocked) {
                 const lockedKeys = map.__metravelRouteFitLockedKeys || [];
                 const survives = routePointKeys.some(function(key) {
-                  return lockedKeys.indexOf(key) !== -1;
+                  return key !== '' && lockedKeys.indexOf(key) !== -1;
                 });
                 if (!survives) {
                   map.__metravelRouteFitLocked = false;
@@ -641,7 +646,7 @@ ${ESCAPE_HTML_FN_SCRIPT}
                       // перетаскивание единственной точки маршрута само же и
                       // сняло бы защёлку следующим рендером.
                       map.__metravelRouteFitLockedKeys = routePointKeys.map(function(key, keyIndex) {
-                        return keyIndex === index ? position.lat + ',' + position.lng : key;
+                        return keyIndex === index ? routePointKey(position.lat, position.lng) : key;
                       });
                       if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
                         window.ReactNativeWebView.postMessage(JSON.stringify({

@@ -295,11 +295,34 @@ describe('#1781 native-карта — точки маршрута правятс
     };
     harness.renderPoints(single);
     harness.routeMarkers[0].handlers.dragstart();
+    // Сырая позиция дропа против округлённой до шести знаков в маршруте:
+    // ключ защёлки обязан пережить это огрубление.
+    harness.routeMarkers[0].handlers.dragend({
+      target: { getLatLng: () => ({ lat: 53.90123456789012, lng: 27.56789123456789 }) },
+    });
+    harness.renderPoints({ ...single, routePoints: [[53.901235, 27.567891]] });
+
+    expect(harness.map.__metravelRouteFitLocked).toBe(true);
+  });
+
+  it('нумерует ключи защёлки по полному набору, включая нерисуемые точки', () => {
+    const harness = createHarness();
+    const withBroken = {
+      ...routePayload(true),
+      routePoints: [[Number.NaN, 27.4], [53.9, 27.56], [53.91, 27.6]],
+    };
+    harness.renderPoints(withBroken);
+    // Битая точка маркера не даёт, но индекс в наборе занимает: перетащен
+    // средний маркер — это index 1, а не 0.
+    harness.routeMarkers[0].handlers.dragstart();
     harness.routeMarkers[0].handlers.dragend({
       target: { getLatLng: () => ({ lat: 53.95, lng: 27.7 }) },
     });
-    harness.renderPoints({ ...single, routePoints: [[53.95, 27.7]] });
 
-    expect(harness.map.__metravelRouteFitLocked).toBe(true);
+    expect(harness.map.__metravelRouteFitLockedKeys).toEqual([
+      '',
+      '53.950000,27.700000',
+      '53.910000,27.600000',
+    ]);
   });
 });

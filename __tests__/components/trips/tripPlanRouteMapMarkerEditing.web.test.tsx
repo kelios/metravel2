@@ -139,10 +139,12 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
     await waitFor(() => expect(markerProps).toHaveLength(1))
     expect(mockSetView).toHaveBeenCalledTimes(1)
 
-    dragEndAt(0, 53.95, 27.7)
+    // Leaflet отдаёт сырую позицию дропа, а `RouteBuilder` кладёт в маршрут
+    // округлённую до шести знаков: координатный ключ защёлки не совпал бы.
+    dragEndAt(0, 53.90123456789012, 27.56789123456789)
     rerender(
       <TripPlanRouteMap
-        route={[{ ...single[0], coordinates: [27.7, 53.95] }]}
+        route={[{ ...single[0], coordinates: [27.567891, 53.901235] }]}
         onMovePoint={jest.fn()}
       />,
     )
