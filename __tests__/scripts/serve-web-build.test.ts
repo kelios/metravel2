@@ -17,7 +17,12 @@ process.env.E2E_BUILD_DIR = buildDir
 const {
   getDynamicRouteFallbackCandidates,
   isExpectedProxyTransportFailure,
+  resolveApiProxyTarget,
 } = require('../../scripts/serve-web-build')
+
+const { DEFAULT_LOCAL_E2E_API_URL } = require('../../scripts/e2e-target-safety')
+// Фолбэк нормализован через URL, как и заданный таргет.
+const LOCAL_FALLBACK = new URL(DEFAULT_LOCAL_E2E_API_URL).toString()
 
 afterAll(() => {
   removeDir(buildDir)
@@ -46,6 +51,63 @@ describe('E2E web proxy transport logging', () => {
     expect(
       isExpectedProxyTransportFailure({ code: 'EPROTO', message: 'TLS protocol failure' }),
     ).toBe(false)
+  })
+})
+
+// Предохранитель таргета. Прямой запуск `node scripts/e2e-webserver.js` без
+// `E2E_API_PROXY_TARGET` молча уводил ВЕСЬ регрессионный набор на боевой API:
+// набор зеленел на проде, а локальные дефекты не проявлялись вовсе. Правило
+// то же, что в `scripts/e2e-target-safety.js`: не выведенный таргет — это
+// локальный бэкенд, никогда не прод.
+describe('E2E API proxy target is fail-closed to the local backend', () => {
+  const HOST = '127.0.0.1'
+  const PORT = 8085
+
+  it('falls back to the local backend when nothing is configured', () => {
+    expect(resolveApiProxyTarget({}, HOST, PORT)).toBe(LOCAL_FALLBACK)
+  })
+
+  it('never falls back to production', () => {
+    for (const env of [{}, { E2E_API_PROXY_TARGET: 'not a url' }]) {
+      expect(resolveApiProxyTarget(env, HOST, PORT)).not.toContain('metravel.by')
+    }
+  })
+
+  it('falls back to the local backend on an unparseable target', () => {
+    expect(resolveApiProxyTarget({ E2E_API_PROXY_TARGET: 'not a url' }, HOST, PORT)).toBe(
+      LOCAL_FALLBACK,
+    )
+  })
+
+  it('falls back to the local backend instead of self-proxying', () => {
+    // Бандл запекает `EXPO_PUBLIC_API_URL` самого e2e-сервера — прокси на себя
+    // это петля, а не повод уехать на прод.
+    expect(
+      resolveApiProxyTarget({ EXPO_PUBLIC_API_URL: `http://${HOST}:${PORT}` }, HOST, PORT),
+    ).toBe(LOCAL_FALLBACK)
+    expect(
+      resolveApiProxyTarget({ EXPO_PUBLIC_API_URL: `http://localhost:${PORT}` }, HOST, PORT),
+    ).toBe(LOCAL_FALLBACK)
+  })
+
+  it('honours an explicit target, production included', () => {
+    // production-smoke выставляет таргет сам — явный прод обязан работать.
+    expect(resolveApiProxyTarget({ E2E_API_PROXY_TARGET: 'https://metravel.by' }, HOST, PORT)).toBe(
+      'https://metravel.by/',
+    )
+    expect(resolveApiProxyTarget({ E2E_API_URL: 'http://localhost:8000' }, HOST, PORT)).toBe(
+      'http://localhost:8000/',
+    )
+  })
+
+  it('prefers an explicit proxy target over the inherited API url', () => {
+    expect(
+      resolveApiProxyTarget(
+        { E2E_API_PROXY_TARGET: 'http://localhost:8000', EXPO_PUBLIC_API_URL: 'https://metravel.by' },
+        HOST,
+        PORT,
+      ),
+    ).toBe('http://localhost:8000/')
   })
 })
 

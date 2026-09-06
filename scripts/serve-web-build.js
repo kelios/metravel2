@@ -174,6 +174,9 @@ function sendCompressed(req, res, contentType, data, fileExt) {
 // он проходит первой веткой как заданный таргет (`E2E_SUITE=production-smoke`
 // выставляет его сам).
 const { DEFAULT_LOCAL_E2E_API_URL } = require('./e2e-target-safety')
+// Заданный таргет возвращается через `URL.toString()`, поэтому и фолбэк
+// нормализуется так же: иначе три ветки отдают две разные формы одной строки.
+const LOCAL_FALLBACK_TARGET = new URL(DEFAULT_LOCAL_E2E_API_URL).toString()
 
 // Параметризовано ради тестируемости: решение о таргете — предохранитель, и он
 // обязан проверяться, а не держаться на честном слове модульных констант.
@@ -182,7 +185,7 @@ const resolveApiProxyTarget = (env = process.env, serverHost = host, serverPort 
   const requestedProxyTarget = (
     env.E2E_API_PROXY_TARGET ||
     defaultProxyTarget ||
-    DEFAULT_LOCAL_E2E_API_URL
+    LOCAL_FALLBACK_TARGET
   ).trim()
 
   try {
@@ -196,10 +199,10 @@ const resolveApiProxyTarget = (env = process.env, serverHost = host, serverPort 
       (parsed.hostname === '127.0.0.1' && serverHost === 'localhost')
 
     // Guard against accidental self-proxying (e.g. EXPO_PUBLIC_API_URL points to the local E2E server).
-    if (sameHost && samePort) return DEFAULT_LOCAL_E2E_API_URL
+    if (sameHost && samePort) return LOCAL_FALLBACK_TARGET
     return parsed.toString()
   } catch {
-    return DEFAULT_LOCAL_E2E_API_URL
+    return LOCAL_FALLBACK_TARGET
   }
 }
 const apiProxyTarget = resolveApiProxyTarget()
@@ -601,4 +604,8 @@ if (require.main === module) {
   })
 }
 
-module.exports = { getDynamicRouteFallbackCandidates, isExpectedProxyTransportFailure }
+module.exports = {
+  getDynamicRouteFallbackCandidates,
+  isExpectedProxyTransportFailure,
+  resolveApiProxyTarget,
+}
