@@ -78,6 +78,9 @@ export const buildNativeMapHtml = ({
           margin-bottom: 8px;
         }
         .metravel-marker { background: transparent; border: 0; }
+        /* #1781 — точка маршрута рисует свой круг сама, дефолтная рамка
+           .leaflet-div-icon её бы обвела белым квадратом. */
+        .metravel-route-point { background: transparent; border: 0; }
         .metravel-cluster {
           width: 44px;
           height: 44px;
@@ -360,6 +363,24 @@ ${buildInvalidateSchedulerScript({
         // #1496 — цвет оригинального (неупрощённого) трека из загруженного файла.
         const ORIGINAL_TRACK_COLOR = ${serializeForInlineScript(themeColors.accentDark || themeColors.accent || DESIGN_COLORS.travelPoint)};
 
+        // #1781 — маркер точки маршрута: тот же круг, что раньше рисовал
+        // L.circleMarker, но как divIcon, потому что перетаскивать Leaflet умеет
+        // только L.Marker. box-sizing:border-box повторяет центрированную обводку.
+        const ROUTE_POINT_WEIGHT = 3;
+        function makeRoutePointIcon(radius, fillColor) {
+          var size = radius * 2 + ROUTE_POINT_WEIGHT;
+          var half = size / 2;
+          var style = 'width:' + size + 'px;height:' + size + 'px;border-radius:50%;'
+            + 'box-sizing:border-box;background:' + fillColor + ';'
+            + 'border:' + ROUTE_POINT_WEIGHT + 'px solid ' + ROUTE_SURFACE + ';';
+          return L.divIcon({
+            className: 'metravel-route-point',
+            html: '<div aria-hidden="true" style="' + style + '"></div>',
+            iconSize: [size, size],
+            iconAnchor: [half, half]
+          });
+        }
+
         // Экранируем значения точек перед вставкой в HTML popup: поля приходят с бэка
         // и могут содержать <, >, ", ' и & — без эскейпа это XSS в WebView (#113).
 ${ESCAPE_HTML_FN_SCRIPT}
@@ -376,6 +397,10 @@ ${ESCAPE_HTML_FN_SCRIPT}
             const routeMode = data.mode || 'radius';
             const usesServerClusters = data.usesServerClusters === true;
             const pointsOnly = data.pointsOnly === true;
+            // #1781 — точки маршрута планировщика тянутся и открывают действия
+            // только у владельца поездки. У гостя маркеры остаются как были:
+            // не перетаскиваются и не перехватывают тап.
+            const routePointsInteractive = data.routePointsInteractive === true;
             window.__metravelMapMode = routeMode;
             if (data.center && isFinite(data.center.lat) && isFinite(data.center.lng)) {
               map.__userCenter = [data.center.lat, data.center.lng];
@@ -531,7 +556,12 @@ ${ESCAPE_HTML_FN_SCRIPT}
                   }
                 });
                 try {
-                  map.fitBounds(routePolyline.getBounds(), { padding: [70, 70] });
+                  // #1781 — после ручного перетаскивания маркера кадр не двигаем:
+                  // подгонка существует для формы маршрута, а не для того, чтобы
+                  // отменять наведённый пользователем вид.
+                  if (!map.__metravelRouteFitLocked) {
+                    map.fitBounds(routePolyline.getBounds(), { padding: [70, 70] });
+                  }
                 } catch (e) {}
               }
               // Оригинальный трек — отдельная полилиния поверх линии маршрута:
@@ -552,23 +582,66 @@ ${ESCAPE_HTML_FN_SCRIPT}
                 // Оригинал может выходить за пределы упрощённой линии, по которой
                 // карта уже подогналась выше, — досаживаем кадр на общие границы.
                 try {
-                  if (routeBounds.isValid()) map.fitBounds(routeBounds, { padding: [70, 70] });
+                  if (routeBounds.isValid() && !map.__metravelRouteFitLocked) {
+                    map.fitBounds(routeBounds, { padding: [70, 70] });
+                  }
                 } catch (e) {}
               }
               routePoints.forEach(function(point, index) {
                 if (!Array.isArray(point) || !isFinite(point[0]) || !isFinite(point[1])) return;
                 const isStart = index === 0;
                 const isEnd = routePoints.length > 1 && index === routePoints.length - 1;
-                L.circleMarker(point, {
-                  radius: isStart || isEnd ? 8 : 6,
-                  color: ROUTE_SURFACE,
-                  weight: 3,
-                  fillColor: isStart ? ROUTE_START : ROUTE_COLOR,
-                  fillOpacity: 1
+                // #1781 — L.Draggable есть только у L.Marker, у circleMarker его нет
+                // вовсе. Поэтому точка маршрута рисуется divIcon той же геометрии:
+                // диаметр = 2*radius + weight, заливка и рамка — прежние цвета.
+                const marker = L.marker(point, {
+                  icon: makeRoutePointIcon(
+                    isStart || isEnd ? 8 : 6,
+                    isStart ? ROUTE_START : ROUTE_COLOR
+                  ),
+                  draggable: routePointsInteractive,
+                  interactive: routePointsInteractive,
+                  keyboard: false
                 }).addTo(routeLayer);
+                if (routePointsInteractive) {
+                  marker.on('dragstart', function() {
+                    // Кадр перестаёт подгоняться под маршрут: дальше видом
+                    // управляет пользователь, а не форма линии.
+                    map.__metravelRouteFitLocked = true;
+                  });
+                  marker.on('dragend', function(event) {
+                    try {
+                      const position = event && event.target && event.target.getLatLng
+                        ? event.target.getLatLng()
+                        : null;
+                      if (!position || !isFinite(position.lat) || !isFinite(position.lng)) return;
+                      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({
+                          type: 'ROUTE_POINT_MOVED',
+                          index: index,
+                          lat: position.lat,
+                          lng: position.lng
+                        }));
+                      }
+                    } catch (e) {}
+                  });
+                  marker.on('click', function(event) {
+                    try {
+                      // Без этого Leaflet поднимет клик до карты, и MAP_CLICK
+                      // добавит новую точку прямо поверх выбранной.
+                      if (event && event.originalEvent) L.DomEvent.stopPropagation(event);
+                      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({
+                          type: 'ROUTE_POINT_TAP',
+                          index: index
+                        }));
+                      }
+                    } catch (e) {}
+                  });
+                }
                 routeBounds.extend(point);
               });
-              if (routeLine.length < 2 && routeBounds.isValid()) {
+              if (routeLine.length < 2 && routeBounds.isValid() && !map.__metravelRouteFitLocked) {
                 try {
                   map.setView(routeBounds.getCenter(), Math.max(map.getZoom ? map.getZoom() : 13, 14));
                 } catch (e) {}

@@ -3,11 +3,13 @@
 
 const fs = require('fs')
 const path = require('path')
+const { auditSkillFamily, descriptionErrors, skillMetadataErrors } = require('./skill-catalog-validation')
 
 const repoRoot = path.resolve(__dirname, '../../../..')
 const skillsRoot = path.join(repoRoot, '.codex', 'skills')
 const claudeAgentsRoot = path.join(repoRoot, '.claude', 'agents')
-const MAX_CATALOG_DESCRIPTION_LENGTH = 380
+const sharedSkillsRoot = path.join(repoRoot, '.agents', 'skills')
+const claudeSkillsRoot = path.join(repoRoot, '.claude', 'skills')
 const errors = []
 let skillCount = 0
 let claudeAgentCount = 0
@@ -33,36 +35,8 @@ const walk = (dir, matcher, output = []) => {
 
 const fail = (file, message) => errors.push(`${relative(file)}: ${message}`)
 
-const yamlScalar = (frontmatter, key) => {
-  const lines = frontmatter.split(/\r?\n/)
-  const index = lines.findIndex((line) => line.startsWith(`${key}:`))
-  if (index < 0) return ''
-
-  const inline = lines[index].slice(key.length + 1).trim()
-  if (/^[>|][+-]?$/.test(inline)) {
-    const folded = []
-    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
-      const line = lines[cursor]
-      if (!/^\s+/.test(line)) break
-      if (line.trim()) folded.push(line.trim())
-    }
-    return folded.join(' ')
-  }
-
-  const quoted = inline.match(/^(["'])([\s\S]*)\1$/)
-  return quoted ? quoted[2] : inline
-}
-
 const validateCatalogDescription = (file, frontmatter) => {
-  const description = yamlScalar(frontmatter, 'description')
-  if (!description) {
-    fail(file, 'missing description')
-    return
-  }
-  const length = Array.from(description).length
-  if (length > MAX_CATALOG_DESCRIPTION_LENGTH) {
-    fail(file, `description must be <=${MAX_CATALOG_DESCRIPTION_LENGTH} characters (found ${length}); keep capability + concrete triggers and move workflow to the body`)
-  }
+  for (const message of descriptionErrors(frontmatter)) fail(file, message)
 }
 
 if (!codexGuideRoutesSkillCatalog) {
@@ -92,14 +66,7 @@ for (const entry of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
     fail(skillFile, 'skill is not routed from AGENTS.md or its docs/CODEX_SKILLS.md catalog')
   }
   const skill = read(skillFile)
-  const frontmatter = skill.match(/^---\r?\n([\s\S]*?)\r?\n---/)
-  if (!frontmatter) {
-    fail(skillFile, 'missing YAML frontmatter')
-  } else {
-    const name = frontmatter[1].match(/^name:\s*["']?([^"'\r\n]+)["']?\s*$/m)?.[1]
-    if (name !== skillName) fail(skillFile, `frontmatter name must match folder (${skillName})`)
-    validateCatalogDescription(skillFile, frontmatter[1])
-  }
+  for (const message of skillMetadataErrors(skill, skillName)) fail(skillFile, message)
   if (/\[(?:TODO|FIXME|TBD)\b|\b(?:TODO|FIXME|TBD):|Complete and informative explanation/i.test(skill)) {
     fail(skillFile, 'contains unfinished scaffolding')
   }
@@ -117,6 +84,12 @@ for (const entry of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
   } else if (!defaultPrompt.startsWith(`Use $${skillName}`)) {
     fail(agentFile, `default_prompt must start with Use $${skillName}`)
   }
+}
+
+const sharedSkills = auditSkillFamily(sharedSkillsRoot)
+const claudeSkills = auditSkillFamily(claudeSkillsRoot, sharedSkillsRoot)
+for (const result of [sharedSkills, claudeSkills]) {
+  for (const { file, message } of result.errors) fail(file, message)
 }
 
 for (const file of walk(claudeAgentsRoot, (target) => /\.md$/i.test(target))) {
@@ -159,5 +132,5 @@ if (errors.length > 0) {
   for (const error of errors) console.error(`- ${error}`)
   process.exitCode = 1
 } else {
-  console.info(`prompt-audit: passed (${skillCount} skills, ${claudeAgentCount} Claude agents, ${promptCount} prompt artifacts)`)
+  console.info(`prompt-audit: passed (${skillCount} .codex skills; ${sharedSkills.count} .agents skills (${sharedSkills.vendorCount} vendor); ${claudeSkills.count} .claude skills (${claudeSkills.vendorCount} vendor, ${claudeSkills.mirrorCount} mirrors checked); ${claudeAgentCount} Claude agents; ${promptCount} prompt artifacts)`)
 }

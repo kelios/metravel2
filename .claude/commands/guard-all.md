@@ -1,21 +1,9 @@
 ---
-description: Прогон всех guard-скриптов проекта
-allowed-tools: Bash(npm run guard:*), Bash(npm run check:image-architecture), Bash(npm run governance:verify)
+description: Guard-проверки проекта и устранение подтверждённых нарушений
 ---
 
-Прогоняй guard-скрипты по очереди и чини найденное.
+Прочитай `.agents/skills/source-command-guard-all/SKILL.md` и используй его как канонический workflow.
 
-```
-npm run guard:external-links
-npm run guard:file-complexity
-npm run check:image-architecture
-npm run governance:verify
-```
+Прогони актуальный набор guards по каноническому workflow. Исправляй подтверждённую причину в разрешённом scope; превышение LOC само по себе не разрешает незапрошенный широкий рефакторинг. После code changes организуй независимый review-and-fix.
 
-Правила починки:
-- `guard:external-links`: `Linking.openURL`/`window.open` → `@/utils/externalLinks.openExternalUrl`.
-- `guard:file-complexity`: файл >800 LOC — распили по доменам, не прячь нарушение.
-- `check:image-architecture`: прямой `expo-image` в фичевом коде → `components/ui/ImageCardMedia`.
-- `governance:verify`: читай сообщение теста, исправляй контракт или документацию.
-
-В конце — список что было нарушено и что исправлено.
+Аргументы: `$ARGUMENTS`

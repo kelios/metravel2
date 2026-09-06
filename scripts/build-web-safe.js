@@ -5,6 +5,7 @@ require('./ensure-node-version').assertSupportedNode();
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { assertHtmlChunkReloadGuards } = require('./lib/htmlChunkReloadGuard');
 
 const rootDir = path.resolve(__dirname, '..');
 
@@ -210,13 +211,15 @@ function main() {
     clearInterval(readinessTimer);
     cleanupIsolatedExpoTempDir();
 
-    if (code === 0) {
-      process.exit(0);
-      return;
-    }
-
-    if (terminatedByUs && exportReady) {
-      process.exit(0);
+    if (code === 0 || (terminatedByUs && exportReady)) {
+      try {
+        const { checked } = assertHtmlChunkReloadGuards(outputDir);
+        console.log(`[build-web-safe] Chunk reload guard verified in ${checked} HTML files`);
+        process.exit(0);
+      } catch (error) {
+        console.error('[build-web-safe] Invalid HTML chunk reload guard:', error.message);
+        process.exit(1);
+      }
       return;
     }
 

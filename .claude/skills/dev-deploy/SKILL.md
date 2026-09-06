@@ -65,5 +65,5 @@ SSH: `sergey@192.168.50.36`, вход по ключу. Пароль в чат н
 
 ## Границы
 
-- Только дев `192.168.50.36`. Прод `metravel.by` — скилл/агент `frontend-deployer`. Нативные сборки — EAS (`android-*`).
+- Только дев `192.168.50.36`. Прод `metravel.by` — скилл/агент `frontend-deployer`. Android — локальная Gradle-сборка через `android-publisher` / `android-release`; iOS — `ios-deployer` / `ios-release` с отдельными разрешениями на стадии релиза.
 - Не редактировать `docker-compose*.yaml`, `deploy/local/nginx/*`, тома и контейнеры на деве.

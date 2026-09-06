@@ -7,6 +7,7 @@ import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCriticalCSS } from '@/utils/criticalCSSBuilder';
 import { getRootVisibilityGateCss, getTravelRouteClassScript } from '@/utils/htmlShell';
 import { buildMapHeadBootstrapScript } from '@/utils/mapHeadBootstrap';
+import { CHUNK_RELOAD_SCRIPT_ID, getChunkReloadBootstrapScript } from '@/utils/chunkReloadGuard';
 import { getMapSeoDescription, getMapSeoTitle } from '@/constants/mapSeo';
 import { isLikelySelfProxyApiUrl, resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import {
@@ -524,9 +525,15 @@ export default function Root({ children }: { children: React.ReactNode }) {
           produced a duplicate <title> tag on every page. */}
       <meta name="description" content={i18nT('seoStatic:root.default.description')} />
 
+      {/* Recovery must run before Expo scripts and capture native sessionStorage
+          before storage hardening can replace it with a per-document shim. */}
+      <script
+        id={CHUNK_RELOAD_SCRIPT_ID}
+        dangerouslySetInnerHTML={{ __html: getChunkReloadBootstrapScript() }}
+      />
+
       {/* Storage hardening: neutralize throwing localStorage/sessionStorage
-          (iOS Safari block-all-cookies / private mode) BEFORE any other script
-          or the React bundle reads storage. Must stay first in <head>. */}
+          before application scripts or the React bundle read storage. */}
       <script
         dangerouslySetInnerHTML={{ __html: getStorageHardeningScript() }}
       />

@@ -10,6 +10,15 @@ Use this skill to find, reproduce, and verify bugs. QA is read-only by default: 
 `AGENTS.md` is inherited. Read the tested feature contract and only the exact
 browser/e2e/device/operation section needed to collect its evidence.
 
+## Runtime entry
+
+For a changed-code acceptance pass, require reviewed code in `testing` before
+runtime probes. Default to the local stack and perform the session's backend
+refresh/readiness procedure from `docs/WORKFLOW_OPERATIONS.md` →
+`3.0 Локальный стек и обновление бэкенда перед тестированием` before the first
+probe. Use dev or production only when explicitly requested; record the actual
+API target. This skill does not grant permission to message other people.
+
 ## Test Discipline
 
 - Check the current branch and `git status --short` before running risky flows.

@@ -14,9 +14,7 @@
 
 import React from 'react'
 import { Platform } from 'react-native'
-
-const RELOAD_GUARD_KEY = 'mt:chunk-reload-ts'
-const RELOAD_WINDOW_MS = 30_000
+import { reloadOnceForStaleChunk as reloadWithSharedGuard } from './chunkReloadGuard'
 
 export function isChunkLoadError(error: unknown): boolean {
   if (!error) return false
@@ -36,25 +34,7 @@ export function isChunkLoadError(error: unknown): boolean {
 
 function reloadOnceForStaleChunk(): boolean {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return false
-  try {
-    const now = Date.now()
-    const raw = window.sessionStorage?.getItem(RELOAD_GUARD_KEY)
-    const last = raw ? Number(raw) : 0
-    if (Number.isFinite(last) && last > 0 && now - last < RELOAD_WINDOW_MS) {
-      // Already reloaded recently and the chunk is still missing — don't loop.
-      return false
-    }
-    window.sessionStorage?.setItem(RELOAD_GUARD_KEY, String(now))
-  } catch {
-    // sessionStorage unavailable (private mode / blocked): fall through and
-    // reload anyway. Without the guard we accept at most a rare double reload.
-  }
-  try {
-    window.location.reload()
-  } catch {
-    return false
-  }
-  return true
+  return reloadWithSharedGuard(window)
 }
 
 let handlerInstalled = false

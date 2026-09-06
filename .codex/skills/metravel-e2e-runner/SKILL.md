@@ -9,6 +9,15 @@ description: "Run or debug metravel Playwright and browser-smoke flows with safe
 relevant e2e/auth/operation sections from `docs/TESTING.md` and
 `docs/WORKFLOW_OPERATIONS.md`.
 
+## Runtime entry
+
+For a changed-code acceptance pass, require reviewed code in `testing` before
+runtime probes. Default to the local stack and perform the session's backend
+refresh/readiness procedure from `docs/WORKFLOW_OPERATIONS.md` →
+`3.0 Локальный стек и обновление бэкенда перед тестированием` before the first
+probe. Use dev or production only when explicitly requested; record the actual
+API target. This skill does not grant permission to message other people.
+
 ## When to use
 
 - Playwright smoke or regression runs in `e2e/`

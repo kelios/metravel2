@@ -14,6 +14,15 @@ feature code.
 UI/media/link headings implicated by the diff, and only the browser/operation
 section needed from `docs/TESTING.md` or `docs/WORKFLOW_OPERATIONS.md`.
 
+## Runtime entry
+
+For a changed-code acceptance pass, require reviewed code in `testing` before
+runtime probes. Default to the local stack and perform the session's backend
+refresh/readiness procedure from `docs/WORKFLOW_OPERATIONS.md` →
+`3.0 Локальный стек и обновление бэкенда перед тестированием` before the first
+probe. Use dev or production only when explicitly requested; record the actual
+API target. This skill does not grant permission to message other people.
+
 ## Testing Loop
 
 1. Confirm the board ticket is in `testing` and identify the reviewed commit,

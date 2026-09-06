@@ -1,18 +1,9 @@
 ---
-description: Воспроизведение→фикс→ре-тест одного подтверждённого бага
-allowed-tools: Bash(npm run check:fast), Bash(npm run test:run:*), Bash(npm run guard:*), Bash(npm run check:image-architecture), Bash(git status:*), Bash(git diff:*), Read, Grep, Glob, Edit, Write, Agent
+description: Минимальный фикс одного подтверждённого бага с review и проверкой
 ---
 
-Почини ровно ОДИН баг по полному циклу. Аргумент `$ARGUMENTS` — описание бага или ссылка на Bug Report.
+Прочитай `.codex/skills/metravel-feature-builder/SKILL.md` и используй его как канонический workflow.
 
-## Цикл
+Почини один баг из `$ARGUMENTS`: установи механизм, внеси минимальный diff и запусти узкие code-level checks. Добавляй regression-тест для существенного поведения, если он действительно ловит дефект. Затем вызови `review-auditor` по полному task diff. Runtime QA видимого изменения выполняется в `testing` после review pass, по точному сценарию.
 
-1. **Воспроизведи.** Найди путь реализации поиском по `components/`, `hooks/`, `api/`, `utils/`, `__tests__/`. Сформулируй точный контракт: что ожидается vs что происходит.
-2. **Зафиксируй контракт тестом.** Прежде чем чинить — добавь/обнови падающий unit-тест в `__tests__/`, ловящий баг (для тестов подключай агента `test-author`). Тест должен падать на текущем коде.
-3. **Минимальный фикс.** Один root cause, без побочных рефакторингов. Маршрутизируй по доменам: travel → `travel-expert`, map → `map-expert`, guard → `guard-enforcer`.
-4. **Ре-тест.** `npm run check:fast` + новый тест зелёные. Затронут web UI — проверка в браузере (preview_*) + screenshot + console.
-5. **Регрессии.** Убедись, что фикс не сломал соседние тесты в затронутом scope.
-
-## Завершение
-
-Отчёт: корневая причина → изменённые файлы → добавленный тест → выполненные проверки → остаточные риски. Не оставляй `.skip`, не глуши warning'и.
+Аргументы: `$ARGUMENTS`

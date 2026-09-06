@@ -29,6 +29,13 @@ export type NativeMapBridgeMessage =
    * пока в проде могут жить обе версии WebView-HTML.
    */
   | { type: 'SELECT_PLACE'; placeKey: string; index: number | null; id: string; coord: string }
+  /**
+   * #1781: маркер точки маршрута планировщика отпущен в новом месте. `index` —
+   * позиция точки в переданном списке `routePoints`, порядок при этом не меняется.
+   */
+  | { type: 'ROUTE_POINT_MOVED'; index: number; latitude: number; longitude: number }
+  /** #1781: тап по маркеру точки маршрута — запрос действий над этой точкой. */
+  | { type: 'ROUTE_POINT_TAP'; index: number }
   | { type: 'OPEN_URL'; url: string }
 
 export const normalizeRoutePoint = (point: unknown): [number, number] | null => {
@@ -74,6 +81,12 @@ const parseMapMove = (parsed: Record<string, unknown>): MapMovePayload | null =>
   return payload
 }
 
+/** Индекс точки маршрута: только целое неотрицательное значение. */
+const parseRoutePointIndex = (value: unknown): number | null => {
+  const index = toFiniteNumber(value)
+  return index != null && Number.isInteger(index) && index >= 0 ? index : null
+}
+
 export const parseNativeMapBridgeMessage = (raw: unknown): NativeMapBridgeMessage | null => {
   const parsed = parseWebViewJsonObject(raw)
   if (!parsed || typeof parsed.type !== 'string') return null
@@ -109,6 +122,16 @@ export const parseNativeMapBridgeMessage = (raw: unknown): NativeMapBridgeMessag
           : ''
       if (!placeKey && index == null && !id && !coord) return null
       return { type: 'SELECT_PLACE', placeKey, index, id, coord }
+    }
+    case 'ROUTE_POINT_MOVED': {
+      const index = parseRoutePointIndex(parsed.index)
+      if (index == null) return null
+      const coordinate = toFiniteCoordinate(parsed.lat, parsed.lng)
+      return coordinate ? { type: 'ROUTE_POINT_MOVED', index, ...coordinate } : null
+    }
+    case 'ROUTE_POINT_TAP': {
+      const index = parseRoutePointIndex(parsed.index)
+      return index == null ? null : { type: 'ROUTE_POINT_TAP', index }
     }
     case 'OPEN_URL':
       return typeof parsed.url === 'string' ? { type: 'OPEN_URL', url: parsed.url } : null

@@ -14,13 +14,18 @@ Use this skill when the user asks to run the migrated source command `auto-dev`.
 ## Предусловия (стоп при нарушении)
 
 1. `git branch --show-current` обязан быть `main`. Если нет — остановись и сообщи, ничего не меняй.
-2. Прочитай `git status --short` и `git diff --stat` — это текущий scope.
+2. Прочитай `git status --short` и `git diff --stat`; выдели task-owned paths по
+   текущему запросу. Dirty status сам по себе не передаёт владение файлами:
+   чужие незавершённые изменения не исправляй и не включай в scope.
+3. Перед проверками примени operation gate `docs/WORKFLOW_OPERATIONS.md` →
+   «3.4 Координация долгих операций».
 
 ## Выбор работы (в порядке приоритета)
 
 1. **Красный baseline в затронутом scope** — если `npm run check:fast` падает, чинить это первым.
 2. **Подтверждённый баг** — если есть Bug Report или явный запрос пользователя, бери один баг.
-3. **Незавершённый незакоммиченный diff** — доведи до зелёного и консистентного состояния то, что уже начато.
+3. **Собственный незавершённый diff текущей задачи** — доведи его до зелёного и
+   консистентного состояния. Чужой diff требует передачи scope владельцем.
 4. **Гигиена scope** — dead imports, нарушенные guard-ы, broken UI states в уже изменённых файлах.
 
 Если работы нет (scope чистый, проверки зелёные) — сообщи «нет открытой работы» и заверши итерацию без правок.
@@ -30,7 +35,8 @@ Use this skill when the user asks to run the migrated source command `auto-dev`.
 - `components/travel/**`, `components/listTravel/**`, `hooks/useTravel*` → агент `travel-expert`
 - `components/MapPage/**`, `components/map/**`, `app/map*`, `hooks/useMap*` → агент `map-expert`
 - guard-нарушения → агент `guard-enforcer`
-- файл >800 LOC → агент `refactor-surgeon`
+- запрошенный распил файла >800 LOC → агент `refactor-surgeon`; само превышение
+  лимита не расширяет задачу до рефакторинга
 - тесты → агент `test-author`
 
 ## Цикл
@@ -39,7 +45,13 @@ Use this skill when the user asks to run the migrated source command `auto-dev`.
 2. Соблюдай правила: изображения через `components/ui/ImageCardMedia` (fit=contain + blur из DOM с первого кадра), внешние ссылки через `@/utils/externalLinks.openExternalUrl`, серверный стейт — React Query, клиентский — Zustand.
 3. `npm run check:fast` — прогон по изменённому scope.
 4. Упало → прочитай вывод, найди виновные файлы, почини root cause (не глуши warning'и, не добавляй eslint-disable). Повтори до зелёного.
-5. Затронул web UI → проверка в браузере (preview_*), screenshot, console без новых ошибок.
+5. Передай полный task diff независимому `review-auditor` для обязательного
+   code-only review-and-fix по `$metravel-code-reviewer`; повтори затронутые
+   static/unit/guard checks после исправлений.
+6. Затронул web UI → после review и перехода в `testing` передай browser QA
+   профильному tester: desktop/mobile screenshots и console без новых ошибок.
+   Переход и commit/push — `docs/TASK_BOARD_MCP.md`; запуск проверок и локальный
+   QA-таргет с обновлением бэкенда — `docs/WORKFLOW_OPERATIONS.md`.
 
 ## Завершение итерации
 

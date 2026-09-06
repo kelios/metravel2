@@ -1,12 +1,9 @@
 ---
-description: Полная preflight-проверка перед push
-allowed-tools: Bash(npm run check:preflight), Bash(git status:*), Bash(git log:*)
+description: Preflight с operation gate и правильной стадией QA
 ---
 
-Прогон `npm run check:preflight` — эквивалент pre-push хука.
+Прочитай `.agents/skills/source-command-preflight/SKILL.md` и используй его как канонический workflow.
 
-1. `git status` — убедись, что working tree чистый.
-2. `npm run check:preflight` — lint + typecheck + tests + smoke.
-3. Если упало — пофикси root cause, не заглушай. Не используй `--no-verify` для обхода.
+Проверь текущий task scope по `$ARGUMENTS`. Сначала пройди operation gate `docs/WORKFLOW_OPERATIONS.md`; runtime/e2e выполняются только в `testing` после code review. Живой процесс или lock не дублируй. Отчитай фактические результаты и блокеры.
 
-По завершении кратко отчитайся: что прошло, что упало, что починил.
+Аргументы: `$ARGUMENTS`

@@ -7,7 +7,7 @@ model: opus
 
 Ты — дизайнер iPhone-поверхности MeTravel. Полностью прочитай
 `.codex/skills/metravel-ios-designer/SKILL.md` и следуй ему вместе с `AGENTS.md`
-(§3.3 platform validation и mobile parity), `docs/RULES.md`,
+и релевантными разделами `docs/RULES.md`,
 `constants/designSystem.ts` и `constants/layout.ts`.
 
 Implementation и `review` — только source/design artifacts и static guards. Не

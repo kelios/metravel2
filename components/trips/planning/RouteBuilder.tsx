@@ -41,7 +41,10 @@ import {
   previewStopsCount,
   routablePreviewPoints,
 } from '@/components/trips/planning/tripRoutePreview';
-import type { MapFocusPoint } from '@/components/trips/planning/tripPlanRouteMap.types';
+import type {
+  MapFocusPoint,
+  RoutePointMove,
+} from '@/components/trips/planning/tripPlanRouteMap.types';
 import { useTripRouteDisplay } from '@/components/trips/planning/useTripRouteDisplay';
 import {
   type PlannedTrip,
@@ -172,8 +175,11 @@ const compactText = (parts: Array<string | number | null | undefined>): string =
     .filter(Boolean)
     .join(' · ');
 
+/** Шаг округления координат точки: один и тот же для ручного ввода и карты. */
+const COORDINATE_PRECISION = 6;
+
 const formatCoordinateInput = (value: number): string => {
-  const rounded = value.toFixed(6);
+  const rounded = value.toFixed(COORDINATE_PRECISION);
   return rounded.replace(/\.?0+$/, '');
 };
 
@@ -499,6 +505,37 @@ function RouteBuilder({
       if (prev == null) return prev;
       if (prev === index) return null;
       return prev > index ? prev - 1 : prev;
+    });
+  }, []);
+
+  // #1781: точку перетащили по карте. Владелец черновика здесь один, поэтому
+  // перемещение проходит тем же путём, что и правка из списка: меняются только
+  // координаты одной точки, порядок и остальные поля остаются как были.
+  const handleMovePoint = useCallback(({ index, lat, lng }: RoutePointMove) => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+    // Округление тем же шагом, что и ручной ввод: иначе список, поля редактора
+    // и координатная сигнатура показывали бы три разных значения одной точки.
+    const nextLat = Number(lat.toFixed(COORDINATE_PRECISION));
+    const nextLng = Number(lng.toFixed(COORDINATE_PRECISION));
+    setRoute((prev) => {
+      const current = prev[index];
+      if (!current) return prev;
+      const [currentLng, currentLat] = current.coordinates ?? [];
+      if (currentLat === nextLat && currentLng === nextLng) return prev;
+      const next = prev.slice();
+      next[index] = { ...current, coordinates: [nextLng, nextLat] };
+      return next;
+    });
+    // Открытый редактор этой же точки обязан переехать вместе с маркером: иначе
+    // «Сохранить» в нём вернуло бы точку в дотасковую позицию.
+    setEditingIndex((currentIndex) => {
+      if (currentIndex === index) {
+        setEditLat(formatCoordinateInput(nextLat));
+        setEditLng(formatCoordinateInput(nextLng));
+        setEditError(null);
+      }
+      return currentIndex;
     });
   }, []);
 
@@ -1129,6 +1166,8 @@ function RouteBuilder({
       fill={isMapFirst}
       focusPoint={focusPoint}
       onEditPoint={handleEditPoint}
+      onMovePoint={handleMovePoint}
+      onDeletePoint={handleDelete}
       onAddPointFromMap={handleAddPointFromMap}
     />
   );

@@ -1,6 +1,6 @@
 ---
 name: metravel-mobile-tester
-description: Test target-specific metravel behavior on mobile web and/or Android. Use for responsive browser layouts, touch/navigation checks, Android-specific USB local-build QA, Maestro flows, deliberate cross-platform comparisons, or regression reports before a target-specific handoff. Do not run EAS/cloud or store builds without an explicit user request.
+description: Test target-specific metravel behavior on mobile web and/or Android. Use for responsive browser layouts, touch/navigation checks, Android-specific USB local-build QA, Maestro flows, deliberate cross-platform comparisons, or regression reports before a target-specific handoff.
 ---
 
 # Metravel Mobile Tester
@@ -13,6 +13,15 @@ the user explicitly asks to update tests. iPhone-specific QA belongs to
 `AGENTS.md` is inherited. Read the tested feature contract and its exact
 browser case; for Android-specific scope add only the affected native section
 and matching `AND-USB-*` device case.
+
+## Runtime entry
+
+For a changed-code acceptance pass, require reviewed code in `testing` before
+runtime probes. Default to the local stack and perform the session's backend
+refresh/readiness procedure from `docs/WORKFLOW_OPERATIONS.md` →
+`3.0 Локальный стек и обновление бэкенда перед тестированием` before the first
+probe. Use dev or production only when explicitly requested; record the actual
+API target. This skill does not grant permission to message other people.
 
 ## What To Test
 
@@ -81,7 +90,9 @@ and matching `AND-USB-*` device case.
 
 - Stay read-only by default.
 - Use `.env.e2e` auth values if already configured, but never echo them.
-- Do not run Android EAS/cloud builds, Android production builds/submits, or Expo export/dev-client Android QA routes unless the user explicitly asks for that exact path in the current task.
+- Android EAS/cloud builds and submits are prohibited. Production store builds
+  and submissions belong to `$metravel-google-play-operator` for the authorized
+  stage. Use the assigned local Android QA layer through the operation gate.
 - Do not add iPhone evidence unless iOS-specific observable scope is assigned.
   Route that scope to `$metravel-ios-tester`.
 - Do not treat missing production-hosted media in local dev as a frontend bug by itself.

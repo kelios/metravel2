@@ -15,3 +15,13 @@ export type MapFocusPoint = {
 
 /** Зум, на который карта встаёт при центрировании на точке маршрута. */
 export const FOCUS_POINT_ZOOM = 14;
+
+/**
+ * #1781: запрос «перенеси эту точку сюда». Карта только сообщает намерение —
+ * владелец черновика (`RouteBuilder`) решает, как применить его к маршруту.
+ */
+export type RoutePointMove = {
+  index: number;
+  lat: number;
+  lng: number;
+};

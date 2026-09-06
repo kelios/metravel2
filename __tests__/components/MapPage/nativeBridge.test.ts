@@ -63,4 +63,33 @@ describe('native map bridge', () => {
     expect(isSameViewportSnapshot(snapshot, { ...snapshot, zoom: 10.005 })).toBe(true)
     expect(isSameViewportSnapshot(snapshot, { ...snapshot, zoom: 10.02 })).toBe(false)
   })
+
+  // #1781 — точки маршрута планировщика правятся прямо с карты: WebView отдаёт
+  // индекс точки и позицию дропа. Мусорный индекс и нефинитная координата не
+  // должны доехать до владельца маршрута ни в каком виде.
+  it('parses route point drag and tap events and rejects unusable payloads', () => {
+    expect(
+      parseNativeMapBridgeMessage(
+        JSON.stringify({ type: 'ROUTE_POINT_MOVED', index: 2, lat: '53.91', lng: 27.6 }),
+      ),
+    ).toEqual({ type: 'ROUTE_POINT_MOVED', index: 2, latitude: 53.91, longitude: 27.6 })
+    expect(parseNativeMapBridgeMessage(JSON.stringify({ type: 'ROUTE_POINT_TAP', index: 0 }))).toEqual({
+      type: 'ROUTE_POINT_TAP',
+      index: 0,
+    })
+
+    expect(
+      parseNativeMapBridgeMessage(
+        JSON.stringify({ type: 'ROUTE_POINT_MOVED', index: 1, lat: 'нет', lng: 27.6 }),
+      ),
+    ).toBeNull()
+    expect(
+      parseNativeMapBridgeMessage(
+        JSON.stringify({ type: 'ROUTE_POINT_MOVED', index: 1.5, lat: 53.9, lng: 27.6 }),
+      ),
+    ).toBeNull()
+    expect(
+      parseNativeMapBridgeMessage(JSON.stringify({ type: 'ROUTE_POINT_TAP', index: -1 })),
+    ).toBeNull()
+  })
 })

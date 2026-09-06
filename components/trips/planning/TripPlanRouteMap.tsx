@@ -17,12 +17,14 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
   FOCUS_POINT_ZOOM,
   type MapFocusPoint,
+  type RoutePointMove,
 } from '@/components/trips/planning/tripPlanRouteMap.types';
 import {
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
   formatDistance,
   formatDuration,
+  formatRoutePointCoordinates,
   isDrawableCoordinatePair,
   isRouteApproximate,
   routingStateHint,
@@ -52,6 +54,9 @@ interface Props {
   fill?: boolean;
   focusPoint?: MapFocusPoint | null;
   onEditPoint?: (index: number) => void;
+  /** #1781: маркер отпущен в новом месте — координаты точки нужно обновить. */
+  onMovePoint?: (move: RoutePointMove) => void;
+  onDeletePoint?: (index: number) => void;
   onAddPointFromMap?: (coords: { lat: number; lng: number }) => void;
 }
 
@@ -84,6 +89,9 @@ type NativeRouteMapProps = {
   originalTrackCoords?: Array<[number, number]>;
   mode: 'route';
   pointsOnly?: boolean;
+  routePointsInteractive?: boolean;
+  onRoutePointMove?: (index: number, lat: number, lng: number) => void;
+  onRoutePointPress?: (index: number) => void;
   onMapClick?: (lng: number, lat: number) => void;
   onMapUiApiReady?: (api: unknown) => void;
 };
@@ -109,12 +117,22 @@ export default function TripPlanRouteMap({
   originalTrack,
   fill = false,
   focusPoint,
+  onEditPoint,
+  onMovePoint,
+  onDeletePoint,
   onAddPointFromMap,
 }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [layersOpen, setLayersOpen] = useState(false);
   const [mapUiApi, setMapUiApi] = useState<MapUiApi | null>(null);
+  /**
+   * #1781: точка, по маркеру которой открыты действия «Изменить/Удалить».
+   * Индекса мало: список точек умеет переупорядочиваться (#1303), и открытая
+   * карточка молча начала бы указывать на соседнюю точку. Поэтому рядом с
+   * индексом держится id, и при расхождении карточка закрывается.
+   */
+  const [actions, setActions] = useState<{ index: number; id: string } | null>(null);
 
   // Native-карта ждёт пары [lng, lat] — ровно так их хранит RoutePoint.
   const routePoints = useMemo(
@@ -165,10 +183,42 @@ export default function TripPlanRouteMap({
   const handleMapClick = useCallback(
     (lng: number, lat: number) => {
       if (readonly) return;
+      setActions(null);
       onAddPointFromMap?.({ lat, lng });
     },
     [onAddPointFromMap, readonly],
   );
+
+  // #1781: точки маршрута правятся прямо с карты. WebView отдаёт только индекс —
+  // маршрутом по-прежнему владеет `RouteBuilder`, карта ничего не мутирует сама.
+  const interactiveRoutePoints = !readonly && (Boolean(onMovePoint) || Boolean(onDeletePoint) || Boolean(onEditPoint));
+  const handleRoutePointMove = useCallback(
+    (index: number, lat: number, lng: number) => {
+      if (readonly) return;
+      onMovePoint?.({ index, lat, lng });
+    },
+    [onMovePoint, readonly],
+  );
+  const routeRef = useRef(route);
+  routeRef.current = route;
+  const handleRoutePointPress = useCallback(
+    (index: number) => {
+      if (readonly) return;
+      const point = routeRef.current[index];
+      if (!point) return;
+      setActions((current) => (current?.index === index ? null : { index, id: String(point.id) }));
+    },
+    [readonly],
+  );
+  const closeActions = useCallback(() => setActions(null), []);
+  // Точка могла уехать вместе с удалением, переупорядочиванием или сохранением
+  // маршрута — карточка действий не должна пережить свою точку.
+  const actionsPoint = actions && route[actions.index]?.id === actions.id
+    ? route[actions.index]
+    : null;
+  useEffect(() => {
+    if (actions && !actionsPoint) setActions(null);
+  }, [actions, actionsPoint]);
 
   const toggleLayers = useCallback(() => setLayersOpen((value) => !value), []);
   const closeLayers = useCallback(() => setLayersOpen(false), []);
@@ -199,6 +249,11 @@ export default function TripPlanRouteMap({
                 ? i18nT('trips:components.trips.planning.TripPlanRouteMap.tochki_marshruta_pokazany_na_karte_14e6732e')
                 : i18nT('trips:components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6')}
           </Text>
+          {interactiveRoutePoints ? (
+            <Text style={styles.hint} testID="trip-plan-map-marker-hint">
+              {i18nT('tripsStatic:plan.map.markerHint')}
+            </Text>
+          ) : null}
           {originalTrackLine.length > 1 ? (
             <View style={styles.legendItem} testID="trip-plan-map-original-track-legend">
               <View style={[styles.legendLine, { backgroundColor: colors.accentDark }]} />
@@ -227,6 +282,9 @@ export default function TripPlanRouteMap({
           originalTrackCoords={originalTrackLine}
           mode="route"
           pointsOnly
+          routePointsInteractive={interactiveRoutePoints}
+          onRoutePointMove={handleRoutePointMove}
+          onRoutePointPress={handleRoutePointPress}
           onMapClick={handleMapClick}
           onMapUiApiReady={handleMapUiApiReady}
         />
@@ -268,6 +326,72 @@ export default function TripPlanRouteMap({
             onOverlayToggle={handleOverlayToggle}
             onRequestClose={closeLayers}
           />
+        ) : null}
+
+        {actionsPoint ? (
+          <View
+            style={styles.pointActions}
+            accessibilityLabel={i18nT('tripsStatic:plan.map.pointActions')}
+            testID="trip-plan-map-point-actions"
+          >
+            <View style={styles.pointActionsText}>
+              <Text style={styles.pointActionsTitle} numberOfLines={1}>{actionsPoint.name}</Text>
+              {formatRoutePointCoordinates(actionsPoint.coordinates) ? (
+                <Text style={styles.pointActionsMeta} numberOfLines={1}>
+                  {formatRoutePointCoordinates(actionsPoint.coordinates)}
+                </Text>
+              ) : null}
+            </View>
+            <View style={styles.pointActionsButtons}>
+              {onEditPoint ? (
+                <Pressable
+                  accessibilityRole="button"
+                  testID="trip-plan-map-edit-point"
+                  onPress={() => {
+                    const index = actions?.index;
+                    closeActions();
+                    if (index != null) onEditPoint(index);
+                  }}
+                  style={({ pressed }) => [styles.pointActionsButton, pressed && styles.pointActionsButtonPressed]}
+                >
+                  <Feather name="edit-2" size={14} color={colors.text} />
+                  <Text style={styles.pointActionsButtonText}>
+                    {i18nT('tripsStatic:plan.map.editPoint')}
+                  </Text>
+                </Pressable>
+              ) : null}
+              {onDeletePoint ? (
+                <Pressable
+                  accessibilityRole="button"
+                  testID="trip-plan-map-delete-point"
+                  onPress={() => {
+                    const index = actions?.index;
+                    closeActions();
+                    if (index != null) onDeletePoint(index);
+                  }}
+                  style={({ pressed }) => [
+                    styles.pointActionsButton,
+                    styles.pointActionsButtonDanger,
+                    pressed && styles.pointActionsButtonPressed,
+                  ]}
+                >
+                  <Feather name="trash-2" size={14} color={colors.danger} />
+                  <Text style={[styles.pointActionsButtonText, styles.pointActionsButtonTextDanger]}>
+                    {i18nT('tripsStatic:plan.map.deletePoint')}
+                  </Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={i18nT('tripsStatic:plan.map.closePointActions')}
+                testID="trip-plan-map-close-point-actions"
+                onPress={closeActions}
+                style={({ pressed }) => [styles.pointActionsClose, pressed && styles.pointActionsButtonPressed]}
+              >
+                <Feather name="x" size={16} color={colors.textMuted} />
+              </Pressable>
+            </View>
+          </View>
         ) : null}
       </View>
     </View>
@@ -311,6 +435,49 @@ const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surface,
     },
     warning: { fontSize: 12, lineHeight: 16, color: colors.warningDark, fontWeight: '700' },
+    // #1781 — действия точки маршрута. Карточка стоит внизу карты: у маркера
+    // в WebView нет RN-якоря, а низ экрана в map-first раскладке ближе к пальцу.
+    pointActions: {
+      position: 'absolute',
+      left: 12,
+      right: 12,
+      bottom: 12,
+      zIndex: 4,
+      gap: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    pointActionsText: { gap: 2 },
+    pointActionsTitle: { fontSize: 14, fontWeight: '800', color: colors.text },
+    pointActionsMeta: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
+    pointActionsButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    pointActionsButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      minHeight: 44,
+      paddingHorizontal: 12,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    pointActionsButtonDanger: { borderColor: colors.danger },
+    pointActionsButtonPressed: { opacity: 0.7 },
+    pointActionsButtonText: { fontSize: 13, fontWeight: '700', color: colors.text },
+    pointActionsButtonTextDanger: { color: colors.danger },
+    pointActionsClose: {
+      marginLeft: 'auto',
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 999,
+    },
     counter: {
       minWidth: 32,
       textAlign: 'center',

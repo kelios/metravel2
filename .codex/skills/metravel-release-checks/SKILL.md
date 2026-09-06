@@ -49,7 +49,9 @@ Keep release and performance validation aligned with repo policy:
 - Route explicit Google Play build/submit/track work to `$metravel-google-play-operator`; release-checks may prepare gates but must not infer store mutation authority.
 - Treat deploy execution and rollback as `$metravel-devops-agent` work, not release-checks work.
 - For production deploy command selection, defer to `docs/RELEASE.md` and `$metravel-devops-agent`.
-- On this Windows/Codex machine the final production deploy command is `bash /d/metravel/ops/deploy-frontend.sh`, not repeated retries of `./build-prod.sh prod`.
+- Resolve workstation-specific transport through `docs/RELEASE.md` →
+  `Deploy transport depends on the machine: check rsync first`; never assume
+  a historical Windows wrapper exists on the current host.
 - Use `scripts/fix-prod.sh` only as a documented emergency frontend recovery path through `$metravel-devops-agent`, after recording why the normal deploy path is unavailable or unsafe.
 - Run Lighthouse against a production build or the real production URL, never against a dev server.
 - Use post-deploy checks against the real site after release, for example `npm run test:seo:postdeploy`.

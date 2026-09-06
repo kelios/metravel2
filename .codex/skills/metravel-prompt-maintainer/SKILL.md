@@ -15,6 +15,11 @@ when routing or project-wide documentation also changes.
 - `assets/**/PROMPT.md`: concrete reproducible instance.
 - `.codex/skills/*/SKILL.md`: operational behavior and non-obvious constraints.
 - `.codex/skills/*/agents/openai.yaml`: short UI metadata and one-sentence prompt.
+- `.agents/skills/*/SKILL.md`: shared project procedures; matching
+  `.claude/skills` files are compatibility copies. Keep non-vendor copies in
+  sync; preserve OpenSpec adapter differences.
+- `.claude/agents/*.md` and `.claude/commands/*.md`: role prompts and command
+  entry points. `.grok/agents` is generated, not an editing source.
 
 ## Prompt contract
 
@@ -30,7 +35,7 @@ contract. QA/review prompts must request raw evidence and stay neutral.
 
 - Frontmatter: only `name` and `description` (vendor OpenSpec exceptions remain).
 - Description: capability + concrete triggers in at most 380 characters for
-  both Codex skills and Claude agents. Avoid file inventories, workflow stages,
+  project-owned skills and Claude agents. Avoid file inventories, workflow stages,
   validation details, and repeated safety policy; those belong in the body or
   canonical docs.
 - `short_description`: 25–64 characters.
@@ -50,14 +55,24 @@ contract. QA/review prompts must request raw evidence and stay neutral.
 ## Workflow and checks
 
 1. Inventory the affected family/metadata and its canonical owner.
-2. Remove duplicated rules; retain concrete inputs and task-specific overrides.
-3. Re-read as a fresh invocation with no chat-history assumptions.
+2. Trace conflicts to the canonical rule: target environment, stage authority,
+   review/testing separation, credential handling, and artifact ownership.
+   A passing metadata audit does not establish semantic consistency.
+3. Remove duplicated rules; retain concrete inputs, incident evidence, and
+   task-specific overrides. Keep public skill/agent names unless all callers
+   are migrated. Re-read as a fresh invocation without chat-history assumptions;
+   never turn an old session's permission or account snapshot into standing authority.
 4. Run:
 
 ```bash
 npm run audit:prompts
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py .codex/skills/<name>
 ```
+
+Validate each changed skill (including compatibility copies). If the system
+Python lacks PyYAML, use `uv run --with pyyaml python` for the same validator.
+After agent changes, run `node .grok/scripts/sync-agents.mjs`. For audit-script
+changes, run its focused regression tests as well.
 
 Report inspected families, canonical sources changed, size/count delta when
 optimization was requested, validation, and deliberately retained legacy text.

@@ -12,6 +12,15 @@ nor physical-device/TestFlight behavior.
 subsystem from testing, native, and manual-test docs; use release OpenSpec only
 for candidate acceptance.
 
+## Runtime entry
+
+For a changed-code acceptance pass, require reviewed code in `testing` before
+runtime probes. Default to the local stack and perform the session's backend
+refresh/readiness procedure from `docs/WORKFLOW_OPERATIONS.md` →
+`3.0 Локальный стек и обновление бэкенда перед тестированием` before the first
+probe. Use dev or production only when explicitly requested; record the actual
+API target. This skill does not grant permission to message other people.
+
 ## Test Layers
 
 1. **Simulator:** clean launch without Metro when applicable, guest/auth shell,

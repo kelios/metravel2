@@ -1,14 +1,9 @@
 ---
-description: Selective lint+typecheck+tests на изменённом scope
-allowed-tools: Bash(npm run check:fast), Bash(git status:*), Bash(git diff:*)
+description: Selective static/unit checks текущего task scope
 ---
 
-Запусти `npm run check:fast` и разберись с найденным.
+Прочитай `.agents/skills/source-command-check-fast/SKILL.md` и используй его как канонический workflow.
 
-Последовательность:
-1. `git status` и `git diff --stat` — посмотри на scope изменений.
-2. `npm run check:fast` — прогон selective-проверок.
-3. Если упало — прочитай вывод, найди виновные файлы, почини. Не игнорируй warning'и у изменённых файлов.
-4. Прогон повторно до зелёного.
+Проверь текущий task scope и устрани подтверждённые нарушения в его пределах. Чужие изменения сохраняй. После code changes нужен независимый review-and-fix; runtime QA не входит в эту команду.
 
-Не запускай полный test suite или полный lint — для этого есть отдельные команды.
+Аргументы: `$ARGUMENTS`

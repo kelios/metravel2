@@ -20,6 +20,7 @@ const path = require('path');
 const { loadCatalogs: loadI18nCatalogs } = require('../i18n/babel-inline-plugin');
 const { fetchJson, sleep } = require('./lib/fetchJson');
 const { injectSkeletonShell } = require('./ssg-skeletons');
+const { ensureHtmlChunkReloadGuards } = require('./lib/htmlChunkReloadGuard');
 const { buildQuestSeoMetadata, buildBrandedSeoTitle, clampMetaDescription } = require('../utils/questSeo');
 const {
   buildSeoTitle: buildSharedSeoTitle,
@@ -4553,6 +4554,11 @@ async function main() {
     const coverage = assertTravelStaticPagesComplete(travels, DIST_DIR);
     console.log(`\n✅ Static output coverage: ${coverage.expected}/${coverage.expected} published travels present in both page forms`);
   }
+
+  // Redirect stubs do not inherit Expo's shell. Cover the final recursive output,
+  // including those stubs and fallback templates, and reject altered guards.
+  const chunkGuardCoverage = ensureHtmlChunkReloadGuards(DIST_DIR);
+  console.log(`\n✅ Chunk reload guard: ${chunkGuardCoverage.checked} HTML files checked (${chunkGuardCoverage.injected} injected)`);
 
   console.log(`\n🎉 Done! Generated ${totalPages} SEO pages in ${DIST_DIR}`);
 }

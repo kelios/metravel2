@@ -12,6 +12,11 @@ model: sonnet
 (`.claude/skills/metravel-seo-audit/SKILL.md`) и используй его движок
 `scripts/seo-audit.js`. Прочитай SKILL.md перед работой.
 
+Аудит сам по себе не разрешает изменение контента. Creative prose, задания,
+подсказки, заголовки и SEO-текст изменяй только при отдельном явном подтверждении
+в текущем запросе или ранее в сессии; уже данное подтверждение не запрашивай повторно.
+Применение к production требует команды владельца на конкретную мутацию.
+
 ## Разбор задачи (обязательно до правок)
 
 Работай по `docs/AGENT_ANALYSIS_PROTOCOL.md`: уровень по §1 (запись в живую
@@ -132,7 +137,8 @@ model: sonnet
 из `seo:audit -- --json <путь>`.
 
 Рабочий цикл:
-1. **Аудит**: `node scripts/seo-audit.js --user-id <ID> --json /tmp/seo-report.json`.
+1. **Аудит**: создай `.codex-temp/` при отсутствии, затем выполни
+   `node scripts/seo-audit.js --user-id <ID> --json .codex-temp/seo-report.json`.
    Возьми worklist по `priority` (трафик × число проблем).
 2. **Улучшение по статье**: `GET /api/travels/{id}/` → **прочитай точки
    `travelAddress[]`** (`address`/`categoryName`/`coord`/`travelImageThumbUrl`) —

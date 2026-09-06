@@ -31,24 +31,16 @@ Rules:
 - Work from repo root only.
 - Stay on `main`; if not on `main`, stop and ask.
 - Never print secrets from `.env.*`, `.env.e2e`, SSH configs, EAS, or server logs.
-- Before any authorized server write, inspect the backend checkout read-only with
-  `git status --short` and classify every intended path through
-  `git ls-files --error-unmatch -- <repo-relative-path>`.
-- Never mutate a Git-tracked server path: no patch/overwrite/copy/move/delete,
-  chmod, or backup file inside the checkout. Never run backend `commit`, `push`,
-  `pull`, `merge`, `rebase`, `checkout`, `reset`, `restore`, `stash`, or `clean`.
-- A dirty production checkout is a stop condition. Record exact paths and a
-  secret-safe diff summary, create/update an `area=back`/ops task, and leave the
-  cleanup plus canonical backend commit/deploy to the backend owner. For the
-  frontend deploy gate only, tolerate exactly the known untracked
-  `deploy/prod/nginx/ssl/`, untracked `dump.sql`, and permission warning for
-  `deploy/prod/postgis_1/data/`; never inspect or mutate them. Any other entry or
-  warning still stops the deploy, as defined in `docs/RULES.md`.
+- Before an authorized server write, apply `docs/RULES.md` →
+  `Production Git-tracked file immutability (mandatory)`: inspect status and
+  classify intended paths with `git ls-files`. A dirty production checkout
+  stops deployment except for the exact documented frontend-gate exclusions.
+  Leave tracked backend files and cleanup to the backend owner.
 - Project-owned frontend release scripts may write only their documented
   untracked runtime/static targets such as `static/dist`.
 - Do not modify production server paths, SSL paths, Nginx roots, aliases, includes, or proxy targets unless the target host path existence has been verified.
 - Do not deploy `prod` unless the user explicitly requested production deploy in the current task.
-- Do not run Android EAS/cloud builds, Android production builds/submits, or mobile store submit commands unless the user explicitly requested that Android/iOS build or submit target in the current task. Web deploy/release validation must not consume Android EAS build credits.
+- Mobile store work belongs to the Android/iOS release operator for the explicitly authorized stage. Android EAS/cloud builds and submits remain prohibited.
 - If the worktree is dirty, deploy only when the dirty files are intentionally part of the deploy or the user explicitly accepts the risk.
 - Before deploy, build, Android install, server rebuild, or server restart, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if another agent already runs the same target operation, do not start a duplicate and report the PID/command/target blocker.
 - Never edit server shell dotfiles such as `~/.bashrc`, `~/.profile`, `~/.zshrc`, `~/.ssh/config`, or `~/.ssh/environment`. Use inline env vars or project env files instead.
@@ -87,38 +79,18 @@ Deploy:
 
 Dev server deploy uses the documented `./build-dev.sh` path: it performs a clean dependency reinstall, builds `dist/dev`, uploads frontend static assets to `192.168.50.36`, swaps `static/dist`, and restarts `app` + `nginx`. Do not use `./build-prod.sh dev` as a substitute for the LAN dev-server deploy unless project docs have been updated to define that target.
 
-### Production deploy from this Windows/Codex machine
+### Transport and recovery
 
-On this workstation, `./build-prod.sh prod` is not the final deploy command: its local `rsync` deploy
-step is known to fail under Git-for-Windows/MSYS2. For production deploys from
-`D:\metravel\metravel2`, use:
+Before production deployment, follow `docs/RELEASE.md` →
+`Deploy transport depends on the machine: check rsync first`. Verify the actual
+host and transport; the historical Windows wrapper is not a macOS command.
+Never kill another session's process to make room.
 
-```bash
-bash /d/metravel/ops/deploy-frontend.sh
-```
-
-This wrapper:
-
-- verifies branch `main` and SSH access to `metravel-prod`
-- stops competing e2e/preflight/build processes unless `SKIP_KILL=1` is set
-- runs `DEPLOY=0 bash ./build-prod.sh prod` so the canonical build and guards still run
-- verifies `dist/prod` stability and SEO page count
-- transfers with `tar+ssh` to `static/dist.new`
-- atomically swaps `static/dist`, keeps `static/dist.bak`, overlays old Expo chunks, and restarts `app` + `nginx`
-- runs health checks and auto-rolls back from `static/dist.bak` on failure
-
-### Emergency production frontend redeploy
-
-Use `scripts/fix-prod.sh` only when the user explicitly asks for emergency production frontend recovery or when the canonical production path is unavailable and the safer recovery path is justified in the handoff.
-
-That script acquires a remote deploy lock, can rebuild `dist/prod`, verifies the production artifact config, uploads static assets, performs an in-container atomic swap, overlays missing old Expo chunks, restarts nginx, verifies the live entry/runtime chunks, and fails closed on wrong prod config. Do not use it as a casual shortcut for normal releases.
-
-Manual rollback if needed:
-
-```bash
-source scripts/deploy-target.sh && require_deploy_target
-ssh "$PROD_SSH_TARGET" "cd '$PROD_REMOTE_DIR' && mv static/dist static/dist.broken && mv static/dist.bak static/dist && docker compose -f docker-compose-prod.app.yaml restart nginx"
-```
+Recovery follows `docs/RELEASE.md` → `Emergency frontend redeploy` and the
+rollback rules in the transport section. The canonical deploy owns automatic
+rollback. If rollback is incomplete, preserve state and report the exact owner
+action; do not improvise swaps or container restarts. Execute emergency recovery
+only within the user's explicit recovery authorization.
 
 ## Post-Deploy
 

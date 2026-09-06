@@ -1,6 +1,6 @@
 ---
 name: sprint-review
-description: "Приёмка активного спринта на MCP-борде: тикеты в review проверяются реально по Task Contract и AC, зелёные → done, дефекты → связанные задачи. Триггеры: «прими спринт», «приёмка спринта»."
+description: "Приёмка активного спринта на MCP-борде: тикеты в testing проверяются реально по Task Contract и AC, зелёные → done, дефекты → связанные задачи. Триггеры: «прими спринт», «приёмка спринта»."
 ---
 
 # sprint-review
@@ -28,10 +28,10 @@ release). `sprint-review` — это батч-гейт на конце: проб
 1. **Подключение к борду.** `ticket-board`: показать доску, найти активный спринт
    (`metravel_sprints_list` → `status=active`) или взять спринт из `$ARGUMENTS`. Борд недоступен —
    стоп, сослаться на `docs/TASK_BOARD_MCP.md`. Не приниматься вслепую.
-2. **Собрать очередь приёмки.** `metravel_tasks_list(sprint=<N>, status=testing)` +
-   `status=review` (QA-колонка `testing` и пост-ревью `review`) + `status=todo` со старой пометкой
-   «handoff: reviewer/releaser». Раздели области `front`/`back`/`android`/`ios`.
-   Тикеты в `backlog`/`in_progress` в приёмку не идут.
+2. **Собрать очередь приёмки.** `metravel_tasks_list(sprint=<N>, status=testing)`.
+   Раздели области `front`/`back`/`android`/`ios`. Другие статусы в runtime-приёмку
+   не идут: `review` требует code review и перехода в `testing` по
+   `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`».
 
    **`area=back` из очереди исключается сразу.** Бэкенд-тикеты не проверяются, не двигаются и не
    комментируются в рамках приёмки спринта — в итоговом отчёте про них пишется только строка
@@ -40,7 +40,9 @@ release). `sprint-review` — это батч-гейт на конце: проб
    `backend-status-sync`, а не часть батча. Причина: очередь бэка ведёт её владелец, и его фиксы
    регулярно остаются незапушенными в `origin/master` — приёмка возвращает «остаётся» по всем
    карточкам и тратит время впустую (прецеденты 2026-07-04 и 2026-08-10, вся очередь из 15 карточек).
-3. **Приёмка каждого тикета — агент `board-reviewer`.** Для каждого кандидата:
+3. **Приёмка каждого тикета — агент `board-reviewer`.** Локальный QA-таргет и
+   обновление бэкенда перед первой пробой — `docs/WORKFLOW_OPERATIONS.md` →
+   «3.0 Локальный стек и обновление бэкенда перед тестированием». Для каждого кандидата:
    - сверить наличие и полноту `## Task Contract` (нет/пусто → вернуть в `in_progress`,
      «contract incomplete», это refinement-долг);
    - выполнить `Done gate` + `Validation` + AC реальными проверками. **Браузер — основное
@@ -95,8 +97,8 @@ release). `sprint-review` — это батч-гейт на конце: проб
 |---|---|
 | борд: листинг/статусы/спринт | `ticket-board` |
 | приёмка: проверка + перевод в done/возврат | `board-reviewer` |
-| багфикс отбитого тикета (FE) | `travel-expert`, `map-expert`, `browser-reviewer`, `dev-loop` |
-| runtime-evidence на Android | `android-expert` (локальная сборка + `adb`) |
+| багфикс отбитого тикета (FE) | `travel-expert`, `map-expert`, `dev-loop` |
+| runtime-evidence на Android | профильный tester по `android-qa-sweep` (локальная сборка + `adb`) |
 | runtime-evidence на iPhone | `ios-tester` (simulator / physical / TestFlight), фикс — `ios-expert` |
 | BE-блокер / deploy-проба | трекинг `ticket-board` (`area=back`) + сверка `backend-status-sync` |
 

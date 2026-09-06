@@ -203,10 +203,11 @@ frontend-тикета в `testing`. Implementation и `review` передают 
 - На новом компьютере production signing и Android production env берутся из
   переносимого `.secrets` bundle через `npm run android:release:doctor` и
   `npm run android:build:prod`; ручная настройка macOS Keychain не требуется.
-- Current standing release authorization permits the agent to prepare and run the
-  local Android production build/Production submit when an Android release is the
-  active task. This never authorizes changing `alpha`, `internal`, `beta`, tester
-  lists, countries, or the active closed-testing release.
+- Local Android store build, upload/submit, and release each require the user's
+  explicit authorization for that stage in the current task. Reuse authorization
+  already given in the conversation; one stage does not authorize the next.
+  This never authorizes changing `alpha`, `internal`, `beta`, tester lists,
+  countries, or the active closed-testing release.
 - Если задача затрагивает Android-specific наблюдаемое поведение, конфигурацию
   или runtime, считай, что Android-телефон подключён к этому компьютеру по
   USB-кабелю: сначала проверь `adb devices -l`. Общий файл или common responsive

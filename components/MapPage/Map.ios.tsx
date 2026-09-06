@@ -97,6 +97,16 @@ interface TravelProps {
    */
   originalTrackCoords?: [number, number][];
   mode?: 'radius' | 'route';
+  /**
+   * #1781 — точки маршрута планировщика можно тянуть по карте и открывать по
+   * ним действия. Включается только владельцем поездки: у гостя маркеры точек
+   * остаются неинтерактивными, как и до появления правки с карты.
+   */
+  routePointsInteractive?: boolean;
+  /** #1781 — маркер точки маршрута отпущен в новом месте. */
+  onRoutePointMove?: (index: number, lat: number, lng: number) => void;
+  /** #1781 — тап по маркеру точки маршрута: запрос действий над точкой. */
+  onRoutePointPress?: (index: number) => void;
   onMapClick?: (lng: number, lat: number) => void;
   /** Dismiss transient mobile chrome when the user taps empty map space. */
   onMapBackgroundTap?: () => void;
@@ -168,6 +178,9 @@ const Map: React.FC<TravelProps> = ({
   routeLineApproximate = false,
   originalTrackCoords = [],
   mode = 'radius',
+  routePointsInteractive = false,
+  onRoutePointMove,
+  onRoutePointPress,
   onMapClick,
   onMapBackgroundTap,
   onMarkerSelect,
@@ -554,6 +567,7 @@ const Map: React.FC<TravelProps> = ({
       center: { lat: centerLat, lng: centerLng },
       usesServerClusters: shouldUseServerClusterData,
       pointsOnly,
+      routePointsInteractive,
     }),
     [
       nativeMarkerPayload,
@@ -567,6 +581,7 @@ const Map: React.FC<TravelProps> = ({
       centerLng,
       shouldUseServerClusterData,
       pointsOnly,
+      routePointsInteractive,
     ],
   );
 
@@ -800,6 +815,14 @@ const Map: React.FC<TravelProps> = ({
                     : nextViewport,
                 );
               }
+              return;
+            }
+            if (message.type === 'ROUTE_POINT_MOVED') {
+              onRoutePointMove?.(message.index, message.latitude, message.longitude);
+              return;
+            }
+            if (message.type === 'ROUTE_POINT_TAP') {
+              onRoutePointPress?.(message.index);
               return;
             }
             if (message.type === 'SELECT_PLACE') {

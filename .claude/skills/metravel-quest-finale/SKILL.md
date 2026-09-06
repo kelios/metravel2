@@ -17,6 +17,14 @@ description: "Финал городского квеста: текст, фина
 «Квест без финала» на практике = **есть текст, но нет `video_url`** (новый квест
 залит миграцией, но видео не сгенерировано/не залито).
 
+## Полномочия
+
+«Какие квесты без финала» — read-only инвентаризация: верни список и отсутствующие
+поля. Генерацию выполняй по запросу на создание медиа; авторский текст — после
+подтверждения по `docs/RULES.md` → `Images and placeholders`, с учётом уже
+полученного подтверждения в разговоре. Upload/PATCH требуют явного разрешения
+на публикацию для выбранных `quest_id`; готовые файлы и dry-run его не заменяют.
+
 ## Модель данных
 
 - API детали: `GET /api/quests/by-quest-id/<quest_id>/` → `finale: { text,
@@ -61,7 +69,7 @@ const get=u=>new Promise((r,j)=>https.get(u,x=>{let d="";x.on("data",c=>d+=c);x.
    ```bash
    node scripts/upload-quest-finales.js --dry-run --quest-id=<quest_id>
    ```
-5. **Залей на прод.** Токен в `.secrets/metravel-token.json` регулярно протухает,
+5. **При явно разрешённой публикации залей выбранный квест на прод.** Токен в `.secrets/metravel-token.json` регулярно протухает,
    поэтому надёжнее подать свежий через env (в `ps` он не светится):
    ```bash
    METRAVEL_TOKEN=$(node scripts/get-quest-token.js) node scripts/upload-quest-finales.js --quest-id=<quest_id>

@@ -7,6 +7,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
   FOCUS_POINT_ZOOM,
   type MapFocusPoint,
+  type RoutePointMove,
 } from '@/components/trips/planning/tripPlanRouteMap.types';
 import {
   TRANSPORT_ICON_NAME,
@@ -55,6 +56,9 @@ interface Props {
   fill?: boolean;
   focusPoint?: MapFocusPoint | null;
   onEditPoint?: (index: number) => void;
+  /** #1781: маркер отпущен в новом месте — координаты точки нужно обновить. */
+  onMovePoint?: (move: RoutePointMove) => void;
+  onDeletePoint?: (index: number) => void;
   onAddPointFromMap?: (coords: { lat: number; lng: number }) => void;
 }
 
@@ -107,12 +111,15 @@ function FitRouteBounds({
   useMap,
   fitToken,
   fittedTokenRef,
+  lockedRef,
 }: {
   L: LeafletNS;
   positions: Array<[number, number]>;
   useMap: ReactLeafletNS['useMap'];
   fitToken: string;
   fittedTokenRef: React.MutableRefObject<string | null>;
+  /** #1781: пользователь уже наводил кадр руками — подгонка больше не двигает вид. */
+  lockedRef: React.MutableRefObject<boolean>;
 }) {
   const map = useMap();
 
@@ -129,13 +136,18 @@ function FitRouteBounds({
     if (!positions.length) return;
     if (fittedTokenRef.current === fitToken) return;
     fittedTokenRef.current = fitToken;
+    // #1781: перетаскивание маркера меняет и точки, и (через 500 мс) геометрию,
+    // то есть токен обновляется дважды подряд. Подгонка кадра в этот момент
+    // отменяла бы ровно ту точность, ради которой пользователь и тянул маркер,
+    // поэтому после первого ручного перемещения токен только запоминается.
+    if (lockedRef.current) return;
     if (positions.length === 1) {
       map.setView(positions[0], 12);
       return;
     }
     const bounds = L.latLngBounds(positions);
     map.fitBounds(bounds, { padding: [28, 28], maxZoom: 13 });
-  }, [L, fitToken, fittedTokenRef, map, positions]);
+  }, [L, fitToken, fittedTokenRef, lockedRef, map, positions]);
 
   return null;
 }
@@ -206,6 +218,8 @@ export default function TripPlanRouteMap({
   fill = false,
   focusPoint,
   onEditPoint,
+  onMovePoint,
+  onDeletePoint,
   onAddPointFromMap,
 }: Props) {
   const colors = useThemedColors();
@@ -224,6 +238,9 @@ export default function TripPlanRouteMap({
   const mapRef = useRef<{ getCenter: () => { lat: number; lng: number }; getZoom: () => number } | null>(null);
   const restoredViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const fittedTokenRef = useRef<string | null>(null);
+  // #1781: ставится первым же перетаскиванием маркера и живёт до размонтирования
+  // карты — дальше кадром управляет пользователь, а не форма маршрута.
+  const fitLockedRef = useRef(false);
   // Тот же leaflet-инстанс, но состоянием: слои и MapUiApi монтируются хуками
   // /map, а им нужен ререндер после готовности карты (ref его не даёт).
   const [mapInstance, setMapInstance] = useState<unknown>(null);
@@ -389,6 +406,21 @@ export default function TripPlanRouteMap({
 
   const closeLayers = useCallback(() => setLayersOpen(false), []);
 
+  // #1781: перетаскивание маркера. Карта не владеет маршрутом — она отдаёт
+  // индекс и координаты дропа, а `RouteBuilder` решает, что с ними делать.
+  const draggableMarkers = !readonly && typeof onMovePoint === 'function';
+  const handleMarkerDragEnd = useCallback(
+    (index: number) => (event: { target?: { getLatLng?: () => { lat: number; lng: number } } }) => {
+      const position = event?.target?.getLatLng?.();
+      if (!position) return;
+      const { lat, lng } = position;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      fitLockedRef.current = true;
+      onMovePoint?.({ index, lat, lng });
+    },
+    [onMovePoint],
+  );
+
   if (!L || !RL || !markerIcon || !activeMarkerIcon) {
     return (
       <View style={[styles.loadingWrap, fill && styles.loadingWrapFill]} testID="trip-plan-route-map">
@@ -511,6 +543,11 @@ export default function TripPlanRouteMap({
                 ? i18nT('trips:components.trips.planning.TripPlanRouteMap.tochki_marshruta_pokazany_na_karte_14e6732e')
                 : i18nT('trips:components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6')}
           </Text>
+          {draggableMarkers ? (
+            <Text style={styles.hint} testID="trip-plan-map-marker-hint">
+              {i18nT('tripsStatic:plan.map.markerHint')}
+            </Text>
+          ) : null}
           {originalTrackPositions.length > 1 ? (
             <View style={styles.legendItem} testID="trip-plan-map-original-track-legend">
               <View style={[styles.legendLine, { backgroundColor: colors.accentDark }]} />
@@ -553,6 +590,7 @@ export default function TripPlanRouteMap({
               useMap={useMap}
               fitToken={fitToken}
               fittedTokenRef={fittedTokenRef}
+              lockedRef={fitLockedRef}
             />
           ) : null}
           {trackPositions.length > 1 ? (
@@ -583,10 +621,15 @@ export default function TripPlanRouteMap({
             const [lng, lat] = point.coordinates;
             const coordinatesLabel = formatRoutePointCoordinates(point.coordinates);
             return (
+              // #1781: координаты убраны из ключа. `position` — реактивный проп
+              // react-leaflet, а координатный ключ пересоздавал маркер ровно в
+              // момент завершения жеста перетаскивания.
               <Marker
-                key={`${point.id}-${index}-${lat}-${lng}`}
+                key={`${point.id}-${index}`}
                 position={[lat, lng]}
                 icon={activeIndex === index ? activeMarkerIcon : markerIcon}
+                draggable={draggableMarkers}
+                eventHandlers={draggableMarkers ? { dragend: handleMarkerDragEnd(index) } : undefined}
               >
                 <Popup>
                   <div style={styles.popup as React.CSSProperties}>
@@ -595,12 +638,24 @@ export default function TripPlanRouteMap({
                       <div style={styles.popupMeta as React.CSSProperties}>{coordinatesLabel}</div>
                     ) : null}
                     {!readonly ? (
-                      <button
-                        type="button"
-                        onClick={() => onEditPoint?.(index)}
-                        style={styles.popupButton as React.CSSProperties}
-                      >
-                        {i18nT('trips:components.trips.planning.TripPlanRouteMap.redaktirovat_0c9026cb')}</button>
+                      <div style={styles.popupActions as React.CSSProperties}>
+                        <button
+                          type="button"
+                          onClick={() => onEditPoint?.(index)}
+                          style={styles.popupButton as React.CSSProperties}
+                          data-testid={`trip-plan-map-edit-point-${index}`}
+                        >
+                          {i18nT('trips:components.trips.planning.TripPlanRouteMap.redaktirovat_0c9026cb')}</button>
+                        {onDeletePoint ? (
+                          <button
+                            type="button"
+                            onClick={() => onDeletePoint(index)}
+                            style={styles.popupButtonDanger as React.CSSProperties}
+                            data-testid={`trip-plan-map-delete-point-${index}`}
+                          >
+                            {i18nT('tripsStatic:plan.map.deletePoint')}</button>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                 </Popup>
@@ -788,6 +843,11 @@ const createStyles = (colors: ThemedColors) =>
       lineHeight: 16,
       color: colors.textMuted,
     },
+    popupActions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+    },
     popupButton: {
       borderWidth: 1,
       borderStyle: 'solid',
@@ -799,6 +859,21 @@ const createStyles = (colors: ThemedColors) =>
       paddingLeft: 10,
       backgroundColor: colors.surface,
       color: colors.text,
+      cursor: 'pointer',
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    popupButtonDanger: {
+      borderWidth: 1,
+      borderStyle: 'solid',
+      borderColor: colors.danger,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      paddingTop: 7,
+      paddingRight: 10,
+      paddingBottom: 7,
+      paddingLeft: 10,
+      backgroundColor: colors.surface,
+      color: colors.danger,
       cursor: 'pointer',
       fontSize: 13,
       fontWeight: '700',

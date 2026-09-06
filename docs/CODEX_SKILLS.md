@@ -71,5 +71,13 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
 - Workflow хранится в body; project-wide contract — в canonical docs с exact
   heading, а не в каждом skill.
 - `agents/openai.yaml` не дублирует body.
+- `.agents/skills` владеет общими процедурами; одноимённые `.claude/skills`
+  сохраняются как совместимые копии. `audit:prompts` проверяет их metadata и
+  совпадение текста. OpenSpec сохраняет vendor-различия адаптеров; это не дубли
+  для механического удаления.
+- `.claude/agents` — источник ролей, `.grok/agents` генерируется через
+  `node .grok/scripts/sync-agents.mjs`. Команды служат короткими входами в skills.
+- Metadata-аудит не доказывает согласованность полномочий, окружений и стадий:
+  эти контракты проверяются по каноническим документам при ревью промптов.
 - После изменений: `npm run audit:prompts` и validator `skill-creator` для
   каждого затронутого skill.
