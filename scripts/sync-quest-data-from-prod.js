@@ -191,11 +191,26 @@ async function syncFile(file, { apiUrl, dryRun }) {
 
   const applied = []
   const skipped = []
+  const missingOnProd = []
+  let compared = 0
 
   for (const quest of quests) {
     if (!quest?.quest_id) continue
-    const [bundle] = await fetchQuestBundles(apiUrl, quest.quest_id)
+    let bundle
+    try {
+      ;[bundle] = await fetchQuestBundles(apiUrl, quest.quest_id)
+    } catch (error) {
+      if (error?.statusCode !== 404) throw error
+      missingOnProd.push(quest.quest_id)
+      continue
+    }
+    if (!bundle || bundle.quest_id !== quest.quest_id || (
+      !Array.isArray(bundle.steps) && !(typeof bundle.steps === 'string' && bundle.steps.trim())
+    )) {
+      throw new Error(`Некорректный ответ для квеста ${quest.quest_id}: ожидались quest_id и steps`)
+    }
     const prodSteps = new Map(parseSteps(bundle).map((s) => [s.step_id, s]))
+    compared += 1
 
     for (const step of quest.steps || []) {
       const prod = prodSteps.get(step.step_id)
@@ -218,7 +233,7 @@ async function syncFile(file, { apiUrl, dryRun }) {
   }
 
   if (!dryRun && applied.length) fs.writeFileSync(abs, text, 'utf8')
-  return { file, applied, skipped }
+  return { file, applied, skipped, missingOnProd, compared }
 }
 
 // ===================== CLI =====================
@@ -243,16 +258,25 @@ async function main() {
 
   let applied = 0
   let skipped = 0
+  let missing = 0
+  let compared = 0
   for (const file of files) {
     const result = await syncFile(file, args)
-    if (!result.applied.length && !result.skipped.length) continue
+    compared += result.compared
+    missing += result.missingOnProd.length
+    if (!result.applied.length && !result.skipped.length && !result.missingOnProd.length) continue
     console.log(`\n${file}${args.dryRun ? ' [DRY]' : ''}`)
+    for (const questId of result.missingOnProd) console.log(`  [${questId}] на проде нет — пропуск`)
     for (const row of result.applied) console.log(`  ← ${row.step_id} / ${row.field}`)
     for (const row of result.skipped) console.log(`  НЕ ЗАМЕНЕНО ${row.step_id} / ${row.field} — форма записи не опознана`)
     applied += result.applied.length
     skipped += result.skipped.length
   }
 
+  if (!args.source && compared === 0) {
+    throw new Error(`На ${args.apiUrl} не нашлось ни одного из ${missing} квестов корпуса. Проверь --api-url; синхронизация не выполнена.`)
+  }
+  console.log(`\nСравнено квестов: ${compared} из ${compared + missing}; на проде нет: ${missing}`)
   console.log(`\nПеренесено полей: ${applied}${args.dryRun ? ' (DRY RUN, файлы не тронуты)' : ''}`)
   if (skipped) {
     console.log(`Не заменено: ${skipped} — правь вручную и прогоняй сверку заново.`)
@@ -260,7 +284,7 @@ async function main() {
   }
 }
 
-module.exports = { sourceShapes, jsString, replaceField, replaceByAst, renderObject, comparableFields, parseArgs }
+module.exports = { sourceShapes, jsString, replaceField, replaceByAst, renderObject, comparableFields, parseArgs, syncFile, main }
 
 if (require.main === module) {
   main().catch((e) => {
