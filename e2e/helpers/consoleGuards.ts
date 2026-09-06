@@ -4,6 +4,13 @@ export function isRecoverableReactHydrationError(message: string) {
   return /Minified React error #418\b/.test(String(message || ''));
 }
 
+/** CORP/third-party image blocks from editorial HTML, not first-party regressions. */
+export function isBenignThirdPartyResourceError(message: string) {
+  const text = String(message || '')
+  if (!/net::ERR_BLOCKED_BY_RESPONSE\.NotSameOrigin/.test(text)) return false
+  return !/https?:\/\/(?:127\.0\.0\.1|localhost|metravel\.by)[:/]/i.test(text)
+}
+
 export function installNoConsoleErrorsGuard(page: any) {
   const errors: string[] = [];
 

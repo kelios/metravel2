@@ -152,6 +152,22 @@ const SEARCH_TRAVELS = Array.from({ length: 6 }, (_, index) => ({
   year: '2026',
 }))
 
+const HOME_TRAVELS = Array.from({ length: 6 }, (_, index) => ({
+  id: 980_200 + index,
+  slug: `perf-home-${index}`,
+  url: `/travels/perf-home-${index}`,
+  name: `Стабильная карточка главной ${index + 1}`,
+  countryName: 'Беларусь',
+  cityName: 'Минск',
+  travel_image_thumb_url: SEARCH_PIXEL,
+  travel_image_thumb_small_url: SEARCH_PIXEL,
+  publish: true,
+  moderation: true,
+  year: '2026',
+}))
+
+type HomeFixtureCounters = { ofMonth: number }
+
 const PERF_PLACE = {
   id: '98041',
   title: 'Детерминированное место для perf gate',
@@ -268,6 +284,48 @@ async function waitForReady(page: Page, selector: string, requireReadySelector =
     ])
   }
   await page.waitForLoadState('networkidle').catch(() => null)
+}
+
+async function installDeterministicHomeApi(
+  page: Page,
+  target: PageTarget,
+): Promise<HomeFixtureCounters> {
+  const counters: HomeFixtureCounters = { ofMonth: 0 }
+  if (target.key !== 'HOME') return counters
+
+  const fulfillJson = (route: Route, body: unknown) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    })
+
+  const fulfillHomeList = async (route: Route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback()
+      return
+    }
+    const pathname = new URL(route.request().url()).pathname
+    if (pathname.includes('/travels/of-month')) {
+      counters.ofMonth += 1
+      await fulfillJson(route, HOME_TRAVELS)
+      return
+    }
+    if (pathname.includes('/travels/random') || pathname.includes('/travels/popular')) {
+      await fulfillJson(route, HOME_TRAVELS)
+      return
+    }
+    await route.fallback()
+  }
+
+  await page.route('**/api/travels/**', fulfillHomeList)
+  await page.route('**/travels/**', fulfillHomeList)
+  return counters
+}
+
+function expectHomeFixturesUsed(target: PageTarget, counters: HomeFixtureCounters) {
+  if (target.key !== 'HOME') return
+  expect(counters.ofMonth, 'Home of-month fixture was not exercised').toBeGreaterThan(0)
 }
 
 async function installDeterministicSearchApi(page: Page, target: PageTarget) {
@@ -542,6 +600,7 @@ for (const target of PAGES) {
       }
 
       await injectPerfObservers(page)
+      const homeFixtureCounters = await installDeterministicHomeApi(page, target)
       await installDeterministicSearchApi(page, target)
       const mapFixtureCounters = await installDeterministicMapApi(page, target)
       const catalogFixtureCounters = await installDeterministicCatalogApi(page, target)
@@ -549,6 +608,7 @@ for (const target of PAGES) {
 
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
       await waitForReady(page, target.readySelector, target.requireReadySelector)
+      expectHomeFixturesUsed(target, homeFixtureCounters)
       await expectMapFixturesUsed(target, mapFixtureCounters)
       expectCatalogFixturesUsed(target, catalogFixtureCounters)
       expectQuestDetailFixturesUsed(target, questFixtureCounters)
@@ -663,6 +723,7 @@ for (const target of PAGES) {
       const profile = profileFromProject(testInfo.project.name)
       const budget = BASELINE_MODE ? null : resolveEffectiveBudget(target.key, profile).budget
       await injectPerfObservers(page)
+      const homeFixtureCounters = await installDeterministicHomeApi(page, target)
       await installDeterministicSearchApi(page, target)
       const mapFixtureCounters = await installDeterministicMapApi(page, target)
       const catalogFixtureCounters = await installDeterministicCatalogApi(page, target)
@@ -673,6 +734,7 @@ for (const target of PAGES) {
       })
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
       await waitForReady(page, target.readySelector, target.requireReadySelector)
+      expectHomeFixturesUsed(target, homeFixtureCounters)
       await expectMapFixturesUsed(target, mapFixtureCounters)
       expectCatalogFixturesUsed(target, catalogFixtureCounters)
       expectQuestDetailFixturesUsed(target, questFixtureCounters)

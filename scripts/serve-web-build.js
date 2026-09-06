@@ -166,24 +166,40 @@ function sendCompressed(req, res, contentType, data, fileExt) {
   res.end(data)
 }
 
-const defaultProxyTarget = (process.env.E2E_API_URL || process.env.EXPO_PUBLIC_API_URL || '').trim()
-const requestedProxyTarget = (process.env.E2E_API_PROXY_TARGET || defaultProxyTarget || 'https://metravel.by').trim()
-const resolveApiProxyTarget = () => {
+// Fail-closed, как и `scripts/e2e-target-safety.js`: не выведенный таргет — это
+// ЛОКАЛЬНЫЙ бэкенд, никогда не прод. Раньше все три ветки ниже падали на
+// `https://metravel.by`, и запуск сервера без явного `E2E_API_PROXY_TARGET`
+// молча уводил весь регрессионный набор на боевой API: набор зеленел на проде,
+// а локальные дефекты оставались невидимыми. Явный прод по-прежнему работает —
+// он проходит первой веткой как заданный таргет (`E2E_SUITE=production-smoke`
+// выставляет его сам).
+const { DEFAULT_LOCAL_E2E_API_URL } = require('./e2e-target-safety')
+
+// Параметризовано ради тестируемости: решение о таргете — предохранитель, и он
+// обязан проверяться, а не держаться на честном слове модульных констант.
+const resolveApiProxyTarget = (env = process.env, serverHost = host, serverPort = port) => {
+  const defaultProxyTarget = (env.E2E_API_URL || env.EXPO_PUBLIC_API_URL || '').trim()
+  const requestedProxyTarget = (
+    env.E2E_API_PROXY_TARGET ||
+    defaultProxyTarget ||
+    DEFAULT_LOCAL_E2E_API_URL
+  ).trim()
+
   try {
     const parsed = new URL(requestedProxyTarget)
     const parsedPort = Number(parsed.port || (parsed.protocol === 'https:' ? '443' : '80'))
-    const serverPort = Number(port)
-    const samePort = Number.isFinite(parsedPort) && Number.isFinite(serverPort) && parsedPort === serverPort
+    const listenPort = Number(serverPort)
+    const samePort = Number.isFinite(parsedPort) && Number.isFinite(listenPort) && parsedPort === listenPort
     const sameHost =
-      parsed.hostname === host ||
-      (parsed.hostname === 'localhost' && host === '127.0.0.1') ||
-      (parsed.hostname === '127.0.0.1' && host === 'localhost')
+      parsed.hostname === serverHost ||
+      (parsed.hostname === 'localhost' && serverHost === '127.0.0.1') ||
+      (parsed.hostname === '127.0.0.1' && serverHost === 'localhost')
 
     // Guard against accidental self-proxying (e.g. EXPO_PUBLIC_API_URL points to the local E2E server).
-    if (sameHost && samePort) return 'https://metravel.by'
+    if (sameHost && samePort) return DEFAULT_LOCAL_E2E_API_URL
     return parsed.toString()
   } catch {
-    return 'https://metravel.by'
+    return DEFAULT_LOCAL_E2E_API_URL
   }
 }
 const apiProxyTarget = resolveApiProxyTarget()
@@ -564,6 +580,9 @@ if (require.main === module) {
 
   server.listen(port, host, () => {
     console.log(`✅ Web build server running at http://${host}:${port}`)
+    // Таргет прокси печатается всегда: молчаливый сервер — это как раз тот
+    // случай, когда весь набор уходит не на тот API и никто этого не видит.
+    console.log(`   API proxy → ${apiProxyTarget}`)
   })
 
   process.on('SIGINT', shutdown)

@@ -12,7 +12,10 @@ import {
   readTravelFooterLayoutShiftReport,
   resetTravelFooterLayoutShiftGuard,
 } from './helpers/travelFooterLayoutShiftGuard'
-import { isRecoverableReactHydrationError } from './helpers/consoleGuards'
+import {
+  isBenignThirdPartyResourceError,
+  isRecoverableReactHydrationError,
+} from './helpers/consoleGuards'
 
 const VIEWPORTS = [
   { height: 640, label: 'desktop-narrow', totalClsBudget: 0.388872, width: 1024 },
@@ -245,7 +248,11 @@ test.describe('@perf Travel details deferred footer transition CLS', () => {
       const report = await readTravelFooterLayoutShiftReport(page)
       const unexpectedBrowserErrors = useLiveTravelData
         ? browserErrors
-        : browserErrors.filter((message) => !isRecoverableReactHydrationError(message))
+        : browserErrors.filter(
+            (message) =>
+              !isRecoverableReactHydrationError(message) &&
+              !isBenignThirdPartyResourceError(message),
+          )
       await page.screenshot({
         path: `.codex-temp/task-1604/${viewport.label}-${useLiveTravelData ? 'live' : 'fixture'}.png`,
       })

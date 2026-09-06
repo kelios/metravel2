@@ -11,7 +11,10 @@ import {
   readTravelFooterLayoutShiftReport,
   resetTravelFooterLayoutShiftGuard,
 } from './helpers/travelFooterLayoutShiftGuard'
-import { isRecoverableReactHydrationError } from './helpers/consoleGuards'
+import {
+  isBenignThirdPartyResourceError,
+  isRecoverableReactHydrationError,
+} from './helpers/consoleGuards'
 
 /**
  * Task #1642. The footer transition guard (#1604) proves the footer no longer
@@ -465,7 +468,11 @@ test.describe('@perf Travel details deferred upstream (near/comments) CLS', () =
       const report = await readTravelFooterLayoutShiftReport(page)
       const unexpectedBrowserErrors = useLiveTravelData
         ? browserErrors
-        : browserErrors.filter((message) => !isRecoverableReactHydrationError(message))
+        : browserErrors.filter(
+            (message) =>
+              !isRecoverableReactHydrationError(message) &&
+              !isBenignThirdPartyResourceError(message),
+          )
 
       const committedGeometry = UPSTREAM_TRANSITIONS.map(({ key }) => {
         // The load-bearing window is narrow on both sides. While the wrapper's

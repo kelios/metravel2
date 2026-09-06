@@ -1,11 +1,10 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
 import { PERF_BUDGET_TEST_MATCH, PERF_DESKTOP_VIEWPORTS } from './e2e/helpers/perfProjects';
 
 const { resolveE2ETargets } = require('./scripts/e2e-target-safety');
 const { getE2ESuiteSelection } = require('./scripts/e2e-suite-classification');
+const { applyE2EEnvFiles } = require('./scripts/e2e-env-files');
 
 function clearColorEnv() {
   if (Object.prototype.hasOwnProperty.call(process.env, 'NO_COLOR')) {
@@ -16,34 +15,12 @@ function clearColorEnv() {
   }
 }
 
-function applyEnvFile(filePath: string) {
-  if (!fs.existsSync(filePath)) return;
-  const raw = fs.readFileSync(filePath, 'utf8');
-  const lines = raw.split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    if (trimmed.startsWith('#')) continue;
-    const eq = trimmed.indexOf('=');
-    if (eq <= 0) continue;
-    const key = trimmed.slice(0, eq).trim();
-    let value = trimmed.slice(eq + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-    if (!key) continue;
-    if (process.env[key] == null || String(process.env[key]).length === 0) {
-      process.env[key] = value;
-    }
-  }
-}
-
 // Ensure E2E env vars are loaded for global-setup (auth) and test runtime.
 // We intentionally support env files that may contain spaces around '='.
+// Тот же модуль подключает `scripts/e2e-webserver.js`, иначе бандл собирается
+// по другому набору значений, чем ожидает рантайм тестов.
 const rootDir = process.cwd();
-applyEnvFile(path.join(rootDir, '.env.e2e'));
-applyEnvFile(path.join(rootDir, '.env.dev'));
-applyEnvFile(path.join(rootDir, '.env'));
+applyE2EEnvFiles(rootDir);
 clearColorEnv();
 
 // Используем отдельный порт для e2e, чтобы не конфликтовать с локальной разработкой.

@@ -7,8 +7,13 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { StringDecoder } = require('node:string_decoder');
 const { acquireBuildLock, releaseBuildLock } = require('./build-lock');
+const { applyE2EEnvFiles } = require('./e2e-env-files');
 
 const rootDir = path.join(__dirname, '..');
+// Тот же набор env-файлов, что читает `playwright.config.ts`. Без этого прямой
+// запуск сервера собирает бандл по `.env`, игнорируя `.env.e2e`, и фича-флаги
+// бандла расходятся с ожиданиями тестов.
+applyE2EEnvFiles(rootDir);
 if (Object.prototype.hasOwnProperty.call(process.env, 'NO_COLOR')) {
   delete process.env.NO_COLOR;
 }

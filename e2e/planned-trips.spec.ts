@@ -431,6 +431,13 @@ test.describe('Trip planner — happy path', () => {
     expect(networkEvidence.plannedTripRequests.some((entry) => entry.includes('/route/'))).toBe(false)
 
     await page.setViewportSize({ width: 390, height: 844 })
+    // Пересечение брейкпоинта 768px пересобирает панель из `stack` в `mapFirst`
+    // (`layout={isMobile ? 'mapFirst' : 'stack'}` в app/(tabs)/trips/plan/[id].tsx):
+    // секция шагов переезжает под другого родителя, поэтому узел контрола
+    // физически пересоздаётся. Без ожидания мобильной раскладки замеры ниже
+    // успевают отработать ещё на десктопном узле, а evidence-скриншот попадает
+    // в окно перемонтирования и падает с «Element is not attached to the DOM».
+    await expect(page.getByTestId('route-mobile-map')).toBeVisible()
     // #1691: панель маршрута на мобильном — обычный контент под картой, поэтому
     // контрол просто доводится до кадра страничным скроллом.
     await control.evaluate((node) => node.scrollIntoView({ block: 'center' }))
