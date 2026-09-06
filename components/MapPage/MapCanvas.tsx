@@ -120,14 +120,17 @@ export function MapCanvas({
     Platform.OS !== 'web' &&
     locationState.status === 'denied' &&
     !locationState.canAskAgain
-  // Баннер свёрнут в одну строку: раньше он занимал ~четверть экрана поверх карты
-  // (две строки текста + два стека кнопок) и дублировал подсказку режима маршрута.
-  // Текст — короткий статус, действие — одна кнопка; «указать старт вручную»
-  // осмысленно только внутри режима маршрута и живёт теперь там.
+  const isRouteMode = mapPanelProps?.mode === 'route'
+  // Пустой ряд действий не должен добавлять баннеру вторую строку и её gap.
+  const hasGeoBannerActions = canRetryLocation || canOpenSettings || isRouteMode
+  // Баннер держится минимальным: короткий статус + до двух действий («указать
+  // старт вручную» осмысленно только внутри режима маршрута и живёт там). На
+  // мобиле статус и действия разнесены по двум строкам (#1780) — инлайн они не
+  // помещались и статус усекался до «Геолокация недос…»; на десктопе баннер
+  // по-прежнему однострочный.
   const geoBannerMessage = hasCachedViewport
     ? i18nT('map:components.MapPage.MapCanvas.poslednee_izvestnoe_mesto_2b6f90c3')
     : i18nT('map:components.MapPage.MapCanvas.geolokatsiya_nedostupna_7c41d5e8')
-  const isRouteMode = mapPanelProps?.mode === 'route'
   // Живые тики намеренно не обновляют locationState (иначе экран перерисовывается на
   // каждый GPS-фикс во время движения), поэтому свежесть считаем по внешнему каналу:
   // компонент и так тикает раз в 15 с своим locationClock. См. hooks/map/liveUserPosition.
@@ -231,65 +234,74 @@ export function MapCanvas({
           ]}
           testID="map-geo-banner"
         >
-          <Feather name="map-pin" size={13} color={themedColors.warning} />
-          <Text style={styles.geoBannerText} numberOfLines={1}>
-            {geoBannerMessage}
-          </Text>
-          {canRetryLocation && (
-            <Pressable
-              testID="map-geo-retry"
-              onPress={retryLocation}
-              accessibilityRole="button"
-              // Явный label: у Pressable с вложенным Text доступное имя на web не
-              // выводилось (кнопка «Разрешить» читалась как безымянная).
-              accessibilityLabel={
-                locationState.status === 'denied'
-                  ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_b419aad0')
-                  : i18nT('map:components.MapPage.MapCanvas.povtorit_66ddcbbc')
-              }
-              style={({ pressed }) => [
-                styles.geoBannerActionPrimary,
-                pressed && PRESSED_OPACITY_06,
-              ]}
-            >
-              <Text style={styles.geoBannerActionPrimaryText} numberOfLines={1}>
-                {locationState.status === 'denied'
-                  ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_b419aad0')
-                  : i18nT('map:components.MapPage.MapCanvas.povtorit_66ddcbbc')}
-              </Text>
-            </Pressable>
-          )}
-          {canOpenSettings && (
-            <Pressable
-              testID="map-geo-open-settings"
-              onPress={openLocationSettings}
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.geoBannerActionPrimary,
-                pressed && PRESSED_OPACITY_06,
-              ]}
-            >
-              <Text style={styles.geoBannerActionPrimaryText} numberOfLines={1}>
-                {i18nT('map:components.MapPage.MapCanvas.otkryt_nastroyki_ecb067f5')}
-              </Text>
-            </Pressable>
-          )}
-          {/* Ручной старт — действие режима маршрута, а не общего гео-статуса.
-              В radius-режиме он вёл в маршрут из баннера про геолокацию. */}
-          {isRouteMode && (
-            <Pressable
-              testID="map-geo-manual-start"
-              onPress={startManualRoute}
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.geoBannerActionSecondary,
-                pressed && PRESSED_OPACITY_06,
-              ]}
-            >
-              <Text style={styles.geoBannerActionSecondaryText} numberOfLines={1}>
-                {i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.ukazat_start_337c5937')}
-              </Text>
-            </Pressable>
+          <View style={styles.geoBannerMain}>
+            <Feather name="map-pin" size={13} color={themedColors.warning} />
+            {/* На мобиле статус занимает всю ширину баннера, поэтому
+                «Геолокация недоступна» помещается целиком: раньше инлайновая
+                кнопка съедала 135 pt из 355 и резала текст многоточием. */}
+            <Text style={styles.geoBannerText} numberOfLines={2}>
+              {geoBannerMessage}
+            </Text>
+          </View>
+          {hasGeoBannerActions && (
+            <View style={styles.geoBannerActions} testID="map-geo-banner-actions">
+              {canRetryLocation && (
+                <Pressable
+                  testID="map-geo-retry"
+                  onPress={retryLocation}
+                  accessibilityRole="button"
+                  // Явный label: у Pressable с вложенным Text доступное имя на web не
+                  // выводилось (кнопка «Разрешить» читалась как безымянная).
+                  accessibilityLabel={
+                    locationState.status === 'denied'
+                      ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_b419aad0')
+                      : i18nT('map:components.MapPage.MapCanvas.povtorit_66ddcbbc')
+                  }
+                  style={({ pressed }) => [
+                    styles.geoBannerActionPrimary,
+                    pressed && PRESSED_OPACITY_06,
+                  ]}
+                >
+                  <Text style={styles.geoBannerActionPrimaryText} numberOfLines={1}>
+                    {locationState.status === 'denied'
+                      ? i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_b419aad0')
+                      : i18nT('map:components.MapPage.MapCanvas.povtorit_66ddcbbc')}
+                  </Text>
+                </Pressable>
+              )}
+              {canOpenSettings && (
+                <Pressable
+                  testID="map-geo-open-settings"
+                  onPress={openLocationSettings}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.geoBannerActionPrimary,
+                    pressed && PRESSED_OPACITY_06,
+                  ]}
+                >
+                  <Text style={styles.geoBannerActionPrimaryText} numberOfLines={1}>
+                    {i18nT('map:components.MapPage.MapCanvas.otkryt_nastroyki_ecb067f5')}
+                  </Text>
+                </Pressable>
+              )}
+              {/* Ручной старт — действие режима маршрута, а не общего гео-статуса.
+                  В radius-режиме он вёл в маршрут из баннера про геолокацию. */}
+              {isRouteMode && (
+                <Pressable
+                  testID="map-geo-manual-start"
+                  onPress={startManualRoute}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.geoBannerActionSecondary,
+                    pressed && PRESSED_OPACITY_06,
+                  ]}
+                >
+                  <Text style={styles.geoBannerActionSecondaryText} numberOfLines={1}>
+                    {i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.ukazat_start_337c5937')}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
           )}
           <Pressable
             onPress={dismissGeoBanner}

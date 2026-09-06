@@ -41,6 +41,48 @@ const ROUTE_SUMMARY_CLOSE_TOUCH_INSET =
 const ROUTE_CONTROL_TOUCH_TARGET_SIZE = 44
 /** Зазор между ярусами правого стека (`toolbarStack`). */
 const TOOLBAR_STACK_GAP = 6
+
+/**
+ * Пол отступа под статус-бар/нотч там, где safe-area == 0 (web, старые
+ * устройства): кнопки не должны прилипать к самому краю.
+ */
+const TOOLBAR_TOP_INSET_FLOOR = 8
+/** Воздух между safe-area и видимым кругом верхнего ряда кнопок. */
+const TOOLBAR_TOP_GAP = 8
+
+/**
+ * Отступ ряда кнопок сверху. Вью кнопки выше видимого круга на прозрачные поля
+ * тач-таргета, поэтому padding уменьшен ровно на них — сам круг остаётся на
+ * прежней высоте.
+ */
+export const getMapToolbarPaddingTop = (topInset: number) =>
+  Math.max(
+    0,
+    Math.max(topInset, TOOLBAR_TOP_INSET_FLOOR) + TOOLBAR_TOP_GAP - MAP_TOOLBAR_TOUCH_PADDING,
+  )
+
+/**
+ * #1780 — нижняя граница верхнего ряда круглых кнопок карты в координатах
+ * экрана. Ряд живёт в overlay-слое (`MapMobileTopOverlay`, zIndex 1500), а
+ * гео-баннер — в слое карты (`MapCanvas`, zIndex 1010, absolute `top`), см.
+ * `mapFilterChips.ts`: это РАЗНЫЕ поддеревья, общего вертикального потока у них
+ * нет. Граница считается по ВЬЮ кнопки (тач-таргет), а не по видимому кругу: он
+ * кончается на `MAP_TOOLBAR_TOUCH_PADDING` выше. Раньше `map.styles.ts` держал
+ * свою копию этой высоты хардкодом (54 против реальных 51 + 8 воздуха), поэтому
+ * баннер стоял в 3 pt от тач-рамки ряда и на iPhone 16 Pro его тень читалась
+ * как наложение на кнопки. Теперь высота объявлена один раз здесь и
+ * используется обеими сторонами.
+ */
+export const getMapToolbarBottom = (topInset: number) =>
+  getMapToolbarPaddingTop(topInset) + MAP_TOOLBAR_TOUCH_TARGET_SIZE
+
+/**
+ * Воздух под рядом кнопок для элементов ЧУЖОГО поддерева (гео-баннер в
+ * `MapCanvas`). Внутри overlay-слоя ярусы стоят через `TOOLBAR_STACK_GAP` (6):
+ * там зазор считается от вью кнопки, а снаружи — от её нижней границы вместе с
+ * прозрачными полями тач-таргета, поэтому значения намеренно разные.
+ */
+export const MAP_TOOLBAR_STACK_GAP = 8
 /**
  * #1699 — под тулбаром живёт РОВНО один ярус маршрута: выбор старта, пока
  * заданы не оба конца, и сводка, как только маршрут построен. Раньше ярусов
@@ -247,7 +289,10 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
     },
     routeHint: {
       position: 'absolute' as const,
-      top: BUTTON_SIZE + 54,
+      // `top` задаёт компонент (`routePopoverTop`), считая ярус от
+      // `getMapToolbarBottom`. Прежний хардкод (BUTTON_SIZE + 54) был мёртвым —
+      // единственный потребитель всегда перебивал его инлайном — и повторял
+      // высоту тулбара третьей копией, из-за которой и разъехался гео-баннер.
       left: 10,
       right: 10,
       flexDirection: 'row',

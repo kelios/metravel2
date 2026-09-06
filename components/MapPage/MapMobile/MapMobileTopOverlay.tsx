@@ -33,11 +33,12 @@ import {
 } from '../transportModes'
 import {
   getMapMobileTopOverlayStyles,
+  getMapToolbarBottom,
+  getMapToolbarPaddingTop,
   MAP_ROUTE_ROW_MAX_WIDTH,
   MAP_ROUTE_ROW_MIN_WIDTH,
   MAP_ROUTE_ROW_RESERVED,
   MAP_ROUTE_ROW_STACK_OFFSET,
-  MAP_TOOLBAR_TOUCH_PADDING,
   MAP_TOOLBAR_TOUCH_TARGET_SIZE,
 } from './MapMobileTopOverlay.styles'
 import { MapMobileRadiusPopover } from './MapMobileRadiusPopover'
@@ -297,12 +298,9 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   )
 
   // R-1 — глобальной шапки на табе карты больше нет, поэтому overlay сам отвечает
-  // за отступ под статус-бар/нотч. Берём safe-area top, но держим небольшой пол,
-  // чтобы кнопки не прилипали к самому краю там, где safe-area == 0.
-  const resolvedTopPadding = Math.max(topInset, 8) + 8
-  // Кнопка выше видимого круга на прозрачные поля тач-таргета, поэтому padding
-  // ряда уменьшен ровно на них: сам круг остаётся на прежней высоте.
-  const toolbarPaddingTop = Math.max(0, resolvedTopPadding - MAP_TOOLBAR_TOUCH_PADDING)
+  // за отступ под статус-бар/нотч. Геометрия ряда объявлена в его styles-модуле:
+  // на неё же опирается гео-баннер из другого поддерева (см. getMapToolbarBottom).
+  const toolbarPaddingTop = getMapToolbarPaddingTop(topInset)
   // Ряд иконок не должен уезжать за правый край: слева от него стоит кнопка
   // локации, по краям — padding root. Что не помещается — ужимается к видимому
   // кругу (см. iconButtonTouch), а не обрезается.
@@ -317,8 +315,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   // Ряд чипов стоит сразу под тулбаром, поэтому ВСЕ поповеры (включая радиус)
   // открываются ниже него — иначе поповер лёг бы прямо на чипы.
   const activeFiltersOffset = showActiveFiltersRow ? MAP_FILTER_CHIPS_STACK_OFFSET : 0
-  const basePopoverTop =
-    toolbarPaddingTop + MAP_TOOLBAR_TOUCH_TARGET_SIZE + 6 + activeFiltersOffset
+  const basePopoverTop = getMapToolbarBottom(topInset) + 6 + activeFiltersOffset
   // Селектор старта и сводка взаимоисключают друг друга и занимают один и тот
   // же ярус, поэтому смещение считается один раз, а не складывается (#1699).
   const routeRowOffset = showRouteStartSelector || showRouteSummary ? MAP_ROUTE_ROW_STACK_OFFSET : 0

@@ -185,7 +185,10 @@ invariants` в `__tests__/components/map-core/leafletWebViewHtml.test.ts`.
 Позиция пользователя на Android следует атомарному визуальному контракту:
 
 - явный trusted target одной WebView-командой сначала создаёт accuracy-круг и
-  общий 30px GPS-маркер, а затем центрирует карту по той же координате;
+  общий с mobile web GPS-маркер (размер и цвет — `USER_LOCATION_MARKER_SIZE` /
+  `USER_LOCATION_MARKER_COLOR` в `mapMarkerStyles.ts`, #1780: синяя точка в белом
+  кольце, намеренно не бренд-оранжевая, чтобы «я» не путалось с POI-пином), а
+  затем центрирует карту по той же координате;
 - user-location pane находится выше POI/cluster `markerPane`, но ниже tooltip и
   popup, поэтому «Вы здесь» не скрывается маркерами и не перекрывает подсказки;
 - сам GPS-маркер не перехватывает события, поэтому совпадающие POI/кластеры
@@ -194,6 +197,15 @@ invariants` в `__tests__/components/map-core/leafletWebViewHtml.test.ts`.
   нижний `markerPane`;
 - ошибка отрисовки очищает визуальный слой и center target: состояние «камера
   центрируется, но точки нет» не допускается.
+
+Тот же pane-контракт с #1780 действует и на web (`MapLayers.tsx`): маркер «вы
+здесь» живёт в собственном pane `metravel-user-location` (z-index 625,
+`pointer-events: none`), а не в общем `markerPane` (600) — иначе Leaflet
+сортирует его с POI и кластерами по широте, и кластер севернее закрывает точку
+целиком. Ловушка при правке: `utils/leafletFix.ts` патчит `Map.getPane` в
+get-or-create, поэтому проверка «pane ещё нет» не работает — `getPane` сам
+создаёт узел, но БЕЗ стилей. Стиль применяется безусловно, `createPane` остаётся
+фолбэком для ванильного Leaflet.
 
 `TravelMap.native.tsx` имеет более узкий отдельный bridge для embedded travel
 map (`POINT_SELECT`, `CLEAR_SELECTED_POINT`, `OPEN_URL`, `RESIZE`). Изменение

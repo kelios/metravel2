@@ -1,6 +1,10 @@
 // src/screens/tabs/map.styles.ts
 import { Platform, StyleSheet } from 'react-native';
 import { LAYOUT, METRICS } from '@/constants/layout';
+import {
+  getMapToolbarBottom,
+  MAP_TOOLBAR_STACK_GAP,
+} from '@/components/MapPage/MapMobile/MapMobileTopOverlay.styles';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { webTextStyle } from '@/utils/webProps';
 
@@ -22,6 +26,9 @@ const PANEL_RADIUS = 20;
 const CONTROL_RADIUS = 12;
 // Размер вью иконочных контролов карты и есть их тач-таргет — floor проекта 44dp.
 const CONTROL_SIZE = 44;
+// Вертикальные поля гео-баннера на мобиле. Отдельная константа, потому что из
+// неё же считается минимальная высота баннера под абсолютный крестик (#1780).
+const GEO_BANNER_PADDING_VERTICAL_MOBILE = 7;
 
 export const getStyles = (
   isMobile: boolean,
@@ -685,9 +692,11 @@ export const getStyles = (
         // below the safe-area toolbar (design states 1/3) instead of letting a
         // bottom sheet or browser footer cover it. Desktop retains the compact
         // bottom-left placement.
-        // Ряд иконок кончается на ~insetTop+54; пилюли маршрута под ним больше
-        // нет (она уехала в FAB), поэтому баннер подтянут к тулбару вплотную.
-        top: isMobile ? Math.max(insetTop, 8) + 54 : undefined,
+        // #1780 — высоту ряда кнопок больше НЕ дублируем хардкодом: она объявлена
+        // в MapMobileTopOverlay.styles (ряд и баннер живут в разных поддеревьях,
+        // см. mapFilterChips.ts). Прежний хардкод 54 оставлял до тач-рамки ряда
+        // 3 pt, и на iPhone 16 Pro баннер читался как наложение на кнопки.
+        top: isMobile ? getMapToolbarBottom(insetTop) + MAP_TOOLBAR_STACK_GAP : undefined,
         bottom: isMobile ? undefined : 20,
         left: isMobile ? 10 : 16,
         right: isMobile ? 10 : undefined,
@@ -696,11 +705,21 @@ export const getStyles = (
         // усекался до «Геолокация недо…». 520 даёт запас, чтобы статус читался
         // целиком; вне режима маршрута баннер всё равно ужимается по контенту.
         maxWidth: isMobile ? undefined : 520,
-        flexDirection: 'row',
-        alignItems: 'center',
+        // #1780 — на мобиле баннер собран в две строки: статус сверху, действия
+        // снизу. Инлайновая кнопка съедала 135 pt из 355 (замер на iPhone
+        // 13 mini), и текст усекался до «Геолокация недос…». Desktop остаётся
+        // одной строкой — там ширины хватает.
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'center',
+        // Крестик выведен из потока, поэтому высоту баннера он больше НЕ держит.
+        // Без ряда действий (status `unavailable` — ни «Повторить», ни «Открыть
+        // настройки») в баннере остаётся одна строка ~15dp, и 44dp тач-таргет
+        // вместе с видимым кружком вылезал бы за нижний край плашки на карту.
+        // Пол высоты повторяет прежнюю высоту баннера с крестиком в потоке.
+        minHeight: isMobile ? CONTROL_SIZE + GEO_BANNER_PADDING_VERTICAL_MOBILE * 2 : undefined,
         gap: 6,
         paddingHorizontal: isMobile ? 10 : 14,
-        paddingVertical: isMobile ? 7 : 9,
+        paddingVertical: isMobile ? GEO_BANNER_PADDING_VERTICAL_MOBILE : 9,
         backgroundColor: themedColors.warningSoft,
         borderRadius: isMobile ? 12 : 14,
         borderWidth: StyleSheet.hairlineWidth,
@@ -714,6 +733,26 @@ export const getStyles = (
               WebkitBackdropFilter: 'blur(18px)',
             } as any)
           : themedColors.shadows.medium),
+      },
+      /**
+       * Строка статуса: иконка + текст. На мобиле в ней же прячется место под
+       * абсолютный крестик (paddingRight), поэтому он не занимает третью строку.
+       */
+      geoBannerMain: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 7,
+        minWidth: 0,
+        flex: isMobile ? undefined : 1,
+        paddingRight: isMobile ? 30 : 0,
+      },
+      /** Ряд действий баннера: на мобиле — вторая строка, на десктопе — инлайн. */
+      geoBannerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        minWidth: 0,
+        flexShrink: 1,
       },
       geoBannerText: {
         // flex:1 + minWidth:0 обязательны: Text без flex в row на native не
@@ -761,10 +800,17 @@ export const getStyles = (
       // баннера обтягивала крестик, поэтому `hitSlop` до пальца не доходил
       // (#1274). Строку это не растит — кнопки действий рядом уже 44dp.
       geoBannerClose: {
-        width: 44,
-        height: 44,
+        width: CONTROL_SIZE,
+        height: CONTROL_SIZE,
         alignItems: 'center',
         justifyContent: 'center',
+        // #1780 — на мобиле баннер стал двухстрочным, и крестик в потоке уехал бы
+        // третьей строкой. Абсолютная позиция держит его в правом верхнем углу и
+        // не растит высоту; место под него резервирует geoBannerMain.paddingRight,
+        // а тач-таргет целиком укладывается в minHeight баннера.
+        ...(isMobile
+          ? ({ position: 'absolute' as const, right: 2, top: 0 })
+          : null),
         ...(Platform.OS === 'web'
           ? ({ cursor: 'pointer' } as any)
           : null),

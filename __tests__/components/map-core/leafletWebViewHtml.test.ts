@@ -11,6 +11,7 @@ import {
   buildNativeMapHtml,
   toNativeOverlayLayerDefinitions,
 } from '@/components/MapPage/Map/nativeMapHtml';
+import { USER_LOCATION_MARKER_SIZE } from '@/components/MapPage/Map/mapMarkerStyles';
 import { buildNativeWeatherTempLabelsScript } from '@/components/MapPage/Map/nativeWeatherTempLabelsScript';
 import {
   NATIVE_BASE_MIN_ZOOM_GLOBAL,
@@ -266,7 +267,11 @@ describe('buildNativeMapHtml — engine regression invariants', () => {
     expect(html).toContain("userLocationPane.style.zIndex = '625'");
     expect(html).toContain("userLocationPane.style.pointerEvents = 'none'");
     expect(html).toContain("className: 'metravel-pin-marker metravel-pin-marker-user'");
-    expect(html).toContain('iconSize: [30, 30]');
+    // #1780 — размер маркера объявлен один раз в mapMarkerStyles и общий с web,
+    // поэтому проверяем контракт, а не переписанное число.
+    expect(html).toContain(
+      `iconSize: [${USER_LOCATION_MARKER_SIZE}, ${USER_LOCATION_MARKER_SIZE}]`,
+    );
     expect(html).toContain('pane: USER_LOCATION_PANE');
     expect(html).toContain('interactive: false');
     expect(html).toContain('const dot = L.marker([lat, lng]');

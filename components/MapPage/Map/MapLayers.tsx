@@ -3,7 +3,7 @@
  * @module components/MapPage/Map/MapLayers
  */
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import type { LatLng } from '@/types/coordinates';
 import { getLiveUserPosition, subscribeLiveUserPosition } from '@/hooks/map/liveUserPosition';
@@ -13,6 +13,10 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { getOsmTileUrl, OSM_PROXY_ATTRIBUTION, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
 import { translate as i18nT } from '@/i18n'
 
+
+/** Имя и z-index pane «вы здесь» — те же, что у native-карты (nativeMapHtml.ts). */
+const USER_LOCATION_PANE = 'metravel-user-location';
+const USER_LOCATION_PANE_Z_INDEX = 625;
 
 const isTestEnv =
   typeof process !== 'undefined' &&
@@ -54,11 +58,6 @@ interface MapLayersProps {
   userLocationIcon: any;
 
   /**
-   * Dedicated pane for user location marker on web.
-   */
-  userLocationPaneName?: string;
-
-  /**
    * Map instance (for rendering check)
    */
   mapInstance: any;
@@ -88,7 +87,6 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
   radiusInMeters,
   userLocation,
   userLocationIcon,
-  userLocationPaneName,
   mapInstance,
 }) => {
   const colors = useThemedColors();
@@ -144,6 +142,41 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
     }
     return [validUserLocation.lat, validUserLocation.lng];
   }, [validUserLocation]);
+
+  // #1780 — «вы здесь» на web жил в общем markerPane (600) вместе с POI и
+  // кластерами. Leaflet сортирует их по широте, поэтому кластер, стоящий чуть
+  // севернее, полностью закрывал точку пользователя (браузерная проба: маркер
+  // целиком под бейджем кластера «5»). Native уже решает это отдельным pane
+  // (nativeMapHtml.ts, z-index 625, тот же фикс #1404) — web повторяет его
+  // контракт: 625 держит точку выше markerPane, но ниже tooltip/popup (650/700).
+  // pointerEvents:none обязателен — pane чисто визуальный и не должен
+  // перехватывать тап у совпадающего POI/кластера снизу.
+  const [userLocationPaneName, setUserLocationPaneName] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!mapInstance?.createPane || !mapInstance?.getPane) return;
+    try {
+      // `utils/leafletFix` патчит Map.getPane в get-or-create, поэтому проверка
+      // «pane ещё нет» здесь невозможна: getPane САМ создаёт узел — но без
+      // стилей. Отсюда правило: берём pane и КАЖДЫЙ раз применяем стиль, а не
+      // только в ветке создания. `createPane` остаётся фолбэком для ванильного
+      // Leaflet (jest/native), где патча нет.
+      const pane =
+        mapInstance.getPane(USER_LOCATION_PANE) ?? mapInstance.createPane(USER_LOCATION_PANE);
+      // Тот же патч на мёртвой/пересоздаваемой карте отдаёт detached-заглушку —
+      // вешать на неё маркер нельзя, он просто исчезнет с карты.
+      if (!pane || pane.isConnected === false) {
+        setUserLocationPaneName(undefined);
+        return;
+      }
+      pane.style.zIndex = String(USER_LOCATION_PANE_Z_INDEX);
+      pane.style.pointerEvents = 'none';
+      setUserLocationPaneName(USER_LOCATION_PANE);
+    } catch {
+      // Pane недоступен — маркер остаётся в markerPane, как раньше.
+      setUserLocationPaneName(undefined);
+    }
+  }, [mapInstance]);
 
   const shouldRenderBaseTileLayer = Platform.OS !== 'web' || isTestEnv;
   const userLocationLabel = i18nT('map:components.MapPage.Map.MapLayers.vy_zdes_ba4a137a');

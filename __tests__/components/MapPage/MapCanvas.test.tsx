@@ -208,6 +208,39 @@ describe('MapCanvas', () => {
     expect(screen.queryByTestId('map-geo-retry')).toBeNull()
   })
 
+  // #1780 — на мобиле статус и действия стоят разными строками. Если действий
+  // нет (геолокация недоступна в принципе: ни «Повторить», ни «Открыть
+  // настройки»), пустая вторая строка добавила бы баннеру только gap.
+  it('drops the geo banner action row when there is nothing to offer', () => {
+    const screen = render(
+      <MapCanvas
+        {...baseProps}
+        isMobile
+        showProgress={false}
+        showGeoBanner
+        locationState={{
+          status: 'unavailable',
+          coordinates: null,
+          accuracy: null,
+          timestamp: null,
+          canAskAgain: false,
+        }}
+      />,
+    )
+
+    expect(screen.getByTestId('map-geo-banner')).toBeTruthy()
+    expect(screen.queryByTestId('map-geo-banner-actions')).toBeNull()
+  })
+
+  it('keeps the geo banner action row while at least one action is offered', () => {
+    const screen = render(
+      <MapCanvas {...baseProps} isMobile showProgress={false} showGeoBanner />,
+    )
+
+    expect(screen.getByTestId('map-geo-banner-actions')).toBeTruthy()
+    expect(screen.getByTestId('map-geo-retry')).toBeTruthy()
+  })
+
   it('shows when a trusted live fix is temporarily refreshing', () => {
     const screen = render(
       <MapCanvas

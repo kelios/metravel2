@@ -252,24 +252,41 @@ export const buildMapPinHtml = (accentColor: string) => {
   `
 }
 
-export const buildUserLocationHtml = (accentColor: string) => {
-  const accent = sanitizeCssValue(
-    accentColor,
-    String(DESIGN_TOKENS.colors.accent),
-  )
-  const surface = sanitizeCssValue(
-    String(DESIGN_TOKENS.colors.surface),
-    '#ffffff',
-  )
+/**
+ * #1780 — цвет маркера «вы здесь». Намеренно НЕ из общей палитры:
+ *  - бренд-оранжевый занят POI-пинами, и пользователь не отличал себя от точки;
+ *  - матовый `accent` (#8a9aa8) сливался с серо-голубыми тайлами OSM, поэтому
+ *    маркер был не только неотличим, но и просто плохо заметен.
+ * Насыщенный синий — конвенция GPS-точки (Google/Apple/OSM/2ГИС): он читается
+ * как «я», а не как «объект», без подписи и без обучения.
+ */
+const USER_LOCATION_CORE = '#1a6fd4'
+const USER_LOCATION_HALO = '#4a93e8'
+/**
+ * Кольцо всегда белое, в обеих темах: на тёмных тайлах белая обводка — главный
+ * контур, дающий точке контраст. Тематический `surface` в тёмной теме сделал бы
+ * кольцо тёмным и растворил бы маркер.
+ */
+const USER_LOCATION_RING = '#ffffff'
+
+export const USER_LOCATION_MARKER_COLOR = USER_LOCATION_CORE
+/** Размер divIcon маркера «вы здесь» — общий контракт web и native WebView. */
+export const USER_LOCATION_MARKER_SIZE = 38
+
+export const buildUserLocationHtml = () => {
+  const core = sanitizeCssValue(USER_LOCATION_CORE, '#1a6fd4')
+  const halo = sanitizeCssValue(USER_LOCATION_HALO, '#4a93e8')
+  const ring = sanitizeCssValue(USER_LOCATION_RING, '#ffffff')
 
   // "You are here" GPS dot — distinct from POI teardrop pins: a centered core
   // dot with a white ring and an expanding pulse halo. Transparency comes from
-  // element `opacity` (accent is a CSS var() on web, so alpha-hex can't append).
+  // element `opacity` (colours stay literal hex so the same markup renders in
+  // the native WebView, where CSS custom properties of the app are absent).
   return `
     <div style="
       position: relative;
-      width: 30px;
-      height: 30px;
+      width: ${USER_LOCATION_MARKER_SIZE}px;
+      height: ${USER_LOCATION_MARKER_SIZE}px;
       box-sizing: border-box;
       pointer-events: none;
       user-select: none;
@@ -278,12 +295,12 @@ export const buildUserLocationHtml = (accentColor: string) => {
         position: absolute;
         left: 50%;
         top: 50%;
-        width: 26px;
-        height: 26px;
-        margin-left: -13px;
-        margin-top: -13px;
+        width: 32px;
+        height: 32px;
+        margin-left: -16px;
+        margin-top: -16px;
         border-radius: 999px;
-        background: ${accent};
+        background: ${halo};
         opacity: 0.45;
         transform: scale(0.6);
         animation: metravelUserPulse 2.4s ease-out infinite;
@@ -293,31 +310,31 @@ export const buildUserLocationHtml = (accentColor: string) => {
         position: absolute;
         left: 50%;
         top: 50%;
-        width: 22px;
-        height: 22px;
-        margin-left: -11px;
-        margin-top: -11px;
+        width: 28px;
+        height: 28px;
+        margin-left: -14px;
+        margin-top: -14px;
         border-radius: 999px;
-        background: ${accent};
-        opacity: 0.16;
+        background: ${halo};
+        opacity: 0.2;
         box-sizing: border-box;
       "></div>
       <div style="
         position: absolute;
         left: 50%;
         top: 50%;
-        width: 16px;
-        height: 16px;
-        margin-left: -8px;
-        margin-top: -8px;
+        width: 20px;
+        height: 20px;
+        margin-left: -10px;
+        margin-top: -10px;
         border-radius: 999px;
         background:
-          radial-gradient(circle at 34% 30%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 42%),
-          ${accent};
-        border: 3px solid ${surface};
+          radial-gradient(circle at 34% 30%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 42%),
+          ${core};
+        border: 4px solid ${ring};
         box-shadow:
-          0 2px 6px rgba(30, 20, 10, 0.32),
-          0 1px 2px rgba(30, 20, 10, 0.25);
+          0 2px 8px rgba(12, 24, 44, 0.42),
+          0 1px 2px rgba(12, 24, 44, 0.3);
         box-sizing: border-box;
       "></div>
     </div>

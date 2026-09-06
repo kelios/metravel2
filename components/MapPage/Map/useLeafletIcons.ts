@@ -6,6 +6,7 @@ import {
   buildBirdMarkerHtml,
   buildMapPinHtml,
   buildUserLocationHtml,
+  USER_LOCATION_MARKER_SIZE,
 } from './mapMarkerStyles'
 
 export const useLeafletIcons = (L: any) => {
@@ -36,15 +37,16 @@ export const useLeafletIcons = (L: any) => {
     }
 
     const makeUserLocationPin = () => {
-      const html = buildUserLocationHtml(DESIGN_TOKENS.colors.accent)
+      const html = buildUserLocationHtml()
+      const half = USER_LOCATION_MARKER_SIZE / 2
       return L.divIcon({
         className: 'metravel-pin-marker metravel-pin-marker-user',
         html,
-        iconSize: [30, 30],
+        iconSize: [USER_LOCATION_MARKER_SIZE, USER_LOCATION_MARKER_SIZE],
         // Centered anchor: a GPS "you are here" dot is centered on the fix,
         // not bottom-anchored like a teardrop POI pin.
-        iconAnchor: [15, 15],
-        popupAnchor: [0, -16],
+        iconAnchor: [half, half],
+        popupAnchor: [0, -half - 1],
       })
     }
 

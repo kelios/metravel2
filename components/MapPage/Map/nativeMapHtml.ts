@@ -18,7 +18,12 @@ import {
   NATIVE_BASE_MIN_ZOOM_SCRIPT,
   buildNativeTileBridgeScript,
 } from './nativeTileBridgeScript';
-import { buildBirdMarkerHtml, buildUserLocationHtml } from './mapMarkerStyles';
+import {
+  buildBirdMarkerHtml,
+  buildUserLocationHtml,
+  USER_LOCATION_MARKER_COLOR,
+  USER_LOCATION_MARKER_SIZE,
+} from './mapMarkerStyles';
 import { buildNativeWeatherTempLabelsScript } from './nativeWeatherTempLabelsScript';
 
 const DEFAULT_LAT = 53.8828449;
@@ -48,9 +53,12 @@ export const toNativeOverlayLayerDefinitions = (
 
 const NATIVE_OVERLAY_LAYERS = toNativeOverlayLayerDefinitions(getActiveOverlayLayers());
 
-const USER_LOCATION_COLOR = DESIGN_TOKENS.colors.accent;
+// #1780 — цвет «вы здесь» задан самим маркером (см. mapMarkerStyles): матовый
+// accent сливался с тайлами, а бренд-оранжевый — с POI-пинами. Accuracy-круг
+// красится тем же цветом, чтобы точка и её погрешность читались как одно целое.
+const USER_LOCATION_COLOR = USER_LOCATION_MARKER_COLOR;
 const BIRD_MARKER_HTML = buildBirdMarkerHtml();
-const USER_LOCATION_MARKER_HTML = buildUserLocationHtml(USER_LOCATION_COLOR);
+const USER_LOCATION_MARKER_HTML = buildUserLocationHtml();
 export const buildNativeMapHtml = ({
   themeColors,
   markerShadowColor,
@@ -268,12 +276,12 @@ ${buildInvalidateSchedulerScript({
         const userLocationIcon = L.divIcon({
           className: 'metravel-pin-marker metravel-pin-marker-user',
           html: ${serializeForInlineScript(USER_LOCATION_MARKER_HTML)},
-          iconSize: [30, 30],
-          iconAnchor: [15, 15],
-          popupAnchor: [0, -16]
+          iconSize: [${USER_LOCATION_MARKER_SIZE}, ${USER_LOCATION_MARKER_SIZE}],
+          iconAnchor: [${USER_LOCATION_MARKER_SIZE / 2}, ${USER_LOCATION_MARKER_SIZE / 2}],
+          popupAnchor: [0, ${-USER_LOCATION_MARKER_SIZE / 2 - 1}]
         });
 
-        // Рисует тот же заметный 30px GPS-маркер, что mobile web, и accuracy-круг.
+        // Рисует тот же заметный GPS-маркер, что mobile web, и accuracy-круг.
         // map.__realUserLocation коммитится только после успешного добавления обоих
         // слоёв: камера не должна центрироваться на точке, которой визуально нет.
         window.__metravelRenderUserLocation = function(lat, lng) {
