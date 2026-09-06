@@ -109,6 +109,8 @@ export type QuestMeta = {
      */
     viewsCount: number;
     isCompletedByMe: boolean;
+    /** Shared offline metadata or a pending identity refresh cannot identify others. */
+    personalStatusUnavailable?: boolean;
     firstCompleter: ApiQuestFirstCompleter | null;
 };
 
@@ -676,6 +678,8 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
         completionsCount: apiMeta.completions_count ?? 0,
         viewsCount: apiMeta.views_count ?? 0,
         isCompletedByMe: apiMeta.is_completed_by_me ?? false,
+        personalStatusUnavailable: apiMeta.personal_status_unavailable === true
+            || typeof apiMeta.is_completed_by_me !== 'boolean',
         firstCompleter: adaptFirstCompleter(apiMeta.first_completer),
     };
 }

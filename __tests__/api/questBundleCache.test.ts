@@ -28,7 +28,8 @@ import {
   QUEST_BUNDLE_CACHE_PREFIX,
   QUEST_LIST_CACHE_KEY,
 } from '@/api/questBundleCache'
-import { adaptBundle } from '@/utils/questAdapters'
+import { adaptBundle, adaptMeta } from '@/utils/questAdapters'
+import { filterQuestsCompletedByOthers } from '@/utils/questCatalogSelection'
 
 jest.mock('@/api/client', () => ({
   apiClient: { get: jest.fn(), post: jest.fn(), patch: jest.fn(), delete: jest.fn() },
@@ -176,14 +177,17 @@ describe('questsList offline round-trip', () => {
     mockOfflinePackages.clear()
   })
 
-  it('writes and reads back the raw list unchanged', async () => {
+  it('preserves public metadata and marks the shared snapshot personal status unavailable', async () => {
     const list = makeRawMeta()
     await writeCachedQuestsList(list, 1_700_000_000_000)
 
     const stored = await AsyncStorage.getItem(QUEST_LIST_CACHE_KEY)
     expect(stored).toContain('"version":1')
 
-    expect(await readCachedQuestsList()).toEqual(list)
+    expect(await readCachedQuestsList()).toEqual(list.map((quest) => ({
+      ...quest,
+      personal_status_unavailable: true,
+    })))
   })
 
   it('returns null when nothing is cached', async () => {
@@ -213,6 +217,22 @@ describe('questsList offline round-trip', () => {
   it('rethrows when the list fetch fails and there is no cache', async () => {
     mockedGet.mockRejectedValue(new Error('offline'))
     await expect(fetchQuestsList()).rejects.toThrow('offline')
+  })
+
+  it('does not attribute sanitized own completions to others and restores filtering after a fresh response', async () => {
+    const mineOnly = { ...makeRawMeta()[0], is_completed_by_me: true, completions_count: 1 }
+    await writeCachedQuestsList([mineOnly])
+    mockedGet.mockRejectedValue(new Error('offline'))
+
+    const offline = (await fetchQuestsList()).map(adaptMeta)
+    expect(offline[0]).toMatchObject({ isCompletedByMe: false, completionsCount: 1, personalStatusUnavailable: true })
+    expect(filterQuestsCompletedByOthers(offline)).toEqual([])
+
+    // A fresh successful response replaces the shared snapshot, including its marker.
+    mockedGet.mockResolvedValue([{ ...mineOnly, is_completed_by_me: false }])
+    const online = (await fetchQuestsList()).map(adaptMeta)
+    expect(online[0].personalStatusUnavailable).toBe(false)
+    expect(filterQuestsCompletedByOthers(online).map((quest) => quest.id)).toEqual([QUEST_ID])
   })
 })
 
@@ -253,6 +273,7 @@ describe('questsList cache keeps personal fields out of device-shared storage', 
     const cached = await readCachedQuestsList()
     expect(cached?.[0]?.is_completed_by_me).toBe(false)
     expect(cached?.[0]?.user_rating).toBeNull()
+    expect(cached?.[0]?.personal_status_unavailable).toBe(true)
   })
 
   it('does not show the previous account completions in the offline catalog', async () => {

@@ -1,5 +1,5 @@
 // screens/tabs/useQuestPersonalSlices.ts
-// Личные срезы каталога квестов «Пройденные» / «Не пройденные» (#1791).
+// Срезы каталога по прохождениям: мной, другими и ещё не пройдено мной.
 //
 // Отдельный модуль, а не блок в `QuestsScreen.tsx`: экран уже на потолке
 // `guard-file-complexity-changed` (800 LOC), и вся эта логика — один связный
@@ -12,13 +12,17 @@ import { useAuthStore } from '@/stores/authStore';
 
 import {
     COMPLETED_FILTER_ID,
+    COMPLETED_BY_OTHERS_FILTER_ID,
     UNCOMPLETED_FILTER_ID,
     filterQuestsByCompletion,
+    filterQuestsCompletedByOthers,
 } from './QuestsScreen.helpers';
 
 export type QuestPersonalSlices<T> = {
     /** Показывать строку «Пройденные» в сайдбаре и мобильном drawer. */
     showCompletedFilter: boolean;
+    /** Есть квесты, пройденные хотя бы одним другим игроком. */
+    showCompletedByOthersFilter: boolean;
     /** Показывать строку «Не пройденные». */
     showUncompletedFilter: boolean;
     /** Счётчики личных срезов для `cityQuestCountById`. */
@@ -43,12 +47,13 @@ export type QuestPersonalSlices<T> = {
  * Узкие подписки вместо `useAuth()`: тот отдаёт весь срез стора, и каталог
  * перерисовывался бы на смену аватара или счётчика обновления профиля.
  */
-export function useQuestPersonalSlices<T extends { isCompletedByMe?: boolean }>(
+export function useQuestPersonalSlices<T extends { isCompletedByMe?: boolean; completionsCount?: number }>(
     quests: T[],
 ): QuestPersonalSlices<T> {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const authReady = useAuthStore((state) => state.authReady);
     const completed = useMemo(() => filterQuestsByCompletion(quests, true), [quests]);
+    const completedByOthers = useMemo(() => filterQuestsCompletedByOthers(quests), [quests]);
     const uncompleted = useMemo(() => filterQuestsByCompletion(quests, false), [quests]);
 
     return useMemo(() => {
@@ -58,21 +63,26 @@ export function useQuestPersonalSlices<T extends { isCompletedByMe?: boolean }>(
         // дословно повторяет весь каталог, а при закрытом каталоге вёл бы в
         // пустую сетку без объяснения.
         const showCompletedFilter = isAuthenticated;
+        const showCompletedByOthersFilter = isAuthenticated && completedByOthers.length > 0;
         const showUncompletedFilter = isAuthenticated
             && completed.length > 0
             && uncompleted.length > 0;
         const isPersonalSliceId = (selectedCityId: string | null) =>
-            selectedCityId === COMPLETED_FILTER_ID || selectedCityId === UNCOMPLETED_FILTER_ID;
+            selectedCityId === COMPLETED_FILTER_ID || selectedCityId === UNCOMPLETED_FILTER_ID
+            || selectedCityId === COMPLETED_BY_OTHERS_FILTER_ID;
 
         return {
             showCompletedFilter,
+            showCompletedByOthersFilter,
             showUncompletedFilter,
             counts: {
                 [COMPLETED_FILTER_ID]: completed.length,
+                [COMPLETED_BY_OTHERS_FILTER_ID]: completedByOthers.length,
                 [UNCOMPLETED_FILTER_ID]: uncompleted.length,
             },
             sliceFor: (selectedCityId) => {
                 if (selectedCityId === COMPLETED_FILTER_ID) return completed;
+                if (selectedCityId === COMPLETED_BY_OTHERS_FILTER_ID) return completedByOthers;
                 if (selectedCityId === UNCOMPLETED_FILTER_ID) return uncompleted;
                 return null;
             },
@@ -85,10 +95,11 @@ export function useQuestPersonalSlices<T extends { isCompletedByMe?: boolean }>(
             isSelectionValid: (selectedCityId) => {
                 if (!isPersonalSliceId(selectedCityId)) return false;
                 if (!authReady) return true;
+                if (selectedCityId === COMPLETED_BY_OTHERS_FILTER_ID) return showCompletedByOthersFilter;
                 return selectedCityId === COMPLETED_FILTER_ID
                     ? showCompletedFilter
                     : showUncompletedFilter;
             },
         };
-    }, [authReady, completed, isAuthenticated, uncompleted]);
+    }, [authReady, completed, completedByOthers, isAuthenticated, uncompleted]);
 }

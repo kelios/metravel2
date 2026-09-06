@@ -196,7 +196,7 @@ describe('QuestsContentPanel', () => {
             />,
         );
 
-        expect(getByText('Пройденные квесты')).toBeTruthy();
+        expect(getByText('Квесты, пройденные мной')).toBeTruthy();
         expect(getByText('Вы ещё не прошли ни одного квеста')).toBeTruthy();
         fireEvent.press(getByText('Выбрать первый квест'));
         expect(onResetFilters).toHaveBeenCalledTimes(1);
@@ -207,7 +207,7 @@ describe('QuestsContentPanel', () => {
             <QuestsContentPanel {...makeBaseProps()} selectedCityId="__completed__" selectedCityName={null} />,
         );
 
-        expect(getByTestId('quests-content-title').props.children).toBe('Пройденные квесты');
+        expect(getByTestId('quests-content-title').props.children).toBe('Квесты, пройденные мной');
         expect(queryByText('Вы ещё не прошли ни одного квеста')).toBeNull();
 
         // Пустой срез «Не пройденные» — не тот же случай: объяснение про
@@ -221,7 +221,16 @@ describe('QuestsContentPanel', () => {
             />,
         );
 
-        expect(getByTestId('quests-content-title').props.children).toBe('Ещё не пройденные');
+        expect(getByTestId('quests-content-title').props.children).toBe('Квесты, ещё не пройденные мной');
+        expect(queryByText('Вы ещё не прошли ни одного квеста')).toBeNull();
+    });
+
+    it.each([false, true])('names other players explicitly in the completion slice (mobile=%s)', (mobile) => {
+        mockIsMobile = mobile;
+        const { getByTestId, queryByText } = render(
+            <QuestsContentPanel {...makeBaseProps()} selectedCityId="__completed_by_others__" selectedCityName={null} />,
+        );
+        expect(getByTestId('quests-content-title').props.children).toBe('Квесты, пройденные другими');
         expect(queryByText('Вы ещё не прошли ни одного квеста')).toBeNull();
     });
 

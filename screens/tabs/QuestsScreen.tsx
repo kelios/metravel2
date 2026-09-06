@@ -1,5 +1,3 @@
-// src/screens/tabs/QuestsScreen.tsx
-// Redesigned: Two-column layout like search page
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import {
     View, Pressable, Platform,
@@ -38,6 +36,7 @@ import {
     BIKE_FILTER_ID,
     REVIEWED_FILTER_ID,
     COMPLETED_FILTER_ID,
+    COMPLETED_BY_OTHERS_FILTER_ID,
     UNCOMPLETED_FILTER_ID,
     filterReviewedQuests,
     buildQuestCityCatalog,
@@ -57,12 +56,9 @@ import { canRankQuestsByPopularity, sortQuestsByPopularity } from '@/utils/quest
 import { useQuestCatalogHandoff } from './useQuestCatalogHandoff';
 import { createCollator, translate as i18nT } from '@/i18n'
 
-
 const { spacing, radii } = DESIGN_TOKENS;
 
 const LazyQuestMap = React.lazy(() => import('@/components/MapPage/Map.web'));
-
-// ───────────── Main screen (Redesigned) ─────────────
 
 export default function QuestsScreen() {
     // #1484: заход в каталог после ранее завершённого квеста — это и есть
@@ -597,6 +593,9 @@ export default function QuestsScreen() {
         if (selectedCityId === COMPLETED_FILTER_ID) {
             return i18nT('quests:screens.tabs.QuestsScreen.completedSeoTitle');
         }
+        if (selectedCityId === COMPLETED_BY_OTHERS_FILTER_ID) {
+            return i18nT('quests:screens.tabs.QuestsScreen.completedByOthersSeoTitle');
+        }
         if (selectedCityId === UNCOMPLETED_FILTER_ID) {
             return i18nT('quests:screens.tabs.QuestsScreen.uncompletedSeoTitle');
         }
@@ -709,6 +708,7 @@ export default function QuestsScreen() {
                             kidsFilterId={KIDS_FILTER_ID}
                             bikeFilterId={BIKE_FILTER_ID}
                             showCompletedFilter={personalSlices.showCompletedFilter}
+                            showCompletedByOthersFilter={personalSlices.showCompletedByOthersFilter}
                             showUncompletedFilter={personalSlices.showUncompletedFilter}
                             areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
                             collapsedCountryCodes={collapsedCountryCodes}
@@ -741,6 +741,7 @@ export default function QuestsScreen() {
                         kidsFilterId={KIDS_FILTER_ID}
                         bikeFilterId={BIKE_FILTER_ID}
                         showCompletedFilter={personalSlices.showCompletedFilter}
+                        showCompletedByOthersFilter={personalSlices.showCompletedByOthersFilter}
                         showUncompletedFilter={personalSlices.showUncompletedFilter}
                         areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
                         collapsedCountryCodes={collapsedCountryCodes}

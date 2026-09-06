@@ -81,7 +81,12 @@ type CachedQuestsListEnvelope = {
  * и `views_count` опирается офлайн-отбор популярных для промо-блока (#1798).
  */
 function stripPersonalQuestFields(list: ApiQuestMeta[]): ApiQuestMeta[] {
-    return list.map((quest) => ({ ...quest, is_completed_by_me: false, user_rating: null }));
+    return list.map((quest) => ({
+        ...quest,
+        is_completed_by_me: false,
+        user_rating: null,
+        personal_status_unavailable: true,
+    }));
 }
 
 /**

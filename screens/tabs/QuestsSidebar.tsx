@@ -9,7 +9,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 
 import type { City, NearbyCity } from './questsShared';
 import { pluralizeQuest } from './questsShared';
-import { COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID } from './QuestsScreen.helpers';
+import { COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID } from './QuestsScreen.helpers';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -122,7 +122,7 @@ type SidebarFilterRowProps = {
 
 // Виртуальный срез каталога в списке городов: та же строка, что и город, но с
 // собственной иконкой. Отдельным компонентом — потому что таких срезов уже
-// три (отзывы, пройденные, не пройденные), и порознь они разъезжались бы в
+// несколько (отзывы и прохождения), и порознь они разъезжались бы в
 // разметке и состояниях.
 function SidebarFilterRow({
     styles,
@@ -180,6 +180,7 @@ type QuestsSidebarProps = {
     bikeFilterId: string;
     /** Личные срезы каталога показываются только вошедшему игроку (#1791). */
     showCompletedFilter?: boolean;
+    showCompletedByOthersFilter?: boolean;
     showUncompletedFilter?: boolean;
     areAllCountryGroupsCollapsed: boolean;
     collapsedCountryCodes: Record<string, boolean>;
@@ -204,6 +205,7 @@ export default function QuestsSidebar({
     kidsFilterId,
     bikeFilterId,
     showCompletedFilter = false,
+    showCompletedByOthersFilter = false,
     showUncompletedFilter = false,
     areAllCountryGroupsCollapsed,
     collapsedCountryCodes,
@@ -225,8 +227,10 @@ export default function QuestsSidebar({
     const reviewedQuestCount = cityQuestCountById[REVIEWED_FILTER_ID] || 0;
     const isReviewedSelected = selectedCityId === REVIEWED_FILTER_ID;
     const completedQuestCount = cityQuestCountById[COMPLETED_FILTER_ID] || 0;
+    const completedByOthersQuestCount = cityQuestCountById[COMPLETED_BY_OTHERS_FILTER_ID] || 0;
     const uncompletedQuestCount = cityQuestCountById[UNCOMPLETED_FILTER_ID] || 0;
     const isCompletedSelected = selectedCityId === COMPLETED_FILTER_ID;
+    const isCompletedByOthersSelected = selectedCityId === COMPLETED_BY_OTHERS_FILTER_ID;
     const isUncompletedSelected = selectedCityId === UNCOMPLETED_FILTER_ID;
     const mapActionActive = viewMode === 'map';
     const mapActionLabel = viewMode === 'map' ? i18nT('quests:screens.tabs.QuestsSidebar.pokazat_kvesty_spiskom_0029a3b3') : i18nT('quests:screens.tabs.QuestsSidebar.pokazat_kvesty_na_karte_d06a6df4');
@@ -353,6 +357,20 @@ export default function QuestsSidebar({
                         onPress={() => onSelectCity(COMPLETED_FILTER_ID)}
                         accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.completedA11y', { value1: pluralizeQuest(completedQuestCount) })}
                         testID="quests-sidebar-completed-button"
+                    />
+                )}
+                {showCompletedByOthersFilter && (
+                    <SidebarFilterRow
+                        styles={styles}
+                        colors={colors}
+                        iconSize={iconSize}
+                        icon="users"
+                        label={i18nT('quests:screens.tabs.QuestsSidebar.completedByOthersLabel')}
+                        count={completedByOthersQuestCount}
+                        active={isCompletedByOthersSelected}
+                        onPress={() => onSelectCity(COMPLETED_BY_OTHERS_FILTER_ID)}
+                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.completedByOthersA11y', { value1: pluralizeQuest(completedByOthersQuestCount) })}
+                        testID="quests-sidebar-completed-by-others-button"
                     />
                 )}
                 {showUncompletedFilter && (

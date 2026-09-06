@@ -5,7 +5,7 @@
  * управления), сами срезы, счётчики и то, что выход из аккаунта не оставляет
  * каталог в личном фильтре.
  */
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import type { ComponentProps } from 'react';
@@ -14,6 +14,7 @@ import type { QuestMeta } from '@/utils/questAdapters';
 import {
     ALL_QUESTS_ID,
     COMPLETED_FILTER_ID,
+    COMPLETED_BY_OTHERS_FILTER_ID,
     STORAGE_SELECTED_CITY,
     UNCOMPLETED_FILTER_ID,
 } from '@/screens/tabs/QuestsScreen.helpers';
@@ -101,6 +102,7 @@ describe.each([false, true])('personal catalog slices (mobile=%s)', (mobile) => 
 
         expect(queryByTestId('quests-sidebar-completed-button')).toBeNull();
         expect(queryByTestId('quests-sidebar-uncompleted-button')).toBeNull();
+        expect(queryByTestId('quests-sidebar-completed-by-others-button')).toBeNull();
         expect(mockContentProps.questsAll).toHaveLength(4);
     });
 
@@ -126,6 +128,126 @@ describe.each([false, true])('personal catalog slices (mobile=%s)', (mobile) => 
         fireEvent.press(getByTestId('quests-sidebar-uncompleted-button'));
         await waitFor(() => expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(['fresh-one', 'fresh-two']));
         expect(mockContentProps.selectedCityId).toBe(UNCOMPLETED_FILTER_ID);
+    });
+});
+
+const SHARED_CATALOG = () => [
+    quest('mine-only', true),
+    { ...quest('other-only', false), completionsCount: 3 },
+    { ...quest('mine-and-other', true), completionsCount: 2 },
+    quest('nobody', false),
+];
+
+describe.each([false, true])('completed by others (mobile=%s)', (mobile) => {
+    it('counts quests rather than completions and includes shared completions, excluding mine-only and untouched quests', async () => {
+        mockMobile = mobile;
+        mockQuests = SHARED_CATALOG();
+        signIn();
+        const { getByTestId, getByText } = render(<QuestsScreen />);
+        await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
+        if (mobile) fireEvent.press(getByTestId('open-filters'));
+
+        expect(getByText('Пройдено мной')).toBeTruthy();
+        expect(getByText('Пройдено другими')).toBeTruthy();
+        expect(getByText('Ещё не пройдено мной')).toBeTruthy();
+        const others = getByTestId('quests-sidebar-completed-by-others-button');
+        expect(others.props.accessibilityLabel).toBe('Пройденные другими игроками квесты, 2 квеста');
+        expect(getByTestId('quests-sidebar-completed-button').props.accessibilityLabel)
+            .toBe('Пройденные мной квесты, 2 квеста');
+        fireEvent.press(others);
+        await waitFor(() => expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(['other-only', 'mine-and-other']));
+        expect(mockContentProps.selectedCityId).toBe(COMPLETED_BY_OTHERS_FILTER_ID);
+        expect(mockContentProps.filtersActive).toBe(true);
+        expect(AsyncStorage.setItem).toHaveBeenCalledWith(STORAGE_SELECTED_CITY, COMPLETED_BY_OTHERS_FILTER_ID);
+
+        if (mobile) fireEvent.press(getByTestId('open-filters'));
+        expect(getByTestId('quests-sidebar-completed-by-others-button').props.accessibilityState.selected).toBe(true);
+        fireEvent.press(getByTestId('quests-sidebar-completed-button'));
+        await waitFor(() => expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(['mine-only', 'mine-and-other']));
+        await act(async () => {
+            await mockContentProps.onResetFilters();
+        });
+        await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
+        expect(mockContentProps.questsAll).toHaveLength(4);
+    });
+
+    it('sorts within the others slice and preserves global search and city navigation', async () => {
+        mockMobile = mobile;
+        mockQuests = SHARED_CATALOG().reverse();
+        signIn();
+        const { getByTestId, getByLabelText } = render(<QuestsScreen />);
+        await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
+        if (mobile) fireEvent.press(getByTestId('open-filters'));
+        fireEvent.press(getByTestId('quests-sidebar-completed-by-others-button'));
+        await waitFor(() => expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(['mine-and-other', 'other-only']));
+        expect(mockContentProps.popularSortAvailable).toBe(true);
+        act(() => mockContentProps.onTogglePopularSort?.());
+        await waitFor(() => expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(['other-only', 'mine-and-other']));
+
+        act(() => mockContentProps.onSearchChange('mine-only'));
+        await waitFor(() => expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(['mine-only']));
+        act(() => mockContentProps.onSearchChange(''));
+        await waitFor(() => expect(mockContentProps.questsAll).toHaveLength(2));
+        expect(mockContentProps.selectedCityId).toBe(COMPLETED_BY_OTHERS_FILTER_ID);
+
+        if (mobile) fireEvent.press(getByTestId('open-filters'));
+        fireEvent.press(getByLabelText('Минск, 4 квеста'));
+        await waitFor(() => expect(mockContentProps.selectedCityId).toBe('minsk'));
+        expect(mockContentProps.questsAll).toHaveLength(4);
+    });
+
+    it('restores the others slice through authentication hydration and resets it on sign-out', async () => {
+        mockMobile = mobile;
+        mockQuests = SHARED_CATALOG();
+        await AsyncStorage.setItem(STORAGE_SELECTED_CITY, COMPLETED_BY_OTHERS_FILTER_ID);
+        useAuthStore.setState({ isAuthenticated: false, authReady: false, userId: null });
+        const { rerender } = render(<QuestsScreen />);
+        await waitFor(() => expect(mockContentProps.selectedCityId).toBe(COMPLETED_BY_OTHERS_FILTER_ID));
+        expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(['other-only', 'mine-and-other']);
+
+        signIn();
+        rerender(<QuestsScreen />);
+        expect(mockContentProps.selectedCityId).toBe(COMPLETED_BY_OTHERS_FILTER_ID);
+        signOut();
+        rerender(<QuestsScreen />);
+        await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
+        expect(mockContentProps.questsAll).toHaveLength(4);
+    });
+
+    it('hides an empty others slice and clears a saved selection when only my completions remain', async () => {
+        mockMobile = mobile;
+        signIn();
+        await AsyncStorage.setItem(STORAGE_SELECTED_CITY, COMPLETED_BY_OTHERS_FILTER_ID);
+        const { getByTestId, queryByTestId } = render(<QuestsScreen />);
+        await waitFor(() => {
+            expect(AsyncStorage.setItem).toHaveBeenCalledWith(STORAGE_SELECTED_CITY, ALL_QUESTS_ID);
+            expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID);
+            expect(mockContentProps.questsAll).toHaveLength(4);
+        });
+        if (mobile) fireEvent.press(getByTestId('open-filters'));
+        expect(queryByTestId('quests-sidebar-completed-by-others-button')).toBeNull();
+    });
+
+    it('hides others for a shared offline snapshot and makes the filter available after refresh', async () => {
+        mockMobile = mobile;
+        signIn();
+        mockQuests = SHARED_CATALOG().map((quest) => ({
+            ...quest, isCompletedByMe: false, personalStatusUnavailable: true,
+        }));
+        await AsyncStorage.setItem(STORAGE_SELECTED_CITY, COMPLETED_BY_OTHERS_FILTER_ID);
+        const { getByTestId, queryByTestId, rerender } = render(<QuestsScreen />);
+        await waitFor(() => {
+            expect(AsyncStorage.setItem).toHaveBeenCalledWith(STORAGE_SELECTED_CITY, ALL_QUESTS_ID);
+            expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID);
+        });
+        if (mobile) fireEvent.press(getByTestId('open-filters'));
+        expect(queryByTestId('quests-sidebar-completed-by-others-button')).toBeNull();
+
+        mockQuests = SHARED_CATALOG();
+        rerender(<QuestsScreen />);
+        fireEvent.press(getByTestId('quests-sidebar-completed-by-others-button'));
+        await waitFor(() => expect(mockContentProps.questsAll.map((quest) => quest.id))
+            .toEqual(['other-only', 'mine-and-other']));
     });
 });
 
@@ -249,7 +371,9 @@ describe('передача среза из профиля (#1794)', () => {
         const { rerender } = render(<QuestsScreen />);
         await waitFor(() => expect(mockContentProps.selectedCityId).toBe(COMPLETED_FILTER_ID));
 
-        mockContentProps.onResetFilters();
+        await act(async () => {
+            await mockContentProps.onResetFilters();
+        });
         await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
 
         mockFocused = false;

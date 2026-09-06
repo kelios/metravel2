@@ -20,7 +20,7 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import type { MapMovePayload } from '@/components/MapPage/Map/types';
 
 import QuestCard from './QuestCard';
-import { COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID } from './QuestsScreen.helpers';
+import { COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID } from './QuestsScreen.helpers';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
 import { pluralizeQuest, type QuestMeta } from './questsShared';
 import { translate as i18nT } from '@/i18n'
@@ -210,11 +210,13 @@ export default function QuestsContentPanel({
                                                 ? i18nT('quests:screens.tabs.QuestsScreen.reviewedTitle')
                                                 : selectedCityId === COMPLETED_FILTER_ID
                                                     ? i18nT('quests:screens.tabs.QuestsContentPanel.completedTitle')
-                                                    : selectedCityId === UNCOMPLETED_FILTER_ID
-                                                        ? i18nT('quests:screens.tabs.QuestsContentPanel.uncompletedTitle')
-                                                        : selectedCityName
-                                                            ? i18nT('quests:screens.tabs.QuestsContentPanel.locationTitle', { value1: selectedCityName })
-                                                            : i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
+                                                    : selectedCityId === COMPLETED_BY_OTHERS_FILTER_ID
+                                                        ? i18nT('quests:screens.tabs.QuestsContentPanel.completedByOthersTitle')
+                                                        : selectedCityId === UNCOMPLETED_FILTER_ID
+                                                            ? i18nT('quests:screens.tabs.QuestsContentPanel.uncompletedTitle')
+                                                            : selectedCityName
+                                                                ? i18nT('quests:screens.tabs.QuestsContentPanel.locationTitle', { value1: selectedCityName })
+                                                                : i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
                     </Text>
                     <View style={styles.contentCountRow}>
                         {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}

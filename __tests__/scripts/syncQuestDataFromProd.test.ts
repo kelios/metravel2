@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { makeTempDir, removeDir } from './cli-test-utils'
 
 const questBundles = require('@/scripts/lib/questBundles')
 const scanBaseline = require('@/scripts/lib/scanBaseline')
@@ -40,8 +41,7 @@ describe('sync quest data — отсутствующий квест не обр�
 
   beforeEach(() => {
     jest.resetAllMocks()
-    fs.mkdirSync(path.resolve('.codex-temp'), { recursive: true })
-    directory = fs.mkdtempSync(path.resolve('.codex-temp/sync-quest-test-'))
+    directory = makeTempDir('sync-quest-test-')
     fileIndex = 0
     logs = []
     jest.spyOn(console, 'log').mockImplementation((...args: unknown[]) => { logs.push(args.join(' ')) })
@@ -49,7 +49,7 @@ describe('sync quest data — отсутствующий квест не обр�
   })
 
   afterEach(() => {
-    fs.rmSync(directory, { recursive: true, force: true })
+    removeDir(directory)
     jest.restoreAllMocks()
     process.argv = originalArgv
     process.exitCode = originalExitCode

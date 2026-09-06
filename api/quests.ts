@@ -124,6 +124,8 @@ export type ApiQuestMediaGroup = Omit<TravelMediaGroup, 'cover'> & {
 };
 
 export type ApiQuestMeta = {
+    /** Client-only: shared offline metadata has no reliable personal status. */
+    personal_status_unavailable?: boolean;
     id: number;
     quest_id: string;
     title: string;
@@ -198,6 +200,7 @@ export function withQuestMetaDefaults(meta: ApiQuestMeta): ApiQuestMeta {
         rating_count: meta.rating_count ?? 0,
         user_rating: meta.user_rating ?? null,
         completions_count: meta.completions_count ?? 0,
+        personal_status_unavailable: typeof meta.is_completed_by_me !== 'boolean',
         is_completed_by_me: meta.is_completed_by_me ?? false,
         first_completer: meta.first_completer ?? null,
     });

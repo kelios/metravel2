@@ -585,6 +585,16 @@ describe('questAdapters', () => {
   });
 
   describe('adaptMeta', () => {
+    it('keeps a missing personal status unknown during identity refresh', () => {
+      const identityPending: Partial<ApiQuestMeta> = makeQuestMeta({ completions_count: 1 });
+      delete identityPending.is_completed_by_me;
+
+      expect(adaptMeta(identityPending as ApiQuestMeta)).toMatchObject({
+        isCompletedByMe: false,
+        personalStatusUnavailable: true,
+      });
+    });
+
     it('converts API meta to frontend format', () => {
       const result = adaptMeta({
         quest_id: 'krakow-dragon',

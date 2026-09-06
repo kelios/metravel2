@@ -405,7 +405,9 @@ describe('Map.ios Component', () => {
     expect(html).toContain('const routeLine = Array.isArray(data.routeLine) ? data.routeLine : routePoints');
     expect(html).toContain('L.polyline(routeLine');
     expect(html).toContain("dashArray: routeApproximate ? '8 8' : null");
-    expect(html).toContain('L.circleMarker(point');
+    expect(html).toContain('const marker = L.marker(point, {');
+    expect(html).toContain('icon: makeRoutePointIcon(');
+    expect(html).toContain('draggable: routePointsInteractive');
     expect(html).toContain('map.fitBounds(routePolyline.getBounds()');
   });
 

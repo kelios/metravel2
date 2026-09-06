@@ -2,7 +2,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { spawnSync } from 'child_process';
+import { makeTempDir, removeDir, runNodeCli } from './cli-test-utils';
 
 const {
   CHUNK_RELOAD_SCRIPT_ID,
@@ -29,13 +29,11 @@ describe('HTML chunk reload build guard', () => {
   };
 
   beforeEach(() => {
-    const tempRoot = path.resolve('.codex-temp');
-    fs.mkdirSync(tempRoot, { recursive: true });
-    distDir = fs.mkdtempSync(path.join(tempRoot, 'html-chunk-guard-'));
+    distDir = makeTempDir('html-chunk-guard-');
   });
 
   afterEach(() => {
-    fs.rmSync(distDir, { recursive: true, force: true });
+    removeDir(distDir);
   });
 
   it('checks every nested HTML variant, including fallback templates and redirects', () => {
@@ -140,13 +138,13 @@ describe('HTML chunk reload build guard', () => {
   it('CLI checks the real artifact and returns nonzero for an invalid nested page', () => {
     write('index.html', shell());
     const cli = path.resolve('scripts/lib/htmlChunkReloadGuard.js');
-    const valid = spawnSync(process.execPath, [cli, distDir], { encoding: 'utf8' });
+    const valid = runNodeCli([cli, distDir]);
     expect(valid.status).toBe(0);
     expect(valid.stdout).toContain('Checked 1 HTML files');
     write('travels/old/index.html', shell(external));
-    const invalid = spawnSync(process.execPath, [cli, distDir], { encoding: 'utf8' });
+    const invalid = runNodeCli([cli, distDir]);
     expect(invalid.status).toBe(1);
     expect(invalid.stderr).toContain('travels/old/index.html');
-    expect(spawnSync(process.execPath, [cli], { encoding: 'utf8' }).status).toBe(1);
+    expect(runNodeCli([cli]).status).toBe(1);
   });
 });

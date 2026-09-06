@@ -93,10 +93,12 @@ export {
     BIKE_FILTER_ID,
     REVIEWED_FILTER_ID,
     COMPLETED_FILTER_ID,
+    COMPLETED_BY_OTHERS_FILTER_ID,
     UNCOMPLETED_FILTER_ID,
     // Срез по личному статусу прохождения: правило одно на каталог (#1791) и
     // профиль (#1794) и лежит рядом со своими id.
     filterQuestsByCompletion,
+    filterQuestsCompletedByOthers,
     resolveStoredQuestCatalogSelection,
 } from '@/utils/questCatalogSelection';
 // «Поблизости» остаётся единым продуктовым порогом, без пользовательского

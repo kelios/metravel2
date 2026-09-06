@@ -16,11 +16,10 @@ export const NEARBY_ID = '__nearby__';
 export const KIDS_FILTER_ID = '__kids__';
 export const BIKE_FILTER_ID = '__bike__';
 export const REVIEWED_FILTER_ID = '__reviewed__';
-// Личные срезы каталога: «что я уже прошёл» и «что ещё не проходил». Оба
-// существуют только для вошедшего игрока — у гостя `is_completed_by_me`
-// приходит `false` на каждом квесте, поэтому «Пройденные» гарантированно
-// пусты, а «Не пройденные» дословно повторяют весь каталог.
+// Срезы прохождений доступны вошедшему игроку: личный статус позволяет
+// отличить свои прохождения от прохождений других игроков.
 export const COMPLETED_FILTER_ID = '__completed__';
+export const COMPLETED_BY_OTHERS_FILTER_ID = '__completed_by_others__';
 export const UNCOMPLETED_FILTER_ID = '__uncompleted__';
 
 /**
@@ -34,6 +33,18 @@ export function filterQuestsByCompletion<T extends { isCompletedByMe?: boolean }
     completed: boolean,
 ): T[] {
     return quests.filter((quest) => Boolean(quest.isCompletedByMe) === completed);
+}
+
+/** Общий счётчик включает личное прохождение: оно само по себе не считается чужим. */
+export function filterQuestsCompletedByOthers<T extends {
+    isCompletedByMe?: boolean;
+    completionsCount?: number;
+    personalStatusUnavailable?: boolean;
+}>(
+    quests: T[],
+): T[] {
+    return quests.filter((quest) => !quest.personalStatusUnavailable
+        && (quest.completionsCount ?? 0) > (quest.isCompletedByMe ? 1 : 0));
 }
 
 /**
