@@ -5,6 +5,7 @@
 export {};
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const readAppConfig = () => {
@@ -211,6 +212,82 @@ describe('Android Configuration Tests', () => {
         filter.data.some((d: any) => d.scheme === 'https')
       );
       expect(hasHttps).toBe(true);
+    });
+  });
+
+  describe('Firebase push configuration (#1818)', () => {
+    const evaluate = (googleServicesJson?: string) => {
+      const previous = process.env.GOOGLE_SERVICES_JSON;
+      if (googleServicesJson) process.env.GOOGLE_SERVICES_JSON = googleServicesJson;
+      try {
+        delete require.cache[require.resolve('../../app.config.js')];
+        return require('../../app.config.js')({ config: readAppConfig().expo });
+      } finally {
+        if (previous === undefined) delete process.env.GOOGLE_SERVICES_JSON;
+        else process.env.GOOGLE_SERVICES_JSON = previous;
+      }
+    };
+
+    const writeConfig = (packageName: string) => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-firebase-'));
+      const filePath = path.join(dir, 'google-services.json');
+      fs.writeFileSync(
+        filePath,
+        JSON.stringify({
+          project_info: { project_number: '000000000000' },
+          client: [
+            {
+              client_info: {
+                mobilesdk_app_id: '1:0:android:test',
+                android_client_info: { package_name: packageName },
+              },
+              api_key: [{ current_key: 'test-key' }],
+            },
+          ],
+        })
+      );
+      tempDirs.push(dir);
+      return filePath;
+    };
+
+    let tempDirs: string[] = [];
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+      for (const dir of tempDirs) fs.rmSync(dir, { recursive: true, force: true });
+      tempDirs = [];
+    });
+
+    it('wires the Firebase config in when it is present', () => {
+      const config = evaluate(writeConfig('by.metravel.app'));
+
+      expect(config.android.googleServicesFile).toBeTruthy();
+    });
+
+    it('never ships an absolute build-machine path', () => {
+      // expo-constants serialises the public app config into APK assets, so an
+      // absolute path would leak the build machine's home directory.
+      const config = evaluate(writeConfig('by.metravel.app'));
+
+      expect(path.isAbsolute(config.android.googleServicesFile)).toBe(false);
+    });
+
+    it('skips a config registered for another package instead of throwing', () => {
+      const stderr = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true);
+
+      const config = evaluate(writeConfig('by.other.app'));
+
+      expect(config.android.googleServicesFile).toBeUndefined();
+      expect(String(stderr.mock.calls[0]?.[0])).toContain('by.metravel.app');
+    });
+
+    it('keeps the rest of the Android config untouched', () => {
+      const config = evaluate(writeConfig('by.metravel.app'));
+
+      expect(config.android.package).toBe('by.metravel.app');
+      expect(config.android.versionCode).toBe(readAppConfig().expo.android.versionCode);
     });
   });
 

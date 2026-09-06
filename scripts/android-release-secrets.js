@@ -3,6 +3,10 @@
 const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')
+const {
+  CONFIG_FILE_NAME,
+  resolveGoogleServicesFile,
+} = require('./android-firebase-config')
 
 const ROOT_DIR = path.resolve(__dirname, '..')
 const SECRETS_DIR = path.join(ROOT_DIR, '.secrets')
@@ -279,6 +283,19 @@ function exportPortableSecretBundle(options = {}) {
     serviceAccountDestination,
   )
 
+  // Firebase config is a fifth secret: without it the Android build stops
+  // before Gradle (#1818), so a machine restored from this bundle alone could
+  // not build at all.
+  const googleServicesSource = resolveGoogleServicesFile({
+    env: releaseEnvironment,
+    rootDir,
+  })
+  const googleServicesDestination = path.join(secretsDir, CONFIG_FILE_NAME)
+  const hasGoogleServices = copySecretFile(
+    googleServicesSource,
+    googleServicesDestination,
+  )
+
   const bundle = {
     version: 1,
     keystorePath: relativeToRoot(keystoreDestination, rootDir),
@@ -308,6 +325,7 @@ function exportPortableSecretBundle(options = {}) {
       keystoreDestination,
       productionEnvDestination,
       ...(hasServiceAccount ? [serviceAccountDestination] : []),
+      ...(hasGoogleServices ? [googleServicesDestination] : []),
     ],
   }
 }

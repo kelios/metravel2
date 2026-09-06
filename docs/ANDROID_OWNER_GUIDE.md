@@ -106,13 +106,14 @@ node scripts/android-firebase-config.js
 Expo-проект (`eas credentials` → Android → FCM V1). Без них Expo примет токен, но
 push до устройства не дойдёт.
 
-Канонический переносимый bundle состоит из четырёх gitignored файлов:
+Канонический переносимый bundle состоит из пяти gitignored файлов:
 
 ```text
 .secrets/metravel-android-release.json
 .secrets/metravel-android-upload.jks
 .secrets/metravel-android-prod.env
 .secrets/google-play-service-account.json
+.secrets/google-services.json
 ```
 
 На уже работающем авторизованном Mac он создаётся без вывода значений:
