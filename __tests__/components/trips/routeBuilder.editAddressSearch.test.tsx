@@ -5,7 +5,7 @@
 // координаты подставились», ручной ввод как запасной путь и то, что выбор
 // адреса при добавлении больше не выбрасывает уже введённое.
 import React from 'react'
-import { fireEvent, render } from '@testing-library/react-native'
+import { act, fireEvent, render } from '@testing-library/react-native'
 
 import type { PlannedTrip } from '@/api/plannedTrips'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
@@ -51,9 +51,15 @@ jest.mock('@/components/trips/planning/TripRoutePreviewEngine', () => {
   }
 })
 
+// Тап по карте — отдельный вход в правку точки, и он тоже обязан сбрасывать
+// владение именем: props карты нужны тесту целиком.
+const mockMapProps: { current: { onAddPointFromMap?: (p: { lat: number; lng: number }) => void } } =
+  { current: {} }
+
 jest.mock('@/components/trips/planning/TripPlanRouteMap', () => {
-  return function TripPlanRouteMap() {
+  return function TripPlanRouteMap(props: Record<string, unknown>) {
     const { View } = require('react-native')
+    mockMapProps.current = props as { onAddPointFromMap?: (p: { lat: number; lng: number }) => void }
     return <View testID="trip-plan-route-map" />
   }
 })
@@ -313,6 +319,29 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: поиск мест
       name: 'Прага',
       coordinates: [14.4378, 50.0755],
     })
+  })
+
+  it('точка, открытая тапом по карте, не отдаёт своё имя прошлому выбору адреса', () => {
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
+
+    // Правка точки A: поиск сам подставил имя и запомнил его как своё.
+    fireEvent.press(getByTestId('route-builder-edit-0'))
+    fireEvent.changeText(getByTestId('route-builder-edit-name'), '')
+    fireEvent.press(getByTestId('route-builder-address-pick'))
+    expect(getByTestId('route-builder-edit-name').props.value).toBe('Острава')
+
+    // Тап по карте коммитит правку и открывает редактор новой точки.
+    act(() => {
+      mockMapProps.current.onAddPointFromMap?.({ lat: 53.9, lng: 27.56 })
+    })
+    fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Острава')
+    fireEvent.press(getByTestId('route-builder-address-pick-prague'))
+
+    // Имя набрано пользователем — совпадение с прошлой автоподстановкой ничего
+    // не значит, переписаться должны только координаты.
+    expect(getByTestId('route-builder-edit-name').props.value).toBe('Острава')
+    expect(getByTestId('route-builder-edit-lat').props.value).toBe('50.0755')
+    expect(getByTestId('route-builder-edit-lng').props.value).toBe('14.4378')
   })
 
   it('отмена после выбора адреса оставляет маршрут прежним', () => {

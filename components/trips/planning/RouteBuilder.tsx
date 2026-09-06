@@ -283,6 +283,10 @@ function RouteBuilder({
     description: '',
   });
   const editAddressAutofillNameRef = useRef<string | null>('');
+  // Зеркало `editName` для `handleEditAddressSelect`: сравнивать надо до записи
+  // ref'а автоподстановки, а зависимость от самого состояния пересоздавала бы
+  // колбэк на каждый символ и снимала `React.memo` с `AddressSearch` формы.
+  const editNameRef = useRef('');
   const [siteQuery, setSiteQuery] = useState('');
   const [siteOptions, setSiteOptions] = useState<SiteRouteOption[]>([]);
   const [siteSearchStatus, setSiteSearchStatus] = useState<SiteSearchStatus>('idle');
@@ -585,6 +589,7 @@ function RouteBuilder({
     setEditingIndex(index);
     setEditType(point.type);
     setEditName(point.name);
+    editNameRef.current = point.name;
     setEditDescription(point.description ?? '');
     setEditLat(point.coordinates ? formatCoordinateInput(point.coordinates[1]) : '');
     setEditLng(point.coordinates ? formatCoordinateInput(point.coordinates[0]) : '');
@@ -624,6 +629,13 @@ function RouteBuilder({
     setEditingIndex(null);
     setEditError(null);
     editAddressAutofillNameRef.current = '';
+  }, []);
+
+  // Единственная точка записи имени правки: состояние и его зеркало не должны
+  // разъезжаться.
+  const commitEditName = useCallback((next: string) => {
+    editNameRef.current = next;
+    setEditName(next);
   }, []);
 
   const handleOpenAddPoint = () => {
@@ -725,10 +737,15 @@ function RouteBuilder({
       setEditingIndex(nextIndex);
       setEditType(point.type);
       setEditName(point.name);
+      editNameRef.current = point.name;
       setEditDescription('');
       setEditLat(formatCoordinateInput(lat));
       setEditLng(formatCoordinateInput(lng));
       setEditError(null);
+      // Тап по карте — такой же вход в правку новой точки, как `handleStartEdit`:
+      // без сброса имя, подставленное поиском предыдущей точке, считалось бы
+      // «своим» и молча переписалось бы следующим выбором адреса.
+      editAddressAutofillNameRef.current = '';
       return [...base, point];
     });
     trackRoutePointAdded(trip.id, 'custom');
@@ -864,14 +881,14 @@ function RouteBuilder({
       // адрес из-за уточнения координат. Поиск заполняет его только пустым — или
       // своим же прошлым результатом, чтобы исправленный выбор не оставил имя
       // первого места при координатах второго.
-      const currentName = editName.trim();
+      const currentName = editNameRef.current.trim();
       const nameOwnedBySearch = !currentName || currentName === editAddressAutofillNameRef.current;
       const autoName = addressPointName(address);
-      if (nameOwnedBySearch) setEditName(autoName);
+      if (nameOwnedBySearch) commitEditName(autoName);
       editAddressAutofillNameRef.current = nameOwnedBySearch ? autoName : null;
       setEditError(null);
     },
-    [editName],
+    [commitEditName],
   );
 
   const handleApplyTemplate = (points: Array<Omit<RoutePoint, 'id'>>) => {
@@ -1250,7 +1267,7 @@ function RouteBuilder({
         />
         <TextInput
           value={editName}
-          onChangeText={setEditName}
+          onChangeText={commitEditName}
           placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nazvanie_tochki_0cdacb0f')}
           placeholderTextColor={colors.textMuted}
           style={styles.input}
