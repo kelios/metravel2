@@ -93,7 +93,7 @@ export const profileGenerated2 = {
   "components.settings.DataOwnershipSection.moi_dannye_12de8ed5": "Moje dane",
   "components.settings.DataOwnershipSection.otozvat_soglasiya_a71fe389": "Wycofaj zgodę",
   "components.settings.DataOwnershipSection.otzyvaem_cc9508e0": "Przypominamy...",
-  "components.settings.DataOwnershipSection.deleteTravelsHint": "Usuwa opublikowane i robocze podróże wraz ze zdjęciami i trasami. Zapisane trasy czyścisz w „Ulubionych”.",
+  "components.settings.DataOwnershipSection.deleteTravelsHint": "Usuwa Twoje podróże wraz ze zdjęciami i trasami, w tym robocze. Listę „Chcę iść” czyścisz na jej własnym ekranie.",
   "components.settings.DataOwnershipSection.deleteTravelsLabel": "Usuń wszystkie moje podróże",
   "components.settings.DataOwnershipSection.udalit_perepisku_eb5f6cf8": "Usuń korespondencję",
   "components.settings.DataOwnershipSection.udalyaem_77fa19fc": "Usuńmy...",

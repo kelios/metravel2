@@ -93,7 +93,7 @@ export const profileGenerated2 = {
   "components.settings.DataOwnershipSection.moi_dannye_12de8ed5": "Мої дані",
   "components.settings.DataOwnershipSection.otozvat_soglasiya_a71fe389": "Відкликати згоди",
   "components.settings.DataOwnershipSection.otzyvaem_cc9508e0": "Відгукуємо…",
-  "components.settings.DataOwnershipSection.deleteTravelsHint": "Видаляє опубліковані та чорнові подорожі разом із фотографіями і треками. Збережені маршрути очищуються в «Обраному».",
+  "components.settings.DataOwnershipSection.deleteTravelsHint": "Видаляє ваші подорожі разом із фотографіями і треками, зокрема чорнові. Список «Хочу поїхати» очищується на своєму екрані.",
   "components.settings.DataOwnershipSection.deleteTravelsLabel": "Видалити всі мої подорожі",
   "components.settings.DataOwnershipSection.udalit_perepisku_eb5f6cf8": "Видалити листування",
   "components.settings.DataOwnershipSection.udalyaem_77fa19fc": "Видаляємо…",

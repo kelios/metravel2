@@ -37,6 +37,10 @@ const COUNT_BUDGET_MS = 2500;
  */
 export function useDataOwnership() {
     const [lastExport, setLastExport] = useState<DataExportDto | null>(null);
+    // Подсчёт идёт до первого диалога, и всё это время кнопка обязана выглядеть
+    // занятой: иначе нажатие на секунды остаётся без ответа, а второе нажатие
+    // заводит второй цикл подтверждений.
+    const [isPreparingDelete, setIsPreparingDelete] = useState(false);
     const queryClient = useQueryClient();
     const userId = useAuthStore((s) => s.userId);
 
@@ -137,7 +141,15 @@ export function useDataOwnership() {
     }, [userId]);
 
     const deleteTravels = useCallback(async () => {
-        const affected = await countAffectedTravels();
+        if (isPreparingDelete || deleteTravelsMutation.isPending) return;
+
+        setIsPreparingDelete(true);
+        let affected: number | null;
+        try {
+            affected = await countAffectedTravels();
+        } finally {
+            setIsPreparingDelete(false);
+        }
 
         const acknowledged = await confirmAction({
             title: i18nT('shared:hooks.useDataOwnership.deleteTravelsTitle'),
@@ -156,7 +168,7 @@ export function useDataOwnership() {
             confirmText: i18nT('shared:hooks.useDataOwnership.deleteTravelsFinalConfirm'),
         });
         if (confirmed) deleteTravelsMutation.mutate();
-    }, [countAffectedTravels, deleteTravelsMutation]);
+    }, [countAffectedTravels, deleteTravelsMutation, isPreparingDelete]);
 
     const revokeConsents = useCallback(async () => {
         const confirmed = await confirmAction({
@@ -176,7 +188,7 @@ export function useDataOwnership() {
             lastExport,
             isExporting: exportMutation.isPending,
             isDeletingMessages: deleteMessagesMutation.isPending,
-            isDeletingTravels: deleteTravelsMutation.isPending,
+            isDeletingTravels: isPreparingDelete || deleteTravelsMutation.isPending,
             isRevokingConsents: revokeConsentsMutation.isPending,
         }),
         [
@@ -185,6 +197,7 @@ export function useDataOwnership() {
             deleteTravels,
             revokeConsents,
             lastExport,
+            isPreparingDelete,
             exportMutation.isPending,
             deleteMessagesMutation.isPending,
             deleteTravelsMutation.isPending,

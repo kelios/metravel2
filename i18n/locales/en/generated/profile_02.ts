@@ -93,7 +93,7 @@ export const profileGenerated2 = {
   "components.settings.DataOwnershipSection.moi_dannye_12de8ed5": "My details",
   "components.settings.DataOwnershipSection.otozvat_soglasiya_a71fe389": "Withdraw consent",
   "components.settings.DataOwnershipSection.otzyvaem_cc9508e0": "We are recalling...",
-  "components.settings.DataOwnershipSection.deleteTravelsHint": "Deletes published and draft travels along with their photos and tracks. Saved routes are cleared in Favorites.",
+  "components.settings.DataOwnershipSection.deleteTravelsHint": "Deletes your travels along with their photos and tracks, drafts included. Your “I want to go” list is cleared on its own screen.",
   "components.settings.DataOwnershipSection.deleteTravelsLabel": "Delete all my travels",
   "components.settings.DataOwnershipSection.udalit_perepisku_eb5f6cf8": "Delete correspondence",
   "components.settings.DataOwnershipSection.udalyaem_77fa19fc": "Let's delete...",

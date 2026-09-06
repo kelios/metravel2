@@ -118,6 +118,34 @@ describe('#1828 copy of the destructive data-ownership action', () => {
     }
   });
 
+  // Отсылать за сохранёнными маршрутами можно только туда, что в продукте
+  // действительно так подписано: экран называется «Хочу поехать», не «Избранное».
+  it('names the saved-list screen the way the product names it', () => {
+    const inventedNames = /избранн|ulubion|favorit|абран|обран/i;
+
+    for (const locale of LOCALES) {
+      const shared = resources[locale].shared as Record<string, string>;
+      const profile = resources[locale].profile as Record<string, string>;
+      const savedListName = shared['app.tabs.favorites.hochu_poehat_d89b6117'];
+      const mentions = [
+        shared['hooks.useDataOwnership.deleteTravelsMessage'],
+        shared['hooks.useDataOwnership.deleteTravelsMessageWithCount'],
+        profile['components.settings.DataOwnershipSection.deleteTravelsHint'],
+      ];
+
+      for (const value of mentions) {
+        expect({ locale, value }).toEqual({
+          locale,
+          value: expect.stringContaining(savedListName),
+        });
+        expect({ locale, value }).toEqual({
+          locale,
+          value: expect.not.stringMatching(inventedNames),
+        });
+      }
+    }
+  });
+
   it('keeps the counted message interpolating the number of affected travels', () => {
     for (const locale of LOCALES) {
       const shared = resources[locale].shared as Record<string, string>;
@@ -162,6 +190,51 @@ describe('#1828 two-step confirmation before the destructive call', () => {
     });
 
     await waitFor(() => expect(mockDelete).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('#1828 busy state while the confirmation is being prepared', () => {
+  // Подсчёт идёт до первого диалога: пока он идёт, кнопка обязана быть занятой,
+  // иначе нажатие остаётся без ответа, а второе заводит второй цикл подтверждений.
+  it('reports the action as running while the count is in flight', async () => {
+    let releaseCount: (payload: { total: number }) => void = () => {};
+    mockCount.mockImplementation(
+      (() => new Promise((resolve) => {
+        releaseCount = resolve as (payload: { total: number }) => void;
+      })) as never,
+    );
+
+    const { result } = renderDataOwnership();
+    expect(result.current.isDeletingTravels).toBe(false);
+
+    let pending: Promise<void> | undefined;
+    await act(async () => {
+      pending = result.current.deleteTravels();
+    });
+
+    expect(result.current.isDeletingTravels).toBe(true);
+    expect(mockConfirm).not.toHaveBeenCalled();
+
+    await act(async () => {
+      releaseCount({ total: 3 });
+      await pending;
+    });
+
+    expect(mockConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores a second press while the first one is still counting', async () => {
+    mockCount.mockImplementation((() => new Promise(() => {})) as never);
+    const { result } = renderDataOwnership();
+
+    await act(async () => {
+      void result.current.deleteTravels();
+    });
+    await act(async () => {
+      void result.current.deleteTravels();
+    });
+
+    expect(mockCount).toHaveBeenCalledTimes(1);
   });
 });
 
