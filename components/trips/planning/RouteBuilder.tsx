@@ -794,13 +794,9 @@ function RouteBuilder({
     setIsAddPointOpen(false);
   };
 
-  // #1491: шаг «Точки маршрута» умеет то же, что и /map, — искать адрес. Поиск
-  // переиспользован целиком (`AddressSearch`, Nominatim + разбор координат);
-  // здесь только раскладка результата в доменную точку маршрута.
-  // #1782: выбор результата больше не выбрасывает уже введённое. Раньше он
-  // всегда клал `custom` с именем из адреса, поэтому выбранный чип «Ночёвка» и
-  // набранные название с описанием исчезали молча.
-  const handleAddAddressPoint = useCallback(
+  // #1782: выбранный адрес заполняет форму, чтобы название можно было уточнить
+  // до добавления. Саму точку создаёт общий handleAdd после подтверждения.
+  const handleAddAddressSelect = useCallback(
     (address: string, coords: { lat: number; lng: number }) => {
       const full = address.trim();
       if (!full || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return;
@@ -816,25 +812,14 @@ function RouteBuilder({
       const typedDescription = isSiteMode ? '' : newDescription.trim();
       const name = typedName || addressPointName(full);
 
-      setRoute((prev) => [
-        ...prev,
-        {
-          id: `address-${prev.length}-${name}`,
-          type,
-          name,
-          description: typedDescription || (full === name ? null : full),
-          coordinates: [coords.lng, coords.lat],
-          placeId: null,
-        },
-      ]);
-      trackRoutePointAdded(trip.id, type);
-      setNewName('');
-      setNewLat('');
-      setNewLng('');
-      setNewDescription('');
-      setIsAddPointOpen(false);
+      setNewType(type);
+      setNewName(name);
+      setNewLat(formatCoordinateInput(coords.lat));
+      setNewLng(formatCoordinateInput(coords.lng));
+      setNewDescription(typedDescription || (full === name ? '' : full));
+      setNewPointError(null);
     },
-    [newDescription, newName, newType, trip.id],
+    [newDescription, newName, newType],
   );
 
   // #1782: правку точки тоже нельзя было довести без точных координат —
@@ -1334,7 +1319,7 @@ function RouteBuilder({
       styles={styles}
       addressSlot={
         <AddressSearch
-          onAddressSelect={handleAddAddressPoint}
+          onAddressSelect={handleAddAddressSelect}
           placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nayti_mesto_po_nazvaniyu_ili_adresu_fa7745e0')}
           enableCoordinateInput
           dense

@@ -203,8 +203,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
     !isError &&
     searchEnabled &&
     debouncedQuery.length >= MIN_QUERY_LENGTH &&
-    results.length === 0 &&
-    !showResults
+    results.length === 0
   const showMinCharsHint =
     !loading && searchEnabled && query.length > 0 && query.length < MIN_QUERY_LENGTH
 

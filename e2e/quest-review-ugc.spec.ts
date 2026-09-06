@@ -150,11 +150,14 @@ test.describe('#1486 quest review UGC', () => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
       await gotoWithRetry(page, '/quests')
 
-      await expect(page.getByTestId(`quest-card-reviews-${NONE_ID}`).first()).toBeVisible({
+      await expect(page.getByTestId(`quest-card-${NONE_ID}`).first()).toBeVisible({
         timeout: WAIT_MS,
       })
+      await expect(page.getByTestId(`quest-card-reviews-${NONE_ID}`)).toHaveCount(0)
       await expect(page.getByTestId(`quest-card-rating-${NONE_ID}`)).toHaveCount(0)
+      await expect(page.getByTestId(`quest-card-reviews-${FEW_ID}`).first()).toBeVisible()
       await expect(page.getByTestId(`quest-card-rating-${FEW_ID}`)).toHaveCount(0)
+      await expect(page.getByTestId(`quest-card-reviews-${MANY_ID}`).first()).toBeVisible()
       await expect(page.getByTestId(`quest-card-rating-${MANY_ID}`).first()).toBeVisible()
 
       await page.screenshot({
@@ -170,7 +173,7 @@ test.describe('#1486 quest review UGC', () => {
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'reader-many.png') })
     await page.getByTestId('quest-reviews-close').click()
 
-    await page.getByTestId(`quest-card-reviews-${NONE_ID}`).first().click()
+    await page.getByTestId(`quest-card-reviews-${FEW_ID}`).first().click()
     await expect(page.getByTestId('quest-reviews-empty')).toBeVisible({ timeout: WAIT_MS })
     await expect(page.getByText('Пока нет отзывов')).toBeVisible()
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'reader-empty.png') })

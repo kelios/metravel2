@@ -435,10 +435,12 @@ test.describe('Trip planner — happy path', () => {
     // контрол просто доводится до кадра страничным скроллом.
     await control.evaluate((node) => node.scrollIntoView({ block: 'center' }))
     await expect(control).toBeVisible()
-    const touchHeights = await choices.evaluateAll((nodes) =>
-      nodes.map((node) => node.getBoundingClientRect().height),
-    )
-    expect(touchHeights.every((height) => height >= 44)).toBe(true)
+    await expect.poll(async () => {
+      const touchHeights = await choices.evaluateAll((nodes) =>
+        nodes.map((node) => node.getBoundingClientRect().height),
+      )
+      return touchHeights.every((height) => height >= 44)
+    }).toBe(true)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await control.screenshot({ path: path.join(evidenceDir, 'mobile-owner-control.png') })
 

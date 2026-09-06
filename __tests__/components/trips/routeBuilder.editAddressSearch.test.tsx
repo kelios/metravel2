@@ -128,13 +128,13 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
 const renderRouteBuilder = (element: React.ReactElement) =>
   render(element, { wrapper: createQueryWrapper().Wrapper })
 
-describe('RouteBuilder: поиск места в форме точки маршрута', () => {
+describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: поиск места (%s)', (layout) => {
   beforeEach(() => {
     mockRouteMutate.mockReset()
   })
 
   it('подставляет координаты выбранного места в поля правки точки', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
 
     fireEvent.press(getByTestId('route-builder-edit-0'))
     fireEvent.press(getByTestId('route-builder-address-pick'))
@@ -155,7 +155,7 @@ describe('RouteBuilder: поиск места в форме точки марш�
   })
 
   it('оставляет ручной ввод координат рабочим запасным путём', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
 
     fireEvent.press(getByTestId('route-builder-edit-0'))
     fireEvent.changeText(getByTestId('route-builder-edit-lat'), '50.5')
@@ -170,7 +170,7 @@ describe('RouteBuilder: поиск места в форме точки марш�
 
   it('не отдаёт бэкенду тип place без привязки к месту и не берёт скрытые поля', () => {
     const { getByTestId, queryByTestId } = renderRouteBuilder(
-      <RouteBuilder trip={makeTrip({ route: [] })} />,
+      <RouteBuilder trip={makeTrip({ route: [] })} layout={layout} />,
     )
 
     fireEvent.press(getByTestId('route-builder-add-action'))
@@ -182,28 +182,94 @@ describe('RouteBuilder: поиск места в форме точки марш�
     expect(queryByTestId('route-builder-name')).toBeNull()
 
     fireEvent.press(getByTestId('route-builder-address-pick'))
+    expect(getByTestId('route-builder-name').props.value).toBe('Острава')
+    expect(getByTestId('route-builder-lat').props.value).toBe('49.8209')
+    expect(getByTestId('route-builder-lng').props.value).toBe('18.2625')
+    expect(queryByTestId('route-builder-site-search')).toBeNull()
+    expect(queryByTestId('route-builder-save')).toBeNull()
+
+    // Выбор только заполняет форму: до добавления можно уточнить имя.
+    fireEvent.changeText(getByTestId('route-builder-name'), 'Встреча в Остраве')
+    fireEvent.press(getByTestId('route-builder-add'))
     fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
       // #1532: `place` без `placeId` бэкенд отклоняет вместе со всем маршрутом.
       type: 'custom',
       placeId: null,
-      name: 'Острава',
+      name: 'Встреча в Остраве',
+      coordinates: [18.2625, 49.8209],
     })
   })
 
   it('сохраняет выбранный тип и введённое название при добавлении по поиску', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip({ route: [] })} />)
+    const { getByTestId } = renderRouteBuilder(
+      <RouteBuilder trip={makeTrip({ route: [] })} layout={layout} />,
+    )
 
     fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.press(getByTestId('route-builder-type-overnight'))
     fireEvent.changeText(getByTestId('route-builder-name'), 'Ночёвка в Остраве')
+    fireEvent.changeText(getByTestId('route-builder-description'), 'Встречаемся у вокзала')
     fireEvent.press(getByTestId('route-builder-address-pick'))
+    fireEvent.press(getByTestId('route-builder-add'))
     fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
       type: 'overnight',
       name: 'Ночёвка в Остраве',
+      description: 'Встречаемся у вокзала',
+      coordinates: [18.2625, 49.8209],
+    })
+  })
+
+  it('заполняет пустое название в правке и разрешает изменить его до сохранения', () => {
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
+
+    fireEvent.press(getByTestId('route-builder-edit-0'))
+    fireEvent.changeText(getByTestId('route-builder-edit-name'), '')
+    fireEvent.press(getByTestId('route-builder-address-pick'))
+    expect(getByTestId('route-builder-edit-name').props.value).toBe('Острава')
+    fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Остановка в Остраве')
+    fireEvent.press(getByTestId('route-builder-edit-save'))
+    fireEvent.press(getByTestId('route-builder-save'))
+
+    expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
+      name: 'Остановка в Остраве',
+      coordinates: [18.2625, 49.8209],
+    })
+  })
+
+  it('отмена после выбора адреса оставляет маршрут прежним', () => {
+    const { getByTestId, queryByTestId } = renderRouteBuilder(
+      <RouteBuilder trip={makeTrip()} layout={layout} />,
+    )
+
+    fireEvent.press(getByTestId('route-builder-add-action'))
+    fireEvent.press(getByTestId('route-builder-address-pick'))
+    fireEvent.press(getByTestId('route-builder-add-cancel'))
+
+    expect(queryByTestId('route-builder-add-form')).toBeNull()
+    expect(queryByTestId('route-builder-save')).toBeNull()
+    expect(mockRouteMutate).not.toHaveBeenCalled()
+  })
+
+  it('позволяет добавить точку ручным вводом без результата поиска', () => {
+    const { getByTestId } = renderRouteBuilder(
+      <RouteBuilder trip={makeTrip({ route: [] })} layout={layout} />,
+    )
+
+    fireEvent.press(getByTestId('route-builder-add-action'))
+    fireEvent.press(getByTestId('route-builder-type-custom'))
+    fireEvent.changeText(getByTestId('route-builder-name'), 'Ручная точка')
+    fireEvent.changeText(getByTestId('route-builder-lat'), '49.8209')
+    fireEvent.changeText(getByTestId('route-builder-lng'), '18.2625')
+    fireEvent.press(getByTestId('route-builder-add'))
+    fireEvent.press(getByTestId('route-builder-save'))
+
+    expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
+      type: 'custom',
+      name: 'Ручная точка',
       coordinates: [18.2625, 49.8209],
     })
   })

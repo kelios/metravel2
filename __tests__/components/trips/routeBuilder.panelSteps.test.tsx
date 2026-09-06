@@ -352,11 +352,12 @@ describe('RouteBuilder panel steps', () => {
     expect(queryByTestId('route-builder-save-error')).toBeNull()
   })
 
-  it('добавляет точку адресным поиском карты', () => {
+  it('добавляет точку после выбора адреса и подтверждения формы', () => {
     const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip({ route: [] })} />)
 
     fireEvent.press(getByTestId('route-builder-add-action'))
     fireEvent.press(getByTestId('route-builder-address-pick'))
+    fireEvent.press(getByTestId('route-builder-add'))
     fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate).toHaveBeenCalledTimes(1)
