@@ -75,15 +75,24 @@ jest.mock('@/components/MapPage/AddressSearch', () => {
   }) {
     const { Pressable } = require('react-native')
     return (
-      <Pressable
-        testID="route-builder-address-pick"
-        onPress={() =>
-          onAddressSelect('Острава, Моравскосилезский край, Чехия', {
-            lat: 49.8209,
-            lng: 18.2625,
-          })
-        }
-      />
+      <>
+        <Pressable
+          testID="route-builder-address-pick"
+          onPress={() =>
+            onAddressSelect('Острава, Моравскосилезский край, Чехия', {
+              lat: 49.8209,
+              lng: 18.2625,
+            })
+          }
+        />
+        {/* Второй результат нужен кейсу «ошибся местом и выбрал другое». */}
+        <Pressable
+          testID="route-builder-address-pick-prague"
+          onPress={() =>
+            onAddressSelect('Прага, Чехия', { lat: 50.0755, lng: 14.4378 })
+          }
+        />
+      </>
     )
   }
 })
@@ -237,6 +246,72 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: поиск мест
     expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
       name: 'Остановка в Остраве',
       coordinates: [18.2625, 49.8209],
+    })
+  })
+
+  it('исправленный выбор адреса переписывает и название с описанием, а не только координаты', () => {
+    const { getByTestId } = renderRouteBuilder(
+      <RouteBuilder trip={makeTrip({ route: [] })} layout={layout} />,
+    )
+
+    fireEvent.press(getByTestId('route-builder-add-action'))
+    fireEvent.press(getByTestId('route-builder-address-pick'))
+    fireEvent.press(getByTestId('route-builder-address-pick-prague'))
+
+    expect(getByTestId('route-builder-name').props.value).toBe('Прага')
+    expect(getByTestId('route-builder-description').props.value).toBe('Прага, Чехия')
+    expect(getByTestId('route-builder-lat').props.value).toBe('50.0755')
+    expect(getByTestId('route-builder-lng').props.value).toBe('14.4378')
+
+    fireEvent.press(getByTestId('route-builder-add'))
+    fireEvent.press(getByTestId('route-builder-save'))
+
+    expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
+      name: 'Прага',
+      description: 'Прага, Чехия',
+      coordinates: [14.4378, 50.0755],
+    })
+  })
+
+  it('исправленный выбор адреса не трогает название, набранное пользователем', () => {
+    const { getByTestId } = renderRouteBuilder(
+      <RouteBuilder trip={makeTrip({ route: [] })} layout={layout} />,
+    )
+
+    fireEvent.press(getByTestId('route-builder-add-action'))
+    // В режиме «Место» полей названия и описания на экране нет.
+    fireEvent.press(getByTestId('route-builder-type-custom'))
+    fireEvent.changeText(getByTestId('route-builder-name'), 'Встреча у вокзала')
+    fireEvent.press(getByTestId('route-builder-address-pick'))
+    fireEvent.press(getByTestId('route-builder-address-pick-prague'))
+
+    expect(getByTestId('route-builder-name').props.value).toBe('Встреча у вокзала')
+
+    fireEvent.press(getByTestId('route-builder-add'))
+    fireEvent.press(getByTestId('route-builder-save'))
+
+    expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
+      name: 'Встреча у вокзала',
+      coordinates: [14.4378, 50.0755],
+    })
+  })
+
+  it('исправленный выбор адреса в правке переписывает предзаполненное имя', () => {
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
+
+    fireEvent.press(getByTestId('route-builder-edit-0'))
+    fireEvent.changeText(getByTestId('route-builder-edit-name'), '')
+    fireEvent.press(getByTestId('route-builder-address-pick'))
+    fireEvent.press(getByTestId('route-builder-address-pick-prague'))
+
+    expect(getByTestId('route-builder-edit-name').props.value).toBe('Прага')
+
+    fireEvent.press(getByTestId('route-builder-edit-save'))
+    fireEvent.press(getByTestId('route-builder-save'))
+
+    expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
+      name: 'Прага',
+      coordinates: [14.4378, 50.0755],
     })
   })
 

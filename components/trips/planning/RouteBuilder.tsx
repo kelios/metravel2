@@ -273,6 +273,16 @@ function RouteBuilder({
   const [editLng, setEditLng] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
+  // #1782: повторный выбор адреса обязан переписать то, что подставил сам поиск,
+  // и не тронуть то, что набрал пользователь. Ref держит последнее записанное
+  // поиском значение: поле, равное ему, принадлежит поиску, `null` — правке
+  // пользователя. Иначе исправленная «Острава → Прага» уезжала бы в маршрут с
+  // пражскими координатами под именем и описанием Остравы.
+  const addAddressAutofillRef = useRef<{ name: string | null; description: string | null }>({
+    name: '',
+    description: '',
+  });
+  const editAddressAutofillNameRef = useRef<string | null>('');
   const [siteQuery, setSiteQuery] = useState('');
   const [siteOptions, setSiteOptions] = useState<SiteRouteOption[]>([]);
   const [siteSearchStatus, setSiteSearchStatus] = useState<SiteSearchStatus>('idle');
@@ -566,6 +576,7 @@ function RouteBuilder({
     setNewLat('');
     setNewLng('');
     setNewDescription('');
+    addAddressAutofillRef.current = { name: '', description: '' };
     setIsAddPointOpen(false);
   };
 
@@ -578,6 +589,7 @@ function RouteBuilder({
     setEditLat(point.coordinates ? formatCoordinateInput(point.coordinates[1]) : '');
     setEditLng(point.coordinates ? formatCoordinateInput(point.coordinates[0]) : '');
     setEditError(null);
+    editAddressAutofillNameRef.current = '';
   }, []);
 
   const handleEditPoint = useCallback(
@@ -611,18 +623,21 @@ function RouteBuilder({
   const handleCancelEdit = useCallback(() => {
     setEditingIndex(null);
     setEditError(null);
+    editAddressAutofillNameRef.current = '';
   }, []);
 
   const handleOpenAddPoint = () => {
     setEditingIndex(null);
     setEditError(null);
     setNewPointError(null);
+    addAddressAutofillRef.current = { name: '', description: '' };
     setIsAddPointOpen(true);
   };
 
   const handleCancelAddPoint = () => {
     setIsAddPointOpen(false);
     setNewPointError(null);
+    addAddressAutofillRef.current = { name: '', description: '' };
   };
 
   // Применение открытой правки к маршруту. Вынесено из `handleSaveEdit`, потому что
@@ -808,16 +823,31 @@ function RouteBuilder({
       // (`RoutePointAddForm`), полей названия и описания на экране нет. Их
       // прежнее значение — невидимый остаток прошлой попытки, а не ввод
       // пользователя, поэтому имя тогда берётся из адреса.
-      const typedName = isSiteMode ? '' : newName.trim();
-      const typedDescription = isSiteMode ? '' : newDescription.trim();
-      const name = typedName || addressPointName(full);
+      // Значение, оставшееся от прошлого выбора адреса, вводом пользователя не
+      // считается: иначе второй выбор менял бы только координаты.
+      const autofilled = addAddressAutofillRef.current;
+      const currentName = isSiteMode ? '' : newName.trim();
+      const currentDescription = isSiteMode ? '' : newDescription.trim();
+      const nameOwnedBySearch = !currentName || currentName === autofilled.name;
+      const descriptionOwnedBySearch =
+        !currentDescription || currentDescription === autofilled.description;
+      const name = nameOwnedBySearch ? addressPointName(full) : currentName;
+      const description = descriptionOwnedBySearch
+        ? full === name
+          ? ''
+          : full
+        : currentDescription;
 
       setNewType(type);
       setNewName(name);
       setNewLat(formatCoordinateInput(coords.lat));
       setNewLng(formatCoordinateInput(coords.lng));
-      setNewDescription(typedDescription || (full === name ? '' : full));
+      setNewDescription(description);
       setNewPointError(null);
+      addAddressAutofillRef.current = {
+        name: nameOwnedBySearch ? name : null,
+        description: descriptionOwnedBySearch ? description : null,
+      };
     },
     [newDescription, newName, newType],
   );
@@ -831,11 +861,17 @@ function RouteBuilder({
       setEditLat(formatCoordinateInput(coords.lat));
       setEditLng(formatCoordinateInput(coords.lng));
       // Имя принадлежит пользователю: «Ночёвка у Пети» не должна превратиться в
-      // адрес из-за уточнения координат. Поиск заполняет его только пустым.
-      setEditName((prev) => (prev.trim() ? prev : addressPointName(address)));
+      // адрес из-за уточнения координат. Поиск заполняет его только пустым — или
+      // своим же прошлым результатом, чтобы исправленный выбор не оставил имя
+      // первого места при координатах второго.
+      const currentName = editName.trim();
+      const nameOwnedBySearch = !currentName || currentName === editAddressAutofillNameRef.current;
+      const autoName = addressPointName(address);
+      if (nameOwnedBySearch) setEditName(autoName);
+      editAddressAutofillNameRef.current = nameOwnedBySearch ? autoName : null;
       setEditError(null);
     },
-    [],
+    [editName],
   );
 
   const handleApplyTemplate = (points: Array<Omit<RoutePoint, 'id'>>) => {
