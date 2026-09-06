@@ -276,4 +276,7 @@ export const questsGenerated2 = {
   "components.quests.QuestReviewPromptBanner.subtitle": "Пара слов помогут другим выбрать маршрут",
   "components.quests.QuestReviewPromptBanner.cta": "Оставить отзыв",
   "components.quests.QuestReviewPromptBanner.dismiss": "Скрыть",
+  "screens.tabs.QuestsContentPanel.popularSortLabel": "Популярные",
+  "screens.tabs.QuestsContentPanel.popularSortA11yOn": "Сортировать по популярности",
+  "screens.tabs.QuestsContentPanel.popularSortA11yOff": "Вернуть обычный порядок",
 } as const

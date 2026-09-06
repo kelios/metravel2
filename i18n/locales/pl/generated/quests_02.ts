@@ -276,4 +276,7 @@ export const questsGenerated2 = {
   "components.quests.QuestReviewPromptBanner.subtitle": "Kilka słów pomoże innym wybrać trasę",
   "components.quests.QuestReviewPromptBanner.cta": "Zostaw opinię",
   "components.quests.QuestReviewPromptBanner.dismiss": "Ukryj",
+  "screens.tabs.QuestsContentPanel.popularSortLabel": "Popularne",
+  "screens.tabs.QuestsContentPanel.popularSortA11yOn": "Sortuj według popularności",
+  "screens.tabs.QuestsContentPanel.popularSortA11yOff": "Przywróć zwykłą kolejność",
 } as const

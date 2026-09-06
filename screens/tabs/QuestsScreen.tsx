@@ -50,6 +50,7 @@ import {
     type QuestMapArea,
     type MapPoint,
 } from './QuestsScreen.helpers';
+import { canRankQuestsByPopularity, sortQuestsByPopularity } from '@/utils/questPopularity';
 import { createCollator, translate as i18nT } from '@/i18n'
 
 
@@ -78,6 +79,7 @@ export default function QuestsScreen() {
     const nearbyRadiusKm = DEFAULT_NEARBY_RADIUS_KM;
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+    const [popularSortEnabled, setPopularSortEnabled] = useState(false);
     const [pendingMapAreaCenter, setPendingMapAreaCenter] = useState<QuestMapArea | null>(null);
     const [activeMapAreaCenter, setActiveMapAreaCenter] = useState<QuestMapArea | null>(null);
     const [collapsedCountryCodes, setCollapsedCountryCodes] = useState<Record<string, boolean>>({});
@@ -421,6 +423,30 @@ export default function QuestsScreen() {
         reviewedQuests,
     ]);
 
+    // «Популярные» — тот же порядок, которым бэкенд отвечает на `?sort=popular`
+    // и по которому отобрано промо главной (#1798): прохождения → просмотры →
+    // id. Правило одно на всех (`utils/questPopularity`), иначе витрина и
+    // каталог показывали бы разные «популярные». Каталог уже выкачан целиком,
+    // поэтому сортируем на месте, без второго запроса.
+    //
+    // Списки, упорядоченные по расстоянию («Рядом» с координатой, область
+    // карты), переключатель не трогает: там смысл порядка задаёт близость.
+    // Свободный поиск перекрывает и «Рядом», и область карты (см. `questsAll`
+    // выше) — его выдача идёт в порядке каталога, поэтому сортировать её можно.
+    const distanceOrdered = !searchTerm && (
+        Boolean(activeMapAreaCenter)
+        || (selectedCityId === NEARBY_ID && Boolean(userLoc))
+    );
+    const popularSortAvailable = !distanceOrdered && canRankQuestsByPopularity(questsAll);
+    const popularSortActive = popularSortEnabled && popularSortAvailable;
+    const visibleQuests = useMemo(
+        () => (popularSortActive ? sortQuestsByPopularity(questsAll) : questsAll),
+        [popularSortActive, questsAll],
+    );
+    const handleTogglePopularSort = useCallback(() => {
+        setPopularSortEnabled((current) => !current);
+    }, []);
+
     const catalogModel = useQuestCatalogResponsiveModel(questsAll.length);
     const questCardWidth = catalogModel.cardWidth;
 
@@ -714,8 +740,11 @@ export default function QuestsScreen() {
                 bikeFilterId={BIKE_FILTER_ID}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                questsAll={questsAll}
+                questsAll={visibleQuests}
                 questCardWidth={questCardWidth}
+                popularSortAvailable={popularSortAvailable}
+                popularSortActive={popularSortActive}
+                onTogglePopularSort={handleTogglePopularSort}
                 mapPoints={mapPoints}
                 mapCenter={mapCenter}
                 userLoc={userLoc}

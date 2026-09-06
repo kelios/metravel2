@@ -276,4 +276,7 @@ export const questsGenerated2 = {
   "components.quests.QuestReviewPromptBanner.subtitle": "Кілька слів допоможуть іншим обрати маршрут",
   "components.quests.QuestReviewPromptBanner.cta": "Залишити відгук",
   "components.quests.QuestReviewPromptBanner.dismiss": "Сховати",
+  "screens.tabs.QuestsContentPanel.popularSortLabel": "Популярні",
+  "screens.tabs.QuestsContentPanel.popularSortA11yOn": "Сортувати за популярністю",
+  "screens.tabs.QuestsContentPanel.popularSortA11yOff": "Повернути звичайний порядок",
 } as const

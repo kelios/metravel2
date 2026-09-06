@@ -5,7 +5,11 @@
  * жить в одном месте и давать в обоих случаях один и тот же состав.
  */
 const {
+  POPULAR_QUEST_MIN_COMPLETIONS,
+  POPULAR_QUEST_MIN_MATCHES,
+  canRankQuestsByPopularity,
   compareQuestPopularity,
+  countPopularQuests,
   selectPopularQuests,
   sortQuestsByPopularity,
 } = require('@/utils/questPopularity')
@@ -92,6 +96,61 @@ describe('quest popularity rule', () => {
   it('returns the whole list when no limit is given', () => {
     expect(selectPopularQuests(CATALOG)).toHaveLength(CATALOG.length)
     expect(compareQuestPopularity(CATALOG[0], CATALOG[0])).toBe(0)
+  })
+})
+
+/**
+ * #1790: каталог предлагает сортировку «Популярные» только там, где она что-то
+ * меняет. Порог считается по тем же полям, что и порядок, чтобы «популярное» в
+ * каталоге и на главной значило одно и то же.
+ */
+describe('popularity threshold for the catalog sort', () => {
+  it('counts only quests at or above the completions threshold', () => {
+    // В CATALOG это q32 (3) и три квеста с двумя прохождениями.
+    expect(POPULAR_QUEST_MIN_COMPLETIONS).toBe(2)
+    expect(countPopularQuests(CATALOG)).toBe(4)
+    expect(canRankQuestsByPopularity(CATALOG)).toBe(true)
+  })
+
+  it('does not offer the sort for a catalog nobody has completed', () => {
+    const flat = CATALOG.map((quest) => ({ ...quest, completions_count: 0 }))
+    expect(countPopularQuests(flat)).toBe(0)
+    expect(canRankQuestsByPopularity(flat)).toBe(false)
+  })
+
+  it('ignores single completions — one walkthrough is not a signal', () => {
+    const onesOnly = CATALOG.map((quest) => ({ ...quest, completions_count: 1 }))
+    expect(canRankQuestsByPopularity(onesOnly)).toBe(false)
+  })
+
+  it('needs more than one popular quest to have something to reorder', () => {
+    const single = CATALOG.map((quest, index) => ({
+      ...quest,
+      completions_count: index === 0 ? POPULAR_QUEST_MIN_COMPLETIONS : 0,
+    }))
+    expect(POPULAR_QUEST_MIN_MATCHES).toBe(2)
+    expect(countPopularQuests(single)).toBe(1)
+    expect(canRankQuestsByPopularity(single)).toBe(false)
+
+    const pair = single.map((quest, index) => (
+      index === 1 ? { ...quest, completions_count: POPULAR_QUEST_MIN_COMPLETIONS } : quest
+    ))
+    expect(canRankQuestsByPopularity(pair)).toBe(true)
+  })
+
+  it('reads the adapted camelCase catalog the screen actually holds', () => {
+    const adapted = [
+      { id: 'a', completionsCount: 2 },
+      { id: 'b', completionsCount: 2 },
+      { id: 'c', completionsCount: 0 },
+    ]
+    expect(countPopularQuests(adapted)).toBe(2)
+    expect(canRankQuestsByPopularity(adapted)).toBe(true)
+  })
+
+  it('survives a missing catalog instead of throwing', () => {
+    expect(countPopularQuests(undefined)).toBe(0)
+    expect(canRankQuestsByPopularity(null)).toBe(false)
   })
 })
 

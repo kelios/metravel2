@@ -276,4 +276,7 @@ export const questsGenerated2 = {
   "components.quests.QuestReviewPromptBanner.subtitle": "A couple of words help others pick a route",
   "components.quests.QuestReviewPromptBanner.cta": "Leave a review",
   "components.quests.QuestReviewPromptBanner.dismiss": "Dismiss",
+  "screens.tabs.QuestsContentPanel.popularSortLabel": "Popular",
+  "screens.tabs.QuestsContentPanel.popularSortA11yOn": "Sort by popularity",
+  "screens.tabs.QuestsContentPanel.popularSortA11yOff": "Restore the default order",
 } as const

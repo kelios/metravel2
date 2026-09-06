@@ -57,6 +57,10 @@ type QuestsContentPanelProps = {
     nearbyRadiusKm?: number;
     questsAll: (QuestMeta & { _distanceKm?: number })[];
     questCardWidth: number;
+    /** Есть ли в текущем срезе достаточно прохождений, чтобы предлагать сортировку. */
+    popularSortAvailable?: boolean;
+    popularSortActive?: boolean;
+    onTogglePopularSort?: () => void;
     mapPoints: MapPoint[];
     mapCenter: { latitude: number; longitude: number };
     userLoc: { lat: number; lng: number } | null;
@@ -99,6 +103,9 @@ export default function QuestsContentPanel({
     onSearchChange = () => {},
     questsAll,
     questCardWidth,
+    popularSortAvailable = false,
+    popularSortActive = false,
+    onTogglePopularSort = () => {},
     mapPoints,
     mapCenter,
     userLoc,
@@ -218,6 +225,28 @@ export default function QuestsContentPanel({
                             >
                                 <Feather name="x" size={13} color={colors.primary} />
                                 <Text style={styles.resetFiltersChipText}>{i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}</Text>
+                            </Pressable>
+                        )}
+                        {dataLoaded && popularSortAvailable && (
+                            <Pressable
+                                style={[styles.sortChip, popularSortActive && styles.sortChipActive]}
+                                onPress={onTogglePopularSort}
+                                accessibilityRole="button"
+                                accessibilityLabel={popularSortActive
+                                    ? i18nT('quests:screens.tabs.QuestsContentPanel.popularSortA11yOff')
+                                    : i18nT('quests:screens.tabs.QuestsContentPanel.popularSortA11yOn')}
+                                accessibilityState={{ selected: popularSortActive }}
+                                hitSlop={8}
+                                testID="quests-sort-popular"
+                            >
+                                <Feather
+                                    name="trending-up"
+                                    size={13}
+                                    color={popularSortActive ? colors.textOnPrimary : colors.primary}
+                                />
+                                <Text style={[styles.sortChipText, popularSortActive && styles.sortChipTextActive]}>
+                                    {i18nT('quests:screens.tabs.QuestsContentPanel.popularSortLabel')}
+                                </Text>
                             </Pressable>
                         )}
                     </View>

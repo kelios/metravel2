@@ -94,6 +94,14 @@ export type QuestMeta = {
     ratingAvg: number | null;
     ratingCount: number;
     completionsCount: number;
+    /**
+     * Уникальные просмотры квеста. В UI не показываются: поле нужно правилу
+     * популярности (`utils/questPopularity`), которое ломает им ничью по
+     * прохождениям ровно так же, как серверный `?sort=popular`. Без него
+     * каталог отсортировал бы 12 квестов с одним прохождением иначе, чем
+     * промо главной, отобравшее их у бэкенда.
+     */
+    viewsCount: number;
     isCompletedByMe: boolean;
     firstCompleter: ApiQuestFirstCompleter | null;
 };
@@ -659,6 +667,7 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
         ratingAvg: apiMeta.rating_avg ?? null,
         ratingCount: apiMeta.rating_count ?? 0,
         completionsCount: apiMeta.completions_count ?? 0,
+        viewsCount: apiMeta.views_count ?? 0,
         isCompletedByMe: apiMeta.is_completed_by_me ?? false,
         firstCompleter: adaptFirstCompleter(apiMeta.first_completer),
     };

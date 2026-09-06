@@ -19,6 +19,24 @@
 /** Значение параметра `sort`, которым бэкенд отдаёт этот же порядок. */
 const QUEST_POPULARITY_SORT = 'popular';
 
+/**
+ * Сколько прохождений делают квест «популярным» для витрины каталога.
+ *
+ * Порог продиктован данными, а не вкусом: прод-срез
+ * `/api/quests/?compact=1&page_size=500` от 06.09.2026 — 182 квеста, из них
+ * 166 без единого прохождения, 12 с одним, 3 с двумя и 1 с тремя. Один
+ * случайный проход (в том числе собственный QA-прогон) не отличает квест от
+ * соседа, поэтому «популярно» начинается с двух.
+ */
+const POPULAR_QUEST_MIN_COMPLETIONS = 2;
+
+/**
+ * Ниже двух таких квестов сортировать нечего: витрина показала бы один и тот же
+ * список в другом порядке. На этом пороге каталог не предлагает переключатель
+ * вовсе — вместо пустой или однокарточной «подборки популярного».
+ */
+const POPULAR_QUEST_MIN_MATCHES = 2;
+
 function numericField(quest, snakeKey, camelKey) {
   const raw = quest && (quest[snakeKey] != null ? quest[snakeKey] : quest[camelKey]);
   const value = Number(raw);
@@ -59,9 +77,30 @@ function selectPopularQuests(quests, limit) {
   return sorted.slice(0, Math.max(0, limit));
 }
 
+/** Сколько квестов набора перешагнули порог популярности. */
+function countPopularQuests(quests) {
+  if (!Array.isArray(quests)) return 0;
+  let count = 0;
+  for (const quest of quests) {
+    if (numericField(quest, 'completions_count', 'completionsCount') >= POPULAR_QUEST_MIN_COMPLETIONS) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+/** Есть ли в наборе достаточно прохождений, чтобы сортировка что-то значила. */
+function canRankQuestsByPopularity(quests) {
+  return countPopularQuests(quests) >= POPULAR_QUEST_MIN_MATCHES;
+}
+
 module.exports = {
+  POPULAR_QUEST_MIN_COMPLETIONS,
+  POPULAR_QUEST_MIN_MATCHES,
   QUEST_POPULARITY_SORT,
+  canRankQuestsByPopularity,
   compareQuestPopularity,
+  countPopularQuests,
   selectPopularQuests,
   sortQuestsByPopularity,
 };

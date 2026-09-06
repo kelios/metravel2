@@ -1,5 +1,5 @@
 // src/screens/tabs/QuestsScreen.styles.ts
-import { StyleSheet, Platform, type ViewStyle } from 'react-native';
+import { StyleSheet, Platform, type TextStyle, type ViewStyle } from 'react-native';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { LAYOUT } from '@/constants/layout';
@@ -39,6 +39,30 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             boxShadow: '0 2px 8px rgba(0, 121, 107, 0.35)',
         }
         : {};
+
+    // Контекстные чипы шапки каталога (сброс фильтров, сортировка «Популярные»)
+    // — одна пилюля с контуром `primary`. Форма живёт в одном месте, иначе
+    // соседние по ряду чипы разъезжаются при первой же правке отступов.
+    const headerChip: ViewStyle = {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginTop: 2,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 3,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: colors.primary,
+        backgroundColor: 'transparent',
+        ...Platform.select({
+            web: { cursor: 'pointer' } as ViewStyle,
+        }),
+    };
+    const headerChipText: TextStyle = {
+        color: colors.primary,
+        fontSize: typography.sizes.sm,
+        fontWeight: '600',
+    };
 
     return StyleSheet.create({
         /* ---- Root Layout (Two-column, Premium) ---- */
@@ -608,25 +632,19 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             // Keep the header height stable while the quest count is loading.
             minHeight: 20,
         },
-        resetFiltersChip: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-            marginTop: 2,
-            paddingHorizontal: spacing.sm,
-            paddingVertical: 3,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: colors.primary,
-            backgroundColor: 'transparent',
-            ...Platform.select({
-                web: { cursor: 'pointer' } as any,
-            }),
+        resetFiltersChip: headerChip,
+        resetFiltersChipText: headerChipText,
+        // Сортировка «Популярные» живёт в том же ряду, что и сброс фильтров, и
+        // повторяет его форму: это такой же контекстный переключатель среза, а
+        // не отдельный блок над каталогом. Включённое состояние — заливка
+        // `primary`, как у активных иконок шапки.
+        sortChip: headerChip,
+        sortChipActive: {
+            backgroundColor: colors.primary,
         },
-        resetFiltersChipText: {
-            color: colors.primary,
-            fontSize: typography.sizes.sm,
-            fontWeight: '600',
+        sortChipText: headerChipText,
+        sortChipTextActive: {
+            color: colors.textOnPrimary,
         },
         contentBody: {
             padding: isMobileW ? spacing.md : spacing.lg,

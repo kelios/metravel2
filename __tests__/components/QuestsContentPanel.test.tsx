@@ -56,6 +56,13 @@ describe('QuestsContentPanel', () => {
         questVirtualizedList: {},
         questVirtualizedListContent: {},
         questVirtualizedItem: {},
+        contentCountRow: {},
+        resetFiltersChip: {},
+        resetFiltersChipText: {},
+        sortChip: {},
+        sortChipActive: {},
+        sortChipText: {},
+        sortChipTextActive: {},
     };
 
     const colors = {
@@ -87,6 +94,7 @@ describe('QuestsContentPanel', () => {
         ratingAvg: null,
         ratingCount: 0,
         completionsCount: 0,
+        viewsCount: 0,
         isCompletedByMe: false,
         firstCompleter: null,
     });
@@ -119,6 +127,55 @@ describe('QuestsContentPanel', () => {
         onMapUserLocationChange: () => {},
         onMapMove: () => {},
         onSearchMapArea: () => {},
+    });
+
+    /**
+     * #1790: переключатель «Популярные» показывается ровно тогда, когда экран
+     * сказал, что сортировать есть что, и подписывается по своему состоянию —
+     * иначе a11y-имя обещало бы включить уже включённую сортировку.
+     */
+    describe('popular sort chip', () => {
+        it('stays hidden while the slice has nothing to reorder', () => {
+            const { queryByTestId } = render(<QuestsContentPanel {...makeBaseProps()} />);
+            expect(queryByTestId('quests-sort-popular')).toBeNull();
+        });
+
+        it('stays hidden until the catalog is loaded', () => {
+            const { queryByTestId } = render(
+                <QuestsContentPanel {...makeBaseProps()} dataLoaded={false} popularSortAvailable />,
+            );
+            expect(queryByTestId('quests-sort-popular')).toBeNull();
+        });
+
+        it('offers to sort, then to undo it, and reports the state to assistive tech', () => {
+            const onTogglePopularSort = jest.fn();
+            const { getByTestId, rerender } = render(
+                <QuestsContentPanel
+                    {...makeBaseProps()}
+                    popularSortAvailable
+                    onTogglePopularSort={onTogglePopularSort}
+                />,
+            );
+
+            const chip = getByTestId('quests-sort-popular');
+            expect(chip.props.accessibilityLabel).toBe('Сортировать по популярности');
+            expect(chip.props.accessibilityState.selected).toBe(false);
+            fireEvent.press(chip);
+            expect(onTogglePopularSort).toHaveBeenCalledTimes(1);
+
+            rerender(
+                <QuestsContentPanel
+                    {...makeBaseProps()}
+                    popularSortAvailable
+                    popularSortActive
+                    onTogglePopularSort={onTogglePopularSort}
+                />,
+            );
+
+            const activeChip = getByTestId('quests-sort-popular');
+            expect(activeChip.props.accessibilityLabel).toBe('Вернуть обычный порядок');
+            expect(activeChip.props.accessibilityState.selected).toBe(true);
+        });
     });
 
     it('names the reviews slice without treating it as a city', () => {

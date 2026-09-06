@@ -276,4 +276,7 @@ export const questsGenerated2 = {
   "components.quests.QuestReviewPromptBanner.subtitle": "Некалькі слоў дапамогуць іншым выбраць маршрут",
   "components.quests.QuestReviewPromptBanner.cta": "Пакінуць водгук",
   "components.quests.QuestReviewPromptBanner.dismiss": "Схаваць",
+  "screens.tabs.QuestsContentPanel.popularSortLabel": "Папулярныя",
+  "screens.tabs.QuestsContentPanel.popularSortA11yOn": "Сартаваць па папулярнасці",
+  "screens.tabs.QuestsContentPanel.popularSortA11yOff": "Вярнуць звычайны парадак",
 } as const
