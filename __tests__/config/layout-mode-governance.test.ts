@@ -126,7 +126,9 @@ describe('Layout mode governance (docs/RULES.md — один responsive-UX)', ()
     ];
     const withoutHydrationLatch = MIGRATED_TO_SHARED_SOURCE.filter(
       (relative) =>
-        !HYDRATION_LATCHED.test(fs.readFileSync(path.join(ROOT, ...relative.split('/')), 'utf8')),
+        !HYDRATION_LATCHED.test(
+          stripComments(fs.readFileSync(path.join(ROOT, ...relative.split('/')), 'utf8')),
+        ),
     );
 
     expect(withoutHydrationLatch).toEqual([]);
