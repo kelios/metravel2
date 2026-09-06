@@ -449,4 +449,47 @@ describe('useMarkerImageUpload', () => {
       jest.useRealTimers();
     }
   });
+
+  it('re-uploads the file when the point came back with another id', async () => {
+    const pendingFile = new File(['point'], 'point.webp', { type: 'image/webp' });
+    const recreatedMarkerId = 56;
+    const uploadedUrlForRecreated = 'https://example.com/travel-address/route-point-56.webp';
+    (getPendingImageFile as jest.MockedFunction<typeof getPendingImageFile>)
+      .mockReturnValue(pendingFile);
+    (uploadImage as jest.MockedFunction<typeof uploadImage>)
+      .mockResolvedValueOnce({ url: uploadedUrl })
+      .mockResolvedValueOnce({ url: uploadedUrlForRecreated });
+
+    const updateFormMarkers = jest.fn();
+    const updateBaseline = jest.fn();
+    // Точка ушла в сейв без id: апсерт удалил прежнюю строку и создал новую с
+    // пустой картинкой, поэтому старый url к ней не относится.
+    const formDataRef = {
+      current: { coordsMeTravel: [{ ...marker, id: null }] } as unknown as TravelFormData,
+    };
+    const { result } = renderHook(
+      () => useMarkerImageUpload({ formDataRef, updateFormMarkers, updateBaseline }),
+      { concurrentRoot: false },
+    );
+
+    await act(async () => {
+      await result.current.uploadPendingMarkerImages([marker]);
+    });
+    expect(updateFormMarkers).not.toHaveBeenCalled();
+
+    const recreatedMarker = { ...marker, id: recreatedMarkerId };
+    formDataRef.current = {
+      coordsMeTravel: [recreatedMarker],
+    } as unknown as TravelFormData;
+    await act(async () => {
+      await result.current.uploadPendingMarkerImages([recreatedMarker]);
+    });
+
+    expect(uploadImage).toHaveBeenCalledTimes(2);
+    const secondUploadBody = (uploadImage as jest.MockedFunction<typeof uploadImage>)
+      .mock.calls[1][0];
+    expect(secondUploadBody.get('id')).toBe(String(recreatedMarkerId));
+    expect(updateFormMarkers).toHaveBeenCalledTimes(1);
+    expect(updateFormMarkers.mock.calls[0][0][0].image).toBe(uploadedUrlForRecreated);
+  });
 });

@@ -260,6 +260,11 @@ function RouteBuilder({
   // Транспорт и тип велосипеда шлют один и тот же PATCH по одной поездке,
   // поэтому лок общий: параллельных перестроений маршрута быть не должно.
   const transportMutationLockedRef = useRef(false);
+  // #1824: у сохранения маршрута лока не было вовсе. `disabled` кнопки держится
+  // на `isPending`, а он появляется только со следующим рендером — повтор в
+  // одном тике успевал отправить второй PUT. Ref ловит его синхронно, как это
+  // уже сделано у перестроения маршрута.
+  const routeSaveLockedRef = useRef(false);
 
   const [route, setRoute] = useState<RoutePoint[]>(trip.route);
 
@@ -971,6 +976,7 @@ function RouteBuilder({
 
   const handleSave = () => {
     if (
+      routeSaveLockedRef.current ||
       transportMutationLockedRef.current ||
       updateTripTransport.isPending ||
       updateTripBikeType.isPending
@@ -986,19 +992,40 @@ function RouteBuilder({
       return;
     }
 
+    // #1824: подпись черновика, который уходит на сервер. Ответ применяется
+    // только если за время запроса на экране остался ровно он. Иначе правка,
+    // сделанная во время сохранения — перетаскивание маркера, переименование
+    // точки, новая точка, — была бы молча затёрта серверным ответом; на
+    // медленной сети окно потери равно времени запроса.
+    //
+    // При расхождении на экране остаются правки пользователя, а не серверный
+    // ответ, и это НЕ тихое расхождение: `hasUnsavedRouteChanges` сравнивает
+    // черновик уже с новым `trip.route`, поэтому кнопка сохранения остаётся на
+    // месте и честно говорит, что есть что отправить. PUT заменяет маршрут
+    // целиком (`api/plannedTripsRequests.ts:452`), так что повторное сохранение
+    // разошедшегося черновика дублей точек не создаёт.
+    const submittedRouteSignature = currentRouteSignature;
     setRouteSaveError(null);
+    routeSaveLockedRef.current = true;
     updateTripRoute.mutate(
       { tripId: trip.id, route },
       {
         onSuccess: (updatedTrip) => {
-          setRoute(updatedTrip.route);
+          setRoute((currentRoute) => (
+            routeSignature(currentRoute) === submittedRouteSignature
+              ? updatedTrip.route
+              : currentRoute
+          ));
           void uploadPendingOriginal();
         },
         onError: () => {
           setRouteSaveError({
             message: i18nT('tripsStatic:plan.route.saveError'),
-            signature: currentRouteSignature,
+            signature: submittedRouteSignature,
           });
+        },
+        onSettled: () => {
+          routeSaveLockedRef.current = false;
         },
       },
     );
@@ -1010,6 +1037,7 @@ function RouteBuilder({
   // мутацию этого экрана, которая ещё летит.
   const canCommitRouteRebuild = () =>
     !transportMutationLockedRef.current &&
+    !routeSaveLockedRef.current &&
     !updateTripRoute.isPending &&
     !updateTripTransport.isPending &&
     !updateTripBikeType.isPending;

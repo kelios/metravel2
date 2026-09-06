@@ -37,10 +37,12 @@ const revokePreviewUrl = (url: string): void => {
  * Замер в браузере (Chrome, локальный стек, 06.09.2026): апдейт стейта из
  * промиса `uploadImage` коммитится примерно через 160 мс, а `requestAnimationFrame`
  * успевает выполниться раньше — в момент revoke в DOM ещё стоит `<img src="blob:…">`.
- * Ревокнутый blob отдаёт `net::ERR_FILE_NOT_FOUND`, `ImageCardMedia` сжигает на нём
- * обе попытки (первую и retry) и уходит в терминальный `failed`: миниатюра точки
- * остаётся пустой до перезагрузки страницы. Поэтому blob живёт ещё несколько секунд
- * после подмены источника — освобождение памяти не стоит потерянного превью.
+ * Ревокнутый blob отдаёт `net::ERR_FILE_NOT_FOUND`, и `ImageCardMedia` сжигает на нём
+ * обе попытки (первую и retry). Слот чинится сам только когда источник всё-таки
+ * сменился: запись о сбое привязана к identity картинки. Если же подмена до точки не
+ * доехала, миниатюра остаётся с мёртвым `blob:` и пустым квадратом до перезагрузки
+ * страницы. Поэтому blob живёт ещё несколько секунд после подмены источника, а при
+ * `pending` не ревокается вовсе — освобождение памяти не стоит потерянного превью.
  */
 const PREVIEW_REVOKE_DELAY_MS = 15_000
 
@@ -83,7 +85,12 @@ export function useMarkerImageUpload({
   // Загрузка уже прошла, а подмена источника в форме — ещё нет (точка успела
   // потерять id или картинку в стейте). Держим готовый URL, чтобы следующий
   // сейв доклеил его без повторной заливки того же файла на сервер.
-  const resolvedUploadsRef = useRef(new Map<string, string>())
+  // Значение помнит id точки, к которой файл привязал бэкенд: `POST /api/upload`
+  // пишет картинку в `TravelAddress` по этому id, поэтому чужой точке такой URL
+  // не годится.
+  const resolvedUploadsRef = useRef(
+    new Map<string, { markerId: string; uploadedUrl: string }>(),
+  )
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -227,7 +234,10 @@ export function useMarkerImageUpload({
               // Ревок здесь оставил бы миниатюру с мёртвым источником, поэтому
               // файл и превью живут до следующей попытки — уже без повторной
               // заливки того же файла.
-              resolvedUploadsRef.current.set(imageUrl, uploadedUrl)
+              resolvedUploadsRef.current.set(imageUrl, {
+                markerId: normalizedMarkerId,
+                uploadedUrl,
+              })
               return
             }
             resolvedUploadsRef.current.delete(imageUrl)
@@ -235,9 +245,14 @@ export function useMarkerImageUpload({
             schedulePreviewRevoke(imageUrl)
           }
 
-          const resolvedUrl = resolvedUploadsRef.current.get(imageUrl)
-          if (resolvedUrl) {
-            finishPreview(resolvedUrl)
+          // Готовый URL переиспользуем только для той же точки. Точка, ушедшая
+          // в сейв без id, пересоздаётся апсертом: старая строка удаляется,
+          // новая создаётся с пустой картинкой. Подставить туда прежний URL
+          // вместо повторной заливки — значит показать фото до перезагрузки и
+          // потерять его на сервере.
+          const resolved = resolvedUploadsRef.current.get(imageUrl)
+          if (resolved && resolved.markerId === normalizedMarkerId) {
+            finishPreview(resolved.uploadedUrl)
             return
           }
 
@@ -268,7 +283,8 @@ export function useMarkerImageUpload({
             if (succeeded) {
               // Файл уже на сервере: повторная заливка не нужна. Если подмена
               // источника не прошла, следующий сейв доклеит её из
-              // resolvedUploadsRef без сетевого запроса.
+              // resolvedUploadsRef без сетевого запроса — пока точка держит тот
+              // же id, к которому бэкенд привязал картинку.
               markerUploadStateRef.current.delete(imageUrl)
             } else {
               markerUploadStateRef.current.set(imageUrl, {

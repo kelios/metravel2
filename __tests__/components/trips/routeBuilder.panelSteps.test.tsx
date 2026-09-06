@@ -264,6 +264,7 @@ describe('RouteBuilder panel steps', () => {
 
     act(() => {
       mockRouteMutate.mock.calls[0][1].onError(new Error('400'))
+      mockRouteMutate.mock.calls[0][1].onSettled()
     })
 
     expect(getByTestId('route-builder-save-error').props.children).toBe(
@@ -281,6 +282,7 @@ describe('RouteBuilder panel steps', () => {
     fireEvent.press(getByTestId('route-builder-save'))
     act(() => {
       mockRouteMutate.mock.calls[0][1].onError(new Error('400'))
+      mockRouteMutate.mock.calls[0][1].onSettled()
     })
     expect(getByTestId('route-builder-save-error')).toBeTruthy()
 
@@ -298,6 +300,7 @@ describe('RouteBuilder panel steps', () => {
           ],
         }),
       )
+      mockRouteMutate.mock.calls[1][1].onSettled()
     })
 
     expect(getByTestId('route-builder-save')).toBeTruthy()
@@ -318,6 +321,7 @@ describe('RouteBuilder panel steps', () => {
     fireEvent.press(getByTestId('route-builder-save'))
     act(() => {
       mockRouteMutate.mock.calls[0][1].onError(new Error('400'))
+      mockRouteMutate.mock.calls[0][1].onSettled()
     })
     expect(getByTestId('route-builder-save-error')).toBeTruthy()
 
@@ -342,6 +346,7 @@ describe('RouteBuilder panel steps', () => {
     fireEvent.press(getByTestId('route-builder-save'))
     act(() => {
       mockRouteMutate.mock.calls[0][1].onError(new Error('400'))
+      mockRouteMutate.mock.calls[0][1].onSettled()
     })
     expect(getByTestId('route-builder-save-error')).toBeTruthy()
 
