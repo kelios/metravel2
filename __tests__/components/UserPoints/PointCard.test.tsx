@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { PointCard } from '@/components/UserPoints/PointCard';
 import { PointStatus } from '@/types/userPoints';
 import type { ImportedPoint } from '@/types/userPoints';
+import { __resetViewportMetricsForTests } from '@/utils/viewportMetrics';
 
 const mockPlaceListCard = jest.fn((props: any) => {
   const React = require('react');
@@ -139,25 +140,41 @@ describe('PointCard', () => {
 
   it('copies coordinates via navigator.clipboard on web when available', async () => {
     const originalPlatform = require('react-native').Platform.OS;
+    const originalWindow = (global as any).window;
     (require('react-native').Platform as any).OS = 'web';
 
     const writeText = jest.fn(async () => true);
+    // Заглушка окна обязана уметь то же, что настоящее: web-ветка вьюпорт-стора
+    // подписывается на `resize`/`orientationchange` (#1814). Окно и платформа
+    // восстанавливаются в `finally` — иначе первая же ошибка внутри теста
+    // оставляет глобалы сломанными и роняет все следующие кейсы файла.
     (global as any).window = {
       navigator: {
         clipboard: {
           writeText,
         },
       },
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
     };
 
-    render(<PointCard point={mockPoint} />);
-    fireEvent.press(screen.getByLabelText('Копировать координаты'));
+    try {
+      render(<PointCard point={mockPoint} />);
+      fireEvent.press(screen.getByLabelText('Копировать координаты'));
 
-    await waitFor(() => {
-      expect(writeText).toHaveBeenCalledWith('50.450100, 30.523400');
-    });
-
-    (require('react-native').Platform as any).OS = originalPlatform;
+      await waitFor(() => {
+        expect(writeText).toHaveBeenCalledWith('50.450100, 30.523400');
+      });
+    } finally {
+      (require('react-native').Platform as any).OS = originalPlatform;
+      (global as any).window = originalWindow;
+      // Модульное состояние `viewportMetrics` тоже глобал: на web-ветке оно
+      // повесило слушатели инвалидации на заглушку окна и запомнило это флагом.
+      // Без сброса кэш вьюпорта остаётся привязан к выброшенному окну — и
+      // следующий web-кейс этого файла читал бы ширину, которая уже никогда не
+      // инвалидируется.
+      __resetViewportMetricsForTests();
+    }
   });
 
   it('passes navigation actions into the shared card overflow model', () => {

@@ -41,6 +41,20 @@ const LEGACY_ALLOWLIST = new Set([
   'components/layout/BottomDock.tsx',
 ]);
 
+/**
+ * Страж обязан судить КОД, а не прозу. Без этого комментарий, который честно
+ * называет прежний хук, валит тест — и объяснение миграции приходится писать
+ * эвфемизмами («прежний хук размеров окна из react-native»), то есть страж
+ * начинает портить документацию вместо того, чтобы ловить дефект.
+ */
+function stripComments(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    // `[^:]` перед `//` бережёт протокол в строковых литералах: `https://…`
+    // не комментарий, и срезать его хвост незачем.
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+}
+
 function walkSourceFiles(dir: string, out: string[] = []): string[] {
   if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -79,6 +93,43 @@ describe('Layout mode governance (docs/RULES.md — один responsive-UX)', ()
     // форматирование: перенос аргумента на новую строку — не регрессия.
     expect(source).toMatch(/useBreakpoints\(\s*\{\s*clientOnly:\s*true\s*\}\s*\)/);
     expect(PLATFORM_DECIDES_MODE.test(source)).toBe(false);
+  });
+
+  it('«Мои точки» читают ширину из ОДНОГО источника (регрессия #1814)', () => {
+    // #1814: родитель уже сидел на `useBreakpoints({ clientOnly: true })`, а
+    // `PointsListGrid` и `PointCard` остались на `useWindowDimensions` — живой
+    // ширине без гидратационной защёлки. На первом web-кадре части одного экрана
+    // могли оказаться в разных режимах. Область чтения ограничена ровно фичей,
+    // чтобы страж не молчал из-за широкого поиска и не ловил чужие экраны.
+    const featureDir = path.join(ROOT, 'components/UserPoints');
+    const featureFiles = walkSourceFiles(featureDir);
+    expect(featureFiles.length).toBeGreaterThan(0);
+
+    // Второй источник — это не только прежний хук: прямое чтение `Dimensions`
+    // даёт ровно тот же дефект другим синтаксисом, поэтому ловим обе формы.
+    const SECOND_VIEWPORT_SOURCE = /\buseWindowDimensions\b|\bDimensions\.get\s*\(/;
+    const withOwnViewportSource = featureFiles
+      .filter((file) => SECOND_VIEWPORT_SOURCE.test(stripComments(fs.readFileSync(file, 'utf8'))))
+      .map((file) => path.relative(ROOT, file).split(path.sep).join('/'));
+
+    expect(withOwnViewportSource).toEqual([]);
+
+    // Мало перевести на общий хук: без `clientOnly` первый web-кадр этих узлов
+    // приходит с width=0 (`hooks/useHydrationReady.ts`) и десктоп мигает узкой
+    // раскладкой (#1282). Читаем по точному пути: файл, уехавший из фичи, роняет
+    // страж на чтении, а не выпадает из области молча. Сверяем смысл, а не
+    // форматирование: перенос аргумента и висячая запятая — не регрессия.
+    const HYDRATION_LATCHED = /useResponsiveWidth\(\s*\{[^}]*\bclientOnly\s*:\s*true\b/;
+    const MIGRATED_TO_SHARED_SOURCE = [
+      'components/UserPoints/PointsListGrid.tsx',
+      'components/UserPoints/PointCard.tsx',
+    ];
+    const withoutHydrationLatch = MIGRATED_TO_SHARED_SOURCE.filter(
+      (relative) =>
+        !HYDRATION_LATCHED.test(fs.readFileSync(path.join(ROOT, ...relative.split('/')), 'utf8')),
+    );
+
+    expect(withoutHydrationLatch).toEqual([]);
   });
 
   it('унаследованный список не разрастается молча', () => {

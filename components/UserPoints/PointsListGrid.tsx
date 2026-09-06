@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react'
-import { Platform, View, useWindowDimensions, ScrollView, TextInput, Text as RNText, RefreshControl } from 'react-native'
+import { Platform, View, ScrollView, TextInput, Text as RNText, RefreshControl } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { FlashList } from '@shopify/flash-list'
 
 import { UserPointsMap } from '@/components/UserPoints/UserPointsMap'
 import { PointsListWebLazyScroll } from '@/components/UserPoints/PointsListWebLazyScroll'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useResponsiveWidth } from '@/hooks/useResponsive'
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
 import IconButton from '@/components/ui/IconButton'
@@ -116,7 +117,14 @@ export const PointsListGrid: React.FC<{
   onResetFilters,
   showMapSettings = false,
 }) => {
-  const { width: windowWidth } = useWindowDimensions()
+  // #1814 — ширина берётся из того же источника, что и у родителя
+  // (`PointsList` → `useBreakpoints({ clientOnly: true })`). Прежний
+  // `useWindowDimensions` отдавал живую ширину без гидратационной защёлки, и на
+  // первом web-кадре родитель с этим узлом могли разойтись по режиму. Поддерево
+  // монтируется уже после гидратации (`UserPointsScreen` держит спиннер до
+  // `authReady`), значит `clientOnly` здесь корректен и не даёт «нулевого»
+  // кадра (#1282).
+  const windowWidth = useResponsiveWidth({ clientOnly: true })
   const isWeb = Platform.OS === 'web'
   const isWideScreen = isWeb && windowWidth >= 1024
   const compactControls = isWeb && windowWidth < 1200

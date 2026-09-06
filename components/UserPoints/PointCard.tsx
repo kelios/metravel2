@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, StyleSheet, useWindowDimensions } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 
@@ -23,6 +23,7 @@ import {
 import { PLACE_CARD_STYLE } from '@/components/MapPage/AddressListItem/constants';
 import type { ImportedPoint } from '@/types/userPoints';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsiveWidth } from '@/hooks/useResponsive';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { getSiteBaseUrl } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
@@ -178,7 +179,11 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   onToggleSelect,
 }) => {
   const colors = useThemedColors();
-  const { width: viewportWidth } = useWindowDimensions();
+  // #1814 — один источник ширины на всю фичу «Мои точки»: родительский
+  // `PointsList` читает `useBreakpoints({ clientOnly: true })`, карточка обязана
+  // читать тот же стор с той же семантикой гидратации, иначе на первом web-кадре
+  // шапка и карточки рисуются в разных режимах.
+  const viewportWidth = useResponsiveWidth({ clientOnly: true });
 
   const title = React.useMemo(() => getPointTitle(point), [point]);
   const subtitle = React.useMemo(() => getPointSubtitle(point, title), [point, title]);

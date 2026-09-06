@@ -8,7 +8,17 @@ jest.mock('react-native', () => {
       ...RN.Platform,
       OS: 'web',
     },
-    useWindowDimensions: () => ({ width: 1280, height: 800, scale: 1, fontScale: 1 }),
+  };
+});
+
+// #1814 — сетка перешла на общий вьюпорт-хук фичи (`useResponsiveWidth`),
+// поэтому десктопная ширина задаётся тем же источником, что и у `PointsList`,
+// а не заглушкой `useWindowDimensions`.
+jest.mock('@/hooks/useResponsive', () => {
+  const actual = jest.requireActual('@/hooks/useResponsive');
+  return {
+    ...actual,
+    useResponsiveWidth: () => 1280,
   };
 });
 
