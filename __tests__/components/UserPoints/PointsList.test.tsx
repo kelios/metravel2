@@ -17,6 +17,14 @@ jest.mock('react-native', () => {
   };
 });
 
+// #1788 — режим и ширина в PointsList приходят из общего вьюпорт-хука, а не из
+// `useWindowDimensions` + `Platform.OS`. Сценарий этого файла — десктопная
+// ширина, поэтому фиксируем её в том источнике, который читает компонент.
+jest.mock('@/hooks/useResponsive', () => ({
+  ...jest.requireActual('@/hooks/useResponsive'),
+  useResponsive: () => ({ width: 1200, height: 800, isMobile: false }),
+}));
+
 jest.mock('@/components/UserPoints/PointsListGrid', () => {
   const React = require('react');
   const { Text, View, TouchableOpacity } = require('react-native');

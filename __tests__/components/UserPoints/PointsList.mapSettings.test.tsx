@@ -35,6 +35,15 @@ jest.mock('expo-location', () => ({
   requestForegroundPermissionsAsync: jest.fn(async () => ({ status: 'denied' })),
 }));
 
+const BREAKPOINT_TABLET = 768;
+
+/** Минимальный снимок вьюпорта: PointsList читает из него ширину и режим. */
+const buildResponsiveState = (width: number) => ({
+  width,
+  height: 844,
+  isMobile: width < BREAKPOINT_TABLET,
+});
+
 const originalOS = Platform.OS;
 const setPlatform = (os: typeof Platform.OS) => {
   Object.defineProperty(Platform, 'OS', { configurable: true, get: () => os });
@@ -63,9 +72,12 @@ describe('PointsList map settings availability (#1787)', () => {
   beforeEach(() => {
     setPlatform('web');
     mockWidth = 1280;
-    jest.spyOn(require('react-native'), 'useWindowDimensions').mockImplementation(() => ({
-      width: mockWidth, height: 844, scale: 1, fontScale: 1,
-    }));
+    // #1788 — PointsList берёт и ширину, и режим из общего вьюпорт-хука
+    // (`useResponsive`), а не из `useWindowDimensions` + `Platform.OS`. Мок
+    // двигает ровно тот источник, который читает продакшен-код.
+    jest.spyOn(require('@/hooks/useResponsive'), 'useResponsive').mockImplementation(() =>
+      buildResponsiveState(mockWidth),
+    );
   });
 
   afterEach(() => {

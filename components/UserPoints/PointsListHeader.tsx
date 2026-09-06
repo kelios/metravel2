@@ -193,13 +193,14 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
 
           {/*
             #1414 (TestFlight 1.0.5 (8)): подпись действия обязательна на любой
-            ширине. `showLabel={!isMobile}` гасил её, а `isMobile` здесь — не
-            вьюпорт, а `Platform.OS !== 'web'` (`PointsList.tsx:81`), поэтому
-            mobile web видел три подписанные кнопки, а Android и iPhone — три
-            одинаковых кружка settings/filter/sliders без единой буквы. Иконки
-            здесь не «говорящие» в смысле `docs/DESIGN_SYSTEM.md`
-            («Mobile pattern: secondary tool actions»), значит действию нужна
-            подпись, а не icon-only ряд.
+            ширине. `showLabel={!isMobile}` гасил её, и тогда `isMobile` означал
+            не вьюпорт, а `Platform.OS !== 'web'`, поэтому mobile web видел три
+            подписанные кнопки, а Android и iPhone — три одинаковых кружка
+            settings/filter/sliders без единой буквы. Источник `isMobile` с тех
+            пор исправлен на вьюпорт (#1788), но подпись всё равно остаётся
+            безусловной: иконки здесь не «говорящие» в смысле
+            `docs/DESIGN_SYSTEM.md` («Mobile pattern: secondary tool actions»),
+            значит действию нужна подпись, а не icon-only ряд на любой ширине.
           */}
           <IconButton
             icon={<Feather name="settings" size={18} color={colors.text} />}
