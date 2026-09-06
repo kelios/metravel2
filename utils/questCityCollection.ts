@@ -4,6 +4,7 @@
 
 import { calculateDistance } from '@/utils/distanceCalculator'
 import { createCollator } from '@/i18n/format'
+import { filterQuestsByCompletion } from '@/utils/questCatalogSelection'
 import type { QuestMeta } from '@/utils/questAdapters'
 import {
   buildCanonicalQuestCityIndex,
@@ -21,6 +22,22 @@ export const NEXT_QUEST_RADIUS_KM = 60
 
 /** Сколько квестов показываем в блоке следующего шага. */
 export const NEXT_QUEST_LIMIT = 3
+
+/** Сколько пройденных квестов показывает профиль до «Показать все» (#1794). */
+export const PROFILE_COMPLETED_QUESTS_LIMIT = 4
+
+/**
+ * Пройденные квесты в порядке для показа человеку: по городу, внутри города по
+ * названию. Времени прохождения в каталоге нет, а порядок id — это порядок
+ * заведения квестов в базе, то есть для истории игрока произвольный.
+ */
+export function selectCompletedQuests(quests: QuestMeta[]): QuestMeta[] {
+  const collator = createCollator()
+  return filterQuestsByCompletion(quests, true).sort(
+    (a, b) =>
+      collator.compare(a.cityName ?? '', b.cityName ?? '') || collator.compare(a.title ?? '', b.title ?? ''),
+  )
+}
 
 export type QuestCityCollection = {
   cityId: string

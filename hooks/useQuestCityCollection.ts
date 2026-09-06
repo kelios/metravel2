@@ -12,6 +12,7 @@ import {
   buildQuestCityCollection,
   buildQuestCityCollections,
   pickNextQuests,
+  selectCompletedQuests,
   type QuestCityCollection,
   type QuestOrigin,
   type QuestSuggestion,
@@ -112,6 +113,8 @@ export function useQuestCityCollection(params: {
  */
 export function useQuestCityCollections(opts?: { enabled?: boolean }): {
   collections: QuestCityCollection[]
+  /** Пройденные квесты того же каталога — список «Мои квесты» в профиле (#1794). */
+  completedQuests: QuestMeta[]
   loading: boolean
 } {
   const enabled = opts?.enabled ?? true
@@ -136,9 +139,11 @@ export function useQuestCityCollections(opts?: { enabled?: boolean }): {
     enabled: enabled && authReady && isAuthenticated && hasCompleted,
   })
   const collections = useMemo(() => buildQuestCityCollections(quests), [quests])
+  const completedQuests = useMemo(() => selectCompletedQuests(quests), [quests])
 
   return {
     collections,
+    completedQuests,
     loading: enabled && authReady && isAuthenticated && (progressPending || (hasCompleted && loading)),
   }
 }

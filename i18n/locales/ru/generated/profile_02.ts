@@ -334,4 +334,9 @@ export const profileGenerated2 = {
   "components.settings.NotificationSettingsSection.openSettingsAction": "Открыть настройки устройства",
   "components.settings.NotificationSettingsSection.retryAction": "Повторить",
   "components.settings.NotificationSettingsSection.syncingA11y": "Синхронизация уведомлений",
+  "components.profile.ProfileCompletedQuests.title": "Мои квесты",
+  "components.profile.ProfileCompletedQuests.subtitle": "Пройдено маршрутов: {{value1}}",
+  "components.profile.ProfileCompletedQuests.eyebrow": "Пройденный квест",
+  "components.profile.ProfileCompletedQuests.showAll": "Показать все {{value1}}",
+  "components.profile.ProfileCompletedQuests.showAllA11y": "Показать все пройденные квесты, {{value1}}",
 } as const

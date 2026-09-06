@@ -334,4 +334,9 @@ export const profileGenerated2 = {
   "components.settings.NotificationSettingsSection.openSettingsAction": "Otwórz ustawienia urządzenia",
   "components.settings.NotificationSettingsSection.retryAction": "Spróbuj ponownie",
   "components.settings.NotificationSettingsSection.syncingA11y": "Synchronizowanie powiadomień",
+  "components.profile.ProfileCompletedQuests.title": "Moje questy",
+  "components.profile.ProfileCompletedQuests.subtitle": "Ukończone trasy: {{value1}}",
+  "components.profile.ProfileCompletedQuests.eyebrow": "Ukończony quest",
+  "components.profile.ProfileCompletedQuests.showAll": "Pokaż wszystkie {{value1}}",
+  "components.profile.ProfileCompletedQuests.showAllA11y": "Pokaż wszystkie ukończone questy, {{value1}}",
 } as const

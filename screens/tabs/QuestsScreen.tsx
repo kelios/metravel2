@@ -54,6 +54,7 @@ import {
     type MapPoint,
 } from './QuestsScreen.helpers';
 import { canRankQuestsByPopularity, sortQuestsByPopularity } from '@/utils/questPopularity';
+import { useQuestCatalogHandoff } from './useQuestCatalogHandoff';
 import { createCollator, translate as i18nT } from '@/i18n'
 
 
@@ -158,6 +159,9 @@ export default function QuestsScreen() {
             devError('Error saving selected city:', error);
         }
     }, [geoRequesting, isMobile]);
+
+    // Срез, переданный из профиля (#1794): применяем как обычный выбор.
+    useQuestCatalogHandoff({ enabled: isFocused, onApply: handleSelectCity });
 
     const handleShowKidsQuests = useCallback(() => {
         void handleSelectCity(KIDS_FILTER_ID);

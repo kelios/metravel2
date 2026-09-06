@@ -80,50 +80,33 @@ export const getQuestCountryName = (code: string): string => {
     return key ? i18nT(key) : code;
 };
 
-// v2: сброс устаревшего авто-сохранённого города (старый код по гео сохранял
-// единственный ближайший город, из-за чего по умолчанию был виден лишь 1 город).
-export const STORAGE_SELECTED_CITY = 'quests_selected_city_v2';
+// Ключ хранилища, id виртуальных срезов и предикат личных срезов живут в
+// листовом `utils/questCatalogSelection.ts`: их читает не только этот экран, но и
+// профиль (#1794), а тянуть ради двух строк таблицу стран и геометрию карты в
+// его бандл незачем. Здесь они ре-экспортируются, чтобы у экрана остался один
+// вход за своими константами.
+export {
+    STORAGE_SELECTED_CITY,
+    ALL_QUESTS_ID,
+    NEARBY_ID,
+    KIDS_FILTER_ID,
+    BIKE_FILTER_ID,
+    REVIEWED_FILTER_ID,
+    COMPLETED_FILTER_ID,
+    UNCOMPLETED_FILTER_ID,
+    // Срез по личному статусу прохождения: правило одно на каталог (#1791) и
+    // профиль (#1794) и лежит рядом со своими id.
+    filterQuestsByCompletion,
+    resolveStoredQuestCatalogSelection,
+} from '@/utils/questCatalogSelection';
 // «Поблизости» остаётся единым продуктовым порогом, без пользовательского
 // селектора и окружности радиуса на карте. 10 км резали город пополам (из
 // Кракова было видно 6 квестов из 9 городских), поэтому берём радиус
 // агломерации + ближней вылазки на день.
 export const DEFAULT_NEARBY_RADIUS_KM = 30;
-export const ALL_QUESTS_ID = '__all__';
-export const NEARBY_ID = '__nearby__';
-export const KIDS_FILTER_ID = '__kids__';
-export const REVIEWED_FILTER_ID = '__reviewed__';
-// Личные срезы каталога: «что я уже прошёл» и «что ещё не проходил». Оба
-// существуют только для вошедшего игрока — у гостя `is_completed_by_me`
-// приходит `false` на каждом квесте, поэтому «Пройденные» гарантированно
-// пусты, а «Не пройденные» дословно повторяют весь каталог.
-export const COMPLETED_FILTER_ID = '__completed__';
-export const UNCOMPLETED_FILTER_ID = '__uncompleted__';
 
 export function filterReviewedQuests<T extends { ratingCount: number }>(quests: T[]): T[] {
     return quests.filter((quest) => quest.ratingCount > 0);
-}
-
-/**
- * Срез каталога по личному статусу прохождения. Флаг приходит в каждом
- * элементе `/quests/` (`is_completed_by_me` → `isCompletedByMe`), поэтому
- * отдельного запроса срез не стоит.
- */
-export function filterQuestsByCompletion<T extends { isCompletedByMe?: boolean }>(
-    quests: T[],
-    completed: boolean,
-): T[] {
-    return quests.filter((quest) => Boolean(quest.isCompletedByMe) === completed);
-}
-
-/**
- * «Рядом» требует свежей геолокации и поэтому не восстанавливается между
- * сессиями. Старое значение `__nearby__` могло означать как настоящий
- * геофильтр, так и прежний «мягкий» дефолт всего каталога, поэтому безопасно
- * мигрируем его в явное состояние «Все квесты».
- */
-export function resolveStoredQuestCatalogSelection(savedId: string | null): string {
-    if (!savedId || savedId === NEARBY_ID) return ALL_QUESTS_ID;
-    return savedId;
 }
 
 let expoLocationModulePromise: Promise<typeof import('expo-location')> | null = null;
@@ -147,8 +130,6 @@ export function isKidsQuest(tags?: string[] | null): boolean {
 export function filterKidsQuests<T extends { tags?: string[] | null }>(quests: T[]): T[] {
     return quests.filter((quest) => isKidsQuest(quest.tags));
 }
-
-export const BIKE_FILTER_ID = '__bike__';
 
 // Канонический тег велоквестов и предикат живут в utils/questAudience.ts —
 // их используют и карточки каталога, и городские лендинги.

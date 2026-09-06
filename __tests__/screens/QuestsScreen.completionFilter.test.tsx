@@ -17,6 +17,7 @@ import {
     STORAGE_SELECTED_CITY,
     UNCOMPLETED_FILTER_ID,
 } from '@/screens/tabs/QuestsScreen.helpers';
+import { STORAGE_PENDING_CATALOG_SELECTION } from '@/utils/questCatalogSelection';
 import { useAuthStore } from '@/stores/authStore';
 import QuestsScreen from '@/screens/tabs/QuestsScreen';
 
@@ -24,8 +25,9 @@ type ContentProps = ComponentProps<typeof QuestsContentPanel>;
 let mockContentProps: ContentProps;
 let mockQuests: QuestMeta[] = [];
 let mockMobile = false;
+let mockFocused = true;
 
-jest.mock('expo-router', () => ({ useIsFocused: () => true }));
+jest.mock('expo-router', () => ({ useIsFocused: () => mockFocused }));
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
 jest.mock('@/components/MapPage/Map.web', () => () => null);
 jest.mock('@/components/seo/LazyInstantSEO', () => () => null);
@@ -79,6 +81,7 @@ const signOut = () => useAuthStore.setState({ isAuthenticated: false, authReady:
 beforeEach(async () => {
     (Platform as { OS: string }).OS = 'web';
     mockMobile = false;
+    mockFocused = true;
     mockQuests = CATALOG();
     signOut();
     await AsyncStorage.clear();
@@ -207,4 +210,54 @@ it('leaves the city slice untouched by the personal filters', async () => {
     expect(mockContentProps.questsAll.map((q) => q.id)).toEqual([
         'walked-one', 'fresh-one', 'walked-two', 'fresh-two',
     ]);
+});
+
+describe('передача среза из профиля (#1794)', () => {
+    it('применяет отложенный срез на холодном старте каталога', async () => {
+        signIn();
+        await AsyncStorage.setItem(STORAGE_PENDING_CATALOG_SELECTION, COMPLETED_FILTER_ID);
+
+        render(<QuestsScreen />);
+
+        await waitFor(() => expect(mockContentProps.selectedCityId).toBe(COMPLETED_FILTER_ID));
+        expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(['walked-one', 'walked-two']);
+        expect(await AsyncStorage.getItem(STORAGE_PENDING_CATALOG_SELECTION)).toBeNull();
+        expect(AsyncStorage.setItem).toHaveBeenCalledWith(STORAGE_SELECTED_CITY, COMPLETED_FILTER_ID);
+    });
+
+    it('применяет его и на уже открытой вкладке — ради этого случая ключ и заведён', async () => {
+        // Вкладка каталога живёт всю сессию: `router.push` из профиля второй
+        // экземпляр не создаёт, а mount-эффект больше не выполнится. Без
+        // приёма на фокусе кнопка «Показать все» показывала бы прежний срез.
+        signIn();
+        const { rerender } = render(<QuestsScreen />);
+        await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
+
+        await AsyncStorage.setItem(STORAGE_PENDING_CATALOG_SELECTION, COMPLETED_FILTER_ID);
+        mockFocused = false;
+        rerender(<QuestsScreen />);
+        mockFocused = true;
+        rerender(<QuestsScreen />);
+
+        await waitFor(() => expect(mockContentProps.selectedCityId).toBe(COMPLETED_FILTER_ID));
+        expect(await AsyncStorage.getItem(STORAGE_PENDING_CATALOG_SELECTION)).toBeNull();
+    });
+
+    it('не возвращает срез на следующий заход: ключ одноразовый', async () => {
+        signIn();
+        await AsyncStorage.setItem(STORAGE_PENDING_CATALOG_SELECTION, COMPLETED_FILTER_ID);
+        const { rerender } = render(<QuestsScreen />);
+        await waitFor(() => expect(mockContentProps.selectedCityId).toBe(COMPLETED_FILTER_ID));
+
+        mockContentProps.onResetFilters();
+        await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
+
+        mockFocused = false;
+        rerender(<QuestsScreen />);
+        mockFocused = true;
+        rerender(<QuestsScreen />);
+
+        await waitFor(() => expect(mockContentProps.questsAll).toHaveLength(4));
+        expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID);
+    });
 });
