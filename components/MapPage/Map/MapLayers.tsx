@@ -11,6 +11,7 @@ import type { MapMode } from './types';
 import { isValidCoordinate } from '@/utils/coordinateValidator';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getOsmTileUrl, OSM_PROXY_ATTRIBUTION, OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
+import { ensureMapPane } from './ensureMapPane';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -154,28 +155,16 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
   const [userLocationPaneName, setUserLocationPaneName] = useState<string | undefined>(undefined);
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    if (!mapInstance?.createPane || !mapInstance?.getPane) return;
-    try {
-      // `utils/leafletFix` патчит Map.getPane в get-or-create, поэтому проверка
-      // «pane ещё нет» здесь невозможна: getPane САМ создаёт узел — но без
-      // стилей. Отсюда правило: берём pane и КАЖДЫЙ раз применяем стиль, а не
-      // только в ветке создания. `createPane` остаётся фолбэком для ванильного
-      // Leaflet (jest/native), где патча нет.
-      const pane =
-        mapInstance.getPane(USER_LOCATION_PANE) ?? mapInstance.createPane(USER_LOCATION_PANE);
-      // Тот же патч на мёртвой/пересоздаваемой карте отдаёт detached-заглушку —
-      // вешать на неё маркер нельзя, он просто исчезнет с карты.
-      if (!pane || pane.isConnected === false) {
-        setUserLocationPaneName(undefined);
-        return;
-      }
-      pane.style.zIndex = String(USER_LOCATION_PANE_Z_INDEX);
-      pane.style.pointerEvents = 'none';
-      setUserLocationPaneName(USER_LOCATION_PANE);
-    } catch {
-      // Pane недоступен — маркер остаётся в markerPane, как раньше.
-      setUserLocationPaneName(undefined);
-    }
+    if (!mapInstance) return;
+    // Ловушки патча `utils/leafletFix` (get-or-create без стилей, а на мёртвой
+    // карте — detached-заглушка либо сам контейнер) знает хелпер, см. его JSDoc.
+    // `undefined` означает «безопасного pane нет» — маркер остаётся в markerPane.
+    setUserLocationPaneName(
+      ensureMapPane(mapInstance, USER_LOCATION_PANE, {
+        zIndex: USER_LOCATION_PANE_Z_INDEX,
+        pointerEvents: 'none',
+      }),
+    );
   }, [mapInstance]);
 
   const shouldRenderBaseTileLayer = Platform.OS !== 'web' || isTestEnv;

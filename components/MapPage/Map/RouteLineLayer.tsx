@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from 'react'
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
 
+import { ensureMapPane } from './ensureMapPane'
 import {
   ROUTE_PANE_NAME,
   ROUTE_PANE_Z_INDEX,
@@ -55,19 +56,11 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({
 
     removeExisting()
 
-    let pane: HTMLElement | null = null
-    try {
-      pane = typeof map.getPane === 'function' ? map.getPane(ROUTE_PANE_NAME) : null
-      if (!pane && typeof map.createPane === 'function') {
-        pane = map.createPane(ROUTE_PANE_NAME)
-      }
-      if (pane?.style) {
-        pane.style.zIndex = ROUTE_PANE_Z_INDEX
-        pane.style.pointerEvents = 'none'
-      }
-    } catch {
-      ignoreTravelMapRuntimeError()
-    }
+    // Ловушки патча `utils/leafletFix` (см. JSDoc хелпера) знает ensureMapPane.
+    const paneName = ensureMapPane(map, ROUTE_PANE_NAME, {
+      zIndex: ROUTE_PANE_Z_INDEX,
+      pointerEvents: 'none',
+    })
 
     const latlngs = routeLineCoords
       .filter(([lat, lng]) => isValidLatLng(lat, lng))
@@ -77,7 +70,7 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({
     const addPolyline = () => {
       if (!mountedRef.current) return
 
-      const hasRoutePane = !!pane
+      const hasRoutePane = !!paneName
       const renderer =
         typeof L.svg === 'function'
           ? L.svg(hasRoutePane ? { pane: ROUTE_PANE_NAME } : undefined)

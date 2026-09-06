@@ -2,6 +2,17 @@ import React, { useEffect, useRef } from 'react';
 import type { LatLng } from '@/types/coordinates';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_COLORS } from '@/constants/designSystem';
+import { ensureMapPane } from './ensureMapPane';
+import { ROUTE_PANE_NAME } from './travelMapGeometry';
+
+/**
+ * Порядок отрисовки маршрута на карте раздела «Карта». Отличается от
+ * `ROUTE_PANE_Z_INDEX` карты статьи (450) при общем имени pane, и это не
+ * конфликт: pane принадлежит конкретному экземпляру карты (Leaflet держит их в
+ * `map._panes` и вешает в свой `mapPane`), поэтому одно имя на двух экранах —
+ * два разных узла со своими z-index.
+ */
+const MAP_PAGE_ROUTE_PANE_Z_INDEX = 590;
 
 interface MapRouteProps {
   map: any;
@@ -71,19 +82,12 @@ const MapRoute: React.FC<MapRouteProps> = ({
     const addPolyline = () => {
       if (cancelled) return;
 
-      const paneName = 'metravelRoutePane';
-      let hasRoutePane = false;
-      try {
-        const existing = typeof map.getPane === 'function' ? map.getPane(paneName) : null;
-        const pane = existing || (typeof map.createPane === 'function' ? map.createPane(paneName) : null);
-        if (pane && pane.style) {
-          pane.style.zIndex = '590';
-          pane.style.pointerEvents = 'none';
-          hasRoutePane = true;
-        }
-      } catch {
-        // noop
-      }
+      // Ловушки патча `utils/leafletFix` (см. JSDoc хелпера) знает ensureMapPane.
+      const paneName = ensureMapPane(map, ROUTE_PANE_NAME, {
+        zIndex: MAP_PAGE_ROUTE_PANE_Z_INDEX,
+        pointerEvents: 'none',
+      });
+      const hasRoutePane = !!paneName;
 
       const renderer = typeof leaflet.svg === 'function' && hasRoutePane ? leaflet.svg({ pane: paneName }) : undefined;
 

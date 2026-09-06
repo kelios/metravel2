@@ -207,6 +207,15 @@ get-or-create, поэтому проверка «pane ещё нет» не ра�
 создаёт узел, но БЕЗ стилей. Стиль применяется безусловно, `createPane` остаётся
 фолбэком для ванильного Leaflet.
 
+С #1813 это правило живёт в одном месте — `components/MapPage/Map/ensureMapPane.ts`.
+Новый pane веб-карты заводится только через него: хелпер знает все особенности
+патча (get-or-create без стилей; detached-заглушка мёртвой карты, отсекаемая по
+`isConnected === false`; контейнер карты или общий `mapPane`, которые тот же
+патч отдаёт после `map.remove()` — стилизовать их нельзя, `pointer-events: none`
+убил бы интерактивность всей карты) и возвращает имя pane либо `undefined` —
+сигнал остаться в штатном pane Leaflet. Потребители: маркер «вы здесь»
+(`MapLayers.tsx`) и оба слоя маршрута (`MapRoute.tsx`, `RouteLineLayer.tsx`).
+
 `TravelMap.native.tsx` имеет более узкий отдельный bridge для embedded travel
 map (`POINT_SELECT`, `CLEAR_SELECTED_POINT`, `OPEN_URL`, `RESIZE`). Изменение
 одного bridge не означает автоматический parity второго.
