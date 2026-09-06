@@ -53,7 +53,15 @@ function QuestModalSheet({
       statusBarTranslucent={statusBarTranslucent}
       onRequestClose={onClose}
     >
-      <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel={overlayLabel}>
+      {/* Подложка закрывает лист по тапу, но не должна быть accessibility-
+          элементом: иначе её подпись схлопнет всё окно в один узел для
+          скринридера на native (Pressable по умолчанию accessible={true}). */}
+      <Pressable
+        style={styles.overlay}
+        onPress={onClose}
+        accessible={false}
+        accessibilityLabel={overlayLabel}
+      >
         {/* Лист — Pressable только чтобы гасить тап по подложке. `accessible`
             у Pressable по умолчанию true и схлопнул бы всё содержимое в один
             элемент скринридера (звёзды и поля формы отзыва). */}

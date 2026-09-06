@@ -137,7 +137,11 @@ async function updateQuestFinishRecord(
   await serializeFinishRecordWrite(async () => {
     try {
       const stored = await readQuestFinishRecord(record.ownerId)
-      const base = stored ?? record
+      // Записи может уже не быть: выход из аккаунта чистит её в этой же
+      // очереди. Воскрешать её снимком вызывающего нельзя — иначе у аккаунта
+      // всплывёт лишнее событие возврата (#1484).
+      if (!stored) return
+      const base = stored
       if (base.questId !== record.questId || base.finishedAt !== record.finishedAt) return
       await AsyncStorage.setItem(
         questFinishRecordKey(record.ownerId),
