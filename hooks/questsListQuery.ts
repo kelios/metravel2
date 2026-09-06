@@ -1,4 +1,6 @@
 import { queryKeys } from '@/api/queryKeys'
+import type { QueryFunctionContext } from '@tanstack/react-query'
+import { waitForQuestsCatalogCredentials } from '@/api/questsCatalogInvalidation'
 import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy'
 
 /**
@@ -10,7 +12,7 @@ import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListC
  * кеша, — а держалась она копипастой в двух местах, где разъехаться могли и
  * `select`, и `retry`, и сигнатура `queryFn`.
  *
- * Модуль намеренно лёгкий: ключи + политика кеша. Слой адаптеров
+ * Модуль намеренно лёгкий: ключи, политика кеша и ожидание смены credentials. Слой адаптеров
  * (`utils/questAdapters` → `utils/geoCountry`) он не тянет, поэтому его можно
  * импортировать из универсальных крошек, которые рендерятся на каждом маршруте.
  *
@@ -22,8 +24,9 @@ import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListC
 export function questsListQueryOptions() {
   return {
     queryKey: queryKeys.quests(),
-    queryFn: async ({ signal }: { signal?: AbortSignal }) => {
+    queryFn: async ({ signal, client }: QueryFunctionContext) => {
       const { fetchQuestsList } = await import('@/api/quests')
+      await waitForQuestsCatalogCredentials(client, signal)
       return fetchQuestsList({ signal })
     },
     staleTime: QUESTS_LIST_STALE_TIME,

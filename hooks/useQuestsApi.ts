@@ -16,6 +16,9 @@ import {
     deleteProgress as apiDeleteProgress,
 } from '@/api/quests';
 import { queryKeys } from '@/api/queryKeys';
+import { getActiveQueryClient } from '@/api/activeQueryClient';
+import { refreshQuestsCatalogCompletion, resetQuestsCatalogCompletion } from '@/api/questsCatalogInvalidation';
+import { useAuthStore } from '@/stores/authStore';
 import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy';
 import { questsListQueryOptions } from '@/hooks/questsListQuery';
 import {
@@ -254,14 +257,22 @@ const pushMergedProgress = async (
     questId: string,
     data: PendingQuestProgressData,
 ): Promise<ApiQuestProgress> => {
+    const ownerId = useAuthStore.getState().userId;
     const serverProgress = await fetchOrCreateProgress(questId);
     const { merged, serverNeedsPush } = mergeQuestProgress(
         normalizeQuestProgressSnapshot(data),
         snapshotFromServerProgress(serverProgress),
     );
 
-    if (!serverNeedsPush) return serverProgress;
-    return apiUpdateProgress(serverProgress.id, toQuestProgressServerPayload(merged));
+    const updated = serverNeedsPush
+        ? await apiUpdateProgress(serverProgress.id, toQuestProgressServerPayload(merged))
+        : serverProgress;
+    const currentAuth = useAuthStore.getState();
+    if (updated.completed && ownerId && currentAuth.isAuthenticated && currentAuth.userId === ownerId) {
+        const client = getActiveQueryClient();
+        if (client) void refreshQuestsCatalogCompletion(client, questId);
+    }
+    return updated;
 };
 
 /** Хук для синхронизации прогресса квеста с бэкендом (для авторизованных) */
@@ -475,14 +486,20 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         pendingDataRef.current = null;
 
         if (!isAuthenticated || !progressIdRef.current) return;
+        const ownerId = useAuthStore.getState().userId;
         try {
             await apiDeleteProgress(progressIdRef.current);
+            const currentAuth = useAuthStore.getState();
+            const client = getActiveQueryClient();
+            if (client && questId && ownerId && currentAuth.isAuthenticated && currentAuth.userId === ownerId) {
+                resetQuestsCatalogCompletion(client, questId);
+            }
             setProgress(null);
             progressIdRef.current = null;
         } catch (err) {
             console.warn('Could not delete quest progress from server:', err);
         }
-    }, [clearRetryTimer, isAuthenticated]);
+    }, [clearRetryTimer, isAuthenticated, questId]);
 
     return { progress, progressLoading, syncing, saveProgress, resetProgress };
 }

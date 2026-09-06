@@ -12,6 +12,7 @@ import {
 } from '@/utils/authTokenStore';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import { getActiveQueryClient } from '@/api/activeQueryClient';
+import { refreshQuestsCatalogIdentity } from '@/api/questsCatalogInvalidation';
 import { queryKeys } from '@/api/queryKeys';
 import type { UserProfileDto } from '@/api/user';
 import type { FacebookAuthResult } from '@/api/auth';
@@ -113,6 +114,8 @@ export type { AuthState, AuthStore } from '@/stores/authState';
 // Epoch counter to guard against races where an in-flight auth check
 // finishes after logout and re-applies stale authenticated state.
 let authEpoch = 0;
+let logoutCredentialsReady: Promise<void> | undefined;
+let catalogIdentityVersion = 0;
 
 export const useAuthStore = create<AuthStore>((set, get) => {
     // Общий финиш нативного социального входа (Google/Facebook/Apple): токены в
@@ -558,6 +561,9 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             // Logout must still clear the local session.
         }
 
+        let releaseCatalogRefresh!: () => void;
+        const credentialsReady = new Promise<void>((resolve) => { releaseCatalogRefresh = resolve; });
+        logoutCredentialsReady = credentialsReady;
         get().invalidateAuthState();
 
         try {
@@ -568,10 +574,15 @@ export const useAuthStore = create<AuthStore>((set, get) => {
                 console.warn('Ошибка при логауте с сервера:', e);
             }
         } finally {
-            await Promise.all([
-                clearSessionTokens(),
-                removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar']),
-            ]);
+            try {
+                await Promise.all([
+                    clearSessionTokens(),
+                    removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar']),
+                ]);
+            } finally {
+                if (logoutCredentialsReady === credentialsReady) logoutCredentialsReady = undefined;
+                releaseCatalogRefresh();
+            }
         }
     },
 
@@ -597,6 +608,19 @@ export const useAuthStore = create<AuthStore>((set, get) => {
         return await setNewPasswordApi(token, newPassword);
     },
     };
+});
+
+useAuthStore.subscribe((state, previous) => {
+    const identity = state.isAuthenticated ? state.userId : null;
+    const previousIdentity = previous.isAuthenticated ? previous.userId : null;
+    if (identity === previousIdentity) return;
+    const version = ++catalogIdentityVersion;
+    const client = getActiveQueryClient();
+    if (!client) return;
+    void refreshQuestsCatalogIdentity(client, () => {
+        const current = useAuthStore.getState();
+        return version === catalogIdentityVersion && (current.isAuthenticated ? current.userId : null) === identity;
+    }, identity === null ? logoutCredentialsReady : undefined);
 });
 
 export const resetAuthStoreForTests = () => {
