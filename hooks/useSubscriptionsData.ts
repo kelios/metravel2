@@ -9,6 +9,7 @@ import { fetchMySubscriptions, fetchMySubscribers, resolveProfileFullName, unsub
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries';
 import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { confirmAction } from '@/utils/confirmAction';
 import { normalizeTravelPreview, type TravelPreview } from '@/utils/subscriptionsHelpers';
 import { translate as i18nT } from '@/i18n'
@@ -58,6 +59,7 @@ interface UseSubscriptionsDataOptions {
 export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) {
   const { includeAuthorTravels = false, enabled = true } = options;
   const { isAuthenticated, authReady } = useAuth();
+  const owner = useQueryOwner();
   const queryClient = useQueryClient();
 
   const retryFn = useCallback(
@@ -70,7 +72,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
   );
 
   const subscriptionsQuery = useQuery<UserProfileDto[]>({
-    queryKey: queryKeys.mySubscriptions(),
+    queryKey: queryKeys.mySubscriptions(owner),
     queryFn: fetchMySubscriptions,
     enabled: isAuthenticated && enabled,
     staleTime: 5 * 60 * 1000,
@@ -78,7 +80,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
   });
 
   const subscribersQuery = useQuery<UserProfileDto[]>({
-    queryKey: queryKeys.mySubscribers(),
+    queryKey: queryKeys.mySubscribers(owner),
     queryFn: fetchMySubscribers,
     enabled: isAuthenticated && enabled,
     staleTime: 5 * 60 * 1000,
@@ -200,12 +202,12 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
 
       try {
         await unsubscribeFromUser(userId);
-        queryClient.invalidateQueries({ queryKey: queryKeys.mySubscriptions() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.mySubscriptions(owner) });
       } catch {
         // silent
       }
     },
-    [queryClient]
+    [owner, queryClient]
   );
 
   return {

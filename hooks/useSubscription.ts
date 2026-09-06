@@ -9,6 +9,7 @@ import {
 } from '@/api/user';
 import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { showToast } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n'
 
@@ -20,6 +21,7 @@ import { translate as i18nT } from '@/i18n'
  */
 export function useSubscription(targetUserId: string | number | null | undefined) {
     const { isAuthenticated, userId: currentUserId } = useAuth();
+    const owner = useQueryOwner();
     const queryClient = useQueryClient();
 
     const normalizedTargetId = useMemo(() => {
@@ -36,7 +38,7 @@ export function useSubscription(targetUserId: string | number | null | undefined
     const enabled = isAuthenticated && !!normalizedTargetId && !isOwnProfile;
 
     const subscriptionsQuery = useQuery<UserProfileDto[]>({
-        queryKey: queryKeys.mySubscriptions(),
+        queryKey: queryKeys.mySubscriptions(owner),
         queryFn: fetchMySubscriptions,
         enabled,
         staleTime: 5 * 60 * 1000,
@@ -59,15 +61,15 @@ export function useSubscription(targetUserId: string | number | null | undefined
     }, [normalizedTargetId, subscriptionsQuery.data]);
 
     const invalidate = useCallback(() => {
-        queryClient.invalidateQueries({ queryKey: queryKeys.mySubscriptions() });
-        queryClient.invalidateQueries({ queryKey: queryKeys.mySubscribers() });
-    }, [queryClient]);
+        queryClient.invalidateQueries({ queryKey: queryKeys.mySubscriptions(owner) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.mySubscribers(owner) });
+    }, [owner, queryClient]);
 
     const subscribeMutation = useMutation({
         mutationFn: () => subscribeToUser(normalizedTargetId!),
         onMutate: async () => {
-            await queryClient.cancelQueries({ queryKey: queryKeys.mySubscriptions() });
-            const previous = queryClient.getQueryData<UserProfileDto[]>(queryKeys.mySubscriptions());
+            await queryClient.cancelQueries({ queryKey: queryKeys.mySubscriptions(owner) });
+            const previous = queryClient.getQueryData<UserProfileDto[]>(queryKeys.mySubscriptions(owner));
             if (previous && normalizedTargetId) {
                 const placeholder: UserProfileDto = {
                     id: Number(normalizedTargetId) || 0,
@@ -83,7 +85,7 @@ export function useSubscription(targetUserId: string | number | null | undefined
                     user: Number(normalizedTargetId) || 0,
                 };
                 queryClient.setQueryData<UserProfileDto[]>(
-                    queryKeys.mySubscriptions(),
+                    queryKeys.mySubscriptions(owner),
                     [...previous, placeholder]
                 );
             }
@@ -91,7 +93,7 @@ export function useSubscription(targetUserId: string | number | null | undefined
         },
         onError: (_err, _vars, context) => {
             if (context?.previous) {
-                queryClient.setQueryData(queryKeys.mySubscriptions(), context.previous);
+                queryClient.setQueryData(queryKeys.mySubscriptions(owner), context.previous);
             }
             showToast({ type: 'error', text1: i18nT('shared:hooks.useSubscription.oshibka_282b48f5'), text2: i18nT('shared:hooks.useSubscription.ne_udalos_podpisatsya_poprobuyte_pozzhe_0dfb8d0c') });
         },
@@ -101,11 +103,11 @@ export function useSubscription(targetUserId: string | number | null | undefined
     const unsubscribeMutation = useMutation({
         mutationFn: () => unsubscribeFromUser(normalizedTargetId!),
         onMutate: async () => {
-            await queryClient.cancelQueries({ queryKey: queryKeys.mySubscriptions() });
-            const previous = queryClient.getQueryData<UserProfileDto[]>(queryKeys.mySubscriptions());
+            await queryClient.cancelQueries({ queryKey: queryKeys.mySubscriptions(owner) });
+            const previous = queryClient.getQueryData<UserProfileDto[]>(queryKeys.mySubscriptions(owner));
             if (previous && normalizedTargetId) {
                 queryClient.setQueryData<UserProfileDto[]>(
-                    queryKeys.mySubscriptions(),
+                    queryKeys.mySubscriptions(owner),
                     previous.filter(
                         (p) =>
                             String(p.user ?? p.id) !== normalizedTargetId &&
@@ -117,7 +119,7 @@ export function useSubscription(targetUserId: string | number | null | undefined
         },
         onError: (_err, _vars, context) => {
             if (context?.previous) {
-                queryClient.setQueryData(queryKeys.mySubscriptions(), context.previous);
+                queryClient.setQueryData(queryKeys.mySubscriptions(owner), context.previous);
             }
             showToast({ type: 'error', text1: i18nT('shared:hooks.useSubscription.oshibka_282b48f5'), text2: i18nT('shared:hooks.useSubscription.ne_udalos_otpisatsya_poprobuyte_pozzhe_a1ce39c4') });
         },

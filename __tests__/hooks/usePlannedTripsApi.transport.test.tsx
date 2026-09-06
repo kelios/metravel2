@@ -133,7 +133,14 @@ describe('planned trip hooks', () => {
     })
     expect(queryClient.getQueryData(queryKeys.plannedTrip(42))).toEqual(updatedTrip)
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.plannedTripsAll() })
-    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: queryKeys.plannedTripsMine() })
+    // Личную коллекцию отдельно не инвалидируем — её накрывает родительский
+    // `plannedTripsAll`. Проверяем по форме ключа, а не по конкретному
+    // владельцу: с #1831 ключ несёт `userId`, и точное сравнение привязало бы
+    // набор к тому, кто именно вошёл в этом тесте.
+    const invalidatedMineKeys = invalidateSpy.mock.calls
+      .map(([filters]) => (filters as { queryKey?: readonly unknown[] } | undefined)?.queryKey ?? [])
+      .filter((queryKey) => queryKey[0] === 'planned-trips' && queryKey[1] === 'me')
+    expect(invalidatedMineKeys).toEqual([])
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.publicTripsAll() })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.communityTripsAll() })
   })

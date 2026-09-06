@@ -58,7 +58,7 @@ describe('auth identity → exact quests catalog', () => {
   it('guest→A refreshes once; profile/auth-ready changes do not refresh; other keys stay fresh', async () => {
     client.setQueryData(queryKeys.quests(), meta(false))
     client.setQueryData(queryKeys.questsPreview(2), meta(false))
-    client.setQueryData(queryKeys.userPointsAll(), ['point'])
+    client.setQueryData(queryKeys.userPointsAll('A'), ['point'])
     const fetchCatalog = jest.fn().mockResolvedValue(meta(true))
     observe(fetchCatalog)
 
@@ -73,7 +73,7 @@ describe('auth identity → exact quests catalog', () => {
     expect(fetchCatalog).toHaveBeenCalledTimes(1)
     expect(client.getQueryData(queryKeys.quests())).toEqual(meta(true))
     expect(client.getQueryState(queryKeys.questsPreview(2))?.isInvalidated).toBe(false)
-    expect(client.getQueryState(queryKeys.userPointsAll())?.isInvalidated).toBe(false)
+    expect(client.getQueryState(queryKeys.userPointsAll('A'))?.isInvalidated).toBe(false)
   })
 
   it('A→B immediately removes personal fields while B request is pending', async () => {

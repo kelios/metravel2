@@ -11,6 +11,7 @@ import type {
 } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import Button from '@/components/ui/Button';
 import { translate as i18nT, type TranslationKey } from '@/i18n'
 
@@ -30,6 +31,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
   onCancel 
 }) => {
   const queryClient = useQueryClient();
+  const owner = useQueryOwner();
   const [step, setStep] = useState<ImportStep>('intro');
   const [file, setFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [preview, setPreview] = useState<ImportPreviewResult | null>(null);
@@ -103,7 +105,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       setImportResult(result);
       setStep('complete');
 
-      await queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll(owner) });
       if (!isMountedRef.current) return;
 
       const serverHandled =

@@ -18,6 +18,7 @@ import {
 import { ApiError, isTimeoutError } from '@/api/client'
 import { queryKeys } from '@/api/queryKeys'
 import { useAuthStore } from '@/stores/authStore'
+import { useQueryOwner } from '@/hooks/useQueryOwner'
 
 const STALE_TIME = 60 * 1000
 
@@ -48,8 +49,9 @@ export function useTripChat(tripId: string | number | null | undefined) {
  */
 export function useTripChatMessages(threadId: string | number | null | undefined) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const owner = useQueryOwner()
   return useQuery<TripChatMessage[]>({
-    queryKey: queryKeys.tripChatMessages(threadId),
+    queryKey: queryKeys.tripChatMessages(owner, threadId),
     queryFn: () => fetchTripChatMessages(threadId as string | number),
     enabled: isAuthenticated && threadId != null && threadId !== '',
     staleTime: STALE_TIME,
@@ -60,6 +62,7 @@ export function useTripChatMessages(threadId: string | number | null | undefined
 /** Отправка сообщения в тред. */
 export function useSendTripMessage(threadId: string | number | null | undefined) {
   const qc = useQueryClient()
+  const owner = useQueryOwner()
   return useMutation<TripChatMessage, unknown, string>({
     mutationFn: (text: string) => {
       const input: SendTripMessageInput = { threadId: Number(threadId), text }
@@ -68,14 +71,14 @@ export function useSendTripMessage(threadId: string | number | null | undefined)
     onSuccess: (message) => {
       // Дописать сообщение в кэш сразу, затем синхронизироваться с сервером.
       qc.setQueryData<TripChatMessage[]>(
-        queryKeys.tripChatMessages(threadId),
+        queryKeys.tripChatMessages(owner, threadId),
         (old) => {
           const list = old ?? []
           if (list.some((m) => m.id === message.id)) return list
           return [...list, message]
         },
       )
-      void qc.invalidateQueries({ queryKey: queryKeys.tripChatMessages(threadId) })
+      void qc.invalidateQueries({ queryKey: queryKeys.tripChatMessages(owner, threadId) })
     },
   })
 }

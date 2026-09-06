@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useSavedPointToggle, findSavedPointByCoord } from '@/hooks/map/useSavedPointToggle';
 import { userPointsApi } from '@/api/userPoints';
 import { writePointsPaginationState } from '@/api/userPointsCollectionCache';
+import { queryKeys } from '@/api/queryKeys';
 import type { ImportedPoint } from '@/types/userPoints';
 
 jest.mock('@/api/userPoints', () => ({
@@ -17,10 +18,14 @@ jest.mock('@/api/userPoints', () => ({
 
 let mockIsAuthenticated = true;
 
-// Хук читает `isAuthenticated` из zustand-стора через селектор.
+// #1831: ключ коллекции несёт владельца, поэтому мок стора отдаёт и `userId` —
+// иначе набор писал бы в кэш не тот ключ, по которому ходит хук.
+const OWNER = '7';
+
+// Хук читает `isAuthenticated` и владельца из zustand-стора через селектор.
 jest.mock('@/stores/authStore', () => ({
-  useAuthStore: (selector: (s: { isAuthenticated: boolean }) => unknown) =>
-    selector({ isAuthenticated: mockIsAuthenticated }),
+  useAuthStore: (selector: (s: { isAuthenticated: boolean; userId: string | null }) => unknown) =>
+    selector({ isAuthenticated: mockIsAuthenticated, userId: OWNER }),
 }));
 
 const mockedApi = userPointsApi as jest.Mocked<typeof userPointsApi>;
@@ -123,10 +128,10 @@ describe('useSavedPointToggle — optimistic toggle', () => {
 
   it('keeps isReady false while a partial cache is being replaced by the full collection', async () => {
     const fullRead = deferred<ImportedPoint[]>();
-    queryClient.setQueryData(['userPointsAll'], [
+    queryClient.setQueryData(queryKeys.userPointsAll(OWNER), [
       makePoint({ id: 1, latitude: 10, longitude: 20 }),
     ]);
-    writePointsPaginationState(queryClient, { nextPage: 2, complete: false });
+    writePointsPaginationState(queryClient, OWNER, { nextPage: 2, complete: false });
     mockedApi.getAllPoints.mockReturnValue(fullRead.promise as any);
 
     const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
@@ -141,10 +146,10 @@ describe('useSavedPointToggle — optimistic toggle', () => {
 
   it('waits for an untrusted partial cache and skips POST when the full read finds the point', async () => {
     const fullRead = deferred<ImportedPoint[]>();
-    queryClient.setQueryData(['userPointsAll'], [
+    queryClient.setQueryData(queryKeys.userPointsAll(OWNER), [
       makePoint({ id: 1, latitude: 10, longitude: 20 }),
     ]);
-    writePointsPaginationState(queryClient, { nextPage: 2, complete: false });
+    writePointsPaginationState(queryClient, OWNER, { nextPage: 2, complete: false });
     mockedApi.getAllPoints.mockReturnValue(fullRead.promise as any);
 
     const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
@@ -169,10 +174,10 @@ describe('useSavedPointToggle — optimistic toggle', () => {
   it('does not mistake a deduplicated first-page producer read for the full collection', async () => {
     const firstPage = deferred<ImportedPoint[]>();
     const producerRead = queryClient.fetchQuery({
-      queryKey: ['userPointsAll'],
+      queryKey: queryKeys.userPointsAll(OWNER),
       queryFn: async () => {
         const points = await firstPage.promise;
-        writePointsPaginationState(queryClient, { nextPage: 2, complete: false });
+        writePointsPaginationState(queryClient, OWNER, { nextPage: 2, complete: false });
         return points;
       },
     });
@@ -295,11 +300,11 @@ describe('useSavedPointToggle — optimistic toggle', () => {
 
     // Кэш обязан содержать всю коллекцию, а не только что созданную точку.
     await waitFor(() => {
-      const cached = client.getQueryData(['userPointsAll']) as ImportedPoint[] | undefined;
+      const cached = client.getQueryData(queryKeys.userPointsAll(OWNER)) as ImportedPoint[] | undefined;
       expect(Array.isArray(cached) && cached.length).toBeGreaterThan(1);
     });
     // Вся коллекция на месте, и созданная точка дописана — без лишнего запроса.
-    const cached = client.getQueryData(['userPointsAll']) as ImportedPoint[];
+    const cached = client.getQueryData(queryKeys.userPointsAll(OWNER)) as ImportedPoint[];
     expect(cached).toHaveLength(wholeCollection.length + 1);
     expect(mockedApi.getAllPoints).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(result.current.isSaved).toBe(true));
@@ -321,7 +326,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     });
 
     await waitFor(() =>
-      expect(client.getQueryState(['userPointsAll'])?.status).toBe('error'),
+      expect(client.getQueryState(queryKeys.userPointsAll(OWNER))?.status).toBe('error'),
     );
     expect(result.current.isReady).toBe(false);
 
@@ -332,7 +337,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     });
 
     expect(mockedApi.createPoint).not.toHaveBeenCalled();
-    expect(client.getQueryData(['userPointsAll'])).toBeUndefined();
+    expect(client.getQueryData(queryKeys.userPointsAll(OWNER))).toBeUndefined();
   });
 
   it('deduplicates concurrent create calls for the same trusted-unsaved coordinate', async () => {
@@ -357,7 +362,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     });
 
     expect(mockedApi.createPoint).toHaveBeenCalledTimes(1);
-    expect(queryClient.getQueryData<ImportedPoint[]>(['userPointsAll'])).toEqual([
+    expect(queryClient.getQueryData<ImportedPoint[]>(queryKeys.userPointsAll(OWNER))).toEqual([
       expect.objectContaining({ id: 777 }),
     ]);
   });
@@ -400,7 +405,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
       await Promise.all([first, second]);
     });
 
-    const cached = queryClient.getQueryData<ImportedPoint[]>(['userPointsAll']) ?? [];
+    const cached = queryClient.getQueryData<ImportedPoint[]>(queryKeys.userPointsAll(OWNER)) ?? [];
     expect(cached).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: 701, latitude: COORD.lat, longitude: COORD.lng }),

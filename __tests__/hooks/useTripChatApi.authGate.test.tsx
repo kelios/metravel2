@@ -14,7 +14,9 @@ jest.mock('@/api/tripChat', () => ({
   sendTripMessage: jest.fn(async () => ({ id: 2, text: 'sent' })),
 }))
 
-const authRef = { isAuthenticated: false }
+// #1831: ключ сообщений треда несёт владельца. Авторизованный без `userId`
+// собрал бы ключ с `undefined` — состояние, которого в сторе не бывает.
+const authRef = { isAuthenticated: false, userId: null as string | null }
 jest.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (state: typeof authRef) => unknown) => selector(authRef),
 }))
@@ -34,6 +36,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 beforeEach(() => {
   jest.clearAllMocks()
   authRef.isAuthenticated = false
+  authRef.userId = null
 })
 
 describe('useTripChatMessages auth gate (#1829)', () => {
@@ -47,6 +50,7 @@ describe('useTripChatMessages auth gate (#1829)', () => {
 
   it('вошедший пользователь сообщения получает', async () => {
     authRef.isAuthenticated = true
+    authRef.userId = '7'
     const { result } = renderHook(() => useTripChatMessages(7), { wrapper })
 
     await waitFor(() => expect(result.current.data).toEqual([{ id: 1, text: 'secret' }]))
@@ -61,6 +65,7 @@ describe('useTripChatMessages auth gate (#1829)', () => {
     expect(mockThread).not.toHaveBeenCalled()
 
     authRef.isAuthenticated = true
+    authRef.userId = '7'
     const signedIn = renderHook(() => useTripChat(7), { wrapper })
     await waitFor(() => expect(signedIn.result.current.data).toBeTruthy())
     expect(mockThread).toHaveBeenCalledWith(7)

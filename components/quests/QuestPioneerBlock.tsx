@@ -7,6 +7,7 @@ import { queryKeys } from '@/api/queryKeys'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useAuth } from '@/context/AuthContext'
 import { useQuestPioneerMeta } from '@/hooks/useQuestPioneerMeta'
+import { useQueryOwner } from '@/hooks/useQueryOwner'
 import { useThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
 
@@ -22,6 +23,7 @@ function QuestPioneerBlock({ questId, questNumericId }: Props) {
   const { userId, isAuthenticated } = useAuth()
   const pioneer = useQuestPioneerMeta(questId, questNumericId)
   const queryClient = useQueryClient()
+  const owner = useQueryOwner()
 
   const isPioneer =
     isAuthenticated &&
@@ -46,8 +48,8 @@ function QuestPioneerBlock({ questId, questNumericId }: Props) {
   useEffect(() => {
     if (!isPioneer || triggeredRef.current) return
     triggeredRef.current = true
-    void queryClient.invalidateQueries({ queryKey: queryKeys.achievementsMe() })
-  }, [isPioneer, queryClient])
+    void queryClient.invalidateQueries({ queryKey: queryKeys.achievementsMe(owner) })
+  }, [isPioneer, owner, queryClient])
 
   if (!isPioneer) return null
 

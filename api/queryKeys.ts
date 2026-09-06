@@ -20,8 +20,12 @@ export const queryKeys = {
   filterOptions: () => ['filter-options'] as const,
   travelFacets: (search: string, params: Record<string, unknown>) =>
     ['travel-facets', search, params] as const,
-  userPointsAll: () => ['userPointsAll'] as const,
-  userPointsPagination: () => ['userPointsAll', 'pagination'] as const,
+  userPointsAll: (userId: string | null) => ['userPointsAll', userId] as const,
+  // Отметка полноты коллекции живёт ПОД ключом самой коллекции: инвалидация
+  // `userPointsAll(userId)` обязана задевать и её, иначе от снесённых данных
+  // остался бы признак «докачано целиком».
+  userPointsPagination: (userId: string | null) =>
+    ['userPointsAll', userId, 'pagination'] as const,
   myTravelsCount: (userId: string | number | null | undefined) =>
     ['my-travels-count', userId] as const,
   exportMyTravelsCount: (userId: string | number | null | undefined) =>
@@ -56,8 +60,8 @@ export const queryKeys = {
   locationSearch: (query: string, locale: string) => ['location-search', locale, query] as const,
   reverseGeocode: (lat: number, lng: number, locale: string) =>
     ['reverse-geocode', locale, lat, lng] as const,
-  mySubscriptions: () => ['my-subscriptions'] as const,
-  mySubscribers: () => ['my-subscribers'] as const,
+  mySubscriptions: (userId: string | null) => ['my-subscriptions', userId] as const,
+  mySubscribers: (userId: string | null) => ['my-subscribers', userId] as const,
   userTravels: (userId: string | number | null | undefined) => ['user-travels', userId] as const,
   userProfile: (id: string | number | null | undefined, suffix?: unknown) =>
     (suffix === undefined
@@ -99,43 +103,47 @@ export const queryKeys = {
   placeRating: (placeId: string | number | undefined, isAuthenticated: boolean) =>
     ['placeRating', placeId, isAuthenticated] as const,
   article: (articleIdOrSlug: number | string | undefined) => ['article', articleIdOrSlug] as const,
-  stravaStatus: () => ['strava', 'status'] as const,
+  stravaStatus: (userId: string | null) => ['strava', 'status', userId] as const,
   stravaActivitiesRoot: () => ['strava', 'activities'] as const,
-  stravaActivities: (params: Record<string, unknown>) => ['strava', 'activities', params] as const,
-  stravaActivity: (activityId: string | number | null | undefined) =>
-    ['strava', 'activity', activityId] as const,
+  stravaActivities: (userId: string | null, params: Record<string, unknown>) =>
+    ['strava', 'activities', userId, params] as const,
+  stravaActivity: (userId: string | null, activityId: string | number | null | undefined) =>
+    ['strava', 'activity', userId, activityId] as const,
   achievementsBadges: () => ['achievements', 'badges'] as const,
-  achievementsMe: () => ['achievements', 'me'] as const,
+  achievementsMe: (userId: string | null) => ['achievements', 'me', userId] as const,
   achievementsUser: (userId: string | number | null | undefined) =>
     ['achievements', 'user', userId] as const,
   achievementsPeerCatalog: () => ['achievements', 'peer-catalog'] as const,
   achievementsTravelPeer: (travelId: string | number | null | undefined) =>
     ['achievements', 'travel-peer', travelId] as const,
-  achievementsRareMe: () => ['achievements', 'rare', 'me'] as const,
+  achievementsRareMe: (userId: string | null) => ['achievements', 'rare', 'me', userId] as const,
   achievementsRareUser: (userId: string | number | null | undefined) =>
     ['achievements', 'rare', 'user', userId] as const,
   achievementsRareCatalog: () => ['achievements', 'rare', 'catalog'] as const,
-  gamificationPlaceBadgesMe: () => ['gamification', 'place-badges', 'me'] as const,
+  gamificationPlaceBadgesMe: (userId: string | null) =>
+    ['gamification', 'place-badges', 'me', userId] as const,
   gamificationPlaceBadgesUser: (userId: string | number | null | undefined) =>
     ['gamification', 'place-badges', 'user', userId] as const,
-  gamificationProgressMe: () => ['gamification', 'progress', 'me'] as const,
+  gamificationProgressMe: (userId: string | null) =>
+    ['gamification', 'progress', 'me', userId] as const,
   gamificationProgressUser: (userId: string | number | null | undefined) =>
     ['gamification', 'progress', 'user', userId] as const,
-  gamificationCharacterMe: () => ['gamification', 'character', 'me'] as const,
+  gamificationCharacterMe: (userId: string | null) =>
+    ['gamification', 'character', 'me', userId] as const,
   gamificationCharacterUser: (userId: string | number | null | undefined) =>
     ['gamification', 'character', 'user', userId] as const,
-  privacySettings: () => ['privacy', 'settings'] as const,
-  securityJournal: () => ['security', 'journal'] as const,
+  privacySettings: (userId: string | null) => ['privacy', 'settings', userId] as const,
+  securityJournal: (userId: string | null) => ['security', 'journal', userId] as const,
   publicTrips: (filters: Record<string, unknown>) => ['public-trips', filters] as const,
   publicTripsAll: () => ['public-trips'] as const,
   publicTrip: (tripId: string | number | null | undefined) =>
     ['public-trip', tripId] as const,
-  tripMyApplications: () => ['trip-applications', 'me'] as const,
+  tripMyApplications: (userId: string | null) => ['trip-applications', 'me', userId] as const,
   tripApplications: (tripId: string | number | null | undefined) =>
     ['trip-applications', 'trip', tripId] as const,
-  tripNotifications: () => ['trip-notifications'] as const,
+  tripNotifications: (userId: string | null) => ['trip-notifications', userId] as const,
   // Планирование поездок (Sprint 13 / блок D)
-  plannedTripsMine: () => ['planned-trips', 'me'] as const,
+  plannedTripsMine: (userId: string | null) => ['planned-trips', 'me', userId] as const,
   plannedTripsAll: () => ['planned-trips'] as const,
   plannedTrip: (tripId: string | number | null | undefined) =>
     ['planned-trip', tripId] as const,
@@ -159,22 +167,22 @@ export const queryKeys = {
     ['trip-suggestions', tripId] as const,
   // Trust & Safety (Sprint 16)
   userReportReasons: () => ['user-report-reasons'] as const,
-  myBlockedUsers: () => ['user-blocked', 'me'] as const,
-  myVerifications: () => ['user-verifications', 'me'] as const,
+  myBlockedUsers: (userId: string | null) => ['user-blocked', 'me', userId] as const,
+  myVerifications: (userId: string | null) => ['user-verifications', 'me', userId] as const,
   participantRating: (
     tripId: string | number | null | undefined,
     userId: string | number | null | undefined,
   ) => ['participant-rating', tripId, userId] as const,
   // Коммуникация участников (Sprint 15 / блок 6)
-  myTelegramLink: () => ['telegram-link', 'me'] as const,
+  myTelegramLink: (userId: string | null) => ['telegram-link', 'me', userId] as const,
   tripChat: (tripId: string | number | null | undefined) => ['trip-chat', tripId] as const,
   tripChatAll: () => ['trip-chat'] as const,
-  tripChatMessages: (threadId: string | number | null | undefined) =>
-    ['trip-chat-messages', threadId] as const,
+  tripChatMessages: (userId: string | null, threadId: string | number | null | undefined) =>
+    ['trip-chat-messages', userId, threadId] as const,
   tripTelegramGroup: (tripId: string | number | null | undefined) =>
     ['trip-telegram-group', tripId] as const,
-  contactRequests: (direction: string, status?: string) =>
-    ['contact-requests', direction, status ?? 'all'] as const,
+  contactRequests: (userId: string | null, direction: string, status?: string) =>
+    ['contact-requests', userId, direction, status ?? 'all'] as const,
   contactRequestsAll: () => ['contact-requests'] as const,
   // Привязка к пользователю обязательна: логаут кэш не чистит, и без неё
   // следующий вошедший увидел бы чужое число непрочитанных (#1661).

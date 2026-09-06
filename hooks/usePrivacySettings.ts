@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { showToast } from '@/utils/toast';
 import {
     fetchPrivacySettings,
@@ -23,7 +24,8 @@ import { translate as i18nT } from '@/i18n'
 export function usePrivacySettings() {
     const { isAuthenticated } = useAuth();
     const queryClient = useQueryClient();
-    const queryKey = queryKeys.privacySettings();
+    const owner = useQueryOwner();
+    const queryKey = queryKeys.privacySettings(owner);
 
     const settingsQuery = useQuery<PrivacySettingsDto>({
         queryKey,

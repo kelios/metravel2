@@ -16,6 +16,7 @@ import {
 import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 
 const STALE_TIME = 60 * 1000;
 
@@ -31,8 +32,9 @@ export function useContactRequests(
   status?: ContactRequestStatus,
 ) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const owner = useQueryOwner();
   return useQuery<ContactAccessRequest[]>({
-    queryKey: queryKeys.contactRequests(direction, status),
+    queryKey: queryKeys.contactRequests(owner, direction, status),
     queryFn: () => fetchContactRequests(direction, status),
     enabled: isAuthenticated,
     staleTime: STALE_TIME,

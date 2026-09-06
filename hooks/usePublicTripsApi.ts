@@ -25,6 +25,7 @@ import {
 import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import {
   trackApplicationDecision,
   trackApplicationSubmitted,
@@ -72,8 +73,9 @@ export function usePublicTrip(tripId: string | number | null | undefined) {
 /** Заявки текущего пользователя со статусами (#414). */
 export function useMyTripApplications() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const owner = useQueryOwner();
   return useQuery<TripApplication[]>({
-    queryKey: queryKeys.tripMyApplications(),
+    queryKey: queryKeys.tripMyApplications(owner),
     queryFn: fetchMyApplications,
     enabled: isAuthenticated,
     staleTime: STALE_TIME,
@@ -96,8 +98,9 @@ export function useTripApplications(tripId: string | number | null | undefined) 
 /** Нотификации о заявках (#415). */
 export function useTripNotifications() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const owner = useQueryOwner();
   return useQuery<TripNotification[]>({
-    queryKey: queryKeys.tripNotifications(),
+    queryKey: queryKeys.tripNotifications(owner),
     queryFn: fetchTripNotifications,
     enabled: isAuthenticated,
     staleTime: STALE_TIME,
@@ -108,6 +111,7 @@ export function useTripNotifications() {
 /** Подача заявки «Хочу поехать» (#412). */
 export function useSubmitApplication() {
   const qc = useQueryClient();
+  const owner = useQueryOwner();
   return useMutation<TripApplication, unknown, SubmitApplicationInput>({
     mutationFn: submitApplication,
     onSuccess: (application, input) => {
@@ -116,7 +120,7 @@ export function useSubmitApplication() {
       qc.setQueryData<PublicTrip>(queryKeys.publicTrip(input.tripId), (old) =>
         old ? { ...old, myApplicationStatus: application.status } : old,
       );
-      void qc.invalidateQueries({ queryKey: queryKeys.tripMyApplications() });
+      void qc.invalidateQueries({ queryKey: queryKeys.tripMyApplications(owner) });
       void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });
     },
   });
@@ -125,6 +129,7 @@ export function useSubmitApplication() {
 /** Отмена своей заявки участником (#414). */
 export function useCancelApplication() {
   const qc = useQueryClient();
+  const owner = useQueryOwner();
   return useMutation<
     { id: number; status: ApplicationStatus },
     unknown,
@@ -133,9 +138,9 @@ export function useCancelApplication() {
   >({
     mutationFn: cancelApplication,
     onMutate: async (applicationId) => {
-      await qc.cancelQueries({ queryKey: queryKeys.tripMyApplications() });
-      const prev = qc.getQueryData<TripApplication[]>(queryKeys.tripMyApplications());
-      qc.setQueryData<TripApplication[]>(queryKeys.tripMyApplications(), (old) =>
+      await qc.cancelQueries({ queryKey: queryKeys.tripMyApplications(owner) });
+      const prev = qc.getQueryData<TripApplication[]>(queryKeys.tripMyApplications(owner));
+      qc.setQueryData<TripApplication[]>(queryKeys.tripMyApplications(owner), (old) =>
         (old ?? []).map((a) =>
           a.id === applicationId ? { ...a, status: 'cancelled' } : a,
         ),
@@ -143,11 +148,11 @@ export function useCancelApplication() {
       return prev;
     },
     onError: (_err, _id, prev) => {
-      if (prev) qc.setQueryData(queryKeys.tripMyApplications(), prev);
+      if (prev) qc.setQueryData(queryKeys.tripMyApplications(owner), prev);
     },
     onSuccess: (_res, applicationId) => {
       // Сбросить «На рассмотрении» на карточке/детали соответствующей поездки.
-      const apps = qc.getQueryData<TripApplication[]>(queryKeys.tripMyApplications());
+      const apps = qc.getQueryData<TripApplication[]>(queryKeys.tripMyApplications(owner));
       const tripId = apps?.find((a) => a.id === applicationId)?.tripId;
       if (tripId != null) {
         qc.setQueryData<PublicTrip>(queryKeys.publicTrip(tripId), (old) =>
@@ -166,6 +171,7 @@ interface DecisionContext {
 /** Решение организатора по заявке: accept/reject (#413). */
 export function useDecideApplication() {
   const qc = useQueryClient();
+  const owner = useQueryOwner();
   return useMutation<
     { id: number; status: ApplicationStatus },
     unknown,
@@ -196,7 +202,7 @@ export function useDecideApplication() {
       // статус заявки участника — обновляем связанные кэши.
       void qc.invalidateQueries({ queryKey: queryKeys.publicTrip(input.tripId) });
       void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });
-      void qc.invalidateQueries({ queryKey: queryKeys.tripMyApplications() });
+      void qc.invalidateQueries({ queryKey: queryKeys.tripMyApplications(owner) });
     },
   });
 }

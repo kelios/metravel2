@@ -3,6 +3,7 @@ import type { QueryClient } from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { PointStatus } from '@/types/userPoints';
 
 type PointLike = { id?: unknown };
@@ -13,6 +14,7 @@ type Params = {
 };
 
 export const usePointsBulkActions = ({ filteredPoints, queryClient }: Params) => {
+  const owner = useQueryOwner();
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
@@ -69,7 +71,7 @@ export const usePointsBulkActions = ({ filteredPoints, queryClient }: Params) =>
     try {
       await userPointsApi.bulkUpdatePoints(selectedIds, updates);
       const selectedSet = new Set(selectedIds);
-      queryClient.setQueryData(queryKeys.userPointsAll(), (prev: unknown) => {
+      queryClient.setQueryData(queryKeys.userPointsAll(owner), (prev: unknown) => {
         const arr = Array.isArray(prev) ? prev : [];
         return arr.map((p: unknown) => {
           const item = (p ?? {}) as Record<string, unknown>;
@@ -86,7 +88,7 @@ export const usePointsBulkActions = ({ filteredPoints, queryClient }: Params) =>
     } finally {
       setIsBulkWorking(false);
     }
-  }, [bulkColor, bulkStatus, queryClient, selectedIds]);
+  }, [bulkColor, bulkStatus, owner, queryClient, selectedIds]);
 
   const deleteSelected = useCallback(async () => {
     if (!selectedIds.length) return;
@@ -102,7 +104,7 @@ export const usePointsBulkActions = ({ filteredPoints, queryClient }: Params) =>
         setBulkProgress({ current: done, total: selectedIds.length });
       }
       const selectedSet = new Set(selectedIds);
-      queryClient.setQueryData(queryKeys.userPointsAll(), (prev: unknown) => {
+      queryClient.setQueryData(queryKeys.userPointsAll(owner), (prev: unknown) => {
         const arr = Array.isArray(prev) ? prev : [];
         return arr.filter((p: unknown) => {
           const item = (p ?? {}) as Record<string, unknown>;
@@ -118,13 +120,13 @@ export const usePointsBulkActions = ({ filteredPoints, queryClient }: Params) =>
       setBulkProgress(null);
       setShowConfirmDeleteSelected(false);
     }
-  }, [queryClient, selectedIds]);
+  }, [owner, queryClient, selectedIds]);
 
   const deleteAll = useCallback(async () => {
     setIsBulkWorking(true);
     try {
       await userPointsApi.purgePoints();
-      queryClient.setQueryData(queryKeys.userPointsAll(), []);
+      queryClient.setQueryData(queryKeys.userPointsAll(owner), []);
       exitSelectionMode();
     } catch {
       // noop
@@ -133,7 +135,7 @@ export const usePointsBulkActions = ({ filteredPoints, queryClient }: Params) =>
       setBulkProgress(null);
       setShowConfirmDeleteAll(false);
     }
-  }, [exitSelectionMode, queryClient]);
+  }, [exitSelectionMode, owner, queryClient]);
 
   return {
     selectionMode,

@@ -9,6 +9,7 @@ import {
 } from '@/api/userPointsCollectionCache';
 import { useAuthStore } from '@/stores/authStore';
 import { useSavedPointsCollection } from '@/hooks/useSavedPointsCollection';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import type { ImportedPoint } from '@/types/userPoints';
 
 /**
@@ -118,6 +119,7 @@ type UseSavedPointToggleArgs = {
 export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointToggleArgs) {
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const owner = useQueryOwner();
 
   // Общий с «Моими точками» кэш-ключ, поэтому сохранение/снятие здесь видно там
   // (и наоборот). Полнота коллекции — контракт `useSavedPointsCollection`
@@ -136,12 +138,12 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
   }, [coord, coordIndex]);
 
   const invalidate = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });
-  }, [queryClient]);
+    void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll(owner) });
+  }, [owner, queryClient]);
 
   const removeSaved = useCallback(async () => {
     if (!savedPoint) return;
-    const key = queryKeys.userPointsAll();
+    const key = queryKeys.userPointsAll(owner);
     const targetId = savedPoint.id;
     // Отменяем летящее чтение коллекции: она читается постранично (#1706) и
     // резолвится долго, поэтому её ответ пришёл бы ПОСЛЕ оптимистичной записи и
@@ -168,16 +170,16 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
     // ceil(count/200) запросов на каждое снятие. Клиентский лимитер считает
     // `/user-points/` одним ключом (`utils/rateLimiter.ts:58`, 60 запросов в
     // минуту), поэтому серия сохранений упиралась бы в ложное 429.
-  }, [invalidate, queryClient, savedPoint]);
+  }, [invalidate, owner, queryClient, savedPoint]);
 
   const createPoint = useCallback(
     async (payload: Partial<ImportedPoint>) => {
       // Idempotency guard: backend has no remove-by-coordinate, so if the cache
       // already shows this point as saved we never POST a duplicate.
       if (savedPoint) return;
-      const key = queryKeys.userPointsAll();
+      const key = queryKeys.userPointsAll(owner);
       const hasCollection = queryClient.getQueryData(key) !== undefined;
-      const collectionPartial = isPointsCollectionPartial(queryClient);
+      const collectionPartial = isPointsCollectionPartial(queryClient, owner);
       const targetLat = Number(payload.latitude ?? coord?.lat);
       const targetLng = Number(payload.longitude ?? coord?.lng);
       if (!hasCollection || collectionPartial) {
@@ -190,7 +192,7 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
           queryKey: key,
           queryFn: async () => {
             const allPoints = await userPointsApi.getAllPoints();
-            markPointsCollectionComplete(queryClient);
+            markPointsCollectionComplete(queryClient, owner);
             return allPoints;
           },
           staleTime: 0,
@@ -198,17 +200,17 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
         // A full-read consumer can mount while `usePointsDataModel` is fetching
         // page 1 under the same key. React Query joins that request, whose result
         // is only a prefix. Once it settles, run the required full query.
-        if (isPointsCollectionPartial(queryClient)) {
+        if (isPointsCollectionPartial(queryClient, owner)) {
           completePoints = await queryClient.fetchQuery<ImportedPoint[]>({
             queryKey: key,
             queryFn: async () => {
               const allPoints = await userPointsApi.getAllPoints();
-              markPointsCollectionComplete(queryClient);
+              markPointsCollectionComplete(queryClient, owner);
               return allPoints;
             },
             staleTime: 0,
           });
-          if (isPointsCollectionPartial(queryClient)) {
+          if (isPointsCollectionPartial(queryClient, owner)) {
             throw new Error('Saved points collection is still partial');
           }
         }
@@ -247,7 +249,7 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
         readPointsFromUnknown(old).map((p) => (p.id === optimisticPointId ? created : p)),
       );
     },
-    [coord, queryClient, savedPoint],
+    [coord, owner, queryClient, savedPoint],
   );
 
   return {

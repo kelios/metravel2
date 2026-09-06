@@ -10,6 +10,7 @@ import {
 } from '@/api/userPointsCollectionCache';
 import type { ImportedPoint } from '@/types/userPoints';
 import { useFilterOptions } from '@/hooks/useFilterOptions';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import type { PointFilters } from '@/types/userPoints';
 import {
   createCategoryNameToIdsMap,
@@ -61,18 +62,19 @@ export const usePointsDataModel = ({
   );
 
   const queryClient = useQueryClient();
+  const owner = useQueryOwner();
 
   // First page renders fast (perPage=defaultPerPage). Remaining pages stream in
   // the background and are appended to the same flat-array cache so map pins and
   // list rows appear incrementally without the first paint waiting for all points.
   const pointsQuery = useQuery({
-    queryKey: queryKeys.userPointsAll(),
+    queryKey: queryKeys.userPointsAll(owner),
     queryFn: async () => {
       const { items } = await userPointsApi.getPointsPage(1, defaultPerPage);
       // #1709: пока докачка не закончилась, в кэше лежит ПРЕФИКС коллекции.
       // Отметка полноты — часть контракта общего ключа: потребители, которым
       // нужна вся коллекция, обязаны её прочитать прежде, чем поверить кэшу.
-      writePointsPaginationState(queryClient, {
+      writePointsPaginationState(queryClient, owner, {
         nextPage: 2,
         // A short page is the end. An oversized page means the backend ignored
         // perPage and returned the complete set in one response (#752).
@@ -96,13 +98,16 @@ export const usePointsDataModel = ({
     // pages stay outside the dependencies so they do not cancel/restart the
     // in-flight run — that used to stop loading after page 2.
     if (pointsQuery.isLoading || pointsQuery.error) return;
-    const cached = queryClient.getQueryData<ImportedPoint[]>(queryKeys.userPointsAll());
+    const cached = queryClient.getQueryData<ImportedPoint[]>(queryKeys.userPointsAll(owner));
     const count = Array.isArray(cached) ? cached.length : 0;
-    let pagination: PointsPaginationState | undefined = readPointsPaginationState(queryClient);
+    let pagination: PointsPaginationState | undefined = readPointsPaginationState(
+      queryClient,
+      owner,
+    );
     if (!pagination) {
       if (count !== defaultPerPage) return;
       pagination = { nextPage: 2, complete: false };
-      writePointsPaginationState(queryClient, pagination);
+      writePointsPaginationState(queryClient, owner, pagination);
     }
     if (pagination.complete) return;
     if (backgroundLoadRef.current.running) return;
@@ -123,7 +128,7 @@ export const usePointsDataModel = ({
           if (cancelled || backgroundLoadRef.current.token !== token) return;
           let added = 0;
           if (items.length > 0) {
-            queryClient.setQueryData(queryKeys.userPointsAll(), (prev: unknown) => {
+            queryClient.setQueryData(queryKeys.userPointsAll(owner), (prev: unknown) => {
               const arr: ImportedPoint[] = Array.isArray(prev) ? (prev as ImportedPoint[]) : [];
               const seen = new Set(arr.map((p) => Number(p?.id)));
               const next = items.filter((p) => !seen.has(Number(p?.id)));
@@ -135,11 +140,11 @@ export const usePointsDataModel = ({
           // paginating (returns the full set every time, see #752) or we are
           // past the end — stop instead of re-downloading the same payload.
           if (!hasMore || added === 0) {
-            writePointsPaginationState(queryClient, { nextPage: page, complete: true });
+            writePointsPaginationState(queryClient, owner, { nextPage: page, complete: true });
             break;
           }
           page += 1;
-          writePointsPaginationState(queryClient, { nextPage: page, complete: false });
+          writePointsPaginationState(queryClient, owner, { nextPage: page, complete: false });
         }
       } finally {
         if (backgroundLoadRef.current.token === token) {
@@ -157,7 +162,7 @@ export const usePointsDataModel = ({
         backgroundLoadRef.current.running = false;
       }
     };
-  }, [defaultPerPage, pointsQuery.error, pointsQuery.isLoading, queryClient]);
+  }, [defaultPerPage, owner, pointsQuery.error, pointsQuery.isLoading, queryClient]);
 
   const pointsWithDerivedCategories = useMemo(() => {
     return (points as any[]).map((p) => {

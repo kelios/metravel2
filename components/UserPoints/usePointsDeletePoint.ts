@@ -3,6 +3,7 @@ import type { QueryClient } from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 
 type PointLike = Record<string, unknown>;
 
@@ -12,6 +13,7 @@ type Params = {
 };
 
 export const usePointsDeletePoint = ({ queryClient, setIsBulkWorking }: Params) => {
+  const owner = useQueryOwner();
   const [pointToDelete, setPointToDelete] = useState<PointLike | null>(null);
 
   const requestDeletePoint = useCallback((point: unknown) => {
@@ -32,7 +34,7 @@ export const usePointsDeletePoint = ({ queryClient, setIsBulkWorking }: Params) 
     setIsBulkWorking(true);
     try {
       await userPointsApi.deletePoint(id);
-      queryClient.setQueryData(queryKeys.userPointsAll(), (prev: unknown) => {
+      queryClient.setQueryData(queryKeys.userPointsAll(owner), (prev: unknown) => {
         const arr = Array.isArray(prev) ? prev : [];
         return arr.filter((p: unknown) => {
           const item = (p ?? {}) as Record<string, unknown>;
@@ -45,7 +47,7 @@ export const usePointsDeletePoint = ({ queryClient, setIsBulkWorking }: Params) 
       setIsBulkWorking(false);
       setPointToDelete(null);
     }
-  }, [pointToDelete, queryClient, setIsBulkWorking]);
+  }, [owner, pointToDelete, queryClient, setIsBulkWorking]);
 
   return {
     pointToDelete,

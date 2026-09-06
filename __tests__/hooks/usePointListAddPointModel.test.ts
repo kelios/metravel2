@@ -1,6 +1,12 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 
 import { usePointListAddPointModel } from '@/components/travel/hooks/usePointListAddPointModel';
+import { queryKeys } from '@/api/queryKeys';
+import { useAuthStore } from '@/stores/authStore';
+
+// #1831: ключ коллекции точек несёт владельца. `useAuth` здесь замокан, а
+// владельца хук берёт из стора — без него набор проверял бы гостевой ключ.
+const OWNER = '7';
 
 const mockCreatePoint = jest.fn();
 const mockShowToast = jest.fn();
@@ -45,6 +51,7 @@ describe('usePointListAddPointModel', () => {
     mockGetQueryData.mockReturnValue([]);
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue({ isAuthenticated: true, authReady: true });
+    useAuthStore.setState({ authReady: true, isAuthenticated: true, userId: OWNER });
   });
 
   it('shows auth toast when user is not authenticated', async () => {
@@ -155,7 +162,7 @@ describe('usePointListAddPointModel', () => {
       })
     );
 
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['userPointsAll'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.userPointsAll(OWNER) });
   });
 
   /**
@@ -216,11 +223,11 @@ describe('usePointListAddPointModel', () => {
       expect(mockCreatePoint).toHaveBeenCalledTimes(1);
     });
 
-    expect(mockSetQueryData).toHaveBeenCalledWith(['userPointsAll'], expect.any(Function));
+    expect(mockSetQueryData).toHaveBeenCalledWith(queryKeys.userPointsAll(OWNER), expect.any(Function));
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
     // Летящее постраничное чтение обязано быть отменено ДО оптимистичной записи,
     // иначе его ответ затрёт только что созданную точку (#1706).
-    expect(mockCancelQueries).toHaveBeenCalledWith({ queryKey: ['userPointsAll'] });
+    expect(mockCancelQueries).toHaveBeenCalledWith({ queryKey: queryKeys.userPointsAll(OWNER) });
     expect(mockCancelQueries.mock.invocationCallOrder[0]).toBeLessThan(
       mockSetQueryData.mock.invocationCallOrder[0],
     );

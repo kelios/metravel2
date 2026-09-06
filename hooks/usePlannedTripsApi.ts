@@ -43,6 +43,7 @@ import {
 } from '@/api/plannedTrips';
 import { ApiError, isTimeoutError } from '@/api/clientErrors';
 import { queryKeys } from '@/api/queryKeys';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { useAuthStore } from '@/stores/authStore';
 import {
   trackTripCreated,
@@ -90,8 +91,9 @@ const syncUpdatedPlannedTrip = (qc: QueryClient, trip: PlannedTrip): void => {
 
 export function useMyPlannedTrips() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const owner = useQueryOwner();
   return useQuery<PlannedTrip[]>({
-    queryKey: queryKeys.plannedTripsMine(),
+    queryKey: queryKeys.plannedTripsMine(owner),
     queryFn: fetchMyPlannedTrips,
     enabled: isAuthenticated,
     staleTime: STALE_TIME,
@@ -199,12 +201,13 @@ export function useTripSuggestions(tripId: string | number | null | undefined) {
 
 export function useCreateTrip() {
   const qc = useQueryClient();
+  const owner = useQueryOwner();
   return useMutation<PlannedTrip, unknown, CreateTripInput>({
     mutationFn: createTrip,
     onSuccess: (trip) => {
       trackTripCreated(trip.id, trip.transport);
       qc.setQueryData<PlannedTrip>(queryKeys.plannedTrip(trip.id), trip);
-      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine() });
+      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine(owner) });
       // Публичная поездка попадает в каталог «Поехали со мной» (BE отдаёт её сразу).
       if (trip.visibility === 'public') {
         void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });
@@ -215,6 +218,7 @@ export function useCreateTrip() {
 
 export function useDeletePlannedTrip() {
   const qc = useQueryClient();
+  const owner = useQueryOwner();
   return useMutation<{ id: number }, unknown, number | string>({
     mutationFn: deletePlannedTrip,
     onSuccess: (_result, tripId) => {
@@ -223,7 +227,7 @@ export function useDeletePlannedTrip() {
         queryKey: queryKeys.plannedTrip(tripId),
         refetchType: 'inactive',
       });
-      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine() });
+      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine(owner) });
       void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsAll() });
       void qc.invalidateQueries({ queryKey: queryKeys.publicTripsAll() });
       void qc.invalidateQueries({ queryKey: queryKeys.communityTripsAll() });
@@ -257,24 +261,26 @@ export function useUpdateTripBikeType() {
 
 export function useUpdateTripRoute() {
   const qc = useQueryClient();
+  const owner = useQueryOwner();
   return useMutation<PlannedTrip, unknown, UpdateRouteInput>({
     mutationFn: updateTripRoute,
     onSuccess: (trip) => {
       qc.setQueryData<PlannedTrip>(queryKeys.plannedTrip(trip.id), trip);
       invalidateRouteElevation(qc, trip.id);
-      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine() });
+      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine(owner) });
     },
   });
 }
 
 export function useSetRsvp() {
   const qc = useQueryClient();
+  const owner = useQueryOwner();
   return useMutation<PlannedTrip, unknown, RsvpInput>({
     mutationFn: setRsvp,
     onSuccess: (trip, input) => {
       trackTripRsvp(input.tripId, input.rsvp);
       qc.setQueryData<PlannedTrip>(queryKeys.plannedTrip(trip.id), trip);
-      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine() });
+      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine(owner) });
     },
   });
 }
@@ -311,11 +317,12 @@ export function useDecideSuggestion() {
 
 export function useSubmitTripReport() {
   const qc = useQueryClient();
+  const owner = useQueryOwner();
   return useMutation<PlannedTrip, unknown, SubmitReportInput>({
     mutationFn: submitTripReport,
     onSuccess: (trip) => {
       qc.setQueryData<PlannedTrip>(queryKeys.plannedTrip(trip.id), trip);
-      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine() });
+      void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine(owner) });
       void qc.invalidateQueries({ queryKey: queryKeys.communityTripsAll() });
     },
   });

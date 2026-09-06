@@ -3,6 +3,10 @@ import type { QueryClient } from '@tanstack/react-query';
 import { queryKeys } from './queryKeys';
 
 /**
+ * #1831: ключ коллекции несёт владельца, поэтому и отметка полноты обязана его
+ * нести — иначе признак «докачано целиком» от предыдущего пользователя выдал бы
+ * пустую коллекцию следующего за полную.
+ *
  * Кэш-ключ `userPointsAll` делят между собой producer с ЧАСТИЧНЫМ контрактом
  * (`usePointsDataModel` — первая страница сразу, остальные докачиваются в фоне)
  * и потребители с контрактом ПОЛНОТЫ (`useSavedPointToggle`,
@@ -29,11 +33,13 @@ export const USER_POINTS_COLLECTION_STALE_TIME_MS = 10 * 60 * 1000;
 
 export const readPointsPaginationState = (
   queryClient: QueryClient,
+  userId: string | null,
 ): PointsPaginationState | undefined =>
-  queryClient.getQueryData<PointsPaginationState>(queryKeys.userPointsPagination());
+  queryClient.getQueryData<PointsPaginationState>(queryKeys.userPointsPagination(userId));
 
 export const writePointsPaginationState = (
   queryClient: QueryClient,
+  userId: string | null,
   state: PointsPaginationState,
 ): void => {
   // Отметка обязана пережить сами данные. Её запись — это `setQueryData` без
@@ -41,8 +47,11 @@ export const writePointsPaginationState = (
   // подписке и на фетче: с общим 10-минутным `gcTime` метаданные исчезли бы
   // раньше частичного префикса, и он снова сошёл бы за полную коллекцию.
   // Дефолты применяются при СОЗДАНИИ записи, поэтому ставим их до первой записи.
-  queryClient.setQueryDefaults(queryKeys.userPointsPagination(), { gcTime: Infinity });
-  queryClient.setQueryData<PointsPaginationState>(queryKeys.userPointsPagination(), state);
+  queryClient.setQueryDefaults(queryKeys.userPointsPagination(userId), { gcTime: Infinity });
+  queryClient.setQueryData<PointsPaginationState>(
+    queryKeys.userPointsPagination(userId),
+    state,
+  );
 };
 
 /**
@@ -51,8 +60,11 @@ export const writePointsPaginationState = (
  * Отсутствие метаданных частичностью НЕ считается: так выглядит либо ещё пустой
  * кэш, либо кэш, заполненный полным чтением `getAllPoints()`.
  */
-export const isPointsCollectionPartial = (queryClient: QueryClient): boolean => {
-  const state = readPointsPaginationState(queryClient);
+export const isPointsCollectionPartial = (
+  queryClient: QueryClient,
+  userId: string | null,
+): boolean => {
+  const state = readPointsPaginationState(queryClient, userId);
   return state !== undefined && !state.complete;
 };
 
@@ -61,9 +73,12 @@ export const isPointsCollectionPartial = (queryClient: QueryClient): boolean => 
  * прерванный ранее стрим оставил бы `complete: false` навсегда, и каждый
  * следующий потребитель перечитывал бы всю коллекцию заново.
  */
-export const markPointsCollectionComplete = (queryClient: QueryClient): void => {
-  const state = readPointsPaginationState(queryClient);
-  writePointsPaginationState(queryClient, {
+export const markPointsCollectionComplete = (
+  queryClient: QueryClient,
+  userId: string | null,
+): void => {
+  const state = readPointsPaginationState(queryClient, userId);
+  writePointsPaginationState(queryClient, userId, {
     nextPage: state?.nextPage ?? 1,
     complete: true,
   });

@@ -3,6 +3,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { fetchSecurityJournal, type SecurityJournalEntryDto, type SecurityJournalPage } from '@/api/privacy';
 
 /**
@@ -11,9 +12,10 @@ import { fetchSecurityJournal, type SecurityJournalEntryDto, type SecurityJourna
  */
 export function useSecurityJournal(enabled = true) {
     const { isAuthenticated } = useAuth();
+    const owner = useQueryOwner();
 
     const query = useInfiniteQuery<SecurityJournalPage>({
-        queryKey: queryKeys.securityJournal(),
+        queryKey: queryKeys.securityJournal(owner),
         queryFn: ({ pageParam }) => fetchSecurityJournal((pageParam as number) ?? 1),
         initialPageParam: 1,
         getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,

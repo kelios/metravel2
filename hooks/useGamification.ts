@@ -23,6 +23,7 @@ import {
 import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { trackPathChosen } from '@/utils/gamificationAnalytics';
 import {
   useMyAchievements,
@@ -45,8 +46,9 @@ const hasId = (userId: string | number | null | undefined): boolean =>
 
 export function useMyPlaceFirstBadges(options: { enabled?: boolean } = {}) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const owner = useQueryOwner();
   return useQuery<PlaceFirstBadge[]>({
-    queryKey: queryKeys.gamificationPlaceBadgesMe(),
+    queryKey: queryKeys.gamificationPlaceBadgesMe(owner),
     queryFn: fetchMyPlaceFirstBadges,
     enabled: isAuthenticated && (options.enabled ?? true),
     staleTime: STALE_TIME,
@@ -68,6 +70,7 @@ export function useUserPlaceFirstBadges(userId: string | number | null | undefin
 
 export function useMyGamificationProgress() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const owner = useQueryOwner();
   const qc = useQueryClient();
   // Подписываемся на консолидированный /achievements/me/ (дедуп — тот же кэш),
   // чтобы переоценивать `enabled`, когда он зарезолвится (#588).
@@ -81,20 +84,20 @@ export function useMyGamificationProgress() {
   const needsSeparateFetch = achSuccess && !consolidatedHasProgression;
 
   const query = useQuery<GamificationProgress>({
-    queryKey: queryKeys.gamificationProgressMe(),
+    queryKey: queryKeys.gamificationProgressMe(owner),
     queryFn: fetchMyGamificationProgress,
     enabled: isAuthenticated && needsSeparateFetch,
     staleTime: STALE_TIME,
     retry,
     initialData: () => {
       const cached = qc.getQueryData<{ progressionDto?: unknown }>(
-        queryKeys.achievementsMe(),
+        queryKeys.achievementsMe(owner),
       ) as { progressionDto?: Parameters<typeof mapProgress>[0] } | undefined;
       if (cached?.progressionDto == null) return undefined;
       return mapProgress(cached.progressionDto);
     },
     initialDataUpdatedAt: () =>
-      qc.getQueryState(queryKeys.achievementsMe())?.dataUpdatedAt ?? 0,
+      qc.getQueryState(queryKeys.achievementsMe(owner))?.dataUpdatedAt ?? 0,
   });
 
   const isFetching = query.isFetching || (!query.data && achFetching);
@@ -138,6 +141,7 @@ export function useUserGamificationProgress(
 
 export function useMyCharacter() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const owner = useQueryOwner();
   const qc = useQueryClient();
   const { data: ach, isSuccess: achSuccess, isFetching: achFetching } =
     useMyAchievements({ enabled: isAuthenticated });
@@ -146,7 +150,7 @@ export function useMyCharacter() {
   const needsSeparateFetch = achSuccess && !consolidatedHasCharacter;
 
   const query = useQuery<CharacterState>({
-    queryKey: queryKeys.gamificationCharacterMe(),
+    queryKey: queryKeys.gamificationCharacterMe(owner),
     queryFn: fetchMyCharacter,
     // #588: консолидированный /achievements/me/ уже содержит персонажа — отдельный
     // /character/me/ дёргаем только если его там не оказалось.
@@ -154,14 +158,14 @@ export function useMyCharacter() {
     staleTime: STALE_TIME,
     retry,
     initialData: () => {
-      const cached = qc.getQueryData(queryKeys.achievementsMe()) as
+      const cached = qc.getQueryData(queryKeys.achievementsMe(owner)) as
         | { characterDto?: Parameters<typeof mapCharacter>[0] | null }
         | undefined;
       if (cached?.characterDto == null) return undefined;
       return mapCharacter(cached.characterDto);
     },
     initialDataUpdatedAt: () =>
-      qc.getQueryState(queryKeys.achievementsMe())?.dataUpdatedAt ?? 0,
+      qc.getQueryState(queryKeys.achievementsMe(owner))?.dataUpdatedAt ?? 0,
   });
 
   // Пока консолидированный запрос грузится, показываем его loading-состояние,
@@ -204,10 +208,11 @@ export function useUserCharacter(userId: string | number | null | undefined) {
 /** Мутация выбора пути: обновляет кэш персонажа и шлёт path_chosen. */
 export function useChooseCharacterPath() {
   const qc = useQueryClient();
+  const owner = useQueryOwner();
   return useMutation<CharacterState, unknown, ChoosePathInput>({
     mutationFn: chooseCharacterPath,
     onSuccess: (next, input) => {
-      qc.setQueryData<CharacterState>(queryKeys.gamificationCharacterMe(), next);
+      qc.setQueryData<CharacterState>(queryKeys.gamificationCharacterMe(owner), next);
       trackPathChosen({ pathSlug: input.pathSlug, characterLevel: next.level });
     },
   });
@@ -225,19 +230,20 @@ export function useChooseCharacterPath() {
  */
 export function useSeedGamificationFromAchievements(enabled = true): void {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const owner = useQueryOwner();
   const qc = useQueryClient();
   const { data } = useMyAchievements({ enabled: enabled && isAuthenticated });
 
-  const updatedAt = qc.getQueryState(queryKeys.achievementsMe())?.dataUpdatedAt;
+  const updatedAt = qc.getQueryState(queryKeys.achievementsMe(owner))?.dataUpdatedAt;
 
   useEffect(() => {
     if (!data) return;
 
     if (data.characterDto != null) {
-      const state = qc.getQueryState(queryKeys.gamificationCharacterMe());
+      const state = qc.getQueryState(queryKeys.gamificationCharacterMe(owner));
       if (state?.data == null) {
         qc.setQueryData(
-          queryKeys.gamificationCharacterMe(),
+          queryKeys.gamificationCharacterMe(owner),
           mapCharacter(data.characterDto),
           { updatedAt },
         );
@@ -245,14 +251,14 @@ export function useSeedGamificationFromAchievements(enabled = true): void {
     }
 
     if (data.progressionDto != null) {
-      const state = qc.getQueryState(queryKeys.gamificationProgressMe());
+      const state = qc.getQueryState(queryKeys.gamificationProgressMe(owner));
       if (state?.data == null) {
         qc.setQueryData(
-          queryKeys.gamificationProgressMe(),
+          queryKeys.gamificationProgressMe(owner),
           mapProgress(data.progressionDto),
           { updatedAt },
         );
       }
     }
-  }, [data, qc, updatedAt]);
+  }, [data, owner, qc, updatedAt]);
 }

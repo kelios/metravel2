@@ -20,9 +20,13 @@ jest.mock('@/api/miscOptimized', () => ({
   fetchAllFiltersOptimized: jest.fn(async () => ({ categoryTravelAddress: [] })),
 }));
 
+// #1831: и коллекция, и отметка полноты несут владельца — мок стора обязан его
+// отдавать, иначе набор проверял бы ключ, по которому хуки не ходят.
+const OWNER = '7';
+
 jest.mock('@/stores/authStore', () => ({
-  useAuthStore: (selector: (s: { isAuthenticated: boolean }) => unknown) =>
-    selector({ isAuthenticated: true }),
+  useAuthStore: (selector: (s: { isAuthenticated: boolean; userId: string | null }) => unknown) =>
+    selector({ isAuthenticated: true, userId: OWNER }),
 }));
 
 jest.mock('@/api/userPoints', () => ({
@@ -35,6 +39,7 @@ jest.mock('@/api/userPoints', () => ({
 }));
 
 import { userPointsApi } from '@/api/userPoints';
+import { queryKeys } from '@/api/queryKeys';
 import {
   isPointsCollectionPartial,
   writePointsPaginationState,
@@ -149,12 +154,14 @@ describe('#1709 общий кэш userPointsAll: частичный стрим �
     // продлевает gcTime только на подписке и на фетче. С общим 10-минутным
     // gcTime отметка исчезла бы раньше частичного префикса, и он снова сошёл бы
     // за полную коллекцию.
-    writePointsPaginationState(queryClient, { nextPage: 3, complete: false });
-    const meta = queryClient.getQueryCache().find({ queryKey: ['userPointsAll', 'pagination'] });
+    writePointsPaginationState(queryClient, OWNER, { nextPage: 3, complete: false });
+    const meta = queryClient
+      .getQueryCache()
+      .find({ queryKey: queryKeys.userPointsPagination(OWNER) });
     expect(meta?.gcTime).toBe(Infinity);
-    expect(isPointsCollectionPartial(queryClient)).toBe(true);
-    writePointsPaginationState(queryClient, { nextPage: 3, complete: true });
-    expect(isPointsCollectionPartial(queryClient)).toBe(false);
+    expect(isPointsCollectionPartial(queryClient, OWNER)).toBe(true);
+    writePointsPaginationState(queryClient, OWNER, { nextPage: 3, complete: true });
+    expect(isPointsCollectionPartial(queryClient, OWNER)).toBe(false);
   });
 
   it('контроль: непрерванный стрим отдаёт полную коллекцию без лишнего запроса', async () => {

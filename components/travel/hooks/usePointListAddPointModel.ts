@@ -5,6 +5,7 @@ import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { useAuth } from '@/context/AuthContext';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import type { ImportedPoint } from '@/types/userPoints';
 import { PointStatus } from '@/types/userPoints';
 import { showToast } from '@/utils/toast';
@@ -46,6 +47,7 @@ export function usePointListAddPointModel({
 }) {
   const [addingPointId, setAddingPointId] = useState<string | null>(null);
   const { isAuthenticated, authReady } = useAuth();
+  const owner = useQueryOwner();
   const queryClient = ReactQuery.useQueryClient();
 
   const handleAddPoint = useCallback(
@@ -156,9 +158,9 @@ export function usePointListAddPointModel({
         // предыдущему состоянию, и на первом чтении это `undefined` — в кэше
         // осталась бы одна точка, свежая на весь staleTime.
         let collectionReady =
-          queryClient.getQueryData(queryKeys.userPointsAll()) !== undefined;
+          queryClient.getQueryData(queryKeys.userPointsAll(owner)) !== undefined;
         if (collectionReady) {
-          await queryClient.cancelQueries({ queryKey: queryKeys.userPointsAll() });
+          await queryClient.cancelQueries({ queryKey: queryKeys.userPointsAll(owner) });
         } else {
           // Коллекция ещё читается: дожидаемся того же самого чтения (запрос
           // дедуплицируется), иначе запись ниже была бы затёрта его ответом, а
@@ -167,7 +169,7 @@ export function usePointListAddPointModel({
           // поэтому ошибка гасится, а кэш остаётся нетронутым.
           try {
             await queryClient.ensureQueryData({
-              queryKey: queryKeys.userPointsAll(),
+              queryKey: queryKeys.userPointsAll(owner),
               queryFn: () => userPointsApi.getAllPoints(),
             });
             // Полноту здесь НЕ отмечаем: `ensureQueryData` дедуплицируется на
@@ -184,7 +186,7 @@ export function usePointListAddPointModel({
         const cachedOptimistically =
           collectionReady && !!created && Number.isFinite(Number((created as any).latitude));
         if (cachedOptimistically) {
-          queryClient.setQueryData<ImportedPoint[]>(queryKeys.userPointsAll(), (old) => {
+          queryClient.setQueryData<ImportedPoint[]>(queryKeys.userPointsAll(owner), (old) => {
             const arr = Array.isArray(old) ? old : [];
             if (arr.some((p) => p?.id === created.id)) return arr;
             return [...arr, created];
@@ -204,7 +206,7 @@ export function usePointListAddPointModel({
         // рефетч стоил бы ceil(count/200) запросов на каждое добавление — серия
         // сохранений упиралась бы в клиентский лимитер `/user-points/`.
         if (!cachedOptimistically) {
-          void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll() });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll(owner) });
         }
       } catch (error) {
         if (__DEV__) {
@@ -219,7 +221,7 @@ export function usePointListAddPointModel({
         setAddingPointId(null);
       }
     },
-    [addingPointId, authReady, baseUrl, categoryIdToName, categoryNameToIds, isAuthenticated, isPointSaved, queryClient, travelName]
+    [addingPointId, authReady, baseUrl, categoryIdToName, categoryNameToIds, isAuthenticated, isPointSaved, owner, queryClient, travelName]
   );
 
   return {

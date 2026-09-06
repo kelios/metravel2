@@ -4,6 +4,7 @@ import type { QueryClient } from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { buildAddressFromGeocode, buildPointTitleFromGeocode } from '@/utils/geocodeHelpers';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { PointStatus } from '@/types/userPoints';
@@ -75,6 +76,7 @@ export const usePointsManualForm = ({
   resolveCategoryIdsForEdit,
   queryClient,
 }: Params) => {
+  const owner = useQueryOwner();
   const [editingPointId, setEditingPointId] = useState<number | null>(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [manualName, setManualName] = useState('');
@@ -261,7 +263,7 @@ export const usePointsManualForm = ({
 
       if (editingPointId != null) {
         const updated = await userPointsApi.updatePoint(editingPointId, payload);
-        queryClient.setQueryData(queryKeys.userPointsAll(), (prev: unknown) => {
+        queryClient.setQueryData(queryKeys.userPointsAll(owner), (prev: unknown) => {
           const arr = Array.isArray(prev) ? prev : [];
           return arr.map((p: unknown) => {
             const item = (p ?? {}) as Record<string, unknown>;
@@ -270,7 +272,7 @@ export const usePointsManualForm = ({
         });
       } else {
         const created = await userPointsApi.createPoint(payload);
-        queryClient.setQueryData(queryKeys.userPointsAll(), (prev: unknown) => {
+        queryClient.setQueryData(queryKeys.userPointsAll(owner), (prev: unknown) => {
           const arr = Array.isArray(prev) ? prev : [];
           return [created, ...arr];
         });
@@ -291,6 +293,7 @@ export const usePointsManualForm = ({
     manualCoords,
     manualName,
     manualStatus,
+    owner,
     queryClient,
   ]);
 

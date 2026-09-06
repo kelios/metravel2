@@ -34,23 +34,24 @@ const { logoutApi } = require('@/api/auth') as { logoutApi: jest.Mock }
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
 
-// По одному представителю каждого класса, который карточка называет утекающим:
-// ключ без владельца, ключ с владельцем, офлайн-персист и чат поездки.
+// По одному представителю каждого класса, который карточка называет утекающим.
+// #1831 перевёл все эти ключи на владельца, но сброс обязан сносить их и так:
+// он устроен от запрета и не зависит от полноты ревизии ключей.
 const seedPersonalCache = (client: QueryClient, owner: string) => {
-  client.setQueryData(queryKeys.privacySettings(), { matrix: owner })
-  client.setQueryData(queryKeys.userPointsAll(), [`point-of-${owner}`])
-  client.setQueryData(queryKeys.mySubscriptions(), [{ id: `sub-of-${owner}` }])
-  client.setQueryData(queryKeys.myTelegramLink(), { handle: `@${owner}` })
-  client.setQueryData(queryKeys.tripChatMessages(7), [{ id: 1, text: `secret of ${owner}` }])
+  client.setQueryData(queryKeys.privacySettings(owner), { matrix: owner })
+  client.setQueryData(queryKeys.userPointsAll(owner), [`point-of-${owner}`])
+  client.setQueryData(queryKeys.mySubscriptions(owner), [{ id: `sub-of-${owner}` }])
+  client.setQueryData(queryKeys.myTelegramLink(owner), { handle: `@${owner}` })
+  client.setQueryData(queryKeys.tripChatMessages(owner, 7), [{ id: 1, text: `secret of ${owner}` }])
   client.setQueryData(queryKeys.favorites(owner), [{ id: 1 }])
 }
 
 const personalCacheSnapshot = (client: QueryClient, owner: string) => ({
-  privacySettings: client.getQueryData(queryKeys.privacySettings()),
-  userPointsAll: client.getQueryData(queryKeys.userPointsAll()),
-  mySubscriptions: client.getQueryData(queryKeys.mySubscriptions()),
-  myTelegramLink: client.getQueryData(queryKeys.myTelegramLink()),
-  tripChatMessages: client.getQueryData(queryKeys.tripChatMessages(7)),
+  privacySettings: client.getQueryData(queryKeys.privacySettings(owner)),
+  userPointsAll: client.getQueryData(queryKeys.userPointsAll(owner)),
+  mySubscriptions: client.getQueryData(queryKeys.mySubscriptions(owner)),
+  myTelegramLink: client.getQueryData(queryKeys.myTelegramLink(owner)),
+  tripChatMessages: client.getQueryData(queryKeys.tripChatMessages(owner, 7)),
   favorites: client.getQueryData(queryKeys.favorites(owner)),
 })
 
@@ -163,7 +164,7 @@ describe('#1829 смена владельца сессии сбрасывает 
     expect(survivesIdentityChange(queryKeys.quests())).toBe(true)
     expect(survivesIdentityChange(queryKeys.questsPreview(2))).toBe(false)
     expect(survivesIdentityChange(queryKeys.questsCompactCatalog('A'))).toBe(false)
-    expect(survivesIdentityChange(queryKeys.privacySettings())).toBe(false)
+    expect(survivesIdentityChange(queryKeys.privacySettings('A'))).toBe(false)
   })
 
   // Между сбросом на выходе и входом следующего ответ старой сессии мог лечь в
@@ -173,11 +174,11 @@ describe('#1829 смена владельца сессии сбрасывает 
     await tick()
     useAuthStore.getState().invalidateAuthState()
     await tick()
-    client.setQueryData(queryKeys.privacySettings(), { matrix: 'A' })
+    client.setQueryData(queryKeys.privacySettings('A'), { matrix: 'A' })
 
     useAuthStore.getState().applyConfirmedAccountSession({ userId: 'B' })
 
-    expect(client.getQueryData(queryKeys.privacySettings())).toBeUndefined()
+    expect(client.getQueryData(queryKeys.privacySettings('A'))).toBeUndefined()
   })
 
   it('ответ, долетевший со старой сессией после сброса, снимается вторым проходом', async () => {
@@ -189,13 +190,13 @@ describe('#1829 смена владельца сессии сбрасывает 
     const logout = useAuthStore.getState().logout()
     await tick()
     // Запрос, стартовавший до выхода, приносит данные ушедшего пользователя.
-    client.setQueryData(queryKeys.privacySettings(), { matrix: 'A' })
+    client.setQueryData(queryKeys.privacySettings('A'), { matrix: 'A' })
 
     resolveLogout()
     await logout
     await tick()
 
-    expect(client.getQueryData(queryKeys.privacySettings())).toBeUndefined()
+    expect(client.getQueryData(queryKeys.privacySettings('A'))).toBeUndefined()
   })
 
   it('второй проход не трогает данные уже вошедшего следующего пользователя', async () => {
@@ -208,12 +209,12 @@ describe('#1829 смена владельца сессии сбрасывает 
     await tick()
     useAuthStore.getState().applyConfirmedAccountSession({ userId: 'B' })
     await tick()
-    client.setQueryData(queryKeys.privacySettings(), { matrix: 'B' })
+    client.setQueryData(queryKeys.privacySettings('B'), { matrix: 'B' })
 
     resolveLogout()
     await logout
     await tick()
 
-    expect(client.getQueryData(queryKeys.privacySettings())).toEqual({ matrix: 'B' })
+    expect(client.getQueryData(queryKeys.privacySettings('B'))).toEqual({ matrix: 'B' })
   })
 })

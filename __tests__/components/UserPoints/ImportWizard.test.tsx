@@ -1,6 +1,8 @@
 import { render, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ImportWizard } from '@/components/UserPoints/ImportWizard';
+import { queryKeys } from '@/api/queryKeys';
+import { useAuthStore } from '@/stores/authStore';
 import type { ImportPreviewResult } from '@/types/userPoints';
 
 jest.mock('expo-document-picker', () => ({
@@ -94,8 +96,13 @@ describe('ImportWizard', () => {
     },
   };
 
+  // #1831: ключ коллекции несёт владельца, а импорт доступен только вошедшему —
+  // без вошедшего набор проверял бы гостевой ключ, по которому мастер не ходит.
+  const OWNER = '7';
+
   beforeEach(() => {
     jest.clearAllMocks();
+    useAuthStore.setState({ authReady: true, isAuthenticated: true, userId: OWNER });
     mockGetDocumentAsync.mockResolvedValue({ canceled: false, assets: [mockAsset] });
     mockPreviewImport.mockResolvedValue(previewResult);
     mockImportPoints.mockResolvedValue({ created: 1, skipped: 0 });
@@ -172,7 +179,7 @@ describe('ImportWizard', () => {
     });
 
     await waitFor(() => {
-      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['userPointsAll'] });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.userPointsAll(OWNER) });
     });
   });
 

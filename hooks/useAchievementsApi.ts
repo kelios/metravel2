@@ -30,6 +30,7 @@ import {
 import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 
 const STALE_TIME = 5 * 60 * 1000;
 
@@ -58,8 +59,9 @@ export function useBadgeCatalog() {
 /** Достижения текущего пользователя: значки + ранг + прогресс к незакрытым. */
 export function useMyAchievements(options: { enabled?: boolean } = {}) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const owner = useQueryOwner();
   return useQuery<MyAchievements>({
-    queryKey: queryKeys.achievementsMe(),
+    queryKey: queryKeys.achievementsMe(owner),
     queryFn: fetchMyAchievements,
     enabled: isAuthenticated && (options.enabled ?? true),
     staleTime: STALE_TIME,
@@ -106,6 +108,7 @@ export function useTravelPeerBadges(travelId: string | number | null | undefined
 /** Редкие награды текущего пользователя (своя зона профиля). */
 export function useMyRareAwards() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const owner = useQueryOwner();
   const qc = useQueryClient();
   // Живой /achievements/me/ отдаёт rare_awards top-level — засеваемся из него и
   // отдельный /rare-awards/me/ дёргаем только когда поля в ответе не оказалось.
@@ -115,17 +118,17 @@ export function useMyRareAwards() {
   const needsSeparateFetch = achSuccess && !consolidatedHasRare;
 
   const query = useQuery<RareAward[]>({
-    queryKey: queryKeys.achievementsRareMe(),
+    queryKey: queryKeys.achievementsRareMe(owner),
     queryFn: fetchMyRareAwards,
     enabled: isAuthenticated && needsSeparateFetch,
     staleTime: STALE_TIME,
     retry,
     initialData: () => {
-      const cached = qc.getQueryData<MyAchievements>(queryKeys.achievementsMe());
+      const cached = qc.getQueryData<MyAchievements>(queryKeys.achievementsMe(owner));
       return cached?.rareAwards ?? undefined;
     },
     initialDataUpdatedAt: () =>
-      qc.getQueryState(queryKeys.achievementsMe())?.dataUpdatedAt ?? 0,
+      qc.getQueryState(queryKeys.achievementsMe(owner))?.dataUpdatedAt ?? 0,
   });
 
   const isFetching = query.isFetching || (!query.data && achFetching);
@@ -176,11 +179,13 @@ export function useRareAwardCatalog(enabled = true) {
 /** Мутация выдачи редкой награды админом. Инвалидирует зону наград получателя. */
 export function useGrantRareAward() {
   const qc = useQueryClient();
+  const owner = useQueryOwner();
   return useMutation<RareAwardGrant, unknown, GrantRareAwardInput>({
     mutationFn: grantRareAward,
     onSuccess: (_result, input) => {
       qc.invalidateQueries({ queryKey: queryKeys.achievementsRareUser(input.userId) });
-      qc.invalidateQueries({ queryKey: queryKeys.achievementsRareMe() });
+      // Выдача самому себе меняет и свою зону наград — ключ владельца тот же.
+      qc.invalidateQueries({ queryKey: queryKeys.achievementsRareMe(owner) });
     },
   });
 }

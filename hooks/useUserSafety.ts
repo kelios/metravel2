@@ -18,6 +18,7 @@ import {
 import type { UserProfileDto } from '@/api/user'
 import { ApiError, isTimeoutError } from '@/api/client'
 import { queryKeys } from '@/api/queryKeys'
+import { useQueryOwner } from '@/hooks/useQueryOwner'
 
 const STALE_TIME = 5 * 60 * 1000
 
@@ -37,8 +38,9 @@ export function useReportReasons() {
 }
 
 export function useBlockedUsers(enabled = true) {
+  const owner = useQueryOwner()
   return useQuery<UserProfileDto[]>({
-    queryKey: queryKeys.myBlockedUsers(),
+    queryKey: queryKeys.myBlockedUsers(owner),
     queryFn: fetchBlockedUsers,
     enabled,
     staleTime: STALE_TIME,
@@ -58,22 +60,24 @@ export function useReportUser() {
 
 export function useBlockUser() {
   const qc = useQueryClient()
+  const owner = useQueryOwner()
   return useMutation<void, unknown, string | number>({
     mutationFn: blockUser,
     onSuccess: (_res, userId) => {
       void qc.invalidateQueries({ queryKey: queryKeys.userProfile(userId) })
-      void qc.invalidateQueries({ queryKey: queryKeys.myBlockedUsers() })
+      void qc.invalidateQueries({ queryKey: queryKeys.myBlockedUsers(owner) })
     },
   })
 }
 
 export function useUnblockUser() {
   const qc = useQueryClient()
+  const owner = useQueryOwner()
   return useMutation<void, unknown, string | number>({
     mutationFn: unblockUser,
     onSuccess: (_res, userId) => {
       void qc.invalidateQueries({ queryKey: queryKeys.userProfile(userId) })
-      void qc.invalidateQueries({ queryKey: queryKeys.myBlockedUsers() })
+      void qc.invalidateQueries({ queryKey: queryKeys.myBlockedUsers(owner) })
     },
   })
 }

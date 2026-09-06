@@ -7,6 +7,7 @@ import {
   isPointsCollectionPartial,
   markPointsCollectionComplete,
 } from '@/api/userPointsCollectionCache';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import type { ImportedPoint } from '@/types/userPoints';
 
 /**
@@ -27,18 +28,19 @@ import type { ImportedPoint } from '@/types/userPoints';
  */
 export function useSavedPointsCollection({ enabled }: { enabled: boolean }) {
   const queryClient = useQueryClient();
+  const owner = useQueryOwner();
 
   // Read on every query-driven render: it controls both initial freshness and
   // whether the currently cached array is complete enough to trust.
-  const partial = isPointsCollectionPartial(queryClient);
+  const partial = isPointsCollectionPartial(queryClient, owner);
 
   const query = useQuery<ImportedPoint[]>({
-    queryKey: queryKeys.userPointsAll(),
+    queryKey: queryKeys.userPointsAll(owner),
     queryFn: async () => {
       const points = await userPointsApi.getAllPoints();
       // Кэш заполнен целиком — снимаем признак частичности, иначе прерванный
       // стрим заставлял бы каждого следующего потребителя перечитывать всё.
-      markPointsCollectionComplete(queryClient);
+      markPointsCollectionComplete(queryClient, owner);
       return points;
     },
     enabled,

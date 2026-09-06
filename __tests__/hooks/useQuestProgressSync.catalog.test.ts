@@ -38,7 +38,7 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
     setActiveQueryClient(client)
     client.setQueryData(queryKeys.quests(), catalog(false))
-    client.setQueryData(queryKeys.userPointsAll(), ['point'])
+    client.setQueryData(queryKeys.userPointsAll('A'), ['point'])
     fetchCatalog = jest.fn().mockResolvedValue(catalog(true))
     const observer = new QueryObserver(client, { queryKey: queryKeys.quests(), queryFn: fetchCatalog, staleTime: QUESTS_LIST_STALE_TIME })
     unsubscribe = observer.subscribe(() => undefined)
@@ -72,7 +72,7 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     expect(fetchCatalog).toHaveBeenCalledTimes(1)
     await save(result)
     expect(fetchCatalog).toHaveBeenCalledTimes(1)
-    expect(client.getQueryState(queryKeys.userPointsAll())?.isInvalidated).toBe(false)
+    expect(client.getQueryState(queryKeys.userPointsAll('A'))?.isInvalidated).toBe(false)
     unmount()
   })
 

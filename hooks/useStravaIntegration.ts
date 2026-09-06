@@ -14,6 +14,7 @@ import {
 import { ApiError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { useAuth } from '@/context/AuthContext';
+import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { showToast } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n'
@@ -53,6 +54,7 @@ export const mergeStravaActivities = (
 
 export function useStravaIntegration() {
   const { isAuthenticated } = useAuth();
+  const owner = useQueryOwner();
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<StravaActivityFilters>({
     after: '',
@@ -69,7 +71,7 @@ export function useStravaIntegration() {
   );
 
   const statusQuery = useQuery({
-    queryKey: queryKeys.stravaStatus(),
+    queryKey: queryKeys.stravaStatus(owner),
     queryFn: fetchStravaStatus,
     enabled: isAuthenticated,
     staleTime: 60 * 1000,
@@ -88,7 +90,7 @@ export function useStravaIntegration() {
     status.status === 'connected';
 
   const activitiesQuery = useQuery({
-    queryKey: queryKeys.stravaActivities(activitiesQueryParams as Record<string, unknown>),
+    queryKey: queryKeys.stravaActivities(owner, activitiesQueryParams as Record<string, unknown>),
     queryFn: () => fetchStravaActivities(activitiesQueryParams),
     enabled: canLoadActivities,
     staleTime: 60 * 1000,
@@ -101,7 +103,7 @@ export function useStravaIntegration() {
   });
 
   const selectedActivityQuery = useQuery<StravaActivityDetail | null>({
-    queryKey: queryKeys.stravaActivity(selectedActivityId),
+    queryKey: queryKeys.stravaActivity(owner, selectedActivityId),
     queryFn: () => fetchStravaActivityDetail(selectedActivityId as string),
     enabled: canLoadActivities && Boolean(selectedActivityId),
     staleTime: 60 * 1000,
@@ -114,12 +116,14 @@ export function useStravaIntegration() {
   });
 
   const invalidateStrava = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.stravaStatus() });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.stravaStatus(owner) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.stravaActivitiesRoot() });
     if (selectedActivityId) {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.stravaActivity(selectedActivityId) });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.stravaActivity(owner, selectedActivityId),
+      });
     }
-  }, [queryClient, selectedActivityId]);
+  }, [owner, queryClient, selectedActivityId]);
 
   useEffect(() => {
     if (!activitiesQuery.data) return;

@@ -31,9 +31,13 @@ jest.mock('@/hooks/useAchievementsApi', () => ({
 }))
 
 const isAuthenticatedRef = { value: true }
+// #1831: личные ключи геймификации несут владельца, поэтому мок стора обязан
+// отдавать `userId` — иначе ключ собрался бы с `undefined`, и набор проверял бы
+// не тот ключ, по которому ходит приложение.
+const OWNER = 'owner-1'
 jest.mock('@/stores/authStore', () => ({
-  useAuthStore: (selector: (s: { isAuthenticated: boolean }) => unknown) =>
-    selector({ isAuthenticated: isAuthenticatedRef.value }),
+  useAuthStore: (selector: (s: { isAuthenticated: boolean; userId: string | null }) => unknown) =>
+    selector({ isAuthenticated: isAuthenticatedRef.value, userId: OWNER }),
 }))
 
 import {
@@ -242,7 +246,7 @@ describe('useChooseCharacterPath', () => {
 
     expect(mockChoosePath.mock.calls[0][0]).toEqual({ pathSlug: 'fox' })
     const cached = queryClient.getQueryData<CharacterState>(
-      queryKeys.gamificationCharacterMe(),
+      queryKeys.gamificationCharacterMe(OWNER),
     )
     expect(cached?.pathSlug).toBe('fox')
     expect(cached?.pendingChoice).toBe(false)
@@ -267,7 +271,7 @@ describe('useChooseCharacterPath', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(
-      queryClient.getQueryData(queryKeys.gamificationCharacterMe()),
+      queryClient.getQueryData(queryKeys.gamificationCharacterMe(OWNER)),
     ).toBeUndefined()
     expect(trackPathChosen).not.toHaveBeenCalled()
   })
