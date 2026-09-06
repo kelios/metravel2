@@ -40,7 +40,6 @@ const BREAKPOINT_TABLET = 768;
 /** Минимальный снимок вьюпорта: PointsList читает из него ширину и режим. */
 const buildResponsiveState = (width: number) => ({
   width,
-  height: 844,
   isMobile: width < BREAKPOINT_TABLET,
 });
 
@@ -73,9 +72,9 @@ describe('PointsList map settings availability (#1787)', () => {
     setPlatform('web');
     mockWidth = 1280;
     // #1788 — PointsList берёт и ширину, и режим из общего вьюпорт-хука
-    // (`useResponsive`), а не из `useWindowDimensions` + `Platform.OS`. Мок
-    // двигает ровно тот источник, который читает продакшен-код.
-    jest.spyOn(require('@/hooks/useResponsive'), 'useResponsive').mockImplementation(() =>
+    // (`useBreakpoints({ clientOnly: true })`), а не из `useWindowDimensions` +
+    // `Platform.OS`. Мок двигает ровно тот источник, который читает код.
+    jest.spyOn(require('@/hooks/useResponsive'), 'useBreakpoints').mockImplementation(() =>
       buildResponsiveState(mockWidth),
     );
   });

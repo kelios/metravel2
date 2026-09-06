@@ -76,10 +76,9 @@ describe('PointsList: режим раскладки из вьюпорта (#1788
   beforeEach(() => {
     headerProps.length = 0;
     jest
-      .spyOn(require('@/hooks/useResponsive'), 'useResponsive')
+      .spyOn(require('@/hooks/useResponsive'), 'useBreakpoints')
       .mockImplementation(() => ({
         width: mockWidth,
-        height: 844,
         isMobile: mockWidth < BREAKPOINT_TABLET,
       }));
   });

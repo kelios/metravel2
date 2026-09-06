@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getPointCategoryNames } from '@/utils/travelPointMeta';
 import { STATUS_LABELS } from '@/types/userPoints';
 import { DESIGN_COLORS } from '@/constants/designSystem';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useBreakpoints } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { createStyles } from './PointsList.styles';
 import { normalizeCategoryIdsFromPoint } from './pointsListLogic';
@@ -81,7 +81,12 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   // чего mobile web на 390px получал десктопную раскладку, а iPhone-приложение на
   // той же ширине — мобильную; docs/RULES.md требует один responsive-UX на
   // mobile web / Android / iPhone. Ширина уже читается в этом же компоненте.
-  const { width: windowWidth, isMobile } = useResponsive();
+  // `clientOnly` обязателен: без него первый web-кадр приходит с width=0
+  // (`hooks/useHydrationReady.ts`), и десктоп на мгновение рисуется мобильной
+  // раскладкой — тот самый скачок, из-за которого правило появилось (#1282).
+  // Экран монтируется уже после гидратации (`UserPointsScreen` держит спиннер,
+  // пока `authReady === false`), поэтому SSR-кадра здесь нет.
+  const { width: windowWidth, isMobile } = useBreakpoints({ clientOnly: true });
   const isNarrow = windowWidth < 420;
   // Панель настроек карты остаётся web-only: у native нет моста MapUiApi
   // (см. комментарий ниже), поэтому здесь Platform — признак ВОЗМОЖНОСТИ, а не

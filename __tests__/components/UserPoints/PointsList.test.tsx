@@ -22,7 +22,7 @@ jest.mock('react-native', () => {
 // ширина, поэтому фиксируем её в том источнике, который читает компонент.
 jest.mock('@/hooks/useResponsive', () => ({
   ...jest.requireActual('@/hooks/useResponsive'),
-  useResponsive: () => ({ width: 1200, height: 800, isMobile: false }),
+  useBreakpoints: () => ({ width: 1200, isMobile: false }),
 }));
 
 jest.mock('@/components/UserPoints/PointsListGrid', () => {

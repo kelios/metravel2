@@ -57,16 +57,15 @@ function walkSourceFiles(dir: string, out: string[] = []): string[] {
 
 const sourceFiles = SRC_DIRS.flatMap((dir) => walkSourceFiles(path.join(ROOT, dir)));
 
-const findOffenders = (): string[] =>
-  sourceFiles
-    .filter((file) => PLATFORM_DECIDES_MODE.test(fs.readFileSync(file, 'utf8')))
-    .map((file) => path.relative(ROOT, file).split(path.sep).join('/'));
+// Дерево читается ОДИН раз на модуль: два прохода по app/components/screens —
+// это лишние ~2300 синхронных чтений на каждый прогон стража.
+const offenders: string[] = sourceFiles
+  .filter((file) => PLATFORM_DECIDES_MODE.test(fs.readFileSync(file, 'utf8')))
+  .map((file) => path.relative(ROOT, file).split(path.sep).join('/'));
 
 describe('Layout mode governance (docs/RULES.md — один responsive-UX)', () => {
   it('режим раскладки не решается платформой вне унаследованного списка', () => {
-    const offenders = findOffenders().filter((file) => !LEGACY_ALLOWLIST.has(file));
-
-    expect(offenders).toEqual([]);
+    expect(offenders.filter((file) => !LEGACY_ALLOWLIST.has(file))).toEqual([]);
   });
 
   it('«Мои точки» берут режим из вьюпорта (регрессия #1788)', () => {
@@ -75,13 +74,13 @@ describe('Layout mode governance (docs/RULES.md — один responsive-UX)', ()
       'utf8',
     );
 
-    expect(source).toContain('useResponsive()');
+    // Именно clientOnly-вариант: без него первый web-кадр приходит с width=0 и
+    // десктоп мигает мобильной раскладкой (#1282).
+    expect(source).toContain("useBreakpoints({ clientOnly: true })");
     expect(PLATFORM_DECIDES_MODE.test(source)).toBe(false);
   });
 
   it('унаследованный список не разрастается молча', () => {
-    const offenders = findOffenders();
-
     // Строки из списка обязаны существовать: исчезнувший файл — повод убрать
     // запись, а не держать мёртвый allowlist.
     expect(offenders.filter((file) => LEGACY_ALLOWLIST.has(file)).sort()).toEqual(
