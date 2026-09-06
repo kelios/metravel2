@@ -1,6 +1,23 @@
+const {
+  assertGoogleServicesConfig,
+  resolveGoogleServicesFile,
+} = require('./scripts/android-firebase-config')
+
 const FACEBOOK_PLUGIN = 'react-native-fbsdk-next'
 
 const cleanEnv = (value) => String(value || '').trim()
+
+// `android.googleServicesFile` is the only switch that makes prebuild copy
+// google-services.json and apply the Gradle plugin; without it Firebase never
+// initialises and Android cannot obtain an Expo push token (#1818). The config
+// is a gitignored secret, so it is wired in only when actually present — web
+// and `expo start` must keep working on a machine that does not hold it.
+const androidGoogleServices = () => {
+  const configPath = resolveGoogleServicesFile()
+  if (!configPath) return {}
+  assertGoogleServicesConfig(configPath)
+  return { googleServicesFile: configPath }
+}
 
 module.exports = ({ config }) => {
   const appID = cleanEnv(process.env.EXPO_PUBLIC_META_APP_ID)
@@ -29,5 +46,9 @@ module.exports = ({ config }) => {
     ])
   }
 
-  return { ...config, plugins }
+  return {
+    ...config,
+    plugins,
+    android: { ...config.android, ...androidGoogleServices() },
+  }
 }

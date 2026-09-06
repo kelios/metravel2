@@ -86,15 +86,16 @@ else
     log_success ".env.prod найден"
 fi
 
-# 6. Проверка Google Services (опционально для analytics)
+# 6. Проверка Google Services (обязателен для push: без него Firebase не
+# инициализируется и Expo push token на Android не выдаётся, #1818)
 log_info "Шаг 6: Проверка Google Services..."
 
-if [ ! -f "google-services.json" ]; then
-    log_warning "google-services.json не найден"
-    log_warning "Нужен только для Firebase Analytics/Notifications"
-    log_warning "Для карт используется OpenStreetMap (бесплатный)"
+if node scripts/android-firebase-config.js >/dev/null 2>&1; then
+    log_success "google-services.json найден и относится к by.metravel.app"
 else
-    log_success "google-services.json найден"
+    log_warning "$(node scripts/android-firebase-config.js 2>&1 || true)"
+    log_warning "Prebuild продолжится, но Android-сборка будет остановлена"
+    log_warning "проверкой в scripts/android-gradle-build.js: push не заработает"
 fi
 
 # 6.5 Генерация native-проекта (это и есть prebuild)

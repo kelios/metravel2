@@ -4,6 +4,15 @@ const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')
 
+const {
+  CONFIG_FILE_NAME: GOOGLE_SERVICES_FILE_NAME,
+  MISSING_CONFIG_HINT,
+  REQUIRED_FIREBASE_RESOURCES,
+  assertGoogleServicesConfig,
+  findMissingFirebaseGradleWiring,
+  resolveGoogleServicesFile,
+} = require('./android-firebase-config')
+
 const ROOT_DIR = path.resolve(__dirname, '..')
 const ANDROID_DIR = path.join(ROOT_DIR, 'android')
 const LOCAL_ENV_PATH = path.join(ROOT_DIR, '.env')
@@ -15,6 +24,12 @@ const PORTABLE_PROD_ENV_PATH = path.join(
 )
 const GRADLE_PROPERTIES_PATH = path.join(ANDROID_DIR, 'gradle.properties')
 const APP_BUILD_GRADLE_PATH = path.join(ANDROID_DIR, 'app', 'build.gradle')
+const PROJECT_BUILD_GRADLE_PATH = path.join(ANDROID_DIR, 'build.gradle')
+const COPIED_GOOGLE_SERVICES_PATH = path.join(
+  ANDROID_DIR,
+  'app',
+  GOOGLE_SERVICES_FILE_NAME,
+)
 const RELEASE_MAPPING_PATH = path.join(
   ANDROID_DIR,
   'app',
@@ -132,11 +147,11 @@ function readAndroidManifestMetaData(xml, name) {
   return tag.match(/\bandroid:value=["']([^"']*)["']/)?.[1]?.trim() || ''
 }
 
-function verifyFacebookAndroidResources(mode, environment) {
-  const facebook = getFacebookBuildConfig(environment)
+/** Resources Gradle actually packaged into the artifact for this variant. */
+function packagedValuesXmlPath(mode) {
   const variant = mode === 'production' ? 'release' : 'debug'
   const variantTitle = variant[0].toUpperCase() + variant.slice(1)
-  const valuesPath = path.join(
+  return path.join(
     ANDROID_DIR,
     'app',
     'build',
@@ -147,6 +162,13 @@ function verifyFacebookAndroidResources(mode, environment) {
     'values',
     'values.xml',
   )
+}
+
+function verifyFacebookAndroidResources(mode, environment) {
+  const facebook = getFacebookBuildConfig(environment)
+  const variant = mode === 'production' ? 'release' : 'debug'
+  const variantTitle = variant[0].toUpperCase() + variant.slice(1)
+  const valuesPath = packagedValuesXmlPath(mode)
   const manifestPath = path.join(
     ANDROID_DIR,
     'app',
@@ -194,6 +216,66 @@ function verifyFacebookAndroidResources(mode, environment) {
 
   process.stdout.write(
     '[android-gradle] Facebook Android resources verified (values hidden)\n',
+  )
+}
+
+/**
+ * Fail before Gradle starts when the Firebase chain is broken: no config file,
+ * a config for another package, or an android/ generated before
+ * `android.googleServicesFile` was wired in. Any of those still builds green
+ * and produces an APK that cannot register for push (#1818).
+ */
+function assertFirebaseConfigApplied() {
+  const configPath = resolveGoogleServicesFile()
+  if (!configPath) throw new Error(MISSING_CONFIG_HINT)
+  assertGoogleServicesConfig(configPath)
+
+  const missing = findMissingFirebaseGradleWiring({
+    projectBuildGradle: fs.existsSync(PROJECT_BUILD_GRADLE_PATH)
+      ? fs.readFileSync(PROJECT_BUILD_GRADLE_PATH, 'utf8')
+      : '',
+    appBuildGradle: fs.existsSync(APP_BUILD_GRADLE_PATH)
+      ? fs.readFileSync(APP_BUILD_GRADLE_PATH, 'utf8')
+      : '',
+    hasCopiedConfig: fs.existsSync(COPIED_GOOGLE_SERVICES_PATH),
+  })
+  if (missing.length === 0) return
+
+  throw new Error(
+    'Firebase wiring is missing from android/ — this build would ship without ' +
+      'FCM and Android could not obtain an Expo push token.\n' +
+      missing.map((entry) => `  missing: ${entry}`).join('\n') +
+      '\nRun `npx expo prebuild -p android` first (it copies ' +
+      `${GOOGLE_SERVICES_FILE_NAME} and applies the Gradle plugin), then rebuild.`,
+  )
+}
+
+/**
+ * The Gradle plugin turns google-services.json into string resources. Empty or
+ * absent resources are exactly what AAPT2 reported for the shipped 1.0.5 APK,
+ * so assert on what Gradle packaged rather than on the source file alone.
+ */
+function verifyFirebaseAndroidResources(
+  mode,
+  valuesPath = packagedValuesXmlPath(mode),
+) {
+  if (!fs.existsSync(valuesPath)) {
+    throw new Error('compiled Android Firebase configuration is missing')
+  }
+  const xml = fs.readFileSync(valuesPath, 'utf8')
+  const missing = REQUIRED_FIREBASE_RESOURCES.filter(
+    (name) => !readAndroidResource(xml, 'string', name),
+  )
+  if (missing.length > 0) {
+    throw new Error(
+      'compiled Android resources have no Firebase configuration: ' +
+        `${missing.join(', ')} missing or empty. The installed app would log ` +
+        '"Default FirebaseApp failed to initialize" and push registration ' +
+        'would stay unavailable.',
+    )
+  }
+  process.stdout.write(
+    '[android-gradle] Firebase Android resources verified (values hidden)\n',
   )
 }
 
@@ -256,6 +338,7 @@ function main() {
   try {
     buildEnvironment = createBuildEnvironment(mode)
     getFacebookBuildConfig(buildEnvironment)
+    assertFirebaseConfigApplied()
     if (mode === 'production') assertReleaseConfigApplied()
   } catch (error) {
     process.stderr.write(`[android-gradle] ${error.message}\n`)
@@ -286,6 +369,7 @@ function main() {
 
   try {
     verifyFacebookAndroidResources(mode, buildEnvironment)
+    verifyFirebaseAndroidResources(mode)
     if (mode === 'production') assertR8Ran()
   } catch (error) {
     process.stderr.write(`[android-gradle] ${error.message}\n`)
@@ -298,13 +382,16 @@ if (require.main === module) main()
 module.exports = {
   REQUIRED_APP_GRADLE_SNIPPETS,
   REQUIRED_GRADLE_PROPERTIES,
+  assertFirebaseConfigApplied,
   assertR8Ran,
   assertReleaseConfigApplied,
   createBuildEnvironment,
   findMissingReleaseOptimizations,
   getFacebookBuildConfig,
+  packagedValuesXmlPath,
   parseEnvFile,
   readAndroidManifestMetaData,
   readAndroidResource,
   verifyFacebookAndroidResources,
+  verifyFirebaseAndroidResources,
 }

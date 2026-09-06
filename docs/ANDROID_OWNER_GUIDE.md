@@ -36,6 +36,7 @@ upload key. Обновление closed testing остаётся отдельн�
 | Version source | `app.json` → `expo.version` / `expo.android.versionCode` |
 | Local AAB | `android/app/build/outputs/bundle/release/app-release.aab` |
 | Play service account | `.secrets/google-play-service-account.json` или `GOOGLE_PLAY_SERVICE_ACCOUNT_PATH` |
+| Firebase (push) config | `google-services.json` в корне, `.secrets/google-services.json` или `GOOGLE_SERVICES_JSON` |
 | Protected in production workflow | `alpha`, `internal`, `beta` |
 | Writable by default | только `production` |
 | Explicit testing workflow | только пара `alpha` + `internal`; `beta`/`production` неизменны |
@@ -75,6 +76,35 @@ METRAVEL_ANDROID_KEY_PASSWORD
 
 Gradle fail-closed: если хотя бы одной переменной нет, release task завершается
 до сборки. `release` никогда не подписывается debug-keystore.
+
+### Firebase config для push (#1818)
+
+Android-push идёт через FCM: `getExpoPushTokenAsync` возвращает токен только
+после того, как в приложении инициализировался default FirebaseApp. Инициализация
+происходит по string-ресурсам `google_app_id`, `gcm_defaultSenderId`,
+`google_api_key`, которые Gradle-плагин генерирует из `google-services.json`.
+Плагин подключает `expo prebuild` — и только когда в конфиге задан
+`android.googleServicesFile`.
+
+Файл gitignored и в репозиторий не попадает. Владелец берёт его в Firebase
+Console → Project settings → Your apps → Android app с package `by.metravel.app`
+→ `google-services.json` и кладёт в корень репозитория или в
+`.secrets/google-services.json` (путь можно задать и через `GOOGLE_SERVICES_JSON`).
+Значения не печатать и не коммитить.
+
+Проверка без вывода значений:
+
+```bash
+node scripts/android-firebase-config.js
+```
+
+Сборка fail-closed: `scripts/android-gradle-build.js` останавливается до Gradle,
+если конфига нет, он от другого package или `android/` сгенерирован без плагина,
+и после Gradle — если в упакованных ресурсах нет непустых трёх ключей.
+
+Для реальной доставки Expo дополнительно нужны FCM V1 credentials, загруженные в
+Expo-проект (`eas credentials` → Android → FCM V1). Без них Expo примет токен, но
+push до устройства не дойдёт.
 
 Канонический переносимый bundle состоит из четырёх gitignored файлов:
 
