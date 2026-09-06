@@ -6,6 +6,7 @@ import type { RouteGeometry, RoutingState, RoutePoint, RouteSummary, TripTranspo
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
   FOCUS_POINT_ZOOM,
+  routePointFitKey,
   type MapFocusPoint,
   type RoutePointMove,
 } from '@/components/trips/planning/tripPlanRouteMap.types';
@@ -108,7 +109,7 @@ const routePositions = (route: RoutePoint[]): Array<[number, number]> =>
 function FitRouteBounds({
   L,
   positions,
-  pointIds,
+  pointKeys,
   useMap,
   fitToken,
   fittedTokenRef,
@@ -116,8 +117,8 @@ function FitRouteBounds({
 }: {
   L: LeafletNS;
   positions: Array<[number, number]>;
-  /** Идентификаторы текущих точек маршрута — по ним снимается защёлка кадра. */
-  pointIds: string[];
+  /** Ключи текущих точек маршрута — по ним снимается защёлка кадра. */
+  pointKeys: string[];
   useMap: ReactLeafletNS['useMap'];
   fitToken: string;
   fittedTokenRef: React.MutableRefObject<string | null>;
@@ -143,8 +144,8 @@ function FitRouteBounds({
     // которых её поставили. Оптовая замена маршрута — шаблон или импорт GPX —
     // не оставляет ни одной, и новый маршрут обязан попасть в кадр: иначе он
     // остаётся за пределами вида до размонтирования карты.
-    const lockedIds = lockedKeysRef.current;
-    if (lockedIds && !pointIds.some((id) => lockedIds.has(id))) {
+    const lockedKeys = lockedKeysRef.current;
+    if (lockedKeys && !pointKeys.some((key) => key !== '' && lockedKeys.has(key))) {
       lockedKeysRef.current = null;
     }
     if (!positions.length) return;
@@ -161,7 +162,7 @@ function FitRouteBounds({
     }
     const bounds = L.latLngBounds(positions);
     map.fitBounds(bounds, { padding: [28, 28], maxZoom: 13 });
-  }, [L, fitToken, fittedTokenRef, lockedKeysRef, map, pointIds, positions]);
+  }, [L, fitToken, fittedTokenRef, lockedKeysRef, map, pointKeys, positions]);
 
   return null;
 }
@@ -253,10 +254,10 @@ export default function TripPlanRouteMap({
   const restoredViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const fittedTokenRef = useRef<string | null>(null);
   // #1781: ставится первым же перетаскиванием маркера — дальше кадром управляет
-  // пользователь, а не форма маршрута. Внутри — id точек на момент защёлки:
+  // пользователь, а не форма маршрута. Внутри — ключи точек на момент защёлки:
   // когда не остаётся ни одной из них, маршрут заменили целиком и подгонка
   // снова разрешена.
-  const fitLockedIdsRef = useRef<Set<string> | null>(null);
+  const fitLockedKeysRef = useRef<Set<string> | null>(null);
   // Тот же leaflet-инстанс, но состоянием: слои и MapUiApi монтируются хуками
   // /map, а им нужен ререндер после готовности карты (ref его не даёт).
   const [mapInstance, setMapInstance] = useState<unknown>(null);
@@ -322,10 +323,20 @@ export default function TripPlanRouteMap({
   }, []);
 
   const markerPositions = useMemo(() => routePositions(route), [route]);
-  // Защёлка ключуется идентификаторами точек, а не координатами: перетаскивание
-  // сохраняет id, а `RouteBuilder` округляет координаты дропа до шести знаков —
-  // координатный ключ не совпал бы с сохранённым никогда.
-  const pointIds = useMemo(() => route.map((point) => point.id), [route]);
+  // Защёлка ключуется координатами, а не id: сохранение маршрута пересоздаёт
+  // строки точек на бэкенде и выдаёт им новые id, то есть id-ключ снимал бы
+  // защёлку на первом же «Сохранить маршрут». Округление общее с `RouteBuilder`
+  // (`routePointFitKey`), иначе сырая позиция дропа не совпала бы с сохранённой.
+  // Нумерация — по ПОЛНОМУ маршруту, тому же, по которому нумеруются маркеры:
+  // нерисуемая точка индекс занимает, но ключа не даёт.
+  const pointKeys = useMemo(
+    () =>
+      route.map((point) => {
+        const [lng, lat] = point.coordinates ?? [];
+        return routePointFitKey(lat as number, lng as number);
+      }),
+    [route],
+  );
   const routedGeometry = useMemo(
     () => (hasUsableRouteGeometry(routeGeometry) ? routeGeometry : null),
     [routeGeometry],
@@ -435,10 +446,14 @@ export default function TripPlanRouteMap({
       if (!position) return;
       const { lat, lng } = position;
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-      fitLockedIdsRef.current = new Set(pointIds);
+      // Ключи снимаются уже с местом дропа: иначе перетаскивание единственной
+      // точки маршрута само же и сняло бы защёлку следующим рендером.
+      fitLockedKeysRef.current = new Set(
+        pointKeys.map((key, keyIndex) => (keyIndex === index ? routePointFitKey(lat, lng) : key)),
+      );
       onMovePoint?.({ index, lat, lng });
     },
-    [onMovePoint, pointIds],
+    [onMovePoint, pointKeys],
   );
 
   if (!L || !RL || !markerIcon || !activeMarkerIcon) {
@@ -610,8 +625,8 @@ export default function TripPlanRouteMap({
               useMap={useMap}
               fitToken={fitToken}
               fittedTokenRef={fittedTokenRef}
-              pointIds={pointIds}
-              lockedKeysRef={fitLockedIdsRef}
+              pointKeys={pointKeys}
+              lockedKeysRef={fitLockedKeysRef}
             />
           ) : null}
           {trackPositions.length > 1 ? (

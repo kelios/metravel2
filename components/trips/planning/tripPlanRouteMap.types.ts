@@ -25,3 +25,22 @@ export type RoutePointMove = {
   lat: number;
   lng: number;
 };
+
+/**
+ * Шаг округления координат точки маршрута. Один и тот же для ручного ввода,
+ * перетаскивания маркера и ключа защёлки кадра: сохранение маршрута на бэкенде
+ * пересоздаёт строки точек и выдаёт им НОВЫЕ id, поэтому идентичность точки для
+ * карты держится на координатах, а не на id (#1781).
+ */
+export const ROUTE_POINT_COORDINATE_PRECISION = 6;
+
+/**
+ * Ключ точки для защёлки авто-подгонки кадра. Leaflet отдаёт сырую позицию
+ * дропа, а в маршрут уезжает округлённая — без общего округления ключ дропа не
+ * совпал бы с сохранённым никогда. Нефинитную пару ключом не считаем: такая
+ * точка не рисуется, но индекс в наборе занимает.
+ */
+export const routePointFitKey = (lat: number, lng: number): string =>
+  Number.isFinite(lat) && Number.isFinite(lng)
+    ? `${lat.toFixed(ROUTE_POINT_COORDINATE_PRECISION)},${lng.toFixed(ROUTE_POINT_COORDINATE_PRECISION)}`
+    : '';

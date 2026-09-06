@@ -6,6 +6,7 @@ import {
   type WebMapLayerDefinition,
 } from '@/config/mapWebLayers';
 import type { ThemedColors } from '@/hooks/useTheme';
+import { ROUTE_POINT_COORDINATE_PRECISION } from '@/components/trips/planning/tripPlanRouteMap.types';
 import { getActiveLocaleDefinition, translate as i18nT } from '@/i18n';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
 import {
@@ -545,13 +546,15 @@ ${ESCAPE_HTML_FN_SCRIPT}
               // из точек, ради которых её поставили. Оптовая замена маршрута
               // (шаблон, импорт трека) не оставляет ни одной, и новый маршрут
               // обязан попасть в кадр: иначе он остаётся за пределами вида до
-              // пересоздания карты. Ключ точки — её координаты (id сюда не
-              // доезжает), огрублённые до шести знаков: RouteBuilder округляет
-              // координаты дропа тем же шагом, и сырой ключ не совпал бы с
-              // сохранённым никогда. Индексация — по ПОЛНОМУ набору, тому же,
-              // по которому нумеруются маркеры: фильтрация сдвинула бы слоты.
+              // пересоздания карты. Ключ точки — её координаты, огрублённые тем
+              // же шагом, которым RouteBuilder округляет координаты дропа: сырой
+              // ключ не совпал бы с сохранённым никогда. Шаг приходит из общего
+              // контракта карты маршрута, а не зашит числом. Индексация — по
+              // ПОЛНОМУ набору, тому же, по которому нумеруются маркеры:
+              // фильтрация сдвинула бы слоты.
+              const ROUTE_POINT_FIT_PRECISION = ${ROUTE_POINT_COORDINATE_PRECISION};
               const routePointKey = function(lat, lng) {
-                return lat.toFixed(6) + ',' + lng.toFixed(6);
+                return lat.toFixed(ROUTE_POINT_FIT_PRECISION) + ',' + lng.toFixed(ROUTE_POINT_FIT_PRECISION);
               };
               const routePointKeys = routePoints.map(function(point) {
                 if (!Array.isArray(point) || !isFinite(point[0]) || !isFinite(point[1])) return '';

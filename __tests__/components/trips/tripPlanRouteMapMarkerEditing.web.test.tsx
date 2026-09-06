@@ -132,6 +132,25 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
     expect(mockFitBounds).toHaveBeenCalledTimes(2)
   })
 
+  it('держит защёлку после сохранения маршрута, хотя бэкенд выдаёт точкам новые id', async () => {
+    const { rerender } = render(<TripPlanRouteMap route={route} onMovePoint={jest.fn()} />)
+
+    await waitFor(() => expect(markerProps).toHaveLength(2))
+    expect(mockFitBounds).toHaveBeenCalledTimes(1)
+
+    dragEndAt(1, 53.95, 27.7)
+    // PUT /route/ пересоздаёт строки точек: те же координаты приезжают с новыми
+    // id. Ключ защёлки обязан это пережить, иначе кадр, наведённый после
+    // перетаскивания, выбрасывался бы первым же «Сохранить маршрут».
+    const savedRoute: RoutePoint[] = [
+      { ...route[0], id: '90001' },
+      { ...route[1], id: '90002', coordinates: [27.7, 53.95] },
+    ]
+    rerender(<TripPlanRouteMap route={savedRoute} onMovePoint={jest.fn()} />)
+
+    expect(mockFitBounds).toHaveBeenCalledTimes(1)
+  })
+
   it('не снимает защёлку кадра, когда перетащили единственную точку маршрута', async () => {
     const single: RoutePoint[] = [route[0]]
     const { rerender } = render(<TripPlanRouteMap route={single} onMovePoint={jest.fn()} />)

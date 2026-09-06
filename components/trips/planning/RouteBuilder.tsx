@@ -41,9 +41,10 @@ import {
   previewStopsCount,
   routablePreviewPoints,
 } from '@/components/trips/planning/tripRoutePreview';
-import type {
-  MapFocusPoint,
-  RoutePointMove,
+import {
+  ROUTE_POINT_COORDINATE_PRECISION,
+  type MapFocusPoint,
+  type RoutePointMove,
 } from '@/components/trips/planning/tripPlanRouteMap.types';
 import { useTripRouteDisplay } from '@/components/trips/planning/useTripRouteDisplay';
 import {
@@ -175,8 +176,11 @@ const compactText = (parts: Array<string | number | null | undefined>): string =
     .filter(Boolean)
     .join(' · ');
 
-/** Шаг округления координат точки: один и тот же для ручного ввода и карты. */
-const COORDINATE_PRECISION = 6;
+/**
+ * Шаг округления координат точки: один и тот же для ручного ввода, карты и
+ * ключа защёлки кадра (#1781) — живёт в общем контракте карты маршрута.
+ */
+const COORDINATE_PRECISION = ROUTE_POINT_COORDINATE_PRECISION;
 
 const formatCoordinateInput = (value: number): string => {
   const rounded = value.toFixed(COORDINATE_PRECISION);
