@@ -37,6 +37,20 @@
  *   node scripts/scan-quest-prod-drift.js --source=scripts/pinsk-quest-data.js
  *   node scripts/scan-quest-prod-drift.js --json
  *
+ * Локальный файл, которому на проде не отвечает ни один квест (404 по слагу),
+ * печатается отдельной категорией и код возврата не меняет: заливка такой квест
+ * не создаёт, откатить им боевой контент нельзя, а обход остальных файлов должен
+ * продолжаться. На 06.09.2026 такой файл в корпусе один —
+ * `ozero-glubokoe-quest-data.js`, снятый с публикации в #1652 и намеренно
+ * оставленный как обратимый исходник.
+ *
+ * Корпусный прогон, в котором не сравнился НИ ОДИН квест, при этом падает: это
+ * не чистый корпус, а промах по эндпоинту (чужой `METRAVEL_API_URL`, локальный
+ * бэкенд без контента, опечатка в `--api-url`). Замер 06.09.2026 на хосте,
+ * отвечающем 404 на всё: 175 файлов, 179 квестов, ноль сравнений — и без этой
+ * проверки итог был бы «Расхождений с продом нет» с кодом 0, то есть отчёт о
+ * чистоте вслепую.
+ *
  * Exit code 1, если хоть один файл разошёлся с продом.
  */
 
@@ -45,12 +59,43 @@ const { localQuestDataFiles } = require('./lib/scanBaseline')
 const { QUEST_DATA_FILE_PATTERN } = require('./scan-quest-answer-reachability')
 const { diffQuest, comparableFields, DEFAULT_API } = require('./lib/questProdDiff')
 
+/**
+ * 404 по конкретному квесту — это результат замера, а не сбой замера: сравнивать
+ * локальный файл не с чем. Причин три, и все штатные — квест снят с публикации
+ * (`status=2` фильтруется этим эндпоинтом, так живёт `ozero-glubokoe-crystal`
+ * после #1652), слаг переименован, файл ещё не разлит. Раньше 404 летел наружу
+ * наравне с сетевой ошибкой и ронял весь корпусный обход на первом же таком
+ * файле — гвардия класса #1554 не измеряла ничего.
+ *
+ * Остальные коды (5xx, 429, таймаут, обрыв сокета) остаются фатальными: они
+ * означают «измерить не удалось», и молчаливое «расхождений нет» было бы там
+ * ложью.
+ */
+function isMissingOnProd(error) {
+  return error?.statusCode === 404
+}
+
+/**
+ * Строки отчёта по одному файлу плюс `compared` — сколько квестов реально
+ * удалось сравнить. Счётчик нужен вызывающему, чтобы отличить чистый корпус
+ * (сравнили всё, расхождений нет) от корпуса, который не сравнили вовсе: в
+ * обоих случаях `rows` не содержит ни одного расхождения.
+ */
 async function scanFile(file, apiUrl) {
   const quests = loadLocalBundles(file, null)
   const rows = []
+  let compared = 0
   for (const quest of quests) {
     if (!quest?.quest_id) continue
-    const [bundle] = await fetchQuestBundles(apiUrl, quest.quest_id)
+    let bundle
+    try {
+      ;[bundle] = await fetchQuestBundles(apiUrl, quest.quest_id)
+    } catch (error) {
+      if (!isMissingOnProd(error)) throw error
+      rows.push({ file, quest_id: quest.quest_id, missingOnProd: true, drifted: false })
+      continue
+    }
+    compared += 1
     const diff = diffQuest(quest, bundle, parseSteps(bundle))
     // Гейт валит только то, что заливка реально перенесёт, — расхождения полей
     // шага и текста интро/финала. Разошедшийся состав шагов заливка не
@@ -60,7 +105,7 @@ async function scanFile(file, apiUrl) {
     const structure = diff.onlyLocal.length || diff.onlyProd.length
     if (drifted || structure) rows.push({ file, ...diff, drifted: Boolean(drifted) })
   }
-  return rows
+  return { rows, compared }
 }
 
 function parseArgs(argv) {
@@ -75,7 +120,16 @@ function parseArgs(argv) {
 function reportText(rows, files) {
   console.log(`Сверка локальных data-файлов с продом: ${files} файлов, поля ${comparableFields.join(', ')}`)
 
-  for (const row of rows) {
+  const missing = rows.filter((r) => r.missingOnProd)
+  const diffRows = rows.filter((r) => !r.missingOnProd)
+
+  if (missing.length) {
+    console.log(`\nСравнивать не с чем — на проде нет квеста с таким слагом: ${missing.length}`)
+    console.log('  (снят с публикации, переименован или ещё не разлит — проверить шапку файла)')
+    for (const row of missing) console.log(`  ${row.file} [${row.quest_id}]`)
+  }
+
+  for (const row of diffRows) {
     console.log(`\n  ${row.file} [${row.quest_id}] — локально ${row.local_steps} шагов, на проде ${row.prod_steps}`)
     if (row.onlyProd.length) console.log(`    шаги только на проде: ${row.onlyProd.join(', ')}`)
     if (row.onlyLocal.length) console.log(`    шаги только локально (заливка их пропустит — структура разошлась): ${row.onlyLocal.join(', ')}`)
@@ -83,9 +137,9 @@ function reportText(rows, files) {
     for (const q of row.questLevel) console.log(`    ${q.scope} / ${q.field}: расходится`)
   }
 
-  const drifted = rows.filter((r) => r.drifted)
+  const drifted = diffRows.filter((r) => r.drifted)
   const steps = drifted.reduce((n, r) => n + r.changed.length, 0)
-  const infoOnly = rows.length - drifted.length
+  const infoOnly = diffRows.length - drifted.length
   if (infoOnly) console.log(`\nРазошёлся состав шагов (заливка его не применяет, гейт не валит): ${infoOnly} квестов`)
   console.log(drifted.length
     ? `\nРазошлись с продом: ${drifted.length} квестов, ${steps} шагов. Перенести прод в файл — node scripts/sync-quest-data-from-prod.js --all`
@@ -97,7 +151,26 @@ async function main() {
   const files = args.source ? [args.source] : localQuestDataFiles(process.cwd(), QUEST_DATA_FILE_PATTERN)
 
   const rows = []
-  for (const file of files) rows.push(...await scanFile(file, args.apiUrl))
+  let compared = 0
+  for (const file of files) {
+    const result = await scanFile(file, args.apiUrl)
+    rows.push(...result.rows)
+    compared += result.compared
+  }
+
+  // Весь корпус ответил 404 — измерения не было. Отдельная категория «на проде
+  // нет квеста» задумана под единичный снятый с публикации файл; когда под неё
+  // попадает ВЕСЬ корпус, это не состояние контента, а не тот эндпоинт, и
+  // напечатать «Расхождений с продом нет» значило бы отчитаться о чистоте
+  // вслепую — ровно то ложное зелёное, ради которого гвардия и заведена.
+  // Точечный `--source` под правило не подпадает: один намеренно снятый с
+  // публикации файл (`ozero-glubokoe-quest-data.js`) — штатный ответ.
+  if (!args.source && compared === 0 && rows.some((r) => r.missingOnProd)) {
+    throw new Error(
+      `на ${args.apiUrl} не нашлось ни одного из ${rows.length} квестов корпуса — `
+      + 'сравнивать не с чем, проверь --api-url / METRAVEL_API_URL',
+    )
+  }
 
   if (args.json) console.log(JSON.stringify({ files: files.length, rows }, null, 2))
   else reportText(rows, files.length)
@@ -105,7 +178,7 @@ async function main() {
   if (rows.some((r) => r.drifted)) process.exitCode = 1
 }
 
-module.exports = { scanFile, parseArgs }
+module.exports = { isMissingOnProd, scanFile, parseArgs, reportText, main }
 
 if (require.main === module) {
   main().catch((e) => {
