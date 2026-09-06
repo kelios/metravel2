@@ -35,6 +35,10 @@ jest.mock('@/components/ui/ImageCardMedia', () => ({
 }));
 jest.mock('@/hooks/useResponsive', () => ({
     useResponsive: () => ({ isPhone: mockIsPhone }),
+    // #1826 перевёл карточку на width-only подписку, чтобы кадр высоты (адресная
+    // строка мобильного браузера) не перерисовывал каталог. Мок обязан отдавать
+    // и её, иначе набор падает на `useBreakpoints is not a function`.
+    useBreakpoints: () => ({ isPhone: mockIsPhone }),
 }));
 jest.mock('@/hooks/useTheme', () => ({
     useThemedColors: () => ({
