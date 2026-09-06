@@ -33,6 +33,7 @@ const PERSONAL_KEY_ROOTS = new Set<string>([
   'my-subscribers',
   'my-subscriptions',
   'privacy',
+  'quest-progress',
   'security',
   'strava',
   'telegram-link',
@@ -46,9 +47,19 @@ const PERSONAL_KEY_ROOTS = new Set<string>([
 const keyRoot = ({ body }: Factory): string | null => /^\[\s*'([^']+)'/.exec(body)?.[1] ?? null
 
 /**
+ * Хелпер инвалидации по префиксу данных не держит: под ним ничего не лежит, он
+ * только адресует поддерево. Отличает его не имя, а ОТСУТСТВИЕ параметров —
+ * адресовать поддерево целиком не от чего параметризовать. Имени мало:
+ * `userPointsAll(userId)` и `questProgressAll(userId)` тоже кончаются на `All`,
+ * но держат личную коллекцию, и ранний выход по имени вывел бы их из-под
+ * правила — вернулся бы ровно тот долг, который закрывал #1831.
+ */
+const isPrefixHelper = ({ name, args }: Factory): boolean =>
+  (name.endsWith('All') || name.endsWith('Root')) && args.trim() === ''
+
+/**
  * Личный ключ виден либо по имени (`my*`, `*Me`, `*Mine`, сегмент `'me'`), либо
- * по корню из списка выше. Хелперы инвалидации по префиксу (`*All`, `*Root`)
- * данных не держат — под ними ничего не лежит, они только адресуют поддерево.
+ * по корню из списка выше.
  *
  * Эвристика не претендует на то, чтобы угадать любой личный ключ: она ловит те
  * формы, которыми личные ключи заводят в этом файле. Утечку закрывает не она, а
@@ -57,7 +68,7 @@ const keyRoot = ({ body }: Factory): string | null => /^\[\s*'([^']+)'/.exec(bod
  */
 const looksPersonal = (factory: Factory): boolean => {
   const { name, body } = factory
-  if (name.endsWith('All') || name.endsWith('Root')) return false
+  if (isPrefixHelper(factory)) return false
   const root = keyRoot(factory)
   return (
     /^my[A-Z]/.test(name) ||
@@ -114,12 +125,18 @@ describe('#1829 владелец в ключах кэша', () => {
       'stravaStatus',
       'tripChatMessages',
     ]
+    // `userPointsAll` кончается на `All`, но это ключ самой коллекции, а не
+    // хелпер: он принимает владельца и держит данные.
+    const personalDespiteAllSuffix = ['userPointsAll', 'questProgressAll']
     const notPersonal = ['travels', 'questDetail', 'filterOptions', 'contactRequestsAll', 'stravaActivitiesRoot']
 
     expect({
       personal: personal.filter((name) => !looksPersonal(byName.get(name)!)),
+      personalDespiteAllSuffix: personalDespiteAllSuffix.filter(
+        (name) => !looksPersonal(byName.get(name)!),
+      ),
       notPersonal: notPersonal.filter((name) => looksPersonal(byName.get(name)!)),
-    }).toEqual({ personal: [], notPersonal: [] })
+    }).toEqual({ personal: [], personalDespiteAllSuffix: [], notPersonal: [] })
   })
 
   it('список долга не содержит ни выдуманных, ни уже починенных ключей', () => {
