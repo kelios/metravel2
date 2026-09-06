@@ -214,6 +214,23 @@ describe('useQuestsApi hooks', () => {
       expect(mockFetchQuestsPreview).not.toHaveBeenCalled();
     });
 
+    // #1798: в кэше `['quests']` каталог лежит в порядке id, а промо-блок
+    // показывает популярные. Без пересортировки `initialData` блок мигал бы
+    // выборкой по id всякий раз, когда главную открывают после экрана квестов.
+    it('seeds the block from the cached catalog by popularity, not by id', async () => {
+      queryClient.setQueryData(queryKeys.quests(), [
+        { ...API_META, id: 1, quest_id: 'oldest', completions_count: 0, views_count: 3 },
+        { ...API_META, id: 2, quest_id: 'seen-more', completions_count: 0, views_count: 9 },
+        { ...API_META, id: 3, quest_id: 'played', completions_count: 2, views_count: 1 },
+      ]);
+
+      const { result } = renderHook(() => useQuestsPreview(2), { wrapper });
+
+      expect(result.current.loading).toBe(false);
+      expect(result.current.quests.map((quest) => quest.id)).toEqual(['played', 'seen-more']);
+      expect(mockFetchQuestsPreview).not.toHaveBeenCalled();
+    });
+
     it('does not fetch while disabled', async () => {
       renderHook(() => useQuestsPreview(2, { enabled: false }), { wrapper });
 
