@@ -246,6 +246,38 @@ describe('RouteBuilder panel steps', () => {
     expect(mockRouteMutate).not.toHaveBeenCalled()
   })
 
+  // #1824: у ветки «точки не менялись» лока не было вовсе, а `disabled` кнопки
+  // держится на `uploadRouteFile.isPending` и поднимается только со следующим
+  // рендером. Повтор нажатия в одном тике отправлял второй multipart того же
+  // файла, и завершение первой отправки удаляло кэш-копию из-под второй.
+  it('повтор нажатия в одном тике не отправляет оригинал дважды', async () => {
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+
+    fireEvent.press(getByTestId('route-builder-apply-original-only'))
+    fireEvent.press(getByTestId('route-builder-save'))
+    fireEvent.press(getByTestId('route-builder-save'))
+
+    await waitFor(() => expect(mockOriginalUpload).toHaveBeenCalledTimes(1))
+    expect(mockRouteMutate).not.toHaveBeenCalled()
+  })
+
+  // Лок отправки оригинала обязан сниматься и по отказу: иначе отказ хранилища
+  // запирал бы кнопку до перезагрузки экрана, а обещанный ретрай той же кнопкой
+  // молча не уходил бы.
+  it('после отказа хранилища ретрай той же кнопкой уходит снова', async () => {
+    mockOriginalUpload.mockRejectedValueOnce(new Error('storage down'))
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+
+    fireEvent.press(getByTestId('route-builder-apply-original-only'))
+    fireEvent.press(getByTestId('route-builder-save'))
+    // Отказ обработан, лок снят.
+    await act(async () => {})
+    expect(mockOriginalUpload).toHaveBeenCalledTimes(1)
+
+    fireEvent.press(getByTestId('route-builder-save'))
+    await waitFor(() => expect(mockOriginalUpload).toHaveBeenCalledTimes(2))
+  })
+
   // Регресс #1496: у `updateTripRoute.mutate` был только `onSuccess`, поэтому
   // отказ `PUT /route/` (на проде — 400 «title is required for custom route
   // points») ничего не показывал: кнопка гасла, маршрут не сохранялся, и

@@ -954,12 +954,22 @@ function RouteBuilder({
     if (pending) void releasePickedTripRouteUpload(pending);
   }, []);
 
+  // #1824: у файловой ветки кнопки та же дыра, что была у PUT. Ветка
+  // «точки не менялись» уходит сюда мимо лока сохранения, а `disabled` кнопки
+  // держится на `uploadRouteFile.isPending`, который поднимается только со
+  // следующим рендером. Повтор нажатия в одном тике успевал отправить второй
+  // multipart того же файла (до 20 МиБ), и завершение первой отправки удаляло
+  // кэш-копию из-под второй — пользователь видел ошибку загрузки на файле,
+  // который на самом деле загрузился.
+  const originalUploadLockedRef = useRef(false);
+
   // Загрузка оригинала идёт после успешного сохранения точек и не откатывает их:
   // при отказе хранилища точки остаются сохранёнными, файл остаётся выбранным, и
   // повторное «Сохранить маршрут» пробует загрузку ещё раз.
   const uploadPendingOriginal = async (): Promise<void> => {
     const pending = pendingOriginalRef.current;
-    if (!pending) return;
+    if (!pending || originalUploadLockedRef.current) return;
+    originalUploadLockedRef.current = true;
     setOriginalUploadError(null);
     try {
       await uploadRouteFile.mutateAsync({
@@ -971,6 +981,10 @@ function RouteBuilder({
       void releasePickedTripRouteUpload(pending);
     } catch {
       setOriginalUploadError(i18nT('tripsStatic:plan.routeImport.original.uploadError'));
+    } finally {
+      // Отказ хранилища лок не удерживает: ретрай той же кнопкой обязан
+      // проходить, поэтому снятие идёт и по успеху, и по ошибке.
+      originalUploadLockedRef.current = false;
     }
   };
 
