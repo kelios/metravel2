@@ -126,8 +126,17 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
             answered: countAnsweredSteps(merged.answers),
           })
         }
-      } finally {
+        // #1803: чистим гостевую копию ТОЛЬКО после успешного слияния. Раньше
+        // это стояло в `finally`, и упавшее создание строки уносило гостевые
+        // ответы безвозвратно: после разведения чтения и создания у строки
+        // появилось два независимых создателя (эта миграция и флаш синхронизации),
+        // а `quest_progress` несёт unique_together (quest, user) — проигравший
+        // POST получает 400.
         await clearGuestQuestProgress(questId)
+      } catch (error) {
+        const { devError } = require('@/utils/logger')
+        devError('Guest quest progress migration failed, local copy kept:', error)
+        migratedRef.current = false
       }
     })()
   }, [enabled, isAuthenticated, questId])

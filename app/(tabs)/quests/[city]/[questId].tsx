@@ -21,7 +21,7 @@ import { useActionConsent } from '@/hooks/useActionConsent';
 import { useGuestQuestFlow } from '@/components/quests/useGuestQuestFlow';
 import { CONSENT_TYPES } from '@/utils/actionConsent';
 import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
-import { snapshotFromServerProgress } from '@/utils/questProgressMerge';
+import { normalizeQuestProgressSnapshot, snapshotFromServerProgress } from '@/utils/questProgressMerge';
 import { buildQuestProgressStorageKey } from '@/utils/questProgressStorage';
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
@@ -65,6 +65,10 @@ const getRouteParam = (value: string | string[] | undefined): string => {
   if (Array.isArray(value)) return value[0] ?? '';
   return value ?? '';
 };
+
+// #1803: «серверной записи нет» — это НЕ «чтение ещё идёт». Ссылка стабильна,
+// потому что уезжает в зависимости эффекта визарда.
+const NO_SERVER_PROGRESS = normalizeQuestProgressSnapshot(null);
 
 const getQuestSeo = (bundle: FrontendQuestBundle | null, questId: string, isLoading: boolean): QuestSeoModel => {
   if (isLoading) {
@@ -404,11 +408,19 @@ export default function QuestByIdScreen() {
         answeredAt: guest.answeredAt,
       };
     }
-    if (!backendProgress) return undefined;
+    if (!backendProgress) {
+      // #1803: пока чтение идёт, визарду сеять нечего. Но когда оно закончилось
+      // и записи нет, ему нужен именно ПУСТОЙ серверный снапшот, а не
+      // `undefined`: на `undefined` он засевает локальную копию как уже
+      // согласованную с сервером (`markSeeded=true`) и глушит save-эффект —
+      // прохождение, пройденное без сети, после этого не долилось бы на сервер
+      // никогда. С пустым снапшотом слияние честно скажет `serverNeedsPush`.
+      return progressLoading ? undefined : NO_SERVER_PROGRESS;
+    }
     // Полный снапшот (включая updated_at) — визард сливает его с локальным, а не
     // перезаписывает: прогресс мог идти параллельно на другом устройстве.
     return snapshotFromServerProgress(backendProgress);
-  }, [backendProgress, guestFlow.guestInitial, isAuthenticated]);
+  }, [backendProgress, guestFlow.guestInitial, isAuthenticated, progressLoading]);
   const structuredDataTags = useMemo(() => {
     if (!bundle || !questId) return null;
 

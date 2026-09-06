@@ -327,8 +327,12 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         fetchQuestProgress(questId)
             .then((data) => {
                 if (!cancelled) {
-                    setProgress(data);
-                    progressIdRef.current = data?.id ?? null;
+                    // #1803: пустое чтение не должно затирать то, что уже создал
+                    // параллельный флаш. Иначе `resetProgress` молча пропускает
+                    // серверный DELETE (он выходит на пустом `progressIdRef`), и
+                    // «Начать заново» на сервере не срабатывает.
+                    if (data) setProgress(data);
+                    progressIdRef.current = data?.id ?? progressIdRef.current ?? null;
                     // Ответы, сделанные пока запрос был в полёте, ждут отправки —
                     // дожимаем. Строку создаст сам флаш, если игрок уже начал.
                     flushPendingNow();

@@ -119,6 +119,108 @@ describe('useQuestWizardProgress', () => {
     expect(JSON.parse(saved!).answers).toEqual({ intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' })
   })
 
+  it('доливает офлайновое прохождение, когда серверной строки нет вовсе', async () => {
+    // #1803 развёл чтение и создание: у нового игрока серверной записи нет, и
+    // экран получает ПУСТОЙ серверный снапшот, а не `undefined`. На `undefined`
+    // визард засеял бы локальную копию как согласованную с сервером и заглушил
+    // save-эффект — квест, пройденный без сети, не долился бы никогда.
+    const storageKey = 'quest_progress_no_server_row'
+    await AsyncStorage.setItem(storageKey, JSON.stringify({
+      index: 2,
+      unlocked: 2,
+      answers: { intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' },
+      attempts: {},
+      hints: {},
+      showMap: true,
+    }))
+
+    const onProgressChange = jest.fn()
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey,
+        // Так роут описывает «чтение закончилось, записи на сервере нет».
+        initialProgress: {
+          currentIndex: 0,
+          unlockedIndex: 0,
+          answers: {},
+          attempts: {},
+          hints: {},
+          showMap: true,
+        },
+        onProgressChange,
+      })
+    )
+
+    await waitFor(() => expect(result.current.answers['step-2']).toBe('castle'))
+    expect(result.current.currentIndex).toBe(2)
+
+    await waitFor(() => expect(onProgressChange).toHaveBeenCalled())
+    expect(onProgressChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      answers: { intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' },
+      completed: true,
+    }))
+  })
+
+  it('пока чтение прогресса идёт, визард на сервер ничего не шлёт', async () => {
+    // Контракт роута: `undefined` означает ТОЛЬКО «чтение ещё в полёте».
+    // Здесь визард сознательно засевает локальную копию как согласованную —
+    // именно поэтому «записи нет» роут обязан выражать пустым снапшотом, а не
+    // `undefined` (#1803): иначе офлайновое прохождение молча осталось бы на
+    // устройстве.
+    const storageKey = 'quest_progress_still_loading'
+    await AsyncStorage.setItem(storageKey, JSON.stringify({
+      index: 2,
+      unlocked: 2,
+      answers: { intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' },
+      attempts: {},
+      hints: {},
+      showMap: true,
+    }))
+
+    const onProgressChange = jest.fn()
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey,
+        initialProgress: undefined,
+        onProgressChange,
+      })
+    )
+
+    await waitFor(() => expect(result.current.answers['step-2']).toBe('castle'))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(onProgressChange).not.toHaveBeenCalled()
+  })
+
+  it('нетронутый экран без серверной строки на сервер ничего не шлёт', async () => {
+    // Обратная половина того же инварианта: «просто открыл» строку не создаёт.
+    const storageKey = 'quest_progress_untouched_no_row'
+    const onProgressChange = jest.fn()
+
+    renderHook(() =>
+      useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey,
+        initialProgress: {
+          currentIndex: 0,
+          unlockedIndex: 0,
+          answers: {},
+          attempts: {},
+          hints: {},
+          showMap: true,
+        },
+        onProgressChange,
+      })
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(onProgressChange).not.toHaveBeenCalled()
+  })
+
   it('сливает ответы двух устройств вместо выбора победителя', async () => {
     // Телефон A прошёл офлайн step-1, телефон B онлайн записал step-2 на сервер.
     const storageKey = 'quest_progress_two_devices'
