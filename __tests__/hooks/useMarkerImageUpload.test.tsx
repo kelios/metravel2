@@ -317,7 +317,8 @@ describe('useMarkerImageUpload', () => {
     expect(revokeObjectURL).not.toHaveBeenCalled();
   });
 
-  it('replaces the live blob source before revoking it after a successful upload', async () => {
+  it('keeps the blob preview alive after the swap so a repaint cannot hit a revoked source', async () => {
+    jest.useFakeTimers();
     const pendingFile = new File(['point'], 'point.webp', { type: 'image/webp' });
     const frameCallbacks: FrameRequestCallback[] = [];
     let renderedSource = blobUrl;
@@ -367,21 +368,85 @@ describe('useMarkerImageUpload', () => {
       { concurrentRoot: false },
     );
 
-    await act(async () => {
-      await result.current.uploadPendingMarkerImages([marker]);
+    try {
+      await act(async () => {
+        await result.current.uploadPendingMarkerImages([marker]);
+      });
+
+      expect(result.current.renderedFormData.coordsMeTravel[0]?.image).toBe(uploadedUrl);
+      expect(removePendingImageFile).toHaveBeenCalledWith(blobUrl);
+      // Кадр раньше коммита апдейта из промиса: revoke по rAF успевает убить
+      // blob, пока в DOM ещё стоит превью — миниатюра точки остаётся пустой.
+      expect(frameCallbacks).toHaveLength(0);
+      expect(revokeObjectURL).not.toHaveBeenCalled();
+
+      act(() => {
+        jest.advanceTimersByTime(14_000);
+      });
+      expect(revokeObjectURL).not.toHaveBeenCalled();
+
+      act(() => {
+        jest.advanceTimersByTime(2_000);
+      });
+      expect(revokeObjectURL).toHaveBeenCalledTimes(1);
+      expect(revokeObjectURL).toHaveBeenCalledWith(blobUrl);
+      expect(renderedSourceAtRevoke).toBe(uploadedUrl);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('never revokes a preview whose swap did not reach the form and reuses the uploaded url', async () => {
+    jest.useFakeTimers();
+    const pendingFile = new File(['point'], 'point.webp', { type: 'image/webp' });
+    const revokeObjectURL = jest.fn();
+    Object.defineProperty(globalThis.URL, 'revokeObjectURL', {
+      configurable: true,
+      writable: true,
+      value: revokeObjectURL,
     });
+    (getPendingImageFile as jest.MockedFunction<typeof getPendingImageFile>)
+      .mockReturnValue(pendingFile);
+    (uploadImage as jest.MockedFunction<typeof uploadImage>)
+      .mockResolvedValue({ url: uploadedUrl });
 
-    expect(result.current.renderedFormData.coordsMeTravel[0]?.image).toBe(uploadedUrl);
-    expect(removePendingImageFile).toHaveBeenCalledWith(blobUrl);
-    expect(revokeObjectURL).not.toHaveBeenCalled();
-    expect(frameCallbacks).toHaveLength(1);
+    const updateFormMarkers = jest.fn();
+    const updateBaseline = jest.fn();
+    // Точка временно потеряла id в форме: подменять картинку не в чем.
+    const formDataRef = {
+      current: { coordsMeTravel: [{ ...marker, id: null }] } as unknown as TravelFormData,
+    };
+    const { result } = renderHook(() => useMarkerImageUpload({
+      formDataRef,
+      updateFormMarkers,
+      updateBaseline,
+    }));
 
-    act(() => {
-      frameCallbacks[0](16);
-    });
+    try {
+      await act(async () => {
+        await result.current.uploadPendingMarkerImages([marker]);
+      });
 
-    expect(revokeObjectURL).toHaveBeenCalledTimes(1);
-    expect(revokeObjectURL).toHaveBeenCalledWith(blobUrl);
-    expect(renderedSourceAtRevoke).toBe(uploadedUrl);
+      expect(uploadImage).toHaveBeenCalledTimes(1);
+      expect(updateFormMarkers).not.toHaveBeenCalled();
+      expect(removePendingImageFile).not.toHaveBeenCalled();
+      act(() => {
+        jest.advanceTimersByTime(60_000);
+      });
+      expect(revokeObjectURL).not.toHaveBeenCalled();
+
+      // Id вернулся — следующий сейв доклеивает готовый url без повторной заливки.
+      formDataRef.current = { coordsMeTravel: [marker] } as unknown as TravelFormData;
+      await act(async () => {
+        await result.current.uploadPendingMarkerImages([marker]);
+      });
+
+      expect(uploadImage).toHaveBeenCalledTimes(1);
+      expect(updateFormMarkers).toHaveBeenCalledTimes(1);
+      expect(updateFormMarkers.mock.calls[0][0][0].image).toBe(uploadedUrl);
+      expect(removePendingImageFile).toHaveBeenCalledWith(blobUrl);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

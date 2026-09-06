@@ -63,13 +63,34 @@ async function waitForCounterValue(
   expected: number,
   timeout = 8_000,
 ) {
-  const deadline = Date.now() + timeout;
-  while (Date.now() < deadline) {
-    const c = await getCounter(page);
-    if (c && c.current === expected) return c;
-    await page.waitForTimeout(200);
-  }
+  await expect
+    .poll(async () => {
+      const c = await getCounter(page);
+      return c?.current ?? null;
+    }, { timeout })
+    .toBe(expected);
   return getCounter(page);
+}
+
+async function countSliderDots(page: import('@playwright/test').Page) {
+  return page.evaluate(() => {
+    const wrappers = Array.from(document.querySelectorAll('[data-testid="slider-wrapper"]'));
+    const wrapper = wrappers.at(-1);
+    if (!wrapper) return 0;
+    const allDivs = Array.from(wrapper.querySelectorAll('div'));
+    for (const container of allDivs) {
+      const children = Array.from(container.children) as HTMLElement[];
+      if (children.length < 2) continue;
+      const allLeafSmall = children.every((c) => {
+        if (c.tagName !== 'DIV') return false;
+        if (c.children.length > 0) return false;
+        const h = parseFloat(getComputedStyle(c).height);
+        return h >= 4 && h <= 10;
+      });
+      if (allLeafSmall) return children.length;
+    }
+    return 0;
+  });
 }
 
 function getSliderWrapper(page: import('@playwright/test').Page) {
@@ -283,7 +304,6 @@ test.describe('Slider — counter accuracy', () => {
     // Go to slide 2 first
     await clickSliderNavButton(page, 'Next slide');
     await waitForCounterValue(page, 2, 8_000);
-    await page.waitForTimeout(300); // let scroll snap settle before clicking prev
 
     // Then go back
     await clickSliderNavButton(page, 'Previous slide');
@@ -307,28 +327,7 @@ test.describe('Slider — pagination dots', () => {
     await getSliderWrapper(page).waitFor({ state: 'visible', timeout: 10_000 });
 
     // On desktop, dots container should not be visible (showDots=isMobile=false)
-    // Verify by checking that no dot-sized leaf divs exist in the wrapper
-    const dotCount = await page.evaluate(() => {
-      const wrappers = Array.from(document.querySelectorAll('[data-testid="slider-wrapper"]'));
-      const wrapper = wrappers.at(-1);
-      if (!wrapper) return 0;
-      const allDivs = Array.from(wrapper.querySelectorAll('div'));
-      for (const container of allDivs) {
-        const children = Array.from(container.children) as HTMLElement[];
-        if (children.length < 2) continue;
-        const allLeafSmall = children.every((c) => {
-          if (c.tagName !== 'DIV') return false;
-          if (c.children.length > 0) return false;
-          const h = parseFloat(getComputedStyle(c).height);
-          return h >= 4 && h <= 10;
-        });
-        if (allLeafSmall) return children.length;
-      }
-      return 0;
-    });
-
-    // On desktop viewport, dots should not be rendered
-    expect(dotCount).toBe(0);
+    await expect.poll(() => countSliderDots(page)).toBe(0);
   });
 
   test('dots are shown on mobile viewport', async ({ page }) => {
@@ -342,29 +341,7 @@ test.describe('Slider — pagination dots', () => {
     // Now resize to mobile viewport to check dots
     await page.setViewportSize({ width: 390, height: 844 });
     await getSliderWrapper(page).waitFor({ state: 'visible', timeout: 10_000 });
-    await page.waitForTimeout(500); // allow layout to settle
-
-    // On mobile, dots should be rendered
-    const dotCount = await page.evaluate(() => {
-      const wrappers = Array.from(document.querySelectorAll('[data-testid="slider-wrapper"]'));
-      const wrapper = wrappers.at(-1);
-      if (!wrapper) return 0;
-      const allDivs = Array.from(wrapper.querySelectorAll('div'));
-      for (const container of allDivs) {
-        const children = Array.from(container.children) as HTMLElement[];
-        if (children.length < 2) continue;
-        const allLeafSmall = children.every((c) => {
-          if (c.tagName !== 'DIV') return false;
-          if (c.children.length > 0) return false;
-          const h = parseFloat(getComputedStyle(c).height);
-          return h >= 4 && h <= 10;
-        });
-        if (allLeafSmall) return children.length;
-      }
-      return 0;
-    });
-
-    expect(dotCount).toBe(counter.total);
+    await expect.poll(() => countSliderDots(page)).toBe(counter.total);
 
     // Active dot (index 0) should be wider than inactive
     const dotsInfo = await page.evaluate(() => {
@@ -414,21 +391,15 @@ test.describe('Slider — arrow visibility', () => {
     // Arrows have opacity:0 by default (CSS), shown on :hover via CSS rule.
     // Move cursor away from slider first to ensure no hover state
     await page.mouse.move(0, 0);
-    await page.waitForTimeout(100);
-
-    const opacityAway = await nextBtn.evaluate((el) =>
-      parseFloat(getComputedStyle(el).opacity)
-    );
-    expect(opacityAway).toBe(0);
+    await expect
+      .poll(async () => nextBtn.evaluate((el) => parseFloat(getComputedStyle(el).opacity)))
+      .toBe(0);
 
     // Hover the wrapper — CSS :hover rule sets opacity:1
     await wrapper.hover();
-    await page.waitForTimeout(100);
-
-    const opacityHover = await nextBtn.evaluate((el) =>
-      parseFloat(getComputedStyle(el).opacity)
-    );
-    expect(opacityHover).toBe(1);
+    await expect
+      .poll(async () => nextBtn.evaluate((el) => parseFloat(getComputedStyle(el).opacity)))
+      .toBe(1);
   });
 });
 
@@ -462,8 +433,9 @@ test.describe('Slider — boundary navigation', () => {
     while (attempts < maxAttempts) {
       const current = await getCounter(page);
       if (current?.current === counter.total) break;
+      const nextExpected = Math.min((current?.current ?? 1) + 1, counter.total);
       await clickSliderNavButton(page, 'Next slide');
-      await page.waitForTimeout(300);
+      await waitForCounterValue(page, nextExpected, 8_000);
       attempts++;
     }
 
@@ -626,18 +598,21 @@ test.describe('Slider — no horizontal page overflow', () => {
       throw new Error('Slider test precondition failed');
     }
 
-    // Wait for slider to mount
     await page.locator('[data-testid="slider-scroll"]').first().waitFor({ state: 'attached', timeout: 15_000 }).catch(() => null);
-    await page.waitForTimeout(500);
-
-    await assertNoHorizontalScroll(page);
+    await expect
+      .poll(async () => {
+        await assertNoHorizontalScroll(page);
+        return true;
+      })
+      .toBe(true);
   });
 });
 
 test.describe('Slider — autoplay disabled on travel page', () => {
   test('autoPlay=false: slider does not auto-advance on travel details page', async ({ page }) => {
     // The travel details page explicitly sets autoPlay={false} on the Slider.
-    // This test verifies the slider stays on slide 1 for 5 seconds without user interaction.
+    // Fake 5s so a 6s autoplay interval would still have a chance to fire.
+    await page.clock.install();
     await preacceptCookies(page);
     const counter = await navigateToTravelWithSlider(page);
     if (!counter) {
@@ -646,8 +621,7 @@ test.describe('Slider — autoplay disabled on travel page', () => {
 
     expect(counter.current).toBe(1);
 
-    // Wait 5 seconds — autoplay is disabled, slide should NOT advance
-    await page.waitForTimeout(5000);
+    await page.clock.fastForward(5000);
 
     const cAfter = await getCounter(page);
     expect(cAfter?.current).toBe(1);
@@ -823,23 +797,25 @@ test.describe('Slider — slide virtualization', () => {
     await waitForCounterValue(page, 2, 8_000);
     await clickSliderNavButton(page, 'Next slide');
     await waitForCounterValue(page, 3, 8_000);
-    await page.waitForTimeout(300); // allow React to re-render
 
     // Now index=2, VIRTUAL_WINDOW=2 should expose at least one forward slide marker (3 or 4).
     // Some datasets have sparse/missing media at specific indices, so we assert forward expansion
     // instead of hardcoding index=4.
-    const forwardRendered = await page.evaluate(() => {
-      const has3 =
-        document.querySelector('[data-testid="slider-image-3"]') !== null ||
-        document.querySelector('[data-testid="slider-neutral-placeholder-3"]') !== null ||
-        document.querySelector('img[alt*="4 из"]') !== null;
-      const has4 =
-        document.querySelector('[data-testid="slider-image-4"]') !== null ||
-        document.querySelector('[data-testid="slider-neutral-placeholder-4"]') !== null ||
-        document.querySelector('img[alt*="5 из"]') !== null;
-      return has3 || has4;
-    });
-    expect(forwardRendered).toBe(true);
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          const has3 =
+            document.querySelector('[data-testid="slider-image-3"]') !== null ||
+            document.querySelector('[data-testid="slider-neutral-placeholder-3"]') !== null ||
+            document.querySelector('img[alt*="4 из"]') !== null;
+          const has4 =
+            document.querySelector('[data-testid="slider-image-4"]') !== null ||
+            document.querySelector('[data-testid="slider-neutral-placeholder-4"]') !== null ||
+            document.querySelector('img[alt*="5 из"]') !== null;
+          return has3 || has4;
+        });
+      })
+      .toBe(true);
   });
 });
 
@@ -885,22 +861,18 @@ test.describe('Slider — scroll container properties', () => {
       throw new Error('Slider test precondition failed');
     }
 
-    await page.waitForTimeout(300);
-
-    const widths = await page.evaluate(() => {
-      const scroll = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement;
-      const wrapper = document.querySelector('[data-testid="slider-wrapper"]') as HTMLElement;
-      if (!scroll || !wrapper) return null;
-      return {
-        scrollW: scroll.getBoundingClientRect().width,
-        wrapperW: wrapper.getBoundingClientRect().width,
-      };
-    });
-
-    expect(widths).not.toBeNull();
-    expect(widths!.scrollW).toBeGreaterThan(0);
-    // Scroll container should be same width as wrapper (not wider)
-    expect(widths!.scrollW).toBeLessThanOrEqual(widths!.wrapperW + 2);
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          const scroll = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement;
+          const wrapper = document.querySelector('[data-testid="slider-wrapper"]') as HTMLElement;
+          if (!scroll || !wrapper) return false;
+          const scrollW = scroll.getBoundingClientRect().width;
+          const wrapperW = wrapper.getBoundingClientRect().width;
+          return scrollW > 0 && scrollW <= wrapperW + 2;
+        });
+      })
+      .toBe(true);
   });
 });
 
@@ -912,9 +884,7 @@ test.describe('Slider — no blur bleed from adjacent slides', () => {
       throw new Error('Slider test precondition failed');
     }
 
-    // Wait for slider to fully mount and first image to load
     await page.locator('[data-testid="slider-scroll"]').first().waitFor({ state: 'attached', timeout: 15_000 });
-    await page.waitForTimeout(800);
 
     // Check that slide index 1 (the adjacent slide) does NOT have a visible blur background.
     // The blur div in ImageCardMedia is only shown when webLoaded=true AND it's the current slide.
@@ -967,13 +937,12 @@ test.describe('Slider — rapid navigation', () => {
     await clickSliderNavButton(page, 'Next slide');
     await clickSliderNavButton(page, 'Next slide');
 
-    // Wait for counter to settle
-    await page.waitForTimeout(1500);
-    const c = await getCounter(page);
-    expect(c).not.toBeNull();
-    // Counter should stay valid and not break during rapid interactions.
-    expect(c!.current).toBeGreaterThanOrEqual(1);
-    expect(c!.current).toBeLessThanOrEqual(counter.total);
-    expect(c!.total).toBe(counter.total);
+    await expect
+      .poll(async () => {
+        const next = await getCounter(page);
+        if (!next || next.total !== counter.total) return false;
+        return next.current >= 2 && next.current <= counter.total;
+      }, { timeout: 8_000 })
+      .toBe(true);
   });
 });

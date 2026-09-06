@@ -53,12 +53,12 @@ async function getCounter(page: import('@playwright/test').Page) {
  * Wait for the counter to show a specific `current` value.
  */
 async function waitForCounterValue(page: import('@playwright/test').Page, expected: number, timeout = 5_000) {
-  const deadline = Date.now() + timeout;
-  while (Date.now() < deadline) {
-    const c = await getCounter(page);
-    if (c && c.current === expected) return c;
-    await page.waitForTimeout(200);
-  }
+  await expect
+    .poll(async () => {
+      const c = await getCounter(page);
+      return c?.current ?? null;
+    }, { timeout })
+    .toBe(expected);
   return getCounter(page);
 }
 
@@ -244,7 +244,6 @@ test.describe('Slider navigation on web', () => {
     const nextBtn = getSliderNavButton(page, 'Next slide');
     await expect(nextBtn).toBeVisible({ timeout: 5_000 });
     await clickSliderNavButton(page, 'Next slide');
-    await page.waitForTimeout(500); // wait for scroll animation
 
     const afterNext = await waitForCounterValue(page, 2, 10_000);
     expect(afterNext?.current).toBe(2);
@@ -253,7 +252,6 @@ test.describe('Slider navigation on web', () => {
     const prevBtn = getSliderNavButton(page, 'Previous slide');
     await expect(prevBtn).toBeVisible({ timeout: 5_000 });
     await clickSliderNavButton(page, 'Previous slide');
-    await page.waitForTimeout(500); // wait for scroll animation
 
     const afterPrev = await waitForCounterValue(page, 1, 10_000);
     expect(afterPrev?.current).toBe(1);
@@ -272,14 +270,11 @@ test.describe('Slider navigation on web', () => {
     const dragOk = await dragSlider(page, 0.84, 0.12);
     expect(dragOk).toBe(true);
 
-    await page.waitForTimeout(1000);
-    const afterDrag = await getCounter(page);
-    expect(afterDrag).not.toBeNull();
+    await expect.poll(async () => getCounter(page)).not.toBeNull();
 
     const dragBackOk = await dragSlider(page, 0.16, 0.88);
     expect(dragBackOk).toBe(true);
 
-    await page.waitForTimeout(1000);
     const nextBtn = getSliderNavButton(page, 'Next slide');
     await expect(nextBtn).toBeVisible({ timeout: 5_000 });
     await clickSliderNavButton(page, 'Next slide');
@@ -301,9 +296,7 @@ test.describe('Slider navigation on web', () => {
     const dragOk = await dragSlider(page, 0.84, 0.12);
     expect(dragOk).toBe(true);
 
-    await page.waitForTimeout(1000);
-    const afterDrag = await getCounter(page);
-    expect(afterDrag).not.toBeNull();
+    await expect.poll(async () => getCounter(page)).not.toBeNull();
   });
 
   test('focused slider wrapper stays interactive', async ({ page }) => {
@@ -328,16 +321,21 @@ test.describe('Slider navigation on web', () => {
       node.setAttribute('tabindex', '0');
       node.focus({ preventScroll: true });
     });
-    await page.waitForTimeout(100);
+    await expect
+      .poll(async () =>
+        wrapper.evaluate((el) => {
+          const node = el as HTMLElement;
+          return document.activeElement === node || node.contains(document.activeElement);
+        }),
+      )
+      .toBe(true);
 
     // After focus, arrow navigation must still work.
     await clickSliderNavButton(page, 'Next slide');
-    await page.waitForTimeout(500);
     const afterRight = await waitForCounterValue(page, 2, 10_000);
     expect(afterRight?.current).toBe(2);
 
     await clickSliderNavButton(page, 'Previous slide');
-    await page.waitForTimeout(500);
     const afterLeft = await waitForCounterValue(page, 1, 10_000);
     expect(afterLeft?.current).toBe(1);
   });

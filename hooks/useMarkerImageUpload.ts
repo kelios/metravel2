@@ -33,16 +33,20 @@ const revokePreviewUrl = (url: string): void => {
   if (typeof revoke === 'function') revoke(url)
 }
 
-const revokePreviewUrlAfterSourceSwap = (url: string): void => {
+/**
+ * Замер в браузере (Chrome, локальный стек, 06.09.2026): апдейт стейта из
+ * промиса `uploadImage` коммитится примерно через 160 мс, а `requestAnimationFrame`
+ * успевает выполниться раньше — в момент revoke в DOM ещё стоит `<img src="blob:…">`.
+ * Ревокнутый blob отдаёт `net::ERR_FILE_NOT_FOUND`, `ImageCardMedia` сжигает на нём
+ * обе попытки (первую и retry) и уходит в терминальный `failed`: миниатюра точки
+ * остаётся пустой до перезагрузки страницы. Поэтому blob живёт ещё несколько секунд
+ * после подмены источника — освобождение памяти не стоит потерянного превью.
+ */
+const PREVIEW_REVOKE_DELAY_MS = 15_000
+
+const schedulePreviewRevoke = (url: string): void => {
   if (!/^blob:/i.test(url)) return
-  const requestFrame = (
-    globalThis as { requestAnimationFrame?: (callback: FrameRequestCallback) => number }
-  ).requestAnimationFrame
-  if (typeof requestFrame === 'function') {
-    requestFrame(() => revokePreviewUrl(url))
-    return
-  }
-  setTimeout(() => revokePreviewUrl(url), 0)
+  setTimeout(() => revokePreviewUrl(url), PREVIEW_REVOKE_DELAY_MS)
 }
 
 const extractUploadUrl = (response: UploadImageResponse): string => {
@@ -51,6 +55,15 @@ const extractUploadUrl = (response: UploadImageResponse): string => {
     response.url ?? nestedData?.url ?? response.path ?? response.file_url
   return uploadedUrlRaw ? normalizeMediaUrl(String(uploadedUrlRaw)) : ''
 }
+
+/**
+ * `applied` — источник точки уже заменён на серверный url;
+ * `pending` — точки с таким id в форме пока нет (id ещё не приехал с бэка),
+ * превью и файл нужно сохранить до следующей попытки;
+ * `obsolete` — превью уже не показывается (пользователь удалил или заменил фото),
+ * подменять нечего.
+ */
+type MarkerImageSwapResult = 'applied' | 'pending' | 'obsolete'
 
 interface UseMarkerImageUploadOptions {
   formDataRef: React.MutableRefObject<TravelFormData>
@@ -67,6 +80,10 @@ export function useMarkerImageUpload({
     new Map<string, { inFlight: boolean; attempts: number }>(),
   )
   const latestMarkerUploadRef = useRef(new Map<string, string>())
+  // Загрузка уже прошла, а подмена источника в форме — ещё нет (точка успела
+  // потерять id или картинку в стейте). Держим готовый URL, чтобы следующий
+  // сейв доклеил его без повторной заливки того же файла на сервер.
+  const resolvedUploadsRef = useRef(new Map<string, string>())
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -77,17 +94,23 @@ export function useMarkerImageUpload({
   }, [])
 
   const applyUploadedMarkerImage = useCallback(
-    (markerId: string, blobUrl: string, uploadedUrl: string) => {
-      if (!mountedRef.current) return
+    (
+      markerId: string,
+      blobUrl: string,
+      uploadedUrl: string,
+    ): MarkerImageSwapResult => {
+      if (!mountedRef.current) return 'obsolete'
       const currentMarkers = Array.isArray(formDataRef.current.coordsMeTravel)
         ? (formDataRef.current.coordsMeTravel as MarkerData[])
         : []
       const latestBlobUrl = latestMarkerUploadRef.current.get(markerId)
-      if (latestBlobUrl && latestBlobUrl !== blobUrl) return
+      if (latestBlobUrl && latestBlobUrl !== blobUrl) return 'obsolete'
 
       let didApplyUpload = false
+      let didFindMarker = false
       const updatedMarkers = currentMarkers.map((marker) => {
         if (String(marker?.id ?? '') !== markerId) return marker
+        didFindMarker = true
         const currentImage = String(marker?.image ?? '').trim()
         if (!currentImage) return marker
         if (isLocalPreviewUrl(currentImage) && currentImage !== blobUrl) {
@@ -96,7 +119,7 @@ export function useMarkerImageUpload({
         didApplyUpload = true
         return { ...marker, image: uploadedUrl }
       })
-      if (!didApplyUpload) return
+      if (!didApplyUpload) return didFindMarker ? 'obsolete' : 'pending'
 
       const nextFormData = {
         ...(formDataRef.current as TravelFormData),
@@ -107,6 +130,7 @@ export function useMarkerImageUpload({
       formDataRef.current = nextFormData
       updateFormMarkers(updatedMarkers, nextFormData)
       updateBaseline(nextFormData)
+      return 'applied'
     },
     [formDataRef, updateFormMarkers, updateBaseline],
   )
@@ -192,6 +216,31 @@ export function useMarkerImageUpload({
           if (!file) return
 
           const normalizedMarkerId = String(markerId)
+          const finishPreview = (uploadedUrl: string): void => {
+            const swap = applyUploadedMarkerImage(
+              normalizedMarkerId,
+              imageUrl,
+              uploadedUrl,
+            )
+            if (swap === 'pending') {
+              // Точка ещё показывает blob-превью, а подменить его не в чем.
+              // Ревок здесь оставил бы миниатюру с мёртвым источником, поэтому
+              // файл и превью живут до следующей попытки — уже без повторной
+              // заливки того же файла.
+              resolvedUploadsRef.current.set(imageUrl, uploadedUrl)
+              return
+            }
+            resolvedUploadsRef.current.delete(imageUrl)
+            removePendingImageFile(imageUrl)
+            schedulePreviewRevoke(imageUrl)
+          }
+
+          const resolvedUrl = resolvedUploadsRef.current.get(imageUrl)
+          if (resolvedUrl) {
+            finishPreview(resolvedUrl)
+            return
+          }
+
           latestMarkerUploadRef.current.set(normalizedMarkerId, imageUrl)
           markerUploadStateRef.current.set(imageUrl, {
             inFlight: true,
@@ -211,15 +260,15 @@ export function useMarkerImageUpload({
               throw new Error('Upload did not return URL')
             }
 
-            applyUploadedMarkerImage(normalizedMarkerId, imageUrl, uploadedUrl)
-            removePendingImageFile(imageUrl)
-            revokePreviewUrlAfterSourceSwap(imageUrl)
+            finishPreview(uploadedUrl)
             succeeded = true
           } catch {
             // Keep pending file for the next successful save/retry path.
           } finally {
             if (succeeded) {
-              // blob-URL поставлен на revoke после source swap и больше не встретится.
+              // Файл уже на сервере: повторная заливка не нужна. Если подмена
+              // источника не прошла, следующий сейв доклеит её из
+              // resolvedUploadsRef без сетевого запроса.
               markerUploadStateRef.current.delete(imageUrl)
             } else {
               markerUploadStateRef.current.set(imageUrl, {

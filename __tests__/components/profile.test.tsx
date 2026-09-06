@@ -5,7 +5,7 @@ import { useFavorites } from '@/context/FavoritesContext';
 import type { MyAchievements, UserRank } from '@/api/achievements';
 import { mockPush, mockReplace, mockUseRouter, resetExpoRouterMocks } from '../helpers/expoRouterMock';
 import { createQueryWrapper } from '../helpers/testQueryClient';
-import { mockFetchMyTravels, mockUnwrapMyTravelsPayload, resetTravelsApiMocks } from '../helpers/mockTravelsApi';
+import { mockFetchMyTravels, mockMyTravelsPayload, mockUnwrapMyTravelsPayload, resetTravelsApiMocks } from '../helpers/mockTravelsApi';
 import {
   createAuthValue,
   createFavoriteItem,
@@ -371,28 +371,24 @@ describe('ProfileScreen', () => {
   it('shows draft travels as regular cards in profile routes', async () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(0, 0);
-    mockFetchMyTravels.mockResolvedValue({
-      total: 2,
-      count: 2,
-      data: [
-        {
-          id: 776,
-          title: 'Опубликованный Алтай',
-          countryName: 'Россия',
-          publish: 1,
-          moderation: 1,
-          publication_status: 'published',
-        },
-        {
-          id: 777,
-          title: 'Черновик Кавказа',
-          countryName: 'Грузия',
-          publish: 0,
-          moderation: 0,
-          updated_at: '2026-07-10T12:00:00Z',
-        },
-      ],
-    });
+    mockMyTravelsPayload([
+      {
+        id: 776,
+        title: 'Опубликованный Алтай',
+        countryName: 'Россия',
+        publish: 1,
+        moderation: 1,
+        publication_status: 'published',
+      },
+      {
+        id: 777,
+        title: 'Черновик Кавказа',
+        countryName: 'Грузия',
+        publish: 0,
+        moderation: 0,
+        updated_at: '2026-07-10T12:00:00Z',
+      },
+    ] as never);
 
     const { findByLabelText, findByText, queryByText } = renderProfile();
 

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router'
 import type { ProfileTabKey } from '@/components/profile/ProfileTabs'
 import type { ProfileTravelEngagementMetricKey } from '@/components/profile/ProfileTravelEngagementSection'
 import { isTravelListItem, normalizeToTravel } from '@/components/profile/travelNormalize'
+import type { TravelPublicationCounts } from '@/hooks/useMyTravels'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
 import type { Travel } from '@/types/types'
 import { selectPlural, translate as i18nT } from '@/i18n'
@@ -21,6 +22,7 @@ type UseProfileTravelSectionsInput = {
   viewHistory: unknown[]
   myTravels: Travel[]
   engagementSummary: TravelEngagementStats | null
+  publicationCounts: TravelPublicationCounts | null
   travelsCount: number
   travelsLoading: boolean
   travelsLoadingMore: boolean
@@ -46,6 +48,7 @@ export function useProfileTravelSections({
   viewHistory,
   myTravels,
   engagementSummary,
+  publicationCounts,
   travelsCount,
   travelsLoading,
   travelsLoadingMore,
@@ -87,6 +90,15 @@ export function useProfileTravelSections({
     () => profileTravels.filter((travel) => !isTravelDraft(travel)),
     [profileTravels],
   )
+
+  // Разбивка «Опубл. / Черновики» приходит с сервера: классификация загруженных
+  // страниц (`publishedTravels`/`draftTravels`) годится в счётчик только когда
+  // список догружен целиком — иначе вкладки показывали разбивку первой страницы.
+  const isTravelListComplete = profileTravels.length >= travelsCount
+  const publishedTravelsCount = publicationCounts?.published
+    ?? (isTravelListComplete ? publishedTravels.length : undefined)
+  const draftTravelsCount = publicationCounts?.drafts
+    ?? (isTravelListComplete ? draftTravels.length : undefined)
 
   useEffect(() => {
     const requiresCompleteTravelList =
@@ -245,11 +257,11 @@ export function useProfileTravelSections({
     authoredTravelEngagementScope,
     authoredTravelEngagementSummary,
     currentData,
-    draftTravels,
+    draftTravelsCount,
     emptyStateProps,
     formatTripsCount,
     personalTravelStatusSummary,
     profileTravels,
-    publishedTravels,
+    publishedTravelsCount,
   }
 }

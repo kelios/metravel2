@@ -1,5 +1,6 @@
 import type { MyTravelsItem, MyTravelsPayload } from '@/api/travelsApi';
 import { extractTravelEngagementStats } from '@/utils/travelEngagementStats'
+import { DRAFT_PUBLICATION_STATUSES, isTravelDraft } from '@/utils/travelPublicationStatus'
 
 export const mockFetchMyTravels = jest.fn();
 
@@ -44,6 +45,25 @@ export const mockUnwrapMyTravelsPayload = (payload: MyTravelsPayload | null | un
   }
 
   return { items: [], total: Number(obj.total ?? obj.count ?? 0) || 0, engagementSummary };
+};
+
+// Профиль спрашивает у API отдельный счётчик черновиков
+// (`where.publication_status`), поэтому фейк обязан уважать этот фильтр: иначе
+// на счётчик приходит весь список автора и тест не отличит серверную разбивку
+// от подсчёта по загруженной странице.
+export const mockMyTravelsPayload = (items: MyTravelsItem[]) => {
+  mockFetchMyTravels.mockImplementation(async (params: { publicationStatus?: readonly string[] } = {}) => {
+    const requestedStatuses = params?.publicationStatus;
+    const scoped = Array.isArray(requestedStatuses) && requestedStatuses.length > 0
+      ? items.filter((item) => {
+          const wantsDrafts = requestedStatuses.every(
+            (status) => (DRAFT_PUBLICATION_STATUSES as readonly string[]).includes(status),
+          );
+          return isTravelDraft(item as never) === wantsDrafts;
+        })
+      : items;
+    return { total: scoped.length, count: scoped.length, data: scoped };
+  });
 };
 
 export const resetTravelsApiMocks = () => {

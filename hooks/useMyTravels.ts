@@ -7,6 +7,7 @@ import type { TravelEngagementStats } from '@/utils/travelEngagementStats'
 import { showToastMessage } from '@/utils/toast'
 import { translate as i18nT } from '@/i18n'
 import { isOfflineLikeError, isTimeoutError } from '@/api/clientErrors'
+import { DRAFT_PUBLICATION_STATUSES, isTravelDraft } from '@/utils/travelPublicationStatus'
 
 
 interface UseMyTravelsArgs {
@@ -16,9 +17,19 @@ interface UseMyTravelsArgs {
   onTotalChange?: (total: number) => void;
 }
 
+export interface TravelPublicationCounts {
+  published: number;
+  drafts: number;
+}
+
 export interface UseMyTravelsResult {
   myTravels: Travel[];
   engagementSummary: TravelEngagementStats | null;
+  /**
+   * Сколько у автора опубликованных и черновиков ВСЕГО, а не в загруженных
+   * страницах. null — счётчик ещё не получен или запрос за ним не удался.
+   */
+  publicationCounts: TravelPublicationCounts | null;
   isLoading: boolean;
   isLoadingMore: boolean;
   removingTravelId: number | null;
@@ -47,6 +58,18 @@ const decrementSummaryByTravel = (
     visitedCount: toDecrementedMetric(current.visitedCount, travel.engagementStats.visitedCount),
     plannedCount: toDecrementedMetric(current.plannedCount, travel.engagementStats.plannedCount),
   }
+}
+
+// Удаление уводит маршрут из своей вкладки сразу, не дожидаясь перезагрузки
+// списка: иначе счётчик секунду показывает уже несуществующий маршрут.
+const decrementCountsByTravel = (
+  current: TravelPublicationCounts | null,
+  travel: Travel | undefined,
+): TravelPublicationCounts | null => {
+  if (!current || !travel) return current
+  return isTravelDraft(travel)
+    ? { ...current, drafts: Math.max(0, current.drafts - 1) }
+    : { ...current, published: Math.max(0, current.published - 1) }
 }
 
 const getDeleteErrorCopy = (error: unknown) => {
@@ -113,9 +136,41 @@ const getLoadErrorMessage = (error: unknown) => {
   return i18nT('errorsStatic:api.common.unknownError')
 }
 
+// Черновики считает сервер: вкладки «Опубл.» и «Черновики» показывали разбивку
+// первой страницы (15 + 5 при 365 маршрутах), потому что классификация шла по
+// загруженным элементам. Просим у API только count по черновиковым статусам —
+// perPage=1 не тянет список, а опубликованные выводим вычитанием из общего
+// количества, чтобы сумма вкладок всегда сходилась со счётчиком «Маршруты».
+const fetchDraftTravelsCount = async (userId: string | number): Promise<number | null> => {
+  try {
+    const payload = await fetchMyTravels({
+      user_id: userId,
+      page: 1,
+      perPage: 1,
+      includeDrafts: true,
+      publicationStatus: DRAFT_PUBLICATION_STATUSES,
+      throwOnError: true,
+    });
+    return unwrapMyTravelsPayload(payload).total;
+  } catch {
+    // Счётчик — украшение вкладки: его сбой не должен ломать загрузку списка.
+    return null;
+  }
+};
+
+const toPublicationCounts = (
+  total: number,
+  draftsCount: number | null,
+): TravelPublicationCounts | null => {
+  if (draftsCount == null) return null;
+  const drafts = Math.min(Math.max(0, draftsCount), total);
+  return { published: Math.max(0, total - drafts), drafts };
+};
+
 export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalChange }: UseMyTravelsArgs): UseMyTravelsResult {
   const [myTravels, setMyTravels] = useState<Travel[]>([]);
   const [engagementSummary, setEngagementSummary] = useState<TravelEngagementStats | null>(null)
+  const [publicationCounts, setPublicationCounts] = useState<TravelPublicationCounts | null>(null)
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [removingTravelId, setRemovingTravelId] = useState<number | null>(null)
@@ -145,6 +200,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
       setHasMore(false);
       setMyTravels([]);
       setEngagementSummary(null)
+      setPublicationCounts(null)
       setError(null);
       return;
     }
@@ -153,7 +209,10 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
     setIsLoadingMore(false);
     setError(null);
     try {
-      const payload = await fetchMyTravels({ user_id: uid, page: 1, perPage, includeDrafts, throwOnError: true });
+      const [payload, draftsCount] = await Promise.all([
+        fetchMyTravels({ user_id: uid, page: 1, perPage, includeDrafts, throwOnError: true }),
+        includeDrafts ? fetchDraftTravelsCount(uid) : Promise.resolve<number | null>(null),
+      ]);
       // Запрос вытеснен более новым load/loadMore или хук размонтирован — не коммитим.
       if (!mountedRef.current || seq !== requestSeqRef.current) return;
       const { items, total, engagementSummary: nextEngagementSummary } = unwrapMyTravelsPayload(payload);
@@ -162,6 +221,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
 
       setMyTravels(normalized);
       setEngagementSummary(nextEngagementSummary)
+      setPublicationCounts(toPublicationCounts(effectiveTotal, draftsCount))
       setPage(1);
       setTotalCount(effectiveTotal)
       setHasMore(normalized.length < effectiveTotal && items.length > 0);
@@ -171,6 +231,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
       if (!mountedRef.current || seq !== requestSeqRef.current) return;
       setMyTravels([]);
       setEngagementSummary(null)
+      setPublicationCounts(null)
       setPage(1);
       setTotalCount(0)
       setHasMore(false);
@@ -205,6 +266,9 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
 
       setMyTravels(merged);
       setEngagementSummary((current) => current ?? nextEngagementSummary)
+      // Общее количество могло измениться между страницами — держим разбивку в
+      // сумме с ним, иначе «Опубл.» разойдётся со счётчиком «Маршруты».
+      setPublicationCounts((current) => (current ? toPublicationCounts(effectiveTotal, current.drafts) : current))
       setPage(nextPage);
       setTotalCount(effectiveTotal)
       setHasMore(merged.length < effectiveTotal && items.length > 0);
@@ -241,13 +305,16 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
         const previousTravels = myTravels
         const deletedTravel = previousTravels.find((travel) => travel.id === travelId)
         const previousTotal = totalCount
+        const previousCounts = publicationCounts
         const nextTravels = previousTravels.filter((travel) => travel.id !== travelId)
         const nextTotal = Math.max(0, previousTotal - 1)
+        const nextCounts = decrementCountsByTravel(previousCounts, deletedTravel)
 
         deleteInFlightRef.current = travelId
         setRemovingTravelId(travelId)
         setMyTravels(nextTravels)
         setEngagementSummary((current) => decrementSummaryByTravel(current, deletedTravel))
+        setPublicationCounts(nextCounts)
         setTotalCount(nextTotal)
         onTotalChange?.(nextTotal)
 
@@ -272,6 +339,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
           if (mountedRef.current) {
             setMyTravels(myTravels)
             setEngagementSummary(engagementSummary)
+            setPublicationCounts(publicationCounts)
             setTotalCount(totalCount)
             onTotalChange?.(totalCount)
           }
@@ -288,8 +356,8 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
         if (mountedRef.current) setRemovingTravelId(null)
       }
     },
-    [engagementSummary, load, myTravels, onTotalChange, totalCount],
+    [engagementSummary, load, myTravels, onTotalChange, publicationCounts, totalCount],
   );
 
-  return { myTravels, engagementSummary, isLoading, isLoadingMore, removingTravelId, hasMore, error, load, loadMore, remove };
+  return { myTravels, engagementSummary, publicationCounts, isLoading, isLoadingMore, removingTravelId, hasMore, error, load, loadMore, remove };
 }

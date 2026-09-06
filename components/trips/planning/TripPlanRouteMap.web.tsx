@@ -38,7 +38,10 @@ import { hasUsableRouteGeometry } from './tripRoutePreview';
 
 type LeafletNS = typeof import('leaflet');
 type ReactLeafletNS = typeof import('react-leaflet');
-type MapClickEvent = { latlng: { lat: number; lng: number } };
+type MapClickEvent = {
+  latlng: { lat: number; lng: number };
+  originalEvent?: { target?: EventTarget | null };
+};
 
 interface Props {
   route: RoutePoint[];
@@ -178,6 +181,13 @@ function ClickToAdd({
 }) {
   const handleClick = (event: MapClickEvent) => {
     if (disabled) return;
+    const target = event.originalEvent?.target;
+    if (
+      target instanceof Element &&
+      target.closest('.leaflet-marker-icon, .metravel-trip-plan-marker, .leaflet-popup')
+    ) {
+      return;
+    }
     onAddPointFromMap?.({ lat: event.latlng.lat, lng: event.latlng.lng });
   };
 

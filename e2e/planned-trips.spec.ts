@@ -145,13 +145,59 @@ const buildTransportTrip = (
   }
 }
 
-async function mockTransportTrip(page: import('@playwright/test').Page) {
+async function mockNominatimOstrava(page: import('@playwright/test').Page) {
+  await page.route('**/nominatim.openstreetmap.org/**', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({
+        status: 204,
+        headers: {
+          'access-control-allow-origin': '*',
+          'access-control-allow-headers': '*',
+        },
+      })
+      return
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify([
+        {
+          place_id: 1782,
+          display_name: 'Острава, Моравскосилезский край, Чехия',
+          lat: '49.8209',
+          lon: '18.2625',
+        },
+      ]),
+    })
+  })
+}
+
+async function mockTransportTrip(
+  page: import('@playwright/test').Page,
+  options?: { ownerId?: number },
+) {
   const patchBodies: Array<Record<string, unknown>> = []
+  const routePutBodies: Array<Record<string, unknown>> = []
   const plannedTripRequests: string[] = []
   let currentTransport = 'car'
   let currentBikeType = 'regular'
   let currentDescription = 'Проверка перестроения маршрута'
+  let currentPoints = transportRoutePoints.map((point) => ({ ...point }))
   let shouldFailNextPatch = false
+
+  const resolveOwnerId = async () => {
+    if (options?.ownerId != null) return options.ownerId
+    return page.evaluate(() => Number(window.localStorage.getItem('userId')))
+  }
+
+  const tripPayload = async () => {
+    const ownerId = await resolveOwnerId()
+    return {
+      ...buildTransportTrip(currentTransport, ownerId, currentBikeType, currentDescription),
+      route: { points: currentPoints },
+    }
+  }
 
   page.on('request', (request) => {
     const pathname = new URL(request.url()).pathname
@@ -186,8 +232,29 @@ async function mockTransportTrip(page: import('@playwright/test').Page) {
       }),
     })
   })
+  await page.route('**/api/trips/planned/99002/route/', async (route) => {
+    const request = route.request()
+    if (request.method() !== 'PUT') {
+      await route.fallback()
+      return
+    }
+    const body = (request.postDataJSON() ?? {}) as Record<string, unknown>
+    routePutBodies.push(body)
+    if (Array.isArray(body.points)) {
+      currentPoints = body.points as typeof currentPoints
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(await tripPayload()),
+    })
+  })
   await page.route('**/api/trips/planned/99002/', async (route) => {
     const request = route.request()
+    if (new URL(request.url()).pathname.includes('/route')) {
+      await route.fallback()
+      return
+    }
     if (request.method() === 'PATCH') {
       const body = request.postDataJSON() as Record<string, unknown>
       patchBodies.push(body)
@@ -208,18 +275,16 @@ async function mockTransportTrip(page: import('@playwright/test').Page) {
       await waitForFakeAuth(page)
     }
 
-    const ownerId = await page.evaluate(() => Number(window.localStorage.getItem('userId')))
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(
-        buildTransportTrip(currentTransport, ownerId, currentBikeType, currentDescription),
-      ),
+      body: JSON.stringify(await tripPayload()),
     })
   })
 
   return {
     patchBodies,
+    routePutBodies,
     plannedTripRequests,
     failNextPatch: () => {
       shouldFailNextPatch = true
@@ -573,5 +638,171 @@ test.describe('Trip planner — happy path', () => {
     // Горизонтального скролла на 390px не появилось.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     expect(consoleErrors).toEqual([])
+  })
+})
+
+test.describe('Trip planner — map points and address search', () => {
+  const openPlanner = async (
+    page: import('@playwright/test').Page,
+    viewport: { width: number; height: number },
+    options?: { ownerId?: number },
+  ) => {
+    await setupFakeAuth(page)
+    await seedConsent(page)
+    await mockNominatimOstrava(page)
+    const networkEvidence = await mockTransportTrip(page, options)
+    await page.setViewportSize(viewport)
+    await page.goto('/trips/plan/99002', { waitUntil: 'domcontentloaded' })
+    await waitForFakeAuth(page)
+    await expect(page.getByTestId('trip-plan-route-map').locator('.leaflet-container')).toBeVisible({
+      timeout: 30_000,
+    })
+    return networkEvidence
+  }
+
+  const routeMarkers = (page: import('@playwright/test').Page) =>
+    page.getByTestId('trip-plan-route-map').locator('.metravel-trip-plan-marker')
+
+  const closeMarkerPopup = async (page: import('@playwright/test').Page) => {
+    const closePopup = page.locator('.leaflet-popup-close-button')
+    if ((await closePopup.count()) === 0) return
+    await closePopup.first().click({ force: true })
+    await expect(page.locator('.leaflet-popup')).toHaveCount(0)
+  }
+
+  const openMarkerPopup = async (page: import('@playwright/test').Page, markerIndex: number) => {
+    const map = page.getByTestId('trip-plan-route-map').locator('.leaflet-container')
+    await map.scrollIntoViewIfNeeded()
+    const marker = routeMarkers(page).nth(markerIndex)
+    await expect(marker).toBeVisible()
+    await closeMarkerPopup(page)
+
+    const popup = page.locator('.leaflet-popup')
+    const attempts = [
+      () => marker.dispatchEvent('click'),
+      () => marker.click({ force: true, position: { x: 17, y: 8 }, timeout: 2_000 }),
+      () => marker.click({ force: true, timeout: 2_000 }),
+    ]
+    for (const attempt of attempts) {
+      await attempt().catch(() => undefined)
+      const opened = await popup
+        .waitFor({ state: 'visible', timeout: 1_500 })
+        .then(() => true)
+        .catch(() => false)
+      if (opened) return
+    }
+    await expect(popup).toBeVisible()
+  }
+
+  const dragLeafletMarker = async (
+    page: import('@playwright/test').Page,
+    markerIndex: number,
+    deltaX: number,
+    deltaY: number,
+  ) => {
+    const marker = routeMarkers(page).nth(markerIndex)
+    await expect(marker).toBeVisible()
+    await marker.scrollIntoViewIfNeeded()
+    const box = await marker.boundingBox()
+    expect(box).not.toBeNull()
+    const startX = box!.x + 17
+    const startY = box!.y + 8
+    await page.mouse.move(startX, startY)
+    await page.mouse.down()
+    await page.mouse.move(startX + deltaX, startY + deltaY, { steps: 16 })
+    await page.mouse.up()
+  }
+
+  const expectPointMovedFrom = async (
+    page: import('@playwright/test').Page,
+    originLat: number,
+    originLng: number,
+  ) => {
+    await page.getByTestId('route-builder-edit-0').evaluate((node) => node.scrollIntoView({ block: 'center' }))
+    await page.getByTestId('route-builder-edit-0').click()
+    await expect.poll(async () => Number(await page.getByTestId('route-builder-edit-lat').inputValue())).not.toBeCloseTo(originLat, 4)
+    await expect.poll(async () => Number(await page.getByTestId('route-builder-edit-lng').inputValue())).not.toBeCloseTo(originLng, 3)
+    const lat = Number(await page.getByTestId('route-builder-edit-lat').inputValue())
+    const lng = Number(await page.getByTestId('route-builder-edit-lng').inputValue())
+    await page.getByTestId('route-builder-edit-cancel').click()
+    return { lat, lng }
+  }
+
+  test('adds a route point through address search in the add form', async ({ page }) => {
+    await openPlanner(page, { width: 1440, height: 900 })
+
+    await page.getByTestId('route-builder-add-action').click()
+    const addForm = page.getByTestId('route-builder-add-form')
+    await expect(addForm).toBeVisible()
+
+    const search = addForm.getByPlaceholder('Найти место по названию или адресу')
+    await expect(search).toBeVisible()
+    await search.fill('Острава')
+    const suggestion = page.getByRole('option', { name: 'Острава, Моравскосилезский край, Чехия' })
+    await expect(suggestion).toBeVisible({ timeout: 10_000 })
+    await suggestion.click()
+
+    await expect.poll(async () => Number(await page.getByTestId('route-builder-lat').inputValue())).toBeCloseTo(49.8209, 4)
+    await expect.poll(async () => Number(await page.getByTestId('route-builder-lng').inputValue())).toBeCloseTo(18.2625, 4)
+    await expect(page.getByTestId('route-builder-name')).toHaveValue('Острава')
+
+    await page.getByTestId('route-builder-add').click()
+    await expect(page.getByTestId('route-builder-point-2')).toBeVisible()
+    await expect(page.getByTestId('route-builder-point-2')).toContainText('Острава')
+  })
+
+  test('owner can edit a route point from the map marker', async ({ page }) => {
+    await openPlanner(page, { width: 1440, height: 900 })
+
+    await openMarkerPopup(page, 0)
+    const editFromMap = page.getByTestId('trip-plan-map-edit-point-0')
+    await expect(editFromMap).toBeVisible()
+    await expect(page.getByTestId('trip-plan-map-delete-point-0')).toBeVisible()
+
+    await editFromMap.evaluate((node) => (node as HTMLButtonElement).click())
+    await expect(page.getByTestId('route-builder-edit-form')).toBeVisible()
+    await expect.poll(async () => Number(await page.getByTestId('route-builder-edit-lat').inputValue())).toBeCloseTo(53.9, 4)
+  })
+
+  test('owner can delete a route point from the map marker', async ({ page }) => {
+    await openPlanner(page, { width: 1440, height: 900 })
+
+    await openMarkerPopup(page, 0)
+    const deleteFromMap = page.getByTestId('trip-plan-map-delete-point-0')
+    await expect(deleteFromMap).toBeVisible()
+    await deleteFromMap.evaluate((node) => (node as HTMLButtonElement).click())
+    await expect(page.getByTestId('route-builder-point-0')).toContainText('Финиш')
+    await expect(page.getByTestId('route-builder-point-1')).toHaveCount(0)
+  })
+
+  test('owner can drag a route marker on desktop web', async ({ page }) => {
+    await openPlanner(page, { width: 1440, height: 900 })
+
+    await expect(page.getByTestId('trip-plan-route-map').locator('.leaflet-marker-draggable').first()).toBeVisible()
+    await dragLeafletMarker(page, 0, 40, -30)
+    await expectPointMovedFrom(page, 53.9, 27.56)
+  })
+
+  test('owner can drag a route marker on mobile web', async ({ page }) => {
+    await openPlanner(page, { width: 390, height: 844 })
+
+    const mobileMap = page.getByTestId('route-mobile-map')
+    await expect(mobileMap).toBeVisible()
+    await mobileMap.evaluate((node) => node.scrollIntoView({ block: 'center' }))
+    await expect(mobileMap.locator('.leaflet-marker-draggable').first()).toBeVisible()
+    await dragLeafletMarker(page, 0, 80, -50)
+    await expectPointMovedFrom(page, 53.9, 27.56)
+  })
+
+  test('guest cannot drag markers or see map action buttons', async ({ page }) => {
+    await openPlanner(page, { width: 1440, height: 900 }, { ownerId: 999 })
+
+    const map = page.getByTestId('trip-plan-route-map')
+    await expect(map.locator('.leaflet-marker-icon').first()).toBeVisible()
+    await expect(map.locator('.leaflet-marker-draggable')).toHaveCount(0)
+    await map.locator('.leaflet-marker-icon').first().click({ force: true })
+    await expect(page.getByTestId('trip-plan-map-edit-point-0')).toHaveCount(0)
+    await expect(page.getByTestId('trip-plan-map-delete-point-0')).toHaveCount(0)
+    await expect(page.getByTestId('route-builder-add-action')).toHaveCount(0)
   })
 })

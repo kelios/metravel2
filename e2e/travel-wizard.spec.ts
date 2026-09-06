@@ -355,14 +355,24 @@ const maybeLogin = async (page: Page) => {
   ];
 
   const pickVisible = async (candidates: any[], timeoutMs: number) => {
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-      for (const c of candidates) {
-        const loc = c.first();
-        if (await loc.isVisible().catch(() => false)) return loc;
-      }
-      await page.waitForTimeout(250);
-    }
+    let found: ReturnType<typeof candidates[number]['first']> | null = null;
+    await expect
+      .poll(
+        async () => {
+          for (const c of candidates) {
+            const loc = c.first();
+            if (await loc.isVisible().catch(() => false)) {
+              found = loc;
+              return true;
+            }
+          }
+          return false;
+        },
+        { timeout: timeoutMs },
+      )
+      .toBe(true)
+      .catch(() => false);
+    if (found) return found;
     await Promise.race(candidates.map((c) => c.first().waitFor({ state: 'visible', timeout: 1000 }).catch(() => null)));
     for (const c of candidates) {
       const loc = c.first();
@@ -1416,10 +1426,8 @@ test.describe('Создание путешествия - Полный flow', () 
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест автосохранения');
 
     // Триггерим blur, чтобы гарантированно запустить валидацию/автосейв.
+    // waitForRequest/waitForResponse already armed above cover the 5s debounce.
     await page.keyboard.press('Tab').catch(() => null);
-
-    // debounce автосейва = 5s, плюс время запроса
-    await page.waitForTimeout(6500);
 
     const [upsertReq, upsertResp] = await Promise.all([upsertReqPromise, autoUpsertRespPromise]);
     expect(upsertReq.postDataJSON()).toEqual(

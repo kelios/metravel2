@@ -78,6 +78,7 @@ export const fetchMyTravels = async (params: {
     includeDrafts?: boolean;
     publish?: number;
     moderation?: number;
+    publicationStatus?: readonly string[];
     page?: number;
     perPage?: number;
     throwOnError?: boolean;
@@ -91,6 +92,7 @@ export const fetchMyTravels = async (params: {
         user_id: string | number;
         publish?: number;
         moderation?: number;
+        publication_status?: string[];
         countries?: string[];
         year?: MyTravelsYearRange;
         hasGallery?: true;
@@ -108,11 +110,17 @@ export const fetchMyTravels = async (params: {
             user_id: params.user_id,
         };
 
+        const publicationStatus = params.publicationStatus?.length
+            ? [...params.publicationStatus]
+            : null;
         const hasExplicitStatus =
-            typeof params.publish !== 'undefined' || typeof params.moderation !== 'undefined';
+            typeof params.publish !== 'undefined'
+            || typeof params.moderation !== 'undefined'
+            || publicationStatus !== null;
 
         if (typeof params.publish !== 'undefined') whereObject.publish = params.publish;
         if (typeof params.moderation !== 'undefined') whereObject.moderation = params.moderation;
+        if (publicationStatus) whereObject.publication_status = publicationStatus;
 
         if (!params.includeDrafts && !hasExplicitStatus) {
             whereObject.publish = 1;
