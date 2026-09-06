@@ -30,10 +30,15 @@ export function useQuestCatalogHandoff(params: {
         (async () => {
             try {
                 const pending = await AsyncStorage.getItem(STORAGE_PENDING_CATALOG_SELECTION);
-                if (!pending) return;
-                await AsyncStorage.removeItem(STORAGE_PENDING_CATALOG_SELECTION);
-                if (cancelled) return;
+                // Отменённый эффект обязан оставить ключ на месте: `onApply`
+                // меняет ссылку (ширина вьюпорта садится уже после первого
+                // рендера), эффект переподписывается — и съеденный, но не
+                // применённый ключ означал бы каталог в прежнем срезе.
+                if (!pending || cancelled) return;
                 onApply(pending);
+                // Удаление после применения: повторное применение того же id
+                // идемпотентно, а потерянный ключ — нет.
+                await AsyncStorage.removeItem(STORAGE_PENDING_CATALOG_SELECTION);
             } catch {
                 // Недоступное хранилище — просто нет передачи: каталог
                 // открывается в своём прежнем срезе.
