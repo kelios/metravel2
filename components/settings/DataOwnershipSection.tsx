@@ -19,11 +19,11 @@ export default function DataOwnershipSection() {
     const {
         exportData,
         deleteMessages,
-        deleteRoutes,
+        deleteTravels,
         revokeConsents,
         isExporting,
         isDeletingMessages,
-        isDeletingRoutes,
+        isDeletingTravels,
         isRevokingConsents,
     } = useDataOwnership();
 
@@ -63,16 +63,25 @@ export default function DataOwnershipSection() {
                 icon={<Feather name="message-square" size={18} color={colors.danger} />}
             />
 
+            {/*
+              * #1828: кнопка зовёт `DELETE /user/data/routes/`, а эта ручка удаляет все
+              * путешествия автора вместе с фото и треками. Подпись обязана называть
+              * последствие, а не «маршруты»; сноска отделяет действие от сохранённых
+              * маршрутов, которые чистятся в «Избранном».
+              */}
             <Button
                 variant="danger-outline"
                 fullWidth
-                onPress={deleteRoutes}
-                loading={isDeletingRoutes}
-                disabled={isDeletingRoutes}
-                label={i18nT('profile:components.settings.DataOwnershipSection.udalit_marshruty_f569fb47')}
-                accessibilityLabel={i18nT('profile:components.settings.DataOwnershipSection.udalit_marshruty_f569fb47')}
-                icon={<Feather name="navigation" size={18} color={colors.danger} />}
+                onPress={deleteTravels}
+                loading={isDeletingTravels}
+                disabled={isDeletingTravels}
+                label={i18nT('profile:components.settings.DataOwnershipSection.deleteTravelsLabel')}
+                accessibilityLabel={i18nT('profile:components.settings.DataOwnershipSection.deleteTravelsLabel')}
+                icon={<Feather name="trash-2" size={18} color={colors.danger} />}
             />
+            <Text style={styles.actionHint}>
+                {i18nT('profile:components.settings.DataOwnershipSection.deleteTravelsHint')}
+            </Text>
 
             <Pressable
                 style={[styles.subtleButton, globalFocusStyles.focusable]}
@@ -113,6 +122,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
         cardText: { flex: 1 },
         cardTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
         cardMeta: { marginTop: 2, fontSize: 12, color: colors.textMuted },
+        actionHint: { marginTop: -4, fontSize: 12, lineHeight: 16, color: colors.textMuted },
         divider: { height: 1, backgroundColor: colors.border, marginVertical: 2 },
         subtleButton: {
             flexDirection: 'row',

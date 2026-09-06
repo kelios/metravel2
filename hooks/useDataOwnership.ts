@@ -1,9 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/api/client';
 import { confirmAction } from '@/utils/confirmAction';
 import { showToast } from '@/utils/toast';
 import { openExternalUrl } from '@/utils/externalLinks';
+import { useAuthStore } from '@/stores/authStore';
+import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries';
+import { invalidateTravelCollections } from '@/utils/travelQueryInvalidation';
 import {
     requestDataExport,
     deleteUserMessages,
@@ -17,13 +20,25 @@ import { translate as i18nT } from '@/i18n'
 const errorMessage = (error: unknown, fallback: string): string =>
     error instanceof ApiError ? error.message : fallback;
 
+/** Сколько ждём счётчик затрагиваемых путешествий, прежде чем спросить без числа. */
+const COUNT_BUDGET_MS = 2500;
+
 /**
  * Действия пользователя над своими данными (GDPR-подобные):
- * экспорт архива, удаление переписки/маршрутов, отзыв согласий.
+ * экспорт архива, удаление переписки, удаление своих путешествий, отзыв согласий.
  * Удаление аккаунта здесь НЕ дублируется — оно уже в settings (deleteCurrentUserAccount).
+ *
+ * #1828: `DELETE /user/data/routes/` называется «routes», но удаляет НЕ сохранённые
+ * маршруты. Сервер (`users/services/data_ownership_service.py:delete_routes`) хардом
+ * стирает все Travel, где пользователь единственный автор, вместе с файлами треков, и
+ * снимает авторство со всех совместных (`TravelUser.objects.filter(user=user).delete()`).
+ * Поэтому копия здесь обязана называть путешествия, а не маршруты, а подтверждение —
+ * идти в два шага. Очистка сохранённых маршрутов живёт отдельно, на вкладке «Избранное».
  */
 export function useDataOwnership() {
     const [lastExport, setLastExport] = useState<DataExportDto | null>(null);
+    const queryClient = useQueryClient();
+    const userId = useAuthStore((s) => s.userId);
 
     const exportMutation = useMutation({
         mutationFn: requestDataExport,
@@ -52,11 +67,16 @@ export function useDataOwnership() {
             showToast({ type: 'error', text1: i18nT('shared:hooks.useDataOwnership.oshibka_718d3c7d'), text2: errorMessage(error, i18nT('shared:hooks.useDataOwnership.ne_udalos_udalit_perepisku_f24184c9')) }),
     });
 
-    const deleteRoutesMutation = useMutation({
+    const deleteTravelsMutation = useMutation({
         mutationFn: deleteUserRoutes,
-        onSuccess: () => showToast({ type: 'success', text1: i18nT('shared:hooks.useDataOwnership.marshruty_udaleny_69c5c668') }),
+        onSuccess: () => {
+            // Удалённое не должно пережить действие в кэше: профиль, «Мои путешествия»
+            // и счётчики читают те же ключи, что и сохранение путешествия.
+            void invalidateTravelCollections(queryClient, userId ?? null);
+            showToast({ type: 'success', text1: i18nT('shared:hooks.useDataOwnership.deleteTravelsSuccess') });
+        },
         onError: (error) =>
-            showToast({ type: 'error', text1: i18nT('shared:hooks.useDataOwnership.oshibka_718d3c7d'), text2: errorMessage(error, i18nT('shared:hooks.useDataOwnership.ne_udalos_udalit_marshruty_c4218ef8')) }),
+            showToast({ type: 'error', text1: i18nT('shared:hooks.useDataOwnership.oshibka_718d3c7d'), text2: errorMessage(error, i18nT('shared:hooks.useDataOwnership.deleteTravelsError')) }),
     });
 
     const revokeConsentsMutation = useMutation({
@@ -80,14 +100,63 @@ export function useDataOwnership() {
         if (confirmed) deleteMessagesMutation.mutate();
     }, [deleteMessagesMutation]);
 
-    const deleteRoutes = useCallback(async () => {
-        const confirmed = await confirmAction({
-            title: i18nT('shared:hooks.useDataOwnership.udalit_marshruty_e479bd12'),
-            message: i18nT('shared:hooks.useDataOwnership.vashi_sohranennye_marshruty_budut_udaleny_be_5de38c28'),
-            confirmText: i18nT('shared:hooks.useDataOwnership.udalit_fcfe15ec'),
+    // Сколько путешествий заденет действие. Считается по тому же источнику, что и
+    // счётчик «Мои путешествия» (`fetchMyTravels`), с черновиками — сервер их тоже
+    // удаляет. Ошибка запроса не должна маскироваться нулём: тогда возвращается
+    // `null`, и подтверждение показывает вариант без числа. Число — уточнение, а не
+    // условие показа: медленная сеть не имеет права держать нажатую кнопку немой,
+    // поэтому счётчик ждём не дольше `COUNT_BUDGET_MS`.
+    const countAffectedTravels = useCallback(async (): Promise<number | null> => {
+        if (!userId) return null;
+
+        const counted = (async (): Promise<number | null> => {
+            try {
+                const payload = await fetchMyTravels({
+                    user_id: userId,
+                    perPage: 1,
+                    includeDrafts: true,
+                    throwOnError: true,
+                });
+                const { total } = unwrapMyTravelsPayload(payload);
+                return Number.isFinite(total) ? total : null;
+            } catch {
+                return null;
+            }
+        })();
+
+        let budget: ReturnType<typeof setTimeout> | undefined;
+        const expired = new Promise<null>((resolve) => {
+            budget = setTimeout(() => resolve(null), COUNT_BUDGET_MS);
         });
-        if (confirmed) deleteRoutesMutation.mutate();
-    }, [deleteRoutesMutation]);
+
+        try {
+            return await Promise.race([counted, expired]);
+        } finally {
+            if (budget) clearTimeout(budget);
+        }
+    }, [userId]);
+
+    const deleteTravels = useCallback(async () => {
+        const affected = await countAffectedTravels();
+
+        const acknowledged = await confirmAction({
+            title: i18nT('shared:hooks.useDataOwnership.deleteTravelsTitle'),
+            message:
+                affected === null
+                    ? i18nT('shared:hooks.useDataOwnership.deleteTravelsMessage')
+                    : i18nT('shared:hooks.useDataOwnership.deleteTravelsMessageWithCount', { value1: affected }),
+            confirmText: i18nT('shared:hooks.useDataOwnership.deleteTravelsContinue'),
+        });
+        if (!acknowledged) return;
+
+        // Второй шаг обязателен: действие необратимо и уносит фотографии и треки.
+        const confirmed = await confirmAction({
+            title: i18nT('shared:hooks.useDataOwnership.deleteTravelsFinalTitle'),
+            message: i18nT('shared:hooks.useDataOwnership.deleteTravelsFinalMessage'),
+            confirmText: i18nT('shared:hooks.useDataOwnership.deleteTravelsFinalConfirm'),
+        });
+        if (confirmed) deleteTravelsMutation.mutate();
+    }, [countAffectedTravels, deleteTravelsMutation]);
 
     const revokeConsents = useCallback(async () => {
         const confirmed = await confirmAction({
@@ -102,23 +171,23 @@ export function useDataOwnership() {
         () => ({
             exportData,
             deleteMessages,
-            deleteRoutes,
+            deleteTravels,
             revokeConsents,
             lastExport,
             isExporting: exportMutation.isPending,
             isDeletingMessages: deleteMessagesMutation.isPending,
-            isDeletingRoutes: deleteRoutesMutation.isPending,
+            isDeletingTravels: deleteTravelsMutation.isPending,
             isRevokingConsents: revokeConsentsMutation.isPending,
         }),
         [
             exportData,
             deleteMessages,
-            deleteRoutes,
+            deleteTravels,
             revokeConsents,
             lastExport,
             exportMutation.isPending,
             deleteMessagesMutation.isPending,
-            deleteRoutesMutation.isPending,
+            deleteTravelsMutation.isPending,
             revokeConsentsMutation.isPending,
         ]
     );

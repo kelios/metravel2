@@ -100,6 +100,13 @@ export const deleteUserMessages = async (): Promise<null> => {
     return apiClient.delete<null>('/user/data/messages/');
 };
 
+/**
+ * #1828: имя ручки лжёт. `DELETE /user/data/routes/` НЕ трогает сохранённые
+ * маршруты — сервер хардом удаляет все путешествия, где пользователь единственный
+ * автор (вместе с фотографиями и файлами треков), и снимает его авторство со всех
+ * совместных. Очистка сохранённых маршрутов — это `DELETE /user/<id>/clear-favorite/`
+ * на вкладке «Избранное». Переименование самой ручки — за бэкендом.
+ */
 export const deleteUserRoutes = async (): Promise<null> => {
     return apiClient.delete<null>('/user/data/routes/');
 };
