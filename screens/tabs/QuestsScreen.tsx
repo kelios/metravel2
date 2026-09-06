@@ -118,7 +118,13 @@ export default function QuestsScreen() {
     // НЕреактивным снапшотом: в стилях мобильного веба она не используется
     // (карта = 100dvh через CSS), поэтому отсутствие подписки на высоту ничего
     // не ломает, но убирает keyboard/address-bar-джиттер при вводе.
-    const height = width > 0 ? Dimensions.get('window').height : 0;
+    //
+    // #1826: читать её на КАЖДОМ рендере было мало: сама подписка на высоту
+    // снята, но любой посторонний рендер (символ в поиске) подхватывал свежее
+    // число, `getStyles` отдавал новый объект — и мемоизация карточек отбивалась
+    // впустую ровно в тот кадр, ради которого затевалась. Ступень привязана к
+    // ширине: настоящий ресайз окна и поворот меняют и её, клавиатура — нет.
+    const height = useMemo(() => (width > 0 ? Dimensions.get('window').height : 0), [width]);
     const s = useMemo(() => getStyles(colors, width, height), [colors, width, height]);
 
     // ── Persistent city selection ──
@@ -461,6 +467,9 @@ export default function QuestsScreen() {
         () => (popularSortActive ? sortQuestsByPopularity(questsAll) : questsAll),
         [popularSortActive, questsAll],
     );
+    // #1826: инлайн-стрелка делала любую мемоизацию панели пустой.
+    const handleOpenFilterDrawer = useCallback(() => setFilterDrawerOpen(true), []);
+
     const handleTogglePopularSort = useCallback(() => {
         setPopularSortEnabled((current) => !current);
     }, []);
@@ -775,6 +784,7 @@ export default function QuestsScreen() {
                 kidsFilterId={KIDS_FILTER_ID}
                 bikeFilterId={BIKE_FILTER_ID}
                 searchQuery={searchQuery}
+                appliedSearchTerm={searchTerm}
                 onSearchChange={setSearchQuery}
                 questsAll={visibleQuests}
                 questCardWidth={questCardWidth}
@@ -796,7 +806,7 @@ export default function QuestsScreen() {
                 onShowKids={handleShowKidsQuests}
                 onShowBike={handleShowBikeQuests}
                 onShowNearby={requestNearbyQuests}
-                onOpenFilterDrawer={() => setFilterDrawerOpen(true)}
+                onOpenFilterDrawer={handleOpenFilterDrawer}
                 onToggleViewMode={handleToggleViewMode}
                 onMapUserLocationChange={handleMapUserLocationChange}
                 onMapMove={handleMapMove}

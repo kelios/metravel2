@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { Suspense, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -9,7 +9,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
-import type { ListRenderItemInfo, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import type { LayoutChangeEvent, ListRenderItemInfo, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
@@ -52,6 +52,8 @@ type QuestsContentPanelProps = {
     kidsFilterId?: string;
     bikeFilterId?: string;
     searchQuery: string;
+    /** Применённый (debounce) поисковый терм: по нему живёт список. */
+    appliedSearchTerm?: string;
     onSearchChange: (text: string) => void;
     /** @deprecated Radius selection is no longer shown in the quest catalog. */
     nearbyRadiusKm?: number;
@@ -94,7 +96,7 @@ const QUEST_GRID_PAGE_SIZE = 24;
 const QUEST_GRID_REVEAL_DISTANCE = 800;
 const QUEST_GRID_SCROLL_THROTTLE = 32;
 
-export default function QuestsContentPanel({
+function QuestsContentPanel({
     styles,
     colors,
     dataLoaded,
@@ -105,6 +107,7 @@ export default function QuestsContentPanel({
     kidsFilterId = '__kids__',
     bikeFilterId = '__bike__',
     searchQuery = '',
+    appliedSearchTerm,
     onSearchChange = () => {},
     questsAll,
     questCardWidth,
@@ -140,12 +143,21 @@ export default function QuestsContentPanel({
     // задевает: их кладёт отдельный скрытый индекс сборки
     // (`scripts/generate-seo-pages.js:injectQuestLinksIndex`), а не сама сетка.
     const [visibleCount, setVisibleCount] = useState(QUEST_GRID_PAGE_SIZE);
+    const gridViewportHeightRef = useRef(0);
 
     // Смена набора (город, фильтр, поиск) начинает окно заново — иначе после
-    // «все квесты» узкий срез рисовался бы с раздутым окном.
+    // «все квесты» узкий срез рисовался бы с раздутым окном. Ключ — сама
+    // выборка, а не ссылка на массив: переключатель «Популярные» отдаёт новый
+    // массив того же набора, и по ссылке он схлопывал бы уже раскрытое окно.
+    const catalogSelectionKey = [
+        selectedCityId ?? '',
+        appliedSearchTerm ?? searchQuery,
+        isMapAreaActive ? 'area' : '',
+        questsAll.length,
+    ].join('|');
     useEffect(() => {
         setVisibleCount(QUEST_GRID_PAGE_SIZE);
-    }, [questsAll]);
+    }, [catalogSelectionKey]);
 
     const visibleQuests = useMemo(
         () => (questsAll.length <= visibleCount ? questsAll : questsAll.slice(0, visibleCount)),
@@ -160,12 +172,31 @@ export default function QuestsContentPanel({
 
     const handleGridScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
         const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+        gridViewportHeightRef.current = layoutMeasurement.height;
         const distanceToEnd = contentSize.height - (contentOffset.y + layoutMeasurement.height);
         if (distanceToEnd <= QUEST_GRID_REVEAL_DISTANCE) revealMoreQuests();
     }, [revealMoreQuests]);
 
+    const handleGridLayout = useCallback((event: LayoutChangeEvent) => {
+        gridViewportHeightRef.current = event.nativeEvent.layout.height;
+    }, []);
+
+    // Прокрутка — не единственный путь: широкий экран, увеличенный масштаб или
+    // узкий срез укладывают окно целиком во вьюпорт, скролл-события не
+    // возникает вовсе, и остаток каталога становится недостижим. Пока контент
+    // помещается в вьюпорт, окно растёт само; рост ограничен размером набора,
+    // поэтому цикл конечен.
+    const handleGridContentSizeChange = useCallback((_width: number, contentHeight: number) => {
+        const viewportHeight = gridViewportHeightRef.current;
+        if (viewportHeight > 0 && contentHeight <= viewportHeight) revealMoreQuests();
+    }, [revealMoreQuests]);
+
     const router = useRouter();
-    const searchActive = searchQuery.trim().length > 0;
+    // #1826: заголовок, счётчик и пустые состояния обязаны жить по тому же
+    // терму, что и список. Иначе на debounce-паузе шапка уже «поиск», а список
+    // ещё прежний — и при пустом прежнем наборе на 200 мс показывалось
+    // «Ничего не найдено» при живых результатах.
+    const searchActive = (appliedSearchTerm ?? searchQuery).trim().length > 0;
 
     // The no-JS catalog is intentionally visible in generated HTML. Once the
     // interactive catalog mounts, remove only its explicitly marked SSG nodes
@@ -722,6 +753,8 @@ export default function QuestsContentPanel({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             onScroll={handleGridScroll}
+            onLayout={handleGridLayout}
+            onContentSizeChange={handleGridContentSizeChange}
             scrollEventThrottle={QUEST_GRID_SCROLL_THROTTLE}
             testID="quests-content"
         >
@@ -729,3 +762,11 @@ export default function QuestsContentPanel({
         </ScrollView>
     );
 }
+
+/**
+ * #1826: Done gate требует границу мемоизации и здесь. Во время набора она
+ * ничего не отбивает (`searchQuery` меняется на каждый символ — так и должно
+ * быть, поле обязано оставаться мгновенным), но снимает лишние проходы по
+ * панели на посторонних рендерах экрана: геолокация, фокус, тема.
+ */
+export default memo(QuestsContentPanel)

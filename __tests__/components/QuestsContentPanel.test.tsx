@@ -648,6 +648,59 @@ describe('QuestsContentPanel', () => {
         expect(getByTestId('quest-card-quest-53').props.accessibilityHint).toBe('53');
     });
 
+    // Прокрутка — не единственный путь раскрытия: на широком экране или при
+    // увеличенном масштабе окно укладывается во вьюпорт целиком, скролл-событий
+    // не возникает вовсе, и остаток каталога был бы недостижим.
+    it('grows the web grid window while the content still fits the viewport', () => {
+        mockIsMobile = false;
+        (Platform as { OS: string }).OS = 'web';
+        const LazyQuestMap = jest.fn(() => null);
+        const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
+
+        const { getByTestId, queryByTestId } = render(
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="list"
+                selectedCityId="warsaw"
+                selectedCityName="Warsaw"
+                nearbyId="__nearby__"
+                nearbyRadiusKm={15}
+                questsAll={quests}
+                questCardWidth={320}
+                mapPoints={[]}
+                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
+                userLoc={null}
+                isMapAreaActive={false}
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch={false}
+                radiiLg={24}
+                LazyQuestMap={LazyQuestMap}
+                isMobile={false}
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+                onSetRadius={() => {}}
+                onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
+            />
+        );
+
+        const scroller = getByTestId('quests-content');
+        expect(queryByTestId('quest-card-quest-24')).toBeNull();
+
+        // Вьюпорт заведомо выше контента: скроллить нечего.
+        fireEvent(scroller, 'layout', { nativeEvent: { layout: { height: 20000, width: 1440 } } });
+        fireEvent(scroller, 'contentSizeChange', 1440, 1200);
+        expect(getByTestId('quest-card-quest-24')).toBeTruthy();
+
+        fireEvent(scroller, 'contentSizeChange', 1440, 2400);
+        expect(getByTestId('quest-card-quest-53')).toBeTruthy();
+    });
+
     // Смена набора обязана начинать окно заново: иначе узкий срез после «всех
     // квестов» рисовался бы с раздутым окном.
     it('restarts the web grid window when the catalog changes', () => {
@@ -702,6 +755,60 @@ describe('QuestsContentPanel', () => {
         rerender(panel(quests.slice(0, 40)));
         expect(queryByTestId('quest-card-quest-24')).toBeNull();
         expect(getByTestId('quest-card-quest-23')).toBeTruthy();
+    });
+
+    // Переключатель «Популярные» отдаёт новый массив того же набора. Окно,
+    // привязанное к ссылке, схлопывалось бы на смене одного лишь порядка.
+    it('keeps the web grid window when only the order of the same catalog changes', () => {
+        mockIsMobile = true;
+        (Platform as { OS: string }).OS = 'web';
+        const LazyQuestMap = jest.fn(() => null);
+        const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
+
+        const panel = (data: QuestMeta[]) => (
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="list"
+                selectedCityId="warsaw"
+                selectedCityName="Warsaw"
+                nearbyId="__nearby__"
+                nearbyRadiusKm={15}
+                questsAll={data}
+                questCardWidth={320}
+                mapPoints={[]}
+                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
+                userLoc={null}
+                isMapAreaActive={false}
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch={false}
+                radiiLg={24}
+                LazyQuestMap={LazyQuestMap}
+                isMobile
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+                onSetRadius={() => {}}
+                onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
+            />
+        );
+
+        const { getByTestId, rerender } = render(panel(quests));
+        fireEvent.scroll(getByTestId('quests-content'), {
+            nativeEvent: {
+                contentOffset: { y: 10000 },
+                contentSize: { height: 10400, width: 390 },
+                layoutMeasurement: { height: 800, width: 390 },
+            },
+        });
+        expect(getByTestId('quest-card-quest-24')).toBeTruthy();
+
+        rerender(panel(quests.slice().reverse()));
+        expect(getByTestId('quest-card-quest-29')).toBeTruthy();
     });
 
     it('exposes the mobile nearby CTA and geolocation message in list mode', () => {
