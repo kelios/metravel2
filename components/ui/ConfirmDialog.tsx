@@ -1,7 +1,7 @@
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { Dialog, Portal } from '@/ui/paper';
 import { Modal, Text, StyleSheet, Platform, ScrollView, View } from 'react-native';
-import type { ViewStyle } from 'react-native';
+import type { LayoutChangeEvent, ViewStyle } from 'react-native';
 import Button from '@/components/ui/Button';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -70,6 +70,58 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         paddingHorizontal: isMobile ? 20 : 24,
     }), [isMobile]);
 
+    // Гейт остановки Tab: `focusable` даёт `tabindex="0"`, а `useFocusTrap`
+    // подхватывает всё с tabindex в свой цикл. Безусловный focusable добавил бы
+    // лишний шаг Tab каждому подтверждению приложения — а прокручивать в
+    // однострочном сообщении нечего. Поэтому меряем реальное переполнение:
+    // фокусируемой и регионом для скринридера область становится только тогда,
+    // когда есть что прокручивать.
+    const [messageOverflows, setMessageOverflows] = useState(false);
+    const messageViewportRef = useRef(0);
+    const messageContentRef = useRef(0);
+    const syncMessageOverflow = useCallback(() => {
+        const viewport = messageViewportRef.current;
+        // Дробные высоты RNW дают ложное переполнение на пиксель.
+        setMessageOverflows(viewport > 0 && messageContentRef.current > viewport + 1);
+    }, []);
+    const handleMessageLayout = useCallback((event: LayoutChangeEvent) => {
+        messageViewportRef.current = event.nativeEvent.layout.height;
+        syncMessageOverflow();
+    }, [syncMessageOverflow]);
+    const handleMessageContentSize = useCallback((_width: number, height: number) => {
+        messageContentRef.current = height;
+        syncMessageOverflow();
+    }, [syncMessageOverflow]);
+
+    const messageBlock = (
+        <ScrollView
+            testID="confirm-dialog-message"
+            style={styles.messageScroll}
+            onLayout={handleMessageLayout}
+            onContentSizeChange={handleMessageContentSize}
+            focusable={messageOverflows}
+            {...(messageOverflows
+                ? Platform.select({
+                    web: webAccessibilityProps({
+                        role: 'region',
+                        'aria-label': title,
+                    }),
+                })
+                : null)}
+        >
+            <Text
+                style={styles.dialogText}
+                {...Platform.select({
+                    web: webAccessibilityProps({
+                        id: 'dialog-message',
+                    }),
+                })}
+            >
+                {message}
+            </Text>
+        </ScrollView>
+    );
+
     // ✅ УЛУЧШЕНИЕ: Focus trap для модального окна
     useFocusTrap(dialogRef, {
         enabled: visible && Platform.OS === 'web',
@@ -130,33 +182,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         >
                             {title}
                         </Text>
-                        <ScrollView
-                            testID="confirm-dialog-message"
-                            style={styles.messageScroll}
-                            // Иначе скрытую часть длинного сообщения не прочитать
-                            // с клавиатуры: `useFocusTrap` перехватывает каждый
-                            // Tab и водит фокус только по `FOCUSABLE_SELECTOR`, а
-                            // у скроллера RNW своего `tabindex` нет. `focusable`
-                            // отдаёт `tabindex="0"`, селектор его подхватывает.
-                            focusable
-                            {...Platform.select({
-                                web: webAccessibilityProps({
-                                    role: 'region',
-                                    'aria-label': title,
-                                }),
-                            })}
-                        >
-                            <Text
-                                style={styles.dialogText}
-                                {...Platform.select({
-                                    web: webAccessibilityProps({
-                                        id: 'dialog-message',
-                                    }),
-                                })}
-                            >
-                                {message}
-                            </Text>
-                        </ScrollView>
+                        {messageBlock}
 
                         <View style={[styles.actionContainer, isMobile && styles.actionContainerMobile]}>
                             <Button
@@ -227,21 +253,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                     {title}
                 </Dialog.Title>
                 <Dialog.Content style={styles.dialogContent}>
-                    <ScrollView
-                        testID="confirm-dialog-message"
-                        style={styles.messageScroll}
-                    >
-                        <Text
-                            style={styles.dialogText}
-                            {...Platform.select({
-                                web: webAccessibilityProps({
-                                    id: 'dialog-message',
-                                }),
-                            })}
-                        >
-                            {message}
-                        </Text>
-                    </ScrollView>
+                    {messageBlock}
                 </Dialog.Content>
                 <Dialog.Actions style={[styles.actionContainer, isMobile && styles.actionContainerMobile]}>
                     <Button

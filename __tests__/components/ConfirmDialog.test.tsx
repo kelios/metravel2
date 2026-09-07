@@ -1,4 +1,4 @@
-import { render, fireEvent, waitFor, within } from '@testing-library/react-native'
+import { render, fireEvent, waitFor, within, act } from '@testing-library/react-native'
 import { Modal, Platform, StyleSheet } from 'react-native'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
@@ -135,10 +135,6 @@ describe('ConfirmDialog', () => {
     const messageArea = getByTestId('confirm-dialog-message')
     // Единственный сжимаемый блок: переполнение уходит в прокрутку сообщения.
     expect(flattenStyle(messageArea.props.style).flexShrink).toBe(1)
-    // `useFocusTrap` перехватывает каждый Tab и водит фокус только по своему
-    // селектору; без `focusable` (→ `tabindex="0"`) скрытую часть длинного
-    // сообщения нельзя прочитать с клавиатуры.
-    expect(messageArea.props.focusable).toBe(true)
     expect(within(messageArea).getByText(LONG_MESSAGE)).toBeTruthy()
     // Кнопки лежат вне области прокрутки, поэтому остаются на экране.
     expect(within(messageArea).queryByText('Удалить')).toBeNull()
@@ -159,6 +155,36 @@ describe('ConfirmDialog', () => {
     // Кнопки по-прежнему смонтированы и кликабельны при любой длине сообщения.
     fireEvent.press(getByText('Удалить'))
     expect(defaultProps.onConfirm).toHaveBeenCalledTimes(1)
+  })
+
+  it('takes a Tab stop only while the message actually overflows', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web' })
+
+    const { getByTestId } = render(<ConfirmDialog {...defaultProps} message={LONG_MESSAGE} />)
+    const messageArea = getByTestId('confirm-dialog-message')
+
+    // До замера область не претендует на фокус.
+    expect(messageArea.props.focusable).toBe(false)
+
+    // Однострочное сообщение: прокручивать нечего — лишнего шага Tab быть не
+    // должно, иначе он появится в КАЖДОМ подтверждении приложения.
+    act(() => {
+      fireEvent(messageArea, 'layout', { nativeEvent: { layout: { height: 300 } } })
+      fireEvent(messageArea, 'contentSizeChange', 332, 24)
+    })
+    expect(getByTestId('confirm-dialog-message').props.focusable).toBe(false)
+
+    // Текст выше своей области: без остановки Tab скрытую часть не прочитать —
+    // `useFocusTrap` перехватывает каждый Tab и водит фокус только по элементам
+    // с `tabindex`, которого у скроллера RNW своего нет.
+    act(() => {
+      fireEvent(getByTestId('confirm-dialog-message'), 'contentSizeChange', 332, 1602)
+    })
+    expect(getByTestId('confirm-dialog-message').props.focusable).toBe(true)
+    // `role="region"`/`aria-label` этим сьютом не проверить: `Platform.select`
+    // здесь — ios-реализация (`'web' in spec` она не смотрит) и на web-ветку
+    // отдаёт undefined, сколько ни подменяй `Platform.OS`. Их закрывает
+    // браузерная проба.
   })
 
   it('routes Escape only to the topmost confirm and hands control back after it unmounts', () => {
