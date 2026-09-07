@@ -1409,6 +1409,7 @@ if (typeof module !== 'undefined' && module.exports) {
     collectRichTextMediaUrls,
     collectUploadsScanDetails,
     familyOfMediaUrl,
+    isLegacyBucketUrl,
     mapWithConcurrency,
     toTargetUrlWithQuery,
     extractTargetsFromPayloads,
