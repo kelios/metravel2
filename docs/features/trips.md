@@ -124,11 +124,19 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 /trips/community  → CommunityRoutesCatalog → TripPlanCard × N
 /trips/plan/create→ TripCreateForm
 /trips/plan/:id   → PlannedTripScreen (табы route|people|export|more)
-                     ├─ route : RouteBuilder
+                     ├─ route : RouteBuilder  (контейнер-владелец черновика точек;
+                     │           │   хуки: useRoutePointDraft, useTripRouteFileBranch,
+                     │           │   useTripRouteRebuild, useTripRouteSave,
+                     │           │   useTripRouteElevationRefresh, useRouteSiteSearch)
+                     │           ├─ RouteBuilderLayout  (stack | mapFirst → RouteBuilderMobile)
                      │           ├─ TripPlanRouteMap(.web)
-                     │           ├─ RoutePointRow × N (useRoutePointDrag)
+                     │           ├─ RouteTransportSection → TripBikeTypeControl
+                     │           ├─ RoutePointsSection
+                     │           │    ├─ RoutePointRow × N (useRoutePointDrag)
+                     │           │    └─ RoutePointAddForm
+                     │           ├─ RoutePointEditForm
                      │           ├─ RouteSummaryBar
-                     │           ├─ TripBikeTypeControl
+                     │           ├─ RouteSaveSection
                      │           ├─ RouteElevationProfile (safeLazy)
                      │           └─ TripRouteDownloadButtons
                      ├─ people: TripParticipantsList, TripRsvpControl,
@@ -141,7 +149,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 
 | Файл | LOC | Зона ответственности |
 | --- | --- | --- |
-| `components/trips/planning/RouteBuilder.tsx` | **979 — >800, кандидат на распил** | конструктор маршрута: точки, порядок, поиск по местам/путешествиям сайта, шаблоны, транспорт/тип велосипеда, живая сводка, экспорт, сохранение |
+| `components/trips/planning/RouteBuilder.tsx` | 778 | контейнер конструктора после распила #1825: владеет черновиком точек, картой, превью и шаблонами; остальное — в модулях ниже. Ниже порога 800, поэтому `guard:file-complexity:changed` для него блокирующий |
 | `app/(tabs)/trips/plan/[id].tsx` | 688 | экран поездки: шапка, owner-редактор метаданных, табы планировщика, удаление |
 | `components/trips/planning/TripPlanRouteMap.web.tsx` | 661 | Leaflet/React-Leaflet карта конструктора на web, слои, fullscreen |
 | `components/trips/planning/TripCreateForm.tsx` | 653 | форма создания поездки, yup-валидация, prefill из travel |
@@ -150,6 +158,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/chat/TripChatPanel.tsx` | 409 | чат поездки |
 | `components/trips/PublicTripsCatalog.tsx` | 404 | каталог: поиск, фильтры, адаптивная сетка 1/2/3 колонки |
 | `components/trips/PublicTripFilters.tsx` | 391 | панель фильтров каталога |
+| `components/trips/planning/useRoutePointDraft.ts` | 329 | состояние обеих форм точки (добавление и правка), ref'ы автоподстановки адреса (#1782) и переходы между формами |
 | `components/trips/planning/RoutePointRow.tsx` | 321 | строка точки маршрута: на mobile — вся строка кнопка «открыть точку» плюс инлайн-редактор в карточке, на desktop — четыре кнопки управления |
 | `components/trips/planning/useRoutePointDrag.ts` | 305 | drag&drop точек маршрута поверх `routePointReorder` |
 | `components/trips/planning/TripPlanCard.tsx` | 304 | карточка planned/community trip |
@@ -158,8 +167,10 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/planning/TripRatingPanel.tsx` | 249 | оценки участников после завершения |
 | `components/trips/OrganizerApplicationsPanel.tsx` | 238 | решения организатора по заявкам |
 | `components/trips/planning/TripInvitePanel.tsx` | 232 | приглашение участников, share-ссылки |
+| `components/trips/planning/RoutePointEditForm.tsx` | 211 | форма правки точки: тип, название, координаты, описание, адресный поиск; на mapFirst — плюс перестановка и удаление |
 | `components/trips/planning/TripSuggestPointForm.tsx` | 221 | предложение точки участником |
 | `components/trips/planning/tripPlanFormatting.ts` | 214 | метки/иконки/цвета планировщика, сводка маршрута строкой, даты |
+| `components/trips/planning/RoutePointsSection.tsx` | 192 | шаг 2 панели: список точек и форма добавления |
 | `components/trips/TripApplyForm.tsx` | 189 | форма «Хочу поехать» |
 | `components/trips/planning/TripSuggestionsPanel.tsx` | 189 | список предложенных точек и решения |
 | `components/trips/communication/TripTelegramGroupCard.tsx` | 185 | группа Telegram поездки |
@@ -168,18 +179,27 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/planning/CommunityRoutesCatalog.tsx` | 176 | каталог маршрутов сообщества |
 | `components/trips/MyTripsDashboard.tsx` | 167 | дашборд «Мои поездки», сегменты и счётчики |
 | `components/trips/planning/RouteBuilder.styles.ts` | 165 | стили конструктора |
+| `components/trips/planning/useTripRouteFileBranch.ts` | 143 | файл маршрута: чтение, оригинальный трек, загрузка и удаление плюс синхронные локи (#1824) |
+| `components/trips/planning/RouteBuilderLayout.tsx` | 137 | две раскладки панели: `stack` (две колонки) и `mapFirst` (через RouteBuilderMobile) |
 | `components/trips/planning/TripRouteExportMenu.tsx` | 150 | экспорт: скачивание + открытие в навигаторе |
 | `components/trips/planning/RouteSummaryBar.tsx` | 147 | сводка маршрута под конструктором |
+| `components/trips/planning/routeBuilderPoint.ts` | 115 | чистые хелперы точки: разбор координат, формат ввода, имя из адреса, сигнатура маршрута |
 | `components/trips/planning/TripParticipantsList.tsx` | 124 | участники и их RSVP |
 | `components/trips/planning/TripPlanningEmptyState.tsx` | 121 | пустое состояние планировщика |
 | `components/trips/PublicTripCard.tsx` | 114 | карточка публичной поездки |
 | `components/trips/TripNotificationsList.tsx` | 113 | уведомления о заявках |
 | `components/trips/planning/tripRouteExport.ts` | 110 | единая сборка GPX/KML + хук состояния экспорта |
+| `components/trips/planning/useTripRouteSave.ts` | 109 | сохранение маршрута: синхронный лок PUT (#1824), ошибка с подписью маршрута, догрузка оригинала |
+| `components/trips/planning/RouteTransportSection.tsx` | 107 | шаг 1 панели: транспорт и тип велосипеда |
+| `components/trips/planning/useTripRouteRebuild.ts` | 106 | транспорт и велопрофиль: общий лок и общая ошибка — один PATCH на переключение |
+| `components/trips/planning/useTripRouteElevationRefresh.ts` | 106 | источник профиля высот, один пересчёт ORS на маршрут, подписи точек для графика |
+| `components/trips/planning/useRouteSiteSearch.ts` | 95 | поиск места или путешествия сайта для формы добавления точки |
 | `components/trips/MyApplicationsList.tsx` | 99 | мои заявки и отмена |
 | `components/trips/planning/tripFallbackCover.ts` | 97 | детерминированная обложка-заглушка |
 | `components/trips/planning/TripRsvpControl.tsx` | 97 | going/maybe/declined |
 | `components/trips/planning/TripRouteDownloadButtons.tsx` | 94 | пара кнопок GPX/KML, общая для двух мест |
 | `components/trips/planning/TripPlanLinkedText.tsx` | 246 | автолинк в описании: на web настоящий `<a href>`, на native `onPress` |
+| `components/trips/planning/RouteSaveSection.tsx` | 81 | CTA сохранения маршрута и его ошибки |
 | `components/trips/planning/TripPlanLinksBlock.tsx` | 85 | блок «Ссылки» — чипы с доменами из описания поездки |
 | `components/trips/tripFormatting.ts` | 74 | метки/цвета статусов каталога, даты, места |
 | `components/trips/planning/TripAffiliateBlock.tsx` | 74 | партнёрские ссылки |
@@ -189,7 +209,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/publicTripCatalogUtils.ts` | 39 | сортировка (featured вперёд), поиск, признак активных фильтров |
 | `components/trips/planning/TripBikeTypeControl.tsx` | 48 | выбор типа велосипеда |
 
-Всего `components/trips/**` — 44 файла, ~11k LOC вместе с роутами.
+Всего `components/trips/**` — 76 файлов, ~16k LOC вместе с роутами.
 
 ## Модель данных
 

@@ -5,23 +5,18 @@
 // #1490: пока правки не сохранены, линию и цифры даёт тот же движок
 // маршрутизации, что и /map, а не прямая между точками.
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
+import { Platform, Text, View } from 'react-native';
 
-import { fetchPlacesCatalog } from '@/api/places';
-import { fetchTravels } from '@/api/travelsApi';
-import type { Travel, TravelAddressItem } from '@/types/types';
 import Button from '@/components/ui/Button';
-import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import { safeLazy } from '@/components/layout/safeLazy';
-import RouteBuilderMobile from '@/components/trips/planning/RouteBuilderMobile';
-import RoutePointAddForm, {
-  type SiteRouteOption,
-  type SiteSearchStatus,
-} from '@/components/trips/planning/RoutePointAddForm';
+import RouteBuilderLayout from '@/components/trips/planning/RouteBuilderLayout';
+import { type SiteRouteOption } from '@/components/trips/planning/RoutePointAddForm';
+import RoutePointEditForm from '@/components/trips/planning/RoutePointEditForm';
 import RoutePointRow from '@/components/trips/planning/RoutePointRow';
+import RoutePointsSection from '@/components/trips/planning/RoutePointsSection';
+import RouteSaveSection from '@/components/trips/planning/RouteSaveSection';
+import RouteTransportSection from '@/components/trips/planning/RouteTransportSection';
 import RouteSummaryBar from '@/components/trips/planning/RouteSummaryBar';
-import TripBikeTypeControl from '@/components/trips/planning/TripBikeTypeControl';
 import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap';
 import TripRouteDownloadButtons from '@/components/trips/planning/TripRouteDownloadButtons';
 import TripRouteImportPanel from '@/components/trips/planning/TripRouteImportPanel';
@@ -30,53 +25,43 @@ import {
   useTripRouteExport,
 } from '@/components/trips/planning/tripRouteExport';
 import RoutingStatus, { ROUTING_DIRECT_LINE } from '@/components/MapPage/RoutingStatus';
-import AddressSearch from '@/components/MapPage/AddressSearch';
 import RouteStepBlock from '@/components/MapPage/RouteStepBlock';
-import { routeBuilderCta } from '@/components/trips/planning/routeBuilderCta';
 import TripRoutePreviewEngine from '@/components/trips/planning/TripRoutePreviewEngine';
 import {
-  ROUTE_TRANSPORTS,
-  isRoutableTransport,
   previewPointsKey,
   previewStopsCount,
   routablePreviewPoints,
 } from '@/components/trips/planning/tripRoutePreview';
 import {
-  ROUTE_POINT_COORDINATE_PRECISION,
   type MapFocusPoint,
   type RoutePointMove,
 } from '@/components/trips/planning/tripPlanRouteMap.types';
+import {
+  COORDINATE_PRECISION,
+  POINT_TYPES,
+  formatCoordinateInput,
+  routeSignature,
+} from '@/components/trips/planning/routeBuilderPoint';
+import { useRoutePointDraft } from '@/components/trips/planning/useRoutePointDraft';
+import { useRouteSiteSearch } from '@/components/trips/planning/useRouteSiteSearch';
 import { useTripRouteDisplay } from '@/components/trips/planning/useTripRouteDisplay';
 import {
   type PlannedTrip,
   type RouteSummary,
   type RoutingState,
   type RoutePoint,
-  type RoutePointType,
-  type TripBikeType,
 } from '@/api/plannedTrips';
+import { TRANSPORT_LABEL } from '@/components/trips/planning/tripPlanFormatting';
+import { type PickedTripRouteFileUpload } from '@/components/trips/planning/TripRouteFilePicker.types';
+import { useTripRouteFileBranch } from '@/components/trips/planning/useTripRouteFileBranch';
 import {
-  ROUTE_POINT_ICON_NAME,
-  ROUTE_POINT_LABEL,
-  TRANSPORT_LABEL,
-} from '@/components/trips/planning/tripPlanFormatting';
+  useTripRouteElevationRefresh,
+  useTripRouteElevationSource,
+} from '@/components/trips/planning/useTripRouteElevationRefresh';
+import { useTripRouteRebuild } from '@/components/trips/planning/useTripRouteRebuild';
+import { useTripRouteSave } from '@/components/trips/planning/useTripRouteSave';
 import {
-  usePlannedTripOriginalTrack,
-  usePlannedTripRouteFile,
-  useDeletePlannedTripRouteFile,
-  useUploadPlannedTripRouteFile,
-} from '@/hooks/usePlannedTripRouteFile';
-import { releasePickedTripRouteUpload } from '@/components/trips/planning/TripRouteFilePicker';
-import {
-  toRouteFileUploadPart,
-  type PickedTripRouteFileUpload,
-} from '@/components/trips/planning/TripRouteFilePicker.types';
-import {
-  useRefreshTripRouteElevation,
   useRouteTemplates,
-  useTripRouteElevation,
-  useUpdateTripBikeType,
-  useUpdateTripTransport,
   useUpdateTripRoute,
 } from '@/hooks/usePlannedTripsApi';
 import { trackRoutePointAdded } from '@/utils/tripAnalytics';
@@ -125,113 +110,6 @@ interface Props {
   onDisplayStateChange?: (state: RouteBuilderDisplayState | null) => void;
 }
 
-const POINT_TYPES: RoutePointType[] = ['place', 'custom', 'rest', 'overnight'];
-/** Старт и финиш: тот же порог «маршрут можно строить», что и на /map. */
-const MIN_ROUTE_POINTS = 2;
-const SITE_SEARCH_MIN_LENGTH = 2;
-
-const parseNumber = (value: unknown): number | null => {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim()) {
-    const parsed = Number(value.replace(',', '.').trim());
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-};
-
-const parseLatLngPair = (value: unknown): { lat: number; lng: number } | null => {
-  if (typeof value !== 'string') return null;
-  const [latRaw, lngRaw] = value.split(',').map((part) => part.trim());
-  const lat = parseNumber(latRaw);
-  const lng = parseNumber(lngRaw);
-  if (lat == null || lng == null) return null;
-  return { lat, lng };
-};
-
-const travelAddressCoordinates = (point: TravelAddressItem): { lat: number; lng: number } | null => {
-  if (typeof point === 'string') return null;
-  const directLat = parseNumber(point.lat);
-  const directLng = parseNumber(point.lng);
-  if (directLat != null && directLng != null) return { lat: directLat, lng: directLng };
-  return parseLatLngPair(point.coords);
-};
-
-const travelCoordinates = (travel: Travel): [number, number] | null => {
-  const routePoint = travel.coordsMeTravel?.find((point) => {
-    const lat = parseNumber(point.lat);
-    const lng = parseNumber(point.lng);
-    return lat != null && lng != null;
-  });
-  if (routePoint) return [Number(routePoint.lng), Number(routePoint.lat)];
-
-  const addressPoint = travel.travelAddress
-    ?.map(travelAddressCoordinates)
-    .find((point): point is { lat: number; lng: number } => point != null);
-  return addressPoint ? [addressPoint.lng, addressPoint.lat] : null;
-};
-
-const compactText = (parts: Array<string | number | null | undefined>): string =>
-  parts
-    .map((part) => String(part ?? '').trim())
-    .filter(Boolean)
-    .join(' · ');
-
-/**
- * Шаг округления координат точки: один и тот же для ручного ввода, карты и
- * ключа защёлки кадра (#1781) — живёт в общем контракте карты маршрута.
- */
-const COORDINATE_PRECISION = ROUTE_POINT_COORDINATE_PRECISION;
-
-const formatCoordinateInput = (value: number): string => {
-  const rounded = value.toFixed(COORDINATE_PRECISION);
-  return rounded.replace(/\.?0+$/, '');
-};
-
-// #1491/#1782: адресный поиск отдаёт полный адрес до страны. Голова адреса
-// становится названием точки, весь адрес остаётся под рукой для описания.
-const addressPointName = (address: string): string => {
-  const full = address.trim();
-  const [head] = full.split(',');
-  return head.trim() || full;
-};
-
-const coordinatesFromFields = (
-  latValue: string,
-  lngValue: string,
-): { coordinates: [number, number] | null; error: string | null } => {
-  const latText = latValue.trim();
-  const lngText = lngValue.trim();
-  if (!latText && !lngText) return { coordinates: null, error: null };
-
-  const lat = parseNumber(latText);
-  const lng = parseNumber(lngText);
-  if (lat == null || lng == null) {
-    return { coordinates: null, error: i18nT('trips:components.trips.planning.RouteBuilder.ukazhite_shirotu_i_dolgotu_chislami_06a43fa9') };
-  }
-  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-    return { coordinates: null, error: i18nT('trips:components.trips.planning.RouteBuilder.shirota_dolzhna_byt_ot_90_do_90_dolgota_ot_1_964ccc95') };
-  }
-
-  return { coordinates: [lng, lat], error: null };
-};
-
-const routeSignature = (route: RoutePoint[]): string =>
-  route
-    .map((point) => {
-      const coords = point.coordinates
-        ? `${formatCoordinateInput(point.coordinates[0])},${formatCoordinateInput(point.coordinates[1])}`
-        : '';
-      return [
-        point.id,
-        point.type,
-        point.placeId ?? '',
-        point.name,
-        point.description ?? '',
-        coords,
-      ].join('|');
-    })
-    .join('>');
-
 function RouteBuilder({
   trip,
   layout = 'stack',
@@ -254,12 +132,7 @@ function RouteBuilder({
     [panelStyles],
   );
   const updateTripRoute = useUpdateTripRoute();
-  const updateTripTransport = useUpdateTripTransport();
-  const updateTripBikeType = useUpdateTripBikeType();
   const templatesQuery = useRouteTemplates();
-  // Транспорт и тип велосипеда шлют один и тот же PATCH по одной поездке,
-  // поэтому лок общий: параллельных перестроений маршрута быть не должно.
-  const transportMutationLockedRef = useRef(false);
   // #1824: у сохранения маршрута лока не было вовсе. `disabled` кнопки держится
   // на `isPending`, а он появляется только со следующим рендером — повтор в
   // одном тике успевал отправить второй PUT. Ref ловит его синхронно, как это
@@ -278,77 +151,88 @@ function RouteBuilder({
     setRouteReplacementToken((value) => value + 1);
   }, []);
 
-  const [newType, setNewType] = useState<RoutePointType>('place');
-  const [newName, setNewName] = useState('');
-  const [newLat, setNewLat] = useState('');
-  const [newLng, setNewLng] = useState('');
-  const [newDescription, setNewDescription] = useState('');
-  const [newPointError, setNewPointError] = useState<string | null>(null);
-  const [isAddPointOpen, setIsAddPointOpen] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editType, setEditType] = useState<RoutePointType>('custom');
-  const [editName, setEditName] = useState('');
-  const [editLat, setEditLat] = useState('');
-  const [editLng, setEditLng] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editError, setEditError] = useState<string | null>(null);
-  // #1782: повторный выбор адреса обязан переписать то, что подставил сам поиск,
-  // и не тронуть то, что набрал пользователь. Ref держит последнее записанное
-  // поиском значение: поле, равное ему, принадлежит поиску, `null` — правке
-  // пользователя. Иначе исправленная «Острава → Прага» уезжала бы в маршрут с
-  // пражскими координатами под именем и описанием Остравы.
-  const addAddressAutofillRef = useRef<{ name: string | null; description: string | null }>({
-    name: '',
-    description: '',
+  const {
+    routeRebuildError,
+    transportPending,
+    isRouteRebuildBusy,
+    handleTransportChange,
+    handleBikeTypeChange,
+  } = useTripRouteRebuild({
+    trip,
+    setRoute,
+    t,
+    isRouteSaveBusy: () => routeSaveLockedRef.current || updateTripRoute.isPending,
   });
-  const editAddressAutofillNameRef = useRef<string | null>('');
-  // Зеркало `editName` для `handleEditAddressSelect`: сравнивать надо до записи
-  // ref'а автоподстановки, а зависимость от самого состояния пересоздавала бы
-  // колбэк на каждый символ и снимала `React.memo` с `AddressSearch` формы.
-  const editNameRef = useRef('');
-  const [siteQuery, setSiteQuery] = useState('');
-  const [siteOptions, setSiteOptions] = useState<SiteRouteOption[]>([]);
-  const [siteSearchStatus, setSiteSearchStatus] = useState<SiteSearchStatus>('idle');
-  const [transportCommitPending, setTransportCommitPending] = useState(false);
-  // Транспорт и тип велосипеда перестраивают маршрут одним потоком, поэтому и
-  // ошибка одна: иначе неудача одного контрола висела бы под другим успешным.
-  const [routeRebuildError, setRouteRebuildError] = useState<string | null>(null);
 
-  // #1496 — фаза 2 импорта. Исходный файл хранится у поездки отдельно от точек:
-  // хранилище доступно только владельцу, поэтому участник видит обычный маршрут
-  // без запросов к нему.
-  const routeFileQuery = usePlannedTripRouteFile(trip.id, { enabled: trip.isOwner });
-  const storedRouteFile = routeFileQuery.data ?? null;
-  const originalTrackQuery = usePlannedTripOriginalTrack(trip.id, storedRouteFile, {
-    enabled: trip.isOwner,
-  });
-  const originalTrack = originalTrackQuery.data ?? null;
-  const uploadRouteFile = useUploadPlannedTripRouteFile();
-  const deleteRouteFile = useDeletePlannedTripRouteFile();
-  // Оригинал уезжает на бэкенд тем же действием «Сохранить маршрут», что и точки:
-  // иначе сохранённый файл описывал бы маршрут, которого у поездки ещё нет.
-  const pendingOriginalRef = useRef<PickedTripRouteFileUpload | null>(null);
-  const [pendingOriginalName, setPendingOriginalName] = useState<string | null>(null);
-  const [originalUploadError, setOriginalUploadError] = useState<string | null>(null);
-  // Отказ `PUT /route/` (например 400 от валидации точек) до этого нигде не
-  // всплывал: у мутации был только `onSuccess`, поэтому кнопка гасла, маршрут
-  // не сохранялся и пользователь не получал ни одного признака ошибки.
-  //
-  // Вместе с текстом храним подпись маршрута, на котором отказ случился: ошибка
-  // остаётся оценкой ровно того набора точек, который её вызвал. Как только на
-  // экране другой маршрут — правка точки, новый импорт, откат и повторная
-  // правка — сообщение само перестаёт показываться, без россыпи сбросов по всем
-  // местам, где меняется `route`.
-  const [routeSaveError, setRouteSaveError] = useState<
-    { message: string; signature: string } | null
-  >(null);
 
+  const {
+    newType,
+    newName,
+    newLat,
+    newLng,
+    newDescription,
+    newPointError,
+    isAddPointOpen,
+    editingIndex,
+    editType,
+    editName,
+    editLat,
+    editLng,
+    editDescription,
+    editError,
+    setNewType,
+    setNewName,
+    setNewLat,
+    setNewLng,
+    setNewDescription,
+    setNewPointError,
+    setIsAddPointOpen,
+    setEditingIndex,
+    setEditType,
+    setEditLat,
+    setEditLng,
+    setEditDescription,
+    setEditError,
+    handleAdd,
+    handleStartEdit,
+    handleCancelEdit,
+    commitEditName,
+    handleOpenAddPoint,
+    handleCancelAddPoint,
+    handleSaveEdit,
+    handleAddPointFromMap,
+    handleAddAddressSelect,
+    handleEditAddressSelect,
+  } = useRoutePointDraft({ tripId: trip.id, setRoute });
+
+  const {
+    storedRouteFile,
+    originalTrack,
+    pendingOriginalName,
+    originalUploadError,
+    originalUploadPending,
+    storedFileRemoving,
+    handleRemoveStoredRouteFile,
+    uploadPendingOriginal,
+    acceptImportedOriginal,
+  } = useTripRouteFileBranch({ tripId: trip.id, isOwner: trip.isOwner });
   const savedRouteSignature = useMemo(() => routeSignature(trip.route), [trip.route]);
   // #1491: кнопка действия существует только пока есть что отправлять. Сравнение
   // идёт по полной сигнатуре, а не по координатной: переименование точки — тоже
   // несохранённая правка, и потерять её молча нельзя.
   const currentRouteSignature = useMemo(() => routeSignature(route), [route]);
   const hasUnsavedRouteChanges = currentRouteSignature !== savedRouteSignature;
+  const { handleSave, visibleRouteSaveError } = useTripRouteSave({
+    tripId: trip.id,
+    route,
+    setRoute,
+    currentRouteSignature,
+    hasUnsavedRouteChanges,
+    routeSaveLockedRef,
+    updateTripRoute,
+    isRouteRebuildBusy,
+    uploadPendingOriginal,
+  });
   // Геометрия, сводка и высоты зависят только от координат и транспорта: правка
   // названия или описания точки их не обесценивает. Поэтому серверные данные
   // держатся за координатной сигнатурой, а не за полной — иначе опечатка в
@@ -366,57 +250,33 @@ function RouteBuilder({
     [trip.route],
   );
 
-  // Профиль высот описывает сохранённый маршрут, поэтому пока точки не совпадают
-  // с серверными, он скрыт вместе с серверной геометрией.
-  const routeElevationQuery = useTripRouteElevation(trip.id, {
-    enabled: routeShapeMatchesSaved && routableSavedPoints >= 2,
+  const {
+    routeElevationQuery,
+    routeElevation,
+    routeElevationPending,
+  } = useTripRouteElevationSource({
+    tripId: trip.id,
+    routeShapeMatchesSaved,
+    routableSavedPoints,
   });
-  const refreshRouteElevation = useRefreshTripRouteElevation();
-  const refreshRouteElevationMutate = refreshRouteElevation.mutate;
-  const routeElevation = routeShapeMatchesSaved ? routeElevationQuery.data ?? null : null;
 
   const routeDisplay = useTripRouteDisplay({
     trip,
     route,
     routeElevation,
-    routeElevationPending: routeShapeMatchesSaved && routeElevationQuery.isFetching,
+    routeElevationPending,
     routeShapeMatchesSaved,
   });
   const preview = routeDisplay.preview;
 
-  // Сохранение маршрута кладёт сводку без высот; один пересчёт ORS на маршрут
-  // возвращает ascent/descent и 3D-полилинию. Прямую линию не пересчитываем —
-  // у провайдера для неё высот нет.
-  const elevationRefreshKeyRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (
-      !trip.isOwner ||
-      !routeShapeMatchesSaved ||
-      routeElevationQuery.isFetching ||
-      !routeDisplay.hasUsableSavedGeometry
-    ) return;
-    const elevation = routeElevationQuery.data;
-    if (!elevation || elevation.preview || elevation.provider !== 'ors') return;
-
-    // Профиль зависит не только от точек: смена транспорта и типа велосипеда
-    // перестраивает маршрут на тех же точках и снова обнуляет высоты, поэтому
-    // без них ключ повторно совпал бы и график высот больше не вернулся бы.
-    const refreshKey = `${trip.id}:${savedRouteSignature}:${trip.transport}:${trip.bikeType ?? 'none'}`;
-    if (elevationRefreshKeyRef.current === refreshKey) return;
-    elevationRefreshKeyRef.current = refreshKey;
-    refreshRouteElevationMutate({ tripId: trip.id });
-  }, [
-    refreshRouteElevationMutate,
-    routeElevationQuery.data,
-    routeElevationQuery.isFetching,
-    routeDisplay.hasUsableSavedGeometry,
+  const elevationPlaceHints = useTripRouteElevationRefresh({
+    trip,
+    route,
+    routeElevationQuery,
     routeShapeMatchesSaved,
+    hasUsableSavedGeometry: routeDisplay.hasUsableSavedGeometry,
     savedRouteSignature,
-    trip.bikeType,
-    trip.id,
-    trip.isOwner,
-    trip.transport,
-  ]);
+  });
 
   // Один владелец выбирает всю отображаемую триаду. Если сохранённый healthy
   // status приехал без geometry, shared preview engine чинит тот же набор точек;
@@ -467,18 +327,6 @@ function RouteBuilder({
     />
   ) : null;
 
-  // Названия точек маршрута подписывают старт/пик/финиш на графике. Берём
-  // текущий маршрут, а не сохранённый: график идёт вслед за превью.
-  const elevationPlaceHints = useMemo(
-    () =>
-      route.flatMap((point) =>
-        point.coordinates
-          ? [{ name: point.name, coord: `${point.coordinates[1]},${point.coordinates[0]}` }]
-          : [],
-      ),
-    [route],
-  );
-
   const elevationPreview = routeDisplay.elevation;
 
   const elevationProfileSection = elevationPreview ? (
@@ -525,7 +373,7 @@ function RouteBuilder({
   const handleReorder = useCallback((from: number, to: number) => {
     setRoute((prev) => moveItem(prev, from, to));
     setEditingIndex((prev) => remapIndexAfterMove(prev, from, to));
-  }, []);
+  }, [setEditingIndex]);
 
   const handleMove = useCallback(
     (index: number, delta: number) => handleReorder(index, index + delta),
@@ -539,7 +387,7 @@ function RouteBuilder({
       if (prev === index) return null;
       return prev > index ? prev - 1 : prev;
     });
-  }, []);
+  }, [setEditingIndex]);
 
   // #1781: точку перетащили по карте. Владелец черновика здесь один, поэтому
   // перемещение проходит тем же путём, что и правка из списка: меняются только
@@ -570,51 +418,7 @@ function RouteBuilder({
       }
       return currentIndex;
     });
-  }, []);
-
-  const handleAdd = () => {
-    const name = newName.trim();
-    if (!name) return;
-    const { coordinates, error } = coordinatesFromFields(newLat, newLng);
-    if (error) {
-      setNewPointError(error);
-      return;
-    }
-    const description = newDescription.trim();
-
-    setNewPointError(null);
-    setRoute((prev) => [
-      ...prev,
-      {
-        id: `local-${prev.length}-${name}`,
-        type: newType,
-        name,
-        description: description || null,
-        coordinates,
-        placeId: null,
-      },
-    ]);
-    trackRoutePointAdded(trip.id, newType);
-    setNewName('');
-    setNewLat('');
-    setNewLng('');
-    setNewDescription('');
-    addAddressAutofillRef.current = { name: '', description: '' };
-    setIsAddPointOpen(false);
-  };
-
-  const handleStartEdit = useCallback((point: RoutePoint, index: number) => {
-    setIsAddPointOpen(false);
-    setEditingIndex(index);
-    setEditType(point.type);
-    setEditName(point.name);
-    editNameRef.current = point.name;
-    setEditDescription(point.description ?? '');
-    setEditLat(point.coordinates ? formatCoordinateInput(point.coordinates[1]) : '');
-    setEditLng(point.coordinates ? formatCoordinateInput(point.coordinates[0]) : '');
-    setEditError(null);
-    editAddressAutofillNameRef.current = '';
-  }, []);
+  }, [setEditError, setEditLat, setEditLng, setEditingIndex]);
 
   const handleEditPoint = useCallback(
     (index: number) => {
@@ -641,187 +445,13 @@ function RouteBuilder({
     [route],
   );
 
-  // Ссылка обязана быть стабильной: она уезжает в `onCloseEdit` каждой строки
-  // точки, а `RoutePointRow` мемоизирован — с новой функцией на каждый рендер
-  // любой символ в инлайн-редакторе перерисовывал бы весь список.
-  const handleCancelEdit = useCallback(() => {
-    setEditingIndex(null);
-    setEditError(null);
-    editAddressAutofillNameRef.current = '';
-  }, []);
-
-  // Единственная точка записи имени правки: состояние и его зеркало не должны
-  // разъезжаться.
-  const commitEditName = useCallback((next: string) => {
-    editNameRef.current = next;
-    setEditName(next);
-  }, []);
-
-  const handleOpenAddPoint = () => {
-    setEditingIndex(null);
-    setEditError(null);
-    setNewPointError(null);
-    addAddressAutofillRef.current = { name: '', description: '' };
-    setIsAddPointOpen(true);
-  };
-
-  const handleCancelAddPoint = () => {
-    setIsAddPointOpen(false);
-    setNewPointError(null);
-    addAddressAutofillRef.current = { name: '', description: '' };
-  };
-
-  // Применение открытой правки к маршруту. Вынесено из `handleSaveEdit`, потому что
-  // тот же коммит нужен тапу по карте: иначе незакрытый редактор либо блокирует
-  // добавление точек, либо молча теряет введённое имя.
-  const applyPointEdit = (prev: RoutePoint[], index: number): RoutePoint[] => {
-    const name = editName.trim();
-    if (!name) return prev;
-    const { coordinates, error } = coordinatesFromFields(editLat, editLng);
-    if (error || !coordinates) return prev;
-    const current = prev[index];
-    if (!current) return prev;
-    const next = prev.slice();
-    const nextType = editType === 'place' && current.placeId == null ? 'custom' : editType;
-    next[index] = {
-      ...current,
-      type: nextType,
-      name,
-      description: editDescription.trim() || null,
-      coordinates,
-      placeId: nextType === 'place' ? current.placeId : null,
-    };
-    return next;
-  };
-
-  const handleSaveEdit = () => {
-    if (editingIndex == null) return;
-    const name = editName.trim();
-    if (!name) {
-      setEditError(i18nT('trips:components.trips.planning.RouteBuilder.vvedite_nazvanie_tochki_65a2f141'));
-      return;
-    }
-
-    const { coordinates, error } = coordinatesFromFields(editLat, editLng);
-    if (error) {
-      setEditError(error);
-      return;
-    }
-
-    setRoute((prev) => {
-      const current = prev[editingIndex];
-      if (!current) return prev;
-      const next = prev.slice();
-      // #1532: `place` — не самостоятельный ярлык, а следствие привязки к месту
-      // или путешествию MeTravel. Точка без `placeId` этот тип получить не
-      // может: маршрут ушёл бы как `point_type: 'travel', place_id: null`, а
-      // бэкенд (`validate_route_point_attrs`) отклоняет такой PUT целиком —
-      // вместе со всеми здоровыми точками маршрута.
-      const nextType = editType === 'place' && current.placeId == null ? 'custom' : editType;
-      next[editingIndex] = {
-        ...current,
-        type: nextType,
-        name,
-        description: editDescription.trim() || null,
-        coordinates,
-        placeId: nextType === 'place' ? current.placeId : null,
-      };
-      return next;
-    });
-    setEditingIndex(null);
-    setEditError(null);
-  };
-
-  const handleAddPointFromMap = ({ lat, lng }: { lat: number; lng: number }) => {
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-    setIsAddPointOpen(false);
-    // Точка, добавленная с карты, сразу открывает редактор (так задумано подсказкой
-    // «после клика можно сразу переименовать»). Раньше это же и убивало карту: пока
-    // редактор открыт, обработчик тапа не передавался вовсе, и следующий тап молча
-    // ничего не делал — при живой подсказке «нажмите на карту, чтобы добавить точку».
-    // Теперь незакрытая правка фиксируется, и цепочка тапов работает подряд.
-    const pendingIndex = editingIndex;
-    setRoute((prev) => {
-      const base = pendingIndex == null ? prev : applyPointEdit(prev, pendingIndex);
-      const nextIndex = base.length;
-      const name = i18nT('trips:components.trips.planning.RouteBuilder.tochka_value1_58a44f4e', { value1: nextIndex + 1 });
-      const point: RoutePoint = {
-        id: `map-${Date.now()}-${nextIndex}`,
-        type: 'custom',
-        name,
-        description: null,
-        coordinates: [lng, lat],
-        placeId: null,
-      };
-      setEditingIndex(nextIndex);
-      setEditType(point.type);
-      setEditName(point.name);
-      editNameRef.current = point.name;
-      setEditDescription('');
-      setEditLat(formatCoordinateInput(lat));
-      setEditLng(formatCoordinateInput(lng));
-      setEditError(null);
-      // Тап по карте — такой же вход в правку новой точки, как `handleStartEdit`:
-      // без сброса имя, подставленное поиском предыдущей точке, считалось бы
-      // «своим» и молча переписалось бы следующим выбором адреса.
-      editAddressAutofillNameRef.current = '';
-      return [...base, point];
-    });
-    trackRoutePointAdded(trip.id, 'custom');
-  };
-
-  useEffect(() => {
-    const query = siteQuery.trim();
-    if (!isAddPointOpen || newType !== 'place' || query.length < SITE_SEARCH_MIN_LENGTH) {
-      setSiteOptions([]);
-      setSiteSearchStatus('idle');
-      return;
-    }
-
-    const controller = new AbortController();
-    setSiteSearchStatus('loading');
-
-    Promise.all([
-      fetchPlacesCatalog({ page: 1, perPage: 6, q: query }, controller.signal),
-      fetchTravels(0, 6, query, {}, { signal: controller.signal }),
-    ])
-      .then(([placesPage, travelsPage]) => {
-        const placeOptions: SiteRouteOption[] = placesPage.places.map((place) => {
-          const numericId = parseNumber(place.id);
-          return {
-            key: `place-${place.id}`,
-            kind: 'place',
-            id: numericId,
-            title: place.title,
-            subtitle: compactText([place.category, place.country]),
-            description: place.address ?? null,
-            coordinates: [place.lngNumber, place.latNumber],
-            imageUrl: place.travelImageThumbUrl || place.imageUrl || null,
-          };
-        });
-
-        const travelOptions: SiteRouteOption[] = travelsPage.data.map((travel) => ({
-          key: `travel-${travel.id}`,
-          kind: 'travel',
-          id: travel.id,
-          title: travel.name,
-          subtitle: compactText([i18nT('trips:components.trips.planning.RouteBuilder.puteshestvie_7cbf3a43'), travel.countryName]),
-          description: travel.description || null,
-          coordinates: travelCoordinates(travel),
-          imageUrl: travel.travel_image_thumb_url || travel.travel_image_thumb_small_url || null,
-        }));
-
-        setSiteOptions([...placeOptions, ...travelOptions]);
-        setSiteSearchStatus('ready');
-      })
-      .catch((error) => {
-        if (error instanceof Error && error.name === 'AbortError') return;
-        setSiteOptions([]);
-        setSiteSearchStatus('error');
-      });
-
-    return () => controller.abort();
-  }, [isAddPointOpen, newType, siteQuery]);
+  const {
+    siteQuery,
+    setSiteQuery,
+    siteOptions,
+    siteSearchStatus,
+    resetSiteSearch,
+  } = useRouteSiteSearch({ isAddPointOpen, newType });
 
   const handleAddSitePoint = (option: SiteRouteOption) => {
     const title = option.title.trim();
@@ -839,76 +469,9 @@ function RouteBuilder({
       },
     ]);
     trackRoutePointAdded(trip.id, 'place');
-    setSiteQuery('');
-    setSiteOptions([]);
-    setSiteSearchStatus('idle');
+    resetSiteSearch();
     setIsAddPointOpen(false);
   };
-
-  // #1782: выбранный адрес заполняет форму, чтобы название можно было уточнить
-  // до добавления. Саму точку создаёт общий handleAdd после подтверждения.
-  const handleAddAddressSelect = useCallback(
-    (address: string, coords: { lat: number; lng: number }) => {
-      const full = address.trim();
-      if (!full || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return;
-      // #1532: `place` без `placeId` бэкенд отклоняет вместе со всем маршрутом,
-      // а адресная точка привязки к месту MeTravel не имеет.
-      const isSiteMode = newType === 'place';
-      const type: RoutePointType = isSiteMode ? 'custom' : newType;
-      // В режиме «Место» форма показывает только поиск по MeTravel
-      // (`RoutePointAddForm`), полей названия и описания на экране нет. Их
-      // прежнее значение — невидимый остаток прошлой попытки, а не ввод
-      // пользователя, поэтому имя тогда берётся из адреса.
-      // Значение, оставшееся от прошлого выбора адреса, вводом пользователя не
-      // считается: иначе второй выбор менял бы только координаты.
-      const autofilled = addAddressAutofillRef.current;
-      const currentName = isSiteMode ? '' : newName.trim();
-      const currentDescription = isSiteMode ? '' : newDescription.trim();
-      const nameOwnedBySearch = !currentName || currentName === autofilled.name;
-      const descriptionOwnedBySearch =
-        !currentDescription || currentDescription === autofilled.description;
-      const name = nameOwnedBySearch ? addressPointName(full) : currentName;
-      const description = descriptionOwnedBySearch
-        ? full === name
-          ? ''
-          : full
-        : currentDescription;
-
-      setNewType(type);
-      setNewName(name);
-      setNewLat(formatCoordinateInput(coords.lat));
-      setNewLng(formatCoordinateInput(coords.lng));
-      setNewDescription(description);
-      setNewPointError(null);
-      addAddressAutofillRef.current = {
-        name: nameOwnedBySearch ? name : null,
-        description: descriptionOwnedBySearch ? description : null,
-      };
-    },
-    [newDescription, newName, newType],
-  );
-
-  // #1782: правку точки тоже нельзя было довести без точных координат —
-  // тестировщик видел только два числовых поля. Тот же `AddressSearch`, что и в
-  // добавлении, подставляет сюда координаты; ручной ввод остаётся рабочим.
-  const handleEditAddressSelect = useCallback(
-    (address: string, coords: { lat: number; lng: number }) => {
-      if (!Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return;
-      setEditLat(formatCoordinateInput(coords.lat));
-      setEditLng(formatCoordinateInput(coords.lng));
-      // Имя принадлежит пользователю: «Ночёвка у Пети» не должна превратиться в
-      // адрес из-за уточнения координат. Поиск заполняет его только пустым — или
-      // своим же прошлым результатом, чтобы исправленный выбор не оставил имя
-      // первого места при координатах второго.
-      const currentName = editNameRef.current.trim();
-      const nameOwnedBySearch = !currentName || currentName === editAddressAutofillNameRef.current;
-      const autoName = addressPointName(address);
-      if (nameOwnedBySearch) commitEditName(autoName);
-      editAddressAutofillNameRef.current = nameOwnedBySearch ? autoName : null;
-      setEditError(null);
-    },
-    [commitEditName],
-  );
 
   const handleApplyTemplate = (points: Array<Omit<RoutePoint, 'id'>>) => {
     setRoute(
@@ -933,197 +496,15 @@ function RouteBuilder({
     setEditError(null);
     setIsAddPointOpen(false);
     setNewPointError(null);
-    setOriginalUploadError(null);
-    if (originalUpload) {
-      // Предыдущий невыгруженный выбор больше не нужен — иначе на устройстве
-      // остаётся кэш-копия файла до 20 МиБ.
-      const previous = pendingOriginalRef.current;
-      if (previous) void releasePickedTripRouteUpload(previous);
-      pendingOriginalRef.current = originalUpload;
-      setPendingOriginalName(
-        originalUpload.kind === 'native' ? originalUpload.name : originalUpload.file.name,
-      );
-    }
-  }, [markRouteReplaced]);
-
-  // #1824, пункт 3: третья мутация файловой ветки. Черновик точек она не
-  // трогает, поэтому ответом его не затирает, — но синхронного лока у неё тоже
-  // не было, а `disabled` кнопки держится на `deleteRouteFile.isPending` и
-  // поднимается только со следующим рендером. Повтор нажатия в одном тике слал
-  // второй DELETE того же `routeId`, второй отвечал 404, и пользователь получал
-  // «не удалось удалить» на файле, который на самом деле удалён.
-  const routeFileDeleteLockedRef = useRef(false);
-
-  const handleRemoveStoredRouteFile = useCallback(() => {
-    if (!storedRouteFile || routeFileDeleteLockedRef.current) return;
-    routeFileDeleteLockedRef.current = true;
-    setOriginalUploadError(null);
-    deleteRouteFile.mutate(
-      { tripId: trip.id, routeId: storedRouteFile.id },
-      {
-        onError: () => setOriginalUploadError(
-          i18nT('tripsStatic:plan.routeImport.original.removeError'),
-        ),
-        // Как и у отправки оригинала, лок снимается и по отказу: иначе отказ
-        // хранилища запирал бы кнопку до перезагрузки экрана.
-        onSettled: () => {
-          routeFileDeleteLockedRef.current = false;
-        },
-      },
-    );
-  }, [deleteRouteFile, storedRouteFile, trip.id]);
-
-  // Освобождаем кэш-копию, если экран закрыли, не сохранив маршрут.
-  useEffect(() => () => {
-    const pending = pendingOriginalRef.current;
-    pendingOriginalRef.current = null;
-    if (pending) void releasePickedTripRouteUpload(pending);
-  }, []);
-
-  // #1824: у файловой ветки кнопки та же дыра, что была у PUT. Ветка
-  // «точки не менялись» уходит сюда мимо лока сохранения, а `disabled` кнопки
-  // держится на `uploadRouteFile.isPending`, который поднимается только со
-  // следующим рендером. Повтор нажатия в одном тике успевал отправить второй
-  // multipart того же файла (до 20 МиБ), и завершение первой отправки удаляло
-  // кэш-копию из-под второй — пользователь видел ошибку загрузки на файле,
-  // который на самом деле загрузился.
-  const originalUploadLockedRef = useRef(false);
-
-  // Загрузка оригинала идёт после успешного сохранения точек и не откатывает их:
-  // при отказе хранилища точки остаются сохранёнными, файл остаётся выбранным, и
-  // повторное «Сохранить маршрут» пробует загрузку ещё раз.
-  const uploadPendingOriginal = async (): Promise<void> => {
-    const pending = pendingOriginalRef.current;
-    if (!pending || originalUploadLockedRef.current) return;
-    originalUploadLockedRef.current = true;
-    setOriginalUploadError(null);
-    try {
-      await uploadRouteFile.mutateAsync({
-        tripId: trip.id,
-        file: toRouteFileUploadPart(pending),
-      });
-      pendingOriginalRef.current = null;
-      setPendingOriginalName(null);
-      void releasePickedTripRouteUpload(pending);
-    } catch {
-      setOriginalUploadError(i18nT('tripsStatic:plan.routeImport.original.uploadError'));
-    } finally {
-      // Отказ хранилища лок не удерживает: ретрай той же кнопкой обязан
-      // проходить, поэтому снятие идёт и по успеху, и по ошибке.
-      originalUploadLockedRef.current = false;
-    }
-  };
-
-  const handleSave = () => {
-    if (
-      routeSaveLockedRef.current ||
-      transportMutationLockedRef.current ||
-      updateTripTransport.isPending ||
-      updateTripBikeType.isPending
-    ) {
-      return;
-    }
-
-    // После успешного сохранения точек загрузка оригинала могла упасть. В таком
-    // состоянии повторная кнопка ретраит только файл и не делает лишний PUT
-    // неизменившегося маршрута.
-    if (!hasUnsavedRouteChanges) {
-      void uploadPendingOriginal();
-      return;
-    }
-
-    // #1824: подпись черновика, который уходит на сервер. Ответ применяется
-    // только если за время запроса на экране остался ровно он. Иначе правка,
-    // сделанная во время сохранения — перетаскивание маркера, переименование
-    // точки, новая точка, — была бы молча затёрта серверным ответом; на
-    // медленной сети окно потери равно времени запроса.
-    //
-    // При расхождении на экране остаются правки пользователя, а не серверный
-    // ответ, и это НЕ тихое расхождение: `hasUnsavedRouteChanges` сравнивает
-    // черновик уже с новым `trip.route`, поэтому кнопка сохранения остаётся на
-    // месте и честно говорит, что есть что отправить. PUT заменяет маршрут
-    // целиком (`api/plannedTripsRequests.ts:452`), так что повторное сохранение
-    // разошедшегося черновика дублей точек не создаёт.
-    const submittedRouteSignature = currentRouteSignature;
-    setRouteSaveError(null);
-    routeSaveLockedRef.current = true;
-    updateTripRoute.mutate(
-      { tripId: trip.id, route },
-      {
-        onSuccess: (updatedTrip) => {
-          setRoute((currentRoute) => (
-            routeSignature(currentRoute) === submittedRouteSignature
-              ? updatedTrip.route
-              : currentRoute
-          ));
-          void uploadPendingOriginal();
-        },
-        onError: () => {
-          setRouteSaveError({
-            message: i18nT('tripsStatic:plan.route.saveError'),
-            signature: submittedRouteSignature,
-          });
-        },
-        onSettled: () => {
-          routeSaveLockedRef.current = false;
-        },
-      },
-    );
-  };
-
-
-  // Инвариант «ровно один PATCH на переключение» держится здесь, а не на
-  // `disabled` дочернего контрола: ref ловит повтор в одном тике, isPending —
-  // мутацию этого экрана, которая ещё летит.
-  const canCommitRouteRebuild = () =>
-    !transportMutationLockedRef.current &&
-    !routeSaveLockedRef.current &&
-    !updateTripRoute.isPending &&
-    !updateTripTransport.isPending &&
-    !updateTripBikeType.isPending;
-
-  // Транспорт и тип велосипеда перестраивают маршрут одним и тем же PATCH, поэтому
-  // обвязка коммита общая: лок ставится синхронно до mutate, ответ применяется
-  // атомарно и не затирает несохранённый черновик маршрута.
-  const beginRouteRebuild = () => {
-    const persistedRouteSignature = routeSignature(trip.route);
-    transportMutationLockedRef.current = true;
-    setTransportCommitPending(true);
-    setRouteRebuildError(null);
-
-    return {
-      onSuccess: (updatedTrip: PlannedTrip) => {
-        setRoute((currentRoute) => (
-          routeSignature(currentRoute) === persistedRouteSignature
-            ? updatedTrip.route
-            : currentRoute
-        ));
-      },
-      onError: () => {
-        setRouteRebuildError(
-          t('trips:components.trips.planning.RouteBuilder.ne_udalos_perestroit_marshrut_poprobuyte_esche_raz_9c4be156'),
-        );
-      },
-      onSettled: () => {
-        transportMutationLockedRef.current = false;
-        setTransportCommitPending(false);
-      },
-    };
-  };
-
-  const handleTransportChange = (value: string) => {
-    if (value === trip.transport || !isRoutableTransport(value) || !canCommitRouteRebuild()) {
-      return;
-    }
-
-    updateTripTransport.mutate({ tripId: trip.id, transport: value }, beginRouteRebuild());
-  };
-
-  const handleBikeTypeChange = (value: TripBikeType) => {
-    if (value === trip.bikeType || !canCommitRouteRebuild()) return;
-
-    updateTripBikeType.mutate({ tripId: trip.id, bikeType: value }, beginRouteRebuild());
-  };
+    acceptImportedOriginal(originalUpload);
+  }, [
+    acceptImportedOriginal,
+    markRouteReplaced,
+    setEditError,
+    setEditingIndex,
+    setIsAddPointOpen,
+    setNewPointError,
+  ]);
 
   // Перетаскивание доступно только владельцу и только когда переставлять есть
   // что. Стрелки остаются на месте как клавиатурный и a11y путь.
@@ -1192,13 +573,6 @@ function RouteBuilder({
   }
 
   const templates = templatesQuery.data ?? [];
-  const transportPending =
-    transportCommitPending || updateTripTransport.isPending || updateTripBikeType.isPending;
-  const transportDisabled = transportPending || updateTripRoute.isPending;
-  const transportOptions = ROUTE_TRANSPORTS.map((transport) => ({
-    key: transport,
-    label: TRANSPORT_LABEL[transport],
-  }));
 
   // Секции панели собираются один раз и раскладываются по-разному: `stack` —
   // не-мобильная раскладка (ширина ≥768px, планшет портрет и десктоп), две
@@ -1211,57 +585,18 @@ function RouteBuilder({
   // /map: заголовки берутся из общих ключей панели маршрута карты, чтобы
   // «Транспорт → Точки маршрута → Итог» не разъехались по формулировкам.
   const transportSection = (
-    <RouteStepBlock
-      step={1}
-      title={i18nT('map:components.MapPage.FiltersPanelRouteSection.transport_aa70a7ea')}
-      styles={stepStyles}
-      aside={<Text style={panelStyles.stepBadge}>{TRANSPORT_LABEL[trip.transport]}</Text>}
-      testID="route-builder-step-transport"
-    >
-      <View
-        style={panelStyles.stepBody}
-        accessibilityState={{ busy: transportPending }}
-        testID="route-builder-transport-control"
-      >
-        <SegmentedControl
-          options={transportOptions}
-          value={trip.transport}
-          onChange={handleTransportChange}
-          accessibilityLabel={t('trips:components.trips.planning.RouteBuilder.sposob_peredvizheniya_f5c52d42')}
-          compact
-          dense
-          minTouchHeight={44}
-          noOuterMargins
-          disabled={transportDisabled}
-        />
-        {trip.transport === 'bike' && trip.bikeType ? (
-          <TripBikeTypeControl
-            value={trip.bikeType}
-            disabled={transportDisabled}
-            onChange={handleBikeTypeChange}
-            styles={styles}
-          />
-        ) : null}
-        {transportPending ? (
-          <Text
-            style={styles.hint}
-            accessibilityLiveRegion="polite"
-            testID="route-builder-transport-pending"
-          >
-            {t('trips:components.trips.planning.RouteBuilder.perestraivaem_marshrut_d8d47f21')}
-          </Text>
-        ) : null}
-        {routeRebuildError ? (
-          <Text
-            style={styles.errorText}
-            accessibilityLiveRegion="assertive"
-            testID="route-builder-transport-error"
-          >
-            {routeRebuildError}
-          </Text>
-        ) : null}
-      </View>
-    </RouteStepBlock>
+    <RouteTransportSection
+      styles={styles}
+      panelStyles={panelStyles}
+      stepStyles={stepStyles}
+      transport={trip.transport}
+      bikeType={trip.bikeType}
+      pending={transportPending}
+      disabled={transportPending || updateTripRoute.isPending}
+      error={routeRebuildError}
+      onTransportChange={handleTransportChange}
+      onBikeTypeChange={handleBikeTypeChange}
+    />
   );
 
   const mapSection = (
@@ -1294,171 +629,50 @@ function RouteBuilder({
       : POINT_TYPES.filter((type) => type !== 'place');
 
   const editPointSection = editingIndex != null ? (
-      <View
-        style={[styles.editForm, isMapFirst && styles.editFormInline]}
-        testID="route-builder-edit-form"
-      >
-        {/* В мобильной раскладке форма уже подписана номером и названием своей
-            точки в карточке над ней — второй заголовок был бы шумом. */}
-        {isMapFirst ? null : (
-          <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.redaktirovat_tochku_8815b389')}</Text>
-        )}
-        <View style={styles.chipRow}>
-          {editTypeOptions.map((type) => {
-            const active = type === editType;
-            return (
-              <Pressable
-                key={type}
-                accessibilityRole="button"
-                onPress={() => setEditType(type)}
-                style={[styles.typeChip, active && styles.typeChipActive]}
-                testID={`route-builder-edit-type-${type}`}
-              >
-                <Feather
-                  name={ROUTE_POINT_ICON_NAME[type] as never}
-                  size={13}
-                  color={active ? colors.textOnPrimary : colors.textSecondary}
-                />
-                <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
-                  {ROUTE_POINT_LABEL[type]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        {/* #1782: поиск места по названию. Координаты приходят из результата,
-            поля широты и долготы ниже остаются доступны для ручного ввода. */}
-        <AddressSearch
-          // Переход к правке соседней точки обязан сбрасывать строку поиска:
-          // в десктопной раскладке форма живёт на одном месте и без ключа
-          // сохранила бы запрос от предыдущей точки.
-          key={`edit-address-${editingIndex}`}
-          onAddressSelect={handleEditAddressSelect}
-          placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nayti_mesto_po_nazvaniyu_ili_adresu_fa7745e0')}
-          enableCoordinateInput
-          dense
-        />
-        <TextInput
-          value={editName}
-          onChangeText={commitEditName}
-          placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nazvanie_tochki_0cdacb0f')}
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-          testID="route-builder-edit-name"
-        />
-        <View style={styles.coordRow}>
-          <TextInput
-            value={editLat}
-            onChangeText={setEditLat}
-            placeholder={i18nT('trips:components.trips.planning.RouteBuilder.shirota_lat_6d696d4a')}
-            placeholderTextColor={colors.textMuted}
-            keyboardType="numbers-and-punctuation"
-            style={[styles.input, styles.coordInput]}
-            testID="route-builder-edit-lat"
-          />
-          <TextInput
-            value={editLng}
-            onChangeText={setEditLng}
-            placeholder={i18nT('trips:components.trips.planning.RouteBuilder.dolgota_lng_f08c3647')}
-            placeholderTextColor={colors.textMuted}
-            keyboardType="numbers-and-punctuation"
-            style={[styles.input, styles.coordInput]}
-            testID="route-builder-edit-lng"
-          />
-        </View>
-        <TextInput
-          value={editDescription}
-          onChangeText={setEditDescription}
-          placeholder={i18nT('trips:components.trips.planning.RouteBuilder.opisanie_ili_ssylka_po_zhelaniyu_2a1ab272')}
-          placeholderTextColor={colors.textMuted}
-          multiline
-          numberOfLines={3}
-          style={[styles.input, styles.textArea]}
-          testID="route-builder-edit-description"
-        />
-        {editError ? <Text style={styles.errorText}>{editError}</Text> : null}
-        <View style={styles.editActions}>
-          <Button
-            label={i18nT('trips:components.trips.planning.RouteBuilder.sohranit_tochku_467b8cde')}
-            onPress={handleSaveEdit}
-            variant="secondary"
-            disabled={!editName.trim()}
-            testID="route-builder-edit-save"
-          />
-          <Button
-            label={i18nT('trips:components.trips.planning.RouteBuilder.otmena_cb0c29f2')}
-            onPress={handleCancelEdit}
-            variant="ghost"
-            testID="route-builder-edit-cancel"
-          />
-        </View>
-        {/* Перестановка и удаление в мобильной строке отсутствуют — четыре
-            иконки не помещались рядом с названием, — поэтому живут здесь. */}
-        {isMapFirst && editingIndex != null ? (
-          <>
-            <View style={styles.editActions}>
-              <Button
-                label={i18nT('trips:components.trips.planning.RouteBuilder.podnyat_tochku_vyshe_23208202')}
-                onPress={() => handleMove(editingIndex, -1)}
-                variant="ghost"
-                size="sm"
-                disabled={editingIndex === 0}
-                icon={<Feather name="chevron-up" size={16} color={colors.text} />}
-                testID={`route-builder-move-up-${editingIndex}`}
-              />
-              <Button
-                label={i18nT('trips:components.trips.planning.RouteBuilder.opustit_tochku_nizhe_c1c13a3e')}
-                onPress={() => handleMove(editingIndex, 1)}
-                variant="ghost"
-                size="sm"
-                disabled={editingIndex === route.length - 1}
-                icon={<Feather name="chevron-down" size={16} color={colors.text} />}
-                testID={`route-builder-move-down-${editingIndex}`}
-              />
-            </View>
-            <View style={styles.editDangerRow}>
-              <Button
-                label={i18nT('trips:components.trips.planning.RouteBuilder.udalit_tochku_37161453')}
-                onPress={() => handleDelete(editingIndex)}
-                variant="ghost"
-                size="sm"
-                icon={<Feather name="trash-2" size={16} color={colors.danger} />}
-                testID={`route-builder-delete-${editingIndex}`}
-              />
-            </View>
-          </>
-        ) : null}
-    </View>
+    <RoutePointEditForm
+      styles={styles}
+      colors={colors}
+      isMapFirst={isMapFirst}
+      editingIndex={editingIndex}
+      routeLength={route.length}
+      typeOptions={editTypeOptions}
+      type={editType}
+      name={editName}
+      lat={editLat}
+      lng={editLng}
+      description={editDescription}
+      error={editError}
+      onTypeChange={setEditType}
+      onAddressSelect={handleEditAddressSelect}
+      onNameChange={commitEditName}
+      onLatChange={setEditLat}
+      onLngChange={setEditLng}
+      onDescriptionChange={setEditDescription}
+      onSave={handleSaveEdit}
+      onCancel={handleCancelEdit}
+      onMove={handleMove}
+      onDelete={handleDelete}
+    />
   ) : null;
 
-  const addPointSection = editingIndex != null ? null : !isAddPointOpen ? (
-    <Button
-      label={i18nT('trips:components.trips.planning.RouteBuilder.dobavit_tochku_60ab5746')}
-      onPress={handleOpenAddPoint}
-      variant="secondary"
-      size="sm"
-      icon={<Feather name="plus" size={16} color={colors.text} />}
-      testID="route-builder-add-action"
-    />
-  ) : (
-    <RoutePointAddForm
+  const pointsSection = (
+    <RoutePointsSection
       styles={styles}
-      addressSlot={
-        <AddressSearch
-          onAddressSelect={handleAddAddressSelect}
-          placeholder={i18nT('trips:components.trips.planning.RouteBuilder.nayti_mesto_po_nazvaniyu_ili_adresu_fa7745e0')}
-          enableCoordinateInput
-          dense
-        />
-      }
+      panelStyles={panelStyles}
+      stepStyles={stepStyles}
       colors={colors}
-      pointTypes={POINT_TYPES}
-      type={newType}
-      name={newName}
-      lat={newLat}
-      lng={newLng}
-      description={newDescription}
-      error={newPointError}
+      isMapFirst={isMapFirst}
+      route={route}
+      editingIndex={editingIndex}
+      editorSlot={editPointSection}
+      renderPoint={renderPoint}
+      isAddPointOpen={isAddPointOpen}
+      newType={newType}
+      newName={newName}
+      newLat={newLat}
+      newLng={newLng}
+      newDescription={newDescription}
+      newPointError={newPointError}
       siteQuery={siteQuery}
       siteOptions={siteOptions}
       siteSearchStatus={siteSearchStatus}
@@ -1467,62 +681,13 @@ function RouteBuilder({
       onLatChange={setNewLat}
       onLngChange={setNewLng}
       onDescriptionChange={setNewDescription}
+      onAddressSelect={handleAddAddressSelect}
       onSiteQueryChange={setSiteQuery}
       onAddSitePoint={handleAddSitePoint}
       onAdd={handleAdd}
-      onCancel={handleCancelAddPoint}
+      onOpenAddPoint={handleOpenAddPoint}
+      onCancelAddPoint={handleCancelAddPoint}
     />
-  );
-
-  const pointsSection = (
-    <RouteStepBlock
-      step={2}
-      title={i18nT('map:components.MapPage.FiltersPanelRouteSection.tochki_marshruta_0250dc3a')}
-      styles={stepStyles}
-      aside={
-        route.length >= MIN_ROUTE_POINTS ? (
-          <View style={panelStyles.stepCheckBadge}>
-            <Feather name="check" size={12} color={colors.success} />
-            <Text style={panelStyles.stepCheckText}>
-              {i18nT('map:components.MapPage.FiltersPanelRouteSection.gotovo_aab95a18')}
-            </Text>
-          </View>
-        ) : (
-          <Text style={panelStyles.stepHint}>
-            {i18nT('map:components.MapPage.FiltersPanelRouteSection.vyberite_tochki_fb6530e6')}
-          </Text>
-        )
-      }
-      testID="route-builder-step-points"
-    >
-      {route.length ? (
-        isMapFirst ? (
-          <View style={styles.pointList}>
-            {route.map((point, index) =>
-              renderPoint(point, index, editingIndex === index ? editPointSection : null),
-            )}
-          </View>
-        ) : (
-          <ScrollView
-            style={styles.pointListScroll}
-            contentContainerStyle={styles.pointList}
-            nestedScrollEnabled
-            keyboardShouldPersistTaps="handled"
-            accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelRouteSection.tochki_marshruta_0250dc3a')}
-            testID="route-builder-point-list-scroll"
-            {...(Platform.OS === 'web' ? { tabIndex: 0 as const } : {})}
-          >
-            {route.map((point, index) => renderPoint(point, index))}
-          </ScrollView>
-        )
-      ) : (
-        <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.dobavte_pervuyu_tochku_marshruta_nizhe_d7cb9f9e')}</Text>
-      )}
-      {/* Добавление живёт вплотную к списку: раньше кнопка лежала в самом низу
-          панели, за импортом и экспортом, и на телефоне до неё надо было
-          прокрутить ~2000px. */}
-      {addPointSection}
-    </RouteStepBlock>
   );
 
   const templatesSection = templates.length ? (
@@ -1560,136 +725,53 @@ function RouteBuilder({
     <TripRouteImportPanel
       route={route}
       routeGeometry={routeGeometry}
-      disabled={updateTripRoute.isPending || transportPending || uploadRouteFile.isPending}
+      disabled={updateTripRoute.isPending || transportPending || originalUploadPending}
       storedFile={storedRouteFile}
       pendingUploadName={pendingOriginalName}
       uploadError={originalUploadError}
-      removing={deleteRouteFile.isPending}
+      removing={storedFileRemoving}
       onRemoveStoredFile={handleRemoveStoredRouteFile}
       onApply={handleApplyImportedRoute}
     />
   );
 
-  // #1491: главное действие панели. Подписи — общая лесенка с /map
-  // («Добавьте старт и финиш» → «Построить маршрут» → «Пересчитать маршрут»),
-  // а сама кнопка появляется только когда есть несохранённые правки: постоянная
-  // «Сохранить маршрут» не отличала «правки ждут» от «всё уже на сервере».
-  const routeSavePending = updateTripRoute.isPending || uploadRouteFile.isPending;
-  const visibleRouteSaveError =
-    routeSaveError && routeSaveError.signature === currentRouteSignature
-      ? routeSaveError.message
-      : null;
-  const cta = routeBuilderCta({
-    pointCount: route.length,
-    savedPointCount: trip.route.length,
-    hasUnsavedChanges: hasUnsavedRouteChanges,
-    hasPendingOriginal: pendingOriginalName != null,
-    pending: routeSavePending || transportPending,
-  });
+  const saveSection = (
+    <RouteSaveSection
+      styles={styles}
+      panelStyles={panelStyles}
+      pointCount={route.length}
+      savedPointCount={trip.route.length}
+      hasUnsavedChanges={hasUnsavedRouteChanges}
+      hasPendingOriginal={pendingOriginalName != null}
+      routeSavePending={updateTripRoute.isPending || originalUploadPending}
+      transportPending={transportPending}
+      error={visibleRouteSaveError}
+      onSave={handleSave}
+    />
+  );
 
-  const saveSection = cta.visible ? (
-    <View style={panelStyles.ctaBlock}>
-      <Button
-        label={cta.label}
-        onPress={handleSave}
-        loading={routeSavePending}
-        disabled={cta.disabled}
-        fullWidth
-        testID="route-builder-save"
-      />
-      {cta.hint ? (
-        <Text style={panelStyles.stepHint} testID="route-builder-save-hint">
-          {cta.hint}
-        </Text>
-      ) : null}
-      {visibleRouteSaveError ? (
-        <Text
-          style={styles.errorText}
-          accessibilityLiveRegion="assertive"
-          testID="route-builder-save-error"
-        >
-          {visibleRouteSaveError}
-        </Text>
-      ) : null}
-    </View>
-  ) : null;
-
-  if (isMapFirst) {
-    return (
-      <RouteBuilderMobile
-        mapSlot={mapSection}
-        engineSlot={previewEngine}
-        summary={summary}
-        routingState={routingState}
-        transport={trip.transport}
-        // Ключ карты, а не свой: строка та же самая, а в fill-режиме её шапку
-        // рисует раскладка — дублировать перевод в пятый раз незачем.
-        mapHint={
-          route.length
-            ? null
-            : i18nT('trips:components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6')
-        }
-      >
-        {transportSection}
-        {previewStatusSection}
-        {/* Список точек уже содержит и добавление, и инлайн-редактор точки. */}
-        {pointsSection}
-        {/* Главное действие стоит сразу под работой с точками, а не за
-            шаблонами, импортом и экспортом в самом низу панели. */}
-        {saveSection}
-        {elevationProfileSection}
-        {summarySection}
-        {templatesSection}
-        {importSection}
-        {routeDownloadSection}
-      </RouteBuilderMobile>
-    );
-  }
-
-  // #1491: раскладка как на /map — шаги слева, карта справа и всегда перед
-  // глазами. Колонок здесь всегда две: сузиться до одной эта ветка не умеет, а
-  // мобильная раскладка `mapFirst` — отдельная (#1495/#1691) и сюда не
-  // попадает, из неё возврат выше.
   return (
-    <View style={styles.wrap} testID="route-builder">
-      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.RouteBuilder.konstruktor_marshruta_187e063e')}</Text>
-
-      <View style={[panelStyles.workspace, panelStyles.workspaceSplit]} testID="route-builder-workspace">
-        <View
-          style={[panelStyles.panelColumn, panelStyles.panelColumnSplit]}
-          testID="route-builder-panel-column"
-        >
-          {transportSection}
-
-          {/* Добавление точки переехало внутрь секции списка — в обеих
-              раскладках это одно место. */}
-          {pointsSection}
-
-          {editPointSection}
-
-          {templatesSection}
-
-          {summarySection}
-
-          {importSection}
-
-          {routeDownloadSection}
-
-          {saveSection}
-        </View>
-
-        <View
-          style={[panelStyles.mapColumn, panelStyles.mapColumnSplit]}
-          testID="route-builder-map-column"
-        >
-          {mapSection}
-          {previewEngine}
-          {previewStatusSection}
-        </View>
-      </View>
-
-      {elevationProfileSection}
-    </View>
+    <RouteBuilderLayout
+      isMapFirst={isMapFirst}
+      styles={styles}
+      panelStyles={panelStyles}
+      pointCount={route.length}
+      summary={summary}
+      routingState={routingState}
+      transport={trip.transport}
+      mapSection={mapSection}
+      previewEngine={previewEngine}
+      previewStatusSection={previewStatusSection}
+      transportSection={transportSection}
+      pointsSection={pointsSection}
+      editPointSection={editPointSection}
+      templatesSection={templatesSection}
+      summarySection={summarySection}
+      importSection={importSection}
+      routeDownloadSection={routeDownloadSection}
+      saveSection={saveSection}
+      elevationProfileSection={elevationProfileSection}
+    />
   );
 }
 

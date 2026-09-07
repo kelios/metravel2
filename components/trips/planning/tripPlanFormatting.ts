@@ -131,9 +131,10 @@ export function isDrawableCoordinatePair(
 
 /**
  * #1671: формат ОТОБРАЖЕНИЯ координат точки — пять знаков (≈1 м на местности).
- * Намеренно отделён от формата ВВОДА (`formatCoordinateInput` в RouteBuilder,
- * шесть знаков): подставленный в узкую карточку формат ввода давал строку в
- * 21 символ, которая переносилась по цифрам на четыре строки.
+ * Намеренно отделён от формата ВВОДА (`formatCoordinateInput` в
+ * `routeBuilderPoint.ts`, шесть знаков): подставленный в узкую карточку формат
+ * ввода давал строку в 21 символ, которая переносилась по цифрам на четыре
+ * строки.
  */
 export function formatRoutePointCoordinates(
   coordinates: [number, number] | null | undefined,
