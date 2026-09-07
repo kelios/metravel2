@@ -227,6 +227,47 @@ describe('TripRouteImportPanel', () => {
     expect(onApply).not.toHaveBeenCalled();
   });
 
+  // #1842: отказ по лимиту точек обязан оставлять рабочий выход. Предпросмотр
+  // после отказа не закрывается, поэтому подсказка и кнопка «только трек» видны
+  // рядом с самим сообщением.
+  it('offers the originalOnly way out of a capacity refusal and keeps the draft intact', () => {
+    const fullRoute = Array.from({ length: 50 }, (_, index): RoutePoint => ({
+      id: `point-${index}`,
+      type: 'custom',
+      name: `Point ${index + 1}`,
+      description: null,
+      coordinates: [20 + index * 0.001, 50],
+      placeId: null,
+    }));
+    const onApply = jest.fn();
+    const screen = render(<TripRouteImportPanel route={fullRoute} onApply={onApply} />);
+
+    const selectedFile = file('route.gpx', GPX_SINGLE_WITH_WAYPOINTS);
+    act(() => mockPickerProps.onPicked(selectedFile));
+    fireEvent.press(screen.getByTestId('trip-route-import-append'));
+
+    // Отказ объявляется assertive, поэтому выход из него обязан объявляться
+    // тоже: иначе читающий экран сообщает про лимит и молчит про обход.
+    expect(
+      screen.getByTestId('trip-route-import-capacity-hint').props.accessibilityLiveRegion,
+    ).toBe('polite');
+    expect(screen.getByTestId('trip-route-import-original-only').props.accessibilityLabel).toBe(
+      'Только трек на карту',
+    );
+
+    fireEvent.press(screen.getByTestId('trip-route-import-original-only'));
+
+    expect(onApply).toHaveBeenCalledTimes(1);
+    // Точки не тронуты — та же ссылка, что пришла пропом; оригинал при этом
+    // уезжает наверх и будет загружен обычным «Сохранить маршрут».
+    expect(onApply.mock.calls[0][0]).toBe(fullRoute);
+    expect(onApply.mock.calls[0][1]).toBe(selectedFile.upload);
+    // Кэш-копия ушла наверх целой: отказ по лимиту её не освобождает, иначе
+    // «Сохранить маршрут» отправлял бы уже удалённый с устройства файл.
+    expect(mockReleaseUpload).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('trip-route-import-preview')).toBeNull();
+  });
+
   it('cancels pending preview without changing the current route', () => {
     const onApply = jest.fn();
     const screen = render(<TripRouteImportPanel route={currentRoute} onApply={onApply} />);

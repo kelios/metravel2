@@ -237,6 +237,21 @@ function TripRouteImportPanel({
         </Text>
       ) : null}
 
+      {/* Отказ по лимиту точек — не тупик: трек можно положить на карту, не
+          трогая маршрут (#1842). Подсказка ведёт к кнопке в блоке действий: сам
+          предпросмотр после отказа остаётся открытым, поэтому кнопка на месте.
+          Живая область обязательна: сообщение об отказе объявляется assertive, и
+          без неё читающий экран озвучивал бы отказ, но не выход из него. */}
+      {errorCode === 'capacity' ? (
+        <Text
+          style={styles.hint}
+          accessibilityLiveRegion="polite"
+          testID="trip-route-import-capacity-hint"
+        >
+          {t('tripsStatic:plan.routeImport.error.capacityHint')}
+        </Text>
+      ) : null}
+
       {pendingUploadName ? (
         <Text
           style={styles.hint}
@@ -382,6 +397,14 @@ function TripRouteImportPanel({
               variant="outline"
               labelNumberOfLines={2}
               testID="trip-route-import-append"
+            />
+            <Button
+              label={t('tripsStatic:plan.routeImport.originalOnly')}
+              onPress={() => handleApply('originalOnly')}
+              disabled={disabled}
+              variant="outline"
+              labelNumberOfLines={2}
+              testID="trip-route-import-original-only"
             />
           </View>
         </View>

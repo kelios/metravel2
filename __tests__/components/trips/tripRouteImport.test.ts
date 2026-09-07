@@ -344,4 +344,35 @@ describe('buildImportedRouteDraft', () => {
 
     expect(result).toEqual({ ok: false, error: { code: 'capacity' } });
   });
+
+  // #1842: трек как слой карты и точки маршрута — два независимых ресурса.
+  // Режим `originalOnly` тратит только первый, поэтому лимит точек он не видит
+  // ни при каком состоянии маршрута: ни на пустом, ни на добитом ровно до
+  // лимита, ни на перебравшем его — во всех трёх `replace`/`append` уже
+  // отвечают `capacity`.
+  it('keeps the draft untouched in originalOnly mode and never spends the point budget', () => {
+    const routeOfLength = (length: number) =>
+      Array.from({ length }, (_, index) => routePoint(`existing-${index}`, [10 + index * 0.01, 40]));
+    const states: RoutePoint[][] = [
+      [],
+      routeOfLength(TRIP_ROUTE_IMPORT_DRAFT_MAX_POINTS),
+      routeOfLength(TRIP_ROUTE_IMPORT_DRAFT_MAX_POINTS + 20),
+    ];
+
+    for (const existingRoute of states) {
+      const result = buildImportedRouteDraft({
+        existingRoute,
+        parsedRoute: preview(['50,20', '50.1,20.1', '50.2,20.2']),
+        namedWaypoints: [{ coord: '50.1,20.1', name: 'Anchor' }],
+        mode: 'originalOnly',
+      });
+
+      // Черновик тот же и по содержимому, и по ссылке: содержимое держит
+      // `hasUnsavedRouteChanges` (сигнатура точек) и потому оставляет
+      // сохранение одной загрузкой файла, а ссылка — лишний рендер.
+      expect(result).toEqual({ ok: true, route: existingRoute });
+      if (!result.ok) continue;
+      expect(result.route).toBe(existingRoute);
+    }
+  });
 });

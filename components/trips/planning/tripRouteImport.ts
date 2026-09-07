@@ -49,7 +49,14 @@ export interface PrepareTripRouteImportInput {
   sizeBytes?: number | null;
 }
 
-export type TripRouteImportMode = 'replace' | 'append';
+/**
+ * `originalOnly` (#1842) — трек нужен только как слой карты (`tripOriginalTrack.ts`,
+ * потолок 12 000 точек), а точки маршрута пользователь ставит сам. Режим намеренно
+ * не расходует общий бюджет `TRIP_ROUTE_IMPORT_DRAFT_MAX_POINTS`: у похода из
+ * нескольких треков он весь уходил на безымянные «Точка N» уже с первого файла, и
+ * второй трек упирался в `capacity`.
+ */
+export type TripRouteImportMode = 'replace' | 'append' | 'originalOnly';
 
 export interface BuildImportedRouteDraftInput {
   existingRoute: RoutePoint[];
@@ -469,6 +476,16 @@ const coordinatesEqual = (
 export const buildImportedRouteDraft = (
   input: BuildImportedRouteDraftInput,
 ): BuildImportedRouteDraftResult => {
+  // Черновик точек возвращается нетронутым, поэтому «Сохранить маршрут» шлёт
+  // одну загрузку файла без лишнего `PUT .../route/`. Держит это содержимое, а
+  // не ссылка: `hasUnsavedRouteChanges` в `RouteBuilder` сравнивает сигнатуры
+  // точек (`RouteBuilder.tsx:218`), и структурно равная копия дала бы тот же
+  // ответ. Ссылка та же ради другого — `setRoute` на том же массиве не гоняет
+  // лишний рендер конструктора. Ветка стоит до всей арифметики бюджета, поэтому
+  // `capacity` здесь недостижим при любом состоянии маршрута, включая уже
+  // заполненный лимит.
+  if (input.mode === 'originalOnly') return { ok: true, route: input.existingRoute };
+
   const maxPoints = Math.max(0, Math.floor(input.maxPoints ?? TRIP_ROUTE_IMPORT_DRAFT_MAX_POINTS));
   const track = geoPoints(input.parsedRoute.linePoints);
   if (track.length < 2) return { ok: false, error: { code: 'capacity' } };
