@@ -651,6 +651,12 @@ describe('QuestsContentPanel', () => {
     // Прокрутка — не единственный путь раскрытия: на широком экране или при
     // увеличенном масштабе окно укладывается во вьюпорт целиком, скролл-событий
     // не возникает вовсе, и остаток каталога был бы недостижим.
+    //
+    // Порядок событий здесь настоящий, web-овский: один общий ResizeObserver отдаёт
+    // вложенную сетку РАНЬШЕ скроллера, поэтому на первом layout сетки высоты
+    // вьюпорта ещё нет. Раскрытие обязано случиться на следующем событии, а не
+    // зависеть от порядка. Высоту контента шлём только layout-ом самой сетки:
+    // `onContentSizeChange` на web внутри вьюпорта не приходит вовсе.
     it('grows the web grid window while the content still fits the viewport', () => {
         mockIsMobile = false;
         (Platform as { OS: string }).OS = 'web';
@@ -689,16 +695,73 @@ describe('QuestsContentPanel', () => {
             />
         );
 
-        const scroller = getByTestId('quests-content');
         expect(queryByTestId('quest-card-quest-24')).toBeNull();
 
-        // Вьюпорт заведомо выше контента: скроллить нечего.
-        fireEvent(scroller, 'layout', { nativeEvent: { layout: { height: 20000, width: 1440 } } });
-        fireEvent(scroller, 'contentSizeChange', 1440, 1200);
+        const layout = (testID: string, height: number) => fireEvent(
+            getByTestId(testID),
+            'layout',
+            { nativeEvent: { layout: { height, width: 1440 } } },
+        );
+
+        // Первый батч ResizeObserver: вложенная сетка приходит раньше скроллера,
+        // высоты вьюпорта ещё нет — раскрывать не по чему.
+        layout('quests-grid', 1200);
+        expect(queryByTestId('quest-card-quest-24')).toBeNull();
+
+        // Вьюпорт заведомо выше сетки: скроллить нечего, окно обязано вырасти само.
+        layout('quests-content', 20000);
         expect(getByTestId('quest-card-quest-24')).toBeTruthy();
 
-        fireEvent(scroller, 'contentSizeChange', 1440, 2400);
+        // Раскрытие переизмеряет сетку: пока она помещается, окно растёт дальше.
+        layout('quests-grid', 2400);
         expect(getByTestId('quest-card-quest-53')).toBeTruthy();
+    });
+
+    // Обратная сторона того же пути: пока сетка выше вьюпорта, прокрутка есть и
+    // окно не должно раскрываться само — иначе виртуализация схлопнется в тот же
+    // полный каталог, ради ухода от которого она и появилась.
+    it('keeps the web grid window closed while the grid overflows the viewport', () => {
+        mockIsMobile = false;
+        (Platform as { OS: string }).OS = 'web';
+        const LazyQuestMap = jest.fn(() => null);
+        const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
+
+        const { getByTestId, queryByTestId } = render(
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode="list"
+                selectedCityId="warsaw"
+                selectedCityName="Warsaw"
+                nearbyId="__nearby__"
+                nearbyRadiusKm={15}
+                questsAll={quests}
+                questCardWidth={320}
+                mapPoints={[]}
+                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
+                userLoc={null}
+                isMapAreaActive={false}
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch={false}
+                radiiLg={24}
+                LazyQuestMap={LazyQuestMap}
+                isMobile={false}
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+                onSetRadius={() => {}}
+                onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
+            />
+        );
+
+        fireEvent(getByTestId('quests-grid'), 'layout', { nativeEvent: { layout: { height: 3200, width: 1440 } } });
+        fireEvent(getByTestId('quests-content'), 'layout', { nativeEvent: { layout: { height: 900, width: 1440 } } });
+
+        expect(queryByTestId('quest-card-quest-24')).toBeNull();
     });
 
     // Смена набора обязана начинать окно заново: иначе узкий срез после «всех

@@ -144,6 +144,7 @@ function QuestsContentPanel({
     // (`scripts/generate-seo-pages.js:injectQuestLinksIndex`), а не сама сетка.
     const [visibleCount, setVisibleCount] = useState(QUEST_GRID_PAGE_SIZE);
     const gridViewportHeightRef = useRef(0);
+    const gridContentHeightRef = useRef(0);
 
     // Смена набора (город, фильтр, поиск) начинает окно заново — иначе после
     // «все квесты» узкий срез рисовался бы с раздутым окном. Ключ — сама
@@ -170,6 +171,31 @@ function QuestsContentPanel({
         ));
     }, [questsAll.length]);
 
+    // Прокрутка — не единственный путь раскрытия: широкий экран, увеличенный
+    // масштаб или узкий срез укладывают окно целиком во вьюпорт, скролл-события
+    // тогда не возникает вовсе, и остаток каталога становится недостижим.
+    //
+    // Высоту контента берём с самой сетки, а НЕ из `onContentSizeChange`: на web
+    // `react-native-web` вешает его на `onLayout` внутреннего контейнера ScrollView,
+    // а тот из-за `contentContainerStyle={{ flexGrow: 1 }}` растянут ровно на высоту
+    // вьюпорта, пока контент помещается, — рост внутри вьюпорта не даёт ни одного
+    // события. `styles.questsGrid` не растягивается, поэтому его `onLayout` приходит
+    // на каждое раскрытие окна.
+    //
+    // Обе величины живут в ref, а проверка общая и зовётся из обоих обработчиков:
+    // общий ResizeObserver отдаёт вложенные узлы раньше скроллера, так что порядок
+    // событий не должен ничего решать. Рост ограничен размером набора — цикл конечен.
+    //
+    // Сетка меряется без шапки и SEO-блоков над ней, то есть «помещается» — оценка
+    // сверху. Переоценка стоит одного лишнего шага окна, недооценки быть не может:
+    // если сетка выше вьюпорта, контент точно прокручивается и работает скролл-путь.
+    const maybeRevealWhenGridFits = useCallback(() => {
+        const viewportHeight = gridViewportHeightRef.current;
+        const contentHeight = gridContentHeightRef.current;
+        if (viewportHeight <= 0 || contentHeight <= 0) return;
+        if (contentHeight <= viewportHeight) revealMoreQuests();
+    }, [revealMoreQuests]);
+
     const handleGridScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
         const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
         gridViewportHeightRef.current = layoutMeasurement.height;
@@ -177,19 +203,15 @@ function QuestsContentPanel({
         if (distanceToEnd <= QUEST_GRID_REVEAL_DISTANCE) revealMoreQuests();
     }, [revealMoreQuests]);
 
-    const handleGridLayout = useCallback((event: LayoutChangeEvent) => {
+    const handleScrollerLayout = useCallback((event: LayoutChangeEvent) => {
         gridViewportHeightRef.current = event.nativeEvent.layout.height;
-    }, []);
+        maybeRevealWhenGridFits();
+    }, [maybeRevealWhenGridFits]);
 
-    // Прокрутка — не единственный путь: широкий экран, увеличенный масштаб или
-    // узкий срез укладывают окно целиком во вьюпорт, скролл-события не
-    // возникает вовсе, и остаток каталога становится недостижим. Пока контент
-    // помещается в вьюпорт, окно растёт само; рост ограничен размером набора,
-    // поэтому цикл конечен.
-    const handleGridContentSizeChange = useCallback((_width: number, contentHeight: number) => {
-        const viewportHeight = gridViewportHeightRef.current;
-        if (viewportHeight > 0 && contentHeight <= viewportHeight) revealMoreQuests();
-    }, [revealMoreQuests]);
+    const handleQuestsGridLayout = useCallback((event: LayoutChangeEvent) => {
+        gridContentHeightRef.current = event.nativeEvent.layout.height;
+        maybeRevealWhenGridFits();
+    }, [maybeRevealWhenGridFits]);
 
     const router = useRouter();
     // #1826: заголовок, счётчик и пустые состояния обязаны жить по тому же
@@ -618,7 +640,7 @@ function QuestsContentPanel({
                         )}
 
                         {dataLoaded && questsAll.length > 0 && (
-                            <View style={styles.questsGrid}>
+                            <View style={styles.questsGrid} onLayout={handleQuestsGridLayout} testID="quests-grid">
                                 {visibleQuests.map((quest, index) => (
                                     <QuestCard
                                         key={quest.id}
@@ -753,8 +775,7 @@ function QuestsContentPanel({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             onScroll={handleGridScroll}
-            onLayout={handleGridLayout}
-            onContentSizeChange={handleGridContentSizeChange}
+            onLayout={handleScrollerLayout}
             scrollEventThrottle={QUEST_GRID_SCROLL_THROTTLE}
             testID="quests-content"
         >
