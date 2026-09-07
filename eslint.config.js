@@ -37,10 +37,12 @@ const baseIgnores = [
   "output/",
   ".claude/",
   ".claude/**",
-  ".codex-temp/",
-  ".codex-temp/**",
-  ".codex-debug/",
-  ".codex-debug/**",
+  // Префиксный паттерн, а не директорийный: одиночный `.codex-temp-probe.js`
+  // в корне назван по этой конвенции, но лежит рядом с каталогом (#1846).
+  ".codex-temp*",
+  ".codex-temp*/**",
+  ".codex-debug*",
+  ".codex-debug*/**",
   // Рабочие каталоги аудитов и временных прогонов (все перечислены в .gitignore)
   ".quest-audit/",
   ".quest-audit/**",

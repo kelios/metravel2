@@ -117,8 +117,16 @@ nginx/ssl/
 .claude/sessions/
 .claude/tmp/
 .claude/scheduled_tasks.lock
-.codex-temp/
-.codex-debug/
+# Одноразовые артефакты сессий: и каталог, и одиночный файл в корне.
+# Директорийный паттерн `.codex-temp/` не матчил `.codex-temp-probe.js`,
+# и файл уехал в origin/main чужим коммитом (#1846).
+.codex-temp*
+.codex-debug*
+# Те же одноразовые скрипты, названные без точки: `eslint.config.js` объявляет
+# `__*.mjs` и `_tmp-*` разовой диагностикой, но eslint их лишь не читает — без
+# этих строк такой артефакт спокойно уезжал бы в git и не краснел бы нигде.
+/__*.mjs
+/_tmp-*
 .tmp/
 
 # iOS signing & certificates (never commit)

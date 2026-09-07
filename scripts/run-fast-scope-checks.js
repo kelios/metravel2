@@ -261,6 +261,15 @@ const main = () => {
       return
     }
 
+    // Первым и безусловно: guard дешёвый (одно чтение `git ls-files`), а
+    // предотвращать одноразовый артефакт в корне надо именно здесь. #1846
+    // показал, что `lint` ловит его уже постфактум — файл к тому моменту уже
+    // на origin/main и красит гейт у каждой сессии.
+    const rootScratchGuardStatus = runCommand('npm', ['run', 'guard:root-scratch-artifacts'])
+    if (rootScratchGuardStatus !== 0) {
+      process.exit(rootScratchGuardStatus)
+    }
+
     const guardStatus = runCommand('npm', ['run', 'guard:external-links'])
     if (guardStatus !== 0) {
       process.exit(guardStatus)
