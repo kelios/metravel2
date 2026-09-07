@@ -764,6 +764,64 @@ describe('QuestsContentPanel', () => {
         expect(queryByTestId('quest-card-quest-24')).toBeNull();
     });
 
+    // Пока сетки нет на экране (режим карты), её последняя измеренная высота
+    // протухает. Layout скроллера, пришедший в это время, не должен раскрывать
+    // окно по высоте прежней сетки: вернувшись в список, пользователь увидел бы
+    // раздутое окно, которого никто не запрашивал.
+    it('does not reveal from a stale grid height while the grid is unmounted', () => {
+        mockIsMobile = false;
+        (Platform as { OS: string }).OS = 'web';
+        const LazyQuestMap = jest.fn(() => null);
+        const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
+
+        const panel = (mode: 'list' | 'map') => (
+            <QuestsContentPanel
+                styles={styles}
+                colors={colors}
+                dataLoaded
+                viewMode={mode}
+                selectedCityId="warsaw"
+                selectedCityName="Warsaw"
+                nearbyId="__nearby__"
+                nearbyRadiusKm={15}
+                questsAll={quests}
+                questCardWidth={320}
+                mapPoints={[]}
+                mapCenter={{ latitude: 52.23, longitude: 21.01 }}
+                userLoc={null}
+                isMapAreaActive={false}
+                geoMessage={null}
+                geoRequesting={false}
+                showMapAreaSearch={false}
+                radiiLg={24}
+                LazyQuestMap={LazyQuestMap}
+                isMobile={false}
+                onShowNearby={() => {}}
+                onOpenFilterDrawer={() => {}}
+                onToggleViewMode={() => {}}
+                onSetRadius={() => {}}
+                onMapUserLocationChange={() => {}}
+                onMapMove={() => {}}
+                onSearchMapArea={() => {}}
+            />
+        );
+
+        const { getByTestId, queryByTestId, rerender } = render(panel('list'));
+
+        // Сетка выше вьюпорта: прокрутка есть, окно само не растёт.
+        fireEvent(getByTestId('quests-grid'), 'layout', { nativeEvent: { layout: { height: 3200, width: 1440 } } });
+        fireEvent(getByTestId('quests-content'), 'layout', { nativeEvent: { layout: { height: 900, width: 1440 } } });
+        expect(queryByTestId('quest-card-quest-24')).toBeNull();
+
+        // Карта снимает сетку с экрана; вертикальный ресайз в этот момент даёт
+        // layout скроллера, но сравнивать его уже не с чем.
+        rerender(panel('map'));
+        fireEvent(getByTestId('quests-content'), 'layout', { nativeEvent: { layout: { height: 5000, width: 1440 } } });
+
+        rerender(panel('list'));
+        expect(queryByTestId('quest-card-quest-24')).toBeNull();
+    });
+
     // Смена набора обязана начинать окно заново: иначе узкий срез после «всех
     // квестов» рисовался бы с раздутым окном.
     it('restarts the web grid window when the catalog changes', () => {
