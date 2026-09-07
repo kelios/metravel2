@@ -11,6 +11,7 @@ import { apiClient, ApiError } from '@/api/client';
 import { resolveDevMockFlag } from '@/utils/devMockFlags';
 import { devWarn } from '@/utils/logger';
 import { serializeTripStart } from '@/utils/tripDateTime';
+import { overnightBookingPayload } from '@/utils/overnightBooking';
 import { translate as i18nT } from '@/i18n';
 import {
   MOCK_PLANNED_TRIPS,
@@ -448,6 +449,9 @@ export async function updateTripRoute(input: UpdateRouteInput): Promise<PlannedT
       description: p.description ?? '',
       lat: p.coordinates ? p.coordinates[1] : null,
       lng: p.coordinates ? p.coordinates[0] : null,
+      // #1843: поля брони уезжают только у ночёвки — у остальных типов
+      // `overnightBookingPayload` отдаёт пустой объект и ключей не добавляет.
+      ...overnightBookingPayload(p),
     }));
     const dto = await apiClient.put<PlannedTripDto>(
       `/trips/planned/${input.tripId}/route/`,

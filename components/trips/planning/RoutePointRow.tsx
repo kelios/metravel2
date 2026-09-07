@@ -21,12 +21,18 @@ import {
 } from 'react-native';
 
 import type { RoutePoint } from '@/api/plannedTrips';
-import TripPlanLinkedText from '@/components/trips/planning/TripPlanLinkedText';
+import TripPlanLinkedText, {
+  buildTripPlanLinkProps,
+  resolveTripPlanLink,
+  type TripPlanLinkElementProps,
+} from '@/components/trips/planning/TripPlanLinkedText';
+import { formatOvernightPrice } from '@/components/trips/planning/routeOvernightBooking';
 import {
   ROUTE_POINT_ICON_NAME,
   ROUTE_POINT_LABEL,
   formatRoutePointCoordinates,
 } from '@/components/trips/planning/tripPlanFormatting';
+import { pointOvernightBooking } from '@/utils/overnightBooking';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import type { createStyles } from './RouteBuilder.styles';
@@ -107,6 +113,10 @@ function PointBody({
   );
 }
 
+// `Text` с web-пропсами анкора: RNW рендерит `<a href>` только когда они
+// объявлены в типе (тот же приём, что в `TripPlanLinkedText`).
+const BookingLink = Text as React.ComponentType<TripPlanLinkElementProps>;
+
 function RoutePointRow({
   point,
   index,
@@ -129,6 +139,11 @@ function RoutePointRow({
   onCloseEdit,
 }: Props) {
   const { t } = useTranslation();
+  // #1843: бронь показывается только у ночёвки — предикат живёт в общем модуле,
+  // и строка не решает заново, чья это точка.
+  const booking = pointOvernightBooking(point);
+  const bookingLink = booking?.url ? resolveTripPlanLink(booking.url) : null;
+  const bookingPrice = formatOvernightPrice(booking?.price);
   const isFirst = index === 0;
   const isLast = index === total - 1;
   const coordinatesLabel = formatRoutePointCoordinates(point.coordinates);
@@ -252,6 +267,45 @@ function RoutePointRow({
             >
               {coordinatesLabel}
             </Text>
+          ) : null}
+          {/* #1843: адрес жилья, бронь, цена и заезд отдельными значениями.
+              Ссылка — настоящий анкор через тот же контракт, что и ссылки в
+              описании точки (#1494): на web это `<a href target=_blank>`, на
+              native — общий обработчик ссылок rich-текста. */}
+          {booking ? (
+            <View style={styles.overnightMeta} testID={`route-builder-point-booking-${index}`}>
+              {booking.address ? (
+                <View style={styles.overnightMetaItem}>
+                  <Feather name="map-pin" size={12} color={colors.textMuted} />
+                  <Text style={styles.overnightMetaText}>{booking.address}</Text>
+                </View>
+              ) : null}
+              {bookingLink ? (
+                <BookingLink
+                  style={styles.overnightLink}
+                  testID={`route-builder-point-booking-link-${index}`}
+                  {...buildTripPlanLinkProps(bookingLink)}
+                >
+                  {t('tripsStatic:plan.overnight.openBooking', { domain: bookingLink.domain })}
+                </BookingLink>
+              ) : null}
+              {bookingPrice ? (
+                <View style={styles.overnightMetaItem}>
+                  <Feather name="tag" size={12} color={colors.textMuted} />
+                  <Text style={styles.overnightMetaText}>
+                    {t('tripsStatic:plan.overnight.priceValue', { value: bookingPrice })}
+                  </Text>
+                </View>
+              ) : null}
+              {booking.checkinTime ? (
+                <View style={styles.overnightMetaItem}>
+                  <Feather name="clock" size={12} color={colors.textMuted} />
+                  <Text style={styles.overnightMetaText}>
+                    {t('tripsStatic:plan.overnight.checkinValue', { value: booking.checkinTime })}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           ) : null}
         </PointBody>
         {isOwner && compact ? (

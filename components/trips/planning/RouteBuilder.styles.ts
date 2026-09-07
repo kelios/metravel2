@@ -189,6 +189,49 @@ export const createStyles = (colors: ThemedColors) =>
     },
     coordRow: { flexDirection: 'row', gap: 8 },
     coordInput: { flex: 1 },
+    // #1843: подраздел брони внутри формы точки. Отбит линией сверху, а не
+    // рамкой: своя рамка внутри уже обведённой формы читалась как вложенная
+    // карточка, которой здесь нет.
+    overnightSection: {
+      gap: 8,
+      marginTop: 4,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    overnightLegend: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+    // Строка «цена + заезд»: два узких поля рядом, как широта и долгота.
+    overnightPairRow: { flexDirection: 'row', gap: 8 },
+    overnightPairInput: { flex: 1, minWidth: 0 },
+    // Бронь в карточке точки. `flexWrap` обязателен: у View в RNW
+    // `flexShrink: 0`, и ряд без переноса вынес бы длинный адрес за рамку
+    // карточки целиком, вместо того чтобы перенести его на вторую строку.
+    overnightMeta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10 },
+    overnightMetaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      minWidth: 0,
+      flexShrink: 1,
+    },
+    overnightMetaText: {
+      minWidth: 0,
+      flexShrink: 1,
+      fontSize: 12,
+      color: colors.textSecondary,
+      lineHeight: 16,
+    },
+    // Тот же выход по ширине, что у соседних значений: анкор лежит в том же ряду
+    // прямым потомком, а на native `flexShrink` по умолчанию 0 — длинный домен
+    // мерился бы по внутренней ширине и вылезал бы за карточку.
+    overnightLink: {
+      minWidth: 0,
+      flexShrink: 1,
+      fontSize: 12,
+      lineHeight: 16,
+      color: colors.primaryDark,
+      fontWeight: '700',
+    },
     templates: { gap: 8 },
     templateRow: {
       flexDirection: 'row',

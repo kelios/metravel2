@@ -5,6 +5,7 @@
 import type { Travel, TravelAddressItem } from '@/types/types';
 import { type RoutePoint, type RoutePointType } from '@/api/plannedTrips';
 import { ROUTE_POINT_COORDINATE_PRECISION } from '@/components/trips/planning/tripPlanRouteMap.types';
+import { pointOvernightBooking } from '@/utils/overnightBooking';
 import { translate as i18nT } from '@/i18n'
 
 export const POINT_TYPES: RoutePointType[] = ['place', 'custom', 'rest', 'overnight'];
@@ -97,6 +98,24 @@ export const coordinatesFromFields = (
   return { coordinates: [lng, lat], error: null };
 };
 
+// #1843: бронь ночёвки — такая же несохранённая правка, как имя точки. Без неё в
+// подписи заполнение адреса, ссылки, цены или заезда не меняло сигнатуру, кнопка
+// «Сохранить маршрут» не появлялась вовсе (`routeBuilderCta`), и `handleSave`
+// уходил в ранний возврат по `!hasUnsavedRouteChanges` — введённая бронь молча
+// пропадала при уходе с экрана. Значение берётся через `pointOvernightBooking`,
+// потому что в PUT уезжает ровно оно: бронь у точки не-ночёвки не сохраняется, и
+// «менять» её нечем.
+const bookingSignature = (point: RoutePoint): string => {
+  const booking = pointOvernightBooking(point);
+  if (!booking) return '';
+  return [
+    booking.address ?? '',
+    booking.url ?? '',
+    booking.price ?? '',
+    booking.checkinTime ?? '',
+  ].join('~');
+};
+
 export const routeSignature = (route: RoutePoint[]): string =>
   route
     .map((point) => {
@@ -110,6 +129,7 @@ export const routeSignature = (route: RoutePoint[]): string =>
         point.name,
         point.description ?? '',
         coords,
+        bookingSignature(point),
       ].join('|');
     })
     .join('>');

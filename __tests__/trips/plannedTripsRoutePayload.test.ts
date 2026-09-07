@@ -107,4 +107,51 @@ describe('updateTripRoute payload', () => {
       expect.objectContaining({ order: ROUTE_LENGTH, title: `Point ${ROUTE_LENGTH}` }),
     )
   })
+
+  it('#1843: поля брони уезжают плоскими ключами и только у ночёвки', async () => {
+    // Проверяется провод, а не хелпер: PUT маршрута атомарный, поэтому ключ брони
+    // у точки другого типа уронил бы сохранение всего маршрута (#1532), а пустое
+    // текстовое поле обязано уходить пустой строкой — `address`/`booking_url` на
+    // бэкенде объявлены `blank=True, default=''` без `null=True`.
+    delete process.env.EXPO_PUBLIC_TRIPS_MOCK
+    const apiClientMock = { put: jest.fn(async () => makeTripDto(3)) }
+    const { updateTripRoute } = loadApi(apiClientMock)
+    const base = makeRoute().slice(0, 3)
+
+    await updateTripRoute({
+      tripId: 42,
+      route: [
+        base[0],
+        {
+          ...base[1],
+          type: 'overnight',
+          booking: {
+            address: 'Rue de la Gare 1',
+            url: 'https://booking.com/hotel/lu/x.html',
+            price: 84.5,
+            checkinTime: '15:00',
+          },
+        },
+        { ...base[2], type: 'overnight' },
+      ],
+    })
+
+    const [, body] = apiClientMock.put.mock.calls[0] as [string, { points: Record<string, unknown>[] }]
+    expect(body.points[1]).toEqual(
+      expect.objectContaining({
+        address: 'Rue de la Gare 1',
+        booking_url: 'https://booking.com/hotel/lu/x.html',
+        price: 84.5,
+        checkin_time: '15:00',
+      }),
+    )
+    // Ночёвка без брони обнуляет поля, иначе стереть введённое было бы нечем.
+    expect(body.points[2]).toEqual(
+      expect.objectContaining({ address: '', booking_url: '', price: null, checkin_time: null }),
+    )
+    // У точки другого типа ни одного ключа брони нет вовсе.
+    expect(Object.keys(body.points[0])).toEqual(
+      expect.not.arrayContaining(['address', 'booking_url', 'price', 'checkin_time']),
+    )
+  })
 })

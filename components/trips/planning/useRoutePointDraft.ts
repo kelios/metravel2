@@ -10,6 +10,14 @@ import {
   coordinatesFromFields,
   formatCoordinateInput,
 } from '@/components/trips/planning/routeBuilderPoint';
+import {
+  EMPTY_OVERNIGHT_BOOKING_DRAFT,
+  overnightBookingDraft,
+  parseOvernightBookingDraft,
+  type OvernightBookingDraft,
+  type OvernightBookingField,
+} from '@/components/trips/planning/routeOvernightBooking';
+import { isOvernightPoint } from '@/utils/overnightBooking';
 import { trackRoutePointAdded } from '@/utils/tripAnalytics';
 import { translate as i18nT } from '@/i18n'
 
@@ -33,6 +41,12 @@ export function useRoutePointDraft({
   const [editLat, setEditLat] = useState('');
   const [editLng, setEditLng] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  // #1843: черновик брони ночёвки. Живёт рядом с остальными полями правки и
+  // переживает переключение типа туда-обратно: скрытый блок не должен терять
+  // уже набранный адрес брони, пока форма не закрыта.
+  const [editBooking, setEditBooking] = useState<OvernightBookingDraft>(
+    EMPTY_OVERNIGHT_BOOKING_DRAFT,
+  );
   const [editError, setEditError] = useState<string | null>(null);
   // #1782: повторный выбор адреса обязан переписать то, что подставил сам поиск,
   // и не тронуть то, что набрал пользователь. Ref держит последнее записанное
@@ -89,6 +103,7 @@ export function useRoutePointDraft({
     setEditDescription(point.description ?? '');
     setEditLat(point.coordinates ? formatCoordinateInput(point.coordinates[1]) : '');
     setEditLng(point.coordinates ? formatCoordinateInput(point.coordinates[0]) : '');
+    setEditBooking(overnightBookingDraft(point));
     setEditError(null);
     editAddressAutofillNameRef.current = '';
   }, []);
@@ -108,6 +123,28 @@ export function useRoutePointDraft({
     editNameRef.current = next;
     setEditName(next);
   }, []);
+
+  // Одна точка записи вместо четырёх сеттеров наружу: форма правки и без брони
+  // передаёт в контейнер полтора десятка пропсов.
+  const handleEditBookingChange = useCallback(
+    (field: OvernightBookingField, value: string) => {
+      setEditBooking((prev) => ({ ...prev, [field]: value }));
+      setEditError(null);
+    },
+    [],
+  );
+
+  /**
+   * #1843: бронь для сохраняемой точки. Тип решает всё: у не-ночёвки поля
+   * сбрасываются в `null`, иначе смена типа оставила бы в маршруте ссылку на
+   * бронь, которой форма уже не показывает. `error` — та же ошибка, что
+   * показывается у координат, а не исключение: незакрытая правка при тапе по
+   * карте не имеет куда её вывести.
+   */
+  const editedBookingFor = (nextType: RoutePointType) => {
+    if (!isOvernightPoint(nextType)) return { booking: null, error: null };
+    return parseOvernightBookingDraft(editBooking);
+  };
 
   const handleOpenAddPoint = () => {
     setEditingIndex(null);
@@ -135,6 +172,11 @@ export function useRoutePointDraft({
     if (!current) return prev;
     const next = prev.slice();
     const nextType = editType === 'place' && current.placeId == null ? 'custom' : editType;
+    // Негодная бронь останавливает коммит целиком, как и негодные координаты:
+    // тап по карте не показывает ошибку, а молча сохранённая точка потеряла бы
+    // введённую ссылку.
+    const { booking, error: bookingError } = editedBookingFor(nextType);
+    if (bookingError) return prev;
     next[index] = {
       ...current,
       type: nextType,
@@ -142,6 +184,7 @@ export function useRoutePointDraft({
       description: editDescription.trim() || null,
       coordinates,
       placeId: nextType === 'place' ? current.placeId : null,
+      booking,
     };
     return next;
   };
@@ -157,6 +200,16 @@ export function useRoutePointDraft({
     const { coordinates, error } = coordinatesFromFields(editLat, editLng);
     if (error) {
       setEditError(error);
+      return;
+    }
+
+    // #1843: бронь проверяется до записи в маршрут — иначе форма закрылась бы,
+    // а «14-00» или `javascript:`-ссылка молча не доехали бы до точки. Фолбэк
+    // `place → custom` ниже на бронь не влияет: он переписывает только `place`,
+    // а ночёвкой этот тип не бывает.
+    const { booking, error: bookingError } = editedBookingFor(editType);
+    if (bookingError) {
+      setEditError(bookingError);
       return;
     }
 
@@ -177,6 +230,7 @@ export function useRoutePointDraft({
         description: editDescription.trim() || null,
         coordinates,
         placeId: nextType === 'place' ? current.placeId : null,
+        booking,
       };
       return next;
     });
@@ -212,6 +266,10 @@ export function useRoutePointDraft({
       setEditDescription('');
       setEditLat(formatCoordinateInput(lat));
       setEditLng(formatCoordinateInput(lng));
+      // Новая точка с карты — не ночёвка, и бронь предыдущей правки ей не
+      // принадлежит: без сброса первый же переключатель типа показал бы чужой
+      // адрес брони как свой.
+      setEditBooking({ ...EMPTY_OVERNIGHT_BOOKING_DRAFT });
       setEditError(null);
       // Тап по карте — такой же вход в правку новой точки, как `handleStartEdit`:
       // без сброса имя, подставленное поиском предыдущей точке, считалось бы
@@ -301,6 +359,7 @@ export function useRoutePointDraft({
     editLat,
     editLng,
     editDescription,
+    editBooking,
     editError,
     setNewType,
     setNewName,
@@ -319,6 +378,7 @@ export function useRoutePointDraft({
     handleStartEdit,
     handleCancelEdit,
     commitEditName,
+    handleEditBookingChange,
     handleOpenAddPoint,
     handleCancelAddPoint,
     handleSaveEdit,

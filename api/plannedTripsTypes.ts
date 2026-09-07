@@ -20,6 +20,23 @@ export interface TripPerson {
   avatarUrl: string | null
 }
 
+/**
+ * #1843: данные брони ночёвки. Живут только у точки `overnight` — у остальных
+ * типов поля не собираются формой, не уезжают в PUT маршрута и не читаются из
+ * ответа. Раньше адрес жилья, ссылка на Booking и время заезда лежали одной
+ * строкой в `description`, и вытащить оттуда отдельно ссылку было нечем.
+ */
+export interface OvernightBooking {
+  /** Адрес жилья: отдельная строка, а не часть свободного описания. */
+  address: string | null
+  /** Абсолютный http(s)-адрес брони, нормализованный общим контрактом ссылок. */
+  url: string | null
+  /** Цена за ночь. Валюты в контракте нет — число показывается без символа. */
+  price: number | null
+  /** Время заезда в форме `ЧЧ:ММ`; секунды бэкенда сюда не доезжают. */
+  checkinTime: string | null
+}
+
 export interface RoutePoint {
   id: string
   type: RoutePointType
@@ -28,6 +45,13 @@ export interface RoutePoint {
   /** [lng, lat] in the Metravel domain format. */
   coordinates: [number, number] | null
   placeId: number | null
+  /**
+   * Бронь ночёвки (#1843). Поле необязательное: точки строятся литералами в
+   * десятке мест (мок, шаблоны, импорт трека, предложения участников), и ни
+   * одному из них бронь не принадлежит — `undefined` там честнее пустого
+   * объекта. У точки не-`overnight` значение всегда отсутствует или `null`.
+   */
+  booking?: OvernightBooking | null
 }
 
 export interface RouteSummary {

@@ -15,7 +15,10 @@ import {
 import Button from '@/components/ui/Button';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n';
+import { isOvernightPoint } from '@/utils/overnightBooking';
+import RouteOvernightFields from './RouteOvernightFields';
 import type { createStyles } from './RouteBuilder.styles';
+import type { OvernightBookingDraft, OvernightBookingField } from './routeOvernightBooking';
 
 type RouteBuilderStyles = ReturnType<typeof createStyles>;
 
@@ -34,8 +37,11 @@ interface Props {
   lat: string;
   lng: string;
   description: string;
+  /** #1843: черновик брони. Показывается только у точки «ночёвка». */
+  booking: OvernightBookingDraft;
   error: string | null;
   onTypeChange: (type: RoutePointType) => void;
+  onBookingChange: (field: OvernightBookingField, value: string) => void;
   onAddressSelect: (address: string, coords: { lat: number; lng: number }) => void;
   onNameChange: (value: string) => void;
   onLatChange: (value: string) => void;
@@ -59,8 +65,10 @@ export default function RoutePointEditForm({
   lat: editLat,
   lng: editLng,
   description: editDescription,
+  booking: editBooking,
   error: editError,
   onTypeChange,
+  onBookingChange,
   onAddressSelect,
   onNameChange,
   onLatChange,
@@ -154,6 +162,17 @@ export default function RoutePointEditForm({
         style={[styles.input, styles.textArea]}
         testID="route-builder-edit-description"
       />
+      {/* #1843: адрес жилья, ссылка на бронь, цена и время заезда — поля
+          единственного типа точки. Раньше всё это уходило в описание одной
+          строкой, и отдельно кликнуть по ссылке брони было нечем. */}
+      {isOvernightPoint(editType) ? (
+        <RouteOvernightFields
+          styles={styles}
+          colors={colors}
+          draft={editBooking}
+          onChange={onBookingChange}
+        />
+      ) : null}
       {editError ? <Text style={styles.errorText}>{editError}</Text> : null}
       <View style={styles.editActions}>
         <Button

@@ -179,6 +179,7 @@ function RouteBuilder({
     editLat,
     editLng,
     editDescription,
+    editBooking,
     editError,
     setNewType,
     setNewName,
@@ -197,6 +198,7 @@ function RouteBuilder({
     handleStartEdit,
     handleCancelEdit,
     commitEditName,
+    handleEditBookingChange,
     handleOpenAddPoint,
     handleCancelAddPoint,
     handleSaveEdit,
@@ -641,8 +643,10 @@ function RouteBuilder({
       lat={editLat}
       lng={editLng}
       description={editDescription}
+      booking={editBooking}
       error={editError}
       onTypeChange={setEditType}
+      onBookingChange={handleEditBookingChange}
       onAddressSelect={handleEditAddressSelect}
       onNameChange={commitEditName}
       onLatChange={setEditLat}

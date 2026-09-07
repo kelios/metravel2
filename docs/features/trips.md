@@ -201,6 +201,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/planning/TripPlanLinkedText.tsx` | 246 | автолинк в описании: на web настоящий `<a href>`, на native `onPress` |
 | `components/trips/planning/RouteSaveSection.tsx` | 81 | CTA сохранения маршрута и его ошибки |
 | `components/trips/planning/TripPlanLinksBlock.tsx` | 85 | блок «Ссылки» — чипы с доменами из описания поездки |
+| `components/trips/planning/TripPlanCollapsibleText.tsx` | 140 | кнопка «Показать полностью» под обрезанным описанием поездки |
 | `components/trips/tripFormatting.ts` | 74 | метки/цвета статусов каталога, даты, места |
 | `components/trips/planning/TripAffiliateBlock.tsx` | 74 | партнёрские ссылки |
 | `components/trips/TripsPageSeo.tsx` | 71 | SEO-обёртка всех trips-роутов |
@@ -209,7 +210,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/publicTripCatalogUtils.ts` | 39 | сортировка (featured вперёд), поиск, признак активных фильтров |
 | `components/trips/planning/TripBikeTypeControl.tsx` | 48 | выбор типа велосипеда |
 
-Всего `components/trips/**` — 76 файлов, ~16k LOC вместе с роутами.
+Всего `components/trips/**` — 77 файлов, ~16k LOC вместе с роутами.
 
 ## Модель данных
 
@@ -261,13 +262,49 @@ DTO `PublicTripDto` (snake_case): `id`, `owner`, `owner_profile`, `title`,
 `region`, `publishedToCommunity`, `report`, `isOwner`, `myRsvp`, `createdAt`.
 
 - `RoutePoint`: `id: string`, `type: place|custom|rest|overnight`, `name`,
-  `description`, `coordinates: [lng, lat] | null`, `placeId`.
+  `description`, `coordinates: [lng, lat] | null`, `placeId`,
+  `booking?: OvernightBooking | null`.
   Порядок домена — **[lng, lat]**, в PUT уходит раздельными `lat`/`lng`.
   `type: 'place'` существует только вместе с непустым `placeId`: в PUT он уходит
   как `point_type: 'travel'`, а бэкенд (`validate_route_point_attrs`) отклоняет
   такую точку без привязки и валит весь запрос. Поэтому «Место» ставится только
   выбором места или путешествия в поиске по сайту, а не переключателем типа
   (#1532); из формы редактирования чип «Место» скрыт для точки без `placeId`.
+- `OvernightBooking` (#1843): `address`, `url`, `price`, `checkinTime` — все
+  `| null`. Бронь принадлежит ИСКЛЮЧИТЕЛЬНО точке `type: 'overnight'`: тип
+  главнее содержимого, поэтому смена типа снимает бронь и на экране, и в PUT.
+  Единственное место правил — `utils/overnightBooking.ts` (разбор, нормализация,
+  оба направления обмена) и `components/trips/planning/routeOvernightBooking.ts`
+  (черновик формы, тексты ошибок, формат вывода).
+  - В PUT уходят плоские ключи `address`, `booking_url`, `price`, `checkin_time`
+    и ТОЛЬКО у ночёвки: `overnightBookingPayload` отдаёт остальным типам пустой
+    объект. PUT маршрута атомарный, и один лишний ключ уронил бы сохранение
+    всего маршрута — та же цена ошибки, что у `point_type` в #1532. Пустое
+    значение текстовых полей — пустая строка (как `description` в том же
+    payload), потому что на бэкенде это `blank=True, default=''` без
+    `null=True`; `price` и `checkin_time` обнуляются `null`.
+  - Бронь входит в `routeSignature` (`routeBuilderPoint.ts`): правка одних
+    только её полей — такая же несохранённая правка, как переименование точки.
+    Без этого кнопка «Сохранить маршрут» не появлялась бы вовсе
+    (`routeBuilderCta.visible`), а `handleSave` уходил бы в ранний возврат.
+  - `url` проходит общий контракт внешних ссылок
+    (`normalizeHttpOrInternalUrl`, #1494): голому `booking.com/…` дописывается
+    `https://`, `javascript:`/`ftp:` не проходят ни из формы, ни из базы.
+    В строке точки ссылка рисуется настоящим анкором через
+    `buildTripPlanLinkProps`, а не текстом с `onPress`.
+  - `price` — число без валюты (валюты в контракте поля нет, единицу задаёт
+    подпись «за ночь»); запятая принимается как десятичный разделитель, потому
+    что так набирают во всех продуктовых локалях. `checkinTime` — `ЧЧ:ММ`,
+    секунды `TimeField` бэкенда до пользователя не доезжают.
+  - **Backend полей ещё нет.** `TripRoutePoint` (`trips/models.py`) несёт только
+    `point_type/order/travel/title/description/lat/lng`, а
+    `_planned_route_point_payload` (`trips/views.py`) собирает payload белым
+    списком — лишние ключи молча отбрасываются. Поэтому фронт уже отправляет и
+    читает бронь, но до миграции она не сохраняется вовсе: ответ на успешный
+    PUT возвращает точки без полей брони, `useTripRouteSave` подставляет его в
+    состояние конструктора, и блок брони исчезает из строки точки сразу после
+    сохранения — не только после перезагрузки. Что требуется от бэкенда — ниже,
+    в «Открытые вопросы».
 - `RouteSummary`: `distanceKm`, `durationMin`, `elevationGainM`, `stopsCount`,
   `provider?`, `updatedAt?`.
 - `RoutingState`: `provider`, `isOptimal`, `fallbackReason`, `warnings[]`.
@@ -822,6 +859,18 @@ metravel.by — относительный путь без `target`), поэто
 выключено на Android (RN #22811). Найденные в описании ссылки дублируются
 чипами в блоке «Ссылки» (`TripPlanLinksBlock`, ключ `tripsStatic:plan.links.title`).
 
+Компактная шапка вкладки «Маршрут» (#1691) обрезает описание до двух строк, и
+логистика внутри текста — автобусы до старта и с финиша — была видна только
+после перехода на соседнюю вкладку. `TripPlanCollapsibleText` (#1844) рисует под
+таким описанием кнопку «Показать полностью»/«Свернуть»
+(`tripsStatic:plan.description.expand|collapse`), не меняя контракт
+`TripPlanLinkedText`. Переполнение оценивается по самому тексту
+(`estimateTripPlanTextLines` × `tripPlanTextCharsPerLine(width)`): `onTextLayout`
+в react-native-web не реализован, а компактная шапка живёт на всей мобильной
+ширине, поэтому вместимость строки считается по вьюпорту. Ошибка оценки
+безопасна в одну сторону — пока текст считается помещающимся, `numberOfLines`
+не передаётся вовсе, так что спрятать текст без кнопки разворота нельзя.
+
 Шаринг самой поездки — `utils/tripPlanLinks.ts`: `buildTripPlanPath/Url`
 (id проходит `/^[1-9]\d*$/`, иначе пустая строка), `buildTripShareText`,
 `buildTripTelegramShareUrl` (`https://t.me/share/url?...`).
@@ -857,7 +906,9 @@ Unit/component (Jest):
 - `__tests__/trips/api.publicTrips.test.ts`, `plannedTripsAdapter.test.ts`,
   `plannedTripsTransport.test.ts`, `plannedTripsRoutePayload.test.ts`,
   `plannedTripsRouteElevation.test.ts`, `plannedTripsBikeType.test.ts`,
-  `api.tripChat.test.ts`, `api.tripTelegramGroup.test.ts` — адаптеры и payload;
+  `api.tripChat.test.ts`, `api.tripTelegramGroup.test.ts` — адаптеры и payload
+  (в `plannedTripsRoutePayload` — #1843: поля брони уезжают плоскими ключами и
+  только у ночёвки, пустые текстовые — пустой строкой);
 - `__tests__/trips/publicTripCatalogUtils.test.ts`, `tripFormatting.test.ts`,
   `tripPlanFormatting.test.ts`, `tripDateTime.test.ts`,
   `tripDateGovernance.test.ts` — презентационный слой и даты;
@@ -867,7 +918,13 @@ Unit/component (Jest):
   `tripRouteExportMenu`, `tripTelegramGroupCard`, `tripConsent`,
   `tripPlanLinkedText`, `routeBuilder.pointDescription`, `tripFallbackCover`,
   `publicTripFallbackCover`, `tripPlanRouteMapFullscreen`,
-  `tripPlanRouteMapLayers`, `tripPlanRouteMapNative`;
+  `tripPlanRouteMapLayers`, `tripPlanRouteMapNative`,
+  `routeBuilder.overnightBooking` (#1843 — блок брони появляется и исчезает по
+  типу точки, доезжает до PUT нормализованным, правка одной только брони
+  считается несохранённой, у не-ночёвки полей нет);
+- `__tests__/utils/overnightBooking.test.ts` — контракт полей брони: разбор
+  времени и цены, безопасность ссылки, и то, что ни один ключ брони не уходит в
+  payload точки другого типа;
 - `__tests__/app/` — `plannedTripScreen.states`, `plannedTripScreen.routeExport`,
   `plannedTripsScreen.redirect` (редирект `/trips/plan` → `/trips/my`),
   `tripCreateScreen.authGate`, `tripDetailScreen.dockReserve`;
@@ -942,6 +999,26 @@ E2E (Playwright):
 13. `/trips` объявлен в `HEADER_NAV_ITEMS` как primary, но `CustomHeaderNavSection`
     его исключает. В какой именно поверхности шапки/меню пункт реально виден
     пользователю — по прочитанному коду не установлено.
+14. **#1843, поля брони ночёвки — не вопрос, а точная зависимость от бэкенда.**
+    Фронтовая часть готова целиком; чтобы бронь пережила перезагрузку, в
+    `../metravel-backend` нужно (проверено по исходнику 07.09.2026):
+    - `TripRoutePoint` (`trips/models.py`, НЕ абстрактный `RoutePointBase` —
+      иначе поля разъедутся ещё и на шаблоны и предложения, которым бронь не
+      принадлежит) + миграция: `address = CharField(max_length=255, blank=True,
+      default='')`, `booking_url = URLField(max_length=500, blank=True,
+      default='')`, `price = DecimalField(max_digits=10, decimal_places=2,
+      null=True, blank=True)`, `checkin_time = TimeField(null=True, blank=True)`;
+    - четыре имени в `TripRoutePointSerializer.Meta.fields`
+      (`trips/serializers.py:910`);
+    - в `validate_route_point_attrs` (`trips/serializers.py:882`) — отказ, когда
+      любое из полей непусто у точки с `point_type != 'overnight'`, тем же
+      стилем, что связка `travel`/`title`/координат;
+    - четыре ключа в `_planned_route_point_payload` (`trips/views.py:1259`):
+      метод собирает payload белым списком, и без правки ровно этого метода
+      поля не доедут до сериализатора даже после миграции — PUT
+      `/trips/planned/{id}/route/` пересоздаёт точки именно через него.
+    Шаблоны маршрута (`TripRouteTemplatePoint`) бронь намеренно НЕ несут: чужая
+    бронь в переиспользуемом шаблоне — не данные шаблона.
 
 ## Связанные документы
 
