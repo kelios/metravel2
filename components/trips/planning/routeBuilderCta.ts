@@ -14,6 +14,7 @@ import {
   routeCtaState,
   type RouteCtaState,
 } from '@/components/MapPage/routeCtaLabel'
+import { MIN_ROUTE_POINTS } from '@/components/trips/planning/routeBuilderPoint'
 
 export interface RouteBuilderCtaInput {
   /** Точек в текущем (черновом) маршруте. */
@@ -37,9 +38,6 @@ export interface RouteBuilderCta {
   hint: string | null
   state: RouteCtaState
 }
-
-/** Маршрут по дорогам требует минимум старт и финиш — тот же порог, что на /map. */
-const MIN_ROUTE_POINTS = 2
 
 export const routeBuilderCta = ({
   pointCount,

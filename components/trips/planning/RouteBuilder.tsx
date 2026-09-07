@@ -668,7 +668,11 @@ function RouteBuilder({
       isMapFirst={isMapFirst}
       route={route}
       editingIndex={editingIndex}
-      editorSlot={editPointSection}
+      // Форма правки принадлежит одной раскладке за раз: в mapFirst её ставит
+      // карточка своей точки внутри секции, в stack — `RouteBuilderLayout`.
+      // Секция в stack слот и не читает, поэтому `null` ничего не рисует иначе,
+      // а лишь называет владельца там, где раньше приходил чужой узел.
+      editorSlot={isMapFirst ? editPointSection : null}
       renderPoint={renderPoint}
       isAddPointOpen={isAddPointOpen}
       newType={newType}

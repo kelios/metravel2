@@ -9,7 +9,12 @@ import { pointOvernightBooking } from '@/utils/overnightBooking';
 import { translate as i18nT } from '@/i18n'
 
 export const POINT_TYPES: RoutePointType[] = ['place', 'custom', 'rest', 'overnight'];
-/** Старт и финиш: тот же порог «маршрут можно строить», что и на /map. */
+/**
+ * Старт и финиш: тот же порог «маршрут можно строить», что и на /map.
+ * Объявление единственное на каталог (#1870): по нему живут и бейдж «Готово»
+ * шага 2 (`RoutePointsSection`), и лесенка CTA (`routeBuilderCta`), поэтому
+ * поднятый порог двигает оба места сразу и они не расходятся.
+ */
 export const MIN_ROUTE_POINTS = 2;
 export const SITE_SEARCH_MIN_LENGTH = 2;
 
