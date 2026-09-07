@@ -528,14 +528,17 @@ npx serve dist/prod -l 3000 -s
   stops following the theme on Android and iPhone. Values that must reach an API
   payload use `DESIGN_COLORS`, never a `var(--…)` token.
 - Map/place/travel-point surfaces must reuse one point/place template whenever
-  possible: the same component serves every page and every platform, and a
-  per-surface difference may only add functionality, never fork the layout. The
-  mobile popup/card contract is fullscreen inside the app content area with app
-  header/footer still visible; the hero image takes about 70% of the card; below
-  it are title/meta, coordinates with copy, article/page action when available,
-  expandable navigation system choices, and existing save/add/share/route
-  actions. Nothing in the card may be clipped on either axis: every element stays
-  readable without horizontal scrolling and without a cut-off bottom.
+  possible: the same content/action model serves every page and every platform,
+  and a per-surface shell may only adapt insets, engine, or presentation and add
+  functionality — never fork the layout or the action set (`MapPlaceBottomCard`
+  as the mobile shell over the shared `PlacePopupCard` model is the sanctioned
+  shape; details in `docs/features/map.md`). The mobile popup/card contract is
+  fullscreen inside the app content area with app header/footer still visible;
+  the hero image takes about 70% of the card; below it are title/meta,
+  coordinates with copy, article/page action when available, expandable
+  navigation system choices, and existing save/add/share/route actions. Nothing
+  in the card may be clipped on either axis: every element stays readable without
+  horizontal scrolling and without a cut-off bottom.
 - The point/place navigation set must explicitly include Google Maps, Apple Maps, Organic Maps/offline, Waze, Яндекс Карты, Яндекс Навигатор, and OpenStreetMap where coordinates are available. Telegram/share is extra and must not replace map/navigation choices.
 - Related travel state actions must be visible as text, not only as an unlabeled icon: "Был здесь", "Хочу поехать", "Планирую" or a compact "Был / Хочу / Планирую" affordance that opens those choices.
 - On travel details, tapping a point card or its image focuses the map and highlights/raises the corresponding marker. It must not open the fullscreen popup automatically; the popup/card opens from an explicit marker tap/click on the map.
