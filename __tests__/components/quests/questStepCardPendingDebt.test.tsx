@@ -5,6 +5,8 @@
  * маршрута и упирался в тупик: финала нет, объяснения нет, выхода нет.
  * Разбор прохождений 24–28.08.2026: 4 из 6 закончились ровно так, 0 засчитано.
  */
+import { StyleSheet } from 'react-native'
+
 import { fireEvent, render } from '@testing-library/react-native'
 
 import { QuestStepCard } from '@/components/quests/questWizardStepCard'
@@ -70,6 +72,29 @@ describe('QuestStepCard — долг маршрута перед финалом'
     fireEvent.press(screen.getByTestId('quest-step-pending-finish'))
 
     expect(screen.props.onFinishHere).toHaveBeenCalledTimes(1)
+  })
+
+  it('переносит ряд возвратов и держит кнопку в карточке: долг бывает и на семь точек', () => {
+    // Квест из восьми точек (#92, Гомель) даёт семь кнопок «Вернуться» плюс
+    // выход на финал. Строка без переноса вынесла их за карточку и за колонку
+    // контента, поверх карты — это и есть разъехавшаяся вёрстка.
+    const desktopStyles = createQuestWizardStyles(colors, false, 1280)
+    expect(desktopStyles.farStepActions.flexWrap).toBe('wrap')
+
+    const pendingBehind = Array.from({ length: 7 }, (_, i) => ({
+      id: `p-${i + 1}`,
+      title: `${i + 1}. Печать очень длинного названия точки маршрута`,
+      index: i,
+    }))
+    const screen = renderCard({ styles: desktopStyles, pendingBehind })
+
+    const buttons = [
+      ...pendingBehind.map((pending) => screen.getByTestId(`quest-step-pending-go-${pending.id}`)),
+      screen.getByTestId('quest-step-pending-finish'),
+    ]
+    buttons.forEach((button) => {
+      expect(StyleSheet.flatten(button.props.style)).toMatchObject({ maxWidth: '100%' })
+    })
   })
 
   it('молчит, когда долга нет', () => {

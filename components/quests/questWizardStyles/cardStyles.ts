@@ -148,8 +148,19 @@ export const createCardStyles = (colors: QuestColors, isMobile: boolean, _screen
     },
     farStepActions: {
         flexDirection: isMobile ? 'column' : 'row',
+        // Долг маршрута (#1633) кладёт сюда по кнопке на каждую отложенную
+        // точку — на квесте из восьми точек их семь плюс «завершить здесь».
+        // Строка без переноса выносила их за карточку и за колонку контента,
+        // поверх карты. Ряд обязан переноситься.
+        flexWrap: isMobile ? 'nowrap' : 'wrap',
         alignItems: isMobile ? 'stretch' : 'center',
         gap: SPACING.sm,
+    },
+    // Заголовок точки в подписи кнопки длины не знает: без потолка одна
+    // кнопка перерастает карточку и на узком экране, где перенос уже не
+    // спасает. Ширину режем здесь, текст внутри укорачивает сама Button.
+    farStepActionButton: {
+        maxWidth: '100%',
     },
     visitorInfoCard: {
         backgroundColor: colors.backgroundSecondary,

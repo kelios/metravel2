@@ -174,6 +174,12 @@ const staticStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
+    // Когда caller ограничил ширину кнопки (maxWidth/width/stretch), ряд с
+    // иконкой и подписью обязан ужиматься: без этого он остаётся шириной по
+    // содержимому и текст вылезает за рамку вместо многоточия. Кнопку,
+    // которая шире содержимого, флаг не трогает — ужимать там нечего.
+    flexShrink: 1,
+    minWidth: 0,
   },
   icon: {
     marginRight: spacing.xs,
@@ -184,6 +190,7 @@ const staticStyles = StyleSheet.create({
   label: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
+    flexShrink: 1,
   },
   iconOnly: {
     paddingHorizontal: spacing.sm,

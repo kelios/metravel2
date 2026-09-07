@@ -741,6 +741,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                   onPress={() => onGoToStep?.(pending.index)}
                   variant="outline"
                   size="md"
+                  style={styles.farStepActionButton}
                   icon={<Feather name="corner-up-left" size={16} color={colors.primaryText} />}
                   testID={`quest-step-pending-go-${pending.id}`}
                 />
@@ -751,6 +752,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                   onPress={onFinishHere}
                   variant="primary"
                   size="md"
+                  style={styles.farStepActionButton}
                   icon={<Feather name="flag" size={16} color={colors.textOnPrimary} />}
                   testID="quest-step-pending-finish"
                 />
