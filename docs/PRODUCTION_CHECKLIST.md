@@ -1,6 +1,6 @@
 # Production release checklist
 
-Актуализировано: 2026-08-13.
+Актуализировано: 2026-09-07.
 
 Checklist описывает действия, но не подтверждает, что конкретный релиз уже
 прошёл. Evidence прикладывается к release/task на MCP board.
@@ -177,6 +177,37 @@ iPad full-screen/windowed portrait/landscape и обязательные tablet 
 
 - [ ] Не возвращён service-worker runtime/static cache и нет инструкции
       пользователю очищать кэш.
+
+## Mail configuration change (server-owned)
+
+Независимая от релиза операция: правка `/etc/postfix/**`, `inet_interfaces`,
+`relayhost`, SASL/TLS или `/etc/fail2ban/jail.local`. Требует отдельного явного
+разрешения владельца — `sudo` на проде интерактивный, а получать root через
+группу `docker` запрещено (тихая эскалация прав). Завершается разделом `Handoff`.
+
+- [ ] Перед сужением или открытием listener снята read-only картина того, что
+      сервер реально обслуживает: `postconf -h inet_interfaces mynetworks
+      relayhost`, `ss -ltn | grep ':25'`, MX домена, и по логу — есть ли входящая
+      почта в очереди и хоть один успешный `sasl_username=`. Ноль по обоим
+      счётчикам означает, что публичный listener не нужен и перебор закрывается
+      сужением, а не баном.
+- [ ] Изменение применено, демон поднялся без `fatal/error/warning`:
+      `systemctl is-active postfix`, `mailq`.
+- [ ] Listener соответствует намерению: `ss -ltn | grep ':25'`.
+- [ ] `postconf -n` отличается от прежнего ровно намеренными строками;
+      `relayhost`, SASL и TLS не задеты попутно.
+- [ ] **Отправка отчётов подтверждена, а не предположена.** Снижение числа строк
+      в логе доказательством не является: нужен реальный `status=sent` с
+      `dsn=2.0.0` от relay. Проверяется одной штатной рассылкой (09:00 и 10:00)
+      или прогоном `report.sh` по отдельному разрешению владельца.
+- [ ] Первая отправка после рестарта проверена на `No route to host` по IPv6.
+      Единичный случай в момент рестарта — транзиентный сбой сети; повтор на
+      штатных рассылках лечится без отключения IPv6:
+
+  ```bash
+  sudo postconf -e 'smtp_address_preference = ipv4'
+  sudo systemctl reload postfix
+  ```
 
 ## Handoff
 
