@@ -1,0 +1,44 @@
+{
+  "contractVersion": 1,
+  "scope": [
+    "app",
+    "components",
+    "hooks",
+    "utils"
+  ],
+  "totals": {
+    "files": 29,
+    "occurrences": 129
+  },
+  "files": {
+    "components/home/homeHeroStyles/sliderMediaStyles.ts": 1,
+    "components/home/homeHeroStyles/typographyStyles.ts": 9,
+    "components/layout/NewVersionPrompt.tsx": 2,
+    "components/listTravel/filters/modernFiltersStyles/containerHeaderStyles.ts": 1,
+    "components/listTravel/travelListItemStyles.ts": 2,
+    "components/MapPage/Map/ClusterLayer.tsx": 4,
+    "components/MapPage/Map/mapMarkerStyles.ts": 10,
+    "components/MapPage/Map/MapWebCanvas.tsx": 1,
+    "components/MapPage/Map/MarkerClusterGroup.tsx": 3,
+    "components/MapPage/Map/nativeMapHtml.ts": 1,
+    "components/MapPage/Map/PlacePopupCard/FullscreenPopupOverlay.tsx": 2,
+    "components/MapPage/Map/PlacePopupCard/styles.ts": 2,
+    "components/MapPage/Map/RouteLineLayer.tsx": 1,
+    "components/MapPage/Map/useLeafletIcons.ts": 2,
+    "components/MapPage/MapBottomSheet.tsx": 1,
+    "components/MapPage/MapMobile/MapEmptyStateToast.tsx": 1,
+    "components/MapPage/MapMobile/MapMobilePopover.tsx": 1,
+    "components/MapPage/MapMobile/MapMobileTopOverlay.styles.ts": 1,
+    "components/MapPage/MapMobileLayout.styles.ts": 3,
+    "components/MapPage/MapPanel.tsx": 1,
+    "components/travel/gallery/styles.ts": 2,
+    "components/UserPoints/PointsListManualModal.tsx": 3,
+    "utils/mapSnapshot/leafletSnapshot.ts": 10,
+    "utils/mapSnapshot/shared.ts": 1,
+    "utils/mapWebOverlays/osmFeaturesOverlay.ts": 5,
+    "utils/mapWebOverlays/osmPoiOverlay.ts": 45,
+    "utils/mapWebOverlays/osmRoutesOverlay.ts": 6,
+    "utils/passwordStrength.ts": 5,
+    "utils/registrationPasswordStrength.ts": 3
+  }
+}
