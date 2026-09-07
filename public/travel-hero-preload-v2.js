@@ -124,6 +124,149 @@
       }
     }
 
+    /*
+     * ЗЕРКАЛО `normalizeOgImageUrl` из `utils/seo.ts` (#1873).
+     *
+     * ПОЧЕМУ КОПИЯ, А НЕ ИМПОРТ. Скрипт шипится сырым файлом из `public/` и
+     * выполняется ДО бандла — импортов у него нет вовсе, в этом весь его смысл:
+     * краулер видит настоящую мету, не дожидаясь гидрации. Копия здесь ОДНА, и
+     * её расхождение с TS-источником валит
+     * `__tests__/public/travel-hero-preload-social-preview.test.ts`: тот же набор
+     * входов гоняется через `normalizeOgImageUrl` и сравнивается посимвольно —
+     * тем же приёмом, что `scripts/lib/readerMediaUrl.js` (#1854/#1868).
+     *
+     * ПОЧЕМУ ВООБЩЕ СЧИТАЕМ АДРЕС, А НЕ ПЕРЕСТАЁМ ПАТЧИТЬ МЕТУ. Оболочка SPA
+     * (`app/+html.tsx`) `og:image` не объявляет вовсе, а SSG-страница есть не у
+     * каждого адреса: свежая и переименованная статья живут без пререндера до
+     * следующего деплоя. Перестань скрипт писать обложку — на таких страницах её
+     * не было бы ни одного кадра до гидрации, а на пререндеренных он до этой
+     * правки ЗАТИРАЛ верный SSG-адрес мастером без `?w=` (`no-store`, 0.4–1 МБ).
+     * Нужен был не отказ от записи, а тот же адрес, что у SSG.
+     */
+
+    /* Зеркало `socialPreviewWidthForRoute` (`constants/imageContract.ts`). */
+    var SOCIAL_PREVIEW_WIDTH_BY_ROUTE = {
+      'avatar': 160,
+      'badge-image': 160,
+      'quest-cover': 800,
+      'address-image': 960,
+      'quest-step-image': 800,
+      'quest-poster': 800,
+      'trip-cover': 960,
+      'travel-image': 1280,
+      'gallery': 1280,
+      'travel-description-image': 960
+    };
+
+    /* Зеркало `FIRST_PARTY_MEDIA_ROUTE` и правил ключа из `utils/mediaUrl.ts`. */
+    var FIRST_PARTY_MEDIA_ROUTE = /^\/(?:gallery|travel-image|travel-description-image|address-image)\/(.+)$/i;
+    var LEGACY_IMAGE_EXTENSIONS = ['gif', 'heic', 'heif', 'jpeg', 'jpg', 'png', 'webp'];
+    var LEGACY_SIGNATURE_QUERY_PARAM = /^(?:x-amz-.+|awsaccesskeyid|signature|expires|policy|key-pair-id)$/i;
+    var S3_HOST = /(?:^|\.)s3(?:[.-][a-z0-9-]+)*\.amazonaws\.com$/i;
+    var OWN_SITE_HOST = /(?:^|\.)metravel\.by$/i;
+
+    /* Зеркало `isFirstPartyMediaHost` + `resolveLegacyResizeOrigin`: ссылку в
+     * бакет обслуживает наш backend, но origin для неё берётся из конфигурации,
+     * а не из адреса, — придумывать его здесь нельзя, поэтому такой хост мимо. */
+    function isFirstPartyMediaHost(hostname) {
+      var h = String(hostname || '').toLowerCase();
+      if (!h || S3_HOST.test(h)) return false;
+      if (OWN_SITE_HOST.test(h)) return true;
+      if (isPrivateHost(h)) return true;
+      if (h === String(host || '').toLowerCase()) return true;
+      return !!apiOrigin && h === getHostname(apiOrigin);
+    }
+
+    /* Зеркало `parseSupportedLegacyImageKey`: сегменты ключа либо `null`. */
+    function parseLegacyImageKeyParts(key) {
+      var decodedKey;
+      try {
+        decodedKey = decodeURIComponent(key);
+      } catch (_e) {
+        return null;
+      }
+      if (!decodedKey || decodedKey.indexOf('\\') !== -1 || decodedKey.indexOf('\0') !== -1) return null;
+
+      var parts = decodedKey.split('/');
+      for (var i = 0; i < parts.length; i++) {
+        if (!parts[i] || parts[i] === '.' || parts[i] === '..') return null;
+      }
+
+      var last = parts[parts.length - 1].split('.');
+      var extension = String(last[last.length - 1] || '').toLowerCase();
+      for (var e = 0; e < LEGACY_IMAGE_EXTENSIONS.length; e++) {
+        if (LEGACY_IMAGE_EXTENSIONS[e] === extension) return parts;
+      }
+      return null;
+    }
+
+    function indexOfPart(parts, value) {
+      for (var i = 0; i < parts.length; i++) { if (parts[i] === value) return i; }
+      return -1;
+    }
+
+    function lastIndexOfPart(parts, value) {
+      for (var i = parts.length - 1; i >= 0; i--) { if (parts[i] === value) return i; }
+      return -1;
+    }
+
+    /* Зеркало `isLegacyConversionKey`. */
+    function isLegacyConversionKey(parts) {
+      var conversionIndex = indexOfPart(parts, 'conversions');
+      return conversionIndex > 0 &&
+        conversionIndex === lastIndexOfPart(parts, 'conversions') &&
+        conversionIndex < parts.length - 1 &&
+        indexOfPart(parts, 'responsive-images') === -1 &&
+        parts[0].indexOf(':') === -1;
+    }
+
+    /*
+     * Адрес соцпревью: ступень семейства, затем тот же transform-роут, по
+     * которому кадр запрашивает читатель.
+     *
+     * ПОРЯДОК НЕ КОММУТИРУЕТ. Семейство определяется по ПЕРВОМУ сегменту пути;
+     * после переписывания это `media-resize`, такого семейства в контракте нет,
+     * ширина не проставится вовсе, и краулер получит мастер с `no-store` —
+     * регресс #1221. Поэтому сначала ширина, и только потом роут.
+     */
+    function toSocialPreviewUrl(absoluteUrl) {
+      try {
+        if (!absoluteUrl) return absoluteUrl;
+        var url = new URL(String(absoluteUrl));
+
+        if (!url.searchParams.has('w')) {
+          var familyMatch = /^\/([a-z-]+)\//i.exec(url.pathname);
+          var family = familyMatch ? familyMatch[1].toLowerCase() : '';
+          var width = family && Object.prototype.hasOwnProperty.call(SOCIAL_PREVIEW_WIDTH_BY_ROUTE, family)
+            ? SOCIAL_PREVIEW_WIDTH_BY_ROUTE[family]
+            : 0;
+          if (width) url.searchParams.set('w', String(width));
+        }
+
+        if (!isFirstPartyMediaHost(url.hostname)) return url.toString();
+
+        var routeMatch = FIRST_PARTY_MEDIA_ROUTE.exec(url.pathname);
+        if (!routeMatch) return url.toString();
+        var keyParts = parseLegacyImageKeyParts(routeMatch[1]);
+        if (!keyParts) return url.toString();
+
+        var isUpload = keyParts[0] === 'uploads' && keyParts.length > 1;
+        if (!isUpload && !isLegacyConversionKey(keyParts)) return url.toString();
+
+        // Подпись S3 после переписывания бессмысленна и только плодит cache-key.
+        var signed = [];
+        url.searchParams.forEach(function (_value, key) {
+          if (LEGACY_SIGNATURE_QUERY_PARAM.test(key)) signed.push(key);
+        });
+        for (var si = 0; si < signed.length; si++) { url.searchParams.delete(signed[si]); }
+
+        url.pathname = (isUpload ? '/media-resize/' : '/media-resize/legacy/') + routeMatch[1];
+        return url.toString();
+      } catch (_e) {
+        return absoluteUrl;
+      }
+    }
+
     function getTravelImage(data) {
       try {
         var ogImgUrl = '';
@@ -134,7 +277,7 @@
         if (!ogImgUrl && data && data.travel_image_thumb_url) {
           ogImgUrl = data.travel_image_thumb_url;
         }
-        return toAbsoluteUrl(ogImgUrl) || DEFAULT_OG_IMAGE;
+        return toSocialPreviewUrl(toAbsoluteUrl(ogImgUrl)) || DEFAULT_OG_IMAGE;
       } catch (_e) {
         return DEFAULT_OG_IMAGE;
       }

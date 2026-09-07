@@ -3,6 +3,7 @@
  */
 
 import { familyRouteFromPathname, socialPreviewWidthForRoute } from '@/constants/imageContract';
+import { resolveLegacyResizeOrigin, toLegacyResizePath } from '@/utils/mediaUrl';
 
 export const DEFAULT_OG_IMAGE_PATH = '/assets/icons/logo_yellow_512x512.png';
 
@@ -87,21 +88,58 @@ function withSocialPreviewWidth(absoluteUrl: string): string {
 }
 
 /**
+ * Тот же кэшируемый transform-роут, по которому кадр запрашивает читатель (#1873).
+ *
+ * ЗАЧЕМ. Ownership/family-роуты идут мимо кэша nginx (`x-cache-status: BYPASS`)
+ * даже со ступенью: тело правильное и `immutable`, но каждый обход краулера и
+ * каждый шеринг заново гоняют ресайз в Django — на одном vCPU с transform
+ * concurrency = 1. Тот же ключ на legacy-роуте кэшируется (замер прода
+ * 07.09.2026, `3860/conversions/…-detail_hd.jpg?w=1280`: family `BYPASS`,
+ * legacy `MISS` → `HIT`, тело байт в байт 83 182 B).
+ *
+ * ПОЧЕМУ ЗДЕСЬ, А НЕ У ВЫЗЫВАЮЩИХ. Обложку соцпревью во фронте объявляют
+ * четверо — Helmet (`useTravelDetailsHeadSync`), вьюмодель страницы,
+ * `createTravelStructuredData` и `InstantSEO`, — и все они уже ходят сюда за
+ * ступенью (#1221). Правило адреса обязано жить в той же единственной точке,
+ * иначе повторится ровно то расхождение, ради которого заведён #1873: SSG уводил
+ * на legacy-роут, а клиент возвращал family-роут поверх него.
+ *
+ * ПОРЯДОК НЕ КОММУТИРУЕТ — он тот же, что у `toSocialPreviewUrl` в
+ * `scripts/generate-seo-pages.js`. `withSocialPreviewWidth` узнаёт семейство по
+ * ПЕРВОМУ сегменту пути; после переписывания это `media-resize`, такого
+ * семейства в контракте нет, ширина не проставится вовсе, и краулер получит
+ * мастер с `no-store` — регресс #1221.
+ *
+ * Origin берём у `resolveLegacyResizeOrigin`, а не склеиваем сами: чужой хост и
+ * прямая ссылка в бакет обязаны остаться нетронутыми — построить им наш
+ * transform-роут значило бы выдать краулеру адрес, по которому картинки нет.
+ * Классам без legacy-роута (плоский корень `/gallery/<hash>.webp` — большинство
+ * обложек) отдельной ветки не нужно: `toLegacyResizePath` отдаёт на них `null`.
+ */
+function toSocialPreviewUrl(absoluteUrl: string): string {
+  const withWidth = withSocialPreviewWidth(absoluteUrl);
+  const origin = resolveLegacyResizeOrigin(withWidth);
+  if (!origin) return withWidth;
+  const legacyPath = toLegacyResizePath(withWidth);
+  return legacyPath ? `${origin}${legacyPath}` : withWidth;
+}
+
+/**
  * Ensures any image URL is absolute and HTTPS for use in og:image / twitter:image,
- * and pins a stored-derivative width for first-party media (see `withSocialPreviewWidth`).
- * Returns null for empty/invalid input.
+ * pins a stored-derivative width and moves first-party media onto the cacheable
+ * reader route (see `toSocialPreviewUrl`). Returns null for empty/invalid input.
  */
 export function normalizeOgImageUrl(image?: string | null): string | null {
   if (!image) return null;
   const trimmed = String(image).trim();
   if (!trimmed) return null;
 
-  if (trimmed.startsWith('//')) return withSocialPreviewWidth(`https:${trimmed}`);
+  if (trimmed.startsWith('//')) return toSocialPreviewUrl(`https:${trimmed}`);
   if (trimmed.startsWith('http://'))
-    return withSocialPreviewWidth(trimmed.replace(/^http:\/\//i, 'https://'));
-  if (trimmed.startsWith('https://')) return withSocialPreviewWidth(trimmed);
-  if (trimmed.startsWith('/')) return withSocialPreviewWidth(buildOgImageUrl(trimmed));
-  return withSocialPreviewWidth(buildOgImageUrl(`/${trimmed}`));
+    return toSocialPreviewUrl(trimmed.replace(/^http:\/\//i, 'https://'));
+  if (trimmed.startsWith('https://')) return toSocialPreviewUrl(trimmed);
+  if (trimmed.startsWith('/')) return toSocialPreviewUrl(buildOgImageUrl(trimmed));
+  return toSocialPreviewUrl(buildOgImageUrl(`/${trimmed}`));
 }
 
 export function ensureSingleTitleTag(title: string): HTMLTitleElement | null {
