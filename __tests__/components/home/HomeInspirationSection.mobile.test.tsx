@@ -111,6 +111,64 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
     expect(wide.getByText('Подборка выходного дня')).toBeTruthy()
   })
 
+  // #1778 (TestFlight 1.0.5 (8), «Слишком много популярных нам точно столько
+  // нужно?»): на телефоне карточка рельсы занимает почти всю ширину, поэтому
+  // восемь популярных — это восемь свайпов. Лимит подборки «Популярное» на
+  // телефоне сокращён до пяти; остальные рельсы (например «Новые маршруты»)
+  // остаются на общем лимите 8 — обе стороны контракта держим numeric-assert'ом.
+  describe('rail card budget', () => {
+    const railData = {
+      results: Array.from({ length: 10 }, (_, index) => ({
+        id: index + 1,
+        name: `Маршрут ${index + 1}`,
+      })),
+    }
+
+    const renderRail = (queryKey: string) => {
+      mockUseQuery.mockReturnValue({
+        data: railData,
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: jest.fn(),
+      } as any)
+
+      return render(
+        <HomeInspirationSection
+          title="Популярное у путешественников"
+          subtitle="Маршруты, которые чаще всего открывают другие путешественники"
+          queryKey={queryKey}
+          fetchFn={jest.fn()}
+          layout="rail"
+        />,
+      )
+    }
+
+    const countRenderedRoutes = (view: ReturnType<typeof render>) =>
+      Array.from({ length: 10 }, (_, index) => index + 1).filter(
+        (n) => view.queryByText(`Маршрут ${n}`) !== null,
+      )
+
+    it('caps the popular rail at 5 cards on a phone', () => {
+      const view = renderRail('home-popular-travels')
+
+      expect(countRenderedRoutes(view)).toEqual([1, 2, 3, 4, 5])
+    })
+
+    it('keeps other rails at 8 cards on a phone', () => {
+      const view = renderRail('home-new-travels')
+
+      expect(countRenderedRoutes(view)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+    })
+
+    it('keeps the popular rail at the full desktop budget of 10 cards', () => {
+      mockViewport = { isPhone: false, isLargePhone: false, width: 1280 }
+      const view = renderRail('home-popular-travels')
+
+      expect(countRenderedRoutes(view)).toHaveLength(10)
+    })
+  })
+
   it('shows a working "Все маршруты" CTA that navigates to the catalog', () => {
     render(
       <HomeInspirationSection

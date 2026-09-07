@@ -59,6 +59,18 @@ const EMPTY_STATE_TEXT: Record<string, { title: string; subtitle: string }> = {
   },
 }
 
+// Сколько карточек показывает рельса. На телефоне карточка занимает почти всю
+// ширину, поэтому «сколько в подборке» = «сколько свайпов подряд»: восемь
+// карточек «Популярного» читались как каталог, а не как подборка (отзыв
+// TestFlight 1.0.5 (8): «Слишком много популярных нам точно столько нужно?»).
+// Пять — это топ, который пролистывается парой инерционных свайпов; за большим
+// под рельсой стоит кнопка «Все маршруты».
+const RAIL_COUNT_DESKTOP = 10
+const RAIL_COUNT_MOBILE = 8
+const RAIL_COUNT_MOBILE_BY_SECTION: Record<string, number> = {
+  'home-popular-travels': 5,
+}
+
 const SECTION_BADGES: Record<string, string> = {
   get 'home-travels-of-month'() { return i18nT('homeStatic:inspiration.month') },
   get 'home-random-travels'() { return i18nT('homeStatic:inspiration.random') },
@@ -190,10 +202,15 @@ export function HomeInspirationSection({
   const travelsList = useMemo(() => {
     const arr = extractItems(travelData)
     if (fixedCount != null) return arr.slice(0, fixedCount)
-    if (isRail) return arr.slice(0, isMobile ? 8 : 10)
+    if (isRail) {
+      const railCount = isMobile
+        ? (RAIL_COUNT_MOBILE_BY_SECTION[queryKey] ?? RAIL_COUNT_MOBILE)
+        : RAIL_COUNT_DESKTOP
+      return arr.slice(0, railCount)
+    }
     if (isWeekendShowcase) return isMobile ? arr : arr.slice(0, 4)
     return arr.slice(0, isMobile ? 4 : 6)
-  }, [travelData, isMobile, isWeekendShowcase, isRail, fixedCount])
+  }, [travelData, isMobile, isWeekendShowcase, isRail, fixedCount, queryKey])
 
   useEffect(() => {
     return () => {
