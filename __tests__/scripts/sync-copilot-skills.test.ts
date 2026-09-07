@@ -226,4 +226,60 @@ describe('sync-copilot-skills CLI', () => {
     expect(result.stderr).toContain('снимок разошёлся с источником')
     expect(mirrorBody()).toBe('СТАРОЕ ТЕЛО\n')
   })
+
+  // Пробы выше упираются в блокер `missingSkills` и до записи не доходят, поэтому
+  // единственный деструктивный путь зеркала (`applyMirrorPlan`: запись, удаление
+  // сироты и уборка опустевшего каталога) оставался непокрытым: регрессия в порядке
+  // writes/deletes или в `removeEmptyDirsUpTo` прошла бы сьют зелёной. Здесь фикстура
+  // несёт ВСЕ объявленные скиллы, поэтому блокера нет и запись выполняется по-настоящему.
+  describe('полная фикстура: зеркало действительно переписывается', () => {
+    const orphanFile = () => path.join(rootDir, '.github', 'skills', 'metravel-qa-agent', 'legacy', 'stale.md')
+    const companionFile = (skill: string) =>
+      path.join(rootDir, '.github', 'skills', skill, 'agents', 'openai.yaml')
+
+    beforeEach(() => {
+      for (const skill of MIRRORED_SKILLS) {
+        writeTextFile(skillFile('.codex', skill), `источник ${skill}\n`)
+      }
+      // Спутник есть в источнике, но не в снимке — реальный случай metravel-i18n-guardrails.
+      writeTextFile(
+        path.join(rootDir, '.codex', 'skills', 'metravel-i18n-guardrails', 'agents', 'openai.yaml'),
+        'short_description: "источник"\n',
+      )
+      // Сирота внутри зеркалимого скилла: источник этого файла исчез.
+      writeTextFile(orphanFile(), 'файла нет в .codex\n')
+      // Vendor и Copilot-native соседи не должны пострадать от записи.
+      writeTextFile(skillFile('.github', 'speckit-plan'), 'вендорный spec-kit\n')
+      writeTextFile(skillFile('.github', 'copilot-only-helper'), 'скилл без оригинала\n')
+    })
+
+    it('переписывает снимок, создаёт спутника, сносит сироту и убирает опустевший каталог', () => {
+      const result = run([])
+
+      expect(result.status).toBe(0)
+      expect(result.stdout).toContain('copilot-skill-sync: synced.')
+      expect(mirrorBody()).toBe('источник metravel-qa-agent\n')
+      expect(fs.readFileSync(companionFile('metravel-i18n-guardrails'), 'utf8')).toBe('short_description: "источник"\n')
+      expect(fs.existsSync(orphanFile())).toBe(false)
+      // Каталог `legacy/` держался только сиротой — иначе `removeEmptyDirsUpTo` мёртв.
+      expect(fs.existsSync(path.dirname(orphanFile()))).toBe(false)
+      expect(fs.readFileSync(skillFile('.github', 'speckit-plan'), 'utf8')).toBe('вендорный spec-kit\n')
+      expect(fs.readFileSync(skillFile('.github', 'copilot-only-helper'), 'utf8')).toBe('скилл без оригинала\n')
+    })
+
+    it('после записи --check зеленеет, а повторный прогон ничего не меняет (идемпотентность)', () => {
+      expect(run([]).status).toBe(0)
+
+      const check = run(['--check'])
+      expect(check.status).toBe(0)
+      expect(check.stdout).toContain('copilot-skill-sync: passed.')
+
+      const again = run(['--json'])
+      const report = JSON.parse(again.stdout)
+      expect(again.status).toBe(0)
+      expect(report.ok).toBe(true)
+      expect(report.writes).toEqual([])
+      expect(report.deletes).toEqual([])
+    })
+  })
 })
