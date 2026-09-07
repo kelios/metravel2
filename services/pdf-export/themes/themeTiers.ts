@@ -1,7 +1,7 @@
 // services/pdf-export/themes/themeTiers.ts
 // Тиры тем PDF-экспорта: free vs premium (FE-8.1 / #292)
 
-import type { PdfThemeName } from '@/components/export/ThemePreview'
+import type { PdfThemeName } from './types'
 
 export type PdfThemeTier = 'free' | 'premium'
 
@@ -33,6 +33,7 @@ export const PDF_THEME_TIERS: Record<PdfThemeName, PdfThemeTier> = {
   nordic: 'premium',
   retro: 'premium',
   tropical: 'premium',
+  illustrated: 'premium',
   'editorial-luxe': 'premium',
   watercolor: 'premium',
 }

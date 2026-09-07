@@ -3,8 +3,10 @@
 
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import ThemePreview from '@/components/export/ThemePreview';
+import ThemePreview, { THEME_CATALOG } from '@/components/export/ThemePreview';
 import type { PdfThemeName } from '@/components/export/ThemePreview';
+
+import { PDF_THEMES } from '@/services/pdf-export/themes/PdfThemeConfig';
 
 const mockRequireUnlock = jest.fn();
 const mockTrackPaywallView = jest.fn();
@@ -37,6 +39,28 @@ describe('ThemePreview paywall (#296)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockIsPremium = true;
+  });
+
+  it('covers every registered theme exactly once (#1821)', () => {
+    const ids = Object.values(THEME_CATALOG).map((theme) => theme.id);
+    expect(ids.sort()).toEqual(Object.keys(PDF_THEMES).sort());
+    for (const [id, theme] of Object.entries(THEME_CATALOG)) {
+      expect(theme.id).toBe(id);
+    }
+  });
+
+  it.each([true, false])('preserves illustrated access for premium=%s (#1821)', (premium) => {
+    mockIsPremium = premium;
+    const { getByText } = render(<ThemePreview {...baseProps} />);
+    fireEvent.press(getByText(PDF_THEMES.illustrated.displayName));
+    if (premium) {
+      expect(onThemeSelect).toHaveBeenCalledWith('illustrated');
+      expect(mockTrackPaywallView).not.toHaveBeenCalled();
+    } else {
+      expect(onThemeSelect).not.toHaveBeenCalled();
+      expect(mockTrackPaywallView).toHaveBeenCalledWith('illustrated');
+      expect(getByText('Премиум-шаблон')).toBeTruthy();
+    }
   });
 
   describe('forced free user', () => {

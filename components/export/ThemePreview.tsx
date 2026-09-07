@@ -6,27 +6,9 @@ import { usePdfPremium } from '@/hooks/usePdfPremium';
 import { isPremiumTheme } from '@/services/pdf-export/themes/themeTiers';
 import { translate as i18nT } from '@/i18n'
 
+import type { PdfThemeName } from '@/services/pdf-export/themes/types';
 
-export type PdfThemeName =
-  | 'minimal'
-  | 'light'
-  | 'dark'
-  | 'travel-magazine'
-  | 'classic'
-  | 'modern'
-  | 'romantic'
-  | 'adventure'
-  | 'black-white'
-  | 'sepia'
-  | 'newspaper'
-  | 'ocean'
-  | 'forest'
-  | 'sunset'
-  | 'nordic'
-  | 'retro'
-  | 'tropical'
-  | 'editorial-luxe'
-  | 'watercolor';
+export type { PdfThemeName } from '@/services/pdf-export/themes/types';
 
 interface ThemeInfo {
   id: PdfThemeName;
@@ -45,7 +27,7 @@ interface ThemeInfo {
   };
 }
 
-const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
+export const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   minimal: {
     id: 'minimal',
     get name() { return i18nT('export:components.export.ThemePreview.theme.minimal.name') },
@@ -314,6 +296,22 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     },
     preview: {
       headerFont: 'Poppins',
+      bodyFont: 'Nunito',
+      style: 'playful',
+    },
+  },
+  illustrated: {
+    id: 'illustrated',
+    get name() { return i18nT('export:services.pdfExport.theme.illustrated.displayName') },
+    get description() { return i18nT('export:services.pdfExport.theme.illustrated.description') },
+    colors: {
+      primary: '#2d2d2d',
+      secondary: '#5a5a5a',
+      accent: '#d4a574',
+      background: '#fffef9',
+    },
+    preview: {
+      headerFont: 'Comfortaa',
       bodyFont: 'Nunito',
       style: 'playful',
     },
