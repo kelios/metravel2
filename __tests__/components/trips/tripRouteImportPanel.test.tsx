@@ -254,6 +254,11 @@ describe('TripRouteImportPanel', () => {
     expect(screen.getByTestId('trip-route-import-original-only').props.accessibilityLabel).toBe(
       'Только трек на карту',
     );
+    // Подсказка называет кнопку подстановкой, а не своей копией названия:
+    // сломайся интерполяция — здесь будет «{{value}}», а не подпись кнопки.
+    expect(screen.getByTestId('trip-route-import-capacity-hint')).toHaveTextContent(
+      'Трек можно положить на карту, не трогая точки маршрута, — кнопка «Только трек на карту».',
+    );
 
     fireEvent.press(screen.getByTestId('trip-route-import-original-only'));
 

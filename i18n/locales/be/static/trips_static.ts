@@ -95,7 +95,7 @@ export const tripsStaticResources = {
   "plan.routeImport.error.empty": "У файле няма трэка як мінімум з дзвюма кропкамі.",
   "plan.routeImport.error.read": "Не ўдалося прачытаць файл. Выберыце яго яшчэ раз.",
   "plan.routeImport.error.capacity": "Маршрут не змяшчаецца ў даступны ліміт кропак. Выдаліце частку бягучых або імянных пунктаў.",
-  "plan.routeImport.error.capacityHint": "Трэк можна пакласці на карту, не чапаючы пунктаў маршруту, — кнопка «Толькі трэк на карту».",
+  "plan.routeImport.error.capacityHint": "Трэк можна пакласці на карту, не чапаючы пунктаў маршруту, — кнопка «{{value}}».",
   "plan.routeImport.original.pending": "Арыгінал «{{value}}» будзе захаваны разам з маршрутам.",
   "plan.routeImport.original.applyHint": "Зыходны файл захаваецца ў паездцы, і на карце з’явіцца яго дакладная, неспрошчаная лінія.",
   "plan.routeImport.original.stored": "Арыгінальны трэк захаваны ў паездцы · {{value}}",

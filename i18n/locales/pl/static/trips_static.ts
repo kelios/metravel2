@@ -95,7 +95,7 @@ export const tripsStaticResources = {
   "plan.routeImport.error.empty": "Plik nie zawiera śladu z co najmniej dwoma punktami.",
   "plan.routeImport.error.read": "Nie udało się odczytać pliku. Wybierz go ponownie.",
   "plan.routeImport.error.capacity": "Trasa nie mieści się w dostępnym limicie punktów. Usuń część bieżących lub nazwanych punktów.",
-  "plan.routeImport.error.capacityHint": "Ślad można pokazać na mapie bez zmiany punktów trasy — przycisk „Tylko ślad na mapie”.",
+  "plan.routeImport.error.capacityHint": "Ślad można pokazać na mapie bez zmiany punktów trasy — przycisk „{{value}}”.",
   "plan.routeImport.original.pending": "Oryginał „{{value}}” zostanie zapisany razem z trasą.",
   "plan.routeImport.original.applyHint": "Plik źródłowy zostanie zapisany przy wyjeździe, a na mapie pojawi się jego dokładna, nieuproszczona linia.",
   "plan.routeImport.original.stored": "Oryginalny ślad zapisany przy wyjeździe · {{value}}",

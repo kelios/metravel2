@@ -248,7 +248,13 @@ function TripRouteImportPanel({
           accessibilityLiveRegion="polite"
           testID="trip-route-import-capacity-hint"
         >
-          {t('tripsStatic:plan.routeImport.error.capacityHint')}
+          {/* Подпись кнопки подставляется, а не переписывается в тексте: иначе
+              её переименование оставило бы подсказку указывать на несуществующее
+              название сразу в пяти локалях, а `test:i18n` сверяет паритет
+              ключей, а не перекрёстные ссылки внутри строк. */}
+          {t('tripsStatic:plan.routeImport.error.capacityHint', {
+            value: t('tripsStatic:plan.routeImport.originalOnly'),
+          })}
         </Text>
       ) : null}
 

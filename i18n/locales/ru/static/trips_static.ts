@@ -95,7 +95,7 @@ export const tripsStaticResources = {
   "plan.routeImport.error.empty": "В файле нет трека минимум с двумя точками.",
   "plan.routeImport.error.read": "Не удалось прочитать файл. Выберите его ещё раз.",
   "plan.routeImport.error.capacity": "Маршрут не помещается в доступный лимит точек. Удалите часть текущих или именованных точек.",
-  "plan.routeImport.error.capacityHint": "Трек можно положить на карту, не трогая точки маршрута, — кнопка «Только трек на карту».",
+  "plan.routeImport.error.capacityHint": "Трек можно положить на карту, не трогая точки маршрута, — кнопка «{{value}}».",
   "plan.routeImport.original.pending": "Оригинал «{{value}}» будет сохранён вместе с маршрутом.",
   "plan.routeImport.original.applyHint": "Исходный файл сохранится у поездки, и на карте появится его точная, неупрощённая линия.",
   "plan.routeImport.original.stored": "Оригинальный трек сохранён у поездки · {{value}}",
