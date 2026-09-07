@@ -117,8 +117,11 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
   // телефоне сокращён до пяти; остальные рельсы (например «Новые маршруты»)
   // остаются на общем лимите 8 — обе стороны контракта держим numeric-assert'ом.
   describe('rail card budget', () => {
+    // Элементов заведомо больше любого лимита рельсы: иначе «десктоп рисует 10»
+    // проходит и при снятом лимите, и assert перестаёт быть потолком.
+    const RAIL_FIXTURE_SIZE = 12
     const railData = {
-      results: Array.from({ length: 10 }, (_, index) => ({
+      results: Array.from({ length: RAIL_FIXTURE_SIZE }, (_, index) => ({
         id: index + 1,
         name: `Маршрут ${index + 1}`,
       })),
@@ -145,7 +148,7 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
     }
 
     const countRenderedRoutes = (view: ReturnType<typeof render>) =>
-      Array.from({ length: 10 }, (_, index) => index + 1).filter(
+      Array.from({ length: RAIL_FIXTURE_SIZE }, (_, index) => index + 1).filter(
         (n) => view.queryByText(`Маршрут ${n}`) !== null,
       )
 
@@ -165,7 +168,7 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
       mockViewport = { isPhone: false, isLargePhone: false, width: 1280 }
       const view = renderRail('home-popular-travels')
 
-      expect(countRenderedRoutes(view)).toHaveLength(10)
+      expect(countRenderedRoutes(view)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     })
   })
 
