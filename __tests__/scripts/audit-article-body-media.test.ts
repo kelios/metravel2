@@ -80,10 +80,20 @@ describe('audit-article-body-media: разбор целей', () => {
     expect(pointIdOfUrl('не адрес')).toBeNull();
   });
 
-  it('переносит первопартийный путь на проверяемый origin и отбрасывает мусор', () => {
+  it('переносит свой путь на проверяемый origin и отбрасывает мусор', () => {
     expect(toTargetUrl('/address-image/1/x.webp')).toBe('https://metravel.by/address-image/1/x.webp');
+    expect(toTargetUrl('https://metravel.by/gallery/1/g.jpg')).toBe('https://metravel.by/gallery/1/g.jpg');
     expect(toTargetUrl('data:image/png;base64,AAA')).toBeNull();
     expect(toTargetUrl('')).toBeNull();
+  });
+
+  // Перенос бакетного пути на наш origin выдумывал 404 там, где у читателя 200:
+  // `/uploads/<key>` сайт не обслуживает, а бакет отдаёт файл.
+  it('бакетную ссылку щупает как есть, а чужой хост не щупает вовсе', () => {
+    expect(toTargetUrl('https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/a.JPG')).toBe(
+      'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/a.JPG',
+    );
+    expect(toTargetUrl('https://images.weserv.nl/?url=metravel.by%2Fx.webp')).toBeNull();
   });
 
   it('читает точки из travelAddress и из coordsMeTravel', () => {

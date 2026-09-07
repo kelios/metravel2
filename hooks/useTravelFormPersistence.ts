@@ -955,15 +955,28 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         // Guard «фото исчезнувшей точки» (#1834): `/address-image/<id>/` в теле
         // живёт по строке `travel_address` и умирает вместе с точкой. Сверяем id
         // из тела с точками сохраняемого маршрута и показываем список, а не
-        // переписываем текст за автора. Только ручной путь: у автосейва нет
-        // пользователя перед модалкой, и узкий контент-сейв точки не трогает.
-        const proceedWithBodyImages = await confirmDanglingPointImagesIfNeeded(
-          bodySnapshot,
-          toSave?.coordsMeTravel,
-        );
-        if (!proceedWithBodyImages) {
-          suppressAutosaveErrorToastRef.current = false;
-          return;
+        // переписываем текст за автора.
+        //
+        // Только НАМЕРЕННОЕ сохранение: полное (кнопка «Сохранить» — без
+        // dataOverride, тот же признак, по которому показывается тост «Сохранено»)
+        // либо публикация. Инкрементальный сейв маршрута приходит сюда с
+        // override'ом и пользователя перед экраном не подразумевает: каждый клик
+        // по карте идёт через `scheduleAddPointSave` → `saveRoute` → сюда
+        // (`TravelWizardStepRoute.tsx:227`), у опубликованной статьи автосейв
+        // выключен, и модалка на этом пути не предупреждала бы, а теряла точку —
+        // отмена оставила бы её без server-id, то есть без возможности приложить
+        // фото (отказ #505). Предупреждение автор всё равно увидит: удалить точку
+        // и не сохранить статью нельзя.
+        const isDeliberateSave = !dataOverride || isPublishIntent;
+        if (isDeliberateSave) {
+          const proceedWithBodyImages = await confirmDanglingPointImagesIfNeeded(
+            bodySnapshot,
+            toSave?.coordsMeTravel,
+          );
+          if (!proceedWithBodyImages) {
+            suppressAutosaveErrorToastRef.current = false;
+            return;
+          }
         }
 
         formDataRef.current = toSave as TravelFormData;

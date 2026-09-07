@@ -117,6 +117,20 @@ function familyOfMediaUrl(rawUrl, site = DEFAULT_SITE) {
   return parts[0].toLowerCase()
 }
 
+/**
+ * Прямая ссылка в наше legacy-хранилище S3: не на проверяемом origin.
+ *
+ * Один предикат на оба гейта, и по разным поводам: контрактной проверке такой
+ * адрес не годится как цель (`?w=` бакет игнорирует by design, #1176), а
+ * 404-прогону, наоборот, годится ровно как есть — переносить `/uploads/<key>` на
+ * наш origin нельзя, сайт этот путь не обслуживает и перенос выдумывает битые
+ * кадры (проба 07.09.2026 на статьях 116/171/220/290). Разойдись эти два места в
+ * определении хоста — один гейт молча перестанет видеть целый класс кадров.
+ */
+function isLegacyBucketUrl(rawUrl) {
+  return /^https?:\/\/[^/]*\bs3[.-][^/]*amazonaws\.com\//i.test(String(rawUrl || '').trim())
+}
+
 module.exports = {
   RICH_TEXT_FIELDS,
   RICH_TEXT_IMG_SRC_ATTRIBUTES,
@@ -124,4 +138,5 @@ module.exports = {
   collectLegacyUploadCandidates,
   collectRichTextMediaUrls,
   familyOfMediaUrl,
+  isLegacyBucketUrl,
 }

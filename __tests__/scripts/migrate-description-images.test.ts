@@ -224,26 +224,3 @@ describe('collectPointImageRefs', () => {
     expect(collectPointImageRefs(`${point(15601)}${point(15601)}`)).toHaveLength(1);
   });
 });
-
-describe('legacyUploadKey: формы первопартийного адреса', () => {
-  it('берёт и прокси-путь, и голый /uploads/<key>', () => {
-    // Голую форму сайт не обслуживает вовсе (проба 07.09.2026: 404), а миграция
-    // её раньше не видела — семь кадров в статьях 116/171/220/290 читатель видел
-    // пустой рамкой при зелёном «legacy нет».
-    expect(
-      collectLegacyUploadRefs('<img src="https://metravel.by/uploads/1620061579IMG_6533.JPG">'),
-    ).toEqual([
-      { raw: 'https://metravel.by/uploads/1620061579IMG_6533.JPG', key: 'uploads/1620061579IMG_6533.JPG' },
-    ]);
-    expect(
-      collectLegacyUploadRefs('<img src="https://metravel.by/media-resize/uploads/x.JPG">'),
-    ).toEqual([{ raw: 'https://metravel.by/media-resize/uploads/x.JPG', key: 'uploads/x.JPG' }]);
-  });
-
-  it('не расширяется на соседние первопартийные классы', () => {
-    expect(collectLegacyUploadRefs('<img src="https://metravel.by/gallery/1/g.jpg">')).toEqual([]);
-    expect(
-      collectLegacyUploadRefs('<img src="https://metravel.by/travel-description-image/1/d.webp">'),
-    ).toEqual([]);
-  });
-});

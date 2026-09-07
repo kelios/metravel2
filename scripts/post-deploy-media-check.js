@@ -37,6 +37,7 @@ const {
   collectLegacyUploadCandidates,
   collectRichTextMediaUrls,
   familyOfMediaUrl: familyOfMediaUrlAt,
+  isLegacyBucketUrl,
 } = require('./lib/articleBodyMedia')
 
 const args = process.argv.slice(2)
@@ -495,11 +496,6 @@ function collectArticleBodyRungs(detail, site = SITE) {
     }
   }
   return rungs
-}
-
-/** Прямая ссылка в S3: не на проверяемом origin и `?w=` не понимает (#1176). */
-function isLegacyBucketUrl(rawUrl) {
-  return /^https?:\/\/[^/]*\bs3[.-][^/]*amazonaws\.com\//i.test(String(rawUrl || '').trim())
 }
 
 /** Как `toTargetUrl`, но сохраняет query: у ступени в нём и лежит ширина. */

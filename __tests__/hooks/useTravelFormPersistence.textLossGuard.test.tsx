@@ -1071,12 +1071,14 @@ describe('handleManualSave — guard «фото исчезнувшей точк�
     mockSaveFormData.mockResolvedValue({ ...baseTravel } as any);
   });
 
+  // Полное сохранение = кнопка «Сохранить»: без dataOverride, тем же признаком
+  // отличается и тост «Сохранено».
   it('точка ушла из маршрута, а фото осталось в тексте → confirm; отмена = чистый no-op', async () => {
     mockConfirmAction.mockResolvedValueOnce(false);
     const { result } = setupPersistence({ initialFormData: baseTravel, baselineText });
 
     await act(async () => {
-      await result.current.handleManualSave(baseTravel as any);
+      await result.current.handleManualSave();
     });
 
     expect(mockConfirmAction).toHaveBeenCalledTimes(1);
@@ -1088,12 +1090,46 @@ describe('handleManualSave — guard «фото исчезнувшей точк�
     const { result } = setupPersistence({ initialFormData: baseTravel, baselineText });
 
     await act(async () => {
-      await result.current.handleManualSave(baseTravel as any);
+      await result.current.handleManualSave();
     });
 
     expect(mockConfirmAction).toHaveBeenCalledTimes(1);
     expect(mockSaveFormData).toHaveBeenCalledTimes(1);
     expect(mockSaveFormData.mock.calls[0][0].description).toContain('address-image/15188/');
+  });
+
+  // Инкрементальный сейв маршрута (клик по карте, удаление точки) приходит с
+  // dataOverride. Модалка на этом пути не предупреждала бы, а теряла точку:
+  // отмена оставила бы её без server-id, то есть без возможности приложить фото
+  // (отказ #505). У опубликованной статьи автосейва нет, и этот сейв — единственный.
+  it('инкрементальный сейв точки диалога не поднимает и не теряет точку', async () => {
+    const { result } = setupPersistence({ initialFormData: baseTravel, baselineText });
+
+    await act(async () => {
+      await result.current.handleManualSave({
+        countries: ['1'],
+        coordsMeTravel: [
+          ...baseTravel.coordsMeTravel,
+          { id: null, lat: 53.91, lng: 27.57, address: 'Новая точка', categories: [] },
+        ],
+      } as any);
+    });
+
+    expect(mockConfirmAction).not.toHaveBeenCalled();
+    expect(mockSaveFormData).toHaveBeenCalledTimes(1);
+    expect(mockSaveFormData.mock.calls[0][0].coordsMeTravel).toHaveLength(2);
+  });
+
+  it('публикация статьи с мёртвым фото в теле диалог поднимает', async () => {
+    mockConfirmAction.mockResolvedValueOnce(false);
+    const { result } = setupPersistence({ initialFormData: baseTravel, baselineText });
+
+    await act(async () => {
+      await result.current.handleManualSave(baseTravel as any, { intent: 'publish' });
+    });
+
+    expect(mockConfirmAction).toHaveBeenCalledTimes(1);
+    expect(mockSaveFormData).not.toHaveBeenCalled();
   });
 
   it('фото живой точки диалога не поднимает', async () => {
@@ -1106,10 +1142,7 @@ describe('handleManualSave — guard «фото исчезнувшей точк�
     });
 
     await act(async () => {
-      await result.current.handleManualSave({
-        ...baseTravel,
-        description: `${LONG_TEXT}${POINT_IMG(15193)}`,
-      } as any);
+      await result.current.handleManualSave();
     });
 
     expect(mockConfirmAction).not.toHaveBeenCalled();

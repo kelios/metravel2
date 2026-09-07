@@ -127,6 +127,18 @@ describe('confirmDanglingPointImagesIfNeeded', () => {
     expect(mockConfirmAction).toHaveBeenCalledTimes(1);
   });
 
+  it('у weserv-обёртки показывает имя фотографии, а не имя чужого хоста', async () => {
+    mockConfirmAction.mockResolvedValueOnce(true);
+    const html =
+      '<img src="https://images.weserv.nl/?url=metravel.by%2Faddress-image%2F15188%2Fconversions%2Fdead.webp">';
+
+    await confirmDanglingPointImagesIfNeeded({ description: html }, [point(15193)]);
+
+    const message = mockConfirmAction.mock.calls[0][0].message;
+    expect(message).toContain('dead.webp');
+    expect(message).not.toContain('images.weserv.nl');
+  });
+
   it('показывает автору имя файла и id точки, а текст не переписывает', async () => {
     mockConfirmAction.mockResolvedValueOnce(true);
     const body = { description: img(777) };

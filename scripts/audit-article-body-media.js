@@ -48,6 +48,7 @@ const {
   collectArticleBodyMediaUrls,
   collectRichTextMediaUrls,
   familyOfMediaUrl,
+  isLegacyBucketUrl,
 } = require('./lib/articleBodyMedia')
 
 const args = process.argv.slice(2)
@@ -158,13 +159,23 @@ async function headStatusResilient(url) {
   return headStatus(url)
 }
 
-/** Абсолютный адрес на проверяемом origin; чужой хост и мусор отбрасываются. */
+/**
+ * Адрес, который щупаем, — тот, что запрашивает читатель.
+ *
+ * Свой путь переносим на проверяемый origin (в теле встречается и
+ * корне-относительная форма), бакетную ссылку берём как есть, чужой хост
+ * (weserv и прочие обёртки) не проверяем вовсе: он не наш и его доступность —
+ * не наш контракт.
+ */
 function toTargetUrl(rawUrl) {
   const value = String(rawUrl || '').trim()
   if (!value) return null
   try {
     const parsed = value.startsWith('/') ? new URL(value, SITE) : new URL(value)
     if (!/^https?:$/.test(parsed.protocol)) return null
+    if (isLegacyBucketUrl(parsed.toString())) return parsed.toString()
+    const siteHost = new URL(SITE).hostname
+    if (parsed.hostname !== siteHost) return null
     return `${SITE}${parsed.pathname}${parsed.search}`
   } catch {
     return null

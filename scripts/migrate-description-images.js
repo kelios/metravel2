@@ -105,13 +105,8 @@ function legacyUploadKey(url) {
 
   let key = parsed.pathname.replace(/^\/+/, '')
   if (isFirstParty) {
-    // Две формы одного класса на нашем домене: прокси-путь `/media-resize/uploads/<key>`
-    // и ГОЛЫЙ `/uploads/<key>`. Вторую эта функция раньше отбрасывала, и тела с ней
-    // проходили миграцию как «legacy нет» — при том, что голый путь сайт не
-    // обслуживает вовсе: замер 07.09.2026, `/uploads/1620061579IMG_6533.JPG` → 404,
-    // тот же ключ через `/media-resize/` → 200. Семь таких кадров в статьях 116, 171,
-    // 220, 290 читатель видел пустой рамкой (#1834, находка корпусного прогона).
-    const m = /^(?:media-resize\/)?(uploads\/.+)$/i.exec(key)
+    // Наш прокси-путь того же класса: `/media-resize/uploads/<key>`.
+    const m = /^media-resize\/(uploads\/.+)$/i.exec(key)
     if (!m) return null
     key = m[1]
   } else if (!isBucketHost) {
