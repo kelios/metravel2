@@ -78,8 +78,8 @@ native-устройство/эмулятор (`adb exec-out screencap -p`; dev-c
 HMR подтянет правки). Эталон при расхождении — устройство. Не вводить в редизайн web-only
 визуальные ветвления для мобильного: serif — только desktop (`!isMobile`), hover-reveal —
 только desktop, контент (чипы/кнопки/бейджи) не скрывать `Platform.OS === 'web'`,
-тематические поверхности — только `useThemedColors()` (статичные `DESIGN_TOKENS.colors.*`
-на native не переключаются в dark). Скрины всех трёх вьюпортов — в отчёт.
+тематические поверхности — только `useThemedColors()`, не `DESIGN_TOKENS.colors.*`
+(`docs/RULES.md` → «UI rules»). Скрины всех трёх вьюпортов — в отчёт.
 
 ## Проверка по platform impact (обязательное правило)
 

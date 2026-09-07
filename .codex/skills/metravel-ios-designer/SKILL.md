@@ -24,8 +24,8 @@ App Store assets are in scope.
   semantics. Only engine, system permissions/insets and OS APIs may differ; a
   platform difference is never an excuse for a different UX. Desktop may add
   hover-only affordances. iPad adapts the same hierarchy to its available scene.
-- **Tokens, not hex.** Themed surfaces use `useThemedColors()`; on native
-  `DESIGN_TOKENS.colors.*` is a static light fallback, not a live theme.
+- **Tokens, not hex.** Themed surfaces use `useThemedColors()`, never
+  `DESIGN_TOKENS.colors.*` (`docs/RULES.md` → `UI rules`).
 - **Existing primitives.** `components/ui`, `ImageCardMedia` (contain + blur),
   `UnifiedTravelCard`, shared map/place cards. No local duplicate substitutes.
 - **Photo dominance** on content cards; header ≤20% of the mobile viewport;
