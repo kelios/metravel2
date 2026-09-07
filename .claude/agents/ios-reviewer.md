@@ -92,8 +92,8 @@ build, запиши testing handoff, но не запускай этот сло�
   legacy-методы делают `throw` в рантайме при зелёных typecheck и web (§8);
 - `router.push('/x/y#anchor')` — хеш на native игнорируется, экран открывается
   с корня роута (§9);
-- `DESIGN_TOKENS.colors.*` в тематической поверхности на native — статичный
-  светлый fallback; тема только через `useThemedColors()` (`hooks/useTheme.ts:199`);
+- `DESIGN_TOKENS.colors.*` в тематической поверхности — тема только
+  `useThemedColors()` (`docs/RULES.md` → «UI rules»);
 - `Text` без `flex` внутри row-контейнера → обрезание строки на устройстве
   (`NATIVE-TEXT-ROW-001`, guard `scripts/guard-text-row-sizing.js`);
 - `hitSlop` вместо собственного размера вью: родитель, обтягивающий кнопку,

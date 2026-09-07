@@ -522,11 +522,12 @@ npx serve dist/prod -l 3000 -s
   chips, badges, buttons — must not be hidden behind `Platform.OS === 'web'`
   when the same element is visible on a device: that produces two different
   products under one flow and is the parity rule above, violated in code.
-- **Theming goes through `useThemedColors()`.** On themed surfaces do not read
-  `DESIGN_TOKENS.colors.*` directly: on web those are live CSS variables, on
-  native they collapse to a static light fallback, so a themed screen silently
-  stops following the theme on Android and iPhone. Values that must reach an API
-  payload use `DESIGN_COLORS`, never a `var(--…)` token.
+- **Theming goes through `useThemedColors()`** (`hooks/useTheme.ts:199`). On
+  themed surfaces do not read `DESIGN_TOKENS.colors.*` directly: on web those
+  are live CSS variables, on native they collapse to a static light fallback,
+  so a themed screen silently stops following the theme on Android and iPhone.
+  Values that must reach an API payload use `DESIGN_COLORS`, never a `var(--…)`
+  token.
 - Map/place/travel-point surfaces must reuse one point/place template whenever
   possible: the same content/action model serves every page and every platform,
   and a per-surface shell may only adapt insets, engine, or presentation and add

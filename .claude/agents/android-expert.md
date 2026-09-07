@@ -120,10 +120,8 @@ code-review pass и статуса `testing`.
   `node_modules` — первый подозреваемый при «web ок, телефон падает» (§2, §5);
 - `router.push('/x/y#anchor')` — хеш на native игнорируется, экран открывается
   с корня роута (§9);
-- `DESIGN_TOKENS.colors.*` в тематической поверхности: на web это живые
-  CSS-переменные, на native — статичный светлый fallback, поэтому тёмная тема
-  «работает» в браузере и ломается на телефоне; корректно только
-  `useThemedColors()`;
+- `DESIGN_TOKENS.colors.*` в тематической поверхности — тема только
+  `useThemedColors()` (`docs/RULES.md` → «UI rules»);
 - `Text` без `flex` внутри row-контейнера → строка обрезается на устройстве при
   длинной локали (`NATIVE-TEXT-ROW-001`, `NATIVE-TEXT-MEASURE-001`, guard
   `scripts/guard-text-row-sizing.js`);

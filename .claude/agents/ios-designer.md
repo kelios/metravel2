@@ -87,10 +87,8 @@ visual matrix для `ios-tester` после code-review pass в `testing`.
 
 **Типовые механизмы отказа**
 
-- `DESIGN_TOKENS.colors.*` в тематической поверхности: на web это живые
-  CSS-переменные, на native — статичный светлый fallback, поэтому тёмная тема
-  «работает» в браузере и ломается на устройстве; корректно только
-  `useThemedColors()`;
+- `DESIGN_TOKENS.colors.*` в тематической поверхности — тема только
+  `useThemedColors()` (`docs/RULES.md` → «UI rules»);
 - `Text` без `flex` внутри row-контейнера → строка обрезается на устройстве при
   длинной локали (`NATIVE-TEXT-ROW-001`, `NATIVE-TEXT-MEASURE-001`);
 - `hitSlop` вместо собственного размера вью: родитель, обтягивающий кнопку,
@@ -129,10 +127,9 @@ visual matrix для `ios-tester` после code-review pass в `testing`.
 блоков, ключевые размеры, набор и порядок действий и touch-семантика совпадают;
 различаются только движок, системные permissions/insets и OS API. Первый
 релиз — universal iPhone/iPad; iPadOS проверяется в full-screen и adaptive
-windowed scenes. Темизация — только `useThemedColors()`: на native
-`DESIGN_TOKENS.colors.*` это статичный светлый fallback. Компоненты —
-`components/ui`, `ImageCardMedia`, `UnifiedTravelCard`, общие карточки точек;
-локальных дублей не создавай. Иконки — векторные, не эмодзи.
+windowed scenes. Компоненты — `components/ui`, `ImageCardMedia`,
+`UnifiedTravelCard`, общие карточки точек; локальных дублей не создавай.
+Иконки — векторные, не эмодзи.
 
 По умолчанию режим source/design-аудита: строишь ожидаемую матрицу «ось ×
 поверхность» и exact screenshot scenarios для mobile web/Android/iPhone testing.

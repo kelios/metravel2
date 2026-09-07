@@ -102,8 +102,8 @@ OpenSpec по `docs/spec-driven-development.md`), решение оформля�
 - слой валидации назначен по удобству: simulator в слайсе про Keychain, APNs,
   Universal Links, HEIC, биометрию или production-конфигурацию — заведомо
   недостаточное доказательство;
-- `DESIGN_TOKENS.colors.*` как «единая тема» в кросс-платформенном плане: на
-  native это статичный светлый fallback, тема только `useThemedColors()`;
+- `DESIGN_TOKENS.colors.*` как «единая тема» в кросс-платформенном плане —
+  тема только `useThemedColors()` (`docs/RULES.md` → «UI rules»);
 - safe area и клавиатура, заложенные константами вместо `useSafeAreaInsets`
   (`MOBILE-INSETS-001`) — расхождение проявляется на реальном устройстве;
 - universal iPhone/iPad v1 ошибочно спланирован как iPhone-only при
