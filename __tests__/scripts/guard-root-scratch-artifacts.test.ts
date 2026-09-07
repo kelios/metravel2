@@ -157,6 +157,59 @@ describe('guard-root-scratch-artifacts', () => {
     expect(eslintConfig).toContain('"*.tmp.*"')
   })
 
+  it('closes every scratch convention in BOTH git and eslint, not in one of them', () => {
+    // Провал Done gate #1466 был именно асимметрией контуров: git такой файл в
+    // коммит не пустит, а eslint прочитает его локально и покрасит общий гейт.
+    // Поэтому проверяются оба контура одним набором имён.
+    //
+    // ESLint поднимается дочерним процессом: его flat-config грузится
+    // динамическим import'ом, который внутри jest требует
+    // `--experimental-vm-modules` и падает.
+    const scratchProbes = [
+      '.codex-temp-probe2.js',
+      '.codex-debug-run.js',
+      '__probe.js',
+      '__diag.ts',
+      '__map_diag.mjs',
+      '_tmp-run.mjs',
+      'probe9999.tmp.mjs',
+    ]
+    const keptFiles = ['metro.config.js', '__tests__/scripts/x.test.ts', '__mocks__/x.js', 'scripts/x.tmp.js']
+
+    const eslintProbe = runCli(
+      process.execPath,
+      [
+        '-e',
+        `const { ESLint } = require('eslint')
+         const files = ${JSON.stringify([...scratchProbes, ...keptFiles])}
+         ;(async () => {
+           const eslint = new ESLint()
+           const out = {}
+           for (const file of files) out[file] = await eslint.isPathIgnored(file)
+           process.stdout.write(JSON.stringify(out))
+         })()`,
+      ],
+      { cwd: repoRoot },
+    )
+    expect(eslintProbe.status).toBe(0)
+    const eslintIgnored = JSON.parse(eslintProbe.stdout)
+
+    const isGitIgnored = (file: string) =>
+      runCli('git', ['check-ignore', '-q', file], { cwd: repoRoot }).status === 0
+
+    for (const probe of scratchProbes) {
+      expect({ file: probe, git: isGitIgnored(probe), eslint: eslintIgnored[probe] })
+        .toEqual({ file: probe, git: true, eslint: true })
+    }
+
+    // Обратная сторона: настоящие каталоги и вложенные файлы не должны исчезать
+    // ни из git, ни из линтера.
+    for (const kept of keptFiles) {
+      expect({ file: kept, git: isGitIgnored(kept), eslint: eslintIgnored[kept] })
+        .toEqual({ file: kept, git: false, eslint: false })
+    }
+  })
+
   it('reads the repository root even when started from a subdirectory', () => {
     // `git ls-files` без pathspec видит только поддерево cwd: из `scripts/`
     // guard не увидел бы ни одного корневого файла и отчитался бы «passed».
