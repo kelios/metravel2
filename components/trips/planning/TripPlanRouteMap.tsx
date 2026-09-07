@@ -45,8 +45,12 @@ interface Props {
   summary?: RouteSummary | null;
   transport?: TripTransport;
   readonly?: boolean;
-  /** #1496: исходный импортированный трек поверх построенного маршрута. */
-  originalTrack?: RouteGeometry | null;
+  /**
+   * #1496: исходный импортированный трек поверх построенного маршрута.
+   * #1847: по сегменту на каждый `<trk>`/`<LineString>` файла — соседние треки
+   * не соединяются, иначе между ними появляется прямая, которой в файле нет.
+   */
+  originalTrackSegments?: RouteGeometry[] | null;
   /**
    * #1495: карта растягивается на всю родительскую сцену и отдаёт ей заголовок —
    * в map-first раскладке подписи живут в чипах поверх карты.
@@ -86,7 +90,7 @@ type NativeRouteMapProps = {
   fullRouteCoords: Array<[number, number]>;
   routeLineVisible?: boolean;
   routeLineApproximate?: boolean;
-  originalTrackCoords?: Array<[number, number]>;
+  originalTrackSegments?: Array<Array<[number, number]>>;
   mode: 'route';
   pointsOnly?: boolean;
   routePointsInteractive?: boolean;
@@ -114,7 +118,7 @@ export default function TripPlanRouteMap({
   summary,
   transport,
   readonly = false,
-  originalTrack,
+  originalTrackSegments,
   fill = false,
   focusPoint,
   onEditPoint,
@@ -153,10 +157,16 @@ export default function TripPlanRouteMap({
       : routePoints),
     [hasRoutedGeometry, routeGeometry, routePoints],
   );
-  const originalTrackLine = useMemo(
-    () => (originalTrack?.length ? lngLatPairs(originalTrack) : []),
-    [originalTrack],
+  // #1847: каждый трек файла уезжает в WebView своей линией. Сегмент, от
+  // которого после фильтра битых пар осталась одна точка, отбрасывается:
+  // нарисовать его нечем, а карта всё равно рисует только линии от двух точек.
+  const originalTrackLines = useMemo(
+    () => (originalTrackSegments ?? [])
+      .map((segment) => lngLatPairs(segment ?? []))
+      .filter((line) => line.length > 1),
+    [originalTrackSegments],
   );
+  const hasOriginalTrack = originalTrackLines.length > 0;
   const center = useMemo(() => {
     const first = routeLine[0] ?? routePoints[0];
     if (!first) return DEFAULT_CENTER;
@@ -254,7 +264,7 @@ export default function TripPlanRouteMap({
               {i18nT('tripsStatic:plan.map.markerHint')}
             </Text>
           ) : null}
-          {originalTrackLine.length > 1 ? (
+          {hasOriginalTrack ? (
             <View style={styles.legendItem} testID="trip-plan-map-original-track-legend">
               <View style={[styles.legendLine, { backgroundColor: colors.accentDark }]} />
               <Text style={styles.legendText}>{i18nT('tripsStatic:plan.map.originalTrack')}</Text>
@@ -279,7 +289,7 @@ export default function TripPlanRouteMap({
           fullRouteCoords={routeLine}
           routeLineVisible={routeLine.length >= 2}
           routeLineApproximate={approximate}
-          originalTrackCoords={originalTrackLine}
+          originalTrackSegments={originalTrackLines}
           mode="route"
           pointsOnly
           routePointsInteractive={interactiveRoutePoints}
@@ -288,7 +298,7 @@ export default function TripPlanRouteMap({
           onMapClick={handleMapClick}
           onMapUiApiReady={handleMapUiApiReady}
         />
-        {fill && originalTrackLine.length > 1 ? (
+        {fill && hasOriginalTrack ? (
           <View style={styles.legendOverlay} testID="trip-plan-map-original-track-legend">
             <View style={[styles.legendLine, { backgroundColor: colors.accentDark }]} />
             <Text style={styles.legendText}>{i18nT('tripsStatic:plan.map.originalTrack')}</Text>

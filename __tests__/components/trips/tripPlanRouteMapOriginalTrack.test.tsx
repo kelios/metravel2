@@ -45,10 +45,27 @@ const routeGeometry: Array<[number, number]> = [
 ]
 
 // Оригинал из файла: та же дорога, но со всеми поворотами.
-const originalTrack: Array<[number, number]> = Array.from({ length: 120 }, (_, index) => [
-  27.56 + index * 0.00033,
-  53.9 + index * 0.00008 + (index % 2 === 0 ? 0.00004 : -0.00004),
-])
+const originalTrackSegments: Array<Array<[number, number]>> = [
+  Array.from({ length: 120 }, (_, index) => [
+    27.56 + index * 0.00033,
+    53.9 + index * 0.00008 + (index % 2 === 0 ? 0.00004 : -0.00004),
+  ]),
+]
+
+// Два кольца похода в разных концах региона (#1847): склейка проводила между
+// ними прямую через весь регион, которой в файле нет.
+const twoRingSegments: Array<Array<[number, number]>> = [
+  [
+    [6.42, 49.81],
+    [6.43, 49.82],
+    [6.42, 49.81],
+  ],
+  [
+    [6.3, 49.79],
+    [6.31, 49.8],
+    [6.3, 49.79],
+  ],
+]
 
 describe('TripPlanRouteMap (native) — оригинальный трек', () => {
   beforeEach(() => {
@@ -57,11 +74,12 @@ describe('TripPlanRouteMap (native) — оригинальный трек', () =
 
   it('передаёт оригинал отдельным каналом, не подменяя точки и линию маршрута', () => {
     render(
-      <TripPlanRouteMap route={route} routeGeometry={routeGeometry} originalTrack={originalTrack} />,
+      <TripPlanRouteMap route={route} routeGeometry={routeGeometry} originalTrackSegments={originalTrackSegments} />,
     )
 
     const props = mockNativeMapProps[mockNativeMapProps.length - 1]
-    expect(props.originalTrackCoords).toHaveLength(120)
+    expect(props.originalTrackSegments).toHaveLength(1)
+    expect((props.originalTrackSegments as unknown[][])[0]).toHaveLength(120)
     // Упрощённая линия и точки остаются ровно теми же — оригинал их не заменил.
     expect(props.fullRouteCoords).toEqual(routeGeometry)
     expect(props.routePoints).toEqual([
@@ -74,12 +92,12 @@ describe('TripPlanRouteMap (native) — оригинальный трек', () =
     const withoutTrack = render(<TripPlanRouteMap route={route} routeGeometry={routeGeometry} />)
     expect(withoutTrack.queryByTestId('trip-plan-map-original-track-legend')).toBeNull()
     expect(
-      mockNativeMapProps[mockNativeMapProps.length - 1].originalTrackCoords,
+      mockNativeMapProps[mockNativeMapProps.length - 1].originalTrackSegments,
     ).toEqual([])
     withoutTrack.unmount()
 
     const withTrack = render(
-      <TripPlanRouteMap route={route} routeGeometry={routeGeometry} originalTrack={originalTrack} />,
+      <TripPlanRouteMap route={route} routeGeometry={routeGeometry} originalTrackSegments={originalTrackSegments} />,
     )
     expect(withTrack.getByTestId('trip-plan-map-original-track-legend')).toBeTruthy()
   })
@@ -89,7 +107,7 @@ describe('TripPlanRouteMap (native) — оригинальный трек', () =
       <TripPlanRouteMap
         route={route}
         routeGeometry={routeGeometry}
-        originalTrack={originalTrack}
+        originalTrackSegments={originalTrackSegments}
         fill
       />,
     )
@@ -102,10 +120,26 @@ describe('TripPlanRouteMap (native) — оригинальный трек', () =
       <TripPlanRouteMap
         route={route}
         routeGeometry={routeGeometry}
-        originalTrack={[[27.56, 53.9]]}
+        originalTrackSegments={[[[27.56, 53.9]]]}
       />,
     )
 
-    expect(mockNativeMapProps[mockNativeMapProps.length - 1].originalTrackCoords).toHaveLength(1)
+    // Одна точка линией не станет — в WebView такой сегмент не уезжает вовсе.
+    expect(mockNativeMapProps[mockNativeMapProps.length - 1].originalTrackSegments).toEqual([])
+  })
+
+  it('#1847 отдаёт каждый трек файла отдельной линией, не склеивая их', () => {
+    const screen = render(
+      <TripPlanRouteMap
+        route={route}
+        routeGeometry={routeGeometry}
+        originalTrackSegments={twoRingSegments}
+      />,
+    )
+
+    const props = mockNativeMapProps[mockNativeMapProps.length - 1]
+    expect(props.originalTrackSegments).toEqual(twoRingSegments)
+    // Легенда одна на весь оригинал, а не по пункту на сегмент.
+    expect(screen.getAllByTestId('trip-plan-map-original-track-legend')).toHaveLength(1)
   })
 })

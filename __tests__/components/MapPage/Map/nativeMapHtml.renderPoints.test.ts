@@ -180,7 +180,7 @@ const payloadFor = (points: unknown[]) => ({
   clusters: [],
   routePoints: [],
   routeLine: [],
-  originalTrack: [],
+  originalTrackSegments: [],
   mode: 'radius',
   center: { lat: 53.9, lng: 27.5 },
   usesServerClusters: false,

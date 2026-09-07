@@ -188,7 +188,7 @@ const routePayload = (interactive: boolean) => ({
     [53.905, 27.58],
     [53.91, 27.6],
   ],
-  originalTrack: [],
+  originalTrackSegments: [],
   mode: 'route',
   center: { lat: 53.9, lng: 27.5 },
   usesServerClusters: false,

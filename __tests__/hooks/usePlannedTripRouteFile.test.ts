@@ -122,7 +122,8 @@ describe('usePlannedTripOriginalTrack', () => {
 
     const track = await lastOptions().queryFn()
     expect(api.downloadPlannedTripRouteFileBlob).toHaveBeenCalledWith('7', 42)
-    expect(track.geometry).toHaveLength(200)
+    expect(track.segments).toHaveLength(1)
+    expect(track.segments[0]).toHaveLength(200)
     expect(track.sourcePointCount).toBe(200)
     expect(track.thinnedForDisplay).toBe(false)
   })

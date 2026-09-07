@@ -394,7 +394,14 @@ ${ESCAPE_HTML_FN_SCRIPT}
             const routePoints = Array.isArray(data.routePoints) ? data.routePoints : [];
             const routeLine = Array.isArray(data.routeLine) ? data.routeLine : routePoints;
             const routeApproximate = data.routeApproximate === true;
-            const originalTrack = Array.isArray(data.originalTrack) ? data.originalTrack : [];
+            // #1847 — оригинал приходит списком линий: по одной на каждый трек
+            // файла. Склеенный плоский список рисовал между несмежными треками
+            // прямую, которой в исходном файле нет.
+            const originalTrackSegments = (Array.isArray(data.originalTrackSegments)
+              ? data.originalTrackSegments
+              : []).filter(function(segment) {
+                return Array.isArray(segment) && segment.length >= 2;
+              });
             const routeMode = data.mode || 'radius';
             const usesServerClusters = data.usesServerClusters === true;
             const pointsOnly = data.pointsOnly === true;
@@ -593,23 +600,26 @@ ${ESCAPE_HTML_FN_SCRIPT}
                   }
                 } catch (e) {}
               }
-              // Оригинальный трек — отдельная полилиния поверх линии маршрута:
+              // Оригинальный трек — отдельные полилинии поверх линии маршрута:
               // упрощённые точки и построенная по ним линия остаются на карте.
-              if (originalTrack.length >= 2) {
-                L.polyline(originalTrack, {
-                  color: ORIGINAL_TRACK_COLOR,
-                  weight: 3,
-                  opacity: 0.95,
-                  lineCap: 'round',
-                  lineJoin: 'round'
-                }).addTo(routeLayer);
-                originalTrack.forEach(function(point) {
-                  if (Array.isArray(point) && isFinite(point[0]) && isFinite(point[1])) {
-                    routeBounds.extend(point);
-                  }
+              if (originalTrackSegments.length) {
+                originalTrackSegments.forEach(function(segment) {
+                  L.polyline(segment, {
+                    color: ORIGINAL_TRACK_COLOR,
+                    weight: 3,
+                    opacity: 0.95,
+                    lineCap: 'round',
+                    lineJoin: 'round'
+                  }).addTo(routeLayer);
+                  segment.forEach(function(point) {
+                    if (Array.isArray(point) && isFinite(point[0]) && isFinite(point[1])) {
+                      routeBounds.extend(point);
+                    }
+                  });
                 });
                 // Оригинал может выходить за пределы упрощённой линии, по которой
-                // карта уже подогналась выше, — досаживаем кадр на общие границы.
+                // карта уже подогналась выше, — досаживаем кадр на общие границы
+                // всех сегментов.
                 try {
                   if (routeBounds.isValid() && !map.__metravelRouteFitLocked) {
                     map.fitBounds(routeBounds, { padding: [70, 70] });

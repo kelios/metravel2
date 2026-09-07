@@ -5,6 +5,9 @@
  * геометрия из файла рисуется ОТДЕЛЬНОЙ полилинией и не подменяет собой линию
  * маршрута, построенную по упрощённым точкам; подгонка кадра охватывает обе
  * линии; без файла карта работает ровно как прежде.
+ *
+ * #1847 — многотрековый файл рисуется отдельной линией на каждый трек: склейка
+ * проводила между несмежными треками прямую, которой в файле нет.
  */
 import React from 'react'
 import { render, waitFor } from '@testing-library/react-native'
@@ -63,11 +66,26 @@ const routeGeometry: Array<[number, number]> = [
 ]
 
 // Оригинал уходит южнее упрощённой линии — так видно, что подгонка кадра его учла.
-const originalTrack: Array<[number, number]> = [
+const originalTrackSegments: Array<Array<[number, number]>> = [[
   [27.56, 53.9],
   [27.57, 53.8],
   [27.59, 53.85],
   [27.6, 53.91],
+]]
+
+// Два кольца похода в разных концах региона — ровно тот файл, на котором
+// склейка рисовала прямую через весь регион.
+const twoRingSegments: Array<Array<[number, number]>> = [
+  [
+    [6.42, 49.81],
+    [6.43, 49.82],
+    [6.42, 49.81],
+  ],
+  [
+    [6.3, 49.79],
+    [6.31, 49.8],
+    [6.3, 49.79],
+  ],
 ]
 
 describe('TripPlanRouteMap.web — оригинальный трек', () => {
@@ -79,7 +97,7 @@ describe('TripPlanRouteMap.web — оригинальный трек', () => {
 
   it('рисует оригинал отдельной линией поверх маршрута, не подменяя его', async () => {
     const screen = render(
-      <TripPlanRouteMap route={route} routeGeometry={routeGeometry} originalTrack={originalTrack} />,
+      <TripPlanRouteMap route={route} routeGeometry={routeGeometry} originalTrackSegments={originalTrackSegments} />,
     )
 
     await waitFor(() => expect(mockPolylineProps.length).toBe(2))
@@ -104,15 +122,76 @@ describe('TripPlanRouteMap.web — оригинальный трек', () => {
     expect(screen.getByTestId('trip-plan-map-original-track-legend')).toBeTruthy()
   })
 
-  it('подгоняет кадр под обе линии, а не только под упрощённую', async () => {
+  it('#1847 рисует каждый трек файла своей линией и не соединяет их между собой', async () => {
+    const screen = render(
+      <TripPlanRouteMap
+        route={route}
+        routeGeometry={routeGeometry}
+        originalTrackSegments={twoRingSegments}
+      />,
+    )
+
+    // Линия маршрута плюс по линии на каждое кольцо — а не одна общая ломаная.
+    await waitFor(() => expect(mockPolylineProps.length).toBe(3))
+
+    const [, firstRing, secondRing] = mockPolylineProps
+    expect(firstRing.positions).toEqual([
+      [49.81, 6.42],
+      [49.82, 6.43],
+      [49.81, 6.42],
+    ])
+    expect(secondRing.positions).toEqual([
+      [49.79, 6.3],
+      [49.8, 6.31],
+      [49.79, 6.3],
+    ])
+    // Шва нет: конец первого кольца не соседствует с началом второго ни в одной
+    // из линий — именно эту прямую через регион и рисовала склейка.
+    expect(firstRing.positions).not.toContainEqual([49.79, 6.3])
+    expect(secondRing.positions).not.toContainEqual([49.81, 6.42])
+    // Легенда по-прежнему одна на весь оригинал, а не по пункту на сегмент.
+    expect(screen.getAllByTestId('trip-plan-map-original-track-legend')).toHaveLength(1)
+    expect(firstRing.pathOptions).toEqual(secondRing.pathOptions)
+  })
+
+  it('#1847 подгоняет кадр под все сегменты, а не только под первый', async () => {
     render(
-      <TripPlanRouteMap route={route} routeGeometry={routeGeometry} originalTrack={originalTrack} />,
+      <TripPlanRouteMap
+        route={route}
+        routeGeometry={routeGeometry}
+        originalTrackSegments={twoRingSegments}
+      />,
     )
 
     await waitFor(() => expect(mockFitBounds).toHaveBeenCalled())
 
     const positions = mockLatLngBounds.mock.calls[0][0] as Array<[number, number]>
-    expect(positions).toHaveLength(routeGeometry.length + originalTrack.length)
+    expect(positions).toContainEqual([49.82, 6.43])
+    expect(positions).toContainEqual([49.79, 6.3])
+  })
+
+  it('#1847 пропускает сегмент, от которого осталась одна точка', async () => {
+    const screen = render(
+      <TripPlanRouteMap
+        route={route}
+        routeGeometry={routeGeometry}
+        originalTrackSegments={[[[27.56, 53.9]]]}
+      />,
+    )
+
+    await waitFor(() => expect(mockPolylineProps.length).toBe(1))
+    expect(screen.queryByTestId('trip-plan-map-original-track-legend')).toBeNull()
+  })
+
+  it('подгоняет кадр под обе линии, а не только под упрощённую', async () => {
+    render(
+      <TripPlanRouteMap route={route} routeGeometry={routeGeometry} originalTrackSegments={originalTrackSegments} />,
+    )
+
+    await waitFor(() => expect(mockFitBounds).toHaveBeenCalled())
+
+    const positions = mockLatLngBounds.mock.calls[0][0] as Array<[number, number]>
+    expect(positions).toHaveLength(routeGeometry.length + originalTrackSegments[0].length)
     // Самая южная точка есть только у оригинала — без неё часть трека была бы за кадром.
     expect(Math.min(...positions.map(([lat]) => lat))).toBeCloseTo(53.8, 5)
   })
@@ -130,7 +209,7 @@ describe('TripPlanRouteMap.web — оригинальный трек', () => {
         route={route}
         routeGeometry={null}
         routingState={{ provider: 'ors', isOptimal: true, fallbackReason: null, warnings: [] }}
-        originalTrack={originalTrack}
+        originalTrackSegments={originalTrackSegments}
       />,
     )
 

@@ -1156,7 +1156,7 @@ function RouteBuilder({
         <TripPlanRouteMap
           route={route}
           routeGeometry={routeGeometry}
-          originalTrack={originalTrack?.geometry ?? null}
+          originalTrackSegments={originalTrack?.segments ?? null}
           routingState={routingState}
           summary={summary}
           transport={trip.transport}
@@ -1256,7 +1256,7 @@ function RouteBuilder({
     <TripPlanRouteMap
       route={route}
       routeGeometry={routeGeometry}
-      originalTrack={originalTrack?.geometry ?? null}
+      originalTrackSegments={originalTrack?.segments ?? null}
       routingState={routingState}
       summary={summary}
       transport={trip.transport}

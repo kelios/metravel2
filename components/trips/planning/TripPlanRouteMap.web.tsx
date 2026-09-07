@@ -51,8 +51,12 @@ interface Props {
   summary?: RouteSummary | null;
   transport?: TripTransport;
   readonly?: boolean;
-  /** #1496: исходный импортированный трек поверх построенного маршрута. */
-  originalTrack?: RouteGeometry | null;
+  /**
+   * #1496: исходный импортированный трек поверх построенного маршрута.
+   * #1847: по сегменту на каждый `<trk>`/`<LineString>` файла — соседние треки
+   * не соединяются, иначе между ними появляется прямая, которой в файле нет.
+   */
+  originalTrackSegments?: RouteGeometry[] | null;
   /**
    * #1495: карта растягивается на всю родительскую сцену и отдаёт ей заголовок —
    * в map-first раскладке подписи живут в чипах поверх карты.
@@ -239,7 +243,7 @@ export default function TripPlanRouteMap({
   summary,
   transport,
   readonly = false,
-  originalTrack,
+  originalTrackSegments,
   fill = false,
   focusPoint,
   onEditPoint,
@@ -355,10 +359,15 @@ export default function TripPlanRouteMap({
   const trackPositions = useMemo(() => (
     routedGeometry ? lngLatPositions(routedGeometry) : markerPositions
   ), [markerPositions, routedGeometry]);
-  const originalTrackPositions = useMemo(
-    () => (originalTrack?.length ? lngLatPositions(originalTrack) : []),
-    [originalTrack],
+  // #1847: каждый трек файла — своя линия. Сегмент, от которого после фильтра
+  // битых пар осталась одна точка, отбрасывается: нарисовать его нечем.
+  const originalTrackSegmentPositions = useMemo(
+    () => (originalTrackSegments ?? [])
+      .map((segment) => lngLatPositions(segment ?? []))
+      .filter((positions) => positions.length > 1),
+    [originalTrackSegments],
   );
+  const hasOriginalTrack = originalTrackSegmentPositions.length > 0;
   const center = trackPositions[0] ?? markerPositions[0] ?? DEFAULT_CENTER;
   // Токен считается по содержимому, а не по ссылке: перезапрос маршрута даёт
   // новый массив с теми же точками, и подгонка не должна срабатывать заново.
@@ -367,10 +376,10 @@ export default function TripPlanRouteMap({
   // Подгонка охватывает и оригинальный трек: он может выходить за пределы
   // упрощённых точек, и без него часть настоящей формы осталась бы за кадром.
   const fitPositions = useMemo(
-    () => (originalTrackPositions.length >= 2
-      ? [...trackPositions, ...originalTrackPositions]
+    () => (originalTrackSegmentPositions.length
+      ? [...trackPositions, ...originalTrackSegmentPositions.flat()]
       : trackPositions),
-    [originalTrackPositions, trackPositions],
+    [originalTrackSegmentPositions, trackPositions],
   );
   const fitToken = useMemo(
     () => fitPositions.map((position) => position.join(',')).join('|'),
@@ -521,7 +530,7 @@ export default function TripPlanRouteMap({
           <Feather name={fullscreen ? 'minimize-2' : 'maximize-2'} size={18} color={colors.text} />
         </button>
         {canvas}
-        {fill && originalTrackPositions.length > 1 ? (
+        {fill && hasOriginalTrack ? (
           <View style={styles.legendOverlay} testID="trip-plan-map-original-track-legend">
             <View style={[styles.legendLine, { backgroundColor: colors.accentDark }]} />
             <Text style={styles.legendText}>{i18nT('tripsStatic:plan.map.originalTrack')}</Text>
@@ -593,7 +602,7 @@ export default function TripPlanRouteMap({
               {i18nT('tripsStatic:plan.map.markerHint')}
             </Text>
           ) : null}
-          {originalTrackPositions.length > 1 ? (
+          {hasOriginalTrack ? (
             <View style={styles.legendItem} testID="trip-plan-map-original-track-legend">
               <View style={[styles.legendLine, { backgroundColor: colors.accentDark }]} />
               <Text style={styles.legendText}>{i18nT('tripsStatic:plan.map.originalTrack')}</Text>
@@ -650,16 +659,19 @@ export default function TripPlanRouteMap({
               }}
             />
           ) : null}
-          {originalTrackPositions.length > 1 ? (
+          {originalTrackSegmentPositions.map((positions, index) => (
             <Polyline
-              positions={originalTrackPositions}
+              // Порядок сегментов задан файлом и стабилен между рендерами:
+              // ключ по индексу здесь не переставляет линии местами.
+              key={`original-track-segment-${index}`}
+              positions={positions}
               pathOptions={{
                 color: colors.accentDark,
                 weight: 3,
                 opacity: 0.95,
               }}
             />
-          ) : null}
+          ))}
           {route.map((point, index) => {
             // #1683: не «есть пара», а «пара пригодна к отрисовке» — на
             // невалидном LatLng `L.marker` бросает и уносит всю карту.

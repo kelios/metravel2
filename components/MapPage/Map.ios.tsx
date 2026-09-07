@@ -94,8 +94,10 @@ interface TravelProps {
    * Неупрощённая геометрия исходного GPX/KML-файла (#1496). Отдельный слой поверх
    * линии маршрута: `fullRouteCoords` и точки остаются как есть, оригинал их не
    * подменяет. Пусто для всех экранов, кроме планировщика поездки.
+   * #1847 — список независимых линий, по одной на каждый трек файла: склейка в
+   * одну ломаную рисовала между несмежными треками прямую, которой в файле нет.
    */
-  originalTrackCoords?: [number, number][];
+  originalTrackSegments?: [number, number][][];
   mode?: 'radius' | 'route';
   /**
    * #1781 — точки маршрута планировщика можно тянуть по карте и открывать по
@@ -145,6 +147,11 @@ interface TravelProps {
 const DEFAULT_LAT = 53.8828449;
 const DEFAULT_LNG = 27.7273595;
 
+// Стабильная ссылка вместо литерала в дефолте пропа: пустой массив на каждом
+// рендере пересобирал бы memo сегментов и payload карты на всех экранах, где
+// оригинального трека нет вовсе.
+const EMPTY_TRACK_SEGMENTS: [number, number][][] = [];
+
 // Семафор на сетевые загрузки тайлов: #807 nginx zone режет бурст → 429/серо.
 const MAX_TILE_FETCH = 3;
 
@@ -176,7 +183,7 @@ const Map: React.FC<TravelProps> = ({
   fullRouteCoords = [],
   routeLineVisible = true,
   routeLineApproximate = false,
-  originalTrackCoords = [],
+  originalTrackSegments = EMPTY_TRACK_SEGMENTS,
   mode = 'radius',
   routePointsInteractive = false,
   onRoutePointMove,
@@ -243,11 +250,13 @@ const Map: React.FC<TravelProps> = ({
       .filter((point): point is [number, number] => Boolean(point)),
     [fullRouteCoords, routeLineVisible, routePoints],
   );
-  const originalTrackLatLngs = useMemo(
-    () => originalTrackCoords
-      .map(normalizeRoutePoint)
-      .filter((point): point is [number, number] => Boolean(point)),
-    [originalTrackCoords],
+  const originalTrackSegmentLatLngs = useMemo(
+    () => originalTrackSegments
+      .map((segment) => (Array.isArray(segment) ? segment : [])
+        .map(normalizeRoutePoint)
+        .filter((point): point is [number, number] => Boolean(point)))
+      .filter((segment) => segment.length >= 2),
+    [originalTrackSegments],
   );
   const serverClusterQuery = useMapClusters({
     bbox: viewportSnapshot?.bbox ?? null,
@@ -562,7 +571,7 @@ const Map: React.FC<TravelProps> = ({
       routePoints: selectedRouteLatLngs,
       routeLine: routeLineLatLngs,
       routeApproximate: routeLineApproximate,
-      originalTrack: originalTrackLatLngs,
+      originalTrackSegments: originalTrackSegmentLatLngs,
       mode,
       center: { lat: centerLat, lng: centerLng },
       usesServerClusters: shouldUseServerClusterData,
@@ -575,7 +584,7 @@ const Map: React.FC<TravelProps> = ({
       selectedRouteLatLngs,
       routeLineLatLngs,
       routeLineApproximate,
-      originalTrackLatLngs,
+      originalTrackSegmentLatLngs,
       mode,
       centerLat,
       centerLng,

@@ -196,7 +196,7 @@ describe('TripPlanRouteMap.web — битые координаты точки', 
     const screen = render(
       <TripPlanRouteMapWeb
         route={[point('a', 'Старт', START), point('b', 'Финиш', FINISH)]}
-        originalTrack={[TRACK_START, BROKEN_LAT, TRACK_END]}
+        originalTrackSegments={[[TRACK_START, BROKEN_LAT, TRACK_END]]}
       />,
     )
 
@@ -256,10 +256,10 @@ describe('TripPlanRouteMap (native) — битые координаты точк
     render(
       <TripPlanRouteMapNative
         route={[point('a', 'Старт', START), point('b', 'Финиш', FINISH)]}
-        originalTrack={[START, BROKEN_LNG, FINISH]}
+        originalTrackSegments={[[START, BROKEN_LNG, FINISH]]}
       />,
     )
 
-    expect(mockNativeMapProps[0].originalTrackCoords).toEqual([START, FINISH])
+    expect(mockNativeMapProps[0].originalTrackSegments).toEqual([[START, FINISH]])
   })
 })
