@@ -123,11 +123,17 @@ const createHarness = () => {
   // подгонка обязана идти по границам оригинала, и её не должен перебивать
   // setView одиночной точки.
   const fitBoundsCalls: FakeBounds[] = [];
+  // #1858 — `own` у накопителя дописывается и ПОСЛЕ подгонки, поэтому по нему
+  // нельзя судить, что кадр охватил в момент вызова. Снимок содержимого на
+  // вызове отличает «подогнались по объединению» от «подогнались по треку, а
+  // точку положили следом».
+  const fitBoundsSnapshots: unknown[][] = [];
   const setViewCalls: unknown[] = [];
 
   const map: Record<string, unknown> = {
     fitBounds: (target: FakeBounds) => {
       fitBoundsCalls.push(target);
+      fitBoundsSnapshots.push([...target.own]);
     },
     setView: (target: unknown) => {
       setViewCalls.push(target);
@@ -172,7 +178,7 @@ const createHarness = () => {
 
   const polylines = () => routeLayer.added.filter((shape) => shape.kind === 'polyline');
 
-  return { renderPoints, polylines, extended, fitBoundsCalls, setViewCalls, map };
+  return { renderPoints, polylines, extended, fitBoundsCalls, fitBoundsSnapshots, setViewCalls, map };
 };
 
 // Два кольца похода: Route 2 стоит в Эхтернахе, Route 3 — в Мюллертале.
@@ -327,5 +333,85 @@ describe('#1851 native-карта — оригинал без точек мар�
 
     expect(harness.map.__metravelRouteFitLocked).toBe(false);
     expect(harness.fitBoundsCalls).toHaveLength(1);
+  });
+});
+
+
+/**
+ * #1858 — «трек + ПЕРВАЯ точка маршрута» терял наведение на трек: подгонка по
+ * треку стояла выше `routePoints.forEach`, а центровка «маршрут есть, линии
+ * нет» — ниже, и последняя запись выигрывала. Кадр становился зумом 14 вокруг
+ * центроида трека, сам трек уходил за края. Здесь заперты все четыре
+ * комбинации трека и точек; эталон поведения — web (`TripPlanRouteMap.web.tsx`
+ * подгоняется по объединению трека и точек одной подгонкой).
+ */
+describe('#1858 native-карта — кадр при треке и точках маршрута', () => {
+  // Точка стоит в стороне от обоих колец: если кадр возьмут только по треку,
+  // объединение отличить от него будет нельзя.
+  const AWAY_FROM_TRACK: [number, number] = [49.7, 6.2];
+
+  const withSingleRoutePoint = (originalTrackSegments: number[][][]) =>
+    // Одна точка — линию маршрута строить не из чего, поэтому routeLine пуст:
+    // ровно этот случай и заводил в центровку зумом 14.
+    payload(originalTrackSegments, { routePoints: [AWAY_FROM_TRACK], routeLine: [] });
+
+  it('трек + первая точка: одна подгонка по объединению, без центровки зумом 14', () => {
+    const harness = createHarness();
+
+    harness.renderPoints(withSingleRoutePoint([ECHTERNACH_RING, MUELLERTHAL_RING]));
+
+    expect(harness.fitBoundsCalls).toHaveLength(1);
+    // В границах кадра НА МОМЕНТ подгонки лежат и оба кольца файла, и сама точка
+    // маршрута: до фикса точка попадала в накопитель уже после fitBounds.
+    expect(harness.fitBoundsSnapshots[0]).toContainEqual(ECHTERNACH_RING[1]);
+    expect(harness.fitBoundsSnapshots[0]).toContainEqual(MUELLERTHAL_RING[1]);
+    expect(harness.fitBoundsSnapshots[0]).toContainEqual(AWAY_FROM_TRACK);
+    // На дофиксовом коде здесь был ровно один setView с зумом 14, и он отменял
+    // подгонку выше.
+    expect(harness.setViewCalls).toHaveLength(0);
+  });
+
+  it('одна точка без трека: прежняя центровка зумом 14 сохраняется', () => {
+    const harness = createHarness();
+
+    harness.renderPoints(withSingleRoutePoint([]));
+
+    // Кадр здесь брать больше не из чего: подгонки нет, работает центровка.
+    expect(harness.fitBoundsCalls).toHaveLength(0);
+    expect(harness.setViewCalls).toHaveLength(1);
+  });
+
+  it('трек + две точки: кадр досаживается на общие границы, регресса #1496/#1847 нет', () => {
+    const harness = createHarness();
+
+    harness.renderPoints(payload([ECHTERNACH_RING, MUELLERTHAL_RING]));
+
+    // Первая подгонка — по линии маршрута, вторая — по объединению с треком.
+    expect(harness.fitBoundsCalls).toHaveLength(2);
+    const finalFit = harness.fitBoundsSnapshots[1];
+    expect(finalFit).toContainEqual(ECHTERNACH_RING[1]);
+    expect(finalFit).toContainEqual(MUELLERTHAL_RING[1]);
+    // И обе точки маршрута — кадр охватывает трек вместе с ними.
+    expect(finalFit).toContainEqual([49.8136, 6.4212]);
+    expect(finalFit).toContainEqual([49.7909, 6.3065]);
+    expect(harness.setViewCalls).toHaveLength(0);
+  });
+
+  it('трек + первая точка не двигают кадр, наведённый пользователем', () => {
+    const harness = createHarness();
+    // #1781 — защёлка поднята перетаскиванием маркера: ни подгонка, ни центровка
+    // не имеют права вернуть кадр на маршрут.
+    harness.map.__metravelRouteFitLocked = true;
+    harness.map.__metravelRouteReplacementToken = 0;
+
+    harness.renderPoints({
+      ...withSingleRoutePoint([ECHTERNACH_RING]),
+      routeReplacementToken: 0,
+    });
+
+    expect(harness.fitBoundsCalls).toHaveLength(0);
+    expect(harness.setViewCalls).toHaveLength(0);
+    // Слои при этом на месте: защёлка отменяет только кадр.
+    expect(harness.polylines()).toHaveLength(1);
   });
 });

@@ -608,14 +608,6 @@ ${ESCAPE_HTML_FN_SCRIPT}
                     }
                   });
                 });
-                // Оригинал может выходить за пределы упрощённой линии, по которой
-                // карта уже подогналась выше, — досаживаем кадр на общие границы
-                // всех сегментов.
-                try {
-                  if (routeBounds.isValid() && !map.__metravelRouteFitLocked) {
-                    map.fitBounds(routeBounds, { padding: [70, 70] });
-                  }
-                } catch (e) {}
               }
               routePoints.forEach(function(point, index) {
                 if (!Array.isArray(point) || !isFinite(point[0]) || !isFinite(point[1])) return;
@@ -671,10 +663,24 @@ ${ESCAPE_HTML_FN_SCRIPT}
                 }
                 routeBounds.extend(point);
               });
-              // #1851 — центровка «маршрут есть, а линии нет» принадлежит точкам
-              // маршрута. Без них в блок заводит один только оригинальный трек,
-              // и этот setView перебил бы его fitBounds выше зумом 14.
-              if (routePoints.length >= 1 && routeLine.length < 2 && routeBounds.isValid() && !map.__metravelRouteFitLocked) {
+              // #1858 — кадр считается ОДИН раз и после отрисовки маркеров:
+              // раньше подгонка по треку стояла выше routePoints.forEach, а
+              // центровка одиночной точки — ниже, и при «трек + первая точка»
+              // побеждала последняя, отменяя наведение на трек зумом 14.
+              // Теперь при наличии трека кадр берётся по объединению границ
+              // трека, линии и точек (паритет с web: TripPlanRouteMap.web.tsx:390
+              // подгоняется по объединению трека и точек), а центровка зумом 14 остаётся
+              // ровно для маршрута без трека, где она единственный источник кадра.
+              if (originalTrackSegments.length) {
+                // Оригинал может выходить за пределы упрощённой линии: когда та
+                // есть, кадр подогнался по ней выше — досаживаем его на общие
+                // границы. Когда линии нет, эта подгонка кадр и ставит.
+                try {
+                  if (routeBounds.isValid() && !map.__metravelRouteFitLocked) {
+                    map.fitBounds(routeBounds, { padding: [70, 70] });
+                  }
+                } catch (e) {}
+              } else if (routePoints.length >= 1 && routeLine.length < 2 && routeBounds.isValid() && !map.__metravelRouteFitLocked) {
                 try {
                   map.setView(routeBounds.getCenter(), Math.max(map.getZoom ? map.getZoom() : 13, 14));
                 } catch (e) {}
