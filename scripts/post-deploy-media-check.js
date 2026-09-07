@@ -39,6 +39,7 @@ const {
   familyOfMediaUrl: familyOfMediaUrlAt,
   isLegacyBucketUrl,
 } = require('./lib/articleBodyMedia')
+const { toReaderMediaPath } = require('./lib/readerMediaUrl')
 
 const args = process.argv.slice(2)
 
@@ -203,13 +204,6 @@ const KNOWN_BROKEN_FAMILIES = new Map([
   // Замер 2026-08-02: все пять семейств отдают dynamic-transform-cache и
   // корректные ступени в обеих Accept-ветках, поэтому исключений нет.
 ])
-
-/** Family-роуты proxy-contract: из них достаётся storage-key для legacy-цели. */
-const FIRST_PARTY_MEDIA_ROUTE =
-  /^\/(gallery|travel-image|travel-description-image|address-image|avatar|quest-cover|trip-cover|quest-step-image|quest-poster|badge-image)\/(.+)$/i
-
-/** Расширения, которые legacy-роут вообще обслуживает (`LEGACY_IMAGE_EXTENSIONS` в `utils/mediaUrl.ts`). */
-const LEGACY_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp'])
 
 /**
  * Accept ровно как у Chrome: бэкенд ветвится по нему, и гейт обязан щупать ту
@@ -388,24 +382,21 @@ function toTargetUrl(site, rawUrl) {
 /**
  * Legacy-роут того же изображения: `/media-resize/legacy/<storage-key>`.
  *
- * Ключ в бакете — это путь без family-префикса, ровно как его достаёт
- * `FIRST_PARTY_MEDIA_ROUTE` в `utils/mediaUrl.ts`. Legacy обслуживает только
- * conversion-ключи, поэтому URL без `/conversions/` сюда не годится.
+ * Путь строит общий резолвер читательского адреса (`lib/readerMediaUrl.js`), а
+ * не своя копия правила: цель гейта обязана совпадать с URL, который браузер
+ * действительно запрашивает (#1854). Собственная копия была шире фронтовой — она
+ * знала все family-роуты proxy-contract, включая `quest-cover` и `avatar`, —
+ * и на них построила бы адрес, которого у читателя нет: переписывает роут фронт,
+ * а он знает ровно четыре роута. На реальный набор кандидатов (обложка статьи,
+ * фото точки, снимок галереи) сужение не влияет, все три внутри этих четырёх.
+ *
+ * Legacy обслуживает только conversion-ключи, поэтому адрес, который резолвер
+ * увёл в другой класс или оставил как есть, сюда не годится.
  */
 function toLegacyTarget(site, familyUrl) {
-  const value = String(familyUrl || '').trim()
-  if (!value) return null
-  let pathname
-  try {
-    pathname = (value.startsWith('/') ? new URL(value, site) : new URL(value)).pathname
-  } catch {
-    return null
-  }
-  const match = FIRST_PARTY_MEDIA_ROUTE.exec(pathname)
-  if (!match) return null
-  const key = match[2]
-  if (!/\/conversions\//i.test(key)) return null
-  return `${site}/media-resize/legacy/${key}`
+  const path = toReaderMediaPath(familyUrl, { site })
+  if (!path || !/^\/media-resize\/legacy\//i.test(path)) return null
+  return `${site}${path}`
 }
 
 /**
@@ -413,14 +404,18 @@ function toLegacyTarget(site, familyUrl) {
  *
  * Манифест для legacy-ключа отдаёт голую ссылку на бакет
  * (`https://<bucket>.s3.<region>.amazonaws.com/uploads/<key>`), а фронт
- * переписывает её на наш прокси по правилу `isLegacyUploadKey` из
- * `utils/mediaUrl.ts`: класс `uploads/**` идёт БЕЗ префикса `legacy/`. Здесь то
- * же правило продублировано, потому что гейт — CommonJS и TS-утилиту не
- * импортирует; расхождение ловит `__tests__/scripts/post-deploy-media-check.test.ts`.
+ * переписывает её на наш прокси: класс `uploads/**` идёт БЕЗ префикса `legacy/`.
+ * Правило берётся из общего резолвера `lib/readerMediaUrl.js` — своей копии тут
+ * больше нет, расхождение зеркала с TS-источником валит
+ * `__tests__/scripts/reader-media-url.test.ts` (#1854).
  *
- * Path-style ссылки на бакет (`s3.<region>.amazonaws.com/<bucket>/uploads/...`)
- * сюда намеренно не попадают: манифест их не отдаёт, а угадывать имя бакета в
- * гейте — способ получить цель, которой нет на проверяемом origin.
+ * Отсюда же две границы, которые раньше держала местная копия. Path-style
+ * ссылку (`s3.<region>.amazonaws.com/<bucket>/uploads/...`) резолвер принимает,
+ * но только с нашим именем бакета: это не «угадывание», а то же условие, по
+ * которому её переписывает фронт. А первопартийный `/uploads/<key>` целью
+ * больше не становится: фронт такой путь не переписывает, читатель идёт по нему
+ * как есть, и `/media-resize/uploads/<key>` был бы адресом из ниоткуда. Уже
+ * переписанный `/media-resize/uploads/<key>` в теле, наоборот, теперь цель даёт.
  *
  * #1753: цель больше НЕ несёт `f=jpeg`. Обход #1233 снят: в proxy-contract v16
  * этот формат объявлен у `legacy_upload` как `unsupported_format` и отвечает
@@ -436,21 +431,9 @@ function toLegacyTarget(site, familyUrl) {
  * (`LEGACY_UPLOAD_FIXED_WIDTH`) держит `__tests__/scripts/postDeployMediaWidths.test.ts`.
  */
 function toUploadsTarget(site, rawUrl) {
-  const value = String(rawUrl || '').trim()
-  if (!value) return null
-  let key
-  try {
-    const pathname = (value.startsWith('/') ? new URL(value, site) : new URL(value)).pathname
-    key = decodeURIComponent(pathname).replace(/^\/+/, '')
-  } catch {
-    return null
-  }
-  const parts = key.split('/')
-  if (parts[0] !== 'uploads' || parts.length < 2) return null
-  if (parts.some((part) => !part || part === '.' || part === '..')) return null
-  const extension = String(parts[parts.length - 1].split('.').pop() || '').toLowerCase()
-  if (!LEGACY_IMAGE_EXTENSIONS.has(extension)) return null
-  return `${site}/media-resize/${key}?w=${widthsFor('media-resize-uploads').large}`
+  const path = toReaderMediaPath(rawUrl, { site })
+  if (!path || !/^\/media-resize\/uploads\//i.test(path)) return null
+  return withWidth(`${site}${path}`, widthsFor('media-resize-uploads').large)
 }
 
 /** Семейство по адресу медиа, привязанное к проверяемому origin этого прогона. */

@@ -48,8 +48,8 @@ const {
   collectArticleBodyMediaUrls,
   collectRichTextMediaUrls,
   familyOfMediaUrl,
-  isLegacyBucketUrl,
 } = require('./lib/articleBodyMedia')
+const { toReaderMediaUrl, unwrapWeservUrl } = require('./lib/readerMediaUrl')
 
 const args = process.argv.slice(2)
 
@@ -160,26 +160,20 @@ async function headStatusResilient(url) {
 }
 
 /**
- * Адрес, который щупаем, — тот, что запрашивает читатель.
+ * Адрес, который щупаем, — ровно тот, что уходит из браузера читателя.
  *
- * Свой путь переносим на проверяемый origin (в теле встречается и
- * корне-относительная форма), бакетную ссылку берём как есть, чужой хост
- * (weserv и прочие обёртки) не проверяем вовсе: он не наш и его доступность —
- * не наш контракт.
+ * Между `src` в теле и запросом браузера стоит переписывание роута
+ * (`toLegacyResizePath` в `utils/mediaUrl.ts`), и строить цель из `src` нельзя:
+ * бакетную ссылку и conversion-ключ читатель спрашивает по `/media-resize/…`,
+ * а не по адресу из разметки. Гейт по адресу из `src` меряет доступность
+ * другого файла — молчит на сломанном прокси-роуте при живом объекте в бакете и
+ * выдумывает битые кадры, когда объект в бакете закроют (#1854).
+ *
+ * Правило одно на все гейты и живёт в `lib/readerMediaUrl.js`; чужой хост он
+ * отдаёт как `null` — его доступность не наш контракт.
  */
 function toTargetUrl(rawUrl) {
-  const value = String(rawUrl || '').trim()
-  if (!value) return null
-  try {
-    const parsed = value.startsWith('/') ? new URL(value, SITE) : new URL(value)
-    if (!/^https?:$/.test(parsed.protocol)) return null
-    if (isLegacyBucketUrl(parsed.toString())) return parsed.toString()
-    const siteHost = new URL(SITE).hostname
-    if (parsed.hostname !== siteHost) return null
-    return `${SITE}${parsed.pathname}${parsed.search}`
-  } catch {
-    return null
-  }
+  return toReaderMediaUrl(rawUrl, SITE)
 }
 
 /** Id точек маршрута статьи — владельцы кадров `/address-image/<id>/`. */
@@ -199,10 +193,19 @@ function collectPointIds(detail) {
 
 const POINT_IMAGE_PATH_RE = /^\/address-image\/(\d+)\//
 
-/** Id точки из адреса кадра, либо null для любого другого класса. */
+/**
+ * Id точки из ИСХОДНОГО адреса кадра, либо null для любого другого класса.
+ *
+ * Считается до переписывания роута и только по нему: у читательского адреса
+ * (`/media-resize/legacy/<id>/conversions/…`) первый сегмент ключа — тот же id,
+ * но семейство источника по нему уже не восстановить, и `gallery`-ключ выглядел
+ * бы фотографией точки.
+ */
 function pointIdOfUrl(url) {
   try {
-    const match = POINT_IMAGE_PATH_RE.exec(new URL(url).pathname)
+    // База нужна корне-относительной форме: в теле статьи `src` чаще всего
+    // именно такой, а разбор без базы на нём бросает.
+    const match = POINT_IMAGE_PATH_RE.exec(new URL(String(url), SITE).pathname)
     return match ? Number(match[1]) : null
   } catch {
     return null
@@ -224,13 +227,21 @@ function collectTravelTargets(detail, families) {
   for (const rawUrl of [...collectArticleBodyMediaUrls(detail), ...collectRichTextMediaUrls(detail)]) {
     const url = toTargetUrl(rawUrl)
     if (!url || seen.has(url)) continue
-    const family = familyOfMediaUrl(url, SITE)
+    // Классификация идёт по ИСХОДНОМУ адресу: `family` и `pointId` — это про
+    // владельца кадра (строка точки, запись галереи, legacy-ключ), а роут на
+    // владельца не влияет. Обёртку weserv снимаем — она не класс, а упаковка, и
+    // без разворота ссылка на бакет внутри неё выглядела бы «не наш класс».
+    const sourceUrl = unwrapWeservUrl(rawUrl)
+    const family = familyOfMediaUrl(sourceUrl, SITE)
     if (!family || !families.has(family)) continue
     seen.add(url)
 
-    const pointId = pointIdOfUrl(url)
+    const pointId = pointIdOfUrl(sourceUrl)
     targets.push({
       url,
+      // Адрес из разметки печатается рядом с целью: без него по строке отчёта
+      // не найти сам `<img>`, который надо править.
+      sourceUrl,
       family,
       pointId,
       // Точки статьи прочитаны из её же payload: пустой маршрут значит «точек
@@ -335,7 +346,10 @@ function printItems(title, items) {
   console.log(`\n${title} (${items.length}):`)
   for (const item of items.slice(0, MAX_PRINTED_ITEMS)) {
     const status = item.status ? `HTTP ${item.status}` : item.error || 'нет ответа'
-    console.log(`   travel ${item.travelId} · ${status} · ${item.url}`)
+    // Цель и `src` расходятся на двух классах из шести; когда расходятся —
+    // печатаем оба, иначе строка не даёт найти `<img>` в теле статьи.
+    const source = item.sourceUrl && item.sourceUrl !== item.url ? ` ← ${item.sourceUrl}` : ''
+    console.log(`   travel ${item.travelId} · ${status} · ${item.url}${source}`)
   }
   if (items.length > MAX_PRINTED_ITEMS) {
     console.log(`   … ещё ${items.length - MAX_PRINTED_ITEMS} — полный список в --json`)

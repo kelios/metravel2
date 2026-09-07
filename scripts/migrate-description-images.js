@@ -45,6 +45,7 @@ const fs = require('fs')
 const path = require('path')
 const https = require('https')
 const { RICH_TEXT_FIELDS } = require('./lib/articleBodyMedia')
+const { unwrapWeservUrl } = require('./lib/readerMediaUrl')
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '')
 const SITE = API_BASE.replace(/\/api$/, '')
@@ -61,45 +62,9 @@ const SHRUNK_FILE = path.join(STATE_DIR, 'shrunk.json')
 const LEGACY_BUCKET = 'metravelprod'
 const LEGACY_IMAGE_EXTENSIONS = new Set(['gif', 'heic', 'heif', 'jpeg', 'jpg', 'png', 'webp'])
 
-/**
- * Разворачивает цепочку `images.weserv.nl/?url=…` до исходного адреса.
- *
- * Зеркало `unwrapWeservImageUrl` из `utils/weservImageUrl.ts`: гейт и скрипты —
- * CommonJS и TS-утилиту не импортируют, ровно как `scripts/post-deploy-media-check.js`.
- * В телах встречается до трёх слоёв, поэтому разворачиваем до неподвижной точки.
- */
-function unwrapWeserv(url) {
-  let current = String(url || '').trim()
-  // Лимит с большим запасом: в статье 175 обёртки вложены ДЕВЯТЬ раз подряд
-  // (src длиной 555 символов), и прежний предел в 8 итераций недокручивал ровно
-  // на один слой — пятнадцать фотографий выглядели как «не наш класс» и молча
-  // проходили мимо миграции. Раскрутка стоит копейки, а недокрут стоит картинки.
-  for (let i = 0; i < 24; i += 1) {
-    if (!/images\.weserv\.nl/i.test(current)) return current
-    let next = null
-    try {
-      const parsed = new URL(current.startsWith('//') ? `https:${current}` : current)
-      next = parsed.searchParams.get('url')
-    } catch {
-      return current
-    }
-    if (!next) return current
-    let decoded = next
-    try {
-      decoded = decodeURIComponent(next)
-    } catch {
-      /* уже раскодировано */
-    }
-    if (!/^https?:\/\//i.test(decoded)) decoded = `https://${decoded.replace(/^\/+/, '')}`
-    if (decoded === current) return current
-    current = decoded
-  }
-  return current
-}
-
 /** Ключ объекта в нашем бакете для класса `uploads/**`, иначе `null`. */
 function legacyUploadKey(url) {
-  const value = unwrapWeserv(url)
+  const value = unwrapWeservUrl(url)
   if (!value || /^(data:|blob:)/i.test(value)) return null
   let parsed
   try {
@@ -213,8 +178,9 @@ function decodeDataUri(raw, detect = detectImageFormat) {
  * Лестница ширин, которые обслуживает прокси.
  *
  * Зеркало `DIMENSION_LADDER` из `utils/imageProxy.ts` — по той же причине, что и
- * `unwrapWeserv`: скрипты CommonJS и TS-утилиту не импортируют. Источник правды у
- * обоих один — `ALLOWED_IMAGE_WIDTHS` бэкенда (`GET /api/media/proxy-contract`).
+ * общий резолвер `lib/readerMediaUrl.js`: скрипты CommonJS и TS-утилиту не
+ * импортируют. Источник правды у обоих один — `ALLOWED_IMAGE_WIDTHS` бэкенда
+ * (`GET /api/media/proxy-contract`).
  */
 const PROXY_WIDTH_LADDER = [32, 96, 160, 320, 480, 640, 720, 800, 960, 1024, 1200, 1280, 1600, 1920, 2500]
 
@@ -293,7 +259,7 @@ function collectPointImageRefs(html) {
   let match
   while ((match = pattern.exec(source)) !== null) {
     const raw = match[1]
-    const decoded = unwrapWeserv(raw.replace(/&amp;/gi, '&'))
+    const decoded = unwrapWeservUrl(raw.replace(/&amp;/gi, '&'))
     let url
     try {
       url = new URL(decoded, SITE)
@@ -465,7 +431,6 @@ module.exports = {
   collectBodyFieldRefs,
   describeRefs,
   assertOnlyAddressesChanged,
-  unwrapWeserv,
   legacyUploadKey,
   collectLegacyUploadRefs,
   collectDataUriRefs,

@@ -166,9 +166,18 @@ describe('post-deploy media check: цель uploads/** (фото тела ста
     // с TS-контрактом (гейт CommonJS и импортировать его не может): без сверки
     // литерал `?w=800` оставался бы зелёным и тогда, когда фронт просит уже
     // другую ширину, и гейт щупал бы URL, которого у читателя нет.
-    expect(toUploadsTarget(SITE, '/uploads/articles/legacy.jpg')).toBe(
+    expect(toUploadsTarget(SITE, `${SITE}/media-resize/uploads/articles/legacy.jpg`)).toBe(
       `${SITE}/media-resize/uploads/articles/legacy.jpg?w=${LEGACY_UPLOAD_FIXED_WIDTH}`
     )
+  })
+
+  // #1854: цель строится по правилу ФРОНТА, а не по «похоже на legacy-ключ».
+  // Первопартийный `/uploads/<key>` фронт не переписывает — читатель идёт по нему
+  // как есть, — поэтому `/media-resize/uploads/<key>` был бы адресом из ниоткуда:
+  // гейт щупал бы URL, которого нет в сети, и его вердикт ничего не значил бы.
+  it('не выдумывает цель из первопартийного /uploads/, который фронт не переписывает', () => {
+    expect(toUploadsTarget(SITE, '/uploads/articles/legacy.jpg')).toBeNull()
+    expect(toUploadsTarget(SITE, `${SITE}/uploads/articles/legacy.jpg`)).toBeNull()
   })
 
   it('отказывается от всего, что не является legacy-ключом картинки', () => {

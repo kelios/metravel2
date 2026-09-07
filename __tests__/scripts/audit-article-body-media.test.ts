@@ -30,6 +30,11 @@ const {
  * Тело несёт три кадра: живое фото точки 11, фото исчезнувшей точки 99 (её нет в
  * `travelAddress`) и картинку описания. Медиа-роут отдаёт 404 ровно на точку 99 —
  * так стаб воспроизводит прод, где ключ умирает вместе со строкой точки.
+ *
+ * Отказ стоит на ЧИТАТЕЛЬСКОМ адресе (`/media-resize/legacy/99/…`), а исходный
+ * `/address-image/99/…` из разметки стаб отдаёт как 200. Так тест отличает гейт,
+ * который щупает URL браузера, от гейта, который щупает строку из `src`: второй
+ * на этом стабе отчитается «битых нет» (#1854).
  */
 const serverSource = (danglingPointId: number | null) => `
 const http = require('http')
@@ -61,7 +66,7 @@ const server = http.createServer((req, res) => {
       travelAddress: [{ id: 11 }],
     })
   }
-  if (DANGLING && url.pathname.startsWith('/address-image/' + DANGLING + '/')) {
+  if (DANGLING && url.pathname.startsWith('/media-resize/legacy/' + DANGLING + '/')) {
     res.writeHead(404)
     return res.end()
   }
@@ -80,20 +85,36 @@ describe('audit-article-body-media: разбор целей', () => {
     expect(pointIdOfUrl('не адрес')).toBeNull();
   });
 
-  it('переносит свой путь на проверяемый origin и отбрасывает мусор', () => {
+  // Гейт обязан щупать URL, который уходит из браузера. Между `src` и запросом
+  // стоит переписывание роута, и цель из `src` меряет доступность другого файла:
+  // молчит на сломанном прокси при живом объекте в бакете и выдумывает битые
+  // кадры, когда анонимный доступ к бакету закроют (#1854).
+  it('уводит conversion-ключ и бакетную ссылку на читательский роут', () => {
+    expect(toTargetUrl('/address-image/1/conversions/x.webp')).toBe(
+      'https://metravel.by/media-resize/legacy/1/conversions/x.webp',
+    );
+    expect(toTargetUrl('https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/a.JPG')).toBe(
+      'https://metravel.by/media-resize/uploads/a.JPG',
+    );
+  });
+
+  it('остальной свой путь переносит на проверяемый origin и отбрасывает мусор', () => {
     expect(toTargetUrl('/address-image/1/x.webp')).toBe('https://metravel.by/address-image/1/x.webp');
     expect(toTargetUrl('https://metravel.by/gallery/1/g.jpg')).toBe('https://metravel.by/gallery/1/g.jpg');
     expect(toTargetUrl('data:image/png;base64,AAA')).toBeNull();
     expect(toTargetUrl('')).toBeNull();
   });
 
-  // Перенос бакетного пути на наш origin выдумывал 404 там, где у читателя 200:
-  // `/uploads/<key>` сайт не обслуживает, а бакет отдаёт файл.
-  it('бакетную ссылку щупает как есть, а чужой хост не щупает вовсе', () => {
-    expect(toTargetUrl('https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/a.JPG')).toBe(
-      'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/a.JPG',
-    );
-    expect(toTargetUrl('https://images.weserv.nl/?url=metravel.by%2Fx.webp')).toBeNull();
+  // Чужая картинка приезжает читателю как есть (weserv снят в #1163), и её
+  // доступность — не наш контракт. Но обёртка вокруг НАШЕГО кадра разворачивается:
+  // иначе класс внутри неё выпадал бы из проверки целиком.
+  it('чужой хост не щупает, а weserv вокруг своего кадра разворачивает', () => {
+    expect(toTargetUrl('https://images.weserv.nl/?url=example.com%2Fx.webp')).toBeNull();
+    expect(
+      toTargetUrl(
+        'https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2Fb.jpg',
+      ),
+    ).toBe('https://metravel.by/media-resize/uploads/b.jpg');
   });
 
   it('читает точки из travelAddress и из coordsMeTravel', () => {
@@ -117,6 +138,27 @@ describe('audit-article-body-media: разбор целей', () => {
       expect.objectContaining({ pointId: 11, dangling: false }),
       expect.objectContaining({ pointId: 99, dangling: true }),
     ]);
+  });
+
+  // Роут меняет адрес, но не владельца кадра: `family` и `pointId` считаются по
+  // исходной ссылке. У читательского адреса первый сегмент ключа — тот же id,
+  // и по нему `gallery`-ключ выглядел бы фотографией точки.
+  it('классифицирует по исходному адресу, а щупает читательский', () => {
+    const [target] = collectTravelTargets(
+      {
+        description: '<img src="/address-image/99/conversions/dead.webp">',
+        travelAddress: [{ id: 11 }],
+      },
+      RISKY_FAMILIES,
+    );
+
+    expect(target).toMatchObject({
+      url: 'https://metravel.by/media-resize/legacy/99/conversions/dead.webp',
+      sourceUrl: '/address-image/99/conversions/dead.webp',
+      family: 'address-image',
+      pointId: 99,
+      dangling: true,
+    });
   });
 
   it('по умолчанию не щупает travel-description-image: у него владелец — сама статья', () => {
@@ -182,7 +224,14 @@ describe('audit-article-body-media: код возврата', () => {
 
     expect(result.status).toBe(1);
     expect(report.broken).toEqual([
-      expect.objectContaining({ travelId: 1, status: 404, pointId: 99 }),
+      expect.objectContaining({
+        travelId: 1,
+        status: 404,
+        pointId: 99,
+        // Отказ виден только на читательском роуте: `/address-image/99/…` стаб
+        // отдаёт 200, как отдавал бы кэш прода.
+        url: `${broken.origin}/media-resize/legacy/99/conversions/dead.webp`,
+      }),
     ]);
     expect(report.dangling).toEqual([
       expect.objectContaining({ travelId: 1, pointId: 99 }),
