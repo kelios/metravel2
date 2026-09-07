@@ -21,6 +21,11 @@ type UseProfileTravelSectionsInput = {
   favorites: unknown[]
   viewHistory: unknown[]
   myTravels: Travel[]
+  /**
+   * Серверный срез вкладки «Опубл.»/«Черновики» (#1833). Для остальных вкладок
+   * пуст: они читают общий список автора.
+   */
+  statusTabTravels?: Travel[]
   engagementSummary: TravelEngagementStats | null
   publicationCounts: TravelPublicationCounts | null
   travelsCount: number
@@ -32,6 +37,10 @@ type UseProfileTravelSectionsInput = {
   loadMoreTravels: () => Promise<void>
   personalTravelStatusEntries: TravelStatusEntry[]
 }
+
+// Стабильная ссылка: новый литерал на каждый рендер менял бы идентичность
+// currentData и перерисовывал бы список впустую.
+const NO_STATUS_TAB_TRAVELS: Travel[] = []
 
 const TRAVEL_BACKED_TABS: ReadonlySet<ProfileTabKey> = new Set<ProfileTabKey>([
   'travels',
@@ -47,6 +56,7 @@ export function useProfileTravelSections({
   favorites,
   viewHistory,
   myTravels,
+  statusTabTravels = NO_STATUS_TAB_TRAVELS,
   engagementSummary,
   publicationCounts,
   travelsCount,
@@ -85,10 +95,16 @@ export function useProfileTravelSections({
     () => myTravels.map(withVisibleEngagementStats),
     [myTravels],
   )
+  // Локальная классификация нужна только счётчикам вкладок: сам список среза
+  // приходит с сервера уже отфильтрованным (#1833).
   const draftTravels = useMemo(() => profileTravels.filter(isTravelDraft), [profileTravels])
   const publishedTravels = useMemo(
     () => profileTravels.filter((travel) => !isTravelDraft(travel)),
     [profileTravels],
+  )
+  const statusTabData = useMemo(
+    () => statusTabTravels.map(withVisibleEngagementStats),
+    [statusTabTravels],
   )
 
   // Разбивка «Опубл. / Черновики» приходит с сервера: классификация загруженных
@@ -99,13 +115,16 @@ export function useProfileTravelSections({
     ?? (isTravelListComplete ? publishedTravels.length : undefined)
   const draftTravelsCount = publicationCounts?.drafts
     ?? (isTravelListComplete ? draftTravels.length : undefined)
+  // Перекрёстные ссылки пустых вкладок ведём по серверной разбивке: список
+  // вкладки-среза о соседнем статусе ничего не знает.
+  const hasPublishedTravels = (publishedTravelsCount ?? publishedTravels.length) > 0
+  const hasDraftTravels = (draftTravelsCount ?? draftTravels.length) > 0
 
   useEffect(() => {
-    const requiresCompleteTravelList =
-      activeTab === 'countries' ||
-      activeTab === 'worldmap' ||
-      activeTab === 'publishedTravels' ||
-      activeTab === 'draftTravels'
+    // «Страны» и «Карта» строятся по всему каталогу автора, поэтому им список
+    // догружается страницами. Вкладки-срезы сюда больше не входят: у них свой
+    // серверный фильтр, и догрузка всего каталога ради них была лишней (#1833).
+    const requiresCompleteTravelList = activeTab === 'countries' || activeTab === 'worldmap'
     if (!requiresCompleteTravelList || travelsLoading || travelsLoadingMore || !travelsHasMore) return
     if (profileTravels.length === 0) return
     void loadMoreTravels()
@@ -147,8 +166,7 @@ export function useProfileTravelSections({
   const currentData = useMemo<Travel[]>(() => {
     if (activeTravelMetric) return authoredMetricTravels
     if (activeTab === 'travels') return profileTravels
-    if (activeTab === 'publishedTravels') return publishedTravels
-    if (activeTab === 'draftTravels') return draftTravels
+    if (activeTab === 'publishedTravels' || activeTab === 'draftTravels') return statusTabData
     if (activeTab === 'favorites') return normalizedFavorites.map(withVisibleEngagementStats)
     if (activeTab === 'history') return normalizedHistory.map(withVisibleEngagementStats)
     return []
@@ -156,11 +174,10 @@ export function useProfileTravelSections({
     activeTab,
     activeTravelMetric,
     authoredMetricTravels,
-    draftTravels,
     normalizedFavorites,
     normalizedHistory,
     profileTravels,
-    publishedTravels,
+    statusTabData,
   ])
   const emptyStateProps = useMemo(() => {
     // Сбой загрузки не должен выглядеть как «маршрутов нет»: у пустого списка
@@ -209,7 +226,7 @@ export function useProfileTravelSections({
           description: i18nT('profile:app.tabs.profile.kogda_chernovik_budet_opublikovan_on_poyavit_56258bdd'),
           variant: 'empty' as const,
           action: { label: i18nT('profile:app.tabs.profile.sozdat_marshrut_23a41ea7'), onPress: () => router.push('/travel/new') },
-          secondaryAction: draftTravels.length > 0
+          secondaryAction: hasDraftTravels
             ? { label: i18nT('profile:app.tabs.profile.otkryt_chernoviki_6355de2b'), onPress: () => setActiveTab('draftTravels') }
             : undefined,
         }
@@ -220,7 +237,7 @@ export function useProfileTravelSections({
           description: i18nT('profile:app.tabs.profile.sohranennye_bez_publikatsii_puteshestviya_bu_2d0b0535'),
           variant: 'empty' as const,
           action: { label: i18nT('profile:app.tabs.profile.sozdat_marshrut_23a41ea7'), onPress: () => router.push('/travel/new') },
-          secondaryAction: publishedTravels.length > 0
+          secondaryAction: hasPublishedTravels
             ? { label: i18nT('profile:app.tabs.profile.otkryt_opublikovannye_32af0ce3'), onPress: () => setActiveTab('publishedTravels') }
             : undefined,
         }
@@ -243,7 +260,7 @@ export function useProfileTravelSections({
       default:
         return { icon: 'layers', title: i18nT('profile:app.tabs.profile.pusto_7e81f6e3'), description: '' }
     }
-  }, [activeTab, activeTravelMetric, draftTravels.length, onRetryTravels, publishedTravels.length, router, setActiveTab, setActiveTravelMetric, travelsError])
+  }, [activeTab, activeTravelMetric, hasDraftTravels, hasPublishedTravels, onRetryTravels, router, setActiveTab, setActiveTravelMetric, travelsError])
   const formatTripsCount = useCallback((count: number) => count === 0
     ? i18nT('profile:app.tabs.profile.poka_pusto_bfb75bfd')
     : selectPlural(count, {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { deleteTravel, fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
 import type { Travel } from '@/types/types';
 import { normalizeToTravel } from '@/components/profile/travelNormalize';
@@ -14,6 +14,12 @@ interface UseMyTravelsArgs {
   userId?: string | null;
   perPage: number;
   includeDrafts?: boolean;
+  /**
+   * Серверный фильтр по статусу публикации (`where.publication_status`).
+   * Задан — список приходит уже отфильтрованным; разбивку вкладок такой
+   * экземпляр не считает, она принадлежит общему списку автора.
+   */
+  publicationStatus?: readonly string[];
   onTotalChange?: (total: number) => void;
 }
 
@@ -38,7 +44,8 @@ export interface UseMyTravelsResult {
   error: string | null;
   load: () => Promise<void>;
   loadMore: () => Promise<void>;
-  remove: (travelId: number) => Promise<void>;
+  /** true — маршрут удалён (или его уже не было на сервере). false — отмена или сбой. */
+  remove: (travelId: number) => Promise<boolean>;
 }
 
 const toDecrementedMetric = (current: number | null | undefined, delta: number | null | undefined) => {
@@ -167,7 +174,14 @@ const toPublicationCounts = (
   return { published: Math.max(0, total - drafts), drafts };
 };
 
-export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalChange }: UseMyTravelsArgs): UseMyTravelsResult {
+export function useMyTravels({ userId, perPage, includeDrafts = false, publicationStatus, onTotalChange }: UseMyTravelsArgs): UseMyTravelsResult {
+  // Фильтр держим ключом, а не ссылкой: инлайновый массив у вызывающего иначе
+  // пересоздавал бы load/loadMore на каждом рендере.
+  const publicationStatusKey = publicationStatus?.length ? publicationStatus.join(',') : '';
+  const publicationFilter = useMemo(
+    () => (publicationStatusKey ? publicationStatusKey.split(',') : undefined),
+    [publicationStatusKey],
+  );
   const [myTravels, setMyTravels] = useState<Travel[]>([]);
   const [engagementSummary, setEngagementSummary] = useState<TravelEngagementStats | null>(null)
   const [publicationCounts, setPublicationCounts] = useState<TravelPublicationCounts | null>(null)
@@ -210,8 +224,10 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
     setError(null);
     try {
       const [payload, draftsCount] = await Promise.all([
-        fetchMyTravels({ user_id: uid, page: 1, perPage, includeDrafts, throwOnError: true }),
-        includeDrafts ? fetchDraftTravelsCount(uid) : Promise.resolve<number | null>(null),
+        fetchMyTravels({ user_id: uid, page: 1, perPage, includeDrafts, publicationStatus: publicationFilter, throwOnError: true }),
+        // У среза по статусу своей разбивки нет: черновики и опубликованные
+        // считает общий список, иначе каждая вкладка тянула бы лишний счётчик.
+        includeDrafts && !publicationFilter ? fetchDraftTravelsCount(uid) : Promise.resolve<number | null>(null),
       ]);
       // Запрос вытеснен более новым load/loadMore или хук размонтирован — не коммитим.
       if (!mountedRef.current || seq !== requestSeqRef.current) return;
@@ -240,7 +256,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
     } finally {
       if (mountedRef.current && seq === requestSeqRef.current) setIsLoading(false);
     }
-  }, [userId, perPage, includeDrafts, onTotalChange]);
+  }, [userId, perPage, includeDrafts, publicationFilter, onTotalChange]);
 
   const loadMore = useCallback(async () => {
     const uid = userId;
@@ -252,7 +268,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
     const seq = ++requestSeqRef.current;
     setIsLoadingMore(true);
     try {
-      const payload = await fetchMyTravels({ user_id: uid, page: nextPage, perPage, includeDrafts, throwOnError: true });
+      const payload = await fetchMyTravels({ user_id: uid, page: nextPage, perPage, includeDrafts, publicationStatus: publicationFilter, throwOnError: true });
       // Вытеснен более новым load (onRefresh) / loadMore или unmount — не коммитим,
       // иначе устаревший merged затрёт свежую страницу 1.
       if (!mountedRef.current || seq !== requestSeqRef.current) return;
@@ -287,10 +303,10 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
     } finally {
       if (mountedRef.current && seq === requestSeqRef.current) setIsLoadingMore(false);
     }
-  }, [userId, perPage, includeDrafts, page, isLoading, isLoadingMore, hasMore, myTravels, onTotalChange]);
+  }, [userId, perPage, includeDrafts, publicationFilter, page, isLoading, isLoadingMore, hasMore, myTravels, onTotalChange]);
 
   const remove = useCallback(
-    async (travelId: number) => {
+    async (travelId: number): Promise<boolean> => {
       try {
         const ok = await confirmAction({
           title: i18nT('shared:hooks.useMyTravels.udalit_puteshestvie_64a5de65'),
@@ -298,9 +314,9 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
           confirmText: i18nT('shared:hooks.useMyTravels.udalit_c7e4f56b'),
           cancelText: i18nT('shared:hooks.useMyTravels.otmena_e1cbb99f'),
         });
-        if (!ok) return;
+        if (!ok) return false;
 
-        if (deleteInFlightRef.current === travelId) return
+        if (deleteInFlightRef.current === travelId) return false
 
         const previousTravels = myTravels
         const deletedTravel = previousTravels.find((travel) => travel.id === travelId)
@@ -325,6 +341,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
           text2: i18nT('shared:hooks.useMyTravels.profil_obnovlen_b45689b2'),
         })
         await load();
+        return true;
       } catch (error) {
         const deleteCopy = getDeleteErrorCopy(error)
 
@@ -335,6 +352,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
             text2: deleteCopy.description,
           })
           await load()
+          return true
         } else {
           if (mountedRef.current) {
             setMyTravels(myTravels)
@@ -350,6 +368,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, onTotalCh
             visibilityTime: 4000,
           })
           console.error('Error deleting travel:', error);
+          return false
         }
       } finally {
         deleteInFlightRef.current = null

@@ -56,6 +56,7 @@ import { useTravelStatus, loadTravelStatus } from '@/stores/travelStatusStore'
 import { showToastMessage } from '@/utils/toast'
 import { createProfileScreenStyles } from '@/components/screens/profile/profileScreen.styles';
 import { useProfileTravelSections } from '@/components/screens/profile/useProfileTravelSections';
+import { useProfileTravelTabList } from '@/components/screens/profile/useProfileTravelTabList';
 import {
   PROFILE_TRAVELS_PER_PAGE,
   type UserStats,
@@ -147,23 +148,30 @@ export default function ProfileScreen() {
     setStats((prev) => ({ ...prev, travelsCount: total }));
   }, []);
 
+  const allTravels = useMyTravels({
+    userId,
+    perPage: PROFILE_TRAVELS_PER_PAGE,
+    includeDrafts: true,
+    onTotalChange: handleTotalChange,
+  });
   const {
     myTravels,
     engagementSummary,
     publicationCounts,
     isLoading: travelsLoading,
     isLoadingMore: travelsLoadingMore,
-    removingTravelId,
     hasMore: travelsHasMore,
-    error: travelsError,
     load: loadTravels,
     loadMore: loadMoreTravelsHook,
-    remove: removeMyTravel,
-  } = useMyTravels({
+  } = allTravels;
+  // Вкладки «Опубл.» и «Черновики» читают свой срез с сервера (#1833), остальные —
+  // общий список автора. Дальше экран работает с уже выбранным источником.
+  const travelList = useProfileTravelTabList({
+    activeTab,
     userId,
     perPage: PROFILE_TRAVELS_PER_PAGE,
-    includeDrafts: true,
-    onTotalChange: handleTotalChange,
+    allTravels,
+    onAfterRemove: loadTravels,
   });
   const personalTravelStatusEntries = useTravelStatus()
 
@@ -180,26 +188,32 @@ export default function ProfileScreen() {
 
   // Ретрай после сбоя идёт мимо one-shot guard: сам guard уже сожжён неудачной
   // попыткой, и без этого кнопка «Повторить» была бы декоративной.
+  const reloadActiveTravelList = travelList.reload;
   const handleRetryTravels = useCallback(() => {
-    void loadTravels();
-  }, [loadTravels]);
+    void reloadActiveTravelList();
+  }, [reloadActiveTravelList]);
 
+  const loadMoreActiveTravelList = travelList.loadMore;
   const loadMoreTravels = useCallback(async () => {
     if (!isProfileTravelTab(activeTab)) return;
-    await loadMoreTravelsHook();
-  }, [activeTab, loadMoreTravelsHook]);
+    await loadMoreActiveTravelList();
+  }, [activeTab, loadMoreActiveTravelList]);
 
+  const listTravelsCount = travelList.travels.length;
+  const listLoading = travelList.isLoading;
+  const listLoadingMore = travelList.isLoadingMore;
+  const listHasMore = travelList.hasMore;
   const handleListEndReached = useCallback(() => {
     if (!isProfileTravelTab(activeTab)) return;
-    if (travelsLoading || travelsLoadingMore || !travelsHasMore) return;
-    if (myTravels.length === 0) return;
+    if (listLoading || listLoadingMore || !listHasMore) return;
+    if (listTravelsCount === 0) return;
 
     const now = Date.now();
     if (now - lastEndReachedAtRef.current < 800) return;
 
     lastEndReachedAtRef.current = now;
     void loadMoreTravels();
-  }, [activeTab, loadMoreTravels, myTravels.length, travelsHasMore, travelsLoading, travelsLoadingMore]);
+  }, [activeTab, listHasMore, listLoading, listLoadingMore, listTravelsCount, loadMoreTravels]);
 
   const handleWebScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (!isProfileTravelTab(activeTab)) return;
@@ -245,13 +259,19 @@ export default function ProfileScreen() {
     setRefreshing(true);
     travelsRequestedRef.current = true;
     try {
-      await Promise.all([loadTravels(), loadUserInfo()]);
+      // Активный список перечитывает reload; на вкладке-срезе он не тот же
+      // запрос, что общий список, а счётчики профиля считает именно общий.
+      await Promise.all([
+        reloadActiveTravelList(),
+        loadUserInfo(),
+        ...(travelList.isFiltered ? [loadTravels()] : []),
+      ]);
     } finally {
       setRefreshing(false);
     }
-  }, [loadTravels, loadUserInfo]);
+  }, [loadTravels, loadUserInfo, reloadActiveTravelList, travelList.isFiltered]);
 
-  const handleDeleteMyTravel = removeMyTravel;
+  const handleDeleteMyTravel = travelList.remove;
 
   useEffect(() => {
     setStats((prev) => ({
@@ -313,13 +333,14 @@ export default function ProfileScreen() {
     favorites,
     viewHistory,
     myTravels,
+    statusTabTravels: travelList.isFiltered ? travelList.travels : undefined,
     engagementSummary,
     publicationCounts,
     travelsCount: stats.travelsCount,
     travelsLoading,
     travelsLoadingMore,
     travelsHasMore,
-    travelsError,
+    travelsError: travelList.error,
     onRetryTravels: handleRetryTravels,
     loadMoreTravels: loadMoreTravelsHook,
     personalTravelStatusEntries,
@@ -730,9 +751,9 @@ export default function ProfileScreen() {
       isSuperuser={isSuperuser}
       onDeletePress={isProfileTravelTab(activeTab) ? handleDeleteMyTravel : undefined}
       viewportWidth={width}
-      isDeleting={removingTravelId === item.id}
+      isDeleting={travelList.removingTravelId === item.id}
     />
-  ), [isMobileDevice, userId, isSuperuser, activeTab, handleDeleteMyTravel, removingTravelId, width]);
+  ), [isMobileDevice, userId, isSuperuser, activeTab, handleDeleteMyTravel, travelList.removingTravelId, width]);
 
   const ListSkeleton = useMemo(() => (
     <View style={styles.skeletonListWrap}>
@@ -768,7 +789,7 @@ export default function ProfileScreen() {
     );
   }
 
-  const isTravelsTabLoading = isProfileTravelTab(activeTab) && travelsLoading;
+  const isTravelsTabLoading = isProfileTravelTab(activeTab) && listLoading;
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -792,7 +813,7 @@ export default function ProfileScreen() {
         isSectionTab={isSectionTab}
         isTravelsTabLoading={isTravelsTabLoading}
         activeTab={activeTab}
-        travelsLoadingMore={travelsLoadingMore}
+        travelsLoadingMore={listLoadingMore}
         isCardsSingleColumn={isCardsSingleColumn}
         gridColumns={gridColumns}
         gapSize={gapSize}
@@ -801,7 +822,7 @@ export default function ProfileScreen() {
         isSuperuser={isSuperuser}
         handleDeleteMyTravel={handleDeleteMyTravel}
         width={width}
-        removingTravelId={removingTravelId}
+        removingTravelId={travelList.removingTravelId}
         handleWebScroll={handleWebScroll}
         handleWebLayout={handleWebLayout}
         handleWebContentSizeChange={handleWebContentSizeChange}
