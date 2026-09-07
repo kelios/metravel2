@@ -194,29 +194,18 @@
 
       var last = parts[parts.length - 1].split('.');
       var extension = String(last[last.length - 1] || '').toLowerCase();
-      for (var e = 0; e < LEGACY_IMAGE_EXTENSIONS.length; e++) {
-        if (LEGACY_IMAGE_EXTENSIONS[e] === extension) return parts;
-      }
-      return null;
+      return LEGACY_IMAGE_EXTENSIONS.indexOf(extension) === -1 ? null : parts;
     }
 
-    function indexOfPart(parts, value) {
-      for (var i = 0; i < parts.length; i++) { if (parts[i] === value) return i; }
-      return -1;
-    }
-
-    function lastIndexOfPart(parts, value) {
-      for (var i = parts.length - 1; i >= 0; i--) { if (parts[i] === value) return i; }
-      return -1;
-    }
-
-    /* Зеркало `isLegacyConversionKey`. */
+    /* Зеркало `isLegacyConversionKey`: сравнение идёт теми же `indexOf`/`lastIndexOf`,
+     * что и в TS-источнике, — расхождение копии видно построчно, а не через свои
+     * обёртки над теми же встроенными методами. */
     function isLegacyConversionKey(parts) {
-      var conversionIndex = indexOfPart(parts, 'conversions');
+      var conversionIndex = parts.indexOf('conversions');
       return conversionIndex > 0 &&
-        conversionIndex === lastIndexOfPart(parts, 'conversions') &&
+        conversionIndex === parts.lastIndexOf('conversions') &&
         conversionIndex < parts.length - 1 &&
-        indexOfPart(parts, 'responsive-images') === -1 &&
+        parts.indexOf('responsive-images') === -1 &&
         parts[0].indexOf(':') === -1;
     }
 
