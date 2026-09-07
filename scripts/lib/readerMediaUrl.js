@@ -186,22 +186,35 @@ function toSourceMediaUrl(url) {
   return unwrapWeservUrl(normalizeAbsoluteMediaUrl(url))
 }
 
-/** Ключ объекта в нашем бакете, если URL ведёт именно туда. */
-const extractLegacyStorageKey = (parsed, site) => {
+/**
+ * Ключ объекта в НАШЕМ бакете, если URL ведёт прямо туда (обе формы адресации).
+ *
+ * Отдельная функция, потому что «наш бакет» спрашивают двое: разбор ключа и
+ * ветка `toReaderMediaUrl`, где такой адрес щупается как есть. Второе выражение
+ * того же правила разошлось бы на краях — например, корень бакета
+ * (`s3.<region>.amazonaws.com/metravelprod`) ключа не даёт и целью пробы быть
+ * не может.
+ */
+const extractOwnBucketKey = (parsed) => {
   const host = parsed.hostname.toLowerCase()
   const path = parsed.pathname.replace(/^\/+/, '')
   if (!path) return null
 
   const virtualHost = host.match(S3_VIRTUAL_HOST)
-  if (virtualHost && virtualHost[1].toLowerCase() === LEGACY_STORAGE_BUCKET) return path
+  if (virtualHost) return virtualHost[1].toLowerCase() === LEGACY_STORAGE_BUCKET ? path : null
 
-  if (S3_PATH_STYLE_HOST.test(host)) {
-    const [bucket, ...rest] = path.split('/')
-    if (bucket.toLowerCase() === LEGACY_STORAGE_BUCKET && rest.length) return rest.join('/')
-  }
+  if (!S3_PATH_STYLE_HOST.test(host)) return null
+  const [bucket, ...rest] = path.split('/')
+  return bucket.toLowerCase() === LEGACY_STORAGE_BUCKET && rest.length ? rest.join('/') : null
+}
+
+/** Ключ объекта в нашем бакете — прямой ссылкой или за первопартийным роутом. */
+const extractLegacyStorageKey = (parsed, site) => {
+  const ownBucketKey = extractOwnBucketKey(parsed)
+  if (ownBucketKey) return ownBucketKey
 
   const firstParty = FIRST_PARTY_MEDIA_ROUTE.exec(parsed.pathname)
-  if (firstParty && isFirstPartyMediaHost(host, site)) return firstParty[1]
+  if (firstParty && isFirstPartyMediaHost(parsed.hostname.toLowerCase(), site)) return firstParty[1]
 
   return null
 }
@@ -317,24 +330,21 @@ function toReaderMediaPath(url, options = {}) {
   return `${parsed.pathname}${parsed.search}`
 }
 
-/** Ссылка ведёт в НАШ legacy-бакет (виртуальный хост или path-style). */
-const isOwnStorageBucketUrl = (parsed) => {
-  const host = parsed.hostname.toLowerCase()
-  const virtualHost = host.match(S3_VIRTUAL_HOST)
-  if (virtualHost) return virtualHost[1].toLowerCase() === LEGACY_STORAGE_BUCKET
-  if (!S3_PATH_STYLE_HOST.test(host)) return false
-  return parsed.pathname.replace(/^\/+/, '').split('/')[0].toLowerCase() === LEGACY_STORAGE_BUCKET
-}
-
 /**
  * Полный адрес, который запрашивает браузер, либо `null`.
  *
  * Обычно это путь на проверяемом origin. Исключение — ключ НАШЕГО бакета,
  * который фронт не переписывает (`toLegacyResizePath` знает только `uploads/**`
- * и conversion-ключи; `uploads/x.svg` или плоский корень бакета мимо них):
- * `buildExternalImageUrl` отдаёт такой адрес как есть, и читатель идёт прямо в
- * S3. Вернуть тут `null` значило бы перестать щупать живой класс кадров молча —
- * ровно то «ложное зелено», против которого заведён модуль.
+ * и conversion-ключи; `uploads/x.svg` мимо них): `buildExternalImageUrl` отдаёт
+ * такой адрес как есть, и читатель идёт прямо в S3. Вернуть тут `null` значило
+ * бы молча перестать щупать живой класс кадров — ровно то «ложное зелено»,
+ * против которого заведён модуль.
+ *
+ * Протокол апгрейдим ровно как фронт (`htmlTransform.ts`): страница отдаётся по
+ * https, и `http://`-кадр браузер заблокировал бы как mixed content, поэтому по
+ * такой ссылке он ходит уже по https. Параметры трансформации, наоборот,
+ * оставляем — по той же причине, что и на первопартийной ветке (см.
+ * `toReaderMediaPath`): политика в модуле одна на обе ветки.
  *
  * Чужой бакет сюда не попадает: его доступность не наш контракт.
  */
@@ -349,7 +359,9 @@ function toReaderMediaUrl(url, site = DEFAULT_SITE) {
     if (source.startsWith('/')) return null
     const parsed = new URL(source)
     if (!/^https?:$/.test(parsed.protocol)) return null
-    return isOwnStorageBucketUrl(parsed) ? parsed.toString() : null
+    if (!extractOwnBucketKey(parsed)) return null
+    if (parsed.protocol === 'http:') parsed.protocol = 'https:'
+    return parsed.toString()
   } catch {
     return null
   }

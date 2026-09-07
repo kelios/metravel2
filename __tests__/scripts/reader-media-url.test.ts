@@ -37,8 +37,10 @@ const MIRROR_INPUTS = [
   // Класс `uploads/**`: бакет виртуальным хостом и path-style.
   `${S3}/uploads/1614096729IMG_6960.JPG`,
   'https://s3.eu-north-1.amazonaws.com/metravelprod/uploads/a.jpg',
-  // Чужой бакет на том же S3 — не наш класс.
+  // Чужой бакет на том же S3 — не наш класс. Корень нашего — не кадр.
   'https://someoneelse.s3.eu-north-1.amazonaws.com/uploads/a.jpg',
+  'https://s3.eu-north-1.amazonaws.com/metravelprod',
+  'https://metravelprod.s3.eu-north-1.amazonaws.com/',
   // Conversion-ключ: бакетом и за каждым family-роутом, который знает фронт.
   `${S3}/15601/conversions/x.webp`,
   `${SITE}/address-image/15601/conversions/x.webp`,
@@ -178,6 +180,13 @@ describe('readerMediaUrl: адрес, который запрашивает чи
     expect(toReaderMediaUrl(`${S3}/uploads/a.JPG`, SITE)).toBe(`${SITE}/media-resize/uploads/a.JPG`);
     // Чужой бакет остаётся чужим хостом: его доступность не наш контракт.
     expect(toReaderMediaUrl('https://someoneelse.s3.eu-north-1.amazonaws.com/uploads/a.svg', SITE)).toBeNull();
+    // Корень бакета — не кадр, а листинг: ключа нет, целью пробы он быть не может.
+    expect(toReaderMediaUrl('https://s3.eu-north-1.amazonaws.com/metravelprod', SITE)).toBeNull();
+    // Страница отдаётся по https, и `http://`-кадр браузер заблокировал бы как
+    // mixed content: читатель идёт по https, значит и проба тоже.
+    expect(toReaderMediaUrl('http://metravelprod.s3.eu-north-1.amazonaws.com/uploads/logo.svg', SITE)).toBe(
+      `${S3}/uploads/logo.svg`,
+    );
   });
 });
 
