@@ -152,8 +152,10 @@ describe('guard-root-scratch-artifacts', () => {
     expect(gitignoreLines).not.toContain('/__*')
 
     const eslintConfig = readRepoFile('eslint.config.js')
-    expect(eslintConfig).toContain('".codex-temp*"')
-    expect(eslintConfig).toContain('".codex-debug*"')
+    // `**/` не косметика: без него паттерн привязан к корню, а `.gitignore`
+    // пишет те же имена без ведущего слэша и игнорирует их на любой глубине.
+    expect(eslintConfig).toContain('"**/.codex-temp*"')
+    expect(eslintConfig).toContain('"**/.codex-debug*"')
     expect(eslintConfig).toContain('"*.tmp.*"')
   })
 
@@ -173,6 +175,10 @@ describe('guard-root-scratch-artifacts', () => {
       '__map_diag.mjs',
       '_tmp-run.mjs',
       'probe9999.tmp.mjs',
+      // Вложенные: `.gitignore` пишет их без ведущего слэша, значит git
+      // игнорирует их на любой глубине — eslint обязан вести себя так же.
+      'components/.codex-temp-probe.js',
+      'scripts/.codex-debug-run.js',
     ]
     const keptFiles = ['metro.config.js', '__tests__/scripts/x.test.ts', '__mocks__/x.js', 'scripts/x.tmp.js']
 
