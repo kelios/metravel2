@@ -6,7 +6,6 @@ import {
   type WebMapLayerDefinition,
 } from '@/config/mapWebLayers';
 import type { ThemedColors } from '@/hooks/useTheme';
-import { ROUTE_POINT_COORDINATE_PRECISION } from '@/components/trips/planning/tripPlanRouteMap.types';
 import { getActiveLocaleDefinition, translate as i18nT } from '@/i18n';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
 import {
@@ -409,6 +408,9 @@ ${ESCAPE_HTML_FN_SCRIPT}
             // только у владельца поездки. У гостя маркеры остаются как были:
             // не перетаскиваются и не перехватывают тап.
             const routePointsInteractive = data.routePointsInteractive === true;
+            // #1820 — счётчик оптовых замен маршрута (шаблон, импорт трека).
+            // Его рост — единственный признак «маршрут заменили целиком».
+            const routeReplacementToken = data.routeReplacementToken;
             window.__metravelMapMode = routeMode;
             if (data.center && isFinite(data.center.lat) && isFinite(data.center.lng)) {
               map.__userCenter = [data.center.lat, data.center.lng];
@@ -549,33 +551,16 @@ ${ESCAPE_HTML_FN_SCRIPT}
 
             if (routeMode === 'route' && routePoints.length >= 1) {
               const routeBounds = L.latLngBounds();
-              // #1781 — защёлка кадра держится, пока на карте остаётся хоть одна
-              // из точек, ради которых её поставили. Оптовая замена маршрута
-              // (шаблон, импорт трека) не оставляет ни одной, и новый маршрут
-              // обязан попасть в кадр: иначе он остаётся за пределами вида до
-              // пересоздания карты. Ключ точки — её координаты, огрублённые тем
-              // же шагом, которым RouteBuilder округляет координаты дропа: сырой
-              // ключ не совпал бы с сохранённым никогда. Шаг приходит из общего
-              // контракта карты маршрута, а не зашит числом. Индексация — по
-              // ПОЛНОМУ набору, тому же, по которому нумеруются маркеры:
-              // фильтрация сдвинула бы слоты.
-              const ROUTE_POINT_FIT_PRECISION = ${ROUTE_POINT_COORDINATE_PRECISION};
-              const routePointKey = function(lat, lng) {
-                return lat.toFixed(ROUTE_POINT_FIT_PRECISION) + ',' + lng.toFixed(ROUTE_POINT_FIT_PRECISION);
-              };
-              const routePointKeys = routePoints.map(function(point) {
-                if (!Array.isArray(point) || !isFinite(point[0]) || !isFinite(point[1])) return '';
-                return routePointKey(point[0], point[1]);
-              });
-              if (map.__metravelRouteFitLocked) {
-                const lockedKeys = map.__metravelRouteFitLockedKeys || [];
-                const survives = routePointKeys.some(function(key) {
-                  return key !== '' && lockedKeys.indexOf(key) !== -1;
-                });
-                if (!survives) {
-                  map.__metravelRouteFitLocked = false;
-                  map.__metravelRouteFitLockedKeys = null;
-                }
+              // #1820 — защёлку кадра снимает только явный сигнал оптовой замены
+              // маршрута: счётчик применений шаблона и импортов трека из
+              // RouteBuilder. Выводить замену из самих точек нельзя — повторное
+              // применение ТОГО ЖЕ шаблона возвращает неперетащенные точки с
+              // прежними координатами, и от частичной правки такая замена
+              // неотличима. Снятие стоит до всех читателей флага ниже: подгонки
+              // по линии, по оригинальному треку и по единственной точке.
+              if (map.__metravelRouteReplacementToken !== routeReplacementToken) {
+                map.__metravelRouteReplacementToken = routeReplacementToken;
+                map.__metravelRouteFitLocked = false;
               }
               if (routeLine.length >= 2) {
                 const routePolyline = L.polyline(routeLine, {
@@ -647,7 +632,6 @@ ${ESCAPE_HTML_FN_SCRIPT}
                     // Кадр перестаёт подгоняться под маршрут: дальше видом
                     // управляет пользователь, а не форма линии.
                     map.__metravelRouteFitLocked = true;
-                    map.__metravelRouteFitLockedKeys = routePointKeys;
                   });
                   marker.on('dragend', function(event) {
                     try {
@@ -655,12 +639,6 @@ ${ESCAPE_HTML_FN_SCRIPT}
                         ? event.target.getLatLng()
                         : null;
                       if (!position || !isFinite(position.lat) || !isFinite(position.lng)) return;
-                      // Ключи защёлки запоминаются уже с местом дропа: иначе
-                      // перетаскивание единственной точки маршрута само же и
-                      // сняло бы защёлку следующим рендером.
-                      map.__metravelRouteFitLockedKeys = routePointKeys.map(function(key, keyIndex) {
-                        return keyIndex === index ? routePointKey(position.lat, position.lng) : key;
-                      });
                       if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
                         window.ReactNativeWebView.postMessage(JSON.stringify({
                           type: 'ROUTE_POINT_MOVED',

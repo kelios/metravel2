@@ -4,7 +4,8 @@
  * Regression control карточки на стороне карты: маркер владельца перетаскивается
  * и отдаёт координаты дропа, popup несёт удаление рядом с редактированием, а у
  * гостя ни того, ни другого нет. Плюс инвариант кадра: ручное перемещение
- * выключает авто-подгонку, иначе карта отменяла бы наведённую точность.
+ * выключает авто-подгонку, иначе карта отменяла бы наведённую точность, и
+ * включает её обратно только счётчик оптовых замен маршрута (#1820).
  */
 import React from 'react'
 import { render, waitFor } from '@testing-library/react-native'
@@ -108,7 +109,9 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
   })
 
   it('снова подгоняет кадр, когда маршрут заменён целиком', async () => {
-    const { rerender } = render(<TripPlanRouteMap route={route} onMovePoint={jest.fn()} />)
+    const { rerender } = render(
+      <TripPlanRouteMap route={route} routeReplacementToken={0} onMovePoint={jest.fn()} />,
+    )
 
     await waitFor(() => expect(markerProps).toHaveLength(2))
     expect(mockFitBounds).toHaveBeenCalledTimes(1)
@@ -118,16 +121,66 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
       route[0],
       { ...route[1], coordinates: [27.7, 53.95] },
     ]
-    rerender(<TripPlanRouteMap route={movedRoute} onMovePoint={jest.fn()} />)
+    rerender(
+      <TripPlanRouteMap route={movedRoute} routeReplacementToken={0} onMovePoint={jest.fn()} />,
+    )
     expect(mockFitBounds).toHaveBeenCalledTimes(1)
 
-    // Шаблон или импортированный трек не оставляет ни одной прежней точки:
-    // иначе новый маршрут навсегда остался бы за пределами кадра.
+    // Импортированный трек: `RouteBuilder` увеличил счётчик оптовых замен, иначе
+    // новый маршрут навсегда остался бы за пределами кадра.
     const importedRoute: RoutePoint[] = [
       { id: 'i1', type: 'custom', name: 'Прага', description: null, coordinates: [14.43, 50.07], placeId: null },
       { id: 'i2', type: 'custom', name: 'Брно', description: null, coordinates: [16.6, 49.19], placeId: null },
     ]
-    rerender(<TripPlanRouteMap route={importedRoute} onMovePoint={jest.fn()} />)
+    rerender(
+      <TripPlanRouteMap route={importedRoute} routeReplacementToken={1} onMovePoint={jest.fn()} />,
+    )
+
+    expect(mockFitBounds).toHaveBeenCalledTimes(2)
+  })
+
+  it('#1820 снова подгоняет кадр на повторном применении ТОГО ЖЕ шаблона', async () => {
+    const { rerender } = render(
+      <TripPlanRouteMap route={route} routeReplacementToken={0} onMovePoint={jest.fn()} />,
+    )
+
+    await waitFor(() => expect(markerProps).toHaveLength(2))
+    expect(mockFitBounds).toHaveBeenCalledTimes(1)
+
+    dragEndAt(1, 53.95, 27.7)
+    rerender(
+      <TripPlanRouteMap
+        route={[route[0], { ...route[1], coordinates: [27.7, 53.95] }]}
+        routeReplacementToken={0}
+        onMovePoint={jest.fn()}
+      />,
+    )
+    expect(mockFitBounds).toHaveBeenCalledTimes(1)
+
+    // Тот же шаблон возвращает неперетащенную точку с ТЕМИ ЖЕ координатами:
+    // по самим точкам такая замена неотличима от частичной правки, и снимает
+    // защёлку только счётчик.
+    rerender(
+      <TripPlanRouteMap route={route} routeReplacementToken={1} onMovePoint={jest.fn()} />,
+    )
+
+    expect(mockFitBounds).toHaveBeenCalledTimes(2)
+  })
+
+  it('#1820 показывает маршрут шаблона, даже если кадр по нему уже наводили', async () => {
+    const { rerender } = render(
+      <TripPlanRouteMap route={route} routeReplacementToken={0} onMovePoint={jest.fn()} />,
+    )
+
+    await waitFor(() => expect(markerProps).toHaveLength(2))
+    expect(mockFitBounds).toHaveBeenCalledTimes(1)
+
+    // Применение шаблона — замена маршрута целиком, и карта обязана показать
+    // получившийся маршрут: пользователь мог увести кадр жестом, а форма линии
+    // при этом совпадает с той, по которой подгонка уже отработала.
+    rerender(
+      <TripPlanRouteMap route={route} routeReplacementToken={1} onMovePoint={jest.fn()} />,
+    )
 
     expect(mockFitBounds).toHaveBeenCalledTimes(2)
   })
@@ -158,8 +211,9 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
     await waitFor(() => expect(markerProps).toHaveLength(1))
     expect(mockSetView).toHaveBeenCalledTimes(1)
 
-    // Leaflet отдаёт сырую позицию дропа, а `RouteBuilder` кладёт в маршрут
-    // округлённую до шести знаков: координатный ключ защёлки не совпал бы.
+    // Маршрут из одной точки после дропа не сохраняет ни одной прежней
+    // координаты — ровно тот случай, на котором эвристика по точкам снимала бы
+    // защёлку сама (#1820). Счётчик замен не рос: кадр остаётся наведённым.
     dragEndAt(0, 53.90123456789012, 27.56789123456789)
     rerender(
       <TripPlanRouteMap

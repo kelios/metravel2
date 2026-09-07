@@ -18,6 +18,7 @@ import {
   FOCUS_POINT_ZOOM,
   type MapFocusPoint,
   type RoutePointMove,
+  type RouteReplacementToken,
 } from '@/components/trips/planning/tripPlanRouteMap.types';
 import {
   TRANSPORT_ICON_NAME,
@@ -57,6 +58,12 @@ interface Props {
    */
   fill?: boolean;
   focusPoint?: MapFocusPoint | null;
+  /**
+   * #1820: счётчик оптовых замен маршрута (шаблон, импорт трека). Его рост —
+   * единственный признак «маршрут заменили целиком»: снимает защёлку кадра и
+   * заставляет карту показать получившийся маршрут.
+   */
+  routeReplacementToken?: RouteReplacementToken;
   onEditPoint?: (index: number) => void;
   /** #1781: маркер отпущен в новом месте — координаты точки нужно обновить. */
   onMovePoint?: (move: RoutePointMove) => void;
@@ -94,6 +101,7 @@ type NativeRouteMapProps = {
   mode: 'route';
   pointsOnly?: boolean;
   routePointsInteractive?: boolean;
+  routeReplacementToken?: RouteReplacementToken;
   onRoutePointMove?: (index: number, lat: number, lng: number) => void;
   onRoutePointPress?: (index: number) => void;
   onMapClick?: (lng: number, lat: number) => void;
@@ -121,6 +129,7 @@ export default function TripPlanRouteMap({
   originalTrackSegments,
   fill = false,
   focusPoint,
+  routeReplacementToken,
   onEditPoint,
   onMovePoint,
   onDeletePoint,
@@ -293,6 +302,7 @@ export default function TripPlanRouteMap({
           mode="route"
           pointsOnly
           routePointsInteractive={interactiveRoutePoints}
+          routeReplacementToken={routeReplacementToken}
           onRoutePointMove={handleRoutePointMove}
           onRoutePointPress={handleRoutePointPress}
           onMapClick={handleMapClick}

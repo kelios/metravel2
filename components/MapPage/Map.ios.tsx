@@ -105,6 +105,12 @@ interface TravelProps {
    * остаются неинтерактивными, как и до появления правки с карты.
    */
   routePointsInteractive?: boolean;
+  /**
+   * #1820 — счётчик оптовых замен маршрута (шаблон, импорт трека). Его рост —
+   * единственный признак «маршрут заменили целиком»: снимает защёлку кадра,
+   * поставленную перетаскиванием маркера, и разрешает подгонку под маршрут.
+   */
+  routeReplacementToken?: number;
   /** #1781 — маркер точки маршрута отпущен в новом месте. */
   onRoutePointMove?: (index: number, lat: number, lng: number) => void;
   /** #1781 — тап по маркеру точки маршрута: запрос действий над точкой. */
@@ -186,6 +192,7 @@ const Map: React.FC<TravelProps> = ({
   originalTrackSegments = EMPTY_TRACK_SEGMENTS,
   mode = 'radius',
   routePointsInteractive = false,
+  routeReplacementToken,
   onRoutePointMove,
   onRoutePointPress,
   onMapClick,
@@ -577,6 +584,7 @@ const Map: React.FC<TravelProps> = ({
       usesServerClusters: shouldUseServerClusterData,
       pointsOnly,
       routePointsInteractive,
+      routeReplacementToken,
     }),
     [
       nativeMarkerPayload,
@@ -591,6 +599,7 @@ const Map: React.FC<TravelProps> = ({
       shouldUseServerClusterData,
       pointsOnly,
       routePointsInteractive,
+      routeReplacementToken,
     ],
   );
 

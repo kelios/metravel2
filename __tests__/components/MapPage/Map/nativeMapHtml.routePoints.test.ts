@@ -9,7 +9,8 @@
  *   1. у владельца точка маршрута — перетаскиваемый маркер;
  *   2. дроп и тап уходят в RN отдельными сообщениями моста, тап не всплывает;
  *   3. у гостя маркеры остаются неинтерактивными;
- *   4. после ручного перетаскивания кадр больше не подгоняется под маршрут.
+ *   4. после ручного перетаскивания кадр больше не подгоняется под маршрут, и
+ *      снимает защёлку только счётчик оптовых замен маршрута (#1820).
  */
 import { buildNativeMapHtml } from '@/components/MapPage/Map/nativeMapHtml';
 
@@ -194,6 +195,8 @@ const routePayload = (interactive: boolean) => ({
   usesServerClusters: false,
   pointsOnly: true,
   routePointsInteractive: interactive,
+  // #1820 — счётчик оптовых замен маршрута из RouteBuilder.
+  routeReplacementToken: 0,
 });
 
 describe('#1781 native-карта — точки маршрута правятся с карты', () => {
@@ -274,13 +277,38 @@ describe('#1781 native-карта — точки маршрута правятс
     });
     expect(harness.fitBoundsCalls).toHaveLength(1);
 
-    // Импортированный трек не оставляет ни одной прежней точки: без снятия
-    // защёлки он остался бы за пределами кадра до пересоздания карты.
+    // Импортированный трек: RouteBuilder увеличил счётчик замен, и без снятия
+    // защёлки новый маршрут остался бы за пределами кадра до пересоздания карты.
     harness.renderPoints({
       ...routePayload(true),
       routePoints: [[50.07, 14.43], [49.19, 16.6]],
       routeLine: [[50.07, 14.43], [49.19, 16.6]],
+      routeReplacementToken: 1,
     });
+
+    expect(harness.map.__metravelRouteFitLocked).toBe(false);
+    expect(harness.fitBoundsCalls).toHaveLength(2);
+  });
+
+  it('#1820 снимает защёлку на повторном применении ТОГО ЖЕ шаблона', () => {
+    const harness = createHarness();
+    harness.renderPoints(routePayload(true));
+    harness.routeMarkers[0].handlers.dragstart();
+    harness.routeMarkers[0].handlers.dragend({
+      target: { getLatLng: () => ({ lat: 53.95, lng: 27.7 }) },
+    });
+    harness.renderPoints({
+      ...routePayload(true),
+      routePoints: [[53.95, 27.7], [53.91, 27.6]],
+      routeLine: [[53.95, 27.7], [53.91, 27.6]],
+    });
+    expect(harness.map.__metravelRouteFitLocked).toBe(true);
+    expect(harness.fitBoundsCalls).toHaveLength(1);
+
+    // Шаблон применён ещё раз: неперетащенная точка возвращается с теми же
+    // координатами, поэтому по самим точкам замена неотличима от правки —
+    // защёлку снимает только счётчик.
+    harness.renderPoints({ ...routePayload(true), routeReplacementToken: 1 });
 
     expect(harness.map.__metravelRouteFitLocked).toBe(false);
     expect(harness.fitBoundsCalls).toHaveLength(2);
@@ -295,34 +323,14 @@ describe('#1781 native-карта — точки маршрута правятс
     };
     harness.renderPoints(single);
     harness.routeMarkers[0].handlers.dragstart();
-    // Сырая позиция дропа против округлённой до шести знаков в маршруте:
-    // ключ защёлки обязан пережить это огрубление.
+    // Маршрут из одной точки после дропа не сохраняет ни одной прежней
+    // координаты — ровно тот случай, на котором эвристика по точкам снимала бы
+    // защёлку сама (#1820). Счётчик замен не рос: кадр остаётся наведённым.
     harness.routeMarkers[0].handlers.dragend({
       target: { getLatLng: () => ({ lat: 53.90123456789012, lng: 27.56789123456789 }) },
     });
     harness.renderPoints({ ...single, routePoints: [[53.901235, 27.567891]] });
 
     expect(harness.map.__metravelRouteFitLocked).toBe(true);
-  });
-
-  it('нумерует ключи защёлки по полному набору, включая нерисуемые точки', () => {
-    const harness = createHarness();
-    const withBroken = {
-      ...routePayload(true),
-      routePoints: [[Number.NaN, 27.4], [53.9, 27.56], [53.91, 27.6]],
-    };
-    harness.renderPoints(withBroken);
-    // Битая точка маркера не даёт, но индекс в наборе занимает: перетащен
-    // средний маркер — это index 1, а не 0.
-    harness.routeMarkers[0].handlers.dragstart();
-    harness.routeMarkers[0].handlers.dragend({
-      target: { getLatLng: () => ({ lat: 53.95, lng: 27.7 }) },
-    });
-
-    expect(harness.map.__metravelRouteFitLockedKeys).toEqual([
-      '',
-      '53.950000,27.700000',
-      '53.910000,27.600000',
-    ]);
   });
 });

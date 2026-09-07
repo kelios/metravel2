@@ -267,6 +267,16 @@ function RouteBuilder({
   const routeSaveLockedRef = useRef(false);
 
   const [route, setRoute] = useState<RoutePoint[]>(trip.route);
+  // #1820: маршрут заменён целиком — шаблоном или импортированным треком.
+  // Карта снимает по этому счётчику защёлку кадра, поставленную перетаскиванием
+  // маркера: сама она такую замену увидеть не может, потому что повторное
+  // применение того же шаблона возвращает неперетащенные точки с прежними
+  // координатами. Ответы бэкенда (сохранение маршрута, смена транспорта) точки
+  // не заменяют и счётчик не трогают — иначе они выбрасывали бы наведённый кадр.
+  const [routeReplacementToken, setRouteReplacementToken] = useState(0);
+  const markRouteReplaced = useCallback(() => {
+    setRouteReplacementToken((value) => value + 1);
+  }, []);
 
   const [newType, setNewType] = useState<RoutePointType>('place');
   const [newName, setNewName] = useState('');
@@ -907,6 +917,7 @@ function RouteBuilder({
         id: `tpl-${index}-${p.name}`,
       })),
     );
+    markRouteReplaced();
     setEditingIndex(null);
     setEditError(null);
     setIsAddPointOpen(false);
@@ -917,6 +928,7 @@ function RouteBuilder({
     originalUpload: PickedTripRouteFileUpload | null,
   ) => {
     setRoute(nextRoute);
+    markRouteReplaced();
     setEditingIndex(null);
     setEditError(null);
     setIsAddPointOpen(false);
@@ -932,7 +944,7 @@ function RouteBuilder({
         originalUpload.kind === 'native' ? originalUpload.name : originalUpload.file.name,
       );
     }
-  }, []);
+  }, [markRouteReplaced]);
 
   // #1824, пункт 3: третья мутация файловой ветки. Черновик точек она не
   // трогает, поэтому ответом его не затирает, — но синхронного лока у неё тоже
@@ -1263,6 +1275,7 @@ function RouteBuilder({
       activeIndex={editingIndex}
       fill={isMapFirst}
       focusPoint={focusPoint}
+      routeReplacementToken={routeReplacementToken}
       onEditPoint={handleEditPoint}
       onMovePoint={handleMovePoint}
       onDeletePoint={handleDelete}
