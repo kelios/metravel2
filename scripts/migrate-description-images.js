@@ -105,8 +105,13 @@ function legacyUploadKey(url) {
 
   let key = parsed.pathname.replace(/^\/+/, '')
   if (isFirstParty) {
-    // Наш прокси-путь того же класса: `/media-resize/uploads/<key>`.
-    const m = /^media-resize\/(uploads\/.+)$/i.exec(key)
+    // Две формы одного класса на нашем домене: прокси-путь `/media-resize/uploads/<key>`
+    // и ГОЛЫЙ `/uploads/<key>`. Вторую эта функция раньше отбрасывала, и тела с ней
+    // проходили миграцию как «legacy нет» — при том, что голый путь сайт не
+    // обслуживает вовсе: замер 07.09.2026, `/uploads/1620061579IMG_6533.JPG` → 404,
+    // тот же ключ через `/media-resize/` → 200. Семь таких кадров в статьях 116, 171,
+    // 220, 290 читатель видел пустой рамкой (#1834, находка корпусного прогона).
+    const m = /^(?:media-resize\/)?(uploads\/.+)$/i.exec(key)
     if (!m) return null
     key = m[1]
   } else if (!isBucketHost) {
@@ -263,6 +268,43 @@ function isOversizedFrame({ bytes, width, height }, threshold = OVERSIZED_BYTES_
 }
 
 /**
+ * Все `src` тела, ведущие в класс `address-image` — фото ТОЧКИ маршрута.
+ *
+ * Отдельный класс от legacy `uploads/**`, и по другой причине (#1834, рецидив
+ * #1088). Ключ `/address-image/<id точки>/…` резолвится по строке `travel_address`:
+ * фото живёт ровно столько, сколько живёт точка. Пересохранение маршрута
+ * пересоздаёт строки с новыми id — и `<img>` в теле остаётся указывать на
+ * прежнюю. Замер прода 07.09.2026: у travel 682 тело ссылается на точки
+ * 15601…5487, а маршрут состоит из 15845–15882 — ни одного пересечения; ссылки
+ * ещё отдают 200 только потому, что старые строки не удалены.
+ *
+ * Форма результата общая с двумя другими классами: `raw` — строка для замены,
+ * `key` — метка для журнала. `frameUrl` отличает эту ветку у загрузчика: кадр
+ * лежит по собственному адресу, а не в `/media-resize/<ключ>`.
+ */
+function collectPointImageRefs(html) {
+  const out = new Map()
+  const source = String(html || '')
+  const pattern = /<img\b[^>]*?\bsrc=["']([^"']+)["'][^>]*>/gi
+  let match
+  while ((match = pattern.exec(source)) !== null) {
+    const raw = match[1]
+    const decoded = unwrapWeserv(raw.replace(/&amp;/gi, '&'))
+    let url
+    try {
+      url = new URL(decoded, SITE)
+    } catch {
+      continue
+    }
+    if (!/^\/address-image\/\d+\//i.test(url.pathname)) continue
+    if (!out.has(raw)) {
+      out.set(raw, { raw, key: url.pathname.replace(/^\/+/, ''), frameUrl: url.toString() })
+    }
+  }
+  return Array.from(out.values())
+}
+
+/**
  * Все `src` тела, ведущие в канонический класс `travel-description-image`.
  *
  * Это картинки, уже прошедшие миграцию (#1245/#1320): ни legacy-ключа, ни
@@ -336,6 +378,7 @@ module.exports = {
   legacyUploadKey,
   collectLegacyUploadRefs,
   collectDataUriRefs,
+  collectPointImageRefs,
   collectCanonicalRefs,
   buildManifestGeometry,
   shrinkWidthFor,
@@ -709,11 +752,13 @@ async function migrateOne(id, { token, dryRun }) {
   const original = before.description || ''
 
   const dataUriRefs = collectDataUriRefs(original)
-  const refs = [...collectLegacyUploadRefs(original), ...dataUriRefs]
+  const pointRefs = collectPointImageRefs(original)
+  const refs = [...collectLegacyUploadRefs(original), ...dataUriRefs, ...pointRefs]
   const httpRefs = (original.match(/http:\/\/(?:cdn\.|api\.)?metravel\.by/gi) || []).length
   console.log(
-    `📄 [${id}] ${before.slug} — картинок в теле ${countImages(original)}, из них legacy ${refs.length - dataUriRefs.length}` +
+    `📄 [${id}] ${before.slug} — картинок в теле ${countImages(original)}, из них legacy ${refs.length - dataUriRefs.length - pointRefs.length}` +
       (dataUriRefs.length ? `, base64 ${dataUriRefs.length}` : '') +
+      (pointRefs.length ? `, фото точек ${pointRefs.length}` : '') +
       (httpRefs ? `, http-ссылок ${httpRefs}` : ''),
   )
   if (!refs.length && !httpRefs) {
@@ -738,7 +783,13 @@ async function migrateOne(id, { token, dryRun }) {
   const uploaded = []
   for (const ref of refs) {
     // Легаси-ссылку надо скачать, base64 уже несёт кадр в себе — дальше конвейер общий.
-    const file = ref.dataUri ? decodeDataUri(ref.raw) : await downloadMaster(ref.key)
+    // Три источника — один конвейер: base64 несёт кадр в себе, фото точки лежит по
+    // собственному адресу, legacy-ключ достаётся через `/media-resize/`.
+    const file = ref.dataUri
+      ? decodeDataUri(ref.raw)
+      : ref.frameUrl
+        ? await downloadFrame(ref.frameUrl)
+        : await downloadMaster(ref.key)
     const url = await uploadDescriptionImage(id, file, token)
     // Заменяем ВСЕ вхождения именно этой строки: один и тот же кадр может стоять
     // в теле несколько раз, в том числе в разных weserv-обёртках.
@@ -773,6 +824,9 @@ async function migrateOne(id, { token, dryRun }) {
   }
   if (collectDataUriRefs(next).length) {
     throw new Error('в теле остались base64-кадры после замены')
+  }
+  if (collectPointImageRefs(next).length) {
+    throw new Error('в теле остались ссылки на фото точек после замены')
   }
 
   const payload = buildUpsertPayload(before, { description: next })

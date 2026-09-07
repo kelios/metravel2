@@ -98,9 +98,19 @@ const createHarness = () => {
       makeShape('marker', position, options),
   };
 
+  // #1851 — кадр проверяется по вызовам, а не по «не упало»: без точек маршрута
+  // подгонка обязана идти по границам оригинала, и её не должен перебивать
+  // setView одиночной точки.
+  const fitBoundsCalls: unknown[] = [];
+  const setViewCalls: unknown[] = [];
+
   const map: Record<string, unknown> = {
-    fitBounds: () => undefined,
-    setView: () => undefined,
+    fitBounds: (target: unknown) => {
+      fitBoundsCalls.push(target);
+    },
+    setView: (target: unknown) => {
+      setViewCalls.push(target);
+    },
     getZoom: () => 10,
     __userCenter: null,
   };
@@ -141,7 +151,7 @@ const createHarness = () => {
 
   const polylines = () => routeLayer.added.filter((shape) => shape.kind === 'polyline');
 
-  return { renderPoints, polylines, extended };
+  return { renderPoints, polylines, extended, fitBoundsCalls, setViewCalls, bounds };
 };
 
 // Два кольца похода: Route 2 стоит в Эхтернахе, Route 3 — в Мюллертале.
@@ -156,7 +166,10 @@ const MUELLERTHAL_RING = [
   [49.7909, 6.3065],
 ];
 
-const payload = (originalTrackSegments: number[][][]) => ({
+const payload = (
+  originalTrackSegments: number[][][],
+  overrides: Record<string, unknown> = {},
+) => ({
   points: [],
   clusters: [],
   routePoints: [
@@ -173,7 +186,12 @@ const payload = (originalTrackSegments: number[][][]) => ({
   usesServerClusters: false,
   pointsOnly: true,
   routePointsInteractive: false,
+  ...overrides,
 });
+
+// Обычный порядок при импорте похода: файл уже загружен, точки маршрута ещё нет.
+const withoutRoutePoints = (originalTrackSegments: number[][][]) =>
+  payload(originalTrackSegments, { routePoints: [], routeLine: [] });
 
 describe('#1847 native-карта — многотрековый оригинал', () => {
   it('рисует по полилинии на каждый трек файла, не соединяя их между собой', () => {
@@ -220,5 +238,46 @@ describe('#1847 native-карта — многотрековый оригина�
     harness.renderPoints(payload([]));
 
     expect(harness.polylines()).toHaveLength(1);
+  });
+});
+
+/**
+ * #1851 — весь route-блок висел под `routePoints.length >= 1`, и оригинальный
+ * трек, попавший внутрь него в #1496, наследовал гейт чужой линии. Файл грузят
+ * раньше, чем расставляют точки: слой оставался пустым, а легенда на RN-стороне
+ * гейтится независимо и трек обещала.
+ */
+describe('#1851 native-карта — оригинал без точек маршрута', () => {
+  it('рисует все сегменты файла, когда точек маршрута ещё нет', () => {
+    const harness = createHarness();
+
+    harness.renderPoints(withoutRoutePoints([ECHTERNACH_RING, MUELLERTHAL_RING]));
+
+    const lines = harness.polylines();
+    // Линии маршрута нет — рисовать её не от чего; оба кольца файла на месте.
+    expect(lines).toHaveLength(2);
+    expect(lines[0].coordinates).toEqual(ECHTERNACH_RING);
+    expect(lines[1].coordinates).toEqual(MUELLERTHAL_RING);
+  });
+
+  it('наводит кадр на границы оригинала, а не оставляет карту на дефолтном центре', () => {
+    const harness = createHarness();
+
+    harness.renderPoints(withoutRoutePoints([ECHTERNACH_RING, MUELLERTHAL_RING]));
+
+    expect(harness.fitBoundsCalls).toEqual([harness.bounds]);
+    // Центровка одиночной точки маршрута сюда не заходит: её setView с зумом 14
+    // перебил бы подгонку по треку.
+    expect(harness.setViewCalls).toHaveLength(0);
+    expect(harness.extended).toContainEqual(ECHTERNACH_RING[1]);
+    expect(harness.extended).toContainEqual(MUELLERTHAL_RING[1]);
+  });
+
+  it('без точек маршрута и без оригинала в route-слой ничего не кладёт', () => {
+    const harness = createHarness();
+
+    harness.renderPoints(withoutRoutePoints([]));
+
+    expect(harness.polylines()).toHaveLength(0);
   });
 });

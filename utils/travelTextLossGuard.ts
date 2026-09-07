@@ -13,7 +13,17 @@ const FIELD_LABELS: Record<RichTextLossField, string> = {
   get recommendation() { return i18nT('travel:utils.travelTextLossGuard.field.recommendation') },
 }
 
-const GUARDED_FIELDS: RichTextLossField[] = ['description', 'plus', 'minus', 'recommendation']
+/**
+ * Rich-text поля тела статьи — один набор на всех, кто сверяет тело при сохранении
+ * (`utils/travelBodyPointImageGuard.ts`). Расхождение здесь означало бы, что один
+ * гейт смотрит на поле, которого другой не видит.
+ */
+export const GUARDED_RICH_TEXT_FIELDS: RichTextLossField[] = ['description', 'plus', 'minus', 'recommendation']
+
+/** Название поля в родительном виде для сообщений автору. */
+export function getRichTextFieldLabel(field: RichTextLossField): string {
+  return FIELD_LABELS[field]
+}
 
 // Очевидные заглушки, которыми затирают реальный текст (см. инцидент travel/225: «<p>desc</p>»).
 const getPlaceholderValues = () => new Set(
@@ -58,7 +68,7 @@ export function detectRichTextLoss(
   if (!baseline || !next) return []
 
   const lost: RichTextLossField[] = []
-  for (const field of GUARDED_FIELDS) {
+  for (const field of GUARDED_RICH_TEXT_FIELDS) {
     const baselineText = toPlainText(baseline[field])
     const nextText = toPlainText(next[field])
     if (isDestructiveChange(baselineText, nextText)) {

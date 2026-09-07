@@ -177,10 +177,13 @@ export default function TripPlanRouteMap({
   );
   const hasOriginalTrack = originalTrackLines.length > 0;
   const center = useMemo(() => {
-    const first = routeLine[0] ?? routePoints[0];
+    // #1851: файл трека грузят раньше, чем расставляют точки маршрута. Без
+    // третьего кандидата такая поездка открывалась на дефолтном Минске — за
+    // тысячи километров от собственного трека.
+    const first = routeLine[0] ?? routePoints[0] ?? originalTrackLines[0]?.[0];
     if (!first) return DEFAULT_CENTER;
     return { latitude: first[1], longitude: first[0] };
-  }, [routeLine, routePoints]);
+  }, [originalTrackLines, routeLine, routePoints]);
 
   const { enabledOverlays, handleOverlayToggle, overlayOptions } = useMapOverlays(mapUiApi);
 

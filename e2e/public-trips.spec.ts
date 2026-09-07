@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import { test, expect, request, type Page } from '@playwright/test'
 import { resetTripApplicationsViaAdmin } from './helpers/tripApplicationsReset'
+import './scenarios/planned-trip-map-editing'
 
 /**
  * Публичные поездки «Поехали со мной» (Sprint 14, #416).

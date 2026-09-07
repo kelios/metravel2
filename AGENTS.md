@@ -69,6 +69,11 @@ Validation:
 - Не выводи secrets из `.env*`, `.env.e2e`, `.secrets`, SSH, EAS, Play или
   deploy configs. Временные логи/screenshots/traces/JSON храни только в ignored
   `.codex-temp/`, `.codex-debug/`, `test-results/` или `playwright-report/`.
+- Корень репозитория — закрытый список: любой корневой файл объявлен в
+  `ALLOWED_ROOT_FILES` (`scripts/guard-root-scratch-artifacts.js`). Гейт читает
+  не только индекс, но и untracked-срез корня, поэтому разовая проба краснеет
+  ещё до коммита; уносить её в `.codex-temp/` или игнорировать, а не
+  дописывать в список.
 - Production deploy, store build/upload/submit/release и другие внешние
   мутации требуют точной текущей команды пользователя и профильного operator
   skill. Один разрешённый stage не разрешает следующий.

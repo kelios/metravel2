@@ -549,7 +549,13 @@ ${ESCAPE_HTML_FN_SCRIPT}
             };
             if (!samePoints) scheduleChunk(function() { renderMarkerChunk(0); });
 
-            if (routeMode === 'route' && routePoints.length >= 1) {
+            // #1851 — оригинальный трек не зависит от точек маршрута: файл
+            // грузят раньше, чем расставляют точки, и до #1851 весь route-блок
+            // висел под условием routePoints.length >= 1. Трек приезжал в payload,
+            // легенда его обещала (собственный гейт на RN-стороне), а слой
+            // оставался пустым. Условие линии маршрута не меняется — она
+            // по-прежнему рисуется только от своих точек (гейты ниже).
+            if (routeMode === 'route' && (routePoints.length >= 1 || originalTrackSegments.length)) {
               const routeBounds = L.latLngBounds();
               // #1820 — защёлку кадра снимает только явный сигнал оптовой замены
               // маршрута: счётчик применений шаблона и импортов трека из
@@ -665,7 +671,10 @@ ${ESCAPE_HTML_FN_SCRIPT}
                 }
                 routeBounds.extend(point);
               });
-              if (routeLine.length < 2 && routeBounds.isValid() && !map.__metravelRouteFitLocked) {
+              // #1851 — центровка «маршрут есть, а линии нет» принадлежит точкам
+              // маршрута. Без них в блок заводит один только оригинальный трек,
+              // и этот setView перебил бы его fitBounds выше зумом 14.
+              if (routePoints.length >= 1 && routeLine.length < 2 && routeBounds.isValid() && !map.__metravelRouteFitLocked) {
                 try {
                   map.setView(routeBounds.getCenter(), Math.max(map.getZoom ? map.getZoom() : 13, 14));
                 } catch (e) {}

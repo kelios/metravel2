@@ -4,18 +4,21 @@ const path = require('path')
 const { makeTempDir, removeDir, runCli, writeTextFile } = require('./cli-test-utils')
 
 const {
-  ALLOWED_ROOT_DOTFILES,
+  ALLOWED_ROOT_FILES,
   buildJsonResult,
+  classifyRootFile,
   evaluateGuard,
+  isAllowedRootFile,
   isRootDotfile,
-  isAllowedRootDotfile,
-  isScratchArtifact,
   listTrackedFiles,
+  listUntrackedFiles,
+  looksLikeScratchArtifact,
 } = require('@/scripts/guard-root-scratch-artifacts')
 
 const repoRoot = process.cwd()
 const guardPath = path.resolve(repoRoot, 'scripts/guard-root-scratch-artifacts.js')
 const readRepoFile = (file: string) => fs.readFileSync(path.resolve(repoRoot, file), 'utf8')
+const violationFiles = (result: { violations: { file: string }[] }) => result.violations.map((v) => v.file)
 
 describe('guard-root-scratch-artifacts', () => {
   it.each([
@@ -35,25 +38,53 @@ describe('guard-root-scratch-artifacts', () => {
     })
 
     expect(result.ok).toBe(false)
-    expect(result.violations).toEqual([{ file: '.codex-temp-probe.js' }])
-  })
-
-  it('rejects a differently named artifact of the same class', () => {
-    // Точечный паттерн `.codex-temp*` третий эпизод не поймает: guard закрывает
-    // класс «новый top-level dotfile», а не конкретное имя.
-    const result = evaluateGuard({ trackedFiles: ['.probe-login.js', '.quest-audit-run.json'] })
-
-    expect(result.ok).toBe(false)
-    expect(result.violations.map((v: { file: string }) => v.file)).toEqual([
-      '.probe-login.js',
-      '.quest-audit-run.json',
+    expect(result.violations).toEqual([
+      expect.objectContaining({ file: '.codex-temp-probe.js', kind: 'scratch', origin: 'tracked' }),
     ])
   })
 
-  it('accepts real root config dotfiles and env examples', () => {
+  it('rejects a root file whose name matches NO scratch convention at all', () => {
+    // Ядро #1852. До закрытого списка `probe.mjs` не ловил никто: guard знал
+    // только угаданные конвенции, git его принимал, eslint читал. Denylist
+    // заведомо неполон — третий эпизод семьи пришёл именно под новым именем.
+    const result = evaluateGuard({ trackedFiles: ['probe.mjs', 'check-1847.js', 'diag.json'] })
+
+    expect(result.ok).toBe(false)
+    expect(violationFiles(result)).toEqual(['probe.mjs', 'check-1847.js', 'diag.json'])
+    for (const name of ['probe.mjs', 'check-1847.js', 'diag.json']) {
+      expect(classifyRootFile(name)).toBe('unknown')
+      expect(looksLikeScratchArtifact(name)).toBe(false)
+    }
+  })
+
+  it('rejects a differently named dotfile of the same class', () => {
+    const result = evaluateGuard({ trackedFiles: ['.probe-login.js', '.quest-audit-run.json'] })
+
+    expect(result.ok).toBe(false)
+    expect(violationFiles(result)).toEqual(['.probe-login.js', '.quest-audit-run.json'])
+  })
+
+  it('gives a different remediation to a scratch name and to an unknown new root file', () => {
+    // Один и тот же совет на оба случая бесполезен: автору настоящего конфига
+    // предлагали бы выбросить его файл, а автору пробы — объявить её в
+    // allow-list. Поэтому конвенции denylist'а сохранены как классификатор.
+    const result = evaluateGuard({ trackedFiles: ['__probe.js', 'notes.md'] })
+
+    const scratch = result.violations.find((v: { file: string }) => v.file === '__probe.js')
+    const unknown = result.violations.find((v: { file: string }) => v.file === 'notes.md')
+
+    expect(scratch.kind).toBe('scratch')
+    expect(scratch.remediation).toContain('.codex-temp/')
+    expect(unknown.kind).toBe('unknown')
+    expect(unknown.remediation).toContain('ALLOWED_ROOT_FILES')
+    expect(unknown.remediation).toContain('scripts/guard-root-scratch-artifacts.js')
+    expect(scratch.remediation).not.toEqual(unknown.remediation)
+  })
+
+  it('accepts real root config files and env examples', () => {
     const result = evaluateGuard({
       trackedFiles: [
-        ...ALLOWED_ROOT_DOTFILES,
+        ...ALLOWED_ROOT_FILES,
         '.env.deploy.example',
         '.env.media-ops.example',
         'app/_layout.tsx',
@@ -65,9 +96,9 @@ describe('guard-root-scratch-artifacts', () => {
   })
 
   it('keeps .env values themselves outside the allow-list', () => {
-    expect(isAllowedRootDotfile('.env')).toBe(false)
-    expect(isAllowedRootDotfile('.env.e2e')).toBe(false)
-    expect(isAllowedRootDotfile('.env.deploy.example')).toBe(true)
+    expect(isAllowedRootFile('.env')).toBe(false)
+    expect(isAllowedRootFile('.env.e2e')).toBe(false)
+    expect(isAllowedRootFile('.env.deploy.example')).toBe(true)
   })
 
   it('reads the env-placeholder convention from guard-env-secrets, not from a private copy', () => {
@@ -76,15 +107,12 @@ describe('guard-root-scratch-artifacts', () => {
     const { isAllowedEnvPlaceholder } = require('@/scripts/guard-env-secrets')
 
     for (const name of ['.env.example', '.env.deploy.example', '.env', '.env.e2e']) {
-      expect(isAllowedRootDotfile(name)).toBe(isAllowedEnvPlaceholder(name) || ALLOWED_ROOT_DOTFILES.has(name))
+      expect(isAllowedRootFile(name)).toBe(isAllowedEnvPlaceholder(name) || ALLOWED_ROOT_FILES.has(name))
     }
-    expect(isAllowedRootDotfile('.env.example')).toBe(true)
+    expect(isAllowedRootFile('.env.example')).toBe(true)
   })
 
   it('rejects one-off root scripts named without a leading dot', () => {
-    // `eslint.config.js` объявляет `__*` и `_tmp-*` разовой диагностикой и просто
-    // их не читает: такой артефакт в git не покраснел бы нигде. Расширение тут
-    // роли не играет — `__probe.js` воспроизводит #1846 ровно так же, как .mjs.
     const result = evaluateGuard({
       trackedFiles: [
         '__map_diag.mjs',
@@ -98,7 +126,7 @@ describe('guard-root-scratch-artifacts', () => {
     })
 
     expect(result.ok).toBe(false)
-    expect(result.violations.map((v: { file: string }) => v.file)).toEqual([
+    expect(violationFiles(result)).toEqual([
       '__map_diag.mjs',
       '__probe.js',
       '__diag.ts',
@@ -107,20 +135,65 @@ describe('guard-root-scratch-artifacts', () => {
     ])
   })
 
-  it('leaves ordinary root config files and nested files alone', () => {
-    for (const file of ['metro.config.js', 'app.config.js', 'queryKeys.ts', 'scripts/_tmp-probe.mjs', 'scripts/x.tmp.js', '__tests__/a.ts']) {
-      expect(isScratchArtifact(file)).toBe(false)
+  it('leaves declared root files and nested files alone', () => {
+    for (const file of [
+      'metro.config.js',
+      'app.config.js',
+      'queryKeys.ts',
+      'scripts/_tmp-probe.mjs',
+      'scripts/x.tmp.js',
+      'scripts/probe.mjs',
+      '__tests__/a.ts',
+    ]) {
+      expect(classifyRootFile(file)).toBe('allowed')
     }
   })
 
   it('keeps the allow-list in sync with what git actually tracks in the root', () => {
-    // Расхождение здесь означает, что allow-list превратился в список мёртвых
-    // имён и перестал быть осознанным решением.
-    const tracked = listTrackedFiles(repoRoot).filter((file: string) => isRootDotfile(file))
+    // Обе стороны обязательны. Трекаемое имя вне списка — дыра ровно того
+    // класса, ради которого список и заводился; запись без файла — мёртвое имя,
+    // из-за которого список перестаёт быть осознанным решением.
+    const trackedRootFiles = listTrackedFiles(repoRoot).filter((file: string) => !file.includes('/'))
 
-    expect(evaluateGuard({ trackedFiles: tracked })).toMatchObject({ ok: true })
-    for (const allowed of ALLOWED_ROOT_DOTFILES) {
-      expect(tracked).toContain(allowed)
+    expect(evaluateGuard({ trackedFiles: trackedRootFiles })).toMatchObject({ ok: true })
+    expect(trackedRootFiles.length).toBeGreaterThan(20)
+    for (const declared of ALLOWED_ROOT_FILES) {
+      expect(trackedRootFiles).toContain(declared)
+    }
+  })
+
+  it('reads the untracked-but-not-ignored slice of the root, not only the index', () => {
+    // Живой третий эпизод (`probe1847*.tmp.mjs`, 07.09.2026) был untracked:
+    // индекс его не видел, а общий `npm run lint` уже краснел у всех. Игнор
+    // при этом обязан оставаться выходом — игнорируемый файл не читает ни git,
+    // ни eslint, и гейт он не красит.
+    const repo = makeTempDir('guard-root-scratch-untracked-')
+    try {
+      runCli('git', ['init', '-q', '.'], { cwd: repo })
+      writeTextFile(path.join(repo, '.gitignore'), '/__*.mjs\n')
+      writeTextFile(path.join(repo, 'package.json'), '{}\n')
+      runCli('git', ['add', '-A'], { cwd: repo })
+      writeTextFile(path.join(repo, 'probe.mjs'), 'const a = 1\n')
+      writeTextFile(path.join(repo, '__ignored.mjs'), 'const a = 1\n')
+      writeTextFile(path.join(repo, 'nested', 'probe.mjs'), 'const a = 1\n')
+
+      expect(listUntrackedFiles(repo).sort()).toEqual(['nested/probe.mjs', 'probe.mjs'])
+
+      const result = evaluateGuard({
+        trackedFiles: listTrackedFiles(repo),
+        untrackedFiles: listUntrackedFiles(repo),
+      })
+      expect(result.ok).toBe(false)
+      expect(result.violations).toEqual([
+        expect.objectContaining({ file: 'probe.mjs', kind: 'unknown', origin: 'untracked' }),
+      ])
+
+      const run = runCli(process.execPath, [guardPath], { cwd: repo })
+      expect(run.status).toBe(1)
+      expect(run.stderr).toContain('probe.mjs')
+      expect(run.stderr).toContain('untracked')
+    } finally {
+      removeDir(repo)
     }
   })
 
@@ -134,6 +207,15 @@ describe('guard-root-scratch-artifacts', () => {
 
     const fastScopeChecks = readRepoFile('scripts/run-fast-scope-checks.js')
     expect(fastScopeChecks).toContain("runCommand('npm', ['run', 'guard:root-scratch-artifacts'])")
+  })
+
+  it('records the closed-root contract in AGENTS.md, not only in the guard', () => {
+    // Требование Done gate #1852: решение по untracked-сценарию записано, а не
+    // оставлено умолчанием. Без записи следующая сессия трактует красный гейт
+    // как чужую поломку и обходит его.
+    const agents = readRepoFile('AGENTS.md')
+    expect(agents).toContain('ALLOWED_ROOT_FILES')
+    expect(agents).toMatch(/untracked/i)
   })
 
   it('keeps the scratch-artifact convention ignored by prefix, not by directory', () => {
@@ -181,13 +263,17 @@ describe('guard-root-scratch-artifacts', () => {
       'scripts/.codex-debug-run.js',
     ]
     const keptFiles = ['metro.config.js', '__tests__/scripts/x.test.ts', '__mocks__/x.js', 'scripts/x.tmp.js']
+    // Имя вне ВСЕХ конвенций: ни один игнор его не знает и знать не должен —
+    // guard закрывает этот случай сам, allow-list'ом. Паритет тут в том, что
+    // оба контура видят файл одинаково; асимметрии, которая уронила #1466, нет.
+    const outsideEveryConvention = ['probe.mjs', 'check-1847.js']
 
     const eslintProbe = runCli(
       process.execPath,
       [
         '-e',
         `const { ESLint } = require('eslint')
-         const files = ${JSON.stringify([...scratchProbes, ...keptFiles])}
+         const files = ${JSON.stringify([...scratchProbes, ...keptFiles, ...outsideEveryConvention])}
          ;(async () => {
            const eslint = new ESLint()
            const out = {}
@@ -214,6 +300,12 @@ describe('guard-root-scratch-artifacts', () => {
       expect({ file: kept, git: isGitIgnored(kept), eslint: eslintIgnored[kept] })
         .toEqual({ file: kept, git: false, eslint: false })
     }
+
+    for (const outsider of outsideEveryConvention) {
+      expect({ file: outsider, git: isGitIgnored(outsider), eslint: eslintIgnored[outsider] })
+        .toEqual({ file: outsider, git: false, eslint: false })
+      expect(classifyRootFile(outsider)).toBe('unknown')
+    }
   })
 
   it('reads the repository root even when started from a subdirectory', () => {
@@ -223,14 +315,16 @@ describe('guard-root-scratch-artifacts', () => {
       process.execPath,
       [
         '-e',
-        'const g = require(process.argv[1]); process.stdout.write(String(g.listTrackedFiles().filter(g.isRootDotfile).length))',
+        'const g = require(process.argv[1]); process.stdout.write(String(g.listTrackedFiles().filter(g.isRootFile).length))',
         guardPath,
       ],
       { cwd: path.resolve(repoRoot, 'scripts') },
     )
 
     expect(seenFromSubdir.status).toBe(0)
-    expect(Number(seenFromSubdir.stdout)).toBe(listTrackedFiles(repoRoot).filter(isRootDotfile).length)
+    expect(Number(seenFromSubdir.stdout)).toBe(
+      listTrackedFiles(repoRoot).filter((file: string) => !file.includes('/')).length,
+    )
     expect(Number(seenFromSubdir.stdout)).toBeGreaterThan(0)
   })
 
@@ -259,8 +353,9 @@ describe('guard-root-scratch-artifacts', () => {
   it('keeps the --json payload shaped for automation', () => {
     const failing = buildJsonResult(evaluateGuard({ trackedFiles: ['.codex-temp-probe.js'] }))
 
-    expect(failing).toMatchObject({ contractVersion: 1, ok: false, violationCount: 1 })
+    expect(failing).toMatchObject({ contractVersion: 2, ok: false, violationCount: 1 })
     expect(failing.reason).toContain('.codex-temp/')
+    expect(failing.violations[0]).toMatchObject({ kind: 'scratch', origin: 'tracked' })
     expect(buildJsonResult(evaluateGuard({ trackedFiles: ['package.json'] }))).toMatchObject({
       ok: true,
       violationCount: 0,

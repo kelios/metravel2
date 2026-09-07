@@ -59,6 +59,18 @@ async function waitForCounterValue(page: import('@playwright/test').Page, expect
       return c?.current ?? null;
     }, { timeout })
     .toBe(expected);
+  // The counter updates when navigation starts, before the track transition ends.
+  await expect
+    .poll(() => getSliderWrapper(page).evaluate((wrapper, index) => {
+      const viewport = wrapper.querySelector('[data-testid="slider-scroll"]');
+      const slide = wrapper.querySelector(`[data-testid="slider-slide-${index}"]`);
+      if (!viewport || !slide) return false;
+      const viewportRect = viewport.getBoundingClientRect();
+      const slideRect = slide.getBoundingClientRect();
+      return viewportRect.width > 0 && slideRect.width > 0 &&
+        Math.abs(slideRect.left - viewportRect.left) <= 1;
+    }, expected - 1), { timeout })
+    .toBe(true);
   return getCounter(page);
 }
 
@@ -270,10 +282,11 @@ test.describe('Slider navigation on web', () => {
     const dragOk = await dragSlider(page, 0.84, 0.12);
     expect(dragOk).toBe(true);
 
-    await expect.poll(async () => getCounter(page)).not.toBeNull();
+    await waitForCounterValue(page, 2, 10_000);
 
     const dragBackOk = await dragSlider(page, 0.16, 0.88);
     expect(dragBackOk).toBe(true);
+    await waitForCounterValue(page, 1, 10_000);
 
     const nextBtn = getSliderNavButton(page, 'Next slide');
     await expect(nextBtn).toBeVisible({ timeout: 5_000 });
@@ -296,7 +309,7 @@ test.describe('Slider navigation on web', () => {
     const dragOk = await dragSlider(page, 0.84, 0.12);
     expect(dragOk).toBe(true);
 
-    await expect.poll(async () => getCounter(page)).not.toBeNull();
+    await waitForCounterValue(page, 2, 10_000);
   });
 
   test('focused slider wrapper stays interactive', async ({ page }) => {

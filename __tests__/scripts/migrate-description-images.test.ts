@@ -12,6 +12,7 @@ const {
   collectCanonicalRefs,
   collectDataUriRefs,
   collectLegacyUploadRefs,
+  collectPointImageRefs,
   countImages,
   decodeDataUri,
   isOversizedFrame,
@@ -182,3 +183,67 @@ describe('buildManifestGeometry', () => {
     expect(buildManifestGeometry(null).size).toBe(0)
   })
 })
+
+describe('collectPointImageRefs', () => {
+  const point = (id: number, file = 'a.webp') =>
+    `<img src="https://metravel.by/address-image/${id}/conversions/${file}">`;
+
+  it('берёт фото точки и в абсолютной, и в корне-относительной форме', () => {
+    const refs = collectPointImageRefs(
+      `${point(15601)}<img src="/address-image/437/conversions/b.JPG">`,
+    );
+
+    expect(refs.map((ref: any) => ref.key)).toEqual([
+      'address-image/15601/conversions/a.webp',
+      'address-image/437/conversions/b.JPG',
+    ]);
+    // Кадр лежит по собственному адресу — этим ветка и отличается от legacy-ключа.
+    expect(refs[0].frameUrl).toBe('https://metravel.by/address-image/15601/conversions/a.webp');
+  });
+
+  it('разворачивает weserv-обёртку, но заменять будет исходную строку', () => {
+    const raw =
+      'https://images.weserv.nl/?url=metravel.by%2Faddress-image%2F15601%2Fconversions%2Fa.webp';
+    const refs = collectPointImageRefs(`<img src="${raw}">`);
+
+    expect(refs).toHaveLength(1);
+    expect(refs[0].raw).toBe(raw);
+    expect(refs[0].key).toBe('address-image/15601/conversions/a.webp');
+  });
+
+  it('не трогает соседние классы тела', () => {
+    const html =
+      '<img src="https://metravel.by/travel-description-image/1/description/c.webp">' +
+      '<img src="https://metravel.by/gallery/901/gallery/d.jpg">' +
+      `<img src="${PNG_DATA_URI}">`;
+
+    expect(collectPointImageRefs(html)).toEqual([]);
+  });
+
+  it('дедуплицирует один и тот же адрес', () => {
+    expect(collectPointImageRefs(`${point(15601)}${point(15601)}`)).toHaveLength(1);
+  });
+});
+
+describe('legacyUploadKey: формы первопартийного адреса', () => {
+  it('берёт и прокси-путь, и голый /uploads/<key>', () => {
+    // Голую форму сайт не обслуживает вовсе (проба 07.09.2026: 404), а миграция
+    // её раньше не видела — семь кадров в статьях 116/171/220/290 читатель видел
+    // пустой рамкой при зелёном «legacy нет».
+    expect(
+      collectLegacyUploadRefs('<img src="https://metravel.by/uploads/1620061579IMG_6533.JPG">'),
+    ).toEqual([
+      { raw: 'https://metravel.by/uploads/1620061579IMG_6533.JPG', key: 'uploads/1620061579IMG_6533.JPG' },
+    ]);
+    expect(
+      collectLegacyUploadRefs('<img src="https://metravel.by/media-resize/uploads/x.JPG">'),
+    ).toEqual([{ raw: 'https://metravel.by/media-resize/uploads/x.JPG', key: 'uploads/x.JPG' }]);
+  });
+
+  it('не расширяется на соседние первопартийные классы', () => {
+    expect(collectLegacyUploadRefs('<img src="https://metravel.by/gallery/1/g.jpg">')).toEqual([]);
+    expect(
+      collectLegacyUploadRefs('<img src="https://metravel.by/travel-description-image/1/d.webp">'),
+    ).toEqual([]);
+  });
+});

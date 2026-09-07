@@ -128,6 +128,26 @@ describe('TripPlanRouteMap (native) — оригинальный трек', () =
     expect(mockNativeMapProps[mockNativeMapProps.length - 1].originalTrackSegments).toEqual([])
   })
 
+  it('#1851 без точек маршрута центрует карту по началу оригинала, а не по дефолту', () => {
+    render(<TripPlanRouteMap route={[]} originalTrackSegments={twoRingSegments} />)
+
+    const props = mockNativeMapProps[mockNativeMapProps.length - 1]
+    // Первая пара первого сегмента — [lng, lat], карта ждёт их разложенными.
+    expect(props.coordinates).toEqual({ latitude: 49.81, longitude: 6.42 })
+    // Сам трек по-прежнему уезжает целиком: центровка его не подменяет.
+    expect(props.originalTrackSegments).toEqual(twoRingSegments)
+    expect(props.routePoints).toEqual([])
+  })
+
+  it('#1851 при наличии точек маршрута центр берётся по-прежнему из них', () => {
+    render(
+      <TripPlanRouteMap route={route} routeGeometry={routeGeometry} originalTrackSegments={twoRingSegments} />,
+    )
+
+    const props = mockNativeMapProps[mockNativeMapProps.length - 1]
+    expect(props.coordinates).toEqual({ latitude: 53.9, longitude: 27.56 })
+  })
+
   it('#1847 отдаёт каждый трек файла отдельной линией, не склеивая их', () => {
     const screen = render(
       <TripPlanRouteMap

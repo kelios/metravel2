@@ -231,6 +231,8 @@
     "test:seo:prod:verbose": "node scripts/test-seo-prod.js --verbose",
     "test:seo:postdeploy": "node scripts/post-deploy-seo-check.js",
     "test:seo:postdeploy:verbose": "node scripts/post-deploy-seo-check.js --verbose",
+    "test:media:body": "node scripts/audit-article-body-media.js",
+    "test:media:body:full": "node scripts/audit-article-body-media.js --full --verbose",
     "test:media:postdeploy": "node scripts/post-deploy-media-check.js",
     "test:media:postdeploy:verbose": "node scripts/post-deploy-media-check.js --verbose",
     "release:check": "node scripts/run-with-quality-gate-lock.js release:check --shell \"yarn run lint && yarn run typecheck && ./verify-security-fixes.sh && yarn run audit:high && yarn run test:run && yarn run e2e && yarn run build:web:prod && yarn run guard:eager-web:fail && yarn run guard:bundle-budget:fail\"",

@@ -611,7 +611,7 @@ test.describe('Slider — no horizontal page overflow', () => {
 test.describe('Slider — autoplay disabled on travel page', () => {
   test('autoPlay=false: slider does not auto-advance on travel details page', async ({ page }) => {
     // The travel details page explicitly sets autoPlay={false} on the Slider.
-    // Fake 5s so a 6s autoplay interval would still have a chance to fire.
+    // Advance beyond the default 6s autoplay interval, including its transition.
     await page.clock.install();
     await preacceptCookies(page);
     const counter = await navigateToTravelWithSlider(page);
@@ -621,7 +621,7 @@ test.describe('Slider — autoplay disabled on travel page', () => {
 
     expect(counter.current).toBe(1);
 
-    await page.clock.fastForward(5000);
+    await page.clock.runFor(6500);
 
     const cAfter = await getCounter(page);
     expect(cAfter?.current).toBe(1);
@@ -884,7 +884,14 @@ test.describe('Slider — no blur bleed from adjacent slides', () => {
       throw new Error('Slider test precondition failed');
     }
 
-    await page.locator('[data-testid="slider-scroll"]').first().waitFor({ state: 'attached', timeout: 15_000 });
+    // A negative blur assertion before media loads can pass with no image mounted.
+    await expect.poll(() => getSliderWrapper(page).evaluate((wrapper) => {
+      return [0, 1].every((index) => {
+        const slide = wrapper.querySelector(`[data-testid="slider-slide-${index}"]`);
+        const img = slide?.querySelector('img');
+        return !!img && img.complete && img.naturalWidth > 0;
+      });
+    }), { timeout: 15_000 }).toBe(true);
 
     // Check that slide index 1 (the adjacent slide) does NOT have a visible blur background.
     // The blur div in ImageCardMedia is only shown when webLoaded=true AND it's the current slide.

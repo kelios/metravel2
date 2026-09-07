@@ -85,10 +85,10 @@ end-to-end на web (и совместима с native). Чинит найден
 
 ## Проверка по platform impact (обязательное правило)
 
-Shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`). Общий файл или компонент сам по себе не создаёт Android/iPhone device gate.
+Правило целиком — `docs/RULES.md` → «UI rules» (parity, web-only ветвления,
+темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
+Без открытия документа:
 
-- **Native device validation только для platform-specific scope.** Android-specific поведение, конфигурацию или runtime проверяй на Android; iOS-specific — на требуемом simulator/physical iPhone/TestFlight layer. Parity остаётся архитектурным инвариантом, а не требованием прогонять common/shared задачу на всех устройствах.
-- **Evidence по shared/common UI:** desktop web + mobile web screenshots. Native screenshots нужны только для затронутой Android- или iOS-specific поверхности.
-- **Запрещены web-only визуальные ветвления в мобильном вьюпорте:** serif-шрифты и hover-only элементы — только desktop (`!isMobile`); контент-элементы (чипы, бейджи, кнопки) не скрывать через `Platform.OS === 'web'`, если на устройстве они видны.
-- **Темизация:** для тематических поверхностей только `useThemedColors()` — `DESIGN_TOKENS.colors.*` на native это статичный светлый fallback, на web — живые CSS-переменные.
-- **Попапы/карточки точек на картах** — один общий компонент на всех страницах и платформах (различия — только добавочный функционал), компактный, вся информация видна без обрезания по X и Y.
+- Общий файл или компонент сам по себе не создаёт device gate: shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`).
+- Native device QA живёт в стадии `testing` и только для Android/iOS-specific поверхности; evidence по shared UI — desktop web + mobile web.
+- В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.

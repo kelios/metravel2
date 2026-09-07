@@ -43,6 +43,7 @@ import {
   confirmRichTextLossIfNeeded,
   type RichTextSnapshot,
 } from '@/utils/travelTextLossGuard';
+import { confirmDanglingPointImagesIfNeeded } from '@/utils/travelBodyPointImageGuard';
 import { mergeGalleryPreserveCurrentCaptions } from '@/utils/galleryEntryModel';
 import {
   invalidateTravelCollections,
@@ -937,17 +938,32 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         // НЕ completeness-валидация: автосейв не трогаем, статус/модерацию не меняем.
         // Отмена → чистый no-op: ничего не отправляем, форму не трогаем.
         const hasServerId = normalizeTravelId(toSave?.id) ?? stableTravelId;
+        const bodySnapshot: RichTextSnapshot = {
+          description: toSave?.description ?? '',
+          plus: toSave?.plus ?? '',
+          minus: toSave?.minus ?? '',
+          recommendation: toSave?.recommendation ?? '',
+        };
         if (hasServerId != null && serverTextBaselineRef.current) {
-          const proceed = await confirmRichTextLossIfNeeded(serverTextBaselineRef.current, {
-            description: toSave?.description ?? '',
-            plus: toSave?.plus ?? '',
-            minus: toSave?.minus ?? '',
-            recommendation: toSave?.recommendation ?? '',
-          });
+          const proceed = await confirmRichTextLossIfNeeded(serverTextBaselineRef.current, bodySnapshot);
           if (!proceed) {
             suppressAutosaveErrorToastRef.current = false;
             return;
           }
+        }
+
+        // Guard «фото исчезнувшей точки» (#1834): `/address-image/<id>/` в теле
+        // живёт по строке `travel_address` и умирает вместе с точкой. Сверяем id
+        // из тела с точками сохраняемого маршрута и показываем список, а не
+        // переписываем текст за автора. Только ручной путь: у автосейва нет
+        // пользователя перед модалкой, и узкий контент-сейв точки не трогает.
+        const proceedWithBodyImages = await confirmDanglingPointImagesIfNeeded(
+          bodySnapshot,
+          toSave?.coordsMeTravel,
+        );
+        if (!proceedWithBodyImages) {
+          suppressAutosaveErrorToastRef.current = false;
+          return;
         }
 
         formDataRef.current = toSave as TravelFormData;

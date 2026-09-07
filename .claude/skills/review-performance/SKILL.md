@@ -44,3 +44,13 @@ description: "Перфоманс-ревью web-фронтенда: LCP/CLS/INP,
 - Не «оптимизировать» вслепую: каждая правка обоснована измерением или известным
   правилом проекта.
 - Блюр/дизайн не отключать — только переводить на статичный фрост по правилу.
+
+## Проверка по platform impact (обязательное правило)
+
+Правило целиком — `docs/RULES.md` → «UI rules» (parity, web-only ветвления,
+темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
+Без открытия документа:
+
+- Общий файл или компонент сам по себе не создаёт device gate: shared/common responsive UI проверяется на desktop web и mobile web (~390px, `isMobile`).
+- Native device QA живёт в стадии `testing` и только для Android/iOS-specific поверхности; evidence по shared UI — desktop web + mobile web.
+- В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.

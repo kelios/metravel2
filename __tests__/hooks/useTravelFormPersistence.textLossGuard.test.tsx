@@ -7,6 +7,10 @@
  * если rich-text поле резко разрушается относительно серверного baseline —
  * спрашиваем подтверждение. Отмена = чистый no-op (saveFormData не вызывается).
  * Если текст не меняется (например, добавили точку) — диалога нет, сейв идёт.
+ *
+ * Здесь же второй guard той же точки сохранения — «фото исчезнувшей точки в теле»
+ * (#1834): он тоже спрашивает подтверждение перед `saveFormData` и на отмене даёт
+ * чистый no-op, поэтому стенд у них общий.
  */
 import { renderHook, act } from '@testing-library/react-native';
 
@@ -1037,5 +1041,78 @@ describe('handleManualSave — localized backend errors', () => {
       text2:
         'Маршрут сохранён как черновик, но пока не может быть опубликован: сначала он должен пройти модерацию.',
     });
+  });
+});
+
+describe('handleManualSave — guard «фото исчезнувшей точки в теле» (#1834)', () => {
+  const POINT_IMG = (pointId: number) =>
+    `<p><img src="https://metravel.by/address-image/${pointId}/conversions/x.webp"></p>`;
+
+  const baseTravel = {
+    id: 586,
+    name: 'Путешествие',
+    description: `${LONG_TEXT}${POINT_IMG(15188)}`,
+    plus: '',
+    minus: '',
+    recommendation: '',
+    coordsMeTravel: [{ id: 15193, lat: 53.9, lng: 27.56, address: 'Минск', categories: [] }],
+    gallery: [],
+  };
+  const baselineText = {
+    description: baseTravel.description,
+    plus: '',
+    minus: '',
+    recommendation: '',
+  };
+
+  beforeEach(() => {
+    mockConfirmAction.mockReset();
+    mockSaveFormData.mockReset();
+    mockSaveFormData.mockResolvedValue({ ...baseTravel } as any);
+  });
+
+  it('точка ушла из маршрута, а фото осталось в тексте → confirm; отмена = чистый no-op', async () => {
+    mockConfirmAction.mockResolvedValueOnce(false);
+    const { result } = setupPersistence({ initialFormData: baseTravel, baselineText });
+
+    await act(async () => {
+      await result.current.handleManualSave(baseTravel as any);
+    });
+
+    expect(mockConfirmAction).toHaveBeenCalledTimes(1);
+    expect(mockSaveFormData).not.toHaveBeenCalled();
+  });
+
+  it('подтверждение автора пропускает сохранение и текст не переписан', async () => {
+    mockConfirmAction.mockResolvedValueOnce(true);
+    const { result } = setupPersistence({ initialFormData: baseTravel, baselineText });
+
+    await act(async () => {
+      await result.current.handleManualSave(baseTravel as any);
+    });
+
+    expect(mockConfirmAction).toHaveBeenCalledTimes(1);
+    expect(mockSaveFormData).toHaveBeenCalledTimes(1);
+    expect(mockSaveFormData.mock.calls[0][0].description).toContain('address-image/15188/');
+  });
+
+  it('фото живой точки диалога не поднимает', async () => {
+    const { result } = setupPersistence({
+      initialFormData: {
+        ...baseTravel,
+        description: `${LONG_TEXT}${POINT_IMG(15193)}`,
+      },
+      baselineText: { ...baselineText, description: `${LONG_TEXT}${POINT_IMG(15193)}` },
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave({
+        ...baseTravel,
+        description: `${LONG_TEXT}${POINT_IMG(15193)}`,
+      } as any);
+    });
+
+    expect(mockConfirmAction).not.toHaveBeenCalled();
+    expect(mockSaveFormData).toHaveBeenCalledTimes(1);
   });
 });
