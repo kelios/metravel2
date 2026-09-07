@@ -56,8 +56,8 @@
  * `<details>`.
  *
  * Запуск:
- *   node scripts/fix-travel-480-estate-points.js --dry-run
- *   node scripts/fix-travel-480-estate-points.js
+ *   node scripts/fix-travel-480-estate-points.js            # репетиция (умолчание)
+ *   node scripts/fix-travel-480-estate-points.js --apply    # запись на прод
  * Токен: env METRAVEL_TOKEN или ~/.metravel_token.
  */
 
@@ -66,11 +66,31 @@ const os = require('os');
 const path = require('path');
 const https = require('https');
 
-const { buildUpsertPayload } = require('./seo-edit.js');
+const { buildUpsertPayload, backupFileName } = require('./seo-edit.js');
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
 const TRAVEL_ID = 480;
-const isDryRun = process.argv.slice(2).includes('--dry-run');
+
+/**
+ * Умолчание — репетиция, запись требует явного `--apply`.
+ *
+ * Так наоборот было ровно до SEO-OPS-001 (#1107/#1325/#1389/#1390): скрипт
+ * искал `--dry-run` в argv, и любая опечатка (`--dry-ryn`) отвечала умолчанием,
+ * а умолчанием была запись в живой прод. Неизвестный флаг здесь — стоп, а не
+ * молчаливое согласие.
+ */
+const KNOWN_FLAGS = new Set(['--apply', '--dry-run']);
+const argv = process.argv.slice(2);
+const unknownFlags = argv.filter((a) => !KNOWN_FLAGS.has(a));
+if (unknownFlags.length) {
+  console.error(`Неизвестный аргумент: ${unknownFlags.join(' ')}. Допустимо только --apply или --dry-run.`);
+  process.exit(2);
+}
+if (argv.includes('--apply') && argv.includes('--dry-run')) {
+  console.error('--apply и --dry-run взаимоисключающие.');
+  process.exit(2);
+}
+const isDryRun = !argv.includes('--apply');
 
 const CAT_RUINS = 114; // Руины
 const CAT_HOUSE = 36; // Дом
@@ -151,11 +171,25 @@ const describe = (p) =>
   const detail = JSON.parse(before.text);
   const points = detail.coordsMeTravel || [];
 
+  // Бэкап снимает только настоящий прогон. Репетиция, кладущая файл в тот же
+  // каталог, делает СЕБЯ последним снимком — и `--restore 480` после неё
+  // поднимает уже исправленное состояние вместо предзапускового.
+  //
+  // Имя обязано лечь в схему `<id>-<ts>.json`: `latestBackup()` в seo-edit.js
+  // отбирает файлы по префиксу `${id}-`, и снимок с любым другим именем он не
+  // видит — тогда напечатанный ниже `--restore 480` молча поднял бы ЧУЖОЙ,
+  // более старый снимок статьи.
   const backupDir = process.env.BACKUP_DIR || path.join(__dirname, '.seo-backups');
-  fs.mkdirSync(backupDir, { recursive: true });
-  const backupFile = path.join(backupDir, `t${TRAVEL_ID}-points-1864-backup.json`);
-  fs.writeFileSync(backupFile, JSON.stringify(detail, null, 2));
-  console.log(`backup -> ${backupFile}`);
+  let backupFile = null;
+  if (!isDryRun) {
+    fs.mkdirSync(backupDir, { recursive: true });
+    backupFile = path.join(
+      backupDir,
+      backupFileName(TRAVEL_ID, new Date().toISOString().replace(/[:.]/g, '-')),
+    );
+    fs.writeFileSync(backupFile, JSON.stringify(detail, null, 2));
+    console.log(`backup -> ${backupFile}`);
+  }
 
   console.log('--- BEFORE ---');
   for (const fix of FIXES) {
