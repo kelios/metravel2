@@ -42,3 +42,6 @@
   редактор описания поездки
 - [trips-route-point-search-mock](./trips-route-point-search-mock.md) — поиск
   места в форме точки маршрута (#1782)
+- [trips-packing-checklist-mock](./trips-packing-checklist-mock.md) — чеклист
+  снаряжения в планировщике: есть / купить / взято
+- [trips-end-date-mock](./trips-end-date-mock.md) — дата окончания planned trip
