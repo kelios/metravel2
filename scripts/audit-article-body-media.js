@@ -49,7 +49,7 @@ const {
   collectRichTextMediaUrls,
   familyOfMediaUrl,
 } = require('./lib/articleBodyMedia')
-const { toReaderMediaUrl, unwrapWeservUrl } = require('./lib/readerMediaUrl')
+const { toReaderMediaUrl, toSourceMediaUrl } = require('./lib/readerMediaUrl')
 
 const args = process.argv.slice(2)
 
@@ -231,7 +231,7 @@ function collectTravelTargets(detail, families) {
     // владельца кадра (строка точки, запись галереи, legacy-ключ), а роут на
     // владельца не влияет. Обёртку weserv снимаем — она не класс, а упаковка, и
     // без разворота ссылка на бакет внутри неё выглядела бы «не наш класс».
-    const sourceUrl = unwrapWeservUrl(rawUrl)
+    const sourceUrl = toSourceMediaUrl(rawUrl)
     const family = familyOfMediaUrl(sourceUrl, SITE)
     if (!family || !families.has(family)) continue
     seen.add(url)

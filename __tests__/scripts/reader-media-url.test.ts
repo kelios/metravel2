@@ -5,6 +5,7 @@ const {
   toLegacyResizePath,
   toReaderMediaPath,
   toReaderMediaUrl,
+  toSourceMediaUrl,
   unwrapWeservUrl,
 } = require('@/scripts/lib/readerMediaUrl');
 
@@ -63,6 +64,7 @@ const MIRROR_INPUTS = [
   'https://images.weserv.nl/?w=320',
   // Протокол-относительная форма и склеенный двойной хост.
   '//metravelprod.s3.eu-north-1.amazonaws.com/uploads/e.jpg',
+  `//images.weserv.nl/?url=${encodeURIComponent('metravelprod.s3.eu-north-1.amazonaws.com/uploads/g.jpg')}`,
   `${SITE}/${S3}/uploads/f.jpg`,
   // Классы, которые legacy-роут не обслуживает.
   `${S3}/uploads/notes.pdf`,
@@ -143,12 +145,39 @@ describe('readerMediaUrl: адрес, который запрашивает чи
     expect(toReaderMediaPath('https://dev.example.org/gallery/1/g.jpg')).toBeNull();
   });
 
+  it('сводит `//` до разворота обёртки, иначе цепочка остаётся завёрнутой', () => {
+    // `new URL('//host/…')` бросает, поэтому развернуть протокол-относительную
+    // обёртку можно только после нормализации. Разошедшийся порядок уже стоил
+    // пятнадцати фотографий статьи 175, когда недокручивался последний слой.
+    const wrapped = `//images.weserv.nl/?url=${encodeURIComponent(
+      'metravelprod.s3.eu-north-1.amazonaws.com/uploads/g.jpg',
+    )}`;
+    expect(toSourceMediaUrl(wrapped)).toBe(`${S3}/uploads/g.jpg`);
+    expect(toReaderMediaPath(wrapped)).toBe('/media-resize/uploads/g.jpg');
+  });
+
   it('склеивает абсолютный адрес пробы с проверяемым origin', () => {
     expect(toReaderMediaUrl(`${S3}/uploads/a.JPG`, SITE)).toBe(`${SITE}/media-resize/uploads/a.JPG`);
     expect(toReaderMediaUrl('/address-image/9/conversions/p.webp', 'https://dev.metravel.by/')).toBe(
       'https://dev.metravel.by/media-resize/legacy/9/conversions/p.webp',
     );
     expect(toReaderMediaUrl('https://example.com/x.jpg', SITE)).toBeNull();
+  });
+
+  // Ключ нашего бакета, который фронт НЕ переписывает (`toLegacyResizePath`
+  // знает только `uploads/**` и conversion-ключи), читатель запрашивает прямо в
+  // S3: `buildExternalImageUrl` отдаёт такой адрес как есть. Вернуть `null`
+  // значило бы молча перестать щупать живой класс — то самое «ложное зелено».
+  it('щупает свой бакет как есть, когда фронт адрес не переписывает', () => {
+    expect(toReaderMediaUrl(`${S3}/uploads/logo.svg`, SITE)).toBe(`${S3}/uploads/logo.svg`);
+    expect(toReaderMediaUrl(`${S3}/flat-root.jpg`, SITE)).toBe(`${S3}/flat-root.jpg`);
+    expect(toReaderMediaUrl('https://s3.eu-north-1.amazonaws.com/metravelprod/uploads/p.svg', SITE)).toBe(
+      'https://s3.eu-north-1.amazonaws.com/metravelprod/uploads/p.svg',
+    );
+    // Переписываемый класс по-прежнему уходит на прокси, а не в бакет.
+    expect(toReaderMediaUrl(`${S3}/uploads/a.JPG`, SITE)).toBe(`${SITE}/media-resize/uploads/a.JPG`);
+    // Чужой бакет остаётся чужим хостом: его доступность не наш контракт.
+    expect(toReaderMediaUrl('https://someoneelse.s3.eu-north-1.amazonaws.com/uploads/a.svg', SITE)).toBeNull();
   });
 });
 

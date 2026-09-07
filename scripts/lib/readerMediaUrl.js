@@ -173,6 +173,19 @@ const normalizeAbsoluteMediaUrl = (url) => {
   return result
 }
 
+/**
+ * Исходный адрес кадра: `&amp;`, `//`, склеенный двойной хост сведены, обёртки
+ * weserv сняты.
+ *
+ * Отдельная функция, потому что этот шаг нужен ДО любого решения о классе, и
+ * порядок в нём неочевиден: развернуть weserv, не сведя `//`, значит не
+ * развернуть протокол-относительную обёртку вовсе — `new URL('//host/…')`
+ * бросает, и цепочка молча остаётся завёрнутой.
+ */
+function toSourceMediaUrl(url) {
+  return unwrapWeservUrl(normalizeAbsoluteMediaUrl(url))
+}
+
 /** Ключ объекта в нашем бакете, если URL ведёт именно туда. */
 const extractLegacyStorageKey = (parsed, site) => {
   const host = parsed.hostname.toLowerCase()
@@ -236,8 +249,7 @@ function toLegacyResizePath(url, options = {}) {
 
   let parsed
   try {
-    const unwrapped = unwrapWeservUrl(normalizeAbsoluteMediaUrl(value))
-    const normalized = normalizeAbsoluteMediaUrl(unwrapped)
+    const normalized = normalizeAbsoluteMediaUrl(toSourceMediaUrl(value))
     parsed = normalized.startsWith('/')
       ? new URL(normalized, RELATIVE_URL_BASE)
       : new URL(normalized)
@@ -290,7 +302,7 @@ function toReaderMediaPath(url, options = {}) {
   const legacyPath = toLegacyResizePath(value, { site })
   if (legacyPath) return legacyPath
 
-  const source = unwrapWeservUrl(normalizeAbsoluteMediaUrl(value))
+  const source = toSourceMediaUrl(value)
   // Битая weserv-обёртка без разбираемого `url=`: разворачивать нечего, а сам
   // weserv — чужой хост.
   let parsed
@@ -305,15 +317,48 @@ function toReaderMediaPath(url, options = {}) {
   return `${parsed.pathname}${parsed.search}`
 }
 
-/** Абсолютный адрес пробы на проверяемом origin, либо `null`. */
+/** Ссылка ведёт в НАШ legacy-бакет (виртуальный хост или path-style). */
+const isOwnStorageBucketUrl = (parsed) => {
+  const host = parsed.hostname.toLowerCase()
+  const virtualHost = host.match(S3_VIRTUAL_HOST)
+  if (virtualHost) return virtualHost[1].toLowerCase() === LEGACY_STORAGE_BUCKET
+  if (!S3_PATH_STYLE_HOST.test(host)) return false
+  return parsed.pathname.replace(/^\/+/, '').split('/')[0].toLowerCase() === LEGACY_STORAGE_BUCKET
+}
+
+/**
+ * Полный адрес, который запрашивает браузер, либо `null`.
+ *
+ * Обычно это путь на проверяемом origin. Исключение — ключ НАШЕГО бакета,
+ * который фронт не переписывает (`toLegacyResizePath` знает только `uploads/**`
+ * и conversion-ключи; `uploads/x.svg` или плоский корень бакета мимо них):
+ * `buildExternalImageUrl` отдаёт такой адрес как есть, и читатель идёт прямо в
+ * S3. Вернуть тут `null` значило бы перестать щупать живой класс кадров молча —
+ * ровно то «ложное зелено», против которого заведён модуль.
+ *
+ * Чужой бакет сюда не попадает: его доступность не наш контракт.
+ */
 function toReaderMediaUrl(url, site = DEFAULT_SITE) {
   const path = toReaderMediaPath(url, { site })
-  return path ? `${String(site).replace(/\/+$/, '')}${path}` : null
+  if (path) return `${String(site).replace(/\/+$/, '')}${path}`
+
+  const value = String(url || '').trim()
+  if (!value || /^(data:|blob:)/i.test(value)) return null
+  try {
+    const source = toSourceMediaUrl(value)
+    if (source.startsWith('/')) return null
+    const parsed = new URL(source)
+    if (!/^https?:$/.test(parsed.protocol)) return null
+    return isOwnStorageBucketUrl(parsed) ? parsed.toString() : null
+  } catch {
+    return null
+  }
 }
 
 module.exports = {
   toLegacyResizePath,
   toReaderMediaPath,
   toReaderMediaUrl,
+  toSourceMediaUrl,
   unwrapWeservUrl,
 }

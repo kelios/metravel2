@@ -45,7 +45,7 @@ const fs = require('fs')
 const path = require('path')
 const https = require('https')
 const { RICH_TEXT_FIELDS } = require('./lib/articleBodyMedia')
-const { unwrapWeservUrl } = require('./lib/readerMediaUrl')
+const { toSourceMediaUrl } = require('./lib/readerMediaUrl')
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '')
 const SITE = API_BASE.replace(/\/api$/, '')
@@ -64,11 +64,11 @@ const LEGACY_IMAGE_EXTENSIONS = new Set(['gif', 'heic', 'heif', 'jpeg', 'jpg', '
 
 /** Ключ объекта в нашем бакете для класса `uploads/**`, иначе `null`. */
 function legacyUploadKey(url) {
-  const value = unwrapWeservUrl(url)
+  const value = toSourceMediaUrl(url)
   if (!value || /^(data:|blob:)/i.test(value)) return null
   let parsed
   try {
-    parsed = new URL(value.replace(/&amp;/gi, '&'))
+    parsed = new URL(value)
   } catch {
     return null
   }
@@ -259,7 +259,7 @@ function collectPointImageRefs(html) {
   let match
   while ((match = pattern.exec(source)) !== null) {
     const raw = match[1]
-    const decoded = unwrapWeservUrl(raw.replace(/&amp;/gi, '&'))
+    const decoded = toSourceMediaUrl(raw)
     let url
     try {
       url = new URL(decoded, SITE)

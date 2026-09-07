@@ -117,6 +117,16 @@ describe('audit-article-body-media: разбор целей', () => {
     ).toBe('https://metravel.by/media-resize/uploads/b.jpg');
   });
 
+  // Класс `uploads/**` фронт переписывает, а `uploads/x.svg` — нет: читатель
+  // идёт прямо в бакет. Молча перестать щупать такой кадр значит вернуть себе
+  // ровно то «ложное зелено», против которого заведён прогон.
+  it('щупает свой бакет как есть там, где фронт адрес не переписывает', () => {
+    expect(toTargetUrl('https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/logo.svg')).toBe(
+      'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/logo.svg',
+    );
+    expect(toTargetUrl('https://someoneelse.s3.eu-north-1.amazonaws.com/uploads/logo.svg')).toBeNull();
+  });
+
   it('читает точки из travelAddress и из coordsMeTravel', () => {
     expect([...collectPointIds({ travelAddress: [{ id: 11 }, { id: '12' }] })]).toEqual([11, 12]);
     expect([...collectPointIds({ coordsMeTravel: [{ id: 13 }] })]).toEqual([13]);
