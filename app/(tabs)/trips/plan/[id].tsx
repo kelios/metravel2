@@ -35,7 +35,7 @@ import {
 } from '@/components/trips/planning/tripPlanDeferredSections';
 import { shouldRenderTripRouteExportMenu } from '@/components/trips/planning/tripRouteExport';
 import TripAffiliateBlock from '@/components/trips/planning/TripAffiliateBlock';
-import TripPlanLinkedText from '@/components/trips/planning/TripPlanLinkedText';
+import TripPlanCollapsibleText from '@/components/trips/planning/TripPlanCollapsibleText';
 import TripPlanLinksBlock from '@/components/trips/planning/TripPlanLinksBlock';
 import TripPlanDescriptionEditor from '@/components/trips/planning/TripPlanDescriptionEditor';
 import {
@@ -435,7 +435,11 @@ export default function PlannedTripScreen() {
 
               {trip.description ? (
                 <>
-                  <TripPlanLinkedText
+                  {/* #1844: под компактной шапкой описание обрезается до двух
+                      строк, поэтому обёртка добавляет к нему кнопку «Показать
+                      полностью» — иначе логистика внутри текста доступна только
+                      обходным переключением вкладки. */}
+                  <TripPlanCollapsibleText
                     text={trip.description}
                     style={styles.description}
                     linkStyle={styles.descriptionLink}

@@ -199,6 +199,16 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
   ...overrides,
 });
 
+// Логистика поездки живёт в описании (#1844) и не помещается в две строки
+// компактной шапки: именно её нельзя было прочитать на вкладке «Маршрут».
+// Абзацы, а не длина строки: тогда фикстура не зависит от калибровки
+// `estimateTripPlanTextLines` — её точность проверяет тест самого компонента.
+const LOGISTICS_DESCRIPTION = [
+  'Как доехать до старта: из Минска автобусы 511, 512 и 590 до Браслава.',
+  'Обратно с финиша: последний рейс около 19:40, дальше только такси.',
+  'Ночёвка в кемпинге у озера, места бронируем заранее.',
+].join('\n');
+
 const renderScreen = () => {
   const PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default;
   return render(<PlannedTripScreen />);
@@ -592,5 +602,36 @@ describe('PlannedTripScreen — planner states', () => {
     expect(getByTestId('trip-plan-tabs')).toBeTruthy();
     expect(getByTestId('trip-plan-summary')).toBeTruthy();
     expect(getByTestId('trip-plan-tab-people')).toBeTruthy();
+  });
+
+  // #1844: обрезку описания заводит именно компактная шапка (`compactHeader`),
+  // поэтому проводка «обрезали → дали кнопку разворота» проверяется на экране, а
+  // не только в самом `TripPlanCollapsibleText` с пропами из теста.
+  it('gives the description a toggle under the compact mobile route header', () => {
+    mockResponsive = { isMobile: true };
+    mockTrip(makeTrip({ description: LOGISTICS_DESCRIPTION }));
+    const { getByTestId } = renderScreen();
+
+    expect(getByTestId('trip-plan-description').props.numberOfLines).toBe(2);
+    expect(getByTestId('trip-plan-description-toggle')).toBeTruthy();
+  });
+
+  it('leaves the desktop description unclamped and without a toggle', () => {
+    mockTrip(makeTrip({ description: LOGISTICS_DESCRIPTION }));
+    const { getByTestId, queryByTestId } = renderScreen();
+
+    expect(getByTestId('trip-plan-description').props.numberOfLines).toBeUndefined();
+    expect(queryByTestId('trip-plan-description-toggle')).toBeNull();
+  });
+
+  it('keeps the toggle off the other mobile tabs, where the header is full', () => {
+    mockResponsive = { isMobile: true };
+    mockTrip(makeTrip({ description: LOGISTICS_DESCRIPTION }));
+    const { getByTestId, queryByTestId } = renderScreen();
+
+    fireEvent.press(getByTestId('trip-plan-tab-people'));
+
+    expect(getByTestId('trip-plan-description').props.numberOfLines).toBeUndefined();
+    expect(queryByTestId('trip-plan-description-toggle')).toBeNull();
   });
 });
