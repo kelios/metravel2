@@ -174,7 +174,8 @@ export function ProfileTravelEngagementSummary({
   summaryScope = 'all',
 }: {
   summary: TravelEngagementStats | null
-  travelsCount: number
+  /** `null` — счётчик недоступен из-за сбоя, а не равен нулю (#1871). */
+  travelsCount: number | null
   loadedTravelsCount?: number
   isLoading?: boolean
   mode?: 'author' | 'calendar'
@@ -204,6 +205,14 @@ export function ProfileTravelEngagementSummary({
     return availableMetrics
   })()
 
+  // Сколько «из скольких» показываем, известно только когда счётчик жив: при
+  // сбое (`travelsCount === null`) сравнивать не с чем (#1871).
+  const isPartiallyLoaded =
+    summaryScope === 'loaded' &&
+    travelsCount != null &&
+    (loadedTravelsCount ?? 0) > 0 &&
+    (loadedTravelsCount ?? 0) < travelsCount
+
   const description = useMemo(() => {
     if (isCalendarMode) {
       return i18nT('profile:components.profile.ProfileTravelEngagementSection.vashi_lichnye_statusy_po_poezdkam_gde_uzhe_b_4beb4aa9')
@@ -217,7 +226,7 @@ export function ProfileTravelEngagementSummary({
       return i18nT('profile:components.profile.ProfileTravelEngagementSection.opublikuyte_pervoe_puteshestvie_zdes_poyavit_db7bee4b')
     }
 
-    if (summaryScope === 'loaded' && (loadedTravelsCount ?? 0) > 0 && (loadedTravelsCount ?? 0) < travelsCount) {
+    if (isPartiallyLoaded) {
       return i18nT('profile:components.profile.ProfileTravelEngagementSection.poka_pokazyvaem_summu_po_uzhe_zagruzhennym_k_6c67a96a')
     }
 
@@ -226,7 +235,7 @@ export function ProfileTravelEngagementSummary({
     }
 
     return i18nT('profile:components.profile.ProfileTravelEngagementSection.statistika_uzhe_podklyuchena_kak_tolko_u_mar_f4d608ba')
-  }, [isAvailable, isCalendarMode, isLoading, loadedTravelsCount, summaryScope, travelsCount])
+  }, [isAvailable, isCalendarMode, isLoading, isPartiallyLoaded, travelsCount])
 
   return (
     <View style={styles.section}>
@@ -240,12 +249,14 @@ export function ProfileTravelEngagementSummary({
           {isCalendarMode ? i18nT('profile:components.profile.ProfileTravelEngagementSection.moi_statusy_poezdok_c164210a') : i18nT('profile:components.profile.ProfileTravelEngagementSection.chto_delayut_polzovateli_s_vashimi_marshruta_f85d97d6')}
         </Text>
         <Text style={styles.sectionDescription}>{description}</Text>
-        {!isCalendarMode ? (
+        {/* Чип с числом маршрутов — только на живом счётчике: при сбое он рисовал
+            «Маршрутов: 0» автору с сотнями маршрутов (#1871). */}
+        {!isCalendarMode && travelsCount != null ? (
           <View style={styles.sectionMetaRow}>
             <View style={styles.sectionMetaChip}>
               <Text style={styles.sectionMetaChipText}>{i18nT('profile:components.profile.ProfileTravelEngagementSection.marshrutov_0c70d1ac')}{travelsCount}</Text>
             </View>
-            {summaryScope === 'loaded' && (loadedTravelsCount ?? 0) > 0 && (loadedTravelsCount ?? 0) < travelsCount ? (
+            {isPartiallyLoaded ? (
               <View style={styles.sectionMetaChip}>
                 <Text style={styles.sectionMetaChipText}>
                   {i18nT('profile:components.profile.ProfileTravelEngagementSection.zagruzheno_8a574f0a')}{loadedTravelsCount} {i18nT('profile:components.profile.ProfileTravelEngagementSection.iz_01234bb3')}{travelsCount}

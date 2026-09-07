@@ -69,7 +69,10 @@ describe('useMyTravels — состояние ошибки первой стра
     expect(result.current.myTravels).toEqual([]);
     expect(result.current.hasMore).toBe(false);
     expect(result.current.isLoading).toBe(false);
-    expect(onTotalChange).toHaveBeenCalledWith(0);
+    // #1871: ноль здесь выдавал сбой сети за пустой профиль — счётчик потерян,
+    // а не равен нулю.
+    expect(onTotalChange).toHaveBeenCalledWith(null);
+    expect(onTotalChange).not.toHaveBeenCalledWith(0);
   });
 
   it('успешная повторная загрузка гасит error и возвращает данные', async () => {

@@ -54,6 +54,43 @@ describe('useMyTravels — разбивка опубликованных и че
     expect(result.current.myTravels).toHaveLength(2);
   });
 
+  // #1871: `publicationCounts === null` значило одновременно «ещё не загружено»
+  // и «счётчик упал», и сбой прятал бейдж вместо «—».
+  it('помечает разбивку недоступной, когда запрос за счётчиком черновиков упал', async () => {
+    mockFetchMyTravels.mockImplementation(async (params: any) => {
+      if (isDraftCountRequest(params)) throw new Error('500 Internal Server Error');
+      return page([1, 2], 365) as any;
+    });
+
+    const { result } = renderHook(() =>
+      useMyTravels({ userId: 'u-1', perPage: 20, includeDrafts: true })
+    );
+    await act(async () => {
+      await result.current.load();
+    });
+
+    expect(result.current.publicationCounts).toBeNull();
+    expect(result.current.publicationCountsUnavailable).toBe(true);
+    // Сам список сбой счётчика не ломает.
+    expect(result.current.myTravels).toHaveLength(2);
+    expect(result.current.error).toBeNull();
+  });
+
+  it('на успешной разбивке недоступной её не помечает', async () => {
+    mockFetchMyTravels.mockImplementation(async (params: any) =>
+      (isDraftCountRequest(params) ? page([1], 120, 'draft') : page([1, 2], 365)) as any
+    );
+
+    const { result } = renderHook(() =>
+      useMyTravels({ userId: 'u-1', perPage: 20, includeDrafts: true })
+    );
+    await act(async () => {
+      await result.current.load();
+    });
+
+    expect(result.current.publicationCountsUnavailable).toBe(false);
+  });
+
   it('просит у API только счётчик черновиковых статусов, а не их список', async () => {
     mockFetchMyTravels.mockImplementation(async (params: any) =>
       (isDraftCountRequest(params) ? page([1], 7, 'draft') : page([1, 2], 40)) as any

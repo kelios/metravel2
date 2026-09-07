@@ -28,7 +28,14 @@ type UseProfileTravelSectionsInput = {
   statusTabTravels?: Travel[]
   engagementSummary: TravelEngagementStats | null
   publicationCounts: TravelPublicationCounts | null
-  travelsCount: number
+  /**
+   * true — запрос за разбивкой «Опубл./Черновики» упал. Без него
+   * `publicationCounts === null` значит одновременно «ещё не загружено» и
+   * «счётчик потерян» (#1871).
+   */
+  publicationCountsUnavailable: boolean
+  /** `null` — счётчик маршрутов потерян сбоем общего списка, а не равен нулю (#1871). */
+  travelsCount: number | null
   travelsLoading: boolean
   travelsLoadingMore: boolean
   travelsHasMore: boolean
@@ -65,6 +72,7 @@ export function useProfileTravelSections({
   statusTabTravels = NO_STATUS_TAB_TRAVELS,
   engagementSummary,
   publicationCounts,
+  publicationCountsUnavailable,
   travelsCount,
   travelsLoading,
   travelsLoadingMore,
@@ -117,20 +125,26 @@ export function useProfileTravelSections({
   // Разбивка «Опубл. / Черновики» приходит с сервера: классификация загруженных
   // страниц (`publishedTravels`/`draftTravels`) годится в счётчик только когда
   // список догружен целиком — иначе вкладки показывали разбивку первой страницы.
-  // Сбой общего списка обнуляет `travelsCount` и `publicationCounts`, поэтому
-  // ветка `isTravelListComplete` вырождается в 0 >= 0 и рисует выдуманный ноль,
+  // Сбой общего списка гасит и `publicationCounts`, и сам счётчик маршрутов
+  // (`travelsCount === null`, #1871): раньше он приходил нулём, ветка
+  // `isTravelListComplete` вырождалась в 0 >= 0 и рисовала выдуманный ноль,
   // неотличимый от честного «маршрутов нет». Помечаем счётчики недоступными:
   // UI показывает «—» вместо цифры (#1865).
-  const travelCountsUnavailable = Boolean(travelCountsError)
-  const isTravelListComplete = profileTravels.length >= travelsCount
+  const travelCountsUnavailable = Boolean(travelCountsError) || travelsCount == null
+  const isTravelListComplete = travelsCount != null && profileTravels.length >= travelsCount
+  // Серверная разбивка → точный локальный подсчёт по догруженному списку →
+  // «—», если запрос за разбивкой упал (#1871), иначе «ещё не знаем» и цифры нет.
+  const resolveSliceCount = (serverCount: number | undefined, localCount: number) => {
+    if (serverCount != null) return serverCount
+    if (isTravelListComplete) return localCount
+    return publicationCountsUnavailable ? null : undefined
+  }
   const publishedTravelsCount = travelCountsUnavailable
     ? null
-    : publicationCounts?.published
-      ?? (isTravelListComplete ? publishedTravels.length : undefined)
+    : resolveSliceCount(publicationCounts?.published, publishedTravels.length)
   const draftTravelsCount = travelCountsUnavailable
     ? null
-    : publicationCounts?.drafts
-      ?? (isTravelListComplete ? draftTravels.length : undefined)
+    : resolveSliceCount(publicationCounts?.drafts, draftTravels.length)
   // Перекрёстные ссылки пустых вкладок ведём по серверной разбивке: список
   // вкладки-среза о соседнем статусе ничего не знает.
   const hasPublishedTravels = (publishedTravelsCount ?? publishedTravels.length) > 0
@@ -161,8 +175,8 @@ export function useProfileTravelSections({
   )
   const authoredTravelEngagementScope = useMemo<'all' | 'loaded'>(() => {
     if (engagementSummary || profileTravels.length === 0) return 'all'
-    return profileTravels.length >= travelsCount || !travelsHasMore ? 'all' : 'loaded'
-  }, [engagementSummary, profileTravels.length, travelsCount, travelsHasMore])
+    return isTravelListComplete || !travelsHasMore ? 'all' : 'loaded'
+  }, [engagementSummary, isTravelListComplete, profileTravels.length, travelsHasMore])
   const authoredTravelEngagementSummary = useMemo(() => {
     if (engagementSummary) return engagementSummary
     if (!travelsLoading && travelsCount === 0) {
@@ -296,6 +310,5 @@ export function useProfileTravelSections({
     personalTravelStatusSummary,
     profileTravels,
     publishedTravelsCount,
-    travelCountsUnavailable,
   }
 }

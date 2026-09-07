@@ -20,7 +20,11 @@ interface UseMyTravelsArgs {
    * экземпляр не считает, она принадлежит общему списку автора.
    */
   publicationStatus?: readonly string[];
-  onTotalChange?: (total: number) => void;
+  /**
+   * Общее число маршрутов автора. `null` — счётчик потерян сбоем запроса: это
+   * не ноль, и потребитель обязан отличать его от «маршрутов нет» (#1871).
+   */
+  onTotalChange?: (total: number | null) => void;
 }
 
 export interface TravelPublicationCounts {
@@ -33,9 +37,16 @@ export interface UseMyTravelsResult {
   engagementSummary: TravelEngagementStats | null;
   /**
    * Сколько у автора опубликованных и черновиков ВСЕГО, а не в загруженных
-   * страницах. null — счётчик ещё не получен или запрос за ним не удался.
+   * страницах. null — разбивка недоступна; какой именно случай, говорит
+   * `publicationCountsUnavailable`.
    */
   publicationCounts: TravelPublicationCounts | null;
+  /**
+   * true — запрос за разбивкой упал. Отделяет сбой от «ещё не загружено»:
+   * оба состояния дают `publicationCounts === null`, но сбой обязан показывать
+   * «—», а не прятать счётчик (#1871).
+   */
+  publicationCountsUnavailable: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
   removingTravelId: number | null;
@@ -143,12 +154,18 @@ const getLoadErrorMessage = (error: unknown) => {
   return i18nT('errorsStatic:api.common.unknownError')
 }
 
+/**
+ * Результат счётчика черновиков: число либо `'failed'` — запрос упал. `null`
+ * на месте вызова означает «не запрашивали» и в сам тип не входит.
+ */
+type DraftsCountProbe = number | 'failed';
+
 // Черновики считает сервер: вкладки «Опубл.» и «Черновики» показывали разбивку
 // первой страницы (15 + 5 при 365 маршрутах), потому что классификация шла по
 // загруженным элементам. Просим у API только count по черновиковым статусам —
 // perPage=1 не тянет список, а опубликованные выводим вычитанием из общего
 // количества, чтобы сумма вкладок всегда сходилась со счётчиком «Маршруты».
-const fetchDraftTravelsCount = async (userId: string | number): Promise<number | null> => {
+const fetchDraftTravelsCount = async (userId: string | number): Promise<DraftsCountProbe> => {
   try {
     const payload = await fetchMyTravels({
       user_id: userId,
@@ -160,16 +177,17 @@ const fetchDraftTravelsCount = async (userId: string | number): Promise<number |
     });
     return unwrapMyTravelsPayload(payload).total;
   } catch {
-    // Счётчик — украшение вкладки: его сбой не должен ломать загрузку списка.
-    return null;
+    // Счётчик — украшение вкладки: его сбой не должен ломать загрузку списка,
+    // но и молчать о нём нельзя, иначе «упал» неотличим от «ещё не загружен».
+    return 'failed';
   }
 };
 
 const toPublicationCounts = (
   total: number,
-  draftsCount: number | null,
+  draftsCount: DraftsCountProbe | null,
 ): TravelPublicationCounts | null => {
-  if (draftsCount == null) return null;
+  if (typeof draftsCount !== 'number') return null;
   const drafts = Math.min(Math.max(0, draftsCount), total);
   return { published: Math.max(0, total - drafts), drafts };
 };
@@ -185,11 +203,13 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
   const [myTravels, setMyTravels] = useState<Travel[]>([]);
   const [engagementSummary, setEngagementSummary] = useState<TravelEngagementStats | null>(null)
   const [publicationCounts, setPublicationCounts] = useState<TravelPublicationCounts | null>(null)
+  const [publicationCountsUnavailable, setPublicationCountsUnavailable] = useState(false)
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [removingTravelId, setRemovingTravelId] = useState<number | null>(null)
   const [page, setPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0)
+  // null — счётчик потерян сбоем: «сколько маршрутов» неизвестно, и это не ноль.
+  const [totalCount, setTotalCount] = useState<number | null>(0)
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const deleteInFlightRef = useRef<number | null>(null)
@@ -215,6 +235,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
       setMyTravels([]);
       setEngagementSummary(null)
       setPublicationCounts(null)
+      setPublicationCountsUnavailable(false)
       setError(null);
       return;
     }
@@ -227,7 +248,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
         fetchMyTravels({ user_id: uid, page: 1, perPage, includeDrafts, publicationStatus: publicationFilter, throwOnError: true }),
         // У среза по статусу своей разбивки нет: черновики и опубликованные
         // считает общий список, иначе каждая вкладка тянула бы лишний счётчик.
-        includeDrafts && !publicationFilter ? fetchDraftTravelsCount(uid) : Promise.resolve<number | null>(null),
+        includeDrafts && !publicationFilter ? fetchDraftTravelsCount(uid) : Promise.resolve<DraftsCountProbe | null>(null),
       ]);
       // Запрос вытеснен более новым load/loadMore или хук размонтирован — не коммитим.
       if (!mountedRef.current || seq !== requestSeqRef.current) return;
@@ -238,6 +259,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
       setMyTravels(normalized);
       setEngagementSummary(nextEngagementSummary)
       setPublicationCounts(toPublicationCounts(effectiveTotal, draftsCount))
+      setPublicationCountsUnavailable(draftsCount === 'failed')
       setPage(1);
       setTotalCount(effectiveTotal)
       setHasMore(normalized.length < effectiveTotal && items.length > 0);
@@ -248,11 +270,16 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
       setMyTravels([]);
       setEngagementSummary(null)
       setPublicationCounts(null)
+      // Сбой общего списка перекрывает разбивку: у неё свой признак недоступности
+      // только пока сам список жив.
+      setPublicationCountsUnavailable(false)
       setPage(1);
-      setTotalCount(0)
+      // Не ноль, а «неизвестно»: обнулённый счётчик выдавал сбой сети за пустой
+      // профиль на вкладках «Уровень» и «Статистика» (#1871).
+      setTotalCount(null)
       setHasMore(false);
       setError(getLoadErrorMessage(loadError));
-      onTotalChange?.(0);
+      onTotalChange?.(null);
     } finally {
       if (mountedRef.current && seq === requestSeqRef.current) setIsLoading(false);
     }
@@ -323,7 +350,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
         const previousTotal = totalCount
         const previousCounts = publicationCounts
         const nextTravels = previousTravels.filter((travel) => travel.id !== travelId)
-        const nextTotal = Math.max(0, previousTotal - 1)
+        const nextTotal = previousTotal == null ? null : Math.max(0, previousTotal - 1)
         const nextCounts = decrementCountsByTravel(previousCounts, deletedTravel)
 
         deleteInFlightRef.current = travelId
@@ -378,5 +405,5 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
     [engagementSummary, load, myTravels, onTotalChange, publicationCounts, totalCount],
   );
 
-  return { myTravels, engagementSummary, publicationCounts, isLoading, isLoadingMore, removingTravelId, hasMore, error, load, loadMore, remove };
+  return { myTravels, engagementSummary, publicationCounts, publicationCountsUnavailable, isLoading, isLoadingMore, removingTravelId, hasMore, error, load, loadMore, remove };
 }

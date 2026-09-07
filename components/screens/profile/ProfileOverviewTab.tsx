@@ -19,7 +19,8 @@ import { translate as i18nT } from '@/i18n'
 interface ProfileOverviewTabProps {
   userProp: { name: string; email: string; avatar?: string | null; hasDisplayName: boolean };
   profile: Parameters<typeof ProfileCompleteness>[0]['profile'];
-  travelsCount: number;
+  /** `null` — счётчик маршрутов недоступен из-за сбоя, а не равен нулю (#1871). */
+  travelsCount: number | null;
   userId?: string | number | null;
   onCreateRoute: () => void;
   onStartQuest: () => void;

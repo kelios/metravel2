@@ -11,7 +11,8 @@ import { translate as i18nT } from '@/i18n'
 
 
 interface ProfileStatsTabProps {
-  travelsCount: number;
+  /** `null` — счётчик маршрутов недоступен из-за сбоя, а не равен нулю (#1871). */
+  travelsCount: number | null;
   loadedTravelsCount: number;
   travelsLoading: boolean;
   authoredTravelEngagementSummary: Parameters<typeof ProfileTravelEngagementSummary>[0]['summary'];

@@ -2,7 +2,12 @@ import type { Travel } from '@/types/types';
 import { PER_PAGE } from '@/components/listTravel/utils/listTravelConstants';
 
 export interface UserStats {
-  travelsCount: number;
+  /**
+   * Сколько у автора маршрутов. `null` — счётчик потерян сбоем общего списка:
+   * это не «маршрутов нет», и каждый потребитель обязан развести два случая
+   * (#1871).
+   */
+  travelsCount: number | null;
   favoritesCount: number;
   viewsCount: number;
 }

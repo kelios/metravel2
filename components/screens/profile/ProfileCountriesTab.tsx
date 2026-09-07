@@ -24,7 +24,8 @@ interface ProfileCountriesTabProps {
   personalTravelStatusEntries: TravelStatusEntry[]
   travelsSyncing: boolean
   loadedTravelsCount: number
-  totalTravelsCount: number
+  /** `null` — счётчик маршрутов недоступен из-за сбоя, а не равен нулю (#1871). */
+  totalTravelsCount: number | null
   onBackToOverview: () => void
 }
 

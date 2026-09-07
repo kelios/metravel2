@@ -42,6 +42,7 @@ const createAllTravels = (overrides: Partial<UseMyTravelsResult> = {}): UseMyTra
   myTravels: [{ id: 1, name: 'Общий список' } as any],
   engagementSummary: null,
   publicationCounts: null,
+  publicationCountsUnavailable: false,
   isLoading: false,
   isLoadingMore: false,
   removingTravelId: null,

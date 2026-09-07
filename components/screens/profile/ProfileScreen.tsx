@@ -144,7 +144,7 @@ export default function ProfileScreen() {
   const lastEndReachedAtRef = useRef(0);
   const travelsRequestedRef = useRef(false);
 
-  const handleTotalChange = useCallback((total: number) => {
+  const handleTotalChange = useCallback((total: number | null) => {
     setStats((prev) => ({ ...prev, travelsCount: total }));
   }, []);
 
@@ -158,6 +158,7 @@ export default function ProfileScreen() {
     myTravels,
     engagementSummary,
     publicationCounts,
+    publicationCountsUnavailable,
     isLoading: travelsLoading,
     isLoadingMore: travelsLoadingMore,
     hasMore: travelsHasMore,
@@ -331,7 +332,6 @@ export default function ProfileScreen() {
     personalTravelStatusSummary,
     profileTravels,
     publishedTravelsCount,
-    travelCountsUnavailable,
   } = useProfileTravelSections({
     activeTab,
     setActiveTab,
@@ -343,6 +343,7 @@ export default function ProfileScreen() {
     statusTabTravels: travelList.isFiltered ? travelList.travels : undefined,
     engagementSummary,
     publicationCounts,
+    publicationCountsUnavailable,
     travelsCount: stats.travelsCount,
     travelsLoading,
     travelsLoadingMore,
@@ -458,9 +459,9 @@ export default function ProfileScreen() {
 
   const tabCounts = useMemo(() => ({
     overview: badgesCount,
-    // При сбое общего списка `travelsCount` уже обнулён его catch — показываем
-    // «—», а не выдуманный ноль (#1865).
-    travels: travelCountsUnavailable ? null : stats.travelsCount,
+    // При сбое общего списка счётчик приходит `null` — показываем «—», а не
+    // выдуманный ноль (#1865, #1871).
+    travels: stats.travelsCount,
     publishedTravels: publishedTravelsCount,
     draftTravels: draftTravelsCount,
     subscribers: subscribersCount,
@@ -472,7 +473,6 @@ export default function ProfileScreen() {
     draftTravelsCount,
     publishedTravelsCount,
     stats.travelsCount,
-    travelCountsUnavailable,
     subscribersCount,
     subscriptionsCount,
     stats.favoritesCount,

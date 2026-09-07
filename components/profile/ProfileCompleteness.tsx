@@ -10,7 +10,8 @@ import { translate as i18nT } from '@/i18n'
 interface ProfileCompletenessProps {
   user: { name: string; email: string; avatar?: string | null; hasDisplayName: boolean };
   profile?: UserProfileDto | null;
-  travelsCount: number;
+  /** `null` — счётчик недоступен из-за сбоя: шаг про маршрут выпадает из чек-листа. */
+  travelsCount: number | null;
 }
 
 interface CompletenessStep {
@@ -23,6 +24,9 @@ interface CompletenessStep {
 export function ProfileCompleteness({ user, profile, travelsCount }: ProfileCompletenessProps) {
   const colors = useThemedColors();
 
+  // Сбой счётчика не делает шаг невыполненным: при `null` шаг про маршрут
+  // выпадает из чек-листа целиком, иначе автору с сотнями маршрутов
+  // предлагалось «добавьте маршрут» (#1871).
   const steps = useMemo<CompletenessStep[]>(
     () => [
       {
@@ -45,12 +49,16 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
           profile?.youtube || profile?.instagram || profile?.twitter || profile?.vk
         ),
       },
-      {
-        key: 'travel',
-        label: i18nT('profile:components.profile.ProfileCompleteness.marshrut_e01f2892'),
-        icon: 'map',
-        done: travelsCount > 0,
-      },
+      ...(travelsCount == null
+        ? []
+        : [
+            {
+              key: 'travel',
+              label: i18nT('profile:components.profile.ProfileCompleteness.marshrut_e01f2892'),
+              icon: 'map' as const,
+              done: travelsCount > 0,
+            },
+          ]),
     ],
     [user.hasDisplayName, user.avatar, profile, travelsCount]
   );

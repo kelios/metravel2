@@ -10,7 +10,8 @@ import { translate as i18nT } from '@/i18n'
 
 
 interface Props {
-  travelsCount: number
+  /** `null` — счётчик недоступен из-за сбоя; «первых шагов» у автора мы не знаем. */
+  travelsCount: number | null
   rank: UserRank | null | undefined
   onCreateRoute: () => void
   onStartQuest: () => void
@@ -32,7 +33,9 @@ function ProfileFirstStepsCard({
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
 
-  if (travelsCount > 0 || hasProgress(rank)) return null
+  // Карточка новичка появляется только на доказанном нуле: при сбое счётчика
+  // (`null`) автору с сотнями маршрутов предлагалось «создать первый» (#1871).
+  if (travelsCount !== 0 || hasProgress(rank)) return null
 
   return (
     <View style={styles.card} testID={testID ?? 'profile-first-steps-card'}>

@@ -31,6 +31,7 @@ const renderSections = (overrides: Record<string, unknown>) =>
       myTravels: firstPage,
       engagementSummary: null,
       publicationCounts: null,
+      publicationCountsUnavailable: false,
       travelsCount: 365,
       travelsLoading: false,
       travelsLoadingMore: false,
@@ -61,6 +62,30 @@ describe('useProfileTravelSections — счётчики вкладок «Опу�
     expect(result.current.draftTravelsCount).toBeUndefined();
   });
 
+  // #1871: сбой запроса за разбивкой давал тот же `publicationCounts === null`,
+  // что и «ещё не загружено», и вкладка молча оставалась без цифры вместо «—».
+  it('на недогруженном списке показывает «—», когда запрос за разбивкой упал', () => {
+    const { result } = renderSections({
+      publicationCounts: null,
+      publicationCountsUnavailable: true,
+    });
+
+    expect(result.current.publishedTravelsCount).toBeNull();
+    expect(result.current.draftTravelsCount).toBeNull();
+  });
+
+  it('упавшая разбивка не мешает точному локальному подсчёту по догруженному списку', () => {
+    const { result } = renderSections({
+      publicationCounts: null,
+      publicationCountsUnavailable: true,
+      travelsCount: firstPage.length,
+      travelsHasMore: false,
+    });
+
+    expect(result.current.publishedTravelsCount).toBe(15);
+    expect(result.current.draftTravelsCount).toBe(5);
+  });
+
   it('когда список догружен целиком, считает локально — это те же данные', () => {
     const { result } = renderSections({
       publicationCounts: null,
@@ -83,7 +108,18 @@ describe('useProfileTravelSections — счётчики вкладок «Опу�
       travelCountsError: 'Не удалось загрузить маршруты',
     });
 
-    expect(result.current.travelCountsUnavailable).toBe(true);
+    expect(result.current.publishedTravelsCount).toBeNull();
+    expect(result.current.draftTravelsCount).toBeNull();
+  });
+
+  it('потерянный общий счётчик (`travelsCount === null`) сам по себе даёт «—», а не ноль', () => {
+    const { result } = renderSections({
+      myTravels: [],
+      publicationCounts: null,
+      travelsCount: null,
+      travelsHasMore: false,
+    });
+
     expect(result.current.publishedTravelsCount).toBeNull();
     expect(result.current.draftTravelsCount).toBeNull();
   });

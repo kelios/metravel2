@@ -20,7 +20,8 @@ type ProfileCountriesDataInput = {
   personalTravelStatusEntries: TravelStatusEntry[]
   travelsSyncing: boolean
   loadedTravelsCount: number
-  totalTravelsCount: number
+  /** `null` — счётчик маршрутов недоступен из-за сбоя, а не равен нулю (#1871). */
+  totalTravelsCount: number | null
 }
 
 export function useProfileCountriesData({
@@ -103,6 +104,6 @@ export function useProfileCountriesData({
     showPartialCatalogWarning:
       !backendStats && (countryProgressQuery.isError || countriesError) && stats.rows.length > 0,
     showTravelsSyncing:
-      !backendStats && travelsSyncing && totalTravelsCount > 0 && loadedTravelsCount < totalTravelsCount,
+      !backendStats && travelsSyncing && totalTravelsCount != null && totalTravelsCount > 0 && loadedTravelsCount < totalTravelsCount,
   }
 }
