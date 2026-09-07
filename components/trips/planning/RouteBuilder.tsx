@@ -934,8 +934,17 @@ function RouteBuilder({
     }
   }, []);
 
+  // #1824, пункт 3: третья мутация файловой ветки. Черновик точек она не
+  // трогает, поэтому ответом его не затирает, — но синхронного лока у неё тоже
+  // не было, а `disabled` кнопки держится на `deleteRouteFile.isPending` и
+  // поднимается только со следующим рендером. Повтор нажатия в одном тике слал
+  // второй DELETE того же `routeId`, второй отвечал 404, и пользователь получал
+  // «не удалось удалить» на файле, который на самом деле удалён.
+  const routeFileDeleteLockedRef = useRef(false);
+
   const handleRemoveStoredRouteFile = useCallback(() => {
-    if (!storedRouteFile) return;
+    if (!storedRouteFile || routeFileDeleteLockedRef.current) return;
+    routeFileDeleteLockedRef.current = true;
     setOriginalUploadError(null);
     deleteRouteFile.mutate(
       { tripId: trip.id, routeId: storedRouteFile.id },
@@ -943,6 +952,11 @@ function RouteBuilder({
         onError: () => setOriginalUploadError(
           i18nT('tripsStatic:plan.routeImport.original.removeError'),
         ),
+        // Как и у отправки оригинала, лок снимается и по отказу: иначе отказ
+        // хранилища запирал бы кнопку до перезагрузки экрана.
+        onSettled: () => {
+          routeFileDeleteLockedRef.current = false;
+        },
       },
     );
   }, [deleteRouteFile, storedRouteFile, trip.id]);

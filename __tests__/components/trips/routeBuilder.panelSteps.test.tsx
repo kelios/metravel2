@@ -11,6 +11,10 @@ import { createQueryWrapper } from '../../helpers/testQueryClient'
 
 const mockRouteMutate = jest.fn()
 const mockOriginalUpload = jest.fn()
+const mockOriginalDelete = jest.fn()
+// Сохранённый оригинал есть не в каждом сценарии панели, поэтому мок запроса
+// файла переключаемый: по умолчанию файла нет, как и было.
+let mockStoredRouteFile: { id: number; name: string } | null = null
 
 jest.mock('@/api/places', () => ({ fetchPlacesCatalog: jest.fn() }))
 jest.mock('@/api/travelsApi', () => ({ fetchTravels: jest.fn() }))
@@ -25,13 +29,13 @@ jest.mock('@/hooks/usePlannedTripsApi', () => ({
 }))
 
 jest.mock('@/hooks/usePlannedTripRouteFile', () => ({
-  usePlannedTripRouteFile: () => ({ data: null }),
+  usePlannedTripRouteFile: () => ({ data: mockStoredRouteFile }),
   usePlannedTripOriginalTrack: () => ({ data: null }),
   useUploadPlannedTripRouteFile: () => ({
     mutateAsync: mockOriginalUpload,
     isPending: false,
   }),
-  useDeletePlannedTripRouteFile: () => ({ mutate: jest.fn(), isPending: false }),
+  useDeletePlannedTripRouteFile: () => ({ mutate: mockOriginalDelete, isPending: false }),
 }))
 
 jest.mock('@/utils/tripAnalytics', () => ({
@@ -64,6 +68,7 @@ jest.mock('@/components/trips/planning/TripRouteImportPanel', () => {
   return function TripRouteImportPanel({
     route,
     onApply,
+    onRemoveStoredFile,
   }: {
     route: PlannedTrip['route']
     onApply: (route: PlannedTrip['route'], upload: {
@@ -72,10 +77,15 @@ jest.mock('@/components/trips/planning/TripRouteImportPanel', () => {
       name: string
       mimeType: string
     }) => void
+    onRemoveStoredFile: () => void
   }) {
     const { Pressable, View } = require('react-native')
     return (
       <View>
+        <Pressable
+          testID="route-builder-remove-original"
+          onPress={onRemoveStoredFile}
+        />
         <Pressable
           testID="route-builder-apply-original-only"
           onPress={() => onApply(route, {
@@ -179,6 +189,8 @@ describe('RouteBuilder panel steps', () => {
     mockRouteMutate.mockReset()
     mockOriginalUpload.mockReset()
     mockOriginalUpload.mockResolvedValue({ id: 1 })
+    mockOriginalDelete.mockReset()
+    mockStoredRouteFile = null
   })
 
   it('строит панель тремя нумерованными шагами, как /map', () => {
@@ -276,6 +288,38 @@ describe('RouteBuilder panel steps', () => {
 
     fireEvent.press(getByTestId('route-builder-save'))
     await waitFor(() => expect(mockOriginalUpload).toHaveBeenCalledTimes(2))
+  })
+
+  // #1824, пункт 3: у удаления оригинала лока тоже не было. `disabled` кнопки
+  // держится на `deleteRouteFile.isPending` и поднимается только со следующим
+  // рендером, поэтому повтор нажатия в одном тике слал второй DELETE того же
+  // файла — второй отвечал 404, и пользователь видел «не удалось удалить» на
+  // уже удалённом файле.
+  it('повтор нажатия в одном тике не удаляет оригинал дважды', () => {
+    mockStoredRouteFile = { id: 5, name: 'import.gpx' }
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+
+    fireEvent.press(getByTestId('route-builder-remove-original'))
+    fireEvent.press(getByTestId('route-builder-remove-original'))
+
+    expect(mockOriginalDelete).toHaveBeenCalledTimes(1)
+    expect(mockOriginalDelete.mock.calls[0][0]).toEqual({ tripId: 42, routeId: 5 })
+  })
+
+  // Лок удаления снимается и по отказу: иначе неудачное удаление запирало бы
+  // кнопку до перезагрузки экрана.
+  it('после отказа удаления ретрай той же кнопкой уходит снова', () => {
+    mockStoredRouteFile = { id: 5, name: 'import.gpx' }
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+
+    fireEvent.press(getByTestId('route-builder-remove-original'))
+    act(() => {
+      mockOriginalDelete.mock.calls[0][1].onError(new Error('500'))
+      mockOriginalDelete.mock.calls[0][1].onSettled()
+    })
+
+    fireEvent.press(getByTestId('route-builder-remove-original'))
+    expect(mockOriginalDelete).toHaveBeenCalledTimes(2)
   })
 
   // Регресс #1496: у `updateTripRoute.mutate` был только `onSuccess`, поэтому
