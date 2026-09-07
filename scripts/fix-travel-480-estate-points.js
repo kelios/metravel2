@@ -268,7 +268,13 @@ const describe = (p) =>
   if (problems.length) {
     console.error('❌ VERIFY FAILED:');
     for (const p of problems) console.error(`   - ${p}`);
-    console.error(`откат: node scripts/seo-edit.js --restore ${TRAVEL_ID} (бэкап: ${backupFile})`);
+    // `--backup-dir` печатается всегда: seo-edit.js читает только этот флаг и
+    // не знает про BACKUP_DIR, поэтому снимок, уведённый env-переменной, откат
+    // без флага не нашёл бы — и снова поднял бы более старый снимок из
+    // каталога по умолчанию.
+    console.error(
+      `откат: node scripts/seo-edit.js --restore ${TRAVEL_ID} --backup-dir "${backupDir}" (снимок: ${backupFile})`,
+    );
     process.exit(1);
   }
   console.log('✅ FIX VERIFIED');
