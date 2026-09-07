@@ -177,9 +177,13 @@ export default function TripPlanRouteMap({
   );
   const hasOriginalTrack = originalTrackLines.length > 0;
   const center = useMemo(() => {
-    // #1851: файл трека грузят раньше, чем расставляют точки маршрута. Без
-    // третьего кандидата такая поездка открывалась на дефолтном Минске — за
-    // тысячи километров от собственного трека.
+    // #1851: файл трека грузят раньше, чем расставляют точки маршрута. Видимый
+    // кадр в этом случае ставит уже не center, а fitBounds по границам трека в
+    // самом WebView (nativeMapHtml.ts:558) — center на native доезжает только до
+    // map.__userCenter, а его читают ветки, в которые route-режим не заходит
+    // (nativeMapHtml.ts:695,702). Третий кандидат остаётся страховкой ровно этих
+    // веток: до #1851 такая поездка проваливалась в них и центровалась на
+    // дефолтном Минске.
     const first = routeLine[0] ?? routePoints[0] ?? originalTrackLines[0]?.[0];
     if (!first) return DEFAULT_CENTER;
     return { latitude: first[1], longitude: first[0] };

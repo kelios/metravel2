@@ -128,7 +128,10 @@ describe('TripPlanRouteMap (native) — оригинальный трек', () =
     expect(mockNativeMapProps[mockNativeMapProps.length - 1].originalTrackSegments).toEqual([])
   })
 
-  it('#1851 без точек маршрута центрует карту по началу оригинала, а не по дефолту', () => {
+  it('#1851 без точек маршрута объявляет центром начало оригинала, а не дефолтный Минск', () => {
+    // Видимый кадр в этом случае ставит fitBounds внутри WebView; здесь
+    // проверяется объявленный центр — страховка веток nativeMapHtml, которые
+    // читают map.__userCenter, когда рисовать маршрут не от чего.
     render(<TripPlanRouteMap route={[]} originalTrackSegments={twoRingSegments} />)
 
     const props = mockNativeMapProps[mockNativeMapProps.length - 1]

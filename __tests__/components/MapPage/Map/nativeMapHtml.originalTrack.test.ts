@@ -44,6 +44,14 @@ interface FakeShape {
   options: Record<string, unknown>;
 }
 
+/** Границы Leaflet с собственной историей: `own` — что в них реально положили. */
+interface FakeBounds {
+  own: unknown[];
+  extend: (point: unknown) => FakeBounds;
+  isValid: () => boolean;
+  getCenter: () => number[];
+}
+
 const createHarness = () => {
   const makeLayer = () => {
     const layer = {
@@ -60,16 +68,29 @@ const createHarness = () => {
   const routeLayer = makeLayer();
   const extended: unknown[] = [];
 
-  const bounds = {
-    extend: (point: unknown) => {
-      extended.push(point);
-      return bounds;
-    },
-    isValid: () => true,
-    getCenter: () => [49.8, 6.36],
+  // #1851 — каждый вызов L.latLngBounds() отдаёт СВОЙ накопитель. Общий объект
+  // на все границы делал проверку кадра слепой: подгонка по маркерам и подгонка
+  // по треку приходили в fitBounds одним и тем же значением, и assert проходил
+  // бы даже там, где кадр наведён не туда.
+  const makeBounds = (): FakeBounds => {
+    const own: unknown[] = [];
+    const instance: FakeBounds = {
+      own,
+      extend: (point: unknown) => {
+        own.push(point);
+        extended.push(point);
+        return instance;
+      },
+      isValid: () => true,
+      getCenter: () => [49.8, 6.36],
+    };
+    return instance;
   };
 
   const makeShape = (kind: string, coordinates: unknown, options: Record<string, unknown> = {}) => {
+    // Свои границы у каждой фигуры: подгонка по линии маршрута обязана отличаться
+    // от подгонки по общим границам трека.
+    const shapeBounds = makeBounds();
     const shape: Record<string, unknown> = {
       kind,
       coordinates,
@@ -80,14 +101,14 @@ const createHarness = () => {
         layer.added.push(shape);
         return shape;
       },
-      getBounds: () => bounds,
+      getBounds: () => shapeBounds,
       getLatLng: () => ({ lat: 0, lng: 0 }),
     };
     return shape;
   };
 
   const L = {
-    latLngBounds: () => bounds,
+    latLngBounds: () => makeBounds(),
     divIcon: (options: unknown) => options,
     polyline: (coordinates: unknown, options: Record<string, unknown>) =>
       makeShape('polyline', coordinates, options),
@@ -101,11 +122,11 @@ const createHarness = () => {
   // #1851 — кадр проверяется по вызовам, а не по «не упало»: без точек маршрута
   // подгонка обязана идти по границам оригинала, и её не должен перебивать
   // setView одиночной точки.
-  const fitBoundsCalls: unknown[] = [];
+  const fitBoundsCalls: FakeBounds[] = [];
   const setViewCalls: unknown[] = [];
 
   const map: Record<string, unknown> = {
-    fitBounds: (target: unknown) => {
+    fitBounds: (target: FakeBounds) => {
       fitBoundsCalls.push(target);
     },
     setView: (target: unknown) => {
@@ -151,7 +172,7 @@ const createHarness = () => {
 
   const polylines = () => routeLayer.added.filter((shape) => shape.kind === 'polyline');
 
-  return { renderPoints, polylines, extended, fitBoundsCalls, setViewCalls, bounds };
+  return { renderPoints, polylines, extended, fitBoundsCalls, setViewCalls, map };
 };
 
 // Два кольца похода: Route 2 стоит в Эхтернахе, Route 3 — в Мюллертале.
@@ -190,8 +211,10 @@ const payload = (
 });
 
 // Обычный порядок при импорте похода: файл уже загружен, точки маршрута ещё нет.
-const withoutRoutePoints = (originalTrackSegments: number[][][]) =>
-  payload(originalTrackSegments, { routePoints: [], routeLine: [] });
+const withoutRoutePoints = (
+  originalTrackSegments: number[][][],
+  overrides: Record<string, unknown> = {},
+) => payload(originalTrackSegments, { routePoints: [], routeLine: [], ...overrides });
 
 describe('#1847 native-карта — многотрековый оригинал', () => {
   it('рисует по полилинии на каждый трек файла, не соединяя их между собой', () => {
@@ -265,12 +288,15 @@ describe('#1851 native-карта — оригинал без точек мар�
 
     harness.renderPoints(withoutRoutePoints([ECHTERNACH_RING, MUELLERTHAL_RING]));
 
-    expect(harness.fitBoundsCalls).toEqual([harness.bounds]);
+    // Кадр наведён именно на границы трека: в них лежат точки обоих колец. На
+    // дофиксовом коде этот payload уходил в ветку pointsOnly и подгонялся по
+    // границам маркеров — они пусты, поэтому подмену видно.
+    expect(harness.fitBoundsCalls).toHaveLength(1);
+    expect(harness.fitBoundsCalls[0].own).toContainEqual(ECHTERNACH_RING[1]);
+    expect(harness.fitBoundsCalls[0].own).toContainEqual(MUELLERTHAL_RING[1]);
     // Центровка одиночной точки маршрута сюда не заходит: её setView с зумом 14
     // перебил бы подгонку по треку.
     expect(harness.setViewCalls).toHaveLength(0);
-    expect(harness.extended).toContainEqual(ECHTERNACH_RING[1]);
-    expect(harness.extended).toContainEqual(MUELLERTHAL_RING[1]);
   });
 
   it('без точек маршрута и без оригинала в route-слой ничего не кладёт', () => {
@@ -279,5 +305,27 @@ describe('#1851 native-карта — оригинал без точек мар�
     harness.renderPoints(withoutRoutePoints([]));
 
     expect(harness.polylines()).toHaveLength(0);
+  });
+
+  it('не трогает наведённый пользователем кадр, пока маршрут не заменён целиком', () => {
+    const harness = createHarness();
+    // #1781 — защёлка поднята перетаскиванием маркера. До #1851 payload без точек
+    // маршрута до кадра не доходил вовсе; теперь этот путь сам зовёт fitBounds,
+    // и держит его ровно та же защёлка, что и подгонку по линии.
+    harness.map.__metravelRouteFitLocked = true;
+    harness.map.__metravelRouteReplacementToken = 0;
+
+    harness.renderPoints(withoutRoutePoints([ECHTERNACH_RING], { routeReplacementToken: 0 }));
+
+    // Трек рисуется всегда — защёлка отменяет только подгонку кадра.
+    expect(harness.polylines()).toHaveLength(1);
+    expect(harness.fitBoundsCalls).toHaveLength(0);
+
+    // #1820 — оптовая замена (импорт другого файла) снимает защёлку и показывает
+    // получившийся трек, даже когда точек маршрута по-прежнему нет.
+    harness.renderPoints(withoutRoutePoints([ECHTERNACH_RING], { routeReplacementToken: 1 }));
+
+    expect(harness.map.__metravelRouteFitLocked).toBe(false);
+    expect(harness.fitBoundsCalls).toHaveLength(1);
   });
 });
