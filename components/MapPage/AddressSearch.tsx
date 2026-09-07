@@ -9,26 +9,21 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { useQuery, type QueryFunctionContext } from '@tanstack/react-query'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { queryKeys } from '@/queryKeys'
-import { nominatimSearch } from '@/api/external/nominatim'
+import { useLocationSearchQuery, type LocationSearchResult } from '@/api/geoQueries'
 import type { LatLng } from '@/types/coordinates'
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import MapIcon from './MapIcon'
 import IconButton from '@/components/ui/IconButton'
-import { getActiveLocaleDefinition, translate as i18nT } from '@/i18n'
+import { translate as i18nT } from '@/i18n'
 
 
-type AddressSearchKey = ReturnType<typeof queryKeys.addressSearch>
-
+// Совпадает с порогом внутри `useLocationSearchQuery` (#1819): здесь он нужен
+// только для подсказки «введите минимум N символов» и состояний выпадашки.
 const MIN_QUERY_LENGTH = 3
 const SEARCH_DEBOUNCE_MS = 500
-const SEARCH_LIMIT = 5
-const SEARCH_STALE_TIME_MS = 10_000
-const SEARCH_GC_TIME_MS = 60_000
 const RESULTS_MAX_HEIGHT = 200
 
 const BELARUS_BBOX = { latMin: 50, latMax: 57.5, lngMin: 22, lngMax: 33.5 }
@@ -86,13 +81,6 @@ interface AddressSearchProps {
   dense?: boolean
 }
 
-interface SearchResult {
-  display_name: string
-  lat: string
-  lon: string
-  place_id: string
-}
-
 const AddressSearch: React.FC<AddressSearchProps> = ({
   placeholder = i18nT('map:components.MapPage.AddressSearch.vvedite_adres_9750381d'),
   onAddressSelect,
@@ -106,48 +94,40 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   const [showResults, setShowResults] = useState(false)
   const [searchEnabled, setSearchEnabled] = useState(false)
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS)
-  // #1742/#1782: геокодер отвечает на языке интерфейса, а не на языке страны
-  // объекта. Локаль читается на рендере, поэтому переключение языка меняет и
-  // ключ запроса — подсказки не приходят из кэша чужого языка.
-  const geocoderLanguage = getActiveLocaleDefinition().geocoderLanguage
+  const trimmedQuery = debouncedQuery.trim()
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors, dense), [colors, dense])
 
+  // Слой поиска у формы точки статьи и у форм точки маршрута ОДИН (#1819):
+  // тот же ключ кэша, та же локаль, тот же `staleTime`. Поэтому один и тот же
+  // запрос из двух форм уходит в rate-limited Nominatim ровно один раз.
+  //
+  // Расхождения, снятые при переезде с инлайнового `useQuery`:
+  // - ключ кэша держит локаль интерфейса (`getActiveLocale()`), а запрос —
+  //   `geocoderLanguage` той же локали; в реестре локалей это 1:1
+  //   (`i18n/config.ts`), так что переключение языка по-прежнему меняет ключ и
+  //   подсказки не приходят из кэша чужого языка (#1742/#1782);
+  // - окно кэша — каноническое 10 мин/30 мин вместо прежних 10 с/60 с: ради
+  //   него переезд и делался. С 10 с вторая форма, открытая через минуту,
+  //   ходила бы к геокодеру заново, и общий кэш не давал бы ничего;
+  // - `limit` НЕ переопределяем на прежние 5: он не входит в ключ кэша, и с
+  //   разными лимитами у двух потребителей размер общего ответа зависел бы от
+  //   того, кто спросил первым. Выпадашка и так скроллится (RESULTS_MAX_HEIGHT).
   const {
     data: results = [],
     isFetching: loading,
     isError,
     refetch,
-  } = useQuery<SearchResult[], Error, SearchResult[], AddressSearchKey>({
-    queryKey: queryKeys.addressSearch(debouncedQuery, geocoderLanguage),
-    enabled: searchEnabled && debouncedQuery.length >= MIN_QUERY_LENGTH,
-    retry: false,
-    staleTime: SEARCH_STALE_TIME_MS,
-    gcTime: SEARCH_GC_TIME_MS,
-    queryFn: async ({ signal, queryKey }: QueryFunctionContext<AddressSearchKey>) => {
-      // И строка, и язык берутся из ключа: тогда язык ответа заведомо совпадает
-      // с языком, под которым ответ ляжет в кэш.
-      const [, language, q] = queryKey
-      const response = await nominatimSearch(
-        { q, limit: SEARCH_LIMIT, addressdetails: 1, acceptLanguage: language },
-        {
-          signal,
-          headers: { 'User-Agent': 'MeTravel/1.0', 'Accept-Language': language },
-        },
-      )
-      if (!response.ok) throw new Error(i18nT('map:components.MapPage.AddressSearch.oshibka_poiska_adresa_ce9e23a9'))
-      return response.json()
-    },
-  })
+  } = useLocationSearchQuery({ query: debouncedQuery, enabled: searchEnabled })
 
   const handleQueryChange = useCallback((text: string) => {
     setQuery(text)
     setSearchEnabled(true)
-    if (text.length < MIN_QUERY_LENGTH) setShowResults(false)
+    if (text.trim().length < MIN_QUERY_LENGTH) setShowResults(false)
   }, [])
 
   const handleSelectResult = useCallback(
-    (result: SearchResult) => {
+    (result: LocationSearchResult) => {
       const lat = parseFloat(result.lat)
       const lng = parseFloat(result.lon)
       setQuery(result.display_name)
@@ -181,31 +161,37 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
     setShowResults(false)
   }, [value])
 
+  // Длину считаем по обрезанной строке — ровно как `useLocationSearchQuery`.
+  // Иначе «  ав  » прошло бы порог здесь, но не в запросе, и форма показала бы
+  // «ничего не найдено» на запрос, которого не было.
   useEffect(() => {
-    if (searchEnabled && debouncedQuery.length >= MIN_QUERY_LENGTH && results.length > 0) {
+    if (searchEnabled && trimmedQuery.length >= MIN_QUERY_LENGTH && results.length > 0) {
       setShowResults(true)
     }
-  }, [debouncedQuery.length, results.length, searchEnabled])
+  }, [trimmedQuery.length, results.length, searchEnabled])
 
   const handleFocus = useCallback(() => {
-    if (searchEnabled && debouncedQuery.length >= MIN_QUERY_LENGTH && results.length > 0) {
+    if (searchEnabled && trimmedQuery.length >= MIN_QUERY_LENGTH && results.length > 0) {
       setShowResults(true)
     }
-  }, [searchEnabled, debouncedQuery.length, results.length])
+  }, [searchEnabled, trimmedQuery.length, results.length])
 
   const showErrorState =
     !loading &&
     isError &&
     searchEnabled &&
-    debouncedQuery.length >= MIN_QUERY_LENGTH
+    trimmedQuery.length >= MIN_QUERY_LENGTH
   const showEmptyState =
     !loading &&
     !isError &&
     searchEnabled &&
-    debouncedQuery.length >= MIN_QUERY_LENGTH &&
+    trimmedQuery.length >= MIN_QUERY_LENGTH &&
     results.length === 0
   const showMinCharsHint =
-    !loading && searchEnabled && query.length > 0 && query.length < MIN_QUERY_LENGTH
+    !loading &&
+    searchEnabled &&
+    query.trim().length > 0 &&
+    query.trim().length < MIN_QUERY_LENGTH
 
   return (
     <View style={styles.container}>
@@ -297,7 +283,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
       {showEmptyState && (
         <View style={styles.emptyResults}>
           <Text style={styles.emptyResultsText}>
-            {i18nT('map:components.MapPage.AddressSearch.nichego_ne_naydeno_po_zaprosu_965e0048')}{debouncedQuery}»
+            {i18nT('map:components.MapPage.AddressSearch.nichego_ne_naydeno_po_zaprosu_965e0048')}{trimmedQuery}»
           </Text>
         </View>
       )}

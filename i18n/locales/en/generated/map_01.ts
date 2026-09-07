@@ -56,7 +56,6 @@ export const mapGenerated1 = {
   "components.MapPage.AddressSearch.ne_udalos_vypolnit_poisk_proverte_soedinenie_d006a955": "Search failed. Check the connection.",
   "components.MapPage.AddressSearch.nichego_ne_naydeno_po_zaprosu_965e0048": "Nothing found for \"",
   "components.MapPage.AddressSearch.ochistit_poisk_14a2d114": "Clear search",
-  "components.MapPage.AddressSearch.oshibka_poiska_adresa_ce9e23a9": "Address search error",
   "components.MapPage.AddressSearch.povtorit_0281f28d": "Repeat",
   "components.MapPage.AddressSearch.povtorit_poisk_6e2f285c": "Repeat search",
   "components.MapPage.AddressSearch.rezultaty_poiska_adresa_cf35a8de": "Address search results",

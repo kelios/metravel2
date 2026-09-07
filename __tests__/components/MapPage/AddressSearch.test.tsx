@@ -2,6 +2,7 @@ import React from 'react'
 import { fireEvent, render, waitFor } from '@testing-library/react-native'
 
 import AddressSearch from '@/components/MapPage/AddressSearch'
+import LocationSearchInput from '@/components/travel/LocationSearchInput'
 import { nominatimSearch } from '@/api/external/nominatim'
 import type { SupportedLocale } from '@/i18n/config'
 import { createQueryWrapper } from '../../helpers/testQueryClient'
@@ -16,6 +17,7 @@ jest.mock('@/i18n', () => {
   const actual = jest.requireActual('@/i18n')
   return {
     ...actual,
+    getActiveLocale: () => mockLocale,
     getActiveLocaleDefinition: () => actual.getLocaleDefinition(mockLocale),
     translate: (key: string) => key,
   }
@@ -64,7 +66,7 @@ describe('AddressSearch: результаты поиска точки маршр
     expect(mockSearch).toHaveBeenCalledTimes(5)
     for (const locale of ['ru', 'be', 'uk', 'pl', 'en']) {
       expect(mockSearch).toHaveBeenCalledWith(
-        { q: 'Острава', limit: 5, addressdetails: 1, acceptLanguage: locale },
+        { q: 'Острава', limit: 7, addressdetails: 1, acceptLanguage: locale },
         expect.objectContaining({
           signal: expect.anything(),
           headers: expect.objectContaining({ 'Accept-Language': locale }),
@@ -108,5 +110,26 @@ describe('AddressSearch: результаты поиска точки маршр
 
     expect(mockSearch).toHaveBeenCalledTimes(2)
     expect(select).toHaveBeenCalledWith('Острава, Чехия', { lat: 49.8209, lng: 18.2625 })
+  })
+
+  // #1819: слой поиска один на все формы точки. Regression control — не «оба
+  // компонента что-то показали», а «геокодер спрошен ровно один раз».
+  it('берёт ответ на тот же запрос из общего кэша, не спрашивая геокодер второй раз', async () => {
+    mockSearch.mockResolvedValue(response([result('Острава, Чехия')]))
+    const view = render(
+      <>
+        <AddressSearch placeholder="Точка маршрута поездки" onAddressSelect={jest.fn()} />
+        <LocationSearchInput placeholder="Точка маршрута статьи" onLocationSelect={jest.fn()} />
+      </>,
+      { wrapper: query.Wrapper },
+    )
+
+    fireEvent.changeText(view.getByPlaceholderText('Точка маршрута поездки'), 'Острава')
+    await waitFor(() => expect(view.getByText('Острава, Чехия')).toBeTruthy())
+
+    fireEvent.changeText(view.getByPlaceholderText('Точка маршрута статьи'), 'Острава')
+    await waitFor(() => expect(view.getByTestId('location-result-123')).toBeTruthy())
+
+    expect(mockSearch).toHaveBeenCalledTimes(1)
   })
 })
