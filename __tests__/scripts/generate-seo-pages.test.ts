@@ -1039,8 +1039,12 @@ describe('travel SSR SEO helpers', () => {
     expect(payload.author.name).toBe('Julia')
     // #1221: JSON-LD тоже читают краулеры (в том числе Google Images), поэтому ширина
     // производной обязательна и здесь — «голый» адрес отдаёт мастер с `no-store`.
+    // #1872: и адрес тот же, что у og:image, — conversion-ключ на кэшируемом
+    // legacy-роуте. На family-роуте ответ шёл мимо кэша nginx (`BYPASS`), то есть
+    // Google Images пересчитывал производную на каждый обход. Ширина при этом
+    // обязана уцелеть: её выбирают по ИСХОДНОМУ семейству, до переписывания.
     expect(payload.image).toEqual([
-      'https://metravel.by/travel-image/1/conversions/pic-detail_hd.jpg?w=1280',
+      'https://metravel.by/media-resize/legacy/1/conversions/pic-detail_hd.jpg?w=1280',
     ])
   })
 

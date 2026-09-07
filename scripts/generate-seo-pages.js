@@ -313,6 +313,32 @@ function toReaderMediaUrlOnApiOrigin(absoluteUrl) {
   }
 }
 
+/**
+ * Адрес обложки для соцпревью: ступень производной плюс тот же transform-роут,
+ * по которому кадр запрашивает читатель (#1872).
+ *
+ * ПОРЯДОК ЗДЕСЬ — ЧАСТЬ КОНТРАКТА, И ОН НЕ КОММУТИРУЕТ. `withSocialPreviewWidth`
+ * узнаёт семейство по ПЕРВОМУ сегменту пути (`SOCIAL_PREVIEW_WIDTH_BY_ROUTE`).
+ * После переписывания первый сегмент — `media-resize`, семейства в таблице нет,
+ * ширина не проставится вовсе, и краулер получит мастер с `no-store` — ровно тот
+ * регресс, который закрыт #1221. Поэтому сначала ширина по исходному
+ * family-роуту, и только потом роут.
+ *
+ * ЗАЧЕМ переписывать. Ownership/family-роуты идут мимо кэша nginx
+ * (`X-Cache-Status: BYPASS`) даже с шириной: тело правильное и `immutable`, но
+ * не кэшируется, поэтому каждый обход краулера и каждый шеринг заново гоняет
+ * ресайз в Django — на одном vCPU с transform concurrency = 1. Legacy-роут тот
+ * же байт в байт ответ кэширует (замер прода 07.09.2026, ключ
+ * `3994/conversions/…-detail_hd.jpg?w=1280`: family `BYPASS`, legacy `MISS` → `HIT`).
+ *
+ * Классам без legacy-роута (плоский корень `/gallery/<hash>.webp` — большинство
+ * обложек) отдельной ветки не нужно: `toLegacyResizePath` отдаёт на них `null`,
+ * и адрес остаётся прежним.
+ */
+function toSocialPreviewUrl(absoluteUrl) {
+  return toReaderMediaUrlOnApiOrigin(withSocialPreviewWidth(absoluteUrl));
+}
+
 function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } = {}) {
   const versioned = buildVersionedTravelImageUrl(rawUrl, updatedAt, id);
   if (!versioned) return '';
@@ -1171,7 +1197,9 @@ function injectMeta(baseHtml, { title, description, canonical, image, ogType = '
   // --- og:image ---
   // #1221: ширину ставим здесь, в единственной точке вставки, чтобы её нельзя было
   // забыть ни на одном из пяти вызовов injectMeta (город, маршрут, travel, квест, статья).
-  image = withSocialPreviewWidth(image);
+  // #1872: и тем же вызовом уводим на кэшируемый transform-роут — иначе превью
+  // пересчитывается в Django на каждый обход краулера и каждый шеринг.
+  image = toSocialPreviewUrl(image);
   if (image) {
     html = replaceOrInsert(
       html,
@@ -1618,7 +1646,10 @@ function buildTravelArticleJsonLd({ headline, description, canonical, image, tra
 
   // #1221: JSON-LD строится мимо injectMeta, поэтому ширину добиваем и здесь —
   // иначе Google Images и краулеры schema.org тянут мастер с `no-store`.
-  const previewImage = withSocialPreviewWidth(image);
+  // #1872: тот же вызов, что у og:image, а не только ширина. Разойдись эти две
+  // ветки — одна страница просила бы одну и ту же обложку двумя адресами: два
+  // cache-key на кадр и живая BYPASS-ветка для Google Images.
+  const previewImage = toSocialPreviewUrl(image);
   if (previewImage) payload.image = [previewImage];
 
   const publishedAt = travel?.created_at || travel?.date_create || travel?.datePublished || null;
@@ -2568,7 +2599,10 @@ function buildQuestJsonLd({ title, description, canonical, image, quest }) {
   };
   // #1221: JSON-LD строится мимо injectMeta, поэтому ширину добиваем и здесь —
   // иначе Google Images и краулеры schema.org тянут мастер с `no-store`.
-  const previewImage = withSocialPreviewWidth(image);
+  // #1872: тот же вызов, что у og:image, а не только ширина. Разойдись эти две
+  // ветки — одна страница просила бы одну и ту же обложку двумя адресами: два
+  // cache-key на кадр и живая BYPASS-ветка для Google Images.
+  const previewImage = toSocialPreviewUrl(image);
   if (previewImage) payload.image = [previewImage];
   const city = String(quest?.city_name || quest?.cityName || quest?.city?.name || '').trim();
   if (city) {
@@ -4577,6 +4611,7 @@ if (typeof module !== 'undefined' && module.exports) {
     upgradeThumbToDetailUrl,
     buildTravelSeoDescription,
     pickTravelSeoImage,
+    toSocialPreviewUrl,
     buildOptimizedTravelImageUrl,
     buildTravelHeroPreloadData,
     injectTravelHeroPreload,
