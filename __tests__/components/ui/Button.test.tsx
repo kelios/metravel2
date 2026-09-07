@@ -1,6 +1,6 @@
 import { createRef } from 'react'
 import { fireEvent, render } from '@testing-library/react-native'
-import { Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 
 import Button from '@/components/ui/Button'
 
@@ -119,6 +119,20 @@ describe('ui/Button', () => {
     render(<Button label="Отмена" ref={ref} />)
     // ConfirmDialog relies on this ref to drive focus-trap initialFocus.
     expect(ref.current).not.toBeNull()
+  })
+
+  it('ужимает свою начинку: подпись сокращается внутри рамки, а не выходит за неё (#1853)', () => {
+    // Ряд «иконка + подпись» идёт с дефолтом View flexShrink: 0, поэтому
+    // кнопка, ограниченная по ширине снаружи (maxWidth/width/stretch),
+    // держала подпись шириной по содержимому и выносила её за рамку вместо
+    // многоточия, которое даёт numberOfLines={1}.
+    const { getByText } = render(<Button label="Вернуться: 1. Печать высокого берега" />)
+
+    const label = getByText('Вернуться: 1. Печать высокого берега')
+    expect(StyleSheet.flatten(label.props.style)).toMatchObject({ flexShrink: 1 })
+    // parent — обёртка composite Text, ряд-контейнер живёт на шаг выше.
+    const contentRow = label.parent?.parent
+    expect(StyleSheet.flatten(contentRow?.props.style)).toMatchObject({ flexShrink: 1, minWidth: 0 })
   })
 
   it('forwards accessibilityHint', () => {
