@@ -19,6 +19,7 @@ const fs = require('fs');
 const path = require('path');
 const { loadCatalogs: loadI18nCatalogs } = require('../i18n/babel-inline-plugin');
 const { fetchJson, sleep } = require('./lib/fetchJson');
+const { toLegacyResizePath } = require('./lib/readerMediaUrl');
 const { injectSkeletonShell } = require('./ssg-skeletons');
 const { ensureHtmlChunkReloadGuards } = require('./lib/htmlChunkReloadGuard');
 const { buildQuestSeoMetadata, buildBrandedSeoTitle, clampMetaDescription } = require('../utils/questSeo');
@@ -238,43 +239,6 @@ function snapProxyQuality(value) {
   return PROXY_QUALITY_LADDER.find((candidate) => candidate >= q) || 85;
 }
 
-// Зеркало `toLegacyResizePath` из `utils/mediaUrl.ts` для класса ключей
-// `**/conversions/**`. Family-роуты в proxy-contract v4 — `source_passthrough`
-// (#1195): отдают мастер на любой ширине и с `no-store`. Публичный путь это алиас
-// бакета, поэтому ключ адресуется своим transform-роутом `/media-resize/legacy/`.
-// Расхождение с клиентом ловит `__tests__/scripts/travelHeroPreloadParity.test.ts`:
-// preload обязан греть ровно тот файл, который затем запросит `<img>`.
-const FIRST_PARTY_MEDIA_ROUTE =
-  /^\/(?:gallery|travel-image|travel-description-image|address-image)\/(.+)$/i;
-const LEGACY_IMAGE_EXTENSIONS = new Set(['gif', 'heic', 'heif', 'jpeg', 'jpg', 'png', 'webp']);
-
-function toLegacyConversionPathname(pathname) {
-  const match = FIRST_PARTY_MEDIA_ROUTE.exec(pathname);
-  if (!match) return null;
-
-  let key;
-  try {
-    key = decodeURIComponent(match[1]);
-  } catch {
-    return null;
-  }
-  if (!key || key.includes('\\') || key.includes('\0')) return null;
-
-  const parts = key.split('/');
-  if (parts.some((part) => !part || part === '.' || part === '..')) return null;
-
-  const extension = (parts[parts.length - 1].split('.').pop() || '').toLowerCase();
-  if (!LEGACY_IMAGE_EXTENSIONS.has(extension)) return null;
-
-  const conversionIndex = parts.indexOf('conversions');
-  if (conversionIndex <= 0 || conversionIndex !== parts.lastIndexOf('conversions')) return null;
-  if (conversionIndex >= parts.length - 1) return null;
-  if (parts.includes('responsive-images') || parts[0].includes(':')) return null;
-
-  // Ключ берётся из pathname как есть: клиент тоже не перекодирует его.
-  return `/media-resize/legacy/${match[1]}`;
-}
-
 /**
  * Зеркало `socialPreviewWidthForRoute` из `constants/imageContract.ts`: ступень
  * производной для og:image по семейству. Сверяется тестом
@@ -316,12 +280,31 @@ function withSocialPreviewWidth(absoluteUrl) {
   }
 }
 
-/** Тот же rewrite для готового абсолютного URL; чужой origin не трогаем. */
-function toLegacyConversionUrl(absoluteUrl) {
+/**
+ * Адрес, по которому кадр запросит читатель, — для готового абсолютного URL;
+ * чужой origin не трогаем.
+ *
+ * Правило переписывания здесь СВОЁ НЕ ЖИВЁТ: оно одно на все гейты и на SSG —
+ * `toLegacyResizePath` из `scripts/lib/readerMediaUrl.js` (#1854). До #1868 тут
+ * стояла его четвёртая копия, и сверялась она не с самим правилом, а с разметкой
+ * страницы (`travelHeroPreloadParity`: preload греет тот же файл, что просит
+ * `<img>`). Сузься во фронте набор расширений — обе стороны SSG уехали бы
+ * согласованно, тест остался бы зелёным, а preload грел бы адрес по устаревшему
+ * правилу. Ровно так уже разъехались три копии до общего модуля.
+ *
+ * Берётся `toLegacyResizePath`, а не `toReaderMediaPath`: контракт вызывающего —
+ * «переписать или оставить как есть», и `null` на непереписываемом пути обязан
+ * отличаться от переписанного адреса. `toReaderMediaPath` на таком пути отдаёт
+ * путь как есть, и одно от другого было бы не отличить.
+ *
+ * На вход идёт ТОЛЬКО `pathname`: origin вызывающий уже проверил, а query
+ * остаётся на самом `parsed` — присвоение `parsed.pathname` строку с `?` не примет.
+ */
+function toReaderMediaUrlOnApiOrigin(absoluteUrl) {
   try {
     const parsed = new URL(absoluteUrl);
     if (parsed.origin !== API_ORIGIN) return absoluteUrl;
-    const legacyPathname = toLegacyConversionPathname(parsed.pathname);
+    const legacyPathname = toLegacyResizePath(parsed.pathname);
     if (!legacyPathname) return absoluteUrl;
     parsed.pathname = legacyPathname;
     return parsed.toString();
@@ -340,7 +323,7 @@ function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } 
       return parsed.toString();
     }
 
-    const legacyPathname = toLegacyConversionPathname(parsed.pathname);
+    const legacyPathname = toLegacyResizePath(parsed.pathname);
     if (legacyPathname) parsed.pathname = legacyPathname;
 
     IMAGE_OPTIMIZATION_QUERY_PARAMS.forEach((key) => {
@@ -526,8 +509,8 @@ function resolveManifestSources(entry) {
       const absolute = toAbsoluteUrl(m[1]);
       if (!absolute) continue;
       // Зеркало `resolveMediaVariantUrl`: URL манифеста идут в preload/`srcSet` как
-      // есть, поэтому conversion-ключ уводится на transform-роут здесь же (#1195).
-      byWidth.set(width, toLegacyConversionUrl(absolute));
+      // есть, поэтому legacy-ключ уводится на transform-роут здесь же (#1195).
+      byWidth.set(width, toReaderMediaUrlOnApiOrigin(absolute));
     }
   }
   return [...byWidth.entries()]
@@ -550,7 +533,7 @@ function resolveManifestVariants(entry) {
     if (!Number.isFinite(width) || width <= 0) continue;
     const absolute = toAbsoluteUrl(String(rawUrl || '').trim());
     if (!absolute) continue;
-    const url = toLegacyConversionUrl(absolute);
+    const url = toReaderMediaUrlOnApiOrigin(absolute);
     const fitMatch = VARIANT_FIT_PARAM.exec(url);
     resolved.push({ width, url, fit: fitMatch ? fitMatch[1].toLowerCase() : null });
   }
