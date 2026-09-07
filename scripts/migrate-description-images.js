@@ -4,6 +4,13 @@
  * base64-кадры (`data:image/...`) → канонический `travel-description-image`
  * (#1245, #1320).
  *
+ * ОХВАТ. Тело статьи — это ЧЕТЫРЕ rich-text-поля: `description`, `plus`, `minus`,
+ * `recommendation` (`BODY_FIELDS`). Читаются и переписываются все четыре. Пока
+ * конвейер знал только `description`, «миграция прошла» и «класс `uploads/**`
+ * кончился» были разными утверждениями: семь кадров в `recommendation` статей
+ * 116/171/220/290 остались мастерами с `no-store` и нашлись только корпусным
+ * прогоном по всем полям (#1855).
+ *
  * ЗАЧЕМ. В телах статей фотография адресуется тремя разными способами: прямой
  * ссылкой на бакет, той же ссылкой в обёртке `images.weserv.nl` (до трёх слоёв) и
  * нашими family-роутами. Класс `uploads/**` при этом мёртвый — durable-производных
@@ -17,7 +24,8 @@
  * запись идёт в ЖИВЫЕ опубликованные статьи.
  *   1. BACKUP   — полный payload GET на диск до любой записи (`--restore <id>`).
  *   2. VERIFY   — после PUT повторный GET и сверка, что publish/moderation/slug/
- *                 галерея/точки/текст не поехали.
+ *                 галерея/точки/текст не поехали, а каждое переписанное поле
+ *                 записалось.
  *   3. ROLLBACK — при регрессии автоматический откат и ненулевой exit.
  * Плюс проверка самих картинок: новый URL обязан отдавать `stored-derivative`.
  *
@@ -36,6 +44,7 @@
 const fs = require('fs')
 const path = require('path')
 const https = require('https')
+const { RICH_TEXT_FIELDS } = require('./lib/articleBodyMedia')
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '')
 const SITE = API_BASE.replace(/\/api$/, '')
@@ -368,7 +377,94 @@ function countImages(html) {
   return (String(html || '').match(/<img\b/gi) || []).length
 }
 
+/**
+ * Rich-text-поля статьи, в которых читатель видит картинки.
+ *
+ * Их четыре, а не одно: `description` — основной текст, `plus`/`minus` —
+ * «понравилось/не понравилось», `recommendation` — «Рекомендации». Конвейер
+ * #1245 знал только про первое, поэтому «миграция прошла» и «класс `uploads/**`
+ * кончился» разъехались: семь кадров в `recommendation` четырёх статей (116,
+ * 171, 220, 290) остались мастерами с `no-store` и нашлись только корпусным
+ * прогоном #1834, смотревшим все четыре поля (#1855).
+ *
+ * Список берётся из `scripts/lib/articleBodyMedia.js`, а не объявляется здесь
+ * заново: там он уже общий для 404-прогона (#1834) и `post-deploy-media-check`.
+ * Своя копия — это ровно та расстыковка, из которой вырос #1855: аудит смотрел
+ * четыре поля, конвейер писал одно, и оба отчитывались «чисто».
+ */
+const BODY_FIELDS = RICH_TEXT_FIELDS
+
+/**
+ * Разбор всех тел статьи по полям: что в каждом лежит и что подлежит миграции.
+ *
+ * Возвращает запись на КАЖДОЕ поле, включая пустые, — фильтрует вызывающий.
+ * Инвентарю нужен полный срез, миграции — только поля с работой.
+ */
+function collectBodyFieldRefs(detail) {
+  return BODY_FIELDS.map((field) => {
+    const original = (detail && detail[field]) || ''
+    const legacyRefs = collectLegacyUploadRefs(original)
+    const dataUriRefs = collectDataUriRefs(original)
+    const pointRefs = collectPointImageRefs(original)
+    return {
+      field,
+      original,
+      legacyRefs,
+      dataUriRefs,
+      pointRefs,
+      refs: [...legacyRefs, ...dataUriRefs, ...pointRefs],
+      httpRefs: (original.match(/http:\/\/(?:cdn\.|api\.)?metravel\.by/gi) || []).length,
+    }
+  })
+}
+
+/** Одной строкой: что нашлось в теле. Пустые категории не печатаем. */
+function describeRefs(entry) {
+  return [
+    `legacy ${entry.legacyRefs.length}`,
+    entry.dataUriRefs.length ? `base64 ${entry.dataUriRefs.length}` : null,
+    entry.pointRefs.length ? `фото точек ${entry.pointRefs.length}` : null,
+    entry.httpRefs ? `http-ссылок ${entry.httpRefs}` : null,
+  ]
+    .filter(Boolean)
+    .join(', ')
+}
+
+/**
+ * Инварианты содержания одного поля: миграция меняет ТОЛЬКО адреса.
+ *
+ * Бросает при первом же расхождении — переписанное тело в этом состоянии писать
+ * нельзя, и остановиться дешевле, чем разбирать испорченный текст постфактум.
+ */
+function assertOnlyAddressesChanged(field, original, next) {
+  if (countImages(next) !== countImages(original)) {
+    throw new Error(`${field}: число <img> изменилось: ${countImages(original)} → ${countImages(next)}`)
+  }
+  // Текст сравниваем, применив апгрейд протокола к ОБЕИМ версиям: это единственное
+  // изменение содержания, которое миграции разрешено. В телах встречаются видимые
+  // ссылки на свои же статьи, набранные текстом (`http://metravel.by/travels/…` —
+  // 6 штук в статье 447), и апгрейд их правит: https-версия избавляет читателя от
+  // редиректа, а страницу — от смешанного содержимого. Всё остальное расхождение
+  // означает, что замена задела текст, и это повод остановиться.
+  if (plainText(next) !== plainText(upgradeFirstPartyProtocol(original))) {
+    throw new Error(`${field}: текст статьи изменился — миграция обязана трогать только адреса`)
+  }
+  if (collectLegacyUploadRefs(next).length) {
+    throw new Error(`${field}: в теле остались legacy-ссылки после замены`)
+  }
+  if (collectDataUriRefs(next).length) {
+    throw new Error(`${field}: в теле остались base64-кадры после замены`)
+  }
+  if (collectPointImageRefs(next).length) {
+    throw new Error(`${field}: в теле остались ссылки на фото точек после замены`)
+  }
+}
+
 module.exports = {
+  BODY_FIELDS,
+  collectBodyFieldRefs,
+  describeRefs,
+  assertOnlyAddressesChanged,
   unwrapWeserv,
   legacyUploadKey,
   collectLegacyUploadRefs,
@@ -486,7 +582,10 @@ async function runInventory(token) {
     const detail = JSON.parse(text)
     fs.writeFileSync(path.join(BACKUP_DIR, `${item.id}.json`), JSON.stringify(detail, null, 2))
 
-    const refs = collectLegacyUploadRefs(detail.description || '')
+    // Считаем тем же охватом, каким мигрируем: иначе «класса больше нет» —
+    // утверждение про одно поле, а не про статью (#1855).
+    const byField = collectBodyFieldRefs(detail)
+    const refs = byField.flatMap((entry) => entry.legacyRefs)
     if (refs.length) {
       withLegacy += 1
       totalRefs += refs.length
@@ -497,9 +596,12 @@ async function runInventory(token) {
       user: item.user ?? null,
       userName: item.userName ?? null,
       publish: detail.publish ?? null,
-      images: countImages(detail.description || ''),
+      images: byField.reduce((sum, entry) => sum + countImages(entry.original), 0),
       legacyRefs: refs.length,
       keys: refs.map((r) => r.key),
+      fields: Object.fromEntries(
+        byField.filter((entry) => entry.legacyRefs.length).map((entry) => [entry.field, entry.legacyRefs.length]),
+      ),
     })
 
     if ((i + 1) % 25 === 0) console.log(`  … ${i + 1}/${list.length}`)
@@ -744,28 +846,29 @@ async function migrateOne(id, { token, dryRun }) {
   const { status, text } = await request('GET', `/travels/${id}/`, null, token)
   if (status !== 200) throw new Error(`GET travel ${id} → HTTP ${status}`)
   const before = JSON.parse(text)
-  const original = before.description || ''
 
-  const dataUriRefs = collectDataUriRefs(original)
-  const pointRefs = collectPointImageRefs(original)
-  const refs = [...collectLegacyUploadRefs(original), ...dataUriRefs, ...pointRefs]
-  const httpRefs = (original.match(/http:\/\/(?:cdn\.|api\.)?metravel\.by/gi) || []).length
-  console.log(
-    `📄 [${id}] ${before.slug} — картинок в теле ${countImages(original)}, из них legacy ${refs.length - dataUriRefs.length - pointRefs.length}` +
-      (dataUriRefs.length ? `, base64 ${dataUriRefs.length}` : '') +
-      (pointRefs.length ? `, фото точек ${pointRefs.length}` : '') +
-      (httpRefs ? `, http-ссылок ${httpRefs}` : ''),
-  )
-  if (!refs.length && !httpRefs) {
+  // Читаем все четыре rich-text-поля, а не одно `description`: в остальных трёх
+  // легаси-кадры так и лежали, потому что конвейер до них не доходил (#1855).
+  const byField = collectBodyFieldRefs(before)
+  const pending = byField.filter((entry) => entry.refs.length || entry.httpRefs)
+  const images = byField.reduce((sum, entry) => sum + countImages(entry.original), 0)
+  const refsTotal = pending.reduce((sum, entry) => sum + entry.refs.length, 0)
+  const httpTotal = pending.reduce((sum, entry) => sum + entry.httpRefs, 0)
+
+  console.log(`📄 [${id}] ${before.slug} — картинок в телах ${images}, полей с работой ${pending.length}`)
+  for (const entry of pending) console.log(`   ${entry.field}: ${describeRefs(entry)}`)
+  if (!pending.length) {
     console.log('   нечего мигрировать (идемпотентность: уже мигрирована либо legacy не было)')
     return { id, status: 'skipped' }
   }
 
   if (dryRun) {
-    for (const ref of refs) console.log(`   • ${ref.key}`)
-    if (httpRefs) console.log(`   • апгрейд протокола у ${httpRefs} ссылок`)
+    for (const entry of pending) {
+      for (const ref of entry.refs) console.log(`   • ${entry.field}: ${ref.key}`)
+    }
+    if (httpTotal) console.log(`   • апгрейд протокола у ${httpTotal} ссылок`)
     console.log('   --dry-run: ничего не записано')
-    return { id, status: 'dry-run', refs: refs.length, httpRefs }
+    return { id, status: 'dry-run', refs: refsTotal, httpRefs: httpTotal }
   }
 
   // Бэкап ДО любой записи — тем же именем и форматом, что у seo-edit.
@@ -774,57 +877,40 @@ async function migrateOne(id, { token, dryRun }) {
   fs.writeFileSync(backupPath, JSON.stringify(before, null, 2))
   console.log(`   💾 бэкап: ${path.basename(backupPath)}`)
 
-  let next = original
+  const nextByField = {}
   const uploaded = []
-  for (const ref of refs) {
-    // Легаси-ссылку надо скачать, base64 уже несёт кадр в себе — дальше конвейер общий.
-    // Три источника — один конвейер: base64 несёт кадр в себе, фото точки лежит по
-    // собственному адресу, legacy-ключ достаётся через `/media-resize/`.
-    const file = ref.dataUri
-      ? decodeDataUri(ref.raw)
-      : ref.frameUrl
-        ? await downloadFrame(ref.frameUrl)
-        : await downloadMaster(ref.key)
-    const url = await uploadDescriptionImage(id, file, token)
-    // Заменяем ВСЕ вхождения именно этой строки: один и тот же кадр может стоять
-    // в теле несколько раз, в том числе в разных weserv-обёртках.
-    next = next.split(ref.raw).join(url)
-    uploaded.push({ key: ref.key, url, bytes: file.buffer.length })
-    console.log(`   ↑ ${ref.key} → ${url.replace(SITE, '')} (${file.buffer.length} B)`)
-    // 1 с между картинками, а не 0.4: каждая загрузка тянет за собой нарезку шести
-    // производных на единственном vCPU, и на статьях с 30+ фото прежний темп
-    // выбивал из прода 502 (статья 207).
-    await sleep(1000)
+  for (const entry of pending) {
+    let next = entry.original
+    for (const ref of entry.refs) {
+      // Легаси-ссылку надо скачать, base64 уже несёт кадр в себе — дальше конвейер общий.
+      // Три источника — один конвейер: base64 несёт кадр в себе, фото точки лежит по
+      // собственному адресу, legacy-ключ достаётся через `/media-resize/`.
+      const file = ref.dataUri
+        ? decodeDataUri(ref.raw)
+        : ref.frameUrl
+          ? await downloadFrame(ref.frameUrl)
+          : await downloadMaster(ref.key)
+      const url = await uploadDescriptionImage(id, file, token)
+      // Заменяем ВСЕ вхождения именно этой строки: один и тот же кадр может стоять
+      // в теле несколько раз, в том числе в разных weserv-обёртках.
+      next = next.split(ref.raw).join(url)
+      uploaded.push({ field: entry.field, key: ref.key, url, bytes: file.buffer.length })
+      console.log(`   ↑ ${entry.field}: ${ref.key} → ${url.replace(SITE, '')} (${file.buffer.length} B)`)
+      // 1 с между картинками, а не 0.4: каждая загрузка тянет за собой нарезку шести
+      // производных на единственном vCPU, и на статьях с 30+ фото прежний темп
+      // выбивал из прода 502 (статья 207).
+      await sleep(1000)
+    }
+
+    // Заодно чиним протокол у наших адресов, уже лежащих в теле: http-картинка на
+    // https-странице блокируется браузером как mixed content.
+    next = upgradeFirstPartyProtocol(next)
+    // Инварианты содержания: миграция меняет ТОЛЬКО адреса.
+    assertOnlyAddressesChanged(entry.field, entry.original, next)
+    nextByField[entry.field] = next
   }
 
-  // Заодно чиним протокол у наших адресов, уже лежащих в теле: http-картинка на
-  // https-странице блокируется браузером как mixed content.
-  next = upgradeFirstPartyProtocol(next)
-
-  // Инварианты содержания: миграция меняет ТОЛЬКО адреса.
-  if (countImages(next) !== countImages(original)) {
-    throw new Error(`число <img> изменилось: ${countImages(original)} → ${countImages(next)}`)
-  }
-  // Текст сравниваем, применив апгрейд протокола к ОБЕИМ версиям: это единственное
-  // изменение содержания, которое миграции разрешено. В телах встречаются видимые
-  // ссылки на свои же статьи, набранные текстом (`http://metravel.by/travels/…` —
-  // 6 штук в статье 447), и апгрейд их правит: https-версия избавляет читателя от
-  // редиректа, а страницу — от смешанного содержимого. Всё остальное расхождение
-  // означает, что замена задела текст, и это повод остановиться.
-  if (plainText(next) !== plainText(upgradeFirstPartyProtocol(original))) {
-    throw new Error('текст статьи изменился — миграция обязана трогать только адреса')
-  }
-  if (collectLegacyUploadRefs(next).length) {
-    throw new Error('в теле остались legacy-ссылки после замены')
-  }
-  if (collectDataUriRefs(next).length) {
-    throw new Error('в теле остались base64-кадры после замены')
-  }
-  if (collectPointImageRefs(next).length) {
-    throw new Error('в теле остались ссылки на фото точек после замены')
-  }
-
-  const payload = buildUpsertPayload(before, { description: next })
+  const payload = buildUpsertPayload(before, nextByField)
   const put = await request('PUT', '/travels/upsert/', payload, token)
   console.log(`   PUT /travels/upsert/ → HTTP ${put.status}`)
   if (put.status < 200 || put.status >= 300) {
@@ -835,11 +921,19 @@ async function migrateOne(id, { token, dryRun }) {
   const after = JSON.parse((await request('GET', `/travels/${id}/`, null, token)).text)
 
   // Регрессия ДАННЫХ — единственное основание для отката. Если слетела публикация,
-  // slug, галерея или точки, старое описание надо вернуть немедленно.
-  const regressions = detectRegression(before, after, { expectChanged: true, newDescription: next })
+  // slug, галерея или точки, старые тела надо вернуть немедленно. Сохранность
+  // сверяется по КАЖДОМУ переписанному полю: описание своим контрактом
+  // `expectChanged`, остальные — через `newFields`, тем же порогом.
+  const { description: nextDescription = null, ...nextOtherFields } = nextByField
+  const regressions = detectRegression(before, after, {
+    expectChanged: nextDescription != null,
+    newDescription: nextDescription,
+    newFields: nextOtherFields,
+  })
   if (regressions.length) {
     console.error(`   ❌ регрессия данных: ${regressions.join('; ')}`)
-    const rollback = await request('PUT', '/travels/upsert/', buildUpsertPayload(before, { description: original }), token)
+    const originalByField = Object.fromEntries(pending.map((entry) => [entry.field, entry.original]))
+    const rollback = await request('PUT', '/travels/upsert/', buildUpsertPayload(before, originalByField), token)
     console.error(`   ↩︎ откат PUT → HTTP ${rollback.status}`)
     throw new Error(`статья ${id} откачена: ${regressions.join('; ')}`)
   }
@@ -852,12 +946,12 @@ async function migrateOne(id, { token, dryRun }) {
   // человек перепроверил, но написанное не трогаем.
   const probeProblems = []
   for (const upload of uploaded) {
-    probeProblems.push(...(await verifyCanonical(upload.url)).map((p) => `${upload.key}: ${p}`))
+    probeProblems.push(...(await verifyCanonical(upload.url)).map((p) => `${upload.field}/${upload.key}: ${p}`))
   }
   if (probeProblems.length) {
     console.error(`   ⚠️  записано, но проверить не удалось: ${probeProblems.slice(0, 6).join('; ')}`)
     throw new Error(
-      `статья ${id}: описание записано и данные целы, но ${probeProblems.length} проб не прошли — ` +
+      `статья ${id}: тела записаны и данные целы, но ${probeProblems.length} проб не прошли — ` +
         'откат НЕ делался, проверьте вручную',
     )
   }
@@ -1055,7 +1149,10 @@ async function restoreOne(id, token) {
   const file = latestBackup(BACKUP_DIR, id)
   if (!file) throw new Error(`нет бэкапа для ${id}`)
   const before = JSON.parse(fs.readFileSync(file, 'utf8'))
-  const put = await request('PUT', '/travels/upsert/', buildUpsertPayload(before, { description: before.description || '' }), token)
+  // Возвращаем все четыре тела, а не только описание: миграция теперь пишет и в
+  // `plus`/`minus`/`recommendation`, и откат обязан покрывать тот же охват (#1855).
+  const bodies = Object.fromEntries(BODY_FIELDS.map((field) => [field, before[field] || '']))
+  const put = await request('PUT', '/travels/upsert/', buildUpsertPayload(before, bodies), token)
   console.log(`↩︎ restore ${id} из ${path.basename(file)} → HTTP ${put.status}`)
   if (put.status < 200 || put.status >= 300) throw new Error(`restore → HTTP ${put.status}`)
 }
@@ -1148,19 +1245,22 @@ async function runAudit(token) {
       continue
     }
     const detail = JSON.parse(text)
-    const description = detail.description || ''
-    images += countImages(description)
-
     const problems = []
-    const legacy = collectLegacyUploadRefs(description).length
-    if (legacy) problems.push(`legacy uploads: ${legacy}`)
-    const s3 = (description.match(/metravelprod\.s3/gi) || []).length
-    if (s3) problems.push(`прямых S3: ${s3}`)
-    const weserv = (description.match(/images\.weserv\.nl/gi) || []).length
-    if (weserv) problems.push(`weserv: ${weserv}`)
-    const insecure = (description.match(/http:\/\/(?:cdn\.|api\.)?metravel\.by/gi) || []).length
-    if (insecure) problems.push(`http-ссылок: ${insecure}`)
-    if (problems.length) dirty.push({ id: list[i].id, slug: list[i].slug, problem: problems.join(', ') })
+    // Обход идёт по всем четырём rich-text-полям: описание чистым, а
+    // `recommendation` в legacy-классе — ровно та дыра, которой жил #1855.
+    for (const entry of collectBodyFieldRefs(detail)) {
+      const body = entry.original
+      images += countImages(body)
+      const found = []
+      if (entry.legacyRefs.length) found.push(`legacy uploads: ${entry.legacyRefs.length}`)
+      const s3 = (body.match(/metravelprod\.s3/gi) || []).length
+      if (s3) found.push(`прямых S3: ${s3}`)
+      const weserv = (body.match(/images\.weserv\.nl/gi) || []).length
+      if (weserv) found.push(`weserv: ${weserv}`)
+      if (entry.httpRefs) found.push(`http-ссылок: ${entry.httpRefs}`)
+      if (found.length) problems.push(`${entry.field} — ${found.join(', ')}`)
+    }
+    if (problems.length) dirty.push({ id: list[i].id, slug: list[i].slug, problem: problems.join('; ') })
 
     if ((i + 1) % 50 === 0) console.log(`  … ${i + 1}/${list.length}`)
     await sleep(120)

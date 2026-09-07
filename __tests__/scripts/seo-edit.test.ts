@@ -169,6 +169,25 @@ describe('buildUpsertPayload', () => {
     expect(p.countries).toEqual([160]);
     expect(p.coordsMeTravel).toEqual([]);
   });
+
+  // #1855: тело статьи — четыре rich-text-поля, и мигрировать картинки надо во
+  // всех. Пока переопределялось только описание, ссылку в `recommendation`
+  // записать было нечем — payload молча возвращал старое значение поля.
+  it('overrides plus/minus/recommendation when provided, leaving description untouched', () => {
+    const p = buildUpsertPayload(live, { recommendation: '<p><img src="/travel-description-image/1"></p>' });
+    expect(p.recommendation).toBe('<p><img src="/travel-description-image/1"></p>');
+    expect(p.description).toBe('<p>old</p>');
+    expect(p.plus).toBe('<p>чисто</p>');
+    expect(p.minus).toBe('<p>дорога</p>');
+  });
+
+  it('collapses a blank override to null — the API rejects a blank string (#1716)', () => {
+    const p = buildUpsertPayload(live, { plus: '', minus: '', recommendation: '' });
+    expect(p.plus).toBeNull();
+    expect(p.minus).toBeNull();
+    expect(p.recommendation).toBeNull();
+    expect(JSON.stringify(p)).not.toContain(SENTINEL);
+  });
 });
 
 describe('detectRegression', () => {
@@ -225,6 +244,33 @@ describe('detectRegression', () => {
     expect(detectRegression(before, after, { expectChanged: true, newDescription: sent })).toEqual(
       expect.arrayContaining([expect.stringContaining('description shrank unexpectedly')])
     );
+  });
+
+  // #1855: миграция картинок пишет и в остальные три тела, поэтому «записалось ли»
+  // обязано проверяться по каждому переписанному полю. Без этого молчаливый no-op
+  // в `recommendation` выглядел бы успешной миграцией.
+  it('holds a rewritten recommendation to the same persistence bar as the description', () => {
+    const sent = '<p><img src="/travel-description-image/1"></p>';
+    const withRec = { ...before, recommendation: '<p><img src="/uploads/a.jpg"></p>' };
+    expect(detectRegression(withRec, { ...withRec, recommendation: sent }, { newFields: { recommendation: sent } })).toEqual(
+      []
+    );
+    expect(detectRegression(withRec, withRec, { newFields: { recommendation: sent } })).toContain(
+      'recommendation did not persist as written'
+    );
+  });
+
+  it('ignores body fields the write did not touch', () => {
+    const after = { ...before, plus: null, minus: null };
+    expect(detectRegression(before, after, { newFields: { plus: null, minus: null } })).toEqual([]);
+  });
+
+  // #1855 вынес проверку сохранности в общий `persistenceProblems`, и вместе с ней
+  // — предохранитель «нечего сверять». Вызов без текста говорит лишь «мы что-то
+  // писали»; сравнивать его с сохранённым нечем, и придуманная отсюда регрессия
+  // откатила бы корректную правку.
+  it('claims a change without handing over the text it sent — nothing to compare', () => {
+    expect(detectRegression(before, before, { expectChanged: true })).toEqual([]);
   });
 });
 

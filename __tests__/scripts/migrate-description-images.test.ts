@@ -7,18 +7,24 @@
  */
 
 const {
+  BODY_FIELDS,
+  assertOnlyAddressesChanged,
   bytesPerPixel,
   buildManifestGeometry,
+  collectBodyFieldRefs,
   collectCanonicalRefs,
   collectDataUriRefs,
   collectLegacyUploadRefs,
   collectPointImageRefs,
   countImages,
   decodeDataUri,
+  describeRefs,
   isOversizedFrame,
   plainText,
   shrinkWidthFor,
 } = require('../../scripts/migrate-description-images.js')
+const { RICH_TEXT_FIELDS } = require('../../scripts/lib/articleBodyMedia.js')
+const { buildUpsertPayload } = require('../../scripts/seo-edit.js')
 
 // Однопиксельный PNG — единственный формат, который нужен для проверки сигнатуры.
 const PNG_1PX_BASE64 =
@@ -224,3 +230,102 @@ describe('collectPointImageRefs', () => {
     expect(collectPointImageRefs(`${point(15601)}${point(15601)}`)).toHaveLength(1);
   });
 });
+
+/**
+ * Охват полей (#1855).
+ *
+ * Конвейер #1245 читал и писал одно `description`, поэтому семь legacy-кадров в
+ * `recommendation` статей 116/171/220/290 конвейер не видел вовсе: `--dry-run`
+ * показывал «legacy 0», а инвентарь по корпусу — «класса больше нет». Тесты
+ * держат ровно это: поле, отличное от описания, доходит и до сбора, и до записи.
+ */
+describe('collectBodyFieldRefs', () => {
+  const LEGACY = 'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/1614096729IMG_6960.JPG'
+
+  it('покрывает все четыре rich-text-поля тела', () => {
+    expect(BODY_FIELDS).toEqual(['description', 'plus', 'minus', 'recommendation'])
+    expect(collectBodyFieldRefs({}).map((entry: { field: string }) => entry.field)).toEqual(BODY_FIELDS)
+  })
+
+  // Охват миграции и охват 404-прогона (#1834) обязаны быть ОДНИМ списком: их
+  // расхождение и есть механизм #1855 — аудит смотрел четыре поля, конвейер писал
+  // одно, и оба отчитывались «чисто». Копия списка здесь этот гейт снимает.
+  it('охват = общий список rich-text-полей, а не своя копия', () => {
+    expect(BODY_FIELDS).toBe(RICH_TEXT_FIELDS)
+  })
+
+  // Читать поле мало — его надо ещё и записать. `buildUpsertPayload` принимает
+  // переопределения по ИМЕНАМ полей, поэтому расширение общего списка без
+  // расширения payload означало бы, что миграция переписывает тело, а PUT молча
+  // отдаёт его обратно старым.
+  it('каждое поле охвата переносится в payload upsert', () => {
+    const detail = { id: 1, name: 'x', description: '<p>d</p>', plus: '<p>p</p>', minus: '<p>m</p>', recommendation: '<p>r</p>' }
+    for (const field of BODY_FIELDS) {
+      const payload = buildUpsertPayload(detail, { [field]: '<p>переписано</p>' })
+      expect(payload[field]).toBe('<p>переписано</p>')
+      for (const other of BODY_FIELDS) {
+        if (other !== field) expect(payload[other]).toBe(detail[other])
+      }
+    }
+  })
+
+  it('находит legacy-кадр в recommendation при чистом description', () => {
+    const detail = { description: '<p>чистое тело</p>', recommendation: `<p><img src="${LEGACY}"></p>` }
+    const pending = collectBodyFieldRefs(detail).filter((entry: { refs: unknown[] }) => entry.refs.length)
+    expect(pending).toHaveLength(1)
+    expect(pending[0].field).toBe('recommendation')
+    expect(pending[0].refs.map((ref: { key: string }) => ref.key)).toEqual(['uploads/1614096729IMG_6960.JPG'])
+    expect(pending[0].original).toBe(detail.recommendation)
+  })
+
+  it('пустое поле не попадает в очередь, но остаётся в срезе', () => {
+    const entries = collectBodyFieldRefs({ recommendation: `<img src="${LEGACY}">` })
+    const empty = entries.find((entry: { field: string }) => entry.field === 'plus')
+    expect(empty.original).toBe('')
+    expect(empty.refs).toEqual([])
+    expect(empty.httpRefs).toBe(0)
+  })
+
+  it('считает http-ссылки на свои домены отдельно от кадров', () => {
+    const entries = collectBodyFieldRefs({ minus: '<p><a href="http://metravel.by/travels/x">тут</a></p>' })
+    const minus = entries.find((entry: { field: string }) => entry.field === 'minus')
+    expect(minus.refs).toEqual([])
+    expect(minus.httpRefs).toBe(1)
+  })
+
+  it('describeRefs печатает только непустые категории', () => {
+    const entries = collectBodyFieldRefs({ recommendation: `<img src="${LEGACY}">` })
+    const rec = entries.find((entry: { field: string }) => entry.field === 'recommendation')
+    expect(describeRefs(rec)).toBe('legacy 1')
+  })
+})
+
+describe('assertOnlyAddressesChanged', () => {
+  const LEGACY = 'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/1614096729IMG_6960.JPG'
+  const CANONICAL = 'https://metravel.by/travel-description-image/290-abc.webp'
+  const original = `<p>Рекомендации</p><img src="${LEGACY}" alt="замок">`
+
+  it('пропускает замену адреса и называет поле в ошибке', () => {
+    const next = original.split(LEGACY).join(CANONICAL)
+    expect(() => assertOnlyAddressesChanged('recommendation', original, next)).not.toThrow()
+  })
+
+  it('ловит оставшийся legacy-кадр', () => {
+    expect(() => assertOnlyAddressesChanged('recommendation', original, original)).toThrow(
+      /recommendation: в теле остались legacy-ссылки/,
+    )
+  })
+
+  it('ловит задетый текст', () => {
+    const next = `<p>Рекомендации и ещё слово</p><img src="${CANONICAL}" alt="замок">`
+    expect(() => assertOnlyAddressesChanged('recommendation', original, next)).toThrow(
+      /recommendation: текст статьи изменился/,
+    )
+  })
+
+  it('ловит пропавшую картинку', () => {
+    expect(() => assertOnlyAddressesChanged('recommendation', original, '<p>Рекомендации</p>')).toThrow(
+      /recommendation: число <img> изменилось: 1 → 0/,
+    )
+  })
+})

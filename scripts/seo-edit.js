@@ -172,13 +172,24 @@ function composeDescription(oldDesc, { prepend = '', append = '', replace = null
 }
 
 /**
- * Echo every real field from the GET detail; override only description +
- * meta_description. gallery/travelAddress are sent empty on purpose: the
+ * Value for a secondary rich-text field: the override when one is given, the
+ * article's current content otherwise. Empty collapses to `null` in both cases —
+ * `plus`/`minus`/`recommendation` are `CharField(allow_null=True)` without
+ * `allow_blank`, so the API rejects a blank STRING and accepts null (#1716).
+ */
+function pickRichText(next, current) {
+  return (next != null ? next : current) || null;
+}
+
+/**
+ * Echo every real field from the GET detail; override only the rich-text body
+ * fields (`description`/`plus`/`minus`/`recommendation`) + meta_description.
+ * gallery/travelAddress are sent empty on purpose: the
  * backend treats empty arrays as "leave unchanged" (photos live in the media
  * collection; points are carried by coordsMeTravel). Empty text fields go out as
  * `null`: the API rejects a blank STRING but accepts and stores null (#1716).
  */
-function buildUpsertPayload(detail, { description, meta } = {}) {
+function buildUpsertPayload(detail, { description, meta, plus, minus, recommendation } = {}) {
   const d = detail || {};
   return {
     id: d.id,
@@ -206,9 +217,9 @@ function buildUpsertPayload(detail, { description, meta } = {}) {
     // изначально пустое поле маркер черновика визарда, от которого потом
     // защищаются `utils/travelFormUtils.ts` и `components/travel/sectionLinks.ts`,
     // а после отката мусор оставался в статье навсегда.
-    plus: d.plus || null,
-    minus: d.minus || null,
-    recommendation: d.recommendation || null,
+    plus: pickRichText(plus, d.plus),
+    minus: pickRichText(minus, d.minus),
+    recommendation: pickRichText(recommendation, d.recommendation),
     // Сентинел здесь не нужен: upsert принимает и хранит `youtube_link: null`
     // (проверено на 583/584). Подставлять его — значит записывать в чистое поле
     // мусор, от которого потом защищаются нормализатор (`api/travelsNormalize.ts`)
@@ -225,11 +236,40 @@ function buildUpsertPayload(detail, { description, meta } = {}) {
 }
 
 /**
+ * A rich-text field we REWROTE must come back rewritten.
+ *
+ * Same three failure shapes for every body field: the write landed empty, the
+ * write silently no-op'd (API handed back the old content), or the stored value
+ * came back materially shorter than what we sent.
+ */
+function persistenceProblems(label, beforeValue, afterValue, sent) {
+  if (sent == null) return [];
+  const problems = [];
+  // API may normalise trailing whitespace; compare trimmed versions to avoid
+  // false-positive regressions from server-side HTML clean-up.
+  const sentTrimmed = String(sent).trim();
+  const gotTrimmed = String(afterValue || '').trim();
+  const beforeTrimmed = String(beforeValue || '').trim();
+  if (!gotTrimmed) {
+    problems.push(`${label} did not persist as written`);
+  } else if (gotTrimmed === beforeTrimmed && sentTrimmed !== beforeTrimmed) {
+    // Write was a silent no-op — API returned the old content unchanged
+    problems.push(`${label} did not persist as written`);
+  } else if (gotTrimmed.length < sentTrimmed.length * 0.8) {
+    problems.push(`${label} shrank unexpectedly: sent ${sentTrimmed.length} chars, got ${gotTrimmed.length}`);
+  }
+  return problems;
+}
+
+/**
  * Compare the article before/after a write and list unintended regressions.
  * `expectChanged` = true when we DID send a new description (so an unchanged
  * description is itself a regression — the write silently no-op'd).
+ * `newFields` carries the same claim for the other rich-text bodies
+ * (`plus`/`minus`/`recommendation`): only the fields we actually rewrote belong
+ * there, and each is held to the same persistence bar as the description.
  */
-function detectRegression(before, after, { expectChanged = false, newDescription = null } = {}) {
+function detectRegression(before, after, { expectChanged = false, newDescription = null, newFields = null } = {}) {
   const problems = [];
   const b = before || {};
   const a = after || {};
@@ -242,20 +282,11 @@ function detectRegression(before, after, { expectChanged = false, newDescription
   const bp = (b.coordsMeTravel || []).length;
   const ap = (a.coordsMeTravel || []).length;
   if (ap < bp) problems.push(`points shrank ${bp} → ${ap}`);
-  if (expectChanged && newDescription != null) {
-    // API may normalise trailing whitespace; compare trimmed versions to avoid
-    // false-positive regressions from server-side HTML clean-up.
-    const sentTrimmed = newDescription.trim();
-    const gotTrimmed = (a.description || '').trim();
-    const beforeTrimmed = (b.description || '').trim();
-    if (!gotTrimmed) {
-      problems.push('description did not persist as written');
-    } else if (gotTrimmed === beforeTrimmed && sentTrimmed !== beforeTrimmed) {
-      // Write was a silent no-op — API returned the old content unchanged
-      problems.push('description did not persist as written');
-    } else if (gotTrimmed.length < sentTrimmed.length * 0.8) {
-      problems.push(`description shrank unexpectedly: sent ${sentTrimmed.length} chars, got ${gotTrimmed.length}`);
-    }
+  if (expectChanged) {
+    problems.push(...persistenceProblems('description', b.description, a.description, newDescription));
+  }
+  for (const [field, sent] of Object.entries(newFields || {})) {
+    problems.push(...persistenceProblems(field, b[field], a[field], sent));
   }
   return problems;
 }
