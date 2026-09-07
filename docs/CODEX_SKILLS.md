@@ -75,10 +75,14 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
   сохраняются как совместимые копии. `audit:prompts` проверяет их metadata и
   совпадение текста. OpenSpec сохраняет vendor-различия адаптеров; это не дубли
   для механического удаления.
-- `.github/skills/metravel-*` — снимки для Copilot, маршрутизируемые по имени из
-  `.github/copilot-instructions.md`. Генератора у них нет, поэтому они отстают от
-  `.codex/skills` молча; `audit:prompts` проверяет только их metadata, а
-  расхождение текста — решение ревью. `speckit-*` там vendor spec-kit
+- `.github/skills/metravel-*` — зеркало для Copilot, маршрутизируемое по имени из
+  `.github/copilot-instructions.md`. Источник правды — `.codex/skills/<имя>`,
+  зеркало собирает `npm run sync:copilot-skills` побайтовой копией каталога;
+  руками не править. Состав объявлен списком `MIRRORED_SKILLS` в
+  `scripts/sync-copilot-skills.js` — снимок `metravel-*` без объявления гейт
+  считает ошибкой, а не новым скиллом. Расхождение ловят
+  `npm run sync:copilot-skills:check` (входит в `npm run lint`) и `audit:prompts`.
+  `speckit-*` там vendor spec-kit
   (`.specify/integrations/copilot.manifest.json`), руками не править.
 - `.claude/agents` — источник ролей, `.grok/agents` генерируется через
   `node .grok/scripts/sync-agents.mjs`. Команды служат короткими входами в skills.

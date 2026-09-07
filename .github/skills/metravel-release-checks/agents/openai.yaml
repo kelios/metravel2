@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Release Checks"
   short_description: "Pick the right metravel validation flow."
-  default_prompt: "Use $metravel-release-checks to choose and run the right metravel checks for this change, fix real failures in scope, and report any unrelated blocker explicitly."
+  default_prompt: "Use $metravel-release-checks to map affected targets and locales, validate shared responsive UI on desktop/mobile web, add native evidence only for native-specific scope, and respect store gates."

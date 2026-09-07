@@ -7,14 +7,9 @@ description: Produce technical designs and review implementation plans or diffs 
 
 Use this skill after a feature brief or bug report and before implementation, or after implementation as a reviewer.
 
-Read first:
-
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- `docs/DEVELOPMENT.md` for local workflow and SEO patterns when relevant.
-- `docs/TESTING.md` for validation planning when relevant.
-- Feature docs from `docs/features/` only for the touched area.
+`AGENTS.md` is inherited. Read the affected feature contract and only the
+canonical architecture/development/testing headings needed for this design or
+review.
 
 ## Technical Design Contract
 
@@ -26,9 +21,10 @@ Existing code to reuse:
 Affected files/modules:
 Data/API impact:
 UI impact:
-Platform impact: web | Android | iOS | shared | none
+Platform impact: desktop web | mobile web | Android | iOS | shared | none
 Localization impact: RU/BE/UK/PL/EN | selected locales | none
 External-link impact:
+Task Contract:
 Risks:
 Implementation steps:
 Validation plan:
@@ -50,11 +46,17 @@ Residual risk:
 ## Rules
 
 - Prefer reuse of existing components, hooks, services, and utilities.
-- Design one shared Expo/React Native product contract and isolate only
-  technical web/Android/iOS adapters.
-- Define translation keys/namespaces, RU/BE/UK/PL/EN coverage, formatting,
-  accessibility/SEO impact, and `npm run test:i18n` when localization is affected.
+- Design against one Expo/React Native architecture. Separate technical platform
+  adapters from shared product behavior and name validation per affected active
+  platform. Common/shared responsive UI uses desktop-web and mobile-web
+  evidence. Android and iOS evidence is required only for target-specific
+  observable behavior/configuration/runtime, at the appropriate native layer.
+  Treat mobile parity as an invariant rather than an automatic device matrix.
+- For app-owned UI copy or locale-sensitive behavior, define translation
+  namespaces/keys, formatting, accessibility/SEO impact, RU/BE/UK/PL/EN coverage,
+  and `npm run test:i18n`. Require a separate API contract for localized server content.
 - Keep implementation steps small enough for one programmer pass.
+- For FE/BE board work, require the `Task Contract` from `docs/TASK_BOARD_MCP.md`; incomplete scope, Data/API contract, platform/localization impact, dependencies, validation, or Done gate is a design blocker.
 - Treat direct external-link usage, hardcoded component hex colors, skipped tests, dead imports, and broken UI states as review findings.
 - Require browser verification for visible web UI changes.
 - Require `npm run guard:external-links` or `npm run governance:verify` when external navigation changes.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel I18n Guardrails"
+  short_description: "Preserve localization across web and native"
+  default_prompt: "Use $metravel-i18n-guardrails to verify affected-locale behavior on desktop/mobile web, adding Android or iPhone lifecycle checks only for platform-specific locale scope."

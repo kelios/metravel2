@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-const fs = require('fs')
 const path = require('path')
+const { toPosix, topSegment, collectFiles, applyMirrorPlan, parseMirrorArgs } = require('./lib/skillMirror')
 
 // #1770: один и тот же скилл лежал в репозитории двумя рукописными копиями —
 // `.claude/skills/<имя>/` для Claude Code и `.agents/skills/<имя>/` для Codex
@@ -41,10 +41,6 @@ const VENDOR_OWNED_SKILLS = ['openspec-']
 const MIRRORED_COMMANDS = ['auto-dev', 'changed-summary', 'check-fast', 'guard-all', 'preflight']
 
 const COMMAND_SKILL_PREFIX = 'source-command-'
-
-const toPosix = (value) => String(value || '').replace(/\\/g, '/')
-
-const topSegment = (relativePath) => toPosix(relativePath).split('/')[0]
 
 const isVendorOwned = (skillName) => VENDOR_OWNED_SKILLS.some((prefix) => skillName.startsWith(prefix))
 
@@ -152,47 +148,6 @@ const planSync = ({ sourceSkillFiles = [], commandFiles, targetFiles = [] } = {}
   }
 }
 
-const collectFiles = (rootDir) => {
-  if (!fs.existsSync(rootDir)) return []
-  const files = []
-  const walk = (currentDir) => {
-    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-      const absolutePath = path.join(currentDir, entry.name)
-      if (entry.isDirectory()) {
-        walk(absolutePath)
-        continue
-      }
-      if (!entry.isFile()) continue
-      files.push({ path: toPosix(path.relative(rootDir, absolutePath)), content: fs.readFileSync(absolutePath, 'utf8') })
-    }
-  }
-  walk(rootDir)
-  return files
-}
-
-const removeEmptyDirsUpTo = (rootDir, startDir) => {
-  let current = startDir
-  while (current.startsWith(rootDir) && current !== rootDir) {
-    if (!fs.existsSync(current) || fs.readdirSync(current).length > 0) return
-    fs.rmdirSync(current)
-    current = path.dirname(current)
-  }
-}
-
-const applyPlan = (rootDir, plan) => {
-  const targetRoot = path.join(rootDir, TARGET_SKILLS_DIR)
-  for (const write of plan.writes) {
-    const absolutePath = path.join(targetRoot, write.path)
-    fs.mkdirSync(path.dirname(absolutePath), { recursive: true })
-    fs.writeFileSync(absolutePath, write.content, 'utf8')
-  }
-  for (const remove of plan.deletes) {
-    const absolutePath = path.join(targetRoot, remove.path)
-    if (fs.existsSync(absolutePath)) fs.unlinkSync(absolutePath)
-    removeEmptyDirsUpTo(targetRoot, path.dirname(absolutePath))
-  }
-}
-
 const buildJsonResult = (plan) => ({
   contractVersion: OUTPUT_CONTRACT_VERSION,
   ok: plan.ok,
@@ -202,13 +157,8 @@ const buildJsonResult = (plan) => ({
   missingCommands: plan.missingCommands,
 })
 
-const parseArgs = (argv) => ({
-  check: argv.includes('--check'),
-  output: argv.includes('--json') ? 'json' : 'text',
-})
-
 const main = () => {
-  const args = parseArgs(process.argv.slice(2))
+  const args = parseMirrorArgs(process.argv.slice(2))
   const rootDir = process.cwd()
 
   const plan = planSync({
@@ -220,7 +170,7 @@ const main = () => {
   if (args.output === 'json') {
     process.stdout.write(`${JSON.stringify({ ...buildJsonResult(plan), mode: args.check ? 'check' : 'write' }, null, 2)}\n`)
     if (args.check && !plan.ok) process.exit(1)
-    if (!args.check) applyPlan(rootDir, plan)
+    if (!args.check) applyMirrorPlan(path.join(rootDir, TARGET_SKILLS_DIR), plan)
     return
   }
 
@@ -251,7 +201,7 @@ const main = () => {
     process.exit(1)
   }
 
-  applyPlan(rootDir, plan)
+  applyMirrorPlan(path.join(rootDir, TARGET_SKILLS_DIR), plan)
   console.log(
     `agent-skill-sync: synced. записано ${plan.writes.length}, удалено ${plan.deletes.length}, зеркало держит ${plan.mirrored} файлов`,
   )

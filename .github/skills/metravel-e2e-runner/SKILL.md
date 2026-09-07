@@ -1,11 +1,22 @@
 ---
 name: metravel-e2e-runner
-description: Run and debug metravel Playwright and browser smoke scenarios, use .env.e2e safely, collect trace or screenshot evidence in ignored folders, and validate real web flows without exposing secrets.
+description: "Run or debug metravel Playwright and browser-smoke flows with safe .env.e2e handling. Use for real-web regression, console, screenshot, trace, or flaky-flow evidence."
 ---
 
 # Metravel E2E Runner
 
-Read `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, and `docs/CODEX.md` before running browser or Playwright flows. Load the matching feature doc from `docs/features/` for the tested area.
+`AGENTS.md` is inherited. Load the matching feature contract and only the
+relevant e2e/auth/operation sections from `docs/TESTING.md` and
+`docs/WORKFLOW_OPERATIONS.md`.
+
+## Runtime entry
+
+For a changed-code acceptance pass, require reviewed code in `testing` before
+runtime probes. Default to the local stack and perform the session's backend
+refresh/readiness procedure from `docs/WORKFLOW_OPERATIONS.md` →
+`3.0 Локальный стек и обновление бэкенда перед тестированием` before the first
+probe. Use dev or production only when explicitly requested; record the actual
+API target. This skill does not grant permission to message other people.
 
 ## When to use
 
@@ -16,10 +27,10 @@ Read `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, and `docs/CODEX.md` before
 
 ## Execution rules
 
+- Before Playwright/e2e/browser-smoke runs, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. If an e2e/full/preflight quality gate is active, stop your duplicate launch without waiting, polling, bypassing, or retrying. `validation delegated/skipped: active gate pid/name` is coordination only. Request the owner result and resume acceptance; do not close from delegation or park the task in `testing`.
 - Use `.env.e2e` credentials when present and never print secrets.
 - Prefer the narrowest Playwright spec or `--grep` scope that proves the scenario.
 - For visible web UI, check browser console errors and confirm the final state with screenshot or trace evidence when useful.
-- Store traces, screenshots, videos, and temporary reports only in ignored folders such as `.codex-temp/`, `playwright-report/`, or `test-results/`.
 - If the scenario is blocked by local server health or external instability, report the blocker and the next concrete re-run step.
 
 ## Repo specifics
@@ -32,5 +43,4 @@ Read `AGENTS.md`, `docs/RULES.md`, `docs/TESTING.md`, and `docs/CODEX.md` before
 
 - `npm run e2e`
 - `npm run check:e2e:changed`
-- `npx playwright test e2e/<spec>.ts --project=chromium --workers=1`
-
+- `node scripts/run-with-quality-gate-lock.js e2e:targeted -- node node_modules/playwright/cli.js test e2e/<spec>.ts --project=chromium --workers=1`

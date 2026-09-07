@@ -1,66 +1,76 @@
 ---
 name: metravel-agent-workflow
-description: Orchestrate a role-based metravel AI workflow across business analyst, system architect, designer, programmer, QA, reviewer, and DevOps agents. Use when Codex needs to split a metravel task into agent roles, run a bug-finding/fixing/deploy loop, or coordinate feature discovery, implementation, validation, review, and deploy without losing project rules.
+description: "Coordinate a small role-based metravel workflow when analysis, implementation, platform work, QA, review, or release must be separated. Use only for genuinely multi-role tasks or controlled bug/release loops."
 ---
 
 # Metravel Agent Workflow
 
-Use this skill to coordinate multiple role prompts or subagents for metravel work. Keep the workflow controlled: each role has a narrow output contract, code changes happen only in the implementation stage, and deploys happen only through the DevOps stage after explicit environment gating.
+Do not use for docs-only work, one isolated bugfix/refactor, a single check or
+board update, or read-only analysis without a downstream handoff. `AGENTS.md` is
+inherited; use `docs/CODEX.md` for routing and load only task-specific references.
 
-Read first:
+## Build the smallest chain
 
-- `AGENTS.md`
-- `docs/RULES.md`
-- `docs/CODEX.md`
-- Extra feature docs only when the task touches that area.
+Choose only stages that produce an artifact consumed by the next stage:
 
-## Role Order
+1. Discovery: project/business analyst only for unclear requirements or broad
+   repository scope.
+2. Design: system architect/domain expert/UI/i18n only for affected contracts.
+3. Implementation: one owning domain/feature/native skill.
+4. Review: `$metravel-code-reviewer` after code changes, preferably independent;
+   this stage is code-only.
+5. Testing: browser/mobile/QA skill only after review passes and the reviewed
+   commit enters `testing`.
+6. Operations: board, deploy, production smoke, or store operator only when that
+   external stage is explicitly in scope.
 
-Default feature flow:
+Never launch the full chain by default. Domain skills own travel/map/profile/
+achievements/quests; Android and iOS roles own only their platform-specific
+surface. Backend diagnosis is read-only.
 
-1. Business Analyst: produce a concise feature brief and acceptance criteria.
-2. System Architect: map the brief to existing code, constraints, web/Android/iOS
-   and RU/BE/UK/PL/EN impact, risk, and validation.
-3. Designer: use `$metravel-ui-guardrails` for visible UI states and web/mobile
-   behavior; add `$metravel-i18n-guardrails` for localization impact.
-4. Programmer: use `$metravel-feature-builder` to implement the smallest sufficient diff.
-5. QA Agent: use `$metravel-qa-agent` to test and create structured bug reports.
-6. Reviewer: use `$metravel-system-architect` in review mode to check the diff, tests, and rule compliance.
-7. DevOps Agent: use `$metravel-devops-agent` only when the user explicitly asks to deploy or verify a deployment.
+## Role contract
 
-Default bug loop:
+Each role receives:
 
-1. QA Agent explores the app and writes bug reports only.
-2. Programmer fixes one confirmed bug report at a time.
-3. QA Agent re-tests the fixed scenario.
-4. Reviewer checks the diff and validation.
-5. DevOps Agent deploys only if the bug fix is approved and the user explicitly requested a target environment.
+```text
+Role/skill and one bounded objective:
+Owned paths or raw evidence:
+Platform/localization impact:
+Task-specific constraints and authority:
+Expected artifact:
+Validation or handoff consumer:
+```
 
-## Control Rules
+Do not paste global project rules into role prompts. Analysts/QA/audit roles are
+read-only unless their selected skill explicitly owns fixes. Keep unrelated
+worktree changes outside every role's ownership.
 
-- Do not let exploratory QA or analyst roles edit code.
-- Do not let implementation start from vague requirements; require acceptance criteria or a bug report first.
-- Do not deploy production from vague wording; require an explicit `prod` deploy request and a clean environment gate.
-- Keep unrelated user changes separate; never revert files outside the task.
-- Preserve project rules for external links, design tokens, e2e secrets, server paths, and scope-based validation.
-- Require every handoff to state platform and localization impact. Common/shared UI
-  requires desktop-web and mobile-web evidence; native evidence is only a gate for
-  corresponding platform-specific scope. If such a required gate is unavailable,
-  stop and request an exact owner unblock, then resume the same acceptance rather
-  than issuing a final `verify pending` handoff.
-- For visible web UI changes, require browser verification, screenshot, and console check before final handoff.
-- If a role finds a real issue in the touched scope, route it to implementation before handoff unless it is explicitly blocked.
+## Control gates
 
-## Handoff Format
+- No frontend role edits backend/Django/server working trees.
+- Production/store mutations require exact target authorization; each iOS stage
+  is separate and Android EAS remains prohibited.
+- Apply operation coordination before build/deploy/full tests/e2e/Lighthouse/
+  device install. Do not duplicate an active target or treat `SKIPPED` as pass.
+- Board work uses Problem Memory → Task Contract → Ticket Board. `blocked_by` is
+  only a hard implementation dependency; `testing` is active QA or an exact
+  recheck, never parking.
+- Visible common UI requires desktop and mobile-web evidence in `testing`.
+  Android/iPhone evidence is added there only for corresponding
+  platform-specific behavior/runtime.
+- Reviewer gets the original task, complete task diff, task-owned paths, and raw
+  code-level checks. It fixes confirmed in-scope findings and re-reviews without
+  browser/API/device runtime QA.
 
-Each role should return one compact artifact:
+## Bug loop
 
-- Business Analyst: `Feature Brief`
-- System Architect: `Technical Design`
-- Designer: `UI Contract`
-- Programmer: `Implementation Summary`
-- QA Agent: `Bug Report` or `QA Pass`
-- Reviewer: `Review Findings`
-- DevOps Agent: `Deploy Report`
+Use only the needed roles: reproduce with evidence → owning implementer fixes →
+independent code-only reviewer repairs/passes → ticket enters `testing` → same
+observable layer retests. Add deploy/release only after a separate explicit
+request.
 
-The orchestrator final answer should include the changed files, validation run, and remaining blockers or risks.
+## Handoff
+
+Return one compact artifact per role. The final coordinator reports artifacts
+consumed, changed files, checks, unresolved blockers, and residual risk; omit
+role transcripts and repeated policy text.

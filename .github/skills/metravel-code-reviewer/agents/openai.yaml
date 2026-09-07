@@ -1,5 +1,4 @@
 interface:
-  display_name: "Metravel Code Reviewer"
-  short_description: "Review diffs for project-rule compliance, validation, and risk."
-  default_prompt: "Use $metravel-code-reviewer to review the proposed metravel diff, lead with concrete findings, check project-rule compliance and missing validation, and call out any residual risk before handoff."
-
+  display_name: "Metravel Code Reviewer and Fixer"
+  short_description: "Review and repair every code diff before handoff"
+  default_prompt: "Use $metravel-code-reviewer to review and fix the complete task diff using code-level checks only, then hand browser, API, simulator, and device scenarios to testing."

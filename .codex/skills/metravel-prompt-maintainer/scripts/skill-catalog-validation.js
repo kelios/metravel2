@@ -59,7 +59,10 @@ const skillMetadataErrors = (skill, skillName, enforceBudget = true) => {
   return errors.concat(descriptionErrors(frontmatter[1], enforceBudget))
 }
 
-const auditSkillFamily = (root, canonicalRoot) => {
+// `canonicalLabel` — как назвать источник в тексте ошибки. #1823 добавил второе
+// зеркало (`.github/skills` против `.codex/skills`), поэтому источник больше не
+// один и зашитая в сообщение строка врала бы про половину находок.
+const auditSkillFamily = (root, canonicalRoot, canonicalLabel = '.agents/skills') => {
   const result = { count: 0, vendorCount: 0, mirrorCount: 0, errors: [] }
   if (!fs.existsSync(root)) {
     result.errors.push({ file: root, message: 'missing skill directory' })
@@ -84,7 +87,7 @@ const auditSkillFamily = (root, canonicalRoot) => {
     if (!fs.existsSync(canonicalFile)) continue
     result.mirrorCount += 1
     if (skill !== fs.readFileSync(canonicalFile, 'utf8')) {
-      result.errors.push({ file, message: `SKILL.md differs from canonical .agents/skills/${entry.name}/SKILL.md` })
+      result.errors.push({ file, message: `SKILL.md differs from canonical ${canonicalLabel}/${entry.name}/SKILL.md` })
     }
   }
   return result
