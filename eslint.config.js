@@ -43,6 +43,8 @@ const baseIgnores = [
   ".codex-temp*/**",
   ".codex-debug*",
   ".codex-debug*/**",
+  // Корневые одноразовые пробники сессий: `<имя>.tmp.<ext>` (#1846).
+  "*.tmp.*",
   // Рабочие каталоги аудитов и временных прогонов (все перечислены в .gitignore)
   ".quest-audit/",
   ".quest-audit/**",

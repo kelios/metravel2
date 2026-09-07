@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 
-const { runCli } = require('./cli-test-utils')
+const { makeTempDir, removeDir, runCli, writeTextFile } = require('./cli-test-utils')
 
 const {
   ALLOWED_ROOT_DOTFILES,
@@ -82,18 +82,33 @@ describe('guard-root-scratch-artifacts', () => {
   })
 
   it('rejects one-off root scripts named without a leading dot', () => {
-    // `eslint.config.js` объявляет `__*.mjs` и `_tmp-*` разовой диагностикой и
-    // просто их не читает: такой артефакт в git не покраснел бы нигде.
+    // `eslint.config.js` объявляет `__*` и `_tmp-*` разовой диагностикой и просто
+    // их не читает: такой артефакт в git не покраснел бы нигде. Расширение тут
+    // роли не играет — `__probe.js` воспроизводит #1846 ровно так же, как .mjs.
     const result = evaluateGuard({
-      trackedFiles: ['__map_diag.mjs', '_tmp-probe.mjs', 'metro.config.js', '__tests__/scripts/x.test.ts'],
+      trackedFiles: [
+        '__map_diag.mjs',
+        '__probe.js',
+        '__diag.ts',
+        '_tmp-probe.mjs',
+        'probe1847.tmp.mjs',
+        'metro.config.js',
+        '__tests__/scripts/x.test.ts',
+      ],
     })
 
     expect(result.ok).toBe(false)
-    expect(result.violations.map((v: { file: string }) => v.file)).toEqual(['__map_diag.mjs', '_tmp-probe.mjs'])
+    expect(result.violations.map((v: { file: string }) => v.file)).toEqual([
+      '__map_diag.mjs',
+      '__probe.js',
+      '__diag.ts',
+      '_tmp-probe.mjs',
+      'probe1847.tmp.mjs',
+    ])
   })
 
   it('leaves ordinary root config files and nested files alone', () => {
-    for (const file of ['metro.config.js', 'app.config.js', 'queryKeys.ts', 'scripts/_tmp-probe.mjs', '__tests__/a.ts']) {
+    for (const file of ['metro.config.js', 'app.config.js', 'queryKeys.ts', 'scripts/_tmp-probe.mjs', 'scripts/x.tmp.js', '__tests__/a.ts']) {
       expect(isScratchArtifact(file)).toBe(false)
     }
   })
@@ -128,13 +143,18 @@ describe('guard-root-scratch-artifacts', () => {
     expect(gitignore).toMatch(/^\.codex-temp\*$/m)
     expect(gitignore).toMatch(/^\.codex-debug\*$/m)
     // Разовая диагностика без точки в имени игнорируется eslint'ом, поэтому
-    // без gitignore-строк она уезжала бы в git молча.
-    expect(gitignore).toMatch(/^\/__\*\.mjs$/m)
-    expect(gitignore).toMatch(/^\/_tmp-\*$/m)
+    // без gitignore-строк она уезжала бы в git молча. Расширения перечислены
+    // поимённо: голый `/__*` унёс бы из git корневые `__tests__/` и `__mocks__/`.
+    const gitignoreLines = gitignore.split('\n')
+    for (const pattern of ['/__*.js', '/__*.cjs', '/__*.mjs', '/__*.ts', '/__*.tsx', '/_tmp-*', '/*.tmp.*']) {
+      expect(gitignoreLines).toContain(pattern)
+    }
+    expect(gitignoreLines).not.toContain('/__*')
 
     const eslintConfig = readRepoFile('eslint.config.js')
     expect(eslintConfig).toContain('".codex-temp*"')
     expect(eslintConfig).toContain('".codex-debug*"')
+    expect(eslintConfig).toContain('"*.tmp.*"')
   })
 
   it('reads the repository root even when started from a subdirectory', () => {
@@ -153,6 +173,28 @@ describe('guard-root-scratch-artifacts', () => {
     expect(seenFromSubdir.status).toBe(0)
     expect(Number(seenFromSubdir.stdout)).toBe(listTrackedFiles(repoRoot).filter(isRootDotfile).length)
     expect(Number(seenFromSubdir.stdout)).toBeGreaterThan(0)
+  })
+
+  it('sees a non-ASCII artifact name that git would otherwise quote', () => {
+    // При дефолтном `core.quotePath` git отдаёт не-ASCII путь как
+    // `".codex-\\321\\202..."`. Имя перестаёт начинаться с точки, и guard
+    // отчитался бы «passed» на реальном артефакте — именно на чистом CI-runner'е,
+    // где нет system-конфига, глушащего квотирование на машине разработчика.
+    const repo = makeTempDir('guard-root-scratch-quotepath-')
+    try {
+      runCli('git', ['init', '-q', '.'], { cwd: repo })
+      runCli('git', ['config', 'core.quotePath', 'true'], { cwd: repo })
+      writeTextFile(path.join(repo, '.codex-темп-проба.js'), 'const a = 1\n')
+      runCli('git', ['add', '-A', '-f'], { cwd: repo })
+
+      expect(listTrackedFiles(repo)).toEqual(['.codex-темп-проба.js'])
+
+      const run = runCli(process.execPath, [guardPath], { cwd: repo })
+      expect(run.status).toBe(1)
+      expect(run.stderr).toContain('.codex-темп-проба.js')
+    } finally {
+      removeDir(repo)
+    }
   })
 
   it('keeps the --json payload shaped for automation', () => {

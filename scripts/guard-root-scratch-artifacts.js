@@ -27,6 +27,8 @@ const { isAllowedEnvPlaceholder } = require('./guard-env-secrets')
 
 const OUTPUT_CONTRACT_VERSION = 1
 
+const GIT_PATH_ARGS = ['-c', 'core.quotePath=false']
+
 // Легитимные top-level dotfile-ы. Новый файл в этом списке — осознанное
 // решение владельца конфигурации, а не побочный эффект `git add`.
 const ALLOWED_ROOT_DOTFILES = new Set([
@@ -43,7 +45,9 @@ const ALLOWED_ROOT_DOTFILES = new Set([
 // eslint их лишь не читает — в git они попадали свободно, и такой артефакт на
 // origin/main не краснел бы вовсе (в отличие от #1846). Класс закрывается тем
 // же индексом.
-const ROOT_SCRATCH_FILE_PATTERNS = [/^__.+\.mjs$/, /^_tmp-/]
+// Расширение перечисляется, потому что `_tmp-` ловит любое, а `__` — только
+// исполняемый скрипт: корневой `__probe.js` воспроизводил бы #1846 целиком.
+const ROOT_SCRATCH_FILE_PATTERNS = [/^__.+\.[cm]?[jt]sx?$/, /^_tmp-/, /\.tmp\.[^.]+$/]
 
 const REMEDIATION =
   'Временные скрипты и логи держи внутри .codex-temp/, .codex-debug/, test-results/ или playwright-report/ (AGENTS.md §3). Если это настоящий конфиг проекта — переименуй его вне scratch-конвенций и добавь dotfile в ALLOWED_ROOT_DOTFILES в scripts/guard-root-scratch-artifacts.js.'
@@ -105,14 +109,22 @@ const evaluateGuard = ({ trackedFiles = [] } = {}) => {
 // запуск из `scripts/` вернул бы ноль корневых файлов, и guard отчитался бы
 // «passed», ничего не прочитав. Область чтения привязывается к корню репозитория.
 const resolveRepoRoot = (cwd = process.cwd()) =>
-  execFileSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim()
-
-const listTrackedFiles = (rootDir = resolveRepoRoot()) => {
-  const stdout = execFileSync('git', ['-C', rootDir, 'ls-files', '--full-name'], {
+  execFileSync('git', [...GIT_PATH_ARGS, '-C', cwd, 'rev-parse', '--show-toplevel'], {
     encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-  })
-  return stdout.split('\n').filter(Boolean)
+  }).trim()
+
+// `-z` + `core.quotePath=false` обязательны, а не гигиена: при дефолтном
+// `core.quotePath` git отдаёт не-ASCII путь в кавычках с октальными escape'ами
+// (`".codex-\321\202..."`). Такое имя перестаёт начинаться с точки, guard
+// отчитался бы «passed» на реальном артефакте — и именно на чистом CI-runner'е,
+// где нет локального system-конфига, который глушит квотирование на этой машине.
+const listTrackedFiles = (rootDir = resolveRepoRoot()) => {
+  const stdout = execFileSync(
+    'git',
+    [...GIT_PATH_ARGS, '-C', rootDir, 'ls-files', '-z', '--full-name'],
+    { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+  )
+  return stdout.split('\0').filter(Boolean)
 }
 
 const buildJsonResult = (result) => {
@@ -156,6 +168,7 @@ module.exports = {
   ALLOWED_ROOT_DOTFILES,
   ROOT_SCRATCH_FILE_PATTERNS,
   REMEDIATION,
+  GIT_PATH_ARGS,
   parseArgs,
   isRootFile,
   isRootDotfile,
