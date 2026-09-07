@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useMemo } from 'react';
 import { Dialog, Portal } from '@/ui/paper';
-import { Modal, Text, StyleSheet, Platform, View } from 'react-native';
+import { Modal, Text, StyleSheet, Platform, ScrollView, View } from 'react-native';
+import type { ViewStyle } from 'react-native';
 import Button from '@/components/ui/Button';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -48,6 +49,27 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     // ✅ УЛУЧШЕНИЕ: Динамические стили в зависимости от темы
     const styles = useMemo(() => createStyles(colors), [colors]);
 
+    // #1862: без ограничения по высоте длинное `message` (перечень в гейте
+    // #1834, крупный системный шрифт, Dynamic Type) раздувало бокс выше окна:
+    // верх уезжал за край экрана, а блок кнопок — за нижний, и подтвердить или
+    // отменить действие было нечем. Высоту режем вьюпортом, переполнение
+    // отдаём прокрутке сообщения, кнопки остаются закреплёнными.
+    const dialogSizing = useMemo<ViewStyle>(() => ({
+        width: isMobile ? '95%' : '90%',
+        maxWidth: isMobile ? '95%' : 380,
+        // web: отступ от краёв уже даёт `webBackdrop`; на native родитель —
+        // absoluteFill-обёртка Paper без собственного отступа.
+        maxHeight: Platform.OS === 'web' ? '100%' : '85%',
+        // Процента одного мало: на Android Paper добавляет диалогу
+        // `marginVertical: 44` (Dialog.tsx), и `0.85H + 88` перерастает H на
+        // низких окнах (телефон в альбомной, H≈369dp). Отрицательный запас
+        // Yoga снимает сжатием. На web правка инертна — там бокс уже заперт
+        // `max-height`, и отрицательного запаса не возникает.
+        flexShrink: 1,
+        paddingVertical: isMobile ? 16 : 20,
+        paddingHorizontal: isMobile ? 20 : 24,
+    }), [isMobile]);
+
     // ✅ УЛУЧШЕНИЕ: Focus trap для модального окна
     useFocusTrap(dialogRef, {
         enabled: visible && Platform.OS === 'web',
@@ -91,15 +113,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                     <View
                         ref={dialogRef as unknown as React.Ref<View>}
                         testID="confirm-dialog"
-                        style={[
-                            styles.dialog,
-                            {
-                                width: isMobile ? '95%' : '90%',
-                                maxWidth: isMobile ? '95%' : 380,
-                                paddingVertical: isMobile ? 16 : 20,
-                                paddingHorizontal: isMobile ? 20 : 24,
-                            },
-                        ]}
+                        style={[styles.dialog, dialogSizing]}
                         {...Platform.select({
                             web: webAccessibilityProps({
                                 'data-testid': 'confirm-dialog',
@@ -116,16 +130,33 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         >
                             {title}
                         </Text>
-                        <Text
-                            style={styles.dialogText}
+                        <ScrollView
+                            testID="confirm-dialog-message"
+                            style={styles.messageScroll}
+                            // Иначе скрытую часть длинного сообщения не прочитать
+                            // с клавиатуры: `useFocusTrap` перехватывает каждый
+                            // Tab и водит фокус только по `FOCUSABLE_SELECTOR`, а
+                            // у скроллера RNW своего `tabindex` нет. `focusable`
+                            // отдаёт `tabindex="0"`, селектор его подхватывает.
+                            focusable
                             {...Platform.select({
                                 web: webAccessibilityProps({
-                                    id: 'dialog-message',
+                                    role: 'region',
+                                    'aria-label': title,
                                 }),
                             })}
                         >
-                            {message}
-                        </Text>
+                            <Text
+                                style={styles.dialogText}
+                                {...Platform.select({
+                                    web: webAccessibilityProps({
+                                        id: 'dialog-message',
+                                    }),
+                                })}
+                            >
+                                {message}
+                            </Text>
+                        </ScrollView>
 
                         <View style={[styles.actionContainer, isMobile && styles.actionContainerMobile]}>
                             <Button
@@ -174,15 +205,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             <Dialog 
                 visible={visible} 
                 onDismiss={onClose} 
-                style={[
-                    styles.dialog,
-                    {
-                        width: isMobile ? '95%' : '90%',
-                        maxWidth: isMobile ? '95%' : 380,
-                        paddingVertical: isMobile ? 16 : 20,
-                        paddingHorizontal: isMobile ? 20 : 24,
-                    },
-                ]}
+                testID="confirm-dialog"
+                style={[styles.dialog, dialogSizing]}
                 {...Platform.select({
                     web: webAccessibilityProps({
                         role: 'dialog',
@@ -202,17 +226,22 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 >
                     {title}
                 </Dialog.Title>
-                <Dialog.Content>
-                    <Text 
-                        style={styles.dialogText}
-                        {...Platform.select({
-                            web: webAccessibilityProps({
-                                id: 'dialog-message',
-                            }),
-                        })}
+                <Dialog.Content style={styles.dialogContent}>
+                    <ScrollView
+                        testID="confirm-dialog-message"
+                        style={styles.messageScroll}
                     >
-                        {message}
-                    </Text>
+                        <Text
+                            style={styles.dialogText}
+                            {...Platform.select({
+                                web: webAccessibilityProps({
+                                    id: 'dialog-message',
+                                }),
+                            })}
+                        >
+                            {message}
+                        </Text>
+                    </ScrollView>
                 </Dialog.Content>
                 <Dialog.Actions style={[styles.actionContainer, isMobile && styles.actionContainerMobile]}>
                     <Button
@@ -272,6 +301,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     dialogText: {
         fontSize: 16,
         color: colors.textMuted,
+    },
+    // Единственный сжимаемый блок диалога: заголовок и кнопки держат свою
+    // высоту (`flexShrink: 0` по умолчанию в RN), переполнение уходит сюда.
+    dialogContent: {
+        flexShrink: 1,
+    },
+    // contentContainer трогать не нужно: базовый стиль ScrollView задаёт
+    // flexGrow/flexShrink самому скроллеру, а его внутренний контейнер и в RN,
+    // и в react-native-web остаётся flexGrow: 0 / flexShrink: 0 — растянуть или
+    // сжать текст ему нечем.
+    messageScroll: {
+        flexShrink: 1,
         marginBottom: 20,
     },
     actionContainer: {

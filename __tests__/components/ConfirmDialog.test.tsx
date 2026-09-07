@@ -1,8 +1,15 @@
-import { render, fireEvent, waitFor } from '@testing-library/react-native'
-import { Modal, Platform } from 'react-native'
+import { render, fireEvent, waitFor, within } from '@testing-library/react-native'
+import { Modal, Platform, StyleSheet } from 'react-native'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 const originalPlatform = Platform.OS
+
+// Ровно тот случай из #1862: перечень строк раздувал бокс выше окна, верх
+// уезжал за экран, а кнопки — за нижний край и переставали кликаться.
+const LONG_MESSAGE = Array.from({ length: 14 }, (_, index) => `Строка перечня ${index + 1}`).join('\n')
+
+const flattenStyle = (style: unknown): Record<string, unknown> =>
+  (StyleSheet.flatten(style as never) as Record<string, unknown> | undefined) ?? {}
 
 describe('ConfirmDialog', () => {
   const defaultProps = {
@@ -115,6 +122,43 @@ describe('ConfirmDialog', () => {
 
     view.unmount()
     document.removeEventListener('keyup', parentModalKeyup)
+  })
+
+  it('caps a long message at the viewport and scrolls only the message on web', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web' })
+
+    const { getByTestId } = render(<ConfirmDialog {...defaultProps} message={LONG_MESSAGE} />)
+
+    // Без потолка по высоте бокс вырастал по содержимому и выносил кнопки за экран.
+    expect(flattenStyle(getByTestId('confirm-dialog').props.style).maxHeight).toBe('100%')
+
+    const messageArea = getByTestId('confirm-dialog-message')
+    // Единственный сжимаемый блок: переполнение уходит в прокрутку сообщения.
+    expect(flattenStyle(messageArea.props.style).flexShrink).toBe(1)
+    // `useFocusTrap` перехватывает каждый Tab и водит фокус только по своему
+    // селектору; без `focusable` (→ `tabindex="0"`) скрытую часть длинного
+    // сообщения нельзя прочитать с клавиатуры.
+    expect(messageArea.props.focusable).toBe(true)
+    expect(within(messageArea).getByText(LONG_MESSAGE)).toBeTruthy()
+    // Кнопки лежат вне области прокрутки, поэтому остаются на экране.
+    expect(within(messageArea).queryByText('Удалить')).toBeNull()
+    expect(within(messageArea).queryByText('Отмена')).toBeNull()
+  })
+
+  it('caps a long message at the viewport and scrolls only the message on native', () => {
+    const { getByTestId, getByText } = render(
+      <ConfirmDialog {...defaultProps} message={LONG_MESSAGE} />
+    )
+
+    // Paper вешает наш `style` на surface внутри своей Modal-обёртки.
+    expect(flattenStyle(getByTestId('confirm-dialog-surface').props.style).maxHeight).toBe('85%')
+    expect(flattenStyle(getByTestId('confirm-dialog-message').props.style).flexShrink).toBe(1)
+    expect(within(getByTestId('confirm-dialog-message')).getByText(LONG_MESSAGE)).toBeTruthy()
+    expect(within(getByTestId('confirm-dialog-message')).queryByText('Удалить')).toBeNull()
+
+    // Кнопки по-прежнему смонтированы и кликабельны при любой длине сообщения.
+    fireEvent.press(getByText('Удалить'))
+    expect(defaultProps.onConfirm).toHaveBeenCalledTimes(1)
   })
 
   it('routes Escape only to the topmost confirm and hands control back after it unmounts', () => {
