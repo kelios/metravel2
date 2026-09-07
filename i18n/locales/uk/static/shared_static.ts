@@ -58,6 +58,7 @@ export const sharedStaticResources = {
   "errors.tryLater": "Спробуйте пізніше",
   "errors.retry": "Повторити",
   "myTravels.loadFailedTitle": "Не вдалося завантажити маршрути",
+  "profileTabs.countUnavailable": "кількість недоступна",
   "article.loadFailed": "Неможливо завантажити статтю",
   "article.checkLink": "Перевірте посилання на статтю.",
   "article.authorFallback": "Автор подорожі",

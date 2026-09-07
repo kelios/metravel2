@@ -25,10 +25,19 @@ export type ProfileTabKey =
 interface ProfileTabsProps {
   activeTab: ProfileTabKey;
   onChangeTab: (key: ProfileTabKey) => void;
-  counts?: Partial<Record<ProfileTabKey, number>>;
+  /**
+   * Значение бейджа вкладки. `null` — счётчик недоступен (его запрос упал):
+   * бейдж показывает «—», потому что исчезнувшая цифра неотличима от честного
+   * нуля (#1865). `undefined`/отсутствие ключа — бейджа нет вовсе.
+   */
+  counts?: Partial<Record<ProfileTabKey, number | null>>;
   /** Какие табы показывать и в каком порядке. По умолчанию — все четыре. */
   tabKeys?: ProfileTabKey[];
 }
+
+// Прочерк, а не «0»: пользователь должен видеть, что цифры нет, а не верить
+// выдуманному нулю.
+const UNAVAILABLE_COUNT_BADGE = '\u2014';
 
 const TAB_ICONS: Record<ProfileTabKey, React.ComponentProps<typeof Feather>['name']> = {
   overview: 'grid',
@@ -215,7 +224,20 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
 
   const renderTab = (tab: (typeof allTabs)[number]) => {
     const isActive = activeTab === tab.key;
-    const count = typeof counts?.[tab.key] === 'number' ? (counts[tab.key] as number) : 0;
+    const rawCount = counts?.[tab.key];
+    const isCountUnavailable = rawCount === null;
+    const count = typeof rawCount === 'number' ? rawCount : 0;
+    const hasBadge = isCountUnavailable || count > 0;
+    const badgeText = isCountUnavailable
+      ? UNAVAILABLE_COUNT_BADGE
+      : count > 999
+        ? '999+'
+        : String(count);
+    const a11yLabel = isCountUnavailable
+      ? `${tab.a11yLabel}: ${i18nT('sharedStatic:profileTabs.countUnavailable')}`
+      : count > 0
+        ? `${tab.a11yLabel}: ${count}`
+        : tab.a11yLabel;
 
     return (
       <Pressable
@@ -231,7 +253,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
         onPress={() => onChangeTab(tab.key)}
         accessibilityRole="tab"
         accessibilityState={{ selected: isActive }}
-        accessibilityLabel={count > 0 ? `${tab.a11yLabel}: ${count}` : tab.a11yLabel}
+        accessibilityLabel={a11yLabel}
         accessibilityHint={tab.hint}
         onLayout={(event) => {
           tabLayoutsRef.current.set(tab.key, event.nativeEvent.layout);
@@ -250,10 +272,10 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
         >
           {tab.label}
         </Text>
-        {count > 0 ? (
+        {hasBadge ? (
           <View style={[styles.countBadge, isActive && styles.activeCountBadge]}>
             <Text style={[styles.countText, isActive && styles.activeCountText]}>
-              {count > 999 ? '999+' : count}
+              {badgeText}
             </Text>
           </View>
         ) : null}

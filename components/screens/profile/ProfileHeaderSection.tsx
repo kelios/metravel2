@@ -28,7 +28,8 @@ interface ProfileHeaderSectionProps {
   onRankPress?: () => void;
   activeTab: ProfileTabKey;
   handleProfileTabChange: (tab: ProfileTabKey) => void;
-  tabCounts: Partial<Record<ProfileTabKey, number>>;
+  /** `null` в значении — счётчик недоступен, бейдж покажет «—» (#1865). */
+  tabCounts: Partial<Record<ProfileTabKey, number | null>>;
   showClearButton: boolean;
   handleClearActiveTab: () => void;
 }

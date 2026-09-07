@@ -416,6 +416,46 @@ describe('ProfileScreen', () => {
     ).toBeTruthy();
   });
 
+  // #1865: сбой общего списка автора обнуляет travelsCount и publicationCounts,
+  // и вкладки рисовали ноль — сбой был неотличим от пустого профиля.
+  it('shows unavailable tab counters when the author list request fails', async () => {
+    setupAuth({ isAuthenticated: true });
+    setupFavorites(0, 0);
+    mockFetchMyTravels.mockRejectedValue(new Error('502 Bad Gateway'));
+
+    const { findByLabelText, queryByLabelText } = renderProfile();
+
+    expect(await findByLabelText('Маршруты: количество недоступно')).toBeTruthy();
+    expect(await findByLabelText('Опубликованные маршруты: количество недоступно')).toBeTruthy();
+    expect(await findByLabelText('Черновики маршрутов: количество недоступно')).toBeTruthy();
+    // Голая подпись без числа = бейджа нет вовсе, то есть «честный ноль».
+    expect(queryByLabelText('Маршруты')).toBeNull();
+  });
+
+  // #1865: счётчики считает общий список, а «Повторить» на вкладке-срезе
+  // перечитывало только сам срез — цифры оставались недоступными.
+  it('retries the author list behind the counters from a status tab', async () => {
+    setupAuth({ isAuthenticated: true });
+    setupFavorites(0, 0);
+    mockFetchMyTravels.mockRejectedValue(new Error('502 Bad Gateway'));
+
+    const { findByLabelText } = renderProfile();
+
+    fireEvent.press(await findByLabelText('Черновики маршрутов: количество недоступно'));
+
+    const authorListCalls = () => mockFetchMyTravels.mock.calls.filter(
+      ([params]) => !(params as { publicationStatus?: readonly string[] })?.publicationStatus,
+    ).length;
+    const retry = await findByLabelText('Повторить');
+    const callsBeforeRetry = authorListCalls();
+
+    fireEvent.press(retry);
+
+    await waitFor(() => {
+      expect(authorListCalls()).toBeGreaterThan(callsBeforeRetry);
+    });
+  });
+
   it('opens calendar from profile header quick action', async () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(2, 5);

@@ -161,6 +161,7 @@ export default function ProfileScreen() {
     isLoading: travelsLoading,
     isLoadingMore: travelsLoadingMore,
     hasMore: travelsHasMore,
+    error: allTravelsError,
     load: loadTravels,
     loadMore: loadMoreTravelsHook,
   } = allTravels;
@@ -189,9 +190,14 @@ export default function ProfileScreen() {
   // Ретрай после сбоя идёт мимо one-shot guard: сам guard уже сожжён неудачной
   // попыткой, и без этого кнопка «Повторить» была бы декоративной.
   const reloadActiveTravelList = travelList.reload;
+  const isFilteredTravelList = travelList.isFiltered;
   const handleRetryTravels = useCallback(() => {
     void reloadActiveTravelList();
-  }, [reloadActiveTravelList]);
+    // Счётчики профиля считает общий список, а не срез вкладки: без этого
+    // «Повторить» возвращало бы маршруты, оставляя цифры недоступными до
+    // pull-to-refresh (#1865).
+    if (isFilteredTravelList && allTravelsError) void loadTravels();
+  }, [allTravelsError, isFilteredTravelList, loadTravels, reloadActiveTravelList]);
 
   const loadMoreActiveTravelList = travelList.loadMore;
   const loadMoreTravels = useCallback(async () => {
@@ -325,6 +331,7 @@ export default function ProfileScreen() {
     personalTravelStatusSummary,
     profileTravels,
     publishedTravelsCount,
+    travelCountsUnavailable,
   } = useProfileTravelSections({
     activeTab,
     setActiveTab,
@@ -341,6 +348,7 @@ export default function ProfileScreen() {
     travelsLoadingMore,
     travelsHasMore,
     travelsError: travelList.error,
+    travelCountsError: allTravelsError,
     onRetryTravels: handleRetryTravels,
     loadMoreTravels: loadMoreTravelsHook,
     personalTravelStatusEntries,
@@ -450,7 +458,9 @@ export default function ProfileScreen() {
 
   const tabCounts = useMemo(() => ({
     overview: badgesCount,
-    travels: stats.travelsCount,
+    // При сбое общего списка `travelsCount` уже обнулён его catch — показываем
+    // «—», а не выдуманный ноль (#1865).
+    travels: travelCountsUnavailable ? null : stats.travelsCount,
     publishedTravels: publishedTravelsCount,
     draftTravels: draftTravelsCount,
     subscribers: subscribersCount,
@@ -462,6 +472,7 @@ export default function ProfileScreen() {
     draftTravelsCount,
     publishedTravelsCount,
     stats.travelsCount,
+    travelCountsUnavailable,
     subscribersCount,
     subscriptionsCount,
     stats.favoritesCount,

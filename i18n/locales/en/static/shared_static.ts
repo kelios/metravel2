@@ -58,6 +58,7 @@ export const sharedStaticResources = {
   "errors.tryLater": "Try again later",
   "errors.retry": "Retry",
   "myTravels.loadFailedTitle": "Couldn't load your routes",
+  "profileTabs.countUnavailable": "count unavailable",
   "article.loadFailed": "Failed to load article",
   "article.checkLink": "Check the link to the article.",
   "article.authorFallback": "Travel author",

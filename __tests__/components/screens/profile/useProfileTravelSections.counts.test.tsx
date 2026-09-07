@@ -36,6 +36,7 @@ const renderSections = (overrides: Record<string, unknown>) =>
       travelsLoadingMore: false,
       travelsHasMore: true,
       travelsError: null,
+      travelCountsError: null,
       onRetryTravels: jest.fn(),
       loadMoreTravels: jest.fn(),
       personalTravelStatusEntries: [],
@@ -69,5 +70,38 @@ describe('useProfileTravelSections — счётчики вкладок «Опу�
 
     expect(result.current.publishedTravelsCount).toBe(15);
     expect(result.current.draftTravelsCount).toBe(5);
+  });
+
+  // #1865: сбой общего списка обнуляет travelsCount и publicationCounts, и
+  // ветка «список догружен целиком» вырождалась в 0 >= 0 — счётчики врали нулём.
+  it('при сбое общего списка помечает счётчики недоступными, а не нулём', () => {
+    const { result } = renderSections({
+      myTravels: [],
+      publicationCounts: null,
+      travelsCount: 0,
+      travelsHasMore: false,
+      travelCountsError: 'Не удалось загрузить маршруты',
+    });
+
+    expect(result.current.travelCountsUnavailable).toBe(true);
+    expect(result.current.publishedTravelsCount).toBeNull();
+    expect(result.current.draftTravelsCount).toBeNull();
+  });
+
+  it('успешный срез вкладки продолжает рисовать свой список при сбое общего', () => {
+    const statusTabTravels = travels(3, 'draft');
+    const { result } = renderSections({
+      activeTab: 'draftTravels',
+      myTravels: [],
+      statusTabTravels,
+      publicationCounts: null,
+      travelsCount: 0,
+      travelsHasMore: false,
+      travelCountsError: 'Не удалось загрузить маршруты',
+    });
+
+    expect(result.current.currentData).toHaveLength(3);
+    expect(result.current.publishedTravelsCount).toBeNull();
+    expect(result.current.draftTravelsCount).toBeNull();
   });
 });

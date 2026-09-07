@@ -58,6 +58,7 @@ export const sharedStaticResources = {
   "errors.tryLater": "Spróbuj ponownie później",
   "errors.retry": "Spróbuj ponownie",
   "myTravels.loadFailedTitle": "Nie udało się załadować tras",
+  "profileTabs.countUnavailable": "liczba niedostępna",
   "article.loadFailed": "Nie udało się załadować artykułu",
   "article.checkLink": "Sprawdź link do artykułu.",
   "article.authorFallback": "Autor podróży",

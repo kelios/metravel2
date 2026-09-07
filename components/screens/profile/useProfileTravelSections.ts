@@ -33,6 +33,12 @@ type UseProfileTravelSectionsInput = {
   travelsLoadingMore: boolean
   travelsHasMore: boolean
   travelsError: string | null
+  /**
+   * Ошибка ОБЩЕГО списка автора. Счётчики вкладок считает именно он, поэтому на
+   * вкладке-срезе (#1833) его сбой не совпадает с `travelsError` активного
+   * источника и без отдельного входа остался бы невидимым (#1865).
+   */
+  travelCountsError: string | null
   onRetryTravels: () => void
   loadMoreTravels: () => Promise<void>
   personalTravelStatusEntries: TravelStatusEntry[]
@@ -64,6 +70,7 @@ export function useProfileTravelSections({
   travelsLoadingMore,
   travelsHasMore,
   travelsError,
+  travelCountsError,
   onRetryTravels,
   loadMoreTravels,
   personalTravelStatusEntries,
@@ -110,11 +117,20 @@ export function useProfileTravelSections({
   // Разбивка «Опубл. / Черновики» приходит с сервера: классификация загруженных
   // страниц (`publishedTravels`/`draftTravels`) годится в счётчик только когда
   // список догружен целиком — иначе вкладки показывали разбивку первой страницы.
+  // Сбой общего списка обнуляет `travelsCount` и `publicationCounts`, поэтому
+  // ветка `isTravelListComplete` вырождается в 0 >= 0 и рисует выдуманный ноль,
+  // неотличимый от честного «маршрутов нет». Помечаем счётчики недоступными:
+  // UI показывает «—» вместо цифры (#1865).
+  const travelCountsUnavailable = Boolean(travelCountsError)
   const isTravelListComplete = profileTravels.length >= travelsCount
-  const publishedTravelsCount = publicationCounts?.published
-    ?? (isTravelListComplete ? publishedTravels.length : undefined)
-  const draftTravelsCount = publicationCounts?.drafts
-    ?? (isTravelListComplete ? draftTravels.length : undefined)
+  const publishedTravelsCount = travelCountsUnavailable
+    ? null
+    : publicationCounts?.published
+      ?? (isTravelListComplete ? publishedTravels.length : undefined)
+  const draftTravelsCount = travelCountsUnavailable
+    ? null
+    : publicationCounts?.drafts
+      ?? (isTravelListComplete ? draftTravels.length : undefined)
   // Перекрёстные ссылки пустых вкладок ведём по серверной разбивке: список
   // вкладки-среза о соседнем статусе ничего не знает.
   const hasPublishedTravels = (publishedTravelsCount ?? publishedTravels.length) > 0
@@ -280,5 +296,6 @@ export function useProfileTravelSections({
     personalTravelStatusSummary,
     profileTravels,
     publishedTravelsCount,
+    travelCountsUnavailable,
   }
 }
