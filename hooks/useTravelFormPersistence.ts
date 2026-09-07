@@ -98,6 +98,25 @@ const SERVER_OWNED_SAVE_RESPONSE_FIELDS = new Set<keyof TravelFormData>([
 ]);
 const LOCAL_EDITING_STATE_FIELDS = new Set<keyof TravelFormData>(['name', 'description', 'plus', 'minus', 'recommendation', 'youtube_link']);
 
+/**
+ * Несёт ли аргумент `handleManualSave` реальные данные формы.
+ *
+ * Кнопка «Сохранить» в шапке мастера подключена как `onSave={onManualSave}`
+ * (`TravelWizardStepBasic.tsx:213` и соседние шаги), а RN `Pressable` зовёт
+ * `onPress(event)` — то есть сюда приезжает press-событие в роли `dataOverride`.
+ * Данных формы в нём нет (дальше его безвредно съедает `filterAllowedKeys`), но
+ * отличать «пользователь нажал сохранить» от инкрементального сейва маршрута по
+ * одному лишь наличию аргумента поэтому нельзя: событие truthy, и гейт мёртвого
+ * фото точки (#1834) молча не срабатывал бы ровно там, где он и нужен.
+ */
+function isFormDataOverride(value: unknown): value is TravelFormData {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  // Синтетическое событие RN/React узнаётся по своим полям, а не по отсутствию наших.
+  if ('nativeEvent' in candidate || 'preventDefault' in candidate) return false;
+  return Object.keys(candidate).some((key) => key in getEmptyFormData(null));
+}
+
 const preserveFieldsEditedAfterDispatch = (
   savedData: TravelFormData,
   currentData: TravelFormData,
@@ -957,17 +976,16 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         // из тела с точками сохраняемого маршрута и показываем список, а не
         // переписываем текст за автора.
         //
-        // Только НАМЕРЕННОЕ сохранение: полное (кнопка «Сохранить» — без
-        // dataOverride, тот же признак, по которому показывается тост «Сохранено»)
-        // либо публикация. Инкрементальный сейв маршрута приходит сюда с
-        // override'ом и пользователя перед экраном не подразумевает: каждый клик
-        // по карте идёт через `scheduleAddPointSave` → `saveRoute` → сюда
+        // Только НАМЕРЕННОЕ сохранение: кнопка «Сохранить» в шапке мастера либо
+        // публикация. Инкрементальный сейв маршрута приходит сюда с override'ом
+        // формы и пользователя перед экраном не подразумевает: каждый клик по
+        // карте идёт через `scheduleAddPointSave` → `saveRoute` → сюда
         // (`TravelWizardStepRoute.tsx:227`), у опубликованной статьи автосейв
         // выключен, и модалка на этом пути не предупреждала бы, а теряла точку —
         // отмена оставила бы её без server-id, то есть без возможности приложить
         // фото (отказ #505). Предупреждение автор всё равно увидит: удалить точку
         // и не сохранить статью нельзя.
-        const isDeliberateSave = !dataOverride || isPublishIntent;
+        const isDeliberateSave = !isFormDataOverride(dataOverride) || isPublishIntent;
         if (isDeliberateSave) {
           const proceedWithBodyImages = await confirmDanglingPointImagesIfNeeded(
             bodySnapshot,

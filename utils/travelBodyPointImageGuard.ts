@@ -126,6 +126,28 @@ function toDisplayName(url: string): string {
   return name || url
 }
 
+/**
+ * Сколько кадров показываем списком.
+ *
+ * Не косметика, а условие работоспособности диалога: `ConfirmDialog` высоту не
+ * ограничивает и не скроллит, поэтому длинное сообщение выносит кнопки за экран.
+ * Замер на локальном стенде (travel 682, 14 позиций): диалог 1051 px в окне 900,
+ * верх обрезан, обе кнопки на y=925 — автор не может ни подтвердить, ни отменить.
+ * Пяти строк хватает, чтобы узнать проблему, а полный перечень даёт корпусный
+ * прогон `scripts/audit-article-body-media.js`.
+ */
+const MAX_LISTED_ITEMS = 5
+
+/** Список для диалога: первые `MAX_LISTED_ITEMS` строк плюс хвостовой счётчик. */
+function buildList(dangling: DanglingPointImage[]): string {
+  const lines = dangling.slice(0, MAX_LISTED_ITEMS).map(describe)
+  const rest = dangling.length - lines.length
+  if (rest > 0) {
+    lines.push(i18nT('travel:utils.travelBodyPointImageGuard.more', { count: String(rest) }))
+  }
+  return lines.join('\n')
+}
+
 /** Строка списка: «описание — 1b3ee9bb….webp (точка 15188)». */
 function describe(item: DanglingPointImage): string {
   return i18nT('travel:utils.travelBodyPointImageGuard.item', {
@@ -152,7 +174,7 @@ export async function confirmDanglingPointImagesIfNeeded(
     title: i18nT('travel:utils.travelBodyPointImageGuard.title'),
     message: i18nT('travel:utils.travelBodyPointImageGuard.message', {
       count: String(dangling.length),
-      list: dangling.map(describe).join('\n'),
+      list: buildList(dangling),
     }),
     confirmText: i18nT('travel:utils.travelBodyPointImageGuard.confirm'),
     cancelText: i18nT('travel:utils.travelBodyPointImageGuard.cancel'),

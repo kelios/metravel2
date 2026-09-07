@@ -139,6 +139,25 @@ describe('confirmDanglingPointImagesIfNeeded', () => {
     expect(message).not.toContain('images.weserv.nl');
   });
 
+  // ConfirmDialog не ограничивает высоту и не скроллит: полный список из 14
+  // позиций вынес обе кнопки за экран (замер на локальном стенде, travel 682 —
+  // диалог 1051 px в окне 900). Список обязан быть коротким.
+  it('длинный список усекается до пяти строк и хвостового счётчика', async () => {
+    mockConfirmAction.mockResolvedValueOnce(true);
+    const many = Array.from({ length: 14 }, (_, i) =>
+      `<img src="https://metravel.by/address-image/${900 + i}/conversions/f${i}.webp">`,
+    ).join('');
+
+    await confirmDanglingPointImagesIfNeeded({ description: many }, [point(15193)]);
+
+    const message = mockConfirmAction.mock.calls[0][0].message;
+    const bullets = message.split('\n').filter((line) => line.trim().startsWith('•'));
+    expect(bullets).toHaveLength(6);
+    expect(bullets[5]).toContain('9');
+    // Счётчик в шапке сообщения по-прежнему называет полное число.
+    expect(message).toContain('(14)');
+  });
+
   it('показывает автору имя файла и id точки, а текст не переписывает', async () => {
     mockConfirmAction.mockResolvedValueOnce(true);
     const body = { description: img(777) };

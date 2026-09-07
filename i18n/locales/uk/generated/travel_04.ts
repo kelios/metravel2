@@ -404,6 +404,7 @@ export const travelGenerated4 = {
   "utils.travelBodyPointImageGuard.title": "Фото видалених точок у тексті",
   "utils.travelBodyPointImageGuard.message": "У тексті статті лишилися фото точок, яких більше немає в маршруті ({{count}}). У читача на їх місці буде порожня рамка — фото точки живе лише разом із точкою.\n\n{{list}}\n\nЗамініть їх власним завантаженням прямо в текст, тоді правка маршруту його більше не зламає.",
   "utils.travelBodyPointImageGuard.item": "• {{field}} — {{file}} (точка {{pointId}})",
+  "utils.travelBodyPointImageGuard.more": "• …і ще {{count}} — повний перелік дає прохід за статтями",
   "utils.travelBodyPointImageGuard.confirm": "Зберегти все одно",
   "utils.travelBodyPointImageGuard.cancel": "Повернутися і замінити",
   "utils.travelSeo.htmlFallback": "Знайди місце для подорожі та поділись своїм досвідом.",

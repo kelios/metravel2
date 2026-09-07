@@ -404,6 +404,7 @@ export const travelGenerated4 = {
   "utils.travelBodyPointImageGuard.title": "Zdjęcia usuniętych punktów w tekście",
   "utils.travelBodyPointImageGuard.message": "W tekście artykułu zostały zdjęcia punktów, których nie ma już na trasie ({{count}}). Czytelnik zobaczy w ich miejscu pustą ramkę — zdjęcie punktu żyje tylko razem z punktem.\n\n{{list}}\n\nZastąp je własnym zdjęciem wgranym prosto do tekstu, wtedy zmiana trasy go już nie zepsuje.",
   "utils.travelBodyPointImageGuard.item": "• {{field}} — {{file}} (punkt {{pointId}})",
+  "utils.travelBodyPointImageGuard.more": "• …i jeszcze {{count}} — pełną listę daje przegląd artykułów",
   "utils.travelBodyPointImageGuard.confirm": "Zapisz mimo to",
   "utils.travelBodyPointImageGuard.cancel": "Wróć i zastąp",
   "utils.travelSeo.htmlFallback": "Znajdź miejsce do podróży i podziel się swoimi doświadczeniami.",

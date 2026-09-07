@@ -1132,6 +1132,26 @@ describe('handleManualSave — guard «фото исчезнувшей точк�
     expect(mockSaveFormData).not.toHaveBeenCalled();
   });
 
+  // Шапка мастера подключена как `onSave={onManualSave}`, а RN Pressable зовёт
+  // `onPress(event)`: сюда приезжает press-событие в роли dataOverride. Признак
+  // «намеренного сохранения» обязан считать его отсутствием данных формы, иначе
+  // гейт молчит ровно там, где нужен (поймано браузерной пробой на локальном стеке).
+  it('press-событие от кнопки «Сохранить» считается намеренным сохранением', async () => {
+    mockConfirmAction.mockResolvedValueOnce(false);
+    const { result } = setupPersistence({ initialFormData: baseTravel, baselineText });
+
+    await act(async () => {
+      await result.current.handleManualSave({
+        nativeEvent: { timestamp: 1 },
+        preventDefault: () => {},
+        target: 7,
+      } as any);
+    });
+
+    expect(mockConfirmAction).toHaveBeenCalledTimes(1);
+    expect(mockSaveFormData).not.toHaveBeenCalled();
+  });
+
   it('фото живой точки диалога не поднимает', async () => {
     const { result } = setupPersistence({
       initialFormData: {

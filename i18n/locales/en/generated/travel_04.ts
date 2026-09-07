@@ -404,6 +404,7 @@ export const travelGenerated4 = {
   "utils.travelBodyPointImageGuard.title": "Photos of deleted points in the text",
   "utils.travelBodyPointImageGuard.message": "The article text still shows photos of points that are no longer on the route ({{count}}). Readers will see an empty frame instead — a point photo only lives as long as its point.\n\n{{list}}\n\nReplace them with your own upload straight into the text, then editing the route will not break it again.",
   "utils.travelBodyPointImageGuard.item": "• {{field}} — {{file}} (point {{pointId}})",
+  "utils.travelBodyPointImageGuard.more": "• …and {{count}} more — the article sweep lists them all",
   "utils.travelBodyPointImageGuard.confirm": "Save anyway",
   "utils.travelBodyPointImageGuard.cancel": "Go back and replace",
   "utils.travelSeo.htmlFallback": "Find a place to travel and share your experience.",
