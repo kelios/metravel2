@@ -9,7 +9,6 @@ const {
   classifyRootFile,
   evaluateGuard,
   isAllowedRootFile,
-  isRootDotfile,
   listTrackedFiles,
   listUntrackedFiles,
   looksLikeScratchArtifact,
@@ -21,17 +20,6 @@ const readRepoFile = (file: string) => fs.readFileSync(path.resolve(repoRoot, fi
 const violationFiles = (result: { violations: { file: string }[] }) => result.violations.map((v) => v.file)
 
 describe('guard-root-scratch-artifacts', () => {
-  it.each([
-    ['.codex-temp-probe.js', true],
-    ['.codex-debug-run.mjs', true],
-    ['.gitignore', true],
-    ['components/MapPage/AddressSearch.tsx', false],
-    ['.claude/settings.json', false],
-    ['scripts/.tmp-probe.js', false],
-  ])('classifies %s as root dotfile: %s', (file, expected) => {
-    expect(isRootDotfile(file)).toBe(expected)
-  })
-
   it('rejects the artifact that actually reached origin/main', () => {
     const result = evaluateGuard({
       trackedFiles: ['package.json', '.codex-temp-probe.js', 'components/MapPage/AddressSearch.tsx'],
@@ -195,6 +183,29 @@ describe('guard-root-scratch-artifacts', () => {
     } finally {
       removeDir(repo)
     }
+  })
+
+  it('ignores a symlinked node_modules, not only a real directory', () => {
+    // Закрытый список сделал корневой untracked-симлинк нарушением: при общем
+    // install'е и в документированном рецепте чистого клона `node_modules` —
+    // ссылка, а `/node_modules/` со слэшем матчит только КАТАЛОГ. Гейт краснел
+    // на служебной ссылке, то есть на самом способе доказать, что он зелёный.
+    const gitignoreLines = readRepoFile('.gitignore').split('\n')
+    expect(gitignoreLines).toContain('/node_modules')
+    expect(gitignoreLines).not.toContain('/node_modules/')
+  })
+
+  it('closes routine tooling artifacts of the root by ignore, not by the allow-list', () => {
+    // Обратная сторона закрытого списка: нарушением стал ЛЮБОЙ незаигноренный
+    // корневой файл, включая штатный. `docs/ARCHITECTURE.md` документирует
+    // `npm install`, а lockfile проекта — `yarn.lock`; без игнора
+    // `package-lock.json` попадал в untracked-срез, и общий `npm run lint`
+    // вместе с pre-commit краснели у всех сессий с советом объявить второй
+    // lockfile в allow-list.
+    expect(runCli('git', ['check-ignore', '-q', 'package-lock.json'], { cwd: repoRoot }).status).toBe(0)
+    // Игнор закрывает срез, но не легализует файл: попади он в индекс — гейт
+    // обязан его назвать, иначе второй lockfile уедет на origin/main молча.
+    expect(classifyRootFile('package-lock.json')).toBe('unknown')
   })
 
   it('wires the guard into both shared gates, not only into lint', () => {

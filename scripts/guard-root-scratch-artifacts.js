@@ -134,8 +134,6 @@ const isRootFile = (relativePath) => {
   return file.length > 0 && !file.includes('/')
 }
 
-const isRootDotfile = (relativePath) => isRootFile(relativePath) && normalizePath(relativePath).startsWith('.')
-
 const isAllowedRootFile = (relativePath) => {
   const file = normalizePath(relativePath)
   if (!isRootFile(file)) return true
@@ -273,7 +271,6 @@ module.exports = {
   GIT_PATH_ARGS,
   parseArgs,
   isRootFile,
-  isRootDotfile,
   isAllowedRootFile,
   looksLikeScratchArtifact,
   classifyRootFile,

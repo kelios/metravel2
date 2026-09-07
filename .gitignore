@@ -1,4 +1,14 @@
-/node_modules/
+# Без завершающего слэша: `/node_modules/` матчит только КАТАЛОГ, а при
+# общем install'е (и в документированном рецепте чистого клона) это симлинк.
+# Незаигноренный корневой симлинк виден и `git add -A`, и
+# `guard:root-scratch-artifacts` — гейт краснел на служебной ссылке.
+/node_modules
+# Lockfile проекта — `yarn.lock` (README, docs/DEVELOPMENT.md, ci-smoke.yml:
+# `yarn install --frozen-lockfile`), но `docs/ARCHITECTURE.md` документирует и
+# `npm install`, а он кладёт в корень второй lockfile. Без этой строки он
+# попадал в untracked-срез `guard:root-scratch-artifacts`, и общий `npm run
+# lint` вместе с `check:fast`/pre-commit краснели у всех сессий сразу.
+/package-lock.json
 /.secrets/
 *.gcp.json
 gcp-service-account*.json
