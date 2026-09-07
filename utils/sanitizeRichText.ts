@@ -1,6 +1,7 @@
 import sanitizeHtml, { Attributes } from 'sanitize-html'
 
 import { buildPrintImageUrl, PRINT_IMAGE_INLINE_WIDTH } from '@/utils/printImageUrl'
+import { normalizeQuillListMarkup } from '@/utils/richTextLists'
 import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 
 const ALLOWED_IFRAME_HOSTS = [
@@ -83,6 +84,13 @@ const allowedAttributes: sanitizeHtml.IOptions['allowedAttributes'] = {
   video: ['src', 'poster', 'controls', 'loop', 'autoplay', 'muted', 'playsinline', 'preload'],
   source: ['src', 'srcset', 'type', 'media'],
   details: ['open'],
+  // #1866: тип пункта списка Quill. Атрибут доживает до конца санитизации, где
+  // `normalizeQuillListMarkup` превращает его в семантический тег; снятый
+  // allowlist'ом раньше, он оставил бы маркированный список нумерованным —
+  // восстановить тип уже нечем.
+  ol: ['data-list'],
+  ul: ['data-list'],
+  li: ['data-list'],
 }
 
 function isSafeDataImage(value: string) {
@@ -384,7 +392,7 @@ function sanitizeRichTextInternal(
   const withoutReactComponents = removeReactNativeComponents(html);
   const withAutoAnchors = injectAutoHeadingAnchors(withoutReactComponents)
 
-  const sanitized = sanitizeHtml(withAutoAnchors, {
+  const sanitizedHtml = sanitizeHtml(withAutoAnchors, {
     allowedTags,
     allowedAttributes,
     allowedStyles: {
@@ -474,7 +482,18 @@ function sanitizeRichTextInternal(
     // ✅ КРИТИЧНО: Явно запрещаем React Native компоненты
     disallowedTagsMode: 'discard',
   }).trim();
-  
+
+  // #1866: этот санитайзер стоит на ЗАПИСИ тела статьи (`api/misc.ts` →
+  // `sanitizeTravelBodyForWrite`) — в том числе для native-редактора, который
+  // отдаёт сырой HTML Quill мимо `sanitizeArticleEditorHtml`. Транспортную
+  // разметку списка (`<ol><li data-list="bullet">`) приводим к семантической
+  // ЗДЕСЬ, после allowlist: sanitize-html уже достроил незакрытые `<li>`, а
+  // `data-list` до бэкенда всё равно не доезжает (`GLOBAL_ATTRS` в
+  // `metravel/common/rich_text.py` его не знает), поэтому тип списка обязан
+  // уехать в базу тегом. Переписывание безопасно: новых тегов и атрибутов оно
+  // не вносит, только `<ol>`/`<ul>`/`<li>` из уже очищенного вывода.
+  const sanitized = normalizeQuillListMarkup(sanitizedHtml);
+
   // ✅ ДОПОЛНИТЕЛЬНАЯ ЗАЩИТА: Проверяем результат на наличие React Native компонентов
   const hasReactComponents = /<View|<Text|<ScrollView|<Image[^>]*>|<TouchableOpacity|<TouchableHighlight|<SafeAreaView|<ActivityIndicator/i.test(sanitized);
   if (hasReactComponents) {

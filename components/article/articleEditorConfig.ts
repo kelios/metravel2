@@ -171,6 +171,9 @@ export function normalizeArticleEditorHtmlForOutput(
   return faqBaseline ? restoreFaqMarkupIfLost(faqBaseline, sanitized) : sanitized
 }
 
+// Native-редактор идёт мимо `sanitizeArticleEditorHtml`; транспортную разметку
+// списков Quill приводит к семантической сам `sanitizeRichText` (#1866) — он же
+// стоит и на записи native-тела, поэтому отдельного вызова здесь не нужно.
 export function sanitizeArticleEditorNativeContent(html: string): string {
   return sanitizeRichText(normalizeArticleEditorHtmlForInput(html));
 }

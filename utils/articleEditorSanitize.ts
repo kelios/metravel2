@@ -1,5 +1,7 @@
 import sanitizeHtmlLib from 'sanitize-html';
 
+import { normalizeQuillListMarkup } from '@/utils/richTextLists';
+
 const ARTICLE_ALLOWED_TAGS = [
   'p',
   'br',
@@ -10,6 +12,8 @@ const ARTICLE_ALLOWED_TAGS = [
   'u',
   's',
   'blockquote',
+  'pre',
+  'code',
   'ul',
   'ol',
   'li',
@@ -30,9 +34,17 @@ const ARTICLE_ALLOWED_TAGS = [
   'summary',
 ] as const;
 
+// Запись обязана перечислять не только теги, которые отдаёт Quill, но и атрибуты,
+// которыми он различает смысл внутри одного тега: `disallowedTagsMode: 'discard'`
+// снимает с тега ВСЕ атрибуты, если записи для него здесь нет (#1768 — так терялись
+// теги FAQ, #1866 — так терялся тип списка). Регресс ловит
+// `__tests__/utils/articleEditorSanitize.quillFormats.test.ts`.
 const ARTICLE_ALLOWED_ATTRIBUTES: sanitizeHtmlLib.IOptions['allowedAttributes'] = {
   a: ['href', 'name', 'target', 'rel', 'title'],
   span: ['id'],
+  ol: ['data-list', 'class'],
+  ul: ['data-list', 'class'],
+  li: ['data-list', 'class'],
   img: ['src', 'alt', 'title', 'width', 'height', 'loading', 'decoding'],
   iframe: ['src', 'title', 'allow', 'allowfullscreen', 'frameborder', 'width', 'height', 'class'],
   section: ['class', 'data-faq', 'itemscope', 'itemtype'],
@@ -68,12 +80,20 @@ function collapseSemanticallyEmptyEditorHtml(html: string): string {
 /**
  * Sanitizes article-editor HTML with a strict allowlist so Quill output
  * cannot round-trip unsafe markup back into the app.
+ *
+ * После allowlist транспортная разметка списков Quill приводится к
+ * семантической: функция стоит и на выходе редактора, и на загрузке тела
+ * обратно в редактор, а `matchList` в Quill 2 читает ТЕГ контейнера, а не
+ * `data-list` — `<ol data-list="bullet">` открылся бы нумерованным. Порядок
+ * важен: sanitize-html сначала достраивает незакрытые `<li>`, и только после
+ * этого блок разбирается на пробеги (`data-list` для того и оставлен в
+ * `ARTICLE_ALLOWED_ATTRIBUTES`, что должен дожить до этого шага).
  */
 export function sanitizeArticleEditorHtml(html: string): string {
   const raw = String(html ?? '');
   if (!raw.trim()) return '';
 
-  return collapseSemanticallyEmptyEditorHtml(sanitizeHtmlLib(raw, {
+  return collapseSemanticallyEmptyEditorHtml(normalizeQuillListMarkup(sanitizeHtmlLib(raw, {
     allowedTags: [...ARTICLE_ALLOWED_TAGS],
     allowedAttributes: ARTICLE_ALLOWED_ATTRIBUTES,
     allowedSchemes: ['http', 'https', 'mailto'],
@@ -83,6 +103,11 @@ export function sanitizeArticleEditorHtml(html: string): string {
     },
     allowedClasses: {
       iframe: ['ql-video'],
+      // Уровень вложенности пункта; на чтении по нему считается отступ
+      // (`components/article/SafeHtml.tsx:76-84`, `li.ql-indent-1..3`).
+      ol: [/^ql-indent-\d+$/],
+      ul: [/^ql-indent-\d+$/],
+      li: [/^ql-indent-\d+$/],
     },
     allowedIframeHostnames: [...ARTICLE_ALLOWED_IFRAME_HOSTS],
     disallowedTagsMode: 'discard',
@@ -107,5 +132,5 @@ export function sanitizeArticleEditorHtml(html: string): string {
       if (frame.tag === 'iframe' && !frame.attribs?.src) return true;
       return false;
     },
-  }).trim());
+  }).trim()));
 }
