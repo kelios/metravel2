@@ -12,8 +12,9 @@
 //      present at build time).
 //   2. The Yandex Metrika id and GA4 id from .env.prod are actually present in
 //      index.html (the stub check alone misses a build that lost only one id).
-//   3. No dev/LAN config leaked into the app bundle (192.168.* — the signature
-//      of EXPO_PUBLIC_API_URL=http://192.168.x.x / IS_LOCAL_API builds).
+//   3. No dev/local config leaked into the app bundle (192.168.*, 127.0.0.1,
+//      localhost — the signature of EXPO_PUBLIC_API_URL=http://192.168.x.x or
+//      of a build that inherited a local/e2e .env).
 //
 // Usage: node scripts/verify-prod-config.js [--dist dist/prod]
 // Exit 0 = artifact is safe to ship; non-zero = abort the deploy.
@@ -93,13 +94,19 @@ if (gaId) {
   console.warn('[verify-prod-config] WARN: EXPO_PUBLIC_GOOGLE_GA4 not set in .env.prod — skipping id check')
 }
 
-// 3) No LAN/dev API must leak into the app bundle. The bug signature is a
-// private-range IP used as a URL (e.g. EXPO_PUBLIC_API_URL=http://192.168.50.36).
-// Match only private IPs inside an http(s):// URL — NOT bare "192.168." string
-// literals, which legitimately appear in runtime LAN-detection code
-// (window.location.hostname.startsWith('192.168.')).
-const LAN_URL_RE = /https?:\/\/(?:192\.168\.|10\.|172\.(?:1[6-9]|2\d|3[01])\.)\d/
-const lanHits = []
+// 3) No LAN/dev/local API must leak into the app bundle. The bug signature is a
+// non-public host used as a URL (e.g. EXPO_PUBLIC_API_URL=http://192.168.50.36).
+// Loopback belongs in the same family and was the actual 2026-09-08 signature:
+// build-prod.sh copies .env.prod over the shared .env, but a build started with
+// a leftover e2e value ships http://127.0.0.1:8085 as the API base and every
+// request dies in the reader's browser (board #1881).
+// Match only these hosts inside an http(s):// URL — NOT bare "192.168."/"localhost"
+// string literals, which legitimately appear in runtime host-detection code
+// (window.location.hostname.startsWith('192.168.')). The negative lookahead after
+// localhost keeps real hosts like localhost-cdn.example.com out of the match.
+const LOCAL_URL_RE =
+  /https?:\/\/(?:localhost(?![\w.-])|(?:127\.|192\.168\.|10\.|172\.(?:1[6-9]|2\d|3[01])\.)\d)/
+const localHits = []
 const scanRoots = [indexPath, path.join(distDir, '_expo', 'static', 'js')]
 const scan = (target) => {
   let stat
@@ -110,7 +117,7 @@ const scan = (target) => {
   }
   if (stat.isDirectory()) {
     for (const entry of fs.readdirSync(target)) {
-      if (lanHits.length > 5) return
+      if (localHits.length > 5) return
       scan(path.join(target, entry))
     }
     return
@@ -122,11 +129,15 @@ const scan = (target) => {
   } catch {
     return
   }
-  if (LAN_URL_RE.test(content)) lanHits.push(path.relative(distDir, target))
+  if (LOCAL_URL_RE.test(content)) localHits.push(path.relative(distDir, target))
 }
 for (const root of scanRoots) scan(root)
-if (lanHits.length) {
-  errors.push(`LAN/dev API URL leaked into prod build (private-IP URL in: ${lanHits.slice(0, 5).join(', ')})`)
+if (localHits.length) {
+  errors.push(
+    `LAN/dev/local API URL leaked into prod build (private-IP or loopback URL in: ${localHits
+      .slice(0, 5)
+      .join(', ')})`
+  )
 }
 
 if (errors.length) {
@@ -136,5 +147,5 @@ if (errors.length) {
 
 console.log(
   `[verify-prod-config] OK: ${path.relative(repoRoot, distDir)} verified ` +
-    `(analytics enabled${metrikaId ? `, metrika ${metrikaId} present` : ''}${gaId ? `, GA4 ${gaId} present` : ''}, no LAN/dev leak)`
+    `(analytics enabled${metrikaId ? `, metrika ${metrikaId} present` : ''}${gaId ? `, GA4 ${gaId} present` : ''}, no LAN/dev/local leak)`
 )

@@ -159,7 +159,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/PublicTripsCatalog.tsx` | 404 | каталог: поиск, фильтры, адаптивная сетка 1/2/3 колонки |
 | `components/trips/PublicTripFilters.tsx` | 391 | панель фильтров каталога |
 | `components/trips/planning/useRoutePointDraft.ts` | 329 | состояние обеих форм точки (добавление и правка), ref'ы автоподстановки адреса (#1782) и переходы между формами |
-| `components/trips/planning/RoutePointRow.tsx` | 321 | строка точки маршрута: на mobile — вся строка кнопка «открыть точку» плюс инлайн-редактор в карточке, на desktop — четыре кнопки управления |
+| `components/trips/planning/RoutePointRow.tsx` | 393 | строка точки маршрута: ручка в левом жёлобе, шапка «номер + тип + управление», под ней текст на всю ширину карточки; на mobile — вся строка кнопка «открыть точку» плюс инлайн-редактор, на desktop — правка и удаление; длинное описание свёрнуто до трёх строк |
 | `components/trips/planning/useRoutePointDrag.ts` | 305 | drag&drop точек маршрута поверх `routePointReorder` |
 | `components/trips/planning/TripPlanCard.tsx` | 304 | карточка planned/community trip |
 | `components/trips/PublicTripDetail.tsx` | 303 | деталь публичной поездки, reveal, гейты заявки |
@@ -167,7 +167,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/planning/TripRatingPanel.tsx` | 249 | оценки участников после завершения |
 | `components/trips/OrganizerApplicationsPanel.tsx` | 238 | решения организатора по заявкам |
 | `components/trips/planning/TripInvitePanel.tsx` | 232 | приглашение участников, share-ссылки |
-| `components/trips/planning/RoutePointEditForm.tsx` | 211 | форма правки точки: тип, название, координаты, описание, адресный поиск; на mapFirst — плюс перестановка и удаление |
+| `components/trips/planning/RoutePointEditForm.tsx` | 233 | форма правки точки: тип, название, координаты, описание, адресный поиск; плюс перестановка (обе раскладки) и удаление (только mapFirst) |
 | `components/trips/planning/TripSuggestPointForm.tsx` | 221 | предложение точки участником |
 | `components/trips/planning/tripPlanFormatting.ts` | 214 | метки/иконки/цвета планировщика, сводка маршрута строкой, даты |
 | `components/trips/planning/RoutePointsSection.tsx` | 192 | шаг 2 панели: список точек и форма добавления |
@@ -649,6 +649,17 @@ sequenceDiagram
   один вход в правку (вся строка + карандаш), а перестановка и удаление живут в
   раскрытом инлайн-редакторе внутри карточки точки; клавиатурный и a11y-путь
   перестановки — на ручке перетаскивания (`accessibilityActions`);
+- карточка точки в обеих раскладках: ручка перетаскивания в левом жёлобе, шапка
+  «номер + тип + управление» одной строкой, под ней название, описание,
+  координаты и бронь на всю ширину карточки. Управление в шапке — правка и
+  удаление на desktop, только правка на mobile: панель `stack` шириной 380
+  оставляет карточке ~356px, и прежние ручка плюс четыре иконки по 44dp
+  забирали 232 из них — тексту точки доставалось ~90px, описание переносилось
+  по слогам. Перестановка стрелками поэтому живёт в редакторе точки в обеих
+  раскладках. Длинное описание свёрнуто до трёх строк с кнопкой «Показать
+  полностью» (`TripPlanCollapsibleText` с вместимостью строки по замеренной
+  ширине колонки): иначе одна точка с логистикой выдавливала из ограниченного
+  по высоте списка все остальные;
 - порядок меняют два пути с общей арифметикой в `routePointReorder.ts`:
   стрелки (клавиатура/a11y) и drag&drop (`useRoutePointDrag`). `moveItem`,
   `remapIndexAfterMove` (открытая форма редактирования едет за своей точкой) и

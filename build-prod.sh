@@ -25,6 +25,134 @@ source "$(dirname "${BASH_SOURCE[0]}")/scripts/use-node.sh"
 # shellcheck source=scripts/deploy-target.sh
 source "$(dirname "${BASH_SOURCE[0]}")/scripts/deploy-target.sh"
 
+# Единая уборка на выходе. Раньше EXIT-trap ставили внутри build_env и
+# deploy_prod, и каждый следующий затирал предыдущий, поэтому отдельный trap на
+# .env до конца цикла бы не дожил. Все временные пути объявлены глобально: trap
+# выполняется на верхнем уровне и `local`-переменные функций там не видны.
+EXPORT_LOG=''
+REMOTE_LOG=''
+ENV_BACKUP=''
+ENV_BACKUP_PRESENT=0
+BUILD_SOURCE_SHA=''
+
+# .env общий для всех параллельных сессий в этом чекауте, а apply_env копирует
+# поверх него .env.$ENV. Без возврата исходника соседняя сессия молча получала
+# прод-конфиг: 08.09.2026 прерванная сборка оставила APP_ENV=production рядом с
+# мёртвым EXPO_PUBLIC_API_URL от чужого e2e-прогона (#1881).
+restore_env_file() {
+  local backup="$ENV_BACKUP"
+
+  [[ -n "$backup" ]] || return 0
+  ENV_BACKUP=''
+
+  if [[ "$ENV_BACKUP_PRESENT" == "1" ]]; then
+    if cp -p "$backup" .env; then
+      echo "♻️  .env восстановлен в исходное состояние"
+    else
+      echo "⚠️  Не удалось восстановить .env — исходная копия осталась в $backup"
+      return 0
+    fi
+  else
+    rm -f .env
+    echo "♻️  .env удалён: до сборки его в дереве не было"
+  fi
+
+  rm -f "$backup"
+}
+
+on_exit() {
+  local status=$?
+
+  trap - EXIT
+  # Уборка неразрывна: второй Ctrl-C, пришедший посреди `cp` в
+  # restore_env_file, иначе бросил бы общий .env прод-копией — ENV_BACKUP к
+  # этому моменту уже обнулён, и повторной попытки не будет.
+  trap '' INT TERM HUP
+  if [[ -n "${EXPORT_LOG:-}" ]]; then
+    rm -f "$EXPORT_LOG"
+  fi
+  if [[ -n "${REMOTE_LOG:-}" ]]; then
+    rm -f "$REMOTE_LOG"
+  fi
+  restore_env_file
+  exit "$status"
+}
+
+trap on_exit EXIT
+# Без явных обработчиков сигналов bash умирает, не выполнив EXIT-trap: после
+# Ctrl-C или kill общий .env остался бы прод-копией.
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
+
+# Гейт источника сборки. build-prod.sh собирает физическое содержимое рабочего
+# каталога, а в этом чекауте одновременно работают до восьми сессий и почти
+# всегда что-то не закоммичено. 08.09.2026 запуск из общего дерева утащил в
+# сборку 29 продуктовых файлов чужой задачи, висевшей in_progress (#1881).
+# Проверка идёт до install_deps и сборки, поэтому стоп ничего не стоит.
+assert_deployable_source() {
+  local env_name="$1"
+  local allow_dirty="$2"
+  local deploying="$3"
+  local upstream='origin/main'
+  local dirty
+
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "❌ Каталог не является Git-репозиторием: собираемый коммит не с чем сверить"
+    return 1
+  fi
+
+  BUILD_SOURCE_SHA="$(git rev-parse HEAD)"
+  echo "🔖 Собираемый коммит: $BUILD_SOURCE_SHA ($(git rev-parse --abbrev-ref HEAD))"
+
+  dirty="$(git status --porcelain)"
+  if [[ -n "$dirty" ]]; then
+    if [[ "$deploying" != "1" ]]; then
+      echo "⚠️  Дерево грязное, но это build-only (DEPLOY=$deploying) — в артефакт попадёт незакоммиченная работа, деплоить его нельзя:"
+      printf '%s\n' "$dirty" | sed 's/^/    /'
+    elif [[ "$allow_dirty" == "1" ]]; then
+      echo "⚠️  ВНИМАНИЕ: --allow-dirty, собирается ГРЯЗНОЕ дерево — в артефакт попадёт незакоммиченная работа:"
+      printf '%s\n' "$dirty" | sed 's/^/    /'
+    else
+      echo "❌ Рабочее дерево грязное — сборка остановлена, чтобы чужая незакоммиченная работа не уехала на прод:"
+      printf '%s\n' "$dirty" | sed 's/^/    /'
+      echo "   Штатный путь — деплой из изолированного worktree на origin/main:"
+      echo "     docs/WORKFLOW_OPERATIONS.md → «3.5 Деплой из изолированного worktree»"
+      echo "   Осознанный обход: ./build-prod.sh $env_name --allow-dirty"
+      echo "   Локальная проверка артефакта без деплоя: DEPLOY=0 ./build-prod.sh $env_name"
+      return 1
+    fi
+  fi
+
+  # Гейт защищает ровно прод. `DEPLOY=0 ./build-prod.sh prod` — документированный
+  # build-only preview (docs/PRODUCTION_CHECKLIST.md, docs/RELEASE.md,
+  # docs/ARCHITECTURE.md), он существует ради проверки ещё не отправленной
+  # работы. У сверки с origin/main обхода нет, поэтому остановка build-only
+  # прогона сделала бы этот путь недоступным вовсе — здесь достаточно
+  # предупредить, на прод этим запуском ничего не уедет.
+  if [[ "$deploying" != "1" ]]; then
+    echo "ℹ️  DEPLOY=$deploying: сборка без деплоя, сверка с $upstream пропущена"
+    return 0
+  fi
+
+  # Без GIT_TERMINAL_PROMPT=0 fetch за учётными данными уходит в интерактивный
+  # запрос и висит, удерживая общий .codex-temp/ops/web-build.lock.
+  if ! GIT_TERMINAL_PROMPT=0 git fetch --quiet origin main 2>/dev/null; then
+    echo "⚠️  Не удалось обновить $upstream — достижимость сверяется по локальной копии ссылки"
+  fi
+  if ! git rev-parse --verify --quiet "$upstream" >/dev/null; then
+    echo "❌ Ссылка $upstream недоступна: достижимость собираемого коммита не проверить"
+    return 1
+  fi
+  if ! git merge-base --is-ancestor HEAD "$upstream"; then
+    echo "❌ Коммит $BUILD_SOURCE_SHA не достижим из $upstream — на прод уехало бы то, чего нет в main."
+    echo "   Запушьте работу и повторите: PREFLIGHT_SKIP_E2E=1 git push origin main"
+    return 1
+  fi
+
+  echo "✅ Источник сборки: $BUILD_SOURCE_SHA достижим из $upstream"
+}
+
 apply_env() {
   local ENV="$1"
 
@@ -38,7 +166,24 @@ apply_env() {
     exit 1
   fi
 
-  echo "📦 Применяю .env.$ENV → .env"
+  if [[ -z "$ENV_BACKUP" ]]; then
+    # ENV_BACKUP публикуется ПОСЛЕДНИМ, уже после снимка. Иначе между `mktemp` и
+    # `ENV_BACKUP_PRESENT=1` открыто окно в несколько миллисекунд: сигнал,
+    # пойманный в нём, запускает restore_env_file с непустым ENV_BACKUP и
+    # дефолтным ENV_BACKUP_PRESENT=0 — и общий `.env` УДАЛЯЕТСЯ вместо
+    # восстановления (воспроизводилось 10 раз из 32 прогонов kill -TERM).
+    local snapshot
+    local present=0
+    snapshot="$(mktemp -t metravel-env-backup 2>/dev/null || mktemp "/tmp/metravel-env-backup.XXXXXX")"
+    if [[ -f .env ]]; then
+      cp -p .env "$snapshot"
+      present=1
+    fi
+    ENV_BACKUP_PRESENT="$present"
+    ENV_BACKUP="$snapshot"
+  fi
+
+  echo "📦 Применяю .env.$ENV → .env (исходный вернётся на выходе)"
   cp ".env.$ENV" .env
 }
 
@@ -59,9 +204,7 @@ create_export_log() {
 build_env() {
   local ENV="$1"
   local DIR="dist/$ENV"
-  local EXPORT_LOG
   EXPORT_LOG="$(create_export_log "$ENV")"
-  trap 'rm -f "${EXPORT_LOG:-}"' EXIT
 
   echo "🚀 Сборка для $ENV → $DIR"
   apply_env "$ENV"
@@ -107,7 +250,6 @@ deploy_prod() {
   local EXPO_OVERLAY_HELPER_B64
   local CONTAINER_HELPER_B64
   local REMOTE_DONE_MARKER
-  local REMOTE_LOG
 
   if [[ ! "$EXPO_OVERLAY_RETENTION_DAYS" =~ ^[0-9]+$ ]]; then
     echo "❌ EXPO_OVERLAY_RETENTION_DAYS must be a non-negative integer"
@@ -138,7 +280,6 @@ deploy_prod() {
   # echoes the swallowed tail can leak the variable name, never the value.
   REMOTE_DONE_MARKER="MT_REMOTE_DEPLOY_OK:$(date +%s).$$.$RANDOM"
   REMOTE_LOG="$(mktemp -t metravel-remote-deploy 2>/dev/null || mktemp /tmp/metravel-remote-deploy.XXXXXX)"
-  trap 'rm -f "${REMOTE_LOG:-}"' EXIT
 
   # Send the remote program as literal stdin. Embedding it in a local
   # double-quoted argument strips nested quotes and turns punctuation inside
@@ -398,12 +539,35 @@ REMOTE_DEPLOY_SCRIPT
     return 1
   fi
   rm -f "$REMOTE_LOG"
+  REMOTE_LOG=''
 
   rm -rf dist
 }
 
-ENV="${1:-prod}"
+ENV=''
+ALLOW_DIRTY=0
+for arg in "$@"; do
+  case "$arg" in
+    --allow-dirty)
+      ALLOW_DIRTY=1
+      ;;
+    -*)
+      echo "❌ Неизвестный флаг: $arg (поддерживается только --allow-dirty)"
+      exit 1
+      ;;
+    *)
+      if [[ -n "$ENV" ]]; then
+        echo "❌ Лишний аргумент: $arg"
+        exit 1
+      fi
+      ENV="$arg"
+      ;;
+  esac
+done
+ENV="${ENV:-prod}"
 DEPLOY="${DEPLOY:-1}"
+
+assert_deployable_source "$ENV" "$ALLOW_DIRTY" "$DEPLOY"
 
 echo "🔁 Старт сборки..."
 install_deps
@@ -498,4 +662,4 @@ if [[ "$DEPLOY" == "1" ]]; then
   fi
 fi
 
-echo "🎉 Сборка завершена успешно!"
+echo "🎉 Сборка завершена успешно! Собранный коммит: $BUILD_SOURCE_SHA"

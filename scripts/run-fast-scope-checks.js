@@ -270,6 +270,12 @@ const main = () => {
       process.exit(rootScratchGuardStatus)
     }
 
+    // Read the actual public/ tree even when an extra file is Git-ignored.
+    const publicFilesGuardStatus = runCommand('npm', ['run', 'guard:public-files'])
+    if (publicFilesGuardStatus !== 0) {
+      process.exit(publicFilesGuardStatus)
+    }
+
     const guardStatus = runCommand('npm', ['run', 'guard:external-links'])
     if (guardStatus !== 0) {
       process.exit(guardStatus)

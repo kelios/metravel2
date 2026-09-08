@@ -116,7 +116,10 @@ describe('RouteBuilder reorder', () => {
   it('saves the whole reordered list with a single mutation', () => {
     const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    // Стрелки — клавиатурный/a11y путь того же reorder, что и перетаскивание.
+    // Стрелки живут в редакторе точки: в строке рядом с названием помещаются
+    // только правка и удаление. Клавиатурный/a11y путь того же reorder остался
+    // на ручке перетаскивания.
+    fireEvent.press(getByTestId('route-builder-edit-19'))
     fireEvent.press(getByTestId('route-builder-move-up-19'))
     fireEvent.press(getByTestId('route-builder-save'))
 

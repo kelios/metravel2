@@ -137,6 +137,36 @@ describe('RouteBuilder point description', () => {
     )
   })
 
+  // На скрине владельца (08.09.2026, Mullerthal Trail) описание первой точки —
+  // автобусы RGTR до старта — занимало в карточке полтора десятка строк и
+  // выдавливало из ограниченного по высоте списка остальные точки.
+  it('collapses a long point description to three lines with a per-point toggle', () => {
+    const longDescription =
+      'День 0. Приезд, база на старте. Автобусы RGTR 211/212 из Люксембурга ' +
+      '(Kirchberg/Limpertsberg), 190/191 от вокзала Ettelbruck, 272 от Wasserbillig ' +
+      '(поезд Трир–Люксембург). Проезд по Люксембургу бесплатный, билеты не нужны. ' +
+      'Заселение с 15:00, ключи на ресепшене до 22:00, поздний заезд — по телефону.'
+    const trip = makeTrip()
+    const { getByTestId, queryByTestId } = renderRouteBuilder(
+      <RouteBuilder
+        trip={makeTrip({
+          route: [
+            { ...trip.route[0], description: longDescription },
+            { ...trip.route[1], description: 'Короткая заметка.' },
+          ],
+        })}
+      />,
+    )
+
+    expect(getByTestId('route-builder-point-description-0').props.numberOfLines).toBe(3)
+
+    fireEvent.press(getByTestId('route-builder-point-description-toggle-0'))
+    expect(getByTestId('route-builder-point-description-0').props.numberOfLines).toBeUndefined()
+
+    // Короткому описанию соседней точки кнопка не нужна и не рисуется.
+    expect(queryByTestId('route-builder-point-description-toggle-1')).toBeNull()
+  })
+
   it('renders links inside a point description as real anchors on web', () => {
     Platform.OS = 'web'
     const { UNSAFE_getAllByProps } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)

@@ -141,6 +141,17 @@ Behavior:
 - Missing/unreachable `baseURL` and a configured-but-invalid required account session fail global setup instead of creating an empty state and reporting authenticated scenarios as passed. `live-contract` forces `E2E_AUTH_MODE=required`.
 - `test-quality-governance.test.ts` rejects focused/disabled tests, literal boolean assertions, and diagnostic/manual filenames in the automated spec tree.
 
+## Run budget: a full local `npm run e2e` fits in ~10 minutes
+
+Measured on 2026-09-08, 8-core Apple Silicon / 16 GB, warm `dist`: fast pass 5.0 min (396 tests) + perf pass 4.8 min (82 tests) = **9 min 46 s**, exit 0. A cold `dist` adds one Expo export (~3-4 min) on top; that is the only reason a run exceeds the budget.
+
+- The fast pass runs as **one Playwright invocation on half the cores** (capped at 4). The previous default — 16 shards at one worker — executed the same 396 tests strictly serially and paid 16 cold Playwright starts: 16.5 min for an identical green result.
+- The perf pass stays at `--workers=1` on purpose: budgets measure LCP/CLS/TBT and parallel load would corrupt them. Its ~4.8 min is the floor of the current budget suite, so it is the co-dominant cost — trimming the run further means fewer perf targets, not more workers.
+- Flakes are retried **per test** (`--retries=1` locally), not by re-running the whole pass. With a single shard a pass-level retry would cost the entire suite again: the 2026-09-08 run lost 4.5 min re-running 82 perf tests because one CLS assertion flaked. Playwright still reports such tests as `flaky`, so the signal is not lost.
+- Knobs, all env-overridable: `E2E_WORKERS`, `E2E_FAST_SHARDS` (set >1 only to bisect memory/artifact problems), `E2E_TEST_RETRIES`, `E2E_FAST_SHARD_RETRIES`, `E2E_PERF_RETRIES`. CI keeps its previous behaviour (2 workers, no per-test retry).
+- Inner loop, not the full suite: `E2E_SUITE=smoke npm run e2e` for critical paths, `npm run check:e2e:changed` to run only the specs your diff touches.
+- **The local backend must be alive for the whole run.** A dead `localhost:8000` does not fail loudly — most specs mock the API or read prerendered HTML, so 396 tests still pass while the few that need a live catalog fail as if the layout regressed (`web-scroll-delegation.spec.ts` reported dead scroll zones on 2026-09-08; the real cause was `/api/travels/` answering 502 through the e2e proxy). Start it as a long-lived process (`bash ~/Sites/metravel/run-backend.sh`, not a `nohup … &` launcher that the shell reaps) and keep a watchdog on `http://127.0.0.1:8000/api/travels/?perPage=1` for the duration.
+
 ## High-risk coverage slices
 
 - `npm run test:coverage:export-settings` is the reproducible branch/function/line

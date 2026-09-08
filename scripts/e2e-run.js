@@ -2,6 +2,7 @@
 
 const { spawn, execSync } = require('node:child_process');
 const net = require('node:net');
+const os = require('node:os');
 const path = require('node:path');
 
 const rootDir = path.join(__dirname, '..');
@@ -107,6 +108,7 @@ async function runFastPlaywrightPass({
   port,
   shards,
   retries,
+  testRetries,
 }) {
   const shardCount = Math.max(1, Number.isFinite(shards) ? Math.floor(shards) : 1);
   const shardRetries = Math.max(0, Number.isFinite(retries) ? Math.floor(retries) : 0);
@@ -130,7 +132,7 @@ async function runFastPlaywrightPass({
         await runPlaywright([
           'test',
           '--forbid-only',
-          '--retries=0',
+          `--retries=${testRetries}`,
           '--pass-with-no-tests',
           `--workers=${workers}`,
           '--grep-invert',
@@ -188,11 +190,21 @@ async function main() {
     process.exit(2);
   }
 
-  // Keep worker count conservative to avoid long-run Playwright artifact/trace flakes
-  // under local parallel load. Local runs can still opt back up with E2E_WORKERS.
-  const workersFast = getNumberEnv('E2E_WORKERS', process.env.CI ? 2 : 1);
-  const fastShards = getNumberEnv('E2E_FAST_SHARDS', process.env.CI ? 1 : 16);
-  const fastShardRetries = getNumberEnv('E2E_FAST_SHARD_RETRIES', process.env.CI ? 0 : 1);
+  // Локально быстрый набор идёт ОДНИМ прогоном на нескольких воркерах.
+  // Прежний дефолт (16 шардов по одному воркеру) исполнял 396 тестов строго
+  // последовательно и добавлял 16 холодных стартов Playwright: замер 08.09.2026
+  // — 16,5 мин против 5,0 мин на четырёх воркерах при том же зелёном результате.
+  // Половина ядер — тот же расчёт, что у `workers: '50%'` в playwright.config.ts;
+  // потолок в 4 держит пиковую память браузеров в разумных рамках на 16 ГБ.
+  const localWorkers = Math.max(2, Math.min(4, Math.floor(os.cpus().length / 2)));
+  const workersFast = getNumberEnv('E2E_WORKERS', process.env.CI ? 2 : localWorkers);
+  const fastShards = getNumberEnv('E2E_FAST_SHARDS', 1);
+  const fastShardRetries = getNumberEnv('E2E_FAST_SHARD_RETRIES', 0);
+  // Перезапуск флака делается НА УРОВНЕ ТЕСТА, а не всего прогона: одним шардом
+  // повтор пасса стоил бы полного набора заново. Флак остаётся видимым — Playwright
+  // печатает такие тесты как `flaky`, а стабильное падение красит прогон и на повторе.
+  // На CI поведение прежнее: повтор пасса целиком, без per-test retry.
+  const testRetries = Math.max(0, getNumberEnv('E2E_TEST_RETRIES', process.env.CI ? 0 : 1));
   const requestedPort = getNumberEnv('E2E_WEB_PORT', 8085);
   const autoSelectPort = String(process.env.E2E_AUTO_SELECT_PORT || '1') !== '0';
   const selectedPort = autoSelectPort
@@ -225,6 +237,7 @@ async function main() {
       port: selectedPort,
       shards: fastShards,
       retries: fastShardRetries,
+      testRetries,
     });
 
     // Pass 2: perf/vitals tests in isolation (single worker).
@@ -237,7 +250,7 @@ async function main() {
         await runPlaywright([
           'test',
           '--forbid-only',
-          '--retries=0',
+          `--retries=${testRetries}`,
           '--pass-with-no-tests',
           '--workers=1',
           '--grep',

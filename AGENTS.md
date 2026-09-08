@@ -170,6 +170,15 @@ Validation:
 - Крупный diff: `npm run lint` и `npm run test:run`.
 - После review в `testing`: `npm run check:preflight` или точечный
   browser/API/device/e2e gate по Task Contract.
+- Полный `npm run e2e` укладывается в ~10 минут при тёплом `dist` (замер
+  08.09.2026: быстрый набор 5,0 мин, перф 4,8 мин). Дефолты рассчитаны на это и
+  правке под задачу не подлежат; внутренний цикл — `E2E_SUITE=smoke npm run e2e`
+  или `npm run check:e2e:changed`, а не полный набор. Условия и ручки —
+  `docs/TESTING.md` → «Run budget».
+- Перед первой e2e/browser-пробой локальный бэкенд поднимается долгоживущим
+  процессом и проверяется сторожем на весь прогон: мёртвый `localhost:8000` не
+  красит набор честно — спеки на моках проходят, а зависящие от живого каталога
+  падают как «регрессия вёрстки».
 - Localization: `npm run test:i18n`; external links: соответствующий governance
   guard; release/performance: только production build/real URL по профильному doc.
 - `SKIPPED` из-за чужого quality gate — coordination evidence, не pass. Если

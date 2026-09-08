@@ -192,6 +192,9 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
 
 /** Правка маршрута без сохранения: точки перестают совпадать с серверными. */
 const editRoute = (getByTestId: (id: string) => unknown) => {
+  // Перестановка живёт в редакторе точки: в строке остались правка и удаление,
+  // иначе четыре иконки по 44dp не оставляли места названию.
+  fireEvent.press(getByTestId('route-builder-edit-1') as never)
   fireEvent.press(getByTestId('route-builder-move-up-1') as never)
 }
 

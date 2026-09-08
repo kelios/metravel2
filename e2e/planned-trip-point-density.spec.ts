@@ -45,7 +45,13 @@ const savedPoints = [
     point_type: 'custom',
     order: 2,
     title: 'Друя',
-    description: '',
+    // Реальное описание точки со скрина владельца (Mullerthal Trail,
+    // 08.09.2026): логистика на полтора десятка строк в колонке панели.
+    description:
+      'День 0. Приезд, база на старте. Автобусы RGTR 211/212 из Люксембурга '
+      + '(Kirchberg/Limpertsberg), 190/191 от вокзала Ettelbruck, 272 от '
+      + 'Wasserbillig (поезд Трир–Люксембург). Проезд по Люксембургу бесплатный, '
+      + 'билеты не нужны. Заселение с 15:00, ключи на ресепшене до 22:00.',
     lat: 55.7896,
     lng: 27.4712,
   },
@@ -256,6 +262,13 @@ test.describe('Planned trip point density (#1671)', () => {
     const profileHeight = (await profile.boundingBox())?.height ?? Number.POSITIVE_INFINITY
     expect(profileHeight).toBeLessThan(470)
 
+    // Кнопка «Показать полностью» — не тап по строке: в мобильной раскладке тап
+    // по телу точки открывает редактор, и разворот описания не должен его звать.
+    const toggle = page.getByTestId('route-builder-point-description-toggle-1').first()
+    await toggle.evaluate((node) => node.scrollIntoView({ block: 'center' }))
+    await toggle.click()
+    await expect(page.getByTestId('route-builder-edit-form')).toHaveCount(0)
+
     // Доказательство владельцу — сами элементы, а не верх страницы: карточка
     // точки и блок высот на 390pt лежат ниже первого экрана.
     await shoot(
@@ -288,6 +301,37 @@ test.describe('Planned trip point density (#1671)', () => {
     ]) {
       await expect(summaryCards(page).getByText(label)).toBeVisible()
     }
+
+    // Панель конструктора — колонка 380px: ручка и четыре иконки по 44dp
+    // забирали 232px из 356, и текстовой колонке точки оставалось ~90px —
+    // описание переносилось по слогам, как на скрине владельца 08.09.2026.
+    const body = page.getByTestId('route-builder-focus-1').first()
+    await body.evaluate((node) => node.scrollIntoView({ block: 'center' }))
+    const bodyBox = await body.boundingBox()
+    expect(bodyBox!.width).toBeGreaterThan(240)
+
+    // Длинное описание свёрнуто до трёх строк с кнопкой разворота: иначе одна
+    // точка выдавливает из ограниченного по высоте списка все остальные.
+    const description = page.getByTestId('route-builder-point-description-1').first()
+    await expect(description).toBeVisible()
+    const collapsedHeight = (await description.boundingBox())!.height
+    expect(collapsedHeight).toBeLessThan(70)
+
+    await shoot(
+      page,
+      page.getByTestId('route-builder-point-1').first(),
+      'e2e/__screenshots__/planned-trip-point-card-collapsed-1280.png',
+    )
+
+    await page.getByTestId('route-builder-point-description-toggle-1').first().click()
+    const expandedHeight = (await description.boundingBox())!.height
+    expect(expandedHeight).toBeGreaterThan(collapsedHeight)
+
+    await shoot(
+      page,
+      page.getByTestId('route-builder-point-1').first(),
+      'e2e/__screenshots__/planned-trip-point-card-desc-1280.png',
+    )
 
     await shoot(
       page,

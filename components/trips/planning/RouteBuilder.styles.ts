@@ -1,6 +1,11 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { webStyle, webTextStyle, webViewStyle } from '@/utils/webProps';
+// Кегль описания точки: по нему считается вместимость строки, когда описание
+// сворачивается в карточке (`RoutePointRow`), поэтому значение объявлено один
+// раз и берётся отсюда, а не переписывается числом в компоненте.
+export const POINT_DESCRIPTION_FONT_SIZE = 13;
+
 export const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     wrap: { gap: 12 },
@@ -38,12 +43,17 @@ export const createStyles = (colors: ThemedColors) =>
       overflow: 'hidden',
     },
     pointCardEditing: { borderColor: colors.primary },
+    // Строка точки: ручка перетаскивания в левом жёлобе, всё остальное —
+    // одной колонкой справа от неё (`pointContent`). Управление стоит на строке
+    // типа, а не отдельной колонкой справа: четыре иконки по 44dp забирали
+    // 188px из 356px карточки в панели шириной 380 (`routePanelStyles.ts`), и
+    // тексту точки оставалось ~90px — описание переносилось по слогам.
     pointRow: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      gap: 8,
-      paddingVertical: 8,
-      paddingRight: 12,
+      gap: 4,
+      paddingVertical: 6,
+      paddingRight: 8,
       paddingLeft: 4,
     },
     pointEditor: {
@@ -55,7 +65,7 @@ export const createStyles = (colors: ThemedColors) =>
     },
     // Без ручки перетаскивания (чужой маршрут или единственная точка) строка
     // сохраняет прежние отступы — слева больше нечего компенсировать.
-    pointRowFlat: { paddingVertical: 12, paddingLeft: 12 },
+    pointRowFlat: { paddingVertical: 10, paddingLeft: 12 },
     // Строку под пальцем поднимаем над соседями: на Android порядок отрисовки
     // задаёт elevation, на web — zIndex.
     pointRowDragging: {
@@ -83,7 +93,10 @@ export const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surfaceMuted,
       ...Platform.select({ web: webViewStyle({ cursor: 'grabbing' }), default: {} }),
     },
-    pointBody: { flex: 1, minWidth: 0, gap: 2, paddingTop: 2 },
+    // Колонка содержимого: шапка «номер + тип + управление», под ней текст
+    // точки на всю ширину карточки.
+    pointContent: { flex: 1, minWidth: 0, gap: 2 },
+    pointBody: { minWidth: 0, gap: 2 },
     pointTypeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, minWidth: 0 },
     // Номер точки: маркеры на карте одинаковые, и без номера строку списка не с
     // чем сопоставить.
@@ -100,7 +113,9 @@ export const createStyles = (colors: ThemedColors) =>
       color: colors.textOnPrimary,
       backgroundColor: colors.primary,
     },
-    pointType: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },
+    // Подпись типа — единственный растягивающийся элемент шапки: она забирает
+    // остаток ширины и прижимает управление к правому краю карточки.
+    pointType: { flex: 1, minWidth: 0, fontSize: 11, color: colors.textMuted, fontWeight: '600' },
     pointName: {
       minWidth: 0,
       fontSize: 15,
@@ -111,7 +126,11 @@ export const createStyles = (colors: ThemedColors) =>
         default: {},
       }),
     },
-    pointDescription: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
+    pointDescription: {
+      fontSize: POINT_DESCRIPTION_FONT_SIZE,
+      color: colors.textSecondary,
+      lineHeight: 18,
+    },
     descriptionLink: { color: colors.primaryDark, fontWeight: '700' },
     pointCoordinates: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
     pointControls: { flexDirection: 'row', gap: 4 },
@@ -123,7 +142,6 @@ export const createStyles = (colors: ThemedColors) =>
       justifyContent: 'center',
       backgroundColor: colors.surfaceMuted,
     },
-    ctrlDisabled: { opacity: 0.4 },
     editForm: {
       gap: 8,
       borderWidth: 1,

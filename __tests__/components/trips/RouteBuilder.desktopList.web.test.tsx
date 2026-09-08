@@ -161,6 +161,25 @@ describe('RouteBuilder desktop long-list contract', () => {
     expect(getByTestId('route-builder-delete-25')).toHaveProp('accessibilityRole', 'button')
   })
 
+  // Панель конструктора — колонка 380px: ручка и четыре иконки по 44dp забирали
+  // 232px из 356px карточки, и тексту точки оставалось ~90px. В строке остались
+  // правка и удаление, перестановка переехала в редактор точки.
+  it('keeps the point row down to two controls and moves reorder into the editor', () => {
+    const { getByTestId, queryByTestId } = renderBuilder(3)
+
+    expect(getByTestId('route-builder-edit-1')).toBeTruthy()
+    expect(getByTestId('route-builder-delete-1')).toBeTruthy()
+    expect(queryByTestId('route-builder-move-up-1')).toBeNull()
+    expect(queryByTestId('route-builder-move-down-1')).toBeNull()
+
+    fireEvent.press(getByTestId('route-builder-edit-1'))
+
+    expect(getByTestId('route-builder-move-up-1')).toBeTruthy()
+    expect(getByTestId('route-builder-move-down-1')).toBeTruthy()
+    // Удаление в десктопной раскладке остаётся ровно одно — в строке точки.
+    expect(getByTestId('route-builder-delete-1')).toHaveProp('accessibilityRole', 'button')
+  })
+
   it('never shows add and edit forms at the same time', () => {
     const { getByTestId, queryByTestId } = renderBuilder()
 

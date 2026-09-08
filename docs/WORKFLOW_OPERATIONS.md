@@ -14,7 +14,9 @@
 - Xcode/iPhone+iPad simulator/physical Apple device/TestFlight → «3.2.1 iOS testing and release operations»;
 - матрица разрешений iOS и QA удаления аккаунта → «3.2.2 iOS permission matrix и account-deletion QA»;
 - baseline/after на живом URL, закрытие perf/media/network задач → «3.3.1 Production-target validation and task closure»;
-- deploy/build/e2e/Lighthouse и общие locks → «3.4 Координация долгих операций».
+- deploy/build/e2e/Lighthouse и общие locks → «3.4 Координация долгих операций»;
+- штатный запуск прод-деплоя из общего чекаута → «3.5 Деплой из изолированного
+  worktree».
 
 Обязательный минимум остаётся в `AGENTS.md`: common/shared responsive UI
 проверяется desktop web + mobile web, а device gate применяется только к
@@ -84,8 +86,11 @@ curl -sS -o /dev/null -w '%{http_code}\n' http://localhost:8000/api/travels/  # 
 grep -E '^EXPO_PUBLIC_(API_URL|IS_LOCAL_API)=' .env   # localhost:8000 + false
 ```
 
-Последняя проверка не формальность: `build-prod.sh` копирует `.env.prod` поверх
-`.env`, и после каждого прод-деплоя фронт молча начинает ходить в прод. Именно
+Последняя проверка не формальность: `.env` — общий файл всех параллельных
+сессий, и содержимое ему меняет не только человек. `build-prod.sh` копирует
+`.env.prod` поверх него на время сборки (с 08.09.2026 возвращает исходник
+EXIT-trap'ом, #1881), e2e-прогон оставляет там свой адрес, а прерванный деплой
+до фикса оставлял гибрид `APP_ENV=production` с мёртвым локальным API. Именно
 так `.env` и был найден 29.08.2026 — с `EXPO_PUBLIC_API_URL=https://metravel.by`
 при живом локальном бэке. Правильные значения для локальной проверки:
 
@@ -169,8 +174,10 @@ curl -s -o /dev/null -w '%{http_code}\n' --max-time 60 http://localhost:8081/
 - SSG-шелла, прод-кэша и прод-nginx здесь нет: perf/LCP/CLS/SEO-утверждения про
   прод локальным прогоном не доказываются — см. «3.3.1 Production-target
   validation and task closure».
-- `build-prod.sh` перезаписывает `.env` из `.env.prod`; после прод-деплоя вернуть
-  строку `EXPO_PUBLIC_API_URL=http://localhost:8000`.
+- `build-prod.sh` подменяет `.env` на `.env.prod` на время сборки и возвращает
+  исходник EXIT-trap'ом — включая Ctrl-C и `kill` (#1881). Строку
+  `EXPO_PUBLIC_API_URL=http://localhost:8000` всё равно видно перед первой
+  пробой: файл общий, и туда пишет не только деплой.
 
 Лежащий дев-стенд и прод-инфраструктура — зона владельца: агенты их не поднимают
 и не чинят. Полное описание локального стека (данные, вход, секреты, S3) —
@@ -415,3 +422,68 @@ deny → allow → Settings → retry снимают на свежепостав
 - Если запускаешь новую долгую операцию без собственного lock механизма, оставь короткий marker в `.codex-temp/ops/` и удали его после завершения.
 - `build-prod.sh` удерживает общий `.codex-temp/ops/web-build.lock` до конца полного цикла build + SEO + deploy. Не обходи этот wrapper: прямой `expo export` или запуск `scripts/build-web-safe.js` параллельно с deploy запрещен.
 - Основные test/quality команды (`check:fast`, `check:changed`, `check:e2e:changed`, `check:preflight`, `test:run`, `e2e`, `release:check`) обязаны запускаться только через общий `scripts/run-with-quality-gate-lock.js`. Он использует атомарный `.codex-temp/ops/quality-gate.lock`, сообщает PID владельца и при живом владельце сразу возвращает нейтральный `SKIPPED` с кодом `0`, чтобы чат завершил собственный запуск без ожидания/ретрая. `SKIPPED` нельзя записывать как `passed` или финальный Testing verdict: acceptance запрашивает результат владельца и продолжается после него. Lock умершего процесса восстанавливается автоматически. Общая Jest-конфигурация применяет тот же контракт к прямому `npx jest`. Не обходи wrapper прямым Playwright-запуском.
+
+### 3.5 Деплой из изолированного worktree
+
+`build-prod.sh` собирает физическое содержимое рабочего каталога, а не коммит.
+В общем чекауте `/Users/juliasavran/Sites/metravel2/metravel2` одновременно
+работают до восьми сессий, и что-то незакоммиченное там есть почти всегда:
+08.09.2026 запуск оттуда утащил в прод-сборку 29 продуктовых файлов чужой
+задачи в статусе `in_progress` — 774 добавленные строки. Сборку остановили
+вручную до rsync, и только потому, что человек заметил (#1881).
+
+Поэтому изолированный worktree — не обходной путь, а ШТАТНЫЙ способ запустить
+прод-деплой. Общий чекаут годится, только когда `git status --porcelain` в нём
+пуст.
+
+```bash
+MT=/Users/juliasavran/Sites/metravel2/metravel2
+WT=/Users/juliasavran/Sites/metravel2/worktrees/deploy-main
+
+git -C "$MT" fetch origin main
+git -C "$MT" worktree add --detach "$WT" origin/main
+
+# node_modules общий со всеми worktree этого репозитория (та же конвенция, что
+# у worktrees/map и соседей): своя установка стоит гигабайты и минуты.
+ln -sfn "$MT/node_modules" "$WT/node_modules"
+
+# .env* и .env.deploy в git не лежат, а без них apply_env и resolve прод-хоста
+# падают. Симлинк, а не копия: секреты не размножаются по дереву.
+for f in .env.prod .env.deploy; do ln -sfn "$MT/$f" "$WT/$f"; done
+
+cd "$WT" && ./build-prod.sh prod
+```
+
+После деплоя worktree снимается: брошенный worktree git не показывает в
+`status`, но рекурсивные сканы (`grep -r`, `os.walk`) его видят и начинают
+врать.
+
+```bash
+rm -f "$WT/node_modules" "$WT/.env.prod" "$WT/.env.deploy"
+git -C "$MT" worktree remove --force "$WT" && git -C "$MT" worktree prune
+```
+
+Что делает гейт `build-prod.sh` перед установкой зависимостей (проверка стоит
+доли секунды и срабатывает до сборки):
+
+- печатает собираемый sha — в лог старта и в финальную строку отчёта, иначе
+  «задеплоено» не привязано ни к какому коммиту;
+- останавливается на непустом `git status --porcelain` и перечисляет файлы.
+  Осознанный обход — только явный флаг: `./build-prod.sh prod --allow-dirty`,
+  и он громко печатает, что в артефакт уедет незакоммиченная работа;
+- обновляет `origin/main` и останавливается, если `HEAD` из него недостижим.
+  У этой проверки обхода нет: невоспроизводимый прод не нужен даже срочно.
+  Аварийное восстановление уже выложенного релиза — `scripts/fix-prod.sh`.
+
+Обе остановки касаются только деплоя. `DEPLOY=0 ./build-prod.sh prod` —
+документированный build-only preview (`docs/PRODUCTION_CHECKLIST.md`,
+`docs/RELEASE.md`), он существует ради проверки ещё не отправленной работы:
+там гейт печатает те же файлы предупреждением и пропускает сверку с
+`origin/main`. Собранный таким прогоном `dist/prod` деплоить нельзя — в том
+числе через `scripts/fix-prod.sh`, который заливает лежащий на диске артефакт.
+
+`.env` на время сборки подменяется на `.env.prod` и возвращается EXIT-trap'ом:
+нормальный выход, ошибка, `Ctrl-C` (SIGINT), `kill` (SIGTERM) и обрыв терминала
+(SIGHUP). `kill -9` и отключение питания обработчик не переживают — после них
+`.env` проверяется руками. Отдельного ручного возврата `EXPO_PUBLIC_API_URL`
+после штатного деплоя больше не требуется.

@@ -229,16 +229,19 @@ describe('RouteBuilder — мобильная раскладка вкладки 
     expect(within(card).getByTestId('route-builder-delete-1')).toBeTruthy()
   })
 
-  it('оставляет desktop-раскладку с полным набором кнопок в строке', () => {
+  it('оставляет desktop-раскладке правку и удаление в строке, а форму — отдельной секцией', () => {
     const { getByTestId, queryByTestId } = render(
       <RouteBuilder trip={makeTrip()} />,
       { wrapper: createQueryWrapper().Wrapper },
     )
 
-    expect(getByTestId('route-builder-move-up-1')).toBeTruthy()
+    // Панель шириной 380 не вмещает четыре иконки по 44dp рядом с текстом:
+    // перестановка уехала в редактор и здесь, удаление осталось в строке.
+    expect(queryByTestId('route-builder-move-up-1')).toBeNull()
     expect(getByTestId('route-builder-delete-1')).toBeTruthy()
 
     fireEvent.press(getByTestId('route-builder-edit-1'))
+    expect(getByTestId('route-builder-move-up-1')).toBeTruthy()
     // На desktop форма остаётся отдельной секцией колонки, а не внутри строки.
     expect(queryByTestId('route-builder-edit-form')).toBeTruthy()
     expect(
@@ -321,7 +324,15 @@ describe('RouteBuilder layout=mapFirst — связка карты и панел
     })
 
     expect(queryByTestId('route-mobile-map')).toBeNull()
-    expect(queryByTestId('route-builder-focus-1')).toBeNull()
+    // Текстовая колонка точки есть в обеих раскладках — её ширину меряет
+    // проверка вёрстки карточки, — но в `stack` это обычный View: ни роли
+    // кнопки, ни ответчика касаний. Поэтому тап по описанию карту не двигает и
+    // не перехватывает выделение текста.
+    const pointBody = getByTestId('route-builder-focus-1')
+    expect(pointBody.props.accessibilityRole).toBeUndefined()
+    expect(pointBody.props.onStartShouldSetResponder).toBeUndefined()
+    fireEvent.press(pointBody)
+    expect(getByTestId('route-map-focus').props.children).toBe('none')
     expect(getByTestId('route-map-fill').props.children).toBe('false')
   })
 })

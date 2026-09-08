@@ -189,41 +189,44 @@ export default function RoutePointEditForm({
           testID="route-builder-edit-cancel"
         />
       </View>
-      {/* Перестановка и удаление в мобильной строке отсутствуют — четыре
-          иконки не помещались рядом с названием, — поэтому живут здесь. */}
+      {/* Перестановка живёт здесь в обеих раскладках: в строке точки рядом с
+          названием помещаются только правка и удаление, а на 380px панели даже
+          четыре иконки по 44dp оставляли тексту ~90px. Клавиатурный и a11y путь
+          того же reorder остался на ручке перетаскивания. */}
+      <View style={styles.editActions}>
+        <Button
+          label={i18nT('trips:components.trips.planning.RouteBuilder.podnyat_tochku_vyshe_23208202')}
+          onPress={() => onMove(editingIndex, -1)}
+          variant="ghost"
+          size="sm"
+          disabled={editingIndex === 0}
+          icon={<Feather name="chevron-up" size={16} color={colors.text} />}
+          testID={`route-builder-move-up-${editingIndex}`}
+        />
+        <Button
+          label={i18nT('trips:components.trips.planning.RouteBuilder.opustit_tochku_nizhe_c1c13a3e')}
+          onPress={() => onMove(editingIndex, 1)}
+          variant="ghost"
+          size="sm"
+          disabled={editingIndex === routeLength - 1}
+          icon={<Feather name="chevron-down" size={16} color={colors.text} />}
+          testID={`route-builder-move-down-${editingIndex}`}
+        />
+      </View>
+      {/* Удаление в мобильной раскладке есть только здесь: в строке точки его
+          заменил чеврон сворачивания редактора. В `stack` кнопка удаления
+          осталась в самой строке — второй такой же в форме быть не должно. */}
       {isMapFirst ? (
-        <>
-          <View style={styles.editActions}>
-            <Button
-              label={i18nT('trips:components.trips.planning.RouteBuilder.podnyat_tochku_vyshe_23208202')}
-              onPress={() => onMove(editingIndex, -1)}
-              variant="ghost"
-              size="sm"
-              disabled={editingIndex === 0}
-              icon={<Feather name="chevron-up" size={16} color={colors.text} />}
-              testID={`route-builder-move-up-${editingIndex}`}
-            />
-            <Button
-              label={i18nT('trips:components.trips.planning.RouteBuilder.opustit_tochku_nizhe_c1c13a3e')}
-              onPress={() => onMove(editingIndex, 1)}
-              variant="ghost"
-              size="sm"
-              disabled={editingIndex === routeLength - 1}
-              icon={<Feather name="chevron-down" size={16} color={colors.text} />}
-              testID={`route-builder-move-down-${editingIndex}`}
-            />
-          </View>
-          <View style={styles.editDangerRow}>
-            <Button
-              label={i18nT('trips:components.trips.planning.RouteBuilder.udalit_tochku_37161453')}
-              onPress={() => onDelete(editingIndex)}
-              variant="ghost"
-              size="sm"
-              icon={<Feather name="trash-2" size={16} color={colors.danger} />}
-              testID={`route-builder-delete-${editingIndex}`}
-            />
-          </View>
-        </>
+        <View style={styles.editDangerRow}>
+          <Button
+            label={i18nT('trips:components.trips.planning.RouteBuilder.udalit_tochku_37161453')}
+            onPress={() => onDelete(editingIndex)}
+            variant="ghost"
+            size="sm"
+            icon={<Feather name="trash-2" size={16} color={colors.danger} />}
+            testID={`route-builder-delete-${editingIndex}`}
+          />
+        </View>
       ) : null}
     </View>
   );

@@ -26,7 +26,9 @@ import { useTranslation } from '@/i18n/LocaleProvider';
 // `plannedTripScreen.styles.ts:15`) при `fontSize: 15` — средняя ширина глифа
 // пропорционального шрифта ≈0.5em.
 const CONTENT_HORIZONTAL_PADDING = 32;
-const AVERAGE_GLYPH_WIDTH = 7.5;
+const REFERENCE_FONT_SIZE = 15;
+const GLYPH_WIDTH_RATIO = 0.5;
+const AVERAGE_GLYPH_WIDTH = REFERENCE_FONT_SIZE * GLYPH_WIDTH_RATIO;
 // Компактная шапка живёт на всей мобильной ширине (до планшетного брейкпоинта
 // 768), поэтому вместимость строки считается по реальному вьюпорту: на 430dp
 // телефоне и в узком окне десктопа фиксированная «телефонная» вместимость
@@ -41,6 +43,18 @@ export const tripPlanTextCharsPerLine = (viewportWidth: number): number => {
       ? viewportWidth
       : REFERENCE_VIEWPORT_WIDTH;
   return Math.max(1, Math.floor((width - CONTENT_HORIZONTAL_PADDING) / AVERAGE_GLYPH_WIDTH));
+};
+
+/**
+ * Вместимость строки текста известной ширины. Нужна там, где текст живёт не на
+ * всю ширину контента экрана: описание точки маршрута лежит в карточке панели
+ * шириной 380px, и оценка по вьюпорту объявила бы помещающимся в две строки
+ * текст, которому в этой колонке нужно полтора десятка.
+ */
+export const tripPlanTextCharsPerWidth = (contentWidth: number, fontSize: number): number => {
+  const width = Number.isFinite(contentWidth) && contentWidth > 0 ? contentWidth : 0;
+  const glyphWidth = Math.max(1, fontSize * GLYPH_WIDTH_RATIO);
+  return Math.max(1, Math.floor(width / glyphWidth));
 };
 
 /**
@@ -63,10 +77,26 @@ interface Props {
   linkStyle?: StyleProp<TextStyle>;
   /** Предел строк в свёрнутом состоянии; `undefined` — текст не обрезается и кнопки нет. */
   numberOfLines?: number;
+  /**
+   * Готовая вместимость строки (`tripPlanTextCharsPerWidth`). Передаётся, когда
+   * ширина текста известна и не равна ширине контента экрана; без неё
+   * вместимость считается по вьюпорту.
+   */
+  charsPerLine?: number;
   testID?: string;
+  /** Свой testID кнопки: в списке точек компонент рендерится по разу на точку. */
+  toggleTestID?: string;
 }
 
-function TripPlanCollapsibleText({ text, style, linkStyle, numberOfLines, testID }: Props) {
+function TripPlanCollapsibleText({
+  text,
+  style,
+  linkStyle,
+  numberOfLines,
+  charsPerLine,
+  testID,
+  toggleTestID = 'trip-plan-description-toggle',
+}: Props) {
   const colors = useThemedColors();
   const { width } = useResponsive();
   const { t } = useTranslation();
@@ -79,9 +109,10 @@ function TripPlanCollapsibleText({ text, style, linkStyle, numberOfLines, testID
     setExpanded(false);
   }, [text]);
 
+  const lineCapacity = charsPerLine ?? tripPlanTextCharsPerLine(width);
   const overflows =
     numberOfLines !== undefined &&
-    estimateTripPlanTextLines(text, tripPlanTextCharsPerLine(width)) > numberOfLines;
+    estimateTripPlanTextLines(text, lineCapacity) > numberOfLines;
   const collapsed = overflows && !expanded;
   const toggle = useCallback(() => setExpanded((value) => !value), []);
 
@@ -100,7 +131,7 @@ function TripPlanCollapsibleText({ text, style, linkStyle, numberOfLines, testID
           style={styles.toggle}
           accessibilityRole="button"
           accessibilityState={{ expanded }}
-          testID="trip-plan-description-toggle"
+          testID={toggleTestID}
         >
           <Text style={styles.toggleLabel}>
             {expanded
