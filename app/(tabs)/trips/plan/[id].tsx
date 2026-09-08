@@ -666,16 +666,33 @@ export default function PlannedTripScreen() {
                     {i18nT('tripsStatic:tripCreate.endDateLabel')}
                   </Text>
                   {Platform.OS === 'web' ? (
-                    <input
-                      type="date"
-                      value={editValues.endDate}
-                      min={editValues.startDate || undefined}
-                      onChange={(event) => setEditValues((prev) => prev ? { ...prev, endDate: event.currentTarget.value } : prev)}
-                      aria-label={i18nT('tripsStatic:tripCreate.endDateLabel')}
-                      data-testid="trip-plan-edit-end-date"
-                      disabled={updateTrip.isPending}
-                      style={webDateInputStyle}
-                    />
+                    /* Очистка не отдаётся встроенному контролу: в мобильном
+                       Safari он не даёт стереть дату, и заданный конец стал бы
+                       неудаляемым. Тот же аффорданс, что на native. */
+                    <View style={styles.endDateRow}>
+                      <input
+                        type="date"
+                        value={editValues.endDate}
+                        min={editValues.startDate || undefined}
+                        onChange={(event) => setEditValues((prev) => prev ? { ...prev, endDate: event.currentTarget.value } : prev)}
+                        aria-label={i18nT('tripsStatic:tripCreate.endDateLabel')}
+                        data-testid="trip-plan-edit-end-date"
+                        disabled={updateTrip.isPending}
+                        style={webDateInputStyle}
+                      />
+                      {editValues.endDate ? (
+                        <Pressable
+                          onPress={() => setEditValues((prev) => prev ? { ...prev, endDate: '' } : prev)}
+                          disabled={updateTrip.isPending}
+                          accessibilityRole="button"
+                          accessibilityLabel={i18nT('tripsStatic:tripCreate.endDateClear')}
+                          style={[styles.endDateClear, globalFocusStyles.focusable]}
+                          testID="trip-plan-edit-end-date-clear"
+                        >
+                          <Feather name="x" size={16} color={colors.textSecondary} />
+                        </Pressable>
+                      ) : null}
+                    </View>
                   ) : (
                     <>
                       <View style={styles.endDateRow}>

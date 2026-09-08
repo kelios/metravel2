@@ -597,6 +597,26 @@ describe('PlannedTripScreen — planner states', () => {
     );
   });
 
+  it('clears the end date with an explicit control on web', () => {
+    // По умолчанию сьют идёт под `ios`; веб-ветку надо назвать явно, иначе
+    // проверялась бы native-кнопка, которая уже покрыта выше.
+    Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'web' });
+    mockSearchParams = { id: '8001', edit: '1' };
+    mockTrip(makeTrip({ isOwner: true, endDate: '2026-08-20' }));
+    const { getByTestId, queryByTestId, UNSAFE_getByProps } = renderScreen();
+
+    fireEvent.press(getByTestId('trip-plan-edit-end-date-clear'));
+
+    expect(UNSAFE_getByProps({ 'data-testid': 'trip-plan-edit-end-date' }).props.value).toBe('');
+    expect(queryByTestId('trip-plan-edit-end-date-clear')).toBeNull();
+
+    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    expect(mockUpdateTripMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ endDate: null }),
+      expect.any(Object),
+    );
+  });
+
   it('refuses to save an end earlier than the start', () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'android' });
     mockSearchParams = { id: '8001', edit: '1' };

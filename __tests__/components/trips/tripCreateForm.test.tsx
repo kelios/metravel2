@@ -387,6 +387,19 @@ describe('TripCreateForm — trip end date', () => {
     })
   })
 
+  // Встроенный `<input type=date>` даёт стереть значение не во всех браузерах
+  // (в мобильном Safari — нет), поэтому очистка своя и на web тоже.
+  it('clears the end date with an explicit control on web', async () => {
+    const view = render(<TripCreateForm />)
+    expect(view.queryByTestId('trip-create-end-date-clear')).toBeNull()
+
+    changeEndDate(view, '2026-10-04')
+    fireEvent.press(view.getByTestId('trip-create-end-date-clear'))
+
+    expect(getEndDateInput(view).props.value).toBe('')
+    expect(view.queryByTestId('trip-create-end-date-clear')).toBeNull()
+  })
+
   it('submits null when the end is left empty', async () => {
     const view = render(<TripCreateForm />)
     fillValidForm(view)

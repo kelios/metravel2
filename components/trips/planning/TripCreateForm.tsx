@@ -451,15 +451,34 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
       <View style={styles.col}>
         <Text style={styles.label}>{i18nT('tripsStatic:tripCreate.endDateLabel')}</Text>
         {Platform.OS === 'web' ? (
-          <input
-            type="date"
-            value={values.endDate}
-            min={values.startDate || undefined}
-            onChange={(event) => setField('endDate', event.target.value)}
-            aria-label={i18nT('tripsStatic:tripCreate.endDateLabel')}
-            data-testid="trip-create-end-date"
-            style={webDateInputStyle}
-          />
+          /*
+            Кнопка очистки нужна и на web: встроенный контрол `<input type=date>`
+            даёт стереть значение не во всех браузерах (в мобильном Safari — нет),
+            и без неё однажды заданный конец стал бы неудаляемым. Заодно это тот
+            же аффорданс, что на native — один mobile UX на всех поверхностях.
+          */
+          <View style={styles.endDateRow}>
+            <input
+              type="date"
+              value={values.endDate}
+              min={values.startDate || undefined}
+              onChange={(event) => setField('endDate', event.target.value)}
+              aria-label={i18nT('tripsStatic:tripCreate.endDateLabel')}
+              data-testid="trip-create-end-date"
+              style={webDateInputStyle}
+            />
+            {values.endDate ? (
+              <Pressable
+                onPress={() => setField('endDate', '')}
+                accessibilityRole="button"
+                accessibilityLabel={i18nT('tripsStatic:tripCreate.endDateClear')}
+                style={[styles.endDateClear, globalFocusStyles.focusable]}
+                testID="trip-create-end-date-clear"
+              >
+                <Feather name="x" size={16} color={colors.textSecondary} />
+              </Pressable>
+            ) : null}
+          </View>
         ) : (
           <>
             <View style={styles.endDateRow}>
