@@ -1,9 +1,10 @@
 /**
  * #1516: узкий `PATCH /travels/{id}/content/` не имеет права быть слабее полного
- * `PUT /travels/upsert/`. У бэкенда собственной очистки rich-text нет, поэтому
- * санитизация — единственная защита, и она обязана работать на обоих путях.
+ * `PUT /travels/upsert/`: frontend безопасно нормализует HTML до записи,
+ * а backend отдельно вычисляет canonical safe_html для чтения.
  */
-import { saveTravelContent } from '@/api/misc'
+import { saveFormData, saveTravelContent } from '@/api/misc'
+import { getEmptyFormData } from '@/utils/travelFormUtils'
 
 let mockIsWebPlatform = false
 const mockGetSecureItem = jest.fn()
@@ -103,7 +104,8 @@ describe('saveTravelContent', () => {
     const { body } = readRequest()
     expect(body.name).toBe('Минск')
     expect(body.plus).toBe('Плюсы')
-    expect(body.minus).toBe('Минусы')
+    expect(body.minus).toContain('Минусы')
+    expect(body.minus).not.toContain('iframe')
     expect(body.recommendation).not.toContain('onerror')
   })
 
@@ -122,5 +124,27 @@ describe('saveTravelContent', () => {
   it('не отправляет запрос без единого поля', async () => {
     await expect(saveTravelContent(619, {})).rejects.toThrow()
     expect(mockApiClientRequest).not.toHaveBeenCalled()
+  })
+
+  it.each(['PUT', 'PATCH'])('%s normalizes every rich-text field with the same safe body pipeline', async (method) => {
+    const source = '<p class="ql-align-center"><span class="ql-font-serif ql-size-large">Текст</span></p>' +
+      '<ol><li data-list="bullet" class="ql-indent-2"><span class="ql-ui" contenteditable="false"></span>Пункт</li></ol>' +
+      '<section class="seo-faq"><details><summary>Вопрос?</summary><p>Ответ</p></details></section>' +
+      '<img src="data:image/png;base64,AAAA"><script>steal()</script><p onclick="steal()">Конец</p>'
+    const fields = { description: source, plus: source, minus: source, recommendation: source }
+    if (method === 'PATCH') await saveTravelContent(619, fields)
+    else await saveFormData({ ...getEmptyFormData('619'), name: 'Тестовая статья', ...fields })
+
+    const { body, method: actualMethod } = readRequest()
+    expect(actualMethod).toBe(method)
+    for (const field of Object.keys(fields)) {
+      expect(body[field]).toBe(body.description)
+      expect(body[field]).toContain('class="ql-align-center"')
+      expect(body[field]).toContain('class="ql-font-serif ql-size-large"')
+      expect(body[field]).toContain('<ul><li class="ql-indent-2">Пункт</li></ul>')
+      expect(body[field]).toContain('<details><summary>Вопрос?</summary>')
+      expect(body[field]).toContain('seo-faq')
+      expect(body[field]).not.toMatch(/data-list|ql-ui|base64|<script|onclick/)
+    }
   })
 })

@@ -59,7 +59,10 @@ jest.mock('@/utils/mapWebOverlays/lasyZanocujWfsOverlay', () => ({
 
 jest.mock('@/utils/mapWebLayers', () => ({
   attachTileRetry: (layer: unknown) => layer,
-  createLeafletLayer: (_L: unknown, def: { id: string }) => makeController(def.id).layer,
+  createLeafletLayer: (_L: unknown, def: { id: string; url: string }) => ({
+    ...makeController(def.id).layer,
+    getTileUrl: () => def.url,
+  }),
 }))
 
 jest.mock('@/utils/loadLeafletRuntime', () => ({
@@ -166,7 +169,10 @@ const openLayers = (utils: Awaited<ReturnType<typeof renderMap>>) => {
 }
 
 describe('TripPlanRouteMap — слои карты (#1306)', () => {
+  let consoleWarn: jest.SpyInstance
+
   beforeEach(() => {
+    consoleWarn = jest.spyOn(console, 'warn')
     setPlatformOS('web')
     for (const key of Object.keys(controllers)) delete controllers[key]
     useMapOverlaysStore.setState({ enabledOverlays: getDefaultOverlayState() })
@@ -174,6 +180,9 @@ describe('TripPlanRouteMap — слои карты (#1306)', () => {
 
   afterEach(() => {
     setPlatformOS(originalOS)
+    const warnings = consoleWarn.mock.calls
+    consoleWarn.mockRestore()
+    expect(warnings).toEqual([])
   })
 
   it('показывает кнопку «Слои» на карте конструктора', async () => {

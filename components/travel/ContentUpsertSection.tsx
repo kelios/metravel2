@@ -111,7 +111,8 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     // только расширенному редактору (он сохраняет HTML целиком).
     const isRichDescription = useMemo(() => {
         const raw = String(formData.description ?? '');
-        return /<(img|iframe|video|source|figure|table|blockquote|strong|b|em|i|u|s|ul|ol|li|a|h[1-6])[\s/>]/i.test(raw);
+        return /<(img|iframe|video|source|figure|table|blockquote|strong|b|em|i|u|s|ul|ol|li|a|h[1-6])[\s/>]/i.test(raw) ||
+            /<(p|span)\b[^>]*\bclass\s*=\s*["'][^"']*\bql-(align|font|size|indent)-/i.test(raw);
     }, [formData.description]);
     const [mobileDescriptionDraft, setMobileDescriptionDraft] = useState(descriptionPlainText);
     const isMobileDescriptionFocusedRef = useRef(false);

@@ -20,7 +20,6 @@ export const QUILL_TOOLBAR_BY_VARIANT: Record<ArticleEditorVariant, readonly unk
     [{ font: [] }, { size: ['small', false, 'large', 'huge'] }],
     ['bold', 'italic', 'underline', 'strike'],
     [{ header: [1, 2, 3, false] }],
-    [{ color: [] }, { background: [] }],
     [{ align: [] }],
     [{ list: 'ordered' }, { list: 'bullet' }],
     ['link', 'image'],

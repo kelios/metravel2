@@ -14,7 +14,7 @@
  * шапка, потом экран. Сетевые фетчеры при этом обязаны остаться нетронутыми.
  */
 import React from 'react';
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { cleanup, renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -86,6 +86,7 @@ describe('#1801 офлайн-переход на сохранённый марш
   };
 
   let queryClient: QueryClient;
+  let consoleError: jest.SpyInstance;
 
   const wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: queryClient }, children);
@@ -109,6 +110,7 @@ describe('#1801 офлайн-переход на сохранённый марш
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    consoleError = jest.spyOn(console, 'error');
     // Хранилище мока AsyncStorage живёт на уровне модуля и переживает кейсы, а
     // `clearAllMocks` стирает вызовы, но не данные. Без явной очистки «маршрут
     // не сохранён» держался бы только на порядке объявления тестов.
@@ -124,8 +126,12 @@ describe('#1801 офлайн-переход на сохранённый марш
   });
 
   afterEach(() => {
+    cleanup();
     onlineManager.setOnline(true);
     queryClient.clear();
+    const errors = consoleError.mock.calls;
+    consoleError.mockRestore();
+    expect(errors).toEqual([]);
   });
 
   it.each([

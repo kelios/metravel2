@@ -1,10 +1,12 @@
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { useThemedColors } from '@/hooks/useTheme'
+import { getQuillRichTextStyles } from '@/utils/quillRichText'
 
 export const typographyStyles = (
   colors: ReturnType<typeof useThemedColors>,
   cls: string,
 ): string => `
+${getQuillRichTextStyles(`.${cls}`)}
 /* ===== CLEARFIX ===== */
 .${cls}::after {
   content: "";
@@ -61,15 +63,6 @@ export const typographyStyles = (
 .${cls} li {
   margin-bottom: 0.5em;
   line-height: 1.7;
-}
-.${cls} li.ql-indent-1 {
-  margin-left: 1.5em;
-}
-.${cls} li.ql-indent-2 {
-  margin-left: 3em;
-}
-.${cls} li.ql-indent-3 {
-  margin-left: 4.5em;
 }
 .${cls} li::marker {
   color: ${colors.primary};

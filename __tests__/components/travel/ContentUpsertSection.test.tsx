@@ -320,6 +320,21 @@ describe('ContentUpsertSection — derived display logic', () => {
     expect(getByTestId('travel-wizard.basic.description.mobile-input').props.value).toBe('синий берег')
   })
 
+  it.each([
+    '<p class="ql-align-center">По центру</p>',
+    '<p><span class="ql-font-serif">Другой шрифт</span></p>',
+    '<p><span class="ql-size-large">Крупный</span></p>',
+    '<p class="ql-indent-2">Отступ</p>',
+  ])('opens formatted mobile descriptions in the rich editor: %s', (description) => {
+    const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
+    useResponsive.mockReturnValue({ isHydrated: true, isMobile: true })
+    const { getByTestId, queryByTestId } = renderSection({ description })
+
+    expect(queryByTestId('travel-wizard.basic.description.mobile-input')).toBeNull()
+    fireEvent.press(getByTestId('travel-wizard.basic.description.mobile-rich-preview'))
+    expect(getByTestId('editor-Описание')).toBeTruthy()
+  })
+
   it('syncs the latest edit content after the focused Android description blurs', () => {
     const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
     useResponsive.mockReturnValue({ isHydrated: true, isMobile: true })

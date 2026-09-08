@@ -1,17 +1,58 @@
-import { sanitizeArticleEditorNativeContent, normalizeArticleEditorHtmlForOutput } from '@/components/article/articleEditorConfig'
+import { QUILL_TOOLBAR_BY_VARIANT, sanitizeArticleEditorNativeContent, normalizeArticleEditorHtmlForOutput } from '@/components/article/articleEditorConfig'
 import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize'
 import { normalizeQuillListMarkup, normalizeRichTextListFragments } from '@/utils/richTextLists'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
 
-// #1866 / #1768: allowlist редактора статей уже дважды молча уносил семантику
-// Quill — сперва целые теги FAQ, затем атрибуты, различающие тип списка. Набор
-// ниже перечисляет форматы, которые доезжают до тела статьи: часть даёт тулбар
-// (`QUILL_TOOLBAR_BY_VARIANT`, `components/article/articleEditorConfig.ts:19`),
-// остальные приходят вставкой и из уже сохранённых тел — их читатель умеет
-// рисовать (`components/travel/stableContent/webStyles/typography.ts`), а
-// backend `safe_html` пропускает. Любая будущая правка allowlist, которая
-// снимет тег или атрибут, красит этот файл, а не всплывает через месяц на
-// живой статье.
+// The real toolbar (including Quill's default picker options) owns this matrix.
+// A new format or option must declare a semantic witness before it can pass.
+const Quill = jest.requireActual('quill/dist/quill.js') as typeof import('quill').default
+
+type ToolbarFormat = { format: string; value: string | number | boolean }
+const expandToolbar = (toolbar: readonly unknown[]): ToolbarFormat[] => toolbar.flatMap((entry) => {
+  if (Array.isArray(entry)) return expandToolbar(entry)
+  if (typeof entry === 'string') return [{ format: entry, value: true }]
+  if (!entry || typeof entry !== 'object') throw new Error('Unsupported toolbar entry')
+  return Object.entries(entry).flatMap(([format, configured]) => {
+    let values = Array.isArray(configured) ? configured : [configured]
+    if (values.length === 0) {
+      const host = document.createElement('div')
+      document.body.appendChild(host)
+      const editor = new Quill(host, { theme: 'snow', modules: { toolbar: [[{ [format]: [] }]] } })
+      const module = editor.getModule('toolbar') as { container: HTMLElement }
+      const picker = module.container.querySelector('select')
+      if (!picker || picker.options.length === 0) throw new Error(`Uncovered picker: ${format}`)
+      values = Array.from(picker.options, (option) => option.value || false)
+      module.container.remove()
+      host.remove()
+    }
+    return values.map((value) => ({ format, value: value as ToolbarFormat['value'] }))
+  })
+})
+
+const semanticWitness = ({ format, value }: ToolbarFormat): string => {
+  const simple: Record<string, string> = {
+    bold: '<strong>', italic: '<em>', underline: '<u>', strike: '<s>',
+    link: 'href="https://example.com/"', image: 'src="https://example.com/image.jpg"',
+    clean: '<p>Формат</p>',
+  }
+  if (Object.hasOwn(simple, format) && value === true) return simple[format]
+  if (value === false && ['font', 'size', 'align', 'header'].includes(format)) return '<p>Формат</p>'
+  if (format === 'header' && [1, 2, 3, 4, 5, 6].includes(Number(value))) return `<h${value}>`
+  if (format === 'list' && ['ordered', 'bullet'].includes(String(value))) return value === 'bullet' ? '<ul>' : '<ol>'
+  const supported: Record<string, readonly (string | number)[]> = {
+    align: ['center', 'right', 'justify'], font: ['serif', 'monospace'],
+    size: ['small', 'large', 'huge'], indent: [1, 2, 3, 4, 5, 6, 7, 8],
+  }
+  if (supported[format]?.includes(value as string | number)) return `class="ql-${format}-${value}"`
+  throw new Error(`Uncovered toolbar format/option: ${format}:${value}`)
+}
+
+const createEditor = () => {
+  const host = document.createElement('div')
+  document.body.appendChild(host)
+  return new Quill(host, { modules: { toolbar: false } })
+}
+
 type QuillFormatCase = {
   /** Разметка ровно в том виде, в каком её отдаёт Quill 2. */
   input: string
@@ -19,18 +60,7 @@ type QuillFormatCase = {
   keeps: (string | RegExp)[]
 }
 
-const QUILL_FORMAT_CASES: Record<string, QuillFormatCase> = {
-  bold: { input: '<p><strong>жирный</strong></p>', keeps: ['<strong>'] },
-  italic: { input: '<p><em>курсив</em></p>', keeps: ['<em>'] },
-  underline: { input: '<p><u>подчёркнутый</u></p>', keeps: ['<u>'] },
-  strike: { input: '<p><s>зачёркнутый</s></p>', keeps: ['<s>'] },
-  link: {
-    input: '<p><a href="https://metravel.by/">ссылка</a></p>',
-    keeps: ['href="https://metravel.by/"'],
-  },
-  h1: { input: '<h1>Заголовок</h1>', keeps: ['<h1>'] },
-  h2: { input: '<h2>Заголовок</h2>', keeps: ['<h2>'] },
-  h3: { input: '<h3>Заголовок</h3>', keeps: ['<h3>'] },
+const STORED_CONTENT_CASES: Record<string, QuillFormatCase> = {
   h4: { input: '<h4>Заголовок</h4>', keeps: ['<h4>'] },
   h5: { input: '<h5>Заголовок</h5>', keeps: ['<h5>'] },
   h6: { input: '<h6>Заголовок</h6>', keeps: ['<h6>'] },
@@ -40,18 +70,6 @@ const QUILL_FORMAT_CASES: Record<string, QuillFormatCase> = {
     keeps: ['<pre', 'const a = 1;'],
   },
   inlineCode: { input: '<p><code>npm run lint</code></p>', keeps: ['<code>'] },
-  bulletList: {
-    input:
-      '<ol><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span>Пункт</li></ol>',
-    // Тип списка переживает downstream только как тег: backend safe_html
-    // (`metravel/common/rich_text.py`, GLOBAL_ATTRS без `data-list`) снимает атрибут.
-    keeps: ['<ul>', 'Пункт'],
-  },
-  orderedList: {
-    input:
-      '<ol><li data-list="ordered"><span class="ql-ui" contenteditable="false"></span>Пункт</li></ol>',
-    keeps: ['<ol>', 'Пункт'],
-  },
   nestedList: {
     input:
       '<ol><li data-list="bullet" class="ql-indent-1"><span class="ql-ui" contenteditable="false"></span>Вложенный</li></ol>',
@@ -73,8 +91,50 @@ const QUILL_FORMAT_CASES: Record<string, QuillFormatCase> = {
   },
 }
 
-describe('sanitizeArticleEditorHtml — форматы редактора не теряют своих признаков', () => {
-  it.each(Object.entries(QUILL_FORMAT_CASES))('%s', (_name, { input, keeps }) => {
+describe('every toolbar format survives actual Quill output and reopen', () => {
+  afterEach(() => { document.body.innerHTML = '' })
+
+  const toolbarCases = Object.entries(QUILL_TOOLBAR_BY_VARIANT).flatMap(([variant, toolbar]) =>
+    expandToolbar(toolbar).map((selection) => [`${variant}/${selection.format}:${selection.value}`, selection] as const),
+  )
+
+  it.each(toolbarCases)('%s', (_name, selection) => {
+    const editor = createEditor()
+    const witness = semanticWitness(selection)
+    const { format, value } = selection
+    editor.setText('Формат')
+    if (format === 'image') editor.insertEmbed(0, 'image', 'https://example.com/image.jpg')
+    else if (format === 'clean') {
+      editor.formatText(0, 6, 'bold', true)
+      editor.removeFormat(0, 6)
+    } else if (['header', 'list', 'align', 'indent'].includes(format)) editor.formatLine(0, 6, format, value)
+    else editor.formatText(0, 6, format, format === 'link' ? 'https://example.com/' : value)
+    const originalFormats = editor.getFormat(0, 6)
+    const saved = sanitizeArticleEditorHtml(editor.root.innerHTML)
+    expect(saved).toContain(witness)
+    editor.setContents(editor.clipboard.convert({ html: saved }))
+    expect(editor.getFormat(0, 6)).toEqual(originalFormats)
+  })
+
+  it.each(Object.entries(QUILL_TOOLBAR_BY_VARIANT))('%s toolbar omits color controls that cannot survive saving', (_variant, toolbar) => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const editor = new Quill(host, { theme: 'snow', modules: { toolbar } })
+    const module = editor.getModule('toolbar') as { container: HTMLElement }
+
+    expect(module.container.querySelectorAll('.ql-color, .ql-background')).toHaveLength(0)
+  })
+
+  it('fails deterministically for a new format, unknown option or reintroduced unsupported color control', () => {
+    for (const extra of [['script'], [{ size: ['unknown-size'] }], [{ color: [] }], [{ background: [] }]]) {
+      const expanded = expandToolbar([...QUILL_TOOLBAR_BY_VARIANT.compact, extra])
+      expect(() => expanded.forEach(semanticWitness)).toThrow('Uncovered toolbar format/option')
+    }
+  })
+})
+
+describe('stored and pasted content keeps its semantic attributes', () => {
+  it.each(Object.entries(STORED_CONTENT_CASES))('%s', (_name, { input, keeps }) => {
     const output = sanitizeArticleEditorHtml(input)
 
     for (const marker of keeps) {
@@ -234,5 +294,19 @@ describe('чтение: список с data-list отрисовывается �
     )
 
     expect(output).toBe('<ol><li>Раз</li><li>Два</li></ol><ol start="3"><li>Три</li></ol>')
+  })
+})
+
+
+describe('Quill block formatting and bounded classes', () => {
+  it.each(['p', 'h1', 'h2', 'h3', 'blockquote', 'li'])('keeps alignment and indent on %s', (tag) => {
+    const source = `<${tag} class="ql-align-center ql-indent-8">Блок</${tag}>`
+    expect(sanitizeArticleEditorHtml(source)).toContain('class="ql-align-center ql-indent-8"')
+  })
+
+  it('drops arbitrary classes, unknown fonts/sizes, unsupported indent levels, styles and handlers', () => {
+    const source = '<p class="evil ql-align-left ql-indent-9 ql-indent-999" onclick="steal()">' +
+      '<span class="ql-font-arbitrary ql-size-enormous evil" style="position:fixed;background:url(javascript:steal())">Текст</span></p>'
+    expect(sanitizeArticleEditorHtml(source)).toBe('<p><span>Текст</span></p>')
   })
 })

@@ -167,4 +167,12 @@ describe('запись тела статьи не теряет FAQ-размет�
       expect(mockApiClientRequest).not.toHaveBeenCalled()
     })
   })
+
+  it.each(['plus', 'minus', 'recommendation'] as const)('applies the FAQ-loss guard to %s on both write paths', async (field) => {
+    mockFlattenDisclosureTags = true
+    await expect(saveFormData({ ...baseForm, description: '<p>Статья</p>', [field]: FAQ_BODY }))
+      .rejects.toThrow(guardMessage())
+    await expect(saveTravelContent(554, { [field]: FAQ_BODY })).rejects.toThrow(guardMessage())
+    expect(mockApiClientRequest).not.toHaveBeenCalled()
+  })
 })

@@ -17,6 +17,7 @@ jest.mock('react-native-render-html', () => ({
   HTMLElementModel: {
     fromCustomModel: (model: unknown) => model,
   },
+  defaultHTMLElementModels: jest.requireActual('@native-html/transient-render-engine').defaultHTMLElementModels,
   TChildrenRenderer: () => null,
   default: (props: any) => {
     renderHTMLProps.push(props);
@@ -62,6 +63,7 @@ describe('StableContent (native) links', () => {
     setPlatformOs(originalOs);
     renderHTMLProps.length = 0;
     jest.clearAllMocks();
+    jest.restoreAllMocks();
   });
 
   const renderNative = (
@@ -87,6 +89,52 @@ describe('StableContent (native) links', () => {
     expect(renderHTMLProps.length).toBeGreaterThan(0);
     const props = renderHTMLProps[renderHTMLProps.length - 1];
     expect(props.defaultTextProps?.selectable).toBe(false);
+  });
+
+  it.each(['android', 'ios'])('%s: class formats resolve to real native text styles', (os) => {
+    setPlatformOs(os);
+    renderNative(
+      '<p class="ql-align-center ql-indent-4"><span class="ql-font-serif ql-size-large"><strong>Текст</strong></span></p>' +
+      '<h2 class="ql-align-right"><span class="ql-font-monospace ql-size-huge">Заголовок</span></h2>' +
+      '<p><span id="plain">Обычный текст</span></p>'
+    );
+    const props = renderHTMLProps[renderHTMLProps.length - 1];
+    // Use the same defaults/font resolver as RenderHTML. An always-successful
+    // isFontSupported stub would wrongly accept missing native font families.
+    jest.isolateModules(() => {
+      const nativePlatform = require('react-native').Platform;
+      Object.defineProperty(nativePlatform, 'OS', { value: os, configurable: true });
+      jest.spyOn(nativePlatform, 'select').mockImplementation((values: any) =>
+        values[os] ?? values.native ?? values.default
+      );
+      const { default: buildTREFromConfig } = jest.requireActual(
+        'react-native-render-html/lib/commonjs/helpers/buildTREFromConfig'
+      );
+      const { defaultTRenderEngineProviderProps } = jest.requireActual(
+        'react-native-render-html/lib/commonjs/TRenderEngineProvider'
+      );
+      const engine = buildTREFromConfig({ ...defaultTRenderEngineProviderProps, ...props });
+      const tree = engine.buildTTree(props.source.html);
+      const collect = (node: any): any[] => [node, ...(node.children ?? []).flatMap(collect)];
+      const nodes = collect(tree);
+      const paragraph = nodes.find((node) => node.tagName === 'p');
+      const text = nodes.find((node) => node.classes?.includes('ql-size-large'));
+      const heading = nodes.find((node) => node.tagName === 'h2');
+      const headingText = nodes.find((node) => node.classes?.includes('ql-size-huge'));
+      expect(paragraph.styles.nativeTextFlow.textAlign).toBe('center');
+      expect(paragraph.styles.nativeBlockRet.marginLeft).toBe(96);
+      expect(text.styles.nativeTextFlow.fontFamily).toBe(os === 'ios' ? 'Times New Roman' : 'serif');
+      expect(text.styles.nativeTextFlow.fontSize).toBe(24);
+      expect(text.styles.nativeTextFlow.lineHeight).toBeCloseTo(38.4);
+      expect(heading.styles.nativeTextFlow.textAlign).toBe('right');
+      expect(headingText.styles.nativeTextFlow.fontFamily).toBe(os === 'ios' ? 'Menlo' : 'monospace');
+      expect(headingText.styles.nativeTextFlow.fontSize).toBe(60);
+      expect(headingText.styles.nativeTextFlow.lineHeight).toBe(96);
+      const bold = nodes.find((node) => node.tagName === 'strong');
+      expect(bold.styles.nativeTextFlow.fontSize).toBe(24);
+      const plain = nodes.find((node) => node.attributes?.id === 'plain');
+      expect(plain.styles.nativeTextFlow.fontSize).toBe(16);
+    });
   });
 
   it('android: первый маркер списка выровнен с первой строкой текста', () => {

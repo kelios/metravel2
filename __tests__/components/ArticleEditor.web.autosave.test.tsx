@@ -311,7 +311,7 @@ describe('ArticleEditor.web autosave', () => {
     })
   })
 
-  it('emits sanitized HTML but keeps Quill value raw (prevents caret jumps on attribute stripping)', async () => {
+  it('preserves supported formats and strips unsafe attributes without changing the raw Quill value', async () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default
 
     const onChange = jest.fn()
@@ -329,19 +329,20 @@ describe('ArticleEditor.web autosave', () => {
 
     const quillProps = (globalThis as any).__quillProps__
     expect(quillProps).toBeTruthy()
+    const rawValue = '<p class="ql-align-center unsupported-class" onclick="alert(1)">Hi</p>'
 
     act(() => {
-      quillProps.onChange('<p class="ql-align-center">Hi</p>', null, 'user')
+      quillProps.onChange(rawValue, null, 'user')
     })
 
     await waitFor(() => {
       expect(onChange).toHaveBeenCalled()
-      expect(onChange).toHaveBeenLastCalledWith('<p>Hi</p>')
+      expect(onChange).toHaveBeenLastCalledWith('<p class="ql-align-center">Hi</p>')
     })
 
     await waitFor(() => {
       const latest = (globalThis as any).__quillProps__
-      expect(latest?.value).toBe('<p class="ql-align-center">Hi</p>')
+      expect(latest?.value).toBe(rawValue)
     })
   })
 

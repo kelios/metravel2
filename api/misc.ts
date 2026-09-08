@@ -134,16 +134,16 @@ const makeUniqueSlug = (value?: string): string => {
  * 05.07 и 25.07.2026 — сохранённое тело в `scripts/.seo-backups/554-2026-07-25*`
  * совпадает с выходом тогдашнего санитайзера по этому же исходнику.
  *
- * Убрать санитайзер с записи нельзя: своей очистки rich-text у бэкенда нет, и
- * тогда в базу поедет сырой HTML из редактора. Поэтому инвариант обратный —
+ * Бэкенд строит canonical safe_html отдельно; до записи frontend обязан
+ * нормализовать транспортную разметку редактора. Поэтому инвариант обратный —
  * запись, которая теряет структуру FAQ, не уходит на сервер вообще. Что считать
  * структурой, знает `utils/faqDisclosureMarkup.ts` — тот же счёт, которым
  * рендер (`utils/serverSafeHtml.ts`) выбирает неиспорченный источник.
  */
-const sanitizeTravelBodyForWrite = async (html: string): Promise<string> => {
+const sanitizeTravelBodyForWrite = async (html: string, maxLength?: number): Promise<string> => {
   const { sanitizeRichText } = await import('@/utils/sanitizeRichText');
   const source = stripBase64Images(html);
-  const sanitized = sanitizeRichText(source);
+  const sanitized = sanitizeRichText(source).slice(0, maxLength);
   if (losesFaqMarkup(source, sanitized)) {
     throw new Error(i18nT('errorsStatic:api.misc.faqMarkupWouldBeLost'));
   }
@@ -223,20 +223,16 @@ export const saveFormData = async (
       return typeof sanitized === 'string' ? sanitized.substring(0, maxLen) : value;
     };
 
-    let sanitizedDescription: unknown = data.description;
-    if (typeof data.description === 'string') {
-      sanitizedDescription = await sanitizeTravelBodyForWrite(data.description);
-    }
-
     // ✅ FIX: Санитизация данных перед отправкой
     const sanitizedData = {
       ...data,
       name: sanitizeStringField(data.name, 200),
-      description: sanitizedDescription,
-      minus: sanitizeStringField(data.minus, 5000),
-      plus: sanitizeStringField(data.plus, 5000),
-      recommendation: sanitizeStringField(data.recommendation, 5000),
     };
+    for (const field of ['description', 'plus', 'minus', 'recommendation'] as const) {
+      const value = data[field];
+      if (typeof value !== 'string') continue;
+      sanitizedData[field] = await sanitizeTravelBodyForWrite(value, field === 'description' ? undefined : 5000);
+    }
 
     // Генерируем уникальный slug для новых путешествий, чтобы избежать конфликтов unique constraint
     const payload: TravelFormData = sanitizeForJson({ ...sanitizedData }) as TravelFormData;
@@ -292,8 +288,8 @@ export type TravelContentSaveResponse = {
  *
  * Отправляет ТОЛЬКО переданные поля, поэтому структура статьи остаётся нетронутой
  * и правка одного абзаца не стоит полной пересборки графа (#1516). Санитизация
- * здесь ровно та же, что у полного `saveFormData`: у бэкенда своей очистки
- * rich-text нет, и узкий путь не имеет права быть слабее полного.
+ * здесь ровно та же, что у полного `saveFormData`: узкий путь не имеет права
+ * терять форматы или быть слабее полного.
  */
 export const saveTravelContent = async (
   travelId: number,
@@ -316,15 +312,11 @@ export const saveTravelContent = async (
       payload.name = String(sanitizeInput(fields.name)).substring(0, 200);
     }
 
-    if (typeof fields.description === 'string') {
-      payload.description = await sanitizeTravelBodyForWrite(fields.description);
-    }
-
-    (['plus', 'minus', 'recommendation'] as const).forEach((field) => {
+    for (const field of ['description', 'plus', 'minus', 'recommendation'] as const) {
       const value = fields[field];
-      if (typeof value !== 'string') return;
-      payload[field] = String(sanitizeInput(value)).substring(0, 5000);
-    });
+      if (typeof value !== 'string') continue;
+      payload[field] = await sanitizeTravelBodyForWrite(value, field === 'description' ? undefined : 5000);
+    }
 
     // Пустой payload узкий эндпоинт отклоняет (`At least one content field is
     // required`), и отправлять его незачем: сохранять нечего.

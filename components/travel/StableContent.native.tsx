@@ -79,6 +79,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
             key={prepared.length}
             source={{ html: prepared }}
             contentWidth={contentWidth}
+            emSize={BASE_FONT_SIZE}
             customHTMLElementModels={customHTMLElementModels}
             renderers={renderers}
             // Android: selectable-текст перехватывает тапы — onPress вложенных <a> не срабатывает (RN #22811)

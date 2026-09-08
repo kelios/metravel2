@@ -1,9 +1,11 @@
 import React, { Suspense, useCallback, useMemo, useState } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
+import { isTag } from 'domhandler'
 import {
   HTMLContentModel,
   HTMLElementModel,
+  defaultHTMLElementModels,
   TChildrenRenderer,
   type CustomRendererProps,
   type RenderHTMLProps,
@@ -18,6 +20,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { handleRichTextLinkPress } from '@/utils/internalLinks'
+import { QUILL_ALIGNMENTS, QUILL_FONTS, QUILL_INDENT_LEVELS, QUILL_SIZE_SCALES } from '@/utils/quillRichText'
 
 import { isInstagramEmbedUrl, isYouTubeEmbedUrl } from './htmlTransform'
 import { translate as i18nT } from '@/i18n'
@@ -330,15 +333,11 @@ export function useStableContentRenderConfig({
 
   const classesStyles = useMemo<NonNullable<RenderHTMLProps['classesStyles']>>(
     () => ({
-      'ql-indent-1': {
-        marginLeft: DESIGN_TOKENS.spacing.lg,
-      },
-      'ql-indent-2': {
-        marginLeft: DESIGN_TOKENS.spacing.lg * 2,
-      },
-      'ql-indent-3': {
-        marginLeft: DESIGN_TOKENS.spacing.lg * 3,
-      },
+      ...Object.fromEntries(QUILL_ALIGNMENTS.map((value) => [`ql-align-${value}`, { textAlign: value }])),
+      ...Object.fromEntries(QUILL_FONTS.map((value) => [`ql-font-${value}`, { fontFamily: value }])),
+      ...Object.fromEntries(QUILL_INDENT_LEVELS.map((value) => [
+        `ql-indent-${value}`, { marginLeft: `${value * 1.5}em` },
+      ])),
     }),
     []
   )
@@ -347,9 +346,37 @@ export function useStableContentRenderConfig({
     () => ({
       details: detailsModel,
       summary: summaryModel,
+      span: defaultHTMLElementModels.span.extend({
+        getMixedUAStyles: ({ classes }, element) => {
+          const scaleFor = (tokens: string[]) => Object.entries(QUILL_SIZE_SCALES)
+            .find(([size]) => tokens.includes(`ql-size-${size}`))?.[1];
+          const ownScale = scaleFor(classes);
+          if (!ownScale) return;
+          // RNRH precompiles class em lengths against the root, not the
+          // enclosing heading. Resolve only Quill size spans from the existing
+          // tag styles so "large" never shrinks a heading or clips its lines.
+          let scale: number = ownScale;
+          let fontSize = baseFontSize;
+          for (let parent = element.parent; parent; parent = parent.parent) {
+            if (!isTag(parent)) continue;
+            const tagStyle = tagsStyles[parent.name]?.fontSize ??
+              defaultHTMLElementModels[parent.name as keyof typeof defaultHTMLElementModels]?.mixedUAStyles?.fontSize;
+            if (typeof tagStyle === 'number') {
+              fontSize = tagStyle;
+              break;
+            }
+            if (typeof tagStyle === 'string' && /^[\d.]+em$/.test(tagStyle)) {
+              fontSize = Number.parseFloat(tagStyle) * baseFontSize;
+              break;
+            }
+            scale *= scaleFor(String(parent.attribs.class ?? '').split(/\s+/)) ?? 1;
+          }
+          return { fontSize: fontSize * scale, lineHeight: fontSize * scale * 1.6 };
+        },
+      }),
       ...(iframeModel ? { iframe: iframeModel } : {}),
     }),
-    [iframeModel]
+    [baseFontSize, iframeModel, tagsStyles]
   )
 
   // Внутренние ссылки (metravel.by / относительные) открываем внутри приложения,

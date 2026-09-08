@@ -9,6 +9,7 @@ import { getInstagramCardStyles, replaceInstagramEmbedsWithCards } from '@/utils
 import { normalizeRichTextListFragments } from '@/utils/richTextLists';
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
 import { guardServerSafeHtml } from '@/utils/serverSafeHtml';
+import { getQuillRichTextStyles } from '@/utils/quillRichText';
 
 interface SafeHtmlProps {
     html: string;
@@ -64,6 +65,7 @@ export function SafeHtml({ html, serverSanitized = false, style, className, test
     const richTextStyles = useMemo(
         () => `
 ${getInstagramCardStyles(`.${SAFE_HTML_RICH_TEXT_CLASS}`, colors)}
+${getQuillRichTextStyles(`.${SAFE_HTML_RICH_TEXT_CLASS}`)}
 .${SAFE_HTML_RICH_TEXT_CLASS} ul,
 .${SAFE_HTML_RICH_TEXT_CLASS} ol {
     margin: 1em 0 1.25em 1.75em;
@@ -72,15 +74,6 @@ ${getInstagramCardStyles(`.${SAFE_HTML_RICH_TEXT_CLASS}`, colors)}
 .${SAFE_HTML_RICH_TEXT_CLASS} li {
     margin-bottom: 0.5em;
     line-height: 1.65;
-}
-.${SAFE_HTML_RICH_TEXT_CLASS} li.ql-indent-1 {
-    margin-left: 1.5em;
-}
-.${SAFE_HTML_RICH_TEXT_CLASS} li.ql-indent-2 {
-    margin-left: 3em;
-}
-.${SAFE_HTML_RICH_TEXT_CLASS} li.ql-indent-3 {
-    margin-left: 4.5em;
 }
 .${SAFE_HTML_RICH_TEXT_CLASS} li::marker {
     color: ${colors.primary};

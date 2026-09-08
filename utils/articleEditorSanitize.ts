@@ -1,6 +1,7 @@
 import sanitizeHtmlLib from 'sanitize-html';
 
 import { normalizeQuillListMarkup } from '@/utils/richTextLists';
+import { QUILL_BLOCK_CLASSES, QUILL_INLINE_CLASSES } from '@/utils/quillRichText';
 
 const ARTICLE_ALLOWED_TAGS = [
   'p',
@@ -41,7 +42,16 @@ const ARTICLE_ALLOWED_TAGS = [
 // `__tests__/utils/articleEditorSanitize.quillFormats.test.ts`.
 const ARTICLE_ALLOWED_ATTRIBUTES: sanitizeHtmlLib.IOptions['allowedAttributes'] = {
   a: ['href', 'name', 'target', 'rel', 'title'],
-  span: ['id'],
+  p: ['class'],
+  h1: ['class'],
+  h2: ['class'],
+  h3: ['class'],
+  h4: ['class'],
+  h5: ['class'],
+  h6: ['class'],
+  blockquote: ['class'],
+  pre: ['class'],
+  span: ['id', 'class'],
   ol: ['data-list', 'class'],
   ul: ['data-list', 'class'],
   li: ['data-list', 'class'],
@@ -103,11 +113,11 @@ export function sanitizeArticleEditorHtml(html: string): string {
     },
     allowedClasses: {
       iframe: ['ql-video'],
-      // Уровень вложенности пункта; на чтении по нему считается отступ
-      // (`components/article/SafeHtml.tsx:76-84`, `li.ql-indent-1..3`).
-      ol: [/^ql-indent-\d+$/],
-      ul: [/^ql-indent-\d+$/],
-      li: [/^ql-indent-\d+$/],
+      span: QUILL_INLINE_CLASSES,
+      ...Object.fromEntries(
+        ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'ol', 'ul', 'li']
+          .map((tag) => [tag, QUILL_BLOCK_CLASSES]),
+      ),
     },
     allowedIframeHostnames: [...ARTICLE_ALLOWED_IFRAME_HOSTS],
     disallowedTagsMode: 'discard',
