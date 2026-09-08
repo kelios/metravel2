@@ -89,7 +89,15 @@ const DOCUMENT_ITEMS: MenuLinkItem[] = [
 ]
 
 const wrapperStyles = StyleSheet.create({
-  ctaWrapper: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  ctaWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    // #1882: open-menu path sits in the same fixed desktop account slot as the
+    // closed shell. Without shrink the PL guest cluster overflows left.
+    flexShrink: 1,
+    minWidth: 0,
+  },
   badgeAnchor: { position: 'relative' },
   menuLink: {
     flexDirection: 'row',

@@ -363,7 +363,12 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
 
   return (
     <View style={styles.menuRoot}>
-      <View ref={anchorRef} testID="web-menu-anchor" collapsable={false}>
+      <View
+        ref={anchorRef}
+        testID="web-menu-anchor"
+        collapsable={false}
+        style={styles.menuAnchor}
+      >
         {anchor}
       </View>
       {visible ? (
@@ -590,6 +595,15 @@ const styles = StyleSheet.create({
   },
   menuRoot: {
     position: 'relative',
+    // #1882: RNW View defaults flexShrink to 0, so a DialogMenu inside a fixed
+    // width slot (desktop header account) will not shrink even when the anchor
+    // can. The dropdown panel is portaled and is unaffected.
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  menuAnchor: {
+    flexShrink: 1,
+    minWidth: 0,
   },
   menuOverlay: {
     position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute',
