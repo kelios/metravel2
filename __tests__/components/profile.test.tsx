@@ -1,8 +1,9 @@
 import type { ComponentProps, ComponentType, ReactElement } from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import type { MyAchievements, UserRank } from '@/api/achievements';
+import type { MyTravelsPayload } from '@/api/travelsApi';
 import { mockPush, mockReplace, mockUseRouter, resetExpoRouterMocks } from '../helpers/expoRouterMock';
 import { createQueryWrapper } from '../helpers/testQueryClient';
 import { mockFetchMyTravels, mockMyTravelsPayload, mockUnwrapMyTravelsPayload, resetTravelsApiMocks } from '../helpers/mockTravelsApi';
@@ -423,13 +424,20 @@ describe('ProfileScreen', () => {
     setupFavorites(0, 0);
     mockFetchMyTravels.mockRejectedValue(new Error('502 Bad Gateway'));
 
-    const { findByLabelText, queryByLabelText } = renderProfile();
+    const { findByLabelText, queryByLabelText, queryByTestId, queryByText } = renderProfile();
 
     expect(await findByLabelText('Маршруты: количество недоступно')).toBeTruthy();
     expect(await findByLabelText('Опубликованные маршруты: количество недоступно')).toBeTruthy();
     expect(await findByLabelText('Черновики маршрутов: количество недоступно')).toBeTruthy();
     // Голая подпись без числа = бейджа нет вовсе, то есть «честный ноль».
     expect(queryByLabelText('Маршруты')).toBeNull();
+
+    fireEvent.press(await findByLabelText('Уровень, значки и достижения'));
+    expect(queryByTestId('profile-first-steps-card')).toBeNull();
+    expect(queryByText('Маршрут')).toBeNull();
+
+    fireEvent.press(await findByLabelText('Статистика профиля'));
+    expect(queryByText(/Маршрутов:/)).toBeNull();
   });
 
   // #1865: счётчики считает общий список, а «Повторить» на вкладке-срезе
@@ -632,6 +640,44 @@ describe('ProfileScreen', () => {
 
     fireEvent.press(await findByLabelText('Начать первый квест'));
     expect(mockPush).toHaveBeenCalledWith('/quests');
+  });
+
+  it.each([0, 3])('hides unconfirmed route facts until the author list resolves with %i routes', async (total) => {
+    setupAuth({ isAuthenticated: true });
+    setupFavorites(0, 0);
+    mockMyAchievementsData = null;
+    let resolveResponse!: (payload: MyTravelsPayload) => void;
+    const response = new Promise<MyTravelsPayload>((resolve) => { resolveResponse = resolve; });
+    mockFetchMyTravels.mockReturnValue(response);
+
+    const { findByLabelText, getByLabelText, getByText, queryByTestId, queryByText, queryByLabelText } = renderProfile();
+
+    expect(await findByLabelText('Маршруты')).toBeTruthy();
+    expect(queryByLabelText('Маршруты: количество недоступно')).toBeNull();
+    fireEvent.press(getByLabelText('Уровень, значки и достижения'));
+    expect(queryByTestId('profile-first-steps-card')).toBeNull();
+    expect(queryByText('Маршрут')).toBeNull();
+    expect(getByLabelText('Заполненность профиля')).toHaveProp(
+      'accessibilityValue', expect.objectContaining({ now: 33 }),
+    );
+
+    fireEvent.press(getByLabelText('Статистика профиля'));
+    expect(queryByText(/Маршрутов:/)).toBeNull();
+    expect(getByText('Собираем сводную статистику по вашим опубликованным маршрутам.')).toBeTruthy();
+
+    await act(async () => {
+      resolveResponse({ count: total, results: [] });
+      await response;
+    });
+
+    expect(getByText(new RegExp(`Маршрутов:\\s*${total}`))).toBeTruthy();
+    expect(getByLabelText(total ? `Маршруты: ${total}` : 'Маршруты')).toBeTruthy();
+    fireEvent.press(getByLabelText('Уровень, значки и достижения'));
+    expect(Boolean(queryByTestId('profile-first-steps-card'))).toBe(total === 0);
+    expect(getByText('Маршрут')).toBeTruthy();
+    expect(getByLabelText('Заполненность профиля')).toHaveProp(
+      'accessibilityValue', expect.objectContaining({ now: total === 0 ? 25 : 50 }),
+    );
   });
 
   it('hides first-step CTAs when achievements already have progress', async () => {

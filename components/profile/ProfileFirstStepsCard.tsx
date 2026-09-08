@@ -10,7 +10,7 @@ import { translate as i18nT } from '@/i18n'
 
 
 interface Props {
-  /** `null` — счётчик недоступен из-за сбоя; «первых шагов» у автора мы не знаем. */
+  /** Подтверждённое число; при загрузке или сбое (`null`) первые шаги неизвестны. */
   travelsCount: number | null
   rank: UserRank | null | undefined
   onCreateRoute: () => void

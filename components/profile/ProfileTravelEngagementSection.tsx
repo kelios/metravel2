@@ -174,7 +174,7 @@ export function ProfileTravelEngagementSummary({
   summaryScope = 'all',
 }: {
   summary: TravelEngagementStats | null
-  /** `null` — счётчик недоступен из-за сбоя, а не равен нулю (#1871). */
+  /** Подтверждённое число; `null` — загрузка или сбой, а не ноль маршрутов. */
   travelsCount: number | null
   loadedTravelsCount?: number
   isLoading?: boolean

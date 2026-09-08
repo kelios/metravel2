@@ -10,7 +10,7 @@ import { translate as i18nT } from '@/i18n'
 interface ProfileCompletenessProps {
   user: { name: string; email: string; avatar?: string | null; hasDisplayName: boolean };
   profile?: UserProfileDto | null;
-  /** `null` — счётчик недоступен из-за сбоя: шаг про маршрут выпадает из чек-листа. */
+  /** При загрузке или сбое (`null`) шаг про маршрут выпадает из чек-листа. */
   travelsCount: number | null;
 }
 

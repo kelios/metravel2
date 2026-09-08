@@ -166,6 +166,9 @@ export default function ProfileScreen() {
     load: loadTravels,
     loadMore: loadMoreTravelsHook,
   } = allTravels;
+  // Контент обеих вкладок использует только подтверждённый счётчик; бейджи
+  // сохраняют отдельный контракт начального нуля и недоступности (#1865).
+  const confirmedTravelsCount = travelsLoading ? null : stats.travelsCount;
   // Вкладки «Опубл.» и «Черновики» читают свой срез с сервера (#1833), остальные —
   // общий список автора. Дальше экран работает с уже выбранным источником.
   const travelList = useProfileTravelTabList({
@@ -565,7 +568,7 @@ export default function ProfileScreen() {
       <ProfileOverviewTab
         userProp={userProp}
         profile={profile}
-        travelsCount={stats.travelsCount}
+        travelsCount={confirmedTravelsCount}
         userId={userId}
         onCreateRoute={handleCreateFirstRoute}
         onStartQuest={handleStartFirstQuest}
@@ -574,7 +577,7 @@ export default function ProfileScreen() {
     [
       userProp,
       profile,
-      stats.travelsCount,
+      confirmedTravelsCount,
       userId,
       handleCreateFirstRoute,
       handleStartFirstQuest,
@@ -584,7 +587,7 @@ export default function ProfileScreen() {
   const statsContent = useMemo(
     () => (
       <ProfileStatsTab
-        travelsCount={stats.travelsCount}
+        travelsCount={confirmedTravelsCount}
         loadedTravelsCount={profileTravels.length}
         travelsLoading={travelsLoading}
         authoredTravelEngagementSummary={authoredTravelEngagementSummary}
@@ -598,7 +601,7 @@ export default function ProfileScreen() {
       />
     ),
     [
-      stats.travelsCount,
+      confirmedTravelsCount,
       profileTravels.length,
       travelsLoading,
       authoredTravelEngagementSummary,
