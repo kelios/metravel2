@@ -8,6 +8,7 @@ const LIVE_CONTRACT_SPECS = [
   'draft-recovery.spec.ts',
   'image-upload.spec.ts',
   'metravel-edit-delete.spec.ts',
+  'planned-trip-overnight-booking.spec.ts',
   'public-trips.spec.ts',
   'travel-content-save-delta.spec.ts',
   'travel-crud.spec.ts',
