@@ -636,6 +636,11 @@ done
 
 node scripts/add-cache-bust-meta.js "dist/$ENV"
 
+if [[ "$ENV" == "prod" ]]; then
+  echo "Проверка prod-конфига перед деплоем..."
+  node scripts/verify-prod-config.js --dist "dist/$ENV"
+fi
+
 if [[ "$DEPLOY" == "1" ]]; then
   echo "старт деплоя ..."
   deploy_prod "$ENV"

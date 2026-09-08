@@ -279,6 +279,19 @@ describe('build-prod.sh entry point', () => {
     expect(runEntryPoint(work, ['--nope']).status).not.toBe(0)
     expect(runEntryPoint(work, ['prod', 'dev']).status).not.toBe(0)
   })
+
+  it('runs the prod config guard before the canonical deploy starts', () => {
+    const source = readCanonicalDeploy()
+    const cacheBust = source.indexOf('node scripts/add-cache-bust-meta.js "dist/$ENV"')
+    const prodGuard = source.indexOf('node scripts/verify-prod-config.js --dist "dist/$ENV"')
+    const deployBranch = source.indexOf('if [[ "$DEPLOY" == "1" ]]; then')
+    const deployCall = source.indexOf('deploy_prod "$ENV"', deployBranch)
+
+    expect(cacheBust).toBeGreaterThanOrEqual(0)
+    expect(prodGuard).toBeGreaterThan(cacheBust)
+    expect(deployBranch).toBeGreaterThan(prodGuard)
+    expect(deployCall).toBeGreaterThan(deployBranch)
+  })
 })
 
 describe('build-prod.sh .env lifecycle', () => {
