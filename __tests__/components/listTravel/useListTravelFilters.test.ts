@@ -37,6 +37,24 @@ const setup = (overrides: Partial<Parameters<typeof useListTravelFilters>[0]> = 
 };
 
 describe('useListTravelFilters', () => {
+  it('switches between admin unpublished, personal statuses and the moderation queue', () => {
+    const { result } = setup({ isMeTravel: true, isSuperuser: true, userId: '42' });
+    for (const [key, value] of [['draftsOnly', true], ['publishedOnly', true], ['moderation', 0]] as const) {
+      act(() => result.current.onSelect(key, value));
+      act(() => result.current.onSelect('allAuthorsUnpublishedOnly', true));
+      expect(result.current.filter[key]).toBeUndefined();
+      expect(result.current.queryParams).toEqual({ publish: 0, includeDrafts: true });
+      act(() => result.current.onSelect(key, value));
+      expect(result.current.filter.allAuthorsUnpublishedOnly).toBeUndefined();
+    }
+    act(() => result.current.onSelect('allAuthorsUnpublishedOnly', true));
+    act(() => result.current.onSelect('allAuthorsUnpublishedOnly', undefined));
+    expect(result.current.queryParams).toEqual({ user_id: '42', includeDrafts: true });
+    act(() => result.current.onSelect('allAuthorsUnpublishedOnly', true));
+    act(() => result.current.resetFilters());
+    expect(result.current.queryParams).toEqual({ user_id: '42', includeDrafts: true });
+  });
+
   it('builds stable, cleaned queryParams without empty values', () => {
     const { result } = setup();
 

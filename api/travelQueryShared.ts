@@ -30,6 +30,9 @@ export const PENDING_REVIEW_PUBLICATION_STATUS = 'pending_review';
 
 const isZeroLike = (value: unknown): boolean => value === 0 || value === '0';
 
+export const isUnpublishedQuery = (source: Record<string, unknown> | undefined | null): boolean =>
+    source?.publish === false || isZeroLike(source?.publish);
+
 export const isPendingReviewQuery = (source: Record<string, unknown> | undefined | null): boolean => {
     if (!source) return false;
     const status = typeof source.publication_status === 'string'

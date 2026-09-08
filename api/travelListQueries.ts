@@ -36,6 +36,7 @@ import {
     isAbortError,
     applyPublishModeration,
     isPendingReviewQuery,
+    isUnpublishedQuery,
 } from './travelQueryShared';
 
 export type TravelFacetItem = {
@@ -65,6 +66,7 @@ export const fetchTravelFacets = async (
     try {
         const whereObject: Record<string, unknown> = {};
         const isPendingReview = isPendingReviewQuery(urlParams);
+        const needsAuth = isPendingReview || isUnpublishedQuery(urlParams);
 
         const isUserScoped = urlParams?.user_id !== undefined && urlParams?.user_id !== null;
         if (isUserScoped) {
@@ -113,11 +115,11 @@ export const fetchTravelFacets = async (
         }
 
         const url = `${GET_TRAVEL_FACETS}?${new URLSearchParams(searchParams).toString()}`;
-        const authToken = isPendingReview && shouldUseStoredAuthToken()
+        const authToken = needsAuth && shouldUseStoredAuthToken()
             ? await getSecureItem(TOKEN_KEY)
             : null;
         const init: RequestInit = {
-            ...getApiRequestCredentials(!isPendingReview),
+            ...getApiRequestCredentials(!needsAuth),
             ...(authToken ? { headers: { Authorization: `Token ${authToken}` } } : {}),
             ...(options?.signal ? { signal: options.signal } : {}),
         };
@@ -185,9 +187,10 @@ export const fetchTravels = async (
 
         const isUserScoped = urlParams?.user_id !== undefined && urlParams?.user_id !== null;
         const isPendingReview = isPendingReviewQuery(urlParams);
+        const isUnpublished = isUnpublishedQuery(urlParams);
         const includeDraftsRequested = urlParams?.includeDrafts === true || urlParams?.includeDrafts === 'true';
         const allowDrafts =
-            isUserScoped &&
+            (isUserScoped || isUnpublished) &&
             (
                 includeDraftsRequested ||
                 (
@@ -228,9 +231,9 @@ export const fetchTravels = async (
 
         const params = buildWhereQueryParams({ page, perPage: itemsPerPage, query: search, where: whereObject, sortQuery });
         const urlTravel = `${GET_TRAVELS}?${params}`;
-        publicStaleEndpoint = !isUserScoped && !isPendingReview ? urlTravel : '';
+        publicStaleEndpoint = !isUserScoped && !isPendingReview && !isUnpublished ? urlTravel : '';
 
-        const needsAuth = allowDrafts || isPendingReview;
+        const needsAuth = allowDrafts || isPendingReview || isUnpublished;
         const authToken = needsAuth && shouldUseStoredAuthToken()
             ? await getSecureItem(TOKEN_KEY)
             : null;

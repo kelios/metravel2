@@ -1,4 +1,6 @@
 export const travelGenerated4 = {
+  "components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnly": "Nieopublikowane wszystkich autorów",
+  "components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnlyHint": "Pokaż nieopublikowane artykuły wszystkich autorów, w tym Twoje",
   "components.travel.TravelStatusButton.dobavit_v_plan_c8d5333c": "Dodaj do planu",
   "components.travel.TravelStatusButton.dobavleno_v_plany_dfb57b79": "Dodano do planów",
   "components.travel.TravelStatusButton.nazad_ef2effb6": "Powrót",

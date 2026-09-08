@@ -28,6 +28,7 @@ import {
 export type { FilterOption, FilterGroup, FilterState } from './filters/types';
 import type { FilterGroup, FilterState } from './filters/types';
 import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 
 
 function getModernFiltersReserveState(params: {
@@ -72,7 +73,7 @@ function getModernFiltersActiveCount(selectedFilters: FilterState) {
     }
 
     return sum;
-  }, 0);
+  }, selectedFilters.allAuthorsUnpublishedOnly === true ? 1 : 0);
 }
 
 function splitModernFilterGroups(filterGroups: FilterGroup[]) {
@@ -143,6 +144,9 @@ interface ModernFiltersProps {
   showPublishedOnly?: boolean;
   publishedOnlyValue?: boolean;
   onTogglePublishedOnly?: () => void;
+  showAllAuthorsUnpublishedOnly?: boolean;
+  allAuthorsUnpublishedOnlyValue?: boolean;
+  onToggleAllAuthorsUnpublishedOnly?: () => void;
   onApply?: () => void;
   onClose?: () => void;
   optionalHint?: boolean;
@@ -168,11 +172,15 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   showPublishedOnly,
   publishedOnlyValue,
   onTogglePublishedOnly,
+  showAllAuthorsUnpublishedOnly,
+  allAuthorsUnpublishedOnlyValue,
+  onToggleAllAuthorsUnpublishedOnly,
   onApply,
   onClose,
   optionalHint = false,
   embeddedSidebar = false,
 }) => {
+  const { t } = useTranslation();
   const colors = useThemedColors();
   const styles = useMemo(() => createModernFiltersStyles(colors), [colors]);
   const viewportWidth = useResponsiveWidth();
@@ -434,6 +442,17 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               hint={i18nT('travel:components.listTravel.ModernFilters.pokazyvat_tolko_puteshestviya_ozhidayuschie__3e7a3fd7')}
               checked={moderationValue === 0}
               onToggle={onToggleModeration}
+              styles={styles}
+              checkColor={colors.textOnPrimary}
+            />
+          )}
+          {showAllAuthorsUnpublishedOnly && onToggleAllAuthorsUnpublishedOnly && (
+            <StatusToggleRow
+              testID="filter-all-authors-unpublished-only"
+              label={t('travel:components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnly')}
+              hint={t('travel:components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnlyHint')}
+              checked={!!allAuthorsUnpublishedOnlyValue}
+              onToggle={onToggleAllAuthorsUnpublishedOnly}
               styles={styles}
               checkColor={colors.textOnPrimary}
             />

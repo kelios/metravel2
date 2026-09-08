@@ -2,12 +2,21 @@ import {
   applyListDensity,
   buildListTravelFallbackSteps,
   getCatalogCardMediaLoading,
+  getListTravelActiveFiltersCount,
 } from '@/components/listTravel/listTravelBaseModel'
 import {
   getRightColumnVirtualizationConfig,
   WEB_ROW_HEIGHT_DESKTOP,
   WEB_ROW_HEIGHT_MOBILE,
 } from '@/components/listTravel/rightColumnModel'
+
+describe('getListTravelActiveFiltersCount', () => {
+  it('counts the all-authors unpublished filter only while enabled', () => {
+    expect(getListTravelActiveFiltersCount({ allAuthorsUnpublishedOnly: true }, '')).toBe(1)
+    expect(getListTravelActiveFiltersCount({ allAuthorsUnpublishedOnly: false }, '')).toBe(0)
+    expect(getListTravelActiveFiltersCount({}, '')).toBe(0)
+  })
+})
 
 describe('applyListDensity', () => {
   const base = { gridColumns: 3, isCardsSingleColumn: false, imageHeight: 300 }

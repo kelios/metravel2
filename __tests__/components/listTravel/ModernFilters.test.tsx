@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { Platform, StyleSheet } from 'react-native';
 import { ThemeProvider } from '@/hooks/useTheme';
 import ModernFilters from '@/components/listTravel/ModernFilters';
+import type { FilterState } from '@/components/listTravel/ModernFilters';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock hooks and contexts
@@ -340,14 +341,42 @@ describe('ModernFilters Component', () => {
           showDraftsOnly={true}
           draftsOnlyValue={false}
           onToggleDraftsOnly={jest.fn()}
+          showAllAuthorsUnpublishedOnly={true}
+          allAuthorsUnpublishedOnlyValue={true}
+          onToggleAllAuthorsUnpublishedOnly={jest.fn()}
         />
       );
 
       expect(screen.getByTestId('filter-published-only').props['aria-checked']).toBe(true);
       expect(screen.getByTestId('filter-drafts-only').props['aria-checked']).toBe(false);
+      expect(screen.getByTestId('filter-all-authors-unpublished-only').props['aria-checked']).toBe(true);
     } finally {
       Platform.OS = originalOS;
     }
+  });
+
+  it('shows the all-authors scope and lets the admin reset it as the only active filter', () => {
+    const onToggleAllAuthorsUnpublishedOnly = jest.fn();
+    renderWithProviders(
+      <ModernFilters
+        filterGroups={mockFilterGroups}
+        selectedFilters={{ allAuthorsUnpublishedOnly: true } as unknown as FilterState}
+        onFilterChange={mockOnFilterChange}
+        onClearAll={mockOnClearAll}
+        showAllAuthorsUnpublishedOnly
+        allAuthorsUnpublishedOnlyValue
+        onToggleAllAuthorsUnpublishedOnly={onToggleAllAuthorsUnpublishedOnly}
+      />
+    );
+
+    const row = screen.getByRole('checkbox', { name: 'Неопубликованные всех авторов' });
+    expect(row.props.accessibilityState).toEqual({ checked: true });
+    expect(row.props.accessibilityHint).toBe('Показывать неопубликованные статьи всех авторов, включая ваши');
+    fireEvent.press(row);
+    expect(onToggleAllAuthorsUnpublishedOnly).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Очистить все фильтры (1)' }));
+    expect(mockOnClearAll).toHaveBeenCalledTimes(1);
   });
 
   it('moves selected object option to top of the group list', () => {

@@ -87,6 +87,10 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
       onSelect('publishedOnly', filter.publishedOnly ? undefined : true)
     }, [filter.publishedOnly, onSelect])
 
+    const handleToggleAllAuthorsUnpublishedOnly = useCallback(() => {
+      onSelect('allAuthorsUnpublishedOnly', filter.allAuthorsUnpublishedOnly ? undefined : true)
+    }, [filter.allAuthorsUnpublishedOnly, onSelect])
+
     const filtersElement = isError ? (
       <ErrorDisplay
         message={i18nT('map:hooks.map.useMapFilters.ne_udalos_zagruzit_filtry_4d480f39')}
@@ -116,6 +120,9 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
         showPublishedOnly={isMeTravel}
         publishedOnlyValue={filter.publishedOnly === true}
         onTogglePublishedOnly={handleTogglePublishedOnly}
+        showAllAuthorsUnpublishedOnly={isSuper && isMeTravel}
+        allAuthorsUnpublishedOnlyValue={filter.allAuthorsUnpublishedOnly === true}
+        onToggleAllAuthorsUnpublishedOnly={handleToggleAllAuthorsUnpublishedOnly}
         onClose={onClose}
       />
     )

@@ -367,6 +367,14 @@ export const buildActiveConditionChips = ({
     })
   }
 
+  if (filter.allAuthorsUnpublishedOnly === true) {
+    chips.push({
+      key: 'allAuthorsUnpublishedOnly',
+      label: i18nT('travel:components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnly'),
+      onRemove: () => onSelect('allAuthorsUnpublishedOnly', undefined),
+    })
+  }
+
   return chips
 }
 
@@ -429,6 +437,7 @@ export const buildEmptyStateMessage = ({
   if (filter.sort) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.sortirovka_37dd0492'))
   if (filter.draftsOnly === true) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.chernoviki_f3bb503d'))
   if (filter.publishedOnly === true) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.opublikovannye_2c3a77ca'))
+  if (filter.allAuthorsUnpublishedOnly === true) activeFilters.push(i18nT('travel:components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnly'))
   if (debSearch) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.poisk_value1_844fca95', { value1: debSearch }))
 
   // Формируем сообщение

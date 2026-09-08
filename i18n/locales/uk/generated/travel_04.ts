@@ -1,4 +1,6 @@
 export const travelGenerated4 = {
+  "components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnly": "Неопубліковані всіх авторів",
+  "components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnlyHint": "Показувати неопубліковані статті всіх авторів, зокрема ваші",
   "components.travel.TravelStatusButton.dobavit_v_plan_c8d5333c": "Додати до плану",
   "components.travel.TravelStatusButton.dobavleno_v_plany_dfb57b79": "Додано в плани",
   "components.travel.TravelStatusButton.nazad_ef2effb6": "Назад",

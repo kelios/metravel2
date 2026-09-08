@@ -9,6 +9,7 @@ export interface FilterState {
   moderation?: number; // 0 - на модерации, 1 - прошедшие модерацию, undefined - по умолчанию (1)
   draftsOnly?: boolean;
   publishedOnly?: boolean;
+  allAuthorsUnpublishedOnly?: boolean;
   countries?: number[];
   categories?: Array<string | number>;
   categoryTravelAddress?: number[];

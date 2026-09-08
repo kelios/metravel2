@@ -511,6 +511,7 @@ export function getListTravelActiveFiltersCount(filter: Record<string, any>, deb
   if (filter.moderation !== undefined) count += 1
   if (filter.draftsOnly === true) count += 1
   if (filter.publishedOnly === true) count += 1
+  if (filter.allAuthorsUnpublishedOnly === true) count += 1
   if (debSearch && debSearch.trim().length > 0) count += 1
 
   return count

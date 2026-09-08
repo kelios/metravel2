@@ -75,6 +75,25 @@ describe('buildTravelQueryParams', () => {
     })
   })
 
+  it('requests every unpublished status across authors only for the personal admin view', () => {
+    const params = buildTravelQueryParams(
+      { allAuthorsUnpublishedOnly: true, countries: [3], year: '2026', sort: '-created_at' },
+      { isMeTravel: true, isSuperuser: true, userId: '42' },
+    )
+    expect(params).toEqual({
+      countries: [3], year: '2026', sort: '-created_at', publish: 0, includeDrafts: true,
+    })
+  })
+
+  it('does not broaden a regular user list or public catalog with the admin UI flag', () => {
+    expect(buildTravelQueryParams(
+      { allAuthorsUnpublishedOnly: true }, { isMeTravel: true, userId: '42' },
+    )).toEqual({ includeDrafts: true, user_id: '42' })
+    expect(buildTravelQueryParams(
+      { allAuthorsUnpublishedOnly: true }, { isSuperuser: true, userId: '42' },
+    )).toEqual({ publish: 1, moderation: 1 })
+  })
+
   it('forces Belarus filter for travelsby page', () => {
     const params = buildTravelQueryParams(
       { countries: [1, 2, 4] },

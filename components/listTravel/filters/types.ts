@@ -17,4 +17,5 @@ export type FilterState = Record<string, string[]> & {
   moderation?: number;
   draftsOnly?: boolean;
   publishedOnly?: boolean;
+  allAuthorsUnpublishedOnly?: boolean;
 };

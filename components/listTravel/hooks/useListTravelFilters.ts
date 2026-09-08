@@ -11,6 +11,7 @@ import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/utils/filterQue
 export interface UseListTravelFiltersProps {
   options?: FilterOptions;
   isMeTravel: boolean;
+  isSuperuser?: boolean;
   isExport: boolean;
   isTravelBy: boolean;
   userId: string | null;
@@ -94,6 +95,7 @@ const extractNumericCategoryIds = (categories?: Array<string | number>): number[
 export function useListTravelFilters({
   options,
   isMeTravel,
+  isSuperuser,
   isExport,
   isTravelBy,
   userId,
@@ -169,6 +171,7 @@ export function useListTravelFilters({
   const queryParams = useMemo(() => {
     const params = buildTravelQueryParams(filterForQuery, {
       isMeTravel,
+      isSuperuser,
       isExport,
       isTravelBy,
       belarusId: BELARUS_ID,
@@ -192,7 +195,7 @@ export function useListTravelFilters({
       });
     
     return cleaned;
-  }, [filterForQuery, isMeTravel, isExport, isTravelBy, userId, user_id]);
+  }, [filterForQuery, isMeTravel, isSuperuser, isExport, isTravelBy, userId, user_id]);
 
   const resetFilters = useCallback(() => {
     setFilter(INITIAL_FILTER);
@@ -207,15 +210,23 @@ export function useListTravelFilters({
         return newFilter;
       }
       const next = { ...prev, [field]: value };
+      if (field === 'allAuthorsUnpublishedOnly' && value === true) {
+        delete next.draftsOnly;
+        delete next.publishedOnly;
+        delete next.moderation;
+      }
       if (field === 'moderation' && value !== undefined && value !== null) {
+        delete next.allAuthorsUnpublishedOnly;
         delete next.draftsOnly;
         delete next.publishedOnly;
       }
       if (field === 'draftsOnly' && value === true) {
+        delete next.allAuthorsUnpublishedOnly;
         delete next.publishedOnly;
         delete next.moderation;
       }
       if (field === 'publishedOnly' && value === true) {
+        delete next.allAuthorsUnpublishedOnly;
         delete next.draftsOnly;
         delete next.moderation;
       }

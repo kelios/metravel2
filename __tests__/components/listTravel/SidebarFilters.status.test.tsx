@@ -85,4 +85,41 @@ describe('SidebarFilters publication-status rows', () => {
     lastProps().onToggleDraftsOnly();
     expect(onSelect).toHaveBeenCalledWith('draftsOnly', undefined);
   });
+
+  it.each([
+    { isSuper: false, isMeTravel: false },
+    { isSuper: false, isMeTravel: true },
+    { isSuper: true, isMeTravel: false },
+  ])('hides the all-authors filter without admin access to My travels: %j', (scope) => {
+    render(<SidebarFilters {...baseProps} {...scope} filter={{}} onSelect={jest.fn()} />);
+
+    expect(lastProps().showAllAuthorsUnpublishedOnly).toBe(false);
+  });
+
+  it('lets an admin toggle all-authors unpublished articles from My travels', () => {
+    const onSelect = jest.fn();
+    const screen = render(
+      <SidebarFilters {...baseProps} isSuper isMeTravel filter={{}} onSelect={onSelect} />
+    );
+
+    expect(lastProps().showAllAuthorsUnpublishedOnly).toBe(true);
+    expect(lastProps().allAuthorsUnpublishedOnlyValue).toBe(false);
+    lastProps().onToggleAllAuthorsUnpublishedOnly();
+    expect(onSelect).toHaveBeenCalledWith('allAuthorsUnpublishedOnly', true);
+
+    onSelect.mockClear();
+    screen.rerender(
+      <SidebarFilters
+        {...baseProps}
+        isSuper
+        isMeTravel
+        filter={{ allAuthorsUnpublishedOnly: true }}
+        onSelect={onSelect}
+      />
+    );
+
+    expect(lastProps().allAuthorsUnpublishedOnlyValue).toBe(true);
+    lastProps().onToggleAllAuthorsUnpublishedOnly();
+    expect(onSelect).toHaveBeenCalledWith('allAuthorsUnpublishedOnly', undefined);
+  });
 });

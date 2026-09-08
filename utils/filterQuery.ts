@@ -13,6 +13,7 @@ export const NUMERIC_FILTER_FIELDS = [
 
 export interface TravelFilterContext {
   isMeTravel?: boolean
+  isSuperuser?: boolean
   isExport?: boolean
   isTravelBy?: boolean
   belarusId?: number
@@ -104,6 +105,7 @@ export const buildTravelQueryParams = (
 ) => {
   const {
     isMeTravel,
+    isSuperuser,
     isExport,
     isTravelBy,
     belarusId = DEFAULT_BELARUS_ID,
@@ -120,6 +122,7 @@ export const buildTravelQueryParams = (
 
   delete params.draftsOnly
   delete params.publishedOnly
+  delete params.allAuthorsUnpublishedOnly
 
   if (!(isMeTravel || isExport)) {
     const hasExplicitModeration = 'moderation' in normalized || 'moderation' in filter
@@ -161,7 +164,13 @@ export const buildTravelQueryParams = (
   }
 
   if (isMeTravel) {
-    if (!draftsOnly && !publishedOnly && (moderationValue === 0 || moderationValue === '0')) {
+    if (isSuperuser && userId && filter.allAuthorsUnpublishedOnly === true) {
+      delete params.user_id
+      delete params.moderation
+      delete params.publication_status
+      params.publish = 0
+      params.includeDrafts = true
+    } else if (!draftsOnly && !publishedOnly && (moderationValue === 0 || moderationValue === '0')) {
       delete params.user_id
       delete params.publish
       delete params.moderation

@@ -158,6 +158,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     } = useListTravelFilters({
         options,
         isMeTravel,
+        isSuperuser: isSuper && isAuthenticated && authReady,
         isExport,
         isTravelBy,
         userId,
@@ -397,6 +398,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         }
         onSelect('draftsOnly', undefined);
         onSelect('publishedOnly', undefined);
+        onSelect('allAuthorsUnpublishedOnly', undefined);
       },
       [isMeTravel, onSelect],
     );
@@ -420,6 +422,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
       filter.countries,
       filter.draftsOnly,
       filter.publishedOnly,
+      filter.allAuthorsUnpublishedOnly,
       filter.month,
       filter.over_nights_stay,
       filter.sort,
