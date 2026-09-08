@@ -57,7 +57,11 @@ MeTravel — путеводитель по реальным путешестви
 
 **Keywords (≤100):** `путешествия,карта,квесты,маршруты,туризм,беларусь,поездки,гид`
 
-## BE
+## BE — только справка, не локаль App Store Connect
+
+Apple не поддерживает белорусскую локаль карточки App Store. Текст ниже нужен
+только как ориентир для локализованного интерфейса приложения; эти поля не
+создавать и не вставлять в App Store Connect.
 
 **Name:** `MeTravel`
 
@@ -73,23 +77,95 @@ MeTravel — путеводитель по реальным путешестви
 
 **Subtitle:** `Маршрути та міські квести`
 
-**Description:** той самий зміст, що RU: реальні подорожі з картою, міські квести, обране, планувальник. Сайт metravel.by. Безкоштовно, без внутрішніх покупок.
+**Promotional text:**
+
+```
+Справжні подорожі з картою, фото та міськими квестами. Плануйте поїздку, зберігайте місця й досліджуйте міста, виконуючи завдання на кожній точці.
+```
+
+**Description:**
+
+```
+MeTravel — путівник, створений на основі справжніх подорожей. Тут є розповіді про поїздки з точками на карті, міські квести-прогулянки та ідеї, куди поїхати на вихідні.
+
+ЩО Є В ЗАСТОСУНКУ
+
+• Подорожі з картою. Кожен маршрут — це історія з фотографіями, координатами та практичними подробицями: як дістатися, що подивитися й скільки часу запланувати.
+
+• Інтерактивна карта. Точки маршрутів на одній карті: складайте власний план і дивіться, що є поруч.
+
+• Міські квести. Піші маршрути-головоломки: на кожній точці є історія місця та завдання, яке виконують, стоячи перед об’єктом.
+
+• Пошук місць. Пам’ятки та природні локації можна шукати за назвою й на карті.
+
+• Обране. Зберігайте маршрути та місця, щоб повернутися до них перед поїздкою.
+
+• Планувальник подорожей. Складайте маршрут, позначайте ночівлі та спорядження.
+
+• Вхід через Apple, Google або Facebook. Обліковий запис можна видалити в налаштуваннях застосунку.
+
+ДЛЯ КОГО
+
+Для самостійних подорожей без турагентства: Білорусь, сусідні країни та популярні напрямки — із практичною інформацією від мандрівників.
+
+Сайт: https://metravel.by
+Політика конфіденційності: https://metravel.by/privacy
+Підтримка: https://metravel.by/contact
+
+Застосунок безкоштовний. Деякі посилання на бронювання готелів і турів є партнерськими. Покупок у застосунку немає.
+```
 
 **Keywords:** `подорожі,карта,квести,маршрути,туризм`
 
 ## PL
 
-**Name:** `MeTravel`
+**Name:** `MeTravel: Trasy i Questy`
 
 **Subtitle:** `Trasy i miejskie questy`
 
-**Description:** ten sam zakres co RU: prawdziwe podróże z mapą, questy miejskie, ulubione, planer. Strona metravel.by. Bezpłatnie, bez zakupów w aplikacji.
+**Promotional text:**
 
-**Keywords:** `podroze,mapa,questy,trasy,turystyka`
+```
+Prawdziwe podróże z mapami i zdjęciami oraz miejskie questy. Planuj trasę, zapisuj miejsca i odkrywaj miasta, wykonując zadania w kolejnych punktach.
+```
+
+**Description:**
+
+```
+MeTravel to przewodnik oparty na prawdziwych podróżach. Znajdziesz tu relacje z wypraw z punktami na mapie, miejskie questy spacerowe i pomysły na weekendowy wyjazd.
+
+CO ZNAJDZIESZ W APLIKACJI
+
+• Podróże z mapą. Każda trasa to opowieść ze zdjęciami, współrzędnymi i praktycznymi informacjami: jak dotrzeć na miejsce, co zobaczyć i ile czasu zaplanować.
+
+• Interaktywna mapa. Punkty tras na jednej mapie ułatwiają planowanie i sprawdzanie, co znajduje się w pobliżu.
+
+• Miejskie questy. Piesze trasy z zagadkami: w każdym punkcie czeka historia miejsca i zadanie do wykonania przed danym obiektem.
+
+• Wyszukiwanie miejsc. Atrakcje turystyczne i miejsca na łonie natury można wyszukiwać według nazwy oraz na mapie.
+
+• Ulubione. Zapisuj trasy i miejsca, aby wrócić do nich przed podróżą.
+
+• Planer podróży. Układaj trasę, zaznaczaj noclegi i potrzebny ekwipunek.
+
+• Logowanie przez Apple, Google lub Facebook. Konto można usunąć w ustawieniach aplikacji.
+
+DLA KOGO
+
+Dla osób, które samodzielnie planują podróże bez biura podróży: Białoruś, pobliskie kraje i popularne kierunki — z praktycznymi informacjami od podróżników.
+
+Strona: https://metravel.by
+Polityka prywatności: https://metravel.by/privacy
+Pomoc: https://metravel.by/contact
+
+Aplikacja jest bezpłatna. Niektóre linki do rezerwacji hoteli i wycieczek są partnerskie. Aplikacja nie oferuje zakupów w aplikacji.
+```
+
+**Keywords:** `podróże,mapa,questy,trasy,turystyka`
 
 ## EN
 
-**Name:** `MeTravel`
+**Name:** `MeTravel: Routes & Quests`
 
 **Subtitle:** `Routes and city quests`
 
