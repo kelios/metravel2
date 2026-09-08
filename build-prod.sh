@@ -94,63 +94,15 @@ assert_deployable_source() {
   local env_name="$1"
   local allow_dirty="$2"
   local deploying="$3"
-  local upstream='origin/main'
-  local dirty
+  local gate_js="${METRAVEL_SOURCE_GATE_JS:-}"
+  local here
 
-  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    echo "❌ Каталог не является Git-репозиторием: собираемый коммит не с чем сверить"
-    return 1
+  if [[ -z "$gate_js" ]]; then
+    here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    gate_js="$here/scripts/assert-deployable-source.js"
   fi
-
+  node "$gate_js" --env "$env_name" --allow-dirty "$allow_dirty" --deploy "$deploying" --cwd "$(pwd)" || return 1
   BUILD_SOURCE_SHA="$(git rev-parse HEAD)"
-  echo "🔖 Собираемый коммит: $BUILD_SOURCE_SHA ($(git rev-parse --abbrev-ref HEAD))"
-
-  dirty="$(git status --porcelain)"
-  if [[ -n "$dirty" ]]; then
-    if [[ "$deploying" != "1" ]]; then
-      echo "⚠️  Дерево грязное, но это build-only (DEPLOY=$deploying) — в артефакт попадёт незакоммиченная работа, деплоить его нельзя:"
-      printf '%s\n' "$dirty" | sed 's/^/    /'
-    elif [[ "$allow_dirty" == "1" ]]; then
-      echo "⚠️  ВНИМАНИЕ: --allow-dirty, собирается ГРЯЗНОЕ дерево — в артефакт попадёт незакоммиченная работа:"
-      printf '%s\n' "$dirty" | sed 's/^/    /'
-    else
-      echo "❌ Рабочее дерево грязное — сборка остановлена, чтобы чужая незакоммиченная работа не уехала на прод:"
-      printf '%s\n' "$dirty" | sed 's/^/    /'
-      echo "   Штатный путь — деплой из изолированного worktree на origin/main:"
-      echo "     docs/WORKFLOW_OPERATIONS.md → «3.5 Деплой из изолированного worktree»"
-      echo "   Осознанный обход: ./build-prod.sh $env_name --allow-dirty"
-      echo "   Локальная проверка артефакта без деплоя: DEPLOY=0 ./build-prod.sh $env_name"
-      return 1
-    fi
-  fi
-
-  # Гейт защищает ровно прод. `DEPLOY=0 ./build-prod.sh prod` — документированный
-  # build-only preview (docs/PRODUCTION_CHECKLIST.md, docs/RELEASE.md,
-  # docs/ARCHITECTURE.md), он существует ради проверки ещё не отправленной
-  # работы. У сверки с origin/main обхода нет, поэтому остановка build-only
-  # прогона сделала бы этот путь недоступным вовсе — здесь достаточно
-  # предупредить, на прод этим запуском ничего не уедет.
-  if [[ "$deploying" != "1" ]]; then
-    echo "ℹ️  DEPLOY=$deploying: сборка без деплоя, сверка с $upstream пропущена"
-    return 0
-  fi
-
-  # Без GIT_TERMINAL_PROMPT=0 fetch за учётными данными уходит в интерактивный
-  # запрос и висит, удерживая общий .codex-temp/ops/web-build.lock.
-  if ! GIT_TERMINAL_PROMPT=0 git fetch --quiet origin main 2>/dev/null; then
-    echo "⚠️  Не удалось обновить $upstream — достижимость сверяется по локальной копии ссылки"
-  fi
-  if ! git rev-parse --verify --quiet "$upstream" >/dev/null; then
-    echo "❌ Ссылка $upstream недоступна: достижимость собираемого коммита не проверить"
-    return 1
-  fi
-  if ! git merge-base --is-ancestor HEAD "$upstream"; then
-    echo "❌ Коммит $BUILD_SOURCE_SHA не достижим из $upstream — на прод уехало бы то, чего нет в main."
-    echo "   Запушьте работу и повторите: PREFLIGHT_SKIP_E2E=1 git push origin main"
-    return 1
-  fi
-
-  echo "✅ Источник сборки: $BUILD_SOURCE_SHA достижим из $upstream"
 }
 
 apply_env() {
@@ -635,6 +587,8 @@ for icon in logo_yellow.png logo_yellow_60x60.png logo_yellow_192x192.png logo_y
 done
 
 node scripts/add-cache-bust-meta.js "dist/$ENV"
+
+node scripts/assert-deployable-source.js --copy-marker "dist/$ENV/.build-source.json"
 
 if [[ "$ENV" == "prod" ]]; then
   echo "Проверка prod-конфига перед деплоем..."

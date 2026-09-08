@@ -23,6 +23,12 @@ REMOTE_DIR="${REMOTE_DIR:-$PROD_REMOTE_DIR}"
 SITE_URL="${SITE_URL:-https://metravel.by}"
 ENV="${ENV:-prod}"
 FORCE_REBUILD="${FORCE_REBUILD:-1}"
+ALLOW_DIRTY="${ALLOW_DIRTY:-0}"
+for arg in "$@"; do
+  case "$arg" in
+    --allow-dirty) ALLOW_DIRTY=1 ;;
+  esac
+done
 # Overlay assets older than this only serve HTML cached weeks ago — dead weight
 # on a 15G disk (board #898: _expo grew to 668M/4732 files/82 deploy
 # generations in 12 days; 14 days caps steady-state at ~700M).
@@ -77,6 +83,9 @@ case "$lock_res" in
   *) echo "ERROR: another deploy is already in progress on $SERVER ($lock_res). Aborting to avoid a racing/wrong-config release."; exit 1;;
 esac
 
+echo "source_gate allow_dirty=$ALLOW_DIRTY"
+node "$(dirname "${BASH_SOURCE[0]}")/assert-deployable-source.js" --deploy 1 --allow-dirty "$ALLOW_DIRTY" --cwd "$(pwd)"
+
 if [ "$FORCE_REBUILD" = "1" ]; then
   echo "Force rebuild enabled: removing dist/$ENV"
   rm -rf "dist/$ENV"
@@ -91,6 +100,9 @@ if [ ! -d "dist/$ENV/_expo/static/js/web" ]; then
   echo "ERROR: build output dist/$ENV/_expo/static/js/web is missing"
   exit 1
 fi
+
+node "$(dirname "${BASH_SOURCE[0]}")/assert-deployable-source.js" \
+  --check-marker "dist/$ENV/.build-source.json" --allow-dirty "$ALLOW_DIRTY" --cwd "$(pwd)"
 
 chunk_count="$(find "dist/$ENV/_expo/static/js/web/" -maxdepth 1 -type f | wc -l | tr -d ' ')"
 echo "Local build ready: $chunk_count web chunks"

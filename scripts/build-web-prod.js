@@ -79,6 +79,16 @@ function swapIntoPlace(from, to) {
 // dir and the .env copy below. The lock is released on any process exit.
 acquireBuildLock()
 
+const allowDirty =
+  process.env.ALLOW_DIRTY === '1' || process.argv.includes('--allow-dirty')
+runStep('node', [
+  'scripts/assert-deployable-source.js',
+  '--deploy',
+  '1',
+  '--allow-dirty',
+  allowDirty ? '1' : '0',
+])
+
 fs.copyFileSync(envProdPath, envPath)
 // Do NOT touch dist/prod here — the last good build stays in place until the
 // new build is fully assembled in staging.
@@ -113,6 +123,11 @@ runStep('node', ['scripts/add-cache-bust-meta.js', stagingPath])
 // Fail-closed config gate: never swap a build that lost the prod config
 // (missing Metrika / leaked LAN-dev API). Aborts before the artifact goes live.
 runStep('node', ['scripts/verify-prod-config.js', '--dist', stagingPath])
+runStep('node', [
+  'scripts/assert-deployable-source.js',
+  '--copy-marker',
+  path.join(stagingPath, '.build-source.json'),
+])
 
 // All steps succeeded — atomically replace the previous build.
 swapIntoPlace(stagingPath, distProdPath)

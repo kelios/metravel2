@@ -62,6 +62,7 @@ const GIT_ENV = {
   GIT_AUTHOR_EMAIL: 'source-gate@test.local',
   GIT_COMMITTER_NAME: 'source gate test',
   GIT_COMMITTER_EMAIL: 'source-gate@test.local',
+  METRAVEL_SOURCE_GATE_JS: path.resolve(process.cwd(), 'scripts/assert-deployable-source.js'),
 }
 
 function runHarness(cwd: string, body: string, env: Record<string, string> = {}) {
