@@ -12,6 +12,7 @@ import { resolveDevMockFlag } from '@/utils/devMockFlags';
 import { devWarn } from '@/utils/logger';
 import { serializeTripEnd, serializeTripStart } from '@/utils/tripDateTime';
 import { overnightBookingPayload } from '@/utils/overnightBooking';
+import { dayNumberPayload } from '@/utils/routePointDay';
 import { translate as i18nT } from '@/i18n';
 import {
   MOCK_PLANNED_TRIPS,
@@ -474,6 +475,9 @@ export async function updateTripRoute(input: UpdateRouteInput): Promise<PlannedT
       // #1843: поля брони уезжают только у ночёвки — у остальных типов
       // `overnightBookingPayload` отдаёт пустой объект и ключей не добавляет.
       ...overnightBookingPayload(p),
+      // #1845: день уходит всегда. Пропуск ключа на полном PUT обнуляет день
+      // на бэкенде (#1841), и группировка списка после сохранения пропала бы.
+      ...dayNumberPayload(p),
     }));
     const dto = await apiClient.put<PlannedTripDto>(
       `/trips/planned/${input.tripId}/route/`,

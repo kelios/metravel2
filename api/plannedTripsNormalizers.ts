@@ -4,6 +4,7 @@ import { decodeEncodedPolyline } from '@/utils/encodedPolyline';
 import { buildElevationProfile } from '@/utils/routeFileParser';
 import { parseTripDateTime } from '@/utils/tripDateTime';
 import { isOvernightPoint, overnightBookingFromBe } from '@/utils/overnightBooking';
+import { dayNumberFromBe } from '@/utils/routePointDay';
 import type { ParsedRoutePoint } from '@/types/travelRoutes';
 import type {
   PlannedTrip,
@@ -61,6 +62,9 @@ interface BeRoutePoint {
   booking_url?: string | null;
   price?: number | string | null;
   checkin_time?: string | null;
+  // #1845: день похода. Необязательный — бэкенд без миграции #1841 поле
+  // не отдаёт, и точка обязана нормализоваться без него.
+  day_number?: number | string | null;
 }
 
 interface BeRouteSummary {
@@ -348,6 +352,7 @@ const mapPlannedPoint = (point: BeRoutePoint, index: number): RoutePoint => {
     // типа, домен не принимает — иначе смена типа оставляла бы в маршруте
     // ссылку на бронь, которую форма уже не показывает и не даёт стереть.
     booking: isOvernightPoint(type) ? overnightBookingFromBe(point) : null,
+    dayNumber: dayNumberFromBe(point.day_number),
   };
 };
 

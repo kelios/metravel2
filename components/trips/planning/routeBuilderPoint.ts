@@ -6,6 +6,7 @@ import type { Travel, TravelAddressItem } from '@/types/types';
 import { type RoutePoint, type RoutePointType } from '@/api/plannedTrips';
 import { ROUTE_POINT_COORDINATE_PRECISION } from '@/components/trips/planning/tripPlanRouteMap.types';
 import { pointOvernightBooking } from '@/utils/overnightBooking';
+import { pointDayNumber } from '@/utils/routePointDay';
 import { translate as i18nT } from '@/i18n'
 
 export const POINT_TYPES: RoutePointType[] = ['place', 'custom', 'rest', 'overnight'];
@@ -135,6 +136,7 @@ export const routeSignature = (route: RoutePoint[]): string =>
         point.description ?? '',
         coords,
         bookingSignature(point),
+        pointDayNumber(point) ?? '',
       ].join('|');
     })
     .join('>');

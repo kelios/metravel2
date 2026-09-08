@@ -10,6 +10,7 @@
 // `TZ=Europe/Minsk npx jest __tests__/trips/tripDateTime.test.ts`.
 
 import {
+  addCalendarDays,
   formatTripDateLong,
   formatTripDateRangeShort,
   formatTripDateTimeLong,
@@ -209,5 +210,24 @@ describe('serializeTripStart', () => {
 
   it('refuses an unreadable time as well', () => {
     expect(() => serializeTripStart('2026-10-12', '99:99')).toThrow(/unreadable trip start/)
+  })
+})
+
+describe('addCalendarDays', () => {
+  it('shifts a date-only start by whole days without leaving the calendar', () => {
+    expect(addCalendarDays('2026-09-26', 0)).toBe('2026-09-26')
+    expect(addCalendarDays('2026-09-26', 1)).toBe('2026-09-27')
+    expect(addCalendarDays('2026-09-26', 8)).toBe('2026-10-04')
+  })
+
+  it('crosses a month boundary on local calendar components, not UTC midnight', () => {
+    expect(addCalendarDays('2026-01-31', 1)).toBe('2026-02-01')
+    expect(addCalendarDays('2026-02-28', 1)).toBe('2026-03-01')
+  })
+
+  it('returns null for unreadable dates and fractional offsets', () => {
+    expect(addCalendarDays(null, 1)).toBeNull()
+    expect(addCalendarDays('позавчера', 1)).toBeNull()
+    expect(addCalendarDays('2026-09-26', 1.5)).toBeNull()
   })
 })

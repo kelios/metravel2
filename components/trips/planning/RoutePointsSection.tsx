@@ -13,6 +13,7 @@ import RoutePointAddForm, {
   type SiteRouteOption,
   type SiteSearchStatus,
 } from '@/components/trips/planning/RoutePointAddForm';
+import { RouteDayGroups } from '@/components/trips/planning/RouteDayGroupHeader';
 import { MIN_ROUTE_POINTS, POINT_TYPES } from '@/components/trips/planning/routeBuilderPoint';
 import Button from '@/components/ui/Button';
 import type { ThemedColors } from '@/hooks/useTheme';
@@ -30,6 +31,8 @@ interface Props {
   colors: ThemedColors;
   isMapFirst: boolean;
   route: RoutePoint[];
+  /** Старт поездки: из него считается календарная дата заголовка дня. */
+  startDate: string | null | undefined;
   editingIndex: number | null;
   /**
    * Форма правки точки. В мобильной раскладке она уезжает в карточку своей
@@ -71,6 +74,7 @@ export default function RoutePointsSection({
   colors,
   isMapFirst,
   route,
+  startDate,
   editingIndex,
   editorSlot,
   renderPoint,
@@ -96,6 +100,19 @@ export default function RoutePointsSection({
   onOpenAddPoint,
   onCancelAddPoint,
 }: Props) {
+  const renderRoutePointList = (withEditorSlot: boolean) => (
+    <RouteDayGroups
+      route={route}
+      startDate={startDate}
+      styles={styles}
+      colors={colors}
+      renderPoint={renderPoint}
+      pointSlot={(index) =>
+        withEditorSlot && editingIndex === index ? editorSlot : undefined
+      }
+    />
+  );
+
   const addPointSection = editingIndex != null ? null : !isAddPointOpen ? (
     <Button
       label={i18nT('trips:components.trips.planning.RouteBuilder.dobavit_tochku_60ab5746')}
@@ -162,11 +179,7 @@ export default function RoutePointsSection({
     >
       {route.length ? (
         isMapFirst ? (
-          <View style={styles.pointList}>
-            {route.map((point, index) =>
-              renderPoint(point, index, editingIndex === index ? editorSlot : null),
-            )}
-          </View>
+          <View style={styles.pointList}>{renderRoutePointList(true)}</View>
         ) : (
           <ScrollView
             style={styles.pointListScroll}
@@ -177,7 +190,7 @@ export default function RoutePointsSection({
             testID="route-builder-point-list-scroll"
             {...(Platform.OS === 'web' ? { tabIndex: 0 as const } : {})}
           >
-            {route.map((point, index) => renderPoint(point, index))}
+            {renderRoutePointList(false)}
           </ScrollView>
         )
       ) : (

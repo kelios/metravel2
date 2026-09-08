@@ -39,6 +39,10 @@ export const remapIndexAfterMove = (
  * Позиция, в которую упадёт перетаскиваемая строка. Считаем по центру строки в
  * её текущем (сдвинутом на `deltaY`) положении и по измеренным габаритам:
  * строки в списке разной высоты, поэтому «дельта / высота строки» врёт.
+ *
+ * Обход идёт в визуальном порядке `y`, а не по индексу массива: группировка
+ * по дню (#1845) ставит точку с большим индексом выше меньшей, и тогда первый
+ * же шаг пальца попадал бы в нижнюю по индексу строку.
  */
 export const resolveDropIndex = (
   spans: ReadonlyArray<RouteRowSpan | undefined>,
@@ -52,10 +56,15 @@ export const resolveDropIndex = (
   if (!from) return fromIndex;
 
   const center = from.y + from.height / 2 + deltaY;
+  const visual: Array<{ index: number; span: RouteRowSpan }> = [];
   for (let index = 0; index < total; index += 1) {
     const span = spans[index];
-    if (!span) continue;
+    if (span) visual.push({ index, span });
+  }
+  visual.sort((left, right) => left.span.y - right.span.y || left.index - right.index);
+
+  for (const { index, span } of visual) {
     if (center < span.y + span.height) return index;
   }
-  return total - 1;
+  return visual[visual.length - 1]?.index ?? fromIndex;
 };

@@ -18,6 +18,7 @@ import {
   type OvernightBookingField,
 } from '@/components/trips/planning/routeOvernightBooking';
 import { isOvernightPoint } from '@/utils/overnightBooking';
+import { parseRouteDayDraft, pointDayNumber } from '@/utils/routePointDay';
 import { trackRoutePointAdded } from '@/utils/tripAnalytics';
 import { translate as i18nT } from '@/i18n'
 
@@ -47,6 +48,7 @@ export function useRoutePointDraft({
   const [editBooking, setEditBooking] = useState<OvernightBookingDraft>(
     EMPTY_OVERNIGHT_BOOKING_DRAFT,
   );
+  const [editDayNumber, setEditDayNumber] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
   // #1782: повторный выбор адреса обязан переписать то, что подставил сам поиск,
   // и не тронуть то, что набрал пользователь. Ref держит последнее записанное
@@ -83,6 +85,7 @@ export function useRoutePointDraft({
         description: description || null,
         coordinates,
         placeId: null,
+        dayNumber: null,
       },
     ]);
     trackRoutePointAdded(tripId, newType);
@@ -104,6 +107,8 @@ export function useRoutePointDraft({
     setEditLat(point.coordinates ? formatCoordinateInput(point.coordinates[1]) : '');
     setEditLng(point.coordinates ? formatCoordinateInput(point.coordinates[0]) : '');
     setEditBooking(overnightBookingDraft(point));
+    const day = pointDayNumber(point);
+    setEditDayNumber(day != null ? String(day) : '');
     setEditError(null);
     editAddressAutofillNameRef.current = '';
   }, []);
@@ -133,6 +138,11 @@ export function useRoutePointDraft({
     },
     [],
   );
+
+  const handleEditDayNumberChange = useCallback((value: string) => {
+    setEditDayNumber(value);
+    setEditError(null);
+  }, []);
 
   /**
    * #1843: бронь для сохраняемой точки. Тип решает всё: у не-ночёвки поля
@@ -177,6 +187,8 @@ export function useRoutePointDraft({
     // введённую ссылку.
     const { booking, error: bookingError } = editedBookingFor(nextType);
     if (bookingError) return prev;
+    const { dayNumber, error: dayError } = parseRouteDayDraft(editDayNumber);
+    if (dayError) return prev;
     next[index] = {
       ...current,
       type: nextType,
@@ -185,6 +197,7 @@ export function useRoutePointDraft({
       coordinates,
       placeId: nextType === 'place' ? current.placeId : null,
       booking,
+      dayNumber,
     };
     return next;
   };
@@ -213,6 +226,12 @@ export function useRoutePointDraft({
       return;
     }
 
+    const { dayNumber, error: dayError } = parseRouteDayDraft(editDayNumber);
+    if (dayError) {
+      setEditError(dayError);
+      return;
+    }
+
     setRoute((prev) => {
       const current = prev[editingIndex];
       if (!current) return prev;
@@ -231,6 +250,7 @@ export function useRoutePointDraft({
         coordinates,
         placeId: nextType === 'place' ? current.placeId : null,
         booking,
+        dayNumber,
       };
       return next;
     });
@@ -258,6 +278,7 @@ export function useRoutePointDraft({
         description: null,
         coordinates: [lng, lat],
         placeId: null,
+        dayNumber: null,
       };
       setEditingIndex(nextIndex);
       setEditType(point.type);
@@ -266,6 +287,7 @@ export function useRoutePointDraft({
       setEditDescription('');
       setEditLat(formatCoordinateInput(lat));
       setEditLng(formatCoordinateInput(lng));
+      setEditDayNumber('');
       // Новая точка с карты — не ночёвка, и бронь предыдущей правки ей не
       // принадлежит: без сброса первый же переключатель типа показал бы чужой
       // адрес брони как свой.
@@ -360,6 +382,7 @@ export function useRoutePointDraft({
     editLng,
     editDescription,
     editBooking,
+    editDayNumber,
     editError,
     setNewType,
     setNewName,
@@ -379,6 +402,7 @@ export function useRoutePointDraft({
     handleCancelEdit,
     commitEditName,
     handleEditBookingChange,
+    handleEditDayNumberChange,
     handleOpenAddPoint,
     handleCancelAddPoint,
     handleSaveEdit,

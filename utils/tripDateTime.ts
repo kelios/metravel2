@@ -151,6 +151,25 @@ export function parseTripDateTime(input: string | null | undefined): TripDateTim
   }
 }
 
+/**
+ * Сдвиг календарного дня поездки на целое число суток в локальной зоне.
+ * Нужен заголовку дня похода (#1845): дата дня N = старт + (N − 1).
+ * Дробный сдвиг не определен и возвращает null, чтобы не получить «день 1.5».
+ */
+export function addCalendarDays(
+  input: string | null | undefined,
+  days: number,
+): string | null {
+  const parsed = parseTripDateTime(input)
+  if (!parsed || !Number.isInteger(days)) return null
+  const next = new Date(
+    parsed.value.getFullYear(),
+    parsed.value.getMonth(),
+    parsed.value.getDate() + days,
+  )
+  return toLocalDate(next)
+}
+
 /** Read-only плейсхолдер: дата неизвестна. Это не приглашение «Выберите дату». */
 export function tripDateUnavailableText(): string {
   return i18nT('tripsStatic:plan.dateUnavailable')

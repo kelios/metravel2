@@ -207,6 +207,21 @@ export const createStyles = (colors: ThemedColors) =>
     },
     coordRow: { flexDirection: 'row', gap: 8 },
     coordInput: { flex: 1 },
+    dayGroupHeader: {
+      gap: 2,
+      paddingHorizontal: 4,
+      paddingTop: 8,
+      paddingBottom: 2,
+    },
+    dayGroupTitle: { fontSize: 13, fontWeight: '700', color: colors.text },
+    dayGroupMeta: { fontSize: 12, lineHeight: 16 },
+    dayField: {
+      gap: 8,
+      marginTop: 4,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
     // #1843: подраздел брони внутри формы точки. Отбит линией сверху, а не
     // рамкой: своя рамка внутри уже обведённой формы читалась как вложенная
     // карточка, которой здесь нет.

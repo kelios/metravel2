@@ -154,4 +154,26 @@ describe('updateTripRoute payload', () => {
       expect.not.arrayContaining(['address', 'booking_url', 'price', 'checkin_time']),
     )
   })
+
+  it('#1845: day_number уходит на каждой точке, иначе полный PUT обнулит день', async () => {
+    delete process.env.EXPO_PUBLIC_TRIPS_MOCK
+    const apiClientMock = { put: jest.fn(async () => makeTripDto(3)) }
+    const { updateTripRoute } = loadApi(apiClientMock)
+    const base = makeRoute().slice(0, 3)
+
+    await updateTripRoute({
+      tripId: 42,
+      route: [
+        { ...base[0], dayNumber: 1 },
+        { ...base[1], dayNumber: 2 },
+        { ...base[2], dayNumber: null },
+      ],
+    })
+
+    const [, body] = apiClientMock.put.mock.calls[0] as [
+      string,
+      { points: Array<{ day_number: number | null; title: string }> },
+    ]
+    expect(body.points.map((point) => point.day_number)).toEqual([1, 2, null])
+  })
 })

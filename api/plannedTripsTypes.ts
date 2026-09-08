@@ -52,6 +52,12 @@ export interface RoutePoint {
    * объекта. У точки не-`overnight` значение всегда отсутствует или `null`.
    */
   booking?: OvernightBooking | null
+  /**
+   * День похода (#1845), 1–60 или отсутствует. Необязательное по той же причине,
+   * что бронь: литералы шаблона и импорта дня не несут. `null` и `undefined`
+   * для группировки списка — одно и то же: точка без дня.
+   */
+  dayNumber?: number | null
 }
 
 export interface RouteSummary {

@@ -17,6 +17,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n';
 import { isOvernightPoint } from '@/utils/overnightBooking';
 import RouteOvernightFields from './RouteOvernightFields';
+import RouteDayField from './RouteDayField';
 import type { createStyles } from './RouteBuilder.styles';
 import type { OvernightBookingDraft, OvernightBookingField } from './routeOvernightBooking';
 
@@ -39,9 +40,14 @@ interface Props {
   description: string;
   /** #1843: черновик брони. Показывается только у точки «ночёвка». */
   booking: OvernightBookingDraft;
+  /** #1845: день похода строкой; пусто — точка без дня. */
+  dayNumber: string;
+  /** Чипы уже занятых дней маршрута и следующего свободного. */
+  dayChips: number[];
   error: string | null;
   onTypeChange: (type: RoutePointType) => void;
   onBookingChange: (field: OvernightBookingField, value: string) => void;
+  onDayNumberChange: (value: string) => void;
   onAddressSelect: (address: string, coords: { lat: number; lng: number }) => void;
   onNameChange: (value: string) => void;
   onLatChange: (value: string) => void;
@@ -66,9 +72,12 @@ export default function RoutePointEditForm({
   lng: editLng,
   description: editDescription,
   booking: editBooking,
+  dayNumber: editDayNumber,
+  dayChips,
   error: editError,
   onTypeChange,
   onBookingChange,
+  onDayNumberChange,
   onAddressSelect,
   onNameChange,
   onLatChange,
@@ -165,6 +174,13 @@ export default function RoutePointEditForm({
       {/* #1843: адрес жилья, ссылка на бронь, цена и время заезда — поля
           единственного типа точки. Раньше всё это уходило в описание одной
           строкой, и отдельно кликнуть по ссылке брони было нечем. */}
+      <RouteDayField
+        styles={styles}
+        colors={colors}
+        value={editDayNumber}
+        chipDays={dayChips}
+        onChange={onDayNumberChange}
+      />
       {isOvernightPoint(editType) ? (
         <RouteOvernightFields
           styles={styles}

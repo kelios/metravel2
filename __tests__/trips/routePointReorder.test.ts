@@ -92,4 +92,17 @@ describe('resolveDropIndex', () => {
     expect(resolveDropIndex([undefined, { y: 88, height: 80 }], 0, 500)).toBe(0)
     expect(resolveDropIndex(spans(1), 0, 500)).toBe(0)
   })
+
+  it('follows visual Y when grouping puts a higher index above a lower one', () => {
+    // День 1 визуально выше дня 2, хотя в массиве точка дня 2 стоит первой.
+    const grouped: RouteRowSpan[] = [
+      { y: 120, height: 80 },
+      { y: 0, height: 80 },
+    ]
+
+    expect(resolveDropIndex(grouped, 1, 0)).toBe(1)
+    expect(resolveDropIndex(grouped, 1, 20)).toBe(1)
+    expect(resolveDropIndex(grouped, 1, 130)).toBe(0)
+    expect(resolveDropIndex(grouped, 0, -130)).toBe(1)
+  })
 })

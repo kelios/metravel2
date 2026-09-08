@@ -13,6 +13,7 @@ import RouteBuilderLayout from '@/components/trips/planning/RouteBuilderLayout';
 import { type SiteRouteOption } from '@/components/trips/planning/RoutePointAddForm';
 import RoutePointEditForm from '@/components/trips/planning/RoutePointEditForm';
 import RoutePointRow from '@/components/trips/planning/RoutePointRow';
+import { RouteDayGroups } from '@/components/trips/planning/RouteDayGroupHeader';
 import RoutePointsSection from '@/components/trips/planning/RoutePointsSection';
 import RouteSaveSection from '@/components/trips/planning/RouteSaveSection';
 import RouteTransportSection from '@/components/trips/planning/RouteTransportSection';
@@ -72,7 +73,7 @@ import { createStyles } from './RouteBuilder.styles';
 import { createRoutePanelStyles } from './routePanelStyles';
 import { moveItem, remapIndexAfterMove } from './routePointReorder';
 import { useRoutePointDrag } from './useRoutePointDrag';
-
+import { routeDayChipValues } from '@/components/trips/planning/routePointDays';
 
 // Тот же график, что на travel details: react-native-svg и логика чарта грузятся
 // только когда у маршрута действительно есть высоты. safeLazy переживает
@@ -180,6 +181,7 @@ function RouteBuilder({
     editLng,
     editDescription,
     editBooking,
+    editDayNumber,
     editError,
     setNewType,
     setNewName,
@@ -199,6 +201,7 @@ function RouteBuilder({
     handleCancelEdit,
     commitEditName,
     handleEditBookingChange,
+    handleEditDayNumberChange,
     handleOpenAddPoint,
     handleCancelAddPoint,
     handleSaveEdit,
@@ -468,6 +471,7 @@ function RouteBuilder({
         description: option.description || option.subtitle || null,
         coordinates: option.coordinates,
         placeId: option.id,
+        dayNumber: null,
       },
     ]);
     trackRoutePointAdded(trip.id, 'place');
@@ -563,7 +567,10 @@ function RouteBuilder({
         {elevationProfileSection}
         {route.length ? (
           <View style={styles.pointList}>
-            {route.map((point, index) => renderPoint(point, index))}
+            <RouteDayGroups
+              route={route} startDate={trip.startDate}
+              styles={styles} colors={colors} renderPoint={renderPoint}
+            />
           </View>
         ) : (
           <Text style={styles.hint}>{i18nT('trips:components.trips.planning.RouteBuilder.marshrut_poka_ne_postroen_fbdcf5ed')}</Text>
@@ -644,9 +651,12 @@ function RouteBuilder({
       lng={editLng}
       description={editDescription}
       booking={editBooking}
+      dayNumber={editDayNumber}
+      dayChips={routeDayChipValues(route)}
       error={editError}
       onTypeChange={setEditType}
       onBookingChange={handleEditBookingChange}
+      onDayNumberChange={handleEditDayNumberChange}
       onAddressSelect={handleEditAddressSelect}
       onNameChange={commitEditName}
       onLatChange={setEditLat}
@@ -667,6 +677,7 @@ function RouteBuilder({
       colors={colors}
       isMapFirst={isMapFirst}
       route={route}
+      startDate={trip.startDate}
       editingIndex={editingIndex}
       // Форма правки принадлежит одной раскладке за раз: в mapFirst её ставит
       // карточка своей точки внутри секции, в stack — `RouteBuilderLayout`.
