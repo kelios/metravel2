@@ -1,10 +1,14 @@
 const { execFileSync } = require('child_process');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const plist = require('@expo/plist').default;
 const { getConfig } = require('@expo/config');
 const xcode = require('xcode');
+const {
+  prepareIosSubmitRuntime,
+} = require('./ios-submit-runtime');
 
 const EXPECTED = Object.freeze({
   apnsEnvironment: 'production',
@@ -321,6 +325,22 @@ function validateIosRelease(root = process.cwd(), options = {}) {
     }
   } catch (error) {
     fail('IOS_RESOLVED_EXPO_CONFIG', error.message);
+  }
+
+  const submitConfigRuntime = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'metravel-ios-submit-config.'),
+  );
+  try {
+    prepareIosSubmitRuntime(root, submitConfigRuntime);
+    execFileSync(
+      process.execPath,
+      [path.join(__dirname, 'ios-submit-runtime.js'), 'validate', submitConfigRuntime],
+      { stdio: 'pipe' },
+    );
+  } catch (error) {
+    fail('IOS_SUBMIT_RUNTIME_CONFIG', error.message);
+  } finally {
+    fs.rmSync(submitConfigRuntime, { recursive: true, force: true });
   }
 
   let project;

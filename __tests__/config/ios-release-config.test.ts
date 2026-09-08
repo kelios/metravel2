@@ -38,6 +38,8 @@ function fixture(changes: Record<string, (value: string) => string>): string {
     'yarn.lock',
     'scripts/ios-build.sh',
     'scripts/ios-submit.sh',
+    'scripts/ios-submit-runtime.js',
+    'scripts/android-firebase-config.js',
     'android/app/src/main/AndroidManifest.xml',
     'android/app/src/main/res/values/colors.xml',
     'assets/images/notification-icon.png',
@@ -342,6 +344,24 @@ describe('iOS release configuration', () => {
     );
   });
 
+  it('resolves the isolated submit config runtime before an EAS build starts', () => {
+    expect(validateIosRelease(root)).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'IOS_SUBMIT_RUNTIME_CONFIG' }),
+      ])
+    );
+  });
+
+  it('fails the pre-build guard when an isolated submit config dependency is missing', () => {
+    const testRoot = fixture({});
+    fs.rmSync(path.join(testRoot, 'scripts/android-firebase-config.js'));
+    expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'IOS_SUBMIT_RUNTIME_CONFIG' }),
+      ])
+    );
+  });
+
   it('injects the protected ASC app id only into a temporary submit config', () => {
     const exactBuildId = '11111111-1111-4111-8111-111111111111';
     const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-ios-submit-bin-'));
@@ -372,6 +392,9 @@ if (process.argv.includes('build:view')) {
   process.exit(0);
 }
 const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'eas.json'), 'utf8'));
+const appConfig = require(path.join(process.cwd(), 'app.config.js'));
+const appJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'app.json'), 'utf8'));
+appConfig({ config: appJson.expo });
 if (!process.cwd().includes('/.codex-temp/ios-submit-runtime.')) process.exit(20);
 if (config.submit?.production?.ios?.ascAppId !== process.env.EXPECTED_ASC_APP_ID) process.exit(21);
 if (!process.argv.includes('--id') || !process.argv.includes('${exactBuildId}')) process.exit(22);
