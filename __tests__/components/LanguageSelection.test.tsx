@@ -1,6 +1,6 @@
 import React from 'react'
 import { fireEvent, render } from '@testing-library/react-native'
-import { StyleSheet } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
 
 import LanguageSwitcher from '@/components/layout/LanguageSwitcher'
 import LanguageSection from '@/components/settings/LanguageSection'
@@ -95,7 +95,9 @@ describe('language selection surfaces', () => {
     ['pl', 'PL'],
     ['en', 'EN'],
   ] as const)('держит бокс кода языка одинаковым на локали %s', (locale, displayCode) => {
+    const originalPlatformOS = Platform.OS
     localeState.locale = locale
+    Object.defineProperty(Platform, 'OS', { value: 'web' })
     try {
       const { getByText } = render(<LanguageSwitcher />)
       const code = getByText(displayCode)
@@ -106,7 +108,24 @@ describe('language selection surfaces', () => {
       })
       expect(code.props.numberOfLines).toBe(1)
     } finally {
+      Object.defineProperty(Platform, 'OS', { value: originalPlatformOS })
       localeState.locale = 'ru'
+    }
+  })
+
+  // Фиксированный бокс кода — web-only: на native он не нужен (пререндера нет),
+  // а вместе с `numberOfLines` резал бы код при системном увеличении шрифта.
+  it('на native бокс кода языка не фиксирует', () => {
+    const originalPlatformOS = Platform.OS
+    Object.defineProperty(Platform, 'OS', { value: 'ios' })
+    try {
+      const { getByText } = render(<LanguageSwitcher />)
+      const flattened = StyleSheet.flatten(getByText('RU').props.style)
+
+      expect(flattened.width).toBeUndefined()
+      expect(flattened.textAlign).toBeUndefined()
+    } finally {
+      Object.defineProperty(Platform, 'OS', { value: originalPlatformOS })
     }
   })
 })

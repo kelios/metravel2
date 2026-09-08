@@ -166,8 +166,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       // ехал до 2.6 px, а вместе с ним и его x — сам переключатель стоит правее
       // `navScroll` c `flex:1`, поэтому весь слак строки левее него. 22 px
       // накрывают весь закрытый набор `LOCALE_DISPLAY_CODES` с запасом.
-      width: 22,
-      textAlign: 'center',
+      // Только web: сдвиг от смены локали живёт в пререндеренном HTML, а на
+      // native фиксированный бокс с `numberOfLines` резал бы код при системном
+      // увеличении шрифта.
+      ...(Platform.OS === 'web' ? { width: 22, textAlign: 'center' as const } : null),
     },
     menu: {
       width: 220,
