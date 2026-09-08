@@ -19,6 +19,11 @@ export const TripChatPanel = safeLazy(
   'TripChatPanel',
   { retries: 1 },
 )
+export const TripGearChecklist = safeLazy(
+  () => import('@/components/trips/planning/TripGearChecklist'),
+  'TripGearChecklist',
+  { retries: 1 },
+)
 export const TripInvitePanel = safeLazy(
   () => import('@/components/trips/planning/TripInvitePanel'),
   'TripInvitePanel',

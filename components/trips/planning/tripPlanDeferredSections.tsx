@@ -8,6 +8,7 @@
 import PhotoUploadWithPreviewDefault from '@/components/travel/PhotoUploadWithPreview'
 import TripChatPanelDefault from '@/components/trips/chat/TripChatPanel'
 import TripTelegramGroupCardDefault from '@/components/trips/communication/TripTelegramGroupCard'
+import TripGearChecklistDefault from '@/components/trips/planning/TripGearChecklist'
 import TripInvitePanelDefault from '@/components/trips/planning/TripInvitePanel'
 import TripParticipantsListDefault from '@/components/trips/planning/TripParticipantsList'
 import TripRatingPanelDefault from '@/components/trips/planning/TripRatingPanel'
@@ -19,6 +20,7 @@ import TripSuggestionsPanelDefault from '@/components/trips/planning/TripSuggest
 
 export const PhotoUploadWithPreview = PhotoUploadWithPreviewDefault
 export const TripChatPanel = TripChatPanelDefault
+export const TripGearChecklist = TripGearChecklistDefault
 export const TripInvitePanel = TripInvitePanelDefault
 export const TripParticipantsList = TripParticipantsListDefault
 export const TripRatingPanel = TripRatingPanelDefault

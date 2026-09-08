@@ -23,6 +23,7 @@ import RouteBuilder, {
 import {
   PhotoUploadWithPreview,
   TripChatPanel,
+  TripGearChecklist,
   TripInvitePanel,
   TripParticipantsList,
   TripRatingPanel,
@@ -952,6 +953,7 @@ export default function PlannedTripScreen() {
                 <Suspense fallback={<ActivityIndicator style={styles.loader} testID="trip-plan-panel-more-loading" />}>
                   <TripReportForm trip={trip} />
                   {trip.status === 'completed' ? <TripRatingPanel trip={trip} /> : null}
+                  <TripGearChecklist trip={trip} />
                 </Suspense>
                 <TripAffiliateBlock trip={trip} />
               </View>

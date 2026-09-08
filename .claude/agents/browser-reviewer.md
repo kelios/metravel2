@@ -22,7 +22,15 @@ code тебе не принадлежат.
 
 1. Прочитай Task Contract и exact runtime handoff: route, actions, expected
    state, API contract, target env, platform/localization impact.
-2. Проверь operation lock; затем подними или переиспользуй preview.
+2. Проверь operation lock; затем **переиспользуй уже поднятый дев-сервер**.
+   Metro на машине один, порт `8081`: проба
+   `curl -s -o /dev/null -w '%{http_code}' --max-time 60 http://localhost:8081/`.
+   Ответил `200` — работай на нём, даже если его поднимала другая сессия: дерево
+   общее, бандл собирается из того же кода. Свой поднимай, только если ни один
+   не отвечает или чужой целится не в тот API — а это видно по запросам
+   страницы (`CORS blocked` на `https://metravel.by/api/...`), НЕ по `ps eww`:
+   `expo` читает `.env` поверх окружения процесса. Правило, проба и порты —
+   `docs/WORKFLOW_OPERATIONS.md` → «Один Metro на машину, порт 8081».
 3. Для видимого FE flow собери реальное evidence: действия пользователя,
    DOM/state, real backend data, network shape/status, console и screenshot.
 4. Responsive common UI проверь на desktop 1280 и mobile web 390; native device

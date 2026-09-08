@@ -23,6 +23,7 @@ import { travelGenerated3 } from './travel_03'
 import { travelGenerated4 } from './travel_04'
 import { tripsGenerated1 } from './trips_01'
 import { tripsGenerated2 } from './trips_02'
+import { tripsGenerated3 } from './trips_03'
 
 export const generatedResources = {
   "achievements": { ...achievementsGenerated1 },
@@ -40,5 +41,5 @@ export const generatedResources = {
   "seo": { ...seoGenerated1 },
   "shared": { ...sharedGenerated1, ...sharedGenerated2 },
   "travel": { ...travelGenerated1, ...travelGenerated2, ...travelGenerated3, ...travelGenerated4 },
-  "trips": { ...tripsGenerated1, ...tripsGenerated2 },
+  "trips": { ...tripsGenerated1, ...tripsGenerated2, ...tripsGenerated3 },
 } as const

@@ -162,6 +162,10 @@ export const queryKeys = {
     routeId: string | number | null | undefined,
     revision: string | null | undefined,
   ) => ['planned-trip-route-track', tripId, routeId, revision ?? ''] as const,
+  // Чеклист снаряжения поездки (#1839). Ключ на поездку: список приватный и
+  // читается только владельцем или участником с ответом «еду».
+  plannedTripGear: (tripId: string | number | null | undefined) =>
+    ['planned-trip-gear', tripId] as const,
   routeTemplates: () => ['route-templates'] as const,
   tripSuggestions: (tripId: string | number | null | undefined) =>
     ['trip-suggestions', tripId] as const,

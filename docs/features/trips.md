@@ -314,6 +314,13 @@ DTO `PublicTripDto` (snake_case): `id`, `owner`, `owner_profile`, `title`,
   `role: organizer|participant`.
 - `TripReport`: `summary`, `photoUrls`, `gpxUrl`, `visitedPlaceIds`, `published`,
   `publishedAt`.
+- `TripGearItem` (`api/plannedTripsGear.ts`, #1839): `id`, `title`,
+  `category: documents|clothing|footwear|electronics|hygiene|food|first_aid|other`,
+  `status: buy|owned|packed`, `sortOrder`. Живёт отдельным ресурсом, а не полем
+  поездки: чеклист приватный, читается только владельцем и участником с ответом
+  «еду», и в общий `PlannedTrip` не попадает. Незнакомые `status`/`category` с
+  бэка деградируют в `buy`/`other` — потерянная из списка вещь опаснее вещи в
+  «Другом».
 
 ## Что реально возвращает API публичных поездок и чего в нём НЕТ
 
@@ -404,6 +411,11 @@ DTO `PublicTripDto` (snake_case): `id`, `owner`, `owner_profile`, `title`,
 | `uploadPlannedTripRouteFile` | `POST /trips/planned/{id}/routes/` (multipart `file`) | создаёт (201) или заменяет (200) с тем же id |
 | `downloadPlannedTripRouteFileBlob` | `GET /trips/planned/{id}/routes/{routeId}/download/` | отдаёт ровно загруженные байты |
 | `deletePlannedTripRouteFile` | `DELETE /trips/planned/{id}/routes/{routeId}/` | 204 |
+| `fetchTripGear` | `GET /trips/planned/{id}/gear/` | #1839; владелец или участник `going`, без пагинации |
+| `addTripGearItem` | `POST /trips/planned/{id}/gear/ {title,category}` | owner-only, 201 одним объектом |
+| `applyTripGearTemplate` | `POST /trips/planned/{id}/gear/ {template:'hiking'}` | тело ровно из одного поля; возвращает ТОЛЬКО созданные позиции, на повторе — `[]` |
+| `updateTripGearItem` | `PATCH /trips/planned/{id}/gear/{itemId}/ {status}` | owner-only |
+| `deleteTripGearItem` | `DELETE /trips/planned/{id}/gear/{itemId}/` | 204, owner-only |
 
 ### Исходный файл маршрута (фаза 2 импорта, #1496)
 
@@ -460,6 +472,30 @@ backend-контракт #1493). Хранилище доступно тольк�
 Смежные: `GET/POST /trips/{id}/chat/`, `.../messages/` (`api/tripChat.ts`),
 `GET/POST /trips/{id}/telegram-group/` и invite-link (`api/tripTelegramGroup.ts`).
 
+### Чеклист снаряжения (#1839)
+
+Блок живёт во вкладке «Ещё» экрана `/trips/plan/:id`, после отчёта и рейтинга
+(`components/trips/planning/TripGearChecklist.tsx`, макет
+`docs/features/trips-packing-checklist-mock.md`). Правила без рендера —
+`tripGearRules.ts`: цикл статуса `купить → есть → взято`, группировка по
+категориям фиксированным порядком макета, прогресс считает только `packed`.
+
+Три вещи, которые тут легко сделать неправильно:
+
+- **Мок-фолбэка нет намеренно.** 404/501 показывают «Чеклист снаряжения пока
+  недоступен», а не выдуманные вещи: по фальшивому списку человек собрался бы в
+  поход. Это прямое требование Task Contract #1839.
+- **Кнопка «Повторить» появляется только там, где повтор что-то меняет** — на
+  сорванном чтении. 401/403/404/501 и отказ записи её не получают: запись
+  чинится тем же тапом по чипу.
+- **Повтор шаблона — не ошибка.** Бэк сверяет названия без учёта регистра и
+  пробелов и возвращает пустой массив, когда добавлять нечего; клиент в этом
+  случае не трогает кэш и пишет «Все вещи из шаблона уже в списке».
+
+Статус переключается оптимистично (`useUpdateTripGearItem`), с откатом на
+ошибке: чип обязан отвечать на тап мгновенно, а полный рефетч после каждого
+PATCH возвращал бы список на кадр в прежнее состояние.
+
 ### Mock-фолбэк
 
 `api/publicTrips.ts` и `api/plannedTripsRequests.ts` используют один флаг
@@ -485,6 +521,7 @@ backend-контракт #1493). Хранилище доступно тольк�
 | `useTripRouteElevation(id)` | `['trip-route-elevation', id]` | `enabled: isAuthenticated && …` |
 | `useRouteTemplates()` | `['route-templates']` | `staleTime` 1 час |
 | `useTripSuggestions(id)` | `['trip-suggestions', id]` | |
+| `useTripGear(id, enabled)` | `['planned-trip-gear', id]` | `hooks/useTripGearApi.ts`; `enabled` = владелец или участник `going`, `staleTime` 1 минута |
 | чат / Telegram | `['trip-chat', id]`, `['trip-chat-messages', threadId]`, `['trip-telegram-group', id]` | |
 
 `staleTime` trips-запросов — 5 минут (у шаблонов — 1 час). В
