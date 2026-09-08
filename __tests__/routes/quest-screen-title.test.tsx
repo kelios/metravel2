@@ -7,6 +7,7 @@ import { act } from 'react-test-renderer'
 import { render } from '@testing-library/react-native'
 
 const mockUseIsFocused = jest.fn(() => true)
+const mockUseLocalSearchParams = jest.fn(() => ({ city: '4', questId: 'minsk-cmok' }))
 const mockRouterPush = jest.fn()
 const mockUseAuth = jest.fn(() => ({ isAuthenticated: true }))
 const mockUseQuestBundle = jest.fn(() => ({
@@ -14,6 +15,7 @@ const mockUseQuestBundle = jest.fn(() => ({
     id: 77,
     title: 'Тайна Свислочского Цмока: Легенда оживает',
     storageKey: 'minsk-cmok',
+    coverUrl: undefined as string | undefined,
     steps: [],
     finale: null,
     intro: null,
@@ -31,15 +33,10 @@ const mockUseQuestProgressSync = jest.fn(() => ({
 }))
 
 jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => ({ city: '4', questId: 'minsk-cmok' }),
+  useLocalSearchParams: () => mockUseLocalSearchParams(),
   Link: ({ children }: { children: React.ReactNode }) => children,
   useIsFocused: () => mockUseIsFocused(),
   useRouter: () => ({ push: mockRouterPush }),
-}))
-
-jest.mock('@/components/seo/LazyInstantSEO', () => ({
-  __esModule: true,
-  default: () => null,
 }))
 
 jest.mock('@/hooks/useTheme', () => ({
@@ -105,6 +102,51 @@ jest.mock('@/components/quests/TravelsForQuestSection', () => ({
   default: () => null,
 }))
 
+const IMAGE_SELECTORS = [
+  'meta[property="og:image"]',
+  'meta[property="og:image:secure_url"]',
+  'meta[name="twitter:image"]',
+]
+
+const appendImageHead = (image: string) => {
+  for (const [attribute, value] of [
+    ['property', 'og:image'],
+    ['property', 'og:image:secure_url'],
+    ['name', 'twitter:image'],
+  ]) {
+    const node = document.createElement('meta')
+    node.setAttribute(attribute, value)
+    node.setAttribute('content', image)
+    document.head.appendChild(node)
+  }
+}
+
+const expectSingleImageHead = (image: string) => {
+  for (const selector of IMAGE_SELECTORS) {
+    const nodes = document.head.querySelectorAll(selector)
+    expect(nodes).toHaveLength(1)
+    expect(nodes[0].getAttribute('content')).toBe(image)
+  }
+}
+
+// Keep the real LazyInstantSEO and JSON-LD serializer; only Expo Head's renderer
+// is mocked by the common setup. This checks declarative tags before any timers.
+const expectRenderedImage = (screen: ReturnType<typeof render>, image: string) => {
+  for (const key of ['og:image', 'og:image:secure_url', 'twitter:image']) {
+    const nodes = screen.UNSAFE_root.findAll((node) =>
+      node.type === 'meta' && (node.props.property === key || node.props.name === key),
+    )
+    expect(nodes).toHaveLength(1)
+    expect(nodes[0].props.content).toBe(image)
+  }
+  const script = screen.UNSAFE_root.findByProps({ type: 'application/ld+json' })
+  const jsonLd = JSON.parse(script.props.dangerouslySetInnerHTML.__html)
+  expect(jsonLd['@graph']).toContainEqual(expect.objectContaining({
+    '@type': 'CreativeWork',
+    image: [image],
+  }))
+}
+
 describe('Quest screen title sync', () => {
   beforeAll(() => {
     const RN = require('react-native')
@@ -115,6 +157,7 @@ describe('Quest screen title sync', () => {
   beforeEach(() => {
     jest.useFakeTimers()
     mockUseIsFocused.mockReturnValue(true)
+    mockUseLocalSearchParams.mockReturnValue({ city: '4', questId: 'minsk-cmok' })
     mockRouterPush.mockClear()
     mockUseAuth.mockReturnValue({ isAuthenticated: true })
     mockUseQuestBundle.mockClear()
@@ -123,6 +166,7 @@ describe('Quest screen title sync', () => {
         id: 77,
         title: 'Тайна Свислочского Цмока: Легенда оживает',
         storageKey: 'minsk-cmok',
+        coverUrl: undefined,
         steps: [],
         finale: null,
         intro: null,
@@ -199,6 +243,100 @@ describe('Quest screen title sync', () => {
     expect(document.querySelector('meta[name="robots"]')).toBeNull()
   })
 
+  it.each([
+    ['https://metravel.by/quest-cover/quests/77/main/cover.webp', 'https://metravel.by/quest-cover/quests/77/main/cover.webp?w=800'],
+    ['/quest-cover/quests/77/main/cover.webp', 'https://metravel.by/quest-cover/quests/77/main/cover.webp?w=800'],
+    ['//metravel.by/quest-cover/quests/77/main/cover.webp', 'https://metravel.by/quest-cover/quests/77/main/cover.webp?w=800'],
+    ['  http://metravel.by/quest-cover/quests/77/main/cover.webp  ', 'https://metravel.by/quest-cover/quests/77/main/cover.webp?w=800'],
+    ['https://metravel.by/quest-cover/quests/77/main/cover.webp?w=400', 'https://metravel.by/quest-cover/quests/77/main/cover.webp?w=400'],
+    ['https://example.com/quest.jpg', 'https://example.com/quest.jpg'],
+    [undefined, 'https://metravel.by/assets/icons/logo_yellow_512x512.png'],
+    ['   ', 'https://metravel.by/assets/icons/logo_yellow_512x512.png'],
+  ])('keeps one normalized cover in declarative SEO, JSON-LD and every delayed head write: %s', async (coverUrl, expected) => {
+    const current = mockUseQuestBundle()
+    mockUseQuestBundle.mockReturnValue({ ...current, bundle: { ...current.bundle, coverUrl } })
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen />)
+
+    expectRenderedImage(screen, expected)
+    // SSG already carries the correct image. None of the route's later writes
+    // may replace it with the original master URL (#1877).
+    appendImageHead(expected)
+    for (const elapsed of [0, 120, 280]) {
+      // Expo can append another head set during reconciliation. The route must
+      // still own all three image tags after each of its 0/120/400 ms patches.
+      appendImageHead('https://metravel.by/quest-cover/previous.webp')
+      await act(async () => {
+        jest.advanceTimersByTime(elapsed)
+        await Promise.resolve()
+      })
+      expectSingleImageHead(expected)
+      expectRenderedImage(screen, expected)
+    }
+  })
+
+  it('cancels stale image writes when the focused route changes to another quest', async () => {
+    const current = mockUseQuestBundle()
+    mockUseQuestBundle.mockReturnValue({
+      ...current,
+      bundle: { ...current.bundle, coverUrl: '/quest-cover/quests/77/main/cover.webp' },
+    })
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen />)
+    await act(async () => {
+      jest.advanceTimersByTime(100)
+      await Promise.resolve()
+    })
+
+    mockUseLocalSearchParams.mockReturnValue({ city: '1', questId: 'krakow-dragon' })
+    mockUseQuestBundle.mockReturnValue({
+      ...current,
+      bundle: {
+        ...current.bundle,
+        storageKey: 'krakow-dragon',
+        coverUrl: '/quest-cover/quests/78/main/next.webp',
+      },
+    })
+    screen.rerender(<QuestScreen />)
+    const expected = 'https://metravel.by/quest-cover/quests/78/main/next.webp?w=800'
+    expectRenderedImage(screen, expected)
+
+    // Inspect both old and new deadlines: 100, 120, 220, 400 and 500 ms.
+    for (const elapsed of [0, 20, 100, 180, 100]) {
+      await act(async () => {
+        jest.advanceTimersByTime(elapsed)
+        await Promise.resolve()
+      })
+      expectSingleImageHead(expected)
+      expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href'))
+        .toBe('https://metravel.by/quests/1/krakow-dragon')
+    }
+  })
+
+  it.each(['blur', 'unmount'])('leaves the destination image alone after quest %s', async (transition) => {
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen />)
+    await act(async () => {
+      jest.advanceTimersByTime(100)
+      await Promise.resolve()
+    })
+    if (transition === 'blur') {
+      mockUseIsFocused.mockReturnValue(false)
+      screen.rerender(<QuestScreen />)
+    } else {
+      screen.unmount()
+    }
+
+    IMAGE_SELECTORS.forEach((selector) => document.querySelectorAll(selector).forEach((node) => node.remove()))
+    const destinationImage = 'https://metravel.by/og-map.png'
+    appendImageHead(destinationImage)
+    await act(async () => {
+      jest.runOnlyPendingTimers()
+      await Promise.resolve()
+    })
+    expectSingleImageHead(destinationImage)
+  })
+
   it('does not load quest data or progress while the quest screen is not focused', () => {
     mockUseIsFocused.mockReturnValue(false)
     const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
@@ -216,6 +354,7 @@ describe('Quest screen title sync', () => {
         id: 77,
         title: 'Тайна Свислочского Цмока: Легенда оживает',
         storageKey: 'minsk-cmok',
+        coverUrl: undefined,
         steps: [
           {
             id: 'step-1',

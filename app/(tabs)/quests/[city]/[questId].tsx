@@ -24,7 +24,7 @@ import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
 import { normalizeQuestProgressSnapshot, snapshotFromServerProgress } from '@/utils/questProgressMerge';
 import { buildQuestProgressStorageKey } from '@/utils/questProgressStorage';
 import { stringifyJsonLd } from '@/utils/jsonLd';
-import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH, normalizeOgImageUrl } from '@/utils/seo';
 import { buildQuestSeoMetadata } from '@/utils/questSeo';
 import { buildQuestCountModel } from '@/utils/questCountModel';
 
@@ -105,14 +105,6 @@ const getQuestSeo = (bundle: FrontendQuestBundle | null, questId: string, isLoad
   };
 };
 
-const getQuestImage = (coverUrl: string | undefined): string => {
-  const cleanCoverUrl = String(coverUrl || '').trim();
-  if (!cleanCoverUrl) return buildOgImageUrl(DEFAULT_OG_IMAGE_PATH);
-  return /^https?:\/\//i.test(cleanCoverUrl)
-    ? cleanCoverUrl.replace(/^http:\/\//i, 'https://')
-    : buildOgImageUrl(cleanCoverUrl);
-};
-
 const upsertMetaContent = (selector: string, value: string) => {
   const nodes = document.querySelectorAll(selector);
   for (let index = 1; index < nodes.length; index += 1) nodes[index].remove();
@@ -158,6 +150,7 @@ const patchQuestHead = (seo: QuestSeoModel, canonical: string, image: string) =>
   upsertMetaContent('meta[name="twitter:title"]', seo.title);
   upsertMetaContent('meta[name="twitter:description"]', seo.description);
   upsertMetaContent('meta[property="og:image"]', image);
+  upsertMetaContent('meta[property="og:image:secure_url"]', image);
   upsertMetaContent('meta[name="twitter:image"]', image);
   removeMeta('meta[name="robots"]');
   upsertCanonical(canonical);
@@ -389,7 +382,11 @@ export default function QuestByIdScreen() {
     (isAuthenticated ? progressLoading : Boolean(questId) && !guestFlow.guestReady);
   const seo = useMemo(() => getQuestSeo(bundle, questId, isLoading), [bundle, isLoading, questId]);
   const countModel = bundle ? resolveBundleCountModel(bundle) : null;
-  const seoImage = useMemo(() => getQuestImage(bundle?.coverUrl), [bundle?.coverUrl]);
+  // SSG/Expo Head and the delayed head patches must agree on the derivative URL.
+  const seoImage = useMemo(
+    () => normalizeOgImageUrl(bundle?.coverUrl) ?? buildOgImageUrl(DEFAULT_OG_IMAGE_PATH),
+    [bundle?.coverUrl],
+  );
   const initialProgress = useMemo(() => {
     if (!isAuthenticated) {
       const guest = guestFlow.guestInitial;
@@ -432,7 +429,7 @@ export default function QuestByIdScreen() {
       cityId: cityId || undefined,
       cityName: bundle.city?.name,
       countryCode: bundle.city?.countryCode,
-      coverUrl: bundle.coverUrl,
+      coverUrl: seoImage,
       stepsCount: countModel?.total,
       lat: bundle.city?.lat,
       lng: bundle.city?.lng,
@@ -445,7 +442,7 @@ export default function QuestByIdScreen() {
         dangerouslySetInnerHTML={{ __html: stringifyJsonLd(structuredData) }}
       />
     );
-  }, [bundle, canonical, cityId, countModel?.total, questId, seo.description, seo.title]);
+  }, [bundle, canonical, cityId, countModel?.total, questId, seo.description, seo.title, seoImage]);
 
   const relatedTravelsSlot = useMemo(() => {
     if (!bundle) return null;
@@ -486,6 +483,8 @@ export default function QuestByIdScreen() {
 
   // Императивный патч head — только для успешной страницы квеста. На gate/loading/error
   // ветках свой InstantSEO (со своим robots/canonical), и отложенный патч его перетирал.
+  // Keep image ownership during SSG/Expo reconciliation, using the same normalized
+  // image as InstantSEO and JSON-LD so delayed writes cannot restore the master.
   useQuestHeadSync(isFocused && !isLoading && Boolean(bundle), seo, canonical, seoImage);
 
   // Generated quest HTML owns the no-JS H1 until the real bundle is ready.
