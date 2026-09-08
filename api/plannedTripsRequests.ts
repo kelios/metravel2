@@ -10,7 +10,7 @@
 import { apiClient, ApiError } from '@/api/client';
 import { resolveDevMockFlag } from '@/utils/devMockFlags';
 import { devWarn } from '@/utils/logger';
-import { serializeTripStart } from '@/utils/tripDateTime';
+import { serializeTripEnd, serializeTripStart } from '@/utils/tripDateTime';
 import { overnightBookingPayload } from '@/utils/overnightBooking';
 import { translate as i18nT } from '@/i18n';
 import {
@@ -245,6 +245,19 @@ export async function fetchTripSuggestions(
 
 // ── Мутации ─────────────────────────────────────────────────────────────────
 
+/**
+ * #1838: конец сериализуется относительно уже собранного старта, а не сырого
+ * поля формы — у поездки на одну дату конец обязан совпасть со стартом
+ * моментом, иначе бэкенд отвергнет `end_at < start_at`.
+ */
+const endDatePayload = (
+  endDate: string | null | undefined,
+  startPayload: string,
+): string | null => {
+  const end = endDate?.trim();
+  return end ? serializeTripEnd(end, startPayload) : null;
+};
+
 const buildMockTrip = (input: CreateTripInput): PlannedTrip => {
   mockIdSeq += 1;
   return {
@@ -253,6 +266,7 @@ const buildMockTrip = (input: CreateTripInput): PlannedTrip => {
     title: input.title,
     description: input.description,
     startDate: input.startDate,
+    endDate: input.endDate?.trim() || null,
     startTime: input.startTime,
     transport: input.transport,
     bikeType: 'regular',
@@ -280,10 +294,14 @@ const buildMockTrip = (input: CreateTripInput): PlannedTrip => {
 
 export async function createTrip(input: CreateTripInput): Promise<PlannedTrip> {
   const coords = input.startPoint?.coordinates ?? null;
+  const startPayload = serializeTripStart(input.startDate, input.startTime);
   const body = {
     title: input.title,
     description: input.description,
-    start_date: serializeTripStart(input.startDate, input.startTime),
+    start_date: startPayload,
+    // #1838: конец шлётся всегда — null означает «поездка на одну дату», и
+    // пропуск поля не отличался бы от «конец не меняли».
+    end_date: endDatePayload(input.endDate, startPayload),
     status: 'planned',
     is_public: input.visibility === 'public',
     max_participants: input.seatsTotal,
@@ -313,10 +331,12 @@ export async function createTrip(input: CreateTripInput): Promise<PlannedTrip> {
 }
 
 export async function updatePlannedTrip(input: UpdateTripInput): Promise<PlannedTrip> {
+  const startPayload = serializeTripStart(input.startDate, input.startTime);
   const body = {
     title: input.title,
     description: input.description,
-    start_date: serializeTripStart(input.startDate, input.startTime),
+    start_date: startPayload,
+    end_date: endDatePayload(input.endDate, startPayload),
     is_public: input.visibility === 'public',
     max_participants: input.seatsTotal,
     transport_mode: transportToBe(input.transport),
@@ -330,6 +350,7 @@ export async function updatePlannedTrip(input: UpdateTripInput): Promise<Planned
     trip.title = input.title;
     trip.description = input.description;
     trip.startDate = input.startDate;
+    trip.endDate = input.endDate?.trim() || null;
     trip.startTime = input.startTime;
     trip.transport = input.transport;
     trip.visibility = input.visibility;
@@ -354,6 +375,7 @@ export async function updatePlannedTrip(input: UpdateTripInput): Promise<Planned
         trip.title = input.title;
         trip.description = input.description;
         trip.startDate = input.startDate;
+        trip.endDate = input.endDate?.trim() || null;
         trip.startTime = input.startTime;
         trip.transport = input.transport;
         trip.visibility = input.visibility;

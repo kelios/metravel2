@@ -149,6 +149,7 @@ interface PublicTripDto {
   title: string;
   description?: string | null;
   start_at: string;
+  end_at?: string | null;
   transport_mode?: string | null;
   is_public?: boolean;
   seats_count?: number;
@@ -275,10 +276,11 @@ const mapTrip = (dto: PublicTripDto): PublicTrip => {
     region: dto.start_point_name ?? '',
     tripType: dto.transport_mode ?? null,
     // Бэк отдаёт ISO date-time со смещением: приводим к локальному календарному
-    // дню, иначе карточка печатала сырой ISO (#1313). Каталожный сериализатор
-    // не отдаёт конец поездки — поле остаётся пустым.
+    // дню, иначе карточка печатала сырой ISO (#1313). Конец каталог отдаёт с
+    // #1836 (`PublicTripCatalogSerializer` наследует `end_at` у `TripSerializer`);
+    // до него поле было заглушкой null.
     startDate: parseTripDateTime(dto.start_at)?.date ?? '',
-    endDate: null,
+    endDate: parseTripDateTime(dto.end_at)?.date ?? null,
     organizer: {
       id: profileId(dto.owner_profile, dto.owner),
       name: profileName(dto.owner_profile, dto.owner),

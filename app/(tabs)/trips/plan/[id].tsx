@@ -58,6 +58,7 @@ import {
   routingStateHint,
 } from '@/components/trips/planning/tripPlanFormatting';
 import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCover';
+import { isTripEndBeforeStart } from '@/utils/tripDateTime';
 import { useDeletePlannedTrip, usePlannedTrip, useUpdatePlannedTrip } from '@/hooks/usePlannedTripsApi';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -97,6 +98,7 @@ const initialEditValues = (trip: PlannedTrip) => ({
   description: trip.description,
   coverUrl: trip.coverUrl ?? '',
   startDate: trip.startDate,
+  endDate: trip.endDate ?? '',
   startTime: trip.startTime ?? '',
   transport: trip.transport,
   visibility: trip.visibility,
@@ -144,6 +146,7 @@ export default function PlannedTripScreen() {
   const [editError, setEditError] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<ReturnType<typeof initialEditValues> | null>(null);
   const [editDatePickerVisible, setEditDatePickerVisible] = useState(false);
+  const [editEndDatePickerVisible, setEditEndDatePickerVisible] = useState(false);
   const [coverUploadPending, setCoverUploadPending] = useState(false);
   const [activeTab, setActiveTab] = useState<PlannerTabKey>('route');
   const [liveRouteDisplay, setLiveRouteDisplay] = useState<(
@@ -277,6 +280,7 @@ export default function PlannedTripScreen() {
     if (trip) setEditValues(initialEditValues(trip));
     setEditError(null);
     setEditDatePickerVisible(false);
+    setEditEndDatePickerVisible(false);
     setCoverUploadPending(false);
     setIsEditing(false);
   };
@@ -284,6 +288,11 @@ export default function PlannedTripScreen() {
   const handleEditStartDateSelect = (startDate: string) => {
     setEditValues((prev) => (prev ? { ...prev, startDate } : prev));
     setEditDatePickerVisible(false);
+  };
+
+  const handleEditEndDateSelect = (endDate: string) => {
+    setEditValues((prev) => (prev ? { ...prev, endDate } : prev));
+    setEditEndDatePickerVisible(false);
   };
 
   const handleSaveDetails = () => {
@@ -298,6 +307,15 @@ export default function PlannedTripScreen() {
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
       setEditError(i18nT('trips:app.tabs.trips.plan.id.data_dolzhna_byt_v_formate_gggg_mm_dd_e9eabe4e'));
+      return;
+    }
+    const endDate = editValues.endDate.trim();
+    if (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      setEditError(i18nT('tripsStatic:tripCreate.validation.endDateFormat'));
+      return;
+    }
+    if (endDate && isTripEndBeforeStart(startDate, endDate)) {
+      setEditError(i18nT('tripsStatic:tripCreate.validation.endBeforeStart'));
       return;
     }
     if (editValues.startTime.trim() && !/^\d{2}:\d{2}$/.test(editValues.startTime.trim())) {
@@ -316,6 +334,7 @@ export default function PlannedTripScreen() {
         title,
         description: editValues.description.trim(),
         startDate,
+        endDate: endDate || null,
         startTime: editValues.startTime.trim() || null,
         transport: editValues.transport,
         visibility: editValues.visibility,
@@ -326,6 +345,7 @@ export default function PlannedTripScreen() {
         onSuccess: (updatedTrip) => {
           setEditValues(initialEditValues(updatedTrip));
           setEditDatePickerVisible(false);
+          setEditEndDatePickerVisible(false);
           setIsEditing(false);
         },
         onError: () => {
@@ -402,7 +422,7 @@ export default function PlannedTripScreen() {
 
               <Text style={styles.title}>{trip.title}</Text>
               <Text style={styles.meta}>
-                {formatTripDateTime(trip.startDate, trip.startTime)} · {trip.organizer.name}
+                {formatTripDateTime(trip.startDate, trip.startTime, trip.endDate)} · {trip.organizer.name}
               </Text>
 
               {summaryLine ? (
@@ -636,6 +656,113 @@ export default function PlannedTripScreen() {
                       testID="trip-plan-edit-start-time"
                     />
                   </View>
+                </View>
+
+                {/* #1838: конец поездки — отдельная строка под датой и временем;
+                    третьей колонкой он не помещается на мобильной ширине. */}
+                <View style={styles.formCol}>
+                  <Text style={styles.label}>
+                    {i18nT('tripsStatic:tripCreate.endDateLabel')}
+                  </Text>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      type="date"
+                      value={editValues.endDate}
+                      min={editValues.startDate || undefined}
+                      onChange={(event) => setEditValues((prev) => prev ? { ...prev, endDate: event.currentTarget.value } : prev)}
+                      aria-label={i18nT('tripsStatic:tripCreate.endDateLabel')}
+                      data-testid="trip-plan-edit-end-date"
+                      disabled={updateTrip.isPending}
+                      style={webDateInputStyle}
+                    />
+                  ) : (
+                    <>
+                      <View style={styles.endDateRow}>
+                        <Pressable
+                          onPress={() => setEditEndDatePickerVisible(true)}
+                          disabled={updateTrip.isPending}
+                          accessibilityRole="button"
+                          accessibilityLabel={i18nT('tripsStatic:tripCreate.endDatePick')}
+                          accessibilityHint={i18nT('trips:app.tabs.trips.plan.id.otkroet_kalendar_vybora_daty_b8c5a057')}
+                          style={[styles.datePickerTrigger, styles.endDateTrigger, globalFocusStyles.focusable]}
+                          testID="trip-plan-edit-end-date"
+                        >
+                          <Feather name="calendar" size={16} color={colors.primary} />
+                          <Text
+                            style={[
+                              styles.datePickerText,
+                              !editValues.endDate && styles.datePickerPlaceholder,
+                            ]}
+                            numberOfLines={1}
+                            testID="trip-plan-edit-end-date-value"
+                          >
+                            {editValues.endDate
+                              ? formatTripDisplayDate(editValues.endDate)
+                              : i18nT('tripsStatic:tripCreate.endDateEmpty')}
+                          </Text>
+                        </Pressable>
+                        {editValues.endDate ? (
+                          <Pressable
+                            onPress={() => setEditValues((prev) => prev ? { ...prev, endDate: '' } : prev)}
+                            disabled={updateTrip.isPending}
+                            accessibilityRole="button"
+                            accessibilityLabel={i18nT('tripsStatic:tripCreate.endDateClear')}
+                            style={[styles.endDateClear, globalFocusStyles.focusable]}
+                            testID="trip-plan-edit-end-date-clear"
+                          >
+                            <Feather name="x" size={16} color={colors.textSecondary} />
+                          </Pressable>
+                        ) : null}
+                      </View>
+                      <Modal
+                        visible={editEndDatePickerVisible}
+                        transparent
+                        animationType="fade"
+                        onRequestClose={() => setEditEndDatePickerVisible(false)}
+                        statusBarTranslucent
+                      >
+                        <Pressable
+                          style={styles.datePickerOverlay}
+                          onPress={() => setEditEndDatePickerVisible(false)}
+                          testID="trip-plan-edit-end-date-picker-backdrop"
+                        >
+                          <Pressable
+                            style={styles.datePickerSheet}
+                            onPress={() => undefined}
+                            testID="trip-plan-edit-end-date-picker"
+                          >
+                            <View style={styles.datePickerHeader}>
+                              <View style={styles.datePickerTitleRow}>
+                                <Feather name="calendar" size={18} color={colors.primary} />
+                                <Text style={styles.datePickerTitle}>
+                                  {i18nT('tripsStatic:tripCreate.endDateLabel')}
+                                </Text>
+                              </View>
+                              <Text style={styles.datePickerHint}>
+                                {i18nT('trips:app.tabs.trips.plan.id.vyberite_den_v_kalendare_otmena_ne_izmenit_t_6991c409')}</Text>
+                            </View>
+                            <View style={styles.datePickerCalendar}>
+                              <MiniCalendar
+                                entries={[]}
+                                selectedDate={editValues.endDate || null}
+                                focusDate={editValues.endDate || editValues.startDate || undefined}
+                                onDayPress={handleEditEndDateSelect}
+                                accentColor={colors.primary}
+                                accentSoftColor={colors.primaryLight}
+                              />
+                            </View>
+                            <Button
+                              label={i18nT('trips:app.tabs.trips.plan.id.otmena_66379efd')}
+                              onPress={() => setEditEndDatePickerVisible(false)}
+                              variant="secondary"
+                              fullWidth
+                              testID="trip-plan-edit-end-date-cancel"
+                            />
+                          </Pressable>
+                        </Pressable>
+                      </Modal>
+                    </>
+                  )}
                 </View>
 
                 {/* Пять подписанных чипов вставали на телефоне в четыре ряда

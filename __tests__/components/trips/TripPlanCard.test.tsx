@@ -34,6 +34,7 @@ const trip: PlannedTrip = {
   title: 'Поездка организатора',
   description: '',
   startDate: '2026-08-01',
+  endDate: null,
   startTime: '09:00',
   transport: 'car',
   visibility: 'private',
@@ -72,6 +73,19 @@ describe('TripPlanCard start date rendering', () => {
     expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}/);
     // Конкретный час зависит от зоны прогона; проверяем локализованную форму.
     expect(text).toMatch(/\d{1,2} \S+ 2026 г\.,\s?\d{2}:\d{2}/);
+  });
+
+  // #1838: многодневная поездка не должна выглядеть однодневной в «Мои поездки».
+  it('renders the trip end as a range', () => {
+    const text = renderedText(
+      render(
+        <TripPlanCard
+          trip={{ ...trip, startDate: '2026-09-26', endDate: '2026-10-04', startTime: null }}
+        />,
+      ),
+    );
+
+    expect(text).toContain('26 сентября 2026 г. — 4 октября 2026 г.');
   });
 
   it('renders the unavailable placeholder for an unreadable value', () => {
@@ -140,12 +154,12 @@ describe('TripPlanCard metadata row sizing', () => {
     const { getByText } = render(<TripPlanCard trip={trip} />);
 
     const metadata = getByText(
-      `На машине · ${formatTripDateTime(trip.startDate, trip.startTime)}`,
+      `На машине · ${formatTripDateTime(trip.startDate, trip.startTime, trip.endDate)}`,
     );
 
     expect(StyleSheet.flatten(metadata.props.style).flex).toBe(1);
     expect(metadata.props.children).toBe(
-      `На машине · ${formatTripDateTime(trip.startDate, trip.startTime)}`,
+      `На машине · ${formatTripDateTime(trip.startDate, trip.startTime, trip.endDate)}`,
     );
     expect(metadata.props.numberOfLines).toBeUndefined();
   });

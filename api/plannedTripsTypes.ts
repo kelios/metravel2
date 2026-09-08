@@ -111,6 +111,8 @@ export interface PlannedTrip {
   title: string
   description: string
   startDate: string
+  /** Календарный день конца, `YYYY-MM-DD`; null — конец не задан (#1838). */
+  endDate: string | null
   startTime: string | null
   transport: TripTransport
   // null — бэк не отдал bike_type; выбор типа велосипеда в этом случае скрыт.
@@ -162,6 +164,8 @@ export interface CreateTripInput {
   title: string
   description: string
   startDate: string
+  /** Необязательный день конца; null/пропуск — поездка на одну дату. */
+  endDate?: string | null
   startTime: string | null
   transport: TripTransport
   visibility: TripVisibility
@@ -175,6 +179,8 @@ export interface UpdateTripInput {
   title: string
   description: string
   startDate: string
+  /** Обязателен явно: пропуск поля молча стирал бы уже сохранённый конец. */
+  endDate: string | null
   startTime: string | null
   transport: TripTransport
   visibility: TripVisibility

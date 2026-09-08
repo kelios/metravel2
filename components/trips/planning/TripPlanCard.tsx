@@ -98,7 +98,7 @@ function TripPlanCard({
           color={colors.textSecondary}
         />
         <Text style={styles.meta}>
-          {`${TRANSPORT_LABEL[trip.transport]} · ${formatTripDateTime(trip.startDate, trip.startTime)}`}
+          {`${TRANSPORT_LABEL[trip.transport]} · ${formatTripDateTime(trip.startDate, trip.startTime, trip.endDate)}`}
         </Text>
       </View>
 

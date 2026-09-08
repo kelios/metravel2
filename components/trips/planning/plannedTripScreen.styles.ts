@@ -102,6 +102,15 @@ export const createStyles = (colors: ThemedColors, isMobile: boolean) =>
     coverUploadHint: { fontSize: 12, lineHeight: 17, color: colors.textMuted },
     formRow: { flexDirection: 'row', gap: 10 },
     formCol: { flex: 1, gap: 6 },
+    endDateRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    endDateTrigger: { flex: 1 },
+    endDateClear: {
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 12,
+    },
     datePickerTrigger: {
       borderWidth: 1,
       borderColor: colors.border,
@@ -115,6 +124,9 @@ export const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       gap: 8,
     },
     datePickerText: { flex: 1, color: colors.text, fontSize: 14, fontWeight: '600' },
+    // Пустой конец поездки — состояние, а не значение: приглушённым он читается
+    // так же, как в форме создания, где эта подпись уже приглушена.
+    datePickerPlaceholder: { color: colors.textMuted },
     datePickerOverlay: {
       flex: 1,
       justifyContent: 'flex-end',

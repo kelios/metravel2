@@ -192,6 +192,48 @@ export function formatTripDateRangeShort(
 }
 
 /**
+ * «11 июля 2026 г., 08:00 — 20 июля 2026 г.» / без конца — ровно как
+ * `formatTripDateTimeLong`.
+ *
+ * Планировщик печатает длинную дату с временем старта, а не сокращённый вид
+ * каталога (`formatTripDateRangeShort`): время старта на этих поверхностях
+ * показывалось и до появления конца, и терять его ради компактности нельзя.
+ * Конец — календарный день, времени у него в домене нет (#1838).
+ */
+export function formatTripDateTimeRangeLong(
+  start: string | null | undefined,
+  time: string | null | undefined,
+  end: string | null | undefined,
+): string {
+  const from = parseTripDateTime(start)
+  if (!from) return tripDateUnavailableText()
+  const base = formatTripDateTimeLong(start, time)
+  const to = parseTripDateTime(end)
+  // Однодневный диапазон не дублирует дату; нечитаемый конец не печатается
+  // вовсе — иначе «Дата не указана» встала бы второй половиной строки.
+  if (!to || to.date === from.date) return base
+  return `${base} — ${formatDate(to.value, LONG_DATE)}`
+}
+
+/**
+ * Конец раньше начала? Сравниваются календарные дни, а не моменты: конец
+ * поездки в домене — день, и «04.10 раньше 26.09» не должно зависеть от того,
+ * какое время суток подставит сериализатор.
+ *
+ * Нечитаемое значение здесь не ошибка диапазона: его ловит проверка формата
+ * поля, иначе пользователь получил бы две ошибки на одну опечатку.
+ */
+export function isTripEndBeforeStart(
+  start: string | null | undefined,
+  end: string | null | undefined,
+): boolean {
+  const from = parseTripDateTime(start)
+  const to = parseTripDateTime(end)
+  if (!from || !to) return false
+  return to.date < from.date
+}
+
+/**
  * Payload старта поездки с явным смещением устройства.
  *
  * Раньше клиент слал `YYYY-MM-DDTHH:mm:00` без смещения, а бэкенд читает такое
@@ -206,9 +248,44 @@ export function formatTripDateRangeShort(
  * самая потеря данных, ради которой задача и делалась.
  */
 export function serializeTripStart(date: string, time: string | null | undefined): string {
-  const parsed = parseTripDateTime(`${date}T${time?.trim() || '09:00'}:00`)
+  return serializeTripMoment(date, time?.trim() || '09:00', 'serializeTripStart', 'trip start')
+}
+
+/**
+ * Payload конца поездки. У конца в домене нет времени, а бэкенд хранит момент
+ * (`end_at`), и читается он в часовом поясе устройства-читателя — поэтому день
+ * якорится полднем. Последняя минута дня переезжает на следующую дату от
+ * любого сдвига вперёд: конец, сохранённый в Варшаве, публичный каталог
+ * показывал бы минскому читателю днём позже. Полдень выдерживает ±11 часов,
+ * то есть весь реальный разброс поясов аудитории.
+ *
+ * Однодневная поездка — исключение: полдень оказался бы раньше вечернего
+ * старта, а бэкенд требует `end_at >= start_at`
+ * (`trips/serializers.py:165 validate_trip_date_range` плюс констрейнт модели).
+ * Концом тогда становится ровно момент старта: день конца совпадёт с днём
+ * старта в любом поясе, и диапазон не напечатается вовсе.
+ *
+ * @param date календарный день конца, `YYYY-MM-DD`
+ * @param start payload старта из `serializeTripStart` — сравнивать конец надо
+ *   с тем моментом, который реально уедет в запросе, а не с сырым полем формы.
+ */
+export function serializeTripEnd(date: string, start: string): string {
+  const to = parseTripDateTime(date)
+  if (!to) throw new Error(`serializeTripEnd: unreadable trip end "${date}"`)
+  const from = parseTripDateTime(start)
+  if (from && from.date === to.date) return start
+  return serializeTripMoment(date, '12:00', 'serializeTripEnd', 'trip end')
+}
+
+function serializeTripMoment(
+  date: string,
+  time: string,
+  caller: string,
+  subject: string,
+): string {
+  const parsed = parseTripDateTime(`${date}T${time}:00`)
   if (!parsed?.time) {
-    throw new Error(`serializeTripStart: unreadable trip start "${date}"`)
+    throw new Error(`${caller}: unreadable ${subject} "${date}"`)
   }
   const offsetMinutes = -parsed.value.getTimezoneOffset()
   const sign = offsetMinutes < 0 ? '-' : '+'

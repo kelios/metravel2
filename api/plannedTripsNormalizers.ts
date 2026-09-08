@@ -143,6 +143,7 @@ export interface CommunityTripDto {
   title: string;
   description?: string | null;
   start_at?: string | null;
+  end_at?: string | null;
   transport_mode?: string | null;
   bike_type?: string | null;
   content_type?: string | null;
@@ -469,6 +470,9 @@ export const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
     title,
     description: dto.description ?? '',
     ...tripStartFields(dto.start_date),
+    // #1838: конец читается только из своего поля. Подстановка старта вместо
+    // отсутствующего конца — ровно тот дефект, который чинила BE-задача #1836.
+    endDate: parseTripDateTime(dto.end_date)?.date ?? null,
     transport,
     bikeType: bikeTypeFromBe(dto.bike_type),
     visibility: dto.is_public ? 'public' : 'private',
@@ -574,6 +578,7 @@ export const mapCommunityTrip = (dto: CommunityTripDto): PlannedTrip => {
     title: dto.title,
     description: dto.description ?? '',
     ...tripStartFields(dto.start_at),
+    endDate: parseTripDateTime(dto.end_at)?.date ?? null,
     transport: transportFromBe(dto.transport_mode),
     bikeType: bikeTypeFromBe(dto.bike_type),
     visibility: dto.is_public ? 'public' : 'private',

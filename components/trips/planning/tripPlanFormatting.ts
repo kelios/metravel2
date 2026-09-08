@@ -21,7 +21,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 import { selectPlural, translate as i18nT } from '@/i18n'
 import { formatInteger } from '@/i18n/format'
 import { formatDistance as formatDistanceKm } from '@/utils/distanceCalculator'
-import { formatTripDateLong, formatTripDateTimeLong } from '@/utils/tripDateTime'
+import { formatTripDateLong, formatTripDateTimeRangeLong } from '@/utils/tripDateTime'
 
 
 export const TRANSPORT_LABEL: Record<TripTransport, string> = {
@@ -282,7 +282,18 @@ export function formatTripDisplayDate(value: string): string {
   return formatTripDateLong(value);
 }
 
-/** «11 июля 2026 г.» / с временем «11 июля 2026 г., 08:00». */
-export function formatTripDateTime(dateIso: string, time: string | null): string {
-  return formatTripDateTimeLong(dateIso, time);
+/**
+ * Срок поездки: «11 июля 2026 г.» / «11 июля 2026 г., 08:00» / с концом —
+ * «11 июля 2026 г., 08:00 — 20 июля 2026 г.».
+ *
+ * Конец — обязательный аргумент, а не значение по умолчанию: планировщик уже
+ * однажды потерял его молча (#1838), и пропущенный вызов должен падать
+ * типизацией, а не печатать одну дату вместо диапазона.
+ */
+export function formatTripDateTime(
+  dateIso: string,
+  time: string | null,
+  endDateIso: string | null,
+): string {
+  return formatTripDateTimeRangeLong(dateIso, time, endDateIso);
 }

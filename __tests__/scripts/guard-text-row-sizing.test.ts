@@ -283,13 +283,13 @@ describe('guard-text-row-sizing', () => {
     const afterSource = fs.readFileSync(path.resolve(process.cwd(), filePath), 'utf8')
     const combinedLabel = [
       '        <Text style={styles.meta}>',
-      '          {`${TRANSPORT_LABEL[trip.transport]} · ${formatTripDateTime(trip.startDate, trip.startTime)}`}',
+      '          {`${TRANSPORT_LABEL[trip.transport]} · ${formatTripDateTime(trip.startDate, trip.startTime, trip.endDate)}`}',
       '        </Text>',
     ].join('\n')
     const competingLabels = [
       '        <Text style={styles.meta}>{TRANSPORT_LABEL[trip.transport]}</Text>',
       '        <Text style={styles.metaDot}>·</Text>',
-      '        <Text style={styles.meta}>{formatTripDateTime(trip.startDate, trip.startTime)}</Text>',
+      '        <Text style={styles.meta}>{formatTripDateTime(trip.startDate, trip.startTime, trip.endDate)}</Text>',
     ].join('\n')
     const failedCompetingFlexSource = afterSource.replace(combinedLabel, competingLabels)
     const failedFlexShrinkSource = failedCompetingFlexSource.replace(

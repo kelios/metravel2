@@ -29,7 +29,7 @@ import {
   VISIBILITY_LABEL,
   formatTripDisplayDate,
 } from '@/components/trips/planning/tripPlanFormatting';
-import { parseTripDateTime } from '@/utils/tripDateTime';
+import { isTripEndBeforeStart, parseTripDateTime } from '@/utils/tripDateTime';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDefaultTripStartDate, type TripPlanPrefill } from '@/utils/tripPlanLinks';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -54,6 +54,7 @@ interface FormValues {
   title: string;
   description: string;
   startDate: string;
+  endDate: string;
   startTime: string;
   transport: TripTransport;
   visibility: TripVisibility;
@@ -84,6 +85,25 @@ const createSchema = async () => {
     .matches(DATE_RE, i18nT('tripsStatic:tripCreate.validation.startDateFormat'))
     .test('valid-date', i18nT('tripsStatic:tripCreate.validation.startDateInvalid'), (value) =>
       parseTripDateTime(value) != null,
+    ),
+  endDate: yup
+    .string()
+    .trim()
+    .test('end-format', i18nT('tripsStatic:tripCreate.validation.endDateFormat'), (value) =>
+      !value ? true : DATE_RE.test(value),
+    )
+    .test('end-valid', i18nT('tripsStatic:tripCreate.validation.endDateInvalid'), (value) =>
+      !value ? true : parseTripDateTime(value) != null,
+    )
+    // Сравнение живёт в `utils/tripDateTime.ts`: разбирать дату второй раз
+    // здесь запрещает regression control #1313.
+    .test(
+      'end-after-start',
+      i18nT('tripsStatic:tripCreate.validation.endBeforeStart'),
+      function endAfterStart(value) {
+        if (!value) return true;
+        return !isTripEndBeforeStart(this.parent?.startDate, value);
+      },
     ),
   startTime: yup
     .string()
@@ -135,6 +155,7 @@ const isYupValidationError = (
 const FIELD_ERROR_ORDER: (keyof FormValues)[] = [
   'title',
   'startDate',
+  'endDate',
   'startTime',
   'seatsTotal',
   'startLat',
@@ -198,6 +219,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
     title: initialValues?.title ?? '',
     description: initialValues?.description ?? '',
     startDate: initialValues?.startDate ?? getDefaultTripStartDate(),
+    endDate: '',
     startTime: '',
     transport: 'car',
     visibility: 'public',
@@ -211,9 +233,19 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [consentChecked, setConsentChecked] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [endDatePickerVisible, setEndDatePickerVisible] = useState(false);
   const startDateDisplay = useMemo(
     () => formatTripCreateDisplayDate(values.startDate),
     [values.startDate],
+  );
+  // Пустой конец — это «одна дата», а не «дата неизвестна», поэтому у него своя
+  // подпись, а не приглашение выбрать день из `formatTripCreateDisplayDate`.
+  const endDateDisplay = useMemo(
+    () =>
+      values.endDate.trim()
+        ? formatTripCreateDisplayDate(values.endDate)
+        : i18nT('tripsStatic:tripCreate.endDateEmpty'),
+    [values.endDate],
   );
   const firstFieldError = useMemo(() => {
     for (const key of FIELD_ERROR_ORDER) {
@@ -233,6 +265,13 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
     setDatePickerVisible(false);
   };
 
+  const openEndDatePicker = () => setEndDatePickerVisible(true);
+  const closeEndDatePicker = () => setEndDatePickerVisible(false);
+  const handleEndDateSelect = (date: string) => {
+    setField('endDate', date);
+    setEndDatePickerVisible(false);
+  };
+
   const handleSubmit = async () => {
     setSubmitError(null);
     setErrors({});
@@ -248,6 +287,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
         title: valid.title.trim(),
         description: (valid.description ?? '').trim(),
         startDate: valid.startDate.trim(),
+        endDate: valid.endDate?.trim() ? valid.endDate.trim() : null,
         startTime: valid.startTime?.trim() ? valid.startTime.trim() : null,
         transport: valid.transport as TripTransport,
         visibility: valid.visibility as TripVisibility,
@@ -401,6 +441,110 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
             <Text style={styles.error}>{errors.startTime}</Text>
           ) : null}
         </View>
+      </View>
+
+      {/*
+        #1838: конец поездки — отдельная строка под стартом, а не третья колонка
+        того же ряда: на мобильной ширине три поля в ряд не помещаются, а конец
+        необязателен и не должен ужимать дату старта.
+      */}
+      <View style={styles.col}>
+        <Text style={styles.label}>{i18nT('tripsStatic:tripCreate.endDateLabel')}</Text>
+        {Platform.OS === 'web' ? (
+          <input
+            type="date"
+            value={values.endDate}
+            min={values.startDate || undefined}
+            onChange={(event) => setField('endDate', event.target.value)}
+            aria-label={i18nT('tripsStatic:tripCreate.endDateLabel')}
+            data-testid="trip-create-end-date"
+            style={webDateInputStyle}
+          />
+        ) : (
+          <>
+            <View style={styles.endDateRow}>
+              <Pressable
+                onPress={openEndDatePicker}
+                accessibilityRole="button"
+                accessibilityLabel={i18nT('tripsStatic:tripCreate.endDatePick')}
+                accessibilityHint={i18nT('trips:components.trips.planning.TripCreateForm.otkroet_kalendar_vybora_daty_0583ffc3')}
+                style={[styles.datePickerTrigger, styles.endDateTrigger, globalFocusStyles.focusable]}
+                testID="trip-create-end-date"
+              >
+                <Feather name="calendar" size={16} color={colors.primary} />
+                <Text
+                  style={[
+                    styles.datePickerText,
+                    !values.endDate && styles.datePickerPlaceholder,
+                  ]}
+                  numberOfLines={1}
+                  testID="trip-create-end-date-value"
+                >
+                  {endDateDisplay}
+                </Text>
+              </Pressable>
+              {values.endDate ? (
+                <Pressable
+                  onPress={() => setField('endDate', '')}
+                  accessibilityRole="button"
+                  accessibilityLabel={i18nT('tripsStatic:tripCreate.endDateClear')}
+                  style={[styles.endDateClear, globalFocusStyles.focusable]}
+                  testID="trip-create-end-date-clear"
+                >
+                  <Feather name="x" size={16} color={colors.textSecondary} />
+                </Pressable>
+              ) : null}
+            </View>
+            <Modal
+              visible={endDatePickerVisible}
+              transparent
+              animationType="fade"
+              onRequestClose={closeEndDatePicker}
+              statusBarTranslucent
+            >
+              <Pressable
+                style={styles.datePickerOverlay}
+                onPress={closeEndDatePicker}
+                testID="trip-create-end-date-picker-backdrop"
+              >
+                <Pressable
+                  style={styles.datePickerSheet}
+                  onPress={() => undefined}
+                  testID="trip-create-end-date-picker"
+                >
+                  <View style={styles.datePickerHeader}>
+                    <View style={styles.datePickerTitleRow}>
+                      <Feather name="calendar" size={18} color={colors.primary} />
+                      <Text style={styles.datePickerTitle}>
+                        {i18nT('tripsStatic:tripCreate.endDateLabel')}
+                      </Text>
+                    </View>
+                    <Text style={styles.datePickerHint}>
+                      {i18nT('trips:components.trips.planning.TripCreateForm.vyberite_den_v_kalendare_otmena_ne_izmenit_t_3eba0aae')}</Text>
+                  </View>
+                  <View style={styles.datePickerCalendar}>
+                    <MiniCalendar
+                      entries={[]}
+                      selectedDate={values.endDate || null}
+                      focusDate={values.endDate || values.startDate || getDefaultTripStartDate()}
+                      onDayPress={handleEndDateSelect}
+                      accentColor={colors.primary}
+                      accentSoftColor={colors.primaryLight}
+                    />
+                  </View>
+                  <Button
+                    label={i18nT('trips:components.trips.planning.TripCreateForm.otmena_b15b4282')}
+                    onPress={closeEndDatePicker}
+                    variant="secondary"
+                    fullWidth
+                    testID="trip-create-end-date-cancel"
+                  />
+                </Pressable>
+              </Pressable>
+            </Modal>
+          </>
+        )}
+        {errors.endDate ? <Text style={styles.error}>{errors.endDate}</Text> : null}
       </View>
 
       {/*
@@ -643,6 +787,15 @@ const createStyles = (colors: ThemedColors) =>
     },
     row: { flexDirection: 'row', gap: 10 },
     col: { flex: 1, gap: 6 },
+    endDateRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    endDateTrigger: { flex: 1 },
+    endDateClear: {
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 12,
+    },
     datePickerTrigger: {
       borderWidth: 1,
       borderColor: colors.border,

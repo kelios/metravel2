@@ -106,6 +106,14 @@ function changeStartDate(view: RenderedForm, value: string) {
   fireEvent(getStartDateInput(view), 'change', { target: { value } })
 }
 
+function getEndDateInput(view: RenderedForm) {
+  return view.UNSAFE_getByProps({ 'data-testid': 'trip-create-end-date' })
+}
+
+function changeEndDate(view: RenderedForm, value: string) {
+  fireEvent(getEndDateInput(view), 'change', { target: { value } })
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
@@ -346,5 +354,68 @@ describe('TripCreateForm — Android date picker', () => {
     fireEvent.press(getByTestId('trip-create-start-date-cancel'))
     expect(queryByTestId('trip-create-date-picker')).toBeNull()
     expect(getByTestId('trip-create-start-date-value').props.children).toBe('10 августа 2026 г.')
+  })
+})
+
+// #1838: до правки конца поездки в форме не было вовсе, и поездка 26.09–04.10
+// сохранялась одним днём.
+describe('TripCreateForm — trip end date', () => {
+  const fillValidForm = (view: RenderedForm) => {
+    fireEvent.press(view.getByTestId('trip-create-consent'))
+    fireEvent.changeText(view.getByTestId('trip-create-title'), 'Поход по пуще')
+    changeStartDate(view, '2026-09-26')
+  }
+
+  it('offers an optional end date next to the start', () => {
+    const view = render(<TripCreateForm />)
+    const endDate = getEndDateInput(view)
+
+    expect(endDate.props.type).toBe('date')
+    expect(endDate.props.value).toBe('')
+  })
+
+  it('submits the chosen end date', async () => {
+    const view = render(<TripCreateForm />)
+    fillValidForm(view)
+    changeEndDate(view, '2026-10-04')
+    fireEvent.press(view.getByTestId('trip-create-submit'))
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
+    expect(mockMutate.mock.calls[0][0]).toMatchObject({
+      startDate: '2026-09-26',
+      endDate: '2026-10-04',
+    })
+  })
+
+  it('submits null when the end is left empty', async () => {
+    const view = render(<TripCreateForm />)
+    fillValidForm(view)
+    fireEvent.press(view.getByTestId('trip-create-submit'))
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
+    expect(mockMutate.mock.calls[0][0]).toMatchObject({ endDate: null })
+  })
+
+  // Ошибка под полем, а не тост, и запрос не уходит — иначе бэкенд ответит 400
+  // на форму, которая выглядела заполненной.
+  it('blocks an end earlier than the start', async () => {
+    const view = render(<TripCreateForm />)
+    fillValidForm(view)
+    changeEndDate(view, '2026-09-25')
+    fireEvent.press(view.getByTestId('trip-create-submit'))
+
+    const errors = await view.findAllByText('Окончание раньше начала')
+    expect(errors.length).toBeGreaterThan(0)
+    expect(mockMutate).not.toHaveBeenCalled()
+  })
+
+  it('accepts an end on the same day as the start', async () => {
+    const view = render(<TripCreateForm />)
+    fillValidForm(view)
+    changeEndDate(view, '2026-09-26')
+    fireEvent.press(view.getByTestId('trip-create-submit'))
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
+    expect(mockMutate.mock.calls[0][0]).toMatchObject({ endDate: '2026-09-26' })
   })
 })

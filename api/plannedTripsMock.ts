@@ -52,6 +52,7 @@ export const MOCK_PLANNED_TRIPS: PlannedTrip[] = [
     description:
       'Двухдневный выезд на машине по Браславскому Поозерью: смотровая на горе Маяк, замковая гора, ночёвка у воды.',
     startDate: '2026-07-11',
+    endDate: '2026-07-12',
     startTime: '08:00',
     transport: 'car',
     bikeType: 'regular',
@@ -102,6 +103,7 @@ export const MOCK_PLANNED_TRIPS: PlannedTrip[] = [
     description:
       'Лёгкий городской веломаршрут по набережной Свислочи с остановками у главных точек.',
     startDate: '2026-06-28',
+    endDate: null,
     startTime: '10:30',
     transport: 'bike',
     bikeType: 'regular',
@@ -138,6 +140,7 @@ export const MOCK_PLANNED_TRIPS: PlannedTrip[] = [
     description:
       'Классический автомаршрут к двум замкам ЮНЕСКО с обедом между ними. Маршрут пройден и опубликован.',
     startDate: '2026-05-24',
+    endDate: null,
     startTime: '09:00',
     transport: 'car',
     bikeType: 'regular',

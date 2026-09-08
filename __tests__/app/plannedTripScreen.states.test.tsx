@@ -165,6 +165,7 @@ const baseTrip: PlannedTrip = {
   title: 'Маршрут по Браславским озёрам',
   description: '',
   startDate: '2026-08-15',
+  endDate: null,
   startTime: '08:00',
   transport: 'car',
   bikeType: 'regular',
@@ -547,6 +548,69 @@ describe('PlannedTripScreen — planner states', () => {
       expect.objectContaining({ startDate: '2026-08-20' }),
       expect.any(Object),
     );
+  });
+
+  // #1838: до правки шапка знала только старт, и поездка 15–20 августа
+  // выглядела однодневной, а сохранение конца молча терялось.
+  it('shows the trip end in the header as a range', () => {
+    mockTrip(makeTrip({ endDate: '2026-08-20' }));
+    const { getByText } = renderScreen();
+
+    expect(getByText(/15 августа 2026 г\., 08:00 — 20 августа 2026 г\./)).toBeTruthy();
+  });
+
+  it('keeps a single date in the header when the trip has no end', () => {
+    mockTrip(makeTrip());
+    const { getByText, queryByText } = renderScreen();
+
+    expect(getByText(/15 августа 2026 г\., 08:00/)).toBeTruthy();
+    expect(queryByText(/—/)).toBeNull();
+  });
+
+  it('edits and clears the trip end on native', () => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'android' });
+    mockSearchParams = { id: '8001', edit: '1' };
+    mockTrip(makeTrip({ isOwner: true, endDate: null }));
+    const { getByTestId, queryByTestId } = renderScreen();
+
+    expect(getByTestId('trip-plan-edit-end-date-value').props.children).toBe('Не задано');
+    expect(queryByTestId('trip-plan-edit-end-date-clear')).toBeNull();
+
+    fireEvent.press(getByTestId('trip-plan-edit-end-date'));
+    fireEvent.press(getByTestId('mini-calendar-day-2026-08-20'));
+    expect(getByTestId('trip-plan-edit-end-date-value').props.children).toBe(
+      '20 августа 2026 г.',
+    );
+
+    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    expect(mockUpdateTripMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ endDate: '2026-08-20' }),
+      expect.any(Object),
+    );
+
+    // Убрать конец — это отправить null, а не «не менять поле».
+    fireEvent.press(getByTestId('trip-plan-edit-end-date-clear'));
+    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    expect(mockUpdateTripMutate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ endDate: null }),
+      expect.any(Object),
+    );
+  });
+
+  it('refuses to save an end earlier than the start', () => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'android' });
+    mockSearchParams = { id: '8001', edit: '1' };
+    // Календарь в этом файле замокан одним днём 2026-08-20, поэтому «раньше
+    // старта» задаётся стартом позже него, а не другим днём в пикере.
+    mockTrip(makeTrip({ isOwner: true, startDate: '2026-08-25', endDate: null }));
+    const { getByTestId, getByText } = renderScreen();
+
+    fireEvent.press(getByTestId('trip-plan-edit-end-date'));
+    fireEvent.press(getByTestId('mini-calendar-day-2026-08-20'));
+    fireEvent.press(getByTestId('trip-plan-edit-save'));
+
+    expect(getByText('Окончание раньше начала')).toBeTruthy();
+    expect(mockUpdateTripMutate).not.toHaveBeenCalled();
   });
 
   it('navigates the workspace tabs between route, people, export and more', () => {
