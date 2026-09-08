@@ -1,5 +1,6 @@
 import React from 'react'
 import { fireEvent, render } from '@testing-library/react-native'
+import { StyleSheet } from 'react-native'
 
 import LanguageSwitcher from '@/components/layout/LanguageSwitcher'
 import LanguageSection from '@/components/settings/LanguageSection'
@@ -81,5 +82,31 @@ describe('language selection surfaces', () => {
 
     fireEvent.press(getByLabelText('Как в системе'))
     expect(localeState.useSystemLocale).toHaveBeenCalledTimes(1)
+  })
+
+  // #1879: статический HTML пререндерится на RU, а выбранная локаль доезжает из
+  // хранилища уже после первого кадра. Код языка рисуется в боксе фиксированной
+  // ширины, иначе смена RU -> BY/UK/PL/EN меняет ширину самого переключателя, а
+  // вместе с ней и его x: правее `navScroll` с `flex:1` весь слак строки левее.
+  it.each([
+    ['ru', 'RU'],
+    ['be', 'BY'],
+    ['uk', 'UK'],
+    ['pl', 'PL'],
+    ['en', 'EN'],
+  ] as const)('держит бокс кода языка одинаковым на локали %s', (locale, displayCode) => {
+    localeState.locale = locale
+    try {
+      const { getByText } = render(<LanguageSwitcher />)
+      const code = getByText(displayCode)
+
+      expect(StyleSheet.flatten(code.props.style)).toMatchObject({
+        width: 22,
+        textAlign: 'center',
+      })
+      expect(code.props.numberOfLines).toBe(1)
+    } finally {
+      localeState.locale = 'ru'
+    }
   })
 })

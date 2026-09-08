@@ -64,7 +64,9 @@ export default function LanguageSwitcher({ compact = false }: LanguageSwitcherPr
           <View style={styles.globeSlot}>
             <Feather name="globe" size={17} color={colors.textMuted} />
           </View>
-          <Text style={styles.code}>{getLocaleDisplayCode(locale)}</Text>
+          <Text style={styles.code} numberOfLines={1}>
+            {getLocaleDisplayCode(locale)}
+          </Text>
           {!compact ? (
             <View style={styles.chevronSlot} {...webChevronSlotProps()}>
               <Feather
@@ -156,6 +158,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontSize: 13,
       fontWeight: '700',
       letterSpacing: 0.4,
+      // #1879: тот же приём, что у иконочных слотов рядом, — фиксированный бокс
+      // вместо ширины по контенту. Статический HTML пререндерится на RU, а
+      // выбранная локаль доезжает из хранилища уже после первого кадра, и код
+      // менялся RU -> BY/UK/PL/EN. Ширины кода в проде на 13px/700: RU 19.56,
+      // UK 19.77, EN 18.73, BY 18.63, PL 17.14 px, то есть бокс переключателя
+      // ехал до 2.6 px, а вместе с ним и его x — сам переключатель стоит правее
+      // `navScroll` c `flex:1`, поэтому весь слак строки левее него. 22 px
+      // накрывают весь закрытый набор `LOCALE_DISPLAY_CODES` с запасом.
+      width: 22,
+      textAlign: 'center',
     },
     menu: {
       width: 220,

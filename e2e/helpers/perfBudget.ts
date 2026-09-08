@@ -63,8 +63,18 @@ export async function injectPerfObservers(page: any) {
                   const aria = (el as any).getAttribute?.('aria-label') || ''
                   const pr = s?.previousRect
                   const cr = s?.currentRect
+                  // #1879: горизонтальный сдвиг узла в этой строке был неотличим от
+                  // вертикального — печатались только `y` и высота, поэтому
+                  // «y 10→10» не говорило ни какая ось поехала, ни на сколько.
+                  // Обе координаты и обе стороны бокса печатаются целиком.
                   const move =
-                    pr && cr ? ` (y ${Math.round(pr.y)}→${Math.round(cr.y)}, h ${Math.round(cr.height)})` : ''
+                    pr && cr
+                      ? ` (x ${Math.round(pr.x)}→${Math.round(cr.x)}, y ${Math.round(pr.y)}→${Math.round(
+                          cr.y,
+                        )}, w ${Math.round(pr.width)}→${Math.round(cr.width)}, h ${Math.round(
+                          pr.height,
+                        )}→${Math.round(cr.height)})`
+                      : ''
                   return `${tag}${tid ? `[testid=${tid}]` : ''}${markers}${aria ? `[aria=${aria.slice(0, 40)}]` : ''}${cls ? `.${cls}` : ''}${move}`
                 })
                 .filter(Boolean)

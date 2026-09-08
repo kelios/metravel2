@@ -29,6 +29,12 @@ const shellStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    // #1879: слот аккаунта на desktop — бокс фиксированной ширины
+    // (`HEADER_ACCOUNT_SLOT_WIDTH`), и обёртка обязана уметь сжиматься внутри
+    // него. Иначе кластер шире резерва выпирает наружу и сдвигает соседей по
+    // строке шапки вместо того, чтобы ужать якорь.
+    flexShrink: 1,
+    minWidth: 0,
   },
 })
 

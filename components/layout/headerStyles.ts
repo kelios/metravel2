@@ -22,6 +22,11 @@ export const createAnchorStyles = (colors: ThemedColors) =>
       maxWidth: 220,
       minHeight: 44,
       minWidth: 44,
+      // #1879: у View в RNW `flexShrink` по умолчанию 0, поэтому якорь не
+      // сжимался и в локалях с длинным «Войти» раздвигал фиксированный слот
+      // аккаунта, уводя переключатель языка влево. Теперь лишнее забирает сам
+      // якорь: `anchorText` уже с `numberOfLines={1}` и даёт многоточие.
+      flexShrink: 1,
       gap: 6,
       borderWidth: 1,
       borderColor: colors.borderLight,
