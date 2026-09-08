@@ -3,6 +3,10 @@
 // всех совместных. Подтверждение при этом обещало «сохранённые маршруты».
 // Набор держит два инварианта, которые и разошлись: копия действия описывает то,
 // что делает вызываемая ручка, и разрушительный вызов требует явного второго шага.
+//
+// #1878: фронт переехал на канонический `DELETE /user/data/authored-content/`, а
+// числа берёт из `GET` того же пути. Третий инвариант: подтверждение называет
+// ровно то, что вернул сервер, а при отказе счётчика не выдумывает число.
 
 import React from 'react';
 import { renderHook, waitFor, act } from '@testing-library/react-native';
@@ -11,7 +15,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 jest.mock('@/api/privacy', () => ({
   requestDataExport: jest.fn(async () => ({ status: 'queued' })),
   deleteUserMessages: jest.fn(async () => null),
-  deleteUserRoutes: jest.fn(async () => null),
+  deleteAuthoredContent: jest.fn(async () => null),
+  fetchAuthoredContentSummary: jest.fn(async () => ({ travels_to_delete: 0, co_authored_to_detach: 0 })),
   revokeUserConsents: jest.fn(async () => null),
 }));
 
@@ -19,31 +24,33 @@ jest.mock('@/utils/confirmAction', () => ({ confirmAction: jest.fn(async () => f
 jest.mock('@/utils/toast', () => ({ showToast: jest.fn() }));
 jest.mock('@/utils/externalLinks', () => ({ openExternalUrl: jest.fn() }));
 
-jest.mock('@/api/travelUserQueries', () => ({
-  fetchMyTravels: jest.fn(async () => ({ items: [], total: 0 })),
-  unwrapMyTravelsPayload: jest.fn((payload: { total?: number }) => ({
-    items: [],
-    total: payload?.total ?? 0,
-  })),
-}));
-
 const authRef = { userId: 'user-1' as string | null };
 jest.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (state: typeof authRef) => unknown) => selector(authRef),
 }));
 
 import { useDataOwnership } from '@/hooks/useDataOwnership';
-import { deleteUserRoutes } from '@/api/privacy';
+import { deleteAuthoredContent, fetchAuthoredContentSummary } from '@/api/privacy';
 import { confirmAction } from '@/utils/confirmAction';
-import { fetchMyTravels } from '@/api/travelUserQueries';
 import { resources } from '@/i18n/resources';
-import { translate as i18nT } from '@/i18n';
+import { i18n, translate as i18nT } from '@/i18n';
+import type { AuthoredContentSummaryDto } from '@/api/privacy';
 
-const mockDelete = deleteUserRoutes as jest.MockedFunction<typeof deleteUserRoutes>;
+const mockDelete = deleteAuthoredContent as jest.MockedFunction<typeof deleteAuthoredContent>;
 const mockConfirm = confirmAction as jest.MockedFunction<typeof confirmAction>;
-const mockCount = fetchMyTravels as jest.MockedFunction<typeof fetchMyTravels>;
+const mockCount = fetchAuthoredContentSummary as jest.MockedFunction<typeof fetchAuthoredContentSummary>;
 
 const LOCALES = ['ru', 'be', 'uk', 'pl', 'en'] as const;
+
+/** Обе половины счётчика во всех формах числа. */
+const AFFECTED_KEYS = [
+  'hooks.useDataOwnership.deleteTravelsAffectedOwnedOne',
+  'hooks.useDataOwnership.deleteTravelsAffectedOwnedFew',
+  'hooks.useDataOwnership.deleteTravelsAffectedOwnedMany',
+  'hooks.useDataOwnership.deleteTravelsAffectedSharedOne',
+  'hooks.useDataOwnership.deleteTravelsAffectedSharedFew',
+  'hooks.useDataOwnership.deleteTravelsAffectedSharedMany',
+] as const;
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider
@@ -63,12 +70,12 @@ beforeEach(() => {
   jest.clearAllMocks();
   authRef.userId = 'user-1';
   mockConfirm.mockResolvedValue(false);
-  mockCount.mockResolvedValue({ total: 0 } as never);
+  mockCount.mockResolvedValue({ travels_to_delete: 0, co_authored_to_detach: 0 });
 });
 
 describe('#1828 copy of the destructive data-ownership action', () => {
-  // Ручка `data/routes` не трогает сохранённые маршруты — обещать их нельзя ни на
-  // одной локали, иначе автор снова сотрёт свои статьи, думая, что чистит избранное.
+  // `data/authored-content` не трогает сохранённые маршруты — обещать их нельзя ни
+  // на одной локали, иначе автор снова сотрёт свои статьи, думая, что чистит избранное.
   it('never promises saved routes in any locale', () => {
     const savedRoutePromises = [
       /сохранённые маршруты будут/i,
@@ -99,7 +106,7 @@ describe('#1828 copy of the destructive data-ownership action', () => {
       be: /падарожж/i,
       uk: /подорож/i,
       pl: /podróż/i,
-      en: /travels/i,
+      en: /travel/i,
     } as const;
 
     for (const locale of LOCALES) {
@@ -109,8 +116,8 @@ describe('#1828 copy of the destructive data-ownership action', () => {
         profile['components.settings.DataOwnershipSection.deleteTravelsLabel'],
         shared['hooks.useDataOwnership.deleteTravelsTitle'],
         shared['hooks.useDataOwnership.deleteTravelsMessage'],
-        shared['hooks.useDataOwnership.deleteTravelsMessageWithCount'],
         shared['hooks.useDataOwnership.deleteTravelsFinalMessage'],
+        ...AFFECTED_KEYS.map((key) => shared[key]),
       ];
       for (const value of named) {
         expect({ locale, value }).toEqual({ locale, value: expect.stringMatching(travelWord[locale]) });
@@ -129,7 +136,7 @@ describe('#1828 copy of the destructive data-ownership action', () => {
       const savedListName = shared['app.tabs.favorites.hochu_poehat_d89b6117'];
       const mentions = [
         shared['hooks.useDataOwnership.deleteTravelsMessage'],
-        shared['hooks.useDataOwnership.deleteTravelsMessageWithCount'],
+        shared['hooks.useDataOwnership.deleteTravelsMessageCounted'],
         profile['components.settings.DataOwnershipSection.deleteTravelsHint'],
       ];
 
@@ -146,13 +153,16 @@ describe('#1828 copy of the destructive data-ownership action', () => {
     }
   });
 
-  it('keeps the counted message interpolating the number of affected travels', () => {
+  it('keeps every counted string interpolating its value', () => {
     for (const locale of LOCALES) {
       const shared = resources[locale].shared as Record<string, string>;
-      expect({
-        locale,
-        counted: shared['hooks.useDataOwnership.deleteTravelsMessageWithCount'].includes('{{value1}}'),
-      }).toEqual({ locale, counted: true });
+      for (const key of [...AFFECTED_KEYS, 'hooks.useDataOwnership.deleteTravelsMessageCounted']) {
+        expect({ locale, key, counted: shared[key]?.includes('{{value1}}') }).toEqual({
+          locale,
+          key,
+          counted: true,
+        });
+      }
     }
   });
 });
@@ -197,10 +207,10 @@ describe('#1828 busy state while the confirmation is being prepared', () => {
   // Подсчёт идёт до первого диалога: пока он идёт, кнопка обязана быть занятой,
   // иначе нажатие остаётся без ответа, а второе заводит второй цикл подтверждений.
   it('reports the action as running while the count is in flight', async () => {
-    let releaseCount: (payload: { total: number }) => void = () => {};
+    let releaseCount: (payload: AuthoredContentSummaryDto) => void = () => {};
     mockCount.mockImplementation(
       (() => new Promise((resolve) => {
-        releaseCount = resolve as (payload: { total: number }) => void;
+        releaseCount = resolve as (payload: AuthoredContentSummaryDto) => void;
       })) as never,
     );
 
@@ -216,7 +226,7 @@ describe('#1828 busy state while the confirmation is being prepared', () => {
     expect(mockConfirm).not.toHaveBeenCalled();
 
     await act(async () => {
-      releaseCount({ total: 3 });
+      releaseCount({ travels_to_delete: 3, co_authored_to_detach: 0 });
       await pending;
     });
 
@@ -238,21 +248,135 @@ describe('#1828 busy state while the confirmation is being prepared', () => {
   });
 });
 
-describe('#1828 how many travels the confirmation names', () => {
-  it('shows the counted message with the number of affected travels', async () => {
-    mockCount.mockResolvedValueOnce({ total: 7 } as never);
+describe('#1878 how many travels the confirmation names', () => {
+  it('names both halves of the summary the server returned', async () => {
+    mockCount.mockResolvedValueOnce({ travels_to_delete: 7, co_authored_to_detach: 2 });
     const { result } = renderDataOwnership();
 
     await act(async () => {
       await result.current.deleteTravels();
     });
 
-    expect(mockCount).toHaveBeenCalledWith(
-      expect.objectContaining({ user_id: 'user-1', includeDrafts: true, throwOnError: true }),
+    const message = mockConfirm.mock.calls[0][0].message;
+    expect(message).toBe(
+      i18nT('shared:hooks.useDataOwnership.deleteTravelsMessageCounted', {
+        value1: `${i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedOwnedMany', { value1: '7' })} ${i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedSharedFew', { value1: '2' })}`,
+      }),
     );
+    expect(message).toContain('7');
+    expect(message).toContain('2');
+  });
+
+  // Общий счётчик «Мои путешествия» складывает личные и совместные, а удаляются
+  // только первые: числа обязаны приходить из ручки, которая знает разделение.
+  it('reads the numbers from the endpoint that performs the deletion', async () => {
+    mockCount.mockResolvedValueOnce({ travels_to_delete: 1, co_authored_to_detach: 0 });
+    const { result } = renderDataOwnership();
+
+    await act(async () => {
+      await result.current.deleteTravels();
+    });
+
+    expect(mockCount).toHaveBeenCalledTimes(1);
+    expect(mockCount).toHaveBeenCalledWith();
+  });
+
+  // «Удалить 0 путешествий» читается как ошибка, а не как факт.
+  it('never prints a zero half of the summary', async () => {
+    mockCount.mockResolvedValueOnce({ travels_to_delete: 0, co_authored_to_detach: 3 });
+    const { result } = renderDataOwnership();
+
+    await act(async () => {
+      await result.current.deleteTravels();
+    });
+
+    const message = mockConfirm.mock.calls[0][0].message;
+    expect(message).toContain(
+      i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedSharedMany', { value1: '3' }),
+    );
+    expect(message).not.toContain(
+      i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedOwnedMany', { value1: '0' }),
+    );
+  });
+
+  // Оба нуля — считать нечего, и подтверждение обязано вернуться к копии без чисел.
+  it('falls back to the countless message when nothing is affected', async () => {
+    mockCount.mockResolvedValueOnce({ travels_to_delete: 0, co_authored_to_detach: 0 });
+    const { result } = renderDataOwnership();
+
+    await act(async () => {
+      await result.current.deleteTravels();
+    });
+
     expect(mockConfirm.mock.calls[0][0].message).toBe(
-      i18nT('shared:hooks.useDataOwnership.deleteTravelsMessageWithCount', { value1: 7 }),
+      i18nT('shared:hooks.useDataOwnership.deleteTravelsMessage'),
     );
+  });
+
+  // Мусор вместо числа — это тот же отказ счётчика, а не «0» и не «NaN».
+  it('falls back to the countless message when the summary is not numeric', async () => {
+    mockCount.mockResolvedValueOnce({ travels_to_delete: null, co_authored_to_detach: 4 } as never);
+    const { result } = renderDataOwnership();
+
+    await act(async () => {
+      await result.current.deleteTravels();
+    });
+
+    expect(mockConfirm.mock.calls[0][0].message).toBe(
+      i18nT('shared:hooks.useDataOwnership.deleteTravelsMessage'),
+    );
+  });
+
+  // Числительные склоняются во всех пяти локалях: 1, 2 и 5 обязаны дать разные
+  // формы там, где язык их различает, и ни одна не имеет права остаться ключом.
+  it('declines both numbers in every locale', async () => {
+    const original = i18n.language;
+    // Пять одинаковых текстов означали бы, что переключение локали не сработало и
+    // набор пять раз проверил RU.
+    const perLocale = new Set<string>();
+    try {
+      for (const locale of LOCALES) {
+        await act(async () => {
+          await i18n.changeLanguage(locale);
+        });
+
+        const rendered: string[] = [];
+        for (const count of [1, 2, 5]) {
+          mockConfirm.mockClear();
+          mockCount.mockResolvedValueOnce({ travels_to_delete: count, co_authored_to_detach: count });
+          const { result } = renderDataOwnership();
+          await act(async () => {
+            await result.current.deleteTravels();
+          });
+          const message = mockConfirm.mock.calls[0][0].message;
+          expect({ locale, count, message }).toEqual({
+            locale,
+            count,
+            message: expect.stringContaining(String(count)),
+          });
+          expect({ locale, count, message }).toEqual({
+            locale,
+            count,
+            message: expect.not.stringMatching(/deleteTravels|\{\{/),
+          });
+          // Само число из сравнения форм убирается: иначе «1» против «5» отличало бы
+          // тексты и без всякого склонения.
+          rendered.push(message.replace(/\d+/g, '#'));
+        }
+        perLocale.add(rendered[0]);
+
+        // Один и тот же текст на 1 и 5 означает, что склонение не подключено.
+        expect({ locale, singularEqualsPlural: rendered[0] === rendered[2] }).toEqual({
+          locale,
+          singularEqualsPlural: false,
+        });
+      }
+      expect(perLocale.size).toBe(LOCALES.length);
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage(original);
+      });
+    }
   });
 
   // Провалившийся счётчик не имеет права превратиться в честный на вид ноль.

@@ -101,14 +101,28 @@ export const deleteUserMessages = async (): Promise<null> => {
 };
 
 /**
- * #1828: имя ручки лжёт. `DELETE /user/data/routes/` НЕ трогает сохранённые
- * маршруты — сервер хардом удаляет все путешествия, где пользователь единственный
- * автор (вместе с фотографиями и файлами треков), и снимает его авторство со всех
- * совместных. Очистка сохранённых маршрутов — это `DELETE /user/<id>/clear-favorite/`
- * на экране «Хочу поехать». Переименование самой ручки — за бэкендом.
+ * Что именно снесёт удаление авторского контента. Читается перед подтверждением:
+ * `travels_to_delete` — путешествия, где пользователь единственный автор (сервер
+ * стирает их вместе с фотографиями и файлами треков), `co_authored_to_detach` —
+ * совместные, где снимется только авторство, а само путешествие останется.
  */
-export const deleteUserRoutes = async (): Promise<null> => {
-    return apiClient.delete<null>('/user/data/routes/');
+export type AuthoredContentSummaryDto = {
+    travels_to_delete: number;
+    co_authored_to_detach: number;
+};
+
+export const fetchAuthoredContentSummary = async (): Promise<AuthoredContentSummaryDto> => {
+    return apiClient.get<AuthoredContentSummaryDto>('/user/data/authored-content/');
+};
+
+/**
+ * Удаляет авторский контент текущего пользователя: путешествия, где он
+ * единственный автор, и его авторство на совместных. Сохранённые маршруты это
+ * НЕ трогает — их чистит `DELETE /user/<id>/clear-favorite/` на экране «Хочу
+ * поехать». Legacy-алиас `DELETE /user/data/routes/` (#1830) с фронта не зовётся.
+ */
+export const deleteAuthoredContent = async (): Promise<null> => {
+    return apiClient.delete<null>('/user/data/authored-content/');
 };
 
 export const revokeUserConsents = async (): Promise<null> => {

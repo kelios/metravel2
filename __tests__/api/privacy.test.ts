@@ -22,7 +22,8 @@ import {
   requestContactAccess,
   requestDataExport,
   deleteUserMessages,
-  deleteUserRoutes,
+  deleteAuthoredContent,
+  fetchAuthoredContentSummary,
   revokeUserConsents,
   PRIVACY_SETTINGS_DEFAULTS,
 } from '@/api/privacy'
@@ -127,8 +128,16 @@ describe('contact protection + data ownership endpoints', () => {
     await deleteUserMessages()
     expect(mockDelete).toHaveBeenCalledWith('/user/data/messages/')
 
-    await deleteUserRoutes()
-    expect(mockDelete).toHaveBeenCalledWith('/user/data/routes/')
+    await deleteAuthoredContent()
+    expect(mockDelete).toHaveBeenCalledWith('/user/data/authored-content/')
+    expect(mockDelete).not.toHaveBeenCalledWith('/user/data/routes/')
+
+    mockGet.mockResolvedValue({ travels_to_delete: 2, co_authored_to_detach: 1 } as any)
+    await expect(fetchAuthoredContentSummary()).resolves.toEqual({
+      travels_to_delete: 2,
+      co_authored_to_detach: 1,
+    })
+    expect(mockGet).toHaveBeenCalledWith('/user/data/authored-content/')
 
     await revokeUserConsents()
     expect(mockPost).toHaveBeenCalledWith('/user/consents/revoke/')

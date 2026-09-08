@@ -5,16 +5,17 @@ import { confirmAction } from '@/utils/confirmAction';
 import { showToast } from '@/utils/toast';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { useAuthStore } from '@/stores/authStore';
-import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries';
 import { invalidateTravelCollections } from '@/utils/travelQueryInvalidation';
 import {
     requestDataExport,
     deleteUserMessages,
-    deleteUserRoutes,
+    deleteAuthoredContent,
+    fetchAuthoredContentSummary,
     revokeUserConsents,
+    type AuthoredContentSummaryDto,
     type DataExportDto,
 } from '@/api/privacy';
-import { translate as i18nT } from '@/i18n'
+import { formatInteger, selectPlural, translate as i18nT } from '@/i18n'
 
 
 const errorMessage = (error: unknown, fallback: string): string =>
@@ -23,17 +24,57 @@ const errorMessage = (error: unknown, fallback: string): string =>
 /** Сколько ждём счётчик затрагиваемых путешествий, прежде чем спросить без числа. */
 const COUNT_BUDGET_MS = 2500;
 
+const isCountable = (value: unknown): value is number =>
+    typeof value === 'number' && Number.isFinite(value) && value >= 0;
+
+/**
+ * Две фразы подтверждения: сколько путешествий исчезнет и с какого числа совместных
+ * снимется авторство. Нулевую половину фраза не упоминает — «удалить 0 путешествий»
+ * читается как ошибка, а не как факт; когда нулевые обе, чисел нет вовсе и
+ * подтверждение возвращается к копии без них.
+ */
+const describeAffectedContent = (summary: AuthoredContentSummaryDto): string | null => {
+    const phrases: string[] = [];
+
+    if (summary.travels_to_delete > 0) {
+        const value1 = formatInteger(summary.travels_to_delete);
+        const many = i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedOwnedMany', { value1 });
+        phrases.push(
+            selectPlural(summary.travels_to_delete, {
+                one: i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedOwnedOne', { value1 }),
+                few: i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedOwnedFew', { value1 }),
+                many,
+                other: many,
+            })
+        );
+    }
+
+    if (summary.co_authored_to_detach > 0) {
+        const value1 = formatInteger(summary.co_authored_to_detach);
+        const many = i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedSharedMany', { value1 });
+        phrases.push(
+            selectPlural(summary.co_authored_to_detach, {
+                one: i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedSharedOne', { value1 }),
+                few: i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedSharedFew', { value1 }),
+                many,
+                other: many,
+            })
+        );
+    }
+
+    return phrases.length > 0 ? phrases.join(' ') : null;
+};
+
 /**
  * Действия пользователя над своими данными (GDPR-подобные):
  * экспорт архива, удаление переписки, удаление своих путешествий, отзыв согласий.
  * Удаление аккаунта здесь НЕ дублируется — оно уже в settings (deleteCurrentUserAccount).
  *
- * #1828: `DELETE /user/data/routes/` называется «routes», но удаляет НЕ сохранённые
- * маршруты. Сервер (`users/services/data_ownership_service.py:delete_routes`) хардом
- * стирает все Travel, где пользователь единственный автор, вместе с файлами треков, и
- * снимает авторство со всех совместных (`TravelUser.objects.filter(user=user).delete()`).
- * Поэтому копия здесь обязана называть путешествия, а не маршруты, а подтверждение —
- * идти в два шага. Очистка сохранённых маршрутов живёт отдельно, на экране «Хочу поехать».
+ * `DELETE /user/data/authored-content/` хардом стирает все Travel, где пользователь
+ * единственный автор, вместе с фотографиями и файлами треков, и снимает его авторство
+ * со всех совместных (`users/services/data_ownership_service.py:delete_authored_content`).
+ * Поэтому копия здесь называет путешествия, а не маршруты, а подтверждение идёт в два
+ * шага. Очистка сохранённых маршрутов живёт отдельно, на экране «Хочу поехать».
  */
 export function useDataOwnership() {
     const [lastExport, setLastExport] = useState<DataExportDto | null>(null);
@@ -72,7 +113,7 @@ export function useDataOwnership() {
     });
 
     const deleteTravelsMutation = useMutation({
-        mutationFn: deleteUserRoutes,
+        mutationFn: deleteAuthoredContent,
         onSuccess: () => {
             // Удалённое не должно пережить действие в кэше: профиль, «Мои путешествия»
             // и счётчики читают те же ключи, что и сохранение путешествия.
@@ -104,25 +145,22 @@ export function useDataOwnership() {
         if (confirmed) deleteMessagesMutation.mutate();
     }, [deleteMessagesMutation]);
 
-    // Сколько путешествий заденет действие. Считается по тому же источнику, что и
-    // счётчик «Мои путешествия» (`fetchMyTravels`), с черновиками — сервер их тоже
-    // удаляет. Ошибка запроса не должна маскироваться нулём: тогда возвращается
-    // `null`, и подтверждение показывает вариант без числа. Число — уточнение, а не
-    // условие показа: медленная сеть не имеет права держать нажатую кнопку немой,
-    // поэтому счётчик ждём не дольше `COUNT_BUDGET_MS`.
-    const countAffectedTravels = useCallback(async (): Promise<number | null> => {
+    // Что именно снесёт действие. Общий счётчик «Мои путешествия» сюда не годится:
+    // он складывает личные и совместные, а удаляются только первые — со вторых
+    // снимается авторство. Разделение знает один сервер, поэтому числа берутся из
+    // `GET /user/data/authored-content/`. Ошибка запроса не должна маскироваться
+    // нулём: тогда возвращается `null`, и подтверждение показывает вариант без
+    // чисел. Числа — уточнение, а не условие показа: медленная сеть не имеет права
+    // держать нажатую кнопку немой, поэтому счётчик ждём не дольше `COUNT_BUDGET_MS`.
+    const countAffectedTravels = useCallback(async (): Promise<AuthoredContentSummaryDto | null> => {
         if (!userId) return null;
 
-        const counted = (async (): Promise<number | null> => {
+        const counted = (async (): Promise<AuthoredContentSummaryDto | null> => {
             try {
-                const payload = await fetchMyTravels({
-                    user_id: userId,
-                    perPage: 1,
-                    includeDrafts: true,
-                    throwOnError: true,
-                });
-                const { total } = unwrapMyTravelsPayload(payload);
-                return Number.isFinite(total) ? total : null;
+                const summary = await fetchAuthoredContentSummary();
+                return isCountable(summary?.travels_to_delete) && isCountable(summary?.co_authored_to_detach)
+                    ? summary
+                    : null;
             } catch {
                 return null;
             }
@@ -144,19 +182,20 @@ export function useDataOwnership() {
         if (isPreparingDelete || deleteTravelsMutation.isPending) return;
 
         setIsPreparingDelete(true);
-        let affected: number | null;
+        let affected: AuthoredContentSummaryDto | null;
         try {
             affected = await countAffectedTravels();
         } finally {
             setIsPreparingDelete(false);
         }
 
+        const counted = affected === null ? null : describeAffectedContent(affected);
         const acknowledged = await confirmAction({
             title: i18nT('shared:hooks.useDataOwnership.deleteTravelsTitle'),
             message:
-                affected === null
+                counted === null
                     ? i18nT('shared:hooks.useDataOwnership.deleteTravelsMessage')
-                    : i18nT('shared:hooks.useDataOwnership.deleteTravelsMessageWithCount', { value1: affected }),
+                    : i18nT('shared:hooks.useDataOwnership.deleteTravelsMessageCounted', { value1: counted }),
             confirmText: i18nT('shared:hooks.useDataOwnership.deleteTravelsContinue'),
         });
         if (!acknowledged) return;
