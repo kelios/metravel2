@@ -55,6 +55,7 @@ type QuestSeoModel = {
 };
 
 const HEAD_PATCH_DELAYS_MS = [0, 120, 400] as const;
+const QUEST_STRUCTURED_DATA_ID = 'quest-structured-data';
 const QUEST_LIST_ROUTE = '/quests';
 const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
@@ -160,8 +161,29 @@ const useQuestHeadSync = (enabled: boolean, seo: QuestSeoModel, canonical: strin
   useEffect(() => {
     if (!enabled || Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
 
+    // SSG's unowned TouristTrip survives Helmet reconciliation and SPA navigation.
+    // Keep it until the managed graph exists, including mounts after the last timer.
+    const bootstrapSelector = 'script[data-seo-jsonld="quest"][type="application/ld+json"]';
+    let bootstrapObserver: MutationObserver | undefined;
+    if (document.head.querySelector(bootstrapSelector)) {
+      const handOverStructuredData = () => {
+        const managedScript = document.head.querySelector<HTMLScriptElement>(
+          `script#${QUEST_STRUCTURED_DATA_ID}[type="application/ld+json"][data-rh="true"]`,
+        );
+        if (!managedScript?.textContent?.trim()) return;
+        document.head.querySelectorAll(bootstrapSelector).forEach((node) => node.remove());
+        bootstrapObserver?.disconnect();
+      };
+      bootstrapObserver = new MutationObserver(handOverStructuredData);
+      bootstrapObserver.observe(document.head, { childList: true, subtree: true });
+      handOverStructuredData();
+    }
+
     const timers = HEAD_PATCH_DELAYS_MS.map((delay) => setTimeout(() => patchQuestHead(seo, canonical, image), delay));
-    return () => timers.forEach(clearTimeout);
+    return () => {
+      timers.forEach(clearTimeout);
+      bootstrapObserver?.disconnect();
+    };
   }, [canonical, enabled, image, seo]);
 };
 
@@ -435,12 +457,11 @@ export default function QuestByIdScreen() {
       lng: bundle.city?.lng,
     });
 
+    // Expo Head's Helmet processor reads inline scripts from string children.
     return (
-      <script
-        key="quest-structured-data"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: stringifyJsonLd(structuredData) }}
-      />
+      <script key={QUEST_STRUCTURED_DATA_ID} id={QUEST_STRUCTURED_DATA_ID} type="application/ld+json">
+        {stringifyJsonLd(structuredData)}
+      </script>
     );
   }, [bundle, canonical, cityId, countModel?.total, questId, seo.description, seo.title, seoImage]);
 

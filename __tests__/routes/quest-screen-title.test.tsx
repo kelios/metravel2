@@ -5,6 +5,8 @@
 import React from 'react'
 import { act } from 'react-test-renderer'
 import { render } from '@testing-library/react-native'
+import { Helmet, HelmetProvider, type HelmetServerState } from 'expo-router/vendor/react-helmet-async/lib'
+import LazyInstantSEO from '@/components/seo/LazyInstantSEO'
 
 const mockUseIsFocused = jest.fn(() => true)
 const mockUseLocalSearchParams = jest.fn(() => ({ city: '4', questId: 'minsk-cmok' }))
@@ -129,8 +131,61 @@ const expectSingleImageHead = (image: string) => {
   }
 }
 
-// Keep the real LazyInstantSEO and JSON-LD serializer; only Expo Head's renderer
-// is mocked by the common setup. This checks declarative tags before any timers.
+const appendBootstrapQuestJsonLd = () => {
+  const script = document.createElement('script')
+  script.type = 'application/ld+json'
+  script.setAttribute('data-seo-jsonld', 'quest')
+  script.textContent = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'TouristTrip',
+    image: ['https://metravel.by/quest-cover/previous.webp?w=800'],
+  })
+  document.head.appendChild(script)
+  return script
+}
+
+const expectSingleQuestGraph = (image: string) => {
+  const scripts = document.head.querySelectorAll(
+    'script#quest-structured-data[type="application/ld+json"], script[data-seo-jsonld="quest"][type="application/ld+json"]',
+  )
+  expect(scripts).toHaveLength(1)
+  expect(JSON.parse(scripts[0].textContent ?? '')['@graph']).toContainEqual(expect.objectContaining({
+    '@type': 'CreativeWork',
+    image: [image],
+  }))
+}
+
+// The global Expo Head mock keeps React elements without processing them. Feed
+// the route's actual additionalTags through Expo's vendored Helmet too: it drops
+// inline scripts with dangerouslySetInnerHTML instead of string children.
+const readHelmetStructuredData = (screen: ReturnType<typeof render>) => {
+  const { additionalTags } = screen.UNSAFE_root.findByType(LazyInstantSEO).props
+  const context: { helmet?: HelmetServerState } = {}
+  const originalCanUseDOM = HelmetProvider.canUseDOM
+  let helmetScreen: ReturnType<typeof render> | undefined
+  let html = ''
+  HelmetProvider.canUseDOM = false
+  try {
+    helmetScreen = render(
+      <HelmetProvider context={context}>
+        <Helmet>{additionalTags}</Helmet>
+      </HelmetProvider>,
+    )
+    html = context.helmet?.script.toString() ?? ''
+  } finally {
+    helmetScreen?.unmount()
+    HelmetProvider.canUseDOM = originalCanUseDOM
+  }
+
+  const template = document.createElement('template')
+  template.innerHTML = html
+  const scripts = template.content.querySelectorAll('script')
+  expect(scripts).toHaveLength(1)
+  expect(scripts[0].type).toBe('application/ld+json')
+  return { html, jsonLd: JSON.parse(scripts[0].textContent ?? '') }
+}
+
+// Check declarative social tags and Helmet's emitted JSON-LD before any timers.
 const expectRenderedImage = (screen: ReturnType<typeof render>, image: string) => {
   for (const key of ['og:image', 'og:image:secure_url', 'twitter:image']) {
     const nodes = screen.UNSAFE_root.findAll((node) =>
@@ -139,8 +194,7 @@ const expectRenderedImage = (screen: ReturnType<typeof render>, image: string) =
     expect(nodes).toHaveLength(1)
     expect(nodes[0].props.content).toBe(image)
   }
-  const script = screen.UNSAFE_root.findByProps({ type: 'application/ld+json' })
-  const jsonLd = JSON.parse(script.props.dangerouslySetInnerHTML.__html)
+  const { jsonLd } = readHelmetStructuredData(screen)
   expect(jsonLd['@graph']).toContainEqual(expect.objectContaining({
     '@type': 'CreativeWork',
     image: [image],
@@ -276,6 +330,7 @@ describe('Quest screen title sync', () => {
   })
 
   it('cancels stale image writes when the focused route changes to another quest', async () => {
+    appendBootstrapQuestJsonLd()
     const current = mockUseQuestBundle()
     mockUseQuestBundle.mockReturnValue({
       ...current,
@@ -283,10 +338,13 @@ describe('Quest screen title sync', () => {
     })
     const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = render(<QuestScreen />)
+    const initialHelmetHtml = readHelmetStructuredData(screen).html
     await act(async () => {
+      document.head.insertAdjacentHTML('beforeend', initialHelmetHtml)
       jest.advanceTimersByTime(100)
       await Promise.resolve()
     })
+    expectSingleQuestGraph('https://metravel.by/quest-cover/quests/77/main/cover.webp?w=800')
 
     mockUseLocalSearchParams.mockReturnValue({ city: '1', questId: 'krakow-dragon' })
     mockUseQuestBundle.mockReturnValue({
@@ -300,6 +358,10 @@ describe('Quest screen title sync', () => {
     screen.rerender(<QuestScreen />)
     const expected = 'https://metravel.by/quest-cover/quests/78/main/next.webp?w=800'
     expectRenderedImage(screen, expected)
+    // Helmet replaces its own script on navigation; the old unowned SSG graph
+    // must already be gone instead of surviving next to the destination graph.
+    document.head.querySelector('script#quest-structured-data')?.remove()
+    document.head.insertAdjacentHTML('beforeend', readHelmetStructuredData(screen).html)
 
     // Inspect both old and new deadlines: 100, 120, 220, 400 and 500 ms.
     for (const elapsed of [0, 20, 100, 180, 100]) {
@@ -308,9 +370,85 @@ describe('Quest screen title sync', () => {
         await Promise.resolve()
       })
       expectSingleImageHead(expected)
+      expectSingleQuestGraph(expected)
       expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href'))
         .toBe('https://metravel.by/quests/1/krakow-dragon')
     }
+  })
+
+  it('preserves bootstrap JSON-LD until Helmet mounts a ready owner after the last head timer', async () => {
+    const bootstrap = appendBootstrapQuestJsonLd()
+    const unrelated = document.createElement('script')
+    unrelated.type = 'application/ld+json'
+    unrelated.setAttribute('data-seo-jsonld', 'website')
+    unrelated.textContent = JSON.stringify({ '@type': 'WebSite', name: 'MeTravel' })
+    document.head.appendChild(unrelated)
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen />)
+    const { html } = readHelmetStructuredData(screen)
+
+    await act(async () => {
+      jest.advanceTimersByTime(500)
+      await Promise.resolve()
+    })
+    expect(bootstrap.isConnected).toBe(true)
+
+    // An empty managed node is not a ready replacement for the no-JS graph.
+    const template = document.createElement('template')
+    template.innerHTML = html
+    const managed = template.content.querySelector('script')!
+    const payload = managed.textContent
+    managed.textContent = ''
+    await act(async () => {
+      document.head.appendChild(managed)
+      await Promise.resolve()
+    })
+    expect(bootstrap.isConnected).toBe(true)
+
+    await act(async () => {
+      managed.textContent = payload
+      await Promise.resolve()
+    })
+    expect(bootstrap.isConnected).toBe(false)
+    expectSingleQuestGraph('https://metravel.by/assets/icons/logo_yellow_512x512.png')
+    expect(unrelated.isConnected).toBe(true)
+  })
+
+  it.each(['blur', 'unmount'])('stops bootstrap JSON-LD handover after quest %s', async (transition) => {
+    const bootstrap = appendBootstrapQuestJsonLd()
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen />)
+    const { html } = readHelmetStructuredData(screen)
+    if (transition === 'blur') {
+      mockUseIsFocused.mockReturnValue(false)
+      screen.rerender(<QuestScreen />)
+    } else {
+      screen.unmount()
+    }
+
+    await act(async () => {
+      document.head.insertAdjacentHTML('beforeend', html)
+      jest.runOnlyPendingTimers()
+      await Promise.resolve()
+    })
+    expect(bootstrap.isConnected).toBe(true)
+  })
+
+  it('keeps untrusted cover text escaped in the script emitted by Helmet', () => {
+    const coverUrl = 'https://example.com/cover.webp?label=</script><script>bad</script>&caption=\u2028\u2029#photo'
+    const current = mockUseQuestBundle()
+    mockUseQuestBundle.mockReturnValue({ ...current, bundle: { ...current.bundle, coverUrl } })
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen />)
+
+    const { html, jsonLd } = readHelmetStructuredData(screen)
+    expect(html).not.toContain('</script><script>')
+    expect(html).toContain('\\u003c/script\\u003e')
+    expect(html).toContain('\\u0026caption=\\u2028\\u2029')
+    expect(jsonLd['@graph']).toContainEqual(expect.objectContaining({
+      '@type': 'CreativeWork',
+      image: [coverUrl],
+    }))
   })
 
   it.each(['blur', 'unmount'])('leaves the destination image alone after quest %s', async (transition) => {
