@@ -347,7 +347,7 @@ App Review Information, в Git и на борд не попадают.
 
 ## Что уже в App Store Connect (2026-09-09)
 
-Повторный `eas metadata:pull` после `eas metadata:push`:
+Повторный `eas metadata:pull` после заполнения владельцем:
 
 - Версия `1.0.5`, copyright `2026 MeTravel`, категории Travel + Social Networking,
   релиз ручной (`automaticRelease: false`).
@@ -355,15 +355,6 @@ App Review Information, в Git и на борд не попадают.
   description, promotional text, keywords, support/marketing/privacy URL.
 - Скриншоты во всех четырёх локалях: 4 кадра `APP_IPHONE_67` (1320×2868) и
   4 кадра `APP_IPAD_PRO_3GEN_129` (2064×2752). Исходники — `.codex-temp/appstore-shots/`.
-- App Review notes уже есть. Submit не выполнялся.
-
-## Что остаётся владельцу
-
-1. Заполнить App Review contact (имя, email, телефон в международном формате)
-   только в защищённых полях App Store Connect.
-2. Заполнить demo account только там же. Логин/пароль в Git и на борд не
-   копировать. `demoAccountRequired` сейчас `true`.
-3. Сверить анкету App Privacy в ASC с составом `PrivacyInfo.xcprivacy` из
-   раздела «Privacy» — из репозитория опубликованные ответы не проверяются.
-4. Подтвердить пакет в чате — после этого карточка #1424 может идти в
-   testing/done. Submit (#1425 или отдельная команда) здесь не выполняется.
+- App Review contact, demo-аккаунт (`demoAccountRequired: true`) и notes заполнены
+  в защищённых полях Connect. Значения в Git и на борд не копируются.
+- Submit не выполнялся. Отправка в App Review — #1425 или отдельная команда.
