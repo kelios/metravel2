@@ -223,29 +223,128 @@ The app is free. Some hotel and tour links are affiliate. There are no in-app pu
 
 ## Скриншоты (owner / device)
 
-Нужны правдивые снимки accepted TestFlight build из #1423, обязательный iPhone size.
-Симулятор и макеты не заменяют. Не обещать функции, которых нет в этом билде.
-iPad screenshots — отдельный набор, universal v1.
+Обязательный набор App Store Connect для версии 1:
+
+| Набор | Принимаемые размеры (портрет) | Обязателен |
+| --- | --- | --- |
+| iPhone 6.9" | 1290×2796, 1320×2868 | да |
+| iPhone 6.5" | 1242×2688, 1284×2778 | нет, необязательный слот ASC |
+| iPad 13" | 2064×2752, 2048×2732 | да, пока `expo.ios.supportsTablet: true` |
+
+Остальные размеры Apple масштабирует сама, отдельно снимать их не нужно.
+Кадр с экрана, размер которого в таблицу не попал (например 1206×2622 у
+iPhone 16 Pro или 1179×2556 у iPhone 15), ASC на загрузке отклонит — гуард
+называет такой файл до попытки выгрузки. Минимум на обязательный набор —
+3 кадра (`MIN_SCREENSHOTS_PER_FAMILY`); кадры 6.5" гуард принимает, но в
+обязательный набор не засчитывает.
+
+`app.json` → `expo.ios.supportsTablet` = `true`, то есть принятый билд 9 —
+universal. Пока это так, карточка без набора iPad в ASC не заполняется; убрать
+iPad из требований можно только отключением `supportsTablet`, а это новая сборка
+и новый TestFlight-кандидат, не правка карточки.
+
+Ограничение железа на 2026-09-09: единственный спаренный iPhone —
+iPhone 13 mini (1080×2340). Этот размер App Store не принимает, поэтому снять
+загружаемые скриншоты с принятого билда 9 на нём нельзя. Нужен один из вариантов
+владельца:
+
+1. iPhone 6.9" (16/17 Pro Max) с установленным TestFlight build 9 плюс iPad 13" —
+   полностью соответствует контракту задачи;
+2. явное разрешение владельца снять кадры на симуляторах iPhone 17 Pro Max и
+   iPad Pro 13" из ровно того же исходника, что и билд 9 (`8ae84cb56`;
+   `git diff --name-only 8ae84cb56 HEAD -- app api components constants context
+   hooks i18n screens services stores styles types ui utils assets app.json ios`
+   пуст).
+   Это отступление от пункта «симулятор не заменяет принятый билд» в Task
+   Contract #1424 и требует решения владельца, а не агента.
+
+Апскейл кадров с mini до 1290×2796 запрещён: это подделка материала карточки.
+
+Проверка готового набора (каталог с PNG, в репозиторий не коммитится):
+
+```bash
+npm run ios:store:guard -- --screenshots .codex-temp/appstore-shots
+```
+
+## Автопроверка карточки
+
+`npm run ios:store:guard` (`scripts/ios-store-listing-guard.js`) проверяет этот
+файл: наличие локалей ASC RU/UK/PL/EN, лимиты Apple по name/subtitle/promotional/
+description/keywords, формат keywords, служебные поля, отсутствие заглушек и
+утечек пароля, совпадение version/buildNumber с `app.json`. С `--screenshots`
+добавляется проверка размеров PNG и полноты обязательных наборов.
+Регрессия закрыта `__tests__/config/ios-store-listing.test.ts`.
 
 ## App Review notes (без секретов)
 
-Черновик для ASC, demo-пароль только в защищённом поле Connect:
+Черновик для ASC. Демо-логин и пароль вводятся только в защищённые поля
+App Review Information, в Git и на борд не попадают.
 
-- Приложение: маршруты, карта, квесты, планировщик поездок.
-- Вход: Sign in with Apple обязателен (Guideline 4.8), также Google и Facebook.
-- Удаление аккаунта: Настройки → удаление аккаунта (Guideline 5.1.1(v)).
-- Разрешения: геолокация при использовании карты/квеста, камера и фото по действию пользователя, Face ID только если выбран биометрический вход.
-- Демо-аккаунт: non-expiring, логин/пароль только в ASC, не в Git и не в этом файле.
-- Export compliance: exempt encryption, как в Info.plist.
+Проверено по исходнику принятого билда 9 (`8ae84cb56`; diff с `HEAD` по путям
+приложения из раздела «Скриншоты» пуст):
+
+- Что это: путеводитель по путешествиям — статьи с точками на карте
+  (`app/(tabs)/article`), общая карта (`app/(tabs)/map.tsx`), городские квесты
+  (`app/(tabs)/quests/`), поиск мест, избранное (`app/(tabs)/favorites.tsx`) и
+  планировщик поездок с ночёвками и снаряжением
+  (`components/trips/planning/RouteOvernightFields.tsx`,
+  `components/trips/planning/TripGearChecklist.tsx`).
+- Вход: Sign in with Apple (`app.json` → `expo.ios.usesAppleSignIn: true`,
+  entitlement `com.apple.developer.applesignin`,
+  `components/auth/AppleSignInButton.native.tsx`), Google
+  (`components/auth/GoogleSignInButton.native.tsx`) и Facebook
+  (`components/auth/LoginForm.tsx:341` → `FacebookAuthFlow.native.tsx` →
+  `components/auth/FacebookSignInButton.native.tsx`; одноимённый файл без
+  суффикса `.native` — веб-only заглушка, на iOS Metro её не выбирает).
+  Требование Guideline 4.8 выполнено: Apple присутствует наравне со сторонними
+  провайдерами.
+- Удаление аккаунта (Guideline 5.1.1(v)): вкладка «Настройки» → карточка
+  аккаунта → «Удалить аккаунт»; маршрут `app/(tabs)/settings.tsx` →
+  `components/screens/settings/SettingsScreen.tsx:34` →
+  `components/settings/AccountSection.tsx:51`.
+- Разрешения ровно те, что объявлены в `ios/metravel/Info.plist` (пять ключей):
+  геолокация When In Use, motion, чтение фотобиблиотеки, камера, Face ID.
+  Все запрашиваются по действию пользователя; фоновой геолокации нет —
+  `UIBackgroundModes` в Info.plist отсутствует, `app.json` →
+  `isIosBackgroundLocationEnabled: false`. Push — стандартный системный запрос
+  APNs (`aps-environment: production`, `services/notifications.ts`).
+- ATT не показывается: ключа `NSUserTrackingUsageDescription` нет ни в
+  `ios/metravel/Info.plist`, ни в `app.json` → `expo.ios.infoPlist`, поэтому
+  системный запрос трекинга приложению недоступен.
+- Universal links: `applinks:metravel.by`, входная точка — ссылки на статьи и
+  квесты с сайта.
+- Export compliance: `ITSAppUsesNonExemptEncryption: false` в
+  `app.json` → `expo.ios.infoPlist` и в собранном Info.plist — exempt.
 
 ## Privacy
 
-Сверка с #1416 и манифестом бинарника. Не копировать web GA4/Yandex в App Privacy, если native analytics выключен. Location / Photos / Account — по фактическому flow бинарника.
+Сверка с #1416 и манифестом принятого бинарника:
+
+- Facebook SDK (`react-native-fbsdk-next`) собран без рекламных идентификаторов:
+  `FacebookAdvertiserIDCollectionEnabled = false`,
+  `FacebookAutoLogAppEventsEnabled = false` (`ios/metravel/Info.plist`).
+  Поэтому в App Privacy tracking выключен и ATT не требуется.
+- Web-аналитика (GA4, Яндекс.Метрика) в native-бандл не входит и в App Privacy
+  не переносится.
+- Location / Photos / Camera / Account — по фактическому flow бинарника, список
+  разрешений выше.
+- `ios/metravel/PrivacyInfo.xcprivacy` объявляет ровно 10 типов данных
+  (Coarse/Precise Location, DeviceID, EmailAddress, EmailsOrTextMessages, Name,
+  OtherUserContactInfo, OtherUserContent, PhotosOrVideos, UserID),
+  `NSPrivacyTracking = false`, `NSPrivacyTrackingDomains` пуст. Это состав
+  манифеста в репозитории; опубликованные ответы анкеты App Privacy лежат в App
+  Store Connect и отсюда не видны — сверку анкеты с этим списком делает владелец
+  в ASC (пункт «Что остаётся владельцу»).
 
 ## Что остаётся владельцу
 
-1. Выбрать accepted build #1423 в Connect.
-2. Снять iPhone (и iPad) скриншоты с этого билда.
-3. Вставить тексты выше, уложиться в лимиты Connect.
-4. Заполнить demo account и contact только в ASC.
-5. Подтвердить пакет в чате — после этого карточка #1424 может идти в testing/done. Submit (#1425 или отдельная команда) не выполняется здесь.
+1. Снять iPhone 6.9" и iPad 13" скриншоты принятого build 9 — либо на
+   соответствующих устройствах, либо после явного разрешения на симуляторный
+   вариант из раздела «Скриншоты», и прогнать
+   `npm run ios:store:guard -- --screenshots <каталог>`.
+2. Загрузить их в ASC и вставить тексты выше.
+3. Заполнить demo account и App Review contact только в ASC.
+4. Сверить анкету App Privacy в ASC с составом `PrivacyInfo.xcprivacy` из
+   раздела «Privacy» — из репозитория опубликованные ответы не проверяются.
+5. Подтвердить пакет в чате — после этого карточка #1424 может идти в
+   testing/done. Submit (#1425 или отдельная команда) здесь не выполняется.

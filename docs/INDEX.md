@@ -107,6 +107,9 @@
   Developer и App Store Connect по человеческой задаче #1410; создание App
   Store record, TestFlight и submission в этот этап не входят;
 - `docs/ANDROID_OWNER_GUIDE.md` — owner-only Android build/Play flow;
+- `docs/IOS_STORE_LISTING.md` — пакет карточки App Store (#1424): тексты
+  локалей ASC, скриншот-требования, App Review notes и privacy-сверка;
+  автопроверка — `npm run ios:store:guard`;
 - `docs/ANDROID_STORE_LISTING.md` — текущий store listing draft.
 
 Android EAS build/submit запрещены; Android production использует local Gradle и
