@@ -1,6 +1,6 @@
 const fs = require('fs')
 const path = require('path')
-const { runCli, writeTextFile, removeDir } = require('./cli-test-utils')
+const { makeTempDir, runCli, writeTextFile, removeDir } = require('./cli-test-utils')
 const { evaluateGuard } = require('@/scripts/guard-public-files')
 
 const repoRoot = process.cwd()
@@ -12,9 +12,7 @@ describe('guard-public-files', () => {
   let fixtureScript: string
 
   beforeEach(() => {
-    const tempRoot = path.join(repoRoot, '.codex-temp')
-    fs.mkdirSync(tempRoot, { recursive: true })
-    fixtureRoot = fs.mkdtempSync(path.join(tempRoot, 'public-files-'))
+    fixtureRoot = makeTempDir('public-files-')
     publicDir = path.join(fixtureRoot, 'public')
     fixtureScript = path.join(fixtureRoot, 'scripts/guard-public-files.js')
     // Copy the real tree, not files generated from the allowlist under test.
