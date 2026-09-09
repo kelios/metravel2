@@ -18,6 +18,7 @@ type SimpleMultiSelectPassthroughProps = {
     allowCreate?: boolean;
     onCreateItem?: (name: string) => Promise<MultiSelectValueLocal | null>;
     createLabel?: string;
+    onOpen?: () => void;
 };
 
 type MultiSelectFieldProps<Item extends Record<string, unknown>> = {
@@ -52,6 +53,7 @@ const MultiSelectField = forwardRef<unknown, MultiSelectFieldProps<Record<string
             allowCreate,
             onCreateItem,
             createLabel,
+            onOpen,
             testID,
             accessibilityLabel,
         },
@@ -114,6 +116,7 @@ const MultiSelectField = forwardRef<unknown, MultiSelectFieldProps<Record<string
                     allowCreate={allowCreate}
                     onCreateItem={onCreateItem}
                     createLabel={createLabel}
+                    onOpen={onOpen}
                 />
             </View>
         );

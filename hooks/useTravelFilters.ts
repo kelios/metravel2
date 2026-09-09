@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import { captureFiltersRefreshBoundary, fetchAllCountriesOptimized, fetchFiltersOptimized } from '@/api/miscOptimized';
+import { POINT_CATEGORY_DICTIONARY_REFRESH_EVENT } from '@/utils/pointCategoryDictionaryQuery';
 import { translate as i18nT } from '@/i18n'
 
 export interface TravelFilters {
@@ -403,9 +404,10 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
       away = true;
       returnController?.abort();
     };
-    const resume = () => {
-      if (!away || document.visibilityState === 'hidden') return;
+    const refreshFromReturn = () => {
+      if (document.visibilityState === 'hidden') return;
       away = false;
+      returnController?.abort();
       returnController = new AbortController();
       void refetchPointCategories({
         force: true,
@@ -414,21 +416,40 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
         signal: returnController.signal,
       });
     };
-    const onBlur = (event: FocusEvent) => { if (event.target === window) leave(); };
-    const onFocus = (event: FocusEvent) => { if (event.target === window) resume(); };
+    const resume = () => {
+      if (!away) return;
+      refreshFromReturn();
+    };
+    const isWindowFocusTarget = (event: Event) => (
+      event.target === window || event.target === document
+    );
+    const onBlur = (event: FocusEvent) => { if (isWindowFocusTarget(event)) leave(); };
+    const onFocus = (event: FocusEvent) => { if (isWindowFocusTarget(event)) resume(); };
     const onVisibilityChange = () => {
       if (document.visibilityState === 'hidden') leave();
       else resume();
+    };
+    const onPageShow = (event: Event) => {
+      if (!('persisted' in event) || !(event as { persisted?: boolean }).persisted) return;
+      away = true;
+      resume();
+    };
+    const onPickerOpen = () => {
+      refreshFromReturn();
     };
 
     window.addEventListener('blur', onBlur);
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener(POINT_CATEGORY_DICTIONARY_REFRESH_EVENT, onPickerOpen);
     return () => {
       returnController?.abort();
       window.removeEventListener('blur', onBlur);
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener(POINT_CATEGORY_DICTIONARY_REFRESH_EVENT, onPickerOpen);
     };
   }, [isPointStep, refetchPointCategories]);
 

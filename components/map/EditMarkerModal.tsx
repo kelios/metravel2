@@ -8,6 +8,7 @@ import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import MultiSelectField from '@/components/forms/MultiSelectField';
 import { isPointCategoryCreateEnabled } from '@/config/featureFlags';
 import { createPointCategory } from '@/api/misc';
+import { requestPointCategoryDictionaryRefresh } from '@/utils/pointCategoryDictionaryQuery';
 import { confirmAction } from '@/utils/confirmAction';
 import type { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
@@ -181,6 +182,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                             }}
                             allowCreate={allowCreateCategory}
                             onCreateItem={handleCreateCategory}
+                            onOpen={requestPointCategoryDictionaryRefresh}
                             createLabel={i18nT('map:components.map.EditMarkerModal.dobavit_kategoriyu_bb7b37c2')}
                             labelField="name"
                             valueField="id"

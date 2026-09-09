@@ -17,6 +17,7 @@ import MultiSelectField from '@/components/forms/MultiSelectField'
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview'
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard'
 import { createPointCategory } from '@/api/misc'
+import { requestPointCategoryDictionaryRefresh } from '@/utils/pointCategoryDictionaryQuery'
 import { isPointCategoryCreateEnabled } from '@/config/featureFlags'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -168,6 +169,7 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
                 valueField="id"
                 allowCreate={isPointCategoryCreateEnabled()}
                 onCreateItem={handleCreateCategory}
+                onOpen={requestPointCategoryDictionaryRefresh}
                 createLabel={i18nT('map:components.map.EditMarkerModal.dobavit_kategoriyu_bb7b37c2')}
                 placeholder={i18nT('map:components.map.EditMarkerModal.vyberite_de6e6bdc')}
                 testID="travel-wizard.point-editor.categories"

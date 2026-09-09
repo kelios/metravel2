@@ -33,6 +33,8 @@ interface SimpleMultiSelectProps {
    */
   onCreateItem?: (name: string) => Promise<MultiSelectValue | null>;
   createLabel?: string;
+  /** Вызывается при переходе из закрытого состояния в открытое. */
+  onOpen?: () => void;
 }
 
 export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
@@ -49,6 +51,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   allowCreate = false,
   onCreateItem,
   createLabel = i18nT('shared:components.forms.SimpleMultiSelect.dobavit_0aef7a5e'),
+  onOpen,
 }) => {
   const colors = useThemedColors(); // ✅ УЛУЧШЕНИЕ: Поддержка темной темы
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -143,10 +146,11 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   };
 
   const handleOpen = () => {
-    if (!disabled) {
-      setIsOpen(true);
-      setSearchQuery('');
-    }
+    if (disabled) return;
+    const wasClosed = !isOpen;
+    setIsOpen(true);
+    setSearchQuery('');
+    if (wasClosed) onOpen?.();
   };
 
   const handleClose = () => {

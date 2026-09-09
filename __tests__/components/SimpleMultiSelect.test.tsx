@@ -128,6 +128,25 @@ describe('SimpleMultiSelect', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 
+  it('calls onOpen once when the closed picker opens, not on a second press', () => {
+    const onOpen = jest.fn()
+    const screen = render(
+      <SimpleMultiSelect
+        data={dataNumericIds}
+        value={[1]}
+        onChange={jest.fn()}
+        labelField="name"
+        valueField="id"
+        onOpen={onOpen}
+      />,
+    )
+
+    fireEvent.press(screen.getByTestId('simple-multiselect.open-button'))
+    expect(onOpen).toHaveBeenCalledTimes(1)
+    fireEvent.press(screen.getByTestId('simple-multiselect.open-button'))
+    expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
   it('opens from the remaining selected field area and the explicit chevron control', () => {
     const props = {
       data: dataNumericIds,

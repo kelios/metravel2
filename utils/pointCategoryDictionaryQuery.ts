@@ -21,3 +21,20 @@ export const fetchPointCategoryDictionary = async (): Promise<CategoryDictionary
   const data = await fetchFiltersOptimized()
   return normalizeCategoryDictionary(data.categoryTravelAddress)
 }
+
+/**
+ * Пользовательский сигнал «сейчас выбирают категорию точки».
+ *
+ * Возврат во вкладку (focus/visibility) уже обновляет словарь в
+ * `useTravelFilters`, но 2026-09-08 на проде соседняя вкладка админки снова
+ * оставила селектор со старым списком: событие ухода/возврата в той сессии
+ * не доказано. Открытие селектора — тот момент, когда автору нужен свежий
+ * список, и оно не зависит от того, спрятал ли браузер исходную вкладку.
+ */
+export const POINT_CATEGORY_DICTIONARY_REFRESH_EVENT =
+  'metravel:refresh-point-category-dictionary'
+
+export function requestPointCategoryDictionaryRefresh(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(POINT_CATEGORY_DICTIONARY_REFRESH_EVENT))
+}

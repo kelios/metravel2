@@ -17,6 +17,7 @@ import {
   normalizeCategoryTravelAddress,
 } from '@/hooks/useTravelFilters';
 import { captureFiltersRefreshBoundary, fetchAllCountriesOptimized, fetchFiltersOptimized } from '@/api/miscOptimized';
+import { POINT_CATEGORY_DICTIONARY_REFRESH_EVENT } from '@/utils/pointCategoryDictionaryQuery';
 
 // Справочники берутся через дедуплицирующий слой miscOptimized: раньше прямые
 // вызовы api/misc из разных путей давали по два одинаковых запроса на страницу.
@@ -447,6 +448,12 @@ describe('useTravelFilters', () => {
     const focus = () => window.dispatchEvent(new Event('focus'));
     const blur = () => window.dispatchEvent(new Event('blur'));
     const visibilityChange = () => document.dispatchEvent(new Event('visibilitychange'));
+    const pickerOpen = () => window.dispatchEvent(new Event(POINT_CATEGORY_DICTIONARY_REFRESH_EVENT));
+    const pageShow = (persisted: boolean) => {
+      const event = new Event('pageshow');
+      Object.defineProperty(event, 'persisted', { value: persisted });
+      window.dispatchEvent(event);
+    };
     const openPointStep = async (step = 2) => {
       const hook = renderHook(
         ({ step }: { step: number }) => useTravelFilters({ currentStep: step }),
@@ -615,8 +622,33 @@ describe('useTravelFilters', () => {
       const { rerender } = await openPointStep();
       await act(async () => { rerender({ step }); });
       const count = mockFetchFilters.mock.calls.length;
-      await act(async () => { blur(); focus(); visibilityChange(); });
+      await act(async () => { blur(); focus(); visibilityChange(); pickerOpen(); pageShow(true); });
       expect(mockFetchFilters).toHaveBeenCalledTimes(count);
+    });
+
+    it('refreshes when the point category picker opens even inside the step throttle', async () => {
+      let now = 1_000_000;
+      jest.spyOn(Date, 'now').mockImplementation(() => now);
+      const { result, rerender } = await openPointStep();
+      mockFetchFilters.mockResolvedValue(refreshed);
+      const count = mockFetchFilters.mock.calls.length;
+      now += 10_000;
+      await act(async () => { rerender({ step: 3 }); });
+      expect(mockFetchFilters).toHaveBeenCalledTimes(count);
+      await act(async () => { pickerOpen(); });
+      expect(result.current.filters.categoryTravelAddress).toContainEqual({ id: '228', name: 'Планетарий' });
+      expect(mockFetchFilters).toHaveBeenCalledTimes(count + 1);
+    });
+
+    it('refreshes after a persisted pageshow and ignores a non-persisted one', async () => {
+      const { result } = await openPointStep();
+      mockFetchFilters.mockResolvedValue(refreshed);
+      const count = mockFetchFilters.mock.calls.length;
+      await act(async () => { pageShow(false); });
+      expect(mockFetchFilters).toHaveBeenCalledTimes(count);
+      await act(async () => { pageShow(true); });
+      expect(result.current.filters.categoryTravelAddress).toContainEqual({ id: '228', name: 'Планетарий' });
+      expect(mockFetchFilters).toHaveBeenCalledTimes(count + 1);
     });
 
     it.each(['android', 'ios'] as const)('does not add browser listeners on %s', async (os) => {
@@ -624,7 +656,7 @@ describe('useTravelFilters', () => {
       const addListener = jest.spyOn(window, 'addEventListener');
       await openPointStep();
       const count = mockFetchFilters.mock.calls.length;
-      await act(async () => { blur(); focus(); visibilityChange(); });
+      await act(async () => { blur(); focus(); visibilityChange(); pickerOpen(); pageShow(true); });
       expect(mockFetchFilters).toHaveBeenCalledTimes(count);
       expect(addListener.mock.calls.filter(([name]) => name === 'focus' || name === 'blur')).toEqual([]);
     });
