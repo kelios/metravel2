@@ -22,6 +22,7 @@ const {
   findViolationsInSource,
   hasBatchFailureGuardCall,
   hasCallExpression,
+  hasRequireOf,
   isCoveredFile,
   maskSource,
   readDeclaredSelections,
@@ -120,6 +121,19 @@ const USAGE_TEMPLATE_HELPER_SOURCE = SILENT_EMPTY_RETURN_SOURCE.replace(
     '`',
   ].join('\n'),
 )
+
+// #1442: naming the contract, parse and runner only in USAGE used to pass.
+const USAGE_ONLY_CONTRACT_SOURCE = [
+  "const USAGE = `usage",
+  "  require('./lib/seo-cli-contract')",
+  '  parseCliArgs(',
+  '  runSeoCli(',
+  '`',
+  "const CLI_SPEC = { name: 'seo-demo', usage: USAGE, selection: 'none', flags: { 'dry-run': { type: 'boolean' } } }",
+  'async function main() { return 0 }',
+  'if (require.main === module) { main() }',
+  '',
+].join('\n')
 
 // A local binding that happens to share the name answers for the script: read
 // the first `CLI_SPEC` at any depth and this one, which selects nothing, hides
@@ -267,6 +281,24 @@ describe('negative probe: putting the permissive default back fails the guard', 
       rule: 'contract-module',
       reason: /does not require scripts\/lib\/seo-cli-contract\.js/,
       content: "const fs = require('fs')\nasync function main() { return fs }\nmain()\n",
+    },
+    {
+      label: 'the contract, parse and runner claimed only in USAGE — the #1442 shape',
+      rule: 'contract-module',
+      reason: /does not require scripts\/lib\/seo-cli-contract\.js/,
+      content: USAGE_ONLY_CONTRACT_SOURCE,
+    },
+    {
+      label: 'parseCliArgs named only in USAGE',
+      rule: 'strict-parse',
+      reason: /never calls parseCliArgs/,
+      content: USAGE_ONLY_CONTRACT_SOURCE,
+    },
+    {
+      label: 'runSeoCli named only in USAGE',
+      rule: 'exit-contract',
+      reason: /never calls runSeoCli/,
+      content: USAGE_ONLY_CONTRACT_SOURCE,
     },
     {
       // A switch has the same hole as the if-chain: `default` keeps going.
@@ -425,8 +457,25 @@ describe('negative probe: putting the permissive default back fails the guard', 
       '\n  requireNonEmptySelection(rows) refuses an empty run\n',
     )
     expect(USAGE_TEMPLATE_HELPER_SOURCE).toContain('const USAGE = `usage')
+    expect(USAGE_ONLY_CONTRACT_SOURCE).toContain("require('./lib/seo-cli-contract')")
+    expect(USAGE_ONLY_CONTRACT_SOURCE).toContain('parseCliArgs(')
+    expect(USAGE_ONLY_CONTRACT_SOURCE).toContain('runSeoCli(')
+    expect(USAGE_ONLY_CONTRACT_SOURCE.split('require(')).toHaveLength(2)
     expect(SHADOWED_CLI_SPEC_SOURCE).toContain("const CLI_SPEC = { name: 'fallback', selection: 'none' }")
     expect(SHADOWED_CLI_SPEC_SOURCE).toContain("selection: 'rows'")
+  })
+
+  it('fails all three call-shape rules when the contract is only named in USAGE', () => {
+    const result = evaluateGuard({
+      sources: [sourceOf('scripts/seo-fixture.js', USAGE_ONLY_CONTRACT_SOURCE)],
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.violations.map((entry: { rule: string }) => entry.rule).sort()).toEqual([
+      'contract-module',
+      'exit-contract',
+      'strict-parse',
+    ])
   })
 
   it('names only the missing declaration when a script declares nothing', () => {
@@ -570,6 +619,14 @@ describe('negative probe: putting the permissive default back fails the guard', 
     expect(hasCallExpression("requireNonEmptySelection(rows)", 'requireNonEmptySelection')).toBe(true)
     expect(hasCallExpression("const help = 'requireNonEmptySelection(rows)'", 'requireNonEmptySelection')).toBe(false)
     expect(hasCallExpression('const p = /requireNonEmptySelection\\(/', 'requireNonEmptySelection')).toBe(false)
+    expect(hasCallExpression('parseCliArgs(process.argv, spec)', 'parseCliArgs')).toBe(true)
+    expect(hasCallExpression("const help = 'parseCliArgs(process.argv, spec)'", 'parseCliArgs')).toBe(false)
+    expect(hasCallExpression('runSeoCli(main, spec)', 'runSeoCli')).toBe(true)
+    expect(hasCallExpression('const USAGE = `runSeoCli(`', 'runSeoCli')).toBe(false)
+    expect(hasRequireOf("const x = require('./lib/seo-cli-contract')", './lib/seo-cli-contract')).toBe(true)
+    expect(hasRequireOf("const x = require(\"./lib/seo-cli-contract\")", './lib/seo-cli-contract')).toBe(true)
+    expect(hasRequireOf("const x = require('fs')", './lib/seo-cli-contract')).toBe(false)
+    expect(hasRequireOf("const USAGE = `require('./lib/seo-cli-contract')`", './lib/seo-cli-contract')).toBe(false)
     // A pattern the mask reads as division — `]` does not open an expression, so
     // the regex body stays code. The name is still preceded by a slash, and a
     // mention in a pattern is not a call.

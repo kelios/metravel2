@@ -167,20 +167,22 @@ const declaresNoSelection = (code) => {
   return values.length > 0 && values.every((value) => value === NO_SELECTION)
 }
 
+const CONTRACT_REQUIRE_PATH = './lib/seo-cli-contract'
+
 const REQUIRED_NEEDLES = [
   {
     rule: 'contract-module',
-    needle: "require('./lib/seo-cli-contract')",
+    satisfiedWhen: (code) => hasRequireOf(code, CONTRACT_REQUIRE_PATH),
     reason: `does not require ${CONTRACT_MODULE} — its arguments are parsed somewhere without the contract`,
   },
   {
     rule: 'strict-parse',
-    needle: 'parseCliArgs(',
+    satisfiedWhen: (code) => hasCallExpression(code, 'parseCliArgs'),
     reason: 'never calls parseCliArgs() — an unknown or mistyped flag would fall through to a default',
   },
   {
     rule: 'exit-contract',
-    needle: 'runSeoCli(',
+    satisfiedWhen: (code) => hasCallExpression(code, 'runSeoCli'),
     reason: 'never calls runSeoCli() — bad input would not reach the non-zero exit contract',
   },
   {
@@ -311,9 +313,9 @@ const startsRegexLiteral = (emitted) => {
 // the file on disk.
 //
 // Two readings come out of it, and both rules need their own. Rules that read
-// values (`selection: 'rows'`, `require('./lib/seo-cli-contract')`,
-// `argv.includes('--all')`) need the literals intact. Rules that look for a call
-// need them blanked: `requireNonEmptySelection(` or `requireNoBatchFailures(`
+// values (`selection: 'rows'`, `argv.includes('--all')`) need the literals
+// intact. Rules that look for a call need them blanked: `parseCliArgs(`,
+// `runSeoCli(`, `requireNonEmptySelection(` or `requireNoBatchFailures(`
 // inside a USAGE template, a regex or any other string is prose about the call,
 // not the call — and every
 // covered script writes its USAGE as a multi-line template, so that shape is the
@@ -436,6 +438,53 @@ const hasCallExpression = (code, name) => {
   const masked = maskSource(code, { literals: true })
   for (const match of masked.matchAll(new RegExp(`\\b${name}\\s*\\(`, 'g'))) {
     if (!NOT_A_CALL_BEFORE.includes(masked[match.index - 1] || ' ')) return true
+  }
+  return false
+}
+
+const unwrapStringLiteral = (value) => {
+  const text = unwrapParentheses(value)
+  const quote = text[0]
+  if ((quote === "'" || quote === '"' || quote === '`') && text.endsWith(quote) && text.length >= 2) {
+    return text.slice(1, -1)
+  }
+  return null
+}
+
+// `require('./lib/seo-cli-contract')` is itself a string literal, so masking
+// literals would erase the path. Locate `require(` in code position, then read
+// the first argument from the original source at the same offsets.
+const hasRequireOf = (code, modulePath) => {
+  const source = String(code || '')
+  const masked = maskSource(source, { literals: true })
+  for (const match of masked.matchAll(/\brequire\s*\(/g)) {
+    if (NOT_A_CALL_BEFORE.includes(masked[match.index - 1] || ' ')) continue
+    const open = masked.indexOf('(', match.index + 'require'.length)
+    if (open === -1) continue
+    let parentheses = 1
+    let brackets = 0
+    let braces = 0
+    let end = -1
+    for (let i = open + 1; i < masked.length; i++) {
+      const char = masked[i]
+      if (char === '(') parentheses++
+      else if (char === ')') {
+        parentheses--
+        if (parentheses === 0) {
+          end = i
+          break
+        }
+      } else if (char === '[') brackets++
+      else if (char === ']') brackets--
+      else if (char === '{') braces++
+      else if (char === '}') braces--
+      else if (char === ',' && parentheses === 1 && brackets === 0 && braces === 0) {
+        end = i
+        break
+      }
+    }
+    if (end === -1) continue
+    if (unwrapStringLiteral(source.slice(open + 1, end).trim()) === modulePath) return true
   }
   return false
 }
@@ -671,6 +720,7 @@ module.exports = {
   findViolationsInSource,
   hasBatchFailureGuardCall,
   hasCallExpression,
+  hasRequireOf,
   isCoveredFile,
   maskSource,
   readDeclaredSelections,
