@@ -369,7 +369,7 @@ describe('iOS release configuration', () => {
     const fakeNode = path.join(fakeBin, 'node');
     fs.writeFileSync(fakeNode, `#!/bin/sh
 case "$1" in
-  *ios-eas-artifact-download.js|*ios-artifact-audit.js) exit 0 ;;
+  *ios-release-guard.js|*ios-eas-artifact-download.js|*ios-artifact-audit.js) exit 0 ;;
 esac
 exec "$REAL_NODE" "$@"
 `);
@@ -380,7 +380,7 @@ if [ "$1" = "-C" ]; then shift 2; fi
 if [ "$1" = "branch" ]; then printf 'main\\n'; fi
 if [ "$1" = "rev-parse" ]; then printf 'test-revision\\n'; fi
 exit 0
-`);
+    `);
     fs.chmodSync(fakeGit, 0o755);
     const fakeNpx = path.join(fakeBin, 'npx');
     fs.writeFileSync(fakeNpx, `#!/usr/bin/env node

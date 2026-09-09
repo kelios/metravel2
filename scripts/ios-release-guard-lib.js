@@ -183,6 +183,116 @@ const PRODUCTION_AASA_ORIGIN =
 const PRODUCTION_AASA_APPLE_CDN =
   'https://app-site-association.cdn-apple.com/a/v1/metravel.by';
 
+const AASA_ROUTE_POLICY_CASES = Object.freeze([
+  Object.freeze({ id: 'travel-detail', path: '/travels/alps', allowed: true }),
+  Object.freeze({ id: 'article-detail', path: '/article/123', allowed: true }),
+  Object.freeze({ id: 'quest-detail', path: '/quests/warsaw/42', allowed: true }),
+  Object.freeze({ id: 'map-root', path: '/map', allowed: true }),
+  // SharedWebCredentials normalizes the root route's trailing slash. Requiring
+  // /map to allow while /map/ denies is therefore impossible on Apple systems.
+  Object.freeze({ id: 'map-root-trailing-slash', path: '/map/', allowed: true }),
+  Object.freeze({ id: 'user-profile', path: '/user/123', allowed: true }),
+  Object.freeze({ id: 'trips-root', path: '/trips', allowed: true }),
+  Object.freeze({ id: 'trip-detail', path: '/trips/123', allowed: true }),
+  Object.freeze({ id: 'trip-plan', path: '/trips/plan/123', allowed: true }),
+  Object.freeze({ id: 'travel-deeper', path: '/travels/alps/extra', allowed: false }),
+  Object.freeze({ id: 'article-private', path: '/article/123/edit', allowed: false }),
+  Object.freeze({ id: 'quest-deeper', path: '/quests/warsaw/42/extra', allowed: false }),
+  Object.freeze({ id: 'map-deeper', path: '/map/extra', allowed: false }),
+  Object.freeze({ id: 'user-private', path: '/user/123/settings', allowed: false }),
+  Object.freeze({ id: 'trip-deeper', path: '/trips/123/extra', allowed: false }),
+  Object.freeze({ id: 'trip-plan-deeper', path: '/trips/plan/123/extra', allowed: false }),
+  Object.freeze({ id: 'trip-plan-create', path: '/trips/plan/create', allowed: false }),
+  Object.freeze({ id: 'profile-private', path: '/profile', allowed: false }),
+  Object.freeze({ id: 'admin-private', path: '/admin/', allowed: false }),
+]);
+
+function runAppleAasaRouteMatcher(components, urls, options = {}) {
+  const platform = options.platform || process.platform;
+  if (platform !== 'darwin') {
+    throw new Error('Apple AASA semantic matcher requires macOS');
+  }
+
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-aasa-matcher.'));
+  const executable = path.join(tempRoot, 'matcher');
+  try {
+    execFileSync(
+      options.xcrunPath || 'xcrun',
+      [
+        'clang',
+        '-fobjc-arc',
+        '-framework',
+        'Foundation',
+        '-F',
+        '/System/Library/PrivateFrameworks',
+        '-framework',
+        'SharedWebCredentials',
+        path.join(__dirname, 'ios-aasa-apple-matcher.m'),
+        '-o',
+        executable,
+      ],
+      { encoding: 'utf8', stdio: 'pipe', timeout: 20000 }
+    );
+    const raw = execFileSync(executable, [], {
+      encoding: 'utf8',
+      input: JSON.stringify({ components, urls }),
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 20000,
+    });
+    const results = JSON.parse(raw);
+    if (!Array.isArray(results) || results.length !== urls.length ||
+        results.some(result => !result || typeof result.matched !== 'boolean' ||
+          typeof result.excluded !== 'boolean')) {
+      throw new Error('Apple AASA semantic matcher returned an invalid result');
+    }
+    return results;
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
+function validateAppleAppSiteAssociationRoutePolicy(data, options = {}) {
+  const details = data?.applinks?.details;
+  if (!Array.isArray(details) || details.length !== 1 ||
+      !Array.isArray(details[0]?.components)) {
+    return [{
+      code: 'IOS_AASA_ROUTE_POLICY',
+      detail: 'Apple semantic route matrix requires exactly one components policy',
+    }];
+  }
+
+  const cases = options.routePolicyCases || AASA_ROUTE_POLICY_CASES;
+  const matcher = options.runAasaRouteMatcher || runAppleAasaRouteMatcher;
+  let results;
+  try {
+    results = matcher(
+      details[0].components,
+      cases.map(routeCase => new URL(routeCase.path, EXPECTED.productionOrigin).href),
+      options
+    );
+    if (!Array.isArray(results) || results.length !== cases.length) {
+      throw new Error('Apple AASA semantic matcher returned an invalid result');
+    }
+  } catch {
+    return [{
+      code: 'IOS_AASA_MATCHER_UNAVAILABLE',
+      detail: 'system Apple AASA semantic matcher could not run; release is blocked',
+    }];
+  }
+
+  const failed = cases.filter((routeCase, index) => {
+    const result = results[index];
+    const isAllowed = result?.matched === true && result.excluded !== true;
+    return isAllowed !== routeCase.allowed;
+  });
+  if (failed.length === 0) return [];
+
+  return [{
+    code: 'IOS_AASA_ROUTE_POLICY',
+    detail: `Apple semantic route matrix failed: ${failed.map(routeCase => routeCase.id).join(', ')}`,
+  }];
+}
+
 /**
  * TN3155: modern AASA is `appIDs` (array) + `components`. Mixing in legacy
  * `appID` (string) or `paths` leaves Universal Links associated-domain
@@ -265,7 +375,9 @@ function checkLiveProductionAasa(options = {}) {
         detail: 'origin and Apple CDN AASA documents differ',
       }];
     }
-    return validateAppleAppSiteAssociationDocument(origin);
+    const schemaErrors = validateAppleAppSiteAssociationDocument(origin);
+    if (schemaErrors.length > 0) return schemaErrors;
+    return validateAppleAppSiteAssociationRoutePolicy(origin, options);
   } catch (error) {
     return [{
       code: 'IOS_AASA_FETCH',
@@ -987,6 +1099,7 @@ function validateIosRelease(root = process.cwd(), options = {}) {
 }
 
 module.exports = {
+  AASA_ROUTE_POLICY_CASES,
   EXPECTED,
   IOS_IPAD_ORIENTATIONS,
   IOS_PURPOSE_STRINGS,
@@ -994,6 +1107,8 @@ module.exports = {
   PRODUCTION_AASA_APPLE_CDN,
   PRODUCTION_AASA_ORIGIN,
   checkLiveProductionAasa,
+  runAppleAasaRouteMatcher,
   validateAppleAppSiteAssociationDocument,
+  validateAppleAppSiteAssociationRoutePolicy,
   validateIosRelease,
 };
