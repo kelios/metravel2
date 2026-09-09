@@ -345,14 +345,25 @@ App Review Information, в Git и на борд не попадают.
   Store Connect и отсюда не видны — сверку анкеты с этим списком делает владелец
   в ASC (пункт «Что остаётся владельцу»).
 
+## Что уже в App Store Connect (2026-09-09)
+
+Повторный `eas metadata:pull` после `eas metadata:push`:
+
+- Версия `1.0.5`, copyright `2026 MeTravel`, категории Travel + Social Networking,
+  релиз ручной (`automaticRelease: false`).
+- Локали карточки: RU / UK / PL / EN-US. У всех заполнены name, subtitle,
+  description, promotional text, keywords, support/marketing/privacy URL.
+- Скриншоты во всех четырёх локалях: 4 кадра `APP_IPHONE_67` (1320×2868) и
+  4 кадра `APP_IPAD_PRO_3GEN_129` (2064×2752). Исходники — `.codex-temp/appstore-shots/`.
+- App Review notes уже есть. Submit не выполнялся.
+
 ## Что остаётся владельцу
 
-1. Загрузить готовый набор из `.codex-temp/appstore-shots/` (4 кадра iPhone 6.9"
-   и 4 кадра iPad 13", гейт зелёный) в ASC и вставить тексты выше. Каталог не
-   коммитится; пересобрать набор можно повторным прогоном по разделу
-   «Скриншоты».
-3. Заполнить demo account и App Review contact только в ASC.
-4. Сверить анкету App Privacy в ASC с составом `PrivacyInfo.xcprivacy` из
+1. Заполнить App Review contact (имя, email, телефон в международном формате)
+   только в защищённых полях App Store Connect.
+2. Заполнить demo account только там же. Логин/пароль в Git и на борд не
+   копировать. `demoAccountRequired` сейчас `true`.
+3. Сверить анкету App Privacy в ASC с составом `PrivacyInfo.xcprivacy` из
    раздела «Privacy» — из репозитория опубликованные ответы не проверяются.
-5. Подтвердить пакет в чате — после этого карточка #1424 может идти в
+4. Подтвердить пакет в чате — после этого карточка #1424 может идти в
    testing/done. Submit (#1425 или отдельная команда) здесь не выполняется.
