@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Google Play Operator"
   short_description: "Local Android build and safe Play Production release"
-  default_prompt: "Use $metravel-google-play-operator to build Android locally without EAS, validate the temporary Play production edit, protect all testing tracks, and commit only the production release when eligibility is green."
+  default_prompt: "Use $metravel-google-play-operator to build Android locally without EAS, require google-services.json, dry-run the authorized Play tracks, and commit production and/or alpha+internal only with explicit owner authority."

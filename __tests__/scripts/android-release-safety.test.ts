@@ -167,6 +167,13 @@ describe('Android release safety contract', () => {
     );
     expect(gradleRunner).toContain("[task, '--no-daemon']");
     expect(gradleRunner).toContain('verifyFacebookAndroidResources');
+
+    const releaseAgent = fs.readFileSync(
+      path.join(ROOT, 'scripts/android-release-agent.js'),
+      'utf8'
+    );
+    expect(releaseAgent).toContain('resolveGoogleServicesFile');
+    expect(releaseAgent).toContain('google-services.json is missing');
   });
 
   it('loads a portable release bundle without macOS Keychain', () => {

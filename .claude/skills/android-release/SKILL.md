@@ -1,6 +1,6 @@
 ---
 name: android-release
-description: "Регламент релиза Android: bump → гейт → локальная Gradle-сборка подписанного AAB → Play Publisher API, без EAS. Триггеры: «выпусти Android-приложение», «релиз Android», «опубликовать в Google Play»."
+description: "Регламент релиза Android: bump → гейт → локальная Gradle-сборка подписанного AAB → Play Publisher API, без EAS. Триггеры: «выпусти Android», «релиз Android», «опубликовать в Google Play», «залей android», «новую сборку в стор», «обнови в сторе», «собери android»."
 ---
 
 # android-release

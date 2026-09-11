@@ -165,10 +165,18 @@ Portable-бандл, всё gitignored, содержимое НЕ печатат
 .secrets/metravel-android-upload.jks
 .secrets/metravel-android-prod.env
 .secrets/google-play-service-account.json
+.secrets/google-services.json
 ```
 
+Пятый файл — Firebase Android config для `by.metravel.app` (#1818). Без него
+`android:build:prod` падает до Gradle. Если файла нет: Firebase Console →
+Android app с этим package, либо завести app на GCP-проекте `metravel` и
+положить скачанный JSON в `.secrets/google-services.json`. Фиктивный конфиг
+запрещён.
+
 - Проверка готовности среды одной командой: `npm run android:release:doctor` (Node 22.13.1+
-  внутри мажора 22, JDK 17–21, Android SDK, keystore, prod-env, service account).
+  внутри мажора 22, JDK 17–21, Android SDK, keystore, prod-env, service account,
+  google-services.json).
 - Gradle fail-closed: без `METRAVEL_ANDROID_KEYSTORE_*` release-таск падает до сборки,
   debug-keystore для release не используется никогда.
 - Upload-сертификат: `.secrets/metravel-android-upload-certificate.pem`, отпечаток берётся

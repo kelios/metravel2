@@ -1,6 +1,6 @@
 ---
 name: metravel-google-play-operator
-description: Prepare, locally build, submit, and verify metravel Android production releases in Google Play without EAS cloud quota. Protect closed-testing tracks, verify versionCode/upload signing, and report Play eligibility blockers.
+description: Prepare, locally build, submit, and verify metravel Android Google Play releases without EAS. Use for залей android, новую сборку в стор, обнови в сторе, android:build:prod, production commit, or owner-authorized alpha+internal testing updates.
 ---
 
 # Metravel Google Play Operator
@@ -19,11 +19,11 @@ build/signing/Play sections of `docs/RELEASE.md`,
 - Execute only stages explicitly authorized in the current task. Build,
   upload/submit, and release authority do not imply one another; retain an
   authorization already given in the conversation without asking again.
-- `alpha`, `internal`, `beta`, testers, countries and the active closed-testing
-  release are protected. Never mutate or promote them through this workflow.
-  Explicit closed/internal testing updates use the separate `android-release`
-  workflow and wrappers in `docs/ANDROID_OWNER_GUIDE.md`; this production
-  workflow never substitutes for that route.
+- `beta`, testers, countries and staged rollout stay protected. `production`
+  is writable only through `android:submit:production`. `alpha`+`internal` are
+  writable only through `android:submit:testing` after an explicit owner request
+  for testing tracks (see `docs/ANDROID_OWNER_GUIDE.md`). One wrapper never
+  writes the other family.
 - A status check uses a temporary Play edit and deletes it without commit.
 
 ## Current Release Contract
@@ -32,10 +32,12 @@ build/signing/Play sections of `docs/RELEASE.md`,
 - Use project-owned npm wrappers; Android build is local Gradle and Play upload is
   `scripts/android-play-release.js`.
 - `app.json` is the version source. Release signing loads the portable
-  gitignored `.secrets/metravel-android-release.json` bundle (or the four
-  `METRAVEL_ANDROID_KEYSTORE_*` overrides) and must never fall back to debug key.
-- Only `production` is writable. Dry-run validates and deletes the edit; actual
-  commit requires the explicit production wrapper.
+  gitignored `.secrets` bundle (keystore JSON, upload `.jks`, prod env, Play
+  service account, and `google-services.json` for `by.metravel.app`) or the four
+  `METRAVEL_ANDROID_KEYSTORE_*` overrides and must never fall back to debug key.
+  Missing Firebase config fails the production build before Gradle (#1818).
+- Dry-run validates and deletes the edit. Actual commit uses the matching
+  wrapper for the authorized tracks only.
 - Never print service-account JSON, keystore passwords, private keys, access
   tokens, or auth responses. Confirm credential files are ignored before use.
 
@@ -44,9 +46,9 @@ build/signing/Play sections of `docs/RELEASE.md`,
 1. Preflight: confirm `main`, inspect `git status --short`, check the exclusive operation gate, run `npm run android:release:doctor`, verify local signing/service-account presence without exposing values, and record target `production`.
 2. Before a release build, require the documented release checks and successful local USB Android smoke for the changed native scope.
 3. For an authorized build, run `npm run android:prebuild` before `npm run android:build:prod` as required by `docs/RELEASE.md` → `Android`; verify the local AAB metadata/upload certificate.
-4. If upload is authorized, run `npm run android:submit:latest`: it uploads the AAB to a temporary production edit, then validates and deletes that edit without commit. A build-only request stops with the verified local artifact.
-5. If production publication is explicitly authorized, dry-run is green, and Play eligibility allows it, run `npm run android:submit:production`. This command commits a `completed` production release; upload-only authority does not permit it.
-6. Verify production status/versionCode and confirm protected tracks were unchanged. Do not trust submit output alone.
+4. If upload is authorized, dry-run the authorized family: `npm run android:submit:latest` for production, `npm run android:submit:testing:latest` for alpha+internal. Each loads the AAB into a temporary edit, validates, and deletes it. A build-only request stops with the verified local artifact.
+5. If publication is explicitly authorized and the matching dry-run is green, commit with `npm run android:submit:production` and/or `npm run android:submit:testing`. Production is `completed` at 100% with no staged rollout.
+6. Verify with `npm run android:play:status` that authorized tracks moved to the new versionCode and the other family did not. Do not trust submit output alone.
 7. On `FAILED_PRECONDITION`, stop retries, confirm the temporary edit was deleted, and report the exact Play Console eligibility action.
 8. Update only the relevant board ticket; do not mark release work done without production track evidence.
 

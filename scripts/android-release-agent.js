@@ -11,6 +11,7 @@ const {
   resolveProductionEnvPath,
   resolveServiceAccountPath,
 } = require('./android-release-secrets')
+const { resolveGoogleServicesFile } = require('./android-firebase-config')
 
 const ROOT_DIR = path.resolve(__dirname, '..')
 const ANDROID_DIR = path.join(ROOT_DIR, 'android')
@@ -331,6 +332,15 @@ function doctor(mode = 'production') {
           ? 'ready'
           : 'not copied (build-only mode is still available)'
       }\n`,
+    )
+    const googleServices = resolveGoogleServicesFile({ env: environment })
+    if (!googleServices) {
+      fail(
+        'google-services.json is missing for package by.metravel.app. Put the Firebase Android config in .secrets/google-services.json (or the repo root).',
+      )
+    }
+    process.stdout.write(
+      '[android-agent] Firebase Android config (google-services.json): ready\n',
     )
   }
   return environment
