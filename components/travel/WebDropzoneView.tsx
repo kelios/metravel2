@@ -4,8 +4,9 @@ import type { useDropzone as UseDropzoneHook } from 'react-dropzone';
 import Feather from '@expo/vector-icons/Feather';
 import Button from '@/components/ui/Button';
 import type { useThemedColors } from '@/hooks/useTheme';
-import { WEB_SUPPORTED_UPLOAD_EXTENSIONS } from '@/components/travel/gallery/utils';
+import { WEB_IMAGE_PICK_MAX_MB, WEB_SUPPORTED_UPLOAD_EXTENSIONS } from '@/components/travel/gallery/utils';
 import { translate as i18nT } from '@/i18n';
+import { formatInteger } from '@/i18n/format';
 
 // #1148: web-вью загрузчика фото с dropzone-зоной, вынесен из
 // PhotoUploadWithPreview. Модуль экспортирует ФАБРИКУ: useDropzone приходит из
@@ -29,7 +30,7 @@ export type WebDropzoneViewProps = {
   uploadMessage: string | null;
   hasValidImage: boolean;
   currentDisplayUrl: string | undefined;
-  validateFile: (file: File) => string | null;
+  reportClientError: (message: string) => void;
   handleUploadImage: (file: any) => Promise<void>;
   handleRemovePress: () => void;
   handleImageLoadCheck: (img: HTMLImageElement) => void;
@@ -42,24 +43,31 @@ export const createWebDropzoneView = (
   const WebDropzoneView: React.FC<WebDropzoneViewProps> = ({
   disabled, isMobileWeb, placeholder, maxSizeMB, colors, styles,
   loading, uploadProgress, error, uploadMessage, hasValidImage, currentDisplayUrl,
-  validateFile, handleUploadImage, handleRemovePress, handleImageLoadCheck, handleImageError,
+  reportClientError, handleUploadImage, handleRemovePress, handleImageLoadCheck, handleImageError,
 }) => {
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const pickMaxSizeMB = Math.max(maxSizeMB, WEB_IMAGE_PICK_MAX_MB);
   const uploadWebFile = useCallback(async (file?: File) => {
     if (disabled || !file) return;
-    const validationError = validateFile(file);
-    if (validationError) return;
     await handleUploadImage(file);
-  }, [disabled, handleUploadImage, validateFile]);
+  }, [disabled, handleUploadImage]);
 
   const { getRootProps, getInputProps, isDragActive, open: openFilePicker } = useDropzone({
     onDrop: async (acceptedFiles, rejectedFiles) => {
       if (disabled) return;
       if (rejectedFiles.length > 0) {
-        const rejection = rejectedFiles[0];
-        // Validation handled by the hook, but show dropzone-specific errors
-        if (rejection.errors.some(e => e.code === 'file-too-large')) return;
-        if (rejection.errors.some(e => e.code === 'file-invalid-type')) return;
+        const codes = rejectedFiles[0].errors.map((item) => item.code);
+        if (codes.includes('file-too-large')) {
+          reportClientError(i18nT('shared:hooks.usePhotoUpload.fayl_slishkom_bolshoy_maksimalnyy_razmer_val_4f239ac1', {
+            value1: formatInteger(maxSizeMB),
+          }));
+          return;
+        }
+        if (codes.includes('file-invalid-type')) {
+          reportClientError(i18nT('shared:hooks.usePhotoUpload.nepodderzhivaemyy_format_razresheny_jpg_png__f81e3a7b'));
+          return;
+        }
+        reportClientError(i18nT('shared:hooks.usePhotoUpload.proizoshla_oshibka_pri_zagruzke_cc3f9675'));
         return;
       }
       await uploadWebFile(acceptedFiles[0]);
@@ -67,7 +75,7 @@ export const createWebDropzoneView = (
     // Тот же список расширений, что у галереи: обложка отклоняла .heics/.heifs,
     // которые галерея принимает — расхождение без причины (см. gallery/utils.ts).
     accept: { 'image/*': WEB_SUPPORTED_UPLOAD_EXTENSIONS },
-    maxSize: maxSizeMB * 1024 * 1024,
+    maxSize: pickMaxSizeMB * 1024 * 1024,
     multiple: false,
     disabled,
     noClick: isMobileWeb,
@@ -101,6 +109,17 @@ export const createWebDropzoneView = (
           <Feather name="x" size={18} color={colors.textOnPrimary} />
         </Pressable>
       )}
+    </View>
+  ) : null;
+  const replaceHint = hasValidImage && !loading && !isMobileWeb ? (
+    <Text style={styles.placeholderSubtext}>
+      {i18nT('travel:components.travel.PhotoUploadWithPreview.ili_nazhmite_dlya_vybora_fayla_8e7a14a9')}
+    </Text>
+  ) : null;
+  const errorState = error ? (
+    <View style={styles.errorContainer}>
+      <Feather name="alert-circle" size={14} color={colors.danger} />
+      <Text style={styles.errorText}>{error}</Text>
     </View>
   ) : null;
 
@@ -158,12 +177,8 @@ export const createWebDropzoneView = (
           </View>
         </View>
         {loadingState || preview}
-        {error && !currentDisplayUrl && (
-          <View style={styles.errorContainer}>
-            <Feather name="alert-circle" size={14} color={colors.danger} />
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
+        {replaceHint}
+        {errorState}
         {uploadMessage && !error && (
           <View style={styles.successContainer}>
             <Feather name="check-circle" size={14} color={colors.success} />
@@ -193,12 +208,8 @@ export const createWebDropzoneView = (
           </View>
         )}
       </div>
-      {error && !currentDisplayUrl && (
-        <View style={styles.errorContainer}>
-          <Feather name="alert-circle" size={14} color={colors.danger} />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
+      {replaceHint}
+      {errorState}
       {uploadMessage && !error && (
         <View style={styles.successContainer}>
           <Feather name="check-circle" size={14} color={colors.success} />

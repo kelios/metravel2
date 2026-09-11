@@ -55,8 +55,8 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   const {
     loading, uploadProgress, error, uploadMessage,
     hasValidImage, currentDisplayUrl,
-    handleUploadImage, handleRemovePress, validateFile,
-    handleImageLoadCheck, handleImageError,
+    handleUploadImage, handleRemovePress,
+    handleImageLoadCheck, handleImageError, reportClientError,
   } = usePhotoUpload({ collection, idTravel, oldImage, onUpload, onPreviewChange, onRequestRemove, disabled, maxSizeMB });
 
   useEffect(() => {
@@ -158,7 +158,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         uploadMessage={uploadMessage}
         hasValidImage={hasValidImage}
         currentDisplayUrl={currentDisplayUrl}
-        validateFile={validateFile}
+        reportClientError={reportClientError}
         handleUploadImage={handleUploadImage}
         handleRemovePress={handleRemovePress}
         handleImageLoadCheck={handleImageLoadCheck}

@@ -7,6 +7,10 @@ export const WEB_SUPPORTED_UPLOAD_EXTENSIONS = [
   '.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif', '.heics', '.heifs',
 ]
 
+// Сырой кадр с телефона часто тяжелее серверного лимита 10 МБ. Dropzone должен
+// пропустить его в `prepareWebImageFileForUpload`; 10 МБ проверяется уже после сжатия.
+export const WEB_IMAGE_PICK_MAX_MB = 40
+
 const API_BASE_URL: string =
   process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '')
 

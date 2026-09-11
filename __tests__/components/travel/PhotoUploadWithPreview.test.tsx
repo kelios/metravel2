@@ -445,6 +445,117 @@ describe('PhotoUploadWithPreview', () => {
             }
         });
 
+        it('web: shows upload error even when an existing cover is already displayed', async () => {
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+            const blobUrl = 'blob:http://localhost:8081/test-blob-failed-replace';
+            const originalCreateObjectURL = (global as any).URL?.createObjectURL;
+            (global as any).URL = (global as any).URL || {};
+            (global as any).URL.createObjectURL = jest.fn(() => blobUrl);
+            // Replace-failure in the browser commits a preview/spinner before
+            // the network error. A sync reject batches those updates away.
+            let rejectUpload: (reason?: unknown) => void = () => {};
+            mockUploadImage.mockImplementationOnce(
+                () => new Promise((_, reject) => {
+                    rejectUpload = reject;
+                }),
+            );
+
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        idTravel={'739'}
+                        oldImage="https://cdn.example.com/existing-cover.webp"
+                    />
+                );
+
+                await waitFor(() => expect(typeof lastOnDrop).toBe('function'));
+                const file = new File([new Uint8Array([1, 2, 3])], 'cover.jpg', { type: 'image/jpeg' });
+                let dropPromise: Promise<unknown> = Promise.resolve();
+                await act(async () => {
+                    dropPromise = lastOnDrop([file], []);
+                });
+                await waitFor(() => expect(mockUploadImage).toHaveBeenCalledTimes(1));
+                await act(async () => {
+                    rejectUpload(new Error('Upload a valid image file.'));
+                    await dropPromise;
+                });
+
+                await waitFor(() => {
+                    expect(screen.getByText(/произошла ошибка при загрузке/i)).toBeTruthy();
+                    expect(getWebPreviewImg(screen).props.src).toBe('https://cdn.example.com/existing-cover.webp');
+                });
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+                (global as any).URL.createObjectURL = originalCreateObjectURL;
+            }
+        });
+
+        it('web: surfaces dropzone file-too-large instead of swallowing it, and picks up to 40MB', async () => {
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        idTravel={'739'}
+                        oldImage="https://cdn.example.com/existing-cover.webp"
+                    />
+                );
+
+                await waitFor(() => expect(typeof lastOnDrop).toBe('function'));
+                expect(lastDropzoneOptions.maxSize).toBe(40 * 1024 * 1024);
+
+                await act(async () => {
+                    await lastOnDrop([], [{
+                        file: new File([new Uint8Array([1])], 'huge.jpg', { type: 'image/jpeg' }),
+                        errors: [{ code: 'file-too-large', message: 'File is larger than 10485760 bytes' }],
+                    }]);
+                });
+
+                await waitFor(() => {
+                    expect(mockUploadImage).not.toHaveBeenCalled();
+                    expect(screen.getByText(/файл слишком большой/i)).toBeTruthy();
+                });
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+            }
+        });
+
+        it('web: surfaces dropzone file-invalid-type instead of swallowing it', async () => {
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        idTravel={'739'}
+                        oldImage="https://cdn.example.com/existing-cover.webp"
+                    />
+                );
+
+                await waitFor(() => expect(typeof lastOnDrop).toBe('function'));
+
+                await act(async () => {
+                    await lastOnDrop([], [{
+                        file: new File([new Uint8Array([1])], 'notes.txt', { type: 'text/plain' }),
+                        errors: [{ code: 'file-invalid-type', message: 'File type not allowed' }],
+                    }]);
+                });
+
+                await waitFor(() => {
+                    expect(mockUploadImage).not.toHaveBeenCalled();
+                    expect(screen.getByText(/неподдерживаемый формат/i)).toBeTruthy();
+                });
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+            }
+        });
+
         it('web: does not call uploadImage when idTravel is missing (preview-only mode), but still emits blob preview', async () => {
             const originalOs = Platform.OS;
             Object.defineProperty(Platform, 'OS', { value: 'web' });

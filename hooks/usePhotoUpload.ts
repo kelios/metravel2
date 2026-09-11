@@ -205,12 +205,9 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     }
     const normalized = normalizeImageUrl(oldImage);
     if (normalized && normalized.length > 0) {
-      setImageUri(normalized); setFallbackImageUrl(oldImage); setHasTriedFallback(false); setPreviewUrl(null);
+      setImageUri(normalized); setFallbackImageUrl(oldImage); setHasTriedFallback(false); setPreviewUrl(null); setError(null);
     }
   }, [oldImage, isManuallySelected]);
-
-  // Clear error when image appears
-  useEffect(() => { if (imageUri || previewUrl) setError(null); }, [imageUri, previewUrl]);
 
   // Notify parent of preview changes
   useEffect(() => {
@@ -340,11 +337,18 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     setImageUri(null); setPreviewUrl(null); setError(i18nT('shared:hooks.usePhotoUpload.izobrazhenie_ne_naydeno_6a0466ad'));
   }, [currentDisplayUrl, fallbackImageUrl, lastPreviewUrl, hasTriedFallback, applyFallback, handleRemoveImage, scheduleRemoteRetry]);
 
+  const reportClientError = useCallback((message: string) => {
+    if (!message) return;
+    setError(message);
+    setUploadMessage(null);
+  }, []);
+
   return {
     imageUri, previewUrl, loading, uploadProgress, error, uploadMessage,
     hasValidImage, currentDisplayUrl, fallbackImageUrl, lastPreviewUrl, hasTriedFallback,
-    handleUploadImage, handleRemovePress, validateFile,
+    handleUploadImage, handleRemovePress,
     handleImageLoadCheck, handleImageError, applyFallback,
+    reportClientError,
     blobUrlsRef,
   };
 }
