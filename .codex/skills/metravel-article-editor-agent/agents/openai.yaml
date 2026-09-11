@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Article Editor"
   short_description: "Manage article and travel-guide content safely"
-  default_prompt: "Use $metravel-article-editor-agent to manage the requested article or travel-guide draft, media, author, and publish state with a rollback snapshot, hidden credentials, explicit confirmation before creative prose, and final API/browser verification."
+  default_prompt: "Use $metravel-article-editor-agent for the requested article or Julia travel: live seo-edit or draft upsert, media, Julia authorship, rollback snapshot, and API verification. Owner-named travel prose is confirmation — follow metravel-travel-article, do not ask again."

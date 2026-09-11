@@ -21,6 +21,8 @@
 
 Обычная FE-задача: прочитай `.codex/skills/metravel-feature-builder/SKILL.md`.
 Travel/map/profile/achievements/quests — соответствующий `$metravel-*-expert`.
+Статья/путеводитель/впечатления/дневник Юли — `.claude/skills/metravel-travel-article/SKILL.md`
+и роль `travel-writer`; API publish/media без прозы — `$metravel-article-editor-agent`.
 Широкий/неясный/high-risk scope — `.codex/skills/metravel-codex-orchestrator/SKILL.md`.
 Карта каталога: `docs/CODEX_SKILLS.md` только при аудите, не перед каждой задачей.
 

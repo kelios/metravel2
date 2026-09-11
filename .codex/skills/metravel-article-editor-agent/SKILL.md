@@ -1,64 +1,60 @@
 ---
 name: metravel-article-editor-agent
-description: "Create, edit, verify, publish, unpublish, or add media to metravel articles/travel guides through approved APIs. Use for article/travel upsert, photo folders, media uploads, or explicitly confirmed text changes."
+description: "Create, edit, publish, or add media to metravel articles and Julia travel guides via API. Use for upsert, photo folders, uploads, and owner-requested prose: отредактируй статью, путеводитель, добавь впечатления, diary notes. /article-editor"
 ---
 
 # Metravel Article Editor Agent
 
-Use this skill for article and travel-guide content operations: photo-folder drafts, HTML/media insertion, publish/unpublish actions, and verification of article/travel pages. Do not independently write or creatively edit prose.
+Use this skill for article and travel-guide operations: live-text edits, photo-folder drafts, HTML/media insertion, publish/unpublish, and verification.
 
-`AGENTS.md` is inherited. Load only the article/quest authority and media
-headings from `docs/RULES.md`, the affected API/feature contract, and the exact
-editor/media or SEO section of `docs/DEVELOPMENT.md` when needed.
+`AGENTS.md` is inherited. For Julia travel prose, load
+`.claude/skills/metravel-travel-article/SKILL.md` and follow it — do not invent a
+second style. For Grok, the matching role is `travel-writer`.
 
 ## Scope
 
-This agent may operate the article API when the user explicitly asks for article media/content changes.
+Operate the article/travel API when the user asks for content changes.
 
-- Public read: `GET /api/articles/`, `GET /api/articles/{id}/`.
+- Public read: `GET /api/articles/`, `GET /api/articles/{id}/`, `GET /api/travels/{id}/`.
 - Admin writes: `POST /api/articles/`, `PUT/PATCH /api/articles/{id}/`, `POST /api/articles/{id}/publish/`, `POST /api/articles/{id}/unpublish/`.
 - Article fields: `name`, `description`, `article_type_id`, `publish`.
-- Travel article read/write: `GET /api/travels/{id}/`, `PUT /api/travels/upsert/`, existing `scripts/seo-edit.js`, and project-owned guide scripts when they match the task.
-- For rich-text images inside article/travel descriptions, use `POST /api/upload` with `collection=description` when a travel id is the target container. For pure article records, confirm the supported backend media path before uploading; do not invent a collection name.
+- Live travel body: `scripts/seo-edit.js --desc-file` (backup + verify + rollback). Do not run `metravel_publish.py` on a published travel — it unpublishes.
+- New travel draft: `PUT /api/travels/upsert/` with `id:null` and `publish=false`, Julia token only.
+- Description images: `POST /api/upload` `collection=description` with the travel id. For pure article records, confirm the backend media path; do not invent a collection name.
 
 ## Text Authority
 
-Codex may independently add, generate, upload, and insert images/media for articles, route points, and quests when requested.
+Do not rewrite article/quest prose as a side effect of a code or docs task.
 
-Codex must not independently write, expand, rewrite, or creatively improve article/quest prose, tasks, hints, titles, SEO text, or other authored text. If the task appears to require new or changed authored text, ask the user for explicit confirmation before doing the text work, even when the original request sounds direct.
+When the current request is to edit, write, enrich, or add impressions, distances, tips, diary, or guidebook text to a named travel (id, URL, slug, or pasted notes plus link) — that is confirmation. Do not ask again. Load `metravel-travel-article` and write.
 
-For a new travel article, use the designated Julia author credentials already stored in `.env.e2e`, verify the created author is user id `1`, and default to `publish=false` unless publication was explicitly requested. Never print the author credential or token. If the record is created under the wrong author, stop and use the documented rollback/recreate path rather than trying to spoof authorship in the payload.
+- `userId` ≠ 1: guest article. Do not change prose. Ask the owner.
+- Do not invent personal experience missing from the owner's notes, the existing article, or visible photos.
+- Keep Julia's existing paragraphs and italic kickers; insert around them.
+- Vague "improve my articles" with no target: ask for id or URL.
+
+New travel records: Julia credentials from `.env.e2e` (`E2E_EMAIL2`), verify author user id `1`, `publish=false` unless publication was requested. Never print the credential. Wrong author → documented `DELETE` + recreate, never spoof authorship in the payload.
 
 ## Secrets
 
-Never print, echo, screenshot, or commit tokens.
+Never print, echo, screenshot, or commit tokens. Logs may say `token: present` or `token: missing`.
 
-Preferred token source order:
-
-1. `.secrets/metravel-token.json` in the repo root.
-2. `METRAVEL_TOKEN` environment variable.
-3. Legacy `~/.metravel_token` only when `.secrets` is unavailable.
-
-When a script needs the token, load it inside the script/process and pass only the `Authorization: Token <token>` header. Logs may say `token: present` or `token: missing`, never the value.
+- Author-bearing writes (new travel, editorial comment, gallery captions under Julia): Julia token.
+  `METRAVEL_TOKEN=$(E2E_EMAIL=$E2E_EMAIL2 E2E_PASSWORD=$E2E_PASSWORD2 node scripts/get-quest-token.js | tail -1)`
+- Body-only `seo-edit` on Julia's article preserves author; default `.secrets/metravel-token.json` / `~/.metravel_token` is Sergey (id 104) and must not create articles or post the editorial comment.
 
 ## Editing Workflow
 
-1. Identify the article by id, URL, slug fallback, or search query.
-2. Fetch the current article JSON and save a rollback snapshot under an ignored folder:
-   - `.codex-temp/articles/<article-id>/before.json` for task-local work, or
-   - `scripts/.seo-backups/` when reusing SEO scripts.
-3. Edit only the requested fields. Preserve `article_type_id` and `publish` unless the user asked to change them. For authored text fields, require the confirmation from `Text Authority` before editing.
-4. Sanitize HTML through existing article editor rules when possible:
-   - `utils/articleEditorSanitize.ts`
-   - `components/article/articleEditorConfig.ts`
-   - `utils/sanitizeRichText.ts`
-5. Avoid direct external-link patterns in generated HTML. Keep external links compatible with the frontend sanitizer and governance rules.
-6. Apply the API write with a dry-run first when the script supports it.
-7. Re-fetch the article and compare the intended fields.
-8. Verify the public page or API response. For visible article body changes, use browser verification and a screenshot when feasible.
-9. If publish state, article type, title, or body regresses unexpectedly, restore from the rollback snapshot before handoff.
+1. Identify by id, URL, slug, or search. `GET` and confirm `userId`.
+2. Snapshot: `scripts/.seo-backups/` via `seo-edit`, or `.codex-temp/articles/<id>/before.json`.
+3. Travel prose → `metravel-travel-article` (enrichment / diary mode / photo folder). Preserve `publish` and `moderation` unless asked.
+4. Sanitize through `utils/articleEditorSanitize.ts` / `utils/sanitizeRichText.ts` when generating HTML. Keep external links sanitizer-compatible.
+5. Dry-run `seo-edit` when writing a live description, then write.
+6. Re-GET: intended fields, image count, no `alt="Изображение"`.
+7. SPA shows API text immediately; crawler HTML updates only after SSG rebuild — say so in the report.
+8. Unexpected publish/type/title/body regression → restore from backup before handoff.
 
-For photo-folder/travel-guide work, add duplicate detection, EXIF/GPS and visible-photo verification, exact place-name research, deliberate cover selection from inspected images, and final `GET` verification of points, country/categories, cover, gallery, author, and publish state. Do not guess a place from filename or coordinates alone.
+Photo-folder work still needs duplicate detection, EXIF/GPS, visible-photo checks, exact place names, a chosen cover, and final `GET` of points, countries, cover, gallery, author, publish. Diary-only edits do not require a photo folder.
 
 ## Generated Images
 
