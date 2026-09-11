@@ -158,7 +158,7 @@ describe('webImageUpload', () => {
     const mockCanvasPipeline = (
       naturalWidth: number,
       naturalHeight: number,
-      encodedBytes: number,
+      encodedBytes: number | number[],
     ) => {
       URL.createObjectURL = jest.fn(() => 'blob:test');
       URL.revokeObjectURL = jest.fn();
@@ -178,6 +178,8 @@ describe('webImageUpload', () => {
       jest.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
         if (tagName.toLowerCase() !== 'canvas') return originalDocumentCreateElement(tagName);
 
+        const sizes = Array.isArray(encodedBytes) ? encodedBytes : [encodedBytes];
+        let encodeIndex = 0;
         const canvas: any = {
           width: 0,
           height: 0,
@@ -185,7 +187,9 @@ describe('webImageUpload', () => {
           toBlob: (callback: (blob: Blob | null) => void, type: string, quality: number) => {
             toBlobCalls.push({ type, quality });
             canvasSizes.push({ width: canvas.width, height: canvas.height });
-            callback(new Blob([new Uint8Array(encodedBytes)], { type: 'image/jpeg' }));
+            const bytes = sizes[Math.min(encodeIndex, sizes.length - 1)];
+            encodeIndex += 1;
+            callback(new Blob([new Uint8Array(bytes)], { type: 'image/jpeg' }));
           },
         };
         return canvas as HTMLCanvasElement;
@@ -297,6 +301,19 @@ describe('webImageUpload', () => {
       const source = new File([new Uint8Array(2 * 1024 * 1024)], 'already-tight.jpg', { type: 'image/jpeg' });
 
       expect(await compressWebRasterImage(source)).toBe(source);
+    });
+
+    it('дожимает кадр тяжелее 10 МБ, пока JPEG не влезет в лимит сервера', async () => {
+      mockCanvasPipeline(4000, 3000, [11 * 1024 * 1024, 11 * 1024 * 1024, 800 * 1024]);
+      const source = new File([new Uint8Array(12 * 1024 * 1024)], 'phone.jpg', { type: 'image/jpeg' });
+
+      const result = await compressWebRasterImage(source);
+
+      expect(result).not.toBe(source);
+      expect(result.type).toBe('image/jpeg');
+      expect(result.size).toBe(800 * 1024);
+      expect(result.size).toBeLessThanOrEqual(10 * 1024 * 1024);
+      expect(toBlobCalls.length).toBeGreaterThan(1);
     });
   });
 

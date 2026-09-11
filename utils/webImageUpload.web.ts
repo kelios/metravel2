@@ -15,6 +15,9 @@ const HEIC_EXTENSIONS = ['.heic', '.heif', '.heics', '.heifs'];
 // downscale обрежет то, что нужно PDF-экспорту.
 const WEB_UPLOAD_MAX_SIDE = 2500;
 const WEB_UPLOAD_JPEG_QUALITY = 0.86;
+const WEB_UPLOAD_QUALITY_RETRIES = [0.72, 0.58];
+const WEB_UPLOAD_SIDE_RETRIES = [1920, 1600];
+const SERVER_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
 
 // Страховка под `MAX_IMAGE_UPLOAD_SIZE = 10 MB` на бэкенде: файл может быть тяжёлым
 // и при скромных размерах в пикселях (например PNG-скриншот 2000×2000 на 12 МБ).
@@ -112,15 +115,26 @@ async function loadImageForCompression(file: File): Promise<HTMLImageElement | n
   });
 }
 
-function getCompressedCanvasSize(width: number, height: number): { width: number; height: number } {
-  const maxSide = Math.max(width, height);
-  if (maxSide <= WEB_UPLOAD_MAX_SIDE) return { width, height };
+function getCompressedCanvasSize(
+  width: number,
+  height: number,
+  maxSide: number = WEB_UPLOAD_MAX_SIDE,
+): { width: number; height: number } {
+  const longest = Math.max(width, height);
+  if (longest <= maxSide) return { width, height };
 
-  const scale = WEB_UPLOAD_MAX_SIDE / maxSide;
+  const scale = maxSide / longest;
   return {
     width: Math.max(1, Math.round(width * scale)),
     height: Math.max(1, Math.round(height * scale)),
   };
+}
+
+function fileFromJpegBlob(source: File, blob: Blob): File {
+  return new File([blob], replaceImageExtension(source.name, '.jpg'), {
+    type: 'image/jpeg',
+    lastModified: source.lastModified || Date.now(),
+  });
 }
 
 /**
@@ -149,36 +163,55 @@ export async function compressWebRasterImage(file: File): Promise<File> {
   if (!image || sourceWidth <= 0 || sourceHeight <= 0) return file;
 
   const needsDownscale = Math.max(sourceWidth, sourceHeight) > WEB_UPLOAD_MAX_SIDE;
-  if (!needsDownscale && !exceedsUploadBudget) return file;
-
-  const target = getCompressedCanvasSize(sourceWidth, sourceHeight);
+  const overServerLimit = file.size > SERVER_UPLOAD_MAX_BYTES;
+  if (!needsDownscale && !exceedsUploadBudget && !overServerLimit) return file;
 
   const canvas = document.createElement('canvas');
-  canvas.width = target.width;
-  canvas.height = target.height;
   const ctx = canvas.getContext('2d');
   if (!ctx || typeof canvas.toBlob !== 'function') return file;
 
-  // JPEG не хранит альфу, и прозрачные пиксели PNG выходят чёрными. Под правилом по
-  // весу сюда попадали единицы файлов, теперь — любой PNG крупнее 2500px, поэтому
-  // подкладываем белый фон, как это делают обычные компрессоры.
-  if (typeof ctx.fillRect === 'function') {
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, target.width, target.height);
+  const encodeJpeg = async (width: number, height: number, quality: number): Promise<Blob | null> => {
+    canvas.width = width;
+    canvas.height = height;
+    // JPEG не хранит альфу, и прозрачные пиксели PNG выходят чёрными. Под правилом по
+    // весу сюда попадали единицы файлов, теперь — любой PNG крупнее 2500px, поэтому
+    // подкладываем белый фон, как это делают обычные компрессоры.
+    if (typeof ctx.fillRect === 'function') {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+    }
+    ctx.drawImage(image, 0, 0, width, height);
+    return await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/jpeg', quality);
+    });
+  };
+
+  const acceptBlob = (blob: Blob | null): blob is Blob =>
+    Boolean(blob && blob.size > 0 && blob.size <= SERVER_UPLOAD_MAX_BYTES && blob.size < file.size);
+
+  const printTarget = getCompressedCanvasSize(sourceWidth, sourceHeight);
+  const firstBlob = await encodeJpeg(printTarget.width, printTarget.height, WEB_UPLOAD_JPEG_QUALITY);
+  if (acceptBlob(firstBlob)) return fileFromJpegBlob(file, firstBlob);
+  // Оригинал уже в лимите сервера, а первый проход не выиграл — качество важнее
+  // косметической экономии (см. тест «пережатие не дало выигрыша»).
+  if (!overServerLimit && (!firstBlob || firstBlob.size >= file.size)) return file;
+
+  let best = firstBlob && firstBlob.size > 0 ? firstBlob : null;
+  for (const quality of WEB_UPLOAD_QUALITY_RETRIES) {
+    const blob = await encodeJpeg(printTarget.width, printTarget.height, quality);
+    if (blob && blob.size > 0 && (!best || blob.size < best.size)) best = blob;
+    if (acceptBlob(blob)) return fileFromJpegBlob(file, blob);
   }
-  ctx.drawImage(image, 0, 0, target.width, target.height);
 
-  const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob(resolve, 'image/jpeg', WEB_UPLOAD_JPEG_QUALITY);
-  });
-  // Если пережатие не дало выигрыша (например фото уже маленькое и хорошо сжатое),
-  // отправляем оригинал — качество важнее косметической экономии.
-  if (!blob || blob.size <= 0 || blob.size >= file.size) return file;
+  for (const maxSide of WEB_UPLOAD_SIDE_RETRIES) {
+    const target = getCompressedCanvasSize(sourceWidth, sourceHeight, maxSide);
+    const blob = await encodeJpeg(target.width, target.height, WEB_UPLOAD_QUALITY_RETRIES[WEB_UPLOAD_QUALITY_RETRIES.length - 1]);
+    if (blob && blob.size > 0 && (!best || blob.size < best.size)) best = blob;
+    if (acceptBlob(blob)) return fileFromJpegBlob(file, blob);
+  }
 
-  return new File([blob], replaceImageExtension(file.name, '.jpg'), {
-    type: 'image/jpeg',
-    lastModified: file.lastModified || Date.now(),
-  });
+  if (acceptBlob(best)) return fileFromJpegBlob(file, best);
+  return file;
 }
 
 export async function prepareWebImageFileForUpload(file: File): Promise<File> {

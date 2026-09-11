@@ -3169,8 +3169,9 @@ guard, падающий в CI на попытке обойти этот конт
   `currentDisplayUrl`; `useEffect` сбрасывал ошибку, пока в `imageUri` жила
   старая обложка; dropzone `maxSize=10MB` глотал `file-too-large` до
   `prepareWebImageFileForUpload`.
-- **Controls:** ошибка видна при занятом слоте; pick limit 40 МБ, upload limit
-  10 МБ после сжатия; тесты в `PhotoUploadWithPreview.test.tsx`.
+- **Controls:** ошибка видна при занятом слоте; pick limit 80 МБ; клиент
+  дожимает JPEG, пока тело не ≤10 МБ (`compressWebRasterImage`); тесты в
+  `PhotoUploadWithPreview.test.tsx` и `webImageUpload.test.ts`.
 - **Решение для новой жалобы:** повтор скрытой ошибки или молчаливого
   `file-too-large` на обложке — `reopen #1893`. Галерея / фото точки — свои
   семьи. 400 `Upload a valid image file` от API при живом UI — `create-linked`

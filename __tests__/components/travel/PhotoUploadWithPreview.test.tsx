@@ -493,7 +493,7 @@ describe('PhotoUploadWithPreview', () => {
             }
         });
 
-        it('web: surfaces dropzone file-too-large instead of swallowing it, and picks up to 40MB', async () => {
+        it('web: surfaces dropzone file-too-large instead of swallowing it, and picks up to 80MB', async () => {
             const originalOs = Platform.OS;
             Object.defineProperty(Platform, 'OS', { value: 'web' });
 
@@ -507,7 +507,7 @@ describe('PhotoUploadWithPreview', () => {
                 );
 
                 await waitFor(() => expect(typeof lastOnDrop).toBe('function'));
-                expect(lastDropzoneOptions.maxSize).toBe(40 * 1024 * 1024);
+                expect(lastDropzoneOptions.maxSize).toBe(80 * 1024 * 1024);
 
                 await act(async () => {
                     await lastOnDrop([], [{
