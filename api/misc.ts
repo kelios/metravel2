@@ -54,6 +54,12 @@ const LONG_TIMEOUT = 30000;
 // исход от сервера, а не гадаем по своему таймеру.
 const SAVE_TRAVEL_TIMEOUT = 65000;
 
+// Загрузка фото — тот же потолок nginx, что у `/api/` (`proxy_read_timeout 60s`):
+// `set_image` режет кадр, пишет webp и кладёт в S3 синхронно. Клиентские 30 с
+// короче сервера: запрос ещё жив, UI уже показывает «Превышено время ожидания
+// (30000ms)». Ждём чуть дольше 60 с, чтобы исход пришёл от nginx/бэка.
+const UPLOAD_TIMEOUT = 65000;
+
 const GET_FILTERS = `${URLAPI}/getFiltersTravel/`;
 const GET_FILTERS_COUNTRY = `${URLAPI}/countriesforsearch/`;
 const GET_ALL_COUNTRY = `${URLAPI}/countries/`;
@@ -467,7 +473,7 @@ export const uploadImage = async (
 
   // Use apiClient upload helper so 401 triggers refresh+retry.
   // AND-15: Pass onProgress for XHR-based progress tracking.
-  const result = await apiClient.uploadFormDataWithProgress<unknown>('/upload', data, onProgress, 'POST', LONG_TIMEOUT);
+  const result = await apiClient.uploadFormDataWithProgress<unknown>('/upload', data, onProgress, 'POST', UPLOAD_TIMEOUT);
   if (typeof result === 'string') {
     const rawText = result.trim();
     if (!rawText) return { ok: true };

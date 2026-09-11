@@ -73,7 +73,6 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   const lastNotifiedPreviewRef = useRef<string | null>(null);
   const pendingUploadRef = useRef<File | NativeUploadFile | null>(null);
   const blobUrlsRef = useRef<Set<string>>(new Set());
-  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevOldImageRef = useRef<string | null | undefined>(undefined);
   const mountedRef = useRef(true);
   const uploadingRef = useRef(false);
@@ -161,7 +160,6 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     return () => {
       mountedRef.current = false;
       if (remoteRetryTimerRef.current) { clearTimeout(remoteRetryTimerRef.current); remoteRetryTimerRef.current = null; }
-      if (progressIntervalRef.current) { clearInterval(progressIntervalRef.current); progressIntervalRef.current = null; }
       currentBlobUrls.forEach((url: string) => { try { URL.revokeObjectURL(url); } catch { /* noop */ } });
       currentBlobUrls.clear();
     };
@@ -270,16 +268,10 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
       formData.append('collection', collection);
       formData.append('id', normalizedId);
 
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) { if (progressIntervalRef.current) { clearInterval(progressIntervalRef.current); progressIntervalRef.current = null; } return 90; }
-          return prev + 10;
-        });
-      }, 200);
-
-      const response = await uploadImage(formData) as Record<string, unknown> & { data?: Record<string, unknown> };
-      if (progressIntervalRef.current) { clearInterval(progressIntervalRef.current); progressIntervalRef.current = null; }
+      const response = await uploadImage(formData, (percent) => {
+        if (!mountedRef.current) return;
+        setUploadProgress(Math.min(99, Math.round(percent * 100)));
+      }) as Record<string, unknown> & { data?: Record<string, unknown> };
       if (!mountedRef.current) return;
       setUploadProgress(100);
 
@@ -310,7 +302,6 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         setPreviewUrl(null);
       }
     } finally {
-      if (progressIntervalRef.current) { clearInterval(progressIntervalRef.current); progressIntervalRef.current = null; }
       if (mountedRef.current) { setLoading(false); setUploadProgress(0); }
     }
   }, [collection, idTravel, previewUrl, onUpload, validateFile]);

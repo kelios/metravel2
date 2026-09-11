@@ -356,6 +356,13 @@ describe('api/misc', () => {
     fd.append('file', new File([], 'a.png'))
     const result = await uploadImage(fd)
     expect(result).toEqual({ ok: true })
+    expect(mockApiClientUploadFormData).toHaveBeenCalledWith(
+      '/upload',
+      fd,
+      undefined,
+      'POST',
+      65000,
+    )
   })
 
   it('fetchFilters returns fallback without JSON parsing on non-ok response', async () => {
