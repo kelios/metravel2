@@ -4,6 +4,13 @@ Task: #1889. Candidate: **1.0.5 (9)**, source
 `8ae84cb56b578013a0fa1c3ec75c8d5524982c1a`. This is an active evidence protocol;
 it does not certify completion of the App Review demonstration.
 
+Latest operational state: both reviewed test helpers are built, and the new iPad
+profile/signature checks pass. The most recent iPad run stopped at its lock
+screen; the iPhone private-input attempt encountered the XCTest passcode prompt.
+Unlock/XCTest confirmation and the separate consent for two disposable QA
+registrations are pending. No final demonstration or physical reviewer sign-in
+has been completed. Readiness snapshots below do not override this later state.
+
 ## Scope and evidence boundary
 
 - Task type: physical Apple-device demonstration and exact-candidate acceptance
@@ -27,7 +34,7 @@ Read-only `xcrun devicectl` probes on 12 September, including the resumed pass a
 | Layer | Actual state | What this proves |
 | --- | --- | --- |
 | Physical iPhone 13 mini | iOS 26.5; paired; Developer Mode enabled; initially unlocked; `by.metravel.app` installed as 1.0.5 (9) | Device and installed version/build are available. The current probe alone does not prove installation provenance or latest OS. |
-| Physical iPad mini 6 (`iPad14,1`) | **Current:** iPadOS 26.6.2, connected and unlocked. App inventory succeeds after the owner's Developer Mode action; MeTravel 1.0.5 (9) is installed | Latest-OS physical recording target. TestFlight provenance and product scenarios remain to be verified. |
+| Physical iPad mini 6 (`iPad14,1`) | iPadOS 26.6.2; app inventory succeeded while unlocked after the owner's Developer Mode action; MeTravel 1.0.5 (9) is installed. The latest run later found the screen locked | Latest-OS physical recording target. TestFlight provenance and product scenarios remain to be verified after renewed access. |
 | Other paired iPhone | iPhone 16 Pro, iOS 26.6; unavailable | Not a usable recording target in this session. |
 | QuickTime physical video | Both devices are available as Screen sources; their Home screens were observed. Recreating the iPad preview resolved its initial black image | Physical recording channel is available. QuickTime supplies video, not remote touch; no final demonstration is recorded yet. |
 | iPhone Mirroring | App failed to remain running when selected through computer use | No usable touch channel from Mirroring was established. |
@@ -35,8 +42,8 @@ Read-only `xcrun devicectl` probes on 12 September, including the resumed pass a
 
 The first disconnected iPad inventory reported 18.7.8 and unavailable. The resumed
 direct probe returned **26.6.2**, so the earlier value is historical cache evidence,
-not the tablet's current OS. Both devices are now unlocked; do not request another
-generic unlock/connect action.
+not the tablet's current OS. Both devices were unlocked at that readiness check;
+any later access request must be based on a fresh observation, as recorded below.
 
 The installed-app inventory also reports `builtByDeveloper=true`. This is a
 provenance signal to resolve by inspecting TestFlight and the selected installed
@@ -226,3 +233,58 @@ Actual iPhone results on the installed 1.0.5 (9), English locale:
 
 No password, account-creation request, report, block, trip write or deletion has
 been performed. The permanent reviewer account and owner accounts remain untouched.
+
+The reviewed safe helper was committed and pushed at `2dcc62d1a`. Its first
+authorised iPad-only `build-for-testing` attempt exited 65 before Swift
+compilation: Xcode reported `No Accounts: Add a new account in Accounts settings`
+and the cached profile still excluded the iPad. Xcode 26.6 → Apple Accounts was
+opened and directly showed an empty account list with `Add Apple Account…`.
+This access gate requires the owner to finish developer sign-in; it is not a
+MeTravel runtime failure. No profile update or candidate build succeeded in that
+attempt. Evidence: `safe-helper/build-result.json` and `safe-helper/build-summary.log`.
+
+A local fallback check confirmed that the existing helper profile includes the
+iPhone 13 mini and that a profile certificate fingerprint matches an available
+local codesigning identity. A sequential helper-only iPhone build can therefore
+use the existing automatic-signing state without portal/provisioning-update
+flags while iPad access is resolved. This does not establish safe-input runtime
+behaviour: the new helper still requires binary identity and a dummy canary with
+both attachment lifetimes set to `keepNever` before any real credentials.
+Evidence: `iphone-safe-helper-fallback-readiness.json`.
+
+The iPhone helper fallback then built successfully (exit 0) without provisioning
+update/device-registration flags. The resulting test binary SHA-256 is
+`525f99690117a03ff47b2479b8af996ffab7e82c041ea9eed4a7407fec7fb64e`;
+its runner supports device families `[1,2]`, contains the private-input protocol
+marker, and does not contain the old raw-scenario print marker. The generated
+runtime manifest explicitly sets both attachment lifetimes to `keepNever`.
+Evidence: `safe-helper-iphone/binary-identity.json` and `build-result.json`.
+A read-only initial run using this new helper passed and still showed the empty
+guest registration form. The first dummy-only clipboard/long-press attempt then
+displayed the physical iPhone passcode prompt `Enable UI Automation` for XCTest;
+the owner was asked to complete that exact action. This is not a passing secret
+canary, and no real MeTravel credentials have been sent through the helper.
+
+The owner subsequently added the Apple account in Xcode. A fresh Accounts UI
+check shows a development team and `Sign Out`, replacing the empty account list;
+the first iPad build failure above is now historical access evidence. The
+authorised iPad helper build can be retried once the current device operation
+finishes. Team/account/device identifiers are excluded from retained evidence.
+
+The iPad retry produced `TEST BUILD SUCCEEDED` with completed compilation/signing
+and no build errors. Its `xcodebuild` process then remained in macOS's exiting
+state; only the waiting task wrapper was interrupted after that state and the
+success marker were verified. An exit-code-0 result is not claimed. Independent
+artifact checks passed: the new embedded profile includes the connected iPad,
+`codesign --verify --deep --strict` succeeds, and the runner has device families
+`[1,2]`. The iPad helper test binary SHA-256 is
+`17216cb7c78a07878636e4b09619fe52fb08f60db336939e5f345b59835062ee`.
+Sources: `safe-helper/build-result.json`, `safe-helper/binary-identity.json`.
+
+The following iPad TestFlight run encountered the physical device's ordinary
+lock screen before the test body started; its log requests Unlock. QuickTime
+also shows the locked physical iPad with Touch ID. The owner was asked to unlock
+it and complete a subsequent XCTest passcode prompt if shown. This does not
+establish a TestFlight or MeTravel failure. The iPhone dummy attempt likewise
+does not establish private-input safety: the navigation-only test body completed,
+but no Paste/value verification occurred and the orchestration timed out.
