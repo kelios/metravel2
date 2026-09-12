@@ -1,9 +1,10 @@
 # Ответ Apple на запрос от 10.09.2026 — MeTravel 1.0.5 (9)
 
 Рабочий пакет [#1890](https://metravel.by/board#task-1890), обновлён 12.09.2026.
-**Не готов к отправке:** reviewer-вход и основные сценарии на iPad подтверждены,
-но регистрация, жалоба/блокировка и удаление отдельного аккаунта ещё не сняты в
-[#1889](https://metravel.by/board#task-1889). App Privacy обновлена и опубликована
+**Материалы готовы, отправка не разрешена:** все сцены сняты и смонтированы в
+[#1889](https://metravel.by/board#task-1889) — `review-demonstration-final.mp4`,
+375,3 с, SHA-256 `3fc2c03f…1b7b`, privacy playback PASS после исправления;
+решения по Reply/Notes и повторному submit остаются в #1891. App Privacy обновлена и опубликована
 12.09 в 12:29 UTC: 12 типов и уточнённые аналитические цели. Первичный manifest
 build 9 остаётся прежним; исправление исходника не меняет установленный кандидат.
 Черновик не является отправленным
@@ -43,7 +44,18 @@ Apple просит шесть ответов **в Reply и в Notes**. Проф�
 
 ## 1. Физическое видео
 
-Сохранены четыре исходные главы; это ещё не итоговое вложение:
+Итоговый файл 12.09.2026 23:00: `.codex-temp/app-review-2026-09-12/device/final/review-demonstration-final.mp4`,
+375,33 с, 896×1500, H.264/yuv420p, без аудио, SHA-256
+`3fc2c03fb4c61bf3d51400c9990ef909389eb9cc44582bea02552d537aeb1b7b`. Состав: проверенный
+partial (главы ниже) плюс сцены register/ugc-report/ugc-block/account-delete из
+`device/director/`; маски AutoFill и статус-бара, вырезы кадров раннера помечены
+титрами «EDIT/SOURCE CUT»; манифест `final/manifest.json` — PASS по
+`scene-manifest-check.mjs`; покадровый privacy review — PASS после исправления
+утечки имени раннера (первый экспорт сохранён как `-v1`). Не вошли: состояние
+«Blocked» в UI и неудачный повторный вход после удаления (решение владельца),
+iPhone-запись владельца (личные данные в каждом кадре).
+
+Сохранены четыре исходные главы, вошедшие в partial:
 
 | Локальный файл в `.codex-temp/app-review-2026-09-12/device/` | Длительность | Подтверждённое содержание / ограничение |
 | --- | --- | --- |
@@ -423,11 +435,16 @@ demo-доступ и соответствие видео именно ему; п
 MeTravel 1.0.5 (9) — response to the 10 September 2026 information request.
 
 1. Physical-device demonstration
-Video: [VIDEO_ATTACHMENT_OR_ACCESSIBLE_LINK]. Recorded [RECORDING_DATE] on
+Video: review-demonstration-final.mp4 (attached), recorded 12 September 2026 on
 iPad mini 6, iPadOS 26.6.2, verified TestFlight 1.0.5 (9).
-Timecodes: [LAUNCH; GUEST; REGISTER/LOGIN; TRAVEL/MAP/QUEST; FAVOURITES/PLAN;
-REPORT/BLOCK; DISPOSABLE ACCOUNT DELETION].
-iPhone/iPad checks: [MODELS_OS_AND_VERIFIED_RESULTS].
+Timecodes: 00:04 cold launch; 00:10 guest browse (catalogue, article, map with
+tiles, quest); 01:08 sign-in with the reviewer demo account; 01:17 settings with
+version/build; 01:39 session survives relaunch; 01:50 favourites and a personal
+trip plan in the calendar; 03:04 registration of a disposable account (e-mail
+activation step cut) and sign-in; 04:41 report an author, confirmation shown;
+05:08 block an author; 05:32 delete the disposable account, confirmation and
+return to the sign-in screen.
+iPhone compatibility verified separately on a physical iPhone 13 mini (build 9).
 No in-app purchases or subscriptions are configured; partner bookings are separate.
 
 2. Purpose and audience
