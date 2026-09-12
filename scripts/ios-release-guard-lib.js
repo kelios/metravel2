@@ -114,6 +114,29 @@ const IOS_PRIVACY_DATA = Object.freeze({
   NSPrivacyCollectedDataTypeEmailsOrTextMessages: true,
   NSPrivacyCollectedDataTypePhotosorVideos: true,
   NSPrivacyCollectedDataTypeOtherUserContent: true,
+  NSPrivacyCollectedDataTypeGameplayContent: true,
+  NSPrivacyCollectedDataTypeProductInteraction: true,
+});
+
+// Quest progress and closed answers are retained; answer-attempt statistics
+// include authenticated users and a persistent app-installation session ID.
+// Other launch data remains functionality-only.
+const IOS_PRIVACY_DATA_PURPOSES = Object.freeze({
+  NSPrivacyCollectedDataTypeUserID: [
+    'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+    'NSPrivacyCollectedDataTypePurposeAnalytics',
+  ],
+  NSPrivacyCollectedDataTypeDeviceID: [
+    'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+    'NSPrivacyCollectedDataTypePurposeAnalytics',
+  ],
+  NSPrivacyCollectedDataTypeGameplayContent: [
+    'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+    'NSPrivacyCollectedDataTypePurposeAnalytics',
+  ],
+  NSPrivacyCollectedDataTypeProductInteraction: [
+    'NSPrivacyCollectedDataTypePurposeAnalytics',
+  ],
 });
 
 const IOS_REQUIRED_REASON_APIS = Object.freeze({
@@ -1001,7 +1024,7 @@ function validateIosRelease(root = process.cwd(), options = {}) {
         entry.NSPrivacyCollectedDataTypeTracking === false &&
         jsonEqual(
           entry.NSPrivacyCollectedDataTypePurposes,
-          ['NSPrivacyCollectedDataTypePurposeAppFunctionality']
+          IOS_PRIVACY_DATA_PURPOSES[type] || ['NSPrivacyCollectedDataTypePurposeAppFunctionality']
         );
     });
   if (!privacyDataValid || privacyConfig.NSPrivacyTracking !== false ||

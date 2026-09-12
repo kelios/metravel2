@@ -4,6 +4,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+const plist = require('@expo/plist').default;
 const {
   IOS_IPAD_ORIENTATIONS,
   validateIosRelease,
@@ -16,6 +17,13 @@ type TestAppConfig = {
   expo: {
     plugins: Array<string | [string, Record<string, unknown>]>;
   };
+};
+
+type TestPrivacyManifest = {
+  NSPrivacyCollectedDataTypes: Array<{
+    NSPrivacyCollectedDataType: string;
+    NSPrivacyCollectedDataTypePurposes: string[];
+  }>;
 };
 
 function notificationPlugin(config: TestAppConfig): [string, Record<string, unknown>] {
@@ -838,6 +846,48 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
         .replace('<key>NSPrivacyTracking</key>\n\t<false/>', '<key>NSPrivacyTracking</key>\n\t<true/>'),
     });
     expect(validateIosRelease(testRoot)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_PRIVACY_DATA' })])
+    );
+  });
+
+  it.each([
+    'NSPrivacyCollectedDataTypeGameplayContent',
+    'NSPrivacyCollectedDataTypeProductInteraction',
+  ])('fails closed when collected quest data %s is omitted', type => {
+    const testRoot = fixture({
+      'ios/metravel/PrivacyInfo.xcprivacy': value => {
+        const manifest = plist.parse(value) as TestPrivacyManifest;
+        manifest.NSPrivacyCollectedDataTypes = manifest.NSPrivacyCollectedDataTypes.filter(
+          entry => entry.NSPrivacyCollectedDataType !== type
+        );
+        return plist.build(manifest);
+      },
+    });
+    expect(validateIosRelease(testRoot, { checkLiveAasa: false })).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_PRIVACY_DATA' })])
+    );
+  });
+
+  it.each([
+    'NSPrivacyCollectedDataTypeUserID',
+    'NSPrivacyCollectedDataTypeDeviceID',
+    'NSPrivacyCollectedDataTypeGameplayContent',
+    'NSPrivacyCollectedDataTypeProductInteraction',
+  ])('fails closed when quest Analytics purpose is omitted for %s', type => {
+    const testRoot = fixture({
+      'ios/metravel/PrivacyInfo.xcprivacy': value => {
+        const manifest = plist.parse(value) as TestPrivacyManifest;
+        const entry = manifest.NSPrivacyCollectedDataTypes.find(
+          data => data.NSPrivacyCollectedDataType === type
+        );
+        if (!entry) throw new Error(`privacy fixture is missing ${type}`);
+        entry.NSPrivacyCollectedDataTypePurposes = entry.NSPrivacyCollectedDataTypePurposes.filter(
+          purpose => purpose !== 'NSPrivacyCollectedDataTypePurposeAnalytics'
+        );
+        return plist.build(manifest);
+      },
+    });
+    expect(validateIosRelease(testRoot, { checkLiveAasa: false })).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'IOS_PRIVACY_DATA' })])
     );
   });

@@ -342,7 +342,7 @@ App Review Information, в Git и на борд не попадают.
   событий квестов, SDK-аналитики и сторонних страниц внутри WebView.
 - Location / Photos / Camera / Account — по фактическому flow бинарника, список
   разрешений выше.
-- `ios/metravel/PrivacyInfo.xcprivacy` объявляет ровно 10 типов данных
+- Первичный manifest **отправленного build 9** объявляет ровно 10 типов данных
   (Coarse/Precise Location, DeviceID, EmailAddress, EmailsOrTextMessages, Name,
   OtherUserContactInfo, OtherUserContent, PhotosOrVideos, UserID),
   `NSPrivacyTracking = false`, `NSPrivacyTrackingDomains` пуст. Это также
@@ -361,6 +361,19 @@ ASC — те же 10 типов данных, все linked to identity. Это 
 формы; полнота классификации фактической телеметрии и партнёрских WebView
 проверяется отдельно в #1890. Из этой сверки не следует отсутствие tracking у
 всех внешних поставщиков.
+
+Последующая проверка 12.09 подтвердила сохраняемые iOS-события квестов,
+в том числе привязанные к пользователю. Подготовлена source-правка
+`ios/metravel/PrivacyInfo.xcprivacy`: Product Interaction (Analytics), Gameplay
+Content (App Functionality + Analytics), а также Analytics для существующих
+User ID и Device ID. Последний охватывает сохраняемый UUID установки в
+`quest_attempts_session_v1`, отправляемый с попытками. Все четыре linked,
+без tracking; остальные восемь типов сохранены.
+В source теперь 12 типов, **в build 9 и live ASC всё ещё 10**. Основания,
+точный delta анкеты и граница новой сборки описаны в
+[пакете ответа Apple](IOS_APP_REVIEW_RESPONSE_20260910.md#подтверждённая-корректировка-app-privacy-и-первого-manifest).
+Source-правка не изменяет уже подписанный IPA; обновление App Privacy,
+новый signed build/upload и повторный submit — отдельные операции.
 
 ## Что уже в App Store Connect (2026-09-09)
 
@@ -385,9 +398,10 @@ ASC — те же 10 типов данных, все linked to identity. Это 
 
 Единый рабочий пакет — [ответ Apple от 10.09](IOS_APP_REVIEW_RESPONSE_20260910.md)
 (#1890), физическая проверка и видео — #1889. Пакет пока не готов к отправке:
-происхождение установленного бинарника, обязательные сценарии, demo-вход и
-запись видео ещё проверяются; iPad с актуальной ОС и перечень сервисов уже
-подтверждены в рабочем пакете. Исторические source-заметки выше не являются
+TestFlight-происхождение обоих устройств, reviewer-вход на iPad, основные
+сценарии и личный план/календарь подтверждены. Остались отдельные сценарии
+регистрации/report/block/delete, итоговая обработка видео и включение
+подтверждённой privacy-корректировки в точный release-пакет. Исторические source-заметки выше не являются
 новой физической приёмкой build 9. Reply/Notes и повторный submit ещё не выполнены.
 
 Подготовлена фактическая правка описаний карточки; в ASC она **не сохранена**.
@@ -405,3 +419,21 @@ Save не нажималась. Точные замены для отдельн�
 Остальной текст описаний сохранён. Локали интерфейса приложения не меняются;
 перед записью в ASC сверить текущую строку каждой локали и применить только эту
 замену в рамках разрешённого операторского действия.
+
+### Уточнение языка контента — предложение к пакету 12.09.2026
+
+В exact IPA `1.0.5 (9)` проверены `CFBundleDevelopmentRegion=ru` и директории
+локализаций `be/en/pl/ru/uk`. Это языки интерфейса, а не обещание перевода
+авторских статей и квестов. Владелец 12.09 уточнила, что контент преимущественно
+русскоязычный. Языки карточки магазина и локализации бинарника — разные свойства:
+[Apple: Localize app information](https://developer.apple.com/help/app-store-connect/manage-app-information/localize-app-information).
+
+Предлагаемые добавления после первого абзаца Description; в ASC не сохранены,
+языки сборки и карточки не удалялись:
+
+| Локаль ASC | Предлагаемое уточнение |
+| --- | --- |
+| RU | Статьи и квесты преимущественно на русском языке. Язык интерфейса можно изменить; это не переводит авторский контент. |
+| UK | Статті та квести переважно російською мовою. Мову інтерфейсу можна змінити; це не перекладає авторський контент. |
+| PL | Artykuły i questy są głównie w języku rosyjskim. Można zmienić język interfejsu, ale nie tłumaczy to treści autorów. |
+| EN-US | Articles and quests are mainly in Russian. You can change the interface language; this does not translate authors' content. |

@@ -1,9 +1,12 @@
 # Ответ Apple на запрос от 10.09.2026 — MeTravel 1.0.5 (9)
 
 Рабочий пакет [#1890](https://metravel.by/board#task-1890), обновлён 12.09.2026.
-**Не готов к отправке:** физическое видео и проверка demo ещё выполняются в
-[#1889](https://metravel.by/board#task-1889); неподтверждённые пункты перечислены
-ниже. Черновик не является отправленным ответом или результатом приёмки.
+**Не готов к отправке:** reviewer-вход и основные сценарии на iPad подтверждены,
+но регистрация, жалоба/блокировка и удаление отдельного аккаунта ещё не сняты в
+[#1889](https://metravel.by/board#task-1889). Также выявлен пропуск фактически
+собираемых данных квестов в App Privacy и первичном manifest build 9; исправление
+исходника не меняет установленный кандидат. Черновик не является отправленным
+ответом или результатом приёмки.
 
 ## Проверенная идентичность и состояние
 
@@ -11,13 +14,15 @@
 | --- | --- |
 | Приложение | MeTravel, `by.metravel.app`, universal iPhone/iPad |
 | Кандидат | `1.0.5 (9)` — непосредственно выбран в App Store Connect 12.09.2026 |
-| Исходник кандидата по #1424 | `8ae84cb56b578013a0fa1c3ec75c8d5524982c1a`, входит в `origin/main`; происхождение установленного экземпляра проверяется отдельно |
+| Физический iPad | 12.09.2026: TestFlight на iPad mini 6 показывает MeTravel `1.0.5 (9)` и «Открыть»; iPadOS `26.6.2` подтверждена прямой проверкой устройства |
+| Исходник кандидата по #1424 | `8ae84cb56b578013a0fa1c3ec75c8d5524982c1a`, входит в `origin/main`; TestFlight `1.0.5 (9)` с кнопкой «Открыть» подтверждён на обоих физических устройствах |
 | Отправка | `2caaff34-ee6a-4546-b599-a27d056195dd`, отправлена 09.09.2026 |
 | Текущее состояние | «Отклонено», «Нерешенные проблемы», `2.1.0 Performance: App Completeness` |
 | Сообщение Apple | Одно, от 10.09.2026: `Guideline 2.1 — Information Needed — New App Submission` |
 | Распространение | Общедоступное, 175 доступных стран/регионов; цена и выручка 0,00 во всех 175 строках диалога «Текущая цена» 12.09.2026 |
+| Платные продукты ASC | 12.09.2026: страницы встроенных покупок, групп автоматически продляемых подписок и подписок без продления показывают начальное создание первого продукта; созданных продуктов/групп нет |
 | Дополнительные платформы | Распространение iOS-приложения на Mac и Apple Vision Pro выключено в ASC 12.09.2026 |
-| App Privacy | Live ASC 12.09.2026: опубликованы 10 типов, каждый linked to identity; это сверка формы, не доказательство полноты классификации телеметрии и партнёрских WebView |
+| App Privacy | Live ASC и первичный manifest build 9: 10 linked типов, только App Functionality. Подтверждён пропуск данных взаимодействия/прохождения квестов и аналитической цели; корректировка source описана ниже, ASC и build 9 не изменены |
 | Отправленный ответ | Нет: в переписке пока только сообщение Apple |
 
 [Исходная переписка App Review](https://appstoreconnect.apple.com/apps/6801264369/distribution/reviewsubmissions/details/2caaff34-ee6a-4546-b599-a27d056195dd).
@@ -28,16 +33,48 @@ Apple просит шесть ответов **в Reply и в Notes**. Проф�
 
 | № | Что должно быть в Reply и Notes | Доказательство | Готовность |
 | --- | --- | --- | --- |
-| 1 | Физическое видео от запуска до результатов обычных действий; регистрация, вход, удаление отдельного аккаунта, UGC report/block | #1889; version/build, device, OS, дата, файл и таймкоды | В работе; файла для Apple ещё нет |
+| 1 | Физическое видео от запуска до результатов обычных действий; регистрация, вход, удаление отдельного аккаунта, UGC report/block | #1889; version/build, device, OS, дата, файл и таймкоды | Сохранены четыре главы, включая reviewer-вход, Settings, сессию после перезапуска, избранное и личный план/календарь. Регистрация/report/block/delete и проверка итогового монтажа остаются открыты |
 | 2 | Назначение, аудитория, самостоятельная польза | Исходник кандидата; карточка #1424; раздел 2 ниже | Текст подготовлен; показанные сценарии связываются с #1889 |
-| 3 | Первый запуск, доступ к функциям, рабочий reviewer demo | Защищённые поля ASC + физический вход в #1889 | Штатный login API принял данные 12.09, HTTP 200; физический вход ещё проверяется |
+| 3 | Первый запуск, доступ к функциям, рабочий reviewer demo | Защищённые поля ASC + физический вход в #1889 | Login API: HTTP 200; владелец затем вошла на физическом iPad, наблюдён авторизованный аккаунт редакции |
 | 4 | Реально включённые внешние сервисы, включая backend | Инвентарь ниже; точный исходник, бинарник и узкое чтение SMTP/S3 настроек | Провайдеры перечислены; режим Meta описан без неподтверждённого обещания отсутствия событий |
 | 5 | Функциональные и контентные различия по регионам | ASC 175 стран; исходник; ответ владельца 12.09 | Собственных ограничений MeTravel не заявлено; ассортимент и доступность поставщиков могут различаться |
 | 6 | Применимость регулируемых услуг и права на сторонние материалы | #1420, Terms/Privacy, атрибуция; ответ владельца 12.09 | Права на указанные партнёрские предложения подтверждены владельцем; реквизиты договоров не выдумываются |
 
 ## 1. Физическое видео
 
-Итоговый файл пока отсутствует. В отправляемый текст должны попасть имя
+Сохранены четыре исходные главы; это ещё не итоговое вложение:
+
+| Локальный файл в `.codex-temp/app-review-2026-09-12/device/` | Длительность | Подтверждённое содержание / ограничение |
+| --- | --- | --- |
+| `ipad-guest-demonstration.mp4` | 151,56 с | TestFlight, запуск, каталог, статья, карта, квест |
+| `ipad-reviewer-login-private.mp4` | 213,19 с | Владелец вошла в reviewer на iPad; ввод в начале и прочие приватные сегменты требуют проверки перед передачей |
+| `iphone-owner-main-scenario-private.mp4` | 206,73 с | Владелец прошла основные сценарии на iPhone; использован её личный аккаунт, есть Messages. Это не доказательство reviewer-входа и не готовое вложение |
+| `ipad-authenticated-settings-plan.mp4` | 432,53 с | Settings/build 9, видимый вход в удаление без нажатия, сессия после холодного запуска, добавление/снятие избранного, личный план «Рысы» на 19.09 и карточка календаря |
+
+Гостевая глава:
+`.codex-temp/app-review-2026-09-12/device/ipad-guest-demonstration.mp4`,
+151,56 секунды, 1488×2266, H.264, без звуковой дорожки. Она показывает TestFlight
+`1.0.5 (9)`, запуск, каталог, статью, карту с загруженными тайлами и квест.
+Независимая выборочная проверка кадров каждые 5 секунд подтверждает эти переходы;
+в выбранных кадрах секретов и личных уведомлений не обнаружено. Полный playback
+и итоговый монтаж ещё не завершены; это не готовое полное демо.
+
+Позднее сохранён `device/review-demonstration-partial.mp4`: 181,5 секунды,
+без аудио, только iPad; интервалы ввода credentials и весь iPhone-материал
+исключены. Монтаж явно помечает сокращения и неполноту. Полное декодирование
+и визуальная выборка раз в секунду прошли; непрерывный просмотр и недостающие
+сценарии ещё нужны. Точный SHA, таймкоды и границы проверки — в журнале устройства.
+
+В четвёртой главе reviewer остался активен после terminate/activate. Новый
+favorite добавлен и снят, прежнее избранное сохранено. Личный план «Рысы»
+(`travel 738`) на 19.09.2026 оставлен reviewer для проверки Apple: он виден в
+«Я планирую (1)», календаре и открывает маршрут. Форма организации публичной
+поездки только просмотрена; её обязательное согласие не принималось и поездка
+не публиковалась. Это подтверждение личного планирования, не создания
+публичного события. Точные файлы, SHA и исходные отметки — в
+[журнале устройства](IOS_APP_REVIEW_DEVICE_EVIDENCE_20260912.md).
+
+В отправляемый текст должны попасть имя
 прикреплённого файла либо доступная Apple ссылка, устройство, версия ОС, дата,
 `1.0.5 (9)` и реальные таймкоды. Плановые отметки времени не выдаются за запись.
 
@@ -52,12 +89,17 @@ Apple просит шесть ответов **в Reply и в Notes**. Проф�
 на **iPadOS 26.6.2**; прежние 18.7.8/unavailable были устаревшим списком
 спаренных устройств. Оба устройства доступны и разблокированы. После включения
 Developer Mode по запросу ошибка 10005 исчезла, прямая проверка iPad подтвердила
-установленный `1.0.5 (9)`. Автоматические касания пока ограничены профилем подписи
-вспомогательного XCUITest runner; это не ошибка подписи кандидата MeTravel.
+установленный `1.0.5 (9)`. Подпись вспомогательного XCUITest runner затем
+подготовлена по разрешению владельца; после повторной разблокировки его запуск
+на iPad прошёл с exit 0. Живой TestFlight показывает MeTravel `1.0.5 (9)` и
+«Открыть»; гостевой Home загружает маршруты и квесты, меню содержит Login/Register.
+Источник: `.codex-temp/app-review-2026-09-12/device/ipad-testflight-provenance.json`
+и журнал #1889. Это подтверждение установленного кандидата и первых действий,
+а не завершённого видео или сценариев аккаунта.
 На iPhone сохраняется iOS 26.5.
 Письмо Apple требует **physical device**, а не именно iPhone. Основное видео
-можно снять на iPad с актуальной ОС после разрешения device gate и подтверждения
-точного установленного кандидата; iPhone используется для отдельной проверки
+снимается на iPad с актуальной ОС и подтверждённым TestFlight-кандидатом;
+iPhone используется для отдельной проверки
 совместимости. Обновление iPhone не является условием записи на iPad.
 
 Порядок записи: холодный запуск → гостевой каталог/статья/карта/квест →
@@ -107,8 +149,11 @@ purpose. The authenticated public-author profile provides the reporting and
 blocking menu; the demonstration identifies the test author used for this check.
 
 Редакторская пометка: последние две фразы про выполненную демонстрацию допустимы
-к отправке только после видео #1889. До проверки не заявлять, что reviewer demo
-работает. Не копировать demo-логин или пароль в этот документ, борд и видео.
+к отправке только после видео #1889. Физический reviewer-вход подтверждён ниже;
+сценарии жалобы/блокировки и удаления ещё не завершены.
+Учётные данные не копировать в этот документ или борд;
+пароль не раскрывать в видео. Владелец отдельно разрешила запись своего входа
+в форме приложения; этот локальный материал требует проверки перед передачей.
 
 Промежуточное подтверждение 12.09.2026, 10:13:52 UTC: штатный production
 `POST /api/user/login/` принял переданные владельцем данные постоянного reviewer
@@ -117,6 +162,18 @@ credentials в evidence не сохранены. Это API-проверка д�
 и доступность функций в кандидате остаются частью #1889. Удаление или
 пересоздание постоянного reviewer не требуется. Обезличенный результат:
 `.codex-temp/app-review-2026-09-12/reviewer-login-api.sanitized.json`.
+
+Последующая физическая проверка: владелец вручную вошла в reviewer на iPad mini 6
+с TestFlight `1.0.5 (9)`; вместо формы входа наблюдён авторизованный аккаунт
+редакции. Вход попал в локальную запись
+`device/ipad-reviewer-login-private.mp4` (213,19 секунды, без аудио).
+Это **private source**, не разрешённое к отправке вложение: ввод и клавиатура
+ещё требуют просмотра/скрытия секретного фрагмента. Позднейшие действия в
+Settings, сохранение сессии после перезапуска и избранное по этой записи не
+засчитываются. На iPhone отдельно подтверждён TestFlight `1.0.5 (9)`;
+по прямому запросу владельца записан выполняемый ею основной сценарий, файл
+сохранён. Позднее отдельная iPad-глава подтвердила Settings, сохранение сессии,
+избранное и личный план/календарь, как указано в разделе 1.
 
 ## 4. External services — рабочий инвентарь
 
@@ -177,11 +234,67 @@ false раньше серверного default. Это подтверждает
 | Open-Meteo | Прогноз и высоты; координаты места/маршрута | `components/home/hooks/useWeatherWidgetModel.ts:92`, `components/map-core/useElevation.ts:203` |
 | Опциональные слои карты | Esri, OpenTopoMap, WaymarkedTrails, Overpass, польские лесные сервисы; viewport/POI-запросы. OpenWeatherMap key присутствует в exact IPA | `config/mapWebLayers.ts:220,234,249,433,446,570,626`, `components/MapPage/Map/nativeWeatherTempLabelsScript.ts:122`; compiled key не доказывает действующий тариф, лицензию или успешный запрос |
 | Expo / APNs | Push token и платформа связываются с аккаунтом; доставка уведомлений | `hooks/usePushNotifications.native.ts:137`, `services/notifications.ts:169`, `api/auth.ts:648`; наличие кода не доказывает доставку |
+| Instagram / YouTube | Медиа в статьях: Instagram загружается в native WebView при приближении к видимой области, YouTube — после нажатия; до загрузки/при ошибке возможна карточка-ссылка | Exact candidate: `components/travel/stableContent/useRenderConfig.native.tsx:199`, `components/iframe/InstagramEmbed.native.tsx:241`, `components/travel/details/sections/LazyYouTubeSection.native.tsx:74`; allowlist `utils/articleEditorSanitize.ts:65` |
 | Собственная телеметрия квестов | В MeTravel идут идентификатор сессии, шаг, результат, время/попытки/подсказки и локаль; свободный текст исключён, закрытые ответы могут передаваться | `utils/questAnswerTelemetry.ts:88,201,363`, `api/quests.ts:867,898`; native GA4/Яндекс отключены в `utils/analytics.ts:147`, но это не отсутствие всей телеметрии |
 | Belkraj / Tripvenue | Native WebView экскурсий для поддержанных направлений; координаты первой точки, страна и партнёрский контекст | `components/belkraj/BelkrajWidget.native.tsx:38,94,109`, `belkrajAvailability.ts:104`; production-путь не зависит от Travelpayouts marker; downstream cookies/analytics не проверены |
 | Travelpayouts / Tripster / Ostrovok | Внешние партнёрские предложения отелей/экскурсий; направление и партнёрский контекст | `components/affiliate/affiliateConfig.ts:119,124,161,177,229`; в exact IPA marker и оба templates непустые, config gate включён; активность и права на программы не выводятся из наличия URL |
 | Gmail SMTP / Telegram | Сервисные письма: адрес получателя и сообщение; необязательное связывание Telegram-аккаунта и выбранные социальные контакты | Узкое read-only чтение действующих настроек backend 12.09: `smtp.gmail.com`; frontend `api/telegramLink.ts:3,18`. Это конфигурация отправителя, а не доказательство доставки письма |
 | Sentry / AI / платежи | В просмотренных исходниках не найден включённый вызов Sentry/AI или собственный платёжный путь; внешние коммерческие ссылки присутствуют | `services/performanceMonitoring.ts:19,28`, `api/misc.ts:62,845`, `package.json:257`; это не runtime-проверка и не доказательство отсутствия серверных AI/служебных задач либо платёжных форм у партнёров |
+
+### Подтверждённая корректировка App Privacy и первого manifest
+
+Это отдельный результат проверки фактов, а не утверждение о причине письма
+Apple. В точном кандидате native-квест отправляет попытки и сохраняет прогресс:
+`components/quests/questWizardStepCard.tsx:429`,
+`utils/questAnswerTelemetry.ts:205,213,363`, `api/quests.ts:898`.
+В backend `origin/master` `QuestAnswerAttempt` и `QuestProgress` сохраняются
+раздельно: `quests/models.py:353,474`; закрытые ответы участвуют в статистике
+`quests/services/answer_telemetry.py:247,284`. Свободный текст в телеметрию
+попыток не передаётся. Native-заглушка GA4/Яндекс этот путь не отключает.
+
+Узкая production-проверка 12.09 выполнила только два `EXISTS` в read-only
+транзакции: за последние 24 часа существуют сохранённые события `platform=ios`
+и существуют такие события с привязкой к пользователю. Оба результата `true`.
+Строки событий, ответы, идентификаторы и количества не читались. Evidence:
+`.codex-temp/app-review-2026-09-12/quest-privacy-read.sanitized.json`.
+
+По [Apple App privacy details](https://developer.apple.com/app-store/app-privacy-details/)
+взаимодействия с функциями относятся к Product Interaction, сохранённое
+прохождение — к Gameplay Content; анализ поведения имеет цель Analytics.
+Дополнительно `getQuestAttemptSessionKey` в точном source
+`utils/questAnswerTelemetry.ts:88–122` создаёт UUID и сохраняет его глобально в
+AsyncStorage под `quest_attempts_session_v1`; `session_key` отправляется вместе
+с попытками гостей и авторизованных пользователей. Это устойчивый идентификатор
+установки, а не только текущего аккаунта. Apple относит device-level identifiers
+к Device ID, поэтому его существующей строке также нужна цель Analytics.
+Первичный manifest должен описывать собственный сбор приложения согласно
+[Apple TN3184](https://developer.apple.com/documentation/technotes/tn3184-adding-data-collection-details-to-your-privacy-manifest).
+
+Подготовлена минимальная source-корректировка и точный delta для формы ASC:
+
+| Тип | Linked | Tracking | Назначения после корректировки |
+| --- | --- | --- | --- |
+| Product Interaction — новый | Да | Нет | Analytics |
+| Gameplay Content — новый | Да | Нет | App Functionality, Analytics |
+| User ID — существующий | Да | Нет | App Functionality, Analytics |
+| Device ID — существующий | Да | Нет | App Functionality, Analytics |
+
+Остальные восемь первичных типов не меняются. В source
+`ios/metravel/PrivacyInfo.xcprivacy` теперь 12 типов; guard синхронизирован со
+строгой проверкой категорий и целей. Независимый code-only review пройден:
+`plutil`, статический release guard без live AASA, lint изменённых guard/tests
+и targeted config Jest 58/58 — PASS после добавления Analytics к Device ID.
+Это проверка исходников, не нового IPA.
+Новый сбор данных этим изменением не включается — описывается существующий.
+
+**Граница кандидата:** загруженный build 9 по-прежнему содержит старый manifest,
+а опубликованная форма ASC ещё не исправлена. Apple позволяет менять ответы
+App Privacy без выпуска обновления, но это не переписывает manifest уже
+подписанного IPA. Для включения source-правки нужен отдельно разрешённый новый
+signed build и upload с новым номером, затем проверка точного артефакта и
+соответствующий QA. Записи build 9 сохраняют доказательство показанного
+поведения, но их нельзя переименовать в видео новой сборки. До этого пакет
+не получает окончательный privacy/candidate PASS.
 
 Английская основа пункта 4 (после уточнения условных строк):
 
@@ -291,17 +404,21 @@ Live ASC 12.09 показал лимит Notes 4000 символов (474 зан
 вложения доступно: разрешённый и проверенный private review attachment может
 заменить публичную видеоссылку.
 Учётные данные никогда не подставляются: они остаются в защищённых полях ASC.
+Этот текст привязан к проверенному build 9 и пока не описывает новую сборку.
+После выбора следующего кандидата нужно заново сверить номер, конфигурацию,
+demo-доступ и соответствие видео именно ему; прежнюю запись нельзя просто
+переименовать. История build 9 сохраняется отдельно.
 
 ```text
-MeTravel 1.0.5 (build 9) — response to the 10 September 2026 information request.
+MeTravel 1.0.5 (9) — information requested on 10 September 2026.
 
 1. Physical-device demonstration
-Video: [VIDEO_ATTACHMENT_OR_ACCESSIBLE_LINK]. Recorded on [PHYSICAL_DEVICE_MODEL],
-[VERIFIED_CURRENT_STABLE_IOS_OR_IPADOS], [RECORDING_DATE], using the verified TestFlight
+Video: [VIDEO_ATTACHMENT_OR_ACCESSIBLE_LINK]. Recorded on iPad mini 6,
+iPadOS 26.6.2, [RECORDING_DATE], using the verified TestFlight
 candidate 1.0.5 (9). Timecodes: [LAUNCH; GUEST BROWSING; REGISTRATION AND SIGN-IN;
 TRAVEL/MAP/QUEST; FAVOURITES/PLANNING; REPORT/BLOCK; DISPOSABLE ACCOUNT DELETION].
 The deletion account is separate from the permanent reviewer account.
-[VERIFIED_PAID_FEATURE_RESULT: show any actual paid flow, or confirm its absence.]
+No in-app purchases or subscriptions are configured; partner bookings are separate.
 Compatibility checks: [IPHONE_AND_IPAD_MODELS_OS_AND_VERIFIED_RESULTS].
 
 2. Purpose and audience
@@ -313,18 +430,20 @@ catalogue focuses on Belarus and nearby destinations, with more added by authors
 Connect to the internet and browse articles, maps and quests as a guest; no
 subscription or special hardware is needed. For account features, open Profile
 and use the credentials in the protected App Review Information fields.
-Reviewer sign-in was verified on [DEMO_VERIFICATION_DATE_AND_RESULT].
+Reviewer sign-in succeeded on the physical iPad on 12 September 2026.
 To test deletion, use a disposable account, open Settings > Delete account and
 confirm. Keep the permanent reviewer account. Reporting and blocking are in
 the public-author profile menu after sign-in; the video uses a test author.
 
 4. External services and data
-MeTravel's API handles accounts, travel content, quests, trip plans and user-safety
-actions, including quest-attempt/session events. Apple/Google sign-in exchanges
-identity tokens and account details. Amazon S3 stores uploaded media and database
-backups; Gmail SMTP is configured for account emails (recipient address and message).
+Our API handles accounts, content, plans and user safety. It retains quest progress
+and attempts for functionality and analytics, linked to persistent installation IDs
+and signed-in user IDs. Apple/Google sign-in exchanges tokens and account details.
+Amazon S3 stores media and database backups; Gmail SMTP is configured for
+account emails (recipient address and message).
 Expo/APNs use device tokens for notifications;
 optional Telegram linking associates the selected Telegram account.
+Articles can embed Instagram posts and YouTube videos in web views.
 Leaflet/OpenStreetMap provide maps; Nominatim/BigDataCloud geocode addresses;
 OpenRouteService, Valhalla and OSRM calculate routes. Open-Meteo provides weather
 and elevation. Optional layers use Esri, OpenTopoMap, WaymarkedTrails, Overpass,
@@ -339,9 +458,9 @@ MeTravel's account and trip-planning flows do not request payment-card details;
 partner booking/payment handling belongs to the external provider.
 
 5. Countries and regions
-ASC is configured for free public distribution in 175 countries and regions.
-The interface supports RU/BE/UK/PL/EN. Articles and quests retain the author's
-language; changing the interface language does not translate that content.
+Free distribution is configured for 175 countries and regions.
+The interface supports RU/BE/UK/PL/EN. Articles and quests are mainly in Russian;
+changing the interface does not translate them.
 Destination coverage and partner offers vary by catalogue.
 The owner confirms no additional country-specific feature restrictions imposed
 by MeTravel. Third-party service availability can vary.
@@ -360,15 +479,22 @@ Privacy Policy: https://metravel.by/privacy
 
 ## Что ещё нужно для готовности
 
-1. #1889: точное происхождение установленного бинарника, запись всех действий
-   с результатами и таймкодами, iPad-проверка,
-   свежий demo-вход, проверка файла на отсутствие секретов.
+1. #1889: TestFlight-происхождение на обоих устройствах, гостевая глава,
+   reviewer-вход, Settings, сессия после перезапуска, избранное и личный
+   план/календарь на iPad подтверждены. Остались регистрация/report/block/delete,
+   проверка совместимости по записанному iPhone-сценарию и итоговой записи с таймкодами
+   и проверкой отсутствия секретов. Private-input канал iPad не принят;
+   штатный вход владельца дал доступ для продолжения QA. Для двух
+   одноразовых аккаунтов согласие с Terms ещё не завершено;
+   до этого регистрация/UGC/удаление не считаются пройденными.
 2. Effective config build 9, S3 и Gmail SMTP подтверждены указанными выше
    источниками. Описание Meta ограничено проверенными фактами инициализации и
    локальных flags; не обещает безусловное отсутствие событий.
-   Сопоставить основной и SDK privacy manifests с эффективными режимами SDK,
-   телеметрией, WebView и ASC формой; совпадение первых 10 типов не закрывает
-   этот вопрос.
+   Подтверждённый пропуск первого manifest и App Privacy разобран в разделе 4:
+   source-правка отревьюена, но build 9 и ASC её ещё не содержат. Нужны
+   решение по точному следующему кандидату и отдельные
+   разрешённые операции build/upload/App Privacy. Это не устраняет границы
+   оценки сторонних SDK/WebView, перечисленные в инвентаре.
 3. Владелец 12.09 подтвердил партнёрские права и отсутствие дополнительных
    сервисов/собственных страновых ограничений; повторно эти вопросы не задавать.
 4. Полный Reply и Notes: 6/6 ответов, проверка длины и согласованности,
