@@ -1,0 +1,17 @@
+{
+  "source": "Apple Guideline 2.1 Information Needed — New App Submission (2026-09-10); Task Contract #1889",
+  "scenes": [
+    { "id": "launch-cold", "required": true, "name": "Cold launch from the home screen with build visible (TestFlight card or Settings version/build)" },
+    { "id": "guest-browse", "required": true, "name": "Guest: catalog, article, map with loaded tiles, quest" },
+    { "id": "register", "required": true, "name": "Registration of a disposable account, activation, signed-in state" },
+    { "id": "login", "required": true, "name": "Sign-in with the permanent reviewer demo account" },
+    { "id": "core-actions", "required": true, "name": "Favorites add/remove and personal trip plan visible in calendar" },
+    { "id": "profile-settings", "required": true, "name": "Profile and Settings with version/build" },
+    { "id": "ugc-report", "required": true, "name": "Report an author from the public profile menu; confirmation shown" },
+    { "id": "ugc-block", "required": true, "name": "Block an author; blocked state shown" },
+    { "id": "account-delete", "required": true, "name": "Delete the disposable account; confirmation and failed re-login" },
+    { "id": "purchases", "required": true, "name": "Paid features, only if present in the candidate; otherwise notApplicable with evidence" },
+    { "id": "session-restart", "required": false, "name": "Session survives terminate/activate" },
+    { "id": "iphone-compat", "required": false, "name": "Compatibility pass on the other supported device family" }
+  ]
+}

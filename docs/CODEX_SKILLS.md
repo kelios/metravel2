@@ -20,7 +20,8 @@ catalog по frontmatter `description`.
   `evidence-editor`.
 - Platform/release: `android-developer`, `android-portable-builder`,
   `google-play-operator`, iOS analyst/architect/designer/developer/reviewer/
-  tester/release-operator, `devops-agent`, `play-campaign-tester`.
+  tester/release-operator, `app-review-evidence`, `devops-agent`,
+  `play-campaign-tester`.
 - Planning/operations: `codex-orchestrator`, `agent-workflow`,
   `project-analyst`, `business-analyst`, `system-architect`,
   `growth-analyst`, `seo-index-operator`, OpenSpec skills.
@@ -38,6 +39,7 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
 
 `$metravel-achievements-expert`, `$metravel-agent-workflow`,
 `$metravel-android-developer`, `$metravel-android-portable-builder`,
+`$metravel-app-review-evidence`,
 `$metravel-article-editor-agent`, `$metravel-backend-diagnostician`,
 `$metravel-browser-reviewer`, `$metravel-business-analyst`,
 `$metravel-child-quest-visuals`, `$metravel-code-reviewer`,
