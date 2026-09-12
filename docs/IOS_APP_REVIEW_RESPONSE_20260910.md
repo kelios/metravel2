@@ -410,69 +410,62 @@ demo-доступ и соответствие видео именно ему; п
 переименовать. История build 9 сохраняется отдельно.
 
 ```text
-MeTravel 1.0.5 (9) — information requested on 10 September 2026.
+MeTravel 1.0.5 (9) — response to the 10 September 2026 information request.
 
 1. Physical-device demonstration
-Video: [VIDEO_ATTACHMENT_OR_ACCESSIBLE_LINK]. Recorded on iPad mini 6,
-iPadOS 26.6.2, [RECORDING_DATE], using the verified TestFlight
-candidate 1.0.5 (9). Timecodes: [LAUNCH; GUEST BROWSING; REGISTRATION AND SIGN-IN;
-TRAVEL/MAP/QUEST; FAVOURITES/PLANNING; REPORT/BLOCK; DISPOSABLE ACCOUNT DELETION].
-The deletion account is separate from the permanent reviewer account.
+Video: [VIDEO_ATTACHMENT_OR_ACCESSIBLE_LINK]. Recorded [RECORDING_DATE] on
+iPad mini 6, iPadOS 26.6.2, verified TestFlight 1.0.5 (9).
+Timecodes: [LAUNCH; GUEST; REGISTER/LOGIN; TRAVEL/MAP/QUEST; FAVOURITES/PLAN;
+REPORT/BLOCK; DISPOSABLE ACCOUNT DELETION].
+iPhone/iPad checks: [MODELS_OS_AND_VERIFIED_RESULTS].
 No in-app purchases or subscriptions are configured; partner bookings are separate.
-Compatibility checks: [IPHONE_AND_IPAD_MODELS_OS_AND_VERIFIED_RESULTS].
 
 2. Purpose and audience
-MeTravel is a free travel app for independent travellers. It combines articles,
-photographs, mapped places, city quests, favourites and trip plans. Its public
-catalogue focuses on Belarus and nearby destinations, with more added by authors.
+MeTravel is a free app for independent travellers: articles, photos, mapped
+places, city quests, favourites and trip plans. Its author-contributed catalogue
+focuses on Belarus and nearby destinations.
 
 3. Setup and reviewer access
-Connect to the internet and browse articles, maps and quests as a guest; no
-subscription or special hardware is needed. For account features, open Profile
-and use the credentials in the protected App Review Information fields.
-Reviewer sign-in succeeded on the physical iPad on 12 September 2026.
-To test deletion, use a disposable account, open Settings > Delete account and
-confirm. Keep the permanent reviewer account. Reporting and blocking are in
-the public-author profile menu after sign-in; the video uses a test author.
+With internet access, browse articles, maps and quests as a guest. No special
+hardware is needed. For account features, open Profile and use the protected
+App Review Information credentials. Reviewer sign-in succeeded on the physical
+iPad on 12 September 2026. Delete only a disposable account via Settings >
+Delete account > confirm; keep the permanent reviewer account. After sign-in,
+report/block is in the public-author profile menu. The video uses a test author.
 
 4. External services and data
-Our API handles accounts, content, plans and user safety. It retains quest progress
-and attempts for functionality and analytics, linked to persistent installation IDs
-and signed-in user IDs. Apple/Google sign-in exchanges tokens and account details.
-Amazon S3 stores media and database backups; Gmail SMTP is configured for
-account emails (recipient address and message).
-Expo/APNs use device tokens for notifications;
-optional Telegram linking associates the selected Telegram account.
-Articles can embed Instagram posts and YouTube videos in web views.
-Leaflet/OpenStreetMap provide maps; Nominatim/BigDataCloud geocode addresses;
-OpenRouteService, Valhalla and OSRM calculate routes. Open-Meteo provides weather
-and elevation. Optional layers use Esri, OpenTopoMap, WaymarkedTrails, Overpass,
-Polish forestry services and OpenWeatherMap. These requests use map areas,
-coordinates, destinations or search queries required by the selected feature.
+Our API handles accounts, content, plans and user safety. Quest progress/attempts
+support functionality and analytics, linked to persistent installation IDs and
+signed-in user IDs. Apple/Google sign-in exchanges tokens and account details.
+Amazon S3 stores media/database backups; Gmail SMTP is configured for account
+emails (recipient address and message).
+Expo/APNs support opt-in push notifications using device tokens.
+Optional Telegram linking associates a Telegram account.
+Articles embed Instagram/YouTube in web views. Leaflet/OpenStreetMap provide
+maps; Nominatim/BigDataCloud geocode; OpenRouteService/Valhalla/OSRM route;
+Open-Meteo supplies weather/elevation. Optional layers use Esri, OpenTopoMap,
+WaymarkedTrails, Overpass, Polish forestry services and OpenWeatherMap.
+Requests use map areas, coordinates, destinations or feature search queries.
 Belkraj/Tripvenue, Travelpayouts, Tripster and Ostrovok provide destination-based
-partner offers via WebView or external links, receiving destination/partner context.
-Meta SDK 18.1.0 remains included although Facebook sign-in is disabled. Its
-shipped auto-event and advertising-ID flags are false; our code implements no
-Meta event/purchase logging. Native initialization can request SDK configuration.
-MeTravel's account and trip-planning flows do not request payment-card details;
-partner booking/payment handling belongs to the external provider.
+offers via WebView/external links, receiving destination/partner context.
+Meta SDK 18.1.0 is included; Facebook sign-in is disabled. Shipped auto-event and
+advertising-ID flags are false; our code has no Meta event/purchase logging.
+Native initialization can request SDK configuration.
+Account/trip-planning flows do not request payment-card details; external
+providers handle partner bookings/payments.
 
 5. Countries and regions
-Free distribution is configured for 175 countries and regions.
-The interface supports RU/BE/UK/PL/EN. Articles and quests are mainly in Russian;
-changing the interface does not translate them.
-Destination coverage and partner offers vary by catalogue.
-The owner confirms no additional country-specific feature restrictions imposed
-by MeTravel. Third-party service availability can vary.
+Free distribution is configured for 175 countries/regions. UI languages: RU/BE/UK/PL/EN.
+Articles/quests are mainly Russian; changing the UI does not translate them.
+Destinations and offers vary by catalogue. The owner confirms no additional
+MeTravel country-specific feature restrictions. Third-party availability varies.
 
 6. Services and content rights
-MeTravel provides travel information and planning, not medical, financial or
-gambling services. The owner confirmed rights to the travel photographs and
-review screenshot materials. Authors retain their uploads' rights and grant the
-limited operational licence in our Terms. Third-party materials retain their
-provider attribution. The owner also confirms permission to display
-Belkraj/Tripvenue offers and Tripster/Ostrovok offers through Travelpayouts in
-the mobile app.
+MeTravel provides travel information/planning, not medical, financial or gambling
+services. The owner confirms rights to travel photos/review screenshots. Authors
+retain upload rights and grant the limited operational licence in our Terms.
+Third-party materials retain attribution. The owner confirms permission for
+mobile Belkraj/Tripvenue offers and Tripster/Ostrovok offers via Travelpayouts.
 Terms: https://metravel.by/terms
 Privacy Policy: https://metravel.by/privacy
 ```
