@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Scenario Recorder"
+  short_description: "Record exact UI scenarios with evidence."
+  default_prompt: "Use $metravel-scenario-recorder to execute the supplied scenario on its exact build and capture compact video and screenshot evidence."

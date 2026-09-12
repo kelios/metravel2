@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Evidence Editor"
+  short_description: "Edit and verify UI evidence with ffmpeg."
+  default_prompt: "Use $metravel-evidence-editor to turn the supplied recordings into a privacy-checked, source-traceable review artifact."

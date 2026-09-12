@@ -32,6 +32,7 @@
 | Android-specific | `$metravel-android-developer` | mobile tester/local builder/operator по точному stage |
 | iPhone-specific | соответствующий iOS analyst/architect/developer/tester | release operator только по exact authorization |
 | Performance/security/growth/SEO | соответствующий analyst/reviewer/operator | implementation skill только если правки разрешены |
+| Запись/монтаж UI evidence | `$metravel-scenario-recorder` или `$metravel-evidence-editor` | tester задаёт сценарий и evidence layer; recorder и editor не выносят QA verdict |
 | Deploy/release/prod smoke | devops/release operator или production smoke | operation gate и exact target обязательны |
 | Новая функция/contract/recurring complex bug | OpenSpec explore/propose | apply — только отдельным запросом |
 
@@ -64,6 +65,34 @@ Output/validation: <artifact and checks>.
 Не повторяй в prompt содержание `AGENTS.md`, `RULES.md` и `CODEX.md`; передавай
 только task-specific facts. Reviewer/QA получает исходный scope и evidence без
 подсказки желаемого verdict.
+
+### Media-agent dispatch
+
+- Передавай fresh agent только один готовый сценарий или bounded batch: scene
+  ids, exact build/artifact, target/evidence layer, steps/expected result,
+  output directory и checkpoint `completed | artifacts | build | next_step`.
+- Для Codex готовые механические записи и экспорты запускай на
+  `gpt-5.6-luna` с `medium`; repair или новый workflow — на `gpt-5.6-sol` с
+  `medium`. Более сильную модель выбирает только root для узкого вопроса.
+  Claude role files сохраняют поддерживаемое значение `model: sonnet`.
+- Readiness выполняется один раз на batch. Используй deterministic CLI,
+  `ffprobe` и точечные кадры вместо frame dumps. Повторяй только изменённые или
+  упавшие scenes; после двух одинаковых operational failures верни exact
+  unblock. Agent output — не более 10 строк.
+- Recorder фиксирует реальные действия на назначенном evidence layer. Editor
+  сохраняет originals и source timeline; монтаж не повышает доказательность и
+  не подменяет отсутствующее device video или exact-build evidence.
+
+### Продолжение без повторного аудита
+
+Сначала используй сохранённые checkpoint, SHA и результаты проверок. При
+неизменном входе повтор нужен только из-за истечения актуальности, ошибки или
+конкретного незакрытого риска. Читай указанные карточки и нужные поля; полный
+поиск истории выполняется для create/reopen/split, а не на каждом продолжении.
+Не выводи целиком большие ответы API, описания карточек и accessibility tree,
+если следующий шаг определяется несколькими полями. Уже полученное разрешение
+сохраняется в handoff; запрос нового разрешения на отдельную внешнюю стадию
+не заменяет выполнение доступной подготовки и не повторяет прежний вопрос.
 
 ## Conditional references
 

@@ -331,11 +331,14 @@ code-review pass. Release operations сохраняют отдельные autho
 | Camera | «снять фото» на тех же экранах | `components/travel/PhotoUploadWithPreview.tsx` |
 | Notifications | **локальные**, не push: напоминание о незаконченном квесте и геофенсинг | `components/quests/useQuestReminder.native.ts`, `services/questGeofencing.native.ts` |
 
-Remote push на iOS в v1 не запрашивается вообще: `NativeAppRuntime.native.tsx`
-передаёт `autoRequest: false`, `requestPermission()` из UI не вызывает никто, а
-плагин уведомлений Android-only и `aps-environment` не синтезирует. Поэтому
-«notifications» в матрице проверяются через квестовый сценарий локальных
-уведомлений, и отсутствие APNs-промпта — ожидаемое поведение, а не дефект.
+В принятом source `8ae84cb56` и build 9 remote push включается по действию
+пользователя в `NotificationSettingsSection.native.tsx`: обработчик вызывает
+`requestAndRegisterPushNotifications`. На старте `usePushNotifications()`
+синхронизирует только уже выданное разрешение (`requestPermission: false` в
+`services/pushRegistration.native.ts`). Подписанный IPA build 9 содержит
+`aps-environment=production`. Отсутствие системного запроса на старте ожидаемо;
+отдельно проверяй пользовательское включение push и доставку. Наличие кода или
+entitlement само по себе не доказывает успешную доставку уведомления.
 
 **Сборка кандидата.** Собирать только из чистого дерева:
 

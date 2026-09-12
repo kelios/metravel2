@@ -16,7 +16,8 @@ catalog по frontmatter `description`.
 - Validation/review: `test-runner`, `test-writer`, `e2e-runner`,
   `browser-reviewer`, `mobile-tester`, `qa-agent`, `quality-fixer`,
   `code-reviewer`, `security-reviewer`, `release-checks`,
-  `production-smoke`, `performance-analyst`.
+  `production-smoke`, `performance-analyst`, `scenario-recorder`,
+  `evidence-editor`.
 - Platform/release: `android-developer`, `android-portable-builder`,
   `google-play-operator`, iOS analyst/architect/designer/developer/reviewer/
   tester/release-operator, `devops-agent`, `play-campaign-tester`.
@@ -43,6 +44,7 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
 `$metravel-codex-orchestrator`, `$metravel-design-auditor`,
 `$metravel-devops-agent`, `$metravel-docs-maintainer`,
 `$metravel-domain-router`, `$metravel-e2e-runner`,
+`$metravel-evidence-editor`,
 `$metravel-feature-builder`, `$metravel-google-play-operator`,
 `$metravel-growth-analyst`, `$metravel-hook-builder`,
 `$metravel-i18n-guardrails`, `$metravel-ios-analyst`,
@@ -57,6 +59,7 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
 `$metravel-quest-geo-verifier`, `$metravel-quest-playthrough-reviewer`,
 `$metravel-quest-writer`, `$metravel-refactor-surgeon`,
 `$metravel-release-checks`, `$metravel-security-reviewer`,
+`$metravel-scenario-recorder`,
 `$metravel-seo-index-operator`, `$metravel-sprint-reviewer`,
 `$metravel-system-architect`, `$metravel-task-contract`,
 `$metravel-test-runner`, `$metravel-test-writer`, `$metravel-ticket-board`,
