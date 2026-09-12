@@ -46,14 +46,18 @@ Local read-only preflight and source/archive inspection do not mutate store stat
   Creating, replacing, or deleting that persistent API key requires explicit
   owner authorization separate from an ordinary upload.
 - `scripts/ios-build.sh` and `scripts/ios-submit.sh` are the canonical hardened
-  path: both are non-interactive, both run `node scripts/ios-release-guard.js`
-  first, and both fail closed without the matching environment authorization
+  path: both run `node scripts/ios-release-guard.js` first and fail closed
+  without the matching environment authorization
   (`IOS_SIGNED_BUILD_AUTHORIZATION=1` for `preview`/`production` builds,
   `IOS_UPLOAD_AUTHORIZATION=1` plus an explicit build id for upload). Build and
   upload are separate commands; neither submits to App Review or releases a
   storefront version, and `IOS_AUTO_SUBMIT_FORBIDDEN` in the guard keeps
   `--auto-submit` out of the repository. Setting an authorization variable is
   itself an owner-authorized act — never export one to unblock yourself.
+- The submit wrapper passes `--non-interactive`; the build wrapper currently
+  does not. Do not describe the build command as unattended or answer
+  credential/access prompts automatically. Inspect each prompt and apply the
+  existing authorization gates and credential-map rules before responding.
 - Run the read-only checks before any gated command: `npm run ios:release:guard`
   (identity, version/build parity across Expo/plist/Xcode, entitlements, purpose
   strings, privacy manifest, production origins, placeholder and tracked-secret
