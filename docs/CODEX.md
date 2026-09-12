@@ -33,6 +33,7 @@
 | iPhone-specific | соответствующий iOS analyst/architect/developer/tester | release operator только по exact authorization |
 | Performance/security/growth/SEO | соответствующий analyst/reviewer/operator | implementation skill только если правки разрешены |
 | Запись/монтаж UI evidence | `$metravel-scenario-recorder` или `$metravel-evidence-editor` | tester задаёт сценарий и evidence layer; recorder и editor не выносят QA verdict |
+| Сценарии и запись видео для App Review | `$metravel-app-review-director` | один кандидат, один батч сцен; аккаунты и приватный ввод по `docs/WORKFLOW_OPERATIONS.md` 3.1 |
 | Пакет для Apple App Review | `$metravel-app-review-evidence` | покрытие сцен, manifest, вложение и Reply/Notes; запись/монтаж — recorder/editor, внешние шаги — release operator |
 | Deploy/release/prod smoke | devops/release operator или production smoke | operation gate и exact target обязательны |
 | Новая функция/contract/recurring complex bug | OpenSpec explore/propose | apply — только отдельным запросом |
