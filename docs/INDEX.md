@@ -110,6 +110,10 @@
 - `docs/IOS_STORE_LISTING.md` — пакет карточки App Store (#1424): тексты
   локалей ASC, скриншот-требования, App Review notes и privacy-сверка;
   автопроверка — `npm run ios:store:guard`;
+- `docs/IOS_APP_REVIEW_RESPONSE_20260910.md` — рабочий ответ на запрос Apple
+  о первом релизе (#1890): шесть вопросов, доказательства build 9 и готовность видео;
+- `docs/IOS_APP_REVIEW_DEVICE_EVIDENCE_20260912.md` — протокол #1889:
+  физические устройства, сценарий видео, история проверок и оставшиеся шаги;
 - `docs/ANDROID_STORE_LISTING.md` — текущий store listing draft.
 
 Android EAS build/submit запрещены; Android production использует local Gradle и

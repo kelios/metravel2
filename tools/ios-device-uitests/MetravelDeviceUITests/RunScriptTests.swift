@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 /// Универсальный драйвер живого iPhone: сценарий приходит снаружи в QA_SCRIPT (JSON),
 /// поэтому под каждый шаг приёмки НЕ надо перекомпилировать обвязку.
@@ -7,18 +8,30 @@ final class RunScriptTests: XCTestCase {
 
     private var app: XCUIApplication!
     private var docs: URL { FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0] }
+    private var secretPasteboardChangeCount: Int?
+    private var isPrivateInput: Bool { env("QA_PRIVATE_INPUT") == "1" }
 
     override func setUp() {
         super.setUp()
-        continueAfterFailure = true
-        // Системные алерты (гео, фото, уведомления) не должны вешать прогон.
-        addUIInterruptionMonitor(withDescription: "system-alert") { alert in
-            for label in ["Разрешить", "Allow", "OK", "Не сейчас", "Not Now"] {
-                let b = alert.buttons[label]
-                if b.exists { b.tap(); return true }
-            }
-            return false
-        }
+        continueAfterFailure = false
+        // Permission matrix требует явного выбора: не регистрируем auto-dismiss monitor.
+    }
+
+    override func tearDown() {
+        clearSecretClipboard()
+        super.tearDown()
+    }
+
+    override func record(_ issue: XCTIssue) {
+        guard isPrivateInput else { super.record(issue); return }
+        super.record(XCTIssue(
+            type: issue.type,
+            compactDescription: "Private input step failed; details suppressed",
+            detailedDescription: nil,
+            sourceCodeContext: issue.sourceCodeContext,
+            associatedError: nil,
+            attachments: []
+        ))
     }
 
     func testRunScript() throws {
@@ -28,7 +41,6 @@ final class RunScriptTests: XCTestCase {
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30), "приложение не вышло на передний план")
 
         let raw = env("QA_SCRIPT") ?? #"[{"op":"shot","name":"screen"}]"#
-        print("QA-SCRIPT-RAW[\(raw.count)]: \(raw)")
         guard let steps = try JSONSerialization.jsonObject(with: Data(raw.utf8)) as? [[String: Any]] else {
             XCTFail("QA_SCRIPT не разобрался как массив шагов"); return
         }
@@ -36,7 +48,14 @@ final class RunScriptTests: XCTestCase {
         for (i, step) in steps.enumerated() {
             let op = step["op"] as? String ?? ""
             let name = step["name"] as? String ?? "step\(i)"
-            print("QA-STEP \(i) \(op) \(name)")
+            if isPrivateInput {
+                guard !["shot", "tree", "type", "typePlaceholder", "clear"].contains(op) else {
+                    XCTFail("Операция запрещена в QA_PRIVATE_INPUT"); return
+                }
+                print("QA-STEP \(i)")
+            } else {
+                print("QA-STEP \(i) \(op) \(name)")
+            }
             switch op {
             case "wait":  Thread.sleep(forTimeInterval: step["sec"] as? Double ?? 1)
             case "shot":  shot(name)
@@ -45,6 +64,10 @@ final class RunScriptTests: XCTestCase {
             case "tapId": tapQuery(app.descendants(matching: .any).matching(identifier: step["id"] as? String ?? ""), what: step["id"] as? String ?? "")
             case "tapText": tapText(step["text"] as? String ?? "")
             case "longPressText": longPressText(step["text"] as? String ?? "", duration: step["sec"] as? Double ?? 1.2)
+            case "longPressPlaceholder": longPressPlaceholder(step["placeholder"] as? String ?? "", duration: step["sec"] as? Double ?? 1.2)
+            case "tapSystemAlertButton": tapSystemAlertButton(step)
+            case "secretClipboard": stageSecretClipboard(key: step["key"] as? String ?? "")
+            case "clearSecretClipboard": clearSecretClipboard()
             case "ensureSwitch": ensureSwitch(id: step["id"] as? String ?? "", on: (step["on"] as? Bool) ?? true)
             case "typePlaceholder": typePlaceholder(step["placeholder"] as? String ?? "", text: step["text"] as? String ?? "")
             case "swipe": swipe(step)
@@ -63,6 +86,81 @@ final class RunScriptTests: XCTestCase {
     }
 
     // MARK: - операции
+
+    /// Только opaque key попадает в QA_SCRIPT. Значение не передаётся в XCTest typeText.
+    /// Перед настоящими credentials обязателен dummy-canary + keepNever в xctestrun.
+    private func stageSecretClipboard(key: String) {
+        guard isPrivateInput, key.range(of: #"^[A-Za-z0-9_-]{1,64}$"#, options: .regularExpression) != nil else {
+            XCTFail("Для secretClipboard нужны QA_PRIVATE_INPUT=1 и допустимый ключ"); return
+        }
+        let directory = docs.appendingPathComponent("qa-secret-input", isDirectory: true)
+        let file = directory.appendingPathComponent(key + ".txt")
+        guard file.resolvingSymlinksInPath().deletingLastPathComponent() == directory.resolvingSymlinksInPath() else {
+            XCTFail("Недопустимый путь приватного файла"); return
+        }
+        do {
+            let data = try Data(contentsOf: file)
+            try FileManager.default.removeItem(at: file)
+            guard !data.isEmpty, data.count <= 16384, let value = String(data: data, encoding: .utf8) else {
+                XCTFail("Ожидается непустой UTF-8 приватный файл до 16 KiB"); return
+            }
+            onMain {
+                UIPasteboard.general.setItems([["public.utf8-plain-text": value]], options: [
+                    .localOnly: true, .expirationDate: Date().addingTimeInterval(60)
+                ])
+                secretPasteboardChangeCount = UIPasteboard.general.changeCount
+            }
+        } catch {
+            // Не печатаем error: он может содержать путь или данные.
+            try? FileManager.default.removeItem(at: file)
+            XCTFail("Не удалось прочитать и удалить приватный файл")
+        }
+    }
+
+    private func clearSecretClipboard() {
+        guard let expectedChangeCount = secretPasteboardChangeCount else { return }
+        onMain {
+            if UIPasteboard.general.changeCount == expectedChangeCount {
+                UIPasteboard.general.items = []
+            }
+        }
+        secretPasteboardChangeCount = nil
+    }
+
+    private func onMain(_ action: () -> Void) {
+        if Thread.isMainThread { action() } else { DispatchQueue.main.sync(execute: action) }
+    }
+
+    private func tapSystemAlertButton(_ step: [String: Any]) {
+        guard let text = step["alertText"] as? String, !text.isEmpty,
+              let label = step["button"] as? String, !label.isEmpty else {
+            XCTFail("Нужны ожидаемый alertText и точная подпись button"); return
+        }
+        let alerts = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts
+        guard alerts.count == 1 else { XCTFail("Ожидается один системный alert"); return }
+        let alert = alerts.element(boundBy: 0)
+        guard alert.label.contains(text) || alert.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", text)).count > 0 else {
+            XCTFail("Системный alert не соответствует ожидаемому"); return
+        }
+        let buttons = alert.buttons.matching(NSPredicate(format: "label == %@", label))
+        guard buttons.count == 1, buttons.element(boundBy: 0).isHittable else {
+            XCTFail("Нет единственной доступной кнопки системного alert"); return
+        }
+        buttons.element(boundBy: 0).tap()
+    }
+
+    private func longPressPlaceholder(_ placeholder: String, duration: TimeInterval) {
+        guard !placeholder.isEmpty else { XCTFail("Нужен placeholder поля"); return }
+        let fields = app.descendants(matching: .any).matching(NSPredicate(
+            format: "(elementType == %d OR elementType == %d) AND placeholderValue == %@",
+            XCUIElement.ElementType.textField.rawValue, XCUIElement.ElementType.secureTextField.rawValue, placeholder
+        ))
+        guard fields.count == 1 else { XCTFail("Ожидается единственное поле с placeholder"); return }
+        let field = fields.element(boundBy: 0)
+        scrollTo(field)
+        guard field.isHittable else { XCTFail("Поле недоступно для long-press"); return }
+        field.press(forDuration: duration)
+    }
 
     private func shot(_ name: String) {
         let screenshot = XCUIScreen.main.screenshot()

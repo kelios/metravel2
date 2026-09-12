@@ -42,7 +42,7 @@ MeTravel — путеводитель по реальным путешестви
 
 • Планировщик поездок. Собирайте маршрут, отмечайте ночёвки и снаряжение.
 
-• Вход через Apple, Google или Facebook. Данные аккаунта можно удалить из настроек приложения.
+• Вход через Apple или Google. Данные аккаунта можно удалить из настроек приложения.
 
 ДЛЯ КОГО
 
@@ -102,7 +102,7 @@ MeTravel — путівник, створений на основі справж
 
 • Планувальник подорожей. Складайте маршрут, позначайте ночівлі та спорядження.
 
-• Вхід через Apple, Google або Facebook. Обліковий запис можна видалити в налаштуваннях застосунку.
+• Вхід через Apple або Google. Обліковий запис можна видалити в налаштуваннях застосунку.
 
 ДЛЯ КОГО
 
@@ -148,7 +148,7 @@ CO ZNAJDZIESZ W APLIKACJI
 
 • Planer podróży. Układaj trasę, zaznaczaj noclegi i potrzebny ekwipunek.
 
-• Logowanie przez Apple, Google lub Facebook. Konto można usunąć w ustawieniach aplikacji.
+• Logowanie przez Apple lub Google. Konto można usunąć w ustawieniach aplikacji.
 
 DLA KOGO
 
@@ -194,7 +194,7 @@ INSIDE THE APP
 
 • A trip planner for the route, overnights and packing.
 
-• Sign in with Apple, Google or Facebook. You can delete your account from Settings.
+• Sign in with Apple or Google. You can delete your account from Settings.
 
 WHO IT IS FOR
 
@@ -305,8 +305,12 @@ App Review Information, в Git и на борд не попадают.
   (`components/auth/LoginForm.tsx:341` → `FacebookAuthFlow.native.tsx` →
   `components/auth/FacebookSignInButton.native.tsx`; одноимённый файл без
   суффикса `.native` — веб-only заглушка, на iOS Metro её не выбирает).
-  Требование Guideline 4.8 выполнено: Apple присутствует наравне со сторонними
-  провайдерами.
+  На уровне исходника Apple присутствует наравне со сторонними провайдерами;
+  это не заменяет проверку доступности входа в точном бинарнике.
+  Уточнение по exact IPA от 12.09: compiled Facebook feature flag равен false,
+  поэтому Facebook login UI в build 9 скрыт, хотя native SDK включён в бинарник.
+  Google config непустая; успешный вход проверяется отдельно. Обещание Facebook
+  убрано из локального пакета описаний четырёх локалей; изменение ASC ещё предстоит.
 - Удаление аккаунта (Guideline 5.1.1(v)): вкладка «Настройки» → карточка
   аккаунта → «Удалить аккаунт»; маршрут `app/(tabs)/settings.tsx` →
   `components/screens/settings/SettingsScreen.tsx:34` →
@@ -327,23 +331,35 @@ App Review Information, в Git и на борд не попадают.
 
 ## Privacy
 
-Сверка с #1416 и манифестом принятого бинарника:
+Исходниковая сверка с #1416, дополненная проверкой IPA 12.09.2026:
 
-- Facebook SDK (`react-native-fbsdk-next`) собран без рекламных идентификаторов:
+- В compiled Info.plist кандидата для Facebook SDK (`react-native-fbsdk-next`):
   `FacebookAdvertiserIDCollectionEnabled = false`,
-  `FacebookAutoLogAppEventsEnabled = false` (`ios/metravel/Info.plist`).
-  Поэтому в App Privacy tracking выключен и ATT не требуется.
-- Web-аналитика (GA4, Яндекс.Метрика) в native-бандл не входит и в App Privacy
-  не переносится.
+  `FacebookAutoLogAppEventsEnabled = false`, `FacebookAutoInitEnabled = true`.
+  Эти настройки не доказывают отсутствие всех форм tracking или ненужность ATT.
+- Native utility GA4/Яндекс не отправляет web-события; это не проверка собственных
+  событий квестов, SDK-аналитики и сторонних страниц внутри WebView.
 - Location / Photos / Camera / Account — по фактическому flow бинарника, список
   разрешений выше.
 - `ios/metravel/PrivacyInfo.xcprivacy` объявляет ровно 10 типов данных
   (Coarse/Precise Location, DeviceID, EmailAddress, EmailsOrTextMessages, Name,
   OtherUserContactInfo, OtherUserContent, PhotosOrVideos, UserID),
-  `NSPrivacyTracking = false`, `NSPrivacyTrackingDomains` пуст. Это состав
-  манифеста в репозитории; опубликованные ответы анкеты App Privacy лежат в App
-  Store Connect и отсюда не видны — сверку анкеты с этим списком делает владелец
-  в ASC (пункт «Что остаётся владельцу»).
+  `NSPrivacyTracking = false`, `NSPrivacyTrackingDomains` пуст. Это также
+  подтверждено для **первичного** манифеста скачанного IPA build 9 от 12.09;
+  опубликованные ответы анкеты App Privacy сверяются в ASC отдельно.
+- В том же IPA присутствуют 28 встроенных SDK privacy manifests. FBSDKCoreKit,
+  LoginKit и ShareKit декларируют `tracking=true` и tracking domain; Google
+  Sign-In — 8 типов данных. Есть категории сверх первичных 10. Это декларации
+  SDK, не доказательство фактического сбора или нарушения. Нужна сверка с
+  реально включёнными режимами SDK и поведением WebView перед итоговым privacy
+  verdict. Обезличенная инвентаризация:
+  `.codex-temp/app-review-2026-09-12/artifact/identity-config.json`.
+
+Дополнение 12.09.2026: опубликованная форма App Privacy повторно прочитана в live
+ASC — те же 10 типов данных, все linked to identity. Это подтверждает состояние
+формы; полнота классификации фактической телеметрии и партнёрских WebView
+проверяется отдельно в #1890. Из этой сверки не следует отсутствие tracking у
+всех внешних поставщиков.
 
 ## Что уже в App Store Connect (2026-09-09)
 
@@ -357,4 +373,33 @@ App Review Information, в Git и на борд не попадают.
   4 кадра `APP_IPAD_PRO_3GEN_129` (2064×2752). Исходники — `.codex-temp/appstore-shots/`.
 - App Review contact, demo-аккаунт (`demoAccountRequired: true`) и notes заполнены
   в защищённых полях Connect. Значения в Git и на борд не копируются.
-- Submit не выполнялся. Отправка в App Review — #1425 или отдельная команда.
+- На момент этого снимка submit не выполнялся; последующая отправка отражена ниже.
+
+## Дополнение после запроса Apple (2026-09-12)
+
+Первый submit выполнен 09.09.2026 в #1426. При повторном чтении ASC 12.09
+выбрана версия `1.0.5 (9)`, состояние «Отклонено», одно сообщение Apple от 10.09:
+`2.1 Information Needed — New App Submission`. Apple просит физическое видео и
+шесть ответов в Reply и Notes; письмо не устанавливает конкретный дефект кода.
+
+Единый рабочий пакет — [ответ Apple от 10.09](IOS_APP_REVIEW_RESPONSE_20260910.md)
+(#1890), физическая проверка и видео — #1889. Пакет пока не готов к отправке:
+обязательные результаты, происхождение бинарника, актуальная ОС и условные
+сервисы проверяются отдельно. Исторические source-заметки выше не являются
+новой физической приёмкой build 9. Reply/Notes и повторный submit ещё не выполнены.
+
+Подготовлена фактическая правка описаний карточки; в ASC она **не сохранена**.
+Live Description всех четырёх локалей 12.09 всё ещё обещают Facebook; кнопка
+Save не нажималась. Точные замены для отдельного
+обновления метаданных после проверки пакета:
+
+| Локаль ASC | Было | Подготовлено |
+| --- | --- | --- |
+| RU | Вход через Apple, Google или Facebook. | Вход через Apple или Google. |
+| UK | Вхід через Apple, Google або Facebook. | Вхід через Apple або Google. |
+| PL | Logowanie przez Apple, Google lub Facebook. | Logowanie przez Apple lub Google. |
+| EN-US | Sign in with Apple, Google or Facebook. | Sign in with Apple or Google. |
+
+Остальной текст описаний сохранён. Локали интерфейса приложения не меняются;
+перед записью в ASC сверить текущую строку каждой локали и применить только эту
+замену в рамках разрешённого операторского действия.
