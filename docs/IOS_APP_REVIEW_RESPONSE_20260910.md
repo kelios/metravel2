@@ -275,8 +275,8 @@ Tripster/Ostrovok offers through Travelpayouts in the mobile app.
 ## Общий черновик Reply и Notes — не отправлять с временными полями
 
 Ниже один компактный текст для обоих полей. Квадратные скобки — только
-незавершённые результаты #1889 и факты о сервисах/регионах/правах, которые ещё
-нельзя утверждать. После подстановки проверенных значений перечитать 6/6 пунктов,
+незавершённые результаты физического QA и видео #1889. После подстановки
+проверенных значений перечитать 6/6 пунктов,
 проверить длину по текущему полю ASC и использовать один и тот же файл видео.
 Live ASC 12.09 показал лимит Notes 4000 символов (474 занято, 3526 осталось);
 после замены временных полей длину нужно пересчитать. Поле необязательного
@@ -314,7 +314,7 @@ the public-author profile menu after sign-in; the video uses a test author.
 MeTravel's API handles accounts, travel content, quests, trip plans and user-safety
 actions, including quest-attempt/session events. Apple/Google sign-in exchanges
 identity tokens and account details. Amazon S3 stores uploaded media and database
-backups; Gmail SMTP delivers account emails (recipient address and message).
+backups; Gmail SMTP is configured for account emails (recipient address and message).
 Expo/APNs use device tokens for notifications;
 optional Telegram linking associates the selected Telegram account.
 Leaflet/OpenStreetMap provide maps; Nominatim/BigDataCloud geocode addresses;
@@ -352,8 +352,8 @@ Privacy Policy: https://metravel.by/privacy
 
 ## Что ещё нужно для готовности
 
-1. #1889: доступное физическое устройство на актуальной ОС, точное происхождение
-   бинарника, запись всех действий с результатами и таймкодами, iPad-проверка,
+1. #1889: точное происхождение установленного бинарника, запись всех действий
+   с результатами и таймкодами, iPad-проверка,
    свежий demo-вход, проверка файла на отсутствие секретов.
 2. Effective config build 9, S3 и Gmail SMTP подтверждены указанными выше
    источниками. Описание Meta ограничено проверенными фактами инициализации и
