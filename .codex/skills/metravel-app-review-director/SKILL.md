@@ -91,6 +91,14 @@ for a person, debug, or read trees while capture is running. If a pause is
 unavoidable, stop capture and continue in a new file. A take with idle
 waiting is a draft, not evidence: re-record it.
 
+Budget: about three minutes of wall clock per scene. The dummy canary runs
+once per runner build, not per scene; at most one rehearsal per scene; the
+first take whose expected end state is visible in the last frames is final
+(no second take "for quality", no post-take XCTest verification — the video
+is the verification); short steps are merged into one `QA_SCRIPT` so
+`xcodebuild` is not launched per tap; checkpoint and board notes are written
+once per batch, plus once after any failure.
+
 Rerun only a failed scene, once, after fixing the observed cause. Two
 identical operational failures (lock, trust, signing, capture source) → stop
 and name the exact owner action.
