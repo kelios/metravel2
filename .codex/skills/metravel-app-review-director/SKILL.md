@@ -81,6 +81,16 @@ store the report beside the file. The private-input protocol pauses capture
 for the paste segment: split the scene into `<id>-a.mov`/`<id>-b.mov` and
 record the cut in the checkpoint; the editor labels it.
 
+One take, no dead time. Everything that can be prepared happens before
+capture starts: helper build and dummy canary, the secret file already in
+the runner container, the whole scene in one `QA_SCRIPT` (including
+`secretClipboard` → `longPressPlaceholder` → Paste → `clearSecretClipboard`
+→ submit), the activation command dry-run, and a rehearsal of the scene
+without capture. A recorded scene is a continuous 30–90 s run; never wait
+for a person, debug, or read trees while capture is running. If a pause is
+unavoidable, stop capture and continue in a new file. A take with idle
+waiting is a draft, not evidence: re-record it.
+
 Rerun only a failed scene, once, after fixing the observed cause. Two
 identical operational failures (lock, trust, signing, capture source) → stop
 and name the exact owner action.
