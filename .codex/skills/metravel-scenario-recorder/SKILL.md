@@ -21,6 +21,13 @@ checkpoint. If one is missing, report only the missing field; do not invent it.
 
 ## Recording contract
 
+Before asking the owner to unlock a device, prepare the exact next driver
+command, input channel, activation-mailbox access, and any required account
+authorization. Ask for unlock last and run the prepared scene immediately;
+do not leave an unlocked device idle during unrelated analysis. If another
+owner decision is still pending, bundle the access request with that decision.
+Do not change auto-lock/security settings to compensate for agent delays.
+
 1. Work on one scene or one explicitly bounded batch. Run readiness once for
    that batch and record the actual build, target, viewport/orientation, locale,
    and backend.

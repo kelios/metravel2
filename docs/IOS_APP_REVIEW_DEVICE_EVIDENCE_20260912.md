@@ -18,10 +18,34 @@ credential-entry and phone footage is excluded. Its whole timeline has a
 one-second sampled visual review, not continuous playback or an every-frame
 privacy certification. The source recordings remain private. The helper's dummy
 Paste channel was not accepted and no real credentials were sent through it.
-Disposable-account registration consent and the remaining acceptance scenarios
-are still outstanding. No complete App Review demonstration is certified.
-Device actions are paused while the saved recordings are reviewed; the earlier
-lock/XCTest failures below are historical, not the current blocker.
+Authorization to create the two named disposable accounts and the remaining
+acceptance scenarios are still outstanding. No complete App Review demonstration
+is certified. See the latest checkpoint below; older lock/XCTest failures remain
+historical evidence.
+
+## Resume checkpoint — 12 September, 12:51 UTC
+
+- After the owner's unlock, the cached helper read the physical iPad screen/tree
+  in approximately 9 seconds. Candidate remains TestFlight 1.0.5 (9), iPad mini 6,
+  iPadOS 26.6.2. The reviewer session was reversibly logged out.
+- A 22.56-second physical recording shows guest Login → Register. The complete
+  visible form has empty Email/Password fields and no separate Terms checkbox
+  or consent wording. No registration submission or account creation occurred.
+- Source: `device/recorder-resume/registration-entry.mp4`, H.264, 1488×2266,
+  with an audio track; keep this source private. A video-only derivative is
+  `device/recorder-resume/registration-entry-silent.mp4`, SHA-256
+  `aedf587c1f6ad72431d42fa8c6f4991ac80b9909316699b749bb986226009c1e`.
+  This is registration-entry evidence, not registration/activation success.
+- Screenshot: `device/recorder-resume/registration-capture/register-screen.png`.
+  The existing Gmail tab is signed in to the intended activation mailbox;
+  activation messages have not been accessed and no accounts have been created.
+- The subsequent short dummy-input check stopped before the test body on
+  `deviceprep Code=-3` asking to unlock iPad. No real credentials were used.
+  A dummy-only file remains staged in the helper container for the next probe.
+- Next: obtain the pending named-account decision, unlock immediately before
+  resuming the prepared dummy probe, verify input and cleanup, then execute the
+  registration/activation scene. Preserve the permanent reviewer account.
+
 
 ## Scope and evidence boundary
 
