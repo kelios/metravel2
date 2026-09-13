@@ -420,7 +420,12 @@
     "autolinking": {
       "buildFromSource": [
         "expo-image"
-      ]
+      ],
+      "ios": {
+        "exclude": [
+          "react-native-fbsdk-next"
+        ]
+      }
     },
     "install": {
       "exclude": [

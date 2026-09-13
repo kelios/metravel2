@@ -26,13 +26,27 @@
 |---|---|---|---|---|---|
 | Email + пароль | да | да | да | да | `api/auth.ts` |
 | Google | да | да | да | да | `GoogleSignInButton.web.tsx` (GSI) / `.native.tsx` |
-| Facebook | гейт `EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED` | тот же гейт | тот же гейт | тот же гейт | `FacebookAuthFlow.shared.tsx` |
+| Facebook | гейт `EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED` | тот же гейт | тот же гейт | **нет** (SDK исключён из сборки, #1895) | `FacebookAuthFlow.shared.tsx` |
 | Apple | гейт `EXPO_PUBLIC_APPLE_WEB_CLIENT_ID` + `..._REDIRECT_URI` | тот же гейт | **нет** | да | `AppleSignInButton.web.tsx` / `.native.tsx` |
 
 Apple в Android-приложении отсутствует осознанно: `expo-apple-authentication`
 на не-iOS отдаёт `isAvailableAsync() === false`. Аккаунт, созданный через Apple,
 попадает в Android-приложение только через email + пароль — см. «Известные
 ограничения».
+
+Facebook в iPhone-приложении отсутствует на уровне сборки (#1895), а не только
+за гейтом: `package.json` → `expo.autolinking.ios.exclude` снимает
+`react-native-fbsdk-next` с iOS-autolinking (и RN-под, и Expo-модуль
+`ExpoAdapterFBSDKNext` с `FacebookAppDelegate`), `ios/metravel/Info.plist` не
+содержит Facebook-ключей и `fb…`-схем, а `FacebookSignInButton.ios.tsx` —
+заглушка без импорта JS SDK. Причина: Meta SDK 18.x объявляет в своём privacy
+manifest `tracking=true` и tracking domains, что противоречит app-owned
+манифесту и форме App Privacy (`tracking=false`, guideline 5.1.2). Гейты
+`ios:release:guard` (`IOS_META_SDK_LINKED`) и `ios:artifact:audit`
+(`IOS_ARTIFACT_META_SDK`, `IOS_ARTIFACT_SDK_TRACKING`) держат это состояние.
+Вернуть Facebook на iOS — отдельная фича: Meta требует на iOS Limited Login
+без ATT-согласия (OIDC-токен вместо access token, нужен backend-контракт), либо
+ATT-запрос и `tracking=true` в App Privacy.
 
 ## Веб-вход через Apple (#1506)
 

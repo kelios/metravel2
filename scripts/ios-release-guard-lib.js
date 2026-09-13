@@ -148,6 +148,18 @@ const IOS_REQUIRED_REASON_APIS = Object.freeze({
 
 const PORTABLE_HERMES_CLI_PATH =
   '$(PODS_ROOT)/../../node_modules/hermes-compiler/hermesc/osx-bin/hermesc';
+
+// Meta SDK не входит в iPhone-сборку (#1895): его встроенный privacy manifest
+// объявляет tracking=true и tracking domains, что расходится с app-owned
+// манифестом (tracking=false) и опубликованной формой App Privacy. Исключение
+// живёт в package.json → expo.autolinking.ios.exclude и снимает и RN-под
+// react-native-fbsdk-next, и Expo-модуль ExpoAdapterFBSDKNext с его
+// FacebookAppDelegate-подписчиком; Android продолжает линковать SDK, а
+// iOS-кнопка входа — заглушка без импорта JS SDK.
+const IOS_EXCLUDED_NATIVE_MODULES = Object.freeze(['react-native-fbsdk-next']);
+const META_SDK_NATIVE_PATTERN = /FBSDK|FBAEMKit|react-native-fbsdk-next|ExpoAdapterFBSDKNext/;
+const META_SDK_PLIST_PATTERN =
+  /<key>Facebook[A-Za-z]+<\/key>|<string>fb(?:\d+|api|auth2|-messenger-api|shareextension)<\/string>/;
 const PATCH_PACKAGE_COMMAND =
   'node ./node_modules/patch-package/dist/index.js --error-on-fail';
 
@@ -498,6 +510,7 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   let appDelegate;
   let questFullMap;
   let questFullMapNative;
+  let facebookIosButton;
   let androidManifest;
   let androidColors;
   try {
@@ -521,6 +534,7 @@ function validateIosRelease(root = process.cwd(), options = {}) {
     appDelegate = read(root, 'ios/metravel/AppDelegate.swift');
     questFullMap = read(root, 'components/quests/QuestFullMap.tsx');
     questFullMapNative = read(root, 'components/quests/QuestFullMap.native.tsx');
+    facebookIosButton = read(root, 'components/auth/FacebookSignInButton.ios.tsx');
     androidManifest = read(root, 'android/app/src/main/AndroidManifest.xml');
     androidColors = read(root, 'android/app/src/main/res/values/colors.xml');
     appIconContents = readJson(
@@ -800,6 +814,28 @@ function validateIosRelease(root = process.cwd(), options = {}) {
     );
   }
 
+  const iosAutolinkingExclude = packageJson.expo?.autolinking?.ios?.exclude;
+  const missingIosExclusions = IOS_EXCLUDED_NATIVE_MODULES.filter(
+    name => !Array.isArray(iosAutolinkingExclude) || !iosAutolinkingExclude.includes(name)
+  );
+  if (missingIosExclusions.length > 0) {
+    fail(
+      'IOS_META_SDK_LINKED',
+      `package.json expo.autolinking.ios.exclude must keep ${missingIosExclusions.join(', ')} out of the iPhone build`
+    );
+  }
+  if (META_SDK_NATIVE_PATTERN.test(podfileLock) || META_SDK_NATIVE_PATTERN.test(project)) {
+    fail('IOS_META_SDK_LINKED', 'ios/Podfile.lock and the Xcode project must not link Meta SDK pods or frameworks');
+  }
+  if (META_SDK_PLIST_PATTERN.test(info) ||
+      Object.prototype.hasOwnProperty.call(infoConfig, 'LSApplicationQueriesSchemes')) {
+    fail('IOS_META_SDK_LINKED', 'Info.plist must not keep Facebook SDK configuration, fb URL schemes or Meta query schemes');
+  }
+  if (/(?:\bfrom\s*|\brequire\(\s*|\bimport\(\s*)['"]react-native-fbsdk-next['"]/.test(facebookIosButton) ||
+      !facebookIosButton.includes('export default function FacebookSignInButton')) {
+    fail('IOS_META_SDK_LINKED', 'components/auth/FacebookSignInButton.ios.tsx must stay a stub that never imports the Meta JS SDK');
+  }
+
   const plistPairs = [
     ['IOS_DEVELOPMENT_LANGUAGE_PLIST', /<key>CFBundleDevelopmentRegion<\/key>\s*<string>ru<\/string>/],
     ['IOS_DISPLAY_NAME_PLIST', /<key>CFBundleDisplayName<\/key>\s*<string>MeTravel<\/string>/],
@@ -932,8 +968,11 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   );
   const nodeModulesRoot = path.join(root, 'node_modules');
   if (fs.existsSync(nodeModulesRoot)) {
+    // Пакеты из IOS_EXCLUDED_NATIVE_MODULES законно отсутствуют в lock:
+    // autolinking их для iOS не резолвит, хотя podspec в node_modules есть.
     const unlockedPods = Object.keys(packageJson.dependencies || {}).filter(
-      name => !lockedNodeModules.has(name) && hasIosPodspec(path.join(nodeModulesRoot, name))
+      name => !IOS_EXCLUDED_NATIVE_MODULES.includes(name) &&
+        !lockedNodeModules.has(name) && hasIosPodspec(path.join(nodeModulesRoot, name))
     );
     const orphanedPods = Array.from(lockedNodeModules).filter(
       name => !fs.existsSync(path.join(nodeModulesRoot, name))
@@ -1124,6 +1163,7 @@ function validateIosRelease(root = process.cwd(), options = {}) {
 module.exports = {
   AASA_ROUTE_POLICY_CASES,
   EXPECTED,
+  IOS_EXCLUDED_NATIVE_MODULES,
   IOS_IPAD_ORIENTATIONS,
   IOS_PURPOSE_STRINGS,
   LOCALIZED_PURPOSE_STRINGS,

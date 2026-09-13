@@ -318,6 +318,75 @@ describe('iOS signed artifact audit', () => {
     )).toBe(false);
   });
 
+  // Meta SDK снят с iPhone-сборки (#1895): его фреймворки и privacy bundles
+  // объявляют tracking=true и tracking domains, чего в архиве быть не должно.
+  it('fails closed when a Meta privacy bundle with tracking domains ships in the archive', () => {
+    const appPath = createAppBundle();
+    const bundlePath = path.join(appPath, 'FBSDKCoreKit_Privacy.bundle');
+    fs.mkdirSync(bundlePath);
+    fs.writeFileSync(path.join(bundlePath, 'PrivacyInfo.xcprivacy'), plist.build({
+      NSPrivacyTracking: true,
+      NSPrivacyTrackingDomains: ['ep1.facebook.com'],
+    }));
+    expect(validateIosAppBundle(appPath, ARTIFACT_OPTIONS)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'IOS_ARTIFACT_META_SDK',
+          detail: expect.stringContaining('FBSDKCoreKit_Privacy.bundle'),
+        }),
+        expect.objectContaining({
+          code: 'IOS_ARTIFACT_SDK_TRACKING',
+          detail: expect.stringContaining('ep1.facebook.com'),
+        }),
+      ])
+    );
+  });
+
+  it('fails closed when any bundled SDK privacy manifest declares tracking', () => {
+    const appPath = createAppBundle();
+    const bundlePath = path.join(appPath, 'SomeVendor_Privacy.bundle');
+    fs.mkdirSync(bundlePath);
+    fs.writeFileSync(path.join(bundlePath, 'PrivacyInfo.xcprivacy'), plist.build({
+      NSPrivacyTracking: true,
+    }));
+    const errors = validateIosAppBundle(appPath, ARTIFACT_OPTIONS);
+    expect(errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({
+        code: 'IOS_ARTIFACT_SDK_TRACKING',
+        detail: expect.stringContaining('SomeVendor_Privacy.bundle'),
+      })])
+    );
+    expect(errors).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'IOS_ARTIFACT_META_SDK' })])
+    );
+  });
+
+  it('fails closed when the compiled Info.plist keeps Facebook configuration', () => {
+    const appPath = createAppBundle(info => {
+      info.FacebookAppID = '1';
+    });
+    expect(validateIosAppBundle(appPath, ARTIFACT_OPTIONS)).toEqual(
+      expect.arrayContaining([expect.objectContaining({
+        code: 'IOS_ARTIFACT_META_SDK',
+        detail: expect.stringContaining('Info.plist: FacebookAppID'),
+      })])
+    );
+  });
+
+  it('fails closed when the app binary links Meta SDK symbols', () => {
+    const appPath = createAppBundle();
+    fs.writeFileSync(
+      path.join(appPath, 'metravel'),
+      'linked CMMotionActivityManager native symbol and FBSDKCoreKit.ApplicationDelegate'
+    );
+    expect(validateIosAppBundle(appPath, ARTIFACT_OPTIONS)).toEqual(
+      expect.arrayContaining([expect.objectContaining({
+        code: 'IOS_ARTIFACT_META_SDK',
+        detail: expect.stringContaining('linked symbols: metravel'),
+      })])
+    );
+  });
+
   it('fails closed when the bundled privacy manifest differs from the source contract', () => {
     const appPath = createAppBundle();
     expect(validateIosAppBundle(appPath, {

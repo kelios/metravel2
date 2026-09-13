@@ -74,6 +74,7 @@ function fixture(changes: Record<string, (value: string) => string>): string {
     'ios/metravel/Images.xcassets/SplashScreenLogo.imageset/image@3x.png',
     'components/quests/QuestFullMap.tsx',
     'components/quests/QuestFullMap.native.tsx',
+    'components/auth/FacebookSignInButton.ios.tsx',
   ];
   for (const relativePath of requiredFiles) {
     const target = path.join(tempRoot, relativePath);
@@ -834,6 +835,75 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
         detail: expect.stringContaining('hermes-engine lock checksum differs'),
       }),
     ]);
+  });
+
+  // Meta SDK снят с iPhone-сборки (#1895): его privacy manifest объявляет
+  // tracking=true, что расходится с app-owned манифестом и формой App Privacy.
+  it.each<[string, Record<string, (value: string) => string>, string]>([
+    [
+      'iOS autolinking exclusion is dropped',
+      {
+        'package.json': value => {
+          const pkg = JSON.parse(value);
+          delete pkg.expo.autolinking.ios;
+          return JSON.stringify(pkg, null, 2);
+        },
+      },
+      'expo.autolinking.ios.exclude must keep react-native-fbsdk-next',
+    ],
+    [
+      'Podfile.lock links a Meta pod again',
+      { 'ios/Podfile.lock': value => value.replace('PODS:\n', 'PODS:\n  - FBSDKCoreKit (18.1.0)\n') },
+      'must not link Meta SDK pods',
+    ],
+    [
+      'Info.plist keeps Facebook configuration',
+      {
+        'ios/metravel/Info.plist': value => value.replace(
+          '<key>ITSAppUsesNonExemptEncryption</key>',
+          '<key>FacebookAppID</key>\n\t<string>1</string>\n\t<key>ITSAppUsesNonExemptEncryption</key>'
+        ),
+      },
+      'Info.plist must not keep Facebook SDK configuration',
+    ],
+    [
+      'Info.plist restores Meta query schemes',
+      {
+        'ios/metravel/Info.plist': value => value.replace(
+          '<key>ITSAppUsesNonExemptEncryption</key>',
+          '<key>LSApplicationQueriesSchemes</key>\n\t<array>\n\t\t<string>fbapi</string>\n\t</array>\n\t<key>ITSAppUsesNonExemptEncryption</key>'
+        ),
+      },
+      'Info.plist must not keep Facebook SDK configuration',
+    ],
+    [
+      'the iOS sign-in stub imports the Meta JS SDK',
+      {
+        'components/auth/FacebookSignInButton.ios.tsx': value =>
+          `import { Settings } from 'react-native-fbsdk-next'\n${value}`,
+      },
+      'must stay a stub',
+    ],
+  ])('fails closed when the Meta SDK returns to the iPhone build: %s', (_name, changes, detail) => {
+    const testRoot = fixture(changes);
+    expect(validateIosRelease(testRoot, { checkLiveAasa: false })).toEqual(
+      expect.arrayContaining([expect.objectContaining({
+        code: 'IOS_META_SDK_LINKED',
+        detail: expect.stringContaining(detail),
+      })])
+    );
+  });
+
+  it('keeps the excluded Meta pod out of the Podfile.lock staleness check', () => {
+    // react-native-fbsdk-next остаётся в package.json ради Android и несёт
+    // podspec в node_modules, но для iOS autolinking его не резолвит — это не
+    // «отставший lock», а ожидаемое состояние.
+    expect(validateIosRelease(fixture({}), { checkLiveAasa: false })).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({
+        code: 'IOS_PODFILE_LOCK_STALE',
+        detail: expect.stringContaining('react-native-fbsdk-next'),
+      })])
+    );
   });
 
   it('fails closed when privacy collection or tracking drifts', () => {

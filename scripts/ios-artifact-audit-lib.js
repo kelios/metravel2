@@ -10,6 +10,12 @@ const {
   LOCALIZED_PURPOSE_STRINGS,
 } = require('./ios-release-guard-lib');
 
+// Meta SDK is excluded from the iPhone build (#1895): the linked Meta
+// frameworks declare tracking=true in their own privacy manifests, which the
+// app-owned manifest and the published App Privacy form both deny.
+const META_SDK_SYMBOL_PATTERN = /FBSDK(?:CoreKit|LoginKit|ShareKit|GamingServicesKit)|FBAEMKit/;
+const META_SDK_ENTRY_PATTERN = /^(?:FBSDK|FBAEMKit)/i;
+
 const EXPECTED_ENTITLEMENTS = Object.freeze({
   'aps-environment': EXPECTED.apnsEnvironment,
   'com.apple.developer.applesignin': ['Default'],
@@ -56,18 +62,25 @@ function parsePlist(plistPath) {
   return JSON.parse(output);
 }
 
-function findFiles(root, basename) {
+// `readdirSync` с `withFileTypes` не разыменовывает симлинки: у ссылки
+// `isDirectory()` ложно, поэтому обход не уходит в цикл по самоссылающемуся
+// бандлу.
+function findEntries(root, predicate) {
   const matches = [];
   const pending = [root];
   while (pending.length > 0) {
     const current = pending.pop();
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const target = path.join(current, entry.name);
+      if (predicate(entry)) matches.push(target);
       if (entry.isDirectory()) pending.push(target);
-      else if (entry.isFile() && entry.name === basename) matches.push(target);
     }
   }
   return matches;
+}
+
+function findFiles(root, basename) {
+  return findEntries(root, entry => entry.isFile() && entry.name === basename);
 }
 
 function pngDimensions(buffer) {
@@ -260,6 +273,7 @@ function validateIosAppBundle(appPath, options = {}) {
   const executablePath = typeof info.CFBundleExecutable === 'string'
     ? path.join(appPath, info.CFBundleExecutable)
     : '';
+  const metaSdkExecutables = [];
   if (!executablePath || !fs.existsSync(executablePath)) {
     fail('IOS_ARTIFACT_EXECUTABLE', 'archive app executable is missing');
   } else {
@@ -270,6 +284,9 @@ function validateIosAppBundle(appPath, options = {}) {
           encoding: 'utf8',
           maxBuffer: 128 * 1024 * 1024,
         });
+        if (META_SDK_SYMBOL_PATTERN.test(nativeStrings)) {
+          metaSdkExecutables.push(path.relative(appPath, nativeExecutable));
+        }
         for (const requirement of SENSITIVE_NATIVE_API_INVENTORY) {
           if (requirement.pattern.test(nativeStrings) &&
               (typeof info[requirement.key] !== 'string' || info[requirement.key].trim().length < 20)) {
@@ -323,6 +340,41 @@ function validateIosAppBundle(appPath, options = {}) {
       }
     } catch {
       fail('IOS_ARTIFACT_PRIVACY_MANIFEST', 'bundled app privacy manifest is invalid');
+    }
+  }
+
+  // No Meta framework, resource bundle, compiled Facebook configuration or
+  // linked FBSDK symbol may reach the archive (#1895).
+  const metaSdkEntries = findEntries(appPath, entry => META_SDK_ENTRY_PATTERN.test(entry.name))
+    .map(entry => path.relative(appPath, entry));
+  const facebookInfoKeys = Object.keys(info).filter(key => /^Facebook/.test(key));
+  if (metaSdkEntries.length > 0 || facebookInfoKeys.length > 0 || metaSdkExecutables.length > 0) {
+    const detail = [
+      metaSdkEntries.length > 0 && `bundled: ${metaSdkEntries.sort().join(', ')}`,
+      facebookInfoKeys.length > 0 && `Info.plist: ${facebookInfoKeys.sort().join(', ')}`,
+      metaSdkExecutables.length > 0 && `linked symbols: ${metaSdkExecutables.sort().join(', ')}`,
+    ].filter(Boolean).join('; ');
+    fail('IOS_ARTIFACT_META_SDK', `Meta SDK must not ship in the iPhone archive — ${detail}`);
+  }
+  // Every bundled SDK privacy manifest must stay tracking-free, otherwise the
+  // archive contradicts the app-owned manifest and the App Privacy form.
+  for (const manifestPath of privacyManifests) {
+    const relativePath = path.relative(appPath, manifestPath);
+    let manifest;
+    try {
+      manifest = parsePlist(manifestPath);
+    } catch {
+      fail('IOS_ARTIFACT_SDK_TRACKING', `${relativePath} is not a valid privacy manifest`);
+      continue;
+    }
+    const trackingDomains = Array.isArray(manifest.NSPrivacyTrackingDomains)
+      ? manifest.NSPrivacyTrackingDomains
+      : [];
+    if (manifest.NSPrivacyTracking === true || trackingDomains.length > 0) {
+      fail(
+        'IOS_ARTIFACT_SDK_TRACKING',
+        `${relativePath} declares tracking${trackingDomains.length > 0 ? ` (${trackingDomains.join(', ')})` : ''}`
+      );
     }
   }
 
