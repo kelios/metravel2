@@ -165,6 +165,98 @@ function acceptedVariantsFromPattern(pattern) {
   }
 }
 
+// ===================== Эхо текста шага (#1923) =====================
+
+// Отклонённый ввод, дословно стоящий в тексте СВОЕГО шага, — это ловушка:
+// игрок отвечает самым заметным словом задания и получает отказ. Признак виден
+// только в телеметрии: «слово из текста шага не принимается» само по себе верно
+// почти для всех слов, поэтому сканы контента его не ловят. Замер 13.09.2026 по
+// всей телеметрии: 176 отклонённых попыток с сырым вводом, 10 кандидатов, из них
+// 3 настоящих (шаги 537 `brest-lantern/1-chasy-fonarey`, 176 `gomel-palace/chapel`,
+// 325 `minsk-cipher/3-pobeda`). Остальные семь — отрицания, намеренные
+// перечисления, номер точки в заголовке и вставленный в поле ответа текст
+// подсказки; их отсеивают правила ниже.
+const STEP_TEXT_FIELDS = ['title', 'task', 'hint']
+const STEP_TEXT_FIELD_LABEL = { title: 'заголовке', task: 'задании', hint: 'подсказке' }
+
+// «не флягу и не котелок» — подсказка называет слово, чтобы его исключить.
+const NEGATION_WORDS = new Set(['не', 'ни', 'без'])
+// Ответ — одно-три слова. Более длинное совпадение означает, что игрок вставил
+// в поле ответа сам текст шага (шаг 166 `nesvizh-radziwill/gate`).
+const MAX_ECHO_WORDS = 5
+// Насколько далеко ищем отрицание и признак перечисления вокруг совпадения.
+const NEGATION_LOOKBEHIND = 2
+const ENUMERATION_WINDOW = 4
+// Текст может назвать значение и сразу от него отречься: подсказка шага 325
+// `minsk-cipher/3-pobeda` пишет «получишь 33 — и это ещё не ответ», то есть сама
+// говорит, что промежуточный результат не принимается. Это обучающий шаг, а не
+// ловушка, и в словарь такое значение добавлять запрещено (см. шапку файла).
+const DISOWN_LOOKAHEAD = 6
+
+const textWords = (value) => normalizeValue(value).split(' ').filter(Boolean)
+
+/** Все позиции, где `needle` стоит в `hay` целой последовательностью слов. */
+function wordSequenceStarts(hay, needle) {
+  const starts = []
+  if (!needle.length || needle.length > hay.length) return starts
+  for (let start = 0; start + needle.length <= hay.length; start += 1) {
+    let matched = true
+    for (let offset = 0; offset < needle.length; offset += 1) {
+      if (hay[start + offset] !== needle[offset]) {
+        matched = false
+        break
+      }
+    }
+    if (matched) starts.push(start)
+  }
+  return starts
+}
+
+const isNegatedMatch = (hay, start) =>
+  hay.slice(Math.max(0, start - NEGATION_LOOKBEHIND), start).some((word) => NEGATION_WORDS.has(word))
+
+// «дубовый лист, кленовый или липовый» — задание намеренно предлагает выбор,
+// и названный вариант обязан отклоняться.
+const isEnumerationMatch = (hay, start, end) =>
+  hay.slice(Math.max(0, start - ENUMERATION_WINDOW), Math.min(hay.length, end + ENUMERATION_WINDOW)).includes('или')
+
+/** Текст сам объявляет названное значение неответом («и это ещё не ответ»). */
+function isDisownedMatch(hay, end) {
+  const tail = hay.slice(end, Math.min(hay.length, end + DISOWN_LOOKAHEAD))
+  for (let i = 0; i < tail.length - 1; i += 1) {
+    if (tail[i] === 'не' && tail[i + 1] === 'ответ') return true
+    if (tail[i] === 'ещё' && tail[i + 1] === 'не') return true
+  }
+  return false
+}
+
+// «1. Экипаж» — цифра в начале заголовка это номер точки, а не ответ.
+const isStepNumbering = (field, needle, start) =>
+  field === 'title' && start === 0 && needle.length === 1 && isNumeric(needle[0])
+
+/**
+ * Где ввод дословно стоит в тексте своего шага. `null` — эха нет либо совпадение
+ * отсеяно как отрицание, перечисление, номер точки или вставленный текст шага.
+ */
+function findStepTextEcho(value, texts = {}) {
+  const needle = textWords(value)
+  if (!needle.length || needle.length > MAX_ECHO_WORDS) return null
+
+  for (const field of STEP_TEXT_FIELDS) {
+    const hay = textWords(texts?.[field])
+    if (!hay.length) continue
+    for (const start of wordSequenceStarts(hay, needle)) {
+      const end = start + needle.length
+      if (isStepNumbering(field, needle, start)) continue
+      if (isNegatedMatch(hay, start)) continue
+      if (isDisownedMatch(hay, end)) continue
+      if (isEnumerationMatch(hay, start, end)) continue
+      return { field }
+    }
+  }
+  return null
+}
+
 function computeFriction(step) {
   const rejectedPerSolver = Number(step?.rejected_per_solver) || 0
   const hintOpenRate = Number(step?.hint_open_rate) || 0
@@ -180,11 +272,12 @@ function computeFriction(step) {
  * Разбор ответа `answer-stats` в отчёт: шаги по убыванию трения, у каждого —
  * отклонённые вводы, разложенные по группам.
  */
-function buildInsights({ stats, patternsByStepKey = {}, minCount = 2 } = {}) {
+function buildInsights({ stats, patternsByStepKey = {}, textsByStepKey = {}, minCount = 2 } = {}) {
   const steps = Array.isArray(stats?.steps) ? stats.steps : []
 
   const enriched = steps.map((step) => {
     const accepted = acceptedVariantsFromPattern(patternsByStepKey[step.step_key])
+    const texts = textsByStepKey[step.step_key] ?? {}
     const rejected = Array.isArray(step.top_rejected) ? step.top_rejected : []
 
     const candidates = rejected
@@ -196,6 +289,9 @@ function buildInsights({ stats, patternsByStepKey = {}, minCount = 2 } = {}) {
         count: Number(entry.count) || 0,
         players: Number(entry.players) || 0,
         category: classifyRejectedValue(entry.value, accepted),
+        // Эхо текста шага считается по КАЖДОМУ кандидату, а не по группе: слово
+        // из задания попадает и в «синоним», и в «другой ответ» (#1923).
+        textEcho: findStepTextEcho(entry.value, texts),
       }))
 
     return {
@@ -212,6 +308,9 @@ function buildInsights({ stats, patternsByStepKey = {}, minCount = 2 } = {}) {
       friction: computeFriction(step),
       acceptedVariants: accepted,
       candidates,
+      // Шаг с эхом обязан попасть в глаза редактору: правится формулировка, а
+      // не словарь (расширение словаря печатаемым словом делает шаг кнопкой).
+      textEchoes: candidates.filter((candidate) => candidate.textEcho),
     }
   })
 
@@ -301,6 +400,16 @@ const patternsFromQuest = (quest) => {
   return map
 }
 
+/** Видимый игроку текст шагов — по нему считается эхо отклонённого ввода (#1923). */
+const textsFromQuest = (quest) => {
+  const map = {}
+  for (const step of quest?.steps ?? []) {
+    const key = String(step.step_id ?? step.id ?? '')
+    if (key) map[key] = { title: step.title, task: step.task, hint: step.hint }
+  }
+  return map
+}
+
 const formatMs = (ms) => (ms > 0 ? `${Math.round(ms / 1000)}с` : '—')
 const formatRate = (rate) => `${Math.round(rate * 100)}%`
 
@@ -327,9 +436,24 @@ function printReport(report, { minCount }) {
         if (!inGroup.length) continue
         console.log(`  ${CATEGORY_LABEL[group]}:`)
         for (const candidate of inGroup) {
-          console.log(`    «${candidate.value}» — ${candidate.count} раз у ${candidate.players} игроков`)
+          const echo = candidate.textEcho
+            ? ` ← стоит в ${STEP_TEXT_FIELD_LABEL[candidate.textEcho.field]} шага, но отклоняется (#1923)`
+            : ''
+          console.log(`    «${candidate.value}» — ${candidate.count} раз у ${candidate.players} игроков${echo}`)
         }
       }
+    }
+    console.log('')
+  }
+
+  const trapped = report.steps.filter((step) => step.textEchoes?.length)
+  if (trapped.length) {
+    console.log('Ловушки текста шага (#1923) — правится формулировка, НЕ словарь:')
+    for (const step of trapped) {
+      const values = step.textEchoes
+        .map((candidate) => `«${candidate.value}» (${STEP_TEXT_FIELD_LABEL[candidate.textEcho.field]})`)
+        .join(', ')
+      console.log(`  ${step.stepKey}: ${values}`)
     }
     console.log('')
   }
@@ -381,6 +505,7 @@ async function main() {
     const report = buildInsights({
       stats,
       patternsByStepKey: patternsFromQuest(quest),
+      textsByStepKey: textsFromQuest(quest),
       minCount: args.minCount,
     })
     report.questSlug = quest.quest_id
@@ -422,6 +547,7 @@ module.exports = {
   buildInsights,
   classifyRejectedValue,
   computeFriction,
+  findStepTextEcho,
   levenshtein,
   normalizeValue,
   parseArgs,
