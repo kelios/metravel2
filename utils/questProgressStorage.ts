@@ -50,3 +50,20 @@ export function buildQuestProgressStorageKey(
   const userId = String(owner.userId ?? '').trim()
   return `${base}${QUEST_PROGRESS_USER_SUFFIX}${userId || `:${QUEST_PROGRESS_PENDING_USER}`}`
 }
+
+/**
+ * Квестовая часть ключа — без владельца.
+ *
+ * Визард отличает по ней «другой квест» от «тот же квест, другой владелец»:
+ * ключ меняется и при логине (`guest_` → `__u`), и при появлении id
+ * (`__u:pending` → `__u123`), но прохождение при этом продолжается, и обнулять
+ * состояние нельзя. Смена самой этой величины означает именно другой квест —
+ * и обязана обнулять всё, что собрано на предыдущем (#1906).
+ */
+export function questKeyFromProgressStorageKey(storageKey: string): string {
+  const withoutOwnerPrefix = storageKey.startsWith(GUEST_QUEST_STORAGE_PREFIX)
+    ? storageKey.slice(GUEST_QUEST_STORAGE_PREFIX.length)
+    : storageKey
+  const suffixAt = withoutOwnerPrefix.lastIndexOf(QUEST_PROGRESS_USER_SUFFIX)
+  return suffixAt === -1 ? withoutOwnerPrefix : withoutOwnerPrefix.slice(0, suffixAt)
+}

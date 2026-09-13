@@ -58,6 +58,16 @@ type PendingQuestProgressData = {
     answeredAt?: Record<string, number>;
 };
 
+/**
+ * Отложенная отправка адресная: снапшот помнит квест, из которого собран.
+ * Голый снапшот в очереди уезжал в PATCH следующего квеста, и тот получал чужие
+ * ответы вместе с «Пройден» (#1906).
+ */
+type PendingQuestProgress = {
+    questId: string;
+    data: PendingQuestProgressData;
+};
+
 const getErrorMessage = (error: unknown, fallback: string): string =>
     error instanceof Error && typeof error.message === 'string' ? error.message : fallback;
 
@@ -287,10 +297,11 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     const inFlightRef = useRef(false);
     const flushQueuedRef = useRef(false);
     const mountedRef = useRef(true);
-    const pendingDataRef = useRef<PendingQuestProgressData | null>(null);
+    const pendingDataRef = useRef<PendingQuestProgress | null>(null);
     const isAuthenticatedRef = useRef(isAuthenticated);
     isAuthenticatedRef.current = isAuthenticated;
-    // questId нужен флашу на размонтировании (эффект с пустыми deps) — держим в ref.
+    // Актуальный questId для асинхронных веток: ответ запроса может прийти,
+    // когда игрок уже на другом квесте.
     const questIdRef = useRef(questId);
     questIdRef.current = questId;
     // flushSync и планировщик ретраев ссылаются друг на друга: держим актуальный
@@ -304,6 +315,18 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             mountedRef.current = false;
         };
     }, []);
+
+    // Смена квеста в живой сессии: серверная запись предыдущего квеста обязана
+    // исчезнуть из состояния ТЕМ ЖЕ рендером. Иначе экран отдаёт визарду
+    // `initialProgress` прошлого квеста, тот засевает им новый и возвращает
+    // чужие ответы обратно на сервер (#1906). Ссылки и очередь чистит эффект
+    // прощания ниже — ему нужны прежние значения.
+    const syncedQuestIdRef = useRef(questId);
+    if (syncedQuestIdRef.current !== questId) {
+        syncedQuestIdRef.current = questId;
+        setProgress(null);
+        setProgressLoading(isAuthenticated && !!questId);
+    }
 
     // Немедленный флаш отложенного прогресса (возврат сети/приложения, появление
     // progress id). Сбрасывает бэкофф, чтобы не ждать следующий шаг ретрая.
@@ -330,7 +353,9 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
                     // #1803: пустое чтение не должно затирать то, что уже создал
                     // параллельный флаш. Иначе `resetProgress` молча пропускает
                     // серверный DELETE (он выходит на пустом `progressIdRef`), и
-                    // «Начать заново» на сервере не срабатывает.
+                    // «Начать заново» на сервере не срабатывает. Прошлый квест
+                    // так уцелеть не может: его id снят при уходе с квеста
+                    // (#1906), сохраняется только id этого же квеста.
                     if (data) setProgress(data);
                     progressIdRef.current = data?.id ?? progressIdRef.current ?? null;
                     // Ответы, сделанные пока запрос был в полёте, ждут отправки —
@@ -379,8 +404,12 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         }
         clearRetryTimer();
 
-        const data = pendingDataRef.current;
-        if (!data || !isAuthenticatedRef.current || !questId) return;
+        const pending = pendingDataRef.current;
+        if (!pending || !isAuthenticatedRef.current || !questId) return;
+        // Очередь адресная: снапшот другого квеста сюда попасть не должен, а
+        // если попал — он уходит только своему квесту, не этому (#1906).
+        if (pending.questId !== questId) return;
+        const data = pending.data;
         // Нет id и игрок ещё ничего не сделал — отправлять нечего, а создавать
         // строку под пустой снапшот нельзя (#1803).
         if (!progressIdRef.current && !hasQuestProgressStarted(data)) return;
@@ -400,14 +429,22 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             saved = true;
             // Снимаем с очереди только то, что реально отправили: изменения,
             // сделанные во время запроса, остаются pending и уйдут своим флашем.
-            if (pendingDataRef.current === data) pendingDataRef.current = null;
+            if (pendingDataRef.current === pending) pendingDataRef.current = null;
             retryAttemptRef.current = 0;
-            progressIdRef.current = updated.id;
-            if (mountedRef.current) setProgress(updated);
+            // Ответ мог прийти, когда игрок уже на другом квесте: ни id строки,
+            // ни её содержимое текущему квесту не принадлежат (#1906).
+            if (questIdRef.current === questId) {
+                progressIdRef.current = updated.id;
+                if (mountedRef.current) setProgress(updated);
+            }
         } catch (err) {
-            if (!pendingDataRef.current) pendingDataRef.current = data;
+            // Вернуть в очередь можно только на своём квесте: на чужом снапшот
+            // уже не отправится, а местом в очереди перекроет актуальный.
+            // Потерянным он не будет — локальная копия дольёт его при следующем
+            // открытии квеста (см. useQuestWizardProgress).
+            if (!pendingDataRef.current && questIdRef.current === questId) pendingDataRef.current = pending;
             devWarn('Could not save quest progress to server, will retry:', err);
-            scheduleRetry();
+            if (questIdRef.current === questId) scheduleRetry();
         } finally {
             inFlightRef.current = false;
             if (mountedRef.current) setSyncing(false);
@@ -434,12 +471,15 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         if (isConnected && wasOffline) flushPendingNow();
     }, [flushPendingNow, isConnected]);
 
-    // Flush pending save on unmount — иначе изменение, сделанное за <2 сек до ухода
-    // со страницы, теряется (debounce-таймер просто очищался). Делаем state-free
-    // запрос, чтобы не дёргать setState на размонтированном компоненте. Если он
-    // упадёт (офлайн), прогресс всё равно не теряется: локальная копия в
-    // AsyncStorage дольёт его на сервер при следующем открытии квеста
-    // (см. useQuestWizardProgress).
+    // Прощание с квестом — размонтирование ИЛИ смена questId в живой сессии.
+    // Оба случая одинаковы: квест закончился, и всё, что к нему привязано (id
+    // строки, очередь, таймеры), обязано умереть вместе с ним. Пока этого не
+    // было, id и очередь предыдущего квеста открывали гейт «прохождение ещё не
+    // начато» и уезжали в PATCH следующего (#1906).
+    // Отложенное при этом не теряется: изменение, сделанное за <2 сек до ухода,
+    // уходит state-free запросом СВОЕМУ квесту. Если он упадёт (офлайн),
+    // локальная копия в AsyncStorage дольёт прогресс при следующем открытии
+    // квеста (см. useQuestWizardProgress).
     useEffect(() => {
         return () => {
             if (debounceTimerRef.current) {
@@ -450,24 +490,33 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
                 clearTimeout(retryTimerRef.current);
                 retryTimerRef.current = null;
             }
-            const data = pendingDataRef.current;
-            const pendingQuestId = questIdRef.current;
-            if (!data || !isAuthenticatedRef.current || !pendingQuestId) return;
-            if (!progressIdRef.current && !hasQuestProgressStarted(data)) return;
-            void pushMergedProgress(pendingQuestId, data).catch((err) => {
-                devWarn('Could not flush quest progress on unmount:', err);
+            retryAttemptRef.current = 0;
+            flushQueuedRef.current = false;
+            const pending = pendingDataRef.current;
+            const startedProgressId = progressIdRef.current;
+            pendingDataRef.current = null;
+            progressIdRef.current = null;
+            if (!pending || !isAuthenticatedRef.current) return;
+            if (!startedProgressId && !hasQuestProgressStarted(pending.data)) return;
+            // Флаш в полёте, а строки ещё нет: дубль ушёл бы вторым параллельным
+            // POST и создал ВТОРОЕ прохождение (#1905). Когда строка уже есть,
+            // повторный флаш безопасен — он идёт через GET и слияние.
+            if (inFlightRef.current && !startedProgressId) return;
+            void pushMergedProgress(pending.questId, pending.data).catch((err) => {
+                devWarn('Could not flush quest progress on leaving the quest:', err);
             });
         };
-    }, []);
+    }, [questId]);
 
     // Сохранение прогресса на сервер (с дебаунсом 2 сек)
     const saveProgress = useCallback((data: PendingQuestProgressData) => {
-        if (!isAuthenticated) return;
+        if (!isAuthenticated || !questId) return;
 
         // Ставим в очередь даже до получения progress id: если чтение прогресса
         // ещё в полёте, ответ игрока не должен пропасть — флаш уйдёт, как только
-        // id появится (см. загрузку прогресса выше).
-        pendingDataRef.current = data;
+        // id появится (см. загрузку прогресса выше). Вместе со снапшотом кладём
+        // его квест: отправить его другому нельзя (#1906).
+        pendingDataRef.current = { questId, data };
         // Пока прохождение не начато, ждём первого действия: строка на сервере
         // создаётся первым же значимым снапшотом, а не открытием экрана (#1803).
         if (!progressIdRef.current && !hasQuestProgressStarted(data)) return;
@@ -476,7 +525,7 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         debounceTimerRef.current = setTimeout(() => {
             flushSync();
         }, PROGRESS_SYNC_DEBOUNCE_MS);
-    }, [isAuthenticated, flushSync]);
+    }, [isAuthenticated, flushSync, questId]);
 
     // Сброс прогресса
     const resetProgress = useCallback(async () => {

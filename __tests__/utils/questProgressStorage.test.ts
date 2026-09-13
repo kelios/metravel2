@@ -1,6 +1,7 @@
 import {
   buildQuestProgressStorageKey,
   GUEST_QUEST_STORAGE_PREFIX,
+  questKeyFromProgressStorageKey,
 } from '@/utils/questProgressStorage'
 
 describe('buildQuestProgressStorageKey (#1456)', () => {
@@ -49,5 +50,32 @@ describe('buildQuestProgressStorageKey (#1456)', () => {
     expect(
       buildQuestProgressStorageKey('quest_progress_krakow', { isAuthenticated: true, userId: 42 }),
     ).toBe('quest_progress_krakow__u42')
+  })
+})
+
+describe('questKeyFromProgressStorageKey (#1906)', () => {
+  const base = 'quest_progress_gomel_soviet'
+
+  it('у одного квеста квестовая часть ключа одна на всех владельцев', () => {
+    const guest = buildQuestProgressStorageKey(base, { isAuthenticated: false })
+    const pending = buildQuestProgressStorageKey(base, { isAuthenticated: true, userId: null })
+    const user = buildQuestProgressStorageKey(base, { isAuthenticated: true, userId: '17' })
+
+    expect(questKeyFromProgressStorageKey(guest)).toBe(base)
+    expect(questKeyFromProgressStorageKey(pending)).toBe(base)
+    expect(questKeyFromProgressStorageKey(user)).toBe(base)
+  })
+
+  it('разные квесты одного игрока различает', () => {
+    const owner = { isAuthenticated: true, userId: '17' }
+    expect(questKeyFromProgressStorageKey(buildQuestProgressStorageKey(base, owner))).not.toBe(
+      questKeyFromProgressStorageKey(
+        buildQuestProgressStorageKey('quest_progress_gomel_spasova', owner),
+      ),
+    )
+  })
+
+  it('ключ без владельца отдаёт как есть', () => {
+    expect(questKeyFromProgressStorageKey('quest_progress')).toBe('quest_progress')
   })
 })

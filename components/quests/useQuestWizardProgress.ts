@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { questStepsMissingForCompletion } from '@/utils/questCompletionPolicy'
+import { questKeyFromProgressStorageKey } from '@/utils/questProgressStorage'
 import {
   buildQuestCountModel,
   getQuestProgressSteps,
@@ -217,6 +218,28 @@ export function useQuestWizardProgress({
     setAttempts(snapshot.attempts)
     setHints(snapshot.hints)
     setShowMap(snapshot.showMap)
+  }
+
+  // Состояние принадлежит квесту, а не хуку: на другом квесте оно обнуляется
+  // тем же рендером, ДО save-эффекта. Иначе эффект успевал отправить ответы
+  // прошлого квеста уже под новым ключом, а монотонный `completed` дарил новому
+  // квесту чужой «Пройден» (#1906). Сравниваем квестовую часть ключа: смена
+  // владельца (логин, появление id) прохождение продолжает, а не начинает.
+  // Хранилище здесь не трогаем: локальную запись нового квеста ещё предстоит
+  // прочитать load-эффекту.
+  const questKey = questKeyFromProgressStorageKey(storageKey)
+  const stateQuestKeyRef = useRef(questKey)
+  if (stateQuestKeyRef.current !== questKey) {
+    stateQuestKeyRef.current = questKey
+    backendSeededKey.current = null
+    confirmedCompletedRef.current = false
+    answeredAtRef.current = {}
+    lastAnswersRef.current = {}
+    updatedAtRef.current = 0
+    const emptyState = normalizeQuestProgressSnapshot(null)
+    seededSnapshotRef.current = stateFingerprint(emptyState)
+    applyProgressState(emptyState)
+    setCompletionFinishedAt(null)
   }
 
   /**

@@ -1177,4 +1177,117 @@ describe('useQuestWizardProgress', () => {
       showMap: true,
     })
   })
+
+  it('следующий квест не получает ответы и «Пройден» предыдущего (#1906)', async () => {
+    // Игрок закончил квест A и открыл квест B, не перезагружая вкладку. Пока
+    // состояние не обнулялось вместе с квестом, save-эффект успевал отправить
+    // ответы A уже под ключом B, а монотонный `completed` дарил B чужой зачёт:
+    // на проде так засчитались три прохождения (446, 454, 455).
+    const checker = () => true
+    const routeSteps = [
+      { id: 'p-1', answer: checker },
+      { id: 'p-2', answer: checker },
+    ]
+    const owner = { isAuthenticated: true, userId: '182' }
+    const keyA = buildQuestProgressStorageKey('gomel-soviet', owner)
+    const keyB = buildQuestProgressStorageKey('gomel-spasova', owner)
+    const noServerProgress = {
+      currentIndex: 0,
+      unlockedIndex: 0,
+      answers: {},
+      attempts: {},
+      hints: {},
+      showMap: true,
+      completed: false,
+    }
+
+    const onProgressChange = jest.fn()
+    const { result, rerender } = renderHook(
+      ({ storageKey }: { storageKey: string }) =>
+        useQuestWizardProgress({
+          allSteps: [{ id: 'intro' }, ...routeSteps],
+          steps: routeSteps,
+          storageKey,
+          initialProgress: noServerProgress,
+          onProgressChange,
+        }),
+      { initialProps: { storageKey: keyA } },
+    )
+
+    await waitFor(() => expect(result.current.requiredCount).toBe(2))
+    act(() => {
+      result.current.setAnswers({ 'p-1': 'лев', 'p-2': 'мост' })
+    })
+    await waitFor(() => expect(result.current.questCompleted).toBe(true))
+    expect(onProgressChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ completed: true }),
+    )
+
+    onProgressChange.mockClear()
+    rerender({ storageKey: keyB })
+
+    await waitFor(() => expect(result.current.answers).toEqual({}))
+    expect(result.current.questCompleted).toBe(false)
+    expect(result.current.currentIndex).toBe(0)
+    for (const [payload] of onProgressChange.mock.calls) {
+      expect(payload.completed).toBe(false)
+      expect(payload.answers).toEqual({})
+    }
+
+    // Своё прохождение квеста B засчитанным предыдущим не становится.
+    act(() => {
+      result.current.setAnswers({ 'p-1': 'свой ответ' })
+    })
+    await waitFor(() => {
+      expect(onProgressChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ completed: false, answers: { 'p-1': 'свой ответ' } }),
+      )
+    })
+
+    // Запись квеста A на месте: очистка состояния хранилище не трогает.
+    expect(JSON.parse((await AsyncStorage.getItem(keyA))!)).toMatchObject({
+      answers: { 'p-1': 'лев', 'p-2': 'мост' },
+      completed: true,
+    })
+    expect(JSON.parse((await AsyncStorage.getItem(keyB))!)).toMatchObject({
+      answers: { 'p-1': 'свой ответ' },
+      completed: false,
+    })
+  })
+
+  it('смена владельца того же квеста прохождение не обнуляет (#1906)', async () => {
+    // Обратная сторона обнуления: ключ меняется и без смены квеста — гость
+    // логинится, а `userId` приезжает в стор позже `isAuthenticated`. Это тот же
+    // квест и то же прохождение, и терять набранные ответы нельзя.
+    const checker = () => true
+    const routeSteps = [
+      { id: 'p-1', answer: checker },
+      { id: 'p-2', answer: checker },
+    ]
+    const guestKey = buildQuestProgressStorageKey('golshany-black-monk', { isAuthenticated: false })
+    const pendingKey = buildQuestProgressStorageKey('golshany-black-monk', { isAuthenticated: true })
+    const userKey = buildQuestProgressStorageKey('golshany-black-monk', { isAuthenticated: true, userId: '184' })
+
+    const { result, rerender } = renderHook(
+      ({ storageKey }: { storageKey: string }) =>
+        useQuestWizardProgress({
+          allSteps: [{ id: 'intro' }, ...routeSteps],
+          steps: routeSteps,
+          storageKey,
+        }),
+      { initialProps: { storageKey: guestKey } },
+    )
+
+    await waitFor(() => expect(result.current.requiredCount).toBe(2))
+    act(() => {
+      result.current.setAnswers({ 'p-1': 'чёрный монах' })
+    })
+    await waitFor(() => expect(result.current.answers['p-1']).toBe('чёрный монах'))
+
+    rerender({ storageKey: pendingKey })
+    expect(result.current.answers).toEqual({ 'p-1': 'чёрный монах' })
+
+    rerender({ storageKey: userKey })
+    expect(result.current.answers).toEqual({ 'p-1': 'чёрный монах' })
+  })
 })
