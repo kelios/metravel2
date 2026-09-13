@@ -3,6 +3,7 @@ import { ActivityIndicator, Image, Platform, StatusBar as RNStatusBar, StyleShee
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import AppProviders from "@/components/layout/AppProviders";
 import NativeAppRuntime from "@/components/layout/NativeAppRuntime";
+import QuestProgressQueueRuntime from "@/components/quests/QuestProgressQueueRuntime";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import ConfirmDialogHost from "@/components/ui/ConfirmDialogHost";
 import {
@@ -447,6 +448,8 @@ function ThemedContent({
     >
                           {Platform.OS === 'web' ? <SkipLinks /> : null}
                           <NativeAppRuntime />
+                          {/* Досылка прогресса квеста, пройденного без сети (#1922) */}
+                          <QuestProgressQueueRuntime />
                           {/* AND-08: Global StatusBar — syncs barStyle with current theme (native only) */}
                           {Platform.OS !== 'web' && (
                             <RNStatusBar

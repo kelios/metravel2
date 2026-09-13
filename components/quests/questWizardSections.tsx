@@ -14,6 +14,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta'
 import QuestNextStepSection from './QuestNextStepSection'
 import QuestPioneerBlock from './QuestPioneerBlock'
+import QuestProgressPendingNotice from './QuestProgressPendingNotice'
 import QuestReviewSection from './QuestReviewSection'
 import type { QuestMapApp } from './questWizardHelpers'
 import type { QuestRouteMode } from './questRouteGeometry'
@@ -521,6 +522,11 @@ export function QuestFinalePanel({
               ? i18nT('quests:components.quests.questWizardSections.kvest_zavershen_6d9d9233')
               : i18nT('quests:components.quests.questWizardSections.partialTitle')}
           </Text>
+
+          {/* #1922 — квест пройден без сети: снапшот лежит в очереди доставки.
+              Без пометки финал выглядит как засчитанный, хотя в «Пройденных»
+              его ещё нет. */}
+          <QuestProgressPendingNotice questId={questId} />
 
           {/* Квест закончен на месте: далёкие точки остались непройденными —
               счётчик показываем честно, а не подменяем «всё пройдено». Строка

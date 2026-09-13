@@ -8,6 +8,7 @@ import { QuestWizard as QuestWizardDirect } from '@/components/quests/QuestWizar
 import QuestConsentGate from '@/components/quests/QuestConsentGate';
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection';
 import QuestCompletionBadge from '@/components/quests/QuestCompletionBadge';
+import QuestProgressPendingNotice, { useQuestProgressPending } from '@/components/quests/QuestProgressPendingNotice';
 import QuestReviewsModal from '@/components/quests/QuestReviewsModal';
 import QuestReviewInvite from '@/components/quests/QuestReviewInvite';
 import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm';
@@ -373,15 +374,22 @@ export default function QuestByIdScreen() {
   }, [ratingMeta.ratingAvg, ratingMeta.ratingCount, styles.metaChip, styles.metaChipText, colors.warning, colors.textMuted]);
 
   const completionMeta = useQuestCompletionMeta(shouldLoadQuest ? questId : undefined, bundle?.id);
+  // #1922 — прохождение, сделанное без сети, ждёт отправки: пометка живёт рядом
+  // с бейджем «Пройден», иначе «ещё едет» неотличимо от «не засчитано».
+  const progressPending = useQuestProgressPending(shouldLoadQuest ? questId : undefined);
   const completionSlot = useMemo(() => {
-    if (!completionMeta.isCompletedByMe && completionMeta.completionsCount <= 0) return null;
+    const showCompletion = completionMeta.isCompletedByMe || completionMeta.completionsCount > 0;
+    if (!showCompletion && !progressPending) return null;
     return (
       <View style={styles.completionRow}>
-        <QuestCompletionBadge
-          isCompleted={completionMeta.isCompletedByMe}
-          completionsCount={completionMeta.completionsCount}
-          variant="detail"
-        />
+        {showCompletion ? (
+          <QuestCompletionBadge
+            isCompleted={completionMeta.isCompletedByMe}
+            completionsCount={completionMeta.completionsCount}
+            variant="detail"
+          />
+        ) : null}
+        <QuestProgressPendingNotice questId={questId} />
         {/* #1795 — второй вход в отзыв: форма на финале ловила игрока ровно в
             тот момент, когда он уже уходит с телефона, поэтому отзывов не было
             вовсе. Кнопка живёт рядом с бейджем «Пройден» и открывает ту же форму. */}
@@ -395,6 +403,7 @@ export default function QuestByIdScreen() {
     cityId,
     completionMeta.isCompletedByMe,
     completionMeta.completionsCount,
+    progressPending,
     questId,
     styles.completionRow,
   ]);

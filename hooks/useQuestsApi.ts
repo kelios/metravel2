@@ -9,15 +9,13 @@ import {
     fetchQuestsList,
     fetchQuestsPreview,
     fetchQuestByQuestId,
-    withQuestProgress,
     fetchQuestProgress,
     fetchQuestReviews,
-    updateProgress as apiUpdateProgress,
     deleteProgress as apiDeleteProgress,
 } from '@/api/quests';
 import { queryKeys } from '@/api/queryKeys';
 import { getActiveQueryClient } from '@/api/activeQueryClient';
-import { refreshQuestsCatalogCompletion, resetQuestsCatalogCompletion } from '@/api/questsCatalogInvalidation';
+import { resetQuestsCatalogCompletion } from '@/api/questsCatalogInvalidation';
 import { useAuthStore } from '@/stores/authStore';
 import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy';
 import { questsListQueryOptions } from '@/hooks/questsListQuery';
@@ -27,13 +25,13 @@ import {
 } from '@/utils/questAdapters';
 import { selectPopularQuests } from '@/utils/questPopularity';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { hasQuestProgressStarted } from '@/utils/questProgressMerge';
 import {
-    hasQuestProgressStarted,
-    mergeQuestProgress,
-    normalizeQuestProgressSnapshot,
-    snapshotFromServerProgress,
-    toQuestProgressServerPayload,
-} from '@/utils/questProgressMerge';
+    dequeueQuestProgress,
+    deliverOrEnqueueQuestProgress,
+    enqueueQuestProgress,
+    pushQuestProgressSnapshot,
+} from '@/utils/questProgressQueue';
 import { devWarn } from '@/utils/logger';
 import type { QuestMeta, FrontendQuestBundle } from '@/utils/questAdapters';
 import { translate as i18nT } from '@/i18n'
@@ -256,39 +254,6 @@ const PROGRESS_SYNC_DEBOUNCE_MS = 2000;
 const PROGRESS_RETRY_BASE_MS = 2000;
 const PROGRESS_RETRY_MAX_MS = 60 * 1000;
 
-/**
- * Отправка отложенного прогресса с защитой от затирания параллельного устройства:
- * перед PATCH забираем текущее серверное состояние и шлём слитое. Иначе телефон,
- * вернувшийся из офлайна, стёр бы ответы, записанные другим устройством.
- * Возвращает актуальную серверную запись (PATCH пропускается, если серверу
- * добавлять нечего).
- */
-const pushMergedProgress = async (
-    questId: string,
-    data: PendingQuestProgressData,
-): Promise<ApiQuestProgress> => {
-    const ownerId = useAuthStore.getState().userId;
-    // Чтение, слияние и PATCH идут одним писателем на квест: после логина этот
-    // флаш и миграция гостевого прогресса стартуют вместе, а `answers` заменяет
-    // серверный словарь целиком — считать слияние от общей устаревшей базы
-    // значит потерять чужие ответы (#1905).
-    const updated = await withQuestProgress(questId, async (serverProgress) => {
-        const { merged, serverNeedsPush } = mergeQuestProgress(
-            normalizeQuestProgressSnapshot(data),
-            snapshotFromServerProgress(serverProgress),
-        );
-        return serverNeedsPush
-            ? apiUpdateProgress(serverProgress.id, toQuestProgressServerPayload(merged))
-            : serverProgress;
-    });
-    const currentAuth = useAuthStore.getState();
-    if (updated.completed && ownerId && currentAuth.isAuthenticated && currentAuth.userId === ownerId) {
-        const client = getActiveQueryClient();
-        if (client) void refreshQuestsCatalogCompletion(client, questId);
-    }
-    return updated;
-};
-
 /** Хук для синхронизации прогресса квеста с бэкендом (для авторизованных) */
 export function useQuestProgressSync(questId: string | undefined, isAuthenticated: boolean) {
     const [progress, setProgress] = useState<ApiQuestProgress | null>(null);
@@ -429,8 +394,10 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         setSyncing(true);
         let saved = false;
         try {
-            const updated = await pushMergedProgress(questId, data);
+            const updated = await pushQuestProgressSnapshot(questId, data);
             saved = true;
+            // Снапшот доехал: очередь доставки этому квесту больше не нужна.
+            void dequeueQuestProgress(questId);
             // Снимаем с очереди только то, что реально отправили: изменения,
             // сделанные во время запроса, остаются pending и уйдут своим флашем.
             if (pendingDataRef.current === pending) pendingDataRef.current = null;
@@ -447,6 +414,10 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             // Потерянным он не будет — локальная копия дольёт его при следующем
             // открытии квеста (см. useQuestWizardProgress).
             if (!pendingDataRef.current && questIdRef.current === questId) pendingDataRef.current = pending;
+            // Ретрай живёт в памяти экрана и умирает вместе с приложением —
+            // поэтому снапшот сразу ложится в очередь на диске (#1922). Она
+            // дошлёт его после выгрузки приложения и с любого экрана.
+            void enqueueQuestProgress(questId, data);
             devWarn('Could not save quest progress to server, will retry:', err);
             if (questIdRef.current === questId) scheduleRetry();
         } finally {
@@ -500,15 +471,23 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             const startedProgressId = progressIdRef.current;
             pendingDataRef.current = null;
             progressIdRef.current = null;
-            if (!pending || !isAuthenticatedRef.current) return;
+            if (!pending) return;
             if (!startedProgressId && !hasQuestProgressStarted(pending.data)) return;
+            // Токена уже нет (#1921) — отправлять некому, но выбрасывать снапшот
+            // нельзя: очередь дождётся входа и уедет после него (#1922).
+            if (!isAuthenticatedRef.current) {
+                void enqueueQuestProgress(pending.questId, pending.data);
+                return;
+            }
             // Флаш в полёте, а строки ещё нет: дубль ушёл бы вторым параллельным
             // POST и создал ВТОРОЕ прохождение (#1905). Когда строка уже есть,
             // повторный флаш безопасен — он идёт через GET и слияние.
-            if (inFlightRef.current && !startedProgressId) return;
-            void pushMergedProgress(pending.questId, pending.data).catch((err) => {
-                devWarn('Could not flush quest progress on leaving the quest:', err);
-            });
+            if (inFlightRef.current && !startedProgressId) {
+                void enqueueQuestProgress(pending.questId, pending.data);
+                return;
+            }
+            // Одна попытка отправки, и очередь на диске — если она не прошла.
+            void deliverOrEnqueueQuestProgress(pending.questId, pending.data);
         };
     }, [questId]);
 

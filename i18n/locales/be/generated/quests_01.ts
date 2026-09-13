@@ -252,6 +252,7 @@ export const questsGenerated1 = {
   "components.quests.questWizardStepCard.pointRole.optional": "Кропка па жаданні",
   "components.quests.questWizardStepCard.pointRole.required": "Абавязковая кропка",
   "components.quests.questWizardStepCard.pointRole.start": "Стартавая кропка",
+  "components.quests.QuestProgressPendingNotice.pendingDelivery": "Праходжанне яшчэ не адпраўлена — пойдзе, як з'явіцца сетка",
   "components.quests.questWizardSections.partialTitle": "Квэст пройдзены часткова",
   "components.quests.questWizardSections.partialNotCredited": "Пройдзена {{value1}} з {{value2}} пунктаў. Квэст залічыцца, калі пройдзеце яшчэ {{count}} пунктаў.",
   "components.quests.questWizardSections.partialNotCredited_one": "Пройдзена {{value1}} з {{value2}} пунктаў. Квэст залічыцца, калі пройдзеце яшчэ {{count}} пункт.",

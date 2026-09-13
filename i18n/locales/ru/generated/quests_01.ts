@@ -252,6 +252,7 @@ export const questsGenerated1 = {
   "components.quests.questWizardStepCard.pointRole.optional": "Точка по желанию",
   "components.quests.questWizardStepCard.pointRole.required": "Обязательная точка",
   "components.quests.questWizardStepCard.pointRole.start": "Стартовая точка",
+  "components.quests.QuestProgressPendingNotice.pendingDelivery": "Прохождение ещё не отправлено — уйдёт, как появится сеть",
   "components.quests.questWizardSections.partialTitle": "Квест пройден частично",
   "components.quests.questWizardSections.partialNotCredited": "Пройдено {{value1}} из {{value2}} точек. Квест засчитается, когда пройдёте ещё {{count}} точек.",
   "components.quests.questWizardSections.partialNotCredited_one": "Пройдено {{value1}} из {{value2}} точек. Квест засчитается, когда пройдёте ещё {{count}} точку.",

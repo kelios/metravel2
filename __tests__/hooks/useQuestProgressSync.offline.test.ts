@@ -8,6 +8,7 @@
 // `waitFor` в последующих тестах того же файла.
 import { AppState } from 'react-native';
 import { renderHook, act } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 let mockIsConnected = true;
 
@@ -37,6 +38,10 @@ jest.mock('@/api/quests', () => ({
 }));
 
 import { useQuestProgressSync } from '@/hooks/useQuestsApi';
+import {
+  QUEST_PROGRESS_QUEUE_KEY,
+  __resetQuestProgressQueue,
+} from '@/utils/questProgressQueue';
 
 const API_PROGRESS = {
   id: 42,
@@ -109,6 +114,8 @@ const mountLoadedSync = async () => {
 describe('useQuestProgressSync — офлайн-прохождение', () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    __resetQuestProgressQueue();
+    void AsyncStorage.removeItem(QUEST_PROGRESS_QUEUE_KEY);
     mockReadOrCreateProgress.mockReset();
     mockFetchQuestProgress.mockReset();
     mockUpdateProgress.mockReset();
@@ -155,6 +162,32 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
     await advance(120000);
     expect(mockUpdateProgress).toHaveBeenCalledTimes(2);
     expect(result.current.progress?.answers).toEqual(OFFLINE_ANSWER.answers);
+  });
+
+  // #1922: до очереди на диске отложенный снапшот жил только в ref-е экрана.
+  // Уход с квеста делал одну попытку отправки, и в офлайне прохождение
+  // оставалось на телефоне — в «Пройденных» его не было, пока игрок не откроет
+  // ТОТ ЖЕ квест в сети.
+  it('кладёт непрошедший снапшот в очередь на диске — уход с квеста его больше не теряет', async () => {
+    mockIsConnected = false;
+    const { result, unmount } = await mountLoadedSync();
+
+    mockUpdateProgress.mockRejectedValue(OFFLINE_ERROR());
+
+    act(() => {
+      result.current.saveProgress(OFFLINE_ANSWER);
+    });
+    await advance(2000);
+    expect(mockUpdateProgress).toHaveBeenCalledTimes(1);
+
+    unmount();
+    await flushMicrotasks();
+
+    const raw = await AsyncStorage.getItem(QUEST_PROGRESS_QUEUE_KEY);
+    const queued = raw ? JSON.parse(raw) : [];
+    expect(queued).toHaveLength(1);
+    expect(queued[0].questId).toBe('krakow-dragon');
+    expect(queued[0].snapshot.answers).toEqual(OFFLINE_ANSWER.answers);
   });
 
   it('flushes the offline answer to the server once the network is back', async () => {

@@ -252,6 +252,7 @@ export const questsGenerated1 = {
   "components.quests.questWizardStepCard.pointRole.optional": "Optional point",
   "components.quests.questWizardStepCard.pointRole.required": "Required point",
   "components.quests.questWizardStepCard.pointRole.start": "Start point",
+  "components.quests.QuestProgressPendingNotice.pendingDelivery": "Your run hasn't been sent yet — it will go out once you're online",
   "components.quests.questWizardSections.partialTitle": "Quest partly completed",
   "components.quests.questWizardSections.partialNotCredited": "You visited {{value1}} of {{value2}} points. The quest counts as completed once you visit {{count}} more points.",
   "components.quests.questWizardSections.partialNotCredited_one": "You visited {{value1}} of {{value2}} points. The quest counts as completed once you visit {{count}} more point.",
