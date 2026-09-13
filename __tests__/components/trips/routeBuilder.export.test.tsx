@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render, waitFor } from '@testing-library/react-native'
+import { fireEvent, render, waitFor, within } from '@testing-library/react-native'
 
 import type { PlannedTrip } from '@/api/plannedTrips'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
@@ -113,6 +113,16 @@ describe('RouteBuilder route download', () => {
     expect(getByTestId('route-builder-export')).toBeTruthy()
     expect(getByTestId('trip-route-export-gpx')).toBeTruthy()
     expect(getByTestId('trip-route-export-kml')).toBeTruthy()
+  })
+
+  it('groups track import and GPX/KML export into one «Route file» block (#1902)', () => {
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+
+    const block = within(getByTestId('route-builder-route-file'))
+    expect(block.getByText('Файл маршрута')).toBeTruthy()
+    expect(block.getByTestId('trip-route-import-panel')).toBeTruthy()
+    expect(block.getByTestId('route-builder-export')).toBeTruthy()
+    expect(block.getByTestId('trip-route-export-gpx')).toBeTruthy()
   })
 
   it('keeps the download available for a participant who cannot edit the route', () => {

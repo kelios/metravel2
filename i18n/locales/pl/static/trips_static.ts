@@ -102,6 +102,8 @@ export const tripsStaticResources = {
   "plan.overnight.errors.url": "Link do rezerwacji musi być adresem strony — na przykład booking.com/hotel/…",
   "plan.overnight.errors.price": "Cena za noc to liczba bez waluty, na przykład 42 lub 42,50.",
   "plan.overnight.errors.checkin": "Godzinę zameldowania podaje się jako GG:MM, na przykład 14:00.",
+  "plan.routeFile.title": "Plik trasy",
+  "plan.routeFile.hint": "Wgraj własny ślad GPX/KML lub zapisz zbudowaną trasę.",
   "plan.routeImport.action": "Wczytaj ślad (GPX/KML)",
   "plan.routeImport.title": "Podgląd importu",
   "plan.routeImport.reading": "Odczytywanie pliku…",

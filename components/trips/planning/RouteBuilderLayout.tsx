@@ -30,8 +30,8 @@ interface Props {
   editPointSection: React.ReactNode;
   templatesSection: React.ReactNode;
   summarySection: React.ReactNode;
-  importSection: React.ReactNode;
-  routeDownloadSection: React.ReactNode;
+  /** #1902: импорт трека и скачивание GPX/KML одним блоком «Файл маршрута». */
+  routeFileSection: React.ReactNode;
   saveSection: React.ReactNode;
   elevationProfileSection: React.ReactNode;
 }
@@ -52,8 +52,7 @@ export default function RouteBuilderLayout({
   editPointSection,
   templatesSection,
   summarySection,
-  importSection,
-  routeDownloadSection,
+  routeFileSection,
   saveSection,
   elevationProfileSection,
 }: Props) {
@@ -83,8 +82,7 @@ export default function RouteBuilderLayout({
         {elevationProfileSection}
         {summarySection}
         {templatesSection}
-        {importSection}
-        {routeDownloadSection}
+        {routeFileSection}
       </RouteBuilderMobile>
     );
   }
@@ -114,9 +112,7 @@ export default function RouteBuilderLayout({
 
           {summarySection}
 
-          {importSection}
-
-          {routeDownloadSection}
+          {routeFileSection}
 
           {saveSection}
         </View>

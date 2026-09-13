@@ -102,6 +102,8 @@ export const tripsStaticResources = {
   "plan.overnight.errors.url": "Спасылка на браніраванне мусіць быць адрасам сайта — напрыклад, booking.com/hotel/…",
   "plan.overnight.errors.price": "Цана за ноч — лік без валюты, напрыклад 42 або 42,50.",
   "plan.overnight.errors.checkin": "Час засялення пазначаецца як ГГ:ХХ, напрыклад 14:00.",
+  "plan.routeFile.title": "Файл маршруту",
+  "plan.routeFile.hint": "Загрузіце свой трэк GPX/KML або захавайце пабудаваны маршрут.",
   "plan.routeImport.action": "Загрузіць трэк (GPX/KML)",
   "plan.routeImport.title": "Папярэдні прагляд імпарту",
   "plan.routeImport.reading": "Чытаем файл…",
