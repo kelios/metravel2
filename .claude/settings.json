@@ -23,6 +23,17 @@
             "statusMessage": "Код-ревью гейт перед testing"
           }
         ]
+      },
+      {
+        "matcher": "mcp__metravel-task-board__metravel_task_update",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/task-claim.mjs\"",
+            "timeout": 15,
+            "statusMessage": "Гейт занятости карточки"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -34,6 +45,17 @@
             "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/review-gate.mjs\"",
             "timeout": 30,
             "statusMessage": "Автозапуск ревью/приёмки по статусу борда"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__metravel-task-board__metravel_task_update|mcp__metravel-task-board__metravel_task_get",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/task-claim.mjs\"",
+            "timeout": 15,
+            "statusMessage": "Claim карточки и проверка чужих сессий"
           }
         ]
       }

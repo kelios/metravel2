@@ -40,6 +40,13 @@ Validation:
   `git branch --show-current` и `git status --short`; чужие изменения не
   переписывай. В harness worktree перенеси итог на основной `main` по правилам
   `docs/RULES.md`.
+- Карточку борда в `in_progress`/`review`/`testing` ведёт ОДНА сессия. Статус «в
+  работе» — это «кто-то работает прямо сейчас», а не «брошено, доделывай». Перед
+  тем как взять такую карточку (в том числе по прямой ссылке от пользователя):
+  `ListAgents` → `SendMessage` живой сессии, которая может её вести → `git status
+  --short` по целевым файлам. Чужие несохранённые правки в них означают, что
+  карточку уже ведут. Механическая страховка — хук `.claude/hooks/task-claim.mjs`,
+  но он видит только сессии этой машины и разговора не заменяет.
 - Platform `shared` не создаёт автоматический Android/iPhone gate. Видимый
   common responsive UI проверяется на desktop web и mobile web; device gate
   нужен только для соответствующего platform-specific behavior/config/runtime.
