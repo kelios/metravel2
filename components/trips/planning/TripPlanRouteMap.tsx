@@ -6,8 +6,9 @@
 // `Map.ios`, который ре-экспортирует `Map.android`), поэтому маршрут, точки и
 // контрол «Слои» (#1306) совпадают с mobile web по составу и поведению.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { RouteGeometry, RoutingState, RoutePoint, RouteSummary, TripTransport } from '@/api/plannedTrips';
 import MapComponent from '@/components/MapPage/Map';
@@ -81,6 +82,8 @@ const LAYERS_POPOVER_RIGHT = 10;
 const LAYERS_POPOVER_MIN_WIDTH = 250;
 const LAYERS_POPOVER_MAX_WIDTH = 300;
 const LAYERS_SCROLL_MAX_HEIGHT = 196;
+// В полноэкранном режиме карточке слоёв не мешает высота встроенной карты.
+const LAYERS_SCROLL_MAX_HEIGHT_FULLSCREEN = 420;
 
 const EMPTY_TRAVEL = { data: [] as never[] };
 
@@ -137,8 +140,24 @@ export default function TripPlanRouteMap({
 }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
   const [layersOpen, setLayersOpen] = useState(false);
   const [mapUiApi, setMapUiApi] = useState<MapUiApi | null>(null);
+  // #1897: паритет с web-кнопкой «развернуть карту». На native карта живёт в
+  // WebView, и `position: fixed`/портала нет — разворот идёт через `Modal`, а
+  // Escape заменяет явная кнопка `minimize-2` и системный «назад» на Android
+  // (`onRequestClose`). Карта одна: пока модалка открыта, встроенный слот стоит
+  // пустой заглушкой, а WebView монтируется в модалке — два одновременных
+  // Leaflet-WebView на слабом Android ни к чему. Точки, линия и состояние
+  // построения приходят пропсами от `RouteBuilder`, поэтому переезд карты между
+  // слотами их не трогает; кадр после переезда снова ставит fitBounds внутри
+  // WebView (nativeMapHtml), как и на web, где портал пересобирает MapContainer.
+  const [fullscreen, setFullscreen] = useState(false);
+  // Двухфазное закрытие, как у карты квеста (#809): синхронный unmount WebView
+  // посреди жеста оставляет touch-responder залоченным. Сначала снимаем
+  // pointerEvents с карты, размонтируем модалку следующим кадром.
+  const [fullscreenClosing, setFullscreenClosing] = useState(false);
+  const closeFrameRef = useRef<number | null>(null);
   /**
    * #1781: точка, по маркеру которой открыты действия «Изменить/Удалить».
    * Индекса мало: список точек умеет переупорядочиваться (#1303), и открытая
@@ -249,7 +268,39 @@ export default function TripPlanRouteMap({
   const toggleLayers = useCallback(() => setLayersOpen((value) => !value), []);
   const closeLayers = useCallback(() => setLayersOpen(false), []);
 
+  const openFullscreen = useCallback(() => {
+    setLayersOpen(false);
+    setActions(null);
+    setFullscreen(true);
+  }, []);
+  const closeFullscreen = useCallback(() => {
+    if (closeFrameRef.current != null) return;
+    setLayersOpen(false);
+    setActions(null);
+    setFullscreenClosing(true);
+    closeFrameRef.current = requestAnimationFrame(() => {
+      closeFrameRef.current = null;
+      setFullscreen(false);
+      setFullscreenClosing(false);
+    });
+  }, []);
+  useEffect(() => () => {
+    if (closeFrameRef.current != null) cancelAnimationFrame(closeFrameRef.current);
+  }, []);
+  // Редактор точки живёт в панели под картой — из полноэкранного режима к нему
+  // не добраться, поэтому «Изменить» сначала сворачивает карту.
+  const editPointFromMap = useCallback(
+    (index: number) => {
+      if (fullscreen) closeFullscreen();
+      onEditPoint?.(index);
+    },
+    [closeFullscreen, fullscreen, onEditPoint],
+  );
+
   const layersLabel = i18nT('tripsStatic:plan.map.layers');
+  const fullscreenLabel = fullscreen
+    ? i18nT('tripsStatic:plan.map.collapse')
+    : i18nT('tripsStatic:plan.map.expand');
 
   return (
     <View style={[styles.wrap, fill && styles.wrapFill]} testID="trip-plan-route-map">
@@ -298,6 +349,35 @@ export default function TripPlanRouteMap({
       )}
 
       <View style={[styles.mapShell, fill && styles.mapShellFill]}>
+        {fullscreen ? (
+          <View style={styles.mapPlaceholder} testID="trip-plan-map-fullscreen-placeholder" />
+        ) : renderMapContent()}
+      </View>
+
+      {fullscreen ? (
+        <Modal
+          visible
+          transparent={false}
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={closeFullscreen}
+        >
+          <View
+            style={[styles.fullscreenModal, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
+            testID="trip-plan-map-fullscreen-modal"
+          >
+            <View style={styles.fullscreenMapShell} pointerEvents={fullscreenClosing ? 'none' : 'auto'}>
+              {renderMapContent()}
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+    </View>
+  );
+
+  function renderMapContent() {
+    return (
+      <>
         <NativeMap
           travel={EMPTY_TRAVEL}
           coordinates={center}
@@ -336,6 +416,20 @@ export default function TripPlanRouteMap({
         >
           <Feather name="layers" size={18} color={layersOpen ? colors.primaryDark : colors.text} />
         </Pressable>
+        <Pressable
+          onPress={fullscreen ? closeFullscreen : openFullscreen}
+          accessibilityRole="button"
+          accessibilityLabel={fullscreenLabel}
+          accessibilityState={{ expanded: fullscreen }}
+          testID="trip-plan-map-fullscreen"
+          style={({ pressed }) => [
+            styles.layersToggle,
+            styles.fullscreenToggle,
+            pressed && styles.layersTogglePressed,
+          ]}
+        >
+          <Feather name={fullscreen ? 'minimize-2' : 'maximize-2'} size={18} color={colors.text} />
+        </Pressable>
 
         {layersOpen ? (
           <MapMobileLayersPopover
@@ -344,7 +438,7 @@ export default function TripPlanRouteMap({
             right={LAYERS_POPOVER_RIGHT}
             minWidth={LAYERS_POPOVER_MIN_WIDTH}
             maxWidth={LAYERS_POPOVER_MAX_WIDTH}
-            scrollMaxHeight={LAYERS_SCROLL_MAX_HEIGHT}
+            scrollMaxHeight={fullscreen ? LAYERS_SCROLL_MAX_HEIGHT_FULLSCREEN : LAYERS_SCROLL_MAX_HEIGHT}
             mapUiApi={mapUiApi}
             showBaseLayer={false}
             showMapControls={false}
@@ -377,7 +471,7 @@ export default function TripPlanRouteMap({
                   onPress={() => {
                     const index = actions?.index;
                     closeActions();
-                    if (index != null) onEditPoint(index);
+                    if (index != null) editPointFromMap(index);
                   }}
                   style={({ pressed }) => [styles.pointActionsButton, pressed && styles.pointActionsButtonPressed]}
                 >
@@ -420,9 +514,9 @@ export default function TripPlanRouteMap({
             </View>
           </View>
         ) : null}
-      </View>
-    </View>
-  );
+      </>
+    );
+  }
 }
 
 const createStyles = (colors: ThemedColors) =>
@@ -546,7 +640,9 @@ const createStyles = (colors: ThemedColors) =>
     layersToggle: {
       position: 'absolute',
       top: 10,
-      right: 10,
+      // Порядок кнопок карты тот же, что на mobile web (#1301,
+      // TripPlanRouteMap.web.tsx:879): слои левее, «на весь экран» у самого края.
+      right: 62,
       width: 44,
       height: 44,
       alignItems: 'center',
@@ -563,4 +659,9 @@ const createStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surfaceMuted,
     },
     layersTogglePressed: { opacity: 0.7 },
+    // Справа от кнопки слоёв, тем же кругом 44dp.
+    fullscreenToggle: { right: 10 },
+    mapPlaceholder: { flex: 1, backgroundColor: colors.surfaceMuted },
+    fullscreenModal: { flex: 1, backgroundColor: colors.background },
+    fullscreenMapShell: { flex: 1, overflow: 'hidden', backgroundColor: colors.surfaceMuted },
   });
