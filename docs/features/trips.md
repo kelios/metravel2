@@ -149,7 +149,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 
 | Файл | LOC | Зона ответственности |
 | --- | --- | --- |
-| `components/trips/planning/RouteBuilder.tsx` | 778 | контейнер конструктора после распила #1825: владеет черновиком точек, картой, превью и шаблонами; остальное — в модулях ниже. Ниже порога 800, поэтому `guard:file-complexity:changed` для него блокирующий |
+| `components/trips/planning/RouteBuilder.tsx` | 797 | контейнер конструктора после распила #1825: владеет черновиком точек, картой, превью и шаблонами; остальное — в модулях ниже. Ниже порога 800, поэтому `guard:file-complexity:changed` для него блокирующий |
 | `app/(tabs)/trips/plan/[id].tsx` | 688 | экран поездки: шапка, owner-редактор метаданных, табы планировщика, удаление |
 | `components/trips/planning/TripPlanRouteMap.web.tsx` | 661 | Leaflet/React-Leaflet карта конструктора на web, слои, fullscreen |
 | `components/trips/planning/TripCreateForm.tsx` | 653 | форма создания поездки, yup-валидация, prefill из travel |
