@@ -238,11 +238,37 @@ false раньше серверного default. Это подтверждает
 любых сетевых запросов Meta. Значения и время сохранены без идентификаторов и
 секретов в `.codex-temp/app-review-2026-09-12/meta-config-read.sanitized.json`.
 
+### Корректировка для следующего кандидата — #1895 (13.09.2026)
+
+Коммит `e17db1872` снимает Meta SDK с iPhone-сборки целиком (вариант A из #1895):
+`package.json` → `expo.autolinking.ios.exclude = ["react-native-fbsdk-next"]`
+исключает из iOS-autolinking и RN-под, и Expo-модуль `ExpoAdapterFBSDKNext` с
+`FacebookAppDelegate`; `ios/Podfile.lock` и `project.pbxproj` регенерированы
+обычным `pod install` (ушли FBSDKCoreKit/Basics/LoginKit/ShareKit/
+GamingServicesKit и FBAEMKit); `ios/metravel/Info.plist` без `Facebook*`-ключей,
+схемы `fb…` и `LSApplicationQueriesSchemes`; `FacebookSignInButton.ios.tsx` —
+заглушка без импорта JS SDK. Android и web не изменены. Build 9 остаётся как
+есть; в следующем подписанном кандидате SDK-манифестов Meta с `tracking=true`
+не будет, и расхождение с app-owned манифестом и формой App Privacy исчезает.
+
+Гейты: `npm run ios:release:guard` — `IOS_META_SDK_LINKED` при любом возврате
+SDK (autolinking, lock/pbxproj, Info.plist, заглушка); `npm run ios:artifact:audit`
+— `IOS_ARTIFACT_META_SDK` (FBSDK*/FBAEMKit в архиве, `Facebook*` в compiled
+Info.plist, FBSDK-символы в бинарнике) и `IOS_ARTIFACT_SDK_TRACKING` (любой
+bundled `PrivacyInfo.xcprivacy` с `NSPrivacyTracking=true` или tracking domains).
+Локальная проба 13.09.2026: Release-сборка под iOS-симулятор (Xcode 26.6,
+iPhone 17 Pro) собралась, в `.app` 0 FBSDK/FBAEM-записей, 0 Facebook-ключей,
+0 FBSDK-символов в бинарнике, 0 manifest с tracking (32 SDK-манифеста
+проверены); аудит `.app` даёт только ожидаемый для неподписанной
+симуляторной сборки `IOS_ARTIFACT_PROVISIONING`; приложение запускается и
+держит главный экран. Подписанный IPA следующего кандидата проверяется тем же
+`ios:artifact:audit` после сборки.
+
 | Сервис | Назначение и данные | Доказательство / граница |
 | --- | --- | --- |
 | MeTravel API | Аккаунт/email-вход, статьи, фото, квесты, планы, жалобы и блокировки; аккаунтные данные, выбранный контент, координаты маршрута | `api/auth.ts:31,145`, `api/user.ts:26,238`, `api/misc.ts:238`; runtime-кандидат проверяется в #1889 |
 | Apple / Google | Настроенные способы входа наряду с email; provider identity/token, имя/email передаются MeTravel | `components/auth/AppleSignInButton.native.tsx:92`, `GoogleSignInButton.native.tsx:48,123`; в exact IPA Google config непустая и availability gate проходит; успешный вход ещё проверяется |
-| Facebook SDK | Native SDK присутствует с AutoInit=true, но Facebook login UI в build 9 скрыт | Exact Hermes v98: `isFacebookNativeLoginEnabled` сравнивает пустую строку с `true` и возвращает false; linked SDK не означает доступную кнопку входа или отсутствие SDK-сетевой активности |
+| Facebook SDK | Build 9: native SDK присутствует с AutoInit=true, Facebook login UI скрыт. Следующий кандидат (#1895, коммит `e17db1872`): Meta SDK исключён из iOS-сборки целиком — без фреймворков, Facebook-ключей Info.plist и tracking-manifest | Build 9 — exact Hermes v98: `isFacebookNativeLoginEnabled` сравнивает пустую строку с `true` и возвращает false; linked SDK не означает доступную кнопку входа или отсутствие SDK-сетевой активности. Следующий кандидат — см. «Корректировка для следующего кандидата» ниже |
 | Amazon S3 | Загруженные фото/медиа и резервные копии базы, содержащие аккаунтные и контентные данные | Реальная инвентаризация `docs/features/images.md:127` от 30.07 и успешный backup `docs/DB_BACKUP.md:3,7,11` от 31.08; узкое чтение действующих настроек 12.09 подтвердило `eu-north-1` |
 | Leaflet / OpenStreetMap | Локальная карта в native WebView, тайлы через MeTravel proxy; область/масштаб карты | `components/MapPage/Map.ios.tsx:3,16`, `config/mapWebTileContract.ts:6`; это не встроенная Google Maps/Apple MapKit карта |
 | Nominatim / BigDataCloud | Поиск адресов и обратное геокодирование; запрос, координаты и язык | `api/external/nominatim.ts:34`, `api/geoQueries.ts:123,147,209`; возможны прямые обращения к поставщику |
