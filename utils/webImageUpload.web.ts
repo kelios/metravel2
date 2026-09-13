@@ -186,12 +186,14 @@ export async function compressWebRasterImage(file: File): Promise<File> {
     });
   };
 
-  const acceptBlob = (blob: Blob | null): blob is Blob =>
-    Boolean(blob && blob.size > 0 && blob.size <= SERVER_UPLOAD_MAX_BYTES && blob.size < file.size);
+  // Не type predicate: `blob is Blob` в ложной ветке сужал `Blob | null` до
+  // `null`, и последующие `firstBlob.size`/`best` падали в `never` (tsc 6).
+  const acceptBlob = (blob: Blob): boolean =>
+    blob.size > 0 && blob.size <= SERVER_UPLOAD_MAX_BYTES && blob.size < file.size;
 
   const printTarget = getCompressedCanvasSize(sourceWidth, sourceHeight);
   const firstBlob = await encodeJpeg(printTarget.width, printTarget.height, WEB_UPLOAD_JPEG_QUALITY);
-  if (acceptBlob(firstBlob)) return fileFromJpegBlob(file, firstBlob);
+  if (firstBlob && acceptBlob(firstBlob)) return fileFromJpegBlob(file, firstBlob);
   // Оригинал уже в лимите сервера, а первый проход не выиграл — качество важнее
   // косметической экономии (см. тест «пережатие не дало выигрыша»).
   if (!overServerLimit && (!firstBlob || firstBlob.size >= file.size)) return file;
@@ -200,17 +202,17 @@ export async function compressWebRasterImage(file: File): Promise<File> {
   for (const quality of WEB_UPLOAD_QUALITY_RETRIES) {
     const blob = await encodeJpeg(printTarget.width, printTarget.height, quality);
     if (blob && blob.size > 0 && (!best || blob.size < best.size)) best = blob;
-    if (acceptBlob(blob)) return fileFromJpegBlob(file, blob);
+    if (blob && acceptBlob(blob)) return fileFromJpegBlob(file, blob);
   }
 
   for (const maxSide of WEB_UPLOAD_SIDE_RETRIES) {
     const target = getCompressedCanvasSize(sourceWidth, sourceHeight, maxSide);
     const blob = await encodeJpeg(target.width, target.height, WEB_UPLOAD_QUALITY_RETRIES[WEB_UPLOAD_QUALITY_RETRIES.length - 1]);
     if (blob && blob.size > 0 && (!best || blob.size < best.size)) best = blob;
-    if (acceptBlob(blob)) return fileFromJpegBlob(file, blob);
+    if (blob && acceptBlob(blob)) return fileFromJpegBlob(file, blob);
   }
 
-  if (acceptBlob(best)) return fileFromJpegBlob(file, best);
+  if (best && acceptBlob(best)) return fileFromJpegBlob(file, best);
   return file;
 }
 
