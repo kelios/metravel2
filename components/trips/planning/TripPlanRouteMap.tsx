@@ -268,9 +268,13 @@ export default function TripPlanRouteMap({
   const toggleLayers = useCallback(() => setLayersOpen((value) => !value), []);
   const closeLayers = useCallback(() => setLayersOpen(false), []);
 
+  // Карта при переезде между слотами пересоздаётся и ставит кадр по всему
+  // маршруту, поэтому уже применённый focusPoint отпускается: если список точек
+  // просил центрирование, новая карта повторит его тем же токеном.
   const openFullscreen = useCallback(() => {
     setLayersOpen(false);
     setActions(null);
+    focusedTokenRef.current = null;
     setFullscreen(true);
   }, []);
   const closeFullscreen = useCallback(() => {
@@ -278,6 +282,7 @@ export default function TripPlanRouteMap({
     setLayersOpen(false);
     setActions(null);
     setFullscreenClosing(true);
+    focusedTokenRef.current = null;
     closeFrameRef.current = requestAnimationFrame(() => {
       closeFrameRef.current = null;
       setFullscreen(false);
