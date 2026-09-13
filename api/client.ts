@@ -9,7 +9,7 @@ import {
     shouldUseStoredAuthToken,
     usesWebCookieAuth,
 } from '@/utils/authPlatform';
-import { getSecureItem } from '@/utils/secureStorage';
+import { getSecureItem, readSecureItem, type SecureItemRead } from '@/utils/secureStorage';
 import {
     clearSessionTokens,
     persistRotatedSessionTokens,
@@ -69,6 +69,16 @@ export const __setBackendRefreshEndpointForTests = (enabled: boolean): void => {
 /**
  * Единый API клиент
  */
+/**
+ * Небезопасные методы — те, для которых бэкенд включает CSRF-проверку в
+ * cookie-ветке авторизации. Чтение без токена не теряет данные и остаётся
+ * разрешённым: на него сервер честно отвечает 401 (#1921).
+ */
+const UNSAFE_HTTP_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+const isUnsafeHttpMethod = (method: RequestInit['method']): boolean =>
+    UNSAFE_HTTP_METHODS.has(String(method ?? 'GET').toUpperCase());
+
 class ApiClient {
     private baseURL: string;
     private defaultHeaders: HeadersInit;
@@ -257,6 +267,16 @@ class ApiClient {
     }
 
     /**
+     * Тот же токен, но с ответом на вопрос «его нет или хранилище не ответило».
+     * Различие несущее: пустота — это разлогин, отказ Keychain — транзиентный
+     * сбой, по которому стирать живую сессию нельзя (#810).
+     */
+    private async readAccessToken(): Promise<SecureItemRead> {
+        if (!shouldUseStoredAuthToken()) return { value: null, unavailable: false };
+        return await readSecureItem(TOKEN_KEY);
+    }
+
+    /**
      * Строит заголовки запроса: опциональные defaultHeaders + Authorization (если есть токен)
      * + переданные extra. Поведение идентично прежним inline-литералам:
      * пустой/нулевой токен не добавляет Authorization.
@@ -334,7 +354,23 @@ class ApiClient {
             );
         }
 
-        const token = skipAuth ? null : await this.getAccessToken();
+        const auth: SecureItemRead = skipAuth
+            ? { value: null, unavailable: false }
+            : await this.readAccessToken();
+        const token = auth.value;
+
+        // Небезопасный метод без токена на native отправлять нельзя. Раньше он
+        // уходил анонимно, бэкенд разбирал его как cookie-сессию и отвечал
+        // `403 CSRF Failed` — приложение оставалось «залогиненным», а отзыв,
+        // прогресс и телеметрия пропадали молча (прод 13.09.2026, #1921).
+        if (!skipAuth && !token && !usesWebCookieAuth() && isUnsafeHttpMethod(options.method)) {
+            // Хранилище не ответило: значение неизвестно, и стирать сессию по
+            // такому сбою нельзя — запись просто не уходит, и человек видит
+            // ошибку вместо тихой потери.
+            if (!auth.unavailable) await this.clearTokens();
+            throw new ApiError(401, i18nT('errorsStatic:api.client.sessionExpired'));
+        }
+
         const headers = this.authHeaders(token, { includeDefaults: true, extra: options.headers });
 
         try {

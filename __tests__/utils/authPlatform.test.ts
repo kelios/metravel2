@@ -32,7 +32,10 @@ describe('authPlatform', () => {
     expect(shouldUseStoredAuthToken()).toBe(true);
     expect(hasUsableAuthCredential(null)).toBe(false);
     expect(hasUsableAuthCredential('token')).toBe(true);
-    expect(getApiRequestCredentials()).toEqual({});
+    // #1921: cookie отключается явно — иначе запрос без токена уходит в
+    // cookie-ветку бэкенда и падает на CSRF (403) вместо честного 401.
+    expect(getApiRequestCredentials()).toEqual({ credentials: 'omit' });
+    expect(getApiRequestCredentials(true)).toEqual({ credentials: 'omit' });
   });
 
   it('recognizes only access and refresh credential keys', () => {

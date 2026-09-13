@@ -60,6 +60,7 @@ export const errorsStaticResources = {
   "api.client.tooManyRequests": "Zbyt wiele żądań. Proszę chwilę poczekać.",
   "api.client.offline": "Brak połączenia z Internetem. Sprawdź połączenie i spróbuj ponownie.",
   "api.client.authRequired": "Wymagana autoryzacja",
+  "api.client.sessionExpired": "Sesja wygasła. Zaloguj się ponownie, aby zapisać zmiany",
   "api.client.uploadFailed": "Błąd ładowania: {{details}}",
   "api.client.fileUploadFailed": "Błąd pobierania pliku",
   "api.client.uploadNetworkError": "Błąd sieci podczas ładowania",

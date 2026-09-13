@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   setSecureItem,
   getSecureItem,
+  readSecureItem,
   removeSecureItem,
   isSecureStorageAvailable,
 } from '@/utils/secureStorage'
@@ -154,7 +155,8 @@ describe('secureStorage (native)', () => {
     })
 
     mockSecureStore.setItemAsync.mockClear()
-    mockSecureStore.getItemAsync.mockClear()
+    mockSecureStore.getItemAsync.mockReset()
+    mockSecureStore.getItemAsync.mockResolvedValue('native-value')
     mockSecureStore.deleteItemAsync.mockClear()
     mockSecureStore.isAvailableAsync.mockClear()
 
@@ -180,6 +182,35 @@ describe('secureStorage (native)', () => {
 
     await removeSecureItem('token')
     expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith('token')
+  })
+
+  // #1921: молчаливый `null` при сбое Keychain был неотличим от «токена нет» —
+  // приложение оставалось «залогиненным» и отправляло запись без заголовка
+  // авторизации, теряя её.
+  it('перечитывает хранилище при сбое и возвращает значение со второй попытки', async () => {
+    mockSecureStore.getItemAsync
+      .mockRejectedValueOnce(new Error('keychain busy'))
+      .mockResolvedValueOnce('native-value')
+
+    const read = await readSecureItem('token')
+
+    expect(mockSecureStore.getItemAsync).toHaveBeenCalledTimes(2)
+    expect(read).toEqual({ value: 'native-value', unavailable: false })
+  })
+
+  it('отличает отказ хранилища от пустого значения', async () => {
+    mockSecureStore.getItemAsync.mockRejectedValue(new Error('keychain unavailable'))
+
+    const failed = await readSecureItem('token')
+    expect(failed).toEqual({ value: null, unavailable: true })
+
+    mockSecureStore.getItemAsync.mockReset()
+    mockSecureStore.getItemAsync.mockResolvedValue(null)
+
+    const empty = await readSecureItem('token')
+    expect(empty).toEqual({ value: null, unavailable: false })
+    // Старый контракт не меняется: `getSecureItem` по-прежнему отдаёт значение.
+    expect(await getSecureItem('token')).toBeNull()
   })
 
   it('checks native secure storage availability via expo-secure-store', async () => {

@@ -4,7 +4,7 @@ import {
   __resetSessionTokenWritesForTests,
 } from '@/utils/authTokenStore';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
-import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
+import { getSecureItem, readSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { devError, devWarn } from '@/utils/logger';
 import { Platform } from 'react-native';
 
@@ -14,6 +14,7 @@ jest.mock('@/utils/fetchWithTimeout', () => ({
 
 jest.mock('@/utils/secureStorage', () => ({
   getSecureItem: jest.fn(),
+  readSecureItem: jest.fn(),
   setSecureItem: jest.fn(),
   removeSecureItems: jest.fn(),
 }));
@@ -25,6 +26,7 @@ jest.mock('@/utils/logger', () => ({
 
 const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>;
 const mockedGetSecureItem = getSecureItem as jest.MockedFunction<typeof getSecureItem>;
+const mockedReadSecureItem = readSecureItem as jest.MockedFunction<typeof readSecureItem>;
 const mockedRemoveSecureItems = removeSecureItems as jest.MockedFunction<typeof removeSecureItems>;
 const originalPlatformOS = Platform.OS;
 
@@ -42,6 +44,15 @@ describe('src/api/client.ts apiClient', () => {
     // not leak into the following native test.
     mockedFetchWithTimeout.mockReset();
     mockedGetSecureItem.mockReset();
+    mockedReadSecureItem.mockReset();
+    // Клиент читает токен через `readSecureItem` (#1921: ему нужно отличать
+    // «токена нет» от «Keychain не ответил»). Очередь значений в тестах
+    // по-прежнему живёт на `getSecureItem` — делегируем, чтобы кейсы читались
+    // как раньше, а отказ хранилища задавался явно.
+    mockedReadSecureItem.mockImplementation(async (key: string) => ({
+      value: await mockedGetSecureItem(key),
+      unavailable: false,
+    }));
     mockedRemoveSecureItems.mockReset();
     Platform.OS = 'ios' as typeof Platform.OS;
     (navigator as any).onLine = true;
@@ -249,6 +260,61 @@ describe('src/api/client.ts apiClient', () => {
       }),
     );
     expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2);
+  });
+
+  // #1921: на iPhone запись без токена уходила анонимно, бэкенд разбирал её как
+  // cookie-сессию и отвечал `403 CSRF Failed: Referer checking failed`.
+  // Приложение считало себя залогиненным, а отзыв и телеметрия пропадали молча.
+  describe('native: запись без токена (#1921)', () => {
+    it('не отправляет POST анонимно, стирает сессию и сообщает, что нужно войти', async () => {
+      mockedGetSecureItem.mockResolvedValue(null);
+
+      await expect(apiClient.post('/quest-reviews/', { rating: 5 })).rejects.toMatchObject({
+        status: 401,
+      });
+
+      expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
+      expect(mockedRemoveSecureItems).toHaveBeenCalled();
+    });
+
+    it('сбой хранилища не стирает сессию, но и не превращает запись в анонимную', async () => {
+      mockedReadSecureItem.mockResolvedValue({ value: null, unavailable: true });
+
+      await expect(apiClient.post('/quest-reviews/', { rating: 5 })).rejects.toMatchObject({
+        status: 401,
+      });
+
+      expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
+      // Keychain мог сглючить транзиентно — живую сессию по такому сбою не трут (#810).
+      expect(mockedRemoveSecureItems).not.toHaveBeenCalled();
+    });
+
+    it('чтение без токена по-прежнему уходит на сервер', async () => {
+      mockedGetSecureItem.mockResolvedValue(null);
+      mockedFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
+      } as any);
+
+      await expect(apiClient.get('/quests/')).resolves.toEqual({ ok: true });
+      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
+    });
+
+    it('не прикладывает cookie: единственная авторизация native — заголовок', async () => {
+      mockedGetSecureItem.mockResolvedValue('token');
+      mockedFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
+      } as any);
+
+      await apiClient.post('/quest-reviews/', { rating: 5 });
+
+      const [, options] = mockedFetchWithTimeout.mock.calls[0];
+      expect((options as any).credentials).toBe('omit');
+      expect((options as any).headers.Authorization).toBe('Token token');
+    });
   });
 
   it('skipAuth: не читает и не отправляет токен', async () => {

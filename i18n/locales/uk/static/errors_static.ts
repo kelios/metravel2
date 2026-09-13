@@ -60,6 +60,7 @@ export const errorsStaticResources = {
   "api.client.tooManyRequests": "Занадто багато запитів. Зачекайте, будь ласка.",
   "api.client.offline": "Немає підключення до інтернету. Перевірте з'єднання та спробуйте знову.",
   "api.client.authRequired": "Потрібна авторизація",
+  "api.client.sessionExpired": "Сесія завершилася. Увійдіть знову, щоб зберегти зміни",
   "api.client.uploadFailed": "Помилка завантаження: {{details}}",
   "api.client.fileUploadFailed": "Помилка завантаження файлу",
   "api.client.uploadNetworkError": "Помилка мережі під час завантаження",

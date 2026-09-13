@@ -147,14 +147,39 @@ export async function setSecureItem(key: string, value: string): Promise<void> {
 }
 
 /**
- * Безопасное получение значения
+ * Результат чтения: пустое значение и неотвечающее хранилище — РАЗНЫЕ исходы.
+ *
+ * До #1921 сбой Keychain в проде молча возвращал `null`, неотличимый от «токена
+ * нет»: приложение продолжало считать пользователя залогиненным, но отправляло
+ * запись без заголовка `Authorization` — и теряло её. Теперь вызывающий видит
+ * `unavailable` и может не превращать сбой хранилища в анонимный запрос.
+ */
+export type SecureItemRead = {
+  value: string | null
+  /** Хранилище не ответило. Значение неизвестно — это НЕ «значения нет». */
+  unavailable: boolean
+}
+
+/** Сколько раз перечитываем native-хранилище, прежде чем признать сбой. */
+const SECURE_READ_ATTEMPTS = 2
+
+/**
+ * Безопасное получение значения. Сбой хранилища неотличим от пустоты —
+ * если это различие важно, читай через `readSecureItem`.
  */
 export async function getSecureItem(key: string): Promise<string | null> {
+  return (await readSecureItem(key)).value
+}
+
+/**
+ * Безопасное получение значения с признаком «хранилище не ответило».
+ */
+export async function readSecureItem(key: string): Promise<SecureItemRead> {
   try {
     if (Platform.OS === 'web') {
       if (isAuthTokenStorageKey(key)) {
         purgeLegacyWebAuthCredential(key);
-        return null;
+        return { value: null, unavailable: false };
       }
       const fullKey = `${STORAGE_PREFIX}${key}`;
       const ls = getWebLocalStorage();
@@ -171,9 +196,9 @@ export async function getSecureItem(key: string): Promise<string | null> {
       if (encrypted == null) {
         encrypted = webMemoryStore.get(fullKey) ?? null;
       }
-      if (!encrypted) return null;
+      if (!encrypted) return { value: null, unavailable: false };
       const decrypted = simpleDecrypt(encrypted, ENCRYPTION_KEY);
-      if (!decrypted) return null;
+      if (!decrypted) return { value: null, unavailable: false };
       // Re-encrypt legacy plaintext values so future reads use the safe path.
       if (ls && !encrypted.startsWith(ENCRYPTED_PREFIX) && typeof btoa === 'function') {
         try {
@@ -181,23 +206,41 @@ export async function getSecureItem(key: string): Promise<string | null> {
           ls.setItem(fullKey, reEncrypted);
         } catch { /* best-effort migration */ }
       }
-      return decrypted;
+      return { value: decrypted, unavailable: false };
     } else {
-      // Для native используем SecureStore
+      // Для native используем SecureStore. Отсутствие МОДУЛЯ и отказ САМОГО
+      // хранилища — разные вещи: первое в проде фатально (dev-фолбэк только для
+      // разработки), второе транзиентно и лечится повтором (#1921).
+      let SecureStore: { getItemAsync: (key: string) => Promise<string | null> };
       try {
-        const SecureStore = require('expo-secure-store');
-        return await SecureStore.getItemAsync(key);
+        SecureStore = require('expo-secure-store');
       } catch {
-        if (!__DEV__) return null;
+        if (!__DEV__) return { value: null, unavailable: true };
         console.warn('expo-secure-store не установлен. Используется dev-only AsyncStorage fallback');
-        return await AsyncStorage.getItem(`${STORAGE_PREFIX}${key}`);
+        return {
+          value: await AsyncStorage.getItem(`${STORAGE_PREFIX}${key}`),
+          unavailable: false,
+        };
       }
+
+      let lastError: unknown = null;
+      for (let attempt = 0; attempt < SECURE_READ_ATTEMPTS; attempt += 1) {
+        try {
+          return { value: await SecureStore.getItemAsync(key), unavailable: false };
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      if (__DEV__) {
+        console.warn('SecureStore не ответил на чтение:', lastError);
+      }
+      return { value: null, unavailable: true };
     }
   } catch {
     if (__DEV__) {
       console.error('Ошибка при получении из secure storage:');
     }
-    return null;
+    return { value: null, unavailable: true };
   }
 }
 

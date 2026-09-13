@@ -29,10 +29,20 @@ export const hasUsableAuthCredential = (storedToken: string | null): boolean =>
 /**
  * Web API requests either participate in the cookie session or explicitly opt
  * out for public endpoints. Native keeps the header-token contract.
+ *
+ * На native cookie отключается ЯВНО. Пустой объект оставлял решение рантайму, и
+ * fetch в React Native прикладывал cookie общего хранилища устройства: запрос,
+ * ушедший без заголовка `Authorization` (токен не прочитался из Keychain),
+ * попадал на бэкенде в cookie-ветку `CookieTokenAuthentication`, где для
+ * небезопасного метода включается CSRF-проверка. Нативный запрос не шлёт
+ * `Referer`, поэтому вместо честного 401 приходил `403 CSRF Failed: Referer
+ * checking failed`, приложение считало себя залогиненным, а запись пропадала
+ * молча — прод 13.09.2026, потерян отзыв о квесте и две пачки телеметрии
+ * (#1921).
  */
 export const getApiRequestCredentials = (
   skipAuth: boolean = false,
 ): Pick<RequestInit, 'credentials'> => {
-  if (!usesWebCookieAuth()) return {};
+  if (!usesWebCookieAuth()) return { credentials: 'omit' };
   return { credentials: skipAuth ? 'omit' : 'include' };
 };
