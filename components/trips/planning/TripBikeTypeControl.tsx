@@ -18,6 +18,7 @@ interface Props {
     bikeTypeControl: StyleProp<ViewStyle>;
     bikeTypeChips: StyleProp<ViewStyle>;
     label: StyleProp<TextStyle>;
+    hint: StyleProp<TextStyle>;
   };
 }
 
@@ -41,6 +42,12 @@ function TripBikeTypeControl({ value, disabled, onChange, styles }: Props) {
           />
         ))}
       </View>
+      {/* #1901: голые названия типов не объясняют, на что влияет выбор. Объяснение
+          живёт строкой под чипами, а не в подписи чипа: Chip рисует label в одну
+          строку с многоточием, и на 320dp длинная подпись обрезалась бы. */}
+      <Text style={styles.hint} testID="route-builder-bike-type-hint">
+        {t('tripsStatic:plan.bikeType.hint')}
+      </Text>
     </View>
   );
 }

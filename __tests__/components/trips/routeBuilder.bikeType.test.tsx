@@ -174,11 +174,15 @@ describe('RouteBuilder bike type selector', () => {
       getByTestId(`route-builder-bike-type-${bikeType}`),
     )
     expect(chips.map((chip) => chip.props.accessibilityLabel)).toEqual([
-      // #1901: подпись объясняет, какие дороги выберет профиль маршрута.
-      'Обычный: велодорожки и тихие дороги',
-      'Шоссейный: быстрее по асфальту',
-      'Горный: грунтовки и тропы',
+      'Обычный',
+      'Шоссейный',
+      'Горный',
     ])
+    // #1901: объяснение, какие дороги выберет профиль, стоит строкой под чипами —
+    // в подписи чипа оно бы обрезалось многоточием на 320dp.
+    expect(getByTestId('route-builder-bike-type-hint').props.children).toBe(
+      'От типа зависит, какие дороги выберет маршрут: обычный — велодорожки и тихие дороги, шоссейный — быстрее по асфальту, горный — грунтовки и тропы.',
+    )
     expect(chips.map((chip) => chip.props.accessibilityState.selected)).toEqual([
       false,
       true,
