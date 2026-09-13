@@ -38,6 +38,7 @@ jest.mock('@/api/quests', () => ({
 }));
 
 import { useQuestProgressSync } from '@/hooks/useQuestsApi';
+import { useAuthStore } from '@/stores/authStore';
 import {
   QUEST_PROGRESS_QUEUE_KEY,
   __resetQuestProgressQueue,
@@ -211,6 +212,42 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
     await flushMicrotasks();
 
     expect(JSON.parse((await AsyncStorage.getItem(QUEST_PROGRESS_QUEUE_KEY)) ?? '[]')).toHaveLength(0);
+  });
+
+  // Экран могли открыть холодным — тогда в этом маунте не было ни одного
+  // сохранения, и владельца записи знает только стор. Без этого отката «Начать
+  // заново» оставляло запись на диске, и она воскрешала сброшенное прохождение.
+  it('«Начать заново» снимает запись владельца и без единого сохранения в этом маунте', async () => {
+    const authSnapshot = useAuthStore.getState();
+    useAuthStore.setState({ isAuthenticated: true, userId: '169' });
+    await AsyncStorage.setItem(
+      QUEST_PROGRESS_QUEUE_KEY,
+      JSON.stringify([
+        {
+          questId: 'krakow-dragon',
+          ownerId: '169',
+          snapshot: OFFLINE_ANSWER,
+          queuedAt: Date.now(),
+        },
+      ]),
+    );
+    __resetQuestProgressQueue();
+
+    try {
+      const { result } = await mountLoadedSync();
+
+      await act(async () => {
+        await result.current.resetProgress();
+      });
+      await flushMicrotasks();
+
+      expect(JSON.parse((await AsyncStorage.getItem(QUEST_PROGRESS_QUEUE_KEY)) ?? '[]')).toHaveLength(0);
+    } finally {
+      useAuthStore.setState({
+        isAuthenticated: authSnapshot.isAuthenticated,
+        userId: authSnapshot.userId,
+      });
+    }
   });
 
   it('flushes the offline answer to the server once the network is back', async () => {

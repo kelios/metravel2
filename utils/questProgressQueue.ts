@@ -32,7 +32,12 @@ import {
     type QuestProgressSnapshot,
 } from '@/utils/questProgressMerge'
 
-export const QUEST_PROGRESS_QUEUE_KEY = 'quest_progress_queue_v1'
+/**
+ * v2 — в записи появился владелец (`ownerId`). Записи v1 не читаются намеренно:
+ * без владельца очередь не может решить, в чьё прохождение их отправлять, а
+ * наружу v1 не выпускался — он прожил один коммит.
+ */
+export const QUEST_PROGRESS_QUEUE_KEY = 'quest_progress_queue_v2'
 
 /**
  * Потолок очереди: у записи ключ — квест, поэтому это число РАЗНЫХ квестов,
@@ -74,6 +79,7 @@ const isQueuedProgress = (value: unknown): value is QueuedQuestProgress => {
     return (
         typeof record.questId === 'string' &&
         !!record.questId &&
+        typeof record.ownerId === 'string' &&
         !!record.snapshot &&
         typeof record.snapshot === 'object'
     )
@@ -89,7 +95,7 @@ const loadQueue = async (): Promise<QueuedQuestProgress[]> => {
                 if (!Array.isArray(parsed)) return []
                 return parsed.filter(isQueuedProgress).map((entry) => ({
                     questId: entry.questId,
-                    ownerId: typeof entry.ownerId === 'string' ? entry.ownerId : null,
+                    ownerId: entry.ownerId,
                     snapshot: normalizeQuestProgressSnapshot(entry.snapshot),
                     queuedAt: Number(entry.queuedAt) || 0,
                 }))
@@ -326,6 +332,14 @@ export function flushQuestProgressQueue(): Promise<void> {
     // Цепочка не должна оставаться отклонённой: следующий вызов встанет за ней.
     flushChain = next.catch(() => {})
     return flushChain
+}
+
+/**
+ * Пересчитать видимость пометки. Смена аккаунта не трогает состав очереди, и
+ * без этого вызова вошедший видел бы чип от записи предыдущего игрока.
+ */
+export function refreshQuestProgressQueueVisibility(): void {
+    notify()
 }
 
 /** Квесты, снапшот которых ещё не доехал. Синхронно — только загруженное. */

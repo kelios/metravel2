@@ -12,7 +12,10 @@ import { AppState } from 'react-native'
 
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useAuthStore } from '@/stores/authStore'
-import { flushQuestProgressQueue } from '@/utils/questProgressQueue'
+import {
+    flushQuestProgressQueue,
+    refreshQuestProgressQueueVisibility,
+} from '@/utils/questProgressQueue'
 
 export function useQuestProgressQueueRuntime(): void {
     const { isConnected } = useNetworkStatus()
@@ -42,10 +45,16 @@ export function useQuestProgressQueueRuntime(): void {
     // не рендерится, а лишний рендер в корневом дереве стоит дорого.
     useEffect(() => {
         let wasAuthenticated = useAuthStore.getState().isAuthenticated
+        let wasOwnerId = useAuthStore.getState().userId
         return useAuthStore.subscribe((state) => {
             const isAuthenticated = state.isAuthenticated
             const wasGuest = !wasAuthenticated
+            const ownerChanged = state.userId !== wasOwnerId
             wasAuthenticated = isAuthenticated
+            wasOwnerId = state.userId
+            // Состав очереди при смене аккаунта не меняется, а видимость
+            // пометки — да: чужая запись вошедшему не принадлежит.
+            if (ownerChanged) refreshQuestProgressQueueVisibility()
             if (isAuthenticated && wasGuest) void flushQuestProgressQueue()
         })
     }, [])
