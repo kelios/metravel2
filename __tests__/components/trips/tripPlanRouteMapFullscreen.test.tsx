@@ -157,6 +157,43 @@ describe('TripPlanRouteMap fullscreen (web)', () => {
     expect(UNSAFE_getByProps({ 'data-testid': 'map-canvas' })).toBeTruthy()
   })
 
+  // #1911: редактор точки живёт в панели под картой, а фулскрин — портал в body
+  // поверх всей страницы. Без сворачивания карты «Изменить» выглядело как
+  // неработающая кнопка: обработчик вызывался, редактор открывался под порталом.
+  // На native это уже так (#1897), web оставался со старым поведением.
+  it('collapses the fullscreen map before opening the point editor', async () => {
+    const onEditPoint = jest.fn()
+    const { getByLabelText, UNSAFE_getByProps } = render(
+      <TripPlanRouteMap route={route} onEditPoint={onEditPoint} />,
+    )
+    await waitFor(() => getByLabelText(EXPAND))
+
+    fireEvent(getByLabelText(EXPAND), 'click')
+    expect(mockCanvasProps.at(-1)?.containerKey).toMatch(/-fs$/)
+
+    fireEvent(UNSAFE_getByProps({ 'data-testid': 'trip-plan-map-edit-point-1' }), 'click')
+
+    expect(onEditPoint).toHaveBeenCalledWith(1)
+    // Карта вернулась в инлайн-раскладку, и страница снова скроллится.
+    expect(getByLabelText(EXPAND)).toBeTruthy()
+    expect(mockCanvasProps.at(-1)?.containerKey).toMatch(/-inline$/)
+    expect(document.body.style.overflow).toBe('')
+  })
+
+  it('does not change plain (non-fullscreen) editing', async () => {
+    const onEditPoint = jest.fn()
+    const { getByLabelText, UNSAFE_getByProps } = render(
+      <TripPlanRouteMap route={route} onEditPoint={onEditPoint} />,
+    )
+    await waitFor(() => getByLabelText(EXPAND))
+
+    fireEvent(UNSAFE_getByProps({ 'data-testid': 'trip-plan-map-edit-point-0' }), 'click')
+
+    expect(onEditPoint).toHaveBeenCalledWith(0)
+    expect(getByLabelText(EXPAND)).toBeTruthy()
+    expect(mockCanvasProps.at(-1)?.containerKey).toMatch(/-inline$/)
+  })
+
   it('stops an active fitBounds transition when the Leaflet map is removed', async () => {
     const { unmount } = await renderMap()
 

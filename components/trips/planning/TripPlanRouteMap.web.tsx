@@ -321,6 +321,20 @@ export default function TripPlanRouteMap({
     setFullscreen((value) => !value);
   }, []);
 
+  // Редактор точки живёт в панели под картой, а развёрнутая карта уходит порталом
+  // в body и перекрывает её целиком — из полноэкранного режима до редактора не
+  // добраться, и кнопка выглядит неработающей (#1911). Поэтому «Изменить»
+  // сначала сворачивает карту, как уже сделано на native (`editPointFromMap` в
+  // `TripPlanRouteMap.tsx`, #1897). Свернуть уже свёрнутую карту безвредно:
+  // тем же значением состояния React ререндер не запускает.
+  const editPointFromMap = useCallback(
+    (index: number) => {
+      setFullscreen(false);
+      onEditPoint?.(index);
+    },
+    [onEditPoint],
+  );
+
   useEffect(() => {
     if (!fullscreen) return;
     if (typeof document === 'undefined') return;
@@ -708,7 +722,7 @@ export default function TripPlanRouteMap({
                       <div style={styles.popupActions as React.CSSProperties}>
                         <button
                           type="button"
-                          onClick={() => onEditPoint?.(index)}
+                          onClick={() => editPointFromMap(index)}
                           style={styles.popupButton as React.CSSProperties}
                           data-testid={`trip-plan-map-edit-point-${index}`}
                         >
