@@ -267,6 +267,10 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     const flushQueuedRef = useRef(false);
     const mountedRef = useRef(true);
     const pendingDataRef = useRef<PendingQuestProgress | null>(null);
+    // Владелец отложенного снапшота. Берётся, пока сессия жива: к моменту ухода
+    // с квеста токена может уже не быть (#1921), а очереди нужно знать, в чьё
+    // прохождение отправлять — чужому аккаунту отдавать нельзя (#1456).
+    const progressOwnerIdRef = useRef<string | null>(null);
     const isAuthenticatedRef = useRef(isAuthenticated);
     isAuthenticatedRef.current = isAuthenticated;
     // Актуальный questId для асинхронных веток: ответ запроса может прийти,
@@ -397,7 +401,7 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             const updated = await pushQuestProgressSnapshot(questId, data);
             saved = true;
             // Снапшот доехал: очередь доставки этому квесту больше не нужна.
-            void dequeueQuestProgress(questId);
+            void dequeueQuestProgress(questId, progressOwnerIdRef.current);
             // Снимаем с очереди только то, что реально отправили: изменения,
             // сделанные во время запроса, остаются pending и уйдут своим флашем.
             if (pendingDataRef.current === pending) pendingDataRef.current = null;
@@ -415,9 +419,11 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             // открытии квеста (см. useQuestWizardProgress).
             if (!pendingDataRef.current && questIdRef.current === questId) pendingDataRef.current = pending;
             // Ретрай живёт в памяти экрана и умирает вместе с приложением —
-            // поэтому снапшот сразу ложится в очередь на диске (#1922). Она
-            // дошлёт его после выгрузки приложения и с любого экрана.
-            void enqueueQuestProgress(questId, data);
+            // поэтому снапшот сразу ложится в очередь на диске (#1922). Два
+            // планировщика тут намеренно: экранный дожимает, пока игрок ещё на
+            // квесте, дисковый переживает выгрузку. Дубля записи это не даёт —
+            // оба идут через `withQuestProgress`, и второму нечего добавить.
+            void enqueueQuestProgress(questId, data, progressOwnerIdRef.current);
             devWarn('Could not save quest progress to server, will retry:', err);
             if (questIdRef.current === questId) scheduleRetry();
         } finally {
@@ -476,18 +482,18 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             // Токена уже нет (#1921) — отправлять некому, но выбрасывать снапшот
             // нельзя: очередь дождётся входа и уедет после него (#1922).
             if (!isAuthenticatedRef.current) {
-                void enqueueQuestProgress(pending.questId, pending.data);
+                void enqueueQuestProgress(pending.questId, pending.data, progressOwnerIdRef.current);
                 return;
             }
             // Флаш в полёте, а строки ещё нет: дубль ушёл бы вторым параллельным
             // POST и создал ВТОРОЕ прохождение (#1905). Когда строка уже есть,
             // повторный флаш безопасен — он идёт через GET и слияние.
             if (inFlightRef.current && !startedProgressId) {
-                void enqueueQuestProgress(pending.questId, pending.data);
+                void enqueueQuestProgress(pending.questId, pending.data, progressOwnerIdRef.current);
                 return;
             }
             // Одна попытка отправки, и очередь на диске — если она не прошла.
-            void deliverOrEnqueueQuestProgress(pending.questId, pending.data);
+            void deliverOrEnqueueQuestProgress(pending.questId, pending.data, progressOwnerIdRef.current);
         };
     }, [questId]);
 
@@ -500,6 +506,7 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         // id появится (см. загрузку прогресса выше). Вместе со снапшотом кладём
         // его квест: отправить его другому нельзя (#1906).
         pendingDataRef.current = { questId, data };
+        progressOwnerIdRef.current = useAuthStore.getState().userId ?? progressOwnerIdRef.current;
         // Пока прохождение не начато, ждём первого действия: строка на сервере
         // создаётся первым же значимым снапшотом, а не открытием экрана (#1803).
         if (!progressIdRef.current && !hasQuestProgressStarted(data)) return;
@@ -520,6 +527,10 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         retryAttemptRef.current = 0;
         flushQueuedRef.current = false;
         pendingDataRef.current = null;
+        // Очередь на диске переживает экран, поэтому «Начать заново» обязано
+        // снять запись и с неё: иначе удалённое прохождение воскресло бы при
+        // следующем пробуждении очереди.
+        void dequeueQuestProgress(questId ?? '', progressOwnerIdRef.current);
 
         if (!isAuthenticated || !progressIdRef.current) return;
         const ownerId = useAuthStore.getState().userId;

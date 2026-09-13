@@ -190,6 +190,29 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
     expect(queued[0].snapshot.answers).toEqual(OFFLINE_ANSWER.answers);
   });
 
+  // #1922: очередь переживает экран, поэтому «Начать заново» обязано снять
+  // запись и с диска — иначе удалённое прохождение воскресло бы при следующем
+  // пробуждении очереди.
+  it('«Начать заново» снимает запись с дисковой очереди', async () => {
+    mockIsConnected = false;
+    const { result } = await mountLoadedSync();
+
+    mockUpdateProgress.mockRejectedValue(OFFLINE_ERROR());
+
+    act(() => {
+      result.current.saveProgress(OFFLINE_ANSWER);
+    });
+    await advance(2000);
+    expect(JSON.parse((await AsyncStorage.getItem(QUEST_PROGRESS_QUEUE_KEY)) ?? '[]')).toHaveLength(1);
+
+    await act(async () => {
+      await result.current.resetProgress();
+    });
+    await flushMicrotasks();
+
+    expect(JSON.parse((await AsyncStorage.getItem(QUEST_PROGRESS_QUEUE_KEY)) ?? '[]')).toHaveLength(0);
+  });
+
   it('flushes the offline answer to the server once the network is back', async () => {
     mockIsConnected = false;
     const { result, rerender } = await mountLoadedSync();

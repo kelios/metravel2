@@ -13,7 +13,7 @@ jest.mock('@/api/quests', () => ({
   updateProgress: (...args: any[]) => mockUpdateProgress(...args),
 }))
 
-const mockAuthState = { isAuthenticated: true, userId: 169 }
+const mockAuthState = { isAuthenticated: true, userId: '169' }
 
 jest.mock('@/stores/authStore', () => ({
   useAuthStore: { getState: () => mockAuthState },
@@ -61,7 +61,7 @@ beforeEach(async () => {
   __resetQuestProgressQueue()
   await AsyncStorage.clear()
   mockAuthState.isAuthenticated = true
-  mockAuthState.userId = 169
+  mockAuthState.userId = '169'
   mockWithQuestProgress.mockReset()
   mockUpdateProgress.mockReset()
   // Реальный `withQuestProgress` отдаёт задаче существующую или только что
@@ -156,6 +156,43 @@ describe('очередь не выбрасывается, пока отправ�
 
     expect(getQueuedQuestIds()).toEqual([])
     expect(mockUpdateProgress).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('запись принадлежит своему игроку', () => {
+  // #1456: ответы одного игрока не имеют права уехать в прохождение другого.
+  // Локальная копия держит владельца в ключе по той же причине.
+  it('после смены аккаунта чужая запись не уезжает и остаётся ждать своего входа', async () => {
+    await enqueueQuestProgress('ojcow-lokietek', offlineRun())
+
+    mockAuthState.userId = '186'
+    await flushQuestProgressQueue()
+
+    expect(mockWithQuestProgress).not.toHaveBeenCalled()
+    expect(await readStoredQueue()).toHaveLength(1)
+
+    // Вернулся владелец — его прохождение уезжает.
+    mockAuthState.userId = '169'
+    await flushQuestProgressQueue()
+
+    expect(mockUpdateProgress).toHaveBeenCalledTimes(1)
+    expect(await readStoredQueue()).toHaveLength(0)
+  })
+
+  it('прохождения двух игроков по одному квесту не сливаются в одну запись', async () => {
+    await enqueueQuestProgress('ojcow-lokietek', offlineRun({ answers: { intro: 'start', '1-spider': 'паук' } }))
+    mockAuthState.userId = '186'
+    await enqueueQuestProgress('ojcow-lokietek', offlineRun({ answers: { intro: 'start' }, completed: false }))
+
+    const stored = await readStoredQueue()
+    expect(stored).toHaveLength(2)
+    expect(stored.map((entry: any) => entry.ownerId).sort()).toEqual(['169', '186'])
+
+    // Уезжает только запись вошедшего игрока.
+    await flushQuestProgressQueue()
+    const left = await readStoredQueue()
+    expect(left).toHaveLength(1)
+    expect(left[0].ownerId).toBe('169')
   })
 })
 

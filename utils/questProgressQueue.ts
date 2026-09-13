@@ -45,6 +45,13 @@ const RETRY_MAX_MS = 60 * 1000
 
 export type QueuedQuestProgress = {
     questId: string
+    /**
+     * Владелец прохождения на момент постановки. Без него запись уехала бы в
+     * строку того, кто вошёл следующим: ответы одного игрока попали бы в
+     * прохождение другого — та же семья, из-за которой ключ локальной копии
+     * содержит id владельца (#1456, `utils/questProgressStorage.ts`).
+     */
+    ownerId: string | null
     snapshot: QuestProgressSnapshot
     queuedAt: number
 }
@@ -57,6 +64,9 @@ let flushChain: Promise<void> | null = null
 let retryAttempt = 0
 let retryTimer: ReturnType<typeof setTimeout> | null = null
 const listeners = new Set<(questIds: string[]) => void>()
+
+/** Кто сейчас за телефоном. `null` — гость: отправлять некому. */
+const currentOwnerId = (): string | null => useAuthStore.getState().userId ?? null
 
 const isQueuedProgress = (value: unknown): value is QueuedQuestProgress => {
     if (!value || typeof value !== 'object') return false
@@ -79,6 +89,7 @@ const loadQueue = async (): Promise<QueuedQuestProgress[]> => {
                 if (!Array.isArray(parsed)) return []
                 return parsed.filter(isQueuedProgress).map((entry) => ({
                     questId: entry.questId,
+                    ownerId: typeof entry.ownerId === 'string' ? entry.ownerId : null,
                     snapshot: normalizeQuestProgressSnapshot(entry.snapshot),
                     queuedAt: Number(entry.queuedAt) || 0,
                 }))
@@ -98,8 +109,17 @@ const loadQueue = async (): Promise<QueuedQuestProgress[]> => {
     return queueLoadPromise
 }
 
+/**
+ * Пометку «ещё не отправлено» видит владелец записи, а гостю показываем всё:
+ * он же и есть тот, у кого пропал токен, и запись на его телефоне.
+ */
+const isVisibleToViewer = (entry: QueuedQuestProgress): boolean => {
+    const viewer = currentOwnerId()
+    return viewer == null || entry.ownerId == null || entry.ownerId === viewer
+}
+
 const notify = () => {
-    const questIds = (queue ?? []).map((entry) => entry.questId)
+    const questIds = (queue ?? []).filter(isVisibleToViewer).map((entry) => entry.questId)
     listeners.forEach((listener) => {
         try {
             listener(questIds)
@@ -177,6 +197,7 @@ export async function pushQuestProgressSnapshot(
 export async function enqueueQuestProgress(
     questId: string,
     snapshot: QuestProgressSnapshot | Partial<QuestProgressSnapshot>,
+    ownerId: string | null = currentOwnerId(),
 ): Promise<void> {
     if (!questId) return
 
@@ -185,26 +206,36 @@ export async function enqueueQuestProgress(
     // массивом, и запись в захваченный до await была бы потеряна.
     const entries = queue ?? (queue = [])
     const normalized = normalizeQuestProgressSnapshot(snapshot)
-    const existingIndex = entries.findIndex((entry) => entry.questId === questId)
+    // Ключ записи — квест И владелец: два человека с одного телефона могут
+    // ждать отправки одного и того же квеста, и сливать их прохождения нельзя.
+    const existingIndex = entries.findIndex(
+        (entry) => entry.questId === questId && entry.ownerId === ownerId,
+    )
 
     if (existingIndex >= 0) {
         const existing = entries[existingIndex]
         const { merged } = mergeQuestProgress(normalized, existing.snapshot)
-        entries[existingIndex] = { questId, snapshot: merged, queuedAt: Date.now() }
+        entries[existingIndex] = { questId, ownerId, snapshot: merged, queuedAt: Date.now() }
     } else {
-        entries.push({ questId, snapshot: normalized, queuedAt: Date.now() })
+        entries.push({ questId, ownerId, snapshot: normalized, queuedAt: Date.now() })
         if (entries.length > QUEUE_MAX_QUESTS) entries.splice(0, entries.length - QUEUE_MAX_QUESTS)
     }
 
     await persistQueue()
 }
 
-/** Снимает квест с очереди — его снапшот уже доехал другим путём. */
-export async function dequeueQuestProgress(questId: string): Promise<void> {
+/**
+ * Снимает квест с очереди — его снапшот уже доехал другим путём или прохождение
+ * удалено. Запись чужого владельца при этом не трогается.
+ */
+export async function dequeueQuestProgress(
+    questId: string,
+    ownerId: string | null = currentOwnerId(),
+): Promise<void> {
     if (!questId) return
     await loadQueue()
     const entries = queue ?? []
-    const next = entries.filter((entry) => entry.questId !== questId)
+    const next = entries.filter((entry) => entry.questId !== questId || entry.ownerId !== ownerId)
     if (next.length === entries.length) return
     queue = next
     await persistQueue()
@@ -217,16 +248,17 @@ export async function dequeueQuestProgress(questId: string): Promise<void> {
 export async function deliverOrEnqueueQuestProgress(
     questId: string,
     snapshot: QuestProgressSnapshot | Partial<QuestProgressSnapshot>,
+    ownerId: string | null = currentOwnerId(),
 ): Promise<void> {
     if (!questId) return
     // Авторизацию проверяет вызывающий: на экране квеста её знает сам хук, и
     // сверяться тут со стором значит спорить с ним о состоянии сессии.
     try {
         await pushQuestProgressSnapshot(questId, snapshot)
-        await dequeueQuestProgress(questId)
+        await dequeueQuestProgress(questId, ownerId)
     } catch (error) {
         devWarn('Could not deliver quest progress, queued for later:', error)
-        await enqueueQuestProgress(questId, snapshot)
+        await enqueueQuestProgress(questId, snapshot, ownerId)
     }
 }
 
@@ -242,15 +274,24 @@ const drainQueue = async (): Promise<void> => {
     await loadQueue()
     if (!queue?.length) return
     // Без аккаунта отправлять некуда, но очередь остаётся: она ждёт входа.
-    if (!useAuthStore.getState().isAuthenticated) return
+    const ownerId = currentOwnerId()
+    if (!useAuthStore.getState().isAuthenticated || !ownerId) return
 
     clearRetryTimer()
+
+    // Квест за заход берём один раз: пока шёл запрос, экран мог положить более
+    // свежий снапшот того же квеста, и без этого набора цикл вернулся бы к нему
+    // снова. Записи ЧУЖИХ владельцев не трогаем — они ждут своего входа.
+    const processed = new Set<string>()
 
     // Первый неуспех останавливает заход: долбить недоступный сервер остальными
     // квестами смысла нет, их заберёт ретрай.
     for (;;) {
-        const entry = (queue ?? [])[0]
+        const entry = (queue ?? []).find(
+            (candidate) => candidate.ownerId === ownerId && !processed.has(candidate.questId),
+        )
         if (!entry) break
+        processed.add(entry.questId)
 
         try {
             await pushQuestProgressSnapshot(entry.questId, entry.snapshot)
@@ -265,15 +306,13 @@ const drainQueue = async (): Promise<void> => {
             devWarn('Server rejected queued quest progress, dropping:', status)
         }
 
-        // Снимаем запись по ссылке: пока шёл запрос, экран квеста мог положить
-        // сюда более свежий снапшот — он останется в очереди и уедет следующим.
+        // Снимаем запись ПО ССЫЛКЕ: если её уже заменили более свежим снапшотом,
+        // ссылки в массиве нет — та запись остаётся и уедет следующим заходом.
         const current = queue ?? []
         const index = current.indexOf(entry)
         if (index >= 0) {
             current.splice(index, 1)
             await persistQueue()
-        } else {
-            break
         }
     }
 }
@@ -291,7 +330,7 @@ export function flushQuestProgressQueue(): Promise<void> {
 
 /** Квесты, снапшот которых ещё не доехал. Синхронно — только загруженное. */
 export function getQueuedQuestIds(): string[] {
-    return (queue ?? []).map((entry) => entry.questId)
+    return (queue ?? []).filter(isVisibleToViewer).map((entry) => entry.questId)
 }
 
 /**
