@@ -111,8 +111,8 @@ export function createQuestFixture(options: QuestFixtureOptions): QuestFixture {
     await mockFakeAuthApis(page)
     await page.route(`**/api/quests/by-quest-id/${questId}/**`, (route) => fulfillJson(route, questBundle))
     await page.route(`**/api/quest-progress/quest/${questId}/**`, (route) => fulfillJson(route, serverRow))
-    // Строка прогресса живая: PATCH её обновляет, чтобы следующий
-    // `fetchOrCreateProgress` перед слиянием видел то же, что и сервер, — иначе
+    // Строка прогресса живая: PATCH её обновляет, чтобы следующий писатель
+    // (`withQuestProgress`) перед слиянием видел то же, что и сервер, — иначе
     // клиент слал бы один и тот же снапшот по кругу.
     await page.route('**/api/quest-progress/*/', (route) => {
       let body: Record<string, unknown> | null = null
