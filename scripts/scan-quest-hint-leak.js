@@ -376,6 +376,22 @@ function findingKeys(finding) {
  */
 const BASELINE_SCOPES = new Set(['quest_title', 'intro', 'finale'])
 
+/**
+ * Ключи baseline для прогона. Для локального файла — только его набор: гейт
+ * `check:fast` смотрит ровно тот файл, который правит автор, и должен падать
+ * только на том, что добавила правка. У прод-прогона файла-источника нет, и до
+ * #1913 baseline к нему не применялся вовсе — 80 уже разобранных находок
+ * показывались как свежие. Ключ находки сам несёт `quest_id`, поэтому для
+ * не-файлового источника берём объединение всех файлов: осознанное исключение
+ * остаётся исключением независимо от того, читаем мы его из локальных данных
+ * или из API.
+ */
+function baselineKeysForSource(known, { localFile }) {
+  if (!known) return undefined
+  if (localFile) return known[localFile]
+  return Object.values(known).flat()
+}
+
 /** Находка шага в baseline не попадает никогда — она всегда «новая». */
 function splitFindings(findings, knownKeys) {
   const scoped = splitByBaseline(
@@ -405,7 +421,9 @@ function updateBaseline(rootDir, fields = DEFAULT_FIELDS, scopes = DEFAULT_SCOPE
       + 'Поля шага сюда не попадают никогда: их контур вычищен до нуля и '
       + 'обязан падать сразу. Гейт check:fast падает только на том, что добавила правка. '
       + 'Снимается по файлам данных в рабочем дереве, поэтому обновлять его надо на дереве без чужих '
-      + 'незавершённых правок. Обновлять: npm run quest:scan-hint-leak:baseline',
+      + 'незавершённых правок. Прод-прогон (источник — API, а не файл) вычитает объединение всех '
+      + 'файлов: ключ несёт quest_id, поэтому исключение остаётся исключением независимо от источника '
+      + '(#1913). Обновлять: npm run quest:scan-hint-leak:baseline',
     known,
   })
   return { baselinePath: path.join(rootDir, BASELINE_PATH), files: Object.keys(known).length, total }
@@ -488,13 +506,13 @@ async function main() {
   const scanned = scanQuests(quests, args.fields, args.scopes)
   const { scannedSteps, scannedQuestNodes } = scanned
   const source = args.source || args.apiUrl
-  // Baseline вычитается по имени файла-источника: гейт `check:fast` смотрит
-  // ровно тот файл, который правит автор, и должен падать только на том, что
-  // добавила правка.
   const { fresh: findings, known: knownFindings } = args.baseline
     ? splitFindings(
       scanned.findings,
-      loadBaseline(path.resolve(process.cwd(), args.baseline), BASELINE_CONTRACT_VERSION).known?.[source],
+      baselineKeysForSource(
+        loadBaseline(path.resolve(process.cwd(), args.baseline), BASELINE_CONTRACT_VERSION).known,
+        { localFile: args.source },
+      ),
     )
     : { fresh: scanned.findings, known: [] }
 
@@ -542,6 +560,7 @@ async function main() {
 module.exports = {
   BASELINE_PATH,
   BASELINE_SCOPES,
+  baselineKeysForSource,
   findingKeys,
   splitFindings,
   updateBaseline,

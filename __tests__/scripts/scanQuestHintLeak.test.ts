@@ -129,10 +129,11 @@ describe('parseArgs — набор сканируемых полей', () => {
 
   // #1467: все 17 находок по `location` переписаны, прогон по проду нулевой —
   // поле переведено в умолчание, чтобы новая утечка в подписи роняла gate сразу.
-  // `title`/`story`/`task` остаются вне умолчания: у них есть неразобранные
-  // находки, и любое включение уронило бы каждый прогон.
-  it('по умолчанию сканирует hint и location: остальные поля шумят и в gate не входят', () => {
-    expect(parseArgs([]).fields).toEqual(['hint', 'location'])
+  // #1908 тем же путём добавил `title` шага: контур вычищен до нуля на проде.
+  // `story`/`task` остаются вне умолчания: у них есть неразобранные находки, и
+  // любое включение уронило бы каждый прогон.
+  it('по умолчанию сканирует hint, location и title шага: story/task шумят и в gate не входят', () => {
+    expect(parseArgs([]).fields).toEqual(['hint', 'location', 'title'])
   })
 
   it('незнакомое поле отвергает, а не сканирует молча пустоту', () => {
@@ -170,6 +171,7 @@ const {
   findQuestLeaks,
   findingKeys,
   splitFindings,
+  baselineKeysForSource,
   INTRO_FIELDS,
 } = require('@/scripts/scan-quest-hint-leak')
 
@@ -459,5 +461,55 @@ describe('baseline — разобранный остаток молчит, но�
     const { fresh, known } = splitFindings([titleFinding], findingKeys(titleFinding))
     expect(known).toEqual([titleFinding])
     expect(fresh).toEqual([])
+  })
+})
+
+// #1913: до этой правки прод-прогон не вычитал baseline вовсе — ключ искался по
+// имени файла-источника, а у выгрузки из API его нет. Сплошной скан по проду
+// показывал 80 находок, из которых 79 были уже разобранным остатком, и класс
+// нельзя было измерить. Паритет «локальный с baseline = прод с baseline» держат
+// эти тесты.
+describe('baselineKeysForSource — паритет локального и прод-прогона', () => {
+  const known = {
+    'scripts/amsterdam-quest-data.js': ['intro|amsterdam-on-piles||story|один'],
+    'scripts/belgrade-quest-data.js': ['quest_title|belgrade-white-city||title|белград'],
+  }
+
+  it('локальный файл вычитает ТОЛЬКО свой набор', () => {
+    // Гейт check:fast смотрит правленный файл и должен падать ровно на том, что
+    // добавила правка, а не молчать из-за исключения соседнего города.
+    expect(baselineKeysForSource(known, { localFile: 'scripts/amsterdam-quest-data.js' })).toEqual([
+      'intro|amsterdam-on-piles||story|один',
+    ])
+  })
+
+  it('прод-прогон вычитает объединение всех файлов', () => {
+    expect(baselineKeysForSource(known, { localFile: undefined })).toEqual([
+      'intro|amsterdam-on-piles||story|один',
+      'quest_title|belgrade-white-city||title|белград',
+    ])
+  })
+
+  it('локальный файл без записей не подхватывает чужие исключения', () => {
+    expect(baselineKeysForSource(known, { localFile: 'scripts/vilnius-cinema-quest-data.js' })).toBeUndefined()
+  })
+
+  it('без baseline ключей нет', () => {
+    expect(baselineKeysForSource(undefined, { localFile: undefined })).toBeUndefined()
+  })
+
+  it('то же исключение молчит на обоих прогонах', () => {
+    const finding = {
+      quest_id: 'amsterdam-on-piles',
+      scope: 'intro',
+      step_id: null,
+      field: 'story',
+      leaks: [{ kind: 'dictionary', value: 'один' }],
+    }
+    const local = splitFindings([finding], baselineKeysForSource(known, { localFile: 'scripts/amsterdam-quest-data.js' }))
+    const prod = splitFindings([finding], baselineKeysForSource(known, { localFile: undefined }))
+    expect(local.fresh).toEqual([])
+    expect(prod.fresh).toEqual([])
+    expect(prod.known).toEqual(local.known)
   })
 })
