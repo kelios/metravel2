@@ -149,7 +149,15 @@
       "gomel-palace|chapel|dict-material-surface|майолику",
       "gomel-palace|chapel|dict-material-surface|цветная майолика",
       "gomel-palace|chapel|task-asks-material|формулировка",
-      "gomel-palace|graf|task-color-word|сохранила"
+      "gomel-palace|graf|task-color-word|сохранила",
+      "gomel-palace|palace|dict-color|бел ведер",
+      "gomel-palace|palace|dict-color|бел ведере",
+      "gomel-palace|palace|dict-color|белведер",
+      "gomel-palace|palace|dict-color|белведере",
+      "gomel-palace|palace|dict-color|бель ведер",
+      "gomel-palace|palace|dict-color|бель ведере",
+      "gomel-palace|palace|dict-color|бельведэр",
+      "gomel-palace|palace|dict-color|бельвердер"
     ],
     "scripts/gomel-soviet-quest-data.js": [
       "gomel-soviet|4-dom-mayanca|dict-color|белый и красный",
