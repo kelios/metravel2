@@ -659,7 +659,8 @@ native-геозоны используют только координаты ш�
 - API — `__tests__/api/quests.test.ts`, `questBundleCache`, `questRating`,
   `questReview`;
 - хуки — `useQuestsApi`, `useQuestWizardProgress`, `useQuestProgressSync.offline`,
-  `useQuestForLocation`;
+  `useQuestProgressSync.questSwitch` (смена квеста не уносит очередь и «Пройден»
+  предыдущего, #1906), `useQuestForLocation`;
 - визард — `questStepCardAttemptGuards`, `questStepCardFarSkip`,
   `questFinalePartialCompletion`, `QuestWizard.guestGate`,
   `QuestWizard.offline`, `questWizardHelpers`, `questWizardTouchTargets`,

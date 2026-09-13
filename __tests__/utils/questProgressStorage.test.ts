@@ -78,4 +78,16 @@ describe('questKeyFromProgressStorageKey (#1906)', () => {
   it('ключ без владельца отдаёт как есть', () => {
     expect(questKeyFromProgressStorageKey('quest_progress')).toBe('quest_progress')
   })
+
+  it('`__u` внутри самого storage_key квеста не считает владельцем', () => {
+    const tricky = 'quest_progress_minsk__urban'
+    const guest = buildQuestProgressStorageKey(tricky, { isAuthenticated: false })
+    const pending = buildQuestProgressStorageKey(tricky, { isAuthenticated: true, userId: null })
+    const user = buildQuestProgressStorageKey(tricky, { isAuthenticated: true, userId: '17' })
+
+    expect(questKeyFromProgressStorageKey(guest)).toBe(tricky)
+    expect(questKeyFromProgressStorageKey(pending)).toBe(tricky)
+    expect(questKeyFromProgressStorageKey(user)).toBe(tricky)
+    expect(questKeyFromProgressStorageKey(tricky)).toBe(tricky)
+  })
 })

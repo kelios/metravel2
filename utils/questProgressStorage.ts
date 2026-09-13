@@ -64,6 +64,11 @@ export function questKeyFromProgressStorageKey(storageKey: string): string {
   const withoutOwnerPrefix = storageKey.startsWith(GUEST_QUEST_STORAGE_PREFIX)
     ? storageKey.slice(GUEST_QUEST_STORAGE_PREFIX.length)
     : storageKey
-  const suffixAt = withoutOwnerPrefix.lastIndexOf(QUEST_PROGRESS_USER_SUFFIX)
-  return suffixAt === -1 ? withoutOwnerPrefix : withoutOwnerPrefix.slice(0, suffixAt)
+  // Срезается только суффикс владельца в конце ключа (`__u123` / `__u:pending`),
+  // а не первое попавшееся `__u` внутри самого storage_key квеста.
+  return withoutOwnerPrefix.replace(OWNER_SUFFIX_RE, '')
 }
+
+const OWNER_SUFFIX_RE = new RegExp(
+  `${QUEST_PROGRESS_USER_SUFFIX}(?:\\d+|:${QUEST_PROGRESS_PENDING_USER})$`,
+)
