@@ -5,7 +5,7 @@
  * 1. Локальное хранение гостевого прогресса (AsyncStorage, без токена) и
  *    подсчёт пройденных «настоящих» точек → мягкий гейт после 2 точки.
  * 2. Миграция гостевого прогресса в аккаунт после логина через useGuestQuestFlow
- *    (fetchOrCreateProgress + updateProgress + очистка локального).
+ *    (withQuestProgress + updateProgress + очистка локального).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { act, renderHook, waitFor } from '@testing-library/react-native'
@@ -25,8 +25,12 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
 }))
 
+// #1905: миграция гостя ходит через очередь писателей квеста — мок отдаёт задаче
+// серверную запись ровно так же, как это делает настоящий `withQuestProgress`.
+const mockReadOrCreateProgress = jest.fn()
 jest.mock('@/api/quests', () => ({
-  fetchOrCreateProgress: jest.fn(),
+  withQuestProgress: (questId: string, task: (progress: any) => Promise<unknown>) =>
+    Promise.resolve(mockReadOrCreateProgress(questId)).then((progress) => task(progress)),
   updateProgress: jest.fn(),
 }))
 
@@ -90,7 +94,7 @@ describe('useGuestQuestFlow migration after login', () => {
       earlyFinish: true,
     })
 
-    mockedApi.fetchOrCreateProgress.mockResolvedValue({
+    mockReadOrCreateProgress.mockResolvedValue({
       id: 42,
       answers: {},
     } as never)
@@ -106,7 +110,7 @@ describe('useGuestQuestFlow migration after login', () => {
     )
 
     await waitFor(() => {
-      expect(mockedApi.fetchOrCreateProgress).toHaveBeenCalledWith('krakow-dragon')
+      expect(mockReadOrCreateProgress).toHaveBeenCalledWith('krakow-dragon')
       expect(mockedApi.updateProgress).toHaveBeenCalledWith(
         42,
         expect.objectContaining({
@@ -135,7 +139,7 @@ describe('useGuestQuestFlow migration after login', () => {
       showMap: true,
     })
 
-    mockedApi.fetchOrCreateProgress.mockResolvedValue({
+    mockReadOrCreateProgress.mockResolvedValue({
       id: 42,
       current_index: 3,
       unlocked_index: 3,
@@ -184,7 +188,7 @@ describe('useGuestQuestFlow migration after login', () => {
       showMap: true,
     })
 
-    mockedApi.fetchOrCreateProgress.mockResolvedValue({
+    mockReadOrCreateProgress.mockResolvedValue({
       id: 42,
       current_index: 3,
       unlocked_index: 3,
@@ -206,7 +210,7 @@ describe('useGuestQuestFlow migration after login', () => {
     )
 
     await waitFor(() => {
-      expect(mockedApi.fetchOrCreateProgress).toHaveBeenCalled()
+      expect(mockReadOrCreateProgress).toHaveBeenCalled()
     })
     expect(mockedApi.updateProgress).not.toHaveBeenCalled()
 
@@ -230,7 +234,7 @@ describe('useGuestQuestFlow migration after login', () => {
       await new Promise((resolve) => setTimeout(resolve, 0))
     })
 
-    expect(mockedApi.fetchOrCreateProgress).not.toHaveBeenCalled()
+    expect(mockReadOrCreateProgress).not.toHaveBeenCalled()
     expect(mockedApi.updateProgress).not.toHaveBeenCalled()
   })
 
@@ -258,6 +262,6 @@ describe('useGuestQuestFlow migration after login', () => {
       expect(result.current.guestReady).toBe(true)
       expect(result.current.guestInitial?.answers['step-1']).toBe('дракон')
     })
-    expect(mockedApi.fetchOrCreateProgress).not.toHaveBeenCalled()
+    expect(mockReadOrCreateProgress).not.toHaveBeenCalled()
   })
 })

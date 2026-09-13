@@ -19,7 +19,7 @@ jest.mock('@/hooks/useNetworkStatus', () => ({
   }),
 }));
 
-const mockFetchOrCreateProgress = jest.fn();
+const mockReadOrCreateProgress = jest.fn();
 const mockFetchQuestProgress = jest.fn();
 const mockUpdateProgress = jest.fn();
 
@@ -27,7 +27,10 @@ jest.mock('@/api/quests', () => ({
   fetchQuestsList: jest.fn(),
   fetchQuestByQuestId: jest.fn(),
   fetchQuestReviews: jest.fn(),
-  fetchOrCreateProgress: (...args: any[]) => mockFetchOrCreateProgress(...args),
+  // #1905: чтение → слияние → запись сериализованы очередью писателей квеста;
+  // мок отдаёт задаче серверную запись ровно как настоящий `withQuestProgress`.
+  withQuestProgress: (questId: string, task: (progress: any) => Promise<unknown>) =>
+    Promise.resolve(mockReadOrCreateProgress(questId)).then((progress) => task(progress)),
   fetchQuestProgress: (...args: any[]) => mockFetchQuestProgress(...args),
   updateProgress: (...args: any[]) => mockUpdateProgress(...args),
   deleteProgress: jest.fn(),
@@ -106,7 +109,7 @@ const mountLoadedSync = async () => {
 describe('useQuestProgressSync — офлайн-прохождение', () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    mockFetchOrCreateProgress.mockReset();
+    mockReadOrCreateProgress.mockReset();
     mockFetchQuestProgress.mockReset();
     mockUpdateProgress.mockReset();
     // Чтение при маунте отдаёт существующую запись: эти тесты про уже начатое
@@ -114,7 +117,7 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
     mockFetchQuestProgress.mockResolvedValue(API_PROGRESS);
     // Перед каждым PATCH хук забирает актуальное серверное состояние (защита от
     // затирания параллельного устройства) — GET должен отвечать на любом флаше.
-    mockFetchOrCreateProgress.mockResolvedValue(API_PROGRESS);
+    mockReadOrCreateProgress.mockResolvedValue(API_PROGRESS);
     // Отложенный прогресс переживает неудачное сохранение и дожимается флашем на
     // размонтировании, поэтому мок обязан оставаться thenable и без Once-значений.
     mockUpdateProgress.mockResolvedValue(API_PROGRESS);
@@ -227,7 +230,7 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
       hints: { 'step-4': true },
       updated_at: new Date(SERVER_UPDATED_AT).toISOString(),
     };
-    mockFetchOrCreateProgress.mockResolvedValue(serverFromOtherDevice);
+    mockReadOrCreateProgress.mockResolvedValue(serverFromOtherDevice);
 
     const { result } = await mountLoadedSync();
 
@@ -254,7 +257,7 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
   });
 
   it('не шлёт PATCH, если сервер уже знает всё из очереди', async () => {
-    mockFetchOrCreateProgress.mockResolvedValue({
+    mockReadOrCreateProgress.mockResolvedValue({
       ...API_PROGRESS,
       current_index: OFFLINE_ANSWER.currentIndex,
       unlocked_index: OFFLINE_ANSWER.unlockedIndex,
@@ -360,12 +363,12 @@ describe('useQuestProgressSync — экран открыт, прохождени
 
   beforeEach(() => {
     jest.useFakeTimers();
-    mockFetchOrCreateProgress.mockReset();
+    mockReadOrCreateProgress.mockReset();
     mockFetchQuestProgress.mockReset();
     mockUpdateProgress.mockReset();
     // Прохождения ещё нет: чтение отвечает пустотой, а не создаёт запись.
     mockFetchQuestProgress.mockResolvedValue(null);
-    mockFetchOrCreateProgress.mockResolvedValue({
+    mockReadOrCreateProgress.mockResolvedValue({
       ...API_PROGRESS,
       current_index: 0,
       unlocked_index: 0,
@@ -386,7 +389,7 @@ describe('useQuestProgressSync — экран открыт, прохождени
     await flushMicrotasks();
 
     expect(mockFetchQuestProgress).toHaveBeenCalledWith('krakow-dragon');
-    expect(mockFetchOrCreateProgress).not.toHaveBeenCalled();
+    expect(mockReadOrCreateProgress).not.toHaveBeenCalled();
     expect(result.current.progress).toBeNull();
   });
 
@@ -401,7 +404,7 @@ describe('useQuestProgressSync — экран открыт, прохождени
     await advance(2000);
     await advance(120000);
 
-    expect(mockFetchOrCreateProgress).not.toHaveBeenCalled();
+    expect(mockReadOrCreateProgress).not.toHaveBeenCalled();
     expect(mockUpdateProgress).not.toHaveBeenCalled();
   });
 
@@ -413,7 +416,7 @@ describe('useQuestProgressSync — экран открыт, прохождени
       result.current.saveProgress(EMPTY_SNAPSHOT);
     });
     await advance(2000);
-    expect(mockFetchOrCreateProgress).not.toHaveBeenCalled();
+    expect(mockReadOrCreateProgress).not.toHaveBeenCalled();
 
     // Игрок нажал «Начать квест» — визард пишет ответ на intro.
     act(() => {
@@ -421,7 +424,7 @@ describe('useQuestProgressSync — экран открыт, прохождени
     });
     await advance(2000);
 
-    expect(mockFetchOrCreateProgress).toHaveBeenCalledWith('krakow-dragon');
+    expect(mockReadOrCreateProgress).toHaveBeenCalledWith('krakow-dragon');
     expect(mockUpdateProgress).toHaveBeenCalledWith(42, expect.objectContaining({
       answers: { intro: 'start' },
     }));
@@ -436,6 +439,6 @@ describe('useQuestProgressSync — экран открыт, прохождени
     });
     await advance(2000);
 
-    expect(mockFetchOrCreateProgress).toHaveBeenCalledWith('krakow-dragon');
+    expect(mockReadOrCreateProgress).toHaveBeenCalledWith('krakow-dragon');
   });
 });

@@ -13,7 +13,7 @@ jest.mock('@/hooks/useNetworkStatus', () => ({
   useNetworkStatus: () => ({ isConnected: true, isInternetReachable: true, type: 'unknown' }),
 }));
 
-const mockFetchOrCreateProgress = jest.fn();
+const mockReadOrCreateProgress = jest.fn();
 const mockFetchQuestProgress = jest.fn();
 const mockUpdateProgress = jest.fn();
 const mockDeleteProgress = jest.fn();
@@ -22,7 +22,10 @@ jest.mock('@/api/quests', () => ({
   fetchQuestsList: jest.fn(),
   fetchQuestByQuestId: jest.fn(),
   fetchQuestReviews: jest.fn(),
-  fetchOrCreateProgress: (...args: any[]) => mockFetchOrCreateProgress(...args),
+  // #1905: чтение → слияние → запись сериализованы очередью писателей квеста;
+  // мок отдаёт задаче серверную запись ровно как настоящий `withQuestProgress`.
+  withQuestProgress: (questId: string, task: (progress: any) => Promise<unknown>) =>
+    Promise.resolve(mockReadOrCreateProgress(questId)).then((progress) => task(progress)),
   fetchQuestProgress: (...args: any[]) => mockFetchQuestProgress(...args),
   updateProgress: (...args: any[]) => mockUpdateProgress(...args),
   deleteProgress: (...args: any[]) => mockDeleteProgress(...args),
@@ -89,7 +92,7 @@ const advance = async (ms: number) => {
 describe('useQuestProgressSync — переход на следующий квест', () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    mockFetchOrCreateProgress.mockReset();
+    mockReadOrCreateProgress.mockReset();
     mockFetchQuestProgress.mockReset();
     mockUpdateProgress.mockReset();
     mockDeleteProgress.mockReset();
@@ -97,7 +100,7 @@ describe('useQuestProgressSync — переход на следующий кве
     mockFetchQuestProgress.mockImplementation(async (questId: string) =>
       questId === QUEST_A ? PROGRESS_A : null,
     );
-    mockFetchOrCreateProgress.mockImplementation(async (questId: string) => ({
+    mockReadOrCreateProgress.mockImplementation(async (questId: string) => ({
       ...PROGRESS_A,
       id: questId === QUEST_A ? 446 : 447,
     }));
@@ -130,12 +133,12 @@ describe('useQuestProgressSync — переход на следующий кве
     await advance(120000);
 
     // Очередь ушла своему квесту...
-    expect(mockFetchOrCreateProgress).toHaveBeenCalledWith(QUEST_A);
+    expect(mockReadOrCreateProgress).toHaveBeenCalledWith(QUEST_A);
     expect(mockUpdateProgress).toHaveBeenCalledWith(446, expect.objectContaining({
       answers: { intro: 'start', 'soviet-1': 'лев', 'soviet-2': 'мост' },
     }));
     // ...и ни одним запросом не коснулась квеста B.
-    expect(mockFetchOrCreateProgress).not.toHaveBeenCalledWith(QUEST_B);
+    expect(mockReadOrCreateProgress).not.toHaveBeenCalledWith(QUEST_B);
     expect(mockUpdateProgress).not.toHaveBeenCalledWith(447, expect.anything());
     // Серверная запись предыдущего квеста не подставляется визарду нового.
     expect(result.current.progress).toBeNull();
@@ -153,7 +156,7 @@ describe('useQuestProgressSync — переход на следующий кве
     });
     rerender({ questId: QUEST_B });
     await flushMicrotasks();
-    mockFetchOrCreateProgress.mockClear();
+    mockReadOrCreateProgress.mockClear();
     mockUpdateProgress.mockClear();
 
     // Визард нового квеста сохраняет пустой снапшот первым рендером. До #1906
@@ -165,7 +168,7 @@ describe('useQuestProgressSync — переход на следующий кве
     await advance(2000);
     await advance(120000);
 
-    expect(mockFetchOrCreateProgress).not.toHaveBeenCalled();
+    expect(mockReadOrCreateProgress).not.toHaveBeenCalled();
     expect(mockUpdateProgress).not.toHaveBeenCalled();
     expect(result.current.progress).toBeNull();
   });
@@ -183,10 +186,10 @@ describe('useQuestProgressSync — переход на следующий кве
     rerender({ questId: QUEST_B });
     await flushMicrotasks();
     await advance(2000);
-    mockFetchOrCreateProgress.mockClear();
+    mockReadOrCreateProgress.mockClear();
     mockUpdateProgress.mockClear();
     // Серверная запись квеста B (её создаёт первое действие игрока) пустая.
-    mockFetchOrCreateProgress.mockImplementation(async () => ({
+    mockReadOrCreateProgress.mockImplementation(async () => ({
       ...PROGRESS_A,
       id: 447,
       current_index: 0,
@@ -205,7 +208,7 @@ describe('useQuestProgressSync — переход на следующий кве
     });
     await advance(2000);
 
-    expect(mockFetchOrCreateProgress).toHaveBeenCalledWith(QUEST_B);
+    expect(mockReadOrCreateProgress).toHaveBeenCalledWith(QUEST_B);
     expect(mockUpdateProgress).toHaveBeenCalledTimes(1);
     expect(mockUpdateProgress).toHaveBeenCalledWith(447, expect.objectContaining({
       answers: { intro: 'start' },
@@ -223,7 +226,7 @@ describe('useQuestProgressSync — переход на следующий кве
         resolveRead = resolve;
       }),
     );
-    mockFetchOrCreateProgress.mockImplementation(async () => ({ ...PROGRESS_A, id: 500 }));
+    mockReadOrCreateProgress.mockImplementation(async () => ({ ...PROGRESS_A, id: 500 }));
     mockUpdateProgress.mockImplementation(async (id: number) => ({ ...PROGRESS_A, id }));
     mockDeleteProgress.mockResolvedValue(undefined);
 
@@ -234,7 +237,7 @@ describe('useQuestProgressSync — переход на следующий кве
       result.current.saveProgress({ ...EMPTY_SNAPSHOT_B, answers: { intro: 'start' } });
     });
     await advance(2000);
-    expect(mockFetchOrCreateProgress).toHaveBeenCalledWith(QUEST_B);
+    expect(mockReadOrCreateProgress).toHaveBeenCalledWith(QUEST_B);
 
     // Пустое чтение возвращается позже созданной строки.
     act(() => {

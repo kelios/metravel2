@@ -17,7 +17,7 @@ jest.mock('@/hooks/useNetworkStatus', () => ({
 const mockFetchQuestsList = jest.fn();
 const mockFetchQuestsPreview = jest.fn();
 const mockFetchQuestByQuestId = jest.fn();
-const mockFetchOrCreateProgress = jest.fn();
+const mockReadOrCreateProgress = jest.fn();
 const mockUpdateProgress = jest.fn();
 const mockFetchQuestProgress = jest.fn();
 const mockDeleteProgress = jest.fn();
@@ -26,7 +26,10 @@ jest.mock('@/api/quests', () => ({
   fetchQuestsList: (...args: any[]) => mockFetchQuestsList(...args),
   fetchQuestsPreview: (...args: any[]) => mockFetchQuestsPreview(...args),
   fetchQuestByQuestId: (...args: any[]) => mockFetchQuestByQuestId(...args),
-  fetchOrCreateProgress: (...args: any[]) => mockFetchOrCreateProgress(...args),
+  // #1905: чтение → слияние → запись сериализованы очередью писателей квеста;
+  // мок отдаёт задаче серверную запись ровно как настоящий `withQuestProgress`.
+  withQuestProgress: (questId: string, task: (progress: any) => Promise<unknown>) =>
+    Promise.resolve(mockReadOrCreateProgress(questId)).then((progress) => task(progress)),
   fetchQuestProgress: (...args: any[]) => mockFetchQuestProgress(...args),
   updateProgress: (...args: any[]) => mockUpdateProgress(...args),
   deleteProgress: (...args: any[]) => mockDeleteProgress(...args),
@@ -117,7 +120,7 @@ describe('useQuestsApi hooks', () => {
       mockFetchQuestsList,
       mockFetchQuestsPreview,
       mockFetchQuestByQuestId,
-      mockFetchOrCreateProgress,
+      mockReadOrCreateProgress,
       mockFetchQuestProgress,
       mockUpdateProgress,
       mockDeleteProgress,
@@ -356,7 +359,7 @@ describe('useQuestsApi hooks', () => {
       expect(result.current.progress).toEqual(API_PROGRESS);
       expect(mockFetchQuestProgress).toHaveBeenCalledWith('krakow-dragon');
       // Открытие экрана только читает: строку создаёт первое действие (#1803).
-      expect(mockFetchOrCreateProgress).not.toHaveBeenCalled();
+      expect(mockReadOrCreateProgress).not.toHaveBeenCalled();
     });
 
     it('does not load progress for unauthenticated user', async () => {
@@ -420,7 +423,7 @@ describe('useQuestsApi hooks', () => {
       // Флаш на размонтировании тоже идёт через слияние (GET → merge → PATCH),
       // поэтому он асинхронный и серверная запись нужна обоим вызовам.
       mockFetchQuestProgress.mockResolvedValue(API_PROGRESS);
-      mockFetchOrCreateProgress.mockResolvedValue(API_PROGRESS);
+      mockReadOrCreateProgress.mockResolvedValue(API_PROGRESS);
       mockUpdateProgress.mockResolvedValue(API_PROGRESS);
 
       const { result, unmount } = renderHook(() =>

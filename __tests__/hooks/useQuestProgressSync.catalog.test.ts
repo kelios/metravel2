@@ -11,12 +11,12 @@ jest.mock('@/stores/authStore', () => ({
 }))
 jest.mock('@/hooks/useNetworkStatus', () => ({ useNetworkStatus: () => ({ isConnected: true }) }))
 jest.mock('@/api/quests', () => ({
-  fetchQuestProgress: jest.fn(), fetchOrCreateProgress: jest.fn(), updateProgress: jest.fn(),
+  fetchQuestProgress: jest.fn(), withQuestProgress: jest.fn(), updateProgress: jest.fn(),
   deleteProgress: jest.fn().mockResolvedValue(undefined),
 }))
 
-const { fetchQuestProgress, fetchOrCreateProgress, updateProgress } = require('@/api/quests') as {
-  fetchQuestProgress: jest.Mock; fetchOrCreateProgress: jest.Mock; updateProgress: jest.Mock
+const { fetchQuestProgress, withQuestProgress, updateProgress } = require('@/api/quests') as {
+  fetchQuestProgress: jest.Mock; withQuestProgress: jest.Mock; updateProgress: jest.Mock
 }
 const { useQuestProgressSync } = require('@/hooks/useQuestsApi') as typeof import('@/hooks/useQuestsApi')
 const progress = { id: 42, quest: 1, user: 10, answers: {}, attempts: {}, hints: {}, skipped: {}, completed: false } as ApiQuestProgress
@@ -33,7 +33,8 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     jest.clearAllMocks()
     mockOwnerId = 'A'
     fetchQuestProgress.mockResolvedValue(progress)
-    fetchOrCreateProgress.mockResolvedValue(progress)
+    // #1905: писатель получает серверную запись из очереди квеста.
+    withQuestProgress.mockImplementation((_questId: string, task: (p: ApiQuestProgress) => Promise<unknown>) => task(progress))
     updateProgress.mockResolvedValue({ ...progress, completed: true })
     client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
     setActiveQueryClient(client)

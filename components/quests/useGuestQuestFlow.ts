@@ -11,7 +11,7 @@ import {
   saveGuestQuestProgress,
   type GuestQuestProgress,
 } from '@/utils/guestQuestProgress'
-import { fetchOrCreateProgress, updateProgress } from '@/api/quests'
+import { updateProgress, withQuestProgress } from '@/api/quests'
 import {
   countAnsweredSteps,
   mergeQuestProgress,
@@ -46,7 +46,7 @@ type UseGuestQuestFlowParams = {
  * Гостевой поток квеста: локальное хранение прогресса (AsyncStorage, без токена),
  * загрузка стартового прогресса для гостя, переход на /login|/registration с
  * redirect обратно, и одноразовая миграция локального прогресса в аккаунт после
- * логина (fetchOrCreateProgress + updateProgress), затем очистка локального.
+ * логина (withQuestProgress + updateProgress), затем очистка локального.
  */
 export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }: UseGuestQuestFlowParams) {
   const router = useRouter()
@@ -111,27 +111,33 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
       const guestProgress = await loadGuestQuestProgress(questId)
       if (!guestProgress || countAnsweredSteps(guestProgress.answers) === 0) return
       try {
-        const serverProgress = await fetchOrCreateProgress(questId)
-        // Тот же путь слияния, что и у авторизованной синхронизации: аккаунт мог
-        // уже пройти часть квеста на другом устройстве — ни гостевые, ни
-        // серверные ответы не теряем.
-        const { merged, serverNeedsPush } = mergeQuestProgress(
-          normalizeQuestProgressSnapshot(guestProgress),
-          snapshotFromServerProgress(serverProgress),
-        )
-        if (serverNeedsPush) {
-          await updateProgress(serverProgress.id, toQuestProgressServerPayload(merged))
-          queueAnalyticsEvent('quest_guest_progress_migrated', {
-            quest_id: questId,
-            answered: countAnsweredSteps(merged.answers),
-          })
-        }
+        // Чтение, слияние и запись — в очереди писателей квеста: флаш отложенной
+        // очереди стартует тем же переходом в авторизованное состояние, а
+        // `answers` уходит на сервер полным словарём. Два писателя от одной базы
+        // затёрли бы ответы друг друга (#1905).
+        await withQuestProgress(questId, async (serverProgress) => {
+          // Тот же путь слияния, что и у авторизованной синхронизации: аккаунт мог
+          // уже пройти часть квеста на другом устройстве — ни гостевые, ни
+          // серверные ответы не теряем.
+          const { merged, serverNeedsPush } = mergeQuestProgress(
+            normalizeQuestProgressSnapshot(guestProgress),
+            snapshotFromServerProgress(serverProgress),
+          )
+          if (serverNeedsPush) {
+            await updateProgress(serverProgress.id, toQuestProgressServerPayload(merged))
+            queueAnalyticsEvent('quest_guest_progress_migrated', {
+              quest_id: questId,
+              answered: countAnsweredSteps(merged.answers),
+            })
+          }
+        })
         // #1803: чистим гостевую копию ТОЛЬКО после успешного слияния. Раньше
         // это стояло в `finally`, и упавшее создание строки уносило гостевые
         // ответы безвозвратно: после разведения чтения и создания у строки
         // появилось два независимых создателя (эта миграция и флаш синхронизации),
         // а `quest_progress` несёт unique_together (quest, user) — проигравший
-        // POST получает 400.
+        // POST получал 400/500, пока #1905 не свёл обоих писателей в одну
+        // очередь `withQuestProgress`.
         await clearGuestQuestProgress(questId)
       } catch (error) {
         const { devError } = require('@/utils/logger')

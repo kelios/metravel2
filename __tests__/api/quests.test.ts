@@ -5,6 +5,7 @@ import {
   fetchQuestsPreview,
   fetchQuestByQuestId,
   fetchOrCreateProgress,
+  withQuestProgress,
   fetchQuestProgress,
   createProgress,
   updateProgress,
@@ -540,12 +541,85 @@ describe('api/quests', () => {
       const error404 = new (ApiError as any)(404, 'Not found');
       mockedGet
         .mockRejectedValueOnce(error404) // GET progress → 404
-        .mockResolvedValueOnce({ id: 5 }); // GET quest → ok
+        .mockResolvedValueOnce({ id: 5 }) // GET quest → ok
+        .mockRejectedValueOnce(error404); // повторное чтение прогресса → всё ещё нет
 
       const postError = new (ApiError as any)(400, 'Bad request');
       mockedPost.mockRejectedValueOnce(postError);
 
       await expect(fetchOrCreateProgress('krakow-dragon')).rejects.toThrow('Bad request');
+    });
+
+    // #1905: после логина миграция гостевого прогресса и флаш отложенной очереди
+    // зовут создание одновременно; POST на /quest-progress/ не идемпотентен.
+    it('creates the row once for parallel calls on the same quest', async () => {
+      const error404 = new (ApiError as any)(404, 'Not found');
+      const created = { ...MOCK_PROGRESS, id: 461 };
+      mockedGet
+        .mockRejectedValueOnce(error404) // первый писатель: GET progress → 404
+        .mockResolvedValueOnce({ id: 5 }) // GET quest → numeric id
+        .mockResolvedValueOnce(created); // второй писатель читает уже созданную запись
+      mockedPost.mockResolvedValueOnce(created);
+
+      const [first, second] = await Promise.all([
+        fetchOrCreateProgress('krakow-dragon'),
+        fetchOrCreateProgress('krakow-dragon'),
+      ]);
+
+      expect(mockedPost).toHaveBeenCalledTimes(1);
+      expect(first).toBe(created);
+      expect(second).toBe(created);
+    });
+
+    it('creates progress per quest, not once for all quests', async () => {
+      const error404 = new (ApiError as any)(404, 'Not found');
+      // Оба чтения прогресса уходят первыми (вызовы стартуют в одном тике),
+      // только потом оба читают числовой id квеста.
+      mockedGet
+        .mockRejectedValueOnce(error404)
+        .mockRejectedValueOnce(error404)
+        .mockResolvedValueOnce({ id: 5 })
+        .mockResolvedValueOnce({ id: 6 });
+      mockedPost
+        .mockResolvedValueOnce({ ...MOCK_PROGRESS, id: 461 })
+        .mockResolvedValueOnce({ ...MOCK_PROGRESS, id: 462 });
+
+      const results = await Promise.all([
+        fetchOrCreateProgress('krakow-dragon'),
+        fetchOrCreateProgress('antalya-kaleici'),
+      ]);
+
+      expect(mockedPost).toHaveBeenCalledTimes(2);
+      expect(mockedPost).toHaveBeenCalledWith('/quest-progress/', { quest: 5 });
+      expect(mockedPost).toHaveBeenCalledWith('/quest-progress/', { quest: 6 });
+      expect(results.map((progress) => progress.id).sort()).toEqual([461, 462]);
+    });
+
+    it('starts a fresh request once the previous one has settled', async () => {
+      mockedGet.mockResolvedValueOnce(MOCK_PROGRESS).mockResolvedValueOnce(MOCK_PROGRESS);
+
+      await fetchOrCreateProgress('krakow-dragon');
+      await fetchOrCreateProgress('krakow-dragon');
+
+      expect(mockedGet).toHaveBeenCalledTimes(2);
+    });
+
+    // #1904: дубль POST на проде отвечает 500 (сырой UniqueViolation), DRF-валидатор
+    // дал бы 400, идемпотентный бэкенд — 409. Запись уже есть — перечитываем её.
+    it.each([
+      [400, 'Bad request'],
+      [409, 'Conflict'],
+      [500, 'Internal server error'],
+    ])('re-reads progress when POST loses the unique race with %s', async (status, message) => {
+      const error404 = new (ApiError as any)(404, 'Not found');
+      const winner = { ...MOCK_PROGRESS, id: 461 };
+      mockedGet
+        .mockRejectedValueOnce(error404) // GET progress → 404
+        .mockResolvedValueOnce({ id: 5 }) // GET quest → numeric id
+        .mockResolvedValueOnce(winner); // повторное чтение → запись победителя
+      mockedPost.mockRejectedValueOnce(new (ApiError as any)(status, message));
+
+      await expect(fetchOrCreateProgress('krakow-dragon')).resolves.toBe(winner);
     });
 
     // #1185: тот же битый сегмент маршрута попадал и в прогресс — прод видел
@@ -554,6 +628,67 @@ describe('api/quests', () => {
       await expect(fetchOrCreateProgress('undefined')).rejects.toThrow(/quest id is missing or invalid/);
       expect(mockedGet).not.toHaveBeenCalled();
       expect(mockedPost).not.toHaveBeenCalled();
+    });
+  });
+
+  // #1905: `answers` уходит на сервер ПОЛНЫМ словарём и серверный заменяет,
+  // поэтому дедупликации одного только POST мало — два писателя, посчитавшие
+  // слияние от одной и той же базы, затирают ответы друг друга.
+  describe('withQuestProgress', () => {
+    /** Восстанавливаем чистые моки: постоянный implementation утёк бы дальше по файлу. */
+    const resetApiMocks = () => {
+      mockedGet.mockReset();
+      mockedPost.mockReset();
+    };
+
+    it('gives the second writer what the first one wrote, not the same stale base', async () => {
+      const error404 = new (ApiError as any)(404, 'Not found');
+      let row: any = null;
+      mockedGet.mockImplementation(((url: string) => {
+        if (url === '/quest-progress/quest/krakow-dragon/') {
+          return row ? Promise.resolve(row) : Promise.reject(error404);
+        }
+        if (url === '/quests/by-quest-id/krakow-dragon/') return Promise.resolve({ id: 5 });
+        return Promise.reject(new Error(`unexpected GET ${url}`));
+      }) as any);
+      mockedPost.mockImplementation((() => {
+        row = { ...MOCK_PROGRESS, id: 461, answers: {} };
+        return Promise.resolve(row);
+      }) as any);
+
+      // Оба писателя пишут полный словарь ответов — ровно как
+      // `toQuestProgressServerPayload` на PATCH.
+      const write = (stepId: string, answer: string) => async (progress: any) => {
+        row = { ...row, answers: { ...progress.answers, [stepId]: answer } };
+      };
+
+      try {
+        await Promise.all([
+          withQuestProgress('krakow-dragon', write('step-1', 'дракон')),
+          withQuestProgress('krakow-dragon', write('step-2', 'костёл')),
+        ]);
+
+        expect(mockedPost).toHaveBeenCalledTimes(1);
+        expect(row.answers).toEqual({ 'step-1': 'дракон', 'step-2': 'костёл' });
+      } finally {
+        resetApiMocks();
+      }
+    });
+
+    it('does not let a failed writer block the next one', async () => {
+      mockedGet.mockResolvedValue(MOCK_PROGRESS as never);
+
+      try {
+        const failed = withQuestProgress('krakow-dragon', async () => {
+          throw new Error('merge failed');
+        });
+        const next = withQuestProgress('krakow-dragon', async (progress) => progress.id);
+
+        await expect(failed).rejects.toThrow('merge failed');
+        await expect(next).resolves.toBe(MOCK_PROGRESS.id);
+      } finally {
+        resetApiMocks();
+      }
     });
   });
 

@@ -9,7 +9,7 @@ import {
     fetchQuestsList,
     fetchQuestsPreview,
     fetchQuestByQuestId,
-    fetchOrCreateProgress,
+    withQuestProgress,
     fetchQuestProgress,
     fetchQuestReviews,
     updateProgress as apiUpdateProgress,
@@ -268,15 +268,19 @@ const pushMergedProgress = async (
     data: PendingQuestProgressData,
 ): Promise<ApiQuestProgress> => {
     const ownerId = useAuthStore.getState().userId;
-    const serverProgress = await fetchOrCreateProgress(questId);
-    const { merged, serverNeedsPush } = mergeQuestProgress(
-        normalizeQuestProgressSnapshot(data),
-        snapshotFromServerProgress(serverProgress),
-    );
-
-    const updated = serverNeedsPush
-        ? await apiUpdateProgress(serverProgress.id, toQuestProgressServerPayload(merged))
-        : serverProgress;
+    // Чтение, слияние и PATCH идут одним писателем на квест: после логина этот
+    // флаш и миграция гостевого прогресса стартуют вместе, а `answers` заменяет
+    // серверный словарь целиком — считать слияние от общей устаревшей базы
+    // значит потерять чужие ответы (#1905).
+    const updated = await withQuestProgress(questId, async (serverProgress) => {
+        const { merged, serverNeedsPush } = mergeQuestProgress(
+            normalizeQuestProgressSnapshot(data),
+            snapshotFromServerProgress(serverProgress),
+        );
+        return serverNeedsPush
+            ? apiUpdateProgress(serverProgress.id, toQuestProgressServerPayload(merged))
+            : serverProgress;
+    });
     const currentAuth = useAuthStore.getState();
     if (updated.completed && ownerId && currentAuth.isAuthenticated && currentAuth.userId === ownerId) {
         const client = getActiveQueryClient();

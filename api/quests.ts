@@ -829,18 +829,81 @@ export async function fetchQuestProgress(questId: string): Promise<ApiQuestProgr
 }
 
 /**
- * Получить или создать прогресс по quest_id. Зовётся только там, где игрок уже
- * начал прохождение и строку создать НАДО (отправка снапшота), — на чтении при
- * открытии экрана используется `fetchQuestProgress`.
+ * Статусы, которыми бэкенд отвечает на POST уже существующего прохождения:
+ * DRF-валидатор unique_together даёт 400, идемпотентный вариант — 409, а сырой
+ * UniqueViolation доезжает до клиента как 500 (#1904). Во всех трёх случаях
+ * запись на сервере уже есть — её надо перечитать, а не терять своё слияние.
  */
-export async function fetchOrCreateProgress(questId: string): Promise<ApiQuestProgress> {
+const PROGRESS_DUPLICATE_STATUSES = new Set([400, 409, 500]);
+
+/**
+ * Очередь писателей прохождения, по одной на quest_id. После логина миграция
+ * гостевого прогресса (`useGuestQuestFlow`) и флаш отложенной очереди
+ * (`pushMergedProgress`) стартуют одним и тем же переходом в авторизованное
+ * состояние (#1905). Параллельно они не просто создавали запись дважды (второй
+ * POST — 500 на unique_together (quest, user)): `answers` уходит на сервер
+ * ПОЛНЫМ словарём и серверный заменяет, поэтому два писателя, посчитавшие
+ * слияние от одной базы, затирают ответы друг друга. Значит сериализовать надо
+ * всю тройку чтение → слияние → запись, а не один только POST.
+ */
+const questProgressWriters = new Map<string, Promise<unknown>>();
+
+const ignoreResult = (): void => undefined;
+
+const readOrCreateProgress = async (questId: string): Promise<ApiQuestProgress> => {
     const existing = await fetchQuestProgress(questId);
     if (existing) return existing;
     // Создание требует числового id квеста — забираем его отдельным запросом.
     const quest = await apiClient.get<{ id: number }>(`/quests/by-quest-id/${questId}/`);
-    return apiClient.post<ApiQuestProgress>('/quest-progress/', {
-        quest: quest.id,
+    try {
+        return await apiClient.post<ApiQuestProgress>('/quest-progress/', {
+            quest: quest.id,
+        });
+    } catch (err: unknown) {
+        const status = err instanceof ApiError ? err.status : undefined;
+        if (status === undefined || !PROGRESS_DUPLICATE_STATUSES.has(status)) throw err;
+        // Гонку мог выиграть не наш поток, а второе устройство или прошлый
+        // запуск: запись уже создана — читаем её и продолжаем слияние.
+        const created = await fetchQuestProgress(questId);
+        if (created) return created;
+        throw err;
+    }
+};
+
+/**
+ * Прочитать (при необходимости создать) прохождение квеста и сделать над ним
+ * работу эксклюзивно: следующий писатель получает запись уже с результатом
+ * предыдущего, а не ту же устаревшую базу.
+ *
+ * `task` НЕ должен сам звать `withQuestProgress`/`fetchOrCreateProgress` по
+ * тому же квесту — это самоблокировка очереди.
+ */
+export async function withQuestProgress<T>(
+    questId: string,
+    task: (progress: ApiQuestProgress) => Promise<T>,
+): Promise<T> {
+    assertUsableQuestId(questId, 'withQuestProgress');
+    const previous = questProgressWriters.get(questId);
+    // Падение предыдущего писателя очередь не рвёт: следующий делает своё чтение.
+    const slot = previous ? previous.then(ignoreResult, ignoreResult) : Promise.resolve();
+    const run = slot.then(async () => task(await readOrCreateProgress(questId)));
+    const tail: Promise<unknown> = run.then(ignoreResult, ignoreResult).then(() => {
+        if (questProgressWriters.get(questId) === tail) questProgressWriters.delete(questId);
     });
+    questProgressWriters.set(questId, tail);
+    return run;
+}
+
+/**
+ * Получить или создать прогресс по quest_id. Зовётся только там, где игрок уже
+ * начал прохождение и строку создать НАДО (отправка снапшота), — на чтении при
+ * открытии экрана используется `fetchQuestProgress`.
+ *
+ * Идёт через ту же очередь: POST на `/quest-progress/` не идемпотентен, и
+ * второй создатель получает ошибку.
+ */
+export async function fetchOrCreateProgress(questId: string): Promise<ApiQuestProgress> {
+    return withQuestProgress(questId, async (progress) => progress);
 }
 
 /** Создать прогресс */
