@@ -14,6 +14,8 @@
 const fs = require('fs')
 const path = require('path')
 
+const { normalizeAnswer } = require('./lib/questAnswerNormalize')
+
 const DEFAULT_BASE_URL = process.env.METRAVEL_API_URL || 'https://metravel.by'
 const TOKEN_FILE = '.secrets/metravel-task-board.env'
 const REQUEST_TIMEOUT_MS = 30000
@@ -52,15 +54,14 @@ const CATEGORY_LABEL = {
 
 // ===================== Чистое ядро (покрыто Jest) =====================
 
-/** Нормализация как в `utils/questAdapters.normalize` — сравниваем одинаково. */
-function normalizeValue(value) {
-  return String(value == null ? '' : value)
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/[.,;:!?'„""–—-]/g, '')
-    .replace(/ё/g, 'е')
-    .trim()
-}
+/**
+ * Нормализация как в `utils/questAdapters.normalize` — сравниваем одинаково.
+ * Правила берутся из общей `scripts/lib/questAnswerNormalize`, а не копируются
+ * сюда: собственная копия разошлась бы с рантаймом молча, и отчёт начал бы
+ * считать эхо и синонимы по своим правилам. Паритет с рантаймом держит
+ * `__tests__/scripts/scanQuestAnswerReachability.test.ts`.
+ */
+const normalizeValue = normalizeAnswer
 
 function levenshtein(a, b) {
   if (a === b) return 0
@@ -176,6 +177,11 @@ function acceptedVariantsFromPattern(pattern) {
 // 325 `minsk-cipher/3-pobeda`). Остальные семь — отрицания, намеренные
 // перечисления, номер точки в заголовке и вставленный в поле ответа текст
 // подсказки; их отсеивают правила ниже.
+// `story` намеренно вне признака, хотя дефект шага 537 печатал «закат» и в ней:
+// история — длинный художественный текст, в котором почти любое слово ответа
+// найдётся случайно, и признак утонул бы в шуме. Ловушку ловим там, где игрок
+// читает вопрос: заголовок, задание, подсказка. Историю правит редактор вместе
+// с ними, когда ловушка уже найдена.
 const STEP_TEXT_FIELDS = ['title', 'task', 'hint']
 const STEP_TEXT_FIELD_LABEL = { title: 'заголовке', task: 'задании', hint: 'подсказке' }
 
@@ -225,7 +231,8 @@ function isDisownedMatch(hay, end) {
   const tail = hay.slice(end, Math.min(hay.length, end + DISOWN_LOOKAHEAD))
   for (let i = 0; i < tail.length - 1; i += 1) {
     if (tail[i] === 'не' && tail[i + 1] === 'ответ') return true
-    if (tail[i] === 'ещё' && tail[i + 1] === 'не') return true
+    // Сравниваем с постнормализованной формой: `ё` к этому моменту уже стала `е`.
+    if (tail[i] === 'еще' && tail[i + 1] === 'не') return true
   }
   return false
 }
