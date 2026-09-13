@@ -6,8 +6,8 @@
 // `htmlparser2`) в native-бандле нужен по делу.
 //
 // Web-вариант лежит в `StableContent.web.tsx` и этот файл не видит.
-import React, { memo, Suspense, useEffect, useMemo, useState } from "react";
-import { View, StyleSheet, Platform } from "react-native";
+import React, { memo, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { View, StyleSheet, Platform, useWindowDimensions } from "react-native";
 import RenderHTML from "react-native-render-html";
 
 import FullscreenGallery from "@/components/travel/FullscreenGallery";
@@ -33,8 +33,17 @@ interface StableContentProps {
 
 type IframeModelType = typeof import("@native-html/iframe-plugin")["iframeModel"];
 
+// Конфиг-пропы RNRH сравниваются по identity: `ignoredDomTags` входит в deps
+// `useTRenderEngine`, поэтому литерал прямо в JSX пересобирал движок и заново
+// парсил весь HTML статьи на каждый ре-рендер компонента.
+const IGNORED_DOM_TAGS = ['script', 'style'];
+
 const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, serverSanitized = false, articleBodyMedia = null }) => {
   const colors = useThemedColors();
+  // #1885: Dynamic Type меняет кегль уже отрисованного текста, но RNRH держит
+  // прежний замер строк — хвост абзаца обрезается по старой коробке, часто
+  // посреди слова. Пересоздаём дерево вместе с масштабом шрифта.
+  const { fontScale } = useWindowDimensions();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [iframeModel, setIframeModel] = useState<IframeModelType | null>(null);
   const [lightboxGallery, setLightboxGallery] = useState<LightboxGallery | null>(null);
@@ -59,6 +68,16 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
     };
   }, [prepared]);
 
+  // Стабильная ссылка: по ней мемоизируются `renderers`, а RNRH пересобирает
+  // реестр рендереров (RenderRegistryProvider) на каждый новый объект.
+  const setLightboxImage = useCallback((image: LightboxImage | null) => {
+    setLightboxGallery(image ? { images: [image], initialIndex: 0 } : null);
+  }, []);
+
+  // Android: selectable-текст перехватывает тапы — onPress вложенных <a> не срабатывает (RN #22811).
+  // Platform.OS в рантайме не меняется, а identity объекта участвует в memo SharedPropsProvider.
+  const defaultTextProps = useMemo(() => ({ selectable: Platform.OS === 'ios' }), []);
+
   const { renderers, baseStyle, tagsStyles, classesStyles, customHTMLElementModels, renderersProps } = useStableContentRenderConfig({
     colors,
     styles,
@@ -66,9 +85,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
     iframeModel,
     baseFontSize: BASE_FONT_SIZE,
     baseLineHeight: BASE_LINE_HEIGHT,
-    setLightboxImage: (image) => {
-      setLightboxGallery(image ? { images: [image], initialIndex: 0 } : null);
-    },
+    setLightboxImage,
   });
 
   return (
@@ -76,14 +93,13 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
       <View style={styles.htmlWrapper}>
         <Suspense fallback={null}>
           <RenderHTML
-            key={prepared.length}
+            key={`${prepared.length}:${fontScale}`}
             source={{ html: prepared }}
             contentWidth={contentWidth}
             emSize={BASE_FONT_SIZE}
             customHTMLElementModels={customHTMLElementModels}
             renderers={renderers}
-            // Android: selectable-текст перехватывает тапы — onPress вложенных <a> не срабатывает (RN #22811)
-            defaultTextProps={{ selectable: Platform.OS === 'ios' }}
+            defaultTextProps={defaultTextProps}
             // Quill safe_html may contain empty inline spans. Without this RNRH
             // can paint a ghost first line and leave only marker `1.` on it.
             enableExperimentalGhostLinesPrevention
@@ -91,7 +107,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, 
             baseStyle={baseStyle}
             tagsStyles={tagsStyles}
             classesStyles={classesStyles}
-            ignoredDomTags={['script', 'style']}
+            ignoredDomTags={IGNORED_DOM_TAGS}
           />
         </Suspense>
       </View>
