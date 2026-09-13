@@ -217,15 +217,41 @@ function adaptPointRole(apiStep: ApiQuestStep): QuestPointRole | undefined {
 
 // ===================== АДАПТЕРЫ: API → Frontend =====================
 
-/** Нормализация ответа пользователя (дублирует логику из data файлов) */
+/**
+ * Нормализация ответа пользователя (дублирует логику из data файлов).
+ * Косметика обеих сторон сравнения: регистр, пробелы, пунктуация, «ё»→«е»,
+ * белорусские «і»→«и» и «э»→«е», служебное «ад»→«от» (#1927). Не стеммер.
+ */
 export function normalize(s: string): string {
     return s
         .toLowerCase()
         .replace(/\s+/g, ' ')
         .replace(/[.,;:!?'„""–—-]/g, '')
         .replace(/ё/g, 'е')
+        .replace(/і/g, 'и')
+        .replace(/э/g, 'е')
+        .replace(/(^| )ад(?= |$)/g, '$1от')
         .trim();
 }
+
+/** Предлог/союз, который игрок ставит перед уже принимаемым ответом (#1927). */
+const LEADING_FUNCTION_WORDS = new Set(['от', 'и']);
+
+/**
+ * Снимает одно ведущее служебное слово. Числовой остаток не трогаем: «от 6»
+ * на счётном шаге не имеет права стать «6».
+ */
+export function stripLeadingFunctionWords(value: string): string {
+    const words = value.split(' ');
+    if (words.length < 2) return value;
+    if (!LEADING_FUNCTION_WORDS.has(words[0])) return value;
+    const rest = words.slice(1).join(' ');
+    if (!rest || /^\d+$/.test(rest)) return value;
+    return rest;
+}
+
+const matchesNormalizedVariants = (value: string, variants: readonly string[]): boolean =>
+    variants.some((variant) => value === variant) || matchesAnyWordForm(value, variants);
 
 /**
  * Создаёт функцию проверки ответа из бэкенд-конфига.
@@ -279,13 +305,11 @@ function createAnswerChecker(answerType: string, answerValue: string): QuestStep
                     .filter((v) => v.length > 0);
                 return (input: string) => {
                     const n = normalize(input);
-                    if (variants.some(v => n === v)) return true;
-                    // Второй проход — словоформа одного из вариантов (#1631):
-                    // словарь с `пули` и `снаряды` обязан принимать `пуля` и
-                    // `снаряд`, иначе игрок получает отказ на собственный
-                    // словарь шага. Правило узкое, разбор — в
-                    // `utils/questAnswerMorphology.ts`.
-                    return matchesAnyWordForm(n, variants);
+                    if (matchesNormalizedVariants(n, variants)) return true;
+                    // «ад куль» при словаре «куль»: служебное слово не часть
+                    // ответа, его снимаем только после провала полного совпадения.
+                    const stripped = stripLeadingFunctionWords(n);
+                    return stripped !== n && matchesNormalizedVariants(stripped, variants);
                 };
             } catch {
                 return () => false;

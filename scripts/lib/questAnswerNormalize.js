@@ -26,6 +26,9 @@ function normalizeRuntime(s) {
     .replace(/\s+/g, ' ')
     .replace(/[.,;:!?'„""–—-]/g, '')
     .replace(/ё/g, 'е')
+    .replace(/і/g, 'и')
+    .replace(/э/g, 'е')
+    .replace(/(^| )ад(?= |$)/g, '$1от')
     .trim()
 }
 

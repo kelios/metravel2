@@ -47,6 +47,11 @@ describe('questAdapters', () => {
       expect(normalize('ёлка')).toBe('елка');
     });
 
+    it('folds Belarusian і/э and the preposition ад (#1927)', () => {
+      expect(normalize('кафэ і магазіны')).toBe('кафе и магазины');
+      expect(normalize('ад куль')).toBe('от куль');
+    });
+
     it('collapses multiple spaces', () => {
       expect(normalize('a   b   c')).toBe('a b c');
     });
@@ -118,6 +123,44 @@ describe('questAdapters', () => {
       expect(check('желто-синий')).toBe(true);
       expect(check('желтосиний')).toBe(true);
       expect(check('синий')).toBe(false);
+    });
+
+    it('exact_any: fully Belarusian input matches the mixed dictionary (#1927)', () => {
+      const shops = buildAnswerChecker(
+        'exact_any',
+        JSON.stringify(['кафе', 'магазіны', 'крамы', 'кафе и магазины', 'кафе и магазіны', 'крамы и магазіны']),
+      );
+      expect(shops('кафэ і магазіны')).toBe(true);
+      expect(shops('крамы і магазіны')).toBe(true);
+      expect(shops('квартиры')).toBe(false);
+
+      const bullets = buildAnswerChecker(
+        'exact_any',
+        JSON.stringify(['пуля', 'пули', 'от пули', 'от пулі', 'куль']),
+      );
+      expect(bullets('ад куль')).toBe(true);
+      expect(bullets('от снега')).toBe(false);
+      expect(bullets('от 6')).toBe(false);
+      expect(bullets('и 6')).toBe(false);
+    });
+
+    it('exact_any: прод-словари шагов 136 и 372 принимают белорусский ввод', () => {
+      const fortress = require('@/scripts/brest-fortress-quest-data.js') as Array<{
+        steps: Array<{ step_id: string; answer_pattern: { type: string; value: string } }>;
+      }>;
+      const soviet = require('@/scripts/gomel-soviet-quest-data.js') as Array<{
+        steps: Array<{ step_id: string; answer_pattern: { type: string; value: string } }>;
+      }>;
+      const holmskie = fortress[0].steps.find((step) => step.step_id === 'holmskie')!;
+      const shops = soviet[0].steps.find((step) => step.step_id === '5-dohodnye-doma')!;
+      const bullets = buildAnswerChecker(holmskie.answer_pattern.type, holmskie.answer_pattern.value);
+      const shopCheck = buildAnswerChecker(shops.answer_pattern.type, shops.answer_pattern.value);
+
+      expect(bullets('ад куль')).toBe(true);
+      expect(bullets('от снега')).toBe(false);
+      expect(shopCheck('кафэ і магазіны')).toBe(true);
+      expect(shopCheck('крамы і магазіны')).toBe(true);
+      expect(shopCheck('квартиры')).toBe(false);
     });
 
     it('range: checks number in range', () => {

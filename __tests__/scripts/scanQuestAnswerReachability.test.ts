@@ -45,6 +45,8 @@ describe('паритет нормализации со средой выполн
     'что?!',
     'а.б,в;г:д!е?ж\'з„и"к"л–м—н-о',
     'ёжик',
+    'кафэ і магазіны',
+    'ад куль',
     '',
     '   ',
     '-',
@@ -75,7 +77,7 @@ describe('паритет нормализации со средой выполн
     const runtimeChain = extractChain(read('utils/questAdapters.ts'), 'export function normalize(s: string): string {')
     const scanChain = extractChain(read('scripts/lib/questAnswerNormalize.js'), 'function normalizeRuntime(s) {')
 
-    expect(runtimeChain.length).toBeGreaterThanOrEqual(4)
+    expect(runtimeChain.length).toBeGreaterThanOrEqual(7)
     expect(scanChain).toEqual(runtimeChain)
   })
 
@@ -284,12 +286,16 @@ describe('доказательство рантаймом: находка mixed_
   const PROD_STEP_130_AFTER =
     '["часы","часов","куранты","часы куранты","башенные часы","гадзіннік","гадзинник","clock"]'
 
-  it('до правки: белорусская форма с кириллической і отвергается, хотя ради неё вариант и заведён', () => {
+  it('кириллическая і доходит до варианта «гадзинник», латинская i остаётся отдельной записью', () => {
+    // До #1455 в словаре лежала латинская i (U+0069). Игрок набирает белорусскую
+    // і (U+0456). #1927 сводит і→и, поэтому ввод совпадает с уже лежащим
+    // «гадзинник»; латинская запись по-прежнему принимается только дословно —
+    // её как мёртвый mixed_script по-прежнему ловит скан, а не чекер.
     const check = buildAnswerChecker('exact_any', PROD_STEP_130_BEFORE)
 
-    expect(check('гадзіннік')).toBe(false)      // U+0456 — то, что наберёт игрок
-    expect(check('гадзiннiк')).toBe(true)       // U+0069 — то, что лежало в словаре
-    expect(check('часы')).toBe(true)            // контроль на здоровой позиции
+    expect(check('гадзіннік')).toBe(true)       // U+0456 → «гадзинник»
+    expect(check('гадзiннiк')).toBe(true)       // U+0069 — дословная запись словаря
+    expect(check('часы')).toBe(true)
   })
 
   it('после правки: набранное кириллицей «гадзіннік» засчитывается', () => {
