@@ -12,14 +12,15 @@ export type CliRunResult = {
 export const runNodeCli = (
   args: string[],
   env: Record<string, string> = {},
+  options: { cwd?: string; input?: string } = {},
 ): CliRunResult => {
-  return runCli(process.execPath, args, { env });
+  return runCli(process.execPath, args, { env, ...options });
 };
 
 export const runCli = (
   command: string,
   args: string[],
-  options: { cwd?: string; env?: Record<string, string> } = {},
+  options: { cwd?: string; env?: Record<string, string>; input?: string } = {},
 ): CliRunResult => {
   try {
     const stdout = execFileSync(command, args, {
@@ -27,6 +28,7 @@ export const runCli = (
       cwd: options.cwd,
       env: { ...process.env, ...(options.env ?? {}) },
       stdio: 'pipe',
+      input: options.input,
     });
     return {
       status: 0,

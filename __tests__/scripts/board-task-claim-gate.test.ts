@@ -1,7 +1,6 @@
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
+import { makeTempDir, removeDir, runNodeCli } from './cli-test-utils';
 
 /**
  * Гейт `task-claim` держит правило «одну карточку борда ведёт одна сессия».
@@ -40,11 +39,11 @@ const runHook = (
   payload: Record<string, unknown>,
   env: Record<string, string> = {},
 ): HookOutput => {
-  const result = spawnSync('node', [HOOK], {
-    input: JSON.stringify(payload),
-    encoding: 'utf8',
-    env: { ...process.env, CLAUDE_PROJECT_DIR: sandbox, ...env },
-  });
+  const result = runNodeCli(
+    [HOOK],
+    { CLAUDE_PROJECT_DIR: sandbox, ...env },
+    { input: JSON.stringify(payload) },
+  );
   expect(result.status).toBe(0);
   const out = result.stdout.trim();
   return out ? JSON.parse(out) : {};
@@ -89,15 +88,15 @@ const reason = (out: HookOutput): string => out.hookSpecificOutput?.permissionDe
 const context = (out: HookOutput): string => out.hookSpecificOutput?.additionalContext ?? '';
 
 beforeEach(() => {
-  sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'task-claim-'));
-  transcripts = fs.mkdtempSync(path.join(os.tmpdir(), 'task-claim-tr-'));
+  sandbox = makeTempDir('task-claim-');
+  transcripts = makeTempDir('task-claim-tr-');
   touchSession('sessA');
   touchSession('sessB');
 });
 
 afterEach(() => {
-  fs.rmSync(sandbox, { recursive: true, force: true });
-  fs.rmSync(transcripts, { recursive: true, force: true });
+  removeDir(sandbox);
+  removeDir(transcripts);
 });
 
 describe('task-claim: кто взял карточку', () => {
@@ -192,11 +191,11 @@ describe('task-claim: чтение карточки предупреждает �
 
 describe('task-claim: гейт не имеет права уронить борд', () => {
   it('битый stdin не блокирует работу с карточками', () => {
-    const result = spawnSync('node', [HOOK], {
-      input: 'не json',
-      encoding: 'utf8',
-      env: { ...process.env, CLAUDE_PROJECT_DIR: sandbox },
-    });
+    const result = runNodeCli(
+      [HOOK],
+      { CLAUDE_PROJECT_DIR: sandbox },
+      { input: 'не json' },
+    );
     expect(result.status).toBe(0);
   });
 
