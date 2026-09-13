@@ -266,17 +266,6 @@ export const createStyles = (colors: ThemedColors) =>
       fontWeight: '700',
     },
     templates: { gap: 8 },
-    // #1902: импорт и экспорт трека — один блок инструментов «Файл маршрута»
-    // в той же рамке, что шаги панели (routePanelStyles.stepBlock), а не два
-    // ряда кнопок, случайно оказавшихся рядом.
-    routeFile: {
-      gap: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      padding: 12,
-      backgroundColor: colors.surfaceMuted,
-    },
     templateRow: {
       flexDirection: 'row',
       alignItems: 'center',

@@ -754,19 +754,6 @@ function RouteBuilder({
     />
   );
 
-  // #1902: импорт трека и скачивание GPX/KML — один блок с заголовком, а не два
-  // самостоятельных ряда ToolActionsRow друг под другом. Слить их в один ряд
-  // нельзя: на телефоне ряд с compactLabel держится одной строкой (nowrap), и
-  // четыре подписанные кнопки в 320–390dp не помещаются.
-  const routeFileSection = (
-    <View style={styles.routeFile} testID="route-builder-route-file">
-      <Text style={styles.label}>{i18nT('tripsStatic:plan.routeFile.title')}</Text>
-      <Text style={styles.hint}>{i18nT('tripsStatic:plan.routeFile.hint')}</Text>
-      {importSection}
-      {routeDownloadSection}
-    </View>
-  );
-
   const saveSection = (
     <RouteSaveSection
       styles={styles}
@@ -799,7 +786,8 @@ function RouteBuilder({
       editPointSection={editPointSection}
       templatesSection={templatesSection}
       summarySection={summarySection}
-      routeFileSection={routeFileSection}
+      importSection={importSection}
+      routeDownloadSection={routeDownloadSection}
       saveSection={saveSection}
       elevationProfileSection={elevationProfileSection}
     />

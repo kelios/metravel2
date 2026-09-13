@@ -30,8 +30,8 @@ interface Props {
   editPointSection: React.ReactNode;
   templatesSection: React.ReactNode;
   summarySection: React.ReactNode;
-  /** #1902: импорт трека и скачивание GPX/KML одним блоком «Файл маршрута». */
-  routeFileSection: React.ReactNode;
+  importSection: React.ReactNode;
+  routeDownloadSection: React.ReactNode;
   saveSection: React.ReactNode;
   elevationProfileSection: React.ReactNode;
 }
@@ -52,10 +52,25 @@ export default function RouteBuilderLayout({
   editPointSection,
   templatesSection,
   summarySection,
-  routeFileSection,
+  importSection,
+  routeDownloadSection,
   saveSection,
   elevationProfileSection,
 }: Props) {
+  // #1902: импорт трека и скачивание GPX/KML — один блок «Файл маршрута» в той
+  // же рамке, что шаги панели, а не два самостоятельных ряда ToolActionsRow
+  // друг под другом. Слить их в один ряд нельзя: на телефоне ряд с
+  // compactLabel держится одной строкой (nowrap), и четыре подписанные кнопки
+  // в 320–390dp не помещаются.
+  const routeFileSection = (
+    <View style={panelStyles.stepBlock} testID="route-builder-route-file">
+      <Text style={styles.label}>{i18nT('tripsStatic:plan.routeFile.title')}</Text>
+      <Text style={styles.hint}>{i18nT('tripsStatic:plan.routeFile.hint')}</Text>
+      {importSection}
+      {routeDownloadSection}
+    </View>
+  );
+
   if (isMapFirst) {
     return (
       <RouteBuilderMobile
