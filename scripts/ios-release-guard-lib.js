@@ -827,8 +827,13 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   if (META_SDK_NATIVE_PATTERN.test(podfileLock) || META_SDK_NATIVE_PATTERN.test(project)) {
     fail('IOS_META_SDK_LINKED', 'ios/Podfile.lock and the Xcode project must not link Meta SDK pods or frameworks');
   }
+  // Сам ключ LSApplicationQueriesSchemes легален (квесты могут объявить om://,
+  // mapsme://), красным считаются только Meta-схемы в его массиве.
+  const queriedSchemes = Array.isArray(infoConfig.LSApplicationQueriesSchemes)
+    ? infoConfig.LSApplicationQueriesSchemes
+    : [];
   if (META_SDK_PLIST_PATTERN.test(info) ||
-      Object.prototype.hasOwnProperty.call(infoConfig, 'LSApplicationQueriesSchemes')) {
+      queriedSchemes.some(scheme => /^fb(?:api|auth2|-messenger-api|shareextension)?$|^fb\d+$/.test(String(scheme)))) {
     fail('IOS_META_SDK_LINKED', 'Info.plist must not keep Facebook SDK configuration, fb URL schemes or Meta query schemes');
   }
   if (/(?:\bfrom\s*|\brequire\(\s*|\bimport\(\s*)['"]react-native-fbsdk-next['"]/.test(facebookIosButton) ||
