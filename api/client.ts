@@ -22,8 +22,8 @@ import {
     TOKEN_KEY,
     isE2E,
 } from '@/api/apiConfig';
-import { notifyAuthInvalidation } from '@/api/authInvalidation';
-export { setAuthInvalidationHandler } from '@/api/authInvalidation';
+import { appBelievesAuthenticated, notifyAuthInvalidation } from '@/api/authInvalidation';
+export { setAuthInvalidationHandler, setAuthSessionProbe } from '@/api/authInvalidation';
 import { RateLimiter, type RateLimitSlot } from '@/utils/rateLimiter';
 import {
     ApiError,
@@ -359,14 +359,26 @@ class ApiClient {
             : await this.readAccessToken();
         const token = auth.value;
 
-        // Небезопасный метод без токена на native отправлять нельзя. Раньше он
-        // уходил анонимно, бэкенд разбирал его как cookie-сессию и отвечал
-        // `403 CSRF Failed` — приложение оставалось «залогиненным», а отзыв,
-        // прогресс и телеметрия пропадали молча (прод 13.09.2026, #1921).
-        if (!skipAuth && !token && !usesWebCookieAuth() && isUnsafeHttpMethod(options.method)) {
+        // Небезопасный метод без токена у ЗАЛОГИНЕННОЙ сессии отправлять нельзя.
+        // Раньше он уходил анонимно, бэкенд разбирал его как cookie-сессию и
+        // отвечал `403 CSRF Failed` — приложение оставалось «залогиненным», а
+        // отзыв, прогресс и телеметрия пропадали молча (прод 13.09.2026, #1921).
+        //
+        // Гостя гард не касается: телеметрия ответов и карточка результата
+        // квеста принимаются бэкендом с `AllowAny`, и анонимный POST для них
+        // штатный. Запретить его значило бы не спасти данные, а уничтожить их:
+        // очередь телеметрии считает 401 безнадёжным и снимает события
+        // насовсем (`utils/questAnswerTelemetry.ts`).
+        if (
+            !skipAuth &&
+            !token &&
+            !usesWebCookieAuth() &&
+            isUnsafeHttpMethod(options.method) &&
+            appBelievesAuthenticated()
+        ) {
             // Хранилище не ответило: значение неизвестно, и стирать сессию по
-            // такому сбою нельзя — запись просто не уходит, и человек видит
-            // ошибку вместо тихой потери.
+            // такому сбою нельзя (#810) — запись просто не уходит, и человек
+            // видит ошибку вместо тихой потери.
             if (!auth.unavailable) await this.clearTokens();
             throw new ApiError(401, i18nT('errorsStatic:api.client.sessionExpired'));
         }

@@ -5,7 +5,7 @@
 
 import { FC, ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
-import { setAuthInvalidationHandler } from '@/api/authInvalidation';
+import { setAuthInvalidationHandler, setAuthSessionProbe } from '@/api/authInvalidation';
 import { useAuthStore, type AuthStore } from '@/stores/authStore';
 import { useShallow } from 'zustand/react/shallow';
 import { AuthContext, type AuthContextType } from '@/context/authContextBase';
@@ -62,8 +62,13 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     // Регистрируем invalidation handler для api client (вызывается при 401)
     useEffect(() => {
         setAuthInvalidationHandler(invalidateAuthState);
+        // Та же регистрация в обратную сторону: транспорту нужно знать, считает
+        // ли приложение себя залогиненным, чтобы не запрещать гостю анонимную
+        // запись и не отправлять анонимно запись живой сессии (#1921).
+        setAuthSessionProbe(() => useAuthStore.getState().isAuthenticated);
         return () => {
             setAuthInvalidationHandler(null);
+            setAuthSessionProbe(null);
         };
     }, [invalidateAuthState]);
 

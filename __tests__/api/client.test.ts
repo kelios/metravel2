@@ -1,4 +1,4 @@
-import { apiClient, ApiError, __setBackendRefreshEndpointForTests } from '@/api/client';
+import { apiClient, ApiError, setAuthSessionProbe, __setBackendRefreshEndpointForTests } from '@/api/client';
 import {
   persistSessionTokens,
   __resetSessionTokenWritesForTests,
@@ -266,7 +266,12 @@ describe('src/api/client.ts apiClient', () => {
   // cookie-сессию и отвечал `403 CSRF Failed: Referer checking failed`.
   // Приложение считало себя залогиненным, а отзыв и телеметрия пропадали молча.
   describe('native: запись без токена (#1921)', () => {
+    afterEach(() => {
+      setAuthSessionProbe(null);
+    });
+
     it('не отправляет POST анонимно, стирает сессию и сообщает, что нужно войти', async () => {
+      setAuthSessionProbe(() => true);
       mockedGetSecureItem.mockResolvedValue(null);
 
       await expect(apiClient.post('/quest-reviews/', { rating: 5 })).rejects.toMatchObject({
@@ -278,6 +283,7 @@ describe('src/api/client.ts apiClient', () => {
     });
 
     it('сбой хранилища не стирает сессию, но и не превращает запись в анонимную', async () => {
+      setAuthSessionProbe(() => true);
       mockedReadSecureItem.mockResolvedValue({ value: null, unavailable: true });
 
       await expect(apiClient.post('/quest-reviews/', { rating: 5 })).rejects.toMatchObject({
@@ -299,6 +305,28 @@ describe('src/api/client.ts apiClient', () => {
 
       await expect(apiClient.get('/quests/')).resolves.toEqual({ ok: true });
       expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
+    });
+
+    // Гостя гард не касается: телеметрия ответов и карточка результата квеста
+    // принимаются с `AllowAny`, а очередь телеметрии считает 401 безнадёжным и
+    // удалила бы события насовсем.
+    it('гостевая запись по-прежнему уходит анонимно', async () => {
+      setAuthSessionProbe(() => false);
+      mockedGetSecureItem.mockResolvedValue(null);
+      mockedFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        status: 202,
+        json: async () => ({ accepted: 1 }),
+      } as any);
+
+      await expect(apiClient.post('/quest-answer-attempts/bulk/', { attempts: [] })).resolves.toEqual({
+        accepted: 1,
+      });
+
+      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
+      const [, options] = mockedFetchWithTimeout.mock.calls[0];
+      expect((options as any).headers.Authorization).toBeUndefined();
+      expect(mockedRemoveSecureItems).not.toHaveBeenCalled();
     });
 
     it('не прикладывает cookie: единственная авторизация native — заголовок', async () => {
