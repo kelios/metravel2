@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 
 jest.mock('@/api/appleAuth', () => ({
   appleAuthApi: jest.fn(),
@@ -16,11 +16,22 @@ jest.mock('@/api/auth', () => ({
   validateWebCookieSessionApi: jest.fn().mockResolvedValue(true),
 }));
 
-jest.mock('@/utils/secureStorage', () => ({
-  setSecureItem: jest.fn().mockResolvedValue(undefined),
-  getSecureItem: jest.fn().mockResolvedValue(null),
-  removeSecureItems: jest.fn().mockResolvedValue(undefined),
-}));
+jest.mock('@/utils/secureStorage', () => {
+  const getSecureItem = jest.fn().mockResolvedValue(null);
+  return {
+    setSecureItem: jest.fn().mockResolvedValue(undefined),
+    getSecureItem,
+    // Прод `readSecureItem` не бросает: сбой Keychain — `unavailable` (#1936).
+    readSecureItem: jest.fn(async (...args: unknown[]) => {
+      try {
+        return { value: await getSecureItem(...args), unavailable: false };
+      } catch {
+        return { value: null, unavailable: true };
+      }
+    }),
+    removeSecureItems: jest.fn().mockResolvedValue(undefined),
+  };
+});
 
 jest.mock('@/utils/storageBatch', () => ({
   getStorageBatch: jest.fn().mockResolvedValue({}),
@@ -67,8 +78,9 @@ const {
     validateWebCookieSessionApi: jest.Mock;
   };
 
-const { getSecureItem, setSecureItem, removeSecureItems } = require('@/utils/secureStorage') as {
+const { getSecureItem, readSecureItem, setSecureItem, removeSecureItems } = require('@/utils/secureStorage') as {
   getSecureItem: jest.Mock;
+  readSecureItem: jest.Mock;
   setSecureItem: jest.Mock;
   removeSecureItems: jest.Mock;
 };
@@ -81,6 +93,7 @@ const { fetchUserProfile } = require('@/api/user') as { fetchUserProfile: jest.M
 
 import { useAuthStore } from '@/stores/authStore';
 import { __resetSessionTokenWritesForTests } from '@/utils/authTokenStore';
+import { translate as i18nT } from '@/i18n';
 
 const flushPromises = () => new Promise((r) => setTimeout(r, 0));
 const originalPlatformOS = Platform.OS;
@@ -92,7 +105,16 @@ beforeEach(() => {
   // `superseded` от чужой записи (#1545).
   __resetSessionTokenWritesForTests();
   validateWebCookieSessionApi.mockResolvedValue(true);
+  getSecureItem.mockResolvedValue(null);
+  getStorageBatch.mockResolvedValue({});
   Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+  readSecureItem.mockImplementation(async (...args: unknown[]) => {
+    try {
+      return { value: await getSecureItem(...args), unavailable: false };
+    } catch {
+      return { value: null, unavailable: true };
+    }
+  });
   // Reset store to initial state
   useAuthStore.setState({
     isAuthenticated: false,
@@ -324,6 +346,7 @@ describe('authStore', () => {
     });
 
     it('handles storage errors gracefully', async () => {
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
       getSecureItem.mockRejectedValue(new Error('storage fail'));
 
       await act(() => useAuthStore.getState().checkAuthentication());
@@ -331,6 +354,50 @@ describe('authStore', () => {
       const s = useAuthStore.getState();
       expect(s.isAuthenticated).toBe(false);
       expect(s.authReady).toBe(true);
+      expect(alertSpy).not.toHaveBeenCalled();
+      alertSpy.mockRestore();
+    });
+
+    it('guests when profile storage throws', async () => {
+      getSecureItem.mockResolvedValue('tok');
+      getStorageBatch.mockRejectedValue(new Error('batch fail'));
+
+      await act(() => useAuthStore.getState().checkAuthentication());
+
+      const s = useAuthStore.getState();
+      expect(s.isAuthenticated).toBe(false);
+      expect(s.authReady).toBe(true);
+    });
+
+    it('does not collapse a Keychain outage into a silent guest session', async () => {
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+      useAuthStore.setState({
+        isAuthenticated: true,
+        userId: '7',
+        username: 'Julia',
+        isSuperuser: false,
+        userAvatar: 'https://img/avatar.jpg',
+      });
+      readSecureItem.mockResolvedValue({ value: null, unavailable: true });
+      getStorageBatch.mockResolvedValue({
+        userId: '7',
+        userName: 'Julia',
+        isSuperuser: 'false',
+        userAvatar: 'https://img/avatar.jpg',
+      });
+
+      await act(() => useAuthStore.getState().checkAuthentication());
+
+      const s = useAuthStore.getState();
+      expect(s.isAuthenticated).toBe(true);
+      expect(s.userId).toBe('7');
+      expect(s.username).toBe('Julia');
+      expect(s.authReady).toBe(true);
+      expect(alertSpy).toHaveBeenCalledWith(
+        i18nT('errorsStatic:api.auth.signInErrorTitle'),
+        i18nT('errorsStatic:api.client.sessionExpired'),
+      );
+      alertSpy.mockRestore();
     });
   });
 

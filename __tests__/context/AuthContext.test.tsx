@@ -4,7 +4,9 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { resetAuthStoreForTests } from '@/stores/authStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi } from '@/api/auth';
-import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
+import { Alert } from 'react-native';
+import { getSecureItem, readSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
+import { translate as i18nT } from '@/i18n';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import { fetchUserProfile } from '@/api/user';
 
@@ -16,11 +18,21 @@ jest.mock('@/api/auth', () => ({
   setNewPasswordApi: jest.fn(),
 }));
 
-jest.mock('@/utils/secureStorage', () => ({
-  getSecureItem: jest.fn(),
-  setSecureItem: jest.fn(),
-  removeSecureItems: jest.fn(),
-}));
+jest.mock('@/utils/secureStorage', () => {
+  const getSecureItem = jest.fn();
+  return {
+    getSecureItem,
+    setSecureItem: jest.fn(),
+    removeSecureItems: jest.fn(),
+    readSecureItem: jest.fn(async (...args: unknown[]) => {
+      try {
+        return { value: await getSecureItem(...args), unavailable: false };
+      } catch {
+        return { value: null, unavailable: true };
+      }
+    }),
+  };
+});
 
 jest.mock('@/utils/storageBatch', () => ({
   getStorageBatch: jest.fn(),
@@ -52,6 +64,13 @@ describe('AuthContext', () => {
     jest.clearAllMocks();
     resetAuthStoreForTests();
     (AsyncStorage as any).__reset?.();
+    (readSecureItem as jest.Mock).mockImplementation(async (...args: unknown[]) => {
+      try {
+        return { value: await (getSecureItem as jest.Mock)(...args), unavailable: false };
+      } catch {
+        return { value: null, unavailable: true };
+      }
+    });
   });
 
   const createDeferred = <T,>() => {
@@ -133,8 +152,8 @@ describe('AuthContext', () => {
   });
 
   it('resets auth state on checkAuthentication error', async () => {
-    (getSecureItem as jest.Mock).mockRejectedValueOnce(new Error('boom'));
-    (getStorageBatch as jest.Mock).mockResolvedValueOnce({});
+    (getSecureItem as jest.Mock).mockResolvedValueOnce('token-123');
+    (getStorageBatch as jest.Mock).mockRejectedValueOnce(new Error('boom'));
 
     let contextValue: any;
 
@@ -150,6 +169,36 @@ describe('AuthContext', () => {
       expect(contextValue.username).toBe('');
       expect(contextValue.isSuperuser).toBe(false);
     });
+  });
+
+  it('does not collapse a Keychain outage into a silent guest session', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    (readSecureItem as jest.Mock).mockResolvedValueOnce({ value: null, unavailable: true });
+    (getStorageBatch as jest.Mock).mockResolvedValueOnce({
+      userId: '7',
+      userName: 'Julia',
+      isSuperuser: 'false',
+      userAvatar: 'https://img/avatar.jpg',
+    });
+
+    let contextValue: any;
+
+    render(
+      <AuthProvider>
+        <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(contextValue.isAuthenticated).toBe(true);
+      expect(contextValue.userId).toBe('7');
+      expect(contextValue.username).toBe('Julia');
+    });
+    expect(alertSpy).toHaveBeenCalledWith(
+      i18nT('errorsStatic:api.auth.signInErrorTitle'),
+      i18nT('errorsStatic:api.client.sessionExpired'),
+    );
+    alertSpy.mockRestore();
   });
 
   it('login success updates state and storage', async () => {

@@ -3,8 +3,9 @@
 // ранее находившиеся в AuthContext. AuthProvider остаётся тонким фасадом
 // для инициализации и регистрации invalidation handler.
 
+import { Alert } from 'react-native';
 import { create } from 'zustand';
-import { getSecureItem } from '@/utils/secureStorage';
+import { readSecureItem } from '@/utils/secureStorage';
 import {
     clearSessionTokens,
     getSessionWriteMark,
@@ -266,12 +267,39 @@ export const useAuthStore = create<AuthStore>((set, get) => {
         const epochAtStart = authEpoch;
         try {
             const usesStoredToken = shouldUseStoredAuthToken();
-            const [token, storageData] = await Promise.all([
-                usesStoredToken ? getSecureItem(ACCESS_TOKEN_STORAGE_KEY) : Promise.resolve(null),
+            const [tokenRead, storageData] = await Promise.all([
+                usesStoredToken
+                    ? readSecureItem(ACCESS_TOKEN_STORAGE_KEY)
+                    : Promise.resolve({ value: null, unavailable: false }),
                 getStorageBatch(['userId', 'userName', 'isSuperuser', 'userAvatar']),
             ]);
 
             if (epochAtStart !== authEpoch) return;
+
+            // Сбой Keychain/SecureStore — не «токена нет». Схлопывать его в гостя
+            // нельзя: сессия на сервере жива, а UI до конца запуска молчит (#1936).
+            if (usesStoredToken && tokenRead.unavailable) {
+                const current = get();
+                const storedUserId = typeof storageData.userId === 'string' ? storageData.userId : '';
+                const hasSession = Boolean(current.isAuthenticated || current.userId || storedUserId);
+                if (hasSession) {
+                    const restoredAvatar = normalizeAvatar(storageData.userAvatar);
+                    set({
+                        isAuthenticated: true,
+                        userId: storedUserId || current.userId,
+                        username: normalizeProfileName(storageData.userName) || current.username,
+                        isSuperuser: storageData.isSuperuser === 'true' || current.isSuperuser,
+                        userAvatar: restoredAvatar ?? current.userAvatar,
+                    });
+                    Alert.alert(
+                        i18nT('errorsStatic:api.auth.signInErrorTitle'),
+                        i18nT('errorsStatic:api.client.sessionExpired'),
+                    );
+                }
+                return;
+            }
+
+            const token = tokenRead.value;
 
             if ((usesStoredToken && !token) || !storageData.userId) {
                 set({

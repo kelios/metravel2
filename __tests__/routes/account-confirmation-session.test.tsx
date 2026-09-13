@@ -57,11 +57,21 @@ jest.mock('@/utils/storageBatch', () => ({
   removeStorageBatch: jest.fn().mockResolvedValue(undefined),
 }))
 
-jest.mock('@/utils/secureStorage', () => ({
-  setSecureItem: jest.fn().mockResolvedValue(undefined),
-  getSecureItem: jest.fn().mockResolvedValue(null),
-  removeSecureItems: jest.fn().mockResolvedValue(undefined),
-}))
+jest.mock('@/utils/secureStorage', () => {
+  const getSecureItem = jest.fn().mockResolvedValue(null)
+  return {
+    setSecureItem: jest.fn().mockResolvedValue(undefined),
+    getSecureItem,
+    removeSecureItems: jest.fn().mockResolvedValue(undefined),
+    readSecureItem: jest.fn(async (...args: unknown[]) => {
+      try {
+        return { value: await getSecureItem(...args), unavailable: false }
+      } catch {
+        return { value: null, unavailable: true }
+      }
+    }),
+  }
+})
 
 import AccountConfirmation from '@/app/(tabs)/accountconfirmation'
 import { useAuthStore } from '@/stores/authStore'
