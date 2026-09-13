@@ -212,6 +212,10 @@ describe('parseArgs', () => {
     const args = parseArgs(['--quest', 'minsk-cipher', '--since', '365d', '--min-count', '3', '--json', '--all'])
     expect(args).toMatchObject({ quest: 'minsk-cipher', since: '365d', minCount: 3, json: true, all: true })
   })
+
+  it('неизвестный флаг — ошибка, а не тихий дефолт (#1934)', () => {
+    expect(() => parseArgs(['--quest', '32', '--quest-id=32'])).toThrow('Unknown argument: --quest-id=32')
+  })
 })
 
 // #1923: ловушка обратного знака к #1908 — текст шага печатает ОТКЛОНЯЕМЫЙ

@@ -43,6 +43,12 @@ const {
   findAuthoringRoleIssues,
   endsWithOptional,
 } = require('./lib/questPointRoles')
+const {
+  parseCliArgs,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runCli,
+} = require('./lib/cli-contract')
 
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 
@@ -82,28 +88,57 @@ function updateBaseline(rootDir) {
   return { baselinePath, files: Object.keys(known).length, total }
 }
 
-const args = process.argv.slice(2)
-const asJson = args.includes('--json')
-const get = (key, fallback) => {
-  const found = args.find((arg) => arg.startsWith(`--${key}=`))
-  return found ? found.split('=').slice(1).join('=') : fallback
+const USAGE = `Гвардия структурных ролей точек квеста — #1802
+
+Usage:
+  node scripts/scan-quest-point-roles.js [--quest-id <id>] [--source <file>] [--baseline <file>] [--update-baseline] [--api-url <url>] [--json]
+
+Options:
+  --quest-id <id>       один квест вместо всего корпуса
+  --source <file>       локальный data-файл вместо прода
+  --baseline <file>     вычесть осознанные исключения (только с --source)
+  --update-baseline     переписать baseline по всем локальным данным
+  --api-url <url>       адрес прода (по умолчанию METRAVEL_API_URL или https://metravel.by)
+  --json                machine-readable результат на stdout
+  --help, -h            напечатать эту справку и выйти`
+
+const CLI_SPEC = {
+  name: 'scan-quest-point-roles',
+  usage: USAGE,
+  selection: 'quests',
+  flags: {
+    'api-url': { type: 'string', default: DEFAULT_API, stripTrailingSlash: true },
+    'quest-id': { type: 'string' },
+    source: { type: 'string' },
+    baseline: { type: 'string' },
+    'update-baseline': { type: 'boolean' },
+    json: { type: 'boolean' },
+  },
 }
 
 async function main() {
-  const source = get('source')
-  const questId = get('quest-id')
-  const apiUrl = get('api-url', DEFAULT_API)
-  const baselineArg = get('baseline')
+  const args = parseCliArgs(process.argv, CLI_SPEC)
+  const source = args.source
+  const questId = args.questId
+  const apiUrl = args.apiUrl
+  const baselineArg = args.baseline
 
-  if (args.includes('--update-baseline')) {
+  if (args.updateBaseline) {
     const result = updateBaseline(process.cwd())
     console.log(`Baseline перезаписан: ${BASELINE_PATH} — ${result.total} исключений в ${result.files} файлах.`)
     return
   }
 
-  const bundles = source
-    ? loadLocalBundles(source, questId)
-    : await fetchQuestBundles(apiUrl, questId)
+  const bundles = requireNonEmptySelection(
+    source
+      ? loadLocalBundles(source, questId)
+      : await fetchQuestBundles(apiUrl, questId),
+    {
+      what: 'квестов',
+      source: source || apiUrl,
+      hint: 'проверь --source / --quest-id / --api-url',
+    },
+  )
 
   const isLocalSource = Boolean(source)
   const findIssues = isLocalSource ? findAuthoringRoleIssues : findRoleMismatches
@@ -128,7 +163,7 @@ async function main() {
         )
       : { fresh: found, known: [] }
 
-  if (asJson) {
+  if (args.json) {
     // `knownFindings` печатается наравне с `mismatches` — как у соседних сканов
     // (`scan-quest-compound-spelling-gap`). Без него `--json --baseline` отдаёт
     // пустой список и на чистом файле, и на файле, где всё вычтено baseline'ом:
@@ -167,14 +202,14 @@ async function main() {
     }
   }
 
-  process.exitCode = mismatches.length > 0 ? 1 : 0
+  requireNoBatchFailures(mismatches.length, {
+    total: Math.max(mismatches.length, bundles.length),
+    message: `расхождений ролей: ${mismatches.length}`,
+  })
 }
 
 if (require.main === module) {
-  main().catch((error) => {
-    console.error('❌', error.message)
-    process.exit(2)
-  })
+  runCli(main, { name: CLI_SPEC.name, usage: USAGE })
 }
 
 module.exports = { BASELINE_PATH, BASELINE_CONTRACT_VERSION, findingKey }

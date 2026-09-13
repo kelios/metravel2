@@ -24,9 +24,13 @@
  * перечитывается с диска и сравнивается с продом заново. Пока сверка не даёт
  * ноль расхождений, работа не считается сделанной.
  *
- *   node scripts/sync-quest-data-from-prod.js --source=scripts/pinsk-quest-data.js --dry-run
+ *   node scripts/sync-quest-data-from-prod.js --source scripts/pinsk-quest-data.js --dry-run
  *   node scripts/sync-quest-data-from-prod.js --source=scripts/pinsk-quest-data.js
  *   node scripts/sync-quest-data-from-prod.js --all --dry-run
+ *   node scripts/sync-quest-data-from-prod.js --help
+ *
+ * Выборку нужно назвать явно: без `--source` и без `--all` прогон не начинается,
+ * а неизвестное имя флага — отказ с кодом 2, а не тихий дефолт.
  */
 
 const fs = require('fs')
@@ -38,6 +42,14 @@ const { fetchQuestBundles, parseSteps } = require('./lib/questBundles')
 const { localQuestDataFiles } = require('./lib/scanBaseline')
 const { QUEST_DATA_FILE_PATTERN } = require('./scan-quest-answer-reachability')
 const { comparableFields, diffStep, diffQuestLevel, DEFAULT_API } = require('./lib/questProdDiff')
+const {
+  parseCliArgs,
+  parseCliTokens,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runCli,
+  UsageError,
+} = require('./lib/cli-contract')
 
 // ===================== Представление значения в исходнике =====================
 
@@ -238,23 +250,45 @@ async function syncFile(file, { apiUrl, dryRun }) {
 
 // ===================== CLI =====================
 
-function parseArgs(argv) {
-  const get = (name) => argv.find((a) => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=')
-  return {
-    apiUrl: get('api-url') || DEFAULT_API,
-    source: get('source') || null,
-    all: argv.includes('--all'),
-    dryRun: argv.includes('--dry-run'),
-  }
+const USAGE = `Перенос прод-контента квеста в локальный data-файл — #1554
+
+Usage:
+  node scripts/sync-quest-data-from-prod.js (--source <file> | --all) [--dry-run] [--api-url <url>]
+
+Options:
+  --source <file>       один data-файл
+  --all                 все локальные data-файлы корпуса
+  --dry-run             репетиция: печатает правки, файлы не пишет
+  --api-url <url>       адрес прода (по умолчанию METRAVEL_API_URL или https://metravel.by)
+  --help, -h            напечатать эту справку и выйти`
+
+const CLI_SPEC = {
+  name: 'sync-quest-data-from-prod',
+  usage: USAGE,
+  selection: 'quest data files',
+  flags: {
+    'api-url': { type: 'string', default: DEFAULT_API, stripTrailingSlash: true },
+    source: { type: 'string' },
+    all: { type: 'boolean' },
+    'dry-run': { type: 'boolean' },
+  },
 }
 
+const parseArgs = (tokens) => parseCliTokens(tokens, CLI_SPEC)
+
 async function main() {
-  const args = parseArgs(process.argv.slice(2))
+  const args = parseCliArgs(process.argv, CLI_SPEC)
   if (!args.source && !args.all) {
-    console.error('Укажи --source=scripts/<город>-quest-data.js или --all')
-    process.exit(1)
+    throw new UsageError('Укажи --source=scripts/<город>-quest-data.js или --all')
   }
-  const files = args.source ? [args.source] : localQuestDataFiles(process.cwd(), QUEST_DATA_FILE_PATTERN)
+  const files = requireNonEmptySelection(
+    args.source ? [args.source] : localQuestDataFiles(process.cwd(), QUEST_DATA_FILE_PATTERN),
+    {
+      what: 'data-файлов квестов',
+      source: args.source ? `--source ${args.source}` : '--all',
+      message: 'синхронизация не выполнена: выборка пуста',
+    },
+  )
 
   let applied = 0
   let skipped = 0
@@ -280,15 +314,15 @@ async function main() {
   console.log(`\nПеренесено полей: ${applied}${args.dryRun ? ' (DRY RUN, файлы не тронуты)' : ''}`)
   if (skipped) {
     console.log(`Не заменено: ${skipped} — правь вручную и прогоняй сверку заново.`)
-    process.exitCode = 1
   }
+  requireNoBatchFailures(skipped, {
+    total: applied + skipped,
+    message: `не заменено: ${skipped} — правь вручную и прогоняй сверку заново`,
+  })
 }
 
 module.exports = { sourceShapes, jsString, replaceField, replaceByAst, renderObject, comparableFields, parseArgs, syncFile, main }
 
 if (require.main === module) {
-  main().catch((e) => {
-    console.error('Fatal:', e.message || e)
-    process.exit(1)
-  })
+  runCli(main, { name: CLI_SPEC.name, usage: USAGE })
 }

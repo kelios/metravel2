@@ -23,8 +23,8 @@ const {
   parseCliArgs,
   requireNonEmptySelection,
   requireNoBatchFailures,
-  runSeoCli,
-} = require('./lib/seo-cli-contract')
+  runCli,
+} = require('./lib/cli-contract')
 
 const KEY = 'eb1c0d4b6f120c68a79525b7fe86581b'
 const HOST = 'metravel.by'
@@ -325,7 +325,7 @@ async function main(argv = process.argv, deps = {}) {
 }
 
 if (require.main === module) {
-  runSeoCli(main, { name: 'indexnow', usage: USAGE })
+  runCli(main, { name: 'indexnow', usage: USAGE })
 }
 
 module.exports = {

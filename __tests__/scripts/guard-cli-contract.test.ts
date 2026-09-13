@@ -1,5 +1,5 @@
 /**
- * Tests for scripts/guard-seo-cli-contract.js — #1391.
+ * Tests for scripts/guard-cli-contract.js — #1391.
  *
  * The guard is the permanent control for `SEO-OPS-001`, a family where four
  * point fixes (#1107, #1325, #1389, #1390) each cured one script and left the
@@ -26,11 +26,11 @@ const {
   isCoveredFile,
   maskSource,
   readDeclaredSelections,
-} = require('@/scripts/guard-seo-cli-contract')
+} = require('@/scripts/guard-cli-contract')
 
-const GUARD = path.resolve(process.cwd(), 'scripts', 'guard-seo-cli-contract.js')
+const GUARD = path.resolve(process.cwd(), 'scripts', 'guard-cli-contract.js')
 
-const COMPLIANT_SOURCE = `const { parseCliArgs, requireNonEmptySelection, requireNoBatchFailures, runSeoCli } = require('./lib/seo-cli-contract')
+const COMPLIANT_SOURCE = `const { parseCliArgs, requireNonEmptySelection, requireNoBatchFailures, runCli } = require('./lib/cli-contract')
 
 const USAGE = 'usage'
 const CLI_SPEC = { name: 'seo-demo', usage: USAGE, selection: 'rows', flags: { 'dry-run': { type: 'boolean' } } }
@@ -44,7 +44,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  runSeoCli(main, { name: 'seo-demo', usage: USAGE })
+  runCli(main, { name: 'seo-demo', usage: USAGE })
 }
 `
 
@@ -58,7 +58,7 @@ const REGRESSED_ARGV_SNIFF_SOURCE = COMPLIANT_SOURCE.replace(
 )
 
 // The #1398 shape: a script that satisfies every other rule — it loads the
-// contract, parses through it, runs through runSeoCli and names no exit code —
+// contract, parses through it, runs through runCli and names no exit code —
 // and still reports success over an empty list, because returning from main()
 // leaves the process at 0. Rule 4 cannot see this one: there is no exit(0) to ban.
 const SILENT_EMPTY_RETURN_SOURCE = COMPLIANT_SOURCE.replace(
@@ -125,9 +125,9 @@ const USAGE_TEMPLATE_HELPER_SOURCE = SILENT_EMPTY_RETURN_SOURCE.replace(
 // #1442: naming the contract, parse and runner only in USAGE used to pass.
 const USAGE_ONLY_CONTRACT_SOURCE = [
   "const USAGE = `usage",
-  "  require('./lib/seo-cli-contract')",
+  "  require('./lib/cli-contract')",
   '  parseCliArgs(',
-  '  runSeoCli(',
+  '  runCli(',
   '`',
   "const CLI_SPEC = { name: 'seo-demo', usage: USAGE, selection: 'none', flags: { 'dry-run': { type: 'boolean' } } }",
   'async function main() { return 0 }',
@@ -166,6 +166,20 @@ describe('covered set is derived from the filesystem, with no allowlist to escap
     expect(COVERED_FILE_PATTERN.test('indexnow-retry.js')).toBe(true)
   })
 
+  it('covers the quest CLI family by prefix and named writers (#1934)', () => {
+    expect(isCoveredFile('scripts/scan-quest-prod-drift.js')).toBe(true)
+    expect(isCoveredFile('scripts/scan-quest-hint-leak.js')).toBe(true)
+    expect(isCoveredFile('scripts/sync-quest-to-prod.js')).toBe(true)
+    expect(isCoveredFile('scripts/sync-quest-data-from-prod.js')).toBe(true)
+    expect(isCoveredFile('scripts/apply-quest-patches.js')).toBe(true)
+    expect(isCoveredFile('scripts/migrate-quest-from-file.js')).toBe(true)
+    expect(isCoveredFile('scripts/quest-answer-insights.js')).toBe(true)
+    expect(isCoveredFile('scripts/scan-quest-brand-new.js')).toBe(true)
+    // One-off city migrators and data modules are not CLIs.
+    expect(isCoveredFile('scripts/migrate-brest-quest.js')).toBe(false)
+    expect(isCoveredFile('scripts/minsk-loshitsa-quest-data.js')).toBe(false)
+  })
+
   it('follows a CLI moved into a subfolder instead of losing it', () => {
     expect(isCoveredFile('scripts/seo/seo-audit.js')).toBe(true)
     expect(isCoveredFile('scripts/ops/nested/indexnow-submit.js')).toBe(true)
@@ -173,8 +187,8 @@ describe('covered set is derived from the filesystem, with no allowlist to escap
 
   it('does not reach outside that surface', () => {
     // scripts/lib is the library home — the shared contract itself lives there.
-    expect(isCoveredFile('scripts/lib/seo-cli-contract.js')).toBe(false)
-    expect(isCoveredFile('scripts/guard-seo-cli-contract.js')).toBe(false)
+    expect(isCoveredFile('scripts/lib/cli-contract.js')).toBe(false)
+    expect(isCoveredFile('scripts/guard-cli-contract.js')).toBe(false)
     expect(isCoveredFile('utils/seo-helper.js')).toBe(false)
     expect(isCoveredFile('scripts/seo-redirects.json')).toBe(false)
   })
@@ -220,7 +234,7 @@ describe('positive probe: the scripts in this repo satisfy the contract', () => 
     const result = runCli(process.execPath, [GUARD], { cwd: process.cwd() })
 
     expect(result.status).toBe(0)
-    expect(result.stdout).toContain('seo-cli-contract: passed')
+    expect(result.stdout).toContain('cli-contract: passed')
   })
 
   it('parses its own arguments through the contract it enforces', () => {
@@ -232,7 +246,7 @@ describe('positive probe: the scripts in this repo satisfy the contract', () => 
 
     const help = runCli(process.execPath, [GUARD, '--help'], { cwd: process.cwd() })
     expect(help.status).toBe(0)
-    expect(help.stdout).toContain('SEO CLI contract guard')
+    expect(help.stdout).toContain('Ops CLI contract guard')
   })
 })
 
@@ -279,13 +293,13 @@ describe('negative probe: putting the permissive default back fails the guard', 
     {
       label: 'a script that never loads the shared contract',
       rule: 'contract-module',
-      reason: /does not require scripts\/lib\/seo-cli-contract\.js/,
+      reason: /does not require scripts\/lib\/cli-contract\.js/,
       content: "const fs = require('fs')\nasync function main() { return fs }\nmain()\n",
     },
     {
       label: 'the contract, parse and runner claimed only in USAGE — the #1442 shape',
       rule: 'contract-module',
-      reason: /does not require scripts\/lib\/seo-cli-contract\.js/,
+      reason: /does not require scripts\/lib\/cli-contract\.js/,
       content: USAGE_ONLY_CONTRACT_SOURCE,
     },
     {
@@ -295,9 +309,9 @@ describe('negative probe: putting the permissive default back fails the guard', 
       content: USAGE_ONLY_CONTRACT_SOURCE,
     },
     {
-      label: 'runSeoCli named only in USAGE',
+      label: 'runCli named only in USAGE',
       rule: 'exit-contract',
-      reason: /never calls runSeoCli/,
+      reason: /never calls runCli/,
       content: USAGE_ONLY_CONTRACT_SOURCE,
     },
     {
@@ -437,7 +451,7 @@ describe('negative probe: putting the permissive default back fails the guard', 
     // left anywhere in it, and everything else about it still compliant.
     expect(SILENT_EMPTY_RETURN_SOURCE).not.toContain('requireNonEmptySelection')
     expect(SILENT_EMPTY_RETURN_SOURCE).toContain("selection: 'rows'")
-    expect(SILENT_EMPTY_RETURN_SOURCE).toContain('runSeoCli(')
+    expect(SILENT_EMPTY_RETURN_SOURCE).toContain('runCli(')
     expect(MISSING_BATCH_FAILURE_GUARD_SOURCE).not.toContain('requireNoBatchFailures')
     expect(MISSING_BATCH_FAILURE_GUARD_SOURCE).toContain('requireNonEmptySelection(')
     expect(DUMMY_ZERO_BATCH_FAILURE_GUARD_SOURCE).not.toBe(COMPLIANT_SOURCE)
@@ -457,9 +471,9 @@ describe('negative probe: putting the permissive default back fails the guard', 
       '\n  requireNonEmptySelection(rows) refuses an empty run\n',
     )
     expect(USAGE_TEMPLATE_HELPER_SOURCE).toContain('const USAGE = `usage')
-    expect(USAGE_ONLY_CONTRACT_SOURCE).toContain("require('./lib/seo-cli-contract')")
+    expect(USAGE_ONLY_CONTRACT_SOURCE).toContain("require('./lib/cli-contract')")
     expect(USAGE_ONLY_CONTRACT_SOURCE).toContain('parseCliArgs(')
-    expect(USAGE_ONLY_CONTRACT_SOURCE).toContain('runSeoCli(')
+    expect(USAGE_ONLY_CONTRACT_SOURCE).toContain('runCli(')
     expect(USAGE_ONLY_CONTRACT_SOURCE.split('require(')).toHaveLength(2)
     expect(SHADOWED_CLI_SPEC_SOURCE).toContain("const CLI_SPEC = { name: 'fallback', selection: 'none' }")
     expect(SHADOWED_CLI_SPEC_SOURCE).toContain("selection: 'rows'")
@@ -621,12 +635,12 @@ describe('negative probe: putting the permissive default back fails the guard', 
     expect(hasCallExpression('const p = /requireNonEmptySelection\\(/', 'requireNonEmptySelection')).toBe(false)
     expect(hasCallExpression('parseCliArgs(process.argv, spec)', 'parseCliArgs')).toBe(true)
     expect(hasCallExpression("const help = 'parseCliArgs(process.argv, spec)'", 'parseCliArgs')).toBe(false)
-    expect(hasCallExpression('runSeoCli(main, spec)', 'runSeoCli')).toBe(true)
-    expect(hasCallExpression('const USAGE = `runSeoCli(`', 'runSeoCli')).toBe(false)
-    expect(hasRequireOf("const x = require('./lib/seo-cli-contract')", './lib/seo-cli-contract')).toBe(true)
-    expect(hasRequireOf("const x = require(\"./lib/seo-cli-contract\")", './lib/seo-cli-contract')).toBe(true)
-    expect(hasRequireOf("const x = require('fs')", './lib/seo-cli-contract')).toBe(false)
-    expect(hasRequireOf("const USAGE = `require('./lib/seo-cli-contract')`", './lib/seo-cli-contract')).toBe(false)
+    expect(hasCallExpression('runCli(main, spec)', 'runCli')).toBe(true)
+    expect(hasCallExpression('const USAGE = `runCli(`', 'runCli')).toBe(false)
+    expect(hasRequireOf("const x = require('./lib/cli-contract')", './lib/cli-contract')).toBe(true)
+    expect(hasRequireOf("const x = require(\"./lib/cli-contract\")", './lib/cli-contract')).toBe(true)
+    expect(hasRequireOf("const x = require('fs')", './lib/cli-contract')).toBe(false)
+    expect(hasRequireOf("const USAGE = `require('./lib/cli-contract')`", './lib/cli-contract')).toBe(false)
     // A pattern the mask reads as division — `]` does not open an expression, so
     // the regex body stays code. The name is still preceded by a slash, and a
     // mention in a pattern is not a call.
@@ -751,16 +765,16 @@ describe('the guard runs in a permanent check, not by hand', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf8'))
 
   it('is wired into governance:verify', () => {
-    expect(packageJson.scripts['guard:seo-cli-contract']).toBe('node scripts/guard-seo-cli-contract.js')
-    expect(packageJson.scripts['governance:verify']).toContain('guard:seo-cli-contract')
+    expect(packageJson.scripts['guard:cli-contract']).toBe('node scripts/guard-cli-contract.js')
+    expect(packageJson.scripts['governance:verify']).toContain('guard:cli-contract')
   })
 
   it('keeps its own tests inside the governance suite', () => {
     expect(packageJson.scripts['test:governance']).toContain(
-      '__tests__/scripts/guard-seo-cli-contract.test.ts',
+      '__tests__/scripts/guard-cli-contract.test.ts',
     )
     expect(packageJson.scripts['test:governance']).toContain(
-      '__tests__/scripts/seo-cli-contract.test.ts',
+      '__tests__/scripts/cli-contract.test.ts',
     )
   })
 })

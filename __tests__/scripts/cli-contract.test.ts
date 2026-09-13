@@ -1,5 +1,5 @@
 /**
- * Contract tests for scripts/lib/seo-cli-contract.js — #1391.
+ * Contract tests for scripts/lib/cli-contract.js — #1391.
  *
  * Four incidents in one family (`SEO-OPS-001`: #1107, #1325, #1389, #1390) broke
  * the same invariant: an undefined or unsupported input produced a wide action or
@@ -13,7 +13,7 @@ import path from 'path'
 
 import { makeTempDir, removeDir, runNodeCli, writeTextFile } from './cli-test-utils'
 
-const CONTRACT_PATH = path.resolve(process.cwd(), 'scripts', 'lib', 'seo-cli-contract.js')
+const CONTRACT_PATH = path.resolve(process.cwd(), 'scripts', 'lib', 'cli-contract.js')
 
 const {
   EmptySelectionError,
@@ -23,10 +23,11 @@ const {
   formatFlagList,
   normalizeSpec,
   parseCliArgs,
+  parseCliTokens,
   requireNonEmptySelection,
   requireNoBatchFailures,
   toCamelCase,
-} = require('@/scripts/lib/seo-cli-contract')
+} = require('@/scripts/lib/cli-contract')
 
 const SPEC = {
   name: 'demo',
@@ -65,6 +66,14 @@ describe('parseCliArgs: unsupported input is a visible failure, never a default'
     // The exact shape of #1389: one dropped character, and `argv.includes` used
     // to answer with the default set.
     expect(() => parse('--all', '--recent-day', '2')).toThrow('Unknown argument: --recent-day')
+  })
+
+  it('rejects an unknown --flag=value the same way as a space-separated typo (#1934)', () => {
+    expect(() => parseCliTokens(['--quest-id=brest-lantern'], SPEC)).toThrow(UsageError)
+    expect(() => parseCliTokens(['--quest-id=brest-lantern'], SPEC)).toThrow(
+      'Unknown argument: --quest-id=brest-lantern',
+    )
+    expect(() => parseCliTokens(['--dryrun'], SPEC)).toThrow('Unknown argument: --dryrun')
   })
 
   it('rejects a positional argument rather than ignoring it', () => {
@@ -305,13 +314,13 @@ describe('requireNoBatchFailures', () => {
   })
 })
 
-describe('runSeoCli exit-code contract', () => {
+describe('runCli exit-code contract', () => {
   const scriptFor = (body: string) => `
 const path = require('path')
 const contract = require(${JSON.stringify(CONTRACT_PATH)})
-const { ExpectedFailureError, UsageError, requireNonEmptySelection, runSeoCli } = contract
+const { ExpectedFailureError, UsageError, requireNonEmptySelection, runCli } = contract
 async function main() { ${body} }
-runSeoCli(main, { name: 'probe', usage: 'PROBE USAGE' })
+runCli(main, { name: 'probe', usage: 'PROBE USAGE' })
 `
 
   const runScript = (body: string) => {

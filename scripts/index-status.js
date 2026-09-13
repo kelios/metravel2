@@ -30,8 +30,8 @@ const {
   parseCliArgs,
   requireNonEmptySelection,
   requireNoBatchFailures,
-  runSeoCli,
-} = require('./lib/seo-cli-contract')
+  runCli,
+} = require('./lib/cli-contract')
 
 const SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly'
 
@@ -745,7 +745,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  runSeoCli(main, { name: 'index-status', usage: USAGE })
+  runCli(main, { name: 'index-status', usage: USAGE })
 }
 
 module.exports = {

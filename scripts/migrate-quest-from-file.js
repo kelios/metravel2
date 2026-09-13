@@ -4,44 +4,71 @@
  * Идемпотентно: переиспользует существующий город (по имени) и квест (по quest_id),
  * не дублирует шаги и финал.
  *
- * NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/migrate-quest-from-file.js \
- *   --source-file=scripts/tallinn-quest-data.js --api-url=https://metravel.by --token=YOUR_TOKEN
+ * Режим запуска обязателен и выбирается явно (#1934):
  *
- * Dry run (без записи):
  *   node scripts/migrate-quest-from-file.js --source-file=scripts/tallinn-quest-data.js --dry-run
+ *   node scripts/migrate-quest-from-file.js --source-file=scripts/tallinn-quest-data.js --apply \
+ *     [--api-url=https://metravel.by] [--token=…]
  */
 
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
-const apiUrlArg = args.find(a => a.startsWith('--api-url='));
-const tokenArg = args.find(a => a.startsWith('--token='));
-const sourceArg = args.find(a => a.startsWith('--source-file='));
-const API_BASE = apiUrlArg ? apiUrlArg.split('=')[1] : 'https://metravel.by';
+const {
+    UsageError,
+    parseCliArgs,
+    parseCliTokens,
+    requireNonEmptySelection,
+    requireNoBatchFailures,
+    runCli,
+} = require('./lib/cli-contract');
 
-if (!sourceArg) {
-    console.error('❌ Нужен --source-file=scripts/<city>-quest-data.js');
-    process.exit(1);
-}
-const SOURCE_FILE = path.resolve(process.cwd(), sourceArg.split('=').slice(1).join('='));
+const USAGE = `Универсальная миграция квеста на прод из data-файла
 
-function resolveToken() {
-    if (tokenArg) return tokenArg.split('=').slice(1).join('=');
+Usage:
+  node scripts/migrate-quest-from-file.js --source-file <file> (--dry-run | --apply) [--api-url <url>] [--token <token>]
+
+Options:
+  --source-file <file>  локальный data-файл квестов (обязателен)
+  --dry-run             репетиция: печатает POST-и, на прод ничего не пишет
+  --apply               боевая запись на прод (нужен токен)
+  --api-url <url>       адрес прода (по умолчанию https://metravel.by)
+  --token <token>       токен; по умолчанию METRAVEL_TOKEN или ~/.metravel_token
+  --help, -h            напечатать эту справку и выйти`;
+
+const CLI_SPEC = {
+    name: 'migrate-quest-from-file',
+    usage: USAGE,
+    selection: 'quests from the data file',
+    modes: {
+        flags: ['dry-run', 'apply'],
+        label: 'режимы запуска',
+        missing: 'Режим не выбран: --dry-run (репетиция) или --apply (боевая запись) — явно',
+    },
+    flags: {
+        'source-file': { type: 'string', required: true },
+        'api-url': { type: 'string', default: 'https://metravel.by', stripTrailingSlash: true },
+        token: { type: 'string', allowLeadingDash: true },
+        'dry-run': { type: 'boolean' },
+        apply: { type: 'boolean' },
+    },
+};
+
+const parseArgs = (tokens) => parseCliTokens(tokens, CLI_SPEC);
+
+let API_BASE = 'https://metravel.by';
+let TOKEN = null;
+let isDryRun = false;
+
+function resolveToken(explicit) {
+    if (explicit) return explicit;
     if (process.env.METRAVEL_TOKEN) return process.env.METRAVEL_TOKEN;
     try {
         const p = path.join(os.homedir(), '.metravel_token');
         if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim();
     } catch { /* ignore */ }
     return null;
-}
-const TOKEN = resolveToken();
-
-if (!TOKEN && !isDryRun) {
-    console.error('❌ Нужен токен: --token=YOUR_TOKEN, либо env METRAVEL_TOKEN, либо ~/.metravel_token');
-    process.exit(1);
 }
 
 function toBackendDecimal(value) {
@@ -132,7 +159,7 @@ function poiInfoPayload(step) {
     return raw;
 }
 
-const QUESTS = require(SOURCE_FILE);
+let QUESTS = [];
 
 // Кэш «имя города → id» на весь прогон: GET /api/quest-cities/ может не отдать
 // только что созданный город (пагинация), из-за чего второй квест того же
@@ -141,8 +168,23 @@ const cityIdByName = new Map();
 const cityKey = (name) => (name || '').trim().toLowerCase();
 
 async function main() {
-    console.log(`🚀 Миграция из ${path.basename(SOURCE_FILE)} → ${API_BASE} (${isDryRun ? 'DRY RUN' : 'LIVE'})\n`);
+    const args = parseCliArgs(process.argv, CLI_SPEC);
+    isDryRun = args.mode === 'dry-run';
+    API_BASE = args.apiUrl;
+    TOKEN = resolveToken(args.token);
+    if (!TOKEN && !isDryRun) {
+        throw new UsageError('Нужен токен: --token=…, METRAVEL_TOKEN или ~/.metravel_token');
+    }
+    QUESTS = requireNonEmptySelection(require(path.resolve(process.cwd(), args.sourceFile)), {
+        what: 'квестов',
+        source: `--source-file ${args.sourceFile}`,
+        hint: 'data-файл должен экспортировать непустой массив квестов',
+    });
 
+    console.log(`🚀 Миграция из ${path.basename(args.sourceFile)} → ${API_BASE} (${isDryRun ? 'DRY RUN' : 'LIVE'})\n`);
+
+    let failed = 0;
+    let total = 0;
     for (const q of QUESTS) {
         console.log(`\n📋 ${q.quest_id}: "${q.title}"`);
 
@@ -199,6 +241,8 @@ async function main() {
                     cityIdByName.set(key, cityId);
                 }
             } catch (e) {
+                total += 1;
+                failed += 1;
                 console.error(`  ❌ City: ${e.message}`);
                 continue;
             }
@@ -223,6 +267,8 @@ async function main() {
                 questDbId = quest.id;
                 console.log(`  ✅ Quest: id=${questDbId}`);
             } catch (e) {
+                total += 1;
+                failed += 1;
                 console.error(`  ❌ Quest: ${e.message}`);
                 continue;
             }
@@ -259,6 +305,8 @@ async function main() {
                 });
                 console.log(`  ✅ Intro step`);
             } catch (e) {
+                total += 1;
+                failed += 1;
                 console.error(`  ❌ Intro: ${e.message}`);
             }
         } else if (q.intro && hasIntro) {
@@ -296,6 +344,8 @@ async function main() {
                 await apiPost('/api/quest-steps/', stepPayload);
                 console.log(`  ✅ Step ${i + 1}/${q.steps.length}: ${s.step_id} — ${s.title}`);
             } catch (e) {
+                total += 1;
+                failed += 1;
                 console.error(`  ❌ Step ${s.step_id}: ${e.message}`);
             }
         }
@@ -309,6 +359,8 @@ async function main() {
                 await apiPost('/api/quest-finales/', { quest: questDbId, text: finale });
                 console.log(`  ✅ Finale`);
             } catch (e) {
+                total += 1;
+                failed += 1;
                 console.error(`  ❌ Finale: ${e.message}`);
             }
         }
@@ -318,6 +370,14 @@ async function main() {
     }
 
     console.log('\n✅ Миграция завершена');
+    requireNoBatchFailures(failed, {
+        total: Math.max(failed, total, QUESTS.length),
+        message: `не применилось операций: ${failed}`,
+    });
 }
 
-main().catch(err => { console.error('Fatal:', err); process.exit(1); });
+module.exports = { CLI_SPEC, USAGE, parseArgs, resolveToken, main };
+
+if (require.main === module) {
+    runCli(main, { name: CLI_SPEC.name, usage: USAGE });
+}

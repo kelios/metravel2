@@ -110,9 +110,9 @@ describe('очередь индексации: разбор аргументов
   it('парсит аргументы только через общий контракт SEO-CLI', () => {
     const source = fs.readFileSync(SCRIPT, 'utf8')
 
-    expect(source).toContain("require('./lib/seo-cli-contract')")
+    expect(source).toContain("require('./lib/cli-contract')")
     expect(source).toContain('parseCliArgs(')
-    expect(source).toContain('runSeoCli(')
+    expect(source).toContain('runCli(')
   })
 })
 

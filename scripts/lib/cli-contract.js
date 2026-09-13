@@ -1,7 +1,7 @@
 'use strict'
 
 /**
- * Shared CLI contract for the SEO ops scripts — #1391.
+ * Shared CLI contract for the ops scripts — #1391 (SEO family), #1934 (quest family).
  *
  * Four incidents in one family (`SEO-OPS-001`: #1107, #1325, #1389, #1390) broke
  * the same invariant: a script fed an undefined or unsupported input did
@@ -10,8 +10,14 @@
  * `args.indexOf('--limit')`, a chain of `arg === '--json'` — and every one of
  * those shapes ignores a typo and keeps going with the default.
  *
- * So the parse lives here once, and `scripts/guard-seo-cli-contract.js` fails CI
- * when a SEO script stops going through it:
+ * The module is family-neutral on purpose. #1934 found the same invariant broken
+ * in the quest CLI family, which the first consolidation left uncovered, and
+ * this time in scripts that WRITE to production: a typo inside `--dry-run`
+ * itself fell through to a live edit of quest content. A second copy of this
+ * parser for that family would have been a second place to fix the next time.
+ *
+ * So the parse lives here once, and `scripts/guard-cli-contract.js` fails CI
+ * when a covered script stops going through it:
  *   - an unknown or mistyped argument is a `UsageError`, never a default;
  *   - a script that declares `modes` refuses to run until exactly one is named;
  *   - a flag that needs a value never swallows the next flag as that value;
@@ -20,9 +26,11 @@
  *   - a processed batch goes through `requireNoBatchFailures`, so caught item
  *     failures cannot be printed and then forgotten behind exit code 0.
  *
- * Deliberately not an options library: no positionals, no `-x` short flags
- * besides `-h`, no "guess the type". Anything this parser cannot express should
- * become an explicit flag, not a fallback.
+ * Deliberately not an options library: no `-x` short flags besides `-h`, no
+ * "guess the type", and no undeclared positionals — a script that takes free
+ * operands says so with `positionals`, so an unknown `--flag` is still refused
+ * instead of being collected as one of them. Anything this parser cannot
+ * express should become an explicit flag, not a fallback.
  */
 
 const FLAG_TYPES = new Set(['boolean', 'string', 'int'])
@@ -36,7 +44,7 @@ class UsageError extends Error {}
  * `--help` was asked for. Thrown rather than returned as a flag on purpose: a
  * caller that forgets `if (args.help) return` would otherwise run the script for
  * real — in seo-fix-links that meant `--help` rewriting every published body,
- * because "no mode" reads as "not a dry run". `runSeoCli` prints the usage and
+ * because "no mode" reads as "not a dry run". `runCli` prints the usage and
  * ends the run, so forgetting it is not possible.
  */
 class HelpRequested extends Error {}
@@ -66,8 +74,8 @@ const formatFlagList = (names) => {
 function normalizeSpec(spec) {
   const name = spec && spec.name
   const usage = spec && spec.usage
-  if (typeof name !== 'string' || !name) throw new Error('seo-cli-contract: spec.name is required')
-  if (typeof usage !== 'string' || !usage) throw new Error('seo-cli-contract: spec.usage is required')
+  if (typeof name !== 'string' || !name) throw new Error('cli-contract: spec.name is required')
+  if (typeof usage !== 'string' || !usage) throw new Error('cli-contract: spec.usage is required')
 
   const rawFlags = (spec && spec.flags) || {}
   const modes = (spec && spec.modes) || null
@@ -75,12 +83,12 @@ function normalizeSpec(spec) {
 
   for (const [flagName, rawFlag] of Object.entries(rawFlags)) {
     if (!FLAG_NAME_PATTERN.test(flagName)) {
-      throw new Error(`seo-cli-contract: ${name}: bad flag name "${flagName}" (expected kebab-case)`)
+      throw new Error(`cli-contract: ${name}: bad flag name "${flagName}" (expected kebab-case)`)
     }
-    if (flagName === 'help') throw new Error(`seo-cli-contract: ${name}: --help is built in`)
+    if (flagName === 'help') throw new Error(`cli-contract: ${name}: --help is built in`)
     const type = rawFlag.type
     if (!FLAG_TYPES.has(type)) {
-      throw new Error(`seo-cli-contract: ${name}: --${flagName} has unknown type "${type}"`)
+      throw new Error(`cli-contract: ${name}: --${flagName} has unknown type "${type}"`)
     }
     flags.set(flagName, {
       name: flagName,
@@ -106,16 +114,46 @@ function normalizeSpec(spec) {
 
   if (modes) {
     if (!Array.isArray(modes.flags) || modes.flags.length < 2) {
-      throw new Error(`seo-cli-contract: ${name}: modes.flags needs at least two flag names`)
+      throw new Error(`cli-contract: ${name}: modes.flags needs at least two flag names`)
     }
     for (const modeName of modes.flags) {
       if (!flags.has(modeName)) {
-        throw new Error(`seo-cli-contract: ${name}: mode --${modeName} is not declared in flags`)
+        throw new Error(`cli-contract: ${name}: mode --${modeName} is not declared in flags`)
       }
     }
   }
 
-  return { name, usage, flags, modes }
+  const positionals = normalizePositionals(spec, name, flags)
+
+  return { name, usage, flags, modes, positionals }
+}
+
+/**
+ * Free operands are opt-in and declared, never implicit. The first version of
+ * this module refused them outright, which pushed `apply-quest-patches.js` to
+ * keep its own `args.filter(a => !a.startsWith('--'))` — the exact shape that
+ * swallowed `--dryrun` into the file list (#1934). Declaring them here keeps the
+ * shell glob that tool is used with (`patches-*.json`) while an unknown `--flag`
+ * still fails: tokens are only collected as operands once they do not start with
+ * `-` at all.
+ */
+function normalizePositionals(spec, name, flags) {
+  const raw = spec && spec.positionals
+  if (!raw) return null
+  const key = raw.key || 'positionals'
+  if (typeof key !== 'string' || !key) {
+    throw new Error(`cli-contract: ${name}: positionals.key must be a non-empty string`)
+  }
+  for (const flag of flags.values()) {
+    if (flag.key === key) {
+      throw new Error(`cli-contract: ${name}: positionals.key "${key}" collides with --${flag.name}`)
+    }
+  }
+  const min = Object.prototype.hasOwnProperty.call(raw, 'min') ? raw.min : 0
+  if (!Number.isInteger(min) || min < 0) {
+    throw new Error(`cli-contract: ${name}: positionals.min must be a non-negative integer`)
+  }
+  return { key, min, valueName: raw.valueName || 'an argument' }
 }
 
 const applyDefaults = (flags) => {
@@ -124,12 +162,15 @@ const applyDefaults = (flags) => {
   return values
 }
 
-function readFlagValue(flag, token, rawValue) {
+function readFlagValue(flag, token, rawValue, { inline = false } = {}) {
   // A leading `-` is a mistyped flag, not a value: `--urls-file -h` has to say so
   // here instead of failing later on ENOENT '-h'. Flags that carry free text opt
   // out with `allowLeadingDash`, otherwise a title like "-40 °C" is unpassable.
-  const looksLikeFlag = rawValue !== undefined && rawValue.startsWith('-') && !flag.allowLeadingDash
-  if (rawValue === undefined || looksLikeFlag) {
+  // `--limit=-5` is attached to its flag and cannot have been a separate token,
+  // so only the space-separated form is read this strictly.
+  const looksLikeFlag =
+    !inline && rawValue !== undefined && rawValue.startsWith('-') && !flag.allowLeadingDash
+  if (rawValue === undefined || rawValue === '' || looksLikeFlag) {
     throw new UsageError(`${token} expects ${flag.valueName}`)
   }
   if (flag.type === 'int') {
@@ -146,43 +187,78 @@ function readFlagValue(flag, token, rawValue) {
 
 /**
  * @param {string[]} argv full `process.argv` — the first two entries are skipped
- * @param {object} spec `{ name, usage, flags, modes }`
- * @returns {object} `{ help, mode, ...values }` with one camelCase key per flag
+ * @param {object} spec `{ name, usage, flags, modes, positionals }`
+ * @returns {object} `{ mode, ...values }` with one camelCase key per flag
  */
 function parseCliArgs(argv, spec) {
-  const { flags, modes } = normalizeSpec(spec)
+  return parseCliTokens(Array.isArray(argv) ? argv.slice(2) : [], spec)
+}
+
+/**
+ * The same parse over the argument tokens alone, without the `node script.js`
+ * prefix. Scripts run through `parseCliArgs(process.argv, …)`; this is what a
+ * test or an operator probe calls, so `parseArgs(['--quest-id=x'])` answers
+ * about that flag instead of silently slicing it away (#1934).
+ *
+ * @param {string[]} tokens argument tokens, already without `node script.js`
+ * @param {object} spec `{ name, usage, flags, modes, positionals }`
+ */
+function parseCliTokens(tokens, spec) {
+  const { flags, modes, positionals } = normalizeSpec(spec)
   const values = applyDefaults(flags)
-  const tokens = Array.isArray(argv) ? argv.slice(2) : []
+  const list = Array.isArray(tokens) ? tokens : []
+  const operands = []
   const seen = new Set()
   let mode = null
   let help = false
 
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i]
+  for (let i = 0; i < list.length; i++) {
+    const token = list[i]
     if (token === '--help' || token === '-h') {
       help = true
       continue
     }
     if (!token.startsWith('--')) {
+      // Anything that still starts with `-` is a mistyped flag, never an
+      // operand: collecting `-dry-run` as a file name is how the silent default
+      // got in.
+      if (positionals && !token.startsWith('-')) {
+        operands.push(token)
+        continue
+      }
       throw new UsageError(`Unexpected argument: ${token} — every option is named, e.g. --dry-run`)
     }
 
-    const flag = flags.get(token.slice(2))
+    // Both spellings are supported because both are in use: the SEO family was
+    // written with `--limit 5`, the quest family with `--source=file.js`. The
+    // name is read out of the token either way, so a typo in it is a refusal in
+    // both — which is the whole point (#1934).
+    const separator = token.indexOf('=')
+    const inline = separator !== -1
+    const name = inline ? token.slice(2, separator) : token.slice(2)
+    const inlineValue = inline ? token.slice(separator + 1) : undefined
+
+    const flag = flags.get(name)
     if (!flag) throw new UsageError(`Unknown argument: ${token}`)
-    if (seen.has(flag.name)) throw new UsageError(`${token} given twice — pass it once`)
+    if (seen.has(flag.name)) throw new UsageError(`--${flag.name} given twice — pass it once`)
     seen.add(flag.name)
 
     if (flag.type === 'boolean') {
+      // `--dry-run=false` reads as "do not rehearse" and would be the same
+      // silent write this contract exists to stop, so it is refused outright.
+      if (inline) throw new UsageError(`--${flag.name} takes no value`)
       values[flag.key] = true
+    } else if (inline) {
+      values[flag.key] = readFlagValue(flag, `--${flag.name}`, inlineValue, { inline: true })
     } else {
-      values[flag.key] = readFlagValue(flag, token, tokens[i + 1])
+      values[flag.key] = readFlagValue(flag, token, list[i + 1])
       i++
     }
 
     if (modes && modes.flags.includes(flag.name)) {
       if (mode && mode !== flag.name) {
         throw new UsageError(
-          `--${mode} and ${token} pick different ${modes.label || 'modes'} — choose one`,
+          `--${mode} and --${flag.name} pick different ${modes.label || 'modes'} — choose one`,
         )
       }
       mode = flag.name
@@ -212,9 +288,17 @@ function parseCliArgs(argv, spec) {
     }
   }
 
+  if (positionals && operands.length < positionals.min) {
+    throw new UsageError(
+      `Expected at least ${positionals.min} ${positionals.valueName}${positionals.min === 1 ? '' : 's'}`,
+    )
+  }
+
   // No `help` key on purpose: `--help` never reaches here, so a `false` field
   // would only invite `if (args.help)` branches back into the callers.
-  return { ...values, mode }
+  const parsed = { ...values, mode }
+  if (positionals) parsed[positionals.key] = operands
+  return parsed
 }
 
 /**
@@ -262,7 +346,7 @@ function requireNoBatchFailures(failed, { total, what, message } = {}) {
  * the work and found nothing wrong. Throw `ExpectedFailureError` for the second
  * case so the operator gets the verdict, not a stack over their own report.
  */
-function runSeoCli(main, { name, usage }) {
+function runCli(main, { name, usage }) {
   return Promise.resolve()
     .then(() => main())
     .catch((error) => {
@@ -297,8 +381,9 @@ module.exports = {
   formatFlagList,
   normalizeSpec,
   parseCliArgs,
+  parseCliTokens,
   requireNonEmptySelection,
   requireNoBatchFailures,
-  runSeoCli,
+  runCli,
   toCamelCase,
 }

@@ -58,6 +58,41 @@ const { fetchQuestBundles, loadLocalBundles, parseSteps } = require('./lib/quest
 const { localQuestDataFiles } = require('./lib/scanBaseline')
 const { QUEST_DATA_FILE_PATTERN } = require('./scan-quest-answer-reachability')
 const { diffQuest, comparableFields, DEFAULT_API } = require('./lib/questProdDiff')
+const {
+  EmptySelectionError,
+  parseCliArgs,
+  parseCliTokens,
+  requireNoBatchFailures,
+  requireNonEmptySelection,
+  runCli,
+} = require('./lib/cli-contract')
+
+const USAGE = `Сверка локальных data-файлов квестов с продом — #1554
+
+Usage:
+  node scripts/scan-quest-prod-drift.js [--source <file>] [--api-url <url>] [--json]
+
+Options:
+  --source <file>       сверить один data-файл вместо всего корпуса
+  --api-url <url>       адрес прода (по умолчанию METRAVEL_API_URL или https://metravel.by)
+  --json                machine-readable результат на stdout
+  --help, -h            напечатать эту справку и выйти`
+
+// Флаг распознаётся по ИМЕНИ, а не по значению: до #1934 скан читал только
+// `--source=`, и вызов `--quest-id=brest-lantern` молча уходил в обход всего
+// корпуса, печатая «Расхождений с продом нет» — ответ не про тот квест, о
+// котором спросили. Обе записи, `--source file.js` и `--source=file.js`,
+// разбираются одинаково; неизвестное имя — UsageError.
+const CLI_SPEC = {
+  name: 'scan-quest-prod-drift',
+  usage: USAGE,
+  selection: 'quest data files',
+  flags: {
+    'api-url': { type: 'string', default: DEFAULT_API, stripTrailingSlash: true },
+    source: { type: 'string' },
+    json: { type: 'boolean' },
+  },
+}
 
 /**
  * 404 по конкретному квесту — это результат замера, а не сбой замера: сравнивать
@@ -108,14 +143,12 @@ async function scanFile(file, apiUrl) {
   return { rows, compared }
 }
 
-function parseArgs(argv) {
-  const get = (name) => argv.find((a) => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=')
-  return {
-    apiUrl: get('api-url') || DEFAULT_API,
-    source: get('source') || null,
-    json: argv.includes('--json'),
-  }
-}
+/**
+ * Разбор одних только аргументов, без префикса `node script.js`, — та форма,
+ * которой пользуются тесты и ручная проба оператора. Именно она отвечает про
+ * переданный флаг, а не срезает его молча (#1934).
+ */
+const parseArgs = (tokens) => parseCliTokens(tokens, CLI_SPEC)
 
 function reportText(rows, files, compared) {
   console.log(`Сверка локальных data-файлов с продом: ${files} файлов, поля ${comparableFields.join(', ')}`)
@@ -154,8 +187,15 @@ function reportText(rows, files, compared) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2))
-  const files = args.source ? [args.source] : localQuestDataFiles(process.cwd(), QUEST_DATA_FILE_PATTERN)
+  const args = parseCliArgs(process.argv, CLI_SPEC)
+  const files = requireNonEmptySelection(
+    args.source ? [args.source] : localQuestDataFiles(process.cwd(), QUEST_DATA_FILE_PATTERN),
+    {
+      what: 'data-файлов квестов',
+      source: args.source ? `--source ${args.source}` : 'scripts/',
+      hint: 'запускать из корня репозитория',
+    },
+  )
 
   const rows = []
   let compared = 0
@@ -173,7 +213,7 @@ async function main() {
   // Точечный `--source` под правило не подпадает: один намеренно снятый с
   // публикации файл (`ozero-glubokoe-quest-data.js`) — штатный ответ.
   if (!args.source && compared === 0 && rows.some((r) => r.missingOnProd)) {
-    throw new Error(
+    throw new EmptySelectionError(
       `на ${args.apiUrl} не нашлось ни одного из ${rows.length} квестов корпуса — `
       + 'сравнивать не с чем, проверь --api-url / METRAVEL_API_URL',
     )
@@ -182,14 +222,17 @@ async function main() {
   if (args.json) console.log(JSON.stringify({ files: files.length, rows }, null, 2))
   else reportText(rows, files.length, compared)
 
-  if (rows.some((r) => r.drifted)) process.exitCode = 1
+  // После отчёта, а не вместо него: найденное расхождение — это результат
+  // замера, и оператор должен увидеть список раньше вердикта.
+  const drifted = rows.filter((r) => r.drifted)
+  requireNoBatchFailures(drifted.length, {
+    total: files.length,
+    message: `разошлись с продом: ${drifted.length} из ${files.length} файлов`,
+  })
 }
 
-module.exports = { isMissingOnProd, scanFile, parseArgs, reportText, main }
+module.exports = { CLI_SPEC, USAGE, isMissingOnProd, scanFile, parseArgs, reportText, main }
 
 if (require.main === module) {
-  main().catch((e) => {
-    console.error('Fatal:', e.message || e)
-    process.exit(1)
-  })
+  runCli(main, { name: CLI_SPEC.name, usage: USAGE })
 }

@@ -28,8 +28,8 @@ const {
   parseCliArgs,
   requireNonEmptySelection,
   requireNoBatchFailures,
-  runSeoCli,
-} = require('./lib/seo-cli-contract');
+  runCli,
+} = require('./lib/cli-contract');
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by').replace(/\/+$/, '') + '/api';
 const BACKUP_DIR = path.join(__dirname, '.seo-backups');
@@ -332,7 +332,7 @@ async function main(argv = process.argv, deps = {}) {
 }
 
 if (require.main === module) {
-  runSeoCli(main, { name: 'seo-fix-links', usage: USAGE });
+  runCli(main, { name: 'seo-fix-links', usage: USAGE });
 }
 
 module.exports = { CLI_SPEC, USAGE, detectRegression, getJson, listTravels, main, rewriteLinks };

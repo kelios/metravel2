@@ -3,9 +3,9 @@
 const fs = require('fs')
 const path = require('path')
 
-const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract')
+const { parseCliArgs, runCli } = require('./lib/cli-contract')
 
-// Guard #1391: SEO ops scripts have no permissive default.
+// Guard #1391 (SEO family), #1934 (quest family): ops scripts have no permissive default.
 //
 // Four incidents in one family (`SEO-OPS-001`: #1107, #1325, #1389, #1390) broke
 // one invariant — a script fed an undefined or unsupported input did something
@@ -13,10 +13,10 @@ const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract')
 // point fix cured one script and left the pattern free to reappear in the next,
 // so the contract is now enforced instead of remembered:
 //
-//   1. the CLI parses through `scripts/lib/seo-cli-contract.js`, where an
+//   1. the CLI parses through `scripts/lib/cli-contract.js`, where an
 //      unknown or mistyped argument is a UsageError and a declared mode is
 //      mandatory;
-//   2. it runs through `runSeoCli`, so bad input exits 2 and a failed run exits 1;
+//   2. it runs through `runCli`, so bad input exits 2 and a failed run exits 1;
 //   3. it holds no hand-rolled flag lookup — `argv.includes('--all')`,
 //      `args.indexOf('--limit')`, `arg === '--json'` — each of which answers a
 //      typo with the default instead of an error (#1389 submitted 544 URLs that way);
@@ -35,20 +35,36 @@ const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract')
 //      evidence about the batch; focused script tests pin the live calls and
 //      their placement after the useful output.
 //
+// #1934 added the quest CLI family to the covered set. The invariant had broken
+// there in exactly the same way — `argv.find(a => a.startsWith('--source='))`
+// with no allowlist on the flag NAME — and this time in scripts that write to
+// production: `sync-quest-to-prod.js --dryrun` was a live edit of quest content,
+// because the misspelt flag was dropped and `--dry-run` defaulted to off. Those
+// writers now declare `modes`, so neither spelling has a default at all.
+//
 // The covered set is derived from the filesystem, not an allowlist: a new
-// `scripts/seo-*.js` or `scripts/indexnow-*.js` joins it automatically and fails
-// until it adopts the contract. There is deliberately no "skip if unclear" path —
-// a guard with a permissive default would be the very bug it guards against.
+// `scripts/seo-*.js`, `scripts/indexnow-*.js` or `scripts/scan-quest-*.js` joins
+// it automatically and fails until it adopts the contract. There is deliberately
+// no "skip if unclear" path — a guard with a permissive default would be the very
+// bug it guards against.
 
 const OUTPUT_CONTRACT_VERSION = 1
 
 const SCRIPTS_DIR = 'scripts'
-const CONTRACT_MODULE = 'scripts/lib/seo-cli-contract.js'
-// By name for the family's naming convention, plus the two prod gates that
-// predate it — `test-seo-prod.js` is #1107, the first incident of SEO-OPS-001,
-// and `post-deploy-seo-check.js` is its post-deploy twin.
+const CONTRACT_MODULE = 'scripts/lib/cli-contract.js'
+// By name for each family's naming convention, plus the gates that predate it —
+// `test-seo-prod.js` is #1107, the first incident of SEO-OPS-001, and
+// `post-deploy-seo-check.js` is its post-deploy twin.
+//
+// The quest half is two prefixes (`scan-quest-`, `sync-quest-`) and three named
+// tools. The prefixes are what makes the rule survive: the next quest scanner or
+// prod sync is covered the day it is written, which is how this family got here
+// in the first place. The three named tools cannot be a prefix — `scripts/` holds
+// ~60 one-off `migrate-<city>-quest.js` scripts and ~175 `*-quest-data.js` data
+// modules, none of which are CLIs, and sweeping them in would be a guard that
+// fails on data files instead of on parsers.
 const COVERED_FILE_PATTERN =
-  /^(seo-.+|indexnow-.+|index-status|test-seo-prod|post-deploy-seo-check)\.js$/
+  /^(seo-.+|indexnow-.+|index-status|test-seo-prod|post-deploy-seo-check|scan-quest-.+|sync-quest-.+|apply-quest-patches|migrate-quest-from-file|quest-answer-insights)\.js$/
 // `scripts/lib/` is the library home, not a CLI surface — the shared contract
 // itself lives there and obviously cannot require itself. Matched as an exact
 // path prefix, not by folder name: a `scripts/ops/lib/seo-foo.js` is still a CLI
@@ -167,7 +183,7 @@ const declaresNoSelection = (code) => {
   return values.length > 0 && values.every((value) => value === NO_SELECTION)
 }
 
-const CONTRACT_REQUIRE_PATH = './lib/seo-cli-contract'
+const CONTRACT_REQUIRE_PATH = './lib/cli-contract'
 
 const REQUIRED_NEEDLES = [
   {
@@ -182,8 +198,8 @@ const REQUIRED_NEEDLES = [
   },
   {
     rule: 'exit-contract',
-    satisfiedWhen: (code) => hasCallExpression(code, 'runSeoCli'),
-    reason: 'never calls runSeoCli() — bad input would not reach the non-zero exit contract',
+    satisfiedWhen: (code) => hasCallExpression(code, 'runCli'),
+    reason: 'never calls runCli() — bad input would not reach the non-zero exit contract',
   },
   {
     rule: 'selection-declared',
@@ -225,6 +241,16 @@ const FORBIDDEN_PATTERNS = [
     reason: 'looks a flag up with includes()/indexOf() — a mistyped flag silently keeps the default (#1389)',
   },
   {
+    // `argv.find(a => a.startsWith('--source='))` reads the VALUE of a flag it
+    // already believes in and drops every name it does not recognise — the shape
+    // the whole quest family was written in (#1934). `.startsWith('--')` on its
+    // own is the same defect wearing a filter: it sorts tokens into "flags I will
+    // ignore" and "everything else" without ever refusing one.
+    rule: 'hand-rolled-parse',
+    pattern: /\.startsWith\(\s*['"`]--/,
+    reason: "reads a flag by prefix — an unknown flag name is dropped instead of refused (#1934)",
+  },
+  {
     rule: 'hand-rolled-parse',
     pattern: /===\s*['"]--[a-z]/,
     reason: 'compares an argument against a flag literal — declare the flag in the CLI spec instead',
@@ -263,10 +289,10 @@ const FORBIDDEN_PATTERNS = [
 
 const normalizePath = (value) => String(value || '').replace(/\\/g, '/')
 
-const USAGE = `SEO CLI contract guard — SEO-OPS-001
+const USAGE = `Ops CLI contract guard — SEO-OPS-001
 
 Usage:
-  node scripts/guard-seo-cli-contract.js [--json]
+  node scripts/guard-cli-contract.js [--json]
 
 Options:
   --json                machine-readable result on stdout
@@ -276,7 +302,7 @@ Options:
 // mistyped \`--jsonn\` printing human text to a caller that expects JSON is the
 // very shape this guard exists to stop.
 const CLI_SPEC = {
-  name: 'guard-seo-cli-contract',
+  name: 'guard-cli-contract',
   usage: USAGE,
   flags: { json: { type: 'boolean' } },
 }
@@ -315,7 +341,7 @@ const startsRegexLiteral = (emitted) => {
 // Two readings come out of it, and both rules need their own. Rules that read
 // values (`selection: 'rows'`, `argv.includes('--all')`) need the literals
 // intact. Rules that look for a call need them blanked: `parseCliArgs(`,
-// `runSeoCli(`, `requireNonEmptySelection(` or `requireNoBatchFailures(`
+// `runCli(`, `requireNonEmptySelection(` or `requireNoBatchFailures(`
 // inside a USAGE template, a regex or any other string is prose about the call,
 // not the call — and every
 // covered script writes its USAGE as a multi-line template, so that shape is the
@@ -451,7 +477,7 @@ const unwrapStringLiteral = (value) => {
   return null
 }
 
-// `require('./lib/seo-cli-contract')` is itself a string literal, so masking
+// `require('./lib/cli-contract')` is itself a string literal, so masking
 // literals would erase the path. Locate `require(` in code position, then read
 // the first argument from the original source at the same offsets.
 const hasRequireOf = (code, modulePath) => {
@@ -625,7 +651,7 @@ const evaluateGuard = ({ sources = [] } = {}) => {
   if (covered.length === 0) {
     return {
       ok: false,
-      reason: `No SEO CLI script matched under ${SCRIPTS_DIR}/ — the guard scanned nothing, which is a broken scan, not a clean repository`,
+      reason: `No ops CLI script matched under ${SCRIPTS_DIR}/ — the guard scanned nothing, which is a broken scan, not a clean repository`,
       checkedFiles: 0,
       violations: [
         {
@@ -641,7 +667,7 @@ const evaluateGuard = ({ sources = [] } = {}) => {
   if (violations.length === 0) {
     return {
       ok: true,
-      reason: `All ${covered.length} SEO CLI script(s) parse through ${CONTRACT_MODULE} and fail loudly on unsupported input`,
+      reason: `All ${covered.length} ops CLI script(s) parse through ${CONTRACT_MODULE} and fail loudly on unsupported input`,
       checkedFiles: covered.length,
       violations: [],
     }
@@ -649,7 +675,7 @@ const evaluateGuard = ({ sources = [] } = {}) => {
 
   return {
     ok: false,
-    reason: `SEO CLI contract broken — see ${CONTRACT_MODULE}`,
+    reason: `Ops CLI contract broken — see ${CONTRACT_MODULE}`,
     checkedFiles: covered.length,
     violations,
   }
@@ -687,18 +713,18 @@ const main = () => {
   }
 
   if (result.ok) {
-    console.log(`seo-cli-contract: passed. ${result.reason}`)
+    console.log(`cli-contract: passed. ${result.reason}`)
     return
   }
 
-  console.error('seo-cli-contract: failed.')
+  console.error('cli-contract: failed.')
   console.error(`- ${result.reason}`)
   formatViolations(result.violations).forEach((line) => console.error(line))
   process.exit(1)
 }
 
 if (require.main === module) {
-  runSeoCli(main, { name: 'guard-seo-cli-contract', usage: USAGE })
+  runCli(main, { name: 'guard-cli-contract', usage: USAGE })
 }
 
 module.exports = {

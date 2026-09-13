@@ -71,6 +71,13 @@ const {
   splitByBaseline: splitFindingsByBaseline,
   writeBaseline,
 } = require('./lib/scanBaseline')
+const {
+  parseCliArgs,
+  parseCliTokens,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runCli,
+} = require('./lib/cli-contract')
 
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 
@@ -255,18 +262,37 @@ async function loadFromApi(apiUrl, questId) {
 
 // ===================== CLI =====================
 
-function parseArgs(argv) {
-  const get = (name) => argv.find((a) => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=')
-  return {
-    apiUrl: get('api-url') || DEFAULT_API,
-    questId: get('quest-id') || null,
-    source: get('source') || null,
-    baseline: get('baseline') || null,
-    updateBaseline: argv.includes('--update-baseline'),
-    strict: argv.includes('--strict'),
-    json: argv.includes('--json'),
-  }
+const USAGE = `Скан достижимости вариантов ответа exact_any — #1450
+
+Usage:
+  node scripts/scan-quest-answer-reachability.js [--quest-id <id>] [--source <file>] [--baseline <file>] [--update-baseline] [--strict] [--api-url <url>] [--json]
+
+Options:
+  --quest-id <id>       один квест вместо всего корпуса
+  --source <file>       локальный data-файл вместо прода
+  --baseline <file>     вычесть известные находки
+  --update-baseline     переписать baseline по всем локальным данным
+  --strict              warning тоже валит прогон
+  --api-url <url>       адрес прода (по умолчанию METRAVEL_API_URL или https://metravel.by)
+  --json                machine-readable результат на stdout
+  --help, -h            напечатать эту справку и выйти`
+
+const CLI_SPEC = {
+  name: 'scan-quest-answer-reachability',
+  usage: USAGE,
+  selection: 'quests',
+  flags: {
+    'api-url': { type: 'string', default: DEFAULT_API, stripTrailingSlash: true },
+    'quest-id': { type: 'string' },
+    source: { type: 'string' },
+    baseline: { type: 'string' },
+    'update-baseline': { type: 'boolean' },
+    strict: { type: 'boolean' },
+    json: { type: 'boolean' },
+  },
 }
+
+const parseArgs = (tokens) => parseCliTokens(tokens, CLI_SPEC)
 
 /** Перезапись baseline по всем локальным данным квестов — единственный способ его пополнить. */
 function updateBaseline(rootDir) {
@@ -312,7 +338,7 @@ function reportText(source, quests, scannedSteps, scannedVariants, findings, kno
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2))
+  const args = parseCliArgs(process.argv, CLI_SPEC)
 
   if (args.updateBaseline) {
     const result = updateBaseline(process.cwd())
@@ -320,9 +346,16 @@ async function main() {
     return
   }
 
-  const quests = args.source
-    ? loadLocalBundles(args.source, args.questId)
-    : await loadFromApi(args.apiUrl, args.questId)
+  const quests = requireNonEmptySelection(
+    args.source
+      ? loadLocalBundles(args.source, args.questId)
+      : await loadFromApi(args.apiUrl, args.questId),
+    {
+      what: 'квестов',
+      source: args.source || args.apiUrl,
+      hint: 'проверь --source / --quest-id / --api-url',
+    },
+  )
 
   const scanned = scanQuests(quests)
   const source = args.source || args.apiUrl
@@ -346,7 +379,10 @@ async function main() {
   }
 
   const failing = findings.filter((f) => args.strict || f.severity === 'blocker')
-  if (failing.length) process.exitCode = 1
+  requireNoBatchFailures(failing.length, {
+    total: Math.max(failing.length, quests.length),
+    message: `недостижимых вариантов: ${failing.length}`,
+  })
 }
 
 module.exports = {
@@ -366,8 +402,5 @@ module.exports = {
 }
 
 if (require.main === module) {
-  main().catch((e) => {
-    console.error('Fatal:', e.message || e)
-    process.exit(1)
-  })
+  runCli(main, { name: CLI_SPEC.name, usage: USAGE })
 }

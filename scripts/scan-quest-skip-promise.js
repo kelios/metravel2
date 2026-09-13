@@ -33,8 +33,39 @@
  */
 
 const { fetchQuestBundles, loadLocalBundles, parseSteps } = require('./lib/questBundles')
+const {
+  parseCliArgs,
+  parseCliTokens,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runCli,
+} = require('./lib/cli-contract')
 
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
+
+const USAGE = `Скан ложного обещания «нажми Пропустить»
+
+Usage:
+  node scripts/scan-quest-skip-promise.js [--quest-id <id>] [--source <file>] [--api-url <url>] [--json]
+
+Options:
+  --quest-id <id>       один квест вместо всего корпуса
+  --source <file>       локальный data-файл вместо прода
+  --api-url <url>       адрес прода (по умолчанию METRAVEL_API_URL или https://metravel.by)
+  --json                machine-readable результат на stdout
+  --help, -h            напечатать эту справку и выйти`
+
+const CLI_SPEC = {
+  name: 'scan-quest-skip-promise',
+  usage: USAGE,
+  selection: 'quests',
+  flags: {
+    'api-url': { type: 'string', default: DEFAULT_API, stripTrailingSlash: true },
+    'quest-id': { type: 'string' },
+    source: { type: 'string' },
+    json: { type: 'boolean' },
+  },
+}
 
 /** Поля шага, которые игрок читает у карточки: задание, рассказ и подсказка. */
 const SCANNED_FIELDS = ['task', 'story', 'hint']
@@ -132,21 +163,20 @@ async function loadFromApi(apiUrl, questId) {
 
 // ===================== CLI =====================
 
-function parseArgs(argv) {
-  const get = (name) => argv.find((a) => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=')
-  return {
-    apiUrl: get('api-url') || DEFAULT_API,
-    questId: get('quest-id') || null,
-    source: get('source') || null,
-    json: argv.includes('--json'),
-  }
-}
+const parseArgs = (tokens) => parseCliTokens(tokens, CLI_SPEC)
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2))
-  const quests = args.source
-    ? loadLocalBundles(args.source, args.questId)
-    : await loadFromApi(args.apiUrl, args.questId)
+  const args = parseCliArgs(process.argv, CLI_SPEC)
+  const quests = requireNonEmptySelection(
+    args.source
+      ? loadLocalBundles(args.source, args.questId)
+      : await loadFromApi(args.apiUrl, args.questId),
+    {
+      what: 'квестов',
+      source: args.source || args.apiUrl,
+      hint: 'проверь --source / --quest-id / --api-url',
+    },
+  )
 
   const { findings, scannedSteps } = scanQuests(quests)
   const source = args.source || args.apiUrl
@@ -162,7 +192,10 @@ async function main() {
     console.log(findings.length ? `\nЛожных обещаний: ${findings.length}` : '\nЛожных обещаний нет.')
   }
 
-  if (findings.length) process.exitCode = 1
+  requireNoBatchFailures(findings.length, {
+    total: Math.max(findings.length, quests.length),
+    message: `ложных обещаний: ${findings.length}`,
+  })
 }
 
 module.exports = {
@@ -175,8 +208,5 @@ module.exports = {
 }
 
 if (require.main === module) {
-  main().catch((e) => {
-    console.error('Fatal:', e.message || e)
-    process.exit(1)
-  })
+  runCli(main, { name: CLI_SPEC.name, usage: USAGE })
 }

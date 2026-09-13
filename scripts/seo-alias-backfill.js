@@ -65,8 +65,8 @@ const {
   parseCliArgs,
   requireNonEmptySelection,
   requireNoBatchFailures,
-  runSeoCli,
-} = require('./lib/seo-cli-contract')
+  runCli,
+} = require('./lib/cli-contract')
 
 const API_BASE = (process.env.METRAVEL_API || 'https://metravel.by').replace(/\/+$/, '') + '/api'
 const BACKUP_DIR = path.join(__dirname, '.seo-backups')
@@ -470,5 +470,5 @@ async function main() {
 module.exports = { CLI_SPEC, USAGE, backfillOne, detectDamage, verifyAlias, resolveSlug }
 
 if (require.main === module) {
-  runSeoCli(main, { name: 'seo-alias-backfill', usage: USAGE })
+  runCli(main, { name: 'seo-alias-backfill', usage: USAGE })
 }

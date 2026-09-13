@@ -39,7 +39,7 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 
-const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract');
+const { parseCliArgs, runCli } = require('./lib/cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 const { detectStoredTextCorruption } = require('./lib/textIntegrity');
 
@@ -415,7 +415,7 @@ async function restore(id, backupDir) {
 }
 
 async function main() {
-  // Parsed here, not at module level, so a UsageError reaches runSeoCli() below
+  // Parsed here, not at module level, so a UsageError reaches runCli() below
   // and a bad invocation exits 2 instead of touching a live article (#1391).
   const args = parseArgs(process.argv);
 
@@ -520,5 +520,5 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 if (require.main === module) {
-  runSeoCli(main, { name: 'seo-edit', usage: USAGE });
+  runCli(main, { name: 'seo-edit', usage: USAGE });
 }

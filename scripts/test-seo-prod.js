@@ -28,8 +28,8 @@ const {
   parseCliArgs,
   requireNonEmptySelection,
   requireNoBatchFailures,
-  runSeoCli,
-} = require('./lib/seo-cli-contract');
+  runCli,
+} = require('./lib/cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 
 // ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ const CLI_SPEC = {
 const parseArgs = (argv) => parseCliArgs(argv, CLI_SPEC);
 
 // Assigned in main() right after the parse: a module-level parse would run
-// before runSeoCli() could map a UsageError onto exit code 2.
+// before runCli() could map a UsageError onto exit code 2.
 let SITE = '';
 let VERBOSE = false;
 let INSECURE_TLS = false;
@@ -599,7 +599,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  runSeoCli(main, { name: 'test-seo-prod', usage: USAGE });
+  runCli(main, { name: 'test-seo-prod', usage: USAGE });
 }
 
 module.exports = { CLI_SPEC, USAGE, parseArgs, isBlockedFromIndexing, checkSeoTitleContract };

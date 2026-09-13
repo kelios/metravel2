@@ -3,7 +3,7 @@
  * went wrong, the run must exit non-zero and say what is still live.
  *
  * Four separate holes live here, none of them visible from a unit test:
- *   - `break` alone left main() resolving normally, so runSeoCli exited 0 and a
+ *   - `break` alone left main() resolving normally, so runCli exited 0 and a
  *     run aborted *because the pipeline is damaging content* printed
  *     "Done: 0 renamed" and reported success to the operator and to CI;
  *   - continuing to the next entry would write the same corruption into every

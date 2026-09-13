@@ -27,7 +27,7 @@ const os = require('os');
 const path = require('path');
 const https = require('https');
 const seoEdit = require('./seo-edit');
-const { parseCliArgs, runSeoCli } = require('./lib/seo-cli-contract');
+const { parseCliArgs, runCli } = require('./lib/cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 const { TextCorruptionError } = require('./lib/textIntegrity');
 
@@ -65,7 +65,7 @@ const CLI_SPEC = {
 };
 
 // Assigned inside main() right after the parse: parsing at module level would put
-// a UsageError outside runSeoCli and lose the exit-code contract.
+// a UsageError outside runCli and lose the exit-code contract.
 let ID = null;
 let FAQ_FILE = '';
 let COMMENT_FILE = '';
@@ -206,7 +206,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  runSeoCli(main, { name: 'seo-apply-one', usage: USAGE });
+  runCli(main, { name: 'seo-apply-one', usage: USAGE });
 }
 
 module.exports = { CLI_SPEC, USAGE };

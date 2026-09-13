@@ -22,16 +22,39 @@
  */
 
 const { fetchQuestBundles, loadLocalBundles, parseSteps } = require('./lib/questBundles')
+const {
+  parseCliArgs,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runCli,
+} = require('./lib/cli-contract')
 
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 /** «7. Логово», «7) Логово» — номер, который игрок читает как номер точки. */
 const LEADING_NUMBER = /^\s*(\d+)[.)]/
 
-const args = process.argv.slice(2)
-const asJson = args.includes('--json')
-const get = (key, fallback) => {
-  const found = args.find((arg) => arg.startsWith(`--${key}=`))
-  return found ? found.split('=').slice(1).join('=') : fallback
+const USAGE = `Гвардия нумерации точек квеста — #1804
+
+Usage:
+  node scripts/scan-quest-step-numbering.js [--quest-id <id>] [--source <file>] [--api-url <url>] [--json]
+
+Options:
+  --quest-id <id>       один квест вместо всего корпуса
+  --source <file>       локальный data-файл вместо прода
+  --api-url <url>       адрес прода (по умолчанию METRAVEL_API_URL или https://metravel.by)
+  --json                machine-readable результат на stdout
+  --help, -h            напечатать эту справку и выйти`
+
+const CLI_SPEC = {
+  name: 'scan-quest-step-numbering',
+  usage: USAGE,
+  selection: 'quests',
+  flags: {
+    'api-url': { type: 'string', default: DEFAULT_API, stripTrailingSlash: true },
+    'quest-id': { type: 'string' },
+    source: { type: 'string' },
+    json: { type: 'boolean' },
+  },
 }
 
 /** Расхождения «номер в заголовке ≠ позиция точки» в одном квесте. */
@@ -61,13 +84,21 @@ function findNumberingMismatches(bundle, steps) {
 }
 
 async function main() {
-  const source = get('source')
-  const questId = get('quest-id')
-  const apiUrl = get('api-url', DEFAULT_API)
+  const args = parseCliArgs(process.argv, CLI_SPEC)
+  const source = args.source
+  const questId = args.questId
+  const apiUrl = args.apiUrl
 
-  const bundles = source
-    ? loadLocalBundles(source, questId)
-    : await fetchQuestBundles(apiUrl, questId)
+  const bundles = requireNonEmptySelection(
+    source
+      ? loadLocalBundles(source, questId)
+      : await fetchQuestBundles(apiUrl, questId),
+    {
+      what: 'квестов',
+      source: source || apiUrl,
+      hint: 'проверь --source / --quest-id / --api-url',
+    },
+  )
 
   const mismatches = []
   let numberedTitles = 0
@@ -77,7 +108,7 @@ async function main() {
     mismatches.push(...findNumberingMismatches(bundle, steps))
   }
 
-  if (asJson) {
+  if (args.json) {
     console.log(JSON.stringify({ scanned: bundles.length, numberedTitles, mismatches }, null, 2))
   } else {
     console.log(`Проверено квестов: ${bundles.length}, заголовков с номером: ${numberedTitles}`)
@@ -91,14 +122,14 @@ async function main() {
     }
   }
 
-  process.exitCode = mismatches.length > 0 ? 1 : 0
+  requireNoBatchFailures(mismatches.length, {
+    total: Math.max(mismatches.length, bundles.length),
+    message: `расхождений нумерации: ${mismatches.length}`,
+  })
 }
 
 module.exports = { findNumberingMismatches, LEADING_NUMBER }
 
 if (require.main === module) {
-  main().catch((error) => {
-    console.error('❌', error.message)
-    process.exit(2)
-  })
+  runCli(main, { name: CLI_SPEC.name, usage: USAGE })
 }

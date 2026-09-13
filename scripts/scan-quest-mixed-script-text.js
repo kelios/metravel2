@@ -48,6 +48,14 @@
 
 const { fetchQuestBundles, loadLocalBundles, parseSteps } = require('./lib/questBundles')
 const { mixedScriptWords, confusableChars } = require('./lib/questScriptMixing')
+const {
+  parseCliArgs,
+  parseCliTokens,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runCli,
+  UsageError,
+} = require('./lib/cli-contract')
 
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 
@@ -156,19 +164,43 @@ function scanQuests(quests, fields = DEFAULT_FIELDS) {
   return { findings, scannedNodes }
 }
 
-function parseArgs(argv) {
-  const get = (name) => argv.find((a) => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=')
-  const fields = (get('fields') || DEFAULT_FIELDS.join(',')).split(',').map((f) => f.trim()).filter(Boolean)
+const USAGE = `Скан смешения алфавитов в видимом тексте квеста — #1464
+
+Usage:
+  node scripts/scan-quest-mixed-script-text.js [--quest-id <id>] [--source <file>] [--fields <list>] [--api-url <url>] [--json]
+
+Options:
+  --quest-id <id>       один квест вместо всего корпуса
+  --source <file>       локальный data-файл вместо прода
+  --fields <list>       поля через запятую (по умолчанию все видимые)
+  --api-url <url>       адрес прода (по умолчанию METRAVEL_API_URL или https://metravel.by)
+  --json                machine-readable результат на stdout
+  --help, -h            напечатать эту справку и выйти`
+
+const CLI_SPEC = {
+  name: 'scan-quest-mixed-script-text',
+  usage: USAGE,
+  selection: 'quests',
+  flags: {
+    'api-url': { type: 'string', default: DEFAULT_API, stripTrailingSlash: true },
+    'quest-id': { type: 'string' },
+    source: { type: 'string' },
+    fields: { type: 'string', default: DEFAULT_FIELDS.join(',') },
+    json: { type: 'boolean' },
+  },
+}
+
+function parseFieldList(value) {
+  const fields = String(value || '').split(',').map((field) => field.trim()).filter(Boolean)
   for (const field of fields) {
-    if (!KNOWN_FIELDS.has(field)) throw new Error(`неизвестное поле --fields=${field}`)
+    if (!KNOWN_FIELDS.has(field)) throw new UsageError(`неизвестное поле --fields=${field}`)
   }
-  return {
-    apiUrl: get('api-url') || DEFAULT_API,
-    questId: get('quest-id') || null,
-    source: get('source') || null,
-    fields,
-    json: argv.includes('--json'),
-  }
+  return fields
+}
+
+const parseArgs = (tokens) => {
+  const args = parseCliTokens(tokens, CLI_SPEC)
+  return { ...args, fields: parseFieldList(args.fields) }
 }
 
 /** Где именно нашлось: у квестовых полей шага нет, и «шаг ?» там было бы враньём. */
@@ -191,10 +223,18 @@ function reportText(source, questCount, scannedNodes, fields, findings) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2))
-  const quests = args.source
-    ? loadLocalBundles(args.source, args.questId)
-    : await fetchQuestBundles(args.apiUrl, args.questId)
+  const parsed = parseCliArgs(process.argv, CLI_SPEC)
+  const args = { ...parsed, fields: parseFieldList(parsed.fields) }
+  const quests = requireNonEmptySelection(
+    args.source
+      ? loadLocalBundles(args.source, args.questId)
+      : await fetchQuestBundles(args.apiUrl, args.questId),
+    {
+      what: 'квестов',
+      source: args.source || args.apiUrl,
+      hint: 'проверь --source / --quest-id / --api-url',
+    },
+  )
 
   const { findings, scannedNodes } = scanQuests(quests, args.fields)
   const source = args.source || args.apiUrl
@@ -205,14 +245,14 @@ async function main() {
     reportText(source, quests.length, scannedNodes, args.fields, findings)
   }
 
-  if (findings.length) process.exitCode = 1
+  requireNoBatchFailures(findings.length, {
+    total: Math.max(findings.length, quests.length),
+    message: `слов со смешанным алфавитом: ${findings.length}`,
+  })
 }
 
 module.exports = { scanQuests, textNodes, parseArgs, contextAround, DEFAULT_FIELDS, STEP_FIELDS, POI_FIELDS, KNOWN_FIELDS }
 
 if (require.main === module) {
-  main().catch((e) => {
-    console.error('Fatal:', e.message || e)
-    process.exit(1)
-  })
+  runCli(main, { name: CLI_SPEC.name, usage: USAGE })
 }

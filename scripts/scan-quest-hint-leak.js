@@ -50,6 +50,14 @@ const { QUEST_DATA_FILE_PATTERN } = require('./scan-quest-answer-reachability')
 // копия правил разошлась бы с `utils/questAdapters.normalize` и молча изменила
 // бы ответ «утечек нет».
 const { normalizeAnswer: normalize } = require('./lib/questAnswerNormalize')
+const {
+  parseCliArgs,
+  parseCliTokens,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runCli,
+  UsageError,
+} = require('./lib/cli-contract')
 
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 
@@ -465,32 +473,64 @@ async function loadFromApi(apiUrl, questId) {
 
 // ===================== CLI =====================
 
-function parseArgs(argv) {
-  const get = (name) => argv.find((a) => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=')
-  const fields = (get('fields') || DEFAULT_FIELDS.join(',')).split(',').map((f) => f.trim()).filter(Boolean)
-  for (const field of fields) {
-    if (!KNOWN_FIELDS.has(field)) throw new Error(`неизвестное поле --fields=${field}`)
+const USAGE = `Скан утечки ответа в текст, который игрок читает до попытки — правило 4a
+
+Usage:
+  node scripts/scan-quest-hint-leak.js [--quest-id <id>] [--source <file>] [--fields <list>] [--scopes <list>] [--baseline <file>] [--update-baseline] [--api-url <url>] [--json]
+
+Options:
+  --quest-id <id>       один квест вместо всего корпуса
+  --source <file>       локальный data-файл вместо прода
+  --fields <list>       поля шага через запятую
+  --scopes <list>       поверхности: step,quest_title,intro,finale
+  --baseline <file>     вычесть известные находки
+  --update-baseline     переписать baseline по всем локальным данным
+  --api-url <url>       адрес прода (по умолчанию METRAVEL_API_URL или https://metravel.by)
+  --json                machine-readable результат на stdout
+  --help, -h            напечатать эту справку и выйти`
+
+const CLI_SPEC = {
+  name: 'scan-quest-hint-leak',
+  usage: USAGE,
+  selection: 'quests',
+  flags: {
+    'api-url': { type: 'string', default: DEFAULT_API, stripTrailingSlash: true },
+    'quest-id': { type: 'string' },
+    source: { type: 'string' },
+    fields: { type: 'string', default: DEFAULT_FIELDS.join(',') },
+    scopes: { type: 'string', default: DEFAULT_SCOPES.join(',') },
+    baseline: { type: 'string' },
+    'update-baseline': { type: 'boolean' },
+    json: { type: 'boolean' },
+  },
+}
+
+function parseCsvList(value, known, errorPrefix) {
+  const items = String(value || '').split(',').map((item) => item.trim()).filter(Boolean)
+  for (const item of items) {
+    if (!known.has(item)) throw new UsageError(`${errorPrefix}=${item}`)
   }
-  const scopes = (get('scopes') || DEFAULT_SCOPES.join(',')).split(',').map((s) => s.trim()).filter(Boolean)
-  for (const scope of scopes) {
-    if (!KNOWN_SCOPES.has(scope)) throw new Error(`неизвестная поверхность --scopes=${scope}`)
-  }
+  return items
+}
+
+const parseArgs = (tokens) => {
+  const args = parseCliTokens(tokens, CLI_SPEC)
   return {
-    apiUrl: get('api-url') || DEFAULT_API,
-    questId: get('quest-id') || null,
-    source: get('source') || null,
-    fields,
-    scopes,
-    baseline: get('baseline') || null,
-    updateBaseline: argv.includes('--update-baseline'),
-    json: argv.includes('--json'),
+    ...args,
+    fields: parseCsvList(args.fields, KNOWN_FIELDS, 'неизвестное поле --fields'),
+    scopes: parseCsvList(args.scopes, KNOWN_SCOPES, 'неизвестная поверхность --scopes'),
   }
 }
 
 const SCOPE_LABEL = { step: 'шаг', quest_title: 'заголовок квеста', intro: 'интро', finale: 'финал' }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2))
+  const parsed = parseCliArgs(process.argv, CLI_SPEC)
+  const args = {
+    ...parsed,
+    fields: parseCsvList(parsed.fields, KNOWN_FIELDS, 'неизвестное поле --fields'),
+    scopes: parseCsvList(parsed.scopes, KNOWN_SCOPES, 'неизвестная поверхность --scopes'),
+  }
   if (args.updateBaseline) {
     // Умолчание, а НЕ `args.scopes`: baseline хранит только текст уровня квеста,
     // и прогон с набором без `intro` перезаписал бы файл пустым объектом —
@@ -499,9 +539,16 @@ async function main() {
     console.log(`Baseline перезаписан: ${BASELINE_PATH} — ${result.total} находок в ${result.files} файлах.`)
     return
   }
-  const quests = args.source
-    ? loadLocalBundles(args.source, args.questId)
-    : await loadFromApi(args.apiUrl, args.questId)
+  const quests = requireNonEmptySelection(
+    args.source
+      ? loadLocalBundles(args.source, args.questId)
+      : await loadFromApi(args.apiUrl, args.questId),
+    {
+      what: 'квестов',
+      source: args.source || args.apiUrl,
+      hint: 'проверь --source / --quest-id / --api-url',
+    },
+  )
 
   const scanned = scanQuests(quests, args.fields, args.scopes)
   const { scannedSteps, scannedQuestNodes } = scanned
@@ -554,7 +601,10 @@ async function main() {
     console.log(findings.length ? `\nУтечек: ${findings.length}` : '\nУтечек нет.')
   }
 
-  if (findings.length) process.exitCode = 1
+  requireNoBatchFailures(findings.length, {
+    total: Math.max(findings.length, quests.length),
+    message: `утечек: ${findings.length}`,
+  })
 }
 
 module.exports = {
@@ -580,8 +630,5 @@ module.exports = {
 }
 
 if (require.main === module) {
-  main().catch((e) => {
-    console.error('Fatal:', e.message || e)
-    process.exit(1)
-  })
+  runCli(main, { name: CLI_SPEC.name, usage: USAGE })
 }

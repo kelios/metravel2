@@ -25,8 +25,8 @@ const {
   parseCliArgs,
   requireNonEmptySelection,
   requireNoBatchFailures,
-  runSeoCli,
-} = require('./lib/seo-cli-contract')
+  runCli,
+} = require('./lib/cli-contract')
 
 const USAGE = `Post-deploy SEO check — metravel.by
 
@@ -72,7 +72,7 @@ const CLI_SPEC = {
 const parseArgs = (argv) => parseCliArgs(argv, CLI_SPEC)
 
 // Assigned in main() right after the parse: a module-level parse would run
-// before runSeoCli() could map a UsageError onto exit code 2.
+// before runCli() could map a UsageError onto exit code 2.
 let SITE = ''
 let VERBOSE = false
 let JSON_OUTPUT = false
@@ -769,5 +769,5 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 if (require.main === module) {
-  runSeoCli(main, { name: 'post-deploy-seo-check', usage: USAGE })
+  runCli(main, { name: 'post-deploy-seo-check', usage: USAGE })
 }

@@ -29,8 +29,8 @@ const {
   parseCliArgs,
   requireNonEmptySelection,
   requireNoBatchFailures,
-  runSeoCli,
-} = require('./lib/seo-cli-contract');
+  runCli,
+} = require('./lib/cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 
 const API = (process.env.METRAVEL_API || 'https://metravel.by/api').replace(/\/+$/, '');
@@ -63,7 +63,7 @@ const CLI_SPEC = {
 const parseArgs = (argv) => parseCliArgs(argv, CLI_SPEC);
 
 // Assigned in main() from the parsed args — the parse has to happen INSIDE
-// main() so a UsageError reaches runSeoCli() and exits 2 (#1391).
+// main() so a UsageError reaches runCli() and exits 2 (#1391).
 let USER_ID = '1';
 let ONLY = [];
 
@@ -383,7 +383,7 @@ async function main(argv = process.argv, deps = {}) {
 }
 
 if (require.main === module) {
-  runSeoCli(main, { name: 'seo-find-dupes', usage: USAGE });
+  runCli(main, { name: 'seo-find-dupes', usage: USAGE });
 }
 
 module.exports = {

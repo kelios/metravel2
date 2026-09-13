@@ -40,11 +40,11 @@
  * конец, и на прод-базе это покрыло все 11 найденных экземпляров.
  *
  * Нормализация — общая с рантаймом (`scripts/lib/questAnswerNormalize`), та же,
- * по которой `buildAnswerChecker` засчитывает ввод игрока. `ъ`/`ь`/`і` она не
- * трогает и не должна: это разные буквы, и покрытие написаний целиком на
- * словаре. Свёртка написаний живёт только здесь, в `orthoStem`, и применяется
- * исключительно для поиска ПАРЫ — сравнение ответа игрока со словарём остаётся
- * строгим.
+ * по которой `buildAnswerChecker` засчитывает ввод игрока. Конечные `ъ`/`ь`
+ * она не трогает: это разные буквы, покрытие написаний целиком на словаре.
+ * Свёртка написаний живёт только здесь, в `orthoStem`, и применяется
+ * исключительно для поиска ПАРЫ. Находка выдаётся, только если зеркальную
+ * фразу отвергает и строка словаря, и морфологический проход (#1631/#1926).
  *
  * Второй класс того же вопроса — «текст шага печатает вариант раздельно»
  * (#1907, `split_spelling_gap`). Источник второго написания здесь не словарь, а
@@ -103,6 +103,7 @@ const {
 } = require('./scan-quest-answer-reachability')
 const { fetchQuestBundles, loadLocalBundles, parseSteps } = require('./lib/questBundles')
 const { normalizeAnswer } = require('./lib/questAnswerNormalize')
+const { matchesAnyWordForm } = require('./lib/questAnswerMorphology')
 // Baseline — общий механизм аудит-сканов квестов (#1450, #1488): загрузка,
 // вычитание и запись живут в `scripts/lib/scanBaseline`, здесь только свои путь,
 // версия контракта и функция ключей.
@@ -112,6 +113,13 @@ const {
   splitByBaseline: splitFindingsByBaseline,
   writeBaseline,
 } = require('./lib/scanBaseline')
+const {
+  parseCliArgs,
+  parseCliTokens,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runCli,
+} = require('./lib/cli-contract')
 
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 
@@ -191,6 +199,10 @@ function scanDictionary(variants) {
       mirrorable = true
       const missing = `${prefix} ${mirror}`
       if (forms.has(missing) || seen.has(missing)) continue
+      // Морфологический проход рантайма (#1631) уже принимает часть зеркал
+      // («от пулі» при «от пули»). Строковое сравнение видело бы дефект,
+      // которого для игрока нет (#1926).
+      if (matchesAnyWordForm(missing, [...forms])) continue
       seen.add(missing)
       gaps.push({ compound, missing, spelling: mirror, sibling: last })
     }
@@ -354,17 +366,35 @@ async function loadFromApi(apiUrl, questId) {
 
 // ===================== CLI =====================
 
-function parseArgs(argv) {
-  const get = (name) => argv.find((a) => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=')
-  return {
-    apiUrl: get('api-url') || DEFAULT_API,
-    questId: get('quest-id') || null,
-    source: get('source') || null,
-    baseline: get('baseline') || null,
-    updateBaseline: argv.includes('--update-baseline'),
-    json: argv.includes('--json'),
-  }
+const USAGE = `Скан пропусков составных форм вокруг второго написания — #1536
+
+Usage:
+  node scripts/scan-quest-compound-spelling-gap.js [--quest-id <id>] [--source <file>] [--baseline <file>] [--update-baseline] [--api-url <url>] [--json]
+
+Options:
+  --quest-id <id>       один квест вместо всего корпуса
+  --source <file>       локальный data-файл вместо прода
+  --baseline <file>     вычесть осознанные исключения
+  --update-baseline     переписать baseline по всем локальным данным
+  --api-url <url>       адрес прода (по умолчанию METRAVEL_API_URL или https://metravel.by)
+  --json                machine-readable результат на stdout
+  --help, -h            напечатать эту справку и выйти`
+
+const CLI_SPEC = {
+  name: 'scan-quest-compound-spelling-gap',
+  usage: USAGE,
+  selection: 'quests',
+  flags: {
+    'api-url': { type: 'string', default: DEFAULT_API, stripTrailingSlash: true },
+    'quest-id': { type: 'string' },
+    source: { type: 'string' },
+    baseline: { type: 'string' },
+    'update-baseline': { type: 'boolean' },
+    json: { type: 'boolean' },
+  },
 }
+
+const parseArgs = (tokens) => parseCliTokens(tokens, CLI_SPEC)
 
 // ===================== Baseline =====================
 
@@ -459,7 +489,7 @@ function reportText(source, quests, scanned, knownFindings = []) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2))
+  const args = parseCliArgs(process.argv, CLI_SPEC)
 
   if (args.updateBaseline) {
     const result = updateBaseline(process.cwd())
@@ -467,9 +497,16 @@ async function main() {
     return
   }
 
-  const quests = args.source
-    ? loadLocalBundles(args.source, args.questId)
-    : await loadFromApi(args.apiUrl, args.questId)
+  const quests = requireNonEmptySelection(
+    args.source
+      ? loadLocalBundles(args.source, args.questId)
+      : await loadFromApi(args.apiUrl, args.questId),
+    {
+      what: 'квестов',
+      source: args.source || args.apiUrl,
+      hint: 'проверь --source / --quest-id / --api-url',
+    },
+  )
 
   const scanned = scanQuests(quests)
   const source = args.source || args.apiUrl
@@ -485,7 +522,10 @@ async function main() {
 
   // Падаем на том, что принесла правка. Записанное в baseline — осознанное
   // исключение владельца контента, а не забытая находка.
-  if (findings.length) process.exitCode = 1
+  requireNoBatchFailures(findings.length, {
+    total: Math.max(findings.length, quests.length),
+    message: `пропусков составных форм: ${findings.length}`,
+  })
 }
 
 module.exports = {
@@ -506,8 +546,5 @@ module.exports = {
 }
 
 if (require.main === module) {
-  main().catch((e) => {
-    console.error('Fatal:', e.message || e)
-    process.exit(1)
-  })
+  runCli(main, { name: CLI_SPEC.name, usage: USAGE })
 }

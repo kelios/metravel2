@@ -39,6 +39,13 @@ const path = require('path')
 const { fetchQuestBundles, loadLocalBundles, parseSteps } = require('./lib/questBundles')
 // Baseline — общий с другими аудит-сканами квестов механизм (#1450, #1488).
 const { loadBaseline, splitByBaseline } = require('./lib/scanBaseline')
+const {
+  parseCliArgs,
+  parseCliTokens,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runCli,
+} = require('./lib/cli-contract')
 
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 
@@ -202,26 +209,52 @@ async function loadFromApi(apiUrl, questId) {
 
 // ===================== CLI =====================
 
-function parseArgs(argv) {
-  const get = (name) => argv.find((a) => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=')
-  return {
-    apiUrl: get('api-url') || DEFAULT_API,
-    questId: get('quest-id') || null,
-    source: get('source') || null,
-    // Allow-файл вычитается ПО УМОЛЧАНИЮ, в отличие от baseline скана утечки:
-    // там умолчание без baseline осмысленно (контур шага вычищен до нуля), а
-    // здесь разобранный остаток свипа #1718 — это норма каталога, и прогон без
-    // вычитания красный by design. `--no-allow-file` показывает всё.
-    allowFile: argv.includes('--no-allow-file') ? null : (get('allow-file') || ALLOW_PATH),
-    json: argv.includes('--json'),
-  }
+const USAGE = `Скан счётного шага без границы счёта — правило 4b
+
+Usage:
+  node scripts/scan-quest-count-steps.js [--quest-id <id>] [--source <file>] [--allow-file <file>] [--no-allow-file] [--api-url <url>] [--json]
+
+Options:
+  --quest-id <id>       один квест вместо всего корпуса
+  --source <file>       локальный data-файл вместо прода
+  --allow-file <file>   файл обоснованных исключений (по умолчанию ${ALLOW_PATH})
+  --no-allow-file       показать все находки без вычитания
+  --api-url <url>       адрес прода (по умолчанию METRAVEL_API_URL или https://metravel.by)
+  --json                machine-readable результат на stdout
+  --help, -h            напечатать эту справку и выйти`
+
+const CLI_SPEC = {
+  name: 'scan-quest-count-steps',
+  usage: USAGE,
+  selection: 'quests',
+  flags: {
+    'api-url': { type: 'string', default: DEFAULT_API, stripTrailingSlash: true },
+    'quest-id': { type: 'string' },
+    source: { type: 'string' },
+    'allow-file': { type: 'string', default: ALLOW_PATH },
+    'no-allow-file': { type: 'boolean' },
+    json: { type: 'boolean' },
+  },
+}
+
+const parseArgs = (tokens) => {
+  const args = parseCliTokens(tokens, CLI_SPEC)
+  return { ...args, allowFile: args.noAllowFile ? null : args.allowFile }
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2))
-  const quests = args.source
-    ? loadLocalBundles(args.source, args.questId)
-    : await loadFromApi(args.apiUrl, args.questId)
+  const parsed = parseCliArgs(process.argv, CLI_SPEC)
+  const args = { ...parsed, allowFile: parsed.noAllowFile ? null : parsed.allowFile }
+  const quests = requireNonEmptySelection(
+    args.source
+      ? loadLocalBundles(args.source, args.questId)
+      : await loadFromApi(args.apiUrl, args.questId),
+    {
+      what: 'квестов',
+      source: args.source || args.apiUrl,
+      hint: 'проверь --source / --quest-id / --api-url',
+    },
+  )
 
   const scanned = scanQuests(quests)
   const source = args.source || args.apiUrl
@@ -255,7 +288,10 @@ async function main() {
     console.log(findings.length ? `\nСчётных шагов без границы: ${findings.length}` : '\nСчётных шагов без границы нет.')
   }
 
-  if (findings.length) process.exitCode = 1
+  requireNoBatchFailures(findings.length, {
+    total: Math.max(findings.length, quests.length),
+    message: `счётных шагов без границы: ${findings.length}`,
+  })
 }
 
 module.exports = {
@@ -274,8 +310,5 @@ module.exports = {
 }
 
 if (require.main === module) {
-  main().catch((e) => {
-    console.error('Fatal:', e.message || e)
-    process.exit(1)
-  })
+  runCli(main, { name: CLI_SPEC.name, usage: USAGE })
 }

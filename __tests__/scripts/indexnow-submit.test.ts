@@ -2,7 +2,7 @@ import path from 'path'
 
 import { makeTempDir, removeDir, runNodeCli, writeTextFile } from './cli-test-utils'
 
-const { HelpRequested } = require('../../scripts/lib/seo-cli-contract')
+const { HelpRequested } = require('../../scripts/lib/cli-contract')
 
 const {
   CLI_SPEC,
@@ -109,7 +109,7 @@ describe('IndexNow argument parsing', () => {
 
   it('accepts --help before any mode check', () => {
     // The contract throws HelpRequested so a forgotten help branch cannot run
-    // the script for real; runSeoCli prints USAGE and exits 0 (see CLI tests).
+    // the script for real; runCli prints USAGE and exits 0 (see CLI tests).
     expect(() => parseArgs(argvOf('--help'))).toThrow(HelpRequested)
     expect(() => parseArgs(argvOf('-h'))).toThrow(HelpRequested)
   })
@@ -207,7 +207,7 @@ describe('IndexNow submission is never reached without a mode', () => {
   it('collects nothing and submits nothing with --help', async () => {
     const spies = makeSpies()
 
-    // main() no longer swallows help itself: the parser throws and runSeoCli
+    // main() no longer swallows help itself: the parser throws and runCli
     // prints USAGE, so a forgotten help branch cannot turn --help into a run.
     await expect(main(argvOf('--help'), spies)).rejects.toThrow(HelpRequested)
 

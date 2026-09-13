@@ -15,6 +15,15 @@ const fs = require('fs')
 const path = require('path')
 
 const { normalizeAnswer } = require('./lib/questAnswerNormalize')
+const {
+  EmptySelectionError,
+  UsageError,
+  parseCliArgs,
+  parseCliTokens,
+  requireNonEmptySelection,
+  requireNoBatchFailures,
+  runCli,
+} = require('./lib/cli-contract')
 
 const DEFAULT_BASE_URL = process.env.METRAVEL_API_URL || 'https://metravel.by'
 const TOKEN_FILE = '.secrets/metravel-task-board.env'
@@ -348,26 +357,35 @@ function buildInsights({ stats, patternsByStepKey = {}, textsByStepKey = {}, min
 
 // ===================== I/O =====================
 
-function parseArgs(argv) {
-  const args = {
-    quest: null,
-    since: '90d',
-    minCount: 2,
-    all: false,
-    json: false,
-    baseUrl: DEFAULT_BASE_URL,
-  }
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i]
-    if (arg === '--quest') args.quest = argv[++i]
-    else if (arg === '--since') args.since = argv[++i]
-    else if (arg === '--min-count') args.minCount = Math.max(1, Number(argv[++i]) || 2)
-    else if (arg === '--base-url') args.baseUrl = argv[++i]
-    else if (arg === '--all') args.all = true
-    else if (arg === '--json') args.json = true
-  }
-  return args
+const USAGE = `Отчёт «трение шага» для редактора квестов — #1278
+
+Usage:
+  node scripts/quest-answer-insights.js (--quest <id|slug> | --all) [--since <window>] [--min-count <n>] [--base-url <url>] [--json]
+
+Options:
+  --quest <id|slug>     один квест (числовой PK или quest_id)
+  --all                 все квесты API
+  --since <window>      окно телеметрии (по умолчанию 90d)
+  --min-count <n>       минимум игроков у кандидата (по умолчанию 2)
+  --base-url <url>      адрес API (по умолчанию METRAVEL_API_URL или https://metravel.by)
+  --json                machine-readable результат на stdout
+  --help, -h            напечатать эту справку и выйти`
+
+const CLI_SPEC = {
+  name: 'quest-answer-insights',
+  usage: USAGE,
+  selection: 'quests',
+  flags: {
+    quest: { type: 'string' },
+    since: { type: 'string', default: '90d' },
+    'min-count': { type: 'int', min: 1, default: 2 },
+    'base-url': { type: 'string', default: DEFAULT_BASE_URL, stripTrailingSlash: true },
+    all: { type: 'boolean' },
+    json: { type: 'boolean' },
+  },
 }
+
+const parseArgs = (tokens) => parseCliTokens(tokens, CLI_SPEC)
 
 /** Staff-токен из gitignored bundle. В вывод не попадает никогда. */
 function readStaffToken(rootDir) {
@@ -485,12 +503,11 @@ function printReport(report, { minCount }) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2))
+  const args = parseCliArgs(process.argv, CLI_SPEC)
   const rootDir = process.cwd()
 
   if (!args.quest && !args.all) {
-    console.error('quest:insights: укажите --quest <id|slug> или --all')
-    process.exit(1)
+    throw new UsageError('quest:insights: укажите --quest <id|slug> или --all')
   }
 
   const token = readStaffToken(rootDir)
@@ -501,13 +518,17 @@ async function main() {
     const rows = Array.isArray(payload) ? payload : (payload?.results ?? [])
     return rows.map((quest) => quest.id).filter(Boolean)
   }
-  const questRefs = args.all ? await listAll() : [args.quest]
-  if (!questRefs.length) {
-    console.error('quest:insights: список квестов пуст — нечего обходить')
-    process.exit(1)
-  }
+  const questRefs = requireNonEmptySelection(
+    args.all ? await listAll() : [args.quest],
+    {
+      what: 'квестов',
+      source: args.all ? '--all' : `--quest ${args.quest}`,
+      message: 'quest:insights: список квестов пуст — нечего обходить',
+    },
+  )
 
   const reports = []
+  let failed = 0
   for (const questRef of questRefs) {
     let quest
     let stats
@@ -520,7 +541,8 @@ async function main() {
       )
     } catch (error) {
       console.error(`quest:insights: ${error.message}`)
-      if (!args.all) process.exit(1)
+      if (!args.all) throw error
+      failed += 1
       continue
     }
 
@@ -538,27 +560,29 @@ async function main() {
   const withData = reports.filter((report) => report.hasData)
   if (!withData.length) {
     // Пустая таблица нулей читается как «всё хорошо». Это не результат.
-    console.error(`quest:insights: нет данных за окно ${args.since}. Попытки не собраны или окно слишком узкое.`)
-    process.exit(1)
+    throw new EmptySelectionError(
+      `quest:insights: нет данных за окно ${args.since}. Попытки не собраны или окно слишком узкое.`,
+    )
   }
 
   if (args.json) {
     process.stdout.write(`${JSON.stringify(args.all ? withData : withData[0], null, 2)}\n`)
-    return
+  } else {
+    withData.sort((a, b) => b.totalFriction - a.totalFriction)
+    for (const report of withData) {
+      console.log(`\n=== ${report.questTitle ?? report.questSlug ?? report.questId} ===`)
+      printReport(report, { minCount: args.minCount })
+    }
   }
 
-  withData.sort((a, b) => b.totalFriction - a.totalFriction)
-  for (const report of withData) {
-    console.log(`\n=== ${report.questTitle ?? report.questSlug ?? report.questId} ===`)
-    printReport(report, { minCount: args.minCount })
-  }
+  requireNoBatchFailures(failed, {
+    total: questRefs.length,
+    message: `не удалось обойти квестов: ${failed} из ${questRefs.length}`,
+  })
 }
 
 if (require.main === module) {
-  main().catch((error) => {
-    console.error(`quest:insights: ${error.message}`)
-    process.exit(1)
-  })
+  runCli(main, { name: CLI_SPEC.name, usage: USAGE })
 }
 
 module.exports = {

@@ -32,8 +32,8 @@ const {
   parseCliArgs,
   requireNonEmptySelection,
   requireNoBatchFailures,
-  runSeoCli,
-} = require('./lib/seo-cli-contract');
+  runCli,
+} = require('./lib/cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 // The FAQ check asks the generator itself whether a body still yields FAQPage,
 // instead of re-implementing its markup contract here (see analyzeFaqMarkup).
@@ -407,7 +407,7 @@ async function batchAsync(items, concurrency, fn) {
 }
 
 async function main(argv = process.argv, deps = {}) {
-  // Parsed here, not at module level: a UsageError has to reach runSeoCli()
+  // Parsed here, not at module level: a UsageError has to reach runCli()
   // below so a bad invocation exits 2 instead of running a wide audit (#1391).
   const args = parseArgs(argv);
   const io = { fetchJson, fetchJsonRetry, ...deps };
@@ -531,5 +531,5 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 if (require.main === module) {
-  runSeoCli(main, { name: 'seo-audit', usage: USAGE });
+  runCli(main, { name: 'seo-audit', usage: USAGE });
 }

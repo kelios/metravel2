@@ -45,8 +45,8 @@ const {
   parseCliArgs,
   requireNonEmptySelection,
   requireNoBatchFailures,
-  runSeoCli,
-} = require('./lib/seo-cli-contract');
+  runCli,
+} = require('./lib/cli-contract');
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText');
 const { TextCorruptionError, isTextCorruptionError } = require('./lib/textIntegrity');
 
@@ -112,7 +112,7 @@ const CLI_SPEC = {
 const parseArgs = (argv) => parseCliArgs(argv, CLI_SPEC);
 
 // Assigned in main() from the parsed args — the parse has to happen INSIDE
-// main() so a UsageError reaches runSeoCli() and exits 2 (#1391).
+// main() so a UsageError reaches runCli() and exits 2 (#1391).
 let USER_ID = '1';
 let EDITOR_USER_ID = 120;
 let LIMIT = 0;
@@ -758,7 +758,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  runSeoCli(main, { name: 'seo-mass-augment', usage: USAGE });
+  runCli(main, { name: 'seo-mass-augment', usage: USAGE });
 }
 
 module.exports = {

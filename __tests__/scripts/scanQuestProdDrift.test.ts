@@ -29,7 +29,8 @@ jest.mock('@/scripts/lib/scanBaseline', () => ({
   localQuestDataFiles: jest.fn(() => []),
 }))
 
-const { isMissingOnProd, main, reportText, scanFile } = require('@/scripts/scan-quest-prod-drift')
+const { UsageError } = require('@/scripts/lib/cli-contract')
+const { isMissingOnProd, main, parseArgs, reportText, scanFile } = require('@/scripts/scan-quest-prod-drift')
 
 const localQuest = (questId: string) => ({
   id: null,
@@ -245,5 +246,23 @@ describe('main — корпусный прогон, который ничего 
     expect(scanBaseline.localQuestDataFiles).not.toHaveBeenCalled()
     expect(logs.join('\n')).toContain('Расхождений с продом нет')
     expect(process.exitCode).toBe(originalExitCode)
+  })
+})
+
+describe('parseArgs — неизвестный флаг это ошибка, а не полный корпус (#1934)', () => {
+  it('отказывается от --quest-id вместо тихого обхода всего каталога', () => {
+    expect(() => parseArgs(['--quest-id=brest-lantern'])).toThrow(UsageError)
+    expect(() => parseArgs(['--quest-id=brest-lantern'])).toThrow(
+      'Unknown argument: --quest-id=brest-lantern',
+    )
+  })
+
+  it('принимает обе записи --source и --source=', () => {
+    expect(parseArgs(['--source', 'scripts/brest-quest-data.js']).source).toBe(
+      'scripts/brest-quest-data.js',
+    )
+    expect(parseArgs(['--source=scripts/brest-quest-data.js']).source).toBe(
+      'scripts/brest-quest-data.js',
+    )
   })
 })

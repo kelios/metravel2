@@ -44,8 +44,8 @@ const {
   parseCliArgs,
   requireNonEmptySelection,
   requireNoBatchFailures,
-  runSeoCli,
-} = require('./lib/seo-cli-contract')
+  runCli,
+} = require('./lib/cli-contract')
 
 const QUEUE_FILE = path.join(__dirname, 'seo-index-queue.json')
 const MAX_REDIRECT_HOPS = 5
@@ -96,7 +96,7 @@ const CLI_SPEC = {
  * флагами.
  */
 function parseArgs(argv) {
-  // `--help` сюда не доходит: контракт бросает `HelpRequested`, а `runSeoCli`
+  // `--help` сюда не доходит: контракт бросает `HelpRequested`, а `runCli`
   // печатает справку и выходит нулём.
   const args = parseCliArgs(argv, CLI_SPEC)
 
@@ -465,7 +465,7 @@ async function main(argv = process.argv, deps = {}) {
   else say(formatReport(report))
 
   // Провал доносится общим batch helper, а не кодом возврата: единый контракт
-  // кодов живёт в runSeoCli (#1391), и пачка при этом не выдаётся вовсе. Это
+  // кодов живёт в runCli (#1391), и пачка при этом не выдаётся вовсе. Это
   // «проверка отработала и нашла плохое»: причина уже разобрана построчно
   // выше, поэтому наружу уходит одна строка, а не трасса вызовов.
   requireNoBatchFailures(failed, {
@@ -490,7 +490,7 @@ async function main(argv = process.argv, deps = {}) {
 }
 
 if (require.main === module) {
-  runSeoCli(main, { name: CLI_NAME, usage: USAGE })
+  runCli(main, { name: CLI_NAME, usage: USAGE })
 }
 
 module.exports = {
