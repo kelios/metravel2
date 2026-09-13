@@ -205,3 +205,125 @@ describe('parseArgs', () => {
     })
   })
 })
+
+// #1907: второй класс — собственный текст шага печатает вариант словаря
+// раздельно, а словарь принимает его только слитно. Подсказка
+// `gomel-palace/palace` объясняла слово как «от bel vedere», игрок списал ровно
+// это и получил отказ. Эталон — реальный шаг 174: дофиксовый словарь из пяти
+// вариантов даёт ровно одну находку, послефиксовый — ноль.
+describe('split_spelling_gap: текст шага печатает вариант раздельно (#1907)', () => {
+  const { printedSplits, splitSpellingGaps, SPLIT_MIN_LENGTH } = require('@/scripts/scan-quest-compound-spelling-gap')
+
+  const hint = 'Слово итальянское, от bel vedere — «прекрасный вид». Так зовут открытую надстройку-фонарь на крыше, с которой смотрят вдаль.'
+  const before = ['бельведер', 'бельведере', 'бельведером', 'belvedere', 'бельведерчик']
+  // Реальный послефиксовый словарь шага 174 (16 форм). Дословное «bel vedere»
+  // из подсказки в него НЕ взято — правило 4a (scan-quest-hint-leak) запрещает
+  // принимать строку подсказки; это осознанное исключение baseline.
+  const after = [
+    'бельведер', 'бельведере', 'бельведером', 'бельведера', 'бельведеры', 'бельведерчик', 'бельведэр',
+    'бельвердер', 'белведер', 'белведере', 'бел ведер', 'бел ведере', 'бель ведер', 'бель ведере',
+    'belvedere', 'belveder',
+  ]
+  const withLatin = [...after, 'bel vedere']
+  const step = (variants: string[], text: Partial<Record<'task' | 'hint' | 'story', string>>) =>
+    ({ id: 174, step_id: 'palace', ...text, answer_pattern: dict(variants) })
+  const splitFindings = (variants: string[], text: Partial<Record<'task' | 'hint' | 'story', string>>) =>
+    scanStep(step(variants, text)).findings.filter((f: { kind: string }) => f.kind === 'split_spelling_gap')
+
+  it('дофиксовый словарь шага 174: ровно одна находка — «bel vedere» из подсказки', () => {
+    expect(splitFindings(before, { hint })).toEqual([
+      expect.objectContaining({ kind: 'split_spelling_gap', value: 'bel vedere', compound: 'belvedere' }),
+    ])
+  })
+
+  it('послефиксовый словарь шага 174: остаётся только дословное «bel vedere», и его гасит baseline', () => {
+    const findings = splitFindings(after, { hint })
+    expect(findings.map((f: { value: string }) => f.value)).toEqual(['bel vedere'])
+    const exception = { quest_id: 'gomel-palace', step_id: 'palace', value: 'bel vedere' }
+    expect(splitByBaseline(findings.map((f: object) => ({ ...exception, ...f })), [findingKey(exception)]).fresh).toEqual([])
+  })
+
+  it('словарь с дословной строкой подсказки молчит: раздельная форма принята', () => {
+    expect(splitFindings(withLatin, { hint })).toEqual([])
+    expect(scanStep(step(withLatin, { hint })).printed).toBe(true)
+  })
+
+  it('здоровый шаг молчит: текст не печатает разбиения ни одной формы', () => {
+    const scanned = scanStep(step(before, { hint: 'Смотри выше колонн — на самую крышу.', task: 'Как называется надстройка?' }))
+    expect(scanned.findings).toEqual([])
+    expect(scanned.printed).toBe(false)
+  })
+
+  it('читает task, hint и story, а не только подсказку', () => {
+    expect(splitFindings(before, { story: 'Итальянцы говорили bel vedere.' })).toHaveLength(1)
+    expect(splitFindings(before, { task: 'Назови bel vedere по-русски.' })).toHaveLength(1)
+  })
+
+  // Границы разбиения — целые слова: «обел ведерек» содержит подстроку
+  // «бел ведере», но игрок такого не спишет. `\b` слеп к кириллице, поэтому
+  // граница задана явно и проверяется отдельно.
+  it('ищет разбиение целым словосочетанием, а не подстрокой', () => {
+    expect(printedSplits('бельведере', 'обел ведерек стоит')).toEqual([])
+    expect(printedSplits('белведере', 'вот бел ведере стоит')).toEqual(['бел ведере'])
+    expect(printedSplits('бельведере', 'вот бел ведере стоит')).toEqual([])
+    expect(printedSplits('belvedere', 'от bel vedere «прекрасный вид»')).toEqual(['bel vedere'])
+  })
+
+  it('не разбивает короткие формы: их разбиения совпадают с текстом случайно', () => {
+    expect(SPLIT_MIN_LENGTH).toBe(6)
+    expect(printedSplits('удар', 'сидит у дар')).toEqual([])
+    expect(printedSplits('город сад', 'город сад')).toEqual([])
+  })
+
+  it('сравнивает по нормализованным формам и не дублирует разбиение', () => {
+    const forms = new Set(['belvedere', 'бельведер'])
+    expect(splitSpellingGaps(forms, 'bel vedere и снова bel vedere').gaps).toEqual([{ single: 'belvedere', missing: 'bel vedere' }])
+    expect(splitSpellingGaps(new Set(['belvedere', 'bel vedere']), 'от bel vedere')).toEqual({ printed: true, gaps: [] })
+    expect(splitSpellingGaps(forms, '')).toEqual({ printed: false, gaps: [] })
+  })
+
+  it('scanQuests считает второй класс отдельно от зеркал и помечает kind', () => {
+    const scanned = scanQuests([{ id: 15, quest_id: 'gomel-palace', steps: [
+      step(before, { hint }),
+      { ...step(withLatin, { hint }), id: 175, step_id: 'fixed' },
+      { id: 176, step_id: 'gap', answer_pattern: dict(['сад', 'садъ', 'городской сад']) },
+    ] }])
+    expect(scanned).toMatchObject({ splitPool: 2, splitDefective: 1, splitClean: 1, pool: 1, defective: 1, clean: 0 })
+    expect(scanned.findings.map((f: { kind: string; value: string }) => [f.kind, f.value])).toEqual([
+      ['split_spelling_gap', 'bel vedere'],
+      ['compound_spelling_gap', 'городской садъ'],
+    ])
+    expect(scanned.findings[0]).toMatchObject({ quest_id: 'gomel-palace', step_db_id: 174, step_id: 'palace' })
+  })
+
+  // Связка с рантаймом: найденная форма — ровно та, что чекер отклонял до
+  // правки и принимает после. Морфологический проход рантайма (#1631) слово,
+  // разорванное пробелом, не спасает — это и есть причина класса.
+  it('найденная сканом форма — ровно та, что рантайм отклонял', () => {
+    const checker = (variants: string[]) => buildAnswerChecker('exact_any', JSON.stringify(variants))
+    const [finding] = splitFindings(before, { hint })
+    expect(checker(before)(finding.value)).toBe(false)
+    expect(checker(before)('Bel Vedere')).toBe(false)
+    expect(checker([...before, finding.value])('Bel Vedere')).toBe(true)
+    expect(checker(after)('бел ведере')).toBe(true)
+    expect(checker(after)('купол')).toBe(false)
+  })
+
+  it('ключ baseline различает классы по форме', () => {
+    const split = { quest_id: 'gomel-palace', step_id: 'palace', value: 'bel vedere' }
+    expect(splitByBaseline([split], [findingKey(split)]).known).toEqual([split])
+    expect(splitByBaseline([split], []).fresh).toEqual([split])
+  })
+
+  // Baseline пишется по локальным файлам, а исключение — про контент: прод-прогон
+  // без `--source` обязан видеть ключи всех файлов, иначе записанное исключение
+  // поднимается на проде как новая находка при каждом запуске.
+  it('на прод-прогоне baseline учитывает все файлы разом, по локальному файлу — только свой', () => {
+    const { baselineKeys } = require('@/scripts/scan-quest-compound-spelling-gap')
+    const known = { 'scripts/a-quest-data.js': ['a|s|x'], 'scripts/b-quest-data.js': ['b|s|y'] }
+    expect(baselineKeys(known, 'https://metravel.by')).toEqual(['a|s|x', 'b|s|y'])
+    expect(baselineKeys(known, 'scripts/a-quest-data.js')).toEqual(['a|s|x'])
+    expect(baselineKeys(known, 'scripts/c-quest-data.js')).toEqual([])
+    expect(baselineKeys(undefined, 'https://metravel.by')).toEqual([])
+  })
+})

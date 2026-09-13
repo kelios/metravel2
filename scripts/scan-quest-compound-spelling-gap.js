@@ -46,6 +46,36 @@
  * исключительно для поиска ПАРЫ — сравнение ответа игрока со словарём остаётся
  * строгим.
  *
+ * Второй класс того же вопроса — «текст шага печатает вариант раздельно»
+ * (#1907, `split_spelling_gap`). Источник второго написания здесь не словарь, а
+ * собственные `task`/`hint`/`story` шага: подсказка `gomel-palace/palace`
+ * объясняла слово как «от bel vedere», игрок списал ровно это — и словарь,
+ * знавший только слитное «belvedere», его отклонил. Условие тоже механическое:
+ *   1) в словаре есть односложная форма длиной ≥ 6;
+ *   2) какое-то её разбиение на два слова одним пробелом стоит в нормализованном
+ *      тексте шага целым словосочетанием (границы — не буква и не цифра;
+ *      `\b` слеп к кириллице, поэтому границы заданы явно);
+ *   3) эта раздельная форма в словаре отсутствует — то есть по той же
+ *      нормализации, что у рантайма, игрок с ней получит «Неверный ответ».
+ * Порог длины 6 отсекает разбиения коротких слов, которые совпадают с текстом
+ * случайно («у дар»), и оставляет ровно то, что игрок действительно списывает.
+ *
+ * Граница с правилом 4a (`scan-quest-hint-leak`): если разбиение стоит в
+ * подсказке ДОСЛОВНО («от bel vedere»), принять его словарь не может — это
+ * сделало бы шаг кнопкой для всякого, кто открыл подсказку, и уронило бы гейт
+ * утечки. Такой случай — осознанное исключение в baseline, а не правка текста;
+ * приём остаётся у форм, которые игрок набирает сам («бел ведере»).
+ *
+ * Почему второй класс живёт здесь, а не отдельным скриптом: у него общие со
+ * сканом зеркал разбор словаря (`parseDictionary`, тот же `exact_any`),
+ * множество нормализованных форм, нормализация, ключ находки `квест|шаг|форма`,
+ * baseline, CLI, отчёт и npm-скрипты — в отдельном файле это ~150 из 370 строк
+ * копией, а собственного кода у класса около сорока строк (`printedSplits` +
+ * `splitSpellingGaps`). Оба класса отвечают на один вопрос — «лежит ли в
+ * словаре то, что игрок физически напишет», — различаясь только тем, откуда
+ * берётся второе написание: из самого словаря или из текста шага. Разные
+ * `kind` в находке и раздельные счётчики отчёта не дают классам смешаться.
+ *
  *   node scripts/scan-quest-compound-spelling-gap.js                    # весь прод
  *   node scripts/scan-quest-compound-spelling-gap.js --quest-id=minsk-cmok
  *   node scripts/scan-quest-compound-spelling-gap.js --source=scripts/minsk-cmok-quest-data.js
@@ -168,19 +198,95 @@ function scanDictionary(variants) {
   return { qualifies: true, mirrorable, gaps }
 }
 
-/** Находки одного шага в том же виде, что у соседних сканов квестов. */
+// ===================== Класс 2: текст шага печатает вариант раздельно (#1907) =====================
+
+/** Поля шага, которые игрок читает до попытки и откуда списывает написание. */
+const SPLIT_FIELDS = ['task', 'hint', 'story']
+/** Односложные формы короче этого не разбиваются: их разбиения совпадают с текстом случайно. */
+const SPLIT_MIN_LENGTH = 6
+
+/** Текст шага в той же нормализации, что и словарь: иначе «Bel Vedere» и «bel vedere» разойдутся. */
+function stepText(step) {
+  return normalizeAnswer(SPLIT_FIELDS.map((field) => step?.[field] ?? '').join(' '))
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/** Стоит ли `phrase` в `text` целым словосочетанием (границы — не буква и не цифра). */
+function containsPhrase(text, phrase) {
+  if (!text.includes(phrase)) return false
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(phrase)}(?![\\p{L}\\p{N}])`, 'u').test(text)
+}
+
+/** Разбиения односложной формы на два слова, которые текст шага печатает. */
+function printedSplits(single, text) {
+  if (single.length < SPLIT_MIN_LENGTH || single.includes(' ')) return []
+  const splits = []
+  for (let i = 1; i < single.length; i++) {
+    const split = `${single.slice(0, i)} ${single.slice(i)}`
+    if (containsPhrase(text, split)) splits.push(split)
+  }
+  return splits
+}
+
+/**
+ * Пропуски второго класса: `forms` — нормализованные записи словаря, `text` —
+ * нормализованный текст шага. Возвращает `{ printed, gaps }`: `printed` — текст
+ * печатает хоть одно разбиение односложной формы (шаг под риском), `gaps` —
+ * разбиения, которых в словаре нет.
+ */
+function splitSpellingGaps(forms, text) {
+  const gaps = []
+  const seen = new Set()
+  let printed = false
+  if (!text) return { printed, gaps }
+  for (const single of forms) {
+    for (const split of printedSplits(single, text)) {
+      printed = true
+      if (forms.has(split) || seen.has(split)) continue
+      seen.add(split)
+      gaps.push({ single, missing: split })
+    }
+  }
+  return { printed, gaps }
+}
+
+/**
+ * Находки одного шага в том же виде, что у соседних сканов квестов. Оба класса
+ * идут одним списком и различаются `kind`; счётчики отчёта считает `scanQuests`.
+ */
 function scanStep(step, dictionary = parseDictionary(step.answer_pattern)) {
-  if (!dictionary || !dictionary.length) return { qualifies: false, mirrorable: false, findings: [] }
+  const silent = { qualifies: false, mirrorable: false, printed: false, findings: [] }
+  if (!dictionary || !dictionary.length) return silent
   const { qualifies, mirrorable, gaps } = scanDictionary(dictionary)
+
+  const forms = new Set()
+  for (const variant of dictionary) {
+    const normalized = normalizeAnswer(variant)
+    if (normalized) forms.add(normalized)
+  }
+  const { printed, gaps: splitGaps } = splitSpellingGaps(forms, stepText(step))
+
   return {
     qualifies,
     mirrorable,
-    findings: gaps.map((gap) => ({
-      kind: 'compound_spelling_gap',
-      value: gap.missing,
-      detail: `словарь принимает «${gap.sibling}» и «${gap.spelling}», но фразу собрал только вокруг «${gap.sibling}»`,
-      compound: gap.compound,
-    })),
+    printed,
+    findings: [
+      ...gaps.map((gap) => ({
+        kind: 'compound_spelling_gap',
+        value: gap.missing,
+        detail: `словарь принимает «${gap.sibling}» и «${gap.spelling}», но фразу собрал только вокруг «${gap.sibling}»`,
+        compound: gap.compound,
+      })),
+      ...splitGaps.map((gap) => ({
+        kind: 'split_spelling_gap',
+        value: gap.missing,
+        detail: `текст шага печатает «${gap.missing}», а словарь знает только слитное «${gap.single}»`,
+        compound: gap.single,
+      })),
+    ],
   }
 }
 
@@ -192,6 +298,9 @@ function scanQuests(quests) {
   let atRisk = 0
   let defective = 0
   let clean = 0
+  let splitPool = 0
+  let splitDefective = 0
+  let splitClean = 0
 
   for (const quest of quests) {
     for (const step of quest.steps || []) {
@@ -201,15 +310,22 @@ function scanQuests(quests) {
       scannedSteps++
       scannedVariants += variants ? variants.length : 0
 
-      const { qualifies, mirrorable, findings: stepFindings } = scanStep(step, variants)
-      if (!qualifies) continue
-      pool++
-      if (mirrorable) atRisk++
-      if (!stepFindings.length) {
-        clean++
-        continue
+      const { qualifies, mirrorable, printed, findings: stepFindings } = scanStep(step, variants)
+      const compoundGaps = stepFindings.filter((finding) => finding.kind === 'compound_spelling_gap').length
+      const splitGaps = stepFindings.length - compoundGaps
+
+      if (qualifies) {
+        pool++
+        if (mirrorable) atRisk++
+        if (compoundGaps) defective++
+        else clean++
       }
-      defective++
+      if (printed) {
+        splitPool++
+        if (splitGaps) splitDefective++
+        else splitClean++
+      }
+
       for (const finding of stepFindings) {
         findings.push({
           quest_db_id: quest.id ?? null,
@@ -222,7 +338,11 @@ function scanQuests(quests) {
       }
     }
   }
-  return { findings, scannedSteps, scannedVariants, pool, atRisk, defective, clean }
+  return {
+    findings, scannedSteps, scannedVariants,
+    pool, atRisk, defective, clean,
+    splitPool, splitDefective, splitClean,
+  }
 }
 
 // ===================== Источники данных =====================
@@ -262,6 +382,20 @@ function splitByBaseline(findings, knownKeys) {
   return splitFindingsByBaseline(findings, knownKeys, (finding) => [findingKey(finding)])
 }
 
+/**
+ * Ключи baseline для источника. Baseline пишется по локальным файлам, а
+ * исключение относится к контенту, не к файлу: ключ уже несёт `квест|шаг|форма`.
+ * Поэтому прод-прогон (без `--source`) берёт ключи всех файлов разом — иначе
+ * записанное исключение (#1907, «bel vedere» из подсказки) на проде
+ * поднималось бы как новая находка при каждом запуске.
+ */
+function baselineKeys(known, source) {
+  if (!known) return []
+  if (known[source]) return known[source]
+  if (/^https?:\/\//.test(source)) return Object.values(known).flat()
+  return []
+}
+
 /** Перезапись baseline по всем локальным данным квестов — единственный способ его пополнить. */
 function updateBaseline(rootDir) {
   const known = {}
@@ -275,10 +409,13 @@ function updateBaseline(rootDir) {
   const baselinePath = path.join(rootDir, BASELINE_PATH)
   writeBaseline(baselinePath, {
     contractVersion: BASELINE_CONTRACT_VERSION,
-    note: 'Осознанные исключения: словарь содержит омографичную пару («цепь»/«цеп», «угол»/«уголь»), '
-      + 'и зеркальная фраза была бы несуществующей — размножать её нельзя, а сужать множество '
-      + 'принимаемых ответов не хочется. Сейчас файл пуст: находок прод-базы не осталось. '
-      + 'Обновлять: npm run quest:scan-compound-spelling-gap:baseline',
+    note: 'Осознанные исключения. Класс compound_spelling_gap (#1536): словарь содержит омографичную '
+      + 'пару («цепь»/«цеп», «угол»/«уголь»), и зеркальная фраза была бы несуществующей — размножать '
+      + 'её нельзя, а сужать множество принимаемых ответов не хочется. Класс split_spelling_gap (#1907): '
+      + 'текст шага печатает разбиение дословно как подсказку (этимология «от bel vedere»), и правило 4a '
+      + '(scan-quest-hint-leak) запрещает принимать дословную строку подсказки — приём остаётся у '
+      + 'транслитераций, которые игрок набирает сам («бел ведере»). Ключи — квест|шаг|форма, на '
+      + 'прод-прогоне учитываются все файлы разом. Обновлять: npm run quest:scan-compound-spelling-gap:baseline',
     known,
   })
   return { baselinePath, files: Object.keys(known).length, total }
@@ -316,6 +453,9 @@ function reportText(source, quests, scanned, knownFindings = []) {
   // вокруг одного из написаний. Широкий `pool` держится ради воспроизводимости
   // чисел разового скана, но норму авторинга показывает именно это число.
   console.log(`из них фраза стоит вокруг одного из написаний: ${scanned.atRisk}`)
+  // Второй класс (#1907): шаги, чей текст печатает разбиение односложной формы.
+  console.log(`\nтекст шага печатает вариант раздельно: ${scanned.splitPool}`)
+  console.log(`дефект есть: ${scanned.splitDefective} | контроль чист: ${scanned.splitClean}`)
 }
 
 async function main() {
@@ -334,7 +474,7 @@ async function main() {
   const scanned = scanQuests(quests)
   const source = args.source || args.apiUrl
   const { fresh: findings, known: knownFindings } = args.baseline
-    ? splitByBaseline(scanned.findings, loadBaseline(path.resolve(process.cwd(), args.baseline)).known?.[source])
+    ? splitByBaseline(scanned.findings, baselineKeys(loadBaseline(path.resolve(process.cwd(), args.baseline)).known, source))
     : { fresh: scanned.findings, known: [] }
 
   if (args.json) {
@@ -352,13 +492,17 @@ module.exports = {
   orthoStem,
   spellingSiblings,
   scanDictionary,
+  printedSplits,
+  splitSpellingGaps,
   scanStep,
   scanQuests,
   parseArgs,
   findingKey,
   splitByBaseline,
+  baselineKeys,
   updateBaseline,
   BASELINE_PATH,
+  SPLIT_MIN_LENGTH,
 }
 
 if (require.main === module) {
