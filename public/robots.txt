@@ -7,6 +7,10 @@ Disallow: /chat
 Disallow: /password/
 Disallow: /map.optimized.example
 Disallow: /assets/icons/
+# Only the parameterised search is closed: the trailing "?" is load-bearing.
+# "Disallow: /search" without it would also close the canonical /search page,
+# which every /search?... variant points to via rel=canonical (#1933).
+Disallow: /search?
 Disallow: /*?debug=*
 Disallow: /*?utm_*
 Disallow: /*?fbclid=*
