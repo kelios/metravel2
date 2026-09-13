@@ -180,7 +180,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/MyTripsDashboard.tsx` | 167 | дашборд «Мои поездки», сегменты и счётчики |
 | `components/trips/planning/RouteBuilder.styles.ts` | 165 | стили конструктора |
 | `components/trips/planning/useTripRouteFileBranch.ts` | 143 | файл маршрута: чтение, оригинальный трек, загрузка и удаление плюс синхронные локи (#1824) |
-| `components/trips/planning/RouteBuilderLayout.tsx` | 137 | две раскладки панели: `stack` (две колонки) и `mapFirst` (через RouteBuilderMobile) |
+| `components/trips/planning/RouteBuilderLayout.tsx` | 148 | две раскладки панели: `stack` (две колонки) и `mapFirst` (через RouteBuilderMobile) |
 | `components/trips/planning/TripRouteExportMenu.tsx` | 150 | экспорт: скачивание + открытие в навигаторе |
 | `components/trips/planning/RouteSummaryBar.tsx` | 147 | сводка маршрута под конструктором |
 | `components/trips/planning/routeBuilderPoint.ts` | 115 | чистые хелперы точки: разбор координат, формат ввода, имя из адреса, сигнатура маршрута |
