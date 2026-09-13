@@ -308,18 +308,29 @@ export default function TripPlanRouteMap({
     setMapInstance((previous: unknown) => (previous === map ? previous : map));
   }, []);
 
-  const toggleFullscreen = useCallback(() => {
+  // Кадр снимается перед КАЖДЫМ переключением контейнера: портал пересобирает
+  // MapContainer, и без снимка инлайн-карта вернулась бы к виду на момент
+  // разворота, а не к тому, что человек только что смотрел (#1928).
+  const snapshotView = useCallback(() => {
     const map = mapRef.current;
-    if (map) {
-      try {
-        const center = map.getCenter();
-        restoredViewRef.current = { center: [center.lat, center.lng], zoom: map.getZoom() };
-      } catch {
-        // Карта ещё не готова — вернёмся к расчётному центру.
-      }
+    if (!map) return;
+    try {
+      const center = map.getCenter();
+      restoredViewRef.current = { center: [center.lat, center.lng], zoom: map.getZoom() };
+    } catch {
+      // Карта ещё не готова — оставим предыдущий снимок или расчётный центр.
     }
-    setFullscreen((value) => !value);
   }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    snapshotView();
+    setFullscreen((value) => !value);
+  }, [snapshotView]);
+
+  const exitFullscreen = useCallback(() => {
+    snapshotView();
+    setFullscreen(false);
+  }, [snapshotView]);
 
   // Редактор точки живёт в панели под картой, а развёрнутая карта уходит порталом
   // в body и перекрывает её целиком — из полноэкранного режима до редактора не
@@ -329,10 +340,10 @@ export default function TripPlanRouteMap({
   // тем же значением состояния React ререндер не запускает.
   const editPointFromMap = useCallback(
     (index: number) => {
-      setFullscreen(false);
+      exitFullscreen();
       onEditPoint?.(index);
     },
-    [onEditPoint],
+    [exitFullscreen, onEditPoint],
   );
 
   useEffect(() => {
@@ -340,7 +351,7 @@ export default function TripPlanRouteMap({
     if (typeof document === 'undefined') return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setFullscreen(false);
+      if (event.key === 'Escape') exitFullscreen();
     };
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -350,7 +361,7 @@ export default function TripPlanRouteMap({
       document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
     };
-  }, [fullscreen]);
+  }, [exitFullscreen, fullscreen]);
 
   useEffect(() => {
     let cancelled = false;

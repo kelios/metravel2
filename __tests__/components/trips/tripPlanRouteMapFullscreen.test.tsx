@@ -9,6 +9,7 @@ const mockFitBounds = jest.fn()
 const mockSetView = jest.fn()
 const mockStop = jest.fn()
 const mockMap = { setView: mockSetView, fitBounds: mockFitBounds, stop: mockStop }
+const mockView = { lat: 53.5, lng: 27.5, zoom: 14 }
 
 // Развёрнутая карта уходит порталом в document.body; react-test-renderer порталы
 // в DOM-контейнер не умеет, поэтому в тесте портал рендерит узел на месте.
@@ -56,7 +57,10 @@ jest.mock('@/components/MapPage/Map/MapCanvas', () => {
       // объект на каждый рендер закрутил бы бесконечный цикл, которого в проде нет.
       const mapRef = ReactModule.useRef<unknown>(null)
       if (!mapRef.current) {
-        mapRef.current = { getCenter: () => ({ lat: 53.5, lng: 27.5 }), getZoom: () => 14 }
+        mapRef.current = {
+          getCenter: () => ({ lat: mockView.lat, lng: mockView.lng }),
+          getZoom: () => mockView.zoom,
+        }
       }
       ReactModule.useEffect(() => {
         onMapRef?.(mapRef.current)
@@ -96,6 +100,9 @@ describe('TripPlanRouteMap fullscreen (web)', () => {
     mockFitBounds.mockClear()
     mockSetView.mockClear()
     mockStop.mockClear()
+    mockView.lat = 53.5
+    mockView.lng = 27.5
+    mockView.zoom = 14
     document.body.style.overflow = ''
   })
 
@@ -146,6 +153,44 @@ describe('TripPlanRouteMap fullscreen (web)', () => {
 
     expect(getByLabelText(EXPAND)).toBeTruthy()
     expect(document.body.style.overflow).toBe('')
+  })
+
+  // #1928: снимок вида должен сниматься на каждом выходе, не только на кнопке.
+  it('keeps the panned fullscreen view when closing with Escape', async () => {
+    const { getByLabelText } = await renderMap()
+
+    fireEvent(getByLabelText(EXPAND), 'click')
+    mockView.lat = 54.1
+    mockView.lng = 28.2
+    mockView.zoom = 16
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    })
+
+    expect(mockCanvasProps.at(-1)?.containerKey).toMatch(/-inline$/)
+    expect(mockCanvasProps.at(-1)?.center).toEqual([54.1, 28.2])
+    expect(mockCanvasProps.at(-1)?.zoom).toBe(16)
+  })
+
+  it('keeps the panned fullscreen view when opening the point editor', async () => {
+    const onEditPoint = jest.fn()
+    const { getByLabelText, UNSAFE_getByProps } = render(
+      <TripPlanRouteMap route={route} onEditPoint={onEditPoint} />,
+    )
+    await waitFor(() => getByLabelText(EXPAND))
+
+    fireEvent(getByLabelText(EXPAND), 'click')
+    mockView.lat = 54.2
+    mockView.lng = 28.3
+    mockView.zoom = 15
+
+    fireEvent(UNSAFE_getByProps({ 'data-testid': 'trip-plan-map-edit-point-1' }), 'click')
+
+    expect(onEditPoint).toHaveBeenCalledWith(1)
+    expect(mockCanvasProps.at(-1)?.containerKey).toMatch(/-inline$/)
+    expect(mockCanvasProps.at(-1)?.center).toEqual([54.2, 28.3])
+    expect(mockCanvasProps.at(-1)?.zoom).toBe(15)
   })
 
   // Точки ставятся кликом по карте — в развёрнутом виде это должно работать так же.

@@ -277,6 +277,9 @@ export default function TripPlanRouteMap({
     focusedTokenRef.current = null;
     setFullscreen(true);
   }, []);
+  // Native WebView при сворачивании размонтируется и снова ставит кадр
+  // fitBounds по маршруту: MapUiApi не отдаёт getCenter/getZoom, поэтому
+  // перенести панораму из модалки в слот, как на web (#1928), здесь нечем.
   const closeFullscreen = useCallback(() => {
     if (closeFrameRef.current != null) return;
     setLayersOpen(false);
