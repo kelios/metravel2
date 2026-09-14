@@ -18,6 +18,8 @@ export type QuestCityLandingGroup<T = unknown> = {
   alias: string | null;
   cityId: string;
   cityIds: string[];
+  /** Short aliases this city used to publish; resolvable, never canonical. */
+  legacyAliases: string[];
   cityName: string;
   countryName: string;
   countryCode: string;
@@ -33,6 +35,7 @@ export type NearbyQuestCityLandingGroup<T = unknown> = QuestCityLandingGroup<T> 
 export function stableTextCompare(a: unknown, b: unknown): number;
 export function questRouteKey(quest: unknown): QuestRouteKey | null;
 export function buildQuestCityAliasMap(quests: unknown): Map<string, string>;
+export function questCityLegacyAlias(alias: unknown): string | null;
 export function buildQuestCityLandingGroups<T = unknown>(
   quests: T[],
   cityAliasMap?: Map<string, string> | null,

@@ -1,6 +1,8 @@
 const {
+  buildQuestCityAliasMap,
   buildQuestCityLandingGroups,
   findNearbyQuestCityGroups,
+  questRouteVariants,
   resolveQuestCitySegment,
 } = require('@/utils/questCityAlias')
 
@@ -87,5 +89,82 @@ describe('quest city landing groups', () => {
     const rome = groups.find((city: { segment: string }) => city.segment === 'rome')
 
     expect(findNearbyQuestCityGroups(rome, groups, { limit: 0 })).toEqual([])
+  })
+})
+
+// #1931: a city whose own name is two words ("Кутна-Гора") used to publish only
+// the first quest_id token, so /quests/kutna claimed a city called «Кутна».
+describe('quest city alias for multi-word city names', () => {
+  const twoWordCityQuest = {
+    quest_id: 'kutna-hora-silver',
+    city_id: '140',
+    city_name: 'Кутна-Гора',
+    country_code: 'cz',
+    lat: 49.95,
+    lng: 15.27,
+  }
+
+  it('keeps every word of the city name in the alias', () => {
+    expect(buildQuestCityAliasMap([twoWordCityQuest]).get('140')).toBe('kutna-hora')
+  })
+
+  it('keeps the already indexed short alias resolvable, with the full one canonical', () => {
+    const group = buildQuestCityLandingGroups([twoWordCityQuest])[0]
+
+    expect(group).toMatchObject({ segment: 'kutna-hora', legacyAliases: ['kutna'] })
+    expect(resolveQuestCitySegment('kutna', [twoWordCityQuest])).toMatchObject({
+      cityId: '140',
+      segment: 'kutna-hora',
+    })
+    expect(questRouteVariants(twoWordCityQuest, buildQuestCityAliasMap([twoWordCityQuest]))
+      .map((variant: { path: string }) => variant.path)).toEqual([
+      '/quests/140/kutna-hora-silver',
+      '/quests/kutna-hora/kutna-hora-silver',
+      '/quests/kutna/kutna-hora-silver',
+    ])
+  })
+
+  it('leaves a one-word city on its single-token alias', () => {
+    const quests = [
+      { quest_id: 'rome-forum', city_id: '121', city_name: 'Рим' },
+      { quest_id: 'minsk-cmok', city_id: '4', city_name: 'Минск' },
+      { quest_id: 'minsk-loshitsa', city_id: '4', city_name: 'Минск' },
+    ]
+    const aliases = buildQuestCityAliasMap(quests)
+
+    expect(aliases.get('121')).toBe('rome')
+    expect(aliases.get('4')).toBe('minsk')
+    expect(buildQuestCityLandingGroups(quests).map((city: { legacyAliases: string[] }) => city.legacyAliases))
+      .toEqual([[], []])
+  })
+
+  it('does not read an abbreviation slug as the first word of the city name', () => {
+    // «Санкт-Петербург» is two words, but `spb` spells neither of them — the
+    // theme tokens must stay out of the alias however long the quest_id is.
+    // `spb-dostoevsky-secrets` is the trap: 13 latin letters against the 14 of
+    // the name pass the whole-name band, so only the lead token («spb» vs
+    // «Санкт») tells the abbreviation from a spelling.
+    const quests = [
+      { quest_id: 'spb-guardians', city_id: '58', city_name: 'Санкт-Петербург' },
+      { quest_id: 'spb-dostoevsky-secrets', city_id: '59', city_name: 'Санкт-Петербург' },
+      { quest_id: 'nn-kremlin-tour', city_id: '60', city_name: 'Нижний Новгород' },
+    ]
+    const aliases = buildQuestCityAliasMap(quests)
+
+    expect(aliases.get('58')).toBe('spb')
+    expect(aliases.get('59')).toBe('spb')
+    expect(aliases.get('60')).toBe('nn')
+  })
+
+  it('does not extend a landmark named after the nearest town', () => {
+    // The record is «Голубая криница», the quest_id is built from Slavgorod
+    // next door, so its second token is quest theme, not city name.
+    const quest = {
+      quest_id: 'slavgorod-blue-krinica',
+      city_id: '66',
+      city_name: 'Голубая криница (Славгородский район)',
+    }
+
+    expect(buildQuestCityAliasMap([quest]).get('66')).toBe('slavgorod')
   })
 })

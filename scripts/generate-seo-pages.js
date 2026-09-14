@@ -2738,6 +2738,7 @@ function buildQuestCityLandingModel(quests, cityAliasMap, travels = []) {
       segment: group.segment,
       cityId: group.cityId,
       cityIds: group.cityIds,
+      legacyAliases: group.legacyAliases,
       name: group.cityName,
       countryName: group.countryName,
       countryCode: group.countryCode,
@@ -4360,7 +4361,7 @@ async function main() {
         indexableCountryLandings.get(String(city.countryCode || '').toUpperCase()) || null;
       if (countryLanding) cityLandingsWithCountryLink += 1;
       const cityHtml = buildQuestCityLandingHtml(cityLandingBaseHtml, city, countryLanding);
-      for (const segment of [...city.cityIds, city.segment]) {
+      for (const segment of [...city.cityIds, city.segment, ...city.legacyAliases]) {
         const relativePath = path.join('quests', segment, 'index.html');
         if (writtenCityLandingPaths.has(relativePath)) continue;
         writeFileSafe(path.join(DIST_DIR, relativePath), cityHtml);
