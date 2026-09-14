@@ -297,6 +297,41 @@ describe('Quest screen title sync', () => {
     expect(document.querySelector('meta[name="robots"]')).toBeNull()
   })
 
+  // #1938: SSG пишет во все варианты сегмента города один canonical
+  // `/quests/<city_id>/<quest_id>`. Проба снимается ПОСЛЕ гидрации — когда
+  // отработали все таймеры HEAD_PATCH_DELAYS_MS; ранний замер показал бы ещё
+  // нетронутое SSG-значение и дефекта не увидел бы.
+  it.each(['4', 'minsk', 'minsk-city'])(
+    'canonicalizes the quest to its city id after hydration when opened as /quests/%s',
+    async (citySegment) => {
+      mockUseLocalSearchParams.mockReturnValue({ city: citySegment, questId: 'minsk-cmok' })
+      const current = mockUseQuestBundle()
+      mockUseQuestBundle.mockReturnValue({
+        ...current,
+        bundle: { ...current.bundle, city: { ...current.bundle.city, id: 4 } },
+      })
+      const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+      const screen = render(<QuestScreen />)
+
+      await act(async () => {
+        jest.advanceTimersByTime(500)
+        await Promise.resolve()
+      })
+
+      expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href'))
+        .toBe('https://metravel.by/quests/4/minsk-cmok')
+      expect(document.querySelector('meta[property="og:url"]')?.getAttribute('content'))
+        .toBe('https://metravel.by/quests/4/minsk-cmok')
+      expect(screen.UNSAFE_root.findByType(LazyInstantSEO).props.canonical)
+        .toBe('https://metravel.by/quests/4/minsk-cmok')
+      const { jsonLd } = readHelmetStructuredData(screen)
+      expect(jsonLd['@graph']).toContainEqual(expect.objectContaining({
+        '@type': 'CreativeWork',
+        url: 'https://metravel.by/quests/4/minsk-cmok',
+      }))
+    },
+  )
+
   it.each([
     ['https://metravel.by/quest-cover/quests/77/main/cover.webp', 'https://metravel.by/quest-cover/quests/77/main/cover.webp?w=800'],
     ['/quest-cover/quests/77/main/cover.webp', 'https://metravel.by/quest-cover/quests/77/main/cover.webp?w=800'],

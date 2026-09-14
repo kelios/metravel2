@@ -50,6 +50,8 @@ export type QuestStep = {
 };
 
 export type QuestCity = {
+  /** Числовой id города — канонический сегмент квестового URL (#1938). */
+  id?: number;
   name?: string;
   lat: number;
   lng: number;

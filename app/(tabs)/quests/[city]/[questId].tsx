@@ -324,7 +324,6 @@ export default function QuestByIdScreen() {
   const isFocused = useIsFocused();
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const canonical = useMemo(() => buildCanonicalUrl(`/quests/${cityId}/${questId}`), [cityId, questId]);
 
   const { isAuthenticated, userId } = useAuth();
   const shouldLoadQuest = isFocused && Boolean(questId);
@@ -411,6 +410,17 @@ export default function QuestByIdScreen() {
   const isLoading =
     isQuestLoading ||
     (isAuthenticated ? progressLoading : Boolean(questId) && !guestFlow.guestReady);
+  // #1938: canonical принадлежит квесту, а не сегменту из адресной строки.
+  // Один квест открывается по числовому city_id и по alias'ам города, а SSG
+  // пишет во все варианты один адрес `/quests/<city_id>/<quest_id>`
+  // (`scripts/generate-seo-pages.js`). Сегмент берём из города бандла и
+  // падаем на сырой параметр только до загрузки данных — как городская
+  // посадочная (`app/(tabs)/quests/[city]/index.tsx`).
+  const canonicalCityId = bundle?.city?.id != null ? String(bundle.city.id) : cityId;
+  const canonical = useMemo(
+    () => buildCanonicalUrl(`/quests/${canonicalCityId}/${questId}`),
+    [canonicalCityId, questId],
+  );
   const seo = useMemo(() => getQuestSeo(bundle, questId, isLoading), [bundle, isLoading, questId]);
   const countModel = bundle ? resolveBundleCountModel(bundle) : null;
   // SSG/Expo Head and the delayed head patches must agree on the derivative URL.
@@ -457,7 +467,7 @@ export default function QuestByIdScreen() {
       title: seo.title,
       description: seo.description,
       questId,
-      cityId: cityId || undefined,
+      cityId: canonicalCityId || undefined,
       cityName: bundle.city?.name,
       countryCode: bundle.city?.countryCode,
       coverUrl: seoImage,
@@ -472,7 +482,7 @@ export default function QuestByIdScreen() {
         {stringifyJsonLd(structuredData)}
       </script>
     );
-  }, [bundle, canonical, cityId, countModel?.total, questId, seo.description, seo.title, seoImage]);
+  }, [bundle, canonical, canonicalCityId, countModel?.total, questId, seo.description, seo.title, seoImage]);
 
   const relatedTravelsSlot = useMemo(() => {
     if (!bundle) return null;

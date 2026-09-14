@@ -553,6 +553,7 @@ export function adaptCity(apiCity: ApiQuestCity): QuestCity {
     const lng = coordNum(apiCity.lng);
     const countryCode = normalizeQuestCountryCode(apiCity.country_code);
     return {
+        id: Number.isFinite(Number(apiCity.id)) ? Number(apiCity.id) : undefined,
         name: apiCity.name || undefined,
         lat,
         lng,
