@@ -203,11 +203,14 @@ describe('AuthContext', () => {
 
   it('login success updates state and storage', async () => {
     (loginApi as jest.Mock).mockResolvedValueOnce({
-      token: 'token-123',
-      id: 7,
-      name: 'User Name',
-      email: 'user@example.com',
-      is_superuser: true,
+      ok: true,
+      user: {
+        token: 'token-123',
+        id: 7,
+        name: 'User Name',
+        email: 'user@example.com',
+        is_superuser: true,
+      },
     });
 
     // First call: background avatar fetch from checkAuthentication (no avatar in storage)
@@ -253,7 +256,7 @@ describe('AuthContext', () => {
 
     await act(async () => {
       const result = await contextValue.login('user@example.com', 'password');
-      expect(result).toBe(true);
+      expect(result).toEqual({ ok: true });
     });
 
     expect(setSecureItem).toHaveBeenCalledWith('userToken', 'token-123');
@@ -302,7 +305,12 @@ describe('AuthContext', () => {
   });
 
   it('login failure keeps unauthenticated', async () => {
-    (loginApi as jest.Mock).mockResolvedValueOnce(null);
+    // #1944: слой api отдаёт причину отказа, а не `null`.
+    (loginApi as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      reason: 'rejected',
+      message: 'Неверный email или пароль',
+    });
     (getSecureItem as jest.Mock).mockResolvedValueOnce(null);
     (getStorageBatch as jest.Mock).mockResolvedValueOnce({});
 
@@ -320,7 +328,7 @@ describe('AuthContext', () => {
 
     await act(async () => {
       const result = await contextValue.login('user@example.com', 'password');
-      expect(result).toBe(false);
+      expect(result).toMatchObject({ ok: false, reason: 'rejected' });
     });
 
     expect(setSecureItem).not.toHaveBeenCalled();

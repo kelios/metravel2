@@ -11,6 +11,14 @@ import {
     type SocialAuthResponse,
     type SocialSessionPayload,
 } from '@/api/authShared';
+import {
+    authFailure,
+    authFailureFromError,
+    authFailureReasonFromStatus,
+    type AuthAttempt,
+    type AuthFailureReason,
+} from '@/utils/authFailure';
+import { isConnectionFailure } from '@/utils/networkFailureTag';
 import { sanitizeInput } from '@/utils/security';
 import { validatePassword } from '@/utils/aiValidation';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
@@ -96,11 +104,13 @@ export type FacebookAuthResult =
         reasonCode: FacebookEmailCompletionReason;
         expiresIn: number;
     }
-    | { status: 'error'; message: string; errorCode?: string };
+    // `reason` — общая таксономия отказа (#1944). Facebook-форма показывает
+    // `message`, но причина нужна общему финишеру соц-входа в сторе.
+    | { status: 'error'; message: string; errorCode?: string; reason?: AuthFailureReason };
 
 export type FacebookCompletionStartResult =
     | { status: 'verification_sent' }
-    | { status: 'error'; message: string; errorCode?: string };
+    | { status: 'error'; message: string; errorCode?: string; reason?: AuthFailureReason };
 
 const getGoogleAuthErrorMessage = (payload: Partial<GoogleAuthResponse>, status: number): string => {
     const directMessage = payload.detail || payload.error || payload.message;
@@ -120,24 +130,24 @@ const getGoogleAuthErrorMessage = (payload: Partial<GoogleAuthResponse>, status:
     return i18nT('errorsStatic:api.auth.googleSignInFailed');
 };
 
-export const loginApi = async (email: string, password: string): Promise<{
-    token: string;
-    refresh?: string;
-    name: string;
-    email: string;
-    id: string | number;
-    is_superuser: boolean;
-} | null> => {
+/**
+ * #1944: результат входа несёт причину отказа, а `Alert` отсюда убран.
+ * Раньше любая неудача возвращала `null`, форма трактовала его как «неверный
+ * пароль», а транспортный сбой дополнительно всплывал модальным окном — при
+ * обрыве связи пользователь видел два противоречивых сообщения сразу.
+ */
+export const loginApi = async (
+    email: string,
+    password: string,
+): Promise<AuthAttempt<SocialSessionPayload>> => {
     try {
         if (!password || password.trim().length === 0) {
-            Alert.alert(i18nT('errorsStatic:api.auth.errorTitle'), i18nT('errorsStatic:api.auth.emptyPassword'));
-            return null;
+            return authFailure('rejected', i18nT('errorsStatic:api.auth.emptyPassword'));
         }
 
         const trimmedEmail = (email ?? '').trim();
         if (!trimmedEmail) {
-            Alert.alert(i18nT('errorsStatic:api.auth.errorTitle'), i18nT('errorsStatic:api.auth.emptyEmail'));
-            return null;
+            return authFailure('rejected', i18nT('errorsStatic:api.auth.emptyEmail'));
         }
 
         const response = await retry(
@@ -164,38 +174,28 @@ export const loginApi = async (email: string, password: string): Promise<{
             }
         );
 
-        const json = await safeJsonParse<{
-            token?: string;
-            refresh?: string;
-            name?: string;
-            email?: string;
-            id?: string | number;
-            is_superuser?: boolean;
-        }>(response, {});
+        const json = await safeJsonParse<SocialAuthResponse>(response, {});
 
-        if (json.token) return json as {
-            token: string;
-            refresh?: string;
-            name: string;
-            email: string;
-            id: string | number;
-            is_superuser: boolean;
-        };
-        return null;
+        const user = parseSocialSession(json);
+        if (user) return { ok: true, user };
+        // Сервер ответил 2xx без сессии — это его сбой, а не ошибка пользователя.
+        return authFailure('server', i18nT('errorsStatic:api.auth.signInFailed'));
     } catch (error: unknown) {
         devError('Login error:', error);
         const rawMessage = error instanceof Error ? error.message : '';
-        let message: string;
-        if (/Login failed: (401|403)/.test(rawMessage)) {
-            message = i18nT('errorsStatic:api.auth.invalidCredentials');
-        } else if (/Login failed: \d+/.test(rawMessage)) {
+        const failedStatus = rawMessage.match(/Login failed: (\d{3})/);
+        if (failedStatus) {
+            const status = Number(failedStatus[1]);
+            if (status === 401 || status === 403) {
+                return authFailure('rejected', i18nT('errorsStatic:api.auth.invalidCredentials'));
+            }
             // 5xx/429/прочее — серверная/временная ошибка, не вводим в заблуждение «неверным паролем».
-            message = i18nT('errorsStatic:api.auth.serviceUnavailable');
-        } else {
-            message = getUserFriendlyError(error);
+            return authFailure(
+                authFailureReasonFromStatus(status),
+                i18nT('errorsStatic:api.auth.serviceUnavailable'),
+            );
         }
-        Alert.alert(i18nT('errorsStatic:api.auth.signInErrorTitle'), message);
-        return null;
+        return authFailureFromError(error, i18nT('errorsStatic:api.auth.signInFailed'));
     }
 };
 
@@ -380,6 +380,12 @@ export const registration = async (values: FormValues): Promise<{ ok: boolean; m
         return { ok: true, message: successMessage };
     } catch (error: unknown) {
         devError('Registration error:', error);
+        // #1944: форма регистрации показывает это сообщение как есть. При обрыве связи
+        // в него попадал сырой технический текст (`Network request failed`), поэтому
+        // транспортный сбой переводим тем же дружелюбным текстом с тегом, что и вход.
+        if (isConnectionFailure(error)) {
+            return { ok: false, message: getUserFriendlyError(error) };
+        }
         const msg = error instanceof Error ? error.message : i18nT('errorsStatic:api.common.unknownError');
         return { ok: false, message: msg };
     }
@@ -424,18 +430,12 @@ export const confirmAccount = async (hash: string) => {
     }
 };
 
-export const googleAuthApi = async (idToken: string): Promise<{
-    token: string;
-    refresh?: string;
-    name: string;
-    email: string;
-    id: string | number;
-    is_superuser: boolean;
-} | null> => {
+/** #1944: тот же контракт, что и у `loginApi` — причина отказа вместо `null` и `Alert`. */
+export const googleAuthApi = async (idToken: string): Promise<AuthAttempt<SocialSessionPayload>> => {
     try {
         const trimmedToken = String(idToken || '').trim();
         if (!trimmedToken) {
-            throw new Error(i18nT('errorsStatic:api.auth.googleIdTokenMissing'));
+            return authFailure('rejected', i18nT('errorsStatic:api.auth.googleIdTokenMissing'));
         }
 
         const response = await retry(
@@ -459,23 +459,18 @@ export const googleAuthApi = async (idToken: string): Promise<{
         const json = await safeJsonParse<GoogleAuthResponse>(response, {});
 
         if (!response.ok) {
-            throw new Error(getGoogleAuthErrorMessage(json, response.status));
+            return authFailure(
+                authFailureReasonFromStatus(response.status),
+                getGoogleAuthErrorMessage(json, response.status),
+            );
         }
 
-        if (json.token) return json as {
-            token: string;
-            refresh?: string;
-            name: string;
-            email: string;
-            id: string | number;
-            is_superuser: boolean;
-        };
-        throw new Error(i18nT('errorsStatic:api.auth.googleServerTokenMissing'));
+        const user = parseSocialSession(json);
+        if (user) return { ok: true, user };
+        return authFailure('server', i18nT('errorsStatic:api.auth.googleServerTokenMissing'));
     } catch (error: unknown) {
         devError('Google auth error:', error);
-        const message = getUserFriendlyError(error);
-        Alert.alert(i18nT('errorsStatic:api.auth.googleSignInErrorTitle'), message);
-        return null;
+        return authFailureFromError(error, i18nT('errorsStatic:api.auth.googleSignInFailed'));
     }
 };
 
@@ -507,6 +502,7 @@ const facebookErrorResult = (
 ): FacebookAuthResult => ({
     status: 'error',
     errorCode: payload.error_code,
+    reason: authFailureReasonFromStatus(status),
     message: getFacebookAuthErrorMessage(payload, status),
 });
 
@@ -577,10 +573,8 @@ export const facebookAuthApi = async (accessToken: string): Promise<FacebookAuth
         };
     } catch (error: unknown) {
         devError('Facebook auth error:', error);
-        return {
-            status: 'error',
-            message: getUserFriendlyError(error),
-        };
+        const failure = authFailureFromError(error, i18nT('errorsStatic:api.auth.facebookSignInFailed'));
+        return { status: 'error', reason: failure.reason, message: failure.message };
     }
 };
 
@@ -606,7 +600,8 @@ export const startFacebookEmailCompletionApi = async (
         };
     } catch (error: unknown) {
         devError('Facebook email completion start error:', error);
-        return { status: 'error', message: getUserFriendlyError(error) };
+        const failure = authFailureFromError(error, i18nT('errorsStatic:api.auth.facebookSignInFailed'));
+        return { status: 'error', reason: failure.reason, message: failure.message };
     }
 };
 

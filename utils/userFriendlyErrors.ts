@@ -1,5 +1,5 @@
 import { translate as i18nT } from '@/i18n'
-import { withFailureTag } from '@/utils/networkFailureTag';
+import { isConnectionFailure, withFailureTag } from '@/utils/networkFailureTag';
 // src/utils/userFriendlyErrors.ts
 // ✅ Утилита для преобразования технических ошибок в понятные сообщения для пользователей
 
@@ -15,7 +15,9 @@ export function getUserFriendlyError(error: Error | string | unknown): string {
     // отдаёт как message результата. Поэтому диагностический тег нужен здесь, а не
     // только в catch-ветках формы, куда сетевая ошибка не долетает (оба модуля её
     // глотают и возвращают null/result).
-    if (/network|fetch|connection|timeout/i.test(errorMessage)) {
+    // #1944: тот же предикат, что выбирает `reason: 'network'` в `utils/authFailure.ts`,
+    // — текст и причина отказа входа не могут разойтись.
+    if (isConnectionFailure(error)) {
         return withFailureTag(i18nT('errors:utils.userFriendlyErrors.problema_s_podklyucheniem_k_internetu_prover_2d6c3825'), error);
     }
 

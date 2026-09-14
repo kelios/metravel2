@@ -404,17 +404,20 @@ describe('authStore', () => {
   describe('login', () => {
     it('returns true and sets state on success', async () => {
       loginApi.mockResolvedValue({
-        token: 'abc',
-        id: 5,
-        name: 'Julia',
-        email: 'j@test.com',
-        is_superuser: false,
+        ok: true,
+        user: {
+            token: 'abc',
+            id: 5,
+            name: 'Julia',
+            email: 'j@test.com',
+            is_superuser: false,
+        },
       });
       fetchUserProfile.mockResolvedValue({ first_name: 'Юлия', avatar: 'https://img/a.jpg' });
 
       const result = await act(() => useAuthStore.getState().login('j@test.com', 'pass'));
 
-      expect(result).toBe(true);
+      expect(result).toEqual({ ok: true });
       const s = useAuthStore.getState();
       expect(s.isAuthenticated).toBe(true);
       expect(s.userId).toBe('5');
@@ -424,11 +427,14 @@ describe('authStore', () => {
 
     it('sanitizes profile URL values before persisting the display name', async () => {
       loginApi.mockResolvedValue({
-        token: 'abc',
-        id: 5,
-        name: 'https://metravel.by/profile',
-        email: 'j@test.com',
-        is_superuser: false,
+        ok: true,
+        user: {
+            token: 'abc',
+            id: 5,
+            name: 'https://metravel.by/profile',
+            email: 'j@test.com',
+            is_superuser: false,
+        },
       });
       fetchUserProfile.mockResolvedValue({
         first_name: 'https://metravel.by/Julia',
@@ -438,7 +444,7 @@ describe('authStore', () => {
 
       const result = await act(() => useAuthStore.getState().login('j@test.com', 'pass'));
 
-      expect(result).toBe(true);
+      expect(result).toEqual({ ok: true });
       expect(useAuthStore.getState().username).toBe('Julia Sauran');
       expect(setStorageBatch).toHaveBeenCalledWith([
         ['userId', '5'],
@@ -450,42 +456,51 @@ describe('authStore', () => {
     it('does not persist access or refresh tokens on web login', async () => {
       Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
       loginApi.mockResolvedValue({
-        token: 'must-not-be-stored',
-        refresh: 'must-not-be-stored-either',
-        id: 5,
-        name: 'Julia',
-        email: 'j@test.com',
-        is_superuser: false,
+        ok: true,
+        user: {
+            token: 'must-not-be-stored',
+            refresh: 'must-not-be-stored-either',
+            id: 5,
+            name: 'Julia',
+            email: 'j@test.com',
+            is_superuser: false,
+        },
       });
       fetchUserProfile.mockResolvedValue({ first_name: 'Julia', avatar: null });
 
-      await expect(useAuthStore.getState().login('j@test.com', 'pass')).resolves.toBe(true);
+      await expect(useAuthStore.getState().login('j@test.com', 'pass')).resolves.toEqual({ ok: true });
 
       expect(setSecureItem).not.toHaveBeenCalled();
     });
 
-    it('returns false when loginApi returns null', async () => {
-      loginApi.mockResolvedValue(null);
+    // #1944: отказ сервера и обрыв связи различимы для формы — она больше не
+    // пишет «Неверный email или пароль» на любую неудачу.
+    it('пробрасывает форме причину отказа сервера как есть', async () => {
+      loginApi.mockResolvedValue({ ok: false, reason: 'rejected', message: 'Неверный email или пароль' });
 
       const result = await act(() => useAuthStore.getState().login('x@x.com', 'wrong'));
-      expect(result).toBe(false);
+      expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Неверный email или пароль' });
       expect(useAuthStore.getState().isAuthenticated).toBe(false);
     });
 
-    it('returns false on error', async () => {
-      loginApi.mockRejectedValue(new Error('network'));
+    it('исключение с транспортной ошибкой даёт reason network, а не отказ по паролю', async () => {
+      loginApi.mockRejectedValue(new Error('Network request failed'));
 
       const result = await act(() => useAuthStore.getState().login('x@x.com', 'p'));
-      expect(result).toBe(false);
+      expect(result).toMatchObject({ ok: false, reason: 'network' });
+      expect((result as { message: string }).message).not.toMatch(/парол/i);
     });
 
     it('falls back to email when profile has no first_name', async () => {
       loginApi.mockResolvedValue({
-        token: 'abc',
-        id: 1,
-        name: '',
-        email: 'test@test.com',
-        is_superuser: false,
+        ok: true,
+        user: {
+            token: 'abc',
+            id: 1,
+            name: '',
+            email: 'test@test.com',
+            is_superuser: false,
+        },
       });
       fetchUserProfile.mockResolvedValue({ first_name: '', avatar: null });
 
@@ -498,18 +513,21 @@ describe('authStore', () => {
       // storage-ключами и сдвинуло epoch, пока логин ждал профиль. Проигравший гонку
       // логин не должен их откатить, иначе после reload пользователь окажется гостем.
       loginApi.mockResolvedValue({
-        token: 'login-token',
-        id: 5,
-        name: 'Логин',
-        email: 'login@example.com',
-        is_superuser: false,
+        ok: true,
+        user: {
+            token: 'login-token',
+            id: 5,
+            name: 'Логин',
+            email: 'login@example.com',
+            is_superuser: false,
+        },
       });
       fetchUserProfile.mockImplementationOnce(async () => {
         useAuthStore.getState().applyConfirmedAccountSession({ userId: '77', userName: 'Ирина' });
         return null;
       });
 
-      await expect(useAuthStore.getState().login('login@example.com', 'pass')).resolves.toBe(false);
+      await expect(useAuthStore.getState().login('login@example.com', 'pass')).resolves.toMatchObject({ ok: false });
 
       // Стереть креды подтверждённой сессии мог бы только откат — а он единственный
       // путь к удалению ПАРЫ токенов. Он пропущен: ни пара secure-токенов, ни
@@ -535,16 +553,19 @@ describe('authStore', () => {
       loginApi.mockImplementationOnce(async () => {
         await persistSessionTokens('confirm-token', 'confirm-refresh');
         return {
-          token: 'login-token',
-          refresh: 'login-refresh',
-          id: 5,
-          name: 'Логин',
-          email: 'login@example.com',
-          is_superuser: false,
+          ok: true,
+          user: {
+            token: 'login-token',
+            refresh: 'login-refresh',
+            id: 5,
+            name: 'Логин',
+            email: 'login@example.com',
+            is_superuser: false,
+          },
         };
       });
 
-      await expect(useAuthStore.getState().login('login@example.com', 'pass')).resolves.toBe(false);
+      await expect(useAuthStore.getState().login('login@example.com', 'pass')).resolves.toMatchObject({ ok: false });
 
       expect(setSecureItem).toHaveBeenCalledWith('userToken', 'confirm-token');
       expect(setSecureItem).toHaveBeenCalledWith('refreshToken', 'confirm-refresh');
@@ -559,18 +580,21 @@ describe('authStore', () => {
       // Регресс #1462/#1469: при реальной разлогинке epoch тоже меняется, и откат
       // обязан очистить и secure-токены, и storage-ключи наполовину записанной сессии.
       loginApi.mockResolvedValue({
-        token: 'login-token',
-        id: 5,
-        name: 'Логин',
-        email: 'login@example.com',
-        is_superuser: false,
+        ok: true,
+        user: {
+            token: 'login-token',
+            id: 5,
+            name: 'Логин',
+            email: 'login@example.com',
+            is_superuser: false,
+        },
       });
       fetchUserProfile.mockImplementationOnce(async () => {
         useAuthStore.getState().invalidateAuthState();
         return null;
       });
 
-      await expect(useAuthStore.getState().login('login@example.com', 'pass')).resolves.toBe(false);
+      await expect(useAuthStore.getState().login('login@example.com', 'pass')).resolves.toMatchObject({ ok: false });
 
       expect(removeSecureItems).toHaveBeenCalledWith(['userToken', 'refreshToken']);
       expect(removeStorageBatch).toHaveBeenCalledWith(['userName', 'isSuperuser', 'userId', 'userAvatar']);

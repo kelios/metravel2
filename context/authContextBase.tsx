@@ -16,8 +16,10 @@ export const createAuthFallbackValue = (): AuthStore => ({
   invalidateAuthState: () => {},
   applyConfirmedAccountSession: () => {},
   checkAuthentication: async () => {},
-  login: async () => false,
-  loginWithGoogle: async () => false,
+  // #1944: отказ входа несёт причину. Без провайдера это не ответ сервера,
+  // поэтому `unknown` и пустой текст — форма подставит свой запасной.
+  login: async () => ({ ok: false, reason: 'unknown', message: '' }),
+  loginWithGoogle: async () => ({ ok: false, reason: 'unknown', message: '' }),
   loginWithApple: async () => ({ status: 'error', message: '' }),
   loginWithFacebook: async () => ({ status: 'error', message: '' }),
   startFacebookEmailCompletion: async () => ({ status: 'error', message: '' }),

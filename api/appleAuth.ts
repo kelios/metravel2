@@ -6,7 +6,11 @@
 import { devError } from '@/utils/logger';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { safeJsonParse } from '@/utils/safeJsonParse';
-import { getUserFriendlyError } from '@/utils/userFriendlyErrors';
+import {
+    authFailureFromError,
+    authFailureReasonFromStatus,
+    type AuthFailureReason,
+} from '@/utils/authFailure';
 import { getCsrfHeader } from '@/utils/csrf';
 import { getApiRequestCredentials } from '@/utils/authPlatform';
 import { translate as i18nT } from '@/i18n';
@@ -44,7 +48,9 @@ export type AppleCredentialPayload = {
 
 export type AppleAuthResult =
     | { status: 'authenticated'; user: SocialSessionPayload }
-    | { status: 'error'; message: string; errorCode?: string };
+    // `reason` — общая таксономия отказа (#1944): форма не должна выдавать
+    // обрыв связи за отказ сервера.
+    | { status: 'error'; message: string; errorCode?: string; reason?: AuthFailureReason };
 
 const getAppleAuthErrorMessage = (payload: Partial<AppleAuthResponse>, status: number): string => {
     // Контрактно закреплён (#1412) только `apple_account_disabled`. Остальное
@@ -76,6 +82,7 @@ export const appleAuthApi = async (credential: AppleCredentialPayload): Promise<
             return {
                 status: 'error',
                 errorCode: 'identity_token_required',
+                reason: 'rejected',
                 message: i18nT('errorsStatic:api.auth.appleIdentityTokenMissing'),
             };
         }
@@ -103,6 +110,7 @@ export const appleAuthApi = async (credential: AppleCredentialPayload): Promise<
             return {
                 status: 'error',
                 errorCode: json.error_code,
+                reason: authFailureReasonFromStatus(response.status),
                 message: getAppleAuthErrorMessage(json, response.status),
             };
         }
@@ -111,11 +119,13 @@ export const appleAuthApi = async (credential: AppleCredentialPayload): Promise<
         if (user) return { status: 'authenticated', user };
         return {
             status: 'error',
+            reason: 'server',
             message: i18nT('errorsStatic:api.auth.appleServerTokenMissing'),
         };
     } catch (error: unknown) {
         // Логируем только транспортную ошибку: credential Apple в логи не попадает.
         devError('Apple auth error:', error);
-        return { status: 'error', message: getUserFriendlyError(error) };
+        const failure = authFailureFromError(error, i18nT('errorsStatic:api.auth.appleSignInFailed'));
+        return { status: 'error', reason: failure.reason, message: failure.message };
     }
 };

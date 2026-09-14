@@ -44,6 +44,7 @@ import FacebookAuthFlow from '@/components/auth/FacebookAuthFlow';
 import { webTouchScrollStyle } from '@/utils';
 import { buildLoginHref, resolvePostAuthPath } from '@/utils/authNavigation';
 import { translate as i18nT } from '@/i18n'
+import { authFailureText } from '@/utils/authFailure';
 
 // INV2-07: streamlined form collects only email + password. Username is derived
 // from the email at submit time and the confirm-password field is removed.
@@ -163,8 +164,8 @@ export default function RegisterForm() {
         try {
             setMsg({ text: '', error: false });
             trackRegistrationSubmitted({ source: 'registration', intent, redirect, method: 'google' });
-            const ok = await loginWithGoogle(credential);
-            if (ok) {
+            const outcome = await loginWithGoogle(credential);
+            if (outcome.ok) {
                 trackRegistrationSucceeded({ source: 'registration', intent, redirect, method: 'google' });
                 if (intent) {
                     sendAnalyticsEvent('AuthSuccess', { source: 'google', intent });
@@ -181,7 +182,13 @@ export default function RegisterForm() {
                     method: 'google',
                     reason: 'api',
                 });
-                setMsg({ text: i18nT('auth:components.auth.RegistrationForm.ne_udalos_voyti_cherez_google_549109b3'), error: true });
+                // #1944: тот же паттерн, что в LoginForm — при обрыве связи форма
+                // показывает сетевой текст с тегом, а не общий «не удалось войти».
+                const googleFailed = i18nT('auth:components.auth.RegistrationForm.ne_udalos_voyti_cherez_google_549109b3');
+                setMsg({
+                    text: authFailureText(outcome, { rejected: googleFailed, failed: googleFailed }),
+                    error: true,
+                });
             }
         } catch (e: any) {
             trackRegistrationFailed({

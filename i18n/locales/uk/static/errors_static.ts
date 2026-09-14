@@ -20,6 +20,7 @@ export const errorsStaticResources = {
   "api.auth.registrationErrorTitle": "Помилка реєстрації",
   "api.auth.emptyPassword": "Пароль не може бути порожнім",
   "api.auth.emptyEmail": "Email не може бути порожнім",
+  "api.auth.signInFailed": "Не вдалося увійти. Спробуйте ще раз.",
   "api.auth.invalidCredentials": "Невірний email або пароль",
   "api.auth.serviceUnavailable": "Сервіс тимчасово недоступний. Спробуйте пізніше.",
   "api.auth.resetInstructionsSent": "Інструкції по відновленню пароля відправлені на ваш email",

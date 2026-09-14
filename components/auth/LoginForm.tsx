@@ -36,6 +36,7 @@ import { webTouchScrollStyle } from '@/utils';
 import { buildRegistrationHref, resolvePostAuthPath } from '@/utils/authNavigation';
 import { translate as i18nT } from '@/i18n'
 import { getUserFriendlyNetworkError, isNetworkError } from '@/utils/networkErrorHandler';
+import { authFailureText } from '@/utils/authFailure';
 
 
 interface LoginFormValues {
@@ -154,8 +155,8 @@ export default function Login() {
     ) => {
         try {
             showMsg('');
-            const ok = await login(values.email.trim(), values.password);
-            if (ok) {
+            const outcome = await login(values.email.trim(), values.password);
+            if (outcome.ok) {
                 sendAnalyticsEvent('login_success', { method: 'email', intent: String(intent || '') });
                 if (intent) {
                     sendAnalyticsEvent('AuthSuccess', { source: String(intent || 'unknown'), intent });
@@ -166,7 +167,12 @@ export default function Login() {
                 notifyAuthProgressSaved(hasReturnContext);
                 replaceAfterAuth();
             } else {
-                showMsg(i18nT('auth:components.auth.LoginForm.nevernyy_email_ili_parol_18c8d999'), true);
+                // #1944: текст берёт слой api по причине отказа. Про пароль пишем
+                // только когда сервер действительно отказал в учётных данных.
+                showMsg(authFailureText(outcome, {
+                    rejected: i18nT('auth:components.auth.LoginForm.nevernyy_email_ili_parol_18c8d999'),
+                    failed: i18nT('auth:components.auth.LoginForm.oshibka_pri_vhode_e41ad402'),
+                }), true);
             }
         } catch (error) {
             showMsg(authErrorMessage(error, i18nT('auth:components.auth.LoginForm.oshibka_pri_vhode_e41ad402')), true);
@@ -181,8 +187,8 @@ export default function Login() {
         let navigating = false;
         try {
             showMsg('');
-            const ok = await loginWithGoogle(credential);
-            if (ok) {
+            const outcome = await loginWithGoogle(credential);
+            if (outcome.ok) {
                 sendAnalyticsEvent('login_success', { method: 'google', intent: String(intent || '') });
                 if (intent) {
                     sendAnalyticsEvent('AuthSuccess', { source: 'google', intent });
@@ -192,7 +198,9 @@ export default function Login() {
                 notifyAuthProgressSaved(hasReturnContext);
                 replaceAfterAuth();
             } else {
-                showMsg(i18nT('auth:components.auth.LoginForm.ne_udalos_voyti_cherez_google_0930989b'), true);
+                // У Google нет «пароля», поэтому запасной текст один на все причины.
+                const googleFailed = i18nT('auth:components.auth.LoginForm.ne_udalos_voyti_cherez_google_0930989b');
+                showMsg(authFailureText(outcome, { rejected: googleFailed, failed: googleFailed }), true);
             }
         } catch (error) {
             showMsg(authErrorMessage(error, i18nT('auth:components.auth.LoginForm.oshibka_pri_vhode_cherez_google_e89e4a9b')), true);

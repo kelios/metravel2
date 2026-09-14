@@ -19,6 +19,12 @@ import { queryKeys } from '@/api/queryKeys';
 import type { UserProfileDto } from '@/api/user';
 import type { FacebookAuthResult } from '@/api/auth';
 import type { SocialSessionPayload } from '@/api/authShared';
+import {
+    authFailure,
+    authFailureFromError,
+    type AuthFailure,
+    type AuthFailureReason,
+} from '@/utils/authFailure';
 import { ACCESS_TOKEN_STORAGE_KEY, shouldUseStoredAuthToken } from '@/utils/authPlatform';
 import { normalizeAvatarUrl } from '@/utils/mediaUrl';
 import { normalizeProfileName, resolveProfileFullName } from '@/utils/profileName';
@@ -122,6 +128,11 @@ let catalogIdentityVersion = 0;
 // (сбрасывать нечего) от входа следующего пользователя после чужого выхода.
 let sessionHadIdentity = false;
 
+// #1944: вход проиграл гонку (logout или чужая запись сессии во время запроса).
+// Сервер тут ни при чём, поэтому причина `unknown`, а не `rejected`: писать
+// пользователю «неверный пароль» в этой ветке было бы враньём.
+const signInInterrupted = (): AuthFailure => authFailure('unknown', i18nT('errorsStatic:api.auth.signInFailed'));
+
 export const useAuthStore = create<AuthStore>((set, get) => {
     // Общий финиш нативного социального входа (Google/Facebook/Apple): токены в
     // SecureStore, профиль, единое состояние. Любой проигрыш epoch-гонке —
@@ -196,10 +207,11 @@ export const useAuthStore = create<AuthStore>((set, get) => {
         resolveFailureMessage: () => string,
     ): Promise<
         | { status: 'authenticated'; user: SocialSessionPayload }
-        | { status: 'error'; message: string }
+        | { status: 'error'; reason: AuthFailureReason; message: string }
     > => {
         const applied = await applySocialSession(userData, epochAtStart, writeMarkAtStart);
-        if (!applied) return { status: 'error', message: resolveFailureMessage() };
+        // Отказ здесь — всегда проигранная гонка сессий, а не ответ сервера (#1944).
+        if (!applied) return { status: 'error', reason: 'unknown', message: resolveFailureMessage() };
         return { status: 'authenticated', user: userData };
     };
 
@@ -433,14 +445,17 @@ export const useAuthStore = create<AuthStore>((set, get) => {
         const writeMarkAtStart = getSessionWriteMark();
         try {
             const { loginApi } = await getAuthApi();
-            const userData = await loginApi(email, password);
-            if (!userData) return false;
-            if (epochAtStart !== authEpoch) return false;
+            // #1944: причина отказа доходит до формы. Единственный источник текста —
+            // слой api: стор не пересказывает отказ своими словами и не показывает Alert.
+            const attempt = await loginApi(email, password);
+            if (!attempt.ok) return attempt;
+            const userData = attempt.user;
+            if (epochAtStart !== authEpoch) return signInInterrupted();
 
             const persisted = await persistSessionTokens(userData.token, userData.refresh, {
                 expectedMark: writeMarkAtStart,
             });
-            if (persisted === 'superseded') return false;
+            if (persisted === 'superseded') return signInInterrupted();
 
             let profile: UserProfileDto | null = null;
             try {
@@ -454,7 +469,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
 
             if (epochAtStart !== authEpoch) {
                 await rollbackPersistedCredentials();
-                return false;
+                return signInInterrupted();
             }
 
             const displayName = resolveAuthDisplayName(profile, userData.name, userData.email);
@@ -476,7 +491,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
 
             if (epochAtStart !== authEpoch) {
                 await rollbackPersistedCredentials();
-                return false;
+                return signInInterrupted();
             }
 
             set((s) => ({
@@ -490,12 +505,12 @@ export const useAuthStore = create<AuthStore>((set, get) => {
                 isPremium: profile?.is_premium ?? false,
             }));
 
-            return true;
+            return { ok: true };
         } catch (error) {
             if (__DEV__) {
                 console.error('Ошибка входа:', error);
             }
-            return false;
+            return authFailureFromError(error, i18nT('errorsStatic:api.auth.signInFailed'));
         }
     },
 
@@ -505,14 +520,17 @@ export const useAuthStore = create<AuthStore>((set, get) => {
         const writeMarkAtStart = getSessionWriteMark();
         try {
             const { googleAuthApi } = await getAuthApi();
-            const userData = await googleAuthApi(credential);
-            if (!userData) return false;
-            return await applySocialSession(userData, epochAtStart, writeMarkAtStart);
+            const attempt = await googleAuthApi(credential);
+            if (!attempt.ok) return attempt;
+            const applied = await applySocialSession(attempt.user, epochAtStart, writeMarkAtStart);
+            return applied
+                ? { ok: true }
+                : authFailure('unknown', i18nT('errorsStatic:api.auth.googleSignInFailed'));
         } catch (error) {
             if (__DEV__) {
                 console.error('Ошибка входа через Google:', error);
             }
-            return false;
+            return authFailureFromError(error, i18nT('errorsStatic:api.auth.googleSignInFailed'));
         }
     },
 
@@ -531,10 +549,8 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             if (__DEV__) {
                 console.error('Ошибка входа через Apple:', error);
             }
-            return {
-                status: 'error',
-                message: i18nT('errorsStatic:api.auth.appleSignInFailed'),
-            };
+            const failure = authFailureFromError(error, i18nT('errorsStatic:api.auth.appleSignInFailed'));
+            return { status: 'error', reason: failure.reason, message: failure.message };
         }
     },
 

@@ -12,7 +12,7 @@ import { survivesIdentityChange } from '@/api/identityQueryCache'
 jest.mock('@/api/quests', () => ({ fetchQuestsList: jest.fn() }))
 jest.mock('@/api/auth', () => ({
   logoutApi: jest.fn().mockResolvedValue(undefined),
-  loginApi: jest.fn().mockResolvedValue({ id: 'A', token: 'test-token', refresh: 'test-refresh' }),
+  loginApi: jest.fn().mockResolvedValue({ ok: true, user: { id: 'A', token: 'test-token', refresh: 'test-refresh' } }),
 }))
 jest.mock('@/api/user', () => ({ fetchUserProfile: jest.fn().mockResolvedValue(null) }))
 jest.mock('@/utils/authTokenStore', () => ({

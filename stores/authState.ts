@@ -9,6 +9,7 @@ import type {
     FacebookAuthResult,
     FacebookCompletionStartResult,
 } from '@/api/auth';
+import type { AuthOutcome } from '@/utils/authFailure';
 
 export interface AuthState {
     isAuthenticated: boolean;
@@ -39,8 +40,11 @@ export interface AuthActions {
         userName?: unknown;
     }) => void;
     checkAuthentication: () => Promise<void>;
-    login: (email: string, password: string) => Promise<boolean>;
-    loginWithGoogle: (credential: string) => Promise<boolean>;
+    // #1944: вход возвращает причину отказа, а не голый `false`. Форма обязана
+    // отличать обрыв связи от отказа сервера: на `false` она писала «Неверный
+    // email или пароль» даже в авиарежиме.
+    login: (email: string, password: string) => Promise<AuthOutcome>;
+    loginWithGoogle: (credential: string) => Promise<AuthOutcome>;
     loginWithApple: (credential: AppleCredentialPayload) => Promise<AppleAuthResult>;
     loginWithFacebook: (credential: string) => Promise<FacebookAuthResult>;
     startFacebookEmailCompletion: (

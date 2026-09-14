@@ -20,6 +20,7 @@ export const errorsStaticResources = {
   "api.auth.registrationErrorTitle": "Registration error",
   "api.auth.emptyPassword": "Password cannot be empty",
   "api.auth.emptyEmail": "Email cannot be empty",
+  "api.auth.signInFailed": "Sign-in failed. Please try again.",
   "api.auth.invalidCredentials": "Invalid email or password",
   "api.auth.serviceUnavailable": "The service is temporarily unavailable. Please try again later.",
   "api.auth.resetInstructionsSent": "Password recovery instructions have been sent to your email.",

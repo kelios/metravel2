@@ -29,6 +29,21 @@ const extractFailureHost = (error: unknown): string => {
     }
 };
 
+// Единственное правило «это транспортный сбой, а не ответ сервера».
+// #1944: по нему выбирают и текст (`utils/userFriendlyErrors.ts`), и причину
+// отказа входа (`utils/authFailure.ts`), поэтому оно обязано быть ОДНО: две
+// копии регулярки разошлись бы, и пользователь получил бы текст про связь с
+// причиной `rejected` (или наоборот — «неверный пароль» при обрыве сети).
+// Набор слов — ровно тот, по которому `getUserFriendlyError` и раньше выбирал
+// ветку «нет связи»; «превышено время» сюда НЕ входит, у него свой текст ниже.
+const CONNECTION_MESSAGE_PATTERN = /network|fetch|connection|timeout/i;
+
+export const isConnectionFailure = (error: unknown): boolean => {
+    if (!error) return false;
+    if (error instanceof ApiError && (error.status === 0 || hasOfflineFlag(error.data))) return true;
+    return CONNECTION_MESSAGE_PATTERN.test(readErrorMessage(error));
+};
+
 /**
  * Короткий технический тег для сетевой ошибки: host · вид сбоя · время UTC.
  * #1943: отказ App Review 14.09.2026 «connection error» нельзя было разобрать —

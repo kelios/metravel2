@@ -11,7 +11,7 @@ import {
   startFacebookEmailCompletionApi,
   validateWebCookieSessionApi,
 } from '@/api/auth';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { validatePassword } from '@/utils/aiValidation';
 import { sanitizeInput } from '@/utils/security';
@@ -63,9 +63,19 @@ const mockedValidatePassword = validatePassword as jest.MockedFunction<typeof va
 const mockedSanitizeInput = sanitizeInput as jest.MockedFunction<typeof sanitizeInput>;
 
 describe('src/api/auth.ts auth/password API', () => {
+  // #1944: Alert следим спаем, а не фабрикой мока модуля: `Alert.alert` в
+  // тестовом окружении — обычная функция, и `not.toHaveBeenCalled()` по ней
+  // молча падал бы «received value must be a mock».
+  let alertSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+  });
+
+  afterEach(() => {
+    alertSpy.mockRestore();
   });
 
   describe('validateWebCookieSessionApi', () => {
@@ -98,29 +108,59 @@ describe('src/api/auth.ts auth/password API', () => {
   });
 
   describe('loginApi', () => {
-    it('возвращает null и показывает Alert при пустом пароле', async () => {
+    // #1944: контракт результата — причина отказа вместо `null`, и НИ ОДНОГО Alert:
+    // модальное окно поверх текста формы и давало два противоречивых сообщения.
+    it('пустой пароль — отказ по сути запроса, без Alert и без запроса', async () => {
       const result = await loginApi('test@example.com', '   ');
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Пароль не может быть пустым' });
       expect(fetchWithTimeout).not.toHaveBeenCalled();
+      expect(alertSpy).not.toHaveBeenCalled();
     });
 
-    it('успешный логин возвращает данные пользователя', async () => {
+    it('успешный логин возвращает сессию пользователя', async () => {
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ token: 't', name: 'User', email: 'e', id: 1, is_superuser: false } as any);
 
       const result = await loginApi('test@example.com', 'password');
 
-      expect(result).toMatchObject({ token: 't', name: 'User' });
+      expect(result).toMatchObject({ ok: true, user: { token: 't', name: 'User' } });
     });
 
-    it('при ошибке логина логирует devError и показывает Alert', async () => {
-      mockedFetchWithTimeout.mockRejectedValueOnce(new Error('network'));
+    it('обрыв связи — reason network, текст с диагностическим тегом и без Alert', async () => {
+      mockedFetchWithTimeout.mockRejectedValue(new Error('Network request failed'));
 
       const result = await loginApi('test@example.com', 'password');
 
-      expect(result).toBeNull();
+      expect(result).toMatchObject({ ok: false, reason: 'network' });
+      // Текст про сеть, а не про пароль, и с тегом [host · вид · время] (#1943).
+      expect((result as { message: string }).message).toMatch(/интернет/i);
+      expect((result as { message: string }).message).toMatch(/\[.+ · .+ · \d{2}:\d{2}:\d{2}Z\]$/);
+      expect((result as { message: string }).message).not.toMatch(/парол/i);
+      expect(alertSpy).not.toHaveBeenCalled();
       expect(devError).toHaveBeenCalled();
+    });
+
+    it('401 от сервера — reason rejected и прежний текст про учётные данные', async () => {
+      mockedFetchWithTimeout.mockRejectedValueOnce(new Error('Login failed: 401'));
+
+      const result = await loginApi('test@example.com', 'password');
+
+      expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Неверный email или пароль' });
+      expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    it('5xx — reason server и текст про недоступность сервиса', async () => {
+      mockedFetchWithTimeout.mockRejectedValue(new Error('Login failed: 503'));
+
+      const result = await loginApi('test@example.com', 'password');
+
+      expect(result).toEqual({
+        ok: false,
+        reason: 'server',
+        message: 'Сервис временно недоступен. Попробуйте позже.',
+      });
+      expect(alertSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -205,7 +245,7 @@ describe('src/api/auth.ts auth/password API', () => {
 
       const result = await googleAuthApi('  google-id-token  ');
 
-      expect(result).toMatchObject({ token: 'google-token', id: 7 });
+      expect(result).toMatchObject({ ok: true, user: { token: 'google-token', id: 7 } });
       expect(fetchWithTimeout).toHaveBeenCalledWith(
         expect.stringContaining('/user/google-login/'),
         expect.objectContaining({
@@ -216,14 +256,14 @@ describe('src/api/auth.ts auth/password API', () => {
       );
     });
 
-    it('показывает сообщение backend при ошибке Google авторизации', async () => {
+    it('отдаёт сообщение backend как отказ по сути запроса (#1944)', async () => {
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 400 } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ detail: 'Google token expired' } as any);
 
       const result = await googleAuthApi('expired-token');
 
-      expect(result).toBeNull();
-      expect(devError).toHaveBeenCalled();
+      expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Google token expired' });
+      expect(alertSpy).not.toHaveBeenCalled();
     });
 
     it('использует понятный fallback для пустого 401 от Google endpoint', async () => {
@@ -232,13 +272,31 @@ describe('src/api/auth.ts auth/password API', () => {
 
       const result = await googleAuthApi('invalid-token');
 
-      expect(result).toBeNull();
-      expect(devError).toHaveBeenCalledWith(
-        'Google auth error:',
-        expect.objectContaining({
-          message: 'Google не подтвердил аккаунт. Попробуйте выбрать аккаунт ещё раз.',
-        }),
-      );
+      expect(result).toEqual({
+        ok: false,
+        reason: 'rejected',
+        message: 'Google не подтвердил аккаунт. Попробуйте выбрать аккаунт ещё раз.',
+      });
+    });
+
+    it('обрыв связи — reason network с тегом, без Alert (#1944)', async () => {
+      mockedFetchWithTimeout.mockRejectedValue(new Error('Network request failed'));
+
+      const result = await googleAuthApi('google-id-token');
+
+      expect(result).toMatchObject({ ok: false, reason: 'network' });
+      expect((result as { message: string }).message).toMatch(/\[.+ · .+ · \d{2}:\d{2}:\d{2}Z\]$/);
+      expect(alertSpy).not.toHaveBeenCalled();
+      expect(devError).toHaveBeenCalled();
+    });
+
+    it('5xx от Google endpoint — reason server', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 503 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({} as any);
+
+      const result = await googleAuthApi('google-id-token');
+
+      expect(result).toMatchObject({ ok: false, reason: 'server' });
     });
   });
 
@@ -274,6 +332,8 @@ describe('src/api/auth.ts auth/password API', () => {
       await expect(facebookAuthApi('facebook-token')).resolves.toEqual({
         status: 'error',
         errorCode: 'facebook_account_conflict',
+        // #1944: сервер ответил — это отказ по сути запроса, а не обрыв связи.
+        reason: 'rejected',
         message: 'Этот Facebook-аккаунт уже связан с другим пользователем.',
       });
     });

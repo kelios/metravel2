@@ -10,7 +10,7 @@ jest.mock('@/api/quests', () => ({ fetchQuestsList: jest.fn() }))
 
 jest.mock('@/api/auth', () => ({
   logoutApi: jest.fn().mockResolvedValue(undefined),
-  loginApi: jest.fn().mockResolvedValue({ id: 'A', token: 'test-token', refresh: 'test-refresh' }),
+  loginApi: jest.fn().mockResolvedValue({ ok: true, user: { id: 'A', token: 'test-token', refresh: 'test-refresh' } }),
 }))
 jest.mock('@/api/user', () => ({ fetchUserProfile: jest.fn().mockResolvedValue(null) }))
 jest.mock('@/utils/authTokenStore', () => ({
@@ -62,7 +62,7 @@ describe('auth identity → exact quests catalog', () => {
     const fetchCatalog = jest.fn().mockResolvedValue(meta(true))
     observe(fetchCatalog)
 
-    await expect(useAuthStore.getState().login('test@example.test', 'test-password')).resolves.toBe(true)
+    await expect(useAuthStore.getState().login('test@example.test', 'test-password')).resolves.toEqual({ ok: true })
     await tick()
     useAuthStore.getState().setUserAvatar('avatar')
     useAuthStore.getState().triggerProfileRefresh()
