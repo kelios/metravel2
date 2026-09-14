@@ -22,6 +22,7 @@ export const errorsStaticResources = {
   "api.auth.emptyEmail": "Adres e-mail nie może być pusty",
   "api.auth.signInFailed": "Nie udało się zalogować. Spróbuj ponownie.",
   "api.auth.invalidCredentials": "Nieprawidłowy adres e-mail lub hasło",
+  "api.auth.accountNotActivated": "Konto nie zostało aktywowane. Skorzystaj z linku aktywacyjnego z wiadomości e-mail.",
   "api.auth.serviceUnavailable": "Usługa jest chwilowo niedostępna. Spróbuj ponownie później.",
   "api.auth.resetInstructionsSent": "Instrukcje odzyskiwania hasła zostały wysłane na Twój adres e-mail.",
   "api.auth.resetInstructionsSentShort": "Instrukcje odzyskiwania zostały wysłane.",

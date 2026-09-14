@@ -74,3 +74,48 @@ export const authFailureText = (
     failure: AuthFailure,
     texts: { rejected: string; failed: string },
 ): string => failure.message.trim() || (failure.reason === 'rejected' ? texts.rejected : texts.failed);
+
+/**
+ * #1946: классификация отказа входа по телу ответа.
+ *
+ * Бэкенд (`users/views.py`, action `login`) отдаёт на ЛЮБОЙ обычный отказ
+ * `401 {"error": "Данные входа не корректные"}` и на неактивированный аккаунт —
+ * `401 {"error": "Аккаунт не активирован. Воспользуйтесь ссылкой активации в
+ * письме"}`. Машиночитаемого `error_code` в ответе нет (проверено read-only в
+ * `../metravel-backend/users/views.py`), поэтому единственный доступный маркер —
+ * сама строка. Отсюда правило: строка бэкенда НИКОГДА не показывается как есть,
+ * она лишь ВЫБИРАЕТ собственный локализованный ключ приложения. Иначе в EN/BE/
+ * UK/PL форма входа показывает русский текст сервера (App Review видел именно
+ * это).
+ *
+ * Локализацию строки на стороне сервера (Accept-Language) оформляем отдельной
+ * `area=back` задачей; до неё распознаём причину здесь.
+ */
+export type AuthRejectionCode = 'account_not_activated' | 'invalid_credentials';
+
+/**
+ * Маркеры неактивированного аккаунта. Русский — текущий ответ прода; английские
+ * добавлены на случай локализации/смены формулировки на бэкенде, чтобы причина
+ * не деградировала молча в «неверный пароль».
+ */
+const ACCOUNT_NOT_ACTIVATED_MARKERS = [
+    'не активирован',
+    'не актываваны',
+    'не активован',
+    'nie jest aktywne',
+    'not activated',
+    'not active',
+    'inactive',
+];
+
+export const authRejectionCode = (detail?: string | null): AuthRejectionCode => {
+    const normalized = String(detail ?? '')
+        .toLowerCase()
+        .replace(/ё/g, 'е')
+        .replace(/\s+/g, ' ')
+        .trim();
+    if (!normalized) return 'invalid_credentials';
+    return ACCOUNT_NOT_ACTIVATED_MARKERS.some((marker) => normalized.includes(marker))
+        ? 'account_not_activated'
+        : 'invalid_credentials';
+};

@@ -4,6 +4,7 @@ import {
   authFailureFromError,
   authFailureReasonFromStatus,
   authFailureText,
+  authRejectionCode,
 } from '@/utils/authFailure';
 
 // #1944: таксономия отказа входа. Разделение «нет связи / отказ сервера / ошибка
@@ -93,5 +94,34 @@ describe('utils/authFailure', () => {
         expect(authFailureText(authFailure(reason, ''), texts)).toBe('Ошибка при входе');
       },
     );
+  });
+
+  // #1946: у бэкенда нет `error_code` — на обычный отказ и на неактивированный
+  // аккаунт он отдаёт 401 с русской строкой в поле `error`. Классификатор
+  // разбирает ТОЛЬКО причину, показываемый текст всегда берётся из i18n.
+  describe('authRejectionCode', () => {
+    it.each([
+      'Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме',
+      'АККАУНТ НЕ АКТИВИРОВАН',
+      'Акаўнт не актываваны',
+      'Акаунт не активований',
+      'Konto nie jest aktywne',
+      'Account is not activated',
+    ])('«%s» — аккаунт не активирован', (detail) => {
+      expect(authRejectionCode(detail)).toBe('account_not_activated');
+    });
+
+    it.each([
+      'Данные входа не корректные',
+      'Enter a valid email address.',
+      '',
+      '   ',
+    ])('«%s» — обычный отказ по учётным данным', (detail) => {
+      expect(authRejectionCode(detail)).toBe('invalid_credentials');
+    });
+
+    it.each([undefined, null])('отсутствующее тело (%s) — обычный отказ', (detail) => {
+      expect(authRejectionCode(detail)).toBe('invalid_credentials');
+    });
   });
 });

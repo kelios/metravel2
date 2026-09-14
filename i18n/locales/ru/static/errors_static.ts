@@ -22,6 +22,7 @@ export const errorsStaticResources = {
   "api.auth.emptyEmail": "Email не может быть пустым",
   "api.auth.signInFailed": "Не удалось войти. Попробуйте ещё раз.",
   "api.auth.invalidCredentials": "Неверный email или пароль",
+  "api.auth.accountNotActivated": "Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме.",
   "api.auth.serviceUnavailable": "Сервис временно недоступен. Попробуйте позже.",
   "api.auth.resetInstructionsSent": "Инструкции по восстановлению пароля отправлены на ваш email",
   "api.auth.resetInstructionsSentShort": "Инструкции по восстановлению отправлены.",

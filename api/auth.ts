@@ -15,6 +15,7 @@ import {
     authFailure,
     authFailureFromError,
     authFailureReasonFromStatus,
+    authRejectionCode,
     type AuthAttempt,
     type AuthFailureReason,
 } from '@/utils/authFailure';
@@ -208,7 +209,18 @@ export const loginApi = async (
             const status = Number(failedStatus[1]);
             const detail = error instanceof Error ? (error as Error & { detail?: string }).detail : undefined;
             if (status === 401 || status === 403 || status === 400) {
-                return authFailure('rejected', detail || i18nT('errorsStatic:api.auth.invalidCredentials'));
+                // #1946: строку бэкенда НЕ показываем как есть — она всегда
+                // русская (`{"error": "Данные входа не корректные"}` на любой
+                // обычный отказ), и в EN/BE/UK/PL форма входа показывала её
+                // поверх собственного локализованного текста. Тело ответа теперь
+                // только ВЫБИРАЕТ ключ приложения: причина #1945 («аккаунт не
+                // активирован») доходит до пользователя на его языке.
+                return authFailure(
+                    'rejected',
+                    authRejectionCode(detail) === 'account_not_activated'
+                        ? i18nT('errorsStatic:api.auth.accountNotActivated')
+                        : i18nT('errorsStatic:api.auth.invalidCredentials'),
+                );
             }
             // 5xx/429/прочее — серверная/временная ошибка. `detail` сюда намеренно НЕ
             // подставляется: DRF отдаёт такие тексты (например throttle) на языке
