@@ -641,7 +641,7 @@ function missingLandingQuestLinks(html, questPaths) {
 function expectedCityLandingFiles(quests, cityAliasMap) {
   const files = new Set()
   for (const city of buildQuestCityLandingGroups(quests, cityAliasMap)) {
-    for (const segment of [...city.cityIds, city.segment]) {
+    for (const segment of [...city.cityIds, city.segment, ...city.legacyAliases]) {
       files.add(path.join('quests', segment, 'index.html'))
     }
   }
@@ -790,6 +790,7 @@ async function main() {
   // the live backend sitemap as a fail-closed external input and only checks
   // membership here. HTTP/redirect behavior remains a post-deploy concern.
 
+  const cityLandingsOnLegacySitemapAlias = []
   for (const city of cityGroups) {
     const canonical = `${SITE_URL}/quests/${city.segment}`
     const cityFile = path.join(DIST_DIR, 'quests', city.segment, 'index.html')
@@ -808,9 +809,30 @@ async function main() {
     if (issues.length > 0) {
       failures.push(`city landing /quests/${city.segment}: ${issues.join(', ')}`)
     }
-    if (!sitemapHasUrl(sitemapXml, canonical)) {
+    // sitemap.xml is Django-owned (maintenance/sitemap.py:_alias) and still
+    // derives the city segment with the single-token rule this build replaced
+    // (#1931), so for a two-word city the two sides name different URLs. The
+    // short one is still a live page that declares the full one canonical, so
+    // Google keeps discovering the landing and consolidating it — what must
+    // never happen is the sitemap pointing at no landing at all, and that is
+    // what stays fail-closed here.
+    const sitemapSegments = [city.segment, ...city.legacyAliases]
+    const sitemapSegment = sitemapSegments.find((segment) =>
+      sitemapHasUrl(sitemapXml, `${SITE_URL}/quests/${segment}`),
+    )
+    if (!sitemapSegment) {
       failures.push(`city landing /quests/${city.segment}: missing from backend sitemap.xml`)
+    } else if (sitemapSegment !== city.segment) {
+      cityLandingsOnLegacySitemapAlias.push(`/quests/${sitemapSegment} -> /quests/${city.segment}`)
     }
+  }
+
+  if (cityLandingsOnLegacySitemapAlias.length > 0) {
+    console.warn(
+      `  ⚠️  ${cityLandingsOnLegacySitemapAlias.length} city landings are listed in the Django sitemap` +
+        ' under the alias the single-token rule produced, not the canonical one' +
+        ` — mirror utils/questCityAlias.js in maintenance/sitemap.py:\n     ${cityLandingsOnLegacySitemapAlias.join('\n     ')}`,
+    )
   }
 
   // Country HTML is frontend-owned and always fail-closed against the complete

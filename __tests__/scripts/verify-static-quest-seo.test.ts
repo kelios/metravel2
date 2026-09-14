@@ -116,6 +116,16 @@ describe('expectedCityLandingFiles', () => {
       ].sort(),
     )
   })
+
+  // #1931: the short alias a two-word city used to publish is already indexed,
+  // so the build still has to produce a page for it, not a 404.
+  it('keeps the landing a two-word city published under its old short alias', () => {
+    const quests = [{ quest_id: 'kutna-hora-silver', city_id: '140', city_name: 'Кутна-Гора' }]
+
+    expect(expectedCityLandingFiles(quests, buildQuestCityAliasMap(quests)).sort()).toEqual(
+      ['quests/140/index.html', 'quests/kutna-hora/index.html', 'quests/kutna/index.html'].sort(),
+    )
+  })
 })
 
 describe('verifyQuestHtml', () => {
