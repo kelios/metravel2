@@ -200,10 +200,14 @@ export const loginApi = async (
             if (status === 401 || status === 403 || status === 400) {
                 return authFailure('rejected', detail || i18nT('errorsStatic:api.auth.invalidCredentials'));
             }
-            // 5xx/429/прочее — серверная/временная ошибка, не вводим в заблуждение «неверным паролем».
+            // 5xx/429/прочее — серверная/временная ошибка. `detail` сюда намеренно НЕ
+            // подставляется: DRF отдаёт такие тексты (например throttle) на языке
+            // сервера, а не пользователя, и здесь для него нет локализатора — в
+            // отличие от 400/401/403, где текст активации/блокировки предназначен
+            // конечному пользователю как есть.
             return authFailure(
                 authFailureReasonFromStatus(status),
-                detail || i18nT('errorsStatic:api.auth.serviceUnavailable'),
+                i18nT('errorsStatic:api.auth.serviceUnavailable'),
             );
         }
         return authFailureFromError(error, i18nT('errorsStatic:api.auth.signInFailed'));

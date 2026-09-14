@@ -190,6 +190,26 @@ describe('src/api/auth.ts auth/password API', () => {
       });
       expect(alertSpy).not.toHaveBeenCalled();
     });
+
+    // code-review-gate P2 (#1945): detail из тела ответа годится ТОЛЬКО для
+    // 400/401/403 — это текст для конечного пользователя (активация,
+    // блокировка). DRF throttle на 429 отдаёт английское `detail` на языке
+    // сервера, для которого на клиенте нет локализатора — его подставлять
+    // нельзя, иначе RU/BE/UK/PL пользователь увидит нелокализованный текст.
+    it('429 с detail от DRF throttle — НЕ подставляет сырой текст, остаётся reason server', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 429 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        detail: 'Request was throttled. Expected available in 42 seconds.',
+      } as any);
+
+      const result = await loginApi('test@example.com', 'password');
+
+      expect(result).toEqual({
+        ok: false,
+        reason: 'server',
+        message: 'Сервис временно недоступен. Попробуйте позже.',
+      });
+    });
   });
 
   describe('confirmAccount', () => {
