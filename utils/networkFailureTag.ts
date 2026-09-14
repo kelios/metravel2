@@ -35,14 +35,45 @@ const extractFailureHost = (error: unknown): string => {
 // копии регулярки разошлись бы, и пользователь получил бы текст про связь с
 // причиной `rejected` (или наоборот — «неверный пароль» при обрыве сети).
 // Набор слов — ровно тот, по которому `getUserFriendlyError` и раньше выбирал
-// ветку «нет связи»; «превышено время» сюда НЕ входит, у него свой текст ниже.
+// ветку «нет связи»; «превышено время» сюда НЕ входит, у него свой текст ниже —
+// причина отказа входа берёт таймаут через `isTransportFailure`.
 const CONNECTION_MESSAGE_PATTERN = /network|fetch|connection|timeout/i;
+
+// WebKit (Safari и любой iOS-браузер, то есть весь mobile web на iPhone) на
+// офлайн-fetch бросает `TypeError: Load failed` — в нём нет ни одного слова из
+// набора выше, поэтому обрыв связи молча уезжал в `unknown` и пользователь
+// видел общий «Не удалось войти» вместо текста про подключение и тега (#1944).
+// Проверяем ПАРУ «имя + текст»: голое имя `TypeError` дают и обычные баги кода,
+// выдавать их за проблемы с интернетом нельзя.
+const WEBKIT_OFFLINE_PATTERN = /load failed/i;
+
+const readErrorName = (error: unknown): string =>
+    String((error as { name?: unknown } | null)?.name ?? '').toLowerCase();
 
 export const isConnectionFailure = (error: unknown): boolean => {
     if (!error) return false;
     if (error instanceof ApiError && (error.status === 0 || hasOfflineFlag(error.data))) return true;
-    return CONNECTION_MESSAGE_PATTERN.test(readErrorMessage(error));
+    const message = readErrorMessage(error);
+    if (CONNECTION_MESSAGE_PATTERN.test(message)) return true;
+    return readErrorName(error) === 'typeerror' && WEBKIT_OFFLINE_PATTERN.test(message);
 };
+
+/**
+ * Таймаут запроса. Отдельно от `isConnectionFailure`, потому что у таймаута свой
+ * текст в `getUserFriendlyError`, и общий предикат менял бы копирайт всему
+ * приложению. Опознаём по ИМЕНИ ошибки `fetchWithTimeout`, а не только по тексту:
+ * текст локализован, и по нему таймаут считался транспортным сбоем лишь в EN,
+ * а в RU/BE/UK/PL — «неизвестной ошибкой» (#1944).
+ */
+export const isTimeoutFailure = (error: unknown): boolean => {
+    if (!error) return false;
+    if (readErrorName(error) === 'timeouterror') return true;
+    return /timeout|timed out|превышено время/i.test(readErrorMessage(error));
+};
+
+/** Любой сбой доставки запроса: связь не установлена ИЛИ ответ не пришёл вовремя. */
+export const isTransportFailure = (error: unknown): boolean =>
+    isConnectionFailure(error) || isTimeoutFailure(error);
 
 /**
  * Короткий технический тег для сетевой ошибки: host · вид сбоя · время UTC.
@@ -52,9 +83,9 @@ export const isConnectionFailure = (error: unknown): boolean => {
  */
 export const describeNetworkFailure = (error: unknown): string => {
     const message = readErrorMessage(error).toLowerCase();
-    const name = String((error as { name?: unknown } | null)?.name ?? '').toLowerCase();
+    const name = readErrorName(error);
     let kind = 'network';
-    if (name === 'timeouterror' || /timeout|timed out|превышено время/.test(message)) {
+    if (isTimeoutFailure(error)) {
         const seconds = message.match(/(\d+)\s*ms/);
         kind = seconds ? `timeout-${Math.round(Number(seconds[1]) / 1000)}s` : 'timeout';
     } else if (name === 'aborterror') {

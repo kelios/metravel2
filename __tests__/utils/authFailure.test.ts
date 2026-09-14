@@ -37,6 +37,36 @@ describe('utils/authFailure', () => {
       expect(failure.reason).toBe('network');
     });
 
+    it('таймаут запроса — network со своим текстом на локализованном сообщении', () => {
+      // `fetchWithTimeout` бросает ЛОКАЛИЗОВАННЫЙ текст и ставит имя `TimeoutError`.
+      // По тексту таймаут опознавался только в английской локали, а в RU уезжал в
+      // `unknown` и терял сообщение «сервер не отвечает».
+      const timeout = new Error('Превышено время ожидания (10000 ms). Попробуйте позже.');
+      timeout.name = 'TimeoutError';
+
+      const failure = authFailureFromError(timeout, 'Не удалось войти.');
+
+      expect(failure.reason).toBe('network');
+      expect(failure.message).not.toBe('Не удалось войти.');
+      expect(failure.message).toMatch(/время/i);
+      expect(failure.message).not.toMatch(/парол/i);
+    });
+
+    it('офлайн в WebKit («Load failed») — network, а не неизвестная ошибка', () => {
+      // Весь mobile web на iPhone: Safari бросает TypeError без ключевых слов.
+      const failure = authFailureFromError(new TypeError('Load failed'), 'Не удалось войти.');
+
+      expect(failure.reason).toBe('network');
+      expect(failure.message).toMatch(/подключением к интернету/i);
+      expect(failure.message).toMatch(/\[[^\]]+ · unreachable · \d{2}:\d{2}:\d{2}Z\]$/);
+    });
+
+    it('обычный TypeError из кода приложения не выдаётся за обрыв связи', () => {
+      const failure = authFailureFromError(new TypeError('undefined is not a function'), 'Не удалось войти.');
+
+      expect(failure).toEqual({ ok: false, reason: 'unknown', message: 'Не удалось войти.' });
+    });
+
     it('несетевое исключение не протекает сырым текстом в форму', () => {
       const failure = authFailureFromError(new Error('TypeError: x is not a function'), 'Не удалось войти.');
 

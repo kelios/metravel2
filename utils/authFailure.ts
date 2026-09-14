@@ -7,7 +7,7 @@
 // Лист-модуль: зависит только от текстовых утилит (`userFriendlyErrors`,
 // `networkFailureTag`), поэтому его одинаково импортируют слой api, стор и формы.
 
-import { isConnectionFailure } from '@/utils/networkFailureTag';
+import { isTransportFailure } from '@/utils/networkFailureTag';
 import { getUserFriendlyError } from '@/utils/userFriendlyErrors';
 
 /**
@@ -47,9 +47,13 @@ export const authFailureReasonFromStatus = (status: number): AuthFailureReason =
  * Причина по пойманному исключению. Транспортный сбой получает дружелюбный текст
  * с диагностическим тегом (#1943), всё остальное — переданный fallback: сырой
  * технический текст исключения в форму входа не выводим.
+ *
+ * Транспорт — это и обрыв связи, и таймаут: запрос до ответа сервера не дошёл ни
+ * в том, ни в другом случае, а раньше таймаут падал в `unknown` (и терял свой
+ * текст «сервер не отвечает») на всех локалях, кроме английской.
  */
 export const authFailureFromError = (error: unknown, fallbackMessage: string): AuthFailure =>
-    isConnectionFailure(error)
+    isTransportFailure(error)
         ? authFailure('network', getUserFriendlyError(error))
         : authFailure('unknown', fallbackMessage);
 
