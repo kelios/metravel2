@@ -1,4 +1,5 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native'
+import { getRandomValues as nativeRandomValues } from 'expo-crypto'
 import { Platform, Pressable, StyleSheet } from 'react-native'
 import {
   AccessToken,
@@ -14,6 +15,17 @@ import FacebookSignInButton, {
   getFacebookNativePermissions,
 } from '@/components/auth/FacebookSignInButton.native'
 import { SOCIAL_AUTH_BUTTON_GEOMETRY } from '@/components/auth/socialAuthButtonGeometry'
+
+// На устройстве источник энтропии — нативный ExpoCrypto; в jest его нативной
+// части нет, и штатная заглушка jest-expo возвращает нулевой буфер. Подменяем
+// её реальным CSPRNG Node: проверяется выбор источника и кодирование nonce, а
+// не случайность как таковая.
+jest.mock('expo-crypto', () => ({
+  getRandomValues: jest.fn((array: Uint8Array) => {
+    require('node:crypto').webcrypto.getRandomValues(array)
+    return array
+  }),
+}))
 
 jest.mock('react-native-fbsdk-next', () => ({
   AccessToken: {
@@ -43,10 +55,33 @@ const previousAppId = process.env.EXPO_PUBLIC_META_APP_ID
 const originalOS = Platform.OS
 const setPlatform = (os: typeof Platform.OS) =>
   Object.defineProperty(Platform, 'OS', { value: os, configurable: true })
+const nativeRandomMock = nativeRandomValues as unknown as jest.Mock
+// Hermes на устройстве не отдаёт `globalThis.crypto`; Node в jest отдаёт,
+// поэтому ветку устройства приходится включать снятием глобали. Nonce считается
+// синхронно, поэтому обёртка тоже синхронная.
+const withoutWebCrypto = (run: () => void) => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto')
+  Object.defineProperty(globalThis, 'crypto', {
+    value: undefined,
+    configurable: true,
+  })
+  try {
+    run()
+  } finally {
+    if (descriptor) Object.defineProperty(globalThis, 'crypto', descriptor)
+    else delete (globalThis as { crypto?: unknown }).crypto
+  }
+}
 
 describe('FacebookSignInButton native', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // clearAllMocks не снимает реализацию, поэтому нативный источник энтропии
+    // возвращается к настоящему CSPRNG перед каждым тестом.
+    nativeRandomMock.mockImplementation((array: Uint8Array) => {
+      require('node:crypto').webcrypto.getRandomValues(array)
+      return array
+    })
     setPlatform('ios')
     process.env.EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED = 'true'
     process.env.EXPO_PUBLIC_META_APP_ID = '123456789'
@@ -111,6 +146,42 @@ describe('FacebookSignInButton native', () => {
 
     expect(first).toMatch(/^[0-9a-f]{32}$/)
     expect(second).not.toBe(first)
+  })
+
+  // Регрессия: на устройстве бандл исполняет Hermes, и `globalThis.crypto` там
+  // нет вовсе. Опора только на Web Crypto оставляла кнопку Facebook на iPhone
+  // мёртвой — nonce пустой, диалог Meta не открывается ни разу, — а в jest
+  // (Node отдаёт Web Crypto) такой код проходил зелёным.
+  it('generates the nonce without Web Crypto, as the device runtime does', () => {
+    withoutWebCrypto(() => {
+      const first = createFacebookLoginNonce()
+      const second = createFacebookLoginNonce()
+
+      expect(first).toMatch(/^[0-9a-f]{32}$/)
+      expect(second).not.toBe(first)
+    })
+    expect(nativeRandomMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('never starts an iPhone attempt when no entropy source answers', async () => {
+    // Заглушённый нативный модуль отдаёт нулевой буфер: константный nonce
+    // хуже отсутствия входа, попытка не начинается.
+    nativeRandomMock.mockImplementation((array: Uint8Array) => array)
+    const onError = jest.fn()
+    const onSuccess = jest.fn()
+    const screen = render(
+      <FacebookSignInButton onSuccess={onSuccess} onError={onError} />,
+    )
+    await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
+
+    withoutWebCrypto(() => {
+      expect(createFacebookLoginNonce()).toBe('')
+      fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+    })
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+
+    expect(loginMock).not.toHaveBeenCalled()
+    expect(onSuccess).not.toHaveBeenCalled()
   })
 
   it('binds the limited-login token to the nonce of the same attempt', () => {

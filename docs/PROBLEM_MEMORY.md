@@ -4205,3 +4205,34 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 - **Решение:** открыто, владелец бэкенда выбирает между сидом значка миграцией
   и мягким отказом награждения (прохождение засчитывается, значок — нет).
   Обе ветки закрывают инвариант; область — `area=back`, карточка #1935.
+
+### NATIVE-WEB-CRYPTO-ABSENT-001 — на устройстве нет `globalThis.crypto`, а jest его отдаёт
+
+- **Инвариант:** криптографический примитив нативного экрана обязан иметь
+  источник, который существует в Hermes. Проверка «есть ли Web Crypto» на
+  устройстве всегда отрицательна, поэтому fail-closed на ней превращается в
+  мёртвую функцию, а не в защиту.
+- **Каноническая задача:** #1918 (nonce Meta Limited Login на iPhone). Семья та
+  же, что у `project_jest_platform_ios_hides_web_regressions`: зелёный unit-тест
+  доказывает окружение jest, а не рантайм устройства.
+- **Подтверждённая причина:** ни `react-native` (0.86), ни winter-runtime
+  `expo` (57) не ставят `globalThis.crypto` на native, а в бинарях
+  `hermesvm.xcframework` (все срезы) нет символа `getRandomValues`. В jest
+  `globalThis.crypto` даёт Node, поэтому код `if (!crypto?.getRandomValues)
+  return ''` проходит все тесты и молча отключает вход на iPhone: nonce пустой,
+  диалог Meta не открывается ни разу.
+- **Почему прежний Done gate не удержал инвариант:** тест на «уникальный
+  непредсказуемый nonce» вызывал функцию в окружении, где Web Crypto есть.
+  Слой доказательства не совпал со слоем отказа — отказ виден только на
+  устройстве/симуляторе.
+- **Доказательство:** 14.09.2026, чтение кода и артефактов сборки:
+  `grep -rn getRandomValues node_modules/react-native node_modules/expo` — пусто;
+  `strings` по семи срезам `hermesvm` — ноль совпадений; `expo-crypto` линкуется
+  и на iOS (`ios/Podfile.lock` → `ExpoCrypto`), и на Android
+  (`expo-modules-autolinking resolve -p android`).
+- **Решение:** источник энтропии на native — нативный `expo-crypto`
+  (`getRandomValues`), Web Crypto остаётся ветвью для окружений, где он есть;
+  нулевой буфер считается отказом источника. Контроль —
+  `__tests__/components/auth/FacebookSignInButton.native.test.tsx`: nonce
+  генерируется при снятом `globalThis.crypto`, а при отсутствии энтропии
+  попытка входа не начинается.

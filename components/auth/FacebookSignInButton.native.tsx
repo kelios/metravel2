@@ -1,4 +1,5 @@
 import Feather from '@expo/vector-icons/Feather'
+import { getRandomValues as getNativeRandomValues } from 'expo-crypto'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
@@ -50,15 +51,33 @@ export const getFacebookNativeCredential = (
 
 /**
  * Nonce одноразовый и проверяется сервером против claim `nonce` в OIDC-токене,
- * поэтому источник случайности обязан быть криптографическим. Runtime Expo даёт
- * Web Crypto на устройстве; если его нет, возвращается пустая строка и попытка
- * входа не начинается — предсказуемый nonce хуже отсутствия кнопки.
+ * поэтому источник случайности обязан быть криптографическим.
+ *
+ * Источников два, и порядок важен. На устройстве бандл исполняет Hermes, а он
+ * Web Crypto не реализует: ни `react-native`, ни winter-runtime `expo` не
+ * ставят `globalThis.crypto`, и в бинаре hermesvm нет символа
+ * `getRandomValues`. Проверка «есть ли Web Crypto» на iPhone всегда
+ * отрицательна, поэтому CSPRNG даёт нативный `expo-crypto` (под ExpoCrypto
+ * линкуется в iOS-сборку, модуль автолинкуется на Android). Ветка Web Crypto
+ * остаётся для runtime, где он есть (Node в тестах, web-окружения).
+ *
+ * Нули считаются отказом источника: заглушённый нативный модуль возвращает
+ * нулевой буфер, а константный nonce хуже отсутствия входа — попытка не
+ * начинается.
  */
 export const createFacebookLoginNonce = (): string => {
-  const cryptoApi = (globalThis as { crypto?: Crypto }).crypto
-  if (typeof cryptoApi?.getRandomValues !== 'function') return ''
   const bytes = new Uint8Array(16)
-  cryptoApi.getRandomValues(bytes)
+  try {
+    const cryptoApi = (globalThis as { crypto?: Crypto }).crypto
+    if (typeof cryptoApi?.getRandomValues === 'function') {
+      cryptoApi.getRandomValues(bytes)
+    } else {
+      getNativeRandomValues(bytes)
+    }
+  } catch {
+    return ''
+  }
+  if (bytes.every((byte) => byte === 0)) return ''
   // Meta принимает nonce только как строку без пробелов и спецсимволов, hex это
   // условие выполняет.
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
