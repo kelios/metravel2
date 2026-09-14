@@ -12,6 +12,24 @@ describe('userFriendlyErrors', () => {
       expect(getUserFriendlyError('connection timeout')).toMatch(/подключением к интернету/i)
     })
 
+    // #1943: текст входа («connection error» на скриншоте App Review) собирает
+    // именно этот маппер — `api/auth.ts` и `api/appleAuth.ts` глотают сетевую
+    // ошибку и показывают его результат, до catch-веток LoginForm она не доходит.
+    it('appends the diagnostic tag to the connection message', () => {
+      expect(getUserFriendlyError(new Error('Network request failed'))).toMatch(
+        /\[[^\]]+ · unreachable · \d{2}:\d{2}:\d{2}Z\]$/,
+      )
+      expect(getUserFriendlyError('connection timeout')).toMatch(
+        /\[[^\]]+ · timeout · \d{2}:\d{2}:\d{2}Z\]$/,
+      )
+    })
+
+    it('leaves non-network messages untagged', () => {
+      expect(getUserFriendlyError('401 unauthorized')).not.toMatch(/ · /)
+      expect(getUserFriendlyError('500 server error')).not.toMatch(/ · /)
+      expect(getUserFriendlyError('400 validation')).not.toMatch(/ · /)
+    })
+
     it('handles auth and permission errors', () => {
       expect(getUserFriendlyError('401 unauthorized')).toMatch(/Требуется авторизация/i)
       expect(getUserFriendlyError('403 forbidden')).toMatch(/Доступ запрещен/i)

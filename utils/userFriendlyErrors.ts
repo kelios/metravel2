@@ -1,4 +1,5 @@
 import { translate as i18nT } from '@/i18n'
+import { withFailureTag } from '@/utils/networkFailureTag';
 // src/utils/userFriendlyErrors.ts
 // ✅ Утилита для преобразования технических ошибок в понятные сообщения для пользователей
 
@@ -8,9 +9,14 @@ import { translate as i18nT } from '@/i18n'
 export function getUserFriendlyError(error: Error | string | unknown): string {
     const errorMessage = error instanceof Error ? error.message : String(error || i18nT('errorsStatic:utils.userFriendlyErrors.unknownInput'));
 
-    // Сетевые ошибки
+    // Сетевые ошибки.
+    // #1943: именно эта ветка — текст «connection error», который видит пользователь
+    // при входе: `api/auth.ts` (email/Google) показывает её в Alert, `api/appleAuth.ts`
+    // отдаёт как message результата. Поэтому диагностический тег нужен здесь, а не
+    // только в catch-ветках формы, куда сетевая ошибка не долетает (оба модуля её
+    // глотают и возвращают null/result).
     if (/network|fetch|connection|timeout/i.test(errorMessage)) {
-        return i18nT('errors:utils.userFriendlyErrors.problema_s_podklyucheniem_k_internetu_prover_2d6c3825');
+        return withFailureTag(i18nT('errors:utils.userFriendlyErrors.problema_s_podklyucheniem_k_internetu_prover_2d6c3825'), error);
     }
 
     if (/timeout|превышено время/i.test(errorMessage)) {
