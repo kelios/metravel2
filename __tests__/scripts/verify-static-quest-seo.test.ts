@@ -33,6 +33,7 @@ const {
   hasQuestCountryStandaloneContent,
   listTravelPageFiles,
   missingLandingQuestLinks,
+  questPageFromHtml,
   sitemapCountryAliases,
   sitemapHasUrl,
   templateSkeleton,
@@ -903,59 +904,63 @@ describe('collectQuestSsgPages', () => {
  * renders below that, and a floor of 110 would have failed the fail-closed
  * production build on a page that is exactly what the template is supposed to
  * produce. These probes drive the real builders at their leanest shape.
+ *
+ * The fixture is the generator's own model, not a hand-written lookalike: a
+ * lookalike that misses a key silently measures a fallback label instead of the
+ * real one, and the probe then licenses a floor the real page cannot clear.
  */
 describe('thin-content floors against the generator itself', () => {
   const {
     buildQuestCityLandingHtml,
+    buildQuestCityLandingModel,
     buildQuestCountryLandingHtml,
+    buildQuestCountryLandingModel,
   } = require('@/scripts/generate-seo-pages')
 
   const SHELL = '<!DOCTYPE html><html lang="ru"><head><title>Metravel</title></head><body></body></html>'
 
-  const leanCity = {
-    segment: 'x',
-    cityIds: ['1'],
-    cityName: 'Х',
-    cityAlias: 'x',
-    legacyAliases: [],
-    quests: [{ quest_id: 'q', city_id: '1', title: 'К', path: '/quests/1/q' }],
-    nearbyCities: [],
-    travelLinks: [],
+  /** The leanest catalog the builders can see: one quest, one city, no neighbours, no travels. */
+  const LEAN_CATALOG = [
+    { quest_id: 'q', city_id: '1', title: 'К', city_name: 'Х', country_code: 'BY' },
+  ]
+
+  const leanCityHtml = () => {
+    const [city] = buildQuestCityLandingModel(LEAN_CATALOG, buildQuestCityAliasMap(LEAN_CATALOG), [])
+    return buildQuestCityLandingHtml(SHELL, city, null)
   }
-  const leanCountry = {
-    countryAlias: 'x',
-    countryName: 'Х',
-    countryCode: 'XX',
-    cities: [{ cityName: 'Х', cityAlias: 'x', landingPath: '/quests/x', questCount: 1 }],
-    quests: [{ quest_id: 'q', city_id: '1', title: 'К', path: '/quests/1/q', cityName: 'Х' }],
+  const leanCountryHtml = () => {
+    const [country] = buildQuestCountryLandingModel(LEAN_CATALOG, 'ru')
+    return buildQuestCountryLandingHtml(SHELL, country)
   }
 
-  const pageFrom = (html: string, path: string) => {
-    const sections = extractQuestSsgSections(html)
-    expect(sections.length).toBeGreaterThan(0)
-    return { path, kind: sections[0].kind, text: sections.map((s: { text: string }) => s.text).join(' ') }
+  const leanPage = (html: string, routePath: string) => {
+    const page = questPageFromHtml(html, routePath)
+    expect(page.kind).not.toBe('')
+    return page
   }
 
   it('passes the leanest city landing the builder can render', () => {
-    const page = pageFrom(buildQuestCityLandingHtml(SHELL, leanCity, null), 'quests/x/index.html')
+    const page = leanPage(leanCityHtml(), 'quests/x/index.html')
 
+    expect(page.kind).toBe('quest-city')
     expect(verifyQuestPageContentDepth([page])).toEqual([])
   })
 
   it('passes the leanest country landing the builder can render', () => {
-    const page = pageFrom(
-      buildQuestCountryLandingHtml(SHELL, leanCountry),
-      'quests/country/x/index.html',
-    )
+    const page = leanPage(leanCountryHtml(), 'quests/country/x/index.html')
 
+    expect(page.kind).toBe('quest-country')
     expect(verifyQuestPageContentDepth([page])).toEqual([])
   })
 
   it('keeps every exemption floor under the leanest output of its level', () => {
     const leanWords: Record<string, number> = {
-      'quest-city': countWords(pageFrom(buildQuestCityLandingHtml(SHELL, leanCity, null), 'c').text),
-      'quest-country': countWords(pageFrom(buildQuestCountryLandingHtml(SHELL, leanCountry), 'k').text),
+      'quest-city': countWords(leanPage(leanCityHtml(), 'c').text),
+      'quest-country': countWords(leanPage(leanCountryHtml(), 'k').text),
     }
+
+    // Pinned so a drop in the builder's own output surfaces here, not on a prod build.
+    expect(leanWords).toEqual({ 'quest-city': 107, 'quest-country': 112 })
 
     for (const entry of THIN_CONTENT_EXEMPTIONS as Array<{ kind: string; minWords: number }>) {
       expect(leanWords[entry.kind]).toBeGreaterThan(entry.minWords)

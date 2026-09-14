@@ -338,12 +338,14 @@ const QUEST_SSG_SECTION_PATTERN = '<section[^>]*\\bdata-ssg-(quests?(?:-[a-z0-9]
  * the current minimum: both optional blocks of a city landing are conditional
  * (`nearbyCities` needs another quest city within 400 km and `travelLinks` a
  * matching travel, scripts/generate-seo-pages.js:3116-3121), so the first quest
- * in an isolated city with no local travel article renders far below 118. The
- * leanest output the builders can produce measures 107-113 words for a city and
- * 112 for a country depending on how the text is flattened, so the floors sit
- * under that at 100: low enough that no legitimate template output can red a
+ * in an isolated city with no local travel article renders far below 118.
+ * Driven on the generator's own models at their leanest shape, the builders
+ * produce 107 words for a city and 112 for a country, so the floors sit under
+ * that at 100: low enough that no legitimate template output can red a
  * fail-closed production build, high enough to catch a section that lost its
- * overview and practical blocks outright.
+ * overview and practical blocks outright (that page measures 42). Both numbers
+ * are pinned in the guard's tests, which drive the real builders rather than a
+ * hand-written lookalike model.
  *
  * The list can only shrink: once every page of a listed level clears the
  * default, the guard fails on the stale entry, so a fixed level cannot quietly
@@ -387,6 +389,22 @@ function sliceBalancedSection(html, openTagStart) {
  */
 function sectionProseText(sectionHtml) {
   return htmlToPlainText(String(sectionHtml || '').replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, ' '))
+}
+
+/**
+ * The one shape `verifyQuestPageContentDepth` measures.
+ *
+ * Shared so a probe cannot measure a page assembled differently from the one the
+ * build measures: change how a page is folded into text here, and both the guard
+ * and its tests follow.
+ */
+function questPageFromHtml(html, routePath, precomputedSections = null) {
+  const sections = precomputedSections || extractQuestSsgSections(html)
+  return {
+    path: routePath,
+    kind: sections.length > 0 ? sections[0].kind : '',
+    text: sections.map((section) => section.text).join(' '),
+  }
 }
 
 /** Every catalog-derived block on a page, with the level it belongs to. */
@@ -487,11 +505,7 @@ function collectQuestSsgPages(distDir, options = {}) {
       const routePath = `quests/${relativePath}`
       const key = getCanonical(html) || routePath.replace(/(?:\/index)?\.html$/, '')
       if (byCanonical.has(key)) continue
-      byCanonical.set(key, {
-        path: routePath,
-        kind: sections[0].kind,
-        text: sections.map((section) => section.text).join(' '),
-      })
+      byCanonical.set(key, questPageFromHtml(html, routePath, sections))
     }
   }
 
@@ -970,6 +984,7 @@ if (typeof module !== 'undefined' && module.exports) {
     hasQuestIntroSection,
     hasQuestJsonLd,
     listTravelPageFiles,
+    questPageFromHtml,
     sectionProseText,
     sitemapCountryAliases,
     sitemapHasUrl,
