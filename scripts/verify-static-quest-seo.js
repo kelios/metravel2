@@ -285,6 +285,295 @@ function verifyQuestCountryMetadataUniqueness(pages) {
   return issues
 }
 
+/**
+ * #1930: how much text a catalog-derived quest page carries, and how much of it
+ * is its own.
+ *
+ * Three thin templates shipped in three weeks — city (#1569), quest detail
+ * (#1763), country (#1929) — and each fix taught the guard about its own level
+ * only: "the section tag is present". A tag can be present and hold one
+ * sentence, so presence never caught the fourth case.
+ *
+ * The rule below keys on the `data-ssg-quest*` marker generate-seo-pages.js
+ * writes onto every crawlable block it builds under /quests, so a level that
+ * does not exist yet — region, theme, whatever comes next — is measured the day
+ * it ships instead of after the next GSC report.
+ *
+ * Both spellings the generator already uses count: `data-ssg-quest-<level>` for
+ * the per-page templates and `data-ssg-quests-<level>` for the hub
+ * (`generate-seo-pages.js` writes `data-ssg-quests-listing` on /quests). A
+ * singular-only pattern would have left the most-crawled catalog page — and the
+ * next level named after it — unmeasured, which is the exact miss this rule
+ * exists to prevent.
+ */
+const MIN_QUEST_PAGE_WORDS = 300
+const MIN_QUEST_PAGE_DISTINCT_RATIO = 0.3
+const QUEST_PAGE_SHINGLE_SIZE = 5
+const QUEST_SSG_SECTION_PATTERN = '<section[^>]*\\bdata-ssg-(quests?(?:-[a-z0-9]+)*)="true"[^>]*>'
+
+/**
+ * Levels that are thin today, each with the open card that owns its content.
+ *
+ * The rule above is retroactive, so the two levels it would fail on arrival keep
+ * a floor they do meet — nothing may get worse — while every other level gets
+ * the full rule immediately. Without this the guard would fail every production
+ * build until two content cards land, which is not what it is for.
+ *
+ * Quest detail pages are deliberately absent: #1763 already raised them and all
+ * 182 of them clear the default outright, so the rule bites on a real level
+ * today rather than only on hypothetical future ones.
+ *
+ * Measured against production on 14.09.2026, prose words per crawlable section
+ * (link labels excluded), all pages in the catalog:
+ *   quest-city    n=132  min 118  median 148  max 182   own wording 0%
+ *   quest-country n=18   min 115  median 120  max 270   own wording 0%
+ *   quest-intro   n=182  min 318  median 721  max 1226  clears the default
+ *
+ * The two single-page levels — the /quests hub and /quests/scenario — were
+ * measured off the generator's own builders instead of prod HTML: 345 prose
+ * words for the hub at the smallest catalog shape it can render, 493 for the
+ * scenario. Both clear the default, so neither needs an entry here.
+ *
+ * The list can only shrink: once every page of a listed level clears the
+ * default, the guard fails on the stale entry, so a fixed level cannot quietly
+ * keep its licence to be thin.
+ */
+const THIN_CONTENT_EXEMPTIONS = [
+  { kind: 'quest-city', minWords: 110, minDistinctRatio: 0, ticket: '#1569' },
+  { kind: 'quest-country', minWords: 110, minDistinctRatio: 0, ticket: '#1929' },
+]
+
+/**
+ * The body of one `<section>`, counting nested sections. A non-greedy match to
+ * the first `</section>` would truncate the text and fail a page that is
+ * actually long enough.
+ */
+function sliceBalancedSection(html, openTagStart) {
+  const source = String(html)
+  const openTagEnd = source.indexOf('>', openTagStart)
+  if (openTagEnd === -1) return null
+
+  const tagRegex = /<(\/?)section\b/gi
+  tagRegex.lastIndex = openTagEnd + 1
+  let depth = 1
+  let match
+  while ((match = tagRegex.exec(source)) !== null) {
+    depth += match[1] ? -1 : 1
+    if (depth === 0) return source.slice(openTagEnd + 1, match.index)
+  }
+  return source.slice(openTagEnd + 1)
+}
+
+/** Visible text of a markup fragment, as a crawler reads it. */
+function sectionPlainText(sectionHtml) {
+  return String(sectionHtml || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&amp;/gi, '&')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * The same text with link labels dropped.
+ *
+ * A catalog-derived landing is mostly a list of links to other pages, and their
+ * labels are city names and quest titles — they are unique per page by
+ * construction. Counting them made /quests/country/belarus read as 755 words of
+ * content when it carries 270 words of prose, and made two landings built from
+ * one template look unlike each other because their link lists differ. Body
+ * copy is what a thin-content page is missing, so body copy is what is measured.
+ */
+function sectionProseText(sectionHtml) {
+  return sectionPlainText(String(sectionHtml || '').replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, ' '))
+}
+
+/** Every catalog-derived block on a page, with the level it belongs to. */
+function extractQuestSsgSections(html) {
+  const source = String(html || '')
+  const openRegex = new RegExp(QUEST_SSG_SECTION_PATTERN, 'gi')
+  const sections = []
+  let match
+  while ((match = openRegex.exec(source)) !== null) {
+    const body = sliceBalancedSection(source, match.index)
+    if (body === null) continue
+    sections.push({ kind: match[1].toLowerCase(), text: sectionProseText(body) })
+  }
+  return sections
+}
+
+function countWords(text) {
+  const words = String(text || '').match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu)
+  return words ? words.length : 0
+}
+
+/**
+ * The page's wording with the parts that always differ removed — numbers and
+ * capitalised tokens, which is where city and country names live. What is left
+ * is the template itself, so two landings that differ only by their name and
+ * their counts reduce to the same tokens.
+ */
+function templateSkeleton(text) {
+  return String(text || '')
+    .split(/\s+/)
+    .map((token) => token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
+    .filter((token) => token.length > 0 && !/\d/.test(token) && !/^\p{Lu}/u.test(token))
+    .map((token) => token.toLowerCase())
+}
+
+function textShingles(tokens, size = QUEST_PAGE_SHINGLE_SIZE) {
+  const shingles = new Set()
+  for (let index = 0; index + size <= tokens.length; index += 1) {
+    shingles.add(tokens.slice(index, index + size).join(' '))
+  }
+  return shingles
+}
+
+/**
+ * Rounded down, so the failure line cannot read "only 30% ... minimum 30%": a
+ * page at 29.7% own wording rounds up to the very floor it just missed, and the
+ * build log then argues with itself.
+ */
+function formatPercent(ratio) {
+  return `${Math.floor(ratio * 100)}%`
+}
+
+/**
+ * Share of a page's phrasing that no other page of its level repeats. `null`
+ * when there is nothing to compare against — a level with one page cannot be a
+ * template of itself.
+ */
+function distinctShingleRatio(page, kindPageCount, shingleUses) {
+  if (kindPageCount < 2 || page.shingles.size === 0) return null
+  let distinct = 0
+  for (const shingle of page.shingles) {
+    if (shingleUses.get(shingle) === 1) distinct += 1
+  }
+  return distinct / page.shingles.size
+}
+
+/**
+ * Catalog-derived pages in a built dist, one entry per canonical page.
+ *
+ * generate-seo-pages.js writes each quest as both `<id>.html` and
+ * `<id>/index.html`, and each city under both its numeric id and its alias —
+ * four files, two pages. Keying on the canonical URL the page declares keeps
+ * those twins from reading as copies of each other.
+ */
+function collectQuestSsgPages(distDir, options = {}) {
+  const read = options.readFile || ((filePath) => fs.readFileSync(filePath, 'utf8'))
+  const root = path.join(distDir, 'quests')
+  if (!fs.existsSync(root)) return []
+
+  const byCanonical = new Map()
+
+  const walk = (dir, relative) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      // Expo route templates ("[city].html") are shipped shells, not pages.
+      if (entry.name.includes('[')) continue
+      const absolute = path.join(dir, entry.name)
+      const relativePath = relative ? `${relative}/${entry.name}` : entry.name
+      if (entry.isDirectory()) {
+        walk(absolute, relativePath)
+        continue
+      }
+      if (!entry.name.endsWith('.html')) continue
+
+      const html = read(absolute)
+      const sections = extractQuestSsgSections(html)
+      if (sections.length === 0) continue
+
+      const routePath = `quests/${relativePath}`
+      const key = getCanonical(html) || routePath.replace(/(?:\/index)?\.html$/, '')
+      if (byCanonical.has(key)) continue
+      byCanonical.set(key, {
+        path: routePath,
+        kind: sections[0].kind,
+        text: sections.map((section) => section.text).join(' '),
+      })
+    }
+  }
+
+  walk(root, '')
+  return [...byCanonical.values()]
+}
+
+/** Volume and independence, for every level the build actually produced. */
+function verifyQuestPageContentDepth(pages, options = {}) {
+  const minWords = Number.isFinite(options.minWords) ? options.minWords : MIN_QUEST_PAGE_WORDS
+  const minDistinctRatio = Number.isFinite(options.minDistinctRatio)
+    ? options.minDistinctRatio
+    : MIN_QUEST_PAGE_DISTINCT_RATIO
+  const exemptions = new Map(
+    (options.exemptions || THIN_CONTENT_EXEMPTIONS).map((entry) => [entry.kind, entry]),
+  )
+
+  const byKind = new Map()
+  for (const page of Array.isArray(pages) ? pages : []) {
+    const kind = String(page?.kind || '').trim().toLowerCase()
+    if (!kind) continue
+    const text = String(page?.text || '')
+    if (!byKind.has(kind)) byKind.set(kind, [])
+    byKind.get(kind).push({
+      path: String(page?.path || '').trim() || '(unknown quest page)',
+      words: countWords(text),
+      shingles: textShingles(templateSkeleton(text)),
+    })
+  }
+
+  const failures = []
+
+  for (const [kind, kindPages] of byKind) {
+    const exemption = exemptions.get(kind)
+    const wordFloor = exemption ? exemption.minWords : minWords
+    const ratioFloor = exemption ? exemption.minDistinctRatio : minDistinctRatio
+
+    const shingleUses = new Map()
+    for (const page of kindPages) {
+      for (const shingle of page.shingles) {
+        shingleUses.set(shingle, (shingleUses.get(shingle) || 0) + 1)
+      }
+    }
+
+    let clearsDefault = true
+
+    for (const page of kindPages) {
+      const ratio = distinctShingleRatio(page, kindPages.length, shingleUses)
+      if (page.words < minWords || (ratio !== null && ratio < minDistinctRatio)) {
+        clearsDefault = false
+      }
+
+      const issues = []
+      if (page.words < wordFloor) {
+        issues.push(`${page.words} words of crawlable text, minimum ${wordFloor}`)
+      }
+      if (ratio !== null && ratio < ratioFloor) {
+        issues.push(
+          `only ${formatPercent(ratio)} of its wording is its own, minimum ${formatPercent(ratioFloor)}` +
+            ' — reads as a shared template'
+        )
+      }
+      if (issues.length > 0) failures.push(`${page.path} [${kind}]: ${issues.join('; ')}`)
+    }
+
+    if (exemption && clearsDefault) {
+      failures.push(
+        `thin-content exemption for "${kind}" (${exemption.ticket}) is stale: every page now clears` +
+          ` ${minWords} words and ${formatPercent(minDistinctRatio)} own wording` +
+          ' — delete the entry from THIN_CONTENT_EXEMPTIONS'
+      )
+    }
+  }
+
+  return failures
+}
+
 function hasQuestJsonLd(html) {
   return /<script[^>]*application\/ld\+json[^>]*>[\s\S]*?"@type"\s*:\s*"TouristTrip"[\s\S]*?<\/script>/i.test(html)
 }
@@ -352,7 +641,7 @@ function missingLandingQuestLinks(html, questPaths) {
 function expectedCityLandingFiles(quests, cityAliasMap) {
   const files = new Set()
   for (const city of buildQuestCityLandingGroups(quests, cityAliasMap)) {
-    for (const segment of [...city.cityIds, city.segment, ...city.legacyAliases]) {
+    for (const segment of [...city.cityIds, city.segment]) {
       files.add(path.join('quests', segment, 'index.html'))
     }
   }
@@ -501,7 +790,6 @@ async function main() {
   // the live backend sitemap as a fail-closed external input and only checks
   // membership here. HTTP/redirect behavior remains a post-deploy concern.
 
-  const cityLandingsOnLegacySitemapAlias = []
   for (const city of cityGroups) {
     const canonical = `${SITE_URL}/quests/${city.segment}`
     const cityFile = path.join(DIST_DIR, 'quests', city.segment, 'index.html')
@@ -520,30 +808,9 @@ async function main() {
     if (issues.length > 0) {
       failures.push(`city landing /quests/${city.segment}: ${issues.join(', ')}`)
     }
-    // sitemap.xml is Django-owned (maintenance/sitemap.py:_alias) and still
-    // derives the city segment with the single-token rule this build replaced
-    // (#1931), so for a two-word city the two sides name different URLs. The
-    // short one is still a live page that declares the full one canonical, so
-    // Google keeps discovering the landing and consolidating it — what must
-    // never happen is the sitemap pointing at no landing at all, and that is
-    // what stays fail-closed here.
-    const sitemapSegments = [city.segment, ...city.legacyAliases]
-    const sitemapSegment = sitemapSegments.find((segment) =>
-      sitemapHasUrl(sitemapXml, `${SITE_URL}/quests/${segment}`),
-    )
-    if (!sitemapSegment) {
+    if (!sitemapHasUrl(sitemapXml, canonical)) {
       failures.push(`city landing /quests/${city.segment}: missing from backend sitemap.xml`)
-    } else if (sitemapSegment !== city.segment) {
-      cityLandingsOnLegacySitemapAlias.push(`/quests/${sitemapSegment} -> /quests/${city.segment}`)
     }
-  }
-
-  if (cityLandingsOnLegacySitemapAlias.length > 0) {
-    console.warn(
-      `  ⚠️  ${cityLandingsOnLegacySitemapAlias.length} city landings are listed in the Django sitemap` +
-        ' under the alias the single-token rule produced, not the canonical one' +
-        ` — mirror utils/questCityAlias.js in maintenance/sitemap.py:\n     ${cityLandingsOnLegacySitemapAlias.join('\n     ')}`,
-    )
   }
 
   // Country HTML is frontend-owned and always fail-closed against the complete
@@ -634,6 +901,13 @@ async function main() {
     )
   }
 
+  // 6. #1930: how much crawlable text each catalog-derived page carries and how
+  // much of it is its own. Keyed on the `data-ssg-quest*` marker rather than on
+  // the three levels that were caught by hand, so the next aggregation level is
+  // measured the day it ships.
+  const catalogPages = collectQuestSsgPages(DIST_DIR)
+  failures.push(...verifyQuestPageContentDepth(catalogPages))
+
   if (failures.length > 0) {
     const message = failures.slice(0, 20).map((failure) => ` - ${failure}`).join('\n')
     const overflow = failures.length > 20 ? `\n ... and ${failures.length - 20} more` : ''
@@ -647,14 +921,21 @@ async function main() {
       ` + ${countryLandingFiles.length} country landings` +
       ` + ${cityGroups.length} backend sitemap aliases` +
       ` + quest promos on ${travelPromoPages}/${travelPageFiles.length} travel pages` +
+      ` + text depth on ${catalogPages.length} catalog-derived pages` +
       ` (metadata: ${scopeLabel}) in ${DIST_DIR}`
   )
 }
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    MIN_QUEST_PAGE_DISTINCT_RATIO,
+    MIN_QUEST_PAGE_WORDS,
+    THIN_CONTENT_EXEMPTIONS,
     TRAVEL_QUEST_PROMO_MARKER,
+    collectQuestSsgPages,
     countTravelQuestPromoPages,
+    countWords,
+    extractQuestSsgSections,
     expectedAliasLandingQuests,
     expectedCityLandingFiles,
     expectedCountryLandingFiles,
@@ -672,13 +953,17 @@ if (typeof module !== 'undefined' && module.exports) {
     hasQuestIntroSection,
     hasQuestJsonLd,
     listTravelPageFiles,
+    sectionPlainText,
+    sectionProseText,
     sitemapCountryAliases,
     sitemapHasUrl,
+    templateSkeleton,
     verifyQuestCityHtml,
     verifyQuestCountryHtml,
     verifyQuestCountryMetadataUniqueness,
     verifyQuestCountrySitemap,
     verifyQuestHtml,
+    verifyQuestPageContentDepth,
   }
 }
 

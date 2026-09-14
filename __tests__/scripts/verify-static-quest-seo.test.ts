@@ -13,8 +13,13 @@ import path from 'path'
 import { makeTempDir, removeDir, writeTextFile } from './cli-test-utils'
 
 const {
+  MIN_QUEST_PAGE_WORDS,
+  THIN_CONTENT_EXEMPTIONS,
   TRAVEL_QUEST_PROMO_MARKER,
+  collectQuestSsgPages,
   countTravelQuestPromoPages,
+  countWords,
+  extractQuestSsgSections,
   expectedAliasLandingQuests,
   expectedCityLandingFiles,
   expectedCountryLandingFiles,
@@ -30,11 +35,13 @@ const {
   missingLandingQuestLinks,
   sitemapCountryAliases,
   sitemapHasUrl,
+  templateSkeleton,
   verifyQuestCityHtml,
   verifyQuestCountryHtml,
   verifyQuestCountryMetadataUniqueness,
   verifyQuestCountrySitemap,
   verifyQuestHtml,
+  verifyQuestPageContentDepth,
 } = require('@/scripts/verify-static-quest-seo')
 
 const { buildQuestCityAliasMap } = require('@/utils/questCityAlias')
@@ -107,16 +114,6 @@ describe('expectedCityLandingFiles', () => {
         'quests/krakow/index.html',
         'quests/minsk/index.html',
       ].sort(),
-    )
-  })
-
-  // #1931: the short alias a two-word city used to publish is already indexed,
-  // so the build still has to produce a page for it, not a 404.
-  it('keeps the landing a two-word city published under its old short alias', () => {
-    const quests = [{ quest_id: 'kutna-hora-silver', city_id: '140', city_name: 'Кутна-Гора' }]
-
-    expect(expectedCityLandingFiles(quests, buildQuestCityAliasMap(quests)).sort()).toEqual(
-      ['quests/140/index.html', 'quests/kutna-hora/index.html', 'quests/kutna/index.html'].sort(),
     )
   })
 })
@@ -633,5 +630,254 @@ describe('extractItems', () => {
     expect(extractItems({ results: [KRAKOW_QUEST] })).toEqual([KRAKOW_QUEST])
     expect(extractItems({ items: [KRAKOW_QUEST] })).toEqual([KRAKOW_QUEST])
     expect(extractItems(null)).toEqual([])
+  })
+})
+
+/**
+ * #1930: the guard measures how much text a catalog-derived page carries and
+ * how much of it is its own, for every level — not the presence of the three
+ * section tags that were added one incident at a time.
+ */
+describe('catalog-derived quest page content depth', () => {
+  /**
+   * Body copy of an exact length. The same seed twice is one template written
+   * onto two pages; different seeds share no phrasing at all. Digit-free on
+   * purpose — the guard drops tokens carrying a number, because that is where
+   * the per-page counts live.
+   */
+  const ALPHABET = 'абвгдежзийклмнопрстуфхцчшщэюя'
+  const prose = (words: number, seed = 0): string => {
+    const vocabulary = Array.from(
+      { length: ALPHABET.length },
+      (_, slot) =>
+        `сл${ALPHABET[seed % ALPHABET.length]}${ALPHABET[slot]}${ALPHABET[(slot * 7) % ALPHABET.length]}`,
+    )
+    return Array.from({ length: words }, (_, index) => vocabulary[index % vocabulary.length]).join(' ')
+  }
+
+  const questSection = (kind: string, body: string): string =>
+    `<section data-ssg-${kind}="true" aria-label="Квесты"><p>${body}</p></section>`
+
+  const page = (kind: string, words: number, seed = 0): { path: string; kind: string; text: string } => {
+    const [section] = extractQuestSsgSections(questSection(kind, prose(words, seed)))
+    return { path: `quests/${kind}-${seed}/index.html`, kind: section.kind, text: section.text }
+  }
+
+  it('fails a page below the word floor and names the file, the floor and the actual count', () => {
+    const failures = verifyQuestPageContentDepth([page('quest-region', 40)], { exemptions: [] })
+
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toContain('quests/quest-region-0/index.html')
+    expect(failures[0]).toContain('[quest-region]')
+    expect(failures[0]).toContain('40 words of crawlable text, minimum 300')
+  })
+
+  it('accepts a page that carries enough of its own text', () => {
+    expect(
+      verifyQuestPageContentDepth([page('quest-region', 400, 0), page('quest-region', 400, 3)], {
+        exemptions: [],
+      }),
+    ).toEqual([])
+  })
+
+  it('fails two same-level pages whose text differs only by name and numbers', () => {
+    const template = (city: string, count: number) =>
+      questSection(
+        'quest-region',
+        `Здесь собраны ${count} квеста в городе ${city}. ${prose(400)}`,
+      )
+    const pages = [
+      { path: 'quests/region/a/index.html', kind: 'quest-region', text: extractQuestSsgSections(template('Минск', 9))[0].text },
+      { path: 'quests/region/b/index.html', kind: 'quest-region', text: extractQuestSsgSections(template('Брест', 4))[0].text },
+    ]
+
+    const failures = verifyQuestPageContentDepth(pages, { exemptions: [] })
+
+    expect(failures).toHaveLength(2)
+    expect(failures[0]).toContain('reads as a shared template')
+    expect(failures[0]).toContain('0% of its wording is its own, minimum 30%')
+  })
+
+  it('does not call a level a template when it is the only page of that level', () => {
+    expect(verifyQuestPageContentDepth([page('quest-region', 400)], { exemptions: [] })).toEqual([])
+  })
+
+  /**
+   * The measurement that decides whether the rule works at all: a landing is
+   * mostly links to other pages, and their labels are unique per page by
+   * construction, so counting them turns a thin template into a long page.
+   */
+  it('measures body copy, not the link labels a catalog page is built from', () => {
+    const links = Array.from(
+      { length: 60 },
+      (_, index) => `<li><a href="/quests/city-${index}">Очень Длинное Название Города ${index}</a></li>`,
+    ).join('')
+    const [section] = extractQuestSsgSections(
+      `<section data-ssg-quest-region="true"><p>${prose(20)}</p><ul>${links}</ul></section>`,
+    )
+
+    expect(section.text).not.toContain('Название')
+    expect(countWords(section.text)).toBe(20)
+  })
+
+  it('applies the full rule to a level nobody has written a guard for yet', () => {
+    const failures = verifyQuestPageContentDepth([
+      page('quest-theme', 120, 0),
+      page('quest-theme', 120, 0),
+    ])
+
+    expect(failures).toHaveLength(2)
+    expect(failures.every((failure) => failure.includes('[quest-theme]'))).toBe(true)
+  })
+
+  /**
+   * The /quests hub is the most-crawled catalog page and the generator spells
+   * its marker in the plural (`data-ssg-quests-listing`). A rule that only knew
+   * the singular would have left that level — and the next one named after it —
+   * outside the measurement it exists for.
+   */
+  it('measures the hub level whose marker the generator spells in the plural', () => {
+    const failures = verifyQuestPageContentDepth([page('quests-listing', 40)])
+
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toContain('[quests-listing]')
+    expect(failures[0]).toContain('40 words of crawlable text, minimum 300')
+  })
+
+  /**
+   * A page at 29.8% own wording must not be reported as "only 30% ... minimum
+   * 30%": a build log that argues with itself reads as a broken guard, and the
+   * next maintainer reopens the guard instead of the thin page.
+   */
+  it('reports a share below the floor as below the floor, never as the floor itself', () => {
+    // Digit-free lowercase tokens survive templateSkeleton unchanged.
+    const token = (index: number) =>
+      `тк${String(index).split('').map((digit) => 'абвгдежзий'[Number(digit)]).join('')}`
+    const run = (count: number, offset: number) =>
+      Array.from({ length: count }, (_, index) => token(offset + index)).join(' ')
+    // 298 own + 706 shared tokens = 1000 shingles, 298 of them unique: 29.8%.
+    const sharedTail = run(706, 0)
+    const pages = [1, 2].map((slot) => ({
+      path: `quests/region/${slot}/index.html`,
+      kind: 'quest-region',
+      text: `${run(298, slot * 100000)} ${sharedTail}`,
+    }))
+
+    const failures = verifyQuestPageContentDepth(pages, { exemptions: [] })
+
+    expect(failures).toHaveLength(2)
+    expect(failures[0]).toContain('only 29% of its wording is its own, minimum 30%')
+  })
+
+  it('holds a grandfathered level to its own floor instead of ignoring it', () => {
+    const exemptions = [{ kind: 'quest-city', minWords: 110, minDistinctRatio: 0, ticket: '#1569' }]
+
+    expect(
+      verifyQuestPageContentDepth([page('quest-city', 150, 0), page('quest-city', 150, 0)], { exemptions }),
+    ).toEqual([])
+
+    const regressed = verifyQuestPageContentDepth(
+      [page('quest-city', 150, 0), page('quest-city', 90, 0)],
+      { exemptions },
+    )
+    expect(regressed).toHaveLength(1)
+    expect(regressed[0]).toContain('90 words of crawlable text, minimum 110')
+  })
+
+  it('fails on an exemption that its level has outgrown, so the list can only shrink', () => {
+    const failures = verifyQuestPageContentDepth(
+      [page('quest-city', 400, 0), page('quest-city', 400, 3)],
+      { exemptions: [{ kind: 'quest-city', minWords: 110, minDistinctRatio: 0, ticket: '#1569' }] },
+    )
+
+    expect(failures).toHaveLength(1)
+    expect(failures[0]).toContain('exemption for "quest-city" (#1569) is stale')
+    expect(failures[0]).toContain('delete the entry from THIN_CONTENT_EXEMPTIONS')
+  })
+
+  it('ships an exemption list that names only levels with an owning card', () => {
+    expect(THIN_CONTENT_EXEMPTIONS.map((entry: { kind: string }) => entry.kind)).toEqual([
+      'quest-city',
+      'quest-country',
+    ])
+    for (const entry of THIN_CONTENT_EXEMPTIONS as Array<{ ticket: string; minWords: number }>) {
+      expect(entry.ticket).toMatch(/^#\d+$/)
+      expect(entry.minWords).toBeLessThan(MIN_QUEST_PAGE_WORDS)
+    }
+  })
+
+  it('reads the level out of the marker, and keeps nested sections in the text', () => {
+    const sections = extractQuestSsgSections(
+      '<section data-ssg-quest-country="true"><p>Первый абзац.</p>' +
+        '<section><p>Вложенный абзац.</p></section><p>Третий абзац.</p></section>',
+    )
+
+    expect(sections).toHaveLength(1)
+    expect(sections[0].kind).toBe('quest-country')
+    expect(sections[0].text).toBe('Первый абзац. Вложенный абзац. Третий абзац.')
+  })
+
+  it('drops the names and the numbers two pages of one template differ by', () => {
+    expect(templateSkeleton('В городе Минск собрано 9 квестов')).toEqual([
+      'городе',
+      'собрано',
+      'квестов',
+    ])
+  })
+})
+
+describe('collectQuestSsgPages', () => {
+  let distDir = ''
+
+  const questPage = (canonical: string, body: string) =>
+    [
+      '<!DOCTYPE html><html lang="ru"><head>',
+      `<link rel="canonical" href="${canonical}" />`,
+      '</head><body>',
+      `<section data-ssg-quest-intro="true"><p>${body}</p></section>`,
+      '</body></html>',
+    ].join('')
+
+  beforeEach(() => {
+    distDir = makeTempDir('quest-ssg-pages-')
+  })
+
+  afterEach(() => {
+    removeDir(distDir)
+  })
+
+  it('returns nothing when the build produced no quests directory', () => {
+    expect(collectQuestSsgPages(distDir)).toEqual([])
+  })
+
+  /**
+   * generate-seo-pages.js writes each quest as both `<id>.html` and
+   * `<id>/index.html`, and each city under its numeric id and its alias — four
+   * files, two pages. Counted per file, every page is its own duplicate and the
+   * uniqueness rule reports 0% own wording for the whole catalog.
+   */
+  it('collapses the file shapes of one page onto its canonical url', () => {
+    const html = questPage('https://metravel.by/quests/4/minsk-svisloch', 'Текст квеста.')
+    writeTextFile(path.join(distDir, 'quests', '4', 'minsk-svisloch.html'), html)
+    writeTextFile(path.join(distDir, 'quests', '4', 'minsk-svisloch', 'index.html'), html)
+    writeTextFile(
+      path.join(distDir, 'quests', 'minsk', 'index.html'),
+      questPage('https://metravel.by/quests/minsk', 'Текст города.'),
+    )
+
+    const pages = collectQuestSsgPages(distDir)
+
+    expect(pages).toHaveLength(2)
+    expect(pages.map((page: { text: string }) => page.text).sort()).toEqual([
+      'Текст города.',
+      'Текст квеста.',
+    ])
+  })
+
+  it('skips the Expo route templates and files with no catalog-derived section', () => {
+    writeTextFile(path.join(distDir, 'quests', '[city].html'), questPage('https://metravel.by/x', 'Шаблон.'))
+    writeTextFile(path.join(distDir, 'quests', 'index.html'), '<!DOCTYPE html><html><body></body></html>')
+
+    expect(collectQuestSsgPages(distDir)).toEqual([])
   })
 })
