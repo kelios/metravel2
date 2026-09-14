@@ -31,6 +31,7 @@ const {
   buildQuestCountryLandingGroups,
   questCountryLandingIsIndexable,
 } = require('../utils/questCountryLanding')
+const { htmlToPlainText } = require('../utils/seoText')
 
 const args = process.argv.slice(2)
 
@@ -328,19 +329,29 @@ const QUEST_SSG_SECTION_PATTERN = '<section[^>]*\\bdata-ssg-(quests?(?:-[a-z0-9]
  *   quest-city    n=132  min 118  median 148  max 182   own wording 0%
  *   quest-country n=18   min 115  median 120  max 270   own wording 0%
  *   quest-intro   n=182  min 318  median 721  max 1226  clears the default
+ *   quests-listing     1  737                           clears the default
+ *   quest-scenario     1  493                           clears the default
  *
- * The two single-page levels — the /quests hub and /quests/scenario — were
- * measured off the generator's own builders instead of prod HTML: 345 prose
- * words for the hub at the smallest catalog shape it can render, 493 for the
- * scenario. Both clear the default, so neither needs an entry here.
+ * The floors below are NOT those catalog minima. A floor taken from what the
+ * catalog happens to contain today only holds until the next page is thinner
+ * than every existing one, and the builders can legitimately render less than
+ * the current minimum: both optional blocks of a city landing are conditional
+ * (`nearbyCities` needs another quest city within 400 km and `travelLinks` a
+ * matching travel, scripts/generate-seo-pages.js:3116-3121), so the first quest
+ * in an isolated city with no local travel article renders far below 118. The
+ * leanest output the builders can produce measures 107-113 words for a city and
+ * 112 for a country depending on how the text is flattened, so the floors sit
+ * under that at 100: low enough that no legitimate template output can red a
+ * fail-closed production build, high enough to catch a section that lost its
+ * overview and practical blocks outright.
  *
  * The list can only shrink: once every page of a listed level clears the
  * default, the guard fails on the stale entry, so a fixed level cannot quietly
  * keep its licence to be thin.
  */
 const THIN_CONTENT_EXEMPTIONS = [
-  { kind: 'quest-city', minWords: 110, minDistinctRatio: 0, ticket: '#1569' },
-  { kind: 'quest-country', minWords: 110, minDistinctRatio: 0, ticket: '#1929' },
+  { kind: 'quest-city', minWords: 100, minDistinctRatio: 0, ticket: '#1569' },
+  { kind: 'quest-country', minWords: 100, minDistinctRatio: 0, ticket: '#1929' },
 ]
 
 /**
@@ -364,22 +375,6 @@ function sliceBalancedSection(html, openTagStart) {
   return source.slice(openTagEnd + 1)
 }
 
-/** Visible text of a markup fragment, as a crawler reads it. */
-function sectionPlainText(sectionHtml) {
-  return String(sectionHtml || '')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&amp;/gi, '&')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
 /**
  * The same text with link labels dropped.
  *
@@ -391,7 +386,7 @@ function sectionPlainText(sectionHtml) {
  * copy is what a thin-content page is missing, so body copy is what is measured.
  */
 function sectionProseText(sectionHtml) {
-  return sectionPlainText(String(sectionHtml || '').replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, ' '))
+  return htmlToPlainText(String(sectionHtml || '').replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, ' '))
 }
 
 /** Every catalog-derived block on a page, with the level it belongs to. */
@@ -975,7 +970,6 @@ if (typeof module !== 'undefined' && module.exports) {
     hasQuestIntroSection,
     hasQuestJsonLd,
     listTravelPageFiles,
-    sectionPlainText,
     sectionProseText,
     sitemapCountryAliases,
     sitemapHasUrl,

@@ -891,3 +891,74 @@ describe('collectQuestSsgPages', () => {
     expect(collectQuestSsgPages(distDir)).toEqual([])
   })
 })
+
+/**
+ * #1930: the exemption floors must sit under what the generator can legitimately
+ * render, not under what the catalog happens to hold today.
+ *
+ * The first version of this guard took the floors from the observed catalog
+ * minimum (118 words for a city). Both optional blocks of a city landing are
+ * conditional — `nearbyCities` needs another quest city within 400 km and
+ * `travelLinks` a matching travel — so the first quest in an isolated city
+ * renders below that, and a floor of 110 would have failed the fail-closed
+ * production build on a page that is exactly what the template is supposed to
+ * produce. These probes drive the real builders at their leanest shape.
+ */
+describe('thin-content floors against the generator itself', () => {
+  const {
+    buildQuestCityLandingHtml,
+    buildQuestCountryLandingHtml,
+  } = require('@/scripts/generate-seo-pages')
+
+  const SHELL = '<!DOCTYPE html><html lang="ru"><head><title>Metravel</title></head><body></body></html>'
+
+  const leanCity = {
+    segment: 'x',
+    cityIds: ['1'],
+    cityName: 'Х',
+    cityAlias: 'x',
+    legacyAliases: [],
+    quests: [{ quest_id: 'q', city_id: '1', title: 'К', path: '/quests/1/q' }],
+    nearbyCities: [],
+    travelLinks: [],
+  }
+  const leanCountry = {
+    countryAlias: 'x',
+    countryName: 'Х',
+    countryCode: 'XX',
+    cities: [{ cityName: 'Х', cityAlias: 'x', landingPath: '/quests/x', questCount: 1 }],
+    quests: [{ quest_id: 'q', city_id: '1', title: 'К', path: '/quests/1/q', cityName: 'Х' }],
+  }
+
+  const pageFrom = (html: string, path: string) => {
+    const sections = extractQuestSsgSections(html)
+    expect(sections.length).toBeGreaterThan(0)
+    return { path, kind: sections[0].kind, text: sections.map((s: { text: string }) => s.text).join(' ') }
+  }
+
+  it('passes the leanest city landing the builder can render', () => {
+    const page = pageFrom(buildQuestCityLandingHtml(SHELL, leanCity, null), 'quests/x/index.html')
+
+    expect(verifyQuestPageContentDepth([page])).toEqual([])
+  })
+
+  it('passes the leanest country landing the builder can render', () => {
+    const page = pageFrom(
+      buildQuestCountryLandingHtml(SHELL, leanCountry),
+      'quests/country/x/index.html',
+    )
+
+    expect(verifyQuestPageContentDepth([page])).toEqual([])
+  })
+
+  it('keeps every exemption floor under the leanest output of its level', () => {
+    const leanWords: Record<string, number> = {
+      'quest-city': countWords(pageFrom(buildQuestCityLandingHtml(SHELL, leanCity, null), 'c').text),
+      'quest-country': countWords(pageFrom(buildQuestCountryLandingHtml(SHELL, leanCountry), 'k').text),
+    }
+
+    for (const entry of THIN_CONTENT_EXEMPTIONS as Array<{ kind: string; minWords: number }>) {
+      expect(leanWords[entry.kind]).toBeGreaterThan(entry.minWords)
+    }
+  })
+})
