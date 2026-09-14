@@ -625,6 +625,19 @@ describe('questAdapters', () => {
       expect(adaptCity({ name: 'Kraków', lat: '50.0617', lng: '19.9383', country_code: '   ' } as any).countryCode)
         .toBeUndefined();
     });
+
+    // #1938: из этого поля деталь квеста собирает canonical `/quests/<city_id>/<quest_id>`
+    // — тот же адрес, что пишут `generate-seo-pages.js` и `generate-sitemap.js`.
+    // Непригодное значение обязано остаться пустым: с `id: 0` canonical увёл бы
+    // индексацию на несуществующий `/quests/0/...` вместо сегмента из URL.
+    it('keeps the numeric city id and drops values unusable as a URL segment', () => {
+      const base = { name: 'Минск', lat: '53.9', lng: '27.56' };
+      expect(adaptCity({ ...base, id: 4 } as any).id).toBe(4);
+      expect(adaptCity({ ...base, id: '4' } as any).id).toBe(4);
+      for (const id of [undefined, null, '', 0, -1, 'minsk']) {
+        expect(adaptCity({ ...base, id } as any).id).toBeUndefined();
+      }
+    });
   });
 
   describe('adaptMeta', () => {

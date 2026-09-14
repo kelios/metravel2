@@ -552,8 +552,14 @@ export function adaptCity(apiCity: ApiQuestCity): QuestCity {
     const lat = coordNum(apiCity.lat);
     const lng = coordNum(apiCity.lng);
     const countryCode = normalizeQuestCountryCode(apiCity.country_code);
+    // Id города — сегмент канонического адреса квеста (#1938), поэтому годится
+    // только положительное целое: `Number(null)`/`Number('')` дают 0, а
+    // `/quests/0/<quest>` — такая же несуществующая страница, как `/quests/null/`
+    // (то же правило у `buildTravelPath`). На непригодном значении поле остаётся
+    // пустым, и canonical честно падает на сегмент из URL.
+    const cityId = Number(apiCity.id);
     return {
-        id: Number.isFinite(Number(apiCity.id)) ? Number(apiCity.id) : undefined,
+        id: Number.isInteger(cityId) && cityId > 0 ? cityId : undefined,
         name: apiCity.name || undefined,
         lat,
         lng,
