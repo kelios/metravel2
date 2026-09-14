@@ -794,6 +794,27 @@ describe('authStore', () => {
       }));
       expect(setSecureItem).not.toHaveBeenCalled();
     });
+
+    // Задача: Facebook-ветки не проходили через authFailureFromError в отличие
+    // от Apple/Google — исключение адаптера возвращалось с голым текстом и без
+    // `reason`, поэтому форма не могла отличить обрыв связи от отказа сервера.
+    it('исключение внутри адаптера возвращает reason из общей таксономии, как у Apple', async () => {
+      facebookAuthApi.mockRejectedValue(new Error('boom'));
+
+      await expect(useAuthStore.getState().loginWithFacebook('short-lived-facebook-token')).resolves.toMatchObject({
+        status: 'error',
+        reason: 'unknown',
+      });
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    });
+
+    it('startFacebookEmailCompletion: исключение адаптера тоже несёт reason', async () => {
+      startFacebookEmailCompletionApi.mockRejectedValue(new Error('boom'));
+
+      await expect(
+        useAuthStore.getState().startFacebookEmailCompletion('opaque-handle', 'completed@example.com'),
+      ).resolves.toMatchObject({ status: 'error', reason: 'unknown' });
+    });
   });
 
   describe('logout', () => {

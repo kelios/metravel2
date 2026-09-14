@@ -161,7 +161,17 @@ export const loginApi = async (
                 // Проверяем статус ВНУТРИ retry: статус в сообщении позволяет shouldRetry
                 // ретраить 5xx (isRetryableError матчит /50\d/) и не ретраить 4xx.
                 if (!res.ok) {
-                    throw new Error(`Login failed: ${res.status}`);
+                    // Тело читаем ДО throw — иначе бэкендовый `detail`/`error`/`message`
+                    // (например «Аккаунт не активирован. Воспользуйтесь ссылкой активации
+                    // в письме») теряется, и 401 показывается как «Неверный email или
+                    // пароль» независимо от реальной причины отказа.
+                    const errorPayload = await safeJsonParse<Partial<SocialAuthResponse>>(res, {});
+                    const detail = errorPayload.detail || errorPayload.error || errorPayload.message;
+                    const httpError = new Error(`Login failed: ${res.status}`) as Error & { detail?: string };
+                    if (typeof detail === 'string' && detail.trim()) {
+                        httpError.detail = detail.trim();
+                    }
+                    throw httpError;
                 }
                 return res;
             },
@@ -186,13 +196,14 @@ export const loginApi = async (
         const failedStatus = rawMessage.match(/Login failed: (\d{3})/);
         if (failedStatus) {
             const status = Number(failedStatus[1]);
-            if (status === 401 || status === 403) {
-                return authFailure('rejected', i18nT('errorsStatic:api.auth.invalidCredentials'));
+            const detail = error instanceof Error ? (error as Error & { detail?: string }).detail : undefined;
+            if (status === 401 || status === 403 || status === 400) {
+                return authFailure('rejected', detail || i18nT('errorsStatic:api.auth.invalidCredentials'));
             }
             // 5xx/429/прочее — серверная/временная ошибка, не вводим в заблуждение «неверным паролем».
             return authFailure(
                 authFailureReasonFromStatus(status),
-                i18nT('errorsStatic:api.auth.serviceUnavailable'),
+                detail || i18nT('errorsStatic:api.auth.serviceUnavailable'),
             );
         }
         return authFailureFromError(error, i18nT('errorsStatic:api.auth.signInFailed'));

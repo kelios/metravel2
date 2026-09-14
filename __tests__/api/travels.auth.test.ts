@@ -150,6 +150,34 @@ describe('src/api/auth.ts auth/password API', () => {
       expect(alertSpy).not.toHaveBeenCalled();
     });
 
+    // Баг: тело ответа читалось ПОСЛЕ throw внутри retry, поэтому 401 с
+    // `detail` («Аккаунт не активирован…») всегда показывался как «Неверный
+    // email или пароль» — реальная причина отказа терялась.
+    it('401 с detail от бэкенда — показывает текст бэкенда, а не «неверный пароль»', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 401 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        detail: 'Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме',
+      } as any);
+
+      const result = await loginApi('test@example.com', 'password');
+
+      expect(result).toEqual({
+        ok: false,
+        reason: 'rejected',
+        message: 'Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме',
+      });
+      expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    it('401 без тела — падает на прежний текст про учётные данные', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 401 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({} as any);
+
+      const result = await loginApi('test@example.com', 'password');
+
+      expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Неверный email или пароль' });
+    });
+
     it('5xx — reason server и текст про недоступность сервиса', async () => {
       mockedFetchWithTimeout.mockRejectedValue(new Error('Login failed: 503'));
 

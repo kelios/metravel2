@@ -567,10 +567,10 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             if (__DEV__) {
                 console.error('Ошибка входа через Facebook:', error);
             }
-            return {
-                status: 'error',
-                message: i18nT('errorsStatic:api.auth.facebookSignInFailed'),
-            };
+            // Как и Apple/Google выше: причина отказа (network/server/rejected/unknown)
+            // идёт через общую таксономию, а не голый текст «не удалось войти».
+            const failure = authFailureFromError(error, i18nT('errorsStatic:api.auth.facebookSignInFailed'));
+            return { status: 'error', reason: failure.reason, message: failure.message };
         }
     },
 
@@ -582,10 +582,8 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             if (__DEV__) {
                 console.error('Ошибка запуска подтверждения email Facebook:', error);
             }
-            return {
-                status: 'error',
-                message: i18nT('errorsStatic:api.auth.facebookSignInFailed'),
-            };
+            const failure = authFailureFromError(error, i18nT('errorsStatic:api.auth.facebookSignInFailed'));
+            return { status: 'error', reason: failure.reason, message: failure.message };
         }
     },
 
@@ -601,10 +599,8 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             if (__DEV__) {
                 console.error('Ошибка подтверждения email Facebook:', error);
             }
-            return {
-                status: 'error',
-                message: i18nT('errorsStatic:api.auth.facebookSignInFailed'),
-            };
+            const failure = authFailureFromError(error, i18nT('errorsStatic:api.auth.facebookSignInFailed'));
+            return { status: 'error', reason: failure.reason, message: failure.message };
         }
     },
 
