@@ -1,4 +1,7 @@
-const BASE = 'https://api.openrouteservice.org';
+// HeiGIT-hosted openrouteservice. The legacy host api.openrouteservice.org is
+// switched off on 28.09.2026 (board #1948); the backend routing chain moved to
+// the same address in #1919, and the API keys are unchanged — only the URL.
+const BASE = 'https://api.heigit.org/openrouteservice';
 
 export type OrsProfile =
   | 'driving-car'

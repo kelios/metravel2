@@ -224,7 +224,7 @@ async function mockTruthfulRouteScenario(
   })
 
   if (mode === 'failure') {
-    await page.route(/^https:\/\/api\.openrouteservice\.org\//, (route) =>
+    await page.route(/^https:\/\/api\.heigit\.org\/openrouteservice\//, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: '{"features":[]}' }),
     )
     await page.route(/^https:\/\/router\.project-osrm\.org\//, (route) =>
