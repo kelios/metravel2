@@ -267,7 +267,7 @@ describe('Login Component', () => {
       fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
-        expect(getByText('Network error')).toBeTruthy();
+        expect(getByText(/· unreachable · \d{2}:\d{2}:\d{2}Z\]$/)).toBeTruthy();
       });
     });
 
@@ -414,7 +414,7 @@ describe('Login Component', () => {
       fireEvent.press(getByText('Забыли пароль?'));
 
       await waitFor(() => {
-        expect(getByText('Network error')).toBeTruthy();
+        expect(getByText(/· unreachable · \d{2}:\d{2}:\d{2}Z\]$/)).toBeTruthy();
       });
     });
 

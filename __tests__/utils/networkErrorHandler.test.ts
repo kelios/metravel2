@@ -7,6 +7,7 @@ import {
   isAuthError,
   isServerError,
   getUserFriendlyNetworkError,
+  describeNetworkFailure,
   withNetworkErrorHandler
 } from '@/utils/networkErrorHandler';
 import { ApiError } from '@/api/client';
@@ -263,5 +264,28 @@ describe('networkErrorHandler', () => {
       
       expect(onError).toHaveBeenCalledWith(error);
     });
+  });
+});
+
+
+describe('describeNetworkFailure (#1943)', () => {
+  it('tags a fetch failure with host, kind and UTC time', () => {
+    const error = new TypeError('Network error while fetching https://metravel.by/api/user/login/. Is the API server running?');
+    expect(describeNetworkFailure(error)).toMatch(/^\[metravel\.by · unreachable · \d{2}:\d{2}:\d{2}Z\]$/);
+  });
+
+  it('tags a timeout with its duration', () => {
+    const error = new Error('Превышено время ожидания (10000 ms). Попробуйте позже');
+    error.name = 'TimeoutError';
+    expect(describeNetworkFailure(error)).toMatch(/· timeout-10s ·/);
+  });
+
+  it('tags an offline ApiError', () => {
+    expect(describeNetworkFailure(new ApiError(0, 'Network error', { offline: true }))).toMatch(/· offline ·/);
+  });
+
+  it('appends the tag to the user-facing network message', () => {
+    const text = getUserFriendlyNetworkError(new TypeError('Network request failed'));
+    expect(text).toMatch(/\[[^\]]+ · unreachable · \d{2}:\d{2}:\d{2}Z\]$/);
   });
 });

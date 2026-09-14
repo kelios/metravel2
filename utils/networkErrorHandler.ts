@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import { ApiError } from '@/api/client';
 import { showToast } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n'
+import { API_BASE_URL } from '@/api/apiConfig';
 
 
 const showToastMessage = async (payload: any) => {
@@ -97,6 +98,44 @@ export const isServerError = (error: any): boolean => {
 /**
  * Получает понятное сообщение об ошибке для пользователя
  */
+
+const extractFailureHost = (error: any): string => {
+    const message = String(error?.message ?? '');
+    const inMessage = message.match(/https?:\/\/([^/\s'"]+)/);
+    if (inMessage) return inMessage[1];
+    try {
+        return API_BASE_URL ? new URL(API_BASE_URL).host : 'api';
+    } catch {
+        return 'api';
+    }
+};
+
+/**
+ * Короткий технический тег для сетевой ошибки: host · вид сбоя · время UTC.
+ * #1943: отказ App Review 14.09.2026 «connection error» нельзя было разобрать —
+ * в логах сервера не было ни одного запроса, а на скриншоте рецензента только
+ * общий текст. Тег не переводится: это диагностический код, а не UI-копирайт.
+ */
+export const describeNetworkFailure = (error: any): string => {
+    const message = String(error?.message ?? '').toLowerCase();
+    const name = String(error?.name ?? '').toLowerCase();
+    let kind = 'network';
+    if (name === 'timeouterror' || /timeout|timed out|превышено время/.test(message)) {
+        const seconds = message.match(/(\d+)\s*ms/);
+        kind = seconds ? `timeout-${Math.round(Number(seconds[1]) / 1000)}s` : 'timeout';
+    } else if (name === 'aborterror') {
+        kind = 'aborted';
+    } else if (error instanceof ApiError && (error.status === 0 || hasOfflineFlag(error.data))) {
+        kind = 'offline';
+    } else if (/failed to fetch|network request failed|network error|прервано/.test(message) || name === 'typeerror') {
+        kind = 'unreachable';
+    }
+    const time = new Date().toISOString().slice(11, 19) + 'Z';
+    return `[${extractFailureHost(error)} · ${kind} · ${time}]`;
+};
+
+const withFailureTag = (text: string, error: any): string => `${text} ${describeNetworkFailure(error)}`;
+
 export const getUserFriendlyNetworkError = (error: any): string => {
     if (!error) {
         return i18nT('errors:utils.networkErrorHandler.proizoshla_neizvestnaya_oshibka_678842d7');
@@ -105,7 +144,7 @@ export const getUserFriendlyNetworkError = (error: any): string => {
     // Если это ApiError, используем его сообщение
     if (error instanceof ApiError) {
         if (hasOfflineFlag(error.data) || error.status === 0) {
-            return i18nT('errors:utils.networkErrorHandler.net_podklyucheniya_k_internetu_proverte_vash_76b1a868');
+            return withFailureTag(i18nT('errors:utils.networkErrorHandler.net_podklyucheniya_k_internetu_proverte_vash_76b1a868'), error);
         }
         if (error.status === 401) {
             return i18nT('errors:utils.networkErrorHandler.trebuetsya_avtorizatsiya_pozhaluysta_voydite_e6066fc3');
@@ -124,7 +163,7 @@ export const getUserFriendlyNetworkError = (error: any): string => {
 
     // Проверяем тип ошибки
     if (isNetworkError(error)) {
-        return i18nT('errors:utils.networkErrorHandler.net_podklyucheniya_k_internetu_proverte_vash_76b1a868');
+        return withFailureTag(i18nT('errors:utils.networkErrorHandler.net_podklyucheniya_k_internetu_proverte_vash_76b1a868'), error);
     }
 
     if (isAuthError(error)) {

@@ -35,6 +35,7 @@ import FacebookAuthFlow from '@/components/auth/FacebookAuthFlow';
 import { webTouchScrollStyle } from '@/utils';
 import { buildRegistrationHref, resolvePostAuthPath } from '@/utils/authNavigation';
 import { translate as i18nT } from '@/i18n'
+import { getUserFriendlyNetworkError, isNetworkError } from '@/utils/networkErrorHandler';
 
 
 interface LoginFormValues {
@@ -51,6 +52,11 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
     }
     return fallback;
 };
+
+// #1943: сетевой сбой при входе показывается с диагностическим тегом
+// [host · вид · время], чтобы скриншот рецензента или пользователя был разборным.
+const authErrorMessage = (error: unknown, fallback: string): string =>
+    isNetworkError(error) ? getUserFriendlyNetworkError(error) : getErrorMessage(error, fallback);
 
 export default function Login() {
     /* ---------- state ---------- */
@@ -138,7 +144,7 @@ export default function Login() {
             const res = await sendPassword(trimmedEmail);
             showMsg(res, /ошиб|не удалось/i.test(res));
         } catch (error) {
-            showMsg(getErrorMessage(error, i18nT('auth:components.auth.LoginForm.oshibka_pri_sbrose_parolya_2500a38a')), true);
+            showMsg(authErrorMessage(error, i18nT('auth:components.auth.LoginForm.oshibka_pri_sbrose_parolya_2500a38a')), true);
         }
     };
 
@@ -163,7 +169,7 @@ export default function Login() {
                 showMsg(i18nT('auth:components.auth.LoginForm.nevernyy_email_ili_parol_18c8d999'), true);
             }
         } catch (error) {
-            showMsg(getErrorMessage(error, i18nT('auth:components.auth.LoginForm.oshibka_pri_vhode_e41ad402')), true);
+            showMsg(authErrorMessage(error, i18nT('auth:components.auth.LoginForm.oshibka_pri_vhode_e41ad402')), true);
         } finally {
             setSubmitting(false);
         }
@@ -189,7 +195,7 @@ export default function Login() {
                 showMsg(i18nT('auth:components.auth.LoginForm.ne_udalos_voyti_cherez_google_0930989b'), true);
             }
         } catch (error) {
-            showMsg(getErrorMessage(error, i18nT('auth:components.auth.LoginForm.oshibka_pri_vhode_cherez_google_e89e4a9b')), true);
+            showMsg(authErrorMessage(error, i18nT('auth:components.auth.LoginForm.oshibka_pri_vhode_cherez_google_e89e4a9b')), true);
         } finally {
             // На успехе оставляем заблокированным до размонтирования (идёт навигация).
             if (!navigating && mountedRef.current) setGoogleBusy(false);
@@ -221,7 +227,7 @@ export default function Login() {
                 showMsg(result.message || i18nT('authStatic:apple.signInFailed'), true);
             }
         } catch (error) {
-            showMsg(getErrorMessage(error, i18nT('authStatic:apple.signInFailed')), true);
+            showMsg(authErrorMessage(error, i18nT('authStatic:apple.signInFailed')), true);
         } finally {
             // На успехе оставляем заблокированным до размонтирования (идёт навигация).
             if (!navigating && mountedRef.current) setAppleBusy(false);
