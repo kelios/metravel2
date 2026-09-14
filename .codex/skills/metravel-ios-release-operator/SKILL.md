@@ -54,6 +54,15 @@ Local read-only preflight and source/archive inspection do not mutate store stat
   storefront version, and `IOS_AUTO_SUBMIT_FORBIDDEN` in the guard keeps
   `--auto-submit` out of the repository. Setting an authorization variable is
   itself an owner-authorized act — never export one to unblock yourself.
+- Before any App Review submit or resubmit, require a recorded pass of
+  `IOS-16` (`docs/MANUAL_TEST_CASES.md`) for the exact candidate: sign-in and
+  guest browsing on an IPv6-only NAT64 Wi-Fi, external reachability of the
+  production API from US/EU nodes, and the device's requests visible in the
+  production nginx log. Apple reviews on IPv6-only networks; the 14.09.2026
+  rejection "connection error on every login method" left zero requests in our
+  logs and could not be diagnosed after the fact. On such a rejection, pull the
+  nginx log for the review window first (`docker logs --since` on the host uses
+  host-local time, UTC+3), then reply with evidence — never resubmit blind.
 - The submit wrapper passes `--non-interactive`; the build wrapper currently
   does not. Do not describe the build command as unattended or answer
   credential/access prompts automatically. Inspect each prompt and apply the

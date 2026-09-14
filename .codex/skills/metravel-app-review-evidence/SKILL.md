@@ -85,6 +85,13 @@ recorded step.
    source, ASC state, the manifest, or a dated owner confirmation. Unknown
    facts go to the owner card, never into the package as "not applicable".
 
+For a "connection error" rejection, the package starts from the production
+nginx log of the review window (Apple egress `17.x`, native UA
+`CFNetwork`/`metravel/`): whether requests arrived, their statuses, the last
+successful sign-in from Apple's network, external reachability and the
+`IOS-16` IPv6-only pass. Reply with those facts and a request for the
+reviewer's screenshot/console; do not resubmit the same candidate blind.
+
 Package readiness never authorizes Reply, Notes, build, upload, submit or
 release: each is a separate owner decision executed by the release operator.
 

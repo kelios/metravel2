@@ -37,8 +37,13 @@ API target. This skill does not grant permission to message other people.
    production origins, Apple login, APNs delivery and notification routing,
    iPad device-family/window geometry, account deletion visibility, five locales,
    accessibility, offline recovery, crash/hang evidence, and launch-critical product matrix.
+5. **IPv6-only network (`IOS-16`):** the same TestFlight candidate on a Mac
+   Internet Sharing "Create NAT64 Network" Wi-Fi — guest catalogue, email
+   sign-in, Sign in with Apple and Google — plus external reachability and the
+   device's requests in the production nginx log. Mandatory before every submit;
+   recipe in `.claude/skills/ios-device-qa/SKILL.md` → «IPv6-only сеть (NAT64)».
 
-Use `docs/MANUAL_TEST_CASES.md` cases `IOS-01..15` as the repeatable baseline;
+Use `docs/MANUAL_TEST_CASES.md` cases `IOS-01..16` as the repeatable baseline;
 select only the cases required by the assigned Task Contract for non-release work.
 
 ## Rules

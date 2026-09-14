@@ -618,6 +618,7 @@ hardware/signing/production behavior.
 | IOS-13 | TestFlight | Profile/settings/account deletion/privacy paths | Reviewer can find required privacy/support/account-deletion behavior and runtime matches store declarations |
 | IOS-14 | TestFlight | Crash/hang/launch matrix | Launch-critical flows complete without crash/hang; evidence identifies exact build and any non-blocking warning |
 | IOS-15 | iPad Simulator + TestFlight | Full-screen и resizable window в portrait/landscape | Scene использует доступные bounds без fixed iPhone compatibility frame; header/content/tabs и primary actions остаются видимыми и достижимыми после каждого resize/rotation |
+| IOS-16 | Physical + TestFlight | IPv6-only (NAT64) сеть и внешняя достижимость перед submit | iPhone/iPad подключены к Wi-Fi Internet Sharing Mac с «Create NAT64 Network»; guest-каталог, email-вход, Sign in with Apple и Google завершаются успехом; в nginx-логах прода видны запросы устройства (UA `metravel/… CFNetwork`); API отвечает 200 с внешних узлов (US/EU, `check-host.net`) и DNS резолвится на 1.1.1.1/8.8.8.8/9.9.9.9. Fail любого пункта блокирует submit: Apple проверяет в IPv6-only сети, а «connection error» без запросов в наших логах (14.09.2026, 2.1(a)) не диагностируется постфактум |
 
 Любой release-blocking fail возвращает implementation task в `in_progress`.
 Если дефект найден в уже загруженном/processed TestFlight candidate,

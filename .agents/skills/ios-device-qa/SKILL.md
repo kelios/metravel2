@@ -166,6 +166,33 @@ TestFlight build), тоже за `ios-tester`.
 - `app.activate()` не гарантирует холодный запуск. Для соответствующего кейса
   явно выполни `terminate` → `activate` и зафиксируй запуск в evidence.
 
+## IPv6-only сеть (NAT64) — обязательный гейт перед submit (`IOS-16`)
+
+Apple проверяет приложения в IPv6-only сети. Отказ 14.09.2026 по 2.1(a)
+(«connection error при любом способе входа») оставил в nginx прода ноль
+запросов от устройств рецензента при живом сервере — постфактум это не
+диагностируется, поэтому проверка делается ДО отправки:
+
+1. Владелец на Mac: System Settings → General → Sharing → Internet Sharing:
+   Option-клик по переключателю показывает «Create NAT64 Network»; источник —
+   Ethernet/USB-модем, раздача — Wi-Fi. Это системная настройка, агент её не
+   меняет и не просит пароль администратора.
+2. iPhone/iPad подключить к этой Wi-Fi; в Settings → Wi-Fi → (i) у сети нет
+   IPv4-адреса, только IPv6 — зафиксировать скриншотом без имени сети.
+3. На exact TestFlight-кандидате пройти: холодный запуск и гостевой каталог,
+   email-вход reviewer-аккаунтом, Sign in with Apple, Google. Ожидаемо — вход
+   завершается, ошибок «No connection» нет.
+4. Доказательство на сервере (read-only, bash):
+   `source scripts/deploy-target.sh` → `ssh "$PROD_SSH_TARGET" "docker logs
+   metravel_nginx_1 --since <host-local время> …"` и фильтр по UA
+   `CFNetwork`/`metravel/` с IP не владельца. `--since/--until` docker трактует
+   в местном времени хоста (UTC+3), логи внутри — UTC: сдвиг 3 часа съедает
+   окно целиком.
+5. Внешняя достижимость: `https://check-host.net/check-http?host=https://metravel.by/api/travels/?perPage=1`
+   с узлами US/EU → все `200`; DNS `dig @1.1.1.1/@8.8.8.8/@9.9.9.9 metravel.by`.
+   Провал любого узла или резолвера — блокер submit и карточка `area=back`
+   (DNS/AAAA/nginx `listen [::]` принадлежат бэкенду).
+
 ## Разрешения (TCC)
 
 - `Uninstall` + `Install` **не обнуляет** решения: iOS возвращает прежний выбор
