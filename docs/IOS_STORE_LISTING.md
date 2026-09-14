@@ -6,7 +6,7 @@ TestFlight build из #1423. Секреты, Team ID, demo-пароль и UDID 
 кладутся.
 
 Версия в репозитории на момент черновика: `app.json` → `expo.version` 1.0.5,
-`expo.ios.buildNumber` 9. Перед заполнением ASC сверить с выбранным билдом.
+`expo.ios.buildNumber` 10 (кандидат после отказа 14.09.2026; build 9 — отклонённый). Перед заполнением ASC сверить с выбранным билдом.
 
 Лимиты Apple (2026): name 30, subtitle 30, description 4000, keywords 100,
 promotional text 170. Основная локаль карточки — RU.

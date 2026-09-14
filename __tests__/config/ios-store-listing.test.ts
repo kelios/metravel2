@@ -152,14 +152,18 @@ describe('App Store listing guard', () => {
     expect(codes(validateStoreListing(dir))).toContain('STORE_VERSION_MISMATCH');
   });
 
-  it('ловит расхождение buildNumber, а не любую цифру 9 в тексте', () => {
+  it('ловит расхождение buildNumber, а не любую цифру в тексте', () => {
     // `iPhone 6.9"` в этом же файле раньше закрывал проверку сам по себе.
-    const dir = makeRoot((markdown) => markdown.replace(/(buildNumber`|билд[аеу]?|build)\s+9\b/g, '$1 8'));
+    // Номер берём из app.json, чтобы тест переживал bump кандидата (9 → 10 → …).
+    const buildNumber = String(JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8')).expo.ios.buildNumber);
+    const dir = makeRoot((markdown) =>
+      markdown.replace(new RegExp(`(buildNumber\`|билд[аеу]?|build)\\s+${buildNumber}\\b`, 'g'), '$1 8'),
+    );
     const mutated = fs.readFileSync(path.join(dir, LISTING_PATH), 'utf8');
     expect(mutated).toContain('iPhone 6.9"');
     const errors = validateStoreListing(dir);
     expect(codes(errors)).toContain('STORE_VERSION_MISMATCH');
-    expect(errors.map((error: Failure) => error.detail).join(' ')).toContain('buildNumber 9');
+    expect(errors.map((error: Failure) => error.detail).join(' ')).toContain(`buildNumber ${buildNumber}`);
   });
 
   it('требует обязательный размер iPhone и iPad для universal-сборки', () => {
