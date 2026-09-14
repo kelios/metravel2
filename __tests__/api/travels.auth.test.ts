@@ -12,6 +12,7 @@ import {
   validateWebCookieSessionApi,
 } from '@/api/auth';
 import { Alert, Platform } from 'react-native';
+import { i18n } from '@/i18n';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { validatePassword } from '@/utils/aiValidation';
 import { sanitizeInput } from '@/utils/security';
@@ -199,6 +200,53 @@ describe('src/api/auth.ts auth/password API', () => {
       expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Неверный email или пароль' });
     });
 
+    // #1946: регрессия #1945 наблюдалась ТОЛЬКО вне русской локали, и на RU её
+    // не видно: тексты приложения и сервера там почти совпадают (различие —
+    // точка в конце), поэтому утечка сырого ответа русскую проверку проходит.
+    // Английская локаль делает разницу «ключ приложения против строки бэкенда»
+    // однозначной.
+    describe('на английской локали', () => {
+      beforeEach(async () => {
+        await i18n.changeLanguage('en');
+      });
+
+      afterEach(async () => {
+        await i18n.changeLanguage('ru');
+      });
+
+      it('401 «не активирован» — английский текст приложения, а не русская строка сервера', async () => {
+        mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 401 } as any);
+        mockedSafeJsonParse.mockResolvedValueOnce({
+          error: 'Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме',
+        } as any);
+
+        const result = await loginApi('test@example.com', 'password');
+
+        expect(result).toEqual({
+          ok: false,
+          reason: 'rejected',
+          message: 'Your account is not activated yet. Use the activation link from the email we sent you.',
+        });
+        expect((result as { message: string }).message).not.toMatch(/[А-Яа-я]/);
+      });
+
+      it('401 обычного отказа — английский текст приложения, а не русская строка сервера', async () => {
+        mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 401 } as any);
+        mockedSafeJsonParse.mockResolvedValueOnce({
+          error: 'Данные входа не корректные',
+        } as any);
+
+        const result = await loginApi('test@example.com', 'password');
+
+        expect(result).toEqual({
+          ok: false,
+          reason: 'rejected',
+          message: 'Invalid email or password',
+        });
+        expect((result as { message: string }).message).not.toMatch(/[А-Яа-я]/);
+      });
+    });
+
     it('401 без тела — падает на прежний текст про учётные данные', async () => {
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 401 } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({} as any);
@@ -334,14 +382,35 @@ describe('src/api/auth.ts auth/password API', () => {
       );
     });
 
-    it('отдаёт сообщение backend как отказ по сути запроса (#1944)', async () => {
+    // #1946: причина отказа по-прежнему `rejected` (#1944), но текст берётся из
+    // i18n. Раньше выигрывал `payload.detail`, а `google_login` отдаёт только
+    // англоязычную технику («Google token is invalid», «id_token is required»),
+    // и русскоязычный пользователь видел её как сообщение об ошибке входа.
+    it('4xx от Google endpoint — отказ по сути запроса с текстом приложения (#1946)', async () => {
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 400 } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce({ detail: 'Google token expired' } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ detail: 'Google token is invalid' } as any);
 
       const result = await googleAuthApi('expired-token');
 
-      expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Google token expired' });
+      expect(result).toEqual({
+        ok: false,
+        reason: 'rejected',
+        message: 'Не удалось войти через Google.',
+      });
       expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    it('401 с технической строкой бэкенда — локализованный текст про аккаунт', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 401 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ error: 'Google email is not verified' } as any);
+
+      const result = await googleAuthApi('unverified-token');
+
+      expect(result).toEqual({
+        ok: false,
+        reason: 'rejected',
+        message: 'Google не подтвердил аккаунт. Попробуйте выбрать аккаунт ещё раз.',
+      });
     });
 
     it('использует понятный fallback для пустого 401 от Google endpoint', async () => {

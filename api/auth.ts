@@ -123,15 +123,19 @@ export type FacebookCompletionStartResult =
     | { status: 'verification_sent' }
     | { status: 'error'; message: string; errorCode?: string; reason?: AuthFailureReason };
 
-const getGoogleAuthErrorMessage = (payload: Partial<GoogleAuthResponse>, status: number): string => {
-    const directMessage = payload.detail || payload.error || payload.message;
-    if (directMessage) return directMessage;
-    if (Array.isArray(payload.non_field_errors) && payload.non_field_errors[0]) {
-        return payload.non_field_errors[0];
-    }
-    if (Array.isArray(payload.id_token) && payload.id_token[0]) {
-        return payload.id_token[0];
-    }
+/**
+ * #1946: тот же контракт, что и у пароля выше и у Facebook-ветки ниже — текст
+ * отказа всегда собственный и локализованный, тело ответа лишь выбирает ключ.
+ *
+ * Раньше `payload.detail || error || message` (и `non_field_errors`/`id_token`)
+ * выигрывали у ключей ниже, а `users/views.py` action `google_login` отдаёт
+ * только англоязычные технические строки — `id_token is required`,
+ * `Google token is invalid`, `Google email is not verified`. Машиночитаемого
+ * `error_code`, как у Facebook, у него нет, поэтому RU/BE/UK/PL показывали эту
+ * отладочную латиницу как текст ошибки входа. Статус — единственный стабильный
+ * признак, и он же оставлен без изменений для причины (#1944).
+ */
+const getGoogleAuthErrorMessage = (status: number): string => {
     if (status === 401 || status === 403) {
         return i18nT('errorsStatic:api.auth.googleAccountNotConfirmed');
     }
@@ -222,11 +226,11 @@ export const loginApi = async (
                         : i18nT('errorsStatic:api.auth.invalidCredentials'),
                 );
             }
-            // 5xx/429/прочее — серверная/временная ошибка. `detail` сюда намеренно НЕ
-            // подставляется: DRF отдаёт такие тексты (например throttle) на языке
-            // сервера, а не пользователя, и здесь для него нет локализатора — в
-            // отличие от 400/401/403, где текст активации/блокировки предназначен
-            // конечному пользователю как есть.
+            // 5xx/429/прочее — серверная/временная ошибка. `detail` сюда намеренно
+            // НЕ подставляется по той же причине, что и в ветке 400/401/403 выше
+            // (#1946): DRF отдаёт такие тексты (например throttle) на языке
+            // сервера, а не пользователя. Сырая строка бэкенда не попадает в форму
+            // входа ни на одном статусе.
             return authFailure(
                 authFailureReasonFromStatus(status),
                 i18nT('errorsStatic:api.auth.serviceUnavailable'),
@@ -498,7 +502,7 @@ export const googleAuthApi = async (idToken: string): Promise<AuthAttempt<Social
         if (!response.ok) {
             return authFailure(
                 authFailureReasonFromStatus(response.status),
-                getGoogleAuthErrorMessage(json, response.status),
+                getGoogleAuthErrorMessage(response.status),
             );
         }
 
