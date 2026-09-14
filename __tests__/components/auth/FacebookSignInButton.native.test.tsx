@@ -1,8 +1,15 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native'
-import { Pressable, StyleSheet } from 'react-native'
-import { AccessToken, LoginManager, Settings } from 'react-native-fbsdk-next'
+import { Platform, Pressable, StyleSheet } from 'react-native'
+import {
+  AccessToken,
+  AuthenticationToken,
+  LoginManager,
+  Settings,
+} from 'react-native-fbsdk-next'
 
 import FacebookSignInButton, {
+  createFacebookLoginNonce,
+  getFacebookLimitedCredential,
   getFacebookNativeCredential,
   getFacebookNativePermissions,
 } from '@/components/auth/FacebookSignInButton.native'
@@ -11,6 +18,9 @@ import { SOCIAL_AUTH_BUTTON_GEOMETRY } from '@/components/auth/socialAuthButtonG
 jest.mock('react-native-fbsdk-next', () => ({
   AccessToken: {
     getCurrentAccessToken: jest.fn(),
+  },
+  AuthenticationToken: {
+    getAuthenticationTokenIOS: jest.fn(),
   },
   LoginManager: {
     logInWithPermissions: jest.fn(),
@@ -22,13 +32,22 @@ jest.mock('react-native-fbsdk-next', () => ({
 }))
 
 const accessTokenMock = AccessToken.getCurrentAccessToken as jest.Mock
+const authenticationTokenMock =
+  AuthenticationToken.getAuthenticationTokenIOS as jest.Mock
 const loginMock = LoginManager.logInWithPermissions as jest.Mock
 const previousEnabled = process.env.EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED
 const previousAppId = process.env.EXPO_PUBLIC_META_APP_ID
+// jest-expo резолвит платформенные модули с defaultPlatform=ios, поэтому
+// Android-ветку приходится включать явной подменой Platform.OS — иначе
+// «зелёный native-тест» доказывает только iOS.
+const originalOS = Platform.OS
+const setPlatform = (os: typeof Platform.OS) =>
+  Object.defineProperty(Platform, 'OS', { value: os, configurable: true })
 
 describe('FacebookSignInButton native', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    setPlatform('ios')
     process.env.EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED = 'true'
     process.env.EXPO_PUBLIC_META_APP_ID = '123456789'
     loginMock.mockResolvedValue({
@@ -38,6 +57,18 @@ describe('FacebookSignInButton native', () => {
     accessTokenMock.mockResolvedValue({
       accessToken: 'native-facebook-access-token',
       permissions: ['public_profile', 'email'],
+    })
+    authenticationTokenMock.mockImplementation(async () => ({
+      authenticationToken: 'limited-login-oidc-token',
+      nonce: loginMock.mock.calls.at(-1)?.[2],
+      graphDomain: 'facebook',
+    }))
+  })
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', {
+      value: originalOS,
+      configurable: true,
     })
   })
 
@@ -66,6 +97,7 @@ describe('FacebookSignInButton native', () => {
         'email',
       ]),
     ).toEqual({
+      kind: 'access_token',
       accessToken: 'token',
       grantedScopes: ['public_profile', 'email'],
       emailPermissionGranted: true,
@@ -73,7 +105,126 @@ describe('FacebookSignInButton native', () => {
     expect(getFacebookNativeCredential('', ['email'])).toBeNull()
   })
 
-  it('initializes the SDK and returns a fresh access token', async () => {
+  it('generates a unique unpredictable nonce per attempt', () => {
+    const first = createFacebookLoginNonce()
+    const second = createFacebookLoginNonce()
+
+    expect(first).toMatch(/^[0-9a-f]{32}$/)
+    expect(second).not.toBe(first)
+  })
+
+  it('binds the limited-login token to the nonce of the same attempt', () => {
+    expect(
+      getFacebookLimitedCredential(' oidc ', 'nonce-1', 'nonce-1', ['email']),
+    ).toEqual({
+      kind: 'authentication_token',
+      authenticationToken: 'oidc',
+      nonce: 'nonce-1',
+      grantedScopes: ['email'],
+      emailPermissionGranted: true,
+    })
+    // Токен из другой (или прошлой) попытки принимать нельзя.
+    expect(
+      getFacebookLimitedCredential('oidc', 'nonce-1', 'nonce-0', ['email']),
+    ).toBeNull()
+    expect(getFacebookLimitedCredential('', 'nonce-1', 'nonce-1', [])).toBeNull()
+    expect(getFacebookLimitedCredential('oidc', '', '', [])).toBeNull()
+    // Пустой набор разрешений в Limited Login — «неизвестно», решение о
+    // дополнении email принимает сервер, а не кнопка.
+    expect(
+      getFacebookLimitedCredential('oidc', 'nonce-1', undefined, undefined),
+    ).toMatchObject({ emailPermissionGranted: true, grantedScopes: [] })
+  })
+
+  it('signs in on iPhone through Limited Login and returns the OIDC token', async () => {
+    const onSuccess = jest.fn()
+    const screen = render(
+      <FacebookSignInButton onSuccess={onSuccess} onError={jest.fn()} />,
+    )
+
+    await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
+    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
+    const [permissions, tracking, nonce] = loginMock.mock.calls[0]
+    expect(permissions).toEqual(['public_profile', 'email'])
+    expect(tracking).toBe('limited')
+    expect(nonce).toMatch(/^[0-9a-f]{32}$/)
+    expect(onSuccess).toHaveBeenCalledWith({
+      kind: 'authentication_token',
+      authenticationToken: 'limited-login-oidc-token',
+      nonce,
+      grantedScopes: ['public_profile', 'email'],
+      emailPermissionGranted: true,
+    })
+    // Классический access token в limited-режиме недоступен и не запрашивается.
+    expect(accessTokenMock).not.toHaveBeenCalled()
+  })
+
+  it('uses a fresh nonce for every iPhone attempt', async () => {
+    const screen = render(
+      <FacebookSignInButton onSuccess={jest.fn()} onError={jest.fn()} />,
+    )
+
+    await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
+    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+    await waitFor(() => expect(loginMock).toHaveBeenCalledTimes(1))
+    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+    await waitFor(() => expect(loginMock).toHaveBeenCalledTimes(2))
+
+    expect(loginMock.mock.calls[1][2]).not.toBe(loginMock.mock.calls[0][2])
+  })
+
+  it('reports an error when the iPhone attempt yields no authentication token', async () => {
+    authenticationTokenMock.mockResolvedValue(null)
+    const onSuccess = jest.fn()
+    const onError = jest.fn()
+    const screen = render(
+      <FacebookSignInButton onSuccess={onSuccess} onError={onError} />,
+    )
+
+    await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
+    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+    expect(onSuccess).not.toHaveBeenCalled()
+  })
+
+  it('rejects an authentication token issued for another nonce', async () => {
+    authenticationTokenMock.mockResolvedValue({
+      authenticationToken: 'stale-oidc-token',
+      nonce: 'nonce-from-a-previous-attempt',
+      graphDomain: 'facebook',
+    })
+    const onSuccess = jest.fn()
+    const onError = jest.fn()
+    const screen = render(
+      <FacebookSignInButton onSuccess={onSuccess} onError={onError} />,
+    )
+
+    await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
+    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+    expect(onSuccess).not.toHaveBeenCalled()
+  })
+
+  it('re-requests only the email permission on iPhone and keeps Limited Login', async () => {
+    const onSuccess = jest.fn()
+    const screen = render(
+      <FacebookSignInButton onSuccess={onSuccess} mode="rerequest_email" />,
+    )
+
+    await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
+    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
+    expect(loginMock.mock.calls[0][0]).toEqual(['email'])
+    expect(loginMock.mock.calls[0][1]).toBe('limited')
+  })
+
+  it('initializes the SDK and returns a fresh access token on Android', async () => {
+    setPlatform('android')
     const onSuccess = jest.fn()
     const screen = render(
       <FacebookSignInButton onSuccess={onSuccess} onError={jest.fn()} />,
@@ -87,12 +238,14 @@ describe('FacebookSignInButton native', () => {
 
     await waitFor(() =>
       expect(onSuccess).toHaveBeenCalledWith({
+        kind: 'access_token',
         accessToken: 'native-facebook-access-token',
         grantedScopes: ['public_profile', 'email'],
         emailPermissionGranted: true,
       }),
     )
     expect(loginMock).toHaveBeenCalledWith(['public_profile', 'email'])
+    expect(authenticationTokenMock).not.toHaveBeenCalled()
   })
 
   it('uses the shared social button geometry for its native touch target', async () => {
@@ -174,11 +327,13 @@ describe('FacebookSignInButton native', () => {
     fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
 
     await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1))
+    expect(authenticationTokenMock).not.toHaveBeenCalled()
     expect(accessTokenMock).not.toHaveBeenCalled()
     expect(onSuccess).not.toHaveBeenCalled()
   })
 
-  it('reports a missing email permission to the shared completion flow', async () => {
+  it('reports a missing email permission to the shared completion flow on Android', async () => {
+    setPlatform('android')
     accessTokenMock.mockResolvedValue({
       accessToken: 'native-facebook-access-token',
       permissions: ['public_profile'],
@@ -193,11 +348,31 @@ describe('FacebookSignInButton native', () => {
 
     await waitFor(() =>
       expect(onSuccess).toHaveBeenCalledWith({
+        kind: 'access_token',
         accessToken: 'native-facebook-access-token',
         grantedScopes: ['public_profile'],
         emailPermissionGranted: false,
       }),
     )
     expect(loginMock).toHaveBeenCalledWith(['email'])
+  })
+
+  it('reports a missing email permission from a limited-login result', async () => {
+    loginMock.mockResolvedValue({
+      isCancelled: false,
+      grantedPermissions: ['public_profile'],
+    })
+    const onSuccess = jest.fn()
+    const screen = render(<FacebookSignInButton onSuccess={onSuccess} />)
+
+    await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
+    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
+    expect(onSuccess.mock.calls[0][0]).toMatchObject({
+      kind: 'authentication_token',
+      grantedScopes: ['public_profile'],
+      emailPermissionGranted: false,
+    })
   })
 })

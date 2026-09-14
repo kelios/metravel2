@@ -26,7 +26,7 @@
 |---|---|---|---|---|---|
 | Email + пароль | да | да | да | да | `api/auth.ts` |
 | Google | да | да | да | да | `GoogleSignInButton.web.tsx` (GSI) / `.native.tsx` |
-| Facebook | гейт `EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED` | тот же гейт | тот же гейт | **нет** (SDK исключён из сборки, #1895) | `FacebookAuthFlow.shared.tsx` |
+| Facebook | гейт `EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED` | тот же гейт | тот же гейт | тот же гейт, режим Limited Login (#1918) | `FacebookAuthFlow.shared.tsx` |
 | Apple | гейт `EXPO_PUBLIC_APPLE_WEB_CLIENT_ID` + `..._REDIRECT_URI` | тот же гейт | **нет** | да | `AppleSignInButton.web.tsx` / `.native.tsx` |
 
 Apple в Android-приложении отсутствует осознанно: `expo-apple-authentication`
@@ -34,19 +34,45 @@ Apple в Android-приложении отсутствует осознанно:
 попадает в Android-приложение только через email + пароль — см. «Известные
 ограничения».
 
-Facebook в iPhone-приложении отсутствует на уровне сборки (#1895), а не только
-за гейтом: `package.json` → `expo.autolinking.ios.exclude` снимает
-`react-native-fbsdk-next` с iOS-autolinking (и RN-под, и Expo-модуль
-`ExpoAdapterFBSDKNext` с `FacebookAppDelegate`), `ios/metravel/Info.plist` не
-содержит Facebook-ключей и `fb…`-схем, а `FacebookSignInButton.ios.tsx` —
-заглушка без импорта JS SDK. Причина: Meta SDK 18.x объявляет в своём privacy
-manifest `tracking=true` и tracking domains, что противоречит app-owned
-манифесту и форме App Privacy (`tracking=false`, guideline 5.1.2). Гейты
-`ios:release:guard` (`IOS_META_SDK_LINKED`) и `ios:artifact:audit`
-(`IOS_ARTIFACT_META_SDK`, `IOS_ARTIFACT_SDK_TRACKING`) держат это состояние.
-Вернуть Facebook на iOS — отдельная фича: Meta требует на iOS Limited Login
-без ATT-согласия (OIDC-токен вместо access token, нужен backend-контракт), либо
-ATT-запрос и `tracking=true` в App Privacy.
+### Facebook на iPhone: Limited Login без ATT (#1918)
+
+На iOS Meta даёт классический Facebook Login (access token Graph API) только
+после согласия App Tracking Transparency. ATT приложение не запрашивает и в
+форме App Privacy остаётся `tracking=false`, поэтому iPhone ходит вторым
+маршрутом — **Limited Login**: `LoginManager.logInWithPermissions(permissions,
+'limited', nonce)` и `AuthenticationToken.getAuthenticationTokenIOS()`
+(`components/auth/FacebookSignInButton.native.tsx`). Результат входа — OIDC-JWT
+и nonce, а не access token.
+
+Отсюда `FacebookCredential` — размеченное объединение (`api/auth.ts` →
+`FacebookCredentialPayload`): `kind: 'access_token'` для web и Android,
+`kind: 'authentication_token'` для iPhone. `facebookAuthApi` шлёт на
+`POST /user/facebook-login/` либо `{access_token}`, либо
+`{authentication_token, nonce}`; ответы, коды ошибок и сценарий дополнения
+email общие для всех платформ (приём OIDC-токена на сервере — #1912).
+
+Nonce генерируется криптографически на каждую попытку и проверяется дважды:
+клиент отбрасывает токен, чей claim `nonce` не совпал с nonce этой попытки
+(чужой или устаревший токен), сервер сверяет то же значение с claim JWT. Набор
+разрешений в limited-режиме приходит не всегда: пустой набор — «неизвестно», и
+решение о дополнении email принимает сервер (`facebook_email_completion_required`).
+
+Meta SDK снова линкуется в iOS-сборку, но только в конфигурации без трекинга:
+`FacebookAutoInitEnabled=false` (SDK поднимает кнопка входа при монтировании,
+вне экрана входа Meta-код не исполняется), `FacebookAutoLogAppEventsEnabled=false`,
+`FacebookAdvertiserIDCollectionEnabled=false` в `ios/metravel/Info.plist`; App
+Events, Advertiser ID и ATT-запрос не используются. Состояние машинно
+проверяется: `ios:release:guard` (`IOS_META_SDK_CONFIG` — SDK залинкован, ключи
+и схемы Meta на месте, три флага `false`, iOS-ветка вызывает `'limited'` и не
+просит `'enabled'`, заглушки `.ios.tsx` нет) и `ios:artifact:audit`
+(`IOS_ARTIFACT_SDK_TRACKING` — tracking-манифест допустим только у бандлов
+`FBSDK*`/`FBAEMKit*` и только при выключенных флагах; трекинг любого другого SDK
+и app-owned манифеста — ошибка). До #1918 действовал обратный контракт: #1895
+убирал SDK из сборки целиком.
+
+Кнопка на iPhone остаётся за флагом сборки `EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED`
+(плюс `EXPO_PUBLIC_META_APP_ID`); облачная сборка берёт их из EAS environment
+variables, локальный `.env` туда не попадает.
 
 ## Веб-вход через Apple (#1506)
 

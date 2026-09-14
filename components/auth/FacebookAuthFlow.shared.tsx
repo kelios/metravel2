@@ -116,7 +116,7 @@ export default function FacebookAuthFlow({
 
     setBusy(true)
     try {
-      const result = await loginWithFacebook(credential.accessToken)
+      const result = await loginWithFacebook(credential)
       handleResult(result)
     } finally {
       setBusy(false)

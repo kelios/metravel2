@@ -1,5 +1,13 @@
-export type FacebookCredential = {
-    accessToken: string;
+import type { FacebookCredentialPayload } from '@/api/auth';
+
+// Credential кнопки Facebook — размеченное объединение, а не два опциональных
+// поля: на iPhone (#1918) вход идёт в режиме Meta Limited Login и отдаёт OIDC
+// authentication token с nonce, а web и Android остаются на access token Graph
+// API. Бэкенд принимает ровно одну из двух форм, поэтому «оба сразу» и «ни
+// одного» обязаны отсекаться типом, а не проверкой в рантайме. Поля запроса
+// живут в `api/auth.ts` рядом с самим запросом, здесь к ним добавляется то, что
+// нужно только UI: выданные разрешения и признак согласия на email.
+export type FacebookCredential = FacebookCredentialPayload & {
     grantedScopes: string[];
     emailPermissionGranted: boolean;
 };

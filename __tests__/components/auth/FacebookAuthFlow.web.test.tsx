@@ -18,6 +18,7 @@ jest.mock('@/components/auth/FacebookSignInButton', () => {
           testID={`mock-facebook-${mode}`}
           disabled={disabled}
           onPress={() => onSuccess({
+            kind: 'access_token',
             accessToken: mode === 'rerequest_email' ? 'fresh-rerequest-token' : 'fresh-login-token',
             grantedScopes: mockEmailPermissionGranted ? ['public_profile', 'email'] : ['public_profile'],
             emailPermissionGranted: mockEmailPermissionGranted,
@@ -69,7 +70,9 @@ describe('FacebookAuthFlow web', () => {
     fireEvent.press(screen.getByTestId('mock-facebook-sign_in'));
 
     await waitFor(() => {
-      expect(loginWithFacebook).toHaveBeenCalledWith('fresh-login-token');
+      expect(loginWithFacebook).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'access_token', accessToken: 'fresh-login-token' }),
+      );
       expect(onAuthenticated).toHaveBeenCalledTimes(1);
     });
   });
@@ -91,7 +94,9 @@ describe('FacebookAuthFlow web', () => {
     fireEvent.press(screen.getByTestId('mock-facebook-rerequest_email'));
 
     await waitFor(() => {
-      expect(loginWithFacebook).toHaveBeenCalledWith('fresh-rerequest-token');
+      expect(loginWithFacebook).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'access_token', accessToken: 'fresh-rerequest-token' }),
+      );
       expect(screen.getByTestId('facebook-email-completion-panel')).toBeTruthy();
     });
   });

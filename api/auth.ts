@@ -92,6 +92,16 @@ type FacebookAuthResponse = GoogleAuthResponse & {
     verification_sent?: boolean;
 };
 
+// Тело `POST /user/facebook-login/`. Web и Android шлют access token Graph API,
+// iPhone (#1918) — OIDC authentication token режима Meta Limited Login вместе с
+// nonce попытки: в Limited Login access token недоступен, а nonce сервер
+// сверяет с одноимённым claim токена. Объединение размечено, поэтому «оба
+// токена сразу» или «ни одного» не собираются на этапе компиляции — бэкенд
+// такой запрос отклоняет.
+export type FacebookCredentialPayload =
+    | { kind: 'access_token'; accessToken: string }
+    | { kind: 'authentication_token'; authenticationToken: string; nonce: string };
+
 export type FacebookEmailCompletionReason =
     | 'facebook_email_permission_missing'
     | 'facebook_primary_email_unavailable';
@@ -545,10 +555,29 @@ const parseFacebookCompletion = (
     };
 };
 
-export const facebookAuthApi = async (accessToken: string): Promise<FacebookAuthResult> => {
+// Пустой токен (и пустой nonce у Limited Login) — это тот же отказ
+// `access_token_required`, что отдаёт сервер: код сохранён ради совместимости
+// клиентов, текст общий для обеих форм credential.
+export const getFacebookLoginBody = (
+    credential: FacebookCredentialPayload,
+): Record<string, string> | null => {
+    if (credential.kind === 'authentication_token') {
+        const token = String(credential.authenticationToken || '').trim();
+        const nonce = String(credential.nonce || '').trim();
+        if (!token || !nonce) return null;
+        return { authentication_token: token, nonce };
+    }
+    const token = String(credential.accessToken || '').trim();
+    if (!token) return null;
+    return { access_token: token };
+};
+
+export const facebookAuthApi = async (
+    credential: FacebookCredentialPayload,
+): Promise<FacebookAuthResult> => {
     try {
-        const trimmedToken = String(accessToken || '').trim();
-        if (!trimmedToken) {
+        const body = getFacebookLoginBody(credential);
+        if (!body) {
             return {
                 status: 'error',
                 errorCode: 'access_token_required',
@@ -561,7 +590,7 @@ export const facebookAuthApi = async (accessToken: string): Promise<FacebookAuth
                 method: 'POST',
                 ...getApiRequestCredentials(),
                 headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
-                body: JSON.stringify({ access_token: trimmedToken }),
+                body: JSON.stringify(body),
             }, DEFAULT_TIMEOUT),
             {
                 maxAttempts: 2,

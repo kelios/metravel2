@@ -306,6 +306,8 @@ App Review Information, в Git и на борд не попадают.
   (`components/auth/LoginForm.tsx:341` → `FacebookAuthFlow.native.tsx` →
   `components/auth/FacebookSignInButton.native.tsx`; одноимённый файл без
   суффикса `.native` — веб-only заглушка, на iOS Metro её не выбирает).
+  С #1918 iOS-ветка кнопки работает в режиме Meta Limited Login: ATT не
+  запрашивается, сервер получает OIDC-токен и nonce вместо access token.
   На уровне исходника Apple присутствует наравне со сторонними провайдерами;
   это не заменяет проверку доступности входа в точном бинарнике.
   Уточнение по exact IPA от 12.09: compiled Facebook feature flag равен false,
@@ -338,6 +340,8 @@ App Review Information, в Git и на борд не попадают.
   `FacebookAdvertiserIDCollectionEnabled = false`,
   `FacebookAutoLogAppEventsEnabled = false`, `FacebookAutoInitEnabled = true`.
   Эти настройки не доказывают отсутствие всех форм tracking или ненужность ATT.
+  Для следующего кандидата (#1918) третий флаг тоже переведён в `false`:
+  SDK инициализирует кнопка входа при монтировании, а не запуск приложения.
 - Native utility GA4/Яндекс не отправляет web-события; это не проверка собственных
   событий квестов, SDK-аналитики и сторонних страниц внутри WebView.
 - Location / Photos / Camera / Account — по фактическому flow бинарника, список

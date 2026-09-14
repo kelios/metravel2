@@ -75,6 +75,7 @@ export const getFacebookCredential = (response: FacebookLoginResponse): Facebook
     if (response.status !== 'connected' || !accessToken) return null;
     const grantedScopes = normalizeGrantedScopes(response.authResponse?.grantedScopes);
     return {
+        kind: 'access_token',
         accessToken,
         grantedScopes,
         emailPermissionGranted: grantedScopes.includes('email'),

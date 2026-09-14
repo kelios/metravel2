@@ -36,6 +36,7 @@ describe('FacebookSignInButton web contract', () => {
         grantedScopes: 'public_profile,email',
       },
     })).toEqual({
+      kind: 'access_token',
       accessToken: 'short-lived-token',
       grantedScopes: ['public_profile', 'email'],
       emailPermissionGranted: true,
@@ -52,6 +53,7 @@ describe('FacebookSignInButton web contract', () => {
         grantedScopes: ['public_profile'],
       },
     })).toEqual({
+      kind: 'access_token',
       accessToken: 'short-lived-token',
       grantedScopes: ['public_profile'],
       emailPermissionGranted: false,

@@ -74,7 +74,7 @@ function fixture(changes: Record<string, (value: string) => string>): string {
     'ios/metravel/Images.xcassets/SplashScreenLogo.imageset/image@3x.png',
     'components/quests/QuestFullMap.tsx',
     'components/quests/QuestFullMap.native.tsx',
-    'components/auth/FacebookSignInButton.ios.tsx',
+    'components/auth/FacebookSignInButton.native.tsx',
   ];
   for (const relativePath of requiredFiles) {
     const target = path.join(tempRoot, relativePath);
@@ -837,71 +837,131 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
     ]);
   });
 
-  // Meta SDK снят с iPhone-сборки (#1895): его privacy manifest объявляет
-  // tracking=true, что расходится с app-owned манифестом и формой App Privacy.
+  // Контракт перевёрнут (#1918): Meta SDK допущен в iPhone-сборку, но только в
+  // конфигурации Limited Login без трекинга. Гейт держит именно её.
   it.each<[string, Record<string, (value: string) => string>, string]>([
     [
-      'iOS autolinking exclusion is dropped',
+      'iOS autolinking excludes the SDK again',
       {
         'package.json': value => {
           const pkg = JSON.parse(value);
-          delete pkg.expo.autolinking.ios;
+          pkg.expo.autolinking.ios = { exclude: ['react-native-fbsdk-next'] };
           return JSON.stringify(pkg, null, 2);
         },
       },
-      'expo.autolinking.ios.exclude must keep react-native-fbsdk-next',
+      'must not drop react-native-fbsdk-next',
     ],
     [
-      'Podfile.lock links a Meta pod again',
-      { 'ios/Podfile.lock': value => value.replace('PODS:\n', 'PODS:\n  - FBSDKCoreKit (18.1.0)\n') },
-      'must not link Meta SDK pods',
+      'Podfile.lock loses the Meta login pod',
+      { 'ios/Podfile.lock': value => value.replace(/FBSDKLoginKit/g, 'SomeOtherKit') },
+      'must link the Meta SDK for Limited Login',
     ],
     [
-      'Info.plist keeps Facebook configuration',
+      'the Xcode project stops embedding the Meta frameworks',
+      {
+        'ios/metravel.xcodeproj/project.pbxproj': value =>
+          value.replace(/FBSDKLoginKit\.framework/g, 'SomeOtherKit.framework'),
+      },
+      'must embed the Meta SDK frameworks',
+    ],
+    [
+      'Info.plist loses the Meta client token',
       {
         'ios/metravel/Info.plist': value => value.replace(
-          '<key>ITSAppUsesNonExemptEncryption</key>',
-          '<key>FacebookAppID</key>\n\t<string>1</string>\n\t<key>ITSAppUsesNonExemptEncryption</key>'
+          /<key>FacebookClientToken<\/key>\n\t<string>[^<]*<\/string>\n/,
+          ''
         ),
       },
-      'Info.plist must not keep Facebook SDK configuration',
+      'missing FacebookClientToken',
     ],
     [
-      'Info.plist restores Meta query schemes',
+      'Info.plist loses the fb<AppID> callback scheme',
       {
         'ios/metravel/Info.plist': value => value.replace(
-          '<key>ITSAppUsesNonExemptEncryption</key>',
-          '<key>LSApplicationQueriesSchemes</key>\n\t<array>\n\t\t<string>fbapi</string>\n\t</array>\n\t<key>ITSAppUsesNonExemptEncryption</key>'
+          /\t\t<dict>\n\t\t\t<key>CFBundleURLSchemes<\/key>\n\t\t\t<array>\n\t\t\t\t<string>fb\d+<\/string>\n\t\t\t<\/array>\n\t\t<\/dict>\n/,
+          ''
         ),
       },
-      'Info.plist must not keep Facebook SDK configuration',
+      'must declare the fb<AppID> callback URL scheme',
     ],
     [
-      'the iOS sign-in stub imports the Meta JS SDK',
+      'Info.plist loses a Meta query scheme',
       {
-        'components/auth/FacebookSignInButton.ios.tsx': value =>
-          `import { Settings } from 'react-native-fbsdk-next'\n${value}`,
+        'ios/metravel/Info.plist': value => value.replace(
+          '\t\t<string>fbauth2</string>\n',
+          ''
+        ),
       },
-      'must stay a stub',
+      'LSApplicationQueriesSchemes must list fbauth2',
     ],
-  ])('fails closed when the Meta SDK returns to the iPhone build: %s', (_name, changes, detail) => {
+    [
+      'app events auto-logging is switched on',
+      {
+        'ios/metravel/Info.plist': value => value.replace(
+          '<key>FacebookAutoLogAppEventsEnabled</key>\n\t<false/>',
+          '<key>FacebookAutoLogAppEventsEnabled</key>\n\t<true/>'
+        ),
+      },
+      'FacebookAutoLogAppEventsEnabled is not false',
+    ],
+    [
+      'advertiser ID collection is switched on',
+      {
+        'ios/metravel/Info.plist': value => value.replace(
+          '<key>FacebookAdvertiserIDCollectionEnabled</key>\n\t<false/>',
+          '<key>FacebookAdvertiserIDCollectionEnabled</key>\n\t<true/>'
+        ),
+      },
+      'FacebookAdvertiserIDCollectionEnabled is not false',
+    ],
+    [
+      'SDK auto-init is switched on',
+      {
+        'ios/metravel/Info.plist': value => value.replace(
+          '<key>FacebookAutoInitEnabled</key>\n\t<false/>',
+          '<key>FacebookAutoInitEnabled</key>\n\t<true/>'
+        ),
+      },
+      'FacebookAutoInitEnabled is not false',
+    ],
+    [
+      'the iOS branch drops the limited login mode',
+      {
+        'components/auth/FacebookSignInButton.native.tsx': value =>
+          value.replace("permissions,\n      'limited',", 'permissions,'),
+      },
+      "must call logInWithPermissions with 'limited' on iOS",
+    ],
+    [
+      'the iOS branch asks for the tracking-enabled mode',
+      {
+        'components/auth/FacebookSignInButton.native.tsx': value =>
+          value.replace("'limited',", "'enabled',"),
+      },
+      'must not request the tracking-enabled login mode',
+    ],
+  ])('fails closed when the Limited Login configuration drifts: %s', (_name, changes, detail) => {
     const testRoot = fixture(changes);
     expect(validateIosRelease(testRoot, { checkLiveAasa: false })).toEqual(
       expect.arrayContaining([expect.objectContaining({
-        code: 'IOS_META_SDK_LINKED',
+        code: 'IOS_META_SDK_CONFIG',
         detail: expect.stringContaining(detail),
       })])
     );
   });
 
-  it('keeps the excluded Meta pod out of the Podfile.lock staleness check', () => {
-    // react-native-fbsdk-next остаётся в package.json ради Android и несёт
-    // podspec в node_modules, но для iOS autolinking его не резолвит — это не
-    // «отставший lock», а ожидаемое состояние.
-    expect(validateIosRelease(fixture({}), { checkLiveAasa: false })).not.toEqual(
+  it('fails closed when a stub file shadows the Limited Login button on iOS', () => {
+    // Заглушка #1895 резолвится Metro раньше `.native.tsx`, поэтому её возврат
+    // молча выключает вход на iPhone при зелёных остальных проверках.
+    const testRoot = fixture({});
+    fs.writeFileSync(
+      path.join(testRoot, 'components/auth/FacebookSignInButton.ios.tsx'),
+      'export default function FacebookSignInButton() { return null }\n'
+    );
+    expect(validateIosRelease(testRoot, { checkLiveAasa: false })).toEqual(
       expect.arrayContaining([expect.objectContaining({
-        code: 'IOS_PODFILE_LOCK_STALE',
-        detail: expect.stringContaining('react-native-fbsdk-next'),
+        code: 'IOS_META_SDK_CONFIG',
+        detail: expect.stringContaining('must not shadow the Limited Login button'),
       })])
     );
   });

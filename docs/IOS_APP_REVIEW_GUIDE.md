@@ -188,7 +188,11 @@ MeTravel's own API handles accounts, content, trip plans, and the
 report/block safety flow described above. Quest progress and attempts support
 app functionality and analytics, linked to the installation and, once signed
 in, the account. Sign-in exchanges tokens/account details with Apple and
-Google (Meta SDK is bundled but Facebook sign-in is disabled in this build).
+Google. The Meta SDK is bundled for Facebook sign-in in Limited Login mode:
+the app never requests App Tracking Transparency, Facebook app-event
+auto-logging, advertiser ID collection and SDK auto-init are disabled, and
+sign-in returns an OIDC token instead of a Graph API access token. Facebook
+sign-in stays behind a build flag and is disabled in build 9.
 Amazon S3 stores media and backups; outbound account email uses Gmail SMTP.
 Push notifications use Expo/APNs. Optional Telegram linking associates a
 Telegram account. Articles can embed Instagram/YouTube content in web views.

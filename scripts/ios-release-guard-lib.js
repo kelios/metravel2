@@ -149,17 +149,41 @@ const IOS_REQUIRED_REASON_APIS = Object.freeze({
 const PORTABLE_HERMES_CLI_PATH =
   '$(PODS_ROOT)/../../node_modules/hermes-compiler/hermesc/osx-bin/hermesc';
 
-// Meta SDK не входит в iPhone-сборку (#1895): его встроенный privacy manifest
-// объявляет tracking=true и tracking domains, что расходится с app-owned
-// манифестом (tracking=false) и опубликованной формой App Privacy. Исключение
-// живёт в package.json → expo.autolinking.ios.exclude и снимает и RN-под
-// react-native-fbsdk-next, и Expo-модуль ExpoAdapterFBSDKNext с его
-// FacebookAppDelegate-подписчиком; Android продолжает линковать SDK, а
-// iOS-кнопка входа — заглушка без импорта JS SDK.
-const IOS_EXCLUDED_NATIVE_MODULES = Object.freeze(['react-native-fbsdk-next']);
-const META_SDK_NATIVE_PATTERN = /FBSDK|FBAEMKit|react-native-fbsdk-next|ExpoAdapterFBSDKNext/;
-const META_SDK_PLIST_PATTERN =
-  /<key>Facebook[A-Za-z]+<\/key>|<string>fb(?:\d+|api|auth2|-messenger-api|shareextension)<\/string>/;
+// Meta SDK вернулся в iPhone-сборку (#1918) — но только в конфигурации Limited
+// Login без трекинга: #1895 убирал его целиком, потому что встроенный privacy
+// manifest SDK объявляет tracking=true. Контракт теперь не «SDK запрещён», а
+// «SDK разрешён ровно в этой конфигурации», и держат его проверки ниже:
+// автологирование App Events, сбор advertiser ID и автоинициализация выключены,
+// iOS-ветка кнопки входа ходит только в режиме 'limited', ATT не запрашивается.
+// Список остаётся пустым, чтобы carve-out staleness-проверки Podfile.lock не
+// пришлось переписывать при следующем исключении.
+const IOS_EXCLUDED_NATIVE_MODULES = Object.freeze([]);
+// Поды, без которых Limited Login на устройстве не работает: RN-мост и
+// Expo-модуль с FacebookAppDelegate-подписчиком (он форвардит открытие URL
+// из диалога Facebook).
+const META_SDK_REQUIRED_PODS = Object.freeze([
+  'react-native-fbsdk-next',
+  'ExpoAdapterFBSDKNext',
+  'FBSDKCoreKit',
+  'FBSDKLoginKit',
+]);
+// Фреймворки Meta, чьи собственные privacy-манифесты объявляют трекинг. Тот же
+// список — единственное исключение в аудите архива (scripts/ios-artifact-audit-lib.js).
+const META_SDK_FRAMEWORK_PREFIX_PATTERN = /^(?:FBSDK|FBAEMKit)/i;
+// Три флага, которыми конфигурация объявляет отсутствие трекинга. Автоинициализация
+// выключена намеренно: SDK поднимает кнопка входа при монтировании, поэтому вне
+// экрана входа Meta-код не исполняется вовсе.
+const META_SDK_NO_TRACKING_FLAGS = Object.freeze([
+  'FacebookAutoInitEnabled',
+  'FacebookAutoLogAppEventsEnabled',
+  'FacebookAdvertiserIDCollectionEnabled',
+]);
+const META_SDK_QUERY_SCHEMES = Object.freeze([
+  'fbapi',
+  'fb-messenger-api',
+  'fbauth2',
+  'fbshareextension',
+]);
 const PATCH_PACKAGE_COMMAND =
   'node ./node_modules/patch-package/dist/index.js --error-on-fail';
 
@@ -510,7 +534,7 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   let appDelegate;
   let questFullMap;
   let questFullMapNative;
-  let facebookIosButton;
+  let facebookNativeButton;
   let androidManifest;
   let androidColors;
   try {
@@ -534,7 +558,7 @@ function validateIosRelease(root = process.cwd(), options = {}) {
     appDelegate = read(root, 'ios/metravel/AppDelegate.swift');
     questFullMap = read(root, 'components/quests/QuestFullMap.tsx');
     questFullMapNative = read(root, 'components/quests/QuestFullMap.native.tsx');
-    facebookIosButton = read(root, 'components/auth/FacebookSignInButton.ios.tsx');
+    facebookNativeButton = read(root, 'components/auth/FacebookSignInButton.native.tsx');
     androidManifest = read(root, 'android/app/src/main/AndroidManifest.xml');
     androidColors = read(root, 'android/app/src/main/res/values/colors.xml');
     appIconContents = readJson(
@@ -815,30 +839,81 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   }
 
   const iosAutolinkingExclude = packageJson.expo?.autolinking?.ios?.exclude;
-  const missingIosExclusions = IOS_EXCLUDED_NATIVE_MODULES.filter(
-    name => !Array.isArray(iosAutolinkingExclude) || !iosAutolinkingExclude.includes(name)
-  );
-  if (missingIosExclusions.length > 0) {
+  const excludedMetaPods = Array.isArray(iosAutolinkingExclude)
+    ? iosAutolinkingExclude.filter(name => String(name).includes('fbsdk'))
+    : [];
+  if (excludedMetaPods.length > 0) {
     fail(
-      'IOS_META_SDK_LINKED',
-      `package.json expo.autolinking.ios.exclude must keep ${missingIosExclusions.join(', ')} out of the iPhone build`
+      'IOS_META_SDK_CONFIG',
+      `package.json expo.autolinking.ios.exclude must not drop ${excludedMetaPods.join(', ')} — Limited Login needs the linked SDK`
     );
   }
-  if (META_SDK_NATIVE_PATTERN.test(podfileLock) || META_SDK_NATIVE_PATTERN.test(project)) {
-    fail('IOS_META_SDK_LINKED', 'ios/Podfile.lock and the Xcode project must not link Meta SDK pods or frameworks');
+  const unlinkedMetaPods = META_SDK_REQUIRED_PODS.filter(name => !podfileLock.includes(name));
+  if (unlinkedMetaPods.length > 0) {
+    fail(
+      'IOS_META_SDK_CONFIG',
+      `ios/Podfile.lock must link the Meta SDK for Limited Login — missing ${unlinkedMetaPods.join(', ')}`
+    );
   }
-  // Сам ключ LSApplicationQueriesSchemes легален (квесты могут объявить om://,
-  // mapsme://), красным считаются только Meta-схемы в его массиве.
-  const queriedSchemes = Array.isArray(infoConfig.LSApplicationQueriesSchemes)
+  if (!/FBSDKLoginKit\.framework/.test(project)) {
+    fail('IOS_META_SDK_CONFIG', 'the Xcode project must embed the Meta SDK frameworks');
+  }
+  const facebookAppId = String(infoConfig.FacebookAppID || '').trim();
+  const missingFacebookKeys = ['FacebookAppID', 'FacebookClientToken', 'FacebookDisplayName']
+    .filter(key => String(infoConfig[key] || '').trim().length === 0);
+  if (missingFacebookKeys.length > 0) {
+    fail(
+      'IOS_META_SDK_CONFIG',
+      `Info.plist must configure the Meta app for Limited Login — missing ${missingFacebookKeys.join(', ')}`
+    );
+  }
+  // Без схемы fb<AppID> система не вернёт управление приложению из диалога
+  // Facebook, и вход зависает на внешнем экране.
+  const declaredUrlSchemes = (Array.isArray(infoConfig.CFBundleURLTypes) ? infoConfig.CFBundleURLTypes : [])
+    .flatMap(entry => (Array.isArray(entry?.CFBundleURLSchemes) ? entry.CFBundleURLSchemes : []))
+    .map(String);
+  if (!facebookAppId || !declaredUrlSchemes.includes(`fb${facebookAppId}`)) {
+    fail('IOS_META_SDK_CONFIG', 'Info.plist must declare the fb<AppID> callback URL scheme');
+  }
+  const queriedSchemes = (Array.isArray(infoConfig.LSApplicationQueriesSchemes)
     ? infoConfig.LSApplicationQueriesSchemes
-    : [];
-  if (META_SDK_PLIST_PATTERN.test(info) ||
-      queriedSchemes.some(scheme => /^fb(?:api|auth2|-messenger-api|shareextension)?$|^fb\d+$/.test(String(scheme)))) {
-    fail('IOS_META_SDK_LINKED', 'Info.plist must not keep Facebook SDK configuration, fb URL schemes or Meta query schemes');
+    : []).map(String);
+  const missingQuerySchemes = META_SDK_QUERY_SCHEMES.filter(scheme => !queriedSchemes.includes(scheme));
+  if (missingQuerySchemes.length > 0) {
+    fail(
+      'IOS_META_SDK_CONFIG',
+      `Info.plist LSApplicationQueriesSchemes must list ${missingQuerySchemes.join(', ')}`
+    );
   }
-  if (/(?:\bfrom\s*|\brequire\(\s*|\bimport\(\s*)['"]react-native-fbsdk-next['"]/.test(facebookIosButton) ||
-      !facebookIosButton.includes('export default function FacebookSignInButton')) {
-    fail('IOS_META_SDK_LINKED', 'components/auth/FacebookSignInButton.ios.tsx must stay a stub that never imports the Meta JS SDK');
+  // Ровно `false`: отсутствующий ключ для SDK означает «включено», поэтому
+  // проверка не терпит undefined.
+  const trackingFlagsOn = META_SDK_NO_TRACKING_FLAGS.filter(key => infoConfig[key] !== false);
+  if (trackingFlagsOn.length > 0) {
+    fail(
+      'IOS_META_SDK_CONFIG',
+      `Info.plist must disable Meta tracking and auto-init — ${trackingFlagsOn.join(', ')} is not false`
+    );
+  }
+  if (fs.existsSync(path.join(root, 'components/auth/FacebookSignInButton.ios.tsx'))) {
+    fail(
+      'IOS_META_SDK_CONFIG',
+      'components/auth/FacebookSignInButton.ios.tsx must not shadow the Limited Login button'
+    );
+  }
+  // Режим входа — единственное, что отделяет Limited Login от классического с
+  // ATT, поэтому он проверяется в исходнике, а не в договорённости.
+  if (!/Platform\.OS === 'ios'/.test(facebookNativeButton) ||
+      !/logInWithPermissions\(\s*permissions,\s*'limited'/.test(facebookNativeButton)) {
+    fail(
+      'IOS_META_SDK_CONFIG',
+      "components/auth/FacebookSignInButton.native.tsx must call logInWithPermissions with 'limited' on iOS"
+    );
+  }
+  if (/'enabled'/.test(facebookNativeButton)) {
+    fail(
+      'IOS_META_SDK_CONFIG',
+      'components/auth/FacebookSignInButton.native.tsx must not request the tracking-enabled login mode'
+    );
   }
 
   const plistPairs = [
@@ -1170,6 +1245,8 @@ module.exports = {
   EXPECTED,
   IOS_EXCLUDED_NATIVE_MODULES,
   IOS_IPAD_ORIENTATIONS,
+  META_SDK_FRAMEWORK_PREFIX_PATTERN,
+  META_SDK_NO_TRACKING_FLAGS,
   IOS_PURPOSE_STRINGS,
   LOCALIZED_PURPOSE_STRINGS,
   PRODUCTION_AASA_APPLE_CDN,

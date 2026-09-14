@@ -8,6 +8,7 @@ import type { AppleAuthResult, AppleCredentialPayload } from '@/api/appleAuth';
 import type {
     FacebookAuthResult,
     FacebookCompletionStartResult,
+    FacebookCredentialPayload,
 } from '@/api/auth';
 import type { AuthOutcome } from '@/utils/authFailure';
 
@@ -46,7 +47,7 @@ export interface AuthActions {
     login: (email: string, password: string) => Promise<AuthOutcome>;
     loginWithGoogle: (credential: string) => Promise<AuthOutcome>;
     loginWithApple: (credential: AppleCredentialPayload) => Promise<AppleAuthResult>;
-    loginWithFacebook: (credential: string) => Promise<FacebookAuthResult>;
+    loginWithFacebook: (credential: FacebookCredentialPayload) => Promise<FacebookAuthResult>;
     startFacebookEmailCompletion: (
         completionHandle: string,
         email: string,

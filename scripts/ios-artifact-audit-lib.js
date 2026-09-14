@@ -8,13 +8,17 @@ const {
   IOS_IPAD_ORIENTATIONS,
   IOS_PURPOSE_STRINGS,
   LOCALIZED_PURPOSE_STRINGS,
+  META_SDK_FRAMEWORK_PREFIX_PATTERN,
+  META_SDK_NO_TRACKING_FLAGS,
 } = require('./ios-release-guard-lib');
 
-// Meta SDK is excluded from the iPhone build (#1895): the linked Meta
-// frameworks declare tracking=true in their own privacy manifests, which the
-// app-owned manifest and the published App Privacy form both deny.
-const META_SDK_SYMBOL_PATTERN = /FBSDK(?:CoreKit|LoginKit|ShareKit|GamingServicesKit)|FBAEMKit/;
-const META_SDK_ENTRY_PATTERN = /^(?:FBSDK|FBAEMKit)/i;
+// Meta SDK снова едет в iPhone-сборке (#1918), но только ради Limited Login.
+// Его собственные privacy-манифесты объявляют tracking=true — это заявление
+// самого SDK о возможностях, а не о поведении приложения. Архив признаётся
+// соответствующим app-owned манифесту (tracking=false) и форме App Privacy
+// ровно тогда, когда трекинг объявляют только бандлы Meta И скомпилированный
+// Info.plist держит выключенными автологирование событий, сбор advertiser ID и
+// автоинициализацию. Трекинг любого другого SDK — по-прежнему ошибка.
 
 const EXPECTED_ENTITLEMENTS = Object.freeze({
   'aps-environment': EXPECTED.apnsEnvironment,
@@ -273,7 +277,6 @@ function validateIosAppBundle(appPath, options = {}) {
   const executablePath = typeof info.CFBundleExecutable === 'string'
     ? path.join(appPath, info.CFBundleExecutable)
     : '';
-  const metaSdkExecutables = [];
   if (!executablePath || !fs.existsSync(executablePath)) {
     fail('IOS_ARTIFACT_EXECUTABLE', 'archive app executable is missing');
   } else {
@@ -284,9 +287,6 @@ function validateIosAppBundle(appPath, options = {}) {
           encoding: 'utf8',
           maxBuffer: 128 * 1024 * 1024,
         });
-        if (META_SDK_SYMBOL_PATTERN.test(nativeStrings)) {
-          metaSdkExecutables.push(path.relative(appPath, nativeExecutable));
-        }
         for (const requirement of SENSITIVE_NATIVE_API_INVENTORY) {
           if (requirement.pattern.test(nativeStrings) &&
               (typeof info[requirement.key] !== 'string' || info[requirement.key].trim().length < 20)) {
@@ -343,21 +343,10 @@ function validateIosAppBundle(appPath, options = {}) {
     }
   }
 
-  // No Meta framework, resource bundle, compiled Facebook configuration or
-  // linked FBSDK symbol may reach the archive (#1895).
-  const metaSdkEntries = findEntries(appPath, entry => META_SDK_ENTRY_PATTERN.test(entry.name))
-    .map(entry => path.relative(appPath, entry));
-  const facebookInfoKeys = Object.keys(info).filter(key => /^Facebook/.test(key));
-  if (metaSdkEntries.length > 0 || facebookInfoKeys.length > 0 || metaSdkExecutables.length > 0) {
-    const detail = [
-      metaSdkEntries.length > 0 && `bundled: ${metaSdkEntries.sort().join(', ')}`,
-      facebookInfoKeys.length > 0 && `Info.plist: ${facebookInfoKeys.sort().join(', ')}`,
-      metaSdkExecutables.length > 0 && `linked symbols: ${metaSdkExecutables.sort().join(', ')}`,
-    ].filter(Boolean).join('; ');
-    fail('IOS_ARTIFACT_META_SDK', `Meta SDK must not ship in the iPhone archive — ${detail}`);
-  }
-  // Every bundled SDK privacy manifest must stay tracking-free, otherwise the
-  // archive contradicts the app-owned manifest and the App Privacy form.
+  // Трекинг в bundled-манифесте допускается только у бандлов Meta SDK и только
+  // при выключенных флагах трекинга в скомпилированном Info.plist (#1918).
+  const metaTrackingDisabled = META_SDK_NO_TRACKING_FLAGS.every(key => info[key] === false);
+  const enabledMetaTrackingFlags = META_SDK_NO_TRACKING_FLAGS.filter(key => info[key] !== false);
   for (const manifestPath of privacyManifests) {
     const relativePath = path.relative(appPath, manifestPath);
     let manifest;
@@ -370,10 +359,21 @@ function validateIosAppBundle(appPath, options = {}) {
     const trackingDomains = Array.isArray(manifest.NSPrivacyTrackingDomains)
       ? manifest.NSPrivacyTrackingDomains
       : [];
-    if (manifest.NSPrivacyTracking === true || trackingDomains.length > 0) {
+    if (manifest.NSPrivacyTracking !== true && trackingDomains.length === 0) continue;
+    const detail = `${relativePath} declares tracking${trackingDomains.length > 0 ? ` (${trackingDomains.join(', ')})` : ''}`;
+    // Владелец манифеста — имя бандла/фреймворка, внутри которого он лежит;
+    // app-owned манифест лежит в корне .app и исключением никогда не является.
+    const owner = path.dirname(manifestPath) === appPath
+      ? path.basename(appPath)
+      : path.basename(path.dirname(manifestPath));
+    if (!META_SDK_FRAMEWORK_PREFIX_PATTERN.test(owner)) {
+      fail('IOS_ARTIFACT_SDK_TRACKING', `${detail} and is not a Meta SDK bundle`);
+      continue;
+    }
+    if (!metaTrackingDisabled) {
       fail(
         'IOS_ARTIFACT_SDK_TRACKING',
-        `${relativePath} declares tracking${trackingDomains.length > 0 ? ` (${trackingDomains.join(', ')})` : ''}`
+        `${detail} while the compiled Info.plist leaves ${enabledMetaTrackingFlags.join(', ')} enabled`
       );
     }
   }

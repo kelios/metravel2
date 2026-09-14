@@ -264,11 +264,46 @@ iPhone 17 Pro) собралась, в `.app` 0 FBSDK/FBAEM-записей, 0 Fac
 держит главный экран. Подписанный IPA следующего кандидата проверяется тем же
 `ios:artifact:audit` после сборки.
 
+### Корректировка для следующего кандидата — #1918 (14.09.2026)
+
+Решение владельца от 14.09.2026 заменило вариант #1895 «убрать SDK»: вход через
+Facebook на iPhone нужен, и Meta SDK возвращается в сборку — но только в
+конфигурации **Limited Login без трекинга**. Раздел #1895 ниже сохранён как
+история; действующим состоянием следующего кандидата является этот.
+
+Что в сборке: `expo.autolinking.ios.exclude` снят, `pod install` (без
+`--repo-update`) вернул FBSDKCoreKit/Basics/LoginKit/ShareKit/GamingServicesKit,
+FBAEMKit и `ExpoAdapterFBSDKNext`; `ios/metravel/Info.plist` снова несёт
+`FacebookAppID`, `FacebookClientToken`, `FacebookDisplayName`, схему `fb<AppID>`
+и `LSApplicationQueriesSchemes`, при этом `FacebookAutoInitEnabled=false`,
+`FacebookAutoLogAppEventsEnabled=false`,
+`FacebookAdvertiserIDCollectionEnabled=false`. Заглушка
+`FacebookSignInButton.ios.tsx` удалена.
+
+Что это значит для App Privacy: приложение не запрашивает App Tracking
+Transparency и не использует Facebook App Events, Advertiser ID и AEM. Вход идёт
+режимом Meta Limited Login — `LoginManager.logInWithPermissions(permissions,
+'limited', nonce)`; результат — OIDC-токен и nonce, а не access token Graph API
+(`components/auth/FacebookSignInButton.native.tsx`). Форма App Privacy остаётся
+`tracking=false`; `tracking=true` в собственных манифестах фреймворков Meta —
+заявление SDK о возможностях, которые в этой конфигурации выключены.
+
+Гейты переведены на новый контракт: `npm run ios:release:guard` —
+`IOS_META_SDK_CONFIG` (SDK залинкован, ключи и схемы Meta на месте, три флага
+`false`, iOS-ветка вызывает `'limited'` и не просит `'enabled'`, заглушки
+`.ios.tsx` нет); `npm run ios:artifact:audit` — `IOS_ARTIFACT_SDK_TRACKING`
+допускает tracking-манифест только у бандлов `FBSDK*`/`FBAEMKit*` и только при
+выключенных флагах в compiled Info.plist, любой другой SDK с трекингом и
+app-owned манифест с трекингом — ошибка (`IOS_ARTIFACT_META_SDK` снят).
+Кнопка на iPhone остаётся выключенной флагом
+`EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED` до деплоя бэкенд-контракта (#1912) и
+настройки Meta/EAS владельцем (#1917).
+
 | Сервис | Назначение и данные | Доказательство / граница |
 | --- | --- | --- |
 | MeTravel API | Аккаунт/email-вход, статьи, фото, квесты, планы, жалобы и блокировки; аккаунтные данные, выбранный контент, координаты маршрута | `api/auth.ts:31,145`, `api/user.ts:26,238`, `api/misc.ts:238`; runtime-кандидат проверяется в #1889 |
 | Apple / Google | Настроенные способы входа наряду с email; provider identity/token, имя/email передаются MeTravel | `components/auth/AppleSignInButton.native.tsx:92`, `GoogleSignInButton.native.tsx:48,123`; в exact IPA Google config непустая и availability gate проходит; успешный вход ещё проверяется |
-| Facebook SDK | Build 9: native SDK присутствует с AutoInit=true, Facebook login UI скрыт. Следующий кандидат (#1895, коммит `e17db1872`): Meta SDK исключён из iOS-сборки целиком — без фреймворков, Facebook-ключей Info.plist и tracking-manifest | Build 9 — exact Hermes v98: `isFacebookNativeLoginEnabled` сравнивает пустую строку с `true` и возвращает false; linked SDK не означает доступную кнопку входа или отсутствие SDK-сетевой активности. Следующий кандидат — см. «Корректировка для следующего кандидата» выше |
+| Facebook SDK | Build 9: native SDK присутствует с AutoInit=true, Facebook login UI скрыт. Следующий кандидат (#1918): Meta SDK присутствует в конфигурации Limited Login без трекинга — AutoInit, App Events и Advertiser ID выключены, ATT не запрашивается, вход отдаёт OIDC-токен вместо access token | Build 9 — exact Hermes v98: `isFacebookNativeLoginEnabled` сравнивает пустую строку с `true` и возвращает false; linked SDK не означает доступную кнопку входа или отсутствие SDK-сетевой активности. Следующий кандидат — см. «Корректировка для следующего кандидата — #1918 (14.09.2026)» выше |
 | Amazon S3 | Загруженные фото/медиа и резервные копии базы, содержащие аккаунтные и контентные данные | Реальная инвентаризация `docs/features/images.md:127` от 30.07 и успешный backup `docs/DB_BACKUP.md:3,7,11` от 31.08; узкое чтение действующих настроек 12.09 подтвердило `eu-north-1` |
 | Leaflet / OpenStreetMap | Локальная карта в native WebView, тайлы через MeTravel proxy; область/масштаб карты | `components/MapPage/Map.ios.tsx:3,16`, `config/mapWebTileContract.ts:6`; это не встроенная Google Maps/Apple MapKit карта |
 | Nominatim / BigDataCloud | Поиск адресов и обратное геокодирование; запрос, координаты и язык | `api/external/nominatim.ts:34`, `api/geoQueries.ts:123,147,209`; возможны прямые обращения к поставщику |

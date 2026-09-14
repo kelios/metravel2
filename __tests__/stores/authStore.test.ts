@@ -734,11 +734,11 @@ describe('authStore', () => {
       });
       fetchUserProfile.mockResolvedValue({ first_name: 'Facebook', last_name: 'User', avatar: null });
 
-      await expect(useAuthStore.getState().loginWithFacebook('short-lived-facebook-token')).resolves.toMatchObject({
+      await expect(useAuthStore.getState().loginWithFacebook({ kind: 'access_token', accessToken: 'short-lived-facebook-token' })).resolves.toMatchObject({
         status: 'authenticated',
       });
 
-      expect(facebookAuthApi).toHaveBeenCalledWith('short-lived-facebook-token');
+      expect(facebookAuthApi).toHaveBeenCalledWith({ kind: 'access_token', accessToken: 'short-lived-facebook-token' });
       expect(setSecureItem).not.toHaveBeenCalled();
       expect(useAuthStore.getState()).toEqual(expect.objectContaining({
         isAuthenticated: true,
@@ -755,7 +755,7 @@ describe('authStore', () => {
         expiresIn: 900,
       });
 
-      await expect(useAuthStore.getState().loginWithFacebook('valid-no-email')).resolves.toMatchObject({
+      await expect(useAuthStore.getState().loginWithFacebook({ kind: 'access_token', accessToken: 'valid-no-email' })).resolves.toMatchObject({
         status: 'email_completion_required',
         completionHandle: 'opaque-handle',
       });
@@ -801,7 +801,7 @@ describe('authStore', () => {
     it('исключение внутри адаптера возвращает reason из общей таксономии, как у Apple', async () => {
       facebookAuthApi.mockRejectedValue(new Error('boom'));
 
-      await expect(useAuthStore.getState().loginWithFacebook('short-lived-facebook-token')).resolves.toMatchObject({
+      await expect(useAuthStore.getState().loginWithFacebook({ kind: 'access_token', accessToken: 'short-lived-facebook-token' })).resolves.toMatchObject({
         status: 'error',
         reason: 'unknown',
       });

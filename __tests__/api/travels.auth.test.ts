@@ -153,7 +153,9 @@ describe('src/api/auth.ts auth/password API', () => {
     // Баг: тело ответа читалось ПОСЛЕ throw внутри retry, поэтому 401 с
     // `detail` («Аккаунт не активирован…») всегда показывался как «Неверный
     // email или пароль» — реальная причина отказа терялась.
-    it('401 с detail от бэкенда — показывает текст бэкенда, а не «неверный пароль»', async () => {
+    // #1946: причина по-прежнему доходит, но текстом ПРИЛОЖЕНИЯ (локализуемый
+    // ключ), а не сырой русской строкой бэкенда.
+    it('401 с detail «не активирован» — локализованный текст приложения про активацию', async () => {
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 401 } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({
         detail: 'Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме',
@@ -164,9 +166,37 @@ describe('src/api/auth.ts auth/password API', () => {
       expect(result).toEqual({
         ok: false,
         reason: 'rejected',
-        message: 'Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме',
+        message: 'Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме.',
       });
       expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    // #1946: прод отдаёт обычный отказ по паролю в поле `error`, а не `detail`,
+    // и ветка `detail ||` делала локализованный ключ недостижимым — EN/BE/UK/PL
+    // получали русский текст сервера.
+    it('401 с error «Данные входа не корректные» — локализованный ключ, а не строка бэкенда', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 401 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        error: 'Данные входа не корректные',
+      } as any);
+
+      const result = await loginApi('test@example.com', 'password');
+
+      expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Неверный email или пароль' });
+      expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    // 400 от сериализатора DRF несёт технические тексты полей — их в форму
+    // входа тоже не выводим.
+    it('400 с произвольным message от бэкенда — локализованный текст про учётные данные', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 400 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        message: 'Enter a valid email address.',
+      } as any);
+
+      const result = await loginApi('test@example.com', 'password');
+
+      expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Неверный email или пароль' });
     });
 
     it('401 без тела — падает на прежний текст про учётные данные', async () => {
@@ -359,7 +389,10 @@ describe('src/api/auth.ts auth/password API', () => {
         is_superuser: false,
       } as any);
 
-      await expect(facebookAuthApi('  short-lived-user-token  ')).resolves.toEqual({
+      await expect(facebookAuthApi({
+        kind: 'access_token',
+        accessToken: '  short-lived-user-token  ',
+      })).resolves.toEqual({
         status: 'authenticated',
         user: expect.objectContaining({ id: 19 }),
       });
@@ -373,11 +406,43 @@ describe('src/api/auth.ts auth/password API', () => {
       );
     });
 
+    it('sends the Limited Login OIDC token with the nonce of the attempt', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        token: 'server-session-token',
+        name: 'Facebook User',
+        email: 'facebook@example.com',
+        id: 19,
+        is_superuser: false,
+      } as any);
+
+      await expect(facebookAuthApi({
+        kind: 'authentication_token',
+        authenticationToken: '  limited-login-oidc-token  ',
+        nonce: '  attempt-nonce  ',
+      })).resolves.toEqual({
+        status: 'authenticated',
+        user: expect.objectContaining({ id: 19 }),
+      });
+      expect(mockedFetchWithTimeout).toHaveBeenCalledWith(
+        expect.stringContaining('/user/facebook-login/'),
+        expect.objectContaining({
+          method: 'POST',
+          // Ровно одна форма credential: access token в это тело не попадает.
+          body: JSON.stringify({
+            authentication_token: 'limited-login-oidc-token',
+            nonce: 'attempt-nonce',
+          }),
+        }),
+        expect.any(Number),
+      );
+    });
+
     it('maps a stable backend conflict code to a localized error', async () => {
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 409 } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ error_code: 'facebook_account_conflict' } as any);
 
-      await expect(facebookAuthApi('facebook-token')).resolves.toEqual({
+      await expect(facebookAuthApi({ kind: 'access_token', accessToken: 'facebook-token' })).resolves.toEqual({
         status: 'error',
         errorCode: 'facebook_account_conflict',
         // #1944: сервер ответил — это отказ по сути запроса, а не обрыв связи.
@@ -387,7 +452,25 @@ describe('src/api/auth.ts auth/password API', () => {
     });
 
     it('does not call the backend without a Facebook credential', async () => {
-      await expect(facebookAuthApi('   ')).resolves.toMatchObject({
+      await expect(facebookAuthApi({ kind: 'access_token', accessToken: '   ' })).resolves.toMatchObject({
+        status: 'error',
+        errorCode: 'access_token_required',
+      });
+      // Limited Login без nonce — тот же отказ: сервер сверяет nonce с claim
+      // токена, и запрос без него заведомо невалиден.
+      await expect(facebookAuthApi({
+        kind: 'authentication_token',
+        authenticationToken: 'oidc-token',
+        nonce: '   ',
+      })).resolves.toMatchObject({
+        status: 'error',
+        errorCode: 'access_token_required',
+      });
+      await expect(facebookAuthApi({
+        kind: 'authentication_token',
+        authenticationToken: '  ',
+        nonce: 'nonce-1',
+      })).resolves.toMatchObject({
         status: 'error',
         errorCode: 'access_token_required',
       });
@@ -403,7 +486,10 @@ describe('src/api/auth.ts auth/password API', () => {
         expires_in: 900,
       } as any);
 
-      await expect(facebookAuthApi('sensitive-facebook-token')).resolves.toEqual({
+      await expect(facebookAuthApi({
+        kind: 'access_token',
+        accessToken: 'sensitive-facebook-token',
+      })).resolves.toEqual({
         status: 'email_completion_required',
         reasonCode: 'facebook_primary_email_unavailable',
         completionHandle: 'opaque-completion-handle',
