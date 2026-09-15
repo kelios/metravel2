@@ -86,6 +86,26 @@ describe('QuestForCityCard — мета-ряд при длинной подпи�
     },
   )
 
+  it.each(['duration', 'difficulty'])(
+    'держит разделитель перед группой «%s» несжимаемым — сжиматься должна подпись, а не точка',
+    (key) => {
+      renderCard()
+
+      // Выход на сжатие в группе обязан быть ровно один (NATIVE-TEXT-ROW-001):
+      // конкурирующий flexShrink у разделителя вернёт тихую обрезку подписи.
+      const dots = screen
+        .getByTestId(`quest-card-meta-${key}`)
+        .findAllByType(require('react-native').View)
+        .map((node: { props: { style?: unknown } }) =>
+          StyleSheet.flatten(node.props.style) as Record<string, unknown>,
+        )
+        .filter((style: Record<string, unknown>) => style.width === 3 && style.height === 3)
+
+      expect(dots).toHaveLength(1)
+      expect(dots[0].flexShrink).toBe(0)
+    },
+  )
+
   it('оставляет подписи явное многоточие вместо тихой обрезки', () => {
     renderCard()
 
