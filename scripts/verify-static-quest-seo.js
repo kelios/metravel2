@@ -139,10 +139,18 @@ function hasQuestCityLandingSection(html) {
   return /<section[^>]*data-ssg-quest-city="true"[^>]*>[\s\S]*?<\/section>/i.test(html)
 }
 
+/**
+ * #1569: к обзору и практике добавлен блок заметок о местах города — это
+ * единственная часть страницы, которой нет в шаблоне и которая отличает один
+ * город от другого. Проверка присутствия здесь не заменяет замер объёма
+ * (`verifyQuestPageContentDepth`): она называет пропавший блок по имени, а не
+ * оставляет разбираться со счётом слов.
+ */
 function hasQuestCityStandaloneContent(html) {
   return (
     /data-ssg-quest-city-overview="true"/i.test(html) &&
-    /data-ssg-quest-city-practical="true"/i.test(html)
+    /data-ssg-quest-city-practical="true"/i.test(html) &&
+    /data-ssg-quest-city-walk="true"/i.test(html)
   )
 }
 
@@ -174,7 +182,9 @@ function verifyQuestCityHtml(html, expectedCanonical, childHtml = '') {
     issues.push(`bad canonical: ${getCanonical(html) || 'missing'}`)
   }
   if (!hasQuestCityLandingSection(html)) issues.push('missing crawlable quest-city section')
-  if (!hasQuestCityStandaloneContent(html)) issues.push('missing independent city overview/practical content')
+  if (!hasQuestCityStandaloneContent(html)) {
+    issues.push('missing independent city overview/walk/practical content')
+  }
 
   if (childHtml) {
     const childTitle = getTitle(childHtml)
@@ -332,27 +342,31 @@ const QUEST_SSG_SECTION_PATTERN = '<section[^>]*\\bdata-ssg-(quests?(?:-[a-z0-9]
  *   quests-listing     1  737                           clears the default
  *   quest-scenario     1  493                           clears the default
  *
+ * Re-measured 15.09.2026 after #1569 gave the city landing its own notes about
+ * the places its quests walk past, driving the real builders over the same live
+ * catalog (132 cities, 182 quest bundles):
+ *   quest-city    n=132  min 352  median 677  max 994   own wording 38.8–79.4%
+ * so the city exemption was deleted rather than raised: the level now clears
+ * the default outright, and the rule above holds it there.
+ *
  * The floors below are NOT those catalog minima. A floor taken from what the
  * catalog happens to contain today only holds until the next page is thinner
  * than every existing one, and the builders can legitimately render less than
- * the current minimum: both optional blocks of a city landing are conditional
- * (`nearbyCities` needs another quest city within 400 km and `travelLinks` a
- * matching travel, scripts/generate-seo-pages.js:3116-3121), so the first quest
- * in an isolated city with no local travel article renders far below 118.
- * Driven on the generator's own models at their leanest shape, the builders
- * produce 107 words for a city and 112 for a country, so the floors sit under
- * that at 100: low enough that no legitimate template output can red a
- * fail-closed production build, high enough to catch a section that lost its
- * overview and practical blocks outright (that page measures 42). Both numbers
- * are pinned in the guard's tests, which drive the real builders rather than a
- * hand-written lookalike model.
+ * the current minimum: both optional blocks of a country landing are
+ * conditional, so the first quest in an isolated country renders below what the
+ * catalog holds today. Driven on the generator's own model at its leanest
+ * shape, the country builder produces 112 words, so the floor sits under that
+ * at 100: low enough that no legitimate template output can red a fail-closed
+ * production build, high enough to catch a section that lost its overview and
+ * practical blocks outright (that page measures 42). The number is pinned in
+ * the guard's tests, which drive the real builder rather than a hand-written
+ * lookalike model.
  *
  * The list can only shrink: once every page of a listed level clears the
  * default, the guard fails on the stale entry, so a fixed level cannot quietly
  * keep its licence to be thin.
  */
 const THIN_CONTENT_EXEMPTIONS = [
-  { kind: 'quest-city', minWords: 100, minDistinctRatio: 0, ticket: '#1569' },
   { kind: 'quest-country', minWords: 100, minDistinctRatio: 0, ticket: '#1929' },
 ]
 

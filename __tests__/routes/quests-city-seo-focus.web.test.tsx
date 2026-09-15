@@ -8,6 +8,23 @@ import { render } from '@testing-library/react-native'
 
 const mockUseIsFocused = jest.fn(() => true)
 
+const WALK_MODEL = {
+  places: [
+    {
+      questId: 'rome-forum',
+      questTitle: 'Квест по Риму: Форум',
+      pointIndex: 0,
+      title: 'Капитолий',
+      location: 'Площадь Микеланджело',
+      sentences: ['Площадь спроектировал Микеланджело, и это его единственный градостроительный проект.'],
+      openingHours: '',
+      ticketPrice: '',
+    },
+  ],
+  otherPlaces: [],
+  routes: [],
+}
+
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children?: React.ReactNode }) => children ?? null,
   useIsFocused: () => mockUseIsFocused(),
@@ -65,6 +82,15 @@ jest.mock('@/hooks/useQuestsApi', () => {
 
 jest.mock('@/hooks/useQuestReturnVisit', () => ({
   useQuestReturnVisit: () => undefined,
+}))
+
+// #1569: заметки о местах приходят из бандлов квестов. Здесь проверяется
+// жизненный цикл меты и заголовка, поэтому загрузка бандлов заменена её
+// результатом — и её отсутствием в отдельном кейсе ниже.
+const mockUseQuestCityWalk = jest.fn(() => WALK_MODEL as unknown)
+
+jest.mock('@/hooks/useQuestCityWalk', () => ({
+  useQuestCityWalk: (...args: unknown[]) => mockUseQuestCityWalk(...(args as [])),
 }))
 
 jest.mock('@/hooks/useQuestCatalogResponsiveModel', () => ({
@@ -132,6 +158,7 @@ describe('quest city SEO focus lifecycle', () => {
   beforeEach(() => {
     jest.useFakeTimers()
     mockUseIsFocused.mockReturnValue(true)
+    mockUseQuestCityWalk.mockReturnValue(WALK_MODEL)
     document.body.innerHTML = ''
     document.head.innerHTML = [
       `<meta name="description" content="${GENERIC_DESCRIPTION}">`,
@@ -176,6 +203,22 @@ describe('quest city SEO focus lifecycle', () => {
     for (const selector of DESCRIPTION_SELECTORS) {
       expect(document.querySelectorAll(selector)).toHaveLength(0)
     }
+  })
+
+  /**
+   * Статический блок — единственное место, где заметки о городе есть до того,
+   * как рантайм получит бандлы. Снять его раньше — значит на это время оставить
+   * отрендеренную страницу без того самого содержания, ради которого она
+   * переписана (#1569).
+   */
+  it('keeps the static city section until the runtime notes are loaded', () => {
+    mockUseQuestCityWalk.mockReturnValueOnce(null)
+    document.body.innerHTML =
+      '<section data-ssg-quest-city="true"><h1>Static city heading</h1></section>'
+
+    render(<QuestsByCityScreen />)
+
+    expect(document.querySelector('section[data-ssg-quest-city="true"]')).not.toBeNull()
   })
 
   it('keeps one visible runtime H1 and removes only the stale shared SSG heading', () => {

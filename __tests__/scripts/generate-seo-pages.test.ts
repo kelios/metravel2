@@ -52,8 +52,10 @@ const {
   loadRedirectManifest,
   buildRedirectStubHtml,
   patchNoindexFallbackTemplate,
+  assertQuestCityLandingsCarryWalk,
   buildQuestCityLandingHtml,
   buildQuestCityLandingModel,
+  buildQuestRouteDigest,
   buildQuestCountryLandingHtml,
   buildQuestCountryLandingModel,
   injectQuestCountryLandingSection,
@@ -2175,6 +2177,147 @@ describe('one-quest city landing value', () => {
     expect(cityDescription).not.toBe(buildQuestSeoDescription(quests[0]))
     expect(html).toContain('Страна маршрута — Италия')
     expect(html).not.toContain('в Италия')
+  })
+})
+
+/**
+ * #1569: посадочная города обязана нести собственный текст — заметки о местах,
+ * мимо которых идут её квесты. До этого блока страница состояла из шаблона с
+ * подставленным названием: 118–182 слова, 0% собственных формулировок, и 21 из
+ * 132 адресов Google не взял в индекс.
+ */
+describe('заметки о местах на посадочной города (#1569)', () => {
+  const { questsGenerated2 } = require('@/i18n/locales/ru/generated/quests_02')
+
+  const ROME_QUEST = {
+    quest_id: 'rome-forum',
+    city_id: '121',
+    city_name: 'Рим',
+    country_name: 'Италия',
+    country_code: 'it',
+    title: 'Квест по Риму: Форум',
+    points: 2,
+    duration_min: 120,
+    difficulty: 'easy',
+    pet_friendly: true,
+    lat: 41.89,
+    lng: 12.49,
+  }
+
+  const ROME_BUNDLE = {
+    quest_id: 'rome-forum',
+    intro: { location: 'Площадь Венеции', story: 'Вступление к маршруту.' },
+    steps: [
+      {
+        step_id: 'capitol',
+        title: '1. Капитолий',
+        location: 'Площадь Микеланджело',
+        story: [
+          'Капитолийский холм был центром древнего города и остался им до сих пор.',
+          'Площадь перестроил Микеланджело, и это его единственный градостроительный проект.',
+          'В центре площади стоит конная статуя Марка Аврелия, единственная дошедшая до нас целой.',
+          'Приглядись к рисунку мостовой под ногами — овал появился только в двадцатом веке.',
+        ].join(' '),
+        answer_pattern: { type: 'exact', value: 'волчица' },
+        point_role: 'required',
+        poi_info: { is_museum: true, opening_hours: 'вт–вс 09:30–19:30', ticket_price: '16 евро' },
+      },
+      {
+        step_id: 'forum',
+        title: '2. Римский форум',
+        location: 'Улица Императорских форумов',
+        story: [
+          'Форум веками служил главной площадью республики и местом народных собраний.',
+          'После падения империи это место превратилось в пастбище и называлось Коровьим полем.',
+          'Раскопки начались только в девятнадцатом веке и продолжаются по сей день.',
+        ].join(' '),
+        answer_pattern: { type: 'any_text' },
+        point_role: 'optional',
+      },
+    ],
+  }
+
+  const buildRome = (bundles: unknown) => {
+    const city = buildQuestCityLandingModel([ROME_QUEST], undefined, [], bundles).find(
+      (candidate: { segment: string }) => candidate.segment === 'rome',
+    )
+    return { city, html: buildQuestCityLandingHtml(MINIMAL_BASE, city) }
+  }
+
+  const ru = (key: string, values: string[] = []) =>
+    values.reduce(
+      (text: string, value: string, index: number) =>
+        text.replace(`{{value${index + 1}}}`, value),
+      questsGenerated2[`app.tabs.quests.city.index.${key}`] as string,
+    )
+
+  it('публикует хвост авторского рассказа, которого нет на странице квеста', () => {
+    const { city, html } = buildRome(new Map([['rome-forum', ROME_BUNDLE]]))
+
+    expect(html).toContain('data-ssg-quest-city-walk="true"')
+    expect(city.walk.places.map((place: { title: string }) => place.title)).toEqual([
+      'Капитолий',
+      'Римский форум',
+    ])
+
+    const published = city.walk.places.flatMap((place: { sentences: string[] }) => place.sentences)
+    // Первые предложения точки принадлежат странице квеста (#1763): город берёт
+    // ровно то, что дайджест оставил, иначе две страницы читаются как копии.
+    const questPageDigest = buildQuestRouteDigest(ROME_BUNDLE).flatMap(
+      (point: { sentences: string[] }) => point.sentences,
+    )
+    expect(published).not.toHaveLength(0)
+    for (const sentence of questPageDigest) expect(published).not.toContain(sentence)
+
+    // Инструкция идущему — это задание точки, а не описание места.
+    expect(html).not.toContain('Приглядись к рисунку мостовой')
+    // Номер точки — порядок прохождения, на странице города он чужой.
+    expect(html).not.toContain('1. Капитолий')
+  })
+
+  it('добавляет практику точки и структуру маршрута из каталога и бандла', () => {
+    const { html } = buildRome(new Map([['rome-forum', ROME_BUNDLE]]))
+
+    expect(html).toContain('Часы работы: вт–вс 09:30–19:30')
+    expect(html).toContain('Билет: 16 евро')
+    expect(html).toContain('data-ssg-quest-city-routes="true"')
+    expect(html).toContain('Квест «Квест по Риму: Форум»: 2 точки, примерно 2 ч, сложность — лёгкая.')
+    expect(html).toContain('По желанию — 1 точка: их можно пропустить.')
+    expect(html).toContain('Старт — Площадь Венеции, финиш — Улица Императорских форумов.')
+    expect(html).toContain('Музеев по дороге: 1 — часы работы лучше проверить заранее.')
+    expect(html).toContain('Маршрут отмечен как подходящий для прогулки с собакой.')
+  })
+
+  /**
+   * Текст, который видит только краулер, — это клоакинг. RU-строки блока обязаны
+   * совпадать со значениями i18n, по которым тот же текст рисует экран города.
+   */
+  it('печатает ровно те RU-строки, которые приложение берёт из i18n', () => {
+    const { html } = buildRome(new Map([['rome-forum', ROME_BUNDLE]]))
+
+    expect(html).toContain(ru('walkTitle', ['Рим']))
+    expect(html).toContain(ru('walkLead'))
+    expect(html).toContain(ru('routesStructureTitle'))
+    expect(html).toContain(ru('walkOpeningHours', ['вт–вс 09:30–19:30']))
+    expect(html).toContain(ru('walkTicket', ['16 евро']))
+    expect(html).toContain(
+      ru('routeSummary', [
+        'Квест по Риму: Форум',
+        `2 точки, ${ru('routeDuration', ['2 ч'])}, ${ru('routeDifficulty', [ru('routeDifficultyEasy')])}`,
+      ]),
+    )
+    expect(html).toContain(ru('routeOptional', ['1 точка']))
+    expect(html).toContain(ru('routeEnds', ['Площадь Венеции', 'Улица Императорских форумов']))
+    expect(html).toContain(ru('routeMuseums', ['1']))
+    expect(html).toContain(ru('routePet'))
+  })
+
+  it('останавливает сборку, когда у города не оказалось ни одного бандла', () => {
+    const { city, html } = buildRome(null)
+
+    expect(city.walk.places).toEqual([])
+    expect(html).not.toContain('data-ssg-quest-city-walk="true"')
+    expect(() => assertQuestCityLandingsCarryWalk([city])).toThrow(/\/quests\/rome \(Рим\)/)
   })
 })
 

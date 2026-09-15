@@ -51,6 +51,22 @@ const {
   QUEST_SCENARIO_FAQ_RU,
 } = require('../utils/questContent');
 const { selectPopularQuests } = require('../utils/questPopularity');
+const {
+  getQuestSteps,
+  getQuestIntro,
+  splitQuestStorySentences,
+  questAnswerLiterals,
+  normalizeQuestText,
+  questTextRevealsAnswer,
+  selectQuestSafeSentences,
+  buildQuestPointFacts,
+  trimQuestPointTitle,
+  questPointId,
+} = require('../utils/questStoryText');
+const {
+  buildQuestCityWalkModel,
+  questCityWalkHasContent,
+} = require('../utils/questCityWalk');
 
 // ---------------------------------------------------------------------------
 // CLI args
@@ -2031,27 +2047,6 @@ function finalizeTravelPageHtml(baseHtml) {
   return gateAppScriptsBehindHero(disableExpoRouterHydration(baseHtml));
 }
 
-function parseQuestJsonField(value, fallback) {
-  if (Array.isArray(value)) return value;
-  if (value && typeof value === 'object') return value;
-  if (typeof value !== 'string' || !value.trim()) return fallback;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return fallback;
-  }
-}
-
-function getQuestSteps(bundle) {
-  const parsed = parseQuestJsonField(bundle?.steps, []);
-  return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
-}
-
-function getQuestIntro(bundle) {
-  const parsed = parseQuestJsonField(bundle?.intro, null);
-  return parsed && typeof parsed === 'object' ? parsed : null;
-}
-
 function formatQuestDuration(durationMin) {
   const total = Number(durationMin) || 0;
   if (total <= 0) return '';
@@ -2060,197 +2055,6 @@ function formatQuestDuration(durationMin) {
   if (hours > 0 && mins > 0) return `${hours} ч ${mins} мин`;
   if (hours > 0) return `${hours} ч`;
   return `${mins} мин`;
-}
-
-// ---------------------------------------------------------------------------
-// Безопасный пересказ маршрута для SSG-среза (#1763)
-// ---------------------------------------------------------------------------
-
-/**
- * Сколько авторского текста точки уходит в статический HTML.
- *
- * Замер по всем 165 квестам прода (04.09.2026): 1 предложение на точку даёт
- * 133 слова уникального текста на квест, 2 — 297, 3 — 450, весь отфильтрованный
- * `story` — 968. При сегодняшних 104–291 слове вне общего шаблона лимит в два
- * предложения лечит тонкость среза и оставляет страницу анонсом маршрута, а не
- * полной публикацией контента квеста (корпус `story` целиком — 221 285 слов).
- * Лимит по словам страхует случай, когда два предложения оказались абзацем.
- */
-const QUEST_DIGEST_MAX_SENTENCES = 2;
-const QUEST_DIGEST_MAX_WORDS = 60;
-
-/**
- * Приметы предложения, обращённого к игроку.
- *
- * Отбор идёт по предложениям, а не по абзацам: гипотеза «первый абзац `story`
- * описывает объект, наводки идут дальше» на корпусе НЕ подтвердилась —
- * обращение к игроку встречается в первом абзаце даже чаще, чем в последующих
- * (506/1601 = 31,6% против 853/3460 = 24,7%). Абзац как единица публикации
- * протаскивал бы наводки на трети точек.
- */
-const QUEST_PLAYER_ADDRESSED_RE = new RegExp(
-  '(?:^|[^а-яёa-z])(?:' +
-    'остановись|найди|отыщи|обрати|посмотри|подойди|встань|пройди|поверни|загляни|' +
-    'сосчитай|посчитай|прочитай|вглядись|оглядись|присмотрись|запомни|дойди|сверни|' +
-    'поднимись|спустись|ищи|смотри|обойди|двигайся|иди|идём|идем|дай|' +
-    'ты|тебя|тебе|тобой|твой|твоя|твои|твоё|твое|твоего|твоей' +
-  ')(?:[^а-яёa-z]|$)',
-  'i',
-);
-
-/**
- * Служебные формулы, которыми открываются точки «по желанию».
- *
- * Одна и та же фраза стоит у 49 точек в 40 квестах, а настоящее описание места
- * («Изысканная польская кухня прямо на Главном рынке…») идёт следующим абзацем.
- * Без этого фильтра лимит в два предложения съедал бы ровно шаблон, и 40
- * страниц несли бы одинаковый текст вместо своего.
- */
-// `\b` в JS считает границей только латиницу и цифры, поэтому после кириллицы
-// он не срабатывает вовсе — конец слова проверяем явным «дальше не буква».
-const QUEST_BOILERPLATE_RE = /^(?:необязательн(?:ая|ое|ый)|рядом с маршрутом есть место|лучшие открытия в путешествии)(?![а-яё])/i;
-
-/** Разбор описания точки на предложения; абзацы схлопываются в общий поток. */
-function splitQuestStorySentences(text) {
-  return String(text || '')
-    .replace(/\s+/g, ' ')
-    .split(/(?<=[.!?…])\s+/)
-    .map((sentence) => sentence.trim())
-    .filter(Boolean);
-}
-
-/**
- * Конкретные ответы, которые нельзя раскрывать.
- *
- * `any`, `any_text` и `any_number` конкретного ответа не задают — раскрывать у
- * них нечего. У `range` спойлер — любое число диапазона, а не только границы.
- */
-function questAnswerLiterals(answerPattern) {
-  const pattern = parseQuestJsonField(answerPattern, null);
-  if (!pattern || typeof pattern !== 'object') return [];
-  const value = parseQuestJsonField(pattern.value, pattern.value);
-
-  if (pattern.type === 'exact_any') {
-    return Array.isArray(value) ? value.map((item) => String(item)) : [];
-  }
-  if (pattern.type === 'exact') {
-    return value === null || value === undefined || value === '' ? [] : [String(value)];
-  }
-  if (pattern.type === 'range' && value && typeof value === 'object') {
-    const min = Number(value.min);
-    const max = Number(value.max);
-    if (!Number.isFinite(min) || !Number.isFinite(max) || max < min) return [];
-    // Диапазон шире сотни — не ответ, а мера; перечислять его бессмысленно.
-    if (max - min > 100) return [];
-    const literals = [];
-    for (let n = min; n <= max; n++) literals.push(String(n));
-    return literals;
-  }
-  return [];
-}
-
-/** Нормализация для сверки: регистр, ё/е и пунктуация не должны прятать совпадение. */
-function normalizeQuestText(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/ё/g, 'е')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
-}
-
-/**
- * Содержит ли текст ответ целиком (все слова ответа как отдельные токены).
- *
- * Сверка идёт по токенам, а не подстрокой, как в `scan-quest-hint-leak.js`, и
- * это не рассинхрон, а разная цена ошибки: у скана есть baseline и редактор,
- * который разбирает находку, а здесь совпадение молча выбрасывает предложение
- * из публикации. Подстрочное правило на корпусе даёт 4 совпадения, и 3 из них —
- * внутри чужого слова («кот» в «который», «три» в «смотрители», «лев» в
- * «уцелевшие»), то есть три выброшенных описания на ровном месте.
- */
-function questTextRevealsAnswer(text, answerLiterals) {
-  const tokens = new Set(normalizeQuestText(text).split(' ').filter(Boolean));
-  if (!tokens.size) return false;
-  return answerLiterals.some((literal) => {
-    const words = normalizeQuestText(literal).split(' ').filter(Boolean);
-    return words.length > 0 && words.every((word) => tokens.has(word));
-  });
-}
-
-/**
- * Описание точки для статического HTML: подмножество авторского `story`.
- *
- * Новый текст не сочиняется — берутся только те предложения, что не обращены к
- * игроку и не содержат ответа. На корпусе фильтр снимает 1 732 предложения из
- * 11 164 (16%) и 17 предложений с дословным ответом, не оставляя без текста ни
- * одной из 1 436 точек.
- */
-function selectQuestSafeSentences(story, answerLiterals, options = {}) {
-  const maxSentences = options.maxSentences ?? QUEST_DIGEST_MAX_SENTENCES;
-  const maxWords = options.maxWords ?? QUEST_DIGEST_MAX_WORDS;
-  const kept = [];
-  let words = 0;
-
-  for (const sentence of splitQuestStorySentences(story)) {
-    if (kept.length >= maxSentences) break;
-    if (QUEST_BOILERPLATE_RE.test(sentence)) continue;
-    if (QUEST_PLAYER_ADDRESSED_RE.test(sentence)) continue;
-    if (questTextRevealsAnswer(sentence, answerLiterals)) continue;
-    const sentenceWords = sentence.split(/\s+/).filter(Boolean).length;
-    // Обрыв только по границе предложения: половина фразы в HTML хуже, чем её
-    // отсутствие. Первое предложение берём даже если оно длиннее лимита —
-    // иначе точка с одним длинным предложением осталась бы без описания.
-    if (kept.length > 0 && words + sentenceWords > maxWords) break;
-    kept.push(sentence);
-    words += sentenceWords;
-  }
-
-  return kept;
-}
-
-/** Практическая справка о точке: только заполненные поля, без пустых подписей. */
-function buildQuestPointFacts(poiInfo) {
-  const poi = parseQuestJsonField(poiInfo, null);
-  if (!poi || typeof poi !== 'object') return [];
-  const facts = [];
-  const hours = String(poi.opening_hours || poi.openingHours || '').trim();
-  const price = String(poi.ticket_price || poi.ticketPrice || '').trim();
-  if (hours) facts.push(`Часы работы: ${hours}`);
-  if (price) facts.push(`Билет: ${price}`);
-  return facts;
-}
-
-/**
- * Название точки без хвоста, который выдаёт ответ.
- *
- * Названия сделаны по образцу «Объект — деталь», и деталь порой и есть ответ
- * («Памятник Тысячелетия — ангел над городом» при ответе «ангел»). На корпусе
- * ответ попадает в название у 15 точек; обрезка по тире лечит 9 из них,
- * сохраняя идентификацию объекта. Оставшиеся 6 — те, где ответ и есть имя
- * объекта («Прикуривающий»): там обрезать нечего, и это разбирает редактор по
- * предупреждению сборки, а не код.
- */
-function trimQuestPointTitle(title, answerLiterals) {
-  const full = String(title || '').trim();
-  if (!full || !answerLiterals.length) return full;
-  const head = full.split(/\s+[—–-]\s+/)[0].trim();
-  if (!head || head === full) return full;
-  if (!questTextRevealsAnswer(full, answerLiterals)) return full;
-  return questTextRevealsAnswer(head, answerLiterals) ? full : head;
-}
-
-/**
- * Ключ точки, общий для модели и сверки.
- *
- * Оба места обязаны считать его из СЫРЫХ полей шага. Возьми модель обрезанное
- * название, а сверка — исходное, и ключи разойдутся ровно на той точке, ради
- * которой обрезка и сделана: сверка не найдёт опубликованное описание и молча
- * пропустит проверку ответа. Порядковый номер как запасной ключ ещё и уникален —
- * два одноимённых объекта без `step_id` не схлопнутся в одну запись.
- */
-function questPointId(step, index) {
-  const explicit = String(step?.step_id || step?.id || '').trim();
-  return explicit || `точка ${index + 1}`;
 }
 
 /**
@@ -2729,8 +2533,27 @@ function findQuestCityTravelLinks(city, travels, limit = 4) {
     .slice(0, Math.max(0, limit));
 }
 
+/**
+ * Посадочная города без собственных заметок — снова тонкая обёртка вокруг
+ * карточки единственного квеста, из-за которой 21 из 132 адресов оказались вне
+ * индекса (#1569, замер 13.09.2026). Текст города собирается из бандлов его
+ * квестов, поэтому недоступный бандл обязан останавливать сборку: иначе релиз
+ * молча выложит ровно ту страницу, ради которой заведена карточка, и увидит это
+ * первым поисковик, а не сборка.
+ */
+function assertQuestCityLandingsCarryWalk(cityLandingModel) {
+  const thin = (Array.isArray(cityLandingModel) ? cityLandingModel : [])
+    .filter((city) => !questCityWalkHasContent(city.walk))
+    .map((city) => `${city.landingPath} (${city.name || city.cityId})`);
+  if (!thin.length) return;
+  throw new Error(
+    `quest city landings without own content: ${thin.join(', ')} — ` +
+      'quest bundles for these cities are missing or carry no publishable notes',
+  );
+}
+
 /** One canonical city model shared by one-quest and multi-quest SSG landings. */
-function buildQuestCityLandingModel(quests, cityAliasMap, travels = []) {
+function buildQuestCityLandingModel(quests, cityAliasMap, travels = [], questBundles = null) {
   const groups = buildQuestCityLandingGroups(quests, cityAliasMap);
   const cities = groups.map((group) => {
     const coverQuest = group.quests.find((quest) => quest?.cover_url || quest?.coverUrl);
@@ -2747,6 +2570,10 @@ function buildQuestCityLandingModel(quests, cityAliasMap, travels = []) {
       cover: String(coverQuest?.cover_url || coverQuest?.coverUrl || '').trim(),
       alias: group.alias,
       landingPath: `/quests/${group.segment}`,
+      // Собственный текст города: считается из бандлов его же квестов, поэтому
+      // страница отвечает «что тут интересного пешком», а не пересказывает
+      // карточку единственного дочернего квеста (#1569).
+      walk: buildQuestCityWalkModel(group.quests, questBundles),
       quests: group.quests
         .map((quest) => {
           const route = questRouteKey(quest);
@@ -3053,6 +2880,98 @@ function injectQuestsListingContent(baseHtml, quests, cityAliasMap, countryLandi
   return `${section}${html}`;
 }
 
+/**
+ * Подписи сложности для посадочной города.
+ *
+ * Отдельно от `components.quests.QuestForCityCard.difficulty.*` («Легко»):
+ * здесь слово стоит в предложении «сложность — лёгкая», и наречие в него не
+ * встаёт. RU-строки блока обязаны совпадать со значениями
+ * `quests:app.tabs.quests.city.index.*` в `i18n/locales/ru`: краулер и человек
+ * читают одну и ту же страницу, и расхождение здесь — это клоакинг.
+ */
+const QUEST_CITY_DIFFICULTY_RU = { easy: 'лёгкая', medium: 'средняя', hard: 'сложная' };
+
+const QUEST_CITY_WALK_LEAD_RU =
+  'Точки маршрутов — реальные места города. Ниже — заметки о них из самих квестов: что это за места и чем они интересны. Заданий и ответов здесь нет.';
+
+/** Блок «что увидите по дороге»: авторские заметки о местах города (#1569). */
+function buildQuestCityWalkHtml(walk, cityLabel, { h2Style, h3Style, pStyle, factStyle }) {
+  const places = Array.isArray(walk?.places) ? walk.places : [];
+  if (!places.length) return '';
+
+  const items = places
+    .map((place) => {
+      const heading = place.location ? `${place.title} — ${place.location}` : place.title;
+      const facts = [
+        place.openingHours ? `Часы работы: ${place.openingHours}` : '',
+        place.ticketPrice ? `Билет: ${place.ticketPrice}` : '',
+      ].filter(Boolean);
+      return [
+        `<h3 style="${h3Style}">${escapeAttr(heading)}</h3>`,
+        `<p style="${pStyle}">${escapeAttr(place.sentences.join(' '))}</p>`,
+        facts.length ? `<p style="${factStyle}">${escapeAttr(facts.join(' · '))}</p>` : '',
+      ].join('');
+    })
+    .join('');
+
+  const otherPlaces = Array.isArray(walk?.otherPlaces) ? walk.otherPlaces : [];
+  const more = otherPlaces.length
+    ? `<p style="${pStyle}">${escapeAttr(`Ещё по дороге: ${otherPlaces.join(', ')}.`)}</p>`
+    : '';
+
+  return [
+    '<div data-ssg-quest-city-walk="true">',
+    `<h2 style="${h2Style}">Что увидите по дороге: ${escapeAttr(cityLabel)}</h2>`,
+    `<p style="${pStyle}">${QUEST_CITY_WALK_LEAD_RU}</p>`,
+    items,
+    more,
+    '</div>',
+  ].join('');
+}
+
+/** Блок «как устроены маршруты»: структура квестов города из каталога и бандлов. */
+function buildQuestCityRoutesHtml(walk, { h2Style, pStyle }) {
+  const routes = Array.isArray(walk?.routes) ? walk.routes : [];
+  if (!routes.length) return '';
+
+  const paragraphs = routes
+    .map((route) => {
+      const summary = [
+        route.pointCount > 0
+          ? `${route.pointCount} ${pluralizeRu(route.pointCount, 'точка', 'точки', 'точек')}`
+          : '',
+        formatQuestDuration(route.durationMin) ? `примерно ${formatQuestDuration(route.durationMin)}` : '',
+        QUEST_CITY_DIFFICULTY_RU[route.difficulty]
+          ? `сложность — ${QUEST_CITY_DIFFICULTY_RU[route.difficulty]}`
+          : '',
+      ].filter(Boolean);
+      const sentences = [
+        route.title && summary.length ? `Квест «${route.title}»: ${summary.join(', ')}.` : '',
+        route.optionalCount > 0
+          ? `По желанию — ${route.optionalCount} ${pluralizeRu(route.optionalCount, 'точка', 'точки', 'точек')}: их можно пропустить.`
+          : '',
+        route.startLocation && route.finishLocation
+          ? `Старт — ${route.startLocation}, финиш — ${route.finishLocation}.`
+          : '',
+        route.museumCount > 0
+          ? `Музеев по дороге: ${route.museumCount} — часы работы лучше проверить заранее.`
+          : '',
+        route.petFriendly ? 'Маршрут отмечен как подходящий для прогулки с собакой.' : '',
+      ].filter(Boolean);
+      return sentences.length ? `<p style="${pStyle}">${escapeAttr(sentences.join(' '))}</p>` : '';
+    })
+    .join('');
+
+  if (!paragraphs) return '';
+
+  return [
+    '<div data-ssg-quest-city-routes="true">',
+    `<h2 style="${h2Style}">Как устроены маршруты</h2>`,
+    paragraphs,
+    '</div>',
+  ].join('');
+}
+
 /** Visible crawlable body for a single /quests/<city> landing. */
 function injectQuestCityLandingSection(baseHtml, city, cityLabel, lead, countryLanding = null) {
   const sectionStyle = [
@@ -3110,6 +3029,13 @@ function injectQuestCityLandingSection(baseHtml, city, cityLabel, lead, countryL
     `<h1 style="${h1Style}">Городские квесты: ${escapeAttr(cityLabel)}</h1>`,
     `<p style="${leadStyle}">${escapeAttr(lead)}</p>`,
     `<div data-ssg-quest-city-overview="true"><h2 style="${h2Style}">Самостоятельная прогулка: ${escapeAttr(cityLabel)}</h2><p style="${pStyle}">${escapeAttr(overview)}</p></div>`,
+    buildQuestCityWalkHtml(city.walk, cityLabel, {
+      h2Style,
+      h3Style: `margin:16px 0 4px;font:700 17px/1.3 ${QUESTS_SSG_FONT};color:var(--color-text,#22332c)`,
+      pStyle,
+      factStyle: 'margin:0 0 10px;font-size:14px;color:var(--color-text-muted,#5f756c)',
+    }),
+    buildQuestCityRoutesHtml(city.walk, { h2Style, pStyle }),
     `<div data-ssg-quest-city-practical="true"><h2 style="${h2Style}">Как спланировать прогулку</h2><p style="${pStyle}">${escapeAttr(practice)}</p><p style="${pStyle}">${escapeAttr(practiceNote)}</p></div>`,
     `<h2 style="${h2Style}">Квесты города: ${escapeAttr(cityLabel)}</h2>`,
     `<ul style="${ulStyle}">${links}</ul>`,
@@ -4215,7 +4141,10 @@ async function main() {
     const questCityAliasMap = buildQuestCityAliasMap(quests);
     // Модель посадочных нужна раньше самих посадочных: из неё детальные страницы
     // берут перелинковку (#1756), иначе их SSG-срез остаётся тупиком графа.
-    const cityLandingModel = buildQuestCityLandingModel(quests, questCityAliasMap, travels);
+    const cityLandingModel = buildQuestCityLandingModel(quests, questCityAliasMap, travels, questBundleMap);
+    // Падаем здесь, а не на verify-static-quest-seo: в этом месте видно, какому
+    // городу не хватило бандла, и сообщение называет город, а не файл в dist.
+    assertQuestCityLandingsCarryWalk(cityLandingModel);
     const questDetailLinksIndex = buildQuestDetailLinksIndex(cityLandingModel);
     // Модель стран нужна раньше собственных страниц: на неё ссылаются хаб
     // `/quests` и посадочные городов, иначе страновые лендинги остаются вне
@@ -4668,6 +4597,9 @@ if (typeof module !== 'undefined' && module.exports) {
     buildQuestScenarioHowToJsonLd,
     injectQuestScenarioContent,
     injectQuestCityLandingSection,
+    buildQuestCityWalkHtml,
+    buildQuestCityRoutesHtml,
+    assertQuestCityLandingsCarryWalk,
     buildQuestCityLandingHtml,
     injectQuestCountryLandingSection,
     buildQuestCountryLandingHtml,

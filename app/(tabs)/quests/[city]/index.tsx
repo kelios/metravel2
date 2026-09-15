@@ -11,6 +11,7 @@ import QuestCard from '@/screens/tabs/QuestCard'
 import { pluralizeQuest } from '@/screens/tabs/questsShared'
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
 import { useQuestsList } from '@/hooks/useQuestsApi'
+import { useQuestCityWalk } from '@/hooks/useQuestCityWalk'
 import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit'
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel'
 import { useBreakpoints } from '@/hooks/useResponsive'
@@ -93,6 +94,13 @@ export default function QuestsByCityScreen() {
     () => (cityGroup ? findNearbyQuestCityGroups(cityGroup, cityGroups, { limit: 4 }) : []),
     [cityGroup, cityGroups],
   )
+  // Заметки о местах города приходят из бандлов его квестов и дописывают
+  // страницу до самостоятельного содержания (#1569). Секции города рисуются
+  // только на вебе, поэтому и запросы бандлов живут там же.
+  const walk = useQuestCityWalk(cityQuests, {
+    enabled: Platform.OS === 'web' && Boolean(cityGroup),
+  })
+
   const cityCoords = useMemo(
     () => cityQuests
       .filter((quest) => Number.isFinite(quest.lat) && Number.isFinite(quest.lng))
@@ -121,15 +129,22 @@ export default function QuestsByCityScreen() {
   // The shared SSG fallback is a sibling of #root, so React hydration cannot
   // remove it. Once this resolved city screen owns the visible H1, discard only
   // the explicitly marked stale fallback and leave other route content alone.
+  //
+  // #1569: ждём и заметки о местах. Статический блок к этому моменту уже скрыт
+  // стилем `rnw-styles-ready`, поэтому двойного текста на экране нет, а вот
+  // снять его ДО того, как рантайм получил бандлы, значило бы на секунды
+  // оставить отрендеренную страницу без того самого содержания, ради которого
+  // она переписана.
   useWebLayoutEffect(() => {
     if (!cityGroup || !isFocused || Platform.OS !== 'web' || typeof document === 'undefined') return
+    if (!walk) return
     document
       .querySelectorAll('section[data-ssg-quest-city="true"]')
       .forEach((section) => section.remove())
     document
       .querySelectorAll('style[data-ssg-quest-city-style="true"]')
       .forEach((style) => style.remove())
-  }, [cityGroup, isFocused])
+  }, [cityGroup, isFocused, walk])
 
   const { width: bpWidth, isMobile } = useBreakpoints()
   const height = Platform.OS === 'web' ? 0 : Dimensions.get('window').height
@@ -327,7 +342,7 @@ export default function QuestsByCityScreen() {
 
       {Platform.OS === 'web' ? (
         <>
-          <QuestCityLandingSections city={cityGroup} nearbyCities={nearbyCities} />
+          <QuestCityLandingSections city={cityGroup} nearbyCities={nearbyCities} walk={walk} />
           <Text
             accessibilityRole="header"
             {...({ 'aria-level': 2 } as Record<string, unknown>)}

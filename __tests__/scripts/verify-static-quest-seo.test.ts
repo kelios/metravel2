@@ -196,6 +196,7 @@ describe('verifyQuestCityHtml', () => {
     '</head><body>',
     '<section data-ssg-quest-city="true">',
     '<div data-ssg-quest-city-overview="true"><h2>Прогулка по Риму</h2><p>Самостоятельный городской маршрут.</p></div>',
+    '<div data-ssg-quest-city-walk="true"><h2>Что увидите по дороге: Рим</h2><p>Капитолий — площадь Микеланджело.</p></div>',
     '<div data-ssg-quest-city-practical="true"><h2>Как спланировать прогулку</h2><p>Проверьте погоду.</p></div>',
     '</section>',
     '</body></html>',
@@ -206,6 +207,20 @@ describe('verifyQuestCityHtml', () => {
     expect(verifyQuestCityHtml(cityHtml, canonical, buildQuestPageHtml())).toEqual([])
   })
 
+  /**
+   * #1569: заметки о местах — единственная часть страницы, которой нет в
+   * шаблоне. Без них город снова читается как обёртка дочернего квеста, поэтому
+   * их пропажа обязана называться отдельно, а не всплывать счётом слов.
+   */
+  it('rejects a city landing that lost its own notes about the places', () => {
+    const withoutWalk = cityHtml.replace(/<div data-ssg-quest-city-walk="true">[\s\S]*?<\/div>/, '')
+
+    expect(hasQuestCityStandaloneContent(withoutWalk)).toBe(false)
+    expect(verifyQuestCityHtml(withoutWalk, canonical, buildQuestPageHtml())).toEqual(
+      expect.arrayContaining(['missing independent city overview/walk/practical content']),
+    )
+  })
+
   it('rejects a one-quest wrapper that copies child metadata and has no planning sections', () => {
     const thin = buildQuestPageHtml({
       canonical: `<link rel="canonical" href="${canonical}" />`,
@@ -214,7 +229,7 @@ describe('verifyQuestCityHtml', () => {
     const issues = verifyQuestCityHtml(thin, canonical, buildQuestPageHtml())
 
     expect(issues).toEqual(expect.arrayContaining([
-      'missing independent city overview/practical content',
+      'missing independent city overview/walk/practical content',
       'title duplicates the only quest page',
       'description duplicates the only quest page',
     ]))
@@ -808,7 +823,6 @@ describe('catalog-derived quest page content depth', () => {
 
   it('ships an exemption list that names only levels with an owning card', () => {
     expect(THIN_CONTENT_EXEMPTIONS.map((entry: { kind: string }) => entry.kind)).toEqual([
-      'quest-city',
       'quest-country',
     ])
     for (const entry of THIN_CONTENT_EXEMPTIONS as Array<{ ticket: string; minWords: number }>) {
@@ -894,23 +908,28 @@ describe('collectQuestSsgPages', () => {
 })
 
 /**
- * #1930: the exemption floors must sit under what the generator can legitimately
- * render, not under what the catalog happens to hold today.
+ * #1930 + #1569: what a floor is for, and the level that outgrew it.
  *
- * The first version of this guard took the floors from the observed catalog
- * minimum (118 words for a city). Both optional blocks of a city landing are
- * conditional — `nearbyCities` needs another quest city within 400 km and
- * `travelLinks` a matching travel — so the first quest in an isolated city
- * renders below that, and a floor of 110 would have failed the fail-closed
- * production build on a page that is exactly what the template is supposed to
- * produce. These probes drive the real builders at their leanest shape.
+ * An exemption floor has to sit under what the generator can legitimately
+ * render, not under what the catalog happens to hold today: both optional
+ * blocks of a country landing are conditional, so the first quest in an
+ * isolated country renders below the current catalog minimum, and a floor taken
+ * from that minimum would red a fail-closed production build on a page that is
+ * exactly what the template is supposed to produce. The probe drives the real
+ * builder at its leanest shape — a hand-written lookalike that misses a key
+ * silently measures a fallback label and licenses a floor the real page cannot
+ * clear.
  *
- * The fixture is the generator's own model, not a hand-written lookalike: a
- * lookalike that misses a key silently measures a fallback label instead of the
- * real one, and the probe then licenses a floor the real page cannot clear.
+ * The city landing left that list in #1569: its text is no longer a template
+ * with a name substituted but notes about the places its own quests walk past,
+ * so the level is held to the default. What is probed here instead is the other
+ * half of that contract — a city whose quest bundles did not resolve carries no
+ * notes, and both the generator and the guard have to say so rather than ship
+ * the wrapper page the card exists to remove.
  */
 describe('thin-content floors against the generator itself', () => {
   const {
+    assertQuestCityLandingsCarryWalk,
     buildQuestCityLandingHtml,
     buildQuestCityLandingModel,
     buildQuestCountryLandingHtml,
@@ -924,10 +943,32 @@ describe('thin-content floors against the generator itself', () => {
     { quest_id: 'q', city_id: '1', title: 'К', city_name: 'Х', country_code: 'BY' },
   ]
 
-  const leanCityHtml = () => {
-    const [city] = buildQuestCityLandingModel(LEAN_CATALOG, buildQuestCityAliasMap(LEAN_CATALOG), [])
-    return buildQuestCityLandingHtml(SHELL, city, null)
-  }
+  /**
+   * A bundle in the shape the build fetches, with the only property the city
+   * landing needs from it: authored sentences beyond the two the quest page
+   * publishes. Third-person, no questions and no instructions, exactly like the
+   * corpus the model was measured on.
+   */
+  const bundleWithNotes = (pointCount: number) => ({
+    quest_id: 'q',
+    steps: Array.from({ length: pointCount }, (_, index) => ({
+      step_id: `p${index}`,
+      title: `Объект номер ${index}`,
+      location: `Улица номер ${index}`,
+      story: [
+        `Первое предложение о месте номер ${index} стоит здесь уже третье столетие подряд.`,
+        `Второе предложение о месте номер ${index} рассказывает про его перестройку и новых владельцев.`,
+        `Третье предложение о месте номер ${index} вспоминает городскую легенду про здешних мастеров.`,
+        `Четвёртое предложение о месте номер ${index} описывает лепнину на его фасаде и старую кладку.`,
+      ].join(' '),
+      answer_pattern: { type: 'any_text' },
+    })),
+    intro: { location: 'Площадь у вокзала', story: 'Вступление к маршруту.' },
+  })
+
+  const cityModel = (bundles: unknown) =>
+    buildQuestCityLandingModel(LEAN_CATALOG, buildQuestCityAliasMap(LEAN_CATALOG), [], bundles)
+  const cityHtml = (bundles: unknown) => buildQuestCityLandingHtml(SHELL, cityModel(bundles)[0], null)
   const leanCountryHtml = () => {
     const [country] = buildQuestCountryLandingModel(LEAN_CATALOG, 'ru')
     return buildQuestCountryLandingHtml(SHELL, country)
@@ -939,11 +980,88 @@ describe('thin-content floors against the generator itself', () => {
     return page
   }
 
-  it('passes the leanest city landing the builder can render', () => {
-    const page = leanPage(leanCityHtml(), 'quests/x/index.html')
+  it('passes a city landing built from the notes of its own quest', () => {
+    const page = leanPage(cityHtml(new Map([['q', bundleWithNotes(8)]])), 'quests/x/index.html')
 
     expect(page.kind).toBe('quest-city')
+    expect(page.text).toContain('Что увидите по дороге')
     expect(verifyQuestPageContentDepth([page])).toEqual([])
+  })
+
+  /**
+   * One unreachable bundle used to cost a quest its rich intro and nothing
+   * else. Now it costs the city its only own content, so the build has to stop:
+   * a release that silently ships that page is the recurrence #1569 is about.
+   */
+  it('fails the build and the guard when a city has no resolvable quest bundle', () => {
+    expect(() => assertQuestCityLandingsCarryWalk(cityModel(null))).toThrow(
+      /quest city landings without own content/,
+    )
+
+    const page = leanPage(cityHtml(null), 'quests/x/index.html')
+    expect(verifyQuestPageContentDepth([page])).toEqual([
+      expect.stringContaining('words of crawlable text, minimum 300'),
+    ])
+  })
+
+  /**
+   * The rule the recurrence is about: two landings of one template must not read
+   * as the same page once the names and the numbers are taken out. Both sides
+   * are driven through the real builders, so a template that starts carrying
+   * more boilerplate than own text fails here instead of in the next GSC report.
+   */
+  it('reads two city landings of one template as two different pages', () => {
+    const catalog = [
+      { quest_id: 'aq', city_id: '1', title: 'Первый квест', city_name: 'Первый', country_code: 'BY' },
+      { quest_id: 'bq', city_id: '2', title: 'Второй квест', city_name: 'Второй', country_code: 'BY' },
+    ]
+    // Своя лексика на каждой точке каждого города: в корпусе у восьми точек
+    // восемь разных рассказов, и фикстура, повторяющая одну фразу восемь раз,
+    // мерила бы не шаблон страницы, а собственный повтор.
+    const CYRILLIC = 'абвгдежзийклмноп'
+    const token = (...parts: number[]) =>
+      `тк${parts.map((part) => CYRILLIC[part % CYRILLIC.length]).join('')}`
+    const sentence = (seed: number, point: number, slot: number) =>
+      `${Array.from({ length: 12 }, (_, word) => token(seed, point, slot, word, word * 5 + point)).join(' ')}.`
+    const notes = (seed: number) =>
+      Array.from({ length: 8 }, (_, index) => ({
+        step_id: `s${seed}${index}`,
+        title: `Объект номер ${index}`,
+        location: `Улица номер ${index}`,
+        story: [0, 1, 2, 3].map((slot) => sentence(seed, index, slot)).join(' '),
+        answer_pattern: { type: 'any_text' },
+      }))
+
+    const bundles = new Map([
+      ['aq', { quest_id: 'aq', steps: notes(1) }],
+      ['bq', { quest_id: 'bq', steps: notes(2) }],
+    ])
+    const model = buildQuestCityLandingModel(catalog, buildQuestCityAliasMap(catalog), [], bundles)
+    const pages = model.map((city: { segment: string }) =>
+      leanPage(buildQuestCityLandingHtml(SHELL, city, null), `quests/${city.segment}/index.html`),
+    )
+
+    expect(pages).toHaveLength(2)
+    expect(verifyQuestPageContentDepth(pages)).toEqual([])
+
+    // Контроль: те же две страницы с одинаковыми заметками — снова один шаблон.
+    const sameNotes = new Map([
+      ['aq', { quest_id: 'aq', steps: notes(1) }],
+      ['bq', { quest_id: 'bq', steps: notes(1) }],
+    ])
+    const templatePages = buildQuestCityLandingModel(
+      catalog,
+      buildQuestCityAliasMap(catalog),
+      [],
+      sameNotes,
+    ).map((city: { segment: string }) =>
+      leanPage(buildQuestCityLandingHtml(SHELL, city, null), `quests/${city.segment}/index.html`),
+    )
+
+    expect(verifyQuestPageContentDepth(templatePages)).toEqual([
+      expect.stringContaining('reads as a shared template'),
+      expect.stringContaining('reads as a shared template'),
+    ])
   })
 
   it('passes the leanest country landing the builder can render', () => {
@@ -955,12 +1073,11 @@ describe('thin-content floors against the generator itself', () => {
 
   it('keeps every exemption floor under the leanest output of its level', () => {
     const leanWords: Record<string, number> = {
-      'quest-city': countWords(leanPage(leanCityHtml(), 'c').text),
       'quest-country': countWords(leanPage(leanCountryHtml(), 'k').text),
     }
 
     // Pinned so a drop in the builder's own output surfaces here, not on a prod build.
-    expect(leanWords).toEqual({ 'quest-city': 107, 'quest-country': 112 })
+    expect(leanWords).toEqual({ 'quest-country': 112 })
 
     for (const entry of THIN_CONTENT_EXEMPTIONS as Array<{ kind: string; minWords: number }>) {
       expect(leanWords[entry.kind]).toBeGreaterThan(entry.minWords)
