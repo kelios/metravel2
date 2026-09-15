@@ -92,12 +92,15 @@ describe('post-deploy media check: разбор контракта', () => {
       quests: { data: [{ cover_url: `${SITE}/quest-cover/quests/1/main/cover.webp` }] },
     })
 
+    // #1204: `media-resize-legacy` из первопартийных payload'ов больше не
+    // возникает — conversion-ключи читатель запрашивает их собственным
+    // family-роутом. Цель этого класса остаётся у прямых ссылок в бакет; её
+    // строит соседний кейс «берёт для legacy первый кандидат».
     expect(targets.map((item: { family: string }) => item.family)).toEqual([
       'travel-image',
       'gallery',
       'address-image',
       'quest-cover',
-      'media-resize-legacy',
     ])
     expect(targets[0].url).toBe(`${SITE}/travel-image/682/conversions/cover.webp`)
     expect(targets[2].url).toBe(`${SITE}/address-image/15850/conversions/point.webp`)
@@ -118,20 +121,31 @@ describe('post-deploy media check: разбор контракта', () => {
     expect(toTargetUrl(SITE, '/gallery/photo.webp')).toBe(`${SITE}/gallery/photo.webp`)
   })
 
-  it('строит legacy-цель из conversion-ключа и отказывается от остальных', () => {
-    expect(toLegacyTarget(SITE, `${SITE}/travel-image/682/conversions/abc.webp`)).toBe(
-      `${SITE}/media-resize/legacy/682/conversions/abc.webp`
-    )
+  it('строит legacy-цель из бакетного conversion-ключа и отказывается от остальных', () => {
+    // #1204: цель гейта — адрес, который браузер РЕАЛЬНО запрашивает. Conversion
+    // за family-роутом читатель теперь просит им же, поэтому legacy-цель остаётся
+    // ровно у того класса, который фронт ещё переписывает, — прямой ссылки в бакет.
+    expect(
+      toLegacyTarget(SITE, 'https://metravelprod.s3.eu-north-1.amazonaws.com/682/conversions/abc.webp'),
+    ).toBe(`${SITE}/media-resize/legacy/682/conversions/abc.webp`)
+    expect(toLegacyTarget(SITE, `${SITE}/travel-image/682/conversions/abc.webp`)).toBeNull()
     expect(toLegacyTarget(SITE, `${SITE}/gallery/plain.webp`)).toBeNull()
   })
 
   it('берёт для legacy первый кандидат, из которого путь реально строится', () => {
     const targets = extractTargetsFromPayloads(SITE, {
-      // Обложка без `/conversions/` для legacy не годится — цель должна прийти
-      // из точки маршрута, а не пропасть вместе с первым кандидатом.
+      // Обложка, которую фронт не переписывает, для legacy не годится — цель должна
+      // прийти из следующего кандидата, а не пропасть вместе с первым.
       travels: { data: [{ id: 1, travel_image_thumb_url: `${SITE}/travel-image/plain.webp` }] },
       travelDetail: {
-        data: { travelAddress: [{ travelImageThumbUrl: `${SITE}/address-image/9/conversions/p.webp` }] },
+        data: {
+          travelAddress: [
+            {
+              travelImageThumbUrl:
+                'https://metravelprod.s3.eu-north-1.amazonaws.com/9/conversions/p.webp',
+            },
+          ],
+        },
       },
     })
 

@@ -197,18 +197,6 @@
       return LEGACY_IMAGE_EXTENSIONS.indexOf(extension) === -1 ? null : parts;
     }
 
-    /* Зеркало `isLegacyConversionKey`: сравнение идёт теми же `indexOf`/`lastIndexOf`,
-     * что и в TS-источнике, — расхождение копии видно построчно, а не через свои
-     * обёртки над теми же встроенными методами. */
-    function isLegacyConversionKey(parts) {
-      var conversionIndex = parts.indexOf('conversions');
-      return conversionIndex > 0 &&
-        conversionIndex === parts.lastIndexOf('conversions') &&
-        conversionIndex < parts.length - 1 &&
-        parts.indexOf('responsive-images') === -1 &&
-        parts[0].indexOf(':') === -1;
-    }
-
     /*
      * Адрес соцпревью: ступень семейства, затем тот же transform-роут, по
      * которому кадр запрашивает читатель.
@@ -239,8 +227,11 @@
         var keyParts = parseLegacyImageKeyParts(routeMatch[1]);
         if (!keyParts) return url.toString();
 
+        // Переписывается только класс `uploads/**`: у него durable-производных нет.
+        // Conversion-ключ за family-роутом с #1204 адресуется штатно — тем же
+        // адресом, который затем запросит `<img>`.
         var isUpload = keyParts[0] === 'uploads' && keyParts.length > 1;
-        if (!isUpload && !isLegacyConversionKey(keyParts)) return url.toString();
+        if (!isUpload) return url.toString();
 
         // Подпись S3 после переписывания бессмысленна и только плодит cache-key.
         var signed = [];
@@ -249,7 +240,7 @@
         });
         for (var si = 0; si < signed.length; si++) { url.searchParams.delete(signed[si]); }
 
-        url.pathname = (isUpload ? '/media-resize/' : '/media-resize/legacy/') + routeMatch[1];
+        url.pathname = '/media-resize/' + routeMatch[1];
         return url.toString();
       } catch (_e) {
         return absoluteUrl;

@@ -330,11 +330,27 @@ const isFirstPartyMetravelHost = (host: string): boolean => {
   return value === 'metravel.by' || value === 'cdn.metravel.by' || value === 'api.metravel.by'
 }
 
+/**
+ * `q`/`fit` понимает только legacy-роут — он один режет в момент запроса.
+ *
+ * Правило то же, что у `optimizeImageUrl` (`servedFromDurableFamily` в
+ * `utils/imageProxy.ts`), и здесь оно появилось с #1204: пока conversion-ключи
+ * уходили на `/media-resize/legacy/`, расхождение двух построителей не
+ * проявлялось, а после снятия rewrite тело статьи стало бы просить у семейства
+ * тот же файл под лишними параметрами. Бэкенд их игнорирует (замер прода
+ * 2026-08-09, `travel-description-image/247b89ab….webp`: `?w=640`, `?w=640&q=70`,
+ * `?w=640&q=70&fit=contain`, `?w=640&fit=cover` — все отдают 157 952 B
+ * байт-в-байт), но каждый набор — ОТДЕЛЬНАЯ запись в кэше nginx и в браузерном.
+ */
+const isLegacyResizeUrl = (url: URL): boolean => /^\/media-resize\//i.test(url.pathname)
+
 const buildMetravelSizedUrl = (base: URL, width: number): string => {
   const url = new URL(base.toString())
   url.searchParams.set('w', String(width))
-  url.searchParams.set('q', String(RESPONSIVE_QUALITY))
-  url.searchParams.set('fit', 'contain')
+  if (isLegacyResizeUrl(url)) {
+    url.searchParams.set('q', String(RESPONSIVE_QUALITY))
+    url.searchParams.set('fit', 'contain')
+  }
   // #1753: `f=jpeg` для класса `uploads/**` (обход #1233) снят. В
   // proxy-contract v16 этот формат объявлен у `legacy_upload` как
   // `unsupported_format`, и запрос отвечает 400 — на живой опубликованной

@@ -204,14 +204,16 @@ describe('#1203 источники медиа-URL из манифеста', () =
     })
   })
 
-  // #1204: манифест адресует family-роут, но для conversion-ключей он отвечает
-  // 404 — рабочий обход обязан пережить переход на готовые источники.
-  it('conversion-ключи остаются на legacy-роуте', () => {
+  // #1204: обход снят. Family-роут отдаёт conversion-ключ штатно — 200
+  // `stored-derivative`, immutable, байт в байт с legacy (проба прода 15.09.2026),
+  // и с #1920 так же кэшируется, поэтому манифест доезжает своим адресом.
+  it('conversion-ключи остаются на family-роуте', () => {
     const result = withWeb(() =>
       buildResponsiveImagePropsFromMedia(PROD_COVER, { maxWidth: 640, widths: [640] }),
     )
 
-    expect(result?.src).toContain('/media-resize/legacy/544/conversions/')
-    expect(result?.srcSet).toContain('/media-resize/legacy/544/conversions/')
+    expect(result?.src).toContain('/travel-image/544/conversions/')
+    expect(result?.srcSet).toContain('/travel-image/544/conversions/')
+    expect(result?.src).not.toContain('/media-resize/')
   })
 })

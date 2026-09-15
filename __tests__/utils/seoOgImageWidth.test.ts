@@ -61,7 +61,7 @@ describe('социальное превью просит производную,
       'address-image',
       'https://metravel.by/address-image/15850/conversions/8ed5a60e.webp',
       // Conversion-ключ уезжает на кэшируемый legacy-роут и СОХРАНЯЕТ ступень (#1873).
-      'https://metravel.by/media-resize/legacy/15850/conversions/8ed5a60e.webp?w=960',
+      'https://metravel.by/address-image/15850/conversions/8ed5a60e.webp?w=960',
     ],
     [
       'quest-cover',
@@ -79,7 +79,7 @@ describe('социальное превью просит производную,
 
   it('относительный путь тоже становится абсолютным и получает ширину', () => {
     expect(normalizeOgImageUrl('/travel-image/958/conversions/abc-thumb_200.jpg')).toBe(
-      'https://metravel.by/media-resize/legacy/958/conversions/abc-thumb_200.jpg?w=1280',
+      'https://metravel.by/travel-image/958/conversions/abc-thumb_200.jpg?w=1280',
     )
   })
 
@@ -149,6 +149,12 @@ describe('адрес соцпревью — ступень семейства Н
     ['https://metravel.by/travel-image/682/conversions/10f0a8f2.webp', 'travel-image'],
     ['https://metravel.by/travel-description-image/12/conversions/x.WEBP', 'travel-description-image'],
     ['https://metravel.by/address-image/15601/conversions/ee55dead.webp', 'address-image'],
+  ])('ступень семейства проставляется на собственном роуте ключа: %s', (input, family) => {
+    // #1204: conversion-ключ роут не меняет — ступень обязана проставиться на нём.
+    expect(expectPreview(input, family).pathname).not.toMatch(/^\/media-resize\//)
+  })
+
+  it.each([
     // `uploads/**` за family-роутом: свой legacy-роут, ступени у класса нет.
     ['https://metravel.by/gallery/uploads/1614096729IMG_6960.JPG', 'gallery'],
   ])('ступень семейства переживает переписывание роута: %s', (input, family) => {
@@ -172,16 +178,20 @@ describe('адрес соцпревью — ступень семейства Н
     // перестановка стала бы незаметной, и этот expect об этом скажет.
     expect(DERIVATIVE_WIDTHS_BY_ROUTE.has('media-resize')).toBe(false)
 
-    const rewrittenFirst = toLegacyResizePath(
-      'https://metravel.by/gallery/3860/conversions/x-detail_hd.jpg',
-    )
-    expect(rewrittenFirst).toBe('/media-resize/legacy/3860/conversions/x-detail_hd.jpg')
+    // Вход берётся из класса, который переписывание ещё трогает (`uploads/**`):
+    // с #1204 conversion-ключ роут не меняет, и на нём перестановка была бы
+    // незаметна, а сам регресс никуда не делся.
+    const rewrittenFirst = toLegacyResizePath('https://metravel.by/gallery/uploads/a.jpg')
+    expect(rewrittenFirst).toBe('/media-resize/uploads/a.jpg')
     expect(socialPreviewWidthForRoute(String(rewrittenFirst).split('/')[1])).toBeNull()
 
-    // И наблюдаемый выход композиции ширину несёт.
+    // И наблюдаемый выход композиции ширину несёт — на обоих классах.
     expect(
       normalizeOgImageUrl('https://metravel.by/gallery/3860/conversions/x-detail_hd.jpg'),
-    ).toBe('https://metravel.by/media-resize/legacy/3860/conversions/x-detail_hd.jpg?w=1280')
+    ).toBe('https://metravel.by/gallery/3860/conversions/x-detail_hd.jpg?w=1280')
+    expect(normalizeOgImageUrl('https://metravel.by/gallery/uploads/a.jpg')).toBe(
+      'https://metravel.by/media-resize/uploads/a.jpg?w=1280',
+    )
   })
 
   it('чужой хост и прямая ссылка в бакет не получают наш transform-роут', () => {

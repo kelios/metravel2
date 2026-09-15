@@ -247,8 +247,11 @@ describe('#1146: первый слайд не расходится с hero по 
     // снэпят 720 → 720. Суть теста не в конкретном числе, а в том, что число ОДНО;
     // расхождение зеркал ловит `imageProxy.ladder.test.ts`.
     expect(src).toContain('w=720')
-    expect(src).toContain('q=70')
-    expect(src).toContain('fit=contain')
+    // #1204: `q`/`fit` на family-роут не уходят вовсе — ни у слайдера, ни у
+    // SSG-preload (`travelHeroPreloadParity` держит это совпадение). Суть теста
+    // прежняя: ширина у обеих сторон ОДНА.
+    expect(src).not.toContain('q=')
+    expect(src).not.toContain('fit=')
     // было: `?w=1280&q=80&fit=contain` — второй файл той же обложки (211 158 B)
     expect(src).not.toContain('w=1280')
   })
@@ -261,7 +264,9 @@ describe('#1146: первый слайд не расходится с hero по 
       'cover',
     )
 
-    expect(src).toContain('fit=contain') // buildUriWeb нормализует cover → contain для слайда
+    // buildUriWeb нормализует cover → contain для слайда; с #1204 сам параметр в
+    // адрес family-роута не пишется, поэтому проверяется отсутствие cover-кадра.
+    expect(src).not.toContain('fit=cover')
     expect(src).not.toContain('w=1280')
   })
 })

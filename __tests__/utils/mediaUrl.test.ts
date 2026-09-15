@@ -224,15 +224,29 @@ describe('toLegacyResizePath', () => {
     expect(toLegacyResizePath('')).toBeNull();
   });
 
-  // #1195: family-роут отдаёт мастер с `no-store`, а тот же ключ через
-  // `legacy_conversion` режется по лестнице и кэшируется. Публичный путь — алиас
-  // бакета, поэтому storage key это всё, что идёт после имени роута.
-  it('routes a first-party family conversion url to the legacy resize route', () => {
-    expect(
-      toLegacyResizePath('/travel-image/682/conversions/10f0a8f2.webp?w=960'),
-    ).toBe('/media-resize/legacy/682/conversions/10f0a8f2.webp?w=960');
+  // #1204: временный rewrite снят. Обе причины, ради которых он существовал,
+  // закрыты на бэкенде — family-роут режет по лестнице (#1195/#1201/#1168) и с
+  // #1920 кэшируется nginx, — поэтому conversion-ключ за family-роутом остаётся
+  // собой и адресуется штатно.
+  it('leaves a first-party family conversion url on its own route', () => {
+    expect(toLegacyResizePath('/travel-image/682/conversions/10f0a8f2.webp?w=960')).toBeNull();
     expect(
       toLegacyResizePath('https://metravel.by/address-image/15862/conversions/5723e78a.webp?w=320'),
+    ).toBeNull();
+  });
+
+  // Прямая ссылка в бакет — ровно та причина, по которой rewrite остаётся: S3 не
+  // понимает `?w=` и отдаёт мастер целиком (замер 2026-08-02 в `utils/mediaUrl.ts`).
+  it('still routes a direct bucket conversion url to the legacy resize route', () => {
+    expect(
+      toLegacyResizePath(
+        'https://metravelprod.s3.eu-north-1.amazonaws.com/682/conversions/10f0a8f2.webp?w=960',
+      ),
+    ).toBe('/media-resize/legacy/682/conversions/10f0a8f2.webp?w=960');
+    expect(
+      toLegacyResizePath(
+        'https://s3.eu-north-1.amazonaws.com/metravelprod/15862/conversions/5723e78a.webp?w=320',
+      ),
     ).toBe('/media-resize/legacy/15862/conversions/5723e78a.webp?w=320');
   });
 

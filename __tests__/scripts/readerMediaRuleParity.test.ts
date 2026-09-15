@@ -72,11 +72,11 @@ describe('SSG: адрес кадра строится по правилу чит
     expect(ssgPathname(input)).toBe(readerPathname(input));
   });
 
-  it('conversion-ключ уходит на transform-роут, а не остаётся на family-роуте', () => {
-    // Family-роуты в proxy-contract v4 это `source_passthrough` (#1195): отдают
-    // мастер на любой ширине и с `no-store`.
+  it('conversion-ключ остаётся на своём family-роуте (#1204)', () => {
+    // Временный rewrite снят: family-роут режет по лестнице (#1195/#1201/#1168) и
+    // с #1920 кэшируется nginx, поэтому генератор адресует ключ штатно.
     expect(ssgPathname(`${SITE}/gallery/355/conversions/x.webp`)).toBe(
-      '/media-resize/legacy/355/conversions/x.webp',
+      '/gallery/355/conversions/x.webp',
     );
   });
 
@@ -91,23 +91,27 @@ describe('SSG: адрес кадра строится по правилу чит
     const divergent = SSG_MEDIA_INPUTS.filter((input) => ssgPathname(input) !== readerPathname(input));
     expect(divergent).toEqual([]);
 
-    // И набор действительно покрывает обе ветки переписывания, а не только «не трогаем».
+    // И набор действительно покрывает ветку переписывания, а не только «не трогаем».
+    // С #1204 у SSG она осталась ровно одна: conversion-ключ за family-роутом больше
+    // не переписывается, а прямая ссылка в бакет до генератора не доходит — он
+    // отсекает чужой origin раньше правила (см. `SSG_MEDIA_INPUTS`). Класс бакета
+    // сверяет `reader-media-url.test.ts`.
     const rewritten = SSG_MEDIA_INPUTS.map((input) => ssgPathname(input)).filter((path) =>
       path.startsWith('/media-resize/'),
     );
-    expect(rewritten.some((path) => path.startsWith('/media-resize/legacy/'))).toBe(true);
     expect(rewritten.some((path) => path.startsWith('/media-resize/uploads/'))).toBe(true);
+    expect(rewritten.every((path) => !path.startsWith('/media-resize/legacy/'))).toBe(true);
     expect(SSG_MEDIA_INPUTS.some((input) => !ssgPathname(input).startsWith('/media-resize/'))).toBe(true);
   });
 });
 
 /**
- * #1872: og:image и JSON-LD `image` шли по family-роуту (`/gallery/<id>/conversions/…?w=1280`).
- * Тело правильное и `immutable`, но ownership/family-роуты идут мимо кэша nginx
- * (`x-cache-status: BYPASS`), поэтому каждый обход краулера и каждый шеринг заново
- * гоняли ресайз в Django — на одном vCPU с transform concurrency = 1. Тот же ключ
- * на legacy-роуте кэшируется (замер прода 07.09.2026: family `BYPASS`, legacy
- * `MISS` → `HIT`, тело байт в байт).
+ * #1872 → #1204: og:image и JSON-LD `image` какое-то время уводились с family-роута
+ * на `/media-resize/legacy/` — не ради тела (оно и там, и там `immutable` и байт в
+ * байт), а ради кэша nginx: у model-owned роутов не было `proxy_cache`, и каждый
+ * обход краулера заново гонял ресайз в Django на одном vCPU. С #1920 кэш на них
+ * включён (замер прода 15.09.2026: `gallery`, `address-image`, `travel-image` дают
+ * `MISS` → `HIT`), поэтому обход снят и адрес остаётся на своём роуте.
  *
  * Сверяется КОМПОЗИЦИЯ, а не два шага по отдельности, потому что дефект живёт
  * ровно в порядке: ступень выбирается по первому сегменту пути, и после
@@ -129,14 +133,14 @@ describe('SSG: адрес соцпревью — ступень семейств
     return preview;
   };
 
-  it('conversion-обложка уезжает на legacy-роут и СОХРАНЯЕТ ширину', () => {
+  it('conversion-обложка остаётся на family-роуте и СОХРАНЯЕТ ширину', () => {
     const preview = expectPreview(
       `${SITE}/gallery/3994/conversions/HcQK2WZBkjkvHnupzbuIPA9ulGbifqOiIvgmkOlG-detail_hd.jpg`,
       'gallery',
     );
 
     expect(preview.toString()).toBe(
-      `${SITE}/media-resize/legacy/3994/conversions/HcQK2WZBkjkvHnupzbuIPA9ulGbifqOiIvgmkOlG-detail_hd.jpg?w=1280`,
+      `${SITE}/gallery/3994/conversions/HcQK2WZBkjkvHnupzbuIPA9ulGbifqOiIvgmkOlG-detail_hd.jpg?w=1280`,
     );
   });
 
@@ -144,10 +148,17 @@ describe('SSG: адрес соцпревью — ступень семейств
     [`${SITE}/travel-image/682/conversions/10f0a8f2.webp`, 'travel-image'],
     [`${SITE}/travel-description-image/12/conversions/x.WEBP`, 'travel-description-image'],
     [`${SITE}/address-image/15601/conversions/ee55dead.webp`, 'address-image'],
-    [`${SITE}/gallery/uploads/1614096729IMG_6960.JPG`, 'gallery'],
-  ])('ступень семейства переживает переписывание роута: %s', (input, family) => {
-    expect(new URL(String(toSocialPreviewUrl(input))).pathname).toMatch(/^\/media-resize\//);
+  ])('ступень семейства проставляется на собственном роуте ключа: %s', (input, family) => {
+    expect(new URL(String(toSocialPreviewUrl(input))).pathname).not.toMatch(/^\/media-resize\//);
     expectPreview(input, family);
+  });
+
+  // Единственный класс за family-роутом, который переписывание ещё трогает:
+  // durable-производных у `uploads/**` нет, и ступень обязана пережить смену роута.
+  it('ступень семейства переживает переписывание `uploads/**`', () => {
+    const input = `${SITE}/gallery/uploads/1614096729IMG_6960.JPG`;
+    expect(new URL(String(toSocialPreviewUrl(input))).pathname).toMatch(/^\/media-resize\//);
+    expectPreview(input, 'gallery');
   });
 
   it.each([
@@ -167,10 +178,11 @@ describe('SSG: адрес соцпревью — ступень семейств
     // перестановка стала бы незаметной, и этот expect об этом скажет.
     expect(DERIVATIVE_WIDTHS_BY_ROUTE.has('media-resize')).toBe(false);
 
-    const rewrittenFirst = toLegacyResizePathTs(
-      `${SITE}/gallery/3994/conversions/x-detail_hd.jpg`,
-    );
-    expect(rewrittenFirst).toBe('/media-resize/legacy/3994/conversions/x-detail_hd.jpg');
+    // Вход берётся из класса, который переписывание ещё трогает (`uploads/**`):
+    // с #1204 conversion-ключ роут не меняет, и на нём перестановка была бы
+    // незаметна, а сам регресс никуда не делся.
+    const rewrittenFirst = toLegacyResizePathTs(`${SITE}/gallery/uploads/a.jpg`);
+    expect(rewrittenFirst).toBe('/media-resize/uploads/a.jpg');
     expect(socialPreviewWidthForRoute(String(rewrittenFirst).split('/')[1])).toBeNull();
   });
 

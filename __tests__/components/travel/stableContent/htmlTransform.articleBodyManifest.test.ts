@@ -33,7 +33,7 @@ const MEDIA = buildArticleBodyMediaIndex(PROD_ARTICLE_BODY_GROUP)
 // перевод делает общий `resolveMediaVariantUrl`, тот же, что у каталога и галереи
 // (#1195). Важно, что адрес один на весь фронт, а не что он дословно из манифеста.
 const ADDRESS_IMAGE_RESOLVED =
-  'https://metravel.by/media-resize/legacy/15601/conversions/db981e7dac4f45cb840ae19a5722ed22.webp'
+  'https://metravel.by/address-image/15601/conversions/db981e7dac4f45cb840ae19a5722ed22.webp'
 
 const withWebViewport = <T,>(width: number, dpr: number, run: () => T): T => {
   const originalOs = Platform.OS
@@ -244,8 +244,10 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
       const raw = 'https://metravel.by/travel-description-image/540/description/abc.JPG'
       const out = withWebViewport(1920, 1, () => prepare(raw))
 
-      expect(out).toContain('q=80')
-      expect(out).toContain('fit=contain')
+      // `q`/`fit` своя сборка на family-роут не ставит (#1204), поэтому источник
+      // лестницы различается не маркером параметров, а самим набором ступеней.
+      expect(out).not.toContain('q=80')
+      expect(out).not.toContain('fit=contain')
       // Полный desktop-набор `articleBody` — четыре ступени shrink-профиля
       // (#1373): ключ идёт своим семейством, потолок 1600 совпадает с набором.
       expect(emittedWidths(out)).toEqual([480, 800, 960, 1600])
@@ -254,8 +256,10 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
     it('keeps every image on the client-built ladder when no manifest is passed', () => {
       const out = withWebViewport(1920, 1, () => prepare(ARTICLE_BODY_DESCRIPTION_IMAGE_URL, null))
 
-      expect(out).toContain('q=80')
-      expect(out).toContain('fit=contain')
+      // `q`/`fit` своя сборка на family-роут не ставит (#1204), поэтому источник
+      // лестницы различается не маркером параметров, а самим набором ступеней.
+      expect(out).not.toContain('q=80')
+      expect(out).not.toContain('fit=contain')
     })
   })
 

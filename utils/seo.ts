@@ -62,9 +62,9 @@ export function buildOgImageUrl(imagePath: string): string {
 /**
  * Соцпревью просят картинку по «голому» адресу, без `?w=` — и получают МАСТЕР.
  *
- * Ownership-роуты объявлены `X-Cache-Status: BYPASS` в nginx, поэтому дешёвым и
- * кэшируемым такой запрос делает только ширина в URL: производная приходит с
- * `public, max-age=31536000, immutable`, мастер — с `no-store`. Замер прода
+ * Дешёвым и кэшируемым такой запрос делает ширина в URL: производная приходит с
+ * `public, max-age=31536000, immutable`, мастер — с `no-store`, а `no-store` не
+ * кэширует ни nginx, ни браузер, каким бы роутом он ни пришёл. Замер прода
  * 2026-08-03 (#1221): 6% медиа-запросов уходили без `w=` и стоили 44 МБ за
  * 4 ч 43 мин, в среднем ~370 КБ на запрос, а самые медленные ответы сайта —
  * это именно они (avg 18 с, max 58 с на `-thumb_200.jpg`).
@@ -88,14 +88,15 @@ function withSocialPreviewWidth(absoluteUrl: string): string {
 }
 
 /**
- * Тот же кэшируемый transform-роут, по которому кадр запрашивает читатель (#1873).
+ * Тот же адрес, по которому кадр запрашивает читатель (#1873).
  *
- * ЗАЧЕМ. Ownership/family-роуты идут мимо кэша nginx (`x-cache-status: BYPASS`)
- * даже со ступенью: тело правильное и `immutable`, но каждый обход краулера и
- * каждый шеринг заново гоняют ресайз в Django — на одном vCPU с transform
- * concurrency = 1. Тот же ключ на legacy-роуте кэшируется (замер прода
- * 07.09.2026, `3860/conversions/…-detail_hd.jpg?w=1280`: family `BYPASS`,
- * legacy `MISS` → `HIT`, тело байт в байт 83 182 B).
+ * ЗАЧЕМ. Обложка соцпревью и `<img>` обязаны совпадать до символа: иначе тот же
+ * файл живёт в кэше дважды, а краулер греет запись, которой читатель не
+ * пользуется. До #1204 совпадение означало увод на `/media-resize/legacy/` —
+ * тогда только он кэшировался (`x-cache-status: BYPASS` литералом на
+ * model-owned роутах). С #1920 кэш включён и на них (замер прода 15.09.2026:
+ * `MISS` → `HIT`), поэтому conversion-ключ остаётся на своём family-роуте, а
+ * переписывание сохранилось у класса `uploads/**`.
  *
  * ПОЧЕМУ ЗДЕСЬ, А НЕ У ВЫЗЫВАЮЩИХ. Обложку соцпревью во фронте объявляют
  * четверо — Helmet (`useTravelDetailsHeadSync`), вьюмодель страницы,
@@ -126,8 +127,9 @@ function toSocialPreviewUrl(absoluteUrl: string): string {
 
 /**
  * Ensures any image URL is absolute and HTTPS for use in og:image / twitter:image,
- * pins a stored-derivative width and moves first-party media onto the cacheable
- * reader route (see `toSocialPreviewUrl`). Returns null for empty/invalid input.
+ * pins a stored-derivative width and keeps first-party media on the route the
+ * reader actually requests (see `toSocialPreviewUrl`). Returns null for
+ * empty/invalid input.
  */
 export function normalizeOgImageUrl(image?: string | null): string | null {
   if (!image) return null;

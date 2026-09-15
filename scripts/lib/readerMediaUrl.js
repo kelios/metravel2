@@ -7,8 +7,10 @@
  * `<img>` через `toFirstPartyArticleImageUrl` → `toLegacyResizePath`
  * (`utils/mediaUrl.ts`), и два класса меняют адрес:
  *   - прямая ссылка на бакет `…amazonaws.com/uploads/<key>` → `/media-resize/uploads/<key>`;
- *   - conversion-ключ любого family-роута (`/address-image/<id>/conversions/<file>`)
- *     → `/media-resize/legacy/<key>`.
+ *   - прямая ссылка на бакет с conversion-ключом → `/media-resize/legacy/<key>`.
+ * Conversion-ключ ЗА family-роутом (`/address-image/<id>/conversions/<file>`)
+ * с #1204 остаётся собой: family-роут отдаёт ту же производную побайтно и с
+ * #1920 так же кэшируется nginx.
  * Замер прода 07.09.2026, travel 290, вкладка network: страница запрашивает
  * `GET /media-resize/uploads/1614096729IMG_6960.JPG?w=800&q=80&fit=contain` и НИ
  * ОДНОГО запроса к `metravelprod.s3.eu-north-1.amazonaws.com` не делает.
@@ -209,13 +211,20 @@ const extractOwnBucketKey = (parsed) => {
   return bucket.toLowerCase() === LEGACY_STORAGE_BUCKET && rest.length ? rest.join('/') : null
 }
 
-/** Ключ объекта в нашем бакете — прямой ссылкой или за первопартийным роутом. */
+/**
+ * Ключ объекта в нашем бакете — прямой ссылкой или за первопартийным роутом,
+ * вместе с признаком источника: `{ key, viaFirstPartyRoute }`.
+ *
+ * Зеркало `LegacyStorageKey` из `utils/mediaUrl.ts`: различие источников несущее,
+ * потому что conversion-ключ за family-роутом больше не переписывается (#1204).
+ */
 const extractLegacyStorageKey = (parsed, site) => {
   const ownBucketKey = extractOwnBucketKey(parsed)
-  if (ownBucketKey) return ownBucketKey
+  if (ownBucketKey) return { key: ownBucketKey, viaFirstPartyRoute: false }
 
   const firstParty = FIRST_PARTY_MEDIA_ROUTE.exec(parsed.pathname)
-  if (firstParty && isFirstPartyMediaHost(parsed.hostname.toLowerCase(), site)) return firstParty[1]
+  if (firstParty && isFirstPartyMediaHost(parsed.hostname.toLowerCase(), site))
+    return { key: firstParty[1], viaFirstPartyRoute: true }
 
   return null
 }
@@ -271,8 +280,9 @@ function toLegacyResizePath(url, options = {}) {
     return null
   }
 
-  const key = extractLegacyStorageKey(parsed, site)
-  if (!key) return null
+  const storageKey = extractLegacyStorageKey(parsed, site)
+  if (!storageKey) return null
+  const { key, viaFirstPartyRoute } = storageKey
   const keyParts = parseSupportedLegacyImageKey(key)
   if (!keyParts) return null
 
@@ -284,7 +294,10 @@ function toLegacyResizePath(url, options = {}) {
   const suffix = query ? `?${query}` : ''
 
   if (isLegacyUploadKey(keyParts)) return `/media-resize/${key}${suffix}`
-  if (isLegacyConversionKey(keyParts)) return `/media-resize/legacy/${key}${suffix}`
+  // Conversion-ключ переписывается только прямой ссылкой на бакет: за
+  // family-роутом он адресован штатно (#1204).
+  if (!viaFirstPartyRoute && isLegacyConversionKey(keyParts))
+    return `/media-resize/legacy/${key}${suffix}`
 
   return null
 }

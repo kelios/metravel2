@@ -94,8 +94,10 @@ describe('CustomImageRenderer body photos (web)', () => {
     // #1170: слот 358 CSS × DPR 2 = 716 → ступень 720, которую вернули в лестницу.
     // Раньше округлялось вверх до 800: лишние пиксели на тот же слот.
     expect(src).toContain('w=720')
-    expect(src).toContain('q=70')
-    expect(src).toContain('fit=contain')
+    // #1204: `q`/`fit` на family-роут не уходят — семейство раздаётся готовыми
+    // производными, и лишние параметры дали бы вторую запись кэша на тот же файл.
+    expect(src).not.toContain('q=')
+    expect(src).not.toContain('fit=')
     // Ширина обязана быть ступенью контракта прокси; сверка лестницы с контрактом —
     // `__tests__/utils/imageProxy.ladder.test.ts`.
     expect(src).not.toMatch(/w=(1024|1600|2048)\b/)

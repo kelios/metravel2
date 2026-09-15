@@ -219,7 +219,7 @@ describe('StableContent (web) link styles', () => {
         // #1195: conversion-ключ греется через `legacy_conversion` — family-роут
         // на голый `?w=` отдаёт мастер с `no-store`.
         expect(prefetch?.href).toBe(
-          'https://metravel.by/media-resize/legacy/540/conversions/abc-detail_hd.jpg?w=800&q=80&fit=contain',
+          'https://metravel.by/gallery/540/conversions/abc-detail_hd.jpg?w=800',
         );
       });
     } finally {

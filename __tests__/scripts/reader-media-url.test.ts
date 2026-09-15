@@ -98,12 +98,21 @@ describe('readerMediaUrl: адрес, который запрашивает чи
     );
   });
 
-  it('уводит conversion-ключ на legacy-роут — и за family-роутом тоже', () => {
+  // #1204: rewrite снят — за family-роутом conversion-ключ адресуется штатно,
+  // и читатель запрашивает ровно тот адрес, который стоит в разметке.
+  it('оставляет conversion-ключ за family-роутом как есть', () => {
     expect(toReaderMediaPath('/address-image/15188/conversions/ee55.webp')).toBe(
-      '/media-resize/legacy/15188/conversions/ee55.webp',
+      '/address-image/15188/conversions/ee55.webp',
     );
     expect(toReaderMediaPath(`${SITE}/gallery/355/conversions/x.webp`)).toBe(
-      '/media-resize/legacy/355/conversions/x.webp',
+      '/gallery/355/conversions/x.webp',
+    );
+  });
+
+  // Прямая ссылка в бакет переписывается по-прежнему: S3 не понимает `?w=`.
+  it('уводит conversion-ключ прямой ссылки на бакет на legacy-роут', () => {
+    expect(toReaderMediaPath(`${S3}/15188/conversions/ee55.webp`)).toBe(
+      '/media-resize/legacy/15188/conversions/ee55.webp',
     );
   });
 
@@ -161,7 +170,7 @@ describe('readerMediaUrl: адрес, который запрашивает чи
   it('склеивает абсолютный адрес пробы с проверяемым origin', () => {
     expect(toReaderMediaUrl(`${S3}/uploads/a.JPG`, SITE)).toBe(`${SITE}/media-resize/uploads/a.JPG`);
     expect(toReaderMediaUrl('/address-image/9/conversions/p.webp', 'https://dev.metravel.by/')).toBe(
-      'https://dev.metravel.by/media-resize/legacy/9/conversions/p.webp',
+      'https://dev.metravel.by/address-image/9/conversions/p.webp',
     );
     expect(toReaderMediaUrl('https://example.com/x.jpg', SITE)).toBeNull();
   });

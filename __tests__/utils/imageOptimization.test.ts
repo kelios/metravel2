@@ -385,6 +385,25 @@ describe('utils/imageOptimization', () => {
       }
     }
 
+    // Legacy-роут — единственный, который режет в момент запроса и потому
+    // принимает `q`/`fit`. У durable-семейства эти параметры не ставятся вовсе
+    // (`servedFromDurableFamily` в `utils/imageProxy.ts`), поэтому снап качества
+    // проверяется здесь, а не на family-пути.
+    const onLegacyPath = (opts: Parameters<typeof optimizeImageUrl>[1]) => {
+      const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
+      process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api'
+      try {
+        return new URL(
+          optimizeImageUrl(
+            'https://metravel.by/media-resize/legacy/3801/conversions/abc-detail_hd.jpg',
+            opts,
+          )!,
+        )
+      } finally {
+        process.env.EXPO_PUBLIC_API_URL = previousApiUrl
+      }
+    }
+
     // #1113: `dpr` прокси игнорирует (замер прода 2026-07-28 — байт-в-байт одинаковый
     // ответ 36 094 B для dpr отсутствующего / 2 / 3), но каждое значение создавало
     // отдельный URL, отдельную запись кэша и отдельную синхронную конверсию.
@@ -399,13 +418,18 @@ describe('utils/imageOptimization', () => {
     it('never emits h, and a widthless family path emits no sizing params at all', () => {
       expect(onMediaPath({ width: 480, height: 320 }).searchParams.get('h')).toBeNull()
 
-      // #1195: conversion-ключ теперь адресуется `/media-resize/legacy/`, а тот
-      // widthless URL не принимает и подставляет канонический w=800 — это дешевле
-      // мастера, который family-роут отдал бы на голый запрос.
+      // #1204: conversion-ключ остаётся на своём family-роуте, а тот без `w`
+      // остаётся голым — одни q/fit лишь плодят cache-key на тот же мастер.
+      // Канонический w=800 по-прежнему подставляется, но уже только legacy-роуту:
+      // его контракт widthless URL не принимает.
       const conversionHeightOnly = onMediaPath({ height: 240, quality: 60, fit: 'contain' })
-      expect(conversionHeightOnly.pathname.startsWith('/media-resize/legacy/')).toBe(true)
-      expect(conversionHeightOnly.searchParams.get('h')).toBeNull()
-      expect(conversionHeightOnly.searchParams.get('w')).toBe('800')
+      expect(conversionHeightOnly.pathname).toBe('/gallery/3801/conversions/abc-detail_hd.jpg')
+      expect(conversionHeightOnly.search).toBe('')
+
+      const legacyHeightOnly = onLegacyPath({ height: 240, quality: 60, fit: 'contain' })
+      expect(legacyHeightOnly.pathname.startsWith('/media-resize/legacy/')).toBe(true)
+      expect(legacyHeightOnly.searchParams.get('h')).toBeNull()
+      expect(legacyHeightOnly.searchParams.get('w')).toBe('800')
 
       // Пути без legacy-роута остаются голыми: лишние q/fit только плодят cache-key
       // на тот же мастер.
@@ -614,11 +638,15 @@ describe('utils/imageOptimization', () => {
     })
 
     it('ceil-snaps quality exactly like proxy-contract v3', () => {
-      expect(onMediaPath({ width: 480, quality: 72 }).searchParams.get('q')).toBe('80')
-      expect(onMediaPath({ width: 480, quality: 78 }).searchParams.get('q')).toBe('80')
-      expect(onMediaPath({ width: 480, quality: 82 }).searchParams.get('q')).toBe('85')
-      expect(onMediaPath({ width: 480, quality: 0 }).searchParams.get('q')).toBe('85')
-      expect(onMediaPath({ width: 480, quality: 150 }).searchParams.get('q')).toBe('85')
+      expect(onLegacyPath({ width: 480, quality: 72 }).searchParams.get('q')).toBe('80')
+      expect(onLegacyPath({ width: 480, quality: 78 }).searchParams.get('q')).toBe('80')
+      expect(onLegacyPath({ width: 480, quality: 82 }).searchParams.get('q')).toBe('85')
+      expect(onLegacyPath({ width: 480, quality: 0 }).searchParams.get('q')).toBe('85')
+      expect(onLegacyPath({ width: 480, quality: 150 }).searchParams.get('q')).toBe('85')
+
+      // А durable-семейство `q` не получает вовсе — тот же файл под лишним
+      // параметром был бы отдельной записью кэша (#1204).
+      expect(onMediaPath({ width: 480, quality: 72 }).searchParams.get('q')).toBeNull()
     })
 
     it('collapses many real per-pixel variants of one file to a single cacheable one', () => {
@@ -630,12 +658,21 @@ describe('utils/imageOptimization', () => {
       ]
       const variants = new Set(
         inputs.map((o) => {
-          const u = onMediaPath(o)
+          const u = onLegacyPath(o)
           return `${u.searchParams.get('w')}|${u.searchParams.get('dpr')}|${u.searchParams.get('q')}`
         })
       )
       expect(variants.size).toBe(1)
       expect([...variants][0]).toBe('480|null|80')
+
+      // На family-роуте схлопывание ещё жёстче: q туда не уходит вовсе.
+      const familyVariants = new Set(
+        inputs.map((o) => {
+          const u = onMediaPath(o)
+          return `${u.searchParams.get('w')}|${u.searchParams.get('dpr')}|${u.searchParams.get('q')}`
+        }),
+      )
+      expect([...familyVariants]).toEqual(['480|null|null'])
     })
   })
 })

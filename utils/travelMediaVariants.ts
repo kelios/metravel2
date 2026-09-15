@@ -29,10 +29,10 @@ const getPublicApiOrigin = (): string | null => {
 // резолвим против API-origin (fallback: origin страницы → прод), абсолютные оставляем.
 //
 // URL манифеста уходят прямо в `src`/`srcSet` мимо `optimizeImageUrl`, поэтому
-// переписывание legacy-конверсии на её собственный роут нужно и здесь. Без него
-// карточка каталога адресует model-owned роут, который в proxy-contract v4 объявлен
-// `source_passthrough`: ширина игнорируется, приезжает мастер, ответ помечен
-// `no-store` — то есть заново качается на каждый показ. См. `toLegacyResizePath`.
+// переписывание нужно и здесь — но с #1204 только для прямых ссылок в бакет:
+// S3 не понимает `?w=` и отдаёт мастер. Conversion-ключ за family-роутом остаётся
+// собой: роут режет по лестнице (#1195/#1201/#1168) и кэшируется (#1920).
+// См. `toLegacyResizePath`.
 export function resolveMediaVariantUrl(url: string | null | undefined): string | null {
   if (!url) return null
   const trimmed = url.trim()

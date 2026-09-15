@@ -71,9 +71,9 @@ test.describe('Gallery: delete broken image (404)', () => {
     );
 
     // Ensure the image request fails fast with 404.
-    // Legacy-ключ `<id>/conversions/<file>` переписывается в первопартийный
-    // `/media-resize/legacy/<key>?w=…` (utils/mediaUrl.ts), поэтому мокаем по
-    // хвосту ключа — он одинаков до и после переписывания.
+    // Мок стоит на хвосте ключа `<id>/conversions/<file>`: он одинаков и на
+    // family-роуте, которым кадр адресуется с #1204, и на `/media-resize/legacy/`,
+    // куда по-прежнему уходит прямая ссылка в бакет (utils/mediaUrl.ts).
     await page.route('**/3796/conversions/404.jpg**', async (route) => {
       await route.fulfill({ status: 404, body: '' });
     });

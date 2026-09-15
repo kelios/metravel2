@@ -357,8 +357,10 @@ describe('HomeHero Component', () => {
 
       expect(preloadUrl).toBeTruthy()
       expect(preloadUrl).toContain('w=480')
-      expect(preloadUrl).toContain('q=80')
-      expect(preloadUrl).toContain('fit=contain')
+      // #1204: `q`/`fit` уходят только на legacy-роут. Семейство раздаётся готовыми
+      // производными, и лишние параметры дали бы вторую запись кэша на тот же файл.
+      expect(preloadUrl).not.toMatch(/[?&]q=/)
+      expect(preloadUrl).not.toMatch(/[?&]fit=/)
       // #1113: `h` в URL больше нет — прокси ресайзит только по ширине, а высота
       // делала ссылку зависимой от геометрии контейнера. Важно, что preload и сам
       // <img> строятся одним `optimizeImageUrl`, поэтому форма URL у них по-прежнему

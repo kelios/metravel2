@@ -41,9 +41,9 @@ test.describe('Production Media Loading Smoke Test', () => {
 
     await page.goto(`${prodUrl}/`, { waitUntil: 'networkidle' });
 
-    // Check images that belong to actual travel-card links. Media URLs now use
-    // `/media-resize/legacy/**` and no longer contain the old `travel-image`
-    // substring, so URL-shape matching produced a false production failure.
+    // Check images that belong to actual travel-card links. Match by the link, not
+    // by URL shape: covers have lived on `/media-resize/legacy/**` and, since
+    // #1204, on their own family route — shape matching produced false failures.
     const travelCardImages = page.locator('a[href^="/travels/"] img');
     await expect(travelCardImages.first()).toBeVisible({ timeout: 15_000 });
     const travelImages = await travelCardImages.evaluateAll((elements) => {
@@ -388,9 +388,9 @@ type TraceProfile = {
 const isTravelCoverRequest = (url: string) => {
   try {
     const { pathname } = new URL(url);
-    // Прод отдаёт обложки ленты через `/media-resize/legacy/<id>/conversions/…`.
-    // Прежний шаблон `/travel-image|/gallery` не совпадал ни с одним запросом,
-    // из-за чего бюджет считался по пустому набору и ассерты были пустышкой.
+    // Набор намеренно покрывает оба роута: до #1204 обложки ленты шли через
+    // `/media-resize/legacy/<id>/conversions/…`, после — своим family-роутом.
+    // Шаблон только по одному из них считал бы бюджет по пустому набору.
     return /^\/media-resize\//i.test(pathname) || /^\/(gallery|travel-image)\//i.test(pathname);
   } catch {
     return false;

@@ -830,18 +830,22 @@ describe('travel hero preload helpers', () => {
       id: 123,
     });
 
-    // #1195: family-роут стал `source_passthrough`, поэтому conversion-ключ
-    // адресуется transform-роутом. Клиент делает ровно тот же rewrite
-    // (`toLegacyResizePath`), паритет закреплён travelHeroPreloadParity.
+    // #1204: временный rewrite снят — conversion-ключ остаётся на своём
+    // family-роуте. Клиент адресует его так же, паритет закреплён
+    // travelHeroPreloadParity.
     expect(url).toContain(
-      'https://metravel.by/media-resize/legacy/123/conversions/pic-thumb_200.jpg',
+      'https://metravel.by/travel-image/123/conversions/pic-thumb_200.jpg',
     );
     // #1146: ширина и качество округляются по той же лестнице, что и на клиенте
     // (utils/imageProxy.ts: DIMENSION_LADDER + snapQuality). Иначе preload грел бы
     // `?w=400&q=35`, а `<img>` просил `?w=480&q=40` — тот же файл вторым запросом.
     expect(url).toContain('w=480');
-    expect(url).toContain('q=40');
-    expect(url).toContain('fit=contain');
+    // #1204: `q`/`fit` уходят только на legacy-роут — семейство раздаётся готовыми
+    // производными, и лишние параметры плодили бы cache-key на тот же файл
+    // (`servedFromDurableFamily` в `utils/imageProxy.ts`). Снап качества при этом
+    // не исчез: его держит `__tests__/utils/imageOptimization.test.ts`.
+    expect(url).not.toContain('q=');
+    expect(url).not.toContain('fit=');
     expect(url).toContain('v=1735689600000');
   });
 
@@ -871,21 +875,21 @@ describe('travel hero preload helpers', () => {
     // Hero сразу использует канонические q70/q80 из storage-policy.
     expect(preload.mobile.href).toContain('https://metravel.by/gallery/77/gallery/photo.JPG');
     expect(preload.mobile.href).toContain('w=720');
-    expect(preload.mobile.href).toContain('q=70');
+    expect(preload.mobile.href).not.toContain('q=');
     expect(preload.mobile.href).toContain('v=991');
     expect(preload.mobile.href).not.toContain('dpr=');
     expect(preload.mobile.srcSet).toContain('w=320');
     expect(preload.mobile.srcSet).toContain('w=640');
     expect(preload.mobile.srcSet).toContain('w=720');
-    expect(preload.mobile.srcSet).toContain('q=70');
+    expect(preload.mobile.srcSet).not.toContain('q=');
     expect(preload.mobile.sizes).toBe('100vw');
     expect(preload.desktop.href).toContain('w=1280');
-    expect(preload.desktop.href).toContain('q=80');
+    expect(preload.desktop.href).not.toContain('q=');
     expect(preload.desktop.href).not.toContain('dpr=');
     expect(preload.desktop.srcSet).toContain('w=720');
     expect(preload.desktop.srcSet).toContain('w=960');
     expect(preload.desktop.srcSet).toContain('w=1280');
-    expect(preload.desktop.srcSet).toContain('q=80');
+    expect(preload.desktop.srcSet).not.toContain('q=');
     expect(preload.desktop.sizes).toBe('(max-width: 1024px) 92vw, 720px');
   });
 
@@ -924,7 +928,7 @@ describe('travel hero preload helpers', () => {
     // строится через прокси нужной ширины (210 858 B → 95 182 B на реальной обложке).
     expect(preload.mobile.href).not.toContain('w=1280');
     expect(preload.mobile.href).toContain('w=720');
-    expect(preload.mobile.href).toContain('fit=contain');
+    expect(preload.mobile.href).not.toContain('fit=');
     expect(preload.mobile.srcSet).not.toContain('fit=cover');
   });
 
@@ -935,7 +939,7 @@ describe('travel hero preload helpers', () => {
     );
 
     expect(preload.desktop.href).toContain('w=1280');
-    expect(preload.desktop.href).toContain('q=80'); // #1146: канонический desktop hero profile
+    expect(preload.desktop.href).not.toContain('q='); // #1204: family-роут берёт качество из профиля
     expect(preload.desktop.href).toContain('v=991');
   });
 
@@ -1046,7 +1050,7 @@ describe('travel SSR SEO helpers', () => {
     // Google Images пересчитывал производную на каждый обход. Ширина при этом
     // обязана уцелеть: её выбирают по ИСХОДНОМУ семейству, до переписывания.
     expect(payload.image).toEqual([
-      'https://metravel.by/media-resize/legacy/1/conversions/pic-detail_hd.jpg?w=1280',
+      'https://metravel.by/travel-image/1/conversions/pic-detail_hd.jpg?w=1280',
     ])
   })
 

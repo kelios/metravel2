@@ -74,12 +74,21 @@ describe('utils/travelMediaVariants', () => {
       expect(resolveMediaVariantUrl('  ')).toBeNull()
     })
 
-    // #1195: URL манифеста идут прямо в src/srcSet мимо `optimizeImageUrl`, поэтому
-    // без переписывания здесь карточка каталога тянет мастер с `no-store`.
-    it('уводит conversion-вариант на legacy-роут, сохраняя ширину', () => {
+    // #1204: временный rewrite снят — family-роут режет по лестнице и кэшируется,
+    // поэтому вариант манифеста доезжает до src/srcSet своим адресом и с шириной.
+    it('оставляет conversion-вариант на family-роуте, сохраняя ширину', () => {
       expect(resolveMediaVariantUrl('/travel-image/682/conversions/10f0a8f2.webp?w=960')).toBe(
-        'https://metravel.by/media-resize/legacy/682/conversions/10f0a8f2.webp?w=960',
+        'https://metravel.by/travel-image/682/conversions/10f0a8f2.webp?w=960',
       )
+    })
+
+    // Прямая ссылка в бакет переписывается по-прежнему: S3 не понимает `?w=`.
+    it('уводит conversion-вариант прямой ссылки на бакет на legacy-роут', () => {
+      expect(
+        resolveMediaVariantUrl(
+          'https://metravelprod.s3.eu-north-1.amazonaws.com/682/conversions/10f0a8f2.webp?w=960',
+        ),
+      ).toBe('https://metravel.by/media-resize/legacy/682/conversions/10f0a8f2.webp?w=960')
     })
 
     it('варианты без conversions-ключа оставляет на family-роуте', () => {

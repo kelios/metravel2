@@ -32,10 +32,12 @@ import { getMediaPlaceholderData, type MediaPlaceholderData } from '@/utils/trav
 
 /**
  * Один и тот же файл адресуется разными роутами: манифест отдаёт
- * `/address-image/355/conversions/x.webp`, а в разметку после
- * `toLegacyResizePath` уходит `/media-resize/legacy/355/conversions/x.webp`
- * (замер прода 2026-08-05, точка 355). Ключ индекса — storage key, то есть путь
- * без роут-префикса и без query, поэтому обе формы и все ступени `?w=` сходятся
+ * `/address-image/355/conversions/x.webp`, а прямая ссылка в бакет после
+ * `toLegacyResizePath` уходит в разметку как `/media-resize/legacy/<key>` (класс
+ * `uploads/**` — как `/media-resize/uploads/<key>`). Conversion-ключ за
+ * family-роутом с #1204 роут не меняет, но нормализация нужна по-прежнему: обе
+ * формы живут в корпусе одновременно. Ключ индекса — storage key, то есть путь
+ * без роут-префикса и без query, поэтому все формы и все ступени `?w=` сходятся
  * в одну запись. Список префиксов тот же, что у первопартийных media-роутов в
  * `utils/mediaUrl.ts`.
  */

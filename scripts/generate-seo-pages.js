@@ -276,9 +276,9 @@ const SOCIAL_PREVIEW_WIDTH_BY_ROUTE = new Map([
 
 /**
  * #1221: соцпревью просили картинку «голым» адресом, без `?w=`, и получали МАСТЕР
- * с `no-store` — по 0.4–1 МБ на каждый обход краулера и каждый шеринг. Ownership-роуты
- * идут мимо кэша nginx (`X-Cache-Status: BYPASS`), поэтому кэшируемым такой ответ
- * делает только ширина в URL. Ступень берётся из контракта семейства: ширину вне
+ * с `no-store` — по 0.4–1 МБ на каждый обход краулера и каждый шеринг. `no-store`
+ * не кэширует ни nginx, ни браузер, поэтому кэшируемым такой ответ делает только
+ * ширина в URL. Ступень берётся из контракта семейства: ширину вне
  * `derivatives` спрашивать нельзя — чтение fail-closed и отвечает 400 (#1224).
  */
 function withSocialPreviewWidth(absoluteUrl) {
@@ -340,12 +340,12 @@ function toReaderMediaUrlOnApiOrigin(absoluteUrl) {
  * регресс, который закрыт #1221. Поэтому сначала ширина по исходному
  * family-роуту, и только потом роут.
  *
- * ЗАЧЕМ переписывать. Ownership/family-роуты идут мимо кэша nginx
- * (`X-Cache-Status: BYPASS`) даже с шириной: тело правильное и `immutable`, но
- * не кэшируется, поэтому каждый обход краулера и каждый шеринг заново гоняет
- * ресайз в Django — на одном vCPU с transform concurrency = 1. Legacy-роут тот
- * же байт в байт ответ кэширует (замер прода 07.09.2026, ключ
- * `3994/conversions/…-detail_hd.jpg?w=1280`: family `BYPASS`, legacy `MISS` → `HIT`).
+ * ЧТО ещё переписывается. С #1204 это только класс `uploads/**`: у него
+ * durable-производных нет вовсе. Conversion-ключи остались на своих
+ * family-роутах — обе причины обхода закрыты на бэкенде (лестница в
+ * #1195/#1201/#1168, кэш nginx в #1920; замер прода 15.09.2026 даёт на
+ * `gallery`/`address-image`/`travel-image` `MISS` → `HIT` и SHA-256, совпадающий
+ * с legacy-роутом).
  *
  * Классам без legacy-роута (плоский корень `/gallery/<hash>.webp` — большинство
  * обложек) отдельной ветки не нужно: `toLegacyResizePath` отдаёт на них `null`,
@@ -354,6 +354,9 @@ function toReaderMediaUrlOnApiOrigin(absoluteUrl) {
 function toSocialPreviewUrl(absoluteUrl) {
   return toReaderMediaUrlOnApiOrigin(withSocialPreviewWidth(absoluteUrl));
 }
+
+/** Legacy-роуты прокси: только они режут в момент запроса и понимают `q`/`fit`. */
+const LEGACY_RESIZE_ROUTE = /^\/media-resize\//i;
 
 function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } = {}) {
   const versioned = buildVersionedTravelImageUrl(rawUrl, updatedAt, id);
@@ -367,6 +370,7 @@ function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } 
 
     const legacyPathname = toLegacyResizePath(parsed.pathname);
     if (legacyPathname) parsed.pathname = legacyPathname;
+    const isLegacyResizeRoute = LEGACY_RESIZE_ROUTE.test(parsed.pathname);
 
     IMAGE_OPTIMIZATION_QUERY_PARAMS.forEach((key) => {
       try {
@@ -377,8 +381,19 @@ function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } 
     });
 
     if (width) parsed.searchParams.set('w', String(snapProxyWidth(width)));
-    if (quality) parsed.searchParams.set('q', String(snapProxyQuality(quality)));
-    parsed.searchParams.set('fit', 'contain');
+
+    // `q`/`fit` ставятся ТОЛЬКО на legacy-роутах — ровно как в `optimizeImageUrl`
+    // (`utils/imageProxy.ts`, `servedFromDurableFamily`). Семейство раздаётся
+    // предгенерированными производными: качество и кадрирование заданы профилем,
+    // присланные параметры бэкенд игнорирует, но каждый их набор — ОТДЕЛЬНЫЙ
+    // cache-key на тот же байт-в-байт файл. Пока conversion-ключи уходили на
+    // `/media-resize/legacy/` (#1204), сюда попадал именно legacy-роут и разница
+    // не проявлялась; после снятия rewrite безусловные `q`/`fit` развели бы
+    // preload и `<img>` по двум адресам одного слота — регресс #1146.
+    if (isLegacyResizeRoute) {
+      if (quality) parsed.searchParams.set('q', String(snapProxyQuality(quality)));
+      parsed.searchParams.set('fit', 'contain');
+    }
 
     return parsed.toString();
   } catch {

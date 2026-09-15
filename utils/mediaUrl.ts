@@ -187,13 +187,8 @@ const LEGACY_SIGNATURE_QUERY_PARAM =
  * роута и есть storage key (`/travel-image/682/conversions/x.webp` →
  * `682/conversions/x.webp`).
  *
- * Это важно после proxy-contract v4: сами эти роуты стали
- * `default_mode: source_passthrough`, то есть `?w=` там больше не режет, ответ
- * приходит мастером и помечается `no-store`. Legacy-конверсию нужно спрашивать
- * её собственным роутом `/media-resize/legacy/<key>` (`default_mode: transform`).
- * Замер прода 2026-08-02, `travel-image/682/conversions/10f0a8f2….webp?w=320`:
- * 132 344 B `no-store` против 14 742 B `immutable` на legacy-роуте; на выборке
- * из 30 обложек каталога — 5 705 100 B против 589 160 B.
+ * Нужны, чтобы отличить наш family-роут от прямой ссылки в бакет: у первого
+ * conversion-ключи адресуются штатно, второй переписывается (#1204).
  */
 const FIRST_PARTY_MEDIA_ROUTE =
   /^\/(?:gallery|travel-image|travel-description-image|address-image)\/(.+)$/i;
@@ -234,22 +229,34 @@ const isFirstPartyMediaHost = (hostname: string): boolean => {
   }
 };
 
+/**
+ * Ключ объекта в бакете и то, каким адресом он пришёл.
+ *
+ * Различие несущее: прямую ссылку на бакет переписывать обязательно (S3 не
+ * понимает `?w=` и отдаёт мастер), а первопартийный family-роут обслуживает
+ * ту же производную сам — см. `toLegacyResizePath`.
+ */
+type LegacyStorageKey = { key: string; viaFirstPartyRoute: boolean };
+
 /** Ключ объекта в нашем бакете, если URL ведёт именно туда. */
-const extractLegacyStorageKey = (parsed: URL): string | null => {
+const extractLegacyStorageKey = (parsed: URL): LegacyStorageKey | null => {
   const host = parsed.hostname.toLowerCase();
   const path = parsed.pathname.replace(/^\/+/, '');
   if (!path) return null;
 
   const virtualHost = host.match(S3_VIRTUAL_HOST);
-  if (virtualHost && virtualHost[1].toLowerCase() === LEGACY_STORAGE_BUCKET) return path;
+  if (virtualHost && virtualHost[1].toLowerCase() === LEGACY_STORAGE_BUCKET)
+    return { key: path, viaFirstPartyRoute: false };
 
   if (S3_PATH_STYLE_HOST.test(host)) {
     const [bucket, ...rest] = path.split('/');
-    if (bucket.toLowerCase() === LEGACY_STORAGE_BUCKET && rest.length) return rest.join('/');
+    if (bucket.toLowerCase() === LEGACY_STORAGE_BUCKET && rest.length)
+      return { key: rest.join('/'), viaFirstPartyRoute: false };
   }
 
   const firstParty = FIRST_PARTY_MEDIA_ROUTE.exec(parsed.pathname);
-  if (firstParty && isFirstPartyMediaHost(host)) return firstParty[1];
+  if (firstParty && isFirstPartyMediaHost(host))
+    return { key: firstParty[1], viaFirstPartyRoute: true };
 
   return null;
 };
@@ -290,6 +297,19 @@ const isLegacyConversionKey = (parts: string[]): boolean => {
  * разный (`imageProxy` берёт его из `EXPO_PUBLIC_API_URL`, трансформация тела
  * статьи — из первопартийного хоста), и склеивание origin в одном месте
  * ломало бы одну из двух веток.
+ *
+ * Conversion-ключи ЗА FAMILY-РОУТОМ больше не переписываются (#1204). Временный
+ * rewrite закрывал две дыры, и обе закрыты на бэкенде:
+ *   - `source_passthrough`/`no-store` на family-роутах — снят в #1195/#1201/#1168;
+ *     проба прода 15.09.2026 на `travel-image`, `gallery`, `address-image`
+ *     (`w=320/800/1600`) даёт 200 `stored-derivative`, `immutable` и SHA-256,
+ *     совпадающий с `/media-resize/legacy/<тот же ключ>` побайтно;
+ *   - мимо кэша nginx (`X-Cache-Status "BYPASS"` литералом) — снят в #1920;
+ *     та же проба даёт `MISS → HIT → HIT` на всех трёх семействах.
+ *
+ * Прямая ссылка на бакет переписывается по-прежнему: S3 не понимает `?w=` и
+ * отдаёт мастер целиком. Класс `uploads/**` остаётся на `/media-resize/` — у
+ * него durable-производных нет вовсе (см. `isLegacyUploadResizeUrl`).
  */
 export const toLegacyResizePath = (url: string): string | null => {
   const value = String(url || '').trim();
@@ -311,8 +331,9 @@ export const toLegacyResizePath = (url: string): string | null => {
     return null;
   }
 
-  const key = extractLegacyStorageKey(parsed);
-  if (!key) return null;
+  const storageKey = extractLegacyStorageKey(parsed);
+  if (!storageKey) return null;
+  const { key, viaFirstPartyRoute } = storageKey;
   const keyParts = parseSupportedLegacyImageKey(key);
   if (!keyParts) return null;
 
@@ -326,7 +347,10 @@ export const toLegacyResizePath = (url: string): string | null => {
   const suffix = query ? `?${query}` : '';
 
   if (isLegacyUploadKey(keyParts)) return `/media-resize/${key}${suffix}`;
-  if (isLegacyConversionKey(keyParts)) return `/media-resize/legacy/${key}${suffix}`;
+  // Conversion-ключ переписывается только когда пришёл прямой ссылкой на бакет.
+  // За family-роутом он уже адресован штатно — см. заголовок функции.
+  if (!viaFirstPartyRoute && isLegacyConversionKey(keyParts))
+    return `/media-resize/legacy/${key}${suffix}`;
 
   return null;
 };

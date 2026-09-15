@@ -170,7 +170,9 @@ describe('preload-скрипт даёт тот же адрес соцпревь�
     // имеют права — иначе краулер увидит второй адрес того же файла.
     const input = `${SITE}/gallery/3860/conversions/x-detail_hd.jpg`
     const head = await socialPreviewFromScript(input)
-    const expected = `${SITE}/media-resize/legacy/3860/conversions/x-detail_hd.jpg?w=1280`
+    // С #1204 адрес остаётся на своём family-роуте: ступень по-прежнему обязана
+    // проставиться (без неё краулер получит мастер), а кэш nginx даёт #1920.
+    const expected = `${SITE}/gallery/3860/conversions/x-detail_hd.jpg?w=1280`
 
     expect(normalizeOgImageUrl(input)).toBe(expected)
     expect({
@@ -188,16 +190,23 @@ describe('preload-скрипт даёт тот же адрес соцпревь�
     )
     for (const value of [head.meta('property', 'og:image'), head.meta('name', 'twitter:image')]) {
       expect(value).toContain('w=1280')
-      expect(value).not.toMatch(/\/gallery\/3860\/conversions\//)
+      // Голый ownership-адрес — это адрес БЕЗ ступени; сам family-роут с #1204
+      // законен, поэтому дефект ловится отсутствием `?w=`, а не именем роута.
+      expect(value).not.toMatch(/\/gallery\/3860\/conversions\/[^?]+$/)
     }
   })
 
-  it('набор входов покрывает обе ветки переписывания и ветку «не трогаем»', async () => {
+  it('набор входов покрывает ветку переписывания и ветку «не трогаем»', async () => {
     // Без этого `it.each` выше был бы зелёным и на наборе, где переписывать нечего.
     const previews = SOCIAL_PREVIEW_INPUTS.map((input) => normalizeOgImageUrl(input) as string)
-    expect(previews.some((url) => url.includes('/media-resize/legacy/'))).toBe(true)
     expect(previews.some((url) => /\/media-resize\/uploads\//.test(url))).toBe(true)
     expect(previews.some((url) => !url.includes('/media-resize/'))).toBe(true)
+    // С #1204 conversion-ключ за family-роутом на legacy-роут не уезжает: у обоих
+    // писателей он остаётся собой, и набор обязан этот класс содержать.
+    expect(previews.every((url) => !url.includes('/media-resize/legacy/'))).toBe(true)
+    expect(
+      previews.some((url) => /\/gallery\/3860\/conversions\/[^?]+\?w=/.test(url)),
+    ).toBe(true)
   })
 
   it.each([...DERIVATIVE_WIDTHS_BY_ROUTE.keys()])(

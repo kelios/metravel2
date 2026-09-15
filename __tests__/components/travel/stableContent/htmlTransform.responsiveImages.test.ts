@@ -39,18 +39,18 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     const out = withWeb(() => prepareStableContentHtml(html))
 
     // src падает на fallback-ступень, а не отдаёт оригинал
-    expect(out).toContain(`src="https://metravel.by/travel-description-image/540/description/abc.JPG?v=3315${AMP}w=800${AMP}q=80${AMP}fit=contain"`)
+    expect(out).toContain(`src="https://metravel.by/travel-description-image/540/description/abc.JPG?v=3315${AMP}w=800"`)
     // полная desktop-лестница присутствует в srcset (jsdom innerWidth 1024 > 768):
     // четыре ступени shrink-профиля `article_body` (бэкенд-коммит `9136878`)
     for (const w of [480, 800, 960, 1600]) {
-      expect(out).toContain(`w=${w}${AMP}q=80${AMP}fit=contain ${w}w`)
+      expect(out).toContain(`w=${w} ${w}w`)
     }
     // Ступень 1920 дважды входила в набор и дважды снята. #1160 поднял ею потолок,
     // когда это была ширина МАСТЕРА: fail-closed чтение отвечало 400 (замер прода
     // 2026-08-03), потолок опустили до 1600. Backend завёл `content_1920`
     // производной (#1215), ступень вернули (#1373) — и тем же днём shrink `9136878`
     // производную снял: точная 1920 снова только мастер с `no-store`, звать её нельзя.
-    expect(out).not.toContain(`w=1920${AMP}q=80${AMP}fit=contain 1920w`)
+    expect(out).not.toContain('w=1920 1920w')
     expect(out).toContain('sizes="(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px"')
     // cache-buster сохранён
     expect(out).toContain(`v=3315`)
@@ -64,10 +64,11 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     const first = extractFirstImgSrc(prepared)
 
     expect(first).not.toBeNull()
-    // #1195: family-роут отдаёт мастер с `no-store`, поэтому conversion-ключ тела
-    // статьи греется через `legacy_conversion` — тот же файл, но по лестнице.
+    // #1204: conversion-ключ тела статьи остаётся на своём family-роуте и греется
+    // ступенью лестницы. `q`/`fit` туда не уходят: семейство раздаётся готовыми
+    // производными, а лишние параметры плодили бы cache-key на тот же файл.
     expect(buildStableContentPrefetchUrl(first!)).toBe(
-      'https://metravel.by/media-resize/legacy/540/conversions/abc-detail_hd.jpg?w=800&q=80&fit=contain',
+      'https://metravel.by/gallery/540/conversions/abc-detail_hd.jpg?w=800',
     )
     expect(buildStableContentPrefetchUrl(first!)).not.toBe(raw)
   })
@@ -118,7 +119,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
         return { prefetch: buildStableContentPrefetchUrl(first), candidates: srcSetCandidates(prepared) }
       })
 
-      expect(prefetch).toBe(`${RAW}?w=${expected}&q=80&fit=contain`)
+      expect(prefetch).toBe(`${RAW}?w=${expected}`)
       // Главное условие тикета: греется ровно та ступень, что есть в лестнице
       // этого вьюпорта, — иначе слот скачивается двумя разными URL.
       expect(candidates).toContain(prefetch)
@@ -127,7 +128,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     it('falls back to the fixed rung outside web, where there is no prefetch at all', () => {
       const prepared = prepareStableContentHtml(`<p><img src="${RAW}" /></p>`)
       expect(buildStableContentPrefetchUrl(extractFirstImgSrc(prepared)!)).toBe(
-        `${RAW}?w=800&q=80&fit=contain`,
+        `${RAW}?w=800`,
       )
     })
   })
@@ -145,13 +146,13 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
 
       // Две ступени мобильного набора: 320/640 у shrink-профиля больше нет (#1373).
       for (const w of [480, 800]) {
-        expect(out).toContain(`w=${w}${AMP}q=80${AMP}fit=contain ${w}w`)
+        expect(out).toContain(`w=${w} ${w}w`)
       }
       // #1160: потолок подняли только на desktop. На мобиле слот 100vw и картинки
       // тела ленивые — лишние ступени здесь платятся мобильным трафиком, а прирост
       // резкости на 390 CSS не виден.
-      expect(out).not.toContain(`w=960${AMP}q=80${AMP}fit=contain 960w`)
-      expect(out).not.toContain(`w=1920${AMP}q=80${AMP}fit=contain 1920w`)
+      expect(out).not.toContain('w=960 960w')
+      expect(out).not.toContain('w=1920 1920w')
     } finally {
       Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
       Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
@@ -163,7 +164,7 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     const out = prepareStableContentHtml(html)
     expect(out).not.toContain('w=4000')
     expect(out).not.toContain('dpr=3')
-    expect(out).toContain(`q=80`)
+    expect(out).not.toContain('q=95')
     // 1920 — потолок мастера, выше него прокси не апскейлит (#1160)
     expect(out).not.toContain('w=2500')
   })
@@ -226,7 +227,10 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
         ),
       )
 
-      expect(out).toContain('/media-resize/legacy/15601/conversions/')
+      // #1204: ключ остаётся на своём family-роуте — клэмп по семейству от этого
+      // и зависит: профиль узнаётся по первому сегменту пути.
+      expect(out).toContain('/address-image/15601/conversions/')
+      expect(out).not.toContain('/media-resize/')
       expect(rungs(out)).toEqual([480, 800, 960])
       expect(out).not.toContain('w=1600')
     })
