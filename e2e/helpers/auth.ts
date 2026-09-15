@@ -2,7 +2,7 @@
  * Хелперы для авторизации в E2E тестах
  */
 
-import { Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /**
  * Проверяет, авторизован ли пользователь
@@ -199,4 +199,98 @@ export async function waitForAuth(page: Page, timeoutMs = 5000): Promise<boolean
   } catch {
     return false;
   }
+}
+
+/**
+ * Имя HttpOnly-cookie веб-сессии. Бэкенд ставит её на логине с этими же
+ * атрибутами: `metravel/common/authentication.py:88-102` и
+ * `AUTH_TOKEN_COOKIE_*` в `metravel/envs/common/settings.py:123-128`.
+ */
+export const WEB_AUTH_COOKIE_NAME = 'authToken';
+
+type BrowserCookie = { name: string; value: string; domain: string; path: string };
+
+/**
+ * Несёт ли банк cookie веб-сессию для этого адреса.
+ *
+ * Сопоставление host/path здесь своё, потому что `context.cookies(url)`
+ * ВЫБРАСЫВАЕТ Secure-cookie, если URL не `https:`, а host не `localhost`
+ * (playwright-core 1.61.1, `lib/coreBundle.js:12641` → `isLocalHostname`).
+ * Дефолтный e2e-таргет — `http://127.0.0.1:8085`, а бэкенд ставит cookie
+ * `Secure`, поэтому фильтр Playwright отвечает «сессии нет» на контексте, где
+ * она есть: реальный вход из global-setup молча подменялся бы сидом, а при
+ * чужом токене — чужой сессией.
+ */
+export function hasWebAuthCookie(cookies: readonly BrowserCookie[], url: string): boolean {
+  const { hostname, pathname } = new URL(url);
+  return cookies.some((cookie) => {
+    if (cookie.name !== WEB_AUTH_COOKIE_NAME || !cookie.value) return false;
+    const cookieDomain = cookie.domain.startsWith('.') ? cookie.domain : `.${cookie.domain}`;
+    if (!`.${hostname}`.endsWith(cookieDomain)) return false;
+    return (pathname || '/').startsWith(cookie.path || '/');
+  });
+}
+
+/**
+ * Гарантирует, что контекст несёт веб-сессию так же, как настоящий вход.
+ *
+ * На web токен в JS не хранится вовсе (`shouldUseStoredAuthToken()` →
+ * `utils/authPlatform.ts:22`, на web `authStore` стирает `secure_userToken`),
+ * поэтому запись токена в `localStorage` авторизацией не является: жёсткая
+ * загрузка документа уходит на сервер анонимной. Документные маршруты,
+ * которые резолвятся по зрителю (`/travel/<id>` после #1932), видят только эту
+ * cookie.
+ *
+ * Обычно она уже лежит в storageState от global-setup — тогда переиспользуем
+ * реальную сессию и ничего не подменяем. Cookie добавляется только если её нет,
+ * и тогда обязателен `userId`: см. ниже, одной cookie для сессии не хватает.
+ */
+export async function ensureWebAuthCookie(
+  page: Page,
+  opts: { url: string; token: string; userId?: string | null },
+): Promise<void> {
+  const context = page.context();
+  // Без фильтра по URL: см. `hasWebAuthCookie` — фильтр Playwright прячет
+  // Secure-cookie реальной сессии на http-таргете `127.0.0.1`.
+  if (hasWebAuthCookie(await context.cookies(), opts.url)) return;
+
+  const token = String(opts.token || '').trim();
+  if (!token) {
+    throw new Error('ensureWebAuthCookie: no auth token to seed the web session cookie with');
+  }
+
+  // Витрина `userId` — часть веб-сессии, а не украшение: `checkAuthentication`
+  // схлопывает пользователя в гостя на `!storageData.userId` ДО обращения к
+  // cookie-пробе (`stores/authStore.ts:316`). Cookie без неё даёт страницу
+  // гостя при живой серверной сессии — ровно тот тихий no-op, против которого
+  // этот хелпер и написан, поэтому требуем её громко.
+  const userId = String(opts.userId ?? '').trim();
+  if (!userId) {
+    throw new Error(
+      'ensureWebAuthCookie: seeding a web session requires userId — authStore checks it before the cookie probe',
+    );
+  }
+
+  await context.addCookies([
+    {
+      name: WEB_AUTH_COOKIE_NAME,
+      value: token,
+      domain: new URL(opts.url).hostname,
+      path: '/',
+      httpOnly: true,
+      // Бэкенд ставит cookie Secure и на локальном стенде: http://127.0.0.1 —
+      // trustworthy origin, браузер такую cookie принимает и отправляет.
+      secure: true,
+      sameSite: 'Lax',
+    },
+  ]);
+
+  await page.addInitScript((value: string) => {
+    try {
+      // Токен сюда класть нельзя: на web клиент его не читает и стирает сам.
+      window.localStorage.setItem('userId', value);
+    } catch {
+      // ignore
+    }
+  }, userId);
 }

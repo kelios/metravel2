@@ -1,9 +1,9 @@
 import { test, expect } from './fixtures';
 import { apiLogin, createOrUpdateTravel, deleteTravel } from './helpers/e2eApi';
-import { mockFakeAuthApis } from './helpers/auth';
+import { ensureWebAuthCookie } from './helpers/auth';
 
 test.describe('Draft recovery popup', () => {
-  test('appears only on page open when stale draft exists and does not reappear on autosave', async ({ page }) => {
+  test('appears only on page open when stale draft exists and does not reappear on autosave', async ({ page, baseURL }) => {
     const email = (process.env.E2E_EMAIL || '').trim();
     const password = (process.env.E2E_PASSWORD || '').trim();
     const hasCreds = !!email && !!password;
@@ -81,27 +81,37 @@ test.describe('Draft recovery popup', () => {
       }
     }, draftKey);
 
-    // Ensure the editor route does not redirect as a guest in full-suite runs.
-    // Prefer the real API token (store plaintext; secureStorage falls back to raw value if decryption fails).
-    const tokenToStore = String(apiCtx?.token || 'e2e-fake-token');
-    const userIdToStore = String(apiCtx?.userId || '').trim() || '1';
-    await page.addInitScript((payload: { token: string }) => {
-      try {
-        window.localStorage.setItem('secure_userToken', payload.token);
-        window.localStorage.setItem('userId', (payload as any).userId);
-        window.localStorage.setItem('userName', 'E2E User');
-        window.localStorage.setItem('isSuperuser', 'false');
-      } catch {
-        // ignore
-      }
-    }, { token: tokenToStore, userId: userIdToStore } as any);
-
-    // Prevent auth hydration from invalidating our seeded token (profile/refresh can 401 and log out).
-    await mockFakeAuthApis(page);
-
     try {
+      // The editor route is resolved by the server from the HttpOnly session
+      // cookie (#1932): the owner gets the shell, anyone else a 301 or a 404.
+      // A token written into localStorage is not a web session at all — the web
+      // client never stores one — so a hard load would arrive anonymous and the
+      // seeded travel (publish: false) would resolve as 404.
+      expect(baseURL, 'baseURL is required to seed the web session cookie').toBeTruthy();
+      await ensureWebAuthCookie(page, {
+        url: String(baseURL),
+        token: String(apiCtx.token),
+        userId: apiCtx.userId,
+      });
+
       // Draft recovery is implemented in the travel editor (UpsertTravelView), routed as /travel/:id.
-      await page.goto(`/travel/${travelId}`, { waitUntil: 'domcontentloaded' });
+      const response = await page.goto(`/travel/${travelId}`, { waitUntil: 'domcontentloaded' });
+
+      // Hard document contract: without these the test degrades silently — a 404
+      // shell still runs addInitScript, so the draft-key assertion below would
+      // pass while no editor ever mounted. Бьёт это на таргетах, где документ
+      // резолвит nginx+Django; локальный `scripts/serve-web-build.js` отдаёт
+      // SPA-оболочку и 200 на любой маршрут, поэтому локально владельца
+      // подтверждают только проверки монтирования редактора ниже.
+      expect(response, `No document response for /travel/${travelId}`).toBeTruthy();
+      expect(
+        response!.status(),
+        `Owner must receive the editor document, got HTTP ${response!.status()}`,
+      ).toBe(200);
+      expect(
+        response!.request().redirectedFrom(),
+        `Owner must not be redirected away from /travel/${travelId}`,
+      ).toBeNull();
 
       const landedUrl = page.url();
       const landedPath = (() => {
