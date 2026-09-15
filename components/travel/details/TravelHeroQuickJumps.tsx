@@ -13,6 +13,32 @@ import { translate as i18nT } from '@/i18n'
 const TOUCH_TAP_MAX_MOVE = 12
 const DUPLICATE_PRESS_GUARD_MS = 250
 
+/**
+ * Потолок системного увеличения шрифта для подписи чипа (#1947).
+ *
+ * Ряд чипов на телефоне — ЗАКРЕПЛЁННАЯ полоса над контентом
+ * (`TravelHeroStickyNavNative` в `stickyHeaderIndices`), и её высота равна
+ * 20pt внутренних отступов плюс `lineHeight` подписи. На iOS-ступенях раздела
+ * «Увеличенные размеры» множитель доходит до 3.571
+ * (`RCTUtils.mm` → `RCTFontSizeMultiplier`), поэтому без потолка полоса растёт
+ * с ~52 до ~92pt — десятая часть экрана iPhone занята навигацией навсегда,
+ * чип «Route map» раздувается примерно до 316pt, и в видимую часть ряда не
+ * помещается даже один чип целиком. Туда же смотрит
+ * `NATIVE_STICKY_SECTION_OFFSET = 156` (`hooks/useScrollNavigation.ts`):
+ * переход к разделу считает высоту полосы константой, и неограниченный рост
+ * подписи прячет заголовок раздела под полосой.
+ *
+ * Значение 2 — первый множитель заметно выше максимальной НЕ-accessibility
+ * ступени iOS (1.353): подпись растёт с 13 до 26pt, полоса остаётся в ~64pt.
+ * Потолок гасит только масштаб, а не перенос: коробка чипа по-прежнему не имеет
+ * фиксированной высоты (`minHeight: 44`) и растёт под подпись.
+ *
+ * На Android это no-op: системный предел шкалы шрифта там 2.0. На вебе проп
+ * отбрасывается — react-native-web не пробрасывает его в DOM (`forwardedProps`),
+ * и браузер Dynamic Type не масштабирует.
+ */
+const QUICK_JUMP_LABEL_MAX_FONT_SCALE = 2
+
 const ACTION_LABELS: Record<string, string> = {
   get map() { return i18nT('travel:components.travel.details.TravelHeroQuickJumps.action.map') },
   get description() { return i18nT('travel:components.travel.details.TravelHeroQuickJumps.action.description') },
@@ -148,7 +174,11 @@ const QuickJumpChip = React.memo(function QuickJumpChip({
         size={16}
         color={isPrimary ? colors.textOnPrimary : colors.primary}
       />
-      <Text style={[styles.quickJumpLabel, isPrimary && styles.quickJumpLabelPrimary]}>
+      <Text
+        testID={`travel-quick-jump-label-${link.key}`}
+        style={[styles.quickJumpLabel, isPrimary && styles.quickJumpLabelPrimary]}
+        maxFontSizeMultiplier={QUICK_JUMP_LABEL_MAX_FONT_SCALE}
+      >
         {label}
       </Text>
     </Pressable>

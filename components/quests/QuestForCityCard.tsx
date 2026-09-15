@@ -232,11 +232,11 @@ export function QuestForCityCard({
           {quest.title}
         </Text>
         {chips.length > 0 && (
-          <View style={styles.chipRow}>
+          <View style={styles.chipRow} testID="quest-card-meta-row">
             {chips.map((chip, i) => (
               // Точка-разделитель живёт внутри группы с чипом, поэтому мета не
               // переносится «осиротевшим» «• Средне» на отдельную строку.
-              <View key={chip.key} style={styles.chipGroup}>
+              <View key={chip.key} style={styles.chipGroup} testID={`quest-card-meta-${chip.key}`}>
                 {i > 0 && <View style={styles.dot} />}
                 <View style={styles.chip}>
                   <NavigationIcon name={chip.icon} size={13} color={colors.textMuted} />
@@ -329,24 +329,43 @@ function createStyles(colors: ThemedColors) {
       gap: 8,
       marginTop: 2,
     },
+    // #1947, семья NATIVE-TEXT-ROW-001. Ряд переносится, но группа, которая одна
+    // не помещается в строку целиком (длинная локаль BE/PL/UK, системное
+    // увеличение шрифта на iOS/Android), в RN не сжимается: `flexShrink` по
+    // умолчанию 0. Такая группа вылезала за карточку, а `overflow: 'hidden'` у
+    // `card` резал её МОЛЧА — без многоточия, ровно как в `#1342`. Выход на
+    // сжатие в группе один (единственная подпись внутри), поэтому он и есть
+    // sizing contract: `numberOfLines={1}` у подписи наконец печатает «…»,
+    // а не теряет хвост. `maxWidth` дополнительно ограничивает группу шириной
+    // строки — на случай, когда перенос уже отдал ей отдельную строку.
     chipGroup: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
+      flexShrink: 1,
+      minWidth: 0,
+      maxWidth: '100%',
     },
     chip: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,
+      flexShrink: 1,
+      minWidth: 0,
     },
     chipText: {
       fontSize: 13,
       fontWeight: '500',
       color: colors.textMuted,
+      flexShrink: 1,
+      minWidth: 0,
     },
     dot: {
       width: 3,
       height: 3,
+      // Разделитель сжиматься не должен: сжимается подпись, а не точка между
+      // чипами. В RN это и так дефолт, но здесь он несущий и потому явный.
+      flexShrink: 0,
       borderRadius: 999,
       backgroundColor: colors.textMuted,
       opacity: 0.6,
