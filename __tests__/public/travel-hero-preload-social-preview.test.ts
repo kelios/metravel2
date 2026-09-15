@@ -233,7 +233,12 @@ describe('preload-скрипт даёт тот же адрес соцпревь�
     })
     await new Promise((resolve) => setTimeout(resolve, 0))
     const familyHrefs = family.preloadHrefs()
-    expect(familyHrefs.length).toBeGreaterThan(0)
+    // Кардинальность пинится намеренно: `imagesrcset` ставится только при
+    // непустом наборе кандидатов, и исчезни он (или переименуйся атрибут —
+    // ровно тот класс дефекта, который правится этим тестом), список схлопнулся
+    // бы до одного href, а проверка ниже осталась бы зелёной на пустом месте.
+    // desktop-ветка харнесса: href самой широкой ступени + три кандидата.
+    expect(familyHrefs).toHaveLength(4)
     for (const href of familyHrefs) {
       expect(href).toContain('w=')
       expect(href).not.toMatch(/[?&]q=/)
