@@ -787,6 +787,29 @@ const verifyPointCategoryRefreshOnReturn = async (page: Page, viewport: 'desktop
     status: 200, contentType: 'application/json', body: '[]',
   }));
 
+  // `travelId` is fictional (no such row exists in any backend). Only the
+  // API above is mocked; the DOCUMENT for `/travel/${travelId}` is not —
+  // deliberately left unmocked (#1954, item 3). On a target where
+  // `/travel/<numeric-id>` is resolved server-side by DB lookup (#1932),
+  // this fictional id would 404 independently of auth — a different
+  // mechanism from the localStorage-fake-login family (#1954, items 1-2).
+  //
+  // An earlier version of this fix intercepted the document and served the
+  // shell from `/` under this path. That was wrong: this suite's actual
+  // default target, `scripts/serve-web-build.js`, does NOT fall back to a
+  // generic shell for a dynamic route — it resolves `/travel/151800` to the
+  // real, route-specific static export `dist/travel/[id].html` (see the
+  // documented precedent at scripts/serve-web-build.js:47-54: a route
+  // silently landing on `index.html` measures the home shell instead of its
+  // own page). Substituting the home document there would have either
+  // introduced a real hydration mismatch (`e2e/hydration-routes.spec.ts`
+  // pins `Minified React error #418` as an observable failure mode) or
+  // silently made this test assert against the wrong screen — exactly the
+  // class of bug #1524 already fixed once for this route family. The
+  // interception's only benefit — surviving a DB-backed 404 for a fictional
+  // id — only applies on an nginx+Django target, and this suite does not
+  // run there. Left unmocked on purpose; not solved for that hypothetical
+  // target.
   await page.goto(`/travel/${travelId}`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toHaveValue('E2E category freshness');
   const stepResponse = page.waitForResponse((response) =>

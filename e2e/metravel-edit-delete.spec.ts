@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 import { apiContextFromEnv, apiRequestContext, createOrUpdateTravel } from './helpers/e2eApi';
 import { preacceptCookies } from './helpers/navigation';
-import { simpleEncrypt } from './helpers/auth';
+import { ensureWebAuthCookie } from './helpers/auth';
 
 const basePayload = {
   id: null,
@@ -57,7 +57,7 @@ function pickOwnerId(raw: unknown): string {
 }
 
 test.describe('Travel edit/delete flow', () => {
-  test('creates a draft, edits it in the wizard and then deletes it', async ({ page, createdTravels }) => {
+  test('creates a draft, edits it in the wizard and then deletes it', async ({ page, createdTravels, baseURL }) => {
     test.setTimeout(240_000);
 
     const ctx = await apiContextFromEnv().catch(() => null);
@@ -85,21 +85,36 @@ test.describe('Travel edit/delete flow', () => {
       pickOwnerId((created as any)?.user?.id) ||
       String(ctx.userId || '').trim();
 
-    const encryptedToken = simpleEncrypt(ctx.token, 'metravel_encryption_key_v1');
-    await page.addInitScript(
-      (payload: { token: string; userId: string }) => {
-        try {
-          window.localStorage.setItem('secure_userToken', payload.token);
-          if (payload.userId) window.localStorage.setItem('userId', payload.userId);
-        } catch {
-          // ignore
-        }
-      },
-      { token: encryptedToken, userId: ownerId }
-    );
     await preacceptCookies(page);
 
-    await page.goto(`/travel/${travelId}`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
+    // The editor route for a numeric id is resolved server-side by the
+    // HttpOnly `authToken` session cookie (#1932), not by anything read from
+    // localStorage: on web `secure_userToken` is never consulted at all
+    // (utils/authPlatform.ts). Seed the real cookie the same way a genuine
+    // login would — same pattern already proven in e2e/draft-recovery.spec.ts.
+    expect(baseURL, 'baseURL is required to seed the web session cookie').toBeTruthy();
+    await ensureWebAuthCookie(page, {
+      url: String(baseURL),
+      token: ctx.token,
+      userId: ownerId,
+    });
+
+    // Hard document contract: without these the test degrades silently — a
+    // 301/404 shell still runs addInitScript, so the URL-shape assertion
+    // below could pass while no editor ever mounted (#1950/#1954).
+    const response = await page.goto(`/travel/${travelId}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 120_000,
+    });
+    expect(response, `No document response for /travel/${travelId}`).toBeTruthy();
+    expect(
+      response!.status(),
+      `Owner must receive the editor document, got HTTP ${response!.status()}`,
+    ).toBe(200);
+    expect(
+      response!.request().redirectedFrom(),
+      `Owner must not be redirected away from /travel/${travelId}`,
+    ).toBeNull();
     await expect(page).toHaveURL(/\/travel\/\d+/, { timeout: 30_000 });
 
     const nameInput = page.getByPlaceholder('Например: Неделя в Грузии');

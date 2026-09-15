@@ -1,6 +1,6 @@
 import { test, expect, type Page, type Response as PWResponse } from '@playwright/test';
 import { apiLogin, readTravel, type E2EApiContext } from './helpers/e2eApi';
-import { mockFakeAuthApis } from './helpers/auth';
+import { ensureWebAuthCookie } from './helpers/auth';
 
 /**
  * #1516 — permanent regression: background autosave of a text-only edit must
@@ -112,30 +112,26 @@ async function ensureDesktopEditorLoaded(page: Page) {
   return editor;
 }
 
-async function openWizardHydrated(page: Page, apiCtx: E2EApiContext, expectedName: string) {
-  // The default global-setup storageState deliberately strips
-  // `secure_userToken` and relies on an HttpOnly session cookie instead (see
-  // e2e/global-setup.ts). This app's `apiClient` authenticates travel reads
-  // with a bearer token from secure storage, not the session cookie, so that
-  // default session renders the wizard as a guest ("Ошибка загрузки: не
-  // удалось загрузить путешествие"). Seed the real bearer token directly —
-  // same pattern already proven in e2e/draft-recovery.spec.ts.
-  await page.addInitScript(
-    (payload: { token: string; userId: string }) => {
-      try {
-        window.localStorage.setItem('secure_userToken', payload.token);
-        window.localStorage.setItem('userId', payload.userId);
-        window.localStorage.setItem('userName', 'E2E User');
-        window.localStorage.setItem('isSuperuser', 'false');
-      } catch {
-        // ignore
-      }
-    },
-    { token: apiCtx.token, userId: String(apiCtx.userId || '').trim() || '1' },
-  );
-  // Prevent auth-hydration probes (profile/refresh) from 401-ing the seeded
-  // token and logging the session back out mid-navigation.
-  await mockFakeAuthApis(page);
+async function openWizardHydrated(
+  page: Page,
+  apiCtx: E2EApiContext,
+  expectedName: string,
+  baseURL: string | undefined,
+) {
+  // The editor route for a numeric id is resolved server-side by the
+  // HttpOnly `authToken` session cookie (#1932). On web the client never
+  // reads a bearer token from storage for authenticated reads either —
+  // `getAccessToken()` returns null in cookie mode (api/client.ts,
+  // utils/authPlatform.ts) — so seeding `secure_userToken` authenticates
+  // nothing on either the document or the XHR layer. Seed the real cookie
+  // the same way a genuine login would — same pattern already proven in
+  // e2e/draft-recovery.spec.ts.
+  expect(baseURL, 'baseURL is required to seed the web session cookie').toBeTruthy();
+  await ensureWebAuthCookie(page, {
+    url: String(baseURL),
+    token: apiCtx.token,
+    userId: String(apiCtx.userId || '').trim() || '1',
+  });
 
   // Defense-in-depth: a stale local draft for this id would pop the
   // "Есть несохранённые изменения" recovery dialog and block the form
@@ -149,7 +145,20 @@ async function openWizardHydrated(page: Page, apiCtx: E2EApiContext, expectedNam
     }
   }, `metravel_travel_draft_${TRAVEL_ID}`);
 
-  await page.goto(`/travel/${TRAVEL_ID}`, { waitUntil: 'domcontentloaded' });
+  // Hard document contract: without these the test degrades silently — a
+  // 301/404 shell still runs addInitScript, so the hydration wait below
+  // would just look like a slow load instead of a routing regression
+  // (#1950/#1954).
+  const response = await page.goto(`/travel/${TRAVEL_ID}`, { waitUntil: 'domcontentloaded' });
+  expect(response, `No document response for /travel/${TRAVEL_ID}`).toBeTruthy();
+  expect(
+    response!.status(),
+    `Owner must receive the editor document, got HTTP ${response!.status()}`,
+  ).toBe(200);
+  expect(
+    response!.request().redirectedFrom(),
+    `Owner must not be redirected away from /travel/${TRAVEL_ID}`,
+  ).toBeNull();
 
   const nameInput = page.getByPlaceholder(NAME_PLACEHOLDER);
   // Hydration gate: the name input only shows the real value after
@@ -166,6 +175,7 @@ async function runNarrowContentSaveCheck(
   page: Page,
   apiCtx: E2EApiContext,
   viewport: { width: number; height: number; label: 'desktop' | 'mobile' },
+  baseURL: string | undefined,
 ) {
   const before = await readTravel(apiCtx, TRAVEL_ID);
   const beforeStructure = snapshotStructure(before);
@@ -194,7 +204,7 @@ async function runNarrowContentSaveCheck(
   );
 
   await page.setViewportSize({ width: viewport.width, height: viewport.height });
-  const nameInput = await openWizardHydrated(page, apiCtx, beforeStructure.name);
+  const nameInput = await openWizardHydrated(page, apiCtx, beforeStructure.name, baseURL);
   await expect(nameInput).toBeVisible();
 
   const marker = `E2E-1516-${viewport.label}-narrow-path-${Date.now()}`;
@@ -279,13 +289,13 @@ test.describe('#1516 travel content-save narrow path (live-contract)', () => {
     apiCtx = await apiLogin(email, password);
   });
 
-  test('desktop 1440x900: editing only the description sends one narrow content PATCH', async ({ page }) => {
+  test('desktop 1440x900: editing only the description sends one narrow content PATCH', async ({ page, baseURL }) => {
     test.setTimeout(120_000);
-    await runNarrowContentSaveCheck(page, apiCtx, { width: 1440, height: 900, label: 'desktop' });
+    await runNarrowContentSaveCheck(page, apiCtx, { width: 1440, height: 900, label: 'desktop' }, baseURL);
   });
 
-  test('mobile 390x844: editing only the description sends one narrow content PATCH', async ({ page }) => {
+  test('mobile 390x844: editing only the description sends one narrow content PATCH', async ({ page, baseURL }) => {
     test.setTimeout(120_000);
-    await runNarrowContentSaveCheck(page, apiCtx, { width: 390, height: 844, label: 'mobile' });
+    await runNarrowContentSaveCheck(page, apiCtx, { width: 390, height: 844, label: 'mobile' }, baseURL);
   });
 });
