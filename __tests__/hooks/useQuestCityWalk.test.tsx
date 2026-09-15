@@ -113,6 +113,20 @@ describe('useQuestCityWalk', () => {
     ])
   })
 
+  it('не пишет чужие квесты в офлайн-каталог: заметки читают бандл без коммита', async () => {
+    mockedFetch.mockImplementation(async (questId: string) => bundleFor(questId) as never)
+
+    renderHook(() => useQuestCityWalk(['minsk-a'].map(quest) as never), { wrapper })
+
+    await act(async () => {
+      jest.runOnlyPendingTimers()
+    })
+
+    // Слотов «недавних» всего 20: квест, который посетитель не открывал, не
+    // должен вытеснять оттуда просмотренный (#1569).
+    expect(mockedFetch).toHaveBeenCalledWith('minsk-a', { persistOffline: false })
+  })
+
   it('оставляет секцию с теми бандлами, что доехали', async () => {
     mockedFetch.mockImplementation(async (questId: string) => {
       if (questId === 'minsk-a') throw new Error('502')

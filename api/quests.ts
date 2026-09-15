@@ -769,7 +769,10 @@ export async function fetchQuestsByCity(cityId: number): Promise<ApiQuestBundle>
  * При успехе кэширует сырой бандл в AsyncStorage (fire-and-forget) для офлайна.
  * При сетевом фейле возвращает кэш, если он есть, — иначе пробрасывает ошибку.
  */
-export async function fetchQuestByQuestId(questId: string): Promise<ApiQuestBundle> {
+export async function fetchQuestByQuestId(
+    questId: string,
+    options: { persistOffline?: boolean } = {},
+): Promise<ApiQuestBundle> {
     assertUsableQuestId(questId, 'fetchQuestByQuestId');
     try {
         const bundle = await retry(
@@ -788,7 +791,14 @@ export async function fetchQuestByQuestId(questId: string): Promise<ApiQuestBund
         // The catalog commit is the single durable quest-package write. Await
         // its best-effort wrapper so a successful online response cannot race a
         // force-stop before the offline snapshot is committed.
-        await writeCachedQuestBundle(questId, normalized);
+        //
+        // `persistOffline: false` is for readers that show a quest the user has
+        // not opened — the city landing notes (#1569) read up to three bundles
+        // per page. Committing those would fill the offline catalog with quests
+        // nobody picked and push actually-opened ones out of its 20 LRU slots.
+        if (options.persistOffline !== false) {
+            await writeCachedQuestBundle(questId, normalized);
+        }
         return normalized;
     } catch (err) {
         const cached = await readCachedQuestBundle(questId);

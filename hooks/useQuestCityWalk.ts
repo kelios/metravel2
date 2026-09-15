@@ -22,6 +22,12 @@ import type { QuestMeta } from '@/utils/questAdapters'
  * страницу. Ключ и форма данных те же, что у запроса крошек
  * (`hooks/useBreadcrumbModel`, сырой `ApiQuestBundle`), поэтому переход с
  * посадочной в квест не платит за бандл второй раз.
+ *
+ * Офлайн-каталог эти чтения не наполняют (`persistOffline: false`): квест,
+ * который посетитель не открывал, не должен появляться в «недавних» и вытеснять
+ * оттуда реально просмотренный — слотов всего 20. Открытый квест пишет себя сам,
+ * потому что экран квеста читает бандл напрямую (`hooks/useQuestsApi.ts:184`), а
+ * не через этот ключ.
  */
 const QUEST_CITY_WALK_STALE_TIME = 30 * 60 * 1000
 const QUEST_CITY_WALK_GC_TIME = 60 * 60 * 1000
@@ -83,7 +89,7 @@ export function useQuestCityWalk(
   return useQueries({
     queries: walkQuestIds.map((questId) => ({
       queryKey: queryKeys.questBundle(questId),
-      queryFn: () => fetchQuestByQuestId(questId),
+      queryFn: () => fetchQuestByQuestId(questId, { persistOffline: false }),
       enabled: enabled && ready,
       staleTime: QUEST_CITY_WALK_STALE_TIME,
       gcTime: QUEST_CITY_WALK_GC_TIME,
