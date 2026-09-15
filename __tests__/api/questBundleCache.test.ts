@@ -140,6 +140,17 @@ describe('questBundleCache offline round-trip', () => {
     expect(cached?.quest_id).toBe(QUEST_ID)
   })
 
+  it('does not cache the bundle when the reader opts out of the offline commit', async () => {
+    mockedGet.mockResolvedValue(makeRawBundle())
+
+    // Городская посадочная читает бандлы квестов, которых посетитель не
+    // открывал (#1569): такой квест не должен занимать слот «недавних».
+    await fetchQuestByQuestId(QUEST_ID, { persistOffline: false })
+    await Promise.resolve()
+
+    expect(await readCachedQuestBundle(QUEST_ID)).toBeNull()
+  })
+
   it('rethrows when the fetch fails and there is no cache', async () => {
     mockedGet.mockRejectedValue(new Error('offline'))
     await expect(fetchQuestByQuestId('uncached-quest')).rejects.toThrow('offline')
