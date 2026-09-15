@@ -3,7 +3,7 @@ const {
   buildQuestCountryLandingGroups,
   getQuestCountryAlias,
   normalizeIsoCountryCode,
-  questCountryLandingIsIndexable,
+  questCountryLandingIsLinkable,
   resolveQuestCountryAlias,
 } = require('@/utils/questCountryLanding')
 
@@ -97,16 +97,18 @@ describe('quest country landing groups', () => {
   })
 
   // #1762: правило считается по каталогу, а не по списку стран — страна, у
-  // которой появился второй город, обязана стать индексируемой сама.
-  it('treats a country landing as indexable only from the second city on', () => {
+  // которой появился второй город, обязана сама попасть в навигацию. Про место
+  // в выдаче эта функция больше не отвечает: индексируемость считается по
+  // фактическому тексту страницы (#1929, `scripts/lib/questPageDepth.js`).
+  it('treats a country landing as linkable only from the second city on', () => {
     const groups = buildQuestCountryLandingGroups(quests)
     const belarus = groups.find((country: { countryAlias: string }) => country.countryAlias === 'belarus')
     const poland = groups.find((country: { countryAlias: string }) => country.countryAlias === 'poland')
 
     expect(belarus.cities.length).toBeGreaterThanOrEqual(2)
     expect(poland.cities).toHaveLength(1)
-    expect(questCountryLandingIsIndexable(belarus)).toBe(true)
-    expect(questCountryLandingIsIndexable(poland)).toBe(false)
+    expect(questCountryLandingIsLinkable(belarus)).toBe(true)
+    expect(questCountryLandingIsLinkable(poland)).toBe(false)
 
     const grownPoland = buildQuestCountryLandingGroups([
       ...quests,
@@ -121,14 +123,14 @@ describe('quest country landing groups', () => {
     ]).find((country: { countryAlias: string }) => country.countryAlias === 'poland')
 
     expect(grownPoland.cities).toHaveLength(2)
-    expect(questCountryLandingIsIndexable(grownPoland)).toBe(true)
+    expect(questCountryLandingIsLinkable(grownPoland)).toBe(true)
   })
 
-  it('refuses a malformed country instead of guessing it is indexable', () => {
-    expect(questCountryLandingIsIndexable(null)).toBe(false)
-    expect(questCountryLandingIsIndexable(undefined)).toBe(false)
-    expect(questCountryLandingIsIndexable({})).toBe(false)
-    expect(questCountryLandingIsIndexable({ cities: 'belarus, poland' })).toBe(false)
+  it('refuses a malformed country instead of guessing it is linkable', () => {
+    expect(questCountryLandingIsLinkable(null)).toBe(false)
+    expect(questCountryLandingIsLinkable(undefined)).toBe(false)
+    expect(questCountryLandingIsLinkable({})).toBe(false)
+    expect(questCountryLandingIsLinkable({ cities: 'belarus, poland' })).toBe(false)
   })
 
   it('skips missing or invalid country codes and never resolves an unknown alias', () => {

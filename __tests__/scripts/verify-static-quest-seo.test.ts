@@ -34,6 +34,7 @@ const {
   listTravelPageFiles,
   missingLandingQuestLinks,
   questPageFromHtml,
+  selectIndexableQuestPages,
   sitemapCountryAliases,
   sitemapHasUrl,
   templateSkeleton,
@@ -43,6 +44,7 @@ const {
   verifyQuestCountrySitemap,
   verifyQuestHtml,
   verifyQuestPageContentDepth,
+  warnQuestCountryNoindexInSitemap,
 } = require('@/scripts/verify-static-quest-seo')
 
 const { buildQuestCityAliasMap } = require('@/utils/questCityAlias')
@@ -309,10 +311,10 @@ describe('quest country landing verification', () => {
     ]))
   })
 
-  // #1762: правило «страна с одним городом не идёт в выдачу» живёт в
-  // генераторе, а сюда приходит уже отрисованный HTML. Без этой проверки
-  // расхождение между правилом и страницей заметил бы только GSC — через месяц.
-  it('demands noindex exactly on the single-city country landings', () => {
+  // Правило индексируемости живёт в генераторе, а сюда приходит уже
+  // отрисованный HTML. Без этой проверки расхождение между правилом и страницей
+  // заметил бы только GSC — через месяц (#1762, #1929).
+  it('demands noindex exactly on the country landings that do not clear the floors', () => {
     const noindexHtml = html.replace(
       '</head>',
       '<meta name="robots" content="noindex, follow" /></head>',
@@ -324,11 +326,54 @@ describe('quest country landing verification', () => {
     expect(verifyQuestCountryHtml(html, canonical, cityPaths, questPaths, '', true)).toEqual([])
 
     expect(verifyQuestCountryHtml(html, canonical, cityPaths, questPaths, '', false)).toEqual(
-      expect.arrayContaining(['single-city country landing is missing noindex']),
+      expect.arrayContaining([
+        'country landing does not clear the content floors but is missing noindex',
+      ]),
     )
     expect(verifyQuestCountryHtml(noindexHtml, canonical, cityPaths, questPaths, '', true)).toEqual(
-      expect.arrayContaining(['multi-city country landing is noindex: noindex, follow']),
+      expect.arrayContaining([
+        'country landing clears the content floors but ships noindex: noindex, follow',
+      ]),
     )
+  })
+
+  /**
+   * Адрес в карте сайта под `noindex` — противоречивый сигнал, но `sitemap.xml`
+   * принадлежит Django: ронять фронтовую сборку из-за состояния чужого сервиса
+   * нельзя, поэтому расхождение выходит предупреждением и задачей бэкенду.
+   */
+  it('warns instead of failing when the backend sitemap still publishes a noindex country', () => {
+    const sitemapXml = [
+      '<urlset>',
+      '<url><loc>https://metravel.by/quests/country/belarus</loc></url>',
+      '<url><loc>https://metravel.by/quests/country/poland</loc></url>',
+      '</urlset>',
+    ].join('')
+    const built = [
+      { country: { countryAlias: 'belarus' }, countryPath: '/quests/country/belarus' },
+      { country: { countryAlias: 'poland' }, countryPath: '/quests/country/poland' },
+    ]
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      expect(
+        warnQuestCountryNoindexInSitemap(built, new Set(['/quests/country/belarus']), sitemapXml),
+      ).toEqual(['poland'])
+      expect(warn).toHaveBeenCalledTimes(1)
+
+      warn.mockClear()
+      expect(
+        warnQuestCountryNoindexInSitemap(
+          built,
+          new Set(['/quests/country/belarus', '/quests/country/poland']),
+          sitemapXml,
+        ),
+      ).toEqual([])
+      expect(warn).not.toHaveBeenCalled()
+      expect(warnQuestCountryNoindexInSitemap(built, new Set(), '<urlset></urlset>')).toEqual([])
+    } finally {
+      warn.mockRestore()
+    }
   })
 
   it('rejects duplicate head tags and an Open Graph URL that is not self-canonical', () => {
@@ -821,14 +866,26 @@ describe('catalog-derived quest page content depth', () => {
     expect(failures[0]).toContain('delete the entry from THIN_CONTENT_EXEMPTIONS')
   })
 
-  it('ships an exemption list that names only levels with an owning card', () => {
-    expect(THIN_CONTENT_EXEMPTIONS.map((entry: { kind: string }) => entry.kind)).toEqual([
-      'quest-country',
-    ])
+  it('ships no thin-content exemption at all, and keeps the shape of any future one', () => {
+    expect(THIN_CONTENT_EXEMPTIONS).toEqual([])
     for (const entry of THIN_CONTENT_EXEMPTIONS as Array<{ ticket: string; minWords: number }>) {
       expect(entry.ticket).toMatch(/^#\d+$/)
       expect(entry.minWords).toBeLessThan(MIN_QUEST_PAGE_WORDS)
     }
+  })
+
+  /**
+   * Страница под `noindex` не претендует на выдачу, поэтому и глубины с неё не
+   * спрашивают. Иначе гвард ронял бы сборку за выполненное решение снять
+   * тонкий уровень с претензии на поиск (#1929).
+   */
+  it('measures only the pages that claim a place in search', () => {
+    const thin = { ...page('quest-country', 120, 0), noindex: true }
+
+    expect(verifyQuestPageContentDepth([thin])).toEqual([])
+    expect(verifyQuestPageContentDepth([{ ...thin, noindex: false }])).toEqual([
+      expect.stringContaining('120 words of crawlable text, minimum 300'),
+    ])
   })
 
   it('reads the level out of the marker, and keeps nested sections in the text', () => {
@@ -1064,20 +1121,66 @@ describe('thin-content floors against the generator itself', () => {
     ])
   })
 
-  it('passes the leanest country landing the builder can render', () => {
+  /**
+   * Страновая посадочная больше не держится исключением: она не набрала текста и
+   * потому не претендует на выдачу. Генератор ставит ей `noindex` сам, гвард её
+   * не меряет, и обе стороны считают это одним и тем же кодом.
+   */
+  it('drops the leanest country landing out of the index instead of out of the guard', () => {
     const page = leanPage(leanCountryHtml(), 'quests/country/x/index.html')
 
     expect(page.kind).toBe('quest-country')
+    expect(page.noindex).toBe(true)
+    // Pinned so a drop in the builder's own output surfaces here, not on a prod build.
+    expect(countWords(page.text)).toBe(112)
     expect(verifyQuestPageContentDepth([page])).toEqual([])
+
+    // Та же страница, заявленная индексируемой, — это и есть регресс, который
+    // гвард обязан поймать: 112 слов против порога в 300.
+    expect(verifyQuestPageContentDepth([{ ...page, noindex: false }])).toEqual([
+      expect.stringContaining('112 words of crawlable text, minimum 300'),
+    ])
+  })
+
+  /**
+   * Правило считается по каталогу, а не по списку стран, и обе его половины
+   * живые. Страна на 40 городах набирает 309 слов и в одиночку место в выдаче
+   * берёт. Но рядом с любой соседкой того же шаблона обе теряют его снова: два
+   * лендинга, различающиеся только именем и числами, — одна страница под двумя
+   * адресами, и именно так Google и обошёлся с уровнем (17 из 18 вне индекса).
+   * Уровень вернётся в выдачу не когда одна страна располнеет, а когда шаблон
+   * перестанет быть общим — как это случилось с городом в #1569.
+   */
+  it('lets the same builder earn a country landing its place in search', () => {
+    const bigCatalog = Array.from({ length: 40 }, (_, index) => ({
+      quest_id: `q${index}-walk`,
+      city_id: String(index + 1),
+      title: `Квест номер ${index}`,
+      city_name: `Город номер ${index}`,
+      country_code: 'BY',
+    }))
+    const [big] = buildQuestCountryLandingModel(bigCatalog, 'ru')
+    const bigPage = leanPage(
+      buildQuestCountryLandingHtml(SHELL, big, { indexable: true }),
+      'quests/country/belarus/index.html',
+    )
+    const leanPageModel = leanPage(leanCountryHtml(), 'quests/country/x/index.html')
+
+    expect(countWords(bigPage.text)).toBeGreaterThanOrEqual(300)
+    expect(bigPage.noindex).toBe(false)
+    expect([...selectIndexableQuestPages([bigPage])]).toEqual([
+      'quests/country/belarus/index.html',
+    ])
+    expect(verifyQuestPageContentDepth([bigPage])).toEqual([])
+
+    expect([...selectIndexableQuestPages([bigPage, leanPageModel])]).toEqual([])
+    expect(countWords(leanPageModel.text)).toBeLessThan(300)
   })
 
   it('keeps every exemption floor under the leanest output of its level', () => {
     const leanWords: Record<string, number> = {
       'quest-country': countWords(leanPage(leanCountryHtml(), 'k').text),
     }
-
-    // Pinned so a drop in the builder's own output surfaces here, not on a prod build.
-    expect(leanWords).toEqual({ 'quest-country': 112 })
 
     for (const entry of THIN_CONTENT_EXEMPTIONS as Array<{ kind: string; minWords: number }>) {
       expect(leanWords[entry.kind]).toBeGreaterThan(entry.minWords)

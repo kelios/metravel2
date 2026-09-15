@@ -58,9 +58,12 @@ const {
   buildQuestRouteDigest,
   buildQuestCountryLandingHtml,
   buildQuestCountryLandingModel,
+  questCountryLandingPageText,
+  selectIndexableQuestCountryLandings,
   injectQuestCountryLandingSection,
   readRequiredQuestCountryTemplate,
 } = require('@/scripts/generate-seo-pages');
+const { countWords } = require('@/scripts/lib/questPageDepth');
 const { injectSkeletonShell } = require('@/scripts/ssg-skeletons');
 const { questRouteKey } = require('@/utils/questCityAlias');
 
@@ -2442,11 +2445,18 @@ describe('catalog-derived quest country landings', () => {
     )
   })
 
-  // #1762. Замер 04.09.2026: из 32 живых страновых лендингов 19 собирали ровно
-  // один город, и ни один из 32 не был проиндексирован — lastCrawlTime пуст на
-  // всех, 11 адресов Google не знает вовсе. Страна с одним городом повторяет
-  // посадочную этого города, поэтому в выдачу она не идёт.
-  it('keeps a single-city country landing out of the index and a multi-city one in it', () => {
+  /**
+   * #1762 мерил число городов, #1929 — сам текст.
+   *
+   * Замер 04.09.2026: из 32 живых страновых лендингов 19 собирали ровно один
+   * город, и ни один из 32 не был проиндексирован. Порог «городов ≥ 2» их
+   * отсёк, но оставшиеся 18 остались такими же тонкими: прогон
+   * `stats:index:all` 13.09.2026 нашёл вне индекса 17 из 18, а замер по живому
+   * каталогу 15.09.2026 — 112–270 слов собственного текста при пороге 300 и
+   * нулевой собственной лексике. Поэтому в выдачу теперь идёт не «страна с
+   * двумя городами», а страница, которая набрала текст.
+   */
+  it('keeps a country landing out of the index until its own text carries it', () => {
     const countries = buildQuestCountryLandingModel(quests)
     const belarus = countries.find((country: { countryAlias: string }) => country.countryAlias === 'belarus')
     const poland = countries.find((country: { countryAlias: string }) => country.countryAlias === 'poland')
@@ -2457,17 +2467,45 @@ describe('catalog-derived quest country landings', () => {
     const belarusHtml = buildQuestCountryLandingHtml(MINIMAL_BASE, belarus)
     const polandHtml = buildQuestCountryLandingHtml(MINIMAL_BASE, poland)
 
-    expect(polandHtml).toContain('<meta data-rh="true" name="robots" content="noindex, follow"/>')
-    expect(belarusHtml).not.toContain('content="noindex, follow"')
-    // follow, а не nofollow: ссылки на город и квесты со страницы обязаны
-    // работать — иначе одностраничная страна становится ещё и тупиком графа.
-    expect(polandHtml).not.toContain('nofollow')
+    for (const html of [belarusHtml, polandHtml]) {
+      expect(html).toContain('<meta data-rh="true" name="robots" content="noindex, follow"/>')
+      // follow, а не nofollow: ссылки на город и квесты со страницы обязаны
+      // работать — иначе страна становится ещё и тупиком графа.
+      expect(html).not.toContain('nofollow')
+    }
     // Тело страницы не режем: по прямой ссылке человек по-прежнему видит города.
     expect(polandHtml).toContain('data-ssg-quest-country-cities="true"')
     expect(polandHtml).toContain('href="/quests/krakow"')
+    expect(belarusHtml).toContain('href="/quests/minsk"')
   })
 
-  it('lists only indexable country landings in the /quests hub block', () => {
+  /**
+   * Правило считается по каталогу, а не по списку стран: страна, чья посадочная
+   * набрала объём, становится индексируемой сама, без правки кода. Фикстура
+   * гонит настоящий билдер — 40 городов дают 309 слов против порога в 300, тогда
+   * как реальная Беларусь на 37 городах даёт 270 и в выдачу не идёт.
+   */
+  it('lets a country landing back into the index once its page carries the words', () => {
+    const catalog = Array.from({ length: 40 }, (_, index) => ({
+      quest_id: `q${index}-walk`,
+      city_id: String(index + 1),
+      city_name: `Город номер ${index}`,
+      country_code: 'BY',
+      title: `Квест номер ${index}`,
+    }))
+    const [country] = buildQuestCountryLandingModel(catalog)
+
+    expect(countWords(questCountryLandingPageText(country))).toBeGreaterThanOrEqual(300)
+    expect([...selectIndexableQuestCountryLandings([country])]).toEqual(['belarus'])
+    expect(buildQuestCountryLandingHtml(MINIMAL_BASE, country)).not.toContain('content="noindex, follow"')
+  })
+
+  /**
+   * Навигация не завязана на индексируемость: страница под `noindex` остаётся
+   * узлом графа, иначе вариант «снять с претензии на поиск» превратился бы в
+   * «выкинуть из сайта» (#1929).
+   */
+  it('lists linkable country landings in the /quests hub block even under noindex', () => {
     const countries = buildQuestCountryLandingModel(quests)
     const linksHtml = buildQuestCountryLinksHtml(countries, {
       h2Style: 'h2',
@@ -2485,7 +2523,7 @@ describe('catalog-derived quest country landings', () => {
     expect(listing).not.toContain('href="/quests/country/poland"')
   })
 
-  it('drops the hub block entirely when no country landing qualifies', () => {
+  it('drops the hub block entirely when no country landing is worth a link', () => {
     const singleCityOnly = buildQuestCountryLandingModel(quests).filter(
       (country: { countryAlias: string }) => country.countryAlias === 'poland',
     )
@@ -2499,7 +2537,7 @@ describe('catalog-derived quest country landings', () => {
   // Единственный вход на страновой лендинг до #1762 — sitemap.xml: хаб
   // перечисляет города напрямую, крошки города идут мимо страны. Ссылка вверх с
   // посадочной города и есть то, чего краулеру не хватало.
-  it('links a city landing up to its country only when that country is indexable', () => {
+  it('links a city landing up to its country only when that country is linkable', () => {
     const countries = buildQuestCountryLandingModel(quests)
     const belarus = countries.find((country: { countryAlias: string }) => country.countryAlias === 'belarus')
     const minsk = buildQuestCityLandingModel(quests, undefined, []).find(

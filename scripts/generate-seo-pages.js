@@ -37,8 +37,12 @@ const {
 } = require('../utils/questCityAlias');
 const {
   buildQuestCountryLandingGroups,
-  questCountryLandingIsIndexable,
+  questCountryLandingIsLinkable,
 } = require('../utils/questCountryLanding');
+const {
+  questPageFromHtml,
+  selectIndexableQuestPages,
+} = require('./lib/questPageDepth');
 const {
   QUESTS_INTRO_TITLE_RU,
   QUESTS_INTRO_LEAD_RU,
@@ -1675,8 +1679,8 @@ function buildTravelArticleJsonLd({ headline, description, canonical, image, tra
   // #1221: JSON-LD строится мимо injectMeta, поэтому ширину добиваем и здесь —
   // иначе Google Images и краулеры schema.org тянут мастер с `no-store`.
   // #1872: тот же вызов, что у og:image, а не только ширина. Разойдись эти две
-  // ветки — одна страница просила бы одну и ту же обложку двумя адресами: два
-  // cache-key на кадр и живая BYPASS-ветка для Google Images.
+  // ветки — одна страница просила бы одну и ту же обложку двумя адресами, то есть
+  // два cache-key на кадр.
   const previewImage = toSocialPreviewUrl(image);
   if (previewImage) payload.image = [previewImage];
 
@@ -2416,8 +2420,8 @@ function buildQuestJsonLd({ title, description, canonical, image, quest }) {
   // #1221: JSON-LD строится мимо injectMeta, поэтому ширину добиваем и здесь —
   // иначе Google Images и краулеры schema.org тянут мастер с `no-store`.
   // #1872: тот же вызов, что у og:image, а не только ширина. Разойдись эти две
-  // ветки — одна страница просила бы одну и ту же обложку двумя адресами: два
-  // cache-key на кадр и живая BYPASS-ветка для Google Images.
+  // ветки — одна страница просила бы одну и ту же обложку двумя адресами, то есть
+  // два cache-key на кадр.
   const previewImage = toSocialPreviewUrl(image);
   if (previewImage) payload.image = [previewImage];
   const city = String(quest?.city_name || quest?.cityName || quest?.city?.name || '').trim();
@@ -2792,11 +2796,11 @@ function injectHomeQuestsSection(baseHtml, quests) {
  * спросом», а страница, до которой краулер не дошёл.
  */
 function buildQuestCountryLinksHtml(countryLandings, { h2Style, pStyle, ulStyle }) {
-  const indexable = (Array.isArray(countryLandings) ? countryLandings : [])
-    .filter((country) => questCountryLandingIsIndexable(country));
-  if (!indexable.length) return '';
+  const linkable = (Array.isArray(countryLandings) ? countryLandings : [])
+    .filter((country) => questCountryLandingIsLinkable(country));
+  if (!linkable.length) return '';
 
-  const links = indexable
+  const links = linkable
     .map((country) => {
       const questCount = Array.isArray(country.quests) ? country.quests.length : 0;
       const cityCount = Array.isArray(country.cities) ? country.cities.length : 0;
@@ -3123,8 +3127,18 @@ function buildQuestCityLandingHtml(cityBaseHtml, city, countryLanding = null) {
   return html;
 }
 
+/**
+ * Лид страновой посадочной. Отдельно от `buildQuestCountryLandingHtml`, потому
+ * что индексируемость считается по тексту страницы до её сборки: секцию нужно
+ * уметь собрать целиком, не собирая документ.
+ */
+function buildQuestCountryLandingLead(country) {
+  const count = Array.isArray(country?.quests) ? country.quests.length : 0;
+  return `${country.countryName}: на одной странице собраны ${count} ${pluralizeRu(count, 'квест', 'квеста', 'квестов')} с заданиями по реальным местам. Выберите город или маршрут и поделитесь подборкой.`;
+}
+
 /** Visible crawlable body for one /quests/country/<alias> landing. */
-function injectQuestCountryLandingSection(baseHtml, country, lead) {
+function buildQuestCountryLandingSection(country, lead) {
   const sectionStyle = [
     'box-sizing:border-box',
     'max-width:840px',
@@ -3168,6 +3182,13 @@ function injectQuestCountryLandingSection(baseHtml, country, lead) {
     '</section>',
   ].join('');
 
+  return section;
+}
+
+/** Ставит собранную секцию в документ, заменяя прежнюю копию, если она есть. */
+function injectQuestCountryLandingSection(baseHtml, country, lead) {
+  const section = buildQuestCountryLandingSection(country, lead);
+
   const styleTag = [
     '<style data-ssg-quest-country-style="true">',
     'html.rnw-styles-ready [data-ssg-quest-country="true"]{display:none!important}',
@@ -3182,21 +3203,67 @@ function injectQuestCountryLandingSection(baseHtml, country, lead) {
   return `${section}${html}`;
 }
 
-/** Build final SSG HTML for one canonical country alias. */
-function buildQuestCountryLandingHtml(countryBaseHtml, country) {
+/**
+ * Текст страновой посадочной — ровно в той форме, в какой его меряет
+ * `verify-static-quest-seo.js`: собственная проза секции без подписей ссылок.
+ */
+function questCountryLandingPageText(country) {
+  const section = buildQuestCountryLandingSection(country, buildQuestCountryLandingLead(country));
+  return questPageFromHtml(section, country.landingPath).text;
+}
+
+/**
+ * Страны, чья посадочная претендует на место в выдаче.
+ *
+ * Два условия, и оба считаются по каталогу, без списка стран в коде: страница не
+ * должна быть обёрткой вокруг единственного города (#1762) и обязана нести
+ * достаточно собственного текста по общей мерке глубины (#1929). Прежде второго
+ * условия не было вовсе, и 18 стран уходили в sitemap с текстом в 112–270 слов,
+ * совпадающим между странами с точностью до названия и двух чисел: 17 из 18
+ * Google не проиндексировал, восемнадцатая (Беларусь) набирает объём только
+ * подписями ссылок, а не собственным текстом.
+ */
+function selectIndexableQuestCountryLandings(countryLandings) {
+  const candidates = (Array.isArray(countryLandings) ? countryLandings : [])
+    .filter((country) => questCountryLandingIsLinkable(country));
+  const indexablePaths = selectIndexableQuestPages(
+    candidates.map((country) => ({
+      path: country.landingPath,
+      kind: 'quest-country',
+      text: questCountryLandingPageText(country),
+    })),
+  );
+  return new Set(
+    candidates
+      .filter((country) => indexablePaths.has(country.landingPath))
+      .map((country) => country.countryAlias),
+  );
+}
+
+/**
+ * Build final SSG HTML for one canonical country alias.
+ *
+ * `options.indexable` приходит из отбора по всему набору стран: уникальность —
+ * величина относительная, и страница, оценённая в одиночку, ответила бы на
+ * другой вопрос. Без него страна оценивается сама по себе — этого достаточно
+ * для пробы одной страницы, но не для сборки.
+ */
+function buildQuestCountryLandingHtml(countryBaseHtml, country, options = {}) {
   const canonical = `${SITE_URL}${country.landingPath}`;
   const count = country.quests.length;
   const title = buildBrandedSeoTitle(`Квесты страны: ${country.countryName} — города и маршруты`);
   const description = clampMetaDescription(
     `${country.countryName}: ${count} ${pluralizeRu(count, 'квест', 'квеста', 'квестов')} в городах страны. Городов с маршрутами: ${country.cities.length}. Выберите прогулку с заданиями и откройте её на телефоне.`,
   );
-  const lead = `${country.countryName}: на одной странице собраны ${count} ${pluralizeRu(count, 'квест', 'квеста', 'квестов')} с заданиями по реальным местам. Выберите город или маршрут и поделитесь подборкой.`;
+  const lead = buildQuestCountryLandingLead(country);
   const image = country.cover ? toAbsoluteUrl(country.cover) : OG_IMAGE;
 
-  // Страна с одним городом уходит из выдачи: её лендинг повторяет посадочную
-  // этого города и не может добавить к ней ничего (#1762). `follow` оставляем —
-  // ссылки со страницы по-прежнему ведут краулер к городу и квестам.
-  const indexable = questCountryLandingIsIndexable(country);
+  // Тонкая страна уходит из выдачи, но остаётся страницей: `follow` и полное
+  // тело — ссылки на города и квесты со страницы по-прежнему работают и ведут
+  // краулер дальше, а человек по прямой ссылке видит те же города (#1929).
+  const indexable = typeof options.indexable === 'boolean'
+    ? options.indexable
+    : selectIndexableQuestCountryLandings([country]).has(country.countryAlias);
 
   let html = injectMeta(countryBaseHtml, {
     title,
@@ -4162,11 +4229,14 @@ async function main() {
     // `/quests` и посадочные городов, иначе страновые лендинги остаются вне
     // графа ссылок и краулер до них не доходит (#1762).
     const countryLandingModel = buildQuestCountryLandingModel(quests, 'ru');
-    const indexableCountryLandings = new Map(
+    const linkedCountryLandings = new Map(
       countryLandingModel
-        .filter((country) => questCountryLandingIsIndexable(country))
+        .filter((country) => questCountryLandingIsLinkable(country))
         .map((country) => [String(country.countryCode || '').toUpperCase(), country]),
     );
+    // Отбор по всему набору стран, а не по одной: доля собственной лексики
+    // считается против соседей того же уровня (#1929).
+    const indexableCountryAliases = selectIndexableQuestCountryLandings(countryLandingModel);
 
     console.log(`\n🧩 Generating ${quests.length} quest pages...`);
     let questGenerated = 0;
@@ -4299,7 +4369,7 @@ async function main() {
     let cityLandingsWithCountryLink = 0;
     for (const city of cityLandingModel) {
       const countryLanding =
-        indexableCountryLandings.get(String(city.countryCode || '').toUpperCase()) || null;
+        linkedCountryLandings.get(String(city.countryCode || '').toUpperCase()) || null;
       if (countryLanding) cityLandingsWithCountryLink += 1;
       const cityHtml = buildQuestCityLandingHtml(cityLandingBaseHtml, city, countryLanding);
       for (const segment of [...city.cityIds, city.segment, ...city.legacyAliases]) {
@@ -4317,7 +4387,9 @@ async function main() {
     const countryLandingBaseHtml = readRequiredQuestCountryTemplate(countryLandingTemplatePath);
     let countryLandingsGenerated = 0;
     for (const country of countryLandingModel) {
-      const countryHtml = buildQuestCountryLandingHtml(countryLandingBaseHtml, country);
+      const countryHtml = buildQuestCountryLandingHtml(countryLandingBaseHtml, country, {
+        indexable: indexableCountryAliases.has(country.countryAlias),
+      });
       writeFileSafe(
         path.join(DIST_DIR, 'quests', 'country', country.countryAlias, 'index.html'),
         countryHtml,
@@ -4329,13 +4401,17 @@ async function main() {
     console.log(`  ✅ Generated: ${questGenerated} quest pages + ${questAliasesGenerated} city aliases + ${cityLandingsGenerated} city landings + ${countryLandingsGenerated} country landings + crawlable listing`);
     console.log(`  🔗 Detail pages with internal links: ${questsWithLinks}/${questGenerated}`);
     // Отдельной строкой, потому что оба числа — про то, дойдёт ли краулер до
-    // страновых лендингов вообще. Ноль в любом из них означает, что они снова
-    // вне графа ссылок, как 04.09.2026 (#1762).
+    // страновых лендингов вообще. Ноль в числе ссылающихся городов означает, что
+    // они снова вне графа ссылок, как 04.09.2026 (#1762). Индексируемых стран
+    // при этом может быть ноль законно: тонкая страна остаётся в навигации, но
+    // не претендует на выдачу (#1929).
     console.log(
-      `  🌍 Indexable country landings: ${indexableCountryLandings.size}/${countryLandingsGenerated}` +
-        ` (остальные noindex — один город), city landings linking up: ${cityLandingsWithCountryLink}/${cityLandingModel.length}`,
+      `  🌍 Country landings: ${indexableCountryAliases.size}/${countryLandingsGenerated} indexable` +
+        ` (остальные noindex, follow — не набрали собственного текста),` +
+        ` в навигации: ${linkedCountryLandings.size},` +
+        ` city landings linking up: ${cityLandingsWithCountryLink}/${cityLandingModel.length}`,
     );
-    if (countryLandingsGenerated > 0 && indexableCountryLandings.size > 0 && cityLandingsWithCountryLink === 0) {
+    if (countryLandingsGenerated > 0 && linkedCountryLandings.size > 0 && cityLandingsWithCountryLink === 0) {
       console.warn(
         '  ⚠️  Ни одна посадочная города не ссылается на свою страну — сверьте countryCode в модели города и страны.',
       );
@@ -4614,6 +4690,10 @@ if (typeof module !== 'undefined' && module.exports) {
     assertQuestCityLandingsCarryWalk,
     buildQuestCityLandingHtml,
     injectQuestCountryLandingSection,
+    buildQuestCountryLandingSection,
+    buildQuestCountryLandingLead,
+    questCountryLandingPageText,
+    selectIndexableQuestCountryLandings,
     buildQuestCountryLandingHtml,
     readRequiredQuestCountryTemplate,
     patchNoindexFallbackTemplate,

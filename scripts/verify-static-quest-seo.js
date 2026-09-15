@@ -29,9 +29,24 @@ const {
 } = require('../utils/questCityAlias')
 const {
   buildQuestCountryLandingGroups,
-  questCountryLandingIsIndexable,
+  questCountryLandingIsLinkable,
 } = require('../utils/questCountryLanding')
-const { htmlToPlainText } = require('../utils/seoText')
+// Одна мерка на двоих: этим же кодом generate-seo-pages.js решает, ставить ли
+// стране `noindex` (#1929), поэтому гвард не может требовать от страницы
+// другого, чем требовал от неё генератор.
+const {
+  MIN_QUEST_PAGE_DISTINCT_RATIO,
+  MIN_QUEST_PAGE_WORDS,
+  countWords,
+  extractQuestSsgSections,
+  formatPercent,
+  questPageFromHtml,
+  questPageIsNoindex,
+  scoreQuestPageLevel,
+  sectionProseText,
+  selectIndexableQuestPages,
+  templateSkeleton,
+} = require('./lib/questPageDepth')
 
 const args = process.argv.slice(2)
 
@@ -237,17 +252,17 @@ function verifyQuestCountryHtml(
     issues.push('missing independent country overview/cities/practical content')
   }
 
-  // #1762: страна с одним городом уходит из выдачи — её лендинг повторяет
-  // посадочную этого города. Правило живёт в генераторе, но проверяется здесь,
-  // на реальном HTML: расхождение иначе всплывёт в GSC через месяц, а не на
-  // сборке.
+  // Правило индексируемости живёт в генераторе, а проверяется здесь, на
+  // реальном HTML: расхождение между моделью и страницей иначе всплывёт в GSC
+  // через месяц, а не на сборке (#1762, #1929). `expectIndexable` считается тем
+  // же кодом, что решал за генератора, — по тексту этой самой страницы.
   const robots = getMetaContent(html, 'name', 'robots') || ''
-  const isNoindex = /\bnoindex\b/i.test(robots)
+  const isNoindex = questPageIsNoindex(html)
   if (!expectIndexable && !isNoindex) {
-    issues.push('single-city country landing is missing noindex')
+    issues.push('country landing does not clear the content floors but is missing noindex')
   }
   if (expectIndexable && isNoindex) {
-    issues.push(`multi-city country landing is noindex: ${robots}`)
+    issues.push(`country landing clears the content floors but ships noindex: ${robots}`)
   }
 
   for (const cityPath of expectedCityPaths) {
@@ -297,193 +312,31 @@ function verifyQuestCountryMetadataUniqueness(pages) {
 }
 
 /**
- * #1930: how much text a catalog-derived quest page carries, and how much of it
- * is its own.
- *
- * Three thin templates shipped in three weeks — city (#1569), quest detail
- * (#1763), country (#1929) — and each fix taught the guard about its own level
- * only: "the section tag is present". A tag can be present and hold one
- * sentence, so presence never caught the fourth case.
- *
- * The rule below keys on the `data-ssg-quest*` marker generate-seo-pages.js
- * writes onto every crawlable block it builds under /quests, so a level that
- * does not exist yet — region, theme, whatever comes next — is measured the day
- * it ships instead of after the next GSC report.
- *
- * Both spellings the generator already uses count: `data-ssg-quest-<level>` for
- * the per-page templates and `data-ssg-quests-<level>` for the hub
- * (`generate-seo-pages.js` writes `data-ssg-quests-listing` on /quests). A
- * singular-only pattern would have left the most-crawled catalog page — and the
- * next level named after it — unmeasured, which is the exact miss this rule
- * exists to prevent.
- */
-const MIN_QUEST_PAGE_WORDS = 300
-const MIN_QUEST_PAGE_DISTINCT_RATIO = 0.3
-const QUEST_PAGE_SHINGLE_SIZE = 5
-const QUEST_SSG_SECTION_PATTERN = '<section[^>]*\\bdata-ssg-(quests?(?:-[a-z0-9]+)*)="true"[^>]*>'
-
-/**
  * Levels that are thin today, each with the open card that owns its content.
  *
- * The rule above is retroactive, so the two levels it would fail on arrival keep
- * a floor they do meet — nothing may get worse — while every other level gets
- * the full rule immediately. Without this the guard would fail every production
- * build until two content cards land, which is not what it is for.
+ * Empty, and that is the point: the list exists so a level caught thin can be
+ * held to a floor it already meets instead of reddening every production build
+ * until its content card lands, but nothing is owed that licence right now.
  *
- * Quest detail pages are deliberately absent: #1763 already raised them and all
- * 182 of them clear the default outright, so the rule bites on a real level
- * today rather than only on hypothetical future ones.
+ * The city landing left in #1569 — its text is no longer a template with a name
+ * substituted but notes about the places its own quests walk past, and the level
+ * clears the default outright (measured over all 132 cities on 15.09.2026: 352 /
+ * 677 / 994 words, 38.8–79.4% own wording, up from 118 / 148 / 182 at 0%).
  *
- * Measured against production on 14.09.2026, prose words per crawlable section
- * (link labels excluded), all pages in the catalog:
- *   quest-city    n=132  min 118  median 148  max 182   own wording 0%
- *   quest-country n=18   min 115  median 120  max 270   own wording 0%
- *   quest-intro   n=182  min 318  median 721  max 1226  clears the default
- *   quests-listing     1  737                           clears the default
- *   quest-scenario     1  493                           clears the default
- *
- * Re-measured 15.09.2026 after #1569 gave the city landing its own notes about
- * the places its quests walk past, driving the real builders over the same live
- * catalog (132 cities, 182 quest bundles):
- *   quest-city    n=132  min 352  median 677  max 994   own wording 38.8–79.4%
- * so the city exemption was deleted rather than raised: the level now clears
- * the default outright, and the rule above holds it there.
- *
- * The floors below are NOT those catalog minima. A floor taken from what the
- * catalog happens to contain today only holds until the next page is thinner
- * than every existing one, and the builders can legitimately render less than
- * the current minimum: both optional blocks of a country landing are
- * conditional, so the first quest in an isolated country renders below what the
- * catalog holds today. Driven on the generator's own model at its leanest
- * shape, the country builder produces 112 words, so the floor sits under that
- * at 100: low enough that no legitimate template output can red a fail-closed
- * production build, high enough to catch a section that lost its overview and
- * practical blocks outright (that page measures 42). The number is pinned in
- * the guard's tests, which drive the real builder rather than a hand-written
- * lookalike model.
+ * The country landing left in #1929 for the opposite reason: it never grew the
+ * text, so it stopped claiming the index. Measured over the live catalog on
+ * 15.09.2026 the level carries 112–270 words of prose against a 300-word floor
+ * and repeats one template verbatim, so every country page now ships
+ * `noindex, follow` and drops out of the measured set below — a page that does
+ * not ask for a place in search is not held to the depth of one. The floor a
+ * level meets is no longer a per-kind constant anywhere: whoever exempts a level
+ * here has to explain why its pages still claim the index.
  *
  * The list can only shrink: once every page of a listed level clears the
  * default, the guard fails on the stale entry, so a fixed level cannot quietly
  * keep its licence to be thin.
  */
-const THIN_CONTENT_EXEMPTIONS = [
-  { kind: 'quest-country', minWords: 100, minDistinctRatio: 0, ticket: '#1929' },
-]
-
-/**
- * The body of one `<section>`, counting nested sections. A non-greedy match to
- * the first `</section>` would truncate the text and fail a page that is
- * actually long enough.
- */
-function sliceBalancedSection(html, openTagStart) {
-  const source = String(html)
-  const openTagEnd = source.indexOf('>', openTagStart)
-  if (openTagEnd === -1) return null
-
-  const tagRegex = /<(\/?)section\b/gi
-  tagRegex.lastIndex = openTagEnd + 1
-  let depth = 1
-  let match
-  while ((match = tagRegex.exec(source)) !== null) {
-    depth += match[1] ? -1 : 1
-    if (depth === 0) return source.slice(openTagEnd + 1, match.index)
-  }
-  return source.slice(openTagEnd + 1)
-}
-
-/**
- * The same text with link labels dropped.
- *
- * A catalog-derived landing is mostly a list of links to other pages, and their
- * labels are city names and quest titles — they are unique per page by
- * construction. Counting them made /quests/country/belarus read as 755 words of
- * content when it carries 270 words of prose, and made two landings built from
- * one template look unlike each other because their link lists differ. Body
- * copy is what a thin-content page is missing, so body copy is what is measured.
- */
-function sectionProseText(sectionHtml) {
-  return htmlToPlainText(String(sectionHtml || '').replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, ' '))
-}
-
-/**
- * The one shape `verifyQuestPageContentDepth` measures.
- *
- * Shared so a probe cannot measure a page assembled differently from the one the
- * build measures: change how a page is folded into text here, and both the guard
- * and its tests follow.
- */
-function questPageFromHtml(html, routePath, precomputedSections = null) {
-  const sections = precomputedSections || extractQuestSsgSections(html)
-  return {
-    path: routePath,
-    kind: sections.length > 0 ? sections[0].kind : '',
-    text: sections.map((section) => section.text).join(' '),
-  }
-}
-
-/** Every catalog-derived block on a page, with the level it belongs to. */
-function extractQuestSsgSections(html) {
-  const source = String(html || '')
-  const openRegex = new RegExp(QUEST_SSG_SECTION_PATTERN, 'gi')
-  const sections = []
-  let match
-  while ((match = openRegex.exec(source)) !== null) {
-    const body = sliceBalancedSection(source, match.index)
-    if (body === null) continue
-    sections.push({ kind: match[1].toLowerCase(), text: sectionProseText(body) })
-  }
-  return sections
-}
-
-function countWords(text) {
-  const words = String(text || '').match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu)
-  return words ? words.length : 0
-}
-
-/**
- * The page's wording with the parts that always differ removed — numbers and
- * capitalised tokens, which is where city and country names live. What is left
- * is the template itself, so two landings that differ only by their name and
- * their counts reduce to the same tokens.
- */
-function templateSkeleton(text) {
-  return String(text || '')
-    .split(/\s+/)
-    .map((token) => token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
-    .filter((token) => token.length > 0 && !/\d/.test(token) && !/^\p{Lu}/u.test(token))
-    .map((token) => token.toLowerCase())
-}
-
-function textShingles(tokens, size = QUEST_PAGE_SHINGLE_SIZE) {
-  const shingles = new Set()
-  for (let index = 0; index + size <= tokens.length; index += 1) {
-    shingles.add(tokens.slice(index, index + size).join(' '))
-  }
-  return shingles
-}
-
-/**
- * Rounded down, so the failure line cannot read "only 30% ... minimum 30%": a
- * page at 29.7% own wording rounds up to the very floor it just missed, and the
- * build log then argues with itself.
- */
-function formatPercent(ratio) {
-  return `${Math.floor(ratio * 100)}%`
-}
-
-/**
- * Share of a page's phrasing that no other page of its level repeats. `null`
- * when there is nothing to compare against — a level with one page cannot be a
- * template of itself.
- */
-function distinctShingleRatio(page, kindPageCount, shingleUses) {
-  if (kindPageCount < 2 || page.shingles.size === 0) return null
-  let distinct = 0
-  for (const shingle of page.shingles) {
-    if (shingleUses.get(shingle) === 1) distinct += 1
-  }
-  return distinct / page.shingles.size
-}
+const THIN_CONTENT_EXEMPTIONS = []
 
 /**
  * Catalog-derived pages in a built dist, one entry per canonical page.
@@ -527,7 +380,15 @@ function collectQuestSsgPages(distDir, options = {}) {
   return [...byCanonical.values()]
 }
 
-/** Volume and independence, for every level the build actually produced. */
+/**
+ * Volume and independence, for every level the build actually produced.
+ *
+ * Меряются только страницы, претендующие на выдачу: страница под `noindex`
+ * из набора выпадает. Иначе гвард требовал бы глубины от страницы, которую сам
+ * же генератор снял с претензии на поиск, и фейлил бы сборку за выполненное
+ * решение (#1929). Отбор в генераторе идёт тем же `scripts/lib/questPageDepth`,
+ * поэтому набор, который он пропустил, здесь проходит по построению.
+ */
 function verifyQuestPageContentDepth(pages, options = {}) {
   const minWords = Number.isFinite(options.minWords) ? options.minWords : MIN_QUEST_PAGE_WORDS
   const minDistinctRatio = Number.isFinite(options.minDistinctRatio)
@@ -539,53 +400,31 @@ function verifyQuestPageContentDepth(pages, options = {}) {
 
   const byKind = new Map()
   for (const page of Array.isArray(pages) ? pages : []) {
+    if (page?.noindex) continue
     const kind = String(page?.kind || '').trim().toLowerCase()
     if (!kind) continue
-    const text = String(page?.text || '')
     if (!byKind.has(kind)) byKind.set(kind, [])
-    byKind.get(kind).push({
-      path: String(page?.path || '').trim() || '(unknown quest page)',
-      words: countWords(text),
-      shingles: textShingles(templateSkeleton(text)),
-    })
+    byKind.get(kind).push(page)
   }
 
   const failures = []
 
   for (const [kind, kindPages] of byKind) {
     const exemption = exemptions.get(kind)
-    const wordFloor = exemption ? exemption.minWords : minWords
-    const ratioFloor = exemption ? exemption.minDistinctRatio : minDistinctRatio
+    const scored = scoreQuestPageLevel(kindPages, {
+      minWords: exemption ? exemption.minWords : minWords,
+      minDistinctRatio: exemption ? exemption.minDistinctRatio : minDistinctRatio,
+    })
 
-    const shingleUses = new Map()
-    for (const page of kindPages) {
-      for (const shingle of page.shingles) {
-        shingleUses.set(shingle, (shingleUses.get(shingle) || 0) + 1)
-      }
+    for (const page of scored) {
+      if (page.issues.length > 0) failures.push(`${page.path} [${kind}]: ${page.issues.join('; ')}`)
     }
 
-    let clearsDefault = true
+    if (!exemption) continue
 
-    for (const page of kindPages) {
-      const ratio = distinctShingleRatio(page, kindPages.length, shingleUses)
-      if (page.words < minWords || (ratio !== null && ratio < minDistinctRatio)) {
-        clearsDefault = false
-      }
-
-      const issues = []
-      if (page.words < wordFloor) {
-        issues.push(`${page.words} words of crawlable text, minimum ${wordFloor}`)
-      }
-      if (ratio !== null && ratio < ratioFloor) {
-        issues.push(
-          `only ${formatPercent(ratio)} of its wording is its own, minimum ${formatPercent(ratioFloor)}` +
-            ' — reads as a shared template'
-        )
-      }
-      if (issues.length > 0) failures.push(`${page.path} [${kind}]: ${issues.join('; ')}`)
-    }
-
-    if (exemption && clearsDefault) {
+    const clearsDefault = scoreQuestPageLevel(kindPages, { minWords, minDistinctRatio })
+      .every((page) => page.issues.length === 0)
+    if (clearsDefault) {
       failures.push(
         `thin-content exemption for "${kind}" (${exemption.ticket}) is stale: every page now clears` +
           ` ${minWords} words and ${formatPercent(minDistinctRatio)} own wording` +
@@ -730,6 +569,38 @@ function verifyQuestCountrySitemap(countryGroups, sitemapXml, required = false) 
   return failures
 }
 
+/**
+ * Адрес, который одновременно лежит в sitemap и отдаёт `noindex`.
+ *
+ * Предупреждение, а не отказ: `sitemap.xml` генерирует Django
+ * (`maintenance/sitemap.py`), и до #1929 его порог зеркалил фронтовое правило
+ * «городов ≥ 2» (#1771). Теперь индексируемость считается по тексту страницы,
+ * которого бэкенд не видит, поэтому наборы законно расходятся до
+ * согласованного релиза. Ронять фронтовую сборку из-за состояния чужого
+ * сервиса нельзя — расхождение уходит задачей бэкенду, а не красной сборкой.
+ */
+function warnQuestCountryNoindexInSitemap(builtCountryLandings, indexableCountryPaths, sitemapXml) {
+  const publishedAliases = sitemapCountryAliases(sitemapXml)
+  if (publishedAliases.size === 0) return []
+
+  const conflicting = (Array.isArray(builtCountryLandings) ? builtCountryLandings : [])
+    .filter(
+      ({ country, countryPath }) =>
+        publishedAliases.has(country.countryAlias) && !indexableCountryPaths.has(countryPath),
+    )
+    .map(({ country }) => country.countryAlias)
+
+  if (conflicting.length > 0) {
+    console.warn(
+      `  ⚠️  ${conflicting.length} country landings are published in the backend sitemap.xml while the` +
+        ' built page ships noindex — the address asks Google to crawl what the page asks it to drop.' +
+        ' sitemap.xml is Django-owned (maintenance/sitemap.py, QUEST_COUNTRY_LANDING_MIN_CITIES):' +
+        ` снять их из карты сайта может только backend-задача:\n     ${conflicting.join(', ')}`,
+    )
+  }
+  return conflicting
+}
+
 function verifyQuestHtml(html, expectedCanonical) {
   const title = getTitle(html)
   const description = getMetaContent(html, 'name', 'description')
@@ -863,6 +734,7 @@ async function main() {
   // post-deploy gate because #1606 can legitimately lag a pre-deploy FE build.
   const countryLandingFiles = expectedCountryLandingFiles(quests)
   const countryMetadataPages = []
+  const builtCountryLandings = []
   for (const country of countryGroups) {
     const relativePath = path.join('quests', 'country', country.countryAlias, 'index.html')
     const filePath = path.join(DIST_DIR, relativePath)
@@ -870,7 +742,28 @@ async function main() {
       failures.push(`country landing: missing file ${relativePath}`)
       continue
     }
+    builtCountryLandings.push({
+      country,
+      countryPath: `/quests/country/${country.countryAlias}`,
+      html: fs.readFileSync(filePath, 'utf8'),
+    })
+  }
 
+  // Кто из стран имеет право на выдачу, считается по тексту уже собранных
+  // страниц — тем же модулем, которым это решал генератор. Одна сторона мерит
+  // модель до записи, другая готовый HTML после: сойтись они обязаны на сборке,
+  // а не в GSC через месяц (#1929).
+  const indexableCountryPaths = selectIndexableQuestPages(
+    builtCountryLandings
+      .filter(({ country }) => questCountryLandingIsLinkable(country))
+      .map(({ countryPath, html }) => ({
+        path: countryPath,
+        kind: 'quest-country',
+        text: questPageFromHtml(html, countryPath).text,
+      })),
+  )
+
+  for (const { country, countryPath, html: countryHtml } of builtCountryLandings) {
     const expectedCityPaths = country.cities.map((city) => `/quests/${city.cityAlias}`)
     const expectedQuestPaths = country.quests
       .map((quest) => questRouteKey(quest)?.path)
@@ -884,24 +777,22 @@ async function main() {
       if (childFile && fs.existsSync(childFile)) childHtml = fs.readFileSync(childFile, 'utf8')
     }
 
-    const countryPath = `/quests/country/${country.countryAlias}`
-    const canonical = `${SITE_URL}${countryPath}`
-    const countryHtml = fs.readFileSync(filePath, 'utf8')
     countryMetadataPages.push({ path: countryPath, html: countryHtml })
     const issues = verifyQuestCountryHtml(
       countryHtml,
-      canonical,
+      `${SITE_URL}${countryPath}`,
       expectedCityPaths,
       expectedQuestPaths,
       childHtml,
-      questCountryLandingIsIndexable(country),
+      indexableCountryPaths.has(countryPath),
     )
     if (issues.length > 0) {
-      failures.push(`country landing /quests/country/${country.countryAlias}: ${issues.join(', ')}`)
+      failures.push(`country landing ${countryPath}: ${issues.join(', ')}`)
     }
   }
   failures.push(...verifyQuestCountryMetadataUniqueness(countryMetadataPages))
   failures.push(...verifyQuestCountrySitemap(countryGroups, sitemapXml, VERIFY_COUNTRY_SITEMAP))
+  warnQuestCountryNoindexInSitemap(builtCountryLandings, indexableCountryPaths, sitemapXml)
 
   // 3. An alias landing lists the quests of every city_id sharing that alias.
   // Duplicated city records used to make one landing silently overwrite the
@@ -1000,6 +891,8 @@ if (typeof module !== 'undefined' && module.exports) {
     listTravelPageFiles,
     questPageFromHtml,
     sectionProseText,
+    scoreQuestPageLevel,
+    selectIndexableQuestPages,
     sitemapCountryAliases,
     sitemapHasUrl,
     templateSkeleton,
@@ -1009,6 +902,7 @@ if (typeof module !== 'undefined' && module.exports) {
     verifyQuestCountrySitemap,
     verifyQuestHtml,
     verifyQuestPageContentDepth,
+    warnQuestCountryNoindexInSitemap,
   }
 }
 
