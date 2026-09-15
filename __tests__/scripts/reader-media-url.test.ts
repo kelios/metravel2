@@ -1,7 +1,11 @@
-import { toLegacyResizePath as toLegacyResizePathTs } from '@/utils/mediaUrl';
+import {
+  isLegacyResizeRouteUrl as isLegacyResizeRouteUrlTs,
+  toLegacyResizePath as toLegacyResizePathTs,
+} from '@/utils/mediaUrl';
 import { unwrapWeservImageUrl } from '@/utils/weservImageUrl';
 
 const {
+  isLegacyResizeRoutePath,
   toLegacyResizePath,
   toReaderMediaPath,
   toReaderMediaUrl,
@@ -218,5 +222,42 @@ describe('readerMediaUrl: зеркало TS-источника', () => {
     const rewritten = MIRROR_INPUTS.map((input) => toLegacyResizePathTs(input)).filter(Boolean);
     expect(rewritten.some((path) => path?.startsWith('/media-resize/uploads/'))).toBe(true);
     expect(rewritten.some((path) => path?.startsWith('/media-resize/legacy/'))).toBe(true);
+  });
+
+  /**
+   * #1204: второе зеркало того же модуля — предикат «адрес на legacy-роуте».
+   *
+   * По нему SSG-генератор решает, ставить ли `q`/`fit`, и сузься он до
+   * `/media-resize/legacy/`, класс `uploads/**` молча потерял бы параметры, а
+   * остальные тесты остались бы зелёными: ни один их вход на `/media-resize/` не
+   * заходит. Ровно так расходились копии правил до #1854/#1868.
+   */
+  const RESIZE_ROUTE_INPUTS = [
+    '/media-resize/legacy/682/conversions/x.webp',
+    '/media-resize/uploads/1614096729IMG_6960.JPG',
+    `${SITE}/media-resize/uploads/a.JPG?w=800`,
+    `${SITE}/media-resize/legacy/1/conversions/x.webp?w=320`,
+    '/travel-image/682/conversions/10f0a8f2.webp',
+    `${SITE}/gallery/cd701fc3.webp?w=320`,
+    'https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/a.JPG',
+    'https://example.com/media-resize/legacy/1/conversions/x.webp',
+    'data:image/png;base64,AAA',
+    '',
+  ];
+
+  it.each(RESIZE_ROUTE_INPUTS)(
+    'isLegacyResizeRoutePath совпадает с isLegacyResizeRouteUrl: %s',
+    (input) => {
+      expect(isLegacyResizeRoutePath(input)).toBe(isLegacyResizeRouteUrlTs(input));
+    },
+  );
+
+  it('набор покрывает оба исхода предиката, а не один', () => {
+    const verdicts = RESIZE_ROUTE_INPUTS.map((input) => isLegacyResizeRouteUrlTs(input));
+    expect(verdicts).toContain(true);
+    expect(verdicts).toContain(false);
+    // Класс `uploads/**` обязан попадать в предикат: именно он остаётся на
+    // legacy-роуте после #1204 и именно ему нужны `q`/`fit`.
+    expect(isLegacyResizeRouteUrlTs('/media-resize/uploads/a.JPG')).toBe(true);
   });
 });

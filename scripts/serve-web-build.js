@@ -210,9 +210,13 @@ const allowInsecureProxy = String(process.env.E2E_API_PROXY_INSECURE || '').toLo
 // `/media-resize/` — legacy-роуты прокси (`legacy_upload`, `legacy_conversion`).
 // С #1204 conversion-ключи идут своими family-роутами, а здесь остаются класс
 // `uploads/**` и прямые ссылки в бакет. Проксировать всё равно обязательно: без
-// этого картинки уходят в SPA-фолбэк, сеть не успокаивается и perf-бюджеты
-// падают по таймауту.
-const proxyPaths = ['/api/', '/api', '/travel-image/', '/address-image/', '/quest-cover/', '/avatar/', '/gallery/', '/uploads/', '/media/', '/media-resize/']
+// этого картинки уходят в SPA-фолбэк (index.html с кодом 200 вместо кадра), сеть
+// не успокаивается и perf-бюджеты падают по таймауту.
+//
+// По той же причине в наборе есть `/travel-description-image/`: `/travel-image/`
+// его префиксом НЕ является, а с #1204 conversion-ключи этого семейства перестали
+// уходить на проксируемый `/media-resize/legacy/` и остаются на своём роуте.
+const proxyPaths = ['/api/', '/api', '/travel-image/', '/travel-description-image/', '/address-image/', '/quest-cover/', '/avatar/', '/gallery/', '/uploads/', '/media/', '/media-resize/']
 // Default timeout is intentionally generous: in CI/local E2E the upstream can be slow,
 // and we prefer test stability over aggressively failing long requests.
 const proxyTimeoutMs = Number(process.env.E2E_API_PROXY_TIMEOUT_MS || '60000')

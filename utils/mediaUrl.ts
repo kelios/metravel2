@@ -407,10 +407,14 @@ export const familyRouteOfMediaUrl = (value: string): string | undefined => {
  * `q`/`fit`. У durable-семейств вариант уже нарезан профилем: присланные
  * параметры бэкенд игнорирует (замер прода 2026-08-09 — все их формы дают
  * байт-в-байт один ответ), но каждый набор был бы отдельной записью в кэше nginx
- * и в браузерном. Предикат один на всех потребителей: `optimizeImageUrl`,
- * трансформацию тела статьи и SSG-генератор (через зеркало в
- * `scripts/lib/readerMediaUrl.js`) — три локальные копии этого правила уже
- * расходились в проекте (#1854, #1868).
+ * и в браузерном.
+ *
+ * Потребители: трансформация тела статьи и SSG-генератор (через зеркало
+ * `isLegacyResizeRoutePath` в `scripts/lib/readerMediaUrl.js`). `optimizeImageUrl`
+ * сюда НЕ переведён намеренно: он считает по своему, более узкому
+ * `LEGACY_RESIZE_PREFIX` (`/media-resize/(uploads|legacy)/`), и перевод менял бы
+ * его поведение попутной правкой. Сегодня они эквивалентны — других роутов под
+ * `/media-resize/` не существует, — но это совпадение, а не общий источник.
  */
 export const isLegacyResizeRouteUrl = (url: string): boolean => {
   const value = String(url || '').trim();

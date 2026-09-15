@@ -100,14 +100,22 @@ function runPreloadScript(travelPayload: Record<string, unknown>): ScriptHead {
       ) as unknown as { textContent?: string } | undefined
       return script?.textContent ? JSON.parse(script.textContent) : undefined
     },
-    // Скрипт ставит `rel`/`href`/`imageSrcset` СВОЙСТВАМИ, а `data-*` — через
-    // `setAttribute`, поэтому читаем оба места.
+    // Скрипт ставит `rel`/`href` СВОЙСТВАМИ, а `imagesrcset` и `data-*` — через
+    // `setAttribute`, поэтому читаем оба места: иначе из проверки тихо выпадают
+    // все кандидаты srcset и остаётся один href самой широкой ступени.
     preloadHrefs: () =>
       created
         .filter((element) => (element as unknown as { rel?: string }).rel === 'preload')
         .flatMap((element) => {
-          const link = element as unknown as { href?: string; imageSrcset?: string }
-          return [link.href, ...String(link.imageSrcset || '').split(',').map((part) => part.trim().split(' ')[0])]
+          const link = element as unknown as { href?: string }
+          const srcSet = element.attrs.imagesrcset || ''
+          return [
+            link.href,
+            ...srcSet
+              .split(',')
+              .map((part) => part.trim().split(' ')[0])
+              .filter(Boolean),
+          ]
         })
         .filter((value): value is string => Boolean(value)),
   }
@@ -235,6 +243,12 @@ describe('preload-скрипт даёт тот же адрес соцпревь�
     // Адрес, уже пришедший из API на legacy-роуте, параметры получает: там ресайз
     // идёт в момент запроса. Своего rewrite у `buildOptimizedUrl` нет (он живёт
     // только в `toSocialPreviewUrl`, для меты), поэтому вход берётся готовым.
+    //
+    // Это pin ветки, а НЕ доказательство паритета с `<img>`: скрипт шлёт `q`
+    // как есть (82/72), а `optimizeImageUrl` снапит его вверх по лестнице
+    // (85/80). На адресах, которые реально приходят из API (family-классы и
+    // прямые ссылки в бакет), ветка недостижима, поэтому лестница качества сюда
+    // не копируется — копий правил в этом скрипте и так три.
     const legacy = runPreloadScript({
       name: 'x',
       gallery: [{ url: `${SITE}/media-resize/uploads/1614096729IMG_6960.JPG` }],
