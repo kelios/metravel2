@@ -208,8 +208,10 @@ const resolveApiProxyTarget = (env = process.env, serverHost = host, serverPort 
 const apiProxyTarget = resolveApiProxyTarget()
 const allowInsecureProxy = String(process.env.E2E_API_PROXY_INSECURE || '').toLowerCase() === 'true'
 // `/media-resize/` — legacy-роуты прокси (`legacy_upload`, `legacy_conversion`).
-// С #1195 через них идут все conversion-ключи, и без проксирования картинки
-// уходили в SPA-фолбэк: сеть не успокаивалась и perf-бюджеты падали по таймауту.
+// С #1204 conversion-ключи идут своими family-роутами, а здесь остаются класс
+// `uploads/**` и прямые ссылки в бакет. Проксировать всё равно обязательно: без
+// этого картинки уходят в SPA-фолбэк, сеть не успокаивается и perf-бюджеты
+// падают по таймауту.
 const proxyPaths = ['/api/', '/api', '/travel-image/', '/address-image/', '/quest-cover/', '/avatar/', '/gallery/', '/uploads/', '/media/', '/media-resize/']
 // Default timeout is intentionally generous: in CI/local E2E the upstream can be slow,
 // and we prefer test stability over aggressively failing long requests.

@@ -381,7 +381,24 @@ function toReaderMediaUrl(url, site = DEFAULT_SITE) {
   }
 }
 
+/**
+ * Зеркало `isLegacyResizeRouteUrl` из `utils/mediaUrl.ts`: адрес обслуживает
+ * legacy-роут прокси, то есть режется в момент запроса и понимает `q`/`fit`.
+ * У durable-семейств эти параметры бэкенд игнорирует, а каждый их набор — лишняя
+ * запись в кэше nginx и в браузерном.
+ */
+function isLegacyResizeRoutePath(url) {
+  const value = String(url || '').trim()
+  if (!value) return false
+  try {
+    return /^\/media-resize\//i.test(new URL(value, RELATIVE_URL_BASE).pathname)
+  } catch {
+    return false
+  }
+}
+
 module.exports = {
+  isLegacyResizeRoutePath,
   toLegacyResizePath,
   toReaderMediaPath,
   toReaderMediaUrl,

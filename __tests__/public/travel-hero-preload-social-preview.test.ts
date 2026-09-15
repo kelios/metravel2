@@ -28,6 +28,7 @@ type MetaElement = { attrs: Record<string, string>; textContent?: string }
 type ScriptHead = {
   meta: (selectorAttr: string, selectorValue: string) => string | undefined
   jsonLd: (id: string) => Record<string, unknown> | undefined
+  preloadHrefs: () => string[]
 }
 
 function runPreloadScript(travelPayload: Record<string, unknown>): ScriptHead {
@@ -99,6 +100,16 @@ function runPreloadScript(travelPayload: Record<string, unknown>): ScriptHead {
       ) as unknown as { textContent?: string } | undefined
       return script?.textContent ? JSON.parse(script.textContent) : undefined
     },
+    // Скрипт ставит `rel`/`href`/`imageSrcset` СВОЙСТВАМИ, а `data-*` — через
+    // `setAttribute`, поэтому читаем оба места.
+    preloadHrefs: () =>
+      created
+        .filter((element) => (element as unknown as { rel?: string }).rel === 'preload')
+        .flatMap((element) => {
+          const link = element as unknown as { href?: string; imageSrcset?: string }
+          return [link.href, ...String(link.imageSrcset || '').split(',').map((part) => part.trim().split(' ')[0])]
+        })
+        .filter((value): value is string => Boolean(value)),
   }
 }
 
@@ -194,6 +205,45 @@ describe('preload-скрипт даёт тот же адрес соцпревь�
       // законен, поэтому дефект ловится отсутствием `?w=`, а не именем роута.
       expect(value).not.toMatch(/\/gallery\/3860\/conversions\/[^?]+$/)
     }
+  })
+
+  /**
+   * #1204: скрипт греет ровно тот адрес, который затем запросит `<img>`.
+   *
+   * У `optimizeImageUrl` (`servedFromDurableFamily`, `utils/imageProxy.ts`) и у
+   * SSG-зеркала `q`/`fit` уходят только на legacy-роут. Пока conversion-ключи
+   * переписывались, все три стороны сходились сами собой; после снятия rewrite
+   * безусловные `q`/`fit` здесь дали бы preload `?w=…&q=…&fit=contain` против
+   * `<img> ?w=…` — второй cache-key и вторая загрузка LCP-кадра (#1146).
+   * Соседний `travelHeroPreloadParity` этот скрипт не покрывает: он сверяет
+   * SSG-генератор с клиентом.
+   */
+  it('preload-скрипт не шлёт `q`/`fit` на family-роут и шлёт их на legacy', async () => {
+    const family = runPreloadScript({
+      name: 'x',
+      gallery: [{ url: `${SITE}/gallery/3860/conversions/x-detail_hd.jpg` }],
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    const familyHrefs = family.preloadHrefs()
+    expect(familyHrefs.length).toBeGreaterThan(0)
+    for (const href of familyHrefs) {
+      expect(href).toContain('w=')
+      expect(href).not.toMatch(/[?&]q=/)
+      expect(href).not.toMatch(/[?&]fit=/)
+    }
+
+    // Адрес, уже пришедший из API на legacy-роуте, параметры получает: там ресайз
+    // идёт в момент запроса. Своего rewrite у `buildOptimizedUrl` нет (он живёт
+    // только в `toSocialPreviewUrl`, для меты), поэтому вход берётся готовым.
+    const legacy = runPreloadScript({
+      name: 'x',
+      gallery: [{ url: `${SITE}/media-resize/uploads/1614096729IMG_6960.JPG` }],
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    const legacyHrefs = legacy.preloadHrefs()
+    expect(legacyHrefs.length).toBeGreaterThan(0)
+    expect(legacyHrefs.every((href) => href.includes('/media-resize/'))).toBe(true)
+    expect(legacyHrefs.every((href) => /[?&]fit=contain/.test(href))).toBe(true)
   })
 
   it('набор входов покрывает ветку переписывания и ветку «не трогаем»', async () => {

@@ -19,6 +19,7 @@ import { applySmartImageLayout } from '@/utils/richTextImageLayout'
 import { guardServerSafeHtml } from '@/utils/serverSafeHtml'
 import {
   familyRouteOfMediaUrl,
+  isLegacyResizeRouteUrl,
   isLegacyUploadResizeUrl,
   isPrivateOrLocalHost,
   toLegacyResizePath,
@@ -342,12 +343,10 @@ const isFirstPartyMetravelHost = (host: string): boolean => {
  * `?w=640&q=70&fit=contain`, `?w=640&fit=cover` — все отдают 157 952 B
  * байт-в-байт), но каждый набор — ОТДЕЛЬНАЯ запись в кэше nginx и в браузерном.
  */
-const isLegacyResizeUrl = (url: URL): boolean => /^\/media-resize\//i.test(url.pathname)
-
 const buildMetravelSizedUrl = (base: URL, width: number): string => {
   const url = new URL(base.toString())
   url.searchParams.set('w', String(width))
-  if (isLegacyResizeUrl(url)) {
+  if (isLegacyResizeRouteUrl(url.toString())) {
     url.searchParams.set('q', String(RESPONSIVE_QUALITY))
     url.searchParams.set('fit', 'contain')
   }

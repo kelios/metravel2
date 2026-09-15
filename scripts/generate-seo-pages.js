@@ -19,7 +19,7 @@ const fs = require('fs');
 const path = require('path');
 const { loadCatalogs: loadI18nCatalogs } = require('../i18n/babel-inline-plugin');
 const { fetchJson, sleep } = require('./lib/fetchJson');
-const { toLegacyResizePath } = require('./lib/readerMediaUrl');
+const { isLegacyResizeRoutePath, toLegacyResizePath } = require('./lib/readerMediaUrl');
 const { injectSkeletonShell } = require('./ssg-skeletons');
 const { ensureHtmlChunkReloadGuards } = require('./lib/htmlChunkReloadGuard');
 const { buildQuestSeoMetadata, buildBrandedSeoTitle, clampMetaDescription } = require('../utils/questSeo');
@@ -355,9 +355,6 @@ function toSocialPreviewUrl(absoluteUrl) {
   return toReaderMediaUrlOnApiOrigin(withSocialPreviewWidth(absoluteUrl));
 }
 
-/** Legacy-роуты прокси: только они режут в момент запроса и понимают `q`/`fit`. */
-const LEGACY_RESIZE_ROUTE = /^\/media-resize\//i;
-
 function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } = {}) {
   const versioned = buildVersionedTravelImageUrl(rawUrl, updatedAt, id);
   if (!versioned) return '';
@@ -370,7 +367,7 @@ function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } 
 
     const legacyPathname = toLegacyResizePath(parsed.pathname);
     if (legacyPathname) parsed.pathname = legacyPathname;
-    const isLegacyResizeRoute = LEGACY_RESIZE_ROUTE.test(parsed.pathname);
+    const isLegacyResizeRoute = isLegacyResizeRoutePath(parsed.pathname);
 
     IMAGE_OPTIMIZATION_QUERY_PARAMS.forEach((key) => {
       try {

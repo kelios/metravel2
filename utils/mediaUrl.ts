@@ -401,6 +401,28 @@ export const familyRouteOfMediaUrl = (value: string): string | undefined => {
 };
 
 /**
+ * Адрес обслуживает legacy-роут прокси (`/media-resize/**`).
+ *
+ * Единственный класс, который режет в МОМЕНТ запроса, поэтому только он понимает
+ * `q`/`fit`. У durable-семейств вариант уже нарезан профилем: присланные
+ * параметры бэкенд игнорирует (замер прода 2026-08-09 — все их формы дают
+ * байт-в-байт один ответ), но каждый набор был бы отдельной записью в кэше nginx
+ * и в браузерном. Предикат один на всех потребителей: `optimizeImageUrl`,
+ * трансформацию тела статьи и SSG-генератор (через зеркало в
+ * `scripts/lib/readerMediaUrl.js`) — три локальные копии этого правила уже
+ * расходились в проекте (#1854, #1868).
+ */
+export const isLegacyResizeRouteUrl = (url: string): boolean => {
+  const value = String(url || '').trim();
+  if (!value) return false;
+  try {
+    return /^\/media-resize\//i.test(new URL(value, RELATIVE_URL_BASE).pathname);
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Путь ведёт в legacy-класс `uploads/**` — единственный без durable-производных.
  *
  * Отделён от `/media-resize/legacy/` намеренно: у conversion-ключей производные

@@ -614,10 +614,15 @@ function extractTargetsFromPayloads(site, { travels, travelDetail, travelDetails
     firstQuest?.cover_url
   push('quest-cover', toTargetUrl(site, questCover), '/api/quests/')
 
-  // Legacy-роут держим в наборе всегда: без него гейт не отличит «все семейства
-  // сломаны» от «проверять нечего». Обслуживает он только conversion-ключи,
-  // поэтому берём первый кандидат, из которого путь реально строится, а не
-  // первый непустой URL.
+  // Legacy-цель строится, только если её реально запрашивает читатель. С #1204
+  // conversion-ключ за family-роутом переписываться перестал, поэтому из
+  // первопартийных payload'ов эта цель больше НЕ возникает — остаётся она у
+  // прямых ссылок в бакет, которые в каталоге ещё встречаются в старых записях.
+  // Отсутствие цели здесь — не поломка набора: сам роут остаётся частью
+  // proxy-contract v16, но щупать адрес, которого на страницах нет, значит мерить
+  // не тот файл (#1854). Покрытие класса на реальных телах статей даёт
+  // `scripts/audit-article-body-media.js`. Берём первый кандидат, из которого путь
+  // реально строится, а не первый непустой URL.
   const legacyUrl = [travelCover, addressItem?.travelImageThumbUrl, galleryItem?.url]
     .map((candidate) => toLegacyTarget(site, candidate))
     .find(Boolean)
