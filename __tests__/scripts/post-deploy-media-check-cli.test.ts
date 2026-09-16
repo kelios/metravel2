@@ -141,6 +141,22 @@ describe('post-deploy-media-check: контракт вывода CLI', () => {
     ])
   })
 
+  it('семейство без цели названо в отчёте, а не пропущено молча (#1955)', () => {
+    // Стаб отдаёт четыре цели из семи: тела статьи, прямой ссылки в бакет и
+    // ключей `uploads/**` в нём нет.
+    const report = JSON.parse(run(served.origin, '--json').stdout)
+
+    expect(report.totalTargets).toBe(4)
+    expect(report.targetNotices.map((notice: { family: string }) => notice.family)).toEqual([
+      'travel-description-image',
+      'media-resize-legacy',
+      'media-resize-uploads',
+    ])
+    expect(run(served.origin).stdout).toContain(
+      'Проверено семейств: 4 (без цели: travel-description-image, media-resize-legacy, media-resize-uploads'
+    )
+  })
+
   it('без --json по-прежнему печатает блок режима раздачи человеку', () => {
     expect(run(served.origin).stdout).toContain('📦 Режим раздачи: 1 из 1')
     expect(run(unreadable.origin).stdout).toContain('⚠️  Режим раздачи не проверен')

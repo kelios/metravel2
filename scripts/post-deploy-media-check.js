@@ -621,8 +621,9 @@ function extractTargetsFromPayloads(site, { travels, travelDetail, travelDetails
   // Отсутствие цели здесь — не поломка набора: сам роут остаётся частью
   // proxy-contract v16, но щупать адрес, которого на страницах нет, значит мерить
   // не тот файл (#1854). Покрытие класса на реальных телах статей даёт
-  // `scripts/audit-article-body-media.js`. Берём первый кандидат, из которого путь
-  // реально строится, а не первый непустой URL.
+  // `scripts/audit-article-body-media.js`. Молчать об отсутствии при этом нельзя:
+  // отчёт получает `media.legacy_target_absent` из `missingTargetNotices` (#1955).
+  // Берём первый кандидат, из которого путь реально строится, а не первый непустой URL.
   const legacyUrl = [travelCover, addressItem?.travelImageThumbUrl, galleryItem?.url]
     .map((candidate) => toLegacyTarget(site, candidate))
     .find(Boolean)
@@ -996,8 +997,8 @@ function hasUploadsTarget(detail) {
  * Этот же набор деталей питает цель `travel-description-image`, поэтому ранний
  * выход его сужает: в удачной ветке остаются первая статья каталога и опорная.
  * Обе — опубликованные travel с манифестом, и прогон против прода 2026-09-04 даёт
- * все 7 семейств; если манифест опустеет у обеих, семейство пропадёт из набора
- * молча — своего notice у него нет (вне Scope #1758).
+ * все 7 семейств; если манифест опустеет у обеих, семейство выпадет из набора с
+ * предупреждением `media.target_absent` (`missingTargetNotices`, #1955).
  */
 async function collectUploadsScanDetails(softFetch, travels) {
   const details = []
@@ -1064,6 +1065,51 @@ function uploadsTargetNotice({ hasTarget, anchorsReachable }) {
       'ушёл со всего сайта: сечения смотрят до 12 статей из каталога. Снимать семейство с гейта — ' +
       'после полного пересчёта ссылок',
   }
+}
+
+/**
+ * Семейства таблицы ступеней, которые прогон не проверил, — каждое со своей
+ * причиной (#1955).
+ *
+ * Гейт валится, только когда целей нет вовсе, а пропажу ОДНОГО семейства не видел:
+ * после #1204 `media-resize-legacy` выпал из набора, и отчёт остался зелёным без
+ * единого слова. `WIDTHS_BY_FAMILY` — перечень того, что гейт мерит, поэтому
+ * семейство оттуда без цели — либо объяснённый пропуск, либо потеря покрытия.
+ *
+ * Legacy без цели — штатное состояние, а не поломка: кандидаты цели прод отдаёт
+ * family-роутами, а на `/media-resize/legacy/` фронт переписывает только прямую
+ * ссылку в бакет. Поэтому `info`: предупреждение на каждом деплое приучило бы
+ * гейт не читать (#1373). Остальные семейства строятся из первопартийного API
+ * всегда, и их пропажа — `warning`.
+ */
+function missingTargetNotices(targets, { anchorsReachable }) {
+  const built = new Set(targets.map((target) => target.family))
+  return [...WIDTHS_BY_FAMILY.keys()]
+    .filter((family) => !built.has(family))
+    .map((family) => {
+      if (family === 'media-resize-uploads') {
+        return { family, ...uploadsTargetNotice({ hasTarget: false, anchorsReachable }) }
+      }
+      if (family === 'media-resize-legacy') {
+        return {
+          family,
+          severity: 'info',
+          code: 'media.legacy_target_absent',
+          message:
+            'Цель media-resize-legacy не построена: ни обложка из каталога, ни фото точки, ни кадр ' +
+            'галереи не пришли прямой ссылкой в бакет с conversion-ключом — только такую фронт ' +
+            'переписывает на /media-resize/legacy/ (#1204). Роут этим прогоном не проверен',
+        }
+      }
+      return {
+        family,
+        severity: 'warning',
+        code: 'media.target_absent',
+        message:
+          `Цель ${family} не построена: публичный API не дал для семейства ни одного адреса. ` +
+          'Семейство этим прогоном не проверено — это потеря покрытия',
+      }
+    })
 }
 
 /**
@@ -1170,15 +1216,12 @@ async function collectTargets() {
 
   const targets = extractTargetsFromPayloads(SITE, { travels, travelDetail, travelDetails, quests })
 
-  const notice = uploadsTargetNotice({
-    hasTarget: targets.some((target) => target.family === 'media-resize-uploads'),
-    anchorsReachable,
-  })
-  if (notice) {
+  const notices = missingTargetNotices(targets, { anchorsReachable })
+  for (const notice of notices) {
     console.error(`${notice.severity === 'warning' ? '⚠️ ' : 'ℹ️ '} ${notice.message}`)
   }
 
-  return { targets, travels, softFetch, notices: notice ? [notice] : [] }
+  return { targets, travels, softFetch, notices }
 }
 
 function withWidth(url, width) {
@@ -1193,7 +1236,13 @@ function printSummary(summary) {
     return
   }
 
-  console.log(`\n📊 Проверено семейств: ${summary.totalTargets}`)
+  // Уведомления уходят в stderr ещё до проб, а итог — в stdout: без этого хвоста
+  // «Проверено семейств: 5» читается как полный набор (#1955).
+  const absentFamilies = summary.targetNotices.map((notice) => notice.family)
+  console.log(
+    `\n📊 Проверено семейств: ${summary.totalTargets}` +
+      (absentFamilies.length ? ` (без цели: ${absentFamilies.join(', ')} — причины выше)` : '')
+  )
   console.log(`❌ Ошибок: ${summary.errorCount}`)
   console.log(`⚠️  Предупреждений: ${summary.warningCount}`)
 
@@ -1366,8 +1415,8 @@ async function main() {
       coverageIssues.filter((issue) => issue.severity === 'warning').length +
       notices.filter((issue) => issue.severity === 'warning').length,
     targets: checked,
-    // Состояние поиска цели `uploads/**`: непостроенная цель обязана быть видна в
-    // отчёте, а не только в stderr, иначе `--json`-потребитель её не увидит (#1758).
+    // Семейства без цели, каждое с причиной: непостроенная цель обязана быть видна в
+    // отчёте, а не только в stderr, иначе `--json`-потребитель её не увидит (#1758, #1955).
     targetNotices: notices,
     articleBody,
     coverage,
@@ -1398,6 +1447,7 @@ if (typeof module !== 'undefined' && module.exports) {
     collectUploadsScanDetails,
     familyOfMediaUrl,
     mapWithConcurrency,
+    missingTargetNotices,
     toTargetUrlWithQuery,
     extractTargetsFromPayloads,
     toLegacyTarget,

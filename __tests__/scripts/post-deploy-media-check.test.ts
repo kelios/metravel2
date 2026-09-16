@@ -14,6 +14,7 @@ const {
   familyOfMediaUrl,
   isBackpressureResponse,
   mapWithConcurrency,
+  missingTargetNotices,
   toLegacyTarget,
   toTargetUrl,
   toTargetUrlWithQuery,
@@ -22,6 +23,7 @@ const {
   uploadsScanPages,
   uploadsTargetNotice,
   validateTarget,
+  WIDTHS_BY_FAMILY,
   widthsFor,
   withWidth,
 } = require('@/scripts/post-deploy-media-check')
@@ -95,7 +97,8 @@ describe('post-deploy media check: разбор контракта', () => {
     // #1204: `media-resize-legacy` из первопартийных payload'ов больше не
     // возникает — conversion-ключи читатель запрашивает их собственным
     // family-роутом. Цель этого класса остаётся у прямых ссылок в бакет; её
-    // строит соседний кейс «берёт для legacy первый кандидат».
+    // строит соседний кейс «берёт для legacy первый кандидат». Пропуск при этом
+    // не молчит — это держит блок «семейство без цели» (#1955).
     expect(targets.map((item: { family: string }) => item.family)).toEqual([
       'travel-image',
       'gallery',
@@ -158,6 +161,98 @@ describe('post-deploy media check: разбор контракта', () => {
     expect(withWidth(`${SITE}/gallery/photo.webp?f=webp`, SMALL_WIDTH)).toBe(
       `${SITE}/gallery/photo.webp?f=webp&w=${SMALL_WIDTH}`
     )
+  })
+})
+
+describe('post-deploy media check: семейство без цели не пропадает молча (#1955)', () => {
+  type Named = { family: string }
+  type Notice = Named & { severity: string; code: string; message: string }
+  const families = (items: Named[]) => items.map((item) => item.family)
+  const noticeFor = (notices: Notice[], family: string) => notices.find((item) => item.family === family)
+
+  /** Форма ответа прода после #1204: conversion-ключи приходят family-роутами. */
+  const firstPartyPayloads = {
+    travels: {
+      data: [{ id: 759, media: { cover: { variants: { original: `${SITE}/travel-image/759/conversions/cover.webp` } } } }],
+    },
+    travelDetail: {
+      data: {
+        gallery: [{ url: `${SITE}/gallery/frame.webp` }],
+        travelAddress: [{ travelImageThumbUrl: `${SITE}/address-image/16150/conversions/point.webp` }],
+        media: { article_body: { cover: { src: `${SITE}/travel-description-image/body.jpg.webp` } } },
+      },
+    },
+    quests: { data: [{ cover_url: `${SITE}/quest-cover/quests/1/main/cover.webp` }] },
+  }
+
+  it('каждое семейство таблицы ступеней либо проверяется, либо названо в уведомлении', () => {
+    const targets = extractTargetsFromPayloads(SITE, firstPartyPayloads)
+    const notices = missingTargetNotices(targets, { anchorsReachable: true })
+
+    // Ровно состояние прода 16.09.2026: пять целей, legacy и uploads без цели.
+    expect(families(targets)).not.toContain('media-resize-legacy')
+    expect([...families(targets), ...families(notices)].sort()).toEqual([...WIDTHS_BY_FAMILY.keys()].sort())
+  })
+
+  it('legacy без цели — info с причиной, а не предупреждение на каждом деплое', () => {
+    const notices = missingTargetNotices(extractTargetsFromPayloads(SITE, firstPartyPayloads), {
+      anchorsReachable: true,
+    })
+
+    const legacy = noticeFor(notices, 'media-resize-legacy')
+    expect(legacy).toMatchObject({ severity: 'info', code: 'media.legacy_target_absent' })
+    expect(legacy?.message).toContain('/media-resize/legacy/')
+    expect(legacy?.message).toContain('не проверен')
+    // Штатный пропуск не трогает итог гейта: предупреждение тут стало бы шумом.
+    expect(notices.filter((item: Notice) => item.severity === 'warning')).toEqual([])
+  })
+
+  it('legacy-цель построена из прямой ссылки в бакет — уведомления про legacy нет', () => {
+    const targets = extractTargetsFromPayloads(SITE, {
+      ...firstPartyPayloads,
+      travelDetail: {
+        data: {
+          ...firstPartyPayloads.travelDetail.data,
+          travelAddress: [
+            { travelImageThumbUrl: 'https://metravelprod.s3.eu-north-1.amazonaws.com/9/conversions/p.webp' },
+          ],
+        },
+      },
+    })
+
+    expect(families(targets)).toContain('media-resize-legacy')
+    expect(noticeFor(missingTargetNotices(targets, { anchorsReachable: true }), 'media-resize-legacy')).toBeUndefined()
+  })
+
+  it('первопартийное семейство без цели — предупреждение о потере покрытия', () => {
+    // Манифест тела статьи опустел: до #1955 `travel-description-image` выпадал
+    // из набора так же молча, как legacy.
+    const targets = extractTargetsFromPayloads(SITE, {
+      ...firstPartyPayloads,
+      travelDetail: { data: { ...firstPartyPayloads.travelDetail.data, media: {} } },
+    })
+
+    expect(noticeFor(missingTargetNotices(targets, { anchorsReachable: true }), 'travel-description-image')).toMatchObject({
+      severity: 'warning',
+      code: 'media.target_absent',
+    })
+  })
+
+  it('uploads без цели сохраняет свои два исхода, а не получает общий код', () => {
+    const targets = extractTargetsFromPayloads(SITE, firstPartyPayloads)
+
+    expect(noticeFor(missingTargetNotices(targets, { anchorsReachable: true }), 'media-resize-uploads')?.code).toBe(
+      'media.uploads_class_absent'
+    )
+    expect(noticeFor(missingTargetNotices(targets, { anchorsReachable: false }), 'media-resize-uploads')?.code).toBe(
+      'media.uploads_target_unresolved'
+    )
+  })
+
+  it('все цели построены — уведомлений нет', () => {
+    const targets = [...WIDTHS_BY_FAMILY.keys()].map((family) => ({ family, url: `${SITE}/${family}/x.webp` }))
+
+    expect(missingTargetNotices(targets, { anchorsReachable: false })).toEqual([])
   })
 })
 
