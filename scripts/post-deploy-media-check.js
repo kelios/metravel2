@@ -1043,9 +1043,11 @@ async function collectUploadsScanDetails(softFetch, travels) {
  * Вердикт «класса нет» опирается на опорный набор: он и есть перепись класса,
  * поэтому «все опорные статьи прочитаны и ключей не содержат» — утверждение об
  * их состоянии, а не о недоступности API.
+ *
+ * Зовётся только для непостроенной цели: правило «цель есть — сообщения нет»
+ * держит `missingTargetNotices`, второй копии здесь не нужно.
  */
-function uploadsTargetNotice({ hasTarget, anchorsReachable }) {
-  if (hasTarget) return null
+function uploadsTargetNotice({ anchorsReachable }) {
   const anchors = UPLOADS_ANCHOR_TRAVEL_IDS.join(', ')
   if (!anchorsReachable) {
     return {
@@ -1088,7 +1090,7 @@ function missingTargetNotices(targets, { anchorsReachable }) {
     .filter((family) => !built.has(family))
     .map((family) => {
       if (family === 'media-resize-uploads') {
-        return { family, ...uploadsTargetNotice({ hasTarget: false, anchorsReachable }) }
+        return { family, ...uploadsTargetNotice({ anchorsReachable }) }
       }
       if (family === 'media-resize-legacy') {
         return {

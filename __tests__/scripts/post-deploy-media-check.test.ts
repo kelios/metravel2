@@ -460,13 +460,8 @@ describe('post-deploy media check: цель uploads/** (фото тела ста
   })
 
   describe('исход поиска цели: «класса нет» и «цель не нашлась» — разные сообщения', () => {
-    it('цель построена — сообщения нет', () => {
-      expect(uploadsTargetNotice({ hasTarget: true, anchorsReachable: true })).toBeNull()
-      expect(uploadsTargetNotice({ hasTarget: true, anchorsReachable: false })).toBeNull()
-    })
-
     it('опорные статьи прочитаны и пусты — класса нет, это законный пропуск', () => {
-      const notice = uploadsTargetNotice({ hasTarget: false, anchorsReachable: true })
+      const notice = uploadsTargetNotice({ anchorsReachable: true })
 
       expect(notice.severity).toBe('info')
       expect(notice.code).toBe('media.uploads_class_absent')
@@ -479,7 +474,7 @@ describe('post-deploy media check: цель uploads/** (фото тела ста
     })
 
     it('опорные статьи недоступны — предупреждение гейта, а не пропуск', () => {
-      const notice = uploadsTargetNotice({ hasTarget: false, anchorsReachable: false })
+      const notice = uploadsTargetNotice({ anchorsReachable: false })
 
       expect(notice.severity).toBe('warning')
       expect(notice.code).toBe('media.uploads_target_unresolved')
@@ -540,7 +535,7 @@ describe('post-deploy media check: цель uploads/** (фото тела ста
 
       expect(details).toEqual([])
       expect(anchorsReachable).toBe(false)
-      expect(uploadsTargetNotice({ hasTarget: false, anchorsReachable }).code).toBe(
+      expect(uploadsTargetNotice({ anchorsReachable }).code).toBe(
         'media.uploads_target_unresolved'
       )
     })
