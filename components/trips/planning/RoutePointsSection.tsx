@@ -1,7 +1,8 @@
 // components/trips/planning/RoutePointsSection.tsx
 // Шаг 2 панели маршрута: список точек (в двух раскладках) и форма добавления
 // точки под ним. Вынесено из RouteBuilder.tsx (#1825) дословно — разметка,
-// testID, порядок веток и тексты те же.
+// testID, порядок веток и тексты те же. Над списком — предложение порядка
+// точек (#1899).
 import React from 'react';
 import Feather from '@expo/vector-icons/Feather';
 import { Platform, ScrollView, Text, View } from 'react-native';
@@ -15,6 +16,8 @@ import RoutePointAddForm, {
 } from '@/components/trips/planning/RoutePointAddForm';
 import { RouteDayGroups } from '@/components/trips/planning/RouteDayGroupHeader';
 import { MIN_ROUTE_POINTS, POINT_TYPES } from '@/components/trips/planning/routeBuilderPoint';
+import RouteOrderSuggestion from '@/components/trips/planning/RouteOrderSuggestion';
+import type { RouteOrderSuggestionTarget } from '@/components/trips/planning/useRouteOrderSuggestion';
 import Button from '@/components/ui/Button';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n';
@@ -31,6 +34,8 @@ interface Props {
   colors: ThemedColors;
   isMapFirst: boolean;
   route: RoutePoint[];
+  /** Транспорт поездки и общий вход перестановки для предложения порядка точек. */
+  orderSuggestion: RouteOrderSuggestionTarget;
   /** Старт поездки: из него считается календарная дата заголовка дня. */
   startDate: string | null | undefined;
   editingIndex: number | null;
@@ -74,6 +79,7 @@ export default function RoutePointsSection({
   colors,
   isMapFirst,
   route,
+  orderSuggestion,
   startDate,
   editingIndex,
   editorSlot,
@@ -177,6 +183,12 @@ export default function RoutePointsSection({
       }
       testID="route-builder-step-points"
     >
+      <RouteOrderSuggestion
+        styles={styles}
+        colors={colors}
+        route={route}
+        target={orderSuggestion}
+      />
       {route.length ? (
         isMapFirst ? (
           <View style={styles.pointList}>{renderRoutePointList(true)}</View>

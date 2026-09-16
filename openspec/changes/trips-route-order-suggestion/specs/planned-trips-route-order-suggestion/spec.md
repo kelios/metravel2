@@ -5,11 +5,15 @@ Let a planned-trip owner ask the server for a better visiting order of the draft
 ## ADDED Requirements
 
 ### Requirement: Owner-only suggestion action
-The system SHALL show a "Suggest optimal order" action inside the route points step only to the trip owner, only when the draft route has at least three points, and only when the trip transport is car, bicycle, or walking.
+The system SHALL show a "Suggest optimal order" action inside the route points step only to the trip owner, only when the draft route has at least three points, and only when the trip transport is car, bicycle, or walking. Because the first and last points stay in place, the action SHALL be enabled only from four points.
 
-#### Scenario: Route with three or more points
-- **WHEN** the owner opens the planner with three or more draft points on a car, bicycle, or walking trip
+#### Scenario: Route with four or more points
+- **WHEN** the owner opens the planner with four to fifty draft points with coordinates on a car, bicycle, or walking trip
 - **THEN** the suggestion action is visible and enabled
+
+#### Scenario: Route with exactly three points
+- **WHEN** the draft route has three points
+- **THEN** the action is disabled, no request is sent, and a hint explains that the first and last points stay in place
 
 #### Scenario: Route with fewer than three points
 - **WHEN** the draft route has one or two points
@@ -34,6 +38,10 @@ The system SHALL present the returned order as a preview listing each point with
 - **THEN** the preview lists the points in the suggested order
 - **AND** the draft list and the map still show the manual order
 
+#### Scenario: Route split by day
+- **WHEN** the preview is shown for a route whose points carry day numbers
+- **THEN** the preview warns that point days stay unchanged and should be checked after applying
+
 #### Scenario: Server returns the identity order
 - **WHEN** the response order equals the draft order
 - **THEN** the system shows a notice that there is nothing to reorder and offers no "Apply" action
@@ -44,6 +52,7 @@ The system SHALL reorder the draft only when the owner presses "Apply", using th
 #### Scenario: Apply
 - **WHEN** the owner presses "Apply"
 - **THEN** the draft points take the suggested order and the preview closes
+- **AND** a notice reminds the owner to save the route
 - **AND** saving the route sends the reordered list
 
 #### Scenario: Dismiss

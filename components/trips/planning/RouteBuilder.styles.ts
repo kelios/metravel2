@@ -279,4 +279,11 @@ export const createStyles = (colors: ThemedColors) =>
     templateBody: { flex: 1, gap: 2 },
     templateTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
     templateDescription: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
+    // #1899: «Предложить оптимальный порядок». Карточка предпросмотра берёт рамку
+    // формы правки (`editForm`), номер строки — бейдж `pointOrder` из списка,
+    // чтобы предложенный порядок сопоставлялся с текущим без перевода взгляда.
+    orderSuggestion: { gap: 8 },
+    orderPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 },
+    orderPreviewName: { flex: 1, minWidth: 0, fontSize: 14, color: colors.text },
+    orderPreviewWas: { fontSize: 12, color: colors.textMuted },
   });

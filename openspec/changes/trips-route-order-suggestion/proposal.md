@@ -4,7 +4,7 @@ Owners of planned trips order route points only by hand (arrow buttons and drag&
 
 ## What Changes
 
-- Add an owner-only "Suggest optimal order" action inside the "Route points" step of the route builder, available when the draft route has at least three points, every point has coordinates, and the trip transport is routable (`car`, `bike`, `foot`).
+- Add an owner-only "Suggest optimal order" action inside the "Route points" step of the route builder, shown from three draft points and enabled from four (the first and last points stay in place, so three points leave nothing to reorder) when every point has coordinates and the trip transport is routable (`car`, `bike`, `foot`).
 - On press send exactly one `POST /api/routing/optimize/` request with the current point coordinates in draft order, `transport_mode`, and `bike_type` for bicycle trips; never send ids, names, or descriptions.
 - Show the returned order as a read-only preview (new position, point name, previous position) without changing the draft route, the saved trip, or the map.
 - Offer two explicit actions: "Apply" reorders the draft through the existing `routePointReorder` arithmetic (the open point editor follows its point); "Dismiss" closes the preview and keeps the manual order.

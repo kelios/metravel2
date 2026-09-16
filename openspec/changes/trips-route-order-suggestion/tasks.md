@@ -5,16 +5,16 @@
 
 ## 2. Suggestion state and reorder arithmetic
 
-- [x] 2.1 Add the pure helpers (request points, snapshot key, identity check, `applyRouteOrder` over `moveItem`, index remap, preview rows, error key mapping) with unit tests.
-- [x] 2.2 Add `useRouteOrderSuggestion` and mount it in `RoutePointsSection`; `RouteBuilder` passes `trip` and draft setters.
+- [x] 2.1 Add the pure helpers in `components/trips/planning/routePointOrder.ts` (availability, request points, snapshot key, identity check, `moveItem` decomposition, preview rows, error kind mapping) with unit tests.
+- [x] 2.2 Add `useRouteOrderSuggestion`; `RoutePointsSection` renders the block and `RouteBuilder` passes the trip transport, bike type and its reorder entry point `handleReorder`.
 
 ## 3. UI and localization
 
-- [x] 3.1 Add `RouteOrderSuggestion` (button, hints, error, preview, Apply/Dismiss) and its styles.
+- [x] 3.1 Add `RouteOrderSuggestion` (button, hints, error, preview, Apply/Dismiss, applied/unchanged notices, day-split warning) and its styles.
 - [x] 3.2 Add `tripsStatic:plan.orderSuggestion.*` copy for RU/BE/UK/PL/EN.
 
 ## 4. Validation
 
-- [x] 4.1 Component tests: hidden for <3 points and non-owner, request payload, preview without draft change, apply/dismiss, identity notice, backend error, missing coordinates.
-- [ ] 4.2 `npm run test:i18n`, targeted jest suites, `npm run check:fast`.
-- [ ] 4.3 In `testing`: desktop web and mobile web evidence against the local backend once #1951 is deployed; before that only the 404 → "unavailable" path is observable.
+- [x] 4.1 Component tests: hidden for <3 points, non-owner and unroutable transport, three-point hint, request payload, preview without draft change, apply/dismiss, editor follows its point, identity notice, backend error, missing coordinates, stale answer dropped, day-split warning.
+- [x] 4.2 `npm run test:i18n`, targeted jest suites, `npm run check:fast`, `tsc --noEmit`, UI guards.
+- [ ] 4.3 In `testing`: desktop web and mobile web evidence against the local backend with #1951 (`origin/master` 7c7b946); the live ORS answer depends on the local `OPENROUTESERVICE_API_KEY`.

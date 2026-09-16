@@ -372,7 +372,7 @@ function RouteBuilder({
     />
   ) : null;
 
-  // Единственная точка входа для перестановки: и стрелки, и перетаскивание.
+  // Единственная точка входа для перестановки: стрелки, перетаскивание и предложенный порядок (#1899).
   // Открытая форма редактирования едет вместе со своей точкой, иначе после
   // переупорядочивания сохранение ушло бы в соседнюю строку.
   const handleReorder = useCallback((from: number, to: number) => {
@@ -677,6 +677,7 @@ function RouteBuilder({
       colors={colors}
       isMapFirst={isMapFirst}
       route={route}
+      orderSuggestion={{ transport: trip.transport, bikeType: trip.bikeType, onReorder: handleReorder }}
       startDate={trip.startDate}
       editingIndex={editingIndex}
       // Форма правки принадлежит одной раскладке за раз: в mapFirst её ставит

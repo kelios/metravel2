@@ -132,6 +132,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
                      │           ├─ TripPlanRouteMap(.web)
                      │           ├─ RouteTransportSection → TripBikeTypeControl
                      │           ├─ RoutePointsSection
+                     │           │    ├─ RouteOrderSuggestion (useRouteOrderSuggestion)
                      │           │    ├─ RoutePointRow × N (useRoutePointDrag)
                      │           │    └─ RoutePointAddForm
                      │           ├─ RoutePointEditForm
@@ -170,7 +171,10 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/planning/RoutePointEditForm.tsx` | 233 | форма правки точки: тип, название, координаты, описание, адресный поиск; плюс перестановка (обе раскладки) и удаление (только mapFirst) |
 | `components/trips/planning/TripSuggestPointForm.tsx` | 221 | предложение точки участником |
 | `components/trips/planning/tripPlanFormatting.ts` | 214 | метки/иконки/цвета планировщика, сводка маршрута строкой, даты |
-| `components/trips/planning/RoutePointsSection.tsx` | 192 | шаг 2 панели: список точек и форма добавления |
+| `components/trips/planning/RoutePointsSection.tsx` | 217 | шаг 2 панели: предложение порядка, список точек и форма добавления |
+| `components/trips/planning/routePointOrder.ts` | 189 | чистая часть предложения порядка точек (#1899): доступность, тело запроса, ключ черновика, разложение перестановки в `moveItem`, строки предпросмотра, коды ошибок |
+| `components/trips/planning/RouteOrderSuggestion.tsx` | 150 | блок «Предложить оптимальный порядок»: кнопка, подсказки, предпросмотр, «Применить»/«Отклонить», ошибки |
+| `components/trips/planning/useRouteOrderSuggestion.ts` | 138 | состояние предложения порядка, привязанное к ключу черновика; применение через `handleReorder` |
 | `components/trips/TripApplyForm.tsx` | 189 | форма «Хочу поехать» |
 | `components/trips/planning/TripSuggestionsPanel.tsx` | 189 | список предложенных точек и решения |
 | `components/trips/communication/TripTelegramGroupCard.tsx` | 185 | группа Telegram поездки |
@@ -397,6 +401,7 @@ DTO `PublicTripDto` (snake_case): `id`, `owner`, `owner_profile`, `title`,
 | `updatePlannedTripTransport` | `PATCH /trips/planned/{id}/ {transport_mode}` | перестраивает маршрут на бэке |
 | `updatePlannedTripBikeType` | `PATCH /trips/planned/{id}/ {bike_type}` | меняет профиль ORS, отдельный rebuild не нужен |
 | `updateTripRoute` | `PUT /trips/planned/{id}/route/ {points[]}` | `order` 1-based, см. ловушки |
+| `optimizeRouteOrder` (`api/routeOrderOptimization.ts`) | `POST /routing/optimize/ {points[{lat,lng}], transport_mode, bike_type?}` | #1899 поверх контракта v1 бэка #1951: `IsAuthenticated`, 3–50 точек, лимит 5/мин на пользователя; ответ `order` — перестановка индексов с закреплёнными первой и последней точкой, клиент принимает только её; ничего не пишет в поездку |
 | `deletePlannedTrip` | `DELETE /trips/{id}/` | путь **без** `planned` |
 | `setRsvp` | `POST /trips/planned/{id}/rsvp/ {status:'accepted'\|'declined'}` | затем повторный `fetchPlannedTrip` |
 | `inviteParticipants` | `POST /trips/planned/{id}/invite/ {user_ids}` | |
@@ -660,8 +665,14 @@ sequenceDiagram
   полностью» (`TripPlanCollapsibleText` с вместимостью строки по замеренной
   ширине колонки): иначе одна точка с логистикой выдавливала из ограниченного
   по высоте списка все остальные;
-- порядок меняют два пути с общей арифметикой в `routePointReorder.ts`:
-  стрелки (клавиатура/a11y) и drag&drop (`useRoutePointDrag`). `moveItem`,
+- порядок меняют три пути с общей арифметикой в `routePointReorder.ts` и общим
+  входом `RouteBuilder.handleReorder`: стрелки (клавиатура/a11y), drag&drop
+  (`useRoutePointDrag`) и «Предложить оптимальный порядок» (#1899,
+  `RouteOrderSuggestion`). Третий путь спрашивает порядок у
+  `POST /routing/optimize/`, показывает предпросмотр и по «Применить» подаёт
+  перестановку в `handleReorder` последовательными ходами `moveItem`; первая и
+  последняя точки закреплены контрактом, поэтому кнопка активна с четырёх точек, а
+  ответ для изменившегося черновика не показывается и не применяется. `moveItem`,
   `remapIndexAfterMove` (открытая форма редактирования едет за своей точкой) и
   `resolveDropIndex` (по центру перетаскиваемой строки и измеренным
   `onLayout`-габаритам, а не по «дельта / высота строки», потому что строки
