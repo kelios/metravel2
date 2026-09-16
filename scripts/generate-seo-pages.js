@@ -1307,6 +1307,25 @@ function injectMeta(baseHtml, { title, description, canonical, image, ogType = '
   return html;
 }
 
+/**
+ * `robots`, которым владеет сборка, а не Helmet.
+ *
+ * Метка `data-rh="true"` из `injectMeta` — заявка Helmet на владение тегом: при
+ * гидрации react-helmet-async снимает каждый `meta[data-rh]`, которого нет в
+ * клиентском `<Head>`. Статичный robots, который роут объявляет и сам, это
+ * переживает — Helmet ставит такой же. Вердикт, который считает только сборка по
+ * тексту страницы, клиент повторить не может, и с меткой его `noindex` исчезал из
+ * живого DOM сразу после загрузки, хотя сырой HTML выглядел верно (#1929). Без
+ * метки Helmet тег не трогает.
+ */
+function injectBuildOwnedRobots(baseHtml, robots) {
+  return replaceOrInsert(
+    baseHtml,
+    /<meta[^>]*name="robots"[^>]*\/?>/i,
+    `<meta name="robots" content="${escapeAttr(robots)}"/>`
+  );
+}
+
 function patchNoindexFallbackTemplate(baseHtml, { title, description } = {}) {
   let html = baseHtml;
 
@@ -3261,6 +3280,8 @@ function buildQuestCountryLandingHtml(countryBaseHtml, country, options = {}) {
   // Тонкая страна уходит из выдачи, но остаётся страницей: `follow` и полное
   // тело — ссылки на города и квесты со страницы по-прежнему работают и ведут
   // краулер дальше, а человек по прямой ссылке видит те же города (#1929).
+  // Роут страны robots не объявляет — вердикт по тексту есть только у сборки,
+  // поэтому тег пишется без метки Helmet и переживает гидрацию.
   const indexable = typeof options.indexable === 'boolean'
     ? options.indexable
     : selectIndexableQuestCountryLandings([country]).has(country.countryAlias);
@@ -3271,8 +3292,8 @@ function buildQuestCountryLandingHtml(countryBaseHtml, country, options = {}) {
     canonical,
     image,
     ogType: 'website',
-    ...(indexable ? {} : { robots: 'noindex, follow' }),
   });
+  if (!indexable) html = injectBuildOwnedRobots(html, 'noindex, follow');
   html = injectBreadcrumbJsonLd(html, {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',

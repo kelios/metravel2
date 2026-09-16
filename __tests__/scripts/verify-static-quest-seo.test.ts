@@ -337,6 +337,27 @@ describe('quest country landing verification', () => {
     )
   })
 
+  // Сырой HTML с `data-rh` проходит все прочие проверки, но роут страны robots
+  // не объявляет, и Helmet снимает такой тег при гидрации: на проде живой DOM
+  // остался без noindex вовсе (#1929, возврат из testing 16.09.2026).
+  it('rejects a country noindex that Helmet owns and drops on hydration', () => {
+    const cityPaths = ['/quests/minsk', '/quests/gomel']
+    const questPaths = ['/quests/4/minsk-center', '/quests/19/gomel-park']
+    const helmetOwnedHtml = html.replace(
+      '</head>',
+      '<meta data-rh="true" name="robots" content="noindex, follow"/></head>',
+    )
+    const buildOwnedHtml = html.replace(
+      '</head>',
+      '<meta name="robots" content="noindex, follow"/></head>',
+    )
+
+    expect(verifyQuestCountryHtml(helmetOwnedHtml, canonical, cityPaths, questPaths, '', false)).toEqual([
+      'country landing noindex is Helmet-owned (data-rh) and is dropped on hydration',
+    ])
+    expect(verifyQuestCountryHtml(buildOwnedHtml, canonical, cityPaths, questPaths, '', false)).toEqual([])
+  })
+
   /**
    * Адрес в карте сайта под `noindex` — противоречивый сигнал, но `sitemap.xml`
    * принадлежит Django: ронять фронтовую сборку из-за состояния чужого сервиса
@@ -1140,6 +1161,12 @@ describe('thin-content floors against the generator itself', () => {
     expect(verifyQuestPageContentDepth([{ ...page, noindex: false }])).toEqual([
       expect.stringContaining('112 words of crawlable text, minimum 300'),
     ])
+
+    // И пишет этот noindex так, чтобы гидрация его не сняла.
+    expect(verifyQuestCountryHtml(leanCountryHtml(), 'https://metravel.by/quests/country/belarus', [], [], '', false))
+      .toEqual(expect.not.arrayContaining([
+        'country landing noindex is Helmet-owned (data-rh) and is dropped on hydration',
+      ]))
   })
 
   /**

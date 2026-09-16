@@ -2468,7 +2468,11 @@ describe('catalog-derived quest country landings', () => {
     const polandHtml = buildQuestCountryLandingHtml(MINIMAL_BASE, poland)
 
     for (const html of [belarusHtml, polandHtml]) {
-      expect(html).toContain('<meta data-rh="true" name="robots" content="noindex, follow"/>')
+      // Без метки Helmet: роут страны robots не объявляет, и `meta[data-rh]`
+      // снимался при гидрации — в живом DOM noindex не оставалось.
+      expect(html).toContain('<meta name="robots" content="noindex, follow"/>')
+      expect(html.match(/name="robots"/g)).toHaveLength(1)
+      expect(html).not.toMatch(/<meta[^>]*data-rh[^>]*name="robots"/)
       // follow, а не nofollow: ссылки на город и квесты со страницы обязаны
       // работать — иначе страна становится ещё и тупиком графа.
       expect(html).not.toContain('nofollow')

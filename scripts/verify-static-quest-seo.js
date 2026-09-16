@@ -213,6 +213,12 @@ function verifyQuestCityHtml(html, expectedCanonical, childHtml = '') {
   return issues
 }
 
+/** Несёт ли robots-тег метку Helmet — то есть будет ли снят при гидрации. */
+function robotsMetaIsHelmetOwned(html) {
+  return (String(html || '').match(/<meta\b[^>]*\bname="robots"[^>]*>/gi) || [])
+    .some((tag) => /\bdata-rh=/i.test(tag))
+}
+
 function verifyQuestCountryHtml(
   html,
   expectedCanonical,
@@ -263,6 +269,12 @@ function verifyQuestCountryHtml(
   }
   if (expectIndexable && isNoindex) {
     issues.push(`country landing clears the content floors but ships noindex: ${robots}`)
+  }
+  // Сырой HTML здесь верен и с меткой Helmet, но роут страны robots не объявляет:
+  // `meta[data-rh]` Helmet снимает при гидрации, и живой DOM остаётся без noindex
+  // вовсе (#1929, возврат из testing 16.09.2026).
+  if (isNoindex && robotsMetaIsHelmetOwned(html)) {
+    issues.push('country landing noindex is Helmet-owned (data-rh) and is dropped on hydration')
   }
 
   for (const cityPath of expectedCityPaths) {
