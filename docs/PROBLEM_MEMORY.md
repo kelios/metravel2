@@ -1994,7 +1994,7 @@ guard, падающий в CI на попытке обойти этот конт
   собственностью сборки (`injectBuildOwnedRobots`, без `data-rh`), а гвард падает
   на Helmet-owned `noindex`. Проверять после гидрации в живом DOM, не `curl`.
   Тот же механизм у статичных `/places`, `/quests/map`, `/userpoints`: SSG ставит
-  `noindex`, экран robots не объявляет — отдельная задача.
+  `noindex`, экран robots не объявляет — отдельная задача `#1968`.
 - **Решение для новой жалобы:** пропала или смешалась country group, alias либо
   SSG-секция — `reopen #1607`; sitemap не публикует уже существующую страницу —
   `reopen #1606`; адрес одновременно в sitemap и под `noindex` — backend-задача
