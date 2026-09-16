@@ -42,6 +42,8 @@ type Props = {
   onOpenArticle?: () => void;
   articleHref?: string | null;
   relatedTravelUrl?: string | null;
+  /** Id статьи `relatedTravelUrl` из API (#1960) — стек не запрашивает её по slug. */
+  relatedTravelId?: number | null;
   /**
    * Превью связанной статьи для ♥/статуса. Отделено от `imageUrl`: у места с
    * несколькими материалами hero меняется при перелистывании, а сохраняется
@@ -171,6 +173,7 @@ const PlacePopupCard: React.FC<Props> = ({
   onOpenArticle,
   articleHref,
   relatedTravelUrl,
+  relatedTravelId,
   relatedTravelImageUrl,
   relatedTravelCountry,
   relatedTravelCity,
@@ -512,6 +515,7 @@ const PlacePopupCard: React.FC<Props> = ({
     return (
       <RelatedTravelActionStack
         relatedTravelUrl={relatedTravelUrl}
+        relatedTravelId={relatedTravelId}
         fallbackTitle={title}
         fallbackImageUrl={relatedTravelFallbackImageUrl}
         fallbackCountry={relatedTravelCountry}
@@ -525,6 +529,7 @@ const PlacePopupCard: React.FC<Props> = ({
     isBottomCardLayout,
     relatedTravelCity,
     relatedTravelCountry,
+    relatedTravelId,
     relatedTravelUrl,
     styles.relatedTravelActionsInline,
     title,

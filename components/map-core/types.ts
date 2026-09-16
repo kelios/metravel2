@@ -52,6 +52,12 @@ export interface LegacyMapPoint {
   categories?: Array<string | number | Record<string, unknown>>;
   articleUrl?: string;
   urlTravel?: string;
+  /**
+   * Id статьи `urlTravel` у точек без `primarySource` (#1960): deep-link из
+   * /places, карта «Рядом», точки пользователя. Читать через
+   * `resolveMapPointRelatedTravelId`, который валидирует значение.
+   */
+  travelId?: number | null;
   updated_at?: string;
   /**
    * Grouped place DTO (#1567/#1571): канонический `place_id` места и summary его
@@ -287,6 +293,9 @@ export const normalizePoint = (input: unknown, index: number): LegacyMapPoint =>
     categories: (raw.categories ?? raw.categoryIds ?? raw.category_ids) as LegacyMapPoint['categories'],
     articleUrl: (raw.articleUrl ?? raw.article_url) as string | undefined,
     urlTravel: (raw.urlTravel ?? raw.url_travel ?? raw.url) as string | undefined,
+    // Id той же статьи, что `urlTravel` (#1960): без него попап карты «Рядом»
+    // снова разбирал бы url и запрашивал статью по slug.
+    travelId: raw.travelId as LegacyMapPoint['travelId'],
   };
 };
 

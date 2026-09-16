@@ -149,3 +149,85 @@ describe('createMapPopupComponent saved-points readiness', () => {
     );
   });
 });
+
+describe('createMapPopupComponent related travel id (#1960)', () => {
+  const primarySource = (travelId: number | null) => ({
+    sourceId: 'travel-address:14029',
+    pointId: 14029,
+    travelId,
+    articleTitle: 'Из Мозыря в Микашевичи через Минск',
+    articleUrl: '/travels/iz-mozyrya-v-mikashevichi',
+    thumbnailUrl: null,
+    thumbnailWidth: null,
+    thumbnailHeight: null,
+  });
+
+  const renderPopup = (point: Record<string, unknown>) => {
+    const Popup = createMapPopupComponent({
+      userLocation: null,
+      colors: {},
+      themeContextValue: {},
+    });
+    renderer.act(() => {
+      renderer.create(<Popup point={point} />);
+    });
+    return mockPlacePopupCard.mock.calls.at(-1)?.[0];
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseSavedPointToggle.mockReturnValue({
+      isSaved: false,
+      isReady: true,
+      removeSaved: jest.fn(),
+      createPoint: jest.fn(),
+    });
+  });
+
+  it('passes the primary source id of the same article as the flat urlTravel', () => {
+    // Кластеры, radius и near-route: `urlTravel` без `?id=`, id — в primary_source.
+    const props = renderPopup({
+      id: 14029,
+      coord: '53.93129,27.6459',
+      address: 'Национальная библиотека Беларуси',
+      urlTravel: 'https://metravel.by/travels/iz-mozyrya-v-mikashevichi',
+      primarySource: primarySource(389),
+    });
+
+    expect(props).toEqual(
+      expect.objectContaining({
+        relatedTravelUrl: 'https://metravel.by/travels/iz-mozyrya-v-mikashevichi',
+        relatedTravelId: 389,
+      }),
+    );
+  });
+
+  it('uses the flat travelId for points without a primary source (nearby map, deep link)', () => {
+    const props = renderPopup({
+      id: '11',
+      coord: '50.061,19.938',
+      address: 'Nearby route',
+      urlTravel: '/travels/nearby-route',
+      travelId: 301,
+    });
+
+    expect(props).toEqual(
+      expect.objectContaining({ relatedTravelUrl: '/travels/nearby-route', relatedTravelId: 301 }),
+    );
+  });
+
+  it('keeps quest points without related travel actions', () => {
+    const props = renderPopup({
+      id: 'quest-1',
+      coord: '53.9,27.56',
+      address: 'Квест',
+      urlTravel: '/travels/should-not-leak',
+      travelId: 301,
+      questMeta: { id: 'q1', title: 'Квест', cityId: 'minsk' },
+    });
+
+    expect(props).toEqual(
+      expect.objectContaining({ relatedTravelUrl: null, relatedTravelId: null }),
+    );
+  });
+});

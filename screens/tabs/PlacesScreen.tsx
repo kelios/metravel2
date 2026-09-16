@@ -18,7 +18,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useResponsiveWidth } from '@/hooks/useResponsive'
 import { stringifyJsonLd } from '@/utils/jsonLd'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH, getSiteBaseUrl } from '@/utils/seo'
-import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel'
+import { toCanonicalTravelPath } from '@/utils/relatedTravel'
 import { webDataSetProps } from '@/utils/webProps'
 import ContributionBanner from '@/components/common/ContributionBanner'
 
@@ -180,9 +180,8 @@ export default function PlacesScreen() {
       name: seoHeading,
       numberOfItems: totalCount,
       itemListElement: seoPlaces.map((place, index) => {
-          const internal = place.urlTravel
-            ? normalizeRelatedTravelRoute(place.urlTravel)
-            : null
+          // Канонический путь статьи без `?id=` и чужого хоста (#1960).
+          const internal = toCanonicalTravelPath(place.urlTravel)
         return {
           '@type': 'ListItem',
           position: index + 1,

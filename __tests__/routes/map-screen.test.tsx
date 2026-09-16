@@ -437,6 +437,7 @@ describe('MapScreen (map tab)', () => {
       placeAddress: 'Минск, Беларусь',
       placeCategory: 'Парковка',
       placeTravelUrl: '/travels/parking',
+      placeTravelId: '646',
     };
     const RN = require('react-native');
     (RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 390, height: 844 });
@@ -454,7 +455,48 @@ describe('MapScreen (map tab)', () => {
       address: 'Минск, Беларусь',
       categoryName: 'Парковка',
       urlTravel: '/travels/parking',
+      // #1960: id статьи из deep-link /places доходит до нижней карточки места.
+      travelId: 646,
     }));
+  });
+
+  it('builds /map JSON-LD with canonical travel urls on the site host (#1960)', async () => {
+    mockFetchTravelsForMap.mockResolvedValue({
+      a: {
+        ...defaultTravelsForMapResponse.a,
+        address: 'Форты Кракова',
+        // Локальный API строит ссылку от своего хоста и пока добавляет `?id=`.
+        urlTravel: 'http://localhost:8000/travels/forty-krakova?id=435',
+      },
+      b: {
+        ...defaultTravelsForMapResponse.b,
+        address: 'Минск за выходные',
+        urlTravel: 'https://metravel.by/travels/minsk-za-vykhodnye#points',
+      },
+    });
+
+    const { UNSAFE_root } = renderWithClient();
+
+    const readJsonLd = () =>
+      UNSAFE_root.findAll(
+        (node: any) => node.type === 'script' && node.props?.type === 'application/ld+json',
+      ).map((node: any) => String(node.props.dangerouslySetInnerHTML?.__html ?? ''));
+
+    await waitFor(() => {
+      expect(readJsonLd().some((html) => html.includes('forty-krakova'))).toBe(true);
+    });
+
+    const html = readJsonLd().find((value) => value.includes('forty-krakova')) ?? '';
+    const graph = JSON.parse(html)['@graph'] as Array<Record<string, any>>;
+    const itemList = graph.find((node) => node['@type'] === 'ItemList');
+    const urls = (itemList?.itemListElement ?? []).map((entry: any) => entry.item?.url);
+
+    expect(urls).toEqual([
+      'https://metravel.by/travels/forty-krakova',
+      'https://metravel.by/travels/minsk-za-vykhodnye',
+    ]);
+    expect(html).not.toContain('?id=');
+    expect(html).not.toContain('localhost');
   });
 
   it('shows error display when map data loading fails', async () => {

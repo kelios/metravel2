@@ -30,6 +30,7 @@ import { useRouteStore } from '@/stores/routeStore';
 import { ThemeContext, type ThemeContextType, type ThemedColors } from '@/hooks/useTheme';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { resolveTravelPointLabel } from '@/utils/travelDisplayLocation';
+import { resolveMapPointRelatedTravelId } from '@/utils/relatedTravel';
 import { osrmRoute } from '@/api/external/osrm';
 import { buildPlaceTitleParts, stripCountryFromCategoryString } from './placeTitle';
 import { useHasUserLocation, type UserLocationSignal } from './userLocationSignal';
@@ -554,6 +555,9 @@ export const createMapPopupComponent = ({
           onPrevSource={hasSourcePager ? goPrevSource : undefined}
           onNextSource={hasSourcePager ? goNextSource : undefined}
           relatedTravelUrl={isQuest ? null : point.urlTravel}
+          // Id той же статьи, что `urlTravel` (primary, не активный материал):
+          // без него стек запрашивал бы статью по slug на каждое открытие (#1960).
+          relatedTravelId={isQuest ? null : resolveMapPointRelatedTravelId(point)}
           // ♥/статус сохраняют ИМЕННО связанную статью места (`urlTravel`), поэтому
           // и превью для избранного берётся у неё, а не у активного материала.
           relatedTravelImageUrl={isQuest ? null : point.imageUrl || point.travelImageThumbUrl}

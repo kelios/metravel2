@@ -146,6 +146,8 @@ describe('UserPointsMapPointMarkerWeb', () => {
     expect(props.coord).toBe('50.059240, 19.939410');
     expect(props.articleHref).toBe('/articles/krakow');
     expect(props.relatedTravelUrl).toBe('/travels/krakow');
+    // Точка сохранена до #1960: `tags.travelId` нет — стек разбирает сам url.
+    expect(props.relatedTravelId).toBeNull();
     expect(props.onAddPoint).toBeUndefined();
     expect(props.suppressFallbackPrimaryAction).toBe(true);
     expect(props.compactLayout).toBe(true);
@@ -164,6 +166,38 @@ describe('UserPointsMapPointMarkerWeb', () => {
     expect(props.suppressInlineClose).toBeFalsy();
 
     expect(props.extraActions.map((action: any) => action.key)).toEqual(['edit', 'delete']);
+  });
+
+  it('passes the saved travel id from tags to the related travel stack (#1960)', () => {
+    renderMarker({
+      point: {
+        ...point,
+        tags: { travelUrl: 'https://metravel.by/travels/forty-krakova', travelId: 435 },
+      },
+    });
+
+    expect(mockPlacePopupCard.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({
+        relatedTravelUrl: 'https://metravel.by/travels/forty-krakova',
+        relatedTravelId: 435,
+      }),
+    );
+  });
+
+  it('ignores a malformed saved travel id', () => {
+    renderMarker({ point: { ...point, tags: { travelUrl: '/travels/krakow', travelId: 'abc' } } });
+
+    expect(mockPlacePopupCard.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ relatedTravelUrl: '/travels/krakow', relatedTravelId: null }),
+    );
+  });
+
+  it('does not pass a saved travel id without its travel url', () => {
+    renderMarker({ point: { ...point, tags: { travelId: 435 } } });
+
+    expect(mockPlacePopupCard.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ relatedTravelUrl: null, relatedTravelId: null }),
+    );
   });
 
   it('keeps edit, delete, close and marker click behavior from the old popup', () => {

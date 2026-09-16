@@ -367,6 +367,41 @@ describe('PlacePopupCard', () => {
     expect(JSON.stringify(tree.toJSON())).toContain('Был / Хочу / Планирую');
   });
 
+  it('threads the explicit related travel id into the ♥/status stack and re-renders it on change (#1960)', () => {
+    const renderCard = (relatedTravelId: number | null) => (
+      <PlacePopupCard
+        colors={mockColors as any}
+        title="Национальная библиотека"
+        imageUrl="https://example.com/photo.jpg"
+        relatedTravelUrl="https://metravel.by/travels/iz-mozyrya-v-mikashevichi"
+        relatedTravelId={relatedTravelId}
+      />
+    );
+
+    let tree: any;
+    renderer.act(() => {
+      tree = renderer.create(renderCard(389));
+    });
+
+    expect(mockRelatedTravelActionStack.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({
+        relatedTravelUrl: 'https://metravel.by/travels/iz-mozyrya-v-mikashevichi',
+        relatedTravelId: 389,
+        variant: 'overlay',
+      }),
+    );
+
+    // Id входит в deps мемоизированного стека: смена точки с тем же url не должна
+    // оставить на ♥/статусе id предыдущей статьи.
+    renderer.act(() => {
+      tree.update(renderCard(646));
+    });
+
+    expect(mockRelatedTravelActionStack.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ relatedTravelId: 646 }),
+    );
+  });
+
   it('uses shared bottom-card action geometry on web and Android', () => {
     const { getStyles } = require('@/components/MapPage/Map/PlacePopupCard/styles');
     const originalOs = Platform.OS;

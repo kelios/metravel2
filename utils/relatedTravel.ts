@@ -49,6 +49,58 @@ export const resolveInternalTravelRoute = (rawUrl: string | null | undefined): s
   }
 }
 
+/**
+ * Явный id связанной статьи (#1960): положительный safe integer, иначе null.
+ * Единственная проверка для всех источников id — API-поля точки карты, prop
+ * стека ♥/статуса, URL-параметр deep-link и `tags` точки пользователя. Строка
+ * принимается только из десятичных цифр: в таком виде id приходит в URL.
+ */
+export const normalizeRelatedTravelId = (value: unknown): number | null => {
+  const text = typeof value === 'string' ? value.trim() : ''
+  const numeric = typeof value === 'number' ? value : /^\d+$/.test(text) ? Number(text) : Number.NaN
+  return Number.isSafeInteger(numeric) && numeric > 0 ? numeric : null
+}
+
+type MapPointRelatedTravelIdSource = {
+  primarySource?: { travelId?: unknown } | null
+  travelId?: unknown
+}
+
+/**
+ * Id статьи, на которую ведёт плоский `urlTravel` точки карты (#1960).
+ *
+ * `primarySource.travelId` идёт первым: backend собирает `urlTravel` и
+ * `primary_source` маркера из одной строки TravelAddress, поэтому это id ТОЙ ЖЕ
+ * статьи, а не активного материала pager'а. Плоский `travelId` — для точек без
+ * `primarySource`: deep-link из /places, карта «Рядом» и точки пользователя.
+ */
+export const resolveMapPointRelatedTravelId = (
+  point: MapPointRelatedTravelIdSource | null | undefined,
+): number | null =>
+  normalizeRelatedTravelId(point?.primarySource?.travelId) ??
+  normalizeRelatedTravelId(point?.travelId)
+
+/**
+ * Канонический путь статьи для structured data (#1960): `/travel(s)/<param>`
+ * без query, hash и хоста. `?id=NNN` в JSON-LD размножал адреса статей дублями
+ * (#1957), а хост dev/local API в разметку попадать не должен. Не-travel ссылка
+ * даёт null. Навигация этим хелпером не пользуется — для переходов остаются
+ * `normalizeRelatedTravelRoute`/`resolveInternalTravelRoute`.
+ */
+export const toCanonicalTravelPath = (rawUrl: string | null | undefined): string | null => {
+  const trimmed = typeof rawUrl === 'string' ? rawUrl.trim() : ''
+  if (!trimmed) return null
+
+  try {
+    const { pathname } = new URL(trimmed, getSiteBaseUrl())
+    const [routeRoot, param] = pathname.split('/').filter(Boolean)
+    if ((routeRoot !== 'travel' && routeRoot !== 'travels') || !param) return null
+    return pathname
+  } catch {
+    return null
+  }
+}
+
 export const resolveRelatedTravelRef = (rawUrl: string | null | undefined): RelatedTravelRef | null => {
   const route = normalizeRelatedTravelRoute(rawUrl)
   if (!route) return null
@@ -72,9 +124,11 @@ export const resolveRelatedTravelRef = (rawUrl: string | null | undefined): Rela
       }
     }
 
-    // Slug routes from the places catalog carry the canonical id as `?id=NNN`.
-    // Reading it lets the related-travel buttons render without a per-card
-    // travel-detail fetch (avoids an N+1 across the list).
+    // Legacy fallback: `urlTravel` карты пока несёт id как `?id=NNN`. Основной
+    // путь с #1960 — явный id из API (`resolveMapPointRelatedTravelId`), а разбор
+    // query нужен до выката #1961 и для уже сохранённых `tags.travelUrl` точек
+    // пользователя без `tags.travelId`. Без него стек снова делал бы запрос
+    // статьи по slug на каждую карточку (N+1).
     const queryId = Number(parsed.searchParams.get('id'))
     if (Number.isFinite(queryId) && queryId > 0) {
       return {

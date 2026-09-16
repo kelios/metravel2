@@ -95,6 +95,9 @@ const catalogPage: PlacesCatalogPage = {
       latNumber: 53.9,
       lngNumber: 27.56,
       urlTravel: '/travels/parking',
+      // #1960: deep-link «На карте» берёт id статьи из `travelId`. `relatedTravelId`
+      // карточки здесь не задаём — стек ♥/статуса не предмет этого набора.
+      travelId: 646,
     }),
     makePlace({
       id: 'place-2',
@@ -208,6 +211,8 @@ describe('PlacesScreen category search', () => {
         placeAddress: 'Минск, Беларусь',
         placeCategory: 'Парковка',
         placeTravelUrl: '/travels/parking',
+        // #1960: id статьи идёт в deep-link рядом с url, карта не запрашивает её по slug.
+        placeTravelId: '646',
         placeImageUrl: '',
       },
     })
@@ -232,6 +237,8 @@ describe('PlacesScreen category search', () => {
         placeAddress: 'Минск, Беларусь',
         placeCategory: 'Парковка',
         placeTravelUrl: '/travels/parking',
+        // #1960: id статьи идёт в deep-link рядом с url, карта не запрашивает её по slug.
+        placeTravelId: '646',
         placeImageUrl: '',
       },
     })

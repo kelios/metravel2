@@ -6,7 +6,7 @@ import { queryKeys } from '@/api/queryKeys'
 import { fetchTravelBySlug } from '@/api/travelDetailsQueries'
 import FavoriteButton from '@/components/travel/FavoriteButton'
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
-import { resolveRelatedTravelRef } from '@/utils/relatedTravel'
+import { normalizeRelatedTravelId, resolveRelatedTravelRef } from '@/utils/relatedTravel'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -48,12 +48,7 @@ export default function RelatedTravelActionStack({
 }: Props) {
   const travelRef = useMemo(() => {
     const urlRef = resolveRelatedTravelRef(relatedTravelUrl)
-    const explicitId =
-      typeof relatedTravelId === 'number' &&
-      Number.isSafeInteger(relatedTravelId) &&
-      relatedTravelId > 0
-        ? relatedTravelId
-        : null
+    const explicitId = normalizeRelatedTravelId(relatedTravelId)
 
     if (urlRef) return explicitId != null ? { ...urlRef, id: explicitId } : urlRef
     return explicitId != null ? { route: `/travels/${explicitId}`, id: explicitId } : null

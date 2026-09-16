@@ -87,10 +87,13 @@ describe('map place source identity', () => {
       point_id: 14029,
       travel_id: 389,
       article_title: 'Из Мозыря в Микашевичи через Минск',
-      article_url: '/travels/iz-mozyrya-v-mikashevichi?id=389',
+      article_url: '/travels/iz-mozyrya-v-mikashevichi',
     });
     expect(source?.sourceId).toBe('travel-address:14029');
     expect(source?.pointId).toBe(14029);
+    // #1960: id статьи — явное поле DTO, а не `?id=` в ссылке.
+    expect(source?.travelId).toBe(389);
+    expect(source?.articleUrl).toBe('/travels/iz-mozyrya-v-mikashevichi');
   });
 });
 

@@ -96,4 +96,39 @@ describe('QuickRecommendations', () => {
     );
     expect(firstCallProps.imageHeight).toBeGreaterThanOrEqual(148);
   });
+
+  it('passes the primary source travel id of the recommendation urlTravel (#1960)', () => {
+    render(
+      <QuickRecommendations
+        places={[
+          {
+            id: 2,
+            address: 'Замок, Мир',
+            coord: '53.451,26.473',
+            categoryName: 'Замок',
+            urlTravel: 'https://metravel.by/travels/mirskiy-zamok',
+            primarySource: {
+              sourceId: 'travel-address:2',
+              pointId: 2,
+              travelId: 512,
+              articleTitle: 'Мирский замок',
+              articleUrl: 'https://metravel.by/travels/mirskiy-zamok',
+              thumbnailUrl: null,
+              thumbnailWidth: null,
+              thumbnailHeight: null,
+            },
+          },
+        ]}
+        userLocation={{ latitude: 53.45, longitude: 26.47 }}
+        onPlaceSelect={jest.fn()}
+      />,
+    );
+
+    expect(mockPlaceListCard.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({
+        relatedTravelUrl: 'https://metravel.by/travels/mirskiy-zamok',
+        relatedTravelId: 512,
+      }),
+    );
+  });
 });

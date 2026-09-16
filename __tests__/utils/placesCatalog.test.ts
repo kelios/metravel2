@@ -58,7 +58,7 @@ describe('mapPlacesCatalogResponse', () => {
         results: [
           rawItem({
             travel_id: 435,
-            urlTravel: '/travels/krakow?id=435',
+            urlTravel: '/travels/krakow',
             travel: { id: 158, slug: 'legacy-slug', url: '/travels/legacy-slug' },
           }),
         ],
@@ -68,7 +68,7 @@ describe('mapPlacesCatalogResponse', () => {
     expect(page.places[0]).toEqual(
       expect.objectContaining({
         travelId: 435,
-        urlTravel: '/travels/krakow?id=435',
+        urlTravel: '/travels/krakow',
       }),
     )
   })
@@ -151,7 +151,7 @@ describe('mapPlacesCatalogResponse', () => {
         results: [
           rawItem({
             travel_id: 129,
-            urlTravel: 'https://metravel.by/travels/ourvietnam?id=129',
+            urlTravel: 'https://metravel.by/travels/ourvietnam',
             travel: { id: 158, slug: 'legacy', url: '/travels/legacy' },
           }),
         ],
@@ -161,7 +161,7 @@ describe('mapPlacesCatalogResponse', () => {
     expect(page.places[0]).toEqual(
       expect.objectContaining({
         relatedTravelId: 129,
-        urlTravel: 'https://metravel.by/travels/ourvietnam?id=129',
+        urlTravel: 'https://metravel.by/travels/ourvietnam',
       }),
     )
   })

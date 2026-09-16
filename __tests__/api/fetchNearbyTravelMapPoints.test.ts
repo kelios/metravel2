@@ -51,6 +51,8 @@ describe('fetchNearbyTravelMapPoints', () => {
         travelImageThumbUrl: 'https://metravel.by/address-image/11/',
         categoryName: 'Poland',
         urlTravel: '/travels/nearby-route',
+        // #1960: id статьи из `travel.id` — попап карты «Рядом» не запрашивает её по slug.
+        travelId: 301,
       },
     ])
     expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1)

@@ -175,6 +175,37 @@ describe('TravelMap (web)', () => {
     expect(getByTestId('travel-map')).toBeTruthy();
   });
 
+  it('keeps the related travel id of nearby map points through point normalization (#1960)', () => {
+    render(
+      <TravelMap
+        travelData={[
+          {
+            id: '11',
+            coord: '50.061,19.938',
+            address: 'Nearby route',
+            urlTravel: 'https://metravel.by/travels/nearby-route',
+            travelId: 301,
+          },
+        ]}
+        compact
+        height={400}
+      />
+    );
+
+    // `normalizePoint` — whitelist полей: без `travelId` попап из `markers`
+    // (useMapMarkers отдаёт travelData как есть) снова запрашивал бы статью по slug.
+    expect(useMapMarkers).toHaveBeenCalledWith(
+      expect.objectContaining({
+        travelData: [
+          expect.objectContaining({
+            urlTravel: 'https://metravel.by/travels/nearby-route',
+            travelId: 301,
+          }),
+        ],
+      })
+    );
+  });
+
   it('passes responsive metravel popup props to travel map markers', () => {
     render(
       <TravelMap

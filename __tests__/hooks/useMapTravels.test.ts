@@ -4,13 +4,13 @@ describe('useMapTravels helpers', () => {
   it('builds a stable identity from url-like fields when id is absent', () => {
     expect(
       getMapTravelIdentity({
-        url: 'https://metravel.by/travels/forty-krakova?id=435',
+        url: 'https://metravel.by/travels/forty-krakova',
       } as any),
-    ).toBe('url:https://metravel.by/travels/forty-krakova?id=435')
+    ).toBe('url:https://metravel.by/travels/forty-krakova')
   })
 
   it('dedupes repeated travels returned with the same public url', () => {
-    const duplicatedUrl = 'https://metravel.by/travels/forty-krakova?id=435'
+    const duplicatedUrl = 'https://metravel.by/travels/forty-krakova'
 
     const result = dedupeMapTravels([
       {
@@ -22,7 +22,7 @@ describe('useMapTravels helpers', () => {
         address: 'Forty Krakova duplicate payload',
       } as any,
       {
-        url: 'https://metravel.by/travels/other-place?id=436',
+        url: 'https://metravel.by/travels/other-place',
         address: 'Other place',
       } as any,
     ])
@@ -30,7 +30,7 @@ describe('useMapTravels helpers', () => {
     expect(result).toHaveLength(2)
     expect(result.map((item) => (item as any).url)).toEqual([
       duplicatedUrl,
-      'https://metravel.by/travels/other-place?id=436',
+      'https://metravel.by/travels/other-place',
     ])
   })
 
@@ -53,7 +53,7 @@ describe('useMapTravels helpers', () => {
   })
 
   it('keeps distinct points of the same travel (same urlTravel, different coord)', () => {
-    const urlTravel = 'https://metravel.by/travels/krakow?id=435'
+    const urlTravel = 'https://metravel.by/travels/krakow'
 
     const result = dedupeMapTravels([
       { urlTravel, coord: '50.06,19.93', address: 'Point A' } as any,
@@ -70,7 +70,7 @@ describe('useMapTravels helpers', () => {
   })
 
   it('removes exact duplicate points (same urlTravel and same coord)', () => {
-    const urlTravel = 'https://metravel.by/travels/krakow?id=435'
+    const urlTravel = 'https://metravel.by/travels/krakow'
 
     const result = dedupeMapTravels([
       { urlTravel, coord: '50.06,19.93', address: 'Point A' } as any,
@@ -86,7 +86,7 @@ describe('useMapTravels helpers', () => {
   })
 
   it('derives point coord identity from lat+lng when coord field is absent', () => {
-    const urlTravel = 'https://metravel.by/travels/krakow?id=435'
+    const urlTravel = 'https://metravel.by/travels/krakow'
 
     const result = dedupeMapTravels([
       { urlTravel, lat: '50.06', lng: '19.93', address: 'Point A' } as any,
@@ -102,7 +102,7 @@ describe('useMapTravels helpers', () => {
   })
 
   it('keeps coord-less url payload deduped by url only', () => {
-    const urlTravel = 'https://metravel.by/travels/krakow?id=435'
+    const urlTravel = 'https://metravel.by/travels/krakow'
 
     const result = dedupeMapTravels([
       { urlTravel, address: 'No coords A' } as any,

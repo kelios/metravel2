@@ -79,11 +79,36 @@ describe('RelatedTravelActionStack', () => {
     )
   })
 
-  it('does not fetch detail when slug route carries an ?id query', async () => {
+  // #1960: backend (#1961) снимет `?id=` с `urlTravel`, id приходит отдельным полем.
+  it('does not fetch detail for a query-less slug url when the API id is explicit', async () => {
+    renderWithQuery(
+      <RelatedTravelActionStack
+        relatedTravelUrl="https://metravel.by/travels/ourvietnam"
+        relatedTravelId={129}
+        fallbackTitle="Вьетнам"
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockStatusButton).toHaveBeenCalled()
+    })
+
+    expect(mockFetchTravelBySlug).not.toHaveBeenCalled()
+    expect(mockFavoriteButton.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({
+        id: 129,
+        url: '/travels/ourvietnam',
+      }),
+    )
+    expect(mockStatusButton.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ travelId: 129, travelTitle: 'Вьетнам' }),
+    )
+  })
+
+  it('keeps the legacy ?id query as a fallback when no explicit id is passed', async () => {
     renderWithQuery(
       <RelatedTravelActionStack
         relatedTravelUrl="https://metravel.by/travels/ourvietnam?id=129"
-        relatedTravelId={129}
         fallbackTitle="Вьетнам"
       />,
     )
@@ -99,8 +124,26 @@ describe('RelatedTravelActionStack', () => {
         url: '/travels/ourvietnam?id=129',
       }),
     )
-    expect(mockStatusButton.mock.calls.at(-1)?.[0]).toEqual(
-      expect.objectContaining({ travelId: 129, travelTitle: 'Вьетнам' }),
+  })
+
+  it('renders from the explicit id without fetching when the url host is the API host', async () => {
+    // Локальный/dev API строит `urlTravel` от своего хоста — url-разбор такую
+    // ссылку отбрасывает, а явный id остаётся достаточным без запроса статьи.
+    renderWithQuery(
+      <RelatedTravelActionStack
+        relatedTravelUrl="http://localhost:8000/travels/ourvietnam"
+        relatedTravelId={129}
+        fallbackTitle="Вьетнам"
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockStatusButton).toHaveBeenCalled()
+    })
+
+    expect(mockFetchTravelBySlug).not.toHaveBeenCalled()
+    expect(mockFavoriteButton.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ id: 129, url: '/travels/129' }),
     )
   })
 

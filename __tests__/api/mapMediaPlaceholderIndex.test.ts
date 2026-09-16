@@ -43,7 +43,9 @@ const POINT = {
     'https://metravel.by/address-image/355/conversions/462e31db74f043c5884fa3f3803132f7.webp',
   travelImageUrl:
     'https://metravel.by/address-image/355/conversions/e4dc7a175f604fea82eea4c37b993ad8.webp',
-  urlTravel: 'https://metravel.by/travels/reka-isloch?id=133',
+  urlTravel: 'https://metravel.by/travels/reka-isloch',
+  // #1960: id статьи приходит явным полем primary_source, а не `?id=` в ссылке.
+  primary_source: { source_id: '355', point_id: 355, travel_id: 133 },
   media: {
     address_images: {
       '355': {

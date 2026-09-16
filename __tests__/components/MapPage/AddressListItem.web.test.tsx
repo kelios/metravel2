@@ -162,6 +162,41 @@ describe('AddressListItem (web right panel)', () => {
     (Platform as any).OS = prevOs;
   });
 
+  it('passes the API travel id of the card urlTravel to the related travel stack (#1960)', () => {
+    const prevOs = Platform.OS;
+    (Platform as any).OS = 'web';
+    mockPlaceListCard.mockClear();
+
+    renderWithProviders(
+      <AddressListItem
+        travel={{
+          ...baseTravel,
+          urlTravel: 'https://metravel.by/travels/forty-krakova',
+          primarySource: {
+            sourceId: 'travel-address:1',
+            pointId: 1,
+            travelId: 435,
+            articleTitle: 'Форты Кракова',
+            articleUrl: 'https://metravel.by/travels/forty-krakova',
+            thumbnailUrl: null,
+            thumbnailWidth: null,
+            thumbnailHeight: null,
+          },
+        }}
+        isMobile={false}
+      />,
+    );
+
+    expect(mockPlaceListCard.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({
+        relatedTravelUrl: 'https://metravel.by/travels/forty-krakova',
+        relatedTravelId: 435,
+      }),
+    );
+
+    (Platform as any).OS = prevOs;
+  });
+
   it('shows the same popup-like navigation action set on web', async () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';

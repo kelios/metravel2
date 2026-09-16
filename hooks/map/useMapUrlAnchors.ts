@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 
 import type { Point as MapPoint } from '@/components/MapPage/Map/types';
+import { normalizeRelatedTravelId } from '@/utils/relatedTravel';
 
 // Разбор anchor-координат и первичных значений фильтров из URL-параметров карты.
 // Извлечено из useMapScreenController без изменения поведения.
@@ -39,6 +40,7 @@ export function useMapUrlAnchors(): MapUrlAnchors {
     placeAddress?: string;
     placeCategory?: string;
     placeTravelUrl?: string;
+    placeTravelId?: string;
     placeImageUrl?: string;
     focusPlace?: string;
   }>();
@@ -76,6 +78,8 @@ export function useMapUrlAnchors(): MapUrlAnchors {
       address: address || title || category || coord,
       categoryName: category || undefined,
       urlTravel: getFirstParamText(params.placeTravelUrl) || undefined,
+      // Id статьи `placeTravelUrl` (#1960): у deep-link точки нет `primarySource`.
+      travelId: normalizeRelatedTravelId(getFirstParamText(params.placeTravelId)) ?? undefined,
       travelImageThumbUrl: getFirstParamText(params.placeImageUrl) || undefined,
     };
   }, [
@@ -85,6 +89,7 @@ export function useMapUrlAnchors(): MapUrlAnchors {
     params.placeId,
     params.placeImageUrl,
     params.placeTitle,
+    params.placeTravelId,
     params.placeTravelUrl,
     urlCoordinates,
   ]);

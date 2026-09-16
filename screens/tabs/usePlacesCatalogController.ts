@@ -228,6 +228,9 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
         placeAddress: place.address || place.country || place.title,
         placeCategory: place.category,
         placeTravelUrl: place.urlTravel || '',
+        // Id статьи `placeTravelUrl` из каталога (#1960): карточка на карте не
+        // разбирает url и не запрашивает статью по slug.
+        placeTravelId: place.travelId != null ? String(place.travelId) : '',
         placeImageUrl: place.travelImageThumbUrl || place.imageUrl || '',
       },
     })

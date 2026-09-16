@@ -18,6 +18,7 @@ import { LAYOUT } from '@/constants/layout'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { ImportedPoint } from '@/types/userPoints'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
+import { normalizeRelatedTravelId } from '@/utils/relatedTravel'
 import { getSiteBaseUrl } from '@/utils/seo'
 import { showToast } from '@/utils/toast'
 import { translate as i18nT } from '@/i18n'
@@ -140,7 +141,10 @@ const getRelatedUrls = (point: ImportedPoint) => {
   const tags = (point.tags ?? {}) as Record<string, unknown>
   const articleUrl = String(tags.articleUrl ?? '').trim()
   const travelUrl = String(tags.travelUrl ?? '').trim()
-  return { articleUrl, travelUrl }
+  // `tags.travelId` пишется вместе с `travelUrl` с #1960. У точек, сохранённых
+  // раньше, его нет — тогда стек берёт id из самого url (legacy `?id=`).
+  const travelId = travelUrl ? normalizeRelatedTravelId(tags.travelId) : null
+  return { articleUrl, travelUrl, travelId }
 }
 
 const openExternal = async (url: string, errorText = i18nT('map:components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_ssylku_f3b28577')) => {
@@ -193,7 +197,7 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
   const countryLabel = React.useMemo(() => getCountryLabel(point), [point])
   const categoryLabel = React.useMemo(() => getCategoryLabel(point, countryLabel), [countryLabel, point])
   const imageUrl = React.useMemo(() => getPointPhotoUrl(point), [point])
-  const { articleUrl, travelUrl } = React.useMemo(() => getRelatedUrls(point), [point])
+  const { articleUrl, travelUrl, travelId } = React.useMemo(() => getRelatedUrls(point), [point])
 
   const pointId = React.useMemo(() => Number(point.id), [point.id])
   const markerPosition = React.useMemo(() => [lat, lng] as [number, number], [lat, lng])
@@ -390,6 +394,7 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
           imageUrl={imageUrl}
           articleHref={articleUrl || travelUrl || null}
           relatedTravelUrl={travelUrl || null}
+          relatedTravelId={travelId}
           categoryLabel={categoryLabel || null}
           coord={coord}
           drivingDistanceMeters={drivingDistanceMeters}

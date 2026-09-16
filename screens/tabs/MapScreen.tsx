@@ -14,6 +14,7 @@ import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig'
 import { getMapSeoDescription, getMapSeoTitle } from '@/constants/mapSeo'
 import { buildOgImageUrl, MAP_OG_IMAGE_PATH } from '@/utils/seo'
 import { createMapStructuredData } from '@/utils/discoverySeo'
+import { toCanonicalTravelPath } from '@/utils/relatedTravel'
 import { devWarn } from '@/utils/logger'
 import {
   buildQuickFiltersData,
@@ -220,7 +221,9 @@ export default function MapScreen() {
       description: getMapSeoDescription(),
       entries: travelsData.slice(0, MAP_STRUCTURED_DATA_ENTRY_LIMIT).map((item: any) => ({
         name: item?.address || i18nT('map:screens.tabs.MapScreen.marshrut_na_karte_62253936'),
-        url: item?.urlTravel,
+        // Канонический `/travels/<slug>` (#1960): `?id=` из `urlTravel` плодил
+        // дубли адресов статей в индексе, хост API в разметку не попадает.
+        url: toCanonicalTravelPath(item?.urlTravel) ?? undefined,
         lat: item?.lat ?? String(item?.coord || '').split(',')[0],
         lng: item?.lng ?? String(item?.coord || '').split(',')[1],
         categoryName: item?.categoryName,

@@ -44,6 +44,7 @@ type NativePoint = {
   categoryName?: string
   articleUrl?: string
   urlTravel?: string
+  travelId?: number | null
 }
 
 // #843 — shared brand «bird» divIcon HTML (same source as web/native /map). Theme-
@@ -92,6 +93,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         categoryName: typeof p.categoryName === 'string' ? p.categoryName : undefined,
         articleUrl: showPointPageAction ? p.articleUrl : undefined,
         urlTravel: showPointPageAction ? p.urlTravel : undefined,
+        // Id идёт в паре со ссылкой (#1960), иначе карточка разбирала бы url.
+        travelId: showPointPageAction ? p.travelId : undefined,
       }))
   }, [showPointPageAction, travelData])
 

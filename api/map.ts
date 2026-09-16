@@ -357,6 +357,8 @@ export type NearbyTravelMapPoint = {
   travelImageThumbUrl: string;
   categoryName: string;
   urlTravel?: string;
+  /** Id статьи точки (#1960): стек ♥/статуса в попапе не запрашивает её по slug. */
+  travelId?: number;
 };
 
 type NearbyTravelMapCard = Pick<Travel, 'id'> & Partial<Pick<Travel, 'slug'>>;
@@ -456,6 +458,9 @@ export const fetchNearbyTravelMapPoints = async (
               normalizeString(normalized.categoryName, '') ||
               normalizeString(normalized.countryName ?? normalized.country_name, ''),
             urlTravel: normalizeString(normalized.urlTravel, '') || undefined,
+            // Фильтр выше оставил только строки этой статьи — `travel.id`
+            // и есть id статьи, на которую ведёт `urlTravel`.
+            travelId: travel.id,
           };
         })
         .filter((point): point is NearbyTravelMapPoint => point !== null);

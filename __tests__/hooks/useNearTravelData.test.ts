@@ -129,6 +129,41 @@ describe('useNearTravelData canonical /near/ adapter path', () => {
     ]);
   });
 
+  it('keeps the travel id on lite-catalog fallback map points for the popup stack (#1960)', async () => {
+    mockedFetchWithTimeout
+      .mockResolvedValueOnce(responseWithJson({
+        count: 1,
+        next: null,
+        previous: null,
+        results: [travelCard(301)],
+      }))
+      .mockResolvedValueOnce(responseWithJson([
+        {
+          id: 11,
+          coord: '50.061,19.938',
+          title: 'Nearby route',
+          travel: { id: 301, slug: 'travel-301' },
+          urlTravel: 'https://metravel.by/travels/travel-301',
+        },
+      ]));
+
+    const { result } = renderHook(
+      () => useNearTravelData(384, undefined, true, {
+        enabled: true,
+        origin: { lat: 50.05, lng: 19.94 },
+      }),
+      { wrapper: makeWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.mapPoints).toHaveLength(1));
+    expect(result.current.mapPoints[0]).toEqual(
+      expect.objectContaining({
+        urlTravel: 'https://metravel.by/travels/travel-301',
+        travelId: 301,
+      }),
+    );
+  });
+
   it.each([
     ['a bare results array', []],
     ['an envelope with malformed results', {

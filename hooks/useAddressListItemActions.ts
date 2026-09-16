@@ -12,6 +12,7 @@ import { openExternalUrlInNewTab, openExternalUrl } from '@/utils/externalLinks'
 import { getSiteBaseUrl } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
+import { resolveMapPointRelatedTravelId } from '@/utils/relatedTravel';
 import type { TravelCoords } from '@/types/types';
 import { translate as i18nT } from '@/i18n'
 
@@ -75,6 +76,7 @@ export const stripCountryFromCategoryString = (raw: string | null | undefined, a
 
 export function useAddressListItemActions(travel: TravelCoords) {
   const { address, categoryName, coord, travelImageThumbUrl, articleUrl, urlTravel } = travel;
+  const relatedTravelId = resolveMapPointRelatedTravelId(travel);
   const [isAddingPoint, setIsAddingPoint] = useState(false);
 
   const { isAuthenticated, authReady } = useAuth();
@@ -163,6 +165,9 @@ export function useAddressListItemActions(travel: TravelCoords) {
     if (travelImageThumbUrl) payload.photo = travelImageThumbUrl;
     const tags: Record<string, unknown> = {};
     if (urlTravel) tags.travelUrl = urlTravel;
+    // Id статьи рядом со ссылкой (#1960): попап «Моих точек» не разбирает url и
+    // не запрашивает статью по slug. Без ссылки стек не рисуется — id не пишем.
+    if (urlTravel && relatedTravelId != null) tags.travelId = relatedTravelId;
     if (articleUrl) tags.articleUrl = articleUrl;
     if (Object.keys(tags).length > 0) payload.tags = tags;
 
@@ -178,7 +183,7 @@ export function useAddressListItemActions(travel: TravelCoords) {
     } catch {
       void showToast({ type: 'error', text1: i18nT('shared:hooks.useAddressListItemActions.ne_udalos_sohranit_tochku_3c69cb31'), position: 'bottom' });
     } finally { setIsAddingPoint(false); }
-  }, [address, articleUrl, authReady, rawCategoryName, isAddingPoint, isAuthenticated, isSavedPointsReady, isSaved, removeSaved, createPoint, travel.lat, travel.lng, travelImageThumbUrl, urlTravel]);
+  }, [address, articleUrl, authReady, rawCategoryName, isAddingPoint, isAuthenticated, isSavedPointsReady, isSaved, relatedTravelId, removeSaved, createPoint, travel.lat, travel.lng, travelImageThumbUrl, urlTravel]);
 
   return {
     rawCategoryName, categories, isAddingPoint, pointAdded: isSaved, isSavedPointsReady, isAuthenticated, authReady,
