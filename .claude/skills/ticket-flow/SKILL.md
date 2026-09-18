@@ -64,7 +64,9 @@ description: "Прогон фронтенд-тикета через MCP task boa
 | releaser | preflight (`/preflight`) + `frontend-deployer` по явному target env; сторы — `android-publisher` (Google Play) и `ios-deployer` (TestFlight/App Store), каждый по отдельной явной команде владельца |
 
 Бэкенд-тикеты (`area=back`) этот скилл НЕ реализует — только заводит/трекает через
-`ticket-board`; реализация в `../metravel-backend` (владелец/бэкендер).
+`ticket-board`. Реализацию пишет владелец бэка в своём репо; фронтовый агент бэкенд
+только читает и не открывает `../metravel-backend` на запись. Батч «все todo» /
+«весь борд» `area=back` пропускает.
 
 ## Шаги
 

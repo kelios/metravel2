@@ -38,7 +38,8 @@
   есть на машине: `../metravel-backend` (симлинк на `~/Sites/metravel/metravel`,
   клон приватного репо `sergey-savran/metravel`, branch `master`) — путь
   известен, спрашивать его у пользователя не нужно; читать read-only, изменения
-  оформлять `area=back` задачей на борде. Единственное исключение — обязательный
+  оформлять `area=back` задачей на борде. «Сделай все todo / весь борд» бэк не
+  открывает. Единственное исключение — обязательный
   sync перед тестированием: `git -C ../metravel-backend fetch origin master &&
   git -C ../metravel-backend reset --hard origin/master`;
 - проверяем ЛОКАЛЬНО: таргет по умолчанию — локальный бэкенд `localhost:8000`

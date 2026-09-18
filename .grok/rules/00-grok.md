@@ -56,4 +56,19 @@ PreToolUse-хуки в `.grok/hooks/` держат контракт карточ
 Если PostToolUse-контекст не дошёл — всё равно сразу спавни `code-review-gate` /
 `board-reviewer` по статусу.
 
-Backend `../metravel-backend` — read-only. Секреты не печатать.
+Секреты не печатать.
+
+## Бэкенд только читается
+
+Канон: `docs/RULES.md` → «Project scope» и `AGENTS.md` §3. Здесь — дыра, из-за
+которой Grok брал `area=back` по «сделай все todo».
+
+- Реализуй только `area=front` / frontend/app/docs.
+- `../metravel-backend` и `~/Sites/metravel/metravel` — read-only: читать,
+  `git show origin/master`, безопасные GET/HEAD. Не edit/write/commit/push/merge.
+- Не `spawn_subagent` с `cwd` в бэк-checkout и не isolation-worktree бэк-репо.
+- «Сделай все todo / весь борд / спринт» = только фронт. Карточки `area=back`
+  пропустить; если нужен фикс бэка — завести/дописать тикет владельцу, не код.
+- Единственное git-исключение: `git -C ../metravel-backend fetch origin master &&
+  git -C ../metravel-backend reset --hard origin/master` перед локальным
+  тестированием фронта. Это sync к `origin/master`, не реализация бэка.

@@ -60,9 +60,14 @@ Validation:
 
 ## 3. Границы и безопасность
 
-- Этот workspace владеет только frontend/app/docs. `../metravel-backend` и
-  `area=back` — read-only diagnosis/probes/board evidence. Никогда не меняй
-  backend working tree и не выполняй там mutating Git-команды.
+- Этот workspace владеет только frontend/app/docs. Бэкенд (`../metravel-backend`,
+  `~/Sites/metravel/metravel`, `area=back`) только читается: диагностика, API-пробы,
+  evidence на борде. Нельзя править файлы, коммитить, пушить, merge/rebase, заводить
+  backend worktree или ставить cwd субагента в бэк-репо «чтобы сделать карточку».
+  Просьба «сделай все todo / весь борд / спринт» `area=back` не открывает: такие
+  карточки пропускаются, реализацию пишет владелец бэка. Никогда не меняй backend
+  working tree и не выполняй там mutating Git-команды, кроме sync перед тестированием
+  ниже.
 - На production Git-tracked backend paths неизменяемы. Перед явно разрешённой
   server write прочитай профильный раздел `docs/RULES.md`, проверь status и
   `git ls-files`; dirty checkout означает stop и backend/ops task, не cleanup.

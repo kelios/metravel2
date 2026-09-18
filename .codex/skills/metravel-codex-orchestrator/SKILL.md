@@ -54,7 +54,8 @@ Output/validation: <artifact and checks>.
 
 ## Hard gates
 
-- Frontend/app/docs only; backend working trees remain read-only.
+- Frontend/app/docs only; backend working trees remain read-only. «Do all
+  todos» does not authorize `area=back` implementation or a backend cwd/worktree.
 - Preserve unrelated changes and protected-path rules.
 - Production/store mutations require the exact current authorization and target.
 - Apply the operation gate before build/deploy/full tests/e2e/Lighthouse/device
