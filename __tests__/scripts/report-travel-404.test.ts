@@ -1,6 +1,7 @@
 const {
   parseArgs,
   extractTravelSlug,
+  normalizeSlug,
   gluedPrefix,
   buildKnownMatchers,
   classifySlug,
@@ -57,6 +58,13 @@ describe('report-travel-404 / разбор запроса', () => {
   it('декодирует percent-кодирование', () => {
     expect(extractTravelSlug('GET /travels/%D0%B2%D0%B5%D0%BD%D0%B0 HTTP/1.1')).toMatchObject({ slug: 'вена' })
   })
+
+  it('приводит NFD «ё» к NFC, чтобы склейка #1956 не двоилась в отчёте', () => {
+    const nfc = 'usadebnyy-dom-vankovichey-1909-god-v-rudakove\u0451'
+    const nfd = nfc.normalize('NFD')
+    expect(extractTravelSlug(`GET /travels/${nfd} HTTP/2.0`)).toMatchObject({ slug: nfc })
+    expect(extractTravelSlug(`GET /travels/${encodeURIComponent(nfc)} HTTP/2.0`)).toMatchObject({ slug: nfc })
+  })
 })
 
 describe('report-travel-404 / склейки', () => {
@@ -108,6 +116,38 @@ describe('report-travel-404 / классификация', () => {
 
   it('всё остальное — кандидат на ручную сверку', () => {
     expect(classify('gruziya-peshchera-sataplia').bucket).toBe('candidate')
+  })
+
+  // #1971: матчер known-404 сравнивал слаги побайтово, поэтому NFD «ё»
+  // склейки #1956 не узнавался, хотя NFC-форма уже стояла в intentional404.
+  it('NFC, NFD и percent-encoded «ё»-склейки из #1956 узнаются как expected', () => {
+    const slugNfc = 'usadebnyy-dom-vankovichey-1909-god-v-rudakove\u0451'
+    const slugNfd = slugNfc.normalize('NFD')
+    const slugPercent = encodeURIComponent(slugNfc)
+    expect(slugNfc).not.toBe(slugNfd)
+    expect(slugPercent).toContain('%')
+    expect(normalizeSlug(slugNfd)).toBe(slugNfc)
+    expect(normalizeSlug(slugPercent)).toBe(slugNfc)
+
+    const withKnown = ctx({
+      known: buildKnownMatchers({
+        noiseSlugs: [],
+        noisePatterns: [],
+        intentional404: [{ slug: slugNfc, ticket: 1956, reason: 'склейка с «ё»' }],
+      }),
+    })
+    for (const slug of [slugNfc, slugNfd, slugPercent]) {
+      expect(classifySlug({ slug, nested: false, undecodable: false }, withKnown)).toMatchObject({
+        bucket: 'expected',
+        note: expect.stringContaining('#1956'),
+      })
+    }
+
+    const fromFile = buildKnownMatchers(require('../../scripts/seo-404-known.json'))
+    const live = ctx({ known: fromFile })
+    for (const slug of [slugNfc, slugNfd, slugPercent]) {
+      expect(classifySlug({ slug, nested: false, undecodable: false }, live).bucket).toBe('expected')
+    }
   })
 })
 

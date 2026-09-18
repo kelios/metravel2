@@ -18,7 +18,13 @@
 const fs = require('fs');
 const path = require('path');
 const { loadCatalogs: loadI18nCatalogs } = require('../i18n/babel-inline-plugin');
-const { fetchJson, sleep } = require('./lib/fetchJson');
+const { fetchJson } = require('./lib/fetchJson');
+const {
+  BUILD_FETCH_RATE_PER_SEC,
+  BUILD_FETCH_MIN_INTERVAL_MS,
+  createRequestPacer,
+  batchAsync,
+} = require('./lib/requestPacer');
 const { isLegacyResizeRoutePath, toLegacyResizePath } = require('./lib/readerMediaUrl');
 const { injectSkeletonShell } = require('./ssg-skeletons');
 const { ensureHtmlChunkReloadGuards } = require('./lib/htmlChunkReloadGuard');
@@ -107,12 +113,10 @@ const HOME_SEO_DESCRIPTION_RU = readRequiredRuTranslation('seoStatic:root.home.d
 // keyed by client IP (nginx/nginx.conf). Detail fetches used to run 10 sockets
 // wide with no pacing: ~400 travels went out at ~100 r/s, the build tripped its
 // own limiter, and nginx answered 503 before the app ever saw the request.
-// The pace below keeps a whole build inside a fraction of the zone, so the
-// limiter never closes and real users never share a bucket with the build.
+// The pace lives in scripts/lib/requestPacer.js (≤8 req/s) so the article-body
+// audit (#1966) shares the same budget and cannot outrun this generator.
 // ---------------------------------------------------------------------------
 const API_ZONE_RATE_PER_SEC = 30;
-const BUILD_FETCH_RATE_PER_SEC = 8;
-const BUILD_FETCH_MIN_INTERVAL_MS = Math.ceil(1000 / BUILD_FETCH_RATE_PER_SEC);
 /** In-flight cap: bounds the burst even when a single request is slow */
 const TRAVEL_DETAIL_CONCURRENCY = 4;
 const QUEST_DETAIL_CONCURRENCY = 4;
@@ -839,47 +843,6 @@ function buildRedirectStubHtml(toSlug) {
 </body>
 </html>
 `;
-}
-
-/**
- * Spread task starts at least `minIntervalMs` apart.
- *
- * The slot is reserved synchronously before the await, so concurrent workers
- * queue up instead of all reading the same "now" and starting together.
- */
-function createRequestPacer(minIntervalMs, { now = Date.now, wait = sleep } = {}) {
-  if (!minIntervalMs || minIntervalMs <= 0) return async () => {};
-  let nextStartAt = 0;
-  return async () => {
-    const current = now();
-    const startAt = Math.max(current, nextStartAt);
-    nextStartAt = startAt + minIntervalMs;
-    if (startAt > current) await wait(startAt - current);
-  };
-}
-
-/**
- * Run async tasks with limited concurrency, an optional start-rate cap and an
- * optional early exit (`shouldStop`) for runs that are already doomed.
- */
-async function batchAsync(items, concurrency, fn, { minIntervalMs = 0, now, wait, shouldStop } = {}) {
-  const results = new Array(items.length);
-  const pace = createRequestPacer(minIntervalMs, { now, wait });
-  let idx = 0;
-  async function worker() {
-    while (idx < items.length) {
-      if (shouldStop && shouldStop()) break;
-      const i = idx++;
-      await pace();
-      results[i] = await fn(items[i], i);
-    }
-  }
-  const workers = [];
-  for (let w = 0; w < Math.min(concurrency, items.length); w++) {
-    workers.push(worker());
-  }
-  await Promise.all(workers);
-  return results;
 }
 
 /** Fetch a single travel detail (description + gallery). */

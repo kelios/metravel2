@@ -6,8 +6,11 @@ const SCRIPT = path.resolve(process.cwd(), 'scripts', 'audit-article-body-media.
 
 const {
   RISKY_FAMILIES,
+  BUILD_FETCH_RATE_PER_SEC,
+  BUILD_FETCH_MIN_INTERVAL_MS,
   collectPointIds,
   collectTravelTargets,
+  fetchTravelDetails,
   pointIdOfUrl,
   toTargetUrl,
 } = require('@/scripts/audit-article-body-media');
@@ -258,5 +261,81 @@ describe('audit-article-body-media: код возврата', () => {
 
     const report = JSON.parse(result.stdout);
     expect(result.stdout.trim()).toBe(JSON.stringify(report, null, 2));
+  });
+});
+
+describe('audit-article-body-media: темп деталей (#1966)', () => {
+  it('держит тот же бюджет, что генератор SEO-страниц: ≤8 req/s', () => {
+    const pacer = require('@/scripts/lib/requestPacer');
+    expect(BUILD_FETCH_RATE_PER_SEC).toBe(8);
+    expect(BUILD_FETCH_RATE_PER_SEC).toBe(pacer.BUILD_FETCH_RATE_PER_SEC);
+    expect(BUILD_FETCH_MIN_INTERVAL_MS).toBe(Math.ceil(1000 / BUILD_FETCH_RATE_PER_SEC));
+    expect(BUILD_FETCH_MIN_INTERVAL_MS).toBe(pacer.BUILD_FETCH_MIN_INTERVAL_MS);
+  });
+
+  it('детали статей идут через общий пейсер, а не голый mapWithConcurrency', () => {
+    const src = require('fs').readFileSync(SCRIPT, 'utf8');
+    expect(src).toContain("require('./lib/requestPacer')");
+    expect(src).toMatch(/fetchTravelDetails\(scanIds/);
+    expect(src).toMatch(/minIntervalMs = BUILD_FETCH_MIN_INTERVAL_MS/);
+    // HEAD картинок по-прежнему ограничен только параллельностью: их отдаёт кэш.
+    expect(src).toMatch(/mapWithConcurrency\(uniqueUrls/);
+  });
+
+  it('старты N статей не чаще бюджета даже при параллельных воркерах', async () => {
+    const waits: number[] = [];
+    const started: number[] = [];
+    const ids = [1, 2, 3, 4, 5];
+
+    await fetchTravelDetails(ids, {
+      site: 'https://metravel.test',
+      families: RISKY_FAMILIES,
+      concurrency: 4,
+      minIntervalMs: BUILD_FETCH_MIN_INTERVAL_MS,
+      now: () => 1_000,
+      wait: async (ms: number) => {
+        waits.push(ms);
+      },
+      fetchJson: async () => {
+        started.push(Date.now());
+        return { description: '', travelAddress: [] };
+      },
+    });
+
+    expect(started).toHaveLength(ids.length);
+    expect(waits).toEqual([125, 250, 375, 500]);
+  });
+
+  it('не превышает --concurrency, даже когда интервал нулевой', async () => {
+    let inflight = 0;
+    let maxInflight = 0;
+    const ids = Array.from({ length: 12 }, (_, i) => i + 1);
+    let release: (() => void) | null = null;
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const running = fetchTravelDetails(ids, {
+      site: 'https://metravel.test',
+      families: RISKY_FAMILIES,
+      concurrency: 3,
+      minIntervalMs: 0,
+      fetchJson: async () => {
+        inflight += 1;
+        maxInflight = Math.max(maxInflight, inflight);
+        await hold;
+        inflight -= 1;
+        return { description: '', travelAddress: [] };
+      },
+    });
+
+    for (let i = 0; i < 50 && maxInflight < 3; i += 1) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    expect(maxInflight).toBe(3);
+    expect(maxInflight).toBeLessThanOrEqual(3);
+    release?.();
+    await running;
+    expect(maxInflight).toBeLessThanOrEqual(3);
   });
 });
