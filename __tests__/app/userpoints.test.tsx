@@ -16,6 +16,7 @@ jest.mock('expo-router', () => ({
   useRouter: jest.fn(() => ({ push: mockPush, back: mockBack, replace: mockReplace, canGoBack: jest.fn(() => true) })),
   usePathname: jest.fn(() => '/userpoints'),
   useLocalSearchParams: () => mockParams,
+  useIsFocused: () => true,
 }));
 
 jest.mock('@/hooks/useResponsive', () => ({

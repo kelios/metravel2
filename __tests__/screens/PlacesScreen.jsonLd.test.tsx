@@ -99,6 +99,8 @@ const catalogPage: PlacesCatalogPage = {
 const readItemListJsonLd = (): string | null => {
   for (let index = mockSeoProps.mock.calls.length - 1; index >= 0; index -= 1) {
     const tags = (mockSeoProps.mock.calls[index]?.[0] as { additionalTags?: any })?.additionalTags
+    const children = tags?.props?.children
+    if (typeof children === 'string' && children.includes('ItemList')) return children
     const html = tags?.props?.dangerouslySetInnerHTML?.__html
     if (typeof html === 'string' && html.includes('ItemList')) return html
   }
@@ -135,5 +137,17 @@ describe('PlacesScreen JSON-LD (#1960)', () => {
     ])
     expect(html).not.toContain('?id=')
     expect(html).not.toContain('localhost')
+  })
+
+  it('declares the SSG robots verdict so Helmet keeps noindex after hydration (#1968)', async () => {
+    render(<PlacesScreen />, { wrapper: createQueryWrapper().Wrapper })
+
+    await waitFor(() => {
+      expect(mockSeoProps).toHaveBeenCalled()
+    })
+
+    expect(mockSeoProps).toHaveBeenCalledWith(
+      expect.objectContaining({ robots: 'noindex, follow' }),
+    )
   })
 })

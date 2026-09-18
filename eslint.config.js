@@ -6,14 +6,20 @@ const tsPlugin = require("@typescript-eslint/eslint-plugin");
 const reactHooks = require("eslint-plugin-react-hooks");
 const reactPlugin = require("eslint-plugin-react");
 
-const linkingOpenUrlGuard = [
-  "error",
-  {
-    selector:
-      "CallExpression[callee.type='MemberExpression'][callee.object.name='Linking'][callee.property.name='openURL']",
-    message: "Use '@/utils/externalLinks.openExternalUrl' instead of direct Linking.openURL.",
-  },
-];
+const linkingOpenUrlRule = {
+  selector:
+    "CallExpression[callee.type='MemberExpression'][callee.object.name='Linking'][callee.property.name='openURL']",
+  message: "Use '@/utils/externalLinks.openExternalUrl' instead of direct Linking.openURL.",
+};
+
+const jsonLdHelmetScriptRule = {
+  selector:
+    "JSXOpeningElement[name.name='script'] > JSXAttribute[name.name='dangerouslySetInnerHTML']",
+  message:
+    "expo-router/head Helmet drops script tags that use dangerouslySetInnerHTML. Pass stringifyJsonLd(data) as a string child via jsonLdScript() (SEO-JSONLD-HEAD-DROP-001).",
+};
+
+const appRestrictedSyntax = ["error", linkingOpenUrlRule, jsonLdHelmetScriptRule];
 
 const baseIgnores = [
   "node_modules/",
@@ -162,7 +168,7 @@ module.exports = [
     rules: {
       "no-unused-vars": "warn",
       "no-console": ["warn", { allow: ["warn", "error", "info"] }],
-      "no-restricted-syntax": linkingOpenUrlGuard,
+      "no-restricted-syntax": appRestrictedSyntax,
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn"
     }
@@ -188,7 +194,7 @@ module.exports = [
     rules: {
       "no-undef": "off",
       "no-console": ["warn", { allow: ["warn", "error", "info"] }],
-      "no-restricted-syntax": linkingOpenUrlGuard,
+      "no-restricted-syntax": appRestrictedSyntax,
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": [
         "error",

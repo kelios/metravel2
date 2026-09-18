@@ -3,7 +3,7 @@ import { Platform } from 'react-native'
 import { translate as i18nT } from '@/i18n'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
-import { stringifyJsonLd } from '@/utils/jsonLd'
+import { jsonLdScript } from '@/components/seo/jsonLdScript'
 import { useMapScreenController } from '@/hooks/useMapScreenController'
 import { useMapViewportHeightVar } from '@/hooks/useMapViewportHeightVar'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -233,13 +233,7 @@ export default function MapScreen() {
 
   const mapSeoTags = useMemo(() => {
     if (!isWeb || !mapStructuredData) return undefined
-    return (
-      <script
-        key="map-structured-data"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: stringifyJsonLd(mapStructuredData) }}
-      />
-    )
+    return jsonLdScript(mapStructuredData, { key: 'map-structured-data' })
   }, [isWeb, mapStructuredData])
 
   const seoBlock = useMemo(() => {

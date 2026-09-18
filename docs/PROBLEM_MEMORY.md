@@ -1364,6 +1364,32 @@ guard, падающий в CI на попытке обойти этот конт
   2026-08-08, генерация на копии `dist/prod`: Mont Blanc 17 % → 100 %, Витебск
   35 % → 100 %, Влёра → 100 %, медиана веса страницы 238 → 241 КБ.
 
+### SEO-JSONLD-HEAD-DROP-001 — JSON-LD в expo-router/head обязан быть строковым child
+
+- **Инвариант:** `<script type="application/ld+json">` внутри `expo-router/head`
+  доезжает до `document.head` (и SSR HTML) как тег с `data-rh`. Helmet читает
+  содержимое скрипта только из строкового `children`; `dangerouslySetInnerHTML`
+  молча отбрасывается.
+- **Surface/owner:** frontend runtime (`components/seo/jsonLdScript.tsx`,
+  экраны с `LazyInstantSEO` `additionalTags`, `BreadcrumbsJsonLd`).
+- **Цепочка:** `#1967` (каноническая). Сосед по инварианту «задумано для
+  краулера обязано доехать» — `SEO-SNIPPET-001` (SSG-слой
+  `scripts/generate-seo-pages.js`). Сосед по Helmet — `QUEST-COUNTRY-LANDING-001`
+  / `#1968`: `meta[data-rh]` robots снимается, если клиентский экран его не
+  объявляет.
+- **Подтверждённая причина:** vendored `react-helmet-async` внутри expo-router
+  (`mapChildrenToProps` → `mapNestedChildrenToProps` →
+  `getTagsFromPropsList('script', ['src', 'innerHTML'])`) кладёт в `innerHTML`
+  только строковых детей; `dangerouslySetInnerHTML` остаётся необработанным
+  пропом, и тег без `src`/`innerHTML` не попадает в документ.
+- **Controls:** helper `jsonLdScript()` возвращает `<script>` со строковым
+  child; eslint `no-restricted-syntax` на `script`+`dangerouslySetInnerHTML`;
+  Jest DOM-контракт через реальный Helmet без мока `LazyInstantSEO`; source-scan
+  guard на Head/`additionalTags`.
+- **Решение для новой жалобы:** нет клиентского `data-rh` JSON-LD —
+  `reopen #1967`; неверный URL внутри уже существующей разметки `/map` —
+  `#1960`; SSG срезает FAQ из тела статьи — `reopen #1138`.
+
 ### SEO-OPS-001 — отчётный инструмент обязан отличать «нет данных» от «нет проблем»
 
 - **Инвариант (структурный, `#1391`, расширен `#1934`):** ops-скрипт с побочным

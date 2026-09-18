@@ -3,10 +3,12 @@ import { useState } from 'react';
 import { View, StyleSheet, Modal, ActivityIndicator } from 'react-native';
 import { PointsList } from '@/components/UserPoints/PointsList';
 import { ImportWizard } from '@/components/UserPoints/ImportWizard';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useAuth } from '@/context/AuthContext';
-import { router } from 'expo-router';
+import { router, useIsFocused } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { buildCanonicalUrl } from '@/utils/seo';
 import EmptyState from '@/components/ui/EmptyState';
 import { translate as i18nT } from '@/i18n'
 
@@ -15,12 +17,23 @@ export default function UserPointsScreen() {
   const [showImportWizard, setShowImportWizard] = useState(false);
   const { isAuthenticated, authReady } = useAuth();
   const colors = useThemedColors();
+  const isFocused = useIsFocused();
 
   const styles = createStyles(colors);
+  const seoBlock = isFocused ? (
+    <InstantSEO
+      headKey="userpoints"
+      title={`${i18nT('navigationStatic:breadcrumb.userpoints')} | Metravel`}
+      description={i18nT('shared:screens.tabs.UserPointsScreen.dlya_sohraneniya_i_prosmotra_vashih_tochek_n_5b5b8307')}
+      canonical={buildCanonicalUrl('/userpoints')}
+      robots="noindex, nofollow"
+    />
+  ) : null;
 
   if (!authReady) {
     return (
       <View style={styles.authContainer} testID="userpoints-auth-loading">
+        {seoBlock}
         <ActivityIndicator color={colors.primary} />
       </View>
     );
@@ -30,6 +43,7 @@ export default function UserPointsScreen() {
   if (!isAuthenticated) {
     return (
       <View style={styles.authContainer}>
+        {seoBlock}
         <EmptyState
           icon="map-pin"
           title={i18nT('shared:screens.tabs.UserPointsScreen.voydite_chtoby_upravlyat_tochkami_c083ffa1')}
@@ -46,6 +60,7 @@ export default function UserPointsScreen() {
 
   return (
     <View style={styles.container} testID="userpoints-screen">
+      {seoBlock}
       <PointsList onImportPress={() => setShowImportWizard(true)} />
 
       <Modal

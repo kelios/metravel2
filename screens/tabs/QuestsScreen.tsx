@@ -7,9 +7,9 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
+import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo';
-import { stringifyJsonLd } from '@/utils/jsonLd';
 import { getQuestAgeSearchTerms } from '@/utils/questAudience';
 import { useIsFocused } from 'expo-router';
 import { useBreakpoints } from '@/hooks/useResponsive';
@@ -661,16 +661,8 @@ export default function QuestsScreen() {
     const questsSeoTags = useMemo(
         () => (
             <>
-                <script
-                    key="quests-structured-data"
-                    type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: stringifyJsonLd(questsStructuredData) }}
-                />
-                <script
-                    key="quests-faq-structured-data"
-                    type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: stringifyJsonLd(questsFaqStructuredData) }}
-                />
+                {jsonLdScript(questsStructuredData, { key: 'quests-structured-data' })}
+                {jsonLdScript(questsFaqStructuredData, { key: 'quests-faq-structured-data' })}
             </>
         ),
         [questsStructuredData, questsFaqStructuredData]

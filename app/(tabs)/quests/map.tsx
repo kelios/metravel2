@@ -15,6 +15,7 @@ import { useQuestsList } from '@/hooks/useQuestsApi';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
+import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { createMapStructuredData } from '@/utils/discoverySeo';
 import { buildQuestPath } from '@/utils/routePaths';
@@ -129,15 +130,20 @@ export default function QuestsMapScreen() {
         [canonical, description, title, travel.data]
     );
     const seoTags = useMemo(
-        () => (
-            <script
-                key="quests-map-structured-data"
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-            />
-        ),
+        () => jsonLdScript(structuredData, { key: 'quests-map-structured-data' }),
         [structuredData]
     );
+    const seoBlock = isFocused ? (
+        <InstantSEO
+            headKey="quests-map"
+            title={title}
+            description={description}
+            canonical={canonical}
+            image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+            robots="noindex, nofollow"
+            additionalTags={seoTags}
+        />
+    ) : null;
 
     if (!isWeb && !questsLoading && travel.data.length > 0) {
         return (
@@ -188,6 +194,7 @@ export default function QuestsMapScreen() {
     if (questsLoading) {
         return (
             <View style={styles.fallback}>
+                {seoBlock}
                 <ActivityIndicator
                     color={colors.primaryDark}
                     accessibilityLabel={i18nT('quests:app.tabs.quests.map.zagruzhaem_kartu_kvestov_6b50ed3f')}
@@ -200,6 +207,7 @@ export default function QuestsMapScreen() {
     if (travel.data.length === 0) {
         return (
             <View style={styles.fallback}>
+                {seoBlock}
                 <Feather name="map" size={48} color={colors.textMuted} />
                 <Text style={styles.fallbackText}>{i18nT('quests:app.tabs.quests.map.net_kvestov_s_koordinatami_dlya_otobrazheniy_6ec1ec92')}</Text>
                 <Pressable onPress={handleBack} style={styles.backBtn}>
@@ -212,16 +220,7 @@ export default function QuestsMapScreen() {
 
     return (
         <View style={{ flex: 1 }}>
-            {isFocused && (
-                <InstantSEO
-                    headKey="quests-map"
-                    title={title}
-                    description={description}
-                    canonical={canonical}
-                    image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
-                    additionalTags={seoTags}
-                />
-            )}
+            {seoBlock}
             {Platform.OS === 'web' && (
                 <h1 style={{
                     position: 'absolute' as const,

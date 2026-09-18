@@ -1,9 +1,35 @@
+import React from 'react'
 import { render, waitFor, fireEvent, act } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Platform } from 'react-native'
+import { Helmet, HelmetProvider, type HelmetServerState } from 'expo-router/vendor/react-helmet-async/lib'
 import MapScreen from '@/screens/tabs/MapScreen'
+import LazyInstantSEO from '@/components/seo/LazyInstantSEO'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useRouteStore } from '@/stores/routeStore'
+
+const readHelmetJsonLd = (screen: ReturnType<typeof render>) => {
+  const { additionalTags } = screen.UNSAFE_root.findByType(LazyInstantSEO).props
+  const context: { helmet?: HelmetServerState } = {}
+  const originalCanUseDOM = HelmetProvider.canUseDOM
+  let helmetScreen: ReturnType<typeof render> | undefined
+  HelmetProvider.canUseDOM = false
+  try {
+    helmetScreen = render(
+      <HelmetProvider context={context}>
+        <Helmet>{additionalTags}</Helmet>
+      </HelmetProvider>,
+    )
+    const html = context.helmet?.script.toString() ?? ''
+    const template = document.createElement('template')
+    template.innerHTML = html
+    const scripts = template.content.querySelectorAll('script')
+    return { html, scripts }
+  } finally {
+    helmetScreen?.unmount()
+    HelmetProvider.canUseDOM = originalCanUseDOM
+  }
+}
 
 let mockResponsiveState = { isPhone: true, isLargePhone: false, isMobile: true, width: 390 }
 let mockSearchParams: Record<string, string> = {}
@@ -475,12 +501,13 @@ describe('MapScreen (map tab)', () => {
       },
     });
 
-    const { UNSAFE_root } = renderWithClient();
+    const screen = renderWithClient();
+    const { UNSAFE_root } = screen;
 
     const readJsonLd = () =>
       UNSAFE_root.findAll(
         (node: any) => node.type === 'script' && node.props?.type === 'application/ld+json',
-      ).map((node: any) => String(node.props.dangerouslySetInnerHTML?.__html ?? ''));
+      ).map((node: any) => String(node.props.children ?? node.props.dangerouslySetInnerHTML?.__html ?? ''));
 
     await waitFor(() => {
       expect(readJsonLd().some((html) => html.includes('forty-krakova'))).toBe(true);
@@ -497,6 +524,13 @@ describe('MapScreen (map tab)', () => {
     ]);
     expect(html).not.toContain('?id=');
     expect(html).not.toContain('localhost');
+
+    const helmet = readHelmetJsonLd(screen);
+    expect(helmet.scripts).toHaveLength(1);
+    expect(helmet.scripts[0].type).toBe('application/ld+json');
+    expect(helmet.scripts[0].getAttribute('data-rh')).toBe('true');
+    expect(helmet.html).toContain('forty-krakova');
+    expect(helmet.html).not.toContain('?id=');
   });
 
   it('shows error display when map data loading fails', async () => {
