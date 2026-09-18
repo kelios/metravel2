@@ -6,6 +6,7 @@ import type { RouteGeometry, RoutePoint } from '@/api/plannedTrips';
 import { TravelMap } from '@/components/MapPage/TravelMap';
 import Button from '@/components/ui/Button';
 import { SelectionGroup } from '@/components/ui/SelectionGroup';
+import type { ToolAction } from '@/components/ui/ToolActionsRow';
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 import { formatFileSize } from '@/utils/fileSize';
 import { formatInteger } from '@/i18n/format';
@@ -47,6 +48,11 @@ type Props = {
    * никогда не расходились.
    */
   onApply: (route: RoutePoint[], originalUpload: PickedTripRouteFileUpload | null) => void;
+  /**
+   * #1902: кнопки скачивания GPX/KML. Пикер отдаёт им своё действие, чтобы
+   * импорт и экспорт жили в одном ToolActionsRow.
+   */
+  fileToolbarExtra?: React.ReactNode;
 };
 
 const parsedPointToLatLng = (coord: string): [number, number] | null => {
@@ -79,6 +85,7 @@ function TripRouteImportPanel({
   removing = false,
   onRemoveStoredFile,
   onApply,
+  fileToolbarExtra,
 }: Props) {
   const { t } = useTranslation();
   const colors = useThemedColors();
@@ -212,9 +219,26 @@ function TripRouteImportPanel({
         maxBytes={TRIP_ROUTE_IMPORT_MAX_BYTES}
         disabled={disabled}
         loading={reading}
+        compact
         onBusyChange={handleBusyChange}
         onPicked={handlePicked}
         onError={handlePickerError}
+        renderToolbar={
+          fileToolbarExtra && React.isValidElement(fileToolbarExtra)
+            ? (action, extra) => (
+                <>
+                  {extra}
+                  {React.cloneElement(
+                    fileToolbarExtra as React.ReactElement<{
+                      leadingActions?: ToolAction[];
+                      compact?: boolean;
+                    }>,
+                    { leadingActions: [action], compact: true },
+                  )}
+                </>
+              )
+            : undefined
+        }
       />
 
       {reading ? (

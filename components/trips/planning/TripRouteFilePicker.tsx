@@ -4,13 +4,18 @@ import Feather from '@expo/vector-icons/Feather';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 
-import ToolActionsRow from '@/components/ui/ToolActionsRow';
+import ToolActionsRow, { type ToolAction } from '@/components/ui/ToolActionsRow';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import type {
   PickedTripRouteFileUpload,
   TripRouteFilePickerProps,
 } from './TripRouteFilePicker.types';
+
+type Props = TripRouteFilePickerProps & {
+  compact?: boolean;
+  renderToolbar?: (action: ToolAction, extra: React.ReactNode) => React.ReactNode;
+};
 
 // Файл, выбранный document-picker'ом, живёт во временной копии, которую пикер
 // удаляет сразу после чтения. Фазе 2 (#1496) он нужен дольше: тот же файл
@@ -49,8 +54,10 @@ function TripRouteFilePicker({
   onPicked,
   onError,
   onBusyChange,
+  compact,
+  renderToolbar,
   testID = 'trip-route-import-picker',
-}: TripRouteFilePickerProps) {
+}: Props) {
   const colors = useThemedColors();
   const { t } = useTranslation();
   const requestIdRef = useRef(0);
@@ -137,20 +144,24 @@ function TripRouteFilePicker({
     }
   }, [maxBytes, onBusyChange, onError, onPicked]);
 
+  const action: ToolAction = {
+    key: 'import-route',
+    label,
+    compactLabel: t('tripsStatic:route.importCompact'),
+    icon: <Feather name="upload" size={18} color={colors.text} />,
+    onPress: () => { void handlePress(); },
+    disabled: disabled || loading,
+    loading,
+    testID,
+  };
+
+  if (renderToolbar) {
+    return <View>{renderToolbar(action, null)}</View>;
+  }
+
   return (
     <View>
-      <ToolActionsRow
-        actions={[{
-          key: 'import-route',
-          label,
-          compactLabel: t('tripsStatic:route.importCompact'),
-          icon: <Feather name="upload" size={18} color={colors.text} />,
-          onPress: () => { void handlePress(); },
-          disabled: disabled || loading,
-          loading,
-          testID,
-        }]}
-      />
+      <ToolActionsRow actions={[action]} compact={compact} />
     </View>
   );
 }

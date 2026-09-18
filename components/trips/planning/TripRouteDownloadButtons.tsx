@@ -27,6 +27,9 @@ interface Props {
    */
   tripId?: number | string | null;
   originalFile?: PlannedTripRouteFile | null;
+  /** #1902: импорт в том же ToolActionsRow, что GPX/KML. */
+  leadingActions?: ToolAction[];
+  compact?: boolean;
   testID?: string;
 }
 
@@ -36,6 +39,8 @@ function TripRouteDownloadButtons({
   showApproximateWarning = false,
   tripId = null,
   originalFile = null,
+  leadingActions,
+  compact,
   testID,
 }: Props) {
   const colors = useThemedColors();
@@ -68,6 +73,7 @@ function TripRouteDownloadButtons({
   // («Поделиться GPX») уходит в accessibilityLabel. Ряд при этом по-прежнему
   // одна строка: три коротких слова помещаются на 320–402dp.
   const actions: ToolAction[] = [
+    ...(leadingActions ?? []),
     {
       key: 'gpx',
       label: isWeb ? i18nT('trips:components.trips.planning.TripRouteExportMenu.skachat_gpx_cc6c1a54') : i18nT('trips:components.trips.planning.TripRouteExportMenu.podelitsya_gpx_f240186b'),
@@ -127,7 +133,13 @@ function TripRouteDownloadButtons({
         </View>
       ) : null}
 
-      <ToolActionsRow actions={actions} />
+      {leadingActions?.length ? (
+        <View testID="route-builder-route-file-tools">
+          <ToolActionsRow actions={actions} compact={compact} />
+        </View>
+      ) : (
+        <ToolActionsRow actions={actions} compact={compact} />
+      )}
 
       {originalError ? (
         <Text style={styles.error} testID="trip-route-export-original-error">

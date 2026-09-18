@@ -271,7 +271,7 @@ export const transportToBe = (transport: TripTransport): string =>
   TRANSPORT_TO_BE[transport] ?? 'car';
 
 // Ключи совпадают с BIKE_TYPE_CHOICES бэка, поэтому маппинг — только валидация.
-export const TRIP_BIKE_TYPES: TripBikeType[] = ['regular', 'road', 'mountain'];
+export const TRIP_BIKE_TYPES: TripBikeType[] = ['regular', 'road', 'mountain', 'electric'];
 
 export const isTripBikeType = (value: unknown): value is TripBikeType =>
   TRIP_BIKE_TYPES.some((bikeType) => bikeType === value);

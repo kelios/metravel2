@@ -57,17 +57,20 @@ export default function RouteBuilderLayout({
   saveSection,
   elevationProfileSection,
 }: Props) {
-  // #1902: импорт трека и скачивание GPX/KML — один блок «Файл маршрута» в той
-  // же рамке, что шаги панели, а не два самостоятельных ряда ToolActionsRow
-  // друг под другом. Слить их в один ряд нельзя: на телефоне ряд с
-  // compactLabel держится одной строкой (nowrap), и четыре подписанные кнопки
-  // в 320–390dp не помещаются.
+  // #1902: импорт и GPX/KML — один compact ToolActionsRow внутри рамки
+  // «Файл маршрута». Пикер отдаёт своё действие в ряд скачивания через
+  // `fileToolbarExtra`; четыре короткие compactLabel держатся nowrap.
+  const importWithFileToolbar = React.isValidElement(importSection)
+    ? React.cloneElement(
+        importSection as React.ReactElement<{ fileToolbarExtra?: React.ReactNode }>,
+        { fileToolbarExtra: routeDownloadSection },
+      )
+    : importSection;
   const routeFileSection = (
     <View style={panelStyles.stepBlock} testID="route-builder-route-file">
       <Text style={styles.label}>{i18nT('tripsStatic:plan.routeFile.title')}</Text>
       <Text style={styles.hint}>{i18nT('tripsStatic:plan.routeFile.hint')}</Text>
-      {importSection}
-      {routeDownloadSection}
+      {importWithFileToolbar}
     </View>
   );
 

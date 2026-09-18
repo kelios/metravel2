@@ -2,12 +2,18 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
-import ToolActionsRow from '@/components/ui/ToolActionsRow';
+import ToolActionsRow, { type ToolAction } from '@/components/ui/ToolActionsRow';
 import { useThemedColors } from '@/hooks/useTheme';
+import { translate as i18nT } from '@/i18n';
 import type {
   PickedTripRouteFileUpload,
   TripRouteFilePickerProps,
 } from './TripRouteFilePicker.types';
+
+type Props = TripRouteFilePickerProps & {
+  compact?: boolean;
+  renderToolbar?: (action: ToolAction, extra: React.ReactNode) => React.ReactNode;
+};
 
 /**
  * На web выбранный `File` живёт в памяти вкладки и освобождается сборщиком —
@@ -26,8 +32,10 @@ function TripRouteFilePicker({
   onPicked,
   onError,
   onBusyChange,
+  compact,
+  renderToolbar,
   testID = 'trip-route-import-picker',
-}: TripRouteFilePickerProps) {
+}: Props) {
   const colors = useThemedColors();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const requestIdRef = useRef(0);
@@ -71,28 +79,34 @@ function TripRouteFilePicker({
     }
   }, [maxBytes, onBusyChange, onError, onPicked]);
 
+  const action: ToolAction = {
+    key: 'import-route',
+    label,
+    compactLabel: i18nT('tripsStatic:route.importCompact'),
+    icon: <Feather name="upload" size={18} color={colors.text} />,
+    onPress: handlePress,
+    disabled: disabled || loading,
+    loading,
+    testID,
+  };
+  const extra = React.createElement('input', {
+    ref: inputRef,
+    type: 'file',
+    accept: '.gpx,.kml',
+    onChange: handleChange,
+    'aria-label': label,
+    'data-testid': `${testID}-input`,
+    style: { display: 'none' },
+  });
+
+  if (renderToolbar) {
+    return <View>{renderToolbar(action, extra)}</View>;
+  }
+
   return (
     <View>
-      {React.createElement('input', {
-        ref: inputRef,
-        type: 'file',
-        accept: '.gpx,.kml',
-        onChange: handleChange,
-        'aria-label': label,
-        'data-testid': `${testID}-input`,
-        style: { display: 'none' },
-      })}
-      <ToolActionsRow
-        actions={[{
-          key: 'import-route',
-          label,
-          icon: <Feather name="upload" size={18} color={colors.text} />,
-          onPress: handlePress,
-          disabled: disabled || loading,
-          loading,
-          testID,
-        }]}
-      />
+      {extra}
+      <ToolActionsRow actions={[action]} compact={compact} />
     </View>
   );
 }

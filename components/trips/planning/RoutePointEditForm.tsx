@@ -2,9 +2,9 @@
 // Форма правки точки маршрута. Вынесена из RouteBuilder.tsx (#1825) дословно —
 // разметка, testID и подписи те же; состояние формы по-прежнему живёт в
 // контейнере и приходит сюда пропсами, как у соседней RoutePointAddForm.
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import Feather from '@expo/vector-icons/Feather';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 
 import type { RoutePointType } from '@/api/plannedTrips';
 import AddressSearch from '@/components/MapPage/AddressSearch';
@@ -12,6 +12,7 @@ import {
   ROUTE_POINT_ICON_NAME,
   ROUTE_POINT_LABEL,
 } from '@/components/trips/planning/tripPlanFormatting';
+import { scrollPlannerNodeIntoView } from '@/components/trips/planning/scrollPlannerNodeIntoView';
 import Button from '@/components/ui/Button';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n';
@@ -88,8 +89,17 @@ export default function RoutePointEditForm({
   onMove,
   onDelete,
 }: Props) {
+  // #1974: на desktop форма живёт ниже списка точек, не внутри карточки.
+  // Мобильный скролл остаётся в RoutePointRow (`compact` + `nearest`).
+  const formRef = useRef<View>(null);
+  useEffect(() => {
+    if (isMapFirst || Platform.OS !== 'web') return;
+    scrollPlannerNodeIntoView(formRef.current, { block: 'start', behavior: 'smooth' });
+  }, [isMapFirst, editingIndex]);
+
   return (
     <View
+      ref={formRef}
       style={[styles.editForm, isMapFirst && styles.editFormInline]}
       testID="route-builder-edit-form"
     >

@@ -6,8 +6,9 @@ export type TripTransport = 'car' | 'bike' | 'foot' | 'public' | 'mixed'
 // пересечением со списком режимов карты. Разъедутся таксономии — сломается
 // компиляция, а не поведение планировщика.
 export type RoutableTripTransport = Extract<TripTransport, TransportMode>
-// Профили ORS cycling-regular/road/mountain: бэк принимает и отдаёт эти же ключи.
-export type TripBikeType = 'regular' | 'road' | 'mountain'
+// Профили ORS cycling-regular/road/mountain/electric: бэк принимает и отдаёт эти же ключи.
+// gravel бэк отклоняет — во фронт не добавляем.
+export type TripBikeType = 'regular' | 'road' | 'mountain' | 'electric'
 export type TripVisibility = 'public' | 'followers' | 'private'
 export type TripPlanStatus = 'planning' | 'active' | 'completed'
 export type RoutePointType = 'place' | 'custom' | 'rest' | 'overnight'
