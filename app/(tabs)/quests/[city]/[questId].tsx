@@ -330,9 +330,11 @@ export default function QuestByIdScreen() {
   const { bundle, loading: isQuestLoading, error: bundleError, refetch } = useQuestBundle(
     shouldLoadQuest ? questId : undefined,
   );
+  // Фокус экрана не равен сессии: `isFocused && isAuthenticated` на блюре
+  // выглядело как логаут, и ответ за <2 с уходил в очередь вместо POST (#1973).
   const { progress: backendProgress, progressLoading, saveProgress, resetProgress } = useQuestProgressSync(
     shouldLoadQuest ? questId : undefined,
-    isFocused && isAuthenticated,
+    isAuthenticated,
   );
   const guestFlow = useGuestQuestFlow({
     questId,
