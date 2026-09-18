@@ -165,27 +165,28 @@ describe('RouteBuilder bike type selector', () => {
     expect(getByTestId('route-builder-transport-control')).toBeTruthy()
   })
 
-  it('shows the three choices with selected state and 44dp targets when transport is bike', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip({ bikeType: 'road' })} />)
+  it('shows routing-profile chips with selected state and 44dp targets when transport is bike', () => {
+    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip({ bikeType: 'road' })} />)
 
     expect(getByTestId('route-builder-bike-type-control')).toBeTruthy()
 
-    const chips = ['regular', 'road', 'mountain'].map((bikeType) =>
+    const chips = ['regular', 'road', 'mountain', 'electric'].map((bikeType) =>
       getByTestId(`route-builder-bike-type-${bikeType}`),
     )
     expect(chips.map((chip) => chip.props.accessibilityLabel)).toEqual([
-      'Обычный',
-      'Шоссейный',
-      'Горный',
+      'Ровные дороги',
+      'По асфальту',
+      'Тропы',
+      'Электро',
     ])
-    // #1901: объяснение, какие дороги выберет профиль, стоит строкой под чипами —
-    // в подписи чипа оно бы обрезалось многоточием на 320dp.
+    expect(queryByTestId('route-builder-bike-type-gravel')).toBeNull()
     expect(getByTestId('route-builder-bike-type-hint').props.children).toBe(
-      'От типа зависит, какие дороги выберет маршрут: обычный — велодорожки и тихие дороги, шоссейный — быстрее по асфальту, горный — грунтовки и тропы.',
+      'От типа зависит, какие дороги выберет маршрут: ровные — велодорожки и тихие улицы, по асфальту — быстрее по шоссе, тропы — грунт и лес, электро — спокойнее, без крутых подъёмов.',
     )
     expect(chips.map((chip) => chip.props.accessibilityState.selected)).toEqual([
       false,
       true,
+      false,
       false,
     ])
 
@@ -194,6 +195,13 @@ describe('RouteBuilder bike type selector', () => {
       ? chipStyle({ pressed: false, focused: false, hovered: false })
       : chipStyle
     expect(StyleSheet.flatten(resolvedStyle).minHeight).toBeGreaterThanOrEqual(44)
+  })
+
+  it('keeps the electric chip selected when the backend stored bike_type=electric', () => {
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip({ bikeType: 'electric' })} />)
+
+    expect(getByTestId('route-builder-bike-type-control')).toBeTruthy()
+    expect(getByTestId('route-builder-bike-type-electric').props.accessibilityState.selected).toBe(true)
   })
 
   it('ignores the current choice and locks rapid repeated changes to one PATCH without a separate rebuild', () => {

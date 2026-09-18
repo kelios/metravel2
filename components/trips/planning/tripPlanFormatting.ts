@@ -36,6 +36,7 @@ export const BIKE_TYPE_LABEL: Record<TripBikeType, string> = {
   get regular() { return i18nT('tripsStatic:plan.bikeType.regular') },
   get road() { return i18nT('tripsStatic:plan.bikeType.road') },
   get mountain() { return i18nT('tripsStatic:plan.bikeType.mountain') },
+  get electric() { return i18nT('tripsStatic:plan.bikeType.electric') },
 };
 
 // Имена материальные, а рисует их `MapIcon` — тот же путь, что у режимов на

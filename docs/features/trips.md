@@ -168,7 +168,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/planning/TripRatingPanel.tsx` | 249 | оценки участников после завершения |
 | `components/trips/OrganizerApplicationsPanel.tsx` | 238 | решения организатора по заявкам |
 | `components/trips/planning/TripInvitePanel.tsx` | 232 | приглашение участников, share-ссылки |
-| `components/trips/planning/RoutePointEditForm.tsx` | 233 | форма правки точки: тип, название, координаты, описание, адресный поиск; плюс перестановка (обе раскладки) и удаление (только mapFirst) |
+| `components/trips/planning/RoutePointEditForm.tsx` | 259 | форма правки точки: тип, название, координаты, описание, адресный поиск; плюс перестановка (обе раскладки) и удаление (только mapFirst); на desktop web скроллит верх формы в кадр (#1974) |
 | `components/trips/planning/TripSuggestPointForm.tsx` | 221 | предложение точки участником |
 | `components/trips/planning/tripPlanFormatting.ts` | 214 | метки/иконки/цвета планировщика, сводка маршрута строкой, даты |
 | `components/trips/planning/RoutePointsSection.tsx` | 217 | шаг 2 панели: предложение порядка, список точек и форма добавления |
@@ -184,7 +184,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/MyTripsDashboard.tsx` | 167 | дашборд «Мои поездки», сегменты и счётчики |
 | `components/trips/planning/RouteBuilder.styles.ts` | 165 | стили конструктора |
 | `components/trips/planning/useTripRouteFileBranch.ts` | 143 | файл маршрута: чтение, оригинальный трек, загрузка и удаление плюс синхронные локи (#1824) |
-| `components/trips/planning/RouteBuilderLayout.tsx` | 148 | две раскладки панели: `stack` (две колонки) и `mapFirst` (через RouteBuilderMobile) |
+| `components/trips/planning/RouteBuilderLayout.tsx` | 151 | две раскладки панели: `stack` (две колонки) и `mapFirst` (через RouteBuilderMobile); блок «Файл маршрута» склеивает импорт и GPX/KML в один compact-ряд (#1902) |
 | `components/trips/planning/TripRouteExportMenu.tsx` | 150 | экспорт: скачивание + открытие в навигаторе |
 | `components/trips/planning/RouteSummaryBar.tsx` | 147 | сводка маршрута под конструктором |
 | `components/trips/planning/routeBuilderPoint.ts` | 115 | чистые хелперы точки: разбор координат, формат ввода, имя из адреса, сигнатура маршрута |
@@ -259,7 +259,7 @@ DTO `PublicTripDto` (snake_case): `id`, `owner`, `owner_profile`, `title`,
 ### Planned trip (`api/plannedTripsTypes.ts`)
 
 `PlannedTrip`: `id`, `slug`, `title`, `description`, `startDate`, `startTime`,
-`transport: car|bike|foot|public|mixed`, `bikeType: regular|road|mountain|null`,
+`transport: car|bike|foot|public|mixed`, `bikeType: regular|road|mountain|electric|null`,
 `visibility: public|followers|private`, `seatsTotal`, `startPoint`,
 `status: planning|active|completed`, `organizer`, `route: RoutePoint[]`,
 `routeGeometry`, `routeSummary`, `routingState`, `participants`, `coverUrl`,

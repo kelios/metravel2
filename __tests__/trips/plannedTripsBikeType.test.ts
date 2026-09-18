@@ -85,7 +85,7 @@ describe('updatePlannedTripBikeType', () => {
     jest.resetModules()
   })
 
-  it.each<TripBikeType>(['regular', 'road', 'mountain'])(
+  it.each<TripBikeType>(['regular', 'road', 'mountain', 'electric'])(
     'sends one focused PATCH for %s and normalizes the rebuilt route',
     async (bikeType) => {
       delete process.env.EXPO_PUBLIC_TRIPS_MOCK
