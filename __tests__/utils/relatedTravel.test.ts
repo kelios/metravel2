@@ -1,4 +1,8 @@
+import fs from 'node:fs'
+import path from 'node:path'
+
 import {
+  buildRelatedTravelTags,
   normalizeRelatedTravelId,
   resolveMapPointRelatedTravelId,
   toCanonicalTravelPath,
@@ -46,6 +50,76 @@ describe('normalizeRelatedTravelId (#1960)', () => {
     { id: 1 },
   ])('rejects %p', (value) => {
     expect(normalizeRelatedTravelId(value)).toBeNull()
+  })
+})
+
+describe('buildRelatedTravelTags (#1963)', () => {
+  it('writes the normalized id next to the travel url', () => {
+    expect(
+      buildRelatedTravelTags({
+        travelUrl: '/travels/minsk-za-vykhodnye',
+        travelId: '646',
+        articleUrl: '/travels/minsk-za-vykhodnye',
+        travelName: 'Минск за выходные',
+      }),
+    ).toEqual({
+      travelUrl: '/travels/minsk-za-vykhodnye',
+      travelId: 646,
+      articleUrl: '/travels/minsk-za-vykhodnye',
+      travelName: 'Минск за выходные',
+    })
+  })
+
+  it('omits travelId when the article has no valid id', () => {
+    expect(
+      buildRelatedTravelTags({
+        travelUrl: '/travels/draft',
+        travelId: 0,
+        travelName: 'Черновик',
+      }),
+    ).toEqual({
+      travelUrl: '/travels/draft',
+      travelName: 'Черновик',
+    })
+  })
+
+  it('does not store a dangling id without a travel url', () => {
+    expect(buildRelatedTravelTags({ travelId: 435, articleUrl: '/travels/x' })).toEqual({
+      articleUrl: '/travels/x',
+    })
+  })
+
+  it('is the only production writer of tags.travelUrl', () => {
+    const assignment = /tags\.travelUrl\s*=/
+    const skipDir = new Set(['node_modules', '__tests__'])
+    const hits: string[] = []
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (entry.name.startsWith('.') || skipDir.has(entry.name)) continue
+        const full = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+          walk(full)
+          continue
+        }
+        if (!/\.(ts|tsx)$/.test(entry.name)) continue
+        if (assignment.test(fs.readFileSync(full, 'utf8'))) {
+          hits.push(path.relative(process.cwd(), full))
+        }
+      }
+    }
+    for (const root of ['api', 'app', 'components', 'hooks', 'screens', 'utils']) {
+      walk(path.join(process.cwd(), root))
+    }
+    expect(hits).toEqual(['utils/relatedTravel.ts'])
+    expect(
+      fs.readFileSync(path.join(process.cwd(), 'hooks/useAddressListItemActions.ts'), 'utf8'),
+    ).toContain('buildRelatedTravelTags')
+    expect(
+      fs.readFileSync(
+        path.join(process.cwd(), 'components/travel/hooks/usePointListAddPointModel.ts'),
+        'utf8',
+      ),
+    ).toContain('buildRelatedTravelTags')
   })
 })
 

@@ -12,6 +12,7 @@ import { showToast } from '@/utils/toast';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import { resolveCategoryIdsByNames as mapResolveCategoryIds } from '@/utils/userPointsCategories';
 import { getPointCategoryIds, getPointCategoryNames } from '@/utils/travelPointMeta';
+import { buildRelatedTravelTags } from '@/utils/relatedTravel'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -34,12 +35,14 @@ const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
 export function usePointListAddPointModel({
   baseUrl,
+  baseTravelId,
   categoryIdToName,
   categoryNameToIds,
   isPointSaved,
   travelName,
 }: {
   baseUrl?: string;
+  baseTravelId?: string | number | null;
   categoryIdToName: Map<string, string>;
   categoryNameToIds: Map<string, string[]>;
   isPointSaved?: (coordStr?: string) => boolean;
@@ -135,16 +138,12 @@ export function usePointListAddPointModel({
         payload.categoryIds = filteredIds;
       }
 
-      const tags: Record<string, unknown> = {};
-      if (baseUrl) {
-        tags.travelUrl = baseUrl;
-      }
-      if (point.articleUrl) {
-        tags.articleUrl = point.articleUrl;
-      }
-      if (travelName) {
-        tags.travelName = travelName;
-      }
+      const tags = buildRelatedTravelTags({
+        travelUrl: baseUrl,
+        travelId: baseTravelId,
+        articleUrl: point.articleUrl,
+        travelName,
+      });
       if (Object.keys(tags).length > 0) {
         payload.tags = tags;
       }
@@ -221,7 +220,7 @@ export function usePointListAddPointModel({
         setAddingPointId(null);
       }
     },
-    [addingPointId, authReady, baseUrl, categoryIdToName, categoryNameToIds, isAuthenticated, isPointSaved, owner, queryClient, travelName]
+    [addingPointId, authReady, baseTravelId, baseUrl, categoryIdToName, categoryNameToIds, isAuthenticated, isPointSaved, owner, queryClient, travelName]
   );
 
   return {

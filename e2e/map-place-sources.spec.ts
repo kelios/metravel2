@@ -54,6 +54,10 @@ const LIBRARY_SOURCE_B = {
  * Плоские строки map-выдачи: переходная форма несёт только place identity.
  * `source_count`/`primary_source` намеренно отсутствуют — renderer обязан
  * донести вычисленный grouped summary до карточки (#1568 seam regression).
+ *
+ * `urlTravel` держит `?id=` — документированный fallback до #1961. Без
+ * `primary_source` стек ♥/статуса иначе ходил бы в resolve-slug/by-slug
+ * на каждое открытие попапа (#1963).
  */
 const LIBRARY_ROW_A = {
   id: 14029,
@@ -64,7 +68,7 @@ const LIBRARY_ROW_A = {
   address: 'Национальная библиотека Беларуси',
   categoryName: 'Библиотека',
   travelImageThumbUrl: LIBRARY_SOURCE_A.thumbnail_url,
-  urlTravel: LIBRARY_SOURCE_A.article_url,
+  urlTravel: `${LIBRARY_SOURCE_A.article_url}?id=${LIBRARY_SOURCE_A.travel_id}`,
   articleUrl: '',
 }
 
@@ -72,7 +76,7 @@ const LIBRARY_ROW_B = {
   ...LIBRARY_ROW_A,
   id: 15688,
   travelImageThumbUrl: LIBRARY_SOURCE_B.thumbnail_url,
-  urlTravel: LIBRARY_SOURCE_B.article_url,
+  urlTravel: `${LIBRARY_SOURCE_B.article_url}?id=${LIBRARY_SOURCE_B.travel_id}`,
 }
 
 /** Соседнее самостоятельное место: другой place_id — склейки быть не должно. */
@@ -106,10 +110,10 @@ const MAP_ROWS = [LIBRARY_ROW_A, LIBRARY_ROW_B, NEARBY_ROW]
 const LIBRARY_MARKER_SELECTOR = '.metravel-pin-marker[title="Национальная библиотека Беларуси"]'
 const NEARBY_MARKER_SELECTOR = '.metravel-pin-marker[title="Центральный ботанический сад НАН"]'
 
-type SourcesTracker = { count: number }
+type SourcesTracker = { count: number; slugRequests: number }
 
 async function installMapMocks(page: any): Promise<SourcesTracker> {
-  const tracker: SourcesTracker = { count: 0 }
+  const tracker: SourcesTracker = { count: 0, slugRequests: 0 }
 
   const fulfillPng = (route: any) =>
     route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG })
@@ -159,6 +163,18 @@ async function installMapMocks(page: any): Promise<SourcesTracker> {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ results: [LIBRARY_SOURCE_A, LIBRARY_SOURCE_B], next: null }),
+    })
+  })
+
+  // #1963: попап с явным id статьи (primary_source.travel_id или `?id=` до
+  // #1961) не должен ходить в resolve-slug/by-slug. Считаем перехваты и
+  // отвечаем 404, чтобы живой API не маскировал регресс.
+  await page.route(/\/api\/travels\/(?:resolve-slug|by-slug)\//, (route: any) => {
+    tracker.slugRequests += 1
+    return route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({ detail: 'slug lookup must not run when travel id is known' }),
     })
   })
 
@@ -227,6 +243,8 @@ test.describe('#1568 map place sources — one marker, paged sources', () => {
 
     // Листание идёт по кэшу: ни одного нового запроса sources.
     expect(sources.count).toBe(1)
+    // Legacy-строки без primary_source несут `?id=` — slug-запроса нет (#1963).
+    expect(sources.slugRequests).toBe(0)
 
     // И не трогает marker layer: оба исходных узла живы со своим штампом.
     await expect(page.locator('.metravel-pin-marker[data-e2e-marker-stamp="1"]')).toHaveCount(2)
@@ -259,6 +277,8 @@ test.describe('#1568 map place sources — one marker, paged sources', () => {
 
     await expect(page.getByTestId('place-source-pager')).toHaveCount(0)
     expect(sources.count).toBe(0)
+    // Grouped DTO: id статьи в primary_source — slug-запроса нет (#1963).
+    expect(sources.slugRequests).toBe(0)
   })
 })
 
@@ -298,5 +318,6 @@ test.describe('#1568 map place sources — mobile web surface', () => {
     await expect(counter).toHaveText('Материал 1 из 2', { timeout: 10_000 })
 
     expect(sources.count).toBe(1)
+    expect(sources.slugRequests).toBe(0)
   })
 })

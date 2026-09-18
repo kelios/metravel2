@@ -4,16 +4,18 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { TravelPointsBlock } from '@/components/travel/details/sections/TravelPointsBlock';
 
+const mockPointList = jest.fn(({ points }: { points: unknown[] }) => {
+  const { Text, View } = require('react-native');
+  return (
+    <View testID="point-list-mock">
+      <Text>{points.length} route points</Text>
+    </View>
+  );
+});
+
 jest.mock('@/components/travel/PointList', () => ({
   __esModule: true,
-  default: ({ points }: { points: unknown[] }) => {
-    const { Text, View } = require('react-native');
-    return (
-      <View testID="point-list-mock">
-        <Text>{points.length} route points</Text>
-      </View>
-    );
-  },
+  default: (props: { points: unknown[] }) => mockPointList(props),
 }));
 
 jest.mock('@/components/travel/TravelDetailSkeletons', () => ({
@@ -116,6 +118,25 @@ describe('TravelPointsBlock', () => {
     expect(file.content).toContain('<color>ff2b7cff</color>');
     expect(file.content).toContain('Гомельский маршрут');
     expect(file.content).toContain('https://metravel.by/travels/gomel-route');
+  });
+
+  it('passes the article id into PointList so saved points carry tags.travelId (#1963)', () => {
+    render(
+      <TravelPointsBlock
+        anchors={{ points: createRef() } as any}
+        handlePointCardPress={jest.fn()}
+        styles={styles}
+        travel={travel}
+      />,
+    );
+
+    expect(mockPointList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: travel.url,
+        baseTravelId: travel.id,
+        travelName: travel.name,
+      }),
+    );
   });
 
   it('opens all exportable points in Google Maps on native', () => {

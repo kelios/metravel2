@@ -238,4 +238,60 @@ describe('usePointListAddPointModel', () => {
       })
     );
   });
+
+  it('writes tags.travelId next to tags.travelUrl when the article id is known (#1963)', async () => {
+    mockCreatePoint.mockResolvedValue({ id: 21, latitude: 53.9, longitude: 27.56 });
+
+    const { result } = renderHook(() =>
+      usePointListAddPointModel({
+        baseUrl: 'https://metravel.by/travels/gomel-route',
+        baseTravelId: 22,
+        categoryIdToName: new Map(),
+        categoryNameToIds: new Map(),
+        travelName: 'Гомельский маршрут',
+      })
+    );
+
+    await act(async () => {
+      await result.current.handleAddPoint({
+        id: '5',
+        address: 'Дворец',
+        coord: '53.9,27.56',
+        articleUrl: 'https://metravel.by/travels/gomel-route#point',
+      });
+    });
+
+    await waitFor(() => expect(mockCreatePoint).toHaveBeenCalledTimes(1));
+    expect(mockCreatePoint.mock.calls[0][0].tags).toEqual({
+      travelUrl: 'https://metravel.by/travels/gomel-route',
+      travelId: 22,
+      articleUrl: 'https://metravel.by/travels/gomel-route#point',
+      travelName: 'Гомельский маршрут',
+    });
+  });
+
+  it('does not write tags.travelId for a draft without an article id (#1963)', async () => {
+    mockCreatePoint.mockResolvedValue({ id: 22, latitude: 53.9, longitude: 27.56 });
+
+    const { result } = renderHook(() =>
+      usePointListAddPointModel({
+        baseUrl: 'https://metravel.by/travels/draft',
+        baseTravelId: undefined,
+        categoryIdToName: new Map(),
+        categoryNameToIds: new Map(),
+        travelName: 'Черновик',
+      })
+    );
+
+    await act(async () => {
+      await result.current.handleAddPoint({ id: '6', address: 'Минск', coord: '53.9,27.56' });
+    });
+
+    await waitFor(() => expect(mockCreatePoint).toHaveBeenCalledTimes(1));
+    expect(mockCreatePoint.mock.calls[0][0].tags).toEqual({
+      travelUrl: 'https://metravel.by/travels/draft',
+      travelName: 'Черновик',
+    });
+    expect(mockCreatePoint.mock.calls[0][0].tags).not.toHaveProperty('travelId');
+  });
 });

@@ -12,7 +12,7 @@ import { openExternalUrlInNewTab, openExternalUrl } from '@/utils/externalLinks'
 import { getSiteBaseUrl } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
-import { resolveMapPointRelatedTravelId } from '@/utils/relatedTravel';
+import { buildRelatedTravelTags, resolveMapPointRelatedTravelId } from '@/utils/relatedTravel';
 import type { TravelCoords } from '@/types/types';
 import { translate as i18nT } from '@/i18n'
 
@@ -163,12 +163,11 @@ export function useAddressListItemActions(travel: TravelCoords) {
       category: cleanedCategory, categoryName: cleanedCategory,
     };
     if (travelImageThumbUrl) payload.photo = travelImageThumbUrl;
-    const tags: Record<string, unknown> = {};
-    if (urlTravel) tags.travelUrl = urlTravel;
-    // Id статьи рядом со ссылкой (#1960): попап «Моих точек» не разбирает url и
-    // не запрашивает статью по slug. Без ссылки стек не рисуется — id не пишем.
-    if (urlTravel && relatedTravelId != null) tags.travelId = relatedTravelId;
-    if (articleUrl) tags.articleUrl = articleUrl;
+    const tags = buildRelatedTravelTags({
+      travelUrl: urlTravel,
+      travelId: relatedTravelId,
+      articleUrl,
+    });
     if (Object.keys(tags).length > 0) payload.tags = tags;
 
     setIsAddingPoint(true);

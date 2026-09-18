@@ -61,6 +61,33 @@ export const normalizeRelatedTravelId = (value: unknown): number | null => {
   return Number.isSafeInteger(numeric) && numeric > 0 ? numeric : null
 }
 
+/**
+ * Единственный писатель `tags.travelUrl` / `tags.travelId` (#1963).
+ * Id пишется только рядом со ссылкой и только если он нормализуется: без url
+ * попап «Моих точек» стек не рисует, а болтающийся id без ссылки не читается.
+ */
+export const buildRelatedTravelTags = ({
+  travelUrl,
+  travelId,
+  articleUrl,
+  travelName,
+}: {
+  travelUrl?: string | null
+  travelId?: unknown
+  articleUrl?: string | null
+  travelName?: string | null
+}): Record<string, unknown> => {
+  const tags: Record<string, unknown> = {}
+  if (travelUrl) {
+    tags.travelUrl = travelUrl
+    const id = normalizeRelatedTravelId(travelId)
+    if (id != null) tags.travelId = id
+  }
+  if (articleUrl) tags.articleUrl = articleUrl
+  if (travelName) tags.travelName = travelName
+  return tags
+}
+
 type MapPointRelatedTravelIdSource = {
   primarySource?: { travelId?: unknown } | null
   travelId?: unknown

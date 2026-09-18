@@ -175,6 +175,7 @@ export const TravelPointsBlock: React.FC<{
           <PointList
             points={travel.travelAddress as any}
             baseUrl={travel.url}
+            baseTravelId={travel.id}
             travelName={travel.name}
             onPointCardPress={handlePointCardPress}
             addressImages={travel.media?.address_images}

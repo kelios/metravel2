@@ -52,6 +52,8 @@ type Point = {
 type PointListProps = {
   points: Point[];
   baseUrl?: string;
+  /** Явный id статьи страницы: пишется в `tags.travelId` вместе с `baseUrl` (#1963). */
+  baseTravelId?: string | number | null;
   travelName?: string;
   onPointCardPress?: (point: Point) => void;
   /**
@@ -177,7 +179,7 @@ const openExternal = async (url: string) => {
 
 /* ---------------- list ---------------- */
 
-const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPointCardPress, addressImages }) => {
+const PointList: React.FC<PointListProps> = ({ points, baseUrl, baseTravelId, travelName, onPointCardPress, addressImages }) => {
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
   const safePoints = useMemo(() => (Array.isArray(points) ? points : []), [points]);
   const { width, isPhone, isLargePhone, isTablet } = useResponsive();
@@ -217,6 +219,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
   const { isPointSaved } = usePointListSavedModel();
   const { addingPointId, handleAddPoint } = usePointListAddPointModel({
     baseUrl,
+    baseTravelId,
     categoryIdToName,
     categoryNameToIds,
     isPointSaved,
