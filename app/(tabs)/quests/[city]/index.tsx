@@ -5,6 +5,7 @@ import { useIsFocused } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
+import { jsonLdScript } from '@/components/seo/jsonLdScript'
 import QuestCityLandingSections from '@/components/quests/QuestCityLandingSections'
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection'
 import QuestCard from '@/screens/tabs/QuestCard'
@@ -24,7 +25,7 @@ import {
   resolveQuestCitySegment,
 } from '@/utils/questCityAlias'
 import { buildQuestPath } from '@/utils/routePaths'
-import { stringifyJsonLd } from '@/utils/jsonLd'
+
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { LAYOUT } from '@/constants/layout'
 import { useTranslation } from '@/i18n/LocaleProvider'
@@ -244,16 +245,8 @@ export default function QuestsByCityScreen() {
     }
     return (
       <>
-        <script
-          key="quests-city-itemlist"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: stringifyJsonLd(itemList) }}
-        />
-        <script
-          key="quests-city-breadcrumb"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumb) }}
-        />
+        {jsonLdScript(itemList, { key: 'quests-city-itemlist' })}
+        {jsonLdScript(breadcrumb, { key: 'quests-city-breadcrumb' })}
       </>
     )
   }, [cityGroup, cityQuests, cityName, cityParam, canonical, t])

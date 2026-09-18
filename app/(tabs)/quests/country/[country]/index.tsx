@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import QuestCountryLandingSections from '@/components/quests/QuestCountryLandingSections'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
+import { jsonLdScript } from '@/components/seo/jsonLdScript'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { LAYOUT } from '@/constants/layout'
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel'
@@ -17,7 +18,7 @@ import QuestCard from '@/screens/tabs/QuestCard'
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
 import { pluralizeQuest } from '@/screens/tabs/questsShared'
 import { buildQuestCountryLandingGroups } from '@/utils/questCountryLanding'
-import { stringifyJsonLd } from '@/utils/jsonLd'
+
 import { buildBrandedSeoTitle } from '@/utils/questSeo'
 import { buildQuestPath } from '@/utils/routePaths'
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo'
@@ -204,16 +205,8 @@ export default function QuestsByCountryScreen() {
 
     return (
       <>
-        <script
-          key="quests-country-itemlist"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: stringifyJsonLd(itemList) }}
-        />
-        <script
-          key="quests-country-breadcrumb"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumb) }}
-        />
+        {jsonLdScript(itemList, { key: 'quests-country-itemlist' })}
+        {jsonLdScript(breadcrumb, { key: 'quests-country-breadcrumb' })}
       </>
     )
   }, [canonical, country, countryName, countryQuests, t])

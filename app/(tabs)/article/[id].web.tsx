@@ -18,6 +18,7 @@ import { useFavorites } from '@/context/FavoritesContext'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useContentScrollAnalytics } from '@/hooks/useContentScrollAnalytics'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
+import { jsonLdScript } from '@/components/seo/jsonLdScript'
 import { buildCanonicalUrl } from '@/utils/seo'
 import { stripToDescription } from '@/components/travel/utils/travelHelpers'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
@@ -166,14 +167,7 @@ export default function ArticleDetails() {
       image={seo.image}
       ogType="article"
       robots={seo.robots}
-      additionalTags={
-        seo.jsonLd ? (
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(seo.jsonLd) }}
-          />
-        ) : undefined
-      }
+      additionalTags={seo.jsonLd ? jsonLdScript(seo.jsonLd) : undefined}
     />
   )
 

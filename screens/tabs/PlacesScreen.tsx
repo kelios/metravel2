@@ -13,10 +13,10 @@ import { useIsFocused } from 'expo-router'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
+import { jsonLdScript } from '@/components/seo/jsonLdScript'
 import { Menu } from '@/ui/paper'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useResponsiveWidth } from '@/hooks/useResponsive'
-import { stringifyJsonLd } from '@/utils/jsonLd'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH, getSiteBaseUrl } from '@/utils/seo'
 import { toCanonicalTravelPath } from '@/utils/relatedTravel'
 import { webDataSetProps } from '@/utils/webProps'
@@ -190,13 +190,7 @@ export default function PlacesScreen() {
         }
       }),
     }
-    return (
-      <script
-        key="places-itemlist"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: stringifyJsonLd(data) }}
-      />
-    )
+    return jsonLdScript(data, { key: 'places-itemlist' })
   }, [isFocused, seoHeading, seoPlaces, totalCount])
 
   // Compact "app" chrome — a sticky compact filter bar (search + Категории + страна
@@ -779,6 +773,7 @@ export default function PlacesScreen() {
           canonical={buildCanonicalUrl('/places')}
           image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
           ogType="website"
+          robots="noindex, follow"
           additionalTags={placesJsonLd}
         />
       ) : null}

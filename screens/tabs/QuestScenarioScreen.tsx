@@ -4,6 +4,7 @@ import { Link, useIsFocused, useNavigation, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
+import { jsonLdScript } from '@/components/seo/jsonLdScript'
 import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm'
 import QuestsSeoIntroFaq, { type QuestFaqItem } from '@/screens/tabs/QuestsSeoIntroFaq'
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
@@ -13,7 +14,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo'
 import { buildBrandedSeoTitle } from '@/utils/questSeo'
 import { buildQuestCityAliasMap } from '@/utils/questCityAlias'
-import { stringifyJsonLd } from '@/utils/jsonLd'
+
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { LAYOUT } from '@/constants/layout'
 import { translate as i18nT } from '@/i18n'
@@ -217,21 +218,9 @@ export default function QuestScenarioScreen() {
     }
     return (
       <>
-        <script
-          key="quest-scenario-faq"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: stringifyJsonLd(faqJsonLd) }}
-        />
-        <script
-          key="quest-scenario-howto"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: stringifyJsonLd(howToJsonLd) }}
-        />
-        <script
-          key="quest-scenario-breadcrumb"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumb) }}
-        />
+        {jsonLdScript(faqJsonLd, { key: 'quest-scenario-faq' })}
+        {jsonLdScript(howToJsonLd, { key: 'quest-scenario-howto' })}
+        {jsonLdScript(breadcrumb, { key: 'quest-scenario-breadcrumb' })}
       </>
     )
   }, [faqItems, steps, canonical])

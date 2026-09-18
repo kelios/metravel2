@@ -191,6 +191,7 @@ function StaticHead({
       {description && <meta key="twitter:description" name="twitter:description" content={description} />}
       {normalizedImage && <meta key="twitter:image" name="twitter:image" content={normalizedImage} />}
       {normalizedImage && imageAlt && <meta key="twitter:image:alt" name="twitter:image:alt" content={imageAlt} />}
+      {/* JSON-LD scripts must be string children; Helmet drops dangerouslySetInnerHTML. */}
       {additionalTags}
       {children}
     </Head>

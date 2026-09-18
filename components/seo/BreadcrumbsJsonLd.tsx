@@ -6,7 +6,7 @@ import useBreadcrumbModelDefault, {
   type BreadcrumbModel,
 } from '@/hooks/useBreadcrumbModel';
 import { getSiteBaseUrl } from '@/utils/seo';
-import { stringifyJsonLd } from '@/utils/jsonLd';
+import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -68,10 +68,7 @@ export default function BreadcrumbsJsonLd({ model: modelProp, pathname: pathname
 
   return (
     <Head key={`breadcrumbs-${pathname ?? 'page'}`}>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: stringifyJsonLd(jsonLd) }}
-      />
+      {jsonLdScript(jsonLd)}
     </Head>
   );
 }
