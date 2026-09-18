@@ -45,7 +45,6 @@ const WAIT_FOR_TIMEOUT_BASELINE = {
   'e2e/profile-redesign-587-590.spec.ts': 4,
   'e2e/profile-worldmap-635.spec.ts': 9,
   'e2e/public-trips.spec.ts': 1,
-  'e2e/qa-1511-autosave-storm.spec.ts': 1,
   'e2e/quest-finale-share-sheet.spec.ts': 1,
   'e2e/render-audit.spec.ts': 1,
   'e2e/search.spec.ts': 2,

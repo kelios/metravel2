@@ -932,7 +932,11 @@ test.describe('Создание путешествия - Полный flow', () 
   // Query и useTravelFilters напрямую, — и каждый уходил в сеть своим запросом.
   // Теперь оба читают общий кэш api/miscOptimized.
   test('запрашивает каждый словарь не больше одного раза за загрузку', async ({ page }) => {
-    test.skip(USE_REAL_API, 'Счётчики считают перехваченные моки, а не живой API');
+    // Счётчики читают перехваченные моки, поэтому словари всегда мокаем —
+    // в том числе при E2E_USE_REAL_API=1, чтобы тест не skip'ался.
+    await ensureAuthedStorageFallback(page, { userId: '1', userName: 'E2E User' });
+    await mockFakeAuthApis(page);
+    dictionaryRequests = await maybeMockTravelFilters(page, { forceMock: true });
 
     await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
     await ensureCanCreateTravel(page);
