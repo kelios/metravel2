@@ -10,6 +10,9 @@
 # lint` вместе с `check:fast`/pre-commit краснели у всех сессий сразу.
 /package-lock.json
 /.secrets/
+# Worktree checkout кладёт `.secrets` симлинком, а не каталогом: паттерн со
+# слэшем его не матчит — та же ловушка, что у `/node_modules/` выше.
+/.secrets
 *.gcp.json
 gcp-service-account*.json
 /dist/
