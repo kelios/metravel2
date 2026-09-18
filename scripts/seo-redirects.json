@@ -952,6 +952,26 @@
     {
       "from": "veloprogulka-dvorec-v-mogilanah-i-rezervaciya-kozi-katy",
       "to": "velopoezdka-v-mogilany-marshrut-vykhodnogo-dnia"
+    },
+    {
+      "from": "begoml-cerkov-vseh-svyatyh",
+      "to": "zabroshennaia-tserkov-v-begomle-kak-doekhat"
+    },
+    {
+      "from": "dominikana",
+      "to": "otdykh-v-dominikane-chto-posmotret-i-ekskursii"
+    },
+    {
+      "from": "karer-grudek-park-grodek-jaworzno",
+      "to": "park-grudek-v-iavozhno-polskie-maldivy"
+    },
+    {
+      "from": "krasnyy-bereg-usadba-gatovskih",
+      "to": "usadba-gatovskikh-v-krasnom-berege-sudby-voiny-i-pamiat"
+    },
+    {
+      "from": "zhiveckie-beskidy-velka-racha-1236m",
+      "to": "pokhod-na-velika-racha-wielka-racza-1236-m"
     }
   ]
 }

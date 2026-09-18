@@ -43,6 +43,11 @@ const http = require('http')
 
 const { fetchJson } = require('./lib/fetchJson')
 const { mapWithConcurrency } = require('./lib/concurrency')
+const {
+  BUILD_FETCH_RATE_PER_SEC,
+  BUILD_FETCH_MIN_INTERVAL_MS,
+  batchAsync,
+} = require('./lib/requestPacer')
 const { readPagedList, TRAVELS_PER_PAGE } = require('./lib/pagedList')
 const {
   collectArticleBodyMediaUrls,
@@ -90,6 +95,7 @@ const FULL_FAMILIES = new Set([...RISKY_FAMILIES, 'travel-description-image'])
 /**
  * Параллелизм: прод одноядерный и на 8 начинает отвечать 503 `capacity-rejected`
  * (замер 2026-08-05, `post-deploy-media-check.js`). Четыре — проверенный потолок.
+ * Темп деталей — тот же бюджет, что у генератора: ≤8 req/s (#1966).
  */
 const DEFAULT_CONCURRENCY = 4
 
@@ -279,13 +285,10 @@ async function main() {
 
   log(`   статей в каталоге: ${ids.length}, обходим: ${scanIds.length}`)
 
-  const perTravel = await mapWithConcurrency(scanIds, concurrency(), async (id) => {
-    try {
-      const detail = await fetchJson(`${SITE}/api/travels/${id}/`, { timeoutMs: REQUEST_TIMEOUT_MS })
-      return { id, targets: collectTravelTargets(detail, families) }
-    } catch (error) {
-      return { id, targets: [], error: error.message }
-    }
+  const perTravel = await fetchTravelDetails(scanIds, {
+    site: SITE,
+    families,
+    concurrency: concurrency(),
   })
 
   const unreadable = perTravel.filter((item) => item.error)
@@ -356,6 +359,38 @@ function printItems(title, items) {
   }
 }
 
+/**
+ * Детали статей — единственные запросы аудита, которые доходят до Django.
+ * HEAD картинок обслуживает кэш nginx; каталог — пять страниц. Темп держим
+ * общим пейсером, параллельность — флагом `--concurrency`.
+ */
+async function fetchTravelDetails(ids, options = {}) {
+  const {
+    site = SITE,
+    families,
+    concurrency: limit = DEFAULT_CONCURRENCY,
+    fetchJson: fetchJsonImpl = fetchJson,
+    timeoutMs = REQUEST_TIMEOUT_MS,
+    minIntervalMs = BUILD_FETCH_MIN_INTERVAL_MS,
+    now,
+    wait,
+  } = options
+
+  return batchAsync(
+    ids,
+    limit,
+    async (id) => {
+      try {
+        const detail = await fetchJsonImpl(`${site}/api/travels/${id}/`, { timeoutMs })
+        return { id, targets: collectTravelTargets(detail, families) }
+      } catch (error) {
+        return { id, targets: [], error: error.message }
+      }
+    },
+    { minIntervalMs, now, wait },
+  )
+}
+
 function printReport(report) {
   console.log(
     `\n📊 Статей обойдено: ${report.scannedTravels}/${report.catalogTravels}, ` +
@@ -381,8 +416,11 @@ function printReport(report) {
 module.exports = {
   FULL_FAMILIES,
   RISKY_FAMILIES,
+  BUILD_FETCH_RATE_PER_SEC,
+  BUILD_FETCH_MIN_INTERVAL_MS,
   collectPointIds,
   collectTravelTargets,
+  fetchTravelDetails,
   pointIdOfUrl,
   toTargetUrl,
 }

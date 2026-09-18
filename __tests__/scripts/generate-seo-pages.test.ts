@@ -2695,6 +2695,14 @@ describe('#1394 build-time fetch of travel details', () => {
 
       expect(waits).toEqual([]);
     });
+
+    it('после переезда в scripts/lib генератор отдаёт тот же пейсер', () => {
+      const lib = require('@/scripts/lib/requestPacer');
+      expect(createRequestPacer).toBe(lib.createRequestPacer);
+      expect(batchAsync).toBe(lib.batchAsync);
+      expect(BUILD_FETCH_RATE_PER_SEC).toBe(lib.BUILD_FETCH_RATE_PER_SEC);
+      expect(BUILD_FETCH_MIN_INTERVAL_MS).toBe(lib.BUILD_FETCH_MIN_INTERVAL_MS);
+    });
   });
 
   describe('fetchTravelDetail', () => {

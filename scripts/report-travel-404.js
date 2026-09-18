@@ -110,6 +110,28 @@ function loadJson(filePath, fallback) {
 }
 
 /**
+ * Percent-decode без броска: битая последовательность остаётся как есть,
+ * чтобы матчер known-404 мог сравнить её с записью, а не падать на логе.
+ */
+function safeDecodeURIComponent(value) {
+  const raw = String(value ?? '')
+  try {
+    return decodeURIComponent(raw)
+  } catch {
+    return raw
+  }
+}
+
+/**
+ * Слаг из лога и слаг из known-404 сравниваются только после decode и NFC.
+ * Иначе NFC «ё» и NFD «е»+комбинирующие точки — разные строки, и разобранный
+ * адрес из #1956 снова падает в candidate (#1971).
+ */
+function normalizeSlug(value) {
+  return safeDecodeURIComponent(value).normalize('NFC')
+}
+
+/**
  * Достаёт слаг из строки запроса nginx: "GET /travels/foo?x=1 HTTP/2.0" → foo.
  * Возвращает null для чужих маршрутов (`/api/travels/…` обслуживает бэкенд и
  * своим 404 не отвечает за SEO-адрес) и для не-GET методов.
@@ -133,7 +155,7 @@ function extractTravelSlug(request) {
     undecodable = true
   }
   if (!slug) return null
-  return { slug, nested: segments.length > 1, undecodable }
+  return { slug: slug.normalize('NFC'), nested: segments.length > 1, undecodable }
 }
 
 /**
@@ -166,9 +188,9 @@ function buildKnownMatchers(known) {
     }
   }
   return {
-    noiseSlugs: new Set((known.noiseSlugs || []).map((s) => String(s).toLowerCase())),
+    noiseSlugs: new Set((known.noiseSlugs || []).map((s) => normalizeSlug(s).toLowerCase())),
     noisePatterns: patterns,
-    intentional: new Map((known.intentional404 || []).map((r) => [r.slug, r])),
+    intentional: new Map((known.intentional404 || []).map((r) => [normalizeSlug(r.slug), r])),
   }
 }
 
@@ -177,9 +199,11 @@ function buildKnownMatchers(known) {
  * сигнала: сломанный редирект важнее того, что адрес заодно похож на склейку.
  */
 function classifySlug(entry, ctx) {
-  const { slug, nested, undecodable } = entry
-  if (ctx.redirectFrom.has(slug)) {
-    return { bucket: 'regression', note: `манифест обещает → ${ctx.redirectFrom.get(slug)}` }
+  const { nested, undecodable } = entry
+  const slug = normalizeSlug(entry.slug)
+  const redirectTo = ctx.redirectFrom.get(slug) ?? ctx.redirectFrom.get(entry.slug)
+  if (redirectTo) {
+    return { bucket: 'regression', note: `манифест обещает → ${redirectTo}` }
   }
   if (/^\d+$/.test(slug)) {
     return { bucket: 'id-url', note: 'обращение по числовому id вместо слага' }
@@ -790,6 +814,7 @@ module.exports = {
   canonicalTargets,
   annotateTruncated,
   extractTravelSlug,
+  normalizeSlug,
   gluedPrefix,
   buildKnownMatchers,
   classifySlug,
