@@ -29,6 +29,155 @@ const extractFailureHost = (error: unknown): string => {
     }
 };
 
+// Common NSURLError codes from NSURLError.h. Kept as a closed map so the
+// technical line stays English and stable for App Review screenshots (#1943).
+const NSURL_ERROR_NAME_BY_CODE: Record<number, string> = {
+    [-998]: 'unknown',
+    [-999]: 'cancelled',
+    [-1000]: 'badURL',
+    [-1001]: 'timedOut',
+    [-1003]: 'cannotFindHost',
+    [-1004]: 'cannotConnectToHost',
+    [-1005]: 'networkConnectionLost',
+    [-1009]: 'notConnectedToInternet',
+    [-1018]: 'internationalRoamingOff',
+    [-1020]: 'dataNotAllowed',
+    [-1200]: 'secureConnectionFailed',
+    [-1202]: 'serverCertificateUntrusted',
+};
+
+const NSURL_ERROR_CODE_BY_NAME: Record<string, number> = Object.fromEntries(
+    Object.entries(NSURL_ERROR_NAME_BY_CODE).map(([code, name]) => [name.toLowerCase(), Number(code)]),
+) as Record<string, number>;
+
+const REQUEST_ID_HEADER_KEYS = [
+    'x-request-id',
+    'x-correlation-id',
+    'x-amzn-requestid',
+    'request-id',
+    'requestid',
+] as const;
+
+const readNumericCode = (value: unknown): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string' && /^-?\d+$/.test(value.trim())) return Number(value.trim());
+    return null;
+};
+
+const isNsUrlErrorCode = (code: number): boolean =>
+    (code <= -1000 && code >= -2000) || code === -998 || code === -999;
+
+const readHeaderValue = (headers: unknown, key: string): string | null => {
+    if (!headers) return null;
+    if (typeof (headers as { get?: unknown }).get === 'function') {
+        const value = (headers as { get: (name: string) => unknown }).get(key);
+        return typeof value === 'string' && value.trim() ? value.trim() : null;
+    }
+    if (typeof headers !== 'object') return null;
+    const record = headers as Record<string, unknown>;
+    const direct = record[key] ?? record[key.toLowerCase()] ?? record[key.toUpperCase()];
+    if (typeof direct === 'string' && direct.trim()) return direct.trim();
+    const matched = Object.entries(record).find(([name]) => name.toLowerCase() === key.toLowerCase());
+    if (matched && typeof matched[1] === 'string' && matched[1].trim()) return matched[1].trim();
+    return null;
+};
+
+const extractRequestId = (error: unknown): string | null => {
+    const seen = new Set<unknown>();
+    const visit = (value: unknown, depth: number): string | null => {
+        if (value == null || depth > 4 || seen.has(value)) return null;
+        if (typeof value !== 'object') return null;
+        seen.add(value);
+        const record = value as Record<string, unknown>;
+        for (const key of ['requestId', 'request_id', 'correlationId']) {
+            const candidate = record[key];
+            if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+        }
+        for (const headers of [record.headers, record.header, record.responseHeaders]) {
+            for (const headerKey of REQUEST_ID_HEADER_KEYS) {
+                const fromHeader = readHeaderValue(headers, headerKey);
+                if (fromHeader) return fromHeader;
+            }
+        }
+        const responseHeaders = (record.response as { headers?: unknown } | undefined)?.headers;
+        for (const headerKey of REQUEST_ID_HEADER_KEYS) {
+            const fromResponse = readHeaderValue(responseHeaders, headerKey);
+            if (fromResponse) return fromResponse;
+        }
+        for (const nestedKey of ['cause', 'data', 'userInfo', 'nativeEvent', 'error', 'response']) {
+            const nested = visit(record[nestedKey], depth + 1);
+            if (nested) return nested;
+        }
+        return null;
+    };
+    return visit(error, 0);
+};
+
+const extractNsUrlErrorCode = (error: unknown): number | null => {
+    const seen = new Set<unknown>();
+    const visit = (value: unknown, depth: number): number | null => {
+        if (value == null || depth > 4 || seen.has(value)) return null;
+        if (typeof value === 'string') {
+            const named = value.match(/NSURLError(?:Domain)?[^\d-]*(-?\d{3,5})/i);
+            if (named) {
+                const code = Number(named[1]);
+                if (isNsUrlErrorCode(code)) return code;
+            }
+            const codeEquals = value.match(/\b(?:code|NSErrorCode)\s*[:=]\s*(-?\d{3,5})\b/i);
+            if (codeEquals) {
+                const code = Number(codeEquals[1]);
+                if (isNsUrlErrorCode(code)) return code;
+            }
+            const byName = value.match(/NSURLError([A-Z][A-Za-z]+)/);
+            if (byName) {
+                const mapped = NSURL_ERROR_CODE_BY_NAME[byName[1].replace(/^URLError/i, '').toLowerCase()];
+                if (typeof mapped === 'number') return mapped;
+            }
+            return null;
+        }
+        if (typeof value !== 'object') return null;
+        seen.add(value);
+        const record = value as Record<string, unknown>;
+        const domain = String(record.domain ?? record.NSErrorDomain ?? record.errorDomain ?? '');
+        for (const key of ['code', 'nativeCode', 'errorCode', 'NSErrorCode', 'nsurlErrorCode']) {
+            const code = readNumericCode(record[key]);
+            if (code == null) continue;
+            if (isNsUrlErrorCode(code) || /nsurlerror/i.test(domain)) return code;
+        }
+        const symbolic = record.code ?? record.name ?? record.NSLocalizedFailureReason;
+        if (typeof symbolic === 'string') {
+            const normalized = symbolic.replace(/^NSURLError/i, '').replace(/^kCFURLError/i, '').toLowerCase();
+            const mapped = NSURL_ERROR_CODE_BY_NAME[normalized];
+            if (typeof mapped === 'number') return mapped;
+        }
+        if (record.message) {
+            const fromMessage = visit(record.message, depth + 1);
+            if (fromMessage != null) return fromMessage;
+        }
+        for (const nestedKey of ['cause', 'userInfo', 'nativeEvent', 'error', 'data', 'underlyingError', 'NSUnderlyingError']) {
+            const nested = visit(record[nestedKey], depth + 1);
+            if (nested != null) return nested;
+        }
+        return null;
+    };
+    return visit(error, 0);
+};
+
+export const describeNativeNetworkFailure = (error: unknown): string => {
+    const host = extractFailureHost(error);
+    const code = extractNsUrlErrorCode(error);
+    const requestId = extractRequestId(error);
+    const parts: string[] = [];
+    if (code != null) {
+        const name = NSURL_ERROR_NAME_BY_CODE[code] ?? `code${code}`;
+        parts.push(`NSURLError ${code} (${name}) @ ${host}`);
+    }
+    if (requestId) {
+        parts.push(`X-Request-ID ${requestId}`);
+    }
+    return parts.join(' · ');
+};
+
 // Единственное правило «это транспортный сбой, а не ответ сервера».
 // #1944: по нему выбирают и текст (`utils/userFriendlyErrors.ts`), и причину
 // отказа входа (`utils/authFailure.ts`), поэтому оно обязано быть ОДНО: две
@@ -99,5 +248,8 @@ export const describeNetworkFailure = (error: unknown): string => {
     return `[${extractFailureHost(error)} · ${kind} · ${time}]`;
 };
 
-export const withFailureTag = (text: string, error: unknown): string =>
-    `${text} ${describeNetworkFailure(error)}`;
+export const withFailureTag = (text: string, error: unknown): string => {
+    const tagged = `${text} ${describeNetworkFailure(error)}`;
+    const native = describeNativeNetworkFailure(error);
+    return native ? `${tagged}\n${native}` : tagged;
+};

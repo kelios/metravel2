@@ -30,6 +30,15 @@ const trackScriptStatus = (script: HTMLScriptElement): void => {
     script.addEventListener('error', markError, { once: true });
 };
 
+const scriptSrcMatches = (script: HTMLScriptElement, src: string): boolean => {
+    if (script.getAttribute('src') === src || script.src === src) return true;
+    try {
+        return script.src === new URL(src, document.baseURI).href;
+    } catch {
+        return false;
+    }
+};
+
 /**
  * Подключает внешний browser SDK один раз и переиспользует его между формами.
  * Provider readiness и OAuth callbacks намеренно остаются у потребителей.
@@ -57,6 +66,13 @@ export function useExternalScript({
         const handleError = () => {
             onErrorRef.current();
         };
+
+        // #1975: locale-specific SDK URLs (Facebook JS SDK) must not stay
+        // pinned to the first inserted src after LocaleProvider resolves.
+        if (script && !scriptSrcMatches(script, src)) {
+            script.remove();
+            script = null;
+        }
 
         if (!script) {
             script = document.createElement('script');

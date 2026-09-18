@@ -1,5 +1,5 @@
 import { translate as i18nT } from '@/i18n'
-import { isConnectionFailure, withFailureTag } from '@/utils/networkFailureTag';
+import { isConnectionFailure, isTimeoutFailure, withFailureTag } from '@/utils/networkFailureTag';
 // src/utils/userFriendlyErrors.ts
 // ✅ Утилита для преобразования технических ошибок в понятные сообщения для пользователей
 
@@ -17,12 +17,29 @@ export function getUserFriendlyError(error: Error | string | unknown): string {
     // глотают и возвращают null/result).
     // #1944: тот же предикат, что выбирает `reason: 'network'` в `utils/authFailure.ts`,
     // — текст и причина отказа входа не могут разойтись.
+    // Таймаут с именем TimeoutError проверяем раньше общего connection-паттерна:
+    // английское слово «timeout» в сообщении иначе уезжает в текст про интернет
+    // и только EN получает диагностический тег.
+    const isNamedTimeout =
+        typeof error === 'object' &&
+        error !== null &&
+        String((error as { name?: unknown }).name || '').toLowerCase() === 'timeouterror';
+    if (isNamedTimeout || (isTimeoutFailure(error) && !isConnectionFailure(error))) {
+        return withFailureTag(
+            i18nT('errors:utils.userFriendlyErrors.prevysheno_vremya_ozhidaniya_server_ne_otvec_12fc2b3e'),
+            error,
+        );
+    }
+
     if (isConnectionFailure(error)) {
         return withFailureTag(i18nT('errors:utils.userFriendlyErrors.problema_s_podklyucheniem_k_internetu_prover_2d6c3825'), error);
     }
 
     if (/timeout|превышено время/i.test(errorMessage)) {
-        return i18nT('errors:utils.userFriendlyErrors.prevysheno_vremya_ozhidaniya_server_ne_otvec_12fc2b3e');
+        return withFailureTag(
+            i18nT('errors:utils.userFriendlyErrors.prevysheno_vremya_ozhidaniya_server_ne_otvec_12fc2b3e'),
+            error,
+        );
     }
 
     // Ошибки авторизации

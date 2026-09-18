@@ -277,6 +277,25 @@ describe('Login Component', () => {
       expect(queryByText('Неверный email или пароль.')).toBeNull();
     });
 
+    it('показывает техническую строку NSURLError из сообщения слоя api', async () => {
+      const mockLogin = jest.fn().mockResolvedValue({
+        ok: false,
+        reason: 'network',
+        message:
+          'Проблема с подключением к интернету. [metravel.by · unreachable · 14:32:45Z]\nNSURLError -1009 (notConnectedToInternet) @ metravel.by',
+      });
+      const { getByPlaceholderText, getByText, queryByText } = await renderLogin(mockLogin);
+
+      fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
+      fireEvent.changeText(getByPlaceholderText('Пароль'), 'correct-password');
+      fireEvent.press(getByText('Войти'));
+
+      await waitFor(() => {
+        expect(getByText(/NSURLError -1009 \(notConnectedToInternet\) @ metravel\.by/)).toBeTruthy();
+      });
+      expect(queryByText('Неверный email или пароль.')).toBeNull();
+    });
+
     it('показывает текст сервера при reason server', async () => {
       const mockLogin = jest.fn().mockResolvedValue({
         ok: false,

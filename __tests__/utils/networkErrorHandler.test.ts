@@ -7,6 +7,7 @@ import {
   isAuthError,
   isServerError,
   getUserFriendlyNetworkError,
+  describeNativeNetworkFailure,
   describeNetworkFailure,
   withNetworkErrorHandler
 } from '@/utils/networkErrorHandler';
@@ -287,5 +288,36 @@ describe('describeNetworkFailure (#1943)', () => {
   it('appends the tag to the user-facing network message', () => {
     const text = getUserFriendlyNetworkError(new TypeError('Network request failed'));
     expect(text).toMatch(/\[[^\]]+ · unreachable · \d{2}:\d{2}:\d{2}Z\]$/);
+  });
+
+  it('builds an English NSURLError line with host', () => {
+    const error = Object.assign(new TypeError('Network request failed https://metravel.by/api/user/login/'), {
+      code: -1001,
+      domain: 'NSURLErrorDomain',
+    });
+    expect(describeNativeNetworkFailure(error)).toBe('NSURLError -1001 (timedOut) @ metravel.by');
+    expect(getUserFriendlyNetworkError(error)).toMatch(/NSURLError -1001 \(timedOut\) @ metravel\.by/);
+  });
+
+  it('reads NSURLError from cause and appends X-Request-ID when present', () => {
+    const error = Object.assign(new TypeError('Network request failed https://metravel.by/api/user/login/'), {
+      cause: { code: -1009, domain: 'NSURLErrorDomain' },
+      headers: { 'X-Request-ID': 'req-123' },
+    });
+    expect(describeNativeNetworkFailure(error)).toBe(
+      'NSURLError -1009 (notConnectedToInternet) @ metravel.by · X-Request-ID req-123',
+    );
+  });
+
+  it('does not invent an NSURLError line when the native code is missing', () => {
+    expect(describeNativeNetworkFailure(new TypeError('Network request failed'))).toBe('');
+  });
+
+  it('tags a localized TimeoutError so non-English locales keep the diagnostic', () => {
+    const error = new Error('Перавышаны час чакання (10000ms). Паспрабуйце пазней.');
+    error.name = 'TimeoutError';
+    const text = getUserFriendlyNetworkError(error);
+    expect(text).toMatch(/· timeout-10s ·/);
+    expect(text).toMatch(/\[[^\]]+ · timeout-10s · \d{2}:\d{2}:\d{2}Z\]/);
   });
 });
