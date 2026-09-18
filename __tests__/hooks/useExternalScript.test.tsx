@@ -168,4 +168,62 @@ describe('useExternalScript', () => {
 
         expect(document.getElementById(SCRIPT_ID)).toBeNull();
     });
+
+    it('replaces the existing node when src changes after the first insert', () => {
+        const { rerender } = renderHook(
+            ({ src }: { src: string }) => useExternalScript({
+                id: SCRIPT_ID,
+                src,
+                onReady: jest.fn(),
+                onError: jest.fn(),
+            }),
+            { initialProps: { src: SCRIPT_SRC } },
+        );
+        const first = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
+        expect(first.src).toBe(SCRIPT_SRC);
+
+        const nextSrc = 'https://sdk.example.com/client-en.js';
+        rerender({ src: nextSrc });
+
+        const second = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
+        expect(document.querySelectorAll(`#${SCRIPT_ID}`)).toHaveLength(1);
+        expect(second).not.toBe(first);
+        expect(second.src).toBe(nextSrc);
+    });
+
+    it('keeps the same node when src is unchanged', () => {
+        const { rerender } = renderHook(
+            ({ src }: { src: string }) => useExternalScript({
+                id: SCRIPT_ID,
+                src,
+                onReady: jest.fn(),
+                onError: jest.fn(),
+            }),
+            { initialProps: { src: SCRIPT_SRC } },
+        );
+        const first = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
+        rerender({ src: SCRIPT_SRC });
+        expect(document.getElementById(SCRIPT_ID)).toBe(first);
+    });
+
+    it('notifies onReady after the replacement script loads', () => {
+        const onReady = jest.fn();
+        const { rerender } = renderHook(
+            ({ src }: { src: string }) => useExternalScript({
+                id: SCRIPT_ID,
+                src,
+                onReady,
+                onError: jest.fn(),
+            }),
+            { initialProps: { src: SCRIPT_SRC } },
+        );
+        const first = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
+        act(() => first.dispatchEvent(new Event('load')));
+        expect(onReady).toHaveBeenCalledTimes(1);
+
+        rerender({ src: 'https://sdk.example.com/client-en.js' });
+        const second = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
+        act(() => second.dispatchEvent(new Event('load')));
+        expect(onReady).toHaveBeenCalledTimes(2);
+    });
 });

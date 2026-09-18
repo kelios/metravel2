@@ -55,7 +55,8 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 };
 
 // #1943: сетевой сбой при входе показывается с диагностическим тегом
-// [host · вид · время], чтобы скриншот рецензента или пользователя был разборным.
+// [host · вид · время] и, если iOS отдал код, строкой
+// `NSURLError -1001 (timedOut) @ host` плюс X-Request-ID.
 const authErrorMessage = (error: unknown, fallback: string): string =>
     isNetworkError(error) ? getUserFriendlyNetworkError(error) : getErrorMessage(error, fallback);
 

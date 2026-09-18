@@ -5,11 +5,17 @@ import { Platform } from 'react-native';
 import { ApiError } from '@/api/client';
 import { showToast } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n'
-import { describeNetworkFailure, hasOfflineFlag, withFailureTag } from '@/utils/networkFailureTag';
+import {
+    describeNativeNetworkFailure,
+    describeNetworkFailure,
+    hasOfflineFlag,
+    isTimeoutFailure,
+    withFailureTag,
+} from '@/utils/networkFailureTag';
 
 // Тег сетевого сбоя живёт в лист-модуле (#1943): им пользуется и
 // `utils/userFriendlyErrors.ts`, через который говорят все методы входа.
-export { describeNetworkFailure };
+export { describeNativeNetworkFailure, describeNetworkFailure };
 
 
 const showToastMessage = async (payload: any) => {
@@ -33,10 +39,11 @@ export const isNetworkError = (error: any): boolean => {
         }
     }
 
-    // Проверка сообщения об ошибке
-    const message = error?.message?.toLowerCase() || '';
-    const code = error?.code?.toLowerCase() || '';
-    const name = error?.name?.toLowerCase() || '';
+    // Проверка сообщения об ошибке.
+    // iOS NSURLError несёт числовой `code` (-1001), `toLowerCase` на числе бросает.
+    const message = String(error?.message ?? '').toLowerCase();
+    const code = String(error?.code ?? '').toLowerCase();
+    const name = String(error?.name ?? '').toLowerCase();
 
     return (
         message.includes('network') ||
@@ -123,6 +130,12 @@ export const getUserFriendlyNetworkError = (error: any): string => {
             return i18nT('errors:utils.networkErrorHandler.zaprashivaemyy_resurs_ne_nayden_859798c3');
         }
         return error.message || i18nT('errorsStatic:utils.network.requestFailed');
+    }
+
+    // Таймаут опознаём по имени TimeoutError, а не по английскому слову
+    // в сообщении: в RU/BE/UK/PL текст локализован и иначе терял тег (#1943).
+    if (isTimeoutFailure(error)) {
+        return withFailureTag(i18nT('errors:utils.userFriendlyErrors.prevysheno_vremya_ozhidaniya_server_ne_otvec_12fc2b3e'), error);
     }
 
     // Проверяем тип ошибки

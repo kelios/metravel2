@@ -24,6 +24,14 @@ describe('userFriendlyErrors', () => {
       )
     })
 
+    it('tags a named TimeoutError even when the message is not English', () => {
+      const error = new Error('Превышено время ожидания (10000 ms). Попробуйте позже.')
+      error.name = 'TimeoutError'
+      const text = getUserFriendlyError(error)
+      expect(text).toMatch(/время/i)
+      expect(text).toMatch(/\[[^\]]+ · timeout-10s · \d{2}:\d{2}:\d{2}Z\]/)
+    })
+
     it('leaves non-network messages untagged', () => {
       expect(getUserFriendlyError('401 unauthorized')).not.toMatch(/ · /)
       expect(getUserFriendlyError('500 server error')).not.toMatch(/ · /)

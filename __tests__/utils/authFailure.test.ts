@@ -50,6 +50,20 @@ describe('utils/authFailure', () => {
       expect(failure.reason).toBe('network');
       expect(failure.message).not.toBe('Не удалось войти.');
       expect(failure.message).toMatch(/время/i);
+      expect(failure.message).toMatch(/\[[^\]]+ · timeout-10s · \d{2}:\d{2}:\d{2}Z\]/);
+      expect(failure.message).not.toMatch(/парол/i);
+    });
+
+    it('NSURLError на iOS попадает в текст отказа отдельной английской строкой', () => {
+      const error = Object.assign(new TypeError('Network request failed https://metravel.by/api/user/login/'), {
+        code: -1009,
+        domain: 'NSURLErrorDomain',
+      });
+
+      const failure = authFailureFromError(error, 'Не удалось войти.');
+
+      expect(failure.reason).toBe('network');
+      expect(failure.message).toMatch(/NSURLError -1009 \(notConnectedToInternet\) @ metravel\.by/);
       expect(failure.message).not.toMatch(/парол/i);
     });
 

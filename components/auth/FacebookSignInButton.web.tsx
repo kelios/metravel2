@@ -91,7 +91,7 @@ export default function FacebookSignInButton({
 }: FacebookSignInButtonProps) {
     const colors = useThemedColors();
     const hydrationReady = useHydrationReady();
-    const { locale } = useLocale();
+    const { locale, isHydrated } = useLocale();
     const [ready, setReady] = useState(false);
     const [loading, setLoading] = useState(false);
     const onSuccessRef = useRef(onSuccess);
@@ -102,6 +102,8 @@ export default function FacebookSignInButton({
     const apiVersion = String(process.env.EXPO_PUBLIC_META_API_VERSION || 'v23.0').trim();
     const enabled = isFacebookLoginEnabled();
     const renderState = getFacebookRenderState(enabled, hydrationReady);
+    const sdkSrc = `https://connect.facebook.net/${getFacebookSdkLocale(locale)}/sdk.js`;
+    const sdkSrcRef = useRef(sdkSrc);
 
     useEffect(() => {
         onSuccessRef.current = onSuccess;
@@ -133,13 +135,25 @@ export default function FacebookSignInButton({
         };
     }, [appId, enabled, initialize]);
 
-    const hasFacebookSdk = typeof window !== 'undefined' && Boolean(window.FB);
+    // Drop the JS SDK singleton when the locale URL changes so the replacement
+    // tag can call FB.init for the new language. Skip the first commit: that
+    // src is the one we are about to load, not a stale SDK.
+    useEffect(() => {
+        if (sdkSrcRef.current === sdkSrc) return;
+        sdkSrcRef.current = sdkSrc;
+        initializedSdkRef.current = null;
+        setReady(false);
+        if (window.FB) delete window.FB;
+    }, [sdkSrc]);
+
     useExternalScript({
         id: SDK_SCRIPT_ID,
-        src: `https://connect.facebook.net/${getFacebookSdkLocale(locale)}/sdk.js`,
+        src: sdkSrc,
         onReady: initialize,
         onError: handleSdkError,
-        enabled: enabled && Boolean(appId) && !hasFacebookSdk,
+        // #1975: wait until LocaleProvider has resolved preference, otherwise
+        // the first insert is always the RU default and never rewritten.
+        enabled: enabled && Boolean(appId) && isHydrated,
         crossOrigin: 'anonymous',
     });
 
