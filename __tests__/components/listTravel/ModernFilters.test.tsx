@@ -369,9 +369,9 @@ describe('ModernFilters Component', () => {
       />
     );
 
-    const row = screen.getByRole('checkbox', { name: 'Неопубликованные всех авторов' });
+    const row = screen.getByRole('checkbox', { name: 'Неопубликованные (на модерации)' });
     expect(row.props.accessibilityState).toEqual({ checked: true });
-    expect(row.props.accessibilityHint).toBe('Показывать неопубликованные статьи всех авторов, включая ваши');
+    expect(row.props.accessibilityHint).toBe('Показывать неопубликованные статьи на модерации');
     fireEvent.press(row);
     expect(onToggleAllAuthorsUnpublishedOnly).toHaveBeenCalledTimes(1);
 

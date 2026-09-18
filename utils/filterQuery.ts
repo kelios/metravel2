@@ -170,6 +170,8 @@ export const buildTravelQueryParams = (
       delete params.publication_status
       params.publish = 0
       params.includeDrafts = true
+      // Own unpublished stays on draftsOnly; this catalog is other authors only.
+      params.exclude_current_user = true
     } else if (!draftsOnly && !publishedOnly && (moderationValue === 0 || moderationValue === '0')) {
       delete params.user_id
       delete params.publish

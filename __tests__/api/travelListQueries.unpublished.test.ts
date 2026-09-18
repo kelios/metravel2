@@ -38,6 +38,21 @@ describe('admin unpublished travel list', () => {
 
   afterEach(() => { Platform.OS = originalOS; });
 
+  it('sends exclude_current_user as a JSON boolean in list and facets where', async () => {
+    await fetchTravels(0, 10, '', { ...params, exclude_current_user: true });
+    parse.mockResolvedValue({ total: 23, facets: {} });
+    await fetchTravelFacets('', { ...params, exclude_current_user: true });
+    expect(request).toHaveBeenCalledTimes(2);
+    for (const [url] of request.mock.calls) {
+      const query = new URL(String(url), 'https://example.test').searchParams;
+      expect(JSON.parse(query.get('where') || '{}')).toEqual({
+        publish: 0,
+        countries: [3],
+        exclude_current_user: true,
+      });
+    }
+  });
+
   it('preserves all unpublished statuses and server pagination with authenticated requests', async () => {
     const result = await fetchTravels(1, 10, 'castle', params);
     expect(result.data.map(item => item.id)).toEqual([1, 2, 3]);

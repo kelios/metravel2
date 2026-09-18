@@ -81,8 +81,28 @@ describe('buildTravelQueryParams', () => {
       { isMeTravel: true, isSuperuser: true, userId: '42' },
     )
     expect(params).toEqual({
-      countries: [3], year: '2026', sort: '-created_at', publish: 0, includeDrafts: true,
+      countries: [3],
+      year: '2026',
+      sort: '-created_at',
+      publish: 0,
+      includeDrafts: true,
+      exclude_current_user: true,
     })
+    expect(params.user_id).toBeUndefined()
+  })
+
+  it('keeps the admin draft filter scoped to the current author', () => {
+    const params = buildTravelQueryParams(
+      { draftsOnly: true },
+      { isMeTravel: true, isSuperuser: true, userId: '42' },
+    )
+    expect(params).toEqual({
+      includeDrafts: true,
+      moderation: 0,
+      publish: 0,
+      user_id: '42',
+    })
+    expect(params.exclude_current_user).toBeUndefined()
   })
 
   it('does not broaden a regular user list or public catalog with the admin UI flag', () => {

@@ -43,7 +43,11 @@ describe('useListTravelFilters', () => {
       act(() => result.current.onSelect(key, value));
       act(() => result.current.onSelect('allAuthorsUnpublishedOnly', true));
       expect(result.current.filter[key]).toBeUndefined();
-      expect(result.current.queryParams).toEqual({ publish: 0, includeDrafts: true });
+      expect(result.current.queryParams).toEqual({
+        publish: 0,
+        includeDrafts: true,
+        exclude_current_user: true,
+      });
       act(() => result.current.onSelect(key, value));
       expect(result.current.filter.allAuthorsUnpublishedOnly).toBeUndefined();
     }

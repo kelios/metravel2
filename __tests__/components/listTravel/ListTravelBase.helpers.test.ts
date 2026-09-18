@@ -45,7 +45,7 @@ describe('ListTravelBase helpers', () => {
     expect(chips).toHaveLength(1)
     expect(chips[0]).toMatchObject({
       key: 'allAuthorsUnpublishedOnly',
-      label: 'Неопубликованные всех авторов',
+      label: 'Неопубликованные (на модерации)',
     })
     chips[0].onRemove()
     expect(onSelect).toHaveBeenCalledWith('allAuthorsUnpublishedOnly', undefined)
@@ -61,6 +61,6 @@ describe('ListTravelBase helpers', () => {
     })
 
     expect(message?.variant).toBe('search')
-    expect(message?.description).toContain('Неопубликованные всех авторов')
+    expect(message?.description).toContain('Неопубликованные (на модерации)')
   })
 })
