@@ -288,6 +288,8 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     // флаш в ref, чтобы таймеры и слушатели не вызывали стейл-замыкание.
     const flushSyncRef = useRef<(() => Promise<void>) | null>(null);
     const { isConnected } = useNetworkStatus();
+    const isConnectedRef = useRef(isConnected);
+    isConnectedRef.current = isConnected;
 
     useEffect(() => {
         mountedRef.current = true;
@@ -486,9 +488,12 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             progressIdRef.current = null;
             if (!pending) return;
             if (!startedProgressId && !hasQuestProgressStarted(pending.data)) return;
-            // Токена уже нет (#1921) — отправлять некому, но выбрасывать снапшот
-            // нельзя: очередь дождётся входа и уедет после него (#1922).
-            if (!isAuthenticatedRef.current) {
+            // Живая сессия — стор, не только проп: экран мог передать
+            // `isFocused && isAuthenticated`, и уход выглядел как выход (#1973).
+            // Без логина (#1921) или без сети — только очередь (#1922).
+            const sessionAlive =
+                isAuthenticatedRef.current || Boolean(useAuthStore.getState().isAuthenticated);
+            if (!sessionAlive || !isConnectedRef.current) {
                 void enqueueQuestProgress(pending.questId, pending.data, ownerIdForQueue());
                 return;
             }

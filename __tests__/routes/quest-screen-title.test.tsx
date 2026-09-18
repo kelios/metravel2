@@ -449,6 +449,17 @@ describe('Quest screen title sync', () => {
     expect(unrelated.isConnected).toBe(true)
   })
 
+  it('passes real auth into progress sync after blur (#1973)', () => {
+    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
+    const screen = render(<QuestScreen />)
+    expect(mockUseQuestProgressSync).toHaveBeenCalledWith('minsk-cmok', true)
+
+    mockUseIsFocused.mockReturnValue(false)
+    screen.rerender(<QuestScreen />)
+
+    expect(mockUseQuestProgressSync).toHaveBeenLastCalledWith(undefined, true)
+  })
+
   it.each(['blur', 'unmount'])('stops bootstrap JSON-LD handover after quest %s', async (transition) => {
     const bootstrap = appendBootstrapQuestJsonLd()
     const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
@@ -517,7 +528,8 @@ describe('Quest screen title sync', () => {
     render(<QuestScreen />)
 
     expect(mockUseQuestBundle).toHaveBeenCalledWith(undefined)
-    expect(mockUseQuestProgressSync).toHaveBeenCalledWith(undefined, false)
+    // questId гасится фокусом, сессия — нет: иначе блюр выглядит как логаут (#1973).
+    expect(mockUseQuestProgressSync).toHaveBeenCalledWith(undefined, true)
   })
 
   it('renders the quest wizard in guest mode for logged-out users without loading server progress', async () => {
