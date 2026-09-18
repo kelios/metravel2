@@ -123,6 +123,14 @@ describe('RouteBuilder route download', () => {
     expect(block.getByTestId('trip-route-import-panel')).toBeTruthy()
     expect(block.getByTestId('route-builder-export')).toBeTruthy()
     expect(block.getByTestId('trip-route-export-gpx')).toBeTruthy()
+
+    const tools = within(block.getByTestId('route-builder-route-file-tools'))
+    expect(tools.getByTestId('trip-route-import-picker')).toBeTruthy()
+    expect(tools.getByTestId('trip-route-export-gpx')).toBeTruthy()
+    expect(tools.getByTestId('trip-route-export-kml')).toBeTruthy()
+    expect(tools.getByText('Импорт')).toBeTruthy()
+    expect(tools.getByText('GPX')).toBeTruthy()
+    expect(tools.getByText('KML')).toBeTruthy()
   })
 
   it('keeps the download available for a participant who cannot edit the route', () => {

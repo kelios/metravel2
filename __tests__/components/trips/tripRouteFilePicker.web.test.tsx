@@ -9,7 +9,12 @@ jest.mock('@/components/ui/ToolActionsRow', () => ({
   default: ({
     actions,
   }: {
-    actions: Array<{ label: string; onPress?: () => void; disabled?: boolean }>;
+    actions: Array<{
+      label: string;
+      compactLabel?: string;
+      onPress?: () => void;
+      disabled?: boolean;
+    }>;
   }) => {
     const ReactModule = jest.requireActual<typeof import('react')>('react');
     const action = actions[0];
@@ -18,6 +23,7 @@ jest.mock('@/components/ui/ToolActionsRow', () => ({
       onClick: action.onPress,
       disabled: action.disabled,
       'aria-label': action.label,
+      'data-compact-label': action.compactLabel,
     }, action.label);
   },
 }));
@@ -62,6 +68,12 @@ describe('TripRouteFilePicker web adapter', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Load track (GPX/KML)' }));
     expect(click).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes a compact import caption for the shared tools row (#1902)', () => {
+    renderPicker();
+    const button = screen.getByRole('button', { name: 'Load track (GPX/KML)' });
+    expect(button.getAttribute('data-compact-label')).toBe('Импорт');
   });
 
   it('reads a selected file locally and reports balanced busy state', async () => {
