@@ -4384,3 +4384,45 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 - **Последняя проверка:** 2026-09-19 — прод: 317 шагов `any_text`, 127 просят
   короткий ответ, 15 кандидатов эвристики, 7 дефектных исправлены, контроль чист у
   112; `quest:scan-prod-drift` без расхождений после синхронизации data-файлов.
+
+### QUEST-COVER-MASTER-ASPECT-001 — мастер обложки квеста остаётся ландшафтным 3:2
+
+- **Инвариант:** мастер `assets/quests/<dir>/cover.png` — ландшафт 3:2
+  (`1536x1024`). Слот обложки в карточке каталога `/quests` равен 1.4615
+  (`screens/tabs/QuestCard.tsx`) и кадрируется только `contain`
+  (`docs/RULES.md` → «Images and placeholders»), поэтому пропорцию держит
+  КОНТЕНТ. Доля плоского поля на карточке: 3:2 — 2.6%, 4:3 — 8.8%, 16:9 —
+  17.8%, квадрат 1:1 — 31.6%. Квадратный кадр, нужный плитке
+  `QuestForCityCard`, берётся производной `src_square`/`square_320` из
+  медиа-манифеста (#1558), а мастером не делается никогда.
+- **Surface/owner:** генерация обложек (Кодекс по `PROMPT.md`), заливка
+  `scripts/upload-quest-media.js` и
+  `scripts/upload-missing-quest-covers-prod.js`.
+- **Цепочка:** 19.09.2026 владелец увидел на `/quests` (город Хаапсалу)
+  «обрезанную» картинку → DOM-замер: слот `600×411`, обложка `800×800`, кадр
+  рисуется `411×411`, поле 95 px × 2 = 31.5% → замер всех 207 обложек прода:
+  30 квадратных, остальные 1.33…1.78 → первопричина найдена в промпте партии
+  19.09 (`PROMPT-20260919.md`: «square quest cover», «readable at 160px»)
+  против исторического `krakowBikePradnik/PROMPT.md` («landscape 16:9 …
+  safe central crop for catalog cards») → #1987.
+- **Подтверждённая причина:** промпт партии оптимизировали под ПЛИТКУ 132×132,
+  а не под карточку каталога. Две поверхности спорят за один мастер, и
+  выигрывает та, на которую смотрит посетитель, — карточка.
+- **Почему не ловилось:** `scripts/normalize_quest_covers_prod.py` режет только
+  максимальную сторону и вес (`TARGET_MAX_SIDE`, `ACCEPTABLE_MAX_BYTES`) и
+  пропорцию сохраняет как есть, поэтому квадрат прошёл пайплайн молча. Ни один
+  скрипт заливки размеры кадра не читал. Шапка
+  `components/quests/questCoverTileGeometry.ts` при этом утверждала как факт
+  «квадратных обложек 0» по замеру 25.08.2026 — устаревшее знание маскировало
+  дефект.
+- **Regression control:** `scripts/lib/questCoverAspect.js` (чтение размеров из
+  заголовка PNG/WEBP/JPEG без внешних деп, отбой вне 1.30…1.80) зовётся из
+  обоих скриптов заливки ДО мутации прода; в `upload-quest-media.js` — до
+  `try`, иначе `catch` увёл бы отказ в обходной путь.
+  `__tests__/scripts/quest-cover-aspect-gate.test.ts` держит и сам гейт, и
+  инвариант «ни одна обложка в `assets/quests` его не нарушает», и факт вызова
+  гейта обоими скриптами. Правило продублировано в `docs/ICON_ART_PROMPTS.md`
+  (раздел 7C), `docs/RULES.md`, `.claude/skills/metravel-quest`,
+  `.claude/skills/metravel-icon-art`,
+  `.codex/skills/metravel-child-quest-visuals` и
+  `.codex/skills/metravel-visual-asset-designer`.

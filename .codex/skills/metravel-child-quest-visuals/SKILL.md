@@ -32,7 +32,7 @@ Do not average several bands into one style. When the product has separate child
 - Anchor fantasy in a recognizable route setting, but do not invent readable signs, monuments, murals, or historical claims.
 - Prefer watercolor, gouache, painterly animation, storybook fantasy, or an age-appropriate graphic-novel look. Quest covers may be illustrated; travel/article photo rules remain unchanged.
 - Use the MeTravel warm-orange accent `#f5842c`, cream `#fff8f3`, muted sage `#7a9d8f`, and blue-grey `#8a9aa8` without turning the scene neon.
-- Keep the focal character or clue inside the central safe area. Default quest cover output is landscape 16:9, final `1672x941` PNG or WEBP.
+- Keep the focal character or clue inside the central safe area. **Quest cover output is landscape 3:2, final `1536x1024` PNG or WEBP** — the catalog card slot is 1.4615 and crops with `contain` only, so 3:2 leaves a 2.6% flat gutter while 16:9 leaves 17.8% and a square master leaves 31.6% (prod measurement 2026-09-19, #1987). The square frame the `QuestForCityCard` tile needs comes from the manifest derivative `src_square`/`square_320` (#1558), never from the master. `scripts/lib/questCoverAspect.js` rejects anything outside 1.30…1.80 in both upload scripts.
 - Keep space and contrast for the card's title overlay. Do not bake title copy into the image.
 - Use only original characters. Never imitate protected book, film, game, toy, or cartoon identities.
 - No generated text, letters, numbers, logos, watermarks, fake URLs, horror, weapons-as-play, unsafe child behaviour, or identifiable real children.
@@ -43,7 +43,7 @@ Do not average several bands into one style. When the product has separate child
 1. Read the quest title, primary age, role, goal, stakes, midpoint turn, finale, and route landmarks.
 2. Reduce the cover to one sentence: `<child role> helps <character/object> achieve <goal> by following <clue type>`.
 3. Choose the age mode and one recurring visual grammar for the whole series.
-4. Build a prompt with: use case, quest premise, original subject, real route anchor, age mode, 16:9 composition, MeTravel palette, central safe area, and negative constraints.
+4. Build a prompt with: use case, quest premise, original subject, real route anchor, age mode, 3:2 landscape composition, MeTravel palette, central safe area, and negative constraints.
 5. Generate with the built-in `image_gen` tool. Use one call per distinct cover.
 6. Inspect the full image and final crop. Reject adult postcard photography, illegible micro-detail, accidental text, extra limbs, copied characters, frightening expressions, or a scene that does not reveal the quest premise.
 7. Save the selected raster in `assets/quests/<questAssetDir>/cover.png` and store the exact prompt in the neighboring `PROMPT.md`.
@@ -54,12 +54,12 @@ Do not average several bands into one style. When the product has separate child
 
 ```text
 Use case: illustration-story
-Asset type: 16:9 MeTravel quest cover for ages <band>
+Asset type: 3:2 landscape MeTravel quest cover for ages <band>
 Quest premise: <role, helper, goal, stakes, clue>
 Scene: <recognizable route anchor transformed through gentle fantasy>
 Subject: <one original focal character or enchanted object in action>
 Style: <selected age mode>, warm hand-painted texture, polished animation background
-Composition: landscape 16:9, central-safe focal action, clear depth, title-overlay contrast
+Composition: landscape 3:2, central-safe focal action, clear depth, title-overlay contrast
 Palette: warm orange #f5842c, cream #fff8f3, muted sage #7a9d8f, blue-grey #8a9aa8
 Constraints: original characters, child-safe action, story readable without text
 Avoid: text, letters, numbers, logo, watermark, photorealistic travel postcard, copied franchise, horror, clutter

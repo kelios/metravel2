@@ -18,6 +18,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const { assertQuestCoverAspect, describeQuestCoverVerdict, inspectQuestCover } = require('./lib/questCoverAspect');
+
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
 const apiUrlArg = args.find(a => a.startsWith('--api-url='));
@@ -224,7 +226,11 @@ async function main() {
         const coverPath = path.join(questDir, quest.cover);
         if (fileExists(coverPath)) {
             const size = fileSizeMB(coverPath);
-            console.log(`  cover: ${quest.cover} (${size} MB)`);
+            // #1987: пропорцию показываем в самом отчёте, чтобы квадратный кадр
+            // был виден ещё в dry-run, а не только когда заливка уже упала.
+            const verdict = inspectQuestCover(coverPath);
+            const mark = verdict.ok ? '' : '  ⚠️  ОТКЛОНЁН ГЕЙТОМ:';
+            console.log(`  cover: ${quest.cover} (${size} MB) — ${describeQuestCoverVerdict(verdict)}${mark}`);
             totalFiles++;
             totalSize += parseFloat(size);
         } else {
@@ -289,6 +295,10 @@ async function main() {
 
                 // Пробуем загрузить cover через multipart PATCH
                 if (fileExists(coverPath)) {
+                    // #1987: гейт пропорции — ДО try, а не внутри: catch ниже
+                    // глотает ошибку и уходит в обходной путь, так что внутри
+                    // гейт просто не сработал бы.
+                    assertQuestCoverAspect(coverPath);
                     try {
                         await uploadFile(
                             `${API_BASE}/api/quests/${questDbId}/`,

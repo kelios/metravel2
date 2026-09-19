@@ -16,6 +16,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const { assertQuestCoverAspect } = require('./lib/questCoverAspect');
+
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
 const apiUrlArg = args.find((arg) => arg.startsWith('--api-url='));
@@ -182,6 +184,9 @@ async function fetchQuestCatalog() {
 }
 
 async function uploadCover(questDbId, coverPath) {
+  // #1987: гейт пропорции стоит здесь, у самой мутации, а не только в dry-run —
+  // партия квадратных обложек 19.09.2026 прошла весь пайплайн молча.
+  assertQuestCoverAspect(coverPath);
   const buf = fs.readFileSync(coverPath);
   const form = new FormData();
   form.append('cover_image', new File([buf], path.basename(coverPath), { type: getMime(coverPath) }));

@@ -19,6 +19,7 @@ For children's, family, fairy-tale, park, or teen quest covers, also use `$metra
 ## Workflow
 
 1. Define slot, subject, aspect ratio, output sizes, alpha/background needs, light/dark variants, and integration point.
+   Quest covers are fixed: **landscape 3:2, `1536x1024`, saved as `assets/quests/<questAssetDir>/cover.png`**. The catalog card slot is 1.4615 and crops with `contain` only, so a square master costs 31.6% of the card width in flat fill and 16:9 costs 17.8% (prod measurement 2026-09-19, #1987). `scripts/lib/questCoverAspect.js` rejects anything outside 1.30…1.80 before upload.
 2. Search existing assets first; do not create near-duplicates.
 3. Build the prompt from `docs/ICON_ART_PROMPTS.md`: one base style, one preset, project palette, concrete subject, framing, and negative constraints. Keep one coherent style across a set.
 4. Use the `imagegen` skill/tool for generation. For edits, inspect the source image first and include it in the edit request.

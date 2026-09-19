@@ -590,10 +590,20 @@ npx serve dist/prod -l 3000 -s
     up to 21.9% for 16:9/9:16) is CONTENT debt — fix it by providing square cover variants
     (precedent #134/#152), never by `cover`, never by a per-card slot, never by editing this
     rule. Covered by `__tests__/components/listTravel/cardMediaLetterbox.test.ts`.
+  - The quest cover MASTER is landscape 3:2 (`1536x1024`, `assets/quests/<dir>/cover.png`).
+    The catalog card slot is 1.4615 (`screens/tabs/QuestCard.tsx`) and crops with `contain`
+    only, so the flat gutter is 2.6% at 3:2, 8.8% at 4:3, 17.8% at 16:9 and 31.6% at 1:1.
+    A square master is therefore forbidden: #1987 shipped 30 of them on 2026-09-19 and they
+    had to be re-issued. The square frame the tile below needs is a manifest DERIVATIVE
+    (`src_square`/`square_320`, #1558), never the master. Enforced by
+    `scripts/lib/questCoverAspect.js` in both upload scripts (rejects outside 1.30…1.80) and
+    by `__tests__/scripts/quest-cover-aspect-gate.test.ts`.
   - The quest cover tile (`QuestForCityCard`, `QUEST_TILE_MEDIA_SIZE`/`QUEST_TILE_SLOT_RATIO`
     in `components/quests/questCoverTileGeometry.ts`, #1542) is the mirror case: the slot is a
-    fixed square and EVERY quest cover is landscape — prod measurement 2026-08-25 over all 156
-    quests: 0 square, 52 × 16:9, 65 × 3:2, 37 × 4:3, 2 × 1.462, so the band runs 12.5–21.9%.
+    fixed square and the cover master is landscape. Prod measurement 2026-08-25 over 156 quests
+    read 0 square, 52 × 16:9, 65 × 3:2, 37 × 4:3, 2 × 1.462; the 2026-09-19 recount over all
+    207 reads 30 × 1:1, 55 × 4:3, 2 × 1.46, 64 × 3:2, 56 × 16:9 — the square ones are the
+    #1987 batch being rolled back, not a new norm. The band runs 12.5–21.9%.
     The `quest-cover` durable family ignores every crop parameter (`?w=320`, `&fit=cover`,
     `&h=320`, `&fit=square`, `&ar=1:1` all return the same 1926 B landscape frame), so there is
     no client- or manifest-side fix: the square variant has to come from the backend (#1558),
