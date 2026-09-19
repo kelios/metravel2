@@ -22,7 +22,7 @@
 - `docs/WORKFLOW_OPERATIONS.md` — условные протоколы `AGENTS.md` §4: локальный
   стек и обязательное обновление бэкенда перед тестированием, e2e-доступы,
   тестовые данные на production, Android device testing, production-target
-  validation и координация долгих операций/locks;
+  validation, координация долгих операций/locks и вход в веб-почту домена;
 - `docs/spec-driven-development.md` — канонический OpenSpec/SDD workflow;
 - `docs/spec-driven-development-requirements.md` — обязательные требования к
   proposal, delta specs, design и tasks;
