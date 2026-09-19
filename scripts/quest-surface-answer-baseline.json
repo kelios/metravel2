@@ -629,6 +629,11 @@
       "spb-guardians|2-isaac-cathedral|dict-material-surface|позолота",
       "spb-guardians|7-kazan-cathedral|task-color-word|золотыми"
     ],
+    "scripts/split-quest-data.js": [
+      "split-dioklecijanova-palaca|4-srebrena-vrata|dict-color|зеленый рынок",
+      "split-dioklecijanova-palaca|4-srebrena-vrata|dict-color|зелёный рынок",
+      "split-dioklecijanova-palaca|4-srebrena-vrata|task-color-word|серебряные"
+    ],
     "scripts/svityaz-quest-data.js": [
       "svityaz-sunken-city|2-prozrachnoe-dno|dict-color|белого",
       "svityaz-sunken-city|2-prozrachnoe-dno|dict-color|белого цвета",

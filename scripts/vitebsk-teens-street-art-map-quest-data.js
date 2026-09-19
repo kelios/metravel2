@@ -53,7 +53,7 @@ module.exports = [
             hint: 'Обрати внимание на позу, взгляд, одежду и предметы.',
             answer_pattern: {
                 type: 'any_text',
-                value: '{"min_length":6}',
+                value: '{"min_length":3}',
             },
             lat: 55.193377,
             lng: 30.190418,
