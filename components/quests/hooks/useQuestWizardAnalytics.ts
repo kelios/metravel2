@@ -2,6 +2,13 @@ import { useCallback, useEffect, useRef } from 'react'
 
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { flushQuestAnswerAttempts } from '@/utils/questAnswerTelemetry'
+import {
+  resetQuestFunnelRun,
+  trackQuestCompleted,
+  trackQuestFinished,
+  trackQuestProgress,
+  trackQuestStart,
+} from '@/utils/questFunnelAnalytics'
 
 type QuestWizardAnalyticsParams = {
   questId?: string
@@ -58,12 +65,23 @@ export function useQuestWizardAnalytics({
   guestAnsweredCount,
   onGuestGate,
 }: QuestWizardAnalyticsParams): QuestWizardAnalyticsApi {
+  // Шаг 2 воронки. Здесь же заводится запись прохождения, из которой считаются
+  // вехи и `duration_sec`, поэтому старт обязан уйти раньше любой вехи.
   const startTrackedRef = useRef(false)
   useEffect(() => {
     if (startTrackedRef.current || !onRealStep) return
-    startTrackedRef.current = true
-    queueAnalyticsEvent('quest_start', { quest_id: questId, city: cityId })
-  }, [cityId, onRealStep, questId])
+    // Защёлкиваем только состоявшийся старт: без согласия на аналитику
+    // прохождение не заводится, и следующая попытка должна пройти заново.
+    startTrackedRef.current = trackQuestStart({ questId, cityId, passedCount, stepsCount })
+  }, [cityId, onRealStep, passedCount, questId, stepsCount])
+
+  // Шаги 3–6 воронки: первая точка и пороги 25/50/75. Дедуп и отсев
+  // восстановленного прогресса живут в модуле воронки — он переживает
+  // перезагрузку, в отличие от рефов этого хука.
+  useEffect(() => {
+    if (!startTrackedRef.current) return
+    trackQuestProgress({ questId, cityId, passedCount, stepsCount })
+  }, [cityId, passedCount, questId, stepsCount])
 
   // Просмотр точки. Считается один раз за прохождение на каждый `step_index`:
   // возврат к пройденной точке — не новый просмотр, иначе навигация назад
@@ -122,15 +140,16 @@ export function useQuestWizardAnalytics({
     // на месте) от обычного: иначе они неразличимо сливаются в воронку
     // завершений. `partial` отделяет незасчитанное прохождение от засчитанного
     // (#1443): без него в воронке завершений слились бы и они.
-    queueAnalyticsEvent('quest_finish', {
-      quest_id: questId,
+    trackQuestFinished({
+      questId,
+      cityId,
       early: finishedEarly,
       partial: partiallyCompleted,
-      passed_count: passedCount,
-      steps_count: stepsCount,
+      passedCount,
+      stepsCount,
     })
     void flushQuestAnswerAttempts()
-  }, [finishedEarly, partiallyCompleted, passedCount, questFinished, questId, stepsCount])
+  }, [cityId, finishedEarly, partiallyCompleted, passedCount, questFinished, questId, stepsCount])
 
   // Игрок вернулся с частичного финала и добрал точки до порога (#1443).
   // `quest_finish` стреляет один раз за сессию и уже улетел с `partial: true`,
@@ -140,12 +159,8 @@ export function useQuestWizardAnalytics({
   useEffect(() => {
     if (!questCompleted || creditedTrackedRef.current) return
     creditedTrackedRef.current = true
-    queueAnalyticsEvent('quest_completion_credited', {
-      quest_id: questId,
-      passed_count: passedCount,
-      steps_count: stepsCount,
-    })
-  }, [passedCount, questCompleted, questId, stepsCount])
+    trackQuestCompleted({ questId, cityId, passedCount, stepsCount })
+  }, [cityId, passedCount, questCompleted, questId, stepsCount])
 
   const guestGateTrackedRef = useRef(false)
   useEffect(() => {
@@ -166,13 +181,16 @@ export function useQuestWizardAnalytics({
   // просмотров и без старта. Поэтому переигровка начинает воронку заново
   // целиком (#1498).
   const resetFunnelSession = useCallback(() => {
+    // Запись прохождения переживает перезагрузку, поэтому сброс обязан снять и
+    // её: иначе новый проход унаследовал бы чужие вехи и чужое время старта.
+    resetQuestFunnelRun(questId)
     startTrackedRef.current = false
     viewedStepsRef.current.clear()
     hintedStepsRef.current.clear()
     finishTrackedRef.current = false
     creditedTrackedRef.current = false
     guestGateTrackedRef.current = false
-  }, [])
+  }, [questId])
 
   return { trackAnswerSubmitted, trackHintOpened, resetFunnelSession }
 }

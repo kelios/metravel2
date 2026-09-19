@@ -6,6 +6,8 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useThemedColors } from '@/hooks/useTheme';
 import { webTouchScrollStyle } from '@/utils';
 import { translate as i18nT } from '@/i18n'
+import { clearAnalyticsIdentity } from '@/utils/analyticsContext';
+import { clearQuestFunnelRuns } from '@/utils/questFunnelAnalytics';
 
 const CONSENT_KEY = 'metravel_consent_v1';
 
@@ -85,6 +87,12 @@ export default function CookieSettingsScreen() {
         } catch {
           // ignore
         }
+      }
+      if (!analyticsAllowed) {
+        // Отзыв согласия снимает и метки аналитики: приостановить отправку
+        // недостаточно, уже заведённый client_id обязан исчезнуть.
+        clearAnalyticsIdentity();
+        clearQuestFunnelRuns();
       }
       if (analyticsAllowed && (window as any).metravelLoadAnalytics) {
         try {

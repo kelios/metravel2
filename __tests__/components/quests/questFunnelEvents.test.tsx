@@ -25,6 +25,14 @@ const mockQuestWizardResponsiveModel = {
 jest.mock('@/utils/analytics', () => ({
   queueAnalyticsEvent: (...args: any[]) => mockQueueAnalyticsEvent(...args),
 }))
+// Воронка прохождения требует согласия на аналитику: она пишет запись о
+// прохождении в localStorage. Настоящий `readConsent` под jest всегда отдаёт
+// null (`Platform.OS` здесь не `web`), поэтому согласие задаётся моком.
+jest.mock('@/utils/consent', () => ({
+  CONSENT_KEY: 'metravel_consent_v1',
+  readConsent: () => ({ necessary: true, analytics: true, date: '2026-09-19' }),
+  writeConsent: jest.fn(),
+}))
 jest.mock('@/utils/questAnswerTelemetry', () => ({
   recordQuestAnswerAttempt: jest.fn(),
   flushQuestAnswerAttempts: jest.fn(() => Promise.resolve()),
@@ -99,12 +107,15 @@ const finale = { story: 'Финал', video: undefined, poster: undefined } as a
 const eventsNamed = (name: string) =>
   mockQueueAnalyticsEvent.mock.calls.filter((call) => call[0] === name).map((call) => call[1])
 
+const eventNames = () => mockQueueAnalyticsEvent.mock.calls.map((call) => call[0])
+
 let storageKeySeq = 0
 
 describe('quest funnel events (#1498)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     storageKeySeq += 1
+    window.localStorage.clear()
   })
 
   it('tracks step views, every answer attempt and the hint through the wizard', async () => {
@@ -253,6 +264,7 @@ describe('useQuestWizardAnalytics (#1498)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    window.localStorage.clear()
   })
 
   // Возврат к пройденной точке размывал бы кривую доходимости, ради которой
@@ -300,6 +312,45 @@ describe('useQuestWizardAnalytics (#1498)', () => {
       { quest_id: 'test-quest', step_index: 0 },
       { quest_id: 'test-quest', step_index: 0 },
     ])
+  })
+
+  // Воронку читают по порядку событий, а вехи считаются из записи прохождения,
+  // которую заводит `quest_start`. Значит, ни одна веха не имеет права уйти в
+  // поток раньше старта — ни с intro, ни без него.
+  it('emits the funnel steps in order: start, then the milestones', () => {
+    const funnelSteps = () =>
+      eventNames().filter((name) =>
+        ['quest_start', 'quest_point_1_done', 'quest_progress_25', 'quest_progress_50'].includes(
+          String(name),
+        ),
+      )
+
+    const { rerender } = renderHook((props: any) => useQuestWizardAnalytics(props), {
+      initialProps: { ...baseParams, onRealStep: false, stepIndex: -1 },
+    })
+    expect(funnelSteps()).toEqual([])
+
+    rerender(baseParams)
+    expect(funnelSteps()).toEqual(['quest_start'])
+
+    // 1 из 3 точек — это и первая точка, и порог 25%.
+    rerender({ ...baseParams, passedCount: 1 })
+    expect(funnelSteps()).toEqual(['quest_start', 'quest_point_1_done', 'quest_progress_25'])
+  })
+
+  // Прогресс приезжает из AsyncStorage и с бэкенда уже после первого рендера:
+  // у квеста без intro визард стоит на первой точке, когда приходят чужие
+  // закрытые точки. Очередь вех на этот скачок нарисовала бы всплеск, которого
+  // не было.
+  it('keeps restored progress out of the funnel', () => {
+    const { rerender } = renderHook((props: any) => useQuestWizardAnalytics(props), {
+      initialProps: { ...baseParams, stepsCount: 8 },
+    })
+    rerender({ ...baseParams, stepsCount: 8, passedCount: 6 })
+
+    expect(eventsNamed('quest_point_1_done')).toHaveLength(0)
+    expect(eventsNamed('quest_progress_25')).toHaveLength(0)
+    expect(eventsNamed('quest_progress_50')).toHaveLength(0)
   })
 
   it('does not emit answer or hint events without a real step', () => {

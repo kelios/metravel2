@@ -8,6 +8,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import { readConsent, writeConsent, ConsentState } from '@/utils/consent';
+import { clearAnalyticsIdentity } from '@/utils/analyticsContext';
+import { clearQuestFunnelRuns } from '@/utils/questFunnelAnalytics';
 import { releaseBottomChromeReserve, setBottomChromeReserve } from '@/utils/bottomChromeReserve';
 import { useFooterOverlayOpen } from '@/hooks/useFooterOverlayOpen';
 import { translate as i18nT } from '@/i18n'
@@ -118,6 +120,10 @@ function ConsentBanner() {
           // ignore
         }
       }
+          // Отзыв согласия снимает и метки аналитики: приостановить отправку
+      // недостаточно, уже заведённый client_id обязан исчезнуть.
+      clearAnalyticsIdentity();
+      clearQuestFunnelRuns();
     }
     setVisible(false);
   };

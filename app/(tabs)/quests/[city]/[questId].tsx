@@ -28,6 +28,7 @@ import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH, normalizeOgImageUrl } from '@/utils/seo';
 import { buildQuestSeoMetadata } from '@/utils/questSeo';
 import { buildQuestCountModel } from '@/utils/questCountModel';
+import { trackQuestView } from '@/utils/questFunnelAnalytics';
 
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
 import type { FrontendQuestBundle } from '@/utils/questAdapters';
@@ -373,6 +374,20 @@ export default function QuestByIdScreen() {
       </Pressable>
     );
   }, [ratingMeta.ratingAvg, ratingMeta.ratingCount, styles.metaChip, styles.metaChipText, colors.warning, colors.textMuted]);
+
+  // Шаг 1 воронки прохождения: карточка квеста открыта. Ждём загруженный бандл —
+  // до него экран показывает скелетон, и засчитывать просмотр нечему. Реф держит
+  // id уже засчитанного квеста: `useQuestBundle` перевыдаёт объект при рефетче и
+  // на каждом возврате фокуса, и без этой отсечки один открытый экран давал бы
+  // пачку входов в воронку. Переход на другой квест и возврат на этот — вход
+  // новый, и он засчитывается.
+  const viewTrackedRef = React.useRef<string | null>(null);
+  useEffect(() => {
+    if (!isFocused || !questId || !bundle) return;
+    if (viewTrackedRef.current === questId) return;
+    viewTrackedRef.current = questId;
+    trackQuestView({ questId, cityId: cityId || undefined, source: 'quest_detail' });
+  }, [bundle, cityId, isFocused, questId]);
 
   const completionMeta = useQuestCompletionMeta(shouldLoadQuest ? questId : undefined, bundle?.id);
   // #1922 — прохождение, сделанное без сети, ждёт отправки: пометка живёт рядом

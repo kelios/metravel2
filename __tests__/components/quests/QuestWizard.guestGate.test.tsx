@@ -22,6 +22,14 @@ let mockQuestWizardResponsiveModel = {
   useWideInlineLayout: false,
   useWideExcursionsSidebar: false,
 }
+// Воронка прохождения требует согласия на аналитику: она пишет запись о
+// прохождении в localStorage. Настоящий `readConsent` под jest всегда отдаёт
+// null (`Platform.OS` здесь не `web`), поэтому согласие задаётся моком.
+jest.mock('@/utils/consent', () => ({
+  CONSENT_KEY: 'metravel_consent_v1',
+  readConsent: () => ({ necessary: true, analytics: true, date: '2026-09-19' }),
+  writeConsent: jest.fn(),
+}))
 jest.mock('@/utils/analytics', () => ({
   queueAnalyticsEvent: (...args: any[]) => mockQueueAnalyticsEvent(...args),
 }))
@@ -100,6 +108,7 @@ const collectRenderedTestIds = (node: unknown, result: string[] = []): string[] 
 describe('QuestWizard guest gate', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    window.localStorage.clear()
     mockQuestWizardResponsiveModel = {
       screenW: 390,
       screenH: 844,
@@ -183,9 +192,13 @@ describe('QuestWizard guest gate', () => {
     // quest_start уходит для гостя, как только видна первая настоящая точка.
     expect(firedEvents()).toContain('quest_start')
     expect(queryByTestId('quest-ai-disclosure-toggle')).toBeNull()
+    // Воронка размечает город как `city_id` — так же, как quest_card_* и
+    // события петли возврата. События гостевого гейта остаются на старом имени
+    // `city`: они в воронку прохождения не входят и переименовываются отдельно,
+    // чтобы не рвать их собственные отчёты заодно.
     expect(
       mockQueueAnalyticsEvent.mock.calls.find((call) => call[0] === 'quest_start')?.[1],
-    ).toEqual(expect.objectContaining({ quest_id: 'test-quest', city: 'minsk' }))
+    ).toEqual(expect.objectContaining({ quest_id: 'test-quest', city_id: 'minsk' }))
     expect(queryByTestId('quest-guest-gate')).toBeNull()
 
     // Отвечаем на точку 1 (auto-pass кнопка «Далее»).
