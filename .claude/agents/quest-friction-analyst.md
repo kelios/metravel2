@@ -55,7 +55,8 @@ model: opus
   `utils/questAnswerEvaluation.ts`, `utils/questAnswerTelemetry.ts`,
   `api/quests.ts`, `api/questReview.ts`;
 - инструменты: `scripts/quest-answer-insights.js`,
-  `scripts/scan-quest-hint-leak.js`, `scripts/apply-quest-patches.js`,
+  `scripts/scan-quest-hint-leak.js`, `scripts/scan-quest-anytext-minlen.js`,
+  `scripts/apply-quest-patches.js`,
   `npm run guard:quest-answer-eval`.
 
 **Как собрать факты**
@@ -211,6 +212,17 @@ retention-джобой `materialize_and_purge` — её пустота не по
 конкретику, и брошенный шаг. Проверяй по Wikipedia/офиц. сайту/OSM/фото. Если
 деталь не подтверждается — **не выдумывай новую**: бери надёжный факт или
 переводи в `any_text`.
+
+**G. Порог свободного ответа выше слов, которые шаг сам перечисляет.**
+`any_text` с `min_length` 4–10, а задание или подсказка перечисляет варианты
+короче: «опиши в паре слов — Дон Кихот, Нос, тройка» при пороге 4 отбил «Нос»
+у двух игроков (`brest-lantern / 4-alleya-fonarey`). Ловится
+`npm run quest:scan-anytext-minlen` (`--source=` до заливки, тот же скан стоит
+в pre-commit по изменённым data-файлам); правка — `min_length` не выше самого
+короткого варианта, но не ниже 3; шаги-«эссе» («назови два отличия») вне
+scope, осознанные исключения — с обоснованием в
+`scripts/quest-anytext-minlen-allow.json`. Класс
+`QUEST-FREE-TEXT-MIN-LENGTH-001`.
 
 ## Диагностика по реальным ответам
 

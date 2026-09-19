@@ -50,6 +50,7 @@ const { BASELINE_PATH: QUEST_HINT_LEAK_BASELINE_PATH } = require('./scan-quest-h
 const { BASELINE_PATH: QUEST_SURFACE_ANSWER_BASELINE_PATH } = require('./scan-quest-surface-answer')
 const { BASELINE_PATH: QUEST_COMPOUND_SPELLING_BASELINE_PATH } = require('./scan-quest-compound-spelling-gap')
 const { BASELINE_PATH: QUEST_POINT_ROLES_BASELINE_PATH } = require('./scan-quest-point-roles')
+const { ALLOW_PATH: QUEST_ANYTEXT_MINLEN_ALLOW_PATH } = require('./scan-quest-anytext-minlen')
 const ESLINT_CACHE_LOCATION = 'node_modules/.cache/eslint/check-fast/.eslintcache'
 const ESLINT_BIN_PATH = path.resolve(process.cwd(), 'node_modules/eslint/bin/eslint.js')
 const MINIMATCH_OPTIONS = Object.freeze({ dot: true })
@@ -413,6 +414,19 @@ const main = () => {
       ], { shell: false })
       if (pointRolesStatus !== 0) {
         process.exit(pointRolesStatus)
+      }
+
+      // Порог длины свободного ответа выше слов, которые шаг сам перечисляет
+      // (#1979, QUEST-FREE-TEXT-MIN-LENGTH-001): «опиши в паре слов — Дон
+      // Кихот, Нос, тройка» при `min_length` 4 отбил «Нос» у двух игроков.
+      // Allow-файл держит шаги с вердиктом, новая находка валит гейт сразу.
+      const anytextMinlenStatus = runCommand('node', [
+        'scripts/scan-quest-anytext-minlen.js',
+        `--source=${questDataFile}`,
+        `--allow-file=${QUEST_ANYTEXT_MINLEN_ALLOW_PATH}`,
+      ], { shell: false })
+      if (anytextMinlenStatus !== 0) {
+        process.exit(anytextMinlenStatus)
       }
     }
 
