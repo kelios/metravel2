@@ -65,6 +65,32 @@ RFC 6147 не синтезирует запись, когда реальная `
 Для `IOS-16` нужна IPv6-only сеть с нативным IPv6 наверху либо dual-stack сеть,
 а факт «сервер доступен по IPv6 снаружи» доказывается Globalping-пробами выше.
 
+## Фильтрация трафика Apple на нашей стороне — проверено 19.09.2026
+
+Решение владельца 19.09.2026: хостеру (hoster.by) ничего не пишем, трафик
+режется только на нашей стороне. Вопрос про гео/ASN-фильтры у хостера снят с
+#1939. Наша сторона проверена read-only на прод-хосте (SSH `sx3` без sudo;
+root-only конфиги и логи — через ro-bind в одноразовом контейнере):
+
+- ufw не включён: `/etc/ufw/ufw.conf` `ENABLED=no` с установки (03.03.2025),
+  `user.rules`/`user6.rules` — пустой скелет без deny/reject, `ufw.log` нет;
+  unit `ufw` «active (exited)» — oneshot, правил не грузит.
+- nftables inactive, `/etc/nftables.conf` — пустой дефолтный скелет;
+  `netfilter-persistent`, `/etc/iptables`, `/etc/docker/daemon.json` и
+  DOCKER-USER отсутствуют.
+- nginx (running conf в контейнере = `deploy/prod/nginx/nginx.conf`): ни одного
+  `deny`/`allow`/`geo`/UA-блока/`return 403|444`; только `limit_req`
+  (api 30r/s, login 5r/m burst 3, general 50r/s, tiles 200r/s); за окно логов
+  14.09 20:10 → 19.09 17:17 UTC — ни одной строки `limiting requests … zone "login"`.
+- fail2ban: единственный jail `sshd`; 1079 банов всего, из 17.0.0.0/8 — 0.
+- Django: IP/geo-блоков нет, DRF-throttle только на квест-телеметрии.
+- Сеть Apple доходит: 66 запросов с `17.166.x.x` (AS714) за то же окно —
+  57×`200`, 9×`301`, HTTP/2, отказов нет. После `AAAA` в access-логе реальные
+  IPv6-клиенты (36 за час 16 UTC и 120 за час 17 UTC 19.09).
+
+Вывод: на нашей стороне ничего не режет ни сеть Apple, ни IPv6; серверной
+причины «connection error» нет, письмо хостеру не нужно.
+
 ## Побочная находка
 
 `POST /api/user/apple-notifications/` от сервера Apple (server-to-server
@@ -76,20 +102,26 @@ RFC 6147 не синтезирует запись, когда реальная `
 1. Сквозной IPv6 (`area=back`, порядок строгий): `listen [::]:80` и
    `listen [::]:443 ssl http2` в nginx → проверка `curl -6` снаружи → AAAA
    `2a0a:7d80:3:2::186` у hoster.by (владелец).
-2. `IOS-16` на exact-кандидате: iPad/iPhone в NAT64-сети Mac Internet Sharing —
-   гость, email-вход, Apple, Google; запросы устройства видны в nginx-логе.
+2. `IOS-16` на exact-кандидате: домашний NAT64-стенд Mac Internet Sharing после
+   `AAAA` среду Apple не воспроизводит (ловушка выше). Серверная часть закрыта
+   Globalping-пробами по IPv6, клиентская — тем, что прод-сборка ходит только по
+   имени `https://metravel.by` (`.env.prod`); IPv4-литералы в коде есть лишь в
+   dev-конфигах (metro/playwright/jest) и одном комментарии. Устройственный прогон
+   (гость, email-вход, Apple, Google; запросы устройства видны в nginx-логе)
+   возможен только в сети с нативным IPv6 наверху; отсутствие такой сети Reply
+   не блокирует.
 3. Ответ Apple с фактами и запросом скриншота/типа сети (отдельное разрешение
    владельца), затем повторный submit (отдельное разрешение).
 4. В следующий кандидат: причина ошибки соединения в UI (код/host), #1895.
 
-## Черновик Reply (EN, ~1 500 символов, не отправлен)
+## Черновик Reply (EN, ~1 800 символов, не отправлен; п.3 обновлён 19.09)
 
 ```text
 Thank you for the review. We investigated the connection error reported on 14 September.
 
 1. Our production API was up throughout the review window (23:30–01:00 UTC): it served 833 successful responses to other clients with no server errors, and it is reachable from US, Canada, UK and EU test nodes (HTTP 200, 0.2–0.8 s). Email sign-in with the reviewer demo account returns 200 today.
 2. Our server logs contain no requests at all from the review devices in that window — no guest catalogue loads and no sign-in attempts — so the failure occurred before the request reached our server. On 12 September at 21:43 UTC a sign-in from the App Review network completed successfully with the same build and account.
-3. To rule out an IPv6-only network path, we are enabling native IPv6 on metravel.by (AAAA record and IPv6 listeners) and re-testing the exact build on an IPv6-only NAT64 network before resubmitting.
+3. To rule out an IPv6-only network path, we have enabled native IPv6 on metravel.by (AAAA record and IPv6 listeners, published on 19 September) and verified it from external test nodes over IPv6 in the US, Germany, Poland and Japan (HTTP 200, valid TLS). The app connects by host name only, so no DNS64/NAT64 synthesis is required. We also confirmed that no firewall or rate limit on our side blocks Apple's network ranges.
 
 Could you share a screenshot of the error and confirm the network type (Wi-Fi IPv6-only or cellular) and the time of the attempt? Thank you.
 ```
