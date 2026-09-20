@@ -23,43 +23,9 @@ import QuestCard from './QuestCard';
 import { COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID } from './QuestsScreen.helpers';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
 import { pluralizeQuest, type QuestMeta, type QuestSortOrder } from './questsShared';
+import QuestsSortChips, { EMPTY_SORT_ORDERS } from './QuestsSortChips';
 
-/** Стабильная пустая ссылка: дефолт-литерал в пропсах ломал бы мемоизацию. */
-const EMPTY_SORT_ORDERS: QuestSortOrder[] = [];
-
-/**
- * Витрина вариантов порядка (#1988). Держим списком, а не ветками в разметке:
- * добавление третьего критерия не должно множить копии одного и того же чипа.
- */
-const SORT_ORDER_CHIPS: {
-    order: Exclude<QuestSortOrder, 'default'>;
-    icon: 'trending-up' | 'star';
-    testID: string;
-    // Именно `TranslationKey`, а не `string`: с `string` опечатка в ключе
-    // компилируется молча, а на web `i18nT` принимает уже инлайненный babel'ем
-    // литерал — заявленный `string` разошёлся бы с фактическим значением.
-    labelKey: TranslationKey;
-    onKey: TranslationKey;
-    offKey: TranslationKey;
-}[] = [
-    {
-        order: 'popular',
-        icon: 'trending-up',
-        testID: 'quests-sort-popular',
-        labelKey: 'quests:screens.tabs.QuestsContentPanel.popularSortLabel',
-        onKey: 'quests:screens.tabs.QuestsContentPanel.popularSortA11yOn',
-        offKey: 'quests:screens.tabs.QuestsContentPanel.popularSortA11yOff',
-    },
-    {
-        order: 'rating',
-        icon: 'star',
-        testID: 'quests-sort-rating',
-        labelKey: 'quests:screens.tabs.QuestsContentPanel.ratingSortLabel',
-        onKey: 'quests:screens.tabs.QuestsContentPanel.ratingSortA11yOn',
-        offKey: 'quests:screens.tabs.QuestsContentPanel.ratingSortA11yOff',
-    },
-];
-import { translate as i18nT, type TranslationKey } from '@/i18n'
+import { translate as i18nT } from '@/i18n'
 
 const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
@@ -359,31 +325,15 @@ function QuestsContentPanel({
                                 <Text style={styles.resetFiltersChipText}>{i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}</Text>
                             </Pressable>
                         )}
-                        {dataLoaded && SORT_ORDER_CHIPS.map((chip) => {
-                            if (!availableSortOrders.includes(chip.order)) return null;
-                            const isActive = activeSortOrder === chip.order;
-                            return (
-                                <Pressable
-                                    key={chip.order}
-                                    style={[styles.sortChip, isActive && styles.sortChipActive]}
-                                    onPress={() => onSelectSortOrder(chip.order)}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={isActive ? i18nT(chip.offKey) : i18nT(chip.onKey)}
-                                    accessibilityState={{ selected: isActive }}
-                                    hitSlop={8}
-                                    testID={chip.testID}
-                                >
-                                    <Feather
-                                        name={chip.icon}
-                                        size={13}
-                                        color={isActive ? colors.textOnPrimary : colors.primary}
-                                    />
-                                    <Text style={[styles.sortChipText, isActive && styles.sortChipTextActive]}>
-                                        {i18nT(chip.labelKey)}
-                                    </Text>
-                                </Pressable>
-                            );
-                        })}
+                        {dataLoaded && (
+                            <QuestsSortChips
+                                styles={styles}
+                                colors={colors}
+                                availableSortOrders={availableSortOrders}
+                                activeSortOrder={activeSortOrder}
+                                onSelectSortOrder={onSelectSortOrder}
+                            />
+                        )}
                     </View>
                 </View>
                 {isMobile && (
