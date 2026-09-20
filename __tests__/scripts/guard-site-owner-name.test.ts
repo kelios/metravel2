@@ -1,6 +1,7 @@
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
+
+import { makeTempDir } from './cli-test-utils'
 
 const {
   checkDist,
@@ -16,7 +17,7 @@ describe('guard-site-owner-name', () => {
   let distDir: string
 
   beforeEach(() => {
-    distDir = fs.mkdtempSync(path.join(os.tmpdir(), 'guard-site-owner-'))
+    distDir = makeTempDir('guard-site-owner-')
   })
 
   afterEach(() => {

@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 
@@ -12,6 +11,7 @@ import {
   readImageSize,
   assertQuestCoverAspect,
 } from '../../scripts/lib/questCoverAspect';
+import { makeTempDir } from './cli-test-utils';
 
 /**
  * #1987: партия из 30 квадратных обложек прошла весь пайплайн заливки молча и
@@ -46,7 +46,7 @@ const pngFixture = (width: number, height: number): Buffer => {
 // Без дженерика в сигнатуре: пресет `jest-expo` парсит `.ts` как TSX, и
 // `<T,>` там читается открывающим JSX-тегом — файл разваливается целиком.
 function withTempCover(width: number, height: number, run: (file: string) => void): void {
-  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'quest-cover-')), 'cover.png');
+  const file = path.join(makeTempDir('quest-cover-'), 'cover.png');
   fs.writeFileSync(file, pngFixture(width, height));
   try {
     run(file);

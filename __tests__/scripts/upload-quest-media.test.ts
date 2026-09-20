@@ -1,15 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { runNodeCli } from './cli-test-utils';
+import { makeTempDir, runNodeCli } from './cli-test-utils';
 
 const ROOT = process.cwd();
 const SCRIPT = path.join(ROOT, 'scripts/upload-quest-media.js');
 let dir: string;
 
 beforeEach(() => {
-  fs.mkdirSync(path.join(ROOT, '.codex-temp'), { recursive: true });
-  dir = fs.mkdtempSync(path.join(ROOT, '.codex-temp/quest-media-test-'));
+  dir = makeTempDir('quest-media-test-');
   fs.mkdirSync(path.join(dir, 'scripts/lib'), { recursive: true });
   fs.copyFileSync(SCRIPT, path.join(dir, 'scripts/upload-quest-media.js'));
   fs.copyFileSync(path.join(ROOT, 'scripts/lib/questCoverAspect.js'), path.join(dir, 'scripts/lib/questCoverAspect.js'));
