@@ -596,7 +596,8 @@ npx serve dist/prod -l 3000 -s
     A square master is therefore forbidden: #1987 shipped 30 of them on 2026-09-19 and they
     had to be re-issued. The square frame the tile below needs is a manifest DERIVATIVE
     (`src_square`/`square_320`, #1558), never the master. Enforced by
-    `scripts/lib/questCoverAspect.js` in both upload scripts (rejects outside 1.30…1.80) and
+    `scripts/lib/questCoverAspect.js` in every upload script that writes `cover_image`
+    (rejects outside 1.30…1.80) and
     by `__tests__/scripts/quest-cover-aspect-gate.test.ts`.
   - The quest cover tile (`QuestForCityCard`, `QUEST_TILE_MEDIA_SIZE`/`QUEST_TILE_SLOT_RATIO`
     in `components/quests/questCoverTileGeometry.ts`, #1542) is the mirror case: the slot is a

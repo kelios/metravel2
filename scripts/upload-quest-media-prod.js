@@ -14,6 +14,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const { assertQuestCoverAspect } = require('./lib/questCoverAspect');
+
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
 const apiUrlArg = args.find(a => a.startsWith('--api-url='));
@@ -109,6 +111,15 @@ async function main() {
         // 1. Upload cover
         const coverPath = path.join(dir, qm.cover);
         if (fs.existsSync(coverPath)) {
+            // #1987: этот скрипт — настоящий путь обложки на прод (поле
+            // `cover_image` из `QuestWriteSerializer`), поэтому гейт пропорции
+            // обязан стоять и здесь, а не только в двух соседних скриптах.
+            // Проверяем и в dry-run: смысл прогона — узнать, что уедет.
+            // Отказ здесь намеренно роняет весь прогон (`main().catch` →
+            // exit 1), а не пропускает квест: скрипт адресный
+            // (`--quest-id=…`), и тихо пропущенная обложка — ровно тот исход,
+            // ради которого гейт и заведён.
+            assertQuestCoverAspect(coverPath);
             if (isDryRun) {
                 console.log(`  [DRY] cover: ${qm.cover} (${sizeMB(coverPath)} MB) → PATCH /api/quests/${questDbId}/`);
             } else {

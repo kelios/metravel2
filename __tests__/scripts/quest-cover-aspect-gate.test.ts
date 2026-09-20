@@ -104,16 +104,44 @@ describe('гейт пропорции обложки квеста', () => {
     expect(catalogLetterboxShare(16 / 9)).toBeCloseTo(0.178, 3);
   });
 
-  it('оба скрипта заливки зовут гейт до мутации прода', () => {
-    for (const script of ['upload-quest-media.js', 'upload-missing-quest-covers-prod.js']) {
-      const source = fs.readFileSync(path.join(REPO_ROOT, 'scripts', script), 'utf8');
-      expect(source).toContain("require('./lib/questCoverAspect')");
-      expect(source).toContain('assertQuestCoverAspect(coverPath)');
-    }
+  /**
+   * Список собирается по дереву, а не хардкодом: третий скрипт заливки
+   * (`upload-quest-media-prod.js`) существовал всё это время и гейта не звал,
+   * а тест на два имени фиксировал дыру как покрытую.
+   */
+  it('каждый скрипт, заливающий обложку, проходит через гейт', () => {
+    const scriptsDir = path.join(REPO_ROOT, 'scripts');
+    const uploaders = fs
+      .readdirSync(scriptsDir)
+      .filter((name) => name.endsWith('.js'))
+      .filter((name) => {
+        const source = fs.readFileSync(path.join(scriptsDir, name), 'utf8');
+        // Заливкой считаем запись картинки в поле обложки квеста, а не любое
+        // упоминание слова cover.
+        return /'cover_image'|"cover_image"|'cover',\s*$|'cover',\s*coverPath/m.test(source)
+          && /coverPath/.test(source);
+      });
+
+    expect(uploaders).toEqual(
+      expect.arrayContaining([
+        'upload-quest-media.js',
+        'upload-quest-media-prod.js',
+        'upload-missing-quest-covers-prod.js',
+      ]),
+    );
+
+    const ungated = uploaders.filter((name) => {
+      const source = fs.readFileSync(path.join(scriptsDir, name), 'utf8');
+      return !source.includes("require('./lib/questCoverAspect')");
+    });
+    expect(ungated).toEqual([]);
   });
 
   it('ни одна обложка в assets/quests не нарушает гейт', () => {
     const assetsDir = path.join(REPO_ROOT, 'assets', 'quests');
+    // Каталог целиком в `.gitignore`: на чистом чекауте его просто нет, и
+    // `readdirSync` уронил бы полный прогон jest по ENOENT.
+    if (!fs.existsSync(assetsDir)) return;
     const offenders: string[] = [];
     for (const dir of fs.readdirSync(assetsDir)) {
       const cover = path.join(assetsDir, dir, 'cover.png');

@@ -125,8 +125,9 @@ no busy background scenery, no multiple disconnected objects
   Квадратный кадр под плитку `QuestForCityCard` берётся ПРОИЗВОДНОЙ
   `src_square`/`square_320` из медиа-манифеста (#1558), мастером его делать
   нельзя. 16:9 — только hero/соцсети, не обложка квеста.
-  Гейт: `scripts/lib/questCoverAspect.js` — оба скрипта заливки отбивают кадр
-  вне 1.30…1.80. Прозрачный фон — только если ассет ляжет поверх фона, иначе
+  Гейт: `scripts/lib/questCoverAspect.js` — все три скрипта заливки
+  (`upload-quest-media.js`, `upload-quest-media-prod.js`,
+  `upload-missing-quest-covers-prod.js`) отбивают кадр вне 1.30…1.80. Прозрачный фон — только если ассет ляжет поверх фона, иначе
   `brandLight`/тёплый фон.
 - Выход: PNG/WEBP под слот; использовать существующий media-компонент конкретной фичи.
 - Для детских, семейных и подростковых quest covers обязательно подключать

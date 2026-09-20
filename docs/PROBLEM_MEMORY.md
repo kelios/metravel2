@@ -4431,9 +4431,12 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   17.8%, квадрат 1:1 — 31.6%. Квадратный кадр, нужный плитке
   `QuestForCityCard`, берётся производной `src_square`/`square_320` из
   медиа-манифеста (#1558), а мастером не делается никогда.
-- **Surface/owner:** генерация обложек (Кодекс по `PROMPT.md`), заливка
-  `scripts/upload-quest-media.js` и
-  `scripts/upload-missing-quest-covers-prod.js`.
+- **Surface/owner:** генерация обложек (Кодекс по `PROMPT.md`) и все три
+  скрипта заливки: `scripts/upload-quest-media.js`,
+  `scripts/upload-quest-media-prod.js`,
+  `scripts/upload-missing-quest-covers-prod.js`. На прод обложку реально
+  кладёт тот, кто шлёт поле `cover_image` (`QuestWriteSerializer`), — это
+  `upload-quest-media-prod.js` и `upload-missing-quest-covers-prod.js`.
 - **Цепочка:** 19.09.2026 владелец увидел на `/quests` (город Хаапсалу)
   «обрезанную» картинку → DOM-замер: слот `600×411`, обложка `800×800`, кадр
   рисуется `411×411`, поле 95 px × 2 = 31.5% → замер всех 207 обложек прода:
@@ -4453,11 +4456,13 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   дефект.
 - **Regression control:** `scripts/lib/questCoverAspect.js` (чтение размеров из
   заголовка PNG/WEBP/JPEG без внешних деп, отбой вне 1.30…1.80) зовётся из
-  обоих скриптов заливки ДО мутации прода; в `upload-quest-media.js` — до
-  `try`, иначе `catch` увёл бы отказ в обходной путь.
+  ВСЕХ трёх скриптов заливки ДО мутации прода. Тест собирает список скриптов
+  по дереву, а не хардкодом: первая версия проверяла два имени и фиксировала
+  третий, ungated, как покрытый.
   `__tests__/scripts/quest-cover-aspect-gate.test.ts` держит и сам гейт, и
-  инвариант «ни одна обложка в `assets/quests` его не нарушает», и факт вызова
-  гейта обоими скриптами. Правило продублировано в `docs/ICON_ART_PROMPTS.md`
+  инвариант «ни одна обложка в `assets/quests` его не нарушает» (с гардом на
+  отсутствие каталога — он в `.gitignore`), и факт вызова гейта каждым
+  найденным скриптом заливки. Правило продублировано в `docs/ICON_ART_PROMPTS.md`
   (раздел 7C), `docs/RULES.md`, `.claude/skills/metravel-quest`,
   `.claude/skills/metravel-icon-art`,
   `.codex/skills/metravel-child-quest-visuals` и

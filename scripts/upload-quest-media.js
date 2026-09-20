@@ -18,7 +18,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { assertQuestCoverAspect, describeQuestCoverVerdict, inspectQuestCover } = require('./lib/questCoverAspect');
+const { describeQuestCoverVerdict, inspectQuestCover } = require('./lib/questCoverAspect');
 
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
@@ -212,6 +212,8 @@ async function main() {
 
     let totalFiles = 0;
     let totalSize = 0;
+    /** #1987: отказы гейта пропорции — итогом и ненулевым кодом выхода. */
+    const rejectedCovers = [];
 
     for (const quest of QUEST_MEDIA) {
         const questDir = path.join(ASSETS_DIR, quest.assetsDir);
@@ -229,8 +231,8 @@ async function main() {
             // #1987: пропорцию показываем в самом отчёте, чтобы квадратный кадр
             // был виден ещё в dry-run, а не только когда заливка уже упала.
             const verdict = inspectQuestCover(coverPath);
-            const mark = verdict.ok ? '' : '  ⚠️  ОТКЛОНЁН ГЕЙТОМ:';
-            console.log(`  cover: ${quest.cover} (${size} MB) — ${describeQuestCoverVerdict(verdict)}${mark}`);
+            const mark = verdict.ok ? '' : '⚠️  ОТКЛОНЁН ГЕЙТОМ: ';
+            console.log(`  cover: ${quest.cover} (${size} MB) — ${mark}${describeQuestCoverVerdict(verdict)}`);
             totalFiles++;
             totalSize += parseFloat(size);
         } else {
@@ -287,6 +289,18 @@ async function main() {
 
         // === ЗАГРУЗКА ===
         if (!isDryRun) {
+            // #1987: отклонённая обложка не должна уносить с собой видео и
+            // картинки шагов того же квеста, поэтому гейт срабатывает ДО
+            // запроса бандла и снимает с заливки только сам cover.
+            let coverAllowed = fileExists(coverPath);
+            if (coverAllowed) {
+                const verdict = inspectQuestCover(coverPath);
+                if (!verdict.ok) {
+                    coverAllowed = false;
+                    rejectedCovers.push(`${quest.quest_id}: ${describeQuestCoverVerdict(verdict)}`);
+                    console.error(`  ❌ cover отклонён гейтом пропорции — ${describeQuestCoverVerdict(verdict)}`);
+                }
+            }
             try {
                 // Получаем текущий бандл
                 const bundle = await fetchQuestBundle(quest.quest_id);
@@ -294,11 +308,7 @@ async function main() {
                 console.log(`  DB id: ${questDbId}`);
 
                 // Пробуем загрузить cover через multipart PATCH
-                if (fileExists(coverPath)) {
-                    // #1987: гейт пропорции — ДО try, а не внутри: catch ниже
-                    // глотает ошибку и уходит в обходной путь, так что внутри
-                    // гейт просто не сработал бы.
-                    assertQuestCoverAspect(coverPath);
+                if (coverAllowed) {
                     try {
                         await uploadFile(
                             `${API_BASE}/api/quests/${questDbId}/`,
@@ -372,6 +382,13 @@ async function main() {
     console.log(`\n=== Итого ===`);
     console.log(`Файлов: ${totalFiles}`);
     console.log(`Размер: ~${totalSize.toFixed(1)} MB`);
+    if (rejectedCovers.length) {
+        // Иначе отказ — одна строка среди сотен при зелёном коде выхода, то
+        // есть ровно то «прошло пайплайн молча», ради которого гейт и заведён.
+        console.error(`\nОтклонено гейтом пропорции обложек: ${rejectedCovers.length}`);
+        for (const line of rejectedCovers) console.error(`  - ${line}`);
+        process.exitCode = 1;
+    }
 
     if (isDryRun) {
         console.log('\n=== Команды для ручной загрузки (scp) ===');
