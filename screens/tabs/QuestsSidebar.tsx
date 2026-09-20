@@ -418,8 +418,20 @@ function QuestsSidebar({
                         <View key={group.code} style={styles.cityListSection}>
                             {countryHref ? (
                                 <View style={styles.countryHeader}>
-                                    <Link href={countryHref as Href} asChild onPress={onCloseDrawer}>
+                                    {/*
+                                      * `onCloseDrawer` висит на дочернем `Pressable`, а не на
+                                      * `Link`: свой `onPress` Link кладёт в `rest` и затирает им
+                                      * навигационный обработчик роутера
+                                      * (`BaseExpoRouterLink`: `{...props, ...rest}`), а
+                                      * компенсирующий `onClick` теряется в react-native-web —
+                                      * `Pressable` спредит `pressEventHandlers` ПОСЛЕ `rest`.
+                                      * Переход тогда уходит по `href` тега `<a>` полной
+                                      * перезагрузкой документа вместо клиентской навигации.
+                                      * На дочернем элементе оба обработчика складывает `Slot`.
+                                      */}
+                                    <Link href={countryHref as Href} asChild>
                                         <Pressable
+                                            onPress={onCloseDrawer}
                                             style={styles.countryLabelPress}
                                             accessibilityRole="link"
                                             accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.countryLandingA11y', { value1: group.name || group.code, value2: pluralizeQuest(countryQuestCount) })}

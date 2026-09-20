@@ -12,19 +12,31 @@ import QuestsSidebar from '@/screens/tabs/QuestsSidebar';
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
+// Мок повторяет НЕВЫГОДНУЮ часть контракта настоящего `Link`: свой `onPress`
+// он кладёт в `rest` и затирает им навигационный обработчик роутера
+// (`BaseExpoRouterLink`: `{...props, ...rest}`), а на дочернем элементе оба
+// обработчика складывает `Slot` (`@radix-ui/react-slot`: сначала детский,
+// потом слотовый). Мок, который навигирует всегда, проверял бы сам себя.
 jest.mock('expo-router', () => {
   const React = require('react') as typeof import('react');
   const push = jest.fn();
   return {
     router: { push },
-    Link: ({ children, href, onPress }: {
+    Link: (props: {
       children: React.ReactElement;
       href: string;
       onPress?: () => void;
-    }) => React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
-      href,
-      onPress: () => { onPress?.(); push(href); },
-    }),
+    }) => {
+      const { children, href } = props;
+      const child = children as React.ReactElement<Record<string, unknown>>;
+      const childOnPress = child.props.onPress as (() => void) | undefined;
+      return React.cloneElement(child, {
+        href,
+        onPress: 'onPress' in props
+          ? props.onPress
+          : () => { childOnPress?.(); push(href); },
+      });
+    },
   };
 });
 

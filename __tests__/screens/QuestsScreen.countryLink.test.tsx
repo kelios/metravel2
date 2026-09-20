@@ -14,11 +14,20 @@ jest.mock('expo-router', () => {
   const React = require('react') as typeof import('react');
   return {
     useIsFocused: () => true,
-    Link: ({ children, href, onPress }: {
+    // Настоящий `Link` затирает навигацию своим `onPress` (см. подробный
+    // разбор в QuestsSidebar.countryLink.test.tsx), поэтому мок отдаёт
+    // дочернему элементу его собственный обработчик, а не подменяет его.
+    Link: (props: {
       children: React.ReactElement;
       href: string;
       onPress?: () => void;
-    }) => React.cloneElement(children as React.ReactElement<Record<string, unknown>>, { href, onPress }),
+    }) => {
+      const child = props.children as React.ReactElement<Record<string, unknown>>;
+      return React.cloneElement(child, {
+        href: props.href,
+        ...('onPress' in props ? { onPress: props.onPress } : {}),
+      });
+    },
   };
 });
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
