@@ -128,7 +128,7 @@ describe('#1829 владелец в ключах кэша', () => {
     // `userPointsAll` кончается на `All`, но это ключ самой коллекции, а не
     // хелпер: он принимает владельца и держит данные.
     const personalDespiteAllSuffix = ['userPointsAll', 'questProgressAll']
-    const notPersonal = ['travels', 'questDetail', 'filterOptions', 'contactRequestsAll', 'stravaActivitiesRoot']
+    const notPersonal = ['travels', 'questCityClassification', 'filterOptions', 'contactRequestsAll', 'stravaActivitiesRoot']
 
     expect({
       personal: personal.filter((name) => !looksPersonal(byName.get(name)!)),

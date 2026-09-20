@@ -16,6 +16,8 @@ import {
     readCachedQuestsList,
     writeCachedQuestsList,
 } from '@/api/questBundleCache';
+import { getActiveQueryClient } from '@/api/activeQueryClient';
+import { queryKeys } from '@/api/queryKeys';
 
 // ===================== ТИПЫ (соответствуют OpenAPI схеме бэкенда) =====================
 
@@ -871,11 +873,22 @@ const ignoreResult = (): void => undefined;
 const readOrCreateProgress = async (questId: string): Promise<ApiQuestProgress> => {
     const existing = await fetchQuestProgress(questId);
     if (existing) return existing;
-    // Создание требует числового id квеста — забираем его отдельным запросом.
-    const quest = await apiClient.get<{ id: number }>(`/quests/by-quest-id/${questId}/`);
+    // Создание требует ЧИСЛОВОГО id квеста. Экран квеста уже держит бандл в
+    // React Query под тем же ключом (`hooks/questBundleQuery.ts`), поэтому
+    // сначала берём id оттуда: сырой GET тянул весь бандл (интро, все шаги и
+    // медиа финала — ~8 КБ gzip на проде) ради одного целого числа, и на
+    // холодном открытии квеста это был третий за загрузку запрос к
+    // `by-quest-id` (#1992). Запрос остаётся фолбэком: очередь прогресса
+    // флашится и без экрана квеста, там кэш пуст.
+    const cachedBundle = getActiveQueryClient()?.getQueryData<ApiQuestBundle>(
+        queryKeys.questBundle(questId),
+    );
+    const questNumericId = typeof cachedBundle?.id === 'number'
+        ? cachedBundle.id
+        : (await apiClient.get<{ id: number }>(`/quests/by-quest-id/${questId}/`)).id;
     try {
         return await apiClient.post<ApiQuestProgress>('/quest-progress/', {
-            quest: quest.id,
+            quest: questNumericId,
         });
     } catch (err: unknown) {
         const status = err instanceof ApiError ? err.status : undefined;

@@ -20,6 +20,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy';
 import { questsListQueryOptions } from '@/hooks/questsListQuery';
 import { useQuestBundleQuery } from '@/hooks/questBundleQuery';
+import { useHydrationReady } from '@/hooks/useHydrationReady';
 import {
     adaptMeta,
     adaptBundle,
@@ -144,10 +145,17 @@ export function useQuestsPreview(limit: number, opts?: { enabled?: boolean }) {
 
 /** Хук для загрузки полного бандла квеста по quest_id */
 export function useQuestBundle(questId: string | undefined) {
-    const { data, isPending, error, refetch } = useQuestBundleQuery(questId);
+    const { data, isPending, isFetching, error, refetch } = useQuestBundleQuery(questId);
+    // #1562/#418: маршрут по `loading` делает ранний return LoadingState, и на
+    // кадре гидратации статического HTML визард (clientOnly-раскладка) не
+    // должен монтироваться. `isPending` этого не гарантирует: посадочная города
+    // (`useQuestCityWalk`) прогревает тот же ключ бандла, и на тёплом кэше
+    // первый кадр уже нёс бы данные. Первый web-кадр держится «загрузкой»
+    // явно; после гидратации и на native тёплый кэш отдаёт бандл сразу.
+    const hydrationReady = useHydrationReady();
     const cityId = data?.city?.id;
     const { data: classification, isPending: classificationPending, isError: classificationFailed } = useQuery({
-        queryKey: ['quest-city-classification', cityId],
+        queryKey: queryKeys.questCityClassification(cityId),
         queryFn: async () => (await fetchQuestsByCity(cityId!)).map((meta) => {
             const adapted = adaptMeta(meta);
             return { questId: meta.quest_id, tags: adapted.tags ?? [], cover: adapted.cover };
@@ -178,7 +186,11 @@ export function useQuestBundle(questId: string | undefined) {
 
     return {
         bundle,
-        loading: Boolean(questId) && isPending,
+        // `isFetching && !data` — это повтор после ошибки: у запроса в статусе
+        // error `isPending` уже false, и без этого слагаемого кнопка «Повторить»
+        // на ErrorState до 60 с (LONG_TIMEOUT × 2 попытки) не давала бы никакой
+        // обратной связи — до рефактора её давал setLoading(true) в refetch.
+        loading: Boolean(questId) && (isPending || (isFetching && !data) || !hydrationReady),
         error: error ? getErrorMessage(error, i18nT('quests:hooks.useQuestsApi.kvest_ne_nayden_af9ac6a4')) : null,
         refetch,
     };

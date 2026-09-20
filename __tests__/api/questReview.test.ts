@@ -177,10 +177,6 @@ describe('hooks/useQuestReview analytics', () => {
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.quests() })
       expect(invalidate).toHaveBeenCalledWith({
-        queryKey: queryKeys.questDetail(42),
-        exact: true,
-      })
-      expect(invalidate).toHaveBeenCalledWith({
         queryKey: queryKeys.questReviews('minsk-cmok'),
         exact: true,
       })

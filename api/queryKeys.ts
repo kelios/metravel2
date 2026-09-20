@@ -85,11 +85,17 @@ export const queryKeys = {
   questBundles: () => ['quest-bundle'] as const,
   questBundle: (slug: string | null | undefined) => ['quest-bundle', slug] as const,
   quests: () => ['quests'] as const,
+  // Классификация квестов одного города: теги для замыкания кольцевого
+  // маршрута и запасная обложка. Бандл их не отдаёт, а полный каталог ради
+  // двух полей не загружается (#1992). Ключ адресный по городу и намеренно
+  // НЕ живёт под префиксом quests(): это ограниченный список одного города,
+  // и инвалидация каталога его не касается.
+  questCityClassification: (cityId: number | undefined) =>
+    ['quest-city-classification', cityId] as const,
   // Срез каталога для промо-блоков (главная): отдельный ключ, чтобы пара
   // карточек не тянула весь список квестов. Префикс общий с quests(), поэтому
   // инвалидация каталога подхватывает и его.
   questsPreview: (limit: number) => ['quests', 'preview', limit] as const,
-  questDetail: (questId: number | undefined) => ['quest', questId] as const,
   questReviews: (questId: string | undefined) => ['quest', questId, 'reviews'] as const,
   travelsForQuest: (searchTerm: string) => ['travels-for-quest', searchTerm] as const,
   questsNearLocation: (loc: string) => ['quests-near-location', loc] as const,

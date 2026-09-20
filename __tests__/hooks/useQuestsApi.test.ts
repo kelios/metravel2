@@ -1,4 +1,5 @@
 import { createElement, type ReactNode } from 'react';
+import { Platform } from 'react-native';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -277,6 +278,49 @@ describe('useQuestsApi hooks', () => {
       expect(result.current.bundle!.title).toBe('Тайна дракона');
       expect(result.current.error).toBeNull();
       expect(typeof result.current.refetch).toBe('function');
+    });
+
+    // #1562/#418: посадочная города прогревает тот же ключ бандла, и на кадре
+    // гидратации `isPending` уже false — без явного первого кадра «загрузка»
+    // визард с clientOnly-раскладкой монтировался бы поверх статического HTML.
+    it('на web первый кадр — loading даже при тёплом кэше, следующий — бандл без запроса', async () => {
+      const originalPlatform = Platform.OS;
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      try {
+        queryClient.setQueryData(queryKeys.questBundle('krakow-dragon'), API_BUNDLE);
+        const frames: boolean[] = [];
+        const { result } = renderHook(
+          () => {
+            const state = useQuestBundle('krakow-dragon');
+            frames.push(state.loading);
+            return state;
+          },
+          { wrapper },
+        );
+
+        expect(frames[0]).toBe(true);
+        await waitFor(() => expect(result.current.loading).toBe(false));
+        expect(result.current.bundle?.title).toBe('Тайна дракона');
+        expect(mockFetchQuestByQuestId).not.toHaveBeenCalled();
+      } finally {
+        Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+      }
+    });
+
+    it('на native тёплый кэш отдаёт бандл первым же кадром — гидратации там нет', () => {
+      queryClient.setQueryData(queryKeys.questBundle('krakow-dragon'), API_BUNDLE);
+      const frames: boolean[] = [];
+      renderHook(
+        () => {
+          const state = useQuestBundle('krakow-dragon');
+          frames.push(state.loading);
+          return state;
+        },
+        { wrapper },
+      );
+
+      expect(frames[0]).toBe(false);
+      expect(mockFetchQuestByQuestId).not.toHaveBeenCalled();
     });
 
     it('sets error when API fails (no fallback)', async () => {

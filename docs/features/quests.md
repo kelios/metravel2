@@ -254,8 +254,15 @@ tripvenue резолвит по ближайшему городу каталог
 | `useQuestForLocation` | `hooks/useQuestForLocation.ts` | `['quests-near-location', key]` | серверный score/distance; при `404` — клиентский фолбэк по `['quests']` |
 | `useTravelsForQuest` | `hooks/useTravelsForQuest.ts` | `['travels-for-quest', term]` | обратная перелинковка квест → travel |
 
-`questBundleQueryOptions` задаёт единый запрос для страницы, мета-хуков и
-breadcrumbs: общий ключ, время жизни и ожидание смены credentials. В кэше
+`questBundleQueryOptions` задаёт единый запрос для страницы, мета-хуков,
+breadcrumbs и секции заметок посадочной города: общий ключ, время жизни и
+ожидание смены credentials. Кэш под этим ключом — ещё и источник ЧИСЛОВОГО
+`id` квеста для `POST /quest-progress/` (`api/quests.ts`,
+`readOrCreateProgress`): сырой `GET /quests/by-quest-id/<slug>/` ради одного
+целого числа остался только фолбэком для флаша очереди прогресса без экрана
+квеста (#1992). Значит у ключа обязан оставаться писатель: если экран перестанет
+класть бандл под него, создание прогресса тихо вернётся к третьему запросу
+бандла на открытие. В кэше
 лежит сырой API-бандл; `useQuestBundle` адаптирует его для визарда. Метаданные
 обновляются после входа/выхода, подтверждённого завершения/сброса и сохранения
 отзыва; личные поля снимаются сразу при смене аккаунта. Отсутствующий или ещё
@@ -882,7 +889,9 @@ E2E (Playwright): `e2e/quests-list-detail.spec.ts` (каталог → дета�
   (alias-резолв покрыт только на уровне SSG-гейта);
 - `QuestConsentGate`, `QuestReviewsModal`, `QuestPioneerBlock`,
   `useQuestGeofence.native`, `useQuestReminder.native`, `QuestPointNavigator.native`;
-- `useQuestBundle` (обогащение тегами и фолбэк обложки) отдельного теста не имеет.
+- `useQuestBundle` (обогащение тегами и адресный фолбэк обложки) покрыт
+  `__tests__/hooks/questDetailMetadata.test.tsx` — вместе с офлайн-веткой и
+  отсутствием полного каталога на холодной детали (#1992).
 
 ## Известные ловушки (механизм, а не симптом)
 

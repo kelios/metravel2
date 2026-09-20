@@ -1,4 +1,8 @@
+import { QueryClient } from '@tanstack/react-query';
+
 import { apiClient, ApiError } from '@/api/client';
+import { setActiveQueryClient } from '@/api/activeQueryClient';
+import { queryKeys } from '@/api/queryKeys';
 import { readCachedQuestsList } from '@/api/questBundleCache';
 import {
   fetchQuestsList,
@@ -517,6 +521,36 @@ describe('api/quests', () => {
       expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/by-quest-id/krakow-dragon/');
       expect(mockedPost).toHaveBeenCalledWith('/quest-progress/', { quest: 5 });
       expect(result).toEqual(newProgress);
+    });
+
+    /**
+     * #1992. Числовой id для POST брался ОТДЕЛЬНЫМ сырым GET бандла мимо React
+     * Query: на холодном открытии квеста это был третий за загрузку запрос к
+     * `by-quest-id` (~8 КБ gzip на проде) ради одного целого числа. Экран
+     * квеста уже держит бандл под тем же ключом, поэтому id берётся из кэша;
+     * запрос остаётся фолбэком для флаша очереди без экрана (кейс выше).
+     */
+    it('берёт числовой id из кэша бандла и не тянет бандл второй раз', async () => {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      client.setQueryData(queryKeys.questBundle('krakow-dragon'), { id: 5 });
+      setActiveQueryClient(client);
+      try {
+        const error404 = new (ApiError as any)(404, 'Not found');
+        mockedGet.mockRejectedValueOnce(error404); // GET progress → 404
+        const newProgress = { ...MOCK_PROGRESS, id: 99, current_index: 0 };
+        mockedPost.mockResolvedValueOnce(newProgress);
+
+        const result = await fetchOrCreateProgress('krakow-dragon');
+
+        expect(mockedGet).toHaveBeenCalledTimes(1);
+        expect(mockedGet).toHaveBeenCalledWith('/quest-progress/quest/krakow-dragon/');
+        expect(mockedGet).not.toHaveBeenCalledWith('/quests/by-quest-id/krakow-dragon/');
+        expect(mockedPost).toHaveBeenCalledWith('/quest-progress/', { quest: 5 });
+        expect(result).toEqual(newProgress);
+      } finally {
+        setActiveQueryClient(null);
+        client.clear();
+      }
     });
 
     it('re-throws non-404 errors from GET', async () => {

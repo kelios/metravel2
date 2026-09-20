@@ -81,10 +81,6 @@ export function useQuestReview({
       // Раньше их случайно обновляла отдельная /rate/-мутация; после удаления
       // несуществующего endpoint инвалидация принадлежит точке реального save.
       void queryClient.invalidateQueries({ queryKey: queryKeys.quests() })
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.questDetail(questId),
-        exact: true,
-      })
       if (questSlug) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.questBundle(questSlug), exact: true })
         void queryClient.invalidateQueries({
