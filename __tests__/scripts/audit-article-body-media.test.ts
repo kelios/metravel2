@@ -488,8 +488,10 @@ describe('повторы перекрывают окно ротации ворк
       PROBE_RETRY_DELAYS_MS.reduce((sum: number, ms: number) => sum + ms, 0);
 
     expect(budget).toBeGreaterThan(MEASURED_RECYCLE_WINDOW_MS);
-    // Прежние «20 + 2 + 20» в окно укладывались целиком — ради этого и повтор.
-    expect(attempts * REQUEST_TIMEOUT_MS + 2000).toBeLessThan(MEASURED_RECYCLE_WINDOW_MS + 20_000);
+    // Прежние «20 с + пауза 2 с + 20 с» укладывались в окно целиком — из-за
+    // этого живые кадры и уехали в «битые». Бюджет считается по старой схеме,
+    // а не по новому числу заходов: иначе ассерт молча поедет за расписанием.
+    expect(2 * REQUEST_TIMEOUT_MS + 2000).toBeLessThan(MEASURED_RECYCLE_WINDOW_MS);
   });
 
   it('честный ответ не повторяется, повторяется только молчание', async () => {

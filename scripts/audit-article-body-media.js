@@ -112,9 +112,11 @@ const REQUEST_TIMEOUT_MS = 20000
  * кадра статей 448/490 уехали в отчёт «битыми» (#2004). Три захода с паузами 5 и
  * 30 с перекрывают окно с запасом.
  *
- * Пауза общая на всю пачку, а не на адрес: ротация накрывает пробы разом,
- * поэтому второй заход ждёт один раз за всех, и худший случай прогона — плюс
- * ~35 с, сколько бы адресов ни отвалилось.
+ * Пауза общая на всю пачку, а не на адрес: ротация накрывает пробы разом, и
+ * второй заход ждёт один раз за всех — 35 с при любом числе отвалившихся
+ * адресов. Сами заходы столько не стоят: каждый — ещё до таймаута на партию из
+ * `--concurrency` молчащих адресов (при 4 потоках и 8 молчащих пробах это
+ * +35 с пауз и +80 с ожидания). Считать «плюс полминуты на прогон» нельзя.
  */
 const PROBE_RETRY_DELAYS_MS = [5000, 30000]
 
@@ -394,10 +396,10 @@ async function main() {
   // Один и тот же адрес встречается в разных статьях: сеть щупаем по уникальному
   // адресу, а отчёт по-прежнему называет каждую статью-владельца.
   const uniqueUrls = [...new Set(targets.map((target) => target.url))]
-  const statuses = await probeUrls(
-    targets.map((target) => target.probeUrl),
-    { concurrency: concurrency() },
-  )
+  // Кадры и запросы считаются отдельно: у одного ключа в теле статьи может быть
+  // и голый адрес, и явная ступень — это два кадра отчёта, но одна проба.
+  const uniqueProbeUrls = [...new Set(targets.map((target) => target.probeUrl))]
+  const statuses = await probeUrls(uniqueProbeUrls, { concurrency: concurrency() })
 
   const { broken, unreachable, dangling, fragile } = classifyTargets(targets, statuses)
 
@@ -408,6 +410,7 @@ async function main() {
     families: [...families],
     checkedMedia: targets.length,
     checkedUniqueMedia: uniqueUrls.length,
+    checkedProbes: uniqueProbeUrls.length,
     unreadableTravels: unreadable.map((item) => ({ id: item.id, error: item.error })),
     broken,
     unreachable,
@@ -506,7 +509,8 @@ async function fetchTravelDetails(ids, options = {}) {
 function printReport(report) {
   console.log(
     `\n📊 Статей обойдено: ${report.scannedTravels}/${report.catalogTravels}, ` +
-      `кадров: ${report.checkedMedia} (уникальных адресов: ${report.checkedUniqueMedia})`,
+      `кадров: ${report.checkedMedia} (уникальных адресов: ${report.checkedUniqueMedia}, ` +
+      `проб по сети: ${report.checkedProbes ?? report.checkedUniqueMedia})`,
   )
 
   printItems('❌ Не отдаётся (битые картинки в тексте)', report.broken)

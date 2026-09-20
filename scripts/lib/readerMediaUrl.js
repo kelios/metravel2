@@ -390,7 +390,7 @@ function toReaderMediaUrl(url, site = DEFAULT_SITE) {
  * = [480, 800]) и совпадает с `LEGACY_UPLOAD_FIXED_WIDTH` для класса
  * `uploads/**`. Клэмп по потолку семейства (`clampLadderToFamily`) её не
  * трогает: самый низкий потолок в контракте — 960 у `routePoint`. Сверку с
- * `constants/imageContract.ts` держит `__tests__/scripts/auditArticleBodyMedia.test.ts`.
+ * `constants/imageContract.ts` держит `__tests__/scripts/audit-article-body-media.test.ts`.
  */
 const ARTICLE_BODY_PROBE_WIDTH = 800
 
