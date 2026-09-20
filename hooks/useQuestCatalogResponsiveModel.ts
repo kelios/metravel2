@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useBreakpoints } from './useResponsive'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { QUESTS_GRID_MIN_COLUMN_WIDTH, QUESTS_LANDING_PADDING } from '@/constants/questLayout'
 
 const { spacing } = DESIGN_TOKENS
 
@@ -19,33 +20,12 @@ export type QuestCatalogResponsiveModel = {
   contentTitleSize: number
 }
 
-/**
- * Опции модели. `hasSidebar` — единственное, что отличает каталог `/quests` от
- * лендингов города и страны: у каталога сайдбар есть, у лендингов его нет.
- */
 export type QuestCatalogResponsiveOptions = {
-  /**
-   * Вычитать ли из ширины экрана сайдбар каталога. По умолчанию `true` —
-   * историческое поведение хука, на котором стоит `/quests`.
-   *
-   * #1989: знание о сайдбаре было зашито внутрь, и лендинги страны и города,
-   * взявшие хук ради `cardWidth`, вместе с ним взяли вычет ЧУЖОГО сайдбара:
-   * карточка считалась для узкой колонки каталога, а грид раскладывался по
-   * полной ширине страницы, и между колонками зияла дыра.
-   */
+  /** По умолчанию сохраняется расчёт каталога; false включает сетку лендинга. */
   hasSidebar?: boolean
-  /**
-   * Потолок ширины контента страницы, если он у неё свой. Лендинги страны и
-   * города ограничивают колонку собственной константой (840 и 760), и без неё
-   * модель делила ширину, которой на странице нет: карточка выходила шире
-   * трека грида.
-   */
+  /** Максимальная ширина контента без внешних отступов. */
   contentMaxWidth?: number
-  /**
-   * Зазор между колонками. По умолчанию `spacing.lg` — так делит native-грид;
-   * web-грид каталога шире (`QUESTS_GRID_WEB_GAP`), и страница, которая рисует
-   * его на web, обязана передать тот же зазор, иначе карточка и трек разойдутся.
-   */
+  /** Совпадает с зазором контейнера карточек. */
   columnGap?: number
 }
 
@@ -64,22 +44,28 @@ export function useQuestCatalogResponsiveModel(
     const isSmallPhone = width < 360
 
     const sidebarWidth = hasSidebar ? (isTablet ? 280 : isLargeTablet ? 300 : 340) : 0
-    const available = isMobile ? width : Math.max(320, width - sidebarWidth - spacing.xl * 2)
-    const contentWidth = Number.isFinite(contentMaxWidth)
-      ? Math.min(available, contentMaxWidth as number)
+    const available = hasSidebar
+      ? (isMobile ? width : Math.max(320, width - sidebarWidth - spacing.xl * 2))
+      : Math.max(0, width - QUESTS_LANDING_PADDING * 2)
+    const contentWidth = typeof contentMaxWidth === 'number' && Number.isFinite(contentMaxWidth)
+      ? Math.min(available, contentMaxWidth)
       : available
 
     let cardColumns = 1
-    if (!isMobile && contentWidth >= 640 && questCount >= 2) {
+    if (!hasSidebar && !isMobile) {
+      cardColumns = Math.max(1, Math.floor((contentWidth + columnGap) / (QUESTS_GRID_MIN_COLUMN_WIDTH + columnGap)))
+    } else if (hasSidebar && !isMobile && contentWidth >= 640 && questCount >= 2) {
       cardColumns = 2
     }
 
     let cardWidth: number
-    if (isMobile) {
+    if (!hasSidebar) {
+      // CSS получает это же число колонок: scrollbar не меняет раскладку
+      // независимо от модели, а maxWidth карточки учитывает его ширину.
+      cardWidth = (contentWidth - columnGap * (cardColumns - 1)) / cardColumns
+    } else if (isMobile) {
       cardWidth = Math.max(280, width - spacing.lg * 2)
     } else if (cardColumns >= 2) {
-      // Ровно то же деление, что делает CSS-грид над этим же контейнером:
-      // расхождение здесь и означает дыру между карточкой и её колонкой.
       const twoColWidth = Math.floor((contentWidth - columnGap) / 2)
       cardWidth = Math.max(280, Math.min(420, twoColWidth))
     } else {

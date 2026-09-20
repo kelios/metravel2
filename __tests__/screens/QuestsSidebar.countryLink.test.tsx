@@ -4,13 +4,29 @@
 // на лендинг, счётчик с шевроном остаётся тумблером.
 
 import { render, fireEvent } from '@testing-library/react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
+import type { ComponentProps } from 'react';
 
 import QuestsSidebar from '@/screens/tabs/QuestsSidebar';
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
-jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
+jest.mock('expo-router', () => {
+  const React = require('react') as typeof import('react');
+  const push = jest.fn();
+  return {
+    router: { push },
+    Link: ({ children, href, onPress }: {
+      children: React.ReactElement;
+      href: string;
+      onPress?: () => void;
+    }) => React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
+      href,
+      onPress: () => { onPress?.(); push(href); },
+    }),
+  };
+});
 
 const colors = {
   primary: '#f5842c',
@@ -27,7 +43,7 @@ const colors = {
 
 const city = (id: string, name: string) => ({ id, name });
 
-const baseProps = (overrides: Record<string, unknown> = {}) => ({
+const baseProps = (overrides: Partial<ComponentProps<typeof QuestsSidebar>> = {}) => ({
   styles: getStyles(colors, 1440),
   colors,
   viewMode: 'list' as const,
@@ -39,7 +55,7 @@ const baseProps = (overrides: Record<string, unknown> = {}) => ({
   areAllCountryGroupsCollapsed: false,
   collapsedCountryCodes: {},
   citiesByCountry: [
-    { code: 'BY', name: 'Беларусь', cities: [city('minsk', 'Минск'), city('brest', 'Брест')] },
+    { code: 'BY', name: 'Беларусь', cities: [city('minsk', 'Минск'), city('brest', 'Брест')], countryLandingHref: '/quests/country/belarus' },
     // Одна страна с единственным городом: лендинга у неё нет
     // (`QUEST_COUNTRY_LANDING_MIN_CITIES = 2`), значит и ссылки быть не должно.
     { code: 'EE', name: 'Эстония', cities: [city('tallinn', 'Таллин')] },
@@ -54,13 +70,22 @@ const baseProps = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe('вход на страницу страны из сайдбара каталога', () => {
-  beforeEach(() => jest.clearAllMocks());
+  const originalPlatform = Platform.OS;
+  beforeEach(() => {
+    jest.clearAllMocks();
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+  });
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+  });
 
   it('имя страны ведёт на лендинг и НЕ сворачивает группу', () => {
     const props = baseProps();
     const { getByTestId } = render(<QuestsSidebar {...props} />);
 
-    fireEvent.press(getByTestId('quests-country-link-BY'));
+    const link = getByTestId('quests-country-link-BY');
+    expect(link.props.href).toBe('/quests/country/belarus');
+    fireEvent.press(link);
 
     expect(router.push).toHaveBeenCalledWith('/quests/country/belarus');
     expect(props.onToggleCountryGroup).not.toHaveBeenCalled();
@@ -76,16 +101,20 @@ describe('вход на страницу страны из сайдбара ка
     expect(router.push).not.toHaveBeenCalled();
   });
 
-  it('у страны без лендинга имя остаётся тумблером, а не битой ссылкой', () => {
+  it('у страны без лендинга один тумблер строки с доступным состоянием', () => {
     const props = baseProps();
-    const { getByTestId } = render(<QuestsSidebar {...props} />);
+    const { getByTestId, queryByTestId, getAllByRole, rerender } = render(<QuestsSidebar {...props} />);
 
-    const link = getByTestId('quests-country-link-EE');
-    expect(link.props.accessibilityRole).toBe('button');
+    expect(queryByTestId('quests-country-link-EE')).toBeNull();
+    const toggle = getByTestId('quests-country-toggle-EE');
+    expect(toggle.props.accessibilityState).toEqual({ expanded: true });
+    expect(getAllByRole('button', { name: /Эстония/ })).toHaveLength(1);
 
-    fireEvent.press(link);
+    fireEvent.press(toggle);
     expect(router.push).not.toHaveBeenCalled();
     expect(props.onToggleCountryGroup).toHaveBeenCalledWith('EE');
+    rerender(<QuestsSidebar {...props} collapsedCountryCodes={{ EE: true }} />);
+    expect(getByTestId('quests-country-toggle-EE').props.accessibilityState).toEqual({ expanded: false });
   });
 
   it('ссылка объявлена ссылкой для вспомогательных технологий', () => {
@@ -93,5 +122,38 @@ describe('вход на страницу страны из сайдбара ка
     const link = getByTestId('quests-country-link-BY');
     expect(link.props.accessibilityRole).toBe('link');
     expect(link.props.accessibilityLabel).toContain('Беларусь');
+  });
+
+  it.each(['ios', 'android'] as const)('на %s имя страны сохраняет сворачивание каталога', (platform) => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: platform });
+    const props = baseProps();
+    const { getByText, getByTestId, queryByTestId, getAllByRole } = render(<QuestsSidebar {...props} />);
+
+    expect(queryByTestId('quests-country-link-BY')).toBeNull();
+    expect(getAllByRole('button', { name: /Беларусь/ })).toHaveLength(1);
+    expect(getByTestId('quests-country-toggle-BY').props.accessibilityState).toEqual({ expanded: true });
+    fireEvent.press(getByText('Беларусь'));
+    expect(props.onToggleCountryGroup).toHaveBeenCalledWith('BY');
+    expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it('ссылка закрывает мобильный drawer, тумблер оставляет его открытым', () => {
+    const onCloseDrawer = jest.fn();
+    const { getByTestId } = render(<QuestsSidebar {...baseProps({ onCloseDrawer })} />);
+
+    fireEvent.press(getByTestId('quests-country-toggle-BY'));
+    expect(onCloseDrawer).not.toHaveBeenCalled();
+    fireEvent.press(getByTestId('quests-country-link-BY'));
+    expect(onCloseDrawer).toHaveBeenCalledTimes(1);
+    expect(onCloseDrawer.mock.invocationCallOrder[0]).toBeLessThan((router.push as jest.Mock).mock.invocationCallOrder[0]);
+  });
+
+  it.each([390, 1440])('зоны ссылки и тумблера имеют минимум 44×44 при ширине %s', (width) => {
+    const { getByTestId } = render(<QuestsSidebar {...baseProps({ styles: getStyles(colors, width) })} />);
+    for (const action of ['link', 'toggle']) {
+      const style = StyleSheet.flatten(getByTestId(`quests-country-${action}-BY`).props.style);
+      expect(style.minHeight).toBeGreaterThanOrEqual(44);
+      expect(style.minWidth).toBeGreaterThanOrEqual(44);
+    }
   });
 });

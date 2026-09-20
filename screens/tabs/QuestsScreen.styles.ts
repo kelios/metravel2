@@ -3,6 +3,7 @@ import { StyleSheet, Platform, type TextStyle, type ViewStyle } from 'react-nati
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { LAYOUT } from '@/constants/layout';
+import { QUESTS_GRID_WEB_GAP, QUESTS_GRID_MIN_COLUMN_WIDTH } from '@/constants/questLayout';
 import type { ThemedColors } from '@/hooks/useTheme';
 
 const { spacing, radii, typography, touchTarget } = DESIGN_TOKENS;
@@ -18,28 +19,6 @@ type WebDecorativeViewStyle = ViewStyle & {
 };
 
 // ───────────── Styles (Two-column layout) ─────────────
-
-/**
- * Зазор между колонками грида каталога на web (#1989).
- *
- * Экспортируется, потому что ширину карточки считает не этот файл, а
- * `useQuestCatalogResponsiveModel`. Пока зазор жил только здесь, модель делила
- * контейнер на `spacing.lg`, грид — на `spacing.xl`, и карточка расходилась с
- * треком на шесть пикселей сверх основной ошибки.
- */
-export const QUESTS_GRID_WEB_GAP = spacing.xl;
-
-/**
- * Ширина колонки контента на лендингах города и страны (#1989).
- *
- * Держится здесь, а не в каждой странице: её обязаны знать оба — и вёрстка
- * (чтобы колонка не «плавала»), и `useQuestCatalogResponsiveModel` (чтобы
- * карточка совпала с треком грида). Пока константы не было, контейнер
- * ScrollView сжимался по самому широкому ребёнку, а модель делила совсем
- * другую ширину: карточка выходила уже колонки, и `justifyItems: 'start'`
- * сгонял весь зазор вправо.
- */
-export const QUESTS_LANDING_CONTENT_WIDTH = 840;
 
 export function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: number) {
     const isMobileW = screenWidth < 768;
@@ -372,7 +351,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            minHeight: 44,
+            minHeight: touchTarget.minHeight,
             marginTop: countryGapTop,
             marginBottom: spacing.xxs,
             paddingHorizontal: spacing.xs,
@@ -382,7 +361,6 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             borderColor: 'transparent',
             ...Platform.select({
                 web: {
-                    cursor: 'pointer',
                     transition: 'background-color 0.2s ease, border-color 0.2s ease',
                 } as any,
             }),
@@ -394,14 +372,18 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
          * счётчик за границу сайдбара.
          */
         countryLabelPress: {
+            flexGrow: 1,
             flexShrink: 1,
-            minWidth: 0,
-            paddingVertical: spacing.xxs,
-            ...Platform.select({ web: { cursor: 'pointer' } as ViewStyle }),
+            minWidth: touchTarget.minWidth,
+            minHeight: touchTarget.minHeight,
+            justifyContent: 'center',
         },
         countryHeaderActions: {
             flexDirection: 'row',
             alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: touchTarget.minWidth,
+            minHeight: touchTarget.minHeight,
             gap: spacing.xs,
         },
         countryCount: {
@@ -830,9 +812,9 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                     display: 'grid',
                     gridTemplateColumns: isMobileW
                         ? '1fr'
-                        : 'repeat(auto-fill, minmax(min(100%, 380px), 1fr))',
+                        : `repeat(auto-fill, minmax(min(100%, ${QUESTS_GRID_MIN_COLUMN_WIDTH}px), 1fr))`,
                     justifyItems: 'start',
-                    gap: spacing.xl,
+                    gap: QUESTS_GRID_WEB_GAP,
                 } as any,
             }),
         },

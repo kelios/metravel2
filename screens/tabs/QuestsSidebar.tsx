@@ -1,7 +1,7 @@
 import { memo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { router, type Href } from 'expo-router';
+import { Link, type Href } from 'expo-router';
 
 import NavigationIcon from '@/components/layout/NavigationIcon';
 import type { NavigationIconName } from '@/constants/navigationIcons';
@@ -12,7 +12,6 @@ import type { City, NearbyCity } from './questsShared';
 import { pluralizeQuest } from './questsShared';
 import { COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID } from './QuestsScreen.helpers';
 import { translate as i18nT } from '@/i18n'
-import { getQuestCountryAlias, questCountryLandingIsLinkable } from '@/utils/questCountryLanding'
 
 
 type SidebarActionButtonProps = {
@@ -168,6 +167,8 @@ type CountryGroup = {
     code: string;
     name: string;
     cities: (City | NearbyCity)[];
+    /** URL prepared from canonical landing groups, not sidebar city IDs. */
+    countryLandingHref?: string;
 };
 
 type QuestsSidebarProps = {
@@ -398,45 +399,59 @@ function QuestsSidebar({
                     // приложения не было — заголовок только сворачивал список.
                     // Теперь имя страны ведёт на лендинг, а счётчик с шевроном
                     // остаётся тумблером: одно нажатие не делает два действия.
-                    const countryAlias = getQuestCountryAlias(group.code);
-                    const countryHref = countryAlias && questCountryLandingIsLinkable({ cities: group.cities })
-                        ? `/quests/country/${countryAlias}`
-                        : null;
+                    const countryHref = Platform.OS === 'web' ? group.countryLandingHref : undefined;
                     const collapseLabel = i18nT('quests:screens.tabs.QuestsSidebar.value1_gruppu_value2_value3_b04a718c', { value1: isCollapsed
                         ? i18nT('quests:screens.tabs.QuestsSidebar.actions.expand')
                         : i18nT('quests:screens.tabs.QuestsSidebar.actions.collapse'), value2: group.name || group.code, value3: pluralizeQuest(countryQuestCount) });
+                    const countryLabel = <Text style={styles.countryLabel} numberOfLines={1}>{group.name}</Text>;
+                    const countryToggleContent = (
+                        <>
+                            <Text style={styles.countryCount}>{pluralizeQuest(countryQuestCount)}</Text>
+                            <Feather
+                                name={isCollapsed ? 'chevron-right' : 'chevron-down'}
+                                size={16}
+                                color={colors.textMuted}
+                            />
+                        </>
+                    );
                     return (
                         <View key={group.code} style={styles.cityListSection}>
-                            <View style={styles.countryHeader}>
-                                <Pressable
-                                    onPress={countryHref ? () => router.push(countryHref as Href) : () => onToggleCountryGroup(group.code)}
-                                    style={styles.countryLabelPress}
-                                    accessibilityRole={countryHref ? 'link' : 'button'}
-                                    accessibilityLabel={countryHref
-                                        ? i18nT('quests:screens.tabs.QuestsSidebar.countryLandingA11y', { value1: group.name || group.code, value2: pluralizeQuest(countryQuestCount) })
-                                        : collapseLabel}
-                                    hitSlop={6}
-                                    testID={`quests-country-link-${group.code}`}
-                                >
-                                    <Text style={styles.countryLabel} numberOfLines={1}>{group.name}</Text>
-                                </Pressable>
+                            {countryHref ? (
+                                <View style={styles.countryHeader}>
+                                    <Link href={countryHref as Href} asChild onPress={onCloseDrawer}>
+                                        <Pressable
+                                            style={styles.countryLabelPress}
+                                            accessibilityRole="link"
+                                            accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.countryLandingA11y', { value1: group.name || group.code, value2: pluralizeQuest(countryQuestCount) })}
+                                            testID={`quests-country-link-${group.code}`}
+                                        >
+                                            {countryLabel}
+                                        </Pressable>
+                                    </Link>
+                                    <Pressable
+                                        onPress={() => onToggleCountryGroup(group.code)}
+                                        style={styles.countryHeaderActions}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={collapseLabel}
+                                        accessibilityState={{ expanded: !isCollapsed }}
+                                        testID={`quests-country-toggle-${group.code}`}
+                                    >
+                                        {countryToggleContent}
+                                    </Pressable>
+                                </View>
+                            ) : (
                                 <Pressable
                                     onPress={() => onToggleCountryGroup(group.code)}
-                                    style={styles.countryHeaderActions}
+                                    style={styles.countryHeader}
                                     accessibilityRole="button"
                                     accessibilityLabel={collapseLabel}
                                     accessibilityState={{ expanded: !isCollapsed }}
-                                    hitSlop={6}
                                     testID={`quests-country-toggle-${group.code}`}
                                 >
-                                    <Text style={styles.countryCount}>{pluralizeQuest(countryQuestCount)}</Text>
-                                    <Feather
-                                        name={isCollapsed ? 'chevron-right' : 'chevron-down'}
-                                        size={16}
-                                        color={colors.textMuted}
-                                    />
+                                    <View style={styles.countryLabelPress}>{countryLabel}</View>
+                                    <View style={styles.countryHeaderActions}>{countryToggleContent}</View>
                                 </Pressable>
-                            </View>
+                            )}
                             {!isCollapsed && group.cities.map((city) => {
                                 const isActive = selectedCityId === city.id;
                                 const count = cityQuestCountById[city.id] || 0;

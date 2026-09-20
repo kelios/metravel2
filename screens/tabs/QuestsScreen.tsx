@@ -26,6 +26,7 @@ import QuestsSidebar from './QuestsSidebar';
 import { getQuestFaqItems } from './QuestsSeoIntroFaq';
 import type { QuestMeta } from './questsShared';
 import { createQuestCatalogStructuredData } from '@/utils/discoverySeo';
+import { buildQuestCountryLandingGroups, questCountryLandingIsLinkable } from '@/utils/questCountryLanding';
 import { getStyles } from './QuestsScreen.styles';
 import {
     getQuestCountryName,
@@ -334,6 +335,13 @@ export default function QuestsScreen() {
     // Group cities by country
     const citiesByCountry = useMemo(() => {
         const collator = createCollator();
+        // Landing cities merge by alias, whereas sidebar cities merge by
+        // catalog identity. Compute eligibility once for both sidebar mounts.
+        const countryLandingHrefByCode = new Map(
+            (Platform.OS === 'web' ? buildQuestCountryLandingGroups(ALL_QUESTS) : [])
+                .filter(questCountryLandingIsLinkable)
+                .map(country => [country.countryCode, `/quests/country/${country.countryAlias}`]),
+        );
         const groups: Record<string, QuestCatalogCity[]> = {};
         for (const city of CITIES) {
             const code = city.countryCode || 'OTHER';
@@ -351,8 +359,9 @@ export default function QuestsScreen() {
             code,
             name: code === 'OTHER' ? '' : getQuestCountryName(code),
             cities: groups[code].slice().sort((a, b) => collator.compare(a.name, b.name)),
+            countryLandingHref: countryLandingHrefByCode.get(code),
         }));
-    }, [CITIES]);
+    }, [ALL_QUESTS, CITIES]);
 
     useEffect(() => {
         setCollapsedCountryCodes((prev) => {

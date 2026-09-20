@@ -10,7 +10,9 @@ import QuestCityLandingSections from '@/components/quests/QuestCityLandingSectio
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection'
 import QuestCard from '@/screens/tabs/QuestCard'
 import { pluralizeQuest } from '@/screens/tabs/questsShared'
-import { getStyles, QUESTS_GRID_WEB_GAP, QUESTS_LANDING_CONTENT_WIDTH } from '@/screens/tabs/QuestsScreen.styles'
+import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
+import { QUESTS_GRID_WEB_GAP, QUESTS_LANDING_CONTENT_WIDTH, QUESTS_LANDING_PADDING } from '@/constants/questLayout'
+import type { ViewStyle } from 'react-native'
 import { useQuestsList } from '@/hooks/useQuestsApi'
 import { useQuestCityWalk } from '@/hooks/useQuestCityWalk'
 import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit'
@@ -264,13 +266,12 @@ export default function QuestsByCityScreen() {
 
   return (
     <ScrollView
-      style={s.root}
+      style={[s.root, { flexDirection: 'column' }]}
       contentContainerStyle={{
-        // #1989: ширину колонки задаёт константа, а не самый широкий ребёнок —
-        // иначе сетка карточек и модель делят разные числа.
         width: '100%',
-        maxWidth: QUESTS_LANDING_CONTENT_WIDTH + spacing.lg * 2,
-        padding: spacing.lg,
+        maxWidth: QUESTS_LANDING_CONTENT_WIDTH + QUESTS_LANDING_PADDING * 2,
+        alignSelf: 'center',
+        padding: QUESTS_LANDING_PADDING,
         gap: spacing.md,
         // Резерв под мобильный BottomDock (абсолютный оверлей): без него
         // последняя карточка города обрезается доком.
@@ -351,7 +352,7 @@ export default function QuestsByCityScreen() {
         </>
       ) : null}
 
-      <View style={s.questsGrid}>
+      <View style={[s.questsGrid, { gridTemplateColumns: `repeat(${catalogModel.cardColumns}, minmax(0, 1fr))` } as ViewStyle]}>
         {cityQuests.map((quest, index) => (
           <QuestCard
             key={quest.id}

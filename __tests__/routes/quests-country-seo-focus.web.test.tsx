@@ -30,10 +30,6 @@ jest.mock('@/screens/tabs/questsShared', () => ({
 }))
 jest.mock('@/screens/tabs/QuestsScreen.styles', () => ({
   getStyles: () => ({ root: {}, questsGrid: {} }),
-  // #1989: страница делит ширину контента тем же зазором, что и web-грид.
-  // Мок обязан отдать реальное число, иначе модель посчитает по дефолту и
-  // тест перестанет проверять совпадение карточки с треком.
-  QUESTS_GRID_WEB_GAP: 32,
 }))
 jest.mock('@/hooks/useQuestsApi', () => {
   const quests = [
@@ -54,7 +50,7 @@ jest.mock('@/hooks/useQuestsApi', () => {
 })
 jest.mock('@/hooks/useQuestReturnVisit', () => ({ useQuestReturnVisit: () => undefined }))
 jest.mock('@/hooks/useQuestCatalogResponsiveModel', () => ({
-  useQuestCatalogResponsiveModel: () => ({ cardWidth: 320 }),
+  useQuestCatalogResponsiveModel: () => ({ cardWidth: 404, cardColumns: 2 }),
 }))
 jest.mock('@/hooks/useResponsive', () => ({
   useBreakpoints: () => ({ width: 1280, isMobile: false }),

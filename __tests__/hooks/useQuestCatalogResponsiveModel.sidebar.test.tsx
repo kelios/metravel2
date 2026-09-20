@@ -7,8 +7,8 @@
 import { Dimensions } from 'react-native'
 import { act, renderHook } from '@testing-library/react-native'
 
-import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel'
-import { QUESTS_GRID_WEB_GAP, QUESTS_LANDING_CONTENT_WIDTH } from '@/screens/tabs/QuestsScreen.styles'
+import { useQuestCatalogResponsiveModel, type QuestCatalogResponsiveOptions } from '@/hooks/useQuestCatalogResponsiveModel'
+import { QUESTS_GRID_WEB_GAP, QUESTS_LANDING_CONTENT_WIDTH } from '@/constants/questLayout'
 
 const setViewport = (width: number, height = 900) => {
   act(() => {
@@ -21,13 +21,20 @@ const setViewport = (width: number, height = 900) => {
 
 const model = (
   width: number,
-  options?: { hasSidebar?: boolean; contentMaxWidth?: number; columnGap?: number },
+  options?: QuestCatalogResponsiveOptions,
+  questCount = 69,
 ) => {
   setViewport(width)
-  return renderHook(() => useQuestCatalogResponsiveModel(69, options)).result.current
+  return renderHook(() => useQuestCatalogResponsiveModel(questCount, options)).result.current
 }
 
 describe('вычет сайдбара в модели каталога квестов', () => {
+  it.each([[390, 1, 342], [768, 1, 424], [1024, 2, 318], [1440, 2, 420]])('сохраняет размеры каталога на %i', (width, columns, cardWidth) => {
+    const catalog = model(width)
+    expect(catalog.cardColumns).toBe(columns)
+    expect(catalog.cardWidth).toBe(cardWidth)
+  })
+
   it('по умолчанию вычитает сайдбар — поведение `/quests` не меняется', () => {
     const withSidebar = model(1440)
     const explicit = model(1440, { hasSidebar: true })
@@ -71,16 +78,22 @@ describe('карточка совпадает с треком грида', () =>
     columnGap: QUESTS_GRID_WEB_GAP,
   }
 
-  it('карточка лендинга равна треку грида на 1024', () => {
-    const landing = model(1024, landingOptions)
-    expect(landing.cardColumns).toBe(2)
-    expect(landing.cardWidth).toBe(trackWidth(QUESTS_LANDING_CONTENT_WIDTH, 2))
+  it.each([
+    [320, 272, 1], [390, 342, 1], [767, 719, 1],
+    [768, 720, 1], [800, 752, 1], [839, 791, 1],
+    [840, 792, 2], [855, 807, 2], [888, 840, 2],
+    [1024, 840, 2], [1280, 840, 2], [1440, 840, 2],
+  ])('на %i px карточки заполняют контейнер %i px в %i колонках', (width, container, columns) => {
+    const landing = model(width, landingOptions)
+    expect(landing.cardColumns).toBe(columns)
+    expect(landing.cardWidth * columns + QUESTS_GRID_WEB_GAP * (columns - 1)).toBe(container)
+    expect(Math.abs(landing.cardWidth - trackWidth(container, columns))).toBeLessThan(1)
   })
 
-  it('и на 1280 — колонка контента не растёт вместе с экраном', () => {
-    const landing = model(1280, landingOptions)
+  it.each([0, 1, 2, 69])('при %i квестах модель сохраняет треки сетки', (count) => {
+    const landing = model(1024, landingOptions, count)
     expect(landing.cardColumns).toBe(2)
-    expect(landing.cardWidth).toBe(trackWidth(QUESTS_LANDING_CONTENT_WIDTH, 2))
+    expect(landing.cardWidth).toBe(404)
   })
 
   it('потолок контента не даёт карточке раздуться на широком экране', () => {
