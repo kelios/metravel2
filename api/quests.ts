@@ -212,6 +212,8 @@ export type ApiQuestBundle = {
     quest_id: string;
     title: string;
     cover_url?: string | null;
+    /** Optional on older detail responses; city metadata supplies classification. */
+    tags?: Record<string, unknown> | null;
     steps: ApiQuestStep[] | string;
     finale: ApiQuestFinale;
     intro: ApiQuestStep | string | null;
@@ -758,10 +760,16 @@ function assertUsableQuestId(questId: string, caller: string): void {
     throw new ApiError(400, `${caller}: quest id is missing or invalid`);
 }
 
-/** Получить квесты по городу */
-export async function fetchQuestsByCity(cityId: number): Promise<ApiQuestBundle> {
-    const bundle = await apiClient.get<ApiQuestBundle>(`/quests/by-city/${cityId}/`);
-    return normalizeQuestBundle(bundle);
+/** Addressed classification/cover fallback; never downloads the whole catalog. */
+export async function fetchQuestsByCity(cityId: number): Promise<ApiQuestMeta[]> {
+    try {
+        const list = await apiClient.get<ApiQuestMeta[]>(`/quests/by-city/${cityId}/`);
+        return list.map(withQuestMetaDefaults);
+    } catch (error) {
+        const cached = await readCachedQuestsList();
+        if (cached) return cached.filter((quest) => String(quest.city_id) === String(cityId));
+        throw error;
+    }
 }
 
 /**

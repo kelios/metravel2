@@ -8,10 +8,10 @@ import type { Query, QueryClient } from '@tanstack/react-query'
  * ключей не может быть единственной защитой: любой новый ключ без владельца
  * снова открыл бы личные данные следующему вошедшему. Сброс закрывает класс
  * целиком и не зависит от этой полноты, поэтому он умышленно устроен от
- * запрета: сносится всё, кроме единственного исключения. Лишний сброс
+ * запрета: сносится всё, кроме явно очищаемых quest-данных. Лишний сброс
  * публичных данных стоит одного запроса, пропущенный личный ключ — утечки.
  *
- * Исключение ровно одно и ровно точное — сам каталог квестов `['quests']`. У
+ * Исключения — точный каталог `['quests']` и бандлы `['quest-bundle', slug]`. У
  * него есть собственный механизм смены личности
  * (`api/questsCatalogInvalidation.ts`), который держит публичную часть списка на
  * экране и снимает с неё личные поля; снос каталога отсюда сломал бы его и
@@ -25,7 +25,11 @@ const QUESTS_CATALOG_KEY_ROOT = 'quests'
 
 /** Что переживает смену владельца сессии. Экспортировано ради проверки состава. */
 export const survivesIdentityChange = (queryKey: unknown): boolean =>
-  Array.isArray(queryKey) && queryKey.length === 1 && queryKey[0] === QUESTS_CATALOG_KEY_ROOT
+  Array.isArray(queryKey) && (
+    (queryKey.length === 1 && queryKey[0] === QUESTS_CATALOG_KEY_ROOT) ||
+    // Bundle metadata uses the same credential barrier and personal-field scrub.
+    (queryKey.length === 2 && queryKey[0] === 'quest-bundle' && typeof queryKey[1] === 'string')
+  )
 
 const isDroppedOnIdentityChange = (query: Query): boolean => !survivesIdentityChange(query.queryKey)
 

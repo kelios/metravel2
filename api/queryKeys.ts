@@ -82,6 +82,7 @@ export const queryKeys = {
   // текущий пользователь, поэтому ключ scoped по userId, как остальные личные коллекции.
   authorEngagementDetails: (userId: string | null, metric: string) =>
     ['author-engagement', userId, metric] as const,
+  questBundles: () => ['quest-bundle'] as const,
   questBundle: (slug: string | null | undefined) => ['quest-bundle', slug] as const,
   quests: () => ['quests'] as const,
   // Срез каталога для промо-блоков (главная): отдельный ключ, чтобы пара

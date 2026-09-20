@@ -1,13 +1,5 @@
-// hooks/useQuestPioneerMeta.ts
-// Источник поля «первопроходец» (#364) для детальной страницы и финала квеста.
-// Бандл квеста не несёт first_completer — берём из списка квестов, который уже
-// кешируется queryKeys.quests() (см. useQuestRatingMeta/useQuestCompletionMeta).
-
-import { useQuery } from '@tanstack/react-query'
-
-import { fetchQuestsList, type ApiQuestMeta } from '@/api/quests'
-import { queryKeys } from '@/api/queryKeys'
-import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy'
+// Metadata shares the route's single-quest bundle, never the full catalog.
+import { useQuestBundleQuery } from '@/hooks/questBundleQuery'
 
 export type QuestPioneer = { id: number; name: string; avatar: string | null }
 
@@ -15,17 +7,8 @@ export function useQuestPioneerMeta(
   questId: string | undefined,
   questNumericId: number | undefined,
 ): QuestPioneer | null {
-  const { data } = useQuery<ApiQuestMeta[]>({
-    queryKey: queryKeys.quests(),
-    queryFn: fetchQuestsList,
-    enabled: Boolean(questId),
-    staleTime: QUESTS_LIST_STALE_TIME,
-    gcTime: QUESTS_LIST_GC_TIME,
-  })
-
-  const meta = data?.find(
-    (item) => item.id === questNumericId || item.quest_id === questId,
-  )
+  const { data } = useQuestBundleQuery(questId)
+  const meta = data && (questNumericId == null || data.id === questNumericId) ? data : undefined
   return meta?.first_completer ?? null
 }
 

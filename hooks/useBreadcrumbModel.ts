@@ -1,3 +1,4 @@
+import { questBundleQueryOptions } from '@/hooks/questBundleQuery';
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 import { useGlobalSearchParams, useLocalSearchParams, usePathname } from 'expo-router';
@@ -13,7 +14,7 @@ import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
 // (145 КБ, слой поездок + xmldom/GPX) как использованный на 0%.
 // Фетчер нужен только внутри `queryFn`, а он выполняется лишь при `enabled`,
 // поэтому `await import(...)` — настоящая async-граница, а не условный require.
-import type { ApiQuestBundle, ApiQuestMeta } from '@/api/quests';
+import type { ApiQuestMeta } from '@/api/quests';
 import { questsListQueryOptions } from '@/hooks/questsListQuery';
 import { resolveQuestCitySegment } from '@/utils/questCityAlias';
 import { resolveQuestCountryAlias } from '@/utils/questCountryLanding';
@@ -322,17 +323,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     return parts.length >= 3 && parts[1] !== 'country' ? parts[2] : null;
   }, [resolvedPathname]);
 
-  const { data: questApiData } = useQuery<ApiQuestBundle | null>({
-    queryKey: queryKeys.questBundle(questSlugForBreadcrumb),
-    queryFn: async () => {
-      if (!questSlugForBreadcrumb) return null;
-      const { fetchQuestByQuestId } = await import('@/api/quests');
-      return fetchQuestByQuestId(questSlugForBreadcrumb);
-    },
-    enabled: !!questSlugForBreadcrumb,
-    staleTime: 600_000,
-    gcTime: 10 * 60 * 1000,
-  });
+  const { data: questApiData } = useQuery(questBundleQueryOptions(questSlugForBreadcrumb));
   const questApiTitle = questApiData?.title || '';
 
   // City landing /quests/<cityId|alias>: the crumb must show the localized city

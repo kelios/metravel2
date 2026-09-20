@@ -1,12 +1,13 @@
 import type { QueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/api/queryKeys'
-import type { ApiQuestMeta } from '@/api/quests'
+import type { ApiQuestBundle, ApiQuestMeta } from '@/api/quests'
 
 type CatalogQuestWithoutIdentity = Omit<ApiQuestMeta, 'is_completed_by_me' | 'user_rating'> &
   Partial<Pick<ApiQuestMeta, 'is_completed_by_me' | 'user_rating'>>
 
 const catalogFilter = { queryKey: queryKeys.quests(), exact: true } as const
+const bundlesFilter = { queryKey: queryKeys.questBundles() } as const
 const completionRefreshes = new WeakMap<QueryClient, Map<string, Promise<void>>>()
 const credentialBarriers = new WeakMap<QueryClient, Promise<void>>()
 
@@ -38,24 +39,37 @@ export function refreshQuestsCatalogIdentity(
   credentialsReady: Promise<void> = Promise.resolve(),
 ): Promise<void> {
   credentialBarriers.set(client, credentialsReady)
-  const cancelled = client.cancelQueries(catalogFilter)
+  const cancelled = Promise.all([client.cancelQueries(catalogFilter), client.cancelQueries(bundlesFilter)])
   client.setQueryData<CatalogQuestWithoutIdentity[]>(catalogFilter.queryKey, (quests) => quests?.map((quest) => {
     const publicQuest = { ...quest }
     delete publicQuest.is_completed_by_me
     delete publicQuest.user_rating
     return publicQuest
   }))
+  client.setQueriesData<ApiQuestBundle>(bundlesFilter, (bundle) => {
+    if (!bundle) return bundle
+    const publicBundle = { ...bundle }
+    delete publicBundle.is_completed_by_me
+    delete publicBundle.user_rating
+    return publicBundle
+  })
   void client.invalidateQueries({ ...catalogFilter, refetchType: 'none' })
+  void client.invalidateQueries({ ...bundlesFilter, refetchType: 'none' })
   return Promise.all([cancelled, credentialsReady]).then(async () => {
     if (!isCurrentIdentity()) return
     if (credentialBarriers.get(client) === credentialsReady) credentialBarriers.delete(client)
-    await client.refetchQueries({ ...catalogFilter, type: 'active' }, { cancelRefetch: false })
+    await Promise.all([
+      client.refetchQueries({ ...catalogFilter, type: 'active' }, { cancelRefetch: false }),
+      client.refetchQueries({ ...bundlesFilter, type: 'active' }, { cancelRefetch: false }),
+    ])
   })
 }
 
 export function refreshQuestsCatalogCompletion(client: QueryClient, questId: string): Promise<void> {
   const quests = client.getQueryData<ApiQuestMeta[]>(catalogFilter.queryKey)
-  if (quests?.find((quest) => quest.quest_id === questId)?.is_completed_by_me) return Promise.resolve()
+  const bundleKey = queryKeys.questBundle(questId)
+  const bundle = client.getQueryData<ApiQuestBundle>(bundleKey)
+  if (bundle?.is_completed_by_me || quests?.find((quest) => quest.quest_id === questId)?.is_completed_by_me) return Promise.resolve()
   let pending = completionRefreshes.get(client)
   if (!pending) {
     pending = new Map()
@@ -68,12 +82,20 @@ export function refreshQuestsCatalogCompletion(client: QueryClient, questId: str
   client.setQueryData<ApiQuestMeta[]>(catalogFilter.queryKey, (current) => current?.map((quest) => (
     quest.quest_id === questId ? { ...quest, is_completed_by_me: true } : quest
   )))
-  const refreshed = client.invalidateQueries(catalogFilter).finally(() => pending.delete(questId))
+  void client.cancelQueries({ queryKey: bundleKey, exact: true })
+  client.setQueryData<ApiQuestBundle>(bundleKey, (current) => current ? { ...current, is_completed_by_me: true } : current)
+  const refreshed = Promise.all([
+    client.invalidateQueries(catalogFilter),
+    client.invalidateQueries({ queryKey: bundleKey, exact: true }),
+  ]).then(() => undefined).finally(() => pending.delete(questId))
   pending.set(questId, refreshed)
   return refreshed
 }
 
 export function resetQuestsCatalogCompletion(client: QueryClient, questId: string): void {
+  const bundleKey = queryKeys.questBundle(questId)
+  void client.cancelQueries({ queryKey: bundleKey, exact: true })
+  client.setQueryData<ApiQuestBundle>(bundleKey, (bundle) => bundle ? { ...bundle, is_completed_by_me: false } : bundle)
   void client.cancelQueries(catalogFilter)
   client.setQueryData<ApiQuestMeta[]>(catalogFilter.queryKey, (quests) => quests?.map((quest) => (
     quest.quest_id === questId ? { ...quest, is_completed_by_me: false } : quest

@@ -1,13 +1,5 @@
-// hooks/useQuestCompletionMeta.ts
-// Источник полей прохождения (#363) для детальной страницы и финала квеста.
-// Бандл квеста не несёт completions-полей — берём их из списка квестов,
-// который уже кешируется queryKeys.quests() (см. useQuestRatingMeta).
-
-import { useQuery } from '@tanstack/react-query'
-
-import { fetchQuestsList, type ApiQuestMeta } from '@/api/quests'
-import { queryKeys } from '@/api/queryKeys'
-import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy'
+// Metadata shares the route's single-quest bundle, never the full catalog.
+import { useQuestBundleQuery } from '@/hooks/questBundleQuery'
 
 export type QuestCompletionMeta = {
   isCompletedByMe: boolean
@@ -20,23 +12,10 @@ export function useQuestCompletionMeta(
   questId: string | undefined,
   questNumericId: number | undefined,
 ): QuestCompletionMeta {
-  const { data } = useQuery<ApiQuestMeta[]>({
-    queryKey: queryKeys.quests(),
-    queryFn: fetchQuestsList,
-    enabled: Boolean(questId),
-    staleTime: QUESTS_LIST_STALE_TIME,
-    gcTime: QUESTS_LIST_GC_TIME,
-  })
-
-  const meta = data?.find(
-    (item) => item.id === questNumericId || item.quest_id === questId,
-  )
+  const { data } = useQuestBundleQuery(questId)
+  const meta = data && (questNumericId == null || data.id === questNumericId) ? data : undefined
   if (!meta) return EMPTY
-
-  return {
-    isCompletedByMe: meta.is_completed_by_me ?? false,
-    completionsCount: meta.completions_count ?? 0,
-  }
+  return { isCompletedByMe: meta.is_completed_by_me ?? false, completionsCount: meta.completions_count ?? 0 }
 }
 
 export default useQuestCompletionMeta

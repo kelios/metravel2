@@ -1,13 +1,5 @@
-// hooks/useQuestRatingMeta.ts
-// Источник рейтинга для детальной страницы и финала квеста.
-// Бандл квеста не несёт rating-полей — берём их из списка квестов и
-// засеваем кеши queryKeys.quests()/questDetail.
-
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-
-import { fetchQuestsList, type ApiQuestMeta } from '@/api/quests'
-import { queryKeys } from '@/api/queryKeys'
-import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy'
+// Metadata shares the route's single-quest bundle, never the full catalog.
+import { useQuestBundleQuery } from '@/hooks/questBundleQuery'
 
 export type QuestRatingMeta = {
   ratingAvg: number | null
@@ -20,33 +12,10 @@ export function useQuestRatingMeta(
   questId: string | undefined,
   questNumericId: number | undefined,
 ): QuestRatingMeta {
-  const queryClient = useQueryClient()
-
-  const { data } = useQuery<ApiQuestMeta[]>({
-    queryKey: queryKeys.quests(),
-    queryFn: async () => {
-      const list = await fetchQuestsList()
-      const match = list.find((meta) => meta.quest_id === questId)
-      if (match) {
-        queryClient.setQueryData<ApiQuestMeta>(queryKeys.questDetail(match.id), match)
-      }
-      return list
-    },
-    enabled: Boolean(questId),
-    staleTime: QUESTS_LIST_STALE_TIME,
-    gcTime: QUESTS_LIST_GC_TIME,
-  })
-
-  if (questNumericId == null) return EMPTY
-
-  const detail = queryClient.getQueryData<ApiQuestMeta>(queryKeys.questDetail(questNumericId))
-  const meta = detail ?? data?.find((item) => item.id === questNumericId)
+  const { data } = useQuestBundleQuery(questId)
+  const meta = data && (questNumericId == null || data.id === questNumericId) ? data : undefined
   if (!meta) return EMPTY
-
-  return {
-    ratingAvg: meta.rating_avg ?? null,
-    ratingCount: meta.rating_count ?? 0,
-  }
+  return { ratingAvg: meta.rating_avg ?? null, ratingCount: meta.rating_count ?? 0 }
 }
 
 export default useQuestRatingMeta

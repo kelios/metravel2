@@ -15,6 +15,7 @@ jest.mock('@/hooks/useNetworkStatus', () => ({
 
 // Mock the API module
 const mockFetchQuestsList = jest.fn();
+const mockFetchQuestsByCity = jest.fn();
 const mockFetchQuestsPreview = jest.fn();
 const mockFetchQuestByQuestId = jest.fn();
 const mockReadOrCreateProgress = jest.fn();
@@ -22,7 +23,10 @@ const mockUpdateProgress = jest.fn();
 const mockFetchQuestProgress = jest.fn();
 const mockDeleteProgress = jest.fn();
 
+jest.mock('@/api/questBundleCache', () => ({ writeCachedQuestBundle: jest.fn() }));
+
 jest.mock('@/api/quests', () => ({
+  fetchQuestsByCity: (...args: unknown[]) => mockFetchQuestsByCity(...args),
   fetchQuestsList: (...args: any[]) => mockFetchQuestsList(...args),
   fetchQuestsPreview: (...args: any[]) => mockFetchQuestsPreview(...args),
   fetchQuestByQuestId: (...args: any[]) => mockFetchQuestByQuestId(...args),
@@ -118,6 +122,7 @@ describe('useQuestsApi hooks', () => {
   beforeEach(() => {
     [
       mockFetchQuestsList,
+      mockFetchQuestsByCity,
       mockFetchQuestsPreview,
       mockFetchQuestByQuestId,
       mockReadOrCreateProgress,
@@ -128,9 +133,8 @@ describe('useQuestsApi hooks', () => {
 
     mockIsConnected = true;
 
-    // useQuestBundle may request the list both for a missing-cover fallback and
-    // for non-blocking tag enrichment. Keep every unconfigured call thenable.
     mockFetchQuestsList.mockResolvedValue([]);
+    mockFetchQuestsByCity.mockResolvedValue([]);
   });
 
   // ===================== useQuestsList =====================
@@ -255,11 +259,16 @@ describe('useQuestsApi hooks', () => {
   // ===================== useQuestBundle =====================
 
   describe('useQuestBundle', () => {
+    let queryClient: QueryClient;
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
+    beforeEach(() => { queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } }); });
+    afterEach(() => { queryClient.clear(); });
     it('loads bundle from API', async () => {
       mockFetchQuestByQuestId.mockResolvedValueOnce(API_BUNDLE);
-      mockFetchQuestsList.mockResolvedValue([API_META]);
+      mockFetchQuestsByCity.mockResolvedValue([API_META]);
 
-      const { result } = renderHook(() => useQuestBundle('krakow-dragon'));
+      const { result } = renderHook(() => useQuestBundle('krakow-dragon'), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
       await waitFor(() => expect(result.current.bundle?.tags).toEqual([]));
@@ -273,7 +282,7 @@ describe('useQuestsApi hooks', () => {
     it('sets error when API fails (no fallback)', async () => {
       mockFetchQuestByQuestId.mockRejectedValueOnce(new Error('Not found'));
 
-      const { result } = renderHook(() => useQuestBundle('nonexistent'));
+      const { result } = renderHook(() => useQuestBundle('nonexistent'), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -284,7 +293,7 @@ describe('useQuestsApi hooks', () => {
     });
 
     it('returns null bundle for undefined questId', async () => {
-      const { result } = renderHook(() => useQuestBundle(undefined));
+      const { result } = renderHook(() => useQuestBundle(undefined), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -301,7 +310,7 @@ describe('useQuestsApi hooks', () => {
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
 
-      const { result } = renderHook(() => useQuestBundle('krakow-dragon'));
+      const { result } = renderHook(() => useQuestBundle('krakow-dragon'), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.bundle?.title).toBe('Тайна дракона (v1)');
@@ -311,22 +320,22 @@ describe('useQuestsApi hooks', () => {
         result.current.refetch();
       });
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
-      expect(result.current.bundle?.title).toBe('Тайна дракона (v2)');
+      await waitFor(() => expect(result.current.bundle?.title).toBe('Тайна дракона (v2)'));
       expect(mockFetchQuestByQuestId).toHaveBeenCalledTimes(2);
     });
 
     it('falls back to quest meta cover when bundle has no coverUrl', async () => {
       mockFetchQuestByQuestId.mockResolvedValueOnce(API_BUNDLE);
-      mockFetchQuestsList.mockResolvedValueOnce([
+      mockFetchQuestsByCity.mockResolvedValueOnce([
         { ...API_META, cover_url: 'https://img.com/cover.jpg' },
       ]);
 
-      const { result } = renderHook(() => useQuestBundle('krakow-dragon'));
+      const { result } = renderHook(() => useQuestBundle('krakow-dragon'), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
-      expect(result.current.bundle?.coverUrl).toBe('https://img.com/cover.jpg');
+      await waitFor(() => expect(result.current.bundle?.coverUrl).toBe('https://img.com/cover.jpg'));
+      expect(mockFetchQuestsList).not.toHaveBeenCalled();
     });
 
     it('does NOT fetch the quest list when the bundle already has cover_url (#729)', async () => {
@@ -335,7 +344,7 @@ describe('useQuestsApi hooks', () => {
         cover_url: 'https://img.com/detail-cover.jpg',
       });
 
-      const { result } = renderHook(() => useQuestBundle('krakow-dragon'));
+      const { result } = renderHook(() => useQuestBundle('krakow-dragon'), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 

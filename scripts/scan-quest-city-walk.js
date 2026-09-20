@@ -12,8 +12,8 @@
  *   (#1930);
  * - посадочная города `/quests/<город>` публикует ХВОСТ рассказа после
  *   дайджеста (`utils/questCityWalk.js`) — ровно то, чего на детальной нет.
- *   Нет хвоста — нет заметок о местах, и городу нечего рассказать сверх
- *   карточки квеста (#1569).
+ *   Нет хвоста — нет заметок о местах (#1569); одна-две заметки страницу тоже
+ *   не спасают: тот же порог #1930 снимает с выдачи и такой город.
  *
  * Партия 19.09.2026 писалась историями в 1–2 предложения (6–42 слова):
  * дайджест забирал их целиком, хвост оставался пустым, и 20.09.2026
@@ -23,22 +23,32 @@
  * первого места, где это стало видно. Этот скан закрывает разрыв на этапе
  * публикации: без сети, без 15-минутной сборки, по одному data-файлу.
  *
- * Что меряется по одному квесту:
- * - `places` — сколько точек оставляют хотя бы одно хвостовое предложение для
- *   заметок города (`buildQuestCityWalkModel` для города из этого одного
- *   квеста — ровно случай нового города, где других квестов нет);
- * - `detailWords` — слова прозы SSG-среза детальной (`injectQuestIntroSection`
- *   → `questPageFromHtml` → `countWords`) без блока перелинковки: он зависит от
- *   каталога, а подписи ссылок в прозу и так не считаются, так что здесь цифра
- *   на несколько слов консервативнее сборки.
- * Чего скан НЕ меряет: долю собственной лексики уровня (#1930, ≥ 30%) — она
- * относительна набору страниц и считается только по всему каталогу на сборке.
+ * Что меряется по одному квесту — слова прозы ОБЕИХ страниц, собранных теми же
+ * функциями, какими их пишет сборка, для города, где этот квест единственный
+ * (ровно случай новой партии; в городе с другими квестами посадочная считается
+ * по всем им и порог берёт легче):
+ * - `cityWords` — посадочная города (`buildQuestCityLandingModel` →
+ *   `buildQuestCityLandingHtml`), где собственный текст города — это заметки о
+ *   местах (`places`, они же хвосты историй);
+ * - `detailWords` — SSG-срез детальной (`injectQuestIntroSection` →
+ *   `questPageFromHtml` → `countWords`).
  *
- * Квест не проходит при `places = 0` или `detailWords < 300`. Лечится не
- * порогом, а текстом: не меньше четырёх предложений на точку — первые два
- * (до 60 слов) описывают объект для детальной, следующие — факты о месте для
- * города: без обращения к игроку, без вопроса и без слов ответа своей и
- * соседних точек, иначе хвост их отфильтрует и заметки не будет.
+ * Обе цифры заведомо НИЖЕ сборочных, и это осознанный перекос гейта в сторону
+ * «допиши»: до заливки каталога ещё нет, поэтому в замер не входят блок
+ * перелинковки детальной (≈20–35 слов), факт «Время: примерно …» (длительность
+ * знает карточка каталога, `QuestBundleSerializer` её не отдаёт), название
+ * страны, соседние города и статьи путешественников на посадочной (≈15–60
+ * слов). Ни одна из этих строк не зависит от `story`, автором квеста не
+ * пишется и на проде только прибавляет слов.
+ * Чего скан НЕ меряет вовсе: долю собственной лексики уровня (#1930, ≥ 30%) —
+ * она относительна набору страниц и считается только по всему каталогу на
+ * сборке.
+ *
+ * Квест не проходит, когда любая из двух страниц ниже `MIN_QUEST_PAGE_WORDS`.
+ * Лечится не порогом, а текстом: не меньше четырёх предложений на точку —
+ * первые два (до 60 слов) описывают объект для детальной, следующие — факты о
+ * месте для города: без обращения к игроку, без вопроса и без слов ответа своей
+ * и соседних точек, иначе хвост их отфильтрует и заметки не будет.
  *
  *   node scripts/scan-quest-city-walk.js --source=scripts/<city>-quest-data.js
  *   node scripts/scan-quest-city-walk.js --quest-id=tartu-bridge-wish
@@ -50,9 +60,14 @@
 
 const { fetchQuestBundles, loadLocalBundles } = require('./lib/questBundles')
 const { MIN_QUEST_PAGE_WORDS, countWords, questPageFromHtml } = require('./lib/questPageDepth')
-const { buildQuestCityWalkModel } = require('../utils/questCityWalk')
+const { buildQuestCityAliasMap } = require('../utils/questCityAlias')
 const { getQuestSteps } = require('../utils/questStoryText')
-const { buildQuestSeoMetadata, injectQuestIntroSection } = require('./generate-seo-pages')
+const {
+  buildQuestCityLandingHtml,
+  buildQuestCityLandingModel,
+  buildQuestSeoMetadata,
+  injectQuestIntroSection,
+} = require('./generate-seo-pages')
 const {
   parseCliArgs,
   parseCliTokens,
@@ -70,6 +85,13 @@ const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
 const EMPTY_PAGE =
   '<!doctype html><html><head><title>quest</title></head><body><div id="root"></div></body></html>'
 
+/**
+ * Числовой `city_id` выдаёт бэкенд при заливке, а группировка каталога без него
+ * посадочную не построит вовсе. В текст страницы идентификатор не попадает — он
+ * адресует её (`/quests/<id>`), — поэтому для замера берётся заглушка.
+ */
+const CITY_ID_PLACEHOLDER = 'city'
+
 // ===================== Замер =====================
 
 /** Карточка каталога, какой её видит сборка, — собранная из бандла. */
@@ -79,8 +101,33 @@ function catalogQuestOf(bundle, steps) {
     title: String(bundle?.title || '').trim(),
     city_name: String(bundle?.city?.name || bundle?.city_name || '').trim(),
     points: steps.length,
-    duration_min: bundle?.duration_min ?? bundle?.meta?.duration_min ?? null,
+    // Длительность живёт в карточке каталога: бандл её не отдаёт ни с прода
+    // (`QuestBundleSerializer`), ни из data-файла (`loadLocalBundles` держит
+    // форму API), поэтому замер идёт без неё — см. перекос гейта в шапке файла.
+    // Поле читается тем же выражением, что и у сборки: начнёт приходить —
+    // подтянется само, а расходиться двум меркам тут нельзя.
+    duration_min: bundle?.duration_min ?? null,
   }
+}
+
+/**
+ * Посадочная города — тем же путём, каким её собирает и меряет сборка
+ * (`generate-seo-pages.js` → `questPageDepth.js`), для города из одного этого
+ * квеста: слова её прозы и та самая модель заметок, из которой они получились.
+ * Модель берётся из посадочной, а не считается рядом вторым вызовом, иначе
+ * отчёт называл бы заметки, которых на померенной странице может не быть.
+ */
+function cityPageOf(quest, bundle) {
+  const catalogQuest = { ...quest, city_id: CITY_ID_PLACEHOLDER }
+  const [city] = buildQuestCityLandingModel(
+    [catalogQuest],
+    buildQuestCityAliasMap([catalogQuest]),
+    [],
+    { [catalogQuest.quest_id]: bundle },
+  )
+  if (!city) return { walk: { places: [], otherPlaces: [] }, words: 0 }
+  const html = buildQuestCityLandingHtml(EMPTY_PAGE, city, null)
+  return { walk: city.walk, words: countWords(questPageFromHtml(html, city.landingPath).text) }
 }
 
 /**
@@ -105,22 +152,31 @@ function detailPageWords(bundle, steps = getQuestSteps(bundle)) {
   return countWords(questPageFromHtml(html, `/quests/x/${quest.quest_id}`).text)
 }
 
-function inspectQuest(bundle, options = {}) {
-  const minWords = Number.isFinite(options.minWords) ? options.minWords : MIN_QUEST_PAGE_WORDS
+/** Почему посадочной города не хватило слов — объём лечится только текстом точек. */
+function cityGapReason(places, steps) {
+  if (steps === 0) return 'у квеста нет точек'
+  if (places === 0) {
+    return `ни одна из ${steps} точек не оставляет хвоста после дайджеста — публиковать сверх шаблона нечего`
+  }
+  return `заметок о местах ${places} из ${steps} точек`
+}
+
+function inspectQuest(bundle) {
   const steps = getQuestSteps(bundle)
   const quest = catalogQuestOf(bundle, steps)
-  const walk = buildQuestCityWalkModel([quest], { [quest.quest_id]: bundle })
+  const { walk, words: cityWords } = cityPageOf(quest, bundle)
   const walkSentences = walk.places.reduce((sum, place) => sum + place.sentences.length, 0)
   const detailWords = detailPageWords(bundle, steps)
 
   const issues = []
-  if (walk.places.length === 0) {
+  if (cityWords < MIN_QUEST_PAGE_WORDS) {
     issues.push(
-      `ни одна из ${steps.length} точек не оставляет хвоста после дайджеста — посадочной города нечего публиковать`,
+      `${cityWords} слов прозы на посадочной города, порог ${MIN_QUEST_PAGE_WORDS}` +
+        ` — ${cityGapReason(walk.places.length, steps.length)}`,
     )
   }
-  if (detailWords < minWords) {
-    issues.push(`${detailWords} слов прозы на детальной странице, порог ${minWords}`)
+  if (detailWords < MIN_QUEST_PAGE_WORDS) {
+    issues.push(`${detailWords} слов прозы на детальной странице, порог ${MIN_QUEST_PAGE_WORDS}`)
   }
 
   return {
@@ -131,20 +187,21 @@ function inspectQuest(bundle, options = {}) {
     places: walk.places.length,
     otherPlaces: walk.otherPlaces.length,
     walkSentences,
+    cityWords,
     detailWords,
-    minWords,
+    minWords: MIN_QUEST_PAGE_WORDS,
     issues,
   }
 }
 
-function scanQuests(bundles, options = {}) {
-  const results = (Array.isArray(bundles) ? bundles : []).map((bundle) => inspectQuest(bundle, options))
+function scanQuests(bundles) {
+  const results = (Array.isArray(bundles) ? bundles : []).map((bundle) => inspectQuest(bundle))
   return { results, findings: results.filter((result) => result.issues.length > 0) }
 }
 
 // ===================== CLI =====================
 
-const USAGE = `Скан глубины историй квеста: хвост для заметок города и слова детальной — QUEST-CITY-LANDING-VALUE-001
+const USAGE = `Скан глубины историй квеста: слова посадочной города и детальной — QUEST-CITY-LANDING-VALUE-001
 
 Usage:
   node scripts/scan-quest-city-walk.js [--quest-id <id>] [--source <file>] [--api-url <url>] [--json]
@@ -174,7 +231,8 @@ function formatResult(result) {
   const mark = result.issues.length ? '❌' : '✅'
   const lines = [
     `  ${mark} ${result.quest_id} — точек ${result.steps}, заметок для города ${result.places}` +
-      ` (${result.walkSentences} предл.), детальная ${result.detailWords} слов (порог ${result.minWords})`,
+      ` (${result.walkSentences} предл.), посадочная ${result.cityWords} слов,` +
+      ` детальная ${result.detailWords} слов (порог ${result.minWords})`,
   ]
   for (const issue of result.issues) lines.push(`       - ${issue}`)
   return lines.join('\n')
@@ -203,20 +261,22 @@ async function main() {
     for (const result of results) console.log(formatResult(result))
     console.log(findings.length
       ? `\nКвестов ниже порога: ${findings.length} из ${results.length} — дописать story точек (≥ 4 предложения: два для дайджеста, дальше факты о месте без обращения к игроку и без слов ответа).`
-      : '\nВсе квесты выборки берут порог: у города есть заметки, детальная не тоньше порога.')
+      : '\nВсе квесты выборки берут порог: и посадочная города, и детальная не тоньше порога.')
   }
 
   requireNoBatchFailures(findings.length, {
     total: results.length,
-    message: `квестов без хвоста для города или тоньше порога детальной: ${findings.length}`,
+    message: `квестов, чья посадочная города или детальная тоньше порога: ${findings.length}`,
   })
 }
 
 module.exports = {
+  CITY_ID_PLACEHOLDER,
   CLI_SPEC,
   EMPTY_PAGE,
   USAGE,
   catalogQuestOf,
+  cityPageOf,
   detailPageWords,
   inspectQuest,
   parseArgs,

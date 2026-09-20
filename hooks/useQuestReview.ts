@@ -86,6 +86,7 @@ export function useQuestReview({
         exact: true,
       })
       if (questSlug) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.questBundle(questSlug), exact: true })
         void queryClient.invalidateQueries({
           queryKey: queryKeys.questReviews(questSlug),
           exact: true,

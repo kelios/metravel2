@@ -21,12 +21,20 @@ type CachedQuestBundleEnvelope = {
 
 const cacheKey = (questId: string): string => `${QUEST_BUNDLE_CACHE_PREFIX}${questId}`;
 
+/** Public offline packages must never supply a previous account's metadata. */
+function stripBundleIdentity(bundle: ApiQuestBundle): ApiQuestBundle {
+    const publicBundle = { ...bundle };
+    delete publicBundle.is_completed_by_me;
+    delete publicBundle.user_rating;
+    return publicBundle;
+}
+
 /** Читает сырой бандл квеста из офлайн-кэша (null — если нет/повреждён/другая версия). */
 export async function readCachedQuestBundle(questId: string): Promise<ApiQuestBundle | null> {
     const id = String(questId || '').trim();
     if (!id) return null;
     const catalogBundle = await readQuestOffline(id);
-    if (catalogBundle) return catalogBundle;
+    if (catalogBundle) return stripBundleIdentity(catalogBundle);
     try {
         const raw = await AsyncStorage.getItem(cacheKey(id));
         if (!raw) return null;
@@ -35,11 +43,11 @@ export async function readCachedQuestBundle(questId: string): Promise<ApiQuestBu
         // One-way migration: keep the legacy value readable until the catalog
         // commit succeeds, then remove it so it cannot remain a second writable
         // quest-package source.
-        const migrated = await saveQuestOffline(parsed.bundle, { pinned: false, includePhotos: false });
+        const migrated = await saveQuestOffline(stripBundleIdentity(parsed.bundle), { pinned: false, includePhotos: false });
         if (migrated) {
             await AsyncStorage.removeItem(cacheKey(id));
         }
-        return parsed.bundle;
+        return stripBundleIdentity(parsed.bundle);
     } catch {
         // Приватный режим / повреждённый JSON — ведём себя как без кэша.
         return null;
@@ -55,7 +63,7 @@ export async function writeCachedQuestBundle(
     const id = String(questId || '').trim();
     if (!id) return;
     try {
-        await saveQuestOffline(bundle, { pinned: false, includePhotos: false });
+        await saveQuestOffline(stripBundleIdentity(bundle), { pinned: false, includePhotos: false });
     } catch (err) {
         console.warn('Failed to cache quest bundle for offline:', err);
     }

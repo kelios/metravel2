@@ -4,6 +4,7 @@
 // оставалось, и 20 посадочных плюс 2 детальные ушли под `noindex, follow` —
 // ни один скан семейства объём story не мерил, партия дошла до сборки прода.
 const {
+  cityPageOf,
   detailPageWords,
   inspectQuest,
   parseArgs,
@@ -56,38 +57,76 @@ const DEEP = (i: number) =>
     `В ${1920 + i} году здесь открылась первая в квартале аптека, и её вывеска пережила три смены власти и один пожар.`,
     `Двор дома ${i} помнит колодец, вокруг которого до войны собирались торговцы с рыночной площади.`,
   ].join(' ')
+// Длинная история ровно на дайджест: детальной хватает, городу не остаётся ничего.
+const DIGEST = (i: number) => `${DEEP(i).split('. ').slice(0, 2).join('. ')}.`
 
 describe('scan-quest-city-walk: замер одного квеста', () => {
-  it('история в одно предложение: у города ноль заметок, детальная тоньше порога — две находки', () => {
+  it('история в одно предложение: у города ноль заметок, обе страницы тоньше порога — две находки', () => {
     const result = inspectQuest(bundle(stories(8, SHORT)))
     expect(result).toMatchObject({ quest_id: 'demo-city-walk', quest_db_id: 7, steps: 8, places: 0, walkSentences: 0 })
+    expect(result.cityWords).toBeLessThan(MIN_QUEST_PAGE_WORDS)
     expect(result.detailWords).toBeLessThan(MIN_QUEST_PAGE_WORDS)
     expect(result.issues).toHaveLength(2)
     expect(result.issues[0]).toMatch(/ни одна из 8 точек/)
     expect(result.issues[1]).toMatch(new RegExp(`порог ${MIN_QUEST_PAGE_WORDS}`))
   })
 
-  it('четыре предложения на точку: каждая точка даёт две заметки городу, детальная берёт порог', () => {
+  it('четыре предложения на точку: каждая точка даёт две заметки городу, обе страницы берут порог', () => {
     const result = inspectQuest(bundle(stories(8, DEEP)))
     expect(result).toMatchObject({ steps: 8, places: 8, walkSentences: 16, otherPlaces: 0, issues: [] })
+    expect(result.cityWords).toBeGreaterThanOrEqual(MIN_QUEST_PAGE_WORDS)
     expect(result.detailWords).toBeGreaterThanOrEqual(MIN_QUEST_PAGE_WORDS)
   })
 
-  it('хвост есть, но точек мало — остаётся только находка про объём детальной', () => {
+  // Сборка снимает с выдачи и город с одной-двумя заметками: порог #1930 меряет
+  // слова посадочной, а не факт «хвост непустой». Проверка «places > 0» такой
+  // квест пропускала бы — ровно тот класс, ради которого скан и написан.
+  it('две заметки на восемь точек: детальная берёт порог, посадочная города — нет', () => {
+    const result = inspectQuest(bundle([DEEP(1), DEEP(2), ...stories(6, (i) => DIGEST(i + 2))]))
+    expect(result).toMatchObject({ steps: 8, places: 2 })
+    expect(result.detailWords).toBeGreaterThanOrEqual(MIN_QUEST_PAGE_WORDS)
+    expect(result.cityWords).toBeLessThan(MIN_QUEST_PAGE_WORDS)
+    expect(result.issues).toHaveLength(1)
+    expect(result.issues[0]).toMatch(/слов прозы на посадочной города.*заметок о местах 2 из 8 точек/)
+  })
+
+  it('хвост есть, но точек мало — обе страницы ниже порога', () => {
     const result = inspectQuest(bundle(stories(3, DEEP)))
     expect(result).toMatchObject({ steps: 3, places: 3 })
-    expect(result.issues).toHaveLength(1)
-    expect(result.issues[0]).toMatch(/слов прозы на детальной/)
+    expect(result.issues).toHaveLength(2)
+    expect(result.issues[0]).toMatch(/слов прозы на посадочной города/)
+    expect(result.issues[1]).toMatch(/слов прозы на детальной/)
+  })
+
+  it('шагов нет вовсе: находка называет причину, а не «ни одна из 0 точек»', () => {
+    const result = inspectQuest(bundle([]))
+    expect(result).toMatchObject({ steps: 0, places: 0 })
+    expect(result.issues[0]).toMatch(/у квеста нет точек/)
+  })
+
+  it('шаги строкой JSON (форма API) меряются так же, как массивом', () => {
+    const asArray = inspectQuest(bundle(stories(8, DEEP)))
+    const asString = inspectQuest(bundle(stories(8, DEEP), { steps: JSON.stringify(bundle(stories(8, DEEP)).steps) }))
+    expect(asString.cityWords).toBe(asArray.cityWords)
+    expect(asString.detailWords).toBe(asArray.detailWords)
   })
 
   it('порог детальной меряется тем же срезом, что пишет сборка: хвост историй в него не входит', () => {
     // Хвост (предложения 3–4) уходит на страницу города, а не в дайджест, —
     // поэтому детальная с хвостом и без него весит одинаково.
     const withTail = detailPageWords(bundle(stories(8, DEEP)))
-    const digestOnly = detailPageWords(
-      bundle(stories(8, (i) => DEEP(i).split('. ').slice(0, 2).join('. ') + '.')),
-    )
+    const digestOnly = detailPageWords(bundle(stories(8, DIGEST)))
     expect(withTail).toBe(digestOnly)
+  })
+
+  it('посадочная города меряется на заметках: без хвоста остаётся один шаблон', () => {
+    const quest = { quest_id: 'demo-city-walk', title: 'Демо', city_name: 'Демо', points: 8, duration_min: null }
+    const withTail = cityPageOf(quest, bundle(stories(8, DEEP)))
+    const templateOnly = cityPageOf(quest, bundle(stories(8, DIGEST)))
+    expect(withTail.walk.places).toHaveLength(8)
+    expect(withTail.words).toBeGreaterThanOrEqual(MIN_QUEST_PAGE_WORDS)
+    expect(templateOnly.walk.places).toHaveLength(0)
+    expect(templateOnly.words).toBeLessThan(MIN_QUEST_PAGE_WORDS)
   })
 
   it('scanQuests оставляет в findings только квесты с находками', () => {

@@ -248,19 +248,28 @@ tripvenue резолвит по ближайшему городу каталог
 | --- | --- | --- | --- |
 | `useQuestsList` | `hooks/useQuestsApi.ts` + `hooks/questsListQuery.ts` | `['quests']` | единственное определение запроса; `staleTime` 30 мин, `gcTime` 60 мин (`hooks/questsListCachePolicy.ts`) |
 | `useQuestsPreview(limit)` | `hooks/useQuestsApi.ts` | `['quests','preview',limit]` | `GET /quests/?sort=popular&page_size=N` одним запросом (при `400` — повтор без `sort`); `initialData` — топ-N по популярности из `['quests']` с наследованием `dataUpdatedAt` |
-| `useQuestRatingMeta` / `useQuestCompletionMeta` / `useQuestPioneerMeta` | `hooks/useQuest*Meta.ts` | `['quests']` (+ засев `['quest', id]`) | бандл не несёт rating/completions/first_completer — берутся из каталога |
+| `useQuestBundle` / `useQuestRatingMeta` / `useQuestCompletionMeta` / `useQuestPioneerMeta` | `hooks/useQuestsApi.ts`, `hooks/useQuest*Meta.ts`, `hooks/questBundleQuery.ts` | `['quest-bundle', slug]` | один сырой бандл для страницы, breadcrumbs и метаданных; полный каталог для детали не загружается (#1992) |
 | `useQuestReviews` | `hooks/useQuestsApi.ts` | `['quest', questId, 'reviews']` | `staleTime` 60 с |
 | `useQuestReview` | `hooks/useQuestReview.ts` | `['questUserReview', userId, id]` | один `POST /quest-reviews/`; personal review изолирован по аккаунту, после успеха инвалидируются каталог/detail/публичная читалка |
 | `useQuestForLocation` | `hooks/useQuestForLocation.ts` | `['quests-near-location', key]` | серверный score/distance; при `404` — клиентский фолбэк по `['quests']` |
 | `useTravelsForQuest` | `hooks/useTravelsForQuest.ts` | `['travels-for-quest', term]` | обратная перелинковка квест → travel |
 
-Ключ `queryKeys.questBundle(slug)` объявлен в `api/queryKeys.ts`, но **бандл
-через React Query не ходит**: `useQuestBundle` — ручной `useState`+`useEffect`
-поверх `fetchQuestByQuestId` с собственным `refetch` (см. «Долги»).
+`questBundleQueryOptions` задаёт единый запрос для страницы, мета-хуков и
+breadcrumbs: общий ключ, время жизни и ожидание смены credentials. В кэше
+лежит сырой API-бандл; `useQuestBundle` адаптирует его для визарда. Метаданные
+обновляются после входа/выхода, подтверждённого завершения/сброса и сохранения
+отзыва; личные поля снимаются сразу при смене аккаунта. Отсутствующий или ещё
+загружающийся бандл не запускает полный каталог ради пустых счётчиков.
 
-Единый ключ `['quests']` — сознательный контракт дедупликации: экран квестов,
-промо главной, три мета-хука детали и лендинг города должны схлопываться в один
-`GET /api/quests/`. Разные `staleTime` под этим ключом ломают дедупликацию.
+`tags` пока отсутствуют в `QuestBundleSerializer`. Классификация для карты и
+запасная обложка берутся из `/quests/by-city/{cityId}/` с выбором текущего
+`quest_id`; это ограниченный список одного города. Полный каталог и
+`fetchQuestsCompactCatalog` ради этих полей не запрашиваются. Отдельная
+компактная коллекция/рекомендации после финиша сохраняет свой контракт #1484.
+
+Единый ключ `['quests']` принадлежит потребителям полного каталога: экрану
+квестов и лендингам. Промо главной использует отдельное превью, деталь — бандл.
+Разные `staleTime` под одним ключом ломают дедупликацию.
 
 ## Клиентский стейт
 
@@ -306,6 +315,10 @@ tripvenue резолвит по ближайшему городу каталог
   заметки заняли бы слоты «недавних» чужими квестами.
 - Кэшируется именно СЫРОЙ нормализованный бандл: `adaptBundle` производит
   функции-чекеры, которые не сериализуются, поэтому адаптация всегда на клиенте.
+- Общий офлайн-бандл не является источником личного статуса: при записи и
+  чтении снимаются `is_completed_by_me` и `user_rating`, включая старые
+  сохранённые пакеты. Публичные рейтинг, счётчик и первопроходец сохраняются
+  (#1992); личный прогресс по-прежнему имеет отдельного владельца.
 - «Скачать квест офлайн» в визарде: `fetchQuestByQuestId` → `saveQuestOffline({
   pinned: true, includePhotos: true })`; состояние берётся из
   `useOfflineCatalog()` по `type === 'quest' && pinned`.
@@ -1011,9 +1024,6 @@ E2E (Playwright): `e2e/quests-list-detail.spec.ts` (каталог → дета�
 - `components/quests/QuestWizard.tsx` (813), `printable/styles.ts` (886) и
   `QuestsScreen.styles.ts` (1287) выше порога guard-скрипта — план распила не
   зафиксирован.
-- `useQuestBundle` не переведён на React Query: ключ `queryKeys.questBundle`
-  объявлен и не используется, дедупликации и общего инвалидационного контракта у
-  детали нет.
 - Backend принимает `POST /api/quest-reviews/` от любого авторизованного
   пользователя и пока не проверяет `QuestProgress.completed=True`. Frontend
   показывает форму только при засчитанном прохождении (#1578), но серверный

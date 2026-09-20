@@ -348,6 +348,15 @@ const INTENTIONALLY_NOINDEX_PATHS = new Set(['/articles', '/article', '/places']
  * всё ещё лежат в backend-owned sitemap.xml, который этот гейт обходит, — без
  * исключения он валил бы каждый деплой пачкой `robots.noindex` подряд.
  *
+ * `/quests/<город>` и `/quests/<город>/<квест>` (#1998): с 20.09.2026 сборка
+ * снимает с выдачи тем же build-owned `noindex, follow` посадочную города, чьи
+ * квесты не оставляют заметок о местах (истории точек короче дайджеста
+ * детальной, #1569), и детальную ниже порога #1930 — хотфикс по партии
+ * 19.09.2026 дал 20 таких городов и 2 детальные, и все они лежат в том же
+ * backend-owned sitemap.xml. Статические роуты каталога — `/quests`,
+ * `/quests/country`, `/quests/scenario`, `/quests/map` — семейству не
+ * принадлежат: их robots задаёт шаблон сборки, и здесь он проверяется строго.
+ *
  * Инвариант при этом не теряется, он проверяется строже и раньше: текст
  * страницы известен только сборке, поэтому «этот лендинг обязан быть noindex, а
  * тот обязан им не быть» сверяет `scripts/verify-static-quest-seo.js` по живому
@@ -355,6 +364,10 @@ const INTENTIONALLY_NOINDEX_PATHS = new Set(['/articles', '/article', '/places']
  * Здесь же остаются все прочие проверки страницы: title, description, canonical.
  */
 const CATALOG_DECIDED_INDEXABILITY_PREFIXES = ['/quests/country/']
+/** Посадочная города или детальная квеста: один или два сегмента после `/quests/`. */
+const QUEST_CATALOG_PAGE_RE = /^\/quests\/([^/]+)(?:\/[^/]+)?$/
+/** Первые сегменты под `/quests/`, которые городом не являются. */
+const QUEST_STATIC_SEGMENTS = new Set(['country', 'scenario', 'map'])
 
 function pathnameOf(url) {
   if (!url) return null
@@ -369,9 +382,13 @@ function pathnameOf(url) {
 function hasCatalogDecidedIndexability(url) {
   const normalized = pathnameOf(url)
   if (!normalized) return false
-  return CATALOG_DECIDED_INDEXABILITY_PREFIXES.some(
+  if (CATALOG_DECIDED_INDEXABILITY_PREFIXES.some(
     (prefix) => normalized.startsWith(prefix) && normalized.length > prefix.length,
-  )
+  )) {
+    return true
+  }
+  const match = normalized.match(QUEST_CATALOG_PAGE_RE)
+  return match !== null && !QUEST_STATIC_SEGMENTS.has(match[1])
 }
 
 function isIntentionallyNoindex(url) {

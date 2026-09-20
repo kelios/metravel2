@@ -1,5 +1,9 @@
+const fs = require('fs')
+const path = require('path')
+
 const {
   detectPageType,
+  hasCatalogDecidedIndexability,
   parseSitemapUrls,
   validateCanonical,
   validateCorePageH1,
@@ -240,13 +244,46 @@ describe('post-deploy SEO check helpers', () => {
       expect(codes('<title>x</title>', 'page', 'https://metravel.by/quests/country/poland')).toEqual([])
     })
 
-    it('does not extend that exception to the rest of the quests section', () => {
+    // #1998: с 20.09.2026 сборка тем же build-owned `noindex, follow` снимает с
+    // выдачи посадочную города без заметок о местах и детальную ниже порога
+    // #1930 (партия 19.09.2026: 20 городов и 2 детальные), а backend sitemap.xml
+    // перечисляет их по-прежнему — без исключения каждый деплой давал бы 22
+    // `robots.noindex`. Обязан ли адрес быть закрыт, знает каталог, и это
+    // сверяет verify-static-quest-seo.js до деплоя.
+    it('leaves city landings and quest pages to the build-time gate, in both directions', () => {
+      expect(hasCatalogDecidedIndexability('https://metravel.by/quests/tartu')).toBe(true)
+      expect(codes(CLOSED, 'page', 'https://metravel.by/quests/tartu')).toEqual([])
+      expect(codes(OPEN, 'page', 'https://metravel.by/quests/grodno')).toEqual([])
+      expect(codes(CLOSED, 'page', 'https://metravel.by/quests/94/luninets-railway')).toEqual([])
+      expect(codes(OPEN, 'page', 'https://metravel.by/quests/nis/nis-eight-seals/')).toEqual([])
+    })
+
+    it('does not extend that exception to the static quest routes', () => {
       expect(codes(CLOSED, 'page', 'https://metravel.by/quests')).toEqual(['robots.noindex'])
       expect(codes(CLOSED, 'page', 'https://metravel.by/quests/country')).toEqual(['robots.noindex'])
-      expect(codes(CLOSED, 'page', 'https://metravel.by/quests/grodno')).toEqual(['robots.noindex'])
-      expect(codes(CLOSED, 'page', 'https://metravel.by/quests/94/luninets-railway')).toEqual([
+      expect(codes(CLOSED, 'page', 'https://metravel.by/quests/scenario')).toEqual(['robots.noindex'])
+      expect(codes(CLOSED, 'page', 'https://metravel.by/quests/map')).toEqual(['robots.noindex'])
+      expect(codes(CLOSED, 'page', 'https://metravel.by/quests/grodno/castle/extra')).toEqual([
         'robots.noindex',
       ])
+    })
+
+    // Исключение отличает город от статического роута по СПИСКУ сегментов, а
+    // список — ручной. Новый роут под `/quests/` (`app/(tabs)/quests/*`) без
+    // строки в этом списке молча попадёт в семейство «решает каталог», и его
+    // `noindex` перестанет быть ошибкой — ровно тот пермиссивный дефолт, ради
+    // которого проверка и существует. Поэтому роутер спрашивается здесь.
+    it('keeps every static quest route out of the catalog-decided family', () => {
+      const routesDir = path.join(process.cwd(), 'app', '(tabs)', 'quests')
+      const staticSegments = fs
+        .readdirSync(routesDir, { withFileTypes: true })
+        .map((entry: any) => entry.name.replace(/\.tsx$/, ''))
+        .filter((name: string) => name !== 'index' && !name.startsWith('[') && !name.startsWith('_'))
+
+      expect(staticSegments.sort()).toEqual(['country', 'map', 'scenario'])
+      for (const segment of staticSegments) {
+        expect(hasCatalogDecidedIndexability(`https://metravel.by/quests/${segment}`)).toBe(false)
+      }
     })
 
     it('keeps the auth contract and falls back to strict when the URL is unknown', () => {

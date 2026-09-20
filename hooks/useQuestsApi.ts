@@ -6,19 +6,20 @@ import { AppState } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ApiQuestMeta, ApiQuestProgress, QuestReview } from '@/api/quests';
 import {
-    fetchQuestsList,
+    fetchQuestsByCity,
     fetchQuestsPreview,
-    fetchQuestByQuestId,
     fetchQuestProgress,
     fetchQuestReviews,
     deleteProgress as apiDeleteProgress,
 } from '@/api/quests';
 import { queryKeys } from '@/api/queryKeys';
+import { writeCachedQuestBundle } from '@/api/questBundleCache';
 import { getActiveQueryClient } from '@/api/activeQueryClient';
 import { resetQuestsCatalogCompletion } from '@/api/questsCatalogInvalidation';
 import { useAuthStore } from '@/stores/authStore';
 import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy';
 import { questsListQueryOptions } from '@/hooks/questsListQuery';
+import { useQuestBundleQuery } from '@/hooks/questBundleQuery';
 import {
     adaptMeta,
     adaptBundle,
@@ -69,11 +70,7 @@ type PendingQuestProgress = {
 const getErrorMessage = (error: unknown, fallback: string): string =>
     error instanceof Error && typeof error.message === 'string' ? error.message : fallback;
 
-// Полный список квестов кешируется под одним ключом queryKeys.quests(), чтобы
-// экран квестов, промо-блок главной и три мета-хука детали (rating/completion/
-// pioneer) дедуплицировались в один запрос /quests/. Держим список «свежим»
-// ~30 мин и в кеше ~60 мин.
-//
+// Полный список нужен каталогу и промо; metadata детали читается из bundle.
 // #1393: и само определение запроса, и времена кеша живут в листовых модулях
 // `questsListQuery` / `questsListCachePolicy`. Ре-экспорта отсюда намеренно
 // НЕТ: он оставлял бы открытой ровно ту дверь, которую задача закрывала, —
@@ -145,96 +142,46 @@ export function useQuestsPreview(limit: number, opts?: { enabled?: boolean }) {
     return { quests, loading: enabled && isPending, error: errorMessage };
 }
 
-// Сессионный памятник списка квестов для фонового дообогащения бандла тегами:
-// без него каждое открытие детали дёргало бы полный пагинированный список.
-let questsListForTagsPromise: ReturnType<typeof fetchQuestsList> | null = null;
-const fetchQuestsListMemoized = () => {
-    if (!questsListForTagsPromise) {
-        questsListForTagsPromise = fetchQuestsList().catch((err) => {
-            questsListForTagsPromise = null;
-            throw err;
-        });
-    }
-    return questsListForTagsPromise;
-};
-
 /** Хук для загрузки полного бандла квеста по quest_id */
 export function useQuestBundle(questId: string | undefined) {
-    const [bundle, setBundle] = useState<FrontendQuestBundle | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [reloadToken, setReloadToken] = useState(0);
+    const { data, isPending, error, refetch } = useQuestBundleQuery(questId);
+    const cityId = data?.city?.id;
+    const { data: classification, isPending: classificationPending, isError: classificationFailed } = useQuery({
+        queryKey: ['quest-city-classification', cityId],
+        queryFn: async () => (await fetchQuestsByCity(cityId!)).map((meta) => {
+            const adapted = adaptMeta(meta);
+            return { questId: meta.quest_id, tags: adapted.tags ?? [], cover: adapted.cover };
+        }),
+        enabled: Boolean(data && cityId && (data.tags === undefined || !data.cover_url)),
+        networkMode: 'always',
+        staleTime: QUESTS_LIST_STALE_TIME,
+        gcTime: QUESTS_LIST_GC_TIME,
+        retry: false,
+    });
 
-    const refetch = useCallback(() => {
-        setReloadToken((t) => t + 1);
-    }, []);
-
+    // City notes can prefill the same raw query without persisting it. Opening
+    // the route is what adds that quest to the offline catalog.
     useEffect(() => {
-        if (!questId) {
-            setBundle(null);
-            setLoading(false);
-            return;
-        }
+        if (questId && data) void writeCachedQuestBundle(questId, data);
+    }, [questId, data]);
 
-        let cancelled = false;
-        setLoading(true);
-        setError(null);
-        setBundle(null);
+    const bundle = useMemo(() => {
+        if (!data || !questId) return null;
+        const adapted = adaptBundle(data);
+        const meta = classification?.find((item) => item.questId === questId);
+        adapted.tags = data.tags !== undefined
+            ? Object.keys(data.tags ?? {})
+            : meta?.tags ?? ((!classificationPending || classificationFailed || !cityId) ? [] : undefined);
+        adapted.coverUrl ||= meta?.cover;
+        return adapted;
+    }, [data, questId, classification, classificationPending, classificationFailed, cityId]);
 
-        fetchQuestByQuestId(questId)
-            .then(async (rawBundle) => {
-                if (cancelled) return;
-
-                const adaptedBundle = adaptBundle(rawBundle);
-                // cover_url теперь приходит в детальном бандле (#729, verified prod).
-                // Полный список /quests/ подгружаем ЛЕНИВО, только если обложки в
-                // детали почему-то нет (легаси/кэш) — экономит запрос всего списка
-                // на каждое открытие квеста.
-                if (!adaptedBundle.coverUrl) {
-                    const list = await fetchQuestsList().catch(() => null);
-                    if (cancelled) return;
-                    const matchedMeta = Array.isArray(list)
-                        ? list.find((quest) => String(quest?.quest_id) === questId)
-                        : null;
-                    const coverFallback = matchedMeta ? adaptMeta(matchedMeta).cover : undefined;
-                    if (coverFallback) {
-                        adaptedBundle.coverUrl = coverFallback;
-                    }
-                }
-
-                setBundle(adaptedBundle);
-                setLoading(false);
-
-                // Теги в detail-API отсутствуют, а от них зависит поведение карты
-                // (кольцевые `loop`-квесты замыкают маршрут к старту). Дотягиваем
-                // их фоном из списка (с AsyncStorage-кэшем для офлайна), не
-                // блокируя первый рендер бандла.
-                void fetchQuestsListMemoized()
-                    .then((list) => {
-                        if (cancelled || !Array.isArray(list)) return;
-                        const matchedMeta = list.find((quest) => String(quest?.quest_id) === questId);
-                        if (!matchedMeta) return;
-                        // An empty tag set is still a completed classification:
-                        // ordinary quests must switch from the temporary map
-                        // skeleton to the default walking route. Dropping `[]`
-                        // here left every untagged quest paused indefinitely.
-                        const tags = adaptMeta(matchedMeta).tags ?? [];
-                        setBundle((prev) => (prev && prev.questId === String(questId) ? { ...prev, tags } : prev));
-                    })
-                    .catch(() => {});
-            })
-            .catch((err) => {
-                if (cancelled) return;
-                const message = getErrorMessage(err, i18nT('quests:hooks.useQuestsApi.kvest_ne_nayden_af9ac6a4'));
-                console.warn('Failed to load quest bundle:', message);
-                setError(message);
-                setLoading(false);
-            });
-
-        return () => { cancelled = true; };
-    }, [questId, reloadToken]);
-
-    return { bundle, loading, error, refetch };
+    return {
+        bundle,
+        loading: Boolean(questId) && isPending,
+        error: error ? getErrorMessage(error, i18nT('quests:hooks.useQuestsApi.kvest_ne_nayden_af9ac6a4')) : null,
+        refetch,
+    };
 }
 
 /** Хук для загрузки публичных отзывов о квесте (читалка чужих отзывов) */
