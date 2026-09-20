@@ -242,13 +242,25 @@ function groupQuestPagesByKind(pages) {
  * наборе, который сам же отбор и построил.
  */
 function selectIndexableQuestPages(pages, options = {}) {
+  return scoreIndexableQuestPages(pages, options).indexable
+}
+
+/**
+ * Тот же отбор, но с причинами отбраковки. Страницу снимают с выдачи и за
+ * объём, и за долю шаблонных формулировок, и лечатся они по-разному: лог
+ * сборки обязан назвать причину, иначе оператор пойдёт дописывать истории
+ * там, где надо расшивать шаблон.
+ */
+function scoreIndexableQuestPages(pages, options = {}) {
   const indexable = new Set()
+  const rejected = new Map()
   for (const [, kindPages] of groupQuestPagesByKind(pages)) {
     for (const scored of scoreQuestPageLevel(kindPages, options)) {
       if (scored.issues.length === 0) indexable.add(scored.path)
+      else rejected.set(scored.path, scored.issues)
     }
   }
-  return indexable
+  return { indexable, rejected }
 }
 
 module.exports = {
@@ -263,6 +275,7 @@ module.exports = {
   groupQuestPagesByKind,
   questPageFromHtml,
   questPageIsNoindex,
+  scoreIndexableQuestPages,
   scoreQuestPageLevel,
   sectionProseText,
   selectIndexableQuestPages,

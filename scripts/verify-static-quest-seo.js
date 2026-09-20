@@ -204,20 +204,15 @@ function verifyQuestCityHtml(html, expectedCanonical, childHtml = '') {
     issues.push(`bad canonical: ${getCanonical(html) || 'missing'}`)
   }
   if (!hasQuestCityLandingSection(html)) issues.push('missing crawlable quest-city section')
-  // Город, чьи квесты не оставили заметок о местах (истории точек короче
-  // дайджеста детальной страницы), генератор собирает под build-owned
-  // `noindex, follow` — с такой страницы спрашивается только планировочная
-  // часть. Индексируемая посадочная обязана нести заметки: без них она снова
-  // обёртка единственного квеста (#1569). Обратное расхождение — заметки есть,
-  // а страница снята с выдачи — тоже ошибка генератора, а не решение; и тег с
-  // меткой Helmet Helmet же снимет при гидрации (#1929).
-  const robots = getMetaContent(html, 'name', 'robots') || ''
+  // Город ниже порога #1930 (без заметок о местах или с одной-двумя) генератор
+  // собирает под build-owned `noindex, follow` — с такой страницы спрашивается
+  // только планировочная часть, а сам порог сверяет verifyQuestPageContentDepth
+  // в обе стороны. Индексируемая посадочная обязана нести заметки: без них она
+  // снова обёртка единственного квеста (#1569). Тег с меткой Helmet Helmet же
+  // снимет при гидрации (#1929).
   if (questPageIsNoindex(html)) {
     if (!hasQuestCityPlanningContent(html)) {
       issues.push('missing independent city overview/practical content')
-    }
-    if (hasQuestCityWalkContent(html)) {
-      issues.push(`city landing carries its own notes about the places but ships noindex: ${robots}`)
     }
     if (robotsMetaIsHelmetOwned(html)) {
       issues.push('city landing noindex is Helmet-owned (data-rh) and is dropped on hydration')
@@ -419,14 +414,14 @@ function collectQuestSsgPages(distDir, options = {}) {
 
 /**
  * Уровни, где индексируемость решает сам генератор этим же порогом: детальная
- * страница ниже него уходит под `noindex, follow` вторым проходом
- * (`selectIndexableQuestDetailPages`). Такая страница из замера не выпадает, а
- * проверяется на обратное расхождение: очистила пороги — значит, `noindex` ей
- * поставили по ошибке, и это ошибка генератора, а не решение. Остальные уровни
- * под `noindex` по-прежнему вне замера: их индексируемость решает другое
- * правило (город — заметки о местах, #1569; страна — #1929).
+ * страница и посадочная города ниже него уходят под `noindex, follow` вторым
+ * проходом (`selectIndexableBuiltQuestPages`). Такая страница из замера не
+ * выпадает, а проверяется на обратное расхождение: очистила пороги — значит,
+ * `noindex` ей поставили по ошибке, и это ошибка генератора, а не решение.
+ * Страна под `noindex` по-прежнему вне замера: её вердикт по тексту секции
+ * сверяет `verifyQuestCountryHtml` (#1929).
  */
-const DEPTH_GATED_KINDS = new Set(['quest-intro'])
+const DEPTH_GATED_KINDS = new Set(['quest-intro', 'quest-city'])
 
 /**
  * Volume and independence, for every level the build actually produced.

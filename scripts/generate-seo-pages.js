@@ -46,8 +46,8 @@ const {
   questCountryLandingIsLinkable,
 } = require('../utils/questCountryLanding');
 const {
-  countWords,
   questPageFromHtml,
+  scoreIndexableQuestPages,
   selectIndexableQuestPages,
 } = require('./lib/questPageDepth');
 const {
@@ -78,6 +78,7 @@ const {
   buildQuestCityWalkModel,
   questCityWalkBundleCount,
   questCityWalkHasContent,
+  questCityWalkQuestIds,
 } = require('../utils/questCityWalk');
 
 // ---------------------------------------------------------------------------
@@ -2539,10 +2540,11 @@ function findQuestCityTravelLinks(city, travels, limit = 4) {
  * индекса (#1569, замер 13.09.2026). Текст города собирается из бандлов его
  * квестов, и пустая модель означает одно из двух:
  *
- * - ни один бандл города не пришёл — `by-quest-id` недоступен, и релиз молча
- *   выложил бы ровно ту страницу, ради которой заведена карточка; сборка падает
- *   здесь и называет город, а не файл в dist;
- * - бандлы есть, но истории точек короче дайджеста детальной страницы и хвоста
+ * - хотя бы один из разбираемых бандлов города не пришёл — `by-quest-id` не
+ *   ответил, и пустые заметки не доказывают тонкость: релиз молча выложил бы
+ *   ровно ту страницу, ради которой заведена карточка; сборка падает здесь и
+ *   называет город, а не файл в dist;
+ * - все бандлы есть, но истории точек короче дайджеста детальной страницы и хвоста
  *   для заметок не оставляют (партия 19.09.2026: 15 городов по 1–2 предложения
  *   на точку). Это дефект контента, а не транспорта: город остаётся в
  *   навигации, но не претендует на выдачу — `noindex, follow`, как страна без
@@ -2550,50 +2552,57 @@ function findQuestCityTravelLinks(city, travels, limit = 4) {
  */
 function assertQuestCityLandingBundlesResolved(cityLandingModel) {
   const unresolved = (Array.isArray(cityLandingModel) ? cityLandingModel : [])
-    .filter((city) => !questCityWalkHasContent(city.walk) && !(city.walkBundleCount > 0))
-    .map((city) => `${city.landingPath} (${city.name || city.cityId})`);
+    // Тонкость доказана только полным набором бандлов: пока хоть один из
+    // разбираемых квестов не ответил, пустые заметки могут быть сбоем
+    // транспорта, а не короткими историями — снимать город с выдачи по такому
+    // сигналу нельзя.
+    .filter((city) => !questCityWalkHasContent(city.walk) && city.walkBundleCount < city.walkQuestCount)
+    .map(
+      (city) =>
+        `${city.landingPath} (${city.name || city.cityId}) ${city.walkBundleCount}/${city.walkQuestCount} bundles`,
+    );
   if (!unresolved.length) return;
   throw new Error(
-    `quest city landings without a single quest bundle: ${unresolved.join(', ')} — ` +
-      '/api/quests/by-quest-id/ did not resolve for these cities, their landings would ship as bare quest-card wrappers',
-  );
-}
-
-/** Города, чья посадочная претендует на выдачу: есть собственные заметки о местах. */
-function selectIndexableQuestCityLandings(cityLandingModel) {
-  return new Set(
-    (Array.isArray(cityLandingModel) ? cityLandingModel : [])
-      .filter((city) => questCityWalkHasContent(city.walk))
-      .map((city) => city.segment),
+    `quest city landings with unresolved quest bundles: ${unresolved.join(', ')} — ` +
+      '/api/quests/by-quest-id/ did not answer for every quest the landing text is built from, ' +
+      'so the missing notes may be a transport failure rather than thin content',
   );
 }
 
 /**
- * Детальные страницы квестов, которые претендуют на выдачу.
+ * Собранные страницы уровня, которые претендуют на выдачу.
  *
- * Правило одно с `verify-static-quest-seo.js` (#1930): ≥300 слов прозы и ≥30%
- * собственных формулировок относительно соседей того же уровня. Уникальность —
- * величина относительная, поэтому отбор идёт по всем собранным страницам разом,
- * после первого прохода и до записи. Тонкая страница (истории точек короче
- * дайджеста — партия 19.09.2026: Суботица 297 и Ниш 299 слова при поле 300)
- * уходит под `noindex, follow`, а не роняет релиз и не выкладывается
- * индексируемой ниже порога. Ноль индексируемых при непустом каталоге — это не
- * «все тонкие», а потерянное тело шаблона: такую сборку нельзя выкладывать молча.
+ * Правило одно с `verify-static-quest-seo.js` (#1930) и со страной (#1929):
+ * ≥300 слов прозы и ≥30% собственных формулировок относительно соседей того же
+ * уровня. Уникальность — величина относительная, поэтому отбор идёт по всем
+ * собранным страницам уровня разом, после первого прохода и до записи, а
+ * тонкая страница уходит под `noindex, follow`, не роняя релиз и не выкладываясь
+ * индексируемой ниже порога. Партия квестов 19.09.2026 дала оба вида тонкости:
+ * детальные Суботицы (297 слов) и Ниша (299) — истории точек по одному
+ * предложению; посадочные 15 городов без единой заметки (шаблон — 150–200 слов
+ * при 0% своей лексики) и ещё пяти с одной-двумя заметками (Хаапсалу, Клайпеда,
+ * Сремски-Карловци, Сигулда, Тракай: 243–280 слов, 20–25%). Правило «есть ли
+ * заметки» второй случай пропускало в выдачу, и верификатор ронял сборку уже
+ * после генерации — поэтому город решается тем же порогом, что и остальные.
+ * Ноль индексируемых при непустом уровне — это не «все тонкие», а потерянное
+ * тело шаблона: такую сборку нельзя выкладывать молча.
  *
- * `entries` — `{ route, html }` первого прохода; ключ множества — `route.path`.
+ * `entries` — `{ path, html }` первого прохода, `level` — имя уровня для
+ * сообщения; `indexable` — множество путей в выдаче, `rejected` — причины
+ * отбраковки остальных для лога сборки.
  */
-function selectIndexableQuestDetailPages(entries) {
+function selectIndexableBuiltQuestPages(entries, level = 'quest') {
   const list = Array.isArray(entries) ? entries : [];
-  if (!list.length) return new Set();
-  const indexable = selectIndexableQuestPages(
-    list.map((entry) => questPageFromHtml(entry.html, entry.route.path)),
+  if (!list.length) return { indexable: new Set(), rejected: new Map() };
+  const { indexable, rejected } = scoreIndexableQuestPages(
+    list.map((entry) => questPageFromHtml(entry.html, entry.path)),
   );
   if (indexable.size === 0) {
     throw new Error(
-      `none of ${list.length} quest pages clears the content floors — the quest page template lost its crawlable body`,
+      `none of ${list.length} ${level} pages clears the content floors — the ${level} template lost its crawlable body`,
     );
   }
-  return indexable;
+  return { indexable, rejected };
 }
 
 /** One canonical city model shared by one-quest and multi-quest SSG landings. */
@@ -2619,6 +2628,7 @@ function buildQuestCityLandingModel(quests, cityAliasMap, travels = [], questBun
       // карточку единственного дочернего квеста (#1569).
       walk: buildQuestCityWalkModel(group.quests, questBundles),
       walkBundleCount: questCityWalkBundleCount(group.quests, questBundles),
+      walkQuestCount: questCityWalkQuestIds(group.quests).length,
       quests: group.quests
         .map((quest) => {
           const route = questRouteKey(quest);
@@ -3125,14 +3135,14 @@ function buildQuestCityLandingHtml(cityBaseHtml, city, countryLanding = null, op
   );
   const image = city.cover ? toAbsoluteUrl(city.cover) : OG_IMAGE;
 
-  // Город без заметок о местах уходит из выдачи, но остаётся страницей:
-  // `follow` и полное тело — ссылки на квесты, соседние города и страну
-  // по-прежнему ведут краулер дальше, а человек по прямой ссылке видит те же
-  // маршруты. Роут города robots не объявляет — вердикт по тексту есть только у
-  // сборки, поэтому тег пишется без метки Helmet и переживает гидрацию (#1929).
-  const indexable = typeof options.indexable === 'boolean'
-    ? options.indexable
-    : questCityWalkHasContent(city.walk);
+  // Тонкий город уходит из выдачи, но остаётся страницей: `follow` и полное
+  // тело — ссылки на квесты, соседние города и страну по-прежнему ведут краулер
+  // дальше, а человек по прямой ссылке видит те же маршруты. Вердикт считается
+  // по всему уровню (`selectIndexableBuiltQuestPages`) и приходит сюда готовым;
+  // одиночная сборка страницы (проба, тест) по умолчанию индексируема. Роут
+  // города robots не объявляет — вердикт по тексту есть только у сборки, поэтому
+  // тег пишется без метки Helmet и переживает гидрацию (#1929).
+  const indexable = options.indexable !== false;
 
   let html = injectMeta(cityBaseHtml, { title, description, canonical, image, ogType: 'website' });
   if (!indexable) html = injectBuildOwnedRobots(html, 'noindex, follow');
@@ -4265,9 +4275,6 @@ async function main() {
     // Падаем здесь, а не на verify-static-quest-seo: в этом месте видно, какому
     // городу не хватило бандла, и сообщение называет город, а не файл в dist.
     assertQuestCityLandingBundlesResolved(cityLandingModel);
-    // Отбор по всей модели, как у стран: город с бандлами, но без заметок о
-    // местах собирается под `noindex, follow`, а не роняет релиз.
-    const indexableCityLandingSegments = selectIndexableQuestCityLandings(cityLandingModel);
     const questDetailLinksIndex = buildQuestDetailLinksIndex(cityLandingModel);
     // Модель стран нужна раньше собственных страниц: на неё ссылаются хаб
     // `/quests` и посадочные городов, иначе страновые лендинги остаются вне
@@ -4353,7 +4360,7 @@ async function main() {
         }
       }
 
-      questPagesToWrite.push({ quest, route, html });
+      questPagesToWrite.push({ quest, route, path: route.path, html });
     }
 
     // #1930: порог объёма и уникальности считается по всему уровню, поэтому
@@ -4362,14 +4369,17 @@ async function main() {
     // verify-static-quest-seo.js: ни красной сборки, ни индексируемой страницы
     // ниже порога. Роут квеста robots объявляет только для ненайденного квеста,
     // а найденному снимает лишь свой тег — вердикт сборки гидрацию переживает.
-    const indexableQuestPaths = selectIndexableQuestDetailPages(questPagesToWrite);
+    const { indexable: indexableQuestPaths, rejected: rejectedQuestPages } =
+      selectIndexableBuiltQuestPages(questPagesToWrite, 'quest');
     const noindexQuestPages = [];
     for (const { quest, route, html: builtHtml } of questPagesToWrite) {
       const indexable = indexableQuestPaths.has(route.path);
       const html = indexable ? builtHtml : injectBuildOwnedRobots(builtHtml, 'noindex, follow');
       if (!indexable) {
-        const words = countWords(questPageFromHtml(builtHtml, route.path).text);
-        noindexQuestPages.push(`${route.path} (${words} words)`);
+        // Причина — из того же отбора: объём и шаблонность лечатся по-разному,
+        // и лог обязан сказать, что именно дописывать.
+        const reasons = (rejectedQuestPages.get(route.path) || []).join('; ');
+        noindexQuestPages.push(`${route.path} (${reasons})`);
       }
       const routeVariants = questRouteVariants(quest, questCityAliasMap);
       for (const variant of routeVariants) {
@@ -4382,8 +4392,8 @@ async function main() {
     console.log(`  🧩 Quest pages: ${indexableQuestPaths.size}/${questPagesToWrite.length} indexable`);
     if (noindexQuestPages.length > 0) {
       console.warn(
-        `  ⚠️  ${noindexQuestPages.length} quest pages ship noindex, follow — ниже порога объёма/уникальности (#1930),` +
-          ` истории точек короче дайджеста: ${noindexQuestPages.join(', ')}`,
+        `  ⚠️  ${noindexQuestPages.length} quest pages ship noindex, follow — не берут порог #1930,` +
+          ` причина у каждой: ${noindexQuestPages.join(', ')}`,
       );
     }
 
@@ -4437,13 +4447,30 @@ async function main() {
       : questBaseHtml;
     const writtenCityLandingPaths = new Set();
     let cityLandingsWithCountryLink = 0;
-    for (const city of cityLandingModel) {
+    const cityLandingEntries = cityLandingModel.map((city) => {
       const countryLanding =
         linkedCountryLandings.get(String(city.countryCode || '').toUpperCase()) || null;
       if (countryLanding) cityLandingsWithCountryLink += 1;
-      const cityHtml = buildQuestCityLandingHtml(cityLandingBaseHtml, city, countryLanding, {
-        indexable: indexableCityLandingSegments.has(city.segment),
-      });
+      return {
+        city,
+        path: city.landingPath,
+        html: buildQuestCityLandingHtml(cityLandingBaseHtml, city, countryLanding),
+      };
+    });
+    // Тот же порог, что у страны (#1929) и детальной (#1930), по всему уровню
+    // разом: город без заметок о местах его не берёт по построению, город с
+    // одной-двумя заметками — тоже, и оба уходят под `noindex, follow`, а не
+    // роняют релиз на verify-static-quest-seo.
+    const { indexable: indexableCityPaths, rejected: rejectedCityPages } =
+      selectIndexableBuiltQuestPages(cityLandingEntries, 'city landing');
+    const noindexCityLandings = [];
+    for (const { city, path: landingPath, html: builtHtml } of cityLandingEntries) {
+      const indexable = indexableCityPaths.has(landingPath);
+      const cityHtml = indexable ? builtHtml : injectBuildOwnedRobots(builtHtml, 'noindex, follow');
+      if (!indexable) {
+        const reasons = (rejectedCityPages.get(landingPath) || []).join('; ');
+        noindexCityLandings.push(`${landingPath} (${city.name || city.cityId}: ${reasons})`);
+      }
       for (const segment of [...city.cityIds, city.segment, ...city.legacyAliases]) {
         const relativePath = path.join('quests', segment, 'index.html');
         if (writtenCityLandingPaths.has(relativePath)) continue;
@@ -4452,21 +4479,15 @@ async function main() {
       }
     }
     const cityLandingsGenerated = writtenCityLandingPaths.size;
-    const noindexCityLandings = cityLandingModel.filter(
-      (city) => !indexableCityLandingSegments.has(city.segment),
-    );
-    console.log(
-      `  🏙️  City landings: ${indexableCityLandingSegments.size}/${cityLandingModel.length} indexable`,
-    );
+    console.log(`  🏙️  City landings: ${indexableCityPaths.size}/${cityLandingModel.length} indexable`);
     if (noindexCityLandings.length > 0) {
       // Дефект контента, а не сборки: истории точек этих квестов короче
-      // дайджеста детальной страницы. Пока их не дописали, посадочная не
-      // претендует на выдачу — и об этом говорит каждый релиз, а не GSC через
-      // месяц.
+      // дайджеста детальной страницы или заметок слишком мало. Пока их не
+      // дописали, посадочная не претендует на выдачу — и об этом говорит каждый
+      // релиз, а не GSC через месяц.
       console.warn(
-        `  ⚠️  ${noindexCityLandings.length} city landings ship noindex, follow — квесты города не оставили` +
-          ' заметок о местах (истории точек короче дайджеста детальной страницы): ' +
-          noindexCityLandings.map((city) => `${city.landingPath} (${city.name || city.cityId})`).join(', '),
+        `  ⚠️  ${noindexCityLandings.length} city landings ship noindex, follow — не берут порог #1930,` +
+          ` причина у каждого: ${noindexCityLandings.join(', ')}`,
       );
     }
 
@@ -4783,8 +4804,7 @@ if (typeof module !== 'undefined' && module.exports) {
     buildQuestCountryLandingLead,
     questCountryLandingPageText,
     selectIndexableQuestCountryLandings,
-    selectIndexableQuestCityLandings,
-    selectIndexableQuestDetailPages,
+    selectIndexableBuiltQuestPages,
     buildQuestCountryLandingHtml,
     readRequiredQuestCountryTemplate,
     patchNoindexFallbackTemplate,

@@ -266,14 +266,7 @@ describe('verifyQuestCityHtml', () => {
     ).toEqual(expect.arrayContaining(['missing independent city overview/practical content']))
   })
 
-  it('rejects a noindex landing that still carries notes or whose robots tag is Helmet-owned', () => {
-    const withNotes = cityHtml.replace('</head>', '<meta name="robots" content="noindex, follow"/></head>')
-    expect(verifyQuestCityHtml(withNotes, canonical, buildQuestPageHtml())).toEqual(
-      expect.arrayContaining([
-        'city landing carries its own notes about the places but ships noindex: noindex, follow',
-      ]),
-    )
-
+  it('rejects a noindex landing whose robots tag is Helmet-owned', () => {
     const helmetOwned = cityHtml
       .replace(/<div data-ssg-quest-city-walk="true">[\s\S]*?<\/div>/, '')
       .replace('</head>', '<meta data-rh="true" name="robots" content="noindex, follow"/></head>')
@@ -1134,19 +1127,19 @@ describe('thin-content floors against the generator itself', () => {
    * a release that silently ships that page is the recurrence #1569 is about.
    * A city whose bundles did resolve but left no notes (stories shorter than the
    * quest-page digest, the 19.09.2026 batch) is not a transport failure: it
-   * ships `noindex, follow` and leaves the measured set, exactly like a thin
-   * country (#1929) — while the same page shipped indexable still fails the floor.
+   * ships `noindex, follow` and is measured only for the reverse mismatch —
+   * while the same page shipped indexable still fails the floor.
    */
   it('fails the build and the guard when a city has no resolvable quest bundle', () => {
     expect(() => assertQuestCityLandingBundlesResolved(cityModel(null))).toThrow(
-      /quest city landings without a single quest bundle/,
+      /quest city landings with unresolved quest bundles/,
     )
 
-    const noindexPage = leanPage(cityHtml(null), 'quests/x/index.html')
+    const noindexPage = leanPage(cityHtml(null, { indexable: false }), 'quests/x/index.html')
     expect(noindexPage.noindex).toBe(true)
     expect(verifyQuestPageContentDepth([noindexPage])).toEqual([])
 
-    const page = leanPage(cityHtml(null, { indexable: true }), 'quests/x/index.html')
+    const page = leanPage(cityHtml(null), 'quests/x/index.html')
     expect(page.noindex).toBe(false)
     expect(verifyQuestPageContentDepth([page])).toEqual([
       expect.stringContaining('words of crawlable text, minimum 300'),
@@ -1316,6 +1309,20 @@ describe('depth-gated quest pages under noindex (#1930)', () => {
         { exemptions: [] },
       ),
     ).toEqual([])
+    // Посадочная города гейтится тем же порогом: тонкая под noindex проходит,
+    // очистившая пороги под noindex — ошибка генератора.
+    expect(
+      verifyQuestPageContentDepth(
+        [page('quest-city', 40, 0, true), page('quest-city', 400, 1, false)],
+        { exemptions: [] },
+      ),
+    ).toEqual([])
+    expect(
+      verifyQuestPageContentDepth(
+        [page('quest-city', 400, 0, true), page('quest-city', 400, 1, false)],
+        { exemptions: [] },
+      ),
+    ).toEqual(['quests/quest-city-0/index.html [quest-city]: clears the content floors but ships noindex'])
 
     expect(
       verifyQuestPageContentDepth(
@@ -1328,7 +1335,7 @@ describe('depth-gated quest pages under noindex (#1930)', () => {
   it('keeps noindex pages of other levels out of the measured set', () => {
     expect(
       verifyQuestPageContentDepth(
-        [page('quest-city', 400, 0, true), page('quest-city', 40, 1, true)],
+        [page('quest-region', 400, 0, true), page('quest-region', 40, 1, true)],
         { exemptions: [] },
       ),
     ).toEqual([])
