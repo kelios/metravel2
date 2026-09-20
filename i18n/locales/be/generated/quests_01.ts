@@ -417,6 +417,7 @@ export const questsGenerated1 = {
   "screens.tabs.QuestsScreen.questNoun_many": "квестаў",
   "screens.tabs.QuestsScreen.questNoun_other": "квестаў",
   "screens.tabs.QuestsSidebar.actions.expand": "Разгарнуць",
+  "screens.tabs.QuestsSidebar.countryLandingA11y": "Усе квэсты краіны {{value1}} — {{value2}}",
   "screens.tabs.QuestsSidebar.actions.collapse": "Згарнуць",
   "utils.questAdapters.defaultCity": "горад",
   "utils.questAdapters.routeIntro": "У гэтым маршруце {{count}} крокаў. Націсніце \"Пачаць квэст\", каб перайсці да першага задання.",

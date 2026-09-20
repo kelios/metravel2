@@ -417,6 +417,7 @@ export const questsGenerated1 = {
   "screens.tabs.QuestsScreen.questNoun_many": "zadania",
   "screens.tabs.QuestsScreen.questNoun_other": "zadania",
   "screens.tabs.QuestsSidebar.actions.expand": "Rozwiń",
+  "screens.tabs.QuestsSidebar.countryLandingA11y": "Wszystkie questy w {{value1}} — {{value2}}",
   "screens.tabs.QuestsSidebar.actions.collapse": "Zwiń",
   "utils.questAdapters.defaultCity": "miasto",
   "utils.questAdapters.routeIntro": "Na tej trasie jest {{count}} kroków. Kliknij „Rozpocznij misję”, aby przejść do pierwszego zadania.",

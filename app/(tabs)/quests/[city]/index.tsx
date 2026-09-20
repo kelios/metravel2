@@ -10,7 +10,7 @@ import QuestCityLandingSections from '@/components/quests/QuestCityLandingSectio
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection'
 import QuestCard from '@/screens/tabs/QuestCard'
 import { pluralizeQuest } from '@/screens/tabs/questsShared'
-import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
+import { getStyles, QUESTS_GRID_WEB_GAP, QUESTS_LANDING_CONTENT_WIDTH } from '@/screens/tabs/QuestsScreen.styles'
 import { useQuestsList } from '@/hooks/useQuestsApi'
 import { useQuestCityWalk } from '@/hooks/useQuestCityWalk'
 import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit'
@@ -32,6 +32,7 @@ import { useTranslation } from '@/i18n/LocaleProvider'
 
 const { spacing } = DESIGN_TOKENS
 const QUEST_LIST_ROUTE = '/quests'
+
 const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 type MetaTarget = {
@@ -150,7 +151,7 @@ export default function QuestsByCityScreen() {
   const { width: bpWidth, isMobile } = useBreakpoints()
   const height = Platform.OS === 'web' ? 0 : Dimensions.get('window').height
   const s = useMemo(() => getStyles(colors, bpWidth, height), [colors, bpWidth, height])
-  const catalogModel = useQuestCatalogResponsiveModel(cityQuests.length)
+  const catalogModel = useQuestCatalogResponsiveModel(cityQuests.length, { hasSidebar: false, contentMaxWidth: QUESTS_LANDING_CONTENT_WIDTH, columnGap: QUESTS_GRID_WEB_GAP })
 
   const seoTitle = useMemo(
     () => buildBrandedSeoTitle(t('quests:app.tabs.quests.city.index.seoTitle', { value1: cityName || cityParam })),
@@ -265,6 +266,10 @@ export default function QuestsByCityScreen() {
     <ScrollView
       style={s.root}
       contentContainerStyle={{
+        // #1989: ширину колонки задаёт константа, а не самый широкий ребёнок —
+        // иначе сетка карточек и модель делят разные числа.
+        width: '100%',
+        maxWidth: QUESTS_LANDING_CONTENT_WIDTH + spacing.lg * 2,
         padding: spacing.lg,
         gap: spacing.md,
         // Резерв под мобильный BottomDock (абсолютный оверлей): без него

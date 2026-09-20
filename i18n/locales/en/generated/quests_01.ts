@@ -417,6 +417,7 @@ export const questsGenerated1 = {
   "screens.tabs.QuestsScreen.questNoun_many": "quests",
   "screens.tabs.QuestsScreen.questNoun_other": "quests",
   "screens.tabs.QuestsSidebar.actions.expand": "Expand",
+  "screens.tabs.QuestsSidebar.countryLandingA11y": "All quests in {{value1}} — {{value2}}",
   "screens.tabs.QuestsSidebar.actions.collapse": "Collapse",
   "utils.questAdapters.defaultCity": "city",
   "utils.questAdapters.routeIntro": "There are {{count}} steps in this route. Click \"Start Quest\" to move on to the first task.",

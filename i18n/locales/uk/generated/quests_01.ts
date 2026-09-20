@@ -417,6 +417,7 @@ export const questsGenerated1 = {
   "screens.tabs.QuestsScreen.questNoun_many": "квестів",
   "screens.tabs.QuestsScreen.questNoun_other": "квестів",
   "screens.tabs.QuestsSidebar.actions.expand": "Розгорнути",
+  "screens.tabs.QuestsSidebar.countryLandingA11y": "Усі квести країни {{value1}} — {{value2}}",
   "screens.tabs.QuestsSidebar.actions.collapse": "Згорнути",
   "utils.questAdapters.defaultCity": "місто",
   "utils.questAdapters.routeIntro": "У цьому маршруті {{count}} кроків. Натисніть «Почати квест», щоб перейти до першого завдання.",
