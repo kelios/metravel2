@@ -175,6 +175,21 @@ describe('ssg-skeletons', () => {
   });
 
   describe('buildHomeSkeletonHtml', () => {
+    it('carries the site owner legal name for crawlers that skip JavaScript (#1999)', () => {
+      // Meta Business Verification читает https://metravel.by/ без JS: React-футер в
+      // статическом HTML главной отсутствует, имя владельца обязана нести оболочка.
+      const legal = require('../../constants/legal.json');
+      const html = buildHomeSkeletonHtml({});
+      const footer = html.match(/<footer class="ssg-home-legal">([^<]*)<\/footer>/);
+      expect(footer).not.toBeNull();
+      expect(footer[1]).toBe(`© MeTravel 2020–${new Date().getFullYear()} · ${legal.siteOwnerLegalName}`);
+      expect(html).not.toMatch(/<footer class="ssg-home-legal"[^>]*aria-hidden/);
+      const css = buildSkeletonCSS();
+      expect(css).toContain(`.ssg-home-legal{width:100%;max-width:1200px;margin:0 auto;padding:20px 16px 28px;text-align:center;font:400 12px/16px`);
+      expect(css).toContain('@media(min-width:1280px){.ssg-home-legal{max-width:none;padding:8px 40px 0}}');
+      expect(css).toContain(`html[data-theme="dark"] .ssg-home-legal{color:${COLORS.dark.textMuted}}`);
+    });
+
     it('returns div with id ssg-skeleton', () => {
       const html = buildHomeSkeletonHtml();
       expect(html).toContain('id="ssg-skeleton"');

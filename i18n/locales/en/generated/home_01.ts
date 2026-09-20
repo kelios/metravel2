@@ -30,6 +30,7 @@ export const homeGenerated1 = {
   "components.about.AboutIntroCard.registriruemsya_32afe09e": "Register",
   "components.about.AboutIntroCard.stavim_status_opublikovat_3562dad7": "Set the status to “Publish”",
   "components.about.AboutIntroCard.versiya_prilozheniya_01aa3c56": "Application version:",
+  "components.about.AboutIntroCard.vladelets_sayta_value1_5dd33620": "Site owner: {{value1}}",
   "components.about.AboutIntroCard.web_build_c7a80e75": "Web build: ",
   "components.about.AboutIntroCard.zhdem_moderatsii_do_24_chasov_e79a615e": "We are waiting for moderation (up to 24 hours)",
   "components.about.CategoriesShowcase.chto_vy_naydete_na_sayte_f9d65a89": "What will you find on the site",

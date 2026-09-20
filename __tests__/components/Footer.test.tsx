@@ -1,6 +1,7 @@
 import { render, fireEvent } from '@testing-library/react-native'
 import Footer from '@/components/layout/Footer'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { SITE_OWNER_LEGAL_NAME } from '@/constants/legal'
 
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () =>
@@ -174,8 +175,11 @@ describe('Footer', () => {
       }
 
       const FooterDesktop = require('@/components/layout/FooterDesktop').default
-      const { getByTestId } = render(<FooterDesktop />)
+      const { getByTestId, getByText } = render(<FooterDesktop />)
       expect(getByTestId('footer-item-about')).toBeTruthy()
+      // #1999: Meta Business Verification сверяет имя владельца с текстом сайта —
+      // строка копирайта несёт его на каждой desktop-странице.
+      expect(getByText(new RegExp(`© MeTravel 2020–\\d{4} · ${SITE_OWNER_LEGAL_NAME}$`))).toBeTruthy()
       expect(getByTestId('footer-item-privacy')).toBeTruthy()
       expect(getByTestId('footer-item-cookies')).toBeTruthy()
       expect(getByTestId('footer-item-fb')).toBeTruthy()

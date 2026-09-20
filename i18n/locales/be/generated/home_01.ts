@@ -30,6 +30,7 @@ export const homeGenerated1 = {
   "components.about.AboutIntroCard.registriruemsya_32afe09e": "Рэгіструемся",
   "components.about.AboutIntroCard.stavim_status_opublikovat_3562dad7": "Ставім статус «Апублікаваць»",
   "components.about.AboutIntroCard.versiya_prilozheniya_01aa3c56": "Версія прыкладання:",
+  "components.about.AboutIntroCard.vladelets_sayta_value1_5dd33620": "Уладальнік сайта: {{value1}}",
   "components.about.AboutIntroCard.web_build_c7a80e75": "Web build:",
   "components.about.AboutIntroCard.zhdem_moderatsii_do_24_chasov_e79a615e": "Чакаем мадэрацыі (да 24 гадзін)",
   "components.about.CategoriesShowcase.chto_vy_naydete_na_sayte_f9d65a89": "Што вы знойдзеце на сайце",

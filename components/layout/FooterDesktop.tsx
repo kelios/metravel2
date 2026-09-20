@@ -9,6 +9,7 @@ import { METRAVEL_SOCIAL_LINKS } from '@/constants/socialLinks'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { translate as i18nT } from '@/i18n'
+import { SITE_OWNER_LEGAL_NAME } from '@/constants/legal'
 
 
 type FooterDesktopProps = {
@@ -126,7 +127,9 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
           alignItems: 'center',
           justifyContent: 'flex-end',
           gap: 6 as any,
-          flexWrap: 'nowrap',
+          // #1999: при нехватке ширины (1280px) ссылки переносятся на вторую
+          // строку, а не ужимают строку копирайта с именем владельца до «…».
+          flexWrap: 'wrap',
           flexShrink: 1,
         },
         leftGroup: {
@@ -227,6 +230,10 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
           color: colors.textMuted,
           fontSize: 12,
           lineHeight: 16,
+          // #1999: строка несёт зарегистрированное имя владельца для Meta —
+          // она не ужимается (на 1280px иначе получала text-overflow: ellipsis).
+          flexShrink: 0,
+          marginLeft: 12,
         },
       }),
     [colors],
@@ -360,7 +367,7 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
             </View>
 
             <Text style={styles.copy} numberOfLines={1}>
-              {i18nT('navigation:components.layout.FooterDesktop.metravel_2020_1c77d748')}{new Date().getFullYear()}
+              {i18nT('navigation:components.layout.FooterDesktop.metravel_2020_1c77d748')}{new Date().getFullYear()}{' · '}{SITE_OWNER_LEGAL_NAME}
             </Text>
           </View>
         </View>

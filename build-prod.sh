@@ -574,6 +574,7 @@ node scripts/verify-static-travel-seo.js --dist "dist/$ENV" --api https://metrav
 # смотрят только на travel-страницы. Сверяем живой каталог с тем, что собрано.
 echo "Проверка: quest-страницы и city-лендинги в статике..."
 node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api https://metravel.by
+node scripts/guard-site-owner-name.js --dist "dist/$ENV"
 
 echo "Постобработка билда..."
 node scripts/copy-public-files.js "dist/$ENV"

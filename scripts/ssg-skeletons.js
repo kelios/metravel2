@@ -55,6 +55,9 @@ const HOME_HERO_FILL = '#536659';
 
 // Системный sans-стек шелла (тот же, что у .ssg-home-title/.ssg-home-sub).
 const SANS = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+// #1999: зарегистрированное имя владельца — Meta Business Verification сверяет
+// его с текстом сайта без JavaScript, поэтому оно лежит в предрендеренной оболочке главной.
+const LEGAL = require('../constants/legal.json');
 
 // Реальные подписи первого экрана главной. Шелл рисуется на этапе сборки, у него
 // нет доступа к i18n-каталогам, поэтому строки продублированы из RU-ресурсов
@@ -198,12 +201,14 @@ function buildSkeletonCSS() {
 .ssg-home-week-sub{width:74%;height:14px;border-radius:6px;background:rgba(255,255,255,.55)}
 .ssg-home-week-action{width:150px;height:34px;border-radius:17px;background:rgba(16,22,20,.45);border:1px solid rgba(255,255,255,.32)}
 .ssg-home-popular{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:28px}
+.ssg-home-legal{width:100%;max-width:1200px;margin:0 auto;padding:20px 16px 28px;text-align:center;font:400 12px/16px ${SANS};color:${COLORS.light.textMuted}}
 .ssg-home-popular-card{border-radius:18px;overflow:hidden;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};padding-bottom:12px}
 .ssg-home-popular-thumb{width:100%;aspect-ratio:3/2}
 .ssg-home-popular-line{height:12px;border-radius:6px;margin:10px 12px 0}
 .ssg-home-popular-line.w76{width:76%}.ssg-home-popular-line.w55{width:55%}
 @media(min-width:768px) and (max-width:1279px){.ssg-home-shell{padding:24px}.ssg-home-book{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}.ssg-home-page{grid-column:1;grid-row:1;justify-content:center;gap:16px;padding:32px}.ssg-home-week{grid-column:2;grid-row:1;margin-top:0}.ssg-home-moods{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:0;border-top:0;padding-top:0}.ssg-home-hero{aspect-ratio:3/2;height:auto}.ssg-home-popular{display:none}}
 @media(min-width:1280px){.ssg-home-bar{height:78px;padding:0 24px;gap:0}.ssg-home-bar-logo{width:32px;height:32px;flex:0 0 32px}.ssg-home-bar-brand{gap:8px}.ssg-home-bar-word{display:inline;font:600 18px/1 ${SANS};color:${COLORS.light.text};letter-spacing:-0.01em}.ssg-home-bar-burger{display:none}.ssg-home-bar-nav{display:flex;align-items:center;gap:22px;margin-left:41px;font:500 14px/1 ${SANS};color:${COLORS.light.text};white-space:nowrap}.ssg-home-bar-nav-item{display:inline-flex;align-items:center;gap:6px}.ssg-home-bar-nav-ico{width:18px;height:18px;flex:0 0 18px}.ssg-home-bar-login{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;margin-left:12px;border-radius:12px;background:${COLORS.light.primary};font:700 14px/1 ${SANS};color:${COLORS.light.textOnPrimary}}.ssg-home-bar-guest{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;margin-left:12px;border-radius:12px;background:${COLORS.light.bgSecondary};font:500 14px/1 ${SANS};color:${COLORS.light.text}}.ssg-home-shell{max-width:none;padding:52px 40px 24px}.ssg-home-book{display:grid;grid-template-columns:49% 51%;gap:0;width:min(100%,1200px);height:min(calc(100svh - 180px),calc((100vw - 80px)/1.3594771));margin:0 auto;background-color:${COLORS.light.surface};background-image:var(--image-homeHeroBook,none);background-size:100% 100%;background-repeat:no-repeat;border-radius:36px;overflow:hidden}.ssg-home-page{position:relative;top:11.0%;align-self:start;justify-content:flex-start;gap:10px;padding:0 18.4% 0 32.65%;border-radius:0;background:transparent;border:0;overflow:hidden}.ssg-home-chapter{display:flex;align-items:center;gap:10px;margin-bottom:2px}.ssg-home-chapter-label{font:600 11px/1.4 Baskerville,Georgia,'Times New Roman',serif;letter-spacing:.14em;text-transform:uppercase;color:${COLORS.light.textMuted};white-space:nowrap}.ssg-home-chapter-line{flex:1;height:1px;background:${COLORS.light.border}}.ssg-home-title{font-family:Baskerville,Georgia,'Times New Roman',serif;font-size:clamp(24px,1.9vw,32px);line-height:1.24;letter-spacing:-0.2px}.ssg-home-title .ssg-accent{color:${BOOK_PAGE_ACCENT}}.ssg-home-sub{font-size:clamp(12px,.85vw,13px);line-height:1.7}.ssg-home-sub-mobile{display:none}.ssg-home-sub-desktop{display:block}.ssg-home-search-row{height:50px;margin-top:2px}.ssg-home-search{height:50px}.ssg-home-search-btn{width:50px;height:50px;flex:0 0 50px}.ssg-home-cta{width:100%;min-width:190px;height:44px;margin-top:0}.ssg-home-moods,.ssg-home-popular{display:none}.ssg-home-week{top:29.2%;align-self:start;width:61.2%;aspect-ratio:3/2;margin:0 0 0 5.1%;border-radius:12px;border:0;background:${HOME_HERO_FILL}}.ssg-home-hero{position:absolute;inset:0;height:100%;aspect-ratio:auto;border-radius:inherit}.ssg-home-week-body{left:24px;right:24px;bottom:22px;padding:18px}}
+@media(min-width:1280px){.ssg-home-legal{max-width:none;padding:8px 40px 0}}
 @media(min-width:1280px) and (min-height:961px){.ssg-home-notes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}.ssg-home-note{height:44px;border-radius:12px;background:rgba(255,255,255,.45);border:1px solid ${COLORS.light.border}}}
 .ssg-search-shell{width:100%;max-width:1214px;margin:0 auto;padding:10px}
 .ssg-search-layout{display:block;min-width:0}
@@ -351,6 +356,7 @@ html[data-theme="dark"] .ssg-home-bar-word,html[data-theme="dark"] .ssg-home-bar
 html[data-theme="dark"] .ssg-home-bar-login{background:${COLORS.dark.primary};color:${COLORS.dark.textOnPrimary}}
 html[data-theme="dark"] .ssg-home-bar-guest{background:${COLORS.dark.bgSecondary};color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-home-book{background-color:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
+html[data-theme="dark"] .ssg-home-legal{color:${COLORS.dark.textMuted}}
 html[data-theme="dark"] .ssg-home-page{background-color:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-home-title{color:${COLORS.dark.text}}
 html[data-theme="dark"] .ssg-home-sub{color:${COLORS.dark.textMuted}}
@@ -576,6 +582,7 @@ function buildHomeSkeletonHtml({ heroHref } = {}) {
 <div class="ssg-home-popular" aria-hidden="true">${Array.from({ length: 2 }, () => '<div class="ssg-home-popular-card"><div class="ssg-home-popular-thumb ssg-pulse"></div><div class="ssg-home-popular-line w76 ssg-pulse"></div><div class="ssg-home-popular-line w55 ssg-pulse"></div></div>').join('')}</div>
 </div>
 </main>
+<footer class="ssg-home-legal">© MeTravel 2020–${new Date().getFullYear()} · ${LEGAL.siteOwnerLegalName}</footer>
 ${buildRemovalScript()}
 </div>`;
 }

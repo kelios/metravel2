@@ -117,6 +117,7 @@ runStep('node', ['scripts/prepare-dist-prod.js', '--src', exportPath, '--dest', 
 runStep('node', ['scripts/generate-seo-pages.js', '--dist', stagingPath])
 runStep('node', ['scripts/verify-static-travel-seo.js', '--dist', stagingPath])
 runStep('node', ['scripts/verify-static-quest-seo.js', '--dist', stagingPath])
+runStep('node', ['scripts/guard-site-owner-name.js', '--dist', stagingPath])
 runStep('node', ['scripts/copy-public-files.js', stagingPath])
 runStep('node', ['scripts/add-cache-bust-meta.js', stagingPath])
 

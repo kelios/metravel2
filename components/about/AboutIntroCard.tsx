@@ -6,6 +6,7 @@ import { useAboutStyles } from './aboutStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
+import { SITE_OWNER_LEGAL_NAME } from '@/constants/legal'
 
 
 type Props = {
@@ -75,6 +76,8 @@ export const AboutIntroCard: React.FC<Props> = ({
     <View style={styles.footerInfo}>
       <Text style={styles.footerText}>
         {i18nT('home:components.about.AboutIntroCard.proekt_zapuschen_v_iyune_2020_ispolzovanie_m_39f4469b')}</Text>
+      <Text style={styles.footerText} testID="about-site-owner">
+        {i18nT('home:components.about.AboutIntroCard.vladelets_sayta_value1_5dd33620', { value1: SITE_OWNER_LEGAL_NAME })}</Text>
       {versionInfo ? (
         <View style={styles.versionInfoBlock} testID="about-app-version">
           <Text style={styles.footerText}>{i18nT('home:components.about.AboutIntroCard.versiya_prilozheniya_01aa3c56')}{versionInfo.displayVersion ?? versionInfo.appVersion}</Text>
