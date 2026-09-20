@@ -33,6 +33,10 @@ function ConsentBanner() {
     return (insets?.bottom || 0) + (LAYOUT?.tabBarHeight ?? 56) + 8;
   }, [insets?.bottom, isMobile]);
   const isConsentSettingsRoute = pathname === '/cookies' || pathname === '/privacy';
+  const detailsLinkStyle = useMemo(
+    () => StyleSheet.flatten([styles.detailsLink, { borderColor: colors.border }]),
+    [colors.border],
+  );
 
   useEffect(() => {
     if (!isWeb || typeof window === 'undefined') return;
@@ -169,18 +173,24 @@ function ConsentBanner() {
             isNarrowMobile && styles.buttonsRowNarrow,
           ]}
         >
+          {/* Прямому ребёнку `Link asChild` отдаётся ОДИН плоский объект стиля: Slot сливает
+              стили спредом, поэтому функция/массив схлопываются в `{}` и кнопка теряет рамку. */}
           <Link href="/cookies" asChild>
             <Pressable
               accessibilityRole="link"
               accessibilityLabel={i18nT('navigation:components.layout.ConsentBanner.podrobnee_o_cookies_caf7ecdc')}
-              style={({ pressed }) => [
-                styles.detailsLink,
-                { borderColor: colors.border },
-                pressed && styles.detailsLinkPressed,
-              ]}
+              style={detailsLinkStyle}
             >
-              <Text style={[styles.detailsLinkText, { color: colors.primaryText }]}>
-                {i18nT('navigation:components.layout.ConsentBanner.podrobnee_1db70e5c')}</Text>
+              {({ pressed }) => (
+                <Text
+                  style={[
+                    styles.detailsLinkText,
+                    { color: colors.primaryText },
+                    pressed && styles.detailsLinkPressed,
+                  ]}
+                >
+                  {i18nT('navigation:components.layout.ConsentBanner.podrobnee_1db70e5c')}</Text>
+              )}
             </Pressable>
           </Link>
           <Button

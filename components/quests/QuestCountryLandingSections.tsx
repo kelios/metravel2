@@ -14,6 +14,21 @@ type Props = {
   country: QuestCountryLandingGroup<QuestMeta>
 }
 
+/**
+ * Базис колонки списка городов: на 840 px секции даёт три колонки, на мобильной ширине — одну.
+ * Карточка обязана уметь сжиматься (`flexShrink`): у контейнера `/quests/country/<slug>` остаётся
+ * ширина экрана минус 80 px, то есть ровно 240 px уже на 320-точечном телефоне, а при делении
+ * экрана или зуме — меньше базиса, и без сжатия карточка вылезала бы за рамку секции.
+ */
+const CITY_CARD_MIN_WIDTH = 240
+
+/**
+ * Потолок карточки: последний ряд часто остаётся неполным, и `flexGrow` растягивал бы
+ * одинокую карточку на всю секцию (840 px) — она читалась бы как отдельный блок, а не как
+ * хвост списка. Половина ряда секции: (840 − 32 отступа − 8 зазор) / 2.
+ */
+const CITY_CARD_MAX_WIDTH = 400
+
 /** Runtime counterpart of the crawlable country-owned SSG sections. */
 export default function QuestCountryLandingSections({ country }: Props) {
   const colors = useThemedColors()
@@ -63,20 +78,27 @@ export default function QuestCountryLandingSections({ country }: Props) {
         </Text>
         <View style={styles.cityList}>
           {country.cities.map((city) => (
+            // Прямому ребёнку `Link asChild` отдаётся ОДИН плоский объект стиля: Slot сливает
+            // стили спредом, поэтому функция `({ pressed }) => [...]` превращается в `{}` и
+            // карточка теряет всю вёрстку. Состояние нажатия живёт на внутренней строке.
             <Link key={city.cityAlias} href={`/quests/${city.cityAlias}`} asChild>
               <Pressable
-                style={({ pressed }) => [styles.cityLink, pressed && styles.cityLinkPressed]}
+                style={styles.cityLink}
                 accessibilityRole="link"
                 accessibilityLabel={t('quests:app.tabs.quests.country.index.cityA11y', {
                   value1: city.cityName,
                   value2: pluralizeQuest(city.questCount),
                 })}
               >
-                <View style={styles.cityText}>
-                  <Text style={styles.cityName}>{city.cityName}</Text>
-                  <Text style={styles.cityMeta}>{pluralizeQuest(city.questCount)}</Text>
-                </View>
-                <Feather name="arrow-right" size={17} color={colors.primary} aria-hidden />
+                {({ pressed }) => (
+                  <View style={[styles.cityRow, pressed && styles.cityRowPressed]}>
+                    <View style={styles.cityText}>
+                      <Text style={styles.cityName}>{city.cityName}</Text>
+                      <Text style={styles.cityMeta}>{pluralizeQuest(city.questCount)}</Text>
+                    </View>
+                    <Feather name="arrow-right" size={17} color={colors.primary} aria-hidden />
+                  </View>
+                )}
               </Pressable>
             </Link>
           ))}
@@ -142,14 +164,18 @@ function createStyles(colors: ThemedColors) {
       color: colors.textSubtle,
     },
     cityList: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 8,
       marginTop: 4,
     },
     cityLink: {
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: CITY_CARD_MIN_WIDTH,
+      maxWidth: CITY_CARD_MAX_WIDTH,
       minHeight: 52,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
+      justifyContent: 'center',
       paddingHorizontal: 12,
       paddingVertical: 8,
       borderRadius: DESIGN_TOKENS.radii.sm,
@@ -157,7 +183,12 @@ function createStyles(colors: ThemedColors) {
       borderColor: colors.border,
       backgroundColor: colors.background,
     },
-    cityLinkPressed: {
+    cityRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    cityRowPressed: {
       opacity: 0.75,
     },
     cityText: {

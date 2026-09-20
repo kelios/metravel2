@@ -23,6 +23,21 @@ type Props = {
   walk: QuestCityWalkModel | null
 }
 
+/**
+ * Базис колонки списка соседних городов: на широкой секции даёт колонки, на мобильной — одну.
+ * Карточка обязана уметь сжиматься (`flexShrink`): у контейнера `/quests/<city>` остаётся ширина
+ * экрана минус 80 px, то есть ровно 240 px уже на 320-точечном телефоне, а при делении экрана
+ * или зуме — меньше базиса, и без сжатия карточка вылезала бы за рамку секции.
+ */
+const NEARBY_CARD_MIN_WIDTH = 240
+
+/**
+ * Потолок карточки: последний ряд часто остаётся неполным, и `flexGrow` растягивал бы
+ * одинокую карточку на всю секцию (840 px) — она читалась бы как отдельный блок, а не как
+ * хвост списка. Половина ряда секции: (840 − 32 отступа − 8 зазор) / 2.
+ */
+const NEARBY_CARD_MAX_WIDTH = 400
+
 const DIFFICULTY_KEYS: Record<string, string> = {
   easy: 'quests:app.tabs.quests.city.index.routeDifficultyEasy',
   medium: 'quests:app.tabs.quests.city.index.routeDifficultyMedium',
@@ -237,22 +252,29 @@ export default function QuestCityLandingSections({ city, nearbyCities, walk }: P
           </Text>
           <View style={styles.nearbyList}>
             {nearbyCities.map((nearby) => (
+              // Прямому ребёнку `Link asChild` отдаётся ОДИН плоский объект стиля: Slot сливает
+              // стили спредом, поэтому функция `({ pressed }) => [...]` превращается в `{}` и
+              // карточка теряет всю вёрстку. Состояние нажатия живёт на внутренней строке.
               <Link key={nearby.segment} href={`/quests/${nearby.segment}`} asChild>
                 <Pressable
-                  style={({ pressed }) => [styles.nearbyLink, pressed && styles.nearbyLinkPressed]}
+                  style={styles.nearbyLink}
                   accessibilityRole="link"
                   accessibilityLabel={t('quests:app.tabs.quests.city.index.nearbyA11y', {
                     value1: nearby.cityName || nearby.segment,
                     value2: formatDistance(nearby.distanceKm),
                   })}
                 >
-                  <View style={styles.nearbyText}>
-                    <Text style={styles.nearbyName}>{nearby.cityName || nearby.segment}</Text>
-                    <Text style={styles.nearbyMeta}>
-                      {pluralizeQuest(nearby.quests.length)} · {formatDistance(nearby.distanceKm)}
-                    </Text>
-                  </View>
-                  <Feather name="arrow-right" size={17} color={colors.primary} aria-hidden />
+                  {({ pressed }) => (
+                    <View style={[styles.nearbyRow, pressed && styles.nearbyRowPressed]}>
+                      <View style={styles.nearbyText}>
+                        <Text style={styles.nearbyName}>{nearby.cityName || nearby.segment}</Text>
+                        <Text style={styles.nearbyMeta}>
+                          {pluralizeQuest(nearby.quests.length)} · {formatDistance(nearby.distanceKm)}
+                        </Text>
+                      </View>
+                      <Feather name="arrow-right" size={17} color={colors.primary} aria-hidden />
+                    </View>
+                  )}
                 </Pressable>
               </Link>
             ))}
@@ -307,14 +329,18 @@ function createStyles(colors: ThemedColors) {
       color: colors.text,
     },
     nearbyList: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 8,
       marginTop: 4,
     },
     nearbyLink: {
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: NEARBY_CARD_MIN_WIDTH,
+      maxWidth: NEARBY_CARD_MAX_WIDTH,
       minHeight: 52,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
+      justifyContent: 'center',
       paddingHorizontal: 12,
       paddingVertical: 8,
       borderRadius: DESIGN_TOKENS.radii.sm,
@@ -322,7 +348,12 @@ function createStyles(colors: ThemedColors) {
       borderColor: colors.border,
       backgroundColor: colors.background,
     },
-    nearbyLinkPressed: {
+    nearbyRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    nearbyRowPressed: {
       opacity: 0.75,
     },
     nearbyText: {
