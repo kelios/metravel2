@@ -64,7 +64,11 @@ const {
   injectQuestCountryLandingSection,
   readRequiredQuestCountryTemplate,
 } = require('@/scripts/generate-seo-pages');
-const { countWords } = require('@/scripts/lib/questPageDepth');
+const {
+  countWords,
+  questPageFromHtml,
+  scoreIndexableQuestPages,
+} = require('@/scripts/lib/questPageDepth');
 const { injectSkeletonShell } = require('@/scripts/ssg-skeletons');
 const { questRouteKey } = require('@/utils/questCityAlias');
 
@@ -2367,6 +2371,25 @@ describe('заметки о местах на посадочной города 
     expect(city.walkBundleCount).toBe(1)
     expect(city.walk.places).not.toHaveLength(0)
     expect(html).not.toMatch(/name="robots" content="[^"]*noindex/)
+  })
+
+  /**
+   * Требование walk-блока у индексируемой посадочной в verify-static-quest-seo —
+   * следствие порога #1930, а не второе правило: город без заметок — это шаблон
+   * с подставленным названием, и порог его не пропускает. Пин на случай, если
+   * шаблон посадочной когда-нибудь отрастит столько собственного текста, что
+   * порог возьмёт и страница без заметок, — тогда требование снимается
+   * осознанно, а не ловится красной сборкой.
+   */
+  it('город без заметок не берёт порог #1930 — walk-блок у индексируемой посадочной следует из порога', () => {
+    const { city, html } = buildRome(new Map([['rome-forum', shortStoriesBundle()]]))
+
+    expect(city.walk.places).toEqual([])
+    const { indexable, rejected } = scoreIndexableQuestPages([questPageFromHtml(html, city.landingPath)])
+    expect(indexable.size).toBe(0)
+    expect(rejected.get(city.landingPath)).toEqual([
+      expect.stringContaining('words of crawlable text, minimum 300'),
+    ])
   })
 
   /**

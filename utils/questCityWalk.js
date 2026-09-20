@@ -211,7 +211,7 @@ function questCityWalkBundleCount(quests, bundles, options = {}) {
  * `quest_id → бандл`. Квесты без бандла в модель не попадают: выдумывать текст
  * за отсутствующие данные нельзя, а пустая модель — это сигнал сборке падать
  * (`assertQuestCityLandingBundlesResolved`) или снимать посадочную с выдачи
- * (`selectIndexableQuestCityLandings`) — границу между этими случаями держит
+ * (`selectIndexableBuiltQuestPages`) — границу между этими случаями держит
  * `questCityWalkBundleCount`.
  */
 function buildQuestCityWalkModel(quests, bundles, options = {}) {
