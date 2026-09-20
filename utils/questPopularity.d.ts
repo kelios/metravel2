@@ -25,6 +25,13 @@ export function selectPopularQuests<T extends QuestPopularityInput>(
   limit?: number,
 ): T[];
 
+/** Число из поля меты в snake_case или camelCase форме. */
+export function numericField(
+  quest: Record<string, unknown> | null | undefined,
+  snakeKey: string,
+  camelKey: string,
+): number;
+
 /** Числовой id квеста — общий последний ключ порядка для всех сортировок. */
 export function questNumericId(quest: QuestPopularityInput): number;
 

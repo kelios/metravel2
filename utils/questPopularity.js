@@ -37,6 +37,11 @@ const POPULAR_QUEST_MIN_COMPLETIONS = 2;
  */
 const POPULAR_QUEST_MIN_MATCHES = 2;
 
+/**
+ * Число из поля меты в любой из её форм. Экспортируется вместе с
+ * `questNumericId`: `utils/questRatingOrder` читает свои поля тем же способом,
+ * и вторая копия разошлась бы с этой на первой же правке разбора значения.
+ */
 function numericField(quest, snakeKey, camelKey) {
   const raw = quest && (quest[snakeKey] != null ? quest[snakeKey] : quest[camelKey]);
   const value = Number(raw);
@@ -118,9 +123,11 @@ module.exports = {
   canRankQuestsByPopularity,
   compareQuestPopularity,
   countPopularQuests,
-  // Экспортируется ради `utils/questRatingOrder`: у правила рейтинга тот же
-  // последний ключ порядка, и вторая копия чтения id разошлась бы с этой на
-  // первой же смене формы меты (`id` — слаг, число в `numericId`).
+  // Экспортируются ради `utils/questRatingOrder`: у правила рейтинга тот же
+  // последний ключ порядка и тот же разбор числовых полей, а вторые копии
+  // разошлись бы с этими на первой же смене формы меты (`id` — слаг, число в
+  // `numericId`).
+  numericField,
   questNumericId,
   selectPopularQuests,
   sortQuestsByPopularity,

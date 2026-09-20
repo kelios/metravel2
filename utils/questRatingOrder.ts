@@ -12,6 +12,15 @@
  * одного отзыва — вымысел (#1486), и поднимать им квест наверх каталога значит
  * врать читателю тем же способом, каким запрещено рисовать «5.0» на карточке.
  *
+ * Порядок дословно повторяет серверный `?ordering=-rating_avg`
+ * (`quests/catalog.py:apply_catalog_query`): там `qualified_rating` равен
+ * `rating_avg` при `rating_count >= RATING_MIN_COUNT` и нулю иначе, а затем
+ * `id`. Поэтому здесь НЕТ ключа по числу отзывов, хотя «4.9 из девяти отзывов
+ * выше 4.9 из трёх» звучит разумно: фронт этот эндпоинт сегодня не зовёт, но
+ * расхождение правил — ровно та ловушка, от которой предостерегает шапка
+ * соседнего `utils/questPopularity.js`. Захотим ключ по числу отзывов — меняем
+ * обе стороны разом.
+ *
  * Данные на 19.09.2026 (прод, все 207 квестов): отзывы есть у трёх квестов, по
  * одному у каждого, публичный рейтинг — НИ У ОДНОГО. То есть вариант «По
  * рейтингу» сегодня недоступен по порогу и появится сам, как только два квеста
@@ -19,7 +28,7 @@
  */
 
 import { hasPublicQuestRating } from '@/api/questRating'
-import { questNumericId, type QuestPopularityInput } from '@/utils/questPopularity'
+import { numericField, questNumericId, type QuestPopularityInput } from '@/utils/questPopularity'
 
 /** Квест в любой из форм, которые видит правило рейтинга. */
 export type QuestRatingInput = QuestPopularityInput & {
@@ -35,16 +44,6 @@ export type QuestRatingInput = QuestPopularityInput & {
  * же причине — см. `POPULAR_QUEST_MIN_MATCHES`.
  */
 export const RATED_QUEST_MIN_MATCHES = 2
-
-const numericField = (
-  quest: QuestRatingInput,
-  snakeKey: 'rating_avg' | 'rating_count',
-  camelKey: 'ratingAvg' | 'ratingCount',
-): number => {
-  const raw = quest?.[snakeKey] != null ? quest[snakeKey] : quest?.[camelKey]
-  const value = Number(raw)
-  return Number.isFinite(value) ? value : 0
-}
 
 /** Есть ли у квеста агрегат, который вообще разрешено показывать. */
 export const hasRankableRating = (quest: QuestRatingInput): boolean =>
@@ -64,11 +63,6 @@ export function compareQuestRating(a: QuestRatingInput, b: QuestRatingInput): nu
     const byAvg =
       numericField(b, 'rating_avg', 'ratingAvg') - numericField(a, 'rating_avg', 'ratingAvg')
     if (byAvg !== 0) return byAvg
-
-    const byCount =
-      numericField(b, 'rating_count', 'ratingCount') -
-      numericField(a, 'rating_count', 'ratingCount')
-    if (byCount !== 0) return byCount
   }
 
   return questNumericId(a) - questNumericId(b)

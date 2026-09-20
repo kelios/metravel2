@@ -34,12 +34,18 @@ describe('порядок каталога квестов по рейтингу',
     expect(sortQuestsByRating([single, public4])).toEqual([public4, single]);
   });
 
-  it('среди публично оценённых порядок — оценка, затем число отзывов, затем id', () => {
+  /**
+   * Ключей ровно два — оценка и id, как у серверного `?ordering=-rating_avg`
+   * (`quests/catalog.py`: `order_by('-qualified_rating', 'id')`). Числа отзывов
+   * среди ключей НЕТ намеренно: расхождение с сервером дороже, чем выигрыш от
+   * «4.9 из девяти выше 4.9 из трёх».
+   */
+  it('среди публично оценённых порядок — оценка, затем id, как на сервере', () => {
     const a = quest(10, 4.9, 5);
     const b = quest(11, 4.9, 9);
     const c = quest(12, 4.1, 40);
-    const d = quest(13, 4.9, 9);
-    expect(sortQuestsByRating([c, a, d, b]).map((q) => q.id)).toEqual([11, 13, 10, 12]);
+    const d = quest(13, 4.9, 3);
+    expect(sortQuestsByRating([c, d, b, a]).map((q) => q.id)).toEqual([10, 11, 13, 12]);
   });
 
   it('квесты без публичного рейтинга держат хвост в порядке каталога по id', () => {

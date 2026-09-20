@@ -35,9 +35,12 @@ const SORT_ORDER_CHIPS: {
     order: Exclude<QuestSortOrder, 'default'>;
     icon: 'trending-up' | 'star';
     testID: string;
-    labelKey: string;
-    onKey: string;
-    offKey: string;
+    // Именно `TranslationKey`, а не `string`: с `string` опечатка в ключе
+    // компилируется молча, а на web `i18nT` принимает уже инлайненный babel'ем
+    // литерал — заявленный `string` разошёлся бы с фактическим значением.
+    labelKey: TranslationKey;
+    onKey: TranslationKey;
+    offKey: TranslationKey;
 }[] = [
     {
         order: 'popular',
@@ -56,7 +59,7 @@ const SORT_ORDER_CHIPS: {
         offKey: 'quests:screens.tabs.QuestsContentPanel.ratingSortA11yOff',
     },
 ];
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, type TranslationKey } from '@/i18n'
 
 const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
