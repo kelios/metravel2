@@ -25,5 +25,8 @@ export function selectPopularQuests<T extends QuestPopularityInput>(
   limit?: number,
 ): T[];
 
+/** Числовой id квеста — общий последний ключ порядка для всех сортировок. */
+export function questNumericId(quest: QuestPopularityInput): number;
+
 export function countPopularQuests(quests: QuestPopularityInput[]): number;
 export function canRankQuestsByPopularity(quests: QuestPopularityInput[]): boolean;

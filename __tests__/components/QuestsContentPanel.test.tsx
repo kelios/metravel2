@@ -153,18 +153,18 @@ describe('QuestsContentPanel', () => {
 
         it('stays hidden until the catalog is loaded', () => {
             const { queryByTestId } = render(
-                <QuestsContentPanel {...makeBaseProps()} dataLoaded={false} popularSortAvailable />,
+                <QuestsContentPanel {...makeBaseProps()} dataLoaded={false} availableSortOrders={['popular']} />,
             );
             expect(queryByTestId('quests-sort-popular')).toBeNull();
         });
 
         it('offers to sort, then to undo it, and reports the state to assistive tech', () => {
-            const onTogglePopularSort = jest.fn();
+            const onSelectSortOrder = jest.fn();
             const { getByTestId, rerender } = render(
                 <QuestsContentPanel
                     {...makeBaseProps()}
-                    popularSortAvailable
-                    onTogglePopularSort={onTogglePopularSort}
+                    availableSortOrders={['popular']}
+                    onSelectSortOrder={onSelectSortOrder}
                 />,
             );
 
@@ -172,20 +172,67 @@ describe('QuestsContentPanel', () => {
             expect(chip.props.accessibilityLabel).toBe('Сортировать по популярности');
             expect(chip.props.accessibilityState.selected).toBe(false);
             fireEvent.press(chip);
-            expect(onTogglePopularSort).toHaveBeenCalledTimes(1);
+            expect(onSelectSortOrder).toHaveBeenCalledWith('popular');
 
             rerender(
                 <QuestsContentPanel
                     {...makeBaseProps()}
-                    popularSortAvailable
-                    popularSortActive
-                    onTogglePopularSort={onTogglePopularSort}
+                    availableSortOrders={['popular']}
+                    activeSortOrder="popular"
+                    onSelectSortOrder={onSelectSortOrder}
                 />,
             );
 
             const activeChip = getByTestId('quests-sort-popular');
             expect(activeChip.props.accessibilityLabel).toBe('Вернуть обычный порядок');
             expect(activeChip.props.accessibilityState.selected).toBe(true);
+        });
+    });
+
+    /**
+     * #1988: порядок каталога стал выбором из нескольких вариантов, а не
+     * тумблером. Панель обязана показывать ровно те, которые экран объявил
+     * доступными, и держать выбранным ровно один.
+     */
+    describe('rating sort chip', () => {
+        it('stays hidden while the catalog has no publicly rated quests', () => {
+            const { queryByTestId } = render(
+                <QuestsContentPanel {...makeBaseProps()} availableSortOrders={['popular']} />,
+            );
+            expect(queryByTestId('quests-sort-popular')).not.toBeNull();
+            expect(queryByTestId('quests-sort-rating')).toBeNull();
+        });
+
+        it('offers rating sort on its own when popularity has nothing to reorder', () => {
+            const onSelectSortOrder = jest.fn();
+            const { getByTestId, queryByTestId } = render(
+                <QuestsContentPanel
+                    {...makeBaseProps()}
+                    availableSortOrders={['rating']}
+                    onSelectSortOrder={onSelectSortOrder}
+                />,
+            );
+            expect(queryByTestId('quests-sort-popular')).toBeNull();
+
+            const chip = getByTestId('quests-sort-rating');
+            expect(chip.props.accessibilityLabel).toBe('Сортировать по рейтингу');
+            fireEvent.press(chip);
+            expect(onSelectSortOrder).toHaveBeenCalledWith('rating');
+        });
+
+        it('keeps exactly one order selected when both are offered', () => {
+            const { getByTestId } = render(
+                <QuestsContentPanel
+                    {...makeBaseProps()}
+                    availableSortOrders={['popular', 'rating']}
+                    activeSortOrder="rating"
+                />,
+            );
+            expect(getByTestId('quests-sort-rating').props.accessibilityState.selected).toBe(true);
+            expect(getByTestId('quests-sort-popular').props.accessibilityState.selected).toBe(false);
+            expect(getByTestId('quests-sort-rating').props.accessibilityLabel).toBe(
+                'Вернуть обычный порядок',
+            );
         });
     });
 

@@ -54,6 +54,8 @@ import {
     type MapPoint,
 } from './QuestsScreen.helpers';
 import { canRankQuestsByPopularity, sortQuestsByPopularity } from '@/utils/questPopularity';
+import { canRankQuestsByRating, sortQuestsByRating } from '@/utils/questRatingOrder';
+import type { QuestSortOrder } from './questsShared';
 import { useQuestCatalogHandoff } from './useQuestCatalogHandoff';
 import { createCollator, translate as i18nT } from '@/i18n'
 
@@ -84,7 +86,7 @@ export default function QuestsScreen() {
     const nearbyRadiusKm = DEFAULT_NEARBY_RADIUS_KM;
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
-    const [popularSortEnabled, setPopularSortEnabled] = useState(false);
+    const [sortOrder, setSortOrder] = useState<QuestSortOrder>('default');
     const [pendingMapAreaCenter, setPendingMapAreaCenter] = useState<QuestMapArea | null>(null);
     const [activeMapAreaCenter, setActiveMapAreaCenter] = useState<QuestMapArea | null>(null);
     const [collapsedCountryCodes, setCollapsedCountryCodes] = useState<Record<string, boolean>>({});
@@ -461,17 +463,42 @@ export default function QuestsScreen() {
         Boolean(activeMapAreaCenter)
         || (selectedCityId === NEARBY_ID && Boolean(userLoc))
     );
-    const popularSortAvailable = !distanceOrdered && canRankQuestsByPopularity(questsAll);
-    const popularSortActive = popularSortEnabled && popularSortAvailable;
-    const visibleQuests = useMemo(
-        () => (popularSortActive ? sortQuestsByPopularity(questsAll) : questsAll),
-        [popularSortActive, questsAll],
-    );
+    //
+    // Порядок каталога — ОДНО состояние с тремя значениями, а не набор
+    // независимых тумблеров: «популярные» и «по рейтингу» взаимно исключают
+    // друг друга, и двумя булевыми флагами это выражалось бы состоянием
+    // «включены оба», которого не существует.
+    //
+    // Каждый вариант доступен только там, где данные делают порядок осмысленным
+    // (см. `canRankQuestsByPopularity` и `canRankQuestsByRating`): пустая
+    // сортировка хуже отсутствующей.
+    const availableSortOrders = useMemo<QuestSortOrder[]>(() => {
+        if (distanceOrdered) return [];
+        const orders: QuestSortOrder[] = [];
+        if (canRankQuestsByPopularity(questsAll)) orders.push('popular');
+        if (canRankQuestsByRating(questsAll)) orders.push('rating');
+        return orders;
+    }, [distanceOrdered, questsAll]);
+
+    // Выбранный порядок мог стать недоступным после смены фильтра или города —
+    // тогда каталог молча возвращается к порядку по умолчанию, а не остаётся
+    // отсортированным по исчезнувшей кнопке.
+    const activeSortOrder: QuestSortOrder =
+        sortOrder !== 'default' && availableSortOrders.includes(sortOrder) ? sortOrder : 'default';
+
+    const visibleQuests = useMemo(() => {
+        if (activeSortOrder === 'popular') return sortQuestsByPopularity(questsAll);
+        if (activeSortOrder === 'rating') return sortQuestsByRating(questsAll);
+        return questsAll;
+    }, [activeSortOrder, questsAll]);
     // #1826: инлайн-стрелка делала любую мемоизацию панели пустой.
     const handleOpenFilterDrawer = useCallback(() => setFilterDrawerOpen(true), []);
 
-    const handleTogglePopularSort = useCallback(() => {
-        setPopularSortEnabled((current) => !current);
+    // Повторное нажатие по выбранному варианту возвращает порядок по умолчанию:
+    // так сохраняется поведение прежнего тумблера «Популярные», к которому
+    // посетитель уже привык.
+    const handleSelectSortOrder = useCallback((order: QuestSortOrder) => {
+        setSortOrder((current) => (current === order ? 'default' : order));
     }, []);
 
     const catalogModel = useQuestCatalogResponsiveModel(questsAll.length);
@@ -780,9 +807,9 @@ export default function QuestsScreen() {
                 onSearchChange={setSearchQuery}
                 questsAll={visibleQuests}
                 questCardWidth={questCardWidth}
-                popularSortAvailable={popularSortAvailable}
-                popularSortActive={popularSortActive}
-                onTogglePopularSort={handleTogglePopularSort}
+                availableSortOrders={availableSortOrders}
+                activeSortOrder={activeSortOrder}
+                onSelectSortOrder={handleSelectSortOrder}
                 mapPoints={mapPoints}
                 mapCenter={mapCenter}
                 userLoc={userLoc}

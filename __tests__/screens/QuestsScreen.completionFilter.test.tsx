@@ -180,8 +180,8 @@ describe.each([false, true])('completed by others (mobile=%s)', (mobile) => {
         if (mobile) fireEvent.press(getByTestId('open-filters'));
         fireEvent.press(getByTestId('quests-sidebar-completed-by-others-button'));
         await waitFor(() => expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(['mine-and-other', 'other-only']));
-        expect(mockContentProps.popularSortAvailable).toBe(true);
-        act(() => mockContentProps.onTogglePopularSort?.());
+        expect(mockContentProps.availableSortOrders?.includes('popular')).toBe(true);
+        act(() => mockContentProps.onSelectSortOrder?.('popular'));
         await waitFor(() => expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(['other-only', 'mine-and-other']));
 
         act(() => mockContentProps.onSearchChange('mine-only'));

@@ -11,6 +11,12 @@ export type NearbyCity = City & { isNearby: true };
 
 export type { QuestMeta } from '@/utils/questAdapters';
 
+/**
+ * Порядок каталога квестов (#1988). Одно состояние вместо набора тумблеров:
+ * варианты взаимно исключают друг друга.
+ */
+export type QuestSortOrder = 'default' | 'popular' | 'rating';
+
 export const pluralizeQuest = (n: number): string => {
     return selectPlural(n, {
         one: i18nT('shared:screens.tabs.questsShared.value1_kvest_ba4b63c8', { value1: n }),

@@ -118,6 +118,10 @@ module.exports = {
   canRankQuestsByPopularity,
   compareQuestPopularity,
   countPopularQuests,
+  // Экспортируется ради `utils/questRatingOrder`: у правила рейтинга тот же
+  // последний ключ порядка, и вторая копия чтения id разошлась бы с этой на
+  // первой же смене формы меты (`id` — слаг, число в `numericId`).
+  questNumericId,
   selectPopularQuests,
   sortQuestsByPopularity,
 };
