@@ -2,10 +2,9 @@
 /**
  * Скрипт загрузки медиа-файлов квестов на бэкенд.
  *
- * Загружает:
- *   - cover_url      — обложка квеста (cover.png)
- *   - image_url      — картинки шагов (1.png, 2.png, ...)
- *   - video_url      — видео финала (.mp4)
+ * Загружает обложку квеста (cover.png) через поле cover_image и проверяет cover_url.
+ * Остальные медиа показывает в отчёте; при попытке загрузки сообщает об отказе:
+ * для них нужны отдельные эндпоинты шагов и финала.
  *
  * Использование:
  *   node scripts/upload-quest-media.js [--dry-run] [--api-url=http://192.168.50.36] [--token=xxx]
@@ -165,42 +164,6 @@ async function fetchQuestBundle(questId) {
     return response.json();
 }
 
-/**
- * Обновляет квест через PATCH (JSON).
- */
-async function patchQuestJson(questDbId, data) {
-    const headers = { 'Content-Type': 'application/json' };
-    if (TOKEN) headers['Authorization'] = `Token ${TOKEN}`;
-
-    const response = await fetch(`${API_BASE}/api/quests/${questDbId}/`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`PATCH failed for quest ${questDbId}: HTTP ${response.status}: ${text}`);
-    }
-    return response.json();
-}
-
-// ===================== СТРАТЕГИЯ ЗАГРУЗКИ =====================
-//
-// Бэкенд Django REST Framework может принимать файлы через:
-//   1) multipart/form-data на PATCH /api/quests/{id}/ — для cover_url, video_url, poster_url
-//   2) JSON PATCH с URL строками — если файлы уже доступны по URL
-//
-// Поскольку image_url хранится внутри JSON-поля steps, мы не можем загрузить
-// файлы напрямую через multipart. Стратегия:
-//
-//   Шаг 1: Загрузить медиа-файлы в /media/ директорию бэкенда
-//           (через отдельный эндпоинт или multipart PATCH)
-//   Шаг 2: Обновить steps JSON с URL загруженных файлов
-//
-// Если бэкенд не поддерживает прямую загрузку файлов,
-// скрипт выведет команды для ручной загрузки через Django admin или scp.
-
 // ===================== MAIN =====================
 
 async function main() {
@@ -214,6 +177,12 @@ async function main() {
     let totalSize = 0;
     /** #1987: отказы гейта пропорции — итогом и ненулевым кодом выхода. */
     const rejectedCovers = [];
+    const failedUploads = [];
+    const reportFailure = (questId, media, message) => {
+        const failure = `${questId}: ${media}: ${message}`;
+        failedUploads.push(failure);
+        console.error(`  ❌ ${failure}`);
+    };
 
     for (const quest of QUEST_MEDIA) {
         const questDir = path.join(ASSETS_DIR, quest.assetsDir);
@@ -312,69 +281,41 @@ async function main() {
                     try {
                         await uploadFile(
                             `${API_BASE}/api/quests/${questDbId}/`,
-                            'cover',
+                            'cover_image',
                             coverPath
                         );
+                        const updated = await fetchQuestBundle(quest.quest_id);
+                        if (typeof updated.cover_url !== 'string' || !updated.cover_url.trim()
+                            || updated.cover_url === bundle.cover_url) {
+                            throw new Error('после PATCH cover_url отсутствует или не изменился; загрузка не подтверждена');
+                        }
                         console.log(`  ✅ cover загружен`);
                     } catch (err) {
-                        console.log(`  ⚠️  cover: multipart PATCH не сработал (${err.message})`);
-                        console.log(`     Попробуем альтернативный подход...`);
-
-                        // Альтернатива: загрузить файл и обновить URL вручную
-                        // Формируем URL для медиа-файла
-                        const mediaUrl = `${API_BASE}/media/quests/${quest.quest_id}/cover.png`;
-                        console.log(`     Целевой URL: ${mediaUrl}`);
+                        reportFailure(quest.quest_id, 'cover', err.message);
                     }
                 }
 
-                // Загружаем видео финала
+                // QuestWriteSerializer игнорирует finale_video и steps даже при HTTP 200.
                 if (quest.finaleVideo) {
                     const videoPath = path.join(questDir, quest.finaleVideo);
                     if (fileExists(videoPath)) {
-                        try {
-                            await uploadFile(
-                                `${API_BASE}/api/quests/${questDbId}/`,
-                                'finale_video',
-                                videoPath
-                            );
-                            console.log(`  ✅ video загружен`);
-                        } catch (err) {
-                            console.log(`  ⚠️  video: multipart PATCH не сработал (${err.message})`);
-                        }
+                        reportFailure(quest.quest_id, 'video',
+                            'загрузка этим скриптом не поддерживается; нужен PATCH /api/quest-finales/{id}/ с полем video');
                     }
                 }
-
-                // Обновляем steps с image_url
-                const steps = typeof bundle.steps === 'string'
-                    ? JSON.parse(bundle.steps)
-                    : bundle.steps;
-
-                let stepsUpdated = false;
-                for (const step of steps) {
-                    const imgFile = quest.stepImages[step.id];
-                    if (imgFile) {
-                        const imgPath = path.join(questDir, imgFile);
-                        if (fileExists(imgPath)) {
-                            // Формируем URL для медиа-файла на бэкенде
-                            step.image_url = `${API_BASE}/media/quests/${quest.quest_id}/${imgFile}`;
-                            stepsUpdated = true;
-                        }
+                for (const [stepId, imgFile] of Object.entries(quest.stepImages)) {
+                    if (fileExists(path.join(questDir, imgFile))) {
+                        reportFailure(quest.quest_id, `step ${stepId}`,
+                            'загрузка этим скриптом не поддерживается; нужен PATCH /api/quest-steps/{id}/ с полем image');
                     }
                 }
-
-                if (stepsUpdated) {
-                    try {
-                        await patchQuestJson(questDbId, {
-                            steps: JSON.stringify(steps),
-                        });
-                        console.log(`  ✅ steps image_url обновлены`);
-                    } catch (err) {
-                        console.log(`  ⚠️  steps update: ${err.message}`);
-                    }
+                if (quest.finalePoster && fileExists(path.join(questDir, quest.finalePoster))) {
+                    reportFailure(quest.quest_id, 'poster',
+                        'загрузка этим скриптом не поддерживается; нужен PATCH /api/quest-finales/{id}/ с полем poster');
                 }
 
             } catch (err) {
-                console.error(`  ❌ Ошибка: ${err.message}`);
+                reportFailure(quest.quest_id, 'bundle', err.message);
             }
         }
     }
@@ -387,6 +328,11 @@ async function main() {
         // есть ровно то «прошло пайплайн молча», ради которого гейт и заведён.
         console.error(`\nОтклонено гейтом пропорции обложек: ${rejectedCovers.length}`);
         for (const line of rejectedCovers) console.error(`  - ${line}`);
+        process.exitCode = 1;
+    }
+    if (failedUploads.length) {
+        console.error(`\nНе подтверждено загрузок: ${failedUploads.length}`);
+        for (const line of failedUploads) console.error(`  - ${line}`);
         process.exitCode = 1;
     }
 
@@ -423,7 +369,8 @@ async function main() {
             console.log('');
         }
 
-        console.log('После загрузки файлов запустите скрипт без --dry-run для обновления URL в БД.');
+        console.log('Само копирование файлов не обновляет БД. Этот скрипт загружает только cover_image;');
+        console.log('для шагов нужен PATCH /api/quest-steps/{id}/ (image), для финала — /api/quest-finales/{id}/ (video/poster).');
     }
 }
 

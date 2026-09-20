@@ -4435,8 +4435,8 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   скрипта заливки: `scripts/upload-quest-media.js`,
   `scripts/upload-quest-media-prod.js`,
   `scripts/upload-missing-quest-covers-prod.js`. На прод обложку реально
-  кладёт тот, кто шлёт поле `cover_image` (`QuestWriteSerializer`), — это
-  `upload-quest-media-prod.js` и `upload-missing-quest-covers-prod.js`.
+  кладёт тот, кто шлёт поле `cover_image` (`QuestWriteSerializer`). Для
+  `upload-quest-media.js` расхождение имени поля исправляет #2001.
 - **Цепочка:** 19.09.2026 владелец увидел на `/quests` (город Хаапсалу)
   «обрезанную» картинку → DOM-замер: слот `600×411`, обложка `800×800`, кадр
   рисуется `411×411`, поле 95 px × 2 = 31.5% → замер всех 207 обложек прода:
@@ -4467,3 +4467,29 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   `.claude/skills/metravel-icon-art`,
   `.codex/skills/metravel-child-quest-visuals` и
   `.codex/skills/metravel-visual-asset-designer`.
+
+### QUEST-MEDIA-WRITE-CONTRACT-001 — HTTP 200 не доказывает сохранение обложки
+
+- **Problem key:** `quest-media-upload-field-name-vs-serializer`.
+- **Инвариант:** `upload-quest-media.js` сообщает об успешной загрузке только
+  после `PATCH cover_image` и повторного GET с непустым изменившимся `cover_url`.
+  Неподтверждённая загрузка даёт ненулевой код выхода, обработка следующих
+  квестов продолжается.
+- **Surface/owner:** операторский скрипт `scripts/upload-quest-media.js`, frontend.
+  Platform impact: none; Localization impact: none.
+- **Цепочка:** ревью #1987 обнаружило расхождение multipart-поля → #2001.
+  Причина отдельная от пропорции обложки в `QUEST-COVER-MASTER-ASPECT-001`.
+- **Подтверждённая причина:** `QuestWriteSerializer` принимает `cover_image`,
+  но скрипт отправлял `cover`. DRF игнорирует неизвестное поле без ошибки.
+  `finale_video` и `steps` этот сериализатор также не принимает: для медиа
+  шагов и финала нужны `/api/quest-steps/{id}/` (`image`) и
+  `/api/quest-finales/{id}/` (`video`/`poster`). Скрипт явно отклоняет эти
+  неподдерживаемые операции и больше не придумывает адреса загруженных файлов.
+- **Regression control:** `__tests__/scripts/upload-quest-media.test.ts`
+  запускает CLI с подменённым транспортом: проверяет multipart-поле, порядок
+  GET/PATCH/GET, HTTP 200 без изменения URL, пустой URL, отказы PATCH/GET,
+  продолжение после ошибки, отказ старых media-полей и dry-run без запросов.
+  Гейт пропорции #1987 сохраняется.
+- **Ограничение проверки:** неизменившийся URL не позволяет подтвердить запись
+  по этому контракту, даже если хранилище перезаписало файл на месте. Скрипт
+  сообщает «загрузка не подтверждена», а не выдаёт ложный успех.

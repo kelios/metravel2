@@ -78,6 +78,126 @@ const QUEST_MEDIA = [
         stepImages: {},
         finaleVideo: 'minskDragon.mp4',
     },
+    {
+        quest_id: 'akko-hidden-city-letter', assetsDir: 'akkoHiddenCityLetter', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'almaty-city-soundtrack', assetsDir: 'almatyCitySoundtrack', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'cesis-light-through-ages', assetsDir: 'cesisLightThroughAges', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'haapsalu-ilon-memory', assetsDir: 'haapsaluIlonMemory', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'haifa-eight-views', assetsDir: 'haifaEightViews', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'jaffa-sea-wish', assetsDir: 'jaffaSeaWish', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'jerusalem-city-gates', assetsDir: 'jerusalemCityGates', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'kaunas-modernist-letter', assetsDir: 'kaunasModernistLetter', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'klaipeda-port-keepers', assetsDir: 'klaipedaPortKeepers', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'kuldiga-water-stone', assetsDir: 'kuldigaWaterStone', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'kuressaare-giants-catch', assetsDir: 'kuressaareGiantsCatch', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'liepaja-wind-melody', assetsDir: 'liepajaWindMelody', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'nis-eight-seals', assetsDir: 'nisEightSeals', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'novi-sad-zmaj-notebook', assetsDir: 'noviSadZmajNotebook', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'palanga-birute-pines', assetsDir: 'palangaBirutePines', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'parnu-seaside-promise', assetsDir: 'parnuSeasidePromise', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'riga-eisenstein-facades', assetsDir: 'rigaEisensteinFacades', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'safed-old-quarter-light', assetsDir: 'safedOldQuarterLight', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'shymkent-common-sky', assetsDir: 'shymkentCommonSky', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'sremski-karlovci-return', assetsDir: 'sremskiKarlovciReturn', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'subotica-flowering-city', assetsDir: 'suboticaFloweringCity', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'tallinn-secret-window', assetsDir: 'tallinnSecretWindow', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'taraz-city-letter', assetsDir: 'tarazCityLetter', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'tartu-bridge-wish', assetsDir: 'tartuBridgeWish', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'turaida-valley-song', assetsDir: 'turaidaValleySong', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'astana-samruk-tree', assetsDir: 'astanaSamrukTree', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'belgrade-white-city', assetsDir: 'belgradeWhiteCity', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'trakai-castle', assetsDir: 'trakaiCastle', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'turkestan-yasawi', assetsDir: 'turkestanYasawi', cover: 'cover.png',
+        stepImages: {},
+    },
+    {
+        quest_id: 'vilnius-old-town', assetsDir: 'vilniusOldTown', cover: 'cover.png',
+        stepImages: {},
+    },
 ];
 
 async function main() {
