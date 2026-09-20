@@ -130,9 +130,14 @@ describe('гейт пропорции обложки квеста', () => {
       ]),
     );
 
+    // Проверяем не только импорт, но и ВЫЗОВ: скрипт, который затянул модуль
+    // ради `catalogLetterboxShare` в лог и ни разу не спросил вердикт, обязан
+    // считаться незащищённым.
     const ungated = uploaders.filter((name) => {
       const source = fs.readFileSync(path.join(scriptsDir, name), 'utf8');
-      return !source.includes("require('./lib/questCoverAspect')");
+      const imports = source.includes("require('./lib/questCoverAspect')");
+      const calls = /assertQuestCoverAspect\(|inspectQuestCover\(/.test(source);
+      return !imports || !calls;
     });
     expect(ungated).toEqual([]);
   });
