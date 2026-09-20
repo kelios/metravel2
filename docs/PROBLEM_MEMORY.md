@@ -1840,7 +1840,9 @@ guard, падающий в CI на попытке обойти этот конт
   (`buildQuestCityLandingHtml` поверх `buildQuestCityWalkModel` — собственный
   текст города это и есть хвосты историй) и слова SSG-среза детальной — и
   падает, когда любая из двух страниц ниже 300 слов: одна-две заметки порога не
-  берут так же, как ноль; `scripts/post-deploy-seo-check.js` считает
+  берут так же, как ноль, а `check:fast` гоняет его по каждому изменённому
+  data-файлу с baseline `scripts/quest-city-walk-baseline.json` (квесты,
+  тонкие до гейта); `scripts/post-deploy-seo-check.js` считает
   `/quests/<город>` и `/quests/<город>/<квест>` семейством «решает каталог» (оба состояния robots
   законны, вердикт — за `verify-static-quest-seo.js` до деплоя), как до этого
   только `/quests/country/<alias>`. Возврат страниц в выдачу — контентная

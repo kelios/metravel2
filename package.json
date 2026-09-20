@@ -193,6 +193,7 @@
     "quest:scan-point-roles:baseline": "node scripts/scan-quest-point-roles.js --update-baseline",
     "quest:scan-city-walk": "node scripts/scan-quest-city-walk.js",
     "quest:scan-city-walk:json": "node scripts/scan-quest-city-walk.js --json",
+    "quest:scan-city-walk:baseline": "node scripts/scan-quest-city-walk.js --update-baseline",
     "quest:backfill-point-roles": "node scripts/backfill-quest-point-roles.js",
     "quest:scan-prod-drift": "node scripts/scan-quest-prod-drift.js",
     "quest:scan-prod-drift:json": "node scripts/scan-quest-prod-drift.js --json",

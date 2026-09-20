@@ -3,14 +3,20 @@
 // (2 предложения / 60 слов) забирал их целиком, хвоста для заметок города не
 // оставалось, и 20 посадочных плюс 2 детальные ушли под `noindex, follow` —
 // ни один скан семейства объём story не мерил, партия дошла до сборки прода.
+const path = require('node:path')
+
 const {
+  BASELINE_CONTRACT_VERSION,
+  BASELINE_PATH,
   cityPageOf,
   detailPageWords,
+  findingKeys,
   inspectQuest,
   parseArgs,
   scanQuests,
 } = require('@/scripts/scan-quest-city-walk')
 const { loadLocalBundles } = require('@/scripts/lib/questBundles')
+const { loadBaseline, splitByBaseline } = require('@/scripts/lib/scanBaseline')
 const { MIN_QUEST_PAGE_WORDS } = require('@/scripts/lib/questPageDepth')
 const { UsageError } = require('@/scripts/lib/cli-contract')
 
@@ -104,6 +110,13 @@ describe('scan-quest-city-walk: замер одного квеста', () => {
     expect(result.issues[0]).toMatch(/у квеста нет точек/)
   })
 
+  it('без quest_id каталог не строит посадочную — находка про идентификатор, а не про истории', () => {
+    const result = inspectQuest(bundle(stories(8, DEEP), { quest_id: '' }))
+    expect(result.cityWords).toBe(0)
+    expect(result.issues).toHaveLength(1)
+    expect(result.issues[0]).toMatch(/нет quest_id/)
+  })
+
   it('шаги строкой JSON (форма API) меряются так же, как массивом', () => {
     const asArray = inspectQuest(bundle(stories(8, DEEP)))
     const asString = inspectQuest(bundle(stories(8, DEEP), { steps: JSON.stringify(bundle(stories(8, DEEP)).steps) }))
@@ -153,5 +166,34 @@ describe('scan-quest-city-walk: CLI', () => {
 
   it('отказывается от опечатки в имени флага, а не обходит весь прод', () => {
     expect(() => parseArgs(['--sourse=scripts/x-quest-data.js'])).toThrow(UsageError)
+  })
+
+  it('разбирает --baseline и --update-baseline', () => {
+    expect(parseArgs(['--source=scripts/x-quest-data.js', `--baseline=${BASELINE_PATH}`])).toMatchObject({
+      baseline: BASELINE_PATH,
+    })
+    expect(parseArgs(['--update-baseline'])).toMatchObject({ updateBaseline: true })
+  })
+})
+
+describe('scan-quest-city-walk: baseline для check:fast', () => {
+  it('вычитает квест, тонкий до появления гейта, и оставляет новый тонкий находкой', () => {
+    const { findings } = scanQuests([
+      bundle(stories(8, SHORT), { quest_id: 'known-thin' }),
+      bundle(stories(8, SHORT), { quest_id: 'new-thin' }),
+    ])
+    const { fresh, known } = splitByBaseline(findings, ['known-thin'], findingKeys)
+    expect(fresh.map((finding: any) => finding.quest_id)).toEqual(['new-thin'])
+    expect(known.map((finding: any) => finding.quest_id)).toEqual(['known-thin'])
+  })
+
+  it('baseline в репозитории читается по контракту и не покрывает эталон', () => {
+    const baseline = loadBaseline(path.resolve(process.cwd(), BASELINE_PATH), BASELINE_CONTRACT_VERSION)
+    expect(Object.keys(baseline.known).length).toBeGreaterThan(0)
+    expect(baseline.known['scripts/kazan-zilant-syuyumbike-quest-data.js']).toBeUndefined()
+    for (const [file, questIds] of Object.entries(baseline.known)) {
+      expect(file).toMatch(/^scripts\/.+quest-data.*\.js$/)
+      expect(Array.isArray(questIds) && questIds.length > 0).toBe(true)
+    }
   })
 })

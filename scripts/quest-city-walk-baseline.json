@@ -1,0 +1,39 @@
+{
+  "contractVersion": 1,
+  "note": "Квесты, лежавшие в репозитории тоньше порога глубины историй (посадочная города из одного квеста или детальная < 300 слов прозы) до появления гейта #1998. Их истории — редакционная работа своих карточек; новый тонкий квест baseline не покрывает. Снимается по файлам данных в РАБОЧЕМ ДЕРЕВЕ, поэтому обновлять надо на дереве без чужих незавершённых правок. Обновлять: npm run quest:scan-city-walk:baseline",
+  "known": {
+    "scripts/bielsko-biala-quest-data.js": [
+      "bielsko-biala-cartoon-vienna"
+    ],
+    "scripts/brest-kids-garden-song-quest-data.js": [
+      "brest-kids-garden-song"
+    ],
+    "scripts/gomel-kids-lost-playbill-quest-data.js": [
+      "gomel-kids-lost-playbill"
+    ],
+    "scripts/gomel-kids-quest-data.js": [
+      "gomel-kids-park-secrets"
+    ],
+    "scripts/gomel-teens-city-blueprint-quest-data.js": [
+      "gomel-teens-city-blueprint"
+    ],
+    "scripts/grodno-kids-park-orchestra-quest-data.js": [
+      "grodno-kids-park-orchestra"
+    ],
+    "scripts/mogilev-kids-lion-ball-quest-data.js": [
+      "mogilev-kids-lion-ball"
+    ],
+    "scripts/mogilev-kids-quest-data.js": [
+      "mogilev-kids-mogislav"
+    ],
+    "scripts/mogilev-stargazer-quest-data.js": [
+      "mogilev-stargazer"
+    ],
+    "scripts/vitebsk-kids-living-drawing-quest-data.js": [
+      "vitebsk-kids-living-drawing"
+    ],
+    "scripts/vlora-quest-data.js": [
+      "vlora-independence"
+    ]
+  }
+}

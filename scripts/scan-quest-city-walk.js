@@ -21,7 +21,9 @@
  * посадочных и 2 детальные ушли под `noindex, follow`. Ни один скан семейства
  * `scan-quest-*` объём story не мерил, поэтому партия дошла до сборки прода —
  * первого места, где это стало видно. Этот скан закрывает разрыв на этапе
- * публикации: без сети, без 15-минутной сборки, по одному data-файлу.
+ * публикации: без сети, без 15-минутной сборки, по одному data-файлу. Тот же
+ * скан гоняет `check:fast` (`scripts/run-fast-scope-checks.js`) по каждому
+ * изменённому `scripts/*-quest-data.js` с baseline ниже.
  *
  * Что меряется по одному квесту — слова прозы ОБЕИХ страниц, собранных теми же
  * функциями, какими их пишет сборка, для города, где этот квест единственный
@@ -51,23 +53,24 @@
  * и соседних точек, иначе хвост их отфильтрует и заметки не будет.
  *
  *   node scripts/scan-quest-city-walk.js --source=scripts/<city>-quest-data.js
+ *   node scripts/scan-quest-city-walk.js --source=… --baseline=scripts/quest-city-walk-baseline.json
  *   node scripts/scan-quest-city-walk.js --quest-id=tartu-bridge-wish
  *   node scripts/scan-quest-city-walk.js                     # весь прод
+ *   node scripts/scan-quest-city-walk.js --update-baseline   # переписать baseline
  *   node scripts/scan-quest-city-walk.js --json
  *
- * Exit code 1, если хотя бы один квест выборки не берёт порог.
+ * Exit code 1, если хотя бы один квест выборки вне baseline не берёт порог.
  */
+
+const path = require('path')
 
 const { fetchQuestBundles, loadLocalBundles } = require('./lib/questBundles')
 const { MIN_QUEST_PAGE_WORDS, countWords, questPageFromHtml } = require('./lib/questPageDepth')
 const { buildQuestCityAliasMap } = require('../utils/questCityAlias')
 const { getQuestSteps } = require('../utils/questStoryText')
-const {
-  buildQuestCityLandingHtml,
-  buildQuestCityLandingModel,
-  buildQuestSeoMetadata,
-  injectQuestIntroSection,
-} = require('./generate-seo-pages')
+// Baseline — общий с другими аудит-сканами квестов механизм (#1450, #1488).
+const { loadBaseline, localQuestDataFiles, splitByBaseline, writeBaseline } = require('./lib/scanBaseline')
+const { QUEST_DATA_FILE_PATTERN } = require('./scan-quest-answer-reachability')
 const {
   parseCliArgs,
   parseCliTokens,
@@ -77,6 +80,17 @@ const {
 } = require('./lib/cli-contract')
 
 const DEFAULT_API = process.env.METRAVEL_API_URL || 'https://metravel.by'
+
+/**
+ * Генератор SSG тянет за собой весь свой граф модулей, а этот файл читает и
+ * `run-fast-scope-checks.js` — ради одного пути к baseline. Поэтому генератор
+ * подключается при первом замере, а не при загрузке модуля.
+ */
+let ssgGenerator = null
+function generator() {
+  if (!ssgGenerator) ssgGenerator = require('./generate-seo-pages')
+  return ssgGenerator
+}
 
 /**
  * Пустая страница-носитель: меряется только crawlable-секция, которую в неё
@@ -91,6 +105,18 @@ const EMPTY_PAGE =
  * адресует её (`/quests/<id>`), — поэтому для замера берётся заглушка.
  */
 const CITY_ID_PLACEHOLDER = 'city'
+
+/**
+ * Baseline — квесты, лежавшие в репозитории тоньше порога до появления гейта
+ * (замер 21.09.2026: 11 квестов в 11 локальных data-файлах, в основном детские
+ * с короткими историями). Их истории — редакционная
+ * работа своих карточек, и `check:fast` не должен краснеть тому, кто правит в
+ * таком файле одну строку. Новый тонкий квест baseline не покрывает и валит
+ * гейт сразу. Ключ — `quest_id`: правка текста историю не «теряет».
+ */
+const BASELINE_PATH = 'scripts/quest-city-walk-baseline.json'
+const BASELINE_CONTRACT_VERSION = 1
+const findingKeys = (finding) => [finding.quest_id]
 
 // ===================== Замер =====================
 
@@ -118,6 +144,7 @@ function catalogQuestOf(bundle, steps) {
  * отчёт называл бы заметки, которых на померенной странице может не быть.
  */
 function cityPageOf(quest, bundle) {
+  const { buildQuestCityLandingHtml, buildQuestCityLandingModel } = generator()
   const catalogQuest = { ...quest, city_id: CITY_ID_PLACEHOLDER }
   const [city] = buildQuestCityLandingModel(
     [catalogQuest],
@@ -135,6 +162,7 @@ function cityPageOf(quest, bundle) {
  * меряет сборка (`generate-seo-pages.js` → `questPageDepth.js`).
  */
 function detailPageWords(bundle, steps = getQuestSteps(bundle)) {
+  const { buildQuestSeoMetadata, injectQuestIntroSection } = generator()
   const quest = catalogQuestOf(bundle, steps)
   const { description } = buildQuestSeoMetadata({
     title: quest.title,
@@ -169,7 +197,12 @@ function inspectQuest(bundle) {
   const detailWords = detailPageWords(bundle, steps)
 
   const issues = []
-  if (cityWords < MIN_QUEST_PAGE_WORDS) {
+  if (!quest.quest_id) {
+    // Без `quest_id` каталог не строит группу города вовсе (`questRouteKey`), и
+    // нулевая посадочная здесь — не про истории: автора нельзя слать
+    // переписывать точки, когда не хватает идентификатора.
+    issues.push('у квеста нет quest_id — посадочная города без него не собирается')
+  } else if (cityWords < MIN_QUEST_PAGE_WORDS) {
     issues.push(
       `${cityWords} слов прозы на посадочной города, порог ${MIN_QUEST_PAGE_WORDS}` +
         ` — ${cityGapReason(walk.places.length, steps.length)}`,
@@ -199,16 +232,46 @@ function scanQuests(bundles) {
   return { results, findings: results.filter((result) => result.issues.length > 0) }
 }
 
+/**
+ * Перезапись baseline по всем локальным данным квестов — единственный способ его
+ * пополнить. Снимается по файлам в РАБОЧЕМ ДЕРЕВЕ, поэтому обновлять его надо на
+ * дереве без чужих незавершённых правок: иначе чужой тонкий квест уедет в файл
+ * как принятое исключение и перестанет ронять гейт молча.
+ */
+function updateBaseline(rootDir) {
+  const known = {}
+  let total = 0
+  for (const file of localQuestDataFiles(rootDir, QUEST_DATA_FILE_PATTERN)) {
+    const { findings } = scanQuests(loadLocalBundles(file, null))
+    if (!findings.length) continue
+    known[file] = findings.map((finding) => finding.quest_id).sort()
+    total += findings.length
+  }
+  const baselinePath = path.join(rootDir, BASELINE_PATH)
+  writeBaseline(baselinePath, {
+    contractVersion: BASELINE_CONTRACT_VERSION,
+    note: 'Квесты, лежавшие в репозитории тоньше порога глубины историй (посадочная города из одного '
+      + 'квеста или детальная < 300 слов прозы) до появления гейта #1998. Их истории — редакционная '
+      + 'работа своих карточек; новый тонкий квест baseline не покрывает. Снимается по файлам данных '
+      + 'в РАБОЧЕМ ДЕРЕВЕ, поэтому обновлять надо на дереве без чужих незавершённых правок. '
+      + 'Обновлять: npm run quest:scan-city-walk:baseline',
+    known,
+  })
+  return { baselinePath, files: Object.keys(known).length, total }
+}
+
 // ===================== CLI =====================
 
 const USAGE = `Скан глубины историй квеста: слова посадочной города и детальной — QUEST-CITY-LANDING-VALUE-001
 
 Usage:
-  node scripts/scan-quest-city-walk.js [--quest-id <id>] [--source <file>] [--api-url <url>] [--json]
+  node scripts/scan-quest-city-walk.js [--quest-id <id>] [--source <file>] [--baseline <file>] [--update-baseline] [--api-url <url>] [--json]
 
 Options:
   --quest-id <id>       один квест вместо всего корпуса
   --source <file>       локальный data-файл вместо прода
+  --baseline <file>     вычесть квесты, тонкие до появления гейта (только с --source)
+  --update-baseline     переписать ${BASELINE_PATH} по всем локальным данным
   --api-url <url>       адрес прода (по умолчанию METRAVEL_API_URL или https://metravel.by)
   --json                machine-readable результат на stdout
   --help, -h            напечатать эту справку и выйти`
@@ -221,6 +284,8 @@ const CLI_SPEC = {
     'api-url': { type: 'string', default: DEFAULT_API, stripTrailingSlash: true },
     'quest-id': { type: 'string' },
     source: { type: 'string' },
+    baseline: { type: 'string' },
+    'update-baseline': { type: 'boolean' },
     json: { type: 'boolean' },
   },
 }
@@ -240,6 +305,13 @@ function formatResult(result) {
 
 async function main() {
   const args = parseCliArgs(process.argv, CLI_SPEC)
+
+  if (args.updateBaseline) {
+    const result = updateBaseline(process.cwd())
+    console.log(`Baseline перезаписан: ${BASELINE_PATH} — ${result.total} квестов в ${result.files} файлах.`)
+    return
+  }
+
   const bundles = requireNonEmptySelection(
     args.source
       ? loadLocalBundles(args.source, args.questId)
@@ -252,16 +324,36 @@ async function main() {
   )
 
   const source = args.source || args.apiUrl
-  const { results, findings } = scanQuests(bundles)
+  const { results, findings: scanned } = scanQuests(bundles)
+  // Baseline применим только к локальному файлу: на проде исключений нет — там
+  // тонкий квест это тонкая страница в выдаче, а не решение автора.
+  const { fresh: findings, known: knownFindings } = args.source && args.baseline
+    ? splitByBaseline(
+        scanned,
+        loadBaseline(path.resolve(process.cwd(), args.baseline), BASELINE_CONTRACT_VERSION).known?.[args.source],
+        findingKeys,
+      )
+    : { fresh: scanned, known: [] }
 
   if (args.json) {
-    console.log(JSON.stringify({ source, quests: results.length, minWords: MIN_QUEST_PAGE_WORDS, findings, results }, null, 2))
+    console.log(JSON.stringify(
+      { source, quests: results.length, minWords: MIN_QUEST_PAGE_WORDS, findings, knownFindings, results },
+      null,
+      2,
+    ))
   } else {
     console.log(`Скан глубины историй квестов: ${source} — ${results.length} квестов`)
     for (const result of results) console.log(formatResult(result))
-    console.log(findings.length
-      ? `\nКвестов ниже порога: ${findings.length} из ${results.length} — дописать story точек (≥ 4 предложения: два для дайджеста, дальше факты о месте без обращения к игроку и без слов ответа).`
-      : '\nВсе квесты выборки берут порог: и посадочная города, и детальная не тоньше порога.')
+    if (knownFindings.length) {
+      console.log(`\nУчтено baseline (тонкие до появления гейта): ${knownFindings.map((f) => f.quest_id).join(', ')}`)
+    }
+    if (findings.length) {
+      console.log(`\nКвестов ниже порога: ${findings.length} из ${results.length} — дописать story точек (≥ 4 предложения: два для дайджеста, дальше факты о месте без обращения к игроку и без слов ответа).`)
+    } else if (knownFindings.length) {
+      console.log('\nНовых квестов ниже порога нет; тонкие до появления гейта учтены baseline.')
+    } else {
+      console.log('\nВсе квесты выборки берут порог: и посадочная города, и детальная не тоньше порога.')
+    }
   }
 
   requireNoBatchFailures(findings.length, {
@@ -271,6 +363,8 @@ async function main() {
 }
 
 module.exports = {
+  BASELINE_CONTRACT_VERSION,
+  BASELINE_PATH,
   CITY_ID_PLACEHOLDER,
   CLI_SPEC,
   EMPTY_PAGE,
@@ -278,9 +372,11 @@ module.exports = {
   catalogQuestOf,
   cityPageOf,
   detailPageWords,
+  findingKeys,
   inspectQuest,
   parseArgs,
   scanQuests,
+  updateBaseline,
 }
 
 if (require.main === module) {

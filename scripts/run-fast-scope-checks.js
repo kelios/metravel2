@@ -51,6 +51,7 @@ const { BASELINE_PATH: QUEST_SURFACE_ANSWER_BASELINE_PATH } = require('./scan-qu
 const { BASELINE_PATH: QUEST_COMPOUND_SPELLING_BASELINE_PATH } = require('./scan-quest-compound-spelling-gap')
 const { BASELINE_PATH: QUEST_POINT_ROLES_BASELINE_PATH } = require('./scan-quest-point-roles')
 const { ALLOW_PATH: QUEST_ANYTEXT_MINLEN_ALLOW_PATH } = require('./scan-quest-anytext-minlen')
+const { BASELINE_PATH: QUEST_CITY_WALK_BASELINE_PATH } = require('./scan-quest-city-walk')
 const ESLINT_CACHE_LOCATION = 'node_modules/.cache/eslint/check-fast/.eslintcache'
 const ESLINT_BIN_PATH = path.resolve(process.cwd(), 'node_modules/eslint/bin/eslint.js')
 const MINIMATCH_OPTIONS = Object.freeze({ dot: true })
@@ -427,6 +428,22 @@ const main = () => {
       ], { shell: false })
       if (anytextMinlenStatus !== 0) {
         process.exit(anytextMinlenStatus)
+      }
+
+      // Глубина историй точек (#1998, QUEST-CITY-LANDING-VALUE-001): партия
+      // 19.09.2026 с историями в 1–2 предложения оставила посадочные 20 городов
+      // без заметок и ушла под noindex — первым это увидела сборка прода, а не
+      // гейт публикации. Замер тот же, что у сборки: посадочная города из
+      // одного этого квеста и детальная ≥ 300 слов прозы. Baseline держит
+      // квесты, лежавшие тоньше порога до гейта; новый тонкий квест валит
+      // гейт сразу.
+      const cityWalkStatus = runCommand('node', [
+        'scripts/scan-quest-city-walk.js',
+        `--source=${questDataFile}`,
+        `--baseline=${QUEST_CITY_WALK_BASELINE_PATH}`,
+      ], { shell: false })
+      if (cityWalkStatus !== 0) {
+        process.exit(cityWalkStatus)
       }
     }
 
