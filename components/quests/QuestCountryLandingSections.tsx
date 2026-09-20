@@ -4,6 +4,10 @@ import { Link } from 'expo-router'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import {
+  QUESTS_LANDING_CARD_MAX_WIDTH,
+  QUESTS_LANDING_CARD_MIN_WIDTH,
+} from '@/constants/questLayout'
 import { useTranslation } from '@/i18n/LocaleProvider'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { pluralizeQuest } from '@/screens/tabs/questsShared'
@@ -13,21 +17,6 @@ import type { QuestCountryLandingGroup } from '@/utils/questCountryLanding'
 type Props = {
   country: QuestCountryLandingGroup<QuestMeta>
 }
-
-/**
- * Базис колонки списка городов: на 840 px секции даёт три колонки, на мобильной ширине — одну.
- * Карточка обязана уметь сжиматься (`flexShrink`): у контейнера `/quests/country/<slug>` остаётся
- * ширина экрана минус 80 px, то есть ровно 240 px уже на 320-точечном телефоне, а при делении
- * экрана или зуме — меньше базиса, и без сжатия карточка вылезала бы за рамку секции.
- */
-const CITY_CARD_MIN_WIDTH = 240
-
-/**
- * Потолок карточки: последний ряд часто остаётся неполным, и `flexGrow` растягивал бы
- * одинокую карточку на всю секцию (840 px) — она читалась бы как отдельный блок, а не как
- * хвост списка. Половина ряда секции: (840 − 32 отступа − 8 зазор) / 2.
- */
-const CITY_CARD_MAX_WIDTH = 400
 
 /** Runtime counterpart of the crawlable country-owned SSG sections. */
 export default function QuestCountryLandingSections({ country }: Props) {
@@ -172,21 +161,25 @@ function createStyles(colors: ThemedColors) {
     cityLink: {
       flexGrow: 1,
       flexShrink: 1,
-      flexBasis: CITY_CARD_MIN_WIDTH,
-      maxWidth: CITY_CARD_MAX_WIDTH,
+      flexBasis: QUESTS_LANDING_CARD_MIN_WIDTH,
+      maxWidth: QUESTS_LANDING_CARD_MAX_WIDTH,
+    },
+    // Рамка и фон живут на ВНУТРЕННЕЙ строке: `opacity` нажатия обязана притушить карточку
+    // целиком, а стиль ссылки-ребёнка `Link asChild` не умеет зависеть от `pressed`.
+    // `flexGrow` тянет строку на всю высоту ссылки — соседи по ряду выше, и без него рамка
+    // не дотягивалась бы до низа карточки.
+    cityRow: {
+      flexGrow: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
       minHeight: 52,
-      justifyContent: 'center',
       paddingHorizontal: 12,
       paddingVertical: 8,
       borderRadius: DESIGN_TOKENS.radii.sm,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.background,
-    },
-    cityRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
     },
     cityRowPressed: {
       opacity: 0.75,

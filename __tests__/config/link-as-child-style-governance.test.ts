@@ -30,6 +30,18 @@ const SRC_DIRS = ['app', 'components', 'context', 'hooks', 'i18n', 'screens', 'u
 
 /** Стиль ребёнка, который переживёт спред, — только объект: не функция и не массив. */
 const CHILD_STYLE_NOT_FLAT = /style=\{\s*[([]/;
+/** Тот же стиль, спрятанный за именем: `style={cardStyle}`. */
+const CHILD_STYLE_IDENTIFIER = /style=\{\s*([A-Za-z_$][\w$]*)\s*\}/;
+
+/**
+ * Объявление имени, за которым прячется не-объект: стрелка `= (`, массив `= [` и
+ * `useMemo(() => [...])`. `StyleSheet.flatten([...])` — законная плоская форма и сюда не попадает.
+ */
+function declaredNotFlat(source: string, name: string): boolean {
+  return new RegExp(
+    String.raw`\b(?:const|let|var)\s+${name}\s*(?::[^=\n]+)?=\s*(?:[([]|useMemo\(\s*\(\s*\)\s*=>\s*\[)`,
+  ).test(source);
+}
 /** Начало JSX-тега; тип-аргументы вроде `useState<Item>()` отсекаются проверкой на `asChild`. */
 const TAG_OPEN = /<[A-Za-z][\w.]*/g;
 
@@ -90,9 +102,8 @@ type Scan = { links: number; offenders: string[] };
  * Читаем ровно открывающий тег ПРЯМОГО ребёнка: стили внутренних узлов
  * (`<View style={[styles.row, pressed && …]}>`) законны и в область не попадают.
  */
-function scanFile(file: string): Scan {
-  const relative = path.relative(ROOT, file).split(path.sep).join('/');
-  const source = stripComments(fs.readFileSync(file, 'utf8'));
+function scanSource(rawSource: string, relative: string): Scan {
+  const source = stripComments(rawSource);
   const scan: Scan = { links: 0, offenders: [] };
 
   TAG_OPEN.lastIndex = 0;
@@ -111,7 +122,9 @@ function scanFile(file: string): Scan {
     if (childTagEnd < 0) continue;
 
     scan.links += 1;
-    if (CHILD_STYLE_NOT_FLAT.test(source.slice(childStart, childTagEnd + 1))) {
+    const childTag = source.slice(childStart, childTagEnd + 1);
+    const named = CHILD_STYLE_IDENTIFIER.exec(childTag);
+    if (CHILD_STYLE_NOT_FLAT.test(childTag) || (named && declaredNotFlat(source, named[1]))) {
       scan.offenders.push(`${relative}:${lineOf(source, childStart)}`);
     }
   }
@@ -119,11 +132,44 @@ function scanFile(file: string): Scan {
   return scan;
 }
 
+function scanFile(file: string): Scan {
+  const relative = path.relative(ROOT, file).split(path.sep).join('/');
+  return scanSource(fs.readFileSync(file, 'utf8'), relative);
+}
+
 const scans = SRC_DIRS.flatMap((dir) => walkSourceFiles(path.join(ROOT, dir))).map(scanFile);
 
 describe('Link asChild — стиль прямого ребёнка', () => {
   it('ни один ребёнок не отдаёт стиль функцией или массивом', () => {
     expect(scans.flatMap((scan) => scan.offenders)).toEqual([]);
+  });
+
+  it('видит стиль, спрятанный за именем переменной', () => {
+    // Спред в Slot одинаково схлопывает и литерал, и значение переменной, поэтому
+    // `const cardStyle = ({ pressed }) => [...]` обязан падать так же, как литерал.
+    const hidden = [
+      'const cardStyle = ({ pressed }: { pressed: boolean }) => [styles.card, pressed && styles.on]',
+      'const memoStyle = useMemo(() => [styles.card, extra], [extra])',
+      '<Link href="/x" asChild>',
+      '  <Pressable style={cardStyle}>{null}</Pressable>',
+      '</Link>',
+      '<Link href="/y" asChild>',
+      '  <Pressable style={memoStyle}>{null}</Pressable>',
+      '</Link>',
+    ].join('\n');
+    expect(scanSource(hidden, 'fixture.tsx').offenders).toEqual(['fixture.tsx:4', 'fixture.tsx:7']);
+
+    // Плоские формы страж не трогает: объект стилей у ребёнка и массив у самой `<Link>`.
+    const flat = [
+      'const flatStyle = StyleSheet.flatten([styles.card, { borderColor }])',
+      '<Link href="/x" asChild style={[styles.card, extra]}>',
+      '  <Pressable style={flatStyle}>{null}</Pressable>',
+      '</Link>',
+      '<Link href="/y" asChild>',
+      '  <Pressable style={styles.card}>{null}</Pressable>',
+      '</Link>',
+    ].join('\n');
+    expect(scanSource(flat, 'fixture.tsx').offenders).toEqual([]);
   });
 
   it('страж действительно читает разметку ссылок', () => {

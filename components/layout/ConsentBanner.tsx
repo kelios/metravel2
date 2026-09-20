@@ -33,10 +33,6 @@ function ConsentBanner() {
     return (insets?.bottom || 0) + (LAYOUT?.tabBarHeight ?? 56) + 8;
   }, [insets?.bottom, isMobile]);
   const isConsentSettingsRoute = pathname === '/cookies' || pathname === '/privacy';
-  const detailsLinkStyle = useMemo(
-    () => StyleSheet.flatten([styles.detailsLink, { borderColor: colors.border }]),
-    [colors.border],
-  );
 
   useEffect(() => {
     if (!isWeb || typeof window === 'undefined') return;
@@ -179,17 +175,19 @@ function ConsentBanner() {
             <Pressable
               accessibilityRole="link"
               accessibilityLabel={i18nT('navigation:components.layout.ConsentBanner.podrobnee_o_cookies_caf7ecdc')}
-              style={detailsLinkStyle}
+              style={styles.detailsLink}
             >
               {({ pressed }) => (
-                <Text
+                <View
                   style={[
-                    styles.detailsLinkText,
-                    { color: colors.primaryText },
+                    styles.detailsLinkPill,
+                    { borderColor: colors.border },
                     pressed && styles.detailsLinkPressed,
                   ]}
                 >
-                  {i18nT('navigation:components.layout.ConsentBanner.podrobnee_1db70e5c')}</Text>
+                  <Text style={[styles.detailsLinkText, { color: colors.primaryText }]}>
+                    {i18nT('navigation:components.layout.ConsentBanner.podrobnee_1db70e5c')}</Text>
+                </View>
               )}
             </Pressable>
           </Link>
@@ -337,13 +335,19 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   detailsLink: {
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+  },
+  // Рамка живёт на ВНУТРЕННЕЙ таблетке: `opacity` нажатия обязана притушить кнопку целиком, а
+  // стиль ребёнка `Link asChild` не умеет зависеть от `pressed`. `flexGrow` тянет таблетку на
+  // всю высоту ссылки, когда ряд кнопок выше.
+  detailsLinkPill: {
+    flexGrow: 1,
     minHeight: 44,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     borderRadius: DESIGN_TOKENS.radii.pill,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
   },
   detailsLinkPressed: {
     opacity: 0.78,

@@ -66,6 +66,15 @@ const NEARBY = [
   },
 ] as never
 
+/**
+ * Рамка и фон карточки лежат на внутренней строке — только её стиль умеет зависеть от `pressed`,
+ * поэтому карточку проверяем в двух узлах: раскладку на ссылке, вид — на строке под ней.
+ */
+const rowStyleOf = (link: { children: unknown[] }) => {
+  const [row] = link.children as Array<{ props: { style?: unknown } }>
+  return StyleSheet.flatten(row.props.style) as Record<string, unknown>
+}
+
 describe('вёрстка ссылок лендингов квестов', () => {
   it('карточка города страны сохраняет рамку и колонку после слияния стилей Slot', () => {
     render(<QuestCountryLandingSections country={COUNTRY} />)
@@ -74,15 +83,18 @@ describe('вёрстка ссылок лендингов квестов', () => 
     expect(links).toHaveLength(2)
 
     const style = StyleSheet.flatten(links[0].props.style)
-    expect(style.borderWidth).toBe(1)
-    expect(style.minHeight).toBe(52)
     expect(style.flexBasis).toBe(240)
     // На 320-точечном экране контейнеру остаётся ровно 240 px, при делении экрана и зуме — меньше:
     // без сжатия карточка вылезает за рамку секции.
     expect(style.flexShrink).toBe(1)
     // Неполный последний ряд: без потолка одинокая карточка растянулась бы на всю секцию.
     expect(style.maxWidth).toBe(400)
-    expect(style.paddingHorizontal).toBe(12)
+
+    const row = rowStyleOf(links[0])
+    expect(row.borderWidth).toBe(1)
+    expect(row.flexDirection).toBe('row')
+    expect(row.minHeight).toBe(52)
+    expect(row.paddingHorizontal).toBe(12)
     expect(screen.getByText('Барановичи')).toBeTruthy()
   })
 
@@ -93,10 +105,13 @@ describe('вёрстка ссылок лендингов квестов', () => 
     expect(links.length).toBeGreaterThan(0)
 
     const style = StyleSheet.flatten(links[0].props.style)
-    expect(style.borderWidth).toBe(1)
-    expect(style.minHeight).toBe(52)
     expect(style.flexBasis).toBe(240)
     expect(style.flexShrink).toBe(1)
     expect(style.maxWidth).toBe(400)
+
+    const row = rowStyleOf(links[0])
+    expect(row.borderWidth).toBe(1)
+    expect(row.flexDirection).toBe('row')
+    expect(row.minHeight).toBe(52)
   })
 })
