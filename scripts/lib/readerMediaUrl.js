@@ -382,6 +382,66 @@ function toReaderMediaUrl(url, site = DEFAULT_SITE) {
 }
 
 /**
+ * Ширина, под которой кадр тела статьи реально уходит в сеть.
+ *
+ * Зеркало `RESPONSIVE_FALLBACK_WIDTH` из
+ * `components/travel/stableContent/htmlTransform.ts`: `<img src>` тела строится
+ * по ней, она же лежит в обеих лестницах слота (`IMAGE_WIDTHS.articleBodyMobile`
+ * = [480, 800]) и совпадает с `LEGACY_UPLOAD_FIXED_WIDTH` для класса
+ * `uploads/**`. Клэмп по потолку семейства (`clampLadderToFamily`) её не
+ * трогает: самый низкий потолок в контракте — 960 у `routePoint`. Сверку с
+ * `constants/imageContract.ts` держит `__tests__/scripts/auditArticleBodyMedia.test.ts`.
+ */
+const ARTICLE_BODY_PROBE_WIDTH = 800
+
+/** `IMAGE_QUALITY.large` — то же значение, что фронт ставит ступени тела. */
+const ARTICLE_BODY_PROBE_QUALITY = 80
+
+/**
+ * Адрес кадра тела для ПРОБЫ: читательский адрес плюс ступень `?w=`.
+ *
+ * Зачем ступень. `toReaderMediaUrl` отдаёт ключ как он лежит в манифесте, и у
+ * `variants.original` это голый family-роут без параметров. Читатель такой
+ * адрес не запрашивает НИКОГДА: тело статьи рендерится лестницей ступеней
+ * (`buildMetravelResponsiveImage`), поэтому голый ключ не лежит в кэше nginx —
+ * каждая проба превращается в GET в Django с полной выборкой мастера
+ * (замер прода 20.09.2026: 195 из 393 проб за прогон — `MISS`, 0,45–1 МБ
+ * каждая, и это сдвигало счётчик `--max-requests` воркера к ротации, #2004).
+ * Со ступенью проба идёт туда же, куда ходит читатель, и обслуживается кэшем.
+ *
+ * Адрес со своей ступенью (`src`/`srcset` манифеста, `?w=1280`) остаётся как
+ * есть: это ровно то, что запрашивает браузер, и оно уже в кэше — подменять
+ * такую ступень своей значило бы щупать чужой адрес и заводить лишний ключ кэша.
+ *
+ * `q`/`fit` добавляются только legacy-роуту: durable-семейства их игнорируют, а
+ * каждый набор параметров — отдельная запись в кэше (то же правило, что у
+ * `buildMetravelSizedUrl`).
+ */
+function toReaderProbeUrl(url, site = DEFAULT_SITE) {
+  const path = toReaderMediaPath(url, { site })
+  // Ключ нашего бакета фронт не переписывает и ступеней ему не строит —
+  // читатель идёт по нему как есть.
+  if (!path) return toReaderMediaUrl(url, site)
+
+  const origin = String(site).replace(/\/+$/, '')
+  let parsed
+  try {
+    parsed = new URL(`${origin}${path}`)
+  } catch {
+    return `${origin}${path}`
+  }
+
+  if (parsed.searchParams.has('w')) return parsed.toString()
+
+  parsed.searchParams.set('w', String(ARTICLE_BODY_PROBE_WIDTH))
+  if (isLegacyResizeRoutePath(parsed.pathname)) {
+    parsed.searchParams.set('q', String(ARTICLE_BODY_PROBE_QUALITY))
+    parsed.searchParams.set('fit', 'contain')
+  }
+  return parsed.toString()
+}
+
+/**
  * Зеркало `isLegacyResizeRouteUrl` из `utils/mediaUrl.ts`: адрес обслуживает
  * legacy-роут прокси, то есть режется в момент запроса и понимает `q`/`fit`.
  * У durable-семейств эти параметры бэкенд игнорирует, а каждый их набор — лишняя
@@ -398,10 +458,13 @@ function isLegacyResizeRoutePath(url) {
 }
 
 module.exports = {
+  ARTICLE_BODY_PROBE_QUALITY,
+  ARTICLE_BODY_PROBE_WIDTH,
   isLegacyResizeRoutePath,
   toLegacyResizePath,
   toReaderMediaPath,
   toReaderMediaUrl,
+  toReaderProbeUrl,
   toSourceMediaUrl,
   unwrapWeservUrl,
 }

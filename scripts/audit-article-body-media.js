@@ -54,7 +54,7 @@ const {
   collectRichTextMediaUrls,
   familyOfMediaUrl,
 } = require('./lib/articleBodyMedia')
-const { toReaderMediaUrl, toSourceMediaUrl } = require('./lib/readerMediaUrl')
+const { toReaderMediaUrl, toReaderProbeUrl, toSourceMediaUrl } = require('./lib/readerMediaUrl')
 
 const args = process.argv.slice(2)
 
@@ -100,6 +100,23 @@ const FULL_FAMILIES = new Set([...RISKY_FAMILIES, 'travel-description-image'])
 const DEFAULT_CONCURRENCY = 4
 
 const REQUEST_TIMEOUT_MS = 20000
+
+/**
+ * Паузы между заходами пробы — бюджет под окно ротации воркера, а не под сетевой
+ * всплеск.
+ *
+ * Единственный воркер прода уходит на плановую переработку, дренаж ждёт самый
+ * долгий запрос в полёте, и всё это время API не отвечает НИКОМУ: замер
+ * 20.09.2026 — окно 43 с (61-секундный `image_pipeline` держал дренаж, #1964).
+ * Прежние «20 с + 2 с + 20 с» укладывались внутрь окна целиком, и четыре живых
+ * кадра статей 448/490 уехали в отчёт «битыми» (#2004). Три захода с паузами 5 и
+ * 30 с перекрывают окно с запасом.
+ *
+ * Пауза общая на всю пачку, а не на адрес: ротация накрывает пробы разом,
+ * поэтому второй заход ждёт один раз за всех, и худший случай прогона — плюс
+ * ~35 с, сколько бы адресов ни отвалилось.
+ */
+const PROBE_RETRY_DELAYS_MS = [5000, 30000]
 
 /** Столько строк списка печатаем человеку; полный список — в `--json`. */
 const MAX_PRINTED_ITEMS = 40
@@ -157,12 +174,73 @@ function headStatus(url, redirectDepth = 0) {
   })
 }
 
-/** HEAD с одним повтором на backpressure: 503/429 — про нагрузку, не про кадр. */
-async function headStatusResilient(url) {
-  const first = await headStatus(url)
-  if (first.status !== 429 && first.status !== 503 && first.status !== 0) return first
-  await new Promise((resolve) => setTimeout(resolve, 2000))
-  return headStatus(url)
+/**
+ * Ответ, который ещё ничего не говорит о кадре: нагрузка (429/503) или полное
+ * молчание (`status: 0` — таймаут, обрыв, отказ соединения).
+ */
+const isInconclusiveProbe = (probe) =>
+  !probe || probe.status === 0 || probe.status === 429 || probe.status === 503
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Пробы всех адресов с заходами по расписанию: `Map<url, { status, error }>`.
+ *
+ * Сеть отделена от суждения: примитив пробы и часы приходят параметрами, поэтому
+ * расписание повторов проверяется тестом без единого сетевого запроса.
+ */
+async function probeUrls(urls, options = {}) {
+  const {
+    concurrency: limit = DEFAULT_CONCURRENCY,
+    head = headStatus,
+    wait = sleep,
+    retryDelaysMs = PROBE_RETRY_DELAYS_MS,
+  } = options
+
+  const statuses = new Map()
+  let pending = [...new Set(urls)]
+
+  const runPass = async (batch) => {
+    const results = await mapWithConcurrency(batch, limit, (url) => head(url))
+    batch.forEach((url, index) => statuses.set(url, results[index]))
+  }
+
+  await runPass(pending)
+
+  for (const delayMs of retryDelaysMs) {
+    pending = pending.filter((url) => isInconclusiveProbe(statuses.get(url)))
+    if (!pending.length) break
+    await wait(delayMs)
+    await runPass(pending)
+  }
+
+  return statuses
+}
+
+/**
+ * Разбор проб по классам. `unreachable` — отдельный класс, и это главное здесь.
+ *
+ * «Нет ответа» — это про сервер в эту секунду, а не про кадр: называть его битым
+ * значит будить владельца на каждой ротации (#2004). Код возврата по-прежнему
+ * дают только `broken`/`dangling`, а непроверенные кадры печатаются честной
+ * строкой и не выдаются за чистый прогон.
+ */
+function classifyTargets(targets, statuses) {
+  const broken = []
+  const unreachable = []
+  const dangling = []
+  const fragile = []
+
+  for (const target of targets) {
+    const probe = statuses.get(target.probeUrl) || { status: 0, error: 'проба не выполнялась' }
+    const item = { ...target, status: probe.status, error: probe.error }
+    if (probe.status === 0) unreachable.push(item)
+    else if (probe.status !== 200) broken.push(item)
+    if (target.dangling) dangling.push(item)
+    else if (target.pointId != null) fragile.push(item)
+  }
+
+  return { broken, unreachable, dangling, fragile }
 }
 
 /**
@@ -180,6 +258,18 @@ async function headStatusResilient(url) {
  */
 function toTargetUrl(rawUrl) {
   return toReaderMediaUrl(rawUrl, SITE)
+}
+
+/**
+ * Адрес, по которому идёт сама проба, — читательский со ступенью `?w=`.
+ *
+ * В отчёте кадр по-прежнему зовётся своим читательским адресом (`url`), а в сеть
+ * уходит ступень: голый ключ из `variants.original` читатель не запрашивает, и
+ * такая проба стоит Django полной выборки мастера мимо кэша nginx (#2004).
+ * Правило живёт в `lib/readerMediaUrl.js` — своей копии здесь нет.
+ */
+function toProbeUrl(rawUrl) {
+  return toReaderProbeUrl(rawUrl, SITE)
 }
 
 /** Id точек маршрута статьи — владельцы кадров `/address-image/<id>/`. */
@@ -245,6 +335,9 @@ function collectTravelTargets(detail, families) {
     const pointId = pointIdOfUrl(sourceUrl)
     targets.push({
       url,
+      // Цель сети отделена от имени кадра: дедупликация и отчёт идут по
+      // читательскому адресу, запрос — по его ступени.
+      probeUrl: toProbeUrl(rawUrl) || url,
       // Адрес из разметки печатается рядом с целью: без него по строке отчёта
       // не найти сам `<img>`, который надо править.
       sourceUrl,
@@ -301,20 +394,12 @@ async function main() {
   // Один и тот же адрес встречается в разных статьях: сеть щупаем по уникальному
   // адресу, а отчёт по-прежнему называет каждую статью-владельца.
   const uniqueUrls = [...new Set(targets.map((target) => target.url))]
-  const statuses = new Map()
-  const probed = await mapWithConcurrency(uniqueUrls, concurrency(), (url) => headStatusResilient(url))
-  uniqueUrls.forEach((url, index) => statuses.set(url, probed[index]))
+  const statuses = await probeUrls(
+    targets.map((target) => target.probeUrl),
+    { concurrency: concurrency() },
+  )
 
-  const broken = []
-  const dangling = []
-  const fragile = []
-  for (const target of targets) {
-    const probe = statuses.get(target.url) || { status: 0 }
-    const item = { ...target, status: probe.status, error: probe.error }
-    if (probe.status !== 200) broken.push(item)
-    if (target.dangling) dangling.push(item)
-    else if (target.pointId != null) fragile.push(item)
-  }
+  const { broken, unreachable, dangling, fragile } = classifyTargets(targets, statuses)
 
   const report = {
     site: SITE,
@@ -325,6 +410,7 @@ async function main() {
     checkedUniqueMedia: uniqueUrls.length,
     unreadableTravels: unreadable.map((item) => ({ id: item.id, error: item.error })),
     broken,
+    unreachable,
     dangling,
     fragile,
   }
@@ -341,7 +427,28 @@ async function main() {
     console.error(`⚠️  Не прочитано статей: ${unreadable.length} — покрытие неполное`)
   }
 
-  process.exit(broken.length || dangling.length ? 1 : 0)
+  // Непроверенный кадр не выдаётся ни за битый, ни за чистый: это потеря
+  // покрытия, и молчать о ней нельзя, но и валить деплой из-за минуты, в которую
+  // прод менял воркер, незачем.
+  if (unreachable.length) {
+    console.error(
+      `⚠️  Не удалось проверить кадров: ${unreachable.length} — прод не ответил за ` +
+        `${PROBE_RETRY_DELAYS_MS.length + 1} захода; это не вердикт о картинке`,
+    )
+  }
+
+  process.exit(exitCodeFor(report))
+}
+
+/**
+ * Код возврата гейта: валят деплой только вердикты о кадре.
+ *
+ * `unreachable` сюда не входит намеренно — «прод не ответил за три захода» это
+ * состояние прода в ту минуту, а не состояние картинки (#2004). Вынесено из
+ * `main`, чтобы контракт проверялся тестом, а не чтением process.exit.
+ */
+function exitCodeFor(report) {
+  return report.broken.length || report.dangling.length ? 1 : 0
 }
 
 function printItems(title, items) {
@@ -349,10 +456,15 @@ function printItems(title, items) {
   console.log(`\n${title} (${items.length}):`)
   for (const item of items.slice(0, MAX_PRINTED_ITEMS)) {
     const status = item.status ? `HTTP ${item.status}` : item.error || 'нет ответа'
+    // Печатается ИЗМЕРЕННЫЙ адрес, со ступенью: владелец идёт проверять строку
+    // отчёта `curl`-ом, и адрес в ней обязан быть тем самым, который ответил.
+    // 20.09.2026 расхождение стоило разбора — `curl` по напечатанному адресу
+    // отдавал 200, потому что щупался не он (#2004).
+    const measured = item.probeUrl || item.url
     // Цель и `src` расходятся на двух классах из шести; когда расходятся —
     // печатаем оба, иначе строка не даёт найти `<img>` в теле статьи.
-    const source = item.sourceUrl && item.sourceUrl !== item.url ? ` ← ${item.sourceUrl}` : ''
-    console.log(`   travel ${item.travelId} · ${status} · ${item.url}${source}`)
+    const source = item.sourceUrl && item.sourceUrl !== measured ? ` ← ${item.sourceUrl}` : ''
+    console.log(`   travel ${item.travelId} · ${status} · ${measured}${source}`)
   }
   if (items.length > MAX_PRINTED_ITEMS) {
     console.log(`   … ещё ${items.length - MAX_PRINTED_ITEMS} — полный список в --json`)
@@ -399,6 +511,7 @@ function printReport(report) {
 
   printItems('❌ Не отдаётся (битые картинки в тексте)', report.broken)
   printItems('❌ Фото точки, которой в маршруте нет (умрёт при следующей правке)', report.dangling)
+  printItems('⏳ Не удалось проверить (прод не ответил — про кадр это ничего не говорит)', report.unreachable)
   if (VERBOSE) {
     printItems('⚠️  Фото живой точки в теле — долг #1834 п.3', report.fragile)
   } else if (report.fragile.length) {
@@ -409,19 +522,28 @@ function printReport(report) {
   }
 
   if (!report.broken.length && !report.dangling.length) {
-    console.log('\n✅ Битых и осиротевших картинок в телах статей нет')
+    const caveat = report.unreachable?.length
+      ? ` (кроме ${report.unreachable.length} непроверенных — прод не ответил)`
+      : ''
+    console.log(`\n✅ Битых и осиротевших картинок в телах статей нет${caveat}`)
   }
 }
 
 module.exports = {
   FULL_FAMILIES,
+  REQUEST_TIMEOUT_MS,
   RISKY_FAMILIES,
   BUILD_FETCH_RATE_PER_SEC,
   BUILD_FETCH_MIN_INTERVAL_MS,
+  PROBE_RETRY_DELAYS_MS,
+  classifyTargets,
   collectPointIds,
   collectTravelTargets,
+  exitCodeFor,
   fetchTravelDetails,
   pointIdOfUrl,
+  probeUrls,
+  toProbeUrl,
   toTargetUrl,
 }
 

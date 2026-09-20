@@ -1,5 +1,13 @@
 import path from 'path';
 
+import {
+  IMAGE_QUALITY,
+  IMAGE_STORAGE_POLICY_V1,
+  IMAGE_WIDTHS,
+  LEGACY_UPLOAD_FIXED_WIDTH,
+  UNKNOWN_FAMILY_DERIVATIVE_CEILING,
+} from '@/constants/imageContract';
+
 import { makeTempDir, removeDir, runNodeCli, startStubServer, type StubServer } from './cli-test-utils';
 
 const SCRIPT = path.resolve(process.cwd(), 'scripts', 'audit-article-body-media.js');
@@ -8,12 +16,23 @@ const {
   RISKY_FAMILIES,
   BUILD_FETCH_RATE_PER_SEC,
   BUILD_FETCH_MIN_INTERVAL_MS,
+  PROBE_RETRY_DELAYS_MS,
+  REQUEST_TIMEOUT_MS,
+  classifyTargets,
   collectPointIds,
   collectTravelTargets,
+  exitCodeFor,
   fetchTravelDetails,
   pointIdOfUrl,
+  probeUrls,
   toTargetUrl,
 } = require('@/scripts/audit-article-body-media');
+
+const {
+  ARTICLE_BODY_PROBE_QUALITY,
+  ARTICLE_BODY_PROBE_WIDTH,
+  toReaderProbeUrl,
+} = require('@/scripts/lib/readerMediaUrl');
 
 /**
  * Корпусный прогон медиа тел статей (#1834).
@@ -278,8 +297,10 @@ describe('audit-article-body-media: темп деталей (#1966)', () => {
     expect(src).toContain("require('./lib/requestPacer')");
     expect(src).toMatch(/fetchTravelDetails\(scanIds/);
     expect(src).toMatch(/minIntervalMs = BUILD_FETCH_MIN_INTERVAL_MS/);
-    // HEAD картинок по-прежнему ограничен только параллельностью: их отдаёт кэш.
-    expect(src).toMatch(/mapWithConcurrency\(uniqueUrls/);
+    // HEAD картинок по-прежнему ограничен только параллельностью: с #2004 проба
+    // идёт по ступени `?w=`, и её отдаёт кэш nginx, а не Django.
+    expect(src).toMatch(/probeUrls\(/);
+    expect(src).toMatch(/mapWithConcurrency\(batch/);
   });
 
   it('старты N статей не чаще бюджета даже при параллельных воркерах', async () => {
@@ -337,5 +358,253 @@ describe('audit-article-body-media: темп деталей (#1966)', () => {
     release?.();
     await running;
     expect(maxInflight).toBeLessThanOrEqual(3);
+  });
+});
+
+/**
+ * Вторая история того же гейта — «нет ответа» ≠ «битый кадр» (#2004).
+ *
+ * 20.09.2026 отчёт выката назвал битыми четыре живых кадра статей 448/490: обе
+ * попытки пробы (20 с + пауза 2 с + 20 с) уместились в 43-секундное окно плановой
+ * ротации единственного воркера прода, а таймаут гейт считал вердиктом о картинке.
+ * Второй слой — адрес пробы: голый ключ `variants.original` читатель не
+ * запрашивает, прод отдаёт его мастером с `no-store` (788 868 B против 148 286 B
+ * у ступени `?w=800`), поэтому 195 из 393 проб за прогон шли мимо кэша nginx в
+ * Django и сами подталкивали ротацию.
+ */
+const PROD = 'https://metravel.by';
+
+/** Измеренное окно ротации воркера, из-за которого завелась карточка (#2004). */
+const MEASURED_RECYCLE_WINDOW_MS = 43_000;
+
+type Probe = { status: number; error?: string };
+
+const target = (overrides: Record<string, unknown> = {}) => ({
+  url: `${PROD}/gallery/1/conversions/a.jpg`,
+  probeUrl: `${PROD}/gallery/1/conversions/a.jpg?w=800`,
+  sourceUrl: `${PROD}/gallery/1/conversions/a.jpg`,
+  family: 'gallery',
+  pointId: null,
+  dangling: false,
+  travelId: 448,
+  ...overrides,
+});
+
+describe('классификация проб: нет ответа — не вердикт о кадре', () => {
+  it('таймаут уходит в unreachable, а не в broken', () => {
+    const statuses = new Map<string, Probe>([
+      [target().probeUrl, { status: 0, error: 'timeout' }],
+    ]);
+
+    const { broken, unreachable } = classifyTargets([target()], statuses);
+
+    expect(broken).toHaveLength(0);
+    expect(unreachable).toHaveLength(1);
+    expect(unreachable[0]).toMatchObject({ travelId: 448, status: 0, error: 'timeout' });
+  });
+
+  it('честный не-200 по-прежнему битый кадр', () => {
+    const statuses = new Map<string, Probe>([[target().probeUrl, { status: 404 }]]);
+
+    const { broken, unreachable } = classifyTargets([target()], statuses);
+
+    expect(unreachable).toHaveLength(0);
+    expect(broken).toHaveLength(1);
+    expect(broken[0]).toMatchObject({ status: 404 });
+  });
+
+  /**
+   * Осиротевшая ссылка на фото точки — дефект по составу маршрута, а не по коду
+   * ответа: молчание прода не должно её прятать.
+   */
+  it('dangling считается и когда ответа не было', () => {
+    const item = target({ pointId: 15601, dangling: true });
+    const statuses = new Map<string, Probe>([[item.probeUrl, { status: 0, error: 'timeout' }]]);
+
+    const { broken, unreachable, dangling } = classifyTargets([item], statuses);
+
+    expect(dangling).toHaveLength(1);
+    expect(unreachable).toHaveLength(1);
+    expect(broken).toHaveLength(0);
+  });
+
+  it('адрес без пробы не выдаётся за чистый кадр', () => {
+    const { broken, unreachable } = classifyTargets([target()], new Map());
+
+    expect(broken).toHaveLength(0);
+    expect(unreachable).toHaveLength(1);
+  });
+});
+
+describe('код возврата гейта: валят только вердикты о кадре', () => {
+  const report = (overrides: Record<string, unknown> = {}) => ({
+    broken: [],
+    unreachable: [],
+    dangling: [],
+    fragile: [],
+    ...overrides,
+  });
+
+  it('молчание прода деплой не валит', () => {
+    expect(exitCodeFor(report({ unreachable: [target()] }))).toBe(0);
+  });
+
+  it('битый и осиротевший кадр — по-прежнему код 1', () => {
+    expect(exitCodeFor(report({ broken: [target()] }))).toBe(1);
+    expect(exitCodeFor(report({ dangling: [target()] }))).toBe(1);
+  });
+});
+
+describe('повторы перекрывают окно ротации воркера', () => {
+  const failing = { status: 0, error: 'timeout' } as const;
+
+  it('три захода с паузами 5 и 30 с, и пауза одна на всю пачку', async () => {
+    const delays: number[] = [];
+    const attempts: string[] = [];
+    const head = async (url: string): Promise<Probe> => {
+      attempts.push(url);
+      return attempts.filter((item) => item === url).length < 3 ? failing : { status: 200 };
+    };
+
+    const statuses = await probeUrls(['u1', 'u2'], {
+      head,
+      wait: async (ms: number) => {
+        delays.push(ms);
+      },
+    });
+
+    expect(delays).toEqual([...PROBE_RETRY_DELAYS_MS]);
+    expect(PROBE_RETRY_DELAYS_MS).toEqual([5000, 30000]);
+    expect(statuses.get('u1')).toEqual({ status: 200 });
+    expect(statuses.get('u2')).toEqual({ status: 200 });
+    // Пауза общая: два адреса отвалились вместе и ждали один раз за обоих.
+    expect(delays).toHaveLength(2);
+  });
+
+  it('бюджет заходов перекрывает измеренные 43 с окна', () => {
+    const attempts = PROBE_RETRY_DELAYS_MS.length + 1;
+    const budget =
+      attempts * REQUEST_TIMEOUT_MS +
+      PROBE_RETRY_DELAYS_MS.reduce((sum: number, ms: number) => sum + ms, 0);
+
+    expect(budget).toBeGreaterThan(MEASURED_RECYCLE_WINDOW_MS);
+    // Прежние «20 + 2 + 20» в окно укладывались целиком — ради этого и повтор.
+    expect(attempts * REQUEST_TIMEOUT_MS + 2000).toBeLessThan(MEASURED_RECYCLE_WINDOW_MS + 20_000);
+  });
+
+  it('честный ответ не повторяется, повторяется только молчание', async () => {
+    const attempts: string[] = [];
+    const head = async (url: string): Promise<Probe> => {
+      attempts.push(url);
+      return url === 'alive' ? { status: 200 } : failing;
+    };
+
+    const statuses = await probeUrls(['alive', 'silent'], { head, wait: async () => {} });
+
+    expect(attempts.filter((url) => url === 'alive')).toHaveLength(1);
+    expect(attempts.filter((url) => url === 'silent')).toHaveLength(3);
+    expect(statuses.get('silent')).toEqual(failing);
+  });
+
+  it('404 не повторяется: это вердикт, а не нагрузка', async () => {
+    const attempts: string[] = [];
+    const head = async (url: string): Promise<Probe> => {
+      attempts.push(url);
+      return { status: 404 };
+    };
+
+    await probeUrls(['gone'], { head, wait: async () => {} });
+
+    expect(attempts).toHaveLength(1);
+  });
+
+  it('429/503 — про нагрузку, их гейт перепрашивает', async () => {
+    const attempts: string[] = [];
+    const head = async (url: string): Promise<Probe> => {
+      attempts.push(url);
+      return attempts.length < 2 ? { status: 503 } : { status: 200 };
+    };
+
+    const statuses = await probeUrls(['busy'], { head, wait: async () => {} });
+
+    expect(attempts).toHaveLength(2);
+    expect(statuses.get('busy')).toEqual({ status: 200 });
+  });
+});
+
+describe('адрес пробы — ступень, которую грузит читатель', () => {
+  it('голый ключ манифеста щупается ступенью', () => {
+    expect(toReaderProbeUrl(`${PROD}/gallery/6059/conversions/a-detail_hd.jpg`, PROD)).toBe(
+      `${PROD}/gallery/6059/conversions/a-detail_hd.jpg?w=${ARTICLE_BODY_PROBE_WIDTH}`,
+    );
+  });
+
+  it('готовая ступень манифеста остаётся как есть', () => {
+    const rung = `${PROD}/gallery/6059/conversions/a-detail_hd.jpg?w=1280`;
+    expect(toReaderProbeUrl(rung, PROD)).toBe(rung);
+  });
+
+  it('legacy-роут получает ещё и q/fit — их понимает только он', () => {
+    expect(
+      toReaderProbeUrl('https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/IMG_6960.JPG', PROD),
+    ).toBe(
+      `${PROD}/media-resize/uploads/IMG_6960.JPG?w=${ARTICLE_BODY_PROBE_WIDTH}` +
+        `&q=${ARTICLE_BODY_PROBE_QUALITY}&fit=contain`,
+    );
+    expect(
+      toReaderProbeUrl(
+        'https://metravelprod.s3.eu-north-1.amazonaws.com/travels/1/conversions/x.webp',
+        PROD,
+      ),
+    ).toBe(
+      `${PROD}/media-resize/legacy/travels/1/conversions/x.webp?w=${ARTICLE_BODY_PROBE_WIDTH}` +
+        `&q=${ARTICLE_BODY_PROBE_QUALITY}&fit=contain`,
+    );
+  });
+
+  it('фото точки щупается ступенью своего family-роута', () => {
+    expect(toReaderProbeUrl('/address-image/15601/conversions/abc.webp', PROD)).toBe(
+      `${PROD}/address-image/15601/conversions/abc.webp?w=${ARTICLE_BODY_PROBE_WIDTH}`,
+    );
+  });
+
+  it('чужой хост не наш контракт', () => {
+    expect(toReaderProbeUrl('https://example.com/a.jpg', PROD)).toBeNull();
+  });
+});
+
+/**
+ * Ступень пробы — копия константы фронта в CommonJS, и копия молча расходится.
+ * Ровно так гейт #1180 спрашивал ширину, которой нет ни в одном профиле, и валил
+ * каждый деплой. Здесь она привязана к контракту хранения.
+ */
+describe('ступень пробы сверена с контрактом', () => {
+  type Profile = { routes: readonly string[]; derivatives: readonly { width: number }[] };
+  const profiles = Object.values(IMAGE_STORAGE_POLICY_V1) as unknown as Profile[];
+
+  /** Семейства аудита, у которых есть собственная лестница производных. */
+  const LADDER_ROUTES = ['gallery', 'travel-image', 'address-image', 'travel-description-image'];
+
+  it.each(LADDER_ROUTES)('%s: ступень пробы есть среди производных профиля', (route) => {
+    const profile = profiles.find((item) => item.routes.includes(route as never));
+    expect(profile).toBeDefined();
+    expect(profile!.derivatives.map((item) => item.width)).toContain(ARTICLE_BODY_PROBE_WIDTH);
+  });
+
+  it('ступень — та, что фронт просит в обеих лестницах слота тела', () => {
+    expect(IMAGE_WIDTHS.articleBodyMobile).toContain(ARTICLE_BODY_PROBE_WIDTH);
+    expect(IMAGE_WIDTHS.articleBodyDesktop).toContain(ARTICLE_BODY_PROBE_WIDTH);
+  });
+
+  it('клэмп по потолку семейства ступень не опускает', () => {
+    expect(ARTICLE_BODY_PROBE_WIDTH).toBeLessThanOrEqual(UNKNOWN_FAMILY_DERIVATIVE_CEILING);
+  });
+
+  it('класс uploads/** просит ровно эту ширину', () => {
+    expect(ARTICLE_BODY_PROBE_WIDTH).toBe(LEGACY_UPLOAD_FIXED_WIDTH);
+  });
+
+  it('качество ступени — то же, что у фронта', () => {
+    expect(ARTICLE_BODY_PROBE_QUALITY).toBe(IMAGE_QUALITY.large);
   });
 });
