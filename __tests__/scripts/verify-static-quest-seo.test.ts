@@ -136,6 +136,26 @@ describe('verifyQuestHtml', () => {
     expect(verifyQuestHtml(buildQuestPageHtml(), CANONICAL)).toEqual([])
   })
 
+  /**
+   * #1930: тонкая детальная уходит под noindex вторым проходом генератора.
+   * Тег обязан быть build-owned — с меткой Helmet его снимет гидрация (#1929).
+   */
+  it('accepts a build-owned noindex on a quest page and rejects a Helmet-owned one', () => {
+    const buildOwned = buildQuestPageHtml().replace(
+      '</head>',
+      '<meta name="robots" content="noindex, follow"/></head>',
+    )
+    expect(verifyQuestHtml(buildOwned, CANONICAL)).toEqual([])
+
+    const helmetOwned = buildQuestPageHtml().replace(
+      '</head>',
+      '<meta data-rh="true" name="robots" content="noindex, follow"/></head>',
+    )
+    expect(verifyQuestHtml(helmetOwned, CANONICAL)).toEqual(
+      expect.arrayContaining(['quest page noindex is Helmet-owned (data-rh) and is dropped on hydration']),
+    )
+  })
+
   it('rejects the bare SPA shell that a skipped quest block leaves behind', () => {
     const shell = '<!DOCTYPE html><html><head><title>Metravel</title></head><body></body></html>'
     const issues = verifyQuestHtml(shell, CANONICAL)
@@ -220,6 +240,47 @@ describe('verifyQuestCityHtml', () => {
     expect(hasQuestCityStandaloneContent(withoutWalk)).toBe(false)
     expect(verifyQuestCityHtml(withoutWalk, canonical, buildQuestPageHtml())).toEqual(
       expect.arrayContaining(['missing independent city overview/walk/practical content']),
+    )
+  })
+
+  /**
+   * Город, чьи квесты не оставили заметок о местах, генератор собирает под
+   * build-owned `noindex, follow` (партия 19.09.2026) — такая страница не
+   * претендует на выдачу, и заметки с неё не спрашиваются; планировочная часть
+   * и навигация по-прежнему обязательны.
+   */
+  it('accepts a noindex landing without notes as long as it keeps the planning sections', () => {
+    const withoutWalk = cityHtml.replace(/<div data-ssg-quest-city-walk="true">[\s\S]*?<\/div>/, '')
+    const noindex = withoutWalk.replace(
+      '</head>',
+      '<meta name="robots" content="noindex, follow"/></head>',
+    )
+
+    expect(verifyQuestCityHtml(noindex, canonical, buildQuestPageHtml())).toEqual([])
+    expect(
+      verifyQuestCityHtml(
+        noindex.replace(/<div data-ssg-quest-city-practical="true">[\s\S]*?<\/div>/, ''),
+        canonical,
+        buildQuestPageHtml(),
+      ),
+    ).toEqual(expect.arrayContaining(['missing independent city overview/practical content']))
+  })
+
+  it('rejects a noindex landing that still carries notes or whose robots tag is Helmet-owned', () => {
+    const withNotes = cityHtml.replace('</head>', '<meta name="robots" content="noindex, follow"/></head>')
+    expect(verifyQuestCityHtml(withNotes, canonical, buildQuestPageHtml())).toEqual(
+      expect.arrayContaining([
+        'city landing carries its own notes about the places but ships noindex: noindex, follow',
+      ]),
+    )
+
+    const helmetOwned = cityHtml
+      .replace(/<div data-ssg-quest-city-walk="true">[\s\S]*?<\/div>/, '')
+      .replace('</head>', '<meta data-rh="true" name="robots" content="noindex, follow"/></head>')
+    expect(verifyQuestCityHtml(helmetOwned, canonical, buildQuestPageHtml())).toEqual(
+      expect.arrayContaining([
+        'city landing noindex is Helmet-owned (data-rh) and is dropped on hydration',
+      ]),
     )
   })
 
@@ -1007,7 +1068,7 @@ describe('collectQuestSsgPages', () => {
  */
 describe('thin-content floors against the generator itself', () => {
   const {
-    assertQuestCityLandingsCarryWalk,
+    assertQuestCityLandingBundlesResolved,
     buildQuestCityLandingHtml,
     buildQuestCityLandingModel,
     buildQuestCountryLandingHtml,
@@ -1046,7 +1107,8 @@ describe('thin-content floors against the generator itself', () => {
 
   const cityModel = (bundles: unknown) =>
     buildQuestCityLandingModel(LEAN_CATALOG, buildQuestCityAliasMap(LEAN_CATALOG), [], bundles)
-  const cityHtml = (bundles: unknown) => buildQuestCityLandingHtml(SHELL, cityModel(bundles)[0], null)
+  const cityHtml = (bundles: unknown, options?: { indexable: boolean }) =>
+    buildQuestCityLandingHtml(SHELL, cityModel(bundles)[0], null, options)
   const leanCountryHtml = () => {
     const [country] = buildQuestCountryLandingModel(LEAN_CATALOG, 'ru')
     return buildQuestCountryLandingHtml(SHELL, country)
@@ -1070,13 +1132,22 @@ describe('thin-content floors against the generator itself', () => {
    * One unreachable bundle used to cost a quest its rich intro and nothing
    * else. Now it costs the city its only own content, so the build has to stop:
    * a release that silently ships that page is the recurrence #1569 is about.
+   * A city whose bundles did resolve but left no notes (stories shorter than the
+   * quest-page digest, the 19.09.2026 batch) is not a transport failure: it
+   * ships `noindex, follow` and leaves the measured set, exactly like a thin
+   * country (#1929) — while the same page shipped indexable still fails the floor.
    */
   it('fails the build and the guard when a city has no resolvable quest bundle', () => {
-    expect(() => assertQuestCityLandingsCarryWalk(cityModel(null))).toThrow(
-      /quest city landings without own content/,
+    expect(() => assertQuestCityLandingBundlesResolved(cityModel(null))).toThrow(
+      /quest city landings without a single quest bundle/,
     )
 
-    const page = leanPage(cityHtml(null), 'quests/x/index.html')
+    const noindexPage = leanPage(cityHtml(null), 'quests/x/index.html')
+    expect(noindexPage.noindex).toBe(true)
+    expect(verifyQuestPageContentDepth([noindexPage])).toEqual([])
+
+    const page = leanPage(cityHtml(null, { indexable: true }), 'quests/x/index.html')
+    expect(page.noindex).toBe(false)
     expect(verifyQuestPageContentDepth([page])).toEqual([
       expect.stringContaining('words of crawlable text, minimum 300'),
     ])
@@ -1212,5 +1283,54 @@ describe('thin-content floors against the generator itself', () => {
     for (const entry of THIN_CONTENT_EXEMPTIONS as Array<{ kind: string; minWords: number }>) {
       expect(leanWords[entry.kind]).toBeGreaterThan(entry.minWords)
     }
+  })
+})
+
+/**
+ * #1930, второй проход генератора: детальная страница ниже порога уходит под
+ * `noindex, follow` и из замера не выпадает — проверяется обратное
+ * расхождение. Остальные уровни под `noindex` по-прежнему вне замера: их
+ * индексируемость решает другое правило (город — заметки о местах, #1569).
+ */
+describe('depth-gated quest pages under noindex (#1930)', () => {
+  const ALPHABET = 'абвгдежзийклмнопрстуфхцчшщэюя'
+  const prose = (words: number, seed = 0): string => {
+    const vocabulary = Array.from(
+      { length: ALPHABET.length },
+      (_, slot) =>
+        `сл${ALPHABET[seed % ALPHABET.length]}${ALPHABET[slot]}${ALPHABET[(slot * 7) % ALPHABET.length]}`,
+    )
+    return Array.from({ length: words }, (_, index) => vocabulary[index % vocabulary.length]).join(' ')
+  }
+  const page = (kind: string, words: number, seed: number, noindex: boolean) => {
+    const [section] = extractQuestSsgSections(
+      `<section data-ssg-${kind}="true" aria-label="Квесты"><p>${prose(words, seed)}</p></section>`,
+    )
+    return { path: `quests/${kind}-${seed}/index.html`, kind: section.kind, text: section.text, noindex }
+  }
+
+  it('accepts a thin quest page under noindex and rejects a noindex page that clears the floors', () => {
+    expect(
+      verifyQuestPageContentDepth(
+        [page('quest-intro', 40, 0, true), page('quest-intro', 400, 1, false)],
+        { exemptions: [] },
+      ),
+    ).toEqual([])
+
+    expect(
+      verifyQuestPageContentDepth(
+        [page('quest-intro', 400, 0, true), page('quest-intro', 400, 1, false)],
+        { exemptions: [] },
+      ),
+    ).toEqual(['quests/quest-intro-0/index.html [quest-intro]: clears the content floors but ships noindex'])
+  })
+
+  it('keeps noindex pages of other levels out of the measured set', () => {
+    expect(
+      verifyQuestPageContentDepth(
+        [page('quest-city', 400, 0, true), page('quest-city', 40, 1, true)],
+        { exemptions: [] },
+      ),
+    ).toEqual([])
   })
 })

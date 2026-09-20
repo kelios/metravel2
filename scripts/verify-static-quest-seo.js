@@ -161,12 +161,19 @@ function hasQuestCityLandingSection(html) {
  * (`verifyQuestPageContentDepth`): она называет пропавший блок по имени, а не
  * оставляет разбираться со счётом слов.
  */
-function hasQuestCityStandaloneContent(html) {
+function hasQuestCityPlanningContent(html) {
   return (
     /data-ssg-quest-city-overview="true"/i.test(html) &&
-    /data-ssg-quest-city-practical="true"/i.test(html) &&
-    /data-ssg-quest-city-walk="true"/i.test(html)
+    /data-ssg-quest-city-practical="true"/i.test(html)
   )
+}
+
+function hasQuestCityWalkContent(html) {
+  return /data-ssg-quest-city-walk="true"/i.test(html)
+}
+
+function hasQuestCityStandaloneContent(html) {
+  return hasQuestCityPlanningContent(html) && hasQuestCityWalkContent(html)
 }
 
 function hasQuestCountryLandingSection(html) {
@@ -197,7 +204,25 @@ function verifyQuestCityHtml(html, expectedCanonical, childHtml = '') {
     issues.push(`bad canonical: ${getCanonical(html) || 'missing'}`)
   }
   if (!hasQuestCityLandingSection(html)) issues.push('missing crawlable quest-city section')
-  if (!hasQuestCityStandaloneContent(html)) {
+  // Город, чьи квесты не оставили заметок о местах (истории точек короче
+  // дайджеста детальной страницы), генератор собирает под build-owned
+  // `noindex, follow` — с такой страницы спрашивается только планировочная
+  // часть. Индексируемая посадочная обязана нести заметки: без них она снова
+  // обёртка единственного квеста (#1569). Обратное расхождение — заметки есть,
+  // а страница снята с выдачи — тоже ошибка генератора, а не решение; и тег с
+  // меткой Helmet Helmet же снимет при гидрации (#1929).
+  const robots = getMetaContent(html, 'name', 'robots') || ''
+  if (questPageIsNoindex(html)) {
+    if (!hasQuestCityPlanningContent(html)) {
+      issues.push('missing independent city overview/practical content')
+    }
+    if (hasQuestCityWalkContent(html)) {
+      issues.push(`city landing carries its own notes about the places but ships noindex: ${robots}`)
+    }
+    if (robotsMetaIsHelmetOwned(html)) {
+      issues.push('city landing noindex is Helmet-owned (data-rh) and is dropped on hydration')
+    }
+  } else if (!hasQuestCityStandaloneContent(html)) {
     issues.push('missing independent city overview/walk/practical content')
   }
 
@@ -393,6 +418,17 @@ function collectQuestSsgPages(distDir, options = {}) {
 }
 
 /**
+ * Уровни, где индексируемость решает сам генератор этим же порогом: детальная
+ * страница ниже него уходит под `noindex, follow` вторым проходом
+ * (`selectIndexableQuestDetailPages`). Такая страница из замера не выпадает, а
+ * проверяется на обратное расхождение: очистила пороги — значит, `noindex` ей
+ * поставили по ошибке, и это ошибка генератора, а не решение. Остальные уровни
+ * под `noindex` по-прежнему вне замера: их индексируемость решает другое
+ * правило (город — заметки о местах, #1569; страна — #1929).
+ */
+const DEPTH_GATED_KINDS = new Set(['quest-intro'])
+
+/**
  * Volume and independence, for every level the build actually produced.
  *
  * Меряются только страницы, претендующие на выдачу: страница под `noindex`
@@ -412,9 +448,9 @@ function verifyQuestPageContentDepth(pages, options = {}) {
 
   const byKind = new Map()
   for (const page of Array.isArray(pages) ? pages : []) {
-    if (page?.noindex) continue
     const kind = String(page?.kind || '').trim().toLowerCase()
     if (!kind) continue
+    if (page?.noindex && !DEPTH_GATED_KINDS.has(kind)) continue
     if (!byKind.has(kind)) byKind.set(kind, [])
     byKind.get(kind).push(page)
   }
@@ -428,7 +464,14 @@ function verifyQuestPageContentDepth(pages, options = {}) {
       minDistinctRatio: exemption ? exemption.minDistinctRatio : minDistinctRatio,
     })
 
+    const noindexPaths = new Set(kindPages.filter((page) => page?.noindex).map((page) => page.path))
     for (const page of scored) {
+      if (noindexPaths.has(page.path)) {
+        if (page.issues.length === 0) {
+          failures.push(`${page.path} [${kind}]: clears the content floors but ships noindex`)
+        }
+        continue
+      }
       if (page.issues.length > 0) failures.push(`${page.path} [${kind}]: ${page.issues.join('; ')}`)
     }
 
@@ -613,6 +656,26 @@ function warnQuestCountryNoindexInSitemap(builtCountryLandings, indexableCountry
   return conflicting
 }
 
+/**
+ * Город под `noindex, follow`, который бэкендовый sitemap.xml по-прежнему
+ * предлагает к обходу. Предупреждение, а не отказ — по той же причине, что у
+ * стран (`warnQuestCountryNoindexInSitemap`): sitemap генерирует Django и не
+ * видит, оставили ли истории квестов заметки о местах. Закрывается расхождение
+ * не бэкендом, а контентом: как только истории точек дорастают до заметок,
+ * страница возвращается в выдачу и sitemap снова прав.
+ */
+function warnQuestCityNoindexInSitemap(landingPaths) {
+  const paths = Array.isArray(landingPaths) ? landingPaths : []
+  if (paths.length > 0) {
+    console.warn(
+      `  ⚠️  ${paths.length} city landings are listed in the backend sitemap.xml while the built page ships noindex` +
+        ' — квесты этих городов не оставили заметок о местах (истории точек короче дайджеста детальной' +
+        ` страницы); дописать истории — и страницы вернутся в выдачу:\n     ${paths.join(', ')}`,
+    )
+  }
+  return paths
+}
+
 function verifyQuestHtml(html, expectedCanonical) {
   const title = getTitle(html)
   const description = getMetaContent(html, 'name', 'description')
@@ -631,6 +694,11 @@ function verifyQuestHtml(html, expectedCanonical) {
   if (ogUrl !== expectedCanonical) issues.push(`bad og:url: ${ogUrl || 'missing'}`)
   if (!hasQuestIntroSection(html)) issues.push('missing crawlable quest intro section')
   if (!hasQuestJsonLd(html)) issues.push('missing TouristTrip JSON-LD')
+  // Тонкая детальная уходит под noindex вторым проходом генератора (#1930);
+  // тег с меткой Helmet гидрация снимет, и живой DOM останется без него (#1929).
+  if (questPageIsNoindex(html) && robotsMetaIsHelmetOwned(html)) {
+    issues.push('quest page noindex is Helmet-owned (data-rh) and is dropped on hydration')
+  }
 
   return issues
 }
@@ -697,6 +765,7 @@ async function main() {
   // membership here. HTTP/redirect behavior remains a post-deploy concern.
 
   const cityLandingsOnLegacySitemapAlias = []
+  const cityLandingsNoindexInSitemap = []
   for (const city of cityGroups) {
     const canonical = `${SITE_URL}/quests/${city.segment}`
     const cityFile = path.join(DIST_DIR, 'quests', city.segment, 'index.html')
@@ -711,7 +780,8 @@ async function main() {
       if (childFile && fs.existsSync(childFile)) childHtml = fs.readFileSync(childFile, 'utf8')
     }
 
-    const issues = verifyQuestCityHtml(fs.readFileSync(cityFile, 'utf8'), canonical, childHtml)
+    const cityHtml = fs.readFileSync(cityFile, 'utf8')
+    const issues = verifyQuestCityHtml(cityHtml, canonical, childHtml)
     if (issues.length > 0) {
       failures.push(`city landing /quests/${city.segment}: ${issues.join(', ')}`)
     }
@@ -731,7 +801,12 @@ async function main() {
     } else if (sitemapSegment !== city.segment) {
       cityLandingsOnLegacySitemapAlias.push(`/quests/${sitemapSegment} -> /quests/${city.segment}`)
     }
+    if (sitemapSegment && questPageIsNoindex(cityHtml)) {
+      cityLandingsNoindexInSitemap.push(`/quests/${city.segment}`)
+    }
   }
+
+  warnQuestCityNoindexInSitemap(cityLandingsNoindexInSitemap)
 
   if (cityLandingsOnLegacySitemapAlias.length > 0) {
     console.warn(
@@ -827,15 +902,27 @@ async function main() {
 
   // 4. Sampled quest pages carry real metadata, not the bare SPA shell.
   const sampled = SAMPLE_SIZE === null ? quests : quests.slice(0, SAMPLE_SIZE)
+  const noindexQuestPages = []
   for (const quest of sampled) {
     const route = questRouteKey(quest)
     const filePath = path.join(DIST_DIR, 'quests', route.cityId, route.questId, 'index.html')
     if (!fs.existsSync(filePath)) continue // already reported as missing above
 
-    const issues = verifyQuestHtml(fs.readFileSync(filePath, 'utf8'), `${API_BASE}${route.path}`)
+    const questHtml = fs.readFileSync(filePath, 'utf8')
+    const issues = verifyQuestHtml(questHtml, `${API_BASE}${route.path}`)
     if (issues.length > 0) {
       failures.push(`${route.path}: ${issues.join(', ')}`)
     }
+    if (questPageIsNoindex(questHtml)) noindexQuestPages.push(route.path)
+  }
+  if (noindexQuestPages.length > 0) {
+    // Предупреждение, а не отказ: sitemap.xml генерирует Django и такие адреса
+    // по-прежнему перечисляет; расхождение закрывается контентом — дописать
+    // истории точек, и страница вернётся в выдачу (#1930).
+    console.warn(
+      `  ⚠️  ${noindexQuestPages.length} quest pages ship noindex, follow (ниже порога #1930, backend sitemap.xml их` +
+        ` по-прежнему перечисляет; дописать истории точек — и страницы вернутся в выдачу): ${noindexQuestPages.join(', ')}`,
+    )
   }
 
   // 5. Travel quest promos. Coverage is geo/city scored, so most-but-not-all
@@ -895,7 +982,9 @@ if (typeof module !== 'undefined' && module.exports) {
     getMetaContent,
     getTitle,
     hasQuestCityLandingSection,
+    hasQuestCityPlanningContent,
     hasQuestCityStandaloneContent,
+    hasQuestCityWalkContent,
     hasQuestCountryLandingSection,
     hasQuestCountryStandaloneContent,
     hasQuestIntroSection,
@@ -914,6 +1003,7 @@ if (typeof module !== 'undefined' && module.exports) {
     verifyQuestCountrySitemap,
     verifyQuestHtml,
     verifyQuestPageContentDepth,
+    warnQuestCityNoindexInSitemap,
     warnQuestCountryNoindexInSitemap,
   }
 }

@@ -45,5 +45,10 @@ export function buildQuestCityWalkModel(
 ): QuestCityWalkModel
 export function isQuestWalkSentence(sentence: unknown): boolean
 export function questCityWalkQuestIds(quests: unknown[], options?: QuestCityWalkOptions): string[]
+export function questCityWalkBundleCount(
+  quests: unknown[],
+  bundles: Map<string, unknown> | Record<string, unknown> | null | undefined,
+  options?: QuestCityWalkOptions,
+): number
 export function questCityWalkHasContent(walk: QuestCityWalkModel | null | undefined): boolean
 export function questWalkKey(quest: unknown): string

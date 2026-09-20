@@ -8,6 +8,7 @@
 const {
   QUEST_CITY_WALK_QUEST_LIMIT,
   buildQuestCityWalkModel,
+  questCityWalkBundleCount,
   questCityWalkHasContent,
   questCityWalkQuestIds,
 } = require('@/utils/questCityWalk')
@@ -250,5 +251,35 @@ describe('buildQuestCityWalkModel', () => {
     expect(empty).toEqual({ places: [], otherPlaces: [], routes: [] })
     expect(questCityWalkHasContent(empty)).toBe(false)
     expect(questCityWalkHasContent(buildQuestCityWalkModel([QUEST], new Map([['minsk-center', bundle([step()])]])))).toBe(true)
+  })
+})
+
+describe('questCityWalkBundleCount', () => {
+  /**
+   * Ноль бандлов — транспортная ошибка, за которую сборка обязана падать;
+   * бандл с историями короче дайджеста — дефект контента, и посадочная лишь
+   * уходит с выдачи. `places` пусты в обоих случаях, поэтому границу держит
+   * отдельный счётчик — и считает он только те квесты, которые модель вообще
+   * разбирает.
+   */
+  it('считает бандлы только у разбираемых квестов города', () => {
+    const quests = [
+      { quest_id: 'minsk-b' },
+      { quest_id: 'minsk-a' },
+      { quest_id: 'minsk-c' },
+      { quest_id: 'minsk-d' },
+    ]
+    const bundles = new Map([
+      ['minsk-a', bundle([step()])],
+      ['minsk-d', bundle([step()])],
+    ])
+
+    // Разбираются первые QUEST_CITY_WALK_QUEST_LIMIT по quest_id: a, b, c —
+    // бандл `minsk-d` за пределами выбора не считается.
+    expect(QUEST_CITY_WALK_QUEST_LIMIT).toBe(3)
+    expect(questCityWalkBundleCount(quests, bundles)).toBe(1)
+    expect(questCityWalkBundleCount(quests, { 'minsk-b': bundle([step()]) })).toBe(1)
+    expect(questCityWalkBundleCount(quests, null)).toBe(0)
+    expect(questCityWalkBundleCount([], bundles)).toBe(0)
   })
 })

@@ -186,13 +186,32 @@ function questCityWalkQuestIds(quests, options = {}) {
 }
 
 /**
+ * Сколько из разбираемых квестов города пришли с бандлом.
+ *
+ * Ноль отличает транспортную ошибку — `by-quest-id` не ответил ни за один
+ * квест города — от города, чьи истории точек короче дайджеста детальной
+ * страницы и хвоста для заметок не оставляют (партия 19.09.2026: 15 городов по
+ * 1–2 предложения на точку). Первое обязано ронять сборку, второе — только
+ * снимать посадочную с индекса: страница собрана без ошибок, ей просто нечего
+ * публиковать сверх карточки квеста. `places` пусты в обоих случаях, поэтому
+ * граница держится отдельным счётчиком.
+ */
+function questCityWalkBundleCount(quests, bundles, options = {}) {
+  return questCityWalkQuestIds(quests, options)
+    .filter((questId) => Boolean(bundleFor(bundles, questId)))
+    .length;
+}
+
+/**
  * Модель блока «что увидите по дороге» для одного города.
  *
  * `quests` — квесты города в любом из двух видов каталога (сырой `ApiQuestMeta`
  * из сборки или адаптированный `QuestMeta` из приложения), `bundles` — карта
  * `quest_id → бандл`. Квесты без бандла в модель не попадают: выдумывать текст
  * за отсутствующие данные нельзя, а пустая модель — это сигнал сборке падать
- * (`assertQuestCityLandingsCarryWalk`).
+ * (`assertQuestCityLandingBundlesResolved`) или снимать посадочную с выдачи
+ * (`selectIndexableQuestCityLandings`) — границу между этими случаями держит
+ * `questCityWalkBundleCount`.
  */
 function buildQuestCityWalkModel(quests, bundles, options = {}) {
   const placeLimit = options.placeLimit ?? QUEST_CITY_WALK_PLACE_LIMIT;
@@ -310,6 +329,7 @@ module.exports = {
   buildQuestCityWalkModel,
   isQuestWalkSentence,
   questCityWalkQuestIds,
+  questCityWalkBundleCount,
   questCityWalkHasContent,
   questWalkKey,
 };

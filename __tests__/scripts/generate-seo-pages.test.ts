@@ -52,7 +52,7 @@ const {
   loadRedirectManifest,
   buildRedirectStubHtml,
   patchNoindexFallbackTemplate,
-  assertQuestCityLandingsCarryWalk,
+  assertQuestCityLandingBundlesResolved,
   buildQuestCityLandingHtml,
   buildQuestCityLandingModel,
   buildQuestRouteDigest,
@@ -60,6 +60,8 @@ const {
   buildQuestCountryLandingModel,
   questCountryLandingPageText,
   selectIndexableQuestCountryLandings,
+  selectIndexableQuestCityLandings,
+  selectIndexableQuestDetailPages,
   injectQuestCountryLandingSection,
   readRequiredQuestCountryTemplate,
 } = require('@/scripts/generate-seo-pages');
@@ -2322,9 +2324,47 @@ describe('заметки о местах на посадочной города 
   it('останавливает сборку, когда у города не оказалось ни одного бандла', () => {
     const { city, html } = buildRome(null)
 
+    expect(city.walkBundleCount).toBe(0)
     expect(city.walk.places).toEqual([])
     expect(html).not.toContain('data-ssg-quest-city-walk="true"')
-    expect(() => assertQuestCityLandingsCarryWalk([city])).toThrow(/\/quests\/rome \(Рим\)/)
+    expect(() => assertQuestCityLandingBundlesResolved([city])).toThrow(/\/quests\/rome \(Рим\)/)
+  })
+
+  /**
+   * Партия 19.09.2026: истории точек по 1–2 предложения, дайджест детальной
+   * страницы (#1763) забирает их целиком, и хвоста для заметок нет. Это дефект
+   * контента, а не транспорта: релиз не падает, а посадочная уходит под
+   * build-owned `noindex, follow`, как страна без собственного текста (#1929), и
+   * остаётся в навигации — ссылки на квест и практика на месте.
+   */
+  it('снимает с выдачи город, чьи бандлы не оставили заметок о местах, не роняя сборку', () => {
+    const shortBundle = {
+      ...ROME_BUNDLE,
+      steps: ROME_BUNDLE.steps.map((step: { story: string }) => ({
+        ...step,
+        story: 'Площадь перестроил Микеланджело по заказу папы Павла Третьего.',
+      })),
+    }
+    const { city, html } = buildRome(new Map([['rome-forum', shortBundle]]))
+
+    expect(city.walkBundleCount).toBe(1)
+    expect(city.walk.places).toEqual([])
+    expect(() => assertQuestCityLandingBundlesResolved([city])).not.toThrow()
+    expect(selectIndexableQuestCityLandings([city]).has('rome')).toBe(false)
+    expect(html).not.toContain('data-ssg-quest-city-walk="true"')
+    expect(html).toContain('<meta name="robots" content="noindex, follow"/>')
+    // Тег без метки Helmet: с `data-rh` его сняла бы гидрация (#1929).
+    expect(html).not.toMatch(/<meta[^>]*data-rh=[^>]*name="robots"/)
+    expect(html).toContain('data-ssg-quest-city-practical="true"')
+    expect(html).toContain(`href="${city.quests[0].path}"`)
+  })
+
+  it('оставляет в выдаче город с собственными заметками и не пишет ему robots', () => {
+    const { city, html } = buildRome(new Map([['rome-forum', ROME_BUNDLE]]))
+
+    expect(city.walkBundleCount).toBe(1)
+    expect(selectIndexableQuestCityLandings([city]).has('rome')).toBe(true)
+    expect(html).not.toMatch(/name="robots" content="[^"]*noindex/)
   })
 })
 
@@ -3510,3 +3550,43 @@ describe('SSG-срез маршрута квеста (#1763)', () => {
     });
   });
 });
+
+/**
+ * #1930: порог объёма считается по всему уровню детальных страниц, и тонкая
+ * страница (истории точек короче дайджеста — партия 19.09.2026) уходит под
+ * `noindex, follow` вторым проходом, а не роняет релиз и не выкладывается
+ * индексируемой ниже порога. Ноль индексируемых при непустом каталоге — это
+ * потерянное тело шаблона, а не «все тонкие».
+ */
+describe('selectIndexableQuestDetailPages (#1930)', () => {
+  const ALPHABET = 'абвгдежзийклмнопрстуфхцчшщэюя'
+  const prose = (words: number, seed: number): string => {
+    const vocabulary = Array.from(
+      { length: ALPHABET.length },
+      (_, slot) =>
+        `сл${ALPHABET[seed % ALPHABET.length]}${ALPHABET[slot]}${ALPHABET[(slot * 7) % ALPHABET.length]}`,
+    )
+    return Array.from({ length: words }, (_, index) => vocabulary[index % vocabulary.length]).join(' ')
+  }
+  const entry = (questId: string, words: number, seed: number) => ({
+    quest: { quest_id: questId },
+    route: { path: `/quests/1/${questId}` },
+    html:
+      `<!DOCTYPE html><html><head><title>${questId}</title></head><body>` +
+      `<section data-ssg-quest-intro="true"><p>${prose(words, seed)}</p></section></body></html>`,
+  })
+
+  it('оставляет в выдаче страницу с достаточным собственным текстом и снимает тонкую', () => {
+    const indexable = selectIndexableQuestDetailPages([entry('long', 400, 1), entry('short', 120, 2)])
+
+    expect(indexable.has('/quests/1/long')).toBe(true)
+    expect(indexable.has('/quests/1/short')).toBe(false)
+  })
+
+  it('останавливает сборку, когда ни одна страница не проходит порог', () => {
+    expect(() => selectIndexableQuestDetailPages([entry('a', 40, 1), entry('b', 40, 2)])).toThrow(
+      /none of 2 quest pages clears the content floors/,
+    )
+    expect(selectIndexableQuestDetailPages([]).size).toBe(0)
+  })
+})

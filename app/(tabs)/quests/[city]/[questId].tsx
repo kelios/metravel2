@@ -155,7 +155,12 @@ const patchQuestHead = (seo: QuestSeoModel, canonical: string, image: string) =>
   upsertMetaContent('meta[property="og:image"]', image);
   upsertMetaContent('meta[property="og:image:secure_url"]', image);
   upsertMetaContent('meta[name="twitter:image"]', image);
-  removeMeta('meta[name="robots"]');
+  // Роут объявляет robots только ненайденному квесту (`noindex, nofollow`, LazyInstantSEO
+  // пишет его без метки Helmet), а fallback-шаблон несёт `noindex, follow` с меткой —
+  // снимаются ровно эти два. Тонкой детальной сборка ставит build-owned `noindex, follow`
+  // без метки (#1930): это вердикт по тексту страницы, и гидрация его переживает, как у
+  // посадочных города и страны (#1929).
+  removeMeta('meta[name="robots"][content="noindex, nofollow"], meta[name="robots"][data-rh]');
   upsertCanonical(canonical);
 };
 
