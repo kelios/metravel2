@@ -34,16 +34,22 @@ backend route и только relevant source/API/production probes.
    висящий незакоммиченным в общем рабочем дереве, означает нарушение гейта
    `review → testing` (`docs/TASK_BOARD_MCP.md`): верни тикет в `in_progress` с
    этим finding и не начинай QA.
-4. Убедись, что changed build доступен на target. Дефолтный target — локальный
-   стек: Expo web против `http://localhost:8000`. Перед первой пробой сессии
-   обнови бэкенд до `origin/master` (`git -C ../metravel-backend fetch origin
-   master && git -C ../metravel-backend reset --hard origin/master`, `migrate`
-   при новых миграциях, рестарт `run-backend.sh`) и убедись, что
-   `showmigrations --plan` не содержит неприменённых: отставший бэк отвечает
-   `200` и даёт ложный `fail`. Процедура — `docs/WORKFLOW_OPERATIONS.md` → «3.0
-   Локальный стек». Приёмка требует дев или прод и там нет нужной сборки →
-   остановись и запроси exact deploy; не проверяй старую сборку и не выдавай
-   финальный status. Production deploy требует отдельной команды владельца.
+4. Убедись, что changed build доступен на target. Дефолтный target для
+   web-задач — ПРОД после выката задачи: `curl -s https://metravel.by/.build-source.json`
+   → `sha`, затем `git merge-base --is-ancestor <sha коммита тикета> <sha>`.
+   Сборки с коммитом тикета на проде нет → не проверяй старую сборку и не
+   выдавай финальный status: верни оркестратору точный запрос на выкат
+   (`frontend-deployer`, `./build-prod.sh prod` из изолированного worktree,
+   `docs/WORKFLOW_OPERATIONS.md` §3.5) — это штатный шаг пайплайна, отдельной
+   команды владельца он не требует. Локальный стек (Expo web против
+   `http://localhost:8000`) — для проб, которые на проде невозможны (мутация
+   контента, тестовые данные): перед первой такой пробой сессии обнови бэкенд
+   до `origin/master` (`git -C ../metravel-backend fetch origin master && git
+   -C ../metravel-backend reset --hard origin/master`, `migrate` при новых
+   миграциях, рестарт `run-backend.sh`) и убедись, что `showmigrations --plan`
+   не содержит неприменённых: отставший бэк отвечает `200` и даёт ложный
+   `fail`. Процедура — `docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек».
+   Дев-стенд — только по явному запросу владельца.
 5. Выпиши проверяемый gate: action/input, ожидаемое поле/state/число, negative
    probe, environment и required platform layer.
 

@@ -61,7 +61,7 @@ description: "Прогон фронтенд-тикета через MCP task boa
 | reviewer (доп. фокус) | `/code-review`, `review-auditor` (углублённый аудит), `browser-reviewer` (видимые web-изменения) |
 | reviewer (iOS-диффы) | `ios-reviewer` — независимый review-and-fix перед iPhone-тестированием |
 | acceptance (приёмка спринта) | агент `board-reviewer` / skill `/sprint-review` — Done gate → `done` |
-| releaser | preflight (`/preflight`) + `frontend-deployer` по явному target env; сторы — `android-publisher` (Google Play) и `ios-deployer` (TestFlight/App Store), каждый по отдельной явной команде владельца |
+| releaser | `frontend-deployer` на прод — штатный шаг после push (изолированный worktree, без параллельного деплоя); сторы — `android-publisher` (Google Play) и `ios-deployer` (TestFlight/App Store), каждый по отдельной явной команде владельца |
 
 Бэкенд-тикеты (`area=back`) этот скилл НЕ реализует — только заводит/трекает через
 `ticket-board`. Реализацию пишет владелец бэка в своём репо; фронтовый агент бэкенд
@@ -107,20 +107,24 @@ description: "Прогон фронтенд-тикета через MCP task boa
    `browser-reviewer`, `/review-security`) подключай дополнительно по фокусу задачи, он гейт не заменяет.
 5. **Test / QA — тоже запускается сам.** Переход в `status=testing` (его делает гейт-агент)
    тем же хуком требует продолжить приёмку тем же проходом:
-   - нужна развёрнутая среда для evidence → сначала выложи на dev (`/dev-deploy`, `dev-deployer`);
-     прод-деплой, EAS и публикацию в стор без явной команды владельца не запускай;
+   - сначала выкати запушенный код на прод: `frontend-deployer` (`./build-prod.sh prod` из
+     изолированного worktree на sha коммита тикета, без параллельного деплоя —
+     `docs/WORKFLOW_OPERATIONS.md` §3.4–3.5). Отдельной команды владельца не нужно (правило
+     20.09.2026); EAS и публикацию в стор без явной команды не запускай, dev-стенд — только по
+     явному запросу;
    - делегируй `test-author` unit/e2e на новое поведение; видимые/web-изменения — ОБЯЗАТЕЛЬНО
      браузерная проверка (Playwright/preview), как требует CLAUDE.md;
-   - вызови `board-reviewer` с id тикета: он сверяет Done gate реальными пробами и при завершении
+   - вызови `board-reviewer` с id тикета: он сверяет, что выкаченный sha (`.build-source.json`)
+     содержит коммит тикета, гоняет Done gate реальными пробами на проде и при завершении
      закрывает current acceptance в `done`. Подтверждённый отдельный дефект → `problem-memory`
      + create/reuse связанной bug/task через `ticket-board`; current acceptance не парковать.
      `testing` между turns допустим только для конкретного повторного замера с exact параметром,
      threshold/trigger и временем. Missing device/access/env/active gate → остановиться, запросить
      у владельца exact unblock и затем продолжить тот же acceptance без финального handoff.
    Назад в `review` из `testing` не возвращай: это заново поднимет код-ревью того же diff'а.
-6. **Release.** Прод-деплой — только по явному запросу и target env: `/preflight` →
-   `frontend-deployer`. Приёмка на dev не ждёт прода: FE закрывается в `done` с пометкой target env,
-   а прод-выкладка при необходимости идёт отдельной release-задачей.
+6. **Release — часть той же задачи.** Выкат на прод выполняется в шаге 5 до приёмки; отдельной
+   release-задачи и отдельной команды владельца нет, `done` ставится только после приёмки на проде.
+   Сторы (`android-publisher`, `ios-deployer`) — по-прежнему по отдельной явной команде на каждый stage.
 7. **Закрытие.** `ticket-board` дописывает в `description`: changed files, validation, reviewer,
    release-note. Если задача порождает новую (бэкенд-правка) — заведи её на борде `area=back`.
    Перед `done` сверяй `Done gate` из `Task Contract`: FE-задача с BE-зависимостью закрывается
@@ -145,7 +149,7 @@ description: "Прогон фронтенд-тикета через MCP task boa
   явной просьбе пользователя и фиксируется в `description` тикета.
 - **В `testing` уходит только запушенный код.** Коммит явными путями +
   `PREFLIGHT_SKIP_E2E=1 git push origin main`
-  выполняются ПОСЛЕ вердикта `pass` и ДО смены статуса: приёмка, dev-deploy и любая
+  выполняются ПОСЛЕ вердикта `pass` и ДО смены статуса: приёмка, прод-деплой и любая
   последующая проба берут код из `main`, а не из общего рабочего дерева. Коммит и push
   вердикт не ломают. Чужой набор в `npm run check:preflight:dry` → узкие проверки своих путей
   и `SKIP_PREFLIGHT=1 git push origin main` с пометкой в тикете. Протокол —
@@ -159,7 +163,8 @@ description: "Прогон фронтенд-тикета через MCP task boa
   но FE runtime-проба получает 404/не тот field/event, оформи отдельный linked defect через
   `problem-memory`/`ticket-board`; current acceptance не возвращай и не паркуй.
 - Один тикет — один активный исполнитель. Не запускай конфликтующие правки одного файла.
-- Не печатай секреты/токены. Деплой — только по явному target, не по умолчанию.
+- Не печатай секреты/токены. Прод-деплой web — штатный шаг после `testing`; dev-стенд и сторы —
+  только по явному запросу.
 
 ## Выход
 

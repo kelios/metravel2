@@ -42,15 +42,23 @@
   открывает. Единственное исключение — обязательный
   sync перед тестированием: `git -C ../metravel-backend fetch origin master &&
   git -C ../metravel-backend reset --hard origin/master`;
-- проверяем ЛОКАЛЬНО: таргет по умолчанию — локальный бэкенд `localhost:8000`
-  (`bash ~/Sites/metravel/run-backend.sh`) плюс `npx expo start --web`. Дев
-  `192.168.50.36` и прод `metravel.by` — только по явному запросу владельца.
+- до ревью проверяем ЛОКАЛЬНО: таргет по умолчанию — локальный бэкенд
+  `localhost:8000` (`bash ~/Sites/metravel/run-backend.sh`) плюс
+  `npx expo start --web`. Дев `192.168.50.36` — только по явному запросу
+  владельца; прод `metravel.by` — таргет приёмки в `testing` после собственного
+  выката задачи (см. ниже).
   Перед началом тестирования бэкенд обновляется до `origin/master` и получает
   `migrate`: процедура и проверки готовности — `docs/WORKFLOW_OPERATIONS.md` →
   «3.0 Локальный стек»;
 - секреты не выводить и не просить вставлять в чат;
-- iOS signed build, TestFlight/App Store upload, App Review submit, storefront
-  release и production deploy выполнять только по отдельному явному точному запросу;
+- задача ведётся от начала до конца одной цепочкой (правило владельца от
+  20.09.2026): `in_progress` → `review` → коммит и пуш явными путями в `main` →
+  `testing` → выкат на прод (`frontend-deployer`, `./build-prod.sh prod` из
+  изолированного worktree, без параллельного деплоя) → приёмка на проде по Task
+  Contract → `done`. Отдельной команды на прод-деплой web-фронтенда не нужно:
+  сборки с коммитом задачи на проде нет — задача не «ждёт деплоя», а выкатывается;
+- iOS signed build, TestFlight/App Store upload, App Review submit и storefront
+  release — по-прежнему только по отдельному явному точному запросу;
 - проверять собственные изменения, не перекладывая QA на пользователя;
 - перед любой задачей фиксировать platform impact для desktop web, mobile web,
   Android и iOS. Shared mobile UX проверять одним flow/state/locale; iPhone

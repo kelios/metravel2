@@ -91,9 +91,13 @@ Validation:
   значит В ОБОИХ контурах: `.gitignore` и `baseIgnores` в `eslint.config.js` —
   eslint читает свой ручной список, а не `.gitignore`, и строка только в одном
   из двух делает guard зелёным, оставляя общий `npm run lint` красным.
-- Production deploy, store build/upload/submit/release и другие внешние
-  мутации требуют точной текущей команды пользователя и профильного operator
-  skill. Один разрешённый stage не разрешает следующий.
+- Production deploy web-фронтенда — штатный шаг пайплайна задачи после push
+  (§5): его выполняет `frontend-deployer` через `./build-prod.sh prod` из
+  изолированного worktree, проверив, что параллельного деплоя нет
+  (`docs/WORKFLOW_OPERATIONS.md` §3.4–3.5); отдельной команды владельца не
+  нужно. Store build/upload/submit/release и другие внешние мутации по-прежнему
+  требуют точной текущей команды пользователя и профильного operator skill.
+  Один разрешённый stage не разрешает следующий.
 - Android EAS/cloud build/submit запрещён; Android собирается локально. iOS
   signed build, TestFlight/App Store upload, review submit и storefront release
   — четыре независимых authorization gate.
@@ -123,11 +127,12 @@ Validation:
    спрашивая. Session-level харнесс может нести обратный default «не вызывать
    Agent без явного запроса» — эти project instructions его перекрывают.
    Переспрашивать только там, где подтверждения требует само действие по другим
-   правилам: production deploy, EAS/store build и submit, storefront release.
+   правилам: EAS/store build и submit, storefront release. Прод-деплой
+   web-фронтенда подтверждения не требует — это шаг пайплайна (§5).
 
 ### Условные контракты
 
-- Проверочный таргет по умолчанию — ЛОКАЛЬНЫЙ стек этой машины: бэкенд
+- Проверочный таргет ДО ревью — ЛОКАЛЬНЫЙ стек этой машины: бэкенд
   `bash /Users/juliasavran/Sites/metravel/run-backend.sh` (Django на :8000,
   PostGIS 17-3.5 и redis в docker, данные — свежая копия прод-базы) и фронт
   `EXPO_PUBLIC_API_URL=http://localhost:8000 npx expo start --web`. `.env`
@@ -135,10 +140,10 @@ Validation:
   поверх него, а metro-прокси предпочитает `EXPO_PUBLIC_API_URL` своему
   `DEFAULT_DEV_API_HOST` (`metro.config.js:318`), поэтому строку читают перед
   первой пробой и при необходимости возвращают на `http://localhost:8000`.
-  Дев-стенд `192.168.50.36` и прод
-  `metravel.by` подключаются точечной переменной окружения и ТОЛЬКО по явному
-  запросу владельца; деплой на них по-прежнему проходит operation gate
-  `docs/WORKFLOW_OPERATIONS.md`. Локально бакет S3 — `metravellocal`, поэтому у
+  Дев-стенд `192.168.50.36` подключается точечной переменной окружения и
+  ТОЛЬКО по явному запросу владельца. Прод `metravel.by` — таргет приёмки в
+  `testing` после собственного выката задачи; выкат проходит operation gate
+  `docs/WORKFLOW_OPERATIONS.md` §3.4–3.5. Локально бакет S3 — `metravellocal`, поэтому у
   старых прод-статей картинки не грузятся: это ожидаемо, для медиа-проверок
   создаётся своя тестовая статья. Устройство целится на тот же бэкенд по LAN-IP.
   Полное описание стека — `/Users/juliasavran/Sites/metravel/README-local.md`.
@@ -180,8 +185,10 @@ Validation:
 - Средний diff до/во время review: релевантные static/unit tests, lint,
   typecheck и guards; без e2e/runtime.
 - Крупный diff: `npm run lint` и `npm run test:run`.
-- После review в `testing`: `npm run check:preflight` или точечный
-  browser/API/device/e2e gate по Task Contract.
+- После review в `testing`: сначала выкат на прод (`frontend-deployer`), затем
+  приёмка на проде — точечный browser/API/device/e2e gate по Task Contract
+  против `https://metravel.by` (выкаченный sha — `.build-source.json`);
+  зелёный Done gate → `done`, дефект → `in_progress` и цикл заново.
 - Полный `npm run e2e` укладывается в ~10 минут при тёплом `dist` (замер
   08.09.2026: быстрый набор 5,0 мин, перф 4,8 мин). Дефолты рассчитаны на это и
   правке под задачу не подлежат; внутренний цикл — `E2E_SUITE=smoke npm run e2e`
@@ -199,7 +206,9 @@ Validation:
   путями задачи и пушится в `main`: вердикт `pass` → `git add <пути задачи>` →
   `git commit` → `PREFLIGHT_SKIP_E2E=1 git push origin main` →
   `status=testing`, sha коммита — в
-  тикет. `git add -A` и `commit` без путей в общем чекауте запрещены; коммит и
+  тикет → выкат на прод → приёмка на проде → `done`; задача не останавливается
+  на `testing` в ожидании команды на деплой (правило владельца 20.09.2026).
+  `git add -A` и `commit` без путей в общем чекауте запрещены; коммит и
   push отпечаток гейта не ломают. `PREFLIGHT_SKIP_E2E=1` оставляет code-level
   pre-push checks, но не запускает Playwright до `testing`. Детали и исключения —
   `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`».

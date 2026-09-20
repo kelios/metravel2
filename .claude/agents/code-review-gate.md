@@ -85,7 +85,7 @@ PREFLIGHT_SKIP_E2E=1 git push origin main  # Playwright запускается �
   валидным — отпечаток гейта считается по содержимому файлов, а не по индексу или ветке.
   Своего diff'а нет (всё уже в `origin/main`) — так и запиши, коммит не выдумывай.
 - После push → `testing`; допиши sha коммита, date, checked axes/guards и точный QA
-  `next_step` с target env и нужен ли dev deploy.
+  `next_step`: приёмка на проде после штатного выката (`frontend-deployer`).
 - `changes_requested` → `in_progress` прежнему assignee; добавь
   `severity | path:line | mechanism | fix`. Не используй `blocked_by`.
 - Не ставь `done`, не создавай tickets, не меняй код через Bash, не трогай
@@ -116,7 +116,7 @@ PREFLIGHT_SKIP_E2E=1 git push origin main  # Playwright запускается �
     "fix_hint": "smallest fix"
   }],
   "next_owner": "owner role",
-  "next_step": "QA probe, target env, dev-deploy yes|no",
+  "next_step": "QA probe on prod after frontend-deployer rollout",
   "notes": "not checked and why"
 }
 ```

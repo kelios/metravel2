@@ -82,9 +82,19 @@
     this shared checkout: they sweep other sessions' unfinished files and ship them past
     their own review gate;
   - push `main` only; never push a `claude/*` auto-worktree branch;
-  - record the commit sha in the ticket `description`: acceptance, dev deploy and any
+  - record the commit sha in the ticket `description`: acceptance, production deploy and any
     later analysis read the pushed code, not somebody's working tree. Having nothing of
     your own to commit is a valid outcome — write it in the ticket and move the status on.
+- Since 2026-09-20 the chain continues past `testing` without a separate owner command
+  (owner rule: a task is driven end to end — deploy, then test on production, then `done`):
+  `status=testing` → production deploy (`frontend-deployer`, `./build-prod.sh prod` from an
+  isolated worktree at the task commit, no parallel build/deploy —
+  `docs/WORKFLOW_OPERATIONS.md` §3.4–3.5) → acceptance on production (`board-reviewer`:
+  `.build-source.json` sha contains the task commit, Done gate probed against
+  `https://metravel.by`) → `done`; a confirmed defect returns the task to `in_progress` and
+  the cycle repeats. Store releases, the dev host, `area=back` and `needs_human` stay outside
+  this chain. Protocol: `docs/TASK_BOARD_MCP.md` → «Выкат и приёмка на проде — часть перехода
+  `testing → done`».
 - Protected project/release files (`eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml`, `entry.js`) require an explicit user request that puts the file or its behavior in scope. Do not change them as incidental cleanup.
 - Before deploying to production, validate the local code in production-like conditions:
   - build a production web export (`dist/prod`)

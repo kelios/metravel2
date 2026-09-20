@@ -231,8 +231,8 @@ function autoAcceptanceDirective(taskId) {
     `АВТО-ГЕЙТ БОРДА: задача #${taskId} прошла код-ревью и переведена в \`${GUARDED_STATUS}\`. QA-приёмка продолжается АВТОМАТИЧЕСКИ, тем же проходом — не жди отдельной просьбы пользователя.`,
     '',
     'Сделай это СЛЕДУЮЩИМ действием:',
-    `1. Код задачи на этом шаге уже закоммичен и запушен в \`main\` (условие гейта). Если Done gate требует развёрнутой среды — выложи изменения на dev (skill \`/dev-deploy\`, агент \`dev-deployer\`). Прод-деплой (\`build-prod.sh\`, \`frontend-deployer\`), EAS и публикацию в стор БЕЗ явной команды владельца не запускай.`,
-    `2. Вызови Agent tool с subagent_type="${ACCEPTANCE_AGENT}" и id #${taskId}: он прогоняет тесты и браузер/API/устройство-пробы против target env по \`Task Contract\`.`,
+    `1. Код задачи на этом шаге уже закоммичен и запушен в \`main\` (условие гейта). Выкати его на прод: Agent tool с subagent_type="frontend-deployer" — \`./build-prod.sh prod\` из изолированного worktree на sha коммита задачи, предварительно убедившись, что параллельной сборки/деплоя нет (\`docs/WORKFLOW_OPERATIONS.md\` §3.4–3.5). Отдельной команды владельца на прод-деплой web-фронтенда не нужно (правило 20.09.2026). EAS и публикацию в стор без явной команды не запускай; dev-стенд — только по явному запросу.`,
+    `2. Вызови Agent tool с subagent_type="${ACCEPTANCE_AGENT}" и id #${taskId}: он сверяет, что выкаченный sha (\`curl -s https://metravel.by/.build-source.json\`) содержит коммит задачи, и прогоняет тесты и браузер/API/устройство-пробы против прода \`https://metravel.by\` по \`Task Contract\`.`,
     `3. Done gate зелёный → \`${ACCEPTANCE_AGENT}\` сам ставит \`done\` с evidence. Найден дефект → задача возвращается в \`in_progress\`, и после фикса цикл \`${REVIEW_STATUS}\` → \`${GUARDED_STATUS}\` повторится сам.`,
     '4. `done` руками не ставь: закрывает только приёмка с доказательством (тест/браузер/устройство + target env).',
   ].join('\n');
@@ -275,7 +275,7 @@ function runPostHook(input, toolInput, taskId) {
   }
 
   emit({
-    systemMessage: `review-gate: #${taskId} в ${GUARDED_STATUS} — дальше QA-приёмка (${ACCEPTANCE_AGENT}), прод-деплой только по явной команде`,
+    systemMessage: `review-gate: #${taskId} в ${GUARDED_STATUS} — дальше выкат на прод (frontend-deployer) и QA-приёмка на проде (${ACCEPTANCE_AGENT}) до \`done\``,
     hookSpecificOutput: {
       hookEventName: 'PostToolUse',
       additionalContext: autoAcceptanceDirective(taskId),

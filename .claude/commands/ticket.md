@@ -1,5 +1,5 @@
 ---
-description: Прогнать фронтенд-тикет через общий MCP task board (discovery→implement→review→testing→done). Аргумент — id задачи, `next`, или описание новой.
+description: Прогнать фронтенд-тикет через общий MCP task board (discovery→implement→review→push→выкат на прод→testing на проде→done). Аргумент — id задачи, `next`, или описание новой.
 ---
 
 Запусти скилл **ticket-flow** для обработки фронтенд-тикета через общий таск-борд MeTravel.
@@ -20,6 +20,7 @@ description: Прогнать фронтенд-тикет через общий 
 этой машины.
 
 **Взял задачу → СРАЗУ `status=in_progress` (+`assignee`), до правок кода.** Никаких
-`todo → done` напрямую даже для одиночной задачи. Порядок: `todo → in_progress → review → testing → done`.
+`todo → done` напрямую даже для одиночной задачи. Порядок: `todo → in_progress → review → testing (выкат на прод + приёмка на проде) → done`
+— задача ведётся от начала до конца, отдельной команды на прод-деплой не ждём.
 
 Аргументы: `$ARGUMENTS`
