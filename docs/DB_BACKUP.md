@@ -31,7 +31,7 @@
 
 | Объект | Путь / расположение | Состояние на 2026-08-31 |
 | --- | --- | --- |
-| Живая БД | контейнер сервиса `metravel-gis` (сейчас `metravel_metravel-gis_1`; имя резолвится, а не вписывается — см. ниже), образ `postgis/postgis:17-3.5`, база `metravel` | ~311 MB |
+| Живая БД | контейнер сервиса `metravel-gis` (с 21.09.2026 — `metravel-metravel-gis-1` после перевода инфра-стека на Compose v2, #2017; до того `metravel_metravel-gis_1`; имя резолвится, а не вписывается — см. ниже), образ `postgis/postgis:17-3.5`, база `metravel` | ~311 MB |
 | Расписание | user crontab пользователя `sx3`, строка с маркером `# metravel-db-backup` | `15 2 * * *`, таймзона хоста Europe/Minsk |
 | Обёртка запуска | `/home/sx3/.local/bin/metravel-db-backup` (0700) | генерируется `scripts/enable-prod-db-backup.sh`, руками не править |
 | Конфиг | `/home/sx3/.metravel-backup.env` (0600) | `S3_URI`, `BACKUP_DIR`, `RETENTION_DAYS=5`, `AWS_CLI`, `LOG_FILE`; секретов нет |
@@ -237,7 +237,8 @@ npm run db:backup:prod:verify                    # проверить крите
 Имя контейнера БД не вписано константой — оно резолвится снипетом из
 `scripts/deploy-target.sh`, поэтому пересоздание сервиса через compose v2
 (смена `metravel_metravel-gis_1` → `metravel-metravel-gis-1`) расписание не
-ломает (борд #733, #1636).
+ломает (борд #733, #1636). Проверено на деле 21.09.2026 (#2017): после окна
+перевода инфра-стека на v2 `--check` обёртки нашёл контейнер под новым именем.
 
 ### Что происходит каждую ночь
 
