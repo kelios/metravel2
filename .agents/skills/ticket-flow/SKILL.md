@@ -61,7 +61,7 @@ description: "Прогон фронтенд-тикета через MCP task boa
 | reviewer (доп. фокус) | `/code-review`, `review-auditor` (углублённый аудит), `browser-reviewer` (видимые web-изменения) |
 | reviewer (iOS-диффы) | `ios-reviewer` — независимый review-and-fix перед iPhone-тестированием |
 | acceptance (приёмка спринта) | агент `board-reviewer` / skill `/sprint-review` — Done gate → `done` |
-| releaser | `frontend-deployer` на прод — штатный шаг после push (изолированный worktree, без параллельного деплоя); сторы — `android-publisher` (Google Play) и `ios-deployer` (TestFlight/App Store), каждый по отдельной явной команде владельца |
+| releaser | `frontend-deployer` на прод — штатный шаг после push, одна команда `DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha>` (изолированный worktree и общий лок внутри, ≤5 минут); сторы — `android-publisher` (Google Play) и `ios-deployer` (TestFlight/App Store), каждый по отдельной явной команде владельца |
 
 Бэкенд-тикеты (`area=back`) этот скилл НЕ реализует — только заводит/трекает через
 `ticket-board`. Реализацию пишет владелец бэка в своём репо; фронтовый агент бэкенд
@@ -107,9 +107,10 @@ description: "Прогон фронтенд-тикета через MCP task boa
    `browser-reviewer`, `/review-security`) подключай дополнительно по фокусу задачи, он гейт не заменяет.
 5. **Test / QA — тоже запускается сам.** Переход в `status=testing` (его делает гейт-агент)
    тем же хуком требует продолжить приёмку тем же проходом:
-   - сначала выкати запушенный код на прод: `frontend-deployer` (`./build-prod.sh prod` из
-     изолированного worktree на sha коммита тикета, без параллельного деплоя —
-     `docs/WORKFLOW_OPERATIONS.md` §3.4–3.5). Отдельной команды владельца не нужно (правило
+   - сначала выкати запушенный код на прод: `frontend-deployer` с коротким промптом — одна
+     команда `DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha коммита тикета>` (изолированный
+     worktree, общий лок и проверка параллельного выката внутри скрипта —
+     `docs/WORKFLOW_OPERATIONS.md` §3.5; без ручного preflight, бюджет ≤5 минут). Отдельной команды владельца не нужно (правило
      20.09.2026); EAS и публикацию в стор без явной команды не запускай, dev-стенд — только по
      явному запросу;
    - делегируй `test-author` unit/e2e на новое поведение; видимые/web-изменения — ОБЯЗАТЕЛЬНО

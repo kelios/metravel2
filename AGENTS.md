@@ -96,8 +96,9 @@ Validation:
   eslint читает свой ручной список, а не `.gitignore`, и строка только в одном
   из двух делает guard зелёным, оставляя общий `npm run lint` красным.
 - Production deploy web-фронтенда — штатный шаг пайплайна задачи после push
-  (§5): его выполняет `frontend-deployer` через `./build-prod.sh prod` из
-  изолированного worktree, проверив, что параллельного деплоя нет
+  (§5): его выполняет `frontend-deployer` одной командой
+  `DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha>` — изолированный worktree, общий лок
+  и проверку параллельного деплоя делает сам скрипт, бюджет ≤5 минут
   (`docs/WORKFLOW_OPERATIONS.md` §3.4–3.5); отдельной команды владельца не
   нужно. Store build/upload/submit/release и другие внешние мутации по-прежнему
   требуют точной текущей команды пользователя и профильного operator skill.

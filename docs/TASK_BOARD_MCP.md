@@ -289,9 +289,10 @@ preflight, затем создаётся или переиспользуется
 
 1. `review` → `pass` → коммит явными путями → `git push origin main` → `status=testing`
    (как выше).
-2. Выкат на прод тем же проходом: `frontend-deployer` → `./build-prod.sh prod` из
-   изолированного worktree на sha коммита задачи, после проверки, что параллельной
-   сборки/деплоя нет (`docs/WORKFLOW_OPERATIONS.md` §3.4–3.5). Отдельной команды
+2. Выкат на прод тем же проходом: `frontend-deployer` → одна команда
+   `DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha коммита задачи>`: изолированный worktree,
+   общий лок и проверку параллельной сборки/деплоя делает сам скрипт
+   (`docs/WORKFLOW_OPERATIONS.md` §3.4–3.5), бюджет ≤5 минут. Отдельной команды
    владельца на прод-деплой web-фронтенда не требуется; дев-стенд — только по
    явному запросу.
 3. Приёмка на проде: `board-reviewer` сверяет `curl -s https://metravel.by/.build-source.json`

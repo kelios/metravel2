@@ -57,8 +57,9 @@
 - секреты не выводить и не просить вставлять в чат;
 - задача ведётся от начала до конца одной цепочкой (правило владельца от
   20.09.2026): `in_progress` → `review` → коммит и пуш явными путями в `main` →
-  `testing` → выкат на прод (`frontend-deployer`, `./build-prod.sh prod` из
-  изолированного worktree, без параллельного деплоя) → приёмка на проде по Task
+  `testing` → выкат на прод (`frontend-deployer`, одна команда
+  `DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha>` — изолированный worktree и общий
+  лок внутри, ≤5 минут) → приёмка на проде по Task
   Contract → `done`. Отдельной команды на прод-деплой web-фронтенда не нужно:
   сборки с коммитом задачи на проде нет — задача не «ждёт деплоя», а выкатывается;
 - iOS signed build, TestFlight/App Store upload, App Review submit и storefront

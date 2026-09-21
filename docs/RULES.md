@@ -87,8 +87,9 @@
     your own to commit is a valid outcome — write it in the ticket and move the status on.
 - Since 2026-09-20 the chain continues past `testing` without a separate owner command
   (owner rule: a task is driven end to end — deploy, then test on production, then `done`):
-  `status=testing` → production deploy (`frontend-deployer`, `./build-prod.sh prod` from an
-  isolated worktree at the task commit, no parallel build/deploy —
+  `status=testing` → production deploy (`frontend-deployer`, one command
+  `DEPLOY_QUIET=1 scripts/deploy-prod.sh <task sha>` — isolated worktree, shared build lock
+  and the parallel-deploy check live in the script, budget ≤5 minutes —
   `docs/WORKFLOW_OPERATIONS.md` §3.4–3.5) → acceptance on production (`board-reviewer`:
   `.build-source.json` sha contains the task commit, Done gate probed against
   `https://metravel.by`) → `done`; a confirmed defect returns the task to `in_progress` and
