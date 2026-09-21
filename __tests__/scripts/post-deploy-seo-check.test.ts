@@ -2,11 +2,13 @@ const fs = require('fs')
 const path = require('path')
 
 const {
+  FALLBACK_DESC,
   detectPageType,
   hasCatalogDecidedIndexability,
   parseSitemapUrls,
   validateCanonical,
   validateCorePageH1,
+  validateDescription,
   validateHomeAssets,
   validatePageResult,
   validateRobots,
@@ -292,6 +294,81 @@ describe('post-deploy SEO check helpers', () => {
       ])
       expect(validateRobots(CLOSED, 'page', undefined).map((i: any) => i.code)).toEqual([
         'robots.noindex',
+      ])
+    })
+  })
+
+  // #2008: /articles закрыт (`noindex, nofollow`), а его описание в 78 символов
+  // давало `description.length` на каждом деплое, хотя длина описания нужна
+  // только сниппету в выдаче, куда закрытая страница не попадает.
+  describe('description length on pages closed from search', () => {
+    // Строка маршрута /articles из scripts/generate-seo-pages.js.
+    const ARTICLES_DESC =
+      'Читай статьи и заметки путешественников. Полезные советы, маршруты и лайфхаки.'
+    const TOO_LONG_DESC = 'Описание длиннее ста семидесяти символов. '.repeat(5)
+    const codes = (issues: any[]) => issues.map((issue) => issue.code)
+
+    it('keeps the length rule on indexable pages', () => {
+      expect(codes(validateDescription(ARTICLES_DESC, 1))).toEqual(['description.length'])
+      expect(codes(validateDescription(ARTICLES_DESC, 1, { noindex: false }))).toEqual([
+        'description.length',
+      ])
+      expect(codes(validateDescription(TOO_LONG_DESC, 1, { noindex: false }))).toEqual([
+        'description.length',
+      ])
+    })
+
+    it('skips the length rule on noindex pages, below and above the range', () => {
+      expect(validateDescription(ARTICLES_DESC, 1, { noindex: true })).toEqual([])
+      expect(validateDescription(TOO_LONG_DESC, 1, { noindex: true })).toEqual([])
+    })
+
+    it('still reports template breakage on noindex pages', () => {
+      expect(codes(validateDescription('', 1, { noindex: true }))).toEqual(['description.missing'])
+      expect(codes(validateDescription(FALLBACK_DESC, 1, { noindex: true }))).toEqual([
+        'description.generic',
+      ])
+      expect(codes(validateDescription(ARTICLES_DESC, 2, { noindex: true }))).toEqual([
+        'description.duplicate',
+      ])
+    })
+
+    const pageIssues = (route: string, robots: string) => {
+      const url = `https://metravel.by${route}`
+      const title = 'Статьи о путешествиях, маршрутах и советах | Metravel'
+      const body = [
+        '<!DOCTYPE html><html lang="ru"><head>',
+        `<title>${title}</title>`,
+        `<meta name="description" content="${ARTICLES_DESC}"/>`,
+        `<meta name="robots" content="${robots}"/>`,
+        `<link rel="canonical" href="${url}"/>`,
+        `<meta property="og:title" content="${title}"/>`,
+        `<meta property="og:description" content="${ARTICLES_DESC}"/>`,
+        '<meta property="og:image" content="https://metravel.by/image.jpg"/>',
+        `<meta property="og:url" content="${url}"/>`,
+        '<meta property="og:type" content="website"/>',
+        '<meta name="twitter:card" content="summary_large_image"/>',
+        `<meta name="twitter:title" content="${title}"/>`,
+        `<meta name="twitter:description" content="${ARTICLES_DESC}"/>`,
+        '<meta name="twitter:image" content="https://metravel.by/image.jpg"/>',
+        '</head><body><h1>Статьи</h1></body></html>',
+      ].join('')
+      return validatePageResult({ url, finalUrl: url, status: 200, headers: {}, body }).issues
+    }
+
+    it('lets the closed /articles pass clean and flags the same text on an indexable page', () => {
+      expect(pageIssues('/articles', 'noindex, nofollow')).toEqual([])
+      expect(codes(pageIssues('/about', 'max-image-preview:large'))).toEqual([
+        'description.length',
+      ])
+    })
+
+    // Признак читается из robots самой страницы, а не из списка маршрутов:
+    // посадочная города квестов бывает и закрытой, и открытой (#1998).
+    it('follows the page robots rather than a list of routes', () => {
+      expect(pageIssues('/quests/tartu', 'noindex, follow')).toEqual([])
+      expect(codes(pageIssues('/quests/tartu', 'max-image-preview:large'))).toEqual([
+        'description.length',
       ])
     })
   })

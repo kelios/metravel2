@@ -167,6 +167,15 @@ function extractMetaContents(html, attr, value) {
   return matches.map((item) => item.match(/content="([^"]*)"/i)?.[1]?.trim() || '')
 }
 
+/**
+ * Первый `<meta name="robots">` страницы — её фактическое состояние индексации:
+ * по нему `validateRobots` сверяет ожидание маршрута, а `validateDescription`
+ * решает, мерить ли сниппет.
+ */
+function extractRobots(html) {
+  return extractMetaContents(html, 'name', 'robots')[0] || ''
+}
+
 function countMatches(html, pattern) {
   return (html.match(pattern) || []).length
 }
@@ -212,7 +221,15 @@ function validateTitle(title, pageType) {
   return issues
 }
 
-function validateDescription(desc, count) {
+/**
+ * `noindex` — страница закрыта от выдачи своим `<meta name="robots">`.
+ * Длина описания — метрика сниппета в поисковой выдаче, а закрытая страница в
+ * выдачу не попадает: `/articles` (`noindex, nofollow`, 78 символов при нижней
+ * границе 80) давал этим правилом одно и то же предупреждение на каждом деплое
+ * (#2008). `duplicate`, `missing` и `generic` ловят поломку шаблона, а не
+ * качество сниппета, поэтому проверяются на любой странице.
+ */
+function validateDescription(desc, count, { noindex = false } = {}) {
   const issues = []
   if (count !== 1) {
     issues.push({
@@ -232,7 +249,7 @@ function validateDescription(desc, count) {
       message: 'Description is generic fallback',
     })
   }
-  if (desc.length < 80 || desc.length > 170) {
+  if (!noindex && (desc.length < 80 || desc.length > 170)) {
     issues.push({
       severity: 'warning',
       code: 'description.length',
@@ -404,7 +421,7 @@ function validateRobots(html, pageType, url) {
   // CATALOG_DECIDED_INDEXABILITY_PREFIXES). Отвечает на него build-time гейт.
   if (hasCatalogDecidedIndexability(url)) return issues
 
-  const robots = extractMetaContents(html, 'name', 'robots')[0] || ''
+  const robots = extractRobots(html)
   const deliberatelyClosed = isIntentionallyNoindex(url)
   if ((pageType === 'home' || pageType === 'search' || pageType === 'map' || pageType === 'page' || pageType === 'travel' || pageType === 'article') &&
       /noindex/i.test(robots) && !deliberatelyClosed) {
@@ -580,6 +597,7 @@ function validatePageResult(result) {
   const descriptions = extractMetaContents(html, 'name', 'description')
   const desc = descriptions[0] || ''
   const canonical = extractCanonical(html)
+  const noindex = /noindex/i.test(extractRobots(html))
 
   if (result.status !== 200) {
     issues.push({
@@ -598,7 +616,7 @@ function validatePageResult(result) {
   }
 
   issues.push(...validateTitle(title, pageType))
-  issues.push(...validateDescription(desc, descriptions.length))
+  issues.push(...validateDescription(desc, descriptions.length, { noindex }))
   issues.push(...validateCanonical(canonical, html, result.finalUrl))
   issues.push(...validateSocialMeta(html, title, desc, canonical, pageType))
   issues.push(...validateRobots(html, pageType, result.finalUrl))
@@ -763,6 +781,7 @@ async function main() {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     CLI_SPEC,
+    FALLBACK_DESC,
     USAGE,
     parseArgs,
     detectPageType,
