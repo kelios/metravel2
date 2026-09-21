@@ -498,10 +498,12 @@ export default function QuestsScreen() {
     }, [dataLoaded, selectedCityId, questsAll, searchTerm]);
 
     const mapCenter = useMemo(() => {
+        // Вся страна, как и виртуальные срезы, центрируется по своим квестам, а не по игроку.
         const virtualFilterCenter = selectedCityId === KIDS_FILTER_ID
             || selectedCityId === BIKE_FILTER_ID
             || selectedCityId === REVIEWED_FILTER_ID
             || personalSlices.isPersonalSliceId(selectedCityId)
+            || Boolean(selectedCountry)
             ? getAverageQuestMapPointCenter(mapPoints)
             : null;
         const selectedCity = virtualFilterCenter
@@ -514,7 +516,7 @@ export default function QuestsScreen() {
             userLoc,
             selectedCity,
         });
-    }, [CITIES, mapPoints, searchTerm, selectedCityId, userLoc, activeMapAreaCenter, personalSlices]);
+    }, [CITIES, mapPoints, searchTerm, selectedCityId, selectedCountry, userLoc, activeMapAreaCenter, personalSlices]);
 
     const handleMapUserLocationChange = useCallback((loc: { latitude: number; longitude: number } | null) => {
         if (!loc) return;

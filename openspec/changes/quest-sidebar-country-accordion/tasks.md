@@ -26,11 +26,11 @@
 
 - [x] 5.1 `npx tsc --noEmit`, `npx eslint` по изменённым файлам, `npx jest` по новым и затронутым сьютам каталога квестов, `npm run test:i18n`
 - [x] 5.2 Стражи затронутой зоны: `guard:touch-targets`, `guard:themed-colors`, `guard:text-row-sizing`, `guard:file-complexity:changed`, `guard:type-debt`
-- [ ] 5.3 Обязательный review-and-fix по полному diff (`review-auditor`), затем `code-review-gate` перед `testing`
+- [x] 5.3 Обязательный review-and-fix по полному diff (`review-auditor`), затем `code-review-gate` перед `testing`
 - [x] 5.4 `openspec validate quest-sidebar-country-accordion --strict`
 
 ## 6. Testing и выкат (пайплайн задачи — постоянное правило владельца от 20.09.2026, `CLAUDE.md`)
 
-- [ ] 6.1 Карточка на MCP-борде ведётся от `in_progress` до `done`; после pass гейта — коммит явными путями задачи и push в `main`
+- [x] 6.1 Карточка на MCP-борде ведётся от `in_progress` до `done`; после pass гейта — коммит явными путями задачи и push в `main`
 - [ ] 6.2 Выкат web на прод через `frontend-deployer` без параллельного деплоя
 - [ ] 6.3 Приёмка на `https://metravel.by/quests` по матрице `design.md`: desktop 1280 px и mobile 375 px, RU и EN — раскрытие по имени/счётчику/шеврону без смены адреса, `aria-expanded`, пункт страны и сетка страны, заголовок и сброс, маркер, шаг строк, drawer, восстановление выбора после перезагрузки, регрессия города/«Рядом»/личных срезов/поиска/карты; скриншоты и консоль без ошибок

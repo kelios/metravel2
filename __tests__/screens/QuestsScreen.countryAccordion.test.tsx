@@ -1,7 +1,7 @@
 // Каталог квестов с выбором всей страны на месте (`openspec/changes/quest-sidebar-country-accordion`):
 // страна не уводит на лендинг, «Все квесты страны» фильтрует сетку, выбор сохраняется и
 // восстанавливается, страны свёрнуты при входе, а в мобильном drawer выбор его закрывает.
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import type { ComponentProps } from 'react';
@@ -12,6 +12,7 @@ import type { QuestMeta } from '@/utils/questAdapters';
 
 let mockQuests: QuestMeta[] = [];
 let mockMobile = false;
+let mockPanelProps: ComponentProps<typeof QuestsContentPanel> | null = null;
 
 jest.mock('expo-router', () => ({ useIsFocused: () => true }));
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
@@ -29,6 +30,7 @@ jest.mock('@/hooks/useResponsive', () => ({
 }));
 jest.mock('@/screens/tabs/QuestsContentPanel', () => (props: ComponentProps<typeof QuestsContentPanel>) => {
   const { Pressable, Text } = require('react-native') as typeof import('react-native');
+  mockPanelProps = props;
   return (
     <>
       <Pressable testID="open-filters" onPress={props.onOpenFilterDrawer} />
@@ -38,8 +40,8 @@ jest.mock('@/screens/tabs/QuestsContentPanel', () => (props: ComponentProps<type
   );
 });
 
-const quest = (id: string, cityId: string, cityName: string, countryCode = 'BY'): QuestMeta => ({
-  id, cityId, cityName, countryCode,
+const quest = (id: string, cityId: string, cityName: string, countryCode = 'BY', lat?: number, lng?: number): QuestMeta => ({
+  id, cityId, cityName, countryCode, lat, lng,
   title: id,
   points: 3,
   durationMin: 60,
@@ -47,9 +49,9 @@ const quest = (id: string, cityId: string, cityName: string, countryCode = 'BY')
 });
 
 const CATALOG = [
-  quest('minsk-center', '4', 'Минск'),
-  quest('brest-fortress', '5', 'Брест'),
-  quest('krakow-old-town', '9', 'Краков', 'PL'),
+  quest('minsk-center', '4', 'Минск', 'BY', 53.9, 27.56),
+  quest('brest-fortress', '5', 'Брест', 'BY', 52.1, 23.7),
+  quest('krakow-old-town', '9', 'Краков', 'PL', 50.06, 19.94),
 ];
 
 describe('страна в каталоге квестов', () => {
@@ -100,6 +102,19 @@ describe('страна в каталоге квестов', () => {
     await waitFor(async () => expect(await AsyncStorage.getItem(STORAGE_SELECTED_CITY)).toBe(ALL_QUESTS_ID));
     expect(getByTestId('panel-quests').props.children).toBe('brest-fortress,krakow-old-town,minsk-center');
     expect(getByTestId('panel-title').props.children).toBe('');
+  });
+
+  it('карта при выбранной стране центрируется по её квестам, а не по игроку', async () => {
+    const { getByTestId } = render(<QuestsScreen />);
+    fireEvent.press(getByTestId('quests-country-toggle-BY'));
+    fireEvent.press(getByTestId('quests-country-all-BY'));
+    await waitFor(() => expect(getByTestId('panel-title').props.children).toBe('Беларусь'));
+
+    // Игрок далеко от страны: центр по нему увёл бы карту от квестов страны.
+    act(() => mockPanelProps?.onMapUserLocationChange?.({ latitude: 41.72, longitude: 44.79 }));
+
+    await waitFor(() => expect(mockPanelProps?.mapCenter?.latitude).toBeCloseTo(53, 1));
+    expect(mockPanelProps?.mapCenter?.longitude).toBeCloseTo(25.63, 1);
   });
 
   it('в мобильном drawer раскрытие страны его не закрывает, а выбор страны закрывает', async () => {

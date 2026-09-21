@@ -81,8 +81,9 @@ react-native-web выводит атрибутом; `accessibilityState.expanded
 `buildQuestCountryLandingGroups` в каталоге удаляются.
 
 Пункт «Все квесты страны» рендерится первым в раскрытой группе при двух городах и больше, в той же
-визуальной форме, что строка города (иконка `globe` вместо `map-pin`, счётчик справа), со
-`accessibilityState.selected`/`aria-selected`. Подпись для скринридера — существующий ключ
+визуальной форме, что строка города (общий `SidebarFilterRow`, иконка `globe`, счётчик справа), с
+`accessibilityState.selected` для native и `aria-pressed` для web: строка — toggle-кнопка, а
+`aria-selected` на роли `button` не допускается. Подпись для скринридера — существующий ключ
 `screens.tabs.QuestsSidebar.countryLandingA11y` («Все квесты страны {{value1}} — {{value2}}»): он уже
 переведён на пять языков и по смыслу описывает именно этот пункт.
 
