@@ -25,12 +25,13 @@ jest.mock('@/screens/tabs/QuestCard', () => {
     const React = require('react');
     const { Text } = require('react-native');
 
-    return function MockQuestCard({ cityId, quest, index, nearby }: { cityId: string; quest: { id: string; title: string }; index?: number; nearby?: boolean }) {
+    return function MockQuestCard({ cityId, quest, index, nearby, cardWidth }: { cityId: string; quest: { id: string; title: string }; index?: number; nearby?: boolean; cardWidth?: number }) {
         return React.createElement(Text, {
             testID: `quest-card-${quest.id}`,
             accessibilityLabel: cityId,
             accessibilityHint: String(index),
             accessibilityState: { selected: Boolean(nearby) },
+            style: { width: cardWidth },
         }, quest.title);
     };
 });
@@ -1368,5 +1369,22 @@ describe('QuestsContentPanel', () => {
 
         fireEvent.press(getByTestId('quests-show-nearby'));
         expect(onShowNearby).toHaveBeenCalledTimes(1);
+    });
+
+    // #2005: колонку web-сетки задаёт CSS auto-fill по контейнеру, поэтому карточка
+    // берёт трек измеренной сетки, а не оценку модели от вьюпорта. Native
+    // раскладывается по модели и сохраняет `questCardWidth`.
+    it.each([
+        ['web', 606, 606],
+        ['web', 862, 415],
+        ['android', 606, 320],
+    ])('на %s сетка %i px даёт карточке %i px', (os, gridWidth, cardWidth) => {
+        (Platform as { OS: string }).OS = os;
+        const { getByTestId } = render(<QuestsContentPanel {...makeBaseProps()} />);
+        expect(getByTestId('quest-card-quest-0')).toHaveStyle({ width: 320 });
+
+        fireEvent(getByTestId('quests-grid'), 'layout', { nativeEvent: { layout: { height: 400, width: gridWidth } } });
+
+        expect(getByTestId('quest-card-quest-0')).toHaveStyle({ width: cardWidth });
     });
 });

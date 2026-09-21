@@ -910,7 +910,9 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             ...Platform.select({
                 web: {
                     boxShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
-                    transition: 'all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    // #2005: только свойства ховера. С `all` ширина из замера сетки
+                    // (318 → 606 на 1024) растягивалась анимацией на каждой загрузке.
+                    transition: 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                     cursor: 'pointer',
                     willChange: 'transform, box-shadow',
                 } as any,

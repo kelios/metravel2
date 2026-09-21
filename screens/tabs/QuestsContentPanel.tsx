@@ -18,6 +18,7 @@ import NavigationIcon from '@/components/layout/NavigationIcon';
 import EmptyState from '@/components/ui/EmptyState';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import type { MapMovePayload } from '@/components/MapPage/Map/types';
+import { useQuestGridCardWidth } from '@/hooks/useQuestCatalogResponsiveModel';
 
 import QuestCard from './QuestCard';
 import { COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID } from './QuestsScreen.helpers';
@@ -179,6 +180,8 @@ function QuestsContentPanel({
     useEffect(() => {
         if (!questsGridMounted) gridContentHeightRef.current = 0;
     }, [questsGridMounted]);
+    // #2005: web-сетка кладёт карточку по треку своей измеренной ширины, native — по модели.
+    const { gridRef: questsGridRef, onGridLayout, cardWidth: gridCardWidth } = useQuestGridCardWidth(questCardWidth, questsGridMounted);
 
     // Прокрутка — не единственный путь раскрытия: широкий экран, увеличенный масштаб
     // или узкий срез укладывают окно целиком во вьюпорт, скролл-события тогда нет
@@ -213,8 +216,9 @@ function QuestsContentPanel({
 
     const handleQuestsGridLayout = useCallback((event: LayoutChangeEvent) => {
         gridContentHeightRef.current = event.nativeEvent.layout.height;
+        onGridLayout(event);
         maybeRevealWhenGridFits();
-    }, [maybeRevealWhenGridFits]);
+    }, [maybeRevealWhenGridFits, onGridLayout]);
 
     const router = useRouter();
     // #1826: заголовок, счётчик и пустые состояния обязаны жить по тому же
@@ -630,7 +634,7 @@ function QuestsContentPanel({
                         )}
 
                         {dataLoaded && questsAll.length > 0 && (
-                            <View style={styles.questsGrid} onLayout={handleQuestsGridLayout} testID="quests-grid">
+                            <View ref={questsGridRef} style={styles.questsGrid} onLayout={handleQuestsGridLayout} testID="quests-grid">
                                 {visibleQuests.map((quest, index) => (
                                     <QuestCard
                                         key={quest.id}
@@ -638,7 +642,7 @@ function QuestsContentPanel({
                                         cityId={getQuestCityId(quest)}
                                         quest={quest}
                                         nearby={selectedCityId === nearbyId && !!userLoc && !isMapAreaActive}
-                                        cardWidth={questCardWidth}
+                                        cardWidth={gridCardWidth}
                                         index={index}
                                     />
                                 ))}

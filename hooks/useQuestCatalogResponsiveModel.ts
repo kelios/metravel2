@@ -1,9 +1,11 @@
-import { useMemo } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Platform, type LayoutChangeEvent, type View } from 'react-native'
 import { useBreakpoints } from './useResponsive'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { QUESTS_GRID_MIN_COLUMN_WIDTH, QUESTS_LANDING_PADDING } from '@/constants/questLayout'
+import { QUESTS_GRID_MIN_COLUMN_WIDTH, QUESTS_GRID_WEB_GAP, QUESTS_LANDING_PADDING } from '@/constants/questLayout'
 
 const { spacing } = DESIGN_TOKENS
+const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 export type QuestCatalogResponsiveModel = {
   isMobile: boolean
@@ -29,6 +31,15 @@ export type QuestCatalogResponsiveOptions = {
   columnGap?: number
 }
 
+/**
+ * Трек CSS-сетки `repeat(auto-fill, minmax(min(100%, 380px), 1fr))`: колонок
+ * столько, сколько минимумов влезает с зазорами, остаток делится поровну.
+ */
+export function getQuestGridTrack(containerWidth: number, columnGap = QUESTS_GRID_WEB_GAP) {
+  const columns = Math.max(1, Math.floor((containerWidth + columnGap) / (QUESTS_GRID_MIN_COLUMN_WIDTH + columnGap)))
+  return { columns, cardWidth: (containerWidth - columnGap * (columns - 1)) / columns }
+}
+
 export function useQuestCatalogResponsiveModel(
   questCount: number,
   { hasSidebar = true, contentMaxWidth, columnGap = spacing.lg }: QuestCatalogResponsiveOptions = {},
@@ -51,18 +62,17 @@ export function useQuestCatalogResponsiveModel(
       ? Math.min(available, contentMaxWidth)
       : available
 
-    let cardColumns = 1
-    if (!hasSidebar && !isMobile) {
-      cardColumns = Math.max(1, Math.floor((contentWidth + columnGap) / (QUESTS_GRID_MIN_COLUMN_WIDTH + columnGap)))
-    } else if (hasSidebar && !isMobile && contentWidth >= 640 && questCount >= 2) {
+    const landingTrack = hasSidebar ? null : getQuestGridTrack(contentWidth, columnGap)
+    let cardColumns = landingTrack?.columns ?? 1
+    if (hasSidebar && !isMobile && contentWidth >= 640 && questCount >= 2) {
       cardColumns = 2
     }
 
     let cardWidth: number
-    if (!hasSidebar) {
+    if (landingTrack) {
       // CSS получает это же число колонок: scrollbar не меняет раскладку
       // независимо от модели, а maxWidth карточки учитывает его ширину.
-      cardWidth = (contentWidth - columnGap * (cardColumns - 1)) / cardColumns
+      cardWidth = landingTrack.cardWidth
     } else if (isMobile) {
       cardWidth = Math.max(280, width - spacing.lg * 2)
     } else if (cardColumns >= 2) {
@@ -98,4 +108,44 @@ export function useQuestCatalogResponsiveModel(
       contentTitleSize,
     }
   }, [width, isMobile, isTablet, isLargeTablet, questCount, hasSidebar, contentMaxWidth, columnGap])
+}
+
+/**
+ * #2005: на web карточка каталога берёт ширину трека ИЗМЕРЕННОЙ сетки. Модель
+ * оценивает контейнер от вьюпорта и не знает отступов панели: на 1024 она
+ * считала 660 при реальных 606 и клала карточку 318 в колонку 606. На native
+ * сетка раскладывается по модели, там отдаётся `fallbackWidth`.
+ */
+export function useQuestGridCardWidth(fallbackWidth: number, enabled: boolean) {
+  const isWeb = Platform.OS === 'web'
+  const gridRef = useRef<View>(null)
+  const gridWidthRef = useRef(0)
+  const [gridWidth, setGridWidth] = useState(0)
+
+  // onLayout сетки приходит на каждое раскрытие окна по высоте. Та же ширина
+  // отсекается до setState: updater `prev === next ? prev : next` всё равно
+  // стоил бы React повторного прохода по панели. Ноль приходит от скрытой сетки
+  // (display: none у неактивной вкладки, пока открыт квест) и не заменяет
+  // последний замер: иначе возврат в каталог рисовал бы кадр с шириной модели.
+  const commitGridWidth = useCallback((width: number) => {
+    const next = Math.round(width)
+    if (next <= 0 || next === gridWidthRef.current) return
+    gridWidthRef.current = next
+    setGridWidth(next)
+  }, [])
+
+  // Первый замер — до отрисовки: onLayout в RNW приходит из ResizeObserver
+  // уже после кадра с шириной модели, это был бы видимый скачок и CLS.
+  useWebLayoutEffect(() => {
+    if (!isWeb || !enabled) return
+    const node: unknown = gridRef.current
+    if (node instanceof HTMLElement) commitGridWidth(node.getBoundingClientRect().width)
+  }, [commitGridWidth, enabled, isWeb])
+
+  const onGridLayout = useCallback((event: LayoutChangeEvent) => {
+    if (isWeb) commitGridWidth(event.nativeEvent.layout.width)
+  }, [commitGridWidth, isWeb])
+
+  const cardWidth = isWeb && enabled && gridWidth > 0 ? getQuestGridTrack(gridWidth).cardWidth : fallbackWidth
+  return { gridRef, onGridLayout, cardWidth }
 }
