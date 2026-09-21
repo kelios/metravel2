@@ -296,4 +296,17 @@ describe('guard-web-deferred-loading', () => {
       violationCount: 1,
     })
   })
+
+  it('is wired into lint, lint:ci and check:fast', () => {
+    // Гейт и есть регрессионный контроль правила: выпади он из общей цепочки,
+    // реестр в RULES.md снова стал бы прозой, которую никто не сверяет.
+    const readRepoFile = (relativePath: string) => fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8')
+    const { scripts } = JSON.parse(readRepoFile('package.json'))
+    expect(scripts['guard:web-deferred-loading']).toBe('node scripts/guard-web-deferred-loading.js')
+    expect(scripts.lint).toContain('npm run guard:web-deferred-loading')
+    expect(scripts['lint:ci']).toContain('npm run guard:web-deferred-loading')
+    expect(readRepoFile('scripts/run-fast-scope-checks.js')).toContain(
+      "runCommand('npm', ['run', 'guard:web-deferred-loading'])",
+    )
+  })
 })
