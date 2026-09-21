@@ -59,7 +59,7 @@ const bundleFor = (id: string) => ({
 })
 
 type IdleWindow = Window & {
-  requestIdleCallback?: (callback: () => void) => number
+  requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number
   cancelIdleCallback?: (handle: number) => void
 }
 
@@ -81,6 +81,7 @@ describe('useQuestCityWalk', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     delete (window as IdleWindow).requestIdleCallback
+    delete (window as IdleWindow).cancelIdleCallback
     jest.useFakeTimers()
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -111,6 +112,32 @@ describe('useQuestCityWalk', () => {
       'minsk-b',
       'minsk-c',
     ])
+  })
+
+  it('ждёт простоя не дольше 1000 мс «Timeout policy» (#2020)', () => {
+    const requestIdleCallback = jest.fn((_callback: () => void, _options?: { timeout: number }) => 1)
+    ;(window as IdleWindow).requestIdleCallback = requestIdleCallback
+    ;(window as IdleWindow).cancelIdleCallback = jest.fn()
+
+    renderHook(() => useQuestCityWalk([quest('minsk-a')] as never), { wrapper })
+
+    expect(requestIdleCallback).toHaveBeenCalledTimes(1)
+    expect(requestIdleCallback.mock.calls[0][1]?.timeout).toBeLessThanOrEqual(1000)
+    expect(mockedFetch).not.toHaveBeenCalled()
+  })
+
+  it('без requestIdleCallback запрашивает бандлы не позже чем через 1000 мс', async () => {
+    mockedFetch.mockImplementation(async (questId: string) => bundleFor(questId) as never)
+
+    renderHook(() => useQuestCityWalk([quest('minsk-a')] as never), { wrapper })
+
+    expect(mockedFetch).not.toHaveBeenCalled()
+
+    await act(async () => {
+      jest.advanceTimersByTime(1000)
+    })
+
+    expect(mockedFetch).toHaveBeenCalledWith('minsk-a', expect.anything())
   })
 
   it('не пишет чужие квесты в офлайн-каталог: заметки читают бандл без коммита', async () => {

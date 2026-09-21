@@ -101,7 +101,7 @@ export const TravelPointsBlock: React.FC<{
       accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelPointsBlock.koordinaty_mest_149babcb')}
       accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
       {...(Platform.OS === 'web'
-        ? { 'data-testid': 'travel-details-points', 'data-section-key': 'points' }
+        ? { dataSet: { sectionKey: 'points' } }
         : {})}
     >
       <View style={styles.pointsHeaderRow}>

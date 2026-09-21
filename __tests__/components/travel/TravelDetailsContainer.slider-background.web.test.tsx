@@ -520,7 +520,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
       await Promise.resolve()
     })
 
-    const galleryAnchors = (tree as any).root.findAllByProps({ 'data-section-key': 'gallery' })
+    const galleryAnchors = (tree as any).root.findAll((node) => node.props.dataSet?.sectionKey === 'gallery')
     expect(galleryAnchors.length).toBeGreaterThan(0)
   })
 

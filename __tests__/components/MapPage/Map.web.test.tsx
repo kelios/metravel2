@@ -420,6 +420,23 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     await act(async () => {})
   })
 
+  it('loads Leaflet on idle within the 1000 ms «Timeout policy» cap (#2020)', async () => {
+    const leafletLoaderModule = require('@/hooks/useLeafletLoader')
+    const loaderSpy = jest.spyOn(leafletLoaderModule, 'useLeafletLoader')
+
+    try {
+      renderWithProviders(<MapPageComponent {...defaultProps} />)
+      await act(async () => {})
+
+      const [options] = loaderSpy.mock.calls[0] ?? []
+      expect(options).toEqual(expect.objectContaining({ useIdleCallback: true }))
+      // No override means the loader default, which its own test caps at 1000 ms.
+      expect((options as { idleTimeout?: number }).idleTimeout ?? 0).toBeLessThanOrEqual(1000)
+    } finally {
+      loaderSpy.mockRestore()
+    }
+  })
+
   it('renders map container on web and hides loading overlay', async () => {
     const { getByTestId, queryByTestId } = renderWithProviders(
       <MapPageComponent {...defaultProps} />

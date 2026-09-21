@@ -30,8 +30,11 @@ import type { QuestMeta } from '@/utils/questAdapters'
  * нельзя. Открытый квест пишет себя отдельным эффектом `writeCachedQuestBundle`
  * в `useQuestBundle` (`hooks/useQuestsApi.ts`), который есть только у экрана.
  */
-/** Запрос бандлов ждёт свободного кадра: секция лежит ниже первого экрана. */
-const QUEST_CITY_WALK_IDLE_TIMEOUT = 1200
+/**
+ * Запрос бандлов ждёт свободного кадра: секция лежит ниже первого экрана.
+ * Дедлайн простоя — не дольше 1000 мс по «Timeout policy» (#2020).
+ */
+const QUEST_CITY_WALK_IDLE_TIMEOUT = 1000
 
 type IdleWindow = Window & {
   requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number

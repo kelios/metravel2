@@ -122,44 +122,6 @@ describe('useTravelDetailsNavigation', () => {
     expect(scrollTo).toHaveBeenCalledWith('comments')
   })
 
-  it('applies data-section-key for anchors that mount lazily (regression)', () => {
-    const scrollTo = jest.fn()
-    const scrollRef = {
-      current: {
-        scrollTo: jest.fn(),
-        getScrollableNode: () => ({ getBoundingClientRect: jest.fn() }),
-      },
-    }
-
-    const anchors: any = { gallery: { current: null }, map: { current: null } }
-
-    useScrollNavigation.mockReturnValue({
-      anchors,
-      scrollTo,
-      scrollRef,
-    })
-
-    const setActiveSection = jest.fn()
-    useActiveSection.mockReturnValue({
-      activeSection: 'gallery',
-      setActiveSection,
-    })
-
-    const startTransition = (cb: () => void) => cb()
-
-    renderHook(() => useTravelDetailsNavigation({ headerOffset: 72, slug: 'minsk', startTransition }))
-
-    // Simulate lazy mount: ref.current becomes available after initial effect.
-    const el = document.createElement('div')
-    anchors.map.current = el
-
-    act(() => {
-      jest.advanceTimersByTime(600)
-    })
-
-    expect(el.getAttribute('data-section-key')).toBe('map')
-  })
-
   it('uses scrollRef node as scrollRoot when it can scroll by size (regression)', () => {
     const scrollNode: any = {
       scrollHeight: 1000,

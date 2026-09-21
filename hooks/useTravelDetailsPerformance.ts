@@ -7,6 +7,8 @@ import { devWarn } from '@/utils/logger'
 import { rIC } from '@/utils/rIC'
 
 const NON_TRAVEL_PERFORMANCE_INIT_DELAY_MS = 1000
+// The safety net below hides the hero skeleton, so «Timeout policy» caps it at 1000 ms (#2020).
+const LCP_SAFETY_NET_MS = 1000
 const preloadTravelHeroSliderRuntime = () => Promise.resolve(import('@/components/travel/Slider.web'))
 
 type IdleCapableWindow = Window & {
@@ -150,7 +152,7 @@ export function useTravelDetailsPerformance({
 
     const timeoutId = setTimeout(() => {
       setLcpLoaded(true)
-    }, 1200)
+    }, LCP_SAFETY_NET_MS)
 
     return () => clearTimeout(timeoutId)
   }, [hasHeroMedia, isLoading, lcpLoaded, travelId])

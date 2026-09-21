@@ -110,7 +110,7 @@ export const TravelDetailsContentSection: React.FC<{
           testID="travel-details-description"
           collapsable={false}
           accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.opisanie_marshruta_98e0c78f')}
-          {...(Platform.OS === 'web' ? { 'data-section-key': 'description' } : {})}
+          {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'description' } } : {})}
         >
           <CollapsibleSection
             title={travel.name}
@@ -150,7 +150,7 @@ export const TravelDetailsContentSection: React.FC<{
           style={[styles.sectionContainer, styles.contentStable]}
           collapsable={false}
           accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.video_marshruta_f83c004c')}
-          {...(Platform.OS === 'web' ? { 'data-section-key': 'video' } : {})}
+          {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'video' } } : {})}
         >
           <Text
             style={styles.sectionHeaderText}
@@ -216,7 +216,7 @@ export const TravelDetailsContentSection: React.FC<{
               ref={anchors.recommendation}
               collapsable={false}
               accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.rekomendatsii_a20e5eec')}
-              {...(Platform.OS === 'web' ? { 'data-section-key': 'recommendation' } : {})}
+              {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'recommendation' } } : {})}
             >
               <CollapsibleSection
                 title={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.rekomendatsii_a20e5eec')}
@@ -240,7 +240,7 @@ export const TravelDetailsContentSection: React.FC<{
               ref={anchors.plus}
               collapsable={false}
               accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.plyusy_2eafad7c')}
-              {...(Platform.OS === 'web' ? { 'data-section-key': 'plus' } : {})}
+              {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'plus' } } : {})}
             >
               <CollapsibleSection
                 title={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.plyusy_2eafad7c')}
@@ -264,7 +264,7 @@ export const TravelDetailsContentSection: React.FC<{
               ref={anchors.minus}
               collapsable={false}
               accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.minusy_626a3d5e')}
-              {...(Platform.OS === 'web' ? { 'data-section-key': 'minus' } : {})}
+              {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'minus' } } : {})}
             >
               <CollapsibleSection
                 title={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.minusy_626a3d5e')}

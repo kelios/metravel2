@@ -48,10 +48,12 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
 
     // При первой загрузке проверяем данные аутентификации.
     // On web, defer to reduce TBT during initial render (AsyncStorage + API call).
+    // The header's sign-in state waits for this check, so «Timeout policy» caps
+    // the idle deadline at 1000 ms (#2020).
     useEffect(() => {
         if (authReady) return;
         if (Platform.OS === 'web' && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-            const id = (window as any).requestIdleCallback(() => checkAuthentication(), { timeout: 1500 });
+            const id = (window as any).requestIdleCallback(() => checkAuthentication(), { timeout: 1000 });
             return () => { try { (window as any).cancelIdleCallback(id); } catch { /* noop */ } };
         }
         checkAuthentication();

@@ -114,9 +114,7 @@ export const TravelRouteMapBlock: React.FC<{
       accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
       {...(Platform.OS === 'web'
         ? {
-            'data-testid': 'travel-details-map',
-            'data-section-key': 'map',
-            'data-map-for-pdf': '1',
+            dataSet: { mapForPdf: '1' },
           }
         : {})}
     >

@@ -91,7 +91,7 @@ export const TravelDetailsSidebarSection: React.FC<{
         collapsable={false}
         accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.ryadom_mozhno_posmotret_3f015f94')}
         accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
-        {...(Platform.OS === 'web' ? { 'data-section-key': 'near' } : {})}
+        {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'near' } } : {})}
       >
         <View style={styles.sectionHeaderRow}>
           <Feather name="map-pin" size={18} color={colors.primaryDark} />
@@ -135,7 +135,7 @@ export const TravelDetailsSidebarSection: React.FC<{
         collapsable={false}
         accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.populyarnye_marshruty_e9bc8e8c')}
         accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
-        {...(Platform.OS === 'web' ? { 'data-section-key': 'popular' } : {})}
+        {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'popular' } } : {})}
       >
         <View style={styles.sectionHeaderRow}>
           <Feather name="trending-up" size={18} color={colors.primaryDark} />

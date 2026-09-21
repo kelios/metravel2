@@ -38,7 +38,8 @@ interface UseLeafletLoaderOptions {
 
   /**
    * Timeout for idle callback (ms)
-   * If browser doesn't idle within this time, force load
+   * If browser doesn't idle within this time, force load.
+   * The map waits behind its skeleton, so «Timeout policy» caps it at 1000 ms (#2020).
    */
   idleTimeout?: number;
 
@@ -270,7 +271,7 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
   const {
     enabled = true,
     useIdleCallback = true,
-    idleTimeout = 1200,
+    idleTimeout = 1000,
     fallbackDelay = 600,
   } = options;
 

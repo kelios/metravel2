@@ -202,7 +202,7 @@ function TravelHeroSectionInner({
         ref={anchors.gallery}
         accessibilityRole="none"
         accessibilityLabel={i18nT('travel:components.travel.details.TravelDetailsHero.geroyskiy_blok_s_izobrazheniem_i_knopkoy_hoc_24d94fd3')}
-        {...(Platform.OS === 'web' ? { 'data-section-key': 'gallery' } : null)}
+        {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'gallery' } } : null)}
         style={sectionAndStable}
       >
         <View

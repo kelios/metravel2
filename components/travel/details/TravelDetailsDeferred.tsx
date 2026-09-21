@@ -206,7 +206,7 @@ export const TravelDeferredSections: React.FC<{
       <View
         ref={setRatingRef}
         collapsable={false}
-        {...(Platform.OS === 'web' ? { 'data-section-key': 'rating' } : {})}
+        {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'rating' } } : {})}
       >
         {shouldLoadRatingSection ? (
           <TravelDeferredRatingSection travel={travel} />
@@ -262,7 +262,7 @@ export const TravelDeferredSections: React.FC<{
       <View
         ref={setCommentsSectionRef}
         collapsable={false}
-        {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
+        {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'comments' } } : {})}
       >
         <TravelDetailsDeferredTransition
           testID="travel-details-comments-transition"

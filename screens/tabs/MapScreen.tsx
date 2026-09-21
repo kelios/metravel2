@@ -51,12 +51,13 @@ function preloadLeafletRuntime() {
 // Defer the Leaflet runtime prefetch off the critical hydration/LCP path.
 // The map container loads Leaflet on its own once mapReady resolves; this is
 // purely a warm-up prefetch, so yield the main thread to first paint first.
+// Its idle deadline matches the loader's: «Timeout policy» caps both at 1000 ms (#2020).
 if (CAN_PRELOAD_LEAFLET) {
   const requestIdle = (window as any).requestIdleCallback as
     | ((cb: () => void, opts?: { timeout: number }) => number)
     | undefined
   if (typeof requestIdle === 'function') {
-    requestIdle(preloadLeafletRuntime, { timeout: 1500 })
+    requestIdle(preloadLeafletRuntime, { timeout: 1000 })
   } else {
     setTimeout(preloadLeafletRuntime, 300)
   }

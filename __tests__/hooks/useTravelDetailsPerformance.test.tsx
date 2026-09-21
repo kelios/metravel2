@@ -141,6 +141,27 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.postLcpRuntimeReady).toBe(false)
   })
 
+  it('releases the first-screen gate within the 1000 ms «Timeout policy» cap when the hero onLoad is lost', () => {
+    const { result } = renderHook(() =>
+      useTravelDetailsPerformance({
+        travel: heroTravel,
+        isMobile: false,
+        isLoading: false,
+      })
+    )
+
+    // The safety net does not pre-empt the hero's own onLoad…
+    expect(result.current.lcpLoaded).toBe(false)
+
+    // …but a lost onLoad (SPA navigation onto a cached hero) holds the skeleton
+    // for at most 1000 ms (#2020).
+    act(() => {
+      jest.advanceTimersByTime(1000)
+    })
+
+    expect(result.current.lcpLoaded).toBe(true)
+  })
+
   it('unblocks the main runtime immediately when the travel has no hero gallery', () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({

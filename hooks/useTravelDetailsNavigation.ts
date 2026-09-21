@@ -335,64 +335,6 @@ export function useTravelDetailsNavigation({
     }
   }, [anchors, handleSectionOpen, slug])
 
-  // Assign data-section-key attributes for Intersection Observer wiring.
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-
-    let cancelled = false
-    let intervalId: ReturnType<typeof setInterval> | null = null
-    let timeoutId: ReturnType<typeof setTimeout> | null = null
-
-    const sectionKeys = Object.keys(anchors)
-    const applied = new Set<string>()
-
-    const applyOnce = (key: string) => {
-      if (applied.has(key)) return
-      const ref = anchors[key as keyof typeof anchors]
-      if (!ref?.current) return
-
-      try {
-        const refCurrent = ref.current as unknown as Record<string, unknown> | null
-        const domNode = (refCurrent?._nativeNode || refCurrent?._domNode || ref.current) as HTMLElement | null
-        if (!domNode || typeof domNode.setAttribute !== 'function') return
-
-        const existing = typeof domNode.getAttribute === 'function' ? domNode.getAttribute('data-section-key') : null
-        if (!existing) {
-          domNode.setAttribute('data-section-key', key)
-        }
-        applied.add(key)
-      } catch {
-        // ignore
-      }
-    }
-
-    const tick = () => {
-      if (cancelled) return
-      sectionKeys.forEach((k) => applyOnce(k))
-
-      if (applied.size >= sectionKeys.length) {
-        if (intervalId) clearInterval(intervalId)
-        intervalId = null
-      }
-    }
-
-    // First attempt immediately.
-    tick()
-
-    // Retry for a while to catch lazy-mounted sections.
-    intervalId = setInterval(tick, 500)
-    timeoutId = setTimeout(() => {
-      if (intervalId) clearInterval(intervalId)
-      intervalId = null
-    }, 4000)
-
-    return () => {
-      cancelled = true
-      if (intervalId) clearInterval(intervalId)
-      if (timeoutId) clearTimeout(timeoutId)
-    }
-  }, [anchors, headerOffset, slug])
-
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false })
     // Default active section is gallery for initial render.

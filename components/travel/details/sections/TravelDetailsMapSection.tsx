@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react'
-import { View, useWindowDimensions } from 'react-native'
+import { Platform, View, useWindowDimensions } from 'react-native'
 
 import type { Travel } from '@/types/types'
 
@@ -89,6 +89,7 @@ export const TravelDetailsMapSection: React.FC<{
 
       <View
         ref={setMapSectionRef}
+        {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'map' } } : {})}
       >
         <TravelRouteMapBlock
           downloadingRouteId={downloadingRouteId}

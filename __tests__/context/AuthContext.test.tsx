@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { resetAuthStoreForTests } from '@/stores/authStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi } from '@/api/auth';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { getSecureItem, readSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { translate as i18nT } from '@/i18n';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
@@ -111,6 +111,31 @@ describe('AuthContext', () => {
       expect(contextValue.username).toBe('');
       expect(contextValue.isSuperuser).toBe(false);
     });
+  });
+
+  it('on web waits for idle no longer than the 1000 ms «Timeout policy» cap before the auth check (#2020)', () => {
+    const originalOS = Platform.OS;
+    const requestIdleCallback = jest.fn((_callback: () => void, _options?: { timeout: number }) => 1);
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
+    Object.defineProperty(window, 'requestIdleCallback', { value: requestIdleCallback, writable: true, configurable: true });
+    Object.defineProperty(window, 'cancelIdleCallback', { value: jest.fn(), writable: true, configurable: true });
+
+    try {
+      const { unmount } = render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+
+      // The header's sign-in state waits for this check.
+      expect(requestIdleCallback).toHaveBeenCalledTimes(1);
+      expect(requestIdleCallback.mock.calls[0][1]?.timeout).toBeLessThanOrEqual(1000);
+      unmount();
+    } finally {
+      Object.defineProperty(Platform, 'OS', { value: originalOS, configurable: true });
+      delete (window as { requestIdleCallback?: unknown }).requestIdleCallback;
+      delete (window as { cancelIdleCallback?: unknown }).cancelIdleCallback;
+    }
   });
 
   it('sets authenticated state when token and storage data exist', async () => {
