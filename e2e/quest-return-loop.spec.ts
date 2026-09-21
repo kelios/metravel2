@@ -276,7 +276,16 @@ test.describe('Петля возврата после финиша квеста 
     await page.goto(`/quests/minsk/${QUEST_ID}`, { waitUntil: 'domcontentloaded' })
     await finishQuest(page)
 
+    // #2010: каталог для блока уходит, только когда его место дошло до экрана
+    // (исключение из «Web loading and hydration policy», docs/RULES.md), а финал
+    // открывается сверху. Докручиваем до блока, как это делает игрок.
     const section = page.getByTestId('quest-next-step-section')
+    const slot = page.getByTestId('quest-next-step-anchor').or(section).first()
+    // Якорь живёт до первого прохода наблюдателя, и пойманный узел может
+    // отцепиться посреди прокрутки — шаг повторяется, пока не пройдёт.
+    await expect(async () => {
+      await slot.scrollIntoViewIfNeeded({ timeout: 5_000 })
+    }).toPass({ timeout: 60_000 })
     await expect(section).toBeVisible({ timeout: 60_000 })
 
     // Коллекция города: только что закрытый квест плюс ранее пройденный —

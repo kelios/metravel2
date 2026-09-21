@@ -494,6 +494,7 @@ npx serve dist/prod -l 3000 -s
 - All sections load immediately on page load — no delays, no waiting for scroll or interaction.
   - Show skeleton placeholders while content loads — page is never blocked.
   - No fallback timers, no IntersectionObserver gating — content starts loading right away.
+  - Exception (owner decision 2026-09-21, #2010): the data request of the LAST section on a page may wait until that section scrolls into view, provided nothing below it can shift and it renders nothing while its data is missing. Gate it only through `useProgressiveLoad` with `disableFallbackOnWeb: true` (visibility only, no timer) and keep the component itself mounted, so its other effects run on page load. The only instance is `QuestNextStepSection` at the end of the quest finale (the compact quest catalog: three requests, ~26 KB, fetched only for an already completed quest). Mid-page sections do not qualify and keep loading right away — e.g. the quest sections of the profile «Уровень» tab.
 - On travel pages, the web hero slider/background must appear immediately with the hero once runtime is ready.
   - Do not gate the slider/background on explicit click, pointer interaction, keyboard interaction, or scroll.
   - Keep the first rendered web hero visually complete from the start: photo, letterbox fill, and slider chrome must arrive together.

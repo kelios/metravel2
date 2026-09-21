@@ -21,6 +21,8 @@ import { useQuestReturnReminder } from './useQuestReturnReminder'
  * нет намеренно: он вернул бы этот запрос каждому, кто открыл пройденный квест
  * и не долистал финал. Native грузит сразу — так `useProgressiveLoad` устроен
  * вне web, а напоминанию там нужен `remainingCount` уже в момент финиша.
+ * Это единственное исключение из «Web loading and hydration policy»
+ * (`docs/RULES.md`): блок последний на странице, под ним нечего сдвигать.
  */
 const NEXT_STEP_LOAD_CONFIG: ProgressiveLoadConfig = {
   priority: 'low',
