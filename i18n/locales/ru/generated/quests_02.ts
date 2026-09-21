@@ -35,6 +35,7 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.ne_udalos_opredelit_mestopolozhenie_proverte_34451827": "Не удалось определить местоположение. Проверьте разрешения браузера и попробуйте ещё раз.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_ryadom_s_vami_i_vashe_tekusche_26c07bc1": "Офлайн-квесты рядом с вами и ваше текущее местоположение на карте.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_v_gorode_value1_progulki_po_to_c1bef6e1": "Офлайн-квесты в городе {{value1}}. Прогулки по точкам, задания и маршруты.",
+  "screens.tabs.QuestsScreen.countryDescription": "Офлайн-квесты в стране {{value1}}. Прогулки по городам, задания и маршруты.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_v_vybrannoy_oblasti_karty_pere_8dffb3a7": "Офлайн-квесты в выбранной области карты. Перемещайте карту и уточняйте поиск по текущему району.",
   "screens.tabs.QuestsScreen.razreshite_dostup_k_geolokatsii_chtoby_pokaz_46647348": "Разрешите доступ к геолокации, чтобы показать квесты рядом с вами.",
   "screens.tabs.QuestsScreen.ryadom_a27f6fda": "Рядом",

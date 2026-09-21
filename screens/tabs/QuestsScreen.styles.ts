@@ -28,8 +28,6 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
     const headerPadding = isMobileW ? spacing.md : spacing.lg;
     const headerTopPadding = isMobileW ? spacing.lg : spacing.xl;
     const sectionPaddingX = isMobileW ? spacing.sm : spacing.md;
-    const sectionPaddingY = isMobileW ? spacing.xxs : spacing.xs;
-    const countryGapTop = isMobileW ? spacing.xs : spacing.sm;
     const cityItemVertical = isMobileW ? spacing.xxs : spacing.xs;
     const cityIconSize = isMobileW ? 28 : 32;
     const badgeFontSize = isSmallPhone ? 12 : 11;
@@ -326,20 +324,14 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             }),
         },
 
-        /* ---- City List (Premium, spacious) ---- */
+        /* ---- City List: шаг свёрнутой страны не больше шага строк фильтров (#2011) ---- */
         cityListSection: {
             paddingHorizontal: sectionPaddingX,
-            paddingVertical: sectionPaddingY,
         },
-        cityListLabel: {
-            color: colors.textMuted,
-            fontSize: 9,
-            fontWeight: '700',
-            textTransform: 'uppercase',
-            letterSpacing: 1.0,
-            marginBottom: spacing.xs,
-            paddingHorizontal: spacing.xs,
-            opacity: 0.8,
+        // Отделяет список стран от строк фильтров над ним: у строк стран своих
+        // вертикальных отступов больше нет.
+        countryList: {
+            marginTop: spacing.sm,
         },
         countryLabel: {
             color: colors.text,
@@ -347,12 +339,23 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             fontWeight: '700',
             letterSpacing: -0.2,
         },
+        // Свёрнутая страна с выбором внутри: иначе после сворачивания не видно, откуда фильтр.
+        // Оранжевый ТЕКСТ на светлой поверхности — `brandText`, а не `brandDark` (≈3.2:1 на
+        // белом): контракт `docs/DESIGN_SYSTEM.md`, «Orange accents».
+        countryLabelActive: {
+            color: colors.brandText,
+        },
+        countryActiveDot: {
+            width: spacing.xs,
+            height: spacing.xs,
+            borderRadius: radii.full,
+            backgroundColor: colors.brand,
+        },
         countryHeader: {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             minHeight: touchTarget.minHeight,
-            marginTop: countryGapTop,
             marginBottom: spacing.xxs,
             paddingHorizontal: spacing.xs,
             paddingVertical: spacing.xxs,
@@ -365,61 +368,23 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                 } as any,
             }),
         },
-        /**
-         * Имя страны — отдельная зона нажатия (#1989): она ведёт на лендинг
-         * страны, а счётчик с шевроном рядом остаётся тумблером сворачивания.
-         * `flexShrink` нужен, чтобы длинное имя ужималось, а не выдавливало
-         * счётчик за границу сайдбара.
-         */
+        // Вся строка страны — одна зона нажатия (#2011); `flexShrink` ужимает длинное имя,
+        // чтобы оно не выдавливало счётчик за границу сайдбара.
         countryLabelPress: {
             flexGrow: 1,
             flexShrink: 1,
-            minWidth: touchTarget.minWidth,
-            minHeight: touchTarget.minHeight,
             justifyContent: 'center',
         },
         countryHeaderActions: {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            minWidth: touchTarget.minWidth,
-            minHeight: touchTarget.minHeight,
             gap: spacing.xs,
         },
         countryCount: {
             color: colors.textMuted,
             fontSize: typography.sizes.xs,
             fontWeight: '700',
-        },
-        countryToolsSection: {
-            paddingHorizontal: sectionPaddingX,
-            paddingTop: spacing.xs,
-            paddingBottom: spacing.xs,
-        },
-        collapseAllBtn: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            alignSelf: 'flex-start',
-            gap: spacing.xxs,
-            backgroundColor: colors.backgroundSecondary,
-            paddingHorizontal: spacing.sm,
-            paddingVertical: spacing.xs,
-            borderRadius: CONTROL_RADIUS,
-            borderWidth: 1,
-            borderColor: colors.borderLight,
-            minHeight: isMobileW ? DESIGN_TOKENS.touchTarget.minHeight : undefined,
-            ...Platform.select({
-                web: {
-                    cursor: 'pointer',
-                    transition: 'opacity 0.2s ease',
-                } as any,
-            }),
-        },
-        collapseAllBtnText: {
-            color: colors.textMuted,
-            fontSize: typography.sizes.xs,
-            fontWeight: '700',
-            letterSpacing: 0.2,
         },
         cityItem: {
             flexDirection: 'row',

@@ -35,6 +35,7 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.ne_udalos_opredelit_mestopolozhenie_proverte_34451827": "Не вдалося визначити місцезнаходження. Перевірте роздільну здатність браузера і спробуйте ще раз.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_ryadom_s_vami_i_vashe_tekusche_26c07bc1": "Офлайн-квести поруч з вами та ваше поточне розташування на карті.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_v_gorode_value1_progulki_po_to_c1bef6e1": "Офлайн-квести в місті {{value1}}. Прогулянки по точках, завдання та маршрути.",
+  "screens.tabs.QuestsScreen.countryDescription": "Офлайн-квести в країні {{value1}}. Прогулянки містами, завдання та маршрути.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_v_vybrannoy_oblasti_karty_pere_8dffb3a7": "Офлайн-квести у вибраній області карти. Переміщуйте карту та уточнюйте пошук по поточному району.",
   "screens.tabs.QuestsScreen.razreshite_dostup_k_geolokatsii_chtoby_pokaz_46647348": "Дозвольте доступ до геолокації, щоб показати квести поряд з вами.",
   "screens.tabs.QuestsScreen.ryadom_a27f6fda": "Поруч",

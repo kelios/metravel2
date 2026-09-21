@@ -26,10 +26,8 @@ import QuestsSidebar from './QuestsSidebar';
 import { getQuestFaqItems } from './QuestsSeoIntroFaq';
 import type { QuestMeta } from './questsShared';
 import { createQuestCatalogStructuredData } from '@/utils/discoverySeo';
-import { buildQuestCountryLandingGroups, questCountryLandingIsLinkable } from '@/utils/questCountryLanding';
 import { getStyles } from './QuestsScreen.styles';
 import {
-    getQuestCountryName,
     STORAGE_SELECTED_CITY,
     DEFAULT_NEARBY_RADIUS_KM,
     ALL_QUESTS_ID,
@@ -50,7 +48,6 @@ import {
     loadExpoLocation,
     resolveQuestMapCenter,
     resolveStoredQuestCatalogSelection,
-    type QuestCatalogCity,
     type QuestMapArea,
     type MapPoint,
 } from './QuestsScreen.helpers';
@@ -58,7 +55,8 @@ import { canRankQuestsByPopularity, sortQuestsByPopularity } from '@/utils/quest
 import { canRankQuestsByRating, sortQuestsByRating } from '@/utils/questRatingOrder';
 import type { QuestSortOrder } from './questsShared';
 import { useQuestCatalogHandoff } from './useQuestCatalogHandoff';
-import { createCollator, translate as i18nT } from '@/i18n'
+import { useQuestCountrySelection } from './useQuestCountrySelection';
+import { translate as i18nT } from '@/i18n'
 
 const { spacing, radii } = DESIGN_TOKENS;
 
@@ -90,7 +88,6 @@ export default function QuestsScreen() {
     const [sortOrder, setSortOrder] = useState<QuestSortOrder>('default');
     const [pendingMapAreaCenter, setPendingMapAreaCenter] = useState<QuestMapArea | null>(null);
     const [activeMapAreaCenter, setActiveMapAreaCenter] = useState<QuestMapArea | null>(null);
-    const [collapsedCountryCodes, setCollapsedCountryCodes] = useState<Record<string, boolean>>({});
     const mapLocationAttemptedRef = useRef(false);
     const selectionChangedRef = useRef(false);
 
@@ -107,6 +104,15 @@ export default function QuestsScreen() {
     );
     const CITIES = cityCatalog.cities;
     const cityQuests = cityCatalog.questsByCityId;
+    const {
+        countryGroups: citiesByCountry,
+        activeCountryCode,
+        selectedCountry,
+        collapsedCountryCodes,
+        areAllCountryGroupsCollapsed,
+        toggleCountryGroup: handleToggleCountryGroup,
+        toggleAllCountryGroups: handleToggleAllCountryGroups,
+    } = useQuestCountrySelection(selectedCityId, CITIES, cityQuests);
 
     const isFocused = useIsFocused();
     const colors = useThemedColors();
@@ -231,11 +237,12 @@ export default function QuestsScreen() {
             || selectedCityId === KIDS_FILTER_ID
             || selectedCityId === BIKE_FILTER_ID
             || (selectedCityId === REVIEWED_FILTER_ID && reviewedQuests.length > 0)
+            || Boolean(selectedCountry)
             || (selectedCityId ? validIds.has(selectedCityId) : false);
         if (isValid) return;
         setSelectedCityId(ALL_QUESTS_ID);
         void AsyncStorage.setItem(STORAGE_SELECTED_CITY, ALL_QUESTS_ID);
-    }, [CITIES, cityCatalog.canonicalCityIdById, dataLoaded, questsError, selectedCityId, reviewedQuests.length, personalSlices]);
+    }, [CITIES, cityCatalog.canonicalCityIdById, dataLoaded, questsError, selectedCityId, selectedCountry, reviewedQuests.length, personalSlices]);
 
     // Один владелец location-запроса: выбор «Рядом» и открытие карты не должны
     // запускать параллельные permission/current-position вызовы.
@@ -332,70 +339,6 @@ export default function QuestsScreen() {
         return counts;
     }, [CITIES, nearbyCount, cityQuests, kidsQuests.length, bikeQuests.length, reviewedQuests.length, personalSlices]);
 
-    // Group cities by country
-    const citiesByCountry = useMemo(() => {
-        const collator = createCollator();
-        // Landing cities merge by alias, whereas sidebar cities merge by
-        // catalog identity. Compute eligibility once for both sidebar mounts.
-        const countryLandingHrefByCode = new Map(
-            (Platform.OS === 'web' ? buildQuestCountryLandingGroups(ALL_QUESTS) : [])
-                .filter(questCountryLandingIsLinkable)
-                .map(country => [country.countryCode, `/quests/country/${country.countryAlias}`]),
-        );
-        const groups: Record<string, QuestCatalogCity[]> = {};
-        for (const city of CITIES) {
-            const code = city.countryCode || 'OTHER';
-            (groups[code] ||= []).push(city);
-        }
-        // Sort countries: BY first, then alphabetically, OTHER last
-        const sortedKeys = Object.keys(groups).sort((a, b) => {
-            if (a === 'BY') return -1;
-            if (b === 'BY') return 1;
-            if (a === 'OTHER') return 1;
-            if (b === 'OTHER') return -1;
-            return collator.compare(getQuestCountryName(a), getQuestCountryName(b));
-        });
-        return sortedKeys.map(code => ({
-            code,
-            name: code === 'OTHER' ? '' : getQuestCountryName(code),
-            cities: groups[code].slice().sort((a, b) => collator.compare(a.name, b.name)),
-            countryLandingHref: countryLandingHrefByCode.get(code),
-        }));
-    }, [ALL_QUESTS, CITIES]);
-
-    useEffect(() => {
-        setCollapsedCountryCodes((prev) => {
-            const next: Record<string, boolean> = {};
-            for (const group of citiesByCountry) {
-                next[group.code] = prev[group.code] ?? false;
-            }
-            return next;
-        });
-    }, [citiesByCountry]);
-
-    const handleToggleCountryGroup = useCallback((code: string) => {
-        setCollapsedCountryCodes((prev) => ({
-            ...prev,
-            [code]: !prev[code],
-        }));
-    }, []);
-
-    const areAllCountryGroupsCollapsed = useMemo(
-        () => citiesByCountry.length > 0 && citiesByCountry.every((group) => collapsedCountryCodes[group.code]),
-        [citiesByCountry, collapsedCountryCodes],
-    );
-
-    const handleToggleAllCountryGroups = useCallback(() => {
-        const nextValue = !areAllCountryGroupsCollapsed;
-        setCollapsedCountryCodes(() => {
-            const next: Record<string, boolean> = {};
-            for (const group of citiesByCountry) {
-                next[group.code] = nextValue;
-            }
-            return next;
-        });
-    }, [areAllCountryGroupsCollapsed, citiesByCountry]);
-
     // #1826: поле ввода остаётся мгновенным (`searchQuery` — состояние экрана),
     // а пересчёт каталога отстаёт на паузу в наборе. Без этого каждый символ
     // перестраивал `questsAll` новым массивом и обнулял мемоизацию карточек.
@@ -442,9 +385,11 @@ export default function QuestsScreen() {
         if (selectedCityId === NEARBY_ID) {
             return filterNearbyQuests(ALL_QUESTS, userLoc, nearbyRadiusKm);
         }
+        if (selectedCountry) return selectedCountry.quests;
         return cityQuests[selectedCityId] || EMPTY_QUESTS;
     }, [
         selectedCityId,
+        selectedCountry,
         userLoc,
         nearbyRadiusKm,
         ALL_QUESTS,
@@ -617,7 +562,7 @@ export default function QuestsScreen() {
                 ? i18nT('quests:screens.tabs.QuestsScreen.dlya_detey_709e9049')
                 : selectedCityId === BIKE_FILTER_ID
                     ? i18nT('quests:screens.tabs.QuestsScreen.veloFilterName')
-                    : CITIES.find((c) => c.id === selectedCityId)?.name ?? null;
+                    : selectedCountry?.name ?? CITIES.find((c) => c.id === selectedCityId)?.name ?? null;
 
     const titleText = useMemo(() => {
         if (activeMapAreaCenter) {
@@ -676,9 +621,10 @@ export default function QuestsScreen() {
         if (selectedCityId === BIKE_FILTER_ID) {
             return i18nT('quests:screens.tabs.QuestsScreen.veloDescription');
         }
+        if (selectedCountry) return i18nT('quests:screens.tabs.QuestsScreen.countryDescription', { value1: selectedCountry.name });
         if (selectedCityName) return i18nT('quests:screens.tabs.QuestsScreen.oflayn_kvesty_v_gorode_value1_progulki_po_to_c1bef6e1', { value1: selectedCityName });
         return i18nT('quests:screens.tabs.QuestsScreen.issleduyte_goroda_i_parki_s_oflayn_kvestami__76e12a53');
-    }, [selectedCityId, selectedCityName, userLoc, activeMapAreaCenter]);
+    }, [selectedCityId, selectedCityName, selectedCountry, userLoc, activeMapAreaCenter]);
     const questsStructuredData = createQuestCatalogStructuredData({
         canonical: buildCanonicalUrl('/quests'),
         title: titleText,
@@ -747,6 +693,7 @@ export default function QuestsScreen() {
                             colors={colors}
                             viewMode={viewMode}
                             selectedCityId={selectedCityId}
+                            activeCountryCode={activeCountryCode}
                             nearbyRequesting={geoRequesting}
                             nearbyId={NEARBY_ID}
                             kidsFilterId={KIDS_FILTER_ID}
@@ -780,6 +727,7 @@ export default function QuestsScreen() {
                         testID="quests-desktop-sidebar"
                         viewMode={viewMode}
                         selectedCityId={selectedCityId}
+                        activeCountryCode={activeCountryCode}
                         nearbyRequesting={geoRequesting}
                         nearbyId={NEARBY_ID}
                         kidsFilterId={KIDS_FILTER_ID}

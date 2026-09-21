@@ -35,6 +35,7 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.ne_udalos_opredelit_mestopolozhenie_proverte_34451827": "Nie udało się ustalić lokalizacji. Sprawdź uprawnienia przeglądarki i spróbuj ponownie.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_ryadom_s_vami_i_vashe_tekusche_26c07bc1": "Zadania offline w Twojej okolicy i Twojej aktualnej lokalizacji na mapie.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_v_gorode_value1_progulki_po_to_c1bef6e1": "Zadania offline w mieście {{value1}}. Spacery do punktów, zadań i tras.",
+  "screens.tabs.QuestsScreen.countryDescription": "Questy offline w kraju {{value1}}. Spacery po miastach, zadania i trasy.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_v_vybrannoy_oblasti_karty_pere_8dffb3a7": "Zadania offline w wybranym obszarze mapy. Przesuń mapę i zawęź wyszukiwanie w bieżącym obszarze.",
   "screens.tabs.QuestsScreen.razreshite_dostup_k_geolokatsii_chtoby_pokaz_46647348": "Zezwól na dostęp do geolokalizacji, aby wyświetlać zadania w pobliżu.",
   "screens.tabs.QuestsScreen.ryadom_a27f6fda": "W pobliżu",

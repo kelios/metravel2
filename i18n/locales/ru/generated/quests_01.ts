@@ -418,6 +418,8 @@ export const questsGenerated1 = {
   "screens.tabs.QuestsScreen.questNoun_other": "квестов",
   "screens.tabs.QuestsSidebar.actions.expand": "Развернуть",
   "screens.tabs.QuestsSidebar.countryLandingA11y": "Все квесты страны {{value1}} — {{value2}}",
+  "screens.tabs.QuestsSidebar.countryAllQuests": "Все квесты страны",
+  "screens.tabs.QuestsSidebar.countryHasSelection": "{{value1}}, выбрано",
   "screens.tabs.QuestsSidebar.actions.collapse": "Свернуть",
   "utils.questAdapters.defaultCity": "город",
   "utils.questAdapters.routeIntro": "В этом маршруте {{count}} шагов. Нажмите «Начать квест», чтобы перейти к первому заданию.",

@@ -65,7 +65,7 @@ runtime-доказательствами под задачу, а не налич
 | `/quests/map` | `app/(tabs)/quests/map.tsx` (314 LOC) | все квесты точками на общей `Map`/`Map.web`; статический сегмент, матчится раньше `[city]` |
 | `/quests/scenario` | `app/(tabs)/quests/scenario.tsx` (9 LOC) → `screens/tabs/QuestScenarioScreen.tsx` (435 LOC) | DIY-лендинг «квест-бук для печати»; тоже статический сегмент перед `[city]` |
 | `/quests/{city}` | `app/(tabs)/quests/[city]/index.tsx` (229 LOC) | лендинг города: сегмент — numeric `city_id` ИЛИ alias (`minsk`); неизвестный сегмент → `router.replace('/quests')` |
-| `/quests/country/{country}` | `app/(tabs)/quests/country/[country]/index.tsx` | web-лендинг страны: валидный ISO alpha-2 из каталога → стабильный alias (`BY → belarus`, `PL → poland`); неизвестный alias → `/quests` |
+| `/quests/country/{country}` | `app/(tabs)/quests/country/[country]/index.tsx` | web-лендинг страны: валидный ISO alpha-2 из каталога → стабильный alias (`BY → belarus`, `PL → poland`); неизвестный alias → `/quests`. Из сайдбара каталога не открывается (#2011): там страна фильтруется на месте; ссылки на лендинг даёт статический HTML каталога и лендингов городов (`scripts/generate-seo-pages.js`) |
 | `/quests/{city}/{questId}` | `app/(tabs)/quests/[city]/[questId].tsx` (688 LOC) | деталь и прохождение: bundle, прогресс, гость/consent, SEO+JSON-LD, модалка отзывов |
 | Промо на главной | `components/home/HomeQuestsPromoSection.tsx` | сразу после hero: 6 карточек (desktop) / 4 (mobile) через `useQuestsPreview(6)` + подарочный вход-блок → `/quests/scenario`; отбор — популярные (`?sort=popular`: прохождения, просмотры, id), а не первые по id (#1798); SSG-двойник — `injectHomeQuestsSection` в `scripts/generate-seo-pages.js` (crawlable `data-ssg-home-quests`, те же 8 ссылок тем же правилом) |
 | Промо в travel-детали | `components/travel/details/sections/QuestForCitySection.tsx` (+ `Deferred*.tsx` / `Deferred*.web.tsx`) | «квест по этому городу» на странице путешествия |
@@ -340,6 +340,15 @@ breadcrumbs и секции заметок посадочной города: о
    `REVIEWED_FILTER_ID`, свободный текстовый поиск (перекрывает город и
    «Рядом»), режим карты с фильтрацией по видимой области. Выбор города
    персистится.
+   Страны в сайдбаре и drawer (#2011, `openspec/changes/quest-sidebar-country-accordion`):
+   строка страны — только тумблер раскрытия её городов (`aria-expanded`), на
+   другой экран она не ведёт. Первым пунктом раскрытой страны с ≥2 городами
+   идёт «Все квесты страны» — фильтр на месте в том же слоте выбора
+   (`__country__:<ISO>`, `utils/questCatalogSelection.ts`): сетка = квесты всех
+   городов страны, заголовок «Квесты: <страна>», сохраняется и валидируется как
+   город. Группы, выбор страны и раскрытие — `screens/tabs/useQuestCountrySelection.ts`:
+   страны свёрнуты при входе, страна активного выбора раскрывается один раз на
+   смену выбора, свёрнутая страна с выбором внутри несёт маркер.
    Личные срезы «Пройдено мной» / «Ещё не пройдено мной» (#1791, владелец —
    `screens/tabs/useQuestPersonalSlices.ts`) — строки в сайдбаре и мобильном
    drawer рядом со «С отзывами», по флагу `isCompletedByMe` из того же ответа

@@ -35,6 +35,7 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.ne_udalos_opredelit_mestopolozhenie_proverte_34451827": "The location could not be determined. Check your browser permissions and try again.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_ryadom_s_vami_i_vashe_tekusche_26c07bc1": "Offline quests near you and your current location on the map.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_v_gorode_value1_progulki_po_to_c1bef6e1": "Offline quests in the city {{value1}}. Walks to points, tasks and routes.",
+  "screens.tabs.QuestsScreen.countryDescription": "Offline quests in {{value1}}. City walks, tasks and routes.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_v_vybrannoy_oblasti_karty_pere_8dffb3a7": "Offline quests in a selected area of the map. Move the map and refine your search in the current area.",
   "screens.tabs.QuestsScreen.razreshite_dostup_k_geolokatsii_chtoby_pokaz_46647348": "Allow geolocation access to show quests near you.",
   "screens.tabs.QuestsScreen.ryadom_a27f6fda": "Nearby",

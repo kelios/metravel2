@@ -35,6 +35,7 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.ne_udalos_opredelit_mestopolozhenie_proverte_34451827": "Не атрымалася вызначыць месцазнаходжанне. Праверце дазволы браўзэра і паспрабуйце яшчэ раз.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_ryadom_s_vami_i_vashe_tekusche_26c07bc1": "Афлайн-квэсты побач з вамі і ваша бягучае месцазнаходжанне на мапе.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_v_gorode_value1_progulki_po_to_c1bef6e1": "Афлайн-квесты ў горадзе {{value1}}. Прагулкі па кропках, заданні і маршруты.",
+  "screens.tabs.QuestsScreen.countryDescription": "Афлайн-квесты ў краіне {{value1}}. Прагулкі па гарадах, заданні і маршруты.",
   "screens.tabs.QuestsScreen.oflayn_kvesty_v_vybrannoy_oblasti_karty_pere_8dffb3a7": "Афлайн-квэсты ў абранай вобласці карты. Перамяшчайце карту і ўдакладняйце пошук па бягучым раёне.",
   "screens.tabs.QuestsScreen.razreshite_dostup_k_geolokatsii_chtoby_pokaz_46647348": "Дазвольце доступ да геалакацыі, каб паказаць квэсты побач з вамі.",
   "screens.tabs.QuestsScreen.ryadom_a27f6fda": "Побач",

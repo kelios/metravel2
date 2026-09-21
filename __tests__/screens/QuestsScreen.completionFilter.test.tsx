@@ -191,6 +191,8 @@ describe.each([false, true])('completed by others (mobile=%s)', (mobile) => {
         expect(mockContentProps.selectedCityId).toBe(COMPLETED_BY_OTHERS_FILTER_ID);
 
         if (mobile) fireEvent.press(getByTestId('open-filters'));
+        // Страны свёрнуты при входе: город виден после раскрытия его страны.
+        fireEvent.press(getByTestId('quests-country-toggle-BY'));
         fireEvent.press(getByLabelText('Минск, 4 квеста'));
         await waitFor(() => expect(mockContentProps.selectedCityId).toBe('minsk'));
         expect(mockContentProps.questsAll).toHaveLength(4);
@@ -327,6 +329,8 @@ it('leaves the city slice untouched by the personal filters', async () => {
     fireEvent.press(getByTestId('quests-sidebar-completed-button'));
     await waitFor(() => expect(mockContentProps.questsAll).toHaveLength(2));
 
+    // Страны свёрнуты при входе: город виден после раскрытия его страны.
+    fireEvent.press(getByTestId('quests-country-toggle-BY'));
     fireEvent.press(getByLabelText('Минск, 4 квеста'));
     await waitFor(() => expect(mockContentProps.selectedCityId).toBe('minsk'));
     expect(mockContentProps.questsAll.map((q) => q.id)).toEqual([
