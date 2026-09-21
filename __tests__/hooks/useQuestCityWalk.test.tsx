@@ -124,7 +124,10 @@ describe('useQuestCityWalk', () => {
 
     // Слотов «недавних» всего 20: квест, который посетитель не открывал, не
     // должен вытеснять оттуда просмотренный (#1569).
-    expect(mockedFetch).toHaveBeenCalledWith('minsk-a', { persistOffline: false })
+    // С #1992 запрос собирается из общих `questBundleQueryOptions`, поэтому в
+    // опции доезжает ещё и `signal` React Query; для инварианта слотов важно
+    // ровно `persistOffline: false`.
+    expect(mockedFetch).toHaveBeenCalledWith('minsk-a', expect.objectContaining({ persistOffline: false }))
   })
 
   it('оставляет секцию с теми бандлами, что доехали', async () => {

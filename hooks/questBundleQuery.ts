@@ -11,7 +11,7 @@ export function questBundleQueryOptions(questId: string | null | undefined) {
     queryFn: async ({ client, signal }: QueryFunctionContext) => {
       await waitForQuestsCatalogCredentials(client, signal)
       const { fetchQuestByQuestId } = await import('@/api/quests')
-      return fetchQuestByQuestId(questId!, { persistOffline: false })
+      return fetchQuestByQuestId(questId!, { persistOffline: false, signal })
     },
     enabled: Boolean(questId),
     // The API reads the durable bundle itself when transport is unavailable.

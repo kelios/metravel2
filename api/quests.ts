@@ -781,14 +781,26 @@ export async function fetchQuestsByCity(cityId: number): Promise<ApiQuestMeta[]>
  */
 export async function fetchQuestByQuestId(
     questId: string,
-    options: { persistOffline?: boolean } = {},
+    options: { persistOffline?: boolean; signal?: AbortSignal } = {},
 ): Promise<ApiQuestBundle> {
     assertUsableQuestId(questId, 'fetchQuestByQuestId');
     try {
         const bundle = await retry(
             // Quest bundles include the intro, all steps and finale media. Do not
             // abort a valid cold response at the generic 10 s API deadline.
-            () => apiClient.get<ApiQuestBundle>(`/quests/by-quest-id/${questId}/`, LONG_TIMEOUT),
+            //
+            // `signal` доводится до реального `fetch` (`utils/fetchWithTimeout.ts`),
+            // как в каталоге (`fetchAllQuestPages`): без него `cancelQueries` по
+            // ключу бандла отменяет только query-объект, а 8 КБ всё равно уходят
+            // по сети — смена identity на bootstrap отменяет летящий запрос и
+            // тут же повторяет его (#1992).
+            () => (options.signal
+                ? apiClient.get<ApiQuestBundle>(
+                    `/quests/by-quest-id/${questId}/`,
+                    LONG_TIMEOUT,
+                    { signal: options.signal },
+                )
+                : apiClient.get<ApiQuestBundle>(`/quests/by-quest-id/${questId}/`, LONG_TIMEOUT)),
             {
                 maxAttempts: 2,
                 delay: 300,
@@ -811,6 +823,16 @@ export async function fetchQuestByQuestId(
         }
         return normalized;
     } catch (err) {
+        // Отмена — не сетевой сбой. Без этой ветки `cancelQueries` по ключу
+        // бандла (смена identity, уход с экрана) превращался бы в «успех» с
+        // офлайн-копией: вызывающий не отличил бы отменённый запрос от
+        // доставленных данных. Таймаут сюда НЕ попадает —
+        // `utils/fetchWithTimeout.ts` отдаёт его отдельной ошибкой, и офлайн-
+        // фолбэк по таймауту продолжает работать (#1992).
+        // Формы отмены сверены с `api/client.ts`: он пробрасывает как есть и
+        // `AbortError`, и случай уже прерванного `signal` (на native expo
+        // отдаёт своё сообщение, а не `name`), поэтому одного `name` мало.
+        if (options.signal?.aborted || (err as { name?: string } | null)?.name === 'AbortError') throw err;
         const cached = await readCachedQuestBundle(questId);
         if (cached) return cached;
         throw err;

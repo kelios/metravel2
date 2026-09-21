@@ -3,7 +3,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { apiClient, ApiError } from '@/api/client';
 import { setActiveQueryClient } from '@/api/activeQueryClient';
 import { queryKeys } from '@/api/queryKeys';
-import { readCachedQuestsList } from '@/api/questBundleCache';
+import { readCachedQuestsList, readCachedQuestBundle } from '@/api/questBundleCache';
 import {
   fetchQuestsList,
   fetchQuestsPreview,
@@ -79,6 +79,11 @@ const MOCK_PROGRESS = {
 describe('api/quests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // `clearAllMocks` НЕ сливает очередь `mockResolvedValueOnce`, а `resetMocks`
+    // в jest.config.js выключен: непотреблённое значение утекало в следующий
+    // тест файла — ровно та протечка, о которой предупреждает шапка выше.
+    (readCachedQuestBundle as jest.Mock).mockReset();
+    (readCachedQuestBundle as jest.Mock).mockResolvedValue(null);
   });
 
   describe('fetchQuestsList', () => {
@@ -490,6 +495,68 @@ describe('api/quests', () => {
 
       await expect(fetchQuestProgress('krakow-dragon')).rejects.toThrow('Server error');
       expect(mockedPost).not.toHaveBeenCalled();
+    });
+  });
+
+  const OFFLINE_BUNDLE = { id: 1, quest_id: 'krakow-dragon', steps: [] } as any;
+
+  describe('fetchQuestByQuestId — отмена', () => {
+    /**
+     * #1992. `cancelQueries` по ключу бандла отменял только query-объект:
+     * `signal` не доходил до `apiClient.get`, и 8 КБ всё равно уезжали по сети.
+     * Каталог (`fetchAllQuestPages`) сигнал пробрасывает — деталь обязана тоже.
+     */
+    it('пробрасывает AbortSignal в apiClient, как это делает каталог', async () => {
+      const controller = new AbortController();
+      mockedGet.mockResolvedValueOnce({ id: 1, quest_id: 'krakow-dragon', steps: [] });
+
+      await fetchQuestByQuestId('krakow-dragon', {
+        persistOffline: false,
+        signal: controller.signal,
+      });
+
+      expect(mockedGet).toHaveBeenCalledWith(
+        '/quests/by-quest-id/krakow-dragon/',
+        expect.anything(),
+        { signal: controller.signal },
+      );
+    });
+
+    /**
+     * Кэш здесь обязан быть НЕПУСТЫМ, иначе тест холостой: при `null` ошибка
+     * пробрасывается и без ветки отмены, и он зеленеет на сломанном коде.
+     */
+    it('отменённый запрос не подменяется офлайн-копией — AbortError пробрасывается', async () => {
+      (readCachedQuestBundle as jest.Mock).mockResolvedValueOnce(OFFLINE_BUNDLE);
+      const abortError = new Error('Aborted');
+      abortError.name = 'AbortError';
+      mockedGet.mockRejectedValueOnce(abortError);
+
+      await expect(
+        fetchQuestByQuestId('krakow-dragon', { persistOffline: false, signal: new AbortController().signal }),
+      ).rejects.toThrow('Aborted');
+      // Прямая проверка ветки: без неё кэш был бы прочитан и подменил бы отмену.
+      expect(readCachedQuestBundle).not.toHaveBeenCalled();
+    });
+
+    it('обычная сетевая ошибка при живом кэше по-прежнему отдаёт офлайн-копию', async () => {
+      (readCachedQuestBundle as jest.Mock).mockResolvedValueOnce(OFFLINE_BUNDLE);
+      mockedGet.mockRejectedValueOnce(new (ApiError as any)(500, 'Server error'));
+
+      const result = await fetchQuestByQuestId('krakow-dragon', { persistOffline: false });
+
+      expect(result.quest_id).toBe('krakow-dragon');
+    });
+
+    it('без signal третий аргумент не передаётся — поведение прежних вызовов не меняется', async () => {
+      mockedGet.mockResolvedValueOnce({ id: 1, quest_id: 'krakow-dragon', steps: [] });
+
+      await fetchQuestByQuestId('krakow-dragon', { persistOffline: false });
+
+      expect(mockedGet).toHaveBeenCalledWith(
+        '/quests/by-quest-id/krakow-dragon/',
+        expect.anything(),
+      );
     });
   });
 
