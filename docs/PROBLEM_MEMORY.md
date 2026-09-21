@@ -2022,6 +2022,18 @@ guard, падающий в CI на попытке обойти этот конт
   проверяют ссылки, eligibility, сворачивание и закрытие панели. Browser gate:
   карточка равна CSS-треку в пределах 1 px на 390/768/839/840/1024/1440.
   Родственный дефект ширины основного каталога остаётся в #2005.
+- **Вход развёрнут, #2011 (21.09.2026):** по запросу владельца сайдбар каталога
+  больше не ведёт на лендинг страны. Строка страны — только тумблер раскрытия её
+  городов (`aria-expanded`); вся страна фильтруется на месте пунктом «Все квесты
+  страны» (слот выбора `__country__:<ISO>`, `utils/questCatalogSelection.ts`,
+  `screens/tabs/useQuestCountrySelection.ts`). Лендинг достижим по статической
+  перелинковке `scripts/generate-seo-pages.js` (список стран каталога, «Все
+  квесты страны» на лендинге города). Тесты `QuestsSidebar.countryLink.test.tsx`
+  и `QuestsScreen.countryLink.test.tsx` заменены на
+  `QuestsSidebar.countryAccordion.test.tsx`, `QuestsScreen.countryAccordion.test.tsx`
+  и `useQuestCountrySelection.test.ts`. Жалоба «страна в сайдбаре не открывает
+  свою страницу» — не дефект, а решение #2011
+  (`openspec/specs/quest-catalog-sidebar/spec.md`).
 - **Инвариант:** каждый валидный ISO alpha-2 с хотя бы одним routable квестом
   создаёт ровно один `/quests/country/<alias>` с уникальными квестами и
   canonical city groups. Missing/invalid code не создаёт страницу, а новый
