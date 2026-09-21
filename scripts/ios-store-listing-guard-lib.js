@@ -3,6 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const { readPngSize } = require('./lib/imageSize');
+
 const LISTING_PATH = path.join('docs', 'IOS_STORE_LISTING.md');
 
 // App Store Connect localizations for MeTravel. BE отсутствует в списке локалей
@@ -138,25 +140,6 @@ function parseFields(sectionBody) {
 function localeOf(heading) {
   const token = heading.split(/[\s—-]/)[0].trim().toUpperCase();
   return ASC_LOCALES.includes(token) || REFERENCE_LOCALES.includes(token) ? token : null;
-}
-
-const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-
-// Скриншот 1290×2796 весит мегабайты, поэтому читаем только заголовок. IHDR по
-// спецификации PNG обязан быть первым чанком, но тип чанка проверяем явно:
-// иначе «PNG» в первых байтах чужого формата дал бы выдуманные размеры.
-function readPngSize(file) {
-  const header = Buffer.alloc(24);
-  const handle = fs.openSync(file, 'r');
-  try {
-    const read = fs.readSync(handle, header, 0, 24, 0);
-    if (read < 24) return null;
-    if (!header.subarray(0, 8).equals(PNG_SIGNATURE)) return null;
-    if (header.toString('ascii', 12, 16) !== 'IHDR') return null;
-    return { width: header.readUInt32BE(16), height: header.readUInt32BE(20) };
-  } finally {
-    fs.closeSync(handle);
-  }
 }
 
 // Подсказка для отчёта: какой слот и какие размеры закрывают обязательный набор.

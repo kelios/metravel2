@@ -21,11 +21,11 @@
  * бы выключен на первом же прогоне. Ориентир для НОВОЙ обложки — 3:2.
  *
  * Модуль без внешних зависимостей и на CommonJS: его зовут node-скрипты
- * заливки, а размеры читаются из заголовка файла, как в
- * `scripts/generate-monochrome-icon.js` (без `sharp`/`jimp`).
+ * заливки, а размеры кадра из заголовка файла читает общий `./imageSize`
+ * (без `sharp`/`jimp`).
  */
 
-const fs = require('fs');
+const { readImageSize } = require('./imageSize');
 
 /** Ниже этого квест-обложку на прод не пускаем: поле шире исторического 4:3. */
 const MIN_COVER_ASPECT = 1.3;
@@ -35,79 +35,6 @@ const MAX_COVER_ASPECT = 1.8;
 
 /** Пропорция слота карточки каталога; к ней стремится новая обложка. */
 const TARGET_COVER_ASPECT = 1.5;
-
-/** Сколько байт заголовка хватает всем поддерживаемым форматам. */
-const HEADER_BYTES = 64 * 1024;
-
-function readHeader(filePath) {
-  const fd = fs.openSync(filePath, 'r');
-  try {
-    const buf = Buffer.alloc(HEADER_BYTES);
-    const read = fs.readSync(fd, buf, 0, HEADER_BYTES, 0);
-    return buf.subarray(0, read);
-  } finally {
-    fs.closeSync(fd);
-  }
-}
-
-function pngSize(buf) {
-  // 8 байт сигнатуры, затем длина+тип чанка (8 байт); IHDR начинается с 16.
-  if (buf.length < 24) return null;
-  if (buf.readUInt32BE(0) !== 0x89504e47) return null;
-  if (buf.subarray(12, 16).toString('latin1') !== 'IHDR') return null;
-  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
-}
-
-function jpegSize(buf) {
-  if (buf.length < 4 || buf[0] !== 0xff || buf[1] !== 0xd8) return null;
-  let offset = 2;
-  while (offset + 9 < buf.length) {
-    if (buf[offset] !== 0xff) {
-      offset += 1;
-      continue;
-    }
-    const marker = buf[offset + 1];
-    // SOF0..SOF15 несут размеры; SOF4/SOF8/SOF12 — не кадровые маркеры.
-    const isFrameHeader =
-      marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
-    if (isFrameHeader) {
-      return { height: buf.readUInt16BE(offset + 5), width: buf.readUInt16BE(offset + 7) };
-    }
-    if (marker === 0xd8 || (marker >= 0xd0 && marker <= 0xd9)) {
-      offset += 2;
-      continue;
-    }
-    offset += 2 + buf.readUInt16BE(offset + 2);
-  }
-  return null;
-}
-
-function webpSize(buf) {
-  if (buf.length < 30) return null;
-  if (buf.subarray(0, 4).toString('latin1') !== 'RIFF') return null;
-  if (buf.subarray(8, 12).toString('latin1') !== 'WEBP') return null;
-  const kind = buf.subarray(12, 16).toString('latin1');
-  if (kind === 'VP8X') {
-    // Три байта на сторону, little-endian, значение хранится как «минус один».
-    const width = 1 + (buf[24] | (buf[25] << 8) | (buf[26] << 16));
-    const height = 1 + (buf[27] | (buf[28] << 8) | (buf[29] << 16));
-    return { width, height };
-  }
-  if (kind === 'VP8 ') {
-    return { width: buf.readUInt16LE(26) & 0x3fff, height: buf.readUInt16LE(28) & 0x3fff };
-  }
-  if (kind === 'VP8L') {
-    const bits = buf.readUInt32LE(21);
-    return { width: 1 + (bits & 0x3fff), height: 1 + ((bits >> 14) & 0x3fff) };
-  }
-  return null;
-}
-
-/** Размеры кадра из заголовка файла. `null`, если формат не распознан. */
-function readImageSize(filePath) {
-  const buf = readHeader(filePath);
-  return pngSize(buf) || webpSize(buf) || jpegSize(buf);
-}
 
 /**
  * Проверка одной обложки. Возвращает разбор, а не бросает: вызывающий скрипт

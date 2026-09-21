@@ -11,10 +11,13 @@ beforeEach(() => {
   dir = makeTempDir('quest-media-test-');
   fs.mkdirSync(path.join(dir, 'scripts/lib'), { recursive: true });
   fs.copyFileSync(SCRIPT, path.join(dir, 'scripts/upload-quest-media.js'));
-  fs.copyFileSync(path.join(ROOT, 'scripts/lib/questCoverAspect.js'), path.join(dir, 'scripts/lib/questCoverAspect.js'));
+  for (const lib of ['questCoverAspect.js', 'imageSize.js']) {
+    fs.copyFileSync(path.join(ROOT, 'scripts/lib', lib), path.join(dir, 'scripts/lib', lib));
+  }
   // Только IHDR: операторский гейт читает размер, содержимое файла не декодирует.
   const png = Buffer.alloc(33);
   Buffer.from('89504e470d0a1a0a', 'hex').copy(png);
+  png.writeUInt32BE(13, 8);
   png.write('IHDR', 12);
   png.writeUInt32BE(1536, 16);
   png.writeUInt32BE(1024, 20);

@@ -11,6 +11,7 @@ const {
   META_SDK_FRAMEWORK_PREFIX_PATTERN,
   META_SDK_NO_TRACKING_FLAGS,
 } = require('./ios-release-guard-lib');
+const { pngHeader } = require('./lib/imageSize');
 
 // Meta SDK снова едет в iPhone-сборке (#1918), но только ради Limited Login.
 // Его собственные privacy-манифесты объявляют tracking=true — это заявление
@@ -85,27 +86,6 @@ function findEntries(root, predicate) {
 
 function findFiles(root, basename) {
   return findEntries(root, entry => entry.isFile() && entry.name === basename);
-}
-
-function pngDimensions(buffer) {
-  if (buffer.length < 33 || buffer.toString('hex', 0, 8) !== '89504e470d0a1a0a') {
-    return null;
-  }
-  let offset = 8;
-  while (offset + 12 <= buffer.length) {
-    const chunkLength = buffer.readUInt32BE(offset);
-    const chunkType = buffer.toString('ascii', offset + 4, offset + 8);
-    const chunkEnd = offset + 12 + chunkLength;
-    if (chunkEnd > buffer.length) return null;
-    if (chunkType === 'IHDR' && chunkLength >= 13) {
-      return {
-        width: buffer.readUInt32BE(offset + 8),
-        height: buffer.readUInt32BE(offset + 12),
-      };
-    }
-    offset = chunkEnd;
-  }
-  return null;
 }
 
 function assetCatalogContainsAppIcon(entries) {
@@ -254,7 +234,7 @@ function validateIosAppBundle(appPath, options = {}) {
   const compiledIconPath = path.join(appPath, 'AppIcon60x60@2x.png');
   const assetCatalogPath = path.join(appPath, 'Assets.car');
   const compiledIcon = fs.existsSync(compiledIconPath)
-    ? pngDimensions(fs.readFileSync(compiledIconPath))
+    ? pngHeader(fs.readFileSync(compiledIconPath))
     : null;
   if (primaryIcon?.CFBundleIconName !== 'AppIcon' ||
       !Array.isArray(primaryIcon?.CFBundleIconFiles) ||

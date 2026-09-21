@@ -9,6 +9,7 @@ const xcode = require('xcode');
 const {
   prepareIosSubmitRuntime,
 } = require('./ios-submit-runtime');
+const { pngHeader } = require('./lib/imageSize');
 
 const EXPECTED = Object.freeze({
   apnsEnvironment: 'production',
@@ -443,28 +444,6 @@ function checkLiveProductionAasa(options = {}) {
       detail: error && error.message ? error.message : String(error),
     }];
   }
-}
-
-function pngDimensions(buffer) {
-  if (buffer.length < 33 || buffer.toString('hex', 0, 8) !== '89504e470d0a1a0a') {
-    return null;
-  }
-  let offset = 8;
-  while (offset + 12 <= buffer.length) {
-    const chunkLength = buffer.readUInt32BE(offset);
-    const chunkType = buffer.toString('ascii', offset + 4, offset + 8);
-    const chunkEnd = offset + 12 + chunkLength;
-    if (chunkEnd > buffer.length) return null;
-    if (chunkType === 'IHDR' && chunkLength >= 13) {
-      return {
-        width: buffer.readUInt32BE(offset + 8),
-        height: buffer.readUInt32BE(offset + 12),
-        colorType: buffer[offset + 17],
-      };
-    }
-    offset = chunkEnd;
-  }
-  return null;
 }
 
 function validateIosRelease(root = process.cwd(), options = {}) {
@@ -1198,7 +1177,7 @@ function validateIosRelease(root = process.cwd(), options = {}) {
     const expoIconBuffer = expoIconPath && fs.existsSync(expoIconPath)
       ? fs.readFileSync(expoIconPath)
       : null;
-    const dimensions = iconBuffer ? pngDimensions(iconBuffer) : null;
+    const dimensions = iconBuffer ? pngHeader(iconBuffer) : null;
     if (dimensions?.width !== 1024 || dimensions?.height !== 1024 ||
         [4, 6].includes(dimensions?.colorType)) {
       fail('IOS_APP_ICON_ASSET', 'App Store icon must be an opaque 1024x1024 PNG');
