@@ -53,7 +53,6 @@ export const TravelDetailsSidebarSection: React.FC<{
     nearInViewport,
     relatedTravels,
     setNearRef,
-    setPopularRef,
     shouldShowNavigationArrows,
   } = useTravelDetailsSidebarSectionModel({
     canRenderHeavy,
@@ -131,12 +130,7 @@ export const TravelDetailsSidebarSection: React.FC<{
       )}
 
       <View
-        ref={(node) => {
-          if (anchors.popular && typeof anchors.popular === 'object') {
-            (anchors.popular as any).current = node;
-          }
-          setPopularRef(node);
-        }}
+        ref={anchors.popular}
         style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
         collapsable={false}
         accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.populyarnye_marshruty_e9bc8e8c')}

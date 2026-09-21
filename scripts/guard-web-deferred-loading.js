@@ -44,9 +44,9 @@ const APPROVED_DEFERRED_LOADING = Object.freeze({
   'components/quests/QuestNextStepSection.tsx': 1,
   'components/travel/TravelDescription.tsx': 1,
   'components/travel/details/hooks/useTravelDeferredSectionsModel.ts': 1,
-  'components/travel/details/hooks/useTravelDetailsContentSectionModel.ts': 2,
+  'components/travel/details/hooks/useTravelDetailsContentSectionModel.ts': 1,
   'components/travel/details/hooks/useTravelDetailsMapSectionContentModel.ts': 1,
-  'components/travel/details/hooks/useTravelDetailsSidebarSectionModel.ts': 2,
+  'components/travel/details/hooks/useTravelDetailsSidebarSectionModel.ts': 1,
   // медиа и встраивания
   'components/belkraj/BelkrajWidget.tsx': 1,
   'components/travel/details/sections/LazyYouTubeSection.web.tsx': 1,
@@ -55,7 +55,6 @@ const APPROVED_DEFERRED_LOADING = Object.freeze({
   'components/ui/ImageCardMediaWebHelpers.tsx': 2,
   // наблюдатель есть, но ничего не загружает
   'components/MapPage/Map/useMapWebLayoutEffects.ts': 1,
-  'components/travel/ToggleableMapSection.tsx': 1,
   'components/affiliate/useAffiliateImpression.ts': 1,
   'hooks/useActiveSection.ts': 1,
   'hooks/useTrackedImpression.ts': 1,

@@ -40,11 +40,6 @@ export function useTravelDetailsSidebarSectionModel({
     enabled: progressiveEnabled,
   })
 
-  const { setElementRef: setPopularRef } = useProgressiveLoad({
-    ...TRAVEL_DETAILS_SIDEBAR_PROGRESSIVE_LOAD_CONFIG,
-    enabled: progressiveEnabled,
-  })
-
   useEffect(() => {
     setRelatedTravels([])
   }, [travel.id, travel.slug])
@@ -66,7 +61,6 @@ export function useTravelDetailsSidebarSectionModel({
     nearInViewport,
     relatedTravels,
     setNearRef,
-    setPopularRef,
     shouldShowNavigationArrows,
   }
 }

@@ -121,7 +121,7 @@ describe('useTravelDeferredSectionsModel', () => {
     })
 
     // #562 keeps observers off the per-section path; #1642 splits them by
-    // lookahead only — map/footer keep the tight margin, the reserved
+    // lookahead only — the map keeps the tight margin, the reserved
     // sidebar/comments pair mounts several viewports earlier. The wiring, not the
     // config object, is what decides when a section mounts.
     expect(window.IntersectionObserver).toHaveBeenCalledTimes(2)
@@ -133,9 +133,11 @@ describe('useTravelDeferredSectionsModel', () => {
     )!
     const tightObserver = intersectionObservers.find((observer) => observer.rootMargin === '200px')!
     expect(reservedObserver.observed).toEqual([commentsElement])
-    expect(tightObserver.observed).toHaveLength(2)
-    expect(tightObserver.observed).toEqual(
-      expect.arrayContaining([mapElement, footerElement]),
+    expect(tightObserver.observed).toEqual([mapElement])
+    // #2021: the web footer mounts with the tree, so even a footer ref handed to
+    // the hook is never observed there.
+    expect(intersectionObservers.flatMap((observer) => observer.observed)).not.toContain(
+      footerElement,
     )
 
     act(() => {
@@ -164,6 +166,31 @@ describe('useTravelDeferredSectionsModel', () => {
     expect(result.current.shouldLoadComments).toBe(true)
     expect(result.current.shouldLoadMap).toBe(false)
     expect(result.current.shouldLoadFooter).toBe(false)
+  })
+
+  it('loads every observed section at once in a browser without IntersectionObserver', () => {
+    // #2021: the map, sidebar and comments have no fallback timer, so an
+    // observer that cannot arm would leave them unloaded for good.
+    window.IntersectionObserver = undefined as unknown as typeof IntersectionObserver
+    const { result } = renderHook(
+      ({ travelId }) => useTravelDeferredSectionsModel({ travelId }),
+      { initialProps: { travelId: 1 } }
+    )
+
+    expect(result.current.shouldLoadMap).toBe(false)
+
+    // The idle callback enables the heavy tree at 250 ms — before the 500 / 600 ms
+    // author and rating timers, so nothing here is loaded by a timer.
+    act(() => {
+      jest.advanceTimersByTime(250)
+    })
+
+    expect(result.current.canRenderHeavy).toBe(true)
+    expect(result.current.shouldLoadMap).toBe(true)
+    expect(result.current.shouldLoadSidebar).toBe(true)
+    expect(result.current.shouldLoadComments).toBe(true)
+    expect(result.current.shouldLoadAuthorSection).toBe(true)
+    expect(result.current.shouldLoadRating).toBe(true)
   })
 
   it('uses settled native offsets without subscribing JS to every scroll frame', () => {

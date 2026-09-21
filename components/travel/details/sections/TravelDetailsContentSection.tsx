@@ -77,7 +77,6 @@ export const TravelDetailsContentSection: React.FC<{
     insightConfigs,
     mobileInsightKey,
     readingTimeLabel,
-    setInsightsRef,
     setMobileInsightKey,
     setVideoRef,
     shouldLoadVideo,
@@ -210,7 +209,7 @@ export const TravelDetailsContentSection: React.FC<{
       )}
 
       {hasInsights && (
-        <View ref={setInsightsRef as any} collapsable={false}>
+        <View collapsable={false}>
           {hasRecommendation && (
             <View
               key="recommendation"

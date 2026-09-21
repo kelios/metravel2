@@ -115,6 +115,8 @@ export const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
     threshold: 0.1,
     traceKey: 'deferred:comments:visible',
   },
+  // Read only for the trace: native stages the footer by scroll depth and web
+  // never observes it (see `WEB_OBSERVED_SECTION_KEYS`).
   footer: {
     fallbackDelay: null,
     priority: 'low' as const,
@@ -144,6 +146,13 @@ export const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
     traceKey: 'deferred:sidebar:visible',
   },
 } as const
+
+// On web the footer mounts with the deferred tree
+// (`shouldLoadFooterSectionForPlatform`, `2fe0bd5bc`), so nothing there reads
+// its flag and the web tree hands it no ref (#2021).
+const WEB_OBSERVED_SECTION_KEYS: TravelDeferredSectionKey[] = TRAVEL_DEFERRED_SECTION_KEYS.filter(
+  (sectionKey) => sectionKey !== 'footer',
+)
 
 // Native-only staging knobs. On web, loading is driven by browser idle +
 // IntersectionObserver (untouched below). On native there is no IntersectionObserver
@@ -343,9 +352,15 @@ export function useTravelDeferredSectionsModel({
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (!canRenderHeavy) return
-    if (typeof window === 'undefined' || typeof window.IntersectionObserver !== 'function') return
+    if (typeof window === 'undefined' || typeof window.IntersectionObserver !== 'function') {
+      // No visibility signal to wait for: load every observed section now.
+      // The map, sidebar and comments have no fallback timer, so returning here
+      // would strand them for good; `useProgressiveLoad` never strands one either (#2021).
+      WEB_OBSERVED_SECTION_KEYS.forEach((sectionKey) => markSectionLoaded(sectionKey))
+      return
+    }
 
-    const entries = TRAVEL_DEFERRED_SECTION_KEYS
+    const entries = WEB_OBSERVED_SECTION_KEYS
       .map((sectionKey) => ({
         element: sectionElements[sectionKey],
         sectionKey,

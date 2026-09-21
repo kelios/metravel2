@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, StyleSheet, Pressable, Text, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { METRICS } from '@/constants/layout';
@@ -31,10 +31,7 @@ const ToggleableMapSection = ({
     const [hasOpened, setHasOpened] = useState(initiallyOpen);
     const { width } = useWindowDimensions();
     const isMobile = width < METRICS.breakpoints.tablet;
-    const isDesktop = width >= METRICS.breakpoints.desktop;
     const colors = useThemedColors();
-    // TD-04: ref для Intersection Observer (web desktop — авто-открытие при прокрутке до карты)
-    const wrapperRef = useRef<View>(null);
 
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -63,35 +60,8 @@ const ToggleableMapSection = ({
         onOpenChange?.(true);
     }, [forceOpenTrigger, onOpenChange]);
 
-    // TD-04: IntersectionObserver — на desktop карта авто-монтируется когда доходит до viewport
-    useEffect(() => {
-        if (Platform.OS !== 'web') return;
-        if (!isDesktop) return; // на мобайле только по клику
-        if (hasOpened) return; // уже открыта — не нужно
-        if (typeof IntersectionObserver === 'undefined') return;
-
-        const node = (wrapperRef.current as any)?._nativeTag
-            ? null // native — не используем
-            : (wrapperRef.current as unknown as Element | null);
-
-        if (!node) return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0]?.isIntersecting) {
-                    setShowMap(true);
-                    setHasOpened(true);
-                    observer.disconnect();
-                }
-            },
-            { rootMargin: '200px', threshold: 0 }
-        );
-        observer.observe(node);
-        return () => observer.disconnect();
-    }, [isDesktop, hasOpened]);
-
     return (
-        <View ref={wrapperRef} style={styles.wrapper}>
+        <View style={styles.wrapper}>
             <Pressable
                 onPress={handleToggle}
                 accessibilityRole="button"

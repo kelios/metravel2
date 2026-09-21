@@ -111,7 +111,6 @@ export const TravelDeferredSections: React.FC<{
     canRenderHeavy,
     setAuthorSectionRef,
     setCommentsRef,
-    setFooterRef,
     setMapRef,
     setRatingRef,
     setSidebarRef,
@@ -287,10 +286,7 @@ export const TravelDeferredSections: React.FC<{
         </TravelDetailsDeferredTransition>
       </View>
 
-      <View
-        ref={setFooterRef}
-        collapsable={false}
-      >
+      <View collapsable={false}>
         <TravelDetailsDeferredTransition
           testID="travel-details-footer-transition"
           isMobile={isMobile}

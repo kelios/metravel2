@@ -72,13 +72,6 @@ export function useTravelDetailsContentSectionModel({
     fallbackDelay: 1000,
     enabled: Boolean(travel.youtube_link),
   })
-  const { setElementRef: setInsightsRef } = useProgressiveLoad({
-    priority: 'low',
-    rootMargin: '260px',
-    threshold: 0.05,
-    fallbackDelay: 1000,
-    enabled: hasInsights,
-  })
 
   const defaultInsightKey = shouldUseMobileInsights ? insightConfigs[0]?.key ?? null : null
 
@@ -119,7 +112,6 @@ export function useTravelDetailsContentSectionModel({
     insightConfigs,
     mobileInsightKey,
     readingTimeLabel,
-    setInsightsRef,
     setMobileInsightKey,
     setVideoRef,
     shouldLoadVideo,
