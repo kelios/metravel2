@@ -127,24 +127,32 @@ export function useQuestGridCardWidth(fallbackWidth: number, enabled: boolean) {
   // стоил бы React повторного прохода по панели. Ноль приходит от скрытой сетки
   // (display: none у неактивной вкладки, пока открыт квест) и не заменяет
   // последний замер: иначе возврат в каталог рисовал бы кадр с шириной модели.
+  // Округление только вниз: границы колонок `k·412 − 32` целые, поэтому floor
+  // сохраняет число колонок CSS, а карточка уже трека меньше чем на 1 px.
   const commitGridWidth = useCallback((width: number) => {
-    const next = Math.round(width)
+    const next = Math.floor(width)
     if (next <= 0 || next === gridWidthRef.current) return
     gridWidthRef.current = next
     setGridWidth(next)
   }, [])
 
+  // Ширина — с узла, а не из события: onLayout RNW отдаёт `offsetWidth`,
+  // округлённый до пикселя, и дробный контейнер у границы колонок (791.6 при
+  // масштабе 125 %) стал бы 792 — две колонки вместо одной у CSS.
+  const measureGrid = useCallback((fallback: number) => {
+    const node: unknown = gridRef.current
+    commitGridWidth(node instanceof HTMLElement ? node.getBoundingClientRect().width : fallback)
+  }, [commitGridWidth])
+
   // Первый замер — до отрисовки: onLayout в RNW приходит из ResizeObserver
   // уже после кадра с шириной модели, это был бы видимый скачок и CLS.
   useWebLayoutEffect(() => {
-    if (!isWeb || !enabled) return
-    const node: unknown = gridRef.current
-    if (node instanceof HTMLElement) commitGridWidth(node.getBoundingClientRect().width)
-  }, [commitGridWidth, enabled, isWeb])
+    if (isWeb && enabled) measureGrid(0)
+  }, [enabled, isWeb, measureGrid])
 
   const onGridLayout = useCallback((event: LayoutChangeEvent) => {
-    if (isWeb) commitGridWidth(event.nativeEvent.layout.width)
-  }, [commitGridWidth, isWeb])
+    if (isWeb) measureGrid(event.nativeEvent.layout.width)
+  }, [isWeb, measureGrid])
 
   const cardWidth = isWeb && enabled && gridWidth > 0 ? getQuestGridTrack(gridWidth).cardWidth : fallbackWidth
   return { gridRef, onGridLayout, cardWidth }

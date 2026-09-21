@@ -114,6 +114,26 @@ describe('ширина карточки по измеренной web-сетке
     expect(result.current.cardWidth).toBe(606)
   })
 
+  // Масштаб 125 % или зум страницы дают дробный контейнер. onLayout RNW отдаёт
+  // округлённый `offsetWidth`: 791.6 → 792, а это уже две колонки по 380, хотя
+  // CSS кладёт одну колонку 791.6 — исходный дефект в полосе шириной 1 px.
+  it.each([
+    [791.6, 792, 791],
+    [1203.5, 1204, 585.5],
+  ])('дробный контейнер %f px (offsetWidth %i) не получает лишнюю колонку', (rectWidth, offsetWidth, cardWidth) => {
+    const node = document.createElement('div')
+    node.getBoundingClientRect = () => ({ width: rectWidth }) as DOMRect
+    const { result, rerender } = renderGridHook(false)
+    result.current.gridRef.current = node as unknown as View
+
+    rerender({ on: true })
+    act(() => result.current.onGridLayout(layoutEvent(offsetWidth)))
+    const css = cssAutoFillTrack(rectWidth)
+    expect(result.current.cardWidth).toBe(cardWidth)
+    expect(css.cardWidth - result.current.cardWidth).toBeGreaterThanOrEqual(0)
+    expect(css.cardWidth - result.current.cardWidth).toBeLessThan(1)
+  })
+
   it('без смонтированной сетки отдаёт ширину модели', () => {
     const { result, rerender } = renderGridHook()
     act(() => result.current.onGridLayout(layoutEvent(606)))
