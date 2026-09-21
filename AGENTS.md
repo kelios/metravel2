@@ -67,7 +67,11 @@ Validation:
   Просьба «сделай все todo / весь борд / спринт» `area=back` не открывает: такие
   карточки пропускаются, реализацию пишет владелец бэка. Никогда не меняй backend
   working tree и не выполняй там mutating Git-команды, кроме sync перед тестированием
-  ниже.
+  ниже. Исключение (владелец, 21.09.2026): `area=back` карточку, которую владелец
+  выдал прямо (ссылка или номер + «делай»), агент ведёт сам полным циклом по правилам
+  бэк-репо (`../metravel-backend/AGENTS.md`, `CLAUDE.md`): коммит явными путями, push
+  в `master`, выкат по `deploy/prod/README.md` только с
+  `METRAVEL_ROLLOUT_COMPOSE_BIN="docker compose"` (#2015), приёмка, `done`.
 - На production Git-tracked backend paths неизменяемы. Перед явно разрешённой
   server write прочитай профильный раздел `docs/RULES.md`, проверь status и
   `git ls-files`; dirty checkout означает stop и backend/ops task, не cleanup.

@@ -39,9 +39,13 @@
   клон приватного репо `sergey-savran/metravel`, branch `master`) — путь
   известен, спрашивать его у пользователя не нужно; читать read-only, изменения
   оформлять `area=back` задачей на борде. «Сделай все todo / весь борд» бэк не
-  открывает. Единственное исключение — обязательный
+  открывает. Исключения — обязательный
   sync перед тестированием: `git -C ../metravel-backend fetch origin master &&
-  git -C ../metravel-backend reset --hard origin/master`;
+  git -C ../metravel-backend reset --hard origin/master`, и `area=back` карточка,
+  которую владелец выдал прямо (правило 21.09.2026): её агент ведёт полным циклом
+  по правилам бэк-репо (`../metravel-backend/CLAUDE.md`) до push в `master`,
+  выката и `done`. Выкат бэка — только с
+  `METRAVEL_ROLLOUT_COMPOSE_BIN="docker compose"`: дефолт v1 кладёт API (#2015);
 - до ревью проверяем ЛОКАЛЬНО: таргет по умолчанию — локальный бэкенд
   `localhost:8000` (`bash ~/Sites/metravel/run-backend.sh`) плюс
   `npx expo start --web`. Дев `192.168.50.36` — только по явному запросу
