@@ -183,8 +183,9 @@ Apple проверяет приложения в IPv6-only сети. Отказ 
    email-вход reviewer-аккаунтом, Sign in with Apple, Google. Ожидаемо — вход
    завершается, ошибок «No connection» нет.
 4. Доказательство на сервере (read-only, bash):
-   `source scripts/deploy-target.sh` → `ssh "$PROD_SSH_TARGET" "docker logs
-   metravel_nginx_1 --since <host-local время> …"` и фильтр по UA
+   `source scripts/deploy-target.sh` → `N="$(metravel_resolve_container_over_ssh
+   nginx)"` → `ssh "$PROD_SSH_TARGET" "docker logs $N --since <host-local
+   время> …"` (имя не константа: с 21.09.2026 `metravel-nginx-1`) и фильтр по UA
    `CFNetwork`/`metravel/` с IP не владельца. `--since/--until` docker трактует
    в местном времени хоста (UTC+3), логи внутри — UTC: сдвиг 3 часа съедает
    окно целиком.
