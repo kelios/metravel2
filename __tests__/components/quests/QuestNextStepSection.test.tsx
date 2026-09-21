@@ -172,6 +172,14 @@ describe('QuestNextStepSection', () => {
     expect(mockPush).toHaveBeenCalledWith('/quests/4/minsk-dvoriki')
   })
 
+  // #2010: на web данные ждут видимости блока, а на native наблюдателя нет —
+  // запрос уходит сразу, и напоминание получает остаток коллекции к финишу.
+  it('на native запрашивает данные коллекции сразу, без ожидания прокрутки', () => {
+    renderSection()
+
+    expect(mockUseQuestCityCollection).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }))
+  })
+
   it('прячет блок целиком, когда предлагать нечего', () => {
     mockUseQuestCityCollection.mockReturnValue({ collection: null, suggestions: [], loading: false })
     const { queryByTestId } = renderSection()

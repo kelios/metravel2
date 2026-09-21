@@ -112,6 +112,39 @@ describe('useProgressiveLoad', () => {
     expect(result.current.shouldLoad).toBe(false);
   });
 
+  // #2010: блок финала квеста грузит каталог только по видимости — таймер не
+  // должен подменять прокрутку, сколько бы страница ни была открыта.
+  it('keeps visibility-only content unloaded by time and loads it on intersection', () => {
+    const { result } = renderHook(() =>
+      useProgressiveLoad({
+        priority: 'low',
+        threshold: 0,
+        enabled: true,
+        disableFallbackOnWeb: true,
+      }),
+    );
+
+    act(() => {
+      result.current.setElementRef(document.createElement('div'));
+    });
+    expect(observers).toHaveLength(1);
+
+    act(() => {
+      jest.advanceTimersByTime(60_000);
+    });
+    expect(result.current.shouldLoad).toBe(false);
+
+    act(() => {
+      observers[0]?.callback([
+        {
+          isIntersecting: true,
+          intersectionRatio: 1,
+        } as IntersectionObserverEntry,
+      ], {} as IntersectionObserver);
+    });
+    expect(result.current.shouldLoad).toBe(true);
+  });
+
   it('loads visibility-only content when IntersectionObserver is unavailable', () => {
     delete (window as any).IntersectionObserver;
     delete (global as any).IntersectionObserver;

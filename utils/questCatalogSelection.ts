@@ -23,6 +23,25 @@ export const COMPLETED_BY_OTHERS_FILTER_ID = '__completed_by_others__';
 export const UNCOMPLETED_FILTER_ID = '__uncompleted__';
 
 /**
+ * Вся страна каталога — тот же слот выбора, что и город: `__country__:BY`.
+ * Отдельный слот для страны мог бы разойтись с выбранным городом другой
+ * страны, а каждому потребителю выбора (сетка, заголовки, сброс, сохранение)
+ * пришлось бы учить второе поле.
+ */
+export const COUNTRY_FILTER_PREFIX = '__country__:';
+
+export function toCountrySelectionId(countryCode: string): string {
+    return `${COUNTRY_FILTER_PREFIX}${countryCode.trim().toUpperCase()}`;
+}
+
+/** Код страны из id выбора; `null` для города и любого другого среза. */
+export function parseCountrySelectionId(selectionId: string | null | undefined): string | null {
+    if (!selectionId || !selectionId.startsWith(COUNTRY_FILTER_PREFIX)) return null;
+    const code = selectionId.slice(COUNTRY_FILTER_PREFIX.length).trim().toUpperCase();
+    return code || null;
+}
+
+/**
  * Предикат этих двух срезов. Флаг приходит в каждом элементе `/quests/`
  * (`is_completed_by_me` → `isCompletedByMe`), поэтому срез не стоит отдельного
  * запроса. Живёт рядом со своими id и без зависимостей: одним правилом каталог
