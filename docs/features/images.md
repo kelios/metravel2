@@ -984,8 +984,9 @@ capability-лестнице переходного proxy. Это включае�
   «предгенерация заработала» по весу ответа бессмысленно, пока флаг выключен:
   прод отдаёт мастер даже для источников с уже готовыми производными (#1195).
 - Инвариант раздачи проверяется постоянно, а не разово: `npm run
-  test:media:postdeploy` (`scripts/post-deploy-media-check.js`, вызывается из
-  `build-prod.sh` после SEO-check) берёт по одному URL на семейство из
+  test:media:postdeploy` (`scripts/post-deploy-media-check.js`; `build-prod.sh`
+  гоняет его в фоне во время экспорта, и генерация SEO ждёт его конца — выкатываемый
+  HTML он не читает, #2013) берёт по одному URL на семейство из
   публичного API и падает при `source-pass-through`, `no-store` или одинаковом
   весе на двух ступенях семейства (`WIDTHS_BY_FAMILY`, свои у каждого). Исключение
   одно и явное — `DECLARED_MASTER_FALLBACK_FAMILIES`: у `uploads/**` мастер,

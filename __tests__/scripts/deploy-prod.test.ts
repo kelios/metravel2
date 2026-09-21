@@ -50,6 +50,8 @@ const BUILD_STUB = [
   'echo "▶ stub stage"',
   'echo "noise line"',
   'echo "⏱  stub stage: 0 с"',
+  'echo "⏱  Время этапов:"',
+  'echo "      0 с  stub stage"',
   'exit "${STUB_EXIT:-0}"',
 ].join('\n')
 
@@ -200,6 +202,8 @@ describe('scripts/deploy-prod.sh', () => {
       expect(result.status).toBe(3)
       expect(tailStart).toBeGreaterThan(-1)
       expect(result.stdout.slice(0, tailStart)).toContain('▶ stub stage')
+      // The stage table rows start with spaces and must survive the filter.
+      expect(result.stdout.slice(0, tailStart)).toContain('      0 с  stub stage')
       expect(result.stdout.slice(0, tailStart)).not.toContain('noise line')
       expect(result.stdout.slice(tailStart)).toContain('noise line')
       expect(fs.existsSync(fixture.worktree)).toBe(false)
