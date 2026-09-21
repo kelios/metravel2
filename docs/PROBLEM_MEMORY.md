@@ -1061,17 +1061,27 @@ guard, падающий в CI на попытке обойти этот конт
 
 - **Инвариант:** нормальный production probe возвращает `provider: ors`,
   `is_optimal: true`, road geometry; direct fallback не кэшируется как healthy.
-- **Surface/owner:** backend routing/provider + frontend runtime smoke.
+- **Surface/owner:** backend routing/provider + frontend runtime smoke;
+  клиентские мосты к `POST /api/routing/route/` (карта, планировщик, квесты).
 - **Цепочка:** configuration `#732`, production failure `#784`, recurrence
-  `#812`.
+  `#812`, мост карты квестов `#2014`.
 - **Подтверждённые причины:** сначала отсутствовал ORS config; затем upstream
   route-not-found скрывался generic `ors_http_error`, а direct fallback
-  сохранялся в cache и переживал восстановление provider.
+  сохранялся в cache и переживал восстановление provider. `#2014`: эндпоинт
+  честно отвечает на direct fallback HTTP 200 с `provider: direct` /
+  `is_optimal: false`, а мост карты квестов
+  (`components/quests/questRouteGeometry.ts`) проверял только `res.ok` и выдавал
+  прямую за проложенный маршрут — статус «готов», GPX и офлайн-экспорт.
 - **Controls:** car/bike/foot prod probes, status-specific fallback reason,
-  no-cache for degraded fallback, `/map` Network/Console smoke.
+  no-cache for degraded fallback, `/map` Network/Console smoke; в каждом
+  клиентском мосте — отказ от ответа по любому из двух признаков деградации
+  (эталон `components/MapPage/useRouting.ts`) и unit-регрессия на каждый
+  признак (`__tests__/components/quests/questRouteGeometry.test.ts`).
 - **Решение для новой жалобы:** persistent direct fallback по той же причине —
-  `reopen #812`; новый provider/config failure — `create-linked` к семье.
-- **Последняя проверка:** `#812 done`, 2026-07-06.
+  `reopen #812`; новый provider/config failure — `create-linked` к семье;
+  клиентский мост, принимающий degraded HTTP 200 за healthy, — `create-linked`
+  к `#2014`.
+- **Последняя проверка:** `#812 done`, 2026-07-06; `#2014`, 2026-09-21.
 
 ### ACH-CACHE-001 — achievements cache and invalidation
 

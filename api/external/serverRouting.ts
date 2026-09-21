@@ -19,7 +19,7 @@ export interface ServerRoutingResponseBody {
   is_optimal?: boolean;
   fallback_reason?: string | null;
   cache_hit?: boolean;
-  warnings?: string[];
+  warnings?: Array<{ code: string; message: string }>;
 }
 
 /**

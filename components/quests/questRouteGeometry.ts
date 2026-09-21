@@ -1,5 +1,5 @@
 import { valhallaRoute } from '@/api/external/valhalla';
-import { serverRoute } from '@/api/external/serverRouting';
+import { serverRoute, type ServerRoutingResponseBody } from '@/api/external/serverRouting';
 import {
   decodePolyline6,
   ensureAnchoredGeometry,
@@ -131,9 +131,24 @@ const buildServerRoute = async (
     routeMode,
     { signal },
   );
-  if (!res.ok) await throwForRouteStatus(res, i18nT('quests:components.quests.questRouteGeometry.servera_marshrutizatsii_9da8dfea'));
+  const serverLabel = i18nT('quests:components.quests.questRouteGeometry.servera_marshrutizatsii_9da8dfea');
+  if (!res.ok) await throwForRouteStatus(res, serverLabel);
 
-  const data = await res.json();
+  const data: ServerRoutingResponseBody | null = await res.json();
+  // На собственный прямой fallback эндпоинт тоже отвечает HTTP 200
+  // (`provider: 'direct'`, `is_optimal: false`): конверт валиден, но это линия
+  // через точки, а не проложенная дорога. Принятая как `routed`, она получила
+  // бы статус «маршрут готов» и ушла бы в GPX и офлайн-экспорт — поэтому любой
+  // из двух признаков передаёт построение Valhalla. Ответы без `is_optimal`
+  // остаются совместимыми.
+  if (data?.provider === 'direct' || data?.is_optimal === false) {
+    throw new Error(i18nT('quests:components.quests.questRouteGeometry.oshibka_value1_value2_value3_02ee40f2', {
+      value1: serverLabel,
+      value2: data.fallback_reason || data.provider || '',
+      value3: '',
+    }));
+  }
+
   const track = ensureAnchoredGeometry(waypoints, normalizeTrack(data?.geometry));
   if (track.length < 2) throw new Error(i18nT('quests:components.quests.questRouteGeometry.pustoy_peshiy_marshrut_ot_servera_cbf4445a'));
 
