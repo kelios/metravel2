@@ -34,6 +34,74 @@ REMOTE_LOG=''
 ENV_BACKUP=''
 ENV_BACKUP_PRESENT=0
 BUILD_SOURCE_SHA=''
+MEDIA_CHECKS_PID=''
+MEDIA_CHECKS_LOG=''
+STAGE_NAME=''
+STAGE_STARTED_AT=0
+STAGE_REPORT=''
+
+# Время этапов (#2013). Выкат дорос до ~15 минут незаметно: длительность этапов
+# нигде не печаталась. Каждый этап закрывается строкой «⏱ этап: N с», а на
+# выходе — в том числе аварийном — печатается сводка, так что регресс времени
+# виден в отчёте любого выката.
+stage() {
+  stage_done
+  STAGE_NAME="$1"
+  STAGE_STARTED_AT=$SECONDS
+  echo "▶ $STAGE_NAME"
+}
+
+stage_done() {
+  [[ -n "$STAGE_NAME" ]] || return 0
+  local took=$((SECONDS - STAGE_STARTED_AT))
+  echo "⏱  $STAGE_NAME: ${took} с"
+  STAGE_REPORT+="$(printf '   %4d с  %s' "$took" "$STAGE_NAME")"$'\n'
+  STAGE_NAME=''
+}
+
+print_stage_report() {
+  stage_done
+  [[ -n "$STAGE_REPORT" ]] || return 0
+  echo "⏱  Время этапов:"
+  printf '%s' "$STAGE_REPORT"
+  echo "⏱  Итого: ${SECONDS} с"
+}
+
+# Медиа-проверки прода — в фоне, пока Metro собирает бандл (#2013). Обе смотрят
+# не выкатываемый фронтенд, а медиа из прод-API: `post-deploy-media-check.js`
+# сверяет вес, кэш и ресайз по URL из `/api/travels/` и `/api/quests/` (#1195),
+# `audit-article-body-media.js` щупает картинки тел статей (#1834, #1088).
+# Выкат их результата не меняет, а в хвосте выката они добавляли 75 с. Экспорт
+# грузит локальный CPU, эти проверки — сеть; генерация SEO ждёт их конца, чтобы
+# два темповых обхода прод-API (#1966) никогда не шли одновременно. Вердикт,
+# как и прежде, сборку не валит.
+start_prod_media_checks() {
+  MEDIA_CHECKS_LOG="$(mktemp -t metravel-media-checks 2>/dev/null || mktemp /tmp/metravel-media-checks.XXXXXX)"
+  (
+    node scripts/post-deploy-media-check.js --url https://metravel.by \
+      || echo "⚠️  Проверка медиа-контракта прода нашла замечания — посмотри: npm run test:media:postdeploy:verbose"
+    node scripts/audit-article-body-media.js --url https://metravel.by \
+      || echo "⚠️  В телах статей есть битые или осиротевшие картинки — посмотри: npm run test:media:body -- --verbose"
+  ) >"$MEDIA_CHECKS_LOG" 2>&1 &
+  MEDIA_CHECKS_PID=$!
+}
+
+finish_prod_media_checks() {
+  [[ -n "$MEDIA_CHECKS_PID" ]] || return 0
+  wait "$MEDIA_CHECKS_PID" || true
+  MEDIA_CHECKS_PID=''
+  echo "Медиа-проверки прода (шли в фоне во время экспорта):"
+  cat "$MEDIA_CHECKS_LOG"
+  rm -f "$MEDIA_CHECKS_LOG"
+  MEDIA_CHECKS_LOG=''
+}
+
+stop_prod_media_checks() {
+  [[ -n "${MEDIA_CHECKS_PID:-}" ]] || return 0
+  pkill -P "$MEDIA_CHECKS_PID" 2>/dev/null || true
+  kill "$MEDIA_CHECKS_PID" 2>/dev/null || true
+  MEDIA_CHECKS_PID=''
+}
 
 # .env общий для всех параллельных сессий в этом чекауте, а apply_env копирует
 # поверх него .env.$ENV. Без возврата исходника соседняя сессия молча получала
@@ -68,6 +136,11 @@ on_exit() {
   # restore_env_file, иначе бросил бы общий .env прод-копией — ENV_BACKUP к
   # этому моменту уже обнулён, и повторной попытки не будет.
   trap '' INT TERM HUP
+  print_stage_report || true
+  stop_prod_media_checks
+  if [[ -n "${MEDIA_CHECKS_LOG:-}" ]]; then
+    rm -f "$MEDIA_CHECKS_LOG"
+  fi
   if [[ -n "${EXPORT_LOG:-}" ]]; then
     rm -f "$EXPORT_LOG"
   fi
@@ -167,6 +240,11 @@ build_env() {
   # (dist/.prod-staging, dist/.prod-build.lock) — иначе bash-флоу сметает их.
   find dist -mindepth 1 -maxdepth 1 ! -name "$ENV" ! -name '.*' -exec rm -rf {} + 2>/dev/null || true
 
+  # `-c` — холодный Metro в свежем изолированном TMPDIR, и это осознанно (#2013):
+  # web-сборка вшивает RU-тексты каталогов `i18n/locales` в вызывающие модули
+  # (i18n/babel-inline-plugin.js), а ключ кэша Metro эти каталоги не видит —
+  # тёплый кэш выкатил бы старый текст после правки одного каталога. Время
+  # холодного экспорта в выкате скрыто фоновыми медиа-проверками прода.
   CI=1 \
   EXPO_NO_INTERACTIVE=1 \
   NODE_ENV=production \
@@ -219,12 +297,21 @@ deploy_prod() {
 
   require_deploy_target || return 1
 
-  # build_env intentionally leaves root-level dot paths outside dist/$ENV,
-  # while copy-public-files publishes the required .well-known tree inside the
-  # environment artifact. Do not upload those redundant build-root leftovers.
-  rsync -avzhe "ssh" --delete --exclude='/.*' \
-    ./dist/ \
-    "$PROD_SSH_TARGET:$PROD_REMOTE_DIR/dist/"
+  # Only dist/$ENV travels: build_env leaves root-level dot paths (staging
+  # dirs, locks) outside it, while copy-public-files publishes the required
+  # .well-known tree and the source marker inside the environment artifact.
+  #
+  # The upload staging dir is removed after every deploy, so without a basis
+  # rsync re-sent the whole ~370 MB artifact (~100 MB compressed) each time.
+  # `--copy-dest` points it at the live release (#2013): unchanged files are
+  # copied on the server, changed ones travel as deltas against the live copy.
+  local rsync_started=$SECONDS
+  rsync -azhe "ssh" --delete --mkpath --stats \
+    --copy-dest="$PROD_REMOTE_DIR/static/dist" \
+    "./dist/$ENV/" \
+    "$PROD_SSH_TARGET:$PROD_REMOTE_DIR/dist/$ENV/"
+  echo "⏱  rsync: $((SECONDS - rsync_started)) с"
+  local remote_started=$SECONDS
 
   # The success marker travels as an argument and comes back only if the
   # remote program reached its final line. The heredoc is quoted, so the
@@ -490,6 +577,7 @@ REMOTE_DEPLOY_SCRIPT
     echo "❌ Remote deploy output is missing the success marker — the readiness/cleanup tail did not run"
     return 1
   fi
+  echo "⏱  удалённая публикация: $((SECONDS - remote_started)) с"
   rm -f "$REMOTE_LOG"
   REMOTE_LOG=''
 
@@ -522,8 +610,14 @@ DEPLOY="${DEPLOY:-1}"
 assert_deployable_source "$ENV" "$ALLOW_DIRTY" "$DEPLOY"
 
 echo "🔁 Старт сборки..."
+stage "зависимости"
 install_deps
 
+if [[ "$DEPLOY" == "1" && "$ENV" == "prod" ]]; then
+  start_prod_media_checks
+fi
+
+stage "экспорт Metro"
 build_env "$ENV"
 
 # Целостность разбиения на чанки. Выпуск может быть «зелёным» по размеру и
@@ -531,11 +625,20 @@ build_env "$ENV"
 # `import()`, обязан тянуть за собой соседей, чьи определения требуют его
 # фабрики. Без этой проверки #1749 доехал до прода и убивал /map сообщением
 # «Requiring unknown module».
+stage "замыкание чанков"
 echo "Проверка замыкания чанков..."
 node scripts/guard-chunk-closure.js "dist/$ENV"
 
+if [[ -n "$MEDIA_CHECKS_PID" ]]; then
+  stage "медиа-проверки прода (фон, ждём конца)"
+  finish_prod_media_checks
+fi
+
+stage "генерация SEO-страниц"
 echo "Генерация SEO-страниц..."
 node scripts/generate-seo-pages.js --dist "dist/$ENV" --api https://metravel.by
+
+stage "проверки статики"
 
 # FE-IDX-1: убедиться, что тело статьи реально инжектировано в статику.
 # Без этого Googlebot видит пустой скелетон → "просканирована, но не проиндексирована".
@@ -576,6 +679,7 @@ echo "Проверка: quest-страницы и city-лендинги в ст�
 node scripts/verify-static-quest-seo.js --dist "dist/$ENV" --api https://metravel.by
 node scripts/guard-site-owner-name.js --dist "dist/$ENV"
 
+stage "постобработка"
 echo "Постобработка билда..."
 node scripts/copy-public-files.js "dist/$ENV"
 
@@ -597,28 +701,19 @@ if [[ "$ENV" == "prod" ]]; then
 fi
 
 if [[ "$DEPLOY" == "1" ]]; then
+  stage "выкат (rsync + публикация)"
   echo "старт деплоя ..."
   deploy_prod "$ENV"
 
   if [[ "$ENV" == "prod" ]]; then
+    stage "пост-деплой SEO"
     echo "✅ Public readiness passed; starting post-deploy acceptance checks"
     echo "Пост-деплой проверка SEO на проде..."
     # Не валит билд (деплой уже выполнен) — только сигнализирует о замечаниях.
+    # Проверки медиа прода (#1195, #1834, #1088) выкатываемый HTML не читают и
+    # прошли в фоне во время экспорта — см. start_prod_media_checks.
     node scripts/post-deploy-seo-check.js --url https://metravel.by --limit 30 \
       || echo "⚠️  Пост-деплой SEO-проверка нашла замечания — посмотри: npm run test:seo:postdeploy:verbose"
-
-    echo "Пост-деплой проверка медиа-контракта на проде..."
-    # SEO-check смотрит на HTML и не видит вес/кэш картинок: именно поэтому #1195
-    # (мастер вместо ступени, 50× перерасхода) прожил дни незамеченным.
-    node scripts/post-deploy-media-check.js --url https://metravel.by \
-      || echo "⚠️  Пост-деплой проверка медиа нашла замечания — посмотри: npm run test:media:postdeploy:verbose"
-
-    echo "Пост-деплой проверка картинок в телах статей на проде..."
-    # Контрактная проверка выше смотрит вес и кэш на выборке статей и не видит
-    # оборванную ссылку: фото точки в теле умирает вместе с точкой (#1834, #1088).
-    # Здесь по всему каталогу щупаются HEAD-ом рискованные классы тела.
-    node scripts/audit-article-body-media.js --url https://metravel.by \
-      || echo "⚠️  В телах статей есть битые или осиротевшие картинки — посмотри: npm run test:media:body -- --verbose"
   fi
 fi
 

@@ -15,11 +15,32 @@
 
 const fs = require('fs')
 const path = require('path')
+const { execFileSync } = require('child_process')
 
 const repoRoot = path.resolve(__dirname, '..')
+
+// Корень ОСНОВНОГО чекаута. Прод-деплой идёт из изолированного worktree
+// (docs/WORKFLOW_OPERATIONS.md §3.5), а у каждого worktree свой `.codex-temp`:
+// лок от корня своего дерева соседние worktree не видели, и две прод-сборки из
+// разных worktree шли бы параллельно (#2013). `--git-common-dir` у всех
+// worktree указывает на один и тот же `.git` основного чекаута.
+function resolveLockRoot(fromDir = repoRoot) {
+  try {
+    const commonDir = execFileSync('git', ['rev-parse', '--git-common-dir'], {
+      cwd: fromDir,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+    if (commonDir) return path.dirname(path.resolve(fromDir, commonDir))
+  } catch {
+    // вне git-дерева лок остаётся у своего корня
+  }
+  return fromDir
+}
+
 // Keep the lock outside `dist`: Expo may recreate/clean the output directory
 // while exporting, which would silently remove a mutex stored inside it.
-const lockPath = path.join(repoRoot, '.codex-temp', 'ops', 'web-build.lock')
+const lockPath = path.join(resolveLockRoot(), '.codex-temp', 'ops', 'web-build.lock')
 const STALE_LOCK_MS = 90 * 60 * 1000
 
 let lockOwned = false
@@ -101,5 +122,6 @@ module.exports = {
   acquireBuildLock,
   releaseBuildLock,
   registerBuildLockCleanup,
+  resolveLockRoot,
   lockPath,
 }

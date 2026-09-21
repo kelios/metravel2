@@ -267,11 +267,27 @@ describe('normal deploy Expo overlay retention', () => {
     expect(source).toContain(
       'EXPO_OVERLAY_HELPER="scripts/deploy-expo-overlay.sh"',
     )
-    expect(source).toContain("--delete --exclude='/.*'")
+    // Only dist/$ENV travels, so build-root dot paths never reach the server,
+    // and the live release is the delta basis for the upload (#2013).
+    expect(source).toContain('rsync -azhe "ssh" --delete --mkpath --stats')
+    expect(source).toContain('--copy-dest="$PROD_REMOTE_DIR/static/dist"')
+    expect(source).toContain(
+      '"./dist/$ENV/" \\\n    "$PROD_SSH_TARGET:$PROD_REMOTE_DIR/dist/$ENV/"',
+    )
     expect(source).not.toContain('scripts/fix-prod.sh')
     expect(
       source.indexOf("printf '%s' \"$EXPO_OVERLAY_HELPER_B64\""),
     ).toBeLessThan(source.indexOf('mv static/dist.new static/dist'))
+  })
+
+  // Web builds inline RU catalog text into the calling modules at transform
+  // time (i18n/babel-inline-plugin.js), while Metro keys a transform on the
+  // module itself and babel.config.js only: a warm cache would ship stale text
+  // after a catalog-only commit (#2013). The prod export stays cold.
+  it('keeps the prod export on a cold Metro cache', () => {
+    expect(readCanonicalDeploy()).toContain(
+      'node scripts/build-web-safe.js -p web -c 2>&1 | tee "$EXPORT_LOG"',
+    )
   })
 
   it('keeps the canonical remote deploy payload valid bash', () => {
@@ -303,8 +319,14 @@ describe('normal deploy Expo overlay retention', () => {
     expect(readinessIndex).toBeLessThan(
       source.indexOf('node scripts/post-deploy-seo-check.js'),
     )
-    expect(readinessIndex).toBeLessThan(
-      source.indexOf('node scripts/post-deploy-media-check.js'),
+    // Prod media checks read the API and media routes, not the released HTML,
+    // so they run in the background during the export (#2013); SEO generation
+    // waits for them so paced walks of the prod API never overlap (#1966).
+    const mediaStart = source.indexOf('\n  start_prod_media_checks\n')
+    expect(mediaStart).toBeGreaterThan(-1)
+    expect(mediaStart).toBeLessThan(source.indexOf('\nbuild_env "$ENV"\n'))
+    expect(source.indexOf('\n  finish_prod_media_checks\n')).toBeLessThan(
+      source.indexOf('\nnode scripts/generate-seo-pages.js'),
     )
     expect(source).not.toContain('Жду перезапуск app/nginx')
   })

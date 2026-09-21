@@ -440,7 +440,7 @@ deny → allow → Settings → retry снимают на свежепостав
   и не завершает статусный проход до него.
 - Не убивай и не перезапускай чужой процесс без явной команды пользователя или документированного safe-wrapper'а. Если lock явно stale, сначала зафиксируй почему он stale, затем аккуратно очисти lock и продолжай.
 - Если запускаешь новую долгую операцию без собственного lock механизма, оставь короткий marker в `.codex-temp/ops/` и удали его после завершения.
-- `build-prod.sh` удерживает общий `.codex-temp/ops/web-build.lock` до конца полного цикла build + SEO + deploy. Не обходи этот wrapper: прямой `expo export` или запуск `scripts/build-web-safe.js` параллельно с deploy запрещен.
+- `build-prod.sh` удерживает общий `.codex-temp/ops/web-build.lock` до конца полного цикла build + SEO + deploy. Путь лока считается от общего `.git` (`scripts/build-lock.js`), поэтому он один и тот же для основного чекаута и всех его worktree: до #2013 сборка из worktree брала свой лок и параллельную сборку из соседнего дерева не видела. Не обходи этот wrapper: прямой `expo export` или запуск `scripts/build-web-safe.js` параллельно с deploy запрещен.
 - Основные test/quality команды (`check:fast`, `check:changed`, `check:e2e:changed`, `check:preflight`, `test:run`, `e2e`, `release:check`) обязаны запускаться только через общий `scripts/run-with-quality-gate-lock.js`. Он использует атомарный `.codex-temp/ops/quality-gate.lock`, сообщает PID владельца и при живом владельце сразу возвращает нейтральный `SKIPPED` с кодом `0`, чтобы чат завершил собственный запуск без ожидания/ретрая. `SKIPPED` нельзя записывать как `passed` или финальный Testing verdict: acceptance запрашивает результат владельца и продолжается после него. Lock умершего процесса восстанавливается автоматически. Общая Jest-конфигурация применяет тот же контракт к прямому `npx jest`. Не обходи wrapper прямым Playwright-запуском.
 
 ### 3.5 Деплой из изолированного worktree
@@ -464,32 +464,41 @@ deny → allow → Settings → retry снимают на свежепостав
 чужой процесс не трогать) остаются обязательными; сторы и дев-стенд —
 по-прежнему только по явному запросу.
 
-```bash
-MT=/Users/juliasavran/Sites/metravel2/metravel2
-WT=/Users/juliasavran/Sites/metravel2/worktrees/deploy-main
-
-git -C "$MT" fetch origin main
-git -C "$MT" worktree add --detach "$WT" origin/main
-
-# node_modules общий со всеми worktree этого репозитория (та же конвенция, что
-# у worktrees/map и соседей): своя установка стоит гигабайты и минуты.
-ln -sfn "$MT/node_modules" "$WT/node_modules"
-
-# .env* и .env.deploy в git не лежат, а без них apply_env и resolve прод-хоста
-# падают. Симлинк, а не копия: секреты не размножаются по дереву.
-for f in .env.prod .env.deploy; do ln -sfn "$MT/$f" "$WT/$f"; done
-
-cd "$WT" && ./build-prod.sh prod
-```
-
-После деплоя worktree снимается: брошенный worktree git не показывает в
-`status`, но рекурсивные сканы (`grep -r`, `os.walk`) его видят и начинают
-врать.
+Выкат — одна команда из основного чекаута (#2013):
 
 ```bash
-rm -f "$WT/node_modules" "$WT/.env.prod" "$WT/.env.deploy"
-git -C "$MT" worktree remove --force "$WT" && git -C "$MT" worktree prune
+DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha>   # без аргумента — origin/main
 ```
+
+`scripts/deploy-prod.sh` держит общий `web-build.lock` на весь выкат, делает
+`fetch`, поднимает worktree `../worktrees/deploy-prod` на названном sha
+(фиксированный путь: брошенный прерванным выкатом worktree снимает следующий
+выкат), подключает симлинками
+`node_modules`, `.env.prod` и `.env.deploy` (секреты не копируются), до сборки
+проверяет чистоту прод-чекаута бэкенда, запускает `./build-prod.sh prod`, сверяет
+`/.build-source.json` прода с sha и делает смоук `/health`, `/`, `/api/travels/`.
+Worktree снимается на любом выходе: брошенный worktree git не показывает в
+`status`, но рекурсивные сканы (`grep -r`, `os.walk`) его видят и начинают врать.
+Полный лог — `.codex-temp/deploy/prod-<sha>-<время>.log`; при `DEPLOY_QUIET=1` в
+консоль идут только этапы, таблица времени и итоги. `DEPLOY=0` — тот же путь без
+выкладки.
+
+Бюджет выката — не больше 5 минут от команды до отчёта. `build-prod.sh`
+печатает время каждого этапа и сводку на выходе, так что регресс виден в отчёте
+любого выката. На время работают:
+
+- медиа-проверки прода (`post-deploy-media-check.js`,
+  `audit-article-body-media.js`) читают API и медиа-маршруты, а не выкатываемый
+  HTML, поэтому идут в фоне во время экспорта; генерация SEO ждёт их конца, чтобы
+  темповые обходы прод-API (#1966) не пересекались. После выката остаётся только
+  `post-deploy-seo-check.js`. Холодный экспорт Metro (`-c`) идёт за это же время,
+  поэтому тёплый кэш Metro не нужен — и запрещён: web-сборка вшивает RU-тексты
+  `i18n/locales` в вызывающие модули (`i18n/babel-inline-plugin.js`), а ключ кэша
+  Metro каталоги не видит, так что правка одного каталога выкатила бы старый текст;
+- `rsync` заливает `dist/prod` с `--copy-dest` на живой релиз: неизменённое
+  копируется на сервере, изменённое идёт дельтой;
+- overlay прошлых чанков (`scripts/deploy-expo-overlay.sh`) ставит жёсткие
+  ссылки одним проходом `cpio`, а не копирует ~6 тыс. файлов по одному.
 
 Что делает гейт `build-prod.sh` перед установкой зависимостей (проверка стоит
 доли секунды и срабатывает до сборки):
