@@ -150,40 +150,6 @@ export function useIdleCallback(
 }
 
 /**
- * Hook for IntersectionObserver with validation
- */
-export function useIntersectionObserver(
-  ref: MutableRefObject<HTMLElement | null> | null,
-  handler: (isIntersecting: boolean) => void,
-  options?: IntersectionObserverInit
-) {
-  useEffect(() => {
-    if (!ref || !ref.current || Platform.OS !== "web") return;
-    if (typeof IntersectionObserver === "undefined") {
-      // Fallback: assume visible if observer not available
-      handler(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry) {
-          handler(entry.isIntersecting);
-        }
-      },
-      options
-    );
-
-    observer.observe(ref.current);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [ref, handler, options]);
-}
-
-/**
  * Hook for RAF-based animation that auto-cleans up
  */
 export function useAnimationFrame(

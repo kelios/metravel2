@@ -1,26 +1,23 @@
 /**
- * Progressive loading utilities for below-the-fold content optimization.
- * On web we use visibility-first loading with a short fallback timer so
- * deferred sections don't compete with the first screen forever.
+ * Visibility-first loading of below-the-fold sections on web, with an optional
+ * fallback timer. Every caller is a named place in docs/RULES.md → «Web loading
+ * and hydration policy»; `npm run guard:web-deferred-loading` fails on a call
+ * outside that registry (#2012). Native loads every enabled section at once.
  */
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Platform, View } from 'react-native';
-
-// Types for progressive loading
-export interface LoadPriority {
-  immediate: boolean;    // LCP critical
-  high: boolean;        // Above fold
-  normal: boolean;      // Normal loading
-  low: boolean;         // Below fold
-}
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Platform } from 'react-native';
 
 export interface ProgressiveLoadConfig {
   priority: 'immediate' | 'high' | 'normal' | 'low';
   threshold?: number;   // Intersection threshold
-  rootMargin?: string;  // Root margin for Intersection Observer
-  fallbackDelay?: number; // Fallback delay for non-supporting browsers
+  rootMargin?: string;  // Widens the viewport root only, not an inner scroller
+  // Web: load after this many ms even if the section is never scrolled to
+  // (default 1000). Not used with `disableFallbackOnWeb`.
+  fallbackDelay?: number;
   enabled?: boolean;
+  // Visibility only, no timer. A browser without IntersectionObserver still
+  // loads at once, so the section is never stranded.
   disableFallbackOnWeb?: boolean;
 }
 
@@ -139,133 +136,4 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
     elementRef: { current: element },
     setElementRef,
   };
-}
-
-// Component wrapper for progressive loading
-export interface ProgressiveWrapperProps {
-  children: React.ReactNode;
-  config: ProgressiveLoadConfig;
-  fallback?: React.ReactNode;
-  className?: string;
-}
-
-export function ProgressiveWrapper({
-  children,
-  config,
-  fallback = null,
-  className,
-}: ProgressiveWrapperProps) {
-  const { shouldLoad, setElementRef } = useProgressiveLoad(config);
-
-  if (!shouldLoad) {
-    if (Platform.OS === 'web') {
-      return React.createElement(
-        'div',
-        {
-          ref: setElementRef,
-          className: className,
-          style: { minHeight: '100px' },
-        },
-        fallback
-      );
-    }
-
-    return React.createElement(
-      View,
-      { style: { minHeight: 100 } },
-      fallback
-    );
-  }
-
-  return React.createElement(React.Fragment, null, children);
-}
-
-// Hook for managing loading priorities
-export function useLoadingPriorities() {
-  const [priorities] = useState<Record<string, LoadPriority>>({
-    immediate: { immediate: true, high: true, normal: true, low: true },
-    high: { immediate: false, high: true, normal: true, low: true },
-    normal: { immediate: false, high: false, normal: true, low: true },
-    low: { immediate: false, high: false, normal: false, low: true },
-  });
-
-  const shouldLoad = useCallback((priority: keyof typeof priorities) => {
-    return priorities[priority];
-  }, [priorities]);
-
-  return { shouldLoad, priorities };
-}
-
-// Critical CSS injector for above-the-fold content
-export function injectCriticalCSS(css: string) {
-  if (Platform.OS !== 'web' || typeof document === 'undefined') {
-    return;
-  }
-
-  // Check if critical CSS is already injected
-  if (document.querySelector('#critical-css')) {
-    return;
-  }
-
-  const style = document.createElement('style');
-  style.id = 'critical-css';
-  style.textContent = css;
-  style.setAttribute('data-critical', 'true');
-  
-  // Insert as first style to ensure highest priority
-  const firstStyle = document.querySelector('style');
-  if (firstStyle) {
-    firstStyle.parentNode?.insertBefore(style, firstStyle);
-  } else {
-    document.head.appendChild(style);
-  }
-}
-
-// Preload critical resources
-export function preloadCriticalResources(resources: Array<{
-  href: string;
-  as: string;
-  type?: string;
-  crossorigin?: string;
-}>) {
-  if (Platform.OS !== 'web' || typeof document === 'undefined') {
-    return;
-  }
-
-  resources.forEach(resource => {
-    if (!resource.as) return;
-    // Check if already preloaded
-    const existing = document.querySelector(
-      `link[rel="preload"][href="${resource.href}"]`
-    );
-    if (existing) return;
-
-    const link = document.createElement('link');
-    link.rel = 'preload';
-    link.href = resource.href;
-    link.as = resource.as;
-    
-    if (resource.type) link.type = resource.type;
-    if (resource.crossorigin) link.crossOrigin = resource.crossorigin;
-    
-    document.head.appendChild(link);
-  });
-}
-
-// Optimize font loading
-export function optimizeFontLoading(fonts: Array<{
-  family: string;
-  weight?: string;
-  style?: string;
-  display?: 'auto' | 'block' | 'swap' | 'fallback' | 'optional';
-}>) {
-  if (Platform.OS !== 'web' || typeof document === 'undefined') {
-    return;
-  }
-
-  // NOTE: This project does not ship web-served .woff2 files under /fonts.
-  // Loading FontFace from /fonts/*.woff2 can return HTML (404) and triggers OTS decode errors.
-  // Keep this function as a no-op on web unless/until real font assets are added.
-  void fonts;
-  return;
 }

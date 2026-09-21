@@ -201,24 +201,6 @@ export function deferExecution(fn: () => void, delay = 1000): void {
 }
 
 /**
- * Intersection Observer для lazy loading
- */
-export function createLazyLoadObserver(
-  callback: (entries: IntersectionObserverEntry[]) => void,
-  options?: IntersectionObserverInit
-): IntersectionObserver | null {
-  if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
-    return null
-  }
-
-  return new IntersectionObserver(callback, {
-    rootMargin: '50px',
-    threshold: 0.01,
-    ...options,
-  })
-}
-
-/**
  * Инициализация мониторинга производительности (web-only).
  * Регистрирует PerformanceObserver для LCP, FCP, CLS и Long Tasks,
  * логируя предупреждения при превышении пороговых значений.

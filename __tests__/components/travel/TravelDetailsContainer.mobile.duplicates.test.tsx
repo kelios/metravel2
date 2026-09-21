@@ -81,7 +81,6 @@ jest.mock('@/hooks/useScrollNavigation', () => ({
 
 jest.mock('@/hooks/useProgressiveLoading', () => ({
   useProgressiveLoad: () => ({ shouldLoad: true, setElementRef: jest.fn() }),
-  ProgressiveWrapper: ({ children }: any) => children,
 }));
 
 jest.mock('@/hooks/useTravelDetailsPerformance', () => ({

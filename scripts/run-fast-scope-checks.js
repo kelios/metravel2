@@ -283,6 +283,14 @@ const main = () => {
       process.exit(guardStatus)
     }
 
+    // Безусловно, как и остальные дешёвые гейты: новая отложенная загрузка
+    // секции появляется в НОВОМ файле (#1475, #818, #2010), и проверка только
+    // изменённых файлов не сверила бы её с реестром в RULES.md (#2012).
+    const deferredLoadingGuardStatus = runCommand('npm', ['run', 'guard:web-deferred-loading'])
+    if (deferredLoadingGuardStatus !== 0) {
+      process.exit(deferredLoadingGuardStatus)
+    }
+
     const typeDebtGuardStatus = runCommand('npm', ['run', 'guard:type-debt'])
     if (typeDebtGuardStatus !== 0) {
       process.exit(typeDebtGuardStatus)

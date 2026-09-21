@@ -6,7 +6,6 @@ import {
   useDOMElement,
   useEventListener,
   useIdleCallback,
-  useIntersectionObserver,
   useInterval,
   useTimeout,
 } from '@/hooks/useTravelDetailsUtils'
@@ -15,7 +14,6 @@ describe('useTravelDetailsUtils', () => {
   const originalPlatform = require('react-native').Platform.OS
   const originalRequestIdleCallback = (window as any).requestIdleCallback
   const originalCancelIdleCallback = (window as any).cancelIdleCallback
-  const originalIntersectionObserver = (global as any).IntersectionObserver
 
   beforeAll(() => {
     const RN = require('react-native')
@@ -27,7 +25,6 @@ describe('useTravelDetailsUtils', () => {
     RN.Platform.OS = originalPlatform
     ;(window as any).requestIdleCallback = originalRequestIdleCallback
     ;(window as any).cancelIdleCallback = originalCancelIdleCallback
-    ;(global as any).IntersectionObserver = originalIntersectionObserver
   })
 
   it('useTimeout runs once and cleans up', () => {
@@ -82,27 +79,6 @@ describe('useTravelDetailsUtils', () => {
     renderHook(() => useIdleCallback(callback, { timeout: 10, enabled: true }))
 
     expect(callback).toHaveBeenCalled()
-  })
-
-  it('useIntersectionObserver forwards visibility state', () => {
-    const handler = jest.fn()
-    const ref = { current: document.createElement('div') }
-    const observe = jest.fn()
-    let observerCallback: ((entries: Array<{ isIntersecting: boolean }>) => void) | null = null
-
-    ;(global as any).IntersectionObserver = jest.fn((cb: any) => {
-      observerCallback = cb
-      return { observe, disconnect: jest.fn() }
-    })
-
-    renderHook(() => useIntersectionObserver(ref, handler))
-
-    act(() => {
-      observerCallback?.([{ isIntersecting: true }])
-    })
-
-    expect(observe).toHaveBeenCalled()
-    expect(handler).toHaveBeenCalledWith(true)
   })
 
   it('useAnimationFrame drives frame updates', () => {
