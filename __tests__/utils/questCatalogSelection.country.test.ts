@@ -1,6 +1,6 @@
 /**
  * Выбор всей страны в каталоге квестов живёт в том же слоте, что и город
- * (`openspec/changes/quest-sidebar-country-accordion`, D1): id `__country__:<ISO>`.
+ * (`openspec/changes/archive/2026-09-21-quest-sidebar-country-accordion/design.md`, D1): id `__country__:<ISO>`.
  */
 import {
     ALL_QUESTS_ID,

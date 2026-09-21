@@ -1,5 +1,5 @@
 /**
- * Страны сайдбара каталога квестов (`openspec/changes/quest-sidebar-country-accordion`):
+ * Страны сайдбара каталога квестов (`openspec/specs/quest-catalog-sidebar/spec.md`):
  * группы, выбор всей страны и раскрытие по умолчанию.
  */
 import { act, renderHook } from '@testing-library/react-native'

@@ -1,4 +1,4 @@
-// Каталог квестов с выбором всей страны на месте (`openspec/changes/quest-sidebar-country-accordion`):
+// Каталог квестов с выбором всей страны на месте (`openspec/specs/quest-catalog-sidebar/spec.md`):
 // страна не уводит на лендинг, «Все квесты страны» фильтрует сетку, выбор сохраняется и
 // восстанавливается, страны свёрнуты при входе, а в мобильном drawer выбор его закрывает.
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
