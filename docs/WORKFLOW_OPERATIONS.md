@@ -192,7 +192,10 @@ curl -s -o /dev/null -w '%{http_code}\n' --max-time 60 http://localhost:8081/
 
 - **Аккаунты для Apple App Review (с 12.09.2026).** Постоянный reviewer demo,
   выданный Apple, хранится в `.env.e2e` как `APP_REVIEW_DEMO_EMAIL` /
-  `APP_REVIEW_DEMO_PASSWORD`: им только входят в сцене `login`, его не удаляют
+  `APP_REVIEW_DEMO_PASSWORD`: им входят в сцене `login`, и (решение владельца
+  21.09.2026) от него же публикуются комментарии редакции под статьями — в
+  интерфейсе он подписан «Редакция metravel», user id 120; рецепт токена —
+  `.claude/skills/metravel-travel-article/SKILL.md`, шаг 7. Аккаунт не удаляют
   и не показывают в паролях/скриншотах/борде. Одноразовые аккаунты для
   регистрации и удаления — Gmail plus-адреса того же ящика
   (`<local-part>+appleqa-<YYYYMMDD>-<n>@gmail.com`): письма активации приходят
