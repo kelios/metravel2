@@ -1,5 +1,5 @@
 import React, { memo, useCallback } from 'react'
-import { Animated, Platform, View } from 'react-native'
+import { Animated, View } from 'react-native'
 import type { Travel } from '@/types/types'
 import {
   AuthorSectionSkeleton,
@@ -142,7 +142,6 @@ export const TravelDeferredSections: React.FC<{
       <View
         ref={setCommentsSectionRef}
         collapsable={false}
-        {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
       >
         {shouldLoadCommentsSection && travel?.id ? (
           <CommentsSection

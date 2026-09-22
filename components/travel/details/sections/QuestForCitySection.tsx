@@ -74,7 +74,7 @@ export const QuestForCitySection: React.FC<{
       accessibilityLabel={heading}
       accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
       testID="quest-for-city-section"
-      data-section-key="quest-for-city"
+      {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'quest-for-city' } } : {})}
     >
       <Text
         style={styles.sectionHeaderText}

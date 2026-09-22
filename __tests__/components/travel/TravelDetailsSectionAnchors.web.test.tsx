@@ -1,20 +1,52 @@
-import React, { act, createRef } from 'react'
-import { createRoot, type Root } from 'react-dom/client'
-import { View } from 'react-native'
+import type React from 'react'
+import type { Root } from 'react-dom/client'
 
 import type { Travel } from '@/types/types'
 import type { AnchorsMap } from '@/components/travel/details/TravelDetailsTypes'
-import { TravelHeroSection } from '@/components/travel/details/TravelDetailsHero'
-import { TravelDetailsContentSection } from '@/components/travel/details/sections/TravelDetailsContentSection'
-import { TravelDetailsMapSection } from '@/components/travel/details/sections/TravelDetailsMapSection'
-import { TravelDetailsSidebarSection } from '@/components/travel/details/sections/TravelDetailsSidebarSection'
-import { TravelDeferredSections } from '@/components/travel/details/TravelDetailsDeferred'
-import { buildTravelSectionLinks } from '@/components/travel/sectionLinks'
-import { useActiveSection } from '@/hooks/useActiveSection'
 
 // The native Jest View accepts arbitrary props; RNW deliberately drops raw data-*.
 // Keep the real web primitives and section wrappers so this catches that boundary.
-jest.mock('react-native', () => jest.requireActual('react-native-web'))
+// `__tests__/setup.ts` already required its own `react-native` mock (via the
+// gesture-handler jest setup), so a hoisted `jest.mock` here would lose to the cached
+// module: load RNW and everything that renders through it from a fresh registry.
+// jest-expo also resolves `.native.tsx` first, so pin the web files of the sections
+// that have a native twin — otherwise the test would read native markup.
+const WEB_VARIANT_MODULES = [
+  '@/components/travel/StableContent',
+  '@/components/travel/details/TravelDetailsDeferred',
+  '@/components/travel/details/TravelDetailsDeferredRuntimeSlot',
+  '@/components/travel/details/sections/TravelRouteMapBlock',
+]
+let act: typeof import('react').act
+let createRef: typeof import('react').createRef
+let createRoot: typeof import('react-dom/client').createRoot
+let View: typeof import('react-native').View
+let TravelHeroSection: typeof import('@/components/travel/details/TravelDetailsHero').TravelHeroSection
+let TravelDetailsContentSection: typeof import('@/components/travel/details/sections/TravelDetailsContentSection').TravelDetailsContentSection
+let TravelDetailsMapSection: typeof import('@/components/travel/details/sections/TravelDetailsMapSection').TravelDetailsMapSection
+let TravelDetailsSidebarSection: typeof import('@/components/travel/details/sections/TravelDetailsSidebarSection').TravelDetailsSidebarSection
+let TravelDeferredSections: typeof import('@/components/travel/details/TravelDetailsDeferred').TravelDeferredSections
+let buildTravelSectionLinks: typeof import('@/components/travel/sectionLinks').buildTravelSectionLinks
+let useActiveSection: typeof import('@/hooks/useActiveSection').useActiveSection
+
+beforeAll(() => {
+  jest.resetModules()
+  jest.doMock('react-native', () => jest.requireActual('react-native-web'))
+  for (const modulePath of WEB_VARIANT_MODULES) {
+    jest.doMock(modulePath, () => jest.requireActual(`${modulePath}.tsx`))
+  }
+  ;({ act, createRef } = require('react'))
+  ;({ createRoot } = require('react-dom/client'))
+  ;({ View } = require('react-native'))
+  ;({ TravelHeroSection } = require('@/components/travel/details/TravelDetailsHero'))
+  ;({ TravelDetailsContentSection } = require('@/components/travel/details/sections/TravelDetailsContentSection'))
+  ;({ TravelDetailsMapSection } = require('@/components/travel/details/sections/TravelDetailsMapSection'))
+  ;({ TravelDetailsSidebarSection } = require('@/components/travel/details/sections/TravelDetailsSidebarSection'))
+  ;({ TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred'))
+  ;({ buildTravelSectionLinks } = require('@/components/travel/sectionLinks'))
+  ;({ useActiveSection } = require('@/hooks/useActiveSection'))
+})
+
 jest.mock('@/components/travel/details/TravelDetailsStyles', () => ({ useTravelDetailsStyles: () => ({}) }))
 jest.mock('@/components/travel/details/TravelDetailsHeroStyles', () => ({ useTravelDetailsHeroStyles: () => ({}) }))
 jest.mock('@/hooks/useTheme', () => ({ useThemedColors: () => ({}) }))
