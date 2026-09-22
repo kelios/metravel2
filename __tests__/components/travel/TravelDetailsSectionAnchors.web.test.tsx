@@ -12,7 +12,6 @@ import type { AnchorsMap } from '@/components/travel/details/TravelDetailsTypes'
 // jest-expo also resolves `.native.tsx` first, so pin the web files of the sections
 // that have a native twin — otherwise the test would read native markup.
 const WEB_VARIANT_MODULES = [
-  '@/components/travel/StableContent',
   '@/components/travel/details/TravelDetailsDeferred',
   '@/components/travel/details/TravelDetailsDeferredRuntimeSlot',
   '@/components/travel/details/sections/TravelRouteMapBlock',
