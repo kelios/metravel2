@@ -29,6 +29,6 @@
 
 - [x] 5.1 Запись в `docs/PROBLEM_MEMORY.md` рядом с QUEST-PROGRESS-CARRYOVER-001 и строка structural backlog про единый контракт согласования прогресса
 - [x] 5.2 Узкие jest-наборы прогресса квеста, `npm run check:fast`, typecheck затронутых файлов
-- [ ] 5.3 Независимое код-ревью полного diff (code-review-gate) и исправление находок
-- [ ] 5.4 Browser evidence после выката: два контекста одного аккаунта на desktop web и mobile web — сброс во втором не воскресает из первого, сеть без `POST`/`PATCH`, консоль без ошибок
+- [x] 5.3 Независимое код-ревью полного diff (code-review-gate) и исправление находок
+- [x] 5.4 Browser evidence после выката: два контекста одного аккаунта на desktop web и mobile web — сброс во втором не воскресает из первого, сеть без `POST`/`PATCH`, консоль без ошибок
 - [x] 5.5 `openspec validate quest-progress-reset-lineage --strict`
