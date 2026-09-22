@@ -150,11 +150,12 @@ describe('useTravelDetailsPerformance', () => {
       })
     )
 
-    // The safety net does not pre-empt the hero's own onLoad…
+    // The safety net is a timer, not an immediate release: the hero's own onLoad
+    // gets the first chance to open the gate…
     expect(result.current.lcpLoaded).toBe(false)
 
-    // …but a lost onLoad (SPA navigation onto a cached hero) holds the skeleton
-    // for at most 1000 ms (#2020).
+    // …and a lost onLoad (SPA navigation onto a cached hero) keeps the
+    // first-screen gate closed for at most 1000 ms (#2020).
     act(() => {
       jest.advanceTimersByTime(1000)
     })

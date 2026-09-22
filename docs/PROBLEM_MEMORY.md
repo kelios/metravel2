@@ -4719,7 +4719,11 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   `IntersectionObserver` общий наблюдатель грузит свои секции сразу
   (`__tests__/components/travel/useTravelDeferredSectionsModel.test.tsx`); #2020 —
   дедлайны сверх 1000 мс «Timeout policy» (страховка LCP героя, прогулка
-  квестов, Leaflet — по 1200 мс, проверка авторизации — 1500 мс).
+  квестов, Leaflet — по 1200 мс, проверка авторизации — 1500 мс). Исправлено в
+  #2020: все четыре — 1000 мс; контроль —
+  `__tests__/hooks/useTravelDetailsPerformance.test.tsx`,
+  `useQuestCityWalk.test.tsx`, `useLeafletLoader.idleDeadline.test.tsx` и
+  `__tests__/context/AuthContext.test.tsx`.
 
 ### TRAVEL-DETAILS-SECTION-KEY-LATE-MOUNT-001 — якорь существует с момента монтирования
 

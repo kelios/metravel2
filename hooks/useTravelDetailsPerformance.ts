@@ -7,7 +7,9 @@ import { devWarn } from '@/utils/logger'
 import { rIC } from '@/utils/rIC'
 
 const NON_TRAVEL_PERFORMANCE_INIT_DELAY_MS = 1000
-// The safety net below hides the hero skeleton, so «Timeout policy» caps it at 1000 ms (#2020).
+// When the hero onLoad is lost, the safety net below reveals the first-screen chrome and the
+// post-LCP tree, so «Timeout policy» caps it at 1000 ms (#2020). The skeleton overlay does not
+// wait for it: `TravelDetailsContainer` caps the overlay at 500 ms via `useSkeletonPhase`.
 const LCP_SAFETY_NET_MS = 1000
 const preloadTravelHeroSliderRuntime = () => Promise.resolve(import('@/components/travel/Slider.web'))
 
@@ -140,12 +142,11 @@ export function useTravelDetailsPerformance({
   // image's load/error callback. On client-side (SPA) navigation that callback is
   // unreliable — a browser-cached hero image can finish before React attaches the
   // handler so no load event ever fires (this happens routinely when arriving from a
-  // card that already rendered the same image). The skeleton overlay then covers the
-  // already-painted content, which reads as a blank/white first screen on navigation.
-  // Cap that window tightly: the overlay only exists to mask hero load, and the real
-  // hero renders its own progressive/placeholder state underneath, so force the gate
-  // open quickly. The happy path (onLoad / cache-hit synth) still releases instantly
-  // well under this timeout.
+  // card that already rendered the same image). Without this net the hero enhancers and
+  // the post-LCP runtime would then never flip. The skeleton overlay does not wait for
+  // the gate (see `LCP_SAFETY_NET_MS`), so the net only bounds how long that chrome stays
+  // hidden. The happy path (onLoad / cache-hit synth) still releases instantly, well
+  // under this timeout.
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (isLoading || travelId == null || !hasHeroMedia || lcpLoaded) return
