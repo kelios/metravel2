@@ -497,6 +497,22 @@ describe('api/quests', () => {
       await expect(fetchQuestProgress('krakow-dragon')).rejects.toThrow('Server error');
       expect(mockedPost).not.toHaveBeenCalled();
     });
+
+    // #2033: «строки нет» стирает копию сброшенного прохождения, поэтому его
+    // подтверждает только 404 про прогресс. 404 про снятый с публикации квест
+    // строку не отменяет — она цела.
+    it('404 про прогресс — строки нет, 404 про неопубликованный квест — ошибка чтения', async () => {
+      mockedGet.mockRejectedValueOnce(new (ApiError as any)(404, 'Not found', {
+        error: 'Progress for quest_id=krakow-dragon not found',
+      }));
+      await expect(fetchQuestProgress('krakow-dragon')).resolves.toBeNull();
+
+      const unpublished = new (ApiError as any)(404, 'Not found', {
+        error: 'Quest with quest_id=krakow-dragon not found',
+      });
+      mockedGet.mockRejectedValueOnce(unpublished);
+      await expect(fetchQuestProgress('krakow-dragon')).rejects.toBe(unpublished);
+    });
   });
 
   const OFFLINE_BUNDLE = { id: 1, quest_id: 'krakow-dragon', steps: [] } as any;

@@ -14,8 +14,6 @@ import {
 } from '@/api/quests';
 import { queryKeys } from '@/api/queryKeys';
 import { writeCachedQuestBundle } from '@/api/questBundleCache';
-import { getActiveQueryClient } from '@/api/activeQueryClient';
-import { resetQuestsCatalogCompletion } from '@/api/questsCatalogInvalidation';
 import { useAuthStore } from '@/stores/authStore';
 import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy';
 import { questsListQueryOptions } from '@/hooks/questsListQuery';
@@ -552,11 +550,7 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         const ownerId = useAuthStore.getState().userId;
         try {
             await apiDeleteProgress(progressIdRef.current);
-            const currentAuth = useAuthStore.getState();
-            const client = getActiveQueryClient();
-            if (client && questId && ownerId && currentAuth.isAuthenticated && currentAuth.userId === ownerId) {
-                resetQuestsCatalogCompletion(client, questId);
-            }
+            if (questId) syncCatalogCompletion(questId, ownerId ?? null, false);
             // DELETE мог дойти, когда игрок уже на другом квесте: «строки нет»
             // о нём неправда, и визард стёр бы копию живого прохождения (#1906, #2033).
             if (questIdRef.current === questId) {

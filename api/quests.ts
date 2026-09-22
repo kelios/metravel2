@@ -854,6 +854,18 @@ export async function fetchAllProgress(): Promise<ApiQuestProgress[]> {
 }
 
 /**
+ * 404 чтения прогресса бывает двух видов (`get_progress` в бэке): строки нет —
+ * и нет опубликованного квеста (`Quest with quest_id=… not found`). Второй не
+ * подтверждает отсутствие прохождения: строка цела, квест снят с публикации.
+ * Принять его за «строки нет» значит стереть живую копию (#2033). Тело без
+ * этой пометки читается по-старому — как отсутствие строки.
+ */
+const isUnpublishedQuestNotFound = (err: ApiError): boolean => {
+    const body = err.data as { error?: unknown } | null | undefined;
+    return typeof body?.error === 'string' && body.error.startsWith('Quest with quest_id=');
+};
+
+/**
  * Прочитать прогресс, НЕ создавая его. `null` — прохождения ещё нет.
  *
  * Отдельно от `fetchOrCreateProgress`, потому что открытие экрана квеста не
@@ -865,8 +877,7 @@ export async function fetchQuestProgress(questId: string): Promise<ApiQuestProgr
     try {
         return await apiClient.get<ApiQuestProgress>(`/quest-progress/quest/${questId}/`);
     } catch (err: unknown) {
-        const status = err instanceof ApiError ? err.status : undefined;
-        if (status === 404) return null;
+        if (err instanceof ApiError && err.status === 404 && !isUnpublishedQuestNotFound(err)) return null;
         throw err;
     }
 }
