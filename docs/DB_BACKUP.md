@@ -1,6 +1,8 @@
 # Бэкап production-базы metravel.by
 
-Актуализировано: 2026-08-31 — включён ежедневный бэкап в S3 (борд #1247).
+Актуализировано: 2026-09-22 — локальные архивы в `~/db-backups`, вне git-checkout
+бэкенда, и установщик ставит этот каталог сам (борд #2025). Ежедневный бэкап в S3
+включён 31.08.2026 (#1247).
 
 ## TL;DR
 
@@ -36,12 +38,11 @@
 | Обёртка запуска | `/home/sx3/.local/bin/metravel-db-backup` (0700) | генерируется `scripts/enable-prod-db-backup.sh`, руками не править |
 | Конфиг | `/home/sx3/.metravel-backup.env` (0600) | `S3_URI`, `BACKUP_DIR`, `RETENTION_DAYS=5`, `AWS_CLI`, `LOG_FILE`; секретов нет |
 | Лог | `/home/sx3/logs/metravel-db-backup.log` (0640) | строка `Backup completed` на каждую успешную ночь; ротация внутри обёртки — 4 файла по 1 МиБ |
-| Локальные архивы | `/home/sx3/metravel/deploy/prod/backups/` | ~54 МиБ штука, ретенция 5 дней, чистится самим скриптом |
+| Локальные архивы | `/home/sx3/db-backups/` (0700) | ~61 МиБ штука на 22.09.2026, ретенция 5 дней, чистится самим скриптом. Вне git-checkout бэкенда с 08.09.2026: прежний каталог `deploy/prod/backups/` внутри checkout останавливал прод-деплой (#1653) |
 | Архивы в S3 | `s3://metravel-backups/postgres/` | приватный бакет, versioning on, lifecycle: объект живёт 90 дней |
 | Ключ S3 | `/home/sx3/.aws/credentials` (0600, владелец `sx3`) | IAM-пользователь `metravel-backup-writer`, инлайн-политика `metravel-backups-put` |
 | AWS CLI | `/home/sx3/.local/aws-cli`, бинарь `/home/sx3/.local/bin/aws` | v2.36.34, userland-установка без root, 271 МБ |
 | Каталог данных живой БД | bind-mount `/home/sx3/metravel/deploy/prod/postgis/data` | 431.9 МиБ |
-| Ручной дамп 05.08.2026 | `/home/sx3/db-backups/metravel-postgres-20260805T122720Z.sql.gz` | 52 328 299 Б, не обновляется, можно удалить |
 | Старая холодная копия | `/home/sx3/pg_dump_17_11_2025/postgis/data` | файлы от **17.11.2025**, 372.9 МиБ, `root:root` |
 | Диск под всё это | `/dev/sda1` → `/` | 15 ГБ, занято 76 %, свободно ~3.5 ГБ |
 
@@ -162,8 +163,8 @@ gzip -cd <файл> | tail -3           # -- PostgreSQL database dump complete
 
 - `deploy/prod/backup/backup_database_to_s3.sh` — сам скрипт;
 - `deploy/prod/backup/README.md` — исходная инструкция автора;
-- на сервере: `/home/sx3/metravel/deploy/prod/backup/` (версия от 05.08.2026,
-  коммит `c2a99c6`).
+- на сервере: `/home/sx3/metravel/deploy/prod/backup/` (на 22.09.2026 — коммит
+  `8189e75`, #2026).
 
 Из этого workspace бэкенд не редактируется — правки оформляются задачей
 `area=back` на общем task board.
@@ -192,7 +193,7 @@ gzip -cd <файл> | tail -3           # -- PostgreSQL database dump complete
 ```bash
 S3_URI=s3://metravel-backups/postgres
 DB_CONTAINER=            # пусто = резолвить на проде; задавать только для разового прогона
-BACKUP_DIR=/home/sx3/metravel/deploy/prod/backups
+BACKUP_DIR=/home/sx3/db-backups   # дефолт скрипта с 8189e75 (#2026) — $HOME/db-backups; только вне checkout
 RETENTION_DAYS=14          # дефолт скрипта; на проде выставлено 5
 MIN_BACKUP_BYTES=1048576
 ```
@@ -219,8 +220,10 @@ $ BACKUP_DIR=/home/sx3/db-backups bash deploy/prod/backup/backup_database_to_s3.
 ```
 
 Артефакт: 52 328 299 байт (~49.9 МиБ), 14 с, `gzip -t` OK, в дампе 119
-`CREATE TABLE`, хвост — `-- PostgreSQL database dump complete`. Файл оставлен на
-сервере в `/home/sx3/db-backups/` как первая с 17.11.2025 логическая копия базы.
+`CREATE TABLE`, хвост — `-- PostgreSQL database dump complete`. Файл был оставлен
+на сервере в `/home/sx3/db-backups/` как первая с 17.11.2025 логическая копия базы.
+С 08.09.2026 этот каталог — штатный `BACKUP_DIR` (#1653), и ретенция 5 дней файл
+уже удалила.
 
 ## Ежедневный бэкап в S3: как включён
 
@@ -251,7 +254,8 @@ npm run db:backup:prod:verify                    # проверить крите
 4. Канонический скрипт снимает `pg_dump --no-owner --no-acl` через `docker exec`,
    жмёт `gzip -9` во временный файл, проверяет `gzip -t` и минимальный размер и
    только потом атомарно переименовывает результат в
-   `deploy/prod/backups/metravel-postgres-<UTC-timestamp>.sql.gz`.
+   `~/db-backups/metravel-postgres-<UTC-timestamp>.sql.gz` — вне git-checkout
+   бэкенда.
 5. Архив уходит в `s3://metravel-backups/postgres/` ключом
    `metravel-backup-writer`.
 6. Локальные архивы старше `RETENTION_DAYS` удаляются, в лог пишется
@@ -306,9 +310,9 @@ mkdir -p backup && bash -c 'source scripts/deploy-target.sh; require_deploy_targ
 
 # забрать последний локальный архив с сервера (быстрее, без обращения к S3)
 bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; \
-  ssh "$PROD_SSH_TARGET" "ls -1t ~/metravel/deploy/prod/backups/*.sql.gz | head -1"'
+  ssh "$PROD_SSH_TARGET" "ls -1t ~/db-backups/*.sql.gz | head -1"'
 bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; \
-  scp "$PROD_SSH_TARGET:/home/sx3/metravel/deploy/prod/backups/<имя>.sql.gz" backup/'
+  scp "$PROD_SSH_TARGET:/home/sx3/db-backups/<имя>.sql.gz" backup/'
 
 # снять свежий дамп мимо расписания
 npm run db:backup:prod
@@ -331,9 +335,9 @@ gzip -cd backup/<имя>.sql.gz | grep -c '^CREATE TABLE'
 
 ```bash
 bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; \
-  ssh "$PROD_SSH_TARGET" "ls -la ~/metravel/deploy/prod/backups/"'
+  ssh "$PROD_SSH_TARGET" "ls -la ~/db-backups/"'
 bash -c 'source scripts/deploy-target.sh; require_deploy_target >/dev/null; \
-  ssh "$PROD_SSH_TARGET" "rm -f ~/metravel/deploy/prod/backups/metravel-postgres-<timestamp>.sql.gz"'
+  ssh "$PROD_SSH_TARGET" "rm -f ~/db-backups/metravel-postgres-<timestamp>.sql.gz"'
 ```
 
 Ретенцию меняют не правкой файла на хосте, а переустановкой — иначе следующий
@@ -368,7 +372,7 @@ ssh "$PROD_SSH_TARGET" '~/.local/bin/aws s3api list-object-versions \
 ssh "$PROD_SSH_TARGET" "crontab -l | grep -v metravel-db-backup | crontab -"
 ```
 
-**Снести установку целиком** (архивы в S3 при этом остаются):
+**Снести установку целиком** (архивы в S3 и в `~/db-backups` при этом остаются):
 
 ```bash
 ssh "$PROD_SSH_TARGET" 'crontab -l | grep -v metravel-db-backup | crontab -; \

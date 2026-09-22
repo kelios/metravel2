@@ -10,6 +10,7 @@
 #   ~/.metravel-backup.env          конфиг (0600): S3_URI, BACKUP_DIR, RETENTION_DAYS, AWS_CLI
 #   ~/.local/bin/metravel-db-backup обёртка (0700): резолвит контейнер БД, лочит, пишет лог
 #   ~/logs/metravel-db-backup.log   лог (0640)
+#   ~/db-backups/                   локальные архивы (0700), вне бэкенд-checkout
 #   user crontab                    строка расписания с маркером `# metravel-db-backup`
 #
 # Почему не `/etc/cron.d` + `/etc/metravel-backup.env`, как в карточке #1247:
@@ -80,7 +81,9 @@ set -Eeuo pipefail
 ENV_FILE="$HOME/.metravel-backup.env"
 WRAPPER="$HOME/.local/bin/metravel-db-backup"
 LOG_FILE="$HOME/logs/metravel-db-backup.log"
-BACKUP_DIR="$HOME/metravel/deploy/prod/backups"
+# Архивы — только вне git-checkout бэкенда: внутри него они пачкали `git status`,
+# и гейт чистоты scripts/deploy-prod.sh останавливал выкат (#1653, #2025).
+BACKUP_DIR="$HOME/db-backups"
 CANONICAL="$HOME/metravel/deploy/prod/backup/backup_database_to_s3.sh"
 AWS_CLI="$HOME/.local/bin/aws"
 CRON_MARK="# metravel-db-backup"
