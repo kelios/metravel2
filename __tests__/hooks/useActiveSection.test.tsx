@@ -118,6 +118,66 @@ describe('useActiveSection', () => {
     expect(result.current.activeSection).toBe('section-2')
   })
 
+  describe('footer below the last section (regression #2027)', () => {
+    const anchors = {
+      'section-1': { current: null },
+      'section-2': { current: null },
+      'section-3': { current: null },
+    }
+
+    const setRects = (rects: Record<string, { top: number; bottom: number }>) => {
+      Object.entries(rects).forEach(([id, { top, bottom }]) => {
+        const el = document.getElementById(id) as any
+        el.getBoundingClientRect = jest.fn(() => ({ top, bottom, height: bottom - top } as any))
+      })
+    }
+
+    // Подвал под последней секцией: ни у одной секции низ не ниже верха вьюпорта.
+    const FOOTER_RECTS = {
+      'section-1': { top: -3000, bottom: -2500 },
+      'section-2': { top: -2500, bottom: -1400 },
+      'section-3': { top: -1400, bottom: -700 },
+    }
+
+    beforeEach(() => {
+      const s3 = document.createElement('div')
+      s3.setAttribute('data-section-key', 'section-3')
+      s3.id = 'section-3'
+      document.body.appendChild(s3)
+    })
+
+    it('keeps the last section active after scrolling past it into the footer', () => {
+      const { result } = renderHook(() => useActiveSection(anchors, 0))
+
+      setRects({
+        'section-1': { top: -2000, bottom: -1500 },
+        'section-2': { top: -1500, bottom: -400 },
+        'section-3': { top: -400, bottom: 300 },
+      })
+      act(() => {
+        lastObserverCallback?.([], null as any)
+      })
+      expect(result.current.activeSection).toBe('section-3')
+
+      setRects(FOOTER_RECTS)
+      act(() => {
+        lastObserverCallback?.([], null as any)
+      })
+      expect(result.current.activeSection).toBe('section-3')
+    })
+
+    it('activates the last section, not the first, when the page opens already in the footer', () => {
+      setRects(FOOTER_RECTS)
+
+      const { result } = renderHook(() => useActiveSection(anchors, 0))
+      act(() => {
+        lastObserverCallback?.([], null as any)
+      })
+
+      expect(result.current.activeSection).toBe('section-3')
+    })
+  })
+
   it('updates activeSection when a lazy-mounted section appears later (regression)', () => {
     const anchors = {
       'section-1': { current: null },

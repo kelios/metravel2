@@ -183,13 +183,15 @@ export function useActiveSection(
         // No section crosses the line (e.g. between sections or at the very top).
         // Prefer the last section that starts above the line but is still partially
         // on screen; if everything above has scrolled off the top, fall back to the
-        // first section that is below the line.
+        // first section that is below the line. With nothing below either, every
+        // section has scrolled off the top: the reader is in the footer under the
+        // last one, so the last section stays active.
         const above = measured.filter((s) => s.top <= headerLine && s.bottom > 0);
         if (above.length) {
           nextActive = above[above.length - 1].key;
         } else {
           const below = measured.filter((s) => s.bottom > 0);
-          nextActive = below.length ? below[0].key : measured[0].key;
+          nextActive = below.length ? below[0].key : measured[measured.length - 1].key;
         }
       }
 
