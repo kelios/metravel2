@@ -99,6 +99,8 @@ install_all() {
 
   umask 077
   mkdir -p "$(dirname "$WRAPPER")" "$(dirname "$LOG_FILE")" "$BACKUP_DIR"
+  # umask не трогает уже существующий каталог, а его мог создать сам скрипт бэкапа.
+  chmod 700 "$BACKUP_DIR"
 
   cat > "$ENV_FILE" <<ENVEOF
 # Конфиг ежедневного бэкапа прод-базы (борд #1247).
