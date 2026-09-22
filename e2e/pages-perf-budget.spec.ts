@@ -496,6 +496,8 @@ async function installDeterministicQuestDetailApi(
       return fulfillJson(route, PERF_QUEST_BUNDLE)
     }
     if (pathname === '/api/quests/') {
+      // Каталог холодной детали запрещён (#2023): маршрут только считает запрос,
+      // чтобы регрессия краснела на проверке инварианта, а не на сети.
       counters.list += 1
       return fulfillJson(route, [PERF_QUEST_META])
     }
@@ -535,7 +537,13 @@ function expectQuestDetailFixturesUsed(
   if (target.key !== 'QUEST_DETAIL') return
 
   expect(counters.detail, 'Quest detail fixture was not exercised').toBeGreaterThan(0)
-  expect(counters.list, 'Quest list fixture was not exercised').toBeGreaterThan(0)
+  // #2023: холодная деталь берёт рейтинг, прохождения и первопроходца из бандла
+  // квеста, а каталог принадлежит его потребителям (#1992). Поэтому ожидается
+  // НОЛЬ запросов `/api/quests/`, а не «фикстура каталога сработала».
+  expect(
+    counters.list,
+    'Cold quest detail requested the quest catalog /api/quests/ (FE-QUESTS-CATALOG-FOR-ONE-QUEST-001, #1992)',
+  ).toBe(0)
 }
 
 function expectCatalogFixturesUsed(target: PageTarget, counters: CatalogFixtureCounters) {
