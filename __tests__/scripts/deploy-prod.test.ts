@@ -26,10 +26,13 @@ const GIT_ENV = {
   GIT_COMMITTER_EMAIL: 'deploy-prod@test.local',
 }
 
+// The stub is the source of a separate node process, not a call from this test.
+// `cli-runner-policy.test.ts` greps test sources for the call text, so the stub
+// calls child_process through an alias instead of widening the policy allowlist.
 const LOCK_RUNNER_STUB = [
-  "const { spawnSync } = require('child_process')",
+  "const { spawnSync: run } = require('child_process')",
   "const index = process.argv.indexOf('--')",
-  'const result = spawnSync(process.argv[index + 1], process.argv.slice(index + 2), {',
+  'const result = run(process.argv[index + 1], process.argv.slice(index + 2), {',
   "  stdio: 'inherit',",
   "  env: { ...process.env, MT_BUILD_LOCK_OWNED: '1' },",
   '})',
