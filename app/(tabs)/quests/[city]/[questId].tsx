@@ -69,9 +69,14 @@ const getRouteParam = (value: string | string[] | undefined): string => {
   return value ?? '';
 };
 
-// #1803: «серверной записи нет» — это НЕ «чтение ещё идёт». Ссылка стабильна,
-// потому что уезжает в зависимости эффекта визарда.
-const NO_SERVER_PROGRESS = normalizeQuestProgressSnapshot(null);
+// #1803: «серверной записи нет» — это НЕ «чтение ещё идёт». Ссылки стабильны,
+// потому что уезжают в зависимости эффекта визарда.
+// Чтение упало: сервер ничего не подтвердил. Пустой снапшот без поколения —
+// визард доливает свою копию, когда сеть вернётся, но не стирает её.
+const UNREAD_SERVER_PROGRESS = normalizeQuestProgressSnapshot(null);
+// Сервер подтвердил, что строки нет. `serverId: null` разрешает визарду стереть
+// копию прохождения, сброшенного на другом устройстве (#2033).
+const NO_SERVER_PROGRESS = { ...UNREAD_SERVER_PROGRESS, serverId: null };
 
 const getQuestSeo = (bundle: FrontendQuestBundle | null, questId: string, isLoading: boolean): QuestSeoModel => {
   if (isLoading) {
@@ -338,7 +343,13 @@ export default function QuestByIdScreen() {
   );
   // Фокус экрана не равен сессии: `isFocused && isAuthenticated` на блюре
   // выглядело как логаут, и ответ за <2 с уходил в очередь вместо POST (#1973).
-  const { progress: backendProgress, progressLoading, saveProgress, resetProgress } = useQuestProgressSync(
+  const {
+    progress: backendProgress,
+    progressLoading,
+    progressMissing,
+    saveProgress,
+    resetProgress,
+  } = useQuestProgressSync(
     shouldLoadQuest ? questId : undefined,
     isAuthenticated,
   );
@@ -475,12 +486,13 @@ export default function QuestByIdScreen() {
       // согласованную с сервером (`markSeeded=true`) и глушит save-эффект —
       // прохождение, пройденное без сети, после этого не долилось бы на сервер
       // никогда. С пустым снапшотом слияние честно скажет `serverNeedsPush`.
-      return progressLoading ? undefined : NO_SERVER_PROGRESS;
+      if (progressLoading) return undefined;
+      return progressMissing ? NO_SERVER_PROGRESS : UNREAD_SERVER_PROGRESS;
     }
     // Полный снапшот (включая updated_at) — визард сливает его с локальным, а не
     // перезаписывает: прогресс мог идти параллельно на другом устройстве.
     return snapshotFromServerProgress(backendProgress);
-  }, [backendProgress, guestFlow.guestInitial, isAuthenticated, progressLoading]);
+  }, [backendProgress, guestFlow.guestInitial, isAuthenticated, progressLoading, progressMissing]);
   const structuredDataTags = useMemo(() => {
     if (!bundle || !questId) return null;
 

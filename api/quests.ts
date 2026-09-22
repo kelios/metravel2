@@ -10,6 +10,7 @@ import { retry } from '@/utils/retry';
 import { isUsableRouteSegment } from '@/utils/routePaths';
 import { resolveTotalPages } from '@/utils/fetchAllPages';
 import { QUEST_POPULARITY_SORT, selectPopularQuests } from '@/utils/questPopularity';
+import { QuestProgressLineageMismatch } from '@/utils/questProgressMerge';
 import {
     readCachedQuestBundle,
     writeCachedQuestBundle,
@@ -892,8 +893,15 @@ const questProgressWriters = new Map<string, Promise<unknown>>();
 
 const ignoreResult = (): void => undefined;
 
-const readOrCreateProgress = async (questId: string): Promise<ApiQuestProgress> => {
+const readOrCreateProgress = async (questId: string, lineageId: number): Promise<ApiQuestProgress> => {
     const existing = await fetchQuestProgress(questId);
+    // Снапшот, согласованный со строкой, ложится только в неё: создать строку
+    // под него значит отменить чужой сброс (#2033). Проверка стоит до POST —
+    // внутри задачи строка была бы уже создана.
+    if (lineageId > 0) {
+        if (existing?.id === lineageId) return existing;
+        throw new QuestProgressLineageMismatch(questId, lineageId, existing);
+    }
     if (existing) return existing;
     // Создание требует ЧИСЛОВОГО id квеста. Экран квеста уже держит бандл в
     // React Query под тем же ключом (`hooks/questBundleQuery.ts`), поэтому
@@ -930,16 +938,21 @@ const readOrCreateProgress = async (questId: string): Promise<ApiQuestProgress> 
  *
  * `task` НЕ должен сам звать `withQuestProgress`/`fetchOrCreateProgress` по
  * тому же квесту — это самоблокировка очереди.
+ *
+ * `lineageId` — поколение снапшота, `id` строки, с которой он согласован. Если он
+ * задан, строка обязана существовать с этим `id`, иначе
+ * `QuestProgressLineageMismatch` без POST и без `task` (#2033).
  */
 export async function withQuestProgress<T>(
     questId: string,
     task: (progress: ApiQuestProgress) => Promise<T>,
+    options: { lineageId?: number } = {},
 ): Promise<T> {
     assertUsableQuestId(questId, 'withQuestProgress');
     const previous = questProgressWriters.get(questId);
     // Падение предыдущего писателя очередь не рвёт: следующий делает своё чтение.
     const slot = previous ? previous.then(ignoreResult, ignoreResult) : Promise.resolve();
-    const run = slot.then(async () => task(await readOrCreateProgress(questId)));
+    const run = slot.then(async () => task(await readOrCreateProgress(questId, options.lineageId ?? 0)));
     const tail: Promise<unknown> = run.then(ignoreResult, ignoreResult).then(() => {
         if (questProgressWriters.get(questId) === tail) questProgressWriters.delete(questId);
     });

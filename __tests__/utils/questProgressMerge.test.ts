@@ -1,5 +1,6 @@
 import {
   hasQuestProgressStarted,
+  isQuestProgressRunEnded,
   mergeQuestProgress,
   normalizeQuestProgressSnapshot,
   snapshotFromServerProgress,
@@ -394,5 +395,93 @@ describe('hasQuestProgressStarted', () => {
   it('не считает стартом словари с выключенными значениями', () => {
     expect(hasQuestProgressStarted({ ...UNTOUCHED, hints: { 'step-1': false } })).toBe(false)
     expect(hasQuestProgressStarted({ ...UNTOUCHED, skipped: { 'step-1': false } })).toBe(false)
+  })
+})
+
+describe('поколение прохождения (#2033)', () => {
+  const finishedRun = snapshot({
+    serverId: 100,
+    currentIndex: 5,
+    unlockedIndex: 5,
+    answers: { intro: 'started', 'step-1': 'a1', 'step-2': 'a2' },
+    completed: true,
+    skipped: { 'step-3': true },
+    earlyFinish: true,
+    updatedAt: T0 + 9_000,
+  })
+  const restartedRun = snapshot({
+    serverId: 105,
+    currentIndex: 1,
+    unlockedIndex: 1,
+    answers: { intro: 'started' },
+    updatedAt: T0 + 1_000,
+  })
+
+  it('снапшот с сервера несёт id строки, а payload его не отправляет', () => {
+    const snap = snapshotFromServerProgress({
+      id: 42,
+      current_index: 0,
+      unlocked_index: 0,
+      answers: {},
+      attempts: {},
+      hints: {},
+      show_map: true,
+      completed: false,
+    })
+
+    expect(snap.serverId).toBe(42)
+    expect(toQuestProgressServerPayload(snap)).not.toHaveProperty('serverId')
+  })
+
+  it('копия сброшенного прохождения не дарит новому ни ответов, ни «Пройден»', () => {
+    const { merged, localChanged, serverNeedsPush } = mergeQuestProgress(finishedRun, restartedRun)
+
+    expect(merged).toEqual(restartedRun)
+    expect(merged.completed).toBe(false)
+    expect(localChanged).toBe(true)
+    expect(serverNeedsPush).toBe(false)
+  })
+
+  it('побеждает более новое поколение независимо от порядка аргументов', () => {
+    expect(mergeQuestProgress(restartedRun, finishedRun).merged).toEqual(restartedRun)
+  })
+
+  it('копия без поколения сливается по-старому и узнаёт id строки (#1803)', () => {
+    const offline = snapshot({ answers: { intro: 'started', 'step-1': 'a1' }, updatedAt: T0 + 2_000 })
+
+    const { merged, localChanged, serverNeedsPush } = mergeQuestProgress(offline, restartedRun)
+
+    expect(merged.serverId).toBe(105)
+    expect(merged.answers).toEqual({ intro: 'started', 'step-1': 'a1' })
+    expect(localChanged).toBe(true)
+    expect(serverNeedsPush).toBe(true)
+  })
+
+  it('одно лишь поколение меняет локальную копию, но не требует PATCH', () => {
+    const { serverId: _serverId, ...sameData } = restartedRun
+
+    const adopted = mergeQuestProgress({ ...sameData, serverId: 0 }, restartedRun)
+    expect(adopted.localChanged).toBe(true)
+    expect(adopted.serverNeedsPush).toBe(false)
+
+    const settled = mergeQuestProgress(restartedRun, restartedRun)
+    expect(settled.localChanged).toBe(false)
+    expect(settled.serverNeedsPush).toBe(false)
+  })
+
+  it('прохождение закончено, только если сервер подтвердил другую строку или её отсутствие', () => {
+    expect(isQuestProgressRunEnded(finishedRun, null)).toBe(true)
+    expect(isQuestProgressRunEnded(finishedRun, 105)).toBe(true)
+    expect(isQuestProgressRunEnded(finishedRun, 100)).toBe(false)
+    // 0 — сервер ничего не подтвердил: упавшее чтение копию не приговаривает.
+    expect(isQuestProgressRunEnded(finishedRun, 0)).toBe(false)
+    // Копия без поколения сервера не встречала — это офлайн-прохождение (#1803).
+    expect(isQuestProgressRunEnded(snapshot({ completed: true }), null)).toBe(false)
+  })
+
+  it('битое поколение читается как «неизвестно»', () => {
+    expect(normalizeQuestProgressSnapshot({ serverId: Number.NaN }).serverId).toBe(0)
+    expect(normalizeQuestProgressSnapshot({ serverId: -3 }).serverId).toBe(0)
+    expect(normalizeQuestProgressSnapshot(null).serverId).toBe(0)
   })
 })

@@ -167,6 +167,23 @@ describe('single-quest metadata (#1992)', () => {
     expect(fetchQuestsList).not.toHaveBeenCalled()
   })
 
+  // #2033: очередь выбрасывает копию сброшенного прохождения и снимает отметку
+  // «Пройден» — в том числе на старте приложения, когда бандл квеста ещё грузится.
+  // Отмена первой загрузки откатывает запрос в pending без повтора: экран висел бы.
+  it('completion reset without a cached mark leaves the cold bundle load alone', async () => {
+    let resolve!: (bundle: ApiQuestBundle) => void
+    fetchQuestByQuestId.mockReturnValue(new Promise<ApiQuestBundle>((done) => { resolve = done }))
+    const { result } = renderHook(() => useDetail(), { wrapper })
+    await waitFor(() => expect(fetchQuestByQuestId).toHaveBeenCalledTimes(1))
+
+    act(() => resetQuestsCatalogCompletion(client, 'quest-a'))
+    await act(async () => resolve(base))
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.bundle?.title).toBe('Quest A')
+    expect(fetchQuestByQuestId).toHaveBeenCalledTimes(1)
+  })
+
   it('saving a review refreshes real rating hooks through the bundle key', async () => {
     submitQuestReview.mockResolvedValue({ id: 1, rating: 5, liked: '', disliked: '' })
     const { result } = renderHook(() => ({ detail: useDetail(), review: useQuestReview({ questId: 7, questSlug: 'quest-a' }) }), { wrapper })

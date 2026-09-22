@@ -92,12 +92,21 @@ export function refreshQuestsCatalogCompletion(client: QueryClient, questId: str
   return refreshed
 }
 
+// Снимается только стоящая отметка. Кэш без неё чинить нечего, а отмена его
+// первой загрузки откатывает запрос в pending без повтора — экран квеста или
+// каталога остался бы в вечной загрузке. Сброс зовёт и очередь, в том числе на
+// старте приложения, пока бандл ещё грузится (#2033).
 export function resetQuestsCatalogCompletion(client: QueryClient, questId: string): void {
   const bundleKey = queryKeys.questBundle(questId)
-  void client.cancelQueries({ queryKey: bundleKey, exact: true })
-  client.setQueryData<ApiQuestBundle>(bundleKey, (bundle) => bundle ? { ...bundle, is_completed_by_me: false } : bundle)
-  void client.cancelQueries(catalogFilter)
-  client.setQueryData<ApiQuestMeta[]>(catalogFilter.queryKey, (quests) => quests?.map((quest) => (
-    quest.quest_id === questId ? { ...quest, is_completed_by_me: false } : quest
-  )))
+  if (client.getQueryData<ApiQuestBundle>(bundleKey)?.is_completed_by_me) {
+    void client.cancelQueries({ queryKey: bundleKey, exact: true })
+    client.setQueryData<ApiQuestBundle>(bundleKey, (bundle) => bundle ? { ...bundle, is_completed_by_me: false } : bundle)
+  }
+  const quests = client.getQueryData<ApiQuestMeta[]>(catalogFilter.queryKey)
+  if (quests?.some((quest) => quest.quest_id === questId && quest.is_completed_by_me)) {
+    void client.cancelQueries(catalogFilter)
+    client.setQueryData<ApiQuestMeta[]>(catalogFilter.queryKey, (current) => current?.map((quest) => (
+      quest.quest_id === questId ? { ...quest, is_completed_by_me: false } : quest
+    )))
+  }
 }

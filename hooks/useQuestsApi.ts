@@ -27,12 +27,13 @@ import {
 } from '@/utils/questAdapters';
 import { selectPopularQuests } from '@/utils/questPopularity';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { hasQuestProgressStarted } from '@/utils/questProgressMerge';
+import { hasQuestProgressStarted, QuestProgressLineageMismatch } from '@/utils/questProgressMerge';
 import {
     dequeueQuestProgress,
     deliverOrEnqueueQuestProgress,
     enqueueQuestProgress,
     pushQuestProgressSnapshot,
+    syncCatalogCompletion,
 } from '@/utils/questProgressQueue';
 import { devWarn } from '@/utils/logger';
 import type { QuestMeta, FrontendQuestBundle } from '@/utils/questAdapters';
@@ -56,6 +57,8 @@ type PendingQuestProgressData = {
     /** Клиентские времена для слияния с параллельным устройством (на сервер не уходят) */
     updatedAt?: number;
     answeredAt?: Record<string, number>;
+    /** Поколение: `id` строки, с которой снапшот согласован (#2033). На сервер не уходит. */
+    serverId?: number;
 };
 
 /**
@@ -218,6 +221,10 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     const [progress, setProgress] = useState<ApiQuestProgress | null>(null);
     const [syncing, setSyncing] = useState(false);
     const [progressLoading, setProgressLoading] = useState(isAuthenticated && !!questId);
+    // Сервер ПОДТВЕРДИЛ, что строки прохождения нет (#2033): чтение вернуло 404,
+    // удаление прошло или отправка узнала о сбросе на другом устройстве.
+    // Упавшее чтение подтверждением не является: по нему визард копию не стирает.
+    const [progressMissing, setProgressMissing] = useState(false);
     const progressIdRef = useRef<number | null>(null);
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -266,6 +273,7 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     if (syncedQuestIdRef.current !== questId) {
         syncedQuestIdRef.current = questId;
         setProgress(null);
+        setProgressMissing(false);
         setProgressLoading(isAuthenticated && !!questId);
     }
 
@@ -288,6 +296,10 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
 
         let cancelled = false;
         setProgressLoading(true);
+        // Новое чтение — прежнее «строки нет» больше не подтверждено: оно могло
+        // принадлежать прошлому аккаунту, и упавшее чтение его не продлевает (#2033).
+        setProgressMissing(false);
+        const readOwnerId = useAuthStore.getState().userId ?? null;
         fetchQuestProgress(questId)
             .then((data) => {
                 if (!cancelled) {
@@ -299,6 +311,12 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
                     // (#1906), сохраняется только id этого же квеста.
                     if (data) setProgress(data);
                     progressIdRef.current = data?.id ?? progressIdRef.current ?? null;
+                    const missing = !progressIdRef.current;
+                    setProgressMissing(missing);
+                    // Сервер подтвердил, что квест не пройден, а отметка «Пройден»
+                    // в кэше этого устройства могла остаться от прохождения,
+                    // сброшенного на другом (#2033).
+                    if (missing || data?.completed === false) syncCatalogCompletion(questId, readOwnerId, false);
                     // Ответы, сделанные пока запрос был в полёте, ждут отправки —
                     // дожимаем. Строку создаст сам флаш, если игрок уже начал.
                     flushPendingNow();
@@ -378,9 +396,34 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             // ни её содержимое текущему квесту не принадлежат (#1906).
             if (questIdRef.current === questId) {
                 progressIdRef.current = updated.id;
-                if (mountedRef.current) setProgress(updated);
+                if (mountedRef.current) {
+                    setProgress(updated);
+                    setProgressMissing(false);
+                }
             }
         } catch (err) {
+            if (err instanceof QuestProgressLineageMismatch) {
+                // Прохождение, из которого собран снапшот, сброшено на другом
+                // устройстве (#2033). Доставлять его некуда: ни ретрая, ни очереди.
+                // Отложенное того же поколения — туда же; снапшот, собранный уже
+                // после сброса, остаётся и уйдёт своим флашем.
+                const queued = pendingDataRef.current;
+                if (queued && (queued === pending || queued.data.serverId === err.lineageId)) {
+                    pendingDataRef.current = null;
+                }
+                void dequeueQuestProgress(questId, ownerIdForQueue(), err.lineageId);
+                retryAttemptRef.current = 0;
+                // Экран переходит на то, что есть на сервере: визард по этому
+                // состоянию стирает копию закончившегося прохождения.
+                if (questIdRef.current === questId) {
+                    progressIdRef.current = err.current?.id ?? null;
+                    if (mountedRef.current) {
+                        setProgress(err.current);
+                        setProgressMissing(!err.current);
+                    }
+                }
+                return;
+            }
             // Вернуть в очередь можно только на своём квесте: на чужом снапшот
             // уже не отправится, а местом в очереди перекроет актуальный.
             // Потерянным он не будет — локальная копия дольёт его при следующем
@@ -514,12 +557,17 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             if (client && questId && ownerId && currentAuth.isAuthenticated && currentAuth.userId === ownerId) {
                 resetQuestsCatalogCompletion(client, questId);
             }
-            setProgress(null);
-            progressIdRef.current = null;
+            // DELETE мог дойти, когда игрок уже на другом квесте: «строки нет»
+            // о нём неправда, и визард стёр бы копию живого прохождения (#1906, #2033).
+            if (questIdRef.current === questId) {
+                setProgress(null);
+                setProgressMissing(true);
+                progressIdRef.current = null;
+            }
         } catch (err) {
             console.warn('Could not delete quest progress from server:', err);
         }
     }, [clearRetryTimer, isAuthenticated, ownerIdForQueue, questId]);
 
-    return { progress, progressLoading, syncing, saveProgress, resetProgress };
+    return { progress, progressLoading, progressMissing, syncing, saveProgress, resetProgress };
 }

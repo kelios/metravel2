@@ -16,6 +16,12 @@
 //   currentIndex, showMap — last-writer-wins (косметика: где курсор и включена ли
 //                    карта; это не данные прохождения)
 //
+// Монотонность держится только внутри ОДНОГО прохождения. Сброс удаляет
+// серверную строку, и следующее прохождение получает новую: `id` строки — это
+// поколение прохождения (#2033). Копии разных поколений не объединяются —
+// выигрывает целиком более новая, иначе сброшенное прохождение воскресает
+// «Пройденным» из копии другого устройства.
+//
 // Времена живут только на клиенте: `updatedAt` для снапшота и `answeredAt` по
 // шагам. С сервера доступен лишь глобальный `updated_at`, поэтому у серверных
 // ответов время шага = время серверной записи. При любом исходе «отвеченность»
@@ -44,6 +50,34 @@ export type QuestProgressSnapshot = {
     updatedAt: number
     /** epoch ms ответа по шагам; для серверных данных подставляется updatedAt записи */
     answeredAt: Record<string, number>
+    /**
+     * Поколение: `id` серверной строки, с которой копия согласована (#2033).
+     * 0 — копия сервера ещё не встречала: прохождение без сети или запись версии
+     * до #2033. Такая копия доливается по-старому (#1803). На сервер поле не
+     * уходит — строка и так знает свой `id`.
+     */
+    serverId: number
+}
+
+/**
+ * Снапшот принадлежит прохождению, которого на сервере больше нет (#2033):
+ * строку удалили «Сбросить» на другом устройстве или создали на её месте новую.
+ * Писать такой снапшот нельзя ни в новую строку, ни в чужую — сброшенное
+ * прохождение воскресло бы «Пройденным». `current` — строка квеста сейчас,
+ * `null` — строки нет.
+ *
+ * Живёт здесь, а не в `@/api/quests`, который её бросает: API-модуль тесты
+ * частично мокают, и `instanceof` против мока сломал бы обработку ошибки.
+ */
+export class QuestProgressLineageMismatch extends Error {
+    constructor(
+        public questId: string,
+        public lineageId: number,
+        public current: ApiQuestProgress | null,
+    ) {
+        super(`Quest progress ${lineageId} of quest ${questId} no longer exists`)
+        this.name = 'QuestProgressLineageMismatch'
+    }
 }
 
 export type QuestProgressMergeResult = {
@@ -93,6 +127,7 @@ export const normalizeQuestProgressSnapshot = (
     earlyFinish: Boolean(raw?.earlyFinish),
     updatedAt: toFiniteNumber(raw?.updatedAt),
     answeredAt: asRecord<number>(raw?.answeredAt),
+    serverId: Math.max(0, toFiniteNumber(raw?.serverId)),
 })
 
 /**
@@ -137,6 +172,8 @@ export const snapshotFromServerProgress = (
         ApiQuestProgress,
         'current_index' | 'unlocked_index' | 'answers' | 'attempts' | 'hints' | 'show_map' | 'completed'
     > & {
+        /** `id` строки — поколение прохождения (#2033). */
+        id?: ApiQuestProgress['id'] | null
         updated_at?: string | null
         // Сервер старше #1454 полей не отдаёт: читаем их как «пропусков нет».
         skipped?: ApiQuestProgress['skipped'] | null
@@ -166,6 +203,7 @@ export const snapshotFromServerProgress = (
         earlyFinish: progress.early_finish ?? undefined,
         updatedAt,
         answeredAt,
+        serverId: progress.id ?? undefined,
     })
 }
 
@@ -291,12 +329,28 @@ const serverFingerprint = (snapshot: QuestProgressSnapshot): string =>
 
 // `skipped`/`earlyFinish` ушли в отпечаток сервера (#1632) и здесь больше не
 // дублируются: локальный отпечаток добавляет к серверному только то, чего на
-// сервере нет, — поштучные времена ответов.
+// сервере нет, — поштучные времена ответов и поколение. Копия, узнавшая `id`
+// своей строки, изменилась и обязана его сохранить (#2033).
 const localFingerprint = (snapshot: QuestProgressSnapshot): string =>
     [
         serverFingerprint(snapshot),
         JSON.stringify(sortRecord(snapshot.answeredAt)),
+        snapshot.serverId,
     ].join('|')
+
+/**
+ * Копия принадлежит прохождению, которого на сервере больше нет (#2033): строку
+ * удалили «Сбросить» на другом устройстве или создали на её месте новую.
+ *
+ * `serverId` — что сервер ПОДТВЕРДИЛ: `id` строки, `null` — строки нет, 0 —
+ * неизвестно (чтение упало или его не было). Копия без поколения закончившейся
+ * не бывает: её офлайн-прохождение ещё не встречало сервер (#1803).
+ */
+export const isQuestProgressRunEnded = (
+    local: Pick<QuestProgressSnapshot, 'serverId'>,
+    serverId: number | null,
+): boolean =>
+    local.serverId > 0 && (serverId === null || (serverId > 0 && serverId !== local.serverId))
 
 /**
  * Слияние локального и серверного прогресса без потери ответов.
@@ -311,6 +365,19 @@ export function mergeQuestProgress(
 ): QuestProgressMergeResult {
     const local = normalizeQuestProgressSnapshot(localRaw)
     const server = normalizeQuestProgressSnapshot(serverRaw)
+
+    // Разные поколения — разные прохождения (#2033): объединение подарило бы
+    // новому прохождению ответы и «Пройден» сброшенного. Выигрывает целиком
+    // более новое: `id` строк растут и не переиспользуются. Порядок аргументов
+    // тут не важен — очередь сливает два локальных снапшота.
+    if (local.serverId > 0 && server.serverId > 0 && local.serverId !== server.serverId) {
+        const newer = local.serverId > server.serverId ? local : server
+        return {
+            merged: newer,
+            localChanged: localFingerprint(newer) !== localFingerprint(local),
+            serverNeedsPush: serverFingerprint(newer) !== serverFingerprint(server),
+        }
+    }
 
     const answers = mergeAnswers(local, server)
     const cursorSource = localOwnsCursor(local, server) ? local : server
@@ -327,6 +394,8 @@ export function mergeQuestProgress(
         earlyFinish: local.earlyFinish || server.earlyFinish,
         updatedAt: Math.max(local.updatedAt, server.updatedAt),
         answeredAt: mergeAnsweredAt(local, server, answers),
+        // Одно поколение или копия без него: слитое принадлежит известной строке.
+        serverId: server.serverId || local.serverId,
     }
 
     return {

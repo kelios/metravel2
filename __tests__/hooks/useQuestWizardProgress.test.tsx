@@ -1291,3 +1291,252 @@ describe('useQuestWizardProgress', () => {
     expect(result.current.answers).toEqual({ 'p-1': 'чёрный монах' })
   })
 })
+
+// #2033: «Сбросить» на одном устройстве удаляет серверную строку, а копия на
+// другом при первом же сохранении создавала её заново — сброшенное прохождение
+// воскресало «Пройденным». Поколение копии — `id` строки, с которой она
+// согласована; копия удалённой или заменённой строки стирается, а не доливается.
+describe('useQuestWizardProgress — поколение прохождения (#2033)', () => {
+  const storageKey = 'quest_progress_lineage__u17'
+  const finishedCopy = {
+    index: 2,
+    unlocked: 2,
+    answers: { intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' },
+    attempts: {},
+    hints: {},
+    showMap: false,
+    completed: true,
+    serverId: 42,
+  }
+  const emptyServer = {
+    currentIndex: 0,
+    unlockedIndex: 0,
+    answers: {},
+    attempts: {},
+    hints: {},
+    showMap: true,
+  }
+  const readStored = async () => JSON.parse((await AsyncStorage.getItem(storageKey))!)
+  /** Даёт отработать эффектам и записи в хранилище. */
+  const settle = () => act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  })
+
+  beforeEach(async () => {
+    await AsyncStorage.clear()
+  })
+
+  it('копия прохождения, сброшенного на другом устройстве, стирается и не уходит на сервер', async () => {
+    await AsyncStorage.setItem(storageKey, JSON.stringify(finishedCopy))
+    const onProgressChange = jest.fn()
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey,
+        // Сервер подтвердил: строки 42 больше нет.
+        initialProgress: { ...emptyServer, serverId: null },
+        onProgressChange,
+      })
+    )
+
+    await waitFor(async () => expect((await readStored()).answers).toEqual({}))
+    await settle()
+    expect(result.current.answers).toEqual({})
+    expect(result.current.currentIndex).toBe(0)
+    expect(result.current.questCompleted).toBe(false)
+    expect(await readStored()).toMatchObject({ completed: false, serverId: 0 })
+    expect(onProgressChange).not.toHaveBeenCalled()
+  })
+
+  it('на месте строки новое прохождение: берётся оно целиком, без ответов и «Пройден» старого', async () => {
+    await AsyncStorage.setItem(storageKey, JSON.stringify(finishedCopy))
+    const onProgressChange = jest.fn()
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey,
+        initialProgress: {
+          ...emptyServer,
+          currentIndex: 1,
+          unlockedIndex: 1,
+          answers: { intro: 'start' },
+          serverId: 57,
+        },
+        onProgressChange,
+      })
+    )
+
+    await waitFor(async () => expect((await readStored()).serverId).toBe(57))
+    await settle()
+    expect(result.current.answers).toEqual({ intro: 'start' })
+    expect(result.current.currentIndex).toBe(1)
+    expect(result.current.questCompleted).toBe(false)
+    expect(onProgressChange).not.toHaveBeenCalled()
+  })
+
+  it('упавшее чтение копию не стирает: она ждёт сервер со своим поколением', async () => {
+    await AsyncStorage.setItem(storageKey, JSON.stringify(finishedCopy))
+    const onProgressChange = jest.fn()
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey,
+        // Так роут описывает упавшее чтение: пустой снапшот без поколения.
+        initialProgress: { ...emptyServer, serverId: 0 },
+        onProgressChange,
+      })
+    )
+
+    await waitFor(() => expect(result.current.answers['step-2']).toBe('castle'))
+    await waitFor(() => expect(onProgressChange).toHaveBeenCalled())
+    // Отправку решит писатель: строка 42 жива — доедет, сброшена — выбросится.
+    expect(onProgressChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      completed: true,
+      serverId: 42,
+    }))
+  })
+
+  it('копия без поколения при подтверждённом отсутствии строки доливается, как раньше (#1803)', async () => {
+    const { serverId: _serverId, ...offlineCopy } = finishedCopy
+    await AsyncStorage.setItem(storageKey, JSON.stringify(offlineCopy))
+    const onProgressChange = jest.fn()
+
+    renderHook(() =>
+      useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey,
+        initialProgress: { ...emptyServer, serverId: null },
+        onProgressChange,
+      })
+    )
+
+    await waitFor(() => expect(onProgressChange).toHaveBeenCalled())
+    expect(onProgressChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      answers: { intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' },
+      completed: true,
+      serverId: 0,
+    }))
+  })
+
+  it('согласованная копия запоминает поколение и отдаёт его со следующим ответом', async () => {
+    await AsyncStorage.setItem(storageKey, JSON.stringify({
+      index: 1,
+      unlocked: 1,
+      answers: { intro: 'start' },
+      attempts: {},
+      hints: {},
+      showMap: true,
+    }))
+    const onProgressChange = jest.fn()
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey,
+        initialProgress: { ...emptyServer, currentIndex: 1, unlockedIndex: 1, answers: { intro: 'start' }, serverId: 42 },
+        onProgressChange,
+      })
+    )
+
+    await waitFor(async () => expect((await readStored()).serverId).toBe(42))
+
+    act(() => {
+      result.current.setAnswers((prev) => ({ ...prev, 'step-1': 'dragon' }))
+    })
+
+    await waitFor(() => expect(onProgressChange).toHaveBeenCalled())
+    expect(onProgressChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      answers: { intro: 'start', 'step-1': 'dragon' },
+      serverId: 42,
+    }))
+  })
+
+  it('сброс на другом устройстве, пока квест открыт: визард переходит к не начатому', async () => {
+    const onProgressChange = jest.fn()
+    const loaded = {
+      currentIndex: 2,
+      unlockedIndex: 2,
+      answers: { intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' },
+      attempts: {},
+      hints: {},
+      showMap: false,
+      completed: true,
+      serverId: 42,
+    }
+
+    const { result, rerender } = renderHook(
+      ({ initialProgress }: { initialProgress: any }) =>
+        useQuestWizardProgress({ allSteps, steps: questSteps, storageKey, initialProgress, onProgressChange }),
+      { initialProps: { initialProgress: loaded } },
+    )
+    await waitFor(() => expect(result.current.answers['step-2']).toBe('castle'))
+    onProgressChange.mockClear()
+
+    // Флаш экрана узнал о сбросе: хук синхронизации сообщает «строки нет».
+    rerender({ initialProgress: { ...emptyServer, serverId: null } })
+
+    await waitFor(() => expect(result.current.answers).toEqual({}))
+    await settle()
+    expect(result.current.currentIndex).toBe(0)
+    expect(result.current.questCompleted).toBe(false)
+    expect(await readStored()).toMatchObject({ answers: {}, completed: false, serverId: 0 })
+    expect(onProgressChange).not.toHaveBeenCalled()
+  })
+
+  it('сброс здесь: новое прохождение забывает прежнее поколение и узнаёт своё из первой отправки', async () => {
+    const onProgressChange = jest.fn()
+    const { result, rerender } = renderHook(
+      ({ initialProgress }: { initialProgress: any }) =>
+        useQuestWizardProgress({ allSteps, steps: questSteps, storageKey, initialProgress, onProgressChange }),
+      {
+        initialProps: {
+          initialProgress: {
+            ...emptyServer,
+            currentIndex: 2,
+            unlockedIndex: 2,
+            answers: { intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' },
+            completed: true,
+            serverId: 42,
+          },
+        },
+      },
+    )
+    await waitFor(async () => expect((await readStored()).serverId).toBe(42))
+
+    await act(async () => {
+      await result.current.resetProgress()
+    })
+    expect(await readStored()).toMatchObject({ answers: {}, serverId: 0 })
+    // Хук синхронизации подтвердил удаление: копия нового прохождения не стирается.
+    rerender({ initialProgress: { ...emptyServer, serverId: null } })
+
+    act(() => {
+      result.current.setAnswers({ intro: 'start' })
+    })
+    await waitFor(() => expect(onProgressChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      answers: { intro: 'start' },
+      serverId: 0,
+    })))
+
+    // Ответ на первую отправку: сервер создал строку 57.
+    rerender({ initialProgress: { ...emptyServer, answers: { intro: 'start' }, serverId: 57 } })
+    await waitFor(async () => expect((await readStored()).serverId).toBe(57))
+
+    act(() => {
+      result.current.setAnswers((prev) => ({ ...prev, 'step-1': 'dragon' }))
+    })
+    await waitFor(() => expect(onProgressChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      answers: { intro: 'start', 'step-1': 'dragon' },
+      serverId: 57,
+    })))
+    expect(result.current.questCompleted).toBe(false)
+  })
+})

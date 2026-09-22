@@ -12,6 +12,8 @@ import { render } from '@testing-library/react-native'
 
 const mockUseAuth = jest.fn(() => ({ isAuthenticated: true, userId: '17' } as any))
 const mockQuestWizard = jest.fn(() => null)
+/** Что вернул хук синхронизации: строка, подтверждённое отсутствие или упавшее чтение. */
+const mockProgressSync = { progress: null as any, progressMissing: false }
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ city: '4', questId: 'minsk-cmok' }),
@@ -55,8 +57,9 @@ jest.mock('@/hooks/useQuestsApi', () => ({
     refetch: jest.fn(),
   }),
   useQuestProgressSync: () => ({
-    progress: null,
+    progress: mockProgressSync.progress,
     progressLoading: false,
+    progressMissing: mockProgressSync.progressMissing,
     saveProgress: jest.fn(),
     resetProgress: jest.fn(),
   }),
@@ -122,6 +125,8 @@ describe('Quest screen: ключ прогресса привязан к акка
   beforeEach(() => {
     mockQuestWizard.mockClear()
     mockUseAuth.mockReturnValue({ isAuthenticated: true, userId: '17' })
+    mockProgressSync.progress = null
+    mockProgressSync.progressMissing = false
     document.head.innerHTML = ''
   })
 
@@ -158,5 +163,40 @@ describe('Quest screen: ключ прогресса привязан к акка
 
     expect(props.storageKey).not.toBe('guest_minsk-cmok')
     expect(props.storageKey).toBe('minsk-cmok__u:pending')
+  })
+
+  // #2033: стереть копию прохождения, сброшенного на другом устройстве, визард
+  // может только по ПОДТВЕРЖДЁННОМУ ответу сервера — упавшее чтение им не является.
+  describe('состояние сервера для визарда (#2033)', () => {
+    it('подтверждённое отсутствие строки приходит как serverId: null', async () => {
+      mockProgressSync.progressMissing = true
+      const props = await renderQuestScreen()
+
+      expect(props.initialProgress.serverId).toBeNull()
+    })
+
+    it('упавшее чтение приходит пустым снапшотом без поколения', async () => {
+      const props = await renderQuestScreen()
+
+      expect(props.initialProgress).toBeDefined()
+      expect(props.initialProgress.serverId).toBe(0)
+    })
+
+    it('прочитанная строка приходит со своим id', async () => {
+      mockProgressSync.progress = {
+        id: 42,
+        current_index: 1,
+        unlocked_index: 1,
+        answers: { intro: 'start' },
+        attempts: {},
+        hints: {},
+        show_map: true,
+        completed: false,
+        updated_at: '2026-09-20T10:00:00Z',
+      }
+      const props = await renderQuestScreen()
+
+      expect(props.initialProgress.serverId).toBe(42)
+    })
   })
 })

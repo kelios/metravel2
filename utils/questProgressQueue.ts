@@ -21,10 +21,14 @@ import {
     withQuestProgress,
     type ApiQuestProgress,
 } from '@/api/quests'
-import { refreshQuestsCatalogCompletion } from '@/api/questsCatalogInvalidation'
+import {
+    refreshQuestsCatalogCompletion,
+    resetQuestsCatalogCompletion,
+} from '@/api/questsCatalogInvalidation'
 import { useAuthStore } from '@/stores/authStore'
 import { devWarn } from '@/utils/logger'
 import {
+    QuestProgressLineageMismatch,
     mergeQuestProgress,
     normalizeQuestProgressSnapshot,
     snapshotFromServerProgress,
@@ -161,6 +165,16 @@ const scheduleRetry = () => {
     }, delay)
 }
 
+/** Каталог — только своему игроку: ответ мог прийти уже после смены аккаунта. */
+export const syncCatalogCompletion = (questId: string, ownerId: string | null, completed: boolean): void => {
+    const currentAuth = useAuthStore.getState()
+    if (!ownerId || !currentAuth.isAuthenticated || currentAuth.userId !== ownerId) return
+    const client = getActiveQueryClient()
+    if (!client) return
+    if (completed) void refreshQuestsCatalogCompletion(client, questId)
+    else resetQuestsCatalogCompletion(client, questId)
+}
+
 /**
  * Отправка снапшота с защитой от затирания параллельного устройства: перед
  * PATCH забираем текущее серверное состояние и шлём слитое. Иначе телефон,
@@ -172,26 +186,41 @@ const scheduleRetry = () => {
  * после логина этот флаш и миграция гостевого прогресса стартуют вместе, а
  * `answers` заменяет серверный словарь целиком — считать слияние от общей
  * устаревшей базы значит потерять чужие ответы (#1905).
+ *
+ * Снапшот с поколением пишется только в свою строку. Если её сбросили на
+ * другом устройстве, летит `QuestProgressLineageMismatch`: снапшот доставлять
+ * некуда, и вызывающий его выбрасывает, а не ставит на ретрай (#2033).
  */
 export async function pushQuestProgressSnapshot(
     questId: string,
     snapshot: QuestProgressSnapshot | Partial<QuestProgressSnapshot>,
 ): Promise<ApiQuestProgress> {
     const ownerId = useAuthStore.getState().userId
-    const updated = await withQuestProgress(questId, async (serverProgress) => {
-        const { merged, serverNeedsPush } = mergeQuestProgress(
-            normalizeQuestProgressSnapshot(snapshot),
-            snapshotFromServerProgress(serverProgress),
+    const local = normalizeQuestProgressSnapshot(snapshot)
+    let updated: ApiQuestProgress
+    try {
+        updated = await withQuestProgress(
+            questId,
+            async (serverProgress) => {
+                const { merged, serverNeedsPush } = mergeQuestProgress(
+                    local,
+                    snapshotFromServerProgress(serverProgress),
+                )
+                return serverNeedsPush
+                    ? apiUpdateProgress(serverProgress.id, toQuestProgressServerPayload(merged))
+                    : serverProgress
+            },
+            { lineageId: local.serverId },
         )
-        return serverNeedsPush
-            ? apiUpdateProgress(serverProgress.id, toQuestProgressServerPayload(merged))
-            : serverProgress
-    })
-    const currentAuth = useAuthStore.getState()
-    if (updated.completed && ownerId && currentAuth.isAuthenticated && currentAuth.userId === ownerId) {
-        const client = getActiveQueryClient()
-        if (client) void refreshQuestsCatalogCompletion(client, questId)
+    } catch (error) {
+        // Отметка «Пройден» в каталоге этого устройства могла прийти из копии
+        // сброшенного прохождения — выравниваем её по серверу.
+        if (error instanceof QuestProgressLineageMismatch) {
+            syncCatalogCompletion(questId, ownerId, error.current?.completed === true)
+        }
+        throw error
     }
+    if (updated.completed) syncCatalogCompletion(questId, ownerId, true)
     return updated
 }
 
@@ -233,15 +262,24 @@ export async function enqueueQuestProgress(
 /**
  * Снимает квест с очереди — его снапшот уже доехал другим путём или прохождение
  * удалено. Запись чужого владельца при этом не трогается.
+ *
+ * `lineageId` сужает снятие до записи этого поколения: прохождение сброшено на
+ * другом устройстве, а снапшот нового прохождения, если он уже лежит в очереди,
+ * должен уехать (#2033).
  */
 export async function dequeueQuestProgress(
     questId: string,
     ownerId: string | null = currentOwnerId(),
+    lineageId?: number,
 ): Promise<void> {
     if (!questId) return
     await loadQueue()
     const entries = queue ?? []
-    const next = entries.filter((entry) => entry.questId !== questId || entry.ownerId !== ownerId)
+    const next = entries.filter((entry) =>
+        entry.questId !== questId ||
+        entry.ownerId !== ownerId ||
+        (lineageId !== undefined && entry.snapshot.serverId !== lineageId),
+    )
     if (next.length === entries.length) return
     queue = next
     await persistQueue()
@@ -263,6 +301,12 @@ export async function deliverOrEnqueueQuestProgress(
         await pushQuestProgressSnapshot(questId, snapshot)
         await dequeueQuestProgress(questId, ownerId)
     } catch (error) {
+        // Прохождение сброшено на другом устройстве: в очередь класть нечего, а
+        // лежащая там запись того же прохождения тоже больше не нужна (#2033).
+        if (error instanceof QuestProgressLineageMismatch) {
+            await dequeueQuestProgress(questId, ownerId, error.lineageId)
+            return
+        }
         devWarn('Could not deliver quest progress, queued for later:', error)
         await enqueueQuestProgress(questId, snapshot, ownerId)
     }
@@ -304,12 +348,17 @@ const drainQueue = async (): Promise<void> => {
             retryAttempt = 0
         } catch (error) {
             const status = error instanceof ApiError ? error.status : undefined
-            if (!isPermanentRejection(status)) {
+            if (error instanceof QuestProgressLineageMismatch) {
+                // Прохождение сброшено на другом устройстве: запись не доставляется
+                // никогда, как и при постоянном отказе, а очередь идёт дальше (#2033).
+                devWarn('Queued quest progress belongs to a reset run, dropping:', entry.questId)
+            } else if (!isPermanentRejection(status)) {
                 devWarn('Could not deliver queued quest progress, will retry:', error)
                 scheduleRetry()
                 break
+            } else {
+                devWarn('Server rejected queued quest progress, dropping:', status)
             }
-            devWarn('Server rejected queued quest progress, dropping:', status)
         }
 
         // Снимаем запись ПО ССЫЛКЕ: если её уже заменили более свежим снапшотом,

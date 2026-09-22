@@ -4,6 +4,7 @@ import { apiClient, ApiError } from '@/api/client';
 import { setActiveQueryClient } from '@/api/activeQueryClient';
 import { queryKeys } from '@/api/queryKeys';
 import { readCachedQuestsList, readCachedQuestBundle } from '@/api/questBundleCache';
+import { QuestProgressLineageMismatch } from '@/utils/questProgressMerge';
 import {
   fetchQuestsList,
   fetchQuestsPreview,
@@ -790,6 +791,66 @@ describe('api/quests', () => {
       } finally {
         resetApiMocks();
       }
+    });
+
+    describe('поколение снапшота (#2033)', () => {
+      const task = jest.fn(async (progress: any) => progress.id);
+
+      beforeEach(() => task.mockClear());
+
+      it('пишет в строку того же поколения, ничего не создавая', async () => {
+        mockedGet.mockResolvedValue({ ...MOCK_PROGRESS, id: 100 } as never);
+
+        try {
+          await expect(withQuestProgress('krakow-dragon', task, { lineageId: 100 })).resolves.toBe(100);
+          expect(mockedPost).not.toHaveBeenCalled();
+        } finally {
+          resetApiMocks();
+        }
+      });
+
+      it('строку сбросили на другом устройстве: ни POST, ни задачи', async () => {
+        mockedGet.mockRejectedValue(new (ApiError as any)(404, 'Not found') as never);
+
+        try {
+          const write = withQuestProgress('krakow-dragon', task, { lineageId: 100 });
+
+          await expect(write).rejects.toBeInstanceOf(QuestProgressLineageMismatch);
+          await expect(write).rejects.toMatchObject({ lineageId: 100, current: null });
+          expect(mockedPost).not.toHaveBeenCalled();
+          expect(task).not.toHaveBeenCalled();
+        } finally {
+          resetApiMocks();
+        }
+      });
+
+      it('на месте строки уже новое прохождение: задача его не трогает', async () => {
+        const restarted = { ...MOCK_PROGRESS, id: 105, completed: false };
+        mockedGet.mockResolvedValue(restarted as never);
+
+        try {
+          const write = withQuestProgress('krakow-dragon', task, { lineageId: 100 });
+
+          await expect(write).rejects.toMatchObject({ lineageId: 100, current: restarted });
+          expect(task).not.toHaveBeenCalled();
+        } finally {
+          resetApiMocks();
+        }
+      });
+
+      it('снапшот без поколения по-прежнему создаёт строку (#1803)', async () => {
+        mockedGet
+          .mockRejectedValueOnce(new (ApiError as any)(404, 'Not found'))
+          .mockResolvedValueOnce({ id: 5 });
+        mockedPost.mockResolvedValueOnce({ ...MOCK_PROGRESS, id: 106 });
+
+        try {
+          await expect(withQuestProgress('krakow-dragon', task, { lineageId: 0 })).resolves.toBe(106);
+          expect(mockedPost).toHaveBeenCalledWith('/quest-progress/', { quest: 5 });
+        } finally {
+          resetApiMocks();
+        }
+      });
     });
   });
 

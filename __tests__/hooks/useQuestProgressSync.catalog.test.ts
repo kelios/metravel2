@@ -125,6 +125,42 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     unmount()
   })
 
+  // #2033: прохождение сброшено на другом устройстве — визард стёр копию, но
+  // «Пройден» в кэше каталога и бандла этого устройства жил бы до 30 минут.
+  it('confirmed missing progress drops a stale completion mark; a failed read keeps it', async () => {
+    const markCompleted = () => {
+      client.setQueryData(queryKeys.quests(), catalog(true))
+      client.setQueryData(queryKeys.questBundle('q'), { id: 1, quest_id: 'q', is_completed_by_me: true })
+    }
+    const bundleMark = () => client.getQueryData<{ is_completed_by_me?: boolean }>(queryKeys.questBundle('q'))?.is_completed_by_me
+
+    markCompleted()
+    fetchQuestProgress.mockRejectedValueOnce(new Error('Network request failed'))
+    const failed = await mount()
+    expect(client.getQueryData(queryKeys.quests())).toEqual(catalog(true))
+    expect(bundleMark()).toBe(true)
+    failed.unmount()
+
+    fetchQuestProgress.mockResolvedValueOnce(null)
+    const missing = await mount()
+    expect(client.getQueryData(queryKeys.quests())).toEqual(catalog(false))
+    expect(bundleMark()).toBe(false)
+    missing.unmount()
+
+    markCompleted()
+    fetchQuestProgress.mockResolvedValueOnce({ ...progress, id: 57, completed: false })
+    const restarted = await mount()
+    expect(bundleMark()).toBe(false)
+    restarted.unmount()
+
+    markCompleted()
+    fetchQuestProgress.mockResolvedValueOnce({ ...progress, completed: true })
+    const completed = await mount()
+    expect(bundleMark()).toBe(true)
+    expect(fetchCatalog).not.toHaveBeenCalled()
+    completed.unmount()
+  })
+
   it('inactive catalog is marked stale without a network fetch', async () => {
     unsubscribe()
     const { result, unmount } = await mount()

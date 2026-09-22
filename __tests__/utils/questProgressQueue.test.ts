@@ -23,6 +23,7 @@ jest.mock('@/api/activeQueryClient', () => ({ getActiveQueryClient: () => null }
 jest.mock('@/api/questsCatalogInvalidation', () => ({ refreshQuestsCatalogCompletion: jest.fn() }))
 
 import { ApiError } from '@/api/clientErrors'
+import { QuestProgressLineageMismatch } from '@/utils/questProgressMerge'
 import {
   QUEST_PROGRESS_QUEUE_KEY,
   __resetQuestProgressQueue,
@@ -193,6 +194,66 @@ describe('запись принадлежит своему игроку', () => 
     const left = await readStoredQueue()
     expect(left).toHaveLength(1)
     expect(left[0].ownerId).toBe('169')
+  })
+})
+
+describe('копия сброшенного прохождения не воскрешает его (#2033)', () => {
+  /** Настоящий `withQuestProgress`: строки поколения 100 больше нет. */
+  const resetElsewhere = async (questId: string, task: any, options?: { lineageId?: number }) => {
+    if (options?.lineageId) throw new QuestProgressLineageMismatch(questId, options.lineageId, null)
+    return task(serverRow)
+  }
+
+  it('отправка передаёт писателю поколение снапшота', async () => {
+    await deliverOrEnqueueQuestProgress('ojcow-lokietek', offlineRun({ serverId: 100 }))
+
+    expect(mockWithQuestProgress.mock.calls[0][2]).toEqual({ lineageId: 100 })
+  })
+
+  it('проход очереди выбрасывает запись сброшенного прохождения и везёт остальные', async () => {
+    await enqueueQuestProgress('ojcow-lokietek', offlineRun({ serverId: 100 }))
+    await enqueueQuestProgress('krakow-dragon', offlineRun())
+    mockWithQuestProgress.mockImplementation(resetElsewhere)
+
+    await flushQuestProgressQueue()
+
+    expect(await readStoredQueue()).toEqual([])
+    // PATCH ушёл только прохождению без поколения — в его строку.
+    expect(mockUpdateProgress).toHaveBeenCalledTimes(1)
+    expect(mockWithQuestProgress.mock.calls.map((call) => call[0])).toEqual(['ojcow-lokietek', 'krakow-dragon'])
+  })
+
+  it('уход с экрана не кладёт копию сброшенного прохождения в очередь и снимает лежащую', async () => {
+    await enqueueQuestProgress('ojcow-lokietek', offlineRun({ serverId: 100 }))
+    mockWithQuestProgress.mockImplementation(resetElsewhere)
+
+    await deliverOrEnqueueQuestProgress('ojcow-lokietek', offlineRun({ serverId: 100 }))
+
+    expect(await readStoredQueue()).toEqual([])
+    expect(mockUpdateProgress).not.toHaveBeenCalled()
+  })
+
+  it('снапшот нового прохождения в очереди переживает выброс копии сброшенного', async () => {
+    await enqueueQuestProgress('ojcow-lokietek', offlineRun({ serverId: 105, completed: false }))
+    mockWithQuestProgress.mockImplementation(resetElsewhere)
+
+    await deliverOrEnqueueQuestProgress('ojcow-lokietek', offlineRun({ serverId: 100 }))
+
+    const [entry] = await readStoredQueue()
+    expect(entry.snapshot.serverId).toBe(105)
+  })
+
+  it('новый снапшот другого поколения вытесняет лежащую запись целиком', async () => {
+    await enqueueQuestProgress('ojcow-lokietek', offlineRun({ serverId: 100 }))
+    await enqueueQuestProgress(
+      'ojcow-lokietek',
+      offlineRun({ serverId: 105, completed: false, answers: { intro: 'start' } }),
+    )
+
+    const [entry] = await readStoredQueue()
+    expect(entry.snapshot.serverId).toBe(105)
+    expect(entry.snapshot.completed).toBe(false)
+    expect(entry.snapshot.answers).toEqual({ intro: 'start' })
   })
 })
 

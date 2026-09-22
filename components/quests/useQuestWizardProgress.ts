@@ -11,6 +11,7 @@ import {
   type QuestPointRole,
 } from '@/utils/questCountModel'
 import {
+  isQuestProgressRunEnded,
   mergeQuestProgress,
   normalizeQuestProgressSnapshot,
   type QuestProgressSnapshot,
@@ -34,6 +35,8 @@ type QuestWizardProgressPayload = {
   /** Время снапшота и ответов по шагам — нужно для слияния между устройствами */
   updatedAt?: number
   answeredAt?: Record<string, number>
+  /** Поколение: `id` строки, с которой копия согласована (#2033). 0 — ещё нет. */
+  serverId?: number
 }
 
 type InitialQuestProgress = {
@@ -48,6 +51,12 @@ type InitialQuestProgress = {
   earlyFinish?: boolean
   updatedAt?: number
   answeredAt?: Record<string, number>
+  /**
+   * `id` серверной строки. `null` — сервер подтвердил, что строки нет;
+   * 0/нет поля — неизвестно (чтение упало, гость). Разница решает, можно ли
+   * стереть копию прохождения, сброшенного на другом устройстве (#2033).
+   */
+  serverId?: number | null
 }
 
 // AsyncStorage-запись прогресса. Ключи index/unlocked исторические; completed,
@@ -55,7 +64,9 @@ type InitialQuestProgress = {
 // в записях, созданных до этого — такие читаются как «время неизвестно».
 // skipped и earlyFinish с #1632 уходят и на сервер (`quest_progress.skipped`,
 // `early_finish`, добавлены бэкендом в #1454); в локальной записи они остаются,
-// чтобы пропуск переживал офлайн до ближайшего PATCH.
+// чтобы пропуск переживал офлайн до ближайшего PATCH. serverId — поколение
+// копии (#2033): `id` строки, с которой она согласована; в записях до #2033 его
+// нет, и они доливаются по-старому.
 type StoredProgressRecord = {
   index: number
   unlocked: number
@@ -68,6 +79,7 @@ type StoredProgressRecord = {
   earlyFinish?: boolean
   updatedAt?: number
   answeredAt?: Record<string, number>
+  serverId?: number
 }
 
 const snapshotFromRecord = (record: Partial<StoredProgressRecord> | null | undefined): QuestProgressSnapshot =>
@@ -83,6 +95,7 @@ const snapshotFromRecord = (record: Partial<StoredProgressRecord> | null | undef
     earlyFinish: record?.earlyFinish,
     updatedAt: record?.updatedAt,
     answeredAt: record?.answeredAt,
+    serverId: record?.serverId,
   })
 
 const serializeRecord = (snapshot: QuestProgressSnapshot): string => JSON.stringify({
@@ -97,6 +110,7 @@ const serializeRecord = (snapshot: QuestProgressSnapshot): string => JSON.string
   earlyFinish: snapshot.earlyFinish,
   updatedAt: snapshot.updatedAt,
   answeredAt: snapshot.answeredAt,
+  serverId: snapshot.serverId,
 })
 
 // Ключ, по которому save-эффект узнаёт состояние, засеянное самим хуком. Только
@@ -196,6 +210,9 @@ export function useQuestWizardProgress({
   const answeredAtRef = useRef<Record<string, number>>({})
   const lastAnswersRef = useRef<Record<string, string>>({})
   const updatedAtRef = useRef(0)
+  // Поколение копии (#2033) тоже не рендерится: оно едет в хранилище и в
+  // отложенный снапшот, чтобы писатель не отдал его чужой строке.
+  const serverIdRef = useRef(0)
   // Живое состояние для слияния серверных обновлений, пришедших во время сессии:
   // load-эффект асинхронный, замыкание успевает устареть.
   const liveSnapshotRef = useRef<QuestProgressSnapshot>(normalizeQuestProgressSnapshot(null))
@@ -236,6 +253,7 @@ export function useQuestWizardProgress({
     answeredAtRef.current = {}
     lastAnswersRef.current = {}
     updatedAtRef.current = 0
+    serverIdRef.current = 0
     const emptyState = normalizeQuestProgressSnapshot(null)
     seededSnapshotRef.current = stateFingerprint(emptyState)
     applyProgressState(emptyState)
@@ -251,6 +269,7 @@ export function useQuestWizardProgress({
     answeredAtRef.current = snapshot.answeredAt
     lastAnswersRef.current = snapshot.answers
     updatedAtRef.current = snapshot.updatedAt
+    serverIdRef.current = snapshot.serverId
     // Присваивание, а не ИЛИ: слитый снапшот уже объединил серверное и локальное
     // `completed`, а сброс прогресса обязан снимать отметку.
     confirmedCompletedRef.current = snapshot.completed
@@ -269,13 +288,27 @@ export function useQuestWizardProgress({
           return
         }
 
-        const server = normalizeQuestProgressSnapshot(initialProgress)
+        const server = normalizeQuestProgressSnapshot({
+          ...initialProgress,
+          serverId: initialProgress.serverId ?? undefined,
+        })
+        // Что сервер подтвердил (#2033): `id` строки, `null` — строки нет, 0 —
+        // ничего (чтение упало, гость). Стирать копию можно только по первым двум.
+        const confirmedServerId = initialProgress.serverId === null ? null : server.serverId
 
         if (backendSeededKey.current === storageKey) {
+          const live = liveSnapshotRef.current
+          // Прохождение сброшено на другом устройстве, пока квест открыт здесь:
+          // экран узнал об этом от сервера. Берём сервер целиком, с курсором —
+          // курсор закончившегося прохождения к новому не относится.
+          if (isQuestProgressRunEnded(live, confirmedServerId)) {
+            setCompletionFinishedAt(null)
+            seedProgressState(server, true)
+            return
+          }
           // Квест уже засеян: это либо эхо собственного сейва, либо ответы
           // другого устройства, прилетевшие в ответе сервера. Сливаем аддитивно,
           // но курсор и карту не двигаем — игрок смотрит на этот экран.
-          const live = liveSnapshotRef.current
           const { merged, localChanged } = mergeQuestProgress(live, server)
           if (!localChanged) return
           seedProgressState(
@@ -291,6 +324,14 @@ export function useQuestWizardProgress({
         // баг 2026-07-28), а локальный — не знать про другое устройство. Поэтому
         // не выбираем победителя, а сливаем: ни один ответ не теряется.
         const local = await readStoredProgress(storageKey)
+        // Кроме копии прохождения, которое сброшено на другом устройстве: её
+        // строки больше нет или на её месте новая. Долить её значит отменить
+        // чужой сброс — копия стирается, остаётся то, что на сервере (#2033).
+        if (isQuestProgressRunEnded(local, confirmedServerId)) {
+          setCompletionFinishedAt(null)
+          seedProgressState(server, true)
+          return
+        }
         const { merged, serverNeedsPush } = mergeQuestProgress(local, server)
         // Если серверу чего-то не хватает — не гасим save-эффект, он дольёт.
         seedProgressState(merged, !serverNeedsPush)
@@ -403,6 +444,7 @@ export function useQuestWizardProgress({
       earlyFinish,
       updatedAt: now,
       answeredAt,
+      serverId: serverIdRef.current,
     })).catch((error) => console.error('Error saving progress:', error))
 
     onProgressChange?.({
@@ -417,6 +459,7 @@ export function useQuestWizardProgress({
       earlyFinish,
       updatedAt: now,
       answeredAt,
+      serverId: serverIdRef.current,
     })
   }, [answers, attempts, currentIndex, earlyFinish, hints, onProgressChange, questCompleted, showMap, skipped, storageKey, unlockedIndex])
 
@@ -433,6 +476,7 @@ export function useQuestWizardProgress({
     earlyFinish,
     updatedAt: updatedAtRef.current,
     answeredAt: answeredAtRef.current,
+    serverId: serverIdRef.current,
   })
 
   const maxAnsweredIndex = useMemo(() => {

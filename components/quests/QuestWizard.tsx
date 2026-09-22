@@ -75,6 +75,8 @@ export type QuestWizardProps = {
         skipped?: Record<string, boolean>; earlyFinish?: boolean;
         /** Клиентские времена для слияния между устройствами (на сервер не уходят) */
         updatedAt?: number; answeredAt?: Record<string, number>;
+        /** Поколение: `id` строки, с которой снапшот согласован (#2033) */
+        serverId?: number;
     }) => void;
     /** Callback при сбросе прогресса */
     onProgressReset?: () => void;
@@ -85,6 +87,8 @@ export type QuestWizardProps = {
         hints: Record<string, boolean>; showMap: boolean; completed?: boolean;
         skipped?: Record<string, boolean>; earlyFinish?: boolean;
         updatedAt?: number; answeredAt?: Record<string, number>;
+        /** `id` строки на сервере; `null` — сервер подтвердил, что строки нет (#2033) */
+        serverId?: number | null;
     };
     /** Web: обновить бандл (и signed video URL) перед повторной попыткой проигрывания */
     onFinaleVideoRetry?: () => void;
