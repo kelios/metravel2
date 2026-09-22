@@ -39,12 +39,7 @@ export const NavRow = memo(function NavRow({
 
   return (
     <>
-      {showDividerAbove && (
-        <View
-          style={styles.linkDivider}
-          {...webOnly({ 'data-link-divider': true } as any)}
-        />
-      )}
+      {showDividerAbove && <View style={styles.linkDivider} />}
       <Pressable
         style={({ pressed }) => [
           styles.link,
@@ -55,9 +50,11 @@ export const NavRow = memo(function NavRow({
         android_ripple={{ color: colors.primarySoft }}
         accessibilityRole="button"
         accessibilityLabel={label}
+        // Маркеры hover-правил сайдбара в `app/global.css` — только через `dataSet`:
+        // сырой `data-*` react-native-web до DOM не пропускает (#2032). Активный
+        // пункт CSS узнаёт по `aria-current`.
         {...webOnly({
-          'data-sidebar-link': true,
-          'data-active': active ? 'true' : 'false',
+          dataSet: { sidebarLink: 'true' },
           'aria-pressed': active,
           'aria-current': active ? 'page' : undefined,
           role: 'button',
@@ -71,8 +68,13 @@ export const NavRow = memo(function NavRow({
             { pointerEvents: 'none' },
           ]}
         />
-        <View style={styles.linkLeft} {...webOnly({ 'data-icon': true } as any)}>
-          <Feather name={icon as any} size={iconSize} color={active ? textColor : mutedText} />
+        <View style={styles.linkLeft}>
+          <Feather
+            name={icon as any}
+            size={iconSize}
+            color={active ? textColor : mutedText}
+            {...webOnly({ dataSet: { sidebarLinkIcon: 'true' } })}
+          />
           <Text
             style={[
               styles.linkTxt,
@@ -80,7 +82,7 @@ export const NavRow = memo(function NavRow({
               active && styles.linkTxtActive,
               { color: active ? textColor : mutedText },
             ]}
-            {...webOnly({ 'data-link-text': true } as any)}
+            {...webOnly({ dataSet: { sidebarLinkLabel: 'true' } })}
           >
             {label}
           </Text>

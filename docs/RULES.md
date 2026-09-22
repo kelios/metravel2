@@ -746,7 +746,7 @@ npx serve dist/prod -l 3000 -s
 - On web, avoid putting `Pressable`/`button` elements inside other clickable containers that render as `button`.
 - For popup/card action icons inside a clickable card, prefer rendering actions as a `View`/`div` with:
   - `role="button"`, `tabIndex=0`, `onClick`/`onKeyDown`
-  - `data-card-action="true"` to prevent card click handlers
+  - `data-card-action="true"` to prevent card click handlers — on a `div` as an attribute, on a `View`/`Pressable` only as `dataSet={{ cardAction: 'true' }}` (a raw `data-*` prop never reaches the DOM, see «Design system»)
   - and `title` for hover tooltips.
 
 ### Colors
@@ -758,6 +758,8 @@ npx serve dist/prod -l 3000 -s
 
 - Tokens live in `constants/designSystem.ts`.
 - Web CSS variables live in `app/global.css`.
+- A web stylesheet is imported in one place only — `app/_layout.tsx` → `app/global.css`, where new app CSS goes: the web export emits that stylesheet, and a `.css` required next to a component — a lazily loaded one above all — never reaches the page (#2032). Vendor stylesheets are static files under `public/` that their loaders link at runtime (`utils/ensureLeafletCss.ts`). React Native StyleSheet keys such as `':hover'` are not CSS either: react-native-web compiles them into an invalid rule; hover goes through `Pressable`'s `hovered` state or a `dataSet`-marked rule in `app/global.css` (the remaining keys — #2036).
+- A DOM attribute that CSS, `closest()` or an e2e locator reads goes onto a react-native-web component through `dataSet` (`dataSet={{ fooBar: 'x' }}` renders `data-foo-bar="x"`). A raw `data-*` prop is dropped before the DOM, and a react-test-renderer test still sees it, so the proof is the rendered DOM (#1642, #2024, #2032). `npm run guard:web-style-channels` (part of `lint` and `check:fast`) fails on a raw `data-*` outside a DOM element and on a stylesheet import outside the root layout; files from before the guard are its recorded debt with exact counts.
 
 ### Style key ownership (mandatory)
 

@@ -163,6 +163,12 @@ const defaultProps = {
   links: mockLinks,
 };
 
+// Маркеры hover-правил `app/global.css` живут в `dataSet` (#2032): react-native-web
+// переносит в DOM только его. Сырой `data-*` этот тест видел, а страница — нет,
+// поэтому поиск идёт по `dataSet`; до DOM его доводит CompactSideBarTravel.dom.web.test.
+const withDataSet = (root: any, key: string, value = 'true'): any[] =>
+  root.findAll((node: any) => node.props?.dataSet?.[key] === value);
+
 describe('CompactSideBarTravel - Web', () => {
   beforeAll(() => {
     Platform.OS = 'web';
@@ -242,9 +248,9 @@ describe('CompactSideBarTravel - Web', () => {
 
   describe('Компактность (без скролла)', () => {
     it('карточка автора должна иметь компактные размеры', () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
+      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
 
-      const card = UNSAFE_getAllByProps({ 'data-sidebar-card': true })[0];
+      const card = withDataSet(UNSAFE_root, 'sidebarCard')[0];
       expect(card).toBeTruthy();
 
       // Проверяем что карточка имеет компактный padding
@@ -255,18 +261,17 @@ describe('CompactSideBarTravel - Web', () => {
     it('аватарка должна быть компактной на desktop web', () => {
       const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
 
-      const avatar = UNSAFE_getAllByProps({ 'data-sidebar-avatar': true })[0];
-      expect(avatar).toBeTruthy();
-      const media = avatar.findByProps({ alt: 'Юлия' });
+      const media = UNSAFE_getAllByProps({ alt: 'Юлия' })[0];
+      expect(media).toBeTruthy();
       const styles = StyleSheet.flatten(media.props.style) || {};
       expect(styles.width).toBeLessThanOrEqual(40);
       expect(styles.height).toBeLessThanOrEqual(40);
     });
 
     it('действия автора имеют доступный touch-target (44px)', () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
+      render(<CompactSideBarTravel {...defaultProps} />);
 
-      const actionButton = UNSAFE_getAllByProps({ 'data-action-btn': true })[0];
+      const actionButton = screen.getByLabelText('Экспорт в PDF');
       const resolvedStyle =
         typeof actionButton.props.style === 'function'
           ? actionButton.props.style({ pressed: false, hovered: false })
@@ -277,9 +282,9 @@ describe('CompactSideBarTravel - Web', () => {
     });
 
     it('пункты меню должны иметь компактные отступы', () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
+      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
 
-      const menuItems = UNSAFE_getAllByProps({ 'data-sidebar-link': true });
+      const menuItems = withDataSet(UNSAFE_root, 'sidebarLink');
       expect(menuItems.length).toBeGreaterThan(0);
 
       // Проверяем что padding не превышает 12px по вертикали
@@ -290,17 +295,20 @@ describe('CompactSideBarTravel - Web', () => {
       });
     });
 
-    it('иконки должны быть 16px', () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
+    it('иконки пунктов меню компактные (18px на desktop)', () => {
+      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
 
-      const icons = UNSAFE_getAllByProps({ 'data-icon': true });
-      expect(icons.length).toBeGreaterThan(0);
+      const icons = withDataSet(UNSAFE_root, 'sidebarLinkIcon').filter((node) => node.props.name);
+      expect(icons.length).toBeGreaterThanOrEqual(mockLinks.length);
+      icons.forEach((icon) => {
+        expect(icon.props.size).toBeLessThanOrEqual(18);
+      });
     });
 
     it('текст должен быть 14px', () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
+      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
 
-      const textElements = UNSAFE_getAllByProps({ 'data-link-text': true });
+      const textElements = withDataSet(UNSAFE_root, 'sidebarLinkLabel');
       expect(textElements.length).toBeGreaterThan(0);
 
       textElements.forEach((text) => {
@@ -343,7 +351,7 @@ describe('CompactSideBarTravel - Web', () => {
       const propsWithActive = { ...defaultProps, activeSection: 'gallery' };
       const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...propsWithActive} />);
 
-      const activeLink = UNSAFE_getAllByProps({ 'data-active': 'true' })[0];
+      const activeLink = UNSAFE_getAllByProps({ 'aria-current': 'page' })[0];
       expect(activeLink).toBeTruthy();
       expect(activeLink.props.accessibilityLabel).toBe('Галерея');
     });
@@ -381,45 +389,50 @@ describe('CompactSideBarTravel - Web', () => {
     });
   });
 
-  describe('Hover эффекты', () => {
-    it('карточка должна иметь hover эффект', () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
-
-      const card = UNSAFE_getAllByProps({ 'data-sidebar-card': true })[0];
-      expect(card).toBeTruthy();
-
-      // Проверяем что есть CSS для hover
-      const styles = StyleSheet.flatten(card.props.style) || {};
-      const transition = styles.transition;
-      expect(transition === undefined || transition.includes('0.2s')).toBe(true);
-    });
-
-    it('пункт меню должен изменяться при hover', async () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
-
-      const menuItem = UNSAFE_getAllByProps({ 'data-sidebar-link': true })[0];
-      expect(menuItem).toBeTruthy();
-
-      // Проверяем transition
-      const styles = StyleSheet.flatten(menuItem.props.style) || {};
-      const transition = styles.transition;
-      expect(transition === undefined || typeof transition === 'string').toBe(true);
-    });
-
-    it('кнопки действий должны иметь hover эффект', () => {
-      mockAuthState.isSuperuser = true;
-      mockAuthState.userId = 'user-1';
-      const propsWithEdit = { ...defaultProps };
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...propsWithEdit} />);
-
-      const actionButtons = UNSAFE_getAllByProps({ 'data-action-btn': true });
-      expect(actionButtons.length).toBeGreaterThan(0);
-
-      actionButtons.forEach((btn) => {
-        const styles = StyleSheet.flatten(btn.props.style) || {};
-        const transition = styles.transition;
-        expect(transition === undefined || typeof transition === 'string').toBe(true);
+  describe('Hover эффекты (маркеры правил app/global.css)', () => {
+    it('каждый пункт меню и «Скачать маршрут» несут маркер sidebarLink', async () => {
+      mockUseTravelRouteFiles.mockReturnValue({
+        data: [{ id: 77, ext: 'gpx', original_name: 'route.gpx' }] as any[],
+        isLoading: false,
+        isFetching: false,
+        error: null,
+        refetch: jest.fn(),
       });
+      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
+      await screen.findByLabelText('Скачать маршрут');
+
+      const labels = new Set(
+        withDataSet(UNSAFE_root, 'sidebarLink').map((node) => node.props.accessibilityLabel),
+      );
+      expect(labels).toEqual(new Set([...mockLinks.map((link) => link.label), 'Скачать маршрут']));
+    });
+
+    it('иконка и подпись пункта помечены для цвета при наведении', () => {
+      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
+
+      const labels = withDataSet(UNSAFE_root, 'sidebarLinkLabel').map((node) => node.props.children);
+      expect(labels).toEqual(expect.arrayContaining(mockLinks.map((link) => link.label)));
+      expect(withDataSet(UNSAFE_root, 'sidebarLinkIcon').filter((node) => node.props.name)).toHaveLength(
+        mockLinks.length,
+      );
+    });
+
+    it('активный пункт узнаётся по aria-current — hover-правило его не перекрашивает', () => {
+      const { UNSAFE_root } = render(
+        <CompactSideBarTravel {...defaultProps} activeSection="gallery" />,
+      );
+
+      const current = withDataSet(UNSAFE_root, 'sidebarLink').filter(
+        (node) => node.props['aria-current'] === 'page',
+      );
+      expect(current.length).toBeGreaterThan(0);
+      current.forEach((node) => expect(node.props.accessibilityLabel).toBe('Галерея'));
+    });
+
+    it('карточка автора несёт маркер sidebarCard', () => {
+      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
+
+      expect(withDataSet(UNSAFE_root, 'sidebarCard').length).toBeGreaterThan(0);
     });
   });
 
@@ -465,10 +478,9 @@ describe('CompactSideBarTravel - Web', () => {
   describe('Адаптивность', () => {
     it('должен применять мобильные стили на мобильном', () => {
       const mobileProps = { ...defaultProps, isMobile: true };
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...mobileProps} />);
+      render(<CompactSideBarTravel {...mobileProps} />);
 
-      const menu = UNSAFE_getAllByProps({ 'data-sidebar-menu': true })[0];
-      expect(menu).toBeTruthy();
+      expect(screen.getByTestId('travel-details-sidebar-menu')).toBeTruthy();
     });
 
     it('должен показывать кнопку закрытия на мобильном', () => {
@@ -487,71 +499,31 @@ describe('CompactSideBarTravel - Web', () => {
     });
   });
 
-  describe('Data-атрибуты', () => {
-    it('должен иметь data-sidebar-card', () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
+  describe('Маркеры web-стилей', () => {
+    it('сайдбар не ставит сырых data-* — react-native-web отбрасывает их до DOM', () => {
+      mockAuthState.isSuperuser = true;
+      mockAuthState.userId = 'user-1';
+      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
 
-      const card = UNSAFE_getAllByProps({ 'data-sidebar-card': true });
-      expect(card.length).toBeGreaterThan(0);
+      // Маркеры, которые сайдбар, карточка автора, её кнопки и виджет погоды ставили
+      // сырым пропом до #2032. Чужой долг вложенных общих компонентов (например,
+      // `data-testid` скелетона картинки) ведёт guard:web-style-channels.
+      const SIDEBAR_MARKERS = /^data-(?:sidebar|link|icon|active|action-btn|author-name|disabled|weather)/;
+      const rawDataProps = UNSAFE_root
+        .findAll(() => true)
+        .flatMap((node: any) => Object.keys(node.props || {}).filter((key) => SIDEBAR_MARKERS.test(key)));
+      expect(rawDataProps).toEqual([]);
     });
 
-    it('должен иметь data-sidebar-avatar', () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
+    it('разделитель перед картой рендерится', () => {
+      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
 
-      const avatar = UNSAFE_getAllByProps({ 'data-sidebar-avatar': true });
-      expect(avatar.length).toBeGreaterThan(0);
-    });
-
-    it('должен иметь data-sidebar-link для каждого пункта', () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
-
-      const links = UNSAFE_getAllByProps({ 'data-sidebar-link': true });
-      expect(links.length).toBeGreaterThanOrEqual(mockLinks.length);
-    });
-
-    it('должен иметь data-active для активного пункта', () => {
-      const propsWithActive = { ...defaultProps, activeSection: 'gallery' };
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...propsWithActive} />);
-
-      const activeLink = UNSAFE_getAllByProps({ 'data-active': 'true' });
-      expect(activeLink.length).toBeGreaterThan(0);
-    });
-
-    it('должен иметь data-icon для иконок', () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
-
-      const icons = UNSAFE_getAllByProps({ 'data-icon': true });
-      expect(icons.length).toBeGreaterThan(0);
-    });
-
-    it('должен иметь data-link-text для текста', () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
-
-      const texts = UNSAFE_getAllByProps({ 'data-link-text': true });
-      expect(texts.length).toBeGreaterThan(0);
-    });
-
-    it('должен иметь data-link-divider для разделителей', () => {
-      const { UNSAFE_queryAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
-
-      const dividers = UNSAFE_queryAllByProps({ 'data-link-divider': true });
-      // Должен быть хотя бы один разделитель (перед картой)
+      const dividers = UNSAFE_root.findAll(
+        (node: any) =>
+          typeof node.type === 'string' &&
+          String(StyleSheet.flatten(node.props.style)?.backgroundImage ?? '').startsWith('linear-gradient(90deg'),
+      );
       expect(dividers.length).toBeGreaterThanOrEqual(1);
-    });
-
-    it('должен иметь data-action-btn для кнопок', () => {
-      const propsWithEdit = { ...defaultProps, isSuperuser: true };
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...propsWithEdit} />);
-
-      const buttons = UNSAFE_getAllByProps({ 'data-action-btn': true });
-      expect(buttons.length).toBeGreaterThan(0);
-    });
-
-    it('должен иметь data-sidebar-menu для контейнера', () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
-
-      const menu = UNSAFE_getAllByProps({ 'data-sidebar-menu': true });
-      expect(menu.length).toBeGreaterThan(0);
     });
   });
 
@@ -579,9 +551,10 @@ describe('CompactSideBarTravel - Web', () => {
 
   describe('Accessibility', () => {
     it('все кнопки должны иметь accessibilityRole="button"', () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
+      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
 
-      const links = UNSAFE_getAllByProps({ 'data-sidebar-link': true });
+      const links = withDataSet(UNSAFE_root, 'sidebarLink');
+      expect(links.length).toBeGreaterThan(0);
       links.forEach((link) => {
         expect(link.props.accessibilityRole).toBe('button');
       });
@@ -599,7 +572,7 @@ describe('CompactSideBarTravel - Web', () => {
       const propsWithActive = { ...defaultProps, activeSection: 'gallery' };
       const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...propsWithActive} />);
 
-      const activeLink = UNSAFE_getAllByProps({ 'data-active': 'true' })[0];
+      const activeLink = UNSAFE_getAllByProps({ 'aria-current': 'page' })[0];
       expect(activeLink.props['aria-pressed']).toBe(true);
     });
   });

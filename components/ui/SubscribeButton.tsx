@@ -92,7 +92,6 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, iconOnly }
                         ? {
                               role: 'button',
                               'aria-label': a11yLabel,
-                              'data-action-btn': true,
                           } as any
                         : {})}
                 >

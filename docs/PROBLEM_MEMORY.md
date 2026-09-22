@@ -4757,3 +4757,102 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   подтвердить ключи и подсветку последних разделов на desktop/mobile web,
   затем проверить переходы по клику. Возврат к императивному проставлению
   атрибутов с ограниченным окном — та же причина, переоткрывать #2024.
+
+### RNW-RAW-DATA-ATTRIBUTE-DROPPED-001 — DOM-атрибут компонента RN идёт только через `dataSet`
+
+- **Problem key:** `rnw-raw-data-attribute-dropped` (сквозной: механизм нескольких
+  несвязанных симптомов).
+- **Инвариант:** атрибут, который читает CSS-селектор, `closest()`, скрипт или
+  e2e-локатор, ставится на компонент react-native-web через `dataSet`
+  (`dataSet={{ fooBar: 'x' }}` → `data-foo-bar="x"`). Сырой `data-*` законен только
+  на DOM-элементе (`<div>`, `createElement('div', …)`). Таблица стилей
+  приложения импортируется только в `app/_layout.tsx` (`app/global.css`): `.css`
+  рядом с компонентом в web-экспорт не попадает.
+- **Surface/owner:** все web-компоненты; `docs/RULES.md` → «Design system»,
+  `scripts/guard-web-style-channels.js`; frontend. Platform impact: desktop web и
+  mobile web; Localization impact: none.
+- **Цепочка:** #1642 (`data-deferred-transition-state` — CLS-гард читал `null`) →
+  #2024 (`data-section-key` поздних секций — scroll-spy их не видел) → #2032
+  (hover-стили бокового меню деталей путешествия и виджета погоды).
+- **Подтверждённая причина:** RNW 0.21 переносит в DOM только allowlist пропов
+  (`react-native-web/dist/modules/forwardedProps`), `data-*` в нём нет. Юнит-тест
+  на react-test-renderer читает проп и проходит, типы молчат (`as any` в спреде),
+  поэтому мёртвый маркер выглядит рабочим до замера в браузере. Три починки подряд
+  лечили по файлу, класс оставался открытым.
+- **Корректирующий слой (#2032):** guard `guard:web-style-channels` в `lint`,
+  `lint:ci` и безусловно в `check:fast`: красный на литеральном `data-…` на
+  компоненте (JSX-атрибут, спред, обёртка вроде `webOnly`, объект с непрослеженным
+  адресатом), на `data-…` внутри `dataSet` и на импорте `.css` вне
+  `app/_layout.tsx`. Сорок мест в 29 файлах, живших до гейта, записаны долгом
+  `KNOWN_RAW_DATA_ATTRIBUTE_DEBT` с точным числом — разбор в #2035.
+- **Regression control:** `__tests__/scripts/guard-web-style-channels.test.ts`
+  (фикстуры #2032: литеральный ключ в спреде, условный `require` `.web.css`; дерево
+  зелёное); доказательство для конкретного экрана — тест на настоящем RNW DOM
+  (`TravelDetailsSectionAnchors.web.test.tsx`, `CompactSideBarTravel.dom.web.test.tsx`).
+- **Чего guard не видит:** вычисляемый ключ (`` [`data-${x}`] ``), маркер,
+  переданный обёртке под другим именем пропа, и ключи-псевдоклассы RN StyleSheet
+  (`':hover'`), которые RNW компилирует в битое правило (#2036).
+
+### TRAVEL-SIDEBAR-HOVER-CSS-DEAD-001 — hover бокового меню деталей путешествия доходит до страницы
+
+- **Инвариант:** на desktop web наведение мыши на пункт меню разделов и «Скачать
+  маршрут» в боковом меню `/travels/:slug` меняет фон пункта и цвет иконки и
+  подписи, на карточку автора — её тень; активный пункт сохраняет RN-вид. Правила
+  лежат в `app/global.css` и находят отрендеренные элементы.
+- **Surface/owner:** `components/travel/CompactSideBarTravel.tsx`,
+  `components/travel/compactSideBar/**`, `components/home/WeatherWidget.tsx`,
+  `app/global.css`; frontend. Platform impact: desktop web; mobile web без
+  изменений (сайдбар рендерится только в desktop-раскладке, правила под
+  `@media (hover: hover) and (pointer: fine)`); Localization impact: none.
+- **Каноническая задача:** #2032. Родственные по механизму —
+  `RNW-RAW-DATA-ATTRIBUTE-DROPPED-001`; тот же компонент, другие инварианты — #2027,
+  #2021, #162, #96.
+- **Подтверждённая причина (три слоя, каждый убивал стили сам):**
+  `CompactSideBarTravel.web.css` и `WeatherWidget.web.css` подключались условным
+  `require` из модулей за `import()`-границей (`lazyWithRetry`, `React.lazy`) и в
+  `dist` не попадали — на проде грузился один `global-*.css`; селекторы целились в
+  сырые `data-*` из `webOnly({ … })`, которых в DOM нет; а hover в RN-стилях
+  (`styles.link[':hover']`) RNW компилирует в `.r-:hover-…{:hover:[object Object];}`.
+- **Что перенесено (сверка каждого правила с RN-стилями):** фон пункта при
+  наведении (`--color-primarySoft`), цвет иконки и подписи (`--color-primaryText`,
+  4,6:1 на фоне наведения — `--color-primary` дал бы ≈2,8:1), тень карточки автора
+  (`--shadow-hover`); переходы — под `prefers-reduced-motion: no-preference`.
+  Не перенесено: второй индикатор активного пункта (`::before`) и градиент его фона —
+  их держат `activeIndicator`/`linkActive`; жирность подписи при наведении (сдвиг
+  строки); подъём карточки и масштаб аватара (оба не кликабельны — подъём обещает
+  клик, которого нет); hover кнопок действий (класс `':hover'` всего приложения —
+  #2036); анимация появления пунктов (пункты невидимы до конца анимации
+  при каждом монтаже, `nth-child` сбит разделителями и карточкой автора); градиент
+  разделителя (уже в RN-стиле `linkDivider`); тонкий скроллбар; правило
+  `prefers-reduced-motion` на `*`, которое заглушило бы анимации всего сайта. `WeatherWidget.web.css` не содержал ни одного
+  отклика на наведение — только сброс `text-decoration`, который нечему сбрасывать,
+  дубли `box-sizing` из `global.css` и serif из RN-стиля — удалён целиком вместе с
+  маркерами без читателей.
+- **Regression control:** `__tests__/components/travel/CompactSideBarTravel.dom.web.test.tsx`
+  — настоящий RNW DOM и настоящий `app/global.css`: маркеры доходят до DOM, каждое
+  правило бокового меню находит отрендеренные элементы, hover-правила — только под
+  `(hover: hover)` и не трогают `aria-current="page"` (мутации — сырой маркер,
+  переименованный селектор, правило вне media, правило на активном пункте —
+  проверены красными); guard `guard:web-style-channels` на `.css`-импорт и сырой
+  `data-*`.
+- **Done gate:** на проде desktop 1366×900 у пунктов меню есть
+  `[data-sidebar-link]`, наведение меняет `background-color` пункта и цвет подписи,
+  правила с `data-sidebar-link` присутствуют в загруженном CSS; mobile web 390×844
+  без изменений.
+
+### RNW-STYLESHEET-PSEUDO-CLASS-DEAD-001 — псевдокласс в стиле RN не становится CSS-правилом
+
+- **Инвариант:** отклик на наведение (фокус, нажатие) на web делается состоянием
+  `hovered` у `Pressable` или правилом в `app/global.css` на маркере `dataSet`;
+  ключ `':hover'` (`':focus'`, `':active'`) в объекте стиля RN не пишется.
+- **Surface/owner:** стили компонентов web; `docs/RULES.md` → «Design system»;
+  frontend. Platform impact: desktop web; Localization impact: none.
+- **Подтверждённая причина:** компилятор react-native-web 0.21.2 не знает
+  псевдоклассов (`compiler`/`preprocess`/`validate` без упоминаний `hover`) и
+  компилирует ключ как CSS-свойство: `.r-:hover-…{:hover:[object Object];}` —
+  правило, которое браузер отбрасывает. Типы молчат (`as any`), тест на
+  react-test-renderer видит объект стиля — ключ выглядит рабочим.
+- **Каноническая задача:** #2036 (40 ключей в 21 файле на 22.09.2026, правило
+  guard). Найдено в #2032, там же сняты два ключа сайдбара деталей путешествия.
+- **Regression control:** пока только правило `docs/RULES.md` → «Design system»;
+  guard-правило на ключи-псевдоклассы — в #2036.

@@ -48,11 +48,6 @@ import { WeatherPlaceholder } from './compactSideBar/parts/WeatherPlaceholder'
 import { WidgetFallback } from './compactSideBar/parts/WidgetFallback'
 import { translate as i18nT } from '@/i18n'
 
-
-if (Platform.OS === 'web') {
-  require('./CompactSideBarTravel.web.css')
-}
-
 type SideBarProps = {
   refs: Record<string, React.RefObject<View>>
   travel: Travel
@@ -249,10 +244,6 @@ function CompactSideBarTravel({
       onPointerEnter={(Platform.OS === 'web') ? enableDeferred : undefined}
       onTouchStart={enableDeferred}
       onFocus={(Platform.OS === 'web') ? enableDeferred : undefined}
-      {...webOnly({
-        'data-sidebar-menu': true,
-        'data-sidebar-deferred-ready': deferredEnabled,
-      } as any)}
     >
       <View style={styles.menuFrame}>
         <ScrollView
@@ -321,8 +312,9 @@ function CompactSideBarTravel({
               accessibilityRole="button"
               accessibilityLabel={i18nT('travel:components.travel.CompactSideBarTravel.skachat_marshrut_4c1eda2d')}
               accessibilityState={{ disabled: isRouteDownloading, busy: isRouteDownloading }}
+              // Тот же hover, что у пунктов меню (`NavRow`): маркеры правил `app/global.css`.
               {...webOnly({
-                'data-sidebar-link': true,
+                dataSet: { sidebarLink: 'true' },
                 role: 'button',
                 'aria-label': i18nT('travel:components.travel.CompactSideBarTravel.skachat_marshrut_4c1eda2d'),
               } as any)}
@@ -340,6 +332,7 @@ function CompactSideBarTravel({
                     name="download"
                     size={(Platform.OS === 'web') && isTablet ? 20 : 18}
                     color={mutedText}
+                    {...webOnly({ dataSet: { sidebarLinkIcon: 'true' } })}
                   />
                 )}
                 <Text
@@ -348,6 +341,7 @@ function CompactSideBarTravel({
                     isTablet && { fontSize: DESIGN_TOKENS.typography.sizes.sm },
                     { color: mutedText },
                   ]}
+                  {...webOnly({ dataSet: { sidebarLinkLabel: 'true' } })}
                 >
                   {isRouteDownloading ? i18nT('travel:components.travel.CompactSideBarTravel.skachivanie_cab4e4f1') : i18nT('travel:components.travel.CompactSideBarTravel.skachat_marshrut_4c1eda2d')}
                 </Text>
@@ -365,7 +359,6 @@ function CompactSideBarTravel({
                   }
                 : null
             }
-            {...webOnly({ 'data-sidebar-weather-shell': true } as any)}
           >
             {!weatherSettled && (Platform.OS === 'web') && !isMobile && <WeatherPlaceholder />}
             <Suspense fallback={<WidgetFallback />}>

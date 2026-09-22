@@ -567,6 +567,41 @@ select:focus-visible {
   opacity: 1 !important;
 }
 
+/*
+ * Детали путешествия — боковое меню desktop (#2032): отклик на наведение у пунктов
+ * разделов, «Скачать маршрут» и карточки автора. Стили живут здесь, а не рядом с
+ * компонентом: CSS, подключённый из модуля за import()-границей (сайдбар грузится
+ * лениво), в web-экспорт не попадает. Маркеры ставит `dataSet` (`NavRow`,
+ * `CompactSideBarTravel`, `AuthorBlock`) — сырой `data-*` react-native-web отбрасывает.
+ * Активный пункт сохраняет RN-вид (`linkActive` + `activeIndicator`), поэтому
+ * `:not([aria-current="page"])`; идущее скачивание маршрута — `aria-disabled`.
+ * Цвет иконки и подписи RN задаёт инлайн-стилем, отсюда `!important`.
+ */
+@media (hover: hover) and (pointer: fine) {
+  [data-sidebar-link]:not([aria-current="page"]):not([aria-disabled="true"]):hover {
+    background-color: var(--color-primarySoft);
+  }
+
+  [data-sidebar-link]:not([aria-current="page"]):not([aria-disabled="true"]):hover [data-sidebar-link-icon],
+  [data-sidebar-link]:not([aria-current="page"]):not([aria-disabled="true"]):hover [data-sidebar-link-label] {
+    color: var(--color-primaryText) !important;
+  }
+
+  [data-sidebar-card]:hover {
+    box-shadow: var(--shadow-hover);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-sidebar-link-icon] {
+    transition: color 0.2s ease;
+  }
+
+  [data-sidebar-card] {
+    transition: box-shadow 0.18s ease;
+  }
+}
+
 /* Slider shimmer skeleton (web) */
 @keyframes slider-shimmer {
   0% { transform: translateX(-100%); }

@@ -86,8 +86,6 @@ function TravelPdfExportControl({
         ]}
         {...(Platform.OS === 'web'
           ? {
-              'data-action-btn': true,
-              'data-disabled': isGenerating ? 'true' : 'false',
               role: 'button',
               'aria-label': i18nT('travel:components.travel.TravelPdfExportControl.eksport_v_pdf_94c24fb3'),
             }

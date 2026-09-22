@@ -291,6 +291,13 @@ const main = () => {
       process.exit(deferredLoadingGuardStatus)
     }
 
+    // Тоже безусловно: сырой `data-*` и `.css` рядом с компонентом приходят в
+    // новом файле так же часто, как в изменённом (#1642, #2024, #2032).
+    const styleChannelsGuardStatus = runCommand('npm', ['run', 'guard:web-style-channels'])
+    if (styleChannelsGuardStatus !== 0) {
+      process.exit(styleChannelsGuardStatus)
+    }
+
     const typeDebtGuardStatus = runCommand('npm', ['run', 'guard:type-debt'])
     if (typeDebtGuardStatus !== 0) {
       process.exit(typeDebtGuardStatus)

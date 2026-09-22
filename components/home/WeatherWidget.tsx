@@ -11,12 +11,6 @@ import { useWeatherWidgetModel } from './hooks/useWeatherWidgetModel';
 import { translate as i18nT } from '@/i18n'
 import { formatDate } from '@/i18n/format'
 
-
-// ✅ УЛУЧШЕНИЕ: Импорт CSS для предотвращения проблем с текстом на hover
-if (Platform.OS === 'web') {
-  require('./WeatherWidget.web.css');
-}
-
 type Props = {
     points: { coord: string; address?: string }[];
     countryName?: string;
@@ -43,15 +37,9 @@ function WeatherWidget({ points, countryName, onSettled }: Props) {
         : i18nT('home:components.home.WeatherWidget.zagruzhaem_prognoz_58fcfd93');
 
     return (
-      <View 
-        style={styles.wrapper}
-        {...(Platform.OS === 'web' ? { 'data-weather-widget': true } : {})}
-      >
+      <View style={styles.wrapper}>
           <View style={styles.titleContainer}>
-              <Text
-                style={[styles.title, { color: colors.text }]}
-                {...(Platform.OS === 'web' ? { 'data-weather-title': true } : {})}
-              >
+              <Text style={[styles.title, { color: colors.text }]}>
                   {i18nT('home:components.home.WeatherWidget.pogoda_v_cdab7f8f')}{locationLabel}
               </Text>
           </View>
@@ -61,7 +49,6 @@ function WeatherWidget({ points, countryName, onSettled }: Props) {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.forecastContainer}
-              {...(Platform.OS === 'web' ? { 'data-weather-forecast': true } : {})}
             >
                 {forecast.map((day, index) => (
                   <View key={day.date} style={[

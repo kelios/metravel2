@@ -131,10 +131,6 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
         ? ({
             cursor: 'pointer' as any,
             transition: 'background-color 0.15s ease, border-color 0.15s ease' as any,
-            ':hover': {
-              backgroundColor: colors.backgroundSecondary,
-              borderColor: colors.border,
-            } as any,
           } as any)
         : {}),
     },
@@ -184,11 +180,12 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       maxWidth: '100%',
       justifyContent: 'space-between',
       backgroundColor: 'transparent',
+      // Hover — правило `[data-sidebar-link]` в `app/global.css`: ключ `':hover'`
+      // react-native-web не компилирует в `:hover`, он давал битое правило (#2032).
       ...((Platform.OS === 'web')
         ? {
             cursor: 'pointer' as any,
             transition: 'background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-            ':hover': { backgroundColor: colors.backgroundSecondary } as any,
           }
         : {}),
     },

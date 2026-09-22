@@ -71,10 +71,11 @@ export const AuthorBlock = memo(function AuthorBlock({
     <View
       testID="travel-details-author"
       style={[styles.card, { backgroundColor: colors.surface }]}
-      {...webOnly({ 'data-sidebar-card': true } as any)}
+      // Маркер hover-правила карточки в `app/global.css` (#2032).
+      {...webOnly({ dataSet: { sidebarCard: 'true' } })}
     >
       <View style={styles.cardRow}>
-        <View style={styles.avatarWrap} {...webOnly({ 'data-sidebar-avatar': true } as any)}>
+        <View style={styles.avatarWrap}>
           {avatarUri ? (
             <ImageCardMedia
               src={avatarUri}
@@ -118,7 +119,6 @@ export const AuthorBlock = memo(function AuthorBlock({
                       cursor: 'pointer',
                       role: 'button',
                       'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.otkryt_profil_avtora_value1_ef516528', { value1: displayName }),
-                      'data-author-name': true,
                       title: i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.otkryt_profil_avtora_value1_ef516528', { value1: displayName }),
                     } as any)
                   : {},
@@ -158,7 +158,6 @@ export const AuthorBlock = memo(function AuthorBlock({
                   ]}
                   ref={editTitleRef}
                   {...webOnly({
-                    'data-action-btn': true,
                     role: 'button',
                     'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.redaktirovat_puteshestvie_8010aa7b'),
                   } as any)}
@@ -195,7 +194,6 @@ export const AuthorBlock = memo(function AuthorBlock({
                     ]}
                     ref={writeTitleRef}
                     {...webOnly({
-                      'data-action-btn': true,
                       role: 'button',
                       'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.napisat_avtoru_value1_191ed8f0', { value1: displayName }),
                     } as any)}
