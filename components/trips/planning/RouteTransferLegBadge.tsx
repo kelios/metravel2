@@ -4,10 +4,11 @@
 // (макет `trips-plan-route-tab-mock.md` §6). Длина — по прямой между точками,
 // так переезд меряет и бэкенд; в дистанцию и время маршрута она не входит.
 import React, { useMemo } from 'react'
-import Feather from '@expo/vector-icons/Feather'
 import { StyleSheet, Text, View } from 'react-native'
 
 import type { ThemedColors } from '@/hooks/useTheme'
+import MapIcon from '@/components/MapPage/MapIcon'
+
 import { ARRIVAL_MODE_ICON_NAME, formatArrivalLeg } from './tripPlanFormatting'
 import type { RouteTransferSegment } from './tripRouteLegs'
 
@@ -20,8 +21,8 @@ export default function RouteTransferLegBadge({ transfer, colors }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors])
   return (
     <View style={styles.row} testID={`route-transfer-leg-${transfer.toIndex}`}>
-      <Feather
-        name={ARRIVAL_MODE_ICON_NAME[transfer.mode] as never}
+      <MapIcon
+        name={ARRIVAL_MODE_ICON_NAME[transfer.mode]}
         size={14}
         color={colors.infoDark}
       />

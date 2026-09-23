@@ -5,13 +5,14 @@
 // рисуется дугой и не входит в дистанцию и время. У первой точки поля нет —
 // предыдущей у неё нет, и бэкенд держит там `''` (#2055).
 import React from 'react'
-import Feather from '@expo/vector-icons/Feather'
 import { Pressable, Text, View } from 'react-native'
 
 import type { RoutePointArrivalMode } from '@/api/plannedTrips'
 import type { ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
 import { ARRIVAL_MODES } from '@/utils/routePointArrivalMode'
+import MapIcon from '@/components/MapPage/MapIcon'
+
 import { ARRIVAL_MODE_ICON_NAME, ARRIVAL_MODE_LABEL } from './tripPlanFormatting'
 import type { createStyles } from './RouteBuilder.styles'
 
@@ -49,8 +50,8 @@ export default function RouteArrivalModeField({ styles, colors, draft }: Props) 
               testID={`route-builder-arrival-${mode ?? 'inherit'}`}
             >
               {mode ? (
-                <Feather
-                  name={ARRIVAL_MODE_ICON_NAME[mode] as never}
+                <MapIcon
+                  name={ARRIVAL_MODE_ICON_NAME[mode]}
                   size={13}
                   color={active ? colors.textOnPrimary : colors.textSecondary}
                 />

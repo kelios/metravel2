@@ -53,8 +53,9 @@ export const TRANSPORT_ICON_NAME: Record<TripTransport, string> = {
 
 /**
  * #2056: способ прибытия к точке. Подписи общие с печатной версией (#2068):
- * «Перелёт · 431 км» одинаково в списке, в итоге и на бумаге. У Feather нет
- * поезда, автобуса и самолёта — берутся ближайшие глифы, эмодзи запрещены.
+ * «Перелёт · 431 км» одинаково в списке, в итоге и на бумаге. Иконки — ключи
+ * `MapIcon`: у Feather нет поезда, автобуса и самолёта, поэтому транспорт
+ * рисуется глифами MaterialCommunityIcons, как способ передвижения поездки.
  */
 export const ARRIVAL_MODE_LABEL: Record<RoutePointArrivalMode, string> = {
   get train() { return i18nT('trips:components.trips.planning.print.arrival.train') },
@@ -65,11 +66,11 @@ export const ARRIVAL_MODE_LABEL: Record<RoutePointArrivalMode, string> = {
 };
 
 export const ARRIVAL_MODE_ICON_NAME: Record<RoutePointArrivalMode, string> = {
-  train: 'git-commit',
-  flight: 'send',
-  bus: 'truck',
-  ferry: 'anchor',
-  transfer: 'shuffle',
+  train: 'arrival-train',
+  flight: 'arrival-flight',
+  bus: 'arrival-bus',
+  ferry: 'arrival-ferry',
+  transfer: 'arrival-transfer',
 };
 
 /** «Перелёт · 431 км» — плашка переезда в списке точек. */
