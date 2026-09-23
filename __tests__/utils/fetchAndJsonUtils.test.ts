@@ -297,6 +297,24 @@ describe('openBookPreviewWindow', () => {
     expect(write).toHaveBeenCalledWith(html)
   })
 
+  it('#2068: opens the pending window without noopener, so a handle comes back to write the document into', () => {
+    const pendingWindow: any = {
+      opener: {},
+      document: { open: jest.fn(), write: jest.fn(), close: jest.fn() },
+    }
+    // Как в браузере: с `noopener` window.open по спецификации возвращает null.
+    const open = jest.fn((_url: string, _target?: string, features?: string) =>
+      features && features.includes('noopener') ? null : pendingWindow,
+    )
+    global.window = { ...window, open } as any
+
+    const opened = openPendingBookPreviewWindow()
+
+    expect(open).toHaveBeenCalledWith('about:blank', '_blank', '')
+    expect(opened).toBe(pendingWindow)
+    expect(pendingWindow.opener).toBeNull()
+  })
+
   it('reuses the remembered pending preview window when targetWindow is omitted', () => {
     const pendingWrite = jest.fn()
     const pendingWindow: any = {

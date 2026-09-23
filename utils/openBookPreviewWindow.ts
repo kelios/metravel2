@@ -42,7 +42,11 @@ function writeHtmlToWindow(win: Window, html: string): boolean {
 export function openPendingBookPreviewWindow(): Window | null {
   if (typeof window === 'undefined') return null;
 
-  const win = tryFinalizeWindow(openWebWindow('about:blank'));
+  // Нужна ссылка на окно, чтобы потом записать в него документ. Дефолт
+  // openWebWindow — `noopener`, а с ним window.open по спецификации возвращает
+  // null: вкладка открывалась пустой, а книга уходила второй вкладкой через
+  // blob (#2068). opener обнуляет tryFinalizeWindow.
+  const win = tryFinalizeWindow(openWebWindow('about:blank', { windowFeatures: '' }));
   if (!win) return null;
   pendingPreviewWindow = win;
   setGlobalPreviewWindow(win);

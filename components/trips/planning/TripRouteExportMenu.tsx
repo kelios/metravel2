@@ -31,6 +31,7 @@ import RoutingStatus, { ROUTING_DIRECT_LINE } from '@/components/MapPage/Routing
 import { translate as i18nT } from '@/i18n'
 import { isRouteApproximate, routingStateHint, routingStateRetryable } from './tripPlanFormatting';
 import TripRoutePreviewEngine from './TripRoutePreviewEngine';
+import TripPlanPrintButton from './print/TripPlanPrintButton';
 import {
   hasUsableRouteGeometry,
   isRoutableTransport,
@@ -211,6 +212,10 @@ function TripRouteExportMenu({ trip }: Props) {
           />
         ))}
       </View>
+
+      {/* #2068: печать плана по дням; та же поездка с разрешённой геометрией,
+          что у GPX/KML, иначе карты дней рисовались бы по прямой. */}
+      <TripPlanPrintButton trip={displayTrip} />
     </View>
   );
 }
