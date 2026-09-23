@@ -1,7 +1,7 @@
 // First-run onboarding (native only). Explains the three core values of MeTravel:
 // real routes ("travel book"), city quests, and the nearby map.
 // Shown once over the home tab; the "seen" flag lives in AsyncStorage.
-// Web has a no-op sibling (OnboardingScreen.tsx) — web uses its own WelcomeBanner.
+// Web has a no-op sibling (OnboardingScreen.tsx): the web app has no first-run onboarding.
 
 import { useCallback, useEffect, useState } from 'react'
 import {

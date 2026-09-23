@@ -5,7 +5,7 @@ import React from 'react'
 import { render } from '@testing-library/react-native'
 import type { UserRank } from '@/api/achievements'
 
-// expo-linear-gradient — мокаем как в WelcomeBanner.test.tsx
+// expo-linear-gradient — мокаем в View с testID, чтобы градиент был виден в дереве
 jest.mock('expo-linear-gradient', () => {
   const React = require('react')
   const { View } = require('react-native')
