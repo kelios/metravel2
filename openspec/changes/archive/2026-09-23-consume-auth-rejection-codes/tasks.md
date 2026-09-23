@@ -26,6 +26,6 @@
 
 ## 5. Ревью и приёмка
 
-- [ ] 5.1 Независимый code-only review-and-fix полного diff (`review-auditor` / `code-review-gate`), повтор code-level проверок после правок
-- [ ] 5.2 После коммита явными путями, push и выката — приёмка на `https://metravel.by` на desktop web и mobile web: общий отказ и подсказка активации по коду, одинаковая нейтральная строка сброса для известного и неизвестного email, локализованная ошибка `400`; проверка хотя бы одной нерусской локали
-- [ ] 5.3 После зелёной приёмки — `openspec archive consume-auth-rejection-codes` с синхронизацией `specs/email-auth-feedback`
+- [x] 5.1 Независимый code-only review-and-fix полного diff (`review-auditor` / `code-review-gate`), повтор code-level проверок после правок
+- [x] 5.2 После коммита явными путями, push и выката — приёмка на `https://metravel.by` на desktop web и mobile web: общий отказ и подсказка активации по коду, одинаковая нейтральная строка сброса для известного и неизвестного email, локализованная ошибка `400`; проверка хотя бы одной нерусской локали
+- [x] 5.3 После зелёной приёмки — `openspec archive consume-auth-rejection-codes` с синхронизацией `specs/email-auth-feedback`
