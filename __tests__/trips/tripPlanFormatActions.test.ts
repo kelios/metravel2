@@ -188,5 +188,23 @@ describe('applyTripPlanFormat — находки ревью #2072', () => {
     expect(result.value).toBe('**_кафе_**');
     expect(parseTripPlanInline(result.value)).toEqual([{ text: 'кафе', bold: true, italic: true }]);
   });
-});
 
+  it('P3 ревью: частичное выделение с одним маркером жирного дотягивается до пары', () => {
+    const value = 'Ужин в **кафе** у озера';
+    const bold = applyTripPlanFormat(value, sel(0, 13), 'bold');
+    expect(bold.value).toBe('**Ужин в кафе** у озера');
+    expect(parseTripPlanInline(bold.value)[0]).toEqual({ text: 'Ужин в кафе', bold: true, italic: false });
+    expect(applyTripPlanFormat(bold.value, bold.selection, 'bold').value).toBe('Ужин в кафе у озера');
+  });
+
+  it('P3 ревью: жирный курсив текста с `_` не превращается в `***…***`', () => {
+    const value = '**https://ex.com/a_b**';
+    expect(applyTripPlanFormat(value, sel(2, 20), 'italic').value).toBe(value);
+    expect(applyTripPlanFormat('*a_b*', sel(1, 4), 'bold').value).toBe('*a_b*');
+  });
+
+  it('P3 ревью: курсив снимается и при выделении части слова внутри жирного', () => {
+    expect(applyTripPlanFormat('_**кафе**_', sel(4, 6), 'italic').value).toBe('**кафе**');
+    expect(applyTripPlanFormat('_кафе_', sel(2, 4), 'italic').value).toBe('кафе');
+  });
+});

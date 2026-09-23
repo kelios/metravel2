@@ -264,19 +264,40 @@ function applyInlineFormat(value: string, selection: TripPlanTextSelection, acti
     ;({ start, end } = target)
   }
 
-  // Повторное нажатие сразу после обёртки: маркеры снаружи выделения.
-  const around = value.slice(start, end).includes('\n') ? null : surroundingPair(value, start, end, action)
-  if (around) {
-    const size = around.marker.length
-    const nextValue = `${value.slice(0, around.openAt)}${value.slice(around.openAt + size, around.closeAt)}${value.slice(around.closeAt + size)}`
-    return { value: nextValue, selection: { start: start - size, end: end - size } }
-  }
-
   // Курсив внутри слова разборщик не читает (`каф_е у_ озера`): края выделения,
   // разрезающие слово, дотягиваются до его границ.
+  const expanded = { start, end }
   if (action === 'italic') {
-    while (start > 0 && /\S/.test(value[start - 1]) && !isOpenEdgeAt(value, start - 1)) start -= 1
-    while (end < value.length && /\S/.test(value[end]) && !isCloseEdgeAt(value, end)) end += 1
+    while (expanded.start > 0 && /\S/.test(value[expanded.start - 1]) && !isOpenEdgeAt(value, expanded.start - 1)) {
+      expanded.start -= 1
+    }
+    while (expanded.end < value.length && /\S/.test(value[expanded.end]) && !isCloseEdgeAt(value, expanded.end)) {
+      expanded.end += 1
+    }
+  }
+
+  // Повторное нажатие: маркеры снаружи выделения — сначала вокруг выделения как
+  // есть (так его возвращает обёртка), затем вокруг слова, если выделена его часть.
+  if (!value.slice(start, end).includes('\n')) {
+    for (const range of [{ start, end }, expanded]) {
+      const around = surroundingPair(value, range.start, range.end, action)
+      if (!around) continue
+      const size = around.marker.length
+      const nextValue = `${value.slice(0, around.openAt)}${value.slice(around.openAt + size, around.closeAt)}${value.slice(around.closeAt + size)}`
+      return { value: nextValue, selection: { start: range.start - size, end: range.end - size } }
+    }
+  }
+  ;({ start, end } = expanded)
+
+  // Выделение, захватившее только один маркер жирного (`Ужин в **кафе`),
+  // дотягивается до его пары в пределах строки — иначе снятие внутренних пар
+  // оставило бы непарный `**` за краем.
+  if ((value.slice(start, end).split('**').length - 1) % 2 === 1) {
+    const lineEnd = value.indexOf('\n', end)
+    const next = value.indexOf('**', end)
+    const previous = value.lastIndexOf('**', start - 2)
+    if (next !== -1 && (lineEnd === -1 || next < lineEnd)) end = next + 2
+    else if (previous !== -1 && previous >= lineStartOf(value, start)) start = previous
   }
 
   const firstAtLineStart = start === lineStartOf(value, start)
@@ -288,7 +309,7 @@ function applyInlineFormat(value: string, selection: TripPlanTextSelection, acti
   // Снимаем, только если обёрнута каждая непустая строка — иначе дооформляем.
   const unwrapping = filled.length > 0 && filled.every((segment) => wrappingMarker(segment.core, action))
 
-  const nextSegments = segments.map((segment) => {
+  const nextSegments = segments.map((segment, index) => {
     if (!segment.core) return { ...segment, text: `${segment.lead}${segment.trail}`, innerStart: 0, inner: '' }
     if (unwrapping) {
       const size = (wrappingMarker(segment.core, action) as string).length
@@ -297,6 +318,13 @@ function applyInlineFormat(value: string, selection: TripPlanTextSelection, acti
     }
     const core = stripInnerStyle(segment.core, action)
     const marker = action === 'italic' && core.includes('_') ? '*' : INLINE_MARKERS[action][0]
+    // `*` курсива вплотную к `**` жирного даёт `***…***`, которое разборщик #2070
+    // не читает: такое сочетание (жирный курсив текста с `_`) не ставим.
+    const before = segment.lead ? segment.lead.slice(-1) : index === 0 ? value[start - 1] ?? '' : ''
+    const after = segment.trail ? segment.trail[0] : index === segments.length - 1 ? value[end] ?? '' : ''
+    if ((marker === '*' || action === 'bold') && /^\*|\*$/.test(`${before}${core}${after}`)) {
+      return { ...segment, text: `${segment.lead}${segment.core}${segment.trail}`, innerStart: segment.lead.length, inner: segment.core }
+    }
     return {
       ...segment,
       text: `${segment.lead}${marker}${core}${marker}${segment.trail}`,
