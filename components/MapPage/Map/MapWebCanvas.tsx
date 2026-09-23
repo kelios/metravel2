@@ -247,7 +247,6 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
   return (
     <MapContainer
       style={mapContainerStyle}
-      data-testid="map-leaflet-container"
       id={mapContainerId}
       center={safeCenter}
       zoom={safeZoom}

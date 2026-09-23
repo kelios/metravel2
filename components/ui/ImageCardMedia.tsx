@@ -929,8 +929,7 @@ function ImageCardMedia({
         },
         style,
       ]}
-      {...(Platform.OS === 'web' && testID ? ({ 'data-testid': testID } as any) : {})}
-      testID={Platform.OS === 'web' ? undefined : testID}
+      testID={testID}
     >
       {resolvedSource && !shouldDisableNetwork && !hasWebLoadError ? (
         <>
@@ -1115,9 +1114,11 @@ export function ImageDataPlaceholder({
       // Стили <img> внутри задаёт expo-image, а не мы, поэтому слой не может
       // сам обойти внешние правила вроде `… img{max-width:…}`. Маркер включает
       // критическое правило `[data-hero-data-placeholder="true"] img`, которое
-      // возвращает слою полную ширину контейнера.
+      // возвращает слою полную ширину контейнера. На web blurhash в слой сейчас
+      // не передаётся (#1208), `<img>` внутри нет и правило ничего не меняет —
+      // маркер виден e2e и замерам заливки. RNW переносит его только из `dataSet`.
       {...(Platform.OS === 'web'
-        ? { 'data-hero-data-placeholder': 'true' }
+        ? { dataSet: { heroDataPlaceholder: 'true' } }
         : null)}
     >
       {normalizedBlurhash ? (

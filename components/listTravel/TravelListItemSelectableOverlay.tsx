@@ -40,7 +40,6 @@ export default function TravelListItemSelectableOverlay({
               'aria-label': checkboxLabel,
               tabIndex: 0,
               testID: 'selection-checkbox',
-              'data-testid': 'selection-checkbox',
               onClick: (e: MouseEvent) => {
                 handleSelectableWebActivate(e, 'click')
               },

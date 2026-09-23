@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BackHandler, Platform, Pressable, Text as RNText, useWindowDimensions, View } from 'react-native'
-import { usePathname } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors } from '@/hooks/useTheme'
@@ -123,9 +122,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const stackSheetToolbar = viewportWidth <= PHONE_STACKED_TOOLBAR_MAX_WIDTH
 
   const bottomSheetRef = useRef<MapBottomSheetRef>(null)
-  const pathname = usePathname()
-  const isActiveWebRoute =
-    IS_WEB && (pathname === '/map' || String(pathname).startsWith('/map/'))
   const [consentBannerVisible, setConsentBannerVisible] = useState(false)
 
   // Контент шторки = list (по умолчанию) | filters (поиск/радиус/категории) | route.
@@ -795,7 +791,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       ]}
       testID="map-mobile-layout"
       {...({ pointerEvents: 'box-none' } as any)}
-      {...(isActiveWebRoute ? ({ 'data-active': 'true' } as any) : null)}
     >
       <View style={styles.mapContainer} {...({ pointerEvents: 'box-none' } as any)}>
         {/* maps.me-style верхний overlay: поиск + фильтры + чипы. Виден, пока

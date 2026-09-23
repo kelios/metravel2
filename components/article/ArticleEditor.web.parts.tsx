@@ -229,7 +229,6 @@ export const ArticleEditorBody: React.FC<{
       style={dynamicStyles.editorArea}
       {...(isWeb
         ? ({
-            'data-editor-surface': 'article-editor',
             onDragEnter: (e: any) => {
               if (!hasSurfaceDraggedFiles(e)) return
               e.preventDefault()

@@ -138,7 +138,6 @@ function WizardExitDialog({
             ]}
             {...Platform.select({
               web: webAccessibilityProps({
-                'data-testid': 'travel-wizard-exit-dialog',
                 role: 'dialog',
                 'aria-modal': true,
               }),

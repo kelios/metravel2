@@ -297,7 +297,7 @@ describe('PlacePopupCard', () => {
 
     const heroPressable = findHeroPressable(tree);
     expect(heroPressable).toBeTruthy();
-    expect(heroPressable.props['data-card-action']).toBe('true');
+    expect(heroPressable.props.dataSet).toEqual({ cardAction: 'true' });
     expect(heroPressable.props.title).toBeTruthy();
 
     const stopPropagation = jest.fn();
@@ -452,7 +452,7 @@ describe('PlacePopupCard', () => {
     });
 
     const heroPressable = tree.root.findAll((node: any) => (
-      node.props?.['data-card-action'] === 'true' &&
+      node.props?.dataSet?.cardAction === 'true' &&
       typeof node.props?.onClickCapture === 'function' &&
       typeof node.props?.onTouchEndCapture === 'function'
     ))[0];

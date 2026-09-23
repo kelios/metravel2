@@ -34,7 +34,6 @@ const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
 
 function CollapsibleBlock({
-  id,
   title,
   description,
   icon,
@@ -290,12 +289,6 @@ function CollapsibleBlock({
         { opacity: animatedOpacity },
         compactMode && styles.containerCompact,
       ]}
-      {...Platform.select({
-        web: {
-          // @ts-ignore -- data-block-id is a web-only data attribute not in RN View types
-          'data-block-id': id,
-        },
-      })}
     >
       {/* Заголовок блока */}
       <View style={[styles.header, compactMode && styles.headerCompact]}>

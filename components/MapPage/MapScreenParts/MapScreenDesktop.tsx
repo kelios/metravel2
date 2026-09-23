@@ -248,7 +248,6 @@ export function MapScreenDesktopChrome({
             ) : (
               <View
                 testID="map-travels-tab"
-                {...(isWeb ? ({ 'data-testid': 'map-travels-tab' } as any) : null)}
                 style={{ flex: 1 }}
               >
                 <Suspense fallback={<ActivityIndicator style={{ paddingVertical: 32 }} color={themedColors.primary} />}>

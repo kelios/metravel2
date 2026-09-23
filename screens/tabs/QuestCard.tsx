@@ -492,7 +492,7 @@ function QuestCard({
                         web: {
                             role: 'button',
                             tabIndex: 0,
-                            'data-card-action': 'true',
+                            dataSet: { cardAction: 'true' },
                             onClick: (event: any) => {
                                 event?.stopPropagation?.();
                                 handleReviewsPress(event);

@@ -31,7 +31,6 @@ function ShimmerOverlayInner({ style, testID }: ShimmerOverlayProps) {
       <View
         testID={testID}
         style={baseStyle}
-        {...(testID ? ({ 'data-testid': testID } as any) : {})}
       >
         <View style={shimmerStyles.overflow}>
           <View

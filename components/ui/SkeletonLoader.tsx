@@ -36,7 +36,6 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   if (Platform.OS === 'web') {
     return (
       <View
-        {...(testID ? ({ 'data-testid': testID } as any) : {})}
         style={[
           ...baseStyle,
           // @ts-ignore — web-only: CSS shimmer sweep

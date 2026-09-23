@@ -1050,7 +1050,7 @@ const PlacePopupCard: React.FC<Props> = ({
       accessibilityLabel={i18nT('map:components.MapPage.Map.PlacePopupCard.index.otkryt_foto_na_ves_ekran_af231f16')}
       {...(Platform.OS === 'web'
         ? ({
-            'data-card-action': 'true',
+            dataSet: { cardAction: 'true' },
             title: popupTooltips.openPhoto,
             onMouseDownCapture: handleOpenFullscreen,
             onPointerDownCapture: handleOpenFullscreen,
@@ -1182,10 +1182,7 @@ const PlacePopupCard: React.FC<Props> = ({
               the hero (flex:1) absorbs the freed space. Legacy fallback keeps the
               scrollable caption for callers without the bottom-card chrome. */}
           {useHeroCaption ? null : (
-            <View
-              style={styles.splitScroll}
-              {...({ 'data-card-action': 'true' } as any)}
-            >
+            <View style={styles.splitScroll}>
               <View style={styles.splitContentPadding}>
                 {topInfoSlot}
               </View>
@@ -1194,10 +1191,7 @@ const PlacePopupCard: React.FC<Props> = ({
           {/* Action bar pinned below the scroll: on content-rich points the info
               above overflows and scrolls, but ♥ / «Был/Хочу/Планирую» / навигация
               stay anchored here so they never slide under the bottom dock. */}
-          <View
-            style={styles.splitFooterPinned}
-            {...({ 'data-card-action': 'true' } as any)}
-          >
+          <View style={styles.splitFooterPinned}>
             <View style={styles.footerContainer}>
               {footerSlot}
             </View>
@@ -1253,10 +1247,7 @@ const PlacePopupCard: React.FC<Props> = ({
             {sourcePagerSlot}
             {closeControl}
           </View>
-          <View
-            style={styles.popupSplitScroll}
-            {...({ 'data-card-action': 'true' } as any)}
-          >
+          <View style={styles.popupSplitScroll}>
             <View style={styles.splitContentPadding}>
               {topInfoSlot}
             </View>

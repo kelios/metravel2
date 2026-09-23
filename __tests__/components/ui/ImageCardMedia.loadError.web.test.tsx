@@ -87,7 +87,9 @@ const runRetryDelay = () => {
 /** Внешний бокс компонента — по нему сверяется сохранённая геометрия. */
 const container = (tree: any): any => {
   const [node] = tree.root.findAll(
-    (item: any) => item?.props?.['data-testid'] === 'quest-media',
+    // `testID` — единственный канал `data-testid` в react-native-web (#2035); тот же
+    // проп несёт и сам элемент `<ImageCardMedia>`, поэтому берём хост-узел бокса.
+    (item: any) => typeof item?.type === 'string' && item?.props?.testID === 'quest-media',
     { deep: true },
   );
   return node;

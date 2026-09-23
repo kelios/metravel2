@@ -69,7 +69,9 @@ export default function SkipLinks({
             web: {
               // @ts-ignore -- tabIndex is a web-only attribute not in RN Pressable types
               tabIndex: 0,
-              'data-skip-link': 'true',
+              // `onBlur` выше читает `dataset.skipLink` у нового фокуса: переход Tab
+              // между ссылками не должен прятать блок. RNW переносит в DOM только `dataSet`.
+              dataSet: { skipLink: 'true' },
               onKeyDown: (event: { key: string; preventDefault: () => void }) => {
                 if (event.key !== 'Enter') return;
                 event.preventDefault();

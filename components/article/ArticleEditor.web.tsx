@@ -448,12 +448,11 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         if (fromQuillRef.trim().length > 0) return fromQuillRef;
 
         try {
+            // Только свой viewport. Общий `document.querySelector` по маркеру поверхности
+            // на странице с несколькими редакторами (шаг мастера — три поля) отдал бы
+            // разметку ЧУЖОГО редактора, пока Quill этого ещё не загружен (#2035).
             const viewport = editorViewportRef.current as HTMLElement | undefined;
-            const rootFromViewport = viewport?.querySelector?.('.ql-editor') as HTMLElement | null | undefined;
-            const rootFromDocument = isWeb && typeof document !== 'undefined'
-                ? document.querySelector('[data-editor-surface="article-editor"] .ql-editor') as HTMLElement | null
-                : null;
-            const root = rootFromViewport ?? rootFromDocument;
+            const root = viewport?.querySelector?.('.ql-editor') as HTMLElement | null | undefined;
             const fromDom = withFaq(
                 normalizeArticleEditorHtmlForOutput(String(root?.innerHTML ?? '')),
             );

@@ -70,7 +70,11 @@ describe('FavoriteButton (overlay variant)', () => {
       />
     )
 
-    expect(screen.getByLabelText('Добавить в «Хочу поехать»').props['data-card-action']).toBe('true')
+    // Только `dataSet` доходит до DOM (`data-card-action="true"`): сырой
+    // `data-card-action` react-native-web отбрасывает (#2035).
+    const hitArea = screen.getByLabelText('Добавить в «Хочу поехать»')
+    expect(hitArea.props.dataSet).toEqual({ cardAction: 'true' })
+    expect(hitArea.props['data-card-action']).toBeUndefined()
   })
 
   it('keeps the web hit area at the 44px accessibility minimum', () => {

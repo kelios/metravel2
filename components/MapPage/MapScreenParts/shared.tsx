@@ -1,9 +1,8 @@
-import { Platform, Pressable, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 
-export const IS_WEB = Platform.OS === 'web'
 export const BADGE_COUNT_CAP = 999
 
 export const PRESSED_OPACITY_07 = { opacity: 0.7 } as const
@@ -12,9 +11,9 @@ export const POINTER_EVENTS_NONE = { pointerEvents: 'none' } as const
 
 export const MAP_PANEL_PLACEHOLDER = <MapPageSkeleton inline />
 
-export const ROOT_MAP_PROPS = IS_WEB
-  ? ({ testID: 'map-screen-root', 'data-testid': 'map-screen-root', 'data-active': 'true' } as any)
-  : ({ testID: 'map-screen-root' } as any)
+// `testID` сам ставит `data-testid="map-screen-root"` на web — его читают правила
+// `body:has([data-testid="map-screen-root"])` в `app/global.css`.
+export const ROOT_MAP_PROPS = { testID: 'map-screen-root' } as const
 
 export function CollapsedIconButton({
   icon,

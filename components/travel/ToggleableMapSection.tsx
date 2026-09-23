@@ -86,7 +86,6 @@ const ToggleableMapSection = ({
                         isMobile && styles.mapContainerMobile,
                         !showMap && keepMounted ? { height: 0, minHeight: 0, marginTop: 0, opacity: 0 } : null,
                     ]}
-                    {...(Platform.OS === 'web' ? { 'data-map-visible': showMap ? 'true' : 'false' } : {})}
                 >
                     {showMap ? (
                         isLoading ? (

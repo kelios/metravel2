@@ -155,7 +155,6 @@ function TravelAuthorQuickLink({ travel }: TravelAuthorQuickLinkProps) {
   return (
     <View
       testID="travel-author-quick-link"
-      {...(Platform.OS === 'web' ? ({ 'data-testid': 'travel-author-quick-link' } as any) : null)}
       accessibilityLabel={i18nT(
         'travel:components.travel.details.TravelAuthorQuickLink.avtor_puteshestviya_value1_a6bf3136',
         { value1: displayName },

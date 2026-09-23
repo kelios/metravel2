@@ -255,7 +255,7 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
           onPress={(event) => onRemove(entry, event)}
           accessibilityRole="button"
           accessibilityLabel={removalLabel}
-          {...(Platform.OS === 'web' ? ({ 'data-card-action': 'true' } as any) : null)}
+          {...(Platform.OS === 'web' ? { dataSet: { cardAction: 'true' } } : null)}
         >
           <View style={styles.removeBadgeShape}>
             <Feather
@@ -294,7 +294,7 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
         onPress={(event) => onEditDate(entry, event)}
         accessibilityRole="button"
         accessibilityLabel={isWishlist ? i18nT('calendar:components.screens.calendar.calendarScreen_parts.izmenit_status_0823b656') : hasCalendarDate ? i18nT('calendar:components.screens.calendar.calendarScreen_parts.izmenit_datu_value1_234c04d5', { value1: calendarDate }) : i18nT('calendar:components.screens.calendar.calendarScreen_parts.dobavit_datu_6851e94d')}
-        {...(Platform.OS === 'web' ? ({ 'data-card-action': 'true' } as any) : null)}
+        {...(Platform.OS === 'web' ? { dataSet: { cardAction: 'true' } } : null)}
       >
         <Feather name={isWishlist ? 'bookmark' : hasCalendarDate ? 'calendar' : 'plus'} size={12} color={hasCalendarDate ? colors.surface : accentColor} />
         <Text

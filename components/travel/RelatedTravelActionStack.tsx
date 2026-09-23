@@ -87,7 +87,7 @@ export default function RelatedTravelActionStack({
       style={[styles.stack, style]}
       {...(Platform.OS === 'web'
         ? ({
-            'data-card-action': 'true',
+            dataSet: { cardAction: 'true' },
             onClick: stopWebCardEvent,
             onMouseDown: stopWebCardEvent,
           } as any)

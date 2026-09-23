@@ -609,7 +609,7 @@ export default function TravelStatusButton({
               'aria-label': compactAccessibilityLabel,
               'aria-pressed': Boolean(current),
               title: i18nT('travel:components.travel.TravelStatusButton.upravlenie_statusom_puteshestviya_443c9fae'),
-              'data-card-action': 'true',
+              dataSet: { cardAction: 'true' },
               onClick: handleMainPress,
               onMouseEnter: isMobile ? undefined : () => setHovered(true),
               onMouseLeave: isMobile ? undefined : () => setHovered(false),

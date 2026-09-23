@@ -620,7 +620,7 @@ function QuestFullMap({
                 </TouchableOpacity>
             </Modal>
 
-            <View ref={mapDivRef as any} style={styles.mapBox} {...{ 'data-quest-map': 'true' } as any}>
+            <View ref={mapDivRef as any} style={styles.mapBox}>
                 <MapCanvas
                     engine={engine}
                     bounds={bounds}

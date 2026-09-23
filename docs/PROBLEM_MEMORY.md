@@ -4839,6 +4839,8 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   адресатом), на `data-…` внутри `dataSet` и на импорте `.css` вне
   `app/_layout.tsx`. Сорок мест в 29 файлах, живших до гейта, записаны долгом
   `KNOWN_RAW_DATA_ATTRIBUTE_DEBT` с точным числом — разбор в #2035.
+- **Долг погашен (#2035, 23.09.2026):** список пуст — маркер с читателем переведён на `dataSet`
+  (`testID`), без читателя снят; RNW-DOM тесты `CardActionPressable`, `PlacePopupCard`, `SkipLinks` (`*.dom.web.test.tsx`).
 - **Regression control:** `__tests__/scripts/guard-web-style-channels.test.ts`
   (фикстуры #2032: литеральный ключ в спреде, условный `require` `.web.css`; дерево
   зелёное); доказательство для конкретного экрана — тест на настоящем RNW DOM

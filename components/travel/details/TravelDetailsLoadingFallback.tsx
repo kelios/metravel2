@@ -25,7 +25,6 @@ export default function TravelDetailsLoadingFallback() {
   return (
     <View
       testID={ROOT_TEST_ID}
-      {...(typeof document !== 'undefined' ? ({ 'data-testid': ROOT_TEST_ID } as any) : null)}
       accessibilityRole="progressbar"
       accessibilityLabel={i18nT('travel:components.travel.details.TravelDetailsLoadingFallback.zagruzka_puteshestviya_a918061e')}
       style={{ flex: 1 }}

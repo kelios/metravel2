@@ -293,6 +293,12 @@ describe('guard-web-style-channels', () => {
         ]),
       )
     })
+
+    it('is paid off by #2035: no raw data-* site is carried as debt any more', () => {
+      // Долг только убывает; погашенный список не пополняется — новое место
+      // сразу пишется через `dataSet` (`testID` для `data-testid`).
+      expect(KNOWN_RAW_DATA_ATTRIBUTE_DEBT).toEqual({})
+    })
   })
 
   it('fails on an empty scan', () => {

@@ -166,11 +166,6 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         ref={dialogRef as unknown as React.Ref<View>}
                         testID="confirm-dialog"
                         style={[styles.dialog, dialogSizing]}
-                        {...Platform.select({
-                            web: webAccessibilityProps({
-                                'data-testid': 'confirm-dialog',
-                            }),
-                        })}
                     >
                         <Text
                             style={styles.dialogTitle}

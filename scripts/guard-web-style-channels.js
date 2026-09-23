@@ -44,41 +44,11 @@ const OUTPUT_CONTRACT_VERSION = 1
 
 const ROOT_STYLESHEET = Object.freeze({ file: 'app/_layout.tsx', specifier: './global.css' })
 
-// Долг до гейта: файл → число мест `raw-data-attribute`. Разбор — перевод на
-// `dataSet` там, где у маркера есть читатель (`data-card-action` читают обработчики
-// вложенных кликов), и снятие маркера без читателя — карточка #2035. Новых
-// строк сюда не добавляют: новое место сразу пишется через `dataSet`.
-const KNOWN_RAW_DATA_ATTRIBUTE_DEBT = Object.freeze({
-  'components/MapPage/Map/MapWebCanvas.tsx': 1,
-  'components/MapPage/Map/PlacePopupCard/index.tsx': 4,
-  'components/MapPage/MapMobileLayout.tsx': 1,
-  'components/MapPage/MapPanelHeader.tsx': 2,
-  'components/MapPage/MapScreenParts/MapScreenDesktop.tsx': 1,
-  'components/MapPage/MapScreenParts/shared.tsx': 2,
-  'components/MapPage/TravelMap.web.tsx': 1,
-  'components/article/ArticleEditor.web.parts.tsx': 1,
-  'components/layout/SkipLinks.tsx': 1,
-  'components/listTravel/TravelListItemSelectableOverlay.tsx': 1,
-  'components/quests/QuestFullMap.tsx': 1,
-  'components/screens/calendar/calendarScreen.parts.tsx': 2,
-  'components/travel/FavoriteButton.tsx': 2,
-  'components/travel/LocationSearchInput.tsx': 2,
-  'components/travel/PointListRow.tsx': 1,
-  'components/travel/RelatedTravelActionStack.tsx': 1,
-  'components/travel/ToggleableMapSection.tsx': 1,
-  'components/travel/TravelStatusButton.tsx': 1,
-  'components/travel/details/TravelAuthorQuickLink.tsx': 1,
-  'components/travel/details/TravelDetailsCriticalShell.tsx': 3,
-  'components/travel/details/TravelDetailsLoadingFallback.tsx': 1,
-  'components/travel/upsert/WizardExitDialog.tsx': 1,
-  'components/ui/CardActionPressable.tsx': 1,
-  'components/ui/CollapsibleBlock.tsx': 1,
-  'components/ui/ConfirmDialog.tsx': 1,
-  'components/ui/ImageCardMedia.tsx': 2,
-  'components/ui/ShimmerOverlay.tsx': 1,
-  'components/ui/SkeletonLoader.tsx': 1,
-  'screens/tabs/QuestCard.tsx': 1,
-})
+// Долг до гейта: файл → число мест `raw-data-attribute`. Сорок мест в 29 файлах
+// разобраны в #2035: маркер с читателем переведён на `dataSet` (`data-testid` — на
+// `testID`), маркер без читателя снят. Список пуст и пустым остаётся: новое место
+// сразу пишется через `dataSet`, строк сюда не добавляют.
+const KNOWN_RAW_DATA_ATTRIBUTE_DEBT = Object.freeze({})
 
 // Код web-приложения — те же корни, что у `guard-web-deferred-loading.js`.
 // Native-файлы DOM не имеют вовсе, тесты читают пропы, а не DOM.

@@ -55,13 +55,9 @@ function TabButton({
   badge?: number
 }) {
   const active = activeTab === tab
-  const isWeb = Platform.OS === 'web'
   return (
     <Pressable
       testID={`map-panel-tab-${tab}`}
-      {...(isWeb && tab === 'travels'
-        ? ({ 'data-testid': 'map-panel-tab-travels' } as any)
-        : null)}
       style={({ pressed }) => [
         styles.tab,
         active && styles.tabActive,
@@ -163,7 +159,6 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
           <View style={styles.panelHeaderActions}>
             <Pressable
               testID="map-filters-button"
-              {...({ 'data-testid': 'map-filters-button' } as any)}
               style={({ pressed }) => [
                 styles.resetButton,
                 styles.resetButtonCompact,

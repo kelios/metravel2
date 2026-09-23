@@ -171,9 +171,11 @@ const CardActionPressable = ({
       onHoverIn={onHoverIn}
       onHoverOut={onHoverOut}
       testID={testID}
-      {...({ 'data-card-action': 'true' } as any)}
       {...(Platform.OS === 'web'
         ? ({
+            // Маркер для `closest('[data-card-action="true"]')` кликабельных карточек
+            // и курсора из `app/global.css`: RNW переносит в DOM только `dataSet`.
+            dataSet: { cardAction: 'true' },
             onMouseDown: stopWebPointerEvent,
             onMouseUp: stopWebPointerEvent,
             onPointerDown: stopWebPointerEvent,

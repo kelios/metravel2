@@ -500,7 +500,6 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       ref={containerRef}
       style={[styles.mapContainer, mapContainerStyle]}
       testID="travel-map"
-      {...(IS_WEB ? { 'data-testid': 'travel-map' } : {})}
     >
       <MapContainer
         center={center}

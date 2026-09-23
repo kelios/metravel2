@@ -174,7 +174,7 @@ const PointListRow = React.memo(function PointListRow({
 
               <View
                 style={styles.listRowNavigationMenu}
-                {...(Platform.OS === 'web' ? ({ 'data-card-action': 'true' } as any) : null)}
+                {...(Platform.OS === 'web' ? { dataSet: { cardAction: 'true' } } : null)}
               >
                 <PointNavigationMenu
                   coord={point.coord}

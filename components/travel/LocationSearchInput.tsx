@@ -221,7 +221,6 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
             {showResults && results.length > 0 && (
                 <ScrollView
                     testID="location-results"
-                    {...(isWeb ? ({ 'data-testid': 'location-results' } as any) : null)}
                     style={styles.resultsContainer}
                     nestedScrollEnabled
                 >
@@ -231,9 +230,6 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
                             testID={`location-result-${result.place_id}`}
                             accessibilityRole="button"
                             accessibilityLabel={result.display_name}
-                            {...(isWeb
-                                ? ({ 'data-testid': `location-result-${result.place_id}` } as any)
-                                : null)}
                             style={({ pressed }) => [
                                 styles.resultItem,
                                 pressed && styles.resultItemPressed,

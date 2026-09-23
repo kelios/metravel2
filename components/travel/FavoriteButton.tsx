@@ -271,8 +271,7 @@ function FavoriteButton({
                             styles.overlayHitArea,
                             { cursor: isPending ? 'wait' : 'pointer' } as any,
                         ]}
-                        data-card-action="true"
-                        data-testid="favorite-button"
+                        dataSet={{ cardAction: 'true' }}
                     />
                 </WebView>
             );
