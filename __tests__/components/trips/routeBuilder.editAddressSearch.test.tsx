@@ -25,9 +25,11 @@ jest.mock('@/hooks/usePlannedTripsApi', () => ({
   useUpdateTripBikeType: () => ({ mutate: jest.fn(), isPending: false }),
 }))
 
+// Один массив на все рендеры: новая ссылка на каждый рендер гоняла бы карту.
+const mockNoTrackSegments: Array<Array<[number, number]>> = []
 jest.mock('@/hooks/usePlannedTripRouteFile', () => ({
-  usePlannedTripRouteFile: () => ({ data: null }),
-  usePlannedTripOriginalTrack: () => ({ data: null }),
+  usePlannedTripRouteFiles: () => ({ data: undefined }),
+  usePlannedTripOriginalTracks: () => mockNoTrackSegments,
   useUploadPlannedTripRouteFile: () => ({ mutateAsync: jest.fn(), isPending: false }),
   useDeletePlannedTripRouteFile: () => ({ mutate: jest.fn(), isPending: false }),
 }))

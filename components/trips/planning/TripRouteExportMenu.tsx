@@ -22,7 +22,7 @@ import {
   type NavigatorDescriptor,
   type TravelMode,
 } from '@/utils/routeExport';
-import { usePlannedTripRouteFile } from '@/hooks/usePlannedTripRouteFile';
+import { usePlannedTripRouteFiles } from '@/hooks/usePlannedTripRouteFile';
 import { useTripRouteElevation } from '@/hooks/usePlannedTripsApi';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { trackRouteExported } from '@/utils/tripAnalytics';
@@ -91,9 +91,9 @@ function TripRouteExportMenu({ trip }: Props) {
     [routeDisplay.geometry, routeDisplay.routingState, routeDisplay.summary, trip],
   );
   const exportController = useTripRouteExport(displayTrip);
-  // #1496 — исходный файл маршрута доступен только владельцу поездки, поэтому
-  // участнику блок скачивания оригинала не показывается и запрос не уходит.
-  const routeFileQuery = usePlannedTripRouteFile(trip.id, { enabled: trip.isOwner });
+  // #1496 — исходные файлы маршрута доступны только владельцу поездки, поэтому
+  // участнику блок скачивания оригиналов не показывается и запрос не уходит.
+  const routeFilesQuery = usePlannedTripRouteFiles(trip.id, { enabled: trip.isOwner });
   const {
     input,
     disabled,
@@ -190,7 +190,7 @@ function TripRouteExportMenu({ trip }: Props) {
         // A disabled React Query can still expose data left in the shared cache
         // by the previous account. The owner flag is therefore also a render
         // boundary, not only a network-request boundary.
-        originalFile={trip.isOwner ? routeFileQuery.data ?? null : null}
+        originalFiles={trip.isOwner ? routeFilesQuery.data : undefined}
       />
 
       {!isWeb ? (

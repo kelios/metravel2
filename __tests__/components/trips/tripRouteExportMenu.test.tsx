@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
 
 import type { PlannedTrip, TripRouteElevation } from '@/api/plannedTrips';
 import type { UseMapRoutingResult } from '@/components/map-core/useMapRouting';
@@ -10,7 +10,7 @@ import TripRouteExportMenu, {
 
 const mockSaveRouteExportFile = jest.fn();
 const mockOpenExternalUrl = jest.fn();
-const mockUsePlannedTripRouteFile = jest.fn();
+const mockUsePlannedTripRouteFiles = jest.fn();
 const mockDownloadOriginal = jest.fn();
 const mockRepairEngine: {
   mounts: Array<{ points: Array<[number, number]>; transportMode: string }>;
@@ -47,7 +47,7 @@ jest.mock('@/utils/tripAnalytics', () => ({
 }));
 
 jest.mock('@/hooks/usePlannedTripRouteFile', () => ({
-  usePlannedTripRouteFile: (...args: unknown[]) => mockUsePlannedTripRouteFile(...args),
+  usePlannedTripRouteFiles: (...args: unknown[]) => mockUsePlannedTripRouteFiles(...args),
 }));
 
 jest.mock('@/utils/travelRouteDownload', () => ({
@@ -164,7 +164,7 @@ describe('TripRouteExportMenu', () => {
     jest.clearAllMocks();
     mockSaveRouteExportFile.mockResolvedValue(true);
     mockOpenExternalUrl.mockResolvedValue(true);
-    mockUsePlannedTripRouteFile.mockReturnValue({ data: null });
+    mockUsePlannedTripRouteFiles.mockReturnValue({ data: undefined });
     mockDownloadOriginal.mockResolvedValue(true);
     mockRepairEngine.mounts = [];
     mockRepairEngine.onResult = null;
@@ -232,73 +232,92 @@ describe('TripRouteExportMenu', () => {
     expect(mockUseTripRouteElevation).toHaveBeenCalledWith(trip.id, { enabled: false });
   });
 
-  // #2053 перенёс «Скачать оригинал» во вкладке «Маршрут» в карточку оригинала.
-  // Вкладка «Экспорт» остаётся как была: GPX, KML, оригинал и подсказка с именем.
-  it('keeps the original download and its file-name hint in the Export tab', async () => {
+  // #2069: оригиналов у поездки ноль или несколько. Вкладка «Экспорт» даёт
+  // скачать каждый — карточкой с именем и размером, той же, что во вкладке
+  // «Маршрут», но без удаления; раньше здесь скачивался только первый файл.
+  it('offers every saved original for download in the Export tab, each by its own routeId', async () => {
     setPlatformOS('web');
-    const originalFile = {
-      id: 42,
-      original_name: 'tatry.gpx',
-      ext: 'gpx',
-      size: 1024,
-      created_at: '2026-08-22T10:00:00Z',
-      updated_at: '2026-08-22T10:00:00Z',
+    const loopsFile = {
+      id: 4,
+      original_name: 'Mullerthal_Trail_Routes_1-3.kml',
+      ext: 'kml',
+      size: 185548,
+      created_at: '2026-09-20T08:00:00Z',
+      updated_at: '2026-09-20T08:00:00Z',
     };
-    mockUsePlannedTripRouteFile.mockReturnValue({ data: originalFile });
+    const daysFile = {
+      id: 11,
+      original_name: 'Mullerthal_Trail_po_dnyam.gpx',
+      ext: 'gpx',
+      size: 412000,
+      created_at: '2026-09-23T08:00:00Z',
+      updated_at: '2026-09-23T08:00:00Z',
+    };
+    mockUsePlannedTripRouteFiles.mockReturnValue({ data: [loopsFile, daysFile] });
 
-    const { getByTestId, getByText, getByLabelText } = render(
+    const { getByTestId, getAllByTestId, queryByTestId } = render(
       <TripRouteExportMenu trip={trip} />,
     );
 
     expect(getByTestId('trip-route-export-gpx')).toBeTruthy();
     expect(getByTestId('trip-route-export-kml')).toBeTruthy();
-    expect(getByTestId('trip-route-original-download-block')).toBeTruthy();
-    expect(getByText('Исходный файл маршрута: tatry.gpx')).toBeTruthy();
-    expect(getByLabelText('Скачать оригинал')).toBeTruthy();
+    const block = within(getByTestId('trip-route-original-download-block'));
+    const cards = getAllByTestId('trip-route-export-stored-original').map((card) => within(card));
+    expect(cards).toHaveLength(2);
+    expect(cards[0].getByText('Mullerthal_Trail_Routes_1-3.kml')).toBeTruthy();
+    expect(cards[1].getByText('Mullerthal_Trail_po_dnyam.gpx')).toBeTruthy();
+    expect(block.getAllByLabelText('Скачать оригинал')).toHaveLength(2);
+    // Вкладка «Экспорт» оригиналы только скачивает.
+    expect(queryByTestId('trip-route-export-remove-original')).toBeNull();
 
-    fireEvent.press(getByTestId('trip-route-export-original'));
+    fireEvent.press(cards[1].getByTestId('trip-route-export-download-original'));
     await waitFor(() => expect(mockDownloadOriginal).toHaveBeenCalledTimes(1));
-    expect(mockDownloadOriginal).toHaveBeenCalledWith(trip.id, originalFile);
+    expect(mockDownloadOriginal).toHaveBeenCalledWith(trip.id, daysFile);
   });
 
   it('shows a failed original download in the Export tab', async () => {
     setPlatformOS('web');
-    mockUsePlannedTripRouteFile.mockReturnValue({
-      data: {
+    mockUsePlannedTripRouteFiles.mockReturnValue({
+      data: [{
         id: 42,
         original_name: 'tatry.gpx',
         ext: 'gpx',
         size: 1024,
         created_at: '2026-08-22T10:00:00Z',
         updated_at: '2026-08-22T10:00:00Z',
-      },
+      }],
     });
     mockDownloadOriginal.mockResolvedValueOnce(false);
     const { findByTestId, getByTestId } = render(<TripRouteExportMenu trip={trip} />);
 
-    fireEvent.press(getByTestId('trip-route-export-original'));
+    fireEvent.press(getByTestId('trip-route-export-download-original'));
 
-    expect(await findByTestId('trip-route-export-original-error')).toBeTruthy();
+    const error = await findByTestId('trip-route-export-original-download-error');
+    expect(
+      within(getByTestId('trip-route-export-stored-original')).getByTestId(
+        'trip-route-export-original-download-error',
+      ),
+    ).toBe(error);
   });
 
   it('never exposes a cached owner-only original to a non-owner', () => {
     setPlatformOS('web');
-    mockUsePlannedTripRouteFile.mockReturnValue({
-      data: {
+    mockUsePlannedTripRouteFiles.mockReturnValue({
+      data: [{
         id: 42,
         original_name: 'private-track.gpx',
         ext: 'gpx',
         size: 1024,
         created_at: '2026-08-22T10:00:00Z',
         updated_at: '2026-08-22T10:00:00Z',
-      },
+      }],
     });
 
     const { queryByTestId } = render(
       <TripRouteExportMenu trip={{ ...trip, isOwner: false }} />,
     );
 
-    expect(mockUsePlannedTripRouteFile).toHaveBeenCalledWith(trip.id, { enabled: false });
+    expect(mockUsePlannedTripRouteFiles).toHaveBeenCalledWith(trip.id, { enabled: false });
     expect(queryByTestId('trip-route-original-download-block')).toBeNull();
   });
 

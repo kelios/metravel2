@@ -1,9 +1,8 @@
-// #1496 — клиент хранилища исходного файла маршрута поездки поверх контракта
-// #1493 `/api/trips/planned/{id}/routes/` (zero-or-one primary file, owner-only).
+// #1496 — клиент хранилища исходных файлов маршрута поездки поверх контракта
+// `/api/trips/planned/{id}/routes/` (#1493, #1840: zero or more files, owner-only).
 import {
   deletePlannedTripRouteFile,
   downloadPlannedTripRouteFileBlob,
-  fetchPlannedTripRouteFile,
   listPlannedTripRouteFiles,
   uploadPlannedTripRouteFile,
 } from '@/api/plannedTripRoutes';
@@ -73,12 +72,23 @@ describe('plannedTripRoutes API', () => {
     await expect(listPlannedTripRouteFiles(7)).resolves.toHaveLength(1);
   });
 
-  it('reduces the zero-or-one list to the primary file', async () => {
+  // #2069: бэкенд хранит до десяти файлов (#1840), а клиент сводил список к
+  // первому — второй загруженный трек не видели ни карта, ни «Файл маршрута».
+  it('keeps every file of the list in backend order instead of the first one', async () => {
     apiClient.get.mockResolvedValueOnce([]);
-    await expect(fetchPlannedTripRouteFile(7)).resolves.toBeNull();
+    await expect(listPlannedTripRouteFiles(47)).resolves.toEqual([]);
 
-    apiClient.get.mockResolvedValueOnce([serverFile]);
-    await expect(fetchPlannedTripRouteFile(7)).resolves.toMatchObject({ id: 42, ext: 'gpx' });
+    apiClient.get.mockResolvedValueOnce([
+      { ...serverFile, id: 4, original_name: 'Mullerthal_Trail_Routes_1-3.kml', ext: 'kml', sort_order: 0 },
+      { ...serverFile, id: 11, original_name: 'Mullerthal_Trail_po_dnyam.gpx', ext: 'gpx', sort_order: 1 },
+    ]);
+    const files = await listPlannedTripRouteFiles(47);
+
+    expect(apiClient.get).toHaveBeenLastCalledWith('/trips/planned/47/routes/', expect.any(Number));
+    expect(files.map((file) => [file.id, file.original_name, file.ext])).toEqual([
+      [4, 'Mullerthal_Trail_Routes_1-3.kml', 'kml'],
+      [11, 'Mullerthal_Trail_po_dnyam.gpx', 'gpx'],
+    ]);
   });
 
   it('uploads the picked file as multipart `file` without rebuilding its bytes', async () => {
@@ -99,7 +109,7 @@ describe('plannedTripRoutes API', () => {
     expect(uploaded).toMatchObject({ id: 42, ext: 'kml' });
   });
 
-  it('deletes and downloads the primary file by its route id', async () => {
+  it('deletes and downloads one file by its route id', async () => {
     apiClient.delete.mockResolvedValue(null);
     await deletePlannedTripRouteFile(7, 42);
     expect(apiClient.delete).toHaveBeenCalledWith('/trips/planned/7/routes/42/', expect.any(Number));

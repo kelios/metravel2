@@ -1,6 +1,6 @@
 // components/trips/planning/TripRouteDownloadButtons.tsx
 // Ряд действий «Скачать GPX» / «Скачать KML» (на native — «Поделиться»)
-// и, при наличии, скачивание исходного файла.
+// и, при наличии, скачивание исходных файлов — по карточке на файл (#2069).
 // Один и тот же блок стоит во вкладке «Экспорт» и в панели конструктора
 // «Маршрут» (#1304): маршрут скачивается там же, где строится.
 import React, { useMemo } from 'react';
@@ -10,7 +10,7 @@ import Feather from '@expo/vector-icons/Feather';
 import ToolActionsRow, { type ToolAction } from '@/components/ui/ToolActionsRow';
 import type { PlannedTripRouteFile } from '@/api/plannedTripRoutes';
 import type { TripRouteExportController } from '@/components/trips/planning/tripRouteExport';
-import { useTripRouteOriginalDownload } from '@/components/trips/planning/useTripRouteOriginalDownload';
+import TripRouteStoredFiles from '@/components/trips/planning/TripRouteStoredFiles';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n';
 
@@ -24,13 +24,14 @@ interface Props {
    */
   showApproximateWarning?: boolean;
   /**
-   * Исходный GPX/KML поездки (#1496). Скачивается ровно теми байтами, которые
-   * были загружены, — в отличие от кнопок выше, которые собирают файл заново из
-   * текущих точек маршрута. Во вкладке «Маршрут» оригинал скачивается из своей
-   * карточки в `TripRouteImportPanel` (#2053), поэтому туда он не передаётся.
+   * Исходные GPX/KML поездки (#1496), ноль или несколько (#2069). Каждый
+   * скачивается ровно теми байтами, которые были загружены, — в отличие от
+   * кнопок выше, которые собирают файл заново из текущих точек маршрута. Во
+   * вкладке «Маршрут» оригиналы скачиваются из своих карточек в
+   * `TripRouteImportPanel` (#2053), поэтому туда они не передаются.
    */
   tripId?: number | string | null;
-  originalFile?: PlannedTripRouteFile | null;
+  originalFiles?: readonly PlannedTripRouteFile[];
   /**
    * #2053, блок «Файл маршрута»: GPX и KML с полными подписями делят ширину
    * блока поровну на любой ширине экрана; не помещаются — ряд переносит кнопку.
@@ -46,13 +47,12 @@ function TripRouteDownloadButtons({
   showDisabledHint = false,
   showApproximateWarning = false,
   tripId = null,
-  originalFile = null,
+  originalFiles,
   fill = false,
   testID,
 }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const original = useTripRouteOriginalDownload(tripId, originalFile);
 
   const { disabled, exportingAction, exportError, saveExport } = controller;
   const isWeb = Platform.OS === 'web';
@@ -62,8 +62,8 @@ function TripRouteDownloadButtons({
   // значат». Формат файла и есть смысл действия, поэтому в compact-режиме он
   // остаётся текстом (`compactLabel`), а полное название действия
   // («Поделиться GPX») уходит в accessibilityLabel. Подпись не сжимается: не
-  // хватает ширины — ряд переносит кнопку (#2053). Вариант у трёх скачиваний
-  // один: по смыслу это одно и то же действие над разными файлами.
+  // хватает ширины — ряд переносит кнопку (#2053). Вариант у обоих скачиваний
+  // один: по смыслу это одно и то же действие над разными форматами.
   const actions: ToolAction[] = [
     {
       key: 'gpx',
@@ -85,16 +85,6 @@ function TripRouteDownloadButtons({
       loading: exportingAction === 'kml',
       testID: 'trip-route-export-kml',
     },
-    ...(original.available ? [{
-      key: 'original',
-      label: original.label,
-      compactLabel: i18nT('tripsStatic:route.originalCompact'),
-      icon: <Feather name="download" size={16} color={colors.primaryDark} />,
-      onPress: () => void original.download(),
-      disabled: original.downloading,
-      loading: original.downloading,
-      testID: 'trip-route-export-original',
-    }] : []),
   ];
 
   return (
@@ -109,22 +99,18 @@ function TripRouteDownloadButtons({
         </Text>
       ) : null}
 
-      {original.available ? (
-        <View testID="trip-route-original-download-block">
-          <Text style={styles.hint}>
-            {i18nT('tripsStatic:route.originalDownloadHint', {
-              value: originalFile?.original_name ?? '',
-            })}
-          </Text>
-        </View>
-      ) : null}
-
       <ToolActionsRow actions={actions} compact={fill ? false : undefined} fill={fill} />
 
-      {original.error ? (
-        <Text style={styles.error} testID="trip-route-export-original-error">
-          {original.error}
-        </Text>
+      {/* Оригиналов может быть несколько (#2069): у каждого своя карточка с
+          именем, размером и «Скачать оригинал», та же, что во вкладке
+          «Маршрут», только без удаления. */}
+      {originalFiles?.length ? (
+        <TripRouteStoredFiles
+          files={originalFiles}
+          tripId={tripId}
+          testIDPrefix="trip-route-export"
+          testID="trip-route-original-download-block"
+        />
       ) : null}
 
       {exportError ? (

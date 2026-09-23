@@ -209,12 +209,12 @@ function RouteBuilder({
   } = useRoutePointDraft({ tripId: trip.id, setRoute });
 
   const {
-    storedRouteFile,
-    originalTrack,
+    storedRouteFiles,
+    originalTrackSegments,
     pendingOriginalName,
     originalUploadError,
     originalUploadPending,
-    storedFileRemoving,
+    removingRouteFileId,
     handleRemoveStoredRouteFile,
     uploadPendingOriginal,
     acceptImportedOriginal,
@@ -540,7 +540,7 @@ function RouteBuilder({
         <TripPlanRouteMap
           route={route}
           routeGeometry={routeGeometry}
-          originalTrackSegments={originalTrack?.segments ?? null}
+          originalTrackSegments={originalTrackSegments}
           routingState={routingState}
           summary={summary}
           transport={trip.transport}
@@ -601,7 +601,7 @@ function RouteBuilder({
     <TripPlanRouteMap
       route={route}
       routeGeometry={routeGeometry}
-      originalTrackSegments={originalTrack?.segments ?? null}
+      originalTrackSegments={originalTrackSegments}
       routingState={routingState}
       summary={summary}
       transport={trip.transport}
@@ -737,11 +737,11 @@ function RouteBuilder({
       route={route}
       routeGeometry={routeGeometry}
       disabled={updateTripRoute.isPending || transportPending || originalUploadPending}
-      storedFile={storedRouteFile}
+      storedFiles={storedRouteFiles}
       tripId={trip.id}
       pendingUploadName={pendingOriginalName}
       uploadError={originalUploadError}
-      removing={storedFileRemoving}
+      removingFileId={removingRouteFileId}
       onRemoveStoredFile={handleRemoveStoredRouteFile}
       onApply={handleApplyImportedRoute}
     />

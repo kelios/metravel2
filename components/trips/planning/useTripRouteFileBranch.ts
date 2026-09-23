@@ -1,13 +1,17 @@
 // components/trips/planning/useTripRouteFileBranch.ts
-// Файловая ветка маршрута поездки: чтение сохранённого файла и оригинального
-// трека, отложенная отправка выбранного оригинала и его удаление. Вынесено из
-// RouteBuilder.tsx (#1825) дословно — локи, тексты ошибок и порядок вызовов те
-// же самые.
+// Файловая ветка маршрута поездки: чтение сохранённых файлов и их оригинальных
+// треков, отложенная отправка выбранного оригинала и удаление любого из файлов.
+// Вынесено из RouteBuilder.tsx (#1825) дословно — локи, тексты ошибок и порядок
+// вызовов те же самые; с #2069 ветка работает со списком файлов, а не с одним.
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
-  usePlannedTripOriginalTrack,
-  usePlannedTripRouteFile,
+  PLANNED_TRIP_ROUTE_FILES_MAX,
+  type PlannedTripRouteFile,
+} from '@/api/plannedTripRoutes';
+import {
+  usePlannedTripOriginalTracks,
+  usePlannedTripRouteFiles,
   useDeletePlannedTripRouteFile,
   useUploadPlannedTripRouteFile,
 } from '@/hooks/usePlannedTripRouteFile';
@@ -17,6 +21,9 @@ import {
   type PickedTripRouteFileUpload,
 } from '@/components/trips/planning/TripRouteFilePicker.types';
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
+
+const NO_FILES: PlannedTripRouteFile[] = [];
 
 export function useTripRouteFileBranch({
   tripId,
@@ -25,17 +32,22 @@ export function useTripRouteFileBranch({
   tripId: number;
   isOwner: boolean;
 }) {
-  // #1496 — фаза 2 импорта. Исходный файл хранится у поездки отдельно от точек:
+  // #1496 — фаза 2 импорта. Исходные файлы хранятся у поездки отдельно от точек:
   // хранилище доступно только владельцу, поэтому участник видит обычный маршрут
-  // без запросов к нему.
-  const routeFileQuery = usePlannedTripRouteFile(tripId, { enabled: isOwner });
-  const storedRouteFile = routeFileQuery.data ?? null;
-  const originalTrackQuery = usePlannedTripOriginalTrack(tripId, storedRouteFile, {
+  // без запросов к нему. Файлов ноль или несколько (#2069), и на карту идут линии
+  // всех — новый файл добавляется к прежним, а не прячется за первым.
+  const routeFilesQuery = usePlannedTripRouteFiles(tripId, { enabled: isOwner });
+  const storedRouteFiles = routeFilesQuery.data ?? NO_FILES;
+  const originalTrackSegments = usePlannedTripOriginalTracks(tripId, storedRouteFiles, {
     enabled: isOwner,
   });
-  const originalTrack = originalTrackQuery.data ?? null;
   const uploadRouteFile = useUploadPlannedTripRouteFile();
   const deleteRouteFile = useDeletePlannedTripRouteFile();
+  // Какой именно файл сейчас удаляется: «занята» только его кнопка, остальные
+  // «Удалить» выключены, пока идёт этот DELETE (лок ниже всё равно один).
+  const removingRouteFileId = deleteRouteFile.isPending
+    ? Number(deleteRouteFile.variables?.routeId)
+    : null;
   // Оригинал уезжает на бэкенд тем же действием «Сохранить маршрут», что и точки:
   // иначе сохранённый файл описывал бы маршрут, которого у поездки ещё нет.
   const pendingOriginalRef = useRef<PickedTripRouteFileUpload | null>(null);
@@ -50,12 +62,15 @@ export function useTripRouteFileBranch({
   // «не удалось удалить» на файле, который на самом деле удалён.
   const routeFileDeleteLockedRef = useRef(false);
 
-  const handleRemoveStoredRouteFile = useCallback(() => {
-    if (!storedRouteFile || routeFileDeleteLockedRef.current) return;
+  // Удаляется ровно тот файл, чьё «Удалить» подтвердили (#2054). Файла уже нет в
+  // списке — удалять нечего, и DELETE не уходит.
+  const handleRemoveStoredRouteFile = useCallback((routeId: number) => {
+    if (routeFileDeleteLockedRef.current) return;
+    if (!storedRouteFiles.some((file) => file.id === routeId)) return;
     routeFileDeleteLockedRef.current = true;
     setOriginalUploadError(null);
     deleteRouteFile.mutate(
-      { tripId, routeId: storedRouteFile.id },
+      { tripId, routeId },
       {
         onError: () => setOriginalUploadError(
           i18nT('tripsStatic:plan.routeImport.original.removeError'),
@@ -67,7 +82,7 @@ export function useTripRouteFileBranch({
         },
       },
     );
-  }, [deleteRouteFile, storedRouteFile, tripId]);
+  }, [deleteRouteFile, storedRouteFiles, tripId]);
 
   // Освобождаем кэш-копию, если экран закрыли, не сохранив маршрут.
   useEffect(() => () => {
@@ -91,6 +106,15 @@ export function useTripRouteFileBranch({
   const uploadPendingOriginal = async (): Promise<void> => {
     const pending = pendingOriginalRef.current;
     if (!pending || originalUploadLockedRef.current) return;
+    // На лимите бэкенд всё равно ответит 400, а общий текст «нажмите ещё раз»
+    // обещал бы ретрай, который не пройдёт никогда. Файл остаётся выбранным:
+    // после удаления лишнего трека то же «Сохранить маршрут» его догрузит.
+    if (storedRouteFiles.length >= PLANNED_TRIP_ROUTE_FILES_MAX) {
+      setOriginalUploadError(i18nT('tripsStatic:plan.routeImport.original.limitError', {
+        value: formatInteger(PLANNED_TRIP_ROUTE_FILES_MAX),
+      }));
+      return;
+    }
     originalUploadLockedRef.current = true;
     setOriginalUploadError(null);
     try {
@@ -130,12 +154,12 @@ export function useTripRouteFileBranch({
   }, []);
 
   return {
-    storedRouteFile,
-    originalTrack,
+    storedRouteFiles,
+    originalTrackSegments,
     pendingOriginalName,
     originalUploadError,
     originalUploadPending: uploadRouteFile.isPending,
-    storedFileRemoving: deleteRouteFile.isPending,
+    removingRouteFileId,
     handleRemoveStoredRouteFile,
     uploadPendingOriginal,
     acceptImportedOriginal,

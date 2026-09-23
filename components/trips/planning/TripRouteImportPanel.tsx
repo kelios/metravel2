@@ -1,22 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
 
 import type { PlannedTripRouteFile } from '@/api/plannedTripRoutes';
 import type { RouteGeometry, RoutePoint } from '@/api/plannedTrips';
 import { TravelMap } from '@/components/MapPage/TravelMap';
 import Button from '@/components/ui/Button';
-import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { SelectionGroup } from '@/components/ui/SelectionGroup';
-import ToolActionsRow, { type ToolAction } from '@/components/ui/ToolActionsRow';
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
-import { formatFileSize } from '@/utils/fileSize';
 import { formatInteger } from '@/i18n/format';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { formatDistance } from './tripPlanFormatting';
 import TripRouteFilePicker, { releasePickedTripRouteUpload } from './TripRouteFilePicker';
-import { useTripRouteOriginalDownload } from './useTripRouteOriginalDownload';
+import TripRouteStoredFiles from './TripRouteStoredFiles';
 import type {
   PickedTripRouteFile,
   PickedTripRouteFileUpload,
@@ -36,21 +32,23 @@ type Props = {
   routeGeometry?: RouteGeometry | null;
   disabled?: boolean;
   /**
-   * Исходный файл, уже сохранённый у поездки (#1496). `null` — его нет либо
-   * хранилище закрыто для этого пользователя.
+   * Исходные файлы, уже сохранённые у поездки (#1496), в порядке бэкенда. Их
+   * ноль или несколько (#2069); пусто — файлов нет либо хранилище закрыто для
+   * этого пользователя.
    */
-  storedFile?: PlannedTripRouteFile | null;
-  /** Поездка сохранённого оригинала: без неё карточка не предлагает скачивание. */
+  storedFiles?: readonly PlannedTripRouteFile[];
+  /** Поездка сохранённых оригиналов: без неё карточки не предлагают скачивание. */
   tripId?: number | string | null;
   /** Оригинал выбран, но ещё не ушёл на бэкенд — уйдёт вместе с «Сохранить маршрут». */
   pendingUploadName?: string | null;
   uploadError?: string | null;
-  removing?: boolean;
+  /** Файл, чей DELETE сейчас в полёте. */
+  removingFileId?: number | null;
   /**
-   * Удаление сохранённого оригинала. Панель вызывает его только из
+   * Удаление одного сохранённого оригинала по id. Панель вызывает его только из
    * подтверждения: «Удалить» в карточке лишь открывает окно (#2054).
    */
-  onRemoveStoredFile?: () => void;
+  onRemoveStoredFile?: (routeId: number) => void;
   /**
    * Точки уходят в черновик маршрута, а исходный файл — наверх: он загружается
    * на бэкенд тем же действием «Сохранить маршрут», чтобы оригинал и точки
@@ -84,15 +82,17 @@ const routeToLatLng = (route: RoutePoint[], geometry?: RouteGeometry | null): [n
     .map(([lng, lat]) => [lat, lng]);
 };
 
+const NO_STORED_FILES: readonly PlannedTripRouteFile[] = [];
+
 function TripRouteImportPanel({
   route,
   routeGeometry,
   disabled = false,
-  storedFile = null,
+  storedFiles = NO_STORED_FILES,
   tripId = null,
   pendingUploadName = null,
   uploadError = null,
-  removing = false,
+  removingFileId = null,
   onRemoveStoredFile,
   onApply,
   fileToolbarExtra,
@@ -222,47 +222,6 @@ function TripRouteImportPanel({
   }, [route, routeGeometry, selected]);
   const hasCurrentLine = mapLines.some((line) => line.color === DESIGN_COLORS.routeLine);
 
-  // #2053: скачивание оригинала живёт в его карточке, рядом с удалением, — тем
-  // же путём, что и во вкладке «Экспорт». Подписи полные на любой ширине: ряд
-  // переносит кнопку, а не режет подпись.
-  const originalDownload = useTripRouteOriginalDownload(tripId, storedFile);
-
-  // #2054: удаление оригинала необратимо — скачать файл потом неоткуда. Окно
-  // подтверждения помнит id файла, а не флаг: если оригинал исчез или сменился,
-  // пока окно открыто, подтверждать уже нечего, и файл, которого пользователь
-  // не видел, не удаляется.
-  const [removeConfirmFileId, setRemoveConfirmFileId] = useState<number | null>(null);
-  const removeConfirmVisible = storedFile != null && removeConfirmFileId === storedFile.id;
-  const closeRemoveConfirm = useCallback(() => setRemoveConfirmFileId(null), []);
-  // Повтор подтверждения в одном тике глушит синхронный лок удаления (#1824)
-  // в `useTripRouteFileBranch`: окно закрывается только со следующим рендером.
-  const handleConfirmRemove = useCallback(() => {
-    setRemoveConfirmFileId(null);
-    onRemoveStoredFile?.();
-  }, [onRemoveStoredFile]);
-
-  const storedFileActions: ToolAction[] = [
-    ...(originalDownload.available ? [{
-      key: 'download-original',
-      label: originalDownload.label,
-      icon: <Feather name="download" size={16} color={colors.primaryDark} />,
-      onPress: () => void originalDownload.download(),
-      disabled: originalDownload.downloading,
-      loading: originalDownload.downloading,
-      testID: 'trip-route-import-download-original',
-    }] : []),
-    ...(onRemoveStoredFile && storedFile ? [{
-      key: 'remove-original',
-      label: t('tripsStatic:plan.routeImport.original.remove'),
-      icon: <Feather name="trash-2" size={16} color={colors.danger} />,
-      onPress: () => setRemoveConfirmFileId(storedFile.id),
-      variant: 'danger-outline' as const,
-      disabled: disabled || removing,
-      loading: removing,
-      testID: 'trip-route-import-remove-original',
-    }] : []),
-  ];
-
   return (
     <View style={styles.wrap} testID="trip-route-import-panel">
       <TripRouteFilePicker
@@ -328,44 +287,17 @@ function TripRouteImportPanel({
         </Text>
       ) : null}
 
-      {!pendingUploadName && storedFile ? (
-        <View style={styles.storedFile} testID="trip-route-import-stored-original">
-          <View style={styles.storedFileBody}>
-            <Text style={styles.storedFileName} numberOfLines={2}>
-              {storedFile.original_name}
-            </Text>
-            <Text style={styles.hint}>
-              {t('tripsStatic:plan.routeImport.original.stored', {
-                value: storedFile.size ? formatFileSize(Number(storedFile.size)) : '—',
-              })}
-            </Text>
-          </View>
-          <ToolActionsRow actions={storedFileActions} compact={false} />
-          {originalDownload.error ? (
-            <Text
-              style={styles.error}
-              accessibilityLiveRegion="polite"
-              testID="trip-route-import-original-download-error"
-            >
-              {originalDownload.error}
-            </Text>
-          ) : null}
-          {/* «Удалить» (danger) — подпись окна по умолчанию, «Отмена» — та же,
-              что у отмены предпросмотра импорта. */}
-          {onRemoveStoredFile ? (
-            <ConfirmDialog
-              visible={removeConfirmVisible}
-              onClose={closeRemoveConfirm}
-              onConfirm={handleConfirmRemove}
-              title={t('tripsStatic:plan.routeImport.original.removeConfirmTitle')}
-              message={t('tripsStatic:plan.routeImport.original.removeConfirmMessage')}
-              cancelText={t('tripsStatic:plan.routeImport.cancel')}
-              confirmTestID="trip-route-import-remove-original-confirm"
-              cancelTestID="trip-route-import-remove-original-cancel"
-            />
-          ) : null}
-        </View>
-      ) : null}
+      {/* #2069: файлов ноль или несколько, и выбранный новый файл добавится к
+          ним, а не заменит, — поэтому список виден и пока новый ждёт сохранения. */}
+      <TripRouteStoredFiles
+        files={storedFiles}
+        tripId={tripId}
+        testIDPrefix="trip-route-import"
+        disabled={disabled}
+        removingFileId={removingFileId}
+        onRemoveFile={onRemoveStoredFile}
+        testID="trip-route-import-stored-originals"
+      />
 
       {uploadError ? (
         <Text
@@ -459,6 +391,17 @@ function TripRouteImportPanel({
           <Text style={styles.hint} testID="trip-route-import-original-hint">
             {t('tripsStatic:plan.routeImport.original.applyHint')}
           </Text>
+          {/* #2069: ни один режим не удаляет прежние файлы — POST бэкенда
+              добавляет запись, а стереть оригинал можно только его «Удалить» с
+              подтверждением (#2054). «Заменить маршрут» заменяет точки, и
+              подсказка говорит это прямо, пока прежние треки есть. */}
+          {storedFiles.length ? (
+            <Text style={styles.hint} testID="trip-route-import-original-append-hint">
+              {t('tripsStatic:plan.routeImport.original.appendHint', {
+                value: t('tripsStatic:plan.routeImport.original.remove'),
+              })}
+            </Text>
+          ) : null}
 
           <View style={styles.actions}>
             <Button
@@ -515,19 +458,6 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
   hint: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
   error: { color: colors.danger, fontSize: 13, lineHeight: 18, fontWeight: '600' },
   routeSelection: { gap: DESIGN_TOKENS.spacing.xs },
-  // Колонка, а не строка: имя файла получает всю ширину карточки (до двух
-  // строк), а «Скачать»/«Удалить» — свой ряд под ним (#2053).
-  storedFile: {
-    gap: DESIGN_TOKENS.spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    backgroundColor: colors.surfaceMuted,
-  },
-  storedFileBody: { minWidth: 0, gap: 2 },
-  storedFileName: { color: colors.text, fontSize: 13, fontWeight: '700' },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.md },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
   legendLine: { width: 24, height: 4, borderRadius: DESIGN_TOKENS.radii.full },

@@ -1,8 +1,8 @@
 // components/trips/planning/useTripRouteOriginalDownload.ts
-// Скачивание исходного GPX/KML поездки (#1496). Один путь для двух мест:
-// вкладка «Экспорт» (`TripRouteDownloadButtons`) и карточка сохранённого
-// оригинала во вкладке «Маршрут» (`TripRouteImportPanel`, #2053). Байты приходят
-// те же, что были загружены, — в отличие от GPX/KML, собранных из точек.
+// Скачивание одного исходного GPX/KML поездки (#1496). Зовёт его карточка
+// сохранённого оригинала `TripRouteStoredFiles` — своя у каждого файла (#2069) —
+// во вкладках «Маршрут» (#2053) и «Экспорт». Байты приходят те же, что были
+// загружены, — в отличие от GPX/KML, собранных из точек.
 import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
 

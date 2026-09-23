@@ -4,6 +4,9 @@
 // TripRouteImportPanel → ConfirmDialog и считает вызовы мутации удаления: DELETE
 // уходит только из подтверждения, а синхронный лок #1824 по-прежнему глушит
 // повтор в одном тике.
+//
+// #2069: файлов у поездки ноль или несколько, у каждого своя карточка, и DELETE
+// уходит ровно по тому routeId, чью «Удалить» подтвердили.
 import React from 'react'
 import { act, fireEvent, render, within } from '@testing-library/react-native'
 
@@ -14,7 +17,8 @@ import { createQueryWrapper } from '../../helpers/testQueryClient'
 
 const mockOriginalDelete = jest.fn()
 let mockDeletePending = false
-let mockStoredRouteFile: PlannedTripRouteFile | null = null
+let mockDeleteVariables: { tripId: number; routeId: number } | undefined = undefined
+let mockStoredRouteFiles: PlannedTripRouteFile[] | undefined = undefined
 
 jest.mock('@/api/places', () => ({ fetchPlacesCatalog: jest.fn() }))
 jest.mock('@/api/travelsApi', () => ({ fetchTravels: jest.fn() }))
@@ -28,13 +32,16 @@ jest.mock('@/hooks/usePlannedTripsApi', () => ({
   useUpdateTripBikeType: () => ({ mutate: jest.fn(), isPending: false }),
 }))
 
+// Один массив на все рендеры: новая ссылка на каждый рендер гоняла бы карту.
+const mockNoTrackSegments: Array<Array<[number, number]>> = []
 jest.mock('@/hooks/usePlannedTripRouteFile', () => ({
-  usePlannedTripRouteFile: () => ({ data: mockStoredRouteFile }),
-  usePlannedTripOriginalTrack: () => ({ data: null }),
+  usePlannedTripRouteFiles: () => ({ data: mockStoredRouteFiles }),
+  usePlannedTripOriginalTracks: () => mockNoTrackSegments,
   useUploadPlannedTripRouteFile: () => ({ mutateAsync: jest.fn(), isPending: false }),
   useDeletePlannedTripRouteFile: () => ({
     mutate: mockOriginalDelete,
     isPending: mockDeletePending,
+    variables: mockDeleteVariables,
   }),
 }))
 
@@ -155,7 +162,8 @@ describe('RouteBuilder — удаление оригинала только по
   beforeEach(() => {
     jest.clearAllMocks()
     mockDeletePending = false
-    mockStoredRouteFile = STORED_ORIGINAL
+    mockDeleteVariables = undefined
+    mockStoredRouteFiles = [STORED_ORIGINAL]
   })
 
   it('«Удалить» без подтверждения не отправляет DELETE', () => {
@@ -237,7 +245,7 @@ describe('RouteBuilder — удаление оригинала только по
     fireEvent.press(getByTestId(REMOVE))
     expect(getByTestId(CONFIRM)).toBeTruthy()
 
-    mockStoredRouteFile = { ...STORED_ORIGINAL, id: 8, original_name: 'Mullerthal_v2.kml' }
+    mockStoredRouteFiles = [{ ...STORED_ORIGINAL, id: 8, original_name: 'Mullerthal_v2.kml' }]
     rerender(<RouteBuilder trip={makeTrip()} />)
 
     expect(queryByTestId('confirm-dialog')).toBeNull()
@@ -250,11 +258,67 @@ describe('RouteBuilder — удаление оригинала только по
   // Pressable нажатие не пропускает ни на web, ни на устройстве.
   it('пока удаление идёт, «Удалить» занята и выключена', () => {
     mockDeletePending = true
+    mockDeleteVariables = { tripId: TRIP_ID, routeId: STORED_ORIGINAL.id }
     const { getByTestId } = renderRouteBuilder()
 
     expect(getByTestId(REMOVE).props.accessibilityState).toMatchObject({
       disabled: true,
       busy: true,
+    })
+  })
+
+  describe('#2069: несколько исходных файлов', () => {
+    // Как у trip 47 на проде: трёхпетлевой KML и добавленный к нему GPX по дням.
+    const LOOPS_KML: PlannedTripRouteFile = STORED_ORIGINAL
+    const DAYS_GPX: PlannedTripRouteFile = {
+      id: 11,
+      original_name: 'Mullerthal_Trail_po_dnyam.gpx',
+      ext: 'gpx',
+      size: 412000,
+      created_at: '2026-09-23T08:00:00Z',
+      updated_at: '2026-09-23T08:00:00Z',
+    }
+    const cardsOf = (screen: ReturnType<typeof renderRouteBuilder>) =>
+      screen.getAllByTestId('trip-route-import-stored-original').map((card) => within(card))
+
+    beforeEach(() => {
+      mockStoredRouteFiles = [LOOPS_KML, DAYS_GPX]
+    })
+
+    it('показывает карточку на каждый файл в порядке бэкенда', () => {
+      const screen = renderRouteBuilder()
+
+      const [first, second] = cardsOf(screen)
+      expect(cardsOf(screen)).toHaveLength(2)
+      expect(first.getByText('Mullerthal_Trail_Routes_1-3.kml')).toBeTruthy()
+      expect(second.getByText('Mullerthal_Trail_po_dnyam.gpx')).toBeTruthy()
+      expect(first.getByTestId(REMOVE)).toBeTruthy()
+      expect(second.getByTestId(REMOVE)).toBeTruthy()
+    })
+
+    it('«Удалить» второго файла удаляет именно его, а не первый', () => {
+      const screen = renderRouteBuilder()
+
+      fireEvent.press(cardsOf(screen)[1].getByTestId(REMOVE))
+      expect(mockOriginalDelete).not.toHaveBeenCalled()
+      fireEvent.press(screen.getByTestId(CONFIRM))
+
+      expect(mockOriginalDelete).toHaveBeenCalledTimes(1)
+      expect(mockOriginalDelete.mock.calls[0][0]).toEqual({ tripId: TRIP_ID, routeId: DAYS_GPX.id })
+    })
+
+    it('пока удаляется один файл, занята только его «Удалить», соседняя выключена', () => {
+      mockDeletePending = true
+      mockDeleteVariables = { tripId: TRIP_ID, routeId: DAYS_GPX.id }
+      const [first, second] = cardsOf(renderRouteBuilder())
+      expect(first.getByTestId(REMOVE).props.accessibilityState).toMatchObject({
+        disabled: true,
+        busy: false,
+      })
+      expect(second.getByTestId(REMOVE).props.accessibilityState).toMatchObject({
+        disabled: true,
+        busy: true,
+      })
     })
   })
 })

@@ -1,10 +1,13 @@
 // api/plannedTripRoutes.ts
-// Исходный (неупрощённый) файл маршрута запланированной поездки — фаза 2 импорта
-// (#1496) поверх backend-контракта #1493 `/api/trips/planned/{id}/routes/`.
+// Исходные (неупрощённые) файлы маршрута запланированной поездки — фаза 2 импорта
+// (#1496) поверх backend-контракта `/api/trips/planned/{id}/routes/` (#1493, #1840).
 //
-// Контракт бэкенда (docs/features/trips.md в backend-репозитории):
-//  - у поездки ноль или один primary-файл, поэтому список никогда не длиннее одного;
-//  - POST создаёт (201) или атомарно заменяет (200) файл, сохраняя тот же id;
+// Контракт бэкенда (`trips/views.py` → `planned_routes`, `trips/route_files.py`):
+//  - у поездки ноль или несколько файлов, не больше `PLANNED_TRIP_ROUTE_FILES_MAX`;
+//    список приходит в порядке `sort_order, id`;
+//  - POST всегда создаёт новую запись (201) в конец списка, а на лимите отвечает 400;
+//    прежние файлы он не трогает — «замены» на бэкенде нет;
+//  - DELETE `.../routes/{routeId}/` удаляет ровно один файл;
 //  - операции доступны только владельцу поездки (иначе 403), анонимам — 401.
 //
 // Мок-фолбэка здесь нет намеренно: Fallback/mock policy #1496 запрещает подменять
@@ -20,8 +23,11 @@ import {
 
 const LONG_TIMEOUT = 30000;
 
+/** `TripRouteFile.MAX_FILES_PER_TRIP` бэкенда: больше файлов POST не примет. */
+export const PLANNED_TRIP_ROUTE_FILES_MAX = 10;
+
 export interface PlannedTripRouteFile extends RouteFileMetadata {
-  /** Меняется при замене исходника — служит частью ключа кэша распарсенного трека. */
+  /** Ревизия файла — часть ключа кэша распарсенного трека. */
   updated_at?: string | null;
 }
 
@@ -51,14 +57,6 @@ export const listPlannedTripRouteFiles = async (
   return extractRouteFileList(payload)
     .map(normalizePlannedTripRouteFile)
     .filter((item): item is PlannedTripRouteFile => Boolean(item));
-};
-
-/** Список из нуля-одного элемента сводится к самому файлу — так его читает UI. */
-export const fetchPlannedTripRouteFile = async (
-  tripId: string | number,
-): Promise<PlannedTripRouteFile | null> => {
-  const files = await listPlannedTripRouteFiles(tripId);
-  return files[0] ?? null;
 };
 
 export const uploadPlannedTripRouteFile = async (

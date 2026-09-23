@@ -14,9 +14,9 @@ import { buildGpx } from '@/utils/routeExport'
 
 const mockSaveRouteExportFile = jest.fn()
 const mockDownloadOriginal = jest.fn()
-// Сохранённый оригинал есть не в каждом сценарии, поэтому мок запроса файла
-// переключаемый: по умолчанию файла нет.
-let mockStoredRouteFile: PlannedTripRouteFile | null = null
+// Сохранённые оригиналы есть не в каждом сценарии, поэтому мок запроса списка
+// переключаемый: по умолчанию файлов нет.
+let mockStoredRouteFiles: PlannedTripRouteFile[] | undefined = undefined
 
 jest.mock('@/api/places', () => ({ fetchPlacesCatalog: jest.fn() }))
 jest.mock('@/api/travelsApi', () => ({ fetchTravels: jest.fn() }))
@@ -43,9 +43,11 @@ jest.mock('@/utils/tripAnalytics', () => ({
   trackRoutePointAdded: jest.fn(),
 }))
 
+// Один массив на все рендеры: новая ссылка на каждый рендер гоняла бы карту.
+const mockNoTrackSegments: Array<Array<[number, number]>> = []
 jest.mock('@/hooks/usePlannedTripRouteFile', () => ({
-  usePlannedTripRouteFile: () => ({ data: mockStoredRouteFile }),
-  usePlannedTripOriginalTrack: () => ({ data: null }),
+  usePlannedTripRouteFiles: () => ({ data: mockStoredRouteFiles }),
+  usePlannedTripOriginalTracks: () => mockNoTrackSegments,
   useUploadPlannedTripRouteFile: () => ({ mutateAsync: jest.fn(), isPending: false }),
   useDeletePlannedTripRouteFile: () => ({ mutate: jest.fn(), isPending: false }),
 }))
@@ -133,7 +135,7 @@ describe('RouteBuilder route download', () => {
     jest.clearAllMocks()
     mockSaveRouteExportFile.mockResolvedValue(true)
     mockDownloadOriginal.mockResolvedValue(true)
-    mockStoredRouteFile = null
+    mockStoredRouteFiles = undefined
   })
 
   it('offers GPX and KML download next to the map', () => {
@@ -175,7 +177,7 @@ describe('RouteBuilder route download', () => {
   })
 
   it('downloads the saved original from its card, not from the export row (#2053)', async () => {
-    mockStoredRouteFile = STORED_ORIGINAL
+    mockStoredRouteFiles = [STORED_ORIGINAL]
     const { getByTestId, queryByTestId, queryByText } = renderRouteBuilder(
       <RouteBuilder trip={makeTrip()} />,
     )
@@ -188,7 +190,7 @@ describe('RouteBuilder route download', () => {
     expect(within(download).getByText('Поделиться оригиналом')).toBeTruthy()
 
     // Имя файла уже в карточке: строки-дубля и второй кнопки оригинала нет.
-    expect(queryByTestId('trip-route-export-original')).toBeNull()
+    expect(queryByTestId('trip-route-export-download-original')).toBeNull()
     expect(queryByTestId('trip-route-original-download-block')).toBeNull()
     expect(queryByText(/Исходный файл маршрута/)).toBeNull()
 
@@ -198,7 +200,7 @@ describe('RouteBuilder route download', () => {
   })
 
   it('reports a failed original download inside the card', async () => {
-    mockStoredRouteFile = STORED_ORIGINAL
+    mockStoredRouteFiles = [STORED_ORIGINAL]
     mockDownloadOriginal.mockResolvedValueOnce(false)
     const { findByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 

@@ -14,7 +14,7 @@ const mockOriginalUpload = jest.fn()
 const mockOriginalDelete = jest.fn()
 // Сохранённый оригинал есть не в каждом сценарии панели, поэтому мок запроса
 // файла переключаемый: по умолчанию файла нет, как и было.
-let mockStoredRouteFile: { id: number; name: string } | null = null
+let mockStoredRouteFiles: Array<{ id: number; name: string }> | undefined = undefined
 
 jest.mock('@/api/places', () => ({ fetchPlacesCatalog: jest.fn() }))
 jest.mock('@/api/travelsApi', () => ({ fetchTravels: jest.fn() }))
@@ -28,9 +28,11 @@ jest.mock('@/hooks/usePlannedTripsApi', () => ({
   useUpdateTripBikeType: () => ({ mutate: jest.fn(), isPending: false }),
 }))
 
+// Один массив на все рендеры: новая ссылка на каждый рендер гоняла бы карту.
+const mockNoTrackSegments: Array<Array<[number, number]>> = []
 jest.mock('@/hooks/usePlannedTripRouteFile', () => ({
-  usePlannedTripRouteFile: () => ({ data: mockStoredRouteFile }),
-  usePlannedTripOriginalTrack: () => ({ data: null }),
+  usePlannedTripRouteFiles: () => ({ data: mockStoredRouteFiles }),
+  usePlannedTripOriginalTracks: () => mockNoTrackSegments,
   useUploadPlannedTripRouteFile: () => ({
     mutateAsync: mockOriginalUpload,
     isPending: false,
@@ -67,6 +69,8 @@ jest.mock('@/components/trips/planning/TripPlanRouteMap', () => {
 jest.mock('@/components/trips/planning/TripRouteImportPanel', () => {
   return function TripRouteImportPanel({
     route,
+    storedFiles,
+    uploadError,
     onApply,
     onRemoveStoredFile,
   }: {
@@ -77,14 +81,17 @@ jest.mock('@/components/trips/planning/TripRouteImportPanel', () => {
       name: string
       mimeType: string
     }) => void
-    onRemoveStoredFile: () => void
+    storedFiles: Array<{ id: number }>
+    uploadError: string | null
+    onRemoveStoredFile: (routeId: number) => void
   }) {
-    const { Pressable, View } = require('react-native')
+    const { Pressable, Text, View } = require('react-native')
     return (
       <View>
+        {uploadError ? <Text testID="route-builder-original-error">{uploadError}</Text> : null}
         <Pressable
           testID="route-builder-remove-original"
-          onPress={onRemoveStoredFile}
+          onPress={() => onRemoveStoredFile(storedFiles[0].id)}
         />
         <Pressable
           testID="route-builder-apply-original-only"
@@ -190,7 +197,7 @@ describe('RouteBuilder panel steps', () => {
     mockOriginalUpload.mockReset()
     mockOriginalUpload.mockResolvedValue({ id: 1 })
     mockOriginalDelete.mockReset()
-    mockStoredRouteFile = null
+    mockStoredRouteFiles = undefined
   })
 
   it('строит панель тремя нумерованными шагами, как /map', () => {
@@ -290,13 +297,30 @@ describe('RouteBuilder panel steps', () => {
     await waitFor(() => expect(mockOriginalUpload).toHaveBeenCalledTimes(2))
   })
 
+  // #2069: на лимите бэкенд всё равно ответит 400, и «нажмите ещё раз» обещало
+  // бы ретрай, который не пройдёт никогда. Multipart до 20 МиБ не уходит, а
+  // ошибка называет причину и выход — удалить лишний трек.
+  it('на лимите файлов не отправляет оригинал и говорит, что удалить лишний', async () => {
+    mockStoredRouteFiles = Array.from({ length: 10 }, (_, index) => ({ id: index + 1, name: `day-${index + 1}.gpx` }))
+    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+
+    fireEvent.press(getByTestId('route-builder-apply-original-only'))
+    fireEvent.press(getByTestId('route-builder-save'))
+
+    await waitFor(() => expect(getByTestId('route-builder-original-error').props.children).toBe(
+      'Больше исходных файлов не сохранить: у поездки их уже 10, это предел. Удалите лишний трек и нажмите «Сохранить маршрут» ещё раз.',
+    ))
+    expect(mockOriginalUpload).not.toHaveBeenCalled()
+    expect(mockRouteMutate).not.toHaveBeenCalled()
+  })
+
   // #1824, пункт 3: у удаления оригинала лока тоже не было. `disabled` кнопки
   // держится на `deleteRouteFile.isPending` и поднимается только со следующим
   // рендером, поэтому повтор нажатия в одном тике слал второй DELETE того же
   // файла — второй отвечал 404, и пользователь видел «не удалось удалить» на
   // уже удалённом файле.
   it('повтор нажатия в одном тике не удаляет оригинал дважды', () => {
-    mockStoredRouteFile = { id: 5, name: 'import.gpx' }
+    mockStoredRouteFiles = [{ id: 5, name: 'import.gpx' }]
     const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     fireEvent.press(getByTestId('route-builder-remove-original'))
@@ -309,7 +333,7 @@ describe('RouteBuilder panel steps', () => {
   // Лок удаления снимается и по отказу: иначе неудачное удаление запирало бы
   // кнопку до перезагрузки экрана.
   it('после отказа удаления ретрай той же кнопкой уходит снова', () => {
-    mockStoredRouteFile = { id: 5, name: 'import.gpx' }
+    mockStoredRouteFiles = [{ id: 5, name: 'import.gpx' }]
     const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     fireEvent.press(getByTestId('route-builder-remove-original'))

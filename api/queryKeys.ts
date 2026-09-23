@@ -159,11 +159,12 @@ export const queryKeys = {
   communityTripsAll: () => ['community-trips'] as const,
   tripRouteElevation: (tripId: string | number | null | undefined) =>
     ['trip-route-elevation', tripId] as const,
-  // Исходный GPX/KML поездки и распарсенная из него неупрощённая геометрия (#1496).
-  // Ключ трека держит `revision` (updated_at/created_at), потому что замена файла
-  // сохраняет тот же id — без него на карте осталась бы геометрия прошлого файла.
-  plannedTripRouteFile: (tripId: string | number | null | undefined) =>
-    ['planned-trip-route-file', tripId] as const,
+  // Исходные GPX/KML поездки (ноль или несколько, #1840/#2069) и распарсенная из
+  // каждого неупрощённая геометрия (#1496). Трек кэшируется на файл: ключ держит
+  // его id и `revision` (updated_at/created_at), поэтому удаление или добавление
+  // соседнего файла не заставляет заново скачивать и разбирать остальные.
+  plannedTripRouteFiles: (tripId: string | number | null | undefined) =>
+    ['planned-trip-route-files', tripId] as const,
   plannedTripRouteTrack: (
     tripId: string | number | null | undefined,
     routeId: string | number | null | undefined,
