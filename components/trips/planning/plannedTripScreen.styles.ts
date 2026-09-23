@@ -10,6 +10,9 @@ const SCROLL_BOTTOM_RESERVE = Platform.select({
 });
 /** Рабочая область вкладки «Маршрут» на desktop ≥ 1280 (макет §4). */
 export const PLANNER_ROUTE_WORKSPACE_MAX_WIDTH = 1200;
+/** Ширина шапки и описания поездки (`inner`) — общий источник для стиля и оценки
+ * переполнения текста описания в `TripPlanCollapsibleText` (#2060). */
+export const PLANNER_INNER_MAX_WIDTH = 860;
 export const createStyles = (colors: ThemedColors, isMobile: boolean) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
@@ -19,7 +22,7 @@ export const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       paddingBottom: SCROLL_BOTTOM_RESERVE,
       alignItems: 'center',
     },
-    inner: { width: '100%', maxWidth: 860, gap: 14 },
+    inner: { width: '100%', maxWidth: PLANNER_INNER_MAX_WIDTH, gap: 14 },
     loader: { marginVertical: 48 },
     error: { color: colors.danger, fontSize: 14, fontWeight: '600', marginVertical: 24 },
     cover: {

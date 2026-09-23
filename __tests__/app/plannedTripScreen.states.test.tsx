@@ -211,6 +211,14 @@ const LOGISTICS_DESCRIPTION = [
   'Ночёвка в кемпинге у озера, места бронируем заранее.',
 ].join('\n');
 
+// #2060: на проде описание поездки 47 занимало 6 274 знака и не сворачивалось
+// на desktop вовсе. Фикстура здесь заведомо длиннее восьми строк — паритет с
+// `LOGISTICS_DESCRIPTION` (абзацы, не длина строки), просто их больше.
+const LONG_DESKTOP_DESCRIPTION = Array.from(
+  { length: 12 },
+  (_, index) => `Абзац ${index + 1} с логистикой маршрута и деталями стоянок.`,
+).join('\n');
+
 const renderScreen = () => {
   const PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default;
   return render(<PlannedTripScreen />);
@@ -746,5 +754,21 @@ describe('PlannedTripScreen — planner states', () => {
 
     expect(getByTestId('trip-plan-description').props.numberOfLines).toBeUndefined();
     expect(queryByTestId('trip-plan-description-toggle')).toBeNull();
+  });
+
+  // #2060: desktop не имел предела строк вовсе — 6 274-знаковое описание
+  // уводило вкладки и конструктор маршрута на 2 116 px вниз.
+  it('clamps a long description to 8 lines on desktop and offers a toggle', () => {
+    mockTrip(makeTrip({ description: LONG_DESKTOP_DESCRIPTION }));
+    const { getByTestId, getByText, queryByText } = renderScreen();
+
+    expect(getByTestId('trip-plan-description').props.numberOfLines).toBe(8);
+    expect(getByText(i18nT('tripsStatic:plan.description.expand'))).toBeTruthy();
+
+    fireEvent.press(getByTestId('trip-plan-description-toggle'));
+
+    expect(getByTestId('trip-plan-description').props.numberOfLines).toBeUndefined();
+    expect(getByText(i18nT('tripsStatic:plan.description.collapse'))).toBeTruthy();
+    expect(queryByText(i18nT('tripsStatic:plan.description.expand'))).toBeNull();
   });
 });

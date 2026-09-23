@@ -36,7 +36,9 @@ import {
 } from '@/components/trips/planning/tripPlanDeferredSections';
 import { shouldRenderTripRouteExportMenu } from '@/components/trips/planning/tripRouteExport';
 import TripAffiliateBlock from '@/components/trips/planning/TripAffiliateBlock';
-import TripPlanCollapsibleText from '@/components/trips/planning/TripPlanCollapsibleText';
+import TripPlanCollapsibleText, {
+  tripPlanTextCharsPerLine,
+} from '@/components/trips/planning/TripPlanCollapsibleText';
 import TripPlanLinksBlock from '@/components/trips/planning/TripPlanLinksBlock';
 import TripPlanDescriptionEditor from '@/components/trips/planning/TripPlanDescriptionEditor';
 import {
@@ -67,8 +69,13 @@ import type { PlannedTrip, TripTransport, TripVisibility } from '@/api/plannedTr
 import { ApiError } from '@/api/clientErrors';
 import { translate as i18nT } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider';
-import { createStyles } from '@/components/trips/planning/plannedTripScreen.styles';
+import {
+  createStyles,
+  PLANNER_INNER_MAX_WIDTH,
+} from '@/components/trips/planning/plannedTripScreen.styles';
 
+const DESCRIPTION_LINE_LIMIT_DESKTOP = 8;
+const DESCRIPTION_LINE_LIMIT_MOBILE_COMPACT = 2;
 
 const TRANSPORT_OPTIONS: TripTransport[] = ['car', 'bike', 'foot', 'public', 'mixed'];
 // БЭК хранит только is_public (PlannedTripUpdateSerializer): 'followers' молча
@@ -109,7 +116,7 @@ export default function PlannedTripScreen() {
   const colors = useThemedColors();
   // Режим берётся из вьюпорта, а не из `Platform.OS`; до гидратации web остаётся
   // на широкой раскладке, иначе SSR-разметка и первый клиентский кадр расходятся.
-  const { isHydrated, isMobile, isDesktop } = useResponsive();
+  const { isHydrated, isMobile, isDesktop, width } = useResponsive();
   const compactTransport = isHydrated && isMobile;
   // Без мемоизации: `TRANSPORT_LABEL` — геттеры поверх активной локали, и
   // замороженный массив пережил бы смену языка.
@@ -174,6 +181,19 @@ export default function PlannedTripScreen() {
   // опознавательной строки: обложка и описание возвращаются на любой другой
   // вкладке и в режиме правки поездки.
   const compactHeader = isMobile && activeTab === 'route' && !isEditing;
+  // #2060: на desktop ограничения строк не было вовсе — длинное описание
+  // (6 274 знака на проде) отодвигало вкладки на 2 116 px. Свёрнутое состояние
+  // мобильной компактной шапки (#1844) не трогаем.
+  const descriptionLineLimit = compactHeader
+    ? DESCRIPTION_LINE_LIMIT_MOBILE_COMPACT
+    : isMobile
+      ? undefined
+      : DESCRIPTION_LINE_LIMIT_DESKTOP;
+  // Описание живёт в колонке `inner` (`plannedTripScreen.styles.ts`, maxWidth
+  // 860): на широких экранах реальная вместимость строки уже, чем по вьюпорту.
+  const descriptionCharsPerLine = isMobile
+    ? undefined
+    : tripPlanTextCharsPerLine(Math.min(width, PLANNER_INNER_MAX_WIDTH));
   const coverUrl = typeof trip?.coverUrl === 'string' ? trip.coverUrl.trim() : '';
   const usesFallbackCover = Boolean(trip && coverUrl.length === 0);
   const displayCoverUrl = usesFallbackCover ? (fallbackCover?.uri ?? '') : coverUrl;
@@ -449,12 +469,13 @@ export default function PlannedTripScreen() {
                   {/* #1844: под компактной шапкой описание обрезается до двух
                       строк, поэтому обёртка добавляет к нему кнопку «Показать
                       полностью» — иначе логистика внутри текста доступна только
-                      обходным переключением вкладки. */}
+                      обходным переключением вкладки. #2060: desktop — 8 строк. */}
                   <TripPlanCollapsibleText
                     text={trip.description}
                     style={styles.description}
                     linkStyle={styles.descriptionLink}
-                    numberOfLines={compactHeader ? 2 : undefined}
+                    numberOfLines={descriptionLineLimit}
+                    charsPerLine={descriptionCharsPerLine}
                     testID="trip-plan-description"
                   />
                   {/* Блок ссылок остаётся и под компактной шапкой: он сам
