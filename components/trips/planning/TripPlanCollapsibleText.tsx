@@ -131,6 +131,9 @@ function TripPlanCollapsibleText({
           style={styles.toggle}
           accessibilityRole="button"
           accessibilityState={{ expanded }}
+          // RNW 0.21 не переводит accessibilityState.expanded в DOM — aria-expanded
+          // задаём напрямую (приёмка #2060 на проде).
+          aria-expanded={expanded}
           testID={toggleTestID}
         >
           <Text style={styles.toggleLabel}>

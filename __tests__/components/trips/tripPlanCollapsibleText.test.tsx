@@ -61,8 +61,11 @@ describe('TripPlanCollapsibleText', () => {
       />,
     );
 
+    expect(getByTestId('trip-plan-description-toggle').props['aria-expanded']).toBe(false);
+
     fireEvent.press(getByTestId('trip-plan-description-toggle'));
 
+    expect(getByTestId('trip-plan-description-toggle').props['aria-expanded']).toBe(true);
     expect(getByTestId('trip-plan-description').props.numberOfLines).toBeUndefined();
     expect(getByText(COLLAPSE_LABEL)).toBeTruthy();
     expect(queryByText(EXPAND_LABEL)).toBeNull();
