@@ -167,7 +167,7 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
                 <Pressable
                   key={index}
                   onPress={() => onCategoryPress?.(cat)}
-                  style={styles.categoryTag}
+                  style={({ hovered }) => [styles.categoryTag, hovered && onCategoryPress && styles.categoryTagHovered]}
                   disabled={!onCategoryPress}
                   accessibilityRole={categoryRole}
                   accessibilityLabel={categoryLabel}
@@ -307,13 +307,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       web: {
         cursor: 'pointer' as any,
         transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease' as any,
-        ':hover': {
-          transform: 'translateY(-1px)',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-          borderColor: colors.primary,
-        } as any,
       },
     }),
+  },
+  // Наведение мыши на кликабельную категорию — состояние `hovered` у Pressable:
+  // ключ-псевдокласс в StyleSheet react-native-web компилирует в битое правило (#2036).
+  categoryTagHovered: {
+    borderColor: colors.primary,
+    transform: [{ translateY: -1 }],
+    ...Platform.select({ web: { boxShadow: colors.boxShadows.hover } }),
   },
   categoryText: {
     fontSize: 11,

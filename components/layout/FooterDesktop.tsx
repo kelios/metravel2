@@ -165,16 +165,14 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
               display: 'flex',
               transition: 'all 0.2s ease',
               cursor: 'pointer',
-              ':hover': {
-                backgroundColor: colors.primarySoft,
-                transform: 'scale(1.05)',
-              },
-              ':active': {
-                transform: 'scale(1)',
-              },
             } as any,
           }),
         },
+        // Наведение мыши — состояние `hovered` у Pressable (#2036): ключи-псевдоклассы
+        // в StyleSheet react-native-web компилирует в битое правило. Подъём снимается
+        // на время нажатия — так было задумано в мёртвом ключе нажатия.
+        itemHovered: { backgroundColor: colors.primarySoft },
+        itemHoverLift: { transform: [{ scale: 1.05 }] },
         pressed: { opacity: 0.7 },
         itemInner: {
           alignItems: 'center',
@@ -283,8 +281,10 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
         accessibilityRole="link"
         accessibilityLabel={label}
         testID={itemTestID}
-        style={({ pressed }) => [
+        style={({ pressed, hovered }) => [
           styles.item,
+          hovered && styles.itemHovered,
+          hovered && !pressed && styles.itemHoverLift,
           pressed && styles.pressed,
           globalFocusStyles.focusable,
         ]}

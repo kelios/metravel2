@@ -331,8 +331,9 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
                     onPress={() => openExternalUrl(String(s.url))}
                     accessibilityRole="link"
                     accessibilityLabel={i18nT('travel:components.travel.AuthorCard.otkryt_value1_2165b58d', { value1: s.label })}
-                    style={({ pressed }) => [
+                    style={({ pressed, hovered }) => [
                       styles.socialChip,
+                      hovered && styles.socialChipHovered,
                       pressed && styles.socialChipPressed,
                     ]}
                   >
@@ -455,13 +456,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
         web: {
           cursor: 'pointer' as any,
           transition: 'all 0.15s ease' as any,
-          ':hover': {
-            backgroundColor: colors.primaryLight,
-            transform: 'translateY(-1px)',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          } as any,
         },
       }),
+    },
+    // Наведение мыши — состояние `hovered` у Pressable: ключ-псевдокласс в
+    // StyleSheet react-native-web компилирует в битое правило (#2036).
+    socialChipHovered: {
+      backgroundColor: colors.primaryLight,
+      transform: [{ translateY: -1 }],
+      ...Platform.select({ web: { boxShadow: colors.boxShadows.medium } }),
     },
     socialChipPressed: { backgroundColor: colors.backgroundTertiary, transform: [{ scale: 0.98 }] },
     socialChipText: { fontSize: 12, fontWeight: '500', color: colors.primaryText },

@@ -95,11 +95,13 @@ function RecentViews({
         web: {
           cursor: 'pointer',
           transition: 'opacity 0.2s ease',
-          ':hover': {
-            opacity: 0.7,
-          },
         },
       }),
+    },
+    // Наведение мыши — состояние `hovered` у Pressable: ключ-псевдокласс в
+    // StyleSheet react-native-web компилирует в битое правило (#2036).
+    clearButtonHovered: {
+      opacity: 0.7,
     },
     clearButtonText: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
@@ -265,7 +267,7 @@ function RecentViews({
           </Pressable>
           <Pressable
             onPress={handleClear}
-            style={styles.clearButton}
+            style={({ hovered }) => [styles.clearButton, hovered && styles.clearButtonHovered]}
             accessibilityLabel={i18nT('travel:components.travel.RecentViews.ochistit_istoriyu_prosmotrov_68ac8b8c')}
             accessibilityRole="button"
           >

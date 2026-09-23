@@ -67,8 +67,9 @@ const ToggleableMapSection = ({
                 accessibilityRole="button"
                 accessibilityLabel={hintText}
                 accessibilityState={{ expanded: showMap }}
-                style={({ pressed }) => [
+                style={({ pressed, hovered }) => [
                     styles.toggleButton,
+                    hovered && styles.toggleButtonHovered,
                     pressed && styles.toggleButtonPressed,
                 ]}
             >
@@ -133,12 +134,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
           web: {
             cursor: 'pointer' as any,
             transition: 'background-color 0.2s ease, border-color 0.2s ease' as any,
-            ':hover': {
-              backgroundColor: colors.backgroundSecondary,
-              borderColor: colors.border,
-            } as any,
           },
         }),
+    },
+    // Наведение мыши — состояние `hovered` у Pressable: ключ-псевдокласс в
+    // StyleSheet react-native-web компилирует в битое правило (#2036).
+    toggleButtonHovered: {
+        backgroundColor: colors.backgroundSecondary,
+        borderColor: colors.border,
     },
     toggleButtonPressed: {
         backgroundColor: colors.backgroundSecondary,

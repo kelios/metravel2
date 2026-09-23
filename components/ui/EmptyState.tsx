@@ -223,13 +223,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только цвет текста
     borderRadius: DESIGN_TOKENS.radii.pill, // pill — единый радиус кнопок по всему приложению
     minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+    // Отклик на наведение даёт сам `Button` (`hovered` → фон `primarySoft` варианта
+    // `ghost`); ключ-псевдокласс здесь был мёртв — RNW компилирует его в битое правило (#2036).
     ...Platform.select({
       web: {
         transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-        // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
-        ':hover': {
-          backgroundColor: colors.primarySoft,
-        },
       },
     }),
   },

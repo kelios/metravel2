@@ -90,8 +90,9 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
           accessibilityRole="button"
           accessibilityState={{ expanded: open }}
           onPress={handleToggle}
-          style={[
+          style={({ hovered }) => [
             styles.sectionHeaderBtn,
+            hovered && styles.sectionHeaderBtnHovered,
             highlight === 'positive' && styles.sectionHeaderPositive,
             highlight === 'negative' && styles.sectionHeaderNegative,
             highlight === 'info' && styles.sectionHeaderInfo,

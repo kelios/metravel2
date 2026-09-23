@@ -65,10 +65,11 @@ export function QuestStepPill({
           ? i18nT('quests:components.quests.questWizardNavigation.postponedLabel', { value1: label })
           : undefined
       }
-      style={[
+      style={({ hovered }) => [
         styles.stepPill,
         compact && styles.compactStepPill,
         styles.stepPillUnlocked,
+        hovered && unlocked && styles.stepPillHovered,
         narrow && styles.stepPillNarrow,
         done && !active && styles.stepPillDone,
         pending && !active && !done && styles.stepPillPending,

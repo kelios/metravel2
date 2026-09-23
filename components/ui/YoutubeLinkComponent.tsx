@@ -124,15 +124,6 @@ const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({
                 onBlur={handleBlur}
                 placeholder={i18nT('shared:components.ui.YoutubeLinkComponent.vvedite_ssylku_na_youtube_b0fffb92')}
                 placeholderTextColor={colors.textMuted}
-                {...Platform.select({
-                    web: {
-                        outlineWidth: 0,
-                        // @ts-ignore -- CSS pseudo-selector :focus is web-only, not in RN style types
-                        ':focus': {
-                            borderColor: displayError ? colors.danger : colors.primary,
-                        },
-                    },
-                })}
             />
             {displayError && (
                 <View style={styles.errorContainer}>

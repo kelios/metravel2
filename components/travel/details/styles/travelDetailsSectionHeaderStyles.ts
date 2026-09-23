@@ -28,14 +28,17 @@ export const createTravelDetailsSectionHeaderStyles = (colors: ThemedColors) => 
       ? ({
           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           cursor: 'pointer',
-          ':hover': {
-            backgroundColor: colors.surfaceMuted,
-            borderColor: colors.primary,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-            transform: 'translateY(-1px)',
-          } as any,
         } as any)
       : {}),
+  },
+  // Наведение мыши — состояние `hovered` у `CardActionPressable` (`CollapsibleSection`):
+  // ключ-псевдокласс в стиле react-native-web компилирует в битое правило (#2036).
+  // В массиве стоит до подсветки и открытого состояния — их фон и рамка сильнее.
+  sectionHeaderBtnHovered: {
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.primary,
+    transform: [{ translateY: -1 }],
+    ...(Platform.OS === 'web' ? ({ boxShadow: colors.boxShadows.hover } as any) : {}),
   },
   sectionHeaderPositive: {
     backgroundColor: colors.primarySoft,

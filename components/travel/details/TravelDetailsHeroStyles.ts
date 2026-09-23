@@ -76,14 +76,22 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
         ? ({
             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             cursor: 'pointer',
-            ':hover': {
-              backgroundColor: colors.primarySoft,
-              borderColor: colors.primary,
-              transform: 'translateY(-1px)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-            } as any,
           } as any)
         : {}),
+    },
+    // Наведение мыши на чип и на кнопку «В избранное» — состояние `hovered` у Pressable
+    // (`TravelHeroQuickJumps`, `TravelHeroFavoriteToggle`): ключ-псевдокласс в StyleSheet
+    // react-native-web компилирует в битое правило (#2036). Цвета и тени задуманного
+    // отклика основного чипа и кнопки избранного были литералами rgba без токена —
+    // перенесены только подъём и масштаб.
+    quickJumpChipHovered: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
+      transform: [{ translateY: -1 }],
+      ...(Platform.OS === 'web' ? ({ boxShadow: colors.boxShadows.hover } as any) : {}),
+    },
+    quickJumpChipPrimaryHovered: {
+      transform: [{ translateY: -1 }],
     },
     quickJumpChipMobile: {
       marginBottom: 0,
@@ -97,12 +105,6 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       ...(Platform.OS === 'web'
         ? ({
             boxShadow: '0 6px 16px rgba(255,107,0,0.22)',
-            ':hover': {
-              backgroundColor: colors.primary,
-              borderColor: colors.primary,
-              transform: 'translateY(-1px)',
-              boxShadow: '0 8px 20px rgba(255,107,0,0.28)',
-            } as any,
           } as any)
         : {}),
     },
@@ -158,13 +160,11 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
             backdropFilter: 'blur(20px) saturate(1.8)',
             WebkitBackdropFilter: 'blur(20px) saturate(1.8)',
             transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-            ':hover': {
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              borderColor: 'rgba(255,255,255,0.3)',
-              transform: 'scale(1.08)',
-            },
           } as any)
         : {}),
+    },
+    heroFavoriteBtnHovered: {
+      transform: [{ scale: 1.08 }],
     },
     heroFavoriteBtnActive: {
       backgroundColor: colors.primary,
@@ -172,12 +172,6 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       ...(Platform.OS === 'web'
         ? ({
             boxShadow: '0 4px 16px rgba(255,107,0,0.4)',
-            ':hover': {
-              backgroundColor: colors.primary,
-              borderColor: colors.primary,
-              transform: 'scale(1.08)',
-              boxShadow: '0 6px 20px rgba(255,107,0,0.5)',
-            },
           } as any)
         : {}),
     },

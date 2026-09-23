@@ -15,6 +15,11 @@ import PointNavigationMenu from '@/components/navigation/PointNavigationMenu';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { translate as i18nT } from '@/i18n'
 
+// Маркеры hover-правил `app/global.css` (#2036): отклик на наведение задаёт не сам
+// Pressable — у строки это обёртка, у иконки круг внутри рамки нажатия, — поэтому он
+// живёт в CSS под `(hover: hover) and (pointer: fine)`. RNW переносит в DOM только `dataSet`.
+const POINT_LIST_ROW_MARKER = Platform.OS === 'web' ? { dataSet: { pointListRow: 'true' } } : null;
+const POINT_LIST_ICON_MARKER = Platform.OS === 'web' ? { dataSet: { pointListIcon: 'true' } } : null;
 
 type PointLike = {
   id: string;
@@ -157,7 +162,7 @@ const PointListRow = React.memo(function PointListRow({
                 title={i18nT('travel:components.travel.PointListRow.skopirovat_koordinaty_b49dd414')}
                 style={styles.listRowIconTouchFrame}
               >
-                <View style={styles.listRowIconBtn}>
+                <View style={styles.listRowIconBtn} {...POINT_LIST_ICON_MARKER}>
                   <Feather name="copy" size={14} color={colors.textMuted} />
                 </View>
               </CardActionPressable>
@@ -167,7 +172,7 @@ const PointListRow = React.memo(function PointListRow({
                 title={i18nT('travel:components.travel.PointListRow.telegram_7701804c')}
                 style={styles.listRowIconTouchFrame}
               >
-                <View style={styles.listRowIconBtn}>
+                <View style={styles.listRowIconBtn} {...POINT_LIST_ICON_MARKER}>
                   <Feather name="send" size={14} color={colors.textMuted} />
                 </View>
               </CardActionPressable>
@@ -191,8 +196,9 @@ const PointListRow = React.memo(function PointListRow({
               disabled={Boolean(addButtonDisabled) || Boolean(addButtonLoading)}
               accessibilityLabel={i18nT('travel:components.travel.PointListRow.moi_tochki_aad50a18')}
               title={i18nT('travel:components.travel.PointListRow.moi_tochki_aad50a18')}
-              style={({ pressed }) => [
+              style={({ pressed, hovered }) => [
                 styles.listRowAddBtn,
+                hovered && !addButtonDisabled && !addButtonLoading && styles.listRowAddBtnHovered,
                 pressed && !addButtonDisabled && !addButtonLoading && styles.addButtonPressed,
                 (addButtonDisabled || addButtonLoading) && styles.addButtonDisabled,
               ]}
@@ -213,7 +219,7 @@ const PointListRow = React.memo(function PointListRow({
   );
 
   return (
-    <View style={styles.listRow}>
+    <View style={styles.listRow} {...POINT_LIST_ROW_MARKER}>
       {Platform.OS === 'web' ? (
         <View
           style={[styles.listRowPressable, globalFocusStyles.focusable]}

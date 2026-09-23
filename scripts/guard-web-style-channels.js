@@ -5,9 +5,10 @@ const path = require('path')
 const ts = require('typescript')
 
 /**
- * Гейт каналов web-стилизации (#2032, класс RNW-RAW-DATA-ATTRIBUTE-DROPPED).
+ * Гейт каналов web-стилизации (#2032, класс RNW-RAW-DATA-ATTRIBUTE-DROPPED; #2036,
+ * класс RNW-STYLESHEET-PSEUDO-CLASS-DEAD).
  *
- * Два способа написать стиль, который в исходнике выглядит живым, а до страницы
+ * Три способа написать стиль, который в исходнике выглядит живым, а до страницы
  * не доходит никогда — ни тесты, ни типы этого не видят:
  *
  *   1. Сырой `data-*` проп на компоненте react-native-web (`View`, `Pressable`,
@@ -22,6 +23,14 @@ const ts = require('typescript')
  *      выпускает `app/global.css` (`app/_layout.tsx`); CSS из модуля за
  *      `import()`-границей в `dist` не попадает вовсе — так прожили hover-стили
  *      сайдбара деталей путешествия и виджета погоды (#2032).
+ *   3. Ключ-псевдокласс в объекте стиля (`':hover'`, `'&:hover'`, `':focus'`,
+ *      `':active'`, `'::before'` …). React Native StyleSheet псевдоклассов не
+ *      знает, а react-native-web 0.21 компилирует ключ как CSS-свойство:
+ *      `.r-:hover-…{:hover:[object Object];}` — правило, которое браузер
+ *      отбрасывает. Тест на react-test-renderer видит объект стиля, `as any` глушит
+ *      типы. Сорок ключей в 21 файле не работали ни дня (#2036). Канал отклика —
+ *      состояние `hovered`/`pressed`/`focused` у `Pressable` или правило на маркере
+ *      `dataSet` в `app/global.css` под `@media (hover: hover) and (pointer: fine)`.
  *
  * Правила:
  *   - `raw-data-attribute` — литеральный `data-…` (JSX-атрибут или ключ объекта,
@@ -35,10 +44,14 @@ const ts = require('typescript')
  *   - `stylesheet-import` — `import`, `require` или `import()` файла `.css` где
  *     угодно, кроме `ROOT_STYLESHEET`; новый web-CSS пишется в `app/global.css`;
  *   - `root-stylesheet-missing` — и сам этот импорт на месте;
- *   - `debt-count` / `stale-entry` — сырые `data-*`, жившие в дереве до гейта,
- *     перечислены в `KNOWN_RAW_DATA_ATTRIBUTE_DEBT` с точным числом мест. Число
- *     только убывает: новое место в файле из списка красит гейт так же, как в
- *     новом файле, а починка обязана снять или уменьшить запись.
+ *   - `pseudo-class-style-key` — ключ объектного литерала (или поле типа), имя
+ *     которого начинается с псевдокласса/псевдоэлемента: `:x`, `::x`, `&:x`.
+ *     Проверяется любой литерал, а не только аргумент `StyleSheet.create`: ключ
+ *     живёт и в фабриках стилей, и в `Platform.select`, и в пропах-спредах;
+ *   - `debt-count` / `stale-entry` — места, жившие в дереве до правила, перечислены
+ *     в `KNOWN_RAW_DATA_ATTRIBUTE_DEBT` и `KNOWN_PSEUDO_CLASS_STYLE_KEY_DEBT` с
+ *     точным числом. Число только убывает: новое место в файле из списка красит
+ *     гейт так же, как в новом файле, а починка обязана снять или уменьшить запись.
  */
 const OUTPUT_CONTRACT_VERSION = 1
 
@@ -49,6 +62,12 @@ const ROOT_STYLESHEET = Object.freeze({ file: 'app/_layout.tsx', specifier: './g
 // `testID`), маркер без читателя снят. Список пуст и пустым остаётся: новое место
 // сразу пишется через `dataSet`, строк сюда не добавляют.
 const KNOWN_RAW_DATA_ATTRIBUTE_DEBT = Object.freeze({})
+
+// Долг правила `pseudo-class-style-key`: файл → число ключей-псевдоклассов. Сорок
+// ключей `':hover'` в 21 файле и девять `':focus'`/`':focus-visible'`/`':active'`
+// разобраны в #2036 — отклик переведён на состояние `Pressable` или правило в
+// `app/global.css`, ключ неинтерактивного блока снят. Список пуст и пустым остаётся.
+const KNOWN_PSEUDO_CLASS_STYLE_KEY_DEBT = Object.freeze({})
 
 // Код web-приложения — те же корни, что у `guard-web-deferred-loading.js`.
 // Native-файлы DOM не имеют вовсе, тесты читают пропы, а не DOM.
@@ -76,8 +95,10 @@ const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/
 
 const DATA_ATTRIBUTE = /^data-/
 const STYLESHEET_SPECIFIER = /\.css(?:[?#].*)?$/
+// Селектор вместо имени свойства: `:hover`, `::before`, `&:hover`, `& :focus`.
+const PSEUDO_SELECTOR_KEY = /^&?\s*::?[a-z]/i
 // Дешёвый предфильтр: файл без этих подстрок не парсится вовсе.
-const PREFILTER = /data-|\.css/
+const PREFILTER = /data-|\.css|['"`]&?\s*::?[a-z]/i
 
 const normalizePath = (value) => String(value || '').replace(/\\/g, '/')
 
@@ -284,10 +305,11 @@ const stylesheetSpecifierOf = (node) => {
 
 /**
  * Места одного файла: сырые `data-*` (`attributes`), `data-…` внутри `dataSet`
- * (`dataSetKeys`) и импорты `.css` (`stylesheets`).
+ * (`dataSetKeys`), импорты `.css` (`stylesheets`) и ключи-псевдоклассы
+ * (`pseudoClassKeys`).
  */
 const analyzeSource = ({ filePath, content }) => {
-  const result = { attributes: [], dataSetKeys: [], stylesheets: [] }
+  const result = { attributes: [], dataSetKeys: [], stylesheets: [], pseudoClassKeys: [] }
   const text = String(content || '')
   if (!PREFILTER.test(text)) return result
 
@@ -306,6 +328,9 @@ const analyzeSource = ({ filePath, content }) => {
       }
     } else if (ts.isPropertyAssignment(node)) {
       const name = propertyNameText(node.name)
+      if (name && PSEUDO_SELECTOR_KEY.test(name)) {
+        result.pseudoClassKeys.push({ line: lineOf(node), name })
+      }
       if (name && DATA_ATTRIBUTE.test(name) && !ts.isIdentifier(node.name)) {
         const objectLiteral = node.parent
         if (isDataSetObject(objectLiteral)) {
@@ -314,6 +339,12 @@ const analyzeSource = ({ filePath, content }) => {
           const sink = resolveObjectSink(objectLiteral, sourceFile)
           if (!sink.dom) result.attributes.push({ line: lineOf(node), name, target: sink.target })
         }
+      }
+    } else if (ts.isPropertySignature(node)) {
+      // Поле типа стиля (`':hover'?: ViewStyle`) — приглашение писать мёртвый ключ.
+      const name = propertyNameText(node.name)
+      if (name && PSEUDO_SELECTOR_KEY.test(name)) {
+        result.pseudoClassKeys.push({ line: lineOf(node), name })
       }
     } else {
       const specifier = stylesheetSpecifierOf(node)
@@ -328,10 +359,59 @@ const analyzeSource = ({ filePath, content }) => {
 }
 
 const describeAttribute = (site) => `'${site.name}' -> ${site.target}`
+const describePseudoClassKey = (site) => `'${site.name}'`
+const explainPseudoClassKey = (site) =>
+  `${describePseudoClassKey(site)} is not CSS on react-native-web (compiles to an invalid rule); ` +
+  'use Pressable hovered/pressed/focused state or a dataSet-marked rule in app/global.css'
 
-const evaluateGuard = ({ sources = [], debt = KNOWN_RAW_DATA_ATTRIBUTE_DEBT } = {}) => {
+/**
+ * Места одного правила против его долгового списка: вне списка каждое место —
+ * нарушение `rule`; в списке число мест обязано совпасть (`debt-count`); запись
+ * без мест — `stale-entry`.
+ */
+const checkRecordedDebt = ({ sitesByFile, debt, debtName, siteLabel, rule, describe, explain }) => {
+  const violations = []
+  for (const [file, sites] of sitesByFile) {
+    if (!Object.prototype.hasOwnProperty.call(debt, file)) {
+      for (const site of sites) {
+        violations.push({ rule, file, line: site.line, snippet: explain(site) })
+      }
+      continue
+    }
+    if (sites.length !== debt[file]) {
+      violations.push({
+        rule: 'debt-count',
+        file,
+        line: sites[0].line,
+        snippet:
+          `${debtName} expects ${debt[file]} site(s), found ${sites.length}: ` +
+          sites.map((site) => `${describe(site)} @${site.line}`).join(', '),
+      })
+    }
+  }
+
+  for (const file of Object.keys(debt)) {
+    if (sitesByFile.has(file)) continue
+    violations.push({
+      rule: 'stale-entry',
+      file,
+      line: 0,
+      snippet: `no ${siteLabel} site left — drop the entry from ${debtName}`,
+    })
+  }
+  return violations
+}
+
+const sumDebt = (debt) => Object.values(debt).reduce((sum, count) => sum + count, 0)
+
+const evaluateGuard = ({
+  sources = [],
+  debt = KNOWN_RAW_DATA_ATTRIBUTE_DEBT,
+  pseudoClassDebt = KNOWN_PSEUDO_CLASS_STYLE_KEY_DEBT,
+} = {}) => {
   const violations = []
   const attributeFiles = new Map()
+  const pseudoClassFiles = new Map()
   let rootStylesheetFound = false
 
   if (sources.length === 0) {
@@ -345,9 +425,10 @@ const evaluateGuard = ({ sources = [], debt = KNOWN_RAW_DATA_ATTRIBUTE_DEBT } = 
 
   for (const source of sources) {
     const file = normalizePath(source.filePath)
-    const { attributes, dataSetKeys, stylesheets } = analyzeSource(source)
+    const { attributes, dataSetKeys, stylesheets, pseudoClassKeys } = analyzeSource(source)
 
     if (attributes.length) attributeFiles.set(file, attributes)
+    if (pseudoClassKeys.length) pseudoClassFiles.set(file, pseudoClassKeys)
 
     for (const site of dataSetKeys) {
       violations.push({
@@ -372,34 +453,26 @@ const evaluateGuard = ({ sources = [], debt = KNOWN_RAW_DATA_ATTRIBUTE_DEBT } = 
     }
   }
 
-  for (const [file, sites] of attributeFiles) {
-    if (!Object.prototype.hasOwnProperty.call(debt, file)) {
-      for (const site of sites) {
-        violations.push({ rule: 'raw-data-attribute', file, line: site.line, snippet: describeAttribute(site) })
-      }
-      continue
-    }
-    if (sites.length !== debt[file]) {
-      violations.push({
-        rule: 'debt-count',
-        file,
-        line: sites[0].line,
-        snippet:
-          `KNOWN_RAW_DATA_ATTRIBUTE_DEBT expects ${debt[file]} site(s), found ${sites.length}: ` +
-          sites.map((site) => `${describeAttribute(site)} @${site.line}`).join(', '),
-      })
-    }
-  }
-
-  for (const file of Object.keys(debt)) {
-    if (attributeFiles.has(file)) continue
-    violations.push({
-      rule: 'stale-entry',
-      file,
-      line: 0,
-      snippet: 'no raw data-* site left — drop the entry from KNOWN_RAW_DATA_ATTRIBUTE_DEBT',
-    })
-  }
+  violations.push(
+    ...checkRecordedDebt({
+      sitesByFile: attributeFiles,
+      debt,
+      debtName: 'KNOWN_RAW_DATA_ATTRIBUTE_DEBT',
+      siteLabel: 'raw data-*',
+      rule: 'raw-data-attribute',
+      describe: describeAttribute,
+      explain: describeAttribute,
+    }),
+    ...checkRecordedDebt({
+      sitesByFile: pseudoClassFiles,
+      debt: pseudoClassDebt,
+      debtName: 'KNOWN_PSEUDO_CLASS_STYLE_KEY_DEBT',
+      siteLabel: 'pseudo-class style key',
+      rule: 'pseudo-class-style-key',
+      describe: describePseudoClassKey,
+      explain: explainPseudoClassKey,
+    }),
+  )
 
   if (sources.length > 0 && !rootStylesheetFound) {
     violations.push({
@@ -411,20 +484,22 @@ const evaluateGuard = ({ sources = [], debt = KNOWN_RAW_DATA_ATTRIBUTE_DEBT } = 
   }
 
   if (violations.length === 0) {
-    const debtSites = Object.values(debt).reduce((sum, count) => sum + count, 0)
     return {
       ok: true,
       reason:
-        `no raw data-* outside dataSet beyond the recorded debt (${debtSites} site(s) in ` +
-        `${Object.keys(debt).length} file(s)); the only stylesheet import is ` +
-        `${ROOT_STYLESHEET.file} -> ${ROOT_STYLESHEET.specifier}`,
+        `no raw data-* outside dataSet beyond the recorded debt (${sumDebt(debt)} site(s) in ` +
+        `${Object.keys(debt).length} file(s)); no pseudo-class style key beyond the recorded debt ` +
+        `(${sumDebt(pseudoClassDebt)} site(s) in ${Object.keys(pseudoClassDebt).length} file(s)); ` +
+        `the only stylesheet import is ${ROOT_STYLESHEET.file} -> ${ROOT_STYLESHEET.specifier}`,
       violations: [],
     }
   }
 
   return {
     ok: false,
-    reason: 'Web styling bypasses its channels: DOM attributes go through dataSet, web CSS through app/global.css',
+    reason:
+      'Web styling bypasses its channels: DOM attributes go through dataSet, web CSS through app/global.css, ' +
+      'hover/focus/press through Pressable state or app/global.css',
     violations,
   }
 }
@@ -470,7 +545,9 @@ const main = () => {
   console.error(
     'A marker on a react-native-web component is `dataSet={{ fooBar: "x" }}` (renders data-foo-bar="x"); ' +
       'a raw data-* prop is dropped before the DOM. Web CSS goes into app/global.css — a stylesheet ' +
-      'imported anywhere else never reaches the web export. See docs/RULES.md → «Design system».',
+      'imported anywhere else never reaches the web export. A pseudo-class key in a style object is ' +
+      'not CSS either: use `style={({ hovered, pressed }) => …}` on Pressable or a dataSet-marked rule ' +
+      'in app/global.css under @media (hover: hover) and (pointer: fine). See docs/RULES.md → «Design system».',
   )
   process.exit(1)
 }
@@ -480,6 +557,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  KNOWN_PSEUDO_CLASS_STYLE_KEY_DEBT,
   KNOWN_RAW_DATA_ATTRIBUTE_DEBT,
   OUTPUT_CONTRACT_VERSION,
   ROOT_STYLESHEET,

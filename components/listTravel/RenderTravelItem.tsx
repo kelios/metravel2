@@ -18,11 +18,6 @@ interface TravelCardExtras {
 
 type TravelCard = Travel & TravelCardExtras;
 
-interface ContainerStyle extends ViewStyle {
-    ':hover'?: ViewStyle;
-    transition?: string;
-}
-
 const hasSameRenderedTravelSnapshot = (prev: Travel, next: Travel) => {
     const p = prev as TravelCard;
     const n = next as TravelCard;
@@ -126,7 +121,7 @@ function RenderTravelItem({
         return undefined;
     }, [cardWidth]);
 
-    const containerStyle = useMemo<ContainerStyle>(() => ({
+    const containerStyle = useMemo<ViewStyle>(() => ({
         width: '100%',
         maxWidth: '100%',
         flexShrink: 0,

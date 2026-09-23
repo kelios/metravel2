@@ -602,6 +602,35 @@ select:focus-visible {
   }
 }
 
+/*
+ * Отклик на наведение там, где его не задаёт состояние `hovered` у Pressable (#2036):
+ * строка списка точек — обёртка вокруг кликабельной строки, иконка-кнопка строки —
+ * круг внутри рамки нажатия, зона загрузки галереи — `<div>` react-dropzone,
+ * «Отменить» индикатора прогресса — `Text` с `onPress`. Маркеры ставит `dataSet`
+ * (`PointListRow`, `GalleryControls`, `ProgressIndicator`): ключ-псевдокласс в стиле
+ * react-native-web компилирует в битое правило. Фон и рамку зоны загрузки RN задаёт
+ * инлайн-стилем, отсюда `!important`. Переходы задают сами RN-стили.
+ */
+@media (hover: hover) and (pointer: fine) {
+  [data-point-list-row]:hover {
+    border-color: var(--color-border);
+    box-shadow: var(--shadow-hover);
+  }
+
+  [data-point-list-icon]:hover {
+    background-color: var(--color-backgroundTertiary);
+  }
+
+  [data-gallery-dropzone]:hover {
+    border-color: var(--color-primary) !important;
+    background-color: var(--color-primarySoft) !important;
+  }
+
+  [data-progress-cancel]:hover {
+    opacity: 0.8;
+  }
+}
+
 /* Slider shimmer skeleton (web) */
 @keyframes slider-shimmer {
   0% { transform: translateX(-100%); }

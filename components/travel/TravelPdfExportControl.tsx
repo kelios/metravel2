@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useCallback, useMemo, useState } from 'react'
-import { ActivityIndicator, Alert, Platform, Pressable } from 'react-native'
+import { ActivityIndicator, Alert, Platform, Pressable, type StyleProp, type ViewStyle } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { Travel } from '@/types/types'
@@ -32,6 +32,8 @@ type Props = {
   travel: Travel
   mutedText: string
   actionBtnStyle: any
+  /** Вид под курсором мыши (web, #2036); на native и на касание `hovered` не приходит. */
+  actionBtnHoveredStyle?: StyleProp<ViewStyle>
   actionBtnPressedStyle: any
   actionBtnDisabledStyle: any
 }
@@ -40,6 +42,7 @@ function TravelPdfExportControl({
   travel,
   mutedText,
   actionBtnStyle,
+  actionBtnHoveredStyle,
   actionBtnPressedStyle,
   actionBtnDisabledStyle,
 }: Props) {
@@ -79,8 +82,9 @@ function TravelPdfExportControl({
         accessibilityRole="button"
         accessibilityLabel={i18nT('travel:components.travel.TravelPdfExportControl.eksport_v_pdf_94c24fb3')}
         ref={setWebTitle}
-        style={({ pressed }) => [
+        style={({ pressed, hovered }) => [
           actionBtnStyle,
+          hovered && !isGenerating ? actionBtnHoveredStyle : null,
           pressed && !isGenerating ? actionBtnPressedStyle : null,
           isGenerating ? actionBtnDisabledStyle : null,
         ]}

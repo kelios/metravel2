@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require('path')
 
 const {
+  KNOWN_PSEUDO_CLASS_STYLE_KEY_DEBT,
   KNOWN_RAW_DATA_ATTRIBUTE_DEBT,
   OUTPUT_CONTRACT_VERSION,
   ROOT_STYLESHEET,
@@ -244,6 +245,99 @@ describe('guard-web-style-channels', () => {
         debt: {},
       })
       expect(rulesOf(moved)).toEqual(['stylesheet-import', 'root-stylesheet-missing'])
+    })
+  })
+
+  describe('pseudo-class style keys (#2036)', () => {
+    const namesOf = (sites: { name: string }[]) => sites.map((site) => site.name)
+
+    it("flags the card's fixture: StyleSheet.create({ a: { ':hover': {} } })", () => {
+      const result = evaluateGuard({
+        sources: [ROOT_LAYOUT, tsx(`const styles = StyleSheet.create({ a: { ':hover': {} } })`)],
+        debt: {},
+        pseudoClassDebt: {},
+      })
+      expect(result.ok).toBe(false)
+      expect(result.violations).toEqual([
+        {
+          rule: 'pseudo-class-style-key',
+          file: 'components/Sample.tsx',
+          line: 1,
+          snippet:
+            "':hover' is not CSS on react-native-web (compiles to an invalid rule); " +
+            'use Pressable hovered/pressed/focused state or a dataSet-marked rule in app/global.css',
+        },
+      ])
+    })
+
+    it('flags every pseudo-class spelling wherever the object goes: factory, Platform.select, props, type', () => {
+      const { pseudoClassKeys } = analyzeSource(
+        tsx(`
+          const createStyles = (colors) => StyleSheet.create({
+            button: {
+              ...Platform.select({ web: { ':hover': { opacity: 0.8 }, ':active': { opacity: 0.6 } } }),
+              '&:hover': {},
+              '& :focus': {},
+              ':focus-visible': {},
+              '::placeholder': {},
+              [':visited']: {},
+            },
+          })
+          const A = () => <Pressable {...Platform.select({ web: { cursor: 'pointer', ':focus': {} } })} />
+          interface ContainerStyle extends ViewStyle { ':hover'?: ViewStyle }
+        `),
+      )
+      expect(namesOf(pseudoClassKeys)).toEqual([
+        ':hover',
+        ':active',
+        '&:hover',
+        '& :focus',
+        ':focus-visible',
+        '::placeholder',
+        ':visited',
+        ':focus',
+        ':hover',
+      ])
+    })
+
+    it('ignores selectors in values, ordinary keys and colons that start no selector', () => {
+      const { pseudoClassKeys } = analyzeSource(
+        tsx(`
+          // ':hover': { opacity: 0.8 }
+          const css = { content: ':hover', selector: '[data-x]:hover', hover: { opacity: 1 }, 'aria-label': 'x' }
+          const map = { 'a:b': 1, ':': 2, ':1': 3, '12:30': 4 }
+        `),
+      )
+      expect(pseudoClassKeys).toEqual([])
+    })
+
+    it('keeps sites from before the rule in their own debt list with the exact count', () => {
+      const debtFile = 'components/OldHover.tsx'
+      const twoKeys = tsx(`const s = StyleSheet.create({ a: { ':hover': {} }, b: { ':focus': {} } })`, debtFile)
+      const withDebt = (count: number) =>
+        evaluateGuard({ sources: [ROOT_LAYOUT, twoKeys], debt: {}, pseudoClassDebt: { [debtFile]: count } })
+
+      expect(withDebt(2).ok).toBe(true)
+      expect(rulesOf(withDebt(1))).toEqual(['debt-count'])
+      expect(rulesOf(withDebt(3))).toEqual(['debt-count'])
+
+      const fixed = tsx(`const s = StyleSheet.create({ a: {}, b: {} })`, debtFile)
+      expect(
+        evaluateGuard({ sources: [ROOT_LAYOUT, fixed], debt: {}, pseudoClassDebt: { [debtFile]: 2 } }).violations,
+      ).toEqual([
+        {
+          rule: 'stale-entry',
+          file: debtFile,
+          line: 0,
+          snippet: 'no pseudo-class style key site left — drop the entry from KNOWN_PSEUDO_CLASS_STYLE_KEY_DEBT',
+        },
+      ])
+    })
+
+    it('is paid off by #2036: no pseudo-class style key is carried as debt', () => {
+      // Сорок ключей `':hover'` и девять `':focus'`/`':active'` разобраны в #2036;
+      // новое место сразу пишется состоянием `Pressable` или правилом `app/global.css`.
+      expect(KNOWN_PSEUDO_CLASS_STYLE_KEY_DEBT).toEqual({})
     })
   })
 

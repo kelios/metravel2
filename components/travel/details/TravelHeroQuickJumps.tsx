@@ -159,10 +159,11 @@ const QuickJumpChip = React.memo(function QuickJumpChip({
       onTouchStart={Platform.OS === 'web' ? undefined : handleTouchStart}
       onTouchEnd={Platform.OS === 'web' ? undefined : handleTouchEnd}
       testID={`travel-quick-jump-${link.key}`}
-      style={({ pressed }) => [
+      style={({ pressed, hovered }) => [
         styles.quickJumpChip,
         isMobile && styles.quickJumpChipMobile,
         isPrimary && styles.quickJumpChipPrimary,
+        hovered && (isPrimary ? styles.quickJumpChipPrimaryHovered : styles.quickJumpChipHovered),
         !isPrimary && pressed && styles.quickJumpChipPressed,
       ]}
       accessibilityRole="button"

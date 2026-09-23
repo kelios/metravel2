@@ -143,6 +143,11 @@ export default function ErrorDisplay({
       alignItems: 'center',
       justifyContent: 'center',
     },
+    // Наведение мыши — состояние `hovered` у Pressable: ключ-псевдокласс в пропах или
+    // стиле react-native-web до CSS не доводит (#2036).
+    dismissButtonHovered: {
+      opacity: 0.7,
+    },
   }), [colors]);
 
   return (
@@ -195,19 +200,10 @@ export default function ErrorDisplay({
 
           {onDismiss && (
             <Pressable
-              style={styles.dismissButton}
+              style={({ hovered }) => [styles.dismissButton, hovered && styles.dismissButtonHovered]}
               onPress={onDismiss}
               accessibilityRole="button"
               accessibilityLabel={i18nT('errors:components.ui.ErrorDisplay.zakryt_uvedomlenie_ob_oshibke_42c95b34')}
-              {...Platform.select({
-                web: {
-                  cursor: 'pointer',
-                  // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
-                  ':hover': {
-                    opacity: 0.7,
-                  },
-                },
-              })}
             >
               <Feather name="x" size={20} color={colors.textMuted} />
             </Pressable>

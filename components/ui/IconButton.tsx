@@ -148,9 +148,12 @@ function IconButton({
           ? { margin: -visualInset }
           : {
               borderRadius: radii.lg,
-              backgroundColor: surfaceColor,
+              // Наведение мыши (web) — мягкий фон; активная кнопка держит заливку
+              // `primary`, иначе иконка цвета `textOnPrimary` теряет контраст.
+              backgroundColor: isHovered && !active ? colors.primarySoft : surfaceColor,
               // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
             },
+        !hasVisualFrame && isHovered && styles.hoverLift,
         style,
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
@@ -235,13 +238,14 @@ const getStyles = (colors: ThemedColors) => {
           cursor: 'pointer',
           boxShadow: boxShadows.light,
           overflow: 'visible',
-          // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
-          ':hover': {
-            backgroundColor: colors.primarySoft,
-            transform: 'scale(1.05)',
-          },
         },
       }),
+    },
+    // Отклик на наведение мыши у иконочной кнопки — через состояние `hovered`
+    // (`onHoverIn`/`onHoverOut` висят только на web, RNW шлёт их только от мыши).
+    // Ключ-псевдокласс в StyleSheet react-native-web компилирует в битое правило (#2036).
+    hoverLift: {
+      transform: [{ scale: 1.05 }],
     },
     // Прозрачная рамка тач-таргета режима `visualSize`: без фона и тени, сам
     // видимый круг — `visual` ниже. `overflow: visible` — чтобы тултип не резался.

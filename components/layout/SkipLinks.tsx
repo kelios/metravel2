@@ -117,21 +117,20 @@ const createLinkStyle = (colors: ThemedColors) => ({
       boxShadow: DESIGN_TOKENS.shadows.medium,
       transition: 'all 0.2s ease',
       cursor: 'pointer',
-      // @ts-ignore -- CSS pseudo-selector :focus is web-only, not in RN style types
-      ':focus': {
-        outlineWidth: 3,
-        outlineStyle: 'solid',
-        outlineColor: colors.primary,
-        outlineOffset: 2,
-      },
     },
   }),
 });
 
+// Кольцо фокуса живёт на состоянии `focusedIndex` (его ставит `onFocus`): ключ-псевдокласс
+// в стиле react-native-web компилирует в битое правило (#2036).
 const createLinkFocusedStyle = (colors: ThemedColors) => ({
   backgroundColor: colors.primary,
   opacity: 0.9,
   transform: [{ scale: 1.05 }],
+  outlineWidth: 3,
+  outlineStyle: 'solid' as const,
+  outlineColor: colors.primary,
+  outlineOffset: 2,
 });
 
 const createLinkTextStyle = (colors: ThemedColors) => ({

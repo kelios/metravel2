@@ -14,10 +14,12 @@ interface SubscribeButtonProps {
     targetUserId: string | number | null | undefined;
     size?: 'sm' | 'md';
     style?: StyleProp<ViewStyle>;
+    /** Вид под курсором мыши (web, #2036); на native и на касание `hovered` не приходит. */
+    hoverStyle?: StyleProp<ViewStyle>;
     iconOnly?: boolean;
 }
 
-function SubscribeButtonComponent({ targetUserId, size = 'sm', style, iconOnly }: SubscribeButtonProps) {
+function SubscribeButtonComponent({ targetUserId, size = 'sm', style, hoverStyle, iconOnly }: SubscribeButtonProps) {
     const { isAuthenticated } = useAuth();
     const router = useRouter();
     const colors = useThemedColors();
@@ -87,7 +89,7 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, iconOnly }
                     disabled={isLoading}
                     accessibilityRole="button"
                     accessibilityLabel={a11yLabel}
-                    style={style}
+                    style={({ hovered }) => [style, hovered && hoverStyle]}
                     {...(Platform.OS === 'web'
                         ? {
                               role: 'button',
@@ -123,6 +125,7 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, iconOnly }
                 disabled={isLoading}
                 accessibilityLabel={a11yLabel}
                 style={style}
+                hoverStyle={hoverStyle}
             />
         </Animated.View>
     );

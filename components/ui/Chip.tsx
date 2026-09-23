@@ -42,11 +42,14 @@ function Chip({ label, selected = false, count, icon, onPress, testID, disabled 
           cursor: 'pointer',
           transition: 'all 0.2s ease',
           boxShadow: DESIGN_TOKENS.shadows.light,
-          ':hover': {
-            transform: 'scale(1.05)',
-          },
         },
       }),
+    },
+    // Отклик мыши на web: состояние `hovered` у Pressable (RNW отдаёт его только
+    // мыши, на native не приходит). Ключ-псевдокласс в StyleSheet react-native-web
+    // компилирует в битое правило (#2036).
+    hovered: {
+      transform: [{ scale: 1.05 }],
     },
     selected: {
       backgroundColor: colors.primarySoft,
@@ -95,10 +98,11 @@ function Chip({ label, selected = false, count, icon, onPress, testID, disabled 
       onPress={onPress}
       disabled={disabled}
       testID={testID}
-      style={({ pressed }) => [
+      style={({ pressed, hovered }) => [
         styles.base,
         globalFocusStyles.focusable, // ✅ УЛУЧШЕНИЕ: Добавлен focus-индикатор
         selected && styles.selected,
+        hovered && !disabled && styles.hovered,
         pressed && !selected && !disabled && styles.pressed,
         disabled && styles.disabled,
         style,

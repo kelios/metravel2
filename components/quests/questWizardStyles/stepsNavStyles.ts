@@ -48,11 +48,12 @@ export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _sc
     stepPillNarrow: { maxWidth: 120, paddingHorizontal: 8 },
     stepPillUnlocked: {
         backgroundColor: colors.backgroundSecondary,
-        ...Platform.select({
-            web: {
-                ':hover': { transform: 'translateY(-1px)' },
-            } as any,
-        }),
+    },
+    // Наведение мыши на доступный шаг — состояние `hovered` у Pressable
+    // (`QuestStepPill`): ключ-псевдокласс в стиле react-native-web компилирует
+    // в битое правило (#2036). Активный шаг держит свой `scale` — он ниже в массиве.
+    stepPillHovered: {
+        transform: [{ translateY: -1 }],
     },
     stepPillActive: {
         backgroundColor: colors.brand,

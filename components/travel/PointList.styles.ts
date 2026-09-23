@@ -58,13 +58,11 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
       web: {
         transition: 'background-color 0.2s ease, border-color 0.2s ease',
         cursor: 'pointer' as any,
-        ':hover': {
-          backgroundColor: colors.backgroundSecondary,
-          borderColor: colors.border,
-        } as any,
       },
     }),
   },
+  // Вид и при нажатии, и при наведении мыши (`hovered` у Pressable, #2036): ключ-псевдокласс
+  // в StyleSheet react-native-web компилирует в битое правило.
   togglePressed: {
     backgroundColor: colors.backgroundSecondary,
     borderColor: colors.border,
@@ -259,44 +257,6 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
       },
     }),
   },
-  overlayMapChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.xs,
-    marginTop: DESIGN_TOKENS.spacing.xxs,
-  },
-  mapChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    minHeight: 36,
-    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderLight,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer' as any,
-        transition: 'all 0.2s ease',
-        ':hover': {
-          borderColor: colors.border,
-          backgroundColor: colors.backgroundSecondary,
-        } as any,
-      },
-    }),
-  },
-  mapChipText: {
-    color: colors.text,
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-    flexShrink: 1,
-  },
-  mapChipIcon: {
-    flexShrink: 0,
-  },
   addButtonPressed: {
     transform: [{ scale: 0.98 }],
   },
@@ -324,12 +284,13 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
       web: {
         cursor: 'pointer' as any,
         transition: 'all 0.2s ease',
-        ':hover': {
-          backgroundColor: colors.backgroundSecondary,
-          borderColor: colors.border,
-        } as any,
       },
     }),
+  },
+  // Наведение мыши — `hovered` у Pressable (#2036); активная кнопка перекрывает его своим видом.
+  viewModeBtnHovered: {
+    backgroundColor: colors.backgroundSecondary,
+    borderColor: colors.border,
   },
   viewModeBtnActive: {
     backgroundColor: colors.primarySoft,
@@ -353,13 +314,12 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     borderWidth: 1,
     borderColor: colors.borderLight,
     overflow: 'hidden',
+    // Наведение мыши на строку — правило `[data-point-list-row]` в `app/global.css`
+    // (маркер ставит `PointListRow`): ключ-псевдокласс в StyleSheet react-native-web
+    // компилирует в битое правило (#2036).
     ...Platform.select({
       web: {
         transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-        ':hover': {
-          borderColor: colors.border,
-          boxShadow: '0 2px 10px rgba(0,0,0,0.07)',
-        } as any,
       },
     }),
   },
@@ -481,63 +441,13 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     height: 36,
     borderRadius: 9,
     backgroundColor: colors.backgroundSecondary ?? colors.surface,
+    // Наведение мыши — правило `[data-point-list-icon]` в `app/global.css` (#2036).
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
         transition: 'background-color 0.15s ease' as any,
-        ':hover': {
-          backgroundColor: colors.backgroundTertiary,
-        } as any,
       },
     }),
-  },
-  listRowMapChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderLight,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer' as any,
-        transition: 'background-color 0.15s ease, border-color 0.15s ease' as any,
-        ':hover': {
-          backgroundColor: colors.backgroundTertiary,
-          borderColor: colors.border,
-        } as any,
-      },
-    }),
-  },
-  listRowMapChipText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  listRowNavChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: colors.primarySoft,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.primary,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer' as any,
-        transition: 'background-color 0.15s ease, border-color 0.15s ease' as any,
-        ':hover': {
-          backgroundColor: colors.primarySoft,
-          borderColor: colors.primaryDark,
-        } as any,
-      },
-    }),
-  },
-  listRowNavChipText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.primaryText,
   },
   listRowAddBtn: {
     flexDirection: 'row',
@@ -560,11 +470,12 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
       web: {
         cursor: 'pointer' as any,
         transition: 'background-color 0.15s ease' as any,
-        ':hover': {
-          backgroundColor: colors.primarySoft,
-        } as any,
       },
     }),
+  },
+  // Наведение мыши — `hovered` у `CardActionPressable` (#2036).
+  listRowAddBtnHovered: {
+    backgroundColor: colors.primarySoft,
   },
   listRowAddBtnText: {
     fontSize: 11,

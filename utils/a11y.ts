@@ -281,23 +281,6 @@ export const validateHeadingHierarchy = (): boolean => {
 };
 
 /**
- * Focus Visible Helper
- * Показывает фокус только когда пользователь использует клавиатуру
- */
-export const createFocusVisibleStyles = (
-  baseStyles: Record<string, any>,
-  focusStyles: Record<string, any>
-) => {
-  if (Platform.OS === 'web') {
-    return {
-      ...baseStyles,
-      ':focus-visible': focusStyles,
-    };
-  }
-  return baseStyles;
-};
-
-/**
  * Expandable Content Helper
  * Для компонентов типа аккордеона и коллапсибл
  */
@@ -377,7 +360,6 @@ export default {
   createLiveRegion,
   getAccessibilityLabel,
   validateHeadingHierarchy,
-  createFocusVisibleStyles,
   createExpandableAttrs,
   handleTabNavigation,
   getColorBlindMode,

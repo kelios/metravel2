@@ -4,6 +4,9 @@ import Feather from '@expo/vector-icons/Feather'
 import Button from '@/components/ui/Button'
 import { translate as i18nT } from '@/i18n'
 
+// RNW переносит в DOM только `dataSet`: сырой `data-*` на `View` до страницы не доходит.
+const DROPZONE_HOVER_MARKER = { dataSet: { galleryDropzone: 'true' } }
+
 
 export type GalleryControlsStyles = {
   container: any
@@ -174,6 +177,8 @@ export const GalleryControls: React.FC<{
                 borderColor: colors.primary,
               },
             ]}
+            // Маркер hover-правила зоны в `app/global.css` (#2036); ветка только web.
+            {...DROPZONE_HOVER_MARKER}
           >
             <Text style={[styles.dropzoneText, { color: colors.textMuted }]}>
               {isDragActive ? i18nT('travel:components.travel.gallery.GalleryControls.otpustite_fayly_5db5ec62') : i18nT('travel:components.travel.gallery.GalleryControls.peretaschite_syuda_izobrazheniya_261e6560')}

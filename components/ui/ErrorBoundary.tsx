@@ -36,9 +36,10 @@ function ErrorActionButton({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      style={({ pressed }) => [
+      style={({ pressed, hovered }) => [
         styles.button,
         primary ? styles.primaryButton : styles.secondaryButton,
+        hovered && (primary ? styles.primaryButtonHovered : styles.secondaryButtonHovered),
         pressed && styles.buttonPressed,
       ]}
     >
@@ -181,14 +182,15 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
         cursor: 'pointer',
         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         boxShadow: colors.boxShadows.light,
-        // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
-        ':hover': {
-          backgroundColor: colors.primaryDark,
-          transform: 'translateY(-1px)',
-          boxShadow: colors.boxShadows.medium,
-        },
       },
     }),
+  },
+  // Наведение мыши — состояние `hovered` у Pressable (`ErrorActionButton`): ключ-псевдокласс
+  // в StyleSheet react-native-web компилирует в битое правило (#2036).
+  primaryButtonHovered: {
+    backgroundColor: colors.primaryDark,
+    transform: [{ translateY: -1 }],
+    ...Platform.select({ web: { boxShadow: colors.boxShadows.medium } }),
   },
   secondaryButton: {
     backgroundColor: 'transparent',
@@ -198,12 +200,11 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
       web: {
         cursor: 'pointer',
         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
-        ':hover': {
-          backgroundColor: colors.primarySoft,
-        },
       },
     }),
+  },
+  secondaryButtonHovered: {
+    backgroundColor: colors.primarySoft,
   },
   buttonLabel: {
     fontSize: 16,

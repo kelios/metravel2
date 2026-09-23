@@ -165,10 +165,6 @@ function NavigationArrows({
             cursor: 'pointer' as any,
             transition: 'background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease' as any,
             boxShadow: '0 1px 4px rgba(0,0,0,0.06)' as any,
-            ':hover': {
-              borderColor: colors.border,
-              boxShadow: '0 4px 16px rgba(0,0,0,0.10)' as any,
-            } as any,
           } as any)
         : { ...(colors.shadows?.light ?? {}) }),
     },
@@ -209,6 +205,12 @@ function NavigationArrows({
       width: 52,
       height: 52,
     },
+    // Наведение мыши — состояние `hovered` у Pressable: ключ-псевдокласс в
+    // StyleSheet react-native-web компилирует в битое правило (#2036).
+    navCardHovered: {
+      borderColor: colors.border,
+      ...Platform.select({ web: { boxShadow: colors.boxShadows.heavy } }),
+    },
     navCardPressed: {
       opacity: 0.85,
     },
@@ -225,7 +227,7 @@ function NavigationArrows({
       {prevTravel ? (
         <Pressable
           onPress={() => handleNavigate(prevTravel)}
-          style={({ pressed }) => [styles.navCard, styles.prevCard, globalFocusStyles.focusable, pressed && styles.navCardPressed]}
+          style={({ pressed, hovered }) => [styles.navCard, styles.prevCard, globalFocusStyles.focusable, hovered && styles.navCardHovered, pressed && styles.navCardPressed]}
           accessibilityRole="button"
           accessibilityLabel={`${isFallback ? i18nT('travel:components.travel.NavigationArrows.pohozhiy_marshrut_7f315641') : i18nT('travel:components.travel.NavigationArrows.predyduschee_puteshestvie_14fe627e')}: ${prevTravel.name || ''}`}
           accessibilityHint={i18nT('travel:components.travel.NavigationArrows.otkryvaet_stranitsu_puteshestviya_a4f7f8e4')}
@@ -266,7 +268,7 @@ function NavigationArrows({
       {nextTravel ? (
         <Pressable
           onPress={() => handleNavigate(nextTravel)}
-          style={({ pressed }) => [styles.navCard, styles.nextCard, globalFocusStyles.focusable, pressed && styles.navCardPressed]}
+          style={({ pressed, hovered }) => [styles.navCard, styles.nextCard, globalFocusStyles.focusable, hovered && styles.navCardHovered, pressed && styles.navCardPressed]}
           accessibilityRole="button"
           accessibilityLabel={`${isFallback ? i18nT('travel:components.travel.NavigationArrows.pohozhiy_marshrut_7f315641') : i18nT('travel:components.travel.NavigationArrows.sleduyuschee_puteshestvie_21829e78')}: ${nextTravel.name || ''}`}
           accessibilityHint={i18nT('travel:components.travel.NavigationArrows.otkryvaet_stranitsu_puteshestviya_a4f7f8e4')}

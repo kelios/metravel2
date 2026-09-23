@@ -140,15 +140,9 @@ function ProgressIndicator({
             <Text 
               style={styles.cancelButton}
               onPress={onCancel}
-              {...Platform.select({
-                web: { 
-                  cursor: 'pointer',
-                  // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
-                  ':hover': {
-                    opacity: 0.8,
-                  },
-                },
-              })}
+              // Наведение мыши — правило `[data-progress-cancel]` в `app/global.css`: у `Text`
+              // нет состояния `hovered`, а ключ-псевдокласс в пропах до CSS не доходит (#2036).
+              {...(Platform.OS === 'web' ? { dataSet: { progressCancel: 'true' } } : null)}
             >
               {i18nT('shared:components.ui.ProgressIndicator.otmenit_ac1629b1')}</Text>
           </View>

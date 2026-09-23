@@ -380,10 +380,11 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
                 {isMobile && (
                   <Pressable
                     onPress={toggleCollapse}
-                    style={({ pressed }) => [
+                    style={({ pressed, hovered }) => [
                       styles.button,
                       styles.buttonSticky,
                       styles.closeButton,
+                      hovered && styles.buttonHovered,
                       pressed && styles.buttonPressed,
                       { backgroundColor: colors.backgroundSecondary }
                     ]}
@@ -398,9 +399,10 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
                     key={button.key}
                     onPress={button.onPress}
                     disabled={button.disabled}
-                    style={({ pressed }) => [
+                    style={({ pressed, hovered }) => [
                       styles.button,
                       styles.buttonSticky,
+                      hovered && !button.disabled && styles.buttonHovered,
                       pressed && styles.buttonPressed,
                       button.key === 'copy' && copied && styles.buttonCopied,
                       button.disabled && styles.buttonDisabled,
@@ -429,8 +431,9 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
                           key={button.key}
                           onPress={button.onPress}
                           disabled={button.disabled}
-                          style={({ pressed }) => [
+                          style={({ pressed, hovered }) => [
                             styles.button,
+                            hovered && !button.disabled && styles.buttonHovered,
                             pressed && styles.buttonPressed,
                             button.key === 'copy' && copied && styles.buttonCopied,
                             button.disabled && styles.buttonDisabled,
@@ -637,12 +640,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       web: {
         cursor: 'pointer' as any,
         transition: 'background-color 0.15s ease, border-color 0.15s ease' as any,
-        ':hover': {
-          backgroundColor: colors.backgroundTertiary,
-          borderColor: colors.border,
-        } as any,
       },
     }),
+  },
+  // Наведение мыши — состояние `hovered` у Pressable: ключ-псевдокласс в
+  // StyleSheet react-native-web компилирует в битое правило (#2036).
+  buttonHovered: {
+    backgroundColor: colors.backgroundTertiary,
+    borderColor: colors.border,
   },
   buttonSticky: {
     paddingVertical: 10,

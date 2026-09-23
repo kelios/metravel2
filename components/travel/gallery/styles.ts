@@ -101,14 +101,12 @@ export const createGalleryStyles = (
       borderWidth: 1,
       borderColor: colors.borderLight,
       // ✅ УЛУЧШЕНИЕ: Добавлена тень для карточек изображений
+      // Без отклика на наведение: карточка кадра сама не нажимается (действия — её
+      // кнопки), подъём обещал бы клик, которого нет (#2036).
       ...Platform.select({
         web: {
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
           transition: 'all 0.2s ease',
-          ':hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
-          },
         },
         default: {
           shadowColor: DESIGN_TOKENS.colors.text,
@@ -185,14 +183,6 @@ export const createGalleryStyles = (
           WebkitBackdropFilter: 'blur(8px)',
           transition: 'all 0.2s ease',
           ...(isMobileWeb ? createMobileWebStaticFrostStyle(colors.danger) : null),
-          ':hover': {
-            transform: 'scale(1.1)',
-            backgroundColor: colors.dangerDark,
-            boxShadow: `0 4px 12px ${colors.dangerSoft}`,
-          },
-          ':active': {
-            transform: 'scale(0.95)',
-          },
         },
         default: {
           shadowColor: DESIGN_TOKENS.colors.text,
@@ -233,12 +223,6 @@ export const createGalleryStyles = (
           WebkitBackdropFilter: 'blur(8px)',
           transition: 'all 0.2s ease',
           ...(isMobileWeb ? createMobileWebStaticFrostStyle(colors.surfaceMuted) : null),
-          ':hover': {
-            transform: 'scale(1.05)',
-          },
-          ':active': {
-            transform: 'scale(0.95)',
-          },
         },
       }),
     },
@@ -247,11 +231,23 @@ export const createGalleryStyles = (
       ...Platform.select({
         web: {
           cursor: 'default',
-          ':hover': {
-            transform: 'none',
-          },
         },
       }),
+    },
+    // Отклик мыши у кнопок кадра — `hoverStyle`/`mousePressStyle` в `DeleteAction`
+    // (состояния `hovered`/`pressed` у Pressable): ключи-псевдоклассы в StyleSheet
+    // react-native-web компилирует в битое правило (#2036). Нажатие считается только под
+    // курсором мыши — на касание кнопки не реагировали и не реагируют.
+    deleteButtonHover: {
+      transform: [{ scale: 1.1 }],
+      backgroundColor: colors.dangerDark,
+      ...Platform.select({ web: { boxShadow: `0 4px 12px ${colors.dangerSoft}` } }),
+    },
+    moveButtonHover: {
+      transform: [{ scale: 1.05 }],
+    },
+    galleryButtonMousePress: {
+      transform: [{ scale: 0.95 }],
     },
     dropzone: {
       width: '100%',
@@ -266,14 +262,12 @@ export const createGalleryStyles = (
       minHeight: 120,
       // ✅ УЛУЧШЕНИЕ: Улучшенные стили для dropzone
       backgroundColor: colors.backgroundSecondary,
+      // Наведение мыши — правило `[data-gallery-dropzone]` в `app/global.css`: зону
+      // рисует DOM-`<div>` react-dropzone, состояния `hovered` у него нет (#2036).
       ...Platform.select({
         web: {
           transition: 'all 0.3s ease',
           cursor: 'pointer',
-          ':hover': {
-            borderColor: colors.primary,
-            backgroundColor: colors.primarySoft,
-          },
         },
       }),
     },

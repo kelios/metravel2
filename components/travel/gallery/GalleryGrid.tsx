@@ -15,6 +15,9 @@ import { translate as i18nT } from '@/i18n'
 
 type GalleryStyles = ReturnType<typeof createGalleryStyles>
 
+// Светлая кнопка удаления у кадра без URL: фон держится и под курсором.
+const LIGHT_DELETE_BUTTON_SURFACE = { backgroundColor: 'rgba(255,255,255,0.9)' }
+
 export const GalleryGrid: React.FC<{
   styles: GalleryStyles
   colors: ThemedColors
@@ -31,6 +34,8 @@ export const GalleryGrid: React.FC<{
   DeleteAction: React.ComponentType<{
     onActivate: () => void
     style?: DeleteActionStyle
+    hoverStyle?: DeleteActionStyle
+    mousePressStyle?: DeleteActionStyle
     testID?: string
     accessibilityLabel?: string
     children: React.ReactNode
@@ -94,6 +99,8 @@ export const GalleryGrid: React.FC<{
             <DeleteAction
               onActivate={() => canMoveLeft && onMove(stableKey, -1)}
               style={[styles.moveButton, !canMoveLeft && styles.moveButtonDisabled]}
+              hoverStyle={canMoveLeft ? styles.moveButtonHover : undefined}
+              mousePressStyle={canMoveLeft ? styles.galleryButtonMousePress : undefined}
               testID="gallery-move-left-button"
               accessibilityLabel={i18nT('travel:components.travel.gallery.GalleryGrid.peremestit_foto_levee_80430f4e')}
             >
@@ -107,6 +114,8 @@ export const GalleryGrid: React.FC<{
             <DeleteAction
               onActivate={() => canMoveRight && onMove(stableKey, 1)}
               style={[styles.moveButton, !canMoveRight && styles.moveButtonDisabled]}
+              hoverStyle={canMoveRight ? styles.moveButtonHover : undefined}
+              mousePressStyle={canMoveRight ? styles.galleryButtonMousePress : undefined}
               testID="gallery-move-right-button"
               accessibilityLabel={i18nT('travel:components.travel.gallery.GalleryGrid.peremestit_foto_pravee_b568179e')}
             >
@@ -150,6 +159,8 @@ export const GalleryGrid: React.FC<{
                 <DeleteAction
                   onActivate={() => onDelete(stableKey)}
                   style={styles.deleteButton}
+                  hoverStyle={styles.deleteButtonHover}
+                  mousePressStyle={styles.galleryButtonMousePress}
                   testID="delete-image-button"
                 >
                   <Feather name="x" size={18} color={colors.textInverse} />
@@ -183,6 +194,8 @@ export const GalleryGrid: React.FC<{
                 <DeleteAction
                   onActivate={() => onDelete(stableKey)}
                   style={styles.deleteButton}
+                  hoverStyle={styles.deleteButtonHover}
+                  mousePressStyle={styles.galleryButtonMousePress}
                   testID="delete-image-button"
                 >
                   <Feather name="x" size={18} color={colors.textInverse} />
@@ -194,7 +207,9 @@ export const GalleryGrid: React.FC<{
                 <ShimmerOverlay />
                 <DeleteAction
                   onActivate={() => onDelete(stableKey)}
-                  style={[styles.deleteButton, { backgroundColor: 'rgba(255,255,255,0.9)' }]}
+                  style={[styles.deleteButton, LIGHT_DELETE_BUTTON_SURFACE]}
+                  hoverStyle={[styles.deleteButtonHover, LIGHT_DELETE_BUTTON_SURFACE]}
+                  mousePressStyle={styles.galleryButtonMousePress}
                   testID="delete-image-button"
                 >
                   <Feather name="x" size={18} color={colors.text} />
@@ -220,6 +235,8 @@ export const GalleryGrid: React.FC<{
                 <DeleteAction
                   onActivate={() => onDelete(stableKey)}
                   style={styles.deleteButton}
+                  hoverStyle={styles.deleteButtonHover}
+                  mousePressStyle={styles.galleryButtonMousePress}
                   testID="delete-image-button"
                 >
                   <Feather name="x" size={18} color={colors.textInverse} />

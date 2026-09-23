@@ -21,14 +21,13 @@ export const createAnswerStyles = (colors: QuestColors, isMobile: boolean, _scre
         color: colors.text,
         minHeight: 52,
         borderWidth: 0,
+        // Фокус поля показывает общее правило `input:focus-visible` в `app/global.css`;
+        // ключ-псевдокласс в стиле react-native-web компилирует в битое правило (#2036).
         ...Platform.select({
             web: {
                 transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                 outlineStyle: 'none',
                 boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.04)',
-                ':focus': {
-                    boxShadow: '0 0 0 3px rgba(245, 132, 44, 0.15), inset 0 1px 3px rgba(0,0,0,0.04)',
-                },
             } as any,
         }),
     },

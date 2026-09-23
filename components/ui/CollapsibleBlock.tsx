@@ -162,11 +162,13 @@ function CollapsibleBlock({
       ...Platform.select({
         web: {
           transition: 'background-color 0.2s ease',
-          ':hover': {
-            backgroundColor: colors.primarySoft,
-          },
         } as any,
       }),
+    },
+    // Наведение мыши на заголовок и кнопки блока — состояние `hovered` у Pressable:
+    // ключ-псевдокласс в StyleSheet react-native-web компилирует в битое правило (#2036).
+    hoverSurface: {
+      backgroundColor: colors.primarySoft,
     },
     iconWrapper: {
       width: 32,
@@ -248,9 +250,6 @@ function CollapsibleBlock({
         web: {
           cursor: 'pointer',
           transition: 'background-color 0.2s ease',
-          ':hover': {
-            backgroundColor: colors.primarySoft,
-          },
         } as any,
       }),
     },
@@ -293,7 +292,7 @@ function CollapsibleBlock({
       <View style={[styles.header, compactMode && styles.headerCompact]}>
         <Pressable
           onPress={collapsible ? handleToggle : undefined}
-          style={styles.headerLeft}
+          style={({ hovered }) => [styles.headerLeft, collapsible && hovered && styles.hoverSurface]}
           disabled={!collapsible}
           accessibilityRole={collapsible ? 'button' : undefined}
           accessibilityLabel={collapsible ? `${isExpanded ? i18nT('shared:components.ui.CollapsibleBlock.svernut_87bd01e3') : i18nT('shared:components.ui.CollapsibleBlock.razvernut_86ab35d3')}: ${title}` : title}
@@ -333,18 +332,10 @@ function CollapsibleBlock({
           {collapsible && (
             <Pressable
               onPress={handleToggle}
-              style={styles.actionButton}
+              style={({ hovered }) => [styles.actionButton, hovered && styles.hoverSurface]}
               accessibilityLabel={isExpanded ? i18nT('shared:components.ui.CollapsibleBlock.svernut_blok_ed41ac29') : i18nT('shared:components.ui.CollapsibleBlock.razvernut_blok_0acd6f55')}
               accessibilityState={{ expanded: isExpanded }}
               hitSlop={8}
-              {...Platform.select({
-                web: {
-                  cursor: 'pointer',
-                  ':hover': {
-                    backgroundColor: colors.primarySoft,
-                  },
-                } as any,
-              })}
             >
               <Feather 
                 name="chevron-down"
@@ -362,17 +353,9 @@ function CollapsibleBlock({
           {hasCloseButton && (
             <Pressable
               onPress={handleHide}
-              style={styles.actionButton}
+              style={({ hovered }) => [styles.actionButton, hovered && styles.hoverSurface]}
               accessibilityLabel={i18nT('shared:components.ui.CollapsibleBlock.skryt_blok_21d83071')}
               hitSlop={8}
-              {...Platform.select({
-                web: {
-                  cursor: 'pointer',
-                  ':hover': {
-                    backgroundColor: colors.primarySoft,
-                  },
-                } as any,
-              })}
             >
               <Feather name="x" size={16} color={colors.textMuted} />
             </Pressable>

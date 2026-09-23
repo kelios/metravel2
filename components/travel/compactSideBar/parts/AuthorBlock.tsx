@@ -151,9 +151,10 @@ export const AuthorBlock = memo(function AuthorBlock({
                   onPress={onEdit}
                   accessibilityRole="button"
                   accessibilityLabel={i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.redaktirovat_puteshestvie_8010aa7b')}
-                  style={({ pressed }) => [
+                  style={({ pressed, hovered }) => [
                     styles.actionBtn,
                     globalFocusStyles.focusable,
+                    hovered && styles.actionBtnHovered,
                     pressed && styles.actionBtnPressed,
                   ]}
                   ref={editTitleRef}
@@ -171,6 +172,7 @@ export const AuthorBlock = memo(function AuthorBlock({
                   travel={travel}
                   mutedText={mutedText}
                   actionBtnStyle={styles.actionBtn}
+                  actionBtnHoveredStyle={styles.actionBtnHovered}
                   actionBtnPressedStyle={styles.actionBtnPressed}
                   actionBtnDisabledStyle={styles.actionBtnDisabled}
                 />
@@ -182,14 +184,16 @@ export const AuthorBlock = memo(function AuthorBlock({
                     targetUserId={authorUserId!}
                     iconOnly
                     style={[styles.actionBtn, globalFocusStyles.focusable]}
+                    hoverStyle={styles.actionBtnHovered}
                   />
                   <Pressable
                     onPress={onWrite}
                     accessibilityRole="button"
                     accessibilityLabel={i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.napisat_avtoru_value1_191ed8f0', { value1: displayName })}
-                    style={({ pressed }) => [
+                    style={({ pressed, hovered }) => [
                       styles.actionBtn,
                       globalFocusStyles.focusable,
+                      hovered && styles.actionBtnHovered,
                       pressed && styles.actionBtnPressed,
                     ]}
                     ref={writeTitleRef}

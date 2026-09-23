@@ -134,6 +134,10 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
           } as any)
         : {}),
     },
+    // Наведение мыши на кнопки действий карточки автора (редактировать, PDF, подписка,
+    // написать) — состояние `hovered` у их Pressable; задуманный в #2032 отклик — рамка
+    // `border` на фоне `backgroundSecondary` (#2036).
+    actionBtnHovered: { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
     actionBtnPressed: { opacity: 0.85, backgroundColor: colors.backgroundSecondary },
     actionBtnDisabled: { opacity: 0.4, backgroundColor: colors.backgroundSecondary },
     userNameWrap: { flexGrow: 1, flexShrink: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center' },
@@ -180,7 +184,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       maxWidth: '100%',
       justifyContent: 'space-between',
       backgroundColor: 'transparent',
-      // Hover — правило `[data-sidebar-link]` в `app/global.css`: ключ `':hover'`
+      // Hover — правило `[data-sidebar-link]` в `app/global.css`: ключ-псевдокласс в стиле
       // react-native-web не компилирует в `:hover`, он давал битое правило (#2032).
       ...((Platform.OS === 'web')
         ? {

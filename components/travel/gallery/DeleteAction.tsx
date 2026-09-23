@@ -5,7 +5,7 @@ import type { createGalleryStyles } from './styles'
 import { translate as i18nT } from '@/i18n'
 
 
-// Gallery styles include web-only CSS (cursor/:hover/backdropFilter) on the
+// Gallery styles include web-only CSS (cursor/backdropFilter/boxShadow) on the
 // interactive entries, so the accepted style is the factory's own value type
 // plus the nested arrays the gallery passes — not a plain ViewStyle.
 type GalleryStyleValue = ReturnType<typeof createGalleryStyles>[keyof ReturnType<typeof createGalleryStyles>]
@@ -17,10 +17,16 @@ export type DeleteActionStyle =
 export const DeleteAction: React.FC<{
   onActivate: () => void
   style?: DeleteActionStyle
+  /**
+   * Web: вид под курсором мыши и при нажатии мышью (#2036). Состояние `hovered` RNW
+   * отдаёт только мыши, поэтому касание на mobile web этих стилей не получает.
+   */
+  hoverStyle?: DeleteActionStyle
+  mousePressStyle?: DeleteActionStyle
   testID?: string
   accessibilityLabel?: string
   children: React.ReactNode
-}> = ({ onActivate, style, testID, accessibilityLabel = i18nT('travel:components.travel.gallery.DeleteAction.udalit_foto_0125fa97'), children }) => {
+}> = ({ onActivate, style, hoverStyle, mousePressStyle, testID, accessibilityLabel = i18nT('travel:components.travel.gallery.DeleteAction.udalit_foto_0125fa97'), children }) => {
   const lastActivateTsRef = useRef<number | null>(null)
 
   const makeActivate = useCallback(
@@ -58,11 +64,17 @@ export const DeleteAction: React.FC<{
       justifyContent: 'center',
       textDecorationLine: 'none',
     } as StyleProp<ViewStyle>
+    // `webStyle` уходит инлайном, поэтому и отклик мыши кладётся поверх него инлайном
+    // (плоским объектом): так «последний выигрывает» без смешения с классами StyleSheet.
+    const flatHoverStyle = hoverStyle ? StyleSheet.flatten(hoverStyle as StyleProp<ViewStyle>) : null
+    const flatMousePressStyle = mousePressStyle ? StyleSheet.flatten(mousePressStyle as StyleProp<ViewStyle>) : null
 
     return (
       <Pressable
         onPress={makeActivate}
-        style={webStyle}
+        style={({ hovered, pressed }) =>
+          hovered ? [webStyle, flatHoverStyle, pressed && flatMousePressStyle] : webStyle
+        }
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         testID={testID}

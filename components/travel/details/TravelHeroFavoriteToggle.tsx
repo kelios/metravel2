@@ -32,10 +32,11 @@ export const TravelHeroFavoriteToggle: React.FC<{
     <Pressable
       onPress={handleFavoriteToggle}
       disabled={isPending}
-      style={[
+      style={({ hovered }) => [
         styles.heroFavoriteBtn,
         isFavorite && styles.heroFavoriteBtnActive,
         isMobile && styles.heroFavoriteBtnMobile,
+        hovered && styles.heroFavoriteBtnHovered,
         isPending && { opacity: 0.6 },
       ]}
       accessibilityRole="button"

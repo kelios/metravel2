@@ -58,7 +58,7 @@ export const PointListToggleButton = React.memo(function PointListToggleButton({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.toggle, pressed && styles.togglePressed, globalFocusStyle]}
+      style={({ pressed, hovered }) => [styles.toggle, (pressed || hovered) && styles.togglePressed, globalFocusStyle]}
       accessibilityRole="button"
       accessibilityLabel={toggleLabel}
       accessibilityState={{ expanded: showList }}
@@ -203,7 +203,11 @@ export const PointListViewModeBar = React.memo(function PointListViewModeBar({
     <View style={styles.viewModeBar}>
       <Pressable
         onPress={() => onSelect('cards')}
-        style={[styles.viewModeBtn, viewMode === 'cards' && styles.viewModeBtnActive]}
+        style={({ hovered }) => [
+          styles.viewModeBtn,
+          hovered && styles.viewModeBtnHovered,
+          viewMode === 'cards' && styles.viewModeBtnActive,
+        ]}
         accessibilityRole="button"
         accessibilityLabel={i18nT('travel:components.travel.PointListChrome.kartochki_681d872e')}
         accessibilityState={{ selected: viewMode === 'cards' }}
@@ -214,7 +218,11 @@ export const PointListViewModeBar = React.memo(function PointListViewModeBar({
       </Pressable>
       <Pressable
         onPress={() => onSelect('list')}
-        style={[styles.viewModeBtn, viewMode === 'list' && styles.viewModeBtnActive]}
+        style={({ hovered }) => [
+          styles.viewModeBtn,
+          hovered && styles.viewModeBtnHovered,
+          viewMode === 'list' && styles.viewModeBtnActive,
+        ]}
         accessibilityRole="button"
         accessibilityLabel={i18nT('travel:components.travel.PointListChrome.spisok_8a652c54')}
         accessibilityState={{ selected: viewMode === 'list' }}
@@ -351,7 +359,7 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
     remaining > 0 ? (
       <Pressable
         onPress={onShowMore}
-        style={({ pressed }) => [styles.toggle, pressed && styles.togglePressed]}
+        style={({ pressed, hovered }) => [styles.toggle, (pressed || hovered) && styles.togglePressed]}
         accessibilityRole="button"
         accessibilityLabel={i18nT('travel:components.travel.PointListChrome.pokazat_esche_value1_tochek_f428791c', { value1: remaining })}
       >

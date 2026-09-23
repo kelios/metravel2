@@ -74,11 +74,13 @@ function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
         ? ({
             cursor: 'pointer',
             transition: 'transform 0.2s ease',
-            ':hover': {
-              transform: 'translateY(-2px)',
-            },
           } as any)
         : null),
+    },
+    // Наведение мыши — состояние `hovered` у Pressable: ключ-псевдокласс в
+    // StyleSheet react-native-web компилирует в битое правило (#2036).
+    primaryButtonHovered: {
+      transform: [{ translateY: -2 }],
     },
     primaryButtonText: {
       fontSize: 15,
@@ -100,11 +102,11 @@ function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
         ? ({
             cursor: 'pointer',
             transition: 'background-color 0.2s ease',
-            ':hover': {
-              backgroundColor: colors.primaryLight,
-            },
           } as any)
         : null),
+    },
+    secondaryButtonHovered: {
+      backgroundColor: colors.primaryLight,
     },
     secondaryButtonText: {
       fontSize: 15,
@@ -148,7 +150,7 @@ function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
 
           <View style={styles.actions}>
             <Pressable
-              style={styles.primaryButton}
+              style={({ hovered }) => [styles.primaryButton, hovered && styles.primaryButtonHovered]}
               onPress={() => router.push('/travel/new')}
               accessibilityLabel={i18nT('navigation:components.layout.WelcomeBanner.sozdat_puteshestvie_9a14711a')}
             >
@@ -157,7 +159,7 @@ function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
             </Pressable>
 
             <Pressable
-              style={styles.secondaryButton}
+              style={({ hovered }) => [styles.secondaryButton, hovered && styles.secondaryButtonHovered]}
               onPress={() => router.push('/map')}
               accessibilityLabel={i18nT('navigation:components.layout.WelcomeBanner.otkryt_kartu_ef64413f')}
             >
