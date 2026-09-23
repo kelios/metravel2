@@ -4,7 +4,13 @@
 сообщение Apple 14.09.2026 00:31 UTC. Review devices: iPhone 17 Pro Max и iPad Air
 11-inch (M3), iOS/iPadOS 26.6.2, «Internet Connection: Active». Формулировка:
 «We were unable to access the app because it returned the connection error when
-we used any of the available login methods». Скриншотов и вложений нет.
+we used any of the available login methods». При повторном чтении ASC
+23.09.2026 обнаружены два вложения: `Screenshot-0913-172915.png` и
+`Screenshot-0913-172917.png`. На iPhone показана ошибка подключения, на iPad —
+такой же alert одновременно с inline-сообщением о неверном пароле. На iPad
+виден индикатор VPN. Это не устанавливает тип сети или причину обрыва;
+противоречивые сообщения относятся к исправлению #1944. Исходные изображения
+содержат данные формы входа: не переносить их в Git или публичный ответ.
 
 ## Что установлено (read-only, 14.09.2026 07:00–08:30 UTC)
 
@@ -21,12 +27,13 @@ we used any of the available login methods». Скриншотов и вложе
 | IPv6 на хосте | Глобальный адрес `2a0a:7d80:3:2::186/112`, исходящий IPv6 работает; nginx слушает только IPv4 (`deploy/prod/nginx/nginx.conf:252,272,294`) |
 | Логин сейчас | `POST /api/user/login/` reviewer-аккаунтом → `200` за 0,6 с |
 
-Вывод: в окно проверки сервер был жив и доступен из внешнего мира, а от устройств
-рецензента не пришло ни одного запроса. Обрыв произошёл до нашего сервера —
-DNS/маршрут/TLS-соединение из сети App Review. Единственный непроверенный нами
-путь — IPv6-only (NAT64) сеть Apple: метravel.by не имеет AAAA и не слушает IPv6,
-всё держится на трансляции NAT64 у Apple. Из логов постфактум причина не
-доказывается; сквозной IPv6 и обязательный тест `IOS-16` убирают эту зависимость.
+Вывод по исследованному окну: сервер обслуживал других клиентов, а запросов,
+однозначно сопоставленных с native-клиентом рецензента, не найдено.
+DNS/маршрут/TLS — гипотезы, а не установленная причина. Отсутствие AAAA само
+по себе не доказывает отказ в корректной DNS64/NAT64-сети. Apple сообщила
+«Internet Connection: Active», но не подтвердила IPv6-only. Сквозной IPv6
+и `IOS-16` нужны для проверки сетевого пути; доказательства конкретной
+причины отказа по имеющимся логам и скриншотам пока нет.
 
 Ловушка при чтении логов: `docker logs --since/--until` на хосте трактуются в
 местном времени (UTC+3), а поля `time` внутри — UTC. Окно надо задавать со сдвигом.
@@ -88,8 +95,9 @@ root-only конфиги и логи — через ro-bind в одноразо�
   57×`200`, 9×`301`, HTTP/2, отказов нет. После `AAAA` в access-логе реальные
   IPv6-клиенты (36 за час 16 UTC и 120 за час 17 UTC 19.09).
 
-Вывод: на нашей стороне ничего не режет ни сеть Apple, ни IPv6; серверной
-причины «connection error» нет, письмо хостеру не нужно.
+Вывод: в перечисленных настройках и исследованном окне не найдено блокировки
+сети Apple или IPv6. Это не исключает любой возможный серверный/сетевой отказ
+в другое время. Письмо хостеру снято решением владельца.
 
 ## Побочная находка
 
@@ -97,39 +105,114 @@ root-only конфиги и логи — через ro-bind в одноразо�
 уведомления Sign in with Apple) отклоняется `401`. Причина отказа не в этом, но
 это дефект контракта Sign in with Apple — отдельная `area=back` карточка.
 
-## План
+## Подготовка 23.09.2026 — сборка отложена до завершения todo
 
-1. Сквозной IPv6 (`area=back`, порядок строгий): `listen [::]:80` и
-   `listen [::]:443 ssl http2` в nginx → проверка `curl -6` снаружи → AAAA
-   `2a0a:7d80:3:2::186` у hoster.by (владелец).
-2. `IOS-16` на exact-кандидате: домашний NAT64-стенд Mac Internet Sharing после
-   `AAAA` среду Apple не воспроизводит (ловушка выше). Серверная часть закрыта
-   Globalping-пробами по IPv6, клиентская — тем, что прод-сборка ходит только по
-   имени `https://metravel.by` (`.env.prod`); IPv4-литералы в коде есть лишь в
-   dev-конфигах (metro/playwright/jest) и одном комментарии. Устройственный прогон
-   (гость, email-вход, Apple, Google; запросы устройства видны в nginx-логе)
-   возможен только в сети с нативным IPv6 наверху; отсутствие такой сети Reply
-   не блокирует.
-3. Ответ Apple с фактами и запросом скриншота/типа сети (отдельное разрешение
-   владельца), затем повторный submit (отдельное разрешение). Решение владельца
-   19.09.2026: и Reply, и повторный submit ждут ответа Meta по бизнес-верификации
-   (#1917, заявка отправлена 19.09, retest 23.09), чтобы кандидат 1.0.5 (10) шёл
-   в App Review с рабочим входом через Facebook для любого аккаунта (Limited
-   Login #1918, бэкенд #1912 done); до Live у Meta кнопка на iPhone выключена
-   флагом EAS `EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED=false`. Порядок: Live у Meta →
-   флаг `true` в EAS production → signed build/upload 1.0.5 (10) (отдельное
-   разрешение) → TestFlight-кейсы, включая живой вход через Facebook → Reply →
-   submit. #1939 переведена в blocked_by #1917.
-4. В следующий кандидат: причина ошибки соединения в UI (код/host), #1895.
+Решение владельца: подготовить всё до сборки; собирать после завершения задач
+в `todo`. Текущая подготовка не запускает build, upload, Reply или submit.
+Task-owned path: этот документ; Platform impact: iOS/iPadOS;
+Localization impact: none (служебные черновики EN).
 
-## Черновик Reply (EN, ~1 800 символов, не отправлен; п.3 обновлён 19.09)
+| Проверено 23.09 | Результат и граница доказательства |
+| --- | --- |
+| Meta / #1917 | meTravel.by — «Опубликовано», Metravel — «Подтверждено», обязательных действий нет. `email`/`public_profile` — «Готов к публикации», блокирующих требований нет; интерфейс не показывает отдельную надпись Advanced Access |
+| EAS | `EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED=true` в production и preview; повторное `env:get` после записи подтвердило оба окружения. App ID совпадает с Meta и native Info.plist. Установленный build 9 от этого не меняется |
+| Исходники | `main` на момент проверки — `b4383e8bf601fa914e2029c34f540c941d66b39c`, версия/build 1.0.5 (10) согласованы. Есть работающие изменения карты/планировщика; этот SHA не зафиксирован как кандидат |
+| Source checks | `npm run ios:release:guard` — PASS; `npm run ios:store:guard` — PASS без проверки screenshots. Это не подпись IPA и не runtime QA |
+| Live ASC | 1.0.5 (9) — «Отклонено», Guideline 2.1(a); 3 сообщения, последнее Apple от 14.09. Выбран ручной релиз. Notes — 3871 символ, содержат build 9; вложение `review-demonstration-final.mp4` относится к build 9 |
+
+Источники состояния: [Meta](https://developers.facebook.com/apps/2443100196153960/dashboard/),
+[разрешения](https://developers.facebook.com/apps/2443100196153960/use_cases/customize/?use_case_enum=FB_LOGIN),
+текущая запись приложения в ASC и история #1917. Секреты и demo-credentials
+остаются только в защищённых полях ASC/EAS.
+
+Очередь `todo` на момент решения владельца:
+
+| Задача | Обязательная проверка до подготовки финального SHA |
+| --- | --- |
+| #2056 — способы переезда по отрезкам маршрута | Native-маршруты и итоги, iOS Simulator по контракту задачи |
+| #2071 — кластеры и активный маркер native-карты | iOS Simulator, поездка с ≥20 точками |
+| #2072 — кнопки форматирования описания плана | Native TextInput selection, iOS Simulator |
+| #2074 — хелперы прод-приёмки | Приёмка QA-инструментов по контракту задачи |
+
+Это снимок, не замороженный состав релиза. Перед сборкой перечитать весь борд:
+карточка, перешедшая из todo в in_progress/review/testing, ещё не завершена.
+Не обходить решение владельца простым перемещением карточек между колонками.
+После завершения очереди зафиксировать чистый, запушенный `main` и заново
+проверить свободный build number в ASC/EAS. Номер 10 пока только плановый.
+
+## Порядок после завершения очереди
+
+1. Проверить итоговый SHA и обязательные проверки задач; повторить source/store
+   guards и `ios:environment:check`, сверить production EAS, доступы и signing.
+   Использовать tracked native project; не выполнять `expo prebuild --clean`.
+2. По отдельной команде на signed build собрать кандидат через `ios-deployer`.
+   Зафиксировать SHA, версию/build и EAS build ID. Затем `ios:artifact:audit`
+   проверяет exact IPA: подпись, entitlements/APNs, universal family,
+   purpose strings, privacy/SDK manifests, HTTPS origins и Facebook flag.
+3. По отдельной команде на upload загрузить этот build ID и дождаться processing.
+   TestFlight-проверка выполняется после upload, на точной обработанной сборке.
+4. Пройти [матрицу IOS-01…16](MANUAL_TEST_CASES.md): iPhone/iPad, свежая установка
+   и обновление с 9, гость, email/Apple/Google/Facebook success/cancel/error,
+   восстановление сессии, offline/retry, Universal Links, APNs, media/share,
+   удаление тестового аккаунта, RU/BE/UK/PL/EN, Dynamic Type и окна/повороты iPad.
+   Для Facebook — аккаунт без роли Meta, Limited Login token/nonce, добор email
+   и отсутствие ATT при обоих системных положениях Allow Apps to Request to Track.
+5. `IOS-16`: свежие IPv4/IPv6-пробы из US/EU плюс вход/гость на устройстве в
+   корректной IPv6-only сети и корреляция запросов с nginx-логом. Mac без
+   IPv6 uplink после публикации AAAA не подходит. Обычный dual-stack прогон
+   подтверждает только свой слой и не заменяет IPv6-only. При недоступном
+   стенде записать точное ограничение; не объявлять pass или готовность submit.
+6. Пересверить screenshots, Notes, Privacy и demo-credentials с кандидатом.
+   Старый ролик build 9 можно обозначить как исторический; новое демо требует
+   manifest/таймкодов и privacy review. Логин/пароль — только protected ASC fields.
+7. Заменить в черновиках ниже плановые поля фактами принятого кандидата.
+   Reply, App Review submit и последующий storefront release — отдельные
+   операции по [релизному регламенту](RELEASE.md#ios--app-store-active-universal-iphoneipad-scope).
+
+Статусы `done` #1918 и #1947 не доказывают будущую iOS-приёмку: последние
+записи этих карточек оставили device/IPA и Dynamic Type проверки за релизом.
+`artifacts/ios-qa/QA_REPORT_PREBUILD_10.md` описывает старый `bc62097bb`
+со снятым APNs entitlement и без Facebook SDK; не переносить его pass на
+следующую сборку. Исторические серверные пробы выше также не заменяют свежие
+измерения перед submit.
+
+## Черновик Reply (EN, подготовлен 23.09, не отправлен)
+
+Это датированный ответ о расследовании, а не заявление об успешной проверке
+нового build. После приёмки дополнить точной версией, датой и результатами
+IOS-16. Скриншоты уже получены; запрашиваются диагностические детали.
 
 ```text
 Thank you for the review. We investigated the connection error reported on 14 September.
 
-1. Our production API was up throughout the review window (23:30–01:00 UTC): it served 833 successful responses to other clients with no server errors, and it is reachable from US, Canada, UK and EU test nodes (HTTP 200, 0.2–0.8 s). Email sign-in with the reviewer demo account returns 200 today.
-2. Our server logs contain no requests at all from the review devices in that window — no guest catalogue loads and no sign-in attempts — so the failure occurred before the request reached our server. On 12 September at 21:43 UTC a sign-in from the App Review network completed successfully with the same build and account.
-3. To rule out an IPv6-only network path, we have enabled native IPv6 on metravel.by (AAAA record and IPv6 listeners, published on 19 September) and verified it from external test nodes over IPv6 in the US, Germany, Poland and Japan (HTTP 200, valid TLS). The app connects by host name only, so no DNS64/NAT64 synthesis is required. We also confirmed that no firewall or rate limit on our side blocks Apple's network ranges.
+We have reviewed both attached screenshots. The iPhone shows a connection error; the iPad shows a connection alert together with an incorrect-password message. We have updated the source to distinguish network failures from credential errors. This change still requires validation in the replacement release build.
 
-Could you share a screenshot of the error and confirm the network type (Wi-Fi IPv6-only or cellular) and the time of the attempt? Thank you.
+Our investigation on 14 September found no identifiable native review-device requests in the server log window we examined, while other clients received successful responses. This does not establish the root cause of the review failure.
+
+On 19 September we enabled native IPv6 for metravel.by, including AAAA records and IPv6 listeners. External checks from the US, Germany, Poland and Japan returned HTTP 200 over IPv6 with valid TLS. We found no Apple-network blocking rules in the server configuration examined that day. These historical checks do not replace testing the new candidate on the review devices' network path.
+
+Could you share the approximate time and time zone of each sign-in attempt, the network type (IPv6-only, dual-stack or cellular), and any underlying networking error code? This will help us correlate a repeat attempt with our server logs. Thank you.
+```
+
+## Черновик Notes для следующего кандидата (EN, не сохранён в ASC)
+
+До сохранения заменить квадратные поля проверенными фактами. Текст рассчитан
+на замену Notes build 9, а не добавление к имеющимся 3871 символам. Описание
+Facebook и результаты проверок оставлять только после exact-candidate pass;
+автоматически отправлять этот шаблон нельзя.
+
+```text
+MeTravel is a travel guide and trip planner with travel articles, map points, city quests, favorites and personal itineraries. Public content can be browsed without signing in. Editorial content is primarily in Russian; the interface supports Russian, Belarusian, Ukrainian, Polish and English.
+
+Candidate: [VERSION (BUILD)], tested on [IPHONE/IPAD AND OS VERSIONS] on [DATE].
+
+Use the demo credentials in the protected App Review Information fields for email sign-in. Sign in with Apple and Google are also available. Facebook uses Meta Limited Login; its published Meta app requests only public_profile and email. [CONFIRM FACEBOOK SUCCESS WITH A NON-ROLE ACCOUNT ON THIS BUILD BEFORE RETAINING THIS SENTENCE.]
+
+To review core features, browse a travel article and its map, open a city quest, then sign in to review favorites and a personal trip plan. Account deletion is available in Settings, in the account section. Please do not delete the reviewer demo account; deletion testing uses a separate disposable account.
+
+The previous 1.0.5 (9) review reported a connection error. The replacement build includes differentiated network/credential errors and connection diagnostics. Our API uses https://metravel.by. [INSERT VERIFIED FRESH-INSTALL, NETWORK-RECOVERY AND IPv6-ONLY RESULTS FOR THIS EXACT BUILD.]
+
+Facebook automatic event logging and advertiser-ID collection are disabled in the release configuration. [CONFIRM THE SIGNED IPA, RUNTIME BEHAVIOR AND APP PRIVACY ANSWERS BEFORE RETAINING THIS PARAGRAPH.] Backend authentication and content are provided by MeTravel; maps and the listed sign-in providers use their respective external services. Support: https://metravel.by/contact . Privacy: https://metravel.by/privacy .
+
+Review demonstration: [NEW VERIFIED ATTACHMENT, DEVICE, BUILD AND SCENE TIMECODES, OR AN EXPLICIT STATEMENT THAT THE EXISTING VIDEO SHOWS BUILD 9].
 ```
