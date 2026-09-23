@@ -181,7 +181,6 @@ export const sharedGenerated2 = {
   "services.notifications.vy_ostanovilis_na_shage_value1_value2_v_kves_8393cf7d": "You stopped at step {{value1}}/{{value2}} in the quest \"{{value3}}\". Continue the passage!",
   "services.questGeofencing.vy_na_meste_otkroyte_zagadku_09e0702f": "You are there - open the riddle",
   "services.questGeofencing.vy_podoshli_k_tochke_value1_kvesta_value2_ot_5709191a": "You have reached point{{value1}} of the quest \"{{value2}}\". Uncover the riddle!",
-  "stores.authStore.chto_to_poshlo_ne_tak_poprobuyte_snova_6b2b849c": "Something went wrong. Try again.",
   "stores.authStore.proizoshla_oshibka_poprobuyte_esche_raz_fa0eb9e8": "An error has occurred. Try again.",
   "stores.travelStatusStore.puteshestvie_value1_a99c3208": "Travel {{value1}}",
   "utils.a11y.skip_to_main_content_48220d7c": "Skip to main content",

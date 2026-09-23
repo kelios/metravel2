@@ -200,6 +200,78 @@ describe('src/api/auth.ts auth/password API', () => {
       expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Неверный email или пароль' });
     });
 
+    // #2042: бэкенд #1993 отдаёт причину отказа машиночитаемым `code`, а
+    // активацию раскрывает только после проверки пароля. Текст выбирает `code`;
+    // строка `error` рядом с ним — лишь fallback для старого бэкенда без `code`.
+    describe('code причины отказа (#2042)', () => {
+      const rejectWith = (body: Record<string, unknown>) => {
+        mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 401 } as any);
+        mockedSafeJsonParse.mockResolvedValueOnce(body as any);
+      };
+
+      it('неактивный аккаунт с неверным паролем (invalid_credentials) — общий отказ', async () => {
+        rejectWith({ code: 'invalid_credentials', error: 'Неверная почта или пароль' });
+
+        const result = await loginApi('inactive@example.com', 'wrong-password');
+
+        expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Неверный email или пароль' });
+      });
+
+      it('неизвестный email (invalid_credentials) — тот же общий отказ', async () => {
+        rejectWith({ code: 'invalid_credentials', error: 'Неверная почта или пароль' });
+
+        const result = await loginApi('nobody@example.com', 'password');
+
+        expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Неверный email или пароль' });
+      });
+
+      it('неактивный аккаунт с верным паролем (account_not_activated) — подсказка активации', async () => {
+        rejectWith({
+          code: 'account_not_activated',
+          error: 'Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме',
+        });
+
+        const result = await loginApi('inactive@example.com', 'correct-password');
+
+        expect(result).toEqual({
+          ok: false,
+          reason: 'rejected',
+          message: 'Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме.',
+        });
+      });
+
+      it('code invalid_credentials сильнее противоречащего текста «не активирован»', async () => {
+        rejectWith({
+          code: 'invalid_credentials',
+          error: 'Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме',
+        });
+
+        const result = await loginApi('test@example.com', 'password');
+
+        expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Неверный email или пароль' });
+      });
+
+      it('code account_not_activated сильнее противоречащего текста обычного отказа', async () => {
+        rejectWith({ code: 'account_not_activated', error: 'Неверная почта или пароль' });
+
+        const result = await loginApi('test@example.com', 'password');
+
+        expect(result).toEqual({
+          ok: false,
+          reason: 'rejected',
+          message: 'Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме.',
+        });
+      });
+
+      it('незнакомый code — общий отказ, а не подсказка активации по тексту', async () => {
+        rejectWith({ code: 'account_locked', detail: 'Аккаунт не активирован' });
+
+        const result = await loginApi('test@example.com', 'password');
+
+        expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Неверный email или пароль' });
+      });
+    });
+
     // #1946: регрессия #1945 наблюдалась ТОЛЬКО вне русской локали, и на RU её
     // не видно: тексты приложения и сервера там почти совпадают (различие —
     // точка в конце), поэтому утечка сырого ответа русскую проверку проходит.
@@ -228,6 +300,34 @@ describe('src/api/auth.ts auth/password API', () => {
           message: 'Your account is not activated yet. Use the activation link from the email we sent you.',
         });
         expect((result as { message: string }).message).not.toMatch(/[А-Яа-я]/);
+      });
+
+      it('401 account_not_activated — английская подсказка активации по code', async () => {
+        mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 401 } as any);
+        mockedSafeJsonParse.mockResolvedValueOnce({
+          code: 'account_not_activated',
+          error: 'Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме',
+        } as any);
+
+        const result = await loginApi('test@example.com', 'password');
+
+        expect(result).toEqual({
+          ok: false,
+          reason: 'rejected',
+          message: 'Your account is not activated yet. Use the activation link from the email we sent you.',
+        });
+      });
+
+      it('401 invalid_credentials — английский общий отказ, а не русская строка сервера', async () => {
+        mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 401 } as any);
+        mockedSafeJsonParse.mockResolvedValueOnce({
+          code: 'invalid_credentials',
+          error: 'Неверная почта или пароль',
+        } as any);
+
+        const result = await loginApi('test@example.com', 'password');
+
+        expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Invalid email or password' });
       });
 
       it('401 обычного отказа — английский текст приложения, а не русская строка сервера', async () => {
@@ -637,20 +737,124 @@ describe('src/api/auth.ts auth/password API', () => {
     });
   });
 
+  // #2042: бэкенд #1993 отвечает на любой корректный email одинаково — 200
+  // `{code: "password_reset_requested", message: …}`, есть аккаунт или нет.
+  // Успех и ошибку решает статус, а текст всегда свой, локализованный: сырая
+  // строка сервера в форму не попадает (#1946).
   describe('resetPasswordLinkApi', () => {
-    it('sanitizeInput вызывается и при пустом email кидает ошибку', async () => {
-      mockedSanitizeInput.mockReturnValueOnce('');
+    const NEUTRAL_RU =
+      'Если аккаунт с такой почтой существует, мы отправили на неё письмо со ссылкой для сброса пароля.';
+    const SERVER_ACK = {
+      code: 'password_reset_requested',
+      message: 'Если аккаунт с такой почтой существует, письмо отправлено.',
+    };
 
-      await expect(resetPasswordLinkApi('   ')).rejects.toThrow('Email не может быть пустым');
+    // Тело отдаём и через фабрику `safeJsonParse`: если реализация снова начнёт
+    // читать и показывать `message`/`email[0]` сервера, тест это увидит.
+    const respond = (status: number, body: unknown = {}) => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: status >= 200 && status < 300, status } as any);
+      mockedSafeJsonParse.mockImplementation(async () => body as any);
+    };
+
+    afterEach(() => {
+      mockedSafeJsonParse.mockReset();
     });
 
-    it('возвращает сообщение из json при успехе', async () => {
-      mockedSanitizeInput.mockReturnValueOnce('user@example.com');
-      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce({ message: 'OK' } as any);
+    it('пустой email — отказ rejected без запроса к серверу', async () => {
+      mockedSanitizeInput.mockReturnValueOnce('');
 
-      const msg = await resetPasswordLinkApi('user@example.com');
-      expect(msg).toBe('OK');
+      await expect(resetPasswordLinkApi('   ')).resolves.toEqual({
+        ok: false,
+        reason: 'rejected',
+        message: 'Email не может быть пустым',
+      });
+      expect(fetchWithTimeout).not.toHaveBeenCalled();
+    });
+
+    it('известный и неизвестный email — одинаковый нейтральный локализованный успех', async () => {
+      respond(200, SERVER_ACK);
+      const known = await resetPasswordLinkApi('known@example.com');
+      respond(200, SERVER_ACK);
+      const unknown = await resetPasswordLinkApi('unknown@example.com');
+
+      expect(known).toEqual({ ok: true, message: NEUTRAL_RU });
+      expect(unknown).toEqual(known);
+      expect(known.message).not.toBe(SERVER_ACK.message);
+    });
+
+    it('успех старого бэкенда без code — та же нейтральная строка, а не его message', async () => {
+      respond(200, { message: 'Ссылка для сброса пароля отправлена на почту' });
+
+      await expect(resetPasswordLinkApi('user@example.com')).resolves.toEqual({ ok: true, message: NEUTRAL_RU });
+    });
+
+    it('400 некорректного email — локализованная ошибка, а не строка сервера', async () => {
+      respond(400, { email: ['Введите правильный адрес электронной почты.'] });
+
+      await expect(resetPasswordLinkApi('bad@')).resolves.toEqual({
+        ok: false,
+        reason: 'rejected',
+        message: 'Введите корректный email',
+      });
+    });
+
+    it('429 — reason server и текст про слишком частые попытки', async () => {
+      respond(429, { detail: 'Request was throttled. Expected available in 42 seconds.' });
+
+      await expect(resetPasswordLinkApi('user@example.com')).resolves.toEqual({
+        ok: false,
+        reason: 'server',
+        message: 'Слишком много попыток. Попробуйте позже.',
+      });
+    });
+
+    it('5xx — reason server и локализованный текст неудачной отправки', async () => {
+      respond(502);
+
+      await expect(resetPasswordLinkApi('user@example.com')).resolves.toEqual({
+        ok: false,
+        reason: 'server',
+        message: 'Не удалось отправить инструкции по восстановлению пароля',
+      });
+    });
+
+    it('обрыв связи — reason network с дружелюбным текстом', async () => {
+      mockedFetchWithTimeout.mockRejectedValueOnce(new Error('Network request failed'));
+
+      const result = await resetPasswordLinkApi('user@example.com');
+
+      expect(result).toMatchObject({ ok: false, reason: 'network' });
+      expect(result.message).toMatch(/интернет/i);
+    });
+
+    describe('на английской локали', () => {
+      beforeEach(async () => {
+        await i18n.changeLanguage('en');
+      });
+
+      afterEach(async () => {
+        await i18n.changeLanguage('ru');
+      });
+
+      it('успех — английская нейтральная строка без русского текста сервера', async () => {
+        respond(200, SERVER_ACK);
+
+        const result = await resetPasswordLinkApi('user@example.com');
+
+        expect(result).toEqual({
+          ok: true,
+          message: "If an account with this email exists, we've sent a password reset link to that address.",
+        });
+        expect(result.message).not.toMatch(/[А-Яа-я]/);
+      });
+
+      it('400 — английская ошибка некорректного email', async () => {
+        respond(400, { email: ['Введите правильный адрес электронной почты.'] });
+
+        const result = await resetPasswordLinkApi('bad@');
+
+        expect(result).toEqual({ ok: false, reason: 'rejected', message: 'Enter a correct email' });
+      });
     });
   });
 

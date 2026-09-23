@@ -857,26 +857,30 @@ describe('authStore', () => {
     });
   });
 
+  // #2042: стор отдаёт форме результат слоя api как есть — успех/отказ решает
+  // статус ответа, а не текст, по которому форма раньше угадывала ошибку.
   describe('sendPassword', () => {
-    it('returns server message on success', async () => {
-      resetPasswordLinkApi.mockResolvedValue('Ссылка отправлена');
+    it('passes the neutral success outcome through', async () => {
+      const success = { ok: true, message: 'Если аккаунт с такой почтой существует, мы отправили письмо.' };
+      resetPasswordLinkApi.mockResolvedValue(success);
 
       const result = await useAuthStore.getState().sendPassword('a@b.com');
-      expect(result).toBe('Ссылка отправлена');
+      expect(result).toEqual(success);
     });
 
-    it('returns fallback message when response is not a string', async () => {
-      resetPasswordLinkApi.mockResolvedValue({ ok: true });
+    it('passes the rejection outcome through', async () => {
+      const failure = { ok: false, reason: 'rejected', message: 'Введите корректный email' };
+      resetPasswordLinkApi.mockResolvedValue(failure);
 
       const result = await useAuthStore.getState().sendPassword('a@b.com');
-      expect(result).toBe('Что-то пошло не так. Попробуйте снова.');
+      expect(result).toEqual(failure);
     });
 
-    it('returns error message on failure', async () => {
+    it('returns an unknown failure when the api throws', async () => {
       resetPasswordLinkApi.mockRejectedValue(new Error('fail'));
 
       const result = await useAuthStore.getState().sendPassword('a@b.com');
-      expect(result).toBe('Произошла ошибка. Попробуйте ещё раз.');
+      expect(result).toEqual({ ok: false, reason: 'unknown', message: 'Произошла ошибка. Попробуйте ещё раз.' });
     });
   });
 

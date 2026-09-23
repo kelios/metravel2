@@ -25,7 +25,7 @@ export const errorsStaticResources = {
   "api.auth.accountNotActivated": "Your account is not activated yet. Use the activation link from the email we sent you.",
   "api.auth.serviceUnavailable": "The service is temporarily unavailable. Please try again later.",
   "api.auth.resetInstructionsSent": "Password recovery instructions have been sent to your email.",
-  "api.auth.resetInstructionsSentShort": "Recovery instructions have been sent.",
+  "api.auth.passwordResetRequested": "If an account with this email exists, we've sent a password reset link to that address.",
   "api.auth.resetInstructionsFailed": "Failed to send password recovery instructions",
   "api.auth.passwordRequirements": "Password does not meet requirements",
   "api.auth.passwordChanged": "Password changed successfully",

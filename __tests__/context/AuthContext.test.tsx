@@ -438,10 +438,10 @@ describe('AuthContext', () => {
     });
   });
 
-  it('sendPassword returns success message from api', async () => {
+  it('sendPassword returns success outcome from api', async () => {
     (getSecureItem as jest.Mock).mockResolvedValueOnce(null);
     (getStorageBatch as jest.Mock).mockResolvedValueOnce({});
-    (resetPasswordLinkApi as jest.Mock).mockResolvedValueOnce('OK');
+    (resetPasswordLinkApi as jest.Mock).mockResolvedValueOnce({ ok: true, message: 'OK' });
 
     let contextValue: any;
 
@@ -455,11 +455,11 @@ describe('AuthContext', () => {
       expect(contextValue).toBeDefined();
     });
 
-    const msg = await contextValue.sendPassword('user@example.com');
-    expect(msg).toBe('OK');
+    const outcome = await contextValue.sendPassword('user@example.com');
+    expect(outcome).toEqual({ ok: true, message: 'OK' });
   });
 
-  it('sendPassword returns fallback message on error', async () => {
+  it('sendPassword returns fallback failure on error', async () => {
     (getSecureItem as jest.Mock).mockResolvedValueOnce(null);
     (getStorageBatch as jest.Mock).mockResolvedValueOnce({});
     (resetPasswordLinkApi as jest.Mock).mockRejectedValueOnce(new Error('fail'));
@@ -476,8 +476,8 @@ describe('AuthContext', () => {
       expect(contextValue).toBeDefined();
     });
 
-    const msg = await contextValue.sendPassword('user@example.com');
-    expect(msg).toBe('Произошла ошибка. Попробуйте ещё раз.');
+    const outcome = await contextValue.sendPassword('user@example.com');
+    expect(outcome).toEqual({ ok: false, reason: 'unknown', message: 'Произошла ошибка. Попробуйте ещё раз.' });
   });
 
   it('setNewPassword proxies to api', async () => {

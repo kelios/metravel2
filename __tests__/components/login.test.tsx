@@ -84,7 +84,7 @@ jest.mock('@/components/seo/InstantSEO', () => {
 // Test utilities
 const renderLogin = async (mockLogin?: jest.Mock, mockSendPassword?: jest.Mock) => {
   const defaultLogin = jest.fn().mockResolvedValue({ ok: true });
-  const defaultSendPassword = jest.fn().mockResolvedValue('Пароль отправлен на email');
+  const defaultSendPassword = jest.fn().mockResolvedValue({ ok: true, message: 'Пароль отправлен на email' });
 
   (useAuth as jest.Mock).mockReturnValue({
     login: mockLogin || defaultLogin,
@@ -375,7 +375,7 @@ describe('Login Component', () => {
       const mockLogin = jest.fn().mockResolvedValue({ ok: true });
       const authValue: Record<string, unknown> = {
         login: mockLogin,
-        sendPassword: jest.fn().mockResolvedValue('ok'),
+        sendPassword: jest.fn().mockResolvedValue({ ok: true, message: 'ok' }),
         loginWithGoogle: jest.fn().mockResolvedValue({ ok: true }),
         loginWithFacebook: jest.fn().mockResolvedValue({ ok: true }),
         isAuthenticated: false,
@@ -426,7 +426,7 @@ describe('Login Component', () => {
     });
 
     it('should call sendPassword with trimmed email', async () => {
-      const mockSendPassword = jest.fn().mockResolvedValue('Пароль отправлен на email');
+      const mockSendPassword = jest.fn().mockResolvedValue({ ok: true, message: 'Пароль отправлен на email' });
       const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
@@ -439,7 +439,7 @@ describe('Login Component', () => {
     });
 
     it('should show success message on successful password reset', async () => {
-      const mockSendPassword = jest.fn().mockResolvedValue('Пароль отправлен на email');
+      const mockSendPassword = jest.fn().mockResolvedValue({ ok: true, message: 'Пароль отправлен на email' });
       const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
@@ -452,7 +452,9 @@ describe('Login Component', () => {
     });
 
     it('should show error message when password reset fails', async () => {
-      const mockSendPassword = jest.fn().mockResolvedValue('Ошибка: не удалось отправить');
+      const mockSendPassword = jest
+        .fn()
+        .mockResolvedValue({ ok: false, reason: 'server', message: 'Ошибка: не удалось отправить' });
       const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
@@ -462,6 +464,44 @@ describe('Login Component', () => {
       await waitFor(() => {
         expect(getByText('Ошибка: не удалось отправить')).toBeTruthy();
       });
+    });
+
+    // #2042: ошибку сброса решает outcome.ok, а не регулярка по русскому тексту
+    // «ошиб|не удалось»: в EN/BE/UK/PL её слов нет, и отказ красился как успех.
+    // Эталон стиля ошибки — клиентская валидация формы, она всегда error=true.
+    const captureErrorStyle = async (utils: Awaited<ReturnType<typeof renderLogin>>) => {
+      fireEvent.changeText(utils.getByPlaceholderText('Email'), 'invalid-email');
+      fireEvent.press(utils.getByText('Забыли пароль?'));
+      const validationError = await utils.findByText('Введите корректный email адрес');
+      return StyleSheet.flatten(validationError.props.style);
+    };
+
+    it('красит отказ сброса как ошибку по outcome.ok, даже без русских слов «ошибка»', async () => {
+      const mockSendPassword = jest
+        .fn()
+        .mockResolvedValue({ ok: false, reason: 'rejected', message: 'Enter a correct email' });
+      const utils = await renderLogin(undefined, mockSendPassword);
+      const errorStyle = await captureErrorStyle(utils);
+
+      fireEvent.changeText(utils.getByPlaceholderText('Email'), 'test@example.com');
+      fireEvent.press(utils.getByText('Забыли пароль?'));
+
+      const message = await utils.findByText('Enter a correct email');
+      expect(StyleSheet.flatten(message.props.style)).toEqual(errorStyle);
+    });
+
+    it('нейтральный успех сброса не красится как ошибка', async () => {
+      const neutral =
+        'Если аккаунт с такой почтой существует, мы отправили на неё письмо со ссылкой для сброса пароля.';
+      const mockSendPassword = jest.fn().mockResolvedValue({ ok: true, message: neutral });
+      const utils = await renderLogin(undefined, mockSendPassword);
+      const errorStyle = await captureErrorStyle(utils);
+
+      fireEvent.changeText(utils.getByPlaceholderText('Email'), 'test@example.com');
+      fireEvent.press(utils.getByText('Забыли пароль?'));
+
+      const message = await utils.findByText(neutral);
+      expect(StyleSheet.flatten(message.props.style)).not.toEqual(errorStyle);
     });
 
     it('should show error message on password reset exception', async () => {
@@ -492,7 +532,7 @@ describe('Login Component', () => {
 
     it('should disable reset button while loading', async () => {
       const mockSendPassword = jest.fn(
-        () => new Promise((resolve) => setTimeout(() => resolve('Success'), 100))
+        () => new Promise((resolve) => setTimeout(() => resolve({ ok: true, message: 'Success' }), 100))
       );
       const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 

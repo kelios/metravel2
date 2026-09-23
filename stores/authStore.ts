@@ -645,15 +645,12 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     sendPassword: async (email) => {
         try {
             const { resetPasswordLinkApi } = await getAuthApi();
-            const response = await resetPasswordLinkApi(email);
-            return typeof response === 'string'
-                ? response
-                : i18nT('shared:stores.authStore.chto_to_poshlo_ne_tak_poprobuyte_snova_6b2b849c');
+            return await resetPasswordLinkApi(email);
         } catch (error) {
             if (__DEV__) {
                 console.error('Ошибка при сбросе пароля:', error);
             }
-            return i18nT('shared:stores.authStore.proizoshla_oshibka_poprobuyte_esche_raz_fa0eb9e8');
+            return authFailure('unknown', i18nT('shared:stores.authStore.proizoshla_oshibka_poprobuyte_esche_raz_fa0eb9e8'));
         }
     },
 

@@ -25,7 +25,7 @@ export const errorsStaticResources = {
   "api.auth.accountNotActivated": "Konto nie zostało aktywowane. Skorzystaj z linku aktywacyjnego z wiadomości e-mail.",
   "api.auth.serviceUnavailable": "Usługa jest chwilowo niedostępna. Spróbuj ponownie później.",
   "api.auth.resetInstructionsSent": "Instrukcje odzyskiwania hasła zostały wysłane na Twój adres e-mail.",
-  "api.auth.resetInstructionsSentShort": "Instrukcje odzyskiwania zostały wysłane.",
+  "api.auth.passwordResetRequested": "Jeśli konto z tym adresem e-mail istnieje, wysłaliśmy na ten adres wiadomość z linkiem do zresetowania hasła.",
   "api.auth.resetInstructionsFailed": "Nie udało się wysłać instrukcji odzyskiwania hasła",
   "api.auth.passwordRequirements": "Hasło nie spełnia wymagań",
   "api.auth.passwordChanged": "Hasło zostało pomyślnie zmienione",

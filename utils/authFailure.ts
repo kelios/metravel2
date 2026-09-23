@@ -30,6 +30,13 @@ export type AuthAttempt<TUser> = { ok: true; user: TUser } | AuthFailure;
 /** Результат входа в сторе: успех без полезной нагрузки либо причина отказа. */
 export type AuthOutcome = { ok: true } | AuthFailure;
 
+/**
+ * #2042: результат запроса ссылки сброса пароля. Успех и ошибку решает статус
+ * ответа в слое api, а не текст: форма раньше угадывала ошибку регуляркой по
+ * русским словам и в EN/BE/UK/PL красила отказ как успех.
+ */
+export type PasswordResetOutcome = { ok: true; message: string } | AuthFailure;
+
 export const authFailure = (reason: AuthFailureReason, message: string): AuthFailure => ({
     ok: false,
     reason,
@@ -76,27 +83,27 @@ export const authFailureText = (
 ): string => failure.message.trim() || (failure.reason === 'rejected' ? texts.rejected : texts.failed);
 
 /**
- * #1946: классификация отказа входа по телу ответа.
+ * #1946 → #2042: классификация отказа входа по телу ответа.
  *
- * Бэкенд (`users/views.py`, action `login`) отдаёт на ЛЮБОЙ обычный отказ
- * `401 {"error": "Данные входа не корректные"}` и на неактивированный аккаунт —
- * `401 {"error": "Аккаунт не активирован. Воспользуйтесь ссылкой активации в
- * письме"}`. Машиночитаемого `error_code` в ответе нет (проверено read-only в
- * `../metravel-backend/users/views.py`), поэтому единственный доступный маркер —
- * сама строка. Отсюда правило: строка бэкенда НИКОГДА не показывается как есть,
+ * Бэкенд (`users/views.py`, action `login`, #1993) отвечает на отказ
+ * `401 {"code": "invalid_credentials", "error": "Неверная почта или пароль"}`,
+ * а на неактивированный аккаунт — только ПОСЛЕ проверки пароля —
+ * `401 {"code": "account_not_activated", "error": "Аккаунт не активирован…"}`.
+ * Причину выбирает машиночитаемый `code`; строка `error` рядом с ним в выборе не
+ * участвует, даже если ей противоречит. Разбор текста — переходный fallback для
+ * старого бэкенда без `code`.
+ *
+ * Правило #1946 не меняется: строка бэкенда НИКОГДА не показывается как есть,
  * она лишь ВЫБИРАЕТ собственный локализованный ключ приложения. Иначе в EN/BE/
  * UK/PL форма входа показывает русский текст сервера (App Review видел именно
  * это).
- *
- * Локализацию строки на стороне сервера (Accept-Language) оформляем отдельной
- * `area=back` задачей; до неё распознаём причину здесь.
  */
 export type AuthRejectionCode = 'account_not_activated' | 'invalid_credentials';
 
 /**
- * Маркеры неактивированного аккаунта. Русский — текущий ответ прода; английские
- * добавлены на случай локализации/смены формулировки на бэкенде, чтобы причина
- * не деградировала молча в «неверный пароль».
+ * Маркеры неактивированного аккаунта для ответа без `code`. Русский — прежний
+ * ответ прода; английские добавлены на случай локализации/смены формулировки,
+ * чтобы причина не деградировала молча в «неверный пароль».
  */
 const ACCOUNT_NOT_ACTIVATED_MARKERS = [
     'не активирован',
@@ -108,7 +115,19 @@ const ACCOUNT_NOT_ACTIVATED_MARKERS = [
     'inactive',
 ];
 
-export const authRejectionCode = (detail?: string | null): AuthRejectionCode => {
+export const authRejectionCode = ({
+    code,
+    detail,
+}: {
+    code?: string | null;
+    detail?: string | null;
+}): AuthRejectionCode => {
+    const explicitCode = String(code ?? '').trim();
+    if (explicitCode) {
+        // Любой другой код (в том числе будущий) — обычный отказ: подсказку
+        // активации даёт только явный `account_not_activated`.
+        return explicitCode === 'account_not_activated' ? 'account_not_activated' : 'invalid_credentials';
+    }
     const normalized = String(detail ?? '')
         .toLowerCase()
         .replace(/ё/g, 'е')

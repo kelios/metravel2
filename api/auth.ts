@@ -18,6 +18,7 @@ import {
     authRejectionCode,
     type AuthAttempt,
     type AuthFailureReason,
+    type PasswordResetOutcome,
 } from '@/utils/authFailure';
 import { isConnectionFailure } from '@/utils/networkFailureTag';
 import { sanitizeInput } from '@/utils/security';
@@ -145,6 +146,10 @@ const getGoogleAuthErrorMessage = (status: number): string => {
     return i18nT('errorsStatic:api.auth.googleSignInFailed');
 };
 
+/** Тело отказа входа: `code` (#1993) и текст — fallback для старого бэкенда без `code`. */
+type LoginRejectionPayload = Pick<SocialAuthResponse, 'detail' | 'error' | 'message'> & { code?: unknown };
+type LoginHttpError = Error & { detail?: string; rejectionCode?: string };
+
 /**
  * #1944: результат входа несёт причину отказа, а `Alert` отсюда убран.
  * Раньше любая неудача возвращала `null`, форма трактовала его как «неверный
@@ -176,15 +181,18 @@ export const loginApi = async (
                 // Проверяем статус ВНУТРИ retry: статус в сообщении позволяет shouldRetry
                 // ретраить 5xx (isRetryableError матчит /50\d/) и не ретраить 4xx.
                 if (!res.ok) {
-                    // Тело читаем ДО throw — иначе бэкендовый `detail`/`error`/`message`
-                    // (например «Аккаунт не активирован. Воспользуйтесь ссылкой активации
-                    // в письме») теряется, и 401 показывается как «Неверный email или
-                    // пароль» независимо от реальной причины отказа.
-                    const errorPayload = await safeJsonParse<Partial<SocialAuthResponse>>(res, {});
+                    // Тело читаем ДО throw — иначе причина отказа (`code`, #1993, и
+                    // текст `detail`/`error`/`message` для старого бэкенда) теряется,
+                    // и 401 показывается как «Неверный email или пароль» независимо от
+                    // реальной причины отказа.
+                    const errorPayload = await safeJsonParse<LoginRejectionPayload>(res, {});
                     const detail = errorPayload.detail || errorPayload.error || errorPayload.message;
-                    const httpError = new Error(`Login failed: ${res.status}`) as Error & { detail?: string };
+                    const httpError = new Error(`Login failed: ${res.status}`) as LoginHttpError;
                     if (typeof detail === 'string' && detail.trim()) {
                         httpError.detail = detail.trim();
+                    }
+                    if (typeof errorPayload.code === 'string' && errorPayload.code.trim()) {
+                        httpError.rejectionCode = errorPayload.code.trim();
                     }
                     throw httpError;
                 }
@@ -211,17 +219,17 @@ export const loginApi = async (
         const failedStatus = rawMessage.match(/Login failed: (\d{3})/);
         if (failedStatus) {
             const status = Number(failedStatus[1]);
-            const detail = error instanceof Error ? (error as Error & { detail?: string }).detail : undefined;
+            const { detail, rejectionCode } = error as LoginHttpError;
             if (status === 401 || status === 403 || status === 400) {
                 // #1946: строку бэкенда НЕ показываем как есть — она всегда
-                // русская (`{"error": "Данные входа не корректные"}` на любой
-                // обычный отказ), и в EN/BE/UK/PL форма входа показывала её
-                // поверх собственного локализованного текста. Тело ответа теперь
-                // только ВЫБИРАЕТ ключ приложения: причина #1945 («аккаунт не
+                // русская, и в EN/BE/UK/PL форма входа показывала её поверх
+                // собственного локализованного текста. Тело ответа только ВЫБИРАЕТ
+                // ключ приложения, и выбирает его явный `code` (#2042), а текст —
+                // лишь при его отсутствии: причина #1945 («аккаунт не
                 // активирован») доходит до пользователя на его языке.
                 return authFailure(
                     'rejected',
-                    authRejectionCode(detail) === 'account_not_activated'
+                    authRejectionCode({ code: rejectionCode, detail }) === 'account_not_activated'
                         ? i18nT('errorsStatic:api.auth.accountNotActivated')
                         : i18nT('errorsStatic:api.auth.invalidCredentials'),
                 );
@@ -301,10 +309,17 @@ export const sendPasswordApi = async (email: string) => {
     }
 };
 
-export const resetPasswordLinkApi = async (email: string) => {
+/**
+ * #2042: бэкенд (#1993) на любой корректный email отвечает одинаково —
+ * `200 {code: "password_reset_requested", message: …}`, есть аккаунт или нет;
+ * некорректный email — `400`. Тело ответа не показываем (#1946): успех — своя
+ * нейтральная строка приложения, одна для известного и неизвестного адреса, а
+ * ошибки выбираются по статусу.
+ */
+export const resetPasswordLinkApi = async (email: string): Promise<PasswordResetOutcome> => {
     const sanitizedEmail = sanitizeInput(email.trim());
     if (!sanitizedEmail) {
-        throw new Error(i18nT('errorsStatic:api.auth.emptyEmail'));
+        return authFailure('rejected', i18nT('errorsStatic:api.auth.emptyEmail'));
     }
 
     try {
@@ -315,18 +330,23 @@ export const resetPasswordLinkApi = async (email: string) => {
             body: JSON.stringify({ email: sanitizedEmail }),
         }, DEFAULT_TIMEOUT);
 
-        const json = await safeJsonParse<{ email?: string[]; message?: string }>(response, {});
-
-        if (!response.ok) {
-            return json?.email?.[0] || json?.message || i18nT('errorsStatic:api.auth.errorTitle');
+        if (response.ok) {
+            return { ok: true, message: i18nT('errorsStatic:api.auth.passwordResetRequested') };
         }
-
-        return json?.message || i18nT('errorsStatic:api.auth.resetInstructionsSentShort');
+        if (response.status === 400) {
+            return authFailure('rejected', i18nT('errorsStatic:api.backendErrors.invalidEmail'));
+        }
+        return authFailure(
+            authFailureReasonFromStatus(response.status),
+            response.status === 429
+                ? i18nT('errorsStatic:api.misc.tooManyAttempts')
+                : i18nT('errorsStatic:api.auth.resetInstructionsFailed'),
+        );
     } catch (error) {
         if (__DEV__) {
             console.error(error);
         }
-        return i18nT('errorsStatic:api.auth.resetInstructionsFailed');
+        return authFailureFromError(error, i18nT('errorsStatic:api.auth.resetInstructionsFailed'));
     }
 };
 

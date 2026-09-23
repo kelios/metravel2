@@ -10,7 +10,7 @@ import type {
     FacebookCompletionStartResult,
     FacebookCredentialPayload,
 } from '@/api/auth';
-import type { AuthOutcome } from '@/utils/authFailure';
+import type { AuthOutcome, PasswordResetOutcome } from '@/utils/authFailure';
 
 export interface AuthState {
     isAuthenticated: boolean;
@@ -57,7 +57,8 @@ export interface AuthActions {
         code: string,
     ) => Promise<FacebookAuthResult>;
     logout: () => Promise<void>;
-    sendPassword: (email: string) => Promise<string>;
+    // #2042: успех/отказ сброса решает статус ответа, а не текст сообщения.
+    sendPassword: (email: string) => Promise<PasswordResetOutcome>;
     setNewPassword: (token: string, newPassword: string) => Promise<boolean>;
 }
 

@@ -143,8 +143,10 @@ export default function Login() {
         }
 
         try {
-            const res = await sendPassword(trimmedEmail);
-            showMsg(res, /ошиб|не удалось/i.test(res));
+            // #2042: ошибку решает статус ответа, а не регулярка по русскому тексту:
+            // в EN/BE/UK/PL она не срабатывала и красила отказ как успех.
+            const outcome = await sendPassword(trimmedEmail);
+            showMsg(outcome.message, !outcome.ok);
         } catch (error) {
             showMsg(authErrorMessage(error, i18nT('auth:components.auth.LoginForm.oshibka_pri_sbrose_parolya_2500a38a')), true);
         }

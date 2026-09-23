@@ -181,7 +181,6 @@ export const sharedGenerated2 = {
   "services.notifications.vy_ostanovilis_na_shage_value1_value2_v_kves_8393cf7d": "Ви зупинилися на кроці {{value1}}/{{value2}} у квесті «{{value3}}». Продовжіть проходження!",
   "services.questGeofencing.vy_na_meste_otkroyte_zagadku_09e0702f": "Ви на місці - відкрийте загадку",
   "services.questGeofencing.vy_podoshli_k_tochke_value1_kvesta_value2_ot_5709191a": "Ви підійшли до точки{{value1}} квесту «{{value2}}». Відкрийте загадку!",
-  "stores.authStore.chto_to_poshlo_ne_tak_poprobuyte_snova_6b2b849c": "Щось пішло не так. Спробуйте ще раз.",
   "stores.authStore.proizoshla_oshibka_poprobuyte_esche_raz_fa0eb9e8": "Відбулася помилка. Спробуйте ще раз.",
   "stores.travelStatusStore.puteshestvie_value1_a99c3208": "Подорож {{value1}}",
   "utils.a11y.skip_to_main_content_48220d7c": "Skip to main content",

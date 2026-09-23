@@ -110,10 +110,10 @@ describe('utils/authFailure', () => {
     );
   });
 
-  // #1946: у бэкенда нет `error_code` — на обычный отказ и на неактивированный
+  // #1946: старый бэкенд без `code` — на обычный отказ и на неактивированный
   // аккаунт он отдаёт 401 с русской строкой в поле `error`. Классификатор
   // разбирает ТОЛЬКО причину, показываемый текст всегда берётся из i18n.
-  describe('authRejectionCode', () => {
+  describe('authRejectionCode без code — текстовый fallback', () => {
     it.each([
       'Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме',
       'АККАУНТ НЕ АКТИВИРОВАН',
@@ -122,7 +122,7 @@ describe('utils/authFailure', () => {
       'Konto nie jest aktywne',
       'Account is not activated',
     ])('«%s» — аккаунт не активирован', (detail) => {
-      expect(authRejectionCode(detail)).toBe('account_not_activated');
+      expect(authRejectionCode({ detail })).toBe('account_not_activated');
     });
 
     it.each([
@@ -131,11 +131,52 @@ describe('utils/authFailure', () => {
       '',
       '   ',
     ])('«%s» — обычный отказ по учётным данным', (detail) => {
-      expect(authRejectionCode(detail)).toBe('invalid_credentials');
+      expect(authRejectionCode({ detail })).toBe('invalid_credentials');
     });
 
     it.each([undefined, null])('отсутствующее тело (%s) — обычный отказ', (detail) => {
-      expect(authRejectionCode(detail)).toBe('invalid_credentials');
+      expect(authRejectionCode({ detail })).toBe('invalid_credentials');
+    });
+
+    it.each([undefined, null, '', '   '])('пустой code (%p) не отменяет разбор текста', (code) => {
+      expect(authRejectionCode({ code, detail: 'Аккаунт не активирован' })).toBe('account_not_activated');
+    });
+  });
+
+  // #2042: бэкенд #1993 отдаёт машиночитаемый `code`. Он решает сам: текст рядом
+  // с ним в выборе не участвует, даже если ему противоречит.
+  describe('authRejectionCode с явным code', () => {
+    it('account_not_activated — подсказка активации', () => {
+      expect(
+        authRejectionCode({
+          code: 'account_not_activated',
+          detail: 'Аккаунт не активирован. Воспользуйтесь ссылкой активации в письме',
+        }),
+      ).toBe('account_not_activated');
+    });
+
+    it('invalid_credentials — обычный отказ', () => {
+      expect(authRejectionCode({ code: 'invalid_credentials', detail: 'Неверная почта или пароль' })).toBe(
+        'invalid_credentials',
+      );
+    });
+
+    it('code invalid_credentials сильнее текста «не активирован»', () => {
+      expect(authRejectionCode({ code: 'invalid_credentials', detail: 'Аккаунт не активирован' })).toBe(
+        'invalid_credentials',
+      );
+    });
+
+    it('code account_not_activated сильнее текста обычного отказа', () => {
+      expect(authRejectionCode({ code: 'account_not_activated', detail: 'Неверная почта или пароль' })).toBe(
+        'account_not_activated',
+      );
+    });
+
+    it('незнакомый code — обычный отказ, текст «не активирован» его не переопределяет', () => {
+      expect(authRejectionCode({ code: 'account_locked', detail: 'Аккаунт не активирован' })).toBe(
+        'invalid_credentials',
+      );
     });
   });
 });

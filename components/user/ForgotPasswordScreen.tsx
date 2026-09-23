@@ -9,8 +9,8 @@ const ForgotPasswordScreen = () => {
     const { sendPassword } = useAuth();
 
     const handleSendPassword = async () => {
-        const success = await sendPassword(email);
-        if (success) {
+        const outcome = await sendPassword(email);
+        if (outcome.ok) {
             // Перейти на экран входа или показать сообщение об успешной отправке
         }
     };
