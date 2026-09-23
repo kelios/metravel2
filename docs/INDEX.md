@@ -81,8 +81,9 @@
 - `docs/ACHIEVEMENTS_BADGE_PROMPTS.md` — badge visual spec: векторная эмблема
   (`components/achievements/BadgeEmblem.tsx`, `badgeMotif`) как дефолт и
   AI-промпт-схема как опциональный фоллбэк для `image_url`.
-- `docs/FACEBOOK_LOGIN_DESIGN.md` — normative web auth states for Facebook
-  registration/login rollout (implemented behind flag, blocked by backend contract).
+- `docs/FACEBOOK_LOGIN_DESIGN.md` — normative screens, states and token contract
+  for Facebook registration/login on web, Android and iPhone (Limited Login);
+  release state per platform lives in `docs/features/auth.md`.
 
 `docs/features/TEMPLATE.md` — шаблон новой feature map; не runtime document.
 

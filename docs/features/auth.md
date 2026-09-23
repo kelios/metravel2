@@ -1,6 +1,6 @@
 # Фича: auth (вход и регистрация)
 
-**Последняя актуализация:** 2026-09-23
+**Последняя актуализация:** 2026-09-24
 
 ## TL;DR
 
@@ -20,14 +20,16 @@
 ## Матрица «провайдер × поверхность»
 
 Единственный источник правды по паритету. `гейт` означает, что поверхность
-готова, но провайдер выпускается только при заданной конфигурации.
+готова, но провайдер выпускается только при заданной конфигурации; в скобках —
+где эта конфигурация задана сейчас. Web читает `.env.prod`, Android-релиз —
+тоже `.env.prod` (`scripts/android-gradle-build.js`), iPhone — переменные EAS.
 
 | Провайдер | desktop web | mobile web | Android | iPhone (iOS) | Реализация |
 |---|---|---|---|---|---|
 | Email + пароль | да | да | да | да | `api/auth.ts` |
 | Google | да | да | да | да | `GoogleSignInButton.web.tsx` (GSI) / `.native.tsx` |
-| Facebook | гейт `EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED` | тот же гейт | тот же гейт | тот же гейт, режим Limited Login (#1918) | `FacebookAuthFlow.shared.tsx` |
-| Apple | гейт `EXPO_PUBLIC_APPLE_WEB_CLIENT_ID` + `..._REDIRECT_URI` | тот же гейт | **нет** | да | `AppleSignInButton.web.tsx` / `.native.tsx` |
+| Facebook | да (гейт `EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED=true` в `.env.prod`) | да | да (тот же гейт, #981) | гейт `true` в EAS с 23.09.2026, но в выпущенных сборках ≤ 1.0.5 (9) кнопка скрыта — появится со следующей сборки; режим Limited Login (#1918) | `FacebookAuthFlow.shared.tsx` |
+| Apple | да (гейт `EXPO_PUBLIC_APPLE_WEB_CLIENT_ID` + `..._REDIRECT_URI` задан в `.env.prod`) | да | **нет** | да | `AppleSignInButton.web.tsx` / `.native.tsx` |
 
 Apple в Android-приложении отсутствует осознанно: `expo-apple-authentication`
 на не-iOS отдаёт `isAvailableAsync() === false`. Аккаунт, созданный через Apple,
@@ -78,7 +80,29 @@ Events, Advertiser ID и ATT-запрос не используются. Сос�
 
 Кнопка на iPhone остаётся за флагом сборки `EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED`
 (плюс `EXPO_PUBLIC_META_APP_ID`); облачная сборка берёт их из EAS environment
-variables, локальный `.env` туда не попадает.
+variables, локальный `.env` туда не попадает. Флаг зашивается в JS-бандл при
+сборке: смена переменной в EAS установленные сборки не меняет.
+
+### Facebook: состояние выпуска (проверено 24.09.2026)
+
+| Слой | Состояние | Как проверено |
+|---|---|---|
+| Meta-приложение `meTravel.by` (2443100196153960) | «Опубликовано» (Live) с 23.09.2026 (#1917): вход открыт любому аккаунту Facebook | кабинет Meta → «Настройки → Основное» |
+| Платформы Meta | Web `https://metravel.by/` (домен `metravel.by`); iOS bundle `by.metravel.app`; Android `by.metravel.app` / `by.metravel.app.MainActivity` | тот же экран |
+| Хэши ключей Android в Meta | три хэша = debug, upload и ключ Google Play App Signing | сверены с `android/app/debug.keystore`, `.secrets/metravel-android-upload-certificate.pem` и `METRAVEL_GOOGLE_ANDROID_PLAY_SHA1` (SHA-1 → base64) |
+| Web (прод) | desktop 1440 и mobile 390, `/login` и `/registration`: кнопка активна, клик открывает окно входа facebook.com с `client_id` приложения и `scope=public_profile,email`, без ошибок Meta и ошибок консоли | Playwright против `https://metravel.by` |
+| Backend (прод) | `POST /api/user/facebook-login/`: поддельный `access_token` и поддельный `authentication_token` + `nonce` → `401 facebook_token_invalid`, пустое тело → `400 access_token_required` | curl |
+| Android-релиз | SDK попадает в AAB: `verifyFacebookAndroidResources` (`scripts/android-gradle-build.js:167`) роняет сборку при включённом флаге без app id или client token; полный вход проверен на Pixel релизной сборкой (#981) | исходник сборки, карточка #981 |
+| iPhone | конфигурация Meta SDK в `ios/metravel/Info.plist` проходит `npm run ios:release:guard`; последняя EAS-сборка 1.0.5 (9) от 08.09.2026 собрана с флагом `false` — кнопки в ней нет | `eas build:list`, `eas env:get` |
+
+Не доказано автоматически: последний шаг «аккаунт Facebook → сессия MeTravel»
+на проде. Агент не вводит пароли, а залогиненный браузер или приложение
+владельца для этого пришлось бы разлогинить — выход удаляет токен аккаунта на
+всех устройствах. Проверка владельцем: окно инкогнито → `/login` → «Войти через
+Facebook». Живой вход на iPhone принимается на точной TestFlight-сборке
+(#1939/#1940). Когда такая сборка уйдёт в App Review, описание в App Store
+Connect можно вернуть к «Apple, Google или Facebook» — убрано 12.09.2026, пока
+кнопка была скрыта (`docs/IOS_STORE_LISTING.md`).
 
 ## Email: причина отказа входа и сброс пароля (#2042)
 

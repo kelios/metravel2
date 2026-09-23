@@ -314,6 +314,11 @@ App Review Information, в Git и на борд не попадают.
   поэтому Facebook login UI в build 9 скрыт, хотя native SDK включён в бинарник.
   Google config непустая; успешный вход проверяется отдельно. Обещание Facebook
   убрано из локального пакета и сохранено в ASC четырёх локалей 12.09.2026.
+  Обновление 24.09.2026: приложение Meta опубликовано 23.09 (#1917), флаг
+  `EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED=true` в EAS production/preview — следующая
+  сборка покажет кнопку. После проверки входа на точной TestFlight-сборке
+  (#1939/#1940) формулировку «Apple, Google или Facebook» можно вернуть в ASC
+  (таблица замен ниже, обратным направлением) — отдельным операторским шагом.
 - Удаление аккаунта (Guideline 5.1.1(v)): вкладка «Настройки» → карточка
   аккаунта → «Удалить аккаунт»; маршрут `app/(tabs)/settings.tsx` →
   `components/screens/settings/SettingsScreen.tsx:34` →

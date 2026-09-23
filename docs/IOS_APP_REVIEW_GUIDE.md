@@ -192,7 +192,8 @@ Google. The Meta SDK is bundled for Facebook sign-in in Limited Login mode:
 the app never requests App Tracking Transparency, Facebook app-event
 auto-logging, advertiser ID collection and SDK auto-init are disabled, and
 sign-in returns an OIDC token instead of a Graph API access token. Facebook
-sign-in stays behind a build flag and is disabled in build 9.
+sign-in is controlled by a build flag: it is disabled in build 9 and enabled
+in the next candidate build.
 Amazon S3 stores media and backups; outbound account email uses Gmail SMTP.
 Push notifications use Expo/APNs. Optional Telegram linking associates a
 Telegram account. Articles can embed Instagram/YouTube content in web views.
