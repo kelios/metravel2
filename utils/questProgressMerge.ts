@@ -406,16 +406,10 @@ export function mergeQuestProgress(
 }
 
 // Только накопительная часть прохождения: курсор и карта принадлежат последнему
-// экрану и накопленным не считаются.
+// экрану и накопленным не считаются. Строится из серверного отпечатка, чтобы
+// новое поле сервера не пришлось дописывать в два списка.
 const accumulatedFingerprint = (snapshot: QuestProgressSnapshot): string =>
-    JSON.stringify({
-        answers: sortRecord(snapshot.answers),
-        attempts: sortRecord(snapshot.attempts),
-        hints: sortRecord(snapshot.hints),
-        completed: snapshot.completed,
-        skipped: sortRecord(snapshot.skipped),
-        earlyFinish: snapshot.earlyFinish,
-    })
+    serverFingerprint({ ...snapshot, currentIndex: 0, unlockedIndex: 0, showMap: true })
 
 /**
  * Сервер уже знает всё, что накопил снапшот: слияние не добавляет ему ни
