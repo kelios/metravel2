@@ -189,14 +189,41 @@ export function formatElevation(m: number): string {
   return i18nT('trips:components.trips.planning.tripPlanFormatting.value1_m_7f82c902', { value1: formatInteger(m) });
 }
 
+/**
+ * #2057: сводка прямой линии (`provider=direct`) — не маршрут. Её дистанция —
+ * сумма отрезков по прямой, а время — та же дистанция, делённая на скорость
+ * способа передвижения (бэкенд `_route_duration_s`, превью —
+ * `estimateDurationSeconds` в `useRouting`): «481 ч 57 мин» пешком на trip 47.
+ * Время и набор высоты такой линии не показываются нигде, дистанция
+ * подписывается «по прямой». Провайдер сводки и `routing_state` бэкенд пишет из
+ * одной записи `TripRouteSummary`, превью — из одного ответа движка.
+ */
+export function isDirectLineSummary(summary: RouteSummary | null | undefined): boolean {
+  return summary?.provider === PREVIEW_DIRECT_PROVIDER;
+}
+
+/** «≈ 2 429 км» — значение плитки «Дистанция по прямой». */
+export function formatDirectDistanceValue(km: number): string {
+  if (km <= 0) return '—';
+  return i18nT('tripsStatic:plan.summary.directDistanceValue', { value: formatDistance(km) });
+}
+
+/**
+ * Дистанция и время одной строкой — шапка карты и строка итога под картой:
+ * «252 км · 4 ч 12 мин». У прямой линии — «≈ 2 429 км по прямой», без времени.
+ */
+export function routeMetricsLine(summary: RouteSummary): string {
+  if (!isDirectLineSummary(summary)) {
+    return `${formatDistance(summary.distanceKm)} · ${formatDuration(summary.durationMin)}`;
+  }
+  if (summary.distanceKm <= 0) return '—';
+  return i18nT('tripsStatic:plan.summary.directDistance', { value: formatDistance(summary.distanceKm) });
+}
+
 /** Краткая сводка маршрута строкой: «252 км · 4 ч 12 мин · 3 остановки». */
 export function routeSummaryLine(summary: RouteSummary | null): string {
   if (!summary) return i18nT('trips:components.trips.planning.tripPlanFormatting.marshrut_ne_postroen_e3365d5c');
-  return [
-    formatDistance(summary.distanceKm),
-    formatDuration(summary.durationMin),
-    `${summary.stopsCount} ${pluralStops(summary.stopsCount)}`,
-  ].join(' · ');
+  return `${routeMetricsLine(summary)} · ${summary.stopsCount} ${pluralStops(summary.stopsCount)}`;
 }
 
 export function isRouteApproximate(routingState: RoutingState | null | undefined): boolean {
@@ -240,10 +267,35 @@ const ROUTING_REASON_HINT: Record<string, string> = {
   get routing_provider_unavailable() { return i18nT('tripsStatic:plan.routingReason.providerUnavailable') },
 };
 
-function humanizeRoutingReason(reason: string | null | undefined): string | null {
+// #2057 (`docs/features/trips-plan-route-tab-mock.md` §2): `ors_http_4xx` — ORS
+// ответил, что дороги между точками нет (перелёт, ночной поезд), и повтор этого
+// не изменит. 401/403/429 — ключ и лимиты самого сервиса: он временно
+// недоступен, как при 5xx и сетевых ошибках (`ors_request_failed` и т. п.).
+const ORS_UNAVAILABLE_CLIENT_ERRORS = new Set(['ors_http_401', 'ors_http_403', 'ors_http_429']);
+
+const isNoRouteReason = (code: string): boolean =>
+  /^ors_http_4\d\d$/.test(code) && !ORS_UNAVAILABLE_CLIENT_ERRORS.has(code);
+
+// Общественный и смешанный транспорт бэкенд прокладывает профилем машины
+// (`PLANNED_ROUTING_TRANSPORT_MODES`), но «на машине» для них было бы неправдой.
+const NO_ROUTE_HINT: Record<TripTransport, string> = {
+  get foot() { return i18nT('tripsStatic:plan.routingReason.noRouteFoot') },
+  get bike() { return i18nT('tripsStatic:plan.routingReason.noRouteBike') },
+  get car() { return i18nT('tripsStatic:plan.routingReason.noRouteCar') },
+  get public() { return i18nT('tripsStatic:plan.routingReason.noRoute') },
+  get mixed() { return i18nT('tripsStatic:plan.routingReason.noRoute') },
+};
+
+function humanizeRoutingReason(
+  reason: string | null | undefined,
+  transport: TripTransport | undefined,
+): string | null {
   const code = (reason ?? '').trim();
   if (!code) return null;
   if (ROUTING_REASON_HINT[code]) return ROUTING_REASON_HINT[code];
+  if (isNoRouteReason(code)) {
+    return transport ? NO_ROUTE_HINT[transport] : i18nT('tripsStatic:plan.routingReason.noRoute');
+  }
   if (/^ors_/.test(code) || /_not_configured$/.test(code)) {
     return i18nT('trips:components.trips.planning.tripPlanFormatting.servis_postroeniya_marshrutov_vremenno_nedos_925a517c');
   }
@@ -252,17 +304,39 @@ function humanizeRoutingReason(reason: string | null | undefined): string | null
   return null;
 }
 
-export function routingStateHint(routingState: RoutingState | null | undefined): string | null {
+/**
+ * Причина приблизительной линии. Во вкладке «Маршрут» её показывает ровно одна
+ * поверхность (#2057, макет §2): шапка карты, а в мобильной раскладке, где
+ * карта отдаёт шапку, — строка итога под картой.
+ */
+export function routingStateHint(
+  routingState: RoutingState | null | undefined,
+  transport?: TripTransport,
+): string | null {
   if (!routingState || !isRouteApproximate(routingState)) return null;
   if (routingState.provider === PREVIEW_SCHEMATIC_PROVIDER) {
     return i18nT('tripsStatic:plan.routingReason.schematic');
   }
   const candidates = [...routingState.warnings, routingState.fallbackReason];
   for (const candidate of candidates) {
-    const humanized = humanizeRoutingReason(candidate);
+    const humanized = humanizeRoutingReason(candidate, transport);
     if (humanized) return humanized;
   }
   return i18nT('trips:components.trips.planning.tripPlanFormatting.servis_routinga_ne_smog_postroit_dorogu_ili__b8007009');
+}
+
+/**
+ * «Повторить» — только у временной причины (макет §2): ответ «дороги между
+ * точками нет» (`ors_http_4xx`) повторный запрос не изменит. Решает тот же код,
+ * по которому `routingStateHint` выбирает текст причины.
+ */
+export function routingStateRetryable(routingState: RoutingState | null | undefined): boolean {
+  if (!routingState || !isRouteApproximate(routingState)) return false;
+  if (routingState.provider === PREVIEW_SCHEMATIC_PROVIDER) return false;
+  const shownCode = [...routingState.warnings, routingState.fallbackReason]
+    .map((candidate) => (candidate ?? '').trim())
+    .find((code) => humanizeRoutingReason(code, undefined) !== null);
+  return !(shownCode && isNoRouteReason(shownCode));
 }
 
 function pluralStops(n: number): string {

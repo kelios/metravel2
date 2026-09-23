@@ -7,15 +7,19 @@ import {
   TRANSPORT_LABEL,
   VISIBILITY_ICON_NAME,
   VISIBILITY_LABEL,
+  formatDirectDistanceValue,
   formatDistance,
   formatDuration,
   formatTripDateTime,
+  isDirectLineSummary,
   isRouteApproximate,
+  routeMetricsLine,
   routeSummaryLine,
   routingStateHint,
   routingStateLabel,
+  routingStateRetryable,
 } from '@/components/trips/planning/tripPlanFormatting'
-import type { RouteSummary, RoutingState } from '@/api/plannedTrips'
+import type { RouteSummary, RoutingState, TripTransport } from '@/api/plannedTrips'
 
 // ── formatDistance ────────────────────────────────────────────────────────────
 
@@ -201,6 +205,136 @@ describe('routingStateHint', () => {
     )
     expect(hint).toBe(
       'Сервис роутинга не смог построить дорогу или тропу, линия показана приблизительно.',
+    )
+  })
+})
+
+// ── #2057: причина по коду ────────────────────────────────────────────────────
+// Прод trip 47: ORS ответил HTTP 404 (дороги пешком между частью точек нет —
+// ночной поезд и перелёты), а экран писал «сервис временно недоступен». Таблица —
+// `docs/features/trips-plan-route-tab-mock.md` §2.
+
+describe('routingStateHint — 4xx против временной недоступности (#2057)', () => {
+  const NO_ROUTE = 'Не получилось проложить маршрут'
+  const UNAVAILABLE = 'Сервис построения маршрутов временно недоступен — линия показана приблизительно.'
+  const degraded = (code: string): RoutingState => ({
+    provider: 'direct',
+    isOptimal: false,
+    fallbackReason: code,
+    warnings: [code],
+  })
+
+  it.each(['ors_http_404', 'ors_http_400', 'ors_http_413'])(
+    '%s — дороги между точками нет, повтор не поможет',
+    (code) => {
+      const hint = routingStateHint(degraded(code), 'foot')
+      expect(hint).toContain(NO_ROUTE)
+      expect(hint).not.toContain('временно недоступен')
+    },
+  )
+
+  it.each([
+    'ors_http_502',
+    'ors_http_500',
+    'ors_http_503',
+    'ors_http_429',
+    'ors_http_401',
+    'ors_http_403',
+    'ors_request_failed',
+    'ors_response_invalid',
+    'ors_not_configured',
+    'ors_url_template_invalid',
+    'route_provider_unavailable',
+    'routing_provider_unavailable',
+  ])('%s — сервис временно недоступен', (code) => {
+    expect(routingStateHint(degraded(code), 'foot')).toBe(UNAVAILABLE)
+  })
+
+  it.each<[TripTransport | undefined, string]>([
+    ['foot', 'Не получилось проложить маршрут пешком между всеми точками — часть отрезков показана по прямой. Так бывает на перелётах и переездах.'],
+    ['bike', 'Не получилось проложить маршрут на велосипеде между всеми точками — часть отрезков показана по прямой. Так бывает на перелётах и переездах.'],
+    ['car', 'Не получилось проложить маршрут на машине между всеми точками — часть отрезков показана по прямой. Так бывает на перелётах и переездах.'],
+    // Общественный и смешанный транспорт бэкенд прокладывает профилем машины,
+    // но называть способ «на машине» было бы неправдой.
+    ['public', 'Не получилось проложить маршрут между всеми точками — часть отрезков показана по прямой. Так бывает на перелётах и переездах.'],
+    ['mixed', 'Не получилось проложить маршрут между всеми точками — часть отрезков показана по прямой. Так бывает на перелётах и переездах.'],
+    [undefined, 'Не получилось проложить маршрут между всеми точками — часть отрезков показана по прямой. Так бывает на перелётах и переездах.'],
+  ])('называет способ передвижения %s', (transport, text) => {
+    expect(routingStateHint(degraded('ors_http_404'), transport)).toBe(text)
+  })
+
+  it('читает код и из warnings, когда fallback_reason пуст', () => {
+    const hint = routingStateHint(
+      { provider: 'direct', isOptimal: false, fallbackReason: null, warnings: ['ors_http_404'] },
+      'car',
+    )
+    expect(hint).toContain('на машине')
+  })
+
+  it.each(['ors_http_404', 'ors_http_400'])('%s — «Повторить» не предлагается', (code) => {
+    expect(routingStateRetryable(degraded(code))).toBe(false)
+  })
+
+  it.each(['ors_http_502', 'ors_http_429', 'ors_request_failed', 'route_provider_unavailable', 'some_future_unknown_code'])(
+    '%s — временная причина, «Повторить» есть',
+    (code) => {
+      expect(routingStateRetryable(degraded(code))).toBe(true)
+    },
+  )
+
+  it('решает тот же код, что и текст причины', () => {
+    const state: RoutingState = {
+      provider: 'direct',
+      isOptimal: false,
+      fallbackReason: 'ors_http_502',
+      warnings: ['ors_http_404'],
+    }
+    expect(routingStateHint(state, 'foot')).toContain(NO_ROUTE)
+    expect(routingStateRetryable(state)).toBe(false)
+  })
+
+  it('у проложенного маршрута и схематичной линии повтора нет', () => {
+    expect(routingStateRetryable({ provider: 'ors', isOptimal: true, fallbackReason: null, warnings: [] })).toBe(false)
+    expect(routingStateRetryable({ provider: 'schematic', isOptimal: false, fallbackReason: null, warnings: [] })).toBe(false)
+    expect(routingStateRetryable(null)).toBe(false)
+  })
+})
+
+// ── #2057: цифры прямой линии ─────────────────────────────────────────────────
+// «481 ч 57 мин» на trip 47 — это 2 429 001 м / 1,4 м/с, а не маршрут.
+
+describe('прямая линия не выдаёт время за маршрут (#2057)', () => {
+  const directSummary: RouteSummary = {
+    distanceKm: 2429,
+    durationMin: 28917,
+    elevationGainM: 0,
+    stopsCount: 61,
+    provider: 'direct',
+  }
+
+  it('узнаёт прямую линию по провайдеру сводки', () => {
+    expect(isDirectLineSummary(directSummary)).toBe(true)
+    expect(isDirectLineSummary({ ...directSummary, provider: 'ors' })).toBe(false)
+    expect(isDirectLineSummary({ ...directSummary, provider: 'preview' })).toBe(false)
+    expect(isDirectLineSummary({ ...directSummary, provider: undefined })).toBe(false)
+    expect(isDirectLineSummary(null)).toBe(false)
+  })
+
+  it('подписывает дистанцию «по прямой» и не печатает время', () => {
+    expect(routeMetricsLine(directSummary)).toBe('≈ 2 429 км по прямой')
+    expect(routeSummaryLine(directSummary)).toBe('≈ 2 429 км по прямой · 61 остановка')
+    expect(routeSummaryLine(directSummary)).not.toMatch(/ч|мин/)
+    expect(formatDirectDistanceValue(directSummary.distanceKm)).toBe('≈ 2 429 км')
+  })
+
+  it('не рисует «≈ — по прямой» у нулевой дистанции', () => {
+    expect(routeMetricsLine({ ...directSummary, distanceKm: 0 })).toBe('—')
+    expect(formatDirectDistanceValue(0)).toBe('—')
+  })
+
+  it('оставляет дорожной сводке дистанцию и время', () => {
+    expect(routeMetricsLine({ ...directSummary, provider: 'ors', distanceKm: 252, durationMin: 252 })).toBe(
+      '252 км · 4 ч 12 мин',
     )
   })
 })

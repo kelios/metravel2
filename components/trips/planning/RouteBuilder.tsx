@@ -52,7 +52,7 @@ import {
   type RoutingState,
   type RoutePoint,
 } from '@/api/plannedTrips';
-import { TRANSPORT_LABEL } from '@/components/trips/planning/tripPlanFormatting';
+import { TRANSPORT_LABEL, routingStateRetryable } from '@/components/trips/planning/tripPlanFormatting';
 import { type PickedTripRouteFileUpload } from '@/components/trips/planning/TripRouteFilePicker.types';
 import { useTripRouteFileBranch } from '@/components/trips/planning/useTripRouteFileBranch';
 import {
@@ -356,8 +356,8 @@ function RouteBuilder({
     />
   ) : null;
 
-  // Прогресс построения и баннер «Прямая линия» с повтором — общий компонент
-  // /map. distance не передаём: цифры печатает RouteSummaryBar, дублировать их
+  // Прогресс построения и баннер «Прямая линия» — общий компонент /map;
+  // «Повторить» в нём только у временной причины (#2057 макет §2). distance не передаём: цифры печатает RouteSummaryBar, дублировать их
   // здесь незачем, и в спокойном состоянии блок не рендерится вовсе.
   // Схематичная линия public/mixed сюда не попадает: там ничего не строится,
   // и объясняет её подпись самой карты, а не прогресс-бар с повтором.
@@ -367,7 +367,7 @@ function RouteBuilder({
       error={preview.degraded ? ROUTING_DIRECT_LINE : null}
       distance={null}
       transportMode={preview.transportMode}
-      onRetry={preview.retry}
+      onRetry={routingStateRetryable(preview.routingState) ? preview.retry : undefined}
     />
   ) : null;
 

@@ -260,6 +260,45 @@ describe('RouteBuilder route download', () => {
     expect(getByTestId('trip-route-export-gpx').props.accessibilityState.disabled).toBe(true)
     expect(getByTestId('trip-route-export-kml').props.accessibilityState.disabled).toBe(true)
   })
+
+  // #2057: на desktop (прод trip 47, 1440) фраза «Сервис построения маршрутов
+  // временно недоступен…» стояла и в «Итоге маршрута», и в «Файле маршрута».
+  // Причину показывает шапка карты (в этом тесте карта заглушена), «Файл
+  // маршрута» говорит про экспорт одной короткой строкой (макет §1 и §2).
+  it('keeps the degradation reason out of the steps: summary chip and a short export line', () => {
+    const { getByTestId, queryByText } = renderRouteBuilder(
+      <RouteBuilder
+        trip={makeTrip({
+          transport: 'foot',
+          routeGeometry: [
+            [19.9496, 49.2992],
+            [20.108, 49.32],
+          ],
+          routeSummary: {
+            distanceKm: 2429,
+            durationMin: 28917,
+            elevationGainM: 0,
+            stopsCount: 2,
+            provider: 'direct',
+          },
+          routingState: {
+            provider: 'direct',
+            isOptimal: false,
+            fallbackReason: 'ors_http_404',
+            warnings: ['ors_http_404'],
+          },
+        })}
+      />,
+    )
+
+    expect(queryByText(/Не получилось проложить|временно недоступен/)).toBeNull()
+    expect(within(getByTestId('route-builder-route-file')).getByTestId('trip-route-download-approximate'))
+      .toHaveTextContent('Линия приблизительная — в файле будут прямые отрезки.')
+    const summary = within(getByTestId('route-summary'))
+    expect(summary.getByTestId('route-summary-approximate')).toBeTruthy()
+    expect(summary.queryByTestId('route-summary-metric-duration')).toBeNull()
+    expect(summary.queryByTestId('route-summary-metric-elevation')).toBeNull()
+  })
 })
 
 // Инвариант экспорта: файл несёт проложенный трек, а не только точки — иначе

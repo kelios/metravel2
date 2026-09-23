@@ -25,9 +25,9 @@ import type { RoutingState, RouteSummary, TripTransport } from '@/api/plannedTri
 import {
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
-  formatDistance,
-  formatDuration,
   isRouteApproximate,
+  routeMetricsLine,
+  routingStateHint,
 } from '@/components/trips/planning/tripPlanFormatting';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -82,9 +82,11 @@ function RouteBuilderMobile({
   );
 
   const approximate = isRouteApproximate(routingState);
-  const summaryLine = summary
-    ? `${formatDistance(summary.distanceKm)} · ${formatDuration(summary.durationMin)}`
-    : t('tripsStatic:plan.mapFirst.emptySummary');
+  const summaryLine = summary ? routeMetricsLine(summary) : t('tripsStatic:plan.mapFirst.emptySummary');
+  // #2057: карта в этой раскладке отдаёт свою шапку, поэтому причина
+  // приблизительной линии живёт здесь и только здесь — «Итог маршрута»
+  // показывает чип, «Файл маршрута» — строку про экспорт (макет §2).
+  const reason = routingStateHint(routingState, transport);
 
   return (
     <View style={styles.wrap} testID={testID}>
@@ -103,24 +105,31 @@ function RouteBuilderMobile({
       </View>
       {engineSlot}
 
-      <View style={styles.summaryRow} testID="route-mobile-summary">
-        <MapIcon
-          name={TRANSPORT_ICON_NAME[transport]}
-          size={16}
-          color={colors.primaryDark}
-        />
-        <Text style={styles.summaryText} numberOfLines={1}>
-          {TRANSPORT_LABEL[transport]}
-        </Text>
-        <View style={styles.summaryDivider} />
-        <Feather
-          name={approximate ? 'alert-triangle' : 'navigation'}
-          size={14}
-          color={approximate ? colors.warningDark : colors.primaryDark}
-        />
-        <Text style={styles.summaryText} numberOfLines={1}>
-          {summaryLine}
-        </Text>
+      <View style={styles.summaryBlock}>
+        <View style={styles.summaryRow} testID="route-mobile-summary">
+          <MapIcon
+            name={TRANSPORT_ICON_NAME[transport]}
+            size={16}
+            color={colors.primaryDark}
+          />
+          <Text style={styles.summaryText} numberOfLines={1}>
+            {TRANSPORT_LABEL[transport]}
+          </Text>
+          <View style={styles.summaryDivider} />
+          <Feather
+            name={approximate ? 'alert-triangle' : 'navigation'}
+            size={14}
+            color={approximate ? colors.warningDark : colors.primaryDark}
+          />
+          <Text style={styles.summaryText} numberOfLines={1}>
+            {summaryLine}
+          </Text>
+        </View>
+        {reason ? (
+          <Text style={styles.summaryReason} testID="route-mobile-summary-reason">
+            {reason}
+          </Text>
+        ) : null}
       </View>
 
       {children}
@@ -158,6 +167,14 @@ const createStyles = (colors: ThemedColors) =>
       zIndex: 1200,
     },
     hintText: { flexShrink: 1, fontSize: 12, lineHeight: 16, color: colors.textSecondary },
+    summaryBlock: { gap: 6 },
+    summaryReason: {
+      paddingHorizontal: 12,
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: '700',
+      color: colors.warningDark,
+    },
     summaryRow: {
       flexDirection: 'row',
       alignItems: 'center',

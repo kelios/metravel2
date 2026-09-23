@@ -85,4 +85,60 @@ describe('RouteSummaryBar layout contract', () => {
     )
     expect(queryByTestId('route-summary-routed')).toBeNull()
   })
+
+  // #2057: прод trip 47 — «В пути 481 ч 57 мин» (дистанция по прямой / 1,4 м/с),
+  // пустая плитка «Набор —» и причина ещё раз под чипом, хотя её уже показала карта.
+  it('shows a direct line as a straight-line distance with stops, without time, elevation or reason', () => {
+    const { getByTestId, queryByTestId, queryByText } = render(
+      <RouteSummaryBar
+        summary={{
+          distanceKm: 2429,
+          durationMin: 28917,
+          elevationGainM: 0,
+          stopsCount: 61,
+          provider: 'direct',
+        }}
+        routingState={{
+          provider: 'direct',
+          isOptimal: false,
+          fallbackReason: 'ors_http_404',
+          warnings: ['ors_http_404'],
+        }}
+        transport="foot"
+      />,
+    )
+
+    const metrics = getByTestId('route-summary-metrics')
+    expect(
+      within(metrics).getAllByTestId(/^route-summary-metric-(distance|duration|elevation|stops)$/),
+    ).toHaveLength(2)
+    expect(queryByTestId('route-summary-metric-duration')).toBeNull()
+    expect(queryByTestId('route-summary-metric-elevation')).toBeNull()
+    expect(getByTestId('route-summary-metric-distance-value')).toHaveTextContent('≈ 2 429 км')
+    expect(getByTestId('route-summary-metric-distance-label')).toHaveTextContent('Дистанция по прямой')
+    // Длинная подпись переносится на вторую строку, а не режется многоточием.
+    expect(getByTestId('route-summary-metric-distance-label')).toHaveProp('numberOfLines', 2)
+    expect(getByTestId('route-summary-metric-stops-value')).toHaveTextContent('61')
+    expect(queryByText(/\d\s*(ч|мин)(?![а-яё])/)).toBeNull()
+
+    // Причину показывает карта; здесь остаётся только чип.
+    expect(
+      within(getByTestId('route-summary-approximate')).getByText('Приблизительный маршрут'),
+    ).toBeTruthy()
+    expect(queryByText(/Не получилось проложить|временно недоступен/)).toBeNull()
+  })
+
+  it('keeps the four metrics and the empty elevation tile for a routed summary (#1336)', () => {
+    const { getByTestId } = render(
+      <RouteSummaryBar summary={{ ...summary, elevationGainM: 0 }} routingState={routed} transport="car" />,
+    )
+
+    expect(
+      within(getByTestId('route-summary-metrics')).getAllByTestId(
+        /^route-summary-metric-(distance|duration|elevation|stops)$/,
+      ),
+    ).toHaveLength(4)
+    expect(getByTestId('route-summary-metric-elevation-value')).toHaveTextContent('—')
+    expect(getByTestId('route-summary-metric-duration-value')).toHaveTextContent('42 мин')
+  })
 })

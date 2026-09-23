@@ -362,7 +362,11 @@ describe('TripRouteExportMenu', () => {
     const { getByTestId } = render(<TripRouteExportMenu trip={directTrip} />);
     const input = buildTripRouteExportInput(directTrip);
 
-    expect(getByTestId('trip-route-export-approximate')).toBeTruthy();
+    // #2057: вкладка «Экспорт» карты не показывает, поэтому причина здесь своя —
+    // и по коду: HTTP 404 значит «дороги нет», а не «сервис недоступен».
+    expect(getByTestId('trip-route-export-approximate')).toHaveTextContent(
+      'Не получилось проложить маршрут на машине между всеми точками — часть отрезков показана по прямой. Так бывает на перелётах и переездах.',
+    );
     expect(input.description).toContain('приблизительный');
   });
 

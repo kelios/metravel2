@@ -336,3 +336,79 @@ describe('RouteBuilder layout=mapFirst — связка карты и панел
     expect(getByTestId('route-map-fill').props.children).toBe('false')
   })
 })
+
+// #2057: прод trip 47 на 390 — «Сервис построения маршрутов временно
+// недоступен…» дважды («Итог маршрута» и «Файл маршрута»), хотя ORS ответил
+// HTTP 404, и «481 ч 57 мин» в строке итога. На телефоне карта отдаёт шапку
+// раскладке, поэтому причина живёт строкой под итогом — и только там
+// (`docs/features/trips-plan-route-tab-mock.md` §2).
+describe('RouteBuilder layout=mapFirst — приблизительный маршрут (#2057)', () => {
+  const route = [makePoint(0), makePoint(1), makePoint(2)]
+  const directTrip = makeTrip({
+    transport: 'foot',
+    route,
+    // Бэкенд у прямой линии отдаёт геометрию по самим точкам.
+    routeGeometry: route.map((point) => point.coordinates),
+    routeSummary: {
+      distanceKm: 2429,
+      durationMin: 28917,
+      elevationGainM: 0,
+      stopsCount: 3,
+      provider: 'direct',
+    },
+    routingState: {
+      provider: 'direct',
+      isOptimal: false,
+      fallbackReason: 'ors_http_404',
+      warnings: ['ors_http_404'],
+    },
+  })
+
+  it('показывает причину один раз — под строкой итога, без времени в пути', () => {
+    const { getAllByText, getByTestId, queryByText } = render(
+      <RouteBuilder trip={directTrip} layout="mapFirst" />,
+      { wrapper: createQueryWrapper().Wrapper },
+    )
+
+    expect(getAllByText(/Не получилось проложить маршрут/)).toHaveLength(1)
+    expect(getByTestId('route-mobile-summary-reason')).toHaveTextContent(
+      'Не получилось проложить маршрут пешком между всеми точками — часть отрезков показана по прямой. Так бывает на перелётах и переездах.',
+    )
+    expect(queryByText(/временно недоступен/)).toBeNull()
+    // 4xx повтором не лечится: предложить «Повторить» здесь нечего.
+    expect(queryByText('Повторить')).toBeNull()
+
+    const summaryRow = getByTestId('route-mobile-summary')
+    expect(within(summaryRow).getByText('≈ 2 429 км по прямой')).toBeTruthy()
+    expect(within(summaryRow).queryByText(/\d\s*(ч|мин)(?![а-яё])/)).toBeNull()
+
+    // «Итог маршрута» держит только чип и две плитки.
+    const summary = getByTestId('route-summary')
+    expect(within(summary).getByTestId('route-summary-approximate')).toBeTruthy()
+    expect(within(summary).queryByTestId('route-summary-metric-duration')).toBeNull()
+    expect(within(summary).queryByTestId('route-summary-metric-elevation')).toBeNull()
+  })
+
+  it('не рисует строку причины у маршрута, проложенного по дорогам', () => {
+    const routedTrip = makeTrip({
+      transport: 'foot',
+      route,
+      routeGeometry: [
+        route[0].coordinates,
+        [27.51, 53.915],
+        route[1].coordinates,
+        [27.53, 53.945],
+        route[2].coordinates,
+      ],
+      routeSummary: { distanceKm: 12.4, durationMin: 150, elevationGainM: 80, stopsCount: 3, provider: 'ors' },
+      routingState: { provider: 'ors', isOptimal: true, fallbackReason: null, warnings: [] },
+    })
+    const { getByTestId, queryByTestId } = render(
+      <RouteBuilder trip={routedTrip} layout="mapFirst" />,
+      { wrapper: createQueryWrapper().Wrapper },
+    )
+
+    expect(queryByTestId('route-mobile-summary-reason')).toBeNull()
+    expect(within(getByTestId('route-mobile-summary')).getByText('12 км · 2 ч 30 мин')).toBeTruthy()
+  })
+})

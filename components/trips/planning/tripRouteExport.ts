@@ -8,10 +8,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
-import {
-  isRouteApproximate,
-  routingStateHint,
-} from '@/components/trips/planning/tripPlanFormatting';
+import { isRouteApproximate } from '@/components/trips/planning/tripPlanFormatting';
 import {
   buildGpx,
   buildKml,
@@ -53,7 +50,6 @@ export interface TripRouteExportController {
   /** Меньше двух точек с координатами — экспортировать нечего. */
   disabled: boolean;
   approximate: boolean;
-  approximateHint: string | null;
   exportingAction: string | null;
   setExportingAction: (action: string | null) => void;
   exportError: string | null;
@@ -99,7 +95,6 @@ export const useTripRouteExport = (trip: PlannedTrip): TripRouteExportController
     input,
     disabled,
     approximate: isTripRouteExportApproximate(trip),
-    approximateHint: routingStateHint(trip.routingState),
     exportingAction,
     setExportingAction,
     exportError,

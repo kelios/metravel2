@@ -66,7 +66,6 @@ export const createStyles = (colors: ThemedColors, isMobile: boolean) =>
     },
     summaryPillText: { fontSize: 13, fontWeight: '700', color: colors.text, flexShrink: 1 },
     summaryPillTextWarning: { color: colors.warningDark },
-    approximateNote: { fontSize: 12, lineHeight: 16, color: colors.warningDark, fontWeight: '600' },
     description: { fontSize: 15, color: colors.text, lineHeight: 21, marginTop: 4 },
     descriptionLink: { color: colors.primaryDark, fontWeight: '700' },
     ownerActions: {

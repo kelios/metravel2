@@ -18,7 +18,10 @@ interface Props {
   controller: TripRouteExportController;
   /** Подсказка «добавьте две точки» рядом с кнопками; в меню экспорта её печатает сам блок. */
   showDisabledHint?: boolean;
-  /** Предупреждение о приблизительном маршруте; в меню экспорта — свой блок выше. */
+  /**
+   * Короткая строка про экспорт приблизительной линии (макет §1). Причину
+   * приблизительности показывает карта (#2057); в меню экспорта — свой блок выше.
+   */
   showApproximateWarning?: boolean;
   /**
    * Исходный GPX/KML поездки (#1496). Скачивается ровно теми байтами, которые
@@ -101,8 +104,8 @@ function TripRouteDownloadButtons({
           {i18nT('trips:components.trips.planning.TripRouteExportMenu.dobavte_minimum_dve_tochki_s_koordinatami_ch_4a19e760')}</Text>
       ) : null}
       {showApproximateWarning && !disabled && controller.approximate ? (
-        <Text style={styles.warning}>
-          {controller.approximateHint ?? i18nT('tripsStatic:route.approximateExportWarning')}
+        <Text style={styles.warning} testID="trip-route-download-approximate">
+          {i18nT('tripsStatic:route.approximateExportLine')}
         </Text>
       ) : null}
 

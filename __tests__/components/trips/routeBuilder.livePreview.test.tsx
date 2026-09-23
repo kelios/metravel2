@@ -373,6 +373,17 @@ describe('RouteBuilder live route preview', () => {
     expect(getByTestId('route-map-provider').props.children).toBe('none')
   })
 
+  it('does not offer retry when ORS answered that there is no road between the points (#2057)', () => {
+    const { queryByText } = renderRouteBuilder(
+      <RouteBuilder trip={makeTrip({ routeGeometry: null })} />,
+    )
+
+    deliver(engineResult({ error: 'ors_http_404' }))
+
+    expect(queryByText('Прямая линия')).toBeTruthy()
+    expect(queryByText('Повторить')).toBeNull()
+  })
+
   it('waits for the persisted elevation geometry source before starting repair', () => {
     mockRouteElevationQuery = {
       data: {

@@ -56,7 +56,6 @@ import {
   planStatusColor,
   routeSummaryLine,
   routingStateClaimsNotEnoughPoints,
-  routingStateHint,
 } from '@/components/trips/planning/tripPlanFormatting';
 import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCover';
 import { isTripEndBeforeStart } from '@/utils/tripDateTime';
@@ -443,15 +442,6 @@ export default function PlannedTripScreen() {
                     {summaryLine}
                   </Text>
                 </View>
-              ) : null}
-
-              {/* Предупреждение о приблизительной линии на вкладке «Маршрут»
-                  дублируется строкой итога самого планировщика. */}
-              {routeApproximate && !compactHeader ? (
-                <Text style={styles.approximateNote} testID="trip-plan-route-approximate">
-                  {routingStateHint(headerRoutingState) ??
-                    i18nT('tripsStatic:route.approximateWarning')}
-                </Text>
               ) : null}
 
               {trip.description ? (

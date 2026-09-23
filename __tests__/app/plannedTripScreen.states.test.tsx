@@ -341,24 +341,35 @@ describe('PlannedTripScreen — planner states', () => {
     expect(queryByTestId('trip-plan-route-approximate')).toBeNull();
   });
 
-  it('flags a direct fallback route as approximate', () => {
-    mockTrip(
-      makeTrip({
-        routeGeometry: null,
-        routeSummary: { distanceKm: 30, durationMin: 40, elevationGainM: 0, stopsCount: 1, provider: 'direct' },
-        routingState: {
-          provider: 'direct',
-          isOptimal: false,
-          fallbackReason: 'routing_provider_unavailable',
-          warnings: ['Маршрут показан приблизительно.'],
-        },
-      }),
-    );
-    const { getByTestId } = renderScreen();
+  // #2057: причину приблизительной линии показывает карта вкладки «Маршрут», под
+  // плашкой шапки остаётся только ⚠. У прямой линии нет времени в пути: на trip 47
+  // здесь стояло «2 429 км · 481 ч 57 мин» — дистанция по прямой / 1,4 м/с.
+  it.each([false, true])(
+    'flags a direct fallback route with ⚠ only and no travel time (mobile: %s)',
+    (isMobile) => {
+      mockResponsive = { isMobile };
+      mockTrip(
+        makeTrip({
+          routeGeometry: null,
+          routeSummary: { distanceKm: 30, durationMin: 40, elevationGainM: 0, stopsCount: 1, provider: 'direct' },
+          routingState: {
+            provider: 'direct',
+            isOptimal: false,
+            fallbackReason: 'ors_http_404',
+            warnings: ['ors_http_404'],
+          },
+        }),
+      );
+      const { getByTestId, queryByTestId, queryByText } = renderScreen();
 
-    expect(getByTestId('trip-plan-summary')).toBeTruthy();
-    expect(getByTestId('trip-plan-route-approximate')).toBeTruthy();
-  });
+      const pill = getByTestId('trip-plan-summary');
+      expect(pill).toHaveTextContent('alert-triangle', { exact: false });
+      expect(pill).toHaveTextContent('≈ 30 км по прямой · 1 остановка', { exact: false });
+      expect(queryByText(/\d\s*(ч|мин)(?![а-яё])/)).toBeNull();
+      expect(queryByTestId('trip-plan-route-approximate')).toBeNull();
+      expect(queryByText(/Не получилось проложить|временно недоступен|приблизительно/)).toBeNull();
+    },
+  );
 
   it('shows metadata edit and delete controls to the owner', () => {
     mockTrip(makeTrip({ isOwner: true }));

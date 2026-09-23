@@ -24,11 +24,10 @@ import {
 import {
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
-  formatDistance,
-  formatDuration,
   formatRoutePointCoordinates,
   isDrawableCoordinatePair,
   isRouteApproximate,
+  routeMetricsLine,
   routingStateHint,
   routingStateLabel,
 } from '@/components/trips/planning/tripPlanFormatting';
@@ -320,11 +319,7 @@ export default function TripPlanRouteMap({
             <View style={styles.routeMode}>
               <MapIcon name={TRANSPORT_ICON_NAME[transport]} size={14} color={colors.primaryDark} />
               <Text style={styles.routeModeText}>{TRANSPORT_LABEL[transport]}</Text>
-              {summary ? (
-                <Text style={styles.routeModeMeta}>
-                  {formatDistance(summary.distanceKm)} · {formatDuration(summary.durationMin)}
-                </Text>
-              ) : null}
+              {summary ? <Text style={styles.routeModeMeta}>{routeMetricsLine(summary)}</Text> : null}
             </View>
           ) : null}
           <Text style={styles.hint}>
@@ -346,8 +341,8 @@ export default function TripPlanRouteMap({
             </View>
           ) : null}
           {approximate ? (
-            <Text style={styles.warning}>
-              {routingStateHint(truthfulRoutingState)
+            <Text style={styles.warning} testID="trip-plan-map-route-reason">
+              {routingStateHint(truthfulRoutingState, transport)
                 ?? i18nT('trips:components.trips.planning.TripPlanRouteMap.liniya_priblizitelnaya_proverte_dorogu_ili_t_9fb768f4')}
             </Text>
           ) : null}

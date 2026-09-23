@@ -29,7 +29,7 @@ import { trackRouteExported } from '@/utils/tripAnalytics';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import RoutingStatus, { ROUTING_DIRECT_LINE } from '@/components/MapPage/RoutingStatus';
 import { translate as i18nT } from '@/i18n'
-import { isRouteApproximate } from './tripPlanFormatting';
+import { isRouteApproximate, routingStateHint, routingStateRetryable } from './tripPlanFormatting';
 import TripRoutePreviewEngine from './TripRoutePreviewEngine';
 import {
   hasUsableRouteGeometry,
@@ -97,11 +97,15 @@ function TripRouteExportMenu({ trip }: Props) {
     input,
     disabled,
     approximate,
-    approximateHint,
     exportingAction,
     setExportingAction,
     setExportError,
   } = exportController;
+  // #2057: причину приблизительной линии называет только эта вкладка — карты
+  // здесь нет. «Файл маршрута» конструктора делит с ней контроллер экспорта, но
+  // говорит одну короткую строку про экспорт, поэтому причина в контроллер не
+  // входит (макет §1–§2).
+  const approximateHint = routingStateHint(displayTrip.routingState, trip.transport);
 
   const mode = TRANSPORT_MODE[trip.transport];
   const isWeb = Platform.OS === 'web';
@@ -123,7 +127,7 @@ function TripRouteExportMenu({ trip }: Props) {
         error={preview.degraded ? ROUTING_DIRECT_LINE : null}
         distance={null}
         transportMode={preview.transportMode}
-        onRetry={preview.retry}
+        onRetry={routingStateRetryable(preview.routingState) ? preview.retry : undefined}
       />
     ) : null;
 

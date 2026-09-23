@@ -12,11 +12,12 @@ import type { RoutingState, RouteSummary, TripTransport } from '@/api/plannedTri
 import {
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
+  formatDirectDistanceValue,
   formatDistance,
   formatDuration,
   formatElevation,
+  isDirectLineSummary,
   isRouteApproximate,
-  routingStateHint,
   routingStateLabel,
 } from '@/components/trips/planning/tripPlanFormatting';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -53,7 +54,6 @@ function RouteSummaryBar({ summary, routingState, transport }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const approximate = isRouteApproximate(routingState);
   const statusLabel = routingState ? routingStateLabel(routingState) : null;
-  const statusHint = routingStateHint(routingState);
 
   if (!summary) {
     return (
@@ -63,12 +63,22 @@ function RouteSummaryBar({ summary, routingState, transport }: Props) {
     );
   }
 
-  const chips: Chip[] = [
-    { id: 'distance', icon: 'map', value: formatDistance(summary.distanceKm), label: i18nT('trips:components.trips.planning.RouteSummaryBar.distantsiya_5e3e6200') },
-    { id: 'duration', icon: 'clock', value: formatDuration(summary.durationMin), label: i18nT('trips:components.trips.planning.RouteSummaryBar.v_puti_0359c071') },
-    { id: 'elevation', icon: 'trending-up', value: formatElevation(summary.elevationGainM), label: i18nT('trips:components.trips.planning.RouteSummaryBar.nabor_304b67d6') },
-    { id: 'stops', icon: 'map-pin', value: String(summary.stopsCount), label: i18nT('trips:components.trips.planning.RouteSummaryBar.ostanovki_e5a7f959') },
-  ];
+  // #2057: причину приблизительной линии показывает карта (или строка итога под
+  // ней на телефоне), здесь — только чип. У прямой линии нет ни времени в пути
+  // (это дистанция, делённая на скорость), ни высот: плиток две.
+  const directLine = isDirectLineSummary(summary);
+  const stopsChip: Chip = { id: 'stops', icon: 'map-pin', value: String(summary.stopsCount), label: i18nT('trips:components.trips.planning.RouteSummaryBar.ostanovki_e5a7f959') };
+  const chips: Chip[] = directLine
+    ? [
+        { id: 'distance', icon: 'map', value: formatDirectDistanceValue(summary.distanceKm), label: i18nT('tripsStatic:plan.summary.directDistanceLabel') },
+        stopsChip,
+      ]
+    : [
+        { id: 'distance', icon: 'map', value: formatDistance(summary.distanceKm), label: i18nT('trips:components.trips.planning.RouteSummaryBar.distantsiya_5e3e6200') },
+        { id: 'duration', icon: 'clock', value: formatDuration(summary.durationMin), label: i18nT('trips:components.trips.planning.RouteSummaryBar.v_puti_0359c071') },
+        { id: 'elevation', icon: 'trending-up', value: formatElevation(summary.elevationGainM), label: i18nT('trips:components.trips.planning.RouteSummaryBar.nabor_304b67d6') },
+        stopsChip,
+      ];
 
   return (
     <View style={styles.wrap} testID="route-summary">
@@ -87,7 +97,6 @@ function RouteSummaryBar({ summary, routingState, transport }: Props) {
               {statusLabel}
             </Text>
           </View>
-          {statusHint ? <Text style={styles.statusHint}>{statusHint}</Text> : null}
         </View>
       ) : null}
       {transport ? (
@@ -118,9 +127,11 @@ function RouteSummaryBar({ summary, routingState, transport }: Props) {
                 {chip.value}
               </Text>
             </View>
+            {/* «Дистанция по прямой» длиннее «Дистанции» и на узкой плитке
+                переносится, а не режется многоточием. */}
             <Text
-              style={styles.metricLabel}
-              numberOfLines={1}
+              style={[styles.metricLabel, directLine && styles.metricLabelWrap]}
+              numberOfLines={directLine ? 2 : 1}
               testID={`route-summary-metric-${chip.id}-label`}
             >
               {chip.label}
@@ -167,11 +178,6 @@ const createStyles = (colors: ThemedColors) =>
       }),
     },
     statusTextWarning: { color: colors.warningDark },
-    statusHint: {
-      fontSize: 12,
-      lineHeight: 16,
-      color: colors.textSecondary,
-    },
     transportMeta: {
       alignSelf: 'flex-start',
       maxWidth: '100%',
@@ -223,6 +229,13 @@ const createStyles = (colors: ThemedColors) =>
       ...noWrapText,
     },
     metricLabel: { fontSize: 11, color: colors.textMuted, ...noWrapText },
+    metricLabelWrap: {
+      lineHeight: 14,
+      ...Platform.select({
+        web: webTextStyle({ whiteSpace: 'normal', overflowWrap: 'break-word' }),
+        default: {},
+      }),
+    },
     hint: { fontSize: 13, color: colors.textMuted },
   });
 
