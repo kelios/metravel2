@@ -12,6 +12,7 @@ import { render } from '@testing-library/react-native'
 
 const mockUseAuth = jest.fn(() => ({ isAuthenticated: true, userId: '17' } as any))
 const mockQuestWizard = jest.fn(() => null)
+const mockResetGuestProgress = jest.fn()
 /** Что вернул хук синхронизации: строка, подтверждённое отсутствие или упавшее чтение. */
 const mockProgressSync = { progress: null as any, progressMissing: false }
 
@@ -96,6 +97,7 @@ jest.mock('@/components/quests/useGuestQuestFlow', () => ({
     guestReady: true,
     guestFreeSteps: 2,
     persistGuestProgress: jest.fn(),
+    resetGuestProgress: mockResetGuestProgress,
     goToLogin: jest.fn(),
     goToRegister: jest.fn(),
   }),
@@ -153,6 +155,13 @@ describe('Quest screen: ключ прогресса привязан к акка
 
     expect(props.guestMode).toBe(true)
     expect(props.storageKey).toBe('guest_minsk-cmok')
+  })
+
+  it('гостевой «Сбросить» стирает и гостевую копию прохождения (#2047)', async () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: false, userId: null })
+    const props = await renderQuestScreen()
+
+    expect(props.onProgressReset).toBe(mockResetGuestProgress)
   })
 
   it('залогиненный без ещё подтянувшегося userId не пишет под гостевой ключ', async () => {

@@ -314,3 +314,71 @@ describe('useGuestQuestFlow migration after login', () => {
     expect(mockReadOrCreateProgress).not.toHaveBeenCalled()
   })
 })
+
+// #2047: «Сбросить» у гостя обязан стирать гостевую копию — сид пустого
+// состояния визарда в `persistGuestProgress` не уходит, и без обработчика сброса
+// старые ответы возвращались при повторном открытии и уезжали на сервер при входе.
+describe('useGuestQuestFlow reset (#2047)', () => {
+  const answeredGuestProgress = {
+    currentIndex: 2,
+    unlockedIndex: 2,
+    answers: { 'step-1': 'дракон', 'step-2': '7' },
+    attempts: {},
+    hints: {},
+    showMap: true,
+  }
+
+  const renderGuestFlow = (isAuthenticated: boolean) =>
+    renderHook(
+      ({ auth }: { auth: boolean }) =>
+        useGuestQuestFlow({
+          questId: 'krakow-dragon',
+          cityId: 'krakow',
+          isAuthenticated: auth,
+          enabled: true,
+        }),
+      { initialProps: { auth: isAuthenticated } },
+    )
+
+  beforeEach(async () => {
+    jest.clearAllMocks()
+    await AsyncStorage.clear()
+    await saveGuestQuestProgress('krakow-dragon', answeredGuestProgress)
+  })
+
+  it('стирает гостевую копию, и повторное открытие квеста начинается с нуля', async () => {
+    const { result } = renderGuestFlow(false)
+    await waitFor(() => {
+      expect(result.current.guestInitial?.answers).toEqual(answeredGuestProgress.answers)
+    })
+
+    let serverDeletionPending: boolean | undefined
+    await act(async () => {
+      serverDeletionPending = await result.current.resetGuestProgress()
+    })
+
+    expect(serverDeletionPending).toBe(false)
+    expect(await AsyncStorage.getItem(`${GUEST_QUEST_PROGRESS_PREFIX}krakow-dragon`)).toBeNull()
+    expect(result.current.guestInitial).toBeNull()
+
+    const reopened = renderGuestFlow(false)
+    await waitFor(() => expect(reopened.result.current.guestReady).toBe(true))
+    expect(reopened.result.current.guestInitial).toBeNull()
+  })
+
+  it('после входа сброшенные ответы не мигрируют в аккаунт', async () => {
+    const { result, rerender } = renderGuestFlow(false)
+    await waitFor(() => expect(result.current.guestInitial).toBeTruthy())
+
+    await act(async () => {
+      await result.current.resetGuestProgress()
+    })
+    rerender({ auth: true })
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(mockReadOrCreateProgress).not.toHaveBeenCalled()
+    expect(mockedApi.updateProgress).not.toHaveBeenCalled()
+  })
+})

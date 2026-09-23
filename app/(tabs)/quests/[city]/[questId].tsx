@@ -610,6 +610,7 @@ export default function QuestByIdScreen() {
               city={bundle.city}
               coverUrl={bundle.coverUrl}
               onProgressChange={guestFlow.persistGuestProgress}
+              onProgressReset={guestFlow.resetGuestProgress}
               initialProgress={initialProgress}
               relatedTravelsSlot={relatedTravelsSlot}
               subscribeSlot={subscribeSlot}
@@ -636,6 +637,7 @@ export default function QuestByIdScreen() {
             city={bundle.city}
             coverUrl={bundle.coverUrl}
             onProgressChange={guestFlow.persistGuestProgress}
+            onProgressReset={guestFlow.resetGuestProgress}
             initialProgress={initialProgress}
             relatedTravelsSlot={relatedTravelsSlot}
               subscribeSlot={subscribeSlot}

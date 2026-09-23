@@ -91,6 +91,18 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
     [questId],
   )
 
+  // «Сбросить» у гостя: визард чистит свою копию, а сид пустого состояния
+  // помечен согласованным и в `persistGuestProgress` не уходит. Гостевая копия
+  // стирается здесь, иначе повторное открытие слило бы старые ответы обратно,
+  // а миграция после входа унесла бы их на сервер (#2047). `false` — удаления
+  // на сервере, которое ждёт сети, у гостя нет.
+  const resetGuestProgress = useCallback(async (): Promise<boolean> => {
+    if (!questId) return false
+    await clearGuestQuestProgress(questId)
+    setGuestInitial(null)
+    return false
+  }, [questId])
+
   const goToLogin = useCallback(() => {
     queueAnalyticsEvent('quest_guest_gate_login_click', { quest_id: questId, city: cityId })
     router.push(buildLoginHref({ redirect: redirectPath, intent: 'quest' }) as never)
@@ -158,6 +170,7 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
     guestReady: guestInitial !== undefined,
     guestFreeSteps: GUEST_QUEST_FREE_STEPS,
     persistGuestProgress,
+    resetGuestProgress,
     goToLogin,
     goToRegister,
   }
