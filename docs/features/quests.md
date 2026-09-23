@@ -722,6 +722,16 @@ breadcrumbs и секции заметок посадочной города: о
   читает staff-агрегат `GET /api/quests/{id}/answer-stats/`; формула
   `rejected_per_solver + 2×hint_open_rate + 3×abandon_rate`. Staff-токен из
   `.secrets/metravel-task-board.env`, в вывод не попадает.
+- Серверная воронка: `npm run quest:funnel` (`scripts/quest-funnel.js`, #2061) —
+  read-only SQL по прод-базе через ssh. Единица — пара «квест × сессия» из
+  `quest_answer_attempt`: от первого ответа до 25/50/75 % и всех точек
+  прогресса (по правилу `utils/questCountModel.ts`: обязательные при явных
+  ролях, иначе все, кроме intro), с разбивкой на гостей, вошедших и
+  платформы; плюс гостевой гейт, засчитанные прохождения вошедших из
+  `quest_progress` и недельный тренд. В отличие от GA4 и Метрики видит
+  приложения и посетителей без согласия на cookie. Верх воронки «открыли
+  квест» по `views_count` не считается: счётчик накручивает сборка сайта
+  (#2050). Флаги `--days`/`--since`, `--quest <slug>`, `--json`.
 - Тестовые данные: e2e гоняются на мок-квестах (`e2e-minsk-quest`,
   `e2e-warsaw-quest`, `e2e-video-quest`, `e2e-reviews-quest`) через перехват
   роутов, продовых записей не создают. DEV-мока оценки квеста нет: рейтинг

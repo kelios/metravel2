@@ -5,7 +5,8 @@ import { readConsent } from '@/utils/consent'
 /**
  * Сквозная воронка прохождения квеста.
  *
- * Семь шагов, читаемых подряд в GA4 и в составной цели Метрики:
+ * Семь шагов, читаемых подряд в GA4; в составную цель Метрики входят пять из
+ * них — больше Метрика не позволяет (docs/features/quests.md → «Как читать»):
  *
  *   quest_view → quest_start → quest_point_1_done →
  *   quest_progress_25 → quest_progress_50 → quest_progress_75 →

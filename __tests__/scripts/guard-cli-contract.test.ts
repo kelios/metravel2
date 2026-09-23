@@ -174,6 +174,7 @@ describe('covered set is derived from the filesystem, with no allowlist to escap
     expect(isCoveredFile('scripts/apply-quest-patches.js')).toBe(true)
     expect(isCoveredFile('scripts/migrate-quest-from-file.js')).toBe(true)
     expect(isCoveredFile('scripts/quest-answer-insights.js')).toBe(true)
+    expect(isCoveredFile('scripts/quest-funnel.js')).toBe(true)
     expect(isCoveredFile('scripts/scan-quest-brand-new.js')).toBe(true)
     // One-off city migrators and data modules are not CLIs.
     expect(isCoveredFile('scripts/migrate-brest-quest.js')).toBe(false)

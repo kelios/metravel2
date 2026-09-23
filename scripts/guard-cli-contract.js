@@ -58,15 +58,15 @@ const CONTRACT_MODULE = 'scripts/lib/cli-contract.js'
 // `test-seo-prod.js` is #1107, the first incident of SEO-OPS-001, and
 // `post-deploy-seo-check.js` is its post-deploy twin.
 //
-// The quest half is two prefixes (`scan-quest-`, `sync-quest-`) and three named
+// The quest half is two prefixes (`scan-quest-`, `sync-quest-`) and four named
 // tools. The prefixes are what makes the rule survive: the next quest scanner or
 // prod sync is covered the day it is written, which is how this family got here
-// in the first place. The three named tools cannot be a prefix — `scripts/` holds
+// in the first place. The four named tools cannot be a prefix — `scripts/` holds
 // ~60 one-off `migrate-<city>-quest.js` scripts and ~175 `*-quest-data.js` data
 // modules, none of which are CLIs, and sweeping them in would be a guard that
 // fails on data files instead of on parsers.
 const COVERED_FILE_PATTERN =
-  /^(seo-.+|indexnow-.+|index-status|test-seo-prod|post-deploy-seo-check|scan-quest-.+|sync-quest-.+|apply-quest-patches|migrate-quest-from-file|quest-answer-insights)\.js$/
+  /^(seo-.+|indexnow-.+|index-status|test-seo-prod|post-deploy-seo-check|scan-quest-.+|sync-quest-.+|apply-quest-patches|migrate-quest-from-file|quest-answer-insights|quest-funnel)\.js$/
 // `scripts/lib/` is the library home, not a CLI surface — the shared contract
 // itself lives there and obviously cannot require itself. Matched as an exact
 // path prefix, not by folder name: a `scripts/ops/lib/seo-foo.js` is still a CLI
