@@ -55,31 +55,30 @@ export function useSavedRouteRetry({
 }: Options): SavedRouteRetryState {
   const active = routingState === savedRoutingState;
   const refresh = useRefreshTripRouteElevation();
-  const [cooldownUntil, setCooldownUntil] = useState(0);
+  // Булев флаг, а не отметка `Date.now()`: переход часов устройства назад не
+  // продлевает cooldown — его снимает ровно этот таймер (P3 гейта #2065).
+  const [coolingDown, setCoolingDown] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Меняется только затем, чтобы форсировать перерасчёт `disabled` ровно в
-  // момент истечения cooldown — сам таймстамп в разметке не участвует.
-  const [, forceRerender] = useState(0);
 
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
 
   const armCooldown = useCallback(() => {
-    setCooldownUntil(Date.now() + SAVED_ROUTE_RETRY_COOLDOWN_MS);
+    setCoolingDown(true);
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => forceRerender((n) => n + 1), SAVED_ROUTE_RETRY_COOLDOWN_MS);
+    timerRef.current = setTimeout(() => setCoolingDown(false), SAVED_ROUTE_RETRY_COOLDOWN_MS);
   }, []);
 
   const onPress = useCallback(() => {
-    if (refresh.isPending || Date.now() < cooldownUntil) return;
+    if (refresh.isPending || coolingDown) return;
     refresh.mutate({ tripId }, { onSettled: armCooldown });
-  }, [armCooldown, cooldownUntil, refresh, tripId]);
+  }, [armCooldown, coolingDown, refresh, tripId]);
 
   return {
     visible: active && isOwner && routingStateRetryable(routingState),
     pending: refresh.isPending,
-    disabled: refresh.isPending || Date.now() < cooldownUntil,
+    disabled: refresh.isPending || coolingDown,
     onPress,
   };
 }
