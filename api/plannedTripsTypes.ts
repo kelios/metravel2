@@ -59,7 +59,15 @@ export interface RoutePoint {
    * для группировки списка — одно и то же: точка без дня.
    */
   dayNumber?: number | null
+  /**
+   * Как добираются до точки от предыдущей (#2055): `null` — как вся поездка.
+   * Необязательное по той же причине, что день: литералы шаблона и импорта его
+   * не несут. Конструктор поле пока не редактирует, только сохраняет (#2056).
+   */
+  arrivalMode?: RoutePointArrivalMode | null
 }
+
+export type RoutePointArrivalMode = 'train' | 'flight' | 'bus' | 'ferry' | 'transfer'
 
 export interface RouteSummary {
   distanceKm: number

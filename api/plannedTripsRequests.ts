@@ -13,6 +13,7 @@ import { devWarn } from '@/utils/logger';
 import { serializeTripEnd, serializeTripStart } from '@/utils/tripDateTime';
 import { overnightBookingPayload } from '@/utils/overnightBooking';
 import { dayNumberPayload } from '@/utils/routePointDay';
+import { arrivalModePayload } from '@/utils/routePointArrivalMode';
 import { translate as i18nT } from '@/i18n';
 import {
   MOCK_PLANNED_TRIPS,
@@ -45,6 +46,7 @@ import type {
   DecideSuggestionInput,
   InviteInput,
   PlannedTrip,
+  RoutePoint,
   RouteTemplate,
   RsvpInput,
   SubmitReportInput,
@@ -447,6 +449,25 @@ export async function deletePlannedTrip(tripId: number | string): Promise<{ id: 
   return { id: Number(tripId) };
 }
 
+/**
+ * Полный PUT маршрута атомарный: поле точки, которого нет в payload, бэкенд
+ * обнуляет. Так молча терялись бронь (#1843), день похода (#1845) и переезды
+ * (#2067). Таблица держит решение для каждого поля `RoutePoint`: новое поле без
+ * строки здесь не скомпилируется, а jest сверяет, что названные ключи реально
+ * уходят в тело запроса. `id` не уходит — порядок задаёт `order`.
+ */
+export const ROUTE_POINT_PUT_KEYS = {
+  id: [],
+  type: ['point_type'],
+  name: ['title'],
+  description: ['description'],
+  coordinates: ['lat', 'lng'],
+  placeId: ['place_id'],
+  booking: ['address', 'booking_url', 'price', 'checkin_time'],
+  dayNumber: ['day_number'],
+  arrivalMode: ['arrival_mode'],
+} as const satisfies Record<keyof RoutePoint, readonly string[]>;
+
 export async function updateTripRoute(input: UpdateRouteInput): Promise<PlannedTrip> {
   if (USE_MOCK) {
     const trip = findMock(input.tripId);
@@ -478,6 +499,8 @@ export async function updateTripRoute(input: UpdateRouteInput): Promise<PlannedT
       // #1845: день уходит всегда. Пропуск ключа на полном PUT обнуляет день
       // на бэкенде (#1841), и группировка списка после сохранения пропала бы.
       ...dayNumberPayload(p),
+      // #2055: без ключа полный PUT стёр бы переезды (поезд, перелёт, автобус).
+      ...arrivalModePayload(p, i),
     }));
     const dto = await apiClient.put<PlannedTripDto>(
       `/trips/planned/${input.tripId}/route/`,
