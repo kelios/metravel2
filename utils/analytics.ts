@@ -13,9 +13,17 @@ const toYandexGoalName = (eventName: string) =>
         .replace(/[^A-Za-z0-9_]/g, '_')
         .slice(0, MAX_YANDEX_GOAL_NAME_LENGTH);
 
+type WebAnalyticsProvider = 'ga' | 'metrika';
+
+const WEB_ANALYTICS_PROVIDERS: readonly WebAnalyticsProvider[] = ['ga', 'metrika'];
+
 type WebAnalyticsEvent = {
     eventName: string;
     eventParams: Record<string, unknown>;
+    // Providers that still owe this event. GA4 and Metrika become ready at
+    // different moments (bootstrapGa() dispatches `metravel:analytics-ready`
+    // while tag.js is still loading), so delivery is tracked per provider (#2062).
+    providers?: readonly WebAnalyticsProvider[];
 };
 
 const isWebAnalyticsAllowed = () => {
@@ -49,7 +57,7 @@ const flushQueuedWebAnalyticsEvents = async (w: any) => {
     isFlushing = true;
     try {
         for (const item of queue) {
-            await sendAnalyticsEvent(item.eventName, item.eventParams);
+            await deliverWebAnalyticsEvent(w, item);
         }
     } finally {
         isFlushing = false;
@@ -67,6 +75,74 @@ const ensureWebAnalyticsQueueListener = (w: any) => {
     });
 };
 
+const deliverWebAnalyticsEvent = async (w: any, event: WebAnalyticsEvent) => {
+    if (!isWebAnalyticsAllowed()) {
+        return;
+    }
+
+    const { eventName, eventParams } = event;
+    const gtag = w?.gtag;
+    const ym = w?.ym;
+    const metrikaId = Number(w?.__metravelMetrikaId || 0);
+    const yandexGoalName = toYandexGoalName(eventName);
+    const pending: WebAnalyticsProvider[] = [];
+    let sentAnyEvent = false;
+
+    for (const provider of event.providers ?? WEB_ANALYTICS_PROVIDERS) {
+        if (provider === 'ga') {
+            if (typeof gtag === 'function') {
+                try {
+                    gtag('event', eventName, eventParams);
+                    sentAnyEvent = true;
+                } catch (error) {
+                    console.error('GA4 gtag Error:', error);
+                }
+            } else if (w?.__metravelGaId) {
+                pending.push('ga');
+            }
+            continue;
+        }
+
+        if (metrikaId <= 0 || yandexGoalName.length === 0 || w?.__metravelMetrikaFailed) {
+            continue;
+        }
+        if (typeof ym === 'function' && w?.__metravelMetrikaReady) {
+            try {
+                ym(metrikaId, 'reachGoal', yandexGoalName, eventParams);
+                sentAnyEvent = true;
+            } catch (error) {
+                console.error('Yandex Metrika reachGoal Error:', error);
+            }
+        } else {
+            pending.push('metrika');
+        }
+    }
+
+    if (!pending.length || !w) {
+        return;
+    }
+
+    getWebEventQueue(w).push({ eventName, eventParams, providers: pending });
+
+    if (typeof w.metravelLoadAnalytics === 'function') {
+        try {
+            w.metravelLoadAnalytics();
+        } catch {
+            // noop
+        }
+    }
+
+    if (areWebProvidersSettled(w)) {
+        await flushQueuedWebAnalyticsEvents(w);
+    }
+
+    // GA bootstraps lazily after consent/idle; missing gtag early is expected in production.
+    if (__DEV__ && !sentAnyEvent && !hasWarnedMissingConfig) {
+        console.warn('Analytics: web analytics is not available yet – event queued.');
+        hasWarnedMissingConfig = true;
+    }
+};
+
 export const sendAnalyticsEvent = async (
     eventName: string,
     eventParams: Record<string, unknown> = {}
@@ -82,65 +158,7 @@ export const sendAnalyticsEvent = async (
     if (Platform.OS === 'web') {
         const w = typeof window !== 'undefined' ? (window as any) : undefined;
         ensureWebAnalyticsQueueListener(w);
-        const gtag = w?.gtag;
-        const ym = w?.ym;
-        const metrikaId = Number(w?.__metravelMetrikaId || 0);
-        const yandexGoalName = toYandexGoalName(eventName);
-        let sentAnyEvent = false;
-
-        if (!isWebAnalyticsAllowed()) {
-            return;
-        }
-
-        if (typeof gtag === 'function') {
-            try {
-                gtag('event', eventName, eventParams);
-                sentAnyEvent = true;
-            } catch (error) {
-                console.error('GA4 gtag Error:', error);
-            }
-        }
-
-        if (
-            typeof ym === 'function' &&
-            metrikaId > 0 &&
-            w?.__metravelMetrikaReady &&
-            yandexGoalName.length > 0
-        ) {
-            try {
-                ym(metrikaId, 'reachGoal', yandexGoalName, eventParams);
-                sentAnyEvent = true;
-            } catch (error) {
-                console.error('Yandex Metrika reachGoal Error:', error);
-            }
-        }
-
-        if (sentAnyEvent) {
-            return;
-        }
-
-        if (w) {
-            const queue = getWebEventQueue(w);
-            queue.push({ eventName, eventParams });
-
-            if (typeof w.metravelLoadAnalytics === 'function') {
-                try {
-                    w.metravelLoadAnalytics();
-                } catch {
-                    // noop
-                }
-            }
-
-            if (areWebProvidersSettled(w)) {
-                await flushQueuedWebAnalyticsEvents(w);
-            }
-        }
-
-        // GA bootstraps lazily after consent/idle; missing gtag early is expected in production.
-        if (__DEV__ && !hasWarnedMissingConfig) {
-            console.warn('Analytics: web analytics is not available yet – event skipped.');
-            hasWarnedMissingConfig = true;
-        }
+        await deliverWebAnalyticsEvent(w, { eventName, eventParams });
         return;
     }
 
