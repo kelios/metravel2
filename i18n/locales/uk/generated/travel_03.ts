@@ -275,7 +275,7 @@ export const travelGenerated3 = {
   "components.travel.stepRoute.ManualPointPanel.naprimer_27_56_ad119976": "наприклад 27.56",
   "components.travel.stepRoute.ManualPointPanel.naprimer_53_90_0a8513b6": "наприклад 53.90",
   "components.travel.stepRoute.ManualPointPanel.opredelit_koordinaty_iz_foto_d6734c3c": "Визначити координати з фото",
-  "components.travel.stepRoute.ManualPointPanel.otmena_b2a62e12": "Скасування",
+  "components.travel.stepRoute.ManualPointPanel.otmena_b2a62e12": "Скасувати",
   "components.travel.stepRoute.ManualPointPanel.panel_dobavleniya_tochki_vruchnuyu_b2c32b4c": "Панель додавання точки вручну",
   "components.travel.stepRoute.ManualPointPanel.shirota_8b33238d": "Широта",
   "components.travel.stepRoute.ManualPointPanel.smenit_znak_dolgoty_d2b2f3a1": "Змінити знак довготи",

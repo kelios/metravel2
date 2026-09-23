@@ -7,7 +7,7 @@ export const mapGenerated1 = {
   "components.map.EditMarkerModal.mozhno_ostavit_adres_iz_karty_ili_sokratit_d_67e7e4c3": "Можна пакінуць адрас з карты ці скараціць да зразумелай назвы месца. (",
   "components.map.EditMarkerModal.naprimer_parkovka_u_ozera_sucha_b5fd5cc9": "Напрыклад: Паркоўка каля возера Sucha",
   "components.map.EditMarkerModal.opishite_mesto_tak_chtoby_vy_sami_cherez_god_1d45d9bf": "Апішыце месца так, каб вы самі праз год хутка зразумелі, што тут глядзець ці рабіць.",
-  "components.map.EditMarkerModal.otmena_0a02aca0": "Адмена",
+  "components.map.EditMarkerModal.otmena_0a02aca0": "Скасаваць",
   "components.map.EditMarkerModal.peretaschite_foto_tochki_marshruta_3a234cc4": "Перацягнеце фота кропкі маршруту",
   "components.map.EditMarkerModal.snachala_sohranite_marshrut_zatem_otkroyte_t_4fff3196": "Спачатку захавайце маршрут, затым адкрыйце кропку зноў - пасля гэтага можна загрузіць фота.",
   "components.map.EditMarkerModal.sohranit_4853bb8f": "Захаваць",

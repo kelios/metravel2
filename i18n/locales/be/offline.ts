@@ -32,7 +32,7 @@ export const offline = {
   remove: 'Выдаліць',
   removeTitle: 'Выдаліць афлайн-копію?',
   removeDescription: 'Матэрыял перастане адкрывацца без сеткі.',
-  cancel: 'Адмена',
+  cancel: 'Скасаваць',
   close: 'Закрыць',
   pin: 'Захаваць',
   unpin: 'Пакінуць часова',

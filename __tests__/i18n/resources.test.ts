@@ -58,6 +58,24 @@ describe('i18n resources', () => {
     }
   })
 
+  it.each([
+    ['uk', 'Скасувати'],
+    ['be', 'Скасаваць'],
+  ] as const)('uses the %s verb for cancel actions across every namespace (#2064)', (locale, expected) => {
+    const fixedTranslate = getFixedTranslator(locale)
+    const cancelKeys: TranslationKey[] = []
+    for (const [namespace, entries] of Object.entries(resources.ru)) {
+      for (const [key, value] of Object.entries(entries)) {
+        if (value === 'Отмена') cancelKeys.push(`${namespace}:${key}` as TranslationKey)
+      }
+    }
+
+    expect(cancelKeys).toContain('shared:components.ui.ConfirmDialog.otmena_53464360')
+    for (const key of cancelKeys) {
+      expect({ key, value: fixedTranslate(key) }).toEqual({ key, value: expected })
+    }
+  })
+
   it('preserves interpolation placeholders in every translation', () => {
     const placeholderPattern = /\{\{\s*([^}\s]+)\s*\}\}/g
     const placeholders = (value: string) =>

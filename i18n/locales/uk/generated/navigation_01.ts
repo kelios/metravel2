@@ -106,7 +106,7 @@ export const navigationGenerated1 = {
   "components.layout.WelcomeBanner.otkryt_kartu_ef64413f": "Відкрити карту",
   "components.layout.WelcomeBanner.sozdat_puteshestvie_9a14711a": "Створити подорож",
   "components.navigation.OpenInMapsSheet.otkryt_v_kartah_a12bfa2e": "Відкрити в картах",
-  "components.navigation.OpenInMapsSheet.otmena_471c1045": "Скасування",
+  "components.navigation.OpenInMapsSheet.otmena_471c1045": "Скасувати",
   "components.navigation.OpenInMapsSheet.zakryt_ffe5de0e": "Закрити",
   "components.navigation.PointNavigationMenu.otkryt_tochku_v_apple_maps_d4faa850": "Відкрити точку в Apple Maps",
   "components.navigation.PointNavigationMenu.otkryt_tochku_v_google_maps_7f67f5c3": "Відкрити точку в Google Maps",
