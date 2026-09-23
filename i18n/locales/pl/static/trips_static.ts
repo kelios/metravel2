@@ -154,6 +154,8 @@ export const tripsStaticResources = {
   "plan.routeImport.original.stored": "Oryginalny ślad zapisany przy wyjeździe · {{value}}",
   "plan.routeImport.original.remove": "Usuń oryginał",
   "plan.routeImport.original.removeError": "Nie udało się usunąć oryginalnego pliku. Spróbuj ponownie.",
+  "plan.routeImport.original.removeConfirmTitle": "Usunąć oryginalny plik?",
+  "plan.routeImport.original.removeConfirmMessage": "Punkty i zbudowana trasa pozostaną. Po usunięciu nie będzie można pobrać pliku źródłowego.",
   "plan.routeImport.original.uploadError": "Trasa została zapisana, ale nie udało się przesłać oryginalnego pliku. Naciśnij „Zapisz trasę” ponownie.",
   "plan.description.expand": "Pokaż w całości",
   "plan.description.collapse": "Zwiń",

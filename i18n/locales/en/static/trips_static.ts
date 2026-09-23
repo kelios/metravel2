@@ -154,6 +154,8 @@ export const tripsStaticResources = {
   "plan.routeImport.original.stored": "Original track stored with the trip · {{value}}",
   "plan.routeImport.original.remove": "Delete original",
   "plan.routeImport.original.removeError": "Could not delete the original file. Please try again.",
+  "plan.routeImport.original.removeConfirmTitle": "Delete the original file?",
+  "plan.routeImport.original.removeConfirmMessage": "The points and the built route will stay. Once deleted, the source file can no longer be downloaded.",
   "plan.routeImport.original.uploadError": "The route was saved, but the original file could not be uploaded. Press “Save route” again.",
   "plan.description.expand": "Show full text",
   "plan.description.collapse": "Collapse",

@@ -154,6 +154,8 @@ export const tripsStaticResources = {
   "plan.routeImport.original.stored": "Оригинальный трек сохранён у поездки · {{value}}",
   "plan.routeImport.original.remove": "Удалить оригинал",
   "plan.routeImport.original.removeError": "Не удалось удалить оригинальный файл. Попробуйте ещё раз.",
+  "plan.routeImport.original.removeConfirmTitle": "Удалить оригинальный файл?",
+  "plan.routeImport.original.removeConfirmMessage": "Точки и построенный маршрут останутся. Скачать исходный файл после удаления будет нельзя.",
   "plan.routeImport.original.uploadError": "Маршрут сохранён, но оригинальный файл загрузить не удалось. Нажмите «Сохранить маршрут» ещё раз.",
   "plan.description.expand": "Показать полностью",
   "plan.description.collapse": "Свернуть",

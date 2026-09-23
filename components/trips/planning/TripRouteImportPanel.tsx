@@ -6,6 +6,7 @@ import type { PlannedTripRouteFile } from '@/api/plannedTripRoutes';
 import type { RouteGeometry, RoutePoint } from '@/api/plannedTrips';
 import { TravelMap } from '@/components/MapPage/TravelMap';
 import Button from '@/components/ui/Button';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { SelectionGroup } from '@/components/ui/SelectionGroup';
 import ToolActionsRow, { type ToolAction } from '@/components/ui/ToolActionsRow';
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
@@ -45,6 +46,10 @@ type Props = {
   pendingUploadName?: string | null;
   uploadError?: string | null;
   removing?: boolean;
+  /**
+   * Удаление сохранённого оригинала. Панель вызывает его только из
+   * подтверждения: «Удалить» в карточке лишь открывает окно (#2054).
+   */
   onRemoveStoredFile?: () => void;
   /**
    * Точки уходят в черновик маршрута, а исходный файл — наверх: он загружается
@@ -221,6 +226,21 @@ function TripRouteImportPanel({
   // же путём, что и во вкладке «Экспорт». Подписи полные на любой ширине: ряд
   // переносит кнопку, а не режет подпись.
   const originalDownload = useTripRouteOriginalDownload(tripId, storedFile);
+
+  // #2054: удаление оригинала необратимо — скачать файл потом неоткуда. Окно
+  // подтверждения помнит id файла, а не флаг: если оригинал исчез или сменился,
+  // пока окно открыто, подтверждать уже нечего, и файл, которого пользователь
+  // не видел, не удаляется.
+  const [removeConfirmFileId, setRemoveConfirmFileId] = useState<number | null>(null);
+  const removeConfirmVisible = storedFile != null && removeConfirmFileId === storedFile.id;
+  const closeRemoveConfirm = useCallback(() => setRemoveConfirmFileId(null), []);
+  // Повтор подтверждения в одном тике глушит синхронный лок удаления (#1824)
+  // в `useTripRouteFileBranch`: окно закрывается только со следующим рендером.
+  const handleConfirmRemove = useCallback(() => {
+    setRemoveConfirmFileId(null);
+    onRemoveStoredFile?.();
+  }, [onRemoveStoredFile]);
+
   const storedFileActions: ToolAction[] = [
     ...(originalDownload.available ? [{
       key: 'download-original',
@@ -231,12 +251,12 @@ function TripRouteImportPanel({
       loading: originalDownload.downloading,
       testID: 'trip-route-import-download-original',
     }] : []),
-    ...(onRemoveStoredFile ? [{
+    ...(onRemoveStoredFile && storedFile ? [{
       key: 'remove-original',
       label: t('tripsStatic:plan.routeImport.original.remove'),
-      icon: null,
-      onPress: onRemoveStoredFile,
-      variant: 'ghost' as const,
+      icon: <Feather name="trash-2" size={16} color={colors.danger} />,
+      onPress: () => setRemoveConfirmFileId(storedFile.id),
+      variant: 'danger-outline' as const,
       disabled: disabled || removing,
       loading: removing,
       testID: 'trip-route-import-remove-original',
@@ -329,6 +349,20 @@ function TripRouteImportPanel({
             >
               {originalDownload.error}
             </Text>
+          ) : null}
+          {/* «Удалить» (danger) — подпись окна по умолчанию, «Отмена» — та же,
+              что у отмены предпросмотра импорта. */}
+          {onRemoveStoredFile ? (
+            <ConfirmDialog
+              visible={removeConfirmVisible}
+              onClose={closeRemoveConfirm}
+              onConfirm={handleConfirmRemove}
+              title={t('tripsStatic:plan.routeImport.original.removeConfirmTitle')}
+              message={t('tripsStatic:plan.routeImport.original.removeConfirmMessage')}
+              cancelText={t('tripsStatic:plan.routeImport.cancel')}
+              confirmTestID="trip-route-import-remove-original-confirm"
+              cancelTestID="trip-route-import-remove-original-cancel"
+            />
           ) : null}
         </View>
       ) : null}

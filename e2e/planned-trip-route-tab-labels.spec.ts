@@ -14,6 +14,11 @@ import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth'
  * где угодно во вкладке валит спеку. Раскладка блока «Файл маршрута» — макет
  * `docs/features/trips-plan-route-tab-mock.md` §0 и §1.
  *
+ * #2054 — там же, §1: «Удалить» у оригинала только открывает подтверждение.
+ * Раньше нажатие сразу слало DELETE, и одно касание на телефоне безвозвратно
+ * стирало загруженный трек. Спека считает DELETE-запросы страницы: «Отмена» —
+ * ноль, «Удалить» в подтверждении — ровно один.
+ *
  * Бэкенд замокан: спека детерминирована и гоняется на собранном `dist`.
  */
 
@@ -143,19 +148,37 @@ async function mockOwnerTripWithOriginal(page: Page) {
   await mockFakeAuthApis(page)
   await seedConsent(page)
 
+  // Все DELETE страницы, а не только замоканный адрес: удаление мимо него тоже
+  // должно попасть в счёт (#2054).
+  const deleteRequests: string[] = []
+  let originalDeleted = false
+  page.on('request', (request) => {
+    if (request.method() === 'DELETE') deleteRequests.push(new URL(request.url()).pathname)
+  })
+
   await page.route('**/proxy/tiles/osm/**', (route) =>
     route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG }),
   )
   await page.route('**/api/trips/route-templates/', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
   )
+  // Список хранит состояние: после удаления оригинала перезагрузка страницы
+  // показывает поездку уже без него, как на бэкенде.
   await page.route(`**/api/trips/planned/${TRIP_ID}/routes/`, (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify([storedOriginal]),
+      body: JSON.stringify(originalDeleted ? [] : [storedOriginal]),
     }),
   )
+  await page.route(`**/api/trips/planned/${TRIP_ID}/routes/${ORIGINAL_ID}/`, async (route) => {
+    if (route.request().method() !== 'DELETE') {
+      await route.fallback()
+      return
+    }
+    originalDeleted = true
+    await route.fulfill({ status: 204, body: '' })
+  })
   await page.route(`**/api/trips/planned/${TRIP_ID}/routes/${ORIGINAL_ID}/download/`, (route) =>
     route.fulfill({
       status: 200,
@@ -199,6 +222,8 @@ async function mockOwnerTripWithOriginal(page: Page) {
       }),
     }),
   )
+
+  return { deleteRequests }
 }
 
 type ClippedLabel = {
@@ -325,6 +350,78 @@ test.describe('Planned trip route tab — button labels are never clipped (#2053
       expect(nameFits).toEqual({ width: true, height: true })
 
       await block.screenshot({ path: testInfo.outputPath(`route-file-${viewport.width}.png`) })
+    })
+  }
+})
+
+const REMOVE_ORIGINAL = 'trip-route-import-remove-original'
+const REMOVE_ORIGINAL_CONFIRM = 'trip-route-import-remove-original-confirm'
+const REMOVE_ORIGINAL_CANCEL = 'trip-route-import-remove-original-cancel'
+
+test.describe('Planned trip route tab — the original is deleted only after confirmation (#2054)', () => {
+  for (const viewport of VIEWPORTS.filter(({ width }) => width >= 390)) {
+    test(`${viewport.name}: «Удалить» asks first, «Отмена» keeps the file, «Удалить» deletes it once`, async ({
+      page,
+    }, testInfo) => {
+      const backend = await mockOwnerTripWithOriginal(page)
+      await page.setViewportSize({ width: viewport.width, height: viewport.height })
+      await page.goto(`/trips/plan/${TRIP_ID}`, { waitUntil: 'domcontentloaded' })
+      await waitForFakeAuth(page)
+
+      const panel = page.getByTestId('trip-plan-panel-route').first()
+      const block = panel.getByTestId('route-builder-route-file').first()
+      const card = block.getByTestId('trip-route-import-stored-original')
+      const dialog = page.getByTestId('confirm-dialog')
+      await expect(card).toBeVisible({ timeout: 30_000 })
+
+      // «Удалить» только спрашивает: окно открыто, DELETE не ушёл.
+      await card.getByTestId(REMOVE_ORIGINAL).click()
+      await expect(dialog).toBeVisible()
+      await expect(dialog.getByText('Удалить оригинальный файл?', { exact: true })).toBeVisible()
+      await expect(
+        dialog.getByText(
+          'Точки и построенный маршрут останутся. Скачать исходный файл после удаления будет нельзя.',
+          { exact: true },
+        ),
+      ).toBeVisible()
+      await expect(dialog.getByTestId(REMOVE_ORIGINAL_CONFIRM)).toHaveAccessibleName('Удалить')
+      await expect(dialog.getByTestId(REMOVE_ORIGINAL_CANCEL)).toHaveAccessibleName('Отмена')
+      // Правило #2053 — и для кнопок окна: подписи целиком.
+      const dialogAudit = await auditButtonLabels(dialog)
+      expect(dialogAudit.measuredTestIds).toEqual(
+        expect.arrayContaining([REMOVE_ORIGINAL_CONFIRM, REMOVE_ORIGINAL_CANCEL]),
+      )
+      expect(dialogAudit.clipped, 'clipped labels in the confirmation').toEqual([])
+      await dialog.screenshot({
+        path: testInfo.outputPath(`remove-original-confirm-${viewport.width}.png`),
+      })
+      expect(backend.deleteRequests).toEqual([])
+
+      // «Отмена» ничего не удаляет — и после перезагрузки оригинал на месте.
+      await dialog.getByTestId(REMOVE_ORIGINAL_CANCEL).click()
+      await expect(dialog).toHaveCount(0)
+      await expect(card).toBeVisible()
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(card).toBeVisible({ timeout: 30_000 })
+      expect(backend.deleteRequests).toEqual([])
+
+      // «Удалить» → «Удалить»: ровно один DELETE этого файла. Успешное удаление
+      // перечитывает список файлов поездки — к этому ответу повторный DELETE
+      // уже был бы в счёте.
+      await card.getByTestId(REMOVE_ORIGINAL).click()
+      await expect(dialog).toBeVisible()
+      const listRefetch = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'GET' &&
+          new URL(response.url()).pathname === `/api/trips/planned/${TRIP_ID}/routes/`,
+      )
+      await dialog.getByTestId(REMOVE_ORIGINAL_CONFIRM).click()
+      await expect(dialog).toHaveCount(0)
+      await expect(card).toHaveCount(0)
+      await listRefetch
+      expect(backend.deleteRequests).toEqual([
+        `/api/trips/planned/${TRIP_ID}/routes/${ORIGINAL_ID}/`,
+      ])
     })
   }
 })

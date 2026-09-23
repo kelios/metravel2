@@ -6,11 +6,12 @@
  *     маршрут», поэтому оригинал и точки не расходятся;
  *  2. кэш-копия выбранного файла освобождается при отмене и при отказе парсера,
  *     иначе на устройстве копятся файлы до 20 МиБ;
- *  3. сохранённый у поездки оригинал показан с именем/размером и его можно убрать;
+ *  3. сохранённый у поездки оригинал показан с именем/размером и его можно убрать —
+ *     только через подтверждение (#2054);
  *  4. ошибка загрузки оригинала видна отдельно от ошибок разбора файла.
  */
 import React from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
 
 import type { RoutePoint } from '@/api/plannedTrips';
@@ -18,12 +19,17 @@ import {
   GPX_SINGLE_WITH_WAYPOINTS,
   MALFORMED_GPX,
 } from '@/__tests__/fixtures/tripRouteImportFixtures';
+import { getThemedColors } from '@/hooks/useTheme';
 
 let mockPickerProps: Record<string, any> = {};
 const mockReleaseUpload = jest.fn();
 const mockDownloadOriginal = jest.fn();
 
-jest.mock('@expo/vector-icons/Feather', () => () => null);
+// Иконка видна тесту по имени: «Удалить» оригинала обязана нести `trash-2`.
+jest.mock('@expo/vector-icons/Feather', () => (props: { name: string }) => {
+  const { View: MockView } = require('react-native');
+  return <MockView testID={`feather-${props.name}`} />;
+});
 jest.mock('@/components/trips/planning/TripRouteFilePicker', () => {
   function MockTripRouteFilePicker(props: Record<string, unknown>) {
     const { Pressable, Text } = require('react-native');
@@ -131,7 +137,10 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
     expect(onApply).not.toHaveBeenCalled();
   });
 
-  it('показывает сохранённый оригинал с размером и даёт его убрать', () => {
+  // Окно здесь настоящее. В jest анимация скрытия Paper-диалога
+  // (`useNativeDriver: true`) не завершается, и закрытое окно остаётся в дереве,
+  // поэтому «Отмену», закрытие и повторы проверяет routeBuilder.removeOriginal.test.tsx.
+  it('показывает сохранённый оригинал с размером и даёт его убрать через подтверждение', () => {
     const onRemove = jest.fn();
     const screen = render(
       <TripRouteImportPanel
@@ -145,7 +154,52 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
     expect(screen.getByTestId('trip-route-import-stored-original')).toBeTruthy();
     expect(screen.getByText('tatry.gpx')).toBeTruthy();
     fireEvent.press(screen.getByTestId('trip-route-import-remove-original'));
+    expect(onRemove).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByTestId('trip-route-import-remove-original-confirm'));
     expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
+  // #2054: одно касание на телефоне безвозвратно стирало загруженный трек —
+  // кнопка была нейтральной ghost и удаляла без вопроса.
+  it('«Удалить» оформлена как опасное действие и только открывает подтверждение', () => {
+    const onRemove = jest.fn();
+    const screen = render(
+      <TripRouteImportPanel
+        route={currentRoute}
+        storedFile={storedFile as never}
+        onRemoveStoredFile={onRemove}
+        onApply={jest.fn()}
+      />,
+    );
+    const colors = getThemedColors(false);
+
+    const remove = screen.getByTestId('trip-route-import-remove-original');
+    expect(within(remove).getByTestId('feather-trash-2')).toBeTruthy();
+    const removeStyle = StyleSheet.flatten(remove.props.style);
+    expect(removeStyle.borderColor).toBe(colors.danger);
+    expect(Number(removeStyle.minHeight)).toBeGreaterThanOrEqual(44);
+    expect(
+      StyleSheet.flatten(within(remove).getByText('Удалить оригинал').props.style).color,
+    ).toBe(colors.danger);
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+
+    fireEvent.press(remove);
+
+    const dialog = within(screen.getByTestId('confirm-dialog'));
+    expect(dialog.getByText('Удалить оригинальный файл?')).toBeTruthy();
+    expect(
+      dialog.getByText(
+        'Точки и построенный маршрут останутся. Скачать исходный файл после удаления будет нельзя.',
+      ),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId('trip-route-import-remove-original-confirm')).getByText('Удалить'),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId('trip-route-import-remove-original-cancel')).getByText('Отмена'),
+    ).toBeTruthy();
+    expect(onRemove).not.toHaveBeenCalled();
   });
 
   // #2053: «Скачать» оригинала живёт в его карточке рядом с «Удалить», имя

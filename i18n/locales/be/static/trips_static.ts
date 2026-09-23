@@ -154,6 +154,8 @@ export const tripsStaticResources = {
   "plan.routeImport.original.stored": "Арыгінальны трэк захаваны ў паездцы · {{value}}",
   "plan.routeImport.original.remove": "Выдаліць арыгінал",
   "plan.routeImport.original.removeError": "Не атрымалася выдаліць арыгінальны файл. Паспрабуйце яшчэ раз.",
+  "plan.routeImport.original.removeConfirmTitle": "Выдаліць арыгінальны файл?",
+  "plan.routeImport.original.removeConfirmMessage": "Кропкі і пабудаваны маршрут застануцца. Спампаваць зыходны файл пасля выдалення будзе нельга.",
   "plan.routeImport.original.uploadError": "Маршрут захаваны, але арыгінальны файл загрузіць не атрымалася. Націсніце «Захаваць маршрут» яшчэ раз.",
   "plan.description.expand": "Паказаць цалкам",
   "plan.description.collapse": "Згарнуць",
