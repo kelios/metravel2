@@ -61,6 +61,13 @@ backend route и только relevant source/API/production probes.
 
 FE↔BE contract при необходимости проверяй авторизованным e2e account из
 `.env.e2e`; токен не выводи. Проверяй field/event/shape, не только HTTP status.
+
+Прод-пробу в Playwright не пиши с нуля — используй помощник
+`e2e/prod-probe/prodProbe.js` (`docs/WORKFLOW_OPERATIONS.md` §3.3.2): сессия
+e2e-аккаунта 104 из кэша (вход только при протухшей), согласие предзаписано,
+`readLocalStorage`, `captureRequests`, `buildSource`, вьюпорты 320/390/1440.
+Образец и смоук — `node e2e/prod-probe/smoke.js`. Под `E2E_EMAIL2` (владелец)
+помощник не входит; сам не логинься под ним ни формой, ни API.
 Narrow tests/types — вспомогательное evidence, не замена browser/runtime.
 
 Evidence note содержит date, target env (для локального стека — коммит бэкенда,

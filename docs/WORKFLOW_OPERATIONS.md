@@ -420,6 +420,49 @@ deny → allow → Settings → retry снимают на свежепостав
   regression guard и structural task; ещё один локальный point fix сам по себе
   не закрывает семейство проблемы.
 
+### 3.3.2 Помощник прод-проб (Playwright)
+
+Приёмка в `testing` не пишет обвязку Playwright с нуля (#2074: приёмка #2047 —
+20 минут и 82 вызова, большая часть на вход, согласие и перехват сети).
+Помощник — `e2e/prod-probe/prodProbe.js`, CommonJS, запускается обычным `node`
+из корня репозитория; пробный скрипт кладётся в ignored `.codex-temp/`.
+
+```js
+// .codex-temp/probe-<id>.js
+const { openProdProbe, readLocalStorage, captureRequests, buildSource } = require('../e2e/prod-probe/prodProbe')
+
+;(async () => {
+  console.log((await buildSource()).sha) // выкаченный sha
+  const probe = await openProdProbe({ viewport: 'mobile' }) // narrow 320 | mobile 390 | desktop 1440
+  const api = captureRequests(probe.page, '/api/trips/')
+  await probe.goto('/trips/plan/59')
+  console.log(api.summary(), await readLocalStorage(probe.page, ['userId']))
+  await probe.close()
+})()
+```
+
+- Вход только под `E2E_EMAIL`/`E2E_PASSWORD` из `.env.e2e` (аккаунт 104).
+  Совпадение `E2E_EMAIL` с `E2E_EMAIL2` (владелец) — отказ до запуска браузера;
+  вход, вернувший id ≠ 104, не сохраняется и роняет пробу.
+- Сессия — `.codex-temp/prod-probe/storageState.<host>.json` (права 0600).
+  Переиспользуется, пока cookie `authToken` жива и `GET
+  /api/user/me/verifications/` отвечает 2xx; иначе один вход через
+  `POST /api/user/login/`. `fresh: true` / `--fresh` — принудительный вход.
+- `consent: 'necessary'` (дефолт) пишет `metravel_consent_v1` в формате
+  `utils/consent.ts` до загрузки страницы; `'all'` — с аналитикой; `false` —
+  баннер остаётся (проба самого баннера). `auth: false` — гость.
+- `captureRequests(page, pattern)` → `entries` с `body()` по запросу (читать до
+  ухода со страницы) и `summary()` для JSON; тела login/refresh/token-ответов
+  не отдаются, ключи `*token*`/`*refresh*`/`*password*` в JSON маскируются.
+- Ошибки печатать только через `formatProbeError(error)`: `error.message`
+  Playwright несёт «Call log» со всеми заголовками, включая `cookie: authToken=…`.
+- Смоук и образец: `node e2e/prod-probe/smoke.js [--fresh] [--viewport=mobile]
+  [--trip=<id>]` — одна JSON-строка (sha, user id, кэш сессии, баннер,
+  localStorage, запросы `/api/trips/`), exit 1 при провале.
+
+Помощник не заменяет правила §3.1.1: мутации на проде — только обратимые и
+только тестовыми данными аккаунта 104.
+
 ### 3.4 Координация долгих операций
 
 - Деплой, release/build, production web build, Android local build/install,

@@ -51,6 +51,8 @@ Android/native задачи — `area=front` с `[AND-...]` и Android-specific 
      `E2E_EMAIL`/`E2E_PASSWORD` из `.env.e2e`, получи `Token` через login API target env
      (`POST /api/login`), затем `curl -H "Authorization: Token <token>"` к контрактному
      endpoint. Проверяй именно field/event/shape из `Data/API contract`, а не только HTTP 200.
+     Браузерную пробу прода — через помощник `e2e/prod-probe/prodProbe.js` (сессия e2e-аккаунта
+     104 из кэша, согласие, localStorage, перехват сети; `docs/WORKFLOW_OPERATIONS.md` §3.3.2).
      Анонимный 404/401 — НЕ доказательство готовности контракта: это лишь graceful-degradation;
      реальный shape подтверждается только авторизованной пробой. Токен не печатай в вывод.
 4. **Вердикт.**
