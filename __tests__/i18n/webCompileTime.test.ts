@@ -107,6 +107,32 @@ describe('web compile-time localization', () => {
   })
 
   /**
+   * #2072: ключ из шаблонной строки (`t(\`trips:….${action}\`)`) инлайнер не
+   * видит — на web все пять кнопок панели оформления получили доступное имя
+   * «Перевод недоступен», а jest с рантайм-переводом этого не заметил. Ключи
+   * перевода в коде приложения — только литералами.
+   */
+  it('never builds a translation key from a template literal in app code', () => {
+    const root = path.resolve(__dirname, '../..')
+    const dirs = ['app', 'components', 'hooks', 'utils', 'screens', 'stores', 'context', 'api']
+    const pattern = /\b(?:t|i18nT|translate)\(\s*`[a-zA-Z]+:[^`]*\$\{/
+    const offenders: string[] = []
+    const walk = (dir: string) => {
+      if (!fs.existsSync(dir)) return
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+          if (entry.name !== 'node_modules') walk(full)
+        } else if (/\.(ts|tsx)$/.test(entry.name) && pattern.test(fs.readFileSync(full, 'utf8'))) {
+          offenders.push(path.relative(root, full))
+        }
+      }
+    }
+    dirs.forEach((dir) => walk(path.join(root, dir)))
+    expect(offenders).toEqual([])
+  })
+
+  /**
    * #1675: инлайнер и рантайм считали имя namespace по-разному, и целый
    * namespace (`questShareStatic`) рендерился на web как «Перевод недоступен».
    * Расхождение спало полгода, потому что на однословных файлах локали

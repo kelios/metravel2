@@ -34,6 +34,16 @@ export default function TripPlanFormatToolbar({ onAction, disabled = false, test
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
+  // Ключи только литералами: на web перевод подставляется при сборке по
+  // строке ключа (`i18n/babel-inline-plugin.js`), а ключ из шаблонной строки
+  // в сборку не попадает и печатается «Перевод недоступен».
+  const labels: Record<TripPlanFormatAction, string> = {
+    heading: t('trips:components.trips.planning.TripPlanFormatToolbar.heading'),
+    bullet: t('trips:components.trips.planning.TripPlanFormatToolbar.bullet'),
+    ordered: t('trips:components.trips.planning.TripPlanFormatToolbar.ordered'),
+    bold: t('trips:components.trips.planning.TripPlanFormatToolbar.bold'),
+    italic: t('trips:components.trips.planning.TripPlanFormatToolbar.italic'),
+  };
 
   return (
     <View
@@ -51,7 +61,7 @@ export default function TripPlanFormatToolbar({ onAction, disabled = false, test
             icon={iconName
               ? <Feather name={iconName} size={ICON_SIZE} color={colors.primaryDark} />
               : <Text style={styles.orderedGlyph}>1.</Text>}
-            label={t(`trips:components.trips.planning.TripPlanFormatToolbar.${action}`)}
+            label={labels[action]}
             onPress={() => onAction(action)}
             disabled={disabled}
             size="sm"
