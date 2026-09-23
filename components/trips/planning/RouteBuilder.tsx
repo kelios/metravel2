@@ -43,6 +43,7 @@ import {
 import { useRoutePointDraft } from '@/components/trips/planning/useRoutePointDraft';
 import { useRouteListMapFocus } from '@/components/trips/planning/useRouteListMapFocus';
 import { useRouteSiteSearch } from '@/components/trips/planning/useRouteSiteSearch';
+import { useSavedRouteRetry } from '@/components/trips/planning/useSavedRouteRetry';
 import { useTripRouteDisplay } from '@/components/trips/planning/useTripRouteDisplay';
 import {
   type PlannedTrip,
@@ -298,6 +299,10 @@ function RouteBuilder({
     return summaryBase.stopsCount === stopsCount ? summaryBase : { ...summaryBase, stopsCount };
   }, [route, summaryBase]);
 
+  // #2065: «Повторить» для сохранённого routing_state, не для живого превью (см. useSavedRouteRetry.ts).
+  const savedRouteRetry = useSavedRouteRetry({
+    tripId: trip.id, isOwner: trip.isOwner, routingState, savedRoutingState: trip.routingState,
+  });
   useEffect(() => {
     onDisplayStateChange?.({
       summary,
@@ -549,6 +554,7 @@ function RouteBuilder({
           focusPoint={focusPoint}
           focusIndices={focusIndices}
           onEditPoint={handleEditPoint}
+          retry={savedRouteRetry}
         />
         {elevationProfileSection}
         {route.length ? (
@@ -614,6 +620,7 @@ function RouteBuilder({
       onMovePoint={handleMovePoint}
       onDeletePoint={handleDelete}
       onAddPointFromMap={handleAddPointFromMap}
+      retry={savedRouteRetry}
     />
   );
 
@@ -772,6 +779,7 @@ function RouteBuilder({
       summary={summary}
       routingState={routingState}
       transport={trip.transport}
+      retry={savedRouteRetry}
       mapSection={mapSection}
       previewEngine={previewEngine}
       previewStatusSection={previewStatusSection}

@@ -13,6 +13,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { RouteSummary, RoutingState, TripTransport } from '@/api/plannedTrips';
 import MapIcon from '@/components/MapPage/MapIcon';
+import SavedRouteRetryButton from '@/components/trips/planning/SavedRouteRetryButton';
+import type { SavedRouteRetryState } from '@/components/trips/planning/useSavedRouteRetry';
 import {
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
@@ -34,6 +36,8 @@ type HeaderProps = {
   transport?: TripTransport;
   summary?: RouteSummary | null;
   readonly: boolean;
+  /** #2065: «Повторить» для сохранённого приблизительного маршрута (владелец, временная причина). */
+  retry?: SavedRouteRetryState | null;
 };
 
 export default function TripPlanRouteMapHeader({
@@ -44,6 +48,7 @@ export default function TripPlanRouteMapHeader({
   transport,
   summary,
   readonly,
+  retry,
 }: HeaderProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -90,7 +95,10 @@ export default function TripPlanRouteMapHeader({
         </View>
       ) : null}
       {reason ? (
-        <Text style={styles.warning} testID="trip-plan-map-route-reason">{reason}</Text>
+        <View style={styles.warningRow}>
+          <Text style={styles.warning} testID="trip-plan-map-route-reason">{reason}</Text>
+          <SavedRouteRetryButton retry={retry} testID="trip-plan-map-route-retry" />
+        </View>
       ) : emptyHint ? (
         <Text style={styles.hint} testID="trip-plan-map-empty-hint">{emptyHint}</Text>
       ) : null}
@@ -164,7 +172,14 @@ const createStyles = (colors: ThemedColors) =>
       color: colors.warningDark,
     },
     hint: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
-    warning: { fontSize: 12, lineHeight: 16, color: colors.warningDark, fontWeight: '700' },
+    warningRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      columnGap: 10,
+      rowGap: 6,
+    },
+    warning: { flexShrink: 1, minWidth: 160, fontSize: 12, lineHeight: 16, color: colors.warningDark, fontWeight: '700' },
     legend: {
       position: 'absolute',
       left: 12,

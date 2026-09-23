@@ -33,6 +33,7 @@ import {
   type NativeRoutePointMarkers,
 } from '@/components/trips/planning/tripPlanMapMarkers';
 import TripPlanRouteMapHeader, { TripPlanMapTrackLegend } from '@/components/trips/planning/TripPlanRouteMapHeader';
+import type { SavedRouteRetryState } from '@/components/trips/planning/useSavedRouteRetry';
 import { useMapOverlays } from '@/hooks/map/useMapOverlays';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { MapUiApi } from '@/types/mapUi';
@@ -72,6 +73,8 @@ interface Props {
   /** #1781: маркер отпущен в новом месте — координаты точки нужно обновить. */
   onMovePoint?: (move: RoutePointMove) => void;
   onDeletePoint?: (index: number) => void;
+  /** #2065: «Повторить» рядом с причиной деградации сохранённого маршрута. */
+  retry?: SavedRouteRetryState | null;
   onAddPointFromMap?: (coords: { lat: number; lng: number }) => void;
 }
 
@@ -154,6 +157,7 @@ export default function TripPlanRouteMap({
   onMovePoint,
   onDeletePoint,
   onAddPointFromMap,
+  retry,
 }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -368,6 +372,7 @@ export default function TripPlanRouteMap({
           transport={transport}
           summary={summary}
           readonly={readonly}
+          retry={retry}
         />
       )}
 

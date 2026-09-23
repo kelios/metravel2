@@ -24,6 +24,8 @@ import { usePlannerPageScrollTo } from '@/components/trips/planning/PlannerPageS
 import { scrollPlannerNodeIntoView } from '@/components/trips/planning/scrollPlannerNodeIntoView';
 
 import type { RoutingState, RouteSummary, TripTransport } from '@/api/plannedTrips';
+import SavedRouteRetryButton from '@/components/trips/planning/SavedRouteRetryButton';
+import type { SavedRouteRetryState } from '@/components/trips/planning/useSavedRouteRetry';
 import {
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
@@ -63,6 +65,8 @@ interface Props {
   summary: RouteSummary | null;
   routingState?: RoutingState | null;
   transport: TripTransport;
+  /** #2065: «Повторить» рядом с причиной деградации сохранённого маршрута. */
+  retry?: SavedRouteRetryState | null;
   /** Секции панели маршрута в мобильном порядке. */
   children: React.ReactNode;
   testID?: string;
@@ -76,6 +80,7 @@ function RouteBuilderMobile({
   summary,
   routingState,
   transport,
+  retry,
   children,
   testID = 'route-builder',
 }: Props) {
@@ -149,9 +154,12 @@ function RouteBuilderMobile({
           </Text>
         </View>
         {reason ? (
-          <Text style={styles.summaryReason} testID="route-mobile-summary-reason">
-            {reason}
-          </Text>
+          <View style={styles.summaryReasonRow}>
+            <Text style={styles.summaryReason} testID="route-mobile-summary-reason">
+              {reason}
+            </Text>
+            <SavedRouteRetryButton retry={retry} testID="route-mobile-summary-retry" />
+          </View>
         ) : null}
       </View>
 
@@ -191,8 +199,17 @@ const createStyles = (colors: ThemedColors) =>
     },
     hintText: { flexShrink: 1, fontSize: 12, lineHeight: 16, color: colors.textSecondary },
     summaryBlock: { gap: 6 },
-    summaryReason: {
+    summaryReasonRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
       paddingHorizontal: 12,
+      columnGap: 10,
+      rowGap: 6,
+    },
+    summaryReason: {
+      flexShrink: 1,
+      minWidth: 160,
       fontSize: 12,
       lineHeight: 16,
       fontWeight: '700',

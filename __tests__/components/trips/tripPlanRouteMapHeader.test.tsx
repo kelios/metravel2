@@ -6,7 +6,7 @@
  * внутри карты. Web и native рисуют одну и ту же шапку.
  */
 import React from 'react'
-import { render, waitFor, within } from '@testing-library/react-native'
+import { fireEvent, render, waitFor, within } from '@testing-library/react-native'
 
 import type { RoutePoint, RoutingState } from '@/api/plannedTrips'
 
@@ -135,5 +135,41 @@ describe.each(MAPS)('TripPlanRouteMap (%s) — шапка карты (#2059)', (
     expect(screen.getByTestId('trip-plan-map-point-count')).toHaveTextContent('0 точек')
     expect(screen.getByTestId('trip-plan-map-empty-hint')).toHaveTextContent(/Нажмите на карту/)
     expect(headerRows(screen)).toBeLessThanOrEqual(3)
+  })
+
+  // #2065: сама видимость и cooldown считает `useSavedRouteRetry` (см. его
+  // тест) — здесь только контракт «шапка рисует переданное состояние».
+  it('рисует «Повторить» рядом с причиной, когда retry.visible истинно', async () => {
+    const onPress = jest.fn()
+    const screen = render(
+      <Map
+        route={route}
+        routeGeometry={geometry}
+        routingState={degraded}
+        summary={{ distanceKm: 2429, durationMin: 0, elevationGainM: 0, stopsCount: 61, provider: 'direct' }}
+        transport="foot"
+        retry={{ visible: true, pending: false, disabled: false, onPress }}
+      />,
+    )
+
+    await waitFor(() => expect(screen.getByTestId('trip-plan-map-header')).toBeTruthy())
+    fireEvent.press(screen.getByTestId('trip-plan-map-route-retry'))
+    expect(onPress).toHaveBeenCalledTimes(1)
+  })
+
+  it('не рисует «Повторить», когда retry.visible ложь или retry не передан', async () => {
+    const screen = render(
+      <Map
+        route={route}
+        routeGeometry={geometry}
+        routingState={degraded}
+        summary={{ distanceKm: 2429, durationMin: 0, elevationGainM: 0, stopsCount: 61, provider: 'direct' }}
+        transport="foot"
+        retry={{ visible: false, pending: false, disabled: false, onPress: jest.fn() }}
+      />,
+    )
+
+    await waitFor(() => expect(screen.getByTestId('trip-plan-map-header')).toBeTruthy())
+    expect(screen.queryByTestId('trip-plan-map-route-retry')).toBeNull()
   })
 })

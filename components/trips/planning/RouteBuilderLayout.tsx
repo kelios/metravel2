@@ -6,6 +6,7 @@ import { Text, View } from 'react-native';
 
 import { type PlannedTrip, type RouteSummary, type RoutingState } from '@/api/plannedTrips';
 import RouteBuilderMobile from '@/components/trips/planning/RouteBuilderMobile';
+import type { SavedRouteRetryState } from '@/components/trips/planning/useSavedRouteRetry';
 import { translate as i18nT } from '@/i18n';
 import type { createStyles } from './RouteBuilder.styles';
 import type { createRoutePanelStyles } from './routePanelStyles';
@@ -24,6 +25,8 @@ interface Props {
   summary: RouteSummary | null;
   routingState: RoutingState | null;
   transport: PlannedTrip['transport'];
+  /** #2065: «Повторить» рядом с причиной деградации сохранённого маршрута. */
+  retry?: SavedRouteRetryState | null;
   mapSection: React.ReactNode;
   previewEngine: React.ReactNode;
   previewStatusSection: React.ReactNode;
@@ -47,6 +50,7 @@ export default function RouteBuilderLayout({
   summary,
   routingState,
   transport,
+  retry,
   mapSection,
   previewEngine,
   previewStatusSection,
@@ -88,6 +92,7 @@ export default function RouteBuilderLayout({
         summary={summary}
         routingState={routingState}
         transport={transport}
+        retry={retry}
         // Ключ карты, а не свой: строка та же самая, а в fill-режиме её шапку
         // рисует раскладка — дублировать перевод в пятый раз незачем.
         mapHint={

@@ -17,10 +17,13 @@ import { createQueryWrapper } from '../../helpers/testQueryClient'
 jest.mock('@/api/places', () => ({ fetchPlacesCatalog: jest.fn() }))
 jest.mock('@/api/travelsApi', () => ({ fetchTravels: jest.fn() }))
 
+// #2065: именованный мок мутации пересчёта — «Повторить» под сохранённой
+// причиной деградации зовёт её, и клик по кнопке должен быть виден тесту.
+const mockRefreshMutate = jest.fn()
 jest.mock('@/hooks/usePlannedTripsApi', () => ({
   useRouteTemplates: () => ({ data: [] }),
   useTripRouteElevation: () => ({ data: undefined }),
-  useRefreshTripRouteElevation: () => ({ mutate: jest.fn(), isPending: false }),
+  useRefreshTripRouteElevation: () => ({ mutate: mockRefreshMutate, isPending: false }),
   useUpdateTripRoute: () => ({ mutate: jest.fn(), isPending: false }),
   useUpdateTripTransport: () => ({ mutate: jest.fn(), isPending: false }),
   useUpdateTripBikeType: () => ({ mutate: jest.fn(), isPending: false }),
@@ -412,5 +415,58 @@ describe('RouteBuilder layout=mapFirst — приблизительный мар
 
     expect(queryByTestId('route-mobile-summary-reason')).toBeNull()
     expect(within(getByTestId('route-mobile-summary')).getByText('12 км · 2 ч 30 мин')).toBeTruthy()
+  })
+})
+
+// #2065: «Повторить» для сохранённого маршрута — временная причина и владелец
+// показывают кнопку рядом с `route-mobile-summary-reason`, клик зовёт
+// существующую мутацию пересчёта ровно один раз.
+describe('RouteBuilder layout=mapFirst — «Повторить» для сохранённого маршрута (#2065)', () => {
+  const route = [makePoint(0), makePoint(1), makePoint(2)]
+  const temporaryTrip = makeTrip({
+    transport: 'foot',
+    route,
+    routeGeometry: route.map((point) => point.coordinates),
+    routeSummary: {
+      distanceKm: 2429,
+      durationMin: 0,
+      elevationGainM: 0,
+      stopsCount: 3,
+      provider: 'direct',
+    },
+    routingState: {
+      provider: 'direct',
+      isOptimal: false,
+      fallbackReason: 'ors_http_502',
+      warnings: ['ors_http_502'],
+    },
+  })
+
+  beforeEach(() => {
+    mockRefreshMutate.mockClear()
+  })
+
+  it('владелец видит «Повторить» у временной причины, клик шлёт мутацию ровно один раз', () => {
+    const { getByTestId } = render(
+      <RouteBuilder trip={temporaryTrip} layout="mapFirst" />,
+      { wrapper: createQueryWrapper().Wrapper },
+    )
+
+    fireEvent.press(getByTestId('route-mobile-summary-retry'))
+
+    expect(mockRefreshMutate).toHaveBeenCalledTimes(1)
+    expect(mockRefreshMutate).toHaveBeenCalledWith(
+      { tripId: temporaryTrip.id },
+      { onSettled: expect.any(Function) },
+    )
+  })
+
+  it('не-владелец не видит «Повторить» даже у временной причины', () => {
+    const { queryByTestId } = render(
+      <RouteBuilder trip={{ ...temporaryTrip, isOwner: false }} layout="mapFirst" />,
+      { wrapper: createQueryWrapper().Wrapper },
+    )
+
+    expect(queryByTestId('route-mobile-summary-retry')).toBeNull()
   })
 })

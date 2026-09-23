@@ -238,3 +238,126 @@ test.describe('Planned trip route tab — the degradation reason is shown once, 
     })
   }
 })
+
+/**
+ * #2065 — «Повторить» рядом с причиной деградации СОХРАНЁННОГО маршрута:
+ * временная причина (ORS 5xx) показывает кнопку на обеих поверхностях, клик
+ * шлёт ровно один `POST /api/trips/{id}/route-summary/` с `force_refresh:true`.
+ * Постоянная причина (404, спека выше) кнопки не получает — уже покрыто строкой
+ * 204 (`getByRole('button', {name: /Повторить/})).toHaveCount(0)`).
+ */
+const RETRY_TRIP_ID = 205702
+
+const retryTestIdByViewport: Record<(typeof VIEWPORTS)[number]['name'], string> = {
+  'mobile-390': 'route-mobile-summary-retry',
+  'desktop-1440': 'trip-plan-map-route-retry',
+}
+
+const temporaryWarning = {
+  code: 'ors_http_502',
+  message: 'ORS answered 502; direct-line fallback was used.',
+}
+
+const temporaryTripDto = {
+  ...tripDto,
+  id: RETRY_TRIP_ID,
+  route_summary: { ...tripDto.route_summary },
+  routing_state: {
+    provider: 'direct',
+    is_optimal: false,
+    fallback_reason: 'ors_http_502',
+    warnings: [temporaryWarning],
+  },
+}
+
+async function mockOwnerTripWithTemporaryDegradation(page: Page, postBodies: unknown[]) {
+  await ensureAuthedStorageFallback(page)
+  await mockFakeAuthApis(page)
+  await seedConsent(page)
+
+  await page.route('**/proxy/tiles/osm/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG }),
+  )
+  await page.route('**/api/trips/route-templates/', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+  )
+  await page.route(`**/api/trips/planned/${RETRY_TRIP_ID}/routes/`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+  )
+  await page.route(`**/api/trips/${RETRY_TRIP_ID}/route-summary/`, async (route) => {
+    const request = route.request()
+    if (request.method() === 'POST') {
+      postBodies.push(request.postDataJSON())
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        trip: RETRY_TRIP_ID,
+        provider: 'direct',
+        status: 'degraded',
+        ascent_m: null,
+        descent_m: null,
+        polyline: null,
+        is_optimal: false,
+        fallback_reason: 'ors_http_502',
+        warnings: [temporaryWarning],
+      }),
+    })
+  })
+  await page.route(`**/api/trips/planned/${RETRY_TRIP_ID}/`, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback()
+      return
+    }
+    await waitForFakeAuth(page)
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(temporaryTripDto),
+    })
+  })
+  await page.route('**/api/routing/route/', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        geometry: temporaryTripDto.route_geometry,
+        distance_m: 2_429_001,
+        duration_s: 1_735_001,
+        provider: 'direct',
+        is_optimal: false,
+        fallback_reason: 'ors_http_502',
+        warnings: [temporaryWarning],
+      }),
+    }),
+  )
+}
+
+test.describe('Planned trip route tab — «Повторить» for a temporary saved-route degradation (#2065)', () => {
+  for (const viewport of VIEWPORTS) {
+    test(`${viewport.name}: ors_http_502 shows «Повторить», click sends one force_refresh POST`, async ({
+      page,
+    }) => {
+      const postBodies: unknown[] = []
+      await mockOwnerTripWithTemporaryDegradation(page, postBodies)
+      await page.setViewportSize({ width: viewport.width, height: viewport.height })
+      await page.goto(`/trips/plan/${RETRY_TRIP_ID}`, { waitUntil: 'domcontentloaded' })
+      await waitForFakeAuth(page)
+
+      const panel = page.getByTestId('trip-plan-panel-route').first()
+      await expect(panel).toBeVisible({ timeout: 30_000 })
+      await expect(page.getByTestId(viewport.reasonTestId)).toBeVisible({ timeout: 30_000 })
+
+      const retryButton = page.getByTestId(retryTestIdByViewport[viewport.name])
+      await expect(retryButton).toBeVisible()
+      await expect(retryButton).toBeEnabled()
+
+      await retryButton.click()
+
+      await expect.poll(() => postBodies.length, { timeout: 15_000 }).toBe(1)
+      expect(postBodies[0]).toEqual({ provider: 'ors', force_refresh: true })
+      await expect(retryButton).toBeDisabled()
+    })
+  }
+})

@@ -13,6 +13,7 @@ import {
 import { FitRouteBounds, FocusRouteIndices, FocusRoutePoint } from '@/components/trips/planning/TripPlanMapFocus';
 import TripPlanRouteMapHeader, { TripPlanMapTrackLegend } from '@/components/trips/planning/TripPlanRouteMapHeader';
 import TripPlanRouteMarkers from '@/components/trips/planning/TripPlanRouteMarkers';
+import type { SavedRouteRetryState } from '@/components/trips/planning/useSavedRouteRetry';
 import { isDrawableCoordinatePair, isRouteApproximate } from '@/components/trips/planning/tripPlanFormatting';
 import { useBreakpoints } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -69,6 +70,8 @@ interface Props {
   onMovePoint?: (move: RoutePointMove) => void;
   onDeletePoint?: (index: number) => void;
   onAddPointFromMap?: (coords: { lat: number; lng: number }) => void;
+  /** #2065: «Повторить» рядом с причиной деградации сохранённого маршрута. */
+  retry?: SavedRouteRetryState | null;
 }
 
 const DEFAULT_CENTER: [number, number] = [53.9, 27.5667];
@@ -160,6 +163,7 @@ export default function TripPlanRouteMap({
   onMovePoint,
   onDeletePoint,
   onAddPointFromMap,
+  retry,
 }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -477,6 +481,7 @@ export default function TripPlanRouteMap({
           transport={transport}
           summary={summary}
           readonly={readonly}
+          retry={retry}
         />
       )}
 
