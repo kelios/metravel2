@@ -6,11 +6,14 @@
 // на web это не `<a href>`, поэтому не работали открытие в новой вкладке через
 // контекстное меню, средняя кнопка мыши и «копировать адрес ссылки», а
 // responder-обработчики RNW ещё и мешали выделению текста вокруг ссылки.
-import React from 'react';
-import { Platform, Text, type StyleProp, type TextProps, type TextStyle } from 'react-native';
+import React, { useMemo } from 'react';
+import { Platform, StyleSheet, Text, type StyleProp, type TextProps, type TextStyle } from 'react-native';
 
 import { normalizeExternalUrl } from '@/utils/externalLinks';
 import { handleRichTextLinkPress, resolveInternalHref } from '@/utils/internalLinks';
+import { useThemedColors } from '@/hooks/useTheme';
+
+import { parseTripPlanRichText, type TripPlanInline } from './tripPlanRichText';
 
 // Домены без протокола (`metravel.by/travels/123`) распознаём по закрытому списку
 // TLD: без него ссылкой становится любое «слово.слово». Список двухуровневый.
@@ -181,11 +184,16 @@ export const splitTripPlanLinkedText = (value: string): TripPlanTextSegment[] =>
   return segments.length ? segments : [{ type: 'text', text: value }];
 };
 
-/** Уникальные ссылки текста в порядке появления — для блока «Ссылки». */
+/**
+ * Уникальные ссылки текста в порядке появления — для блока «Ссылки». Ищутся в тех
+ * же фрагментах разметки #2070, что рисует `TripPlanLinkedText`: по сырой строке
+ * `**https://…**` и `_https://…_` давали чипу адрес с хвостом маркеров.
+ */
 export const extractTripPlanLinks = (value: string): TripPlanLink[] => {
   const seen = new Set<string>();
   const links: TripPlanLink[] = [];
-  for (const segment of splitTripPlanLinkedText(value)) {
+  const fragments = parseTripPlanRichText(value).flatMap((line) => (line.kind === 'blank' ? [] : line.inlines));
+  for (const segment of fragments.flatMap((inline) => splitTripPlanLinkedText(inline.text))) {
     if (segment.type !== 'link' || seen.has(segment.url)) continue;
     seen.add(segment.url);
     links.push({ url: segment.url, href: segment.href, internal: segment.internal, domain: segment.domain });
@@ -239,6 +247,8 @@ interface Props {
   testID?: string;
 }
 
+const DEFAULT_FONT_SIZE = 15;
+
 export default function TripPlanLinkedText({
   text,
   style,
@@ -246,7 +256,36 @@ export default function TripPlanLinkedText({
   numberOfLines,
   testID,
 }: Props) {
-  const segments = splitTripPlanLinkedText(text);
+  const colors = useThemedColors();
+  // #2070: строки с разметкой — вложенные `Text` в одном корневом `Text`, поэтому
+  // `numberOfLines`, выделение и ссылки работают как для обычного текста.
+  const lines = useMemo(() => parseTripPlanRichText(text), [text]);
+  const baseSize = StyleSheet.flatten(style)?.fontSize ?? DEFAULT_FONT_SIZE;
+
+  const renderInlines = (inlines: TripPlanInline[], key: string) =>
+    inlines.map((inline, inlineIndex) => {
+      const inlineStyle: TextStyle | null =
+        inline.bold || inline.italic
+          ? { fontWeight: inline.bold ? '700' : undefined, fontStyle: inline.italic ? 'italic' : undefined }
+          : null;
+      return splitTripPlanLinkedText(inline.text).map((segment, index) => {
+        const segmentKey = `${key}-${inlineIndex}-${index}`;
+        if (segment.type === 'link') {
+          return (
+            <LinkText key={segmentKey} style={[linkStyle, inlineStyle]} {...buildTripPlanLinkProps(segment)}>
+              {segment.text}
+            </LinkText>
+          );
+        }
+        return inlineStyle ? (
+          <Text key={segmentKey} style={inlineStyle}>
+            {segment.text}
+          </Text>
+        ) : (
+          <React.Fragment key={segmentKey}>{segment.text}</React.Fragment>
+        );
+      });
+    });
 
   return (
     <Text
@@ -255,19 +294,30 @@ export default function TripPlanLinkedText({
       testID={testID}
       selectable={isTripPlanTextSelectable()}
     >
-      {segments.map((segment, index) => {
-        if (segment.type === 'text') {
-          return <React.Fragment key={`${index}-text`}>{segment.text}</React.Fragment>;
+      {lines.map((line, index) => {
+        const key = `line-${index}`;
+        const tail = index < lines.length - 1 ? '\n' : '';
+        if (line.kind === 'blank') return <React.Fragment key={key}>{tail}</React.Fragment>;
+        if (line.kind === 'section' || line.kind === 'day') {
+          const headingStyle: TextStyle =
+            line.kind === 'section'
+              ? { fontSize: baseSize + 1, fontWeight: '800', letterSpacing: 0.3, color: colors.text }
+              : { fontSize: baseSize + 1, fontWeight: '700', color: colors.primaryDark };
+          return (
+            <React.Fragment key={key}>
+              <Text style={headingStyle}>{renderInlines(line.inlines, key)}</Text>
+              {tail}
+            </React.Fragment>
+          );
         }
-
         return (
-          <LinkText
-            key={`${index}-${segment.url}`}
-            style={linkStyle}
-            {...buildTripPlanLinkProps(segment)}
-          >
-            {segment.text}
-          </LinkText>
+          <React.Fragment key={key}>
+            {line.kind === 'bullet' ? (
+              <Text style={{ color: colors.primaryDark, fontWeight: '700' }}>{`${line.marker}\u00A0\u00A0`}</Text>
+            ) : null}
+            {renderInlines(line.inlines, key)}
+            {tail}
+          </React.Fragment>
         );
       })}
     </Text>

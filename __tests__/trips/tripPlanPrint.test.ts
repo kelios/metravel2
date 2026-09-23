@@ -227,3 +227,19 @@ describe('printTripPlan', () => {
     expect(openBookPreviewWindow).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('buildTripPlanPrintHtml — разметка текста (#2070)', () => {
+  it('печатает заголовки, список, жирный и курсив из описания', () => {
+    const out = buildTripPlanPrintHtml(
+      buildTripPlanPrintModel(
+        trip([point('A', 6.4, 49.8)], { description: 'ПО ДНЯМ\n\n27.09 вс · Route 1\n_21 км_\nНочь: **Born**\n\n- фонарь\n- <b>' }),
+        null,
+      ),
+      { maps: {}, pageUrl: 'https://metravel.by/trips/plan/47', printedAt: new Date(2026, 8, 23) },
+    )
+    expect(out).toContain('<h3 class="rt-section">ПО ДНЯМ</h3>')
+    expect(out).toContain('<h4 class="rt-day">27.09 вс · Route 1</h4>')
+    expect(out).toContain('<p><em>21 км</em><br><strong>Ночь:</strong> <strong>Born</strong></p>')
+    expect(out).toContain('<ul class="rt-list"><li><span class="rt-marker">•</span>фонарь</li><li><span class="rt-marker">•</span>&lt;b&gt;</li></ul>')
+  })
+})

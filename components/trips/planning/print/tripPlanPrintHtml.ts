@@ -18,18 +18,55 @@ import {
   isDirectLineSummary,
 } from '../tripPlanFormatting'
 import { GEAR_CATEGORY_LABEL, GEAR_STATUS_LABEL } from '../tripGearRules'
+import { parseTripPlanRichText, type TripPlanInline } from '../tripPlanRichText'
 import type { TripPlanPrintDay, TripPlanPrintModel, TripPlanPrintPoint } from './tripPlanPrintModel'
 
 const esc = (value: string | null | undefined) => escapeHtml(value ?? '')
 
-/** Текст пользователя: абзацы по пустой строке, переносы строк сохраняются. */
-const paragraphs = (text: string | null | undefined): string =>
-  (text ?? '')
-    .split(/\n\s*\n/)
-    .map((block) => block.trim())
-    .filter(Boolean)
-    .map((block) => `<p>${esc(block).replace(/\n/g, '<br>')}</p>`)
+const inlineHtml = (inlines: TripPlanInline[]): string =>
+  inlines
+    .map((inline) => {
+      let html = esc(inline.text)
+      if (inline.italic) html = `<em>${html}</em>`
+      if (inline.bold) html = `<strong>${html}</strong>`
+      return html
+    })
     .join('')
+
+/**
+ * Текст пользователя с разметкой #2070 — тот же разбор, что на экране: заголовки
+ * разделов и дней, списки, жирный и курсив; обычные строки абзаца идут через
+ * `<br>`, пустая строка закрывает абзац.
+ */
+const richText = (text: string | null | undefined): string => {
+  const out: string[] = []
+  let paragraph: string[] = []
+  let list: string[] = []
+  const flush = () => {
+    if (paragraph.length) out.push(`<p>${paragraph.join('<br>')}</p>`)
+    if (list.length) out.push(`<ul class="rt-list">${list.join('')}</ul>`)
+    paragraph = []
+    list = []
+  }
+  for (const line of parseTripPlanRichText(text ?? '')) {
+    if (line.kind === 'bullet') {
+      if (paragraph.length) flush()
+      list.push(`<li><span class="rt-marker">${esc(line.marker)}</span>${inlineHtml(line.inlines)}</li>`)
+      continue
+    }
+    if (list.length) flush()
+    if (line.kind === 'blank') flush()
+    else if (line.kind === 'section') {
+      flush()
+      out.push(`<h3 class="rt-section">${inlineHtml(line.inlines)}</h3>`)
+    } else if (line.kind === 'day') {
+      flush()
+      out.push(`<h4 class="rt-day">${inlineHtml(line.inlines)}</h4>`)
+    } else paragraph.push(inlineHtml(line.inlines))
+  }
+  flush()
+  return out.join('')
+}
 
 const ARRIVAL_LABEL: Record<RoutePointArrivalMode, string> = {
   get train() { return i18nT('trips:components.trips.planning.print.arrival.train') },
@@ -82,7 +119,7 @@ const pointHtml = (item: TripPlanPrintPoint): string => {
   <div class="body">
     <div class="type">${esc(ROUTE_POINT_LABEL[point.type])}</div>
     <div class="name">${esc(point.name)}</div>
-    ${paragraphs(point.description)}
+    ${richText(point.description)}
     ${point.type === 'overnight' ? bookingHtml(point.booking) : ''}
   </div>
 </li>`
@@ -169,6 +206,11 @@ h1 { font-size: 20pt; line-height: 1.15; margin: 8mm 0 2mm; }
 h2 { font-size: 13.5pt; margin: 0 0 1.5mm; }
 h4 { font-size: 8.5pt; text-transform: uppercase; letter-spacing: .06em; color: #5b6170; margin: 3mm 0 1mm; break-after: avoid; }
 p { margin: 0 0 1.5mm; }
+.rt-section { font-size: 10.5pt; font-weight: 800; letter-spacing: .03em; margin: 3.5mm 0 1.2mm; break-after: avoid; }
+.rt-day { font-size: 10.5pt; font-weight: 700; color: #1f4e9e; text-transform: none; letter-spacing: 0; margin: 3mm 0 .8mm; break-after: avoid; }
+.rt-list { list-style: none; margin: 0 0 1.5mm; padding: 0; }
+.rt-list li { padding-left: 5mm; text-indent: -5mm; margin-bottom: .6mm; }
+.rt-marker { display: inline-block; min-width: 5mm; text-indent: 0; color: #1f4e9e; font-weight: 700; }
 .sub { color: #5b6170; margin-bottom: 3mm; }
 .muted, .meta, figcaption { color: #5b6170; }
 .meta { font-weight: 600; margin-bottom: 2mm; }
@@ -241,7 +283,7 @@ export function buildTripPlanPrintHtml(model: TripPlanPrintModel, options: TripP
   ${summaryHtml(model)}
   ${model.approximate ? `<p class="muted">${esc(i18nT('trips:components.trips.planning.print.approximate'))}</p>` : ''}
   ${daysTableHtml(model)}
-  ${trip.description.trim() ? `<section class="description"><h2>${esc(i18nT('trips:components.trips.planning.print.descriptionTitle'))}</h2>${paragraphs(trip.description)}</section>` : ''}
+  ${trip.description.trim() ? `<section class="description"><h2>${esc(i18nT('trips:components.trips.planning.print.descriptionTitle'))}</h2>${richText(trip.description)}</section>` : ''}
   ${model.days.map((day) => dayHtml(day, model, options.maps[day.key])).join('')}
   ${gearHtml(model.gear)}
   <section class="notes"><h2>${esc(i18nT('trips:components.trips.planning.print.notesTitle'))}</h2>${notes}</section>
