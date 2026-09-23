@@ -66,11 +66,13 @@ describe('i18n resources', () => {
     const cancelKeys: TranslationKey[] = []
     for (const [namespace, entries] of Object.entries(resources.ru)) {
       for (const [key, value] of Object.entries(entries)) {
-        if (value === 'Отмена') cancelKeys.push(`${namespace}:${key}` as TranslationKey)
+        // «Отмена » с хвостовым пробелом (MessageBubble) — та же подпись кнопки.
+        if (value.trim() === 'Отмена') cancelKeys.push(`${namespace}:${key}` as TranslationKey)
       }
     }
 
     expect(cancelKeys).toContain('shared:components.ui.ConfirmDialog.otmena_53464360')
+    expect(cancelKeys).toContain('messages:components.messages.MessageBubble.otmena_240238ff')
     for (const key of cancelKeys) {
       expect({ key, value: fixedTranslate(key) }).toEqual({ key, value: expected })
     }
