@@ -488,6 +488,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         travel_image_thumb_small_url: sanitizeCoverUrl(mergedData.travel_image_thumb_small_url),
       });
 
+      // Allowlist несущий: не пускает в upsert эхо `created_at`, которое бэк пишет с #1995 (#2040).
       const filteredCleanedData = filterAllowedKeys(cleanedData, Object.keys(baseFormData));
       const payload = ensureRequiredDraftFields(filteredCleanedData as unknown as TravelFormData);
 

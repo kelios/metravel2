@@ -71,7 +71,10 @@ const contentResponse = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-function setupPersistence(baseline: Record<string, unknown>) {
+function setupPersistence(
+  baseline: Record<string, unknown>,
+  paramOverrides: Record<string, unknown> = {},
+) {
   const formState: any = {
     data: baseline,
     reset: jest.fn(),
@@ -105,6 +108,7 @@ function setupPersistence(baseline: Record<string, unknown>) {
     updateBaselineRef: makeRef(jest.fn()),
     rehydrateMarkerIdsFromServer: jest.fn().mockResolvedValue(null),
     uploadPendingMarkerImages: jest.fn().mockResolvedValue(undefined),
+    ...paramOverrides,
   };
 
   renderHook(() => useTravelFormPersistence(params));
@@ -228,5 +232,43 @@ describe('#1516 — узкое фоновое сохранение текста'
         baseline,
       ),
     ).rejects.toThrow('Request aborted');
+  });
+});
+
+/**
+ * #2040: после #1995 бэк пишет `created_at` из upsert, а в форму дата попадает
+ * эхом деталки, ответа upsert и восстановленного черновика. Наружу её не пускает
+ * allowlist ключей `getEmptyFormData` перед `saveFormData`: поля даты в редакторе
+ * нет, поэтому устаревшее эхо не должно ни откатить дату, ни подарить её новой статье.
+ */
+describe('#2040 — дата статьи не уходит в полный upsert', () => {
+  it('не отправляет эхо даты существующей статьи', async () => {
+    const baseline = travelSnapshot({ created_at: '2024-06-01T08:00:00Z' });
+    const { autosaveOptions } = setupPersistence(baseline);
+    mockSaveFormData.mockResolvedValue(travelSnapshot() as any);
+
+    const next = travelSnapshot({
+      created_at: '2024-06-01T08:00:00Z',
+      coordsMeTravel: [POINT, { id: null, lat: 53.91, lng: 27.57, address: 'Точка B', categories: [] }],
+    });
+    await autosaveOptions.onSave(next, undefined, baseline);
+
+    expect(mockSaveFormData).toHaveBeenCalledTimes(1);
+    const payload = mockSaveFormData.mock.calls[0][0];
+    expect(payload).not.toHaveProperty('created_at');
+    expect(payload.id).toBe(619);
+  });
+
+  it('не переносит дату черновика чужой статьи, восстановленного на new', async () => {
+    const recoveredDraft = travelSnapshot({ id: null, created_at: '2023-05-04T10:00:00Z' });
+    const { autosaveOptions } = setupPersistence(recoveredDraft, { stableTravelId: null });
+    mockSaveFormData.mockResolvedValue(travelSnapshot({ id: 700 }) as any);
+
+    await autosaveOptions.onSave(recoveredDraft, undefined, undefined);
+
+    expect(mockSaveFormData).toHaveBeenCalledTimes(1);
+    const payload = mockSaveFormData.mock.calls[0][0];
+    expect(payload).not.toHaveProperty('created_at');
+    expect(payload.id ?? null).toBeNull();
   });
 });
