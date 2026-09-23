@@ -8,7 +8,9 @@ import {
   largeTripDayIndices,
   largeTripPoints,
   mockLargePlannedTrip,
+  routeMapMarkers,
   waitForFakeAuth,
+  waitForSettledRouteMap,
 } from './helpers/largePlannedTripFixture'
 
 /**
@@ -51,45 +53,36 @@ const pageScrollOffset = (page: Page, testId: string) =>
   }, testId)
 
 type DayFrame = {
-  markers: number
+  found: number
   spanShare: number
   inside: boolean
 }
 
 /**
  * Где на карте стоят маркеры точек `indices`: какую долю контейнера занимает
- * их рамка по большей оси и все ли они внутри карты. Маркеры монтируются в
- * порядке маршрута, поэтому индекс маркера в панели = индекс точки.
+ * их рамка по большей оси и все ли они внутри карты. #2059: маркер находится
+ * по своему номеру (номер = индекс + 1), потому что точки, собранные в
+ * кластер, в DOM не стоят и порядок узлов больше не равен порядку маршрута.
  */
-const dayFrame = (page: Page, containerTestId: string, indices: number[]) =>
-  page.evaluate(
-    ({ id, pointIndices }): DayFrame => {
-      const scope = document.querySelector<HTMLElement>(`[data-testid="${id}"]`)
-      const container = scope?.querySelector<HTMLElement>('.leaflet-container')
-      const markers = Array.from(
-        scope?.querySelectorAll<HTMLElement>('.leaflet-marker-pane .metravel-trip-plan-marker') ?? [],
-      )
-      if (!container) return { markers: markers.length, spanShare: 0, inside: false }
-      const box = container.getBoundingClientRect()
-      const centers = pointIndices
-        .map((index) => markers[index]?.getBoundingClientRect())
-        .filter((rect): rect is DOMRect => Boolean(rect))
-        .map((rect) => ({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }))
-      if (!centers.length) return { markers: markers.length, spanShare: 0, inside: false }
-      const xs = centers.map((center) => center.x)
-      const ys = centers.map((center) => center.y)
-      const spanShare = Math.max(
-        (Math.max(...xs) - Math.min(...xs)) / box.width,
-        (Math.max(...ys) - Math.min(...ys)) / box.height,
-      )
-      const inside = centers.every(
-        (center) =>
-          center.x >= box.left && center.x <= box.right && center.y >= box.top && center.y <= box.bottom,
-      )
-      return { markers: markers.length, spanShare, inside }
-    },
-    { id: containerTestId, pointIndices: indices },
+const dayFrame = async (page: Page, containerTestId: string, indices: number[]): Promise<DayFrame> => {
+  const { container, markers } = await routeMapMarkers(page, containerTestId)
+  const labels = new Set(indices.map((index) => String(index + 1)))
+  const centers = markers
+    .filter((marker) => labels.has(marker.label))
+    .map((marker) => ({ x: (marker.left + marker.right) / 2, y: (marker.top + marker.bottom) / 2 }))
+  if (!container || !centers.length) return { found: centers.length, spanShare: 0, inside: false }
+  const xs = centers.map((center) => center.x)
+  const ys = centers.map((center) => center.y)
+  const spanShare = Math.max(
+    (Math.max(...xs) - Math.min(...xs)) / container.width,
+    (Math.max(...ys) - Math.min(...ys)) / container.height,
   )
+  const inside = centers.length === indices.length && centers.every(
+    (center) =>
+      center.x >= container.left && center.x <= container.right && center.y >= container.top && center.y <= container.bottom,
+  )
+  return { found: centers.length, spanShare, inside }
+}
 
 async function openLargeTrip(page: Page, viewport: { width: number; height: number }) {
   await mockLargePlannedTrip(page)
@@ -145,7 +138,7 @@ test.describe('Planned trip route tab — collapsible days on a large trip (#205
     expect(mapTop).toBeLessThan(844 / 2)
     await expect
       .poll(async () => dayFrame(page, 'route-mobile-map', largeTripDayIndices(day)), { timeout: 10_000 })
-      .toMatchObject({ markers: LARGE_TRIP_POINT_COUNT, inside: true })
+      .toMatchObject({ found: largeTripDayIndices(day).length, inside: true })
     expect((await dayFrame(page, 'route-mobile-map', largeTripDayIndices(day))).spanShare).toBeGreaterThanOrEqual(0.35)
     // «На карте» день не раскрывает.
     await expect(page.getByTestId(`route-builder-day-toggle-${day}`)).toHaveAttribute('aria-expanded', 'false')
@@ -183,9 +176,9 @@ test.describe('Planned trip route tab — collapsible days on a large trip (#205
 
     const day = 5
     const indices = largeTripDayIndices(day)
-    await expect
-      .poll(async () => (await dayFrame(page, 'route-builder-map-column', indices)).markers, { timeout: 15_000 })
-      .toBe(LARGE_TRIP_POINT_COUNT)
+    // Карта успокоилась: трек загружен, кадр подогнан, каждая точка учтена
+    // маркером или кластером (#2059).
+    await waitForSettledRouteMap(page, 'route-builder-map-column')
     const before = await dayFrame(page, 'route-builder-map-column', indices)
     expect(before.spanShare).toBeLessThan(0.1)
     // Заголовок подводится к кадру заранее: `click()` Playwright сам прокрутил

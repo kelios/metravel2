@@ -109,7 +109,7 @@ export default function PlannedTripScreen() {
   const colors = useThemedColors();
   // Режим берётся из вьюпорта, а не из `Platform.OS`; до гидратации web остаётся
   // на широкой раскладке, иначе SSR-разметка и первый клиентский кадр расходятся.
-  const { isHydrated, isMobile } = useResponsive();
+  const { isHydrated, isMobile, isDesktop } = useResponsive();
   const compactTransport = isHydrated && isMobile;
   // Без мемоизации: `TRANSPORT_LABEL` — геттеры поверх активной локали, и
   // замороженный массив пережил бы смену языка.
@@ -913,7 +913,7 @@ export default function PlannedTripScreen() {
             </View>
 
             {activeTab === 'route' ? (
-              <View style={styles.panel} testID="trip-plan-panel-route">
+              <View style={[styles.panel, isDesktop && styles.panelRouteWide]} testID="trip-plan-panel-route">
                 {/* #1495/#1691: на телефоне карта — главный элемент вкладки: она
                     идёт первым блоком, панель маршрута лежит обычным контентом
                     под ней. Раскладку выбирает экран, а не RouteBuilder: так

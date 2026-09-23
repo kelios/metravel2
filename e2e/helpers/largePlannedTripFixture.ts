@@ -204,3 +204,67 @@ export async function mockLargePlannedTrip(page: Page): Promise<void> {
     }),
   )
 }
+
+export type RouteMapMarkerBox = { label: string; left: number; top: number; right: number; bottom: number }
+
+/**
+ * #2059: что видно на карте планировщика внутри `scopeTestId` — одиночные
+ * маркеры точек с их номерами (номер = текст капли) и кластеры с числом точек.
+ * Маркер, собранный в кластер, в DOM не стоит, поэтому точку ищут по номеру,
+ * а не по порядку узлов.
+ */
+export const routeMapMarkers = (page: Page, scopeTestId: string) =>
+  page.evaluate((id) => {
+    const scope = document.querySelector<HTMLElement>(`[data-testid="${id}"]`)
+    const container = scope?.querySelector<HTMLElement>('.leaflet-container')
+    const rect = container?.getBoundingClientRect()
+    const markers = Array.from(
+      scope?.querySelectorAll<HTMLElement>('.leaflet-marker-pane .metravel-trip-plan-marker') ?? [],
+    ).map((node) => {
+      const box = node.getBoundingClientRect()
+      return {
+        label: node.textContent?.trim() ?? '',
+        left: box.left,
+        top: box.top,
+        right: box.right,
+        bottom: box.bottom,
+      }
+    })
+    const clusters = Array.from(
+      scope?.querySelectorAll<HTMLElement>('.leaflet-marker-pane .metravel-trip-plan-cluster') ?? [],
+    ).map((node) => ({ count: Number((node.textContent ?? '').replace(/\D+/g, '')) || 0 }))
+    return {
+      container: rect
+        ? { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height }
+        : null,
+      markers,
+      clusters,
+    }
+  }, scopeTestId)
+
+/**
+ * #2059: карта успокоилась — каждая точка учтена ровно один раз (маркером или
+ * числом кластера) и картина не меняется между двумя опросами. Во время
+ * анимации зума markercluster держит в DOM и старые, и новые слои, поэтому
+ * мгновенный снимок посреди перестройки врёт. Перед этим ждём легенду
+ * оригинального трека: пока KML не загружен, подгонка кадра под маршрут ещё
+ * переедет на трек и перестроит кластеры.
+ */
+export async function waitForSettledRouteMap(page: Page, scopeTestId: string) {
+  await expect(page.getByTestId('trip-plan-map-original-track-legend').first()).toBeVisible({ timeout: 20_000 })
+  let previous = ''
+  await expect
+    .poll(async () => {
+      const { markers, clusters } = await routeMapMarkers(page, scopeTestId)
+      const total = markers.length + clusters.reduce((sum, cluster) => sum + cluster.count, 0)
+      const signature = JSON.stringify([
+        markers.map((marker) => [marker.label, Math.round(marker.left), Math.round(marker.top)]),
+        clusters.map((cluster) => cluster.count),
+      ])
+      const settled = total === LARGE_TRIP_POINT_COUNT && signature === previous
+      previous = signature
+      return settled
+    }, { timeout: 20_000 })
+    .toBe(true)
+  return routeMapMarkers(page, scopeTestId)
+}

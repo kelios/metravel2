@@ -8,6 +8,8 @@ const SCROLL_BOTTOM_RESERVE = Platform.select({
   web: 'calc(var(--mt-dock-h, 0px) + 24px)' as unknown as number,
   default: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
 });
+/** Рабочая область вкладки «Маршрут» на desktop ≥ 1280 (макет §4). */
+export const PLANNER_ROUTE_WORKSPACE_MAX_WIDTH = 1200;
 export const createStyles = (colors: ThemedColors, isMobile: boolean) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
@@ -194,6 +196,15 @@ export const createStyles = (colors: ThemedColors, isMobile: boolean) =>
     tabTextActive: { color: colors.primaryDark },
     panel: {
       gap: 16,
+    },
+    // #2059, макет §4: на desktop ≥ 1280 вкладка «Маршрут» шире колонки шапки —
+    // до 1 200 px, а шапка и описание поездки остаются в 860. Панель выходит за
+    // `inner` поровну в обе стороны (`alignSelf: center`); место под это есть
+    // всегда: 1 200 ≤ 1 280 − 2 × 16 (поля `content`) − полоса прокрутки.
+    panelRouteWide: {
+      alignSelf: 'center',
+      width: PLANNER_ROUTE_WORKSPACE_MAX_WIDTH,
+      maxWidth: PLANNER_ROUTE_WORKSPACE_MAX_WIDTH,
     },
     panelHint: { fontSize: 14, lineHeight: 20, color: colors.textMuted },
   });

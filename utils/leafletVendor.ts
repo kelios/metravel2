@@ -6,5 +6,9 @@
 import * as leafletModule from 'leaflet'
 import 'leaflet.markercluster'
 import * as reactLeafletModule from 'react-leaflet'
+// #2059: ядро react-leaflet (контекст карты) — чтобы декларативные `<Marker>`
+// добавлялись в группу кластеров, а не прямо на карту. Пакет и так приходит
+// сюда транзитивно через react-leaflet, отдельного чанка он не заводит.
+import * as reactLeafletCoreModule from '@react-leaflet/core'
 
-export { leafletModule, reactLeafletModule }
+export { leafletModule, reactLeafletModule, reactLeafletCoreModule }

@@ -81,6 +81,18 @@ describe('TripPlanRouteMap (web): focusIndices', () => {
     mockSetView.mockClear()
   })
 
+  it('#2059 подгонка под весь маршрут отступает под каплю маркера и кнопки карты', async () => {
+    const utils = render(<TripPlanRouteMap route={route} />)
+    await waitFor(() => utils.getByLabelText(EXPAND))
+
+    expect(mockFitBounds).toHaveBeenCalledTimes(1)
+    expect(mockFitBounds.mock.calls[0][1]).toEqual({
+      paddingTopLeft: [28, 116],
+      paddingBottomRight: [28, 28],
+      maxZoom: 13,
+    })
+  })
+
   it('подгоняет кадр под точки дня, а не под весь маршрут', async () => {
     const utils = render(<TripPlanRouteMap route={route} />)
     await waitFor(() => utils.getByLabelText(EXPAND))
@@ -91,7 +103,8 @@ describe('TripPlanRouteMap (web): focusIndices', () => {
     expect(mockFitBounds).toHaveBeenCalledTimes(1)
     expect(mockFitBounds).toHaveBeenLastCalledWith(
       { positions: [[48.14, 11.58], [48.1, 11.6], [48.05, 11.7]] },
-      { padding: [28, 28], maxZoom: FOCUS_POINT_ZOOM },
+      // #2059: сверху — кнопки карты и высота капли, снизу — атрибуция.
+      { paddingTopLeft: [28, 116], paddingBottomRight: [28, 28], maxZoom: FOCUS_POINT_ZOOM },
     )
   })
 

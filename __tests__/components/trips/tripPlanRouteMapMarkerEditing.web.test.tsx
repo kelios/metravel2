@@ -253,12 +253,16 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
     expect(markerProps[0].eventHandlers).toBeUndefined()
     expect(screen.UNSAFE_queryAllByProps({ 'data-testid': 'trip-plan-map-delete-point-0' })).toHaveLength(0)
     expect(screen.UNSAFE_queryAllByProps({ 'data-testid': 'trip-plan-map-edit-point-0' })).toHaveLength(0)
-    expect(screen.queryByTestId('trip-plan-map-marker-hint')).toBeNull()
+    expect(screen.getByTestId('trip-plan-route-map').props.accessibilityHint).toBeUndefined()
   })
 
-  it('показывает владельцу подсказку про жест над маркером', async () => {
+  it('#2059 даёт владельцу подсказку про жест скринридеру, а не строкой в шапке', async () => {
     const screen = render(<TripPlanRouteMap route={route} onMovePoint={jest.fn()} />)
 
-    expect(await screen.findByTestId('trip-plan-map-marker-hint')).toBeTruthy()
+    await waitFor(() => expect(markerProps).toHaveLength(2))
+    expect(screen.getByTestId('trip-plan-route-map').props.accessibilityHint).toBe(
+      'Маркер точки можно перетащить по карте, а по тапу открыть изменение или удаление.',
+    )
+    expect(screen.queryByText(/можно перетащить/)).toBeNull()
   })
 })

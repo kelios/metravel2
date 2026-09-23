@@ -25,17 +25,14 @@ import {
   materializeMapPlaceRecord,
   type MapPlaceMarker,
 } from '@/api/mapPlaces';
-import {
-  resolveSelectedNativePlace,
-  toNativeClusterPayload,
-  toNativeMarkerPayload,
-} from './Map/nativeMarkerPayload';
+import { resolveSelectedNativePlace, toNativeClusterPayload, toNativeMarkerPayload } from './Map/nativeMarkerPayload';
 import {
   isSameViewportSnapshot,
   normalizeRoutePoint,
   parseNativeMapBridgeMessage,
   type NativeViewportSnapshot,
 } from './Map/nativeBridge';
+import { normalizeRoutePointsWithMarkers, type NativeRoutePointMarkersPayload } from './Map/nativeRoutePointMarkersScript';
 import { buildNativeMapHtml } from './Map/nativeMapHtml';
 import { buildNativeMapFitCoordsCommand } from './Map/nativeMapViewCommandsScript';
 import { fetchTileWithRetry } from './Map/tileFetchRetry';
@@ -112,6 +109,8 @@ interface TravelProps {
    * поставленную перетаскиванием маркера, и разрешает подгонку под маршрут.
    */
   routeReplacementToken?: number;
+  /** #2059 — номера точек планировщика (как в списке) и отступы кадра под капли. */
+  routePointMarkers?: NativeRoutePointMarkersPayload;
   /** #1781 — маркер точки маршрута отпущен в новом месте. */
   onRoutePointMove?: (index: number, lat: number, lng: number) => void;
   /** #1781 — тап по маркеру точки маршрута: запрос действий над точкой. */
@@ -191,6 +190,7 @@ const Map: React.FC<TravelProps> = ({
   mode = 'radius',
   routePointsInteractive = false,
   routeReplacementToken,
+  routePointMarkers,
   onRoutePointMove,
   onRoutePointPress,
   onMapClick,
@@ -241,11 +241,9 @@ const Map: React.FC<TravelProps> = ({
     [themeColors.surface]
   );
   const markerShadowColor = withAlpha(themeColors.text, 0.24);
-  const selectedRouteLatLngs = useMemo(
-    () => routePoints
-      .map(normalizeRoutePoint)
-      .filter((point): point is [number, number] => Boolean(point)),
-    [routePoints],
+  const selectedRoute = useMemo(
+    () => normalizeRoutePointsWithMarkers(routePoints, routePointMarkers),
+    [routePointMarkers, routePoints],
   );
   const routeLineLatLngs = useMemo(
     () => (routeLineVisible
@@ -545,7 +543,7 @@ const Map: React.FC<TravelProps> = ({
         );
       },
       setOverlayEnabled,
-      fitToCoords: (coords, { maxZoom }) => injectMapCommand(buildNativeMapFitCoordsCommand(coords, maxZoom)),
+      fitToCoords: (coords, { maxZoom, padding }) => injectMapCommand(buildNativeMapFitCoordsCommand(coords, maxZoom, padding)),
     });
 
     return () => onMapUiApiReady(null);
@@ -574,7 +572,8 @@ const Map: React.FC<TravelProps> = ({
     () => ({
       points: nativeMarkerPayload,
       clusters: nativeClusterPayload,
-      routePoints: selectedRouteLatLngs,
+      routePoints: selectedRoute.latLngs,
+      routePointMarkers: selectedRoute.markers,
       routeLine: routeLineLatLngs,
       routeApproximate: routeLineApproximate,
       originalTrackSegments: originalTrackSegmentLatLngs,
@@ -588,7 +587,7 @@ const Map: React.FC<TravelProps> = ({
     [
       nativeMarkerPayload,
       nativeClusterPayload,
-      selectedRouteLatLngs,
+      selectedRoute,
       routeLineLatLngs,
       routeLineApproximate,
       originalTrackSegmentLatLngs,
@@ -834,12 +833,12 @@ const Map: React.FC<TravelProps> = ({
               }
               return;
             }
-            if (message.type === 'ROUTE_POINT_MOVED') {
-              onRoutePointMove?.(message.index, message.latitude, message.longitude);
-              return;
-            }
-            if (message.type === 'ROUTE_POINT_TAP') {
-              onRoutePointPress?.(message.index);
+            if (message.type === 'ROUTE_POINT_MOVED' || message.type === 'ROUTE_POINT_TAP') {
+              // Маркер WebView → позиция в переданном `routePoints` (пары вне диапазона отсеяны).
+              const index = selectedRoute.sourceIndices[message.index];
+              if (index == null) return;
+              if (message.type === 'ROUTE_POINT_MOVED') onRoutePointMove?.(index, message.latitude, message.longitude);
+              else onRoutePointPress?.(index);
               return;
             }
             if (message.type === 'SELECT_PLACE') {

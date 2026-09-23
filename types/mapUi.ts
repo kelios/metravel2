@@ -1,3 +1,10 @@
+/** Отступы подгонки кадра: верх-лево, низ-право и потолок доли стороны контейнера. */
+export type MapFitPadding = {
+  topLeft: readonly [number, number];
+  bottomRight: readonly [number, number];
+  maxShare: number;
+};
+
 export type MapUiApi = {
   zoomIn: () => void;
   zoomOut: () => void;
@@ -11,10 +18,14 @@ export type MapUiApi = {
   centerOnUser: (target?: { lat: number; lng: number } | null) => void;
   fitToResults: () => void;
   focusOnCoord?: (coord: string, options?: { zoom?: number }) => void;
-  /** #2058: кадр под набор точек (день маршрута планировщика), не ближе `maxZoom`. */
+  /**
+   * #2058: кадр под набор точек (день маршрута планировщика), не ближе `maxZoom`.
+   * #2059: `padding` — несимметричные отступы под каплю маркера и кнопки карты
+   * (`ROUTE_MAP_FIT_PADDING`); без него остаются прежние 50 px со всех сторон.
+   */
   fitToCoords?: (
     coords: ReadonlyArray<{ lat: number; lng: number }>,
-    options: { maxZoom: number },
+    options: { maxZoom: number; padding?: MapFitPadding },
   ) => void;
   openPopupForCoord?: (coord: string) => void;
   exportGpx: () => void;

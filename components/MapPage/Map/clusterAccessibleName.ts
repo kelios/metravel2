@@ -27,7 +27,14 @@ import { formatPlaces } from '@/utils/pluralize'
  * post-sync `map.eachLayer(...)` sweep (the very first cluster batch, which
  * can land on the map before the `layeradd` listener attaches).
  */
-export function useApplyClusterAccessibleName(L: any): (layer: any) => void {
+export function useApplyClusterAccessibleName(
+  L: any,
+  /**
+   * #2059: чем считать детей кластера в подписи. /map — места, карта
+   * конструктора поездки — точки маршрута («Кластер: 12 точек»).
+   */
+  formatCount: (count: number) => string = formatPlaces,
+): (layer: any) => void {
   return useCallback(
     (layer: any) => {
       // `L.MarkerCluster` only exists once leaflet.markercluster has augmented
@@ -44,13 +51,13 @@ export function useApplyClusterAccessibleName(L: any): (layer: any) => void {
           typeof layer.getChildCount === 'function' ? layer.getChildCount() : 0
         const label = i18nT(
           'map:components.MapPage.Map.ClusterLayer.klaster_value1_01722671',
-          { value1: formatPlaces(count) },
+          { value1: formatCount(count) },
         )
         el.setAttribute('aria-label', label)
       } catch {
         // noop
       }
     },
-    [L],
+    [L, formatCount],
   )
 }

@@ -2,6 +2,9 @@
 // плавающих контролов (перенесён из nativeMapHtml.ts без изменений) и подгонка
 // кадра под набор координат — день маршрута планировщика (#2058).
 // Вставляется в bodyScript после `L.map(...)` и `__metravelProgrammaticMoveUntil`.
+// `metravelFitOptions` объявлен в `nativeRoutePointMarkersScript.ts` того же
+// скрипта: объявление функции всплывает, а зовётся команда только после загрузки.
+import type { MapFitPadding } from '@/types/mapUi';
 
 export const NATIVE_MAP_VIEW_COMMANDS_SCRIPT = `        window.__metravelMapZoomIn = function() {
           try { map.zoomIn(); } catch (e) {}
@@ -9,7 +12,7 @@ export const NATIVE_MAP_VIEW_COMMANDS_SCRIPT = `        window.__metravelMapZoom
         window.__metravelMapZoomOut = function() {
           try { map.zoomOut(); } catch (e) {}
         };
-        window.__metravelMapFitCoords = function(coords, maxZoom) {
+        window.__metravelMapFitCoords = function(coords, maxZoom, padding) {
           try {
             var latLngs = [];
             for (var i = 0; i < coords.length; i += 1) {
@@ -24,7 +27,7 @@ export const NATIVE_MAP_VIEW_COMMANDS_SCRIPT = `        window.__metravelMapZoom
             if (latLngs.length === 1) {
               map.setView(latLngs[0], Math.max(map.getZoom ? map.getZoom() : maxZoom, maxZoom));
             } else {
-              map.fitBounds(L.latLngBounds(latLngs), { padding: [50, 50], maxZoom: maxZoom });
+              map.fitBounds(L.latLngBounds(latLngs), metravelFitOptions(padding, [50, 50], maxZoom));
             }
             return true;
           } catch (e) {
@@ -32,13 +35,27 @@ export const NATIVE_MAP_VIEW_COMMANDS_SCRIPT = `        window.__metravelMapZoom
           }
         };`;
 
-/** Команда `injectJavaScript` для `MapUiApi.fitToCoords`: только конечные числа. */
+const finitePair = (pair: readonly [number, number]): [number, number] =>
+  [Number.isFinite(pair[0]) ? pair[0] : 0, Number.isFinite(pair[1]) ? pair[1] : 0];
+
+/**
+ * Команда `injectJavaScript` для `MapUiApi.fitToCoords`: только конечные числа.
+ * #2059: `padding` уходит в WebView третьим аргументом, иначе там `[50, 50]`.
+ */
 export const buildNativeMapFitCoordsCommand = (
   coords: ReadonlyArray<{ lat: number; lng: number }>,
   maxZoom: number,
+  padding?: MapFitPadding,
 ): string => {
   const pairs = coords
     .filter(({ lat, lng }) => Number.isFinite(lat) && Number.isFinite(lng))
     .map(({ lat, lng }) => [lat, lng]);
-  return `window.__metravelMapFitCoords && window.__metravelMapFitCoords(${JSON.stringify(pairs)}, ${maxZoom})`;
+  const paddingArg = padding
+    ? `, ${JSON.stringify({
+      topLeft: finitePair(padding.topLeft),
+      bottomRight: finitePair(padding.bottomRight),
+      maxShare: Number.isFinite(padding.maxShare) ? padding.maxShare : 0.4,
+    })}`
+    : '';
+  return `window.__metravelMapFitCoords && window.__metravelMapFitCoords(${JSON.stringify(pairs)}, ${maxZoom}${paddingArg})`;
 };

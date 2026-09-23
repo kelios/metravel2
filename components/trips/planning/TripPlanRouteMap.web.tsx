@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -10,28 +10,21 @@ import {
   type RoutePointMove,
   type RouteReplacementToken,
 } from '@/components/trips/planning/tripPlanRouteMap.types';
-import { FocusRouteIndices, FocusRoutePoint } from '@/components/trips/planning/TripPlanMapFocus';
-import {
-  TRANSPORT_ICON_NAME,
-  TRANSPORT_LABEL,
-  formatRoutePointCoordinates,
-  isDrawableCoordinatePair,
-  isRouteApproximate,
-  routeMetricsLine,
-  routingStateHint,
-  routingStateLabel,
-} from '@/components/trips/planning/tripPlanFormatting';
+import { FitRouteBounds, FocusRouteIndices, FocusRoutePoint } from '@/components/trips/planning/TripPlanMapFocus';
+import TripPlanRouteMapHeader, { TripPlanMapTrackLegend } from '@/components/trips/planning/TripPlanRouteMapHeader';
+import TripPlanRouteMarkers from '@/components/trips/planning/TripPlanRouteMarkers';
+import { isDrawableCoordinatePair, isRouteApproximate } from '@/components/trips/planning/tripPlanFormatting';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
 import { MapCanvas } from '@/components/MapPage/Map/MapCanvas';
 import { useMapInstance } from '@/components/MapPage/Map/useMapInstance';
 import { useMapApi } from '@/components/MapPage/Map/useMapApi';
-import MapIcon from '@/components/MapPage/MapIcon';
 import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobileLayersPopover';
 import WeatherLegend from '@/components/MapPage/WeatherLegend';
 import { useMapOverlays } from '@/hooks/map/useMapOverlays';
 import type { MapUiApi } from '@/types/mapUi';
-import { buildDropMarkerHtml } from '@/utils/markerSvg';
+import type { ReactLeafletCoreRuntime } from '@/utils/loadLeafletRuntime';
 import { translate as i18nT } from '@/i18n'
 import { hasUsableRouteGeometry } from './tripRoutePreview';
 
@@ -89,6 +82,11 @@ const LAYERS_POPOVER_MAX_WIDTH = 300;
 // под кнопкой, иначе нижние секции просто обрезаются краем карты.
 const LAYERS_SCROLL_MAX_HEIGHT_INLINE = 196;
 const LAYERS_SCROLL_MAX_HEIGHT_FULLSCREEN = 420;
+// #2059, макет §4: на desktop ≥ 1280 карта занимает экран за вычетом шапки
+// страницы и вкладок, но не ниже 420 и не выше 760 px. Значение — CSS для
+// DOM-обёртки карты, поэтому `dvh`/`clamp` здесь законны.
+const TALL_MAP_HEIGHT = 'clamp(420px, calc(100dvh - 180px), 760px)';
+const TALL_MAP_SHELL: React.CSSProperties = { height: TALL_MAP_HEIGHT, minHeight: 420 };
 
 // Стабильные ссылки: `useMapApi` пересобирает api на новый массив, а api уезжает
 // в состояние — свежий литерал на каждый рендер дал бы бесконечный цикл.
@@ -116,86 +114,6 @@ const lngLatPositions = (
 
 const routePositions = (route: RoutePoint[]): Array<[number, number]> =>
   lngLatPositions(route.map((point) => point.coordinates));
-
-// `fittedTokenRef` живёт в родителе и переживает пересборку карты (#1301: разворот
-// на весь экран переносит карту порталом, то есть MapContainer монтируется заново).
-// Без него подгонка под маршрут срабатывала бы на каждом развороте и отменяла
-// восстановленные центр и зум.
-function FitRouteBounds({
-  L,
-  positions,
-  useMap,
-  fitToken,
-  fittedTokenRef,
-  lockedRef,
-  replacementToken,
-  appliedReplacementTokenRef,
-}: {
-  L: LeafletNS;
-  positions: Array<[number, number]>;
-  useMap: ReactLeafletNS['useMap'];
-  fitToken: string;
-  fittedTokenRef: React.MutableRefObject<string | null>;
-  /** #1781: пользователь уже наводил кадр руками — подгонка больше не двигает вид. */
-  lockedRef: React.MutableRefObject<boolean>;
-  /** #1820: счётчик оптовых замен маршрута из `RouteBuilder`. */
-  replacementToken: RouteReplacementToken | undefined;
-  /** Значение счётчика, на котором подгонка уже отработала. */
-  appliedReplacementTokenRef: React.MutableRefObject<RouteReplacementToken | undefined>;
-}) {
-  const map = useMap();
-
-  // MapContainer removes the Leaflet instance from a passive effect. Stop any
-  // pending pan/zoom in the earlier layout cleanup, including remounted maps
-  // whose bounds token was already fitted (fullscreen restores their view).
-  useLayoutEffect(() => {
-    return () => {
-      map.stop();
-    };
-  }, [map]);
-
-  useEffect(() => {
-    // #1820: маршрут заменили целиком — шаблоном или импортом трека. Признак
-    // приходит сигналом, а не выводится из точек: повторное применение того же
-    // шаблона возвращает неперетащенные точки с прежними координатами, и по
-    // самим точкам такая замена неотличима от частичной правки.
-    //
-    // Снимается ДО проверки токена: иначе новый токен запомнился бы как
-    // подогнанный, а подгонка не случилась бы уже никогда. Сбрасывается и сам
-    // токен — «маршрут заменили целиком» значит «покажи получившийся», даже
-    // если форма линии совпала с той, по которой кадр уже наводили.
-    if (appliedReplacementTokenRef.current !== replacementToken) {
-      appliedReplacementTokenRef.current = replacementToken;
-      lockedRef.current = false;
-      fittedTokenRef.current = null;
-    }
-    if (!positions.length) return;
-    if (fittedTokenRef.current === fitToken) return;
-    fittedTokenRef.current = fitToken;
-    // Перетаскивание маркера меняет и точки, и (через 500 мс) геометрию, то есть
-    // токен обновляется дважды подряд. Подгонка кадра в этот момент отменяла бы
-    // ровно ту точность, ради которой пользователь и тянул маркер, поэтому после
-    // ручного перемещения токен только запоминается.
-    if (lockedRef.current) return;
-    if (positions.length === 1) {
-      map.setView(positions[0], 12);
-      return;
-    }
-    const bounds = L.latLngBounds(positions);
-    map.fitBounds(bounds, { padding: [28, 28], maxZoom: 13 });
-  }, [
-    L,
-    appliedReplacementTokenRef,
-    fitToken,
-    fittedTokenRef,
-    lockedRef,
-    map,
-    positions,
-    replacementToken,
-  ]);
-
-  return null;
-}
 
 function ClickToAdd({
   disabled,
@@ -249,6 +167,9 @@ export default function TripPlanRouteMap({
   const mapKeyRef = useRef(`trip-plan-route-map-${reactId.replace(/:/g, '')}`);
   const [L, setL] = useState<LeafletNS | null>(null);
   const [RL, setRL] = useState<ReactLeafletNS | null>(null);
+  const [RLCore, setRLCore] = useState<ReactLeafletCoreRuntime | undefined>(undefined);
+  const { isDesktop } = useResponsive();
+  const tall = !fill && isDesktop;
   // #1301: карту конструктора можно развернуть на весь экран. `position: fixed`
   // здесь не работает: ScrollView RN-Web ставит себе `transform: matrix(1,0,0,1,0,0)`
   // и становится containing block — развёрнутая карта получалась 1250x782 в углу
@@ -345,6 +266,7 @@ export default function TripPlanRouteMap({
         if (cancelled) return;
         setL(loaded.L);
         setRL(loaded.RL);
+        setRLCore(loaded.RLCore);
       } catch {
         if (cancelled) return;
         setL(null);
@@ -399,40 +321,6 @@ export default function TripPlanRouteMap({
   // a healthy label requires actual routed geometry, never marker fallback.
   const truthfulRoutingState =
     hasRoutedGeometry || isRouteApproximate(routingState) ? routingState : null;
-  const markerIcon = useMemo(() => {
-    if (!L) return null;
-    return L.divIcon({
-      className: 'metravel-trip-plan-marker',
-      html: buildDropMarkerHtml({
-        size: 34,
-        fill: colors.primary,
-        stroke: colors.primaryDark,
-        innerColor: colors.textOnPrimary,
-        innerRadius: 3.2,
-      }),
-      iconSize: [34, 34],
-      iconAnchor: [17, 34],
-      popupAnchor: [0, -32],
-    });
-  }, [L, colors.primary, colors.primaryDark, colors.textOnPrimary]);
-
-  const activeMarkerIcon = useMemo(() => {
-    if (!L) return null;
-    return L.divIcon({
-      className: 'metravel-trip-plan-marker metravel-trip-plan-marker-active',
-      html: buildDropMarkerHtml({
-        size: 38,
-        fill: colors.warning,
-        stroke: colors.primaryDark,
-        innerColor: colors.textOnPrimary,
-        innerRadius: 3.4,
-      }),
-      iconSize: [38, 38],
-      iconAnchor: [19, 38],
-      popupAnchor: [0, -36],
-    });
-  }, [L, colors.warning, colors.primaryDark, colors.textOnPrimary]);
-
   // Слои карты — ровно те же, что на /map: определения и контроллеры берём из
   // общей механики (`useMapInstance` создаёт слои, `useMapApi` их переключает),
   // а выбор слоёв — общий persisted store (#1306). Оверлеи создаются «холодными»:
@@ -479,7 +367,7 @@ export default function TripPlanRouteMap({
     [onMovePoint],
   );
 
-  if (!L || !RL || !markerIcon || !activeMarkerIcon) {
+  if (!L || !RL) {
     return (
       <View style={[styles.loadingWrap, fill && styles.loadingWrapFill]} testID="trip-plan-route-map">
         <ActivityIndicator color={colors.primaryDark} />
@@ -502,6 +390,7 @@ export default function TripPlanRouteMap({
         style={{
           ...(styles.mapShell as React.CSSProperties),
           ...(fill ? (styles.mapShellFill as React.CSSProperties) : null),
+          ...(tall ? TALL_MAP_SHELL : null),
           ...(fullscreen ? (styles.mapShellFullscreen as React.CSSProperties) : null),
         }}
       >
@@ -534,12 +423,7 @@ export default function TripPlanRouteMap({
           <Feather name={fullscreen ? 'minimize-2' : 'maximize-2'} size={18} color={colors.text} />
         </button>
         {canvas}
-        {fill && hasOriginalTrack ? (
-          <View style={styles.legendOverlay} testID="trip-plan-map-original-track-legend">
-            <View style={[styles.legendLine, { backgroundColor: colors.accentDark }]} />
-            <Text style={styles.legendText}>{i18nT('tripsStatic:plan.map.originalTrack')}</Text>
-          </View>
-        ) : null}
+        {hasOriginalTrack ? <TripPlanMapTrackLegend placement={fill ? 'top' : 'bottom'} /> : null}
         <WeatherLegend enabledOverlays={enabledOverlays} />
         {layersOpen ? (
           <View style={styles.layersPopoverLayer} pointerEvents="box-none">
@@ -571,55 +455,32 @@ export default function TripPlanRouteMap({
     return shell;
   };
 
-  const Marker = RL.Marker as any;
-  const Popup = RL.Popup as any;
   const Polyline = RL.Polyline as any;
   const useMap = RL.useMap;
   const useMapEvents = RL.useMapEvents;
 
   return (
-    <View style={[styles.wrap, fill && styles.wrapFill]} testID="trip-plan-route-map">
+    <View
+      style={[styles.wrap, fill && styles.wrapFill]}
+      testID="trip-plan-route-map"
+      // #2059: подсказка про жест над маркером больше не висит строкой в шапке.
+      accessibilityHint={draggableMarkers ? i18nT('tripsStatic:plan.map.markerHint') : undefined}
+    >
       {fill ? null : (
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>{i18nT('trips:components.trips.planning.TripPlanRouteMap.karta_marshruta_8fbc6a38')}</Text>
-          {transport ? (
-            <View style={styles.routeMode}>
-              <MapIcon name={TRANSPORT_ICON_NAME[transport]} size={14} color={colors.primaryDark} />
-              <Text style={styles.routeModeText}>{TRANSPORT_LABEL[transport]}</Text>
-              {summary ? <Text style={styles.routeModeMeta}>{routeMetricsLine(summary)}</Text> : null}
-            </View>
-          ) : null}
-          <Text style={styles.hint}>
-            {trackPositions.length >= 2 && truthfulRoutingState
-              ? routingStateLabel(truthfulRoutingState)
-              : readonly
-                ? i18nT('trips:components.trips.planning.TripPlanRouteMap.tochki_marshruta_pokazany_na_karte_14e6732e')
-                : i18nT('trips:components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6')}
-          </Text>
-          {draggableMarkers ? (
-            <Text style={styles.hint} testID="trip-plan-map-marker-hint">
-              {i18nT('tripsStatic:plan.map.markerHint')}
-            </Text>
-          ) : null}
-          {hasOriginalTrack ? (
-            <View style={styles.legendItem} testID="trip-plan-map-original-track-legend">
-              <View style={[styles.legendLine, { backgroundColor: colors.accentDark }]} />
-              <Text style={styles.legendText}>{i18nT('tripsStatic:plan.map.originalTrack')}</Text>
-            </View>
-          ) : null}
-          {approximate ? (
-            <Text style={styles.warning} testID="trip-plan-map-route-reason">
-              {routingStateHint(truthfulRoutingState, transport)
-                ?? i18nT('trips:components.trips.planning.TripPlanRouteMap.liniya_priblizitelnaya_proverte_dorogu_ili_t_9fb768f4')}
-            </Text>
-          ) : null}
-        </View>
-        <Text style={styles.counter}>{markerPositions.length}</Text>
-      </View>
+        <TripPlanRouteMapHeader
+          pointCount={markerPositions.length}
+          lineVisible={trackPositions.length >= 2}
+          approximate={approximate}
+          routingState={truthfulRoutingState}
+          transport={transport}
+          summary={summary}
+          readonly={readonly}
+        />
       )}
 
-      {fullscreen ? <div style={styles.mapShellPlaceholder as React.CSSProperties} /> : null}
+      {fullscreen ? (
+        <div style={{ ...(styles.mapShellPlaceholder as React.CSSProperties), ...(tall ? TALL_MAP_SHELL : null) }} />
+      ) : null}
       {renderMapShell(
         <MapCanvas
           engine={{ L, RL }}
@@ -681,54 +542,19 @@ export default function TripPlanRouteMap({
               }}
             />
           ))}
-          {route.map((point, index) => {
-            // #1683: не «есть пара», а «пара пригодна к отрисовке» — на
-            // невалидном LatLng `L.marker` бросает и уносит всю карту.
-            if (!isDrawableCoordinatePair(point.coordinates)) return null;
-            const [lng, lat] = point.coordinates;
-            const coordinatesLabel = formatRoutePointCoordinates(point.coordinates);
-            return (
-              // #1781: координаты убраны из ключа. `position` — реактивный проп
-              // react-leaflet, а координатный ключ пересоздавал маркер ровно в
-              // момент завершения жеста перетаскивания.
-              <Marker
-                key={`${point.id}-${index}`}
-                position={[lat, lng]}
-                icon={activeIndex === index ? activeMarkerIcon : markerIcon}
-                draggable={draggableMarkers}
-                eventHandlers={draggableMarkers ? { dragend: handleMarkerDragEnd(index) } : undefined}
-              >
-                <Popup>
-                  <div style={styles.popup as React.CSSProperties}>
-                    <div style={styles.popupTitle as React.CSSProperties}>{point.name}</div>
-                    {coordinatesLabel ? (
-                      <div style={styles.popupMeta as React.CSSProperties}>{coordinatesLabel}</div>
-                    ) : null}
-                    {!readonly ? (
-                      <div style={styles.popupActions as React.CSSProperties}>
-                        <button
-                          type="button"
-                          onClick={() => editPointFromMap(index)}
-                          style={styles.popupButton as React.CSSProperties}
-                          data-testid={`trip-plan-map-edit-point-${index}`}
-                        >
-                          {i18nT('trips:components.trips.planning.TripPlanRouteMap.redaktirovat_0c9026cb')}</button>
-                        {onDeletePoint ? (
-                          <button
-                            type="button"
-                            onClick={() => onDeletePoint(index)}
-                            style={styles.popupButtonDanger as React.CSSProperties}
-                            data-testid={`trip-plan-map-delete-point-${index}`}
-                          >
-                            {i18nT('tripsStatic:plan.map.deletePoint')}</button>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
+          <TripPlanRouteMarkers
+            L={L}
+            RL={RL}
+            RLCore={RLCore}
+            route={route}
+            activeIndex={activeIndex}
+            readonly={readonly}
+            draggable={draggableMarkers}
+            colors={colors}
+            onDragEnd={handleMarkerDragEnd}
+            onEditPoint={editPointFromMap}
+            onDeletePoint={onDeletePoint}
+          />
           </>)}
         </MapCanvas>,
       )}
@@ -772,45 +598,7 @@ const createStyles = (colors: ThemedColors) =>
       borderRadius: 0,
       backgroundColor: 'transparent',
     },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: 12,
-    },
-    headerText: { flex: 1, gap: 3 },
-    title: { fontSize: 15, fontWeight: '700', color: colors.text },
-    routeMode: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-    routeModeText: { fontSize: 13, fontWeight: '800', color: colors.text },
-    routeModeMeta: { fontSize: 12, fontWeight: '700', color: colors.textMuted },
     hint: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
-    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    legendLine: { width: 22, height: 3, borderRadius: 999 },
-    legendText: { fontSize: 12, color: colors.textSecondary, fontWeight: '700' },
-    legendOverlay: {
-      position: 'absolute', top: 12, left: 12, zIndex: 3,
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999,
-      backgroundColor: colors.surface,
-    },
-    warning: { fontSize: 12, lineHeight: 16, color: colors.warningDark, fontWeight: '700' },
-    counter: {
-      minWidth: 32,
-      textAlign: 'center',
-      borderRadius: 999,
-      overflow: 'hidden',
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      backgroundColor: colors.surfaceMuted,
-      color: colors.text,
-      fontSize: 13,
-      fontWeight: '800',
-    },
     mapShell: {
       position: 'relative',
       height: 320,
@@ -891,58 +679,5 @@ const createStyles = (colors: ThemedColors) =>
       width: '100%',
       height: '100%',
       minHeight: 320,
-    },
-    popup: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 6,
-      minWidth: 160,
-      color: colors.text,
-    },
-    popupTitle: {
-      fontWeight: '700',
-      fontSize: 14,
-      lineHeight: 18,
-      color: colors.text,
-    },
-    popupMeta: {
-      fontSize: 12,
-      lineHeight: 16,
-      color: colors.textMuted,
-    },
-    popupActions: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-    popupButton: {
-      borderWidth: 1,
-      borderStyle: 'solid',
-      borderColor: colors.border,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      paddingTop: 7,
-      paddingRight: 10,
-      paddingBottom: 7,
-      paddingLeft: 10,
-      backgroundColor: colors.surface,
-      color: colors.text,
-      cursor: 'pointer',
-      fontSize: 13,
-      fontWeight: '700',
-    },
-    popupButtonDanger: {
-      borderWidth: 1,
-      borderStyle: 'solid',
-      borderColor: colors.danger,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      paddingTop: 7,
-      paddingRight: 10,
-      paddingBottom: 7,
-      paddingLeft: 10,
-      backgroundColor: colors.surface,
-      color: colors.danger,
-      cursor: 'pointer',
-      fontSize: 13,
-      fontWeight: '700',
     },
   });

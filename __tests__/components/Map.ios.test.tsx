@@ -425,9 +425,63 @@ describe('Map.ios Component', () => {
     expect(html).toContain('L.polyline(routeLine');
     expect(html).toContain("dashArray: routeApproximate ? '8 8' : null");
     expect(html).toContain('const marker = L.marker(point, {');
-    expect(html).toContain('icon: makeRoutePointIcon(');
+    // #2059: номерная капля планировщика или прежний кружок маршрута /map.
+    expect(html).toContain('icon: routePointIcon(routePointMarkers, index, isStart, isEnd)');
+    expect(html).toContain('makeRoutePointIcon(isStart || isEnd ? 8 : 6');
     expect(html).toContain('draggable: routePointsInteractive');
     expect(html).toContain('map.fitBounds(routePolyline.getBounds()');
+    expect(injectedScript).toContain('"routePointMarkers":null');
+  });
+
+  it('#2059 keeps planner marker numbers aligned with the points that survive normalization', () => {
+    const onRoutePointMove = jest.fn();
+    const onRoutePointPress = jest.fn();
+    const rendered = render(
+      <Map
+        travel={mockTravel}
+        coordinates={mockCoordinates}
+        mode="route"
+        routePointsInteractive
+        onRoutePointMove={onRoutePointMove}
+        onRoutePointPress={onRoutePointPress}
+        routePoints={[
+          [27.5667, 53.9],
+          [27.6, 95],
+          [19.9368564, 50.0619474],
+        ]}
+        routePointMarkers={{
+          labels: ['1', '2', '3'],
+          icon: { className: 'metravel-trip-plan-marker', html: '<b>{{n}}</b>', size: [36, 36], anchor: [18, 36] },
+          fontSizes: [8],
+          fitPadding: { topLeft: [28, 116], bottomRight: [28, 28], maxShare: 0.4 },
+        }}
+      />
+    );
+
+    const injectedScript = getInjectedPayloadScript(rendered);
+    // Широта 95 на карту не попадает, а номер 2 уходит вместе с ней: третья
+    // точка остаётся «3», как в списке.
+    expect(injectedScript).toContain('"routePoints":[[53.9,27.5667],[50.0619474,19.9368564]]');
+    expect(injectedScript).toContain('"labels":["1","3"]');
+    expect(injectedScript).toContain('"fitPadding":{"topLeft":[28,116],"bottomRight":[28,28],"maxShare":0.4}');
+
+    // Второй маркер WebView — третья пара `routePoints`: тап и перетаскивание
+    // возвращаются её индексом, а не позицией среди отрисованных маркеров.
+    const webView = getWebView(rendered);
+    act(() => {
+      webView.props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: 'ROUTE_POINT_TAP', index: 1 }) },
+      });
+      webView.props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: 'ROUTE_POINT_MOVED', index: 1, lat: 50.07, lng: 19.95 }) },
+      });
+      webView.props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: 'ROUTE_POINT_TAP', index: 2 }) },
+      });
+    });
+    expect(onRoutePointPress).toHaveBeenCalledTimes(1);
+    expect(onRoutePointPress).toHaveBeenCalledWith(2);
+    expect(onRoutePointMove).toHaveBeenCalledWith(2, 50.07, 19.95);
   });
 
   it('redraws failed base tiles exactly on offline to online recovery', () => {

@@ -12,7 +12,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { RouteGeometry, RoutingState, RoutePoint, RouteSummary, TripTransport } from '@/api/plannedTrips';
 import MapComponent from '@/components/MapPage/Map';
-import MapIcon from '@/components/MapPage/MapIcon';
 import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobileLayersPopover';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
@@ -23,15 +22,17 @@ import {
   type RouteReplacementToken,
 } from '@/components/trips/planning/tripPlanRouteMap.types';
 import {
-  TRANSPORT_ICON_NAME,
-  TRANSPORT_LABEL,
   formatRoutePointCoordinates,
   isDrawableCoordinatePair,
   isRouteApproximate,
-  routeMetricsLine,
-  routingStateHint,
-  routingStateLabel,
 } from '@/components/trips/planning/tripPlanFormatting';
+import {
+  ROUTE_MAP_FIT_PADDING,
+  nativeRoutePointMarkers,
+  routeMarkerLabel,
+  type NativeRoutePointMarkers,
+} from '@/components/trips/planning/tripPlanMapMarkers';
+import TripPlanRouteMapHeader, { TripPlanMapTrackLegend } from '@/components/trips/planning/TripPlanRouteMapHeader';
 import { useMapOverlays } from '@/hooks/map/useMapOverlays';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { MapUiApi } from '@/types/mapUi';
@@ -107,6 +108,8 @@ type NativeRouteMapProps = {
   pointsOnly?: boolean;
   routePointsInteractive?: boolean;
   routeReplacementToken?: RouteReplacementToken;
+  /** #2059: номера точек как в списке, шаблон капли и отступы кадра. */
+  routePointMarkers?: NativeRoutePointMarkers;
   onRoutePointMove?: (index: number, lat: number, lng: number) => void;
   onRoutePointPress?: (index: number) => void;
   onMapClick?: (lng: number, lat: number) => void;
@@ -123,6 +126,17 @@ const NativeMap = MapComponent as unknown as React.ComponentType<NativeRouteMapP
 // разъезжались между платформами.
 const lngLatPairs = (coordinates: Array<[number, number] | null | undefined>): Array<[number, number]> =>
   coordinates.filter(isDrawableCoordinatePair);
+
+/**
+ * #2059: индекс в `route` каждой пары, которую WebView получает маркером, — в
+ * порядке `routePoints` (тот же фильтр, что у `lngLatPairs`). Точка с битыми
+ * координатами на карту не попадает, но номер в списке занимает: по этой
+ * таблице маркер подписывается номером из списка (тот же `routeMarkerLabel`,
+ * что у web), а тап и перетаскивание маркера, о которых WebView сообщает
+ * позицией в `routePoints`, попадают в свою точку, а не в соседнюю.
+ */
+const drawableRouteIndices = (route: RoutePoint[]): number[] =>
+  route.flatMap((point, index) => (isDrawableCoordinatePair(point.coordinates) ? [index] : []));
 
 export default function TripPlanRouteMap({
   route,
@@ -198,6 +212,11 @@ export default function TripPlanRouteMap({
     [originalTrackSegments],
   );
   const hasOriginalTrack = originalTrackLines.length > 0;
+  const markerRouteIndices = useMemo(() => drawableRouteIndices(route), [route]);
+  const routePointMarkers = useMemo(
+    () => nativeRoutePointMarkers(markerRouteIndices.map(routeMarkerLabel), colors),
+    [colors, markerRouteIndices],
+  );
   const center = useMemo(() => {
     // #1851: файл трека грузят раньше, чем расставляют точки маршрута. Видимый
     // кадр в этом случае ставит уже не center, а fitBounds по границам трека в
@@ -239,7 +258,7 @@ export default function TripPlanRouteMap({
       .map(([lng, lat]) => ({ lat, lng }));
     if (!coords.length) return;
     fittedIndicesTokenRef.current = focusIndices.token;
-    mapUiApi.fitToCoords(coords, { maxZoom: FOCUS_POINT_ZOOM });
+    mapUiApi.fitToCoords(coords, { maxZoom: FOCUS_POINT_ZOOM, padding: ROUTE_MAP_FIT_PADDING });
   }, [focusIndices, mapUiApi, route]);
 
   const handleMapClick = useCallback(
@@ -254,9 +273,13 @@ export default function TripPlanRouteMap({
   // #1781: точки маршрута правятся прямо с карты. WebView отдаёт только индекс —
   // маршрутом по-прежнему владеет `RouteBuilder`, карта ничего не мутирует сама.
   const interactiveRoutePoints = !readonly && (Boolean(onMovePoint) || Boolean(onDeletePoint) || Boolean(onEditPoint));
+  const markerRouteIndicesRef = useRef(markerRouteIndices);
+  markerRouteIndicesRef.current = markerRouteIndices;
   const handleRoutePointMove = useCallback(
-    (index: number, lat: number, lng: number) => {
+    (markerIndex: number, lat: number, lng: number) => {
       if (readonly) return;
+      const index = markerRouteIndicesRef.current[markerIndex];
+      if (index == null) return;
       onMovePoint?.({ index, lat, lng });
     },
     [onMovePoint, readonly],
@@ -264,8 +287,10 @@ export default function TripPlanRouteMap({
   const routeRef = useRef(route);
   routeRef.current = route;
   const handleRoutePointPress = useCallback(
-    (index: number) => {
+    (markerIndex: number) => {
       if (readonly) return;
+      const index = markerRouteIndicesRef.current[markerIndex];
+      if (index == null) return;
       const point = routeRef.current[index];
       if (!point) return;
       setActions((current) => (current?.index === index ? null : { index, id: String(point.id) }));
@@ -328,45 +353,22 @@ export default function TripPlanRouteMap({
     : i18nT('tripsStatic:plan.map.expand');
 
   return (
-    <View style={[styles.wrap, fill && styles.wrapFill]} testID="trip-plan-route-map">
+    <View
+      style={[styles.wrap, fill && styles.wrapFill]}
+      testID="trip-plan-route-map"
+      // #2059: подсказка про жест над маркером — не строка шапки, а подсказка скринридера.
+      accessibilityHint={interactiveRoutePoints ? i18nT('tripsStatic:plan.map.markerHint') : undefined}
+    >
       {fill ? null : (
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>{i18nT('trips:components.trips.planning.TripPlanRouteMap.karta_marshruta_8fbc6a38')}</Text>
-          {transport ? (
-            <View style={styles.routeMode}>
-              <MapIcon name={TRANSPORT_ICON_NAME[transport]} size={14} color={colors.primaryDark} />
-              <Text style={styles.routeModeText}>{TRANSPORT_LABEL[transport]}</Text>
-              {summary ? <Text style={styles.routeModeMeta}>{routeMetricsLine(summary)}</Text> : null}
-            </View>
-          ) : null}
-          <Text style={styles.hint}>
-            {routeLine.length >= 2 && truthfulRoutingState
-              ? routingStateLabel(truthfulRoutingState)
-              : readonly
-                ? i18nT('trips:components.trips.planning.TripPlanRouteMap.tochki_marshruta_pokazany_na_karte_14e6732e')
-                : i18nT('trips:components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6')}
-          </Text>
-          {interactiveRoutePoints ? (
-            <Text style={styles.hint} testID="trip-plan-map-marker-hint">
-              {i18nT('tripsStatic:plan.map.markerHint')}
-            </Text>
-          ) : null}
-          {hasOriginalTrack ? (
-            <View style={styles.legendItem} testID="trip-plan-map-original-track-legend">
-              <View style={[styles.legendLine, { backgroundColor: colors.accentDark }]} />
-              <Text style={styles.legendText}>{i18nT('tripsStatic:plan.map.originalTrack')}</Text>
-            </View>
-          ) : null}
-          {approximate ? (
-            <Text style={styles.warning} testID="trip-plan-map-route-reason">
-              {routingStateHint(truthfulRoutingState, transport)
-                ?? i18nT('trips:components.trips.planning.TripPlanRouteMap.liniya_priblizitelnaya_proverte_dorogu_ili_t_9fb768f4')}
-            </Text>
-          ) : null}
-        </View>
-        <Text style={styles.counter}>{routePoints.length}</Text>
-      </View>
+        <TripPlanRouteMapHeader
+          pointCount={routePoints.length}
+          lineVisible={routeLine.length >= 2}
+          approximate={approximate}
+          routingState={truthfulRoutingState}
+          transport={transport}
+          summary={summary}
+          readonly={readonly}
+        />
       )}
 
       <View style={[styles.mapShell, fill && styles.mapShellFill]}>
@@ -411,17 +413,13 @@ export default function TripPlanRouteMap({
           pointsOnly
           routePointsInteractive={interactiveRoutePoints}
           routeReplacementToken={routeReplacementToken}
+          routePointMarkers={routePointMarkers}
           onRoutePointMove={handleRoutePointMove}
           onRoutePointPress={handleRoutePointPress}
           onMapClick={handleMapClick}
           onMapUiApiReady={handleMapUiApiReady}
         />
-        {fill && hasOriginalTrack ? (
-          <View style={styles.legendOverlay} testID="trip-plan-map-original-track-legend">
-            <View style={[styles.legendLine, { backgroundColor: colors.accentDark }]} />
-            <Text style={styles.legendText}>{i18nT('tripsStatic:plan.map.originalTrack')}</Text>
-          </View>
-        ) : null}
+        {hasOriginalTrack ? <TripPlanMapTrackLegend placement={fill ? 'top' : 'bottom'} /> : null}
 
         <Pressable
           onPress={toggleLayers}
@@ -550,33 +548,6 @@ const createStyles = (colors: ThemedColors) =>
       padding: 12,
       backgroundColor: colors.surface,
     },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: 12,
-    },
-    headerText: { flex: 1, gap: 3 },
-    title: { fontSize: 15, fontWeight: '700', color: colors.text },
-    routeMode: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-    routeModeText: { fontSize: 13, fontWeight: '800', color: colors.text },
-    routeModeMeta: { fontSize: 12, fontWeight: '700', color: colors.textMuted },
-    hint: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
-    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    legendLine: { width: 22, height: 3, borderRadius: 999 },
-    legendText: { fontSize: 12, color: colors.textSecondary, fontWeight: '700' },
-    legendOverlay: {
-      position: 'absolute', top: 12, left: 12, zIndex: 3,
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999,
-      backgroundColor: colors.surface,
-    },
-    warning: { fontSize: 12, lineHeight: 16, color: colors.warningDark, fontWeight: '700' },
     // #1781 — действия точки маршрута. Карточка стоит внизу карты: у маркера
     // в WebView нет RN-якоря, а низ экрана в map-first раскладке ближе к пальцу.
     pointActions: {
@@ -619,18 +590,6 @@ const createStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: 999,
-    },
-    counter: {
-      minWidth: 32,
-      textAlign: 'center',
-      borderRadius: 999,
-      overflow: 'hidden',
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      backgroundColor: colors.surfaceMuted,
-      color: colors.text,
-      fontSize: 13,
-      fontWeight: '800',
     },
     wrapFill: {
       flex: 1,

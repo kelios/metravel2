@@ -1,5 +1,5 @@
 import { act, render, fireEvent } from '@testing-library/react-native';
-import { ActivityIndicator, Platform } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet } from 'react-native';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
 import { ApiError } from '@/api/clientErrors';
@@ -17,7 +17,7 @@ const mockUpdateTripMutate = jest.fn();
 const mockTripsPageSeo = jest.fn(() => null);
 const originalOS = Platform.OS;
 let mockSearchParams: Record<string, string> = { id: '8001' };
-let mockResponsive = { isMobile: false };
+let mockResponsive: { isMobile: boolean; isDesktop?: boolean } = { isMobile: false };
 let mockRouteBuilderDisplayState: {
   summary: PlannedTrip['routeSummary'];
   routingState: PlannedTrip['routingState'];
@@ -665,6 +665,23 @@ describe('PlannedTripScreen — planner states', () => {
     expect(getByTestId('trip-rating-panel')).toBeTruthy();
     // Route panel is unmounted when another tab is active.
     expect(queryByTestId('trip-plan-panel-route')).toBeNull();
+  });
+
+  it('#2059 widens only the route workspace to 1 200 px on desktop ≥ 1280', () => {
+    mockTrip(makeTrip());
+    const narrow = renderScreen();
+    expect(StyleSheet.flatten(narrow.getByTestId('trip-plan-panel-route').props.style).width).toBeUndefined();
+    narrow.unmount();
+
+    mockResponsive = { isMobile: false, isDesktop: true };
+    const wide = renderScreen();
+    expect(StyleSheet.flatten(wide.getByTestId('trip-plan-panel-route').props.style)).toMatchObject({
+      width: 1200,
+      maxWidth: 1200,
+      alignSelf: 'center',
+    });
+    // Шапка и вкладки остаются в колонке экрана (860): своей ширины у них нет.
+    expect(StyleSheet.flatten(wide.getByTestId('trip-plan-tabs').props.style).width).toBeUndefined();
   });
 
   it('renders a freshly created empty trip without crashing (regression for #884)', () => {

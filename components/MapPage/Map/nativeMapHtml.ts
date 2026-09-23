@@ -26,6 +26,7 @@ import {
 } from './mapMarkerStyles';
 import { buildNativeWeatherTempLabelsScript } from './nativeWeatherTempLabelsScript';
 import { NATIVE_MAP_VIEW_COMMANDS_SCRIPT } from './nativeMapViewCommandsScript';
+import { NATIVE_ROUTE_POINT_MARKERS_SCRIPT } from './nativeRoutePointMarkersScript';
 
 const DEFAULT_LAT = 53.8828449;
 const DEFAULT_LNG = 27.7273595;
@@ -359,23 +360,7 @@ ${buildInvalidateSchedulerScript({
         // #1496 — цвет оригинального (неупрощённого) трека из загруженного файла.
         const ORIGINAL_TRACK_COLOR = ${serializeForInlineScript(themeColors.accentDark || themeColors.accent || DESIGN_COLORS.travelPoint)};
 
-        // #1781 — маркер точки маршрута: тот же круг, что раньше рисовал
-        // L.circleMarker, но как divIcon, потому что перетаскивать Leaflet умеет
-        // только L.Marker. box-sizing:border-box повторяет центрированную обводку.
-        const ROUTE_POINT_WEIGHT = 3;
-        function makeRoutePointIcon(radius, fillColor) {
-          var size = radius * 2 + ROUTE_POINT_WEIGHT;
-          var half = size / 2;
-          var style = 'width:' + size + 'px;height:' + size + 'px;border-radius:50%;'
-            + 'box-sizing:border-box;background:' + fillColor + ';'
-            + 'border:' + ROUTE_POINT_WEIGHT + 'px solid ' + ROUTE_SURFACE + ';';
-          return L.divIcon({
-            className: 'metravel-route-point',
-            html: '<div aria-hidden="true" style="' + style + '"></div>',
-            iconSize: [size, size],
-            iconAnchor: [half, half]
-          });
-        }
+${NATIVE_ROUTE_POINT_MARKERS_SCRIPT}
 
         // Экранируем значения точек перед вставкой в HTML popup: поля приходят с бэка
         // и могут содержать <, >, ", ' и & — без эскейпа это XSS в WebView (#113).
@@ -407,6 +392,9 @@ ${ESCAPE_HTML_FN_SCRIPT}
             // #1820 — счётчик оптовых замен маршрута (шаблон, импорт трека).
             // Его рост — единственный признак «маршрут заменили целиком».
             const routeReplacementToken = data.routeReplacementToken;
+            // #2059 — номера точек планировщика и их отступы кадра (иначе null).
+            const routePointMarkers = data.routePointMarkers || null;
+            const routeFitPadding = routePointMarkers && routePointMarkers.fitPadding;
             window.__metravelMapMode = routeMode;
             if (data.center && isFinite(data.center.lat) && isFinite(data.center.lng)) {
               map.__userCenter = [data.center.lat, data.center.lng];
@@ -583,7 +571,7 @@ ${ESCAPE_HTML_FN_SCRIPT}
                   // подгонка существует для формы маршрута, а не для того, чтобы
                   // отменять наведённый пользователем вид.
                   if (!map.__metravelRouteFitLocked) {
-                    map.fitBounds(routePolyline.getBounds(), { padding: [70, 70] });
+                    map.fitBounds(routePolyline.getBounds(), metravelFitOptions(routeFitPadding, [70, 70]));
                   }
                 } catch (e) {}
               }
@@ -613,10 +601,7 @@ ${ESCAPE_HTML_FN_SCRIPT}
                 // вовсе. Поэтому точка маршрута рисуется divIcon той же геометрии:
                 // диаметр = 2*radius + weight, заливка и рамка — прежние цвета.
                 const marker = L.marker(point, {
-                  icon: makeRoutePointIcon(
-                    isStart || isEnd ? 8 : 6,
-                    isStart ? ROUTE_START : ROUTE_COLOR
-                  ),
+                  icon: routePointIcon(routePointMarkers, index, isStart, isEnd),
                   draggable: routePointsInteractive,
                   interactive: routePointsInteractive,
                   keyboard: false
@@ -673,7 +658,7 @@ ${ESCAPE_HTML_FN_SCRIPT}
                 // границы. Когда линии нет, эта подгонка кадр и ставит.
                 try {
                   if (routeBounds.isValid() && !map.__metravelRouteFitLocked) {
-                    map.fitBounds(routeBounds, { padding: [70, 70] });
+                    map.fitBounds(routeBounds, metravelFitOptions(routeFitPadding, [70, 70]));
                   }
                 } catch (e) {}
               } else if (routePoints.length >= 1 && routeLine.length < 2 && routeBounds.isValid() && !map.__metravelRouteFitLocked) {
