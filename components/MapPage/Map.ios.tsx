@@ -34,7 +34,7 @@ import {
 } from './Map/nativeBridge';
 import { normalizeRoutePointsWithMarkers, type NativeRoutePointMarkersPayload } from './Map/nativeRoutePointMarkersScript';
 import { buildNativeMapHtml } from './Map/nativeMapHtml';
-import { buildNativeMapFitCoordsCommand } from './Map/nativeMapViewCommandsScript';
+import { buildNativeMapFitCoordsCommand, buildNativeMapFocusCoordCommand } from './Map/nativeMapViewCommandsScript';
 import { fetchTileWithRetry } from './Map/tileFetchRetry';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
 import type { MapUiApi } from '@/types/mapUi';
@@ -143,7 +143,7 @@ interface TravelProps {
    */
   pointsOnly?: boolean;
   onMapUiApiReady?: (
-    api: Pick<MapUiApi, 'zoomIn' | 'zoomOut' | 'centerOnUser' | 'setOverlayEnabled' | 'fitToCoords'> | null,
+    api: Pick<MapUiApi, 'zoomIn' | 'zoomOut' | 'centerOnUser' | 'setOverlayEnabled' | 'fitToCoords' | 'focusOnCoord'> | null,
   ) => void;
 }
 
@@ -544,6 +544,11 @@ const Map: React.FC<TravelProps> = ({
       },
       setOverlayEnabled,
       fitToCoords: (coords, { maxZoom, padding }) => injectMapCommand(buildNativeMapFitCoordsCommand(coords, maxZoom, padding)),
+      // #2066: тап по строке точки в списке планировщика — переход к координате.
+      focusOnCoord: (coord, options) => {
+        const command = buildNativeMapFocusCoordCommand(coord, options?.zoom);
+        if (command) injectMapCommand(command);
+      },
     });
 
     return () => onMapUiApiReady(null);

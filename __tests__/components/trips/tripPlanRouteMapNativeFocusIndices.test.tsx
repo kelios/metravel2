@@ -13,6 +13,7 @@ import { FOCUS_POINT_ZOOM } from '@/components/trips/planning/tripPlanRouteMap.t
 import { ROUTE_MAP_FIT_PADDING } from '@/components/trips/planning/tripPlanMapMarkers'
 
 const mockFitToCoords = jest.fn()
+const mockFocusOnCoord = jest.fn()
 let mockNativeMapProps: Record<string, any> = {}
 
 jest.mock('@/components/MapPage/Map', () => {
@@ -23,7 +24,13 @@ jest.mock('@/components/MapPage/Map', () => {
     mockNativeMapProps = props
     const onReady = props.onMapUiApiReady
     const apiRef = ReactModule.useRef(null)
-    if (!apiRef.current) apiRef.current = { setOverlayEnabled: jest.fn(), fitToCoords: mockFitToCoords }
+    if (!apiRef.current) {
+      apiRef.current = {
+        setOverlayEnabled: jest.fn(),
+        fitToCoords: mockFitToCoords,
+        focusOnCoord: mockFocusOnCoord,
+      }
+    }
     ReactModule.useEffect(() => {
       onReady?.(apiRef.current)
     }, [onReady])
@@ -59,6 +66,7 @@ const route: RoutePoint[] = [
 describe('TripPlanRouteMap (native): focusIndices', () => {
   beforeEach(() => {
     mockFitToCoords.mockClear()
+    mockFocusOnCoord.mockClear()
   })
 
   it('отдаёт WebView координаты точек дня один раз на токен', () => {
@@ -163,5 +171,24 @@ describe('TripPlanRouteMap (native): focusIndices', () => {
 
     act(() => mockNativeMapProps.onRoutePointPress(1))
     expect(within(utils.getByTestId('trip-plan-map-point-actions')).getByText('Точка 3')).toBeTruthy()
+  })
+
+  // #2066: тап по строке точки в списке — карта зовёт MapUiApi.focusOnCoord,
+  // единственный доступ к native-карте из-под WebView (см. TripPlanRouteMap.tsx).
+  it('#2066: тап по точке в списке зовёт focusOnCoord с FOCUS_POINT_ZOOM, тот же token повторно — нет', () => {
+    const focusPoint = { lat: 48.14, lng: 11.58, token: 1 }
+    const utils = render(<TripPlanRouteMap route={route} focusPoint={focusPoint} />)
+
+    expect(mockFocusOnCoord).toHaveBeenCalledTimes(1)
+    expect(mockFocusOnCoord).toHaveBeenCalledWith('48.14,11.58', { zoom: FOCUS_POINT_ZOOM })
+
+    utils.rerender(<TripPlanRouteMap route={route} focusPoint={focusPoint} />)
+    expect(mockFocusOnCoord).toHaveBeenCalledTimes(1)
+
+    utils.rerender(
+      <TripPlanRouteMap route={route} focusPoint={{ lat: 50.06, lng: 19.94, token: 2 }} />,
+    )
+    expect(mockFocusOnCoord).toHaveBeenCalledTimes(2)
+    expect(mockFocusOnCoord).toHaveBeenLastCalledWith('50.06,19.94', { zoom: FOCUS_POINT_ZOOM })
   })
 })

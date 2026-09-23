@@ -5,6 +5,7 @@
 // `metravelFitOptions` объявлен в `nativeRoutePointMarkersScript.ts` того же
 // скрипта: объявление функции всплывает, а зовётся команда только после загрузки.
 import type { MapFitPadding } from '@/types/mapUi';
+import { CoordinateConverter } from '@/utils/coordinateConverter';
 
 export const NATIVE_MAP_VIEW_COMMANDS_SCRIPT = `        window.__metravelMapZoomIn = function() {
           try { map.zoomIn(); } catch (e) {}
@@ -58,4 +59,19 @@ export const buildNativeMapFitCoordsCommand = (
     })}`
     : '';
   return `window.__metravelMapFitCoords && window.__metravelMapFitCoords(${JSON.stringify(pairs)}, ${maxZoom}${paddingArg})`;
+};
+
+/**
+ * #2066: команда `injectJavaScript` для `MapUiApi.focusOnCoord` — тап по строке
+ * точки в списке планировщика. Парсит координаты тем же `CoordinateConverter`,
+ * что и web (`useMapApi.ts`), и переиспользует одноточечную ветку
+ * `__metravelMapFitCoords` (`map.setView` с зумом не ниже переданного).
+ * Невалидная строка → `null`, команда в WebView не уходит.
+ */
+export const buildNativeMapFocusCoordCommand = (coord: string, zoom?: number): string | null => {
+  const parsed = CoordinateConverter.fromLooseString(String(coord));
+  if (!parsed || !CoordinateConverter.isValid(parsed)) return null;
+
+  const targetZoom = typeof zoom === 'number' && Number.isFinite(zoom) ? zoom : 14;
+  return buildNativeMapFitCoordsCommand([{ lat: parsed.lat, lng: parsed.lng }], targetZoom);
 };

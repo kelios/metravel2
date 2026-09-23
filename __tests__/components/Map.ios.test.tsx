@@ -339,6 +339,50 @@ describe('Map.ios Component', () => {
     );
   });
 
+  it('#2066: focuses on a coordinate through the WebView bridge', () => {
+    const onMapUiApiReady = jest.fn();
+    render(
+      <Map travel={mockTravel} coordinates={mockCoordinates} onMapUiApiReady={onMapUiApiReady} />
+    );
+
+    expect(onMapUiApiReady).toHaveBeenCalledWith(
+      expect.objectContaining({ focusOnCoord: expect.any(Function) }),
+    );
+    const api = onMapUiApiReady.mock.calls.find(([value]) => value)?.[0];
+
+    mockInjectJavaScript.mockClear();
+    act(() => {
+      api.focusOnCoord('48.14,11.58', { zoom: 14 });
+    });
+    expect(mockInjectJavaScript).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'window.__metravelMapFitCoords && window.__metravelMapFitCoords([[48.14,11.58]], 14)',
+      ),
+    );
+
+    mockInjectJavaScript.mockClear();
+    act(() => {
+      api.focusOnCoord('48.14,11.58');
+    });
+    expect(mockInjectJavaScript).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'window.__metravelMapFitCoords && window.__metravelMapFitCoords([[48.14,11.58]], 14)',
+      ),
+    );
+
+    mockInjectJavaScript.mockClear();
+    act(() => {
+      api.focusOnCoord('abc');
+    });
+    expect(mockInjectJavaScript).not.toHaveBeenCalled();
+
+    mockInjectJavaScript.mockClear();
+    act(() => {
+      api.focusOnCoord('200,300');
+    });
+    expect(mockInjectJavaScript).not.toHaveBeenCalled();
+  });
+
   it('does not center on the fallback viewport when real user location is absent', () => {
     const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
