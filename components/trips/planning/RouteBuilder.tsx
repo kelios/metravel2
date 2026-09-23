@@ -547,14 +547,18 @@ function RouteBuilder({
           readonly
           activeIndex={editingIndex}
           focusPoint={focusPoint}
+          focusIndices={focusIndices}
           onEditPoint={handleEditPoint}
         />
         {elevationProfileSection}
         {route.length ? (
           <View style={styles.pointList}>
+            {/* Участнику длинный список сворачивается так же (#2058); «на карте»
+                нет — прокрутку к карте ведёт только раскладка владельца. */}
             <RouteDayGroups
               route={route} startDate={trip.startDate}
               styles={styles} colors={colors} renderPoint={renderPoint}
+              collapse={dayCollapse && { ...dayCollapse, onShowOnMap: undefined }}
             />
           </View>
         ) : (

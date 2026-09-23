@@ -276,3 +276,32 @@ describe('RouteBuilder: день на карте', () => {
     expect(getByTestId('route-builder-day-toggle-6').props.accessibilityState).toEqual({ expanded: false })
   })
 })
+
+describe('RouteBuilder: свёртка дней у участника поездки', () => {
+  beforeEach(() => {
+    mockMapProps.length = 0
+  })
+
+  const renderGuest = (layout: 'stack' | 'mapFirst') =>
+    render(<RouteBuilder trip={{ ...makeTrip(largeRoute()), isOwner: false }} layout={layout} />, {
+      wrapper: createQueryWrapper().Wrapper,
+    })
+
+  it.each(['stack', 'mapFirst'] as const)('%s: дни свёрнуты и раскрываются, «на карте» нет', (layout) => {
+    const { getByTestId, queryByTestId } = renderGuest(layout)
+
+    expect(getByTestId('route-builder-day-toggle-3').props.accessibilityState).toEqual({ expanded: false })
+    expect(queryByTestId(`route-builder-point-${dayIndices(3)[0]}`)).toBeNull()
+    expect(queryByTestId('route-builder-day-map-3')).toBeNull()
+
+    fireEvent.press(getByTestId('route-builder-day-toggle-3'))
+    for (const index of dayIndices(3)) expect(getByTestId(`route-builder-point-${index}`)).toBeTruthy()
+  })
+
+  it('desktop: разворот дня подгоняет карту участника под точки дня', () => {
+    const { getByTestId } = renderGuest('stack')
+
+    fireEvent.press(getByTestId('route-builder-day-toggle-4'))
+    expect(lastMapProps().focusIndices?.indices).toEqual(dayIndices(4))
+  })
+})
