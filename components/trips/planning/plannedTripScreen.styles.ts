@@ -13,11 +13,14 @@ export const PLANNER_ROUTE_WORKSPACE_MAX_WIDTH = 1200;
 /** Ширина шапки и описания поездки (`inner`) — общий источник для стиля и оценки
  * переполнения текста описания в `TripPlanCollapsibleText` (#2060). */
 export const PLANNER_INNER_MAX_WIDTH = 860;
+/** Боковой отступ `content` и кегль описания — для той же оценки переполнения. */
+export const PLANNER_CONTENT_HORIZONTAL_PADDING = 16;
+export const PLANNER_DESCRIPTION_FONT_SIZE = 15;
 export const createStyles = (colors: ThemedColors, isMobile: boolean) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     content: {
-      paddingHorizontal: 16,
+      paddingHorizontal: PLANNER_CONTENT_HORIZONTAL_PADDING,
       paddingTop: 16,
       paddingBottom: SCROLL_BOTTOM_RESERVE,
       alignItems: 'center',
@@ -71,7 +74,7 @@ export const createStyles = (colors: ThemedColors, isMobile: boolean) =>
     },
     summaryPillText: { fontSize: 13, fontWeight: '700', color: colors.text, flexShrink: 1 },
     summaryPillTextWarning: { color: colors.warningDark },
-    description: { fontSize: 15, color: colors.text, lineHeight: 21, marginTop: 4 },
+    description: { fontSize: PLANNER_DESCRIPTION_FONT_SIZE, color: colors.text, lineHeight: 21, marginTop: 4 },
     descriptionLink: { color: colors.primaryDark, fontWeight: '700' },
     ownerActions: {
       flexDirection: 'row',

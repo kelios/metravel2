@@ -1,7 +1,12 @@
 import type { Page } from '@playwright/test'
 
 import { expect, test } from './fixtures'
-import { LARGE_TRIP_ID, mockLargePlannedTrip, waitForFakeAuth } from './helpers/largePlannedTripFixture'
+import {
+  documentTop,
+  LARGE_TRIP_ID,
+  mockLargePlannedTrip,
+  waitForFakeAuth,
+} from './helpers/largePlannedTripFixture'
 
 /**
  * #2060 — длинное описание поездки (6 274 знака) не сворачивалось на desktop:
@@ -17,16 +22,6 @@ import { LARGE_TRIP_ID, mockLargePlannedTrip, waitForFakeAuth } from './helpers/
 
 const DESKTOP_TABS_TOP_MAX = 900
 
-const documentTop = (page: Page, testId: string) =>
-  page.evaluate((id) => {
-    const node = document.querySelector<HTMLElement>(`[data-testid="${id}"]`)
-    if (!node) return Number.NaN
-    let scrolled = window.scrollY
-    for (let parent = node.parentElement; parent; parent = parent.parentElement) {
-      scrolled += parent.scrollTop
-    }
-    return Math.round(node.getBoundingClientRect().top + scrolled)
-  }, testId)
 
 async function openLargeTrip(page: Page, viewport: { width: number; height: number }) {
   await mockLargePlannedTrip(page)

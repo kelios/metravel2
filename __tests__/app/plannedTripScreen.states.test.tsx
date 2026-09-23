@@ -17,7 +17,7 @@ const mockUpdateTripMutate = jest.fn();
 const mockTripsPageSeo = jest.fn(() => null);
 const originalOS = Platform.OS;
 let mockSearchParams: Record<string, string> = { id: '8001' };
-let mockResponsive: { isMobile: boolean; isDesktop?: boolean } = { isMobile: false };
+let mockResponsive: { isMobile: boolean; isDesktop?: boolean; width?: number } = { isMobile: false };
 let mockRouteBuilderDisplayState: {
   summary: PlannedTrip['routeSummary'];
   routingState: PlannedTrip['routingState'];
@@ -759,6 +759,7 @@ describe('PlannedTripScreen — planner states', () => {
   // #2060: desktop не имел предела строк вовсе — 6 274-знаковое описание
   // уводило вкладки и конструктор маршрута на 2 116 px вниз.
   it('clamps a long description to 8 lines on desktop and offers a toggle', () => {
+    mockResponsive = { isMobile: false, width: 1440 };
     mockTrip(makeTrip({ description: LONG_DESKTOP_DESCRIPTION }));
     const { getByTestId, getByText, queryByText } = renderScreen();
 
@@ -770,5 +771,16 @@ describe('PlannedTripScreen — planner states', () => {
     expect(getByTestId('trip-plan-description').props.numberOfLines).toBeUndefined();
     expect(getByText(i18nT('tripsStatic:plan.description.collapse'))).toBeTruthy();
     expect(queryByText(i18nT('tripsStatic:plan.description.expand'))).toBeNull();
+  });
+
+  it('measures desktop capacity by the 860px column: a paragraph that fits 8 lines there has no toggle', () => {
+    // 800 знаков одним абзацем: 8 строк по 114 знаков в колонке 860px, но 17 —
+    // по эталонным 390dp, если бы ширина колонки в оценку не дошла.
+    mockResponsive = { isMobile: false, width: 1440 };
+    mockTrip(makeTrip({ description: 'а'.repeat(800) }));
+    const { getByTestId, queryByTestId } = renderScreen();
+
+    expect(getByTestId('trip-plan-description').props.numberOfLines).toBeUndefined();
+    expect(queryByTestId('trip-plan-description-toggle')).toBeNull();
   });
 });

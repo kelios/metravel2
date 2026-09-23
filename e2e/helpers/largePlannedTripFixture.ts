@@ -268,3 +268,15 @@ export async function waitForSettledRouteMap(page: Page, scopeTestId: string) {
     .toBe(true)
   return routeMapMarkers(page, scopeTestId)
 }
+
+/** Верх узла от начала страницы: смещение в окне плюс прокрутка всех предков. */
+export const documentTop = (page: Page, testId: string) =>
+  page.evaluate((id) => {
+    const node = document.querySelector<HTMLElement>(`[data-testid="${id}"]`)
+    if (!node) return Number.NaN
+    let scrolled = window.scrollY
+    for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+      scrolled += parent.scrollTop
+    }
+    return Math.round(node.getBoundingClientRect().top + scrolled)
+  }, testId)

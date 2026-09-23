@@ -37,7 +37,7 @@ import {
 import { shouldRenderTripRouteExportMenu } from '@/components/trips/planning/tripRouteExport';
 import TripAffiliateBlock from '@/components/trips/planning/TripAffiliateBlock';
 import TripPlanCollapsibleText, {
-  tripPlanTextCharsPerLine,
+  tripPlanTextCharsPerWidth,
 } from '@/components/trips/planning/TripPlanCollapsibleText';
 import TripPlanLinksBlock from '@/components/trips/planning/TripPlanLinksBlock';
 import TripPlanDescriptionEditor from '@/components/trips/planning/TripPlanDescriptionEditor';
@@ -71,6 +71,8 @@ import { translate as i18nT } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider';
 import {
   createStyles,
+  PLANNER_CONTENT_HORIZONTAL_PADDING,
+  PLANNER_DESCRIPTION_FONT_SIZE,
   PLANNER_INNER_MAX_WIDTH,
 } from '@/components/trips/planning/plannedTripScreen.styles';
 
@@ -189,11 +191,15 @@ export default function PlannedTripScreen() {
     : isMobile
       ? undefined
       : DESCRIPTION_LINE_LIMIT_DESKTOP;
-  // Описание живёт в колонке `inner` (`plannedTripScreen.styles.ts`, maxWidth
-  // 860): на широких экранах реальная вместимость строки уже, чем по вьюпорту.
-  const descriptionCharsPerLine = isMobile
-    ? undefined
-    : tripPlanTextCharsPerLine(Math.min(width, PLANNER_INNER_MAX_WIDTH));
+  // Описание живёт в колонке `inner` (maxWidth 860) внутри `content` с боковыми
+  // отступами: ширина текста — меньшее из двух, а не вьюпорт.
+  const descriptionTextWidth = Math.min(
+    width - 2 * PLANNER_CONTENT_HORIZONTAL_PADDING,
+    PLANNER_INNER_MAX_WIDTH,
+  );
+  const descriptionCharsPerLine = !isMobile && descriptionTextWidth > 0
+    ? tripPlanTextCharsPerWidth(descriptionTextWidth, PLANNER_DESCRIPTION_FONT_SIZE)
+    : undefined;
   const coverUrl = typeof trip?.coverUrl === 'string' ? trip.coverUrl.trim() : '';
   const usesFallbackCover = Boolean(trip && coverUrl.length === 0);
   const displayCoverUrl = usesFallbackCover ? (fallbackCover?.uri ?? '') : coverUrl;

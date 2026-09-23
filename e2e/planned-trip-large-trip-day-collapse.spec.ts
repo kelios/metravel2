@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test'
 
 import { expect, test } from './fixtures'
 import {
+  documentTop,
   LARGE_TRIP_DAY_SIZES,
   LARGE_TRIP_ID,
   LARGE_TRIP_POINT_COUNT,
@@ -29,17 +30,6 @@ const DAY_COUNT = LARGE_TRIP_DAY_SIZES.length
 const MOBILE_SUMMARY_TOP_MAX = 2_500
 const DESKTOP_LIST_CONTENT_MAX = 1_200
 
-/** Верх узла от начала страницы: смещение в окне плюс прокрутка всех предков. */
-const documentTop = (page: Page, testId: string) =>
-  page.evaluate((id) => {
-    const node = document.querySelector<HTMLElement>(`[data-testid="${id}"]`)
-    if (!node) return Number.NaN
-    let scrolled = window.scrollY
-    for (let parent = node.parentElement; parent; parent = parent.parentElement) {
-      scrolled += parent.scrollTop
-    }
-    return Math.round(node.getBoundingClientRect().top + scrolled)
-  }, testId)
 
 /** Сумма прокрутки всех предков узла — «сдвинулась ли страница». */
 const pageScrollOffset = (page: Page, testId: string) =>
