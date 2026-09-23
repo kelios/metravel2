@@ -70,4 +70,11 @@ export const tripsGenerated3 = {
   "components.trips.planning.print.mapAlt": "Map: {{title}}",
   "components.trips.planning.print.mapCredit": "Map © OpenStreetMap contributors",
   "components.trips.planning.print.footer": "Trip plan from metravel.by — {{url}} · printed {{date}}",
+  "components.trips.planning.TripPlanFormatToolbar.label": "Text formatting",
+  "components.trips.planning.TripPlanFormatToolbar.heading": "Heading",
+  "components.trips.planning.TripPlanFormatToolbar.bullet": "Bulleted list",
+  "components.trips.planning.TripPlanFormatToolbar.ordered": "Numbered list",
+  "components.trips.planning.TripPlanFormatToolbar.bold": "Bold",
+  "components.trips.planning.TripPlanFormatToolbar.italic": "Italic",
+  "components.trips.planning.TripPlanFormatToolbar.hint": "Formatting: ## heading, - list, 1. numbered list, **bold**, _italic_",
 } as const

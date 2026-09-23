@@ -19,6 +19,8 @@ import { translate as i18nT } from '@/i18n';
 import { isOvernightPoint } from '@/utils/overnightBooking';
 import RouteOvernightFields from './RouteOvernightFields';
 import RouteDayField from './RouteDayField';
+import TripPlanFormatToolbar from './TripPlanFormatToolbar';
+import { useTripPlanTextFormatting } from './useTripPlanTextFormatting';
 import type { createStyles } from './RouteBuilder.styles';
 import type { OvernightBookingDraft, OvernightBookingField } from './routeOvernightBooking';
 
@@ -92,6 +94,9 @@ export default function RoutePointEditForm({
   // #1974: на desktop форма живёт ниже списка точек, не внутри карточки.
   // Мобильный скролл остаётся в RoutePointRow (`compact` + `nearest`).
   const formRef = useRef<View>(null);
+  // #2072: те же кнопки оформления, что у описания поездки, — описание точки
+  // показывается той же разметкой #2070.
+  const descriptionFormatting = useTripPlanTextFormatting(editDescription, onDescriptionChange);
   useEffect(() => {
     if (isMapFirst || Platform.OS !== 'web') return;
     scrollPlannerNodeIntoView(formRef.current, { block: 'start', behavior: 'smooth' });
@@ -172,14 +177,22 @@ export default function RoutePointEditForm({
         />
       </View>
       <TextInput
+        ref={descriptionFormatting.inputRef}
         value={editDescription}
-        onChangeText={onDescriptionChange}
+        onChangeText={descriptionFormatting.onChangeText}
+        onSelectionChange={descriptionFormatting.onSelectionChange}
+        selection={descriptionFormatting.selection}
         placeholder={i18nT('trips:components.trips.planning.RouteBuilder.opisanie_ili_ssylka_po_zhelaniyu_2a1ab272')}
         placeholderTextColor={colors.textMuted}
         multiline
         numberOfLines={3}
         style={[styles.input, styles.textArea]}
         testID="route-builder-edit-description"
+      />
+      {/* Панель под полем: меню выделения на телефоне закрыло бы её сверху. */}
+      <TripPlanFormatToolbar
+        onAction={descriptionFormatting.applyFormat}
+        testIDPrefix="route-builder-edit-description"
       />
       {/* #1843: адрес жилья, ссылка на бронь, цена и время заезда — поля
           единственного типа точки. Раньше всё это уходило в описание одной

@@ -70,4 +70,11 @@ export const tripsGenerated3 = {
   "components.trips.planning.print.mapAlt": "Карта: {{title}}",
   "components.trips.planning.print.mapCredit": "Карта © участники OpenStreetMap",
   "components.trips.planning.print.footer": "План поездки с metravel.by — {{url}} · распечатано {{date}}",
+  "components.trips.planning.TripPlanFormatToolbar.label": "Оформление текста",
+  "components.trips.planning.TripPlanFormatToolbar.heading": "Заголовок",
+  "components.trips.planning.TripPlanFormatToolbar.bullet": "Список",
+  "components.trips.planning.TripPlanFormatToolbar.ordered": "Нумерованный список",
+  "components.trips.planning.TripPlanFormatToolbar.bold": "Жирный",
+  "components.trips.planning.TripPlanFormatToolbar.italic": "Курсив",
+  "components.trips.planning.TripPlanFormatToolbar.hint": "Оформление: ## заголовок, - список, 1. нумерованный список, **жирный**, _курсив_",
 } as const

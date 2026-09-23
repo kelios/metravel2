@@ -255,4 +255,58 @@ describe('TripPlanDescriptionEditor', () => {
     expect(queryByTestId('trip-plan-description-fullscreen')).toBeNull();
     expect(onChangeText).not.toHaveBeenCalled();
   });
+
+  // #2072: панель оформления ставит и снимает разметку #2070 у выделения поля,
+  // под которым стоит, и оставляет выделение на тексте — повторное нажатие
+  // снимает оформление.
+  it('bold toggles ** around the inline selection and keeps the word selected', () => {
+    const { getByTestId } = render(<EditorHarness initialValue="Ужин в кафе" />);
+    const inlineInput = getByTestId('trip-plan-edit-description');
+    fireEvent(inlineInput, 'selectionChange', { nativeEvent: { selection: { start: 7, end: 11 } } });
+
+    fireEvent.press(getByTestId('trip-plan-description-format-bold'));
+    let updated = getByTestId('trip-plan-edit-description');
+    expect(updated.props.value).toBe('Ужин в **кафе**');
+    expect(updated.props.selection).toEqual({ start: 9, end: 13 });
+
+    fireEvent.press(getByTestId('trip-plan-description-format-bold'));
+    updated = getByTestId('trip-plan-edit-description');
+    expect(updated.props.value).toBe('Ужин в кафе');
+  });
+
+  it('list and heading buttons mark the selected lines in fullscreen', () => {
+    const { getByTestId } = render(<EditorHarness initialValue={'вода\nхлеб'} />);
+    fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
+    const fullscreenInput = getByTestId('trip-plan-description-fullscreen-input');
+    fireEvent(fullscreenInput, 'selectionChange', { nativeEvent: { selection: { start: 0, end: 9 } } });
+
+    fireEvent.press(getByTestId('trip-plan-description-fullscreen-format-bullet'));
+    expect(getByTestId('trip-plan-description-fullscreen-input').props.value).toBe('- вода\n- хлеб');
+
+    fireEvent(getByTestId('trip-plan-description-fullscreen-input'), 'selectionChange', {
+      nativeEvent: { selection: { start: 2, end: 2 } },
+    });
+    fireEvent.press(getByTestId('trip-plan-description-fullscreen-format-heading'));
+    expect(getByTestId('trip-plan-description-fullscreen-input').props.value).toBe('## вода\n- хлеб');
+  });
+
+  it('format buttons have accessible names, a 44px target and are disabled with the editor', () => {
+    const { getByTestId, rerender } = render(
+      <TripPlanDescriptionEditor value="" onChangeText={jest.fn()} label="Описание" placeholder="" />,
+    );
+    for (const action of ['heading', 'bullet', 'ordered', 'bold', 'italic']) {
+      const button = getByTestId(`trip-plan-description-format-${action}`);
+      expect(button.props.accessibilityLabel).toBeTruthy();
+      const style = StyleSheet.flatten(
+        typeof button.props.style === 'function' ? button.props.style({ pressed: false }) : button.props.style,
+      );
+      expect(style.minHeight ?? style.height).toBeGreaterThanOrEqual(44);
+    }
+    expect(getByTestId('trip-plan-description-format-hint')).toBeTruthy();
+
+    rerender(
+      <TripPlanDescriptionEditor value="" onChangeText={jest.fn()} label="Описание" placeholder="" editable={false} />,
+    );
+    expect(getByTestId('trip-plan-description-format-bold').props.accessibilityState?.disabled).toBe(true);
+  });
 });

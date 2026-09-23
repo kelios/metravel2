@@ -32,6 +32,11 @@ export default function PlannerPageScrollView({ children, ...props }: ScrollView
         // RN-Web этот проп не знает и отдал бы его в DOM; web скроллит сам узел.
         // Тип RN ждёт `RefObject<View>` без `null` — отставание от React 19.
         {...(Platform.OS === 'web' ? {} : { innerViewRef: innerRef as React.RefObject<View> })}
+        // #2072: кнопки оформления под полем описания нажимаются при открытой
+        // клавиатуре. С дефолтным 'never' первое касание только прятало
+        // клавиатуру, и кнопка срабатывала со второго раза. Пустое место
+        // страницы клавиатуру по-прежнему прячет.
+        keyboardShouldPersistTaps="handled"
         {...props}
       >
         {children}

@@ -26,7 +26,14 @@ import { normalizeHttpOrInternalUrl } from '@/utils/externalLinks';
 import { webTextStyle, webViewStyle } from '@/utils/webProps';
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
 
-type TextSelection = { start: number; end: number };
+import TripPlanFormatToolbar from './TripPlanFormatToolbar';
+import {
+  applyTripPlanFormat,
+  clampTripPlanSelection as clampSelection,
+  type TripPlanFormatAction,
+  type TripPlanTextSelection as TextSelection,
+} from './tripPlanFormatActions';
+
 type EditorTarget = 'inline' | 'fullscreen';
 type SelectionOverride = { target: EditorTarget; selection: TextSelection };
 
@@ -37,12 +44,6 @@ interface TripPlanDescriptionEditorProps {
   placeholder: string;
   editable?: boolean;
 }
-
-const clampSelection = (selection: TextSelection, textLength: number): TextSelection => {
-  const start = Math.min(Math.max(0, selection.start), textLength);
-  const end = Math.min(Math.max(start, selection.end), textLength);
-  return { start, end };
-};
 
 export default function TripPlanDescriptionEditor({
   value,
@@ -197,6 +198,27 @@ export default function TripPlanDescriptionEditor({
     setLinkError(null);
   }, [linkValue, onChangeText, restoreSelection, t, value]);
 
+  // #2072: кнопка оформления меняет текст и выделение того поля, под которым
+  // стоит (панель под полем: системное меню выделения на Android и iPhone
+  // рисуется над текстом и закрыло бы панель сверху — RULES.md «Rich-text
+  // editor toolbars»), и возвращает в него фокус — нажатие фокус уводит (web).
+  const applyFormat = useCallback((target: EditorTarget, action: TripPlanFormatAction) => {
+    const result = applyTripPlanFormat(value, selectionRef.current, action);
+    onChangeText(result.value);
+    restoreSelection(target, result.selection, result.value.length);
+    const input = target === 'inline' ? inlineInputRef : fullscreenInputRef;
+    setTimeout(() => input.current?.focus(), 0);
+  }, [onChangeText, restoreSelection, value]);
+  const applyInlineFormat = useCallback(
+    (action: TripPlanFormatAction) => applyFormat('inline', action),
+    [applyFormat],
+  );
+  const applyFullscreenFormat = useCallback(
+    (action: TripPlanFormatAction) => applyFormat('fullscreen', action),
+    [applyFormat],
+  );
+  const formatHint = t('trips:components.trips.planning.TripPlanFormatToolbar.hint');
+
   const fullscreenLabel = t(
     'trips:components.trips.planning.TripPlanDescriptionEditor.openFullscreen',
   );
@@ -232,6 +254,14 @@ export default function TripPlanDescriptionEditor({
         accessibilityLabel={label}
         testID="trip-plan-edit-description"
       />
+      <TripPlanFormatToolbar
+        onAction={applyInlineFormat}
+        disabled={!editable}
+        testIDPrefix="trip-plan-description"
+      />
+      <Text style={styles.formatHint} testID="trip-plan-description-format-hint">
+        {formatHint}
+      </Text>
 
       <Modal
         visible={fullscreenVisible}
@@ -298,6 +328,11 @@ export default function TripPlanDescriptionEditor({
                   accessibilityLabel={label}
                   testID="trip-plan-description-fullscreen-input"
                 />
+                <TripPlanFormatToolbar
+                  onAction={applyFullscreenFormat}
+                  disabled={!editable}
+                  testIDPrefix="trip-plan-description-fullscreen"
+                />
               </View>
 
               <View style={styles.footer}>
@@ -311,6 +346,8 @@ export default function TripPlanDescriptionEditor({
                   testID="trip-plan-description-add-link"
                 />
                 <Text style={styles.footerHint}>
+                  {formatHint}
+                  {'\n'}
                   {t('trips:components.trips.planning.TripPlanDescriptionEditor.saveHint')}
                 </Text>
               </View>
@@ -473,10 +510,16 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
     color: colors.textMuted,
   },
+  formatHint: {
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    lineHeight: 17,
+    color: colors.textMuted,
+  },
   editorBody: {
     flex: 1,
     minHeight: 0,
     padding: DESIGN_TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.xs,
   },
   fullscreenInput: {
     flex: 1,
