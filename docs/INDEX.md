@@ -68,7 +68,8 @@
   `docs/features/map-current-location-route-mobile-mock.svg`,
   `docs/features/article-image-text-wrap-mock.md`,
   `docs/features/trips-plan-description-editor-mock.md`,
-  `docs/features/trips-route-point-search-mock.md`;
+  `docs/features/trips-route-point-search-mock.md`,
+  `docs/features/trips-plan-route-tab-mock.md`;
 - `docs/TRAVEL_SAVE_MODERATION_CONTRACT.md` — save ≠ moderation;
 - `docs/TRAVEL_DRAFT_RECOVERY.md` — local draft persistence/recovery;
 - `docs/TRAVEL_PERFORMANCE_REFACTOR.md` — current travel details performance

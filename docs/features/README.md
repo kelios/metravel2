@@ -45,3 +45,6 @@
 - [trips-packing-checklist-mock](./trips-packing-checklist-mock.md) — чеклист
   снаряжения в планировщике: есть / купить / взято
 - [trips-end-date-mock](./trips-end-date-mock.md) — дата окончания planned trip
+- [trips-plan-route-tab-mock](./trips-plan-route-tab-mock.md) — вкладка
+  «Маршрут» и шапка поездки на mobile и desktop: файл маршрута, статус
+  приблизительной линии, дни списка, карта

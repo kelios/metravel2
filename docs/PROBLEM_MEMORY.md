@@ -1065,7 +1065,7 @@ guard, падающий в CI на попытке обойти этот конт
 - **Surface/owner:** backend routing/provider + frontend runtime smoke;
   клиентские мосты к `POST /api/routing/route/` (карта, планировщик, квесты).
 - **Цепочка:** configuration `#732`, production failure `#784`, recurrence
-  `#812`, мост карты квестов `#2014`.
+  `#812`, мост карты квестов `#2014`, текст причины планировщика `#2057`.
 - **Подтверждённые причины:** сначала отсутствовал ORS config; затем upstream
   route-not-found скрывался generic `ors_http_error`, а direct fallback
   сохранялся в cache и переживал восстановление provider. `#2014`: эндпоинт
@@ -1073,6 +1073,11 @@ guard, падающий в CI на попытке обойти этот конт
   `is_optimal: false`, а мост карты квестов
   (`components/quests/questRouteGeometry.ts`) проверял только `res.ok` и выдавал
   прямую за проложенный маршрут — статус «готов», GPX и офлайн-экспорт.
+  `#2057`: планировщик деградацию показывает честно, но
+  `tripPlanFormatting.ts::humanizeRoutingReason` схлопывает любой `ors_*`, в том
+  числе статусный `ors_http_404` из `#812`, обратно в «временно недоступен» и
+  выводит фразу в четырёх местах экрана без владельца; у прямой линии оценка
+  бэкенда «расстояние / скорость» подаётся как «В пути».
 - **Controls:** car/bike/foot prod probes, status-specific fallback reason,
   no-cache for degraded fallback, `/map` Network/Console smoke; в каждом
   клиентском мосте — отказ от ответа по любому из двух признаков деградации
@@ -1081,8 +1086,10 @@ guard, падающий в CI на попытке обойти этот конт
 - **Решение для новой жалобы:** persistent direct fallback по той же причине —
   `reopen #812`; новый provider/config failure — `create-linked` к семье;
   клиентский мост, принимающий degraded HTTP 200 за healthy, — `create-linked`
-  к `#2014`.
-- **Последняя проверка:** `#812 done`, 2026-07-06; `#2014`, 2026-09-21.
+  к `#2014`; клиентский текст, схлопывающий статусную причину в общую, —
+  `create-linked` к `#2057`.
+- **Последняя проверка:** `#812 done`, 2026-07-06; `#2014`, 2026-09-21;
+  `#2057` заведена 2026-09-23 (прод trip 47: `ors_http_404`, фраза ×4 на 1440).
 
 ### ACH-CACHE-001 — achievements cache and invalidation
 
@@ -4380,7 +4387,11 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   подпись в `TripRouteFilePicker.tsx`, коммит `531c90291`); #1902 (после обеих
   подписей секции импорта и GPX/KML-экспорта всё ещё рендерятся двумя
   отдельными визуальными рядами — `importSection` и `routeDownloadSection`
-  остаются раздельными узлами `RouteBuilderLayout.tsx`).
+  остаются раздельными узлами `RouteBuilderLayout.tsx`); #2053 (после #1902
+  ряд один, но подписи обрезаны: на проде trip 47 во вкладке «Маршрут» 5, 5 и 4
+  обрезанных подписи на 320/390/1440, на 320 у «GPX» и «KML» видимая ширина
+  0 px; причина — `compactLabelledButton.flexShrink: 1` в непереносимом ряду
+  при однострочной подписи `Button`, Done gate #1902 мерил только число рядов).
 - **Surface/owner:** `components/trips/planning/RouteBuilderLayout.tsx`
   (композиция секций, оба возврата — mobile и split), `RouteBuilder.tsx`
   (объявление `importSection`/`routeDownloadSection`), `TripRouteImportPanel`,
@@ -4399,10 +4410,15 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   `RouteBuilderLayout.tsx`), и очередная правка подписи или иконки его не
   закроет; либо объединять секции визуально, либо явно фиксировать раздельные
   ряды как принятое поведение и закрывать семью карточек.
-- **Последняя проверка:** 2026-09-12, чтение `RouteBuilderLayout.tsx` (строки
-  86-87 в ветке `mapFirst`, 117-119 в split-ветке) подтверждает —
-  `importSection` и `routeDownloadSection` рендерятся как два отдельных React-
-  узла в обеих раскладках; #1902 не закрыт.
+- **Controls (с #2053):** e2e-guard «ни одна подпись кнопки во вкладке
+  „Маршрут“ не обрезана» на 320/390/1440 по всем кнопкам вкладки и
+  jest-инвариант `ToolActionsRow` — подписанная кнопка не сжимается уже
+  подписи. Жалоба на обрезанную подпись в зоне: сначала замер
+  `scrollWidth/clientWidth` всех кнопок вкладки на трёх ширинах; пока #2053
+  открыта — `reuse`, после закрытия — `reopen #2053`.
+- **Последняя проверка:** 2026-09-23, прод trip 47 и чтение
+  `ToolActionsRow.tsx`/`TripRouteImportPanel.tsx:226-237`: ряды склеены (#1902
+  done 18.09), подписи обрезаны на всех ширинах — заведена #2053.
 
 ### FEEDBACK-SUCCESS-LOCALE-001 — известный успех обратной связи обходит i18n
 
