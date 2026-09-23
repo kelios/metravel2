@@ -429,16 +429,25 @@ deny → allow → Settings → retry снимают на свежепостав
 
 ```js
 // .codex-temp/probe-<id>.js
-const { openProdProbe, readLocalStorage, captureRequests, buildSource } = require('../e2e/prod-probe/prodProbe')
+const {
+  openProdProbe, readLocalStorage, captureRequests, buildSource, formatProbeError,
+} = require('../e2e/prod-probe/prodProbe')
 
 ;(async () => {
   console.log((await buildSource()).sha) // выкаченный sha
   const probe = await openProdProbe({ viewport: 'mobile' }) // narrow 320 | mobile 390 | desktop 1440
-  const api = captureRequests(probe.page, '/api/trips/')
-  await probe.goto('/trips/plan/59')
-  console.log(api.summary(), await readLocalStorage(probe.page, ['userId']))
-  await probe.close()
-})()
+  try {
+    const api = captureRequests(probe.page, '/api/trips/')
+    await probe.goto('/trips/plan/59')
+    console.log(api.summary(), await readLocalStorage(probe.page, ['userId']))
+  } finally {
+    await probe.close()
+  }
+})().catch((error) => {
+  // Не stack/message: у ошибок Playwright там «Call log» с cookie сессии.
+  console.error(formatProbeError(error))
+  process.exitCode = 1
+})
 ```
 
 - Вход только под `E2E_EMAIL`/`E2E_PASSWORD` из `.env.e2e` (аккаунт 104).
