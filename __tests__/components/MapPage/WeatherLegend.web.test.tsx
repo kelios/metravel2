@@ -86,8 +86,8 @@ describe('WeatherLegend.web — выбор шкалы по enabledOverlays', () 
 })
 
 // #2073: `hasVisibleWeatherLegend` — та же видимость, что решает рендер выше,
-// наружу для карты планировщика (TripPlanRouteMap.web.tsx), которая прячет
-// легенду трека, пока эта легенда занимает тот же нижний левый угол.
+// наружу для карты планировщика (TripPlanRouteMap.web.tsx), которая поднимает
+// легенду трека над этой легендой, пока та занимает нижний левый угол.
 describe('hasVisibleWeatherLegend', () => {
   it('true, когда рендер показал бы легенду', () => {
     expect(hasVisibleWeatherLegend({ [TEMP]: true })).toBe(true)

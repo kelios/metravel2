@@ -190,8 +190,18 @@ test.describe('Planned trip route tab — numbered markers, clusters and a large
     // Обе легенды остаются в DOM одновременно — фикс не прячет легенду трека.
     await expect(page.getByTestId('trip-plan-map-original-track-legend').first()).toBeVisible()
 
-    const weatherBox = await page.getByTestId('weather-legend').boundingBox()
-    const trackBox = await page.getByTestId('trip-plan-map-original-track-legend').first().boundingBox()
+    const legendBoxes = async () => ({
+      weatherBox: await page.getByTestId('weather-legend').boundingBox(),
+      trackBox: await page.getByTestId('trip-plan-map-original-track-legend').first().boundingBox(),
+    })
+    // Высота погодной легенды приходит из onLayout (ResizeObserver) после первого
+    // кадра: до замера легенда трека кадр стоит под ней — ждём подъёма, а не ловим кадр.
+    await expect.poll(async () => {
+      const { weatherBox: w, trackBox: t } = await legendBoxes()
+      if (!w || !t) return 'unmeasured'
+      return t.y + t.height <= w.y ? 'stacked' : 'overlapping'
+    }).toBe('stacked')
+    const { weatherBox, trackBox } = await legendBoxes()
     expect(weatherBox).not.toBeNull()
     expect(trackBox).not.toBeNull()
 
