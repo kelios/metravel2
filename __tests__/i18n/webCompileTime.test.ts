@@ -114,7 +114,7 @@ describe('web compile-time localization', () => {
    */
   it('never builds a translation key from a template literal in app code', () => {
     const root = path.resolve(__dirname, '../..')
-    const dirs = ['app', 'components', 'hooks', 'utils', 'screens', 'stores', 'context', 'api']
+    const dirs = ['app', 'components', 'hooks', 'utils', 'screens', 'stores', 'context', 'api', 'services', 'constants']
     const pattern = /\b(?:t|i18nT|translate)\(\s*`[a-zA-Z]+:[^`]*\$\{/
     const offenders: string[] = []
     const walk = (dir: string) => {
