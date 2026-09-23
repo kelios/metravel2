@@ -27,6 +27,18 @@ export const mapIconName = (name: string): keyof typeof Feather.glyphMap => {
       return 'map'
     case 'directions-transit':
       return 'compass'
+    // #2056: способ прибытия к точке. На native — глифы MaterialCommunityIcons
+    // (MapIcon.tsx), на web — ближайшие Feather: поезда, автобуса и самолёта в нём нет.
+    case 'arrival-train':
+      return 'git-commit'
+    case 'arrival-flight':
+      return 'send'
+    case 'arrival-bus':
+      return 'truck'
+    case 'arrival-ferry':
+      return 'anchor'
+    case 'arrival-transfer':
+      return 'shuffle'
     case 'trip-origin':
       return 'circle'
     case 'swap-vert':

@@ -90,11 +90,11 @@ describe('TripPlanRouteMap.web — переезды (#2056)', () => {
     expect(first.positions).toEqual([[49.81, 6.42], [49, 9], [48.35, 11.78]])
     expect(second.positions).toEqual([[49.62, 6.2], [49.79, 6.32]])
     expect(first.pathOptions).toMatchObject({ color: 'primaryDark', dashArray: undefined })
-    expect(transfer.pathOptions).toMatchObject({
-      color: 'infoDark',
-      dashArray: ROUTE_TRANSFER_DASH_ARRAY,
-      className: 'metravel-route-transfer',
-    })
+    expect(transfer.pathOptions).toMatchObject({ color: 'infoDark', dashArray: ROUTE_TRANSFER_DASH_ARRAY })
+    // Класс — опцией конструктора (проп), а не pathOptions: setStyle его не ставит.
+    expect(transfer.className).toBe('metravel-route-transfer')
+    expect(transfer.pathOptions).not.toHaveProperty('className')
+    expect(first.className).toBeUndefined()
     const arc = transfer.positions as Array<[number, number]>
     expect(arc[0]).toEqual([48.35, 11.78])
     expect(arc[arc.length - 1]).toEqual([49.62, 6.2])

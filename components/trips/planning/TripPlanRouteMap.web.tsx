@@ -574,8 +574,12 @@ export default function TripPlanRouteMap({
               // Отрезки идут в порядке маршрута; ключ по индексу их не переставляет.
               key={`route-leg-${index}`}
               positions={segment.positions}
+              // className — пропом, а не в pathOptions: react-leaflet применяет
+              // pathOptions через setStyle после создания слоя, а Leaflet читает
+              // className только при создании пути (на проде класса не было).
+              className={segment.style === 'transfer' ? 'metravel-route-transfer' : undefined}
               pathOptions={segment.style === 'transfer'
-                ? { color: colors.infoDark, weight: 3, opacity: 0.9, dashArray: ROUTE_TRANSFER_DASH_ARRAY, className: 'metravel-route-transfer' }
+                ? { color: colors.infoDark, weight: 3, opacity: 0.9, dashArray: ROUTE_TRANSFER_DASH_ARRAY }
                 : {
                     color: segment.style === 'approximate' ? colors.warningDark : colors.primaryDark,
                     weight: segment.style === 'approximate' ? 4 : 5,
