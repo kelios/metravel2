@@ -102,7 +102,8 @@ function TripPlanCard({
         </Text>
       </View>
 
-      <Text style={styles.route} numberOfLines={1}>
+      {/* #2056: с переездами строка длиннее — две строки вместо обрезки. */}
+      <Text style={styles.route} numberOfLines={2}>
         {routeSummaryLine(trip.routeSummary)}
       </Text>
 
@@ -229,7 +230,7 @@ const createStyles = (colors: ThemedColors) =>
     // intrinsic/flex allocation tried on Pixel. One flexible string gives Yoga
     // a single remaining-width outlet and preserves normal wrapping.
     meta: { fontSize: 13, color: colors.textSecondary, flex: 1 },
-    route: { fontSize: 13, color: colors.textMuted },
+    route: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
     footer: {
       marginTop: 4,
       paddingTop: 8,

@@ -463,7 +463,9 @@ export default function PlannedTripScreen() {
                   />
                   <Text
                     style={[styles.summaryPillText, routeApproximate && styles.summaryPillTextWarning]}
-                    numberOfLines={1}
+                    // #2056: «… · Переезды K км · N остановок» на 390 в одну строку
+                    // не помещается — вторая строка вместо обрезанного числа остановок.
+                    numberOfLines={2}
                   >
                     {summaryLine}
                   </Text>

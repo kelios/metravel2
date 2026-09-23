@@ -72,7 +72,7 @@ export const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       borderColor: colors.warningLight,
       backgroundColor: colors.warningSoft,
     },
-    summaryPillText: { fontSize: 13, fontWeight: '700', color: colors.text, flexShrink: 1 },
+    summaryPillText: { fontSize: 13, lineHeight: 18, fontWeight: '700', color: colors.text, flexShrink: 1 },
     summaryPillTextWarning: { color: colors.warningDark },
     description: { fontSize: PLANNER_DESCRIPTION_FONT_SIZE, color: colors.text, lineHeight: 21, marginTop: 4 },
     descriptionLink: { color: colors.primaryDark, fontWeight: '700' },
