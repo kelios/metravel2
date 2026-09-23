@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import type { RouteGeometry, RoutingState, RoutePoint, RouteSummary, TripTransport } from '@/api/plannedTrips';
@@ -23,6 +23,13 @@ import { useMapInstance } from '@/components/MapPage/Map/useMapInstance';
 import { useMapApi } from '@/components/MapPage/Map/useMapApi';
 import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobileLayersPopover';
 import WeatherLegend from '@/components/MapPage/WeatherLegend';
+// #2073: `hasVisibleWeatherLegend`/`WEATHER_LEGEND_BOTTOM_OFFSET` берутся из
+// явного `.web`-пути — Jest без платформенного резолвера (`haste.platforms`
+// пресета не знает про `web`) иначе резолвит голый `@/components/MapPage/WeatherLegend`
+// в native-заглушку без этих экспортов, хотя в реальной web-сборке оба импорта
+// попадают в один и тот же файл. Дефолтный импорт выше оставлен голым: часть
+// тестов мокает именно эту, нативно резолвящуюся, спецификацию модуля.
+import { WEATHER_LEGEND_BOTTOM_OFFSET, hasVisibleWeatherLegend } from '@/components/MapPage/WeatherLegend.web';
 import { useMapOverlays } from '@/hooks/map/useMapOverlays';
 import type { MapUiApi } from '@/types/mapUi';
 import type { ReactLeafletCoreRuntime } from '@/utils/loadLeafletRuntime';
@@ -89,6 +96,10 @@ const LAYERS_SCROLL_MAX_HEIGHT_FULLSCREEN = 420;
 // страницы и вкладок, но не ниже 420 и не выше 760 px. Значение — CSS для
 // DOM-обёртки карты, поэтому `dvh`/`clamp` здесь законны.
 const TALL_MAP_HEIGHT = 'clamp(420px, calc(100dvh - 180px), 760px)';
+// #2073: зазор между легендой трека и легендой погоды, когда трек поднят над
+// погодной (см. `trackLegendBottomOffset` ниже) — оставляет видимый просвет
+// между их рамками, а не просто касание краями.
+const TRACK_LEGEND_WEATHER_GAP = 8;
 const TALL_MAP_SHELL: React.CSSProperties = { height: TALL_MAP_HEIGHT, minHeight: 420 };
 
 // Стабильные ссылки: `useMapApi` пересобирает api на новый массив, а api уезжает
@@ -355,6 +366,23 @@ export default function TripPlanRouteMap({
   });
 
   const { enabledOverlays, handleOverlayToggle, overlayOptions } = useMapOverlays(mapUiApi);
+  // #2073: `placement` легенды трека зависит только от пропа `fill`, а не от
+  // состояния `fullscreen` — mobile `mapFirst` (`fill=true`, RouteBuilder.tsx)
+  // держит её сверху, desktop `stack` (`fill=false`) всегда снизу, разворот на
+  // весь экран это не меняет. `WeatherLegend` стоит в том же нижнем левом углу
+  // (`left:12, bottom:WEATHER_LEGEND_BOTTOM_OFFSET`) с более высоким `zIndex` —
+  // Task Contract требует, чтобы обе легенды читались одновременно, поэтому
+  // легенду трека не прячем, а поднимаем над погодной высотой, измеренной её
+  // же `onLayout` (без магической константы — высота зависит от того, какая
+  // шкала показана, и от локали подписей).
+  const weatherLegendVisible = !fill && hasVisibleWeatherLegend(enabledOverlays);
+  const [weatherLegendHeight, setWeatherLegendHeight] = useState(0);
+  const handleWeatherLegendLayout = useCallback((event: LayoutChangeEvent) => {
+    setWeatherLegendHeight(event.nativeEvent.layout.height);
+  }, []);
+  const trackLegendBottomOffset = weatherLegendVisible
+    ? WEATHER_LEGEND_BOTTOM_OFFSET + weatherLegendHeight + TRACK_LEGEND_WEATHER_GAP
+    : undefined;
 
   const closeLayers = useCallback(() => setLayersOpen(false), []);
 
@@ -429,8 +457,13 @@ export default function TripPlanRouteMap({
           <Feather name={fullscreen ? 'minimize-2' : 'maximize-2'} size={18} color={colors.text} />
         </button>
         {canvas}
-        {hasOriginalTrack ? <TripPlanMapTrackLegend placement={fill ? 'top' : 'bottom'} /> : null}
-        <WeatherLegend enabledOverlays={enabledOverlays} />
+        {hasOriginalTrack ? (
+          <TripPlanMapTrackLegend
+            placement={fill ? 'top' : 'bottom'}
+            bottomOffset={fill ? undefined : trackLegendBottomOffset}
+          />
+        ) : null}
+        <WeatherLegend enabledOverlays={enabledOverlays} onLayout={handleWeatherLegendLayout} />
         {layersOpen ? (
           <View style={styles.layersPopoverLayer} pointerEvents="box-none">
             <MapMobileLayersPopover

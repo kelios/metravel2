@@ -110,13 +110,28 @@ export default function TripPlanRouteMapHeader({
  * Легенда оригинального трека внутри карты (#1496). В map-first раскладке —
  * сверху слева, как раньше; во встроенной карте верхний левый угол занят
  * зумом Leaflet, поэтому легенда стоит снизу слева.
+ *
+ * #2073: во встроенной карте (`placement='bottom'`) тот же нижний левый угол
+ * занимает `WeatherLegend` (web-only, выше по `zIndex`) — обе легенды обязаны
+ * читаться одновременно (Task Contract), поэтому легенду трека не прячут, а
+ * поднимают над погодной. Компонент общий для web и native
+ * (`TripPlanRouteMap.web.tsx`/`TripPlanRouteMap.tsx`), поэтому сам он ничего
+ * не знает про `WeatherLegend` — вызывающий web-файл передаёт готовый отступ.
  */
-export function TripPlanMapTrackLegend({ placement }: { placement: 'top' | 'bottom' }) {
+export function TripPlanMapTrackLegend({
+  placement,
+  bottomOffset,
+}: {
+  placement: 'top' | 'bottom';
+  /** Итоговый `bottom` вместо `legendBottom.bottom` — легенда погоды видна и выше её. */
+  bottomOffset?: number;
+}) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const bottomStyle = placement === 'bottom' && bottomOffset ? { bottom: bottomOffset } : styles.legendBottom;
   return (
     <View
-      style={[styles.legend, placement === 'top' ? styles.legendTop : styles.legendBottom]}
+      style={[styles.legend, placement === 'top' ? styles.legendTop : bottomStyle]}
       pointerEvents="none"
       testID="trip-plan-map-original-track-legend"
     >

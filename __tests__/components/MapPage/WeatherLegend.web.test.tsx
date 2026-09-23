@@ -10,7 +10,7 @@ jest.mock('@/hooks/useTheme', () => ({
 }))
 
 // Импортируем после моков
-import WeatherLegend from '@/components/MapPage/WeatherLegend.web'
+import WeatherLegend, { hasVisibleWeatherLegend } from '@/components/MapPage/WeatherLegend.web'
 
 const TEMP = 'weather-temp'
 const LABELS = 'weather-temp-labels'
@@ -82,5 +82,24 @@ describe('WeatherLegend.web — выбор шкалы по enabledOverlays', () 
       />,
     )
     expect(queryByTestId('weather-legend')).toBeNull()
+  })
+})
+
+// #2073: `hasVisibleWeatherLegend` — та же видимость, что решает рендер выше,
+// наружу для карты планировщика (TripPlanRouteMap.web.tsx), которая прячет
+// легенду трека, пока эта легенда занимает тот же нижний левый угол.
+describe('hasVisibleWeatherLegend', () => {
+  it('true, когда рендер показал бы легенду', () => {
+    expect(hasVisibleWeatherLegend({ [TEMP]: true })).toBe(true)
+    expect(hasVisibleWeatherLegend({ [PRECIP]: true })).toBe(true)
+    expect(hasVisibleWeatherLegend({ [CLOUDS]: true })).toBe(true)
+    expect(hasVisibleWeatherLegend({ [LABELS]: true })).toBe(true)
+  })
+
+  it('false для пустого/null/undefined и для всех выключенных слоёв', () => {
+    expect(hasVisibleWeatherLegend({})).toBe(false)
+    expect(hasVisibleWeatherLegend(null)).toBe(false)
+    expect(hasVisibleWeatherLegend(undefined)).toBe(false)
+    expect(hasVisibleWeatherLegend({ [TEMP]: false, [PRECIP]: false, [CLOUDS]: false })).toBe(false)
   })
 })

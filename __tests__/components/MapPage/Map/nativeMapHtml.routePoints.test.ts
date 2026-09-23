@@ -50,6 +50,7 @@ interface FakeMarker {
   position: [number, number];
   options: Record<string, unknown>;
   handlers: Record<string, Handler>;
+  element: { attrs: Record<string, string> };
 }
 
 const createHarness = () => {
@@ -106,10 +107,12 @@ const createHarness = () => {
       },
     },
     marker: (position: [number, number], options: Record<string, unknown> = {}) => {
+      const attrs: Record<string, string> = {};
       const marker: FakeMarker & Record<string, unknown> = {
         position,
         options,
         handlers: {},
+        element: { attrs },
         on(name: string, handler: Handler) {
           marker.handlers[name] = handler;
           return marker;
@@ -120,6 +123,14 @@ const createHarness = () => {
           return marker;
         },
         getLatLng: () => ({ lat: position[0], lng: position[1] }),
+        // #2073 — реальный код на интерактивных точках вызывает
+        // `marker.getElement()` и ставит `aria-description` подсказки прямо на
+        // DOM-узел; фейк отдаёт тот же объект, что хранит `element.attrs`.
+        getElement: () => ({
+          setAttribute: (key: string, value: string) => {
+            attrs[key] = value;
+          },
+        }),
       };
       return marker;
     },
@@ -209,6 +220,32 @@ describe('#1781 native-карта — точки маршрута правятс
       expect(marker.options.draggable).toBe(true);
       expect(marker.options.interactive).toBe(true);
       expect(Object.keys(marker.handlers).sort()).toEqual(['click', 'dragend', 'dragstart']);
+    });
+  });
+
+  // #2073: `accessibilityHint` на RN-контейнере карты (TripPlanRouteMap.tsx)
+  // не доходит до маркеров — они рисуются внутри этого WebView, вне RN-дерева.
+  // Подсказка ставится прямо на DOM-узел маркера: Leaflet `title` (нативный
+  // тултип) и `aria-description` (accessibility-дерево, которое WebView
+  // прокидывает в TalkBack/VoiceOver).
+  it('#2073 у владельца маркер точки получает подсказку title и aria-description', () => {
+    const harness = createHarness();
+    harness.renderPoints(routePayload(true));
+
+    const hint = 'Маркер точки можно перетащить по карте, а по тапу открыть изменение или удаление.';
+    harness.routeMarkers.forEach((marker) => {
+      expect(marker.options.title).toBe(hint);
+      expect(marker.element.attrs['aria-description']).toBe(hint);
+    });
+  });
+
+  it('#2073 у гостя маркер точки не получает подсказку', () => {
+    const harness = createHarness();
+    harness.renderPoints(routePayload(false));
+
+    harness.routeMarkers.forEach((marker) => {
+      expect(marker.options.title).toBeUndefined();
+      expect(marker.element.attrs['aria-description']).toBeUndefined();
     });
   });
 

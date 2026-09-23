@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { StyleSheet, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native'
 
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
@@ -7,8 +7,17 @@ import { translate as i18nT } from '@/i18n'
 
 const MOBILE_LAYOUT_MAX_WIDTH = 767
 
+/**
+ * #2073: тот же отступ читает `TripPlanRouteMap.web.tsx`, поднимая над этой
+ * легендой легенду оригинального трека — обе легенды в нижнем левом углу
+ * встроенной карты обязаны читаться одновременно (Task Contract).
+ */
+export const WEATHER_LEGEND_BOTTOM_OFFSET = 28
+
 interface WeatherLegendProps {
   enabledOverlays?: Record<string, boolean> | null
+  /** #2073: карта конструктора маршрута измеряет высоту, чтобы развести легенды. */
+  onLayout?: (event: LayoutChangeEvent) => void
 }
 
 type ScaleStop = { offset: number; color: string }
@@ -92,12 +101,22 @@ const resolveScale = (
   return null
 }
 
+/**
+ * #2073: та же видимость, что решает рендер ниже, но наружу — карте
+ * планировщика (`TripPlanRouteMap.web.tsx`) нужно знать, займёт ли эта легенда
+ * нижний левый угол, чтобы не сажать туда же легенду оригинального трека:
+ * `WeatherLegend` стоит выше по `zIndex` и молча закрывала бы её текст.
+ */
+export const hasVisibleWeatherLegend = (
+  enabledOverlays: Record<string, boolean> | null | undefined,
+): boolean => resolveScale(enabledOverlays) !== null
+
 const buildGradient = (stops: ScaleStop[]): string =>
   `linear-gradient(to right, ${stops
     .map((s) => `${s.color} ${Math.round(s.offset * 100)}%`)
     .join(', ')})`
 
-function WeatherLegend({ enabledOverlays }: WeatherLegendProps) {
+function WeatherLegend({ enabledOverlays, onLayout }: WeatherLegendProps) {
   const colors = useThemedColors()
   const { width } = useWindowDimensions()
   const isMobile = width <= MOBILE_LAYOUT_MAX_WIDTH
@@ -114,6 +133,7 @@ function WeatherLegend({ enabledOverlays }: WeatherLegendProps) {
   return (
     <View
       style={styles.container}
+      onLayout={onLayout}
       accessibilityLabel={i18nT('map:components.MapPage.WeatherLegend.legenda_value1_bfe44549', { value1: scale.title })}
       testID="weather-legend"
       {...({ role: 'region' } as object)}
@@ -140,7 +160,7 @@ const getStyles = (colors: ThemedColors, isMobile: boolean) =>
     container: {
       position: 'absolute',
       left: 12,
-      bottom: 28,
+      bottom: WEATHER_LEGEND_BOTTOM_OFFSET,
       zIndex: 700,
       maxWidth: 240,
       paddingHorizontal: 12,

@@ -303,6 +303,134 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
     expect(instances[0].element.title).toBe('1. Точка 1')
   })
 
+  // #2073: `accessibilityHint` на корневом `<View>` карты (TripPlanRouteMap.web.tsx)
+  // ничего не даёт — react-native-web 0.21.2 не реализует этот проп ни у одного
+  // элемента. Реальная доставка — `aria-description` прямо на DOM-узле маркера.
+  it('#2073 перетаскиваемый маркер получает aria-description с подсказкой', async () => {
+    const env = setup()
+    const instances: Array<{
+      element: {
+        attrs: Record<string, string>
+        setAttribute: (key: string, value: string) => void
+        removeAttribute: (key: string) => void
+      }
+    }> = []
+    const LiveMarker = (props: Record<string, any>) => {
+      const [instance] = React.useState(() => {
+        const attrs: Record<string, string> = {}
+        const element = {
+          title: String(props.title),
+          attrs,
+          setAttribute: (key: string, value: string) => { attrs[key] = value },
+          removeAttribute: (key: string) => { delete attrs[key] },
+        }
+        const created = { options: { title: String(props.title) }, element, getElement: () => element }
+        instances.push(created)
+        return created
+      })
+      React.useImperativeHandle(props.ref, () => instance, [instance])
+      return <>{props.children}</>
+    }
+    env.RL.Marker = LiveMarker
+    renderMarkers(env, { draggable: true })
+
+    await waitFor(() => expect(instances).toHaveLength(20))
+    instances.forEach((instance) => {
+      expect(instance.element.attrs['aria-description']).toBe(
+        'Маркер точки можно перетащить по карте, а по тапу открыть изменение или удаление.',
+      )
+    })
+  })
+
+  it('#2073 маркер без перетаскивания не получает aria-description', async () => {
+    const env = setup()
+    const instances: Array<{
+      element: { attrs: Record<string, string>; setAttribute: (key: string, value: string) => void }
+    }> = []
+    const LiveMarker = (props: Record<string, any>) => {
+      const [instance] = React.useState(() => {
+        const attrs: Record<string, string> = {}
+        const element = {
+          title: String(props.title),
+          attrs,
+          setAttribute: (key: string, value: string) => { attrs[key] = value },
+          removeAttribute: (key: string) => { delete attrs[key] },
+        }
+        const created = { options: { title: String(props.title) }, element, getElement: () => element }
+        instances.push(created)
+        return created
+      })
+      React.useImperativeHandle(props.ref, () => instance, [instance])
+      return <>{props.children}</>
+    }
+    env.RL.Marker = LiveMarker
+    renderMarkers(env, { draggable: false })
+
+    await waitFor(() => expect(instances).toHaveLength(20))
+    instances.forEach((instance) => {
+      expect(instance.element.attrs['aria-description']).toBeUndefined()
+    })
+  })
+
+  // #2073 P2: markercluster снимает и заново добавляет маркер на каждый
+  // zoom/pan, который меняет его группировку — Leaflet `_initIcon` создаёт
+  // НОВЫЙ DOM-узел на каждое такое пересоздание, а эффект по `title`/`hint`
+  // не перезапускается (их deps не меняются). На момент монтирования маркера
+  // в кластере `getElement()` ещё пуст — DOM появляется позже, вместе с `add`.
+  // На старом коде (`eventHandlers` без `add`) этот тест падает синхронно:
+  // `eventHandlers.add` отсутствует, вызов бросает TypeError.
+  it('#2073 P2 не теряет aria-description при пересоздании DOM-узла маркера (регруппировка кластера)', async () => {
+    const env = setup()
+    type FakeElement = {
+      attrs: Record<string, string>
+      setAttribute: (key: string, value: string) => void
+      removeAttribute: (key: string) => void
+    }
+    const makeElement = (): FakeElement => {
+      const attrs: Record<string, string> = {}
+      return {
+        attrs,
+        setAttribute: (key, value) => { attrs[key] = value },
+        removeAttribute: (key) => { delete attrs[key] },
+      }
+    }
+    let capturedInstance: { options: { title: string }; element: FakeElement | null } | null = null
+    let capturedEventHandlers: Record<string, (event?: unknown) => void> | undefined
+    const LiveMarker = (props: Record<string, any>) => {
+      const [instance] = React.useState(() => ({
+        options: { title: String(props.title) },
+        // На монтировании маркер ещё в кластере — Leaflet его DOM-узел
+        // создаёт позже, реальным добавлением на карту.
+        element: null as FakeElement | null,
+        getElement(): FakeElement | undefined { return this.element ?? undefined },
+      }))
+      capturedInstance = instance
+      capturedEventHandlers = props.eventHandlers
+      React.useImperativeHandle(props.ref, () => instance, [instance])
+      return <>{props.children}</>
+    }
+    env.RL.Marker = LiveMarker
+    renderMarkers(env, { draggable: true, route: route.slice(0, 1) })
+
+    await waitFor(() => expect(capturedInstance).not.toBeNull())
+    expect(capturedEventHandlers?.add).toEqual(expect.any(Function))
+
+    const hint = 'Маркер точки можно перетащить по карте, а по тапу открыть изменение или удаление.'
+
+    // Первое реальное добавление на карту создаёт первый DOM-узел.
+    const firstElement = makeElement()
+    capturedInstance!.element = firstElement
+    capturedEventHandlers!.add({ target: capturedInstance })
+    expect(firstElement.attrs['aria-description']).toBe(hint)
+
+    // Кластер регруппировался (zoom/pan) — Leaflet создал НОВЫЙ узел вместо
+    // старого; та же подсказка обязана появиться и на нём.
+    const secondElement = makeElement()
+    capturedInstance!.element = secondElement
+    capturedEventHandlers!.add({ target: capturedInstance })
+    expect(secondElement.attrs['aria-description']).toBe(hint)
+  })
+
   it('без ядра react-leaflet маркеры идут прямо на карту', async () => {
     const env = setup()
     renderMarkers(env, { RLCore: undefined })

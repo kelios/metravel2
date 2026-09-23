@@ -238,4 +238,44 @@ describe('TripPlanRouteMap — слои карты (#1306)', () => {
 
     expect(utils.getByTestId('trip-plan-weather-legend').props.children).toContain('weather-temp')
   })
+
+  // #2073: во встроенной desktop-карте (`fill=false`, TripPlanRouteMap.web.tsx)
+  // легенда трека и легенда погоды садятся в один нижний левый угол, и
+  // `WeatherLegend` перекрывает текст легенды трека более высоким `zIndex`.
+  // Task Contract требует, чтобы обе легенды читались одновременно — фикс
+  // поднимает легенду трека над погодной (`bottom` больше дефолтных 12px), а
+  // не прячет её.
+  const originalTrackSegments: Array<Array<[number, number]>> = [[
+    [27.56, 53.9],
+    [27.6, 53.91],
+  ]]
+  const DEFAULT_TRACK_LEGEND_BOTTOM = 12
+
+  const trackLegendBottom = (utils: { getByTestId: (id: string) => { props: { style?: unknown } } }) => {
+    const style = utils.getByTestId('trip-plan-map-original-track-legend').props.style
+    const flat = (Array.isArray(style) ? style : [style]) as Array<Record<string, unknown> | undefined>
+    const withBottom = flat.reverse().find((entry) => entry && typeof entry.bottom === 'number')
+    return withBottom?.bottom as number | undefined
+  }
+
+  it('#2073 поднимает легенду трека над легендой погоды, а не прячет её, пока на встроенной карте активен погодный слой', async () => {
+    useMapOverlaysStore.getState().setOverlayEnabled('weather-temp', true)
+
+    const utils = render(<TripPlanRouteMap route={route} originalTrackSegments={originalTrackSegments} />)
+    await waitFor(() => utils.UNSAFE_getByProps({ 'data-testid': 'trip-plan-map-layers' }))
+
+    expect(utils.getByTestId('trip-plan-weather-legend')).toBeTruthy()
+    // Обе легенды видны одновременно (Task Contract), поэтому трек не исчез —
+    // его `bottom` вырос выше дефолта, освобождая нижний левый угол погодной.
+    expect(utils.getByTestId('trip-plan-map-original-track-legend')).toBeTruthy()
+    expect(trackLegendBottom(utils)).toBeGreaterThan(DEFAULT_TRACK_LEGEND_BOTTOM)
+  })
+
+  it('#2073 держит легенду трека на дефолтном отступе, когда погодный слой выключен', async () => {
+    const utils = render(<TripPlanRouteMap route={route} originalTrackSegments={originalTrackSegments} />)
+    await waitFor(() => utils.UNSAFE_getByProps({ 'data-testid': 'trip-plan-map-layers' }))
+
+    expect(utils.getByTestId('trip-plan-map-original-track-legend')).toBeTruthy()
+    expect(trackLegendBottom(utils)).toBe(DEFAULT_TRACK_LEGEND_BOTTOM)
+  })
 })

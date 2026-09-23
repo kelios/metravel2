@@ -389,6 +389,8 @@ ${ESCAPE_HTML_FN_SCRIPT}
             // только у владельца поездки. У гостя маркеры остаются как были:
             // не перетаскиваются и не перехватывают тап.
             const routePointsInteractive = data.routePointsInteractive === true;
+            // #2073 — подсказка о перетаскивании маркера: RN accessibilityHint до маркеров внутри этого WebView не доходит, поэтому строка ставится прямо на их DOM-узел.
+            const routePointMarkerHint = ${serializeForInlineScript(i18nT('tripsStatic:plan.map.markerHint'))};
             // #1820 — счётчик оптовых замен маршрута (шаблон, импорт трека).
             // Его рост — единственный признак «маршрут заменили целиком».
             const routeReplacementToken = data.routeReplacementToken;
@@ -604,9 +606,15 @@ ${ESCAPE_HTML_FN_SCRIPT}
                   icon: routePointIcon(routePointMarkers, index, isStart, isEnd),
                   draggable: routePointsInteractive,
                   interactive: routePointsInteractive,
-                  keyboard: false
+                  keyboard: false,
+                  title: routePointsInteractive ? routePointMarkerHint : undefined
                 }).addTo(routeLayer);
                 if (routePointsInteractive) {
+                  // #2073 — aria-description добавляет ту же подсказку в accessibility-дерево (title выше — только тултип Leaflet).
+                  const routePointMarkerElement = marker.getElement ? marker.getElement() : null;
+                  if (routePointMarkerElement) {
+                    routePointMarkerElement.setAttribute('aria-description', routePointMarkerHint);
+                  }
                   marker.on('dragstart', function() {
                     // Кадр перестаёт подгоняться под маршрут: дальше видом
                     // управляет пользователь, а не форма линии.

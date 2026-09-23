@@ -205,22 +205,50 @@ function RouteMarker({
   // заново, кластеры пересчитываются, раскрытый «паук» схлопывается. Карта же
   // перерисовывается на каждый ввод в панели конструктора.
   const position = useMemo<[number, number]>(() => [lat, lng], [lat, lng]);
-  const eventHandlers = useMemo(
-    () => (draggable ? { dragend: onDragEnd(index) } : undefined),
-    [draggable, index, onDragEnd],
-  );
   const title = `${routeMarkerLabel(index)}. ${point.name}`;
-  // Leaflet читает `title` только при создании иконки: без этого после
-  // переименования точки подсказка и имя маркера для скринридера оставались бы
-  // прежними до пересоздания маркера.
+  // #2073: `accessibilityHint` на web ничего не даёт — react-native-web 0.21.2
+  // не реализует этот проп ни у одного элемента. Подсказку читает
+  // `aria-description` прямо на DOM-узле маркера (не требует связанного
+  // элемента с id, в отличие от `aria-describedby`).
+  const hint = draggable ? i18nT('tripsStatic:plan.map.markerHint') : undefined;
+  // #2073 P2: значения читает стабильный `add`-обработчик ниже, а не замыкание
+  // рендера — так его не нужно пересоздавать на каждое переименование точки
+  // (эффект ниже уже это делает для уже смонтированного узла).
+  const accessibilityRef = useRef({ title, hint });
+  accessibilityRef.current = { title, hint };
+  const applyMarkerAccessibility = useCallback((marker: TitledMarker | null | undefined) => {
+    if (!marker?.options) return;
+    const current = accessibilityRef.current;
+    marker.options.title = current.title;
+    const element = marker.getElement?.();
+    if (!element) return;
+    element.title = current.title;
+    if (current.hint) element.setAttribute?.('aria-description', current.hint);
+    else element.removeAttribute?.('aria-description');
+  }, []);
+  // Гость не тянет маркер и не получает подсказку — `eventHandlers` остаётся
+  // `undefined`, как и раньше (тест «гостю не даёт ни тянуть маркер...»
+  // проверяет это напрямую). `add` живёт в том же объекте и по тем же deps,
+  // что и `dragend`, а не пересоздаётся на переименование точки (`title`/`hint`
+  // в deps сломали бы это же условие и вернули бы прежний баг).
+  const eventHandlers = useMemo(() => {
+    if (!draggable) return undefined;
+    return {
+      dragend: onDragEnd(index),
+      // #2073 P2: markercluster снимает и заново добавляет маркер на каждый
+      // zoom/pan, который меняет его группировку — Leaflet `_initIcon` создаёт
+      // НОВЫЙ DOM-узел и переносит на него только `options.title`, а
+      // `aria-description` без этого терялась бы на каждой такой пересборке.
+      // `add` стабильно стреляет и на первом монтировании, и на каждом таком
+      // пересоздании — эффект ниже остаётся для смены hint без пересборки DOM
+      // (переименование точки на статичном, некластеризованном маркере).
+      add: (event: unknown) => applyMarkerAccessibility((event as { target?: TitledMarker })?.target),
+    };
+  }, [applyMarkerAccessibility, draggable, index, onDragEnd]);
   const markerRef = useRef<TitledMarker | null>(null);
   useEffect(() => {
-    const marker = markerRef.current;
-    if (!marker?.options) return;
-    marker.options.title = title;
-    const element = marker.getElement?.();
-    if (element) element.title = title;
-  }, [title]);
+    applyMarkerAccessibility(markerRef.current);
+  }, [applyMarkerAccessibility, title, hint]);
   const coordinatesLabel = formatRoutePointCoordinates(point.coordinates);
 
   return (

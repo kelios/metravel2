@@ -166,6 +166,54 @@ test.describe('Planned trip route tab — numbered markers, clusters and a large
     await page.screenshot({ path: testInfo.outputPath('large-trip-map-1440.png') })
   })
 
+  // #2073: во встроенной desktop-карте (`fill=false` — RouteBuilder.tsx рендерит
+  // 'stack' на не-mobile ширинах) легенда «Оригинальный трек из файла» и легенда
+  // погодных слоёв садятся в один нижний левый угол (`TripPlanRouteMapHeader.tsx`
+  // `legendBottom`, `WeatherLegend.web.tsx` `left:12, bottom:WEATHER_LEGEND_BOTTOM_OFFSET,
+  // zIndex:700`). Task Contract требует, чтобы обе легенды читались одновременно —
+  // фикс поднимает легенду трека над погодной высотой её измеренного `onLayout`
+  // (`TripPlanRouteMap.web.tsx`), а не прячет её. Порог теста — обе легенды видны
+  // и их прямоугольники физически не пересекаются.
+  test('desktop-1440: weather overlay legend does not cover the original-track legend (#2073)', async ({
+    page,
+  }, testInfo) => {
+    await mockLargePlannedTrip(page)
+    await openLargeTrip(page, { width: 1440, height: 900 })
+
+    const mapScope = 'route-builder-map-column'
+    await waitForSettledRouteMap(page, mapScope)
+    await expect(page.getByTestId('trip-plan-map-original-track-legend').first()).toBeVisible()
+
+    await page.getByTestId('trip-plan-map-layers').click()
+    await page.getByTestId('map-overlay-weather-temp').click()
+    await expect(page.getByTestId('weather-legend')).toBeVisible({ timeout: 10_000 })
+    // Обе легенды остаются в DOM одновременно — фикс не прячет легенду трека.
+    await expect(page.getByTestId('trip-plan-map-original-track-legend').first()).toBeVisible()
+
+    const weatherBox = await page.getByTestId('weather-legend').boundingBox()
+    const trackBox = await page.getByTestId('trip-plan-map-original-track-legend').first().boundingBox()
+    expect(weatherBox).not.toBeNull()
+    expect(trackBox).not.toBeNull()
+
+    const measure = trackBox && weatherBox
+      ? `1440x900 legends: track ${Math.round(trackBox.x)},${Math.round(trackBox.y)} ` +
+        `${Math.round(trackBox.width)}x${Math.round(trackBox.height)}, weather ` +
+        `${Math.round(weatherBox.x)},${Math.round(weatherBox.y)} ${Math.round(weatherBox.width)}x${Math.round(weatherBox.height)}`
+      : '1440x900 legends: boundingBox() returned null'
+    testInfo.annotations.push({ type: 'measure', description: measure })
+    console.log(`[#2073] ${measure}`)
+
+    if (trackBox && weatherBox) {
+      const overlaps = trackBox.x < weatherBox.x + weatherBox.width
+        && trackBox.x + trackBox.width > weatherBox.x
+        && trackBox.y < weatherBox.y + weatherBox.height
+        && trackBox.y + trackBox.height > weatherBox.y
+      expect(overlaps).toBe(false)
+    } else {
+      throw new Error('legend bounding boxes are not measurable')
+    }
+  })
+
   test('desktop-1440: approximate route keeps the map header within 3 lines', async ({ page }, testInfo) => {
     await mockLargePlannedTrip(page)
     const warning = { code: 'ors_http_404', message: 'Provider route is unavailable; direct-line fallback was used.' }
