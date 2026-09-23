@@ -14,7 +14,7 @@ import { FitRouteBounds, FocusRouteIndices, FocusRoutePoint } from '@/components
 import TripPlanRouteMapHeader, { TripPlanMapTrackLegend } from '@/components/trips/planning/TripPlanRouteMapHeader';
 import TripPlanRouteMarkers from '@/components/trips/planning/TripPlanRouteMarkers';
 import { isDrawableCoordinatePair, isRouteApproximate } from '@/components/trips/planning/tripPlanFormatting';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useBreakpoints } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
 import { MapCanvas } from '@/components/MapPage/Map/MapCanvas';
@@ -168,7 +168,9 @@ export default function TripPlanRouteMap({
   const [L, setL] = useState<LeafletNS | null>(null);
   const [RL, setRL] = useState<ReactLeafletNS | null>(null);
   const [RLCore, setRLCore] = useState<ReactLeafletCoreRuntime | undefined>(undefined);
-  const { isDesktop } = useResponsive();
+  // Только ширина: высота (адресная строка mobile web) не должна перерисовывать
+  // карту с её 61 маркером.
+  const { isDesktop } = useBreakpoints();
   const tall = !fill && isDesktop;
   // #1301: карту конструктора можно развернуть на весь экран. `position: fixed`
   // здесь не работает: ScrollView RN-Web ставит себе `transform: matrix(1,0,0,1,0,0)`

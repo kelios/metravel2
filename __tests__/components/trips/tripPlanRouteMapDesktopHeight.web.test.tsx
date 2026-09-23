@@ -12,6 +12,7 @@ let mockIsDesktop = true
 
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ isDesktop: mockIsDesktop }),
+  useBreakpoints: () => ({ isDesktop: mockIsDesktop }),
 }))
 jest.mock('react-dom', () => ({ createPortal: (node: unknown) => node }))
 jest.mock('@/utils/ensureLeafletCss', () => ({ ensureLeafletCss: jest.fn() }))
