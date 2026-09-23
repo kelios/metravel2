@@ -89,7 +89,7 @@ jest.mock('react-native', () => {
 describe('CollapsibleBlock', () => {
   it('should render with title and children', () => {
     const { toJSON } = render(
-      <CollapsibleBlock id="test" title="Test Block">
+      <CollapsibleBlock title="Test Block">
         <Text>Content</Text>
       </CollapsibleBlock>
     );
@@ -104,7 +104,6 @@ describe('CollapsibleBlock', () => {
   it('should render with description', () => {
     const { toJSON } = render(
       <CollapsibleBlock 
-        id="test" 
         title="Test Block"
         description="Test description"
       >
@@ -120,7 +119,6 @@ describe('CollapsibleBlock', () => {
   it('should render with icon', () => {
     const { getByTestId } = render(
       <CollapsibleBlock 
-        id="test" 
         title="Test Block"
         icon="info"
       >
@@ -135,7 +133,6 @@ describe('CollapsibleBlock', () => {
     const onToggle = jest.fn();
     const { UNSAFE_getAllByType } = render(
       <CollapsibleBlock 
-        id="test" 
         title="Test Block"
         onToggle={onToggle}
       >
@@ -162,7 +159,6 @@ describe('CollapsibleBlock', () => {
     const onHide = jest.fn();
     const { UNSAFE_getAllByType } = render(
       <CollapsibleBlock 
-        id="test" 
         title="Test Block"
         onHide={onHide}
         hasCloseButton={true}
@@ -188,7 +184,6 @@ describe('CollapsibleBlock', () => {
   it('should start collapsed when defaultExpanded is false', () => {
     const { toJSON } = render(
       <CollapsibleBlock 
-        id="test" 
         title="Test Block"
         defaultExpanded={false}
       >
@@ -203,7 +198,6 @@ describe('CollapsibleBlock', () => {
   it('should use controlled expanded state', () => {
     const { toJSON, rerender } = render(
       <CollapsibleBlock 
-        id="test" 
         title="Test Block"
         expanded={false}
       >
@@ -217,7 +211,6 @@ describe('CollapsibleBlock', () => {
     // Перерендерим с expanded=true
     rerender(
       <CollapsibleBlock 
-        id="test" 
         title="Test Block"
         expanded={true}
       >
@@ -232,7 +225,6 @@ describe('CollapsibleBlock', () => {
   it('should render in compact mode', () => {
     const { toJSON } = render(
       <CollapsibleBlock 
-        id="test" 
         title="Test Block"
         compactMode={true}
       >
@@ -247,7 +239,6 @@ describe('CollapsibleBlock', () => {
   it('should render header actions', () => {
     const { toJSON } = render(
       <CollapsibleBlock 
-        id="test" 
         title="Test Block"
         headerActions={<Text>Action</Text>}
       >
@@ -263,7 +254,6 @@ describe('CollapsibleBlock', () => {
   it('should not be collapsible when collapsible is false', () => {
     const { toJSON } = render(
       <CollapsibleBlock 
-        id="test" 
         title="Test Block"
         collapsible={false}
       >
@@ -278,7 +268,6 @@ describe('CollapsibleBlock', () => {
   it('should show hidden state when hidden', () => {
     const { toJSON } = render(
       <CollapsibleBlock 
-        id="test" 
         title="Test Block"
         hidden={true}
       >

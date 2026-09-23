@@ -10,7 +10,6 @@ import { translate as i18nT } from '@/i18n'
 
 
 interface CollapsibleBlockProps {
-  id: string;
   title: string;
   description?: string;
   icon?: string;

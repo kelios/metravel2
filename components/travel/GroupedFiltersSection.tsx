@@ -45,7 +45,6 @@ const GroupedFiltersSection: React.FC<GroupedFiltersSectionProps> = ({
 
     return (
         <CollapsibleBlock
-            id={`travel-filter-group-${group.id}`}
             title={group.title}
             description={!isExpanded ? group.description : undefined}
             icon={group.iconName}
