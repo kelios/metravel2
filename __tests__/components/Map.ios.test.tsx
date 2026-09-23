@@ -467,7 +467,9 @@ describe('Map.ios Component', () => {
     const html = getWebViewHtml(rendered);
     expect(html).toContain('const routeLine = Array.isArray(data.routeLine) ? data.routeLine : routePoints');
     expect(html).toContain('L.polyline(routeLine');
-    expect(html).toContain("dashArray: routeApproximate ? '8 8' : null");
+    // #2056: линию рисует drawRouteLines — приблизительная по-прежнему пунктиром 8 8.
+    expect(html).toContain('drawRouteLines(routeLine, routeApproximate, routePointMarkers, routeLayer)');
+    expect(html).toContain("dashArray: transfer ? spec.transferDashArray : (warn ? '8 8' : null)");
     expect(html).toContain('const marker = L.marker(point, {');
     // #2059: номерная капля планировщика или прежний кружок маршрута /map.
     // #2071: пятый аргумент — активная точка (крупнее, вне кластера).

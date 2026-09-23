@@ -281,7 +281,8 @@ DTO `PublicTripDto` (snake_case): `id`, `owner`, `owner_profile`, `title`,
   Разбор и payload — `utils/routePointArrivalMode.ts`. Полный PUT отправляет
   `arrival_mode` у каждой точки, у первой всегда `''`: пропущенный ключ бэкенд
   пишет как `''`, и любое «Сохранить маршрут» стирало бы поезд и перелёты.
-  Конструктор поле пока не редактирует, а только переносит (UI — #2056).
+  Правится полем «Как добираюсь сюда» формы точки (#2056, раздел «Переезды
+  внутри поездки»); `routeSignature` учитывает его PUT-значение.
   Таблица `ROUTE_POINT_PUT_KEYS` (`api/plannedTripsRequests.ts`) держит решение
   для каждого поля `RoutePoint`: новое поле без строки в ней не компилируется, а
   jest (`plannedTripsArrivalMode.test.ts`) сверяет, что ключи реально уходят в
@@ -931,6 +932,56 @@ refresh в это время не стартует и не гоняется с �
 `calculateDistance` и грубая оценка времени `calculateTravelTime`
 (car 50 / bike 15 / foot 5 км/ч) — в сводке маршрута они не участвуют: дистанцию
 и время планировщик берёт только из ответа движка маршрутизации.
+
+### Переезды внутри поездки (#2056)
+
+Контракт — `openspec/changes/trip-route-transfer-legs/`, бэкенд #2055
+(`trips/route_legs.py`), раскладка — `trips-plan-route-tab-mock.md` §6.
+
+- **Способ прибытия.** Форма точки (`RouteArrivalModeField`, черновик —
+  `useRoutePointDraft.editArrival`): «Как вся поездка», поезд, перелёт, автобус,
+  паром, трансфер; у первой точки поля нет. Значение уезжает полным PUT как
+  `arrival_mode` (#2067), смена способа показывает «Сохранить маршрут».
+- **Прогоны.** `tripRouteLegs.splitRouteSegments` повторяет `split_route_legs`:
+  точка `i ≥ 1` со способом закрывает прогон `[start, i)` и даёт переезд
+  `i − 1 → i`; прогон держит только точки с координатами и короче двух точек
+  пропускается; переезд меряется по прямой (как `_route_distance_m`), без
+  координат конца — 0 км. Маршрут без переездов — один прогон, как до #2056.
+- **Сводка.** `route_summary.distance_km`/`duration_min` — только прогоны,
+  `transfer_distance_km` — сумма переездов, `legs[]` — отрезки со срезами
+  `geometry_slice` склеенной `route_geometry`. Адаптер переводит
+  `from_order`/`to_order` в индексы `route` и отбрасывает отрезок с незнакомым
+  способом, чужим `order` или битым срезом (`RouteSummary.legs`,
+  `transferDistanceKm`; у сводки без #2055 оба `undefined`).
+- **Превью.** `useTripRoutePreview` режет черновик на прогоны, и
+  `TripRoutePreviewEngines` монтирует по движку на прогон (`POST
+  /api/routing/route/` на каждый); переезды не прокладываются.
+  `combinePreviewRuns` склеивает тройку, как `combine_route_legs`: геометрия
+  прогонов подряд (деградировавший — своими точками), пара точек переезда,
+  отрезки со срезами; профиля высот у маршрута с переездами нет.
+  `previewRouteShapeKey` без переездов равен прежнему ключу точек, с ними —
+  отпечаток прогонов и концов переездов без способа: «поезд → самолёт» не
+  выбрасывает сохранённую геометрию.
+- **Карта.** `routeLineSegments` — `null` без переездов (одна линия, как было);
+  с ними прогоны рисуются своими срезами (прогон `provider: direct` —
+  приблизительным стилем только он), переезд — дуга `transferArc` цвета
+  `infoDark` пунктиром `2 8`. Web — `Polyline` с классом
+  `metravel-route-transfer`; native — отрезки в payload планировщика
+  (`routePointMarkers.lineSegments`), в WebView их рисует `drawRouteLines`
+  (`nativeRoutePointMarkersScript.ts`), кадр — по всей `routeLine`.
+- **Список и итог.** Плашка `RouteTransferLegBadge` над точкой переезда:
+  «Перелёт · 431 км» (Feather: перелёт `send`, поезд `git-commit`, автобус
+  `truck`, паром `anchor`, трансфер `shuffle`; подписи общие с печатью —
+  `ARRIVAL_MODE_LABEL`). `routeMetricsLine` дописывает «Переезды K км» (строка
+  итога на телефоне, шапка карты, плашка шапки, карточка поездки),
+  `RouteSummaryBar` — плитку «Переезды». Длина дня в заголовке группы переезд
+  не считает, как печать (#2068).
+- **Проверки.** jest: `__tests__/trips/tripRouteLegs.test.ts`,
+  `tripRoutePreviewRuns.test.ts`, `plannedTripsRouteLegs.test.ts`,
+  `__tests__/components/trips/tripRoutePreviewEngines.test.tsx`,
+  `routeTransferLegs.ui.test.tsx`, `tripPlanRouteMapTransferLegs{Web,Native}.test.tsx`,
+  `__tests__/components/MapPage/Map/nativeRouteTransferLines.test.ts`; e2e на
+  моках 1440 и 390 — `e2e/planned-trip-transfer-legs.spec.ts`.
 
 ## Форматирование и локализация
 

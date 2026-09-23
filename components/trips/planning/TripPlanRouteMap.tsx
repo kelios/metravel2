@@ -39,6 +39,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { MapUiApi } from '@/types/mapUi';
 import { translate as i18nT } from '@/i18n'
 import { hasUsableRouteGeometry } from './tripRoutePreview';
+import { routeLineSegments } from './tripRouteLegs';
 
 
 interface Props {
@@ -226,11 +227,18 @@ export default function TripPlanRouteMap({
     const position = markerRouteIndices.indexOf(activeIndex);
     return position === -1 ? null : position;
   }, [activeIndex, markerRouteIndices]);
+  // #2056: маршрут с переездами уезжает в WebView отрезками — переезд дугой
+  // своего цвета, прогоны своими срезами; без переездов `null`, одна линия.
+  const lineSegments = useMemo(
+    () => routeLineSegments(route, hasRoutedGeometry ? routeGeometry ?? null : null, summary?.legs),
+    [hasRoutedGeometry, route, routeGeometry, summary?.legs],
+  );
   const routePointMarkers = useMemo(
     () => nativeRoutePointMarkers(markerRouteIndices.map(routeMarkerLabel), colors, {
       activeIndex: activeMarkerIndex,
+      lines: lineSegments ? { segments: lineSegments, transferColor: colors.infoDark } : null,
     }),
-    [activeMarkerIndex, colors, markerRouteIndices],
+    [activeMarkerIndex, colors, lineSegments, markerRouteIndices],
   );
   const center = useMemo(() => {
     // #1851: файл трека грузят раньше, чем расставляют точки маршрута. Видимый

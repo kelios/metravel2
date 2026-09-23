@@ -6,7 +6,8 @@
 // координат со всеми строками.
 // #2058: при свёртке дней (`routeDayCollapse.ts`) заголовок — кнопка ≥ 44 px,
 // строки свёрнутого дня не монтируются. Макет — trips-plan-route-tab-mock.md §3.
-import React from 'react'
+// #2056: над точкой, до которой добираются переездом, — плашка переезда (§6).
+import React, { useMemo } from 'react'
 import Feather from '@expo/vector-icons/Feather'
 import { Pressable, Text, View } from 'react-native'
 
@@ -29,6 +30,8 @@ import {
   tripDateUnavailableText,
 } from '@/utils/tripDateTime'
 import type { createStyles } from './RouteBuilder.styles'
+import RouteTransferLegBadge from './RouteTransferLegBadge'
+import { transfersByPointIndex } from './tripRouteLegs'
 
 type RouteBuilderStyles = ReturnType<typeof createStyles>
 
@@ -65,8 +68,18 @@ export function RouteDayGroups({
   pointSlot?: (index: number) => React.ReactNode | undefined
   collapse?: RouteDayCollapseView | null
 }) {
+  const transfers = useMemo(() => transfersByPointIndex(route), [route])
+  // Плашка — соседний ребёнок списка, как заголовок дня: `onLayout.y` строк
+  // ручки перетаскивания считается в той же системе координат.
+  const renderRow = (point: RoutePoint, index: number): React.ReactNode[] => {
+    const row = renderPoint(point, index, pointSlot?.(index))
+    const transfer = transfers.get(index)
+    return transfer
+      ? [<RouteTransferLegBadge key={`transfer-${point.id}`} transfer={transfer} colors={colors} />, row]
+      : [row]
+  }
   if (!shouldGroupRouteByDay(route)) {
-    return <>{route.map((point, index) => renderPoint(point, index, pointSlot?.(index)))}</>
+    return <>{route.flatMap((point, index) => renderRow(point, index))}</>
   }
   return (
     <>
@@ -92,9 +105,9 @@ export function RouteDayGroups({
           />,
           ...(expanded === false
             ? []
-            : group.indices.map((index) => {
+            : group.indices.flatMap((index) => {
                 const point = route[index]
-                return point ? renderPoint(point, index, pointSlot?.(index)) : null
+                return point ? renderRow(point, index) : []
               })),
         ]
       })}

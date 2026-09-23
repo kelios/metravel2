@@ -3,6 +3,8 @@
 // линию на карте и цифры в «Итоге» даёт тот же движок, что и /map, а не прямая
 // между точками. #873 также включает этот путь для сохранённого маршрута, если
 // бэк прислал healthy routing state без пригодной геометрии.
+// #2056: маршрут с переездами строится по прогонам — по движку на прогон
+// (`TripRoutePreviewEngines`), переезды не прокладываются.
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import type { UseMapRoutingResult } from '@/components/map-core/useMapRouting';
@@ -17,14 +19,10 @@ import type {
 import type { ParsedRoutePreview } from '@/types/travelRoutes';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
-  hasEngineAnswer,
-  isPreviewDegraded,
+  combinePreviewRuns,
   isRoutableTransport,
-  previewElevation,
-  previewGeometry,
-  previewPointsKey,
-  previewRoutingState,
-  previewSummary,
+  previewRouteShapeKey,
+  previewRunPlan,
   routablePreviewPoints,
   schematicRoutingState,
   schematicSummary,
@@ -52,11 +50,13 @@ export interface TripRoutePreviewState {
   /** Транспорт без автопрокладки (public/mixed): линия схематичная. */
   schematic: boolean;
   points: Array<[number, number]>;
+  /** #2056: точки каждого прогона — по движку на прогон; без переездов прогон один. */
+  runs: Array<Array<[number, number]>>;
   transportMode: RoutableTripTransport | null;
   /** Ключ монтирования движка: смена = повторная попытка построения. */
   retryToken: number;
   retry: () => void;
-  handleResult: (result: UseMapRoutingResult) => void;
+  handleRunResult: (runIndex: number, result: UseMapRoutingResult) => void;
   loading: boolean;
   /** Движок честно вернул «дорогу построить не удалось». */
   degraded: boolean;
@@ -66,7 +66,7 @@ export interface TripRoutePreviewState {
   elevation: ParsedRoutePreview | null;
 }
 
-const IDLE: Omit<TripRoutePreviewState, 'points' | 'retryToken' | 'retry' | 'handleResult'> = {
+const IDLE: Omit<TripRoutePreviewState, 'points' | 'runs' | 'retryToken' | 'retry' | 'handleRunResult'> = {
   engaged: false,
   active: false,
   schematic: false,
@@ -82,7 +82,8 @@ const IDLE: Omit<TripRoutePreviewState, 'points' | 'retryToken' | 'retry' | 'han
 export function useTripRoutePreview({ route, transport, enabled }: Options): TripRoutePreviewState {
   const request = useMemo(() => {
     const points = routablePreviewPoints(route);
-    return { points, transport, key: previewPointsKey(points, transport) };
+    const plan = previewRunPlan(route);
+    return { points, plan, transport, key: previewRouteShapeKey(route, transport, plan.segments) };
   }, [route, transport]);
 
   // Дебаунс идёт по всему запросу целиком, иначе точки и транспорт на секунду
@@ -101,7 +102,7 @@ export function useTripRoutePreview({ route, transport, enabled }: Options): Tri
   const [received, setReceived] = useState<{
     key: string;
     retryToken: number;
-    result: UseMapRoutingResult;
+    results: Array<UseMapRoutingResult | undefined>;
   } | null>(null);
 
   // Ответ принадлежит запросу, с которым смонтирован конкретный engine. Нельзя
@@ -111,7 +112,7 @@ export function useTripRoutePreview({ route, transport, enabled }: Options): Tri
   const engineRetryToken = retryToken;
   const currentEngineRef = useRef({ key: request.key, retryToken });
   currentEngineRef.current = { key: request.key, retryToken };
-  const handleResult = useCallback((result: UseMapRoutingResult) => {
+  const handleRunResult = useCallback((runIndex: number, result: UseMapRoutingResult) => {
     const currentEngine = currentEngineRef.current;
     if (
       currentEngine.key !== engineRequestKey
@@ -119,7 +120,12 @@ export function useTripRoutePreview({ route, transport, enabled }: Options): Tri
     ) {
       return;
     }
-    setReceived({ key: engineRequestKey, retryToken: engineRetryToken, result });
+    setReceived((prev) => {
+      const sameRequest = prev?.key === engineRequestKey && prev.retryToken === engineRetryToken;
+      const results = sameRequest ? prev.results.slice() : [];
+      results[runIndex] = result;
+      return { key: engineRequestKey, retryToken: engineRetryToken, results };
+    });
   }, [engineRequestKey, engineRetryToken]);
 
   const retry = useCallback(() => {
@@ -131,15 +137,16 @@ export function useTripRoutePreview({ route, transport, enabled }: Options): Tri
     && received
     && received.key === request.key
     && received.retryToken === retryToken
-    ? received.result
+    ? received.results
     : null;
 
   return useMemo(() => {
     const shell = {
       points: debounced.points,
+      runs: debounced.plan.runs,
       retryToken,
       retry,
-      handleResult,
+      handleRunResult,
     };
 
     if (schematic) {
@@ -164,19 +171,16 @@ export function useTripRoutePreview({ route, transport, enabled }: Options): Tri
       // «Строим маршрут» держится и на время дебаунса — своего и внутреннего
       // дебаунса движка: для пользователя это один процесс, а не пауза, во
       // время которой блок статуса моргает и исчезает.
-      loading: !hasEngineAnswer(fresh) || Boolean(fresh?.loading),
-      degraded: isPreviewDegraded(fresh),
-      geometry: previewGeometry(fresh),
-      summary: previewSummary(fresh, route),
-      routingState: previewRoutingState(fresh),
-      elevation: previewElevation(fresh),
+      ...combinePreviewRuns(request.plan, fresh ?? [], route),
     };
   }, [
     active,
+    debounced.plan.runs,
     debounced.points,
     engaged,
     fresh,
-    handleResult,
+    handleRunResult,
+    request.plan,
     retry,
     retryToken,
     route,

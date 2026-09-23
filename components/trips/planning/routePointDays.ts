@@ -83,10 +83,24 @@ export const routePointsDistanceKm = (
   return total
 }
 
+/**
+ * Длина дня — сумма соседних пар его точек. #2056: переезд (пара соседних точек
+ * маршрута, у второй есть способ прибытия) в неё не входит — перелёт в 431 км
+ * не делает день пешком длиннее; так же считает печать (#2068).
+ */
 export const dayGroupDistanceKm = (
   route: readonly RoutePoint[],
   indices: readonly number[],
-): number => routePointsDistanceKm(indices.map((index) => route[index]).filter(Boolean))
+): number => {
+  let total = 0
+  for (let position = 1; position < indices.length; position += 1) {
+    const from = indices[position - 1]
+    const to = indices[position]
+    if (to === from + 1 && route[to]?.arrivalMode) continue
+    total += routePointsDistanceKm([route[from], route[to]].filter(Boolean))
+  }
+  return total
+}
 
 /** Календарный день похода: старт поездки + (номер дня − 1). */
 export const hikeDayDate = (

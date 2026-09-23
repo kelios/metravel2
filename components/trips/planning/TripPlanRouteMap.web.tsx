@@ -35,6 +35,7 @@ import type { MapUiApi } from '@/types/mapUi';
 import type { ReactLeafletCoreRuntime } from '@/utils/loadLeafletRuntime';
 import { translate as i18nT } from '@/i18n'
 import { hasUsableRouteGeometry } from './tripRoutePreview';
+import { ROUTE_TRANSFER_DASH_ARRAY, routeLineSegments } from './tripRouteLegs';
 
 
 type LeafletNS = typeof import('leaflet');
@@ -334,6 +335,15 @@ export default function TripPlanRouteMap({
   );
   const usesWaypointFallback = !hasRoutedGeometry && markerPositions.length >= 2;
   const approximate = usesWaypointFallback || isRouteApproximate(routingState);
+  // #2056: маршрут с переездами рисуется по отрезкам — переезд дугой своего
+  // цвета, прогоны по своим срезам геометрии. Без переездов `null`: одна линия.
+  const legLines = useMemo(
+    () => routeLineSegments(route, routedGeometry, summary?.legs)?.map((segment) => ({
+      style: segment.style,
+      positions: lngLatPositions(segment.line),
+    })) ?? null,
+    [route, routedGeometry, summary?.legs],
+  );
   // Fail closed even if another caller passes the inconsistent server tuple:
   // a healthy label requires actual routed geometry, never marker fallback.
   const truthfulRoutingState =
@@ -559,7 +569,21 @@ export default function TripPlanRouteMap({
             lockedRef={fitLockedRef}
             useMap={useMap}
           />
-          {trackPositions.length > 1 ? (
+          {legLines ? legLines.map((segment, index) => (
+            <Polyline
+              // Отрезки идут в порядке маршрута; ключ по индексу их не переставляет.
+              key={`route-leg-${index}`}
+              positions={segment.positions}
+              pathOptions={segment.style === 'transfer'
+                ? { color: colors.infoDark, weight: 3, opacity: 0.9, dashArray: ROUTE_TRANSFER_DASH_ARRAY, className: 'metravel-route-transfer' }
+                : {
+                    color: segment.style === 'approximate' ? colors.warningDark : colors.primaryDark,
+                    weight: segment.style === 'approximate' ? 4 : 5,
+                    opacity: segment.style === 'approximate' ? 0.58 : 0.86,
+                    dashArray: segment.style === 'approximate' ? '8 8' : undefined,
+                  }}
+            />
+          )) : trackPositions.length > 1 ? (
             <Polyline
               positions={trackPositions}
               pathOptions={{

@@ -10,6 +10,7 @@ import type { ParsedRoutePoint } from '@/types/travelRoutes';
 import type {
   PlannedTrip,
   RouteGeometry,
+  RouteLeg,
   RoutePoint,
   RoutePointType,
   RouteSummary,
@@ -77,6 +78,19 @@ interface BeRouteSummary {
   stops_count?: number | string | null;
   provider?: string | null;
   updated_at?: string | null;
+  // #2055: переезды отдельно от прокладываемой части и отрезки сводки.
+  transfer_distance_km?: number | string | null;
+  legs?: Array<BeRouteLeg | null> | null;
+}
+
+interface BeRouteLeg {
+  from_order?: number | string | null;
+  to_order?: number | string | null;
+  mode?: string | null;
+  distance_m?: number | string | null;
+  duration_s?: number | string | null;
+  provider?: string | null;
+  geometry_slice?: unknown;
 }
 
 interface BeRoutingState {
@@ -384,17 +398,55 @@ const mapTripStartPoint = (dto: PlannedTripDto, name: string): RoutePoint | null
   };
 };
 
-const mapRouteSummary = (summary?: BeRouteSummary | null): RouteSummary | null =>
-  summary
-    ? {
-        distanceKm: toNum(summary.distance_km),
-        durationMin: Math.round(toNum(summary.duration_min)),
-        elevationGainM: Math.round(toNum(summary.elevation_gain_m)),
-        stopsCount: Math.round(toNum(summary.stops_count)),
-        provider: summary.provider ?? undefined,
-        updatedAt: summary.updated_at ?? null,
-      }
-    : null;
+/**
+ * #2056: отрезок сводки #2055. `from_order`/`to_order` — `order` точек бэкенда,
+ * UI живёт индексами `route`, поэтому перевод здесь. Отрезок с незнакомым
+ * способом, чужим `order` или битым срезом геометрии отбрасывается — карта
+ * тогда рисует маршрут по точкам, а не режет геометрию наугад.
+ */
+const mapRouteLeg = (leg: BeRouteLeg | null, indexByOrder: Map<number, number>): RouteLeg | null => {
+  if (!leg || typeof leg !== 'object') return null;
+  const fromIndex = indexByOrder.get(toNum(leg.from_order));
+  const toIndex = indexByOrder.get(toNum(leg.to_order));
+  const mode = leg.mode === 'route' ? 'route' : arrivalModeFromBe(leg.mode);
+  const slice = Array.isArray(leg.geometry_slice) ? leg.geometry_slice.map(Number) : [];
+  const [start, end] = slice;
+  if (fromIndex == null || toIndex == null || !mode) return null;
+  if (slice.length !== 2 || !Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start) return null;
+  const durationS = toOptionalNum(leg.duration_s);
+  return {
+    fromIndex,
+    toIndex,
+    mode,
+    distanceKm: toNum(leg.distance_m) / 1000,
+    durationMin: durationS == null ? null : Math.round(durationS / 60),
+    provider: typeof leg.provider === 'string' ? leg.provider : '',
+    geometrySlice: [start, end],
+  };
+};
+
+const mapRouteSummary = (
+  summary: BeRouteSummary | null | undefined,
+  points: BeRoutePoint[],
+): RouteSummary | null => {
+  if (!summary) return null;
+  const indexByOrder = new Map(points.map((point, index) => [toOptionalNum(point.order) ?? index + 1, index]));
+  return {
+    distanceKm: toNum(summary.distance_km),
+    durationMin: Math.round(toNum(summary.duration_min)),
+    elevationGainM: Math.round(toNum(summary.elevation_gain_m)),
+    stopsCount: Math.round(toNum(summary.stops_count)),
+    provider: summary.provider ?? undefined,
+    updatedAt: summary.updated_at ?? null,
+    // Сводка без #2055 этих полей не несёт — остаются `undefined`, как было.
+    transferDistanceKm: toOptionalNum(summary.transfer_distance_km) ?? undefined,
+    legs: Array.isArray(summary.legs)
+      ? summary.legs
+          .map((leg) => mapRouteLeg(leg, indexByOrder))
+          .filter((leg): leg is RouteLeg => leg !== null)
+      : undefined,
+  };
+};
 
 const mapRoutingState = (state?: BeRoutingState | null): RoutingState | null => {
   if (!state) return null;
@@ -494,7 +546,7 @@ export const mapTrip = (dto: PlannedTripDto): PlannedTrip => {
     // #1490: своей оценки расстояния/времени у клиента больше нет. Пока бэкенд
     // не посчитал сводку, её нет — конструктор в это время показывает цифры
     // живого превью от движка маршрутизации, а не выдуманные.
-    routeSummary: mapRouteSummary(dto.route_summary),
+    routeSummary: mapRouteSummary(dto.route_summary, points),
     routingState: mapRoutingState(dto.routing_state),
     participants,
     coverUrl: dto.cover_url ?? dto.cover ?? dto.preview_image_url ?? null,

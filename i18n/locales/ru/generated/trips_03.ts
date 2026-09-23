@@ -77,4 +77,7 @@ export const tripsGenerated3 = {
   "components.trips.planning.TripPlanFormatToolbar.bold": "Жирный",
   "components.trips.planning.TripPlanFormatToolbar.italic": "Курсив",
   "components.trips.planning.TripPlanFormatToolbar.hint": "Оформление: ## заголовок, - список, 1. нумерованный список, **жирный**, _курсив_",
+  "components.trips.planning.arrivalMode.label": "Как добираюсь сюда",
+  "components.trips.planning.arrivalMode.inherit": "Как вся поездка",
+  "components.trips.planning.transfersLine": "Переезды {{value}}",
 } as const

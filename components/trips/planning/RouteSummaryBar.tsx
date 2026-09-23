@@ -43,7 +43,7 @@ interface Props {
 }
 
 interface Chip {
-  id: 'distance' | 'duration' | 'elevation' | 'stops';
+  id: 'distance' | 'duration' | 'elevation' | 'transfers' | 'stops';
   icon: string;
   value: string;
   label: string;
@@ -68,15 +68,22 @@ function RouteSummaryBar({ summary, routingState, transport }: Props) {
   // (это дистанция, делённая на скорость), ни высот: плиток две.
   const directLine = isDirectLineSummary(summary);
   const stopsChip: Chip = { id: 'stops', icon: 'map-pin', value: String(summary.stopsCount), label: i18nT('trips:components.trips.planning.RouteSummaryBar.ostanovki_e5a7f959') };
+  // #2056: переезды — отдельная плитка; в дистанцию и время они не входят.
+  const transferKm = summary.transferDistanceKm ?? 0;
+  const transferChips: Chip[] = transferKm > 0
+    ? [{ id: 'transfers', icon: 'shuffle', value: formatDistance(transferKm), label: i18nT('trips:components.trips.planning.print.summary.transfers') }]
+    : [];
   const chips: Chip[] = directLine
     ? [
         { id: 'distance', icon: 'map', value: formatDirectDistanceValue(summary.distanceKm), label: i18nT('tripsStatic:plan.summary.directDistanceLabel') },
+        ...transferChips,
         stopsChip,
       ]
     : [
         { id: 'distance', icon: 'map', value: formatDistance(summary.distanceKm), label: i18nT('trips:components.trips.planning.RouteSummaryBar.distantsiya_5e3e6200') },
         { id: 'duration', icon: 'clock', value: formatDuration(summary.durationMin), label: i18nT('trips:components.trips.planning.RouteSummaryBar.v_puti_0359c071') },
         { id: 'elevation', icon: 'trending-up', value: formatElevation(summary.elevationGainM), label: i18nT('trips:components.trips.planning.RouteSummaryBar.nabor_304b67d6') },
+        ...transferChips,
         stopsChip,
       ];
 

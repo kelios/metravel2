@@ -4,12 +4,13 @@
 // Каждая строка из данных поездки проходит escapeHtml: название, описания и
 // брони пишет пользователь.
 import type { TripGearItem } from '@/api/plannedTripsGear'
-import type { OvernightBooking, RoutePointArrivalMode } from '@/api/plannedTripsTypes'
+import type { OvernightBooking } from '@/api/plannedTripsTypes'
 import { getActiveLocaleDefinition, translate as i18nT } from '@/i18n'
 import { formatDate, formatNumber } from '@/i18n/format'
 import { escapeHtml } from '@/utils/htmlUtils'
 import { parseTripDateTime } from '@/utils/tripDateTime'
 import {
+  ARRIVAL_MODE_LABEL,
   ROUTE_POINT_LABEL,
   TRANSPORT_LABEL,
   formatDirectDistanceValue,
@@ -68,14 +69,6 @@ const richText = (text: string | null | undefined): string => {
   return out.join('')
 }
 
-const ARRIVAL_LABEL: Record<RoutePointArrivalMode, string> = {
-  get train() { return i18nT('trips:components.trips.planning.print.arrival.train') },
-  get flight() { return i18nT('trips:components.trips.planning.print.arrival.flight') },
-  get bus() { return i18nT('trips:components.trips.planning.print.arrival.bus') },
-  get ferry() { return i18nT('trips:components.trips.planning.print.arrival.ferry') },
-  get transfer() { return i18nT('trips:components.trips.planning.print.arrival.transfer') },
-}
-
 const dayDateLabel = (date: string | null): string => {
   const parsed = parseTripDateTime(date)
   return parsed ? formatDate(parsed.value, { weekday: 'short', day: 'numeric', month: 'long' }) : ''
@@ -110,8 +103,8 @@ const pointHtml = (item: TripPlanPrintPoint): string => {
   const arrivalHtml = arrival
     ? `<div class="arrival">${esc(
         arrival.distanceKm != null
-          ? i18nT('trips:components.trips.planning.print.arrivalDistance', { mode: ARRIVAL_LABEL[arrival.mode], distance: formatDistance(arrival.distanceKm) })
-          : ARRIVAL_LABEL[arrival.mode],
+          ? i18nT('trips:components.trips.planning.print.arrivalDistance', { mode: ARRIVAL_MODE_LABEL[arrival.mode], distance: formatDistance(arrival.distanceKm) })
+          : ARRIVAL_MODE_LABEL[arrival.mode],
       )}</div>`
     : ''
   return `${arrivalHtml}<li class="point point-${esc(point.type)}">

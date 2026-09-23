@@ -2,9 +2,9 @@
 // Черновик точки маршрута: состояние формы добавления, состояние формы правки и
 // все переходы между ними. Вынесено из RouteBuilder.tsx (#1825) дословно —
 // ref'ы автоподстановки, зеркало имени и порядок вызовов setState те же самые.
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 
-import { type RoutePoint, type RoutePointType } from '@/api/plannedTrips';
+import { type RoutePoint, type RoutePointArrivalMode, type RoutePointType } from '@/api/plannedTrips';
 import {
   addressPointName,
   coordinatesFromFields,
@@ -21,6 +21,7 @@ import { isOvernightPoint } from '@/utils/overnightBooking';
 import { parseRouteDayDraft, pointDayNumber } from '@/utils/routePointDay';
 import { trackRoutePointAdded } from '@/utils/tripAnalytics';
 import { translate as i18nT } from '@/i18n'
+import type { RouteArrivalDraft } from './RouteArrivalModeField';
 
 export function useRoutePointDraft({
   tripId,
@@ -49,6 +50,8 @@ export function useRoutePointDraft({
     EMPTY_OVERNIGHT_BOOKING_DRAFT,
   );
   const [editDayNumber, setEditDayNumber] = useState('');
+  // #2056: способ прибытия правимой точки; `null` — как вся поездка.
+  const [editArrivalMode, setEditArrivalMode] = useState<RoutePointArrivalMode | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   // #1782: повторный выбор адреса обязан переписать то, что подставил сам поиск,
   // и не тронуть то, что набрал пользователь. Ref держит последнее записанное
@@ -109,6 +112,7 @@ export function useRoutePointDraft({
     setEditBooking(overnightBookingDraft(point));
     const day = pointDayNumber(point);
     setEditDayNumber(day != null ? String(day) : '');
+    setEditArrivalMode(point.arrivalMode ?? null);
     setEditError(null);
     editAddressAutofillNameRef.current = '';
   }, []);
@@ -143,6 +147,12 @@ export function useRoutePointDraft({
     setEditDayNumber(value);
     setEditError(null);
   }, []);
+
+  // Значение и запись одним пропсом: форма правки и так несёт полтора десятка.
+  const editArrival = useMemo<RouteArrivalDraft>(
+    () => ({ value: editArrivalMode, onChange: setEditArrivalMode }),
+    [editArrivalMode],
+  );
 
   /**
    * #1843: бронь для сохраняемой точки. Тип решает всё: у не-ночёвки поля
@@ -198,6 +208,7 @@ export function useRoutePointDraft({
       placeId: nextType === 'place' ? current.placeId : null,
       booking,
       dayNumber,
+      arrivalMode: editArrivalMode,
     };
     return next;
   };
@@ -251,6 +262,7 @@ export function useRoutePointDraft({
         placeId: nextType === 'place' ? current.placeId : null,
         booking,
         dayNumber,
+        arrivalMode: editArrivalMode,
       };
       return next;
     });
@@ -288,6 +300,7 @@ export function useRoutePointDraft({
       setEditLat(formatCoordinateInput(lat));
       setEditLng(formatCoordinateInput(lng));
       setEditDayNumber('');
+      setEditArrivalMode(null);
       // Новая точка с карты — не ночёвка, и бронь предыдущей правки ей не
       // принадлежит: без сброса первый же переключатель типа показал бы чужой
       // адрес брони как свой.
@@ -383,6 +396,7 @@ export function useRoutePointDraft({
     editDescription,
     editBooking,
     editDayNumber,
+    editArrival,
     editError,
     setNewType,
     setNewName,

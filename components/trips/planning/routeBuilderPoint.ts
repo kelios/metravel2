@@ -7,6 +7,7 @@ import { type RoutePoint, type RoutePointType } from '@/api/plannedTrips';
 import { ROUTE_POINT_COORDINATE_PRECISION } from '@/components/trips/planning/tripPlanRouteMap.types';
 import { pointOvernightBooking } from '@/utils/overnightBooking';
 import { pointDayNumber } from '@/utils/routePointDay';
+import { arrivalModePayload } from '@/utils/routePointArrivalMode';
 import { translate as i18nT } from '@/i18n'
 
 export const POINT_TYPES: RoutePointType[] = ['place', 'custom', 'rest', 'overnight'];
@@ -122,9 +123,12 @@ const bookingSignature = (point: RoutePoint): string => {
   ].join('~');
 };
 
+// #2056: способ прибытия — тоже несохранённая правка. В подпись идёт ровно то,
+// что уедет в PUT (`arrivalModePayload`): у первой точки это всегда `''`, поэтому
+// перестановка, сделавшая точку первой, меняет подпись так же, как её PUT.
 export const routeSignature = (route: RoutePoint[]): string =>
   route
-    .map((point) => {
+    .map((point, index) => {
       const coords = point.coordinates
         ? `${formatCoordinateInput(point.coordinates[0])},${formatCoordinateInput(point.coordinates[1])}`
         : '';
@@ -137,6 +141,7 @@ export const routeSignature = (route: RoutePoint[]): string =>
         coords,
         bookingSignature(point),
         pointDayNumber(point) ?? '',
+        arrivalModePayload(point, index).arrival_mode,
       ].join('|');
     })
     .join('>');

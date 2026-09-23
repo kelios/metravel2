@@ -30,7 +30,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import RoutingStatus, { ROUTING_DIRECT_LINE } from '@/components/MapPage/RoutingStatus';
 import { translate as i18nT } from '@/i18n'
 import { isRouteApproximate, routingStateHint, routingStateRetryable } from './tripPlanFormatting';
-import TripRoutePreviewEngine from './TripRoutePreviewEngine';
+import TripRoutePreviewEngines from './TripRoutePreviewEngines';
 import TripPlanPrintButton from './print/TripPlanPrintButton';
 import {
   hasUsableRouteGeometry,
@@ -112,15 +112,9 @@ function TripRouteExportMenu({ trip }: Props) {
   const isWeb = Platform.OS === 'web';
   const shouldRender = shouldRenderTripRouteExportMenu(Platform.OS);
   const preview = routeDisplay.preview;
-  const repairEngine =
-    routeDisplay.repairingSavedRoute && preview.active && preview.transportMode ? (
-      <TripRoutePreviewEngine
-        key={preview.retryToken}
-        points={preview.points}
-        transportMode={preview.transportMode}
-        onResult={preview.handleResult}
-      />
-    ) : null;
+  const repairEngine = routeDisplay.repairingSavedRoute ? (
+    <TripRoutePreviewEngines preview={preview} />
+  ) : null;
   const repairStatus =
     routeDisplay.repairingSavedRoute && preview.transportMode ? (
       <RoutingStatus

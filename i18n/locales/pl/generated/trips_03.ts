@@ -77,4 +77,7 @@ export const tripsGenerated3 = {
   "components.trips.planning.TripPlanFormatToolbar.bold": "Pogrubienie",
   "components.trips.planning.TripPlanFormatToolbar.italic": "Kursywa",
   "components.trips.planning.TripPlanFormatToolbar.hint": "Formatowanie: ## nagłówek, - lista, 1. lista numerowana, **pogrubienie**, _kursywa_",
+  "components.trips.planning.arrivalMode.label": "Jak tu dotrę",
+  "components.trips.planning.arrivalMode.inherit": "Jak cała podróż",
+  "components.trips.planning.transfersLine": "Przejazdy {{value}}",
 } as const

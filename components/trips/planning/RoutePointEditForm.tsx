@@ -19,6 +19,7 @@ import { translate as i18nT } from '@/i18n';
 import { isOvernightPoint } from '@/utils/overnightBooking';
 import RouteOvernightFields from './RouteOvernightFields';
 import RouteDayField from './RouteDayField';
+import RouteArrivalModeField, { type RouteArrivalDraft } from './RouteArrivalModeField';
 import TripPlanFormatToolbar from './TripPlanFormatToolbar';
 import { useTripPlanTextFormatting } from './useTripPlanTextFormatting';
 import type { createStyles } from './RouteBuilder.styles';
@@ -45,6 +46,8 @@ interface Props {
   booking: OvernightBookingDraft;
   /** #1845: день похода строкой; пусто — точка без дня. */
   dayNumber: string;
+  /** #2056: способ прибытия. У первой точки поле не показывается. */
+  arrival: RouteArrivalDraft;
   /** Чипы уже занятых дней маршрута и следующего свободного. */
   dayChips: number[];
   error: string | null;
@@ -76,6 +79,7 @@ export default function RoutePointEditForm({
   description: editDescription,
   booking: editBooking,
   dayNumber: editDayNumber,
+  arrival,
   dayChips,
   error: editError,
   onTypeChange,
@@ -204,6 +208,9 @@ export default function RoutePointEditForm({
         chipDays={dayChips}
         onChange={onDayNumberChange}
       />
+      {editingIndex > 0 ? (
+        <RouteArrivalModeField styles={styles} colors={colors} draft={arrival} />
+      ) : null}
       {isOvernightPoint(editType) ? (
         <RouteOvernightFields
           styles={styles}

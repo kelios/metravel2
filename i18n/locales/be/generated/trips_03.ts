@@ -77,4 +77,7 @@ export const tripsGenerated3 = {
   "components.trips.planning.TripPlanFormatToolbar.bold": "Тоўсты",
   "components.trips.planning.TripPlanFormatToolbar.italic": "Курсіў",
   "components.trips.planning.TripPlanFormatToolbar.hint": "Афармленне: ## загаловак, - спіс, 1. нумараваны спіс, **тоўсты**, _курсіў_",
+  "components.trips.planning.arrivalMode.label": "Як дабіраюся сюды",
+  "components.trips.planning.arrivalMode.inherit": "Як уся паездка",
+  "components.trips.planning.transfersLine": "Пераезды {{value}}",
 } as const

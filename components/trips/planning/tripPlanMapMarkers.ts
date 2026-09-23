@@ -3,7 +3,10 @@
 // (`TripPlanRouteMarkers.tsx`, Leaflet DOM) и native (`TripPlanRouteMap.tsx` →
 // payload WebView). Модуль чистый: ни Leaflet, ни React, поэтому его читают обе
 // платформы и jest без моков.
-import type { NativeRoutePointMarkersPayload } from '@/components/MapPage/Map/nativeRoutePointMarkersScript';
+import type {
+  NativeRouteLineSegment,
+  NativeRoutePointMarkersPayload,
+} from '@/components/MapPage/Map/nativeRoutePointMarkersScript';
 // #2071: тот же источник параметров кластеризации, что у web-карты
 // конструктора (`TripPlanRouteMarkers.tsx`) — числа не копируются в native.
 import { MAP_CLUSTER_GROUP_OPTIONS } from '@/components/MapPage/Map/mapClusterGroup';
@@ -16,6 +19,7 @@ import {
   numberedDropFontSize,
 } from '@/utils/markerSvg';
 import { FOCUS_POINT_ZOOM } from './tripPlanRouteMap.types';
+import { ROUTE_TRANSFER_DASH_ARRAY } from './tripRouteLegs';
 
 /**
  * Номер маркера = номер строки в списке точек: `RoutePointRow` печатает
@@ -154,9 +158,21 @@ export type NativeRoutePointMarkers = NativeRoutePointMarkersPayload;
 export function nativeRoutePointMarkers(
   labels: string[],
   colors: MarkerColors,
-  options?: { activeIndex?: number | null },
+  options?: {
+    activeIndex?: number | null;
+    /** #2056: отрезки линии маршрута с переездами (`routeLineSegments`) и цвет дуги. */
+    lines?: { segments: NativeRouteLineSegment[]; transferColor: string } | null;
+  },
 ): NativeRoutePointMarkers {
+  const lines = options?.lines;
   return {
+    ...(lines
+      ? {
+          lineSegments: lines.segments,
+          transferColor: lines.transferColor,
+          transferDashArray: ROUTE_TRANSFER_DASH_ARRAY,
+        }
+      : {}),
     labels,
     icon: routeMarkerIconTemplate(colors, false),
     activeIcon: routeMarkerIconTemplate(colors, true),

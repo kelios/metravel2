@@ -27,9 +27,9 @@ import {
 } from '@/components/trips/planning/tripRouteExport';
 import RoutingStatus, { ROUTING_DIRECT_LINE } from '@/components/MapPage/RoutingStatus';
 import RouteStepBlock from '@/components/MapPage/RouteStepBlock';
-import TripRoutePreviewEngine from '@/components/trips/planning/TripRoutePreviewEngine';
+import TripRoutePreviewEngines from '@/components/trips/planning/TripRoutePreviewEngines';
 import {
-  previewPointsKey,
+  previewRouteShapeKey,
   previewStopsCount,
   routablePreviewPoints,
 } from '@/components/trips/planning/tripRoutePreview';
@@ -181,6 +181,7 @@ function RouteBuilder({
     editDescription,
     editBooking,
     editDayNumber,
+    editArrival,
     editError,
     setNewType,
     setNewName,
@@ -242,11 +243,11 @@ function RouteBuilder({
   // держатся за координатной сигнатурой, а не за полной — иначе опечатка в
   // названии снимала бы с карты сохранённую дорогу и жгла запрос к ORS (#1490).
   const savedRouteShape = useMemo(
-    () => previewPointsKey(routablePreviewPoints(trip.route), trip.transport),
+    () => previewRouteShapeKey(trip.route, trip.transport),
     [trip.route, trip.transport],
   );
   const routeShapeMatchesSaved = useMemo(
-    () => previewPointsKey(routablePreviewPoints(route), trip.transport) === savedRouteShape,
+    () => previewRouteShapeKey(route, trip.transport) === savedRouteShape,
     [route, savedRouteShape, trip.transport],
   );
   const routableSavedPoints = useMemo(
@@ -348,16 +349,8 @@ function RouteBuilder({
     </View>
   ) : null;
 
-  // Движок живёт под ключом retryToken: у useRouting нет входа «построй заново»,
-  // а деградированный ответ он намеренно не кэширует (ROUTING-ORS-001).
-  const previewEngine = preview.active && preview.transportMode ? (
-    <TripRoutePreviewEngine
-      key={preview.retryToken}
-      points={preview.points}
-      transportMode={preview.transportMode}
-      onResult={preview.handleResult}
-    />
-  ) : null;
+  // Движок на каждый прогон, под ключом retryToken (#2056, ROUTING-ORS-001).
+  const previewEngine = <TripRoutePreviewEngines preview={preview} />;
 
   // Прогресс построения и баннер «Прямая линия» — общий компонент /map;
   // «Повторить» в нём только у временной причины (#2057 макет §2). distance не передаём: цифры печатает RouteSummaryBar, дублировать их
@@ -649,6 +642,7 @@ function RouteBuilder({
       description={editDescription}
       booking={editBooking}
       dayNumber={editDayNumber}
+      arrival={editArrival}
       dayChips={routeDayChipValues(route)}
       error={editError}
       onTypeChange={setEditType}

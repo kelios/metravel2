@@ -4,6 +4,7 @@
 
 import type {
   RoutingState,
+  RoutePointArrivalMode,
   RoutePointType,
   RouteSummary,
   TripBikeType,
@@ -49,6 +50,36 @@ export const TRANSPORT_ICON_NAME: Record<TripTransport, string> = {
   public: 'directions-bus',
   mixed: 'directions-transit',
 };
+
+/**
+ * #2056: способ прибытия к точке. Подписи общие с печатной версией (#2068):
+ * «Перелёт · 431 км» одинаково в списке, в итоге и на бумаге. У Feather нет
+ * поезда, автобуса и самолёта — берутся ближайшие глифы, эмодзи запрещены.
+ */
+export const ARRIVAL_MODE_LABEL: Record<RoutePointArrivalMode, string> = {
+  get train() { return i18nT('trips:components.trips.planning.print.arrival.train') },
+  get flight() { return i18nT('trips:components.trips.planning.print.arrival.flight') },
+  get bus() { return i18nT('trips:components.trips.planning.print.arrival.bus') },
+  get ferry() { return i18nT('trips:components.trips.planning.print.arrival.ferry') },
+  get transfer() { return i18nT('trips:components.trips.planning.print.arrival.transfer') },
+};
+
+export const ARRIVAL_MODE_ICON_NAME: Record<RoutePointArrivalMode, string> = {
+  train: 'git-commit',
+  flight: 'send',
+  bus: 'truck',
+  ferry: 'anchor',
+  transfer: 'shuffle',
+};
+
+/** «Перелёт · 431 км» — плашка переезда в списке точек. */
+export function formatArrivalLeg(mode: RoutePointArrivalMode, distanceKm: number): string {
+  if (distanceKm <= 0) return ARRIVAL_MODE_LABEL[mode];
+  return i18nT('trips:components.trips.planning.print.arrivalDistance', {
+    mode: ARRIVAL_MODE_LABEL[mode],
+    distance: formatDistance(distanceKm),
+  });
+}
 
 export const VISIBILITY_LABEL: Record<TripVisibility, string> = {
   get public() { return i18nT('tripsStatic:plan.visibility.public') },
@@ -208,16 +239,27 @@ export function formatDirectDistanceValue(km: number): string {
   return i18nT('tripsStatic:plan.summary.directDistanceValue', { value: formatDistance(km) });
 }
 
+/** #2056: «Переезды 2 240 км» — сумма переездов, отдельно от прокладываемой части. */
+export function formatTransfersLine(km: number): string {
+  return i18nT('trips:components.trips.planning.transfersLine', { value: formatDistance(km) });
+}
+
 /**
  * Дистанция и время одной строкой — шапка карты и строка итога под картой:
  * «252 км · 4 ч 12 мин». У прямой линии — «≈ 2 429 км по прямой», без времени.
+ * #2056: переезды в дистанцию и время не входят (их не считает и бэкенд) и
+ * дописываются отдельно: «189 км · 41 ч · Переезды 2 240 км»; у поездки из
+ * одних переездов строка — только они.
  */
 export function routeMetricsLine(summary: RouteSummary): string {
-  if (!isDirectLineSummary(summary)) {
-    return `${formatDistance(summary.distanceKm)} · ${formatDuration(summary.durationMin)}`;
-  }
-  if (summary.distanceKm <= 0) return '—';
-  return i18nT('tripsStatic:plan.summary.directDistance', { value: formatDistance(summary.distanceKm) });
+  const transferKm = summary.transferDistanceKm ?? 0;
+  if (transferKm > 0 && summary.distanceKm <= 0) return formatTransfersLine(transferKm);
+  const routed = !isDirectLineSummary(summary)
+    ? `${formatDistance(summary.distanceKm)} · ${formatDuration(summary.durationMin)}`
+    : summary.distanceKm <= 0
+      ? '—'
+      : i18nT('tripsStatic:plan.summary.directDistance', { value: formatDistance(summary.distanceKm) });
+  return transferKm > 0 ? `${routed} · ${formatTransfersLine(transferKm)}` : routed;
 }
 
 /** Краткая сводка маршрута строкой: «252 км · 4 ч 12 мин · 3 остановки». */

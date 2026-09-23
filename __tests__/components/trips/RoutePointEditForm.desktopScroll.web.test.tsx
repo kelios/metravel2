@@ -47,6 +47,7 @@ const renderForm = (isMapFirst: boolean, editingIndex = 0) =>
       description=""
       booking={EMPTY_OVERNIGHT_BOOKING_DRAFT}
       dayNumber=""
+      arrival={{ value: null, onChange: jest.fn() }}
       dayChips={[]}
       error={null}
       onTypeChange={jest.fn()}

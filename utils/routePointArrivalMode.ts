@@ -5,7 +5,8 @@
 // ответа, и PUT маршрута, а слой `api/` не импортирует `components/`.
 import type { RoutePoint, RoutePointArrivalMode } from '@/api/plannedTripsTypes'
 
-const ARRIVAL_MODES: readonly RoutePointArrivalMode[] = ['train', 'flight', 'bus', 'ferry', 'transfer']
+/** Порядок — тот же, что у выбора «Как добираюсь сюда» в форме точки (#2056). */
+export const ARRIVAL_MODES: readonly RoutePointArrivalMode[] = ['train', 'flight', 'bus', 'ferry', 'transfer']
 
 /**
  * Пустая строка бэкенда — «как вся поездка», в домене это `null`. Незнакомое

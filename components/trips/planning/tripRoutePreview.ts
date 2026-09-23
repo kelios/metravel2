@@ -12,6 +12,7 @@ import type { UseMapRoutingResult } from '@/components/map-core/useMapRouting';
 import type {
   RoutableTripTransport,
   RouteGeometry,
+  RouteLeg,
   RoutePoint,
   RouteSummary,
   RoutingState,
@@ -25,6 +26,7 @@ import {
   PREVIEW_PROVIDER,
   PREVIEW_SCHEMATIC_PROVIDER,
 } from './tripRoutingProviders';
+import { hasTransferSegment, splitRouteSegments, type RouteSegment } from './tripRouteLegs';
 
 /** Провайдеры цепочки строят маршрут только для этих режимов. */
 export const ROUTE_TRANSPORTS: RoutableTripTransport[] = ['car', 'foot', 'bike'];
@@ -61,12 +63,34 @@ export const hasUsableRouteGeometry = (
       Number.isFinite(coordinates[1]),
   );
 
+const pointsFingerprint = (points: Array<[number, number]>): string =>
+  points.map(([lng, lat]) => `${lng.toFixed(6)},${lat.toFixed(6)}`).join('|');
+
 /** Стабильный ключ набора точек: по нему решаем, устарел ли ответ движка. */
 export const previewPointsKey = (
   points: Array<[number, number]>,
   transport: TripTransport,
-): string =>
-  `${transport}:${points.map(([lng, lat]) => `${lng.toFixed(6)},${lat.toFixed(6)}`).join('|')}`;
+): string => `${transport}:${pointsFingerprint(points)}`;
+
+/**
+ * #2056: ключ формы маршрута — то, от чего зависят геометрия и цифры. Без
+ * переездов он совпадает с `previewPointsKey` всех точек. С переездами в нём
+ * прогоны и концы переездов, но не способ: «поезд → самолёт» не меняет ни
+ * линии, ни итога, и сохранённую дорогу из-за этого выбрасывать незачем, а
+ * новый или снятый переезд меняет прогоны — и отдаёт показ превью.
+ */
+export const previewRouteShapeKey = (
+  route: RoutePoint[],
+  transport: TripTransport,
+  segments: RouteSegment[] = splitRouteSegments(route),
+): string => {
+  if (!hasTransferSegment(segments)) return previewPointsKey(routablePreviewPoints(route), transport);
+  const parts = segments.map((segment) =>
+    segment.kind === 'route'
+      ? pointsFingerprint(segment.points)
+      : `~${segment.line ? pointsFingerprint(segment.line) : ''}`);
+  return `${transport}:${parts.join('#')}`;
+};
 
 /**
  * Движок уже что-то ответил. Свежесмонтированный `useRouting` секунду живёт
@@ -206,3 +230,129 @@ export const previewElevation = (
   const elevationProfile = buildElevationProfile(linePoints);
   return elevationProfile.length >= 2 ? { linePoints, elevationProfile } : null;
 };
+
+/** #2056: прогоны превью — вход движков, по одному на прогон; без переездов прогон один. */
+export interface PreviewRunPlan {
+  segments: RouteSegment[];
+  runs: Array<Array<[number, number]>>;
+}
+
+export const previewRunPlan = (route: RoutePoint[]): PreviewRunPlan => {
+  const segments = splitRouteSegments(route);
+  return {
+    segments,
+    runs: segments.flatMap((segment) => (segment.kind === 'route' ? [segment.points] : [])),
+  };
+};
+
+export interface PreviewRunsView {
+  loading: boolean;
+  degraded: boolean;
+  geometry: RouteGeometry | null;
+  summary: RouteSummary | null;
+  routingState: RoutingState | null;
+  elevation: ParsedRoutePreview | null;
+}
+
+const finiteOrZero = (value: number | null | undefined): number =>
+  Number.isFinite(value) ? Number(value) : 0;
+
+/**
+ * #2056: ответы движков прогонов → одна тройка экрана. Маршрут без переездов
+ * отдаётся прежними функциями одного ответа — поведение до #2056 не меняется.
+ *
+ * С переездами тройка собирается так же, как бэкенд склеивает сводку
+ * (`combine_route_legs`): геометрия прогонов подряд (деградировавший прогон —
+ * своими точками по прямой, соседние остаются проложенными), между ними пара
+ * точек переезда; отрезки со срезами геометрии; расстояние и время — только по
+ * прогонам, переезды — отдельной суммой. Профиля высот нет: по склеенной линии
+ * перелёт в 431 км рисовался бы рельефом.
+ */
+export function combinePreviewRuns(
+  plan: PreviewRunPlan,
+  results: ReadonlyArray<UseMapRoutingResult | null | undefined>,
+  route: RoutePoint[],
+): PreviewRunsView {
+  if (!hasTransferSegment(plan.segments)) {
+    const result = results[0] ?? null;
+    return {
+      loading: !hasEngineAnswer(result) || Boolean(result?.loading),
+      degraded: isPreviewDegraded(result),
+      geometry: previewGeometry(result),
+      summary: previewSummary(result, route),
+      routingState: previewRoutingState(result),
+      elevation: previewElevation(result),
+    };
+  }
+
+  const runResults = plan.runs.map((_, index) => results[index] ?? null);
+  const loading = runResults.some((result) => !hasEngineAnswer(result) || Boolean(result?.loading));
+  const degradedResult = runResults.find(isPreviewDegraded) ?? null;
+  if (loading) {
+    return { loading, degraded: Boolean(degradedResult), geometry: null, summary: null, routingState: null, elevation: null };
+  }
+
+  const geometry: RouteGeometry = [];
+  const legs: RouteLeg[] = [];
+  let runIndex = 0;
+  let distanceM = 0;
+  let durationS = 0;
+  let elevationGainM = 0;
+  let transferDistanceKm = 0;
+  for (const segment of plan.segments) {
+    const start = geometry.length;
+    if (segment.kind === 'route') {
+      const result = runResults[runIndex] as UseMapRoutingResult;
+      runIndex += 1;
+      const routed = previewGeometry(result);
+      geometry.push(...(routed ?? segment.points));
+      distanceM += finiteOrZero(result.distance);
+      durationS += finiteOrZero(result.duration);
+      elevationGainM += finiteOrZero(result.elevationGain);
+      legs.push({
+        fromIndex: segment.fromIndex,
+        toIndex: segment.toIndex,
+        mode: 'route',
+        distanceKm: finiteOrZero(result.distance) / 1000,
+        durationMin: Math.round(finiteOrZero(result.duration) / 60),
+        provider: routed ? PREVIEW_PROVIDER : PREVIEW_DIRECT_PROVIDER,
+        geometrySlice: [start, start + (routed ?? segment.points).length],
+      });
+      continue;
+    }
+    if (segment.line) geometry.push(...segment.line);
+    transferDistanceKm += segment.distanceKm;
+    legs.push({
+      fromIndex: segment.fromIndex,
+      toIndex: segment.toIndex,
+      mode: segment.mode,
+      distanceKm: segment.distanceKm,
+      durationMin: null,
+      provider: 'transfer',
+      geometrySlice: [start, geometry.length],
+    });
+  }
+
+  const distanceKm = Math.round((distanceM / 1000) * 10) / 10;
+  return {
+    loading: false,
+    degraded: Boolean(degradedResult),
+    geometry: hasUsableRouteGeometry(geometry) ? geometry : null,
+    summary: distanceKm > 0 || transferDistanceKm > 0
+      ? {
+          distanceKm,
+          durationMin: Math.round(durationS / 60),
+          elevationGainM: degradedResult ? 0 : elevationGainM,
+          stopsCount: previewStopsCount(route),
+          provider: degradedResult ? PREVIEW_DIRECT_PROVIDER : PREVIEW_PROVIDER,
+          updatedAt: null,
+          transferDistanceKm,
+          legs,
+        }
+      : null,
+    routingState: degradedResult
+      ? previewRoutingState(degradedResult)
+      : { provider: PREVIEW_PROVIDER, isOptimal: true, fallbackReason: null, warnings: [] },
+    elevation: null,
+  };
+}

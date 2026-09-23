@@ -62,12 +62,30 @@ export interface RoutePoint {
   /**
    * Как добираются до точки от предыдущей (#2055): `null` — как вся поездка.
    * Необязательное по той же причине, что день: литералы шаблона и импорта его
-   * не несут. Конструктор поле пока не редактирует, только сохраняет (#2056).
+   * не несут. Правится полем «Как добираюсь сюда» формы точки (#2056).
    */
   arrivalMode?: RoutePointArrivalMode | null
 }
 
 export type RoutePointArrivalMode = 'train' | 'flight' | 'bus' | 'ferry' | 'transfer'
+
+/**
+ * Отрезок сводки маршрута (#2055 `route_summary.legs[]`, #2056): прогон,
+ * проложенный движком (`route`), или переезд. Индексы — позиции в `route`
+ * (адаптер переводит `from_order`/`to_order` бэкенда).
+ */
+export interface RouteLeg {
+  fromIndex: number
+  toIndex: number
+  mode: 'route' | RoutePointArrivalMode
+  distanceKm: number
+  /** У переезда времени нет (`duration_s: null`). */
+  durationMin: number | null
+  /** `ors`/`preview` — проложен, `direct` — прогон по прямой, `transfer` — переезд. */
+  provider: string
+  /** Полуинтервал `[start, end)` в `routeGeometry`. */
+  geometrySlice: [number, number]
+}
 
 export interface RouteSummary {
   distanceKm: number
@@ -76,6 +94,12 @@ export interface RouteSummary {
   stopsCount: number
   provider?: 'backend' | 'fallback' | 'ors' | 'direct' | string
   updatedAt?: string | null
+  /**
+   * #2056: переезды считаются отдельно и в `distanceKm`/`durationMin` не входят.
+   * Необязательные: сводка без #2055 и литералы тестов их не несут.
+   */
+  transferDistanceKm?: number
+  legs?: RouteLeg[]
 }
 
 export type RouteGeometry = [number, number][]

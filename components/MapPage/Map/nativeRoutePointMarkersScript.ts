@@ -45,6 +45,20 @@ export type NativeRoutePointMarkersPayload = {
     maxClusterRadius: number;
     disableClusteringAtZoom: number;
   } | null;
+  /**
+   * #2056: линия маршрута планировщика по отрезкам — только у маршрута с
+   * переездами; без поля WebView рисует одну линию `routeLine`, как раньше.
+   * На входе пары [lng, lat], `normalizeRoutePointsWithMarkers` переводит их в
+   * [lat, lng] WebView. Переезд — пунктирная дуга `transferColor`.
+   */
+  lineSegments?: NativeRouteLineSegment[] | null;
+  transferColor?: string;
+  transferDashArray?: string;
+};
+
+export type NativeRouteLineSegment = {
+  style: 'route' | 'approximate' | 'transfer';
+  line: Array<[number, number]>;
 };
 
 /**
@@ -82,7 +96,23 @@ export function normalizeRoutePointsWithMarkers(
       activeIndex = latLngs.length - 1;
     }
   });
-  return { latLngs, sourceIndices, markers: markers ? { ...markers, labels, activeIndex } : null };
+  // #2056: линии отрезков — в ту же систему координат WebView, битые пары
+  // отбрасываются так же, как у точек; линия короче двух пар не рисуется.
+  const lineSegments = markers?.lineSegments
+    ?.map((segment) => ({
+      style: segment.style,
+      line: segment.line
+        .map(normalizeRoutePoint)
+        .filter((point): point is [number, number] => Boolean(point)),
+    }))
+    .filter((segment) => segment.line.length >= 2);
+  return {
+    latLngs,
+    sourceIndices,
+    markers: markers
+      ? { ...markers, labels, activeIndex, ...(lineSegments ? { lineSegments } : {}) }
+      : null,
+  };
 }
 
 /**
@@ -106,6 +136,11 @@ export function normalizeRoutePointsWithMarkers(
  *   точка (`isActive`) берёт более крупный `spec.activeIcon`, если он есть —
  *   как на web (`TripPlanRouteMarkers.tsx`, активная точка крупнее и вне
  *   кластера). Без номера — прежний кружок маршрута /map.
+ * - `drawRouteLines` (#2056) — линия маршрута. Без `spec.lineSegments` — одна
+ *   полилиния `routeLine` с прежним стилем. С ними рисуются отрезки: прогон,
+ *   прогон по прямой (стиль приблизительной линии) и переезд пунктирной дугой
+ *   `spec.transferColor`; полилиния всего `routeLine` на карту не кладётся, но
+ *   возвращается — по её границам вызывающий подгоняет кадр, как раньше.
  */
 export const NATIVE_ROUTE_POINT_MARKERS_SCRIPT = `        const ROUTE_POINT_WEIGHT = 3;
         function makeRoutePointIcon(radius, fillColor) {
@@ -153,4 +188,27 @@ export const NATIVE_ROUTE_POINT_MARKERS_SCRIPT = `        const ROUTE_POINT_WEIG
             iconSize: icon.size,
             iconAnchor: icon.anchor
           });
+        }
+        function drawRouteLines(routeLine, approximate, spec, layer) {
+          function lineStyle(style) {
+            var warn = style === 'approximate';
+            var transfer = style === 'transfer';
+            return {
+              color: transfer ? spec.transferColor : (warn ? ROUTE_WARNING : ROUTE_COLOR),
+              weight: warn ? 4 : (transfer ? 3 : 5),
+              opacity: warn ? 0.58 : 0.9,
+              dashArray: transfer ? spec.transferDashArray : (warn ? '8 8' : null),
+              lineCap: 'round',
+              lineJoin: 'round'
+            };
+          }
+          var outline = L.polyline(routeLine, lineStyle(approximate ? 'approximate' : 'route'));
+          var segments = spec && Array.isArray(spec.lineSegments) ? spec.lineSegments : [];
+          if (!segments.length) return outline.addTo(layer);
+          segments.forEach(function(segment) {
+            if (segment && Array.isArray(segment.line) && segment.line.length >= 2) {
+              L.polyline(segment.line, lineStyle(segment.style)).addTo(layer);
+            }
+          });
+          return outline;
         }`;

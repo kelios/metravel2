@@ -585,14 +585,8 @@ ${ESCAPE_HTML_FN_SCRIPT}
               const routeGeometryChanged = map.__metravelRouteFitKey !== routeFitKey;
               map.__metravelRouteFitKey = routeFitKey;
               if (routeLine.length >= 2) {
-                const routePolyline = L.polyline(routeLine, {
-                  color: routeApproximate ? ROUTE_WARNING : ROUTE_COLOR,
-                  weight: routeApproximate ? 4 : 5,
-                  opacity: routeApproximate ? 0.58 : 0.9,
-                  dashArray: routeApproximate ? '8 8' : null,
-                  lineCap: 'round',
-                  lineJoin: 'round'
-                }).addTo(routeLayer);
+                // #2056 — маршрут с переездами рисуется по отрезкам (drawRouteLines), кадр — по всей routeLine.
+                const routePolyline = drawRouteLines(routeLine, routeApproximate, routePointMarkers, routeLayer);
                 routeLine.forEach(function(point) {
                   if (Array.isArray(point) && isFinite(point[0]) && isFinite(point[1])) {
                     routeBounds.extend(point);

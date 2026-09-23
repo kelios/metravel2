@@ -77,4 +77,7 @@ export const tripsGenerated3 = {
   "components.trips.planning.TripPlanFormatToolbar.bold": "Bold",
   "components.trips.planning.TripPlanFormatToolbar.italic": "Italic",
   "components.trips.planning.TripPlanFormatToolbar.hint": "Formatting: ## heading, - list, 1. numbered list, **bold**, _italic_",
+  "components.trips.planning.arrivalMode.label": "How I get here",
+  "components.trips.planning.arrivalMode.inherit": "Same as the trip",
+  "components.trips.planning.transfersLine": "Transfers {{value}}",
 } as const
