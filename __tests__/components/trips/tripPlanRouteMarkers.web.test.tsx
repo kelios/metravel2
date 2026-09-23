@@ -8,7 +8,7 @@
  * кластеров, а не прямо на карту.
  */
 import React from 'react'
-import { render, waitFor } from '@testing-library/react-native'
+import { act, render, waitFor } from '@testing-library/react-native'
 
 import type { RoutePoint } from '@/api/plannedTrips'
 import { MAP_CLUSTER_GROUP_OPTIONS } from '@/components/MapPage/Map/mapClusterGroup'
@@ -79,11 +79,10 @@ const route: RoutePoint[] = Array.from({ length: 20 }, (_, index) => ({
 
 const colors = getThemedColors(false)
 
-const renderMarkers = (
+const markersTree = (
   env: ReturnType<typeof setup>,
   props: Partial<React.ComponentProps<typeof TripPlanRouteMarkers>> = {},
-) =>
-  render(
+) => (
     <core.LeafletContext.Provider value={{ map: env.map }}>
       <TripPlanRouteMarkers
         L={env.L as any}
@@ -97,8 +96,13 @@ const renderMarkers = (
         onEditPoint={jest.fn()}
         {...props}
       />
-    </core.LeafletContext.Provider>,
+    </core.LeafletContext.Provider>
   )
+
+const renderMarkers = (
+  env: ReturnType<typeof setup>,
+  props: Partial<React.ComponentProps<typeof TripPlanRouteMarkers>> = {},
+) => render(markersTree(env, props))
 
 const lastByIndex = (captured: Captured[]) => {
   const byKey = new Map<string, Captured>()
@@ -118,6 +122,9 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
         ...MAP_CLUSTER_GROUP_OPTIONS,
         // С зума фокуса точки/дня каждая точка — свой маркер (его можно тянуть).
         disableClusteringAtZoom: FOCUS_POINT_ZOOM,
+        // Маркеры сразу на своих местах: без 300 мс полёта от центра кластера,
+        // в который хват брал соседний маркер.
+        animate: false,
         iconCreateFunction: expect.any(Function),
       }),
     )
@@ -162,6 +169,52 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
     expect(second.props.draggable).toBe(true)
     second.props.eventHandlers.dragend({})
     expect(dragEnd).toHaveBeenCalledWith(1)
+  })
+
+  it('брошенный маркер не уходит в кластер к соседу, пока точка стоит на месте дропа (#1781)', async () => {
+    const env = setup()
+    const dragEnd = jest.fn()
+    const props = { onDragEnd: (index: number) => () => dragEnd(index) }
+    const utils = renderMarkers(env, props)
+    await waitFor(() => expect(lastByIndex(env.captured)).toHaveLength(20))
+    const byTitle = (title: string) => lastByIndex(env.captured).find((entry) => entry.props.title === title)
+
+    // Отпустили рядом с третьей точкой; `RouteBuilder` округляет до 6 знаков.
+    const drop = { lat: 47.5198764, lng: 12.0201234 }
+    act(() => {
+      byTitle('2. Точка 2')?.props.eventHandlers.dragend({ target: { getLatLng: () => drop } })
+    })
+    expect(dragEnd).toHaveBeenCalledWith(1)
+    const moved = route.map((point, index) =>
+      index === 1 ? { ...point, coordinates: [12.020123, 47.519876] as [number, number] } : point,
+    )
+    utils.rerender(markersTree(env, { ...props, route: moved }))
+
+    expect(byTitle('2. Точка 2')?.container).toBeUndefined()
+    // Не активная: обычная капля без подъёма над соседями.
+    expect(byTitle('2. Точка 2')?.props.icon.iconSize).toEqual([36, 36])
+    expect(byTitle('3. Точка 3')?.container).toBe(env.group)
+
+    // Точку поправили в редакторе — маркер возвращается в кластеры.
+    const edited = moved.map((point, index) =>
+      index === 1 ? { ...point, coordinates: [12.5, 47.9] as [number, number] } : point,
+    )
+    utils.rerender(markersTree(env, { ...props, route: edited }))
+    expect(byTitle('2. Точка 2')?.container).toBe(env.group)
+  })
+
+  it('отклонённый перенос оставляет маркер в кластерах', async () => {
+    const env = setup()
+    renderMarkers(env)
+    await waitFor(() => expect(lastByIndex(env.captured)).toHaveLength(20))
+
+    act(() => {
+      lastByIndex(env.captured)[1].props.eventHandlers.dragend({
+        target: { getLatLng: () => ({ lat: 47.9, lng: 12.9 }) },
+      })
+    })
+
+    expect(lastByIndex(env.captured)[1].container).toBe(env.group)
   })
 
   it('кластер показывает число точек и подписан для скринридера', async () => {

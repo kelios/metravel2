@@ -518,6 +518,7 @@ export default function TripPlanRouteMap({
             route={route}
             focusIndices={focusIndices}
             appliedTokenRef={appliedFocusIndicesTokenRef}
+            lockedRef={fitLockedRef}
             useMap={useMap}
           />
           {trackPositions.length > 1 ? (

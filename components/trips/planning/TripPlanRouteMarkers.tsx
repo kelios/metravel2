@@ -5,7 +5,7 @@
 // клик «всегда приближает», подпись для скринридера). Вынесено из
 // `TripPlanRouteMap.web.tsx`; импортирует только web-карта, Leaflet и
 // react-leaflet приходят пропсами из `loadLeafletRuntime`.
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
 import type { RoutePoint } from '@/api/plannedTrips';
@@ -17,7 +17,7 @@ import { useTheme, type ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT, translatePlural } from '@/i18n';
 import type { ReactLeafletCoreRuntime } from '@/utils/loadLeafletRuntime';
 import { formatRoutePointCoordinates, isDrawableCoordinatePair } from './tripPlanFormatting';
-import { FOCUS_POINT_ZOOM } from './tripPlanRouteMap.types';
+import { FOCUS_POINT_ZOOM, ROUTE_POINT_COORDINATE_PRECISION } from './tripPlanRouteMap.types';
 import {
   fillRouteMarkerTemplate,
   routeMarkerIconTemplate,
@@ -30,6 +30,16 @@ type LeafletNS = typeof import('leaflet');
 type TitledMarker = { options?: { title?: string }; getElement?: () => HTMLElement | undefined };
 type ReactLeafletNS = typeof import('react-leaflet');
 type DragEndEvent = { target?: { getLatLng?: () => { lat: number; lng: number } } };
+type DroppedPoint = { index: number; lat: number; lng: number };
+
+/** Шаг, на который `RouteBuilder` округляет координаты перенесённой точки. */
+const DROP_MATCH_TOLERANCE = 10 ** -ROUTE_POINT_COORDINATE_PRECISION;
+
+/** Точка стоит там, где её отпустили (с точностью до округления координат). */
+const isDroppedAt = (coordinates: RoutePoint['coordinates'] | undefined, drop: DroppedPoint): boolean =>
+  isDrawableCoordinatePair(coordinates)
+  && Math.abs(coordinates[1] - drop.lat) <= DROP_MATCH_TOLERANCE
+  && Math.abs(coordinates[0] - drop.lng) <= DROP_MATCH_TOLERANCE;
 
 /** «Кластер: 12 точек» — дети кластера конструктора считаются точками маршрута. */
 export const formatRoutePointCount = (count: number): string =>
@@ -119,7 +129,11 @@ function RouteMarkerClusterGroup({ L, core, useMap, colors, children }: ClusterP
       // Кластеры — только на малом масштабе (макет §4): с зума фокуса точки и
       // дня (`FOCUS_POINT_ZOOM`) каждая точка стоит своим маркером, её видно
       // после «показать на карте» и её можно тянуть (#1781). На /map порог 16.
-      overrides: { disableClusteringAtZoom: FOCUS_POINT_ZOOM },
+      // Без анимации разбиения: с ней маркеры дня ещё 300 мс после фокуса летят
+      // от центра прежнего кластера, уже живые для мыши, — хват по видимому
+      // номеру брал соседа, а клик после отпускания попадал в гаснущий кластер
+      // и уводил кадр. Карта-редактор ставит маркер сразу на его место.
+      overrides: { disableClusteringAtZoom: FOCUS_POINT_ZOOM, animate: false },
     });
     const handleLayerAdd = (event: { layer?: unknown }) => applyNameRef.current(event?.layer);
     map.addLayer(created);
@@ -282,6 +296,30 @@ export default function TripPlanRouteMarkers({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const iconFor = useRouteMarkerIcons(L, colors);
 
+  // #1781 в кластерах: отпущенный маркер markercluster раскладывает заново
+  // (`_childMarkerDragEnd` → `_moveChild`), и брошенный рядом с соседом на
+  // зуме < 14 исчезал в кластере «2» — точка не оставалась там, где её
+  // бросили. Поэтому перенесённая точка, как активная, живёт вне кластеров.
+  const [dropped, setDropped] = useState<DroppedPoint | null>(null);
+  const handleDragEnd = useCallback(
+    (index: number) => {
+      const forward = onDragEnd(index);
+      return (event: DragEndEvent) => {
+        const position = event?.target?.getLatLng?.();
+        if (position && Number.isFinite(position.lat) && Number.isFinite(position.lng)) {
+          setDropped({ index, lat: position.lat, lng: position.lng });
+        }
+        forward(event);
+      };
+    },
+    [onDragEnd],
+  );
+  // Держим маркер вне кластеров, пока точка стоит там, куда её бросили:
+  // отклонённый перенос, удаление точки выше по списку или правка координат
+  // возвращают маркер в кластеры сами.
+  const heldIndex =
+    dropped && isDroppedAt(route[dropped.index]?.coordinates, dropped) ? dropped.index : null;
+
   const renderMarker = (point: RoutePoint, index: number) => {
     // #1683: не «есть пара», а «пара пригодна к отрисовке» — на
     // невалидном LatLng `L.marker` бросает и уносит всю карту.
@@ -304,7 +342,7 @@ export default function TripPlanRouteMarkers({
         readonly={readonly}
         draggable={draggable}
         styles={styles}
-        onDragEnd={onDragEnd}
+        onDragEnd={handleDragEnd}
         onEditPoint={onEditPoint}
         onDeletePoint={onDeletePoint}
       />
@@ -318,17 +356,18 @@ export default function TripPlanRouteMarkers({
   // меняется от того, какая точка открыта в редакторе.
   if (!RLCore || !clusterable) return <>{route.map(renderMarker)}</>;
 
-  // Активная точка открыта в редакторе — её маркер живёт вне кластеров и
-  // виден на любом масштабе.
-  const clustered = route.map((point, index) => (index === activeIndex ? null : renderMarker(point, index)));
-  const activePoint = activeIndex != null ? route[activeIndex] : undefined;
-  const activeMarker = activePoint && activeIndex != null ? renderMarker(activePoint, activeIndex) : null;
+  // Активная точка открыта в редакторе, перенесённая только что брошена —
+  // их маркеры живут вне кластеров и видны на любом масштабе.
+  const unclustered = Array.from(
+    new Set([activeIndex, heldIndex].filter((index): index is number => index != null && Boolean(route[index]))),
+  );
+  const clustered = route.map((point, index) => (unclustered.includes(index) ? null : renderMarker(point, index)));
   return (
     <>
       <RouteMarkerClusterGroup L={L} core={RLCore} useMap={RL.useMap} colors={colors}>
         {clustered}
       </RouteMarkerClusterGroup>
-      {activeMarker}
+      {unclustered.map((index) => renderMarker(route[index], index))}
     </>
   );
 }

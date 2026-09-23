@@ -1,6 +1,6 @@
 // #2058: web-карта конструктора подгоняет кадр под точки дня из списка.
 import React from 'react'
-import { fireEvent, render, waitFor } from '@testing-library/react-native'
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
 
 import type { RoutePoint } from '@/api/plannedTrips'
 import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap.web'
@@ -8,7 +8,29 @@ import { FOCUS_POINT_ZOOM } from '@/components/trips/planning/tripPlanRouteMap.t
 
 const mockFitBounds = jest.fn()
 const mockSetView = jest.fn()
-const mockMap = { setView: mockSetView, fitBounds: mockFitBounds, stop: jest.fn(), getZoom: () => 10 }
+// Подписки на `zoomend`: по ним подгонка, пришедшая во время анимации зума,
+// дожидается её конца (`afterZoomAnimation`).
+const mockZoomEndHandlers = new Set<() => void>()
+const mockMap = {
+  setView: mockSetView,
+  fitBounds: mockFitBounds,
+  stop: jest.fn(),
+  getZoom: () => 10,
+  _animatingZoom: false,
+  on: jest.fn((type: string, handler: () => void) => {
+    if (type === 'zoomend') mockZoomEndHandlers.add(handler)
+  }),
+  off: jest.fn((type: string, handler: () => void) => {
+    if (type === 'zoomend') mockZoomEndHandlers.delete(handler)
+  }),
+}
+/** Leaflet закончил анимацию зума: `_animatingZoom` снят, затем `zoomend`. */
+const finishZoomAnimation = () => {
+  mockMap._animatingZoom = false
+  act(() => {
+    Array.from(mockZoomEndHandlers).forEach((handler) => handler())
+  })
+}
 
 jest.mock('react-dom', () => ({ createPortal: (node: unknown) => node }))
 jest.mock('@/utils/ensureLeafletCss', () => ({ ensureLeafletCss: jest.fn() }))
@@ -79,6 +101,8 @@ describe('TripPlanRouteMap (web): focusIndices', () => {
   beforeEach(() => {
     mockFitBounds.mockClear()
     mockSetView.mockClear()
+    mockMap._animatingZoom = false
+    mockZoomEndHandlers.clear()
   })
 
   it('#2059 подгонка под весь маршрут отступает под каплю маркера и кнопки карты', async () => {
@@ -116,6 +140,84 @@ describe('TripPlanRouteMap (web): focusIndices', () => {
     utils.rerender(<TripPlanRouteMap route={route} focusIndices={{ indices: [0], token: 1 }} />)
 
     expect(mockSetView).toHaveBeenLastCalledWith([50.06, 19.94], FOCUS_POINT_ZOOM)
+  })
+
+  it('догрузившийся трек из файла не перебивает показанный день, оптовая замена маршрута — перебивает', async () => {
+    const focusIndices = { indices: [1, 2, 3], token: 1 }
+    const utils = render(<TripPlanRouteMap route={route} focusIndices={focusIndices} routeReplacementToken={0} />)
+    await waitFor(() => utils.getByLabelText(EXPAND))
+    mockFitBounds.mockClear()
+
+    // Трек приходит позже точек: подгонка под «весь маршрут + трек» раньше
+    // уводила кадр с дня, и перетаскивание в нём попадало в пустое место.
+    const track: [number, number][] = [[19.9, 50.0], [11.5, 48.2]]
+    utils.rerender(
+      <TripPlanRouteMap route={route} focusIndices={focusIndices} routeReplacementToken={0} originalTrackSegments={[track]} />,
+    )
+    expect(mockFitBounds).not.toHaveBeenCalled()
+
+    utils.rerender(
+      <TripPlanRouteMap route={route} focusIndices={focusIndices} routeReplacementToken={1} originalTrackSegments={[track]} />,
+    )
+    expect(mockFitBounds).toHaveBeenCalledTimes(1)
+  })
+
+  it('разворот дня во время анимации зума ждёт её конца: Leaflet выбросил бы подгонку молча', async () => {
+    const utils = render(<TripPlanRouteMap route={route} />)
+    await waitFor(() => utils.getByLabelText(EXPAND))
+    mockFitBounds.mockClear()
+
+    // Подгонка под весь маршрут ещё анимирует зум, а человек уже развернул день.
+    mockMap._animatingZoom = true
+    const focusIndices = { indices: [1, 2, 3], token: 1 }
+    utils.rerender(<TripPlanRouteMap route={route} focusIndices={focusIndices} />)
+    expect(mockFitBounds).not.toHaveBeenCalled()
+
+    // Пока запрос ждёт, точка дня переехала: кадр встанет по свежим координатам,
+    // а подгонка под весь маршрут показанный день уже не перебивает.
+    const moved = [...route.slice(0, 3), point(3, 11.8, 48.0)]
+    utils.rerender(<TripPlanRouteMap route={moved} focusIndices={focusIndices} />)
+    expect(mockFitBounds).not.toHaveBeenCalled()
+
+    finishZoomAnimation()
+    expect(mockFitBounds).toHaveBeenCalledTimes(1)
+    expect(mockFitBounds).toHaveBeenLastCalledWith(
+      { positions: [[48.14, 11.58], [48.1, 11.6], [48.0, 11.8]] },
+      expect.objectContaining({ maxZoom: FOCUS_POINT_ZOOM }),
+    )
+    expect(mockZoomEndHandlers.size).toBe(0)
+
+    // Токен применён: следующая анимация тот же день не повторяет.
+    utils.rerender(<TripPlanRouteMap route={[...moved]} focusIndices={focusIndices} />)
+    expect(mockFitBounds).toHaveBeenCalledTimes(1)
+  })
+
+  it('точка из списка во время анимации зума центруется после неё', async () => {
+    const utils = render(<TripPlanRouteMap route={route} />)
+    await waitFor(() => utils.getByLabelText(EXPAND))
+    mockSetView.mockClear()
+
+    mockMap._animatingZoom = true
+    utils.rerender(<TripPlanRouteMap route={route} focusPoint={{ lat: 48.1, lng: 11.6, token: 1 }} />)
+    expect(mockSetView).not.toHaveBeenCalled()
+
+    finishZoomAnimation()
+    expect(mockSetView).toHaveBeenCalledTimes(1)
+    expect(mockSetView).toHaveBeenLastCalledWith([48.1, 11.6], FOCUS_POINT_ZOOM)
+  })
+
+  it('отмонтированная карта не подгоняет кадр по запоздалому zoomend', async () => {
+    const utils = render(<TripPlanRouteMap route={route} />)
+    await waitFor(() => utils.getByLabelText(EXPAND))
+    mockFitBounds.mockClear()
+
+    mockMap._animatingZoom = true
+    utils.rerender(<TripPlanRouteMap route={route} focusIndices={{ indices: [1, 2, 3], token: 1 }} />)
+    utils.unmount()
+
+    expect(mockZoomEndHandlers.size).toBe(0)
+    finishZoomAnimation()
+    expect(mockFitBounds).not.toHaveBeenCalled()
   })
 
   it('тот же токен не повторяет подгонку ни на рендере, ни после разворота на весь экран', async () => {

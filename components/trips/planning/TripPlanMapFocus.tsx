@@ -31,6 +31,36 @@ const mapSize = (map: unknown) => {
   }
 };
 
+type ZoomAnimatedMap = {
+  /** Leaflet 1.9: `true` от старта анимации зума до `zoomend`. */
+  _animatingZoom?: boolean;
+  on?: (type: 'zoomend', handler: () => void) => unknown;
+  off?: (type: 'zoomend', handler: () => void) => unknown;
+};
+
+/**
+ * Кадр, запрошенный во время анимации зума, Leaflet выбрасывает молча:
+ * `Map._tryAnimatedZoom` отвечает «уже анимирую», и `setView`/`fitBounds` со
+ * сменой зума не делает ничего. Разворот дня в первые ~250 мс после подгонки
+ * под маршрут оставлял карту на общем виде. Такой запрос ждёт `zoomend`;
+ * возвращает отписку для cleanup эффекта.
+ */
+function afterZoomAnimation(map: unknown, apply: () => void): (() => void) | undefined {
+  const animated = map as ZoomAnimatedMap;
+  if (!animated._animatingZoom || typeof animated.on !== 'function' || typeof animated.off !== 'function') {
+    apply();
+    return undefined;
+  }
+  const handleZoomEnd = () => {
+    animated.off?.('zoomend', handleZoomEnd);
+    apply();
+  };
+  animated.on('zoomend', handleZoomEnd);
+  return () => {
+    animated.off?.('zoomend', handleZoomEnd);
+  };
+}
+
 // `fittedTokenRef` живёт в родителе и переживает пересборку карты (#1301: разворот
 // на весь экран переносит карту порталом, то есть MapContainer монтируется заново).
 // Без него подгонка под маршрут срабатывала бы на каждом развороте и отменяла
@@ -113,7 +143,8 @@ export function FitRouteBounds({
 
 /**
  * #1495: центрирование карты на точке, выбранной в списке панели маршрута
- * (перенесено из `TripPlanRouteMap.web.tsx` без изменений).
+ * (перенесено из `TripPlanRouteMap.web.tsx`). Запрос во время анимации зума
+ * ждёт её конца (`afterZoomAnimation`), иначе Leaflet его выбросит.
  */
 export function FocusRoutePoint({
   focusPoint,
@@ -134,11 +165,13 @@ export function FocusRoutePoint({
     // (`components/MapPage/Map.web.tsx`), здесь — общим предикатом карты плана.
     if (!isDrawableCoordinatePair([focusPoint.lng, focusPoint.lat])) return;
     if (appliedTokenRef.current === focusPoint.token) return;
-    appliedTokenRef.current = focusPoint.token;
-    map.setView(
-      [focusPoint.lat, focusPoint.lng],
-      Math.max(map.getZoom() ?? FOCUS_POINT_ZOOM, FOCUS_POINT_ZOOM),
-    );
+    return afterZoomAnimation(map, () => {
+      appliedTokenRef.current = focusPoint.token;
+      map.setView(
+        [focusPoint.lat, focusPoint.lng],
+        Math.max(map.getZoom() ?? FOCUS_POINT_ZOOM, FOCUS_POINT_ZOOM),
+      );
+    });
   }, [focusPoint, map]);
 
   return null;
@@ -165,12 +198,15 @@ export function FocusRouteIndices({
   route,
   focusIndices,
   appliedTokenRef,
+  lockedRef,
   useMap,
 }: {
   L: LeafletNS;
   route: readonly RoutePoint[];
   focusIndices: MapFocusIndices | null | undefined;
   appliedTokenRef: React.MutableRefObject<number | null>;
+  /** Защёлка `FitRouteBounds` (#1781): день на карте показал пользователь. */
+  lockedRef: React.MutableRefObject<boolean>;
   useMap: ReactLeafletNS['useMap'];
 }) {
   const map = useMap();
@@ -179,13 +215,22 @@ export function FocusRouteIndices({
     if (!focusIndices || appliedTokenRef.current === focusIndices.token) return;
     const positions = focusIndicesPositions(route, focusIndices.indices);
     if (!positions.length) return;
-    appliedTokenRef.current = focusIndices.token;
-    if (positions.length === 1) {
-      map.setView(positions[0], Math.max(map.getZoom() ?? FOCUS_POINT_ZOOM, FOCUS_POINT_ZOOM));
-      return;
-    }
-    map.fitBounds(L.latLngBounds(positions), routeMapFitBoundsOptions(mapSize(map), FOCUS_POINT_ZOOM));
-  }, [L, appliedTokenRef, focusIndices, map, route]);
+    // Кадр дня выбрал пользователь, как и перетаскиванием маркера: поздняя
+    // подгонка под весь маршрут (догрузился трек из файла, пересчиталась
+    // геометрия) его больше не перебивает. Снимает защёлку только оптовая
+    // замена маршрута (#1820).
+    lockedRef.current = true;
+    // Токен применённым считается только после подгонки: если маршрут
+    // сменился, пока запрос ждал конца анимации, эффект подпишется заново.
+    return afterZoomAnimation(map, () => {
+      appliedTokenRef.current = focusIndices.token;
+      if (positions.length === 1) {
+        map.setView(positions[0], Math.max(map.getZoom() ?? FOCUS_POINT_ZOOM, FOCUS_POINT_ZOOM));
+        return;
+      }
+      map.fitBounds(L.latLngBounds(positions), routeMapFitBoundsOptions(mapSize(map), FOCUS_POINT_ZOOM));
+    });
+  }, [L, appliedTokenRef, focusIndices, lockedRef, map, route]);
 
   return null;
 }

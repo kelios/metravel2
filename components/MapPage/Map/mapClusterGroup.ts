@@ -169,8 +169,13 @@ export function createMapClusterGroup(
   }: {
     iconCreateFunction?: (cluster: any) => any
     onClusterTap?: () => void
-    /** Карта со своим масштабом правит только числа (порог зума), не поведение. */
-    overrides?: { disableClusteringAtZoom?: number }
+    /**
+     * Карта со своим масштабом правит порог зума; карта-редактор (конструктор
+     * поездки) ещё и выключает анимацию разбиения: 300 мс маркеры летят от
+     * центра кластера, и хват в этот момент берёт соседний маркер. /map
+     * переопределений не передаёт — её поведение не меняется.
+     */
+    overrides?: { disableClusteringAtZoom?: number; animate?: boolean }
   },
 ): { group: any; dispose: () => void } {
   const group = L.markerClusterGroup({ ...MAP_CLUSTER_GROUP_OPTIONS, ...overrides, iconCreateFunction })
