@@ -79,7 +79,9 @@ const get=u=>new Promise((r,j)=>https.get(u,x=>{let d="";x.on("data",c=>d+=c);x.
    Без `--quest-id` зальёт все; `--posters-only` — только постеры (вкл. старые
    квесты с уже готовым видео).
 6. **Проверь GET-ом** `GET /api/quests/by-quest-id/<quest_id>/` — `finale.video_url`
-   и `poster_url` непустые и ведут на S3.
+   и `poster_url` непустые и ведут на S3. Видео отдаётся байт-в-байт (размер =
+   локальному `finale.mp4`), а постер бэк перекодирует в WebP 1200×675 — его
+   размер с `poster.jpg` не сравнивать, картинку сверять перцептивно.
 
 ## Диагностика 401 при заливке
 
@@ -111,8 +113,10 @@ curl -s -X PATCH -H "Authorization: Token $TOKEN" -H 'Content-Type: application/
 - **Шрифты кроссплатформенны через env** (дефолт — Windows):
   `FONT_BOLD_PATH='/System/Library/Fonts/Supplemental/Arial Bold.ttf'`,
   `FONT_REG_PATH='/System/Library/Fonts/Supplemental/Arial.ttf'`.
-- **PIL нужен для fallback-оверлея, а в homebrew-python его нет.** На macOS PIL
-  есть в системном `/usr/bin/python3` → `PYTHON_PATH=/usr/bin/python3`.
+- **PIL нужен для fallback-оверлея.** `PYTHON_PATH` — любой python3, где
+  проходит `"$p" -c 'import PIL'`; на этом маке это `/opt/homebrew/bin/python3`
+  (Pillow 12, сверено 23.09.2026). Системный `/usr/bin/python3` — шим xcrun:
+  пока не принята лицензия Xcode, он падает с exit 69 и валит генератор на оверлее.
 - **Сначала проверь, что ffmpeg вообще жив:** `ffmpeg -version`. После обновления
   x265 homebrew-сборка падает на `Library not loaded: libx265.NNN.dylib`, и тогда
   `ffmpeg -filters` молча пуст — это читается как «нет drawtext», хотя бинарник
