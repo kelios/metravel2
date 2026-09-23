@@ -37,7 +37,9 @@ const stageRow = (segment: string, value: string, counts: number[]) => {
   }
 }
 
-// Замер 23.09.2026 с 24.08.2026: 39 → 33 → 24 → 18 → 12 → 1.
+// Форма ответа базы для buildReport, а не эталон воронки: числа взяты из
+// первого замера по всем не-intro точкам. Эталон по правилу точек клиента —
+// в карточке #2061.
 const PROD_LIKE = {
   quest_found: true,
   stages: [
