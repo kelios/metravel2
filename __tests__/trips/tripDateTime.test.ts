@@ -13,6 +13,7 @@ import {
   addCalendarDays,
   formatTripDateLong,
   formatTripDateRangeShort,
+  formatTripDayMonth,
   formatTripDateTimeLong,
   parseTripDateTime,
   serializeTripStart,
@@ -121,6 +122,11 @@ describe('parseTripDateTime', () => {
 describe('trips date presentation', () => {
   it('formats a long date', () => {
     expect(formatTripDateLong('2026-07-11')).toBe('11 июля 2026 г.')
+  })
+
+  it('formats a day and month without the year for the route day header (#2058)', () => {
+    expect(formatTripDayMonth('2026-07-11')).toBe('11 июля')
+    expect(formatTripDayMonth('2026-02-30')).toBe(tripDateUnavailableText())
   })
 
   it('formats a date-time using the time carried by the value itself', () => {

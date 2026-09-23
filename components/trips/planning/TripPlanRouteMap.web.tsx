@@ -5,11 +5,12 @@ import Feather from '@expo/vector-icons/Feather';
 import type { RouteGeometry, RoutingState, RoutePoint, RouteSummary, TripTransport } from '@/api/plannedTrips';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
-  FOCUS_POINT_ZOOM,
+  type MapFocusIndices,
   type MapFocusPoint,
   type RoutePointMove,
   type RouteReplacementToken,
 } from '@/components/trips/planning/tripPlanRouteMap.types';
+import { FocusRouteIndices, FocusRoutePoint } from '@/components/trips/planning/TripPlanMapFocus';
 import {
   TRANSPORT_ICON_NAME,
   TRANSPORT_LABEL,
@@ -62,6 +63,8 @@ interface Props {
    */
   fill?: boolean;
   focusPoint?: MapFocusPoint | null;
+  /** #2058: подогнать кадр под эти точки (день списка), см. `FocusRouteIndices`. */
+  focusIndices?: MapFocusIndices | null;
   /**
    * #1820: счётчик оптовых замен маршрута (шаблон, импорт трека). Его рост —
    * единственный признак «маршрут заменили целиком»: снимает защёлку кадра и
@@ -222,39 +225,6 @@ function ClickToAdd({
   return null;
 }
 
-/**
- * #1495: центрирование карты на точке, выбранной в списке панели маршрута. Живёт
- * внутри MapContainer, потому что доступ к leaflet-инстансу даёт только `useMap`.
- */
-function FocusRoutePoint({
-  focusPoint,
-  useMap,
-}: {
-  focusPoint: MapFocusPoint | null | undefined;
-  useMap: ReactLeafletNS['useMap'];
-}) {
-  const map = useMap();
-  const appliedTokenRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!focusPoint) return;
-    // #1683: запрос фокуса приходит из списка точек, а он отпускает точку по
-    // наличию пары (`RouteBuilder.handleFocusPoint`), не по её пригодности.
-    // `setView` с нефинитным LatLng бросает уже внутри эффекта — маркерный гард
-    // такую точку не спасает. На /map тот же вызов закрыт проверкой координат
-    // (`components/MapPage/Map.web.tsx`), здесь — общим предикатом карты плана.
-    if (!isDrawableCoordinatePair([focusPoint.lng, focusPoint.lat])) return;
-    if (appliedTokenRef.current === focusPoint.token) return;
-    appliedTokenRef.current = focusPoint.token;
-    map.setView(
-      [focusPoint.lat, focusPoint.lng],
-      Math.max(map.getZoom() ?? FOCUS_POINT_ZOOM, FOCUS_POINT_ZOOM),
-    );
-  }, [focusPoint, map]);
-
-  return null;
-}
-
 export default function TripPlanRouteMap({
   route,
   routeGeometry,
@@ -266,6 +236,7 @@ export default function TripPlanRouteMap({
   originalTrackSegments,
   fill = false,
   focusPoint,
+  focusIndices,
   routeReplacementToken,
   onEditPoint,
   onMovePoint,
@@ -297,6 +268,7 @@ export default function TripPlanRouteMap({
   // пересобирает MapContainer, и счётчик, живущий внутри, снимал бы защёлку на
   // каждом развороте.
   const appliedReplacementTokenRef = useRef<RouteReplacementToken | undefined>(routeReplacementToken);
+  const appliedFocusIndicesTokenRef = useRef<number | null>(null);
   // Тот же leaflet-инстанс, но состоянием: слои и MapUiApi монтируются хуками
   // /map, а им нужен ререндер после готовности карты (ref его не даёт).
   const [mapInstance, setMapInstance] = useState<unknown>(null);
@@ -677,6 +649,14 @@ export default function TripPlanRouteMap({
               appliedReplacementTokenRef={appliedReplacementTokenRef}
             />
           ) : null}
+          {/* После подгонки под маршрут: в одном коммите кадр остаётся за днём. */}
+          <FocusRouteIndices
+            L={L}
+            route={route}
+            focusIndices={focusIndices}
+            appliedTokenRef={appliedFocusIndicesTokenRef}
+            useMap={useMap}
+          />
           {trackPositions.length > 1 ? (
             <Polyline
               positions={trackPositions}

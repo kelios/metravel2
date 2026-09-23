@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PanResponder, Platform, type LayoutChangeEvent } from 'react-native';
 
-import { resolveDropIndex, type RouteRowSpan } from './routePointReorder';
+import { maskRowSpans, resolveDropIndex, type RouteRowSpan } from './routePointReorder';
 
 /**
  * Касание начинает перетаскивание только после удержания: короткий смах по ручке
@@ -82,9 +82,14 @@ type Options = {
   enabled: boolean;
   count: number;
   onReorder: (from: number, to: number) => void;
+  /**
+   * #2058: строки, между которыми может упасть точка `fromIndex` (при свёрнутых
+   * днях — её день). `null`/без опции — весь список, как раньше.
+   */
+  dropScope?: (fromIndex: number) => readonly number[] | null;
 };
 
-export function useRoutePointDrag({ enabled, count, onReorder }: Options) {
+export function useRoutePointDrag({ enabled, count, onReorder, dropScope }: Options) {
   const isWeb = Platform.OS === 'web';
   const spansRef = useRef<Array<RouteRowSpan | undefined>>([]);
   const gestureRef = useRef<Gesture | null>(null);
@@ -94,6 +99,7 @@ export function useRoutePointDrag({ enabled, count, onReorder }: Options) {
   const enabledRef = useRef(enabled);
   const countRef = useRef(count);
   const onReorderRef = useRef(onReorder);
+  const dropScopeRef = useRef(dropScope);
 
   const [drag, setDrag] = useState<RoutePointDragState | null>(null);
   // Окно слушаем только пока палец/кнопка мыши зажаты: постоянные глобальные
@@ -104,6 +110,7 @@ export function useRoutePointDrag({ enabled, count, onReorder }: Options) {
   enabledRef.current = enabled;
   countRef.current = count;
   onReorderRef.current = onReorder;
+  dropScopeRef.current = dropScope;
 
   const clearTimer = useCallback(() => {
     const timer = gestureRef.current?.timer;
@@ -177,7 +184,9 @@ export function useRoutePointDrag({ enabled, count, onReorder }: Options) {
       }
       return;
     }
-    const dropIndex = resolveDropIndex(spansRef.current, gesture.index, deltaY);
+    const scope = dropScopeRef.current?.(gesture.index);
+    const spans = scope ? maskRowSpans(spansRef.current, scope) : spansRef.current;
+    const dropIndex = resolveDropIndex(spans, gesture.index, deltaY);
     dropIndexRef.current = dropIndex;
     setDrag({ index: gesture.index, dropIndex, offsetY: deltaY });
   }, []);

@@ -68,3 +68,18 @@ export const resolveDropIndex = (
   }
   return visual[visual.length - 1]?.index ?? fromIndex;
 };
+
+/**
+ * #2058: замеры только разрешённых строк. Остальные становятся «не
+ * измерены» — `resolveDropIndex` их пропускает, как ещё не смонтированные.
+ */
+export const maskRowSpans = (
+  spans: ReadonlyArray<RouteRowSpan | undefined>,
+  allowed: readonly number[],
+): Array<RouteRowSpan | undefined> => {
+  const masked: Array<RouteRowSpan | undefined> = new Array(spans.length).fill(undefined);
+  for (const index of allowed) {
+    if (index >= 0 && index < spans.length) masked[index] = spans[index];
+  }
+  return masked;
+};

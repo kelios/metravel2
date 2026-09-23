@@ -33,10 +33,7 @@ import {
   previewStopsCount,
   routablePreviewPoints,
 } from '@/components/trips/planning/tripRoutePreview';
-import {
-  type MapFocusPoint,
-  type RoutePointMove,
-} from '@/components/trips/planning/tripPlanRouteMap.types';
+import { type RoutePointMove } from '@/components/trips/planning/tripPlanRouteMap.types';
 import {
   COORDINATE_PRECISION,
   POINT_TYPES,
@@ -44,6 +41,7 @@ import {
   routeSignature,
 } from '@/components/trips/planning/routeBuilderPoint';
 import { useRoutePointDraft } from '@/components/trips/planning/useRoutePointDraft';
+import { useRouteListMapFocus } from '@/components/trips/planning/useRouteListMapFocus';
 import { useRouteSiteSearch } from '@/components/trips/planning/useRouteSiteSearch';
 import { useTripRouteDisplay } from '@/components/trips/planning/useTripRouteDisplay';
 import {
@@ -432,22 +430,9 @@ function RouteBuilder({
     [handleStartEdit, route],
   );
 
-  // #1495: тап по точке в списке панели центрует карту на этой точке — только в
-  // раскладке `mapFirst`: в `stack` строка точки получает `onFocus=undefined`.
-  // Владелец и гость здесь равны (#1700): обе ветки отдают карте один и тот же
-  // `focusPoint`. Токен растёт на каждый тап, поэтому повторный тап по той же
-  // точке возвращает карту к ней даже после ручного панорамирования.
-  const [focusPoint, setFocusPoint] = useState<MapFocusPoint | null>(null);
-  const focusTokenRef = useRef(0);
-  const handleFocusPoint = useCallback(
-    (index: number) => {
-      const coordinates = route[index]?.coordinates;
-      if (!coordinates) return;
-      focusTokenRef.current += 1;
-      setFocusPoint({ lat: coordinates[1], lng: coordinates[0], token: focusTokenRef.current });
-    },
-    [route],
-  );
+  // #1495 фокус точки, #2058 свёртка дней и показ дня на карте — один владелец.
+  const { focusPoint, handleFocusPoint, focusIndices, mapRevealToken, dayCollapse, dropScope } =
+    useRouteListMapFocus({ route, editingIndex, routeReplacementToken, isMapFirst });
 
   const {
     siteQuery,
@@ -518,6 +503,7 @@ function RouteBuilder({
     enabled: canReorder,
     count: route.length,
     onReorder: handleReorder,
+    dropScope,
   });
 
   // `editorSlot` приходит только из мобильного списка: там форма правки живёт
@@ -618,6 +604,7 @@ function RouteBuilder({
       activeIndex={editingIndex}
       fill={isMapFirst}
       focusPoint={focusPoint}
+      focusIndices={focusIndices}
       routeReplacementToken={routeReplacementToken}
       onEditPoint={handleEditPoint}
       onMovePoint={handleMovePoint}
@@ -678,6 +665,7 @@ function RouteBuilder({
       route={route}
       orderSuggestion={{ transport: trip.transport, bikeType: trip.bikeType, onReorder: handleReorder }}
       startDate={trip.startDate}
+      dayCollapse={dayCollapse}
       editingIndex={editingIndex}
       // Форма правки принадлежит одной раскладке за раз: в mapFirst её ставит
       // карточка своей точки внутри секции, в stack — `RouteBuilderLayout`.
@@ -776,6 +764,7 @@ function RouteBuilder({
       styles={styles}
       panelStyles={panelStyles}
       pointCount={route.length}
+      mapRevealToken={mapRevealToken}
       summary={summary}
       routingState={routingState}
       transport={trip.transport}

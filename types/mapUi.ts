@@ -11,6 +11,11 @@ export type MapUiApi = {
   centerOnUser: (target?: { lat: number; lng: number } | null) => void;
   fitToResults: () => void;
   focusOnCoord?: (coord: string, options?: { zoom?: number }) => void;
+  /** #2058: кадр под набор точек (день маршрута планировщика), не ближе `maxZoom`. */
+  fitToCoords?: (
+    coords: ReadonlyArray<{ lat: number; lng: number }>,
+    options: { maxZoom: number },
+  ) => void;
   openPopupForCoord?: (coord: string) => void;
   exportGpx: () => void;
   exportKml: () => void;

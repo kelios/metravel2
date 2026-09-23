@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -11,9 +11,9 @@ import Button from '@/components/ui/Button';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import MiniCalendar from '@/components/calendar/MiniCalendar';
-import RouteBuilder, {
-  type RouteBuilderDisplayState,
-} from '@/components/trips/planning/RouteBuilder';
+import RouteBuilder, { type RouteBuilderDisplayState } from '@/components/trips/planning/RouteBuilder';
+// #2058: native-скролл к карте по `[⌖]` дня; web скроллит сам узел.
+import PlannerPageScrollView from '@/components/trips/planning/PlannerPageScrollView';
 // #1543: экран открывается на вкладке `route`, поэтому деревья вкладок
 // «люди»/«экспорт»/«ещё» и панель редактирования владельца на первом кадре не
 // рендерятся — на web они уезжают за async-границу (native-половина сплита
@@ -362,7 +362,7 @@ export default function PlannedTripScreen() {
         fallbackTitle="plan"
         label={trip?.title}
       />
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <PlannerPageScrollView style={styles.screen} contentContainerStyle={styles.content}>
         <View style={styles.inner}>
           {isLoading ? (
             <ActivityIndicator style={styles.loader} />
@@ -980,7 +980,7 @@ export default function PlannedTripScreen() {
             </>
           )}
         </View>
-      </ScrollView>
+      </PlannerPageScrollView>
     </>
   );
 }

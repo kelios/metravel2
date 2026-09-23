@@ -25,6 +25,7 @@ import {
   USER_LOCATION_MARKER_SIZE,
 } from './mapMarkerStyles';
 import { buildNativeWeatherTempLabelsScript } from './nativeWeatherTempLabelsScript';
+import { NATIVE_MAP_VIEW_COMMANDS_SCRIPT } from './nativeMapViewCommandsScript';
 
 const DEFAULT_LAT = 53.8828449;
 const DEFAULT_LNG = 27.7273595;
@@ -211,12 +212,7 @@ ${NATIVE_BASE_MIN_ZOOM_SCRIPT}
           } catch (e) {}
         });
 
-        window.__metravelMapZoomIn = function() {
-          try { map.zoomIn(); } catch (e) {}
-        };
-        window.__metravelMapZoomOut = function() {
-          try { map.zoomOut(); } catch (e) {}
-        };
+${NATIVE_MAP_VIEW_COMMANDS_SCRIPT}
         // Центрируем только на реальной точке пользователя, если она есть
         // (__metravelRenderUserLocation её выставляет). Дефолтный/viewport center
         // не должен выглядеть как текущее положение пользователя.

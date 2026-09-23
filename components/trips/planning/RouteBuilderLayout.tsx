@@ -19,6 +19,8 @@ interface Props {
   panelStyles: RoutePanelStyles;
   /** Длина маршрута: подсказка карты в мобильной раскладке. */
   pointCount: number;
+  /** #2058: `[⌖]` дня поднимает мобильную страницу к карте на каждый рост счётчика. */
+  mapRevealToken: number;
   summary: RouteSummary | null;
   routingState: RoutingState | null;
   transport: PlannedTrip['transport'];
@@ -41,6 +43,7 @@ export default function RouteBuilderLayout({
   styles,
   panelStyles,
   pointCount,
+  mapRevealToken,
   summary,
   routingState,
   transport,
@@ -81,6 +84,7 @@ export default function RouteBuilderLayout({
       <RouteBuilderMobile
         mapSlot={mapSection}
         engineSlot={previewEngine}
+        mapRevealToken={mapRevealToken}
         summary={summary}
         routingState={routingState}
         transport={transport}

@@ -17,6 +17,16 @@ export type MapFocusPoint = {
 export const FOCUS_POINT_ZOOM = 14;
 
 /**
+ * #2058: запрос «покажи эти точки» — индексы в `route`, обычно точки одного
+ * дня. Карта подгоняет кадр (`fitBounds`) под их координаты не ближе
+ * `FOCUS_POINT_ZOOM`. `token` растёт на каждый запрос, как у `MapFocusPoint`.
+ */
+export type MapFocusIndices = {
+  indices: readonly number[];
+  token: number;
+};
+
+/**
  * #1781: запрос «перенеси эту точку сюда». Карта только сообщает намерение —
  * владелец черновика (`RouteBuilder`) решает, как применить его к маршруту.
  */

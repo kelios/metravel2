@@ -320,6 +320,25 @@ describe('Map.ios Component', () => {
     );
   });
 
+  it('#2058: fits the frame to a set of points through the WebView bridge', () => {
+    const onMapUiApiReady = jest.fn();
+    const rendered = render(
+      <Map travel={mockTravel} coordinates={mockCoordinates} onMapUiApiReady={onMapUiApiReady} />
+    );
+
+    expect(getWebViewHtml(rendered)).toContain('window.__metravelMapFitCoords = function');
+    const api = onMapUiApiReady.mock.calls.find(([value]) => value)?.[0];
+    mockInjectJavaScript.mockClear();
+    act(() => {
+      api.fitToCoords([{ lat: 48.14, lng: 11.58 }, { lat: 48.1, lng: 11.6 }], { maxZoom: 14 });
+    });
+    expect(mockInjectJavaScript).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'window.__metravelMapFitCoords && window.__metravelMapFitCoords([[48.14,11.58],[48.1,11.6]], 14)',
+      ),
+    );
+  });
+
   it('does not center on the fallback viewport when real user location is absent', () => {
     const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />

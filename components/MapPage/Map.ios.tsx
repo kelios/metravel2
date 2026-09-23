@@ -37,6 +37,7 @@ import {
   type NativeViewportSnapshot,
 } from './Map/nativeBridge';
 import { buildNativeMapHtml } from './Map/nativeMapHtml';
+import { buildNativeMapFitCoordsCommand } from './Map/nativeMapViewCommandsScript';
 import { fetchTileWithRetry } from './Map/tileFetchRetry';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
 import type { MapUiApi } from '@/types/mapUi';
@@ -142,12 +143,9 @@ interface TravelProps {
    * кластер-эндпоинт. Для карты квестов (`/quests`), где показываем только квесты.
    */
   pointsOnly?: boolean;
-  onMapUiApiReady?: (api: {
-    zoomIn: () => void;
-    zoomOut: () => void;
-    centerOnUser: MapUiApi['centerOnUser'];
-    setOverlayEnabled: (id: string, enabled: boolean) => void;
-  } | null) => void;
+  onMapUiApiReady?: (
+    api: Pick<MapUiApi, 'zoomIn' | 'zoomOut' | 'centerOnUser' | 'setOverlayEnabled' | 'fitToCoords'> | null,
+  ) => void;
 }
 
 const DEFAULT_LAT = 53.8828449;
@@ -547,6 +545,7 @@ const Map: React.FC<TravelProps> = ({
         );
       },
       setOverlayEnabled,
+      fitToCoords: (coords, { maxZoom }) => injectMapCommand(buildNativeMapFitCoordsCommand(coords, maxZoom)),
     });
 
     return () => onMapUiApiReady(null);

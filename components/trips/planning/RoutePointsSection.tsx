@@ -15,6 +15,7 @@ import RoutePointAddForm, {
   type SiteSearchStatus,
 } from '@/components/trips/planning/RoutePointAddForm';
 import { RouteDayGroups } from '@/components/trips/planning/RouteDayGroupHeader';
+import type { RouteDayCollapseView } from '@/components/trips/planning/routeDayCollapse';
 import { MIN_ROUTE_POINTS, POINT_TYPES } from '@/components/trips/planning/routeBuilderPoint';
 import RouteOrderSuggestion from '@/components/trips/planning/RouteOrderSuggestion';
 import type { RouteOrderSuggestionTarget } from '@/components/trips/planning/useRouteOrderSuggestion';
@@ -38,6 +39,8 @@ interface Props {
   orderSuggestion: RouteOrderSuggestionTarget;
   /** Старт поездки: из него считается календарная дата заголовка дня. */
   startDate: string | null | undefined;
+  /** #2058: свёртка дней при > 15 точках; `null` — список как раньше. */
+  dayCollapse: RouteDayCollapseView | null;
   editingIndex: number | null;
   /**
    * Форма правки точки. В мобильной раскладке она уезжает в карточку своей
@@ -81,6 +84,7 @@ export default function RoutePointsSection({
   route,
   orderSuggestion,
   startDate,
+  dayCollapse,
   editingIndex,
   editorSlot,
   renderPoint,
@@ -113,6 +117,7 @@ export default function RoutePointsSection({
       styles={styles}
       colors={colors}
       renderPoint={renderPoint}
+      collapse={dayCollapse}
       pointSlot={(index) =>
         withEditorSlot && editingIndex === index ? editorSlot : undefined
       }

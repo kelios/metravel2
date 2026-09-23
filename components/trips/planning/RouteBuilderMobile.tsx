@@ -9,7 +9,7 @@
 // 2269px — до «Добавить точку» и «Сохранить маршрут» приходилось прокручивать
 // ~2000px в окне высотой в пятую часть экрана. Здесь скролл ровно один —
 // страничный, а карта остаётся первым элементом вкладки.
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   Platform,
   StyleSheet,
@@ -20,6 +20,8 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 
 import MapIcon from '@/components/MapPage/MapIcon';
+import { usePlannerPageScrollTo } from '@/components/trips/planning/PlannerPageScrollView';
+import { scrollPlannerNodeIntoView } from '@/components/trips/planning/scrollPlannerNodeIntoView';
 
 import type { RoutingState, RouteSummary, TripTransport } from '@/api/plannedTrips';
 import {
@@ -49,6 +51,11 @@ interface Props {
   /** Движок превью маршрута: монтируется всегда, независимо от раскладки. */
   engineSlot?: React.ReactNode;
   /**
+   * #2058: `[⌖]` в заголовке дня. Каждый рост счётчика поднимает страницу к
+   * карте — подгонку кадра под день карта делает сама по `focusIndices`.
+   */
+  mapRevealToken?: number;
+  /**
    * Подсказка поверх карты. В `fill`-режиме карта отдаёт свою шапку раскладке, а
    * вместе с ней и строку «нажмите на карту, чтобы добавить точку».
    */
@@ -64,6 +71,7 @@ interface Props {
 function RouteBuilderMobile({
   mapSlot,
   engineSlot,
+  mapRevealToken = 0,
   mapHint,
   summary,
   routingState,
@@ -75,6 +83,21 @@ function RouteBuilderMobile({
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { height: windowHeight } = useWindowDimensions();
+  const mapBlockRef = useRef<View>(null);
+  const scrollPageTo = usePlannerPageScrollTo();
+  // Счётчик живёт в RouteBuilder и переживает эту раскладку: смена ширины окна
+  // desktop ↔ mobile монтирует её заново с прежним значением — это не `[⌖]`.
+  const revealedTokenRef = useRef(mapRevealToken);
+
+  useEffect(() => {
+    if (mapRevealToken === revealedTokenRef.current) return;
+    revealedTokenRef.current = mapRevealToken;
+    if (Platform.OS === 'web') {
+      scrollPlannerNodeIntoView(mapBlockRef.current, { block: 'start', behavior: 'smooth' });
+    } else {
+      scrollPageTo?.(mapBlockRef.current);
+    }
+  }, [mapRevealToken, scrollPageTo]);
 
   const mapHeight = useMemo(
     () => clamp(Math.round(windowHeight * MAP_HEIGHT_RATIO), MAP_MIN_HEIGHT, MAP_MAX_HEIGHT),
@@ -90,7 +113,7 @@ function RouteBuilderMobile({
 
   return (
     <View style={styles.wrap} testID={testID}>
-      <View style={[styles.mapBlock, { height: mapHeight }]} testID="route-mobile-map">
+      <View ref={mapBlockRef} style={[styles.mapBlock, { height: mapHeight }]} testID="route-mobile-map">
         {mapSlot}
         {mapHint ? (
           // Подсказка лежит поверх карты и обязана пропускать тап сквозь себя:

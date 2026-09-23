@@ -17,6 +17,7 @@ import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobile
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
   FOCUS_POINT_ZOOM,
+  type MapFocusIndices,
   type MapFocusPoint,
   type RoutePointMove,
   type RouteReplacementToken,
@@ -58,6 +59,8 @@ interface Props {
    */
   fill?: boolean;
   focusPoint?: MapFocusPoint | null;
+  /** #2058: подогнать кадр под эти точки (день списка) — `fitToCoords` WebView. */
+  focusIndices?: MapFocusIndices | null;
   /**
    * #1820: счётчик оптовых замен маршрута (шаблон, импорт трека). Его рост —
    * единственный признак «маршрут заменили целиком»: снимает защёлку кадра и
@@ -131,6 +134,7 @@ export default function TripPlanRouteMap({
   originalTrackSegments,
   fill = false,
   focusPoint,
+  focusIndices,
   routeReplacementToken,
   onEditPoint,
   onMovePoint,
@@ -223,6 +227,20 @@ export default function TripPlanRouteMap({
     focusedTokenRef.current = focusPoint.token;
     mapUiApi.focusOnCoord(`${focusPoint.lat},${focusPoint.lng}`, { zoom: FOCUS_POINT_ZOOM });
   }, [focusPoint, mapUiApi]);
+
+  // #2058: день списка на карте. Кадр ставит сам WebView (`fitBounds` по
+  // координатам точек дня); токен, как у `focusPoint`, не даёт повторить
+  // подгонку на каждом рендере.
+  const fittedIndicesTokenRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!focusIndices || !mapUiApi?.fitToCoords) return;
+    if (fittedIndicesTokenRef.current === focusIndices.token) return;
+    const coords = lngLatPairs(focusIndices.indices.map((index) => route[index]?.coordinates))
+      .map(([lng, lat]) => ({ lat, lng }));
+    if (!coords.length) return;
+    fittedIndicesTokenRef.current = focusIndices.token;
+    mapUiApi.fitToCoords(coords, { maxZoom: FOCUS_POINT_ZOOM });
+  }, [focusIndices, mapUiApi, route]);
 
   const handleMapClick = useCallback(
     (lng: number, lat: number) => {

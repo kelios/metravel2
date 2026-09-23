@@ -215,6 +215,19 @@ export const createStyles = (colors: ThemedColors) =>
     },
     dayGroupTitle: { fontSize: 13, fontWeight: '700', color: colors.text },
     dayGroupMeta: { fontSize: 12, lineHeight: 16 },
+    // #2058: сворачиваемый день — кнопка на всю строку и `[⌖]` справа.
+    dayGroupHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    dayGroupToggle: {
+      flex: 1,
+      minWidth: 0,
+      minHeight: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 4,
+      borderRadius: 8,
+    },
+    dayGroupToggleText: { flex: 1, minWidth: 0, fontSize: 13, lineHeight: 18, color: colors.text },
     dayField: {
       gap: 8,
       marginTop: 4,

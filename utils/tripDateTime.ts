@@ -44,6 +44,7 @@ const DATE_TIME =
 
 const LONG_DATE: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' }
 const SHORT_DATE: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
+const DAY_MONTH_DATE: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long' }
 
 const pad2 = (value: number): string => String(value).padStart(2, '0')
 
@@ -180,6 +181,13 @@ export function formatTripDateLong(input: string | null | undefined): string {
   const parsed = parseTripDateTime(input)
   if (!parsed) return tripDateUnavailableText()
   return formatDate(parsed.value, LONG_DATE)
+}
+
+/** «11 июля»: заголовок дня в списке точек, год там уже известен по поездке (#2058). */
+export function formatTripDayMonth(input: string | null | undefined): string {
+  const parsed = parseTripDateTime(input)
+  if (!parsed) return tripDateUnavailableText()
+  return formatDate(parsed.value, DAY_MONTH_DATE)
 }
 
 /**
