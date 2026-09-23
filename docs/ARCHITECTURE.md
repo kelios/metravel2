@@ -475,7 +475,6 @@ Backend ожидается как DRF-like API под `/api`. Многие мо�
 - `POST /api/user/confirm-registration/`
 - `POST /api/user/reset-password-link/`
 - `POST /api/user/set-password-after-reset/`
-- `POST /api/user/sendpassword/`
 - `POST /api/user/google-login/`
 - `POST /api/user/push-token/`
 - `GET /api/user/{id}/profile/`

@@ -7,7 +7,6 @@ import {
   registration,
   resetPasswordLinkApi,
   setNewPasswordApi,
-  sendPasswordApi,
   startFacebookEmailCompletionApi,
   validateWebCookieSessionApi,
 } from '@/api/auth';
@@ -879,22 +878,4 @@ describe('src/api/auth.ts auth/password API', () => {
     });
   });
 
-  describe('sendPasswordApi', () => {
-    it('успешный вызов возвращает true и показывает Alert успеха', async () => {
-      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce({ success: true } as any);
-
-      const result = await sendPasswordApi('user@example.com');
-
-      expect(result).toBe(true);
-    });
-
-    it('при ошибке логирует и возвращает false', async () => {
-      mockedFetchWithTimeout.mockRejectedValueOnce(new Error('network'));
-
-      const result = await sendPasswordApi('user@example.com');
-
-      expect(result).toBe(false);
-    });
-  });
 });

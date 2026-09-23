@@ -24,7 +24,6 @@ export const errorsStaticResources = {
   "api.auth.invalidCredentials": "Невірний email або пароль",
   "api.auth.accountNotActivated": "Акаунт не активований. Скористайтеся посиланням активації з листа.",
   "api.auth.serviceUnavailable": "Сервіс тимчасово недоступний. Спробуйте пізніше.",
-  "api.auth.resetInstructionsSent": "Інструкції по відновленню пароля відправлені на ваш email",
   "api.auth.passwordResetRequested": "Якщо акаунт із такою поштою існує, ми надіслали на неї лист із посиланням для скидання пароля.",
   "api.auth.resetInstructionsFailed": "Не вдалося надіслати інструкції щодо відновлення пароля",
   "api.auth.passwordRequirements": "Пароль не відповідає вимогам",

@@ -99,8 +99,6 @@ export const authGenerated1 = {
   "components.auth.SetPasswordForm.ssylka_nedeystvitelna_ili_ustarela_d7694ae3": "Спасылка несапраўдная або састарэлая",
   "components.forms.PasswordStrengthIndicator.sila_parolya_64fc0a52": "Сіла пароля:",
   "components.user.ForgotPasswordLink.zabyli_parol_2494d9db": "Забылі пароль?",
-  "components.user.ForgotPasswordScreen.email_2810658d": "Email",
-  "components.user.ForgotPasswordScreen.otpravit_instruktsiyu_df6218a6": "Адправіць інструкцыю",
   "components.user.SetNewPasswordScreen.novyy_parol_960e12df": "Новы пароль",
   "components.user.SetNewPasswordScreen.ustanovit_novyy_parol_3039d87d": "Усталяваць новы пароль",
   "utils.passwordStrength.dobavte_spetsialnye_simvoly_i_t_d_b4748276": "Дадайце спецыяльныя сімвалы (!@#$%^&* і г.д.)",

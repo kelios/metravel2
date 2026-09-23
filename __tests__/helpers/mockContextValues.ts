@@ -1,3 +1,4 @@
+import { translate as i18nT } from '@/i18n';
 import type { AuthStore } from '@/stores/authStore';
 import type { FavoriteItem, ViewHistoryItem } from '@/context/FavoritesContext';
 import type { useFavorites } from '@/context/FavoritesContext';
@@ -18,7 +19,10 @@ export const createAuthValue = (overrides: Partial<AuthStore> = {}): AuthStore =
   checkAuthentication: jest.fn().mockResolvedValue(undefined),
   login: jest.fn().mockResolvedValue(true),
   logout: jest.fn().mockResolvedValue(undefined),
-  sendPassword: jest.fn().mockResolvedValue(''),
+  sendPassword: jest.fn<ReturnType<AuthStore['sendPassword']>, Parameters<AuthStore['sendPassword']>>().mockImplementation(async () => ({
+    ok: true,
+    message: i18nT('errorsStatic:api.auth.passwordResetRequested'),
+  })),
   setNewPassword: jest.fn().mockResolvedValue(true),
   ...overrides,
 });

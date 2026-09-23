@@ -99,8 +99,6 @@ export const authGenerated1 = {
   "components.auth.SetPasswordForm.ssylka_nedeystvitelna_ili_ustarela_d7694ae3": "Link jest nieprawidłowy lub nieaktualny",
   "components.forms.PasswordStrengthIndicator.sila_parolya_64fc0a52": "Siła hasła:",
   "components.user.ForgotPasswordLink.zabyli_parol_2494d9db": "Zapomniałeś hasła?",
-  "components.user.ForgotPasswordScreen.email_2810658d": "Email",
-  "components.user.ForgotPasswordScreen.otpravit_instruktsiyu_df6218a6": "Wyślij instrukcje",
   "components.user.SetNewPasswordScreen.novyy_parol_960e12df": "Nowe hasło",
   "components.user.SetNewPasswordScreen.ustanovit_novyy_parol_3039d87d": "Ustaw nowe hasło",
   "utils.passwordStrength.dobavte_spetsialnye_simvoly_i_t_d_b4748276": "Dodaj znaki specjalne (!@#$%^&* itd.)",

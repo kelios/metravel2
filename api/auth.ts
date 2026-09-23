@@ -44,7 +44,6 @@ const REGISTER = `${URLAPI}/user/registration/`;
 const RESETPASSWORDLINK = `${URLAPI}/user/reset-password-link/`;
 const CONFIRM_REGISTER = `${URLAPI}/user/confirm-registration/`;
 const SETNEWPASSWORD = `${URLAPI}/user/set-password-after-reset/`;
-const SENDPASSWORD = `${URLAPI}/user/sendpassword/`;
 const GOOGLE_LOGIN = `${URLAPI}/user/google-login/`;
 const FACEBOOK_LOGIN = `${URLAPI}/user/facebook-login/`;
 const FACEBOOK_COMPLETION_START = `${URLAPI}/user/facebook-login/complete/start/`;
@@ -277,35 +276,6 @@ export const logoutApi = async () => {
             clearSessionTokens(),
             AsyncStorage.multiRemove(['userName', 'userId']),
         ]);
-    }
-};
-
-export const sendPasswordApi = async (email: string) => {
-    try {
-        const response = await fetchWithTimeout(SENDPASSWORD, {
-            method: 'POST',
-            ...getApiRequestCredentials(),
-            headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
-            body: JSON.stringify({ email }),
-        }, DEFAULT_TIMEOUT);
-
-        if (!response.ok) {
-            throw new Error('Network response was not ok.');
-        }
-
-        const json = await safeJsonParse<{ success?: boolean; message?: string }>(response, {});
-        if (json.success) {
-            Alert.alert(i18nT('errorsStatic:api.auth.successTitle'), i18nT('errorsStatic:api.auth.resetInstructionsSent'));
-            return true;
-        }
-        Alert.alert(i18nT('errorsStatic:api.auth.errorTitle'), getUserFriendlyError(json.message || i18nT('errorsStatic:api.auth.resetInstructionsFailed')));
-        return false;
-    } catch (error) {
-        if (__DEV__) {
-            console.error(error);
-        }
-        Alert.alert(i18nT('errorsStatic:api.auth.errorTitle'), getUserFriendlyError(error));
-        return false;
     }
 };
 
