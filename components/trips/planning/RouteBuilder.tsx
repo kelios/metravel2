@@ -273,7 +273,7 @@ function RouteBuilder({
   });
   const preview = routeDisplay.preview;
 
-  const elevationPlaceHints = useTripRouteElevationRefresh({
+  const { elevationPlaceHints, markElevationRefreshed } = useTripRouteElevationRefresh({
     trip,
     route,
     routeElevationQuery,
@@ -301,7 +301,7 @@ function RouteBuilder({
 
   // #2065: «Повторить» для сохранённого routing_state, не для живого превью (см. useSavedRouteRetry.ts).
   const savedRouteRetry = useSavedRouteRetry({
-    tripId: trip.id, isOwner: trip.isOwner, routingState, savedRoutingState: trip.routingState,
+    tripId: trip.id, isOwner: trip.isOwner, routingState, savedRoutingState: trip.routingState, markElevationRefreshed,
   });
   useEffect(() => {
     onDisplayStateChange?.({

@@ -7,15 +7,28 @@
 // флаг. Один вызов замкнул бы данные на себя, поэтому источник профиля
 // вызывается ДО `useTripRouteDisplay`, а эффект пересчёта — ПОСЛЕ, ровно там,
 // где он и стоял в контейнере.
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { type PlannedTrip, type RoutePoint } from '@/api/plannedTrips';
+import { type PlannedTrip, type RoutePoint, type TripBikeType, type TripTransport } from '@/api/plannedTrips';
 import {
   useRefreshTripRouteElevation,
   useTripRouteElevation,
 } from '@/hooks/usePlannedTripsApi';
 
 type RouteElevationQuery = ReturnType<typeof useTripRouteElevation>;
+
+// Общий ключ пересчёта: координаты + транспорт + тип велосипеда, а не только
+// точки — смена способа передвижения на тех же точках снова обнуляет высоты
+// на бэкенде (#1308), поэтому без них ключ повторно совпал бы и график больше
+// не вернулся бы. #2065 P2-1: та же формула нужна ручному ретраю
+// (`markElevationRefreshed`) — параметры примитивные, а не весь `trip`, чтобы
+// `exhaustive-deps` видел ровно то, что действительно читается.
+const elevationRefreshKey = (
+  tripId: number,
+  savedRouteSignature: string,
+  transport: TripTransport,
+  bikeType: TripBikeType | null,
+): string => `${tripId}:${savedRouteSignature}:${transport}:${bikeType ?? 'none'}`;
 
 export function useTripRouteElevationSource({
   tripId,
@@ -70,10 +83,7 @@ export function useTripRouteElevationRefresh({
     const elevation = routeElevationQuery.data;
     if (!elevation || elevation.preview || elevation.provider !== 'ors') return;
 
-    // Профиль зависит не только от точек: смена транспорта и типа велосипеда
-    // перестраивает маршрут на тех же точках и снова обнуляет высоты, поэтому
-    // без них ключ повторно совпал бы и график высот больше не вернулся бы.
-    const refreshKey = `${trip.id}:${savedRouteSignature}:${trip.transport}:${trip.bikeType ?? 'none'}`;
+    const refreshKey = elevationRefreshKey(trip.id, savedRouteSignature, trip.transport, trip.bikeType);
     if (elevationRefreshKeyRef.current === refreshKey) return;
     elevationRefreshKeyRef.current = refreshKey;
     refreshRouteElevationMutate({ tripId: trip.id });
@@ -90,6 +100,16 @@ export function useTripRouteElevationRefresh({
     trip.transport,
   ]);
 
+  // #2065 P2-1: ручной ретрай сохранённого маршрута зовёт это ПЕРЕД своим
+  // `mutate`, чтобы пометить текущий ключ уже обслуженным — иначе рефетч
+  // поездки, который запускает сам же ретрай, застаёт эффект выше с
+  // несовпавшим ключом и открывает второй, независимый POST на тот же
+  // эндпоинт. Смена точек/транспорта после этого — новый ключ, эффект
+  // пересчитывает как обычно (#1308/#1825 не нарушены).
+  const markElevationRefreshed = useCallback(() => {
+    elevationRefreshKeyRef.current = elevationRefreshKey(trip.id, savedRouteSignature, trip.transport, trip.bikeType);
+  }, [savedRouteSignature, trip.bikeType, trip.id, trip.transport]);
+
   // Названия точек маршрута подписывают старт/пик/финиш на графике. Берём
   // текущий маршрут, а не сохранённый: график идёт вслед за превью.
   const elevationPlaceHints = useMemo(
@@ -102,5 +122,5 @@ export function useTripRouteElevationRefresh({
     [route],
   );
 
-  return elevationPlaceHints;
+  return { elevationPlaceHints, markElevationRefreshed };
 }

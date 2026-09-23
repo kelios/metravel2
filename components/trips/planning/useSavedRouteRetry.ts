@@ -36,6 +36,14 @@ interface Options {
    * не дублировать баннер живого превью своей копией «Повторить».
    */
   savedRoutingState: RoutingState | null | undefined;
+  /**
+   * #2065 P2-1: вызывается ПЕРЕД `refresh.mutate`, чтобы пометить текущий
+   * ключ автопересчёта высот (#1825, `useTripRouteElevationRefresh`) уже
+   * обслуженным. Без этого рефетч поездки, который запускает сам же этот
+   * ретрай, застаёт автоэффект с несовпавшим ключом, и тот открывает
+   * второй, независимый `POST` на тот же эндпоинт.
+   */
+  markElevationRefreshed?: () => void;
 }
 
 export interface SavedRouteRetryState {
@@ -52,6 +60,7 @@ export function useSavedRouteRetry({
   isOwner,
   routingState,
   savedRoutingState,
+  markElevationRefreshed,
 }: Options): SavedRouteRetryState {
   const active = routingState === savedRoutingState;
   const refresh = useRefreshTripRouteElevation();
@@ -72,8 +81,9 @@ export function useSavedRouteRetry({
 
   const onPress = useCallback(() => {
     if (refresh.isPending || coolingDown) return;
+    markElevationRefreshed?.();
     refresh.mutate({ tripId }, { onSettled: armCooldown });
-  }, [armCooldown, coolingDown, refresh, tripId]);
+  }, [armCooldown, coolingDown, markElevationRefreshed, refresh, tripId]);
 
   return {
     visible: active && isOwner && routingStateRetryable(routingState),
