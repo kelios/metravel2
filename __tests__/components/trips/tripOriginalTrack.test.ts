@@ -5,6 +5,7 @@ import {
   ORIGINAL_TRACK_MAX_DISPLAY_POINTS,
   ORIGINAL_TRACK_MAX_SEGMENTS,
   buildOriginalTrackGeometry,
+  limitOriginalTrackSegmentsForDisplay,
   routeFileExtension,
 } from '@/components/trips/planning/tripOriginalTrack';
 import { TRIP_ROUTE_IMPORT_DRAFT_MAX_POINTS } from '@/components/trips/planning/tripRouteImport';
@@ -204,6 +205,36 @@ describe('buildOriginalTrackGeometry', () => {
     ).toBe(2);
   });
 });
+
+// #2069: у поездки до 10 файлов, и каждый укладывается только в свой потолок.
+// Карта встаёт на сумме, поэтому линии всех файлов проходят общий потолок.
+describe('limitOriginalTrackSegmentsForDisplay', () => {
+  const line = (points: number, shift = 0): Array<[number, number]> =>
+    Array.from({ length: points }, (_, index) => [6.2 + index * 1e-5, 49.8 + shift] as [number, number])
+
+  it('returns the same list when all files fit under the map ceiling', () => {
+    const segments = [line(400), line(300, 0.01)]
+    expect(limitOriginalTrackSegmentsForDisplay(segments)).toBe(segments)
+  })
+
+  it('keeps the point total of several files at the map ceiling, not per file', () => {
+    const perFile = Array.from({ length: 10 }, (_, file) => line(ORIGINAL_TRACK_MAX_DISPLAY_POINTS, file * 0.01))
+    const limited = limitOriginalTrackSegmentsForDisplay(perFile)
+    const total = limited.reduce((sum, segment) => sum + segment.length, 0)
+
+    expect(limited).toHaveLength(10)
+    expect(total).toBeLessThanOrEqual(ORIGINAL_TRACK_MAX_DISPLAY_POINTS)
+    limited.forEach((segment, index) => {
+      expect(segment[0]).toEqual(perFile[index][0])
+      expect(segment[segment.length - 1]).toEqual(perFile[index][perFile[index].length - 1])
+    })
+  })
+
+  it('caps the number of lines across files', () => {
+    const many = Array.from({ length: ORIGINAL_TRACK_MAX_SEGMENTS + 40 }, (_, index) => line(3 + (index % 5), index * 1e-3))
+    expect(limitOriginalTrackSegmentsForDisplay(many)).toHaveLength(ORIGINAL_TRACK_MAX_SEGMENTS)
+  })
+})
 
 describe('routeFileExtension', () => {
   it('prefers the backend ext and falls back to the file name', () => {

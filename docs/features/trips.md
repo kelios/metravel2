@@ -424,8 +424,8 @@ DTO `PublicTripDto` (snake_case): `id`, `owner`, `owner_profile`, `title`,
 | `fetchRouteTemplates` | `GET /trips/route-templates/` | |
 | `fetchTripRouteElevation` | `GET /trips/{id}/route-summary/` | требует токен |
 | `refreshTripRouteElevation` | `POST /trips/{id}/route-summary/ {provider:'ors',force_refresh:true}` | owner-only |
-| `listPlannedTripRouteFiles` / `fetchPlannedTripRouteFile` | `GET /trips/planned/{id}/routes/` | #1496; список из нуля-одного элемента, owner-only |
-| `uploadPlannedTripRouteFile` | `POST /trips/planned/{id}/routes/` (multipart `file`) | создаёт (201) или заменяет (200) с тем же id |
+| `listPlannedTripRouteFiles` | `GET /trips/planned/{id}/routes/` | #1496, #2069; до 10 файлов по `sort_order, id`, owner-only |
+| `uploadPlannedTripRouteFile` | `POST /trips/planned/{id}/routes/` (multipart `file`) | всегда создаёт новую запись (201); на 10 файлах — 400 |
 | `downloadPlannedTripRouteFileBlob` | `GET /trips/planned/{id}/routes/{routeId}/download/` | отдаёт ровно загруженные байты |
 | `deletePlannedTripRouteFile` | `DELETE /trips/planned/{id}/routes/{routeId}/` | 204 |
 | `fetchTripGear` | `GET /trips/planned/{id}/gear/` | #1839; владелец или участник `going`, без пагинации |
@@ -507,8 +507,10 @@ DTO `PublicTripDto` (snake_case): `id`, `owner`, `owner_profile`, `title`,
    (`plannedTripRouteTrack(tripId, routeId, revision)`), поэтому добавление или
    удаление соседнего файла остальные не перекачивает. Хук отдаёт линии всех
    файлов **одним списком** в порядке файлов (`combine`); файл, который ещё
-   качается или не скачался, линий не добавляет и соседей не прячет. Худший
-   случай — 10 файлов × 12 000 точек; реальные треки на порядки меньше;
+   качается или не скачался, линий не добавляет и соседей не прячет. Сумма
+   линий всех файлов проходит тот же общий потолок карты
+   (`limitOriginalTrackSegmentsForDisplay`: 12 000 точек и 500 линий на карту,
+   а не на файл), иначе 10 файлов у своих потолков дали бы 120 000 точек;
 4. `TripPlanRouteMap` рисует эти сегменты **отдельным слоем** поверх линии
    маршрута: на web — `Polyline` на каждый сегмент, на native — поле payload
    `originalTrackSegments` (`Map.ios.tsx` → `Map/nativeMapHtml.ts`). Сегменты

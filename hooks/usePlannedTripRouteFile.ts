@@ -25,6 +25,7 @@ import {
 import { queryKeys } from '@/api/queryKeys';
 import {
   buildOriginalTrackGeometry,
+  limitOriginalTrackSegmentsForDisplay,
   routeFileExtension,
   type OriginalTrackGeometry,
 } from '@/components/trips/planning/tripOriginalTrack';
@@ -63,12 +64,12 @@ export function usePlannedTripRouteFiles(
 // Линии всех файлов подряд, в порядке списка. Сегменты файла не склеиваются ни
 // между собой (#1847), ни с сегментами соседних файлов: каждый остаётся своей
 // полилинией. Файл, который ещё качается или не скачался, просто не добавляет
-// линий — остальные треки от него не зависят.
+// линий — остальные треки от него не зависят. Потолок карты общий на все файлы.
 const combineTrackSegments = (
   results: Array<UseQueryResult<OriginalTrackGeometry | null>>,
 ): RouteGeometry[] => {
   const segments = results.flatMap((result) => result.data?.segments ?? []);
-  return segments.length ? segments : NO_SEGMENTS;
+  return segments.length ? limitOriginalTrackSegmentsForDisplay(segments) : NO_SEGMENTS;
 };
 
 /**

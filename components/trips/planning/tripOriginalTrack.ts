@@ -165,6 +165,28 @@ export const buildOriginalTrackGeometry = (
   };
 };
 
+/**
+ * Общий потолок карты для линий нескольких файлов (#2069). Каждый файл уже
+ * уложен в свой потолок, но на карте файлы лежат вместе, а потолки точек и линий
+ * написаны для карты целиком: десять файлов у своих потолков дали бы 120 000
+ * точек и 5 000 полилиний. Правила те же, что внутри файла: самые длинные линии
+ * и бюджет точек пропорционально длине. Под потолком возвращается тот же массив.
+ */
+export const limitOriginalTrackSegmentsForDisplay = (
+  segments: RouteGeometry[],
+  maxDisplayPoints: number = ORIGINAL_TRACK_MAX_DISPLAY_POINTS,
+): RouteGeometry[] => {
+  const drawn = limitSegmentCount(segments.map((coordinates) => ({ coordinates })));
+  const budgets = distributeBudget(
+    drawn.map((track) => track.coordinates.length),
+    maxDisplayPoints,
+  );
+  const untouched = drawn.length === segments.length &&
+    budgets.every((budget, index) => budget === drawn[index].coordinates.length);
+  if (untouched) return segments;
+  return drawn.map((track, index) => thin(track.coordinates, budgets[index]));
+};
+
 /** Расширение файла для парсера: поле `ext` бэкенда, иначе суффикс имени. */
 export const routeFileExtension = (file: { ext?: string | null; original_name?: string | null }): string =>
   String(file.ext ?? file.original_name?.split('.').pop() ?? '')
