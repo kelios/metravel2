@@ -183,6 +183,7 @@ export const questsGenerated1 = {
   "components.quests.QuestWizard.ne_udalos_postroit_realnyy_peshiy_marshrut_d_a06b2056": "Nie udało się zbudować prawdziwej trasy pieszej dla GPX",
   "components.quests.QuestWizard.ne_udalos_sohranit_kvest_dlya_oflayna_21108b88": "Nie udało się zapisać zadania w trybie offline",
   "components.quests.QuestWizard.progress_ochischen_54659954": "Postęp został usunięty",
+  "components.quests.QuestWizard.progressClearedServerPending": "Postęp został usunięty — z serwera usuniemy go, gdy pojawi się sieć",
   "components.quests.QuestWizard.sbrosit_progress_ffa455c0": "Zresetować postęp?",
   "components.quests.QuestWizard.shag_propuschen_f8686cda": "Krok pominięty",
   "components.quests.QuestWizard.v_kveste_net_tochek_dlya_karty_e2d9a5ea": "W zadaniu nie ma punktów za mapę",

@@ -19,6 +19,7 @@ import {
   snapshotFromServerProgress,
   toQuestProgressServerPayload,
 } from '@/utils/questProgressMerge'
+import { settleQuestProgressDeletions } from '@/utils/questProgressQueue'
 
 type GuestProgressPayload = {
   currentIndex: number
@@ -111,6 +112,11 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
       const guestProgress = await loadGuestQuestProgress(questId)
       if (!guestProgress || countAnsweredSteps(guestProgress.answers) === 0) return
       try {
+        // Сброс этого квеста в аккаунте ещё не дошёл до сервера: гостевые ответы
+        // слились бы в строку стёртого прохождения. Копия ждёт следующей попытки (#2043).
+        if (!(await settleQuestProgressDeletions(questId))) {
+          throw new Error(`Reset of quest progress ${questId} is not confirmed by the server yet`)
+        }
         // Чтение, слияние и запись — в очереди писателей квеста: флаш отложенной
         // очереди стартует тем же переходом в авторизованное состояние, а
         // `answers` уходит на сервер полным словарём. Два писателя от одной базы

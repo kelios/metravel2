@@ -7,10 +7,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const mockWithQuestProgress = jest.fn()
 const mockUpdateProgress = jest.fn()
+const mockDeleteProgress = jest.fn()
 
 jest.mock('@/api/quests', () => ({
   withQuestProgress: (...args: any[]) => mockWithQuestProgress(...args),
   updateProgress: (...args: any[]) => mockUpdateProgress(...args),
+  deleteProgress: (...args: any[]) => mockDeleteProgress(...args),
 }))
 
 const mockAuthState = { isAuthenticated: true, userId: '169' }
@@ -25,13 +27,17 @@ jest.mock('@/api/questsCatalogInvalidation', () => ({ refreshQuestsCatalogComple
 import { ApiError } from '@/api/clientErrors'
 import { QuestProgressLineageMismatch } from '@/utils/questProgressMerge'
 import {
+  QUEST_PROGRESS_DELETIONS_KEY,
   QUEST_PROGRESS_QUEUE_KEY,
   __resetQuestProgressQueue,
+  deleteOrEnqueueQuestProgress,
   deliverOrEnqueueQuestProgress,
   dequeueQuestProgress,
+  dropEndedQuestProgressRuns,
   enqueueQuestProgress,
   flushQuestProgressQueue,
   getQueuedQuestIds,
+  settleQuestProgressDeletions,
   subscribeQuestProgressQueue,
 } from '@/utils/questProgressQueue'
 
@@ -65,6 +71,8 @@ beforeEach(async () => {
   mockAuthState.userId = '169'
   mockWithQuestProgress.mockReset()
   mockUpdateProgress.mockReset()
+  mockDeleteProgress.mockReset()
+  mockDeleteProgress.mockResolvedValue(undefined)
   // Реальный `withQuestProgress` отдаёт задаче существующую или только что
   // созданную серверную строку — здесь она всегда есть.
   mockWithQuestProgress.mockImplementation(async (_questId: string, task: any) => task(serverRow))
@@ -254,6 +262,161 @@ describe('копия сброшенного прохождения не воск
     expect(entry.snapshot.serverId).toBe(105)
     expect(entry.snapshot.completed).toBe(false)
     expect(entry.snapshot.answers).toEqual({ intro: 'start' })
+  })
+})
+
+// #2043: «Сбросить» без сети — `DELETE` падал, повтора не было, и новое
+// прохождение сливалось в строку сброшенного вместе с «Пройден».
+describe('намерение удалить строку при «Сбросить» без сети (#2043)', () => {
+  const offlineError = () => new ApiError(0, 'offline', { offline: true })
+  const readStoredDeletions = async (): Promise<any[]> =>
+    JSON.parse((await AsyncStorage.getItem(QUEST_PROGRESS_DELETIONS_KEY)) ?? '[]')
+
+  it('ложится на диск до запроса и снимается, когда сервер подтвердил удаление', async () => {
+    let storedDuringRequest: any[] = []
+    mockDeleteProgress.mockImplementationOnce(async () => {
+      storedDuringRequest = await readStoredDeletions()
+    })
+
+    await expect(deleteOrEnqueueQuestProgress('ojcow-lokietek', 42)).resolves.toBe(true)
+
+    expect(storedDuringRequest).toEqual([
+      expect.objectContaining({ questId: 'ojcow-lokietek', ownerId: '169', progressId: 42 }),
+    ])
+    expect(mockDeleteProgress).toHaveBeenCalledWith(42)
+    expect(await readStoredDeletions()).toEqual([])
+  })
+
+  it('без сети остаётся, переживает перезапуск и уходит, когда сеть вернулась', async () => {
+    mockDeleteProgress.mockRejectedValueOnce(offlineError())
+
+    await expect(deleteOrEnqueueQuestProgress('ojcow-lokietek', 42)).resolves.toBe(false)
+    expect(await readStoredDeletions()).toHaveLength(1)
+
+    // Перезапуск приложения: модульное состояние пустое, на диске — намерение.
+    __resetQuestProgressQueue()
+    await flushQuestProgressQueue()
+
+    expect(mockDeleteProgress).toHaveBeenCalledTimes(2)
+    expect(mockDeleteProgress).toHaveBeenLastCalledWith(42)
+    expect(await readStoredDeletions()).toEqual([])
+  })
+
+  it('404 — строки уже нет: намерение закрыто и не повторяется', async () => {
+    mockDeleteProgress.mockRejectedValueOnce(new ApiError(404, 'Not found'))
+
+    await expect(deleteOrEnqueueQuestProgress('ojcow-lokietek', 42)).resolves.toBe(true)
+    await flushQuestProgressQueue()
+
+    expect(mockDeleteProgress).toHaveBeenCalledTimes(1)
+    expect(await readStoredDeletions()).toEqual([])
+  })
+
+  it('снапшот квеста не доходит до писателя, пока удаление ждёт, и уходит следом за ним', async () => {
+    mockDeleteProgress.mockRejectedValue(offlineError())
+    await deleteOrEnqueueQuestProgress('ojcow-lokietek', 42)
+    // Новое прохождение без поколения — то, что раньше сливалось в строку 42.
+    const newRun = offlineRun({ completed: false, answers: { intro: 'start' } })
+
+    await deliverOrEnqueueQuestProgress('ojcow-lokietek', newRun)
+    await flushQuestProgressQueue()
+
+    expect(mockWithQuestProgress).not.toHaveBeenCalled()
+    expect(await readStoredQueue()).toHaveLength(1)
+
+    mockDeleteProgress.mockResolvedValue(undefined)
+    await flushQuestProgressQueue()
+
+    expect(mockWithQuestProgress).toHaveBeenCalledTimes(1)
+    const lastDelete = mockDeleteProgress.mock.invocationCallOrder[mockDeleteProgress.mock.invocationCallOrder.length - 1]
+    expect(lastDelete).toBeLessThan(mockWithQuestProgress.mock.invocationCallOrder[0])
+    expect(await readStoredQueue()).toEqual([])
+    expect(await readStoredDeletions()).toEqual([])
+  })
+
+  it('ждущее удаление другого квеста путь к строке этого квеста не закрывает', async () => {
+    mockDeleteProgress.mockRejectedValue(offlineError())
+    await deleteOrEnqueueQuestProgress('ojcow-lokietek', 42)
+
+    await expect(settleQuestProgressDeletions('krakow-dragon')).resolves.toBe(true)
+    await expect(settleQuestProgressDeletions('ojcow-lokietek')).resolves.toBe(false)
+  })
+
+  it('чужое намерение ждёт входа своего владельца', async () => {
+    mockDeleteProgress.mockRejectedValueOnce(offlineError())
+    await deleteOrEnqueueQuestProgress('ojcow-lokietek', 42)
+
+    mockAuthState.userId = '186'
+    await enqueueQuestProgress('krakow-dragon', offlineRun())
+    await flushQuestProgressQueue()
+
+    // В чужой сессии сервер ответил бы 404 и закрыл намерение, не удалив строку.
+    expect(mockDeleteProgress).toHaveBeenCalledTimes(1)
+    expect(await readStoredDeletions()).toHaveLength(1)
+    // Прохождения вошедшего игрока оно не держит.
+    expect(mockUpdateProgress).toHaveBeenCalledTimes(1)
+
+    mockAuthState.userId = '169'
+    await flushQuestProgressQueue()
+
+    expect(mockDeleteProgress).toHaveBeenCalledTimes(2)
+    expect(await readStoredDeletions()).toEqual([])
+  })
+
+  it('постоянный отказ удаления снимает намерение и не затыкает очередь', async () => {
+    mockDeleteProgress.mockRejectedValueOnce(offlineError())
+    await deleteOrEnqueueQuestProgress('ojcow-lokietek', 42)
+    await enqueueQuestProgress('krakow-dragon', offlineRun())
+    mockDeleteProgress.mockRejectedValueOnce(new ApiError(400, 'Bad request'))
+
+    await flushQuestProgressQueue()
+
+    expect(await readStoredDeletions()).toEqual([])
+    expect(mockUpdateProgress).toHaveBeenCalledTimes(1)
+  })
+
+  it('параллельные ожидающие делят одну попытку DELETE', async () => {
+    mockDeleteProgress.mockRejectedValueOnce(offlineError())
+    await deleteOrEnqueueQuestProgress('ojcow-lokietek', 42)
+    let confirmDelete!: () => void
+    mockDeleteProgress.mockImplementationOnce(() => new Promise<void>((resolve) => { confirmDelete = resolve }))
+
+    const writer = settleQuestProgressDeletions('ojcow-lokietek')
+    const reader = settleQuestProgressDeletions('ojcow-lokietek')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    confirmDelete()
+
+    await expect(Promise.all([writer, reader])).resolves.toEqual([true, true])
+    expect(mockDeleteProgress).toHaveBeenCalledTimes(2)
+  })
+})
+
+// Хвост #2033 (R1): запись закончившегося поколения лежала в очереди до её
+// пробуждения, и новое офлайн-прохождение, слившись в неё, наследовало её
+// поколение и выбрасывалось вместе с ней.
+describe('запись закончившегося поколения снимается при открытии квеста (#2043)', () => {
+  it('подтверждённое отсутствие строки снимает запись поколения, новое прохождение ложится отдельно', async () => {
+    await enqueueQuestProgress('ojcow-lokietek', offlineRun({ serverId: 100 }))
+    await enqueueQuestProgress('krakow-dragon', offlineRun())
+
+    await dropEndedQuestProgressRuns('ojcow-lokietek', '169', null)
+    expect((await readStoredQueue()).map((entry: any) => entry.questId)).toEqual(['krakow-dragon'])
+
+    await enqueueQuestProgress('ojcow-lokietek', offlineRun({ completed: false, answers: { intro: 'start' } }))
+    const entry = (await readStoredQueue()).find((candidate: any) => candidate.questId === 'ojcow-lokietek')
+    expect(entry.snapshot).toMatchObject({ serverId: 0, completed: false, answers: { intro: 'start' } })
+  })
+
+  it('запись живого поколения, копия без поколения и чужая запись остаются', async () => {
+    await enqueueQuestProgress('ojcow-lokietek', offlineRun({ serverId: 100 }))
+    await enqueueQuestProgress('krakow-dragon', offlineRun())
+    mockAuthState.userId = '186'
+    await enqueueQuestProgress('ojcow-lokietek', offlineRun({ serverId: 90 }))
+
+    await dropEndedQuestProgressRuns('ojcow-lokietek', '169', 100)
+    await dropEndedQuestProgressRuns('krakow-dragon', '169', null)
+
+    expect(await readStoredQueue()).toHaveLength(3)
   })
 })
 

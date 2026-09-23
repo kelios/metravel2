@@ -183,6 +183,7 @@ export const questsGenerated1 = {
   "components.quests.QuestWizard.ne_udalos_postroit_realnyy_peshiy_marshrut_d_a06b2056": "Не вдалося збудувати реальний піший маршрут для GPX",
   "components.quests.QuestWizard.ne_udalos_sohranit_kvest_dlya_oflayna_21108b88": "Не вдалося зберегти квест для офлайну",
   "components.quests.QuestWizard.progress_ochischen_54659954": "Прогрес очищений",
+  "components.quests.QuestWizard.progressClearedServerPending": "Прогрес очищений — із сервера його видалимо, щойно з'явиться мережа",
   "components.quests.QuestWizard.sbrosit_progress_ffa455c0": "Скинути прогрес?",
   "components.quests.QuestWizard.shag_propuschen_f8686cda": "Крок пропущений",
   "components.quests.QuestWizard.v_kveste_net_tochek_dlya_karty_e2d9a5ea": "У квесті немає крапок для картки",

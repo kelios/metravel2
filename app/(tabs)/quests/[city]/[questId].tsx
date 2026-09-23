@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useIsFocused } from 'expo-router';
@@ -551,10 +551,6 @@ export default function QuestByIdScreen() {
 
   const questConsent = useActionConsent(CONSENT_TYPES.QUEST_START);
 
-  const handleProgressReset = useCallback(() => {
-    void resetProgress();
-  }, [resetProgress]);
-
   // Императивный патч head — только для успешной страницы квеста. На gate/loading/error
   // ветках свой InstantSEO (со своим robots/canonical), и отложенный патч его перетирал.
   // Keep image ownership during SSG/Expo reconciliation, using the same normalized
@@ -716,7 +712,7 @@ export default function QuestByIdScreen() {
             city={bundle.city}
             coverUrl={bundle.coverUrl}
             onProgressChange={saveProgress}
-            onProgressReset={handleProgressReset}
+            onProgressReset={resetProgress}
             initialProgress={initialProgress}
             onFinaleVideoRetry={refetch}
             relatedTravelsSlot={relatedTravelsSlot}
@@ -740,7 +736,7 @@ export default function QuestByIdScreen() {
           city={bundle.city}
           coverUrl={bundle.coverUrl}
           onProgressChange={saveProgress}
-          onProgressReset={handleProgressReset}
+          onProgressReset={resetProgress}
           initialProgress={initialProgress}
           onFinaleVideoRetry={refetch}
           relatedTravelsSlot={relatedTravelsSlot}

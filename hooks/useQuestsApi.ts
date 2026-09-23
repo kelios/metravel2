@@ -10,7 +10,6 @@ import {
     fetchQuestsPreview,
     fetchQuestProgress,
     fetchQuestReviews,
-    deleteProgress as apiDeleteProgress,
 } from '@/api/quests';
 import { queryKeys } from '@/api/queryKeys';
 import { writeCachedQuestBundle } from '@/api/questBundleCache';
@@ -27,10 +26,13 @@ import { selectPopularQuests } from '@/utils/questPopularity';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { hasQuestProgressStarted, QuestProgressLineageMismatch } from '@/utils/questProgressMerge';
 import {
+    deleteOrEnqueueQuestProgress,
     dequeueQuestProgress,
     deliverOrEnqueueQuestProgress,
+    dropEndedQuestProgressRuns,
     enqueueQuestProgress,
     pushQuestProgressSnapshot,
+    settleQuestProgressDeletions,
     syncCatalogCompletion,
 } from '@/utils/questProgressQueue';
 import { devWarn } from '@/utils/logger';
@@ -242,6 +244,10 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         () => progressOwnerIdRef.current ?? useAuthStore.getState().userId ?? null,
         [],
     );
+    // Сбросы по квестам за этот маунт. Флаш, стартовавший до «Сбросить», везёт
+    // стёртое прохождение: его ответ не становится состоянием экрана, а снапшот
+    // не возвращается ни в отложенные, ни в очередь на диске (#2043).
+    const resetCountsRef = useRef<Record<string, number>>({});
     const isAuthenticatedRef = useRef(isAuthenticated);
     isAuthenticatedRef.current = isAuthenticated;
     // Актуальный questId для асинхронных веток: ответ запроса может прийти,
@@ -298,9 +304,17 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         // принадлежать прошлому аккаунту, и упавшее чтение его не продлевает (#2033).
         setProgressMissing(false);
         const readOwnerId = useAuthStore.getState().userId ?? null;
-        fetchQuestProgress(questId)
+        const resetCountAtRead = resetCountsRef.current[questId] ?? 0;
+        // «Сбросить» без сети ещё не дошло до сервера: строка там — стёртое
+        // прохождение, и визард слил бы с ним новое. Пока удаление не
+        // подтверждено, состояние сервера неизвестно — как при упавшем чтении (#2043).
+        settleQuestProgressDeletions(questId, readOwnerId)
+            .then((settled) => (settled ? fetchQuestProgress(questId) : undefined))
             .then((data) => {
-                if (!cancelled) {
+                // Ответ на чтение, отправленное до «Сбросить», описывает стёртое
+                // прохождение: состояние экрана уже задал сам сброс (#2043).
+                const resetDuringRead = (resetCountsRef.current[questId] ?? 0) !== resetCountAtRead;
+                if (!cancelled && data !== undefined && !resetDuringRead) {
                     // #1803: пустое чтение не должно затирать то, что уже создал
                     // параллельный флаш. Иначе `resetProgress` молча пропускает
                     // серверный DELETE (он выходит на пустом `progressIdRef`), и
@@ -315,6 +329,9 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
                     // в кэше этого устройства могла остаться от прохождения,
                     // сброшенного на другом (#2033).
                     if (missing || data?.completed === false) syncCatalogCompletion(questId, readOwnerId, false);
+                    // Визард по этому же ответу стирает копию закончившегося
+                    // поколения — её запись в очереди уходит тем же шагом (#2043).
+                    void dropEndedQuestProgressRuns(questId, readOwnerId, progressIdRef.current);
                     // Ответы, сделанные пока запрос был в полёте, ждут отправки —
                     // дожимаем. Строку создаст сам флаш, если игрок уже начал.
                     flushPendingNow();
@@ -381,9 +398,14 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         inFlightRef.current = true;
         setSyncing(true);
         let saved = false;
+        const resetCountAtStart = resetCountsRef.current[questId] ?? 0;
+        const resetSinceStart = () => (resetCountsRef.current[questId] ?? 0) !== resetCountAtStart;
         try {
             const updated = await pushQuestProgressSnapshot(questId, data);
             saved = true;
+            // Строка стёртого прохождения экрану больше не принадлежит, а очередь
+            // квеста теперь — нового прохождения.
+            if (resetSinceStart()) return;
             // Снапшот доехал: очередь доставки этому квесту больше не нужна.
             void dequeueQuestProgress(questId, ownerIdForQueue());
             // Снимаем с очереди только то, что реально отправили: изменения,
@@ -412,8 +434,9 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
                 void dequeueQuestProgress(questId, ownerIdForQueue(), err.lineageId);
                 retryAttemptRef.current = 0;
                 // Экран переходит на то, что есть на сервере: визард по этому
-                // состоянию стирает копию закончившегося прохождения.
-                if (questIdRef.current === questId) {
+                // состоянию стирает копию закончившегося прохождения. После
+                // «Сбросить» здесь стирать уже нечего, а копию нового — нельзя.
+                if (questIdRef.current === questId && !resetSinceStart()) {
                     progressIdRef.current = err.current?.id ?? null;
                     if (mountedRef.current) {
                         setProgress(err.current);
@@ -422,17 +445,21 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
                 }
                 return;
             }
-            // Вернуть в очередь можно только на своём квесте: на чужом снапшот
-            // уже не отправится, а местом в очереди перекроет актуальный.
-            // Потерянным он не будет — локальная копия дольёт его при следующем
-            // открытии квеста (см. useQuestWizardProgress).
-            if (!pendingDataRef.current && questIdRef.current === questId) pendingDataRef.current = pending;
-            // Ретрай живёт в памяти экрана и умирает вместе с приложением —
-            // поэтому снапшот сразу ложится в очередь на диске (#1922). Два
-            // планировщика тут намеренно: экранный дожимает, пока игрок ещё на
-            // квесте, дисковый переживает выгрузку. Дубля записи это не даёт —
-            // оба идут через `withQuestProgress`, и второму нечего добавить.
-            void enqueueQuestProgress(questId, data, ownerIdForQueue());
+            // Снапшот прохождения, стёртого «Сбросить», пока запрос летел, не
+            // возвращается никуда: иначе он доехал бы следом за удалением.
+            if (!resetSinceStart()) {
+                // Вернуть в очередь можно только на своём квесте: на чужом снапшот
+                // уже не отправится, а местом в очереди перекроет актуальный.
+                // Потерянным он не будет — локальная копия дольёт его при следующем
+                // открытии квеста (см. useQuestWizardProgress).
+                if (!pendingDataRef.current && questIdRef.current === questId) pendingDataRef.current = pending;
+                // Ретрай живёт в памяти экрана и умирает вместе с приложением —
+                // поэтому снапшот сразу ложится в очередь на диске (#1922). Два
+                // планировщика тут намеренно: экранный дожимает, пока игрок ещё на
+                // квесте, дисковый переживает выгрузку. Дубля записи это не даёт —
+                // оба идут через `withQuestProgress`, и второму нечего добавить.
+                void enqueueQuestProgress(questId, data, ownerIdForQueue());
+            }
             devWarn('Could not save quest progress to server, will retry:', err);
             if (questIdRef.current === questId) scheduleRetry();
         } finally {
@@ -531,8 +558,11 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         }, PROGRESS_SYNC_DEBOUNCE_MS);
     }, [isAuthenticated, flushSync, questId]);
 
-    // Сброс прогресса
-    const resetProgress = useCallback(async () => {
+    // Сброс прогресса. `runServerId` — поколение копии, которую стёр визард:
+    // экран, открытый без сети, свою строку не прочитал и знает её только от
+    // визарда. `true` — сервер удаление ещё не подтвердил, и намерение ждёт
+    // сети в очереди (#2043).
+    const resetProgress = useCallback(async (runServerId = 0): Promise<boolean> => {
         if (debounceTimerRef.current) {
             clearTimeout(debounceTimerRef.current);
             debounceTimerRef.current = null;
@@ -541,26 +571,27 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         retryAttemptRef.current = 0;
         flushQueuedRef.current = false;
         pendingDataRef.current = null;
+        if (questId) resetCountsRef.current[questId] = (resetCountsRef.current[questId] ?? 0) + 1;
         // Очередь на диске переживает экран, поэтому «Начать заново» обязано
         // снять запись и с неё: иначе удалённое прохождение воскресло бы при
         // следующем пробуждении очереди.
         void dequeueQuestProgress(questId ?? '', ownerIdForQueue());
 
-        if (!isAuthenticated || !progressIdRef.current) return;
-        const ownerId = useAuthStore.getState().userId;
-        try {
-            await apiDeleteProgress(progressIdRef.current);
-            if (questId) syncCatalogCompletion(questId, ownerId ?? null, false);
-            // DELETE мог дойти, когда игрок уже на другом квесте: «строки нет»
-            // о нём неправда, и визард стёр бы копию живого прохождения (#1906, #2033).
-            if (questIdRef.current === questId) {
-                setProgress(null);
-                setProgressMissing(true);
-                progressIdRef.current = null;
-            }
-        } catch (err) {
-            console.warn('Could not delete quest progress from server:', err);
-        }
+        const progressId = progressIdRef.current ?? (runServerId > 0 ? runServerId : null);
+        if (!isAuthenticated || !questId || !progressId) return false;
+        // Строку удаляет тот, чья сессия сейчас: владелец последнего сейва этого
+        // маунта мог уже выйти, и в чужой сессии намерение не ушло бы никогда.
+        const ownerId = useAuthStore.getState().userId ?? null;
+        // Строка сброшенного прохождения больше не прохождение игрока, дошёл
+        // DELETE или нет: ни флаш, ни визард её не получают (#2043).
+        progressIdRef.current = null;
+        setProgress(null);
+        syncCatalogCompletion(questId, ownerId, false);
+        const deleted = await deleteOrEnqueueQuestProgress(questId, progressId, ownerId);
+        // DELETE мог дойти, когда игрок уже на другом квесте: «строки нет»
+        // о нём неправда, и визард стёр бы копию живого прохождения (#1906, #2033).
+        if (deleted && questIdRef.current === questId) setProgressMissing(true);
+        return !deleted;
     }, [clearRetryTimer, isAuthenticated, ownerIdForQueue, questId]);
 
     return { progress, progressLoading, progressMissing, syncing, saveProgress, resetProgress };

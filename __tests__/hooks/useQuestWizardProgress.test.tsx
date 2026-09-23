@@ -1491,6 +1491,38 @@ describe('useQuestWizardProgress — поколение прохождения (
     expect(onProgressChange).not.toHaveBeenCalled()
   })
 
+  // #2043: экран, открытый без сети, строку не прочитал — удалить на сервере он
+  // может только ту, что помнит стёртая копия. Тост ждёт исхода удаления, экран — нет.
+  it('сброс отдаёт экрану поколение стёртой копии и исход удаления на сервере, не дожидаясь его', async () => {
+    await AsyncStorage.setItem(storageKey, JSON.stringify(finishedCopy))
+    let settleServerDeletion!: (pending: boolean) => void
+    const onProgressReset = jest.fn(() => new Promise<boolean>((resolve) => { settleServerDeletion = resolve }))
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey,
+        // Чтение упало: экран строку не знает.
+        initialProgress: emptyServer,
+        onProgressReset,
+      })
+    )
+    await waitFor(() => expect(result.current.answers['step-1']).toBe('dragon'))
+
+    let reset!: { serverDeletionPending: Promise<boolean> }
+    await act(async () => {
+      reset = await result.current.resetProgress()
+    })
+
+    expect(onProgressReset).toHaveBeenCalledWith(42)
+    expect(result.current.answers).toEqual({})
+    expect(await readStored()).toMatchObject({ answers: {}, serverId: 0 })
+
+    settleServerDeletion(true)
+    await expect(reset.serverDeletionPending).resolves.toBe(true)
+  })
+
   it('сброс здесь: новое прохождение забывает прежнее поколение и узнаёт своё из первой отправки', async () => {
     const onProgressChange = jest.fn()
     const { result, rerender } = renderHook(

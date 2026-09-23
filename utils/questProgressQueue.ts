@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { ApiError } from '@/api/clientErrors'
 import { getActiveQueryClient } from '@/api/activeQueryClient'
 import {
+    deleteProgress as apiDeleteProgress,
     updateProgress as apiUpdateProgress,
     withQuestProgress,
     type ApiQuestProgress,
@@ -29,6 +30,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { devWarn } from '@/utils/logger'
 import {
     QuestProgressLineageMismatch,
+    isQuestProgressRunEnded,
     mergeQuestProgress,
     normalizeQuestProgressSnapshot,
     snapshotFromServerProgress,
@@ -42,6 +44,14 @@ import {
  * наружу v1 не выпускался — он прожил один коммит.
  */
 export const QUEST_PROGRESS_QUEUE_KEY = 'quest_progress_queue_v2'
+
+/**
+ * Намерения удалить строку прохождения: «Сбросить» нажато, а сервер удаление
+ * ещё не подтвердил (#2043). Ключ свой, а не запись в очереди снапшотов: те
+ * сливаются по квесту и зажигают пометку «ещё не отправлено», а удаление не
+ * сливается ни с чем и уходит раньше любого снапшота своего квеста.
+ */
+export const QUEST_PROGRESS_DELETIONS_KEY = 'quest_progress_deletions_v1'
 
 /**
  * Потолок очереди: у записи ключ — квест, поэтому это число РАЗНЫХ квестов,
@@ -65,14 +75,32 @@ export type QueuedQuestProgress = {
     queuedAt: number
 }
 
+export type QueuedQuestProgressDeletion = {
+    questId: string
+    /** Чьё прохождение сброшено: удаление уходит только в сессии этого игрока. */
+    ownerId: string | null
+    /**
+     * `id` строки сброшенного прохождения. Удаляется ровно она: строку, созданную
+     * после сброса (например, новое прохождение на другом устройстве), намерение
+     * не трогает.
+     */
+    progressId: number
+    queuedAt: number
+}
+
 // Состояние модульное, а не хуковое: доставка обязана пережить размонтирование
 // экрана квеста и работать из любого места приложения.
 let queue: QueuedQuestProgress[] | null = null
+// Грузится вместе с `queue`: пока `queue` не загружена, список тоже пуст.
+let deletions: QueuedQuestProgressDeletion[] = []
 let queueLoadPromise: Promise<QueuedQuestProgress[]> | null = null
 let flushChain: Promise<void> | null = null
 let retryAttempt = 0
 let retryTimer: ReturnType<typeof setTimeout> | null = null
 const listeners = new Set<(questIds: string[]) => void>()
+// Одна попытка на намерение: проход очереди, флаш экрана и чтение при открытии
+// квеста ждут общий DELETE, а не шлют каждый свой.
+const deletionAttempts = new Map<QueuedQuestProgressDeletion, Promise<boolean>>()
 
 /** Кто сейчас за телефоном. `null` — гость: отправлять некому. */
 const currentOwnerId = (): string | null => useAuthStore.getState().userId ?? null
@@ -89,28 +117,51 @@ const isQueuedProgress = (value: unknown): value is QueuedQuestProgress => {
     )
 }
 
+const isQueuedDeletion = (value: unknown): value is QueuedQuestProgressDeletion => {
+    if (!value || typeof value !== 'object') return false
+    const record = value as Record<string, unknown>
+    return (
+        typeof record.questId === 'string' &&
+        !!record.questId &&
+        typeof record.ownerId === 'string' &&
+        typeof record.progressId === 'number' &&
+        Number.isSafeInteger(record.progressId) &&
+        record.progressId > 0
+    )
+}
+
+/** Список с диска. Повреждённый JSON или недоступное хранилище — пустой список. */
+const readStoredList = async <T>(key: string, isEntry: (value: unknown) => value is T): Promise<T[]> => {
+    try {
+        const raw = await AsyncStorage.getItem(key)
+        const parsed = raw ? JSON.parse(raw) : []
+        return Array.isArray(parsed) ? parsed.filter(isEntry) : []
+    } catch {
+        return []
+    }
+}
+
 const loadQueue = async (): Promise<QueuedQuestProgress[]> => {
     if (queue) return queue
     if (!queueLoadPromise) {
-        queueLoadPromise = (async () => {
-            try {
-                const raw = await AsyncStorage.getItem(QUEST_PROGRESS_QUEUE_KEY)
-                const parsed = raw ? JSON.parse(raw) : []
-                if (!Array.isArray(parsed)) return []
-                return parsed.filter(isQueuedProgress).map((entry) => ({
+        queueLoadPromise = Promise.all([
+            readStoredList(QUEST_PROGRESS_QUEUE_KEY, isQueuedProgress),
+            readStoredList(QUEST_PROGRESS_DELETIONS_KEY, isQueuedDeletion),
+        ])
+            .then(([storedQueue, storedDeletions]) => {
+                deletions = storedDeletions.map((entry) => ({
+                    questId: entry.questId,
+                    ownerId: entry.ownerId,
+                    progressId: entry.progressId,
+                    queuedAt: Number(entry.queuedAt) || 0,
+                }))
+                queue = storedQueue.map((entry) => ({
                     questId: entry.questId,
                     ownerId: entry.ownerId,
                     snapshot: normalizeQuestProgressSnapshot(entry.snapshot),
                     queuedAt: Number(entry.queuedAt) || 0,
                 }))
-            } catch {
-                // Повреждённый JSON или недоступное хранилище — пустая очередь.
-                return []
-            }
-        })()
-            .then((loaded) => {
-                queue = loaded
-                return loaded
+                return queue
             })
             .finally(() => {
                 queueLoadPromise = null
@@ -146,6 +197,14 @@ const persistQueue = async (): Promise<void> => {
         // Best effort: недоступное хранилище не должно ронять прохождение.
     }
     notify()
+}
+
+const persistDeletions = async (): Promise<void> => {
+    try {
+        await AsyncStorage.setItem(QUEST_PROGRESS_DELETIONS_KEY, JSON.stringify(deletions))
+    } catch {
+        // Best effort, как и у снапшотов: намерение живёт в памяти до выгрузки.
+    }
 }
 
 const clearRetryTimer = () => {
@@ -190,12 +249,20 @@ export const syncCatalogCompletion = (questId: string, ownerId: string | null, c
  * Снапшот с поколением пишется только в свою строку. Если её сбросили на
  * другом устройстве, летит `QuestProgressLineageMismatch`: снапшот доставлять
  * некуда, и вызывающий его выбрасывает, а не ставит на ретрай (#2033).
+ *
+ * Сброс квеста, не дошедший до сервера, писатель сначала доводит: слияние со
+ * строкой сброшенного прохождения вернуло бы новому прохождению прежние ответы
+ * и «Пройден». Пока удаление ждёт, снапшот падает обычной ошибкой и ждёт на
+ * ретрае и в очереди, как ждёт сети (#2043).
  */
 export async function pushQuestProgressSnapshot(
     questId: string,
     snapshot: QuestProgressSnapshot | Partial<QuestProgressSnapshot>,
 ): Promise<ApiQuestProgress> {
     const ownerId = useAuthStore.getState().userId
+    if (!(await settleQuestProgressDeletions(questId, ownerId))) {
+        throw new Error(`Reset of quest progress ${questId} is not confirmed by the server yet`)
+    }
     const local = normalizeQuestProgressSnapshot(snapshot)
     let updated: ApiQuestProgress
     try {
@@ -286,6 +353,30 @@ export async function dequeueQuestProgress(
 }
 
 /**
+ * Сервер подтвердил строку квеста при открытии (`id`, `null` — строки нет):
+ * записи закончившихся поколений снимаются сразу, по тому же правилу, по
+ * которому визард стирает копию. Пока такая запись лежит, новое офлайн-
+ * прохождение сливается в неё, наследует её поколение и выбрасывается вместе с
+ * ней, когда очередь узнает о сбросе (#2043, хвост #2033).
+ */
+export async function dropEndedQuestProgressRuns(
+    questId: string,
+    ownerId: string | null,
+    serverId: number | null,
+): Promise<void> {
+    await loadQueue()
+    const entries = queue ?? []
+    const next = entries.filter((entry) =>
+        entry.questId !== questId ||
+        entry.ownerId !== ownerId ||
+        !isQuestProgressRunEnded(entry.snapshot, serverId),
+    )
+    if (next.length === entries.length) return
+    queue = next
+    await persistQueue()
+}
+
+/**
  * Отправляет снапшот сразу, а при неудаче кладёт в очередь. Точка ухода с
  * квеста: попытка одна, но её провал больше не стоит игроку прохождения.
  */
@@ -320,14 +411,106 @@ export async function deliverOrEnqueueQuestProgress(
 const isPermanentRejection = (status: number | undefined): boolean =>
     typeof status === 'number' && status >= 400 && status < 500 && status !== 429 && status !== 401 && status !== 403
 
+/**
+ * Одна попытка удалить строку. `true` — намерение закрыто: сервер подтвердил,
+ * что строки нет (204; 404 — удаление дошло раньше, а ответ потерялся), либо
+ * отказал навсегда. Держать такое намерение значило бы навсегда закрыть квест
+ * для новых прохождений игрока — та же политика, что у снапшотов (#1922).
+ */
+const attemptDeletion = async (entry: QueuedQuestProgressDeletion): Promise<boolean> => {
+    // Закрыто другим путём, пока этот ждал своей очереди.
+    if (!deletions.includes(entry)) return true
+    // В чужой сессии сервер ответил бы 404 про СВОИ строки, и намерение
+    // закрылось бы, не удалив строку владельца. Оно ждёт его входа.
+    if (entry.ownerId !== currentOwnerId()) return false
+    try {
+        await apiDeleteProgress(entry.progressId)
+    } catch (error) {
+        const status = error instanceof ApiError ? error.status : undefined
+        if (!isPermanentRejection(status)) {
+            devWarn('Could not delete quest progress, will retry:', error)
+            return false
+        }
+        if (status !== 404) devWarn('Server rejected quest progress deletion, dropping:', status)
+    }
+    deletions = deletions.filter((candidate) => candidate !== entry)
+    await persistDeletions()
+    // Каталог мог перечитаться, пока удаление ждало сети, и вернуть «Пройден».
+    syncCatalogCompletion(entry.questId, entry.ownerId, false)
+    return true
+}
+
+const settleDeletion = (entry: QueuedQuestProgressDeletion): Promise<boolean> => {
+    const inFlight = deletionAttempts.get(entry)
+    if (inFlight) return inFlight
+    const attempt = attemptDeletion(entry).finally(() => {
+        deletionAttempts.delete(entry)
+    })
+    deletionAttempts.set(entry, attempt)
+    return attempt
+}
+
+/**
+ * «Сбросить»: удалить на сервере строку сброшенного прохождения. Намерение
+ * ложится на диск ДО запроса: без сети, при ошибке сервера и при выгрузке
+ * приложения посреди запроса оно не теряется и уходит при следующем
+ * пробуждении очереди (#2043). `true` — удаление больше не ждёт.
+ */
+export async function deleteOrEnqueueQuestProgress(
+    questId: string,
+    progressId: number,
+    ownerId: string | null = currentOwnerId(),
+): Promise<boolean> {
+    await loadQueue()
+    const existing = deletions.find((entry) =>
+        entry.questId === questId && entry.ownerId === ownerId && entry.progressId === progressId,
+    )
+    const entry = existing ?? { questId, ownerId, progressId, queuedAt: Date.now() }
+    if (!existing) {
+        deletions = [...deletions, entry]
+        await persistDeletions()
+    }
+    if (await settleDeletion(entry)) return true
+    scheduleRetry()
+    return false
+}
+
+/**
+ * Свободен ли путь к строке квеста: сброс этого квеста, не дошедший до сервера,
+ * сначала доводится. `false` — удаление всё ещё ждёт, и писать в строку или
+ * показывать её как состояние сервера нельзя: это прохождение, которое игрок
+ * стёр (#2043).
+ */
+export async function settleQuestProgressDeletions(
+    questId: string,
+    ownerId: string | null = currentOwnerId(),
+): Promise<boolean> {
+    await loadQueue()
+    const pending = deletions.filter((entry) => entry.questId === questId && entry.ownerId === ownerId)
+    for (const entry of pending) {
+        if (!(await settleDeletion(entry))) return false
+    }
+    return true
+}
+
 const drainQueue = async (): Promise<void> => {
     await loadQueue()
-    if (!queue?.length) return
+    if (!queue?.length && !deletions.length) return
     // Без аккаунта отправлять некуда, но очередь остаётся: она ждёт входа.
     const ownerId = currentOwnerId()
     if (!useAuthStore.getState().isAuthenticated || !ownerId) return
 
     clearRetryTimer()
+
+    // Сначала сбросы: снапшот квеста со сбросом в пути ждёт удаления строки, а
+    // сброс без новых снапшотов иначе не уехал бы вовсе (#2043).
+    for (const entry of deletions.filter((candidate) => candidate.ownerId === ownerId)) {
+        if (!(await settleDeletion(entry))) {
+            scheduleRetry()
+            return
+        }
+        retryAttempt = 0
+    }
 
     // Квест за заход берём один раз: пока шёл запрос, экран мог положить более
     // свежий снапшот того же квеста, и без этого набора цикл вернулся бы к нему
@@ -416,6 +599,8 @@ export function subscribeQuestProgressQueue(listener: (questIds: string[]) => vo
 export function __resetQuestProgressQueue(): void {
     clearRetryTimer()
     queue = null
+    deletions = []
+    deletionAttempts.clear()
     queueLoadPromise = null
     flushChain = null
     retryAttempt = 0

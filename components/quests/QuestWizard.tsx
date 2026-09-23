@@ -78,8 +78,8 @@ export type QuestWizardProps = {
         /** Поколение: `id` строки, с которой снапшот согласован (#2033) */
         serverId?: number;
     }) => void;
-    /** Callback при сбросе прогресса */
-    onProgressReset?: () => void;
+    /** Сброс прогресса: `serverId` — поколение стёртой копии; `true` — удаление на сервере ждёт сети (#2043) */
+    onProgressReset?: (serverId: number) => Promise<boolean> | void;
     /** Начальный прогресс с бэкенда/гостевого хранилища — сливается с локальным */
     initialProgress?: {
         currentIndex: number; unlockedIndex: number;
@@ -468,7 +468,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         const ok = await confirmQuestAsync(i18nT('quests:components.quests.QuestWizard.sbrosit_progress_ffa455c0'), i18nT('quests:components.quests.QuestWizard.vse_vashi_otvety_budut_udaleny_103ee6ff'));
         if (!ok) return;
         try {
-            await resetProgress();
+            const { serverDeletionPending } = await resetProgress();
             // Паузы между попытками (#1428) живут вне снапшота прогресса,
             // поэтому сбрасываются отдельно — иначе переигровка в той же вкладке
             // начиналась бы с унаследованной ступени лестницы.
@@ -477,7 +477,11 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
             // так, объяснено в `useQuestWizardAnalytics` (#1498).
             resetFunnelSession();
             setShowFinaleOnly(false);
-            notifyQuest(i18nT('quests:components.quests.QuestWizard.progress_ochischen_54659954'));
+            // Без сети строка на сервере удалится позже — тост об этом говорит (#2043).
+            const deletionPending = await serverDeletionPending;
+            notifyQuest(deletionPending
+                ? i18nT('quests:components.quests.QuestWizard.progressClearedServerPending')
+                : i18nT('quests:components.quests.QuestWizard.progress_ochischen_54659954'));
         } catch (e) {
             console.error('Error resetting progress:', e);
         }

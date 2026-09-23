@@ -20,6 +20,8 @@ import {
 } from '@/utils/guestQuestProgress'
 import { useGuestQuestFlow } from '@/components/quests/useGuestQuestFlow'
 import * as questsApi from '@/api/quests'
+import { useAuthStore } from '@/stores/authStore'
+import { QUEST_PROGRESS_DELETIONS_KEY, __resetQuestProgressQueue } from '@/utils/questProgressQueue'
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
@@ -28,10 +30,12 @@ jest.mock('expo-router', () => ({
 // #1905: миграция гостя ходит через очередь писателей квеста — мок отдаёт задаче
 // серверную запись ровно так же, как это делает настоящий `withQuestProgress`.
 const mockReadOrCreateProgress = jest.fn()
+const mockDeleteProgress = jest.fn()
 jest.mock('@/api/quests', () => ({
   withQuestProgress: (questId: string, task: (progress: any) => Promise<unknown>) =>
     Promise.resolve(mockReadOrCreateProgress(questId)).then((progress) => task(progress)),
   updateProgress: jest.fn(),
+  deleteProgress: (...args: any[]) => mockDeleteProgress(...args),
 }))
 
 const mockedApi = questsApi as jest.Mocked<typeof questsApi>
@@ -218,6 +222,51 @@ describe('useGuestQuestFlow migration after login', () => {
       const leftover = await loadGuestQuestProgress('krakow-dragon')
       expect(leftover).toBeNull()
     })
+  })
+
+  // #2043: сброс в аккаунте, нажатый без сети, ещё не дошёл до сервера. Гостевые
+  // ответы, слитые в строку стёртого прохождения, пропали бы вместе с ней.
+  it('не сливает гостевые ответы в строку, удаление которой ещё ждёт сети', async () => {
+    const authSnapshot = useAuthStore.getState()
+    useAuthStore.setState({ isAuthenticated: true, userId: '169' })
+    await AsyncStorage.setItem(
+      QUEST_PROGRESS_DELETIONS_KEY,
+      JSON.stringify([{ questId: 'krakow-dragon', ownerId: '169', progressId: 42, queuedAt: 1 }]),
+    )
+    __resetQuestProgressQueue()
+    mockDeleteProgress.mockRejectedValue(new Error('Network request failed'))
+    await saveGuestQuestProgress('krakow-dragon', {
+      currentIndex: 1,
+      unlockedIndex: 1,
+      answers: { 'step-1': 'дракон' },
+      attempts: {},
+      hints: {},
+      showMap: true,
+    })
+
+    try {
+      renderHook(() =>
+        useGuestQuestFlow({
+          questId: 'krakow-dragon',
+          cityId: 'krakow',
+          isAuthenticated: true,
+          enabled: true,
+        }),
+      )
+
+      await waitFor(() => expect(mockDeleteProgress).toHaveBeenCalledWith(42))
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
+
+      expect(mockReadOrCreateProgress).not.toHaveBeenCalled()
+      expect(mockedApi.updateProgress).not.toHaveBeenCalled()
+      expect((await loadGuestQuestProgress('krakow-dragon'))?.answers).toEqual({ 'step-1': 'дракон' })
+    } finally {
+      __resetQuestProgressQueue()
+      mockDeleteProgress.mockReset()
+      useAuthStore.setState({ isAuthenticated: authSnapshot.isAuthenticated, userId: authSnapshot.userId })
+    }
   })
 
   it('is a no-op when there is no guest progress to migrate', async () => {

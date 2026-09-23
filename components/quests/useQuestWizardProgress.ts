@@ -150,7 +150,11 @@ type UseQuestWizardProgressParams = {
   storageKey: string
   initialProgress?: InitialQuestProgress
   onProgressChange?: (data: QuestWizardProgressPayload) => void
-  onProgressReset?: () => void
+  /**
+   * `serverId` — поколение стёртой копии: экран без прочитанной строки удаляет
+   * на сервере её. `true` в ответе — удаление там ещё ждёт сети (#2043).
+   */
+  onProgressReset?: (serverId: number) => Promise<boolean> | void
 }
 
 export function useQuestWizardProgress({
@@ -504,14 +508,21 @@ export function useQuestWizardProgress({
     setSkipped((prev) => (prev[stepId] ? prev : { ...prev, [stepId]: true }))
   }, [])
 
-  const resetProgress = async () => {
+  // Экран сбрасывается сразу, а исход удаления строки на сервере приходит
+  // отдельным промисом: без сети запрос висит до таймаута, и ждать его значило
+  // бы держать на экране прежнее прохождение (#2043).
+  const resetProgress = async (): Promise<{ serverDeletionPending: Promise<boolean> }> => {
+    const resetRunServerId = serverIdRef.current
     await AsyncStorage.removeItem(storageKey)
     // Сброс — единственная немонотонная операция: слияние её бы отменило,
     // поэтому чистим и локальные времена, чтобы старые ответы не «воскресли».
     const emptyState = normalizeQuestProgressSnapshot({ updatedAt: Date.now() })
     setCompletionFinishedAt(null)
     await seedProgressState(emptyState, true)
-    onProgressReset?.()
+    const serverDeletionPending = Promise.resolve(onProgressReset?.(resetRunServerId)).then(
+      (pending) => pending === true,
+    )
+    return { serverDeletionPending }
   }
 
   return {

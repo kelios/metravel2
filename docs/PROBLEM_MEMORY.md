@@ -2619,10 +2619,45 @@ guard, падающий в CI на попытке обойти этот конт
   - `__tests__/hooks/questDetailMetadata.test.tsx` › «completion reset without a cached mark leaves the cold bundle load alone» — сброс отметки не отменяет первую загрузку бандла.
 - **Известная дыра:**
   - копии без поколения — записи версий до #2033 и доставленные только очередью до первого открытия квеста — ведут себя по-старому до первого согласования в сети;
-  - «Сбросить», нажатое без сети, не доходит до сервера (`DELETE` падает), строка остаётся, и следующее прохождение сливается в неё.
+  - ~~«Сбросить», нажатое без сети, не доходит до сервера~~ — закрыто #2043, под-ключ `QUEST-PROGRESS-RESET-OFFLINE-001` ниже.
 - **Последняя проверка:** 2026-09-23. Предпосылка проверена по `../metravel-backend`
   `origin/master` `847d21f`: BigAutoField, `unique_together=[quest, user]`,
   `POST` = `get_or_create`, `DELETE` физический.
+
+### QUEST-PROGRESS-RESET-OFFLINE-001 — «Сбросить» без сети не доходит до сервера
+
+- **Ключ на борде:** `quest-progress-reset-offline-delete-not-retried` (#2043); под-ключ семьи QUEST-PROGRESS-RESET-LINEAGE-001.
+- **Инвариант:** намерение удалить строку сброшенного прохождения durable. Оно
+  ложится на диск до запроса и повторяется, пока сервер не подтвердит отсутствие
+  строки: 204 или 404. Пока удаление не подтверждено, ни один писатель не пишет
+  в эту строку, а экран не отдаёт её визарду как состояние сервера.
+- **Почему нельзя «просто пометить новую копию»:** `POST` = `get_or_create` при
+  `unique_together=[quest, user]`. Вторую строку квеста не создать, пока жива
+  первая, поэтому писатель сначала доводит удаление.
+- **Подтверждённая причина:** `resetProgress` делал одну попытку `DELETE`, а в
+  `catch` — только `console.warn`. У обычного сохранения durable-очередь #1922
+  есть, у удаления её не было. Экран, открытый без сети, не отправлял `DELETE`
+  вовсе: строку он не прочитал, а поколение копии знал только визард.
+- **Surface/owner:** фронтовый клиент прохождения, API прежний:
+  - `utils/questProgressQueue.ts`: список `quest_progress_deletions_v1`, `deleteOrEnqueueQuestProgress`, `settleQuestProgressDeletions` в `pushQuestProgressSnapshot` и в `drainQueue` раньше снапшотов;
+  - `hooks/useQuestsApi.ts`: `resetProgress(runServerId)` и чтение при открытии через `settleQuestProgressDeletions`;
+  - `components/quests/useGuestQuestFlow.ts`: миграция гостя ждёт удаления;
+  - `components/quests/useQuestWizardProgress.ts`: поколение стёртой копии уходит экрану;
+  - `components/quests/QuestWizard.tsx`: тост «с сервера удалится, как появится сеть».
+
+  Контракт — OpenSpec `quest-progress-reconciliation` (change `quest-progress-offline-reset-intent`).
+- **Цепочка:** восьмой root cause в синхронизации прогресса квеста, после #2033.
+  Тем же change закрыт хвост #2033 R1: запись закончившегося поколения снимается
+  с очереди при открытии квеста, а не при её пробуждении.
+- **Controls:**
+  - `__tests__/hooks/useQuestProgressSync.offlineReset.test.ts`;
+  - `__tests__/utils/questProgressQueue.test.ts` › «намерение удалить строку при «Сбросить» без сети» и «запись закончившегося поколения снимается при открытии квеста»;
+  - `__tests__/hooks/useQuestWizardProgress.test.tsx` › «сброс отдаёт экрану поколение стёртой копии»;
+  - `__tests__/components/quests/guestQuestFlow.test.tsx` › «не сливает гостевые ответы в строку, удаление которой ещё ждёт сети»;
+  - `__tests__/components/quests/QuestWizard.resetToast.test.tsx`.
+- **Известная дыра:**
+  - копия без поколения на экране без прочитанной строки: удалять нечего, `DELETE` не уходит;
+  - сброс во время первой, ещё летящей и в итоге успешной отправки прохождения, которое не встречало сервер: строка создаётся уже после сброса и намерения не получает. Ответ такой отправки экран не принимает: счётчик сбросов `resetCountsRef` в `hooks/useQuestsApi.ts` (находка код-ревью #2043).
 
 ### QUEST-ANSWER-UNREACHABLE-001 — вариант закрытого словаря `exact_any` нельзя набрать
 

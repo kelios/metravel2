@@ -183,6 +183,7 @@ export const questsGenerated1 = {
   "components.quests.QuestWizard.ne_udalos_postroit_realnyy_peshiy_marshrut_d_a06b2056": "Failed to build real walking route for GPX",
   "components.quests.QuestWizard.ne_udalos_sohranit_kvest_dlya_oflayna_21108b88": "Failed to save quest for offline",
   "components.quests.QuestWizard.progress_ochischen_54659954": "Progress cleared",
+  "components.quests.QuestWizard.progressClearedServerPending": "Progress cleared — it will be removed from the server once you're online",
   "components.quests.QuestWizard.sbrosit_progress_ffa455c0": "Reset progress?",
   "components.quests.QuestWizard.shag_propuschen_f8686cda": "Step skipped",
   "components.quests.QuestWizard.v_kveste_net_tochek_dlya_karty_e2d9a5ea": "There are no points for the map in the quest",
