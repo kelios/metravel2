@@ -53,12 +53,23 @@ interface FakeMarker {
   element: { attrs: Record<string, string> };
 }
 
+interface FakeClusterGroup {
+  options: Record<string, unknown>;
+  members: FakeMarker[];
+  addLayer: (marker: FakeMarker) => void;
+  addTo: (map: unknown) => FakeClusterGroup;
+}
+
 const createHarness = () => {
   const posted: Array<Record<string, unknown>> = [];
   const routeMarkers: FakeMarker[] = [];
   const stopPropagationCalls: unknown[] = [];
   const fitBoundsCalls: unknown[] = [];
   const setViewCalls: unknown[] = [];
+  // #2071 — кластер-группы точек маршрута, созданные за время жизни harness (по
+  // одной на каждый renderPoints с routePointMarkers.cluster).
+  const clusterGroups: FakeClusterGroup[] = [];
+  const removedLayers: unknown[] = [];
 
   const makeLayer = () => {
     const layer = {
@@ -106,6 +117,25 @@ const createHarness = () => {
         stopPropagationCalls.push(event);
       },
     },
+    // #2071 — фейковая группа кластеров: реального разбиения на кластеры не
+    // делает (это код leaflet.markercluster, инлайненный отдельно и покрытый
+    // `nativeRouteClusterScript.test.ts`), но фиксирует, КАКИЕ маркеры и с
+    // какими опциями в неё попали — этого достаточно, чтобы отличить
+    // «замаркерена вручную в routeLayer» от «отдана кластер-группе».
+    markerClusterGroup: (options: Record<string, unknown>) => {
+      const group: FakeClusterGroup = {
+        options,
+        members: [],
+        addLayer(marker: FakeMarker) {
+          group.members.push(marker);
+        },
+        addTo() {
+          return group;
+        },
+      };
+      clusterGroups.push(group);
+      return group;
+    },
     marker: (position: [number, number], options: Record<string, unknown> = {}) => {
       const attrs: Record<string, string> = {};
       const marker: FakeMarker & Record<string, unknown> = {
@@ -142,6 +172,9 @@ const createHarness = () => {
     },
     setView: (value: unknown) => {
       setViewCalls.push(value);
+    },
+    removeLayer: (layer: unknown) => {
+      removedLayers.push(layer);
     },
     getZoom: () => 10,
     __userCenter: null,
@@ -185,7 +218,16 @@ const createHarness = () => {
     () => undefined,
   ) as (payload: unknown) => void;
 
-  return { renderPoints, routeMarkers, posted, stopPropagationCalls, fitBoundsCalls, map };
+  return {
+    renderPoints,
+    routeMarkers,
+    posted,
+    stopPropagationCalls,
+    fitBoundsCalls,
+    map,
+    clusterGroups,
+    removedLayers,
+  };
 };
 
 const routePayload = (interactive: boolean) => ({
@@ -219,7 +261,9 @@ describe('#1781 native-карта — точки маршрута правятс
     harness.routeMarkers.forEach((marker) => {
       expect(marker.options.draggable).toBe(true);
       expect(marker.options.interactive).toBe(true);
-      expect(Object.keys(marker.handlers).sort()).toEqual(['click', 'dragend', 'dragstart']);
+      // #2071: `add` переставляет aria-description, когда markercluster создаёт
+      // DOM-узел маркера заново (см. тест ниже про подсказку).
+      expect(Object.keys(marker.handlers).sort()).toEqual(['add', 'click', 'dragend', 'dragstart']);
     });
   });
 
@@ -369,5 +413,175 @@ describe('#1781 native-карта — точки маршрута правятс
     harness.renderPoints({ ...single, routePoints: [[53.901235, 27.567891]] });
 
     expect(harness.map.__metravelRouteFitLocked).toBe(true);
+  });
+});
+
+// #2071 — паритет с web: близкие точки маршрута собираются в кластер
+// (`leaflet.markercluster`, порог/радиус приходят из payload), активная точка
+// крупнее и остаётся вне кластера.
+const clusterIcon = { className: 'metravel-trip-plan-marker', html: '<div>{{n}}</div>', size: [36, 36], anchor: [18, 36] };
+const activeClusterIcon = {
+  className: 'metravel-trip-plan-marker-active',
+  html: '<div class="active">{{n}}</div>',
+  size: [44, 44],
+  anchor: [22, 44],
+};
+
+const routePointsPayload = (options: {
+  count: number;
+  activeIndex?: number | null;
+  cluster?: { maxClusterRadius: number; disableClusteringAtZoom: number } | null;
+  interactive?: boolean;
+}) => ({
+  points: [],
+  clusters: [],
+  routePoints: Array.from({ length: options.count }, (_, index) => [53.9 + index * 0.001, 27.5 + index * 0.001]),
+  routeLine: [],
+  originalTrackSegments: [],
+  mode: 'route',
+  center: { lat: 53.9, lng: 27.5 },
+  usesServerClusters: false,
+  pointsOnly: true,
+  routePointsInteractive: options.interactive ?? false,
+  routeReplacementToken: 0,
+  routePointMarkers: {
+    labels: Array.from({ length: options.count }, (_, index) => String(index + 1)),
+    icon: clusterIcon,
+    activeIcon: activeClusterIcon,
+    activeIndex: options.activeIndex ?? null,
+    fontSizes: [8],
+    cluster: options.cluster ?? null,
+  },
+});
+
+describe('#2071 native-карта — кластеризация точек маршрута и активный маркер', () => {
+  it('короткий маршрут (cluster: null) остаётся без кластер-группы — точки как раньше в routeLayer', () => {
+    const harness = createHarness();
+    harness.renderPoints(routePointsPayload({ count: 3, cluster: null }));
+
+    expect(harness.clusterGroups).toHaveLength(0);
+    expect(harness.routeMarkers).toHaveLength(3);
+  });
+
+  it('крупный маршрут оборачивает точки в markerClusterGroup с порогом из payload (паритет с web)', () => {
+    const harness = createHarness();
+    harness.renderPoints(
+      routePointsPayload({ count: 5, cluster: { maxClusterRadius: 80, disableClusteringAtZoom: 14 } }),
+    );
+
+    expect(harness.clusterGroups).toHaveLength(1);
+    expect(harness.clusterGroups[0].options).toMatchObject({
+      maxClusterRadius: 80,
+      disableClusteringAtZoom: 14,
+    });
+    // Все 5 маркеров ушли в кластер-группу, ни один не осел в routeLayer.
+    expect(harness.clusterGroups[0].members).toHaveLength(5);
+    expect(harness.routeMarkers).toHaveLength(0);
+  });
+
+  it('активная точка крупнее (activeIcon) и остаётся вне кластера, остальные — в кластере с обычной иконкой', () => {
+    const harness = createHarness();
+    harness.renderPoints(
+      routePointsPayload({
+        count: 4,
+        activeIndex: 2,
+        cluster: { maxClusterRadius: 80, disableClusteringAtZoom: 14 },
+      }),
+    );
+
+    // Активная точка (index 2) — единственный маркер в routeLayer, не в кластере.
+    expect(harness.routeMarkers).toHaveLength(1);
+    expect(harness.routeMarkers[0].options.icon).toMatchObject({ className: activeClusterIcon.className });
+    expect(harness.routeMarkers[0].options.zIndexOffset).toBe(1000);
+
+    // Остальные 3 точки — в кластере, с обычной (не активной) иконкой.
+    expect(harness.clusterGroups[0].members).toHaveLength(3);
+    harness.clusterGroups[0].members.forEach((marker) => {
+      expect(marker.options.icon).toMatchObject({ className: clusterIcon.className });
+      expect(marker.options.zIndexOffset).toBe(0);
+    });
+  });
+
+  it('пересоздаёт кластер-группу на каждый renderPoints и снимает прежнюю с карты', () => {
+    const harness = createHarness();
+    const cluster = { maxClusterRadius: 80, disableClusteringAtZoom: 14 };
+    harness.renderPoints(routePointsPayload({ count: 5, cluster }));
+    const firstGroup = harness.clusterGroups[0];
+
+    harness.renderPoints(routePointsPayload({ count: 6, cluster }));
+
+    expect(harness.clusterGroups).toHaveLength(2);
+    expect(harness.removedLayers).toContain(firstGroup);
+  });
+
+  // #2071 P2-1 (code review 2026-09-24) — открытие/закрытие точки в редакторе
+  // (setEditingIndex → activeIndex) не должно перестраивать уже наведённый
+  // владельцем кадр: раньше ЛЮБОЙ renderPoints звал fitBounds заново, пока
+  // владелец не потянет маркер (единственное, что раньше ставило fitLocked).
+  it('#2071 P2-1 смена activeIndex не перестраивает кадр, смена геометрии — перестраивает', () => {
+    const harness = createHarness();
+    const geometry = {
+      routePoints: [
+        [53.9, 27.56], [53.901, 27.561], [53.902, 27.562],
+        [53.903, 27.563], [53.904, 27.564], [53.905, 27.565],
+      ],
+      routeLine: [[53.9, 27.56], [53.902, 27.562], [53.905, 27.565]],
+    };
+    const withActive = (activeIndex: number | null) => ({
+      ...routePayload(false),
+      ...geometry,
+      routePointMarkers: {
+        labels: ['1', '2', '3', '4', '5', '6'],
+        icon: clusterIcon,
+        activeIcon: activeClusterIcon,
+        activeIndex,
+        fontSizes: [8],
+        cluster: null,
+      },
+    });
+
+    harness.renderPoints(withActive(null));
+    expect(harness.fitBoundsCalls).toHaveLength(1); // первичная подгонка кадра (routeLine >= 2)
+
+    harness.renderPoints(withActive(5));
+    expect(harness.fitBoundsCalls).toHaveLength(1); // открыли точку в редакторе — кадр не тронут
+
+    harness.renderPoints(withActive(null));
+    expect(harness.fitBoundsCalls).toHaveLength(1); // закрыли редактор — кадр всё ещё не тронут
+
+    // Геометрия реально изменилась (маршрут пересчитан/перенесён) — кадр перестраивается.
+    harness.renderPoints({
+      ...withActive(null),
+      routePoints: [[50.07, 14.43], [49.19, 16.6]],
+      routeLine: [[50.07, 14.43], [49.19, 16.6]],
+    });
+    expect(harness.fitBoundsCalls).toHaveLength(2);
+  });
+
+  // #2071 P2-2 (code review 2026-09-24) — брошенный рядом с соседом маркер не
+  // должен «пропадать» в кластере на следующий renderPoints (то же решение,
+  // что web даёт heldIndex/isDroppedAt в TripPlanRouteMarkers.tsx).
+  it('#2071 P2-2 брошенная точка остаётся вне кластера, пока стоит там, куда её бросили', () => {
+    const harness = createHarness();
+    const cluster = { maxClusterRadius: 80, disableClusteringAtZoom: 14 };
+    harness.renderPoints(routePointsPayload({ count: 5, cluster, interactive: true }));
+    expect(harness.clusterGroups[0].members).toHaveLength(5);
+    expect(harness.routeMarkers).toHaveLength(0); // ни одна точка не активна — все в кластере
+
+    // Владелец бросил вторую точку (index 1) рядом с соседом — dragend.
+    // members — те же FakeMarker, что и routeMarkers: dragend доступен независимо
+    // от того, в какой слой маркер физически попал.
+    const dropped = harness.clusterGroups[0].members[1];
+    dropped.handlers.dragend({ target: { getLatLng: () => ({ lat: 53.901, lng: 27.501 }) } });
+
+    // Тот же payload, но координата второй точки теперь совпадает с местом броска.
+    const afterDrop = routePointsPayload({ count: 5, cluster, interactive: true });
+    afterDrop.routePoints[1] = [53.901, 27.501];
+    harness.renderPoints(afterDrop);
+
+    // Брошенная точка — единственный маркер в routeLayer, не в новой кластер-группе.
+    expect(harness.routeMarkers).toHaveLength(1);
+    expect(harness.routeMarkers[0].position).toEqual([53.901, 27.501]);
+    expect(harness.clusterGroups[1].members).toHaveLength(4);
   });
 });

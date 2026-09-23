@@ -4,6 +4,9 @@
  * кнопки карты.
  */
 import { NATIVE_ROUTE_POINT_MARKERS_SCRIPT } from '@/components/MapPage/Map/nativeRoutePointMarkersScript'
+import { MAP_CLUSTER_GROUP_OPTIONS } from '@/components/MapPage/Map/mapClusterGroup'
+import { ROUTE_DAY_COLLAPSE_THRESHOLD } from '@/components/trips/planning/routeDayCollapse'
+import { FOCUS_POINT_ZOOM } from '@/components/trips/planning/tripPlanRouteMap.types'
 import {
   ROUTE_MAP_FIT_PADDING,
   ROUTE_MARKER_ACTIVE_SIZE,
@@ -85,6 +88,58 @@ describe('#2059 маркер точки маршрута планировщик�
     // Без номеров (маршрут /map) — прежний кружок точки маршрута.
     expect(routePointIcon(null, 0, true, false).className).toBe('metravel-route-point')
     expect(payload.fitPadding).toEqual(ROUTE_MAP_FIT_PADDING)
+  })
+
+  // #2071: активная точка на native берёт крупный activeIcon, а не обычный —
+  // тем же routePointIcon(spec, index, isStart, isEnd, isActive), что и выше.
+  it('#2071 активная точка на native берёт крупный activeIcon, вне кластера', () => {
+    const payload = nativeRoutePointMarkers(['1', '2'], colors, { activeIndex: 1 })
+    const L = { divIcon: (options: { html: string }) => options }
+    const escapeHtml = (value: unknown) => String(value)
+    const routePointIcon = new Function(
+      'L',
+      'escapeHtml',
+      'ROUTE_SURFACE',
+      'ROUTE_START',
+      'ROUTE_COLOR',
+      'map',
+      `${NATIVE_ROUTE_POINT_MARKERS_SCRIPT}\nreturn routePointIcon;`,
+    )(L, escapeHtml, '#fff', '#0f0', '#00f', {}) as (
+      spec: unknown,
+      index: number,
+      isStart: boolean,
+      isEnd: boolean,
+      isActive: boolean,
+    ) => { className: string; iconSize: unknown }
+
+    const activeWeb = routeMarkerIconTemplate(colors, true)
+    const normal = routePointIcon(payload, 0, true, false, false)
+    const active = routePointIcon(payload, 1, false, true, true)
+
+    expect(normal.className).toBe('metravel-trip-plan-marker')
+    expect(active.className).toBe('metravel-trip-plan-marker metravel-trip-plan-marker-active')
+    expect(active.iconSize).toEqual(activeWeb.size)
+    expect(payload.activeIndex).toBe(1)
+  })
+
+  it('#2071 кластеризация — включается только у крупного маршрута, теми же числами, что на web', () => {
+    const short = nativeRoutePointMarkers(
+      Array.from({ length: ROUTE_DAY_COLLAPSE_THRESHOLD }, (_v, i) => String(i + 1)),
+      colors,
+    )
+    expect(short.cluster).toBeNull()
+
+    const long = nativeRoutePointMarkers(
+      Array.from({ length: ROUTE_DAY_COLLAPSE_THRESHOLD + 1 }, (_v, i) => String(i + 1)),
+      colors,
+    )
+    // Числа не задублированы: тот же MAP_CLUSTER_GROUP_OPTIONS/FOCUS_POINT_ZOOM,
+    // что у web-кластера конструктора маршрута (mapClusterGroup.ts + #2059).
+    expect(long.cluster).toEqual({
+      maxClusterRadius: MAP_CLUSTER_GROUP_OPTIONS.maxClusterRadius,
+      disableClusteringAtZoom: FOCUS_POINT_ZOOM,
+    })
+    expect(long.activeIndex).toBeNull()
   })
 
   it('отступы кадра учитывают кнопки карты и высоту капли и не съедают низкую карту', () => {

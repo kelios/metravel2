@@ -153,6 +153,7 @@ export default function TripPlanRouteMap({
   focusPoint,
   focusIndices,
   routeReplacementToken,
+  activeIndex = null,
   onEditPoint,
   onMovePoint,
   onDeletePoint,
@@ -217,9 +218,19 @@ export default function TripPlanRouteMap({
   );
   const hasOriginalTrack = originalTrackLines.length > 0;
   const markerRouteIndices = useMemo(() => drawableRouteIndices(route), [route]);
+  // #2071: `activeIndex` приходит индексом в `route` (список точек), а
+  // WebView-payload (как и `labels`) ждёт позицию среди отрисованных
+  // маркеров — той же нумерации, что и `markerRouteIndices`.
+  const activeMarkerIndex = useMemo(() => {
+    if (activeIndex == null) return null;
+    const position = markerRouteIndices.indexOf(activeIndex);
+    return position === -1 ? null : position;
+  }, [activeIndex, markerRouteIndices]);
   const routePointMarkers = useMemo(
-    () => nativeRoutePointMarkers(markerRouteIndices.map(routeMarkerLabel), colors),
-    [colors, markerRouteIndices],
+    () => nativeRoutePointMarkers(markerRouteIndices.map(routeMarkerLabel), colors, {
+      activeIndex: activeMarkerIndex,
+    }),
+    [activeMarkerIndex, colors, markerRouteIndices],
   );
   const center = useMemo(() => {
     // #1851: файл трека грузят раньше, чем расставляют точки маршрута. Видимый

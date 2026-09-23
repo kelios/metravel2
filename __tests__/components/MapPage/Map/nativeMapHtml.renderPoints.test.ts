@@ -125,6 +125,11 @@ const createHarness = () => {
     'ROUTE_START',
     'ORIGINAL_TRACK_COLOR',
     '__metravelPostViewport',
+    // #2071 — вызывается безусловно на каждый renderPoints (radius-режим тоже,
+    // на всякий случай снятия прежней route-кластер-группы); маршрутный код
+    // этого файла (points-only, 840 маркеров) в route-ветку не заходит вовсе,
+    // поэтому реального `nativeRouteClusterScript.ts` здесь достаточно заглушки.
+    'disposeRoutePointClusterGroup',
     `var __metravelDidInitialRadiusPosition = false;
      ${sliceRenderPoints()}
      return window.__metravelRenderPoints;`,
@@ -142,6 +147,7 @@ const createHarness = () => {
     '#3',
     '#4',
     '#5',
+    () => undefined,
     () => undefined,
   ) as (payload: unknown) => void;
 

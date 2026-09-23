@@ -27,6 +27,11 @@ import {
 import { buildNativeWeatherTempLabelsScript } from './nativeWeatherTempLabelsScript';
 import { NATIVE_MAP_VIEW_COMMANDS_SCRIPT } from './nativeMapViewCommandsScript';
 import { NATIVE_ROUTE_POINT_MARKERS_SCRIPT } from './nativeRoutePointMarkersScript';
+import { NATIVE_ROUTE_CLUSTER_SCRIPT } from './nativeRouteClusterScript';
+import {
+  LEAFLET_MARKERCLUSTER_CSS,
+  LEAFLET_MARKERCLUSTER_JS,
+} from '@/utils/leafletMarkerClusterInlineAsset';
 
 const DEFAULT_LAT = 53.8828449;
 const DEFAULT_LNG = 27.7273595;
@@ -69,7 +74,12 @@ export const buildNativeMapHtml = ({
   markerShadowColor: string;
 }) =>
   buildLeafletWebViewHtml({
-    headStyles: `        .leaflet-popup-content-wrapper { background-color: ${themeColors.surface}; border-radius: 8px; padding: 0; }
+    // #2071 — leaflet.markercluster CSS (spiderfy leg, default bubble): точки
+    // маршрута планировщика используют свою иконку кластера (`makeClusterIcon`,
+    // тот же кружок с числом, что у /map), но плагин сам красит spiderfy-ножки
+    // и подложку своими классами `.marker-cluster*`/`.leaflet-cluster-spider-leg`.
+    headStyles: `${LEAFLET_MARKERCLUSTER_CSS}
+        .leaflet-popup-content-wrapper { background-color: ${themeColors.surface}; border-radius: 8px; padding: 0; }
         .leaflet-popup-content { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; }
         .popup-text { padding: 12px; font-size: 13px; line-height: 1.45; }
         .popup-title {
@@ -107,7 +117,8 @@ export const buildNativeMapHtml = ({
           70% { opacity: 0; }
           100% { transform: scale(2.6); opacity: 0; }
         }`,
-    bodyScript: `        const MAP_LANGUAGE = ${serializeForInlineScript(getActiveLocaleDefinition().geocoderLanguage)};
+    bodyScript: `${LEAFLET_MARKERCLUSTER_JS}
+        const MAP_LANGUAGE = ${serializeForInlineScript(getActiveLocaleDefinition().geocoderLanguage)};
         // zoomControl: false — встроенные кнопки +/− Leaflet (верхний левый угол)
         // перекрывали номерной/стартовый маркер маршрута. Зум доступен через
         // плавающие нативные контролы (__metravelMapZoomIn/Out).
@@ -362,6 +373,8 @@ ${buildInvalidateSchedulerScript({
 
 ${NATIVE_ROUTE_POINT_MARKERS_SCRIPT}
 
+${NATIVE_ROUTE_CLUSTER_SCRIPT}
+
         // Экранируем значения точек перед вставкой в HTML popup: поля приходят с бэка
         // и могут содержать <, >, ", ' и & — без эскейпа это XSS в WebView (#113).
 ${ESCAPE_HTML_FN_SCRIPT}
@@ -404,6 +417,11 @@ ${ESCAPE_HTML_FN_SCRIPT}
 
             clustersLayer.clearLayers();
             routeLayer.clearLayers();
+            // #2071 — проводка кластера точек маршрута целиком живёт в
+            // nativeRouteClusterScript.ts (disposeRoutePointClusterGroup ниже
+            // снимает прежнюю группу; ensureRoutePointClusterGroup создаёт новую
+            // в route-ветке, если payload просит кластеры).
+            disposeRoutePointClusterGroup(map);
             const bounds = L.latLngBounds();
 
             // #1773 — RN шлёт renderPoints и при изменениях, которые маркеров не
@@ -554,6 +572,18 @@ ${ESCAPE_HTML_FN_SCRIPT}
                 map.__metravelRouteReplacementToken = routeReplacementToken;
                 map.__metravelRouteFitLocked = false;
               }
+              // #2071 P2-1 — renderPoints прилетает и на смену activeIndex
+              // (открыть/закрыть точку в редакторе), которая геометрию не
+              // трогает вовсе. Без этого ключа кадр перестраивался бы на
+              // КАЖДЫЙ такой вызов, пока владелец не потянет маркер (тот
+              // единственный момент, что раньше ставил fitLocked) — активная
+              // точка прыгала бы к обзору всего маршрута и сбрасывала фокус
+              // #2066/#2058. Тот же приём, что map.__lastPointsFitKey у
+              // pointsOnly-ветки ниже: кадр трогаем только когда РЕАЛЬНО
+              // изменились точки/линия/оригинал/оптовая замена.
+              const routeFitKey = JSON.stringify([routePoints, routeLine, originalTrackSegments, routeReplacementToken]);
+              const routeGeometryChanged = map.__metravelRouteFitKey !== routeFitKey;
+              map.__metravelRouteFitKey = routeFitKey;
               if (routeLine.length >= 2) {
                 const routePolyline = L.polyline(routeLine, {
                   color: routeApproximate ? ROUTE_WARNING : ROUTE_COLOR,
@@ -572,7 +602,7 @@ ${ESCAPE_HTML_FN_SCRIPT}
                   // #1781 — после ручного перетаскивания маркера кадр не двигаем:
                   // подгонка существует для формы маршрута, а не для того, чтобы
                   // отменять наведённый пользователем вид.
-                  if (!map.__metravelRouteFitLocked) {
+                  if (routeGeometryChanged && !map.__metravelRouteFitLocked) {
                     map.fitBounds(routePolyline.getBounds(), metravelFitOptions(routeFitPadding, [70, 70]));
                   }
                 } catch (e) {}
@@ -595,26 +625,50 @@ ${ESCAPE_HTML_FN_SCRIPT}
                   });
                 });
               }
+              // #2071 — кластеризация точек маршрута, паритет с web
+              // (mapClusterGroup.ts + FOCUS_POINT_ZOOM): порог и радиус
+              // приходят в payload (tripPlanMapMarkers.ts), а не задаются здесь
+              // числом. null/undefined — маршрут короткий, точки остаются как
+              // раньше, каждая своим маркером в routeLayer.
+              ensureRoutePointClusterGroup(map, routePointMarkers && routePointMarkers.cluster);
               routePoints.forEach(function(point, index) {
                 if (!Array.isArray(point) || !isFinite(point[0]) || !isFinite(point[1])) return;
                 const isStart = index === 0;
                 const isEnd = routePoints.length > 1 && index === routePoints.length - 1;
+                // #2071 — активная точка остаётся крупнее и вне кластера (та же
+                // логика, что у web: TripPlanRouteMarkers.tsx исключает
+                // activeIndex из группы кластеров). Держанная (только что
+                // брошенная, P2-2) — вне кластера тем же путём, что web решил
+                // heldIndex/isDroppedAt.
+                const isActive = !!(routePointMarkers && routePointMarkers.activeIndex === index);
+                const isHeld = isRoutePointHeld(map.__metravelRouteHeldPoint, index, point);
                 // #1781 — L.Draggable есть только у L.Marker, у circleMarker его нет
                 // вовсе. Поэтому точка маршрута рисуется divIcon той же геометрии:
                 // диаметр = 2*radius + weight, заливка и рамка — прежние цвета.
                 const marker = L.marker(point, {
-                  icon: routePointIcon(routePointMarkers, index, isStart, isEnd),
+                  icon: routePointIcon(routePointMarkers, index, isStart, isEnd, isActive),
                   draggable: routePointsInteractive,
                   interactive: routePointsInteractive,
                   keyboard: false,
-                  title: routePointsInteractive ? routePointMarkerHint : undefined
-                }).addTo(routeLayer);
+                  title: routePointsInteractive ? routePointMarkerHint : undefined,
+                  zIndexOffset: isActive ? 1000 : 0
+                });
+                addRoutePointMarkerToLayer(marker, routeLayer, map.__metravelRoutePointClusterGroup, isActive || isHeld);
                 if (routePointsInteractive) {
                   // #2073 — aria-description добавляет ту же подсказку в accessibility-дерево (title выше — только тултип Leaflet).
                   const routePointMarkerElement = marker.getElement ? marker.getElement() : null;
                   if (routePointMarkerElement) {
                     routePointMarkerElement.setAttribute('aria-description', routePointMarkerHint);
                   }
+                  // #2071 — маркер в кластере не всегда получает DOM-узел сразу:
+                  // пока точки свёрнуты в кластер, дочерний маркер не в DOM, и
+                  // getElement() выше отдаёт null. add стреляет каждый раз, когда
+                  // маркер реально появляется (первый показ, спайдерфай, зум выше
+                  // порога) — тем же приёмом, что и web (TripPlanRouteMarkers.tsx).
+                  marker.on('add', function() {
+                    const element = marker.getElement ? marker.getElement() : null;
+                    if (element) element.setAttribute('aria-description', routePointMarkerHint);
+                  });
                   marker.on('dragstart', function() {
                     // Кадр перестаёт подгоняться под маршрут: дальше видом
                     // управляет пользователь, а не форма линии.
@@ -626,6 +680,12 @@ ${ESCAPE_HTML_FN_SCRIPT}
                         ? event.target.getLatLng()
                         : null;
                       if (!position || !isFinite(position.lat) || !isFinite(position.lng)) return;
+                      // #2071 P2-2 — держим точку вне кластера, пока она стоит
+                      // там, куда её бросили: следующий renderPoints (тот же
+                      // повод, что уже вызывает numbers/activeIndex-обновления)
+                      // иначе вернул бы её в кластер соседа, и точка «пропала»
+                      // бы там, где её оставил владелец.
+                      map.__metravelRouteHeldPoint = { index: index, lat: position.lat, lng: position.lng };
                       if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
                         window.ReactNativeWebView.postMessage(JSON.stringify({
                           type: 'ROUTE_POINT_MOVED',
@@ -665,11 +725,11 @@ ${ESCAPE_HTML_FN_SCRIPT}
                 // есть, кадр подогнался по ней выше — досаживаем его на общие
                 // границы. Когда линии нет, эта подгонка кадр и ставит.
                 try {
-                  if (routeBounds.isValid() && !map.__metravelRouteFitLocked) {
+                  if (routeGeometryChanged && routeBounds.isValid() && !map.__metravelRouteFitLocked) {
                     map.fitBounds(routeBounds, metravelFitOptions(routeFitPadding, [70, 70]));
                   }
                 } catch (e) {}
-              } else if (routePoints.length >= 1 && routeLine.length < 2 && routeBounds.isValid() && !map.__metravelRouteFitLocked) {
+              } else if (routeGeometryChanged && routePoints.length >= 1 && routeLine.length < 2 && routeBounds.isValid() && !map.__metravelRouteFitLocked) {
                 try {
                   map.setView(routeBounds.getCenter(), Math.max(map.getZoom ? map.getZoom() : 13, 14));
                 } catch (e) {}

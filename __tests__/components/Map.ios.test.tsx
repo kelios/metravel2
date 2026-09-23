@@ -470,7 +470,8 @@ describe('Map.ios Component', () => {
     expect(html).toContain("dashArray: routeApproximate ? '8 8' : null");
     expect(html).toContain('const marker = L.marker(point, {');
     // #2059: номерная капля планировщика или прежний кружок маршрута /map.
-    expect(html).toContain('icon: routePointIcon(routePointMarkers, index, isStart, isEnd)');
+    // #2071: пятый аргумент — активная точка (крупнее, вне кластера).
+    expect(html).toContain('icon: routePointIcon(routePointMarkers, index, isStart, isEnd, isActive)');
     expect(html).toContain('makeRoutePointIcon(isStart || isEnd ? 8 : 6');
     expect(html).toContain('draggable: routePointsInteractive');
     expect(html).toContain('map.fitBounds(routePolyline.getBounds()');

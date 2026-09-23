@@ -4,6 +4,9 @@
 // payload WebView). Модуль чистый: ни Leaflet, ни React, поэтому его читают обе
 // платформы и jest без моков.
 import type { NativeRoutePointMarkersPayload } from '@/components/MapPage/Map/nativeRoutePointMarkersScript';
+// #2071: тот же источник параметров кластеризации, что у web-карты
+// конструктора (`TripPlanRouteMarkers.tsx`) — числа не копируются в native.
+import { MAP_CLUSTER_GROUP_OPTIONS } from '@/components/MapPage/Map/mapClusterGroup';
 import { ROUTE_DAY_COLLAPSE_THRESHOLD } from '@/components/trips/planning/routeDayCollapse';
 import type { ThemedColors } from '@/hooks/useTheme';
 import type { MapFitPadding } from '@/types/mapUi';
@@ -12,6 +15,7 @@ import {
   buildNumberedDropMarkerHtml,
   numberedDropFontSize,
 } from '@/utils/markerSvg';
+import { FOCUS_POINT_ZOOM } from './tripPlanRouteMap.types';
 
 /**
  * Номер маркера = номер строки в списке точек: `RoutePointRow` печатает
@@ -142,14 +146,30 @@ export function routeMapFitBoundsOptions(
  */
 export type NativeRoutePointMarkers = NativeRoutePointMarkersPayload;
 
+/**
+ * #2071: `activeIndex` — позиция активной точки в том же порядке, что и
+ * `labels` (индекс в `routePoints`, ДО фильтра битых координат внутри
+ * `normalizeRoutePointsWithMarkers`) — `null`, если открытой точки нет.
+ */
 export function nativeRoutePointMarkers(
   labels: string[],
   colors: MarkerColors,
+  options?: { activeIndex?: number | null },
 ): NativeRoutePointMarkers {
   return {
     labels,
     icon: routeMarkerIconTemplate(colors, false),
+    activeIcon: routeMarkerIconTemplate(colors, true),
+    activeIndex: options?.activeIndex ?? null,
     fontSizes: NUMBERED_DROP_FONT_SIZES,
     fitPadding: ROUTE_MAP_FIT_PADDING,
+    // Тот же порог, что сворачивает точки в кластер на web (#2059): короткий
+    // маршрут остаётся без кластеров и на native.
+    cluster: shouldClusterRouteMarkers(labels.length)
+      ? {
+          maxClusterRadius: MAP_CLUSTER_GROUP_OPTIONS.maxClusterRadius,
+          disableClusteringAtZoom: FOCUS_POINT_ZOOM,
+        }
+      : null,
   };
 }

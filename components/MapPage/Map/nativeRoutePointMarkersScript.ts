@@ -3,25 +3,48 @@
 // (#1781) перенесён из nativeMapHtml.ts без изменений; #2059 добавил капли с
 // номером для планировщика поездки: номера, шаблон разметки и таблица размеров
 // цифры приходят в payload (`routePointMarkers`), шаблон собирает та же функция,
-// что и web-маркер (`components/trips/planning/tripPlanMapMarkers.ts`).
+// что и web-маркер (`components/trips/planning/tripPlanMapMarkers.ts`). #2071
+// добавил клиентскую кластеризацию (`leaflet.markercluster`, паритет с web
+// `mapClusterGroup.ts`) и увеличенную активную точку — оба вне кластера.
 // Вставляется в bodyScript после ROUTE_* констант и до `escapeHtml`.
 import { normalizeRoutePoint } from './nativeBridge';
+
+type RoutePointIconSpec = {
+  className: string;
+  html: string;
+  size: [number, number];
+  anchor: [number, number];
+};
 
 /** Payload WebView для нумерованных точек (форма `NativeRoutePointMarkers` планировщика). */
 export type NativeRoutePointMarkersPayload = {
   labels: string[];
-  icon: {
-    className: string;
-    html: string;
-    size: [number, number];
-    anchor: [number, number];
-  };
+  icon: RoutePointIconSpec;
+  /** #2071: капля активной точки — крупнее обычной, живёт вне кластера. */
+  activeIcon?: RoutePointIconSpec;
+  /**
+   * #2071: индекс активной точки в итоговом списке маркеров WebView — уже
+   * после фильтра `normalizeRoutePoint` (та же нумерация, что у `labels`/
+   * `latLngs` после `normalizeRoutePointsWithMarkers`). `null` — активной
+   * точки нет.
+   */
+  activeIndex?: number | null;
   fontSizes: readonly number[];
   fitPadding?: {
     topLeft: readonly [number, number];
     bottomRight: readonly [number, number];
     maxShare: number;
   };
+  /**
+   * #2071: паритет с web-кластеризацией маршрута (`mapClusterGroup.ts` +
+   * `FOCUS_POINT_ZOOM`) — включается только у крупного маршрута
+   * (`shouldClusterRouteMarkers`), `null`/`undefined` — точки рисуются как
+   * раньше, без кластеров.
+   */
+  cluster?: {
+    maxClusterRadius: number;
+    disableClusteringAtZoom: number;
+  } | null;
 };
 
 /**
@@ -31,6 +54,11 @@ export type NativeRoutePointMarkersPayload = {
  * `sourceIndices` — позиция каждого маркера WebView во входном `routePoints`:
  * по ней тап и перетаскивание маркера возвращаются индексом переданного
  * списка (контракт `ROUTE_POINT_*` в `nativeBridge.ts`).
+ *
+ * #2071: `markers.activeIndex` приходит в той же нумерации, что и
+ * `markers.labels` (позиция во входном `routePoints`, ДО фильтра). Здесь он
+ * переводится в позицию среди уже отфильтрованных `latLngs` — ровно ту, по
+ * которой WebView-скрипт (`routePoints.forEach`) сверяет `activeIndex`.
  */
 export function normalizeRoutePointsWithMarkers(
   routePoints: ReadonlyArray<[number, number]>,
@@ -43,14 +71,18 @@ export function normalizeRoutePointsWithMarkers(
   const latLngs: Array<[number, number]> = [];
   const sourceIndices: number[] = [];
   const labels: string[] = [];
+  let activeIndex: number | null = null;
   routePoints.forEach((point, index) => {
     const normalized = normalizeRoutePoint(point);
     if (!normalized) return;
     latLngs.push(normalized);
     sourceIndices.push(index);
     if (markers) labels.push(String(markers.labels[index] ?? ''));
+    if (markers?.activeIndex != null && markers.activeIndex === index) {
+      activeIndex = latLngs.length - 1;
+    }
   });
-  return { latLngs, sourceIndices, markers: markers ? { ...markers, labels } : null };
+  return { latLngs, sourceIndices, markers: markers ? { ...markers, labels, activeIndex } : null };
 }
 
 /**
@@ -68,9 +100,12 @@ export function normalizeRoutePointsWithMarkers(
  *   планировщика — прежний симметричный fallback (/map, 70 или 50 px). Зовёт её
  *   и `__metravelMapFitCoords` из `nativeMapViewCommandsScript.ts`: объявление
  *   функции всплывает на весь скрипт.
- * - `routePointIcon` (#2059) — капля с номером точки из списка планировщика.
- *   Разметку собирает RN тем же шаблоном, что web-маркер; здесь подставляются
- *   только номер и размер цифры. Без номера — прежний кружок маршрута /map.
+ * - `routePointIcon` (#2059, активный маркер — #2071) — капля с номером точки
+ *   из списка планировщика. Разметку собирает RN тем же шаблоном, что
+ *   web-маркер; здесь подставляются только номер и размер цифры. Активная
+ *   точка (`isActive`) берёт более крупный `spec.activeIcon`, если он есть —
+ *   как на web (`TripPlanRouteMarkers.tsx`, активная точка крупнее и вне
+ *   кластера). Без номера — прежний кружок маршрута /map.
  */
 export const NATIVE_ROUTE_POINT_MARKERS_SCRIPT = `        const ROUTE_POINT_WEIGHT = 3;
         function makeRoutePointIcon(radius, fillColor) {
@@ -103,9 +138,9 @@ export const NATIVE_ROUTE_POINT_MARKERS_SCRIPT = `        const ROUTE_POINT_WEIG
           options.paddingBottomRight = [clamp(padding.bottomRight[0], size && size.x), clamp(padding.bottomRight[1], size && size.y)];
           return options;
         }
-        function routePointIcon(spec, index, isStart, isEnd) {
+        function routePointIcon(spec, index, isStart, isEnd, isActive) {
           var label = spec && Array.isArray(spec.labels) ? spec.labels[index] : null;
-          var icon = spec && spec.icon;
+          var icon = spec && (isActive && spec.activeIcon ? spec.activeIcon : spec.icon);
           if (!label || !icon || typeof icon.html !== 'string') {
             return makeRoutePointIcon(isStart || isEnd ? 8 : 6, isStart ? ROUTE_START : ROUTE_COLOR);
           }
