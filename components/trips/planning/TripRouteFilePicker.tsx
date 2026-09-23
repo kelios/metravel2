@@ -6,15 +6,14 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 import ToolActionsRow, { type ToolAction } from '@/components/ui/ToolActionsRow';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useTranslation } from '@/i18n/LocaleProvider';
 import type {
   PickedTripRouteFileUpload,
   TripRouteFilePickerProps,
 } from './TripRouteFilePicker.types';
 
 type Props = TripRouteFilePickerProps & {
-  compact?: boolean;
-  renderToolbar?: (action: ToolAction, extra: React.ReactNode) => React.ReactNode;
+  /** Кнопка занимает ряд целиком (блок «Файл маршрута», #2053). */
+  fill?: boolean;
 };
 
 // Файл, выбранный document-picker'ом, живёт во временной копии, которую пикер
@@ -54,12 +53,10 @@ function TripRouteFilePicker({
   onPicked,
   onError,
   onBusyChange,
-  compact,
-  renderToolbar,
+  fill,
   testID = 'trip-route-import-picker',
 }: Props) {
   const colors = useThemedColors();
-  const { t } = useTranslation();
   const requestIdRef = useRef(0);
 
   useEffect(() => () => {
@@ -147,7 +144,6 @@ function TripRouteFilePicker({
   const action: ToolAction = {
     key: 'import-route',
     label,
-    compactLabel: t('tripsStatic:route.importCompact'),
     icon: <Feather name="upload" size={18} color={colors.text} />,
     onPress: () => { void handlePress(); },
     disabled: disabled || loading,
@@ -155,13 +151,11 @@ function TripRouteFilePicker({
     testID,
   };
 
-  if (renderToolbar) {
-    return <View>{renderToolbar(action, null)}</View>;
-  }
-
+  // Импорт подписан полной подписью на любой ширине: icon-only кнопка была
+  // непонятна (#1789), а короткое «Импорт» в сжатом ряду обрезалось (#2053).
   return (
     <View>
-      <ToolActionsRow actions={[action]} compact={compact} />
+      <ToolActionsRow actions={[action]} compact={false} fill={fill} />
     </View>
   );
 }

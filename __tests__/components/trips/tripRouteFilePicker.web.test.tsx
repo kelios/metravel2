@@ -8,6 +8,8 @@ jest.mock('@/components/ui/ToolActionsRow', () => ({
   __esModule: true,
   default: ({
     actions,
+    compact,
+    fill,
   }: {
     actions: Array<{
       label: string;
@@ -15,6 +17,8 @@ jest.mock('@/components/ui/ToolActionsRow', () => ({
       onPress?: () => void;
       disabled?: boolean;
     }>;
+    compact?: boolean;
+    fill?: boolean;
   }) => {
     const ReactModule = jest.requireActual<typeof import('react')>('react');
     const action = actions[0];
@@ -24,6 +28,8 @@ jest.mock('@/components/ui/ToolActionsRow', () => ({
       disabled: action.disabled,
       'aria-label': action.label,
       'data-compact-label': action.compactLabel,
+      'data-compact': String(compact),
+      'data-fill': String(fill),
     }, action.label);
   },
 }));
@@ -70,10 +76,15 @@ describe('TripRouteFilePicker web adapter', () => {
     expect(click).toHaveBeenCalledTimes(1);
   });
 
-  it('passes a compact import caption for the shared tools row (#1902)', () => {
-    renderPicker();
+  // #2053: короткое «Импорт» в сжатом ряду обрезалось до «И…». Импорт подписан
+  // полной подписью на любой ширине и в блоке «Файл маршрута» занимает ряд целиком.
+  it('keeps the full import label on every width and stretches it on request (#2053)', () => {
+    renderPicker({ fill: true });
     const button = screen.getByRole('button', { name: 'Load track (GPX/KML)' });
-    expect(button.getAttribute('data-compact-label')).toBe('Импорт');
+    expect(button.textContent).toBe('Load track (GPX/KML)');
+    expect(button.getAttribute('data-compact')).toBe('false');
+    expect(button.getAttribute('data-fill')).toBe('true');
+    expect(button.hasAttribute('data-compact-label')).toBe(false);
   });
 
   it('reads a selected file locally and reports balanced busy state', async () => {

@@ -3,15 +3,15 @@
 // и, при наличии, скачивание исходного файла.
 // Один и тот же блок стоит во вкладке «Экспорт» и в панели конструктора
 // «Маршрут» (#1304): маршрут скачивается там же, где строится.
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import ToolActionsRow, { type ToolAction } from '@/components/ui/ToolActionsRow';
 import type { PlannedTripRouteFile } from '@/api/plannedTripRoutes';
 import type { TripRouteExportController } from '@/components/trips/planning/tripRouteExport';
+import { useTripRouteOriginalDownload } from '@/components/trips/planning/useTripRouteOriginalDownload';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import { downloadPlannedTripRouteFile } from '@/utils/travelRouteDownload';
 import { translate as i18nT } from '@/i18n';
 
 interface Props {
@@ -23,13 +23,18 @@ interface Props {
   /**
    * Исходный GPX/KML поездки (#1496). Скачивается ровно теми байтами, которые
    * были загружены, — в отличие от кнопок выше, которые собирают файл заново из
-   * текущих точек маршрута.
+   * текущих точек маршрута. Во вкладке «Маршрут» оригинал скачивается из своей
+   * карточки в `TripRouteImportPanel` (#2053), поэтому туда он не передаётся.
    */
   tripId?: number | string | null;
   originalFile?: PlannedTripRouteFile | null;
-  /** #1902: импорт в том же ToolActionsRow, что GPX/KML. */
-  leadingActions?: ToolAction[];
-  compact?: boolean;
+  /**
+   * #2053, блок «Файл маршрута»: GPX и KML с полными подписями делят ширину
+   * блока поровну на любой ширине экрана; не помещаются — ряд переносит кнопку.
+   * Только для владельца: у участника этого блока нет, и его GPX/KML остаются
+   * обычным компактным рядом инструментов (`docs/RULES.md` → UI rules).
+   */
+  fill?: boolean;
   testID?: string;
 }
 
@@ -39,48 +44,30 @@ function TripRouteDownloadButtons({
   showApproximateWarning = false,
   tripId = null,
   originalFile = null,
-  leadingActions,
-  compact,
+  fill = false,
   testID,
 }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [originalDownloading, setOriginalDownloading] = useState(false);
-  const [originalError, setOriginalError] = useState<string | null>(null);
+  const original = useTripRouteOriginalDownload(tripId, originalFile);
 
   const { disabled, exportingAction, exportError, saveExport } = controller;
   const isWeb = Platform.OS === 'web';
-  const canDownloadOriginal = tripId != null && originalFile != null;
-
-  const handleDownloadOriginal = useCallback(async () => {
-    if (tripId == null || !originalFile) return;
-    setOriginalError(null);
-    setOriginalDownloading(true);
-    try {
-      const saved = await downloadPlannedTripRouteFile(tripId, originalFile);
-      if (!saved) setOriginalError(i18nT('tripsStatic:route.originalDownloadError'));
-    } catch {
-      setOriginalError(i18nT('tripsStatic:route.originalDownloadError'));
-    } finally {
-      setOriginalDownloading(false);
-    }
-  }, [originalFile, tripId]);
 
   // #1414 (TestFlight 1.0.5 (8)): на телефоне все три действия рисовались одной
   // и той же иконкой `download` без подписи — «иконки непонятные что они
   // значат». Формат файла и есть смысл действия, поэтому в compact-режиме он
   // остаётся текстом (`compactLabel`), а полное название действия
-  // («Поделиться GPX») уходит в accessibilityLabel. Ряд при этом по-прежнему
-  // одна строка: три коротких слова помещаются на 320–402dp.
+  // («Поделиться GPX») уходит в accessibilityLabel. Подпись не сжимается: не
+  // хватает ширины — ряд переносит кнопку (#2053). Вариант у трёх скачиваний
+  // один: по смыслу это одно и то же действие над разными файлами.
   const actions: ToolAction[] = [
-    ...(leadingActions ?? []),
     {
       key: 'gpx',
       label: isWeb ? i18nT('trips:components.trips.planning.TripRouteExportMenu.skachat_gpx_cc6c1a54') : i18nT('trips:components.trips.planning.TripRouteExportMenu.podelitsya_gpx_f240186b'),
       compactLabel: i18nT('tripsStatic:route.exportFormatGpx'),
       icon: <Feather name="download" size={16} color={colors.primaryDark} />,
       onPress: () => void saveExport('gpx'),
-      variant: 'secondary',
       disabled: disabled || exportingAction !== null,
       loading: exportingAction === 'gpx',
       testID: 'trip-route-export-gpx',
@@ -91,22 +78,18 @@ function TripRouteDownloadButtons({
       compactLabel: i18nT('tripsStatic:route.exportFormatKml'),
       icon: <Feather name="download" size={16} color={colors.primaryDark} />,
       onPress: () => void saveExport('kml'),
-      variant: 'secondary',
       disabled: disabled || exportingAction !== null,
       loading: exportingAction === 'kml',
       testID: 'trip-route-export-kml',
     },
-    ...(canDownloadOriginal ? [{
+    ...(original.available ? [{
       key: 'original',
-      label: isWeb
-        ? i18nT('tripsStatic:route.originalDownload')
-        : i18nT('tripsStatic:route.originalShare'),
+      label: original.label,
       compactLabel: i18nT('tripsStatic:route.originalCompact'),
       icon: <Feather name="download" size={16} color={colors.primaryDark} />,
-      onPress: () => void handleDownloadOriginal(),
-      variant: 'outline' as const,
-      disabled: originalDownloading,
-      loading: originalDownloading,
+      onPress: () => void original.download(),
+      disabled: original.downloading,
+      loading: original.downloading,
       testID: 'trip-route-export-original',
     }] : []),
   ];
@@ -123,7 +106,7 @@ function TripRouteDownloadButtons({
         </Text>
       ) : null}
 
-      {canDownloadOriginal ? (
+      {original.available ? (
         <View testID="trip-route-original-download-block">
           <Text style={styles.hint}>
             {i18nT('tripsStatic:route.originalDownloadHint', {
@@ -133,17 +116,11 @@ function TripRouteDownloadButtons({
         </View>
       ) : null}
 
-      {leadingActions?.length ? (
-        <View testID="route-builder-route-file-tools">
-          <ToolActionsRow actions={actions} compact={compact} />
-        </View>
-      ) : (
-        <ToolActionsRow actions={actions} compact={compact} />
-      )}
+      <ToolActionsRow actions={actions} compact={fill ? false : undefined} fill={fill} />
 
-      {originalError ? (
+      {original.error ? (
         <Text style={styles.error} testID="trip-route-export-original-error">
-          {originalError}
+          {original.error}
         </Text>
       ) : null}
 

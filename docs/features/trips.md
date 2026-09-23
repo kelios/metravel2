@@ -184,7 +184,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/MyTripsDashboard.tsx` | 167 | дашборд «Мои поездки», сегменты и счётчики |
 | `components/trips/planning/RouteBuilder.styles.ts` | 165 | стили конструктора |
 | `components/trips/planning/useTripRouteFileBranch.ts` | 143 | файл маршрута: чтение, оригинальный трек, загрузка и удаление плюс синхронные локи (#1824) |
-| `components/trips/planning/RouteBuilderLayout.tsx` | 151 | две раскладки панели: `stack` (две колонки) и `mapFirst` (через RouteBuilderMobile); блок «Файл маршрута» склеивает импорт и GPX/KML в один compact-ряд (#1902) |
+| `components/trips/planning/RouteBuilderLayout.tsx` | 153 | две раскладки панели: `stack` (две колонки) и `mapFirst` (через RouteBuilderMobile); блок «Файл маршрута» — одна рамка (#1902) и стопка с полными подписями (#2053): импорт во всю ширину, GPX/KML поровну, карточка оригинала со «Скачать»/«Удалить» |
 | `components/trips/planning/TripRouteExportMenu.tsx` | 150 | экспорт: скачивание + открытие в навигаторе |
 | `components/trips/planning/RouteSummaryBar.tsx` | 147 | сводка маршрута под конструктором |
 | `components/trips/planning/routeBuilderPoint.ts` | 115 | чистые хелперы точки: разбор координат, формат ввода, имя из адреса, сигнатура маршрута |
@@ -201,7 +201,8 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/MyApplicationsList.tsx` | 99 | мои заявки и отмена |
 | `components/trips/planning/tripFallbackCover.ts` | 97 | детерминированная обложка-заглушка |
 | `components/trips/planning/TripRsvpControl.tsx` | 97 | going/maybe/declined |
-| `components/trips/planning/TripRouteDownloadButtons.tsx` | 94 | пара кнопок GPX/KML, общая для двух мест |
+| `components/trips/planning/TripRouteDownloadButtons.tsx` | 144 | пара кнопок GPX/KML, общая для двух мест; во вкладке «Экспорт» плюс «Скачать оригинал» и подсказка с именем файла; в блоке «Файл маршрута» владельца — `fill` без оригинала (#2053), у участника во вкладке «Маршрут» — прежний компактный ряд |
+| `components/trips/planning/useTripRouteOriginalDownload.ts` | 53 | скачивание исходного GPX/KML одним путём для вкладки «Экспорт» и карточки оригинала вкладки «Маршрут» (#2053) |
 | `components/trips/planning/TripPlanLinkedText.tsx` | 246 | автолинк в описании: на web настоящий `<a href>`, на native `onPress` |
 | `components/trips/planning/RouteSaveSection.tsx` | 81 | CTA сохранения маршрута и его ошибки |
 | `components/trips/planning/TripPlanLinksBlock.tsx` | 85 | блок «Ссылки» — чипы с доменами из описания поездки |
@@ -470,9 +471,11 @@ backend-контракт #1493). Хранилище доступно тольк�
    `originalTrackSegments` (`Map.ios.tsx` → `Map/nativeMapHtml.ts`). Легенда
    остаётся одна на весь оригинал; точки маршрута и `routeGeometry` не
    подменяются;
-5. `TripRouteDownloadButtons` (вкладка «Экспорт» и панель конструктора) даёт
-   «Скачать оригинал» — байты приходят те же, что были загружены, в отличие от
-   кнопок GPX/KML, которые собирают файл заново из текущих точек.
+5. «Скачать оригинал» есть во вкладке «Экспорт» (`TripRouteDownloadButtons`) и в
+   карточке сохранённого оригинала вкладки «Маршрут» (`TripRouteImportPanel`,
+   рядом с «Удалить оригинал», #2053); оба места ходят через
+   `useTripRouteOriginalDownload`. Байты приходят те же, что были загружены, в
+   отличие от кнопок GPX/KML, которые собирают файл заново из текущих точек.
 
 Смежные: `GET/POST /trips/{id}/chat/`, `.../messages/` (`api/tripChat.ts`),
 `GET/POST /trips/{id}/telegram-group/` и invite-link (`api/tripTelegramGroup.ts`).

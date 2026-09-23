@@ -109,11 +109,14 @@ export default function RouteOrderSuggestion({ styles, colors, route, target }: 
           </View>
         </View>
       ) : (
+        // #2053: в колонке телефона (288–332 px) подпись не влезает в строку —
+        // она переносится на вторую, а не обрезается многоточием.
         <Button
           label={t('tripsStatic:plan.orderSuggestion.action')}
           onPress={request}
           variant="secondary"
           size="sm"
+          labelNumberOfLines={2}
           icon={<Feather name="shuffle" size={16} color={colors.text} />}
           loading={status === 'pending'}
           disabled={availability !== 'ready' || status === 'pending'}

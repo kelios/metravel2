@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 
 import type { PlannedTripRouteFile } from '@/api/plannedTripRoutes';
 import type { RouteGeometry, RoutePoint } from '@/api/plannedTrips';
 import { TravelMap } from '@/components/MapPage/TravelMap';
 import Button from '@/components/ui/Button';
 import { SelectionGroup } from '@/components/ui/SelectionGroup';
-import type { ToolAction } from '@/components/ui/ToolActionsRow';
+import ToolActionsRow, { type ToolAction } from '@/components/ui/ToolActionsRow';
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 import { formatFileSize } from '@/utils/fileSize';
 import { formatInteger } from '@/i18n/format';
@@ -14,6 +15,7 @@ import { useTranslation } from '@/i18n/LocaleProvider';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { formatDistance } from './tripPlanFormatting';
 import TripRouteFilePicker, { releasePickedTripRouteUpload } from './TripRouteFilePicker';
+import { useTripRouteOriginalDownload } from './useTripRouteOriginalDownload';
 import type {
   PickedTripRouteFile,
   PickedTripRouteFileUpload,
@@ -37,6 +39,8 @@ type Props = {
    * хранилище закрыто для этого пользователя.
    */
   storedFile?: PlannedTripRouteFile | null;
+  /** Поездка сохранённого оригинала: без неё карточка не предлагает скачивание. */
+  tripId?: number | string | null;
   /** Оригинал выбран, но ещё не ушёл на бэкенд — уйдёт вместе с «Сохранить маршрут». */
   pendingUploadName?: string | null;
   uploadError?: string | null;
@@ -49,8 +53,8 @@ type Props = {
    */
   onApply: (route: RoutePoint[], originalUpload: PickedTripRouteFileUpload | null) => void;
   /**
-   * #1902: кнопки скачивания GPX/KML. Пикер отдаёт им своё действие, чтобы
-   * импорт и экспорт жили в одном ToolActionsRow.
+   * Кнопки скачивания GPX/KML блока «Файл маршрута» (#1902). Встают вторым
+   * рядом стопки, сразу под импортом, и до карточки оригинала (#2053).
    */
   fileToolbarExtra?: React.ReactNode;
 };
@@ -80,6 +84,7 @@ function TripRouteImportPanel({
   routeGeometry,
   disabled = false,
   storedFile = null,
+  tripId = null,
   pendingUploadName = null,
   uploadError = null,
   removing = false,
@@ -212,6 +217,32 @@ function TripRouteImportPanel({
   }, [route, routeGeometry, selected]);
   const hasCurrentLine = mapLines.some((line) => line.color === DESIGN_COLORS.routeLine);
 
+  // #2053: скачивание оригинала живёт в его карточке, рядом с удалением, — тем
+  // же путём, что и во вкладке «Экспорт». Подписи полные на любой ширине: ряд
+  // переносит кнопку, а не режет подпись.
+  const originalDownload = useTripRouteOriginalDownload(tripId, storedFile);
+  const storedFileActions: ToolAction[] = [
+    ...(originalDownload.available ? [{
+      key: 'download-original',
+      label: originalDownload.label,
+      icon: <Feather name="download" size={16} color={colors.primaryDark} />,
+      onPress: () => void originalDownload.download(),
+      disabled: originalDownload.downloading,
+      loading: originalDownload.downloading,
+      testID: 'trip-route-import-download-original',
+    }] : []),
+    ...(onRemoveStoredFile ? [{
+      key: 'remove-original',
+      label: t('tripsStatic:plan.routeImport.original.remove'),
+      icon: null,
+      onPress: onRemoveStoredFile,
+      variant: 'ghost' as const,
+      disabled: disabled || removing,
+      loading: removing,
+      testID: 'trip-route-import-remove-original',
+    }] : []),
+  ];
+
   return (
     <View style={styles.wrap} testID="trip-route-import-panel">
       <TripRouteFilePicker
@@ -219,27 +250,12 @@ function TripRouteImportPanel({
         maxBytes={TRIP_ROUTE_IMPORT_MAX_BYTES}
         disabled={disabled}
         loading={reading}
-        compact
+        fill
         onBusyChange={handleBusyChange}
         onPicked={handlePicked}
         onError={handlePickerError}
-        renderToolbar={
-          fileToolbarExtra && React.isValidElement(fileToolbarExtra)
-            ? (action, extra) => (
-                <>
-                  {extra}
-                  {React.cloneElement(
-                    fileToolbarExtra as React.ReactElement<{
-                      leadingActions?: ToolAction[];
-                      compact?: boolean;
-                    }>,
-                    { leadingActions: [action], compact: true },
-                  )}
-                </>
-              )
-            : undefined
-        }
       />
+      {fileToolbarExtra}
 
       {reading ? (
         <Text
@@ -295,7 +311,7 @@ function TripRouteImportPanel({
       {!pendingUploadName && storedFile ? (
         <View style={styles.storedFile} testID="trip-route-import-stored-original">
           <View style={styles.storedFileBody}>
-            <Text style={styles.storedFileName} numberOfLines={1}>
+            <Text style={styles.storedFileName} numberOfLines={2}>
               {storedFile.original_name}
             </Text>
             <Text style={styles.hint}>
@@ -304,16 +320,15 @@ function TripRouteImportPanel({
               })}
             </Text>
           </View>
-          {onRemoveStoredFile ? (
-            <Button
-              label={t('tripsStatic:plan.routeImport.original.remove')}
-              onPress={onRemoveStoredFile}
-              variant="ghost"
-              size="sm"
-              disabled={disabled || removing}
-              loading={removing}
-              testID="trip-route-import-remove-original"
-            />
+          <ToolActionsRow actions={storedFileActions} compact={false} />
+          {originalDownload.error ? (
+            <Text
+              style={styles.error}
+              accessibilityLiveRegion="polite"
+              testID="trip-route-import-original-download-error"
+            >
+              {originalDownload.error}
+            </Text>
           ) : null}
         </View>
       ) : null}
@@ -466,11 +481,10 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
   hint: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
   error: { color: colors.danger, fontSize: 13, lineHeight: 18, fontWeight: '600' },
   routeSelection: { gap: DESIGN_TOKENS.spacing.xs },
+  // Колонка, а не строка: имя файла получает всю ширину карточки (до двух
+  // строк), а «Скачать»/«Удалить» — свой ряд под ним (#2053).
   storedFile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: DESIGN_TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.xs,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: DESIGN_TOKENS.radii.md,
@@ -478,7 +492,7 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     backgroundColor: colors.surfaceMuted,
   },
-  storedFileBody: { flex: 1, minWidth: 0, gap: 2 },
+  storedFileBody: { minWidth: 0, gap: 2 },
   storedFileName: { color: colors.text, fontSize: 13, fontWeight: '700' },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.md },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },

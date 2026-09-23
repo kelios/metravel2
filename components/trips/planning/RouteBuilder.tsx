@@ -326,8 +326,7 @@ function RouteBuilder({
       controller={exportController}
       showDisabledHint
       showApproximateWarning
-      tripId={trip.id}
-      originalFile={storedRouteFile}
+      fill={trip.isOwner}
       testID="route-builder-export"
     />
   ) : null;
@@ -747,6 +746,7 @@ function RouteBuilder({
       routeGeometry={routeGeometry}
       disabled={updateTripRoute.isPending || transportPending || originalUploadPending}
       storedFile={storedRouteFile}
+      tripId={trip.id}
       pendingUploadName={pendingOriginalName}
       uploadError={originalUploadError}
       removing={storedFileRemoving}

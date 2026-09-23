@@ -1,6 +1,6 @@
 // #1899 — «Предложить оптимальный порядок» в шаге «Точки маршрута» конструктора.
 import React from 'react'
-import { act, fireEvent, render } from '@testing-library/react-native'
+import { act, fireEvent, render, within } from '@testing-library/react-native'
 
 import type { PlannedTrip } from '@/api/plannedTrips'
 import type { RouteOrderResponse } from '@/api/routeOrderOptimization'
@@ -142,6 +142,15 @@ describe('RouteBuilder route order suggestion', () => {
 
     const publicTransport = renderRouteBuilder(makeTrip({ transport: 'public', bikeType: null }))
     expect(publicTransport.queryByTestId('route-order-suggestion')).toBeNull()
+  })
+
+  // #2053: в колонке телефона 288–332 px подпись обрезалась до «Предложить
+  // оптимальный пор…». Она переносится на вторую строку, а не режется.
+  it('wraps the action label onto a second line instead of clipping it', () => {
+    const { getByTestId } = renderRouteBuilder(makeTrip())
+
+    const label = within(getByTestId('route-order-suggest')).getByText('Предложить оптимальный порядок')
+    expect(label.props.numberOfLines).toBe(2)
   })
 
   it('explains why three points cannot be reordered and sends nothing', () => {

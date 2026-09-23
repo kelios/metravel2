@@ -11,6 +11,7 @@ import TripRouteExportMenu, {
 const mockSaveRouteExportFile = jest.fn();
 const mockOpenExternalUrl = jest.fn();
 const mockUsePlannedTripRouteFile = jest.fn();
+const mockDownloadOriginal = jest.fn();
 const mockRepairEngine: {
   mounts: Array<{ points: Array<[number, number]>; transportMode: string }>;
   onResult: ((result: UseMapRoutingResult) => void) | null;
@@ -47,6 +48,11 @@ jest.mock('@/utils/tripAnalytics', () => ({
 
 jest.mock('@/hooks/usePlannedTripRouteFile', () => ({
   usePlannedTripRouteFile: (...args: unknown[]) => mockUsePlannedTripRouteFile(...args),
+}));
+
+jest.mock('@/utils/travelRouteDownload', () => ({
+  ...jest.requireActual('@/utils/travelRouteDownload'),
+  downloadPlannedTripRouteFile: (...args: unknown[]) => mockDownloadOriginal(...args),
 }));
 
 jest.mock('@/hooks/usePlannedTripsApi', () => ({
@@ -159,6 +165,7 @@ describe('TripRouteExportMenu', () => {
     mockSaveRouteExportFile.mockResolvedValue(true);
     mockOpenExternalUrl.mockResolvedValue(true);
     mockUsePlannedTripRouteFile.mockReturnValue({ data: null });
+    mockDownloadOriginal.mockResolvedValue(true);
     mockRepairEngine.mounts = [];
     mockRepairEngine.onResult = null;
   });
@@ -223,6 +230,55 @@ describe('TripRouteExportMenu', () => {
     render(<TripRouteExportMenu trip={routedTrip} />);
 
     expect(mockUseTripRouteElevation).toHaveBeenCalledWith(trip.id, { enabled: false });
+  });
+
+  // #2053 перенёс «Скачать оригинал» во вкладке «Маршрут» в карточку оригинала.
+  // Вкладка «Экспорт» остаётся как была: GPX, KML, оригинал и подсказка с именем.
+  it('keeps the original download and its file-name hint in the Export tab', async () => {
+    setPlatformOS('web');
+    const originalFile = {
+      id: 42,
+      original_name: 'tatry.gpx',
+      ext: 'gpx',
+      size: 1024,
+      created_at: '2026-08-22T10:00:00Z',
+      updated_at: '2026-08-22T10:00:00Z',
+    };
+    mockUsePlannedTripRouteFile.mockReturnValue({ data: originalFile });
+
+    const { getByTestId, getByText, getByLabelText } = render(
+      <TripRouteExportMenu trip={trip} />,
+    );
+
+    expect(getByTestId('trip-route-export-gpx')).toBeTruthy();
+    expect(getByTestId('trip-route-export-kml')).toBeTruthy();
+    expect(getByTestId('trip-route-original-download-block')).toBeTruthy();
+    expect(getByText('Исходный файл маршрута: tatry.gpx')).toBeTruthy();
+    expect(getByLabelText('Скачать оригинал')).toBeTruthy();
+
+    fireEvent.press(getByTestId('trip-route-export-original'));
+    await waitFor(() => expect(mockDownloadOriginal).toHaveBeenCalledTimes(1));
+    expect(mockDownloadOriginal).toHaveBeenCalledWith(trip.id, originalFile);
+  });
+
+  it('shows a failed original download in the Export tab', async () => {
+    setPlatformOS('web');
+    mockUsePlannedTripRouteFile.mockReturnValue({
+      data: {
+        id: 42,
+        original_name: 'tatry.gpx',
+        ext: 'gpx',
+        size: 1024,
+        created_at: '2026-08-22T10:00:00Z',
+        updated_at: '2026-08-22T10:00:00Z',
+      },
+    });
+    mockDownloadOriginal.mockResolvedValueOnce(false);
+    const { findByTestId, getByTestId } = render(<TripRouteExportMenu trip={trip} />);
+
+    fireEvent.press(getByTestId('trip-route-export-original'));
+
+    expect(await findByTestId('trip-route-export-original-error')).toBeTruthy();
   });
 
   it('never exposes a cached owner-only original to a non-owner', () => {

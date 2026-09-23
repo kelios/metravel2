@@ -1,8 +1,8 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import TripRouteFilePicker from '@/components/trips/planning/TripRouteFilePicker';
-import { i18n } from '@/i18n';
 
 jest.mock('@expo/vector-icons/Feather', () => () => null);
 jest.mock('@/hooks/useResponsive', () => ({
@@ -56,29 +56,32 @@ const renderPicker = () => {
 };
 
 describe('TripRouteFilePicker native adapter', () => {
-  afterEach(async () => {
-    await act(async () => { await i18n.changeLanguage('ru'); });
-  });
+  // #1789: icon-only импорт был непонятен; #2053: короткое «Импорт» в сжатом ряду
+  // обрезалось до «И…». На телефоне видна полная подпись действия — та же, что
+  // и доступное имя; перевод подписи делает панель импорта (`useTranslation`).
+  it('keeps the full import label visible on a phone', () => {
+    const { getByText, getByLabelText, queryByText, props } = renderPicker();
 
-  it.each([
-    ['ru', 'Импорт'], ['be', 'Імпарт'], ['uk', 'Імпорт'],
-    ['pl', 'Import'], ['en', 'Import'],
-  ])('shows a visible compact import label in %s with the full accessible name', async (locale, caption) => {
-    await act(async () => { await i18n.changeLanguage(locale); });
-    const { getByText, getByLabelText, props } = renderPicker();
-
-    expect(getByText(caption)).toBeTruthy();
+    expect(getByText(props.label)).toBeTruthy();
     expect(getByLabelText(props.label)).toBeTruthy();
+    expect(queryByText('Импорт')).toBeNull();
   });
 
-  it('updates the compact caption when the locale changes while mounted', async () => {
-    await act(async () => { await i18n.changeLanguage('ru'); });
-    const { getByText, queryByText } = renderPicker();
-    expect(getByText('Импорт')).toBeTruthy();
+  it('stretches the import across the row when asked to fill it', () => {
+    const { getByTestId } = render(
+      <TripRouteFilePicker
+        label="Load track (GPX/KML)"
+        maxBytes={100}
+        onPicked={jest.fn()}
+        onError={jest.fn()}
+        fill
+      />,
+    );
 
-    await act(async () => { await i18n.changeLanguage('en'); });
-    expect(getByText('Import')).toBeTruthy();
-    expect(queryByText('Импорт')).toBeNull();
+    expect(StyleSheet.flatten(getByTestId('trip-route-import-picker').props.style)).toMatchObject({
+      flexGrow: 1,
+      flexShrink: 0,
+    });
   });
 
   beforeEach(() => {

@@ -1,5 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native'
-import { StyleSheet, Text } from 'react-native'
+import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native'
 
 import ToolActionsRow, { type ToolAction } from '@/components/ui/ToolActionsRow'
 
@@ -17,6 +17,21 @@ const buildActions = (onPress = jest.fn()): ToolAction[] => [
   { key: 'import', label: 'Импорт текста', icon: <Text>upload</Text> },
   { key: 'paste', label: 'Вставить', icon: <Text>clipboard</Text> },
 ]
+
+const exportActions = (): ToolAction[] => [
+  { key: 'gpx', label: 'Скачать GPX', compactLabel: 'GPX', icon: <Text>download</Text> },
+  { key: 'kml', label: 'Скачать KML', compactLabel: 'KML', icon: <Text>download</Text> },
+  {
+    key: 'original',
+    label: 'Скачать оригинал',
+    compactLabel: 'Оригинал',
+    icon: <Text>download</Text>,
+  },
+]
+
+// Корень ряда — View с `flexWrap`: ряд переносит кнопки или держит одну строку.
+const rowStyle = (tree: ReturnType<ReturnType<typeof render>['toJSON']>) =>
+  StyleSheet.flatten((tree as { props: { style?: StyleProp<ViewStyle> } }).props.style)
 
 // Шаблон вспомогательных действий: desktop — иконка + подпись, mobile web и
 // Android — icon-only одной строкой, подпись остаётся accessibilityLabel.
@@ -150,5 +165,80 @@ describe('ui/ToolActionsRow', () => {
     const button = getByLabelText('Импорт')
     expect(button.props.accessibilityState?.busy).toBe(true)
     expect(button.props.accessibilityState?.disabled).toBe(true)
+  })
+
+  // #2053: compact-ряд держался одной строкой за счёт `flexShrink: 1` у
+  // подписанных кнопок, и на 320dp «GPX»/«KML» сжимались до 0 px. Правило слоя:
+  // подписанная кнопка не уже своей подписи, не хватает ширины — ряд
+  // переносится, а длинная подпись встаёт в две строки.
+  describe('labelled buttons are never squeezed (#2053)', () => {
+    it('keeps compact-labelled buttons at their label width and lets the row wrap', () => {
+      mockResponsive = { isHydrated: true, isMobile: true }
+      const { getByLabelText, getByText, toJSON } = render(
+        <ToolActionsRow actions={exportActions()} />,
+      )
+
+      for (const label of ['Скачать GPX', 'Скачать KML', 'Скачать оригинал']) {
+        const style = StyleSheet.flatten(getByLabelText(label).props.style)
+        expect(style.flexShrink).toBe(0)
+        expect(style.maxWidth).toBe('100%')
+      }
+      expect(getByText('Оригинал').props.numberOfLines).toBe(2)
+      expect(rowStyle(toJSON()).flexWrap).toBe('wrap')
+    })
+
+    it('wraps a row where only some compact actions carry a caption', () => {
+      mockResponsive = { isHydrated: true, isMobile: true }
+      const { getByLabelText, toJSON } = render(
+        <ToolActionsRow
+          actions={[
+            { key: 'import', label: 'Импорт текста', icon: <Text>upload</Text> },
+            ...exportActions(),
+          ]}
+        />,
+      )
+
+      expect(rowStyle(toJSON()).flexWrap).toBe('wrap')
+      expect(StyleSheet.flatten(getByLabelText('Импорт текста').props.style)).toMatchObject({
+        flexShrink: 0,
+        minWidth: 44,
+      })
+    })
+
+    it('keeps an icon-only row on one line', () => {
+      mockResponsive = { isHydrated: true, isMobile: true }
+      const { getByLabelText, toJSON } = render(<ToolActionsRow actions={buildActions()} />)
+
+      expect(rowStyle(toJSON()).flexWrap).toBe('nowrap')
+      expect(StyleSheet.flatten(getByLabelText('Надиктовать').props.style).flexShrink).toBe(0)
+    })
+
+    it('wraps a labelled desktop row without shrinking its buttons', () => {
+      const { getByLabelText, getByText, toJSON } = render(
+        <ToolActionsRow actions={buildActions()} />,
+      )
+
+      expect(rowStyle(toJSON()).flexWrap).toBe('wrap')
+      expect(StyleSheet.flatten(getByLabelText('Надиктовать').props.style)).toMatchObject({
+        flexShrink: 0,
+        maxWidth: '100%',
+      })
+      expect(getByText('Надиктовать').props.numberOfLines).toBe(2)
+    })
+
+    it('stretches fill buttons across the row with their full labels on a phone', () => {
+      mockResponsive = { isHydrated: true, isMobile: true }
+      const { getByLabelText, getByText, queryByText, toJSON } = render(
+        <ToolActionsRow actions={exportActions().slice(0, 2)} compact={false} fill />,
+      )
+
+      expect(getByText('Скачать GPX')).toBeTruthy()
+      expect(queryByText('GPX')).toBeNull()
+      const gpx = StyleSheet.flatten(getByLabelText('Скачать GPX').props.style)
+      expect(gpx).toMatchObject({ flexGrow: 1, flexShrink: 0, maxWidth: '100%' })
+      // Равные по смыслу кнопки — один стиль: одинаковое растяжение и вариант.
+      expect(StyleSheet.flatten(getByLabelText('Скачать KML').props.style)).toEqual(gpx)
+      expect(rowStyle(toJSON()).flexWrap).toBe('wrap')
+    })
   })
 })

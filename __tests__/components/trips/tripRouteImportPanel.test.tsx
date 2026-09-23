@@ -3,6 +3,7 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 
 import type { RoutePoint } from '@/api/plannedTrips';
 import TripRouteImportPanel from '@/components/trips/planning/TripRouteImportPanel';
+import { i18n } from '@/i18n';
 import { TRIP_ROUTE_IMPORT_MAX_BYTES } from '@/components/trips/planning/tripRouteImport';
 import {
   EMPTY_GPX,
@@ -123,6 +124,21 @@ describe('TripRouteImportPanel', () => {
       'Добавить к маршруту',
     );
     expect(onApply).not.toHaveBeenCalled();
+  });
+
+  // #1789/#2053: на любой ширине импорт подписан полной фразой, и её перевод
+  // обязан следовать за сменой языка без перемонтирования панели.
+  it('passes the translated import label and follows a locale change', async () => {
+    render(<TripRouteImportPanel route={currentRoute} onApply={jest.fn()} />);
+    expect(mockPickerProps.label).toBe('Загрузить трек (GPX/KML)');
+    expect(mockPickerProps.fill).toBe(true);
+
+    try {
+      await act(async () => { await i18n.changeLanguage('en'); });
+      expect(mockPickerProps.label).toBe('Load track (GPX/KML)');
+    } finally {
+      await act(async () => { await i18n.changeLanguage('ru'); });
+    }
   });
 
   it('switches preview geometry and statistics without applying the draft', () => {

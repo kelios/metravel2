@@ -10,7 +10,8 @@
  *  4. ошибка загрузки оригинала видна отдельно от ошибок разбора файла.
  */
 import React from 'react';
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { View } from 'react-native';
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
 
 import type { RoutePoint } from '@/api/plannedTrips';
 import {
@@ -20,6 +21,7 @@ import {
 
 let mockPickerProps: Record<string, any> = {};
 const mockReleaseUpload = jest.fn();
+const mockDownloadOriginal = jest.fn();
 
 jest.mock('@expo/vector-icons/Feather', () => () => null);
 jest.mock('@/components/trips/planning/TripRouteFilePicker', () => {
@@ -42,6 +44,10 @@ jest.mock('@/components/trips/planning/TripRouteFilePicker', () => {
     releasePickedTripRouteUpload: (upload: unknown) => mockReleaseUpload(upload),
   };
 });
+jest.mock('@/utils/travelRouteDownload', () => ({
+  ...jest.requireActual('@/utils/travelRouteDownload'),
+  downloadPlannedTripRouteFile: (...args: unknown[]) => mockDownloadOriginal(...args),
+}));
 jest.mock('@/components/MapPage/TravelMap', () => ({
   TravelMap: () => {
     const { View } = require('react-native');
@@ -92,6 +98,8 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
   beforeEach(() => {
     mockPickerProps = {};
     mockReleaseUpload.mockClear();
+    mockDownloadOriginal.mockReset();
+    mockDownloadOriginal.mockResolvedValue(true);
   });
 
   it('отдаёт выбранный оригинал наверх вместе с точками маршрута', () => {
@@ -138,6 +146,70 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
     expect(screen.getByText('tatry.gpx')).toBeTruthy();
     fireEvent.press(screen.getByTestId('trip-route-import-remove-original'));
     expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
+  // #2053: «Скачать» оригинала живёт в его карточке рядом с «Удалить», имя
+  // файла — до двух строк, а не обрезанное «Mullerthal_Trail_Ro…».
+  it('скачивает оригинал из его карточки, рядом с удалением', async () => {
+    const screen = render(
+      <TripRouteImportPanel
+        route={currentRoute}
+        tripId={77}
+        storedFile={storedFile as never}
+        onRemoveStoredFile={jest.fn()}
+        onApply={jest.fn()}
+      />,
+    );
+
+    const card = within(screen.getByTestId('trip-route-import-stored-original'));
+    expect(card.getByText('tatry.gpx').props.numberOfLines).toBe(2);
+    expect(card.getByTestId('trip-route-import-remove-original')).toBeTruthy();
+    const download = card.getByTestId('trip-route-import-download-original');
+    expect(download.props.accessibilityLabel).toBe('Поделиться оригиналом');
+
+    fireEvent.press(download);
+    await waitFor(() => expect(mockDownloadOriginal).toHaveBeenCalledTimes(1));
+    expect(mockDownloadOriginal).toHaveBeenCalledWith(77, storedFile);
+  });
+
+  it('без поездки скачать оригинал не предлагает, удаление остаётся', () => {
+    const screen = render(
+      <TripRouteImportPanel
+        route={currentRoute}
+        storedFile={storedFile as never}
+        onRemoveStoredFile={jest.fn()}
+        onApply={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId('trip-route-import-download-original')).toBeNull();
+    expect(screen.getByTestId('trip-route-import-remove-original')).toBeTruthy();
+  });
+
+  it('ставит кнопки скачивания GPX/KML сразу под импортом, до карточки оригинала', () => {
+    const screen = render(
+      <TripRouteImportPanel
+        route={currentRoute}
+        tripId={77}
+        storedFile={storedFile as never}
+        fileToolbarExtra={<View testID="route-file-download-row" />}
+        onApply={jest.fn()}
+      />,
+    );
+
+    const tree = screen.toJSON() as {
+      children?: Array<string | { props: { testID?: string } }>;
+    } | null;
+    const order = tree?.children?.map((child) =>
+      typeof child === 'string' ? child : child.props.testID,
+    );
+    expect(order?.slice(0, 3)).toEqual([
+      'trip-route-import-picker',
+      'route-file-download-row',
+      'trip-route-import-stored-original',
+    ]);
+    // Импорт тянется на ширину блока.
+    expect(mockPickerProps.fill).toBe(true);
   });
 
   it('пока оригинал не загружен, показывает его как ожидающий сохранения', () => {

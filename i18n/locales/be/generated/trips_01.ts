@@ -301,7 +301,7 @@ export const tripsGenerated1 = {
   "components.trips.planning.TripRouteExportMenu.podelitsya_gpx_f240186b": "Падзяліцца GPX",
   "components.trips.planning.TripRouteExportMenu.podelitsya_kml_5f084c27": "Падзяліцца KML",
   "components.trips.planning.TripRouteExportMenu.skachat_gpx_cc6c1a54": "Спампаваць GPX",
-  "components.trips.planning.TripRouteExportMenu.skachat_kml_30f6a059": "Скачаць KML",
+  "components.trips.planning.TripRouteExportMenu.skachat_kml_30f6a059": "Спампаваць KML",
   "components.trips.planning.TripRouteExportMenu.sohranit_gpx_dlya_value1_4b3e9e5c": "Захаваць GPX для {{value1}}",
   "components.trips.planning.TripRouteExportMenu.sohranit_marshrut_gpx_da908e9f": "Захаваць маршрут GPX",
   "components.trips.planning.TripRouteExportMenu.sohranit_marshrut_kml_0a6163aa": "Захаваць маршрут KML",

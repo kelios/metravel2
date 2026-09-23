@@ -17,9 +17,9 @@ export type ToolAction = {
    * неразличимы — TestFlight 1.0.5 (8), «иконки непонятные что они значат».
    * `docs/DESIGN_SYSTEM.md` для такого случая прямо требует подпись.
    *
-   * Слово должно быть коротким (`GPX`, `KML`, `Оригинал`): ряд остаётся одной
-   * строкой, а полное название действия по-прежнему уходит в
-   * `accessibilityLabel`. Без этого поля поведение прежнее — icon-only.
+   * Слово должно быть коротким (`GPX`, `KML`, `Оригинал`), а полное название
+   * действия по-прежнему уходит в `accessibilityLabel`. Без этого поля
+   * поведение прежнее — icon-only.
    */
   compactLabel?: string;
   icon: React.ReactNode;
@@ -39,6 +39,12 @@ type ToolActionsRowProps = {
    * получают icon-only, desktop — icon + подпись.
    */
   compact?: boolean;
+  /**
+   * Кнопки делят ширину ряда: одна занимает его целиком, две — поровну. Это
+   * раскладка блока, где действия — главное содержимое (блок «Файл маршрута»,
+   * #2053), а не ряд инструментов рядом с полем.
+   */
+  fill?: boolean;
 };
 
 /**
@@ -50,23 +56,31 @@ type ToolActionsRowProps = {
  * - mobile web, Android и iPhone — icon-only 44/48dp в ОДНУ строку, подпись
  *   уходит в accessibilityLabel;
  * - действие с `compactLabel` остаётся подписанным и на телефоне: короткое
- *   слово рядом с иконкой, ряд по-прежнему одна строка.
+ *   слово рядом с иконкой.
+ *
+ * Подписанная кнопка (обычная или с `compactLabel`) не сжимается уже своей
+ * подписи: не хватает ширины — ряд переносит кнопку, а подпись длиннее ряда
+ * встаёт в две строки. Сжатие ради одной строки превращало подпись в «G.», а на
+ * 320dp — в пустую кнопку с одной иконкой (#2053). Одной строкой держится
+ * только icon-only ряд: его кнопки фиксированного размера.
  *
  * Так вспомогательные действия не съедают экран телефона тремя полноразмерными
  * кнопками с подписями. Первичное действие шага (Сохранить/Далее) сюда не
  * кладём: у него подпись обязательна на любой ширине.
  */
-function ToolActionsRow({ actions, size = 'sm', style, compact }: ToolActionsRowProps) {
+function ToolActionsRow({ actions, size = 'sm', style, compact, fill = false }: ToolActionsRowProps) {
   const { isHydrated, isMobile } = useResponsive();
   const isCompact = compact ?? (isHydrated && isMobile);
   const visibleActions = actions.filter(Boolean);
+  const iconOnlyRow = isCompact && visibleActions.every((action) => !action.compactLabel);
 
   if (visibleActions.length === 0) return null;
 
   return (
-    <View style={[styles.row, isCompact && styles.rowCompact, style]}>
+    <View style={[styles.row, iconOnlyRow && styles.rowIconOnly, style]}>
       {visibleActions.map((action) => {
         const compactLabelled = isCompact && !!action.compactLabel;
+        const iconOnly = isCompact && !compactLabelled;
         return (
           <Button
             key={action.key}
@@ -77,18 +91,20 @@ function ToolActionsRow({ actions, size = 'sm', style, compact }: ToolActionsRow
             // TalkBack даже тогда, когда видимая подпись сокращена до «GPX».
             accessibilityLabel={action.label}
             icon={action.icon}
-            iconOnly={isCompact && !compactLabelled}
+            iconOnly={iconOnly}
+            labelNumberOfLines={2}
             loading={action.loading}
             disabled={action.disabled}
             onPress={action.onPress}
             testID={action.testID}
-            style={
-              isCompact
-                ? compactLabelled
+            style={[
+              iconOnly
+                ? styles.compactButton
+                : compactLabelled
                   ? styles.compactLabelledButton
-                  : styles.compactButton
-                : styles.button
-            }
+                  : styles.button,
+              fill && styles.fillButton,
+            ]}
           />
         );
       })}
@@ -103,12 +119,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.xs,
   },
-  rowCompact: {
+  rowIconOnly: {
     // Icon-only ряд обязан оставаться одной строкой: перенос вернул бы ту же
     // «лестницу» из кнопок, из-за которой шаблон и появился.
     flexWrap: 'nowrap',
   },
+  // Подписанная кнопка шириной не меньше своей подписи: `flexShrink: 0`, а
+  // потолок — ширина ряда, дальше подпись переносится на вторую строку.
   button: {
+    flexShrink: 0,
+    maxWidth: '100%',
     justifyContent: 'center',
     paddingVertical: DESIGN_TOKENS.spacing.xs,
   },
@@ -119,14 +139,20 @@ const styles = StyleSheet.create({
     minHeight: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minHeight,
   },
   // Подписанная кнопка в compact-ряду: ширину задаёт короткое слово, поэтому
-  // floor тач-таргета держит только высота. `flexShrink: 1` и узкие
-  // горизонтальные паддинги (перебивают `sizeStyles.sm` кнопки, они применяются
-  // раньше `style`) оставляют ряд одной строкой и на 320dp.
+  // floor тач-таргета держит только высота. Узкие горизонтальные паддинги
+  // перебивают `sizeStyles.sm` кнопки (они применяются раньше `style`).
   compactLabelledButton: {
     flexGrow: 0,
-    flexShrink: 1,
+    flexShrink: 0,
+    maxWidth: '100%',
     paddingHorizontal: DESIGN_TOKENS.spacing.xs,
     minHeight: Platform.OS === 'android' ? 48 : DESIGN_TOKENS.touchTarget.minHeight,
+  },
+  // Ширину кнопки задаёт ряд, поэтому горизонтальный паддинг минимальный: место
+  // остаётся подписи, и две кнопки дольше помещаются в одну строку.
+  fillButton: {
+    flexGrow: 1,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
   },
 });
 

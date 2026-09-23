@@ -57,9 +57,11 @@ export default function RouteBuilderLayout({
   saveSection,
   elevationProfileSection,
 }: Props) {
-  // #1902: импорт и GPX/KML — один compact ToolActionsRow внутри рамки
-  // «Файл маршрута». Пикер отдаёт своё действие в ряд скачивания через
-  // `fileToolbarExtra`; четыре короткие compactLabel держатся nowrap.
+  // #1902: импорт и GPX/KML — одна рамка «Файл маршрута». #2053 (макет
+  // `docs/features/trips-plan-route-tab-mock.md` §1, вариант «стопка»): импорт
+  // во всю ширину, под ним GPX и KML поровну, ниже карточка оригинала со своими
+  // «Скачать»/«Удалить». Кнопки скачивания встают в панель импорта через
+  // `fileToolbarExtra`, чтобы оказаться между импортом и карточкой.
   const importWithFileToolbar = React.isValidElement(importSection)
     ? React.cloneElement(
         importSection as React.ReactElement<{ fileToolbarExtra?: React.ReactNode }>,

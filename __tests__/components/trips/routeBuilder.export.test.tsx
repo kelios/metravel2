@@ -1,6 +1,8 @@
 import React from 'react'
+import { StyleSheet } from 'react-native'
 import { fireEvent, render, waitFor, within } from '@testing-library/react-native'
 
+import type { PlannedTripRouteFile } from '@/api/plannedTripRoutes'
 import type { PlannedTrip } from '@/api/plannedTrips'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
 import { createQueryWrapper } from '../../helpers/testQueryClient'
@@ -11,6 +13,10 @@ import {
 import { buildGpx } from '@/utils/routeExport'
 
 const mockSaveRouteExportFile = jest.fn()
+const mockDownloadOriginal = jest.fn()
+// Сохранённый оригинал есть не в каждом сценарии, поэтому мок запроса файла
+// переключаемый: по умолчанию файла нет.
+let mockStoredRouteFile: PlannedTripRouteFile | null = null
 
 jest.mock('@/api/places', () => ({ fetchPlacesCatalog: jest.fn() }))
 jest.mock('@/api/travelsApi', () => ({ fetchTravels: jest.fn() }))
@@ -35,6 +41,18 @@ jest.mock('@/utils/routeExport', () => {
 jest.mock('@/utils/tripAnalytics', () => ({
   trackRouteExported: jest.fn(),
   trackRoutePointAdded: jest.fn(),
+}))
+
+jest.mock('@/hooks/usePlannedTripRouteFile', () => ({
+  usePlannedTripRouteFile: () => ({ data: mockStoredRouteFile }),
+  usePlannedTripOriginalTrack: () => ({ data: null }),
+  useUploadPlannedTripRouteFile: () => ({ mutateAsync: jest.fn(), isPending: false }),
+  useDeletePlannedTripRouteFile: () => ({ mutate: jest.fn(), isPending: false }),
+}))
+
+jest.mock('@/utils/travelRouteDownload', () => ({
+  ...jest.requireActual('@/utils/travelRouteDownload'),
+  downloadPlannedTripRouteFile: (...args: unknown[]) => mockDownloadOriginal(...args),
 }))
 
 jest.mock('@/components/ui/ImageCardMedia', () => {
@@ -101,10 +119,21 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
 const renderRouteBuilder = (element: React.ReactElement) =>
   render(element, { wrapper: createQueryWrapper().Wrapper })
 
+const STORED_ORIGINAL: PlannedTripRouteFile = {
+  id: 7,
+  original_name: 'Mullerthal_Trail_Routes_1-3.kml',
+  ext: 'kml',
+  size: 185548,
+  created_at: '2026-09-20T08:00:00Z',
+  updated_at: '2026-09-20T08:00:00Z',
+}
+
 describe('RouteBuilder route download', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockSaveRouteExportFile.mockResolvedValue(true)
+    mockDownloadOriginal.mockResolvedValue(true)
+    mockStoredRouteFile = null
   })
 
   it('offers GPX and KML download next to the map', () => {
@@ -115,28 +144,94 @@ describe('RouteBuilder route download', () => {
     expect(getByTestId('trip-route-export-kml')).toBeTruthy()
   })
 
-  it('groups track import and GPX/KML export into one «Route file» block (#1902)', () => {
+  // #1902 собрал импорт и GPX/KML в одну рамку «Файл маршрута», но в сжатом ряду
+  // подписи обрезались до «И…», «G.», «K..» (#2053). Теперь блок — стопка по
+  // макету: импорт во всю ширину, GPX и KML поровну, подписи полные.
+  it('stacks the «Route file» block with full labels (#1902, #2053)', () => {
     const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     const block = within(getByTestId('route-builder-route-file'))
     expect(block.getByText('Файл маршрута')).toBeTruthy()
     expect(block.getByTestId('trip-route-import-panel')).toBeTruthy()
     expect(block.getByTestId('route-builder-export')).toBeTruthy()
-    expect(block.getByTestId('trip-route-export-gpx')).toBeTruthy()
 
-    const tools = within(block.getByTestId('route-builder-route-file-tools'))
-    expect(tools.getByTestId('trip-route-import-picker')).toBeTruthy()
-    expect(tools.getByTestId('trip-route-export-gpx')).toBeTruthy()
-    expect(tools.getByTestId('trip-route-export-kml')).toBeTruthy()
-    expect(tools.getByText('Импорт')).toBeTruthy()
-    expect(tools.getByText('GPX')).toBeTruthy()
-    expect(tools.getByText('KML')).toBeTruthy()
+    const importButton = block.getByTestId('trip-route-import-picker')
+    expect(within(importButton).getByText('Загрузить трек (GPX/KML)')).toBeTruthy()
+    expect(StyleSheet.flatten(importButton.props.style)).toMatchObject({
+      flexGrow: 1,
+      flexShrink: 0,
+    })
+
+    const gpx = block.getByTestId('trip-route-export-gpx')
+    const kml = block.getByTestId('trip-route-export-kml')
+    // jest рендерит как iPhone: на native действие называется «Поделиться».
+    expect(within(gpx).getByText('Поделиться GPX')).toBeTruthy()
+    expect(within(kml).getByText('Поделиться KML')).toBeTruthy()
+    expect(block.queryByText('GPX')).toBeNull()
+    // Один вариант и одинаковое растяжение — одинаковые кнопки.
+    const gpxStyle = StyleSheet.flatten(gpx.props.style)
+    expect(gpxStyle).toMatchObject({ flexGrow: 1, flexShrink: 0 })
+    expect(StyleSheet.flatten(kml.props.style)).toEqual(gpxStyle)
   })
 
-  it('keeps the download available for a participant who cannot edit the route', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip({ isOwner: false })} />)
+  it('downloads the saved original from its card, not from the export row (#2053)', async () => {
+    mockStoredRouteFile = STORED_ORIGINAL
+    const { getByTestId, queryByTestId, queryByText } = renderRouteBuilder(
+      <RouteBuilder trip={makeTrip()} />,
+    )
+
+    const card = within(getByTestId('trip-route-import-stored-original'))
+    const name = card.getByText('Mullerthal_Trail_Routes_1-3.kml')
+    expect(name.props.numberOfLines).toBe(2)
+    expect(card.getByTestId('trip-route-import-remove-original')).toBeTruthy()
+    const download = card.getByTestId('trip-route-import-download-original')
+    expect(within(download).getByText('Поделиться оригиналом')).toBeTruthy()
+
+    // Имя файла уже в карточке: строки-дубля и второй кнопки оригинала нет.
+    expect(queryByTestId('trip-route-export-original')).toBeNull()
+    expect(queryByTestId('trip-route-original-download-block')).toBeNull()
+    expect(queryByText(/Исходный файл маршрута/)).toBeNull()
+
+    fireEvent.press(download)
+    await waitFor(() => expect(mockDownloadOriginal).toHaveBeenCalledTimes(1))
+    expect(mockDownloadOriginal).toHaveBeenCalledWith(22, STORED_ORIGINAL)
+  })
+
+  it('reports a failed original download inside the card', async () => {
+    mockStoredRouteFile = STORED_ORIGINAL
+    mockDownloadOriginal.mockResolvedValueOnce(false)
+    const { findByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+
+    fireEvent.press(getByTestId('trip-route-import-download-original'))
+
+    const error = await findByTestId('trip-route-import-original-download-error')
+    expect(
+      within(getByTestId('trip-route-import-stored-original')).getByTestId(
+        'trip-route-import-original-download-error',
+      ),
+    ).toBe(error)
+  })
+
+  // Стопка с полными подписями — исключение только для блока «Файл маршрута»
+  // владельца (#2053). У участника того блока нет: GPX/KML остаются обычным
+  // рядом инструментов — на телефоне (jest рендерит окно 750 px) короткие
+  // подписи, кнопки не растянуты на всю ширину.
+  it('keeps the compact download row for a participant who cannot edit the route', () => {
+    const { getByTestId, queryByTestId } = renderRouteBuilder(
+      <RouteBuilder trip={makeTrip({ isOwner: false })} />,
+    )
 
     expect(getByTestId('route-builder-export')).toBeTruthy()
+    expect(queryByTestId('route-builder-route-file')).toBeNull()
+
+    const gpx = getByTestId('trip-route-export-gpx')
+    const kml = getByTestId('trip-route-export-kml')
+    expect(within(gpx).getByText('GPX')).toBeTruthy()
+    expect(within(kml).getByText('KML')).toBeTruthy()
+    expect(gpx.props.accessibilityLabel).toBe('Поделиться GPX')
+    for (const button of [gpx, kml]) {
+      expect(StyleSheet.flatten(button.props.style).flexGrow).not.toBe(1)
+    }
   })
 
   it('builds a real file through the shared export path', async () => {
