@@ -19,7 +19,12 @@ import {
   snapshotFromServerProgress,
   toQuestProgressServerPayload,
 } from '@/utils/questProgressMerge'
-import { settleQuestProgressDeletions } from '@/utils/questProgressQueue'
+import {
+  enqueueQuestProgress,
+  flushQuestProgressQueue,
+  settleQuestProgressDeletions,
+} from '@/utils/questProgressQueue'
+import { useAuthStore } from '@/stores/authStore'
 
 type GuestProgressPayload = {
   currentIndex: number
@@ -159,6 +164,20 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
         await clearGuestQuestProgress(questId)
       } catch (error) {
         const { devError } = require('@/utils/logger')
+        // Попытка здесь одна на открытие экрана: без сети прохождение ждало бы,
+        // пока игрок снова откроет этот квест. Копию забирает очередь прогресса
+        // (#1922) — её будят сеть, возврат в приложение и вход, а неудачу держит
+        // бэкофф; слияние с сервером у неё то же. Гостевая копия после передачи
+        // стирается, чтобы у ответов был один владелец: иначе следующее открытие
+        // квеста залило бы их в прохождение, сброшенное уже после доставки (#2048).
+        const ownerId = useAuthStore.getState().userId
+        if (ownerId) {
+          await enqueueQuestProgress(questId, normalizeQuestProgressSnapshot(guestProgress), ownerId)
+          await clearGuestQuestProgress(questId)
+          devError('Guest quest progress migration failed, handed over to the progress queue:', error)
+          void flushQuestProgressQueue()
+          return
+        }
         devError('Guest quest progress migration failed, local copy kept:', error)
         migratedRef.current = false
       }

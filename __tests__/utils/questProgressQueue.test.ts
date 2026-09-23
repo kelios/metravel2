@@ -32,6 +32,7 @@ import {
   __resetQuestProgressQueue,
   deleteOrEnqueueQuestProgress,
   deliverOrEnqueueQuestProgress,
+  dequeueDeliveredQuestProgress,
   dequeueQuestProgress,
   dropEndedQuestProgressRuns,
   enqueueQuestProgress,
@@ -440,5 +441,32 @@ describe('пометка «ещё не отправлено»', () => {
 
     expect(getQueuedQuestIds()).toEqual([])
     expect(await readStoredQueue()).toHaveLength(0)
+  })
+
+  // #2048: запись — не всегда подмножество снапшота экрана (туда уходит и
+  // упавшая миграция гостя). Экран снимает только то, что ответ сервера покрыл.
+  it('доставка экраном снимает запись, покрытую ответом сервера, и оставляет непокрытую', async () => {
+    const run = offlineRun()
+    const serverRow = {
+      id: 7,
+      current_index: 6,
+      unlocked_index: 6,
+      answers: { ...run.answers, '2-bridge': 'мост' },
+      attempts: run.attempts,
+      hints: {},
+      show_map: false,
+      completed: true,
+      skipped: {},
+      early_finish: false,
+    }
+
+    await enqueueQuestProgress('ojcow-lokietek', run)
+    // Курсор и карта у сервера другие — это не делает запись непокрытой.
+    await dequeueDeliveredQuestProgress('ojcow-lokietek', serverRow as any)
+    expect(getQueuedQuestIds()).toEqual([])
+
+    await enqueueQuestProgress('ojcow-lokietek', run)
+    await dequeueDeliveredQuestProgress('ojcow-lokietek', { ...serverRow, answers: { intro: 'start' } } as any)
+    expect(getQueuedQuestIds()).toEqual(['ojcow-lokietek'])
   })
 })

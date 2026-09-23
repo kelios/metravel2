@@ -404,3 +404,29 @@ export function mergeQuestProgress(
         serverNeedsPush: serverFingerprint(merged) !== serverFingerprint(server),
     }
 }
+
+// Только накопительная часть прохождения: курсор и карта принадлежат последнему
+// экрану и накопленным не считаются.
+const accumulatedFingerprint = (snapshot: QuestProgressSnapshot): string =>
+    JSON.stringify({
+        answers: sortRecord(snapshot.answers),
+        attempts: sortRecord(snapshot.attempts),
+        hints: sortRecord(snapshot.hints),
+        completed: snapshot.completed,
+        skipped: sortRecord(snapshot.skipped),
+        earlyFinish: snapshot.earlyFinish,
+    })
+
+/**
+ * Сервер уже знает всё, что накопил снапшот: слияние не добавляет ему ни
+ * ответа, ни попытки, ни подсказки, ни отметки. Снапшот закончившегося
+ * поколения покрыт по определению — доставлять его некуда (#2033).
+ */
+export function isQuestProgressCoveredBy(
+    localRaw: Partial<QuestProgressSnapshot> | null | undefined,
+    serverRaw: Partial<QuestProgressSnapshot> | null | undefined,
+): boolean {
+    const server = normalizeQuestProgressSnapshot(serverRaw)
+    const { merged } = mergeQuestProgress(localRaw, server)
+    return accumulatedFingerprint(merged) === accumulatedFingerprint(server)
+}

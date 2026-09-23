@@ -27,6 +27,7 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { hasQuestProgressStarted, QuestProgressLineageMismatch } from '@/utils/questProgressMerge';
 import {
     deleteOrEnqueueQuestProgress,
+    dequeueDeliveredQuestProgress,
     dequeueQuestProgress,
     deliverOrEnqueueQuestProgress,
     dropEndedQuestProgressRuns,
@@ -406,8 +407,9 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             // Строка стёртого прохождения экрану больше не принадлежит, а очередь
             // квеста теперь — нового прохождения.
             if (resetSinceStart()) return;
-            // Снапшот доехал: очередь доставки этому квесту больше не нужна.
-            void dequeueQuestProgress(questId, ownerIdForQueue());
+            // Снапшот доехал: запись очереди, которую покрывает ответ сервера,
+            // больше не нужна. Непокрытая (упавшая миграция гостя, #2048) остаётся.
+            void dequeueDeliveredQuestProgress(questId, updated, ownerIdForQueue());
             // Снимаем с очереди только то, что реально отправили: изменения,
             // сделанные во время запроса, остаются pending и уйдут своим флашем.
             if (pendingDataRef.current === pending) pendingDataRef.current = null;

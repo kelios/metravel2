@@ -21,7 +21,13 @@ import {
 import { useGuestQuestFlow } from '@/components/quests/useGuestQuestFlow'
 import * as questsApi from '@/api/quests'
 import { useAuthStore } from '@/stores/authStore'
-import { QUEST_PROGRESS_DELETIONS_KEY, __resetQuestProgressQueue } from '@/utils/questProgressQueue'
+import {
+  QUEST_PROGRESS_DELETIONS_KEY,
+  QUEST_PROGRESS_QUEUE_KEY,
+  __resetQuestProgressQueue,
+  deliverOrEnqueueQuestProgress,
+  flushQuestProgressQueue,
+} from '@/utils/questProgressQueue'
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
@@ -261,10 +267,126 @@ describe('useGuestQuestFlow migration after login', () => {
 
       expect(mockReadOrCreateProgress).not.toHaveBeenCalled()
       expect(mockedApi.updateProgress).not.toHaveBeenCalled()
-      expect((await loadGuestQuestProgress('krakow-dragon'))?.answers).toEqual({ 'step-1': 'дракон' })
+      // Ответы не потеряны: их держит очередь прогресса, а она уходит только
+      // после подтверждённого удаления (#2048).
+      expect(JSON.parse((await AsyncStorage.getItem(QUEST_PROGRESS_QUEUE_KEY)) ?? '[]')).toEqual([
+        expect.objectContaining({
+          questId: 'krakow-dragon',
+          ownerId: '169',
+          snapshot: expect.objectContaining({ answers: { 'step-1': 'дракон' } }),
+        }),
+      ])
     } finally {
       __resetQuestProgressQueue()
       mockDeleteProgress.mockReset()
+      useAuthStore.setState({ isAuthenticated: authSnapshot.isAuthenticated, userId: authSnapshot.userId })
+    }
+  })
+
+  // #2048: миграция делала одну попытку на открытие экрана — без сети прохождение
+  // ждало, пока игрок снова откроет этот квест. Будильники очереди #1922 (сеть,
+  // возврат в приложение, вход) обязаны довезти его без повторного маунта.
+  it('упавшая миграция доезжает будильником очереди прогресса без повторного открытия квеста', async () => {
+    const authSnapshot = useAuthStore.getState()
+    useAuthStore.setState({ isAuthenticated: true, userId: '169' })
+    __resetQuestProgressQueue()
+    await saveGuestQuestProgress('krakow-dragon', {
+      currentIndex: 1,
+      unlockedIndex: 1,
+      answers: { 'step-1': 'дракон' },
+      attempts: {},
+      hints: {},
+      showMap: true,
+    })
+    mockReadOrCreateProgress.mockRejectedValue(new Error('Network request failed'))
+
+    try {
+      renderHook(() =>
+        useGuestQuestFlow({
+          questId: 'krakow-dragon',
+          cityId: 'krakow',
+          isAuthenticated: true,
+          enabled: true,
+        }),
+      )
+      await waitFor(() => expect(mockReadOrCreateProgress).toHaveBeenCalled())
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
+      expect(mockedApi.updateProgress).not.toHaveBeenCalled()
+
+      // Сеть вернулась: `useQuestProgressQueueRuntime` будит очередь, экран квеста
+      // при этом не перемонтируется.
+      mockReadOrCreateProgress.mockResolvedValue({ id: 42, answers: {} } as never)
+      mockedApi.updateProgress.mockResolvedValue({ id: 42 } as never)
+      await act(async () => {
+        await flushQuestProgressQueue()
+      })
+
+      expect(mockedApi.updateProgress).toHaveBeenCalledWith(
+        42,
+        expect.objectContaining({ answers: { 'step-1': 'дракон' } }),
+      )
+      expect(await loadGuestQuestProgress('krakow-dragon')).toBeNull()
+    } finally {
+      __resetQuestProgressQueue()
+      mockReadOrCreateProgress.mockReset()
+      useAuthStore.setState({ isAuthenticated: authSnapshot.isAuthenticated, userId: authSnapshot.userId })
+    }
+  })
+
+  // Код-ревью #2048: экран вошедшего стартует от сервера и гостевых ответов не
+  // знает. Его успешная отправка не должна снимать с очереди запись миграции,
+  // которую ответ сервера не покрывает.
+  it('отправка экрана вошедшего не снимает с очереди непокрытые гостевые ответы', async () => {
+    const authSnapshot = useAuthStore.getState()
+    useAuthStore.setState({ isAuthenticated: true, userId: '169' })
+    __resetQuestProgressQueue()
+    await saveGuestQuestProgress('krakow-dragon', {
+      currentIndex: 1,
+      unlockedIndex: 1,
+      answers: { 'step-1': 'дракон' },
+      attempts: {},
+      hints: {},
+      showMap: true,
+    })
+    const serverRow: Record<string, any> = { id: 42, answers: {} }
+    mockReadOrCreateProgress.mockRejectedValue(new Error('Network request failed'))
+    mockedApi.updateProgress.mockImplementation(async (id: number, payload: any) => {
+      Object.assign(serverRow, payload, { id })
+      return { ...serverRow } as never
+    })
+
+    try {
+      renderHook(() =>
+        useGuestQuestFlow({
+          questId: 'krakow-dragon',
+          cityId: 'krakow',
+          isAuthenticated: true,
+          enabled: true,
+        }),
+      )
+      await waitFor(() => expect(mockReadOrCreateProgress).toHaveBeenCalled())
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
+
+      // Сеть вернулась, игрок ответил на открытом экране: уходит снапшот экрана.
+      mockReadOrCreateProgress.mockImplementation(() => ({ ...serverRow }))
+      await act(async () => {
+        await deliverOrEnqueueQuestProgress(
+          'krakow-dragon',
+          { currentIndex: 3, unlockedIndex: 3, answers: { 'step-3': 'башня' }, updatedAt: Date.now() },
+          '169',
+        )
+        await flushQuestProgressQueue()
+      })
+
+      expect(serverRow.answers).toEqual({ 'step-1': 'дракон', 'step-3': 'башня' })
+    } finally {
+      __resetQuestProgressQueue()
+      mockReadOrCreateProgress.mockReset()
+      mockedApi.updateProgress.mockReset()
       useAuthStore.setState({ isAuthenticated: authSnapshot.isAuthenticated, userId: authSnapshot.userId })
     }
   })

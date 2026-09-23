@@ -30,6 +30,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { devWarn } from '@/utils/logger'
 import {
     QuestProgressLineageMismatch,
+    isQuestProgressCoveredBy,
     isQuestProgressRunEnded,
     mergeQuestProgress,
     normalizeQuestProgressSnapshot,
@@ -353,6 +354,36 @@ export async function dequeueQuestProgress(
 }
 
 /**
+ * Экран доставил свой снапшот, и сервер ответил строкой `delivered`. Запись
+ * квеста снимается, только если эта строка её уже покрывает: запись — не всегда
+ * подмножество снапшота экрана. В очередь уходит и упавшая миграция гостя
+ * (#2048), а её ответов у экрана вошедшего нет — он стартует от сервера.
+ * Непокрытую запись очередь дожимает сразу: сеть только что ответила.
+ */
+export async function dequeueDeliveredQuestProgress(
+    questId: string,
+    delivered: ApiQuestProgress,
+    ownerId: string | null = currentOwnerId(),
+): Promise<void> {
+    if (!questId) return
+    await loadQueue()
+    const entries = queue ?? []
+    const server = snapshotFromServerProgress(delivered)
+    let uncovered = false
+    const next = entries.filter((entry) => {
+        if (entry.questId !== questId || entry.ownerId !== ownerId) return true
+        const covered = isQuestProgressCoveredBy(entry.snapshot, server)
+        if (!covered) uncovered = true
+        return !covered
+    })
+    if (next.length !== entries.length) {
+        queue = next
+        await persistQueue()
+    }
+    if (uncovered) void flushQuestProgressQueue()
+}
+
+/**
  * Сервер подтвердил строку квеста при открытии (`id`, `null` — строки нет):
  * записи закончившихся поколений снимаются сразу, по тому же правилу, по
  * которому визард стирает копию. Пока такая запись лежит, новое офлайн-
@@ -389,8 +420,8 @@ export async function deliverOrEnqueueQuestProgress(
     // Авторизацию проверяет вызывающий: на экране квеста её знает сам хук, и
     // сверяться тут со стором значит спорить с ним о состоянии сессии.
     try {
-        await pushQuestProgressSnapshot(questId, snapshot)
-        await dequeueQuestProgress(questId, ownerId)
+        const updated = await pushQuestProgressSnapshot(questId, snapshot)
+        await dequeueDeliveredQuestProgress(questId, updated, ownerId)
     } catch (error) {
         // Прохождение сброшено на другом устройстве: в очередь класть нечего, а
         // лежащая там запись того же прохождения тоже больше не нужна (#2033).
