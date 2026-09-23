@@ -571,8 +571,9 @@ export default function TripPlanRouteMap({
           />
           {legLines ? legLines.map((segment, index) => (
             <Polyline
-              // Отрезки идут в порядке маршрута; ключ по индексу их не переставляет.
-              key={`route-leg-${index}`}
+              // Отрезки идут в порядке маршрута; стиль в ключе пересоздаёт слой при
+              // смене вида отрезка — className Leaflet ставит только при создании.
+              key={`route-leg-${index}-${segment.style}`}
               positions={segment.positions}
               // className — пропом, а не в pathOptions: react-leaflet применяет
               // pathOptions через setStyle после создания слоя, а Leaflet читает
