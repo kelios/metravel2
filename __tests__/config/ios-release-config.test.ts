@@ -48,8 +48,6 @@ function fixture(changes: Record<string, (value: string) => string>): string {
     'scripts/ios-submit.sh',
     'scripts/ios-submit-runtime.js',
     'scripts/android-firebase-config.js',
-    'android/app/src/main/AndroidManifest.xml',
-    'android/app/src/main/res/values/colors.xml',
     'assets/images/notification-icon.png',
     'assets/images/icon.png',
     'ios/Podfile.properties.json',
@@ -95,6 +93,14 @@ describe('iOS release configuration', () => {
 
   it('keeps Expo, EAS, Xcode, plist, privacy, entitlement, and assets in parity', () => {
     expect(validateIosRelease(root)).toEqual([]);
+  });
+
+  it('does not fail on read when the untracked android/ directory is absent', () => {
+    const testRoot = fixture({});
+    expect(fs.existsSync(path.join(testRoot, 'android'))).toBe(false);
+    const codes = validateIosRelease(testRoot).map((error: { code: string }) => error.code);
+    expect(codes).not.toContain('IOS_RELEASE_CONFIG_READ');
+    expect(codes).not.toContain('IOS_APNS_PLUGIN_SCOPE');
   });
 
   it('resolves production APNs without background delivery and preserves Android notification metadata', () => {
