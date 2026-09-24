@@ -21,6 +21,12 @@ interface SidebarFiltersProps {
   isVisible?: boolean
   isLoading?: boolean
   isError?: boolean
+  // Отдельно от isError (сбой запроса опций фильтров, который подменяет всю
+  // панель на ErrorDisplay): сбой основного списка путешествий не трогает
+  // рендер фильтров, но total в этом случае не отражает реальную выдачу и
+  // чип результатов должен спрятаться — как resultsCount в RightColumn
+  // (components/listTravel/RightColumn.tsx).
+  hasResultsError?: boolean
   onRetry?: () => void
   onClose?: () => void
   containerStyle?: StyleProp<ViewStyle>
@@ -40,6 +46,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
     isVisible = true,
     isLoading = false,
     isError = false,
+    hasResultsError = false,
     onRetry,
     onClose,
     containerStyle,
@@ -107,7 +114,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
         selectedFilters={filter as unknown as ModernFilterState}
         onFilterChange={handleFilterChange}
         onClearAll={handleClearAll}
-        resultsCount={total}
+        resultsCount={hasResultsError ? undefined : total}
         isLoading={isLoading}
         year={filter.year}
         onYearChange={handleYearChange}

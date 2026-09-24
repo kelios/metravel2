@@ -32,6 +32,38 @@ describe('SidebarFilters publication-status rows', () => {
     modernFiltersProps.length = 0;
   });
 
+  // #2081: RightColumn hides its results counter on a failed travel-list load
+  // (`resultsCount={isError ? undefined : total}` — components/listTravel/RightColumn.tsx).
+  // The persistent SidebarFilters chip must match, gated on the list's own error
+  // (`hasResultsError`) rather than on the unrelated filter-options error (`isError`).
+  it('hides the results chip when the travel list failed to load, independent of filter-options isError', () => {
+    render(
+      <SidebarFilters
+        {...baseProps}
+        filter={{}}
+        onSelect={jest.fn()}
+        total={0}
+        hasResultsError
+      />
+    );
+
+    expect(lastProps().resultsCount).toBeUndefined();
+  });
+
+  it('shows the real results count once the travel list loads successfully', () => {
+    render(
+      <SidebarFilters
+        {...baseProps}
+        filter={{}}
+        onSelect={jest.fn()}
+        total={42}
+        hasResultsError={false}
+      />
+    );
+
+    expect(lastProps().resultsCount).toBe(42);
+  });
+
   it('hides both status rows outside "Мои путешествия"', () => {
     render(<SidebarFilters {...baseProps} filter={{}} onSelect={jest.fn()} />);
 

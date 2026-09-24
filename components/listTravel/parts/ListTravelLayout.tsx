@@ -28,6 +28,7 @@ type ListTravelLayoutProps = {
     | 'isVisible'
     | 'isLoading'
     | 'isError'
+    | 'hasResultsError'
     | 'onRetry'
     | 'onClose'
     | 'containerStyle'

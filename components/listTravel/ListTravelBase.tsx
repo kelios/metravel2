@@ -662,6 +662,10 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         isVisible: !usesOverlaySidebar || showFilters,
         isLoading: filterOptionsLoading,
         isError: hasFilterOptionsError,
+        // Гейт счётчика результатов на сбой основного списка (offline/abort
+        // /api/travels/**), отдельно от isError выше (сбой опций фильтров) —
+        // тот же isError, что уходит в rightColumn ниже.
+        hasResultsError: isError,
         onRetry: () => { void refetchFilterOptions(); },
         onClose: usesOverlaySidebar ? handleCloseFilters : undefined,
         containerStyle: sidebarContainerStyle,
