@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Platform, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors } from '@/hooks/useTheme'
@@ -15,10 +15,29 @@ interface ConsentCheckboxProps {
   accessibilityLabel?: string
 }
 
+/** Web: цель клика лежит внутри `<a>` (вложенный `<Link>` подписи). */
+const isClickFromAnchor = (event: GestureResponderEvent | undefined): boolean => {
+  const target = (event as { target?: { closest?: (selector: string) => unknown } } | undefined)
+    ?.target
+  return Boolean(target?.closest?.('a'))
+}
+
 /**
- * Квадратный чекбокс согласия. Используется для гейтинга действий
- * (старт квеста, заявка на поездку и т.п.) — кнопка действия блокируется,
- * пока чекбокс не отмечен.
+ * Квадратный чекбокс согласия с кликабельной подписью (#2093). Используется
+ * для гейтинга действий (старт квеста, заявка на поездку и т.п.) — кнопка
+ * действия блокируется, пока чекбокс не отмечен.
+ *
+ * Роль `checkbox` несёт только квадрат 44×44; подпись — соседний `<Text>` со
+ * своим `onPress`, а не потомок чекбокса. Обернуть всю строку в `Pressable`
+ * нельзя: на iOS доступный (`accessible`) `Pressable` — лист дерева
+ * VoiceOver, и ссылки `<Link>` из подписи (правила, отказ от
+ * ответственности) становятся недостижимы; на вебе `<a>` внутри
+ * `role="checkbox"` — вложенный интерактив (детали checkbox презентационные).
+ *
+ * Тап по ссылке: на native вложенный `Text` ссылки со своим `onPress`
+ * забирает responder раньше подписи. На вебе `<Link>` без `asChild` — это
+ * `<a>` с `onClick` без `stopPropagation`, клик после перехода всплывает в
+ * `onClick` подписи, поэтому клик с целью внутри `<a>` не переключает.
  */
 export default function ConsentCheckbox({
   checked,
@@ -29,6 +48,11 @@ export default function ConsentCheckbox({
 }: ConsentCheckboxProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
+
+  const handleLabelPress = (event: GestureResponderEvent) => {
+    if (Platform.OS === 'web' && isClickFromAnchor(event)) return
+    onToggle(!checked)
+  }
 
   return (
     <View style={styles.row}>
@@ -45,7 +69,9 @@ export default function ConsentCheckbox({
           {checked ? <Feather name="check" size={14} color={colors.textOnPrimary} /> : null}
         </View>
       </Pressable>
-      <Text style={styles.label}>{children}</Text>
+      <Text style={styles.label} onPress={handleLabelPress}>
+        {children}
+      </Text>
     </View>
   )
 }

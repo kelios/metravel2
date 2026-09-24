@@ -1,6 +1,6 @@
 import React from 'react'
-import { fireEvent, render } from '@testing-library/react-native'
-import { Platform } from 'react-native'
+import { fireEvent, render, within } from '@testing-library/react-native'
+import { Platform, Text } from 'react-native'
 
 jest.mock('@expo/vector-icons', () => ({ Feather: 'Feather' }))
 jest.mock('@expo/vector-icons/Feather', () => 'Feather')
@@ -81,6 +81,110 @@ describe('ConsentCheckbox', () => {
 
     fireEvent.press(getByTestId('cb'))
     expect(onToggle).toHaveBeenCalledWith(true)
+  })
+
+  // #2093: тап по подписи (не только по квадрату 44×44) переключает чекбокс.
+  it('toggles when the label text itself is pressed, not only the square', () => {
+    const onToggle = jest.fn()
+    const { getByText } = render(
+      <ConsentCheckbox checked={false} onToggle={onToggle} testID="cb">
+        Я согласен с условиями
+      </ConsentCheckbox>,
+    )
+
+    fireEvent.press(getByText('Я согласен с условиями'))
+    expect(onToggle).toHaveBeenCalledTimes(1)
+    expect(onToggle).toHaveBeenCalledWith(true)
+  })
+
+  // #2093: вложенная ссылка внутри подписи (как `<Link>` в TripApplyForm)
+  // перехватывает press на себе и не должна переключать чекбокс. На native
+  // `<Link>` без `asChild` рендерится как `Text` со своим `onPress`
+  // (`BaseExpoRouterLink`), поэтому воспроизводим ту же форму напрямую.
+  it('does not toggle when a nested link inside the label is pressed, and fires the link handler', () => {
+    const onToggle = jest.fn()
+    const linkPress = jest.fn()
+    const { getByText } = render(
+      <ConsentCheckbox checked={false} onToggle={onToggle} testID="cb">
+        Я согласен с{' '}
+        <Text onPress={linkPress} accessibilityRole="link">
+          Правилами поездок
+        </Text>
+      </ConsentCheckbox>,
+    )
+
+    fireEvent.press(getByText('Правилами поездок'))
+    expect(linkPress).toHaveBeenCalledTimes(1)
+    expect(onToggle).not.toHaveBeenCalled()
+  })
+
+  // #2093: подпись со ссылками не должна стать потомком узла с ролью
+  // `checkbox`: доступный `Pressable` на iOS — лист дерева VoiceOver (ссылки
+  // недостижимы), а на вебе `<a>` внутри `role="checkbox"` — вложенный
+  // интерактив. Роль checkbox — ровно одна и только у квадрата.
+  it('keeps the label and its links outside the single checkbox node', () => {
+    const { getAllByRole, getByTestId, getByText } = render(
+      <ConsentCheckbox checked={false} onToggle={jest.fn()} testID="cb">
+        Я согласен с{' '}
+        <Text onPress={jest.fn()} accessibilityRole="link">
+          Правилами поездок
+        </Text>
+      </ConsentCheckbox>,
+    )
+
+    expect(getAllByRole('checkbox')).toHaveLength(1)
+    expect(getAllByRole('checkbox')[0]).toBe(getByTestId('cb'))
+    expect(within(getByTestId('cb')).queryByText(/Я согласен/)).toBeNull()
+    expect(within(getByTestId('cb')).queryByText('Правилами поездок')).toBeNull()
+    expect(getByText(/Я согласен/).props.accessibilityRole).toBeUndefined()
+  })
+
+  // #2093: на вебе `<Link>` без `asChild` рендерится react-native-web'ом как
+  // `<a href>` с `onClick` без `stopPropagation` (`BaseExpoRouterLink`), и
+  // клик по нему после перехода всплывает в `onClick` подписи.
+  // `react-test-renderer` не проигрывает реальное всплытие DOM, поэтому жмём
+  // на подпись с фейковым событием, чей `target` лежит внутри `<a>`, — так
+  // выглядит событие, дошедшее до подписи после клика по вложенной ссылке.
+  describe('web DOM click bubbling from a nested <a> (RNW-specific)', () => {
+    const originalOS = Platform.OS
+
+    beforeEach(() => {
+      ;(Platform as { OS: string }).OS = 'web'
+    })
+
+    afterEach(() => {
+      ;(Platform as { OS: string }).OS = originalOS
+    })
+
+    it('ignores a bubbled label click whose target is inside an anchor', () => {
+      const onToggle = jest.fn()
+      const { getByText } = render(
+        <ConsentCheckbox checked={false} onToggle={onToggle} testID="cb">
+          Я согласен
+        </ConsentCheckbox>,
+      )
+
+      fireEvent.press(getByText('Я согласен'), {
+        target: { closest: (selector: string) => (selector === 'a' ? {} : null) },
+      })
+
+      expect(onToggle).not.toHaveBeenCalled()
+    })
+
+    it('still toggles a label click whose target is not inside an anchor', () => {
+      const onToggle = jest.fn()
+      const { getByText } = render(
+        <ConsentCheckbox checked={false} onToggle={onToggle} testID="cb">
+          Я согласен
+        </ConsentCheckbox>,
+      )
+
+      fireEvent.press(getByText('Я согласен'), {
+        target: { closest: () => null },
+      })
+
+      expect(onToggle).toHaveBeenCalledWith(true)
+    })
   })
 })
 
