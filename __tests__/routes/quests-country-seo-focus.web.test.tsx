@@ -215,4 +215,32 @@ describe('quest country SEO focus lifecycle', () => {
     expect(mockReplace).toHaveBeenCalledWith('/quests')
     expect(document.querySelector('link[rel="canonical"]')).toBeNull()
   })
+
+  // #2090: «назад» в браузере (popstate → resetRoot к записи истории до первого
+  // визита) сбрасывает параметры скрытого, ещё смонтированного экрана таба в пустые.
+  // Пустой алиас скрытого экрана — не «страна не найдена».
+  it('keeps a hidden country landing with a history-reset alias from redirecting', () => {
+    const screen = render(<QuestsByCountryScreen />)
+
+    mockUseIsFocused.mockReturnValue(false)
+    mockCountryParam = ''
+    screen.rerender(<QuestsByCountryScreen />)
+
+    mockUseIsFocused.mockReturnValue(true)
+    mockCountryParam = 'belarus'
+    screen.rerender(<QuestsByCountryScreen />)
+
+    expect(mockReplace).not.toHaveBeenCalled()
+  })
+
+  it('redirects an unknown alias only once its screen is focused', () => {
+    mockUseIsFocused.mockReturnValue(false)
+    mockCountryParam = 'unknown-country'
+    const screen = render(<QuestsByCountryScreen />)
+    expect(mockReplace).not.toHaveBeenCalled()
+
+    mockUseIsFocused.mockReturnValue(true)
+    screen.rerender(<QuestsByCountryScreen />)
+    expect(mockReplace).toHaveBeenCalledWith('/quests')
+  })
 })

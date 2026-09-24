@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react'
 import { Dimensions, Platform } from 'react-native'
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
+import { useLocalSearchParams, useNavigation } from 'expo-router'
 import { useIsFocused } from 'expo-router'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
@@ -8,7 +8,6 @@ import QuestCityLandingSections from '@/components/quests/QuestCityLandingSectio
 import {
   getQuestLandingRouteParam,
   QUEST_LANDING_DESCRIPTION_META_TARGETS,
-  QUEST_LIST_ROUTE,
   QuestLandingGrid,
   QuestLandingHeader,
   QuestLandingLoading,
@@ -16,6 +15,7 @@ import {
   QuestLandingSectionTitle,
   renderQuestLandingStructuredData,
   useQuestLandingHeadMeta,
+  useQuestLandingNotFoundRedirect,
   useQuestLandingSsgFallbackCleanup,
 } from '@/components/quests/QuestLandingLayout'
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection'
@@ -47,7 +47,6 @@ export default function QuestsByCityScreen() {
 
   const params = useLocalSearchParams<{ city?: string | string[] }>()
   const cityParam = getQuestLandingRouteParam(params.city)
-  const router = useRouter()
   const navigation = useNavigation()
   const isFocused = useIsFocused()
   const colors = useThemedColors()
@@ -90,11 +89,7 @@ export default function QuestsByCityScreen() {
   const canonical = buildCanonicalUrl(`/quests/${canonicalSegment}`)
 
   // Unknown city (no quests) → fall back to the full catalog.
-  useEffect(() => {
-    if (!loading && !resolved) {
-      router.replace(QUEST_LIST_ROUTE)
-    }
-  }, [loading, resolved, router])
+  useQuestLandingNotFoundRedirect(!loading && !resolved)
 
   // Navigation/stack header title = localized city name (from the resolved
   // city_name), never the raw URL segment («4» / «minsk»). Matches the pattern

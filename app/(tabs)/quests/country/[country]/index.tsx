@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo } from 'react'
 import { Dimensions, Platform } from 'react-native'
-import { useIsFocused, useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
+import { useIsFocused, useLocalSearchParams, useNavigation } from 'expo-router'
 
 import QuestCountryLandingSections from '@/components/quests/QuestCountryLandingSections'
 import {
   getQuestLandingRouteParam,
   QUEST_LANDING_DESCRIPTION_META_TARGETS,
-  QUEST_LIST_ROUTE,
   QuestLandingGrid,
   QuestLandingHeader,
   QuestLandingLoading,
@@ -14,6 +13,7 @@ import {
   QuestLandingSectionTitle,
   renderQuestLandingStructuredData,
   useQuestLandingHeadMeta,
+  useQuestLandingNotFoundRedirect,
   useQuestLandingSsgFallbackCleanup,
 } from '@/components/quests/QuestLandingLayout'
 import type { QuestLandingMetaTarget } from '@/components/quests/QuestLandingLayout'
@@ -39,7 +39,6 @@ export default function QuestsByCountryScreen() {
 
   const params = useLocalSearchParams<{ country?: string | string[] }>()
   const countryParam = getQuestLandingRouteParam(params.country).trim().toLowerCase()
-  const router = useRouter()
   const navigation = useNavigation()
   const isFocused = useIsFocused()
   const colors = useThemedColors()
@@ -57,9 +56,7 @@ export default function QuestsByCountryScreen() {
   )
   const countryQuests = useMemo(() => country?.quests ?? [], [country])
 
-  useEffect(() => {
-    if (Platform.OS !== 'web' || (!loading && !country)) router.replace(QUEST_LIST_ROUTE)
-  }, [country, loading, router])
+  useQuestLandingNotFoundRedirect(Platform.OS !== 'web' || (!loading && !country))
 
   useEffect(() => {
     if (country?.countryName) navigation.setOptions({ title: country.countryName })

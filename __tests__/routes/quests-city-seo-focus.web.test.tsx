@@ -7,6 +7,8 @@ import { Platform, Text } from 'react-native'
 import { render } from '@testing-library/react-native'
 
 const mockUseIsFocused = jest.fn(() => true)
+const mockReplace = jest.fn()
+let mockCityParam = 'rome'
 
 const WALK_MODEL = {
   places: [
@@ -28,9 +30,9 @@ const WALK_MODEL = {
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children?: React.ReactNode }) => children ?? null,
   useIsFocused: () => mockUseIsFocused(),
-  useLocalSearchParams: () => ({ city: 'rome' }),
+  useLocalSearchParams: () => ({ city: mockCityParam }),
   useNavigation: () => ({ setOptions: jest.fn() }),
-  useRouter: () => ({ replace: jest.fn() }),
+  useRouter: () => ({ replace: mockReplace }),
 }))
 
 jest.mock('@expo/vector-icons/Feather', () => () => null)
@@ -158,6 +160,8 @@ describe('quest city SEO focus lifecycle', () => {
   beforeEach(() => {
     jest.useFakeTimers()
     mockUseIsFocused.mockReturnValue(true)
+    mockCityParam = 'rome'
+    mockReplace.mockClear()
     mockUseQuestCityWalk.mockReturnValue(WALK_MODEL)
     document.body.innerHTML = ''
     document.head.innerHTML = [
@@ -190,6 +194,35 @@ describe('quest city SEO focus lifecycle', () => {
 
     screen.unmount()
     expectSingleDescriptionSet(GENERIC_DESCRIPTION)
+  })
+
+  // #2090: страна → город → «назад» в браузере уводило в /quests. popstate делает
+  // resetRoot к записи истории до первого визита города, и скрытый, ещё
+  // смонтированный экран города получает пустой алиас. Пустой алиас скрытого
+  // экрана — не «город не найден».
+  it('keeps a hidden city landing with a history-reset alias from redirecting', () => {
+    const screen = render(<QuestsByCityScreen />)
+
+    mockUseIsFocused.mockReturnValue(false)
+    mockCityParam = ''
+    screen.rerender(<QuestsByCityScreen />)
+
+    mockUseIsFocused.mockReturnValue(true)
+    mockCityParam = 'rome'
+    screen.rerender(<QuestsByCityScreen />)
+
+    expect(mockReplace).not.toHaveBeenCalled()
+  })
+
+  it('redirects an unknown city alias only once its screen is focused', () => {
+    mockUseIsFocused.mockReturnValue(false)
+    mockCityParam = 'unknown-city'
+    const screen = render(<QuestsByCityScreen />)
+    expect(mockReplace).not.toHaveBeenCalled()
+
+    mockUseIsFocused.mockReturnValue(true)
+    screen.rerender(<QuestsByCityScreen />)
+    expect(mockReplace).toHaveBeenCalledWith('/quests')
   })
 
   it('removes city descriptions on blur when the previous head had none', () => {

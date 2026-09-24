@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { ViewStyle } from 'react-native'
-import { Link } from 'expo-router'
+import { Link, useIsFocused, useRouter } from 'expo-router'
 import type { Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -57,6 +57,21 @@ export function useQuestLandingSsgFallbackCleanup(enabled: boolean, kind: 'city'
       .querySelectorAll(`style[data-ssg-quest-${kind}-style="true"]`)
       .forEach((style) => style.remove())
   }, [enabled, kind])
+}
+
+/**
+ * An unknown landing alias sends the visitor to the catalog, but only from the focused
+ * screen. On web a browser back (`popstate` → `resetRoot` to the history record made
+ * before this tab route was first opened) resets the params of the still-mounted hidden
+ * landing to empty; that screen then took the empty alias for an unknown one and replaced
+ * the page the visitor had just returned to with `/quests` (#2090).
+ */
+export function useQuestLandingNotFoundRedirect(notFound: boolean) {
+  const router = useRouter()
+  const isFocused = useIsFocused()
+  useEffect(() => {
+    if (isFocused && notFound) router.replace(QUEST_LIST_ROUTE)
+  }, [isFocused, notFound, router])
 }
 
 export type QuestLandingMetaTarget = {
