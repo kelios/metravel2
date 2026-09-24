@@ -13,9 +13,14 @@ jest.mock('@/api/consent', () => ({
   postConsentRecord: (...args: unknown[]) => mockPostConsentRecord(...args),
 }))
 
+jest.mock('@/hooks/usePublicTripsApi', () => ({
+  useSubmitApplication: () => ({ mutate: jest.fn(), isPending: false }),
+}))
+
 import ConsentCheckbox from '@/components/legal/ConsentCheckbox'
 import DataFreshnessNotice from '@/components/legal/DataFreshnessNotice'
 import QuestConsentGate from '@/components/quests/QuestConsentGate'
+import TripApplyForm from '@/components/trips/TripApplyForm'
 import {
   CONSENT_TYPES,
   hasActionConsent,
@@ -185,6 +190,72 @@ describe('ConsentCheckbox', () => {
 
       expect(onToggle).toHaveBeenCalledWith(true)
     })
+  })
+
+  // #2109: RNW activates Enter on role=checkbox, but Space only on role=button,
+  // so Space scrolls the page instead of toggling. Enter stays on that path.
+  describe('web keyboard (#2109)', () => {
+    const originalOS = Platform.OS
+
+    beforeEach(() => {
+      ;(Platform as { OS: string }).OS = 'web'
+    })
+
+    afterEach(() => {
+      ;(Platform as { OS: string }).OS = originalOS
+    })
+
+    function CheckboxHarness() {
+      const [checked, setChecked] = React.useState(false)
+      return (
+        <ConsentCheckbox checked={checked} onToggle={setChecked} testID="cb">
+          Я согласен
+        </ConsentCheckbox>
+      )
+    }
+
+    it('toggles checked on Space and calls preventDefault so the page does not scroll', () => {
+      const { getByRole } = render(<CheckboxHarness />)
+      const preventDefault = jest.fn()
+
+      fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', preventDefault })
+
+      expect(preventDefault).toHaveBeenCalledTimes(1)
+      expect(getByRole('checkbox').props.accessibilityState.checked).toBe(true)
+    })
+
+    it('keydown Enter still toggles', () => {
+      const { getByRole } = render(<CheckboxHarness />)
+      const checkbox = getByRole('checkbox')
+      const preventDefault = jest.fn()
+
+      fireEvent(checkbox, 'keyDown', { key: 'Enter', preventDefault })
+      // Enter must not be swallowed by the Space handler. RNW turns that
+      // keyup into onPress; the test renderer does not run the browser listener.
+      expect(preventDefault).not.toHaveBeenCalled()
+      fireEvent.press(checkbox)
+
+      expect(getByRole('checkbox').props.accessibilityState.checked).toBe(true)
+    })
+  })
+})
+
+describe('TripApplyForm consent names (#2109)', () => {
+  it('gives both consent checkboxes a non-empty accessible name with the full consent text', () => {
+    const { getByTestId } = render(<TripApplyForm trip={{ id: 1 } as never} />)
+
+    const rulesLabel = getByTestId('trip-apply-consent-rules').props.accessibilityLabel
+    const disclaimerLabel = getByTestId('trip-apply-consent-disclaimer').props.accessibilityLabel
+
+    expect(typeof rulesLabel).toBe('string')
+    expect(rulesLabel.trim().length).toBeGreaterThan(0)
+    expect(rulesLabel).toBe('Я ознакомился с правилами поездок и правилами сообщества.')
+
+    expect(typeof disclaimerLabel).toBe('string')
+    expect(disclaimerLabel.trim().length).toBeGreaterThan(0)
+    expect(disclaimerLabel).toBe(
+      'Я понимаю, что MeTravel не организует поездку и не несёт ответственности за договорённости участников.',
+    )
   })
 })
 

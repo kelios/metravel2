@@ -64,6 +64,17 @@ export default function ConsentCheckbox({
         accessibilityState={{ checked }}
         aria-checked={checked}
         accessibilityLabel={accessibilityLabel}
+        {...(Platform.OS === 'web'
+          ? {
+              // RNW activates Enter for role=checkbox, but Space only for role=button.
+              // Space would scroll the page, so toggle here and cancel that default.
+              onKeyDown: (event: { key: string; repeat?: boolean; preventDefault: () => void }) => {
+                if (event.key !== ' ' || event.repeat) return
+                event.preventDefault()
+                onToggle(!checked)
+              },
+            }
+          : null)}
       >
         <View style={[styles.box, checked && styles.boxChecked]}>
           {checked ? <Feather name="check" size={14} color={colors.textOnPrimary} /> : null}
