@@ -24,6 +24,13 @@ export const createNavControlStyles = (colors: QuestColors, isMobile: boolean, _
     coordsButton: {
         backgroundColor: colors.backgroundSecondary,
         paddingHorizontal: 10, paddingVertical: 8,
+        // Единственный positive-flex выход ряда (NATIVE-TEXT-ROW-001, #2079):
+        // на собственной ширине Android/Yoga мерил «53.2229, 26.6925» одной
+        // строкой, а рисовал с переносом — при font_scale 1.15 на Pixel долгота
+        // срезалась. minWidth держит чип целым: не влез — уходит на новую строку
+        // ряда (flexWrap), а не сжимается до столбика.
+        flex: 1,
+        minWidth: 128,
         // Высота была целиком от padding + текста (30,5dp на mobile web) —
         // объявленного размера нет, и статический гард такое не видит (#1274).
         minHeight: 44,
