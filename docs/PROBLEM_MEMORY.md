@@ -2736,6 +2736,37 @@ guard, падающий в CI на попытке обойти этот конт
 - **Известная дыра:** событие `quest_guest_progress_migrated` шлёт только
   первая попытка; доставка очередью его не шлёт.
 
+### QUEST-PROGRESS-GUEST-MIGRATION-STALE-READ-001 — успешная запись прогресса не доходит до открытого экрана
+
+- **Ключ на борде:** #2092; под-ключ семьи QUEST-PROGRESS-RESET-LINEAGE-001.
+- **Инвариант:** после любой успешной серверной записи прогресса (отправка
+  экраном, доставка очередью, миграция гостя, подтверждённое удаление) все
+  читатели на смонтированном экране получают актуальные данные без повторного
+  маунта. Спека: `openspec/specs/quest-progress-reconciliation` — требование
+  об инвалидации читателей после записи.
+- **Подтверждённая причина:** `useQuestProgressSync` читал сервер один раз на
+  маунт, а миграция гостя в `useGuestQuestFlow` писала строку параллельно и
+  никого не уведомляла — экран держал «0 / N» до повторного открытия.
+  `resetProgress` не трогал бандл квеста, поэтому число прохождений в шапке
+  (`useQuestCompletionMeta`) оставалось старым.
+- **Surface/owner:** одна точка `syncQuestProgressReaders`
+  (`utils/questProgressQueue.ts`) — её зовут `pushQuestProgressSnapshot`,
+  миграция гостя и `attemptDeletion`. Экран подписан через
+  `subscribeQuestProgressWrites` (`hooks/useQuestsApi.ts`) с защитами: чужой
+  аккаунт/квест, своя отправка, строка, стёртая «Сбросить», гонка с чтением,
+  неотправленные ответы визарда. После удаления
+  `refreshQuestCompletionsCount` (`api/questsCatalogInvalidation.ts`)
+  перечитывает бандл и инвалидирует каталог `['quests']`. Лишнего GET к
+  `/api/quest-progress/` нет.
+- **Controls:** `__tests__/components/quests/guestQuestFlow.readerRefresh.test.tsx`,
+  `__tests__/hooks/useQuestProgressSync.writeReaders.test.ts`,
+  `__tests__/hooks/useQuestProgressSync.completionsCount.test.tsx`,
+  `__tests__/utils/questProgressQueue.test.ts` (уведомление после доставки
+  очередью).
+- **Известная дыра:** профиль (`questProgressAll`, `questsCompactCatalog` в
+  `hooks/useQuestCityCollection.ts`) не обновляется ни после сброса, ни после
+  прохождения — отдельная карточка.
+
 ### QUEST-ANSWER-UNREACHABLE-001 — вариант закрытого словаря `exact_any` нельзя набрать
 
 - **Инвариант:** каждый элемент закрытого словаря `exact_any` обязан быть

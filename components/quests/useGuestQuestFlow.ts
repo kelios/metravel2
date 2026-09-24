@@ -23,6 +23,7 @@ import {
   enqueueQuestProgress,
   flushQuestProgressQueue,
   settleQuestProgressDeletions,
+  syncQuestProgressReaders,
 } from '@/utils/questProgressQueue'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -128,6 +129,9 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
     void (async () => {
       const guestProgress = await loadGuestQuestProgress(questId)
       if (!guestProgress || countAnsweredSteps(guestProgress.answers) === 0) return
+      // Аккаунт, в который переносим: строка, записанная уже после выхода из
+      // него, открытому экрану следующего вошедшего не показывается.
+      const accountId = useAuthStore.getState().userId
       try {
         // Сброс этого квеста в аккаунте ещё не дошёл до сервера: гостевые ответы
         // слились бы в строку стёртого прохождения. Копия ждёт следующей попытки (#2043).
@@ -138,7 +142,7 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
         // очереди стартует тем же переходом в авторизованное состояние, а
         // `answers` уходит на сервер полным словарём. Два писателя от одной базы
         // затёрли бы ответы друг друга (#1905).
-        await withQuestProgress(questId, async (serverProgress) => {
+        const migrated = await withQuestProgress(questId, async (serverProgress) => {
           // Тот же путь слияния, что и у авторизованной синхронизации: аккаунт мог
           // уже пройти часть квеста на другом устройстве — ни гостевые, ни
           // серверные ответы не теряем.
@@ -147,12 +151,14 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
             snapshotFromServerProgress(serverProgress),
           )
           if (serverNeedsPush) {
-            await updateProgress(serverProgress.id, toQuestProgressServerPayload(merged))
+            const updated = await updateProgress(serverProgress.id, toQuestProgressServerPayload(merged))
             queueAnalyticsEvent('quest_guest_progress_migrated', {
               quest_id: questId,
               answered: countAnsweredSteps(merged.answers),
             })
+            return updated
           }
+          return serverProgress
         })
         // #1803: чистим гостевую копию ТОЛЬКО после успешного слияния. Раньше
         // это стояло в `finally`, и упавшее создание строки уносило гостевые
@@ -162,6 +168,8 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
         // POST получал 400/500, пока #1905 не свёл обоих писателей в одну
         // очередь `withQuestProgress`.
         await clearGuestQuestProgress(questId)
+        // Экран квеста прочитал прохождение ещё до переноса (#2092).
+        syncQuestProgressReaders(questId, accountId, migrated)
       } catch (error) {
         const { devError } = require('@/utils/logger')
         // Попытка здесь одна на открытие экрана: без сети прохождение ждало бы,

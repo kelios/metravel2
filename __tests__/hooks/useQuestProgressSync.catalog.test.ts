@@ -118,10 +118,15 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     const { result, unmount } = await mount()
     await save(result)
     expect(fetchCatalog).toHaveBeenCalledTimes(1)
+    // Сервер подтвердил удаление строки: каталог перечитывается — число
+    // прохождений в нём уже без этого игрока (#2092).
+    fetchCatalog.mockResolvedValueOnce(catalog(false))
     await act(async () => result.current.resetProgress())
+    await flush()
+    expect(fetchCatalog).toHaveBeenCalledTimes(2)
     expect(client.getQueryData(queryKeys.quests())).toEqual(catalog(false))
     await save(result)
-    expect(fetchCatalog).toHaveBeenCalledTimes(2)
+    expect(fetchCatalog).toHaveBeenCalledTimes(3)
     unmount()
   })
 

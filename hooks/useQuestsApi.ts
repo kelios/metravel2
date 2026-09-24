@@ -34,6 +34,7 @@ import {
     enqueueQuestProgress,
     pushQuestProgressSnapshot,
     settleQuestProgressDeletions,
+    subscribeQuestProgressWrites,
     syncCatalogCompletion,
 } from '@/utils/questProgressQueue';
 import { devWarn } from '@/utils/logger';
@@ -249,6 +250,12 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     // стёртое прохождение: его ответ не становится состоянием экрана, а снапшот
     // не возвращается ни в отложенные, ни в очередь на диске (#2043).
     const resetCountsRef = useRef<Record<string, number>>({});
+    // `id` строк, стёртых «Сбросить» за этот маунт: запись, начатая до сброса,
+    // может подтвердиться уже после него и не возвращает стёртое на экран (#2092).
+    const resetRowIdsRef = useRef<Record<string, number>>({});
+    // Сколько записей других писателей экран принял: ответ чтения, начатого до
+    // такой записи, старше её (#2092).
+    const acceptedWritesRef = useRef(0);
     const isAuthenticatedRef = useRef(isAuthenticated);
     isAuthenticatedRef.current = isAuthenticated;
     // Актуальный questId для асинхронных веток: ответ запроса может прийти,
@@ -306,6 +313,7 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         setProgressMissing(false);
         const readOwnerId = useAuthStore.getState().userId ?? null;
         const resetCountAtRead = resetCountsRef.current[questId] ?? 0;
+        const acceptedWritesAtRead = acceptedWritesRef.current;
         // «Сбросить» без сети ещё не дошло до сервера: строка там — стёртое
         // прохождение, и визард слил бы с ним новое. Пока удаление не
         // подтверждено, состояние сервера неизвестно — как при упавшем чтении (#2043).
@@ -315,7 +323,9 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
                 // Ответ на чтение, отправленное до «Сбросить», описывает стёртое
                 // прохождение: состояние экрана уже задал сам сброс (#2043).
                 const resetDuringRead = (resetCountsRef.current[questId] ?? 0) !== resetCountAtRead;
-                if (!cancelled && data !== undefined && !resetDuringRead) {
+                // Строку, записанную во время чтения, экран уже принял — она новее (#2092).
+                const writtenDuringRead = acceptedWritesRef.current !== acceptedWritesAtRead;
+                if (!cancelled && data !== undefined && !resetDuringRead && !writtenDuringRead) {
                     // #1803: пустое чтение не должно затирать то, что уже создал
                     // параллельный флаш. Иначе `resetProgress` молча пропускает
                     // серверный DELETE (он выходит на пустом `progressIdRef`), и
@@ -347,6 +357,20 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
 
         return () => { cancelled = true; };
     }, [flushPendingNow, questId, isAuthenticated]);
+
+    // Строку записал другой писатель — миграция гостя после входа, доставка
+    // очереди: экран узнаёт её без повторного маунта (#2092). Визард сливает её
+    // с живым состоянием, как эхо своего сейва, и несинхронизированные ответы
+    // остаются. Ответ своего флаша разбирает `flushSync` — со сбросом в полёте.
+    useEffect(() => subscribeQuestProgressWrites((writtenQuestId, written) => {
+        if (!mountedRef.current || inFlightRef.current || !isAuthenticatedRef.current) return;
+        if (writtenQuestId !== questIdRef.current) return;
+        if (written.id <= (resetRowIdsRef.current[writtenQuestId] ?? 0)) return;
+        acceptedWritesRef.current += 1;
+        progressIdRef.current = written.id;
+        setProgress(written);
+        setProgressMissing(false);
+    }), []);
 
     const clearRetryTimer = useCallback(() => {
         if (retryTimerRef.current) {
@@ -581,6 +605,7 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
 
         const progressId = progressIdRef.current ?? (runServerId > 0 ? runServerId : null);
         if (!isAuthenticated || !questId || !progressId) return false;
+        resetRowIdsRef.current[questId] = Math.max(resetRowIdsRef.current[questId] ?? 0, progressId);
         // Строку удаляет тот, чья сессия сейчас: владелец последнего сейва этого
         // маунта мог уже выйти, и в чужой сессии намерение не ушло бы никогда.
         const ownerId = useAuthStore.getState().userId ?? null;

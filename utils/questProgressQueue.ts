@@ -23,6 +23,7 @@ import {
     type ApiQuestProgress,
 } from '@/api/quests'
 import {
+    refreshQuestCompletionsCount,
     refreshQuestsCatalogCompletion,
     resetQuestsCatalogCompletion,
 } from '@/api/questsCatalogInvalidation'
@@ -99,6 +100,7 @@ let flushChain: Promise<void> | null = null
 let retryAttempt = 0
 let retryTimer: ReturnType<typeof setTimeout> | null = null
 const listeners = new Set<(questIds: string[]) => void>()
+const progressWriteListeners = new Set<(questId: string, progress: ApiQuestProgress) => void>()
 // Одна попытка на намерение: проход очереди, флаш экрана и чтение при открытии
 // квеста ждут общий DELETE, а не шлют каждый свой.
 const deletionAttempts = new Map<QueuedQuestProgressDeletion, Promise<boolean>>()
@@ -225,14 +227,57 @@ const scheduleRetry = () => {
     }, delay)
 }
 
-/** Каталог — только своему игроку: ответ мог прийти уже после смены аккаунта. */
-export const syncCatalogCompletion = (questId: string, ownerId: string | null, completed: boolean): void => {
+/** Ответ сервера — только своему игроку: он мог прийти уже после смены аккаунта. */
+const isSessionOwner = (ownerId: string | null): boolean => {
     const currentAuth = useAuthStore.getState()
-    if (!ownerId || !currentAuth.isAuthenticated || currentAuth.userId !== ownerId) return
+    return !!ownerId && !!currentAuth.isAuthenticated && currentAuth.userId === ownerId
+}
+
+export const syncCatalogCompletion = (questId: string, ownerId: string | null, completed: boolean): void => {
+    if (!isSessionOwner(ownerId)) return
     const client = getActiveQueryClient()
     if (!client) return
     if (completed) void refreshQuestsCatalogCompletion(client, questId)
     else resetQuestsCatalogCompletion(client, questId)
+}
+
+/**
+ * Сервер подтвердил запись прохождения: строку (`progress`) или её удаление
+ * (`null`). Правило одно для всех писателей — флаш экрана, доставка очереди,
+ * миграция гостя: читатели на открытом экране получают подтверждённое без
+ * повторного маунта (#2092). Хук синхронизации — строку, каталог и бандл квеста —
+ * отметку «Пройден» и `completions_count`.
+ */
+export const syncQuestProgressReaders = (
+    questId: string,
+    ownerId: string | null,
+    progress: ApiQuestProgress | null,
+): void => {
+    if (!isSessionOwner(ownerId)) return
+    if (progress) {
+        progressWriteListeners.forEach((listener) => {
+            try {
+                listener(questId, progress)
+            } catch {
+                // Падение читателя не должно рвать доставку.
+            }
+        })
+        if (progress.completed) syncCatalogCompletion(questId, ownerId, true)
+        return
+    }
+    syncCatalogCompletion(questId, ownerId, false)
+    const client = getActiveQueryClient()
+    if (client) void refreshQuestCompletionsCount(client, questId)
+}
+
+/** Подписка читателя прохождения на подтверждённые записи строк (#2092). */
+export function subscribeQuestProgressWrites(
+    listener: (questId: string, progress: ApiQuestProgress) => void,
+): () => void {
+    progressWriteListeners.add(listener)
+    return () => {
+        progressWriteListeners.delete(listener)
+    }
 }
 
 /**
@@ -288,7 +333,7 @@ export async function pushQuestProgressSnapshot(
         }
         throw error
     }
-    if (updated.completed) syncCatalogCompletion(questId, ownerId, true)
+    syncQuestProgressReaders(questId, ownerId, updated)
     return updated
 }
 
@@ -466,8 +511,9 @@ const attemptDeletion = async (entry: QueuedQuestProgressDeletion): Promise<bool
     }
     deletions = deletions.filter((candidate) => candidate !== entry)
     await persistDeletions()
-    // Каталог мог перечитаться, пока удаление ждало сети, и вернуть «Пройден».
-    syncCatalogCompletion(entry.questId, entry.ownerId, false)
+    // Каталог мог перечитаться, пока удаление ждало сети, и вернуть «Пройден»,
+    // а число прохождений квеста сервер уже уменьшил.
+    syncQuestProgressReaders(entry.questId, entry.ownerId, null)
     return true
 }
 
@@ -636,4 +682,5 @@ export function __resetQuestProgressQueue(): void {
     flushChain = null
     retryAttempt = 0
     listeners.clear()
+    progressWriteListeners.clear()
 }

@@ -110,3 +110,14 @@ export function resetQuestsCatalogCompletion(client: QueryClient, questId: strin
     )))
   }
 }
+
+// `completions_count` считает сервер, и удалённая строка прохождения его
+// уменьшила: локально число не выводится — каталог и бандл перечитываются, как
+// после отметки «Пройден». Каталог со снятой отметкой и прежним числом записал
+// бы квест в «Пройденные другими» (#2092).
+export function refreshQuestCompletionsCount(client: QueryClient, questId: string): Promise<void> {
+  return Promise.all([
+    client.invalidateQueries(catalogFilter),
+    client.invalidateQueries({ queryKey: queryKeys.questBundle(questId), exact: true }),
+  ]).then(() => undefined)
+}

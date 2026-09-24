@@ -40,6 +40,7 @@ import {
   getQueuedQuestIds,
   settleQuestProgressDeletions,
   subscribeQuestProgressQueue,
+  subscribeQuestProgressWrites,
 } from '@/utils/questProgressQueue'
 
 /** Снапшот пройденного офлайн квеста — то, что должно доехать до сервера. */
@@ -468,5 +469,35 @@ describe('пометка «ещё не отправлено»', () => {
     await enqueueQuestProgress('ojcow-lokietek', run)
     await dequeueDeliveredQuestProgress('ojcow-lokietek', { ...serverRow, answers: { intro: 'start' } } as any)
     expect(getQueuedQuestIds()).toEqual(['ojcow-lokietek'])
+  })
+})
+
+// #2092: доставка очереди — один из писателей прохождения. Открытый экран квеста
+// узнаёт подтверждённую строку из подписки, а не повторным открытием.
+describe('подтверждённая доставка очереди доходит до читателей (#2092)', () => {
+  it('подписчик получает строку сервера только в сессии её владельца и до отписки', async () => {
+    const written: Array<[string, number]> = []
+    const unsubscribe = subscribeQuestProgressWrites((questId, progress) => written.push([questId, progress.id]))
+
+    await enqueueQuestProgress('ojcow-lokietek', offlineRun())
+    await flushQuestProgressQueue()
+    expect(written).toEqual([['ojcow-lokietek', 77]])
+
+    // Сервер подтвердил запись, когда за телефоном уже другой игрок.
+    await enqueueQuestProgress('krakow-smok', offlineRun())
+    mockWithQuestProgress.mockImplementationOnce(async (_questId: string, task: any) => {
+      mockAuthState.userId = '170'
+      return task(serverRow)
+    })
+    await flushQuestProgressQueue()
+    expect(mockUpdateProgress).toHaveBeenCalledTimes(2)
+    expect(written).toHaveLength(1)
+
+    mockAuthState.userId = '169'
+    unsubscribe()
+    await enqueueQuestProgress('ojcow-lokietek', offlineRun())
+    await flushQuestProgressQueue()
+    expect(mockUpdateProgress).toHaveBeenCalledTimes(3)
+    expect(written).toHaveLength(1)
   })
 })
