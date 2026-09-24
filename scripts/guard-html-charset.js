@@ -11,22 +11,9 @@
 
 const fs = require('fs')
 const path = require('path')
+const { listHtmlFiles } = require('./lib/listHtmlFiles')
 
 const PRESCAN_BYTES = 1024
-
-function walkHtmlFiles(distDir, relativeDir = '') {
-  const files = []
-  const directory = path.join(distDir, relativeDir)
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    const relativePath = relativeDir ? `${relativeDir}/${entry.name}` : entry.name
-    if (entry.isDirectory()) {
-      files.push(...walkHtmlFiles(distDir, relativePath))
-    } else if (entry.isFile() && entry.name.endsWith('.html')) {
-      files.push(relativePath)
-    }
-  }
-  return files
-}
 
 // Scoped to a <meta ...> tag, not a bare "charset=" substring: an unscoped
 // check would false-pass a page with NO charset declaration at all if the
@@ -50,9 +37,11 @@ function checkDist(distDir) {
   if (!fs.existsSync(distDir)) {
     throw new Error(`dist directory not found: ${distDir}`)
   }
-  const files = walkHtmlFiles(distDir)
-  const violations = files.filter((relativePath) => !hasCharsetWithinPrescan(path.join(distDir, relativePath)))
-  return { ok: violations.length === 0, total: files.length, violations: violations.sort() }
+  const files = listHtmlFiles(distDir, 'check for charset position')
+  const violations = files
+    .filter((absPath) => !hasCharsetWithinPrescan(absPath))
+    .map((absPath) => path.relative(distDir, absPath).split(path.sep).join('/'))
+  return { ok: violations.length === 0, total: files.length, violations }
 }
 
 function parseArgs(argv) {
@@ -81,4 +70,4 @@ if (require.main === module) {
   main()
 }
 
-module.exports = { checkDist, hasCharsetWithinPrescan, walkHtmlFiles, PRESCAN_BYTES }
+module.exports = { checkDist, hasCharsetWithinPrescan, PRESCAN_BYTES }

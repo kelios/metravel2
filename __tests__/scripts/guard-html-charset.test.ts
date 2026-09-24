@@ -73,6 +73,10 @@ describe('guard-html-charset', () => {
     expect(checkDist(distDir).violations).toEqual([])
   })
 
+  it('fails on a dist without HTML instead of passing vacuously', () => {
+    expect(() => checkDist(distDir)).toThrow(/no HTML files/)
+  })
+
   it('is wired into both prod build pipelines right after the charset fix runs', () => {
     const buildWebProd = fs.readFileSync(path.join(repoRoot, 'scripts/build-web-prod.js'), 'utf8')
     const addIdx = buildWebProd.indexOf("'scripts/add-cache-bust-meta.js'")

@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { listHtmlFiles } = require('./listHtmlFiles');
 const {
   CHUNK_RELOAD_SCRIPT_ID,
   getChunkReloadBootstrapScript,
@@ -172,28 +173,14 @@ function ensureHtmlChunkReloadGuard(html, label = 'HTML') {
   return result;
 }
 
-function listHtmlFiles(distDir) {
-  const files = [];
-  function visit(directory) {
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-      const filePath = path.join(directory, entry.name);
-      if (entry.isDirectory()) visit(filePath);
-      else if (entry.isFile() && /\.html$/i.test(entry.name)) files.push(filePath);
-    }
-  }
-  visit(distDir);
-  if (files.length === 0) throw new Error(`${distDir}: no HTML files to check for chunk reload guard`);
-  return files;
-}
-
 function assertHtmlChunkReloadGuards(distDir) {
-  const files = listHtmlFiles(distDir);
+  const files = listHtmlFiles(distDir, 'check for chunk reload guard');
   for (const filePath of files) assertHtmlChunkReloadGuard(fs.readFileSync(filePath, 'utf8'), filePath);
   return { checked: files.length };
 }
 
 function ensureHtmlChunkReloadGuards(distDir) {
-  const files = listHtmlFiles(distDir);
+  const files = listHtmlFiles(distDir, 'check for chunk reload guard');
   let injected = 0;
   for (const filePath of files) {
     const html = fs.readFileSync(filePath, 'utf8');
