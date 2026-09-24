@@ -401,7 +401,7 @@
     "@types/react": "~19.2.15",
     "react-native": "0.86.0",
     "@babel/runtime": "7.29.2",
-    "@xmldom/xmldom": "0.8.13",
+    "@xmldom/xmldom": "0.8.15",
     "minimist": "^1.2.8",
     "lodash": "4.18.0",
     "lodash-es": "4.18.0",
