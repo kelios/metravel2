@@ -14,6 +14,7 @@ import {
   QuestLandingSectionTitle,
   renderQuestLandingStructuredData,
   useQuestLandingHeadMeta,
+  useQuestLandingSsgFallbackCleanup,
 } from '@/components/quests/QuestLandingLayout'
 import type { QuestLandingMetaTarget } from '@/components/quests/QuestLandingLayout'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
@@ -93,6 +94,10 @@ export default function QuestsByCountryScreen() {
     },
   ], [canonical, seoDescription])
   useQuestLandingHeadMeta(Boolean(country) && isFocused && Platform.OS === 'web', managedMetaTargets)
+  // Статический блок страны из SSG (`section[data-ssg-quest-country]`) — сосед #root,
+  // гидратация его не снимает; стиль `rnw-styles-ready` лишь прячет его, и в DOM
+  // оставался второй, скрытый H1. Снимаем, когда экран страны нарисован (#2087).
+  useQuestLandingSsgFallbackCleanup(!loading && Boolean(country) && isFocused && Platform.OS === 'web', 'country')
 
   const structuredData = useMemo(() => {
     if (!country || countryQuests.length === 0) return null

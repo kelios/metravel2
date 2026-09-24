@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react'
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { ViewStyle } from 'react-native'
 import { Link } from 'expo-router'
@@ -37,6 +37,26 @@ const { spacing } = DESIGN_TOKENS
 export const getQuestLandingRouteParam = (value: string | string[] | undefined): string => {
   if (Array.isArray(value)) return value[0] ?? ''
   return value ?? ''
+}
+
+const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
+
+/**
+ * The SSG fallback of a landing (`section[data-ssg-quest-<kind>]` and its style) is a
+ * sibling of #root, so React hydration cannot remove it. Once the resolved screen owns
+ * the visible H1 (`enabled`), discard exactly that marked fallback and leave other route
+ * content alone — otherwise the DOM keeps a second, hidden H1 (#2087).
+ */
+export function useQuestLandingSsgFallbackCleanup(enabled: boolean, kind: 'city' | 'country') {
+  useWebLayoutEffect(() => {
+    if (!enabled || typeof document === 'undefined') return
+    document
+      .querySelectorAll(`section[data-ssg-quest-${kind}="true"]`)
+      .forEach((section) => section.remove())
+    document
+      .querySelectorAll(`style[data-ssg-quest-${kind}-style="true"]`)
+      .forEach((style) => style.remove())
+  }, [enabled, kind])
 }
 
 export type QuestLandingMetaTarget = {

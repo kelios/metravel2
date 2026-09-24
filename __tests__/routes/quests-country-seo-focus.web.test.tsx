@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import { Platform } from 'react-native'
+import { Platform, Text } from 'react-native'
 import { render } from '@testing-library/react-native'
 
 const mockUseIsFocused = jest.fn(() => true)
@@ -170,6 +170,42 @@ describe('quest country SEO focus lifecycle', () => {
       expect(document.querySelectorAll(selector)).toHaveLength(0)
     }
     expect(document.querySelectorAll('meta[property="og:url"]')).toHaveLength(0)
+  })
+
+  // #2087: SSG-блок страны — сосед #root, гидратация его не снимает, а стиль
+  // `rnw-styles-ready` только прячет. Без снятия в DOM оставался второй, скрытый H1.
+  it('keeps one runtime H1 and removes only the stale SSG country section', () => {
+    document.body.innerHTML = [
+      '<section data-ssg-quest-country="true"><h1>Static country heading</h1></section>',
+      '<h1 data-unrelated-heading="true">Unrelated heading</h1>',
+    ].join('')
+    document.head.insertAdjacentHTML(
+      'beforeend',
+      '<style data-ssg-quest-country-style="true">[data-ssg-quest-country]{display:none}</style>',
+    )
+
+    const { UNSAFE_root } = render(<QuestsByCountryScreen />)
+
+    expect(document.querySelector('section[data-ssg-quest-country="true"]')).toBeNull()
+    expect(document.querySelector('style[data-ssg-quest-country-style="true"]')).toBeNull()
+    expect(document.querySelector('h1[data-unrelated-heading="true"]')?.textContent).toBe('Unrelated heading')
+    expect(
+      UNSAFE_root.findAll((node) =>
+        node.type === Text && node.props.accessibilityRole === 'header' && node.props['aria-level'] === 1,
+      ),
+    ).toHaveLength(1)
+    document.body.innerHTML = ''
+  })
+
+  it('keeps the static country section while the screen is not focused', () => {
+    mockUseIsFocused.mockReturnValue(false)
+    document.body.innerHTML =
+      '<section data-ssg-quest-country="true"><h1>Static country heading</h1></section>'
+
+    render(<QuestsByCountryScreen />)
+
+    expect(document.querySelector('section[data-ssg-quest-country="true"]')).not.toBeNull()
+    document.body.innerHTML = ''
   })
 
   it('redirects an unknown alias instead of rendering an indexable empty page', () => {

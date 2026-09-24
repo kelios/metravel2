@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { Dimensions, Platform } from 'react-native'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import { useIsFocused } from 'expo-router'
@@ -16,6 +16,7 @@ import {
   QuestLandingSectionTitle,
   renderQuestLandingStructuredData,
   useQuestLandingHeadMeta,
+  useQuestLandingSsgFallbackCleanup,
 } from '@/components/quests/QuestLandingLayout'
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection'
 import { pluralizeQuest } from '@/screens/tabs/questsShared'
@@ -36,8 +37,6 @@ import {
 } from '@/utils/questCityAlias'
 
 import { useTranslation } from '@/i18n/LocaleProvider'
-
-const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 const CITY_HEADER_BLOCK_STYLE = { gap: 8, maxWidth: 760 } as const
 
@@ -113,16 +112,7 @@ export default function QuestsByCityScreen() {
   // снять его ДО того, как рантайм получил бандлы, значило бы на секунды
   // оставить отрендеренную страницу без того самого содержания, ради которого
   // она переписана.
-  useWebLayoutEffect(() => {
-    if (!cityGroup || !isFocused || Platform.OS !== 'web' || typeof document === 'undefined') return
-    if (!walk) return
-    document
-      .querySelectorAll('section[data-ssg-quest-city="true"]')
-      .forEach((section) => section.remove())
-    document
-      .querySelectorAll('style[data-ssg-quest-city-style="true"]')
-      .forEach((style) => style.remove())
-  }, [cityGroup, isFocused, walk])
+  useQuestLandingSsgFallbackCleanup(Boolean(cityGroup) && isFocused && Platform.OS === 'web' && Boolean(walk), 'city')
 
   const { width: bpWidth, isMobile } = useBreakpoints()
   const height = Platform.OS === 'web' ? 0 : Dimensions.get('window').height
