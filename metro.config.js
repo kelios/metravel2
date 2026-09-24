@@ -534,4 +534,7 @@ if (process.env.ANALYZE_BUNDLE === '1') {
   }
 }
 
+const { applyWebBuildMinifier } = require('./scripts/lib/webMinifierConfig')
+config.transformer = applyWebBuildMinifier(config.transformer)
+
 module.exports = config
