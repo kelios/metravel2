@@ -398,8 +398,12 @@ async function runWarmUnknownCityHydrationProbe(page, options = {}) {
     const questHref = options.openQuest
       ? await options.openQuest(page)
       : await page.evaluate(() => {
-        const link = document.querySelector('a[href*="/quests/minsk/"]')
-        return link ? link.getAttribute('href') : null
+        // Город в URL квеста — числовой id (`/quests/4/minsk-cmok`), не алиас `/quests/minsk/`.
+        const links = Array.from(document.querySelectorAll('a[href*="/quests/"]'))
+        const href = links
+          .map((node) => node.getAttribute('href') || '')
+          .find((value) => /\/quests\/[^/]+\/[^/?#]+/.test(value.split('?')[0]) && !value.includes('/country/'))
+        return href || null
       })
     if (!questHref) {
       throw new ProdProbeError('на /quests/minsk нет ссылки на квест — сценарий #2107 не собран')
