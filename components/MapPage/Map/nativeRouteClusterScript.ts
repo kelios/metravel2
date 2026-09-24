@@ -31,6 +31,24 @@
  * они и так не рисуются, а лишний маркер в счётчике web правее нуля не сдвигает
  * решение «кластеризовать» на реалистичных маршрутах.
  */
+/*
+ * Функции шаблона ниже (комментарии вынесены из рантайм-строки: она уходит в
+ * WebView, и кириллица в ней красит uiLiteralGovernance):
+ * - disposeRoutePointClusterGroup снимает прежнюю кластер-группу целиком —
+ *   .clearLayers() не меняет maxClusterRadius/disableClusteringAtZoom прежней
+ *   сборки, поэтому группа пересоздаётся; живёт на map (как
+ *   __metravelRouteFitLocked/__userCenter), так её видит любой срез HTML.
+ * - ensureRoutePointClusterGroup создаёт группу, если payload просит кластеры;
+ *   иначе no-op (routeLayer — единственный слой точек).
+ * - isRoutePointHeld (#2071 P2-2): брошенный рядом с соседом маркер
+ *   markercluster перекластеризует на следующий renderPoints
+ *   (_childMarkerDragEnd → _moveChild), и точка «пропадает». Как web
+ *   heldIndex/isDroppedAt (TripPlanRouteMarkers.tsx), маркер держится вне группы,
+ *   пока координаты совпадают с местом броска; допуск 1e-6 = 6 знаков
+ *   ROUTE_POINT_COORDINATE_PRECISION (tripPlanRouteMap.types.ts).
+ * - addRoutePointMarkerToLayer: активная (в редакторе) и держанная (только что
+ *   брошенная) точки остаются вне кластера — видны на любом масштабе, как на web.
+ */
 export const NATIVE_ROUTE_CLUSTER_SCRIPT = `        function buildRoutePointClusterGroup(cluster) {
           if (!cluster || typeof L.markerClusterGroup !== 'function') return null;
           return L.markerClusterGroup({
@@ -45,18 +63,11 @@ export const NATIVE_ROUTE_CLUSTER_SCRIPT = `        function buildRoutePointClus
             }
           });
         }
-        // Снимает прежнюю кластер-группу точек маршрута с карты целиком:
-        // .clearLayers() группы не меняет maxClusterRadius/disableClusteringAtZoom
-        // прежней сборки, поэтому вместо переиспользования группа пересоздаётся.
-        // Живёт на map (как __metravelRouteFitLocked/__userCenter), а не отдельной
-        // переменной каркаса — так её видит любой срез сгенерированного HTML.
         function disposeRoutePointClusterGroup(map) {
           if (!map.__metravelRoutePointClusterGroup) return;
           try { map.removeLayer(map.__metravelRoutePointClusterGroup); } catch (e) {}
           map.__metravelRoutePointClusterGroup = null;
         }
-        // Создаёт новую группу и вешает её на карту, если payload просит
-        // кластеры; иначе — no-op (routeLayer остаётся единственным слоем точек).
         function ensureRoutePointClusterGroup(map, cluster) {
           if (!cluster) return null;
           var group = buildRoutePointClusterGroup(cluster);
@@ -66,13 +77,6 @@ export const NATIVE_ROUTE_CLUSTER_SCRIPT = `        function buildRoutePointClus
           }
           return group;
         }
-        // #2071 P2-2 — брошенный рядом с соседом маркер markercluster
-        // перекластеризует на следующий renderPoints (_childMarkerDragEnd →
-        // _moveChild), и точка «пропадает» там, куда её бросили. Web решил это
-        // heldIndex/isDroppedAt (TripPlanRouteMarkers.tsx) — держит маркер вне
-        // группы, пока координаты точки совпадают с местом броска. 1e-6 —
-        // тот же допуск, что ROUTE_POINT_COORDINATE_PRECISION (6 знаков) даёт
-        // web-стороне (tripPlanRouteMap.types.ts).
         function isRoutePointHeld(heldPoint, index, point) {
           var tolerance = 1e-6;
           return !!(heldPoint && heldPoint.index === index && Array.isArray(point)
@@ -80,8 +84,6 @@ export const NATIVE_ROUTE_CLUSTER_SCRIPT = `        function buildRoutePointClus
             && Math.abs(point[0] - heldPoint.lat) <= tolerance
             && Math.abs(point[1] - heldPoint.lng) <= tolerance);
         }
-        // Активная (открытая в редакторе) и держанная (только что брошенная)
-        // точки остаются вне кластера — видны на любом масштабе, как на web.
         function addRoutePointMarkerToLayer(marker, routeLayer, clusterGroup, keepOutOfCluster) {
           if (clusterGroup && !keepOutOfCluster) {
             clusterGroup.addLayer(marker);
