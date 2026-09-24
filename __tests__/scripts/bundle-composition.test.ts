@@ -98,14 +98,22 @@ const LAZY_ONLY_VENDORS: Array<{ pkg: string; allowedSyncImporters: string[]; ti
 ]
 
 /**
- * Модули PDF/книжного экспорта: тянут генераторы, темы и рендереры, а нужны только
- * по явному действию пользователя. Единственная легальная точка входа — динамический
- * `import()` в `hooks/usePdfExportRuntime.ts`.
+ * Модули, которые живут только за async-границей. Запись адресует ФАЙЛ, а не
+ * строку импорта: нарушитель — любое синхронное ребро (`import`, `export … from`,
+ * `require`), которое под web-резолв разрешается в этот файл, — алиасом,
+ * относительным путём или ре-экспортом (#2084: проверка по тексту алиаса
+ * пропускала `../utils/questCityWalk`). Типы (`import type`) не в счёт.
+ *
+ * `allowedSyncImporters` допустим только из модулей этого же списка: синхронное
+ * ребро внутри уже отложенного чанка не возвращает цель в стартовый граф.
  */
-const LAZY_ONLY_MODULES = [
+const LAZY_ONLY_MODULES: Array<{ file: string; allowedSyncImporters: string[]; ticket: string }> = [
+  // Модули PDF/книжного экспорта: тянут генераторы, темы и рендереры, а нужны
+  // только по явному действию пользователя. Единственная легальная точка входа —
+  // динамический `import()` в `hooks/usePdfExportRuntime.ts`.
   {
-    module: '@/services/book/BookHtmlExportService',
-    allowedSyncImporters: [] as string[],
+    file: 'services/book/BookHtmlExportService.ts',
+    allowedSyncImporters: [],
     ticket: '#1148',
   },
   // #1543: резолвер стран тянет за собой таблицу контуров (67 КБ). Синхронного
@@ -113,26 +121,34 @@ const LAZY_ONLY_MODULES = [
   // динамический `import()` в `hooks/useCountryCodeByCoords.ts` (см.
   // DYNAMIC_IMPORT_CHOKEPOINTS ниже).
   {
-    module: '@/utils/geoCountry',
-    allowedSyncImporters: [] as string[],
+    file: 'utils/geoCountry.ts',
+    allowedSyncImporters: [],
     ticket: '#1543',
   },
   // #1552: адаптер тянет sanitize-html/htmlparser2 и offline catalog, но нужен
   // только в уже асинхронных офлайн-ветках travel-детали. Любой value-import
   // вернёт это поддерево на eager-путь публичной статьи.
   {
-    module: '@/services/offline/travelOfflineAdapter',
-    allowedSyncImporters: [] as string[],
+    file: 'services/offline/travelOfflineAdapter.ts',
+    allowedSyncImporters: [],
     ticket: '#1552',
   },
   // #2082: разбор бандлов квестов для заметок о местах города (~11 KB вместе с
   // `utils/questStoryText.js`) исполняется только после простоя, когда бандлы уже
   // пришли. Синхронным импортом он ехал в стартовом чанке `quests/[city]`, и
-  // сумма `index`-чанков вышла за бюджет. Типы (`import type`) не в счёт.
+  // сумма `index`-чанков вышла за бюджет.
   {
-    module: '@/utils/questCityWalk',
-    allowedSyncImporters: [] as string[],
+    file: 'utils/questCityWalk.js',
+    allowedSyncImporters: [],
     ticket: '#2082',
+  },
+  // #2084: половина тех же ~11 KB. Едет в async-чанке `questCityWalk` и больше
+  // ниоткуда: SSG-скрипты (`scripts/`) читают его через node и в web-бандл не
+  // попадают.
+  {
+    file: 'utils/questStoryText.js',
+    allowedSyncImporters: ['utils/questCityWalk.js'],
+    ticket: '#2084',
   },
 ]
 
@@ -147,21 +163,23 @@ const LAZY_ONLY_MODULES = [
  *
  * Список обязан быть живым в обе стороны: чужих импортёров нет И заявленный
  * чокпоинт действительно держит динамический импорт. Иначе «зелено» означало бы
- * лишь то, что граница тихо исчезла вместе с записью.
+ * лишь то, что граница тихо исчезла вместе с записью. Как и выше, `import()`
+ * сравнивается по разрешённому файлу: второй корень относительным путём — тоже
+ * нарушение (#2084).
  */
-const DYNAMIC_IMPORT_CHOKEPOINTS: Array<{ specifier: string; owner: string; ticket: string }> = [
+const DYNAMIC_IMPORT_CHOKEPOINTS: Array<{ file: string; owner: string; ticket: string }> = [
   {
-    specifier: '@/utils/geoCountry',
+    file: 'utils/geoCountry.ts',
     owner: 'hooks/useCountryCodeByCoords.ts',
     ticket: '#1543',
   },
   {
-    specifier: './travelOfflineAdapter',
+    file: 'services/offline/travelOfflineAdapter.ts',
     owner: 'services/offline/loadTravelOfflineAdapter.ts',
     ticket: '#1552',
   },
   {
-    specifier: '@/utils/questCityWalk',
+    file: 'utils/questCityWalk.js',
     owner: 'hooks/useQuestCityWalk.ts',
     ticket: '#2082',
   },
@@ -405,10 +423,18 @@ const syncDeps = (file: string): string[] => {
   if (cached) return cached
   let content = ''
   try {
-    content = stripComments(readFileSync(file, 'utf8'))
+    content = readFileSync(file, 'utf8')
   } catch {
     /* платформенная пара может отсутствовать — это не ребро */
   }
+  const list = syncDepsOfSource(file, content)
+  syncDepsCache.set(file, list)
+  return list
+}
+
+/** Разрешённые синхронные рёбра файла `file` с содержимым `rawContent`. */
+const syncDepsOfSource = (file: string, rawContent: string): string[] => {
+  const content = stripComments(rawContent)
   const out = new Set<string>()
   const add = (specifier: string) => {
     const resolved = resolveImport(specifier, file)
@@ -418,9 +444,7 @@ const syncDeps = (file: string): string[] => {
   for (const m of content.matchAll(/(?:^|\n)\s*(?:import|export)\s+(?!type\s)[\s\S]*?from\s*['"]([^'"]+)['"]/g)) add(m[1])
   for (const m of content.matchAll(/(?:^|\n)\s*import\s*['"]([^'"]+)['"]/g)) add(m[1])
   for (const m of content.matchAll(/(?<!\.)\brequire\(\s*['"]([^'"]+)['"]\s*\)/g)) add(m[1])
-  const list = [...out]
-  syncDepsCache.set(file, list)
-  return list
+  return [...out]
 }
 
 /** Кратчайшая синхронная цепочка `root → target`, или null. */
@@ -495,6 +519,48 @@ const hasSyncImport = (rawContent: string, specifier: string): boolean => {
   return staticImport.test(content) || staticReExport.test(content) || cjsRequire.test(content)
 }
 
+type ReadSource = (file: string) => string
+
+/**
+ * #2084: нарушители lazy-only контракта по РАЗРЕШЁННЫМ синхронным рёбрам.
+ * `files`/`read` открыты для контроля детектора: синтетические нарушители идут
+ * через ту же функцию, что и проверка дерева. Без `read` — кэш `syncDeps`.
+ */
+const lazyOnlyOffenders = (
+  { file, allowedSyncImporters }: { file: string; allowedSyncImporters: string[] },
+  files: string[] = sourceFiles,
+  read?: ReadSource,
+): string[] => {
+  const target = join(ROOT, file)
+  const depsOf = read ? (source: string) => syncDepsOfSource(source, read(source)) : syncDeps
+  return files
+    .filter((source) => source !== target && depsOf(source).includes(target))
+    .map((source) => relative(ROOT, source))
+    .filter((source) => !allowedSyncImporters.includes(source))
+}
+
+/** #2084: файлы, чей `import()` под web-резолв разрешается в `file`. */
+const dynamicImportersOf = (
+  file: string,
+  files: string[] = sourceFiles,
+  read: ReadSource = (source) => readFileSync(source, 'utf8'),
+): string[] => {
+  const target = join(ROOT, file)
+  return files
+    .filter((source) =>
+      dynamicImportSpecifiers(read(source)).some((specifier) => resolveImport(specifier, source) === target),
+    )
+    .map((source) => relative(ROOT, source))
+}
+
+/**
+ * Контроль цели: файл существует и web-резолв его пути без расширения не уходит в
+ * `.web`-двойника. Иначе импорты разрешались бы в другой файл, и пустой список
+ * нарушителей ничего бы не доказывал.
+ */
+const webResolvesToItself = (file: string): boolean =>
+  resolveImport(`@/${file.replace(/\.(t|j)sx?$/, '')}`, ROOT) === join(ROOT, file)
+
 describe('состав eager-бандла (#1148)', () => {
   it('глобальный confirm host монтируется eager один раз, а UI диалога остаётся async (#1556)', () => {
     const hostSpecifier = '@/components/ui/ConfirmDialogHost'
@@ -543,29 +609,25 @@ describe('состав eager-бандла (#1148)', () => {
   )
 
   it.each(LAZY_ONLY_MODULES)(
-    'модуль $module подключается только динамическим import() ($ticket)',
-    ({ module, allowedSyncImporters }) => {
-      const offenders = sourceFiles
-        .filter((file) => hasSyncImport(readFileSync(file, 'utf8'), module))
-        .map((file) => relative(ROOT, file))
-        .filter((file) => !allowedSyncImporters.includes(file))
+    'модуль $file синхронно импортируется только из своего async-чанка ($ticket)',
+    (entry) => {
+      const { file, allowedSyncImporters } = entry
+      expect({ file, webResolvesToItself: webResolvesToItself(file) }).toEqual({ file, webResolvesToItself: true })
 
-      expect({ module, offenders }).toEqual({ module, offenders: [] })
+      // Разрешённый импортёр сам обязан быть lazy-only и реально держать ребро:
+      // eager- или мёртвая запись тихо открыла бы дорогу в стартовый граф.
+      const badAllowlist = allowedSyncImporters.filter(
+        (importer) =>
+          !LAZY_ONLY_MODULES.some((other) => other.file === importer) ||
+          !syncDeps(join(ROOT, importer)).includes(join(ROOT, file)),
+      )
+      expect({ file, badAllowlist }).toEqual({ file, badAllowlist: [] })
+
+      // Любой транзитивный sync-путь к цели содержит одно прямое ребро в неё,
+      // поэтому проверки прямых рёбер по разрешённому файлу достаточно (#1552).
+      expect({ file, offenders: lazyOnlyOffenders(entry) }).toEqual({ file, offenders: [] })
     },
   )
-
-  it('travelOfflineAdapter не имеет sync-путей из production source (#1552)', () => {
-    const target = join(ROOT, 'services/offline/travelOfflineAdapter.ts')
-    const offenders = sourceFiles
-      .filter((file) => file !== target)
-      .filter((file) => syncDeps(file).includes(target))
-      .map((file) => relative(ROOT, file))
-
-    // Raw-specifier guard выше ловит канонический alias. Этот обход
-    // resolved sync-рёбер ловит relative и re-export обходы: любой
-    // транзитивный sync-путь к адаптеру обязан содержать одно такое ребро.
-    expect(offenders).toEqual([])
-  })
 
   it.each(ROUTE_SCOPED_PAYLOADS)(
     'payload $module остаётся в стартовом графе только своих маршрутов ($ticket)',
@@ -613,15 +675,11 @@ describe('состав eager-бандла (#1148)', () => {
   )
 
   it.each(DYNAMIC_IMPORT_CHOKEPOINTS)(
-    'модуль $specifier грузится ровно из одной async-точки $owner ($ticket)',
-    ({ specifier, owner }) => {
-      const importers = sourceFiles
-        .filter((file) => dynamicImportSpecifiers(readFileSync(file, 'utf8')).includes(specifier))
-        .map((file) => relative(ROOT, file))
-
+    'модуль $file грузится ровно из одной async-точки $owner ($ticket)',
+    ({ file, owner }) => {
       // Ровно один импортёр, и это заявленный чокпоинт: и лишние async-корни, и
       // тихо исчезнувшая граница — одинаково нарушение.
-      expect({ specifier, importers }).toEqual({ specifier, importers: [owner] })
+      expect({ file, importers: dynamicImportersOf(file) }).toEqual({ file, importers: [owner] })
     },
   )
 
@@ -708,5 +766,40 @@ describe('состав eager-бандла (#1148)', () => {
     expect(dynamicImportSpecifiers(`await import(\n  './X',\n)`)).toEqual(['./X'])
     expect(dynamicImportSpecifiers(`type M = typeof import('./X')`)).toEqual([])
     expect(dynamicImportSpecifiers(`// import('./X')\nconst a = 1`)).toEqual([])
+  })
+
+  // #2084: контроль резолвящих детекторов на синтетических нарушителях. Файлы
+  // живут только в памяти, но лежат «внутри» ROOT, поэтому их относительные пути
+  // разрешаются в настоящие цели — так же, как в проверках дерева выше.
+  it('lazy-only и чокпоинт ловят цель по файлу при любом пути импорта, типы — не ребро (#2084)', () => {
+    const fixtures = new Map<string, string>(
+      Object.entries({
+        'components/quests/FixtureRelativeWalk.tsx': `import { buildQuestCityWalkModel } from '../../utils/questCityWalk'`,
+        'utils/fixtureRequireWalk.js': `const walk = require('./questCityWalk')`,
+        'hooks/useFixtureStory.ts': `import { getQuestSteps } from '@/utils/questStoryText'`,
+        'utils/fixtureStoryReExport.ts': `export { getQuestSteps } from './questStoryText.js'`,
+        'components/quests/FixtureSecondRoot.tsx': `const load = () => import(\n  '../../utils/questCityWalk',\n)`,
+        'components/quests/FixtureTypesOnly.tsx': [
+          `import type { QuestCityWalkModel } from '../../utils/questCityWalk'`,
+          `type Runtime = typeof import('../../utils/questCityWalk')`,
+          `// import { getQuestSteps } from '../../utils/questStoryText'`,
+        ].join('\n'),
+      }).map(([file, source]): [string, string] => [join(ROOT, file), source]),
+    )
+    const files = [...fixtures.keys()]
+    const read = (file: string) => fixtures.get(file) ?? ''
+    const entry = (file: string) => LAZY_ONLY_MODULES.find((candidate) => candidate.file === file)!
+
+    expect(lazyOnlyOffenders(entry('utils/questCityWalk.js'), files, read)).toEqual([
+      'components/quests/FixtureRelativeWalk.tsx',
+      'utils/fixtureRequireWalk.js',
+    ])
+    expect(lazyOnlyOffenders(entry('utils/questStoryText.js'), files, read)).toEqual([
+      'hooks/useFixtureStory.ts',
+      'utils/fixtureStoryReExport.ts',
+    ])
+    expect(dynamicImportersOf('utils/questCityWalk.js', files, read)).toEqual([
+      'components/quests/FixtureSecondRoot.tsx',
+    ])
   })
 })
