@@ -17,7 +17,7 @@ import { useQuestProgressSync } from '@/hooks/useQuestsApi'
 import { useAuthStore } from '@/stores/authStore'
 import { loadGuestQuestProgress, saveGuestQuestProgress } from '@/utils/guestQuestProgress'
 import { normalizeQuestProgressSnapshot, snapshotFromServerProgress } from '@/utils/questProgressMerge'
-import { __resetQuestProgressQueue } from '@/utils/questProgressQueue'
+import { __resetQuestProgressQueue, beginQuestProgressWrite, syncQuestProgressReaders } from '@/utils/questProgressQueue'
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
@@ -31,12 +31,15 @@ jest.mock('@/hooks/useNetworkStatus', () => ({
 let mockServerRow: Record<string, any> | null = null
 /** Писатель прохождения стоит, пока тест его не отпустит. */
 let mockWriterGate: Promise<void> = Promise.resolve()
+/** Миграция дошла до записи строки и ждёт, пока тест отпустит писателя. */
+let writerEntered = false
 const mockFetchQuestProgress = jest.fn()
 const mockUpdateProgress = jest.fn()
 
 jest.mock('@/api/quests', () => ({
   fetchQuestProgress: (...args: any[]) => mockFetchQuestProgress(...args),
   withQuestProgress: async (_questId: string, task: (progress: any) => Promise<unknown>) => {
+    writerEntered = true
     await mockWriterGate
     // POST `/quest-progress/` — get_or_create.
     if (!mockServerRow) {
@@ -102,6 +105,7 @@ describe('перенос гостевого прогресса доходит д
     authSnapshot = useAuthStore.getState()
     useAuthStore.setState({ isAuthenticated: true, userId: '169' })
     mockServerRow = null
+    writerEntered = false
     mockWriterGate = new Promise<void>((resolve) => {
       openWriter = resolve
     })
@@ -179,5 +183,61 @@ describe('перенос гостевого прогресса доходит д
     })
     expect(result.current.sync.progress).toBeNull()
     expect(result.current.wizard.completedSteps).toHaveLength(0)
+  })
+
+  // #2098: «Сбросить» посреди миграции, пока экран ещё не знает id строки.
+  // Ответ миграции не должен вернуть перенесённые ответы. Запросы те же:
+  // миграция по-прежнему пишет строку, а сброс без id DELETE не добавляет.
+  it('«Сбросить» до id строки не возвращает ответы ещё идущей миграции', async () => {
+    const { result } = await mountScreenBeforeMigration()
+    await waitFor(() => expect(writerEntered).toBe(true))
+    expect(result.current.sync.progress).toBeNull()
+    expect(mockUpdateProgress).not.toHaveBeenCalled()
+
+    await act(async () => {
+      expect(await result.current.sync.resetProgress()).toBe(false)
+    })
+
+    await act(async () => {
+      openWriter()
+    })
+    await waitFor(() => expect(mockUpdateProgress).toHaveBeenCalledTimes(1))
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(result.current.sync.progress).toBeNull()
+    expect(result.current.sync.progressMissing).toBe(true)
+    expect(result.current.wizard.completedSteps).toHaveLength(0)
+    expect(result.current.wizard.answers['step-1']).toBeUndefined()
+    expect(mockFetchQuestProgress).toHaveBeenCalledTimes(1)
+    const { deleteProgress } = jest.requireMock('@/api/quests') as { deleteProgress: jest.Mock }
+    expect(deleteProgress).not.toHaveBeenCalled()
+
+    // Запись, начатая уже после сброса, на экран попадает: отсечка не вечная.
+    const laterRow = {
+      id: 462,
+      quest: 46,
+      user: 169,
+      current_index: 2,
+      unlocked_index: 2,
+      answers: { 'step-2': 'мост' },
+      attempts: {},
+      hints: {},
+      skipped: {},
+      show_map: true,
+      early_finish: false,
+      completed: false,
+      completed_at: null,
+      created_at: '2026-09-24T09:01:00Z',
+      updated_at: '2026-09-24T09:01:00Z',
+    }
+    act(() => {
+      syncQuestProgressReaders(QUEST_ID, '169', laterRow, beginQuestProgressWrite())
+    })
+    await waitFor(() => expect(result.current.sync.progress?.id).toBe(462))
+    expect(result.current.sync.progress?.answers).toEqual({ 'step-2': 'мост' })
+    expect(result.current.wizard.answers['step-1']).toBeUndefined()
   })
 })

@@ -26,6 +26,7 @@ import { selectPopularQuests } from '@/utils/questPopularity';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { hasQuestProgressStarted, QuestProgressLineageMismatch } from '@/utils/questProgressMerge';
 import {
+    currentQuestProgressWriteEpoch,
     deleteOrEnqueueQuestProgress,
     dequeueDeliveredQuestProgress,
     dequeueQuestProgress,
@@ -253,6 +254,9 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     // `id` строк, стёртых «Сбросить» за этот маунт: запись, начатая до сброса,
     // может подтвердиться уже после него и не возвращает стёртое на экран (#2092).
     const resetRowIdsRef = useRef<Record<string, number>>({});
+    // «Сбросить», пока id строки неизвестен. Номер последней начатой записи:
+    // миграция, стартовавшая не позже него, на экран не возвращается (#2098).
+    const resetWriteEpochRef = useRef<Record<string, number>>({});
     // Сколько записей других писателей экран принял: ответ чтения, начатого до
     // такой записи, старше её (#2092).
     const acceptedWritesRef = useRef(0);
@@ -362,10 +366,15 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     // очереди: экран узнаёт её без повторного маунта (#2092). Визард сливает её
     // с живым состоянием, как эхо своего сейва, и несинхронизированные ответы
     // остаются. Ответ своего флаша разбирает `flushSync` — со сбросом в полёте.
-    useEffect(() => subscribeQuestProgressWrites((writtenQuestId, written) => {
+    // Известный id отсекает `resetRowIdsRef`. Миграция без id — номер старта (#2098).
+    useEffect(() => subscribeQuestProgressWrites((writtenQuestId, written, writeEpoch) => {
         if (!mountedRef.current || inFlightRef.current || !isAuthenticatedRef.current) return;
         if (writtenQuestId !== questIdRef.current) return;
         if (written.id <= (resetRowIdsRef.current[writtenQuestId] ?? 0)) return;
+        if (
+            typeof writeEpoch === 'number' &&
+            writeEpoch <= (resetWriteEpochRef.current[writtenQuestId] ?? 0)
+        ) return;
         acceptedWritesRef.current += 1;
         progressIdRef.current = written.id;
         setProgress(written);
@@ -604,6 +613,14 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         void dequeueQuestProgress(questId ?? '', ownerIdForQueue());
 
         const progressId = progressIdRef.current ?? (runServerId > 0 ? runServerId : null);
+        // Удалять нечего, но миграция уже в пути и позже принесёт строку.
+        // Её номер не id: запись, начатая не позже этого сброса, отбрасывается (#2098).
+        if (questId && !progressId) {
+            resetWriteEpochRef.current[questId] = Math.max(
+                resetWriteEpochRef.current[questId] ?? 0,
+                currentQuestProgressWriteEpoch(),
+            );
+        }
         if (!isAuthenticated || !questId || !progressId) return false;
         resetRowIdsRef.current[questId] = Math.max(resetRowIdsRef.current[questId] ?? 0, progressId);
         // Строку удаляет тот, чья сессия сейчас: владелец последнего сейва этого

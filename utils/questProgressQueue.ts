@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import { ApiError } from '@/api/clientErrors'
 import { getActiveQueryClient } from '@/api/activeQueryClient'
+import { queryKeys } from '@/api/queryKeys'
 import {
     deleteProgress as apiDeleteProgress,
     updateProgress as apiUpdateProgress,
@@ -100,7 +101,18 @@ let flushChain: Promise<void> | null = null
 let retryAttempt = 0
 let retryTimer: ReturnType<typeof setTimeout> | null = null
 const listeners = new Set<(questIds: string[]) => void>()
-const progressWriteListeners = new Set<(questId: string, progress: ApiQuestProgress) => void>()
+type QuestProgressWriteListener = (
+    questId: string,
+    progress: ApiQuestProgress,
+    /** Номер `beginQuestProgressWrite` на старте записи, не id строки (#2098). */
+    writeEpoch?: number,
+) => void
+const progressWriteListeners = new Set<QuestProgressWriteListener>()
+/**
+ * Монотонный номер начатой записи. Не id строки: «Сбросить», нажатый до
+ * появления id, сравнивает с ним ответ миграции, которая стартовала раньше (#2098).
+ */
+let questProgressWriteEpoch = 0
 // Одна попытка на намерение: проход очереди, флаш экрана и чтение при открытии
 // квеста ждут общий DELETE, а не шлют каждый свой.
 const deletionAttempts = new Map<QueuedQuestProgressDeletion, Promise<boolean>>()
@@ -241,38 +253,65 @@ export const syncCatalogCompletion = (questId: string, ownerId: string | null, c
     else resetQuestsCatalogCompletion(client, questId)
 }
 
+/** Номер записи, которую писатель только что начал. Сбрасывается вместе с очередью в тестах. */
+export function beginQuestProgressWrite(): number {
+    questProgressWriteEpoch += 1
+    return questProgressWriteEpoch
+}
+
+/** Последний выданный номер. «Сбросить» без id строки запоминает его (#2098). */
+export function currentQuestProgressWriteEpoch(): number {
+    return questProgressWriteEpoch
+}
+
+/**
+ * «Мои квесты» читает не `['quests']`. Точная инвалидация каталога компактный
+ * срез не задевает, а список прохождений лежит под другим префиксом. Оба держат
+ * staleTime 30 минут — «Пройден» переживал и сброс, и финиш (#2096).
+ */
+const invalidateOwnedQuestCollections = (ownerId: string): void => {
+    const client = getActiveQueryClient()
+    if (!client) return
+    const userId = String(ownerId)
+    void client.invalidateQueries({ queryKey: queryKeys.questProgressAll(userId), exact: true })
+    void client.invalidateQueries({ queryKey: queryKeys.questsCompactCatalog(userId), exact: true })
+}
+
 /**
  * Сервер подтвердил запись прохождения: строку (`progress`) или её удаление
  * (`null`). Правило одно для всех писателей — флаш экрана, доставка очереди,
  * миграция гостя: читатели на открытом экране получают подтверждённое без
  * повторного маунта (#2092). Хук синхронизации — строку, каталог и бандл квеста —
- * отметку «Пройден» и `completions_count`.
+ * отметку «Пройден» и `completions_count`. Профиль — оба своих ключа (#2096).
+ * `writeEpoch` — номер старта записи, не id строки (#2098).
  */
 export const syncQuestProgressReaders = (
     questId: string,
     ownerId: string | null,
     progress: ApiQuestProgress | null,
+    writeEpoch?: number,
 ): void => {
     if (!isSessionOwner(ownerId)) return
     if (progress) {
         progressWriteListeners.forEach((listener) => {
             try {
-                listener(questId, progress)
+                listener(questId, progress, writeEpoch)
             } catch {
                 // Падение читателя не должно рвать доставку.
             }
         })
         if (progress.completed) syncCatalogCompletion(questId, ownerId, true)
-        return
+    } else {
+        syncCatalogCompletion(questId, ownerId, false)
+        const client = getActiveQueryClient()
+        if (client) void refreshQuestCompletionsCount(client, questId)
     }
-    syncCatalogCompletion(questId, ownerId, false)
-    const client = getActiveQueryClient()
-    if (client) void refreshQuestCompletionsCount(client, questId)
+    if (ownerId) invalidateOwnedQuestCollections(ownerId)
 }
 
 /** Подписка читателя прохождения на подтверждённые записи строк (#2092). */
 export function subscribeQuestProgressWrites(
-    listener: (questId: string, progress: ApiQuestProgress) => void,
+    listener: QuestProgressWriteListener,
 ): () => void {
     progressWriteListeners.add(listener)
     return () => {
@@ -305,6 +344,8 @@ export async function pushQuestProgressSnapshot(
     questId: string,
     snapshot: QuestProgressSnapshot | Partial<QuestProgressSnapshot>,
 ): Promise<ApiQuestProgress> {
+    // До первого await: «Сбросить» посреди записи видит, что она началась раньше (#2098).
+    const writeEpoch = beginQuestProgressWrite()
     const ownerId = useAuthStore.getState().userId
     if (!(await settleQuestProgressDeletions(questId, ownerId))) {
         throw new Error(`Reset of quest progress ${questId} is not confirmed by the server yet`)
@@ -333,7 +374,7 @@ export async function pushQuestProgressSnapshot(
         }
         throw error
     }
-    syncQuestProgressReaders(questId, ownerId, updated)
+    syncQuestProgressReaders(questId, ownerId, updated, writeEpoch)
     return updated
 }
 
@@ -683,4 +724,5 @@ export function __resetQuestProgressQueue(): void {
     retryAttempt = 0
     listeners.clear()
     progressWriteListeners.clear()
+    questProgressWriteEpoch = 0
 }

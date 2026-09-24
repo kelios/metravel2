@@ -20,6 +20,7 @@ import {
   toQuestProgressServerPayload,
 } from '@/utils/questProgressMerge'
 import {
+  beginQuestProgressWrite,
   enqueueQuestProgress,
   flushQuestProgressQueue,
   settleQuestProgressDeletions,
@@ -125,6 +126,8 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
   useEffect(() => {
     if (!isAuthenticated || !enabled || !questId || migratedRef.current) return
     migratedRef.current = true
+    // До первого await: «Сбросить» посреди миграции видит, что она началась раньше (#2098).
+    const writeEpoch = beginQuestProgressWrite()
 
     void (async () => {
       const guestProgress = await loadGuestQuestProgress(questId)
@@ -169,7 +172,7 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
         // очередь `withQuestProgress`.
         await clearGuestQuestProgress(questId)
         // Экран квеста прочитал прохождение ещё до переноса (#2092).
-        syncQuestProgressReaders(questId, accountId, migrated)
+        syncQuestProgressReaders(questId, accountId, migrated, writeEpoch)
       } catch (error) {
         const { devError } = require('@/utils/logger')
         // Попытка здесь одна на открытие экрана: без сети прохождение ждало бы,
