@@ -216,3 +216,25 @@ Facebook automatic event logging and advertiser-ID collection are disabled in th
 
 Review demonstration: [NEW VERIFIED ATTACHMENT, DEVICE, BUILD AND SCENE TIMECODES, OR AN EXPLICIT STATEMENT THAT THE EXISTING VIDEO SHOWS BUILD 9].
 ```
+
+## Отправка 24.09.2026 — build 10, Reply и повторный submit
+
+Команда владельца в чате: «Делай #1940: собери 1.0.5 (10), загрузи в TestFlight,
+проверь вход под демо-аккаунтом, отправь ответ Apple и submit». Storefront
+release в неё не входит; в версии стоит ручной релиз.
+
+| Этап | Факт |
+| --- | --- |
+| Signed build | EAS `2efd3e29-2763-490c-bdc4-9e503fbbe098`, коммит `1148d5601`, 1.0.5 (10), production/STORE; `ios:release:guard` OK, `ios:artifact:audit` PASS на скачанном IPA. Собрано из `git clone --shared` на `main` (обход #2076 — копия двух `android/` файлов) |
+| Upload | EAS submission `be0a9f69-894b-46b2-b93b-0ea93a0c8a82` FINISHED 02:36 UTC; в TestFlight build 10 «Готово к отправке», добавлен в группу MeTravel Internal (автоматически не добавился) |
+| Устройство | iPhone 13 mini, iOS 26.5, dual-stack Wi-Fi. На телефоне стояла dev-сборка 1.0.5 (10) от 14.09 (`builtByDeveloper`), из-за совпадения номера TestFlight показывал «Открыть» вместо «Установить»; dev-копия удалена, build 10 установлен из TestFlight |
+| Демо-вход | Логин и пароль вводит владелец (агенту ввод запрещён). Шапка «Открыть профиль Редакция metravel», профиль загрузился. nginx прода: `02:44:34Z POST /api/user/login/ 200 rt 0.375`, UA `metravel/10 CFNetwork/3860.600.12`, затем `GET /api/user/120/profile/ 200`. Снимки — `.codex-temp/ios-tf10/` |
+| Сеть | DNS A+AAAA на 1.1.1.1/8.8.8.8/9.9.9.9. Globalping IPv6: US×8, GB, NL, DE, JP → `200`, TLS валиден. Перемежающиеся TCP connect timeout 15 с у ~4 из ~40 US-проб (IPv4 и IPv6, разные узлы, повтор с того же узла → `200`; контроль wikipedia 7/7). На хосте и в контейнере nginx `ListenOverflows/ListenDrops/TCPReqQFullDrop/SyncookiesSent` = 0, conntrack 254/65536 — потери до нашего сервера |
+| Notes | Заменены (3983/4000): преамбула про build 10 и проверку 24.09; строки о проверках build 9 убраны; неверная для build 10 фраза «Facebook sign-in is disabled» заменена на Limited Login + флаги auto-init/auto-event/advertising-ID = false; ролик помечен как build 9 |
+| Reply | Отправлен 24.09 ~02:55 UTC в переписку заявки `2caaff34…` (сообщений стало 4): скриншоты, разделение сетевой ошибки и неверного пароля, диагностический тег, IPv6 с 19.09 и пробы 24.09, вход демо-аккаунтом на build 10, просьба прислать тег/время/тип сети при повторе |
+| Submit | Build 9 заменён на 10 в версии → «Обновить данные для проверки» → «Повторно отправить на проверку приложения»: заявка и версия — «Ожидание проверки» |
+
+Не проверено на build 10: IPv6-only сеть на устройстве (Mac без IPv6 uplink
+её после AAAA не воспроизводит — см. выше), iPad, Sign in with Apple, Google и
+Facebook на устройстве. Черновики Reply и Notes выше — история, отправленные
+тексты отличаются.
