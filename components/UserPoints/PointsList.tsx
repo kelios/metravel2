@@ -33,6 +33,7 @@ import { PointsListManualModal } from './PointsListManualModal'
 import { PointsListBulkMapBar } from './PointsListBulkMapBar'
 import EmptyState from '@/components/ui/EmptyState'
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
 
 const DEFAULT_POINT_COLORS: string[] = [
@@ -377,7 +378,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       );
     }
     return (
-      <View style={styles.emptyContainer}>
+      <View style={styles.emptyContainer} {...SCREEN_CONTENT_FIRST_PROPS}>
         <EmptyState
           icon="map-pin"
           variant="empty"

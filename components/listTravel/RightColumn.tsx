@@ -43,6 +43,7 @@ import {
   useRightColumnStyles,
 } from '@/components/listTravel/useRightColumnStyles'
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
 
 interface RightColumnProps {
@@ -686,6 +687,7 @@ const RightColumn: React.FC<RightColumnProps> = (
         {/* Cards + Recommendations */}
         <View
           testID="cards-scroll-container"
+          {...SCREEN_CONTENT_FIRST_PROPS}
           style={[
             cardsWrapperStyle,
             showStandaloneListIntro && Platform.OS === 'web'

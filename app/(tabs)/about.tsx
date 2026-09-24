@@ -21,6 +21,7 @@ import { openExternalUrl } from '@/utils/externalLinks';
 import { getAppVersionInfo, webTouchScrollStyle } from '@/utils';
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { METRAVEL_SOCIAL_LINKS } from '@/constants/socialLinks';
 
 
@@ -185,7 +186,10 @@ function AboutAndContactScreen() {
 
                   <CategoriesShowcase isWide={isWide} />
 
-                  <View style={[isWide ? styles.twoColumns : styles.oneColumn, { marginTop: 24 }]}>
+                  <View
+                    style={[isWide ? styles.twoColumns : styles.oneColumn, { marginTop: 24 }]}
+                    {...SCREEN_CONTENT_FIRST_PROPS}
+                  >
                     <View style={isWide ? styles.columnMain : null}>
                       <AboutIntroCard
                         isPageHeading

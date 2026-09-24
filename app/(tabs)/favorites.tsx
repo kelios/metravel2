@@ -27,6 +27,7 @@ import CollectionNativeClearButton from '@/components/profile/CollectionNativeCl
 import { useCollectionBackAffordanceGlobal } from '@/components/layout/useCollectionBackAffordance'
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { refreshFavoritesFromServer } from '@/hooks/useFavoritesData';
 
 
@@ -252,20 +253,22 @@ export default function FavoritesScreen() {
                 {!hasGlobalHeader && (
                     <ProfileCollectionHeader title={i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117')} onBackPress={handleBackToProfile} />
                 )}
-                <EmptyState
-                    icon="heart"
-                    title={i18nT('shared:app.tabs.favorites.v_hochu_poehat_poka_pusto_e39c47ea')}
-                    description={i18nT('shared:app.tabs.favorites.nazhmite_na_kartochke_marshruta_chtoby_dobav_80112c03')}
-                    variant="empty"
-                    action={{
-                        label: i18nT('shared:app.tabs.favorites.nayti_marshruty_ab318302'),
-                        onPress: () => router.push('/search'),
-                    }}
-                    secondaryAction={{
-                        label: i18nT('shared:app.tabs.favorites.populyarnye_marshruty_fcb7673e'),
-                        onPress: () => router.push('/travelsby'),
-                    }}
-                />
+                <View {...SCREEN_CONTENT_FIRST_PROPS}>
+                    <EmptyState
+                        icon="heart"
+                        title={i18nT('shared:app.tabs.favorites.v_hochu_poehat_poka_pusto_e39c47ea')}
+                        description={i18nT('shared:app.tabs.favorites.nazhmite_na_kartochke_marshruta_chtoby_dobav_80112c03')}
+                        variant="empty"
+                        action={{
+                            label: i18nT('shared:app.tabs.favorites.nayti_marshruty_ab318302'),
+                            onPress: () => router.push('/search'),
+                        }}
+                        secondaryAction={{
+                            label: i18nT('shared:app.tabs.favorites.populyarnye_marshruty_fcb7673e'),
+                            onPress: () => router.push('/travelsby'),
+                        }}
+                    />
+                </View>
             </SafeAreaView>
         );
     }
@@ -296,7 +299,10 @@ export default function FavoritesScreen() {
                     style={webTouchScrollStyle}
                     contentContainerStyle={styles.listContent}
                 >
-                    <View style={[styles.cardsGrid, { gap: gapSize, rowGap: gapSize, columnGap: gapSize }]}>
+                    <View
+                        style={[styles.cardsGrid, { gap: gapSize, rowGap: gapSize, columnGap: gapSize }]}
+                        {...SCREEN_CONTENT_FIRST_PROPS}
+                    >
                         {data.map((item: any) => {
                             const cols = Math.max(1, numColumns);
                             const calcWidth = cols > 1

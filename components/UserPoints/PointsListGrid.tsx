@@ -17,6 +17,7 @@ import { getMapGeocoderLanguage } from '@/utils/mapLocale'
 
 import type { PointsListStyles } from './types'
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { createLocalStyles } from './PointsListGrid.styles'
 
 
@@ -186,7 +187,7 @@ export const PointsListGrid: React.FC<{
 
   const renderMapCanvas = React.useCallback(
     () => (
-      <View style={styles.mapInner}>
+      <View style={styles.mapInner} {...SCREEN_CONTENT_FIRST_PROPS}>
 	        <UserPointsMap
 	          points={filteredPoints}
 	          center={currentLocation ?? undefined}

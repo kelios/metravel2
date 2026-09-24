@@ -32,6 +32,7 @@ import {
   sortPublicTrips,
 } from '@/components/trips/publicTripCatalogUtils';
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
 
 const GUTTER = 12;
@@ -240,7 +241,7 @@ function PublicTripsCatalog() {
         ) : isError ? (
           <Text style={styles.empty}>{i18nT('trips:components.trips.PublicTripsCatalog.ne_udalos_zagruzit_katalog_poezdok_8ff8ecbf')}</Text>
         ) : trips.length === 0 ? (
-          <View style={styles.emptyBox} testID="public-trips-empty">
+          <View style={styles.emptyBox} testID="public-trips-empty" {...SCREEN_CONTENT_FIRST_PROPS}>
             <Text style={styles.empty}>
               {hasActiveFilters || hasActiveSearch
                 ? i18nT('trips:components.trips.PublicTripsCatalog.nichego_ne_naydeno_sbroste_poisk_ili_filtry_06382c80')
@@ -257,7 +258,7 @@ function PublicTripsCatalog() {
             ) : null}
           </View>
         ) : (
-          <View style={[styles.grid, { gap: GUTTER }]}>
+          <View style={[styles.grid, { gap: GUTTER }]} {...SCREEN_CONTENT_FIRST_PROPS}>
             {trips.map((trip) => (
               <View key={trip.id} style={cardWidth ? { width: cardWidth } : styles.fullWidth}>
                 <PublicTripCard trip={trip} onPress={openTrip} width={cardWidth} />

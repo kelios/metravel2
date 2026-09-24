@@ -68,6 +68,7 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import type { PlannedTrip, TripTransport, TripVisibility } from '@/api/plannedTrips';
 import { ApiError } from '@/api/clientErrors';
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { useTranslation } from '@/i18n/LocaleProvider';
 import {
   createStyles,
@@ -942,7 +943,11 @@ export default function PlannedTripScreen() {
             </View>
 
             {activeTab === 'route' ? (
-              <View style={[styles.panel, isDesktop && styles.panelRouteWide]} testID="trip-plan-panel-route">
+              <View
+                style={[styles.panel, isDesktop && styles.panelRouteWide]}
+                testID="trip-plan-panel-route"
+                {...SCREEN_CONTENT_FIRST_PROPS}
+              >
                 {/* #1495/#1691: на телефоне карта — главный элемент вкладки: она
                     идёт первым блоком, панель маршрута лежит обычным контентом
                     под ней. Раскладку выбирает экран, а не RouteBuilder: так

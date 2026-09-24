@@ -30,6 +30,7 @@ import { goBackOrReplace } from '@/utils/backNavigation';
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { refreshViewHistory, type ViewHistoryItem } from '@/hooks/useViewHistory';
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
 
 export default function HistoryScreen() {
@@ -452,20 +453,22 @@ export default function HistoryScreen() {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 {renderHeader(false)}
-                <EmptyState
-                    icon="clock"
-                    title={i18nT('shared:app.tabs.history.ty_esche_ne_otkryval_marshruty_e7f97c1c')}
-                    description={i18nT('shared:app.tabs.history.otkroy_lyuboy_marshrut_on_avtomaticheski_soh_b6b47c2a')}
-                    variant="empty"
-                    action={{
-                        label: i18nT('shared:app.tabs.history.nachat_issledovat_e4fa48dc'),
-                        onPress: () => router.push('/search'),
-                    }}
-                    secondaryAction={{
-                        label: i18nT('shared:app.tabs.history.sluchaynyy_marshrut_5309a92b'),
-                        onPress: () => router.push('/roulette'),
-                    }}
-                />
+                <View {...SCREEN_CONTENT_FIRST_PROPS}>
+                    <EmptyState
+                        icon="clock"
+                        title={i18nT('shared:app.tabs.history.ty_esche_ne_otkryval_marshruty_e7f97c1c')}
+                        description={i18nT('shared:app.tabs.history.otkroy_lyuboy_marshrut_on_avtomaticheski_soh_b6b47c2a')}
+                        variant="empty"
+                        action={{
+                            label: i18nT('shared:app.tabs.history.nachat_issledovat_e4fa48dc'),
+                            onPress: () => router.push('/search'),
+                        }}
+                        secondaryAction={{
+                            label: i18nT('shared:app.tabs.history.sluchaynyy_marshrut_5309a92b'),
+                            onPress: () => router.push('/roulette'),
+                        }}
+                    />
+                </View>
             </SafeAreaView>
         );
     }
@@ -489,7 +492,7 @@ export default function HistoryScreen() {
                     contentContainerStyle={styles.gridContent}
                 >
                     {renderHistorySummary()}
-                    <View style={styles.webGrid}>
+                    <View style={styles.webGrid} {...SCREEN_CONTENT_FIRST_PROPS}>
                         {data.map((item, index) => renderCard(item, index))}
                     </View>
                     <ContributionBanner variant="history" />

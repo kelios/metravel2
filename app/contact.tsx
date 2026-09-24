@@ -19,6 +19,7 @@ import { showToast } from '@/utils/toast'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { getAppVersionInfo, webTouchScrollStyle } from '@/utils'
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { METRAVEL_SOCIAL_LINKS } from '@/constants/socialLinks'
 
 
@@ -212,7 +213,7 @@ function ContactScreen() {
               <View style={styles.content}>
                 <AboutHeader />
 
-                <View style={isWide ? styles.twoColumns : styles.oneColumn}>
+                <View style={isWide ? styles.twoColumns : styles.oneColumn} {...SCREEN_CONTENT_FIRST_PROPS}>
                   <AboutIntroCard
                     email={EMAIL}
                     onSendMail={sendMail}

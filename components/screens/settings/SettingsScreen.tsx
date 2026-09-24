@@ -39,6 +39,7 @@ import LanguageSection from '@/components/settings/LanguageSection';
 import OfflineSettingsSection from '@/components/settings/OfflineSettingsSection';
 import NotificationSettingsSection from '@/components/settings/NotificationSettingsSection';
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
 
 // Keep the Strava implementation for a future backend rollout, but hide the settings UI for now.
@@ -316,7 +317,7 @@ export default function SettingsScreen() {
                         </View>
                     )}
 
-                    <View style={styles.section}>
+                    <View style={styles.section} {...SCREEN_CONTENT_FIRST_PROPS}>
                     <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.profil_e0a36973')}</Text>
 
                     <ProfileSection

@@ -18,6 +18,7 @@ import SubscriberCard from '@/components/subscriptions/SubscriberCard';
 import EmptyState from '@/components/ui/EmptyState';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker';
 import type { AuthorWithTravels, SubscriptionTab } from '@/hooks/useSubscriptionsData';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { selectPlural, translate as i18nT } from '@/i18n'
@@ -152,13 +153,15 @@ export default function SubscriptionsTabContent({
   const renderSubscriptionsTab = () => {
     if (subscriptions.length === 0) {
       return (
-        <EmptyState
-          icon="users"
-          title={i18nT('shared:components.subscriptions.SubscriptionsTabContent.vy_esche_ni_na_kogo_ne_podpisany_5e3d37ec')}
-          description={i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpishites_na_avtorov_chtoby_videt_ih_putes_17ba432e')}
-          variant="empty"
-          action={{ label: i18nT('shared:components.subscriptions.SubscriptionsTabContent.nayti_puteshestviya_1951ac15'), onPress: onFindTravels }}
-        />
+        <View {...SCREEN_CONTENT_FIRST_PROPS}>
+          <EmptyState
+            icon="users"
+            title={i18nT('shared:components.subscriptions.SubscriptionsTabContent.vy_esche_ni_na_kogo_ne_podpisany_5e3d37ec')}
+            description={i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpishites_na_avtorov_chtoby_videt_ih_putes_17ba432e')}
+            variant="empty"
+            action={{ label: i18nT('shared:components.subscriptions.SubscriptionsTabContent.nayti_puteshestviya_1951ac15'), onPress: onFindTravels }}
+          />
+        </View>
       );
     }
 
@@ -170,16 +173,18 @@ export default function SubscriptionsTabContent({
             {formatAuthorsCount(subscriptions.length)}
           </Text>
         </View>
-        {filteredAuthors.map((author) => (
-          <AuthorCard
-            key={author.profile.user ?? author.profile.id}
-            author={author}
-            onUnsubscribe={handleUnsubscribe}
-            onMessage={onMessage}
-            onOpenTravel={onOpenTravel}
-            onOpenProfile={onOpenProfile}
-          />
-        ))}
+        <View {...SCREEN_CONTENT_FIRST_PROPS}>
+          {filteredAuthors.map((author) => (
+            <AuthorCard
+              key={author.profile.user ?? author.profile.id}
+              author={author}
+              onUnsubscribe={handleUnsubscribe}
+              onMessage={onMessage}
+              onOpenTravel={onOpenTravel}
+              onOpenProfile={onOpenProfile}
+            />
+          ))}
+        </View>
         {filteredAuthors.length === 0 && search.trim() ? (
           <View style={styles.noResults}>
             <Text style={[styles.noResultsText, { color: colors.textMuted }]}>{i18nT('shared:components.subscriptions.SubscriptionsTabContent.nichego_ne_naydeno_bf51f155')}</Text>

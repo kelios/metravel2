@@ -16,6 +16,7 @@ import { keyExtractor } from '@/components/screens/profile/profileScreen.helpers
 import { webTouchScrollStyle } from '@/utils';
 import type { ProfileTabKey } from '@/components/profile/ProfileTabs';
 import type { createProfileScreenStyles } from '@/components/screens/profile/profileScreen.styles';
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker';
 
 type ProfileStyles = ReturnType<typeof createProfileScreenStyles>;
 
@@ -115,24 +116,26 @@ export function ProfileTravelListView({
         {isSectionTab ? null : isTravelsTabLoading ? (
           listSkeleton
         ) : currentData.length === 0 ? (
-          <View style={styles.emptyWrap}>
+          <View style={styles.emptyWrap} {...SCREEN_CONTENT_FIRST_PROPS}>
             <EmptyState {...emptyStateProps} />
           </View>
         ) : (
-          <ProfileTravelGrid
-            currentData={currentData}
-            styles={styles}
-            isCardsSingleColumn={isCardsSingleColumn}
-            gridColumns={gridColumns}
-            gapSize={gapSize}
-            isMobileDevice={isMobileDevice}
-            userId={userId}
-            isSuperuser={isSuperuser}
-            activeTab={activeTab}
-            handleDeleteMyTravel={handleDeleteMyTravel}
-            width={width}
-            removingTravelId={removingTravelId}
-          />
+          <View {...SCREEN_CONTENT_FIRST_PROPS}>
+            <ProfileTravelGrid
+              currentData={currentData}
+              styles={styles}
+              isCardsSingleColumn={isCardsSingleColumn}
+              gridColumns={gridColumns}
+              gapSize={gapSize}
+              isMobileDevice={isMobileDevice}
+              userId={userId}
+              isSuperuser={isSuperuser}
+              activeTab={activeTab}
+              handleDeleteMyTravel={handleDeleteMyTravel}
+              width={width}
+              removingTravelId={removingTravelId}
+            />
+          </View>
         )}
         {footer}
       </ScrollView>

@@ -27,6 +27,7 @@ import { pluralizeQuest, type QuestMeta, type QuestSortOrder } from './questsSha
 import QuestsSortChips, { EMPTY_SORT_ORDERS } from './QuestsSortChips';
 
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
 const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
@@ -482,6 +483,7 @@ function QuestsContentPanel({
             <View
                 style={[styles.contentBody, viewMode === 'map' && isMobile && styles.contentBodyMap]}
                 testID="quests-content-body"
+                {...SCREEN_CONTENT_FIRST_PROPS}
             >
                 {geoMessageBlock}
 

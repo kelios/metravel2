@@ -23,6 +23,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { confirmAction } from '@/utils/confirmAction';
 import { showToastMessage } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { createCollator, getFormatLocale } from '@/i18n/format'
 
 
@@ -169,7 +170,7 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
 
   if (matchingTrips.length === 0) {
     return (
-      <View testID="my-created-trips-empty">
+      <View testID="my-created-trips-empty" {...SCREEN_CONTENT_FIRST_PROPS}>
         <EmptyState
           icon={role === 'organized' ? 'map' : 'users'}
           title={role === 'organized' ? i18nT('trips:components.trips.MyCreatedTripsList.vy_esche_ne_organizovali_poezdok_f5309bb6') : i18nT('trips:components.trips.MyCreatedTripsList.vy_poka_ne_uchastvuete_v_poezdkah_ee7c708b')}
@@ -306,7 +307,7 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
 
         <View style={styles.results}>
           {visibleTrips.length === 0 ? (
-            <View style={styles.filteredEmpty} testID="my-created-trips-filtered-empty">
+            <View style={styles.filteredEmpty} testID="my-created-trips-filtered-empty" {...SCREEN_CONTENT_FIRST_PROPS}>
               <Text style={styles.empty}>{i18nT('trips:components.trips.MyCreatedTripsList.po_zadannym_usloviyam_poezdok_ne_naydeno_3fa7da64')}</Text>
               <Pressable
                 onPress={resetControls}
@@ -318,7 +319,7 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
               </Pressable>
             </View>
           ) : (
-            <View style={styles.grid}>
+            <View style={styles.grid} {...SCREEN_CONTENT_FIRST_PROPS}>
               {visibleTrips.map((trip) => (
                 <View key={trip.id} style={isDesktop ? styles.gridItemDesktop : styles.gridItemMobile}>
                   <TripPlanCard

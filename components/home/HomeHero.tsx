@@ -25,6 +25,7 @@ import {
 } from './useHomeHeroSlider'
 import { HOME_HERO_MEDIA_SLOT_RATIO, type QuickFilterParams } from './homeHeroShared'
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { readViewportSize } from '@/utils/viewportMetrics'
 
 
@@ -329,7 +330,7 @@ const HomeHero = memo(function HomeHero({
       : i18nT('home:components.home.HomeHero.realnye_marshruty_po_belarusi_i_evrope_ot_te_3f0b1078')
 
   return (
-    <View testID="home-hero" style={styles.container}>
+    <View testID="home-hero" {...SCREEN_CONTENT_FIRST_PROPS} style={styles.container}>
       <ResponsiveContainer maxWidth={1920} padding clientOnly>
         <View style={styles.heroShell}>
           <HomeHeroBookLayout

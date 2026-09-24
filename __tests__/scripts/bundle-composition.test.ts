@@ -474,10 +474,28 @@ const syncPathTo = (root: string, target: string): string[] | null => {
   return null
 }
 
-// `services` тоже участвует в web import graph: async-чокпоинты и тяжёлые
-// адаптеры живут именно там. Без каталога guard видел потребителей, но не мог
-// доказать существование/единственность самой границы (#1552).
-const SOURCE_DIRS = ['app', 'components', 'hooks', 'screens', 'services', 'stores', 'utils', 'constants']
+// Все каталоги исходников web-графа, включая Metro-подмены и локали (#2086).
+// `i18n/locales` содержит TS-модули с импортами, поэтому читается целиком.
+// scripts/plugins/tools — сборочные Node-инструменты; tests, generated dist и
+// native-проекты android/ios не являются исходниками web-бандла.
+const SOURCE_DIRS = [
+  'api',
+  'app',
+  'components',
+  'config',
+  'constants',
+  'context',
+  'hooks',
+  'i18n',
+  'metro-stubs',
+  'screens',
+  'services',
+  'stores',
+  'styles',
+  'types',
+  'ui',
+  'utils',
+]
 const SOURCE_EXTS = ['.ts', '.tsx', '.js', '.jsx']
 
 const collectSourceFiles = (dir: string): string[] => {
@@ -568,6 +586,23 @@ const webResolvesToItself = (file: string): boolean =>
   resolveImport(`@/${file.replace(/\.(t|j)sx?$/, '')}`, ROOT) === join(ROOT, file)
 
 describe('состав eager-бандла (#1148)', () => {
+  it('обход включает вспомогательные web-исходники и вложенные локали (#2086)', () => {
+    // Проверяем результат реального обхода, а не наличие имени в SOURCE_DIRS.
+    expect(sourceFiles.map((file) => relative(ROOT, file))).toEqual(
+      expect.arrayContaining([
+        'api/travelsApi.ts',
+        'config/featureFlags.ts',
+        'context/AuthContext.tsx',
+        'i18n/index.web.ts',
+        'i18n/locales/en/index.ts',
+        'metro-stubs/react-native-web-slim.js',
+        'styles/globalFocus.ts',
+        'types/travel.ts',
+        'ui/paper.web.tsx',
+      ]),
+    )
+  })
+
   it('глобальный confirm host монтируется eager один раз, а UI диалога остаётся async (#1556)', () => {
     const hostSpecifier = '@/components/ui/ConfirmDialogHost'
     const dialogSpecifier = '@/components/ui/ConfirmDialog'
