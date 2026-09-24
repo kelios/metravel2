@@ -96,7 +96,6 @@ export const profileGenerated2 = {
   "components.settings.DataOwnershipSection.deleteTravelsHint": "Выдаляе вашы падарожжы разам з фотаздымкамі і трэкамі, уключна з чарнавікамі. Спіс «Хачу паехаць» чысціцца на сваім экране.",
   "components.settings.DataOwnershipSection.deleteTravelsLabel": "Выдаліць усе мае падарожжы",
   "components.settings.DataOwnershipSection.udalit_perepisku_eb5f6cf8": "Выдаліць перапіску",
-  "components.settings.DataOwnershipSection.udalyaem_77fa19fc": "Выдаляем…",
   "components.settings.DataOwnershipSection.zaprashivaem_c12db78a": "Запытваем…",
   "components.settings.PrivacySettingsMatrix.auditoriya_value1_14cb181a": "Аўдыторыя: {{value1}}",
   "components.settings.PrivacySettingsMatrix.nastroyki_privatnosti_e8b8f4f1": "Налады прыватнасці",

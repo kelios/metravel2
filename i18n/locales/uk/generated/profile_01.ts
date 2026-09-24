@@ -279,7 +279,6 @@ export const profileGenerated1 = {
   "components.profile.ProtectedContacts.oshibka_327bf4ba": "Помилка",
   "components.profile.ProtectedContacts.otkryt_value1_a2bb4ba1": "Відкрити {{value1}}",
   "components.profile.ProtectedContacts.zapros_na_raskrytie_kontaktov_budet_otpravle_b34f78c5": "Запит на розкриття контактів буде надіслано користувачу. Після схвалення він також побачить ваші контакти. Продовжити?",
-  "components.profile.ProtectedContacts.zapros_na_raskrytie_kontaktov_otpravlen_i_oz_6d521f08": "Запит на розкриття контактів надіслано та очікує схвалення.",
   "components.profile.ProtectedContacts.zapros_otpravlen_34d2fb79": "Запит надіслано",
   "components.profile.ProtectedContacts.zaprosit_49cb2f29": "Запросити",
   "components.profile.ProtectedContacts.zaprosit_kontakty_17ae693d": "Запросити контакти",

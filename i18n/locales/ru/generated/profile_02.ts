@@ -96,7 +96,6 @@ export const profileGenerated2 = {
   "components.settings.DataOwnershipSection.deleteTravelsHint": "Удаляет ваши путешествия вместе с фотографиями и треками, включая черновики. Список «Хочу поехать» чистится на своём экране.",
   "components.settings.DataOwnershipSection.deleteTravelsLabel": "Удалить все мои путешествия",
   "components.settings.DataOwnershipSection.udalit_perepisku_eb5f6cf8": "Удалить переписку",
-  "components.settings.DataOwnershipSection.udalyaem_77fa19fc": "Удаляем…",
   "components.settings.DataOwnershipSection.zaprashivaem_c12db78a": "Запрашиваем…",
   "components.settings.PrivacySettingsMatrix.auditoriya_value1_14cb181a": "Аудитория: {{value1}}",
   "components.settings.PrivacySettingsMatrix.nastroyki_privatnosti_e8b8f4f1": "Настройки приватности",

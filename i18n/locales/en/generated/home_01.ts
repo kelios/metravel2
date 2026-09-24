@@ -130,7 +130,6 @@ export const homeGenerated1 = {
   "components.home.HomeInspirationSection.otkryt_katalog_marshrutov_dlya_sektsii_value_43809a8e": "Open the route directory for the section “{{value1}}”",
   "components.home.HomeInspirationSection.poka_bez_sovpadeniy_6a4a2ee3": "No matches yet",
   "components.home.HomeInspirationSection.poka_zdes_pusto_79cbcf37": "It's empty here for now",
-  "components.home.HomeInspirationSection.poprobuyte_obnovit_podborku_esche_raz_8c32ec8b": "Try updating the selection again.",
   "components.home.HomeInspirationSection.poprobuyte_otkryt_katalog_marshrutov_053c11a6": "Try opening the route directory.",
   "components.home.HomeInspirationSection.smotret_vse_marshruty_b50a25b9": "View all routes",
   "components.home.HomeInspirationSection.vse_marshruty_b0e98d06": "All routes",

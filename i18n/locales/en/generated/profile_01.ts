@@ -279,7 +279,6 @@ export const profileGenerated1 = {
   "components.profile.ProtectedContacts.oshibka_327bf4ba": "Error",
   "components.profile.ProtectedContacts.otkryt_value1_a2bb4ba1": "Open {{value1}}",
   "components.profile.ProtectedContacts.zapros_na_raskrytie_kontaktov_budet_otpravle_b34f78c5": "A request to disclose contacts will be sent to the user. Once approved, he will also see your contacts. Continue?",
-  "components.profile.ProtectedContacts.zapros_na_raskrytie_kontaktov_otpravlen_i_oz_6d521f08": "The contact disclosure request has been submitted and is awaiting approval.",
   "components.profile.ProtectedContacts.zapros_otpravlen_34d2fb79": "Request sent",
   "components.profile.ProtectedContacts.zaprosit_49cb2f29": "Request",
   "components.profile.ProtectedContacts.zaprosit_kontakty_17ae693d": "Request contacts",

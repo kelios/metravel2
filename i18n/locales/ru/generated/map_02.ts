@@ -83,7 +83,6 @@ export const mapGenerated2 = {
   "components.MapPage.TravelListPanel.helpers.mesto_ryadom_54760203": "Место рядом",
   "components.MapPage.TravelListPanel.helpers.value1_value2_ryadom_nazhmite_na_kartochku_c_5d55e8f9": "{{value1}} {{value2}} рядом. Нажмите на карточку, чтобы сфокусировать карту.",
   "components.MapPage.TravelListPanel.helpers.value1_value2_ryadom_s_vami_nazhmite_na_kart_7064c056": "{{value1}} {{value2}} рядом с вами. Нажмите на карточку, чтобы сфокусировать карту.",
-  "components.MapPage.TravelListPanel.helpers.value1_value2_v_radiuse_value3_km_value4_naz_93648c6d": "{{value1}} {{value2}} в радиусе {{value3}} км{{value4}}. Нажмите на карточку, чтобы сфокусировать карту.",
   "components.MapPage.TravelListPanel.mesta_ryadom_a41e7282": "Места рядом",
   "components.MapPage.TravelListPanel.nazhmite_na_kartochku_chtoby_sfokusirovat_ka_9ec94a60": "Нажмите на карточку, чтобы сфокусировать карту.",
   "components.MapPage.TravelListPanel.otkryt_filtry_cc6114eb": "Открыть фильтры",

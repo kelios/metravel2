@@ -130,7 +130,6 @@ export const homeGenerated1 = {
   "components.home.HomeInspirationSection.otkryt_katalog_marshrutov_dlya_sektsii_value_43809a8e": "Адкрыць каталог маршрутаў для секцыі «{{value1}}»",
   "components.home.HomeInspirationSection.poka_bez_sovpadeniy_6a4a2ee3": "Пакуль без супадзенняў",
   "components.home.HomeInspirationSection.poka_zdes_pusto_79cbcf37": "Пакуль тут пуста",
-  "components.home.HomeInspirationSection.poprobuyte_obnovit_podborku_esche_raz_8c32ec8b": "Паспрабуйце абнавіць выбарку яшчэ раз.",
   "components.home.HomeInspirationSection.poprobuyte_otkryt_katalog_marshrutov_053c11a6": "Паспрабуйце адкрыць каталог маршрутаў.",
   "components.home.HomeInspirationSection.smotret_vse_marshruty_b50a25b9": "Глядзець усе маршруты",
   "components.home.HomeInspirationSection.vse_marshruty_b0e98d06": "Усе маршруты",

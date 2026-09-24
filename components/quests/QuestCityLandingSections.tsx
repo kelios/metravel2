@@ -1,13 +1,11 @@
 import React, { useMemo } from 'react'
-import Feather from '@expo/vector-icons/Feather'
-import { Link } from 'expo-router'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 
-import { DESIGN_TOKENS } from '@/constants/designSystem'
 import {
-  QUESTS_LANDING_CARD_MAX_WIDTH,
-  QUESTS_LANDING_CARD_MIN_WIDTH,
-} from '@/constants/questLayout'
+  QuestLandingCityLinks,
+  QuestLandingSection,
+  useQuestLandingSectionStyles,
+} from '@/components/quests/QuestLandingLayout'
 import { useTranslation } from '@/i18n/LocaleProvider'
 import { formatInteger } from '@/i18n/format'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
@@ -44,7 +42,8 @@ const DIFFICULTY_KEYS: Record<string, string> = {
 export default function QuestCityLandingSections({ city, nearbyCities, walk }: Props) {
   const colors = useThemedColors()
   const { t } = useTranslation()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const styles = useQuestLandingSectionStyles(colors)
+  const placeStyles = useMemo(() => createPlaceStyles(colors), [colors])
   const cityName = city.cityName || city.segment
   const questCount = city.quests.length
   const pointCount = city.quests.reduce((sum, quest) => sum + (Number(quest.points) || 0), 0)
@@ -128,39 +127,31 @@ export default function QuestCityLandingSections({ city, nearbyCities, walk }: P
 
   return (
     <>
-      <View style={styles.section} testID="quest-city-overview">
-        <View style={styles.titleRow}>
-          <Feather name="map-pin" size={18} color={colors.primary} aria-hidden />
-          <Text
-            accessibilityRole="header"
-            {...({ 'aria-level': 2 } as Record<string, unknown>)}
-            style={styles.title}
-          >
-            {t('quests:app.tabs.quests.city.index.overviewTitle', { value1: cityName })}
-          </Text>
-        </View>
+      <QuestLandingSection
+        styles={styles}
+        colors={colors}
+        testID="quest-city-overview"
+        icon="map-pin"
+        title={t('quests:app.tabs.quests.city.index.overviewTitle', { value1: cityName })}
+      >
         <Text style={styles.body}>{overview}</Text>
-      </View>
+      </QuestLandingSection>
 
       {walkPlaces.length > 0 ? (
-        <View style={styles.section} testID="quest-city-walk">
-          <View style={styles.titleRow}>
-            <Feather name="camera" size={18} color={colors.primary} aria-hidden />
-            <Text
-              accessibilityRole="header"
-              {...({ 'aria-level': 2 } as Record<string, unknown>)}
-              style={styles.title}
-            >
-              {t('quests:app.tabs.quests.city.index.walkTitle', { value1: cityName })}
-            </Text>
-          </View>
+        <QuestLandingSection
+          styles={styles}
+          colors={colors}
+          testID="quest-city-walk"
+          icon="camera"
+          title={t('quests:app.tabs.quests.city.index.walkTitle', { value1: cityName })}
+        >
           <Text style={styles.body}>{t('quests:app.tabs.quests.city.index.walkLead')}</Text>
           {walkPlaces.map((place) => (
-            <View key={`${place.questId}-${place.pointIndex}`} style={styles.place}>
+            <View key={`${place.questId}-${place.pointIndex}`} style={placeStyles.place}>
               <Text
                 accessibilityRole="header"
                 {...({ 'aria-level': 3 } as Record<string, unknown>)}
-                style={styles.placeTitle}
+                style={placeStyles.placeTitle}
               >
                 {place.location ? `${place.title} — ${place.location}` : place.title}
               </Text>
@@ -184,129 +175,71 @@ export default function QuestCityLandingSections({ city, nearbyCities, walk }: P
               {t('quests:app.tabs.quests.city.index.walkMore', { value1: otherPlaces.join(', ') })}
             </Text>
           ) : null}
-        </View>
+        </QuestLandingSection>
       ) : null}
 
       {routeParagraphs.length > 0 ? (
-        <View style={styles.section} testID="quest-city-routes">
-          <View style={styles.titleRow}>
-            <Feather name="list" size={18} color={colors.primary} aria-hidden />
-            <Text
-              accessibilityRole="header"
-              {...({ 'aria-level': 2 } as Record<string, unknown>)}
-              style={styles.title}
-            >
-              {t('quests:app.tabs.quests.city.index.routesStructureTitle')}
-            </Text>
-          </View>
+        <QuestLandingSection
+          styles={styles}
+          colors={colors}
+          testID="quest-city-routes"
+          icon="list"
+          title={t('quests:app.tabs.quests.city.index.routesStructureTitle')}
+        >
           {routeParagraphs.map((paragraph) => (
             <Text key={paragraph.questId} style={styles.body}>
               {paragraph.text}
             </Text>
           ))}
-        </View>
+        </QuestLandingSection>
       ) : null}
 
-      <View style={styles.section} testID="quest-city-practical">
-        <View style={styles.titleRow}>
-          <Feather name="sun" size={18} color={colors.primary} aria-hidden />
-          <Text
-            accessibilityRole="header"
-            {...({ 'aria-level': 2 } as Record<string, unknown>)}
-            style={styles.title}
-          >
-            {t('quests:app.tabs.quests.city.index.practiceTitle')}
-          </Text>
-        </View>
+      <QuestLandingSection
+        styles={styles}
+        colors={colors}
+        testID="quest-city-practical"
+        icon="sun"
+        title={t('quests:app.tabs.quests.city.index.practiceTitle')}
+      >
         <Text style={styles.body}>{practice}</Text>
         <Text style={styles.note}>
           {t('quests:app.tabs.quests.city.index.practiceNote')}
         </Text>
-      </View>
+      </QuestLandingSection>
 
       {nearbyCities.length > 0 ? (
-        <View style={styles.section} testID="quest-city-nearby">
-          <View style={styles.titleRow}>
-            <Feather name="navigation" size={18} color={colors.primary} aria-hidden />
-            <Text
-              accessibilityRole="header"
-              {...({ 'aria-level': 2 } as Record<string, unknown>)}
-              style={styles.title}
-            >
-              {t('quests:app.tabs.quests.city.index.nearbyTitle')}
-            </Text>
-          </View>
+        <QuestLandingSection
+          styles={styles}
+          colors={colors}
+          testID="quest-city-nearby"
+          icon="navigation"
+          title={t('quests:app.tabs.quests.city.index.nearbyTitle')}
+        >
           <Text style={styles.body}>
             {t('quests:app.tabs.quests.city.index.nearbyLead', { value1: cityName })}
           </Text>
-          <View style={styles.nearbyList}>
-            {nearbyCities.map((nearby) => (
-              // Прямому ребёнку `Link asChild` отдаётся ОДИН плоский объект стиля: Slot сливает
-              // стили спредом, поэтому функция `({ pressed }) => [...]` превращается в `{}` и
-              // карточка теряет всю вёрстку. Состояние нажатия живёт на внутренней строке.
-              <Link key={nearby.segment} href={`/quests/${nearby.segment}`} asChild>
-                <Pressable
-                  style={styles.nearbyLink}
-                  accessibilityRole="link"
-                  accessibilityLabel={t('quests:app.tabs.quests.city.index.nearbyA11y', {
-                    value1: nearby.cityName || nearby.segment,
-                    value2: formatDistance(nearby.distanceKm),
-                  })}
-                >
-                  {({ pressed }) => (
-                    <View style={[styles.nearbyRow, pressed && styles.nearbyRowPressed]}>
-                      <View style={styles.nearbyText}>
-                        <Text style={styles.nearbyName}>{nearby.cityName || nearby.segment}</Text>
-                        <Text style={styles.nearbyMeta}>
-                          {pluralizeQuest(nearby.quests.length)} · {formatDistance(nearby.distanceKm)}
-                        </Text>
-                      </View>
-                      <Feather name="arrow-right" size={17} color={colors.primary} aria-hidden />
-                    </View>
-                  )}
-                </Pressable>
-              </Link>
-            ))}
-          </View>
-        </View>
+          <QuestLandingCityLinks
+            styles={styles}
+            colors={colors}
+            links={nearbyCities.map((nearby) => ({
+              key: nearby.segment,
+              href: `/quests/${nearby.segment}`,
+              a11yLabel: t('quests:app.tabs.quests.city.index.nearbyA11y', {
+                value1: nearby.cityName || nearby.segment,
+                value2: formatDistance(nearby.distanceKm),
+              }),
+              name: nearby.cityName || nearby.segment,
+              meta: <>{pluralizeQuest(nearby.quests.length)} · {formatDistance(nearby.distanceKm)}</>,
+            }))}
+          />
+        </QuestLandingSection>
       ) : null}
     </>
   )
 }
 
-function createStyles(colors: ThemedColors) {
+function createPlaceStyles(colors: ThemedColors) {
   return StyleSheet.create({
-    section: {
-      maxWidth: 840,
-      gap: 8,
-      padding: DESIGN_TOKENS.spacing.md,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
-    },
-    titleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    title: {
-      flex: 1,
-      fontSize: 18,
-      lineHeight: 24,
-      fontWeight: '800',
-      color: colors.text,
-    },
-    body: {
-      fontSize: 15,
-      lineHeight: 23,
-      color: colors.textMuted,
-    },
-    note: {
-      fontSize: 13,
-      lineHeight: 20,
-      color: colors.textSubtle,
-    },
     place: {
       gap: 4,
       marginTop: 4,
@@ -316,51 +249,6 @@ function createStyles(colors: ThemedColors) {
       lineHeight: 22,
       fontWeight: '700',
       color: colors.text,
-    },
-    nearbyList: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-      marginTop: 4,
-    },
-    nearbyLink: {
-      flexGrow: 1,
-      flexShrink: 1,
-      flexBasis: QUESTS_LANDING_CARD_MIN_WIDTH,
-      maxWidth: QUESTS_LANDING_CARD_MAX_WIDTH,
-    },
-    // Рамка и фон живут на ВНУТРЕННЕЙ строке: `opacity` нажатия обязана притушить карточку
-    // целиком, а стиль ссылки-ребёнка `Link asChild` не умеет зависеть от `pressed`.
-    // `flexGrow` тянет строку на всю высоту ссылки — соседи по ряду выше, и без него рамка
-    // не дотягивалась бы до низа карточки.
-    nearbyRow: {
-      flexGrow: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      minHeight: 52,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.background,
-    },
-    nearbyRowPressed: {
-      opacity: 0.75,
-    },
-    nearbyText: {
-      flex: 1,
-      gap: 2,
-    },
-    nearbyName: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    nearbyMeta: {
-      fontSize: 12,
-      color: colors.textSubtle,
     },
   })
 }

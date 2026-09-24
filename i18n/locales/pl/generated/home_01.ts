@@ -130,7 +130,6 @@ export const homeGenerated1 = {
   "components.home.HomeInspirationSection.otkryt_katalog_marshrutov_dlya_sektsii_value_43809a8e": "Otwórz katalog tras dla odcinka „{{value1}}”",
   "components.home.HomeInspirationSection.poka_bez_sovpadeniy_6a4a2ee3": "Nie ma jeszcze żadnych meczów",
   "components.home.HomeInspirationSection.poka_zdes_pusto_79cbcf37": "Na razie jest tu pusto",
-  "components.home.HomeInspirationSection.poprobuyte_obnovit_podborku_esche_raz_8c32ec8b": "Spróbuj ponownie zaktualizować wybór.",
   "components.home.HomeInspirationSection.poprobuyte_otkryt_katalog_marshrutov_053c11a6": "Spróbuj otworzyć katalog tras.",
   "components.home.HomeInspirationSection.smotret_vse_marshruty_b50a25b9": "Zobacz wszystkie trasy",
   "components.home.HomeInspirationSection.vse_marshruty_b0e98d06": "Wszystkie trasy",

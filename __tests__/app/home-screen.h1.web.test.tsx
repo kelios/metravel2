@@ -23,8 +23,8 @@ import { Platform } from 'react-native'
 // break hook dispatch with a "more than one copy of React" error.
 jest.mock('@/components/home/Home', () => () => null)
 jest.mock('@/components/seo/LazyInstantSEO', () => () => null)
-jest.mock('@/components/home/HomePageSkeleton', () => ({
-  HomePageSkeleton: () => null,
+jest.mock('@/components/home/HomeSkeletonLayer', () => ({
+  HomeSkeletonLayer: () => null,
 }))
 
 function loadHomeScreen() {

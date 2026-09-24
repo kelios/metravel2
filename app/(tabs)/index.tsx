@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Animated, Platform, StyleSheet, Text, View } from 'react-native'
+import { Animated, Platform, StyleSheet, View } from 'react-native'
 import { usePathname } from 'expo-router'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import ErrorBoundary from '@/components/ui/ErrorBoundary'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import Home from '@/components/home/Home'
-import { HomePageSkeleton } from '@/components/home/HomePageSkeleton'
+import { HomeSkeletonLayer } from '@/components/home/HomeSkeletonLayer'
 import { markSsgFirstScreenReady } from '@/hooks/useHydrationReady'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo'
@@ -123,7 +123,9 @@ function HomeScreen() {
   // Первый экран на web держит SSG-шелл (scripts/ssg-skeletons.js), поэтому
   // React-скелетон там показал бы вторую заглушку поверх первой. Проверено на
   // сборке: в `dist/prod/index.html` есть search/map-скелетоны и нет home.
-  // Значит `HomePageSkeleton` — экран Android (и любой не-web платформы).
+  // Значит `HomePageSkeleton` — экран Android (и любой не-web платформы), и
+  // web-вариант `HomeSkeletonLayer.web.tsx` пустой: разметка скелетона не едет
+  // в веб-чанк главной (#2087).
   const shouldShowSkeleton = !canMountContent || (!IS_WEB && !contentReady)
 
   if (!isHomePath) {
@@ -152,15 +154,7 @@ function HomeScreen() {
           }
         >
           <View style={styles.contentWrapper}>
-            {shouldShowSkeleton && (
-              <View
-                style={styles.skeletonLayer}
-                testID="home-skeleton-layer"
-              >
-                <HomePageSkeleton />
-                {!IS_WEB && <SlowLoadHint colors={colors} />}
-              </View>
-            )}
+            {shouldShowSkeleton && <HomeSkeletonLayer colors={colors} />}
 
             {canMountContent && (
               <ContentLayer
@@ -194,54 +188,6 @@ function ContentLayer({
   }
   return <Animated.View style={[style, { opacity: fadeAnim ?? 1 }]}>{children}</Animated.View>
 }
-
-// Native-only: if the home skeleton stays up longer than SLOW_LOAD_MS, surface a
-// gentle "Загружаем…" hint so a slow device doesn't feel frozen. The component is
-// only mounted while the skeleton layer is shown, so the timer is torn down as
-// soon as content becomes ready.
-const SLOW_LOAD_MS = 4500
-
-const SlowLoadHint = React.memo<{ colors: ReturnType<typeof useThemedColors> }>(({ colors }) => {
-  const [show, setShow] = useState(false)
-  useEffect(() => {
-    const id = setTimeout(() => setShow(true), SLOW_LOAD_MS)
-    return () => clearTimeout(id)
-  }, [])
-
-  if (!show) return null
-
-  return (
-    <View style={slowLoadStyles.wrap} pointerEvents="none">
-      <View style={[slowLoadStyles.pill, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <ActivityIndicator size="small" color={colors.primaryDark} />
-        <Text style={[slowLoadStyles.text, { color: colors.textMuted }]}>{i18nT('home:app.tabs.index.zagruzhaem_4bc2d2f4')}</Text>
-      </View>
-    </View>
-  )
-})
-SlowLoadHint.displayName = 'SlowLoadHint'
-
-const slowLoadStyles = StyleSheet.create({
-  wrap: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingBottom: 120,
-  },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  text: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-})
 
 const HomeWithReadyCallback = React.memo<{ onReady: () => void }>(({ onReady }) => {
   const hasSignaled = useRef(false)
@@ -292,7 +238,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     }) as any,
     errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
     contentWrapper: { flex: 1, position: 'relative' as const },
-    skeletonLayer: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
     contentLayer: { flex: 1 },
   })
 

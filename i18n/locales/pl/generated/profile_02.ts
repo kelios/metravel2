@@ -96,7 +96,6 @@ export const profileGenerated2 = {
   "components.settings.DataOwnershipSection.deleteTravelsHint": "Usuwa Twoje podróże wraz ze zdjęciami i trasami, w tym robocze. Listę „Chcę iść” czyścisz na jej własnym ekranie.",
   "components.settings.DataOwnershipSection.deleteTravelsLabel": "Usuń wszystkie moje podróże",
   "components.settings.DataOwnershipSection.udalit_perepisku_eb5f6cf8": "Usuń korespondencję",
-  "components.settings.DataOwnershipSection.udalyaem_77fa19fc": "Usuńmy...",
   "components.settings.DataOwnershipSection.zaprashivaem_c12db78a": "pytamy...",
   "components.settings.PrivacySettingsMatrix.auditoriya_value1_14cb181a": "Odbiorcy: {{value1}}",
   "components.settings.PrivacySettingsMatrix.nastroyki_privatnosti_e8b8f4f1": "Ustawienia prywatności",

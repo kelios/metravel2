@@ -666,6 +666,31 @@ export default function QuestsScreen() {
         );
     }, [ALL_QUESTS, dismissReviewPrompt, reviewPrompt]);
 
+    // Один набор пропсов на мобильный drawer и десктопную колонку (#2087).
+    const sidebarProps: React.ComponentProps<typeof QuestsSidebar> = {
+        styles: s,
+        colors,
+        viewMode,
+        selectedCityId,
+        activeCountryCode,
+        nearbyRequesting: geoRequesting,
+        nearbyId: NEARBY_ID,
+        kidsFilterId: KIDS_FILTER_ID,
+        bikeFilterId: BIKE_FILTER_ID,
+        showCompletedFilter: personalSlices.showCompletedFilter,
+        showCompletedByOthersFilter: personalSlices.showCompletedByOthersFilter,
+        showUncompletedFilter: personalSlices.showUncompletedFilter,
+        areAllCountryGroupsCollapsed,
+        collapsedCountryCodes,
+        citiesByCountry,
+        cityQuestCountById,
+        spacingMd: spacing.md,
+        onSelectCity: handleSelectCity,
+        onSetViewMode: handleSetViewMode,
+        onToggleCountryGroup: handleToggleCountryGroup,
+        onToggleAllCountryGroups: handleToggleAllCountryGroups,
+    };
+
     return (
         <View style={s.root as ViewStyle} testID="quests-root">
             {isFocused && (
@@ -691,27 +716,7 @@ export default function QuestsScreen() {
                     />
                     <View style={s.sidebarMobile as ViewStyle}>
                         <QuestsSidebar
-                            styles={s}
-                            colors={colors}
-                            viewMode={viewMode}
-                            selectedCityId={selectedCityId}
-                            activeCountryCode={activeCountryCode}
-                            nearbyRequesting={geoRequesting}
-                            nearbyId={NEARBY_ID}
-                            kidsFilterId={KIDS_FILTER_ID}
-                            bikeFilterId={BIKE_FILTER_ID}
-                            showCompletedFilter={personalSlices.showCompletedFilter}
-                            showCompletedByOthersFilter={personalSlices.showCompletedByOthersFilter}
-                            showUncompletedFilter={personalSlices.showUncompletedFilter}
-                            areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
-                            collapsedCountryCodes={collapsedCountryCodes}
-                            citiesByCountry={citiesByCountry}
-                            cityQuestCountById={cityQuestCountById}
-                            spacingMd={spacing.md}
-                            onSelectCity={handleSelectCity}
-                            onSetViewMode={handleSetViewMode}
-                            onToggleCountryGroup={handleToggleCountryGroup}
-                            onToggleAllCountryGroups={handleToggleAllCountryGroups}
+                            {...sidebarProps}
                             onCloseDrawer={() => setFilterDrawerOpen(false)}
                         />
                     </View>
@@ -723,30 +728,7 @@ export default function QuestsScreen() {
                 this slot still allocates its final width before the first paint. */}
             <View style={s.desktopSidebarSlot as ViewStyle} testID="quests-desktop-sidebar-slot">
                 {!isMobile && (
-                    <QuestsSidebar
-                        styles={s}
-                        colors={colors}
-                        testID="quests-desktop-sidebar"
-                        viewMode={viewMode}
-                        selectedCityId={selectedCityId}
-                        activeCountryCode={activeCountryCode}
-                        nearbyRequesting={geoRequesting}
-                        nearbyId={NEARBY_ID}
-                        kidsFilterId={KIDS_FILTER_ID}
-                        bikeFilterId={BIKE_FILTER_ID}
-                        showCompletedFilter={personalSlices.showCompletedFilter}
-                        showCompletedByOthersFilter={personalSlices.showCompletedByOthersFilter}
-                        showUncompletedFilter={personalSlices.showUncompletedFilter}
-                        areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
-                        collapsedCountryCodes={collapsedCountryCodes}
-                        citiesByCountry={citiesByCountry}
-                        cityQuestCountById={cityQuestCountById}
-                        spacingMd={spacing.md}
-                        onSelectCity={handleSelectCity}
-                        onSetViewMode={handleSetViewMode}
-                        onToggleCountryGroup={handleToggleCountryGroup}
-                        onToggleAllCountryGroups={handleToggleAllCountryGroups}
-                    />
+                    <QuestsSidebar {...sidebarProps} testID="quests-desktop-sidebar" />
                 )}
             </View>
 

@@ -279,7 +279,6 @@ export const profileGenerated1 = {
   "components.profile.ProtectedContacts.oshibka_327bf4ba": "Błąd",
   "components.profile.ProtectedContacts.otkryt_value1_a2bb4ba1": "Otwórz {{value1}}",
   "components.profile.ProtectedContacts.zapros_na_raskrytie_kontaktov_budet_otpravle_b34f78c5": "Do użytkownika zostanie wysłana prośba o ujawnienie kontaktów. Po zatwierdzeniu zobaczy także Twoje kontakty. Kontynuować?",
-  "components.profile.ProtectedContacts.zapros_na_raskrytie_kontaktov_otpravlen_i_oz_6d521f08": "Prośba o ujawnienie danych kontaktowych została przesłana i oczekuje na zatwierdzenie.",
   "components.profile.ProtectedContacts.zapros_otpravlen_34d2fb79": "Zapytanie wysłane",
   "components.profile.ProtectedContacts.zaprosit_49cb2f29": "Żądanie",
   "components.profile.ProtectedContacts.zaprosit_kontakty_17ae693d": "Poproś o kontakty",

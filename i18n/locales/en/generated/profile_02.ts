@@ -96,7 +96,6 @@ export const profileGenerated2 = {
   "components.settings.DataOwnershipSection.deleteTravelsHint": "Deletes your travels along with their photos and tracks, drafts included. Your “I want to go” list is cleared on its own screen.",
   "components.settings.DataOwnershipSection.deleteTravelsLabel": "Delete all my travels",
   "components.settings.DataOwnershipSection.udalit_perepisku_eb5f6cf8": "Delete correspondence",
-  "components.settings.DataOwnershipSection.udalyaem_77fa19fc": "Let's delete...",
   "components.settings.DataOwnershipSection.zaprashivaem_c12db78a": "We are asking...",
   "components.settings.PrivacySettingsMatrix.auditoriya_value1_14cb181a": "Audience: {{value1}}",
   "components.settings.PrivacySettingsMatrix.nastroyki_privatnosti_e8b8f4f1": "Privacy Settings",
