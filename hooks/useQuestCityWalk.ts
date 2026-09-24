@@ -4,11 +4,7 @@ import { useQueries } from '@tanstack/react-query'
 
 import type { ApiQuestBundle } from '@/api/quests'
 import { questBundleQueryOptions } from '@/hooks/questBundleQuery'
-import {
-  buildQuestCityWalkModel,
-  questCityWalkQuestIds,
-  type QuestCityWalkModel,
-} from '@/utils/questCityWalk'
+import type { QuestCityWalkModel } from '@/utils/questCityWalk'
 import type { QuestMeta } from '@/utils/questAdapters'
 
 /**
@@ -35,6 +31,52 @@ import type { QuestMeta } from '@/utils/questAdapters'
  * Дедлайн простоя — не дольше 1000 мс по «Timeout policy» (#2020).
  */
 const QUEST_CITY_WALK_IDLE_TIMEOUT = 1000
+
+/**
+ * Разбор бандлов (`utils/questCityWalk` + `utils/questStoryText`, ~11 KB) живёт
+ * за async-границей (#2082). На первом кадре он не исполняется ни разу — бандлы
+ * приходят только после простоя, — а синхронным импортом ехал в стартовом чанке
+ * маршрута города. Этот хук — единственный потребитель в приложении, значит и
+ * единственный корень чанка (канон `hooks/useCountryCodeByCoords.ts`). Загрузка
+ * стартует при монтировании, параллельно ожиданию простоя, поэтому запросы
+ * бандлов не ждут лишнего круга сети.
+ */
+type QuestCityWalkRuntime = typeof import('@/utils/questCityWalk')
+
+let questCityWalkRuntimePromise: Promise<QuestCityWalkRuntime> | null = null
+
+function loadQuestCityWalkRuntime(): Promise<QuestCityWalkRuntime> {
+  if (!questCityWalkRuntimePromise) {
+    questCityWalkRuntimePromise = Promise.resolve(import('@/utils/questCityWalk')).catch((error) => {
+      // Следующий заход на посадочную пробует снова, а не наследует отказ.
+      questCityWalkRuntimePromise = null
+      throw error
+    })
+  }
+  return questCityWalkRuntimePromise
+}
+
+function useQuestCityWalkRuntime(enabled: boolean): QuestCityWalkRuntime | null {
+  const [runtime, setRuntime] = useState<QuestCityWalkRuntime | null>(null)
+
+  useEffect(() => {
+    if (!enabled || runtime) return undefined
+    let active = true
+    loadQuestCityWalkRuntime()
+      .then((loaded) => {
+        if (active) setRuntime(loaded)
+      })
+      .catch(() => {
+        // Чанк не догрузился — секции заметок нет, как при недоступных бандлах;
+        // статический блок SSG остаётся на странице.
+      })
+    return () => {
+      active = false
+    }
+  }, [enabled, runtime])
+
+  return runtime
+}
 
 type IdleWindow = Window & {
   requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number
@@ -72,20 +114,25 @@ export function useQuestCityWalk(
 ): QuestCityWalkModel | null {
   const enabled = opts?.enabled !== false
   const ready = useDeferredUntilIdle(enabled)
+  const runtime = useQuestCityWalkRuntime(enabled)
 
-  const walkQuestIds = useMemo(() => questCityWalkQuestIds(quests), [quests])
+  const walkQuestIds = useMemo(
+    () => (runtime ? runtime.questCityWalkQuestIds(quests) : []),
+    [quests, runtime],
+  )
 
   const combine = useCallback(
     (results: { data?: ApiQuestBundle }[]): QuestCityWalkModel | null => {
+      if (!runtime) return null
       const bundles = new Map<string, ApiQuestBundle>()
       results.forEach((result, index) => {
         const questId = walkQuestIds[index]
         if (questId && result.data) bundles.set(questId, result.data)
       })
       if (bundles.size === 0) return null
-      return buildQuestCityWalkModel(quests, bundles)
+      return runtime.buildQuestCityWalkModel(quests, bundles)
     },
-    [quests, walkQuestIds],
+    [quests, runtime, walkQuestIds],
   )
 
   return useQueries({

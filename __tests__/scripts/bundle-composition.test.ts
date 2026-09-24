@@ -125,6 +125,15 @@ const LAZY_ONLY_MODULES = [
     allowedSyncImporters: [] as string[],
     ticket: '#1552',
   },
+  // #2082: разбор бандлов квестов для заметок о местах города (~11 KB вместе с
+  // `utils/questStoryText.js`) исполняется только после простоя, когда бандлы уже
+  // пришли. Синхронным импортом он ехал в стартовом чанке `quests/[city]`, и
+  // сумма `index`-чанков вышла за бюджет. Типы (`import type`) не в счёт.
+  {
+    module: '@/utils/questCityWalk',
+    allowedSyncImporters: [] as string[],
+    ticket: '#2082',
+  },
 ]
 
 /**
@@ -150,6 +159,11 @@ const DYNAMIC_IMPORT_CHOKEPOINTS: Array<{ specifier: string; owner: string; tick
     specifier: './travelOfflineAdapter',
     owner: 'services/offline/loadTravelOfflineAdapter.ts',
     ticket: '#1552',
+  },
+  {
+    specifier: '@/utils/questCityWalk',
+    owner: 'hooks/useQuestCityWalk.ts',
+    ticket: '#2082',
   },
 ]
 
