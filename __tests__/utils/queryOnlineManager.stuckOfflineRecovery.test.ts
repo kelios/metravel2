@@ -266,7 +266,7 @@ describe('queryOnlineManager: recovery from a stuck offline state (#603)', () =>
     expect(mockNetInfo.refreshCalls).toBe(0);
   });
 
-  it('leaves web on navigator.onLine without NetInfo or AppState', async () => {
+  it('leaves web reachability independent of NetInfo and AppState', async () => {
     const runtime = loadRuntime('web');
     runtime.setupQueryOnlineManager();
     await flush(60_000);

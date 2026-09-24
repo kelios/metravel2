@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Platform } from 'react-native';
+import { subscribeWebNetworkStatus } from '@/utils/webNetworkStatus';
 
 interface NetInfoStateLike {
   isConnected?: boolean | null;
@@ -13,27 +14,6 @@ interface NetInfoStateLike {
 interface NetInfoModuleLike {
   fetch: () => Promise<NetInfoStateLike>;
   addEventListener: (listener: (state: NetInfoStateLike) => void) => () => void;
-}
-
-async function checkWebReachability(): Promise<boolean> {
-  if (typeof window === 'undefined' || typeof fetch === 'undefined') {
-    return false;
-  }
-
-  try {
-    const url = new URL('/favicon.ico', window.location.origin);
-    url.searchParams.set('__network_probe', String(Date.now()));
-
-    const response = await fetch(url.toString(), {
-      method: 'HEAD',
-      cache: 'no-store',
-      credentials: 'same-origin',
-    });
-
-    return response.ok;
-  } catch {
-    return false;
-  }
 }
 
 export interface NetworkStatus {
@@ -54,54 +34,17 @@ export function useNetworkStatus(): NetworkStatus {
   });
 
   useEffect(() => {
-    // Per-instance состояние: module-global probe-id шарился между инстансами хука
-    // и поздний инстанс инвалидировал legit-probe раннего. cancelled гасит async после unmount.
     let cancelled = false;
-    let probeSeq = 0;
 
-    // Для web используем нативный API
+    // Queries, offline UI and write queues must agree on web reachability.
     if (Platform.OS === 'web') {
-      if (typeof window === 'undefined' || !('navigator' in window)) {
-        return;
-      }
-
-      const applyStatus = (isOnline: boolean) => {
-        if (cancelled) return;
+      return subscribeWebNetworkStatus((isOnline) => {
         setNetworkStatus({
           isConnected: isOnline,
           isInternetReachable: isOnline,
           type: 'unknown',
         });
-      };
-
-      const updateStatus = () => {
-        const isOnline = navigator.onLine;
-
-        if (isOnline) {
-          probeSeq += 1;
-          applyStatus(true);
-          return;
-        }
-
-        const probeId = ++probeSeq;
-        void checkWebReachability().then((isReachable) => {
-          if (cancelled || probeId !== probeSeq) return;
-          applyStatus(isReachable);
-        });
-      };
-
-      // Устанавливаем начальное состояние
-      updateStatus();
-
-      // Слушаем изменения
-      window.addEventListener('online', updateStatus);
-      window.addEventListener('offline', updateStatus);
-
-      return () => {
-        cancelled = true;
-        window.removeEventListener('online', updateStatus);
-        window.removeEventListener('offline', updateStatus);
-      };
+      });
     }
 
     // Для native используем NetInfo (требует установки @react-native-community/netinfo)

@@ -1,6 +1,7 @@
 import { onlineManager } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 import { setupNativeQueryOnlineListener } from '@/utils/nativeQueryOnlineListener';
+import { subscribeWebNetworkStatus } from '@/utils/webNetworkStatus';
 
 export interface QueryNetworkState {
   isConnected?: boolean | null;
@@ -20,7 +21,7 @@ export function isQueryNetworkOnline(state: QueryNetworkState): boolean {
  * Native starts conservatively offline until NetInfo resolves, which prevents
  * an offline cold start from firing a first doomed request. The native listener
  * (NetInfo + AppState recheck, #603) lives in a `.native.ts` file so the web
- * bundle keeps only the navigator.onLine path below.
+ * bundle uses the shared HTTP reachability check when navigator.onLine is false.
  */
 export function setupQueryOnlineManager(): void {
   if (configured) return;
@@ -28,20 +29,7 @@ export function setupQueryOnlineManager(): void {
 
   onlineManager.setEventListener((setOnline) => {
     if (Platform.OS === 'web') {
-      if (typeof window === 'undefined' || typeof navigator === 'undefined') {
-        setOnline(true);
-        return undefined;
-      }
-
-      const update = () => setOnline(navigator.onLine !== false);
-      update();
-      window.addEventListener('online', update);
-      window.addEventListener('offline', update);
-
-      return () => {
-        window.removeEventListener('online', update);
-        window.removeEventListener('offline', update);
-      };
+      return subscribeWebNetworkStatus(setOnline);
     }
 
     return setupNativeQueryOnlineListener(setOnline, isQueryNetworkOnline);

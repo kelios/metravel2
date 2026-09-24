@@ -1171,6 +1171,36 @@ guard, падающий в CI на попытке обойти этот конт
 - **Последняя проверка:** 2026-07-28; recurrence confirmed, structural sprint
   planned.
 
+### WEB-FALSE-OFFLINE-001 — Chrome останавливает запросы при доступной сети
+
+- **Семейство/цепочка:** OFFLINE-001, отдельная web-причина `#2111`, связана с
+  `#603` (native NetInfo/AppState) и `#2078` (отображение paused first-load).
+  Вердикт `create-linked`: причины `#603/#2078` не переоткрываются.
+- **Инвариант:** отрицательный `navigator.onLine` — предварительный сигнал;
+  если реальный HTTP из этой же вкладки доступен, каталоги и карта выполняют
+  запросы и выходят из загрузки. Настоящий offline сохраняет существующую
+  работу с кэшем и возобновлением запросов.
+- **Подтверждение 2026-09-25:** в Chrome на production SHA `0495a30a0` страницы
+  `/quests` и `/map` сообщали `navigator.onLine=false`; в той же вкладке
+  `GET /health` вернул `200 {status:'ok'}`, но запросов каталога не было.
+  Контроль в здоровом in-app browser `/search`: ответы API `200`, всего 425
+  путешествий, при выборе 2026 года — 13. Масштаб за пределами этой сессии
+  не измерялся.
+- **Подтверждённая причина:** `utils/queryOnlineManager.ts` напрямую переносил
+  отрицательный browser hint в `onlineManager`, а `networkMode:'online'`
+  останавливал query до первого запроса. Прежние проверки покрывали реальное
+  отключение сети и native NetInfo, не расхождение browser hint с HTTP.
+- **Корректирующий слой:** один web-источник `utils/webNetworkStatus.ts` для
+  React Query и `hooks/useNetworkStatus.ts`; проверка same-origin ресурса только
+  при отрицательном сигнале, ограниченные повторы и общий результат подписчиков.
+- **Контроль #2111:** `__tests__/utils/queryOnlineManager.webReachability.web.test.ts`
+  должен проверять исполнение query при ложном offline и доступном HTTP,
+  настоящую паузу, восстановление, дедупликацию, deadline и отписку. Приёмка —
+  production Chrome desktop/mobile web; на момент заведения ещё не завершена.
+- **Решение при повторе:** та же web-причина переоткрывает `#2111`; дефект
+  native NetInfo остаётся в `#603/#2110`, отображение корректной паузы — в
+  отдельной UI-карточке после сопоставления механизма.
+
 ### OFFLINE-002 — персональные данные в общем кэше устройства
 
 - **Инвариант:** публичный offline payload не содержит состояние текущего
@@ -3504,7 +3534,9 @@ guard, падающий в CI на попытке обойти этот конт
   checks, paired mobile-web/Android screenshots and keyboard/device flows.
 - **Решение для новой жалобы:** search this family first. Reuse an open shared
   shell task; create-linked only when the owning layout primitive differs.
-- **Последняя проверка:** recurring family, no single canonical structural task.
+- **Каноническая структурная задача:** #2097 (`useBottomChromeInset` +
+  `guard:bottom-chrome-inset`). Клавиатурный подъём остаётся у #1072.
+- **Последняя проверка:** 2026-09-25, #2097 в работе.
 
 ### NATIVE-TEXT-ROW-001 — dynamic Text must have an explicit row sizing contract
 
