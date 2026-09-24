@@ -360,8 +360,12 @@ test.describe('#1542 square quest cover tile', () => {
 
       await gotoWithRetry(page, `/quests/1/${QUEST_ID}`)
       const finaleSection = page.getByRole('region', { name: 'Следующий квест рядом' })
+      // #2010: до прокрутки на месте блока стоит только якорь — каталог для
+      // блока уходит, когда его место дошло до экрана (исключение «Web loading
+      // and hydration policy», docs/RULES.md), а финал открывается сверху.
+      const finaleSlot = page.getByTestId('quest-next-step-anchor').or(finaleSection).first()
       const startButton = page.getByRole('button', { name: 'Начать квест' })
-      await expect(finaleSection.or(startButton).first()).toBeVisible({ timeout: WAIT_MS })
+      await expect(finaleSlot.or(startButton).first()).toBeVisible({ timeout: WAIT_MS })
       if (await startButton.isVisible()) {
         await startButton.click()
         const answer = page.getByRole('textbox').first()
@@ -372,6 +376,11 @@ test.describe('#1542 square quest cover tile', () => {
           timeout: 30_000,
         })
       }
+      // Докручиваем до якоря или блока, как игрок. Якорь может отцепиться
+      // посреди прокрутки — шаг повторяется (как в quest-return-loop.spec.ts).
+      await expect(async () => {
+        await finaleSlot.scrollIntoViewIfNeeded({ timeout: 5_000 })
+      }).toPass({ timeout: WAIT_MS })
       await expect(finaleSection).toBeVisible({ timeout: WAIT_MS })
       const finale = await measureTile(page, NEAR_QUEST_ID)
       finale.surface = 'quest-finale'

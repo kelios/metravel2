@@ -238,6 +238,7 @@ type ClippedLabel = {
 type LabelAudit = {
   buttons: number
   labels: number
+  svgLabels: number
   measuredTestIds: string[]
   clipped: ClippedLabel[]
 }
@@ -249,6 +250,14 @@ type LabelAudit = {
  * Высота меряется так же: слой переносит длинную подпись, но держит её в двух
  * строках (`labelNumberOfLines={2}`), и подпись, которой нужна третья строка,
  * срезается по высоте — это такая же обрезка.
+ *
+ * SVG-текст меряется своей рамкой (#2059: номер на капле маркера карты — кнопка
+ * Leaflet с `role="button"`). `<text>` живёт не в CSS-боксе: его `scrollHeight`
+ * Chromium считает по `line-height`, унаследованному от `.leaflet-container`
+ * (1.5), хотя SVG-текст строк не рисует, и у целиком видимой цифры высотой
+ * 15 px выходило «нужно 18». Срезать SVG-текст может только вьюпорт его `<svg>`
+ * (`overflow: hidden`), поэтому нужный размер — рамка текста, а видимый — её
+ * пересечение с рамкой `<svg>`.
  */
 const auditButtonLabels = (panel: Locator) =>
   panel.evaluate((root): LabelAudit => {
@@ -256,11 +265,12 @@ const auditButtonLabels = (panel: Locator) =>
     const clipped: ClippedLabel[] = []
     const measuredTestIds: string[] = []
     let labels = 0
+    let svgLabels = 0
 
     for (const button of buttons) {
       const testId = button.getAttribute('data-testid')
       if (testId) measuredTestIds.push(testId)
-      const nodes = [button, ...Array.from(button.querySelectorAll<HTMLElement>('*'))]
+      const nodes: Element[] = [button, ...Array.from(button.querySelectorAll('*'))]
       for (const node of nodes) {
         const ownText = Array.from(node.childNodes)
           .filter((child) => child.nodeType === Node.TEXT_NODE)
@@ -269,22 +279,37 @@ const auditButtonLabels = (panel: Locator) =>
           .trim()
         if (!ownText) continue
         labels += 1
-        const clippedWidth = node.scrollWidth > node.clientWidth + 1
-        const clippedHeight = node.scrollHeight > node.clientHeight + 1
+        const svg = node instanceof SVGElement ? node.closest('svg') : null
+        let size = {
+          scrollWidth: node.scrollWidth,
+          clientWidth: node.clientWidth,
+          scrollHeight: node.scrollHeight,
+          clientHeight: node.clientHeight,
+        }
+        if (svg) {
+          svgLabels += 1
+          const text = node.getBoundingClientRect()
+          const frame = svg.getBoundingClientRect()
+          size = {
+            scrollWidth: text.width,
+            clientWidth: Math.max(0, Math.min(text.right, frame.right) - Math.max(text.left, frame.left)),
+            scrollHeight: text.height,
+            clientHeight: Math.max(0, Math.min(text.bottom, frame.bottom) - Math.max(text.top, frame.top)),
+          }
+        }
+        const clippedWidth = size.scrollWidth > size.clientWidth + 1
+        const clippedHeight = size.scrollHeight > size.clientHeight + 1
         if (clippedWidth || clippedHeight) {
           clipped.push({
-            button: testId ?? button.getAttribute('aria-label') ?? '',
+            button: testId ?? button.getAttribute('aria-label') ?? button.getAttribute('title') ?? '',
             text: ownText,
-            scrollWidth: node.scrollWidth,
-            clientWidth: node.clientWidth,
-            scrollHeight: node.scrollHeight,
-            clientHeight: node.clientHeight,
+            ...size,
           })
         }
       }
     }
 
-    return { buttons: buttons.length, labels, measuredTestIds, clipped }
+    return { buttons: buttons.length, labels, svgLabels, measuredTestIds, clipped }
   })
 
 const box = async (locator: Locator) => {
@@ -307,6 +332,14 @@ test.describe('Planned trip route tab — button labels are never clipped (#2053
       const card = block.getByTestId('trip-route-import-stored-original')
       await expect(card).toBeVisible({ timeout: 30_000 })
       await expect(panel.getByTestId('route-order-suggest').first()).toBeVisible()
+      // Маркеры карты — тоже кнопки вкладки с подписью-номером (#2059). Карта
+      // дорисовывается после блока «Файл маршрута», и без ожидания замер то
+      // застаёт маркеры, то нет: guard ждёт все номера, а не проскакивает их.
+      for (const [index, point] of savedPoints.entries()) {
+        await expect(
+          panel.getByRole('button', { name: `${index + 1}. ${point.title}`, exact: true }),
+        ).toBeVisible()
+      }
       // Ширина подписи зависит от шрифта: меряем после его загрузки.
       await page.evaluate(async () => {
         await document.fonts.ready
@@ -315,6 +348,7 @@ test.describe('Planned trip route tab — button labels are never clipped (#2053
       const audit = await auditButtonLabels(panel)
       expect(audit.measuredTestIds).toEqual(expect.arrayContaining(REQUIRED_BUTTONS))
       expect(audit.labels).toBeGreaterThan(REQUIRED_BUTTONS.length)
+      expect(audit.svgLabels, 'map marker numbers measured').toBeGreaterThanOrEqual(savedPoints.length)
       expect(audit.clipped, `clipped labels among ${audit.buttons} buttons`).toEqual([])
 
       // Блок «Файл маршрута» по макету §1: импорт во всю ширину, под ним GPX и
