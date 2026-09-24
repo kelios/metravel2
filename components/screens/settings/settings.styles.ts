@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
+import { asBottomDimension, webBottomChromeInset } from '@/components/layout/bottomChromeInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { LAYOUT } from '@/constants/layout';
 import type { useThemedColors } from '@/hooks/useTheme';
 
 const CARD_RADIUS = DESIGN_TOKENS.radii.lg;
@@ -8,17 +8,17 @@ const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
 const MEDIA_RADIUS = DESIGN_TOKENS.radii.md;
 const PILL_RADIUS = DESIGN_TOKENS.radii.pill;
 
-export const createSettingsStyles = (colors: ReturnType<typeof useThemedColors>) =>
+export const createSettingsStyles = (
+  colors: ReturnType<typeof useThemedColors>,
+  dockPadding: number | string = 0,
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.mutedBackground,
     },
     scrollContent: {
-      paddingBottom: Platform.select({
-        web: 24,
-        default: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xxxl,
-      }),
+      paddingBottom: asBottomDimension(Platform.OS === 'web' ? webBottomChromeInset(24) : dockPadding),
     },
     pageContainer: {
       width: '100%',

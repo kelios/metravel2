@@ -1,6 +1,6 @@
 import React, { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, StatusBar as RNStatusBar, StyleSheet, View, LogBox, useColorScheme, useWindowDimensions } from "react-native";
-import { SplashScreen, Stack, usePathname } from "expo-router";
+import { DarkTheme, DefaultTheme, SplashScreen, Stack, ThemeProvider as NavigationThemeProvider, usePathname } from "expo-router";
 import AppProviders from "@/components/layout/AppProviders";
 import NativeAppRuntime from "@/components/layout/NativeAppRuntime";
 import QuestProgressQueueRuntime from "@/components/quests/QuestProgressQueueRuntime";
@@ -30,12 +30,14 @@ import { setActiveQueryClient } from "@/api/activeQueryClient";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
+import { navigationThemeColors } from "@/components/layout/navigationTheme";
 import SkipLinks from '@/components/layout/SkipLinks';
 import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnostics';
 import { installQaDebug } from '@/utils/qaDebug';
 import { useAriaHiddenFocusGuard } from "@/hooks/useAriaHiddenFocusGuard";
 import { useWebScrollDelegation } from "@/hooks/useWebScrollDelegation";
 import { setToastDockInset } from "@/utils/toast";
+import { BottomChromeInsetProvider } from "@/components/layout/bottomChromeInset";
 import { ROOT_ICON_FONTS } from '@/components/layout/rootIconFonts';
 
 if (__DEV__) {
@@ -255,13 +257,17 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
     });
 
     /** === динамическая высота ДОКА футера (только иконки) === */
-    const [, setDockHeightState] = useState(0);
+    // null — замера ещё не было (экраны берут фолбэк). 0 — док скрыт.
+    const [dockHeight, setDockHeightState] = useState<number | null>(null);
     // Feed the real dock height to the toast module so bottom toasts clear the
     // tab bar exactly (the bug: «Добавлено в план» toast rendered under the dock).
     const setDockHeight = useCallback((h: number) => {
         setDockHeightState(h);
         setToastDockInset(h);
     }, []);
+    useEffect(() => {
+        if (!showFooter) setDockHeight(0);
+    }, [showFooter, setDockHeight]);
     
     /** === SSR-safe Toast: рендерим только на клиенте === */
     const [isMounted, setIsMounted] = useState(false);
@@ -372,6 +378,7 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
             pathname={effectivePathname}
             currentColorScheme={colorScheme}
             setDockHeight={setDockHeight}
+            measuredDockHeight={dockHeight}
             isMounted={isMounted}
             queryClient={queryClient}
           />
@@ -388,6 +395,7 @@ function ThemedContent({
   pathname,
   currentColorScheme,
   setDockHeight,
+  measuredDockHeight,
   isMounted,
   queryClient,
 }: {
@@ -397,6 +405,7 @@ function ThemedContent({
   pathname?: string;
   currentColorScheme: 'light' | 'dark' | null | undefined;
   setDockHeight: (h: number) => void;
+  measuredDockHeight: number | null;
   isMounted: boolean;
   queryClient: any;
 }) {
@@ -404,7 +413,6 @@ function ThemedContent({
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const mapBackground = showMapBackground ? require("../assets/travel/roulette-map-bg.jpg") : null;
-  const WEB_FOOTER_RESERVE_HEIGHT = 56;
   const isTravelRoute =
     Platform.OS === 'web' &&
     typeof pathname === 'string' &&
@@ -424,21 +432,21 @@ function ThemedContent({
   const authDeferMode =
     isTravelRoute ? 'interaction' : 'idle';
   const showRootWebDeferredChrome = useDeferredRootWebChrome(isTravelRoute, isMounted);
-
-  const bottomGutter = useMemo(() => {
-    if (!showFooter || !isMobile) return null;
-    // The map screen owns its bottom dock inset internally so Leaflet can fill
-    // the whole mobile viewport behind the fixed tab bar.
-    if (isMapRoute) return null;
-
-    if (Platform.OS === 'web') {
-      return <View testID="bottom-gutter" style={{ height: WEB_FOOTER_RESERVE_HEIGHT }} />;
+  const navigationTheme = useMemo(() => {
+    const isDark = currentColorScheme === 'dark'
+    const base = isDark ? DarkTheme : DefaultTheme
+    return {
+      ...base,
+      dark: isDark,
+      colors: {
+        ...base.colors,
+        ...navigationThemeColors(colors),
+      },
     }
-
-    return null;
-  }, [showFooter, isMobile, isMapRoute]);
+  }, [colors, currentColorScheme]);
 
   return (
+    <BottomChromeInsetProvider measuredHeight={measuredDockHeight}>
     <AppProviders
       queryClient={queryClient}
       deferAuthProvider={shouldDeferAuthProvider}
@@ -456,6 +464,7 @@ function ThemedContent({
                               barStyle={currentColorScheme === 'dark' ? 'light-content' : 'dark-content'}
                             />
                           )}
+                          <NavigationThemeProvider value={navigationTheme}>
                           <RootContainerView style={styles.container}>
                               {isWeb ? <ConfirmDialogHost /> : null}
                               {showMapBackground && (
@@ -479,9 +488,6 @@ function ThemedContent({
                                   <Stack screenOptions={{ headerShown: false }}>
                                       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                                   </Stack>
-
-                                  {/* Прокладка: только высота док-строки футера */}
-                                  {bottomGutter}
                               </View>
 
                               {Platform.OS === 'web' && __DEV__ && !isMobile && !isTravelRoute && !isMapRoute && ReactQueryDevtoolsComponent ? (
@@ -503,9 +509,10 @@ function ThemedContent({
                               )}
 
                               {!isWeb && showFooter && NativeFooterComponent && (
-                                <NativeFooterComponent />
+                                <NativeFooterComponent onDockHeight={setDockHeight} />
                               )}
                         </RootContainerView>
+                          </NavigationThemeProvider>
             {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning.
                 Монтируем на обеих платформах: на native — react-native-toast-message,
                 на web — слушатель события metravel:toast (ToastHost.web). */}
@@ -513,6 +520,7 @@ function ThemedContent({
               <ToastComponent />
             )}
     </AppProviders>
+    </BottomChromeInsetProvider>
   );
 }
 

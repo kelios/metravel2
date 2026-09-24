@@ -1,9 +1,12 @@
 import { Platform, StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { LAYOUT } from '@/constants/layout'
 import { useThemedColors } from '@/hooks/useTheme'
 
-export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedColors>, sidebarWidth = 320) =>
+export const createListTravelBaseStyles = (
+  colors: ReturnType<typeof useThemedColors>,
+  sidebarWidth = 320,
+  dockPadding: number | string = 0,
+) =>
   StyleSheet.create({
     root: {
       flex: 1,
@@ -108,7 +111,7 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
       }),
     },
     cardsContainerMobile: {
-      paddingBottom: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
+      paddingBottom: dockPadding,
       ...(Platform.OS === 'web'
         ? ({
             minHeight: 0,

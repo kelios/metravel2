@@ -15,6 +15,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import MessageBubble from '@/components/messages/MessageBubble'
@@ -31,11 +32,6 @@ const SEND_COOLDOWN_MS = 300
 const MAX_MESSAGE_LENGTH = 2000
 const IS_WEB = Platform.OS === 'web'
 const IS_IOS = Platform.OS === 'ios'
-// Height of the global mobile tab bar (BottomDock) content, mirrors
-// MOBILE_DOCK_HEIGHT_WEB in BottomDock. The dock is an absolute overlay pinned to
-// the screen bottom, so the chat composer must reserve this much (+ safe-area)
-// or the message input renders hidden underneath it.
-const DOCK_CONTENT_HEIGHT = 56
 
 type ChatListItem =
   | { type: 'message'; data: Message }
@@ -185,13 +181,17 @@ function ChatView({
   // navigation-bar inset, while under edge-to-edge our root view spans behind that
   // bar. Lifting by the reported height alone leaves the composer overlapped by
   // exactly the nav-bar height, so add insets.bottom back.
+  const dockPadding = useScrollBottomPadding(DESIGN_TOKENS.spacing.sm)
   const composerBottomInset = IS_WEB
     ? 0
     : keyboardHeight > 0
       // iOS reports the docked keyboard through the bottom of the screen, including
       // the home-indicator area. Android excludes its navigation-bar inset.
+      // Клавиатура — отдельный механизм (#1072), не резерв дока.
       ? keyboardHeight + (IS_IOS ? 0 : insets.bottom) + DESIGN_TOKENS.spacing.xs
-      : (reserveBottomDock ? DOCK_CONTENT_HEIGHT : 0) + insets.bottom + DESIGN_TOKENS.spacing.sm
+      : reserveBottomDock
+        ? dockPadding
+        : insets.bottom + DESIGN_TOKENS.spacing.sm
 
   const [text, setText] = useState('')
   const lastSentAtRef = useRef(0)
@@ -315,7 +315,9 @@ function ChatView({
           style={[
             styles.inputContainer,
             styles.composerDisabled,
-            { paddingBottom: composerBottomInset > 0 ? composerBottomInset : DESIGN_TOKENS.spacing.sm },
+            { paddingBottom: typeof composerBottomInset === 'string' || composerBottomInset > 0
+              ? asBottomDimension(composerBottomInset)
+              : DESIGN_TOKENS.spacing.sm },
           ]}
         >
           <Text style={styles.composerDisabledText}>{composerDisabledReason}</Text>
@@ -438,7 +440,7 @@ function ChatComposer({
   onKeyPress: (e: any) => void
   canSend: boolean
   sending: boolean
-  bottomInset: number
+  bottomInset: number | string
 }) {
   const sendButtonStyle = useCallback(
     ({ pressed }: { pressed: boolean }) => [
@@ -454,7 +456,9 @@ function ChatComposer({
       testID="message-composer"
       style={[
         styles.inputContainer,
-        { paddingBottom: bottomInset > 0 ? bottomInset : DESIGN_TOKENS.spacing.sm },
+        { paddingBottom: typeof bottomInset === 'string' || bottomInset > 0
+          ? asBottomDimension(bottomInset)
+          : DESIGN_TOKENS.spacing.sm },
       ]}
     >
       <TextInput

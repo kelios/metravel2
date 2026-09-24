@@ -1,7 +1,7 @@
 import { Platform, StyleSheet } from 'react-native';
 
 import { getStyles } from '@/screens/tabs/map.styles';
-import { LAYOUT, METRICS } from '@/constants/layout';
+import { METRICS } from '@/constants/layout';
 
 describe('map layout header offset', () => {
   const originalOS = Platform.OS;
@@ -74,7 +74,7 @@ describe('map layout header offset', () => {
     expect(styles.tabsContainer.paddingTop).toBe(Math.max(10, insetTop + 2));
     expect(styles.container.paddingTop ?? 0).toBe(0);
     expect(styles.container.height).toBe(
-      `calc(var(--metravel-map-vh, 100svh) - ${LAYOUT.tabBarHeight}px)`,
+      'calc(var(--metravel-map-vh, 100svh) - var(--mt-dock-h, 0px))',
     );
   });
 });

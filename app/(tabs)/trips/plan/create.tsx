@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import TripCreateForm from '@/components/trips/planning/TripCreateForm';
@@ -8,17 +8,9 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { buildTripPlanPrefill } from '@/utils/tripPlanLinks';
-import { LAYOUT } from '@/constants/layout';
+import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { translate as i18nT } from '@/i18n'
-
-
-// Reserve space for the bottom tab bar / web dock so the last form control
-// (the "Запланировать поездку" submit button) is never hidden behind it.
-const SCROLL_BOTTOM_RESERVE = Platform.select({
-  web: 'calc(var(--mt-dock-h, 0px) + 24px)' as unknown as number,
-  default: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
-});
 
 export default function CreateTripScreen() {
   return (
@@ -34,7 +26,8 @@ export default function CreateTripScreen() {
 
 function CreateTripScreenContent() {
   const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const scrollBottomReserve = useScrollBottomPadding(DESIGN_TOKENS.spacing.xl);
+  const styles = useMemo(() => createStyles(colors, scrollBottomReserve), [colors, scrollBottomReserve]);
   const router = useRouter();
   const params = useLocalSearchParams();
   const authReady = useAuthStore((s) => s.authReady);
@@ -89,13 +82,13 @@ function CreateTripScreenContent() {
   );
 }
 
-const createStyles = (colors: ThemedColors) =>
+const createStyles = (colors: ThemedColors, scrollBottomReserve: number | string) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     content: {
       paddingHorizontal: 16,
       paddingTop: 16,
-      paddingBottom: SCROLL_BOTTOM_RESERVE,
+      paddingBottom: asBottomDimension(scrollBottomReserve),
       alignItems: 'center',
     },
     inner: { width: '100%', maxWidth: 640 },

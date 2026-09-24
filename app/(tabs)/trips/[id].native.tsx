@@ -1,18 +1,16 @@
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-
 import PublicTripDetail from '@/components/trips/PublicTripDetail'
+import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { LAYOUT } from '@/constants/layout'
 import { useSoftKeyboardInset } from '@/hooks/useSoftKeyboardInset'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 export default function TripDetailScreen() {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
-  const insets = useSafeAreaInsets()
+  const dockReserve = useScrollBottomPadding(DESIGN_TOKENS.spacing.xl)
   const { rootBottomOverlap } = useSoftKeyboardInset()
   const params = useLocalSearchParams<{ id?: string }>()
   const tripId = Number(params.id)
@@ -23,10 +21,10 @@ export default function TripDetailScreen() {
   // footer переключается с dock reserve на фактическое keyboard overlap.
   const bottomReserve = useMemo(
     () =>
-      (rootBottomOverlap > 0
-        ? rootBottomOverlap
-        : (LAYOUT?.tabBarHeight ?? 56) + insets.bottom) + DESIGN_TOKENS.spacing.xl,
-    [insets.bottom, rootBottomOverlap],
+      rootBottomOverlap > 0
+        ? rootBottomOverlap + DESIGN_TOKENS.spacing.xl
+        : dockReserve,
+    [dockReserve, rootBottomOverlap],
   )
 
   return (
@@ -44,7 +42,7 @@ export default function TripDetailScreen() {
       <View
         accessible={false}
         pointerEvents="none"
-        style={{ height: bottomReserve }}
+        style={{ height: asBottomDimension(bottomReserve) }}
         testID="trip-detail-bottom-reserve"
       />
     </ScrollView>

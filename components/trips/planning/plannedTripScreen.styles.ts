@@ -1,13 +1,9 @@
 import { Platform, StyleSheet } from 'react-native';
 
-import { LAYOUT } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { asBottomDimension } from '@/components/layout/bottomChromeInset';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { webTextStyle, webViewStyle } from '@/utils/webProps';
-const SCROLL_BOTTOM_RESERVE = Platform.select({
-  web: 'calc(var(--mt-dock-h, 0px) + 24px)' as unknown as number,
-  default: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
-});
 /** Рабочая область вкладки «Маршрут» на desktop ≥ 1280 (макет §4). */
 export const PLANNER_ROUTE_WORKSPACE_MAX_WIDTH = 1200;
 /** Ширина шапки и описания поездки (`inner`) — общий источник для стиля и оценки
@@ -16,13 +12,17 @@ export const PLANNER_INNER_MAX_WIDTH = 860;
 /** Боковой отступ `content` и кегль описания — для той же оценки переполнения. */
 export const PLANNER_CONTENT_HORIZONTAL_PADDING = 16;
 export const PLANNER_DESCRIPTION_FONT_SIZE = 15;
-export const createStyles = (colors: ThemedColors, isMobile: boolean) =>
+export const createStyles = (
+  colors: ThemedColors,
+  isMobile: boolean,
+  scrollBottomReserve: number | string,
+) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     content: {
       paddingHorizontal: PLANNER_CONTENT_HORIZONTAL_PADDING,
       paddingTop: 16,
-      paddingBottom: SCROLL_BOTTOM_RESERVE,
+      paddingBottom: asBottomDimension(scrollBottomReserve),
       alignItems: 'center',
     },
     inner: { width: '100%', maxWidth: PLANNER_INNER_MAX_WIDTH, gap: 14 },

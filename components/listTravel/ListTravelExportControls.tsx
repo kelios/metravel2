@@ -11,6 +11,8 @@ import UIButton from '@/components/ui/Button';
 import ProgressIndicator from '@/components/ui/ProgressIndicator';
 import BookSettingsModal from '@/components/export/BookSettingsModal';
 import SelectedTravelOrderCard from './SelectedTravelOrderCard';
+import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { createStyles } from './listTravelStyles';
 import { getTravelLabel } from '@/utils/pluralize';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -131,7 +133,8 @@ function ListTravelExportControls({
   const [isBookSettingsOpen, setIsBookSettingsOpen] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
-  const s = useMemo(() => createStyles(colors), [colors]);
+  const dockPadding = useScrollBottomPadding(DESIGN_TOKENS.spacing.xl);
+  const s = useMemo(() => createStyles(colors, dockPadding), [colors, dockPadding]);
   const asViewStyle = (style: unknown): StyleProp<ViewStyle> => style as StyleProp<ViewStyle>;
   const asTextStyle = (style: unknown): StyleProp<TextStyle> => style as StyleProp<TextStyle>;
 

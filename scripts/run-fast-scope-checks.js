@@ -298,6 +298,11 @@ const main = () => {
       process.exit(styleChannelsGuardStatus)
     }
 
+    const bottomChromeGuardStatus = runCommand('npm', ['run', 'guard:bottom-chrome-inset'])
+    if (bottomChromeGuardStatus !== 0) {
+      process.exit(bottomChromeGuardStatus)
+    }
+
     const typeDebtGuardStatus = runCommand('npm', ['run', 'guard:type-debt'])
     if (typeDebtGuardStatus !== 0) {
       process.exit(typeDebtGuardStatus)

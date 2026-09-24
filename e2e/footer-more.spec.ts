@@ -28,8 +28,9 @@ test.describe('Footer dock (web mobile) - More modal', () => {
     const dock = page.getByTestId('footer-dock-wrapper');
     await expect(dock).toBeVisible({ timeout: 30_000 });
 
-    // On web mobile the dock is fixed; we reserve space via bottom-gutter.
-    await expect(page.getByTestId('bottom-gutter')).toBeVisible({ timeout: 30_000 });
+    // #2097: in-flow bottom-gutter removed. The dock stays fixed; scroll
+    // containers reserve it through --mt-dock-h.
+    await expect(dock).toBeVisible();
 
     // "Ещё" must exist in the dock.
     const moreInDock = dock.getByTestId('footer-item-more');

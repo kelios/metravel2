@@ -16,13 +16,14 @@ const PANEL_GAP = METRICS.spacing.m; // 16px
 const DESKTOP_SHELL_PADDING = METRICS.spacing.m;
 const TRANSITION_MS = 200;
 export const MAP_WEB_MOBILE_BREAKPOINT_PX = METRICS.breakpoints.tablet;
-export const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = LAYOUT?.tabBarHeight ?? 56;
+/** CSS-резерв дока. Пиксельный SSG-скелет сверяется с BOTTOM_DOCK_HEIGHT отдельно. */
+export const WEB_MOBILE_DOCK_INSET = 'var(--mt-dock-h, 0px)';
 export const WEB_HEADER_RESERVED_HEIGHT = 88;
 // Tablet web keeps the desktop map chrome/header but uses the fixed mobile
 // BottomDock. Reserve both pieces of chrome so Leaflet attribution and bottom
 // controls stay above the dock instead of being painted underneath it.
 const WEB_TABLET_HEADER_AND_DOCK_RESERVED_HEIGHT =
-  LAYOUT.headerHeight + LAYOUT.tabBarHeight + METRICS.spacing.s;
+  `calc(${LAYOUT.headerHeight + METRICS.spacing.s}px + var(--mt-dock-h, 0px))`;
 const PANEL_RADIUS = 20;
 const CONTROL_RADIUS = 12;
 // Размер вью иконочных контролов карты и есть их тач-таргет — floor проекта 44dp.
@@ -40,10 +41,10 @@ export const getStyles = (
   const shadowMedium = themedColors.shadows.medium;
   const shadowHeavy = themedColors.shadows.heavy;
   const webViewportReservedHeight = isMobile
-    ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT
+    ? WEB_MOBILE_DOCK_INSET
     : usesWebBottomDock
       ? WEB_TABLET_HEADER_AND_DOCK_RESERVED_HEIGHT
-      : WEB_HEADER_RESERVED_HEIGHT;
+      : `${WEB_HEADER_RESERVED_HEIGHT}px`;
   const webPointerCursor = Platform.OS === 'web' ? { cursor: 'pointer' as const } : {};
 
   return StyleSheet.create({
@@ -57,8 +58,8 @@ export const getStyles = (
             //   2. 100svh — stable SMALL viewport fallback before the JS var is
             //      set; more reliable than `dvh` in WebViews and equal to the
             //      visible area on Safari/desktop.
-            height: `calc(var(--metravel-map-vh, 100svh) - ${webViewportReservedHeight}px)`,
-            maxHeight: `calc(var(--metravel-map-vh, 100svh) - ${webViewportReservedHeight}px)`,
+            height: `calc(var(--metravel-map-vh, 100svh) - ${webViewportReservedHeight})`,
+            maxHeight: `calc(var(--metravel-map-vh, 100svh) - ${webViewportReservedHeight})`,
             minHeight: 0,
             overflow: 'hidden',
           } as any)
@@ -128,7 +129,7 @@ export const getStyles = (
         position: isMobile ? 'absolute' : 'relative',
         left: isMobile ? 0 : undefined,
         right: isMobile ? 0 : undefined,
-        bottom: isMobile ? (Platform.OS === 'web' ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT : 0) : undefined,
+        bottom: isMobile ? (Platform.OS === 'web' ? WEB_MOBILE_DOCK_INSET : 0) : undefined,
         top: isMobile ? undefined : 0,
         width: isMobile ? '100%' : PANEL_WIDTH_DESKTOP,
         maxWidth: isMobile ? '100%' : PANEL_WIDTH_DESKTOP + 40,
@@ -182,7 +183,7 @@ export const getStyles = (
         top: 0,
         left: 0,
         right: 0,
-        bottom: isMobile && Platform.OS === 'web' ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT : 0,
+        bottom: isMobile && Platform.OS === 'web' ? WEB_MOBILE_DOCK_INSET : 0,
         backgroundColor: themedColors.overlay,
         zIndex: 999,
         ...(Platform.OS === 'web'

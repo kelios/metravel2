@@ -9,7 +9,7 @@ import {
   type LayoutChangeEvent,
   type ViewStyle,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
@@ -34,6 +34,7 @@ import { ProfileWorldMapTab } from '@/components/screens/profile/ProfileWorldMap
 import { ProfileTravelListView } from '@/components/screens/profile/ProfileTravelListView';
 import SubscriptionsTabContent from '@/components/subscriptions/SubscriptionsTabContent';
 import { type ProfileHeaderActionKey } from '@/components/profile/ProfileHeaderQuickActions';
+import { asBottomDimension } from '@/components/layout/bottomChromeInset';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useMyAchievements } from '@/hooks/useAchievementsApi';
 import { useUnreadCount } from '@/hooks/useMessages';
@@ -78,7 +79,6 @@ export default function ProfileScreen() {
     clearHistory,
   } = favoritesContext ?? { favorites: [], viewHistory: [], clearFavorites: undefined, clearHistory: undefined };
   const colors = useThemedColors();
-  const insets = useSafeAreaInsets();
   const { isPhone, isLargePhone, isTablet, isDesktop, isPortrait, width } = useResponsive();
 
   const maxContentWidth = 1280;
@@ -98,7 +98,6 @@ export default function ProfileScreen() {
     isTablet,
     isDesktop,
     isPortrait,
-    insets,
     maxContentWidth,
   });
 
@@ -819,7 +818,7 @@ export default function ProfileScreen() {
       <ProfileTravelListView
         styles={styles}
         colors={colors}
-        contentPaddingBottom={contentPaddingBottom}
+        contentPaddingBottom={asBottomDimension(contentPaddingBottom)}
         listHeader={ListHeader}
         listSkeleton={ListSkeleton}
         emptyStateProps={emptyStateProps}

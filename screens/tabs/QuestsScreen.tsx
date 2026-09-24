@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { useDockReservePx } from '@/components/layout/bottomChromeInset';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -134,7 +135,8 @@ export default function QuestsScreen() {
     // впустую ровно в тот кадр, ради которого затевалась. Ступень привязана к
     // ширине: настоящий ресайз окна и поворот меняют и её, клавиатура — нет.
     const height = useMemo(() => (width > 0 ? Dimensions.get('window').height : 0), [width]);
-    const s = useMemo(() => getStyles(colors, width, height), [colors, width, height]);
+    const dockPx = useDockReservePx();
+    const s = useMemo(() => getStyles(colors, width, height, dockPx), [colors, width, height, dockPx]);
 
     // ── Persistent city selection ──
     useEffect(() => {

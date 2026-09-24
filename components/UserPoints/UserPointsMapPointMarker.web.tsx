@@ -14,6 +14,7 @@ import {
   buildYandexNaviUrl,
 } from '@/components/MapPage/Map/mapLinks'
 import { DESIGN_COLORS } from '@/constants/designSystem'
+import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import { LAYOUT } from '@/constants/layout'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { ImportedPoint } from '@/types/userPoints'
@@ -181,6 +182,7 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
     requestDriveInfo,
     onMarkerReady,
   } = props
+  const dockPx = useDockReservePx()
 
   const markerInstanceRef = React.useRef<any | null>(null)
 
@@ -416,7 +418,7 @@ export const UserPointsMapPointMarkerWeb = React.memo(function UserPointsMapPoin
           fullscreenOnMobile={isCompactPopup && Boolean(imageUrl)}
           popupSplit={!isCompactPopup && Boolean(imageUrl)}
           fullscreenTopInset={LAYOUT.headerHeight}
-          fullscreenBottomInset={LAYOUT.tabBarHeight}
+          fullscreenBottomInset={dockPx}
           onClose={handleClosePopup}
         />
       </mods.Popup>

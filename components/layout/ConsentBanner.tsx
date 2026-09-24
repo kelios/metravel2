@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, usePathname } from 'expo-router';
-import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
-import { LAYOUT } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useDockReservePx } from '@/components/layout/bottomChromeInset';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
@@ -24,14 +23,8 @@ function ConsentBanner() {
   const suspendForOverlay = useFooterOverlayOpen();
   const { isMobile, width } = useResponsive();
   const isNarrowMobile = isMobile && width > 0 && width < 360;
-  const insets = useSafeAreaInsets();
-  const bottomOffset = useMemo(() => {
-    if (!isMobile) {
-      return (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xs;
-    }
-    // On mobile we keep it above the bottom tab bar and respect safe-area.
-    return (insets?.bottom || 0) + (LAYOUT?.tabBarHeight ?? 56) + 8;
-  }, [insets?.bottom, isMobile]);
+  const dockReservePx = useDockReservePx();
+  const bottomOffset = dockReservePx + (isMobile ? 8 : DESIGN_TOKENS.spacing.xs);
   const isConsentSettingsRoute = pathname === '/cookies' || pathname === '/privacy';
 
   useEffect(() => {

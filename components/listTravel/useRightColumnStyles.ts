@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { Platform, type StyleProp, type ViewStyle } from 'react-native'
 
+import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { LAYOUT } from '@/constants/layout'
 import {
   getRightColumnColumns,
   getRightColumnWebRowBaseStyle,
@@ -42,9 +42,7 @@ export function useRightColumnStyles({
   cardsContainerStyle,
   cardsGridStyle,
 }: UseRightColumnStylesArgs) {
-  const nativeBottomReserve = !isWeb
-    ? (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl
-    : DESIGN_TOKENS.spacing.lg
+  const nativeBottomReserve = useScrollBottomPadding(DESIGN_TOKENS.spacing.xl)
 
   const cardsWrapperStyle = useMemo<StyleProp<ViewStyle>>(() => {
     const resetPadding = {

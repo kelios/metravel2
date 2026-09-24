@@ -5,6 +5,7 @@ import { CoordinateConverter } from '@/utils/coordinateConverter'
 import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { isValidCoordinate } from '@/utils/coordinateValidator'
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig'
+import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import { LAYOUT } from '@/constants/layout'
 import { createMapPopupComponent } from './Map/createMapPopupComponent'
 import { useUserLocationSignal } from './Map/userLocationSignal'
@@ -109,6 +110,7 @@ export const getMarkerFocusPlan = ({
 }
 
 const MapPageComponent: React.FC<Props> = (props) => {
+  const dockPx = useDockReservePx()
   const {
     travel = { data: [] },
     initialResultsSettled = true,
@@ -824,10 +826,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
       // expanding «Ещё» never grows it off-screen / re-pans the map).
       popupSplit: !useCompactPopupLayout,
       fullscreenTopInset: LAYOUT.headerHeight,
-      fullscreenBottomInset: LAYOUT.tabBarHeight,
+      fullscreenBottomInset: dockPx,
       userLocationSignal,
     })
-  }, [colors, rl, themeContextValue, useCompactPopupLayout, userLocationSignal])
+  }, [colors, dockPx, rl, themeContextValue, useCompactPopupLayout, userLocationSignal])
 
   const shouldShowLoadingOverlay = IS_WEB
     ? !!leafletError || !canRenderMap

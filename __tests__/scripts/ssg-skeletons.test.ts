@@ -16,9 +16,9 @@ const {
 } = require('../../scripts/ssg-skeletons');
 const {
   MAP_WEB_MOBILE_BREAKPOINT_PX,
-  WEB_MOBILE_FOOTER_RESERVE_HEIGHT,
   WEB_HEADER_RESERVED_HEIGHT,
 } = require('../../screens/tabs/map.styles');
+const { BOTTOM_DOCK_HEIGHT: WEB_MOBILE_FOOTER_RESERVE_HEIGHT } = require('../../components/layout/bottomDockModel');
 const { buildCriticalCSS } = require('../../utils/criticalCSSBuilder');
 
 describe('ssg-skeletons', () => {

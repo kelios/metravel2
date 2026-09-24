@@ -1,6 +1,6 @@
 // app/about/index.tsx
 import { useCallback, useMemo, useRef, useState, memo, useEffect } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StatusBar, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { AboutIntroCard } from '@/components/about/AboutIntroCard';
@@ -178,7 +178,6 @@ function AboutAndContactScreen() {
                 {/* #1610: AboutIntroCard exposes the visible page heading. The
                     old sr-only node reused seoTitle verbatim, including the
                     "| Metravel" browser-title suffix, inside a real <h1>. */}
-                <StatusBar barStyle="dark-content" />
                 <View style={styles.content}>
                   <HeroBanner isWide={isWide} />
 

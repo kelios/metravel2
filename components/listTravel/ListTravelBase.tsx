@@ -7,6 +7,8 @@ import { useRoute } from 'expo-router'
 import RenderTravelItem from './RenderTravelItem'
 import ListTravelTopContent from './parts/ListTravelTopContent'
 import ListTravelLayout from './parts/ListTravelLayout'
+import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
 import StaleContentBanner from '@/components/ui/StaleContentBanner'
@@ -71,7 +73,11 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     const isMobileDevice = viewportState.isMobileDevice;
     const usesOverlaySidebar = viewportState.usesOverlaySidebar;
     const sidebarWidth = viewportState.sidebarWidth;
-    const styles = useMemo(() => createListTravelBaseStyles(colors, sidebarWidth), [colors, sidebarWidth]);
+    const dockPadding = useScrollBottomPadding(DESIGN_TOKENS.spacing.xl);
+    const styles = useMemo(
+      () => createListTravelBaseStyles(colors, sidebarWidth, dockPadding),
+      [colors, dockPadding, sidebarWidth],
+    );
     const gapSize = viewportState.gapSize;
 
     const cardsGridDynamicStyle = useMemo(

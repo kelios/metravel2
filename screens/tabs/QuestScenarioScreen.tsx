@@ -3,6 +3,7 @@ import { Dimensions, Platform, Pressable, ScrollView, Text, View } from 'react-n
 import { Link, useIsFocused, useNavigation, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
+import { asBottomDimension, useDockReservePx, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { jsonLdScript } from '@/components/seo/jsonLdScript'
 import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm'
@@ -16,7 +17,6 @@ import { buildBrandedSeoTitle } from '@/utils/questSeo'
 import { buildQuestCityAliasMap } from '@/utils/questCityAlias'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { LAYOUT } from '@/constants/layout'
 import { translate as i18nT } from '@/i18n'
 
 const { spacing } = DESIGN_TOKENS
@@ -134,8 +134,10 @@ export default function QuestScenarioScreen() {
   }, [navigation])
 
   const { width: bpWidth, isMobile } = useBreakpoints()
+  const mobileDockPadding = useScrollBottomPadding(spacing.xl)
+  const dockPx = useDockReservePx()
   const height = IS_WEB ? 0 : Dimensions.get('window').height
-  const s = useMemo(() => getStyles(colors, bpWidth, height), [colors, bpWidth, height])
+  const s = useMemo(() => getStyles(colors, bpWidth, height, dockPx), [colors, bpWidth, height, dockPx])
 
   const includes = useMemo(() => getQuestScenarioIncludes(), [])
   const steps = useMemo(() => getQuestScenarioSteps(), [])
@@ -233,7 +235,7 @@ export default function QuestScenarioScreen() {
         gap: spacing.lg,
         // Резерв под мобильный BottomDock (абсолютный оверлей), как на городском
         // лендинге — иначе последний блок обрезается доком.
-        paddingBottom: isMobile ? (LAYOUT?.tabBarHeight ?? 56) + spacing.xl : spacing.lg,
+        paddingBottom: isMobile ? asBottomDimension(mobileDockPadding) : spacing.lg,
       }}
       showsVerticalScrollIndicator={false}
       testID="quest-scenario-screen"

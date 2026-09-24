@@ -1,24 +1,17 @@
 import React, { useMemo, useState } from 'react'
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { Link } from 'expo-router'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/ui/Button'
 import ConsentCheckbox from '@/components/legal/ConsentCheckbox'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { LAYOUT } from '@/constants/layout'
 import { useThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
 
 
 type Colors = ReturnType<typeof useThemedColors>
-
-// Мобильный BottomDock — оверлей поверх экрана (`--mt-dock-h` = 0px на desktop),
-// поэтому скролл обязан зарезервировать его высоту. Без резерва кнопка
-// «Начать квест» остаётся под доком, а контент помещается во вьюпорт целиком —
-// скроллить нечего, и квест невозможно начать.
-const WEB_BOTTOM_RESERVE = 'calc(var(--mt-dock-h, 0px) + 24px)' as unknown as number
 
 interface QuestConsentGateProps {
   title: string
@@ -38,19 +31,11 @@ interface QuestConsentGateProps {
 export default function QuestConsentGate({ title, coverUrl, onAccept, testID, ratingSlot, completionSlot }: QuestConsentGateProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
-  const insets = useSafeAreaInsets()
   const [checked, setChecked] = useState(false)
+  const contentBottomPadding = useScrollBottomPadding(DESIGN_TOKENS.spacing.xl)
   const contentStyle = useMemo(
-    () => [
-      styles.content,
-      {
-        paddingBottom:
-          Platform.OS === 'web'
-            ? WEB_BOTTOM_RESERVE
-            : (LAYOUT?.tabBarHeight ?? 56) + insets.bottom + DESIGN_TOKENS.spacing.xl,
-      },
-    ],
-    [insets.bottom, styles.content],
+    () => [styles.content, { paddingBottom: asBottomDimension(contentBottomPadding) }],
+    [contentBottomPadding, styles.content],
   )
 
   const handleStart = () => {

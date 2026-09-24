@@ -17,6 +17,7 @@ import {
   useQuestLandingSsgFallbackCleanup,
 } from '@/components/quests/QuestLandingLayout'
 import type { QuestLandingMetaTarget } from '@/components/quests/QuestLandingLayout'
+import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel'
 import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit'
@@ -64,7 +65,8 @@ export default function QuestsByCountryScreen() {
 
   const { width: bpWidth, isMobile } = useBreakpoints()
   const height = Platform.OS === 'web' ? 0 : Dimensions.get('window').height
-  const s = useMemo(() => getStyles(colors, bpWidth, height), [bpWidth, colors, height])
+  const dockPx = useDockReservePx()
+  const s = useMemo(() => getStyles(colors, bpWidth, height, dockPx), [bpWidth, colors, height, dockPx])
   const catalogModel = useQuestCatalogResponsiveModel(countryQuests.length, { hasSidebar: false, contentMaxWidth: QUESTS_LANDING_CONTENT_WIDTH, columnGap: QUESTS_GRID_WEB_GAP })
   const countryName = country?.countryName || countryParam
   const canonical = buildCanonicalUrl(`/quests/country/${country?.countryAlias || countryParam}`)

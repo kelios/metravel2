@@ -10,7 +10,7 @@ import {
     View,
     findNodeHandle,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { deleteTravelMainImage } from '@/api/misc';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -20,7 +20,7 @@ import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { CollapsibleValidationSummary, ValidationSummary } from '@/components/travel/ValidationFeedback';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { LAYOUT } from '@/constants/layout';
+import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { Travel, TravelFormData } from '@/types/types';
@@ -439,17 +439,13 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     onOpenPublic,
 }) => {
     const colors = useThemedColors();
-    const insets = useSafeAreaInsets();
     const { isHydrated, isMobile: isMobileViewport } = useResponsive();
     const isMobile = isHydrated && isMobileViewport;
     const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile]);
     // На native нижний таб-бар (BottomDock) — фиксированный оверлей высотой
     // tabBarHeight + safe-area-inset-bottom, поэтому к статическому отступу
     // добавляем реальный inset, иначе CTA «Загрузить фото» уходит под док.
-    const contentBottomPadding = useMemo(
-        () => (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl + (Platform.OS === 'web' ? 0 : insets.bottom),
-        [insets.bottom],
-    );
+    const contentBottomPadding = useScrollBottomPadding(DESIGN_TOKENS.spacing.xl);
     const { scrollRef, coverAnchorRef } = useMediaAnchorScroll(focusAnchorId, onAnchorHandled);
 
     const travelId = formData.id ?? null;
@@ -574,7 +570,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                 <ScrollView
                     ref={scrollRef}
                     style={styles.content}
-                    contentContainerStyle={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}
+                    contentContainerStyle={[styles.contentContainer, { paddingBottom: asBottomDimension(contentBottomPadding) }]}
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.contentInner}>

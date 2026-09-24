@@ -13,6 +13,7 @@ import { render } from '@testing-library/react-native'
 
 import LegalPage from '@/components/legal/LegalPage'
 import { BOTTOM_DOCK_HEIGHT } from '@/components/layout/bottomDockModel'
+import { webBottomChromeInset } from '@/components/layout/bottomChromeInset'
 
 const BASE_VERTICAL_PADDING = 24
 
@@ -67,18 +68,18 @@ describe('LegalPage — нижний отступ под доком (#1277)', ()
     expect(bottomPaddingOf(renderPage())).toBe(BASE_VERTICAL_PADDING + BOTTOM_DOCK_HEIGHT + 18)
   })
 
-  it('на mobile web добавляет высоту дока, но не safe-area (там док фиксированной высоты)', () => {
+  it('на web резерв — формула max(док, согласие) плюс базовый зазор', () => {
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
     mockResponsive = { isMobile: true, isDesktop: false, isHydrated: true }
     mockInsets = { top: 0, bottom: 18, left: 0, right: 0 }
 
-    expect(bottomPaddingOf(renderPage())).toBe(BASE_VERTICAL_PADDING + BOTTOM_DOCK_HEIGHT)
+    expect(bottomPaddingOf(renderPage())).toBe(webBottomChromeInset(BASE_VERTICAL_PADDING))
   })
 
-  it('на desktop web дока нет — отступ остаётся базовым, мёртвой полосы внизу не появляется', () => {
+  it('на desktop web та же формула: --mt-dock-h = 0, мёртвой полосы нет', () => {
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
     mockResponsive = { isMobile: false, isDesktop: true, isHydrated: true }
 
-    expect(bottomPaddingOf(renderPage())).toBe(BASE_VERTICAL_PADDING)
+    expect(bottomPaddingOf(renderPage())).toBe(webBottomChromeInset(BASE_VERTICAL_PADDING))
   })
 })

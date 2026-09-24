@@ -4,7 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors } from '@/hooks/useTheme'
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
-import { LAYOUT } from '@/constants/layout'
+import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useRouteStore } from '@/stores/routeStore'
@@ -79,10 +79,8 @@ const PHONE_STACKED_TOOLBAR_MAX_WIDTH = 360
 // Every mobile-web map surface ends flush at the real web dock. The previous
 // 104px sheet inset left a visible strip of map between an open panel and the
 // 56px dock, while selected-place cards already used the correct boundary.
-const WEB_MOBILE_BOTTOM_DOCK_INSET = LAYOUT?.tabBarHeight ?? 56
-const WEB_MOBILE_SELECTED_PLACE_INSET = WEB_MOBILE_BOTTOM_DOCK_INSET
 const WEB_MOBILE_CONSENT_BANNER_INSET = 112
-const NATIVE_MOBILE_BOTTOM_DOCK_INSET = (LAYOUT?.tabBarHeight ?? 56) + 16
+const NATIVE_DOCK_BREATHING_ROOM = 16
 
 export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   travelsData,
@@ -116,6 +114,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 }) => {
   const colors = useThemedColors()
   const insets = useSafeAreaInsets()
+  const dockPx = useDockReservePx()
   const { width: viewportWidth } = useWindowDimensions()
   const isNarrow = viewportWidth <= PHONE_COMPACT_LAYOUT_MAX_WIDTH
   const compactSheetActions = viewportWidth <= PHONE_COMPACT_ACTIONS_MAX_WIDTH
@@ -596,12 +595,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     !hasSelectedPlace
 
   const bottomSheetInset = IS_WEB
-    ? WEB_MOBILE_BOTTOM_DOCK_INSET +
-      (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
-    : NATIVE_MOBILE_BOTTOM_DOCK_INSET
+    ? dockPx + (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
+    : dockPx + NATIVE_DOCK_BREATHING_ROOM
   const selectedPlaceBottomInset = IS_WEB
-    ? WEB_MOBILE_SELECTED_PLACE_INSET +
-      (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
+    ? dockPx + (consentBannerVisible ? WEB_MOBILE_CONSENT_BANNER_INSET : 0)
     : bottomSheetInset
   const searchAreaButtonBottom = getSearchAreaButtonBottom(IS_WEB, isNarrow)
   // Нижнюю зону карты занимает ровно одна кнопка — «Искать в этой области».

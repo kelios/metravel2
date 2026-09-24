@@ -154,7 +154,7 @@ test.describe('@perf Footer layout invariants (web)', () => {
     guard.assertNoErrorsContaining('6000ms timeout exceeded');
   });
 
-  test('mobile: dock renders within viewport, has bottom-gutter, and does not create horizontal overflow', async ({ page }) => {
+  test('mobile: dock renders within viewport and does not create horizontal overflow', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await preacceptCookiesAndStabilize(page);
 
@@ -215,8 +215,9 @@ test.describe('@perf Footer layout invariants (web)', () => {
     const dockMeasure = page.getByTestId('footer-dock-measure');
     await expect(dockMeasure).toBeVisible({ timeout: 30_000 });
 
-    const gutter = page.getByTestId('bottom-gutter');
-    await expect(gutter).toBeVisible({ timeout: 30_000 });
+    const dockVar = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--mt-dock-h').trim());
+    expect(dockVar, 'mobile dock reserve is the CSS variable').not.toBe('');
+    expect(dockVar).not.toBe('0px');
 
     // Icons must be rendered (no missing-glyph placeholder squares).
     await expect(page.locator('text=□')).toHaveCount(0);
@@ -286,8 +287,7 @@ test.describe('@perf Footer layout invariants (web)', () => {
     }
   });
 
-  // Merged from footer-overlap.spec.ts — gutter height must match dock height.
-  test('mobile: bottom-gutter height matches dock height', async ({ page }) => {
+  test('mobile: dock reserve variable is set and the in-flow gutter is gone', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await preacceptCookiesAndStabilize(page);
 
@@ -295,24 +295,11 @@ test.describe('@perf Footer layout invariants (web)', () => {
 
     const dock = page.getByTestId('footer-dock-measure');
     await expect(dock).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('bottom-gutter')).toHaveCount(0);
 
-    const gutter = page.getByTestId('bottom-gutter');
-    await expect(gutter).toHaveCount(1, { timeout: 30_000 });
-    await gutter.scrollIntoViewIfNeeded().catch(() => null);
-
-    const { dockHeight, gutterHeight } = await page.evaluate(() => {
-      const dockEl = document.querySelector('[data-testid="footer-dock-measure"]') as HTMLElement | null;
-      const gutterEl = document.querySelector('[data-testid="bottom-gutter"]') as HTMLElement | null;
-      return {
-        dockHeight: dockEl ? dockEl.offsetHeight : 0,
-        gutterHeight: gutterEl ? gutterEl.offsetHeight : 0,
-      };
-    });
-
-    expect(dockHeight, 'footer dock height should be measurable').toBeGreaterThan(0);
-    expect(gutterHeight).toBeGreaterThan(0);
-    expect(gutterHeight).toBeGreaterThanOrEqual(dockHeight - 1);
-    expect(gutterHeight, `bottom gutter should not be excessively large`).toBeLessThanOrEqual(dockHeight + 20);
+    const dockVar = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--mt-dock-h').trim());
+    expect(dockVar).not.toBe('');
+    expect(dockVar).not.toBe('0px');
   });
 
 });

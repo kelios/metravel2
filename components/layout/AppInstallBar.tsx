@@ -6,10 +6,9 @@ import Feather from '@expo/vector-icons/Feather'
 import Button from '@/components/ui/Button'
 import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { LAYOUT } from '@/constants/layout'
+import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import { useFooterOverlayOpen } from '@/hooks/useFooterOverlayOpen'
 import { useResponsive } from '@/hooks/useResponsive'
-import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
 import { sendAnalyticsEvent } from '@/utils/analytics'
@@ -55,7 +54,6 @@ function AppInstallBar() {
   // На узких экранах (360 px и меньше) иконка съедает столько ширины, что
   // заголовок уходит в многоточие — там она уступает место тексту.
   const showIcon = width >= 390
-  const insets = useSafeAreaInsets()
   const footerOverlayOpen = useFooterOverlayOpen()
 
   const [visible, setVisible] = useState(false)
@@ -67,10 +65,8 @@ function AppInstallBar() {
 
   const styles = useMemo(() => createStyles(colors), [colors])
 
-  const bottomOffset = useMemo(
-    () => (insets?.bottom || 0) + (LAYOUT?.tabBarHeight ?? 56) + 8,
-    [insets?.bottom]
-  )
+  const dockReservePx = useDockReservePx()
+  const bottomOffset = dockReservePx + 8
 
   useEffect(() => {
     if (!IS_WEB || typeof window === 'undefined') return

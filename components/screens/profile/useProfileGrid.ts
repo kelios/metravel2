@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { Platform } from 'react-native';
-import type { EdgeInsets } from 'react-native-safe-area-context';
 import { calculateColumns } from '@/components/listTravel/utils/listTravelHelpers';
 import { BREAKPOINTS } from '@/components/listTravel/utils/listTravelConstants';
+import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 
 interface UseProfileGridArgs {
   width: number;
@@ -11,7 +11,6 @@ interface UseProfileGridArgs {
   isTablet: boolean;
   isDesktop: boolean;
   isPortrait: boolean;
-  insets: EdgeInsets;
   maxContentWidth: number;
 }
 
@@ -22,7 +21,6 @@ export function useProfileGrid({
   isTablet,
   isDesktop,
   isPortrait,
-  insets,
   maxContentWidth,
 }: UseProfileGridArgs) {
   const isDesktopWeb = Platform.OS === 'web' && isDesktop;
@@ -61,14 +59,7 @@ export function useProfileGrid({
     return calculateColumns(contentWidth, 'landscape');
   }, [contentWidth, isCardsSingleColumn, isMobileDevice, isPortrait]);
 
-  const contentPaddingBottom = useMemo(() => {
-    if (Platform.OS === 'web') {
-      const dockVisible = isPhone || isLargePhone || isTablet;
-      return (dockVisible ? 96 : 0) + 32;
-    }
-
-    return Math.max(32, (insets.bottom || 0) + 16);
-  }, [insets.bottom, isLargePhone, isPhone, isTablet]);
+  const contentPaddingBottom = useScrollBottomPadding(32);
 
   return {
     isDesktopWeb,

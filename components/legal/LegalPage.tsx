@@ -3,9 +3,7 @@ import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { usePathname, useIsFocused } from 'expo-router'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
-import { BOTTOM_DOCK_HEIGHT } from '@/components/layout/bottomDockModel'
-import { useResponsive } from '@/hooks/useResponsive'
-import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
+import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import { useThemedColors } from '@/hooks/useTheme'
 import { webTouchScrollStyle } from '@/utils'
 import { translate as i18nT } from '@/i18n'
@@ -50,16 +48,9 @@ export default function LegalPage({
   const isFocused = useIsFocused()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
-  const { isDesktop } = useResponsive()
-  const insets = useSafeAreaInsetsSafe()
-  // Док перекрывает низ экрана везде, кроме desktop web — условие повторяет
-  // BottomDock. Без компенсации последняя секция уходит под таб-бар (#1277).
-  const hasBottomDock = Platform.OS !== 'web' ? true : !isDesktop
-  const contentBottomPadding = useMemo(() => {
-    if (!hasBottomDock) return CONTENT_VERTICAL_PADDING
-    const safeBottom = Platform.OS === 'web' ? 0 : Math.max(0, insets?.bottom ?? 0)
-    return CONTENT_VERTICAL_PADDING + BOTTOM_DOCK_HEIGHT + safeBottom
-  }, [hasBottomDock, insets?.bottom])
+  // Док и плашка согласия — один резерв (#2097). На desktop `--mt-dock-h` = 0,
+  // поэтому формула не добавляет мёртвую полосу.
+  const contentBottomPadding = useScrollBottomPadding(CONTENT_VERTICAL_PADDING)
   const { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } = require('@/utils/seo')
   const canonical = buildCanonicalUrl(pathname || '/')
 

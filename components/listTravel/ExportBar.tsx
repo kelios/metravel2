@@ -2,6 +2,8 @@ import React, { memo, useEffect, useMemo, useRef } from 'react';
 import { Platform, Pressable, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import UIButton from '@/components/ui/Button';
 import ProgressIndicator from '@/components/ui/ProgressIndicator';
+import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { createStyles } from './listTravelStyles';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getTravelLabel } from '@/utils/pluralize';
@@ -98,7 +100,11 @@ export const ExportBar = memo(function ExportBar({
   styles?: ReturnType<typeof createStyles>;
 }) {
   const colors = useThemedColors();
-  const resolvedStyles = useMemo(() => styles ?? createStyles(colors), [colors, styles]);
+  const dockPadding = useScrollBottomPadding(DESIGN_TOKENS.spacing.xl);
+  const resolvedStyles = useMemo(
+    () => styles ?? createStyles(colors, dockPadding),
+    [colors, dockPadding, styles],
+  );
   const asViewStyle = (style: unknown): StyleProp<ViewStyle> => style as StyleProp<ViewStyle>;
   const asTextStyle = (style: unknown): StyleProp<TextStyle> => style as StyleProp<TextStyle>;
   const selectionText = selectedCount

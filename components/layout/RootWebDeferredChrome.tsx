@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { View } from 'react-native'
 
+import { BOTTOM_DOCK_HEIGHT } from '@/components/layout/bottomDockModel'
 import { safeLazy } from '@/components/layout/safeLazy'
 import { isAndroidPhoneUserAgent } from '@/utils/appInstallHint'
 
@@ -40,7 +41,7 @@ interface RootWebDeferredChromeProps {
   setDockHeight: (height: number) => void
 }
 
-const WEB_FOOTER_RESERVE_HEIGHT = 56
+const WEB_FOOTER_RESERVE_HEIGHT = BOTTOM_DOCK_HEIGHT
 export default function RootWebDeferredChrome({
   isMobile,
   pathname,

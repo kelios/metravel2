@@ -14,6 +14,7 @@ import React, { useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
+import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
 import getFiltersPanelStyles from '@/components/MapPage/filtersPanelStyles'
 import type { ThemedColors } from '@/hooks/useTheme'
@@ -81,9 +82,10 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
   onRequestClose,
 }) => {
   const { width } = useWindowDimensions()
+  const dockPx = useDockReservePx()
   const panelStyles = useMemo(
-    () => getFiltersPanelStyles(colors, true, width),
-    [colors, width],
+    () => getFiltersPanelStyles(colors, true, width, dockPx),
+    [colors, dockPx, width],
   )
 
   return (

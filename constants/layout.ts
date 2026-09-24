@@ -2,6 +2,7 @@
  * Unified metrics and layout constants for the application
  * Provides consistent spacing, breakpoints, and responsive helpers
  */
+import { BOTTOM_DOCK_HEIGHT } from '@/components/layout/bottomDockModel'
 
 export const METRICS = {
   // Base unit for consistent spacing (8pt grid system)
@@ -127,8 +128,8 @@ export const LAYOUT = {
   // Standard header height
   headerHeight: 56,
   
-  // Standard tab bar height
-  tabBarHeight: 56,
+  // Единственное определение — bottomDockModel.BOTTOM_DOCK_HEIGHT (#2097).
+  tabBarHeight: BOTTOM_DOCK_HEIGHT,
   
   // Standard button heights
   buttonHeights: {

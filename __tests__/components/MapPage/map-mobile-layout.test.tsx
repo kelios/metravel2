@@ -1,7 +1,6 @@
 // __tests__/components/MapPage/map-mobile-layout.test.tsx
 import { Platform } from 'react-native';
 import { getStyles } from '@/screens/tabs/map.styles';
-import { LAYOUT } from '@/constants/layout';
 
 // Mock themed colors
 const mockThemedColors = {
@@ -37,7 +36,7 @@ describe('Map Mobile Layout Styles', () => {
       const styles = getStyles(true, 0, mockThemedColors as any);
 
       expect(styles.rightPanel.position).toBe('absolute');
-      expect(styles.rightPanel.bottom).toBe(LAYOUT.tabBarHeight);
+      expect(styles.rightPanel.bottom).toBe('var(--mt-dock-h, 0px)');
       expect(styles.rightPanel.left).toBe(0);
       expect(styles.rightPanel.right).toBe(0);
       expect(styles.rightPanel.top).toBeUndefined();

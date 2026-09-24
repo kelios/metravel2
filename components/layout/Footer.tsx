@@ -2,6 +2,9 @@ import React, { Suspense, lazy } from "react";
 import { View, Platform } from "react-native";
 import { useResponsive } from "@/hooks/useResponsive";
 import FooterDesktop from '@/components/layout/FooterDesktop';
+import { BOTTOM_DOCK_HEIGHT } from '@/components/layout/bottomDockModel';
+
+export { BOTTOM_DOCK_HEIGHT };
 
 /** ========= Prop для передачи высоты дока ========= */
 type FooterProps = {
@@ -16,7 +19,7 @@ const BottomDockComp = isFooterTestEnv
   ? (require('@/components/layout/BottomDock').default as React.ComponentType<FooterProps>)
   : lazy(() => import('@/components/layout/BottomDock'));
 
-const WEB_MOBILE_DOCK_RESERVE_HEIGHT = 56;
+const WEB_MOBILE_DOCK_RESERVE_HEIGHT = BOTTOM_DOCK_HEIGHT;
 
 const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
   const { isDesktop } = useResponsive();

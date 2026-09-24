@@ -24,7 +24,9 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { useBiometricAuth } from '@/hooks/useBiometricAuth';
 import { getAppVersionInfo, webTouchScrollStyle } from '@/utils';
+import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import { createSettingsStyles } from '@/components/screens/settings/settings.styles';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import StravaSettingsSection from '@/components/settings/StravaSettingsSection';
 import DataOwnershipSection from '@/components/settings/DataOwnershipSection';
@@ -60,7 +62,8 @@ export default function SettingsScreen() {
     const favoritesContext = useFavorites();
     const { theme, setTheme } = useTheme();
     const colors = useThemedColors();
-    const styles = useMemo(() => createSettingsStyles(colors), [colors]);
+    const dockPadding = useScrollBottomPadding(DESIGN_TOKENS.spacing.xxxl);
+    const styles = useMemo(() => createSettingsStyles(colors, dockPadding), [colors, dockPadding]);
     const appVersionInfo = useMemo(() => getAppVersionInfo(), []);
     const {
         clearHistory = async () => {},

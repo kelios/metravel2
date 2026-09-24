@@ -4,6 +4,7 @@ import { WebView } from 'react-native-webview'
 
 import { useThemedColors } from '@/hooks/useTheme'
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
+import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import { LAYOUT } from '@/constants/layout'
 import { DESIGN_COLORS } from '@/constants/designSystem'
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl'
@@ -76,6 +77,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 }) => {
   const colors = useThemedColors()
   const insets = useSafeAreaInsets()
+  const dockPx = useDockReservePx()
   const [isLoading, setIsLoading] = useState(true)
   const [selectedPoint, setSelectedPoint] = useState<NativePoint | null>(null)
   const webViewRef = useRef<WebView>(null)
@@ -258,7 +260,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
             userLocation={null}
             onClose={() => setSelectedPoint(null)}
             topInset={(insets?.top ?? 0) + LAYOUT.headerHeight}
-            bottomInset={LAYOUT.tabBarHeight}
+            bottomInset={dockPx}
           />
           {/* #844 — the app-root Toast is mounted BELOW this native Modal, so save
               feedback (auth prompt / «Сохранено» / error) from «Мои точки» rendered

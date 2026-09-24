@@ -3,6 +3,7 @@ import { Dimensions, Platform } from 'react-native'
 import { useLocalSearchParams, useNavigation } from 'expo-router'
 import { useIsFocused } from 'expo-router'
 
+import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import QuestCityLandingSections from '@/components/quests/QuestCityLandingSections'
 import {
@@ -111,7 +112,8 @@ export default function QuestsByCityScreen() {
 
   const { width: bpWidth, isMobile } = useBreakpoints()
   const height = Platform.OS === 'web' ? 0 : Dimensions.get('window').height
-  const s = useMemo(() => getStyles(colors, bpWidth, height), [colors, bpWidth, height])
+  const dockPx = useDockReservePx()
+  const s = useMemo(() => getStyles(colors, bpWidth, height, dockPx), [colors, bpWidth, height, dockPx])
   const catalogModel = useQuestCatalogResponsiveModel(cityQuests.length, { hasSidebar: false, contentMaxWidth: QUESTS_LANDING_CONTENT_WIDTH, columnGap: QUESTS_GRID_WEB_GAP })
 
   const seoTitle = useMemo(

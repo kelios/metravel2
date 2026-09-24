@@ -1,7 +1,6 @@
 import { Platform, StyleSheet } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { LAYOUT } from '@/constants/layout'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 const MOBILE_WEB_BOTTOM_CHROME_GAP = 28
@@ -27,9 +26,8 @@ const MOBILE_WEB_SEARCH_AREA_BOTTOM =
  * поэтому внутри карты резерв нужно уменьшить ровно на док: иначе подпись и pill
  * поднимаются на высоту дока дважды и повисают посреди карты.
  */
-const MOBILE_WEB_DOCK_RESERVE = LAYOUT?.tabBarHeight ?? 56
 const MOBILE_WEB_FLOATING_CHROME_LIFT =
-  `max(0px, var(--mt-consent-h, 0px) - ${MOBILE_WEB_DOCK_RESERVE}px)`
+  'max(0px, var(--mt-consent-h, 0px) - var(--mt-dock-h, 0px))'
 
 type MapMobileLayoutStyleOptions = {
   isNarrow: boolean

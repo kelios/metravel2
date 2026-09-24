@@ -6,6 +6,7 @@ import Feather from '@expo/vector-icons/Feather';
 import MyApplicationsList from '@/components/trips/MyApplicationsList';
 import MyCreatedTripsList from '@/components/trips/MyCreatedTripsList';
 import TripNotificationsList from '@/components/trips/TripNotificationsList';
+import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import Button from '@/components/ui/Button';
 import Chip from '@/components/ui/Chip';
 import { useMyPlannedTrips } from '@/hooks/usePlannedTripsApi';
@@ -35,7 +36,8 @@ const SECTION_COPY: Record<DashboardSection, { title: string; description: strin
 export default function MyTripsDashboard() {
   const colors = useThemedColors();
   const { isMobile } = useResponsive();
-  const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile]);
+  const contentPaddingBottom = useScrollBottomPadding(32);
+  const styles = useMemo(() => createStyles(colors, isMobile, contentPaddingBottom), [colors, contentPaddingBottom, isMobile]);
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<DashboardSection>('organized');
   const { data: plannedTrips } = useMyPlannedTrips();
@@ -130,10 +132,10 @@ export default function MyTripsDashboard() {
   );
 }
 
-const createStyles = (colors: ThemedColors, isMobile: boolean) =>
+const createStyles = (colors: ThemedColors, isMobile: boolean, contentPaddingBottom: number | string) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 96, alignItems: 'center' },
+    content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: asBottomDimension(contentPaddingBottom), alignItems: 'center' },
     inner: { width: '100%', maxWidth: 1180, gap: 18 },
     header: {
       flexDirection: 'row',

@@ -1,6 +1,7 @@
 // src/screens/tabs/QuestsScreen.styles.ts
 import { StyleSheet, Platform, type TextStyle, type ViewStyle } from 'react-native';
 
+import { asBottomDimension, webBottomChromeInset } from '@/components/layout/bottomChromeInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { LAYOUT } from '@/constants/layout';
 import { QUESTS_GRID_WEB_GAP, QUESTS_GRID_MIN_COLUMN_WIDTH } from '@/constants/questLayout';
@@ -9,10 +10,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 const { spacing, radii, typography, touchTarget } = DESIGN_TOKENS;
 const PANEL_RADIUS = radii.lg;
 const CONTROL_RADIUS = radii.sm;
-// Нижний док (BottomDock) — абсолютный/фиксированный оверлей на обеих мобильных
-// платформах, поэтому каждый скролл-контейнер сам резервирует место под ним,
-// иначе последняя карточка уходит под док. Формула та же, что в списке travel.
-const MOBILE_DOCK_RESERVE = (LAYOUT?.tabBarHeight ?? 56) + spacing.xl;
+
 type WebDecorativeViewStyle = ViewStyle & {
     backdropFilter?: string;
     boxShadow?: string;
@@ -20,7 +18,10 @@ type WebDecorativeViewStyle = ViewStyle & {
 
 // ───────────── Styles (Two-column layout) ─────────────
 
-export function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: number) {
+export function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: number, dockPx = 0) {
+    const mobileDockReserve = asBottomDimension(Platform.OS === 'web'
+        ? webBottomChromeInset(spacing.xl)
+        : dockPx + spacing.xl);
     const isMobileW = screenWidth < 768;
     const isSmallPhone = screenWidth < 360;
     const isTablet = screenWidth >= 768 && screenWidth < 1024;
@@ -632,7 +633,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             paddingTop: isMobileW ? spacing.sm : spacing.md,
             // Нижний инсет под BottomDock, чтобы последний квест был полностью
             // виден над доком — и на mobile web, и на native.
-            paddingBottom: isMobileW ? MOBILE_DOCK_RESERVE : spacing.lg,
+            paddingBottom: isMobileW ? mobileDockReserve : spacing.lg,
         },
         contentBodyMap: {
             ...(isMobileW
@@ -791,7 +792,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             flexGrow: 1,
             padding: isMobileW ? spacing.md : spacing.lg,
             paddingTop: isMobileW ? spacing.sm : spacing.md,
-            paddingBottom: isMobileW ? MOBILE_DOCK_RESERVE : spacing.lg,
+            paddingBottom: isMobileW ? mobileDockReserve : spacing.lg,
         },
         questVirtualizedItem: {
             marginBottom: spacing.lg,
@@ -842,7 +843,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                     top: LAYOUT.headerHeight + spacing.sm,
                     left: 0,
                     right: 0,
-                    bottom: LAYOUT.tabBarHeight,
+                    bottom: 'var(--mt-dock-h, 0px)',
                     backgroundColor: colors.overlay,
                     backdropFilter: 'blur(4px)',
                     WebkitBackdropFilter: 'blur(4px)',
@@ -870,11 +871,11 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                     position: 'fixed',
                     top: LAYOUT.headerHeight + spacing.sm,
                     left: 0,
-                    bottom: LAYOUT.tabBarHeight,
+                    bottom: 'var(--mt-dock-h, 0px)',
                     width: 340,
                     maxWidth: '88vw',
                     height: 'auto',
-                    maxHeight: `calc(100dvh - ${LAYOUT.headerHeight + spacing.sm + LAYOUT.tabBarHeight}px)`,
+                    maxHeight: `calc(100dvh - ${LAYOUT.headerHeight + spacing.sm}px - var(--mt-dock-h, 0px))`,
                     paddingTop: 'env(safe-area-inset-top, 0px)',
                     paddingBottom: 'env(safe-area-inset-bottom, 0px)',
                     zIndex: 1000,

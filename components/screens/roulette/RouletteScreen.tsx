@@ -15,6 +15,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from 'expo-router';
 
+import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ModernFilters from '@/components/listTravel/ModernFilters';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
@@ -150,7 +151,8 @@ export default function RouletteScreen() {
   const insets = useSafeAreaInsets();
   // Clear the global bottom tab bar (BottomDock, absolute overlay ~56px + safe
   // area) so the last result card isn't hidden behind the footer on native.
-  const resultsBottomInset = Platform.OS === 'web' ? 0 : 56 + insets.bottom + 16;
+  const dockPadding = useScrollBottomPadding(16);
+  const resultsBottomInset = Platform.OS === 'web' && !isMobile ? 0 : dockPadding;
 
   const {
     filter,
@@ -440,7 +442,7 @@ export default function RouletteScreen() {
                       contentContainerStyle={[
                         styles.cardsGrid,
                         isMobile && styles.cardsGridMobile,
-                        resultsBottomInset > 0 && { paddingBottom: resultsBottomInset },
+                        { paddingBottom: asBottomDimension(resultsBottomInset) },
                       ]}
                       {...({ estimatedItemSize: 420 } as any)}
                       renderItem={({ item, index }) => {

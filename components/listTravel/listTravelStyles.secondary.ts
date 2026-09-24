@@ -1,11 +1,11 @@
 import { Platform } from 'react-native';
+import { webBottomChromeInset } from '@/components/layout/bottomChromeInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { LAYOUT } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 
 type ThemedColors = ReturnType<typeof useThemedColors>;
 
-export const createSecondaryStyles = (colors: ThemedColors) => ({
+export const createSecondaryStyles = (colors: ThemedColors, dockPadding: number | string = 0) => ({
   filtersToggle: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -252,7 +252,7 @@ export const createSecondaryStyles = (colors: ThemedColors) => ({
     }),
   },
   cardsContainerMobile: {
-    paddingBottom: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
+    paddingBottom: Platform.OS === 'web' ? webBottomChromeInset(DESIGN_TOKENS.spacing.xl) : dockPadding,
     minHeight: 720,
   },
   cardsGrid: {
@@ -357,7 +357,7 @@ export const createSecondaryStyles = (colors: ThemedColors) => ({
     marginTop: DESIGN_TOKENS.spacing.md,
   },
   cardGridWeb: {
-    paddingBottom: LAYOUT?.tabBarHeight ?? 56,
+    paddingBottom: webBottomChromeInset(0),
   },
   loadMoreButton: {
     marginTop: DESIGN_TOKENS.spacing.md,

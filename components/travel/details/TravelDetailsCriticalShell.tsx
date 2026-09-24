@@ -10,8 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { lazyWithRetry } from '@/utils/chunkReload';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { LAYOUT } from '@/constants/layout';
-import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
+import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { Travel } from '@/types/types';
 import type { TravelSectionLink } from '@/components/travel/sectionLinks';
@@ -140,7 +139,6 @@ export default function TravelDetailsCriticalShell({
   mainAriaLabel,
   topNotice,
 }: TravelDetailsCriticalShellProps) {
-  const insets = useSafeAreaInsetsSafe();
   const colors = useThemedColors();
 
   // Drop legacy sr-only headings once the real React H1 has mounted. The current
@@ -218,21 +216,17 @@ export default function TravelDetailsCriticalShell({
     []
   );
 
+  const nativeScrollBottom = useScrollBottomPadding(132);
   const scrollContentStyle = useMemo(
     () => [
       styles.scrollContent,
       // Web already reserves the bottom dock via `--mt-dock-h` in scrollContent;
-      // only native needs an explicit reserve for safe-area + the sticky bar.
-      isMobile && Platform.OS !== 'web'
-        ? {
-            paddingBottom: Math.max(
-              DESIGN_TOKENS.spacing.xxl,
-              (insets.bottom || 0) + (LAYOUT?.tabBarHeight ?? 56) + 132,
-            ),
-          }
+      // only native needs an explicit reserve for the dock plus the sticky bar.
+      isMobile && Platform.OS !== 'web' && typeof nativeScrollBottom === 'number'
+        ? { paddingBottom: Math.max(DESIGN_TOKENS.spacing.xxl, nativeScrollBottom) }
         : null,
     ],
-    [styles.scrollContent, isMobile, insets.bottom]
+    [styles.scrollContent, isMobile, nativeScrollBottom]
   );
 
   const mainContainerStyle = useMemo(

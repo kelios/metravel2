@@ -10,7 +10,9 @@ import EmptyState from '@/components/ui/EmptyState';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
 import { webTouchScrollStyle } from '@/utils';
+import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import { createSettingsStyles } from '@/components/screens/settings/settings.styles';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
@@ -24,7 +26,8 @@ export default function SecurityJournalScreen() {
     const isFocused = useIsFocused();
     const { isAuthenticated, authReady } = useAuth();
     const colors = useThemedColors();
-    const styles = useMemo(() => createSettingsStyles(colors), [colors]);
+    const dockPadding = useScrollBottomPadding(DESIGN_TOKENS.spacing.xxxl);
+    const styles = useMemo(() => createSettingsStyles(colors, dockPadding), [colors, dockPadding]);
 
     if (authReady && !isAuthenticated) {
         return (

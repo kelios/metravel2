@@ -6,8 +6,8 @@ import type { Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import { jsonLdScript } from '@/components/seo/jsonLdScript'
+import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { LAYOUT } from '@/constants/layout'
 import {
   QUESTS_LANDING_CARD_MAX_WIDTH,
   QUESTS_LANDING_CARD_MIN_WIDTH,
@@ -226,6 +226,7 @@ export function QuestLandingScroll({
   isMobile: boolean
   children: React.ReactNode
 }) {
+  const mobileDockPadding = useScrollBottomPadding(spacing.xl)
   return (
     <ScrollView
       style={[styles.root, { flexDirection: 'column' }]}
@@ -237,7 +238,7 @@ export function QuestLandingScroll({
         gap: spacing.md,
         // Резерв под мобильный BottomDock (абсолютный оверлей): без него
         // последняя карточка обрезается доком.
-        paddingBottom: isMobile ? (LAYOUT?.tabBarHeight ?? 56) + spacing.xl : spacing.lg,
+        paddingBottom: isMobile ? asBottomDimension(mobileDockPadding) : spacing.lg,
       }}
       showsVerticalScrollIndicator={false}
     >

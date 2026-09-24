@@ -3,7 +3,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { createSecondaryStyles } from './listTravelStyles.secondary';
 
-export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
+export const createStyles = (colors: ReturnType<typeof useThemedColors>, dockPadding: number | string = 0) =>
   StyleSheet.create({
     root: {
       flex: 1,
@@ -513,5 +513,5 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     recommendationsTabs: {
       marginTop: DESIGN_TOKENS.spacing.md,
     },
-    ...(createSecondaryStyles(colors) as any),
+    ...(createSecondaryStyles(colors, dockPadding) as any),
   });

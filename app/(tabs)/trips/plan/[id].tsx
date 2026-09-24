@@ -4,6 +4,7 @@ import { ActivityIndicator, Modal, Platform, Pressable, Text, TextInput, View } 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
+import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import MapIcon from '@/components/MapPage/MapIcon';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 
@@ -128,7 +129,11 @@ export default function PlannedTripScreen() {
     label: TRANSPORT_LABEL[option],
     icon: TRANSPORT_ICON_NAME[option],
   }));
-  const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile]);
+  const scrollBottomReserve = useScrollBottomPadding(24);
+  const styles = useMemo(
+    () => createStyles(colors, isMobile, scrollBottomReserve),
+    [colors, isMobile, scrollBottomReserve],
+  );
   const webDateInputStyle = useMemo<CSSProperties>(
     () => ({
       width: '100%',

@@ -229,16 +229,20 @@ Load-bearing web-контракт. На мобильном web поверх ко
 
 **Как читать правильно**
 
-- Всегда через `max()` с базовым отступом и всегда с fallback `0px`:
-  `calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)) + 10px)`. Голая
-  переменная без `max()` уменьшает существующий отступ на desktop, где она `0px`.
-- Резерв — только web. На native тот же зазор считается из
-  `useSafeAreaInsets()` + `LAYOUT.tabBarHeight`; CSS-переменных там нет.
-  В RN-стилях значение уходит через `Platform.select({ web: ..., default: ... })`
-  и приводится `as unknown as number`.
+- Единственный способ — хуки из `components/layout/bottomChromeInset.tsx`
+  (#2097): `useBottomChromeInset()`, `useScrollBottomPadding(extra)`,
+  `useDockReservePx()` для позиции самой плашки. `LAYOUT.tabBarHeight` и
+  `BOTTOM_DOCK_HEIGHT` снаружи модуля дока не читаются (`npm run guard:bottom-chrome-inset`).
+- На web хук возвращает `calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)))`.
+  Голая переменная без `max()` уменьшает существующий отступ на desktop, где она `0px`.
+- На native хук возвращает измеренную высоту дока (она уже включает safe-area).
+  Пока замера нет — `BOTTOM_DOCK_HEIGHT + insets.bottom`. `0` значит, что док скрыт.
+- Корневой web-спейсер `bottom-gutter` на 56px убран: он был вторым определением
+  той же высоты и удваивал отступ. Один механизм на обеих платформах — хук.
 - На Android padding у `contentContainer` не всегда даёт дотянуться до
   последнего CTA — там вместо отступа ставится отдельный пустой `View`
-  (`app/(tabs)/trips/[id].native.tsx`, `testID="trip-detail-bottom-reserve"`).
+  (`app/(tabs)/trips/[id].native.tsx`, `testID="trip-detail-bottom-reserve"`),
+  высота которого берётся из `useScrollBottomPadding`.
 
 **Как проверяется**
 
