@@ -6,7 +6,8 @@
  * Reads the production web build chunks from `dist/prod/_expo/static/js/web`,
  * groups them by logical chunk name (filename without the content hash), and
  * compares raw + gzip + Brotli sizes against the committed budget in
- * `config/bundle-budget.json`.
+ * `config/bundle-budget.json`. A `<logical>:<owner>` row with a `marker`
+ * splits one logical name by owner instead of summing it (#2085).
  *
  * Goal: prevent the travel-route performance refactor (see
  * docs/TRAVEL_PERFORMANCE_REFACTOR.md, этап 7) from silently regressing.
@@ -268,9 +269,55 @@ const KB = 1024
 const toKB = (bytes) => Math.round((bytes / KB) * 10) / 10
 
 const files = fs.readdirSync(jsDir).filter((f) => f.endsWith('.js'))
+const sizeLabel = (c) => `${toKB(c.raw)} KB raw / ${toKB(c.gzip)} KB gzip / ${toKB(c.brotli)} KB brotli`
+
+// #2085: Metro names a route chunk after its source file, so every
+// `app/**/index.tsx` route and every package whose entry is `index.js` land in
+// one `index-<hash>.js` group, and one summed ceiling hid WHICH page grew
+// (#2082/#2083: a +19.5 KB /quests catalog burnt the spare of seven other
+// chunks). A budget row `<logical>:<owner>` with a `marker` splits that group:
+// each hashed file goes to the one owner whose marker string occurs in its
+// built JS. The hash and the file order are not owner signals — both change
+// between builds — and source maps are off in the prod export. A file with no
+// owner or with several, and a marker carried by several files, are breaches:
+// summing them back silently is exactly the blind spot being closed.
+function readOwnerSplits() {
+  let config
+  try {
+    config = JSON.parse(fs.readFileSync(budgetPath, 'utf8'))
+  } catch {
+    return new Map() // a missing or invalid config is reported by the update/check paths below
+  }
+  const rows = config && config.chunks && typeof config.chunks === 'object' ? config.chunks : {}
+  const splits = new Map()
+  for (const [key, spec] of Object.entries(rows)) {
+    const separator = key.indexOf(':')
+    if (separator <= 0) continue
+    const logical = key.slice(0, separator)
+    const marker = spec && spec.marker
+    if (typeof marker !== 'string' || !marker.trim()) {
+      die(`Invalid bundle budget: chunks.${key} must declare a non-empty "marker" string.`)
+    }
+    const owners = splits.get(logical) || []
+    if (owners.some((owner) => owner.marker === marker)) {
+      die(`Invalid bundle budget: chunks.${key} repeats the marker of another ${logical} owner.`)
+    }
+    owners.push({ key, marker })
+    splits.set(logical, owners)
+  }
+  for (const logical of splits.keys()) {
+    if (Object.prototype.hasOwnProperty.call(rows, logical)) {
+      die(`Invalid bundle budget: chunks.${logical} cannot coexist with its per-owner rows ${logical}:*.`)
+    }
+  }
+  return splits
+}
+const ownerSplits = readOwnerSplits()
+const ownerCandidates = []
 
 // Aggregate per logical chunk (a logical name can map to >1 hashed file
-// across incremental builds; sum them so the budget stays meaningful).
+// across incremental builds; sum them so the budget stays meaningful) or, for
+// a split logical name, per owner.
 const chunks = new Map()
 const fileSizes = new Map()
 let allRaw = 0
@@ -305,13 +352,44 @@ for (const file of files) {
       : zlib.brotliCompressSync(budgetBuf, {
           params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 },
         }).length
-  const prev = chunks.get(name) || { raw: 0, gzip: 0, brotli: 0, files: 0 }
-  chunks.set(name, {
+  let budgetKey = name
+  const owners = ownerSplits.get(name)
+  if (owners) {
+    // The generated deps prefix lists other chunks' file names, so the marker
+    // is looked up in the chunk's own code only.
+    const matched = owners.filter((owner) => budgetSource.includes(owner.marker)).map((owner) => owner.key)
+    ownerCandidates.push({ file, logical: name, owners: matched, raw: budgetRaw, gzip: budgetGzip, brotli: budgetBrotli })
+    if (matched.length === 1) budgetKey = matched[0]
+  }
+  const prev = chunks.get(budgetKey) || { raw: 0, gzip: 0, brotli: 0, files: 0 }
+  chunks.set(budgetKey, {
     raw: prev.raw + budgetRaw,
     gzip: prev.gzip + budgetGzip,
     brotli: prev.brotli + budgetBrotli,
     files: prev.files + 1,
   })
+}
+
+const ownerErrors = []
+for (const candidate of ownerCandidates) {
+  if (candidate.owners.length === 0) {
+    ownerErrors.push(`Unattributed ${candidate.logical} chunk: ${candidate.file} (${sizeLabel(candidate)})`)
+  } else if (candidate.owners.length > 1) {
+    ownerErrors.push(
+      `Ambiguous ${candidate.logical} chunk: ${candidate.file} matches ${candidate.owners.join(', ')} ` +
+        `(${sizeLabel(candidate)})`,
+    )
+  }
+}
+const ownerFiles = new Map()
+for (const [logical, owners] of ownerSplits) {
+  for (const owner of owners) {
+    const carriers = ownerCandidates.filter((c) => c.owners.includes(owner.key)).map((c) => c.file)
+    ownerFiles.set(owner.key, { marker: owner.marker, files: carriers })
+    if (carriers.length > 1) {
+      ownerErrors.push(`Owner marker matches ${carriers.length} ${logical} chunks: ${owner.key} in ${carriers.join(', ')}`)
+    }
+  }
 }
 
 if (UPDATE) {
@@ -338,6 +416,11 @@ if (UPDATE) {
     parseEagerRequestPin(existingContractSource, 'bundle budget contract test')
   } catch (error) {
     die(`Cannot update bundle budget: ${error.message}`)
+  }
+  // An owner row absent from the build is dropped like any other absent chunk,
+  // but a file that cannot be attributed has no row to be written into.
+  if (ownerErrors.length) {
+    die(`Cannot update bundle budget: ${ownerErrors.join('; ')}`)
   }
 
   const deferredChunks = existingBudget.deferredChunks || []
@@ -371,6 +454,7 @@ if (UPDATE) {
   }
   for (const [name, c] of [...chunks.entries()].sort((a, b) => b[1].raw - a[1].raw)) {
     budget.chunks[name] = {
+      ...(ownerFiles.has(name) ? { marker: ownerFiles.get(name).marker } : {}),
       maxRawKB: toKB(c.raw),
       maxGzipKB: toKB(c.gzip),
       maxBrotliKB: toKB(c.brotli),
@@ -452,6 +536,12 @@ for (const name of forbiddenChunkNames) {
   if (chunks.has(name)) {
     breaches.push({ label: `Forbidden chunk present: ${name}`, forbidden: true })
   }
+}
+for (const label of ownerErrors) breaches.push({ label, attribution: true })
+for (const [key, { marker, files: carriers }] of ownerFiles) {
+  // Same fail-closed rule as the payload markers below: a vanished marker
+  // leaves its row guarding nothing.
+  if (!carriers.length) breaches.push({ label: `Owner marker not found in build: ${key} ("${marker}")`, missing: true })
 }
 function check(label, actualKB, maxKB, tolerance = tol) {
   if (maxKB == null) return
@@ -735,6 +825,12 @@ if (JSON_OUT) {
           [...payloadRouteCounts].map(([payloadName, value]) => [payloadName, value.routes]),
         ),
         forbiddenChunks: forbiddenChunkNames,
+        ownerChunks: Object.fromEntries(
+          [...ownerFiles].map(([key, { files: carriers }]) => {
+            const c = chunks.get(key) || { raw: 0, gzip: 0, brotli: 0 }
+            return [key, { files: carriers, rawKB: toKB(c.raw), gzipKB: toKB(c.gzip), brotliKB: toKB(c.brotli) }]
+          }),
+        ),
         chunkCount: chunks.size,
         breaches,
       },
@@ -768,14 +864,23 @@ if (JSON_OUT) {
         (max != null ? ` (max ${max})` : ''),
     )
   }
+  for (const [key, { files: carriers }] of ownerFiles) {
+    const c = chunks.get(key)
+    if (!c || !carriers.length) continue
+    const row = budget.chunks[key]
+    console.log(
+      `  ${key} (${carriers.join(', ')}): ${sizeLabel(c)} ` +
+        `(budget ${row.maxRawKB} / ${row.maxGzipKB} / ${row.maxBrotliKB} KB)`,
+    )
+  }
   if (breaches.length === 0) {
     console.log('✓ all budgeted chunks within limits')
   } else {
     console.log(`✗ ${breaches.length} budget breach(es):`)
     for (const b of breaches) {
-      // `missing`/`forbidden` — не размерные нарушения: у них нет ни actual, ни
+      // `missing`/`forbidden`/`attribution` — не размерные нарушения: у них нет ни actual, ни
       // budget, и общий формат печатал бы «undefined KB > undefined KB».
-      if (b.missing || b.forbidden) {
+      if (b.missing || b.forbidden || b.attribution) {
         console.log(`  - ${b.label}`)
       } else if (b.actual != null) {
         console.log(`  - ${b.label}: ${b.actual} > ${b.max} (budget ${b.max})`)

@@ -942,4 +942,227 @@ describe('bundle budget release contract', () => {
       }
     })
   })
+
+  // #2085: Metro называет чанк маршрута по имени файла, поэтому главная,
+  // /quests, лендинги и пакеты с входом `index.js` собираются в одинаковые
+  // `index-<hash>.js`. Общая сумма прятала, какая страница выросла (#2082/#2083);
+  // строки `index:<владелец>` опознают файл по маркеру в собранном JS.
+  describe('index chunk owners', () => {
+    // Потолок единой строки `index` до разделения. Решение владельца в #2083:
+    // сумма строк по владельцам выше него не поднимается.
+    const PREVIOUS_INDEX_CEILING = { maxRawKB: 192.4, maxGzipKB: 48.9, maxBrotliKB: 42 }
+    const HOME_MARKER = 'home.hero.title'
+    const QUESTS_MARKER = 'quests.catalog.title'
+    const ownerRows = {
+      'index:home': { marker: HOME_MARKER, maxRawKB: 2 },
+      'index:quests': { marker: QUESTS_MARKER, maxRawKB: 2 },
+    }
+    const chunkSource = (marker: string, padding: number) => `globalThis.t='${marker}';/*${'x'.repeat(padding)}*/`
+
+    const writeFixture = (tmpDir: string, chunkFiles: Record<string, string>, budget: JsonRecord) => {
+      const jsDir = path.join(tmpDir, 'js')
+      fs.mkdirSync(jsDir, { recursive: true })
+      for (const [file, source] of Object.entries(chunkFiles)) {
+        fs.writeFileSync(path.join(jsDir, file), source)
+      }
+      const testBudgetPath = path.join(tmpDir, 'budget.json')
+      fs.writeFileSync(testBudgetPath, JSON.stringify(budget))
+      return { jsDir, testBudgetPath }
+    }
+
+    const runGuard = (jsDir: string, testBudgetPath: string, args = ['--fail', '--json']) =>
+      runNodeCli([guardScriptPath, ...args], {
+        BUNDLE_BUDGET_JS_DIR: jsDir,
+        BUNDLE_BUDGET_CONFIG: testBudgetPath,
+      })
+
+    it('pins the committed index owners under the pre-split index ceiling', () => {
+      const budget = validateCommittedBudget(budgetPath)
+      const rows = requireRecord(budget.chunks, 'bundle budget.chunks')
+      expect(rows).not.toHaveProperty('index')
+
+      const committedOwners = Object.entries(rows).filter(([key]) => key.startsWith('index:'))
+      expect(committedOwners.length).toBeGreaterThanOrEqual(2)
+      const sums = { maxRawKB: 0, maxGzipKB: 0, maxBrotliKB: 0 }
+      for (const [key, value] of committedOwners) {
+        const row = requireRecord(value, `bundle budget.chunks.${key}`)
+        ensure(typeof row.marker === 'string' && row.marker.trim().length > 0, `${key} must declare a marker.`)
+        for (const metric of Object.keys(sums) as (keyof typeof sums)[]) {
+          sums[metric] += requireBudgetNumber(row[metric], `bundle budget.chunks.${key}.${metric}`)
+        }
+      }
+      for (const metric of Object.keys(sums) as (keyof typeof sums)[]) {
+        expect(Math.round(sums[metric] * 10) / 10).toBeLessThanOrEqual(PREVIOUS_INDEX_CEILING[metric])
+      }
+    })
+
+    it('reddens only the owner that grew, whatever the file hash', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-index-owner-')
+      try {
+        const { jsDir, testBudgetPath } = writeFixture(
+          tmpDir,
+          {
+            'index-1a2b3c4d.js': chunkSource(HOME_MARKER, 1000),
+            'index-5e6f7a8b.js': chunkSource(QUESTS_MARKER, 1000),
+          },
+          { tolerancePct: 0, chunks: ownerRows },
+        )
+
+        const green = runGuard(jsDir, testBudgetPath)
+        expect(green.status).toBe(0)
+        const greenReport = JSON.parse(green.stdout)
+        expect(greenReport.breaches).toEqual([])
+        expect(greenReport.ownerChunks['index:home'].files).toEqual(['index-1a2b3c4d.js'])
+        expect(greenReport.ownerChunks['index:quests'].files).toEqual(['index-5e6f7a8b.js'])
+
+        const textReport = runGuard(jsDir, testBudgetPath, ['--fail'])
+        expect(textReport.status).toBe(0)
+        expect(textReport.stdout).toContain('index:home (index-1a2b3c4d.js): ')
+        expect(textReport.stdout).toContain('index:quests (index-5e6f7a8b.js): ')
+
+        // Новый хеш и другой порядок файлов — владелец тот же.
+        fs.rmSync(path.join(jsDir, 'index-1a2b3c4d.js'))
+        fs.writeFileSync(path.join(jsDir, 'index-ffff0000.js'), chunkSource(HOME_MARKER, 3000))
+
+        const red = runGuard(jsDir, testBudgetPath)
+        expect(red.status).toBe(1)
+        const redReport = JSON.parse(red.stdout)
+        expect(redReport.ownerChunks['index:home'].files).toEqual(['index-ffff0000.js'])
+        expect(redReport.breaches.map((b: { label: string }) => b.label)).toEqual(['index:home (raw)'])
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+
+    it('fails closed on an index chunk that no owner claims', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-index-unattributed-')
+      try {
+        const { jsDir, testBudgetPath } = writeFixture(
+          tmpDir,
+          {
+            'index-1a2b3c4d.js': chunkSource(HOME_MARKER, 100),
+            'index-5e6f7a8b.js': chunkSource(QUESTS_MARKER, 100),
+            'index-0f0f0f0f.js': 'x'.repeat(2048),
+          },
+          { tolerancePct: 0, chunks: ownerRows },
+        )
+
+        const result = runGuard(jsDir, testBudgetPath)
+        expect(result.status).toBe(1)
+        expect(JSON.parse(result.stdout).breaches).toEqual([
+          {
+            label: expect.stringMatching(
+              /^Unattributed index chunk: index-0f0f0f0f\.js \(2 KB raw \/ [\d.]+ KB gzip \/ [\d.]+ KB brotli\)$/,
+            ),
+            attribution: true,
+          },
+        ])
+
+        const textReport = runGuard(jsDir, testBudgetPath, ['--fail'])
+        expect(textReport.status).toBe(1)
+        expect(textReport.stdout).toContain('  - Unattributed index chunk: index-0f0f0f0f.js (2 KB raw / ')
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+
+    it('fails closed when a marker is ambiguous or gone', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-index-ambiguous-')
+      try {
+        const { jsDir, testBudgetPath } = writeFixture(
+          tmpDir,
+          {
+            'index-1a2b3c4d.js': chunkSource(HOME_MARKER, 100),
+            'index-2b3c4d5e.js': chunkSource(HOME_MARKER, 100),
+            'index-3c4d5e6f.js': `${chunkSource(HOME_MARKER, 10)}${chunkSource('other.owner.marker', 10)}`,
+          },
+          {
+            tolerancePct: 0,
+            chunks: { ...ownerRows, 'index:other': { marker: 'other.owner.marker', maxRawKB: 2 } },
+          },
+        )
+
+        const result = runGuard(jsDir, testBudgetPath)
+        expect(result.status).toBe(1)
+        const breaches = JSON.parse(result.stdout).breaches
+        expect(breaches).toContainEqual({
+          label: expect.stringMatching(
+            /^Ambiguous index chunk: index-3c4d5e6f\.js matches index:home, index:other \(/,
+          ),
+          attribution: true,
+        })
+        expect(breaches).toContainEqual({
+          label: expect.stringMatching(/^Owner marker matches 3 index chunks: index:home in index-/),
+          attribution: true,
+        })
+        expect(breaches).toContainEqual({
+          label: `Owner marker not found in build: index:quests ("${QUESTS_MARKER}")`,
+          missing: true,
+        })
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+
+    it('rejects owner rows without a marker or next to the summed row', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-index-config-')
+      try {
+        const { jsDir, testBudgetPath } = writeFixture(
+          tmpDir,
+          { 'index-1a2b3c4d.js': chunkSource(HOME_MARKER, 100) },
+          { tolerancePct: 0, chunks: { ...ownerRows, index: { maxRawKB: 4 } } },
+        )
+        const coexisting = runGuard(jsDir, testBudgetPath)
+        expect(coexisting.status).toBe(1)
+        expect(coexisting.stderr).toContain('chunks.index cannot coexist with its per-owner rows index:*')
+
+        fs.writeFileSync(
+          testBudgetPath,
+          JSON.stringify({ tolerancePct: 0, chunks: { 'index:home': { maxRawKB: 2 } } }),
+        )
+        const unmarked = runGuard(jsDir, testBudgetPath)
+        expect(unmarked.status).toBe(1)
+        expect(unmarked.stderr).toContain('chunks.index:home must declare a non-empty "marker" string')
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+
+    it('keeps owner markers on --update and refuses to regenerate over an unattributed chunk', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-index-update-')
+      try {
+        const committed = validateCommittedBudget(budgetPath)
+        const { jsDir, testBudgetPath } = writeFixture(
+          tmpDir,
+          {
+            'index-1a2b3c4d.js': chunkSource(HOME_MARKER, 1000),
+            'index-5e6f7a8b.js': chunkSource(QUESTS_MARKER, 3000),
+          },
+          { ...committed, chunks: ownerRows },
+        )
+        const pinnedContractPath = path.join(tmpDir, 'contract.test.ts')
+        fs.copyFileSync(contractTestPath, pinnedContractPath)
+        const env = {
+          BUNDLE_BUDGET_JS_DIR: jsDir,
+          BUNDLE_BUDGET_CONFIG: testBudgetPath,
+          BUNDLE_BUDGET_CONTRACT_TEST: pinnedContractPath,
+        }
+
+        expect(runNodeCli([guardScriptPath, '--update'], env)).toMatchObject({ status: 0, stderr: '' })
+        const updated = JSON.parse(fs.readFileSync(testBudgetPath, 'utf8'))
+        expect(updated.chunks['index:home']).toMatchObject({ marker: HOME_MARKER, maxRawKB: 1 })
+        expect(updated.chunks['index:quests']).toMatchObject({ marker: QUESTS_MARKER, maxRawKB: 3 })
+        expect(updated.chunks).not.toHaveProperty('index')
+
+        const updatedSource = fs.readFileSync(testBudgetPath, 'utf8')
+        fs.writeFileSync(path.join(jsDir, 'index-0f0f0f0f.js'), 'globalThis.u=1;')
+        const refused = runNodeCli([guardScriptPath, '--update'], env)
+        expect(refused.status).toBe(1)
+        expect(refused.stderr).toContain('Cannot update bundle budget: Unattributed index chunk: index-0f0f0f0f.js')
+        expect(fs.readFileSync(testBudgetPath, 'utf8')).toBe(updatedSource)
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+  })
 })
