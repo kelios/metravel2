@@ -441,7 +441,13 @@ const syncDepsOfSource = (file: string, rawContent: string): string[] => {
     if (resolved) out.add(resolved)
   }
   // `import ... from 'x'` и `export ... from 'x'`, кроме `import type` / `export type`.
-  for (const m of content.matchAll(/(?:^|\n)\s*(?:import|export)\s+(?!type\s)[\s\S]*?from\s*['"]([^'"]+)['"]/g)) add(m[1])
+  // Пролёт не пересекает следующий `import`/`export`, а specifier — перевод строки
+  // (#2084): иначе `export const L = 'from'` строкой выше проглатывал настоящий
+  // импорт цели, и ребро терялось.
+  for (const m of content.matchAll(
+    /(?:^|\n)\s*(?:import|export)\s+(?!type\s)(?:(?!\n\s*(?:import|export)\s)[\s\S])*?from\s*['"]([^'"\n]+)['"]/g,
+  ))
+    add(m[1])
   for (const m of content.matchAll(/(?:^|\n)\s*import\s*['"]([^'"]+)['"]/g)) add(m[1])
   for (const m of content.matchAll(/(?<!\.)\brequire\(\s*['"]([^'"]+)['"]\s*\)/g)) add(m[1])
   return [...out]
@@ -776,6 +782,7 @@ describe('состав eager-бандла (#1148)', () => {
       Object.entries({
         'components/quests/FixtureRelativeWalk.tsx': `import { buildQuestCityWalkModel } from '../../utils/questCityWalk'`,
         'utils/fixtureRequireWalk.js': `const walk = require('./questCityWalk')`,
+        'utils/fixtureFromStringWalk.ts': `export const label = 'from'\nimport { buildQuestCityWalkModel } from './questCityWalk'`,
         'hooks/useFixtureStory.ts': `import { getQuestSteps } from '@/utils/questStoryText'`,
         'utils/fixtureStoryReExport.ts': `export { getQuestSteps } from './questStoryText.js'`,
         'components/quests/FixtureSecondRoot.tsx': `const load = () => import(\n  '../../utils/questCityWalk',\n)`,
@@ -793,6 +800,7 @@ describe('состав eager-бандла (#1148)', () => {
     expect(lazyOnlyOffenders(entry('utils/questCityWalk.js'), files, read)).toEqual([
       'components/quests/FixtureRelativeWalk.tsx',
       'utils/fixtureRequireWalk.js',
+      'utils/fixtureFromStringWalk.ts',
     ])
     expect(lazyOnlyOffenders(entry('utils/questStoryText.js'), files, read)).toEqual([
       'hooks/useFixtureStory.ts',
