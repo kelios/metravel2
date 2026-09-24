@@ -118,6 +118,7 @@ function useBaseTravelData(
   const {
     data,
     status,
+    fetchStatus,
     isFetching,
     isLoading,
     refetch,
@@ -166,6 +167,15 @@ function useBaseTravelData(
   }, [data?.pages]);
   const hasAnyItems = combinedTravels.length > 0;
   const hasMore = Boolean(hasNextPage);
+  // Без сети первый запрос не падает, а паркуется (`networkMode: 'online'`,
+  // utils/reactQueryConfig.ts): status остаётся 'pending', fetchStatus —
+  // 'paused', и isLoading/isError/isEmpty все ложны — экран показывал
+  // «0 путешествий» над пустотой. Пауза без данных — сбой загрузки: UI отдаёт
+  // «Нет подключения» с «Повторить», а запрос сам доедет, когда сеть вернётся.
+  // Именно без данных (status 'pending'), а не без элементов: закэшированный
+  // пустой ответ при паузе рефетча остаётся честным «пусто», и его fallback-
+  // выдача из кэша не прячется за ошибкой.
+  const isLoadPaused = fetchStatus === 'paused' && status === 'pending';
 
   const isInitialLoading = isLoading && !hasAnyItems;
   const isNextPageLoading = isFetchingNextPage;
@@ -200,7 +210,7 @@ function useBaseTravelData(
     hasMore,
     isLoading,
     isFetching,
-    isError: status === 'error',
+    isError: status === 'error' || isLoadPaused,
     status,
     isInitialLoading,
     isNextPageLoading,

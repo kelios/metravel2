@@ -1,6 +1,6 @@
 import React, { forwardRef, useImperativeHandle } from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 
 import { useListTravelData, useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
 import { fetchTravels, fetchRandomTravels } from '@/api/travelListQueries';
@@ -326,6 +326,83 @@ describe('useListTravelData with infinite query', () => {
 
     unmount();
     queryClient.clear();
+  });
+
+  describe('offline (paused query)', () => {
+    afterEach(() => {
+      onlineManager.setOnline(true);
+    });
+
+    // notifyManager отдаёт смену fetchStatus наблюдателю через setTimeout(0):
+    // без этого флаша ассерты читают рендер ещё до паузы и проходят вхолостую.
+    const refetchWhileOffline = async (ref: React.RefObject<any>, queryClient: QueryClient) => {
+      onlineManager.setOnline(false);
+      await act(async () => {
+        void ref.current?.refetch();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(queryClient.getQueryCache().getAll()[0]?.state.fetchStatus).toBe('paused');
+    };
+
+    it('reports a paused first load without data as isError and resumes when online', async () => {
+      onlineManager.setOnline(false);
+      (fetchTravels as jest.Mock).mockResolvedValueOnce({
+        data: createTravels('online', 2),
+        total: 2,
+      });
+
+      const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+
+      await waitFor(() => expect(ref.current?.isError).toBe(true));
+      expect(ref.current?.status).toBe('pending');
+      expect(ref.current?.isEmpty).toBe(false);
+      expect(fetchTravels).not.toHaveBeenCalled();
+
+      act(() => {
+        onlineManager.setOnline(true);
+      });
+
+      await waitFor(() => expect(ref.current?.data).toHaveLength(2));
+      expect(ref.current?.isError).toBe(false);
+
+      unmount();
+      queryClient.clear();
+    });
+
+    it('keeps cached items without an error while a refetch is paused', async () => {
+      (fetchTravels as jest.Mock).mockResolvedValueOnce({
+        data: createTravels('cached', 3),
+        total: 3,
+      });
+
+      const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+      await waitFor(() => expect(ref.current?.data).toHaveLength(3));
+
+      await refetchWhileOffline(ref, queryClient);
+
+      expect(fetchTravels).toHaveBeenCalledTimes(1);
+      expect(ref.current?.data).toHaveLength(3);
+      expect(ref.current?.isError).toBe(false);
+
+      unmount();
+      queryClient.clear();
+    });
+
+    it('keeps a cached empty result as isEmpty, not isError, while a refetch is paused', async () => {
+      (fetchTravels as jest.Mock).mockResolvedValueOnce({ data: [], total: 0 });
+
+      const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+      await waitFor(() => expect(ref.current?.isEmpty).toBe(true));
+
+      await refetchWhileOffline(ref, queryClient);
+
+      expect(fetchTravels).toHaveBeenCalledTimes(1);
+      expect(ref.current?.isError).toBe(false);
+      expect(ref.current?.isEmpty).toBe(true);
+
+      unmount();
+      queryClient.clear();
+    });
   });
 });
 
