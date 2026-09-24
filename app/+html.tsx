@@ -8,6 +8,7 @@ import { buildCriticalCSS } from '@/utils/criticalCSSBuilder';
 import { getRootVisibilityGateCss, getTravelRouteClassScript } from '@/utils/htmlShell';
 import { buildMapHeadBootstrapScript } from '@/utils/mapHeadBootstrap';
 import { CHUNK_RELOAD_SCRIPT_ID, getChunkReloadBootstrapScript } from '@/utils/chunkReloadGuard';
+import { buildUnknownCityNotFoundHydrationScript } from '@/utils/unknownCityNotFoundHydration';
 import { getMapSeoDescription, getMapSeoTitle } from '@/constants/mapSeo';
 import { isLikelySelfProxyApiUrl, resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import {
@@ -714,6 +715,15 @@ export default function Root({ children }: { children: React.ReactNode }) {
     />
 
     {children}
+
+    {/* #2107: до entry-бандла. Холодный заход не трогает адрес. В тёплой
+        вкладке (флаг sessionStorage с прошлого документа) /quests/<неизвестный>
+        на кадр гидратации становится путём экрана +not-found.html — иначе
+        закэшированный чанк города расходится с этим HTML (#418). */}
+    <script
+      id="metravel-unknown-city-hydration"
+      dangerouslySetInnerHTML={{ __html: buildUnknownCityNotFoundHydrationScript() }}
+    />
 
     {/* LCP decode helper */}
     <script

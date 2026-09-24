@@ -345,6 +345,79 @@ function captureRequests(page, urlPattern) {
   }
 }
 
+// #2107: полный заход в одной вкладке. Неизвестный город nginx отдаёт как
+// +not-found.html; в тёплом кэше чанк города успевает на кадр гидратации и
+// даёт pageerror #418. Холодный заход того же URL ошибку не даёт.
+const HYDRATION_PAGE_ERROR = /Minified React error #418\b|Hydration failed because the server rendered/i
+const WARM_UNKNOWN_CITY_SEQUENCE = Object.freeze([
+  '/quests/country/belarus',
+  '/quests/minsk',
+  '/quests/country/no-such-country-x',
+  '/quests/no-such-city-x',
+])
+
+function isHydrationPageError(error) {
+  const message = error instanceof Error ? error.message : String(error ?? '')
+  return HYDRATION_PAGE_ERROR.test(message)
+}
+
+function pageErrorText(error) {
+  const message = error instanceof Error ? error.message : String(error ?? '')
+  return message.split(/\n\s*Call log:/)[0].trim().slice(0, 300)
+}
+
+/**
+ * Тёплая вкладка: страна → город → квест → назад → неизвестная страна →
+ * неизвестный город. Падает, если на последнем документе есть pageerror.
+ *
+ * @param {import('playwright').Page} page
+ * @param {object} [options]
+ * @param {string} [options.baseUrl]
+ * @param {number} [options.timeoutMs]
+ * @param {number} [options.settleMs] пауза после перехода, чтобы гидратация успела бросить #418
+ * @param {(page: import('playwright').Page) => Promise<string|null>} [options.openQuest]
+ */
+async function runWarmUnknownCityHydrationProbe(page, options = {}) {
+  const baseUrl = options.baseUrl || PROD_BASE_URL
+  const timeoutMs = options.timeoutMs || 45_000
+  const settleMs = options.settleMs ?? 1_500
+  const errors = []
+  const onPageError = (error) => {
+    errors.push(pageErrorText(error))
+  }
+  page.on('pageerror', onPageError)
+  const goto = async (pathname) => {
+    const before = errors.length
+    await page.goto(new URL(pathname, baseUrl).toString(), { waitUntil: 'domcontentloaded', timeout: timeoutMs })
+    if (settleMs > 0) await page.waitForTimeout(settleMs)
+    return errors.slice(before)
+  }
+  try {
+    await goto(WARM_UNKNOWN_CITY_SEQUENCE[0])
+    await goto(WARM_UNKNOWN_CITY_SEQUENCE[1])
+    const questHref = options.openQuest
+      ? await options.openQuest(page)
+      : await page.evaluate(() => {
+        const link = document.querySelector('a[href*="/quests/minsk/"]')
+        return link ? link.getAttribute('href') : null
+      })
+    if (!questHref) {
+      throw new ProdProbeError('на /quests/minsk нет ссылки на квест — сценарий #2107 не собран')
+    }
+    await goto(questHref)
+    await page.goBack({ waitUntil: 'domcontentloaded', timeout: timeoutMs })
+    if (settleMs > 0) await page.waitForTimeout(settleMs)
+    await goto(WARM_UNKNOWN_CITY_SEQUENCE[2])
+    const cityErrors = await goto(WARM_UNKNOWN_CITY_SEQUENCE[3])
+    if (cityErrors.length) {
+      throw new ProdProbeError(`pageerror на неизвестном городе (/quests/<unknown>): ${cityErrors.length}`)
+    }
+    return { errors }
+  } finally {
+    page.off('pageerror', onPageError)
+  }
+}
+
 /** Выкаченная сборка: `/.build-source.json` ({sha, dirty, deploy, recordedAt}). */
 async function buildSource(baseUrl = PROD_BASE_URL) {
   const res = await fetch(new URL('/.build-source.json', baseUrl), { cache: 'no-store' })
@@ -371,4 +444,8 @@ module.exports = {
   readLocalStorage,
   captureRequests,
   buildSource,
+  HYDRATION_PAGE_ERROR,
+  WARM_UNKNOWN_CITY_SEQUENCE,
+  isHydrationPageError,
+  runWarmUnknownCityHydrationProbe,
 }

@@ -51,6 +51,65 @@ describe('resolveProbeCredentials (#2074)', () => {
   });
 });
 
+describe('runWarmUnknownCityHydrationProbe (#2107)', () => {
+  const fakePage = (cityError?: Error) => {
+    const handlers: Array<(error: Error) => void> = []
+    const urls: string[] = []
+    return {
+      urls,
+      on(_event: string, handler: (error: Error) => void) {
+        handlers.push(handler)
+      },
+      off() {
+        handlers.length = 0
+      },
+      async goto(url: string) {
+        urls.push(url)
+        if (cityError && url.includes('/quests/no-such-city-x')) {
+          handlers.forEach((handler) => handler(cityError))
+        }
+      },
+      async goBack() {
+        urls.push('back')
+      },
+      async evaluate() {
+        return '/quests/minsk/some-quest'
+      },
+      async waitForTimeout() {},
+    }
+  }
+
+  it('проходит тёплую цепочку и молчит, если pageerror нет', async () => {
+    const page = fakePage()
+    await expect(probe.runWarmUnknownCityHydrationProbe(page, { settleMs: 0, baseUrl: BASE })).resolves.toEqual({
+      errors: [],
+    })
+    expect(page.urls.map((url) => url.replace(BASE, ''))).toEqual([
+      '/quests/country/belarus',
+      '/quests/minsk',
+      '/quests/minsk/some-quest',
+      'back',
+      '/quests/country/no-such-country-x',
+      '/quests/no-such-city-x',
+    ])
+  })
+
+  it('падает, если неизвестный город бросает #418', async () => {
+    const page = fakePage(new Error('Minified React error #418; visit https://react.dev/errors/418'))
+    await expect(probe.runWarmUnknownCityHydrationProbe(page, { settleMs: 0, baseUrl: BASE })).rejects.toBeInstanceOf(
+      probe.ProdProbeError,
+    )
+  })
+
+  it('узнаёт #418 и не путает его с другими ошибками', () => {
+    expect(probe.isHydrationPageError(new Error('Minified React error #418; visit https://react.dev/errors/418'))).toBe(
+      true,
+    )
+    expect(probe.isHydrationPageError('Hydration failed because the server rendered HTML')).toBe(true)
+    expect(probe.isHydrationPageError('ResizeObserver loop')).toBe(false)
+  })
+})
+
 describe('isReusableState (#2074)', () => {
   it('переиспользует живую сессию аккаунта 104', () => {
     expect(probe.isReusableState(stateWith(), BASE, NOW)).toBe(true);

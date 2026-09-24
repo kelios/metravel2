@@ -1,6 +1,7 @@
 import { Stack, router } from 'expo-router'
+import type { Href } from 'expo-router'
 import { Platform, StyleSheet } from 'react-native'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import Button from '@/components/ui/Button'
@@ -8,11 +9,26 @@ import { Text, View } from '@/components/ui/Themed'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
+import {
+  takeUnknownCityHydrationPath,
+  UNKNOWN_CITY_NOT_FOUND_ELEMENT_ID,
+} from '@/utils/unknownCityNotFoundHydration'
 
 
 export default function NotFoundScreen() {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
+
+  // Кадр гидратации уже совпал с +not-found.html. Дальше возвращаем настоящий
+  // URL города: это клиентский переход, не вторая гидратация, и редирект
+  // неизвестного алиаса на /quests остаётся в лендинге (#2090 / #2107).
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return
+    const deferred = takeUnknownCityHydrationPath(window as unknown as Record<string, unknown>)
+    if (!deferred) return
+    router.replace(deferred as Href)
+  }, [])
+
   return (
     <>
       <Stack.Screen options={{ title: i18nT('shared:app.missing.oops_a237d9cd') }} />
@@ -32,7 +48,11 @@ export default function NotFoundScreen() {
         description={i18nT('shared:app.missing.stranitsa_ne_naydena_pereydite_na_glavnuyu_i_0cfdec3b')}
         robots="noindex, nofollow"
       />
-      <View style={styles.container}>
+      <View
+        nativeID={UNKNOWN_CITY_NOT_FOUND_ELEMENT_ID}
+        testID={UNKNOWN_CITY_NOT_FOUND_ELEMENT_ID}
+        style={styles.container}
+      >
         <Text style={styles.title}>{i18nT('shared:app.missing.stranitsa_ne_naydena_8663ccb9')}</Text>
 
         <Text style={styles.subtitle}>
