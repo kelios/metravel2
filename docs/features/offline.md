@@ -215,6 +215,16 @@ persisted state завершается до первого offline-sensitive que
 quest adapters используют public request policy независимо от наличия auth token;
 private payload не должен случайно попадать в public package.
 
+Живой native-процесс может пропустить событие возврата сети (Android per-uid
+background firewall, #603). Поэтому `utils/nativeQueryOnlineListener.native.ts`
+вызывает `NetInfo.refresh()` при каждом переходе `AppState` → `active`, а пока
+приложение офлайн и на переднем плане — повторяет его с backoff 2 → 60 с, не
+больше 10 раз за эпизод; в background перепроверка останавливается. Онлайн
+решает только ответ NetInfo, явный `isConnected=false` оставляет запросы на
+паузе. Диагностический trace `[NET-DIAG]` включается только сборочным флагом
+`EXPO_PUBLIC_NETWORK_DIAGNOSTICS=1` (release: `logcat` уровня `E`, тег
+`ReactNativeJS`); без флага прод-сборка молчит. Web этот слой не грузит.
+
 ### Content adapters
 
 | Тип | Snapshot/API | Durable assets | Особенности |

@@ -1,16 +1,11 @@
 import { onlineManager } from '@tanstack/react-query';
 import { Platform } from 'react-native';
+import { setupNativeQueryOnlineListener } from '@/utils/nativeQueryOnlineListener';
 
 export interface QueryNetworkState {
   isConnected?: boolean | null;
   isInternetReachable?: boolean | null;
-}
-
-interface NetInfoLike {
-  fetch: () => Promise<QueryNetworkState>;
-  addEventListener: (
-    listener: (state: QueryNetworkState) => void,
-  ) => () => void;
+  type?: string | null;
 }
 
 let configured = false;
@@ -23,7 +18,9 @@ export function isQueryNetworkOnline(state: QueryNetworkState): boolean {
 /**
  * Connects TanStack Query to the actual platform network source exactly once.
  * Native starts conservatively offline until NetInfo resolves, which prevents
- * an offline cold start from firing a first doomed request.
+ * an offline cold start from firing a first doomed request. The native listener
+ * (NetInfo + AppState recheck, #603) lives in a `.native.ts` file so the web
+ * bundle keeps only the navigator.onLine path below.
  */
 export function setupQueryOnlineManager(): void {
   if (configured) return;
@@ -47,24 +44,6 @@ export function setupQueryOnlineManager(): void {
       };
     }
 
-    // Do not allow an offline native cold start to race NetInfo resolution.
-    setOnline(false);
-
-    try {
-      const NetInfo = require('@react-native-community/netinfo') as NetInfoLike;
-      const applyState = (state: QueryNetworkState) => {
-        setOnline(isQueryNetworkOnline(state));
-      };
-      const unsubscribe = NetInfo.addEventListener(applyState);
-
-      void NetInfo.fetch()
-        .then(applyState)
-        .catch(() => setOnline(true));
-
-      return unsubscribe;
-    } catch {
-      setOnline(true);
-      return undefined;
-    }
+    return setupNativeQueryOnlineListener(setOnline, isQueryNetworkOnline);
   });
 }
