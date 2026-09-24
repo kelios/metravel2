@@ -120,6 +120,10 @@ runStep('node', ['scripts/verify-static-quest-seo.js', '--dist', stagingPath])
 runStep('node', ['scripts/guard-site-owner-name.js', '--dist', stagingPath])
 runStep('node', ['scripts/copy-public-files.js', stagingPath])
 runStep('node', ['scripts/add-cache-bust-meta.js', stagingPath])
+// #2088: add-cache-bust-meta.js is where the charset-position fix runs
+// (scripts/lib/htmlCharset.js); guard it right after, before anything else
+// treats staging as deployable.
+runStep('node', ['scripts/guard-html-charset.js', '--dist', stagingPath])
 
 // Fail-closed config gate: never swap a build that lost the prod config
 // (missing Metrika / leaked LAN-dev API). Aborts before the artifact goes live.

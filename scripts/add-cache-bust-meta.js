@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const { promisify } = require('util');
+const { normalizeHeadCharset } = require('./lib/htmlCharset');
 
 const readdir = promisify(fs.readdir);
 const readFile = promisify(fs.readFile);
@@ -32,6 +33,11 @@ const BUILD_VERSION = `v${Date.now()}`;
 async function processHtmlFile(filePath) {
   try {
     let content = await readFile(filePath, 'utf8');
+
+    // #2088: last full pass over every dist/prod/**/*.html file before the
+    // build swaps into place — move <meta charset> to be the first child of
+    // <head> so the browser's 1024-byte encoding prescan always finds it.
+    content = normalizeHeadCharset(content);
 
     const cacheMetaTags = `
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
