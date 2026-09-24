@@ -52,8 +52,12 @@ Local read-only preflight and source/archive inspection do not mutate store stat
   `IOS_UPLOAD_AUTHORIZATION=1` plus an explicit build id for upload). Build and
   upload are separate commands; neither submits to App Review or releases a
   storefront version, and `IOS_AUTO_SUBMIT_FORBIDDEN` in the guard keeps
-  `--auto-submit` out of the repository. Setting an authorization variable is
-  itself an owner-authorized act — never export one to unblock yourself.
+  `--auto-submit` out of the repository. Set an authorization variable only on
+  an explicit owner command for that exact stage (owner decision 24.09.2026): a
+  verbatim chat command such as «собирай» or «загружай» authorizes the agent to
+  export that stage's variable itself and quote the command in the report and
+  ticket. Never export one without such a command to unblock yourself; a command
+  for one stage does not authorize the next.
 - Before any App Review submit or resubmit, require a recorded pass of
   `IOS-16` (`docs/MANUAL_TEST_CASES.md`) for the exact candidate: sign-in and
   guest browsing on an IPv6-only NAT64 Wi-Fi, external reachability of the
