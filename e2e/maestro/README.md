@@ -28,7 +28,8 @@ sudo ln -sfn "$(brew --prefix openjdk@17)/libexec/openjdk.jdk" /Library/Java/Jav
 ## Предусловия
 - Устройство по USB (`adb devices -l`) ИЛИ эмулятор; `by.metravel.app` установлен.
 - **dev-client:** Metro запущен (`npm start`); `launch.yaml` сам подключит bundle (тап по dev-серверу `…8081` или deep-link к `127.0.0.1:8081`). **standalone preview/release-сборка надёжнее** — там `launchApp` сразу открывает приложение (на dev-client `launchApp` показывает лаунчер Expo).
-- Залогинен тест-аккаунтом sergey@lyte.com; `apiUrl=https://metravel.by`.
+- Три квестовых флоу (`quest-reviews`, `quest-intro-map-points`, `quest-offline-points`) запускать **гостем**: в шапке видна кнопка «Войти». Они сами падают на `assertVisible: "Войти"` до сброса прогресса, чтобы не стереть прохождения аккаунта. `apiUrl=https://metravel.by`.
+- Остальные флоу, которым нужен аккаунт (полки рекомендаций), — тест-аккаунт sergey@lyte.com.
 - Тексты ассертов — русские (UI на русском). Лейблы кнопок — из `accessibilityLabel`.
 - Если Java недоступна для Maestro, не помечай device QA как зелёный: зафиксируй blocker и
   вручную пройди соответствующие `AND-USB-*` кейсы через `adb`/устройство.
@@ -39,7 +40,7 @@ Java нужно дать maestro через окружение (если не с
 export JAVA_HOME="$(brew --prefix openjdk@17)/libexec/openjdk.jdk/Contents/Home"
 export PATH="$HOME/.maestro/bin:$JAVA_HOME/bin:$PATH"
 
-maestro test e2e/maestro/quest-reviews.yaml          # ✅ проверено зелёным 2026-06-22
+maestro test e2e/maestro/quest-reviews.yaml
 maestro test e2e/maestro/quest-intro-map-points.yaml
 maestro test e2e/maestro/quest-offline-points.yaml
 maestro test e2e/maestro/recommendation-shelves.yaml
@@ -49,9 +50,9 @@ maestro test e2e/maestro/            # все сразу
 ## Flows
 | Flow | Что проверяет | Статус |
 |---|---|---|
-| `quest-reviews.yaml` | Чип «💬 N» → модалка отзывов (не старт квеста) | ✅ зелёный на 2026-06-22 |
-| `quest-intro-map-points.yaml` | Деталка квеста → intro-карта показывает точки маршрута до старта | 🆕 покрывает регресс пустой карты |
-| `quest-offline-points.yaml` | Скачать GPX / открыть в приложении → share с .gpx (не тост ошибки) | ✅ зелёный на 2026-06-22 |
+| `quest-reviews.yaml` | Поиск «Гомелю» → чип отзывов карточки «Квест по Гомелю…» (ratingCount > 0) → модалка. Не позиция каталога | гость, квест id 15 |
+| `quest-intro-map-points.yaml` | Поиск «Вавель» → «Квест по Кракову: Вавельский дракон» (9 точек) → intro-карта до старта. Сброс только этого гостевого прогресса | гость, квест id 1 |
+| `quest-offline-points.yaml` | Тот же квест Кракова по названию → GPX / открыть в картах → share с .gpx | гость, квест id 1 |
 | `recommendation-shelves.yaml` | Полки Хочу поехать/Недавно смотрели на Маршрутах | ✅ зелёный на 2026-07-05 |
 
 ## Заметки
