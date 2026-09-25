@@ -40,7 +40,6 @@ export const tripsGenerated2 = {
   "components.trips.TripApplyForm.pravilami_poezdok_c465f9f0": "travel rules",
   "components.trips.TripApplyForm.pravilami_soobschestva_409de536": "community rules",
   "components.trips.TripApplyForm.rasskazhite_o_sebe_opyt_chem_budete_polezny__03fac933": "Tell us about yourself: experience, how you will be useful, what you expect from the trip",
-  "components.trips.TripApplyForm.soglasie_chto_metravel_ne_organizuet_poezdku_324c6668": "I understand that MeTravel does not organize the trip and is not responsible for the arrangements of participants.",
   "components.trips.TripApplyForm.soobschenie_organizatoru_ee7cee00": "Message to the organizer",
   "components.trips.TripApplyForm.ssylki_na_sotsseti_po_zhelaniyu_09a87889": "Links to social networks (optional)",
   "components.trips.TripApplyForm.ssylki_pomogut_organizatoru_poznakomitsya_s__b5b89f75": "Links will help the organizer get to know you. They are visible only to him.",

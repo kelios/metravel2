@@ -69,9 +69,9 @@ export default function ConsentCheckbox({
               // RNW activates Enter for role=checkbox, but Space only for role=button.
               // Space would scroll the page, so toggle here and cancel that default.
               onKeyDown: (event: { key: string; repeat?: boolean; preventDefault: () => void }) => {
-                if (event.key !== ' ' || event.repeat) return
+                if (event.key !== ' ') return
                 event.preventDefault()
-                onToggle(!checked)
+                if (!event.repeat) onToggle(!checked)
               },
             }
           : null)}

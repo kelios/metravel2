@@ -127,7 +127,7 @@ function TripApplyForm({ trip, onSubmitted }: Props) {
           checked={agreeDisclaimer}
           onToggle={setAgreeDisclaimer}
           testID="trip-apply-consent-disclaimer"
-          accessibilityLabel={i18nT('trips:components.trips.TripApplyForm.soglasie_chto_metravel_ne_organizuet_poezdku_324c6668')}
+          accessibilityLabel={i18nT('trips:components.trips.TripApplyForm.ya_ponimayu_chto_metravel_ne_organizuet_poez_324c6668')}
         >
           {i18nT('trips:components.trips.TripApplyForm.ya_ponimayu_chto_metravel_ne_organizuet_poez_324c6668')}</ConsentCheckbox>
       </View>

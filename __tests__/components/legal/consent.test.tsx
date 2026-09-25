@@ -224,7 +224,23 @@ describe('ConsentCheckbox', () => {
       expect(getByRole('checkbox').props.accessibilityState.checked).toBe(true)
     })
 
-    it('keydown Enter still toggles', () => {
+    it('prevents scrolling throughout held Space without toggling repeatedly', () => {
+      const { getByRole } = render(<CheckboxHarness />)
+      const preventDefault = jest.fn()
+
+      fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', preventDefault })
+      fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', repeat: true, preventDefault })
+      fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', repeat: true, preventDefault })
+
+      expect(preventDefault).toHaveBeenCalledTimes(3)
+      expect(getByRole('checkbox').props.accessibilityState.checked).toBe(true)
+
+      // A fresh press after releasing Space switches the checkbox off again.
+      fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', repeat: false, preventDefault })
+      expect(getByRole('checkbox').props.accessibilityState.checked).toBe(false)
+    })
+
+    it('leaves Enter handling to Pressable and keeps onPress functional', () => {
       const { getByRole } = render(<CheckboxHarness />)
       const checkbox = getByRole('checkbox')
       const preventDefault = jest.fn()

@@ -40,7 +40,6 @@ export const tripsGenerated2 = {
   "components.trips.TripApplyForm.pravilami_poezdok_c465f9f0": "правіламі паездак",
   "components.trips.TripApplyForm.pravilami_soobschestva_409de536": "правіламі супольнасці",
   "components.trips.TripApplyForm.rasskazhite_o_sebe_opyt_chem_budete_polezny__03fac933": "Раскажыце пра сябе: вопыт, чым будзеце карысныя, што чакаеце ад паездкі",
-  "components.trips.TripApplyForm.soglasie_chto_metravel_ne_organizuet_poezdku_324c6668": "Я разумею, што MeTravel не арганізуе паездку і не нясе адказнасці за дамоўленасці ўдзельнікаў.",
   "components.trips.TripApplyForm.soobschenie_organizatoru_ee7cee00": "Паведамленне арганізатару",
   "components.trips.TripApplyForm.ssylki_na_sotsseti_po_zhelaniyu_09a87889": "Спасылкі на сацсеткі (па жаданні)",
   "components.trips.TripApplyForm.ssylki_pomogut_organizatoru_poznakomitsya_s__b5b89f75": "Спасылкі дапамогуць арганізатару пазнаёміцца з вамі. Яны бачныя толькі яму.",
