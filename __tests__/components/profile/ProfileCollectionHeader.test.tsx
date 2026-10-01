@@ -2,7 +2,28 @@ import { fireEvent, render } from '@testing-library/react-native';
 
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
 
+const mockResponsive = { current: { width: 1200, isPhone: false, isLargePhone: false } as Record<string, unknown> };
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => mockResponsive.current,
+}));
+
 describe('ProfileCollectionHeader', () => {
+  afterEach(() => {
+    mockResponsive.current = { width: 1200, isPhone: false, isLargePhone: false };
+  });
+
+  // #2099: на телефоне «←» и заголовок рисует HeaderContextBar, здесь — ничего.
+  it('renders nothing on a phone (the context bar owns back and title)', () => {
+    mockResponsive.current = { width: 390, isPhone: true, isLargePhone: false };
+    const { queryByText, queryByLabelText } = render(
+      <ProfileCollectionHeader title="Избранное" onBackPress={() => {}} showClearButton onClearPress={() => {}} />
+    );
+
+    expect(queryByText('Избранное')).toBeNull();
+    expect(queryByLabelText('Назад')).toBeNull();
+    expect(queryByLabelText('Очистить')).toBeNull();
+  });
+
   it('renders title and handles back press', () => {
     const onBackPress = jest.fn();
     const { getByText, getByLabelText } = render(

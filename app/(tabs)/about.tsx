@@ -13,6 +13,7 @@ import { ContactForm } from '@/components/about/ContactForm';
 import { SocialSection } from '@/components/about/SocialSection';
 import { sendFeedback } from '@/api/misc';
 import { useIsFocused } from 'expo-router';
+import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAboutStyles } from '@/components/about/aboutStyles';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
@@ -158,6 +159,11 @@ function AboutAndContactScreen() {
   const seoTitle = i18nT('home:app.tabs.about.o_proekte_metravel_soobschestvo_puteshestven_64997f50');
   const description =
       i18nT('home:app.tabs.about.proekt_metravel_soobschestvo_puteshestvennik_f1e95ae3');
+  const isHeaderMobile = useIsScreenHeaderMobile();
+  useScreenHeader({
+    title: i18nT('home:components.about.AboutIntroCard.o_proekte_d94d47ff'),
+    info: [description],
+  });
 
   return (
       <>
@@ -192,6 +198,7 @@ function AboutAndContactScreen() {
                     <View style={isWide ? styles.columnMain : null}>
                       <AboutIntroCard
                         isPageHeading
+                        hideTitle={isHeaderMobile}
                         email={EMAIL}
                         onSendMail={sendMail}
                         onOpenUrl={openUrl}

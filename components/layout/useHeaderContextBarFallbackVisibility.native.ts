@@ -24,7 +24,7 @@ export function useHeaderContextBarFallbackVisibility({
     if (!showHeaderContextBar) return false
     if (isMobile) {
       const action = resolveHeaderContextBarAction(pathname)
-      const isTopLevelTab = !!pathname && isTopLevelSectionPath(pathname, hasListFilterQuery)
+      const isTopLevelTab = !!pathname && isTopLevelSectionPath(pathname, hasListFilterQuery, true)
       return !(isTopLevelTab && action === 'none')
     }
     return breadcrumbModel.showBreadcrumbs

@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native'
-import { Alert, Platform } from 'react-native'
+import { Alert, Platform, Text } from 'react-native'
 
 import CalendarScreen from '@/app/(tabs)/calendar'
+import { resetScreenHeaderForTests, useActiveScreenHeader } from '@/components/layout/ScreenHeaderContext'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
 
 const mockPush = jest.fn()
@@ -14,11 +15,21 @@ const mockShowToast = jest.fn(() => Promise.resolve())
 
 let mockEntries: TravelStatusEntry[] = []
 let mockParams: Record<string, string | undefined> = {}
+let mockHeaderMobile = true
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace, back: mockBack, canGoBack: jest.fn(() => true) }),
   usePathname: jest.fn(() => '/calendar'),
   useLocalSearchParams: () => mockParams,
+  useFocusEffect: (effect: () => void | (() => void)) => {
+    const React = require('react')
+    React.useEffect(effect, [effect])
+  },
+}))
+
+jest.mock('@/components/layout/ScreenHeaderContext', () => ({
+  ...jest.requireActual('@/components/layout/ScreenHeaderContext'),
+  useIsScreenHeaderMobile: () => mockHeaderMobile,
 }))
 
 jest.mock('@/context/AuthContext', () => ({
@@ -45,6 +56,8 @@ jest.mock('@/stores/travelStatusStore', () => {
 jest.mock('@/components/profile/ProfileCollectionHeader', () => {
   return function MockProfileCollectionHeader({ title, onBackPress }: { title: string; onBackPress: () => void }) {
     const { Pressable, Text, View } = require('react-native')
+    const { useIsScreenHeaderMobile } = require('@/components/layout/ScreenHeaderContext')
+    if (useIsScreenHeaderMobile()) return null
     return (
       <View>
         <Text>{title}</Text>
@@ -125,27 +138,33 @@ describe('CalendarScreen status editor', () => {
     })
     mockEntries = [makeEntry()]
     mockParams = {}
+    mockHeaderMobile = true
   })
+
 
   afterEach(() => {
     jest.restoreAllMocks()
+    resetScreenHeaderForTests()
   })
 
-  // #1726 / NATIVE-DUP-BACK-AFFORDANCE-001: основной список на native не рисует
-  // свою шапку — «Назад» уже даёт глобальный HeaderContextBar.
-  it.each(['android', 'ios'])('%s: в основном списке нет второго «Назад»', async (os) => {
+  // #2099 / NATIVE-DUP-BACK-AFFORDANCE-001: на телефоне (web и native) «←» и заголовок
+  // рисует HeaderContextBar по декларации useScreenHeader, тело без второго «Назад».
+  it.each(['android', 'ios', 'web'])('%s: на телефоне в основном списке нет второго «Назад», шапка объявлена', async (os) => {
     const prevOS = Platform.OS
     ;(Platform.OS as any) = os
     try {
-      render(<CalendarScreen />)
+      const Probe = () => <Text testID="active-header-title">{useActiveScreenHeader()?.title ?? ''}</Text>
+      render(<><CalendarScreen /><Probe /></>)
       await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
       expect(screen.queryByText('Назад')).toBeNull()
+      expect(screen.getByTestId('active-header-title').props.children).toBe('Мой календарь')
     } finally {
       ;(Platform.OS as any) = prevOS
     }
   })
 
-  it('web: в основном списке своя шапка с «Назад» одна', async () => {
+  it('web desktop: в основном списке своя шапка с «Назад» одна', async () => {
+    mockHeaderMobile = false
     const prevOS = Platform.OS
     ;(Platform.OS as any) = 'web'
     try {
@@ -227,8 +246,9 @@ describe('CalendarScreen status editor', () => {
   })
 
   it('returns to profile even when calendar has no useful history entry', async () => {
-    // Своя шапка с «Назад» есть только на web (#1726); на native кнопку рисует
-    // глобальный HeaderContextBar вне этого экрана.
+    // Своя шапка с «Назад» есть на desktop; на телефоне кнопку рисует
+    // глобальный HeaderContextBar вне этого экрана (#2099).
+    mockHeaderMobile = false
     const prevOS = Platform.OS
     ;(Platform.OS as any) = 'web'
     try {

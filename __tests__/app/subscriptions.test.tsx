@@ -45,8 +45,11 @@ jest.mock('expo-router', () => ({
     useRouter: mockUseRouter,
     usePathname: mockUsePathname,
     useLocalSearchParams: jest.fn(() => ({})),
+    useFocusEffect: (cb: () => void | (() => void)) => require('react').useEffect(cb, [cb]),
 }));
 
+import { Text } from 'react-native';
+import { useActiveScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import SubscriptionsScreen from '@/app/(tabs)/subscriptions';
 import { useAuth } from '@/context/AuthContext';
 import { fetchMySubscriptions, fetchMySubscribers } from '@/api/user';
@@ -131,11 +134,12 @@ describe('SubscriptionsScreen', () => {
             userId: '1',
         }));
 
-        const { getByText } = render(<SubscriptionsScreen />, {
+        const Probe = () => <Text testID="declared-title">{useActiveScreenHeader()?.title}</Text>;
+        const { getByTestId } = render(<><SubscriptionsScreen /><Probe /></>, {
             wrapper: createQueryWrapper().Wrapper,
         });
 
-        expect(getByText('Подписки')).toBeTruthy();
+        expect(getByTestId('declared-title').props.children).toBe('Подписки');
     });
 
     it('shows tab bar with Подписки and Подписчики tabs', async () => {

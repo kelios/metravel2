@@ -14,6 +14,7 @@ import { showToast } from '@/utils/toast';
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
   useIsFocused: jest.fn(),
+  useFocusEffect: (cb: () => void | (() => void)) => require('react').useEffect(cb, [cb]),
 }));
 
 jest.mock('@/api/misc', () => ({

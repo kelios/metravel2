@@ -317,8 +317,6 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
 
   return (
     <View style={styles.wrap} testID="trip-create-form">
-      <Text style={styles.heading}>{i18nT('trips:components.trips.planning.TripCreateForm.novaya_poezdka_1901be53')}</Text>
-
       <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripCreateForm.nazvanie_1cff860a')}</Text>
       <TextInput
         value={values.title}
@@ -761,7 +759,6 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
 const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     wrap: { gap: 10 },
-    heading: { fontSize: 18, fontWeight: '700', color: colors.text },
     label: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: 4 },
     labelRow: {
       flexDirection: 'row',

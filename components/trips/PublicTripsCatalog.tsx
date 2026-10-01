@@ -17,7 +17,8 @@ import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
 import Button from '@/components/ui/Button';
-import IconButton from '@/components/ui/IconButton';
+import ScreenHeader from '@/components/ui/ScreenHeader';
+import { useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import PublicTripCard from '@/components/trips/PublicTripCard';
 import PublicTripFilters from '@/components/trips/PublicTripFilters';
 import SafetyNotice from '@/components/ui/SafetyNotice';
@@ -25,7 +26,6 @@ import type { PublicTrip, PublicTripsFilters } from '@/api/publicTrips';
 import { usePublicTrips } from '@/hooks/usePublicTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { trackTripCatalogViewed } from '@/utils/tripAnalytics';
-import { goBackOrReplace } from '@/utils/backNavigation';
 import {
   filterPublicTripsBySearch,
   hasActivePublicTripFilters,
@@ -53,7 +53,6 @@ function PublicTripsCatalog() {
 
   const [filters, setFilters] = useState<PublicTripsFilters>({});
   const [searchQuery, setSearchQuery] = useState('');
-  const [introExpanded, setIntroExpanded] = useState(false);
   const hasActiveFilters = hasActivePublicTripFilters(filters);
   const hasActiveSearch = searchQuery.trim().length > 0;
   const { data, isLoading, isError } = usePublicTrips(filters);
@@ -70,9 +69,7 @@ function PublicTripsCatalog() {
   }, [data]);
 
   const contentWidth = Math.min(width, MAX_WIDTH) - 32;
-  const compactIntro = contentWidth < 620;
   const compactControls = contentWidth < 760;
-  const showFullIntro = !compactIntro || introExpanded;
   const cols = columnsFor(contentWidth);
   const cardWidth = cols === 1 ? undefined : (contentWidth - GUTTER * (cols - 1)) / cols;
   const showControls =
@@ -81,34 +78,22 @@ function PublicTripsCatalog() {
     ((filterOptionTrips.length > 0) || hasActiveFilters || hasActiveSearch);
 
   const openTrip = (trip: PublicTrip) => router.push(`/trips/${trip.id}`);
-  // Запасной путь кладётся поверх каталога (`push`), как и до #1727: с главной
-  // браузерное «Назад» возвращает в каталог поездок.
-  const goBack = () => goBackOrReplace(router, '/', { fallbackMode: 'push' });
   const resetFilters = () => setFilters({});
   const resetSearchAndFilters = () => {
     setSearchQuery('');
     setFilters({});
   };
 
-  const organizeAction = compactIntro ? (
-    <IconButton
-      icon={<Feather name="plus" size={18} color={colors.text} />}
-      label={i18nT('trips:components.trips.PublicTripsCatalog.organizovat_moyu_poezdku_3ee4dcf9')}
-      onPress={() => router.push('/trips/plan/create')}
-      size="md"
-      style={styles.organizeIconBtn}
-      testID="public-trips-organize"
-    />
-  ) : (
-    <Button
-      label={i18nT('trips:components.trips.PublicTripsCatalog.organizovat_moyu_poezdku_3ee4dcf9')}
-      onPress={() => router.push('/trips/plan/create')}
-      icon={<Feather name="plus" size={16} color={colors.textOnPrimary} />}
-      size="md"
-      style={styles.organizeBtn}
-      testID="public-trips-organize"
-    />
-  );
+  const header = useScreenHeader({
+    title: i18nT('trips:components.trips.PublicTripsCatalog.poehali_so_mnoy_8297a10d'),
+    info: [i18nT('trips:components.trips.PublicTripsCatalog.publichnye_poezdki_ot_drugih_puteshestvennik_facc5972')],
+    primaryAction: {
+      icon: 'plus',
+      label: i18nT('trips:components.trips.PublicTripsCatalog.organizovat_moyu_poezdku_3ee4dcf9'),
+      onPress: () => router.push('/trips/plan/create'),
+      testID: 'public-trips-organize',
+    },
+  });
 
   const controls = (
     <>
@@ -161,62 +146,12 @@ function PublicTripsCatalog() {
       testID="public-trips-catalog"
     >
       <View style={styles.inner}>
-        <View style={styles.breadcrumbBar} testID="public-trips-breadcrumbs">
-          <Pressable
-            onPress={goBack}
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('trips:components.trips.PublicTripsCatalog.nazad_b4ee6b82')}
-            style={styles.backCrumb}
-            testID="public-trips-back"
-          >
-            <Feather name="arrow-left" size={15} color={colors.primaryText} />
-            <Text style={styles.backCrumbText}>{i18nT('trips:components.trips.PublicTripsCatalog.nazad_b4ee6b82')}</Text>
-          </Pressable>
-          <View style={styles.crumbTrail}>
-            <Pressable
-              onPress={() => router.push('/')}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('trips:components.trips.PublicTripsCatalog.pereyti_na_glavnuyu_d0724ffd')}
-              style={styles.crumbItem}
-            >
-              <Feather name="home" size={13} color={colors.textMuted} />
-              <Text style={styles.crumbText}>{i18nT('trips:components.trips.PublicTripsCatalog.glavnaya_ed2e490e')}</Text>
-            </Pressable>
-            <Feather name="chevron-right" size={14} color={colors.textMuted} />
-            <Text style={styles.crumbCurrent} numberOfLines={1}>
-              {i18nT('trips:components.trips.PublicTripsCatalog.poehali_so_mnoy_8297a10d')}</Text>
-          </View>
-        </View>
-
-        <View style={styles.titleRow}>
-          <Text style={styles.h1}>{i18nT('trips:components.trips.PublicTripsCatalog.poehali_so_mnoy_8297a10d')}</Text>
-          {organizeAction}
-        </View>
+        <ScreenHeader header={header} />
 
         <SafetyNotice
           text={i18nT('trips:components.trips.PublicTripsCatalog.metravel_ne_organizuet_poezdki_eto_ploschadk_ef41d388')}
           style={styles.notice}
         />
-
-        {showFullIntro ? (
-          <Text style={styles.subtitle}>
-            {i18nT('trips:components.trips.PublicTripsCatalog.publichnye_poezdki_ot_drugih_puteshestvennik_facc5972')}</Text>
-        ) : null}
-
-        {compactIntro ? (
-          <Pressable
-            onPress={() => setIntroExpanded((v) => !v)}
-            style={styles.introToggle}
-            accessibilityRole="button"
-            accessibilityLabel={introExpanded ? i18nT('trips:components.trips.PublicTripsCatalog.skryt_vvodnuyu_informatsiyu_14678353') : i18nT('trips:components.trips.PublicTripsCatalog.pokazat_informatsiyu_o_poezdkah_81e78d07')}
-            testID="public-trips-intro-toggle"
-          >
-            <Feather name={introExpanded ? 'chevron-up' : 'info'} size={15} color={colors.primaryText} />
-            <Text style={styles.introToggleText}>
-              {introExpanded ? i18nT('trips:components.trips.PublicTripsCatalog.skryt_3d16fdf4') : i18nT('trips:components.trips.PublicTripsCatalog.o_poezdkah_f75b4cd6')}
-            </Text>
-          </Pressable>
-        ) : null}
 
         {showControls ? (
           compactControls ? (
@@ -276,71 +211,6 @@ const createStyles = (colors: ThemedColors) =>
     screen: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16, alignItems: 'center' },
     inner: { width: '100%', maxWidth: MAX_WIDTH, gap: 12 },
-    breadcrumbBar: {
-      minHeight: 34,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 10,
-      flexWrap: 'wrap',
-    },
-    backCrumb: {
-      minHeight: 44,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 999,
-      backgroundColor: colors.primarySoft,
-      ...Platform.select({ web: { cursor: 'pointer' as any } }),
-    },
-    backCrumbText: { fontSize: 13, fontWeight: '700', color: colors.primaryText },
-    crumbTrail: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      flexShrink: 1,
-      minWidth: 0,
-    },
-    crumbItem: {
-      minHeight: 44,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      ...Platform.select({ web: { cursor: 'pointer' as any } }),
-    },
-    crumbText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
-    crumbCurrent: {
-      flexShrink: 1,
-      minWidth: 0,
-      fontSize: 13,
-      color: colors.text,
-      fontWeight: '700',
-    },
-    titleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 12,
-    },
-    h1: { fontSize: 26, fontWeight: '800', color: colors.text },
-    subtitle: { fontSize: 15, lineHeight: 21, color: colors.textSecondary },
-    organizeBtn: { flexShrink: 0, marginVertical: 0 },
-    organizeIconBtn: { flexShrink: 0, marginHorizontal: 0 },
-    introToggle: {
-      alignSelf: 'flex-start',
-      minHeight: 44,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 999,
-      backgroundColor: colors.primarySoft,
-      ...Platform.select({ web: { cursor: 'pointer' as any } }),
-    },
-    introToggleText: { fontSize: 13, fontWeight: '700', color: colors.primaryText },
     notice: { marginVertical: 2 },
     controlsRow: {
       position: 'relative',

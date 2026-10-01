@@ -1,5 +1,5 @@
 import type React from 'react'
-import type { TextStyle, ViewStyle } from 'react-native'
+import { Platform, type PressableProps, type TextProps, type TextStyle, type ViewStyle } from 'react-native'
 
 type Booleanish = boolean | 'false' | 'true'
 
@@ -87,3 +87,23 @@ export const webTextStyle = (
 export type WebStyle = ViewStyle & Partial<React.CSSProperties>
 
 export const webStyle = (style: WebStyle): ViewStyle => style as ViewStyle
+
+/**
+ * Заголовок первого уровня: на web — настоящий `h1` (SEO, скринридер), на native —
+ * `accessibilityRole="header"`. `aria-level` RN-типы не знают, мост локализован здесь.
+ */
+export const headingLevel1Props = (): TextProps =>
+  Platform.OS === 'web'
+    ? ({ role: 'heading', 'aria-level': 1 } as TextProps)
+    : { accessibilityRole: 'header' }
+
+/** Нативная web-подсказка `title` для иконки без текста; на native — пусто. */
+export const webTitleProps = (title: string): PressableProps =>
+  Platform.OS === 'web' ? ({ title } as PressableProps) : {}
+
+/**
+ * Метка десктопной шапки экрана (#2099): до гидратации статический HTML несёт её
+ * на всех ширинах (h1 должен быть в сыром HTML), а критический CSS прячет метку
+ * на телефоне, чтобы после гидратации контент не прыгал вверх.
+ */
+export const SCREEN_HEADER_DESKTOP_PROPS = webDataSetProps({ screenHeader: 'desktop' })

@@ -8,6 +8,8 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { buildTripPlanPrefill } from '@/utils/tripPlanLinks';
+import ScreenHeader from '@/components/ui/ScreenHeader';
+import { useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { translate as i18nT } from '@/i18n'
@@ -33,6 +35,9 @@ function CreateTripScreenContent() {
   const authReady = useAuthStore((s) => s.authReady);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const initialValues = useMemo(() => buildTripPlanPrefill(params), [params]);
+  const header = useScreenHeader({
+    title: i18nT('trips:components.trips.planning.TripCreateForm.novaya_poezdka_1901be53'),
+  });
 
   if (!authReady) {
     return (
@@ -73,6 +78,7 @@ function CreateTripScreenContent() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.inner}>
+        <ScreenHeader header={header} />
         <TripCreateForm
           initialValues={initialValues}
           onCreated={(trip) => router.replace(`/trips/plan/${trip.id}`)}
@@ -91,7 +97,7 @@ const createStyles = (colors: ThemedColors, scrollBottomReserve: number | string
       paddingBottom: asBottomDimension(scrollBottomReserve),
       alignItems: 'center',
     },
-    inner: { width: '100%', maxWidth: 640 },
+    inner: { width: '100%', maxWidth: 640, gap: 14 },
     state: { gap: 14 },
     h1: { fontSize: 26, fontWeight: '800', color: colors.text },
     lead: { fontSize: 15, color: colors.textSecondary, lineHeight: 21 },

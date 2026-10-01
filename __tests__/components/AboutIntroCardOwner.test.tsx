@@ -23,4 +23,24 @@ describe('AboutIntroCard site owner line', () => {
     expect(SITE_OWNER_LEGAL_NAME).toBe('Sauran Yuliya')
     expect(getByTestId('about-site-owner')).toHaveTextContent(`Владелец сайта: ${SITE_OWNER_LEGAL_NAME}`)
   })
+  // #2099: метка «десктопный блок» скрывает заголовок на телефоне; /contact не
+  // снимает его после гидратации, поэтому метка только у заголовка страницы.
+  it.each([
+    [false, false],
+    [true, true],
+  ])('isPageHeading=%s -> метка screenHeader=%s', (isPageHeading, marked) => {
+    const { toJSON } = render(
+      <AboutIntroCard
+        email="metraveldev@gmail.com"
+        onSendMail={jest.fn()}
+        onOpenUrl={jest.fn()}
+        onOpenPrivacy={jest.fn()}
+        onOpenCookies={jest.fn()}
+        socialLinks={METRAVEL_SOCIAL_LINKS}
+        isPageHeading={isPageHeading}
+      />,
+    )
+
+    expect(JSON.stringify(toJSON()).includes('"screenHeader":"desktop"')).toBe(marked)
+  })
 })

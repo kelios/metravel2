@@ -139,7 +139,7 @@ describe('i18n resources', () => {
   // с заголовком самого экрана. Значение продублировано в двух словарях (крошка
   // рисуется до подгрузки generated-неймспейсов), так что расхождение молча
   // вернёт пользователю два разных названия одного экрана.
-  // Набор путей — `SELF_HEADED_COLLECTION_PATHS` (/favorites, /history, /calendar).
+  // Набор путей — `COLLECTION_PATHS` (/favorites, /history, /calendar).
   it('names self-headed collection screens the same way in breadcrumbs and screen titles', () => {
     for (const locale of ['ru', 'be', 'uk', 'pl', 'en'] as const) {
       const bundle = resources[locale]

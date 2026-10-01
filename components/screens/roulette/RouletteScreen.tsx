@@ -30,6 +30,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getTravelLabel } from '@/utils/pluralize';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { translate as i18nT } from '@/i18n'
+import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 
 
 const MAP_BACKGROUND = require('../../../assets/travel/roulette-map-bg.jpg') as ImageSourcePropType;
@@ -134,6 +135,8 @@ export default function RouletteScreen() {
   const pathname = usePathname();
   const isFocused = useIsFocused();
   const { isPhone, isLargePhone, width } = useResponsive();
+  // #2099: на телефоне название раздела и «←» рисует строка HeaderContextBar.
+  useScreenHeader({ title: i18nT('navigationStatic:constants.headerNavigation.sluchaynyy_marshrut_3f437e35') });
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 

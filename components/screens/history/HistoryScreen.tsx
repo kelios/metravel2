@@ -24,21 +24,16 @@ import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
 import { formatRelativeTime } from '@/utils/relativeTime';
 import { pluralizeRu } from '@/utils/pluralize';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
-import CollectionNativeClearButton from '@/components/profile/CollectionNativeClearButton';
-import { useCollectionBackAffordanceGlobal } from '@/components/layout/useCollectionBackAffordance';
+import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import { goBackOrReplace } from '@/utils/backNavigation';
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { refreshViewHistory, type ViewHistoryItem } from '@/hooks/useViewHistory';
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
 
 export default function HistoryScreen() {
-    // Кто рисует «Назад» на этом экране — решает одна точка для всех кабинетных
-    // коллекций (#836 → #1726): когда глобальный HeaderContextBar показан и
-    // владеет «Назад», in-page шапка молчит во ВСЕХ состояниях; на web и на
-    // native вне мобильной ветки бара шапка — единственная навигация.
-    const hasGlobalHeader = useCollectionBackAffordanceGlobal('/history');
     const router = useRouter();
     const isFocused = useIsFocused();
     const { width } = useResponsive();
@@ -311,33 +306,32 @@ export default function HistoryScreen() {
         await clearHistory();
     }, [clearHistory]);
 
+    const isHeaderMobile = useIsScreenHeaderMobile();
+    const canClear = typeof clearHistory === 'function' && data.length > 0;
+    const clearLabel = i18nT('shared:app.tabs.history.ochistit_istoriyu_prosmotrov_9a61aea8');
+
+    // #2099: на телефоне заголовок, «←» и «Очистить» живут в строке HeaderContextBar
+    // («⋯»); ProfileCollectionHeader там молчит, на desktop рисует прежнюю шапку.
+    useScreenHeader({
+        title: i18nT('shared:app.tabs.history.vy_smotreli_e2be38ed'),
+        overflow: canClear
+            ? [{ key: 'clear', label: clearLabel, icon: 'trash-2', onPress: handleClear, accessibilityLabel: clearLabel }]
+            : undefined,
+    });
+
     const renderHeader = useCallback(
-        (showClear: boolean) => {
-            if (hasGlobalHeader) {
-                if (!showClear) return null;
-
-                return (
-                    <CollectionNativeClearButton
-                        onPress={handleClear}
-                        accessibilityLabel={i18nT('shared:app.tabs.history.ochistit_istoriyu_prosmotrov_9a61aea8')}
-                        testID="history-native-clear"
-                    />
-                );
-            }
-
-            return (
-                <ProfileCollectionHeader
-                    title={i18nT('shared:app.tabs.history.vy_smotreli_e2be38ed')}
-                    dense
-                    onBackPress={handleBackToProfile}
-                    showClearButton={showClear}
-                    onClearPress={handleClear}
-                    clearAccessibilityLabel={i18nT('shared:app.tabs.history.ochistit_istoriyu_prosmotrov_9a61aea8')}
-                    compactClear
-                />
-            );
-        },
-        [hasGlobalHeader, handleBackToProfile, handleClear]
+        (showClear: boolean) => (
+            <ProfileCollectionHeader
+                title={i18nT('shared:app.tabs.history.vy_smotreli_e2be38ed')}
+                dense
+                onBackPress={handleBackToProfile}
+                showClearButton={showClear}
+                onClearPress={handleClear}
+                clearAccessibilityLabel={clearLabel}
+                compactClear
+            />
+        ),
+        [handleBackToProfile, handleClear, clearLabel]
     );
 
     const renderHistorySummary = useCallback(
@@ -350,7 +344,9 @@ export default function HistoryScreen() {
                         </View>
 
                         <View style={styles.summaryCopy}>
-                            <Text style={styles.summaryEyebrow}>{i18nT('shared:app.tabs.history.vy_smotreli_e2be38ed')}</Text>
+                            {isHeaderMobile ? null : (
+                                <Text style={styles.summaryEyebrow} {...SCREEN_HEADER_DESKTOP_PROPS}>{i18nT('shared:app.tabs.history.vy_smotreli_e2be38ed')}</Text>
+                            )}
                             <Text style={styles.summaryTitle}>{i18nT('shared:app.tabs.history.bystryy_vozvrat_k_tomu_chto_uzhe_smotrel_8d05fc78')}</Text>
                             <Text style={styles.summaryDescription}>
                                 {i18nT('shared:app.tabs.history.posle_svorachivaniya_ili_perezapuska_prilozh_d129bc74')}</Text>
@@ -397,7 +393,7 @@ export default function HistoryScreen() {
                 </View>
             </View>
         ),
-        [colors.primaryDark, data.length, latestHistoryItem, latestHistoryTitle, router, styles]
+        [colors.primaryDark, data.length, isHeaderMobile, latestHistoryItem, latestHistoryTitle, router, styles]
     );
 
     const isLoading = !authReady || (isInitialSyncing && data.length === 0);

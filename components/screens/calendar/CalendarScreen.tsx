@@ -58,7 +58,7 @@ import {
   SelectedDateFilter,
 } from '@/components/screens/calendar/calendarScreen.parts'
 import { translate as i18nT } from '@/i18n'
-import { useCollectionBackAffordanceGlobal } from '@/components/layout/useCollectionBackAffordance'
+import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 
 
 async function confirmRemoveFromCalendar(title: string, onConfirm: () => void) {
@@ -186,11 +186,9 @@ export default function CalendarScreen() {
     return true
   }, [router])
 
-  // Кто рисует «Назад» — одна точка для всех кабинетных коллекций (#1726):
-  // когда глобальный HeaderContextBar показан и владеет «Назад», своя шапка
-  // молчит во ВСЕХ состояниях (гость / загрузка / список); на web и на native
-  // вне мобильной ветки бара шапка — единственная навигация.
-  const hasGlobalHeader = useCollectionBackAffordanceGlobal('/calendar')
+  // #2099: на телефоне заголовок и «←» рисует строка HeaderContextBar; на desktop
+  // ProfileCollectionHeader остаётся прежней шапкой с крошками.
+  useScreenHeader({ title: i18nT('calendar:app.tabs.calendar.moy_kalendar_f9da1dd3') })
 
   const handleBreadcrumbPress = useCallback((path: string) => {
     router.push(path as any)
@@ -383,7 +381,6 @@ export default function CalendarScreen() {
     return (
       <CalendarSkeleton
         styles={styles}
-        showHeader={!hasGlobalHeader}
         seoBlock={seoBlock}
         onBackPress={handleBackToProfile}
       />
@@ -394,16 +391,11 @@ export default function CalendarScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         {seoBlock}
-        {/* Только web: на native глобальный HeaderContextBar уже даёт «Назад»
-            для кабинетных коллекций, и вторая шапка была бы второй навигацией
-            назад на одном экране (#799, #1726). См. hasGlobalHeader выше. */}
-        {!hasGlobalHeader && (
-          <ProfileCollectionHeader
-            title={i18nT('calendar:app.tabs.calendar.moy_kalendar_f9da1dd3')}
-            onBackPress={handleBackToProfile}
-            dense
-          />
-        )}
+        <ProfileCollectionHeader
+          title={i18nT('calendar:app.tabs.calendar.moy_kalendar_f9da1dd3')}
+          onBackPress={handleBackToProfile}
+          dense
+        />
         <EmptyState
           icon="calendar"
           title={i18nT('calendar:app.tabs.calendar.voydite_v_akkaunt_0eab41f5')}
@@ -418,7 +410,6 @@ export default function CalendarScreen() {
     return (
       <CalendarSkeleton
         styles={styles}
-        showHeader={!hasGlobalHeader}
         seoBlock={seoBlock}
         onBackPress={handleBackToProfile}
         breadcrumbs={CALENDAR_BREADCRUMBS}
@@ -435,15 +426,13 @@ export default function CalendarScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {seoBlock}
-      {!hasGlobalHeader && (
-        <ProfileCollectionHeader
-          title={i18nT('calendar:app.tabs.calendar.moy_kalendar_f9da1dd3')}
-          onBackPress={handleBackToProfile}
-          breadcrumbs={CALENDAR_BREADCRUMBS}
-          onBreadcrumbPress={handleBreadcrumbPress}
-          dense
-        />
-      )}
+      <ProfileCollectionHeader
+        title={i18nT('calendar:app.tabs.calendar.moy_kalendar_f9da1dd3')}
+        onBackPress={handleBackToProfile}
+        breadcrumbs={CALENDAR_BREADCRUMBS}
+        onBreadcrumbPress={handleBreadcrumbPress}
+        dense
+      />
       <CalendarTabs
         activeTab={activeTab}
         counts={tabCounts}

@@ -109,6 +109,19 @@ export function buildCriticalCSS(): string {
     `@media (min-width:${HEADER_LAYOUT_BREAKPOINTS.mobileContext}px){`,
     '  [data-header-context-fallback="default"]{height:46px !important;min-height:46px !important}',
     '}',
+    // #2099: до гидратации ширина неизвестна, статический HTML несёт десктопную
+    // шапку экрана (h1 обязан быть в сыром HTML). На телефоне её прячет CSS; после
+    // гидратации ScreenHeader там не рендерится вовсе, заголовок в строке «←».
+    `@media (max-width:${HEADER_MEDIA_MAX_WIDTHS.mobile}px){`,
+    '  [data-screen-header="desktop"]{display:none !important}',
+    '}',
+    // #2099: страницы со строкой «←» только на телефоне (/trips, коллекции,
+    // /places, /roulette). До гидратации ширины нет, поэтому слот резервируется
+    // 52px, а от 768px, где бар не рисуется, CSS его схлопывает до первого кадра.
+    '[data-header-context-fallback="phone"]{height:52px !important;min-height:52px !important}',
+    `@media (min-width:${HEADER_LAYOUT_BREAKPOINTS.mobileContext}px){`,
+    '  [data-header-context-fallback="phone"]{display:none !important;height:0 !important;min-height:0 !important}',
+    '}',
     // #1563: the static travel-detail snapshot cannot know the viewport width,
     // so CustomHeader initially reserves the 52px mobile context row. At
     // 768–1279 the lazy runtime bar is actually the desktop breadcrumb row:

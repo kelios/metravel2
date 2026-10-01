@@ -15,10 +15,12 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({}),
   useRouter: () => ({ push: jest.fn(), setParams: jest.fn() }),
   useIsFocused: () => true,
+  useFocusEffect: () => undefined,
 }))
 
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsiveWidth: () => 1280,
+  useResponsive: () => ({ width: 1280, isPhone: false, isLargePhone: false }),
 }))
 
 jest.mock('@/api/places', () => ({ fetchPlacesCatalog: jest.fn() }))

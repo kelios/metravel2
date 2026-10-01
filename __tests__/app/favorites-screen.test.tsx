@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 
 import FavoritesScreen from '@/app/(tabs)/favorites';
+import { resetScreenHeaderForTests, useActiveScreenHeader } from '@/components/layout/ScreenHeaderContext';
 
 const mockUseAuth = jest.fn();
 const mockUseFavorites = jest.fn();
@@ -32,6 +33,10 @@ jest.mock('expo-router', () => ({
     replace: mockReplace,
     canGoBack: mockCanGoBack,
   }),
+  useFocusEffect: (effect: () => void | (() => void)) => {
+    const React = require('react');
+    React.useEffect(effect, [effect]);
+  },
 }));
 
 // Ширина реальная: от неё зависит не только сетка, но и владелец «Назад» —
@@ -73,6 +78,21 @@ jest.mock('@/components/listTravel/TabTravelCard', () => {
   };
 });
 
+const ActiveHeaderProbe = () => {
+  const { Text, View } = require('react-native');
+  const header = useActiveScreenHeader();
+  return (
+    <View>
+      <Text testID="active-header-title">{header?.title ?? ''}</Text>
+      {(header?.overflow ?? []).map((item) => (
+        <Text key={item.key} testID={`active-header-overflow-${item.key}`}>{item.label}</Text>
+      ))}
+    </View>
+  );
+};
+
+const DESKTOP_WIDTH = 1200;
+
 describe('FavoritesScreen', () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -98,6 +118,7 @@ describe('FavoritesScreen', () => {
     jest.useRealTimers();
     jest.clearAllMocks();
     delete (global as any).__mockResponsive;
+    resetScreenHeaderForTests();
   });
 
   it('shows login prompt when not authenticated', () => {
@@ -121,6 +142,7 @@ describe('FavoritesScreen', () => {
 
   it('goes back when "Назад" is pressed', async () => {
     setPlatform('web');
+    (global as any).__mockResponsive = { width: DESKTOP_WIDTH };
     mockUseFavorites.mockReturnValue({
       favorites: [
         { id: 1, type: 'travel', title: 'T1', url: '/travels/1', imageUrl: null, city: null, countryName: 'Belarus' },
@@ -144,6 +166,7 @@ describe('FavoritesScreen', () => {
   // уводит с сайта — «Назад» обязан привести на /profile.
   it('falls back to the profile screen when there is no history to pop', async () => {
     setPlatform('web');
+    (global as any).__mockResponsive = { width: DESKTOP_WIDTH };
     mockCanGoBack.mockReturnValueOnce(false);
     mockUseFavorites.mockReturnValue({
       favorites: [
@@ -165,10 +188,10 @@ describe('FavoritesScreen', () => {
     expect(mockReplace).toHaveBeenCalledWith('/profile');
   });
 
-  // #1726 / NATIVE-DUP-BACK-AFFORDANCE-001: на native «Назад» рисует глобальный
-  // HeaderContextBar, и своя шапка обязана молчать во ВСЕХ состояниях экрана —
-  // раньше загрузка и список рисовали второй «Назад».
-  it.each(['android', 'ios'])('%s: ни в загрузке, ни в списке нет второго «Назад», «Очистить» остаётся', async (os) => {
+  // #2099 / NATIVE-DUP-BACK-AFFORDANCE-001: на телефоне (web и native) «←», заголовок
+  // и «Очистить» («⋯») рисует HeaderContextBar по декларации useScreenHeader, а
+  // шапка экрана молчит во ВСЕХ состояниях — ровно один владелец «Назад».
+  it.each(['android', 'ios', 'web'])('%s: на телефоне тело без «Назад», шапку и «Очистить» объявляет экран', async (os) => {
     setPlatform(os);
     mockUseFavorites.mockReturnValue({
       favorites: [
@@ -178,24 +201,22 @@ describe('FavoritesScreen', () => {
       clearFavorites: jest.fn(),
     });
 
-    const utils = render(<FavoritesScreen />);
-    // состояние загрузки — до таймера
+    const utils = render(<><FavoritesScreen /><ActiveHeaderProbe /></>);
     expect(utils.queryByText('Назад')).toBeNull();
+    expect(utils.getByTestId('active-header-title').props.children).toBe('Хочу поехать');
 
     await act(async () => {
       jest.advanceTimersByTime(350);
     });
 
-    // основной список
     expect(utils.queryByText('Назад')).toBeNull();
-    expect(utils.getByTestId('favorites-native-clear')).toBeTruthy();
+    expect(utils.getByTestId('active-header-overflow-clear')).toBeTruthy();
   });
 
-  // Обратная сторона того же инварианта: на планшете и в ландшафте телефона
-  // глобальный бар уходит в desktop-ветку и «Назад» не рисует вовсе, поэтому
-  // своя шапка обязана остаться — иначе экран без навигации назад.
-  it('android: в ландшафте/на планшете своя шапка остаётся единственной навигацией', async () => {
-    setPlatform('android');
+  // Обратная сторона того же инварианта: на планшете, в ландшафте телефона и на
+  // desktop строки «←» нет, поэтому шапка экрана остаётся единственной навигацией.
+  it.each(['android', 'web'])('%s: на широком экране своя шапка единственная, с «Назад» и «Очистить»', async (os) => {
+    setPlatform(os);
     (global as any).__mockResponsive = { width: 900 };
     mockUseFavorites.mockReturnValue({
       favorites: [
@@ -206,26 +227,6 @@ describe('FavoritesScreen', () => {
     });
 
     const utils = render(<FavoritesScreen />);
-
-    await act(async () => {
-      jest.advanceTimersByTime(350);
-    });
-
-    expect(utils.getAllByText('Назад')).toHaveLength(1);
-    expect(utils.queryByTestId('favorites-native-clear')).toBeNull();
-  });
-
-  it('web: в загрузке и в списке своя шапка с «Назад» есть', async () => {
-    setPlatform('web');
-    mockUseFavorites.mockReturnValue({
-      favorites: [
-        { id: 1, type: 'travel', title: 'T1', url: '/travels/1', imageUrl: null, city: null, countryName: 'Belarus' },
-      ],
-      removeFavorite: jest.fn(),
-      clearFavorites: jest.fn(),
-    });
-
-    const utils = render(<FavoritesScreen />);
     expect(utils.getAllByText('Назад')).toHaveLength(1);
 
     await act(async () => {
@@ -233,7 +234,7 @@ describe('FavoritesScreen', () => {
     });
 
     expect(utils.getAllByText('Назад')).toHaveLength(1);
-    expect(utils.queryByTestId('favorites-native-clear')).toBeNull();
+    expect(utils.getByLabelText('Очистить «Хочу поехать»')).toBeTruthy();
   });
 
   it('runs the real server refresh for native pull-to-refresh', async () => {

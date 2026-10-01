@@ -26,6 +26,9 @@ import { isTravelUpsertHeaderPath } from './customHeaderModel';
 import { isTopLevelSectionPath } from './topLevelSections';
 import { useHasListFilterQuery } from './useListFilterQuery';
 import { translate as i18nT } from '@/i18n'
+import { headingLevel1Props } from '@/utils/webProps';
+import { useActiveScreenHeader } from './ScreenHeaderContext';
+import ScreenHeaderBarActions from './ScreenHeaderBarActions';
 
 
 const CONTROL_RADIUS = DESIGN_TOKENS.radii.sm;
@@ -90,6 +93,7 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
   }, [consumeOpen, pathname]);
 
   const model = useBreadcrumbModelSafe();
+  const screenHeader = useActiveScreenHeader();
 
   const styles = useMemo(() => createStyles(colors), [colors]);
   const navigateTo = (path: string, replace = false) => {
@@ -120,7 +124,7 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
 
   if (isMobile) {
     const mobileAction = resolveHeaderContextBarAction(pathname);
-    const isTopLevelTab = !!pathname && isTopLevelSectionPath(pathname, hasListFilterQuery);
+    const isTopLevelTab = !!pathname && isTopLevelSectionPath(pathname, hasListFilterQuery, true);
     // On top-level sections the bottom dock already names the active section and there's
     // nowhere meaningful to go "back" to — hide the bar but keep emitting BreadcrumbsJsonLd
     // for SEO. Отфильтрованный список разделом не считается (#1725).
@@ -218,9 +222,22 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
             </ActionButton>
 
             <View style={styles.mobileTitleWrap}>
-              <Text style={styles.mobileTitle} numberOfLines={1}>
-                {model.currentTitle}
-              </Text>
+              {screenHeader ? (
+                // #2099: экран объявил шапку — это единственный заголовок экрана
+                // (на web — h1 для скринридера и SEO, на native — header).
+                <Text
+                  style={styles.mobileTitle}
+                  numberOfLines={1}
+                  testID="screen-header-title"
+                  {...headingLevel1Props()}
+                >
+                  {screenHeader.title}
+                </Text>
+              ) : (
+                <Text style={styles.mobileTitle} numberOfLines={1}>
+                  {model.currentTitle}
+                </Text>
+              )}
             </View>
 
             {/* #228 — на карте больше НЕ показываем кнопку «Найти места рядом»:
@@ -236,6 +253,8 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
               >
                 <Feather name="list" size={18} color={colors.textMuted} />
               </ActionButton>
+            ) : screenHeader ? (
+              <ScreenHeaderBarActions header={screenHeader} />
             ) : (
               <View style={styles.mobileRightSpacer} />
             )}

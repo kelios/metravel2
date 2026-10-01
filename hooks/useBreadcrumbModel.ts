@@ -5,7 +5,7 @@ import { useGlobalSearchParams, useLocalSearchParams, usePathname } from 'expo-r
 import { hashKey, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Article, Travel } from '@/types/types';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
-import { hasListFilterQuery, needsGlobalBackAffordance } from '@/components/layout/topLevelSections';
+import { COLLECTION_PATHS, hasListFilterQuery, needsGlobalBackAffordance } from '@/components/layout/topLevelSections';
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles';
 import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
 // #1552: крошки живут в шапке КАЖДОГО маршрута, поэтому статический импорт
@@ -112,8 +112,8 @@ const SETTINGS_CRUMB: BreadcrumbModelItem = { get label() { return i18nT('shared
 // через «Профиль» (при необходимости — ещё и через «Настройки»).
 // Экраны с собственной шапкой (ProfileCollectionHeader): /favorites, /history,
 // /calendar — здесь НЕ перечислены, чтобы не было двойной шапки
-// (их бар подавляется через SELF_HEADED_COLLECTION_PATHS в
-// components/layout/topLevelSections.ts).
+// (на desktop их бар подавляется через COLLECTION_PATHS в
+// components/layout/topLevelSections.ts, на телефоне «←» и заголовок — у бара).
 // /userpoints свою шапку убрал — крошки «Профиль › Мои точки» показывает бар.
 const CABINET_ROUTE_CRUMBS: Record<string, BreadcrumbModelItem[]> = {
   '/profile': [PROFILE_CRUMB],
@@ -515,6 +515,19 @@ export function useBreadcrumbModel(): BreadcrumbModel {
           pageContextTitle: i18nT('shared:hooks.useBreadcrumbModel.glavnaya_6804642b'),
           backToPath: '/',
           showBreadcrumbs: true,
+        };
+      }
+
+      // Кабинетные коллекции: крошек нет (на desktop свои у экрана), а «←» на
+      // телефоне ведёт в «Профиль».
+      if (COLLECTION_PATHS.has(p)) {
+        return {
+          items: [],
+          depth: 1,
+          currentTitle: pageContextTitle,
+          pageContextTitle,
+          backToPath: PROFILE_CRUMB.path ?? '/profile',
+          showBreadcrumbs: false,
         };
       }
 

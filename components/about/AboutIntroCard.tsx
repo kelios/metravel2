@@ -6,11 +6,13 @@ import { useAboutStyles } from './aboutStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
 import { SITE_OWNER_LEGAL_NAME } from '@/constants/legal'
 
 
 type Props = {
   isPageHeading?: boolean;
+  hideTitle?: boolean;
   email: string;
   onSendMail: () => void;
   onOpenUrl: (url: string) => void;
@@ -26,6 +28,7 @@ type Props = {
 
 export const AboutIntroCard: React.FC<Props> = ({
   isPageHeading = false,
+  hideTitle = false,
   email,
   onSendMail,
   onOpenUrl,
@@ -39,7 +42,8 @@ export const AboutIntroCard: React.FC<Props> = ({
   const isWebPageHeading = Platform.OS === 'web' && isPageHeading;
   return (
   <View style={styles.infoCard}>
-    <View style={styles.cardHeader}>
+    {hideTitle ? null : (
+    <View style={styles.cardHeader} {...(isPageHeading ? SCREEN_HEADER_DESKTOP_PROPS : null)}>
       <Text
         style={styles.cardTitle}
         accessibilityRole={isWebPageHeading ? 'header' : undefined}
@@ -48,6 +52,7 @@ export const AboutIntroCard: React.FC<Props> = ({
         {i18nT('home:components.about.AboutIntroCard.o_proekte_d94d47ff')}
       </Text>
     </View>
+    )}
     <Paragraph style={styles.paragraph}>
       {i18nT('home:components.about.AboutIntroCard.metravel_by_eto_nekommercheskiy_proekt_dlya__875e611a')}</Paragraph>
 

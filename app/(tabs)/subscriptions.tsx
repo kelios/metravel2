@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  View, Text, StyleSheet, Pressable, Platform,
-  ScrollView,
-} from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
+import { View, StyleSheet, Platform, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,8 +7,8 @@ import { useSubscriptionsData, type SubscriptionTab } from '@/hooks/useSubscript
 import { useAndroidBackHandler } from '@/hooks/useAndroidBackHandler';
 import SubscriptionsTabContent from '@/components/subscriptions/SubscriptionsTabContent';
 import EmptyState from '@/components/ui/EmptyState';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { globalFocusStyles } from '@/styles/globalFocus';
+import ScreenHeader from '@/components/ui/ScreenHeader';
+import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -51,28 +47,14 @@ export default function SubscriptionsScreen() {
   const handleOpenTravel = useCallback((url: string) => { pushRoute(url); }, [pushRoute]);
   const handleOpenProfile = useCallback((userId: number) => { pushRoute(`/user/${userId}`); }, [pushRoute]);
   const handleFindTravels = useCallback(() => { pushRoute('/search'); }, [pushRoute]);
-  const handleBackToProfile = useCallback(() => { router.back(); }, [router]);
+  const header = useScreenHeader({ title: i18nT('shared:app.tabs.subscriptions.podpiski_f7c35e01') });
 
   // --- Loading / Auth guards ---
 
-  const headerBlock = (
+  const isHeaderMobile = useIsScreenHeaderMobile();
+  const headerBlock = isHeaderMobile ? null : (
     <View style={styles.header}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerTitleBlock}>
-          <Text style={styles.title}>{i18nT('shared:app.tabs.subscriptions.podpiski_f7c35e01')}</Text>
-          <Text style={styles.subtitle}>{i18nT('shared:app.tabs.subscriptions.profil_5da62480')}</Text>
-        </View>
-        <Pressable
-          style={[styles.backToProfileButton, globalFocusStyles.focusable]}
-          onPress={handleBackToProfile}
-          accessibilityRole="button"
-          accessibilityLabel={i18nT('shared:app.tabs.subscriptions.nazad_d572b4fd')}
-          {...Platform.select({ web: { cursor: 'pointer' } })}
-        >
-          <Feather name="arrow-left" size={16} color={colors.primaryDark} />
-          <Text style={styles.backToProfileButtonText}>{i18nT('shared:app.tabs.subscriptions.nazad_d572b4fd')}</Text>
-        </Pressable>
-      </View>
+      <ScreenHeader header={header} />
     </View>
   );
 
@@ -148,15 +130,5 @@ const createPageStyles = (colors: ReturnType<typeof useThemedColors>) =>
       paddingBottom: Platform.OS === 'web' ? 120 : 32,
     },
     header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6 },
-    headerRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 },
-    headerTitleBlock: { flex: 1 },
-    title: { fontSize: 20, fontWeight: '700', color: colors.text },
-    subtitle: { marginTop: 4, fontSize: 13, color: colors.textMuted },
     loadingWrap: { padding: 16, alignItems: 'center', justifyContent: 'center', flex: 1 },
-    backToProfileButton: {
-      flexDirection: 'row', alignItems: 'center', gap: 8,
-      paddingHorizontal: 12, paddingVertical: 10, borderRadius: DESIGN_TOKENS.radii.md,
-      borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface, minHeight: 44,
-    },
-    backToProfileButtonText: { fontSize: 14, fontWeight: '600', color: colors.primaryText },
   });

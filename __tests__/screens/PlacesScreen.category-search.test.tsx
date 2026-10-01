@@ -17,6 +17,7 @@ jest.mock('expo-router', () => ({
     setParams: mockSetParams,
   }),
   useIsFocused: () => true,
+  useFocusEffect: () => undefined,
 }))
 
 jest.mock('@/api/places', () => ({

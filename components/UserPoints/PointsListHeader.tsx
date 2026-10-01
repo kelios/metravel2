@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { PointFilters } from '@/components/UserPoints/PointFilters'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
+import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 import IconButton from '@/components/ui/IconButton'
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -13,6 +14,7 @@ import type { PointFilters as PointFiltersType } from '@/types/userPoints'
 
 import type { PointsListStyles } from './types'
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
 
 
 type ViewMode = 'list' | 'map'
@@ -109,6 +111,14 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
 }) => {
   const themed = useThemedColors();
   const local = React.useMemo(() => createLocalStyles(themed), [themed]);
+  const isHeaderMobile = useIsScreenHeaderMobile();
+  useScreenHeader({
+    title: i18nT('map:components.MapPage.Map.PlacePopupCard.index.moi_tochki_9e5ac9a2'),
+    info: [
+      i18nT('map:components.UserPoints.PointsListHeader.upravlyayte_sohranennymi_mestami_56ebb898'),
+      i18nT('map:components.UserPoints.PointsListHeader.filtruyte_tochki_nastraivayte_kartu_ili_nazh_d60229ee'),
+    ],
+  });
   const canRecommend = total >= 3;
   const recommendationLabel = showingRecommendations
     ? i18nT('map:components.UserPoints.PointsListHeader.vybrat_drugie_sluchaynye_77185bc2')
@@ -130,12 +140,14 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
     <View style={styles.header}>
       <View style={local.summaryCard}>
         <View style={local.summaryTopRow}>
-          <View style={local.summaryTextBlock}>
-            <Text style={local.summaryEyebrow}>{i18nT('map:components.UserPoints.PointsListHeader.vashi_tochki_4f58f81b')}</Text>
-            <Text style={local.summaryTitle}>{i18nT('map:components.UserPoints.PointsListHeader.upravlyayte_sohranennymi_mestami_56ebb898')}</Text>
-            <Text style={local.summarySubtitle}>
-              {i18nT('map:components.UserPoints.PointsListHeader.filtruyte_tochki_nastraivayte_kartu_ili_nazh_d60229ee')}</Text>
-          </View>
+          {isHeaderMobile ? null : (
+            <View style={local.summaryTextBlock} {...SCREEN_HEADER_DESKTOP_PROPS}>
+              <Text style={local.summaryEyebrow}>{i18nT('map:components.UserPoints.PointsListHeader.vashi_tochki_4f58f81b')}</Text>
+              <Text style={local.summaryTitle}>{i18nT('map:components.UserPoints.PointsListHeader.upravlyayte_sohranennymi_mestami_56ebb898')}</Text>
+              <Text style={local.summarySubtitle}>
+                {i18nT('map:components.UserPoints.PointsListHeader.filtruyte_tochki_nastraivayte_kartu_ili_nazh_d60229ee')}</Text>
+            </View>
+          )}
 
           <View style={local.statsGrid}>
             <View style={[styles.statPill, local.statCard]}>

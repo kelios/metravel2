@@ -12,4 +12,6 @@ export const common = {
   'language.headerLabel': "Change language",
   'rail.scrollPrev': "Scroll back",
   'rail.scrollNext': "Scroll forward",
+  'screenHeader.info': "About this section",
+  'screenHeader.more': "More actions",
 } as const

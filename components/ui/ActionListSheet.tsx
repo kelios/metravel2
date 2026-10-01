@@ -26,7 +26,9 @@ type Props = {
   visible: boolean
   onClose: () => void
   title: string
-  actions: ActionListSheetItem[]
+  actions?: ActionListSheetItem[]
+  /** Произвольное тело листа над списком действий (InfoSheet: абзацы пояснения). */
+  children?: React.ReactNode
   /**
    * Extra bottom margin so the panel clears a global dock / tab bar (web only;
    * native uses safe-area + Modal so the panel already sits above system chrome).
@@ -45,7 +47,8 @@ const ActionListSheet: React.FC<Props> = ({
   visible,
   onClose,
   title,
-  actions,
+  actions = [],
+  children,
   bottomOffset,
 }) => {
   const colors = useThemedColors()
@@ -95,6 +98,7 @@ const ActionListSheet: React.FC<Props> = ({
               </CardActionPressable>
             </View>
           </View>
+          {children}
           <View style={styles.list}>
             {actions.map((action) => (
               <CardActionPressable

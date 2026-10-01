@@ -6,6 +6,10 @@ const mockPush = jest.fn();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
+  useFocusEffect: (cb: () => void | (() => void)) => {
+    const React = require('react');
+    React.useEffect(() => cb(), [cb]);
+  },
 }));
 
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');

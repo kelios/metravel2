@@ -463,14 +463,12 @@ export function DateEditorModal({
 
 export function CalendarSkeleton({
   styles,
-  showHeader,
   seoBlock,
   onBackPress,
   breadcrumbs,
   onBreadcrumbPress,
 }: {
   styles: CalendarStyles
-  showHeader?: boolean
   seoBlock: React.ReactNode
   onBackPress: () => void
   breadcrumbs?: ProfileCollectionBreadcrumb[]
@@ -479,15 +477,13 @@ export function CalendarSkeleton({
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {seoBlock}
-      {showHeader && (
-        <ProfileCollectionHeader
-          title={i18nT('calendar:components.screens.calendar.calendarScreen_parts.moy_kalendar_c73f20df')}
-          onBackPress={onBackPress}
-          breadcrumbs={breadcrumbs}
-          onBreadcrumbPress={onBreadcrumbPress}
-          dense
-        />
-      )}
+      <ProfileCollectionHeader
+        title={i18nT('calendar:components.screens.calendar.calendarScreen_parts.moy_kalendar_c73f20df')}
+        onBackPress={onBackPress}
+        breadcrumbs={breadcrumbs}
+        onBreadcrumbPress={onBreadcrumbPress}
+        dense
+      />
       <View style={styles.skeletonWrap}>
         {Array.from({ length: 3 }).map((_, index) => (
           <SkeletonLoader key={index} width="100%" height={200} borderRadius={12} />

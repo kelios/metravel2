@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 import { gotoWithRetry, preacceptCookies } from './navigation'
 
 /**
@@ -430,19 +430,19 @@ export const MOBILE_SCREEN_BUDGET: Record<string, ScreenBudget> = {
   // (0,26–0,27) — заниженное число, не «после». `waitForContentAttached`
   // теперь ждёт `networkidle`, поэтому верное значение — то, что сейчас.
   quests: { firstContentTopRatioMax: 0.35, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
-  trips: { firstContentTopRatioMax: 0.53, titleOccurrencesMax: 2, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
-  'trips-my': { firstContentTopRatioMax: 0.65, titleOccurrencesMax: 2, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
+  trips: { firstContentTopRatioMax: 0.38, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
+  'trips-my': { firstContentTopRatioMax: 0.4, titleOccurrencesMax: 1, searchboxCountMax: 1, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
   'profile-routes': { firstContentTopRatioMax: 0.48, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
   favorites: { firstContentTopRatioMax: 0.24, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
-  history: { firstContentTopRatioMax: 0.78, titleOccurrencesMax: 2, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
-  subscriptions: { firstContentTopRatioMax: 0.44, titleOccurrencesMax: 2, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
+  history: { firstContentTopRatioMax: 0.74, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
+  subscriptions: { firstContentTopRatioMax: 0.36, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
   settings: { firstContentTopRatioMax: 0.16, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
   contact: { firstContentTopRatioMax: 0.66, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
   // `/about`: метка стоит на `AboutIntroCard isPageHeading` (H1 «О проекте»)
   // — первый смысловой текстовый блок ПОСЛЕ `HeroBanner`+`StatsBanner`+
   // `CategoriesShowcase`. Три секции-баннера перед H1 — честная причина
   // ~293%, см. §9 дока и разбор в отчёте задачи.
-  about: { firstContentTopRatioMax: 3.22, titleOccurrencesMax: 0, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
+  about: { firstContentTopRatioMax: 3.22, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
   userpoints: { firstContentTopRatioMax: 0.25, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
   [TRIP_PLAN_SCREEN_KEY]: { firstContentTopRatioMax: 0.60, titleOccurrencesMax: 2, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0 },
 }
@@ -566,7 +566,7 @@ async function toggleThemeViaMenu(page: Page, theme: Theme): Promise<boolean> {
 
   const toggle = page.getByTestId(`theme-toggle-${theme}`)
   if ((await toggle.count()) === 0) {
-    await page.getByTestId('mobile-menu-overlay').click({ force: true }).catch(() => null)
+    await closeMobileMenu(page, panel)
     return false
   }
   await toggle.click()
@@ -578,9 +578,39 @@ async function toggleThemeViaMenu(page: Page, theme: Theme): Promise<boolean> {
     )
     .then(() => true)
     .catch(() => false)
-  await page.getByTestId('mobile-menu-overlay').click({ force: true }).catch(() => null)
-  await panel.waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => null)
+  await closeMobileMenu(page, panel)
   return switched
+}
+
+/**
+ * Закрывает меню кнопкой `mobile-menu-close`, а НЕ кликом в центр оверлея:
+ * центр экрана приходится на пункт панели («Путеводитель по Беларуси» и т. п.),
+ * `click({ force: true })` попадал в него и уводил страницу на `/travelsby` —
+ * тёмные комбинации замеряли другой экран (#2094: home dark 0.199 вместо
+ * 0.076, trips dark ctaOccluded=true). Если меню всё же не закрылось, пробуем
+ * Escape. Путь страницы после закрытия обязан остаться прежним.
+ */
+async function closeMobileMenu(page: Page, panel: Locator): Promise<void> {
+  const pathBefore = new URL(page.url()).pathname
+  const close = page.getByTestId('mobile-menu-close')
+  if ((await close.count()) > 0) {
+    await close.first().click().catch(() => null)
+  }
+  let closed = await panel
+    .waitFor({ state: 'hidden', timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false)
+  if (!closed) {
+    await page.keyboard.press('Escape')
+    closed = await panel
+      .waitFor({ state: 'hidden', timeout: 5_000 })
+      .then(() => true)
+      .catch(() => false)
+  }
+  const pathAfter = new URL(page.url()).pathname
+  if (pathAfter !== pathBefore) {
+    throw new Error(`mobile menu close navigated away: ${pathBefore} -> ${pathAfter}`)
+  }
 }
 
 /** Меняет тему только если она реально отличается от текущей — 0 лишних кликов. */

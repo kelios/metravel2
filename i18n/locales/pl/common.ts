@@ -12,4 +12,6 @@ export const common = {
   'language.headerLabel': "Zmień język",
   'rail.scrollPrev': "Przewiń w tył",
   'rail.scrollNext': "Przewiń w przód",
+  'screenHeader.info': "Więcej o tej sekcji",
+  'screenHeader.more': "Więcej działań",
 } as const

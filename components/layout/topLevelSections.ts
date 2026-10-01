@@ -94,30 +94,46 @@ export const hasListFilterQuery = (
  * `/search?categoryTravelAddress=33,43` — подборка «Замки», открытая с главной,
  * и вернуться с неё должно быть куда (#1725).
  */
+/**
+ * Пункты верхнего меню desktop, которых нет в нижнем доке (корни дока — /search,
+ * /map, /quests, /profile). `/places` и `/roulette` на телефоне открывают из
+ * «Ещё»; `/trips` — только переходом (CTA главной, «Мои поездки»), ни дока, ни
+ * «Ещё» у него нет, и назад иначе вернуться нечем. Это вложенные экраны со
+ * строкой «←» (#2099, `docs/features/mobile-screen-shell-mock.md` §2).
+ */
+export const MOBILE_NESTED_SECTION_PATHS = new Set<string>(['/trips', '/places', '/roulette'])
+
 export const isTopLevelSectionPath = (
   pathname: string,
   hasFilterQuery: boolean = false,
-): boolean => TOP_LEVEL_SECTION_PATHS.has(pathname) && !hasFilterQuery
+  isMobile: boolean = false,
+): boolean =>
+  TOP_LEVEL_SECTION_PATHS.has(pathname) &&
+  !(isMobile && MOBILE_NESTED_SECTION_PATHS.has(pathname)) &&
+  !hasFilterQuery
 
 /**
- * Кабинетные коллекции со своей шапкой (ProfileCollectionHeader: заголовок +
- * «Назад»). Глобальная строка возврата на них дала бы вторую навигацию назад на
- * одном экране (#799), поэтому её не показываем — но сама шапка обязана быть во
- * ВСЕХ состояниях экрана, включая гостя и пустой список (#1725).
+ * Кабинетные коллекции (#2099). На телефоне их заголовок, «←» и «⋯» рисует
+ * глобальная строка `HeaderContextBar` по декларации `useScreenHeader`, а
+ * `ProfileCollectionHeader` молчит; на desktop строки нет, а «Назад», крошки и
+ * «Очистить» — в `ProfileCollectionHeader`. Владелец «Назад» ровно один на
+ * каждой ширине (семья NATIVE-DUP-BACK-AFFORDANCE-001).
  */
-export const SELF_HEADED_COLLECTION_PATHS = new Set<string>([
+export const COLLECTION_PATHS = new Set<string>([
   '/favorites',
   '/history',
   '/calendar',
 ])
 
 /**
- * Нужна ли экрану ГЛОБАЛЬНАЯ строка возврата (крошки на desktop, «Назад» +
+ * Нужна ли экрану ГЛОБАЛЬНАЯ строка возврата (крошки на desktop, «←» +
  * заголовок на телефоне): да для всего, куда попадают переходом и что не несёт
- * собственной навигации назад.
+ * собственной навигации назад. Кабинетные коллекции получают её только на
+ * телефоне (`isMobile`).
  */
 export const needsGlobalBackAffordance = (
   pathname: string,
   hasFilterQuery: boolean = false,
+  isMobile: boolean = false,
 ): boolean =>
-  !isTopLevelSectionPath(pathname, hasFilterQuery) && !SELF_HEADED_COLLECTION_PATHS.has(pathname)
+  !isTopLevelSectionPath(pathname, hasFilterQuery, isMobile) && (isMobile || !COLLECTION_PATHS.has(pathname))

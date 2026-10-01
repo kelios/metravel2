@@ -236,9 +236,9 @@ describe('useBreadcrumbModel', () => {
     expect(result.current.currentTitle).toBe('Экспорт');
   });
 
-  it('does not build a breadcrumb trail for self-headed cabinet pages', async () => {
-    // /favorites, /history, /calendar render their own
-    // ProfileCollectionHeader — the model must not add a redundant trail.
+  it('does not build a breadcrumb trail for cabinet collections and sends back to the profile', async () => {
+    // /favorites, /history, /calendar: on desktop ProfileCollectionHeader owns the
+    // trail, on a phone the bar shows «←» to the profile (#2099).
     for (const path of ['/favorites', '/history', '/calendar']) {
       usePathname.mockReturnValue(path);
       useLocalSearchParams.mockReturnValue({});
@@ -246,6 +246,7 @@ describe('useBreadcrumbModel', () => {
       await waitFor(() => expect(result.current).toBeTruthy());
       expect(result.current.showBreadcrumbs).toBe(false);
       expect(result.current.items).toEqual([]);
+      expect(result.current.backToPath).toBe('/profile');
     }
   });
 

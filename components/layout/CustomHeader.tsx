@@ -3,6 +3,7 @@ import { Platform, View } from 'react-native'
 import { usePathname } from 'expo-router'
 
 import { useResponsive } from '@/hooks/useResponsive'
+import { resolveHeaderContextBarIsMobile } from './headerContextBarModel'
 import { useHydrationReady } from '@/hooks/useHydrationReady'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
@@ -62,11 +63,18 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
   // Семантику контекст-бара (`isMobile`) это не трогает: у него своя ветка.
   const rowIsMobile = Platform.OS === 'web' && !isHydrated ? false : isMobile
   const activePath = getHeaderActivePath(pathname)
+  // 'phone' — страница, где строка «←» есть только на телефоне (#2099): CSS прячет
+  // слот от 768 px, поэтому до гидратации desktop не резервирует лишние 52 px.
+  const hasPhoneOnlyContextBar =
+    shouldShowHeaderContextBar(pathname, true, false, true) &&
+    !shouldShowHeaderContextBar(pathname, false, false, false)
   const webContextFallbackKind =
     Platform.OS === 'web'
       ? pathname.startsWith('/travels/')
         ? 'travel'
-        : 'default'
+        : hasPhoneOnlyContextBar
+          ? 'phone'
+          : 'default'
       : null
   const contextFallbackProps = webContextFallbackKind
     ? webDataSetProps({ headerContextFallback: webContextFallbackKind })
@@ -75,7 +83,12 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
   // и на нём обязана быть строка возврата. До гидратации ответ всегда «нет»:
   // статический HTML не знает параметров запроса (см. useHasListFilterQuery).
   const hasListFilterQuery = useHasListFilterQuery(isHydrated)
-  const showHeaderContextBar = shouldShowHeaderContextBar(pathname, isMobile, hasListFilterQuery)
+  const isBarMobile = resolveHeaderContextBarIsMobile({
+    width,
+    isPhone: responsive.isPhone,
+    isLargePhone: responsive.isLargePhone,
+  })
+  const showHeaderContextBar = shouldShowHeaderContextBar(pathname, isMobile, hasListFilterQuery, isBarMobile)
 
   // Predict whether the lazy HeaderContextBar will actually render visible UI
   // (mirrors HeaderContextBar conditions). Native needs this to reserve height;

@@ -7,13 +7,15 @@ import MyApplicationsList from '@/components/trips/MyApplicationsList';
 import MyCreatedTripsList from '@/components/trips/MyCreatedTripsList';
 import TripNotificationsList from '@/components/trips/TripNotificationsList';
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
-import Button from '@/components/ui/Button';
+import ScreenHeader from '@/components/ui/ScreenHeader';
+import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import Chip from '@/components/ui/Chip';
 import { useMyPlannedTrips } from '@/hooks/usePlannedTripsApi';
 import { useMyTripApplications } from '@/hooks/usePublicTripsApi';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
 
 
 type DashboardSection = 'organized' | 'participating' | 'applications';
@@ -46,36 +48,41 @@ export default function MyTripsDashboard() {
   const organizedCount = plannedTrips?.filter((trip) => trip.isOwner).length;
   const participatingCount = plannedTrips?.filter((trip) => !trip.isOwner).length;
   const copy = SECTION_COPY[activeSection];
+  const isHeaderMobile = useIsScreenHeaderMobile();
+
+  // #2099: заголовок, пояснения и «организовать» объявляются один раз. На телефоне
+  // это строка «←» (название, (i) с пояснением разделов, «+»), на desktop — прежние
+  // H1, описание и кнопки в теле. Поиск по каталогу остаётся только на desktop.
+  const header = useScreenHeader({
+    title: i18nT('trips:components.trips.MyTripsDashboard.moi_poezdki_f50af8c2'),
+    info: [
+      i18nT('trips:components.trips.MyTripsDashboard.organizuyte_svoi_poezdki_otdelno_ot_uchastiy_20317735'),
+      ...(Object.values(SECTION_COPY) as Array<{ title: string; description: string }>).map(
+        (section) => `${section.title}. ${section.description}`,
+      ),
+    ],
+    actions: isHeaderMobile
+      ? undefined
+      : [
+          {
+            icon: 'search',
+            label: i18nT('trips:components.trips.MyTripsDashboard.nayti_poezdku_f3819be3'),
+            onPress: () => router.push('/trips'),
+            testID: 'my-trips-find-cta',
+          },
+        ],
+    primaryAction: {
+      icon: 'plus',
+      label: i18nT('trips:components.trips.MyTripsDashboard.organizovat_poezdku_2332a286'),
+      onPress: () => router.push('/trips/plan/create'),
+      testID: 'my-trips-plan-cta',
+    },
+  });
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.inner}>
-        <View style={styles.header}>
-          <View style={styles.headerCopy}>
-            <Text style={styles.h1}>{i18nT('trips:components.trips.MyTripsDashboard.moi_poezdki_f50af8c2')}</Text>
-            <Text style={styles.lead}>
-              {i18nT('trips:components.trips.MyTripsDashboard.organizuyte_svoi_poezdki_otdelno_ot_uchastiy_20317735')}</Text>
-          </View>
-          <View style={styles.headerActions}>
-            <Button
-              label={i18nT('trips:components.trips.MyTripsDashboard.nayti_poezdku_f3819be3')}
-              variant="secondary"
-              size="sm"
-              iconOnly={isMobile}
-              onPress={() => router.push('/trips')}
-              icon={<Feather name="search" size={isMobile ? 19 : 16} color={colors.primaryDark} />}
-              testID="my-trips-find-cta"
-            />
-            <Button
-              label={i18nT('trips:components.trips.MyTripsDashboard.organizovat_poezdku_2332a286')}
-              size="sm"
-              onPress={() => router.push('/trips/plan/create')}
-              icon={<Feather name="plus" size={16} color={colors.textOnPrimary} />}
-              style={isMobile ? styles.headerPrimaryAction : undefined}
-              testID="my-trips-plan-cta"
-            />
-          </View>
-        </View>
+        <ScreenHeader header={header} />
 
         <ScrollView
           horizontal
@@ -109,10 +116,12 @@ export default function MyTripsDashboard() {
           />
         </ScrollView>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{copy.title}</Text>
-          <Text style={styles.sectionDescription}>{copy.description}</Text>
-        </View>
+        {isHeaderMobile ? null : (
+          <View style={styles.sectionHeader} {...SCREEN_HEADER_DESKTOP_PROPS}>
+            <Text style={styles.sectionTitle}>{copy.title}</Text>
+            <Text style={styles.sectionDescription}>{copy.description}</Text>
+          </View>
+        )}
 
         {activeSection === 'organized' ? <MyCreatedTripsList role="organized" /> : null}
         {activeSection === 'participating' ? <MyCreatedTripsList role="participating" /> : null}
@@ -137,27 +146,6 @@ const createStyles = (colors: ThemedColors, isMobile: boolean, contentPaddingBot
     screen: { flex: 1, backgroundColor: colors.background },
     content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: asBottomDimension(contentPaddingBottom), alignItems: 'center' },
     inner: { width: '100%', maxWidth: 1180, gap: 18 },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      flexWrap: 'wrap',
-      gap: 14,
-    },
-    headerCopy: { flex: 1, minWidth: 240, gap: 5 },
-    h1: { fontSize: 28, fontWeight: '900', color: colors.text },
-    lead: { fontSize: 15, lineHeight: 21, color: colors.textSecondary },
-    // #1660: на мобильном обе CTA живут одной компактной строкой — поиск
-    // сжимается до иконки, а подписанной остаётся только основная кнопка,
-    // чтобы «организовать поездку» не превращалась в безымянный «+».
-    headerActions: {
-      width: isMobile ? '100%' : undefined,
-      flexDirection: 'row',
-      alignItems: 'center',
-      flexWrap: isMobile ? 'nowrap' : 'wrap',
-      gap: 8,
-    },
-    headerPrimaryAction: { flex: 1, minWidth: 0 },
     segments: { gap: 8, paddingVertical: 2 },
     sectionHeader: { gap: 4 },
     sectionTitle: { fontSize: 20, lineHeight: 26, fontWeight: '800', color: colors.text },

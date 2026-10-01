@@ -12,4 +12,6 @@ export const common = {
   'language.headerLabel': "Змяніць мову",
   'rail.scrollPrev': "Пракруціць назад",
   'rail.scrollNext': "Пракруціць наперад",
+  'screenHeader.info': "Падрабязней пра раздзел",
+  'screenHeader.more': "Яшчэ дзеянні",
 } as const

@@ -7,7 +7,9 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import Button from '@/components/ui/Button';
+import { useIsScreenHeaderMobile } from '@/components/layout/ScreenHeaderContext';
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
 
 
 type FeatherIconName = ComponentProps<typeof Feather>['name'];
@@ -18,6 +20,11 @@ export type ProfileCollectionBreadcrumb = {
   icon?: FeatherIconName;
 };
 
+/**
+ * Шапка кабинетной коллекции на desktop: заголовок, «Назад», «Очистить». На
+ * телефоне молчит — строку «←» + заголовок + «⋯» там рисует `HeaderContextBar`
+ * по декларации `useScreenHeader` самого экрана (#2099), «Назад» ровно один.
+ */
 type Props = {
   title: string;
   subtitle?: string;
@@ -30,7 +37,7 @@ type Props = {
   clearButtonText?: string;
   /**
    * Icon-only кнопка очистки (без текстовой подписи) — для экранов, где текст
-   * дублирует уже видимую идентичность (напр. /history с глобальным контекст-баром).
+   * дублирует уже видимую идентичность (напр. /history).
    */
   compactClear?: boolean;
   backAccessibilityLabel?: string;
@@ -59,6 +66,7 @@ export default function ProfileCollectionHeader({
 }: Props) {
   const colors = useThemedColors();
   const { isPhone } = useResponsive();
+  const isScreenHeaderMobile = useIsScreenHeaderMobile();
   const stackOnPhone = isPhone && !dense;
   const visibleBreadcrumbs = breadcrumbs ?? [];
   const styles = useMemo(
@@ -153,8 +161,10 @@ export default function ProfileCollectionHeader({
     [colors, dense, stackOnPhone]
   );
 
+  if (isScreenHeaderMobile) return null;
+
   return (
-    <View style={styles.header}>
+    <View style={styles.header} {...SCREEN_HEADER_DESKTOP_PROPS}>
       {visibleBreadcrumbs.length > 0 && (
         <View
           style={styles.breadcrumbRow}

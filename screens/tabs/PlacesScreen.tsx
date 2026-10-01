@@ -31,12 +31,14 @@ import { PlaceCard, SkeletonGrid, StateBlock } from './PlacesScreen.parts'
 import { createStyles } from './PlacesScreen.styles'
 import { usePlacesCatalogController } from './usePlacesCatalogController'
 import { translate as i18nT } from '@/i18n'
+import { usePlacesScreenHeader } from './usePlacesScreenHeader'
 
 
 export default function PlacesScreen() {
   const isFocused = useIsFocused()
   const colors = useThemedColors()
   const width = useResponsiveWidth()
+  const isHeaderMobile = usePlacesScreenHeader()
   // `useResponsiveWidth` deliberately returns 0 for SSR and the first hydration
   // render. Treat that unknown snapshot as the stable desktop export layout, just
   // like the app shell/header does. Otherwise static HTML is rendered as mobile
@@ -777,7 +779,7 @@ export default function PlacesScreen() {
           additionalTags={placesJsonLd}
         />
       ) : null}
-      {Platform.OS === 'web'
+      {Platform.OS === 'web' && !isHeaderMobile
         ? React.createElement('h1', { style: styles.srOnly as any }, seoHeading)
         : null}
       {compactFixedBar}

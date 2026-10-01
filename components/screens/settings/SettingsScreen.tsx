@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { View, Text, Pressable, Platform, ScrollView } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
+import { View, Text, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,12 +7,12 @@ import { useAuth } from '@/context/AuthContext';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/ui/EmptyState';
-import { globalFocusStyles } from '@/styles/globalFocus';
+import ScreenHeader from '@/components/ui/ScreenHeader';
+import { useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import { confirmAction } from '@/utils/confirmAction';
 import { deleteCurrentUserAccount } from '@/api/user';
 import { ApiError } from '@/api/client';
 import { useSettingsProfileForm } from '@/hooks/useSettingsProfileForm';
-import { useResponsive } from '@/hooks/useResponsive';
 import { Theme, useTheme, useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
@@ -55,10 +54,7 @@ export default function SettingsScreen() {
     const isFocused = useIsFocused();
     const { isAuthenticated, authReady, logout, username, userId } = useAuth();
     const isWeb = Platform.OS === 'web';
-    const { isMobile, isHydrated } = useResponsive();
-    // На мобильном web стики-бар (HeaderContextBar) уже показывает «← Настройки» —
-    // страничный заголовок с кнопкой «Назад» дублировал бы его; оставляем только desktop.
-    const showPageHeader = isWeb && !(isHydrated && isMobile);
+    const header = useScreenHeader({ title: i18nT('profile:app.tabs.settings.nastroyki_bc351c51') });
     const favoritesContext = useFavorites();
     const { theme, setTheme } = useTheme();
     const colors = useThemedColors();
@@ -240,10 +236,6 @@ export default function SettingsScreen() {
         }
     }, [clearFavorites]);
 
-    const handleBackToProfile = useCallback(() => {
-        router.back();
-    }, [router]);
-
     if (!authReady) {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -298,27 +290,7 @@ export default function SettingsScreen() {
             )}
             <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.scrollContent}>
                 <View style={styles.pageContainer}>
-                    {/* На native заголовок «Настройки» и кнопка «Назад» уже есть в нативной шапке экрана,
-                        на мобильном web — в стики-баре HeaderContextBar; не дублируем */}
-                    {showPageHeader && (
-                        <View style={styles.header}>
-                            <View style={styles.headerRow}>
-                                <View style={styles.headerTitleBlock}>
-                                    <Text style={styles.title}>{i18nT('profile:app.tabs.settings.nastroyki_bc351c51')}</Text>
-                                </View>
-                                <Pressable
-                                    style={[styles.backToProfileButton, globalFocusStyles.focusable]}
-                                    onPress={handleBackToProfile}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={i18nT('profile:app.tabs.settings.nazad_5e0a7fb4')}
-                                    {...Platform.select({ web: { cursor: 'pointer' } })}
-                                >
-                                    <Feather name="arrow-left" size={16} color={colors.primaryDark} />
-                                    <Text style={styles.backToProfileButtonText}>{i18nT('profile:app.tabs.settings.nazad_5e0a7fb4')}</Text>
-                                </Pressable>
-                            </View>
-                        </View>
-                    )}
+                    {isWeb ? <ScreenHeader header={header} /> : null}
 
                     <View style={styles.section} {...SCREEN_CONTENT_FIRST_PROPS}>
                     <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.profil_e0a36973')}</Text>

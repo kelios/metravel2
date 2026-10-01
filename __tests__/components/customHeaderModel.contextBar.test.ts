@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
-import { isCollectionBackAffordanceGlobal, shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
-import { SELF_HEADED_COLLECTION_PATHS } from '@/components/layout/topLevelSections';
+import { shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
+import { COLLECTION_PATHS, needsGlobalBackAffordance } from '@/components/layout/topLevelSections';
 
 describe('shouldShowHeaderContextBar (web)', () => {
   const prevOS = Platform.OS;
@@ -40,7 +40,7 @@ describe('shouldShowHeaderContextBar (web)', () => {
     );
 
     it.each(['/favorites', '/history', '/calendar', '/profile'])(
-      'keeps the context bar collapsed on self-headed cabinet page %s',
+      'keeps the context bar collapsed on desktop cabinet page %s',
       (path) => {
         expect(shouldShowHeaderContextBar(path, false)).toBe(false);
       },
@@ -48,6 +48,16 @@ describe('shouldShowHeaderContextBar (web)', () => {
 
     // #1725: эти экраны в навигации не значатся — попасть на них можно только
     // переходом, и вернуться с них должно быть куда.
+    it.each(['/trips', '/places', '/roulette', '/favorites', '/history', '/calendar'])(
+      'phone-only bar on %s: shown below 768 px, absent on 768–1279 and desktop (#2099)',
+      (path) => {
+        // isMobile — компактная шапка (<1280), isBarMobile — телефонная ветка бара (<768).
+        expect(shouldShowHeaderContextBar(path, true, false, true)).toBe(true);
+        expect(shouldShowHeaderContextBar(path, true, false, false)).toBe(false);
+        expect(shouldShowHeaderContextBar(path, false, false, false)).toBe(false);
+      },
+    );
+
     it.each(['/metravel', '/login', '/registration', '/set-password'])(
       'shows the context bar on entered-only page %s',
       (path) => {
@@ -89,8 +99,15 @@ describe('shouldShowHeaderContextBar (web)', () => {
       },
     );
 
-    it.each(['/', '/search', '/travelsby', '/quests', '/trips', '/favorites', '/history', '/calendar', '/profile'])(
-      'keeps the bar collapsed on nav / self-headed page %s',
+    it.each(['/favorites', '/history', '/calendar'])(
+      'shows the back+title bar on cabinet collection %s (#2099)',
+      (path) => {
+        expect(shouldShowHeaderContextBar(path, true)).toBe(true);
+      },
+    );
+
+    it.each(['/', '/search', '/travelsby', '/quests', '/profile'])(
+      'keeps the bar collapsed on nav page %s',
       (path) => {
         expect(shouldShowHeaderContextBar(path, true)).toBe(false);
       },
@@ -126,51 +143,35 @@ describe('shouldShowHeaderContextBar (web)', () => {
   });
 });
 
-describe('владелец «Назад» на кабинетных коллекциях (#1726)', () => {
-  // Семья NATIVE-DUP-BACK-AFFORDANCE-001 (#234 → #799 → #836 → #1726): на одном
-  // экране ровно один владелец навигации назад. Набор перечислен явно — новая
-  // кабинетная коллекция обязана попасть сюда, иначе тест не защищает её.
+describe('владелец «Назад» на кабинетных коллекциях (#2099)', () => {
+  // Семья NATIVE-DUP-BACK-AFFORDANCE-001: на одном экране ровно один владелец
+  // навигации назад. Телефон (web и native) — строка HeaderContextBar по декларации
+  // useScreenHeader, шапка ProfileCollectionHeader молчит; шире — наоборот: бар без
+  // крошек, «Назад» рисует шапка экрана. Набор перечислен явно — новая коллекция
+  // обязана попасть сюда, иначе тест не защищает её.
   const prevOS = Platform.OS;
   afterEach(() => {
     (Platform.OS as any) = prevOS;
   });
 
   it('набор кабинетных коллекций перечислен явно', () => {
-    expect([...SELF_HEADED_COLLECTION_PATHS].sort()).toEqual(['/calendar', '/favorites', '/history']);
+    expect([...COLLECTION_PATHS].sort()).toEqual(['/calendar', '/favorites', '/history']);
   });
 
-  it.each(['android', 'ios'])('%s: в мобильной ветке бар показан и владеет «Назад» на каждой коллекции', (os) => {
+  it.each(['android', 'ios', 'web'])('%s: на телефоне бар показан и владеет «Назад» на каждой коллекции', (os) => {
     (Platform.OS as any) = os;
-    for (const path of SELF_HEADED_COLLECTION_PATHS) {
+    for (const path of COLLECTION_PATHS) {
       expect(shouldShowHeaderContextBar(path, true)).toBe(true);
-      expect(isCollectionBackAffordanceGlobal(path, true)).toBe(true);
+      expect(needsGlobalBackAffordance(path, false, true)).toBe(true);
     }
   });
 
-  // Планшет и ландшафт телефона: бар уходит в desktop-ветку, а крошек у этих
-  // путей нет (`showBreadcrumbs: false`) — видимого «Назад» бар не даёт, и
-  // шапка экрана обязана остаться. Тот же инвариант, сорванный в другую сторону.
-  it.each(['android', 'ios'])('%s: вне мобильной ветки владельцем остаётся шапка экрана', (os) => {
-    (Platform.OS as any) = os;
-    for (const path of SELF_HEADED_COLLECTION_PATHS) {
-      expect(isCollectionBackAffordanceGlobal(path, false)).toBe(false);
-    }
-  });
-
-  it('web: глобальный бар скрыт на каждой коллекции, «Назад» рисует шапка экрана', () => {
+  it('web: на desktop глобальный бар скрыт, «Назад» рисует шапка экрана', () => {
     (Platform.OS as any) = 'web';
-    for (const path of SELF_HEADED_COLLECTION_PATHS) {
-      expect(shouldShowHeaderContextBar(path, true)).toBe(false);
+    for (const path of COLLECTION_PATHS) {
       expect(shouldShowHeaderContextBar(path, false)).toBe(false);
-      expect(isCollectionBackAffordanceGlobal(path, true)).toBe(false);
-      expect(isCollectionBackAffordanceGlobal(path, false)).toBe(false);
+      expect(needsGlobalBackAffordance(path)).toBe(false);
     }
-  });
-
-  it.each(['android', 'web'])('%s: путь вне набора не считается коллекцией с глобальным владельцем', (os) => {
-    (Platform.OS as any) = os;
-    expect(isCollectionBackAffordanceGlobal('/about', true)).toBe(false);
-    expect(isCollectionBackAffordanceGlobal('/userpoints', true)).toBe(false);
   });
 });
 

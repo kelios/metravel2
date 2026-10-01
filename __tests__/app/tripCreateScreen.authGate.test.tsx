@@ -5,6 +5,7 @@ const mockBuildTripPlanPrefill = jest.fn(() => ({ title: 'prefill' }));
 let mockAuthState = { authReady: true, isAuthenticated: false };
 
 jest.mock('expo-router', () => ({
+  useFocusEffect: (cb: () => void | (() => void)) => require('react').useEffect(cb, [cb]),
   useLocalSearchParams: () => ({ title: 'prefill' }),
   useRouter: () => ({ push: mockPush, replace: jest.fn() }),
 }));

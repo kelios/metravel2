@@ -2,7 +2,7 @@ import {
   hasListFilterQuery,
   isTopLevelSectionPath,
   needsGlobalBackAffordance,
-  SELF_HEADED_COLLECTION_PATHS,
+  COLLECTION_PATHS,
   TOP_LEVEL_SECTION_PATHS,
 } from '@/components/layout/topLevelSections';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
@@ -73,9 +73,15 @@ describe('isTopLevelSectionPath / needsGlobalBackAffordance', () => {
     expect(needsGlobalBackAffordance('/search', true)).toBe(true);
   });
 
-  it('keeps the global row off self-headed collections (their own header owns back)', () => {
-    SELF_HEADED_COLLECTION_PATHS.forEach((path) => {
+  it('keeps the global row off collections on desktop (their own header owns back)', () => {
+    COLLECTION_PATHS.forEach((path) => {
       expect(needsGlobalBackAffordance(path)).toBe(false);
+    });
+  });
+
+  it('gives collections the global back row on a phone (#2099)', () => {
+    COLLECTION_PATHS.forEach((path) => {
+      expect(needsGlobalBackAffordance(path, false, true)).toBe(true);
     });
   });
 

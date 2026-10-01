@@ -8,6 +8,7 @@ import { AboutHeader } from '@/components/about/AboutHeader'
 import { AboutIntroCard } from '@/components/about/AboutIntroCard'
 import { ContactForm } from '@/components/about/ContactForm'
 import { SocialSection } from '@/components/about/SocialSection'
+import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 import CustomHeader from '@/components/layout/CustomHeader'
 import { sendFeedback } from '@/api/misc'
 import { useIsFocused } from 'expo-router'
@@ -18,6 +19,7 @@ import { showToast } from '@/utils/toast'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { getAppVersionInfo, webTouchScrollStyle } from '@/utils'
 import { translate as i18nT } from '@/i18n'
+import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { METRAVEL_SOCIAL_LINKS } from '@/constants/socialLinks'
 
@@ -49,6 +51,8 @@ function ContactScreen() {
   const pageHeading = title.replace(/\s*\|\s*MeTravel\s*$/i, '')
   const description =
     i18nT('shared:app.contact.svyazhites_s_komandoy_metravel_voprosy_predl_d5e43273')
+  const isHeaderMobile = useIsScreenHeaderMobile()
+  useScreenHeader({ title: pageHeading, info: [description] })
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -197,11 +201,15 @@ function ContactScreen() {
         >
           <View style={styles.backgroundImage}>
             <View style={styles.container}>
-              {Platform.OS === 'web' && (
-                <h1 style={styles.title as any}>{pageHeading}</h1>
+              {Platform.OS === 'web' && !isHeaderMobile && (
+                <h1 style={styles.title as any} data-screen-header="desktop">{pageHeading}</h1>
               )}
               <View style={styles.content}>
-                <AboutHeader />
+                {isHeaderMobile ? null : (
+                  <View {...SCREEN_HEADER_DESKTOP_PROPS}>
+                    <AboutHeader />
+                  </View>
+                )}
 
                 <View style={isWide ? styles.twoColumns : styles.oneColumn} {...SCREEN_CONTENT_FIRST_PROPS}>
                   <AboutIntroCard

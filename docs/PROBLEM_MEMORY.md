@@ -4283,10 +4283,12 @@ guard, падающий в CI на попытке обойти этот конт
   этих путей нет крошек (`showBreadcrumbs: false`) и видимого бара нет вовсе.
 - **Surface/owner:** native (Android, iOS) кабинетные коллекции `/favorites`,
   `/history`, `/calendar`; владелец решения —
-  `components/layout/customHeaderModel.ts` (`isCollectionBackAffordanceGlobal`)
-  поверх набора `SELF_HEADED_COLLECTION_PATHS` в
-  `components/layout/topLevelSections.ts`, а ширину подставляет хук
-  `components/layout/useCollectionBackAffordance.ts`; экраны `app/(tabs)/favorites.tsx`,
+  с #2099 — контракт `useScreenHeader` (`components/layout/ScreenHeaderContext.tsx`)
+  и набор `COLLECTION_PATHS` в `components/layout/topLevelSections.ts`: на
+  телефоне «←», заголовок и «Очистить» рисует `HeaderContextBar` по декларации
+  экрана, `ProfileCollectionHeader` молчит (`useIsScreenHeaderMobile`); до #2099
+  решали `isCollectionBackAffordanceGlobal`/`SELF_HEADED_COLLECTION_PATHS`/
+  `useCollectionBackAffordanceGlobal` (удалены); экраны `app/(tabs)/favorites.tsx`,
   `components/screens/calendar/CalendarScreen.tsx`,
   `components/screens/history/HistoryScreen.tsx`. Web — здоровый контроль:
   бар на этих путях скрыт, шапка экрана единственная. Localization impact: none.
@@ -4310,12 +4312,11 @@ guard, падающий в CI на попытке обойти этот конт
   разных ad hoc механизма без общей точки решения и без теста, перечисляющего
   набор коллекций; ручная device-проверка каждый раз смотрела выбранные
   состояния одного экрана.
-- **Controls:** единая точка `isCollectionBackAffordanceGlobal(pathname,
-  isContextBarMobile)` и хук `useCollectionBackAffordanceGlobal(pathname)`,
-  который читает ширину тем же `useResponsive` и тем же
-  `resolveHeaderContextBarIsMobile`, что и сам бар, — экраны обязаны
-  консультировать их, а не `Platform.OS`; компактная
-  «Очистить» на native — общий `components/profile/CollectionNativeClearButton`;
+- **Controls:** (после #2099) единая точка — `useScreenHeader` +
+  `useIsScreenHeaderMobile()`, который читает ширину тем же
+  `resolveHeaderContextBarIsMobile`, что и сам бар, — экраны не консультируют
+  `Platform.OS`; «Очистить» на телефоне — пункт «⋯» в строке экрана
+  (`CollectionNativeClearButton` удалён); guard `guard:screen-header`;
   тест `__tests__/components/customHeaderModel.contextBar.test.ts` перечисляет
   набор явно и проверяет для каждого пути три ответа: native в мобильной ветке —
   бар владеет «Назад», native вне её — владеет шапка экрана, web — бар скрыт;
@@ -4324,8 +4325,8 @@ guard, падающий в CI на попытке обойти этот конт
   900 dp шапка возвращается и остаётся единственной.
 - **Решение для новой жалобы:** второй «Назад» на кабинетной коллекции из
   набора — `reopen #1726`; новая кабинетная коллекция без записи в
-  `SELF_HEADED_COLLECTION_PATHS` — `create-linked` к семье с обязательным
-  добавлением пути в набор и в тест; дубль на экране вне кабинетных коллекций
+  `COLLECTION_PATHS` — `create-linked` к семье с обязательным
+  добавлением пути в набор, в тест и в `scripts/guard-screen-header.js`; дубль на экране вне кабинетных коллекций
   (карта, статья) — свои каноны `#234`/`#799`.
 - **Последняя проверка:** 2026-09-03, `#1726` — реализация; device-прогон по
   четырём состояниям трёх экранов записывается в карточке.

@@ -298,6 +298,14 @@ const main = () => {
       process.exit(styleChannelsGuardStatus)
     }
 
+    // Дёшево и безусловно (#2099): guard проверяет поимённый список экранов-
+    // владельцев шапки (`SCREEN_HEADER_OWNERS`); новый вложенный экран
+    // добавляют в этот список вместе с вызовом useScreenHeader.
+    const screenHeaderGuardStatus = runCommand('npm', ['run', 'guard:screen-header'])
+    if (screenHeaderGuardStatus !== 0) {
+      process.exit(screenHeaderGuardStatus)
+    }
+
     const bottomChromeGuardStatus = runCommand('npm', ['run', 'guard:bottom-chrome-inset'])
     if (bottomChromeGuardStatus !== 0) {
       process.exit(bottomChromeGuardStatus)
