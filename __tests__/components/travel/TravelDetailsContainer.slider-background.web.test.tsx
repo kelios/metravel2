@@ -3,6 +3,11 @@ import renderer, { act } from 'react-test-renderer'
 
 import { Platform } from 'react-native'
 import { __testables } from '@/components/travel/details/TravelDetailsHero'
+import {
+  TRAVEL_HERO_LAYERS,
+  getTravelDetailsHeroStyles,
+} from '@/components/travel/details/TravelDetailsHeroStyles'
+import { getThemedColors } from '@/constants/designSystem'
 import { useTravelHeroState } from '@/hooks/useTravelHeroState'
 
 const mockSliderSpy: jest.Mock<any, any> = jest.fn((_props: any) => null)
@@ -341,7 +346,11 @@ describe('TravelHeroSection slider background regression (web)', () => {
     )[0]
     expect(visibleSliderWrapper.props.style).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ opacity: 1, pointerEvents: 'auto', zIndex: 6 }),
+        expect.objectContaining({
+          opacity: 1,
+          pointerEvents: 'auto',
+          zIndex: TRAVEL_HERO_LAYERS.sliderDuringSsgHandoff,
+        }),
       ]),
     )
 
@@ -351,8 +360,15 @@ describe('TravelHeroSection slider background regression (web)', () => {
     )[0]
     expect(adoptedHeroHost).toBeTruthy()
     expect(adoptedHeroHost.props.style).toEqual(
-      expect.arrayContaining([expect.objectContaining({ zIndex: 5 })]),
+      expect.arrayContaining([expect.objectContaining({ zIndex: TRAVEL_HERO_LAYERS.lcpOverlay })]),
     )
+
+    // #2116: the favorite toggle is a sibling of both layers in the same
+    // container; it must stay on top, otherwise slider-slide-0 eats its click.
+    expect(mockHeroFavoriteToggleSpy).toHaveBeenCalled()
+    const favoriteZ = getTravelDetailsHeroStyles(getThemedColors(false)).heroFavoriteBtn.zIndex
+    expect(favoriteZ).toBeGreaterThan(TRAVEL_HERO_LAYERS.sliderDuringSsgHandoff)
+    expect(favoriteZ).toBeGreaterThan(TRAVEL_HERO_LAYERS.lcpOverlay)
 
     sliderProps.onInteractionStart()
     expect(mockReleaseSsgHero).toHaveBeenCalledTimes(1)

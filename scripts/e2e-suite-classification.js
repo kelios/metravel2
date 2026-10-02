@@ -34,6 +34,9 @@ const PRODUCTION_SMOKE_SPECS = [
   // #2117: real-article companion of `travel-sticky-actions-viewport.spec.ts`
   // (that one stays in the default suite with a mocked long article).
   'travel-sticky-actions-production-smoke.spec.ts',
+  // #2116: real SSG article companion of `travel-hero-favorite.spec.ts`
+  // (that one stays in the default suite with a mocked article + injected SSG hero).
+  'travel-hero-favorite-production-smoke.spec.ts',
 ]
 
 const getE2ESuiteSelection = (suite) => {

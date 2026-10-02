@@ -14,6 +14,19 @@ import { TRAVEL_DETAILS_SECTION_RHYTHM } from './styles/travelDetailsSectionRhyt
  * `__tests__/components/travel/travelDetailsStyleKeyOwnership.test.ts`; общее с
  * агрегатом идёт спредом из `TRAVEL_DETAILS_SECTION_RHYTHM`, а не копией.
  */
+/**
+ * Шкала слоёв внутри `travel-details-hero-slider-container`. Контейнер — View
+ * (на web `position: relative; z-index: 0`), то есть свой стековый контекст:
+ * значения сравниваются только между его детьми и наружу не выходят.
+ * Сердечко обязано быть выше слайдера в SSG-handoff и LCP-оверлея — иначе
+ * клик в его центре забирает `slider-slide-0` (#2116).
+ */
+export const TRAVEL_HERO_LAYERS = {
+  lcpOverlay: 5,
+  sliderDuringSsgHandoff: 6,
+  favoriteToggle: 7,
+} as const
+
 export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     ...TRAVEL_DETAILS_SECTION_RHYTHM,
@@ -145,7 +158,7 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       position: 'absolute' as any,
       top: 14,
       right: 14,
-      zIndex: 3,
+      zIndex: TRAVEL_HERO_LAYERS.favoriteToggle,
       width: 44,
       height: 44,
       borderRadius: 22,

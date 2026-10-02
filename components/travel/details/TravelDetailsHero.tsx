@@ -9,7 +9,7 @@ import {
   QuickJumpSkeleton,
 } from '@/components/travel/TravelDetailSkeletons'
 import type { AnchorsMap } from './TravelDetailsTypes'
-import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
+import { TRAVEL_HERO_LAYERS, useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import { useTravelHeroState } from '@/hooks/useTravelHeroState'
 import { useTravelDetailsHeroCompositionModel } from './hooks/useTravelDetailsHeroCompositionModel'
 import { useTravelHeroExtrasModel } from './hooks/useTravelHeroExtrasModel'
@@ -137,7 +137,7 @@ function TravelHeroSectionInner({
         // Keep the regular React slider below its LCP overlay, but raise it
         // above the adopted SSG node so counter, arrows and dots are available
         // immediately instead of looking like the gallery disappeared.
-        ...(ssgHeroHandoffActive ? { zIndex: 6 } : null),
+        ...(ssgHeroHandoffActive ? { zIndex: TRAVEL_HERO_LAYERS.sliderDuringSsgHandoff } : null),
         // pointerEvents всегда 'auto': под-оверлейный слайдер должен принимать
         // touch/свайп даже до снятия оверлея (оверлей сверху сам pointerEvents:'none').
         // Без этого pointer-events:none на дереве слайдера убивает свайп пальцем.
@@ -152,7 +152,7 @@ function TravelHeroSectionInner({
     () => [
       ABSOLUTE_FILL,
       {
-        zIndex: 5,
+        zIndex: TRAVEL_HERO_LAYERS.lcpOverlay,
         opacity: isOverlayFading ? 0 : 1,
         pointerEvents: 'none' as const,
         ...(isWeb ? null : { transition: `opacity ${OVERLAY_TRANSITION_MS}ms ease` }),
