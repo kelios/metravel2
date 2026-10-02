@@ -23,6 +23,4 @@ export const common = {
   'feedback.awardSent': "Nagroda wysłana",
   'feedback.signInToSave': "Zaloguj się, aby zapisywać trasy",
   'feedback.actionError': "Nie udało się wykonać akcji",
-  'feedback.statusUpdated': "Status zaktualizowany",
-  'feedback.pointSaved': "Punkt zapisany",
 } as const

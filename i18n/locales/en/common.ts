@@ -23,6 +23,4 @@ export const common = {
   'feedback.awardSent': "Award sent",
   'feedback.signInToSave': "Sign in to save routes",
   'feedback.actionError': "Could not complete the action",
-  'feedback.statusUpdated': "Status updated",
-  'feedback.pointSaved': "Point saved",
 } as const

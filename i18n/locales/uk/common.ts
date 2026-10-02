@@ -23,6 +23,4 @@ export const common = {
   'feedback.awardSent': "Нагороду надіслано",
   'feedback.signInToSave': "Увійдіть, щоб зберігати маршрути",
   'feedback.actionError': "Не вдалося виконати дію",
-  'feedback.statusUpdated': "Статус оновлено",
-  'feedback.pointSaved': "Точку збережено",
 } as const

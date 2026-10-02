@@ -23,6 +23,4 @@ export const common = {
   'feedback.awardSent': "Узнагароду адпраўлена",
   'feedback.signInToSave': "Увайдзіце, каб захоўваць маршруты",
   'feedback.actionError': "Не ўдалося выканаць дзеянне",
-  'feedback.statusUpdated': "Статус абноўлены",
-  'feedback.pointSaved': "Кропку захавана",
 } as const
