@@ -31,6 +31,9 @@ const PRODUCTION_SMOKE_SPECS = [
   'mobile-screen-budget-production-smoke.spec.ts',
   'prod-media-smoke.spec.ts',
   'public-regressions.spec.ts',
+  // #2117: real-article companion of `travel-sticky-actions-viewport.spec.ts`
+  // (that one stays in the default suite with a mocked long article).
+  'travel-sticky-actions-production-smoke.spec.ts',
 ]
 
 const getE2ESuiteSelection = (suite) => {

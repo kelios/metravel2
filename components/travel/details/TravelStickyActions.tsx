@@ -89,7 +89,12 @@ function TravelStickyActions({
           useNativeDriver: Platform.OS !== 'web',
           damping: 20,
           stiffness: 200,
-        }).start(() => setVisible(false));
+        }).start(({ finished }) => {
+          // #2117: прерванная пружина (бар снова показан) не должна сбрасывать
+          // visible — иначе следующий hide не меняет state, и бар остаётся
+          // отрендеренным на translateY=80 поверх дока.
+          if (finished) setVisible(false);
+        });
       }
     });
 
@@ -153,7 +158,7 @@ function TravelStickyActions({
       style={[
         styles.container,
         Platform.OS !== 'web' ? { paddingBottom: asBottomDimension(nativeBottomPadding) } : null,
-        { transform: [{ translateY }], pointerEvents: 'box-none' },
+        { transform: [{ translateY }] },
       ]}
     >
       <View
@@ -216,6 +221,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       left: 0,
       right: 0,
       zIndex: 999,
+      // #2117: в StyleSheet, не inline — RN-web компилирует box-none в класс, а
+      // inline `pointer-events: box-none` браузер выбрасывает, и полоса над доком
+      // перехватывала тапы по нему.
+      pointerEvents: 'box-none',
       paddingBottom: Platform.select({
         // Reserve whichever bottom overlay is taller: the bottom dock or the consent
         // banner (set by ConsentBanner via --mt-consent-h). max() keeps the toolbar
