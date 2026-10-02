@@ -14,6 +14,7 @@ jest.mock('@/components/ui/ImageCardMedia', () => 'ImageCardMedia')
 jest.mock('@/utils/externalLinks', () => ({ openExternalUrl: jest.fn() }))
 jest.mock('@/utils/tripAnalytics', () => ({ trackTripViewed: jest.fn() }))
 jest.mock('expo-router', () => ({
+  useFocusEffect: (cb: () => void | (() => void)) => require('react').useEffect(cb, [cb]),
   useRouter: () => ({ push: jest.fn() }),
   Link: ({ children }: { children: React.ReactNode }) => children,
 }))

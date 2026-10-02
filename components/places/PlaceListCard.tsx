@@ -36,6 +36,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   onShare,
   mapActions = [],
   inlineActions = [],
+  menuActions = [],
   quickActions = [],
   onAddPoint,
   addDisabled = false,
@@ -79,6 +80,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
     overflowActionLabel,
     overflowActionTitle,
     overflowActions,
+    overflowHasMapActions,
     overlayAddInline,
     saveIcon,
     saveIconColor,
@@ -102,6 +104,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
     isCompactActionCard,
     isSaved,
     mapActions,
+    menuActions,
     onAddPoint,
     onCopyCoord,
     onShare,
@@ -385,7 +388,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
                     <LabeledActionChip
                       accessibilityLabel={overflowActionTitle}
                       accessibilityState={{ expanded: overflowVisible }}
-                      icon={mapActions.length > 0 ? SEMANTIC_ACTION_ICON.navigationMenu : 'more-horizontal'}
+                      icon={overflowHasMapActions ? SEMANTIC_ACTION_ICON.navigationMenu : 'more-horizontal'}
                       iconColor={colors.textMuted}
                       label={overflowActionLabel}
                       onPress={openOverflowMenu}
@@ -408,7 +411,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
                       <LabeledActionChip
                         accessibilityLabel={overflowActionTitle}
                         accessibilityState={{ expanded: overflowVisible }}
-                        icon={mapActions.length > 0 ? SEMANTIC_ACTION_ICON.navigationMenu : 'more-horizontal'}
+                        icon={overflowHasMapActions ? SEMANTIC_ACTION_ICON.navigationMenu : 'more-horizontal'}
                         iconColor={colors.textMuted}
                         label={overflowActionLabel}
                         onPress={openOverflowMenu}
@@ -426,9 +429,9 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
                         }}
                         title={action.title ?? action.label}
                         style={styles.overflowMenuItem}
-                        titleStyle={styles.overflowMenuItemTitle}
+                        titleStyle={[styles.overflowMenuItemTitle, action.destructive && { color: colors.danger }]}
                         leadingIcon={({ size }) => (
-                          <Feather name={action.icon} size={size} color={colors.textMuted} />
+                          <Feather name={action.icon} size={size} color={action.destructive ? colors.danger : colors.textMuted} />
                         )}
                       />
                     ))}

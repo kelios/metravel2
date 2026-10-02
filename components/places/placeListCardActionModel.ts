@@ -19,6 +19,7 @@ type ActionModelInput = {
   onAddPoint?: () => void
   onCopyCoord?: () => void
   onShare?: () => void
+  menuActions: ActionChip[]
   popupAligned: boolean
   quickActions: ActionChip[]
   relatedTravelUrl?: string | null
@@ -40,6 +41,7 @@ export function buildPlaceListCardActionModel({
   onAddPoint,
   onCopyCoord,
   onShare,
+  menuActions,
   popupAligned,
   quickActions,
   relatedTravelUrl,
@@ -75,13 +77,18 @@ export function buildPlaceListCardActionModel({
   const visibleInlineActions = isCompactActionCard
     ? popupAligned ? inlineActions : []
     : inlineActions
-  const overflowActions = isCompactActionCard
-    ? [
-        ...(shareOverflowAction ? [shareOverflowAction] : []),
-        ...mapActions,
-        ...(popupAligned ? [] : inlineActions),
-      ]
-    : []
+  const overflowActions = [
+    ...(isCompactActionCard
+      ? [
+          ...(shareOverflowAction ? [shareOverflowAction] : []),
+          ...mapActions,
+          ...(popupAligned ? [] : inlineActions),
+        ]
+      : []),
+    // #2101: правка/удаление объекта — «⋯» на любой раскладке, destructive последним.
+    ...menuActions,
+  ]
+  const overflowHasMapActions = isCompactActionCard && mapActions.length > 0
   const showShareChip = !isCompactActionCard && hasCoord && Boolean(onShare)
   const showRowAddButton =
     showAddButton && addButtonPlacement === 'row' && Boolean(onAddPoint) && !overlayAddInline
@@ -99,13 +106,14 @@ export function buildPlaceListCardActionModel({
 
   return {
     hasActionRow,
-    overflowActionLabel: mapActions.length > 0
+    overflowActionLabel: overflowHasMapActions
       ? i18nT('map:components.places.PlaceListCard.navigatsiya_fa115805')
       : i18nT('map:components.places.PlaceListCard.esche_16276b19'),
-    overflowActionTitle: mapActions.length > 0
+    overflowActionTitle: overflowHasMapActions
       ? i18nT('map:components.places.PlaceListCard.navigatsiya_i_deystviya_777daf07')
       : i18nT('map:components.places.PlaceListCard.esche_deystviya_6f82137f'),
     overflowActions,
+    overflowHasMapActions,
     overlayAddInline,
     saveIcon,
     saveIconColor,

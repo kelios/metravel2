@@ -1,6 +1,6 @@
+import type { ActionChip } from '@/components/places/PlaceListCard.types';
 import React from 'react';
 import { Platform, StyleSheet } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 
 import PlaceListCard from '@/components/places/PlaceListCard';
@@ -24,6 +24,7 @@ import { PLACE_CARD_STYLE } from '@/components/MapPage/AddressListItem/constants
 import type { ImportedPoint } from '@/types/userPoints';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
+import { METRICS } from '@/constants/layout';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { getSiteBaseUrl } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
@@ -31,15 +32,6 @@ import { translate as i18nT } from '@/i18n'
 import { formatInteger, formatNumber } from '@/i18n/format'
 import { formatRatingValue } from '@/utils/ratingHelpers';
 
-
-type ActionChip = {
-  key: string;
-  label: string;
-  icon: keyof typeof Feather.glyphMap;
-  onPress: () => void;
-  accessibilityLabel?: string;
-  title?: string;
-};
 
 interface PointCardProps {
   point: ImportedPoint;
@@ -184,6 +176,8 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   // читать тот же стор с той же семантикой гидратации, иначе на первом web-кадре
   // шапка и карточки рисуются в разных режимах.
   const viewportWidth = useResponsiveWidth({ clientOnly: true });
+  // До гидратации ширина 0 — desktop-раскладка (как у родительского списка).
+  const isPhone = viewportWidth > 0 && viewportWidth < METRICS.breakpoints.tablet;
 
   const title = React.useMemo(() => getPointTitle(point), [point]);
   const subtitle = React.useMemo(() => getPointSubtitle(point, title), [point, title]);
@@ -309,6 +303,33 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     ];
   }, [coord, title]);
 
+  // Действия над точкой: правка, затем удаление (последним, destructive).
+  const objectActions = React.useMemo<ActionChip[]>(() => {
+    const result: ActionChip[] = [];
+    if (onEdit) {
+      result.push({
+        key: 'edit',
+        label: i18nT('map:components.UserPoints.PointCard.izmenit_ef6b22fb'),
+        icon: 'edit-2',
+        onPress: () => onEdit(point),
+        accessibilityLabel: i18nT('map:components.UserPoints.PointCard.redaktirovat_0d6b9842'),
+        title: i18nT('map:components.UserPoints.PointCard.redaktirovat_0d6b9842'),
+      });
+    }
+    if (onDelete) {
+      result.push({
+        key: 'delete',
+        label: i18nT('map:components.UserPoints.PointCard.udalit_8bbb4e8c'),
+        icon: 'trash-2',
+        destructive: true,
+        onPress: () => onDelete(point),
+        accessibilityLabel: i18nT('map:components.UserPoints.PointCard.udalit_8bbb4e8c'),
+        title: i18nT('map:components.UserPoints.PointCard.udalit_8bbb4e8c'),
+      });
+    }
+    return result;
+  }, [onDelete, onEdit, point]);
+
   const inlineActions = React.useMemo<ActionChip[]>(() => {
     const result: ActionChip[] = [];
     if (selectionMode) {
@@ -332,28 +353,14 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         title: i18nT('map:components.UserPoints.PointCard.otkryt_stranitsu_78d815bb'),
       });
     }
-    if (onEdit) {
-      result.push({
-        key: 'edit',
-        label: i18nT('map:components.UserPoints.PointCard.izmenit_ef6b22fb'),
-        icon: 'edit-2',
-        onPress: () => onEdit(point),
-        accessibilityLabel: i18nT('map:components.UserPoints.PointCard.redaktirovat_0d6b9842'),
-        title: i18nT('map:components.UserPoints.PointCard.redaktirovat_0d6b9842'),
-      });
-    }
-    if (onDelete) {
-      result.push({
-        key: 'delete',
-        label: i18nT('map:components.UserPoints.PointCard.udalit_8bbb4e8c'),
-        icon: 'trash-2',
-        onPress: () => onDelete(point),
-        accessibilityLabel: i18nT('map:components.UserPoints.PointCard.udalit_8bbb4e8c'),
-        title: i18nT('map:components.UserPoints.PointCard.udalit_8bbb4e8c'),
-      });
-    }
+    if (!isPhone) result.push(...objectActions);
     return result;
-  }, [onDelete, onEdit, onToggleSelect, point, relatedPageUrl, selected, selectionMode]);
+  }, [isPhone, objectActions, onToggleSelect, point, relatedPageUrl, selected, selectionMode]);
+  // #2101: на телефоне правка и удаление — подписанные пункты «⋯», удаление последним.
+  const menuActions = React.useMemo<ActionChip[]>(
+    () => (isPhone && !selectionMode ? objectActions : []),
+    [isPhone, objectActions, selectionMode],
+  );
 
   return (
     <PlaceListCard
@@ -368,6 +375,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
       onShare={coord ? () => void openShareUrl(buildTelegramShareUrl(coord)) : undefined}
       mapActions={mapActions}
       inlineActions={inlineActions}
+      menuActions={menuActions}
       showAddButton={false}
       imageHeight={imageHeight}
       width={cardWidth}

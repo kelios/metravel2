@@ -180,14 +180,22 @@ export const createStyles = (
       borderRadius: 14,
       backgroundColor: colors.surfaceMuted,
     },
+    // #2101: на телефоне у каждой вкладки иконка над короткой подписью (не только у
+    // активной); колонка и 11px помещают «Подготовка» в четверть 320 без обрезки.
+    // На телефоне ширина вкладки следует подписи (`flexBasis: auto` + рост), а не
+    // делится поровну: «Подготовка»/«Przygotowanie» длиннее «Люди» и на 320 иначе
+    // касаются краёв своей четверти.
     tab: {
-      flex: 1,
-      flexDirection: 'row',
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: isMobile ? 'auto' : 0,
+      minWidth: 0,
+      flexDirection: isMobile ? 'column' : 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 6,
+      gap: isMobile ? 2 : 6,
       minHeight: 44,
-      paddingHorizontal: 8,
+      paddingHorizontal: isMobile ? 4 : 8,
       paddingVertical: 8,
       borderRadius: 10,
     },
@@ -198,7 +206,7 @@ export const createStyles = (
         default: DESIGN_TOKENS.shadowsNative.light,
       }),
     },
-    tabText: { fontSize: 13, fontWeight: '700', color: colors.textSecondary },
+    tabText: { fontSize: isMobile ? 11 : 13, fontWeight: '700', color: colors.textSecondary, textAlign: 'center' },
     tabTextActive: { color: colors.primaryDark },
     panel: {
       gap: 16,

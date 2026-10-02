@@ -25,6 +25,7 @@ let mockRouteBuilderDisplayState: {
 } | null = null;
 
 jest.mock('expo-router', () => ({
+  useFocusEffect: (cb: () => void | (() => void)) => require('react').useEffect(cb, [cb]),
   useLocalSearchParams: () => mockSearchParams,
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
 }));
@@ -33,6 +34,7 @@ jest.mock('@/hooks/usePlannedTripsApi', () => ({
   usePlannedTrip: (...args: unknown[]) => mockUsePlannedTrip(...args),
   useDeletePlannedTrip: () => ({ mutate: jest.fn(), isPending: false }),
   useUpdatePlannedTrip: () => ({ mutate: mockUpdateTripMutate, isPending: false }),
+  useTripRouteElevation: () => ({ data: null, isFetching: false }),
 }));
 
 jest.mock('@/hooks/useResponsive', () => ({
@@ -385,25 +387,6 @@ describe('PlannedTripScreen — planner states', () => {
 
     expect(getByTestId('trip-plan-delete')).toBeTruthy();
     expect(getByTestId('trip-plan-edit')).toBeTruthy();
-  });
-
-  it('uses compact owner-action labels on mobile without changing their accessible actions', () => {
-    mockResponsive = { isMobile: true };
-    mockTrip(makeTrip({ isOwner: true }));
-    const { getByTestId } = renderScreen();
-
-    // Текст кнопки включает имя Feather-иконки, поэтому сверяем вхождением:
-    // exact-режим toHaveTextContent сравнил бы подпись со строкой «edit-2Редактировать».
-    expect(getByTestId('trip-plan-edit')).toHaveTextContent('Редактировать', { exact: false });
-    expect(getByTestId('trip-plan-edit')).not.toHaveTextContent('Редактировать поездку', {
-      exact: false,
-    });
-    expect(getByTestId('trip-plan-delete')).toHaveTextContent('Удалить', { exact: false });
-    expect(getByTestId('trip-plan-delete')).not.toHaveTextContent('Удалить поездку', {
-      exact: false,
-    });
-    expect(getByTestId('trip-plan-edit').props.accessibilityLabel).toBe('Редактировать');
-    expect(getByTestId('trip-plan-delete').props.accessibilityLabel).toBe('Удалить');
   });
 
   it('hides owner-only controls for a non-owner viewer', () => {

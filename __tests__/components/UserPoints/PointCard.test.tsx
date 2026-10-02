@@ -24,6 +24,11 @@ const mockPlaceListCard = jest.fn((props: any) => {
       {(props.mapActions ?? []).map((action: any) => (
         <Text key={action.key} onPress={action.onPress}>{action.label}</Text>
       ))}
+      {(props.menuActions ?? []).map((action: any) => (
+        <Text key={`menu-${action.key}`} testID={`menu-${action.key}`} accessibilityLabel={`menu ${action.label}`} onPress={action.onPress}>
+          {action.label}{action.destructive ? ' (destructive)' : ''}
+        </Text>
+      ))}
       {(props.inlineActions ?? []).map((action: any) => (
         <Text key={action.key} accessibilityLabel={action.accessibilityLabel} onPress={action.onPress}>
           {action.label}
@@ -36,6 +41,12 @@ const mockPlaceListCard = jest.fn((props: any) => {
 jest.mock('@/components/places/PlaceListCard', () => ({
   __esModule: true,
   default: (props: any) => mockPlaceListCard(props),
+}));
+
+let mockViewportWidth = 1280;
+jest.mock('@/hooks/useResponsive', () => ({
+  ...jest.requireActual('@/hooks/useResponsive'),
+  useResponsiveWidth: () => mockViewportWidth,
 }));
 
 jest.mock('expo-clipboard', () => ({
@@ -192,16 +203,36 @@ describe('PointCard', () => {
     ]);
   });
 
-  it('passes edit and delete as shared card inline actions', () => {
+  it('desktop: правка и удаление — подписанные чипы ряда, «⋯» без них', () => {
+    mockViewportWidth = 1280;
     const onEdit = jest.fn();
     const onDelete = jest.fn();
     render(<PointCard point={mockPoint} onEdit={onEdit} onDelete={onDelete} />);
 
     fireEvent.press(screen.getByLabelText('Редактировать'));
     fireEvent.press(screen.getByLabelText('Удалить'));
-
     expect(onEdit).toHaveBeenCalledWith(mockPoint);
     expect(onDelete).toHaveBeenCalledWith(mockPoint);
+    expect(screen.queryByTestId('menu-edit')).toBeNull();
+    expect(screen.queryByTestId('menu-delete')).toBeNull();
+  });
+
+  it('телефон (#2101): правка и удаление уходят в «⋯», удаление последним и destructive, из ряда убраны', () => {
+    mockViewportWidth = 390;
+    const onEdit = jest.fn();
+    const onDelete = jest.fn();
+    render(<PointCard point={mockPoint} onEdit={onEdit} onDelete={onDelete} />);
+
+    const props = mockPlaceListCard.mock.calls[mockPlaceListCard.mock.calls.length - 1][0];
+    expect(props.menuActions.map((a: any) => a.key)).toEqual(['edit', 'delete']);
+    expect(props.menuActions[1].destructive).toBe(true);
+    expect((props.inlineActions ?? []).map((a: any) => a.key)).not.toContain('edit');
+    expect((props.inlineActions ?? []).map((a: any) => a.key)).not.toContain('delete');
+
+    fireEvent.press(screen.getByTestId('menu-delete'));
+    expect(onDelete).toHaveBeenCalledWith(mockPoint);
+    fireEvent.press(screen.getByTestId('menu-edit'));
+    expect(onEdit).toHaveBeenCalledWith(mockPoint);
   });
 
   it('passes selection action in selection mode', () => {

@@ -20,6 +20,12 @@ export type ActionListSheetItem = {
   /** Optional icon-bubble tint (e.g. per-navigator brand color). */
   iconColor?: string
   iconBubbleColor?: string
+  /**
+   * Разрушительное действие (удалить): красные иконка и подпись, над пунктом —
+   * разделитель. Ставится последним; подтверждение — через `ConfirmDialog` (#2101).
+   */
+  destructive?: boolean
+  testID?: string
 }
 
 type Props = {
@@ -100,9 +106,13 @@ const ActionListSheet: React.FC<Props> = ({
           </View>
           {children}
           <View style={styles.list}>
-            {actions.map((action) => (
+            {actions.map((action, index) => (
+              <React.Fragment key={action.key}>
+              {action.destructive && index > 0 && !actions[index - 1].destructive ? (
+                <View style={styles.separator} testID="action-sheet-separator" />
+              ) : null}
               <CardActionPressable
-                key={action.key}
+                testID={action.testID}
                 accessibilityRole="button"
                 accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
                 onPress={() => {
@@ -124,7 +134,7 @@ const ActionListSheet: React.FC<Props> = ({
                   <Feather
                     name={action.icon}
                     size={18}
-                    color={action.iconColor ?? colors.textMuted}
+                    color={action.destructive ? colors.danger : (action.iconColor ?? colors.textMuted)}
                   />
                 </View>
                 {/* Visible row text = the short brand `label` (e.g. «Google Maps»,
@@ -132,10 +142,11 @@ const ActionListSheet: React.FC<Props> = ({
                     convey the verb, so the verbose `title` (e.g. «Открыть точку в
                     Google Maps») is kept ONLY for the web tooltip + a11y label, not
                     repeated as the visible label — easier to scan. */}
-                <Text style={styles.itemText} numberOfLines={2}>
+                <Text style={[styles.itemText, action.destructive && { color: colors.danger }]} numberOfLines={2}>
                   {action.label}
                 </Text>
               </CardActionPressable>
+              </React.Fragment>
             ))}
           </View>
         </View>
@@ -205,6 +216,11 @@ const createStyles = (colors: ThemedColors, bottomOffset?: number) =>
     },
     list: {
       gap: 4,
+    },
+    separator: {
+      height: StyleSheet.hairlineWidth,
+      marginVertical: 4,
+      backgroundColor: colors.borderLight,
     },
     item: {
       minHeight: 48,

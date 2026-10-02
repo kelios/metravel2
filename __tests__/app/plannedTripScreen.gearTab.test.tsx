@@ -15,6 +15,7 @@ const mockUsePlannedTrip = jest.fn()
 const mockUseTripGear = jest.fn()
 
 jest.mock('expo-router', () => ({
+  useFocusEffect: (cb: () => void | (() => void)) => require('react').useEffect(cb, [cb]),
   useLocalSearchParams: () => ({ id: '8001' }),
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
 }))
@@ -23,6 +24,7 @@ jest.mock('@/hooks/usePlannedTripsApi', () => ({
   usePlannedTrip: (...args: unknown[]) => mockUsePlannedTrip(...args),
   useDeletePlannedTrip: () => ({ mutate: jest.fn(), isPending: false }),
   useUpdatePlannedTrip: () => ({ mutate: jest.fn(), isPending: false }),
+  useTripRouteElevation: () => ({ data: null, isFetching: false }),
 }))
 
 jest.mock('@/hooks/useResponsive', () => ({ useResponsive: () => ({ isMobile: false }) }))

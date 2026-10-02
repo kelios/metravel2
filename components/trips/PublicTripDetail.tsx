@@ -15,6 +15,8 @@ import OrganizerApplicationsPanel from '@/components/trips/OrganizerApplications
 import TripTelegramGroupCard from '@/components/trips/communication/TripTelegramGroupCard';
 import { formatSeats, formatTripDates } from '@/components/trips/tripFormatting';
 import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCover';
+import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext';
+import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps';
 import { useMyTripApplications, usePublicTrip } from '@/hooks/usePublicTripsApi';
 import { useActionConsent } from '@/hooks/useActionConsent';
 import { CONSENT_TYPES } from '@/utils/actionConsent';
@@ -49,6 +51,17 @@ function PublicTripDetail({ tripId }: Props) {
   const contactConsent = useActionConsent(CONSENT_TYPES.CONTACT_EXCHANGE);
   const { data: trip, isLoading, isError } = usePublicTrip(tripId);
   const myApplicationsQuery = useMyTripApplications();
+  const headerMobile = useIsScreenHeaderMobile();
+  const editLabel = i18nT('trips:app.tabs.trips.plan.id.redaktirovat_poezdku_535ddda6');
+  const openPlanEditor = () => router.push(`/trips/plan/${tripId}?edit=1`);
+  // #2101: заголовок один раз — в строке экрана; организатору правка — иконкой там
+  // же, на desktop — кнопка с подписью рядом с заголовком.
+  useScreenHeader({
+    title: trip?.title ?? i18nT('tripsStatic:seo.publicTripTitle'),
+    primaryAction: trip?.isOwner
+      ? { icon: 'edit-2', label: editLabel, onPress: openPlanEditor, testID: 'trip-detail-edit' }
+      : undefined,
+  });
 
   useEffect(() => {
     if (trip) trackTripViewed(trip.id, trip.featured);
@@ -121,9 +134,24 @@ function PublicTripDetail({ tripId }: Props) {
       </View>
 
       <View style={styles.headerRow}>
-        <Text style={styles.title}>{trip.title}</Text>
+        {headerMobile ? null : (
+          <Text style={styles.title} {...SCREEN_HEADER_DESKTOP_PROPS}>{trip.title}</Text>
+        )}
         <TripStatusBadge kind="trip" status={trip.status} />
       </View>
+
+      {trip.isOwner && !headerMobile ? (
+        <View style={styles.ownerActions} {...SCREEN_HEADER_DESKTOP_PROPS}>
+          <Button
+            label={editLabel}
+            variant="secondary"
+            size="sm"
+            onPress={openPlanEditor}
+            icon={<Feather name="edit-2" size={15} color={colors.primaryDark} />}
+            testID="trip-detail-edit"
+          />
+        </View>
+      ) : null}
 
       <View style={styles.chips}>
         <InfoChip icon="map-pin" text={trip.region} />
@@ -240,6 +268,7 @@ const createStyles = (colors: ThemedColors) =>
     },
     headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
     title: { flex: 1, fontSize: 24, fontWeight: '800', color: colors.text, lineHeight: 30 },
+    ownerActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
     organizer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     organizerAvatar: {

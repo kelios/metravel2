@@ -15,6 +15,8 @@ export type ActionChip = {
   onPress: () => void
   accessibilityLabel?: string
   title?: string
+  /** Разрушительное действие (удалить): красный пункт «⋯» последним, с разделителем (#2101). */
+  destructive?: boolean
 }
 
 export type PlaceListCardProps = {
@@ -37,6 +39,11 @@ export type PlaceListCardProps = {
   onShare?: () => void
   mapActions?: ActionChip[]
   inlineActions?: ActionChip[]
+  /**
+   * Действия над объектом карточки (правка, удаление): пункты «⋯» на любой раскладке,
+   * удаление последним с `destructive` (#2101). Подписанные пункты листа, не чипы ряда.
+   */
+  menuActions?: ActionChip[]
   quickActions?: ActionChip[]
   onAddPoint?: () => void
   addDisabled?: boolean

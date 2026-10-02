@@ -23,21 +23,15 @@ import {
   type TravelMode,
 } from '@/utils/routeExport';
 import { usePlannedTripRouteFiles } from '@/hooks/usePlannedTripRouteFile';
-import { useTripRouteElevation } from '@/hooks/usePlannedTripsApi';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { trackRouteExported } from '@/utils/tripAnalytics';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import RoutingStatus, { ROUTING_DIRECT_LINE } from '@/components/MapPage/RoutingStatus';
 import { translate as i18nT } from '@/i18n'
-import { isRouteApproximate, routingStateHint, routingStateRetryable } from './tripPlanFormatting';
+import { routingStateHint, routingStateRetryable } from './tripPlanFormatting';
 import TripRoutePreviewEngines from './TripRoutePreviewEngines';
 import TripPlanPrintButton from './print/TripPlanPrintButton';
-import {
-  hasUsableRouteGeometry,
-  isRoutableTransport,
-  routablePreviewPoints,
-} from './tripRoutePreview';
-import { useTripRouteDisplay } from './useTripRouteDisplay';
+import { useTripRouteExportTrip } from './useTripRouteExportTrip';
 
 
 interface Props {
@@ -60,36 +54,7 @@ const TRANSPORT_MODE: Record<TripTransport, TravelMode> = {
 function TripRouteExportMenu({ trip }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const shouldResolveSavedGeometry =
-    Boolean(trip.routingState) &&
-    !isRouteApproximate(trip.routingState) &&
-    isRoutableTransport(trip.transport) &&
-    !hasUsableRouteGeometry(trip.routeGeometry) &&
-    routablePreviewPoints(trip.route).length >= 2;
-  const routeElevationQuery = useTripRouteElevation(trip.id, {
-    // Export needs this endpoint only as the second persisted geometry source.
-    // A normal trip with routeGeometry must not gain an extra request merely
-    // because the user opened the Export tab.
-    enabled: shouldResolveSavedGeometry,
-  });
-  const routeDisplay = useTripRouteDisplay({
-    trip,
-    route: trip.route,
-    // Disabled queries may still expose cache from an earlier observer/account.
-    // It is not a geometry source unless this exact trip tuple requested it.
-    routeElevation: shouldResolveSavedGeometry ? routeElevationQuery.data ?? null : null,
-    routeElevationPending: shouldResolveSavedGeometry && routeElevationQuery.isFetching,
-    routeShapeMatchesSaved: true,
-  });
-  const displayTrip = useMemo(
-    () => ({
-      ...trip,
-      routeGeometry: routeDisplay.geometry,
-      routingState: routeDisplay.routingState,
-      routeSummary: routeDisplay.summary,
-    }),
-    [routeDisplay.geometry, routeDisplay.routingState, routeDisplay.summary, trip],
-  );
+  const { routeDisplay, displayTrip } = useTripRouteExportTrip(trip);
   const exportController = useTripRouteExport(displayTrip);
   // #1496 — исходные файлы маршрута доступны только владельцу поездки, поэтому
   // участнику блок скачивания оригиналов не показывается и запрос не уходит.

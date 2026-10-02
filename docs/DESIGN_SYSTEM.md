@@ -129,6 +129,35 @@ e2e `e2e/planned-trip-route-tab-labels.spec.ts` (все кнопки вклад�
   вместо неё остаётся подсказка про микрофон системной клавиатуры
   (`components/travel/ContentUpsertSection.tsx`).
 
+## Mobile pattern: screen actions of a details screen (`useScreenHeader` + «⋯»)
+
+Status: accepted, 2026-10-02 (#2101, family MOBILE-ACTION-LABELS-001).
+
+Действия над объектом, который показывает экран (поездка, точка, запись
+календаря), не живут полноширинными кнопками в теле экрана: шесть точечных
+починок (#1774, #1776, #1779, #1780, #1783, #1789) чинили подписи на одном
+экране, а ряд «Редактировать» + розовое «Удалить» возвращался на следующем.
+
+| Действие | Телефон (mobile web, Android, iPhone) | Desktop |
+| --- | --- | --- |
+| правка владельца | иконка в строке экрана (`primaryAction`), a11y-label «Редактировать поездку» | кнопка с подписью в теле |
+| печать, экспорт, «Поделиться» | подписанные пункты «⋯» (`overflow` → `ActionListSheet`) | как раньше |
+| удаление | последний пункт «⋯», `destructive: true` (красный, разделитель), `ConfirmDialog` | кнопка `danger` с подписью |
+
+Состав и порядок «⋯» поездки: «Распечатать план» (на native скрыт до #2102, не
+`disabled`), «Экспорт GPX / KML», «Поделиться», разделитель, «Удалить поездку».
+Не-владелец не видит карандаш и «Удалить».
+
+Вкладки рабочего экрана (поездка): на телефоне иконка над короткой подписью у
+КАЖДОЙ вкладки (11 px, одна строка, помещается в четверть 320 px); вкладка
+называется по содержимому («Отчёт» у завершённой, «Подготовка» у остальных), а не
+«Ещё».
+
+Эталон — `components/trips/planning/TripPlanScreenHeader.tsx` (декларация) и
+`app/(tabs)/trips/plan/[id].tsx` (desktop-блок кнопок с `SCREEN_HEADER_DESKTOP_PROPS`).
+Guard — `scripts/guard-screen-actions.js`; метрика «иконки без доступного имени = 0»
+— `e2e/mobile-screen-budget.spec.ts`.
+
 ## Mobile pattern: rich-text toolbar docked below the editor
 
 Status: accepted, 2026-07-25.

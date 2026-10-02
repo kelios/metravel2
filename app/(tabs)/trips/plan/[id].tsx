@@ -36,6 +36,8 @@ import {
   TripTelegramGroupCard,
 } from '@/components/trips/planning/tripPlanDeferredSections';
 import { shouldRenderTripRouteExportMenu } from '@/components/trips/planning/tripRouteExport';
+import TripPlanScreenHeader from '@/components/trips/planning/TripPlanScreenHeader';
+import { useIsScreenHeaderMobile } from '@/components/layout/ScreenHeaderContext';
 import TripAffiliateBlock from '@/components/trips/planning/TripAffiliateBlock';
 import TripPlanCollapsibleText, {
   tripPlanTextCharsPerWidth,
@@ -70,6 +72,7 @@ import type { PlannedTrip, TripTransport, TripVisibility } from '@/api/plannedTr
 import { ApiError } from '@/api/clientErrors';
 import { translate as i18nT } from '@/i18n'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
+import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
 import { useTranslation } from '@/i18n/LocaleProvider';
 import {
   createStyles,
@@ -98,8 +101,13 @@ const PLANNER_TABS: PlannerTab[] = [
   { key: 'route', get label() { return i18nT('tripsStatic:app.tabs.trips.plan.id.marshrut_52518f7d') }, icon: 'map' },
   { key: 'people', get label() { return i18nT('tripsStatic:app.tabs.trips.plan.id.lyudi_ecd00897') }, icon: 'users' },
   { key: 'export', get label() { return i18nT('tripsStatic:app.tabs.trips.plan.id.eksport_89eec9f8') }, icon: 'download' },
-  { key: 'more', get label() { return i18nT('tripsStatic:app.tabs.trips.plan.id.esche_1eb0a8cd') }, icon: 'more-horizontal' },
+  // #2101: «Ещё» — не меню, а панель отчёта, оценки и сборов; называем по содержимому.
+  // Подпись зависит от статуса поездки: tabLabel().
+  { key: 'more', get label() { return i18nT('tripsStatic:planner.tabs.prepare') }, icon: 'clipboard' },
 ];
+
+const tabLabel = (tab: PlannerTab, tripStatus: PlannedTrip['status'] | undefined): string =>
+  tab.key === 'more' && tripStatus === 'completed' ? i18nT('tripsStatic:planner.tabs.report') : tab.label;
 
 // Форма берёт дату и время как есть: нормализация живёт на границе API
 // (`utils/tripDateTime.ts`, #1313), поэтому `startDate` здесь уже локальный
@@ -157,6 +165,10 @@ export default function PlannedTripScreen() {
   const tripId = Number(params.id);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // #2101: ошибка действий из «⋯» (печать, «Поделиться»); удаление — своя строка.
+  const [actionError, setActionError] = useState<string | null>(null);
+  // Правка и удаление на телефоне живут в строке экрана; до гидратации — desktop.
+  const headerMobile = useIsScreenHeaderMobile();
   const [isEditing, setIsEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<ReturnType<typeof initialEditValues> | null>(null);
@@ -394,6 +406,15 @@ export default function PlannedTripScreen() {
         fallbackTitle="plan"
         label={trip?.title}
       />
+      {trip ? (
+        <TripPlanScreenHeader
+          trip={trip}
+          onEdit={handleStartEdit}
+          onDelete={() => setDeleteConfirmVisible(true)}
+          onShowExport={() => setActiveTab('export')}
+          onActionError={setActionError}
+        />
+      ) : null}
       <PlannerPageScrollView style={styles.screen} contentContainerStyle={styles.content}>
         <View style={styles.inner}>
           {isLoading ? (
@@ -452,7 +473,10 @@ export default function PlannedTripScreen() {
                 </View>
               </View>
 
-              <Text style={styles.title}>{trip.title}</Text>
+              {/* Телефон: заголовок один раз — в строке экрана (useScreenHeader). */}
+              {headerMobile ? null : (
+                <Text style={styles.title} {...SCREEN_HEADER_DESKTOP_PROPS}>{trip.title}</Text>
+              )}
               <Text style={styles.meta}>
                 {formatTripDateTime(trip.startDate, trip.startTime, trip.endDate)} · {trip.organizer.name}
               </Text>
@@ -499,19 +523,12 @@ export default function PlannedTripScreen() {
                 </>
               ) : null}
 
-              {trip.isOwner ? (
-                <View style={styles.ownerActions}>
-                  {/* На мобильной ширине пара «Редактировать поездку» + «Удалить
-                      поездку» не влезала в строку и переносилась, съедая два ряда
-                      над маршрутом. Слово «поездку» здесь избыточно — заголовок
-                      поездки стоит прямо над кнопками, — поэтому на компакте
-                      берём короткие подписи и обе кнопки встают в один ряд. */}
+              {/* #2101: на телефоне правка — иконка в строке экрана, удаление — пункт
+                  «⋯»; полноширинных кнопок в теле нет. Desktop: кнопки с подписями. */}
+              {trip.isOwner && !headerMobile ? (
+                <View style={styles.ownerActions} {...SCREEN_HEADER_DESKTOP_PROPS}>
                   <Button
-                    label={
-                      isMobile
-                        ? i18nT('trips:components.trips.planning.TripPlanRouteMap.redaktirovat_0c9026cb')
-                        : i18nT('trips:app.tabs.trips.plan.id.redaktirovat_poezdku_535ddda6')
-                    }
+                    label={i18nT('trips:app.tabs.trips.plan.id.redaktirovat_poezdku_535ddda6')}
                     variant="secondary"
                     size="sm"
                     onPress={handleStartEdit}
@@ -519,11 +536,7 @@ export default function PlannedTripScreen() {
                     testID="trip-plan-edit"
                   />
                   <Button
-                    label={
-                      isMobile
-                        ? i18nT('trips:app.tabs.trips.plan.id.udalit_eafe069e')
-                        : i18nT('trips:app.tabs.trips.plan.id.udalit_poezdku_32f59a60')
-                    }
+                    label={i18nT('trips:app.tabs.trips.plan.id.udalit_poezdku_32f59a60')}
                     variant="danger"
                     size="sm"
                     onPress={() => setDeleteConfirmVisible(true)}
@@ -532,12 +545,17 @@ export default function PlannedTripScreen() {
                     icon={<Feather name="trash-2" size={15} color={colors.textOnPrimary} />}
                     testID="trip-plan-delete"
                   />
-                  {deleteError ? (
-                    <Text style={styles.deleteError} testID="trip-plan-delete-error">
-                      {deleteError}
-                    </Text>
-                  ) : null}
                 </View>
+              ) : null}
+              {deleteError ? (
+                <Text style={styles.deleteError} testID="trip-plan-delete-error">
+                  {deleteError}
+                </Text>
+              ) : null}
+              {actionError ? (
+                <Text style={styles.deleteError} testID="trip-plan-action-error">
+                  {actionError}
+                </Text>
               ) : null}
             </View>
 
@@ -927,7 +945,7 @@ export default function PlannedTripScreen() {
                     key={tabItem.key}
                     accessibilityRole="tab"
                     accessibilityState={{ selected: active }}
-                    accessibilityLabel={tabItem.label}
+                    accessibilityLabel={tabLabel(tabItem, trip.status)}
                     onPress={() => setActiveTab(tabItem.key)}
                     style={[styles.tab, active && styles.tabActive]}
                     testID={`trip-plan-tab-${tabItem.key}`}
@@ -937,11 +955,12 @@ export default function PlannedTripScreen() {
                       size={16}
                       color={active ? colors.primaryDark : colors.textSecondary}
                     />
-                    {!isMobile || active ? (
-                      <Text style={[styles.tabText, active && styles.tabTextActive]}>
-                        {tabItem.label}
-                      </Text>
-                    ) : null}
+                    <Text
+                      style={[styles.tabText, active && styles.tabTextActive]}
+                      numberOfLines={1}
+                    >
+                      {tabLabel(tabItem, trip.status)}
+                    </Text>
                   </Pressable>
                 );
               })}

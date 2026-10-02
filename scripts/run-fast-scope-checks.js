@@ -306,6 +306,13 @@ const main = () => {
       process.exit(screenHeaderGuardStatus)
     }
 
+    // Безусловно (#2101): полноширинное «Удалить» и безымянная корзина в теле
+    // экрана деталей появляются в изменённом файле списка `ACTION_SCREENS`.
+    const screenActionsGuardStatus = runCommand('npm', ['run', 'guard:screen-actions'])
+    if (screenActionsGuardStatus !== 0) {
+      process.exit(screenActionsGuardStatus)
+    }
+
     const bottomChromeGuardStatus = runCommand('npm', ['run', 'guard:bottom-chrome-inset'])
     if (bottomChromeGuardStatus !== 0) {
       process.exit(bottomChromeGuardStatus)

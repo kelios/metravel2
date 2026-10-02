@@ -15,6 +15,7 @@ const mockUnifiedTravelCard = jest.fn((_props: Record<string, unknown>) => (
 
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
 jest.mock('expo-router', () => ({
+  useFocusEffect: (cb: () => void | (() => void)) => require('react').useEffect(cb, [cb]),
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
 }));
 

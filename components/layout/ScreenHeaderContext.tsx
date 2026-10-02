@@ -80,7 +80,7 @@ const signatureOf = (c: ScreenHeaderConfig) =>
     c.info ?? null,
     c.primaryAction ? [c.primaryAction.icon, c.primaryAction.label, c.primaryAction.testID ?? null] : null,
     (c.actions ?? []).map((a) => [a.icon, a.label, a.testID ?? null]),
-    (c.overflow ?? []).map((o) => [o.key, o.label, o.icon, o.title ?? null]),
+    (c.overflow ?? []).map((o) => [o.key, o.label, o.icon, o.title ?? null, o.destructive ?? false]),
   ])
 
 type ConfigRef = { current: ScreenHeaderConfig }
