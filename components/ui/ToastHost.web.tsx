@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Feather from '@expo/vector-icons/Feather';
 
-import { WEB_TOAST_EVENT_NAME } from '@/utils/toast.web';
+import { WEB_TOAST_EVENT_NAME, type ToastAction } from '@/utils/toast.web';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -12,6 +12,7 @@ type ToastPayload = {
   type?: string;
   visibilityTime?: number;
   position?: 'top' | 'bottom';
+  action?: ToastAction;
 };
 
 // Canonical Feather glyphs (project icon standard) instead of raw Unicode symbols.
@@ -67,6 +68,12 @@ export default function ToastHost() {
       window.removeEventListener(WEB_TOAST_EVENT_NAME, handler as EventListener);
       clearTimers();
     };
+  }, [clearTimers]);
+
+  const hide = useCallback(() => {
+    clearTimers();
+    setVisible(false);
+    slideTimerRef.current = setTimeout(() => setPayload(null), SLIDE_DURATION_MS);
   }, [clearTimers]);
 
   const toastType = (payload?.type ?? 'info') as ToastType;
@@ -145,6 +152,33 @@ export default function ToastHost() {
             <div style={{ opacity: 0.78, fontSize: 13, marginTop: 2 }}>{payload.text2}</div>
           ) : null}
         </div>
+        {payload.action ? (
+          <button
+            type="button"
+            data-testid="toast-action"
+            onClick={() => {
+              const { onPress } = payload.action!;
+              hide();
+              onPress();
+            }}
+            style={{
+              flexShrink: 0,
+              alignSelf: 'center',
+              minHeight: 44,
+              margin: '-12px -16px -12px 0',
+              padding: '0 16px',
+              background: 'none',
+              border: 0,
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: 14,
+              color: DESIGN_TOKENS.colors.textOnDark,
+              textDecoration: 'underline',
+            }}
+          >
+            {payload.action.label}
+          </button>
+        ) : null}
       </div>
     </div>
   );

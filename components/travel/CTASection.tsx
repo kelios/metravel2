@@ -8,7 +8,7 @@ import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-nat
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import type { Travel } from '@/types/types';
-import { useFavorites } from '@/context/FavoritesContext';
+import { useFavoriteToggle } from '@/hooks/useFavoriteToggle';
 import TravelStatusButton from '@/components/travel/TravelStatusButton';
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
@@ -16,8 +16,6 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { showToast } from '@/utils/toast';
-import { devWarn } from '@/utils/logger';
 import { buildTripPlanCreateHref } from '@/utils/tripPlanLinks';
 import { translate as i18nT } from '@/i18n'
 import { buildTravelPath } from '@/utils/travelSeo'
@@ -36,45 +34,23 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
   const isMobile = width < METRICS.breakpoints.tablet;
   const { isAuthenticated } = useAuth();
   const { loginHref, requireAuth } = useRequireAuth({ intent: 'create-book' });
-  const { addFavorite, removeFavorite, isFavorite: checkIsFavorite } = useFavorites();
+  const { toggle, isFavorite: checkIsFavorite } = useFavoriteToggle();
 
   // Проверяем, в избранном ли путешествие
   const isFavorite = checkIsFavorite(travel.id, 'travel');
 
   const handleFavorite = useCallback(async () => {
-    if (!isAuthenticated) {
-      requireAuth();
-      return;
-    }
-    
-    try {
-      if (isFavorite) {
-        await removeFavorite(travel.id, 'travel');
-      } else {
-        await addFavorite({
-          id: travel.id,
-          type: 'travel',
-          title: travel.name,
-          imageUrl: travel.travel_image_thumb_url,
-          url: buildTravelPath(travel) ?? '',
-          country: (travel as any).countryName,
-        });
-      }
-      onFavoriteToggle?.();
-    } catch (error) {
-      devWarn(
-        '[CTASection]',
-        i18nT('travel:components.travel.CTASection.ne_udalos_sohranit_v_hochu_poehat_2be6e48b'),
-        error,
-      );
-      void showToast({
-        type: 'error',
-        text1: i18nT('travel:components.travel.CTASection.ne_udalos_sohranit_v_hochu_poehat_2be6e48b'),
-        text2: i18nT('travel:components.travel.CTASection.poprobuyte_esche_raz_9521822e'),
-        visibilityTime: 2500,
-      });
-    }
-  }, [travel, isAuthenticated, isFavorite, addFavorite, removeFavorite, onFavoriteToggle, requireAuth]);
+    const outcome = await toggle({
+      id: travel.id,
+      type: 'travel',
+      title: travel.name,
+      imageUrl: travel.travel_image_thumb_url,
+      url: buildTravelPath(travel) ?? '',
+      country: (travel as any).countryName,
+      source: 'travel_cta_section',
+    });
+    if (outcome === 'success') onFavoriteToggle?.();
+  }, [travel, toggle, onFavoriteToggle]);
 
   const handlePlanTripFromRoute = useCallback(() => {
     if (!isAuthenticated) {

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useBreakpoints } from '@/hooks/useResponsive'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { globalFocusStyles } from '@/styles/globalFocus'
-import { showToast } from '@/utils/toast'
+import { useActionFeedback } from '@/hooks/useActionFeedback'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -113,7 +113,7 @@ export default function TravelStatusButton({
   const [datePicking, setDatePicking] = useState(false)
   const [dateInput, setDateInput] = useState('')
   const [dateError, setDateError] = useState('')
-  const inFlightRef = useRef(false)
+  const { run } = useActionFeedback()
 
   const handleMainPress = useCallback((e?: any) => {
     stopWebCardEvent(e)
@@ -136,10 +136,10 @@ export default function TravelStatusButton({
     }
     setModalOpen(false)
     setDatePicking(false)
-    if (inFlightRef.current) return
-    inFlightRef.current = true
-    try {
-      await setTravelStatus(
+    const label = STATUS_OPTIONS.find((o) => o.key === status)?.label ?? status
+    await run({
+      key: 'travel-status',
+      commit: () => setTravelStatus(
         {
           id: travelId,
           type: 'travel',
@@ -154,15 +154,14 @@ export default function TravelStatusButton({
           status,
         },
         userId
-      )
-      const label = STATUS_OPTIONS.find((o) => o.key === status)?.label ?? status
-      await showToast({ type: 'success', text1: label, position: 'bottom', visibilityTime: 2000 })
-    } catch {
-      await showToast({ type: 'error', text1: i18nT('travel:components.travel.TravelStatusButton.oshibka_1066f04c'), text2: i18nT('travel:components.travel.TravelStatusButton.ne_udalos_sohranit_status_4cf7d143'), position: 'bottom' })
-    } finally {
-      inFlightRef.current = false
-    }
-  }, [travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, travelYear, travelMonth, travelMonthName, userId, current?.plannedDate])
+      ),
+      success: { message: label },
+      error: {
+        message: i18nT('travel:components.travel.TravelStatusButton.oshibka_1066f04c'),
+        description: i18nT('travel:components.travel.TravelStatusButton.ne_udalos_sohranit_status_4cf7d143'),
+      },
+    })
+  }, [travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, travelYear, travelMonth, travelMonthName, userId, current?.plannedDate, run])
 
   const handleCalendarDateSelect = useCallback((value: string) => {
     setDateInput(value)
@@ -180,10 +179,9 @@ export default function TravelStatusButton({
     }
     setModalOpen(false)
     setDatePicking(false)
-    if (inFlightRef.current) return
-    inFlightRef.current = true
-    try {
-      await setTravelStatus(
+    await run({
+      key: 'travel-status',
+      commit: () => setTravelStatus(
         {
           id: travelId,
           type: 'travel',
@@ -199,28 +197,23 @@ export default function TravelStatusButton({
           plannedDate: dateInput,
         },
         userId
-      )
-      await showToast({ type: 'success', text1: i18nT('travel:components.travel.TravelStatusButton.dobavleno_v_plany_dfb57b79'), text2: dateInput, position: 'bottom', visibilityTime: 2000 })
-    } catch {
-      await showToast({ type: 'error', text1: i18nT('travel:components.travel.TravelStatusButton.oshibka_1066f04c'), text2: i18nT('travel:components.travel.TravelStatusButton.ne_udalos_sohranit_1db862ee'), position: 'bottom' })
-    } finally {
-      inFlightRef.current = false
-    }
-  }, [travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, travelYear, travelMonth, travelMonthName, userId, dateInput])
+      ),
+      success: { message: i18nT('travel:components.travel.TravelStatusButton.dobavleno_v_plany_dfb57b79'), description: dateInput },
+      error: {
+        message: i18nT('travel:components.travel.TravelStatusButton.oshibka_1066f04c'),
+        description: i18nT('travel:components.travel.TravelStatusButton.ne_udalos_sohranit_1db862ee'),
+      },
+    })
+  }, [travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, travelYear, travelMonth, travelMonthName, userId, dateInput, run])
 
   const handleRemove = useCallback(async () => {
     setModalOpen(false)
-    if (inFlightRef.current) return
-    inFlightRef.current = true
-    try {
-      await removeTravelStatus(travelId, userId)
-      await showToast({ type: 'info', text1: i18nT('travel:components.travel.TravelStatusButton.udaleno_iz_plana_91e9ba44'), position: 'bottom', visibilityTime: 2000 })
-    } catch {
-      /* noop */
-    } finally {
-      inFlightRef.current = false
-    }
-  }, [travelId, userId])
+    await run({
+      key: 'travel-status',
+      commit: () => removeTravelStatus(travelId, userId),
+      success: { message: i18nT('travel:components.travel.TravelStatusButton.udaleno_iz_plana_91e9ba44'), type: 'info' },
+    })
+  }, [travelId, userId, run])
 
   const currentOption = current ? STATUS_OPTIONS.find((o) => o.key === current.status) : null
 

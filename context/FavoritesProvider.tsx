@@ -20,6 +20,8 @@ import {
   ensureViewHistoryServerData,
 } from '@/hooks/useViewHistory';
 import { consumeGuestFavoriteIntent } from '@/utils/guestFavoriteIntent';
+import { showToast } from '@/utils/toast';
+import { translate as i18nT } from '@/i18n';
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, userId } = useAuth();
@@ -53,13 +55,24 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     void consumeGuestFavoriteIntent().then((intent) => {
       if (!intent || cancelled) return;
       if (isFavoriteInCache(userId, intent.id, intent.type)) return;
+      // #2103: отложенное избранное после входа подтверждаем тем же тостом, что и
+      // обычное добавление (иначе вход возвращает на страницу без единого сигнала).
       void addFavorite({
         id: intent.id,
         type: intent.type,
         title: intent.title,
         url: intent.url,
         imageUrl: intent.imageUrl,
-      });
+      })
+        .then(() => {
+          void showToast({
+            type: 'success',
+            text1: i18nT('common:feedback.favoriteAdded'),
+            position: 'bottom',
+            visibilityTime: 2500,
+          });
+        })
+        .catch(() => undefined);
     });
 
     return () => {

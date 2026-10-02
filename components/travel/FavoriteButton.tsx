@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
     Animated,
     Platform,
@@ -11,16 +11,9 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useFavorites } from '@/context/FavoritesContext';
-import { useAuth } from '@/context/AuthContext';
-import { devLog } from '@/utils/logger';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { showToast } from '@/utils/toast';
-import { hapticImpact } from '@/utils/haptics';
-import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { saveGuestFavoriteIntent } from '@/utils/guestFavoriteIntent';
-import { trackFavoriteIntentGuest } from '@/utils/growthFunnelAnalytics';
+import { useFavoriteToggle } from '@/hooks/useFavoriteToggle';
 import { translate as i18nT } from '@/i18n';
 
 
@@ -59,44 +52,12 @@ function FavoriteButton({
     const iconSize = size ?? (isOverlay ? 18 : 24);
 
     const colors = useThemedColors();
-    const { isAuthenticated } = useAuth();
-    const { requireAuth } = useRequireAuth({ intent: 'favorite' });
-    const { isFavorite, addFavorite, removeFavorite } = useFavorites();
-    const serverIsFav = isFavorite(id, type);
-
-    // Единый оптимистичный паттерн: null → доверяем серверу; иначе показываем локальный выбор.
-    const [optimisticFav, setOptimisticFav] = useState<boolean | null>(null);
-    const [pendingSync, setPendingSync] = useState(false);
-    const [isPending, setIsPending] = useState(false);
-    const inFlightRef = useRef(false);
-    const isFav = optimisticFav ?? serverIsFav;
+    const { isFavorite, toggle, pending: isPending } = useFavoriteToggle();
+    const isFav = isFavorite(id, type);
 
     const { width } = useWindowDimensions();
     const isMobileWeb = Platform.OS === 'web' && width < METRICS.breakpoints.tablet;
     const styles = useMemo(() => getStyles(colors, isMobileWeb), [colors, isMobileWeb]);
-
-    // Сбрасываем оптимистичное состояние, когда сервер догнал (и запрос не в полёте).
-    useEffect(() => {
-        if (!inFlightRef.current) {
-            setOptimisticFav(null);
-        }
-    }, [serverIsFav]);
-
-    // Синхронизация избранного при восстановлении сети (web).
-    useEffect(() => {
-        if (Platform.OS !== 'web') return;
-
-        const handleOnline = () => {
-            if (pendingSync && isFav !== serverIsFav) {
-                devLog('[FavoriteButton] Network restored, syncing favorite state');
-                setOptimisticFav(null);
-                setPendingSync(false);
-            }
-        };
-
-        window.addEventListener('online', handleOnline);
-        return () => window.removeEventListener('online', handleOnline);
-    }, [pendingSync, isFav, serverIsFav]);
 
     const pulseAnim = useRef(new Animated.Value(1)).current;
     const prevIsFavRef = useRef(isFav);
@@ -111,113 +72,30 @@ function FavoriteButton({
         prevIsFavRef.current = isFav;
     }, [isFav, pulseAnim]);
 
-    const handlePress = useCallback(async (e?: any) => {
+    // Оба варианта (overlay и plain) идут через useFavoriteToggle: отклик одинаковый.
+    const handlePress = useCallback((e?: any) => {
         if (e) {
             if (e.stopPropagation) e.stopPropagation();
             if (e.preventDefault) e.preventDefault();
         }
+        void toggle({
+            id,
+            type,
+            title,
+            url,
+            imageUrl,
+            country,
+            city,
+            source: FAVORITE_INTENT_SOURCE,
+        });
+    }, [toggle, id, type, title, url, imageUrl, country, city]);
 
-        const isAndroidGuest = Platform.OS === 'android' && !isAuthenticated;
-        if (!isAuthenticated && !isAndroidGuest) {
-            trackFavoriteIntentGuest({ itemType: type, itemId: id, source: FAVORITE_INTENT_SOURCE, url });
-            void saveGuestFavoriteIntent({ id: String(id), type, title, url, imageUrl, source: FAVORITE_INTENT_SOURCE });
-            requireAuth();
-            return;
-        }
-
-        if (inFlightRef.current) return;
-        inFlightRef.current = true;
-        setIsPending(true);
-
-        const next = !isFav;
-        setOptimisticFav(next);
-        hapticImpact(next ? 'medium' : 'light');
-
-        try {
-            if (next) {
-                await addFavorite({ id, type, title, url, imageUrl, country, city });
-                if (isOverlay) {
-                    if (isAndroidGuest) {
-                        showToast({
-                            type: 'success',
-                            text1: i18nT('travel:components.travel.OptimizedFavoriteButton.sohraneno_na_etom_ustroystve_2e6175c6'),
-                            text2: i18nT('travel:components.travel.OptimizedFavoriteButton.voydite_chtoby_sinhronizirovat_hochu_poehat_cf4168e6'),
-                            visibilityTime: 3500,
-                        });
-                    }
-                } else {
-                    await showToast({
-                        type: 'success',
-                        text1: isAndroidGuest
-                            ? i18nT('travel:components.travel.FavoriteButton.sohraneno_na_etom_ustroystve_cdc5e362')
-                            : i18nT('travel:components.travel.FavoriteButton.dobavleno_v_hochu_poehat_442a2566'),
-                        text2: isAndroidGuest
-                            ? i18nT('travel:components.travel.FavoriteButton.voydite_chtoby_sinhronizirovat_hochu_poehat_f0f4f24d')
-                            : undefined,
-                        position: 'bottom',
-                        visibilityTime: isAndroidGuest ? 3500 : 2000,
-                    });
-                }
-            } else {
-                await removeFavorite(id, type);
-                if (isOverlay) {
-                    if (isAndroidGuest) {
-                        showToast({
-                            type: 'info',
-                            text1: i18nT('travel:components.travel.OptimizedFavoriteButton.udaleno_s_etogo_ustroystva_12a50dda'),
-                            visibilityTime: 2000,
-                        });
-                    }
-                } else {
-                    await showToast({
-                        type: 'info',
-                        text1: isAndroidGuest
-                            ? i18nT('travel:components.travel.FavoriteButton.udaleno_s_etogo_ustroystva_42b53da4')
-                            : i18nT('travel:components.travel.FavoriteButton.udaleno_iz_hochu_poehat_3ea076cb'),
-                        position: 'bottom',
-                        visibilityTime: 2000,
-                    });
-                }
-            }
-        } catch (error) {
-            setOptimisticFav(serverIsFav);
-
-            const isNetworkError = error instanceof Error
-                && (error.message.includes('network') || error.message.includes('timeout'));
-            if (isNetworkError) {
-                setPendingSync(true);
-            }
-
-            if (isOverlay) {
-                showToast({
-                    type: 'error',
-                    text1: i18nT('travel:components.travel.OptimizedFavoriteButton.ne_udalos_obnovit_hochu_poehat_ff7f74c7'),
-                    visibilityTime: 3000,
-                });
-            } else {
-                const errorMessage = error instanceof Error
-                    ? (isNetworkError
-                        ? i18nT('travel:components.travel.FavoriteButton.problema_s_podklyucheniem_izmeneniya_budut_s_12e5c7dc')
-                        : error.message)
-                    : i18nT('travel:components.travel.FavoriteButton.ne_udalos_obnovit_hochu_poehat_ae6de0b8');
-
-                await showToast({
-                    type: 'error',
-                    text1: i18nT('travel:components.travel.FavoriteButton.oshibka_73fab30d'),
-                    text2: errorMessage,
-                    position: 'bottom',
-                    visibilityTime: 4000,
-                });
-            }
-        } finally {
-            inFlightRef.current = false;
-            setIsPending(false);
-        }
-    }, [isOverlay, isAuthenticated, requireAuth, isFav, id, type, title, imageUrl, url, country, city, addFavorite, removeFavorite, serverIsFav]);
-
-    const iconColor = isOverlay
-        ? (isFav ? colors.danger : colors.textOnDark)
-        : (color || (isFav ? colors.danger : colors.textMuted));
+    // Активное сердечко — залитая подложка danger с белой иконкой (не только цвет контура).
+    const iconColor = isFav
+        ? colors.textOnDark
+        : isOverlay
+            ? colors.textOnDark
+            : (color || colors.textMuted);
     const unfavOpacity = isOverlay ? 0.85 : 0.55;
 
     const icon = (
@@ -246,6 +124,7 @@ function FavoriteButton({
                     <WebView
                         style={[
                             styles.overlayButton,
+                            isFav && styles.activeDisc,
                             { cursor: isPending ? 'wait' : 'pointer' } as any,
                             isPending && styles.overlayPending,
                         ]}
@@ -280,7 +159,7 @@ function FavoriteButton({
         return (
             <Pressable
                 onPress={handlePress}
-                style={[styles.overlayButton, style, isPending && styles.overlayPending]}
+                style={[styles.overlayButton, isFav && styles.activeDisc, style, isPending && styles.overlayPending]}
                 hitSlop={10}
                 disabled={isPending}
                 accessibilityRole="button"
@@ -299,7 +178,7 @@ function FavoriteButton({
 
     return (
         <ButtonComponent
-            style={[styles.plainButton, globalFocusStyles.focusable, style, isPending && { opacity: 0.6 }]}
+            style={[styles.plainButton, isFav && styles.activeDisc, globalFocusStyles.focusable, style, isPending && { opacity: 0.6 }]}
             {...(Platform.OS === 'web'
                 ? {
                       role: 'button',
@@ -338,7 +217,7 @@ function FavoriteButton({
     );
 }
 
-const getStyles = (_colors: ThemedColors, isMobileWeb: boolean) => StyleSheet.create({
+const getStyles = (colors: ThemedColors, isMobileWeb: boolean) => StyleSheet.create({
     plainButton: {
         padding: 8,
         minWidth: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 48dp Android; WCAG 2.5.5 ≥44 elsewhere
@@ -382,6 +261,10 @@ const getStyles = (_colors: ThemedColors, isMobileWeb: boolean) => StyleSheet.cr
         marginTop: -22,
         marginLeft: -22,
         borderRadius: 999,
+    },
+    activeDisc: {
+        backgroundColor: colors.danger,
+        borderColor: colors.danger,
     },
     overlayPending: {
         opacity: 0.65,

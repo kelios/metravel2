@@ -42,6 +42,10 @@ jest.mock('@/components/MapPage/SwipeableListItem', () => ({
   },
 }));
 
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({ isAuthenticated: true, authReady: true }),
+}));
+
 jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => ({
     addFavorite: jest.fn(),

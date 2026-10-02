@@ -94,11 +94,10 @@ describe('TravelHeroFavoriteToggle', () => {
     expect(queryByText('В «Хочу поехать»')).toBeNull()
   })
 
-  it('saves web guest favorite locally without requiring auth', async () => {
+  it('sends a web guest to sign-in with an explanation instead of saving silently', async () => {
     Platform.OS = 'web' as any
-    useAuth.mockReturnValue({ isAuthenticated: false })
+    useAuth.mockReturnValue({ isAuthenticated: false, authReady: true })
     mockIsFavorite.mockReturnValue(false)
-    mockAddFavorite.mockResolvedValue(undefined)
 
     const { getByLabelText } = render(
       <TravelHeroFavoriteToggle
@@ -110,24 +109,11 @@ describe('TravelHeroFavoriteToggle', () => {
     fireEvent.press(getByLabelText('Добавить в «Хочу поехать»'))
 
     await waitFor(() => {
-      expect(mockAddFavorite).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 3,
-          type: 'travel',
-          title: 'Auth travel',
-          url: '/travels/auth',
-        })
-      )
+      expect(mockRequireAuth).toHaveBeenCalledTimes(1)
     })
-
-    expect(mockRequireAuth).not.toHaveBeenCalled()
-    expect(mockRemoveFavorite).not.toHaveBeenCalled()
+    expect(mockAddFavorite).not.toHaveBeenCalled()
     expect(showToast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'success',
-        text1: 'Сохранено на этом устройстве',
-        text2: 'Войдите, чтобы синхронизировать «Хочу поехать».',
-      })
+      expect.objectContaining({ text1: 'Войдите, чтобы сохранять маршруты' })
     )
   })
 
@@ -206,7 +192,7 @@ describe('TravelHeroFavoriteToggle', () => {
     expect(showToast).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'success',
-        text1: 'Добавлено в «Хочу поехать»',
+        text1: 'Добавлено в избранное',
       })
     )
   })
@@ -230,8 +216,8 @@ describe('TravelHeroFavoriteToggle', () => {
 
     expect(showToast).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: 'success',
-        text1: 'Удалено из «Хочу поехать»',
+        type: 'info',
+        text1: 'Удалено из избранного',
       })
     )
   })

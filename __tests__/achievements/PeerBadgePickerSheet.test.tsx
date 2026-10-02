@@ -38,7 +38,7 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
 })
 
 // Hooks — мокаем целиком
-const mockMutate = jest.fn()
+const mockMutate = jest.fn().mockResolvedValue(undefined)
 
 jest.mock('@/hooks/useAchievementsApi', () => ({
   usePeerBadgeCatalog: jest.fn(),
@@ -99,6 +99,7 @@ const setupHooks = (catalogData: PeerBadge[] | undefined, isLoading = false) => 
     isSuccess: !isLoading,
   } as any)
   mockUseGrantPeerBadge.mockReturnValue({
+    mutateAsync: mockMutate,
     mutate: mockMutate,
     isPending: false,
   } as any)

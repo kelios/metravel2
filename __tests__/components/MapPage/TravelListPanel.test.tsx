@@ -43,6 +43,10 @@ jest.mock('@/components/MapPage/AddressListItem', () => {
   };
 });
 
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({ isAuthenticated: true, authReady: true }),
+}));
+
 jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => ({
     addFavorite: mockAddFavorite,
@@ -168,7 +172,7 @@ describe('TravelListPanel (right list on map page)', () => {
     expect(mockShowToast).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'error',
-        text1: 'Не удалось обновить «Хочу поехать»',
+        text1: 'Не удалось обновить избранное',
       })
     );
   });

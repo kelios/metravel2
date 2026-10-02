@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
 import type { ImportedPoint } from '@/types/userPoints';
 import { PointStatus } from '@/types/userPoints';
-import { showToast } from '@/utils/toast';
+import { useActionFeedback } from '@/hooks/useActionFeedback';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import { resolveCategoryIdsByNames as mapResolveCategoryIds } from '@/utils/userPointsCategories';
 import { getPointCategoryIds, getPointCategoryNames } from '@/utils/travelPointMeta';
@@ -50,6 +50,7 @@ export function usePointListAddPointModel({
 }) {
   const [addingPointId, setAddingPointId] = useState<string | null>(null);
   const { isAuthenticated, authReady } = useAuth();
+  const { run, notify } = useActionFeedback();
   const owner = useQueryOwner();
   const queryClient = ReactQuery.useQueryClient();
 
@@ -58,41 +59,25 @@ export function usePointListAddPointModel({
       if (!authReady) return;
       if (addingPointId === point.id) return;
       if (!isAuthenticated) {
-        void showToast({
-          type: 'info',
-          text1: i18nT('travel:components.travel.hooks.usePointListAddPointModel.avtorizuytes_chtoby_sohranyat_tochki_96471933'),
-          position: 'bottom',
-        });
+        notify(i18nT('travel:components.travel.hooks.usePointListAddPointModel.avtorizuytes_chtoby_sohranyat_tochki_96471933'));
         return;
       }
 
       if (!point.coord) {
-        void showToast({
-          type: 'info',
-          text1: i18nT('travel:components.travel.hooks.usePointListAddPointModel.u_tochki_net_koordinat_1d3df1ef'),
-          position: 'bottom',
-        });
+        notify(i18nT('travel:components.travel.hooks.usePointListAddPointModel.u_tochki_net_koordinat_1d3df1ef'));
         return;
       }
 
       // #839: точка уже в «Мои точки» — не плодим дубль (у бэка нет remove-by-coord),
       // просто подтверждаем состояние.
       if (isPointSaved?.(point.coord)) {
-        void showToast({
-          type: 'info',
-          text1: i18nT('travel:components.travel.hooks.usePointListAddPointModel.tochka_uzhe_v_moi_tochki_fa7659b5'),
-          position: 'bottom',
-        });
+        notify(i18nT('travel:components.travel.hooks.usePointListAddPointModel.tochka_uzhe_v_moi_tochki_fa7659b5'));
         return;
       }
 
       const coords = parseCoord(point.coord);
       if (!coords) {
-        void showToast({
-          type: 'info',
-          text1: i18nT('travel:components.travel.hooks.usePointListAddPointModel.nevozmozhno_raspoznat_koordinaty_4d8a632c'),
-          position: 'bottom',
-        });
+        notify(i18nT('travel:components.travel.hooks.usePointListAddPointModel.nevozmozhno_raspoznat_koordinaty_4d8a632c'));
         return;
       }
 
@@ -150,6 +135,9 @@ export function usePointListAddPointModel({
 
       setAddingPointId(point.id);
       try {
+        await run({
+          key: 'save-point',
+          commit: async () => {
         const created = await userPointsApi.createPoint(payload);
         // Летящее постраничное чтение коллекции (#1706) резолвится долго и
         // затёрло бы оптимистичную запись ниже — отменяем его заранее. Только
@@ -195,11 +183,6 @@ export function usePointListAddPointModel({
           source: 'travel_route',
           travelName: travelName || undefined,
         });
-        void showToast({
-          type: 'success',
-          text1: i18nT('travel:components.travel.hooks.usePointListAddPointModel.tochka_dobavlena_v_moi_tochki_6e103965'),
-          position: 'bottom',
-        });
         // Рефетч только если оптимистичной записи не случилось (сервер не вернул
         // координаты). #1706: коллекция читается постранично, и безусловный
         // рефетч стоил бы ceil(count/200) запросов на каждое добавление — серия
@@ -207,20 +190,20 @@ export function usePointListAddPointModel({
         if (!cachedOptimistically) {
           void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll(owner) });
         }
-      } catch (error) {
-        if (__DEV__) {
-          console.error('Не удалось добавить точку из маршрута в мои точки', error);
-        }
-        void showToast({
-          type: 'error',
-          text1: i18nT('travel:components.travel.hooks.usePointListAddPointModel.ne_udalos_sohranit_tochku_a149afe7'),
-          position: 'bottom',
+          },
+          success: { message: i18nT('travel:components.travel.hooks.usePointListAddPointModel.tochka_dobavlena_v_moi_tochki_6e103965') },
+          rollback: (error) => {
+            if (__DEV__) {
+              console.error('Не удалось добавить точку из маршрута в мои точки', error);
+            }
+          },
+          error: { message: i18nT('travel:components.travel.hooks.usePointListAddPointModel.ne_udalos_sohranit_tochku_a149afe7') },
         });
       } finally {
         setAddingPointId(null);
       }
     },
-    [addingPointId, authReady, baseTravelId, baseUrl, categoryIdToName, categoryNameToIds, isAuthenticated, isPointSaved, owner, queryClient, travelName]
+    [addingPointId, authReady, baseTravelId, baseUrl, categoryIdToName, categoryNameToIds, isAuthenticated, isPointSaved, owner, queryClient, travelName, run, notify]
   );
 
   return {

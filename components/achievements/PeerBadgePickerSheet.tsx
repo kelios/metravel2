@@ -12,6 +12,7 @@ import Feather from '@expo/vector-icons/Feather';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useActionFeedback } from '@/hooks/useActionFeedback';
 import { usePeerBadgeCatalog, useGrantPeerBadge } from '@/hooks/useAchievementsApi';
 import type { PeerBadgeReceived, PeerBadgeTarget } from '@/api/achievements';
 import BadgeMedal from '@/components/achievements/BadgeMedal';
@@ -41,6 +42,7 @@ function PeerBadgePickerSheet({
   const colors = useThemedColors();
   const { data: catalog, isLoading } = usePeerBadgeCatalog();
   const grant = useGrantPeerBadge();
+  const { run } = useActionFeedback();
 
   const options = useMemo(
     () => (catalog ?? []).filter((b) => b.target === target),
@@ -94,7 +96,14 @@ function PeerBadgePickerSheet({
                     key={badge.id}
                     style={styles.optionRow}
                     onPress={() =>
-                      grant.mutate({ badgeSlug: badge.slug, recipientId, travelId })
+                      void run({
+                        key: `award:${badge.slug}`,
+                        commit: () =>
+                          grant.mutateAsync({ badgeSlug: badge.slug, recipientId, travelId }),
+                        success: granted
+                          ? undefined
+                          : { message: i18nT('common:feedback.awardSent') },
+                      })
                     }
                     accessibilityRole="button"
                     accessibilityState={{ selected: granted }}

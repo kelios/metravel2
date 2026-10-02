@@ -2,9 +2,7 @@ import { useCallback } from 'react';
 import { Pressable, View } from 'react-native'
 
 import { Text } from '@/ui/paper'
-import { useFavorites } from '@/context/FavoritesContext'
-import { useRequireAuth } from '@/hooks/useRequireAuth'
-import { showToast } from '@/utils/toast'
+import { useFavoriteToggle } from '@/hooks/useFavoriteToggle'
 
 import AddressListItem from '../AddressListItem'
 import { SwipeableListItem } from '../SwipeableListItem'
@@ -45,8 +43,7 @@ export function useTravelItemRenderer({
   onToggleFavorite,
   favorites,
 }: UseTravelItemRendererArgs) {
-  const { addFavorite, removeFavorite, isFavorite: isFavoriteInContext } = useFavorites()
-  const { isAuthenticated, requireAuth } = useRequireAuth({ intent: 'favorite' })
+  const { toggle: toggleFavorite, isFavorite: isFavoriteInContext } = useFavoriteToggle()
 
   return useCallback(
     ({ item }: any) => {
@@ -117,26 +114,13 @@ export function useTravelItemRenderer({
         canUseItemId && isFavoriteInContext(itemId, 'travel')
       const handleToggleFavorite = canUseItemId
         ? () => {
-            if (!isAuthenticated) {
-              requireAuth()
-              return
-            }
-            const action = ctxIsFavorite
-              ? removeFavorite(itemId as string | number, 'travel')
-              : addFavorite({
-                  id: itemId as string | number,
-                  type: 'travel',
-                  title: item?.address || item?.name || item?.title || i18nT('map:components.MapPage.TravelListPanel.useTravelItemRenderer.mesto_d8763e12'),
-                  url:
-                    item?.urlTravel || item?.articleUrl || `/travels/${itemId}`,
-                  imageUrl: item?.travelImageThumbUrl || item?.imageUrl,
-                })
-            void Promise.resolve(action).catch(() => {
-              void showToast({
-                type: 'error',
-                text1: i18nT('map:components.MapPage.TravelListPanel.useTravelItemRenderer.ne_udalos_obnovit_hochu_poehat_56f8def1'),
-                position: 'bottom',
-              })
+            void toggleFavorite({
+              id: itemId as string | number,
+              type: 'travel',
+              title: item?.address || item?.name || item?.title || i18nT('map:components.MapPage.TravelListPanel.useTravelItemRenderer.mesto_d8763e12'),
+              url: item?.urlTravel || item?.articleUrl || `/travels/${itemId}`,
+              imageUrl: item?.travelImageThumbUrl || item?.imageUrl,
+              source: 'map_travel_list',
             })
           }
         : undefined
@@ -167,11 +151,8 @@ export function useTravelItemRenderer({
       styles,
       onToggleFavorite,
       favorites,
-      addFavorite,
-      removeFavorite,
+      toggleFavorite,
       isFavoriteInContext,
-      isAuthenticated,
-      requireAuth,
     ],
   )
 }

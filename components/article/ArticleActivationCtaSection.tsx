@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router'
 
 import Button from '@/components/ui/Button'
 import { useAuth } from '@/context/AuthContext'
-import { useFavorites } from '@/context/FavoritesContext'
+import { useFavoriteToggle } from '@/hooks/useFavoriteToggle'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useTrackedImpression } from '@/hooks/useTrackedImpression'
@@ -38,7 +38,7 @@ const getArticleUrl = (article: Article, redirectPath?: string) => {
 function ArticleActivationCtaSection({ article, redirectPath }: ArticleActivationCtaSectionProps) {
   const router = useRouter()
   const { isAuthenticated } = useAuth()
-  const { addFavorite, isFavorite } = useFavorites()
+  const { toggle, isFavorite } = useFavoriteToggle()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const [isSaving, setIsSaving] = useState(false)
@@ -84,18 +84,19 @@ function ArticleActivationCtaSection({ article, redirectPath }: ArticleActivatio
 
     setIsSaving(true)
     try {
-      await addFavorite({
+      await toggle({
         id: articleId,
         type: 'article',
         title: article.name,
         imageUrl: article.article_image_thumb_url,
         url: articleUrl,
+        source: ARTICLE_SOURCE,
       })
     } finally {
       setIsSaving(false)
     }
   }, [
-    addFavorite,
+    toggle,
     article.article_image_thumb_url,
     article.name,
     articleId,

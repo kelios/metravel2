@@ -4,7 +4,11 @@ export type ToastPayload = {
   type?: string;
   visibilityTime?: number;
   position?: 'top' | 'bottom';
+  /** Кнопка в тосте («Отменить»): рисуется ToastHost.web, нажатие скрывает тост. */
+  action?: ToastAction;
 };
+
+export type ToastAction = { label: string; onPress: () => void };
 
 export const WEB_TOAST_EVENT_NAME = 'metravel:toast';
 

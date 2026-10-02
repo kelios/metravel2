@@ -5,7 +5,11 @@ export type ToastPayload = {
   visibilityTime?: number;
   position?: 'top' | 'bottom';
   bottomOffset?: number;
+  /** Кнопка в тосте («Отменить»): рисуется ToastHost, нажатие скрывает тост. */
+  action?: ToastAction;
 };
+
+export type ToastAction = { label: string; onPress: () => void };
 
 // The bottom tab bar (BottomDock) is pinned to the bottom and its real height
 // (content + safe-area inset) varies by device — on tall gesture-nav phones it
@@ -28,9 +32,9 @@ function resolveBottomOffset(): number {
 
 type NativeToastModule = {
   default?: {
-    show?: (payload: ToastPayload) => void;
+    show?: (payload: Record<string, unknown>) => void;
   };
-  show?: (payload: ToastPayload) => void;
+  show?: (payload: Record<string, unknown>) => void;
 };
 
 let toastModulePromise: Promise<NativeToastModule> | null = null;
@@ -44,11 +48,14 @@ export async function showToast(payload: ToastPayload): Promise<void> {
     const Toast = mod.default ?? mod;
     if (Toast && typeof Toast.show === 'function') {
       const isBottom = (payload.position ?? 'bottom') === 'bottom';
-      Toast.show(
-        isBottom && payload.bottomOffset === undefined
-          ? { ...payload, bottomOffset: resolveBottomOffset() }
-          : payload,
-      );
+      const { action, ...rest } = payload;
+      Toast.show({
+        ...rest,
+        ...(isBottom && payload.bottomOffset === undefined
+          ? { bottomOffset: resolveBottomOffset() }
+          : {}),
+        ...(action ? { props: { action } } : {}),
+      });
     }
   } catch {
     // ignore

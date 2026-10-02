@@ -10,7 +10,7 @@ import {
 import { ApiError, isTimeoutError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
-import { showToast } from '@/utils/toast';
+import { useActionFeedback } from '@/hooks/useActionFeedback';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -23,6 +23,7 @@ export function useSubscription(targetUserId: string | number | null | undefined
     const { isAuthenticated, userId: currentUserId } = useAuth();
     const owner = useQueryOwner();
     const queryClient = useQueryClient();
+    const { run } = useActionFeedback();
 
     const normalizedTargetId = useMemo(() => {
         if (targetUserId == null) return null;
@@ -95,7 +96,6 @@ export function useSubscription(targetUserId: string | number | null | undefined
             if (context?.previous) {
                 queryClient.setQueryData(queryKeys.mySubscriptions(owner), context.previous);
             }
-            showToast({ type: 'error', text1: i18nT('shared:hooks.useSubscription.oshibka_282b48f5'), text2: i18nT('shared:hooks.useSubscription.ne_udalos_podpisatsya_poprobuyte_pozzhe_0dfb8d0c') });
         },
         onSettled: () => invalidate(),
     });
@@ -121,19 +121,51 @@ export function useSubscription(targetUserId: string | number | null | undefined
             if (context?.previous) {
                 queryClient.setQueryData(queryKeys.mySubscriptions(owner), context.previous);
             }
-            showToast({ type: 'error', text1: i18nT('shared:hooks.useSubscription.oshibka_282b48f5'), text2: i18nT('shared:hooks.useSubscription.ne_udalos_otpisatsya_poprobuyte_pozzhe_a1ce39c4') });
         },
         onSettled: () => invalidate(),
     });
 
+    const subscribeAction = useCallback(() => {
+        if (!normalizedTargetId) return Promise.resolve();
+        return run({
+            key: `subscription:${normalizedTargetId}`,
+            commit: () => subscribeMutation.mutateAsync(),
+            success: {
+                message: i18nT('common:feedback.subscribed'),
+                undo: { commit: () => unsubscribeMutation.mutateAsync() },
+            },
+            error: {
+                message: i18nT('shared:hooks.useSubscription.oshibka_282b48f5'),
+                description: i18nT('shared:hooks.useSubscription.ne_udalos_podpisatsya_poprobuyte_pozzhe_0dfb8d0c'),
+            },
+        });
+    }, [normalizedTargetId, run, subscribeMutation, unsubscribeMutation]);
+
+    const unsubscribeAction = useCallback(() => {
+        if (!normalizedTargetId) return Promise.resolve();
+        return run({
+            key: `subscription:${normalizedTargetId}`,
+            commit: () => unsubscribeMutation.mutateAsync(),
+            success: {
+                message: i18nT('common:feedback.unsubscribed'),
+                type: 'info',
+                undo: { commit: () => subscribeMutation.mutateAsync() },
+            },
+            error: {
+                message: i18nT('shared:hooks.useSubscription.oshibka_282b48f5'),
+                description: i18nT('shared:hooks.useSubscription.ne_udalos_otpisatsya_poprobuyte_pozzhe_a1ce39c4'),
+            },
+        });
+    }, [normalizedTargetId, run, subscribeMutation, unsubscribeMutation]);
+
     const toggleSubscription = useCallback(() => {
         if (!normalizedTargetId || !isAuthenticated) return;
         if (isSubscribed) {
-            unsubscribeMutation.mutate();
+            void unsubscribeAction();
         } else {
-            subscribeMutation.mutate();
+            void subscribeAction();
         }
-    }, [normalizedTargetId, isAuthenticated, isSubscribed, subscribeMutation, unsubscribeMutation]);
+    }, [normalizedTargetId, isAuthenticated, isSubscribed, subscribeAction, unsubscribeAction]);
 
     return useMemo(
         () => ({
@@ -141,16 +173,18 @@ export function useSubscription(targetUserId: string | number | null | undefined
             isLoading: subscriptionsQuery.isLoading,
             isMutating: subscribeMutation.isPending || unsubscribeMutation.isPending,
             toggleSubscription,
-            subscribe: () => subscribeMutation.mutate(),
-            unsubscribe: () => unsubscribeMutation.mutate(),
+            subscribe: () => void subscribeAction(),
+            unsubscribe: () => void unsubscribeAction(),
             canSubscribe: enabled,
         }),
         [
             isSubscribed,
             subscriptionsQuery.isLoading,
             toggleSubscription,
-            subscribeMutation,
-            unsubscribeMutation,
+            subscribeAction,
+            unsubscribeAction,
+            subscribeMutation.isPending,
+            unsubscribeMutation.isPending,
             enabled,
         ]
     );

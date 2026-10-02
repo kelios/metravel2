@@ -8,9 +8,9 @@ import { useAuth } from '@/context/AuthContext';
 import { useSavedPointToggle } from '@/hooks/map/useSavedPointToggle';
 import { PointStatus } from '@/types/userPoints';
 import { DESIGN_COLORS } from '@/constants/designSystem';
-import { openExternalUrlInNewTab, openExternalUrl } from '@/utils/externalLinks';
-import { getSiteBaseUrl } from '@/utils/seo';
-import { showToast } from '@/utils/toast';
+import { openExternalUrl } from '@/utils/externalLinks';
+import { openExternal } from '@/utils/openExternalWithToast';
+import { useActionFeedback } from '@/hooks/useActionFeedback';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { buildRelatedTravelTags, resolveMapPointRelatedTravelId } from '@/utils/relatedTravel';
 import type { TravelCoords } from '@/types/types';
@@ -49,17 +49,7 @@ export const buildOsmUrl = (coord?: string) => {
   return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(p.lat))}&mlon=${encodeURIComponent(String(p.lon))}#map=16/${encodeURIComponent(String(p.lat))}/${encodeURIComponent(String(p.lon))}`;
 };
 
-export const openExternal = async (url?: string) => {
-  try {
-    const opened = await openExternalUrlInNewTab(url ?? '', {
-      allowRelative: true,
-      baseUrl: getSiteBaseUrl(),
-    });
-    if (!opened) await showToast({ type: 'info', text1: i18nT('shared:hooks.useAddressListItemActions.ne_udalos_otkryt_ssylku_e0811744'), position: 'bottom' });
-  } catch {
-    await showToast({ type: 'info', text1: i18nT('shared:hooks.useAddressListItemActions.ne_udalos_otkryt_ssylku_e0811744'), position: 'bottom' });
-  }
-};
+export { openExternal } from '@/utils/openExternalWithToast';
 
 export const stripCountryFromCategoryString = (raw: string | null | undefined, address?: string | null) => {
   const category = String(raw ?? '').trim();
@@ -80,6 +70,7 @@ export function useAddressListItemActions(travel: TravelCoords) {
   const [isAddingPoint, setIsAddingPoint] = useState(false);
 
   const { isAuthenticated, authReady } = useAuth();
+  const { run, notify } = useActionFeedback();
 
   // #334 — saved-state shared with «Мои точки» через кэш userPointsAll, матч по
   // координате (у POI нет user-point id). Даёт настоящий toggle без дублей и
@@ -111,21 +102,21 @@ export function useAddressListItemActions(travel: TravelCoords) {
     return cleaned ? cleaned.split(',').map((c) => c.trim()).filter(Boolean) : [];
   }, [address, rawCategoryName]);
 
-  const showToastInfo = useCallback((msg: string) => {
-    void showToast({ type: 'info', text1: msg, position: 'bottom' });
-  }, []);
-
   const copyCoords = useCallback(async () => {
     if (!coord) return;
-    try {
-      if (Platform.OS === 'web' && (navigator as unknown as Record<string, unknown>)?.clipboard) {
-        await (navigator as unknown as { clipboard: { writeText: (s: string) => Promise<void> } }).clipboard.writeText(coord);
-      } else {
-        await Clipboard.setStringAsync(coord);
-      }
-      showToastInfo(i18nT('shared:hooks.useAddressListItemActions.koordinaty_skopirovany_406138ef'));
-    } catch { showToastInfo(i18nT('shared:hooks.useAddressListItemActions.ne_udalos_skopirovat_571f0817')); }
-  }, [coord, showToastInfo]);
+    await run({
+      key: 'copy-coords',
+      commit: async () => {
+        if (Platform.OS === 'web' && (navigator as unknown as Record<string, unknown>)?.clipboard) {
+          await (navigator as unknown as { clipboard: { writeText: (s: string) => Promise<void> } }).clipboard.writeText(coord);
+        } else {
+          await Clipboard.setStringAsync(coord);
+        }
+      },
+      success: { message: i18nT('shared:hooks.useAddressListItemActions.koordinaty_skopirovany_406138ef'), type: 'info' },
+      error: { message: i18nT('shared:hooks.useAddressListItemActions.ne_udalos_skopirovat_571f0817') },
+    });
+  }, [coord, run]);
 
   const openTelegram = useCallback(async () => {
     if (!coord) return;
@@ -149,12 +140,12 @@ export function useAddressListItemActions(travel: TravelCoords) {
 
   const handleAddPoint = useCallback(async () => {
     if (!authReady) return;
-    if (!isAuthenticated) { void showToast({ type: 'info', text1: i18nT('shared:hooks.useAddressListItemActions.voydite_chtoby_sohranit_tochku_990d6c7e'), position: 'bottom' }); return; }
+    if (!isAuthenticated) { notify(i18nT('shared:hooks.useAddressListItemActions.voydite_chtoby_sohranit_tochku_990d6c7e')); return; }
     if (!isSavedPointsReady) return;
     if (isAddingPoint) return;
     const lat = Number(travel.lat);
     const lng = Number(travel.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) { void showToast({ type: 'info', text1: i18nT('shared:hooks.useAddressListItemActions.ne_udalos_raspoznat_koordinaty_1da8464d'), position: 'bottom' }); return; }
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) { notify(i18nT('shared:hooks.useAddressListItemActions.ne_udalos_raspoznat_koordinaty_1da8464d')); return; }
 
     const cleanedCategory = stripCountryFromCategoryString(rawCategoryName, address) || undefined;
     const payload: Record<string, unknown> = {
@@ -173,16 +164,22 @@ export function useAddressListItemActions(travel: TravelCoords) {
     setIsAddingPoint(true);
     try {
       if (isSaved) {
-        await removeSaved();
-        void showToast({ type: 'info', text1: i18nT('shared:hooks.useAddressListItemActions.tochka_ubrana_iz_moi_tochki_b104d947'), position: 'bottom' });
+        await run({
+          key: 'save-point',
+          commit: () => removeSaved(),
+          success: { message: i18nT('shared:hooks.useAddressListItemActions.tochka_ubrana_iz_moi_tochki_b104d947'), type: 'info' },
+          error: { message: i18nT('shared:hooks.useAddressListItemActions.ne_udalos_sohranit_tochku_3c69cb31') },
+        });
         return;
       }
-      await createPoint(payload);
-      void showToast({ type: 'success', text1: i18nT('shared:hooks.useAddressListItemActions.tochka_dobavlena_v_moi_tochki_000bc83b'), position: 'bottom' });
-    } catch {
-      void showToast({ type: 'error', text1: i18nT('shared:hooks.useAddressListItemActions.ne_udalos_sohranit_tochku_3c69cb31'), position: 'bottom' });
+      await run({
+        key: 'save-point',
+        commit: () => createPoint(payload),
+        success: { message: i18nT('shared:hooks.useAddressListItemActions.tochka_dobavlena_v_moi_tochki_000bc83b') },
+        error: { message: i18nT('shared:hooks.useAddressListItemActions.ne_udalos_sohranit_tochku_3c69cb31') },
+      });
     } finally { setIsAddingPoint(false); }
-  }, [address, articleUrl, authReady, rawCategoryName, isAddingPoint, isAuthenticated, isSavedPointsReady, isSaved, relatedTravelId, removeSaved, createPoint, travel.lat, travel.lng, travelImageThumbUrl, urlTravel]);
+  }, [address, articleUrl, authReady, notify, run, rawCategoryName, isAddingPoint, isAuthenticated, isSavedPointsReady, isSaved, relatedTravelId, removeSaved, createPoint, travel.lat, travel.lng, travelImageThumbUrl, urlTravel]);
 
   return {
     rawCategoryName, categories, isAddingPoint, pointAdded: isSaved, isSavedPointsReady, isAuthenticated, authReady,

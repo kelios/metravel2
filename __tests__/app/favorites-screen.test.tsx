@@ -22,6 +22,10 @@ jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => mockUseFavorites(),
 }));
 
+jest.mock('@/hooks/useRequireAuth', () => ({
+  useRequireAuth: () => ({ requireAuth: jest.fn() }),
+}));
+
 jest.mock('@/hooks/useFavoritesData', () => ({
   refreshFavoritesFromServer: (...args: unknown[]) => mockRefreshFavoritesFromServer(...args),
 }));

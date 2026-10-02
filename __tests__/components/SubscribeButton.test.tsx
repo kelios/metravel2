@@ -167,6 +167,21 @@ describe('SubscribeButton', () => {
         expect(button).toBeTruthy();
     });
 
+    it('shows success toast after subscribe', async () => {
+        const { showToast } = require('@/utils/toast');
+        mockedFetchMySubscriptions.mockResolvedValue([]);
+        const { findByText } = render(
+            <SubscribeButton targetUserId="99" />,
+            { wrapper: createWrapper() }
+        );
+        fireEvent.press(await findByText('Подписаться'));
+        await waitFor(() => {
+            expect(showToast).toHaveBeenCalledWith(
+                expect.objectContaining({ type: 'success', text1: 'Вы подписаны' })
+            );
+        });
+    });
+
     it('shows toast on subscribe error', async () => {
         const { showToast } = require('@/utils/toast');
         mockedFetchMySubscriptions.mockResolvedValue([]);

@@ -19,9 +19,7 @@ import * as Clipboard from 'expo-clipboard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useFavorites } from '@/context/FavoritesContext';
-import { useAuth } from '@/context/AuthContext';
-import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { useFavoriteToggle } from '@/hooks/useFavoriteToggle';
 import { showToast } from '@/utils/toast';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { buildTravelPath } from '@/utils/travelSeo';
@@ -45,9 +43,7 @@ function TravelStickyActions({
 }: TravelStickyActionsProps) {
   const colors = useThemedColors();
 
-  const { addFavorite, removeFavorite, isFavorite } = useFavorites();
-  const { isAuthenticated } = useAuth();
-  const { requireAuth } = useRequireAuth({});
+  const { toggle, isFavorite } = useFavoriteToggle();
 
   const travelId = travel?.id;
   const isFav = travelId ? isFavorite(travelId, 'travel') : false;
@@ -100,29 +96,18 @@ function TravelStickyActions({
     return () => scrollY.removeListener(listenerId);
   }, [scrollY, translateY]);
 
-  const handleFavorite = useCallback(async () => {
+  const handleFavorite = useCallback(() => {
     if (!travelId) return;
-    if (!isAuthenticated) {
-      requireAuth();
-      return;
-    }
-    hapticImpact('light');
-    try {
-      if (isFav) {
-        await removeFavorite(travelId, 'travel');
-        void showToast({ type: 'info', text1: i18nT('travel:components.travel.details.TravelStickyActions.udaleno_iz_hochu_poehat_e7b482b5'), position: 'bottom' });
-      } else {
-        // #1438: литеральный слаг (`'null'`) проходил проверку на непустую
-        // строку, и в избранное сохранялся адрес в 404.
-        const url = buildTravelPath({ slug: travel?.slug, id: travelId });
-        if (!url) return;
-        await addFavorite({ id: travelId, type: 'travel', title: travel?.name || '', url });
-        void showToast({ type: 'success', text1: i18nT('travel:components.travel.details.TravelStickyActions.dobavleno_v_hochu_poehat_60afbbe6'), position: 'bottom' });
-      }
-    } catch {
-      void showToast({ type: 'error', text1: i18nT('travel:components.travel.details.TravelStickyActions.ne_udalos_obnovit_hochu_poehat_bb9f3a31'), position: 'bottom' });
-    }
-  }, [travelId, isAuthenticated, isFav, addFavorite, removeFavorite, requireAuth, travel?.name, travel?.slug]);
+    // #1438: литеральный слаг (`'null'`) проходил проверку на непустую
+    // строку, и в избранное сохранялся адрес в 404 (пустой url хук не добавит).
+    void toggle({
+      id: travelId,
+      type: 'travel',
+      title: travel?.name || '',
+      url: buildTravelPath({ slug: travel?.slug, id: travelId }) ?? '',
+      source: 'travel_sticky_actions',
+    });
+  }, [travelId, toggle, travel?.name, travel?.slug]);
 
   const handleShare = useCallback(async () => {
     hapticImpact('light');

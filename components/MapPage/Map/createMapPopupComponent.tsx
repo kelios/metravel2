@@ -19,7 +19,7 @@ import {
   buildYandexMapsUrl,
   buildYandexNaviUrl,
 } from './mapLinks';
-import { showToast } from '@/utils/toast';
+import { useActionFeedback } from '@/hooks/useActionFeedback';
 import { PointStatus } from '@/types/userPoints';
 import { useSavedPointToggle } from '@/hooks/map/useSavedPointToggle';
 import { DESIGN_COLORS } from '@/constants/designSystem';
@@ -115,6 +115,7 @@ export const createMapPopupComponent = ({
 }: CreatePopupComponentArgs) => {
   const PopupComponent: React.FC<{ point: Point; closePopup?: () => void }> = ({ point, closePopup }) => {
     const [isAdding, setIsAdding] = useState(false);
+    const { run, notify } = useActionFeedback();
     const [isDrivingLoading, setIsDrivingLoading] = useState(false);
     const [drivingDistanceMeters, setDrivingDistanceMeters] = useState<number | null>(null);
     const [drivingDurationSeconds, setDrivingDurationSeconds] = useState<number | null>(null);
@@ -203,13 +204,13 @@ export const createMapPopupComponent = ({
       if (!coord) return;
       // expo-clipboard работает кросс-платформенно (web + native). На native
       // navigator.clipboard отсутствовал → копирование было silent no-op (#502).
-      try {
-        await Clipboard.setStringAsync(coord);
-        void showToast({ type: 'success', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.koordinaty_skopirovany_1a76ccfe'), position: 'bottom' });
-      } catch {
-        void showToast({ type: 'error', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_skopirovat_koordinaty_e165149d'), position: 'bottom' });
-      }
-    }, [coord]);
+      await run({
+        key: 'copy-coord',
+        commit: () => Clipboard.setStringAsync(coord),
+        success: { message: i18nT('map:components.MapPage.Map.createMapPopupComponent.koordinaty_skopirovany_1a76ccfe') },
+        error: { message: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_skopirovat_koordinaty_e165149d') },
+      });
+    }, [coord, run]);
 
     const handleOpenGoogleMaps = useCallback(() => {
       if (!coord) return;
@@ -406,7 +407,7 @@ export const createMapPopupComponent = ({
         { lat: normalizedCoord.lat, lng: normalizedCoord.lng },
       );
       if (!Number.isFinite(originToDest) || originToDest < 100) {
-        void showToast({ type: 'info', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.vy_uzhe_na_meste_9b62a74f'), position: 'bottom' });
+        notify(i18nT('map:components.MapPage.Map.createMapPopupComponent.vy_uzhe_na_meste_9b62a74f'));
         return;
       }
 
@@ -420,18 +421,18 @@ export const createMapPopupComponent = ({
       routeStore.addPoint({ lat: userLat, lng: userLng }, i18nT('map:components.MapPage.Map.createMapPopupComponent.moe_mestopolozhenie_ca0ae548'));
       routeStore.addPoint({ lat: normalizedCoord.lat, lng: normalizedCoord.lng }, destinationLabel);
       handlePress();
-    }, [handlePress, normalizedCoord, point.address, popupTitle.title, userLat, userLng]);
+    }, [handlePress, normalizedCoord, notify, point.address, popupTitle.title, userLat, userLng]);
 
     const handleAddPoint = useCallback(async () => {
       if (!authReady) return;
       if (!isAuthenticated) {
-        void showToast({ type: 'info', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.voydite_chtoby_sohranit_tochku_17cbe5b6'), position: 'bottom' });
+        notify(i18nT('map:components.MapPage.Map.createMapPopupComponent.voydite_chtoby_sohranit_tochku_17cbe5b6'));
         return;
       }
       if (!isSavedPointsReady) return;
       if (isAdding) return;
       if (!normalizedCoord) {
-        void showToast({ type: 'info', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_raspoznat_koordinaty_706f0bec'), position: 'bottom' });
+        notify(i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_raspoznat_koordinaty_706f0bec'));
         return;
       }
 
@@ -440,10 +441,12 @@ export const createMapPopupComponent = ({
       if (isSaved) {
         setIsAdding(true);
         try {
-          await removeSaved();
-          void showToast({ type: 'success', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.tochka_ubrana_iz_moih_tochek_577546f5'), position: 'bottom' });
-        } catch {
-          void showToast({ type: 'error', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_ubrat_tochku_110b4219'), position: 'bottom' });
+          await run({
+            key: 'save-point',
+            commit: () => removeSaved(),
+            success: { message: i18nT('map:components.MapPage.Map.createMapPopupComponent.tochka_ubrana_iz_moih_tochek_577546f5') },
+            error: { message: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_ubrat_tochku_110b4219') },
+          });
         } finally {
           setIsAdding(false);
         }
@@ -484,12 +487,14 @@ export const createMapPopupComponent = ({
 
       setIsAdding(true);
       try {
-        await createPoint(payload);
-        void showToast({ type: 'success', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.tochka_dobavlena_v_moi_tochki_9a63cfc3'), position: 'bottom' });
         // Не закрываем попап: пользователь должен увидеть, что кнопка стала
         // «Сохранено», чтобы понять про un-save (toggle, #334).
-      } catch {
-        void showToast({ type: 'error', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_sohranit_tochku_99188f48'), position: 'bottom' });
+        await run({
+          key: 'save-point',
+          commit: () => createPoint(payload),
+          success: { message: i18nT('map:components.MapPage.Map.createMapPopupComponent.tochka_dobavlena_v_moi_tochki_9a63cfc3') },
+          error: { message: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_sohranit_tochku_99188f48') },
+        });
       } finally {
         setIsAdding(false);
       }
@@ -498,6 +503,8 @@ export const createMapPopupComponent = ({
       isAuthenticated,
       isSavedPointsReady,
       isAdding,
+      notify,
+      run,
       isSaved,
       removeSaved,
       createPoint,
@@ -532,14 +539,14 @@ export const createMapPopupComponent = ({
       const cityId = String(questMeta.cityId ?? '').trim();
       const id = String(questMeta.id ?? '').trim();
       if (!cityId || !id) {
-        void showToast({ type: 'error', text1: i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_otkryt_kvest_7dab4cc4'), position: 'bottom' });
+        notify(i18nT('map:components.MapPage.Map.createMapPopupComponent.ne_udalos_otkryt_kvest_7dab4cc4'));
         return;
       }
       handlePress();
       router.push(
         `/quests/${encodeURIComponent(cityId)}/${encodeURIComponent(id)}` as any,
       );
-    }, [handlePress, questMeta]);
+    }, [handlePress, notify, questMeta]);
 
     return (
       <ThemeContext.Provider value={themeContextValue}>

@@ -6,6 +6,7 @@ import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
+import { useFavoriteToggle } from '@/hooks/useFavoriteToggle';
 import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/ui/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
@@ -35,7 +36,8 @@ export default function FavoritesScreen() {
     const canonical = buildCanonicalUrl('/favorites');
     const { width } = useResponsive();
     const { isAuthenticated, authReady, userId } = useAuth();
-    const { favorites, removeFavorite, clearFavorites, ensureServerData } = useFavorites() as any;
+    const { favorites, clearFavorites, ensureServerData } = useFavorites() as any;
+    const { toggle: toggleFavorite } = useFavoriteToggle();
     const colors = useThemedColors();
     const [isLoading, setIsLoading] = useState(true);
 
@@ -327,7 +329,7 @@ export default function FavoritesScreen() {
 
                                 <Pressable
                                     style={[styles.removeButton, globalFocusStyles.focusable]}
-                                    onPress={() => removeFavorite?.(item.id, item.type)}
+                                    onPress={() => void toggleFavorite({ id: item.id, type: item.type, title: item.title, url: item.url, imageUrl: item.imageUrl, country: item.country, city: item.city, source: 'favorites_screen' })}
                                     accessibilityRole="button"
                                     accessibilityLabel={i18nT('shared:app.tabs.favorites.udalit_iz_hochu_poehat_4f301763')}
                                     {...Platform.select({ web: { cursor: 'pointer' } })}
@@ -382,7 +384,7 @@ export default function FavoritesScreen() {
 
                             <Pressable
                                 style={[styles.removeButton, globalFocusStyles.focusable]}
-                                onPress={() => removeFavorite?.(item.id, item.type)}
+                                onPress={() => void toggleFavorite({ id: item.id, type: item.type, title: item.title, url: item.url, imageUrl: item.imageUrl, country: item.country, city: item.city, source: 'favorites_screen' })}
                                 accessibilityRole="button"
                                 accessibilityLabel={i18nT('shared:app.tabs.favorites.udalit_iz_hochu_poehat_4f301763')}
                                 {...Platform.select({ web: { cursor: 'pointer' } })}

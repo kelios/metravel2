@@ -1,4 +1,4 @@
-import { act, render } from '@testing-library/react';
+import { act, fireEvent, render } from '@testing-library/react';
 
 import ToastHost from '@/components/ui/ToastHost.web';
 import { WEB_TOAST_EVENT_NAME } from '@/utils/toast.web';
@@ -24,5 +24,33 @@ describe('ToastHost (web)', () => {
     expect(host?.style.minHeight).toBe('0');
     expect(host?.style.position).toBe('fixed');
     expect(host?.style.bottom).toBe('72px');
+  });
+
+  it('renders an action button («Отменить») that runs the action', () => {
+    const onPress = jest.fn();
+    const { container } = render(<ToastHost />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(WEB_TOAST_EVENT_NAME, {
+          detail: { type: 'success', text1: 'Добавлено в избранное', action: { label: 'Отменить', onPress } },
+        })
+      );
+    });
+
+    const button = container.querySelector('[data-testid="toast-action"]') as HTMLElement;
+    expect(button.textContent).toBe('Отменить');
+    fireEvent.click(button);
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('has no action button when none is passed', () => {
+    const { container } = render(<ToastHost />);
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(WEB_TOAST_EVENT_NAME, { detail: { type: 'info', text1: 'Готово' } })
+      );
+    });
+    expect(container.querySelector('[data-testid="toast-action"]')).toBeNull();
   });
 });
