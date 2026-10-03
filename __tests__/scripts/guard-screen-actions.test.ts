@@ -1,7 +1,7 @@
 const fs = require('node:fs')
-const os = require('node:os')
 const path = require('node:path')
 const { scanSource, scanScreenActions, scanDeleteSurfaces, ACTION_SCREENS, DELETE_SURFACES } = require('@/scripts/guard-screen-actions')
+const { makeTempDir } = require('./cli-test-utils')
 
 describe('guard-screen-actions (#2101)', () => {
   it('репозиторий зелёный', () => {
@@ -64,7 +64,7 @@ describe('guard-screen-actions (#2101)', () => {
   // #2115: guard видит все поверхности удаления, а не только экраны деталей.
   describe('реестр поверхностей удаления (#2115)', () => {
     const makeRoot = (files: Record<string, string>) => {
-      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'screen-actions-'))
+      const root = makeTempDir('screen-actions-')
       for (const [rel, body] of Object.entries(files)) {
         fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true })
         fs.writeFileSync(path.join(root, rel), body)
