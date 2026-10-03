@@ -17,6 +17,7 @@ import TravelDetailsAccessibilityChrome from '@/components/travel/details/Travel
 import TravelDetailsCriticalShell from '@/components/travel/details/TravelDetailsCriticalShell'
 import TravelDetailsDeferredRuntimeSlot from '@/components/travel/details/TravelDetailsDeferredRuntimeSlot'
 import TravelDetailsScrollRuntime from '@/components/travel/details/TravelDetailsScrollRuntime'
+import { getTravelDetailsRuntimeLayers } from '@/components/travel/details/travelDetailsPostLcpRuntimeModel'
 import {
   TravelDetailsDeferredScrollProvider,
   type TravelDetailsDeferredScrollState,
@@ -33,10 +34,8 @@ import { buildTravelPathFromTravel } from '@/utils/routePaths'
 import { cacheTravelOffline } from '@/hooks/useOfflineTravelCache'
 import { translate as i18nT } from '@/i18n'
 
-// #2118: на native хром, привязанный к окну (бар действий, прогресс чтения),
-// монтируется вне ScrollView — `viewportOverlay` оболочки; в контенте остаётся
-// только слой потока статьи. Web держит окно порталом и `fixed` (#2117).
-const NATIVE_VIEWPORT_CHROME = Platform.OS !== 'web'
+// #2118: слои рантайм-хрома по платформе — `getTravelDetailsRuntimeLayers`.
+const RUNTIME_LAYERS = getTravelDetailsRuntimeLayers(Platform.OS)
 
 const SKELETON_FALLBACK = <TravelDetailsLoadingFallback />
 
@@ -357,7 +356,7 @@ export default function TravelDetailsContainer() {
         {deferredRuntimeSlot}
         <TravelDetailsDeferredScrollProvider value={deferredScrollState}>
           <TravelDetailsScrollRuntime
-            layer={NATIVE_VIEWPORT_CHROME ? 'scroll' : 'all'}
+            layer={RUNTIME_LAYERS.content}
             travel={travel}
             isMobile={isMobile}
             screenWidth={screenWidth}
@@ -382,7 +381,7 @@ export default function TravelDetailsContainer() {
   ])
 
   const viewportRuntime = useMemo(() => {
-    if (!NATIVE_VIEWPORT_CHROME || !deferredRuntimeSlot || !travel) return null
+    if (!RUNTIME_LAYERS.viewportOverlay || !deferredRuntimeSlot || !travel) return null
 
     return (
       <TravelDetailsDeferredScrollProvider value={deferredScrollState}>

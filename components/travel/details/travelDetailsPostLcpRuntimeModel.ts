@@ -20,6 +20,20 @@ export function shouldShowTravelSectionsSheet(params: {
   )
 }
 
+/**
+ * #2118: где монтируются слои рантайм-хрома детали. На native хром окна (бар
+ * действий, прогресс) живёт вне ScrollView — в `viewportOverlay` оболочки; в
+ * контенте только слой `scroll`. Web держит окно порталом и `fixed` — всё в контенте.
+ */
+export function getTravelDetailsRuntimeLayers(platformOS: string): {
+  content: 'all' | 'scroll'
+  viewportOverlay: boolean
+} {
+  return platformOS === 'web'
+    ? { content: 'all', viewportOverlay: false }
+    : { content: 'scroll', viewportOverlay: true }
+}
+
 export function shouldShowTravelStickyActions(isMobile: boolean) {
   return isMobile
 }

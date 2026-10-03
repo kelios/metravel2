@@ -51,6 +51,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     height: 4,
     backgroundColor: colors.overlayLight,
     zIndex: 1000,
+    // #2118: на native полоска лежит в слое окна поверх ScrollView и закрепленной
+    // навигации — касания у верхнего края проходят к ним.
+    pointerEvents: 'none',
     ...Platform.select({
       web: {
         position: 'fixed',
