@@ -53,6 +53,8 @@ export const createCustomHeaderStyles = (
   colors: ThemedColors,
   isMobile: boolean,
   safeAreaTop = 0,
+  // #2100: без бренд-строки нижний отступ контейнера не нужен — под строкой «←» его нет.
+  hasBrandRow = true,
 ) => {
   const iosTopInset =
     Platform.OS === 'ios' && Number.isFinite(safeAreaTop) ? Math.max(0, safeAreaTop) : 0;
@@ -61,7 +63,7 @@ export const createCustomHeaderStyles = (
     container: {
       backgroundColor: Platform.OS === 'web' ? colors.background : colors.surface,
       paddingTop: iosTopInset,
-      paddingBottom: Platform.OS === 'web' ? (isMobile ? 6 : 12) : 0,
+      paddingBottom: Platform.OS === 'web' && hasBrandRow ? (isMobile ? 6 : 12) : 0,
       borderBottomWidth: Platform.OS === 'web' ? StyleSheet.hairlineWidth : 0,
       borderBottomColor: colors.border,
       ...(Platform.OS === 'web'

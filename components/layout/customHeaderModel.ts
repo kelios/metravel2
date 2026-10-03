@@ -2,7 +2,7 @@ import { Platform } from 'react-native'
 
 import { METRICS } from '@/constants/layout'
 import { isCompactHeaderWidth } from './headerLayoutContract'
-import { needsGlobalBackAffordance } from './topLevelSections'
+import { isTopLevelSectionPath, needsGlobalBackAffordance } from './topLevelSections'
 
 export const isHeaderTestEnv =
   typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined
@@ -89,3 +89,14 @@ export const shouldShowHeaderContextBar = (
   if (isTravelDetailRoute) return false
   return needsGlobalBackAffordance(pathname, hasFilterQuery)
 }
+
+// #2100: на телефоне бренд-строка (лого, язык, аккаунт) — только у разделов навигации.
+// Вложенный экран, куда попали переходом, несёт одну строку «← название» (#2099);
+// аккаунт — вкладка дока «Профиль», язык — пункт «Ещё». Источник «раздел или нет» —
+// тот же `isTopLevelSectionPath`, по которому HeaderContextBar решает «←».
+// Параметры запроса не учитываются намеренно: статический HTML их не знает, а
+// решение обязано совпасть до и после гидратации (иначе сдвиг шапки, #1144).
+// `isPhone` — ветка телефонной строки «←» (`resolveHeaderContextBarIsMobile`):
+// 768–1279 и desktop не меняются.
+export const shouldShowBrandRow = (pathname: string, isPhone: boolean): boolean =>
+  !isPhone || isTopLevelSectionPath(pathname || '/', false, true)

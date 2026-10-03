@@ -8,6 +8,7 @@ import { translate as i18nT } from '@/i18n'
 import { useThemedColors } from '@/hooks/useTheme'
 import { DialogMenu } from '@/ui/paper'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import LanguageOptionList from './LanguageOptionList'
 import { webAccessibilityProps, webDataSetProps, webViewStyle } from '@/utils/webProps'
 
 type LanguageSwitcherProps = {
@@ -23,15 +24,10 @@ const webChevronSlotProps = () =>
 export default function LanguageSwitcher({ compact = false }: LanguageSwitcherProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
-  const { locale, setLocale, supportedLocales } = useLocale()
+  const { locale } = useLocale()
   const [visible, setVisible] = useState(false)
   const currentLanguage = getLocaleDisplayName(locale)
   const accessibilityLabel = `${i18nT('common:language.headerLabel')}: ${currentLanguage}`
-
-  const chooseLocale = (nextLocale: typeof locale) => {
-    setVisible(false)
-    if (nextLocale !== locale) void setLocale(nextLocale)
-  }
 
   return (
     <DialogMenu
@@ -79,37 +75,7 @@ export default function LanguageSwitcher({ compact = false }: LanguageSwitcherPr
         </Pressable>
       }
     >
-      <View accessibilityRole="radiogroup">
-        {supportedLocales.map((supportedLocale) => {
-          const selected = locale === supportedLocale
-          const label = getLocaleDisplayName(supportedLocale)
-          return (
-            <Pressable
-              key={supportedLocale}
-              onPress={() => chooseLocale(supportedLocale)}
-              accessibilityRole="radio"
-              accessibilityLabel={label}
-              accessibilityState={{ checked: selected }}
-              style={({ pressed }) => [
-                styles.option,
-                selected && styles.optionSelected,
-                pressed && styles.optionPressed,
-              ]}
-              testID={`header-language-option-${supportedLocale}`}
-            >
-              <View style={styles.optionCodeSlot}>
-                <Text style={[styles.optionCode, selected && styles.optionCodeSelected]}>
-                  {getLocaleDisplayCode(supportedLocale)}
-                </Text>
-              </View>
-              <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>
-                {label}
-              </Text>
-              {selected ? <Feather name="check" size={17} color={colors.primary} /> : null}
-            </Pressable>
-          )
-        })}
-      </View>
+      <LanguageOptionList onChosen={() => setVisible(false)} />
     </DialogMenu>
   )
 }
@@ -179,46 +145,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       ...Platform.select({
         web: webViewStyle({ boxShadow: DESIGN_TOKENS.shadows.card }),
       }),
-    },
-    option: {
-      minHeight: 44,
-      paddingHorizontal: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      ...Platform.select({ web: webViewStyle({ cursor: 'pointer' }) }),
-    },
-    optionSelected: {
-      backgroundColor: colors.primarySoft,
-    },
-    optionPressed: {
-      opacity: 0.82,
-    },
-    optionCodeSlot: {
-      width: 34,
-      height: 28,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      backgroundColor: colors.surfaceMuted,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    optionCode: {
-      color: colors.textMuted,
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.3,
-    },
-    optionCodeSelected: {
-      color: colors.primary,
-    },
-    optionLabel: {
-      flex: 1,
-      color: colors.text,
-      fontSize: 14,
-      fontWeight: '500',
-    },
-    optionLabelSelected: {
-      color: colors.primary,
-      fontWeight: '700',
     },
   })

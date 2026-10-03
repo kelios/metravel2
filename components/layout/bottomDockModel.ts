@@ -30,7 +30,9 @@ export type BottomDockMoreMenuItem = {
   key: string
   label: string
   muted?: boolean
-  route: Href
+  /** Пункт-действие вместо перехода (#2100: «Язык интерфейса» открывает лист выбора). */
+  action?: 'language'
+  route?: Href
 }
 
 export type BottomDockMoreMenuSection = {
@@ -77,6 +79,8 @@ export const BOTTOM_DOCK_MORE_MENU_SECTIONS: BottomDockMoreMenuSection[] = [
       { key: 'travel-new', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.sozdat_marshrut_a61a17b8') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.sozdat_marshrut_a61a17b8') }, route: '/travel/new', iconName: 'plus-circle' },
       // Экспорт в PDF («Книга путешествий») — только десктоп; в мобильном доке пункт убран.
       { key: 'profile', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.profil_1f899ea9') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.profil_1f899ea9') }, route: '/profile', iconName: 'user' },
+      // #2100: на вложенных экранах телефона бренд-строки с переключателем языка нет.
+      { key: 'language', get label() { return i18nT('common:language.settingTitle') }, get accessibilityLabel() { return i18nT('common:language.settingTitle') }, action: 'language', iconName: 'globe' },
     ],
   },
   {

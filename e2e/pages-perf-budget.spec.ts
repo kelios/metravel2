@@ -713,11 +713,20 @@ for (const target of PAGES) {
 
       // Позитивный контроль запрещённых узлов: если селектор перестал находиться,
       // проверка «узла нет в сдвигах» проходила бы вхолостую.
+      const nestedPhoneScreen = profile === 'mobile' && Boolean(budget!.phoneNestedScreen)
       for (const forbidden of budget!.skipHeaderPositiveControl ? [] : FORBIDDEN_SHIFT_SOURCES) {
         if (!forbidden.presentOn.includes(profile)) continue
+        if (nestedPhoneScreen && forbidden.brandRowOnly) continue
         expect(
           await page.locator(forbidden.selector).count(),
           `${forbidden.id}: selector ${forbidden.selector} matched nothing on ${profile} — the forbidden-source check would pass vacuously`,
+        ).toBeGreaterThan(0)
+      }
+      if (nestedPhoneScreen) {
+        // #2100: на вложенном экране телефона шапка — одна строка «←».
+        expect(
+          await page.locator('[data-testid="header-context-bar"]').count(),
+          `${budget!.phoneNestedScreen}: строки «←» нет на ${profile}`,
         ).toBeGreaterThan(0)
       }
 

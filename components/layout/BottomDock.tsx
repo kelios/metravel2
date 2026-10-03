@@ -6,7 +6,6 @@ import {
   Pressable,
   Platform,
   Modal,
-  ScrollView,
   LayoutChangeEvent,
   useWindowDimensions,
 } from "react-native";
@@ -24,6 +23,7 @@ import { useMapPanelStore } from "@/stores/mapPanelStore";
 import { hapticSelection } from "@/utils/haptics";
 import { buildArticlesHrefFromSource } from "@/utils/articleNavigation";
 import NavigationIcon from './NavigationIcon';
+import BottomDockMoreList from './BottomDockMoreList';
 import {
   BOTTOM_DOCK_HEIGHT,
   BOTTOM_DOCK_ITEM_DEFS,
@@ -279,10 +279,15 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   );
 
   const renderMoreMenuItem = useCallbackReact(
-    (item: (typeof BOTTOM_DOCK_MORE_MENU_SECTIONS)[number]["items"][number], closeMenu: () => void) => (
+    (item: (typeof BOTTOM_DOCK_MORE_MENU_SECTIONS)[number]["items"][number], closeMenu: () => void, openLanguage: () => void) => (
       <Pressable
         key={item.key}
         onPress={() => {
+          // #2100: язык — подэкран этого же листа, лист не закрываем.
+          if (item.action === 'language') {
+            openLanguage();
+            return;
+          }
           closeMenu();
           const route = Platform.OS !== 'web' && item.route === '/articles'
             ? buildArticlesHrefFromSource(pathname)
@@ -295,8 +300,9 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           globalFocusStyles.focusable,
         ]}
         android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
-        accessibilityRole="link"
+        accessibilityRole={item.action ? "button" : "link"}
         accessibilityLabel={item.accessibilityLabel}
+        testID={`footer-more-item-${item.key}`}
       >
         <NavigationIcon
           name={item.iconName}
@@ -399,21 +405,14 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                 <Feather name="x" size={20} color={colors.textMuted} />
               </Pressable>
             </View>
-            <ScrollView
+            <BottomDockMoreList
+              styles={styles}
+              iconColor={colors.primary}
+              itemFilter={(item) => item.route !== '/privacy' && item.route !== '/cookies'}
+              renderItem={(item, openLanguage) => renderMoreMenuItem(item, () => setShowMore(false), openLanguage)}
+              onClose={() => setShowMore(false)}
               testID="footer-more-list"
-              style={styles.moreList}
-              contentContainerStyle={styles.moreListContent}
-              keyboardShouldPersistTaps="handled"
-            >
-              {BOTTOM_DOCK_MORE_MENU_SECTIONS.map((section, sectionIndex) => (
-                <React.Fragment key={section.key}>
-                  {section.items
-                    .filter((item) => item.route !== '/privacy' && item.route !== '/cookies')
-                    .map((item) => renderMoreMenuItem(item, () => setShowMore(false)))}
-                  {sectionIndex < BOTTOM_DOCK_MORE_MENU_SECTIONS.length - 1 ? <View style={styles.moreDivider} /> : null}
-                </React.Fragment>
-              ))}
-            </ScrollView>
+            />
           </View>
         </>
       )}
@@ -447,22 +446,14 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   <Feather name="x" size={20} color={colors.textMuted} />
                 </Pressable>
               </View>
-              <ScrollView
-                style={styles.moreList}
-                contentContainerStyle={styles.moreListContent}
-                keyboardShouldPersistTaps="handled"
-              >
-                {BOTTOM_DOCK_MORE_MENU_SECTIONS.map((section, sectionIndex) => (
-                  <React.Fragment key={section.key}>
-                    {section.items
-                      .filter((item) => item.route !== '/privacy')
-                      // Настройки cookies (#2135) и PDF-экспорт (#495) — только web: общая политика.
-                      .filter((item) => isNavRouteAvailable(item.route))
-                      .map((item) => renderMoreMenuItem(item, () => setShowMore(false)))}
-                    {sectionIndex < BOTTOM_DOCK_MORE_MENU_SECTIONS.length - 1 ? <View style={styles.moreDivider} /> : null}
-                  </React.Fragment>
-                ))}
-              </ScrollView>
+              <BottomDockMoreList
+                styles={styles}
+                iconColor={colors.primary}
+                // Настройки cookies (#2135) и PDF-экспорт (#495) — только web: общая политика.
+                itemFilter={(item) => item.route !== '/privacy' && isNavRouteAvailable(item.route)}
+                renderItem={(item, openLanguage) => renderMoreMenuItem(item, () => setShowMore(false), openLanguage)}
+                onClose={() => setShowMore(false)}
+              />
             </View>
           </View>
         </Modal>
@@ -490,26 +481,14 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   <Text style={styles.sheetTitle}>{i18nT('navigation:components.layout.BottomDock.esche_d5fa4e69')}</Text>
                 </View>
               </View>
-              <ScrollView
-                style={styles.moreList}
-                contentContainerStyle={styles.moreListContent}
-                keyboardShouldPersistTaps="handled"
-              >
-                {BOTTOM_DOCK_MORE_MENU_SECTIONS.map((section, sectionIndex) => (
-                  <React.Fragment key={section.key}>
-                    {section.items
-                      .filter((item) => Platform.OS === 'web' || item.route !== '/privacy')
-                      // Настройки cookies (#2135) и PDF-экспорт (#495) — только web: общая политика.
-                      .filter((item) => isNavRouteAvailable(item.route))
-                      .map((item) =>
-                        renderMoreMenuItem(item, () => {
-                          nativeSheetRef.current?.close();
-                        })
-                      )}
-                    {sectionIndex < BOTTOM_DOCK_MORE_MENU_SECTIONS.length - 1 ? <View style={styles.moreDivider} /> : null}
-                  </React.Fragment>
-                ))}
-              </ScrollView>
+              <BottomDockMoreList
+                styles={styles}
+                iconColor={colors.primary}
+                // Настройки cookies (#2135) и PDF-экспорт (#495) — только web: общая политика.
+                itemFilter={(item) => (Platform.OS === 'web' || item.route !== '/privacy') && isNavRouteAvailable(item.route)}
+                renderItem={(item, openLanguage) => renderMoreMenuItem(item, () => nativeSheetRef.current?.close(), openLanguage)}
+                onClose={() => nativeSheetRef.current?.close()}
+              />
             </GorhomBottomSheetView>
           )}
         </GorhomBottomSheet>

@@ -3,7 +3,7 @@ import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import { Platform } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
 import CustomHeader from '@/components/layout/CustomHeader';
-import { isQuestDetailHeaderPath, shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
+import { isQuestDetailHeaderPath, shouldShowBrandRow, shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';
 import {
     HEADER_HEIGHT_FALLBACK,
     HEADER_LAYOUT_BREAKPOINTS,
@@ -41,7 +41,7 @@ const getHeaderVariant = (pathname: string, hasFilterQuery: boolean): HeaderVari
     // Строку «←» в телефонном виде рисует бар только ниже mobileContext (#2099).
     const isBarMobile = width < HEADER_LAYOUT_BREAKPOINTS.mobileContext;
     const hasBar = shouldShowHeaderContextBar(pathname || '/', isCompact, hasFilterQuery, isBarMobile);
-    return getHeaderVariantForWidth(width, hasBar);
+    return getHeaderVariantForWidth(width, hasBar, shouldShowBrandRow(pathname || '/', isBarMobile));
 };
 
 // SSR/первый-рендер вариант: НЕ читаем window/sessionStorage, иначе статический
@@ -174,11 +174,13 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
         // резерв, а статический HTML один и тот же для `/search` и
         // `/search?categoryTravelAddress=33,43` (#1725).
         const hasPhoneContextBar = shouldShowHeaderContextBar(pathname || '/', true, false, true);
+        // #2100: вложенный экран телефона резервирует только строку «←» (52).
+        const hasPhoneBrandRow = shouldShowBrandRow(pathname || '/', true);
         const hasCompactContextBar = shouldShowHeaderContextBar(pathname || '/', true, false, false);
         const hasWideContextBar = shouldShowHeaderContextBar(pathname || '/', false);
-        const heightForBand = (band: HeaderViewportBand, hasBar: boolean) =>
-            HEADER_HEIGHT_FALLBACK[getHeaderVariantForBand(band, hasBar)];
-        const mobileHeight = heightForBand('mobile', hasPhoneContextBar);
+        const heightForBand = (band: HeaderViewportBand, hasBar: boolean, hasBrandRow = true) =>
+            HEADER_HEIGHT_FALLBACK[getHeaderVariantForBand(band, hasBar, hasBrandRow)];
+        const mobileHeight = heightForBand('mobile', hasPhoneContextBar, hasPhoneBrandRow);
         const compactHeight = heightForBand('compact', hasCompactContextBar);
         const wideHeight = heightForBand('wide', hasWideContextBar);
         const headerSlotStyle: React.CSSProperties & {

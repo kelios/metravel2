@@ -121,14 +121,25 @@ describe('budget table rules', () => {
         marker: 'data-header-logo-image',
         selector: '[data-header-logo-image]',
         presentOn: ['desktop', 'desktop-narrow', 'mobile'],
+        brandRowOnly: true,
       },
       {
         id: 'header-language-switcher',
         marker: 'testid=header-language-switcher',
         selector: '[data-testid="header-language-switcher"]',
         presentOn: ['desktop', 'desktop-narrow', 'mobile'],
+        brandRowOnly: true,
       },
     ])
+  })
+
+  // #2100: вложенные экраны телефона без бренд-строки — контроль её узлов заменён строкой «←».
+  it('marks phone-nested routes so brand-row positive controls do not run vacuously', () => {
+    expect(PAGE_BUDGETS.PLACES?.mobile?.phoneNestedScreen).toMatch(/#2100/)
+    expect(PAGE_BUDGETS.QUEST_DETAIL?.mobile?.phoneNestedScreen).toMatch(/#2100/)
+    expect(PAGE_BUDGETS.HOME?.mobile?.phoneNestedScreen).toBeUndefined()
+    expect(PAGE_BUDGETS.SEARCH?.mobile?.phoneNestedScreen).toBeUndefined()
+    expect(PAGE_BUDGETS.QUESTS?.mobile?.phoneNestedScreen).toBeUndefined()
   })
 
   it('throws on a missing route or profile instead of falling back', () => {

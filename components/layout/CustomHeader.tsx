@@ -16,6 +16,7 @@ import {
 import {
   getHeaderActivePath,
   getIsHeaderMobile,
+  shouldShowBrandRow,
   shouldShowHeaderContextBar,
 } from './customHeaderModel'
 import { createCustomHeaderStyles, webStickyStyle } from './customHeaderStyles'
@@ -89,6 +90,15 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
     isLargePhone: responsive.isLargePhone,
   })
   const showHeaderContextBar = shouldShowHeaderContextBar(pathname, isMobile, hasListFilterQuery, isBarMobile)
+  // #2100: вложенный экран телефона — без бренд-строки, только строка «←».
+  // Web до гидратации ширины не знает: строка рендерится, а прячет её critical CSS
+  // по метке `data-header-brand="phone-hidden"` (решение по пути — одно на сервере и
+  // клиенте). После гидратации на телефоне строка не монтируется вовсе.
+  const brandRowPhoneHidden = !shouldShowBrandRow(pathname, true)
+  const renderBrandRow =
+    Platform.OS === 'web' && !isHydrated ? true : shouldShowBrandRow(pathname, isBarMobile)
+  const brandRowProps =
+    Platform.OS === 'web' && brandRowPhoneHidden ? webDataSetProps({ headerBrand: 'phone-hidden' }) : null
 
   // Predict whether the lazy HeaderContextBar will actually render visible UI
   // (mirrors HeaderContextBar conditions). Native needs this to reserve height;
@@ -100,8 +110,8 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
   })
 
   const styles = useMemo(
-    () => createCustomHeaderStyles(colors, rowIsMobile, safeAreaInsets.top),
-    [colors, rowIsMobile, safeAreaInsets.top],
+    () => createCustomHeaderStyles(colors, rowIsMobile, safeAreaInsets.top, renderBrandRow),
+    [colors, rowIsMobile, safeAreaInsets.top, renderBrandRow],
   )
 
   const contextBarFallbackStyle = useMemo(
@@ -139,55 +149,58 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
       testID="main-header"
       nativeID={isNavigationTarget ? 'main-navigation' : undefined}
       onLayout={handleLayout}
+      {...brandRowProps}
       {...(Platform.OS === 'web' ? ({ tabIndex: -1 } as any) : null)}
     >
       <View style={styles.wrapper}>
-        <View
-          style={[styles.inner, rowIsMobile && styles.innerMobile]}
-          testID="main-header-row"
-          {...webSlotProps('inner')}
-        >
-          <Logo isCompact={rowIsMobile} showWordmark={!rowIsMobile} />
+        {renderBrandRow ? (
+          <View
+            style={[styles.inner, rowIsMobile && styles.innerMobile]}
+            testID="main-header-row"
+            {...webSlotProps('inner')}
+          >
+            <Logo isCompact={rowIsMobile} showWordmark={!rowIsMobile} />
 
-          {!rowIsMobile &&
-            (isHydrated ? (
-              <Suspense fallback={<View style={styles.navScroll} />}>
-                <CustomHeaderNavSectionComp activePath={activePath} styles={styles} />
+            {!rowIsMobile &&
+              (isHydrated ? (
+                <Suspense fallback={<View style={styles.navScroll} />}>
+                  <CustomHeaderNavSectionComp activePath={activePath} styles={styles} />
+                </Suspense>
+              ) : (
+                // До гидратации держим только бокс навигации (`flex:1`, как у самой
+                // ScrollView): так ширина строки уже финальная, но ленивый чанк не
+                // качается на узких экранах, где навигации не будет вовсе.
+                <View style={styles.navScroll} {...webSlotProps('nav')} aria-hidden />
+              ))}
+
+            <LanguageSwitcher compact={rowIsMobile} />
+
+            {/* Account section is auth-specific (no SSR/SEO value). Render only the
+                empty placeholder during prerender + first client render — mounting the
+                lazy section on the server emits an errored Suspense boundary (<!--$!-->)
+                that throws React #419 on hydration. isHydrated is false on the server and
+                first client render, true after hydration (and always true on native).
+                Плейсхолдер обязан занимать тот же бокс, что и смонтированная секция,
+                иначе её появление уводит переключатель языка влево (#1298): на web
+                это `rightSection` с зарезервированной шириной, а ниже 1280px CSS
+                превращает его в мобильный `flex:1`. */}
+            {isHydrated ? (
+              <Suspense fallback={<View style={rowIsMobile ? styles.rightSectionMobile : styles.rightSection} />}>
+                <CustomHeaderAccountSectionComp
+                  activePath={activePath}
+                  isMobile={rowIsMobile}
+                  styles={styles}
+                />
               </Suspense>
             ) : (
-              // До гидратации держим только бокс навигации (`flex:1`, как у самой
-              // ScrollView): так ширина строки уже финальная, но ленивый чанк не
-              // качается на узких экранах, где навигации не будет вовсе.
-              <View style={styles.navScroll} {...webSlotProps('nav')} aria-hidden />
-            ))}
-
-          <LanguageSwitcher compact={rowIsMobile} />
-
-          {/* Account section is auth-specific (no SSR/SEO value). Render only the
-              empty placeholder during prerender + first client render — mounting the
-              lazy section on the server emits an errored Suspense boundary (<!--$!-->)
-              that throws React #419 on hydration. isHydrated is false on the server and
-              first client render, true after hydration (and always true on native).
-              Плейсхолдер обязан занимать тот же бокс, что и смонтированная секция,
-              иначе её появление уводит переключатель языка влево (#1298): на web
-              это `rightSection` с зарезервированной шириной, а ниже 1280px CSS
-              превращает его в мобильный `flex:1`. */}
-          {isHydrated ? (
-            <Suspense fallback={<View style={rowIsMobile ? styles.rightSectionMobile : styles.rightSection} />}>
-              <CustomHeaderAccountSectionComp
-                activePath={activePath}
-                isMobile={rowIsMobile}
-                styles={styles}
+              <View
+                style={rowIsMobile ? styles.rightSectionMobile : styles.rightSection}
+                {...webSlotProps('account')}
+                aria-hidden
               />
-            </Suspense>
-          ) : (
-            <View
-              style={rowIsMobile ? styles.rightSectionMobile : styles.rightSection}
-              {...webSlotProps('account')}
-              aria-hidden
-            />
-          )}
-        </View>
+            )}
+          </View>
+        ) : null}
 
         {showHeaderContextBar ? (
           isHydrated ? (

@@ -56,6 +56,12 @@ export type PageBudget = {
    * общей шапки: требовать её узлы значило бы ронять гейт на здоровой странице.
    */
   skipHeaderPositiveControl?: string
+  /**
+   * #2100: вложенный экран телефона — бренд-строки (лого, язык) нет, сверху одна
+   * строка «←». Узлы бренд-строки здесь не проверяются на присутствие, вместо них
+   * обязана найтись строка экрана `header-context-bar`. Значение — причина.
+   */
+  phoneNestedScreen?: string
 }
 
 export type PageMeasurement = {
@@ -91,6 +97,8 @@ export const FORBIDDEN_SHIFT_SOURCES: ReadonlyArray<{
    * и требовать её на мобильном — значит ронять гейт на здоровой странице.
    */
   presentOn: readonly PerfProfile[]
+  /** Узел живёт только в бренд-строке: на вложенном экране телефона его нет (#2100). */
+  brandRowOnly?: boolean
 }> = [
   {
     id: 'header-logo',
@@ -109,12 +117,14 @@ export const FORBIDDEN_SHIFT_SOURCES: ReadonlyArray<{
     marker: 'data-header-logo-image',
     selector: '[data-header-logo-image]',
     presentOn: ['desktop', 'desktop-narrow', 'mobile'],
+    brandRowOnly: true,
   },
   {
     id: 'header-language-switcher',
     marker: 'testid=header-language-switcher',
     selector: '[data-testid="header-language-switcher"]',
     presentOn: ['desktop', 'desktop-narrow', 'mobile'],
+    brandRowOnly: true,
   },
 ]
 
@@ -294,6 +304,7 @@ export const PAGE_BUDGETS: BudgetTable = {
       ...TIMING,
     },
     mobile: {
+      phoneNestedScreen: '#2100: вложенный экран телефона — одна строка «←», без бренд-строки',
       // #1334 убрал 115px-сдвиг каталога, #1298/#1340 сняли сдвиг шапки и
       // стирание статического shell. Прод-замер 2026-08-10 (build
       // v1786308063481, 412x823, CPU 4x, холодный контекст): 0.002501 в 5/5.
@@ -324,6 +335,7 @@ export const PAGE_BUDGETS: BudgetTable = {
       firstScreenElementsMax: 240, // measured 199; +20% rounded up
     },
     mobile: {
+      phoneNestedScreen: '#2100: вложенный экран телефона — одна строка «←», без бренд-строки',
       ...QUESTS_CATALOG_BUDGETS.mobile,
       firstScreenElementsMax: 220, // measured 183; +20% rounded up
     },

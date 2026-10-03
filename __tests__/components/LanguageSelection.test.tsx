@@ -1,8 +1,10 @@
 import React from 'react'
 import { fireEvent, render } from '@testing-library/react-native'
-import { Platform, StyleSheet } from 'react-native'
+import { Platform, Pressable, StyleSheet, Text } from 'react-native'
 
+import BottomDockMoreList from '@/components/layout/BottomDockMoreList'
 import LanguageSwitcher from '@/components/layout/LanguageSwitcher'
+import { BOTTOM_DOCK_MORE_MENU_SECTIONS } from '@/components/layout/bottomDockModel'
 import LanguageSection from '@/components/settings/LanguageSection'
 
 jest.mock('@/i18n/LocaleProvider', () => {
@@ -69,6 +71,37 @@ describe('language selection surfaces', () => {
 
     fireEvent.press(getByTestId('header-language-option-uk'))
     expect(localeState.setLocale).toHaveBeenCalledWith('uk')
+  })
+
+  // #2100: на вложенных экранах телефона бренд-строки нет — язык меняется из «Ещё».
+  // Подэкран внутри того же листа: второй Modal на iOS поверх первого не показывается.
+  it('«Ещё» → «Язык интерфейса» открывает выбор языка внутри листа и меняет локаль', () => {
+    const items = BOTTOM_DOCK_MORE_MENU_SECTIONS.flatMap((section) => section.items)
+    const language = items.find((item) => item.key === 'language')
+    expect(language).toEqual(expect.objectContaining({ action: 'language', iconName: 'globe' }))
+    expect(language?.route).toBeUndefined()
+
+    const onClose = jest.fn()
+    const { getByTestId, queryByTestId, getByLabelText } = render(
+      <BottomDockMoreList
+        styles={styles}
+        iconColor="#000"
+        itemFilter={() => true}
+        onClose={onClose}
+        renderItem={(item, openLanguage) => (
+          <Pressable key={item.key} testID={`footer-more-item-${item.key}`} onPress={item.action ? openLanguage : onClose}>
+            <Text>{item.label}</Text>
+          </Pressable>
+        )}
+      />,
+    )
+    expect(queryByTestId('more-language-option-pl')).toBeNull()
+    fireEvent.press(getByTestId('footer-more-item-language'))
+    expect(onClose).not.toHaveBeenCalled()
+    expect(getByLabelText('English')).toBeTruthy()
+    fireEvent.press(getByTestId('more-language-option-pl'))
+    expect(localeState.setLocale).toHaveBeenCalledWith('pl')
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it('offers explicit languages and opt-in system mode in account settings', () => {

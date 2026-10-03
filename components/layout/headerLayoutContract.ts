@@ -18,7 +18,8 @@ export const HEADER_MEDIA_MAX_WIDTHS = {
 } as const
 
 export type HeaderViewportBand = 'mobile' | 'compact' | 'wide'
-export type HeaderVariant = `${HeaderViewportBand}-${'bar' | 'nobar'}`
+// `screen` — только строка экрана без бренд-строки: вложенный экран телефона (#2100).
+export type HeaderVariant = `${HeaderViewportBand}-${'bar' | 'nobar' | 'screen'}`
 
 const HEADER_ROW_HEIGHT: Record<HeaderViewportBand, number> = {
   mobile: 64,
@@ -32,6 +33,8 @@ const HEADER_CONTEXT_HEIGHT: Record<HeaderViewportBand, number> = {
   wide: 46,
 }
 
+const HEADER_BORDERS_HEIGHT = 2
+
 export const HEADER_HEIGHT_FALLBACK: Record<HeaderVariant, number> = {
   'mobile-bar': HEADER_ROW_HEIGHT.mobile + HEADER_CONTEXT_HEIGHT.mobile,
   'mobile-nobar': HEADER_ROW_HEIGHT.mobile,
@@ -39,6 +42,11 @@ export const HEADER_HEIGHT_FALLBACK: Record<HeaderVariant, number> = {
   'compact-nobar': HEADER_ROW_HEIGHT.compact,
   'wide-bar': HEADER_ROW_HEIGHT.wide + HEADER_CONTEXT_HEIGHT.wide,
   'wide-nobar': HEADER_ROW_HEIGHT.wide,
+  // Строка экрана + нижние рамки шапки и строки (2 px — та же надбавка, что
+  // заложена в 64 = 56 + 6 + 2 у бренд-строки); замер #2100 на 390: 54.
+  'mobile-screen': HEADER_CONTEXT_HEIGHT.mobile + HEADER_BORDERS_HEIGHT,
+  'compact-screen': HEADER_CONTEXT_HEIGHT.compact + HEADER_BORDERS_HEIGHT,
+  'wide-screen': HEADER_CONTEXT_HEIGHT.wide + HEADER_BORDERS_HEIGHT,
 }
 
 export const getHeaderViewportBand = (width: number): HeaderViewportBand => {
@@ -50,12 +58,17 @@ export const getHeaderViewportBand = (width: number): HeaderViewportBand => {
 export const getHeaderVariantForBand = (
   band: HeaderViewportBand,
   hasContextBar: boolean,
-): HeaderVariant => `${band}-${hasContextBar ? 'bar' : 'nobar'}`
+  hasBrandRow: boolean = true,
+): HeaderVariant => {
+  if (!hasContextBar) return `${band}-nobar`
+  return hasBrandRow ? `${band}-bar` : `${band}-screen`
+}
 
 export const getHeaderVariantForWidth = (
   width: number,
   hasContextBar: boolean,
-): HeaderVariant => getHeaderVariantForBand(getHeaderViewportBand(width), hasContextBar)
+  hasBrandRow: boolean = true,
+): HeaderVariant => getHeaderVariantForBand(getHeaderViewportBand(width), hasContextBar, hasBrandRow)
 
 export const isCompactHeaderWidth = (width: number) =>
   width < HEADER_LAYOUT_BREAKPOINTS.compactRow

@@ -151,6 +151,36 @@ describe('CustomHeader', () => {
             }
         });
 
+        // #2100: вложенный экран телефона — одна строка «←», бренд-строки нет;
+        // safe-area сверху остаётся на контейнере, раздел дока строку сохраняет.
+        it.each([
+            ['/trips/my', false],
+            ['/contact', false],
+            ['/search', true],
+        ] as const)('iPhone %s: бренд-строка = %s', (path, hasBrandRow) => {
+            Object.defineProperty(Platform, 'OS', { value: 'ios' });
+            mockSafeAreaInsets = { top: 59, right: 0, bottom: 34, left: 0 };
+            (global as any).__mockResponsive = {
+                width: 393,
+                height: 852,
+                isPhone: true,
+                isLargePhone: false,
+                isTablet: false,
+                isDesktop: false,
+                isMobile: true,
+                isHydrated: true,
+            };
+            (usePathname as jest.Mock).mockReturnValue(path);
+
+            try {
+                const { getByTestId, queryByTestId } = renderHeader();
+                expect(Boolean(queryByTestId('main-header-row'))).toBe(hasBrandRow);
+                expect(StyleSheet.flatten(getByTestId('main-header').props.style).paddingTop).toBe(59);
+            } finally {
+                (global as any).__mockResponsive = undefined;
+            }
+        });
+
         it.each(['android', 'web'] as const)('does not apply the iOS top inset on %s', (os) => {
             Object.defineProperty(Platform, 'OS', { value: os });
             mockSafeAreaInsets = { top: 59, right: 0, bottom: 34, left: 0 };

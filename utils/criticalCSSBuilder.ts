@@ -100,6 +100,11 @@ export function buildCriticalCSS(): string {
     '}',
     `@media (max-width:${HEADER_MEDIA_MAX_WIDTHS.mobile}px){`,
     `  [data-header-slot=""]{height:var(--mt-header-slot-mobile,${HEADER_HEIGHT_FALLBACK['mobile-nobar']}px)}`,
+    // #2100: вложенный экран телефона — без бренд-строки (`shouldShowBrandRow`).
+    // Статический HTML несёт строку desktop-геометрии; на телефоне её снимает этот
+    // блок до первого кадра, а после гидратации React её не монтирует — сдвига нет.
+    '  [data-header-brand="phone-hidden"]{padding-bottom:0 !important;min-height:0 !important}',
+    '  [data-header-brand="phone-hidden"] [data-header-inner="true"]{display:none !important}',
     '}',
     // HeaderContextBar uses phone geometry only below 768 px. On wider bands
     // its 44px controls plus two borders need a 46px box from the first frame.
