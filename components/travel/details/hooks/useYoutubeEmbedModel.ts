@@ -23,6 +23,11 @@ export interface UseYoutubeEmbedModelResult {
   handlePreviewPress: () => void
   id: string | null
   mounted: boolean
+  /**
+   * Адрес iframe плеера внутри `nativeSource.html` — единственный фрейм, который
+   * сторонний WebView грузит сам (`createThirdPartyNavigationGuard`, #2135).
+   */
+  nativeEmbedUrl: string | null
   nativeSource: NativeYoutubeSource | null
   shouldAutoplay: boolean
 }
@@ -47,12 +52,16 @@ export function useYoutubeEmbedModel(url: string): UseYoutubeEmbedModelResult {
     return `https://www.youtube.com/embed/${id}?${buildEmbedParams(shouldAutoplay)}`
   }, [id, shouldAutoplay])
 
-  const nativeSource = useMemo<NativeYoutubeSource | null>(() => {
+  const nativeEmbedUrl = useMemo(() => {
     if (!id) return null
-    const src = `https://www.youtube.com/embed/${id}?${buildEmbedParams(shouldAutoplay, [
+    return `https://www.youtube.com/embed/${id}?${buildEmbedParams(shouldAutoplay, [
       'enablejsapi=1',
       `origin=${encodeURIComponent(NATIVE_EMBED_ORIGIN)}`,
     ])}`
+  }, [id, shouldAutoplay])
+
+  const nativeSource = useMemo<NativeYoutubeSource | null>(() => {
+    if (!nativeEmbedUrl) return null
     return {
       baseUrl: NATIVE_EMBED_ORIGIN,
       html: [
@@ -62,16 +71,16 @@ export function useYoutubeEmbedModel(url: string): UseYoutubeEmbedModelResult {
         '<style>html,body{margin:0;padding:0;height:100%;background:#000;overflow:hidden}',
         'iframe{display:block;border:0;width:100%;height:100%}</style>',
         '</head><body>',
-        `<iframe src="${src}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`,
+        `<iframe src="${nativeEmbedUrl}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`,
         '</body></html>',
       ].join(''),
     }
-  }, [id, shouldAutoplay])
+  }, [nativeEmbedUrl])
 
   const handlePreviewPress = useCallback(() => {
     setMounted(true)
     setShouldAutoplay(true)
   }, [])
 
-  return { embedUrl, handlePreviewPress, id, mounted, nativeSource, shouldAutoplay }
+  return { embedUrl, handlePreviewPress, id, mounted, nativeEmbedUrl, nativeSource, shouldAutoplay }
 }

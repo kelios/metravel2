@@ -1,5 +1,22 @@
+import { Platform } from 'react-native'
+
 import LegalPage from '@/components/legal/LegalPage'
 import { translate as i18nT } from '@/i18n'
+
+// Раздел 4 на native: в приложении нет cookies, cookie-баннера и страницы
+// настроек cookies (#2135, App Review 5.1.2(i)), поэтому текст сайта про
+// согласие через баннер и «Настройки cookies и аналитики» заменён заявлением
+// приложения; про аналитику сайта — нейтрально, без отсылки к настройкам.
+const getCookiesSectionParagraphs = (): string[] =>
+  Platform.OS === 'web'
+    ? [
+        i18nT('legal:app.tabs.privacy.my_ispolzuem_tehnicheski_neobhodimye_fayly_c_86b4b204'),
+        i18nT('legal:app.tabs.privacy.analiticheskie_instrumenty_takie_kak_yandeks_03d8dc46'),
+      ]
+    : [
+        i18nT('legal:app.tabs.privacy.nativeAppStorage'),
+        i18nT('legal:app.tabs.privacy.nativeSiteAnalytics'),
+      ]
 
 
 export default function PrivacyScreen() {
@@ -39,10 +56,7 @@ export default function PrivacyScreen() {
         },
         {
           heading: i18nT('legal:app.tabs.privacy.4_cookies_i_lokalnoe_hranilische_8c993f3f'),
-          paragraphs: [
-            i18nT('legal:app.tabs.privacy.my_ispolzuem_tehnicheski_neobhodimye_fayly_c_86b4b204'),
-            i18nT('legal:app.tabs.privacy.analiticheskie_instrumenty_takie_kak_yandeks_03d8dc46'),
-          ],
+          paragraphs: getCookiesSectionParagraphs(),
         },
         {
           heading: i18nT('legal:app.tabs.privacy.5_obrabotka_dannyh_o_mestopolozhenii_131076ea'),

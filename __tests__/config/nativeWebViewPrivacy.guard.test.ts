@@ -5,7 +5,8 @@ import { THIRD_PARTY_WEBVIEW_PRIVACY_PROPS } from '@/utils/thirdPartyWebViewPriv
 
 /**
  * #2135 / App Review 5.1.2(i): ни одна WebView приложения не хранит и не передаёт
- * cookies стороннего веб-контента. Каждый файл, импортирующий
+ * cookies стороннего веб-контента и не открывает внутри приложения чужие
+ * страницы дальше исходного документа. Каждый файл, импортирующий
  * `react-native-webview`, обязан быть классифицирован ниже — новая WebView без
  * решения роняет тест, а не уезжает в сборку молча.
  */
@@ -13,9 +14,12 @@ import { THIRD_PARTY_WEBVIEW_PRIVACY_PROPS } from '@/utils/thirdPartyWebViewPriv
 const ROOT = path.resolve(__dirname, '../..')
 const SOURCE_DIRS = ['app', 'components', 'screens', 'hooks', 'utils', 'context', 'stores', 'ui']
 
-/** Сторонний удалённый контент: обязан применять `THIRD_PARTY_WEBVIEW_PRIVACY_PROPS`. */
+/**
+ * Сторонний удалённый контент: обязан применять `THIRD_PARTY_WEBVIEW_PRIVACY_PROPS`
+ * (без cookies) и `createThirdPartyNavigationGuard` (в WebView только исходный
+ * документ, остальное — во внешний браузер).
+ */
 const THIRD_PARTY_CONTENT_WEBVIEWS: Record<string, string> = {
-  'components/belkraj/BelkrajWidget.native.tsx': 'партнёрский виджет belkraj.by',
   'components/travel/details/sections/LazyYouTubeSection.native.tsx': 'плеер YouTube (iframe youtube.com)',
 }
 
@@ -32,7 +36,12 @@ const FIRST_PARTY_HTML_WEBVIEWS: Record<string, string> = {
 const NO_WEBVIEW_BY_DECISION: Record<string, string> = {
   'components/iframe/InstagramEmbed.native.tsx':
     'embed Instagram несёт cookie-согласие и логирование Meta — карточка-ссылка (#2135)',
+  'components/belkraj/BelkrajWidget.native.tsx':
+    'документ виджета belkraj.by грузит GTM партнёра, страницы экскурсий — Facebook Pixel/Google Ads — карточка-ссылка (#2135)',
 }
+
+/** Навигационные props, которые задаёт только guard: локальное значение его обошло бы. */
+const GUARD_OWNED_PROPS = /\b(?:onShouldStartLoadWithRequest|onOpenWindow|setSupportMultipleWindows|javaScriptCanOpenWindowsAutomatically)\s*=/
 
 const WEBVIEW_IMPORT = /(?:from\s+['"]react-native-webview['"]|import\(\s*['"]react-native-webview['"]\s*\)|require\(\s*['"]react-native-webview['"]\s*\))/
 const COOKIE_FLAG_ENABLED = /\b(?:sharedCookiesEnabled|thirdPartyCookiesEnabled)\b(?!\s*=\s*\{\s*false\s*\})(?!\s*:\s*false)/
@@ -92,9 +101,30 @@ describe('native WebView privacy guard (#2135)', () => {
         file,
         imports: true,
       })
-      expect({ file, spreads: /\{\.\.\.THIRD_PARTY_WEBVIEW_PRIVACY_PROPS\}\s*\/>/.test(source) }).toEqual({
+      expect({ file, spreads: /\{\.\.\.THIRD_PARTY_WEBVIEW_PRIVACY_PROPS\}\s*(?:\{\.\.\.\w+\}\s*)?\/>/.test(source) }).toEqual({
         file,
         spreads: true,
+      })
+    }
+  })
+
+  it('applies the navigation guard last to every third-party content WebView', () => {
+    for (const file of Object.keys(THIRD_PARTY_CONTENT_WEBVIEWS)) {
+      const source = read(file)
+      const guardSpread = /\{\.\.\.THIRD_PARTY_WEBVIEW_PRIVACY_PROPS\}\s*\{\.\.\.(\w+)\}\s*\/>/.exec(source)
+      const guardName = guardSpread?.[1] ?? ''
+      const createdByGuardFactory =
+        guardName !== '' &&
+        new RegExp(`\\b${guardName}\\s*=\\s*(?:useMemo\\(\\s*\\(\\)\\s*=>\\s*)?createThirdPartyNavigationGuard\\(`).test(source)
+
+      expect({ file, guardSpreadLast: Boolean(guardSpread), createdByGuardFactory }).toEqual({
+        file,
+        guardSpreadLast: true,
+        createdByGuardFactory: true,
+      })
+      expect({ file, localNavigationProps: source.match(GUARD_OWNED_PROPS)?.[0] ?? null }).toEqual({
+        file,
+        localNavigationProps: null,
       })
     }
   })

@@ -627,10 +627,17 @@ not by the fastest patch that makes the symptom disappear.
 - Native navigation surfaces never link to web-only routes (`/cookies`,
   `/export`): every menu filters by `isNavRouteAvailable` from
   `constants/platformNavRoutes.ts` instead of its own `Platform.OS` check.
-- WebViews with third-party content spread
-  `THIRD_PARTY_WEBVIEW_PRIVACY_PROPS` (`utils/thirdPartyWebViewPrivacy.ts`:
-  incognito, no shared or third-party cookies); every `react-native-webview`
-  consumer is classified in `__tests__/config/nativeWebViewPrivacy.guard.test.ts`.
+- WebViews with third-party content spread, as their last attributes,
+  `THIRD_PARTY_WEBVIEW_PRIVACY_PROPS` (incognito, no shared or third-party
+  cookies) and the props of `createThirdPartyNavigationGuard`
+  (`utils/thirdPartyWebViewPrivacy.ts`): only the initial document, declared
+  frames and `about:blank`/`data:` load inside; any other navigation — a click,
+  another path or host, `target=_blank` — opens externally through
+  `openExternalUrl`. A third-party document that itself loads a tag manager,
+  ad pixels or a cookie prompt is not embedded on native at all: it becomes an
+  `ExternalContentLinkCard` to the external browser (Instagram, Belkraj, #2135).
+  Every `react-native-webview` consumer is classified in
+  `__tests__/config/nativeWebViewPrivacy.guard.test.ts`.
 - CI enforcement:
   - `yarn guard:external-links`
   - `yarn governance:verify`

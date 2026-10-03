@@ -4322,9 +4322,12 @@ guard, падающий в CI на попытке обойти этот конт
 
 ### IOS-APP-REVIEW-PRIVACY-WEB-CONTENT-001 — приложение показывает cookie-UI и чужой веб-контент с cookies
 
-- **Инвариант:** в native-приложении нет cookie-UI, ссылки на наш сайт с
-  экраном приложения открываются в приложении, а WebView со сторонним
-  контентом не хранит и не передаёт cookies. Иначе App Review 5.1.2(i)
+- **Инвариант:** в native-приложении нет cookie-UI (меню, ссылки и тексты, в
+  том числе юридические экраны), ссылки на наш сайт с экраном приложения
+  открываются в приложении, а WebView со сторонним контентом не хранит и не
+  передаёт cookies и держит внутри только исходный документ. Сторонний документ,
+  который сам грузит тег-менеджер, пиксели или cookie-запрос, на native не
+  встраивается — карточка-ссылка во внешний браузер. Иначе App Review 5.1.2(i)
   читает это как трекинг без ATT, хотя `NSPrivacyTracking=false`.
 - **Surface/owner:** iPhone/iPad и Android (native), ios-expert; карточка
   `#2135` (связана с `#1416`, `#1894`, `#1895`). Отказ 25.09.2026 —
@@ -4334,13 +4337,22 @@ guard, падающий в CI на попытке обойти этот конт
   меню шапки показывали «Настройки cookies»; пункт «Travel-блогеры» и
   `openExternalUrl` уводили metravel.by в Safari с баннером; Belkraj, Instagram
   и YouTube WebView держали общие/сторонние cookies; embed Instagram несёт
-  cookie-согласие Meta для EU.
+  cookie-согласие Meta для EU. Рецидив внутри #2135 (iOS QA 03.10.2026): флаги
+  cookies закрыли хранение, но не навигацию — `onShouldStartLoadWithRequest`
+  Belkraj пропускал любой URL своего origin, и тап по карточке открывал в
+  WebView страницу экскурсии с GTM (Facebook Pixel, Google Ads, GA4, VK,
+  Яндекс); а native «Политика конфиденциальности» отсылала к баннеру и
+  «Настройкам cookies», которых в приложении нет.
 - **Controls:** `constants/platformNavRoutes.ts` (`isNavRouteAvailable`) +
   `__tests__/components/layout/nativeNoCookieUi.test.tsx`; native-ветка
   `utils/externalLinks.ts` с `utils/siteLinks.ts` (allowlist экранов сверяется
   с `app/` в `__tests__/utils/siteLinks.test.ts`);
-  `utils/thirdPartyWebViewPrivacy.ts` + реестр всех WebView в
-  `__tests__/config/nativeWebViewPrivacy.guard.test.ts`; GA4
+  `utils/thirdPartyWebViewPrivacy.ts` (флаги cookies и
+  `createThirdPartyNavigationGuard`, `__tests__/utils/thirdPartyWebViewPrivacy.test.ts`)
+  + реестр всех WebView в `__tests__/config/nativeWebViewPrivacy.guard.test.ts`
+  (сторонняя WebView обязана спредить и флаги, и guard последними);
+  `components/ui/ExternalContentLinkCard.tsx` для Instagram и Belkraj;
+  юридические экраны — `__tests__/app/legalScreensNoCookieUi.native.test.tsx`; GA4
   `allow_google_signals:false`/`allow_ad_personalization_signals:false` в
   `__tests__/app/analyticsInlineScript.test.ts`.
 - **Решение для новой жалобы:** новая WebView или меню — классифицировать в

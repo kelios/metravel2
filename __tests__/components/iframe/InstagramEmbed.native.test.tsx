@@ -33,8 +33,10 @@ const renderEmbed = (url: string) => {
   return tree!
 }
 
+// testID несут и общая карточка `ExternalContentLinkCard`, и её Pressable —
+// ссылка та, у которой роль `link`.
 const linkCard = (tree: renderer.ReactTestRenderer) =>
-  tree.root.findByProps({ testID: 'travel-instagram-link-card' })
+  tree.root.findByProps({ testID: 'travel-instagram-link-card', accessibilityRole: 'link' })
 
 // #2135: страница instagram.com/…/embed/ несёт cookie-согласие Meta и её
 // логирование — на native пост открывается карточкой-ссылкой, без WebView.

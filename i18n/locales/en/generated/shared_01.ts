@@ -210,6 +210,8 @@ export const sharedGenerated1 = {
   "components.article.ArticleRatingSection.voydite_chtoby_otsenit_fe9f546b": "Login to rate",
   "components.article.QuillEditor.ne_udalos_zagruzit_redaktor_poprobuyte_obnov_cb848670": "Failed to load editor. Try refreshing the page.",
   "components.belkraj.BelkrajWidget.belkraj_partner_offers_b193ce0d": "Belkraj partner offers",
+  "components.belkraj.BelkrajWidget.nativeLinkTitle": "Tours near this place",
+  "components.belkraj.BelkrajWidget.nativeLinkCaption": "Open the belkraj.by selection in your browser",
   "components.common.ContributionBanner.dobavit_mesto_fc32c378": "Add a place",
   "components.common.ContributionBanner.dobavit_mesto_na_kartu_b151a49c": "Add a place to the map",
   "components.common.ContributionBanner.zaregistrirovatsya_f38770f0": "Register",

@@ -1,17 +1,14 @@
-import React, { memo, useCallback, useId, useMemo } from 'react'
-import { StyleSheet, View, useWindowDimensions } from 'react-native'
-import { WebView, type WebViewNavigation } from 'react-native-webview'
+import React, { memo, useCallback, useMemo } from 'react'
 
+import ExternalContentLinkCard from '@/components/ui/ExternalContentLinkCard'
 import { translate as i18nT } from '@/i18n'
+import { openExternalUrl } from '@/utils/externalLinks'
 import {
   canRenderBelkrajWidget,
   parseBelkrajCoord,
   resolveBelkrajCountryCode,
 } from './belkrajAvailability'
-import { BELKRAJ_WIDGET_SURFACE } from './belkrajWidgetSurface'
-import { openExternalUrlInNewTab } from '@/utils/externalLinks'
-import { THIRD_PARTY_WEBVIEW_PRIVACY_PROPS } from '@/utils/thirdPartyWebViewPrivacy'
-import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { buildBelkrajWidgetUrl } from './belkrajWidgetUrl'
 
 interface TravelAddress {
   id: number
@@ -24,155 +21,63 @@ interface TravelAddress {
 type Props = {
   points: TravelAddress[]
   countryCode?: string
-  collapsedHeight?: number
-  expandedHeight?: number
-  allowScroll?: boolean
   cardsCount?: number
   /**
    * Паритет контракта с web-вариантом (BelkrajWidget.tsx): tsconfig
-   * moduleSuffixes резолвит типы в .native, поэтому web-вызовы с className
-   * (questWizardSections) должны типизироваться. На native не используется.
+   * moduleSuffixes резолвит типы в .native, поэтому web-вызовы с className,
+   * высотами и прокруткой (questWizardSections, ExcursionsSection) должны
+   * типизироваться. На native карточке-ссылке не используются.
    */
+  collapsedHeight?: number
+  expandedHeight?: number
+  allowScroll?: boolean
   className?: string
 }
 
-const BELKRAJ_ORIGIN = 'https://belkraj.by'
-const MIN_WIDGET_HEIGHT = 320
-
-const getEstimatedWidgetHeight = (cardsCount: number, width: number) => {
-  if (!width || width <= 0) return 980
-
-  const columns = width <= 470 ? 1 : width <= 700 ? 2 : 3
-  const visibleCards = width > 470 && width <= 700
-    ? cardsCount - Math.floor(cardsCount / 3)
-    : cardsCount
-  const rows = Math.max(1, Math.ceil(visibleCards / columns))
-  const rowHeight = width <= 470 ? 168 : 420
-  const rowGap = width <= 470 ? 12 : 24
-  const topBlockHeight = 88
-  const bottomActionHeight = 88
-
-  return Math.max(
-    MIN_WIDGET_HEIGHT,
-    topBlockHeight + (rows * rowHeight) + (Math.max(0, rows - 1) * rowGap) + bottomActionHeight,
-  )
-}
-
-function BelkrajWidget({
-  points,
-  countryCode,
-  collapsedHeight,
-  expandedHeight = 1200,
-  allowScroll = false,
-  cardsCount = 6,
-}: Props) {
-  const { width } = useWindowDimensions()
-  const colors = useThemedColors()
-  const styles = useMemo(() => getStyles(colors), [colors])
-  const reactId = useId()
-  const widgetId = useMemo(() => `metravel-${reactId.replace(/[:]/g, '')}`, [reactId])
-
-  const firstCoord = useMemo(() => parseBelkrajCoord(points?.[0]), [points])
-  const calculatedHeight = useMemo(
-    () => getEstimatedWidgetHeight(cardsCount, width),
-    [cardsCount, width],
-  )
-  const finalHeight = allowScroll
-    ? Math.max(expandedHeight, collapsedHeight ?? calculatedHeight)
-    : collapsedHeight ?? calculatedHeight
-
-  const resolvedCountryCode = useMemo(
-    () => resolveBelkrajCountryCode(points, countryCode),
-    [countryCode, points],
-  )
-
+/**
+ * Подборка экскурсий belkraj.by на native — карточка-ссылка во внешний браузер,
+ * без WebView (#2135, App Review 5.1.2(i)).
+ *
+ * Документ виджета `belkraj.by/partner/widget` сам подключает Google Tag Manager
+ * партнёра (`GTM-TXS6S84`; на 03.10.2026 контейнер пуст, но теги в него партнёр
+ * публикует без нашего релиза), а страницы экскурсий — GTM с Facebook Pixel,
+ * Google Ads, GA4, VK и Яндексом и cookie `Drupal.visitor.utm_*`. Внутри
+ * приложения это сторонний трекинг без ATT, поэтому подборку для той же точки
+ * пользователь открывает в браузере, где cookies и согласие — дело браузера и
+ * сайта партнёра. Web (iframe в `BelkrajWidget.tsx`) не меняется.
+ */
+function BelkrajWidget({ points, countryCode, cardsCount = 6 }: Props) {
   // Гейт тот же, что спрашивают секции вокруг виджета: расходиться им нельзя.
   const canRender = useMemo(
     () => canRenderBelkrajWidget(points, countryCode),
     [countryCode, points],
   )
 
-  const widgetUrl = useMemo(() => {
-    if (!firstCoord) return null
-    const params = new URLSearchParams({
-      lat: String(firstCoord.lat),
-      lng: String(firstCoord.lng),
-      term: 'place',
-      theme: 'cards',
-      partner: 'u180793',
-      size: String(cardsCount),
-      widgetId,
+  const partnerUrl = useMemo(() => {
+    const coord = parseBelkrajCoord(points?.[0])
+    if (!coord) return null
+    return buildBelkrajWidgetUrl({
+      coord,
+      countryCode: resolveBelkrajCountryCode(points, countryCode),
+      cardsCount,
     })
-    if (resolvedCountryCode) params.set('country', resolvedCountryCode)
-    return `${BELKRAJ_ORIGIN}/partner/widget?${params.toString()}`
-  }, [cardsCount, firstCoord, resolvedCountryCode, widgetId])
+  }, [cardsCount, countryCode, points])
 
-  const handleShouldStartLoad = useCallback((request: WebViewNavigation) => {
-    const url = request.url
-    if (!url || url === 'about:blank' || url.startsWith(BELKRAJ_ORIGIN)) return true
+  const openPartnerPage = useCallback(() => {
+    if (partnerUrl) void openExternalUrl(partnerUrl, { allowedProtocols: ['https:'] })
+  }, [partnerUrl])
 
-    void openExternalUrlInNewTab(url, {
-      allowedProtocols: ['https:'],
-      windowFeatures: 'noopener',
-    })
-    return false
-  }, [])
-
-  if (!canRender || !widgetUrl) return null
+  if (!canRender || !partnerUrl) return null
 
   return (
-    <View testID="belkraj-native-container" style={[styles.container, { height: finalHeight }]}>
-      <WebView
-        testID="belkraj-native-webview"
-        source={{ uri: widgetUrl }}
-        style={styles.webview}
-        originWhitelist={['https://*']}
-        javaScriptEnabled
-        domStorageEnabled
-        setSupportMultipleWindows={false}
-        javaScriptCanOpenWindowsAutomatically={false}
-        mixedContentMode="compatibility"
-        androidLayerType="hardware"
-        // Без явного значения RNW не трогает настройку, и на Android 10–12
-        // остаётся системный FORCE_DARK_AUTO: тема приложения DayNight
-        // (android/app/src/main/res/values/styles.xml) в ночном режиме даёт
-        // isLightTheme=false, и WebView алгоритмически инвертирует чужую
-        // страницу — её тёмный текст стал бы светлым уже поверх нашей светлой
-        // подложки. Палитра партнёра фиксированно светлая, поэтому OS-инверсию
-        // выключаем: страница показывается ровно такой, какой её отдали.
-        forceDarkOn={false}
-        onShouldStartLoadWithRequest={handleShouldStartLoad}
-        accessibilityLabel={i18nT('shared:components.belkraj.BelkrajWidget.belkraj_partner_offers_b193ce0d')}
-        // #2135: виджет партнёра не хранит и не передаёт cookies. Ответ виджета
-        // серверный и без Set-Cookie; partner=u180793 — постоянный id площадки,
-        // а не данные пользователя/устройства, т. е. не tracking по Apple.
-        // Клик по карточке уходит в системный браузер (handleShouldStartLoad).
-        {...THIRD_PARTY_WEBVIEW_PRIVACY_PROPS}
-      />
-    </View>
+    <ExternalContentLinkCard
+      testID="belkraj-native-link-card"
+      eyebrow="belkraj.by"
+      title={i18nT('shared:components.belkraj.BelkrajWidget.nativeLinkTitle')}
+      caption={i18nT('shared:components.belkraj.BelkrajWidget.nativeLinkCaption')}
+      onPress={openPartnerPage}
+    />
   )
 }
-
-const getStyles = (colors: ThemedColors) => StyleSheet.create({
-  container: {
-    minHeight: MIN_WIDGET_HEIGHT,
-    overflow: 'hidden',
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderLight,
-    // Не `colors.surface`: в тёмной теме он тёмный, а страница партнёра светлая
-    // и прозрачная — см. `belkrajWidgetSurface.ts`.
-    backgroundColor: BELKRAJ_WIDGET_SURFACE,
-  },
-  webview: {
-    flex: 1,
-    // Красить контейнер мало: RNCWebViewImpl.setBackgroundColor выводит из
-    // alpha флаг `opaque` (alpha < 1 → opaque = NO). С прежним `transparent`
-    // WKWebView становился прозрачным окном в родителя, и прозрачный body
-    // партнёра постоянно показывал тёмный фон под своим тёмным текстом — это и
-    // есть репорт #1697. Непрозрачная светлая заливка возвращает opaque = YES.
-    backgroundColor: BELKRAJ_WIDGET_SURFACE,
-  },
-})
 
 export default memo(BelkrajWidget)

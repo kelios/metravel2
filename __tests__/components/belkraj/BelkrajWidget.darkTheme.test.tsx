@@ -16,11 +16,12 @@ import {
 import { BELKRAJ_WIDGET_SURFACE } from '@/components/belkraj/belkrajWidgetSurface'
 import BelkrajWidgetNative from '@/components/belkraj/BelkrajWidget.native'
 // Явное расширение: jest-expo резолвит с `defaultPlatform: 'ios'`, поэтому путь
-// без него отдал бы `.native.tsx`, а нам нужен именно web-вариант — паритет
-// подложки между платформами и проверяется. Тот же приём: export-web-mobile-guard.
+// без него отдал бы `.native.tsx`, а нам нужен именно web-вариант — подложка
+// iframe проверяется на нём. Тот же приём: export-web-mobile-guard.
 import BelkrajWidgetWeb from '@/components/belkraj/BelkrajWidget.tsx'
 
 jest.mock('@/utils/externalLinks', () => ({
+  openExternalUrl: jest.fn(),
   openExternalUrlInNewTab: jest.fn(),
 }))
 
@@ -66,37 +67,24 @@ const flattenStyle = (style: unknown): Record<string, unknown> =>
     : ((style ?? {}) as Record<string, unknown>)
 
 describe('BelkrajWidget — подложка стороннего виджета не следует тёмной теме (#1697)', () => {
-  it('контейнер на native красится светлой подложкой, а не тёмным colors.surface', () => {
-    const { getByTestId } = render(
+  it('native не показывает страницу партнёра — карточка-ссылка приложения на тематической поверхности', () => {
+    // #2135: на native вместо WebView с belkraj.by карточка-ссылка во внешний
+    // браузер. Это UI приложения, а не страница партнёра, поэтому она следует
+    // теме, а светлая подложка BELKRAJ_WIDGET_SURFACE нужна только web-iframe.
+    const { getByTestId, queryByTestId } = render(
       <BelkrajWidgetNative countryCode="BY" points={MINSK} cardsCount={6} />,
     )
 
-    const style = flattenStyle(getByTestId('belkraj-native-container').props.style)
-
-    expect(style.backgroundColor).toBe(BELKRAJ_WIDGET_SURFACE)
-    expect(style.backgroundColor).not.toBe(MODERN_MATTE_PALETTE_DARK.surface)
-  })
-
-  it('сам WebView непрозрачен и светлый — иначе сквозь него видно тёмный фон', () => {
-    const { getByTestId } = render(
-      <BelkrajWidgetNative countryCode="BY" points={MINSK} cardsCount={6} />,
+    expect(queryByTestId('belkraj-native-webview')).toBeNull()
+    const card = getByTestId('belkraj-native-link-card')
+    const style = flattenStyle(
+      typeof card.props.style === 'function' ? card.props.style({ pressed: false }) : card.props.style,
     )
 
-    const style = flattenStyle(getByTestId('belkraj-native-webview').props.style)
-
-    expect(style.backgroundColor).toBe(BELKRAJ_WIDGET_SURFACE)
-    expect(style.backgroundColor).not.toBe('transparent')
+    expect(style.backgroundColor).toBe(MODERN_MATTE_PALETTE_DARK.surface)
   })
 
-  it('OS-инверсия Android выключена — иначе тёмный текст партнёра станет светлым на светлой подложке', () => {
-    const { getByTestId } = render(
-      <BelkrajWidgetNative countryCode="BY" points={MINSK} cardsCount={6} />,
-    )
-
-    expect(getByTestId('belkraj-native-webview').props.forceDarkOn).toBe(false)
-  })
-
-  it('web-вариант берёт ту же подложку, что и native — платформы не расходятся', () => {
+  it('web-iframe лежит на светлой подложке партнёра, а не на тёмном colors.surface', () => {
     const tree = render(
       <BelkrajWidgetWeb countryCode="BY" points={MINSK} cardsCount={6} />,
     ).toJSON() as { props: { style?: Record<string, unknown> } } | null

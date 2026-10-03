@@ -210,6 +210,8 @@ export const sharedGenerated1 = {
   "components.article.ArticleRatingSection.voydite_chtoby_otsenit_fe9f546b": "Увійдіть, щоб оцінити",
   "components.article.QuillEditor.ne_udalos_zagruzit_redaktor_poprobuyte_obnov_cb848670": "Неможливо завантажити редактор. Спробуйте оновити сторінку.",
   "components.belkraj.BelkrajWidget.belkraj_partner_offers_b193ce0d": "Belkraj partner offers",
+  "components.belkraj.BelkrajWidget.nativeLinkTitle": "Екскурсії поруч із цим місцем",
+  "components.belkraj.BelkrajWidget.nativeLinkCaption": "Відкрити добірку belkraj.by у браузері",
   "components.common.ContributionBanner.dobavit_mesto_fc32c378": "Додати місце",
   "components.common.ContributionBanner.dobavit_mesto_na_kartu_b151a49c": "Додати місце на карту",
   "components.common.ContributionBanner.zaregistrirovatsya_f38770f0": "Зареєструватися",

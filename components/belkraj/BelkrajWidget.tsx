@@ -6,6 +6,7 @@ import {
     resolveBelkrajCountryCode,
 } from './belkrajAvailability';
 import { BELKRAJ_WIDGET_SURFACE } from './belkrajWidgetSurface';
+import { BELKRAJ_ORIGIN, buildBelkrajWidgetUrl } from './belkrajWidgetUrl';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
 import { translate as i18nT } from '@/i18n'
 
@@ -28,7 +29,6 @@ type Props = {
     cardsCount?: number; // количество карточек для отображения
 };
 
-const BELKRAJ_ORIGIN = 'https://belkraj.by';
 const MIN_WIDGET_HEIGHT = 320;
 
 // width приходит из useResponsiveWidth (hydration-safe): на сервере и до конца
@@ -104,20 +104,12 @@ function BelkrajWidget({
 
     const iframeSrc = useMemo(() => {
         if (!firstCoord) return null;
-        const { lat, lng } = firstCoord;
-        const params = new URLSearchParams({
-            lat: String(lat),
-            lng: String(lng),
-            term: 'place',
-            theme: 'cards',
-            partner: 'u180793',
-            size: String(cardsCount),
+        return buildBelkrajWidgetUrl({
+            coord: firstCoord,
+            countryCode: resolvedCountryCode,
+            cardsCount,
+            widgetId,
         });
-        if (resolvedCountryCode) {
-            params.set('country', resolvedCountryCode);
-        }
-        params.set('widgetId', widgetId);
-        return `https://belkraj.by/partner/widget?${params.toString()}`;
     }, [firstCoord, resolvedCountryCode, cardsCount, widgetId]);
 
     useEffect(() => {

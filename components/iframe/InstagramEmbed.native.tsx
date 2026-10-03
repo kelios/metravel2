@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 
+import ExternalContentLinkCard from '@/components/ui/ExternalContentLinkCard'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { useThemedColors } from '@/hooks/useTheme'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { resolveInstagramTarget } from '@/utils/instagramRichText'
 
@@ -23,8 +23,6 @@ interface InstagramEmbedProps {
  * меняется.
  */
 const InstagramEmbed: React.FC<InstagramEmbedProps> = ({ url }) => {
-  const colors = useThemedColors()
-  const styles = useMemo(() => createStyles(colors), [colors])
   const target = useMemo(() => resolveInstagramTarget(url), [url])
 
   const openInInstagram = useCallback(() => {
@@ -35,56 +33,24 @@ const InstagramEmbed: React.FC<InstagramEmbedProps> = ({ url }) => {
 
   return (
     <View style={styles.frame}>
-      <Pressable
+      <ExternalContentLinkCard
         testID="travel-instagram-link-card"
+        eyebrow="Instagram"
+        title={target.title}
+        caption={target.subtitle}
         onPress={openInInstagram}
-        accessibilityRole="link"
-        accessibilityLabel={target.subtitle}
-        style={styles.card}
-      >
-        <Text style={styles.eyebrow}>Instagram</Text>
-        <Text style={styles.title}>{target.title}</Text>
-        <Text style={styles.caption}>{target.subtitle}</Text>
-      </Pressable>
+      />
     </View>
   )
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
-  StyleSheet.create({
-    frame: {
-      width: '100%',
-      maxWidth: 430,
-      minHeight: 96,
-      alignSelf: 'center',
-      marginVertical: DESIGN_TOKENS.spacing.md,
-      borderRadius: DESIGN_TOKENS.radii.lg,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surface,
-      overflow: 'hidden',
-    },
-    card: {
-      paddingHorizontal: 18,
-      paddingVertical: DESIGN_TOKENS.spacing.md,
-      gap: DESIGN_TOKENS.spacing.xs,
-      justifyContent: 'center',
-    },
-    eyebrow: {
-      fontSize: DESIGN_TOKENS.typography.sizes.xs,
-      letterSpacing: 1,
-      textTransform: 'uppercase',
-      color: colors.textMuted,
-    },
-    title: {
-      fontSize: DESIGN_TOKENS.typography.sizes.lg,
-      fontWeight: '600',
-      color: colors.primaryText,
-    },
-    caption: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      color: colors.textMuted,
-    },
-  })
+const styles = StyleSheet.create({
+  frame: {
+    width: '100%',
+    maxWidth: 430,
+    alignSelf: 'center',
+    marginVertical: DESIGN_TOKENS.spacing.md,
+  },
+})
 
 export default React.memo(InstagramEmbed)

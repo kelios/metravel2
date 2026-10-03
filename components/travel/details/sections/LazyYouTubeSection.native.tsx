@@ -3,13 +3,16 @@
  * Извлечено из TravelDetailsDeferred
  */
 
-import React, { Suspense, memo } from 'react'
+import React, { Suspense, memo, useMemo } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
-import { THIRD_PARTY_WEBVIEW_PRIVACY_PROPS } from '@/utils/thirdPartyWebViewPrivacy'
+import {
+  THIRD_PARTY_WEBVIEW_PRIVACY_PROPS,
+  createThirdPartyNavigationGuard,
+} from '@/utils/thirdPartyWebViewPrivacy'
 
 import { useYoutubeEmbedModel } from '../hooks/useYoutubeEmbedModel'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
@@ -40,7 +43,18 @@ const Fallback = () => {
 export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
   const styles = useTravelDetailsStyles()
   const colors = useThemedColors()
-  const { handlePreviewPress, id, mounted, nativeSource } = useYoutubeEmbedModel(url)
+  const { handlePreviewPress, id, mounted, nativeEmbedUrl, nativeSource } = useYoutubeEmbedModel(url)
+  // #2135: в WebView остаётся только обёртка (baseUrl) и iframe плеера; «Смотреть
+  // на YouTube», заголовок и любые другие переходы уходят во внешний браузер или
+  // приложение YouTube, а не открывают youtube.com внутри приложения.
+  const navigationGuard = useMemo(
+    () =>
+      createThirdPartyNavigationGuard({
+        documentUrl: nativeSource?.baseUrl ?? '',
+        frameUrls: nativeEmbedUrl ? [nativeEmbedUrl] : [],
+      }),
+    [nativeEmbedUrl, nativeSource?.baseUrl],
+  )
 
   if (!id) return null
 
@@ -85,14 +99,13 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
           allowsInlineMediaPlayback
           allowsFullscreenVideo
           allowsProtectedMedia
-          setSupportMultipleWindows={false}
-          javaScriptCanOpenWindowsAutomatically={false}
           androidLayerType="hardware"
           mixedContentMode="compatibility"
           // #2135: плеер YouTube — сторонний контент: без общих и сторонних
-          // cookies, хранилище только на время показа. Воспроизведение без
-          // cookies — runtime-кейс testing (#2135, iPhone/iPad Simulator).
+          // cookies, хранилище только на время показа; навигация — только
+          // исходный документ, остальное во внешний браузер (navigationGuard).
           {...THIRD_PARTY_WEBVIEW_PRIVACY_PROPS}
+          {...navigationGuard}
         />
       </View>
     </Suspense>
