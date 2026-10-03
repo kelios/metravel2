@@ -19,7 +19,14 @@ import { useAuth } from '@/context/AuthContext'
 import { useFavorites } from '@/context/FavoritesContext'
 import { useDeferredUnreadCount } from '@/hooks/useDeferredUnreadCount'
 import { useAvatarUri } from '@/hooks/useAvatarUri'
-import { PRIMARY_HEADER_NAV_ITEMS, SECONDARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
+import {
+  DOCUMENT_NAV_ITEMS,
+  PRIMARY_HEADER_NAV_ITEMS,
+  SECONDARY_HEADER_NAV_ITEMS,
+  type HeaderNavItem,
+} from '@/constants/headerNavigation'
+import { isNavRouteAvailable } from '@/constants/platformNavRoutes'
+import { handleHeaderNavPress } from './customHeaderNavModel'
 import { routes } from '@/utils/routes'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildLoginHref } from '@/utils/authNavigation'
@@ -49,6 +56,8 @@ type MenuLinkItem = {
   key: string
   title: string
   path?: string
+  /** Абсолютный URL пункта навигации: открывается общей моделью шапки. */
+  external?: boolean
   icon: NavigationIconName
   onPress?: () => void
   strong?: boolean
@@ -73,6 +82,7 @@ const STATIC_NAV_LINKS: MenuLinkItem[] = [
     key: `nav-${item.path}`,
     title: item.label,
     path: item.path,
+    external: item.external,
     icon: item.icon,
   })),
 ]
@@ -83,10 +93,15 @@ const TRAVEL_ITEMS: MenuLinkItem[] = [
   { key: 'user-points', get title() { return i18nT('navigationStatic:components.layout.AccountMenu.moi_tochki_902be7fb') }, icon: 'map-pin', path: '/userpoints' },
 ]
 
-const DOCUMENT_ITEMS: MenuLinkItem[] = [
-  { key: 'privacy', get title() { return i18nT('navigationStatic:components.layout.AccountMenu.politika_konfidentsialnosti_7622d4e2') }, icon: 'shield', path: '/privacy' },
-  { key: 'cookies', get title() { return i18nT('navigationStatic:components.layout.AccountMenu.nastroyki_cookies_a3a9b803') }, icon: 'settings', path: '/cookies' },
-]
+// «Документы» — тот же список, что в мобильном меню шапки (`DOCUMENT_NAV_ITEMS`);
+// пункты, недоступные на платформе (настройки cookies на native, #2135), отсекает
+// общая политика `isNavRouteAvailable` в `renderLinks`.
+const toDocumentLink = (item: HeaderNavItem): MenuLinkItem => ({
+  key: `doc-${item.path}`,
+  get title() { return item.label },
+  icon: item.icon,
+  path: item.path,
+})
 
 const wrapperStyles = StyleSheet.create({
   ctaWrapper: {
@@ -164,10 +179,10 @@ function MenuLink({
   item: MenuLinkItem
   styles: MenuStyles
   defaultIconColor: string
-  onNavigate: (path: string) => void
+  onNavigate: (path: string, external?: boolean) => void
 }) {
   const onPress =
-    item.onPress ?? (item.path ? () => onNavigate(item.path!) : undefined)
+    item.onPress ?? (item.path ? () => onNavigate(item.path!, item.external) : undefined)
   return (
     <Pressable
       onPress={onPress}
@@ -247,10 +262,13 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
     })
   }, [])
 
+  // Внешний пункт (абсолютный URL) — через общую модель шапки, как в мобильном
+  // меню: `router.push` с абсолютным URL на native уводил его в Safari мимо
+  // `utils/externalLinks.ts`, где ссылка на наш сайт открывается в приложении.
   const navigate = useCallback(
-    (path: string) => {
+    (path: string, external?: boolean) => {
       closeMenu()
-      router.push(path as any)
+      handleHeaderNavPress(router, path, external)
     },
     [closeMenu],
   )
@@ -304,10 +322,9 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
         ),
       },
       { key: 'subscriptions', title: i18nT('navigation:components.layout.AccountMenu.podpiski_980979f1'), icon: 'user-check', path: '/subscriptions' },
-      // #495: PDF book export is web-only (usePdfExportRuntime blocks native) — hide its entry on native.
-      ...(IS_WEB
-        ? [{ key: 'export', title: i18nT('navigation:components.layout.AccountMenu.eksport_v_pdf_234b675b'), icon: 'file-text', path: '/export' } as MenuLinkItem]
-        : []),
+      // #495: PDF book export is web-only (usePdfExportRuntime blocks native) — на native
+      // пункт отсекает общая политика `isNavRouteAvailable` в `renderLinks`.
+      { key: 'export', title: i18nT('navigation:components.layout.AccountMenu.eksport_v_pdf_234b675b'), icon: 'file-text', path: '/export' },
       { key: 'public-profile', title: i18nT('navigation:components.layout.AccountMenu.publichnyy_profil_b0c7fc3b'), icon: 'globe', onPress: handleOpenPublicProfile },
       ...(isSuperuser
         ? [
@@ -339,17 +356,20 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
   const displayName = isAuthenticated && username ? username : i18nT('navigation:components.layout.AccountMenu.gost_3cdc2ca8')
   const anchorLabel = i18nT('navigation:components.layout.AccountMenu.otkryt_menyu_akkaunta_value1_21f7b65f', { value1: displayName })
   const defaultIconColor = colors.textMuted
+  const documentItems = (DOCUMENT_NAV_ITEMS ?? []).map(toDocumentLink)
 
   const renderLinks = (items: MenuLinkItem[]) =>
-    items.map((item) => (
-      <MenuLink
-        key={item.key}
-        item={item}
-        styles={menuStyles}
-        defaultIconColor={defaultIconColor}
-        onNavigate={navigate}
-      />
-    ))
+    items
+      .filter((item) => !item.path || isNavRouteAvailable(item.path))
+      .map((item) => (
+        <MenuLink
+          key={item.key}
+          item={item}
+          styles={menuStyles}
+          defaultIconColor={defaultIconColor}
+          onNavigate={navigate}
+        />
+      ))
 
   return (
     <View style={wrapperStyles.ctaWrapper}>
@@ -426,7 +446,7 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
             </View>
             <View style={menuStyles.sectionDivider} />
             <Text style={menuStyles.sectionTitle}>{i18nT('navigation:components.layout.AccountMenu.dokumenty_9a7a7063')}</Text>
-            {renderLinks(DOCUMENT_ITEMS)}
+            {renderLinks(documentItems)}
           </>
         ) : (
           <>
@@ -486,7 +506,7 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
               colors={colors}
               styles={menuStyles}
             >
-              {renderLinks(DOCUMENT_ITEMS)}
+              {renderLinks(documentItems)}
             </AccountMenuSection>
           </>
         )}

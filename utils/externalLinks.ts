@@ -1,5 +1,7 @@
 import { Linking, Platform } from 'react-native';
+import { router } from 'expo-router';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
+import { resolveAppRouteForSiteUrl } from '@/utils/siteLinks';
 
 type OpenExternalUrlOptions = {
   allowRelative?: boolean;
@@ -98,6 +100,23 @@ const openWithYandexFallback = async (
   }
 };
 
+// #2135: на native ссылка на наш сайт, у пути которой есть экран приложения,
+// открывается внутри приложения. Системный браузер показал бы сайт с
+// cookie-баннером, а App Review считает cookie-запросы веб-контента трекингом
+// без ATT (отказ 5.1.2(i)). Пути без экрана (`/api/…`, `/media/…`, `/board`) и
+// чужие хосты по-прежнему уходят в браузер. Web не меняется: там это и есть сайт.
+const openSiteRouteInApp = (normalized: string): boolean => {
+  if (Platform.OS === 'web') return false;
+  const route = resolveAppRouteForSiteUrl(normalized);
+  if (!route || typeof router?.push !== 'function') return false;
+  try {
+    router.push(route as never);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const resolveNormalizedUrl = (rawUrl: string, options: OpenExternalUrlOptions): string => {
   const allowedProtocols =
     options.allowedProtocols ??
@@ -160,6 +179,7 @@ export function normalizeHttpOrInternalUrl(rawUrl: string): string {
 export async function openExternalUrl(rawUrl: string, options: OpenExternalUrlOptions = {}): Promise<boolean> {
   const normalized = resolveNormalizedUrl(rawUrl, options);
   if (!normalized) return false;
+  if (openSiteRouteInApp(normalized)) return true;
   return openWithYandexFallback(normalized, options.onError);
 }
 
@@ -181,6 +201,7 @@ export async function openExternalUrlInNewTab(
     return Boolean(openedWindow);
   }
 
+  if (openSiteRouteInApp(normalized)) return true;
   return openWithYandexFallback(normalized, options.onError);
 }
 

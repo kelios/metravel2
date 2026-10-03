@@ -73,7 +73,13 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     // We send page_view manually in trackPage() for SPA navigation,
     // so disable GA automatic page_view to avoid duplicates.
     // (transport_type:'beacon' is the GA4 default; do not pass it explicitly.)
-    window.gtag('config', GA_ID, { send_page_view: false });
+    // #2135: analytics only, no advertising — no Google Signals (cross-device
+    // ad data) and no ad personalization, regardless of the property settings.
+    window.gtag('config', GA_ID, {
+      send_page_view: false,
+      allow_google_signals: false,
+      allow_ad_personalization_signals: false
+    });
     try { window.dispatchEvent(new CustomEvent('metravel:analytics-ready')); } catch(_e) {}
 
     var ga = document.createElement('script');

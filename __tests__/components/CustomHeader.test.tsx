@@ -387,7 +387,10 @@ describe('CustomHeader', () => {
 
             expect(utils.getByLabelText('Попутчики')).toBeTruthy();
             expect(utils.getByText('Политика конфиденциальности')).toBeTruthy();
-            expect(utils.getByText('Настройки cookies')).toBeTruthy();
+            // #2135: этот блок рендерится на native (Platform.OS по умолчанию в jest-expo —
+            // ios), а в приложении cookie-UI нет. Web-вариант — nativeNoCookieUi.test.tsx.
+            expect(Platform.OS).not.toBe('web');
+            expect(utils.queryByText('Настройки cookies')).toBeNull();
 
             // secondary nav items (e.g. Instagram article link) render under Навигация
             expect(utils.getByLabelText('Travel-блогеры Беларуси')).toBeTruthy();

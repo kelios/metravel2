@@ -7,10 +7,8 @@ import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaI
 import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import { LAYOUT } from '@/constants/layout'
 import { DESIGN_COLORS } from '@/constants/designSystem'
-import { getSafeExternalUrl } from '@/utils/safeExternalUrl'
-import { openExternalUrl } from '@/utils/externalLinks'
-import { getSiteBaseUrl } from '@/utils/seo'
 import { buildTravelMapNativeHtml } from './Map/travelMapNativeHtml'
+import { openNativeMapLink } from './Map/openNativeMapLink'
 import { normalizePoint } from '@/components/map-core/types'
 import MapPlaceBottomCard from '@/components/MapPage/MapPlaceBottomCard'
 import ToastHost from '@/components/ui/ToastHost'
@@ -237,10 +235,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
               return
             }
             if (parsed?.type === 'OPEN_URL') {
-              const baseUrl = getSiteBaseUrl()
-              const safeUrl = getSafeExternalUrl(parsed?.url, { allowRelative: true, baseUrl })
-              if (!safeUrl) return
-              await openExternalUrl(safeUrl, { allowRelative: true, baseUrl })
+              // Ссылка на статью/наш сайт — экран приложения, не Safari (#2135).
+              await openNativeMapLink(parsed?.url)
             }
           } catch {
             // noop

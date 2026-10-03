@@ -30,6 +30,7 @@ import {
   BOTTOM_DOCK_MORE_MENU_SECTIONS,
   normalizeBottomDockActivePath,
 } from "./bottomDockModel";
+import { isNavRouteAvailable } from "@/constants/platformNavRoutes";
 import { translate as i18nT } from '@/i18n'
 
 
@@ -454,9 +455,9 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                 {BOTTOM_DOCK_MORE_MENU_SECTIONS.map((section, sectionIndex) => (
                   <React.Fragment key={section.key}>
                     {section.items
-                      .filter((item) => item.route !== '/privacy' && item.route !== '/cookies')
-                      // #495: PDF book export is web-only (usePdfExportRuntime blocks native) — hide entry on native.
-                      .filter((item) => item.route !== '/export')
+                      .filter((item) => item.route !== '/privacy')
+                      // Настройки cookies (#2135) и PDF-экспорт (#495) — только web: общая политика.
+                      .filter((item) => isNavRouteAvailable(item.route))
                       .map((item) => renderMoreMenuItem(item, () => setShowMore(false)))}
                     {sectionIndex < BOTTOM_DOCK_MORE_MENU_SECTIONS.length - 1 ? <View style={styles.moreDivider} /> : null}
                   </React.Fragment>
@@ -498,9 +499,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   <React.Fragment key={section.key}>
                     {section.items
                       .filter((item) => Platform.OS === 'web' || item.route !== '/privacy')
-                      .filter((item) => Platform.OS === 'web' || item.route !== '/cookies')
-                      // #495: PDF book export is web-only — hide its entry on native.
-                      .filter((item) => Platform.OS === 'web' || item.route !== '/export')
+                      // Настройки cookies (#2135) и PDF-экспорт (#495) — только web: общая политика.
+                      .filter((item) => isNavRouteAvailable(item.route))
                       .map((item) =>
                         renderMoreMenuItem(item, () => {
                           nativeSheetRef.current?.close();

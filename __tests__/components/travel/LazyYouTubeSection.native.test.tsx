@@ -54,5 +54,9 @@ describe('LazyYouTube native', () => {
     expect(webView.props.allowsFullscreenVideo).toBe(true)
     expect(webView.props.setSupportMultipleWindows).toBe(false)
     expect(webView.props.androidLayerType).toBe('hardware')
+    // #2135: сторонний плеер без постоянных, общих и сторонних cookies.
+    expect(webView.props.incognito).toBe(true)
+    expect(webView.props.sharedCookiesEnabled).toBe(false)
+    expect(webView.props.thirdPartyCookiesEnabled).toBe(false)
   })
 })

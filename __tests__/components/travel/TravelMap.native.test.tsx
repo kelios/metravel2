@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
 
 jest.mock('react-native-webview', () => ({
   WebView: (props: any) => {
@@ -103,5 +103,26 @@ describe('TravelMap native shared place card', () => {
     expect(html).toContain('iconAnchor: [24, 54]')
     expect(html).toContain('0 0 100 100')
     expect(html).not.toContain('data:image/svg+xml')
+  })
+
+  // #2135: ссылка из WebView-карты на статью нашего сайта открывается экраном
+  // приложения, а не в Safari, где сайт показывает cookie-баннер.
+  it('opens a metravel.by travel link from the map WebView inside the app', async () => {
+    const { router } = require('expo-router')
+    const { Linking } = require('react-native')
+    const openSpy = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined)
+    ;(router.push as jest.Mock).mockClear()
+
+    render(<TravelMap travelData={[point]} height={420} />)
+
+    fireEvent(screen.getByTestId('native-travel-map-webview'), 'message', {
+      nativeEvent: {
+        data: JSON.stringify({ type: 'OPEN_URL', url: 'https://metravel.by/travels/forty-krakova' }),
+      },
+    })
+
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/travels/forty-krakova'))
+    expect(openSpy).not.toHaveBeenCalled()
+    openSpy.mockRestore()
   })
 })

@@ -193,7 +193,7 @@ export default function CookieSettingsScreen() {
           <>
             <Text style={styles.heading}>{i18nT('legal:app.tabs.cookies.konfidentsialnost_i_analitika_12436d8d')}</Text>
             <Text style={styles.paragraph}>
-              {i18nT('legal:app.tabs.cookies.v_mobilnom_prilozhenii_metravel_ne_ispolzuyu_96853813')}</Text>
+              {i18nT('legal:app.tabs.cookies.prilozhenie_metravel_ne_ispolzuet_fayly_cooki_8a9cab93')}</Text>
 
             <View style={styles.block}>
               <Text style={styles.subheading}>{i18nT('legal:app.tabs.cookies.kakie_dannye_ispolzuet_prilozhenie_a0311a04')}</Text>

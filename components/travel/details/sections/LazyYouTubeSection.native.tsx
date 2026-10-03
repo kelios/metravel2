@@ -9,6 +9,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
+import { THIRD_PARTY_WEBVIEW_PRIVACY_PROPS } from '@/utils/thirdPartyWebViewPrivacy'
 
 import { useYoutubeEmbedModel } from '../hooks/useYoutubeEmbedModel'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
@@ -80,8 +81,6 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
           originWhitelist={['https://*']}
           javaScriptEnabled
           domStorageEnabled
-          thirdPartyCookiesEnabled
-          sharedCookiesEnabled
           mediaPlaybackRequiresUserAction={false}
           allowsInlineMediaPlayback
           allowsFullscreenVideo
@@ -90,6 +89,10 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
           javaScriptCanOpenWindowsAutomatically={false}
           androidLayerType="hardware"
           mixedContentMode="compatibility"
+          // #2135: плеер YouTube — сторонний контент: без общих и сторонних
+          // cookies, хранилище только на время показа. Воспроизведение без
+          // cookies — runtime-кейс testing (#2135, iPhone/iPad Simulator).
+          {...THIRD_PARTY_WEBVIEW_PRIVACY_PROPS}
         />
       </View>
     </Suspense>

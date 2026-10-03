@@ -137,6 +137,31 @@ describe('analytics inline script', () => {
     expect(windowMock.dataLayer.length).toBeGreaterThan(0)
   })
 
+  // #2135: сайт заявляет «аналитика без рекламы» — GA4 config обязан сам выключать
+  // Google Signals и рекламную персонализацию, не полагаясь на настройки ресурса.
+  it('configures GA4 without Google Signals and ad personalization', () => {
+    const { windowMock } = setupDomEnv()
+
+    runAnalyticsSnippet(windowMock, windowMock.document)
+    windowMock.metravelLoadAnalytics()
+
+    const configCalls = (windowMock.dataLayer as ArrayLike<unknown>[])
+      .map((entry) => Array.from(entry))
+      .filter((args) => args[0] === 'config')
+
+    expect(configCalls).toEqual([
+      [
+        'config',
+        TEST_GA_ID,
+        {
+          send_page_view: false,
+          allow_google_signals: false,
+          allow_ad_personalization_signals: false,
+        },
+      ],
+    ])
+  })
+
   it('respects explicit analytics opt-out (does not init until user opts in)', () => {
     const { windowMock } = setupDomEnv({
       consent: { necessary: true, analytics: false },

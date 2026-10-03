@@ -4295,6 +4295,33 @@ guard, падающий в CI на попытке обойти этот конт
   этапом. Новая сборка нужна только по подтверждённому дефекту или отдельному
   требованию Apple; разрешение Reply/Notes не разрешает resubmit/release.
 
+### IOS-APP-REVIEW-PRIVACY-WEB-CONTENT-001 — приложение показывает cookie-UI и чужой веб-контент с cookies
+
+- **Инвариант:** в native-приложении нет cookie-UI, ссылки на наш сайт с
+  экраном приложения открываются в приложении, а WebView со сторонним
+  контентом не хранит и не передаёт cookies. Иначе App Review 5.1.2(i)
+  читает это как трекинг без ATT, хотя `NSPrivacyTracking=false`.
+- **Surface/owner:** iPhone/iPad и Android (native), ios-expert; карточка
+  `#2135` (связана с `#1416`, `#1894`, `#1895`). Отказ 25.09.2026 —
+  `docs/IOS_APP_REVIEW_REJECTION_20260925.md`.
+- **Причина:** приватность закрывалась манифестом и SDK-флагами, а не тем, что
+  видит ревьюер: общий `AccountMenu` (native при ширине ≥1024 pt) и мобильное
+  меню шапки показывали «Настройки cookies»; пункт «Travel-блогеры» и
+  `openExternalUrl` уводили metravel.by в Safari с баннером; Belkraj, Instagram
+  и YouTube WebView держали общие/сторонние cookies; embed Instagram несёт
+  cookie-согласие Meta для EU.
+- **Controls:** `constants/platformNavRoutes.ts` (`isNavRouteAvailable`) +
+  `__tests__/components/layout/nativeNoCookieUi.test.tsx`; native-ветка
+  `utils/externalLinks.ts` с `utils/siteLinks.ts` (allowlist экранов сверяется
+  с `app/` в `__tests__/utils/siteLinks.test.ts`);
+  `utils/thirdPartyWebViewPrivacy.ts` + реестр всех WebView в
+  `__tests__/config/nativeWebViewPrivacy.guard.test.ts`; GA4
+  `allow_google_signals:false`/`allow_ad_personalization_signals:false` в
+  `__tests__/app/analyticsInlineScript.test.ts`.
+- **Решение для новой жалобы:** новая WebView или меню — классифицировать в
+  guard-реестре и фильтровать политикой; отдельная карточка только при новой
+  поверхности, которую контролы не видят (например, встроенный браузер).
+
 ### NATIVE-DUP-BACK-AFFORDANCE-001 — на одном экране ровно один владелец навигации назад
 
 - **Инвариант:** на любом экране приложения ровно один способ вернуться:

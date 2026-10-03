@@ -153,7 +153,7 @@ function ConsentBanner() {
             numberOfLines={isMobile ? 2 : undefined}
             style={[styles.text, isMobile && styles.textMobile, { color: colors.textMuted }]}
           >
-            {i18nT('navigation:components.layout.ConsentBanner.ispolzuem_analitiku_dlya_uluchsheniya_servis_dae68d24')}</Text>
+            {i18nT('navigation:components.layout.ConsentBanner.ispolzuem_analitiku_bez_reklamy_i_ne_peredae_0b69b674')}</Text>
         </View>
         <View
           style={[

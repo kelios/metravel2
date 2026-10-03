@@ -3,7 +3,6 @@ import { Platform } from 'react-native';
 import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import PlacePopupCard from './PlacePopupCard';
-import { isInternalArticleHref } from './PlacePopupCard/domEvents';
 import {
   resolvePlaceSourceCardFields,
   usePlaceSourcePagerState,
@@ -25,6 +24,7 @@ import { useSavedPointToggle } from '@/hooks/map/useSavedPointToggle';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { getSiteBaseUrl } from '@/utils/seo';
+import { resolveAppRouteForSiteUrl } from '@/utils/siteLinks';
 import { useAuthStore } from '@/stores/authStore';
 import { useRouteStore } from '@/stores/routeStore';
 import { ThemeContext, type ThemeContextType, type ThemedColors } from '@/hooks/useTheme';
@@ -171,21 +171,15 @@ export const createMapPopupComponent = ({
       if (!url) return;
       const baseUrl = getSiteBaseUrl();
 
-      // #501 — на native внутренние travel/article-маршруты открываем нативным
-      // экраном (router.push), а не внешним Chrome. Внешние URL и web —
-      // прежнее поведение (openExternalUrlInNewTab).
+      // #501, #2135 — на native ссылку на наш сайт с экраном приложения открываем
+      // экраном (router.push), а не в браузере с cookie-баннером сайта. Карточку
+      // закрываем ДО перехода: иначе экран откроется под ней. Резолвер общий с
+      // `utils/externalLinks.ts`. Внешние URL и web — прежнее поведение.
       if (Platform.OS !== 'web') {
-        const baseHost = baseUrl.replace(/^https?:\/\//i, '').split('/')[0];
-        let path: string | null = null;
-        const abs = url.match(/^https?:\/\/([^/]+)(\/.*)?$/i);
-        if (abs) {
-          if (abs[1] === baseHost) path = abs[2] || '/';
-        } else if (url.startsWith('/')) {
-          path = url;
-        }
-        if (path && isInternalArticleHref(path.split('?')[0])) {
+        const route = resolveAppRouteForSiteUrl(url);
+        if (route) {
           handlePress();
-          router.push(path as any);
+          router.push(route as any);
           return;
         }
       }

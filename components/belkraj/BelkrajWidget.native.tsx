@@ -10,6 +10,7 @@ import {
 } from './belkrajAvailability'
 import { BELKRAJ_WIDGET_SURFACE } from './belkrajWidgetSurface'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
+import { THIRD_PARTY_WEBVIEW_PRIVACY_PROPS } from '@/utils/thirdPartyWebViewPrivacy'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 interface TravelAddress {
@@ -128,8 +129,6 @@ function BelkrajWidget({
         originWhitelist={['https://*']}
         javaScriptEnabled
         domStorageEnabled
-        sharedCookiesEnabled
-        thirdPartyCookiesEnabled
         setSupportMultipleWindows={false}
         javaScriptCanOpenWindowsAutomatically={false}
         mixedContentMode="compatibility"
@@ -144,6 +143,11 @@ function BelkrajWidget({
         forceDarkOn={false}
         onShouldStartLoadWithRequest={handleShouldStartLoad}
         accessibilityLabel={i18nT('shared:components.belkraj.BelkrajWidget.belkraj_partner_offers_b193ce0d')}
+        // #2135: виджет партнёра не хранит и не передаёт cookies. Ответ виджета
+        // серверный и без Set-Cookie; partner=u180793 — постоянный id площадки,
+        // а не данные пользователя/устройства, т. е. не tracking по Apple.
+        // Клик по карточке уходит в системный браузер (handleShouldStartLoad).
+        {...THIRD_PARTY_WEBVIEW_PRIVACY_PROPS}
       />
     </View>
   )

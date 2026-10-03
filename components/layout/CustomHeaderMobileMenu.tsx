@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather'
 import type { ThemedColors } from '@/hooks/useTheme'
 import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS, SECONDARY_HEADER_NAV_ITEMS, type HeaderNavItem } from '@/constants/headerNavigation'
 import type { NavigationIconName } from '@/constants/navigationIcons'
+import { isNavRouteAvailable } from '@/constants/platformNavRoutes'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
@@ -203,12 +204,15 @@ export default function CustomHeaderMobileMenu({
     active: !item.external && activePath === item.path,
   }))
 
-  const documentItems: MenuActionItem[] = (DOCUMENT_NAV_ITEMS ?? []).map((item) => ({
-    key: item.path,
-    label: item.label,
-    icon: item.icon,
-    onPress: () => onUserAction(item.path),
-  }))
+  // Настройки cookies на native не показываются (#2135): общая политика маршрутов.
+  const documentItems: MenuActionItem[] = (DOCUMENT_NAV_ITEMS ?? [])
+    .filter((item) => isNavRouteAvailable(item.path))
+    .map((item) => ({
+      key: item.path,
+      label: item.label,
+      icon: item.icon,
+      onPress: () => onUserAction(item.path),
+    }))
 
   return (
     <Modal

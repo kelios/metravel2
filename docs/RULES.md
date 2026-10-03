@@ -616,6 +616,20 @@ not by the fastest patch that makes the symptom disappear.
   - `openExternalUrl(...)` for standard external navigation.
   - `openExternalUrlInNewTab(...)` for web new-tab flows.
   - `openWebWindow(...)` only for low-level infrastructure cases (single chokepoint).
+- On native (iOS/Android) both helpers open an own-site URL (relative or
+  `metravel.by`) whose path has an app screen inside the app via expo-router,
+  not in the system browser: the site there shows its cookie banner, which App
+  Review treats as tracking without ATT (5.1.2(i), #2135). Screen roots live in
+  `utils/siteLinks.ts` (`APP_ROUTE_ROOTS`, kept in sync with `app/` by
+  `__tests__/utils/siteLinks.test.ts`); site paths without a screen (`/api/…`,
+  `/media/…`, `/board`) and foreign hosts still open externally. Web is unchanged.
+- Native navigation surfaces never link to web-only routes (`/cookies`,
+  `/export`): every menu filters by `isNavRouteAvailable` from
+  `constants/platformNavRoutes.ts` instead of its own `Platform.OS` check.
+- WebViews with third-party content spread
+  `THIRD_PARTY_WEBVIEW_PRIVACY_PROPS` (`utils/thirdPartyWebViewPrivacy.ts`:
+  incognito, no shared or third-party cookies); every `react-native-webview`
+  consumer is classified in `__tests__/config/nativeWebViewPrivacy.guard.test.ts`.
 - CI enforcement:
   - `yarn guard:external-links`
   - `yarn governance:verify`

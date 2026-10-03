@@ -8,6 +8,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
 import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
 import { SITE_OWNER_LEGAL_NAME } from '@/constants/legal'
+import { COOKIE_SETTINGS_ROUTE, isNavRouteAvailable } from '@/constants/platformNavRoutes'
 
 
 type Props = {
@@ -169,15 +170,18 @@ export const AboutIntroCard: React.FC<Props> = ({
           >
             <Text style={styles.textLinkLabel}>{i18nT('home:components.about.AboutIntroCard.politika_konfidentsialnosti_19e147e0')}</Text>
           </Pressable>
-          <Pressable
-            onPress={onOpenCookies}
-            accessibilityRole="link"
-            accessibilityLabel={i18nT('home:components.about.AboutIntroCard.nastroyki_cookies_a10130ce')}
-            hitSlop={8}
-            style={({ pressed }) => [styles.textLink, pressed && styles.textLinkPressed, globalFocusStyles.focusable]}
-          >
-            <Text style={styles.textLinkLabel}>{i18nT('home:components.about.AboutIntroCard.nastroyki_cookies_a10130ce')}</Text>
-          </Pressable>
+          {/* Настройки cookies — только на сайте: в приложении cookie-UI нет (#2135). */}
+          {isNavRouteAvailable(COOKIE_SETTINGS_ROUTE) ? (
+            <Pressable
+              onPress={onOpenCookies}
+              accessibilityRole="link"
+              accessibilityLabel={i18nT('home:components.about.AboutIntroCard.nastroyki_cookies_a10130ce')}
+              hitSlop={8}
+              style={({ pressed }) => [styles.textLink, pressed && styles.textLinkPressed, globalFocusStyles.focusable]}
+            >
+              <Text style={styles.textLinkLabel}>{i18nT('home:components.about.AboutIntroCard.nastroyki_cookies_a10130ce')}</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     </View>

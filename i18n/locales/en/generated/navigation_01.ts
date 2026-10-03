@@ -34,7 +34,7 @@ export const navigationGenerated1 = {
   "components.layout.BottomDock.navigatsiya_24d0f434": "Navigation",
   "components.layout.BottomDock.zakryt_6a41e4ea": "Close",
   "components.layout.BottomDock.zakryt_menyu_2bc0d545": "Close menu",
-  "components.layout.ConsentBanner.ispolzuem_analitiku_dlya_uluchsheniya_servis_dae68d24": "We use analytics to improve the service.",
+  "components.layout.ConsentBanner.ispolzuem_analitiku_bez_reklamy_i_ne_peredae_0b69b674": "We use ad-free analytics and don't share data with third parties for advertising.",
   "components.layout.ConsentBanner.otklonit_054e0823": "Reject",
   "components.layout.ConsentBanner.podrobnee_1db70e5c": "More details",
   "components.layout.ConsentBanner.podrobnee_o_cookies_caf7ecdc": "More about cookies",

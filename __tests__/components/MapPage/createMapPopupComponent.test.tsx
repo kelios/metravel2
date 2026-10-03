@@ -6,6 +6,11 @@ const mockPlacePopupCard = jest.fn((props: any) =>
   React.createElement('mock-place-popup-card', props),
 );
 const mockUseSavedPointToggle = jest.fn();
+let mockSourceCardFields: { articleUrl: string | null; imageUrl: string | null; articleTitle: string | null } = {
+  articleUrl: null,
+  imageUrl: null,
+  articleTitle: null,
+};
 
 jest.mock('@/components/MapPage/Map/PlacePopupCard', () => ({
   __esModule: true,
@@ -19,11 +24,7 @@ jest.mock('@/components/MapPage/Map/PlacePopupCard/usePlaceSourcePagerState', ()
     goPrev: jest.fn(),
     goNext: jest.fn(),
   }),
-  resolvePlaceSourceCardFields: () => ({
-    articleUrl: null,
-    imageUrl: null,
-    articleTitle: null,
-  }),
+  resolvePlaceSourceCardFields: () => mockSourceCardFields,
 }));
 
 jest.mock('@/hooks/map/useSavedPointToggle', () => ({
@@ -229,5 +230,69 @@ describe('createMapPopupComponent related travel id (#1960)', () => {
     expect(props).toEqual(
       expect.objectContaining({ relatedTravelUrl: null, relatedTravelId: null }),
     );
+  });
+});
+
+// #501, #2135: на native ссылка карточки на наш сайт открывается экраном
+// приложения (не браузером с cookie-баннером), и карточка закрывается ДО перехода.
+describe('createMapPopupComponent open article on native', () => {
+  const { Platform } = require('react-native');
+  const { router } = require('expo-router');
+  const { openExternalUrlInNewTab } = require('@/utils/externalLinks');
+  const originalPlatform = Platform.OS;
+
+  const renderPopup = (closePopup: () => void) => {
+    const Popup = createMapPopupComponent({
+      userLocation: null,
+      colors: {},
+      themeContextValue: {},
+    });
+    renderer.act(() => {
+      renderer.create(<Popup point={{ id: 7, coord: '53.9,27.56', address: 'Минск' }} closePopup={closePopup} />);
+    });
+    return mockPlacePopupCard.mock.calls.at(-1)?.[0];
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+    mockUseSavedPointToggle.mockReturnValue({
+      isSaved: false,
+      isReady: true,
+      removeSaved: jest.fn(),
+      createPoint: jest.fn(),
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+    mockSourceCardFields = { articleUrl: null, imageUrl: null, articleTitle: null };
+  });
+
+  it('closes the card, then routes a www.metravel.by article without the hash', () => {
+    mockSourceCardFields = { articleUrl: 'https://www.metravel.by/travels/forty-krakova#points', imageUrl: null, articleTitle: 'Форты' };
+    const order: string[] = [];
+    const closePopup = jest.fn(() => order.push('close'));
+    (router.push as jest.Mock).mockImplementationOnce(() => order.push('push'));
+
+    renderPopup(closePopup).onOpenArticle();
+
+    expect(router.push).toHaveBeenCalledWith('/travels/forty-krakova');
+    expect(order).toEqual(['close', 'push']);
+    expect(openExternalUrlInNewTab).not.toHaveBeenCalled();
+  });
+
+  it('keeps foreign article links external', () => {
+    mockSourceCardFields = { articleUrl: 'https://example.com/story', imageUrl: null, articleTitle: 'Story' };
+    const closePopup = jest.fn();
+
+    renderPopup(closePopup).onOpenArticle();
+
+    expect(router.push).not.toHaveBeenCalled();
+    expect(closePopup).not.toHaveBeenCalled();
+    expect(openExternalUrlInNewTab).toHaveBeenCalledWith('https://example.com/story', {
+      allowRelative: true,
+      baseUrl: 'https://metravel.by',
+    });
   });
 });

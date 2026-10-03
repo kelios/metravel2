@@ -90,4 +90,21 @@ describe('BelkrajWidget.native', () => {
       expect.objectContaining({ allowedProtocols: ['https:'] }),
     )
   })
+
+  // #2135 / App Review 5.1.2(i): виджет партнёра в приложении не хранит и не
+  // передаёт cookies — отдельное непостоянное хранилище, без общих и сторонних.
+  it('renders the partner page without persistent, shared or third-party cookies', () => {
+    const { getByTestId } = render(
+      <BelkrajWidget
+        countryCode="BY"
+        points={[{ id: 1, address: 'Минск', lat: 53.9, lng: 27.56 }]}
+      />,
+    )
+
+    const webview = getByTestId('belkraj-native-webview')
+
+    expect(webview.props.incognito).toBe(true)
+    expect(webview.props.sharedCookiesEnabled).toBe(false)
+    expect(webview.props.thirdPartyCookiesEnabled).toBe(false)
+  })
 })

@@ -1,11 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Platform, DeviceEventEmitter } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { useRouter } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
-import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
-import { openExternalUrl } from '@/utils/externalLinks';
-import { resolveInternalTravelRoute } from '@/utils/relatedTravel';
 import { useMapClusters } from '@/hooks/map/useMapClusters';
 import { getLiveUserPosition, subscribeLiveUserPosition } from '@/hooks/map/liveUserPosition';
 import type { MapClustersFilters } from '@/api/map';
@@ -34,6 +30,7 @@ import {
 } from './Map/nativeBridge';
 import { normalizeRoutePointsWithMarkers, type NativeRoutePointMarkersPayload } from './Map/nativeRoutePointMarkersScript';
 import { buildNativeMapHtml } from './Map/nativeMapHtml';
+import { openNativeMapLink } from './Map/openNativeMapLink';
 import { buildNativeMapFitCoordsCommand, buildNativeMapFocusCoordCommand } from './Map/nativeMapViewCommandsScript';
 import { fetchTileWithRetry } from './Map/tileFetchRetry';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
@@ -202,7 +199,6 @@ const Map: React.FC<TravelProps> = ({
   pointsOnly = false,
   onMapUiApiReady,
 }) => {
-  const router = useRouter();
   const webViewRef = useRef<WebView>(null);
   const isReadyRef = useRef(false);
   const didAutoCenterOnTrustedUserRef = useRef(false);
@@ -216,7 +212,6 @@ const Map: React.FC<TravelProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const themeColors = useThemedColors();
   const { isConnected } = useNetworkStatus();
-  const { getSiteBaseUrl } = require('@/utils/seo');
 
   useEffect(() => {
     if (!localCoordinates) {
@@ -857,17 +852,9 @@ const Map: React.FC<TravelProps> = ({
               return;
             }
             if (message.type !== 'OPEN_URL') return;
-            const safeUrl = getSafeExternalUrl(message.url, { allowRelative: true, baseUrl: getSiteBaseUrl() });
-            if (!safeUrl) return;
-            // Travel marker links arrive as absolute URLs against the API host
-            // (on local/dev API that host is NOT metravel.by), so route by path
-            // regardless of host instead of leaking them to the external browser.
-            const internalRoute = resolveInternalTravelRoute(safeUrl);
-            if (internalRoute) {
-              router.push(internalRoute as any);
-              return;
-            }
-            await openExternalUrl(safeUrl, { allowRelative: true, baseUrl: getSiteBaseUrl() });
+            // Один обработчик с TravelMap.native: статья по пути при любом хосте
+            // API, ссылка на наш сайт — экраном приложения, внешняя — в браузер.
+            await openNativeMapLink(message.url);
           } catch {
             // noop
           }
