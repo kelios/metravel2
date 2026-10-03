@@ -532,6 +532,36 @@ npx serve dist/prod -l 3000 -s
   - Prefer Playwright or a headed browser capture over reasoning from code alone.
   - For visual loading bugs, inspect both DOM state and network state before changing timing logic.
 
+### Architectural solutions over quick fixes
+
+Owner rule (2026-10-03): the project does not take "cheap paths". Every bug,
+defect report, review finding and external requirement (App Review, SEO,
+performance) is resolved by searching for the optimal architectural solution,
+not by the fastest patch that makes the symptom disappear.
+
+- Fix the mechanism and its family, not the instance: a shared component,
+  contract, provider or guard that closes the whole class (examples already in
+  force: `useBottomChromeInset` instead of 38 local insets, `useScreenHeader`
+  instead of per-screen headers, `useActionFeedback` instead of three heart
+  implementations). A one-screen padding, a hidden menu item, a loosened
+  threshold, a guard that passes on token adjacency, or "remove the prompt so the
+  reviewer stops seeing it" are not solutions.
+- Non-trivial scope is designed before it is coded, with roles delegated to the
+  matching agents: business analysis (`ios-analyst`, `task-author`: requirement,
+  acceptance, source of truth), design (`ios-designer`,
+  `metravel-screen-redesign`: UX, HIG, parity across surfaces), architecture
+  (`ios-architect`, `Plan`: boundaries shared/web/iOS/Android/backend, data
+  contracts, validation plan), implementation (feature expert), independent
+  review (`review-auditor`, `code-review-gate`). The analysis is recorded in the
+  task card (Task Contract, Design evidence) before implementation starts.
+- "Minimal diff" in the workflow means no unrelated changes in the same commit;
+  it never means choosing the cheaper of two designs. When the architectural
+  option is larger than one card, split it into linked cards on the board and
+  take them in priority order instead of shipping the patch.
+- Backend-side parts of the solution are filed as `area=back` cards with the
+  exact diff; the frontend does not work around a backend gap with client-side
+  hacks.
+
 ## UI rules
 
 ### Component reuse
