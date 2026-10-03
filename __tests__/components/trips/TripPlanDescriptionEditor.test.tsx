@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, StyleSheet } from 'react-native';
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, within } from '@testing-library/react-native';
 
 import TripPlanDescriptionEditor from '@/components/trips/planning/TripPlanDescriptionEditor';
 
@@ -43,6 +43,17 @@ function EditorHarness({ initialValue = '' }: { initialValue?: string }) {
 describe('TripPlanDescriptionEditor', () => {
   beforeEach(() => {
     mockIsMobile = false;
+  });
+
+  it('keeps the fullscreen header inside ModalSafeArea (MODAL-TOP-INSET-001)', () => {
+    mockIsMobile = true;
+    const { getByTestId } = render(<EditorHarness initialValue="Текст" />);
+
+    fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
+
+    const safeArea = getByTestId('trip-plan-description-safe-area');
+    expect(within(safeArea).getByTestId('trip-plan-description-fullscreen')).toBeTruthy();
+    expect(within(safeArea).getByTestId('trip-plan-description-close')).toBeTruthy();
   });
 
   it('shows at least eight inline rows and keeps a 44px mobile fullscreen target', () => {

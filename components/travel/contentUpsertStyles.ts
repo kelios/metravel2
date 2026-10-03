@@ -9,7 +9,6 @@ type Colors = ReturnType<typeof useThemedColors>;
 
 export const createContentUpsertStyles = (colors: Colors) => StyleSheet.create({
     container: { padding: DESIGN_TOKENS.spacing.xs, paddingBottom: 40 },
-    modalSafeArea: { flex: 1, backgroundColor: colors.background },
     modalKeyboardAvoiding: { flex: 1 },
     modalShell: { flex: 1, width: '100%', maxWidth: 1200, alignSelf: 'center' },
     modalHeader: {

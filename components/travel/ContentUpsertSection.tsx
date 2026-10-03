@@ -4,9 +4,9 @@ import Feather from '@expo/vector-icons/Feather';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Clipboard from 'expo-clipboard';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { TravelFormData } from '@/types/types';
 import TextInputComponent from '@/components/forms/TextInputComponent';
+import ModalSafeArea from '@/components/ui/ModalSafeArea';
 import { validateTravelForm, getFieldError, type ValidationError } from '@/utils/formValidation';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
@@ -573,7 +573,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                 presentationStyle="fullScreen"
                                 onRequestClose={() => setIsDescriptionFullscreen(false)}
                             >
-                                <SafeAreaView style={styles.modalSafeArea}>
+                                <ModalSafeArea testID="description-fullscreen-safe-area">
                                     <KeyboardAvoidingView
                                         style={styles.modalKeyboardAvoiding}
                                         behavior={WIZARD_KEYBOARD_BEHAVIOR}
@@ -675,7 +675,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                         </View>
                                     </View>
                                     </KeyboardAvoidingView>
-                                </SafeAreaView>
+                                </ModalSafeArea>
                             </Modal>
                         </>
                     ) : (

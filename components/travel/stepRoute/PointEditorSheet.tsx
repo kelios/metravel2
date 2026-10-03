@@ -9,10 +9,10 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
+import ModalSafeArea from '@/components/ui/ModalSafeArea'
 import MultiSelectField from '@/components/forms/MultiSelectField'
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview'
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard'
@@ -103,7 +103,7 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
 
   return (
     <Modal visible animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+      <ModalSafeArea testID="point-editor-safe-area">
         <KeyboardAvoidingView style={styles.flex} behavior={WIZARD_KEYBOARD_BEHAVIOR}>
           <View style={styles.header}>
             <Text style={styles.headerTitle} numberOfLines={1}>
@@ -254,7 +254,7 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
             />
           </View>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </ModalSafeArea>
     </Modal>
   )
 })
@@ -263,7 +263,6 @@ export default PointEditorSheet
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: colors.background },
     flex: { flex: 1 },
     header: {
       flexDirection: 'row',

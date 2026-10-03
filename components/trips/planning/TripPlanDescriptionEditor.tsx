@@ -12,10 +12,10 @@ import {
   type NativeSyntheticEvent,
   type TextInputSelectionChangeEventData,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Button from '@/components/ui/Button';
 import IconButton from '@/components/ui/IconButton';
+import ModalSafeArea from '@/components/ui/ModalSafeArea';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useSoftKeyboardInset } from '@/hooks/useSoftKeyboardInset';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -270,7 +270,7 @@ export default function TripPlanDescriptionEditor({
         statusBarTranslucent
         onRequestClose={handleFullscreenRequestClose}
       >
-        <SafeAreaView style={styles.safeArea}>
+        <ModalSafeArea testID="trip-plan-description-safe-area">
           <KeyboardAvoidingView
             style={styles.keyboardFrame}
             behavior={WIZARD_KEYBOARD_BEHAVIOR}
@@ -353,7 +353,7 @@ export default function TripPlanDescriptionEditor({
               </View>
             </View>
           </KeyboardAvoidingView>
-        </SafeAreaView>
+        </ModalSafeArea>
 
         <Modal
           visible={linkDialogVisible}
@@ -469,10 +469,6 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     lineHeight: 20,
     ...Platform.select({ web: webTextStyle({ outlineWidth: 0 }) }),
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
   },
   keyboardFrame: { flex: 1 },
   fullscreenShell: {

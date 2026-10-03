@@ -3562,6 +3562,31 @@ guard, падающий в CI на попытке обойти этот конт
   `guard:bottom-chrome-inset`). Клавиатурный подъём остаётся у #1072.
 - **Последняя проверка:** 2026-09-25, #2097 в работе.
 
+### MODAL-TOP-INSET-001 — шапка полноэкранного `Modal` под статус-баром iPhone
+
+- Каноническая задача: #2120 (2026-10-03). Эпик: #2105 [MOBILE-SHELL]. Соседи по
+  слою: MOBILE-INSETS-001 (нижний край, #2097), #796 (верх одного экрана на
+  Android, локальная правка `edges`).
+- Причина confirmed (замер iPhone 17 Pro, iOS 26.5, dev-client): нативный
+  `SafeAreaView` внутри `Modal` ищет провайдер по `superview`, модальное окно —
+  отдельная иерархия вью, провайдера нет; отступ снимается в момент появления,
+  пока окно выезжает, и верх остаётся 0. Рамка редактора описания начиналась с
+  y = 0 при корневом `insets.top` = 62, «Закрыть»/«Сохранить и закрыть» — 12–56 pt
+  под часами; три тапа по «Сохранить и закрыть» не доходили до кнопки.
+- Инвариант: содержимое любого `Modal` получает безопасную зону только через
+  `components/ui/ModalSafeArea` (отступы корневого контекста
+  `useSafeAreaInsetsSafe` обычным `View` + фон темы). Локальные
+  `StatusBar.currentHeight` и `SafeAreaView` внутри `Modal` запрещены.
+- Постоянный контроль: `npm run guard:modal-safe-area` (в `lint`, AST TSX:
+  `SafeAreaView` среди потомков `Modal`; allowlist — web-only
+  `ArticleEditor.web.parts.tsx`); jest `__tests__/components/ui/ModalSafeArea.test.tsx`
+  и проверки вложенности шапки в `ContentUpsertSection`/`TripPlanDescriptionEditor`/
+  `PointEditorSheet` (`__tests__/components/travel/stepRoute/PointEditorSheet.safeArea.test.tsx`).
+- Новая жалоба «кнопки окна под часами/вырезом»: сначала проверить, что окно
+  обёрнуто в `ModalSafeArea`; окна с ручным `paddingTop: insets.top` из корневого
+  контекста (рулетка, карта поездки, карта квеста) механизм уже соблюдают.
+  Рецидив при зелёном guard — переоткрывать #2120.
+
 ### NATIVE-TEXT-ROW-001 — dynamic Text must have an explicit row sizing contract
 
 - **Инвариант:** translated/user-generated `Text` рядом с другими children в

@@ -9,8 +9,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
-  StatusBar,
   StyleSheet,
   Text,
   View,
@@ -19,11 +17,13 @@ import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
 
 import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader'
+import ModalSafeArea from '@/components/ui/ModalSafeArea'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { CountryTravelsPanel, type CountryTravelCard } from './CountryTravelsPanel'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useMapZoomPan } from '@/hooks/useMapZoomPan'
 import { useResponsive } from '@/hooks/useResponsive'
+import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
 import { useTheme, useThemedColors } from '@/hooks/useTheme'
 import { useVisitedCountries } from '@/hooks/useVisitedCountries'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
@@ -49,6 +49,9 @@ interface ProfileWorldMapTabProps {
   onBackToOverview: () => void
   onMapGestureActiveChange?: (active: boolean) => void
 }
+
+// Высота шапки полноэкранной карты: и стиль шапки, и расчёт высоты карты (#2120).
+const FULLSCREEN_HEADER_HEIGHT = 56
 
 const formatCountriesLabel = (count: number) => {
   return selectPlural(count, {
@@ -80,9 +83,11 @@ export function ProfileWorldMapTab({
   const { height, isMobile } = useResponsive()
   const router = useRouter()
   const infoCardRef = useRef<View>(null)
-  const fullscreenTopOffset = (Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0) + 56
+  const insets = useSafeAreaInsetsSafe()
+  // Окно карты = отступы ModalSafeArea сверху и снизу + шапка окна (#2120).
+  const fullscreenChromeHeight = insets.top + insets.bottom + FULLSCREEN_HEADER_HEIGHT
   const fullscreenMapHeight = isMobile
-    ? Math.max(240, height - fullscreenTopOffset)
+    ? Math.max(240, height - fullscreenChromeHeight)
     : undefined
 
   const { visitedCodes, byCode, visitedCount, remainingCount, totalCount, isLoading } =
@@ -255,13 +260,8 @@ export function ProfileWorldMapTab({
           width: '100%',
           ...(isMobile ? {} : { maxWidth: 920 }),
         },
-        fullscreenRoot: {
-          flex: 1,
-          backgroundColor: colors.background,
-          paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0,
-        },
         fullscreenHeader: {
-          minHeight: 56,
+          minHeight: FULLSCREEN_HEADER_HEIGHT,
           paddingHorizontal: DESIGN_TOKENS.spacing.md,
           flexDirection: 'row',
           alignItems: 'center',
@@ -610,7 +610,7 @@ export function ProfileWorldMapTab({
         presentationStyle="fullScreen"
         onRequestClose={closeMapFullscreen}
       >
-        <SafeAreaView style={styles.fullscreenRoot}>
+        <ModalSafeArea testID="profile-world-map-fullscreen">
           <View style={styles.fullscreenHeader}>
             <Text style={styles.fullscreenTitle} numberOfLines={1}>
               {i18nT('profile:components.screens.profile.ProfileWorldMapTab.karta_mira_562a96c2')}</Text>
@@ -669,7 +669,7 @@ export function ProfileWorldMapTab({
               </View>
             ) : null}
           </View>
-        </SafeAreaView>
+        </ModalSafeArea>
       </Modal>
     </View>
   )

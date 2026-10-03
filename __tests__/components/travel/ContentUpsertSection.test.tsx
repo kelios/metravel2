@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render } from '@testing-library/react-native'
+import { fireEvent, render, within } from '@testing-library/react-native'
 import { ScrollView, StyleSheet } from 'react-native'
 
 // Make React.lazy render synchronously: instead of suspending on the dynamic
@@ -390,6 +390,17 @@ describe('ContentUpsertSection — derived display logic', () => {
     )
 
     expect(getByTestId('editor-Описание').props.accessibilityHint).toBe(firstInstance)
+  })
+
+  it('keeps the fullscreen header inside ModalSafeArea (MODAL-TOP-INSET-001)', () => {
+    const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
+    useResponsive.mockReturnValue({ isHydrated: true, isMobile: true })
+
+    const { getByLabelText, getByTestId } = renderSection({ description: '<p>test</p>' })
+    fireEvent.press(getByLabelText('Открыть расширенный редактор описания'))
+
+    const safeArea = getByTestId('description-fullscreen-safe-area')
+    expect(within(safeArea).getByTestId('description-fullscreen-keyboard-frame')).toBeTruthy()
   })
 
   it('shrinks the fullscreen editor by the real Android IME height', () => {
