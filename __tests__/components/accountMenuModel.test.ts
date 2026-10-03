@@ -1,3 +1,5 @@
+import { Platform } from 'react-native'
+
 import {
   buildAccountMenuModel,
   runAccountMenuTarget,
@@ -80,6 +82,27 @@ describe('accountMenuModel (#2139)', () => {
   it('гость видит только вход и регистрацию', () => {
     const model = buildAccountMenuModel({ ...base, isAuthenticated: false, isSuperuser: true })
     expect(keysOf(model)).toEqual(['login', 'registration'])
+  })
+
+  it('вход берёт redirect из адреса на момент нажатия, а не на момент сборки модели', () => {
+    const originalOS = Platform.OS
+    const originalUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
+    try {
+      window.history.pushState({}, '', '/travels/old')
+      const model = buildAccountMenuModel({ ...base, isAuthenticated: false })
+      const login = model.guest.find((entry) => entry.key === 'login')
+      expect(login?.target).toEqual({ kind: 'login' })
+
+      // Шапка с мемоизированной моделью переживает SPA-переход.
+      window.history.pushState({}, '', '/search?q=1')
+      const handlers = { navigate: jest.fn(), openExternal: jest.fn(), logout: jest.fn() }
+      runAccountMenuTarget(login!.target, 'desktop', handlers)
+      expect(handlers.navigate).toHaveBeenCalledWith('/login?redirect=%2Fsearch%3Fq%3D1&intent=menu')
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOS })
+      window.history.pushState({}, '', originalUrl)
+    }
   })
 
   it('исполнитель целей: регистрация шлёт событие с источником поверхности, борд — во внешнюю ссылку', () => {

@@ -15,6 +15,9 @@ export type AccountMenuSurface = 'desktop' | 'mobile'
 
 export type AccountMenuTarget =
   | { kind: 'route'; path: string }
+  // Адрес входа строится в момент нажатия: redirect берётся из текущего
+  // window.location, а desktop-модель мемоизирована и переживает SPA-переходы.
+  | { kind: 'login' }
   | { kind: 'register'; path: string }
   | { kind: 'external'; url: string }
   | { kind: 'logout' }
@@ -52,7 +55,7 @@ const buildGuestEntries = (): AccountMenuEntry[] => [
     key: 'login',
     title: i18nT('navigation:components.layout.AccountMenu.voyti_d3fdfdb5'),
     icon: 'log-in',
-    target: { kind: 'route', path: buildLoginHref({ intent: 'menu' }) as string },
+    target: { kind: 'login' },
   },
   {
     key: 'registration',
@@ -191,6 +194,9 @@ export const runAccountMenuTarget = (
   switch (target.kind) {
     case 'route':
       handlers.navigate(target.path)
+      return
+    case 'login':
+      handlers.navigate(buildLoginHref({ intent: 'menu' }))
       return
     case 'register':
       trackRegisterCtaClicked({ source: REGISTER_CTA_SOURCE[surface], intent: 'menu', authState: 'guest' })

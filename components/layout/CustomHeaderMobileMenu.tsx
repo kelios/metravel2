@@ -142,6 +142,7 @@ export default function CustomHeaderMobileMenu({
         }),
       ...(entry.unreadCount !== undefined
         ? {
+            iconColor: hasUnread ? colors.primary : undefined,
             labelStyle: hasUnread ? { fontWeight: '600', color: colors.text } : undefined,
             iconSlotStyle: { position: 'relative' },
             trailingNode: <UnreadBadge count={entry.unreadCount} />,

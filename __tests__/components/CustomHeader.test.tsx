@@ -448,6 +448,34 @@ describe('CustomHeader', () => {
             }
         });
 
+        it('opens the task board on web inside the same tap, without deferring past the menu close (#2139)', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const authBefore = { ...mockAuthContext };
+            const osBefore = ReactNative.Platform.OS;
+            let panelMountedAtOpen: boolean | null = null;
+            let utils: ReturnType<typeof renderHeader> | null = null;
+            const openSpy = jest.spyOn(window, 'open').mockImplementation(() => {
+                panelMountedAtOpen = Boolean(utils?.queryByTestId('mobile-menu-panel'));
+                return null;
+            });
+            Object.assign(mockAuthContext, { isAuthenticated: true, username: 'Юля', userId: 1, isSuperuser: true });
+            Object.defineProperty(ReactNative.Platform, 'OS', { configurable: true, get: () => 'web' });
+            try {
+                utils = renderHeader();
+                fireEvent.press(utils.getByTestId('mobile-menu-open'));
+                fireEvent.press(utils.getByText('Борд задач'));
+                // Синхронно в обработчике тапа, пока меню ещё на экране: window.open,
+                // отложенный до закрытия меню, iOS Safari блокирует как всплывающее окно.
+                expect(openSpy).toHaveBeenCalledWith('https://metravel.by/board', '_blank', 'noopener');
+                expect(panelMountedAtOpen).toBe(true);
+                expect(utils.queryByTestId('mobile-menu-panel')).toBeNull();
+            } finally {
+                Object.defineProperty(ReactNative.Platform, 'OS', { configurable: true, get: () => osBefore });
+                openSpy.mockRestore();
+                Object.assign(mockAuthContext, authBefore, { isSuperuser: undefined });
+            }
+        });
+
         it('unmounts the mobile modal before navigating to privacy', async () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();

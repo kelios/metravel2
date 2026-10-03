@@ -9,7 +9,7 @@ import { useDeferredUnreadCount } from '@/hooks/useDeferredUnreadCount';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAvatarUri } from '@/hooks/useAvatarUri';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { handleHeaderNavPress } from './customHeaderNavModel';
 import UserAvatar from './UserAvatar';
 import {
   CustomHeaderMobileMenuComp,
@@ -109,20 +109,19 @@ const useCustomHeaderMobileMenuController = ({ logout }: { logout: () => Promise
 
   const handleNavPress = useCallback(
     (path: string, external?: boolean) => {
-      runAfterMenuClose(() => {
-        if (external) {
-          if (Platform.OS === 'web') {
-            openExternalUrlInNewTab(path);
-          } else {
-            openExternalUrl(path);
-          }
-          return;
-        }
+      if (external && Platform.OS === 'web') {
+        // Новая вкладка открывается в том же тапе: window.open, отложенный до
+        // закрытия меню, iOS Safari считает всплывающим окном и молча блокирует
+        // (с noopener window.open возвращает null, отказ не виден). Обход
+        // Android Modal ниже нужен только для навигации внутри приложения.
+        handleHeaderNavPress(router, path, true);
+        closeMenu();
+        return;
+      }
 
-        router.push(path as any);
-      });
+      runAfterMenuClose(() => handleHeaderNavPress(router, path, external));
     },
-    [router, runAfterMenuClose],
+    [closeMenu, router, runAfterMenuClose],
   );
 
   const handleLogout = useCallback(() => {

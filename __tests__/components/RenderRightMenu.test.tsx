@@ -163,6 +163,16 @@ describe('AccountMenu', () => {
     expect(getByText('Зарегистрироваться')).toBeTruthy();
   });
 
+  it('keeps the guest menu login a button that builds the login href on press (#2139)', () => {
+    const { getByLabelText } = renderWithClient(<RenderRightMenu />);
+
+    const loginItem = getByLabelText('Войти');
+    expect(loginItem.props.accessibilityRole).toBe('button');
+
+    fireEvent.press(loginItem);
+    expect(router.push).toHaveBeenCalledWith('/login?redirect=%2F&intent=menu');
+  });
+
   it('shows user menu when authenticated', () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
