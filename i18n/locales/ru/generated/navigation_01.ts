@@ -34,7 +34,7 @@ export const navigationGenerated1 = {
   "components.layout.BottomDock.navigatsiya_24d0f434": "Навигация",
   "components.layout.BottomDock.zakryt_6a41e4ea": "Закрыть",
   "components.layout.BottomDock.zakryt_menyu_2bc0d545": "Закрыть меню",
-  "components.layout.ConsentBanner.ispolzuem_analitiku_bez_reklamy_i_ne_peredae_0b69b674": "Используем аналитику без рекламы и не передаём данные третьим лицам для рекламы.",
+  "components.layout.ConsentBanner.analitika_bez_reklamy_dannye_dlya_reklamy_ne_615618ed": "Аналитика без рекламы, данные для рекламы не передаём.",
   "components.layout.ConsentBanner.otklonit_054e0823": "Отклонить",
   "components.layout.ConsentBanner.podrobnee_1db70e5c": "Подробнее",
   "components.layout.ConsentBanner.podrobnee_o_cookies_caf7ecdc": "Подробнее о cookies",
