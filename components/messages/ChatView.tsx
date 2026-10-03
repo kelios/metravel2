@@ -20,6 +20,10 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import MessageBubble from '@/components/messages/MessageBubble'
 import IconButton from '@/components/ui/IconButton'
+import ActionListSheet from '@/components/ui/ActionListSheet'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import { useIsScreenHeaderMobile } from '@/components/layout/ScreenHeaderContext'
+import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
 import SafetyNotice from '@/components/ui/SafetyNotice'
 import type { Message } from '@/api/messages'
 import { routes } from '@/utils/routes'
@@ -378,6 +382,26 @@ function ChatHeader({
   onOpenProfile: () => void
   onDeleteThread?: () => void
 }) {
+  // #2115 (правило #2101): «Удалить диалог» — действие над диалогом экрана. Телефон —
+  // подписанный пункт «⋯» (destructive), desktop — иконка с подписью; везде через
+  // подтверждение (раньше удаление шло сразу).
+  const isPhone = useIsScreenHeaderMobile()
+  const [actionsOpen, setActionsOpen] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const deleteLabel = i18nT('messages:components.messages.ChatView.udalit_dialog_a1169aef')
+  const actions = useMemo(
+    () => [
+      {
+        key: 'delete-thread',
+        label: deleteLabel,
+        icon: 'trash-2' as const,
+        destructive: true,
+        onPress: () => setConfirmOpen(true),
+        testID: 'chat-header-delete-thread',
+      },
+    ],
+    [deleteLabel],
+  )
   return (
     <View style={styles.header}>
       {!hideBackButton && (
@@ -408,15 +432,49 @@ function ChatHeader({
           {otherUserName}
         </Text>
       </Pressable>
-      {onDeleteThread && (
-        <IconButton
-          icon={<Feather name="trash-2" size={16} color={colors.textSecondary} />}
-          label={i18nT('messages:components.messages.ChatView.udalit_dialog_a1169aef')}
-          size="sm"
-          onPress={onDeleteThread}
-          showTooltip={IS_WEB}
+      {onDeleteThread && isPhone ? (
+        <>
+          <IconButton
+            icon={<Feather name="more-horizontal" size={18} color={colors.textSecondary} />}
+            label={i18nT('common:screenHeader.more')}
+            size="sm"
+            onPress={() => setActionsOpen(true)}
+            testID="chat-header-more"
+          />
+          <ActionListSheet
+            visible={actionsOpen}
+            onClose={() => setActionsOpen(false)}
+            title={otherUserName}
+            actions={actions}
+          />
+        </>
+      ) : null}
+      {onDeleteThread && !isPhone ? (
+        <View {...SCREEN_HEADER_DESKTOP_PROPS}>
+          <IconButton
+            icon={<Feather name="trash-2" size={16} color={colors.textSecondary} />}
+            label={deleteLabel}
+            size="sm"
+            onPress={() => setConfirmOpen(true)}
+            showTooltip={IS_WEB}
+            testID="chat-header-delete"
+          />
+        </View>
+      ) : null}
+      {onDeleteThread ? (
+        <ConfirmDialog
+          visible={confirmOpen}
+          onClose={() => setConfirmOpen(false)}
+          onConfirm={() => {
+            setConfirmOpen(false)
+            onDeleteThread()
+          }}
+          title={i18nT('messages:components.messages.ThreadList.udalit_dialog_690a8668')}
+          message={i18nT('messages:components.messages.ThreadList.vy_uvereny_chto_hotite_udalit_etot_dialog_cdd9a62d')}
+          confirmText={i18nT('messages:components.messages.ThreadList.udalit_004e3e97')}
+          confirmTestID="chat-header-delete-confirm"
         />
-      )}
+      ) : null}
     </View>
   )
 }

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { Modal, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -8,6 +8,8 @@ import { translate as i18nT } from '@/i18n'
 
 
 const IS_WEB = Platform.OS === 'web'
+// Анимация fade закрытия ~300 мс; если `onDismiss` не пришёл — действие всё равно выполнится.
+const IOS_DISMISS_FALLBACK_MS = 450
 
 export type ActionListSheetItem = {
   key: string
@@ -65,6 +67,35 @@ const ActionListSheet: React.FC<Props> = ({
   // the responder identity stays stable across renders.
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
+
+  // #2115: пункт часто открывает следующий Modal (`ConfirmDialog` удаления). На iOS
+  // UIKit не покажет его, пока этот лист ещё закрывается (Fabric
+  // `RCTModalHostViewComponentView` не ждёт dismiss), поэтому действие ждёт
+  // `onDismiss` листа; страховка — таймер. Ровно один вызов. Web/Android — сразу.
+  const pendingActionRef = useRef<(() => void) | null>(null)
+  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const flushPendingAction = useCallback(() => {
+    if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current)
+    pendingTimerRef.current = null
+    const run = pendingActionRef.current
+    pendingActionRef.current = null
+    run?.()
+  }, [])
+  useEffect(() => () => {
+    if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current)
+  }, [])
+  const runAfterClose = useCallback(
+    (run: () => void) => {
+      onClose()
+      if (Platform.OS !== 'ios') {
+        run()
+        return
+      }
+      pendingActionRef.current = run
+      pendingTimerRef.current = setTimeout(flushPendingAction, IOS_DISMISS_FALLBACK_MS)
+    },
+    [flushPendingAction, onClose],
+  )
   const swipeHandlers = useMemo(() => {
     if (IS_WEB) return null
     return PanResponder.create({
@@ -79,7 +110,13 @@ const ActionListSheet: React.FC<Props> = ({
   }, [])
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      onDismiss={flushPendingAction}
+    >
       <View style={styles.root}>
         <Pressable
           accessibilityLabel={i18nT('shared:components.ui.ActionListSheet.zakryt_menyu_deystviy_85947952')}
@@ -115,10 +152,7 @@ const ActionListSheet: React.FC<Props> = ({
                 testID={action.testID}
                 accessibilityRole="button"
                 accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
-                onPress={() => {
-                  onClose()
-                  action.onPress()
-                }}
+                onPress={() => runAfterClose(action.onPress)}
                 title={action.title ?? action.label}
                 enableWebClickFallback
                 style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}

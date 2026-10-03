@@ -13,6 +13,8 @@ const path = require('node:path')
 // Экраны деталей и карточки, на которых действует правило.
 const ACTION_SCREENS = [
   'app/(tabs)/trips/plan/[id].tsx',
+  // #2115: «Удалить диалог» — действие над диалогом, который показывает экран чата.
+  'components/messages/ChatView.tsx',
   'components/trips/planning/TripPlanScreenHeader.tsx',
   'components/trips/PublicTripDetail.tsx',
   'components/UserPoints/PointCard.tsx',
@@ -34,6 +36,57 @@ const EXCEPTIONS = {
   'components/screens/calendar/calendarScreen.parts.tsx':
     'карточка календаря: одно действие, иконка с accessibilityLabel и confirmAction; лист даты — подписанная кнопка внутри листа. Перевод карточки на «⋯» — отдельная карточка.',
 }
+
+// #2115: guard видит ВСЕ поверхности удаления, а не только экраны деталей. Корзина
+// или `variant="danger"` вне `ACTION_SCREENS` допустимы только поимённо, с видом:
+//  row      — действие над одной строкой списка (подпись + подтверждение у строки);
+//  bulk     — массовое действие над выбранным в списке;
+//  editor   — кнопка внутри открытого редактора/листа объекта (подписана текстом);
+//  sheet    — пункт уже открытого меню/листа действий или попапа карты;
+//  settings — раздел данных/аккаунта: подписанная кнопка с пояснением и подтверждением;
+//  dialog   — кнопка самого диалога подтверждения/модерации.
+// Новая находка без решения и запись без находки (устарела) — нарушение.
+const SURFACE_KINDS = new Set(['row', 'bulk', 'editor', 'sheet', 'settings', 'dialog'])
+const DELETE_SURFACES = {
+  'app/(tabs)/favorites.tsx': ['row', 'удалить одну запись «Хочу поехать» из строки; «Очистить» — пункт «⋯» с destructive'],
+  'components/UserPoints/PointsListActionsModal.tsx': ['sheet', 'пункт листа действий над точкой'],
+  'components/UserPoints/PointsListBulkMapBar.tsx': ['bulk', 'удалить выбранные точки из панели выбора'],
+  'components/UserPoints/PointsListBulkModals.tsx': ['dialog', 'кнопки диалогов подтверждения массовых действий'],
+  'components/UserPoints/UserPointsMapPointMarker.web.tsx': ['sheet', 'действие попапа точки на карте'],
+  'components/listTravel/RecommendationsTabs.tsx': ['row', 'очистить список вкладки; подтверждение на native не спрашивается сознательно (#1556)'],
+  'components/listTravel/TravelListItem.tsx': ['row', 'админское удаление карточки в списке'],
+  'components/mainPage/StickySearchBar.tsx': ['row', 'очистить недавние поиски в выпадающем списке'],
+  'components/map/EditMarkerModal.tsx': ['editor', 'удалить фото в редакторе метки'],
+  'components/map/MarkersListComponent.tsx': ['row', 'удалить метку из списка меток'],
+  'components/messages/MessageBubble.tsx': ['row', 'удалить своё сообщение: подпись и подтверждение (web — строка, native — Alert)'],
+  'components/messages/ThreadList.tsx': ['row', 'удалить диалог из списка: подпись с именем и подтверждение'],
+  'components/offline/OfflineSaveControl.tsx': ['sheet', 'пункт меню офлайна маршрута, destructive'],
+  'components/profile/ProfileCollectionHeader.tsx': ['row', 'desktop: очистить коллекцию в шапке коллекции, с подтверждением'],
+  'components/screens/history/HistoryScreen.tsx': ['row', '«Очистить историю» — пункт «⋯» с destructive'],
+  'components/screens/profile/ProfileHeaderSection.tsx': ['row', 'очистить список активной вкладки профиля, с подтверждением'],
+  'components/settings/DataManagementSection.tsx': ['settings', 'массовая очистка избранного/истории в разделе данных, с подтверждением'],
+  'components/settings/DataOwnershipSection.tsx': ['settings', 'удаление своих маршрутов/переписки: пояснение и двухшаговое подтверждение'],
+  'components/travel/CommentItem.tsx': ['row', 'удалить комментарий в его меню, ConfirmDialog'],
+  'components/travel/ImageGalleryComponent.ios.tsx': ['editor', 'удалить фото в редакторе галереи'],
+  'components/travel/PhotoUploadWithPreview.tsx': ['editor', 'удалить фото в загрузчике'],
+  'components/travel/PublishModerationAdminPanel.tsx': ['dialog', 'админское отклонение публикации'],
+  'components/travel/RecentViews.tsx': ['row', 'очистить «Недавно смотрели», с подтверждением'],
+  'components/travel/TravelStatusButton.tsx': ['sheet', '«Убрать из плана» в листе статуса маршрута'],
+  'components/travel/WebMapMarkerPopup.tsx': ['sheet', 'действие попапа точки на карте'],
+  'components/travel/gallery/GalleryControls.tsx': ['editor', 'удалить фото в редакторе галереи'],
+  'components/travel/stepRoute/NativePointList.tsx': ['row', 'удалить точку из списка мастера, Alert с destructive'],
+  'components/travel/stepRoute/PointEditorSheet.tsx': ['editor', 'удалить точку в листе редактора (двухшаговое подтверждение)'],
+  'components/travel/upsert/WizardExitDialog.tsx': ['dialog', 'кнопка диалога выхода без сохранения'],
+  'components/trips/planning/RoutePointEditForm.tsx': ['editor', 'удалить точку в форме правки (черновик маршрута до «Сохранить»)'],
+  'components/trips/planning/RoutePointRow.tsx': ['row', 'удалить точку из списка маршрута (черновик до «Сохранить»)'],
+  'components/trips/planning/TripPlanCard.tsx': ['row', 'удалить поездку из списка «Мои поездки», confirmAction'],
+  'components/trips/planning/TripPlanRouteMap.tsx': ['sheet', 'удалить точку в поповере карты (черновик до «Сохранить»)'],
+  'components/trips/planning/TripRouteStoredFiles.tsx': ['row', 'удалить сохранённый оригинал файла, ConfirmDialog'],
+  'components/ui/ConfirmDialog.tsx': ['dialog', 'кнопка подтверждения самого диалога'],
+}
+
+const SCAN_DIRS = ['app', 'components', 'screens']
+const SOURCE_FILE = /\.(tsx?|jsx?)$/
 
 const DESKTOP_MARKER = 'SCREEN_HEADER_DESKTOP_PROPS'
 const DANGER_BUTTON = /variant\s*=\s*["']danger["']/
@@ -109,8 +162,48 @@ function scanSource(rel, source) {
   return findings
 }
 
-function scanScreenActions(rootDir) {
+const isCodeLine = (line) => !/^\s*(\/\/|\*|\/\*)/.test(line)
+const hasDeleteSurface = (source) =>
+  source.split('\n').some((line) => isCodeLine(line) && (TRASH_ICON.test(line) || DANGER_BUTTON.test(line)))
+
+function listSourceFiles(rootDir, dir, out = []) {
+  const abs = path.join(rootDir, dir)
+  if (!fs.existsSync(abs)) return out
+  for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue
+    const rel = path.posix.join(dir, entry.name)
+    if (entry.isDirectory()) listSourceFiles(rootDir, rel, out)
+    else if (SOURCE_FILE.test(entry.name)) out.push(rel)
+  }
+  return out
+}
+
+function scanDeleteSurfaces(rootDir) {
   const findings = []
+  const withSurface = new Set()
+  for (const dir of SCAN_DIRS) {
+    for (const rel of listSourceFiles(rootDir, dir)) {
+      if (hasDeleteSurface(fs.readFileSync(path.join(rootDir, rel), 'utf8'))) withSurface.add(rel)
+    }
+  }
+  for (const rel of withSurface) {
+    if (!ACTION_SCREENS.includes(rel) && !DELETE_SURFACES[rel]) {
+      findings.push(`${rel}: корзина или variant="danger" без решения — экран объекта в ACTION_SCREENS (правило #2101) или строка DELETE_SURFACES с видом и причиной`)
+    }
+  }
+  for (const [rel, entry] of Object.entries(DELETE_SURFACES)) {
+    const [kind, reason] = Array.isArray(entry) ? entry : []
+    if (!SURFACE_KINDS.has(kind) || !String(reason || '').trim()) {
+      findings.push(`${rel}: запись DELETE_SURFACES без вида из ${[...SURFACE_KINDS].join('/')} или без причины`)
+    }
+    if (ACTION_SCREENS.includes(rel)) findings.push(`${rel}: и в ACTION_SCREENS, и в DELETE_SURFACES — решение одно`)
+    if (!withSurface.has(rel)) findings.push(`${rel}: запись DELETE_SURFACES устарела — корзины/danger в файле нет`)
+  }
+  return findings
+}
+
+function scanScreenActions(rootDir) {
+  const findings = [...scanDeleteSurfaces(rootDir)]
   for (const rel of ACTION_SCREENS) {
     const file = path.join(rootDir, rel)
     if (!fs.existsSync(file)) {
@@ -127,7 +220,7 @@ function scanScreenActions(rootDir) {
   return findings
 }
 
-module.exports = { ACTION_SCREENS, EXCEPTIONS, scanSource, scanScreenActions }
+module.exports = { ACTION_SCREENS, EXCEPTIONS, DELETE_SURFACES, scanSource, scanScreenActions, scanDeleteSurfaces }
 
 if (require.main === module) {
   const rootIdx = process.argv.indexOf('--root')

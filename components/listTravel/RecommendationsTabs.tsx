@@ -286,16 +286,14 @@ const RecommendationsTabs = memo(
         if (typeof clearFavorites !== 'function') return;
 
         // #1556: подтверждение через дизайн-системный диалог вместо нативного
-        // `window.confirm`, который морозил вкладку. Гард по платформе сохраняет
-        // прежнее поведение native, где `window.confirm` не существовал и список
-        // очищался без вопроса.
-        if (Platform.OS === 'web') {
-          const confirmed = await confirmAction({
-            title: i18nT('shared:components.ui.ConfirmDialog.podtverzhdenie_a57088b1'),
-            message: i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_hochu_poehat_65feb3a9'),
-          });
-          if (!confirmed) return;
-        }
+        // `window.confirm`, который морозил вкладку. #2115: на native список
+        // раньше очищался без вопроса только потому, что `window.confirm` там не
+        // было; `confirmAction` спрашивает на всех платформах (native — Alert).
+        const confirmed = await confirmAction({
+          title: i18nT('shared:components.ui.ConfirmDialog.podtverzhdenie_a57088b1'),
+          message: i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_hochu_poehat_65feb3a9'),
+        });
+        if (!confirmed) return;
 
         await clearFavorites();
       } catch (error) {
@@ -307,14 +305,12 @@ const RecommendationsTabs = memo(
       try {
         if (typeof clearHistory !== 'function') return;
 
-        // #1556: см. комментарий в `handleClearFavorites`.
-        if (Platform.OS === 'web') {
-          const confirmed = await confirmAction({
-            title: i18nT('shared:components.ui.ConfirmDialog.podtverzhdenie_a57088b1'),
-            message: i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_istoriyu_prosmotrov_95782295'),
-          });
-          if (!confirmed) return;
-        }
+        // #1556, #2115: см. комментарий в `handleClearFavorites`.
+        const confirmed = await confirmAction({
+          title: i18nT('shared:components.ui.ConfirmDialog.podtverzhdenie_a57088b1'),
+          message: i18nT('travel:components.listTravel.RecommendationsTabs.ochistit_istoriyu_prosmotrov_95782295'),
+        });
+        if (!confirmed) return;
 
         await clearHistory();
       } catch (error) {

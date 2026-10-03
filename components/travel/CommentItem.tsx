@@ -126,6 +126,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
                 setShowActions(false);
               }}
               style={styles.actionButton}
+              accessibilityRole="button"
               accessibilityLabel={i18nT('travel:components.travel.CommentItem.redaktirovat_kommentariy_4777db64')}
               testID="comment-actions-edit"
             >
@@ -138,6 +139,7 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
               onPress={handleDelete}
               style={styles.actionButton}
               disabled={deleteComment.isPending}
+              accessibilityRole="button"
               accessibilityLabel={
                 showsAdminDeleteLabel ? i18nT('travel:components.travel.CommentItem.udalit_kommentariy_admin_d55d0a7c') : i18nT('travel:components.travel.CommentItem.udalit_kommentariy_25a8d8a8')
               }

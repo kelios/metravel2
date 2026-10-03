@@ -11,7 +11,7 @@
  * Второй инвариант — десктоп: ветка `!isMobile` обязана сохранить прежний ряд
  * целиком, без кнопки «Ещё».
  */
-import { cleanup, fireEvent, render } from '@testing-library/react-native'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native'
 
 // Экскурсии к шапке отношения не имеют, а тянут за собой сеть.
 jest.mock('@/components/quests/questWizardSections', () => ({
@@ -105,13 +105,14 @@ describe('шапка квеста — меню «Ещё» на телефоне'
     expect(getByLabelText('Открыть точки квеста в приложении карт')).toBeTruthy()
   })
 
-  it('строка листа действительно вызывает действие', () => {
+  it('строка листа действительно вызывает действие', async () => {
     const { getByLabelText, handlers } = renderHeader({ isMobile: true })
 
     fireEvent.press(getByLabelText('Действия с квестом'))
     fireEvent.press(getByLabelText('Сбросить прогресс'))
 
-    expect(handlers.onReset).toHaveBeenCalledTimes(1)
+    // На iOS пункт листа выполняется после закрытия листа (onDismiss / таймер, #2115).
+    await waitFor(() => expect(handlers.onReset).toHaveBeenCalledTimes(1))
   })
 
   it('не показывает экспорт точек, когда точек нет', () => {

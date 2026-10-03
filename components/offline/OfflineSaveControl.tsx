@@ -148,6 +148,8 @@ export default function OfflineSaveControl({
         label: t('offline:remove'),
         icon: 'trash-2',
         iconColor: colors.danger,
+        // #2115: удаление из офлайна — последний пункт «⋯», красный, за разделителем.
+        destructive: true,
         onPress: () => { void removeSaved(); },
       },
     ];

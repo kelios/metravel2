@@ -154,7 +154,7 @@ export default function FavoritesScreen() {
     useScreenHeader({
         title: i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117'),
         overflow: canClear
-            ? [{ key: 'clear', label: clearLabel, icon: 'trash-2', onPress: handleClearAll, accessibilityLabel: clearLabel }]
+            ? [{ key: 'clear', label: clearLabel, icon: 'trash-2', onPress: handleClearAll, accessibilityLabel: clearLabel, destructive: true }]
             : undefined,
     });
 

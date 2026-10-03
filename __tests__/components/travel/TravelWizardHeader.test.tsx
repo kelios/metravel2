@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Modal, StyleSheet } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
@@ -109,7 +109,7 @@ describe('TravelWizardHeader', () => {
     expect(flattened.minHeight).toBeGreaterThanOrEqual(44);
   });
 
-  it('lets mobile users jump directly to another wizard step from the step selector', () => {
+  it('lets mobile users jump directly to another wizard step from the step selector', async () => {
     mockResponsiveState = {
       isHydrated: true,
       isMobile: true,
@@ -141,7 +141,8 @@ describe('TravelWizardHeader', () => {
 
     fireEvent.press(getByLabelText('Перейти к шагу 5: дополнительные параметры'));
 
-    expect(onStepSelect).toHaveBeenCalledTimes(1);
+    // На iOS пункт листа выполняется после закрытия листа (onDismiss / таймер, #2115).
+    await waitFor(() => expect(onStepSelect).toHaveBeenCalledTimes(1));
     expect(onStepSelect).toHaveBeenCalledWith(5);
     expect(queryByLabelText('Перейти к шагу 5: дополнительные параметры')).toBeNull();
   });

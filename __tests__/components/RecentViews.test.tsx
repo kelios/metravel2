@@ -5,6 +5,9 @@ import { Platform } from 'react-native';
 
 
 // Mock Feather icons
+// #2115: очистка истории спрашивает подтверждение — в тесте пользователь соглашается.
+jest.mock('@/utils/confirmAction', () => ({ confirmAction: jest.fn(async () => true) }));
+
 jest.mock('@expo/vector-icons', () => ({
   Feather: ({ name, ...props }: any) => {
     const React = require('react');

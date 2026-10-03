@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import type { Travel } from '@/types/types';
 import { buildTravelPathFromTravel } from '@/utils/routePaths';
 import { translate as i18nT } from '@/i18n'
+import { confirmAction } from '@/utils/confirmAction'
 
 
 interface RecentViewsProps {
@@ -189,6 +190,12 @@ function RecentViews({
   }, [initialTravels, maxItems]);
 
   const handleClear = async () => {
+    // #2115: очистка истории — с подтверждением, как остальные пути очистки (#1556).
+    const confirmed = await confirmAction({
+      title: i18nT('shared:components.ui.ConfirmDialog.podtverzhdenie_a57088b1'),
+      message: i18nT('travel:components.travel.RecentViews.ochistit_istoriyu_prosmotrov_68ac8b8c'),
+    });
+    if (!confirmed) return;
     if (!AsyncStorage?.removeItem) {
       setRecentTravels([]);
       return;

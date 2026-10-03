@@ -20,6 +20,12 @@ const defaultProps = {
     onBack: jest.fn(),
 };
 
+let mockIsScreenHeaderMobile = false;
+jest.mock('@/components/layout/ScreenHeaderContext', () => ({
+    ...jest.requireActual('@/components/layout/ScreenHeaderContext'),
+    useIsScreenHeaderMobile: () => mockIsScreenHeaderMobile,
+}));
+
 describe('ChatView', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -89,13 +95,35 @@ describe('ChatView', () => {
         expect(queryByLabelText('Назад к списку диалогов')).toBeNull();
     });
 
-    it('calls onDeleteThread when delete thread button pressed', () => {
+    // #2115: удаление диалога — только после подтверждения (раньше шло сразу).
+    it('desktop: «Удалить диалог» спрашивает подтверждение и удаляет только после него', () => {
+        mockIsScreenHeaderMobile = false;
         const onDeleteThread = jest.fn();
-        const { getByLabelText } = render(
+        const { getByLabelText, getByTestId } = render(
             <ChatView {...defaultProps} onDeleteThread={onDeleteThread} />
         );
         fireEvent.press(getByLabelText('Удалить диалог'));
-        expect(onDeleteThread).toHaveBeenCalled();
+        expect(onDeleteThread).not.toHaveBeenCalled();
+        fireEvent.press(getByTestId('chat-header-delete-confirm'));
+        expect(onDeleteThread).toHaveBeenCalledTimes(1);
+    });
+
+    // #2115 (правило #2101): на телефоне удаление — подписанный пункт «⋯», корзины в шапке нет.
+    it('телефон: «Удалить диалог» — destructive-пункт «⋯» с подтверждением', async () => {
+        mockIsScreenHeaderMobile = true;
+        const onDeleteThread = jest.fn();
+        const { getByTestId, queryByTestId } = render(
+            <ChatView {...defaultProps} onDeleteThread={onDeleteThread} />
+        );
+        expect(queryByTestId('chat-header-delete')).toBeNull();
+        fireEvent.press(getByTestId('chat-header-more'));
+        fireEvent.press(getByTestId('chat-header-delete-thread'));
+        expect(onDeleteThread).not.toHaveBeenCalled();
+        // На iOS пункт ждёт закрытия листа (onDismiss / страховочный таймер, #2115).
+        const confirm = await waitFor(() => getByTestId('chat-header-delete-confirm'));
+        fireEvent.press(confirm);
+        expect(onDeleteThread).toHaveBeenCalledTimes(1);
+        mockIsScreenHeaderMobile = false;
     });
 
     it('shows loading indicator when loading with no messages', () => {

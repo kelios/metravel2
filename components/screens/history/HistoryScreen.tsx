@@ -315,7 +315,7 @@ export default function HistoryScreen() {
     useScreenHeader({
         title: i18nT('shared:app.tabs.history.vy_smotreli_e2be38ed'),
         overflow: canClear
-            ? [{ key: 'clear', label: clearLabel, icon: 'trash-2', onPress: handleClear, accessibilityLabel: clearLabel }]
+            ? [{ key: 'clear', label: clearLabel, icon: 'trash-2', onPress: handleClear, accessibilityLabel: clearLabel, destructive: true }]
             : undefined,
     });
 

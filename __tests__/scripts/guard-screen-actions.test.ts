@@ -1,4 +1,7 @@
-const { scanSource, scanScreenActions, ACTION_SCREENS } = require('@/scripts/guard-screen-actions')
+const fs = require('node:fs')
+const os = require('node:os')
+const path = require('node:path')
+const { scanSource, scanScreenActions, scanDeleteSurfaces, ACTION_SCREENS, DELETE_SURFACES } = require('@/scripts/guard-screen-actions')
 
 describe('guard-screen-actions (#2101)', () => {
   it('репозиторий зелёный', () => {
@@ -56,5 +59,47 @@ describe('guard-screen-actions (#2101)', () => {
 
   it('экран без декларации шапки падает', () => {
     expect(scanSource('components/trips/PublicTripDetail.tsx', 'export const S = () => null')).toHaveLength(1)
+  })
+
+  // #2115: guard видит все поверхности удаления, а не только экраны деталей.
+  describe('реестр поверхностей удаления (#2115)', () => {
+    const makeRoot = (files: Record<string, string>) => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'screen-actions-'))
+      for (const [rel, body] of Object.entries(files)) {
+        fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true })
+        fs.writeFileSync(path.join(root, rel), body)
+      }
+      // Все записи реестра должны существовать с находкой — кладём их как есть.
+      for (const rel of Object.keys(DELETE_SURFACES)) {
+        if (files[rel] !== undefined) continue
+        fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true })
+        fs.writeFileSync(path.join(root, rel), `const icon = 'trash-2'\n`)
+      }
+      return root
+    }
+
+    it('новая корзина вне ACTION_SCREENS и без записи реестра — нарушение', () => {
+      const root = makeRoot({ 'components/new/NewScreen.tsx': `<Feather name="trash-2" />\n` })
+      const findings = scanDeleteSurfaces(root)
+      expect(findings).toEqual([expect.stringContaining('components/new/NewScreen.tsx: корзина или variant="danger" без решения')])
+    })
+
+    it('запись реестра без находки — устарела', () => {
+      const [rel] = Object.keys(DELETE_SURFACES)
+      const root = makeRoot({ [rel]: `const nothingToDelete = true\n` })
+      expect(scanDeleteSurfaces(root)).toEqual([expect.stringContaining(`${rel}: запись DELETE_SURFACES устарела`)])
+    })
+
+    it('корзина в комментарии не считается поверхностью', () => {
+      const root = makeRoot({ 'components/new/Commented.tsx': `// <Feather name="trash-2" />\n` })
+      expect(scanDeleteSurfaces(root)).toEqual([])
+    })
+
+    it('каждая запись реестра имеет вид и причину', () => {
+      for (const [rel, entry] of Object.entries(DELETE_SURFACES) as [string, [string, string]][]) {
+        expect([rel, ['row', 'bulk', 'editor', 'sheet', 'settings', 'dialog'].includes(entry[0])]).toEqual([rel, true])
+        expect(entry[1].trim().length).toBeGreaterThan(10)
+      }
+    })
   })
 })

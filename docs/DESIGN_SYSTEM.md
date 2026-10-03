@@ -158,6 +158,16 @@ Status: accepted, 2026-10-02 (#2101, family MOBILE-ACTION-LABELS-001).
 Guard — `scripts/guard-screen-actions.js`; метрика «иконки без доступного имени = 0»
 — `e2e/mobile-screen-budget.spec.ts`.
 
+Поверхности удаления вне экрана деталей (#2115). Guard сканирует все `app`,
+`components`, `screens`: корзина или `variant="danger"` допустимы либо на экране из
+`ACTION_SCREENS` (правило выше), либо поимённо в `DELETE_SURFACES` с видом —
+`row` (строка списка: подпись + подтверждение у строки), `bulk` (массовое действие),
+`editor` (кнопка в открытом редакторе), `sheet` (пункт уже открытого меню или
+попапа), `settings` (раздел данных/аккаунта с пояснением), `dialog` (кнопка самого
+диалога) — и причиной. Новая корзина без решения и устаревшая запись роняют guard.
+Пункт «⋯», открывающий `ConfirmDialog`, `ActionListSheet` на iOS выполняет после
+закрытия листа (`onDismiss`): второй Modal поверх закрывающегося UIKit не покажет.
+
 ## Empty states (`ui/EmptyState`, `density`)
 
 Status: accepted, 2026-10-03 (#2104, family MOBILE-EMPTY-STATE-001).
