@@ -6,8 +6,7 @@ import type { ThemedColors } from '@/hooks/useTheme'
 import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS, SECONDARY_HEADER_NAV_ITEMS, type HeaderNavItem } from '@/constants/headerNavigation'
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import { isNavRouteAvailable } from '@/constants/platformNavRoutes'
-import { buildLoginHref } from '@/utils/authNavigation'
-import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
+import { buildAccountMenuModel, runAccountMenuTarget, type AccountMenuEntry } from './accountMenuModel'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import UnreadBadge from './UnreadBadge'
 import NavigationIcon from './NavigationIcon'
@@ -22,12 +21,13 @@ type Props = {
   onOverlayPress: () => void
   onNavPress: (path: string, external?: boolean) => void
   onUserAction: (path: string, extraAction?: () => void) => void
-  onMyTravels?: () => void
   onLogout: () => void
   colors: ThemedColors
   styles: any
   activePath: string
   isAuthenticated: boolean
+  isSuperuser?: boolean
+  userId?: string | number | null
   username?: string | null
   favoritesCount: number
   unreadCount?: number
@@ -84,12 +84,13 @@ export default function CustomHeaderMobileMenu({
   onOverlayPress,
   onNavPress,
   onUserAction,
-  onMyTravels,
   onLogout,
   colors,
   styles,
   activePath,
   isAuthenticated,
+  isSuperuser,
+  userId,
   username,
   favoritesCount,
   unreadCount = 0,
@@ -116,71 +117,46 @@ export default function CustomHeaderMobileMenu({
     },
   }));
 
-  const accountItems: MenuActionItem[] = !isAuthenticated
-    ? [
-        {
-          key: 'login',
-          label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.voyti_ff34a63d'),
-          icon: 'log-in',
-          onPress: () => onUserAction(buildLoginHref({ intent: 'menu' }) as any),
-        },
-        {
-          key: 'registration',
-          label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.zaregistrirovatsya_42755889'),
-          icon: 'user-plus',
-          onPress: () => {
-            trackRegisterCtaClicked({ source: 'mobile_menu', intent: 'menu', authState: 'guest' })
-            onUserAction('/registration')
-          },
-        },
-      ]
-    : [
-        {
-          key: 'profile',
-          label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.lichnyy_kabinet_value1_ea3db966', { value1: favoritesCount > 0 ? ` (${favoritesCount})` : '' }),
-          icon: 'user',
-          onPress: () => onUserAction('/profile'),
-          accessibilityLabel: username ? i18nT('navigation:components.layout.CustomHeaderMobileMenu.lichnyy_kabinet_value1_e241654e', { value1: username }) : i18nT('navigation:components.layout.CustomHeaderMobileMenu.lichnyy_kabinet_b728bc9e'),
-        },
-        {
-          key: 'new-travel',
-          label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.dobavit_puteshestvie_f5877871'),
-          icon: 'plus-circle',
-          onPress: () => onUserAction('/travel/new'),
-        },
-        {
-          key: 'my-travels',
-          label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.moi_puteshestviya_353f3065'),
-          icon: 'map',
-          onPress: onMyTravels ? onMyTravels : () => onUserAction('/metravel'),
-        },
-        {
-          key: 'user-points',
-          label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.moi_tochki_9da59ffd'),
-          icon: 'map-pin',
-          onPress: () => onUserAction('/userpoints'),
-        },
-        {
-          key: 'messages',
-          label: unreadCount > 0 ? i18nT('navigation:components.layout.CustomHeaderMobileMenu.soobscheniya_value1_155d128d', { value1: unreadCount }) : i18nT('navigation:components.layout.CustomHeaderMobileMenu.soobscheniya_1fe9d06d'),
-          icon: 'mail',
-          onPress: () => onUserAction('/messages'),
-          accessibilityLabel:
-            unreadCount > 0 ? i18nT('navigation:components.layout.CustomHeaderMobileMenu.soobscheniya_value1_neprochitannyh_06035ae9', { value1: unreadCount }) : i18nT('navigation:components.layout.CustomHeaderMobileMenu.soobscheniya_1fe9d06d'),
-          iconColor: unreadCount > 0 ? colors.primary : colors.textMuted,
-          labelStyle: unreadCount > 0 ? { fontWeight: '600', color: colors.text } : undefined,
-          iconSlotStyle: { position: 'relative' },
-          trailingNode: <UnreadBadge count={unreadCount} />,
-        },
-        // Экспорт в PDF («Книга путешествий») скрыт в мобильной версии сайта —
-        // фича доступна только на десктопе (см. AccountMenu). На мобильном пункт убран.
-        {
-          key: 'logout',
-          label: i18nT('navigation:components.layout.CustomHeaderMobileMenu.vyhod_0a810aed'),
-          icon: 'log-out',
-          onPress: onLogout,
-        },
-      ]
+  const accountMenu = buildAccountMenuModel({
+    surface: 'mobile',
+    isWeb: Platform.OS === 'web',
+    isAuthenticated,
+    isSuperuser,
+    userId,
+    username,
+    favoritesCount,
+    unreadCount,
+  })
+  const toMenuActionItem = (entry: AccountMenuEntry): MenuActionItem => {
+    const hasUnread = (entry.unreadCount ?? 0) > 0
+    return {
+      key: entry.key,
+      label: entry.title,
+      icon: entry.icon,
+      accessibilityLabel: entry.accessibilityLabel,
+      onPress: () =>
+        runAccountMenuTarget(entry.target, 'mobile', {
+          navigate: (path) => onUserAction(path),
+          openExternal: (url) => onNavPress(url, true),
+          logout: onLogout,
+        }),
+      ...(entry.unreadCount !== undefined
+        ? {
+            labelStyle: hasUnread ? { fontWeight: '600', color: colors.text } : undefined,
+            iconSlotStyle: { position: 'relative' },
+            trailingNode: <UnreadBadge count={entry.unreadCount} />,
+          }
+        : null),
+    }
+  }
+  // Один раздел «Аккаунт» на мобильном: профиль, путешествия и аккаунт подряд.
+  // Состав и правила поверхностей (экспорт PDF — только desktop web) — в модели.
+  const accountItems: MenuActionItem[] = [
+    ...accountMenu.guest,
+    ...(accountMenu.profile ? [accountMenu.profile] : []),
+    ...accountMenu.travels,
+    ...accountMenu.account,
+  ].map(toMenuActionItem)
 
   // «Статьи» добавлены локально (не в HEADER_NAV_ITEMS): попадание в HEADER_NAV_ITEMS
   // сделало бы /articles разделом навигации (TOP_LEVEL_SECTION_PATHS в

@@ -125,10 +125,6 @@ const useCustomHeaderMobileMenuController = ({ logout }: { logout: () => Promise
     [router, runAfterMenuClose],
   );
 
-  const handleMyTravels = useCallback(() => {
-    handleUserAction('/metravel');
-  }, [handleUserAction]);
-
   const handleLogout = useCallback(() => {
     runAfterMenuClose(async () => {
       await logout();
@@ -140,7 +136,6 @@ const useCustomHeaderMobileMenuController = ({ logout }: { logout: () => Promise
     closeMenu,
     closeMenuSafely,
     handleLogout,
-    handleMyTravels,
     handleNavPress,
     handleUserAction,
     mobileMenuVisible,
@@ -158,14 +153,13 @@ export default function CustomHeaderMobileAccountSection({
   styles,
 }: CustomHeaderMobileAccountSectionProps) {
   const colors = useThemedColors();
-  const { isAuthenticated, username, logout, userAvatar, profileRefreshToken } = useAuth();
+  const { isAuthenticated, isSuperuser, userId, username, logout, userAvatar, profileRefreshToken } = useAuth();
   const { avatarUri, setAvatarLoadError } = useAvatarUri({ userAvatar, profileRefreshToken });
   const { favorites } = useFavoritesSafe();
   const {
     closeMenu,
     closeMenuSafely,
     handleLogout,
-    handleMyTravels,
     handleNavPress,
     handleUserAction,
     mobileMenuVisible,
@@ -183,12 +177,13 @@ export default function CustomHeaderMobileAccountSection({
       onOverlayPress: closeMenuSafely,
       onNavPress: handleNavPress,
       onUserAction: handleUserAction,
-      onMyTravels: handleMyTravels,
       onLogout: handleLogout,
       colors: colors as any,
       styles,
       activePath,
       isAuthenticated,
+      isSuperuser,
+      userId,
       username,
       favoritesCount: favorites.length,
       unreadCount,
@@ -200,13 +195,14 @@ export default function CustomHeaderMobileAccountSection({
       colors,
       favorites.length,
       handleLogout,
-      handleMyTravels,
       handleNavPress,
       handleUserAction,
       isAuthenticated,
+      isSuperuser,
       mobileMenuVisible,
       styles,
       unreadCount,
+      userId,
       username,
     ]
   );

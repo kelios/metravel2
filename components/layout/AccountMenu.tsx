@@ -27,18 +27,14 @@ import {
 } from '@/constants/headerNavigation'
 import { isNavRouteAvailable } from '@/constants/platformNavRoutes'
 import { handleHeaderNavPress } from './customHeaderNavModel'
-import { routes } from '@/utils/routes'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildLoginHref } from '@/utils/authNavigation'
-import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
-import { openExternalUrlInNewTab } from '@/utils/externalLinks'
+import { buildAccountMenuModel, runAccountMenuTarget, type AccountMenuEntry } from './accountMenuModel'
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import { translate as i18nT } from '@/i18n'
 
 
 const IS_WEB = Platform.OS === 'web'
-
-const TASK_BOARD_URL = 'https://metravel.by/board'
 
 type AccountMenuProps = {
   initialOpenKey?: number
@@ -63,6 +59,7 @@ type MenuLinkItem = {
   strong?: boolean
   iconColor?: string
   leadingNode?: React.ReactNode
+  accessibilityLabel?: string
 }
 
 type MenuStyles = ReturnType<typeof createMenuStyles>
@@ -85,12 +82,6 @@ const STATIC_NAV_LINKS: MenuLinkItem[] = [
     external: item.external,
     icon: item.icon,
   })),
-]
-
-const TRAVEL_ITEMS: MenuLinkItem[] = [
-  { key: 'travel-new', get title() { return i18nT('navigationStatic:components.layout.AccountMenu.dobavit_puteshestvie_bebd3820') }, icon: 'plus-circle', path: '/travel/new' },
-  { key: 'my-travels', get title() { return i18nT('navigationStatic:components.layout.AccountMenu.moi_puteshestviya_a530e844') }, icon: 'map', path: '/metravel' },
-  { key: 'user-points', get title() { return i18nT('navigationStatic:components.layout.AccountMenu.moi_tochki_902be7fb') }, icon: 'map-pin', path: '/userpoints' },
 ]
 
 // «Документы» — тот же список, что в мобильном меню шапки (`DOCUMENT_NAV_ITEMS`);
@@ -187,7 +178,7 @@ function MenuLink({
     <Pressable
       onPress={onPress}
       accessibilityRole={item.path ? 'link' : 'button'}
-      accessibilityLabel={item.title}
+      accessibilityLabel={item.accessibilityLabel ?? item.title}
       style={({ pressed }) => [
         styles.menuItem,
         wrapperStyles.menuLink,
@@ -282,75 +273,63 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
     router.push('/' as any)
   }, [logout, closeMenu])
 
-  const handleOpenPublicProfile = useCallback(() => {
-    if (userId) router.push(routes.user(userId))
-  }, [userId])
-
-  const handleOpenTaskBoard = useCallback(() => {
-    closeMenu()
-    void openExternalUrlInNewTab(TASK_BOARD_URL, { windowFeatures: 'noopener' })
-  }, [closeMenu])
-
   const handleLogin = useCallback(
     () => navigate(buildLoginHref({ intent: 'menu' })),
     [navigate],
   )
 
-  const handleRegister = useCallback(() => {
-    trackRegisterCtaClicked({ source: 'account_menu', intent: 'menu', authState: 'guest' })
-    navigate('/registration')
-  }, [navigate])
-
-  const guestItems = useMemo<MenuLinkItem[]>(
-    () => [
-      { key: 'login', title: i18nT('navigation:components.layout.AccountMenu.voyti_d3fdfdb5'), icon: 'log-in', onPress: handleLogin },
-      { key: 'registration', title: i18nT('navigation:components.layout.AccountMenu.zaregistrirovatsya_36130f31'), icon: 'user-plus', onPress: handleRegister },
-    ],
-    [handleLogin, handleRegister],
+  const menuModel = useMemo(
+    () =>
+      buildAccountMenuModel({
+        surface: 'desktop',
+        isWeb: IS_WEB,
+        isAuthenticated,
+        isSuperuser,
+        userId,
+        username,
+        favoritesCount: favorites.length,
+        unreadCount,
+      }),
+    [favorites.length, isAuthenticated, isSuperuser, unreadCount, userId, username],
   )
 
-  const accountItems = useMemo<MenuLinkItem[]>(
-    () => [
-      {
-        key: 'messages',
-        title: unreadCount > 0 ? i18nT('navigation:components.layout.AccountMenu.soobscheniya_value1_a08d8c49', { value1: unreadCount }) : i18nT('navigation:components.layout.AccountMenu.soobscheniya_644700aa'),
-        icon: 'mail',
-        path: '/messages',
-        strong: unreadCount > 0,
-        leadingNode: (
-          <MessageMenuIcon count={unreadCount} colors={colors} defaultColor={colors.textMuted} />
-        ),
-      },
-      { key: 'subscriptions', title: i18nT('navigation:components.layout.AccountMenu.podpiski_980979f1'), icon: 'user-check', path: '/subscriptions' },
-      // #495: PDF book export is web-only (usePdfExportRuntime blocks native) — на native
-      // пункт отсекает общая политика `isNavRouteAvailable` в `renderLinks`.
-      { key: 'export', title: i18nT('navigation:components.layout.AccountMenu.eksport_v_pdf_234b675b'), icon: 'file-text', path: '/export' },
-      { key: 'public-profile', title: i18nT('navigation:components.layout.AccountMenu.publichnyy_profil_b0c7fc3b'), icon: 'globe', onPress: handleOpenPublicProfile },
-      ...(isSuperuser
-        ? [
-            {
-              key: 'task-board',
-              title: i18nT('navigation:components.layout.AccountMenu.bord_zadach_c032c12d'),
-              icon: 'trello',
-              onPress: handleOpenTaskBoard,
-            } as MenuLinkItem,
-          ]
-        : []),
-      { key: 'logout', title: i18nT('navigation:components.layout.AccountMenu.vyhod_fc2f589e'), icon: 'log-out', onPress: handleLogout },
-    ],
-    [colors, handleLogout, handleOpenPublicProfile, handleOpenTaskBoard, isSuperuser, unreadCount],
+  const toMenuLinkItem = useCallback(
+    (entry: AccountMenuEntry): MenuLinkItem => {
+      const hasUnread = (entry.unreadCount ?? 0) > 0
+      return {
+        key: entry.key,
+        title: entry.title,
+        accessibilityLabel: entry.accessibilityLabel,
+        icon: entry.icon,
+        path: entry.target.kind === 'route' ? entry.target.path : undefined,
+        onPress: () =>
+          runAccountMenuTarget(entry.target, 'desktop', {
+            navigate,
+            openExternal: (url) => {
+              closeMenu()
+              handleHeaderNavPress(router, url, true)
+            },
+            logout: () => void handleLogout(),
+          }),
+        strong: hasUnread,
+        leadingNode:
+          entry.unreadCount !== undefined ? (
+            <MessageMenuIcon count={entry.unreadCount} colors={colors} defaultColor={colors.textMuted} />
+          ) : undefined,
+      }
+    },
+    [closeMenu, colors, handleLogout, navigate],
   )
 
-  const profileItem = useMemo<MenuLinkItem>(
-    () => ({
-      key: 'profile',
-      title: i18nT('navigation:components.layout.AccountMenu.lichnyy_kabinet_value1_30ade467', { value1: favorites.length > 0 ? ` (${favorites.length})` : '' }),
-      icon: 'user',
-      path: '/profile',
-      strong: true,
-      iconColor: colors.primaryText,
-    }),
-    [favorites.length, colors.primaryText],
+  const guestItems = useMemo(() => menuModel.guest.map(toMenuLinkItem), [menuModel, toMenuLinkItem])
+  const travelItems = useMemo(() => menuModel.travels.map(toMenuLinkItem), [menuModel, toMenuLinkItem])
+  const accountItems = useMemo(() => menuModel.account.map(toMenuLinkItem), [menuModel, toMenuLinkItem])
+  const profileItem = useMemo<MenuLinkItem | null>(
+    () =>
+      menuModel.profile
+        ? { ...toMenuLinkItem(menuModel.profile), strong: true, iconColor: colors.primaryText }
+        : null,
+    [colors.primaryText, menuModel, toMenuLinkItem],
   )
 
   const displayName = isAuthenticated && username ? username : i18nT('navigation:components.layout.AccountMenu.gost_3cdc2ca8')
@@ -450,12 +429,14 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
           </>
         ) : (
           <>
-            <MenuLink
-              item={profileItem}
-              styles={menuStyles}
-              defaultIconColor={defaultIconColor}
-              onNavigate={navigate}
-            />
+            {profileItem ? (
+              <MenuLink
+                item={profileItem}
+                styles={menuStyles}
+                defaultIconColor={defaultIconColor}
+                onNavigate={navigate}
+              />
+            ) : null}
 
             <AccountMenuSection
               title={i18nT('navigation:components.layout.AccountMenu.puteshestviya_28956c1f')}
@@ -464,7 +445,7 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
               colors={colors}
               styles={menuStyles}
             >
-              {renderLinks(TRAVEL_ITEMS)}
+              {renderLinks(travelItems)}
             </AccountMenuSection>
 
             <AccountMenuSection

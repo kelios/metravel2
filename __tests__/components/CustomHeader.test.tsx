@@ -426,6 +426,28 @@ describe('CustomHeader', () => {
             expect(utils.getByLabelText('Travel-блогеры Беларуси')).toBeTruthy();
         });
 
+        it('shows the task board to a superuser in the mobile account section (#2139)', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const authBefore = { ...mockAuthContext };
+            Object.assign(mockAuthContext, { isAuthenticated: true, username: 'Юля', userId: 1, isSuperuser: true });
+            try {
+                const utils = renderHeader();
+                fireEvent.press(utils.getByTestId('mobile-menu-open'));
+                expect(utils.getByText('Борд задач')).toBeTruthy();
+                expect(utils.getByText('Подписки')).toBeTruthy();
+                expect(utils.queryByText('Экспорт в PDF')).toBeNull();
+                utils.unmount();
+
+                Object.assign(mockAuthContext, { isSuperuser: false });
+                const regular = renderHeader();
+                fireEvent.press(regular.getByTestId('mobile-menu-open'));
+                expect(regular.getByText('Подписки')).toBeTruthy();
+                expect(regular.queryByText('Борд задач')).toBeNull();
+            } finally {
+                Object.assign(mockAuthContext, authBefore, { isSuperuser: undefined });
+            }
+        });
+
         it('unmounts the mobile modal before navigating to privacy', async () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
