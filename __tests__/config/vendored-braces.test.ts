@@ -24,8 +24,10 @@ describe('vendored braces (#2077)', () => {
     expect(packageJson.resolutions.braces).toBe('file:./vendor/braces')
     expect(lockVersions('braces')).toEqual(['3.0.4-metravel.0'])
 
-    const vendoredEntry = path.join(repoRoot, 'node_modules/braces/index.js')
-    expect(resolveFrom('braces', 'micromatch')).toBe(vendoredEntry)
+    // Версию, а не абсолютный путь: jest разрешает симлинки, а node_modules в
+    // worktree сборки кандидата бывает симлинком на другой checkout.
+    const bracesSeenByMicromatch = require(resolveFrom('braces/package.json', 'micromatch'))
+    expect(bracesSeenByMicromatch.version).toBe('3.0.4-metravel.0')
     expect(require('braces/package.json').version).toBe('3.0.4-metravel.0')
   })
 
