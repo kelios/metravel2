@@ -257,12 +257,15 @@ describe('PlannedTripScreen — действия экрана (#2101)', () => {
     expect(header.primary).toBe('Редактировать поездку');
   });
 
-  it('телефон: «⋯» — экспорт, «Поделиться», красное «Удалить поездку» последним; печать на native скрыта', () => {
+  // #2102: печать плана есть и в приложениях (printHtml.native → expo-print),
+  // поэтому «Распечатать план» — первый пункт «⋯» на любой платформе.
+  it('телефон: «⋯» — печать, экспорт, «Поделиться», красное «Удалить поездку» последним', () => {
     mockResponsive = PHONE;
     mockTrip(makeTrip({ isOwner: true }));
     const { getByTestId } = renderScreen();
 
     expect(probe(getByTestId).overflow).toEqual([
+      ['print', 'Распечатать план', false],
       ['export', 'Экспорт GPX / KML', false],
       ['share', 'Поделиться', false],
       ['delete', 'Удалить поездку', true],
@@ -325,14 +328,14 @@ describe('PlannedTripScreen — действия экрана (#2101)', () => {
     expect(getByTestId('trip-plan-tab-more')).toHaveTextContent('Отчёт', { exact: false });
   });
 
-  it('чужая поездка: нет карандаша и «Удалить», остаются экспорт и «Поделиться»', () => {
+  it('чужая поездка: нет карандаша и «Удалить», остаются печать, экспорт и «Поделиться»', () => {
     mockResponsive = PHONE;
     mockTrip(makeTrip({ isOwner: false }));
     const { getByTestId } = renderScreen();
 
     const header = probe(getByTestId);
     expect(header.primary).toBeNull();
-    expect(header.overflow.map((o: unknown[]) => o[0])).toEqual(['export', 'share']);
+    expect(header.overflow.map((o: unknown[]) => o[0])).toEqual(['print', 'export', 'share']);
   });
 
   it('desktop: кнопки с подписями на месте, заголовок в теле', () => {

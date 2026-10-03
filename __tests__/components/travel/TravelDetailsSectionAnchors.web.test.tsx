@@ -47,7 +47,11 @@ beforeAll(() => {
 })
 
 jest.mock('@/components/travel/details/TravelDetailsStyles', () => ({ useTravelDetailsStyles: () => ({}) }))
-jest.mock('@/components/travel/details/TravelDetailsHeroStyles', () => ({ useTravelDetailsHeroStyles: () => ({}) }))
+jest.mock('@/components/travel/details/TravelDetailsHeroStyles', () => ({
+  // Шкала слоёв hero (#2116) — данные, не стили: берём настоящую.
+  TRAVEL_HERO_LAYERS: jest.requireActual('@/components/travel/details/TravelDetailsHeroStyles').TRAVEL_HERO_LAYERS,
+  useTravelDetailsHeroStyles: () => ({}),
+}))
 jest.mock('@/hooks/useTheme', () => ({ useThemedColors: () => ({}) }))
 jest.mock('@/hooks/useProgressiveLoading', () => ({
   useProgressiveLoad: () => ({ shouldLoad: false, setElementRef: jest.fn() }),

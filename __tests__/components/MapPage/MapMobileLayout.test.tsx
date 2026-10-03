@@ -381,9 +381,9 @@ describe('MapMobileLayout', () => {
     // Вход в маршрут уехал иконкой в верхний тулбар, поэтому снизу остаётся
     // только pill: 8px подписи от низа + 36px её высоты с воздухом. Резерв
     // плавающей плашки меряется от низа вьюпорта, поэтому внутри карты из него
-    // вычитается высота дока — ровно как у .leaflet-bottom в global.css.
+    // вычитается измеренная высота дока (#2097) — ровно как у .leaflet-bottom в global.css.
     expect(getSearchAreaButtonBottom(true, true)).toBe(
-      'calc(max(0px, var(--mt-consent-h, 0px) - 56px) + 44px)',
+      'calc(max(0px, var(--mt-consent-h, 0px) - var(--mt-dock-h, 0px)) + 44px)',
     )
     expect(getSearchAreaButtonBottom(false, true)).toBe(96)
     expect(getSearchAreaButtonBottom(false, false)).toBe(104)
