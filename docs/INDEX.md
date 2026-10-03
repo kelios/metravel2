@@ -118,6 +118,10 @@
   автопроверка — `npm run ios:store:guard`;
 - `docs/IOS_APP_REVIEW_RESPONSE_20260910.md` — рабочий ответ на запрос Apple
   о первом релизе (#1890): шесть вопросов, доказательства build 9 и готовность видео;
+- `docs/IOS_APP_REVIEW_REJECTION_20260914.md` — отказ 2.1(a) connection error
+  и отправка build 10 (#1940);
+- `docs/IOS_APP_REVIEW_REJECTION_20260925.md` — отказ 1.2 UGC и 5.1.2(i)
+  cookies/ATT: факты, почему пропустили, архитектурное решение, план, черновики;
 - `docs/IOS_APP_REVIEW_DEVICE_EVIDENCE_20260912.md` — протокол #1889:
   физические устройства, сценарий видео, история проверок и оставшиеся шаги;
 - `docs/ANDROID_STORE_LISTING.md` — текущий store listing draft.
