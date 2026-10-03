@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useLayoutEffect, useMemo } from 'react';
-import { Animated, Platform, ScrollView, View } from 'react-native';
+import { Animated, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import type {
   LayoutChangeEvent,
   ScrollViewProps,
@@ -104,6 +104,8 @@ type TravelDetailsCriticalShellProps = {
   animatedX: Animated.Value;
   sideMenuPlatformStyles: StyleProp<ViewStyle>;
   deferredContent: React.ReactNode;
+  /** #2118: native-хром, привязанный к окну (бар действий, прогресс); монтируется вне ScrollView. */
+  viewportOverlay?: React.ReactNode;
   mainAriaLabel: string;
   topNotice?: React.ReactNode;
 };
@@ -136,6 +138,7 @@ export default function TravelDetailsCriticalShell({
   animatedX,
   sideMenuPlatformStyles,
   deferredContent,
+  viewportOverlay,
   mainAriaLabel,
   topNotice,
 }: TravelDetailsCriticalShellProps) {
@@ -411,6 +414,18 @@ export default function TravelDetailsCriticalShell({
               </View>
             )}
           </Animated.ScrollView>
+          {viewportOverlay ? (
+            // #2118: слой окна — сосед ScrollView внутри безопасной зоны
+            // (как оверлей скелетона): `bottom: 0` бара = верх home indicator,
+            // а `useScrollBottomPadding` поднимает его над доком.
+            <View
+              testID="travel-details-viewport-overlay"
+              pointerEvents="box-none"
+              style={StyleSheet.absoluteFill}
+            >
+              {viewportOverlay}
+            </View>
+          ) : null}
         </View>
       </SafeAreaView>
     </View>

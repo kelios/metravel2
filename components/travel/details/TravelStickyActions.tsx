@@ -35,6 +35,10 @@ interface TravelStickyActionsProps {
 }
 
 const THRESHOLD = 300;
+// #2118: направление жеста — по накопленному сдвигу от экстремума, а не по паре
+// соседних событий: на native события скролла идут каждый кадр, и медленный
+// жест вверх даёт < 5 pt за кадр — бар не показывался вовсе (замер iPhone 17 Pro).
+const DIRECTION_SLOP = 12;
 
 function TravelStickyActions({
   travel,
@@ -50,16 +54,22 @@ function TravelStickyActions({
 
   const [visible, setVisible] = useState(false);
   const translateY = useRef(new RNAnimated.Value(80)).current;
-  const lastScrollY = useRef(0);
+  const peakY = useRef(0);
+  const troughY = useRef(0);
   const isShown = useRef(false);
 
   useEffect(() => {
     const listenerId = scrollY.addListener(({ value }) => {
-      const scrollingDown = value > lastScrollY.current + 5;
-      const scrollingUp = value < lastScrollY.current - 5;
-      lastScrollY.current = value;
+      if (isShown.current) {
+        troughY.current = Math.min(troughY.current, value);
+      } else {
+        peakY.current = Math.max(peakY.current, value);
+      }
+      const scrollingUp = !isShown.current && peakY.current - value >= DIRECTION_SLOP;
+      const scrollingDown = isShown.current && value - troughY.current >= DIRECTION_SLOP;
 
       if (value < THRESHOLD) {
+        peakY.current = value;
         if (isShown.current) {
           isShown.current = false;
           setVisible(false);
@@ -75,6 +85,7 @@ function TravelStickyActions({
 
       if (scrollingUp && !isShown.current) {
         isShown.current = true;
+        troughY.current = value;
         setVisible(true);
         RNAnimated.spring(translateY, {
           toValue: 0,
@@ -84,6 +95,7 @@ function TravelStickyActions({
         }).start();
       } else if (scrollingDown && isShown.current) {
         isShown.current = false;
+        peakY.current = value;
         RNAnimated.spring(translateY, {
           toValue: 80,
           useNativeDriver: Platform.OS !== 'web',

@@ -16,8 +16,22 @@ import {
   shouldShowTravelStickyActions,
 } from './travelDetailsPostLcpRuntimeModel'
 
+/**
+ * #2118: слой рантайм-хрома детали.
+ * - `scroll` — то, что живёт в потоке статьи (лист разделов);
+ * - `viewport` — то, что привязано к окну: полоска прогресса чтения и бар
+ *   «Действия с путешествием». На native `position: absolute` относится к
+ *   ближайшему родителю, а внутри ScrollView это колонка контента высотой во
+ *   всю статью: бар стоял на y ≈ 57 800 (замер iPhone 17 Pro), полоска — в низу
+ *   статьи. Поэтому этот слой монтируется вне ScrollView (`viewportOverlay`
+ *   критической оболочки);
+ * - `all` — web: окно держат портал бара (#2117) и `position: fixed` полоски.
+ */
+export type TravelDetailsRuntimeLayer = 'all' | 'scroll' | 'viewport'
+
 type TravelDetailsScrollRuntimeProps = {
   criticalChromeReady: boolean
+  layer?: TravelDetailsRuntimeLayer
   isMobile: boolean
   onNavigate: (key: string) => void
   screenWidth: number
@@ -33,6 +47,7 @@ const TravelStickyActionsComponent = TravelStickyActionsSlot
 
 function TravelDetailsScrollRuntime({
   criticalChromeReady,
+  layer = 'all',
   isMobile,
   onNavigate,
   screenWidth,
@@ -45,17 +60,19 @@ function TravelDetailsScrollRuntime({
   const themedColors = useThemedColors()
   const styles = useMemo(() => getTravelDetailsShellStyles(themedColors), [themedColors])
 
-  const showReadingProgress = shouldShowTravelReadingProgress({
+  const showScrollLayer = layer !== 'viewport'
+  const showViewportLayer = layer !== 'scroll'
+  const showReadingProgress = showViewportLayer && shouldShowTravelReadingProgress({
     contentHeight,
     criticalChromeReady,
     viewportHeight,
   })
-  const showSectionsSheet = shouldShowTravelSectionsSheet({
+  const showSectionsSheet = showScrollLayer && shouldShowTravelSectionsSheet({
     criticalChromeReady,
     screenWidth,
     sectionLinks,
   })
-  const showStickyActions = shouldShowTravelStickyActions(isMobile)
+  const showStickyActions = showViewportLayer && shouldShowTravelStickyActions(isMobile)
 
   return (
     <>

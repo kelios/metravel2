@@ -33,6 +33,10 @@ import { buildTravelPathFromTravel } from '@/utils/routePaths'
 import { cacheTravelOffline } from '@/hooks/useOfflineTravelCache'
 import { translate as i18nT } from '@/i18n'
 
+// #2118: на native хром, привязанный к окну (бар действий, прогресс чтения),
+// монтируется вне ScrollView — `viewportOverlay` оболочки; в контенте остаётся
+// только слой потока статьи. Web держит окно порталом и `fixed` (#2117).
+const NATIVE_VIEWPORT_CHROME = Platform.OS !== 'web'
 
 const SKELETON_FALLBACK = <TravelDetailsLoadingFallback />
 
@@ -353,6 +357,7 @@ export default function TravelDetailsContainer() {
         {deferredRuntimeSlot}
         <TravelDetailsDeferredScrollProvider value={deferredScrollState}>
           <TravelDetailsScrollRuntime
+            layer={NATIVE_VIEWPORT_CHROME ? 'scroll' : 'all'}
             travel={travel}
             isMobile={isMobile}
             screenWidth={screenWidth}
@@ -363,6 +368,35 @@ export default function TravelDetailsContainer() {
           />
         </TravelDetailsDeferredScrollProvider>
       </>
+    )
+  }, [
+    criticalChromeReady,
+    deferredRuntimeSlot,
+    deferredScrollState,
+    isMobile,
+    screenWidth,
+    scrollToComments,
+    scrollToWithMenuClose,
+    sectionLinks,
+    travel,
+  ])
+
+  const viewportRuntime = useMemo(() => {
+    if (!NATIVE_VIEWPORT_CHROME || !deferredRuntimeSlot || !travel) return null
+
+    return (
+      <TravelDetailsDeferredScrollProvider value={deferredScrollState}>
+        <TravelDetailsScrollRuntime
+          layer="viewport"
+          travel={travel}
+          isMobile={isMobile}
+          screenWidth={screenWidth}
+          sectionLinks={sectionLinks}
+          onNavigate={scrollToWithMenuClose}
+          criticalChromeReady={criticalChromeReady}
+          scrollToComments={scrollToComments}
+        />
+      </TravelDetailsDeferredScrollProvider>
     )
   }, [
     criticalChromeReady,
@@ -444,6 +478,7 @@ export default function TravelDetailsContainer() {
           mainAriaLabel={mainAriaLabel}
           topNotice={topNotice}
           deferredContent={deferredRuntime}
+          viewportOverlay={viewportRuntime}
         />
       </RichMediaViewportProvider>
     </>

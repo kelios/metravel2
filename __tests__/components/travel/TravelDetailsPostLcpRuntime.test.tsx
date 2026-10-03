@@ -323,4 +323,34 @@ describe('TravelDetailsPostLcpRuntime', () => {
     expect(screen.getByTestId('travel-sections-sheet-wrapper')).toBeTruthy()
     expect(await screen.findByTestId('travel-sticky-actions')).toBeTruthy()
   })
+
+  // #2118: на native хром окна (прогресс, бар действий) живёт вне ScrollView —
+  // слой `viewport`; в потоке статьи остаётся только лист разделов (`scroll`).
+  it.each([
+    ['scroll', { sheet: true, progress: false, actions: false }],
+    ['viewport', { sheet: false, progress: true, actions: true }],
+  ] as const)('renders only the %s layer of the runtime chrome', async (layer, expected) => {
+    Platform.OS = 'ios'
+    render(
+      <TravelDetailsDeferredScrollProvider
+        value={{ activeSection: 'map', contentHeight: 1200, scrollY: {} as any, viewportHeight: 800 }}
+      >
+        <TravelDetailsScrollRuntime
+          layer={layer}
+          travel={{ id: 1, name: 'Demo', slug: 'demo', gallery: [] } as any}
+          isMobile={true}
+          screenWidth={390}
+          sectionLinks={[{ key: 'map', label: 'Карта', icon: 'map' } as any]}
+          onNavigate={jest.fn()}
+          criticalChromeReady={true}
+          scrollToComments={jest.fn()}
+        />
+      </TravelDetailsDeferredScrollProvider>
+    )
+
+    await act(async () => {})
+    expect(screen.queryByTestId('travel-sections-sheet-wrapper') != null).toBe(expected.sheet)
+    expect(screen.queryByTestId('reading-progress-bar') != null).toBe(expected.progress)
+    expect(screen.queryByTestId('travel-sticky-actions') != null).toBe(expected.actions)
+  })
 })

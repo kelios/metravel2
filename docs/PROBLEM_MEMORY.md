@@ -3587,6 +3587,28 @@ guard, падающий в CI на попытке обойти этот конт
   контекста (рулетка, карта поездки, карта квеста) механизм уже соблюдают.
   Рецидив при зелёном guard — переоткрывать #2120.
 
+### TRAVEL-STICKY-ACTIONS-OFFSCREEN-001 — хром окна детали путешествия смонтирован внутри контента ScrollView
+
+- Канонические задачи: #2117 (web, портал в body), #2118 (native, 2026-10-03).
+- Причина confirmed: бар «Действия с путешествием» и полоска прогресса чтения
+  рендерятся в `TravelDetailsScrollRuntime`, а тот — внутри колонки контента
+  ScrollView; `position: absolute; bottom/top: 0` привязывается к колонке высотой
+  во всю статью. Web: top ≈ 47 476 px (390); native: бар на y = 57 817 при окне
+  874 (iPhone 17 Pro). Отдельно на native медленный жест вверх не показывал бар:
+  направление считалось по паре соседних событий (< 5 pt за кадр).
+- Инвариант: хром, привязанный к окну, не живёт в потоке статьи. Web — портал
+  `TravelStickyActionsSlot.web.tsx` и `fixed`; native — слой `viewport` рантайма
+  в `viewportOverlay` `TravelDetailsCriticalShell` (сосед ScrollView внутри
+  безопасной зоны, `pointerEvents="box-none"`); в контенте — только слой
+  `scroll`. Направление жеста — по накопленному сдвигу от экстремума
+  (`DIRECTION_SLOP` в `TravelStickyActions.tsx`).
+- Постоянный контроль: `__tests__/components/travel/TravelDetailsCriticalShell.viewportOverlay.test.tsx`
+  (оверлей вне `travel-details-scroll`), слои в `TravelDetailsPostLcpRuntime.test.tsx`,
+  медленный жест в `TravelStickyActions.visibility.test.tsx`; web —
+  `e2e/travel-sticky-actions-viewport.spec.ts`.
+- Новый плавающий элемент детали (кнопка, тост, панель) кладётся в слой
+  `viewport`, а не в поток статьи.
+
 ### NATIVE-TEXT-ROW-001 — dynamic Text must have an explicit row sizing contract
 
 - **Инвариант:** translated/user-generated `Text` рядом с другими children в

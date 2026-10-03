@@ -66,4 +66,22 @@ describe('TravelStickyActions visibility (#2117)', () => {
     act(() => completedHide?.({ finished: true }))
     expect(screen.queryByLabelText(TOOLBAR_LABEL)).toBeNull()
   })
+
+  it('shows on a slow upward drag made of per-frame steps below 5 px (#2118)', () => {
+    const { scrollTo } = renderBar()
+
+    scrollTo(2000)
+    for (let y = 1997; y >= 1985; y -= 3) scrollTo(y) // 3 px per frame, 15 px in total
+    expect(screen.queryByLabelText(TOOLBAR_LABEL)).not.toBeNull()
+  })
+
+  it('ignores upward jitter below the direction slop', () => {
+    const { scrollTo } = renderBar()
+
+    scrollTo(2000)
+    scrollTo(1996)
+    scrollTo(1999)
+    scrollTo(1992) // 8 px below the peak
+    expect(screen.queryByLabelText(TOOLBAR_LABEL)).toBeNull()
+  })
 })
