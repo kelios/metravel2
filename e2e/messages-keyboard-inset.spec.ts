@@ -210,8 +210,11 @@ base.describe('Messages — composer vs mobile web keyboard', () => {
         expect(after).toEqual(before);
 
         await page.evaluate(() => window.__setVisualViewportInset?.(0));
-        await page.getByRole('link', { name: 'MeTravel логотип' }).click();
-        await expect(page).toHaveURL(/\/$/);
+        // Уход с экрана сообщений SPA-переходом (не перезагрузкой). После #2100 на
+        // вложенных мобильных экранах нет бренд-строки с логотипом, а док на чате
+        // скрыт — уходим ссылкой на профиль собеседника из шапки чата.
+        await page.getByRole('link', { name: `Профиль ${OTHER.name}` }).click();
+        await expect(page).toHaveURL(/\/user\//);
         await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).overflowY))
             .not.toBe('hidden');
     });
