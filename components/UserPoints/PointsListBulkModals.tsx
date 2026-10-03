@@ -65,7 +65,7 @@ export const PointsListBulkModals: React.FC<PointsListBulkModalsProps> = ({
 
           <View style={styles.actionsModal}>
             <Text style={styles.actionsTitle}>{i18nT('map:components.UserPoints.PointsListBulkModals.udalit_tochku_c48d576a')}</Text>
-            <Text style={styles.emptySubtext}>{String(pointToDelete?.name ?? '')}</Text>
+            <Text style={styles.modalSubtext}>{String(pointToDelete?.name ?? '')}</Text>
 
             <Button
               label={i18nT('map:components.UserPoints.PointsListBulkModals.udalit_0873ed30')}
@@ -156,7 +156,7 @@ export const PointsListBulkModals: React.FC<PointsListBulkModalsProps> = ({
           />
           <View style={styles.actionsModal}>
             <Text style={styles.actionsTitle}>{i18nT('map:components.UserPoints.PointsListBulkModals.udalit_vybrannye_e97d9bbe')}</Text>
-            <Text style={styles.emptySubtext}>{i18nT('map:components.UserPoints.PointsListBulkModals.budut_udaleny_625a665a')}{selectedCount}</Text>
+            <Text style={styles.modalSubtext}>{i18nT('map:components.UserPoints.PointsListBulkModals.budut_udaleny_625a665a')}{selectedCount}</Text>
 
             <Button
               label={i18nT('map:components.UserPoints.PointsListBulkModals.udalit_0873ed30')}
@@ -195,7 +195,7 @@ export const PointsListBulkModals: React.FC<PointsListBulkModalsProps> = ({
           />
           <View style={styles.actionsModal}>
             <Text style={styles.actionsTitle}>{i18nT('map:components.UserPoints.PointsListBulkModals.udalit_vse_tochki_e0facc9e')}</Text>
-            <Text style={styles.emptySubtext}>{i18nT('map:components.UserPoints.PointsListBulkModals.eto_deystvie_nelzya_otmenit_f93bb176')}</Text>
+            <Text style={styles.modalSubtext}>{i18nT('map:components.UserPoints.PointsListBulkModals.eto_deystvie_nelzya_otmenit_f93bb176')}</Text>
 
             <Button
               label={i18nT('map:components.UserPoints.PointsListBulkModals.udalit_vse_faada381')}

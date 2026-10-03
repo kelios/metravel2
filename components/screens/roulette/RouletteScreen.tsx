@@ -20,6 +20,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ModernFilters from '@/components/listTravel/ModernFilters';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import UIButton from '@/components/ui/Button';
+import EmptyState from '@/components/ui/EmptyState';
 import type { Travel } from '@/types/types';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -320,11 +321,14 @@ export default function RouletteScreen() {
             )}
 
             {!showLoading && isEmpty && (
-              <View style={styles.emptyBox}>
-                <Text style={styles.emptyTitle}>{i18nT('shared:app.tabs.roulette.nichego_ne_nashli_d74d63c5')}</Text>
-                <Text style={styles.emptyText}>
-                  {i18nT('shared:app.tabs.roulette.poprobuy_ubrat_chast_filtrov_ili_izmeni_zapr_355b9ced')}</Text>
-              </View>
+              <EmptyState
+                density="compact"
+                variant="search"
+                icon="search"
+                testID="roulette-empty"
+                title={i18nT('shared:app.tabs.roulette.nichego_ne_nashli_d74d63c5')}
+                description={i18nT('shared:app.tabs.roulette.poprobuy_ubrat_chast_filtrov_ili_izmeni_zapr_355b9ced')}
+              />
             )}
 
             {!showLoading && !isEmpty && (

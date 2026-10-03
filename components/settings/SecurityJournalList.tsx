@@ -54,6 +54,7 @@ export default function SecurityJournalList() {
     if (entries.length === 0) {
         return (
             <EmptyState
+                density="compact"
                 icon="shield"
                 title={i18nT('profile:components.settings.SecurityJournalList.zhurnal_pust_e5b72bba')}
                 description={i18nT('profile:components.settings.SecurityJournalList.zdes_budut_otobrazhatsya_sobytiya_bezopasnos_a961da13')}

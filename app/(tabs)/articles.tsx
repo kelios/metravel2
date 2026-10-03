@@ -150,6 +150,7 @@ export default function TabOneScreen() {
           <View style={styles.content}>
             {webPageHeading}
             <EmptyState
+              density="full"
               icon="file-text"
               title={i18nT('shared:app.tabs.articles.statey_poka_net_11eef9a2')}
               description={user_id ? i18nT('shared:app.tabs.articles.u_etogo_polzovatelya_poka_net_opublikovannyh_09fa84d1') : i18nT('shared:app.tabs.articles.poka_net_opublikovannyh_statey_76359aa9')}

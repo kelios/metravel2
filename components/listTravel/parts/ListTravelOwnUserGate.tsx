@@ -44,6 +44,7 @@ const ListTravelOwnUserGate = ({
   return (
     <View style={rootStyle}>
       <EmptyState
+        density="full"
         icon="map-pin"
         title={i18nT('travel:components.listTravel.ListTravelBase.voydite_v_akkaunt_d8ae79f2')}
         description={i18nT('travel:components.listTravel.ListTravelBase.voydite_chtoby_videt_svoi_puteshestviya_i_so_e65ec44d')}

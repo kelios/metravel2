@@ -220,6 +220,7 @@ export default function FavoritesScreen() {
                 {seoBlock}
                 <ProfileCollectionHeader title={i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117')} onBackPress={handleBackToProfile} />
                 <EmptyState
+                    density="full"
                     icon="heart"
                     title={i18nT('shared:app.tabs.favorites.voydite_v_akkaunt_b6b6d6dd')}
                     description={i18nT('shared:app.tabs.favorites.voydite_chtoby_sohranyat_marshruty_v_hochu_p_003156c7')}
@@ -255,6 +256,7 @@ export default function FavoritesScreen() {
                 <ProfileCollectionHeader title={i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117')} onBackPress={handleBackToProfile} />
                 <View {...SCREEN_CONTENT_FIRST_PROPS}>
                     <EmptyState
+                        density="full"
                         icon="heart"
                         title={i18nT('shared:app.tabs.favorites.v_hochu_poehat_poka_pusto_e39c47ea')}
                         description={i18nT('shared:app.tabs.favorites.nazhmite_na_kartochke_marshruta_chtoby_dobav_80112c03')}

@@ -131,11 +131,6 @@ export const createRecommendationsTabsStyles = (
   skeletonContent: { padding: (template.content as any).padding || 12 },
   skeletonLine: { height: 14, backgroundColor: colors.borderLight, borderRadius: 7 },
   skeletonMetaRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center' },
-  emptyState: {
-    alignItems: 'center', justifyContent: 'center', paddingVertical: 40, width: '100%',
-    borderRadius: 16, backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: colors.borderLight,
-  },
-  emptyText: { marginTop: 12, fontSize: 14, color: colors.textMuted, fontWeight: '600' },
   errorContainer: { padding: 32, alignItems: 'center', justifyContent: 'center' },
   errorText: { marginTop: 12, fontSize: 15, color: colors.textMuted, textAlign: 'center' },
   horizontalList: { marginBottom: 8 },

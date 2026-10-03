@@ -28,10 +28,8 @@ import CardRail from '@/components/ui/CardRail';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { confirmAction } from '@/utils/confirmAction';
-import {
-  RecommendationsAuthGate,
-  RecommendationsEmptyState,
-} from './RecommendationsTabs.parts';
+import { RecommendationsAuthGate } from './RecommendationsTabs.parts';
+import EmptyState from '@/components/ui/EmptyState';
 import {
   PersonalizedRecommendations,
   WeeklyHighlights,
@@ -596,7 +594,13 @@ const RecommendationsTabs = memo(
           }
           return renderTabPane(
             favorites.length === 0 ? (
-              <RecommendationsEmptyState message={i18nT('travel:components.listTravel.RecommendationsTabs.v_hochu_poehat_poka_pusto_2942a4b0')} icon="heart" styles={styles} colors={colors} />
+              <EmptyState
+                density="compact"
+                variant="empty"
+                icon="heart"
+                testID="recommendations-favorites-empty"
+                title={i18nT('travel:components.listTravel.RecommendationsTabs.v_hochu_poehat_poka_pusto_2942a4b0')}
+              />
             ) : (
               <View>
                 <SavedCollectionHeader
@@ -638,7 +642,13 @@ const RecommendationsTabs = memo(
           }
           return renderTabPane(
             viewHistory.length === 0 ? (
-              <RecommendationsEmptyState message={i18nT('travel:components.listTravel.RecommendationsTabs.istoriya_prosmotrov_pusta_d2c9428a')} icon="clock" styles={styles} colors={colors} />
+              <EmptyState
+                density="compact"
+                variant="empty"
+                icon="clock"
+                testID="recommendations-history-empty"
+                title={i18nT('travel:components.listTravel.RecommendationsTabs.istoriya_prosmotrov_pusta_d2c9428a')}
+              />
             ) : (
               <View>
                 <SavedCollectionHeader

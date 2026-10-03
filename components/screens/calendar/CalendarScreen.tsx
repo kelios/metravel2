@@ -397,6 +397,7 @@ export default function CalendarScreen() {
           dense
         />
         <EmptyState
+          density="full"
           icon="calendar"
           title={i18nT('calendar:app.tabs.calendar.voydite_v_akkaunt_0eab41f5')}
           description={i18nT('calendar:app.tabs.calendar.voydite_chtoby_planirovat_puteshestviya_i_ve_f13cf76a')}
@@ -470,6 +471,7 @@ export default function CalendarScreen() {
             {visibleEntries.length === 0 ? (
               isDateFilteredEmpty ? (
                 <EmptyState
+                  density="compact"
                   icon="calendar"
                   title={i18nT('calendar:app.tabs.calendar.v_etot_den_poezdok_net_b39357eb')}
                   description={i18nT('calendar:app.tabs.calendar.za_value1_zapisey_net_vsego_v_razdele_value2_1a757718', { value1: selectedDate, value2: activeEntries.length })}
@@ -478,6 +480,7 @@ export default function CalendarScreen() {
                 />
               ) : (
                 <EmptyState
+                  density="compact"
                   icon={emptyConfig.icon}
                   title={emptyConfig.title}
                   description={emptyConfig.description}

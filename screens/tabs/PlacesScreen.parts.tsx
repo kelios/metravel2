@@ -1,14 +1,10 @@
 import React from 'react'
 import {
-  ActivityIndicator,
-  Pressable,
   type StyleProp,
-  Text,
   View,
   type ViewStyle,
   useWindowDimensions,
 } from 'react-native'
-import Feather from '@expo/vector-icons/Feather'
 import * as Clipboard from 'expo-clipboard'
 
 import {
@@ -24,9 +20,9 @@ import {
 import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
 import PlaceListCard from '@/components/places/PlaceListCard'
 import PlaceRatingSection from '@/components/places/PlaceRatingSection'
+import EmptyState, { type EmptyStateProps } from '@/components/ui/EmptyState'
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem'
 import { useSavedPointToggle } from '@/hooks/map/useSavedPointToggle'
-import { type ThemedColors } from '@/hooks/useTheme'
 import { useAuthStore } from '@/stores/authStore'
 import { PointStatus } from '@/types/userPoints'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
@@ -35,7 +31,6 @@ import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel'
 import { showToast } from '@/utils/toast'
 
 import { type PlacesStyles } from './PlacesScreen.styles'
-import { PRESSED_OPACITY } from './PlacesScreen.helpers'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -371,10 +366,11 @@ export function SkeletonGrid({
   )
 }
 
+// Тонкая обёртка над единым EmptyState (#2104): пустота/ошибка внутри списка мест,
+// одно действие с pending-подписью на время рефетча.
 export function StateBlock({
-  styles,
-  colors,
   icon,
+  variant,
   title,
   description,
   actionLabel,
@@ -382,9 +378,8 @@ export function StateBlock({
   pending = false,
   pendingLabel,
 }: {
-  styles: PlacesStyles
-  colors: ThemedColors
-  icon: React.ComponentProps<typeof Feather>['name']
+  icon: string
+  variant: NonNullable<EmptyStateProps['variant']>
   title: string
   description: string
   actionLabel: string
@@ -393,32 +388,18 @@ export function StateBlock({
   pendingLabel?: string
 }) {
   return (
-    <View style={styles.stateBlock}>
-      <View style={styles.stateIconWrap}>
-        <Feather name={icon} size={28} color={colors.textMuted} />
-      </View>
-      <Text style={styles.stateTitle}>{title}</Text>
-      <Text style={styles.stateText}>{description}</Text>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ disabled: pending, busy: pending }}
-        disabled={pending}
-        onPress={onAction}
-        style={({ pressed }) => [
-          styles.stateAction,
-          pending && styles.stateActionPending,
-          pressed && !pending && PRESSED_OPACITY,
-        ]}
-      >
-        {pending ? (
-          <View style={styles.stateActionPendingRow}>
-            <ActivityIndicator size="small" color={colors.textOnPrimary} />
-            <Text style={styles.stateActionText}>{pendingLabel ?? actionLabel}</Text>
-          </View>
-        ) : (
-          <Text style={styles.stateActionText}>{actionLabel}</Text>
-        )}
-      </Pressable>
-    </View>
+    <EmptyState
+      density="compact"
+      variant={variant}
+      icon={icon}
+      title={title}
+      description={description}
+      action={{
+        label: pending ? (pendingLabel ?? actionLabel) : actionLabel,
+        accessibilityLabel: actionLabel,
+        onPress: onAction,
+        loading: pending,
+      }}
+    />
   )
 }

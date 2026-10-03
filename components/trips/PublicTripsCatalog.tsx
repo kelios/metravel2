@@ -16,7 +16,7 @@ import {
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
-import Button from '@/components/ui/Button';
+import EmptyState from '@/components/ui/EmptyState';
 import ScreenHeader from '@/components/ui/ScreenHeader';
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import PublicTripCard from '@/components/trips/PublicTripCard';
@@ -174,23 +174,23 @@ function PublicTripsCatalog() {
             <ActivityIndicator color={colors.primaryDark} />
           </View>
         ) : isError ? (
-          <Text style={styles.empty}>{i18nT('trips:components.trips.PublicTripsCatalog.ne_udalos_zagruzit_katalog_poezdok_8ff8ecbf')}</Text>
+          <Text style={styles.statusText}>{i18nT('trips:components.trips.PublicTripsCatalog.ne_udalos_zagruzit_katalog_poezdok_8ff8ecbf')}</Text>
         ) : trips.length === 0 ? (
-          <View style={styles.emptyBox} testID="public-trips-empty" {...SCREEN_CONTENT_FIRST_PROPS}>
-            <Text style={styles.empty}>
-              {hasActiveFilters || hasActiveSearch
+          <View {...SCREEN_CONTENT_FIRST_PROPS}>
+            <EmptyState
+              density="compact"
+              variant="search"
+              icon={hasActiveFilters || hasActiveSearch ? 'search' : 'compass'}
+              title={hasActiveFilters || hasActiveSearch
                 ? i18nT('trips:components.trips.PublicTripsCatalog.nichego_ne_naydeno_sbroste_poisk_ili_filtry_06382c80')
                 : i18nT('trips:components.trips.PublicTripsCatalog.poka_net_otkrytyh_poezdok_zaglyanite_pozzhe_fdb683cb')}
-            </Text>
-            {hasActiveFilters || hasActiveSearch ? (
-              <Button
-                label={i18nT('trips:components.trips.PublicTripsCatalog.sbrosit_09d93db0')}
-                variant="secondary"
-                size="sm"
-                onPress={resetSearchAndFilters}
-                testID="public-trips-reset-empty"
-              />
-            ) : null}
+              action={hasActiveFilters || hasActiveSearch ? {
+                label: i18nT('trips:components.trips.PublicTripsCatalog.sbrosit_09d93db0'),
+                onPress: resetSearchAndFilters,
+                testID: 'public-trips-reset-empty',
+              } : undefined}
+              testID="public-trips-empty"
+            />
           </View>
         ) : (
           <View style={[styles.grid, { gap: GUTTER }]} {...SCREEN_CONTENT_FIRST_PROPS}>
@@ -263,8 +263,7 @@ const createStyles = (colors: ThemedColors) =>
       ...Platform.select({ web: { cursor: 'pointer' as any } }),
     },
     center: { paddingVertical: 40, alignItems: 'center' },
-    empty: { fontSize: 14, color: colors.textMuted, lineHeight: 20, paddingVertical: 16 },
-    emptyBox: { alignItems: 'flex-start', gap: 8 },
+    statusText: { fontSize: 14, color: colors.textMuted, lineHeight: 20, paddingVertical: 16 },
     grid: { flexDirection: 'row', flexWrap: 'wrap' },
     fullWidth: { width: '100%' },
   });

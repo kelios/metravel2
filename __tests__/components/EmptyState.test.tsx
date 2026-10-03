@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import EmptyState from '@/components/ui/EmptyState';
 
 // Mock Feather icons
@@ -40,6 +41,7 @@ describe('EmptyState', () => {
   it('should render with icon, title and description', () => {
     const { toJSON, getByTestId } = render(
       <EmptyState
+        density="full"
         icon="inbox"
         title="No items"
         description="There are no items to display"
@@ -63,6 +65,7 @@ describe('EmptyState', () => {
     const onPress = jest.fn();
     const { UNSAFE_getAllByType, toJSON } = render(
       <EmptyState
+        density="full"
         icon="inbox"
         title="No items"
         description="There are no items to display"
@@ -92,6 +95,7 @@ describe('EmptyState', () => {
     const customActionStyle = { alignSelf: 'stretch' as const, backgroundImage: 'none' };
     const { UNSAFE_getAllByType } = render(
       <EmptyState
+        density="full"
         icon="inbox"
         title="No items"
         description="There are no items to display"
@@ -117,6 +121,7 @@ describe('EmptyState', () => {
   it('should not render action button when not provided', () => {
     const { toJSON } = render(
       <EmptyState
+        density="full"
         icon="inbox"
         title="No items"
         description="There are no items to display"
@@ -131,6 +136,7 @@ describe('EmptyState', () => {
   it('should use custom icon size', () => {
     const { toJSON } = render(
       <EmptyState
+        density="full"
         icon="inbox"
         title="No items"
         description="Description"
@@ -146,6 +152,7 @@ describe('EmptyState', () => {
   it('should use custom icon color', () => {
     const { toJSON } = render(
       <EmptyState
+        density="full"
         icon="inbox"
         title="No items"
         description="Description"
@@ -161,6 +168,7 @@ describe('EmptyState', () => {
   it('should use default icon size when not provided', () => {
     const { toJSON } = render(
       <EmptyState
+        density="full"
         icon="inbox"
         title="No items"
         description="Description"
@@ -170,5 +178,67 @@ describe('EmptyState', () => {
     // Проверяем, что компонент рендерится с дефолтным размером
     const tree = toJSON();
     expect(tree).toBeTruthy();
+  });
+
+  describe('density (#2104)', () => {
+    const flat = (node: any) => StyleSheet.flatten(node.props.style) || {};
+    const circleOf = (getByTestId: any, icon: string) => {
+      let node = getByTestId(`feather-${icon}`).parent;
+      while (node && flat(node).borderRadius == null) node = node.parent;
+      return node;
+    };
+
+    it('compact: без flex/minHeight, круг 56, иконка 28, testID кнопок', () => {
+      const onPress = jest.fn();
+      const { getByTestId } = render(
+        <EmptyState
+          density="compact"
+          icon="map"
+          title="Ваши маршруты появятся здесь"
+          description="Описание"
+          action={{ label: 'Создать', onPress }}
+          secondaryAction={{ label: 'Квест', onPress }}
+        />
+      );
+      const root = flat(getByTestId('empty-state'));
+      expect(root.minHeight).toBeUndefined();
+      expect(root.flex).toBeUndefined();
+      const circle = flat(circleOf(getByTestId, 'map'));
+      expect(circle.width).toBe(56);
+      expect(circle.height).toBe(56);
+      expect(getByTestId('feather-map').props.size).toBe(28);
+      fireEvent.press(getByTestId('empty-state-action'));
+      expect(onPress).toHaveBeenCalledTimes(1);
+      expect(getByTestId('empty-state-secondary-action')).toBeTruthy();
+    });
+
+    it('full: прежний вид — minHeight и круг больше компактного', () => {
+      const { getByTestId } = render(
+        <EmptyState density="full" icon="map" title="T" description="D" />
+      );
+      const root = flat(getByTestId('empty-state'));
+      expect(root.minHeight).toBeGreaterThanOrEqual(260);
+      expect(root.flex).toBe(1);
+      expect(flat(circleOf(getByTestId, 'map')).width).toBeGreaterThan(56);
+    });
+
+    it('moreActions и собственные testID действий, описание необязательно', () => {
+      const onMore = jest.fn();
+      const { getByTestId, queryByText } = render(
+        <EmptyState
+          density="compact"
+          testID="panel-empty"
+          icon="map-pin"
+          title="Ничего не нашлось"
+          action={{ label: 'Расширить', onPress: jest.fn(), testID: 'empty-expand-radius' }}
+          moreActions={[{ label: 'Фильтры', onPress: onMore, testID: 'empty-open-filters' }]}
+        />
+      );
+      expect(getByTestId('panel-empty')).toBeTruthy();
+      expect(getByTestId('empty-expand-radius')).toBeTruthy();
+      fireEvent.press(getByTestId('empty-open-filters'));
+      expect(onMore).toHaveBeenCalledTimes(1);
+      expect(queryByText('undefined')).toBeNull();
+    });
   });
 });

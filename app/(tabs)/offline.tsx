@@ -263,6 +263,7 @@ export default function OfflineLibraryScreen() {
           </View>
         ) : filtered.length === 0 && filteredOperations.length === 0 ? (
           <EmptyState
+            density="full"
             icon="download-cloud"
             title={t('offline:emptyTitle')}
             description={t('offline:emptyDescription')}

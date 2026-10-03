@@ -94,6 +94,7 @@ export default function ExportScreen() {
             {isMobileWebExport ? (
                 <ResponsiveContainer maxWidth="lg" padding>
                 <EmptyState
+                    density="full"
                     icon="monitor"
                     title={i18nT('export:app.tabs.export.pdf_kniga_dostupna_tolko_na_kompyutere_5fa839fc')}
                     description={i18nT('export:app.tabs.export.sborka_i_eksport_puteshestviy_v_pdf_rabotayu_f77f9626')}
@@ -107,6 +108,7 @@ export default function ExportScreen() {
             ) : !isAuthenticated ? (
                 <ResponsiveContainer maxWidth="lg" padding>
                 <EmptyState
+                    density="full"
                     icon="lock"
                     title={i18nT('export:app.tabs.export.voydite_chtoby_sobrat_pdf_knigu_dd53ff43')}
                     description={i18nT('export:app.tabs.export.eksport_v_pdf_dostupen_posle_avtorizatsii_4948aa62')}
@@ -124,6 +126,7 @@ export default function ExportScreen() {
             ) : shouldShowEmptyState ? (
                 <ResponsiveContainer maxWidth="lg" padding>
                 <EmptyState
+                    density="full"
                     icon="file-text"
                     title={i18nT('export:app.tabs.export.chtoby_sobrat_pdf_knigu_dobavte_hotya_by_odn_605e941a')}
                     description={i18nT('export:app.tabs.export.dobavte_pervoe_puteshestvie_i_smozhete_sobra_376685ca')}

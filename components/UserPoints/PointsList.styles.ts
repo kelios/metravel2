@@ -399,27 +399,10 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
     padding: DESIGN_TOKENS.spacing.xl,
     alignItems: 'center',
   },
-  emptyText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
-    fontWeight: '600' as any,
-    color: colors.text,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
-  },
-  emptySubtext: {
+  modalSubtext: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: colors.textMuted,
     textAlign: 'center',
-  },
-  emptyActionsRow: {
-    marginTop: DESIGN_TOKENS.spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: DESIGN_TOKENS.spacing.sm,
-    flexWrap: 'wrap',
-  },
-  emptyActionButton: {
-    minWidth: 160,
   },
   secondaryButton: {
     backgroundColor: colors.backgroundSecondary,

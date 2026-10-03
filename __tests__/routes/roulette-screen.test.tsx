@@ -42,6 +42,11 @@ jest.mock('@tanstack/react-query', () => {
 jest.mock('expo-router', () => ({
   usePathname: () => '/roulette',
   useIsFocused: () => true,
+  // Шапка экрана (`useScreenHeader`, #2099) регистрируется на фокусе.
+  useFocusEffect: (effect: () => void | (() => void)) => {
+    const React = require('react');
+    React.useEffect(effect, [effect]);
+  },
 }));
 
 jest.mock('react-native', () => {

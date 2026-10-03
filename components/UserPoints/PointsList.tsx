@@ -368,6 +368,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       return (
         <View style={styles.emptyContainer}>
           <EmptyState
+            density="compact"
             icon="wifi-off"
             variant="error"
             title={i18nT('map:components.UserPoints.PointsList.ne_udalos_zagruzit_tochki_a1d1dfdc')}
@@ -380,6 +381,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     return (
       <View style={styles.emptyContainer} {...SCREEN_CONTENT_FIRST_PROPS}>
         <EmptyState
+          density="compact"
           icon="map-pin"
           variant="empty"
           title={i18nT('map:components.UserPoints.PointsList.u_vas_poka_net_tochek_7f6af4ba')}

@@ -265,6 +265,7 @@ export default function SettingsScreen() {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <EmptyState
+                    density="full"
                     icon="settings"
                     title={i18nT('profile:app.tabs.settings.voydite_v_akkaunt_d3790281')}
                     description={i18nT('profile:app.tabs.settings.voydite_chtoby_upravlyat_nastroykami_i_danny_d8ac08ea')}

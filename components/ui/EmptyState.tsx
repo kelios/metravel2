@@ -1,4 +1,8 @@
-// Компонент для пустых состояний
+// Компонент для пустых состояний — единственный владелец вида «пусто» (#2104).
+// density обязателен: `compact` — пустота внутри вкладки, списка, панели или листа
+// (кнопка обязана попасть в первый экран над доком); `full` — самостоятельный пустой
+// экран. Правило — docs/DESIGN_SYSTEM.md «Empty states», страж —
+// __tests__/config/empty-state-governance.test.ts.
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
@@ -9,29 +13,43 @@ import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛ�
 import Button from '@/components/ui/Button';
 import Chip from '@/components/ui/Chip';
 import { translate as i18nT } from '@/i18n'
+import type { FeatherIconName } from '@/constants/navigationIcons'
 
 
-interface EmptyStateProps {
+export type EmptyStateDensity = 'full' | 'compact';
+
+export interface EmptyStateAction {
+  label: string;
+  onPress: () => void;
+  accessibilityLabel?: string;
+  style?: StyleProp<ViewStyle>;
+  /** Иконка Feather слева от подписи. */
+  icon?: FeatherIconName;
+  loading?: boolean;
+  disabled?: boolean;
+  testID?: string;
+}
+
+export interface EmptyStateProps {
   icon: string;
   title: string;
-  description: string;
-  action?: {
-    label: string;
-    onPress: () => void;
-    accessibilityLabel?: string;
-    style?: StyleProp<ViewStyle>;
-  };
-  secondaryAction?: {
-    label: string;
-    onPress: () => void;
-    accessibilityLabel?: string;
-  };
+  description?: string;
+  action?: EmptyStateAction;
+  secondaryAction?: EmptyStateAction;
+  /** Дополнительные действия (ghost) после основного и вторичного — панель карты держит четыре. */
+  moreActions?: EmptyStateAction[];
   iconSize?: number;
   iconColor?: string;
   variant?: 'default' | 'search' | 'error' | 'empty' | 'inspire'; // ✅ УЛУЧШЕНИЕ: Варианты EmptyState
   suggestions?: string[]; // ✅ UX УЛУЧШЕНИЕ: Предложения для поиска
   examples?: Array<{ title: string; author?: string; image?: string }>; // ✅ UX: Примеры для вдохновения
+  /** Обязателен: выбор вида делается на месте вызова, а не угадывается (#2104). */
+  density: EmptyStateDensity;
+  testID?: string;
 }
+
+const renderActionIcon = (name: FeatherIconName | undefined, color: string) =>
+  name ? <Feather name={name} size={18} color={color} /> : undefined;
 
 function EmptyState({
   icon,
@@ -39,18 +57,25 @@ function EmptyState({
   description,
   action,
   secondaryAction,
+  moreActions = [],
   iconSize,
   iconColor,
   variant = 'default',
   suggestions = [],
   examples = [],
+  density,
+  testID = 'empty-state',
 }: EmptyStateProps) {
   const colors = useThemedColors();
   const { isMobile, isHydrated } = useResponsive();
   // До гидрации web считает себя мобильным (width=0). Гейтим по isHydrated, чтобы
   // на десктопе размеры иконки/отступов не «мигали» (64→96) после гидрации.
   const isMobileLayout = isHydrated && isMobile;
-  const styles = useMemo(() => createStyles(colors, isMobileLayout), [colors, isMobileLayout]);
+  const isCompact = density === 'compact';
+  const styles = useMemo(
+    () => (isCompact ? createCompactStyles(colors, isMobileLayout) : createStyles(colors, isMobileLayout)),
+    [colors, isMobileLayout, isCompact],
+  );
 
   // ✅ УЛУЧШЕНИЕ: Разные цвета для разных вариантов
   const variantColors = {
@@ -65,14 +90,17 @@ function EmptyState({
   const finalIconColor = iconColor ?? variantColorScheme.icon;
   // Компакт на мобильном (web и native одинаково — паритет): иначе иконка+отступы
   // выталкивают кнопку-действие за первый экран 390×844.
-  const finalIconSize = iconSize ?? (isMobileLayout ? 64 : 96);
+  // compact игнорирует iconSize: иконка 28 в круге 56 одинакова во всех списках (§6).
+  const finalIconSize = isCompact ? COMPACT_ICON_SIZE : iconSize ?? (isMobileLayout ? 64 : 96);
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID={testID}>
       <View style={[styles.iconContainer, { backgroundColor: variantColorScheme.bg }]}>
         <Feather name={icon as any} size={finalIconSize} color={finalIconColor} />
       </View>
       <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-      <Text style={[styles.description, { color: colors.textMuted }]}>{description}</Text>
+      {description ? (
+        <Text style={[styles.description, { color: colors.textMuted }]}>{description}</Text>
+      ) : null}
 
       {/* ✅ UX УЛУЧШЕНИЕ: Предложения для поиска */}
       {suggestions.length > 0 && (
@@ -120,8 +148,12 @@ function EmptyState({
             onPress={action.onPress}
             variant="primary"
             size="md"
+            icon={renderActionIcon(action.icon, colors.textOnPrimary)}
+            loading={action.loading}
+            disabled={action.disabled}
             style={[styles.actionButton, action.style]}
             accessibilityLabel={action.accessibilityLabel ?? action.label}
+            testID={action.testID ?? `${testID}-action`}
           />
         )}
         {secondaryAction && (
@@ -130,16 +162,38 @@ function EmptyState({
             onPress={secondaryAction.onPress}
             variant="ghost"
             size="md"
-            style={[styles.secondaryActionButton, { backgroundColor: colors.primarySoft }]}
+            icon={renderActionIcon(secondaryAction.icon, colors.primaryText)}
+            loading={secondaryAction.loading}
+            disabled={secondaryAction.disabled}
+            style={[styles.secondaryActionButton, { backgroundColor: colors.primarySoft }, secondaryAction.style]}
             accessibilityLabel={secondaryAction.accessibilityLabel ?? secondaryAction.label}
+            testID={secondaryAction.testID ?? `${testID}-secondary-action`}
           />
         )}
+        {moreActions.map((extra, index) => (
+          <Button
+            key={extra.testID ?? `${extra.label}-${index}`}
+            label={extra.label}
+            onPress={extra.onPress}
+            variant="ghost"
+            size="md"
+            icon={renderActionIcon(extra.icon, colors.primaryText)}
+            loading={extra.loading}
+            disabled={extra.disabled}
+            style={[styles.secondaryActionButton, extra.style]}
+            accessibilityLabel={extra.accessibilityLabel ?? extra.label}
+            testID={extra.testID ?? `${testID}-more-action-${index}`}
+          />
+        ))}
       </View>
     </View>
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: boolean) => StyleSheet.create({
+const fullStyleSpec = (
+  colors: ReturnType<typeof useThemedColors>,
+  isMobile: boolean,
+): StyleSheet.NamedStyles<any> => ({
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -301,5 +355,61 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
     fontStyle: 'italic',
   },
 });
+
+const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: boolean) =>
+  StyleSheet.create(fullStyleSpec(colors, isMobile));
+
+// Компактный вид (макет docs/features/mobile-screen-shell-mock.md §6): круг 56, иконка 28,
+// без flex/minHeight, отступы вдвое меньше `full`; на телефоне кнопки столбиком во всю
+// ширину. Вид одинаков на mobile web, Android и iPhone.
+const COMPACT_ICON_SIZE = 28;
+const COMPACT_CIRCLE = 56;
+
+const createCompactStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: boolean) => {
+  const full = fullStyleSpec(colors, isMobile);
+  return StyleSheet.create<any>({
+    ...full,
+    container: {
+      alignItems: 'center',
+      paddingVertical: 16,
+      paddingHorizontal: 12,
+    },
+    iconContainer: {
+      width: COMPACT_CIRCLE,
+      height: COMPACT_CIRCLE,
+      borderRadius: COMPACT_CIRCLE / 2,
+      backgroundColor: colors.primaryLight,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    title: {
+      fontSize: 18,
+      lineHeight: 24,
+      fontWeight: '700',
+      marginBottom: 6,
+      textAlign: 'center',
+    },
+    description: {
+      fontSize: 14,
+      lineHeight: 20,
+      textAlign: 'center',
+      marginBottom: 14,
+      maxWidth: 400,
+    },
+    actionsContainer: isMobile
+      ? { flexDirection: 'column', alignItems: 'stretch', alignSelf: 'stretch', gap: 8 }
+      : full.actionsContainer,
+    actionButton: {
+      ...full.actionButton,
+      paddingVertical: 12,
+      minHeight: 44,
+    },
+    secondaryActionButton: {
+      ...full.secondaryActionButton,
+      paddingVertical: 10,
+    },
+  });
+};
 
 export default React.memo(EmptyState);

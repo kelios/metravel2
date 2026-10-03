@@ -4,7 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
-import Button from '@/components/ui/Button';
+import EmptyState from '@/components/ui/EmptyState';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { isOrphanedMessageThread, type MessageThread } from '@/api/messages';
 import { translate as i18nT } from '@/i18n'
@@ -308,14 +308,17 @@ function ThreadList({
 
     if (error) {
         return (
-            <View style={styles.center}>
-                <Feather name="alert-circle" size={48} color={colors.textMuted} />
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{error}</Text>
-                <Button
-                    label={i18nT('messages:components.messages.ThreadList.povtorit_d1eae179')}
-                    onPress={onRefresh}
-                    variant="primary"
-                    style={styles.retryButton}
+            <View style={styles.emptyWrap}>
+                <EmptyState
+                    density="compact"
+                    variant="error"
+                    icon="alert-circle"
+                    title={error}
+                    action={{
+                        label: i18nT('messages:components.messages.ThreadList.povtorit_d1eae179'),
+                        onPress: onRefresh,
+                    }}
+                    testID="thread-list-error"
                 />
             </View>
         );
@@ -325,20 +328,20 @@ function ThreadList({
         return (
             <View style={{ flex: 1 }}>
                 {searchBar}
-                <View style={styles.center}>
-                    <Feather name="message-circle" size={48} color={colors.textMuted} />
-                    <Text style={[styles.emptyTitle, { color: colors.text }]}>{i18nT('messages:components.messages.ThreadList.net_soobscheniy_714b7881')}</Text>
-                    <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                        {i18nT('messages:components.messages.ThreadList.napishite_avtoru_puteshestviya_chtoby_nachat_81bd050e')}</Text>
-                    {onNewConversation && (
-                        <Button
-                            label={i18nT('messages:components.messages.ThreadList.novyy_dialog_d3c8399a')}
-                            onPress={onNewConversation}
-                            variant="primary"
-                            icon={<Feather name="edit" size={16} color={colors.textOnPrimary} />}
-                            style={styles.newConversationButton}
-                        />
-                    )}
+                <View style={styles.emptyWrap}>
+                    <EmptyState
+                        density="compact"
+                        variant="empty"
+                        icon="message-circle"
+                        title={i18nT('messages:components.messages.ThreadList.net_soobscheniy_714b7881')}
+                        description={i18nT('messages:components.messages.ThreadList.napishite_avtoru_puteshestviya_chtoby_nachat_81bd050e')}
+                        action={onNewConversation ? {
+                            label: i18nT('messages:components.messages.ThreadList.novyy_dialog_d3c8399a'),
+                            onPress: onNewConversation,
+                            icon: 'edit',
+                        } : undefined}
+                        testID="thread-list-empty"
+                    />
                 </View>
             </View>
         );
@@ -363,12 +366,14 @@ function ThreadList({
             ListHeaderComponent={header}
             ListEmptyComponent={
                 search.trim() ? (
-                    <View style={styles.center}>
-                        <Feather name="search" size={48} color={colors.textMuted} />
-                        <Text style={[styles.emptyTitle, { color: colors.text }]}>{i18nT('messages:components.messages.ThreadList.nichego_ne_naydeno_86511b0f')}</Text>
-                        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                            {i18nT('messages:components.messages.ThreadList.poprobuyte_izmenit_zapros_dc40a3c8')}</Text>
-                    </View>
+                    <EmptyState
+                        density="compact"
+                        variant="search"
+                        icon="search"
+                        title={i18nT('messages:components.messages.ThreadList.nichego_ne_naydeno_86511b0f')}
+                        description={i18nT('messages:components.messages.ThreadList.poprobuyte_izmenit_zapros_dc40a3c8')}
+                        testID="thread-list-search-empty"
+                    />
                 ) : null
             }
         />
@@ -475,23 +480,9 @@ const createStyles = (_colors: ThemedColors) =>
             paddingHorizontal: DESIGN_TOKENS.spacing.xl,
             paddingVertical: DESIGN_TOKENS.spacing.xxl,
         },
-        emptyTitle: {
-            fontSize: DESIGN_TOKENS.typography.sizes.lg,
-            fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-            marginTop: DESIGN_TOKENS.spacing.md,
-            textAlign: 'center',
-        },
-        emptyText: {
-            fontSize: DESIGN_TOKENS.typography.sizes.sm,
-            marginTop: DESIGN_TOKENS.spacing.xs,
-            textAlign: 'center',
-            lineHeight: 20,
-        },
-        retryButton: {
-            marginTop: DESIGN_TOKENS.spacing.md,
-        },
-        newConversationButton: {
-            marginTop: DESIGN_TOKENS.spacing.lg,
+        emptyWrap: {
+            flex: 1,
+            justifyContent: 'center',
         },
         newConversationRow: {
             flexDirection: 'row',

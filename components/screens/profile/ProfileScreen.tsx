@@ -789,6 +789,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <EmptyState
+          density="full"
           icon="user"
           title={i18nT('profile:app.tabs.profile.voydite_v_akkaunt_eba2a87d')}
           description={i18nT('profile:app.tabs.profile.voydite_chtoby_otkryt_profil_i_upravlyat_svo_d7506777')}

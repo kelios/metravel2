@@ -155,6 +155,7 @@ export default function SubscriptionsTabContent({
       return (
         <View {...SCREEN_CONTENT_FIRST_PROPS}>
           <EmptyState
+            density="compact"
             icon="users"
             title={i18nT('shared:components.subscriptions.SubscriptionsTabContent.vy_esche_ni_na_kogo_ne_podpisany_5e3d37ec')}
             description={i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpishites_na_avtorov_chtoby_videt_ih_putes_17ba432e')}
@@ -198,6 +199,7 @@ export default function SubscriptionsTabContent({
     if (subscribers.length === 0) {
       return (
         <EmptyState
+          density="compact"
           icon="users"
           title={i18nT('shared:components.subscriptions.SubscriptionsTabContent.u_vas_poka_net_podpischikov_6c98b691')}
           description={i18nT('shared:components.subscriptions.SubscriptionsTabContent.publikuyte_puteshestviya_chtoby_privlech_pod_921c01f5')}

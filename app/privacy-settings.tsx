@@ -47,6 +47,7 @@ export default function PrivacySettingsScreen() {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <EmptyState
+                    density="full"
                     icon="lock"
                     title={i18nT('profile:app.privacy_settings.voydite_v_akkaunt_df01412b')}
                     description={i18nT('profile:app.privacy_settings.voydite_chtoby_upravlyat_nastroykami_privatn_676e455e')}

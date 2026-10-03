@@ -75,6 +75,7 @@ export default function SubscriptionsScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <EmptyState
+          density="full"
           icon="users"
           title={i18nT('shared:app.tabs.subscriptions.voydite_v_akkaunt_7e11548a')}
           description={i18nT('shared:app.tabs.subscriptions.voydite_chtoby_podpisyvatsya_na_avtorov_i_vi_d8ff462f')}

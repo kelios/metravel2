@@ -58,6 +58,7 @@ export default function ExportScreen() {
     return (
       <ResponsiveContainer maxWidth="lg" padding>
         <EmptyState
+          density="full"
           icon="lock"
           title={i18nT('export:app.tabs.export.voydite_chtoby_sobrat_pdf_knigu_03c34a03')}
           description={i18nT('export:app.tabs.export.eksport_v_pdf_dostupen_posle_avtorizatsii_ab9dcd89')}
@@ -79,6 +80,7 @@ export default function ExportScreen() {
     return (
       <ResponsiveContainer maxWidth="lg" padding>
         <EmptyState
+          density="full"
           icon="file-text"
           title={i18nT('export:app.tabs.export.chtoby_sobrat_pdf_knigu_dobavte_hotya_by_odn_fa3a25bc')}
           description={i18nT('export:app.tabs.export.dobavte_pervoe_puteshestvie_i_smozhete_sobra_1745dc75')}

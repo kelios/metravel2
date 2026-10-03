@@ -309,31 +309,6 @@ export const createSecondaryStyles = (colors: ThemedColors, dockPadding: number 
     color: colors.primaryText,
     textDecorationLine: 'underline',
   },
-  emptyState: {
-    padding: DESIGN_TOKENS.spacing.lg,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  emptyStateTitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    color: colors.text,
-    marginBottom: DESIGN_TOKENS.spacing.xs,
-  },
-  emptyStateText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.textMuted,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
-  },
-  emptyStateActions: {
-    flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  emptyStateAction: {
-    flex: 1,
-  },
   headerBadge: {
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: DESIGN_TOKENS.spacing.xs,

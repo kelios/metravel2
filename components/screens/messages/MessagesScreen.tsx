@@ -379,6 +379,7 @@ function MessagesScreenContent() {
                     </React.Suspense>
                 )}
                 <EmptyState
+                    density="full"
                     icon="log-in"
                     title={i18nT('messages:app.tabs.messages.voydite_v_akkaunt_4c68ac56')}
                     description={i18nT('messages:app.tabs.messages.dlya_dostupa_k_soobscheniyam_neobhodimo_avto_df1d2208')}

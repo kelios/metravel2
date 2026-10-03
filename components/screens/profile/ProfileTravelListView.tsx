@@ -29,7 +29,8 @@ type Props = {
   contentPaddingBottom: number;
   listHeader: ReactElement;
   listSkeleton: ReactElement;
-  emptyStateProps: React.ComponentProps<typeof EmptyState>;
+  /** Заглушка вкладки профиля: всегда `compact` (#2104), вид задаёт этот файл. */
+  emptyStateProps: Omit<React.ComponentProps<typeof EmptyState>, 'density'>;
   currentData: Travel[];
   isSectionTab: boolean;
   isTravelsTabLoading: boolean;
@@ -98,7 +99,7 @@ export function ProfileTravelListView({
     listSkeleton
   ) : (
     <View style={styles.emptyWrap}>
-      <EmptyState {...emptyStateProps} />
+      <EmptyState {...emptyStateProps} density="compact" />
     </View>
   );
 
@@ -117,7 +118,7 @@ export function ProfileTravelListView({
           listSkeleton
         ) : currentData.length === 0 ? (
           <View style={styles.emptyWrap} {...SCREEN_CONTENT_FIRST_PROPS}>
-            <EmptyState {...emptyStateProps} />
+            <EmptyState {...emptyStateProps} density="compact" />
           </View>
         ) : (
           <View {...SCREEN_CONTENT_FIRST_PROPS}>

@@ -189,22 +189,6 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
   },
-  emptyBox: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 6,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: colors.textMuted,
-    textAlign: 'center',
-    maxWidth: 360,
-  },
   poolHint: {
     fontSize: 13,
     color: colors.textMuted,

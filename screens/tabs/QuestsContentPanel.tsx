@@ -454,11 +454,11 @@ function QuestsContentPanel({
         && selectedCityId === COMPLETED_FILTER_ID
         && dataLoaded ? (
             <EmptyState
+                density="compact"
                 icon="check-circle"
                 title={i18nT('quests:screens.tabs.QuestsContentPanel.completedEmptyTitle')}
                 description={i18nT('quests:screens.tabs.QuestsContentPanel.completedEmptyDescription')}
                 variant="empty"
-                iconSize={48}
                 action={{
                     label: i18nT('quests:screens.tabs.QuestsContentPanel.completedEmptyAction'),
                     onPress: onResetFilters,
@@ -579,31 +579,31 @@ function QuestsContentPanel({
 
                         {searchActive && questsAll.length === 0 && dataLoaded && (
                             <EmptyState
+                                density="compact"
                                 icon="search"
                                 title={i18nT('quests:screens.tabs.QuestsContentPanel.nichego_ne_naydeno_21857ccf')}
                                 description={i18nT('quests:screens.tabs.QuestsContentPanel.poprobuyte_drugoe_nazvanie_ili_gorod_980ce716')}
                                 variant="empty"
-                                iconSize={48}
                             />
                         )}
 
                         {!searchActive && isMapAreaActive && questsAll.length === 0 && dataLoaded && (
                             <EmptyState
+                                density="compact"
                                 icon="map-pin"
                                 title={i18nT('quests:screens.tabs.QuestsContentPanel.ryadom_nichego_ne_naydeno_271dd8e7')}
                                 description={i18nT('quests:screens.tabs.QuestsContentPanel.posmotrite_kvesty_v_drugih_gorodah_ili_vyber_720d6ffd')}
                                 variant="empty"
-                                iconSize={48}
                             />
                         )}
 
                         {!searchActive && !isMapAreaActive && selectedCityId === nearbyId && userLoc && questsAll.length === 0 && dataLoaded && (
                             <EmptyState
+                                density="compact"
                                 icon="map-pin"
                                 title={i18nT('quests:screens.tabs.QuestsContentPanel.ryadom_nichego_ne_naydeno_271dd8e7')}
                                 description={i18nT('quests:screens.tabs.QuestsContentPanel.posmotrite_kvesty_v_drugih_gorodah_ili_vyber_720d6ffd')}
                                 variant="empty"
-                                iconSize={48}
                             />
                         )}
 
@@ -615,11 +615,11 @@ function QuestsContentPanel({
 
                         {!searchActive && !selectedCityId && dataLoaded && (
                             <EmptyState
+                                density="compact"
                                 icon="compass"
                                 title={i18nT('quests:screens.tabs.QuestsContentPanel.vyberite_gorod_023bdfab')}
                                 description={isMobile ? i18nT('quests:screens.tabs.QuestsContentPanel.nazhmite_gorod_chtoby_vybrat_bdb9cf3e') : i18nT('quests:screens.tabs.QuestsContentPanel.vyberite_gorod_iz_spiska_sleva_3a187f1e')}
                                 variant="empty"
-                                iconSize={48}
                             />
                         )}
 
@@ -666,31 +666,31 @@ function QuestsContentPanel({
         <>
             {searchActive && dataLoaded && (
                 <EmptyState
+                    density="compact"
                     icon="search"
                     title={i18nT('quests:screens.tabs.QuestsContentPanel.nichego_ne_naydeno_21857ccf')}
                     description={i18nT('quests:screens.tabs.QuestsContentPanel.poprobuyte_drugoe_nazvanie_ili_gorod_980ce716')}
                     variant="empty"
-                    iconSize={48}
                 />
             )}
 
             {!searchActive && isMapAreaActive && dataLoaded && (
                 <EmptyState
+                    density="compact"
                     icon="map-pin"
                     title={i18nT('quests:screens.tabs.QuestsContentPanel.ryadom_nichego_ne_naydeno_271dd8e7')}
                     description={i18nT('quests:screens.tabs.QuestsContentPanel.posmotrite_kvesty_v_drugih_gorodah_ili_vyber_720d6ffd')}
                     variant="empty"
-                    iconSize={48}
                 />
             )}
 
             {!searchActive && !isMapAreaActive && selectedCityId === nearbyId && userLoc && dataLoaded && (
                 <EmptyState
+                    density="compact"
                     icon="map-pin"
                     title={i18nT('quests:screens.tabs.QuestsContentPanel.ryadom_nichego_ne_naydeno_271dd8e7')}
                     description={i18nT('quests:screens.tabs.QuestsContentPanel.posmotrite_kvesty_v_drugih_gorodah_ili_vyber_720d6ffd')}
                     variant="empty"
-                    iconSize={48}
                 />
             )}
 
@@ -702,11 +702,11 @@ function QuestsContentPanel({
 
             {!searchActive && !selectedCityId && dataLoaded && (
                 <EmptyState
+                    density="compact"
                     icon="compass"
                     title={i18nT('quests:screens.tabs.QuestsContentPanel.vyberite_gorod_023bdfab')}
                     description={isMobile ? i18nT('quests:screens.tabs.QuestsContentPanel.nazhmite_gorod_chtoby_vybrat_bdb9cf3e') : i18nT('quests:screens.tabs.QuestsContentPanel.vyberite_gorod_iz_spiska_sleva_3a187f1e')}
                     variant="empty"
-                    iconSize={48}
                 />
             )}
 

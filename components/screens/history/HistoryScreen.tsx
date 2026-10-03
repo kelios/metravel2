@@ -418,6 +418,7 @@ export default function HistoryScreen() {
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 {renderHeader(false)}
                 <EmptyState
+                    density="full"
                     icon="clock"
                     title={i18nT('shared:app.tabs.history.voydite_v_akkaunt_329ef9aa')}
                     description={i18nT('shared:app.tabs.history.voydite_chtoby_sohranyat_istoriyu_prosmotrov_0fcb9b17')}
@@ -451,6 +452,7 @@ export default function HistoryScreen() {
                 {renderHeader(false)}
                 <View {...SCREEN_CONTENT_FIRST_PROPS}>
                     <EmptyState
+                        density="compact"
                         icon="clock"
                         title={i18nT('shared:app.tabs.history.ty_esche_ne_otkryval_marshruty_e7f97c1c')}
                         description={i18nT('shared:app.tabs.history.otkroy_lyuboy_marshrut_on_avtomaticheski_soh_b6b47c2a')}

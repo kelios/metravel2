@@ -813,60 +813,6 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     fontWeight: '600',
   },
 
-  // ─── State blocks ───
-  stateBlock: {
-    minHeight: 320,
-    borderRadius: DESIGN_TOKENS.radii.xl,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: DESIGN_TOKENS.spacing.sm,
-    padding: DESIGN_TOKENS.spacing.xxl,
-  },
-  stateIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: DESIGN_TOKENS.radii.full,
-    backgroundColor: colors.backgroundSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: DESIGN_TOKENS.spacing.xs,
-  },
-  stateTitle: {
-    color: colors.text,
-    ...DESIGN_TOKENS.typography.scale.h2,
-    textAlign: 'center',
-  },
-  stateText: {
-    color: colors.textMuted,
-    ...DESIGN_TOKENS.typography.scale.body,
-    textAlign: 'center',
-    maxWidth: 320,
-  },
-  stateAction: {
-    marginTop: DESIGN_TOKENS.spacing.sm,
-    minHeight: 44,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
-  },
-  stateActionText: {
-    color: colors.textOnPrimary,
-    fontWeight: '700',
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-  },
-  stateActionPending: {
-    opacity: 0.85,
-  },
-  stateActionPendingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
   })
 }
 

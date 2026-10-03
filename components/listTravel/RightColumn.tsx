@@ -724,6 +724,7 @@ const RightColumn: React.FC<RightColumnProps> = (
             <View style={paddingHorizontalStyle}>
               {isOffline ? (
                 <EmptyState
+                  density="compact"
                   icon="wifi-off"
                   title={i18nT('travel:components.listTravel.RightColumn.net_podklyucheniya_fb445d25')}
                   description={i18nT('travel:components.listTravel.RightColumn.proverte_internet_soedinenie_i_poprobuyte_sn_99ebb55e')}
@@ -735,6 +736,7 @@ const RightColumn: React.FC<RightColumnProps> = (
                 />
               ) : (
                 <EmptyState
+                  density="compact"
                   icon="alert-circle"
                   title={i18nT('travel:components.listTravel.RightColumn.oshibka_zagruzki_3d856d87')}
                   description={i18nT('travel:components.listTravel.RightColumn.ne_udalos_zagruzit_puteshestviya_7460434d')}
@@ -755,6 +757,8 @@ const RightColumn: React.FC<RightColumnProps> = (
             getEmptyStateMessage && (
               <View style={paddingHorizontalStyle}>
                 <EmptyState
+                  // Поиск с подсказками сохраняет полный вид (#2104 вне scope), прочее — компактно.
+                  density={getEmptyStateMessage.variant === 'search' ? 'full' : 'compact'}
                   icon={getEmptyStateMessage.icon}
                   title={getEmptyStateMessage.title}
                   description={getEmptyStateMessage.description}

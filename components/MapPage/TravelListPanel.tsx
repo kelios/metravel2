@@ -16,9 +16,9 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { Text } from '@/ui/paper'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
+import EmptyState, { type EmptyStateAction } from '@/components/ui/EmptyState'
 import { useThemedColors } from '@/hooks/useTheme'
 
-import { EmptyState } from './TravelListPanel/EmptyState'
 import { getStyles } from './TravelListPanel/styles'
 import { useTravelItemRenderer } from './TravelListPanel/useTravelItemRenderer'
 import { useWebVirtualization } from './TravelListPanel/useWebVirtualization'
@@ -238,13 +238,53 @@ const TravelListPanel: React.FC<Props> = ({
 
   if (!travelsData || travelsData.length === 0) {
     if (isLoading) return skeletonCards
+    const moreActions: EmptyStateAction[] = []
+    if (onOpenFilters) {
+      moreActions.push({
+        label: i18nT('map:components.MapPage.TravelListPanel.EmptyState.izmenit_filtry_f89a6d6d'),
+        onPress: onOpenFilters,
+        testID: 'empty-open-filters',
+      })
+    }
+    if (onClosePanel) {
+      moreActions.push({
+        label: i18nT('map:components.MapPage.TravelListPanel.EmptyState.vernutsya_na_kartu_59eb3e35'),
+        onPress: onClosePanel,
+        testID: 'empty-back-to-map',
+      })
+    }
+    const hasActions = Boolean(onExpandRadius || onResetFilters || moreActions.length > 0)
     return (
       <EmptyState
-        styles={styles}
-        onExpandRadius={onExpandRadius}
-        onResetFilters={onResetFilters}
-        onOpenFilters={onOpenFilters}
-        onClosePanel={onClosePanel}
+        density="compact"
+        variant="empty"
+        icon="map-pin"
+        testID="travel-list-empty"
+        title={i18nT('map:components.MapPage.TravelListPanel.EmptyState.nichego_ne_nashlos_3ea759ca')}
+        description={
+          hasActions
+            ? i18nT('map:components.MapPage.TravelListPanel.EmptyState.v_etoy_oblasti_net_mest_po_tekuschim_filtram_e47649dc')
+            : i18nT('map:components.MapPage.TravelListPanel.EmptyState.v_etoy_oblasti_net_mest_po_tekuschim_filtram_4a50e9a9')
+        }
+        action={
+          onExpandRadius
+            ? {
+                label: i18nT('map:components.MapPage.TravelListPanel.EmptyState.uvelichit_radius_poiska_527c2df0'),
+                onPress: onExpandRadius,
+                testID: 'empty-expand-radius',
+              }
+            : undefined
+        }
+        secondaryAction={
+          onResetFilters
+            ? {
+                label: i18nT('map:components.MapPage.TravelListPanel.EmptyState.sbrosit_filtry_9441f9e4'),
+                onPress: onResetFilters,
+                testID: 'empty-reset-filters',
+              }
+            : undefined
+        }
+        moreActions={moreActions}
       />
     )
   }

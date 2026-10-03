@@ -3,6 +3,7 @@ import { Platform, View, Text, Pressable, type LayoutChangeEvent } from 'react-n
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { CommentsSkeleton } from '@/components/travel/TravelDetailSkeletons';
+import EmptyState from '@/components/ui/EmptyState';
 import { devWarn } from '@/utils/logger';
 import { CommentForm } from './CommentForm';
 import { CommentThread } from './CommentThread';
@@ -162,34 +163,31 @@ export function CommentsSection({
 
           <View style={styles.commentsList}>
             {hasError && topLevel.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Feather name="message-circle" size={48} color={colors.disabled} />
-                <Text style={styles.emptyText}>{i18nT('travel:components.travel.CommentsSection.kommentarii_nedostupny_95adf33a')}</Text>
-                <Text style={styles.emptySubtext}>{i18nT('travel:components.travel.CommentsSection.poprobuyte_obnovit_stranitsu_ili_povtorit_po_b28b8844')}</Text>
-              </View>
+              <EmptyState
+                density="compact"
+                variant="error"
+                icon="message-circle"
+                title={i18nT('travel:components.travel.CommentsSection.kommentarii_nedostupny_95adf33a')}
+                description={i18nT('travel:components.travel.CommentsSection.poprobuyte_obnovit_stranitsu_ili_povtorit_po_b28b8844')}
+                testID="comments-error"
+              />
             ) : topLevel.length === 0 ? (
-              <View style={styles.emptyState}>
-                <View style={styles.emptyStateIconWrap}>
-                  <Feather name="message-circle" size={28} color={colors.primaryDark} />
-                </View>
-                <Text style={styles.emptyText}>{i18nT('travel:components.travel.CommentsSection.poka_net_kommentariev_58dc3990')}</Text>
-                <Text style={styles.emptySubtext}>
-                  {isAuthenticated
-                    ? i18nT('travel:components.travel.CommentsSection.ostavte_pervyy_kommentariy_forma_uzhe_otkryt_267b4a0b')
-                    : i18nT('travel:components.travel.CommentsSection.nachnite_obsuzhdenie_pervym_voydite_i_ostavt_57f6dfdc')}
-                </Text>
-                {!isAuthenticated && (
-                  <Pressable
-                    onPress={handleLoginPress}
-                    style={styles.emptyActionButton}
-                    accessibilityRole="button"
-                    accessibilityLabel={i18nT('travel:components.travel.CommentsSection.voyti_chtoby_ostavit_pervyy_kommentariy_490a9ec8')}
-                  >
-                    <Feather name="log-in" size={16} color={colors.textOnPrimary} />
-                    <Text style={styles.emptyActionButtonText}>{i18nT('travel:components.travel.CommentsSection.voyti_i_napisat_kommentariy_a713b7cb')}</Text>
-                  </Pressable>
-                )}
-              </View>
+              <EmptyState
+                density="compact"
+                variant="empty"
+                icon="message-circle"
+                title={i18nT('travel:components.travel.CommentsSection.poka_net_kommentariev_58dc3990')}
+                description={isAuthenticated
+                  ? i18nT('travel:components.travel.CommentsSection.ostavte_pervyy_kommentariy_forma_uzhe_otkryt_267b4a0b')
+                  : i18nT('travel:components.travel.CommentsSection.nachnite_obsuzhdenie_pervym_voydite_i_ostavt_57f6dfdc')}
+                action={isAuthenticated ? undefined : {
+                  label: i18nT('travel:components.travel.CommentsSection.voyti_i_napisat_kommentariy_a713b7cb'),
+                  onPress: handleLoginPress,
+                  icon: 'log-in',
+                  accessibilityLabel: i18nT('travel:components.travel.CommentsSection.voyti_chtoby_ostavit_pervyy_kommentariy_490a9ec8'),
+                }}
+                testID="comments-empty"
+              />
             ) : (
               <>
                 {topLevel.slice(0, visibleCount).map((comment) => {

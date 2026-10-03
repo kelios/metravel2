@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import Button from '@/components/ui/Button';
+import EmptyState from '@/components/ui/EmptyState';
 import TripStatusBadge from '@/components/trips/TripStatusBadge';
 import TripApplyForm from '@/components/trips/TripApplyForm';
 import OrganizerApplicationsPanel from '@/components/trips/OrganizerApplicationsPanel';
@@ -76,10 +77,17 @@ function PublicTripDetail({ tripId }: Props) {
   }
   if (isError || !trip) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.empty}>{i18nT('trips:components.trips.PublicTripDetail.poezdka_ne_naydena_9fc200e6')}</Text>
-        <Button label={i18nT('trips:components.trips.PublicTripDetail.k_katalogu_98d7586e')} variant="outline" onPress={() => router.push('/trips')} />
-      </View>
+      <EmptyState
+        density="full"
+        variant="empty"
+        icon="map"
+        title={i18nT('trips:components.trips.PublicTripDetail.poezdka_ne_naydena_9fc200e6')}
+        action={{
+          label: i18nT('trips:components.trips.PublicTripDetail.k_katalogu_98d7586e'),
+          onPress: () => router.push('/trips'),
+        }}
+        testID="trip-detail-not-found"
+      />
     );
   }
 
@@ -249,7 +257,7 @@ function PublicTripDetail({ tripId }: Props) {
       ) : null}
 
       {!trip.isOwner && trip.status === 'full' && !alreadyApplied ? (
-        <Text style={styles.empty}>{i18nT('trips:components.trips.PublicTripDetail.mest_bolshe_net_zayavki_zakryty_a6624f05')}</Text>
+        <Text style={styles.statusText}>{i18nT('trips:components.trips.PublicTripDetail.mest_bolshe_net_zayavki_zakryty_a6624f05')}</Text>
       ) : null}
     </View>
   );
@@ -259,7 +267,7 @@ const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     wrap: { gap: 14 },
     center: { paddingVertical: 48, alignItems: 'center', gap: 12 },
-    empty: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
+    statusText: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
     hero: {
       height: 240,
       borderRadius: 16,

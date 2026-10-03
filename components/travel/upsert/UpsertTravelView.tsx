@@ -147,6 +147,7 @@ const EmptyStateScreen = ({
 }: EmptyStateProps) => (
   <SafeAreaView style={styles.container} testID={testID} accessibilityLabel={accessibilityLabel}>
     <EmptyState
+      density="full"
       icon={icon}
       iconSize={48}
       iconColor={iconColor}

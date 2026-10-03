@@ -115,6 +115,7 @@ function CommunityRoutesCatalog({ initialTransport }: Props) {
           {i18nT('trips:components.trips.planning.CommunityRoutesCatalog.ne_udalos_zagruzit_marshruty_3a9c6311')}</Text>
       ) : !trips || trips.length === 0 ? (
         <EmptyState
+          density="compact"
           icon="map"
           variant="empty"
           title={i18nT('trips:components.trips.planning.CommunityRoutesCatalog.poka_pusto_8a0cf737')}

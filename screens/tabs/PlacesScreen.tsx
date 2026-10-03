@@ -229,9 +229,8 @@ export default function PlacesScreen() {
   } else if (resultsStatus === 'error') {
     resultsContent = (
       <StateBlock
-        styles={styles}
-        colors={colors}
         icon="alert-circle"
+        variant="error"
         title={i18nT('map:screens.tabs.PlacesScreen.ne_udalos_zagruzit_mesta_b8af7ba1')}
         description={i18nT('map:screens.tabs.PlacesScreen.proverte_soedinenie_i_poprobuyte_snova_198a2bc9')}
         actionLabel={i18nT('map:screens.tabs.PlacesScreen.povtorit_e910f968')}
@@ -243,9 +242,8 @@ export default function PlacesScreen() {
   } else if (resultsStatus === 'empty') {
     resultsContent = catalogTotal === 0 && !hasActiveFilters ? (
       <StateBlock
-        styles={styles}
-        colors={colors}
         icon="inbox"
+        variant="empty"
         title={i18nT('map:screens.tabs.PlacesScreen.katalog_poka_pust_ead50e14')}
         description={i18nT('map:screens.tabs.PlacesScreen.skoro_zdes_poyavyatsya_mesta_iz_puteshestviy_95576d13')}
         actionLabel={i18nT('map:screens.tabs.PlacesScreen.obnovit_aaf704dc')}
@@ -255,9 +253,8 @@ export default function PlacesScreen() {
       />
     ) : (
       <StateBlock
-        styles={styles}
-        colors={colors}
         icon="map-pin"
+        variant="search"
         title={
           deferredQuery
             ? i18nT('map:screens.tabs.PlacesScreen.po_zaprosu_value1_nichego_ne_naydeno_2c354d86', { value1: deferredQuery })

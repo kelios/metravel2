@@ -204,6 +204,25 @@ export async function isCtaOccludedByDock(page: Page, ctaTestId: string | undefi
   return !isTopmost
 }
 
+/**
+ * #2104: зазор (px) между низом первой кнопки заглушки `ui/EmptyState`
+ * (`empty-state-action`) и верхом дока, без прокрутки. `null` — на экране нет
+ * заглушки с действием. Высота дока — из `--mt-dock-h` через пробный элемент
+ * (переменная — `calc(...)`, `getComputedStyle` вернул бы сырую строку).
+ */
+export async function measureEmptyCtaDockGap(page: Page): Promise<number | null> {
+  const locator = page.locator('[data-testid="empty-state-action"]').first()
+  if ((await locator.count()) === 0) return null
+  return locator.evaluate((el) => {
+    const probe = document.createElement('div')
+    probe.style.cssText = 'position:fixed;left:0;bottom:0;width:1px;visibility:hidden;height:var(--mt-dock-h, 0px)'
+    document.body.appendChild(probe)
+    const dock = probe.getBoundingClientRect().height
+    probe.remove()
+    return Math.round(window.innerHeight - dock - el.getBoundingClientRect().bottom)
+  })
+}
+
 export type DarkBottomColorSample = { bodyBackground: string; bottomBackground: string; matchesThemeBackground: boolean }
 
 /**
@@ -300,6 +319,7 @@ export type ScreenMetrics = {
   ctaOccluded: boolean | null
   darkBottomMatchesTheme: boolean | null
   unlabeledInteractive: number
+  emptyCtaDockGap: number | null
 }
 
 const RESULTS_PATH = path.join(process.cwd(), 'test-results', 'mobile-screen-budget.json')
@@ -364,6 +384,7 @@ export function printResultsTable(filterScreens?: string[]): void {
     'ctaOccluded',
     'darkBottomOk',
     'unlabeled',
+    'emptyCtaGap',
   ]
   const fmt = (r: ScreenMetrics) => [
     r.screen,
@@ -375,6 +396,7 @@ export function printResultsTable(filterScreens?: string[]): void {
     r.ctaOccluded == null ? 'n/a' : String(r.ctaOccluded),
     r.darkBottomMatchesTheme == null ? 'n/a' : String(r.darkBottomMatchesTheme),
     String(r.unlabeledInteractive),
+    r.emptyCtaDockGap == null ? 'n/a' : String(r.emptyCtaDockGap),
   ]
   const lines = [header, ...rows.map(fmt)]
   const widths = header.map((_, col) => Math.max(...lines.map((line) => String(line[col]).length)))
@@ -635,6 +657,7 @@ async function collectMetrics(
   const searchboxCount = await countSearchboxes(page)
   const ctaOccluded = await isCtaOccludedByDock(page, opts.ctaTestId)
   const unlabeledInteractive = await countUnlabeledInteractive(page)
+  const emptyCtaDockGap = await measureEmptyCtaDockGap(page)
   const darkBottom = theme === 'dark' ? await sampleDarkBottomColor(page) : null
 
   return {
@@ -648,6 +671,7 @@ async function collectMetrics(
     ctaOccluded,
     darkBottomMatchesTheme: darkBottom ? darkBottom.matchesThemeBackground : null,
     unlabeledInteractive,
+    emptyCtaDockGap,
   }
 }
 

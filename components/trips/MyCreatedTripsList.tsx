@@ -157,12 +157,12 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
     return (
       <View testID="my-created-trips-error">
         <EmptyState
+          density="compact"
           icon="alert-circle"
           title={i18nT('trips:components.trips.MyCreatedTripsList.ne_udalos_zagruzit_poezdki_27f9c8b0')}
           description={i18nT('trips:components.trips.MyCreatedTripsList.proverte_soedinenie_i_poprobuyte_esche_raz_eea10b13')}
           variant="error"
           action={{ label: i18nT('trips:components.trips.MyCreatedTripsList.povtorit_13fe14ba'), onPress: () => void refetch() }}
-          iconSize={46}
         />
       </View>
     );
@@ -172,6 +172,7 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
     return (
       <View testID="my-created-trips-empty" {...SCREEN_CONTENT_FIRST_PROPS}>
         <EmptyState
+          density="compact"
           icon={role === 'organized' ? 'map' : 'users'}
           title={role === 'organized' ? i18nT('trips:components.trips.MyCreatedTripsList.vy_esche_ne_organizovali_poezdok_f5309bb6') : i18nT('trips:components.trips.MyCreatedTripsList.vy_poka_ne_uchastvuete_v_poezdkah_ee7c708b')}
           description={
@@ -189,7 +190,6 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
               ? { label: i18nT('trips:components.trips.MyCreatedTripsList.nayti_poezdku_4bd445a5'), onPress: () => router.push('/trips') }
               : undefined
           }
-          iconSize={46}
         />
       </View>
     );

@@ -33,6 +33,7 @@ export default function SecurityJournalScreen() {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 <EmptyState
+                    density="full"
                     icon="shield"
                     title={i18nT('profile:app.security_journal.voydite_v_akkaunt_711b2a4a')}
                     description={i18nT('profile:app.security_journal.voydite_chtoby_posmotret_zhurnal_bezopasnost_64d43a76')}

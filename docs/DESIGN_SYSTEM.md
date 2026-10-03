@@ -158,6 +158,30 @@ Status: accepted, 2026-10-02 (#2101, family MOBILE-ACTION-LABELS-001).
 Guard — `scripts/guard-screen-actions.js`; метрика «иконки без доступного имени = 0»
 — `e2e/mobile-screen-budget.spec.ts`.
 
+## Empty states (`ui/EmptyState`, `density`)
+
+Status: accepted, 2026-10-03 (#2104, family MOBILE-EMPTY-STATE-001).
+
+Вид «пусто» рисует только `components/ui/EmptyState.tsx`. Проп `density`
+обязателен — выбор делается на месте вызова, а не угадывается контекстом:
+
+| `density` | Где | Вид |
+| --- | --- | --- |
+| `compact` | пустота внутри вкладки, списка (`ListEmptyComponent`), панели карты, секции, листа | круг 56, иконка 28, без `flex`/`minHeight`, отступы вдвое меньше, заголовок 18; на телефоне кнопки столбиком во всю ширину — CTA в первом экране над доком |
+| `full` | самостоятельный пустой экран: auth-gate, «избранное пусто», экспорт, офлайн, «не найдено» | прежний крупный вид |
+
+Действия: `action` (primary), `secondaryAction` (ghost), `moreActions[]` (ghost) —
+у каждого `icon`, `loading`, `disabled`, `testID`. Корень — `testID`
+(по умолчанию `empty-state`, кнопки `empty-state-action` / `-secondary-action`).
+Текстовая строка «ничего не найдено» внутри выпадающего списка, пикера или чата
+заглушкой не считается и остаётся строкой.
+
+Guard — `__tests__/config/empty-state-governance.test.ts`: вне владельца
+запрещены ключи `empty*Icon*`/`empty*Circle*` и собственные компоненты
+`*EmptyState*`, исключения поимённо с причиной. Метрика «CTA пустой вкладки
+профиля над доком без прокрутки» — `e2e/mobile-screen-budget.spec.ts`.
+Макет — `docs/features/mobile-screen-shell-mock.md` §6.
+
 ## Mobile pattern: rich-text toolbar docked below the editor
 
 Status: accepted, 2026-07-25.

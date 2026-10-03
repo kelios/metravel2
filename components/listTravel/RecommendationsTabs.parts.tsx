@@ -1,4 +1,3 @@
-import type { ComponentProps } from 'react';
 import { Pressable, Text, View, type TextStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -35,22 +34,5 @@ export const RecommendationsAuthGate = ({
         <Feather name="arrow-right" size={18} color={colors.primaryDark} style={ARROW_ICON_STYLE} />
       </Pressable>
     </View>
-  </View>
-);
-
-export const RecommendationsEmptyState = ({
-  message,
-  icon,
-  styles,
-  colors,
-}: {
-  message: string;
-  icon: ComponentProps<typeof Feather>['name'];
-  styles: TabStyles;
-  colors: TabColors;
-}) => (
-  <View style={styles.emptyState}>
-    <Feather name={icon} size={48} color={colors.textTertiary} />
-    <Text style={styles.emptyText}>{message}</Text>
   </View>
 );

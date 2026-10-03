@@ -205,9 +205,9 @@ export function ProfileEngagementDetailList({
       return (
         <View testID="engagement-detail-error">
           <EmptyState
+            density="compact"
             icon="alert-circle"
             variant="error"
-            iconSize={32}
             title={i18nT('profile:components.profile.ProfileEngagementDetailList.error.title')}
             description={i18nT(
               'profile:components.profile.ProfileEngagementDetailList.error.description',
@@ -225,9 +225,9 @@ export function ProfileEngagementDetailList({
       return (
         <View testID="engagement-detail-empty">
           <EmptyState
+            density="compact"
             icon={METRIC_ICONS[metric]}
             variant="empty"
-            iconSize={32}
             title={i18nT('profile:components.profile.ProfileEngagementDetailList.empty.title')}
             description={i18nT(
               'profile:components.profile.ProfileEngagementDetailList.empty.description',

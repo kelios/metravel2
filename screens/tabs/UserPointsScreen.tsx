@@ -45,6 +45,7 @@ export default function UserPointsScreen() {
       <View style={styles.authContainer}>
         {seoBlock}
         <EmptyState
+          density="full"
           icon="map-pin"
           title={i18nT('shared:screens.tabs.UserPointsScreen.voydite_chtoby_upravlyat_tochkami_c083ffa1')}
           description={i18nT('shared:screens.tabs.UserPointsScreen.dlya_sohraneniya_i_prosmotra_vashih_tochek_n_5b5b8307')}

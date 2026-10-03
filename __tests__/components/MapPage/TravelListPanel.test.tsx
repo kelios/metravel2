@@ -99,6 +99,48 @@ describe('TravelListPanel (right list on map page)', () => {
     });
   });
 
+  it('renders the empty state through ui/EmptyState with all four map actions', () => {
+    const onExpandRadius = jest.fn();
+    const onResetFilters = jest.fn();
+    const onOpenFilters = jest.fn();
+    const onClosePanel = jest.fn();
+
+    const { getByTestId, getByText } = render(
+      <TravelListPanel
+        travelsData={[]}
+        buildRouteTo={() => {}}
+        onExpandRadius={onExpandRadius}
+        onResetFilters={onResetFilters}
+        onOpenFilters={onOpenFilters}
+        onClosePanel={onClosePanel}
+      />
+    );
+
+    expect(getByTestId('travel-list-empty')).toBeTruthy();
+    expect(getByText('Ничего не нашлось')).toBeTruthy();
+
+    fireEvent.press(getByTestId('empty-expand-radius'));
+    fireEvent.press(getByTestId('empty-reset-filters'));
+    fireEvent.press(getByTestId('empty-open-filters'));
+    fireEvent.press(getByTestId('empty-back-to-map'));
+
+    expect(onExpandRadius).toHaveBeenCalledTimes(1);
+    expect(onResetFilters).toHaveBeenCalledTimes(1);
+    expect(onOpenFilters).toHaveBeenCalledTimes(1);
+    expect(onClosePanel).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides empty-state actions whose handlers are absent', () => {
+    const { getByTestId, queryByTestId } = render(
+      <TravelListPanel travelsData={[]} buildRouteTo={() => {}} onOpenFilters={() => {}} />
+    );
+
+    expect(getByTestId('empty-open-filters')).toBeTruthy();
+    expect(queryByTestId('empty-expand-radius')).toBeNull();
+    expect(queryByTestId('empty-reset-filters')).toBeNull();
+    expect(queryByTestId('empty-back-to-map')).toBeNull();
+  });
+
   it('renders AddressListItem for each travel', () => {
     const noop = () => {};
 

@@ -60,7 +60,6 @@ export const createProfileScreenStyles = ({
     },
     emptyWrap: {
       paddingHorizontal: contentPadding,
-      paddingTop: 16,
     },
     skeletonWrap: {
       gap: 0,
