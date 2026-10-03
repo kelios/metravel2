@@ -4,6 +4,8 @@ import {
   HEADER_LAYOUT_BREAKPOINTS,
   HEADER_MEDIA_MAX_WIDTHS,
 } from '@/components/layout/headerLayoutContract';
+import { ABOUT_LAYOUT } from '@/components/about/aboutLayout';
+import { buildBreakpointLayoutCss } from '@/utils/breakpointLayout';
 
 /**
  * Build critical CSS string for the HTML shell.
@@ -237,5 +239,9 @@ export function buildCriticalCSS(): string {
     '@keyframes crit-shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}',
     '[data-testid="main-header"]{background:var(--color-background,' + BL + ');border-bottom:1px solid var(--color-backgroundSecondary,' + BSL + ')}',
     '[data-testid="home-hero-stack"]{background:var(--color-background,' + BL + ')}',
+    // #2112: /about до гидратации рисует узкую раскладку (width = 0); от 900 px
+    // широкую даёт этот блок из того же реестра, что читает React
+    // (`components/about/aboutLayout.ts`) — гидратация ничего не двигает.
+    buildBreakpointLayoutCss(ABOUT_LAYOUT),
   ].join('\n');
 }

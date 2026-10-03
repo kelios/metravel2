@@ -16,6 +16,8 @@ import { useIsFocused } from 'expo-router';
 import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAboutStyles } from '@/components/about/aboutStyles';
+import { ABOUT_LAYOUT, ABOUT_WIDE_MIN_WIDTH } from '@/components/about/aboutLayout';
+import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
 import { openExternalUrl } from '@/utils/externalLinks';
@@ -33,7 +35,7 @@ const YT_THUMB = 'https://img.youtube.com/vi/K0oV4Y-i8hY/hqdefault.jpg';
 function AboutAndContactScreen() {
   const styles = useAboutStyles();
   const { width } = useResponsive();
-  const isWide = width >= 900;
+  const isWide = width >= ABOUT_WIDE_MIN_WIDTH;
 
   const appVersionInfo = useMemo(() => getAppVersionInfo(), []);
 
@@ -192,10 +194,13 @@ function AboutAndContactScreen() {
                   <CategoriesShowcase isWide={isWide} />
 
                   <View
-                    style={[isWide ? styles.twoColumns : styles.oneColumn, { marginTop: 24 }]}
-                    {...SCREEN_CONTENT_FIRST_PROPS}
+                    style={[breakpointStyle(ABOUT_LAYOUT, 'introColumns', isWide), { marginTop: 24 }]}
+                    {...breakpointLayoutProps(ABOUT_LAYOUT, 'introColumns', SCREEN_CONTENT_FIRST_PROPS)}
                   >
-                    <View style={isWide ? styles.columnMain : null}>
+                    <View
+                      style={[breakpointStyle(ABOUT_LAYOUT, 'introMain', isWide), { minWidth: 0 }]}
+                      {...breakpointLayoutProps(ABOUT_LAYOUT, 'introMain')}
+                    >
                       <AboutIntroCard
                         isPageHeading
                         hideTitle={isHeaderMobile}
@@ -211,7 +216,10 @@ function AboutAndContactScreen() {
                         }}
                       />
                     </View>
-                    <View style={[isWide ? styles.columnSide : null, !isWide && styles.videoColumnMobile]}>
+                    <View
+                      style={[breakpointStyle(ABOUT_LAYOUT, 'introSide', isWide), { minWidth: 0 }]}
+                      {...breakpointLayoutProps(ABOUT_LAYOUT, 'introSide')}
+                    >
                       <VideoCard youtubeThumb={YT_THUMB} onOpenYoutube={openYoutube} />
                     </View>
                   </View>

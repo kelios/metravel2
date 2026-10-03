@@ -340,6 +340,39 @@ export const PAGE_BUDGETS: BudgetTable = {
       firstScreenElementsMax: 220, // measured 183; +20% rounded up
     },
   },
+  // #2112: /about — CLS ≤ 0,1 на всех раскладках (на проде было 0,31 на 1280 и
+  // 0,40 на 1024: hero и колонки перекладывались при гидратации). Замер своего
+  // dist 03.10.2026 после правки: CLS 0,0020 / 0,0024 / 0; остальное +20%.
+  ABOUT: {
+    desktop: {
+      clsMax: HEALTHY_CLS_MAX,
+      firstScreenElementsMax: 265, // measured 219
+      lcpMaxMs: LCP_MEDIUM,
+      jsTransferKBMax: 1400, // measured 1143
+      totalTransferKBMax: 1550, // measured 1256
+      requestsMax: 65, // measured 51
+      ...TIMING,
+    },
+    'desktop-narrow': {
+      clsMax: HEALTHY_CLS_MAX,
+      firstScreenElementsMax: 200, // measured 163
+      lcpMaxMs: LCP_MEDIUM,
+      jsTransferKBMax: 1400,
+      totalTransferKBMax: 1550,
+      requestsMax: 65,
+      ...TIMING,
+    },
+    mobile: {
+      phoneNestedScreen: '#2100: вложенный экран телефона — одна строка «←», без бренд-строки',
+      clsMax: HEALTHY_CLS_MAX,
+      firstScreenElementsMax: 150, // measured 124
+      lcpMaxMs: LCP_MEDIUM,
+      jsTransferKBMax: 1400,
+      totalTransferKBMax: 1550,
+      requestsMax: 65,
+      ...TIMING,
+    },
+  },
 }
 
 export class BudgetConfigurationError extends Error {}

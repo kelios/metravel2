@@ -18,7 +18,7 @@ type LanguageOptionListProps = {
 /**
  * Единственный список выбора языка (#2100): его показывают переключатель в
  * бренд-строке (`LanguageSwitcher`) и пункт «Язык интерфейса» меню «Ещё»
- * (`LanguageSheet`). Один radiogroup — одна логика смены локали.
+ * (подэкран `BottomDockMoreList`). Один radiogroup — одна логика смены локали.
  */
 export default function LanguageOptionList({
   onChosen,

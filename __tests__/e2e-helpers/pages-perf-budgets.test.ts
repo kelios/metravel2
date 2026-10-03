@@ -21,7 +21,7 @@ import {
   type PageMeasurement,
 } from '../../e2e/helpers/pagesPerfBudgets'
 
-const GATED_ROUTES = ['HOME', 'SEARCH', 'MAP', 'PLACES', 'QUESTS', 'QUEST_DETAIL'] as const
+const GATED_ROUTES = ['HOME', 'SEARCH', 'MAP', 'PLACES', 'QUESTS', 'QUEST_DETAIL', 'ABOUT'] as const
 
 const healthyBudget = (overrides: Partial<PageBudget> = {}): PageBudget => ({
   clsMax: 0.1,
@@ -137,9 +137,17 @@ describe('budget table rules', () => {
   it('marks phone-nested routes so brand-row positive controls do not run vacuously', () => {
     expect(PAGE_BUDGETS.PLACES?.mobile?.phoneNestedScreen).toMatch(/#2100/)
     expect(PAGE_BUDGETS.QUEST_DETAIL?.mobile?.phoneNestedScreen).toMatch(/#2100/)
+    expect(PAGE_BUDGETS.ABOUT?.mobile?.phoneNestedScreen).toMatch(/#2100/)
     expect(PAGE_BUDGETS.HOME?.mobile?.phoneNestedScreen).toBeUndefined()
     expect(PAGE_BUDGETS.SEARCH?.mobile?.phoneNestedScreen).toBeUndefined()
     expect(PAGE_BUDGETS.QUESTS?.mobile?.phoneNestedScreen).toBeUndefined()
+  })
+
+  // #2112: /about держит здоровый CLS на всех раскладках — гидратация больше не перекладывает hero.
+  it.each(['desktop', 'desktop-narrow', 'mobile'] as const)('pins ABOUT/%s to the healthy CLS ceiling', (profile) => {
+    const budget = resolveBudget('ABOUT', profile)
+    expect(budget.clsMax).toBe(0.1)
+    expect(budget.debt).toBeUndefined()
   })
 
   it('throws on a missing route or profile instead of falling back', () => {

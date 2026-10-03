@@ -8,6 +8,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { trackAppDownloadClicked } from '@/utils/growthFunnelAnalytics';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { translate as i18nT } from '@/i18n'
+import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
+import { ABOUT_LAYOUT } from './aboutLayout'
 
 
 type Props = {
@@ -60,10 +62,14 @@ export const FeaturesSection: React.FC<Props> = ({ isWide }) => {
         <Text style={styles.sectionSubtitle}>{i18nT('home:components.about.FeaturesSection.vse_chto_dostupno_na_platforme_metravel_by_3a0b7ee4')}</Text>
       </View>
 
-      <View style={isWide ? styles.twoColumns : styles.oneColumn}>
+      <View
+        style={breakpointStyle(ABOUT_LAYOUT, 'featuresColumns', isWide)}
+        {...breakpointLayoutProps(ABOUT_LAYOUT, 'featuresColumns')}
+      >
         <View
           testID="about-current-features"
-          style={[isWide ? styles.column : null, styles.featureCard]}
+          style={[breakpointStyle(ABOUT_LAYOUT, 'featuresColumn', isWide), styles.featureCard]}
+          {...breakpointLayoutProps(ABOUT_LAYOUT, 'featuresColumn')}
         >
           <View style={styles.featureCardHeader}>
             <Feather name="star" size={18} color={colors.primaryDark} style={styles.featureCardIcon} />
@@ -95,7 +101,8 @@ export const FeaturesSection: React.FC<Props> = ({ isWide }) => {
 
         <View
           testID="about-roadmap-features"
-          style={[isWide ? styles.column : null, styles.featureCard]}
+          style={[breakpointStyle(ABOUT_LAYOUT, 'featuresColumn', isWide), styles.featureCard]}
+          {...breakpointLayoutProps(ABOUT_LAYOUT, 'featuresColumn')}
         >
           <View style={styles.featureCardHeader}>
             <Feather name="zap" size={18} color={colors.info} style={styles.featureCardIcon} />

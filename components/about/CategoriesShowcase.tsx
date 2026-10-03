@@ -6,6 +6,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { translate as i18nT } from '@/i18n'
+import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
+import { ABOUT_LAYOUT } from './aboutLayout'
 
 
 type FeatherName = React.ComponentProps<typeof Feather>['name'];
@@ -111,7 +113,10 @@ export const CategoriesShowcase: React.FC<Props> = ({ isWide }) => {
           {i18nT('home:components.about.CategoriesShowcase.desyatki_realnyh_puteshestviy_ot_tihih_ozer__f87ec9ab')}</Text>
       </View>
 
-      <View style={[styles.grid, isWide ? styles.gridWide : styles.gridNarrow]}>
+      <View
+        style={[styles.grid, breakpointStyle(ABOUT_LAYOUT, 'categoriesGrid', isWide)]}
+        {...breakpointLayoutProps(ABOUT_LAYOUT, 'categoriesGrid')}
+      >
         {CATEGORIES.map((cat) => {
           const href = buildHref(cat.route, cat.filters);
           return (
@@ -120,9 +125,10 @@ export const CategoriesShowcase: React.FC<Props> = ({ isWide }) => {
               onPress={() => router.push(href as any)}
               accessibilityRole="link"
               accessibilityLabel={`${cat.title}. ${cat.desc}`}
+              {...breakpointLayoutProps(ABOUT_LAYOUT, 'categoriesCard')}
               style={({ pressed, hovered }: any) => [
                 styles.cardOuter,
-                isWide ? styles.cardWide : styles.cardNarrow,
+                breakpointStyle(ABOUT_LAYOUT, 'categoriesCard', isWide),
                 hovered && styles.cardHover,
                 pressed && styles.cardPressed,
                 globalFocusStyles.focusable,
@@ -178,9 +184,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexWrap: 'wrap',
     gap: DESIGN_TOKENS.spacing.sm,
   },
-  gridWide: { justifyContent: 'flex-start' },
-  gridNarrow: { justifyContent: 'space-between' },
   cardOuter: {
+    // Карточка растягивается на остаток ряда при любой ширине; ширина и minWidth — в реестре (#2112).
+    flexGrow: 1,
     borderRadius: DESIGN_TOKENS.radii.lg,
     overflow: 'hidden',
     backgroundColor: colors.surface,
@@ -211,16 +217,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   cardPressed: {
     opacity: 0.92,
     transform: [{ scale: 0.98 }],
-  },
-  cardWide: {
-    width: 'calc(25% - 12px)' as any,
-    minWidth: 180,
-    flexGrow: 1,
-  },
-  cardNarrow: {
-    width: '48%',
-    minWidth: 140,
-    flexGrow: 1,
   },
   card: {
     padding: DESIGN_TOKENS.spacing.md,

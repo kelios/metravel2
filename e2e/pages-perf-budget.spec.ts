@@ -134,6 +134,15 @@ const PAGES: PageTarget[] = [
     readySelector: '[data-testid="quest-trust-bar"]',
     requireReadySelector: true,
   },
+  // #2112: /about перекладывал hero и колонки при гидратации на ширинах ≥ 900
+  // (CLS 0,40 / 0,31 на проде). Страница статична, API не нужен.
+  {
+    key: 'ABOUT',
+    name: 'About',
+    path: '/about',
+    readySelector: '[data-bp-layout="about-heroWrap"]',
+    requireReadySelector: true,
+  },
 ]
 
 const SEARCH_PIXEL =

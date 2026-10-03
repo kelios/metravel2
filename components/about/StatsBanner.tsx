@@ -6,6 +6,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
+import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
+import { ABOUT_LAYOUT } from './aboutLayout'
 
 
 type FeatherName = React.ComponentProps<typeof Feather>['name'];
@@ -27,16 +29,17 @@ export const StatsBanner: React.FC<Props> = ({ isWide }) => {
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <View style={[styles.wrap, isWide ? styles.wrapWide : styles.wrapNarrow]}>
+    <View style={styles.wrap}>
       {ITEMS.map((item) => (
         <Pressable
           key={item.label}
           onPress={() => router.push(item.href as any)}
           accessibilityRole="link"
           accessibilityLabel={`${item.value} ${item.label}`}
+          {...breakpointLayoutProps(ABOUT_LAYOUT, 'statsCell')}
           style={({ pressed, hovered }: any) => [
             styles.cell,
-            isWide ? styles.cellWide : styles.cellNarrow,
+            breakpointStyle(ABOUT_LAYOUT, 'statsCell', isWide),
             hovered && styles.cellHover,
             pressed && styles.cellPressed,
             globalFocusStyles.focusable,
@@ -56,6 +59,7 @@ export const StatsBanner: React.FC<Props> = ({ isWide }) => {
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   wrap: {
     marginTop: DESIGN_TOKENS.spacing.md,
+    padding: DESIGN_TOKENS.spacing.xs,
     borderRadius: DESIGN_TOKENS.radii.lg,
     overflow: 'hidden',
     flexDirection: 'row',
@@ -74,8 +78,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       android: { elevation: 3 },
     }),
   },
-  wrapWide: { padding: DESIGN_TOKENS.spacing.xs },
-  wrapNarrow: { padding: DESIGN_TOKENS.spacing.xs },
   cell: {
     padding: DESIGN_TOKENS.spacing.md,
     alignItems: 'flex-start',
@@ -94,12 +96,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   cellPressed: {
     opacity: 0.85,
     transform: [{ scale: 0.97 }],
-  },
-  cellWide: {
-    width: '25%',
-  },
-  cellNarrow: {
-    width: '50%',
   },
   iconBadge: {
     width: 38,

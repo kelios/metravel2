@@ -7,6 +7,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
+import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
+import { ABOUT_LAYOUT } from './aboutLayout'
 
 
 type Props = {
@@ -22,16 +24,16 @@ const PILL_ITEMS = [
 export const HeroBanner: React.FC<Props> = ({ isWide }) => {
   const router = useRouter();
   const colors = useThemedColors();
-  const styles = React.useMemo(() => createStyles(colors, isWide), [colors, isWide]);
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <View style={styles.wrap}>
-      <View style={styles.copy}>
+    <View style={[styles.wrap, breakpointStyle(ABOUT_LAYOUT, 'heroWrap', isWide)]} {...breakpointLayoutProps(ABOUT_LAYOUT, 'heroWrap')}>
+      <View style={[styles.copy, breakpointStyle(ABOUT_LAYOUT, 'heroCopy', isWide)]} {...breakpointLayoutProps(ABOUT_LAYOUT, 'heroCopy')}>
         <View style={styles.kickerRow}>
           <Feather name="compass" size={14} color={colors.primaryDark} />
           <Text style={styles.kicker}>{i18nT('home:components.about.HeroBanner.metravel_by_b5cd9674')}</Text>
         </View>
-        <Text style={styles.title}>{i18nT('home:components.about.HeroBanner.puteshestviya_kotorye_hochetsya_povtorit_060a8f24')}</Text>
+        <Text style={[styles.title, breakpointStyle(ABOUT_LAYOUT, 'heroTitle', isWide)]} {...breakpointLayoutProps(ABOUT_LAYOUT, 'heroTitle')}>{i18nT('home:components.about.HeroBanner.puteshestviya_kotorye_hochetsya_povtorit_060a8f24')}</Text>
         <Text style={styles.subtitle}>
           {i18nT('home:components.about.HeroBanner.platforma_s_marshrutami_mestami_i_istoriyami_cea11cf9')}</Text>
 
@@ -76,7 +78,11 @@ export const HeroBanner: React.FC<Props> = ({ isWide }) => {
         </View>
       </View>
 
-      <View style={styles.visual} pointerEvents="none">
+      <View
+        style={[styles.visual, breakpointStyle(ABOUT_LAYOUT, 'heroVisual', isWide)]}
+        pointerEvents="none"
+        {...breakpointLayoutProps(ABOUT_LAYOUT, 'heroVisual')}
+      >
         <View style={styles.visualHeader}>
           <View style={styles.visualDot} />
           <Text style={styles.visualLabel}>{i18nT('home:components.about.HeroBanner.marshrut_vyhodnogo_dnya_c7cb110e')}</Text>
@@ -105,7 +111,7 @@ export const HeroBanner: React.FC<Props> = ({ isWide }) => {
   );
 };
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>, isWide: boolean) =>
+const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     wrap: {
       width: '100%',
@@ -113,10 +119,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isWide: boolea
       borderWidth: 1,
       borderColor: colors.borderAccent,
       backgroundColor: colors.surface,
-      padding: isWide ? DESIGN_TOKENS.spacing.xl : DESIGN_TOKENS.spacing.lg,
-      flexDirection: isWide ? 'row' : 'column',
-      alignItems: isWide ? 'center' : 'stretch',
-      gap: isWide ? DESIGN_TOKENS.spacing.xl : DESIGN_TOKENS.spacing.lg,
       marginBottom: DESIGN_TOKENS.spacing.lg,
       overflow: 'hidden',
       ...Platform.select({
@@ -127,7 +129,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isWide: boolea
       }),
     },
     copy: {
-      flex: isWide ? 1.1 : undefined,
       minWidth: 0,
       gap: DESIGN_TOKENS.spacing.sm,
     },
@@ -149,8 +150,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isWide: boolea
       textTransform: 'uppercase',
     },
     title: {
-      fontSize: isWide ? 34 : 25,
-      lineHeight: isWide ? 40 : 31,
       fontWeight: '800',
       color: colors.text,
       maxWidth: 680,
@@ -242,8 +241,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isWide: boolea
       color: colors.primaryText,
     },
     visual: {
-      flex: isWide ? 0.9 : undefined,
-      minHeight: isWide ? 250 : 220,
       borderRadius: DESIGN_TOKENS.radii.lg,
       backgroundColor: colors.surface,
       borderWidth: 1,
