@@ -86,7 +86,9 @@ premium-настройки обязан быть явный free-фолбэк**,
   через `expo-print` `printAsync({ html })`. На iOS закрытие листа без печати =
   reject `PrintIncompleteException` (`code: 'ERR_PRINT_INCOMPLETE'`) → `'cancelled'`
   (код `ERR_PICKER_CANCELED` тоже считается отменой, его даёт только
-  `selectPrinterAsync`). На Android `printAsync({ html })` резолвится сразу после
+  `selectPrinterAsync`). На iOS (RN 0.86, expo-print 57) `code` до JS может не
+  дойти — отмена распознаётся по коду или по причине исключения («Printing did not
+  complete»), включая вложенную `cause` (#2160). На Android `printAsync({ html })` резолвится сразу после
   показа диалога (`PrintModule.kt`), поэтому там `'cancelled'` недостижим, а
   `'printed'` означает «диалог показан».
   `expo-print` — native-модуль: в сборках без него `isPrintAvailable()` = false

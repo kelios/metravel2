@@ -19,7 +19,8 @@ export function isPrintAvailable(): boolean {
 }
 
 /**
- * Отмена пользователем — только по коду ошибки expo-print (ios/ExpoPrintExceptions.swift):
+ * Отмена пользователем — по коду ошибки expo-print или по причине (#2160, см. ниже)
+ * (ios/ExpoPrintExceptions.swift):
  * лист печати закрыт без печати → PrintIncompleteException (`ERR_PRINT_INCOMPLETE`,
  * «Printing did not complete»); выбор принтера отменён → PickerCanceledException
  * (`ERR_PICKER_CANCELED`, только selectPrinterAsync). На Android printAsync({ html })
