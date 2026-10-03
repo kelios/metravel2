@@ -54,6 +54,12 @@ jest.mock('@/components/trips/planning/TripPlanCard', () => {
   };
 });
 
+// «Устоялся ли запрос под авторизацией» проверяет свой unit-тест; здесь — по состоянию запроса.
+jest.mock('@/hooks/useAuthedQuerySettled', () => ({
+  useAuthedQuerySettled: (query: { isPending?: boolean; isLoading?: boolean }) =>
+    !(query.isPending ?? query.isLoading ?? false),
+}));
+
 jest.mock('@/hooks/usePlannedTripsApi', () => ({
   useMyPlannedTrips: () => mockUseMyPlannedTrips(),
   useDeletePlannedTrip: () => ({

@@ -25,6 +25,8 @@ export type BreakpointBlockStyle = Pick<
   ViewStyle & TextStyle,
   | 'width'
   | 'minWidth'
+  | 'maxWidth'
+  | 'flexWrap'
   | 'minHeight'
   | 'padding'
   | 'gap'

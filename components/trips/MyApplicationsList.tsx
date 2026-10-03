@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 
 import TripStatusBadge from '@/components/trips/TripStatusBadge';
 import type { TripApplication } from '@/api/publicTrips';
+import { useAuthedQuerySettled } from '@/hooks/useAuthedQuerySettled';
 import { useCancelApplication, useMyTripApplications } from '@/hooks/usePublicTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
@@ -18,7 +19,10 @@ function MyApplicationsList() {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
-  const { data, isLoading, isError } = useMyTripApplications();
+  const applicationsQuery = useMyTripApplications();
+  const { data, isError } = applicationsQuery;
+  // #2114: до готовности авторизации запрос выключен — это загрузка, а не «заявок нет».
+  const isLoading = !useAuthedQuerySettled(applicationsQuery);
   const cancel = useCancelApplication();
 
   if (isLoading) {

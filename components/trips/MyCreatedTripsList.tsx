@@ -25,6 +25,7 @@ import { showToastMessage } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { createCollator, getFormatLocale } from '@/i18n/format'
+import { useAuthedQuerySettled } from '@/hooks/useAuthedQuerySettled';
 
 
 type MyTripFilters = {
@@ -54,7 +55,10 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<MyTripFilters>(EMPTY_FILTERS);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const { data, isLoading, isError, refetch } = useMyPlannedTrips();
+  const plannedTripsQuery = useMyPlannedTrips();
+  const { data, isError, refetch } = plannedTripsQuery;
+  // #2114: до готовности авторизации запрос выключен — это загрузка, а не «поездок нет».
+  const isLoading = !useAuthedQuerySettled(plannedTripsQuery);
   const {
     mutate: deleteTrip,
     isPending: isDeletingTrip,

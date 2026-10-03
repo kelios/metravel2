@@ -28,6 +28,12 @@ let mockPlannedTripsState: { data?: unknown; isLoading: boolean } = {
   isLoading: false,
 };
 const mockUseTripNotifications = jest.fn();
+// «Устоялся ли запрос под авторизацией» проверяет свой unit-тест; здесь — по состоянию запроса.
+jest.mock('@/hooks/useAuthedQuerySettled', () => ({
+  useAuthedQuerySettled: (query: { isPending?: boolean; isLoading?: boolean }) =>
+    !(query.isPending ?? query.isLoading ?? false),
+}));
+
 jest.mock('@/hooks/usePlannedTripsApi', () => ({
   useMyPlannedTrips: () => mockPlannedTripsState,
 }));
@@ -59,7 +65,10 @@ jest.mock('@/components/trips/TripNotificationsList', () => {
 });
 
 describe('MyTripsDashboard', () => {
-  beforeEach(() => mockPush.mockClear());
+  beforeEach(() => {
+    mockPush.mockClear();
+    mockUseTripNotifications.mockClear();
+  });
 
   it('opens with organizer trips and switches roles without mixing their lists', () => {
     const { getByTestId, queryByTestId } = render(<MyTripsDashboard />);

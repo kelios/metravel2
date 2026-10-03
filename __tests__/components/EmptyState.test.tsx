@@ -241,4 +241,36 @@ describe('EmptyState', () => {
       expect(queryByText('undefined')).toBeNull();
     });
   });
+
+  // #2114: компактная заглушка часто монтируется после ответа данных, а useResponsive
+  // даёт новому потребителю один кадр «до гидратации» (desktop). Вид не должен зависеть
+  // от ширины — иначе второй кадр перекладывает кнопки и сдвигает всё ниже.
+  it('compact не зависит от ширины, full — зависит', () => {
+    const { createEmptyStateStyles } = require('@/components/ui/EmptyState');
+    const { useThemedColors } = require('@/hooks/useTheme');
+    const colors = (() => {
+      let value: unknown;
+      const Probe = () => {
+        value = useThemedColors();
+        return null;
+      };
+      render(<Probe />);
+      return value;
+    })();
+    const flat = (styles: Record<string, unknown>) =>
+      JSON.stringify(Object.fromEntries(Object.entries(styles).map(([k, v]) => [k, StyleSheet.flatten(v as never)])));
+    expect(flat(createEmptyStateStyles(colors, 'compact', true))).toEqual(flat(createEmptyStateStyles(colors, 'compact', false)));
+    expect(flat(createEmptyStateStyles(colors, 'full', true))).not.toEqual(flat(createEmptyStateStyles(colors, 'full', false)));
+  });
+
+  // Кнопки компактной заглушки: узко — столбик, шире планшета — ряд; первый кадр (React
+  // в узком варианте) на широком экране выправляет critical CSS из того же реестра.
+  it('кнопки compact — реестр по ширине и правило critical CSS', () => {
+    const { EMPTY_STATE_LAYOUT } = require('@/components/ui/emptyStateLayout');
+    const { breakpointStyle } = require('@/utils/breakpointLayout');
+    const { buildCriticalCSS } = require('@/utils/criticalCSSBuilder');
+    expect(breakpointStyle(EMPTY_STATE_LAYOUT, 'compactActions', false)).toMatchObject({ flexDirection: 'column', gap: 8 });
+    expect(breakpointStyle(EMPTY_STATE_LAYOUT, 'compactActions', true)).toMatchObject({ flexDirection: 'row', gap: 12 });
+    expect(buildCriticalCSS()).toContain('[data-bp-layout="emptyState-compactActions"]{flex-direction:row !important');
+  });
 });

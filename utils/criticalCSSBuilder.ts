@@ -5,6 +5,7 @@ import {
   HEADER_MEDIA_MAX_WIDTHS,
 } from '@/components/layout/headerLayoutContract';
 import { ABOUT_LAYOUT } from '@/components/about/aboutLayout';
+import { EMPTY_STATE_LAYOUT } from '@/components/ui/emptyStateLayout';
 import { buildBreakpointLayoutCss } from '@/utils/breakpointLayout';
 
 /**
@@ -243,5 +244,7 @@ export function buildCriticalCSS(): string {
     // широкую даёт этот блок из того же реестра, что читает React
     // (`components/about/aboutLayout.ts`) — гидратация ничего не двигает.
     buildBreakpointLayoutCss(ABOUT_LAYOUT),
+    // #2114: кнопки компактной заглушки — ряд от ширины планшета с первого кадра.
+    buildBreakpointLayoutCss(EMPTY_STATE_LAYOUT),
   ].join('\n');
 }

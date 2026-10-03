@@ -130,6 +130,11 @@ test.describe('Mobile screen budget (#2094)', () => {
         }).observe({ type: 'layout-shift', buffered: true })
       })
       await page.goto('/trips/my')
+      // Страница под живой сессией: после ответа списка у сегмента всегда есть «(N)».
+      // Гостю запросы выключены, блок монтируется сразу и CLS ≈ 0 — это не замер.
+      // Невидимый резерв «(0)» (countPending) тоже текст — сначала он должен уйти.
+      await expect(page.getByTestId('my-trips-segment-organized-count-pending')).toHaveCount(0, { timeout: 60_000 })
+      await expect(page.getByTestId('my-trips-segment-organized')).toContainText(/\(\d+\)/, { timeout: 60_000 })
       await expect(page.getByTestId('my-trips-updates')).toBeVisible({ timeout: 60_000 })
       // Дать догрузиться уведомлениям и картинкам карточек.
       await page.waitForLoadState('networkidle').catch(() => null)
@@ -139,6 +144,9 @@ test.describe('Mobile screen budget (#2094)', () => {
       })
       console.log(`[mobile-screen-budget] trips-my @ ${viewport.name}: cls=${cls.toFixed(4)} shifts=${JSON.stringify(shifts)}`)
       expect(cls).toBeLessThanOrEqual(0.05)
+      // Механизм #2114 не вернулся: ни блок «Обновления», ни сегменты не сдвигаются
+      // (до правки они и были источником; один порог 0,05 этого не отличал).
+      expect(shifts.filter((line) => /my-trips-updates/.test(line))).toEqual([])
     })
   }
 

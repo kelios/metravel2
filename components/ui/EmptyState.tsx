@@ -13,6 +13,8 @@ import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛ�
 import Button from '@/components/ui/Button';
 import Chip from '@/components/ui/Chip';
 import { translate as i18nT } from '@/i18n'
+import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
+import { EMPTY_STATE_LAYOUT } from './emptyStateLayout'
 import type { FeatherIconName } from '@/constants/navigationIcons'
 
 
@@ -72,9 +74,12 @@ function EmptyState({
   // на десктопе размеры иконки/отступов не «мигали» (64→96) после гидрации.
   const isMobileLayout = isHydrated && isMobile;
   const isCompact = density === 'compact';
+  // Кнопки компактной заглушки: до гидратации — узкий вариант (столбик), широкий даёт
+  // critical CSS (`emptyStateLayout.ts`); после — по живой ширине.
+  const isWideCompact = isHydrated && !isMobile;
   const styles = useMemo(
-    () => (isCompact ? createCompactStyles(colors, isMobileLayout) : createStyles(colors, isMobileLayout)),
-    [colors, isMobileLayout, isCompact],
+    () => createEmptyStateStyles(colors, density, isMobileLayout),
+    [colors, density, isMobileLayout],
   );
 
   // ✅ УЛУЧШЕНИЕ: Разные цвета для разных вариантов
@@ -141,7 +146,14 @@ function EmptyState({
         </View>
       )}
 
-      <View style={styles.actionsContainer}>
+      <View
+        style={
+          isCompact
+            ? breakpointStyle(EMPTY_STATE_LAYOUT, 'compactActions', isWideCompact)
+            : styles.actionsContainer
+        }
+        {...(isCompact ? breakpointLayoutProps(EMPTY_STATE_LAYOUT, 'compactActions') : null)}
+      >
         {action && (
           <Button
             label={action.label}
@@ -360,13 +372,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
   StyleSheet.create(fullStyleSpec(colors, isMobile));
 
 // Компактный вид (макет docs/features/mobile-screen-shell-mock.md §6): круг 56, иконка 28,
-// без flex/minHeight, отступы вдвое меньше `full`; на телефоне кнопки столбиком во всю
-// ширину. Вид одинаков на mobile web, Android и iPhone.
+// без flex/minHeight, отступы вдвое меньше `full`. Стили не зависят от ширины; раскладку
+// кнопок (столбик на телефоне, ряд шире) задаёт `emptyStateLayout.ts`, верная с первого кадра.
 const COMPACT_ICON_SIZE = 28;
 const COMPACT_CIRCLE = 56;
 
-const createCompactStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: boolean) => {
-  const full = fullStyleSpec(colors, isMobile);
+const createCompactStyles = (colors: ReturnType<typeof useThemedColors>) => {
+  // Базовый спек — всегда узкий вариант: компактный вид от ширины не зависит (#2114).
+  const full = fullStyleSpec(colors, true);
   return StyleSheet.create<any>({
     ...full,
     container: {
@@ -397,9 +410,6 @@ const createCompactStyles = (colors: ReturnType<typeof useThemedColors>, isMobil
       marginBottom: 14,
       maxWidth: 400,
     },
-    actionsContainer: isMobile
-      ? { flexDirection: 'column', alignItems: 'stretch', alignSelf: 'stretch', gap: 8 }
-      : full.actionsContainer,
     actionButton: {
       ...full.actionButton,
       paddingVertical: 12,
@@ -411,5 +421,12 @@ const createCompactStyles = (colors: ReturnType<typeof useThemedColors>, isMobil
     },
   });
 };
+
+/** Стили заглушки: `compact` не зависит от ширины (первый кадр = финальный), `full` — зависит. */
+export const createEmptyStateStyles = (
+  colors: ReturnType<typeof useThemedColors>,
+  density: EmptyStateDensity,
+  isMobile: boolean,
+) => (density === 'compact' ? createCompactStyles(colors) : createStyles(colors, isMobile));
 
 export default React.memo(EmptyState);

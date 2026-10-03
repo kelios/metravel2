@@ -10,6 +10,7 @@ import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/b
 import ScreenHeader from '@/components/ui/ScreenHeader';
 import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import Chip from '@/components/ui/Chip';
+import { useAuthedQuerySettled } from '@/hooks/useAuthedQuerySettled';
 import { useMyPlannedTrips } from '@/hooks/usePlannedTripsApi';
 import { useMyTripApplications, useTripNotifications } from '@/hooks/usePublicTripsApi';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -42,8 +43,13 @@ export default function MyTripsDashboard() {
   const styles = useMemo(() => createStyles(colors, isMobile, contentPaddingBottom), [colors, contentPaddingBottom, isMobile]);
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<DashboardSection>('organized');
-  const { data: plannedTrips, isLoading: plannedTripsLoading } = useMyPlannedTrips();
-  const { data: applications, isLoading: applicationsLoading } = useMyTripApplications();
+  const plannedTripsQuery = useMyPlannedTrips();
+  const applicationsQuery = useMyTripApplications();
+  const plannedTrips = plannedTripsQuery.data;
+  const applications = applicationsQuery.data;
+  // «Нет данных» ≠ «пусто»: пока авторизация поднимается, запросы выключены (#2114).
+  const plannedTripsLoading = !useAuthedQuerySettled(plannedTripsQuery);
+  const applicationsLoading = !useAuthedQuerySettled(applicationsQuery);
   // #2114: уведомления запрашиваются сразу при входе (тот же кэш, что у
   // TripNotificationsList), но блок монтируется только под устоявшимся списком —
   // иначе он стоит в первом экране над скелетоном, и реальные карточки сдвигают его.
