@@ -85,6 +85,19 @@ describe('printHtml.native', () => {
     await expect(native().printHtml(realHtml())).resolves.toBe('cancelled')
   })
 
+  // #2160: замер на iPhone 17 Pro iOS 26.5 — закрытие листа приходит БЕЗ code,
+  // только с reason PrintIncompleteException в тексте; раньше это показывало
+  // пользователю ошибку «Разрешите всплывающие окна».
+  it('закрытие листа без code (реальный reject iOS на новой архитектуре) — cancelled', async () => {
+    mockPrintAsync.mockRejectedValueOnce(new Error('Printing did not complete'))
+    await expect(native().printHtml(realHtml())).resolves.toBe('cancelled')
+
+    mockPrintAsync.mockRejectedValueOnce(
+      Object.assign(new Error("Calling the 'printAsync' function has failed"), { cause: new Error('Printing did not complete') }),
+    )
+    await expect(native().printHtml(realHtml())).resolves.toBe('cancelled')
+  })
+
   it('настоящая ошибка печати не маскируется под отмену — даже со словом cancel в тексте', async () => {
     mockPrintAsync.mockRejectedValueOnce(Object.assign(new Error('Error occurred while printing to PDF'), { code: 'ERR_PDF_NOT_RENDERED' }))
     await expect(native().printHtml(realHtml())).rejects.toThrow('printing to PDF')

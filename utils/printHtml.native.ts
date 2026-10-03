@@ -27,10 +27,23 @@ export function isPrintAvailable(): boolean {
  * 'cancelled' недостижим: 'printed' означает «диалог показан».
  */
 const CANCEL_CODES = new Set(['ERR_PRINT_INCOMPLETE', 'ERR_PICKER_CANCELED'])
+/**
+ * #2160: на iOS (RN 0.86, expo-print 57) отказ при закрытии листа приходит в JS
+ * без `code` — только с `reason` исключения в тексте (замер на iPhone 17 Pro
+ * iOS 26.5: `code=undefined`, `message="Printing did not complete"`). Поэтому
+ * отмена распознаётся по коду ИЛИ по причине из ExpoPrintExceptions.swift,
+ * в том числе во вложенной `cause`.
+ */
+const CANCEL_REASONS = ['Printing did not complete', 'Printer picker has been cancelled']
 
 function isCancellation(error: unknown): boolean {
-  const { code } = (error ?? {}) as { code?: unknown }
-  return typeof code === 'string' && CANCEL_CODES.has(code)
+  for (let current: unknown = error, depth = 0; current && depth < 3; depth += 1) {
+    const { code, message, cause } = current as { code?: unknown; message?: unknown; cause?: unknown }
+    if (typeof code === 'string' && CANCEL_CODES.has(code)) return true
+    if (typeof message === 'string' && CANCEL_REASONS.some((reason) => message.includes(reason))) return true
+    current = cause
+  }
+  return false
 }
 
 export async function printHtml(html: string, _options?: PrintOptions): Promise<PrintResult> {
