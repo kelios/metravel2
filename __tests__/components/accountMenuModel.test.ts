@@ -15,7 +15,7 @@ jest.mock('@/utils/growthFunnelAnalytics', () => ({
 
 const base: AccountMenuInput = {
   surface: 'desktop',
-  isWeb: true,
+  platform: 'web',
   isAuthenticated: true,
   isSuperuser: false,
   userId: 7,
@@ -52,7 +52,7 @@ describe('accountMenuModel (#2139)', () => {
   it('desktop и mobile отличаются только экспортом PDF (только desktop web)', () => {
     const desktop = keysOf(buildAccountMenuModel({ ...base, isSuperuser: true }))
     const mobile = keysOf(buildAccountMenuModel({ ...base, surface: 'mobile', isSuperuser: true }))
-    const desktopNative = keysOf(buildAccountMenuModel({ ...base, isWeb: false, isSuperuser: true }))
+    const desktopNative = keysOf(buildAccountMenuModel({ ...base, platform: 'ios', isSuperuser: true }))
 
     expect(desktop.filter((key) => key !== 'export')).toEqual(mobile)
     expect(desktop).toContain('export')

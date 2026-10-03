@@ -282,7 +282,7 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
     () =>
       buildAccountMenuModel({
         surface: 'desktop',
-        isWeb: IS_WEB,
+        platform: Platform.OS,
         isAuthenticated,
         isSuperuser,
         userId,

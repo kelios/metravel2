@@ -119,7 +119,7 @@ export default function CustomHeaderMobileMenu({
 
   const accountMenu = buildAccountMenuModel({
     surface: 'mobile',
-    isWeb: Platform.OS === 'web',
+    platform: Platform.OS,
     isAuthenticated,
     isSuperuser,
     userId,

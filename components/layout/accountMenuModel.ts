@@ -1,4 +1,5 @@
 import type { NavigationIconName } from '@/constants/navigationIcons'
+import { isNavRouteAvailable } from '@/constants/platformNavRoutes'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 import { routes } from '@/utils/routes'
@@ -41,7 +42,8 @@ export type AccountMenuModel = {
 
 export type AccountMenuInput = {
   surface: AccountMenuSurface
-  isWeb: boolean
+  /** `Platform.OS`: маршруты, недоступные на платформе, отсекает общая политика `isNavRouteAvailable` (#2135). */
+  platform: string
   isAuthenticated: boolean
   isSuperuser?: boolean
   userId?: string | number | null
@@ -100,7 +102,7 @@ const buildTravelEntries = (): AccountMenuEntry[] => [
 
 const buildAccountEntries = ({
   surface,
-  isWeb,
+  platform,
   isSuperuser,
   userId,
   unreadCount,
@@ -126,9 +128,9 @@ const buildAccountEntries = ({
     },
   ]
 
-  // Экспорт в PDF («Книга путешествий») — только desktop web: на native его
-  // блокирует usePdfExportRuntime (#495), в мобильной версии сайта он скрыт.
-  if (surface === 'desktop' && isWeb) {
+  // Экспорт в PDF («Книга путешествий») скрыт в мобильной версии сайта; на native
+  // его отсекает общая политика маршрутов (#495, #2135) — фильтр в конце.
+  if (surface === 'desktop') {
     entries.push({
       key: 'export',
       title: i18nT('navigation:components.layout.AccountMenu.eksport_v_pdf_234b675b'),
@@ -162,7 +164,7 @@ const buildAccountEntries = ({
     target: { kind: 'logout' },
   })
 
-  return entries
+  return entries.filter((entry) => entry.target.kind !== 'route' || isNavRouteAvailable(entry.target.path, platform))
 }
 
 export const buildAccountMenuModel = (input: AccountMenuInput): AccountMenuModel =>
