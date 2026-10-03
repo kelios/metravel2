@@ -1,10 +1,11 @@
 // components/trips/planning/print/printTripPlan.ts
-// #2068: открывает печатную версию плана поездки (только web). Окно
-// открывается синхронно в обработчике клика — иначе блокировщик всплывающих
-// окон отменит его после await; карты и чеклист догружаются уже в открытое окно.
+// #2068/#2102: печатает план поездки через единую точку printHtml (web — окно
+// браузера, приложения — системный диалог печати). Окно на web резервируется
+// синхронно в обработчике клика — иначе блокировщик всплывающих окон отменит
+// его после await; карты и чеклист догружаются уже в открытое окно.
 import type { PlannedTrip } from '@/api/plannedTripsTypes'
 import { fetchTripGear, type TripGearItem } from '@/api/plannedTripsGear'
-import { openBookPreviewWindow, openPendingBookPreviewWindow } from '@/utils/openBookPreviewWindow'
+import { beginPrint, type PrintResult } from '@/utils/printHtml'
 import { buildTripPlanUrl } from '@/utils/tripPlanLinks'
 import { buildTripPlanPrintHtml } from './tripPlanPrintHtml'
 import { buildTripPlanPrintModel, type TripPlanPrintModel } from './tripPlanPrintModel'
@@ -58,11 +59,11 @@ const renderDayMaps = async (model: TripPlanPrintModel): Promise<Record<string, 
   return maps
 }
 
-/** false — окно не открылось (всплывающие окна запрещены), печатать некуда. */
-export async function printTripPlan(trip: PlannedTrip): Promise<boolean> {
-  if (typeof window === 'undefined') return false
-  const previewWindow = openPendingBookPreviewWindow()
-  if (!previewWindow) return false
+/** 'unavailable' — печатать нечем (всплывающие окна запрещены / нет модуля печати). */
+export async function printTripPlan(trip: PlannedTrip): Promise<PrintResult> {
+  const session = beginPrint()
+  // Окно заблокировано / модуля нет — выходим до чеклиста, чанка карт и тайлов.
+  if (!session.available) return 'unavailable'
   const gear = await loadGear(trip)
   const model = buildTripPlanPrintModel(trip, gear)
   const maps = await renderDayMaps(model)
@@ -71,6 +72,5 @@ export async function printTripPlan(trip: PlannedTrip): Promise<boolean> {
     pageUrl: buildTripPlanUrl(trip),
     printedAt: new Date(),
   })
-  openBookPreviewWindow(html, previewWindow)
-  return true
+  return session.print(html, { title: trip.title })
 }

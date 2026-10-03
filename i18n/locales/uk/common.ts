@@ -23,4 +23,5 @@ export const common = {
   'feedback.awardSent': "Нагороду надіслано",
   'feedback.signInToSave': "Увійдіть, щоб зберігати маршрути",
   'feedback.actionError': "Не вдалося виконати дію",
+  'print.unavailable': "Друк недоступний. Дозвольте спливні вікна в браузері або оновіть застосунок.",
 } as const

@@ -529,7 +529,11 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         const questUrl = typeof window !== 'undefined'
             ? window.location.href.replace(/^http:\/\/localhost:\d+/, 'https://metravel.by')
             : undefined;
-        void generatePrintableQuest({ title, steps, intro, coverUrl, questUrl, finaleText: finale?.text, closeLoop: closeLoopRoute });
+        generatePrintableQuest({ title, steps, intro, coverUrl, questUrl, finaleText: finale?.text, closeLoop: closeLoopRoute })
+            .then((result) => {
+                if (result === 'unavailable') notifyQuest(i18nT('common:print.unavailable'));
+            })
+            .catch(() => notifyQuest(i18nT('common:print.unavailable')));
     }, [coverUrl, intro, steps, title, finale?.text, closeLoopRoute]);
 
     const offlineMapPointsCount = useMemo(() => getQuestOfflineMapPoints(steps).length, [steps]);

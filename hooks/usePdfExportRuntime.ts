@@ -1,4 +1,4 @@
-import { Alert, Platform } from 'react-native';
+import { Alert } from 'react-native';
 
 import type { MutableRefObject } from 'react';
 import type { Travel } from '@/types/types';
@@ -34,7 +34,6 @@ type RunPdfExportOptions = {
 };
 
 let bookHtmlExportServicePromise: Promise<BookHtmlExportService> | null = null;
-let bookPreviewWindowModulePromise: Promise<typeof import('@/utils/openBookPreviewWindow')> | null = null;
 const DEFAULT_BATCH_SIZE = 3;
 const DEFAULT_MAX_RETRIES = 2;
 
@@ -51,19 +50,11 @@ async function getBookHtmlExportService(): Promise<BookHtmlExportService> {
   return bookHtmlExportServicePromise;
 }
 
-async function getBookPreviewModule() {
-  if (!bookPreviewWindowModulePromise) {
-    bookPreviewWindowModulePromise = Promise.resolve(import('@/utils/openBookPreviewWindow')).catch((e) => {
-      bookPreviewWindowModulePromise = null;
-      throw e;
-    });
-  }
-  return bookPreviewWindowModulePromise;
-}
-
-async function openBookPreview(html: string, targetWindow?: Window | null): Promise<void> {
-  const mod = await getBookPreviewModule();
-  mod.openBookPreviewWindow(html, targetWindow ?? undefined);
+async function openBookPreview(html: string): Promise<void> {
+  // #2102: печать — через единую точку printHtml; нет окна/модуля печати — ошибка пользователю.
+  const { printHtml } = await import('@/utils/printHtml');
+  const result = await printHtml(html);
+  if (result === 'unavailable') throw new Error(i18nT('common:print.unavailable'));
 }
 
 // #716/#713: canonical-путь экспорта = серверный async job (format:"pdf"); клиентский
@@ -144,7 +135,7 @@ async function tryServerBookExport(
 
 export async function prewarmPdfExportRuntime(): Promise<void> {
   const canUseDom = typeof document !== 'undefined';
-  if (Platform.OS !== 'web' && !canUseDom) {
+  if (!canUseDom) {
     return;
   }
 
@@ -268,7 +259,8 @@ export async function runPdfExport({
   setCurrentStage,
   updateProgress,
 }: RunPdfExportOptions): Promise<void> {
-  if (Platform.OS !== 'web') {
+  // Генераторы книги разбирают HTML через DOMParser — без DOM (приложения) книга не собирается.
+  if (typeof DOMParser === 'undefined') {
     Alert.alert(
       i18nT('export:hooks.usePdfExportRuntime.nedostupno_33f2b2de'),
       i18nT('export:hooks.usePdfExportRuntime.prosmotr_knigi_i_pechat_dostupny_tolko_v_veb_8f59a809'),

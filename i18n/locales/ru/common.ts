@@ -23,4 +23,5 @@ export const common = {
   'feedback.awardSent': "Награда отправлена",
   'feedback.signInToSave': "Войдите, чтобы сохранять маршруты",
   'feedback.actionError': "Не удалось выполнить действие",
+  'print.unavailable': "Печать недоступна. Разрешите всплывающие окна в браузере или обновите приложение.",
 } as const

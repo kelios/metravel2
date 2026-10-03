@@ -13,6 +13,7 @@ import type { ActionListSheetItem } from '@/components/ui/ActionListSheet'
 import { translate as i18nT } from '@/i18n'
 import { shareTripPlan } from '@/utils/shareTripPlan'
 import { trackRouteExported } from '@/utils/tripAnalytics'
+import { isPrintAvailable } from '@/utils/printHtml'
 import { printTripPlan } from './print/printTripPlan'
 import { shouldRenderTripRouteExportMenu } from './tripRouteExport'
 import { useTripRouteExportTrip } from './useTripRouteExportTrip'
@@ -28,19 +29,20 @@ type Props = {
 }
 
 export default function TripPlanScreenHeader({ trip, onEdit, onDelete, onShowExport, onActionError }: Props) {
-  // Печать плана — окно браузера; в приложениях её нет до #2102, пункт скрыт (не disabled).
-  const CAN_PRINT = Platform.OS === 'web'
+  // Печать плана — printHtml: окно браузера на web, системный диалог в приложениях.
+  // В сборке без модуля печати пункт скрыт (не disabled).
+  const CAN_PRINT = isPrintAvailable()
   const { displayTrip } = useTripRouteExportTrip(trip, { enabled: CAN_PRINT })
 
   const handlePrint = useCallback(() => {
     onActionError(null)
     const printError = i18nT('trips:components.trips.planning.print.button.error')
-    // printTripPlan открывает окно до первого await — вызов остаётся синхронным
+    // printTripPlan резервирует окно до первого await — вызов остаётся синхронным
     // продолжением нажатия на пункт.
     printTripPlan(displayTrip)
-      .then((opened) => {
-        if (opened) trackRouteExported(trip.id, 'print')
-        else onActionError(printError)
+      .then((result) => {
+        if (result === 'printed') trackRouteExported(trip.id, 'print')
+        else if (result === 'unavailable') onActionError(i18nT('common:print.unavailable'))
       })
       .catch(() => onActionError(printError))
   }, [displayTrip, onActionError, trip.id])

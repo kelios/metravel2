@@ -6,12 +6,16 @@ jest.mock('@/utils/mapImageGenerator', () => ({
   generateLeafletRouteSnapshot: jest.fn(async () => ''),
 }));
 
-const mockOpenPendingBookPreviewWindow = jest.fn(() => null);
+const mockOpenPendingBookPreviewWindow = jest.fn(() => ({}));
 const mockOpenBookPreviewWindow = jest.fn();
 
+// Jest резолвит printHtml в native-адаптер; окно браузера — web-адаптер.
+jest.mock('@/utils/printHtml', () => jest.requireActual('@/utils/printHtml.web'));
+
 jest.mock('@/utils/openBookPreviewWindow', () => ({
-  openPendingBookPreviewWindow: mockOpenPendingBookPreviewWindow,
-  openBookPreviewWindow: mockOpenBookPreviewWindow,
+  // обёртки: адаптер печати импортирует модуль до объявления моков ниже
+  openPendingBookPreviewWindow: () => mockOpenPendingBookPreviewWindow(),
+  openBookPreviewWindow: (...args: unknown[]) => (mockOpenBookPreviewWindow as (...a: unknown[]) => void)(...args),
 }));
 
 import { Platform } from 'react-native';
@@ -21,7 +25,7 @@ describe('QuestPrintable', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (Platform as { OS: string }).OS = 'web';
-    (global as typeof globalThis & { window?: Record<string, unknown> }).window = {};
+    (global as typeof globalThis & { window?: Record<string, unknown> }).window = { open: jest.fn() };
   });
 
   it('includes quest cover image in printable cover when coverUrl is provided', async () => {
@@ -88,5 +92,31 @@ describe('QuestPrintable', () => {
         fitPaddingFactor: 1.08,
       }),
     );
+  });
+
+  // #2102: попап заблокирован — выходим с 'unavailable' до canvas-карты и тайлов.
+  it('returns unavailable before rendering the map when the print window is blocked', async () => {
+    mockOpenPendingBookPreviewWindow.mockReturnValueOnce(null as never);
+
+    const result = await generatePrintableQuest({
+      title: 'Урочище Вялое',
+      steps: [
+        {
+          id: 'step-1',
+          title: 'Шаг 1',
+          location: 'Опушка',
+          story: 'История',
+          task: 'Задание',
+          answer: () => true,
+          lat: 53.9756,
+          lng: 26.6891,
+          mapsUrl: 'https://maps.google.com/maps?q=53.9756,26.6891',
+        },
+      ],
+    });
+
+    expect(result).toBe('unavailable');
+    expect(mockGenerateCanvasMapSnapshot).not.toHaveBeenCalled();
+    expect(mockOpenBookPreviewWindow).not.toHaveBeenCalled();
   });
 });

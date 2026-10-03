@@ -69,45 +69,45 @@ function CompactActionLink({
     userSelect: 'none',
   };
 
-  if (Platform.OS !== 'web') {
+  if (Platform.OS === 'web') {
     return (
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        style={({ pressed }) => ({
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 4,
-          paddingHorizontal: 10,
-          paddingVertical: 4,
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: resolvedTextStyle.color ? `${accentColor}33` : '#ccc',
-          backgroundColor: pressed ? `${accentColor}22` : `${accentColor}0d`,
-        })}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label={label}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPress(); }}
+        onKeyDown={(e: any) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault(); e.stopPropagation(); onPress();
+        }}
+        style={pillStyle}
       >
         {icon ? <Feather name={icon as any} size={13} color={accentColor} /> : null}
-        <Text style={[style, { textDecorationLine: 'none' }]}>{label}</Text>
-      </Pressable>
+        <Text style={[style, { textDecorationLine: 'none', fontSize: 13 }]}>{label}</Text>
+      </div>
     );
   }
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-label={label}
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPress(); }}
-      onKeyDown={(e: any) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault(); e.stopPropagation(); onPress();
-      }}
-      style={pillStyle}
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: resolvedTextStyle.color ? `${accentColor}33` : '#ccc',
+        backgroundColor: pressed ? `${accentColor}22` : `${accentColor}0d`,
+      })}
     >
       {icon ? <Feather name={icon as any} size={13} color={accentColor} /> : null}
-      <Text style={[style, { textDecorationLine: 'none', fontSize: 13 }]}>{label}</Text>
-    </div>
+      <Text style={[style, { textDecorationLine: 'none' }]}>{label}</Text>
+    </Pressable>
   );
 }
 

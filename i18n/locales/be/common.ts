@@ -23,4 +23,5 @@ export const common = {
   'feedback.awardSent': "Узнагароду адпраўлена",
   'feedback.signInToSave': "Увайдзіце, каб захоўваць маршруты",
   'feedback.actionError': "Не ўдалося выканаць дзеянне",
+  'print.unavailable': "Друк недаступны. Дазвольце ўсплывальныя вокны ў браўзеры або абнавіце праграму.",
 } as const

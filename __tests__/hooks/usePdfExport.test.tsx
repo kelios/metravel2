@@ -9,7 +9,7 @@ import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 
 const mockGenerateTravelsHtml = jest.fn(async () => '<html><body><section class="pdf-page">Test</section></body></html>');
 const mockOpenBookPreviewWindow = jest.fn();
-const mockOpenPendingBookPreviewWindow = jest.fn(() => null);
+const mockOpenPendingBookPreviewWindow = jest.fn((..._args: unknown[]) => ({}));
 
 jest.mock('@/api/travelDetailsQueries', () => ({
   fetchTravel: jest.fn(async () => ({
@@ -39,6 +39,9 @@ jest.mock('@/services/book/BookHtmlExportService', () => ({
     generateTravelsHtml: mockGenerateTravelsHtml,
   })),
 }));
+
+// Jest резолвит printHtml в native-адаптер; окно браузера — web-адаптер.
+jest.mock('@/utils/printHtml', () => jest.requireActual('@/utils/printHtml.web'));
 
 jest.mock('@/utils/openBookPreviewWindow', () => ({
   openPendingBookPreviewWindow: (...args: any[]) => mockOpenPendingBookPreviewWindow(...args),
@@ -231,11 +234,9 @@ describe('usePdfExport', () => {
   });
 
   describe('openPrintBook', () => {
-    it('должен показывать алерт, если платформа не web', async () => {
-      Object.defineProperty(Platform, 'OS', {
-        configurable: true,
-        value: 'ios',
-      });
+    it('должен показывать алерт, если нет DOM (генераторам книги нужен DOMParser)', async () => {
+      const originalDomParser = (global as any).DOMParser;
+      delete (global as any).DOMParser;
 
       const { result } = renderHook(() => usePdfExport(mockTravels));
 
@@ -248,10 +249,7 @@ describe('usePdfExport', () => {
         'Просмотр книги и печать доступны только в веб-версии MeTravel'
       );
 
-      Object.defineProperty(Platform, 'OS', {
-        configurable: true,
-        value: 'web',
-      });
+      (global as any).DOMParser = originalDomParser;
     });
 
     it('должен показывать предупреждение, если не выбрано ни одного путешествия', async () => {

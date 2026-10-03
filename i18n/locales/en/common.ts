@@ -23,4 +23,5 @@ export const common = {
   'feedback.awardSent': "Award sent",
   'feedback.signInToSave': "Sign in to save routes",
   'feedback.actionError': "Could not complete the action",
+  'print.unavailable': "Printing is unavailable. Allow pop-ups in the browser or update the app.",
 } as const

@@ -6,6 +6,8 @@ import { buildTripPlanPrintHtml } from '@/components/trips/planning/print/tripPl
 import { printTripPlan } from '@/components/trips/planning/print/printTripPlan'
 import { openBookPreviewWindow, openPendingBookPreviewWindow } from '@/utils/openBookPreviewWindow'
 
+// Jest резолвит printHtml в native-адаптер; окно браузера — web-адаптер.
+jest.mock('@/utils/printHtml', () => jest.requireActual('@/utils/printHtml.web'))
 jest.mock('@/utils/openBookPreviewWindow', () => ({
   openPendingBookPreviewWindow: jest.fn(() => ({})),
   openBookPreviewWindow: jest.fn(),
@@ -213,11 +215,22 @@ describe('printTripPlan', () => {
     const pending = printTripPlan(trip(loopRoute(), { routeGeometry: loopGeometry() }))
     expect(openPendingBookPreviewWindow).toHaveBeenCalledTimes(1)
 
-    await expect(pending).resolves.toBe(true)
+    await expect(pending).resolves.toBe('printed')
     expect(fetchTripGear).toHaveBeenCalledWith(47)
     const [written] = (openBookPreviewWindow as jest.Mock).mock.calls[0]
     expect(written).toContain('<section class="day"')
+    // кнопка печати — data-атрибут, а не window.print в разметке (#2102)
+    expect(written).toContain('data-print-action')
+    expect(written).not.toContain('onclick="window.print()"')
     expect(written).not.toContain('<figure class="map">')
+  })
+
+  it('окно не открылось (попап-блокер) — unavailable до загрузок: ни чеклиста, ни документа', async () => {
+    ;(openPendingBookPreviewWindow as jest.Mock).mockReturnValueOnce(null)
+
+    await expect(printTripPlan(trip(loopRoute()))).resolves.toBe('unavailable')
+    expect(fetchTripGear).not.toHaveBeenCalled()
+    expect(openBookPreviewWindow).not.toHaveBeenCalled()
   })
 
   it('чеклист не запрашивается у того, кому он закрыт', async () => {

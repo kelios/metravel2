@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { isPrintAvailable } from '@/utils/printHtml'
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -359,17 +360,19 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
             colors={colors}
             showLabel={!iconOnlyActions}
           />
-          <QuestActionButton
-            styles={styles}
-            label={i18nT('quests:components.quests.questWizardShell.pechat_76bdeffe')}
-            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.pechat_kvesta_f66c15e3')}
-            iconName="printer"
-            iconColor={colors.textMuted}
-            onPress={onPrintDownload}
-            baseStyle={styles.actionLabelButton}
-            showLabel={!iconOnlyActions}
-            textStyle={styles.actionLabelText}
-          />
+          {isPrintAvailable() && (
+            <QuestActionButton
+              styles={styles}
+              label={i18nT('quests:components.quests.questWizardShell.pechat_76bdeffe')}
+              accessibilityLabel={i18nT('quests:components.quests.questWizardShell.pechat_kvesta_f66c15e3')}
+              iconName="printer"
+              iconColor={colors.textMuted}
+              onPress={onPrintDownload}
+              baseStyle={styles.actionLabelButton}
+              showLabel={!iconOnlyActions}
+              textStyle={styles.actionLabelText}
+            />
+          )}
           <QuestActionButton
             styles={styles}
             label={i18nT('quests:components.quests.questWizardShell.skachat_gpx_a032dca6')}
@@ -601,7 +604,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
   const overflowActions: ActionListSheetItem[] = !isMobile
     ? []
     : [
-        ...(Platform.OS === 'web'
+        ...(isPrintAvailable()
           ? [
               {
                 key: 'print',
@@ -692,7 +695,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             showLabel={showActionLabels}
             isMobile={isMobile}
           />
-          {!isMobile && Platform.OS === 'web' && (
+          {!isMobile && isPrintAvailable() && (
             <QuestActionButton
               styles={styles}
               label={i18nT('quests:components.quests.questWizardShell.pechat_76bdeffe')}

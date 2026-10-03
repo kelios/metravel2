@@ -1,14 +1,15 @@
 // components/trips/planning/print/TripPlanPrintButton.tsx
-// #2068: «Распечатать план» во вкладке «Экспорт». Только web: печатная версия —
-// HTML-документ в новом окне браузера, у приложений печати нет.
+// #2068/#2102: «Распечатать план» во вкладке «Экспорт». Печать — через printHtml:
+// окно браузера на web, системный диалог в приложениях (если в сборке есть модуль печати).
 import React, { useCallback, useState } from 'react'
-import { Platform, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { PlannedTrip } from '@/api/plannedTripsTypes'
 import Button from '@/components/ui/Button'
 import { useThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
+import { isPrintAvailable } from '@/utils/printHtml'
 import { trackRouteExported } from '@/utils/tripAnalytics'
 import { printTripPlan } from './printTripPlan'
 
@@ -26,18 +27,18 @@ function TripPlanPrintButton({ trip }: Props) {
     if (busy) return
     setBusy(true)
     setError(null)
-    // printTripPlan открывает окно до первого await — вызов обязан остаться
+    // printTripPlan резервирует окно до первого await — вызов обязан остаться
     // синхронным продолжением клика.
     printTripPlan(trip)
-      .then((opened) => {
-        if (opened) trackRouteExported(trip.id, 'print')
-        else setError(i18nT('trips:components.trips.planning.print.button.error'))
+      .then((result) => {
+        if (result === 'printed') trackRouteExported(trip.id, 'print')
+        else if (result === 'unavailable') setError(i18nT('common:print.unavailable'))
       })
       .catch(() => setError(i18nT('trips:components.trips.planning.print.button.error')))
       .finally(() => setBusy(false))
   }, [busy, trip])
 
-  if (Platform.OS !== 'web') return null
+  if (!isPrintAvailable()) return null
 
   return (
     <View style={styles.wrap} testID="trip-plan-print">

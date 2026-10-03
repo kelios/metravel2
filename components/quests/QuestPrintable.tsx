@@ -1,5 +1,5 @@
-import { Platform } from 'react-native';
 import type { QuestStep } from './types';
+import { beginPrint, type PrintResult } from '@/utils/printHtml';
 import {
     QR_NAV,
     QR_SITE,
@@ -39,32 +39,20 @@ type PrintableProps = {
     closeLoop?: boolean; // кольцевой квест: линия маршрута на карте замыкается к старту
 };
 
-type BookPreviewWindowModule = typeof import('@/utils/openBookPreviewWindow');
-
-let bookPreviewWindowModulePromise: Promise<BookPreviewWindowModule> | null = null;
-
-function loadBookPreviewWindowModule(): Promise<BookPreviewWindowModule> {
-    if (!bookPreviewWindowModulePromise) {
-        bookPreviewWindowModulePromise = Promise.resolve(import('@/utils/openBookPreviewWindow'));
-    }
-
-    return bookPreviewWindowModulePromise;
-}
-
 /**
  * Генерирует подарочную HTML-версию квеста для печати.
  * Включает: обложку, карту, шаги с QR-кодами навигации, QR на сайт.
  */
-export async function generatePrintableQuest({ title, steps, intro, coverUrl, questUrl, finaleText, closeLoop }: PrintableProps): Promise<void> {
-    if (Platform.OS !== 'web') return;
-
+export async function generatePrintableQuest({ title, steps, intro, coverUrl, questUrl, finaleText, closeLoop }: PrintableProps): Promise<PrintResult> {
     const validSteps = steps.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng) && (s.lat !== 0 || s.lng !== 0));
     const mapPoints = buildPrintableMapPoints(validSteps);
     const coverImageUri = resolveStepImageUri(coverUrl);
     const coverLead = extractCoverLead(intro?.story);
     const siteQr = questUrl ? qrUrl(questUrl, QR_SITE) : '';
-    const bookPreviewWindow = await loadBookPreviewWindowModule();
-    const previewWindow = bookPreviewWindow.openPendingBookPreviewWindow();
+    // Окно печати на web резервируется до первого await (попап-блокер).
+    const printSession = beginPrint();
+    // Окно заблокировано / модуля нет — выходим до canvas-карты и тайлов.
+    if (!printSession.available) return 'unavailable';
     const mapCanvasDataUrl = await buildPrintableCanvasMapDataUrl(mapPoints, closeLoop);
     const mapStaticUrl = mapCanvasDataUrl || await buildPrintableLeafletMapDataUrl(mapPoints, closeLoop);
     const mapSvg = buildPrintableMapSvg(mapPoints, closeLoop);
@@ -172,7 +160,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
 <body>
     <div class="toolbar no-print">
         <span class="toolbar-title">${escHtml(title)}</span>
-        <button class="toolbar-btn" onclick="window.print()">
+        <button class="toolbar-btn" data-print-action>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             ${escHtml(i18nT('quests:components.quests.QuestPrintable.savePdf'))}
         </button>
@@ -350,5 +338,5 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
 </body>
 </html>`;
 
-    bookPreviewWindow.openBookPreviewWindow(html, previewWindow);
+    return printSession.print(html, { title });
 }

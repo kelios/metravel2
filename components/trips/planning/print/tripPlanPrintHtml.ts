@@ -269,7 +269,7 @@ export function buildTripPlanPrintHtml(model: TripPlanPrintModel, options: TripP
 <style>${STYLES}</style>
 </head>
 <body>
-<div class="toolbar"><span>${esc(i18nT('trips:components.trips.planning.print.toolbarHint'))}</span><button type="button" onclick="window.print()">${esc(i18nT('trips:components.trips.planning.print.toolbarPrint'))}</button></div>
+<div class="toolbar"><span>${esc(i18nT('trips:components.trips.planning.print.toolbarHint'))}</span><button type="button" data-print-action>${esc(i18nT('trips:components.trips.planning.print.toolbarPrint'))}</button></div>
 <main class="doc">
   <h1>${esc(trip.title)}</h1>
   <div class="sub">${esc(subtitle)}</div>

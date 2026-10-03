@@ -7,7 +7,7 @@
 ## TL;DR
 
 Под «экспортом» в MeTravel живут три несвязанных контура: **PDF-книга
-путешествий** (web-only, через печать браузера), **печатная версия квеста**
+путешествий** (сборка — web, печать — `printHtml`), **печатная версия квеста**
 (HTML-документ для печати) и **выгрузка маршрута поездки** в GPX/KML
 (работает и на native, но разными механизмами сохранения). Общего движка у них
 нет — объединяет их только то, что результат уходит из приложения наружу.
@@ -66,19 +66,52 @@ BookSettingsModal
 premium-настройки обязан быть явный free-фолбэк**, а показ пейволла
 сопровождается `trackPaywallView`.
 
-### Как получается сам PDF
+### Печать — одна точка `utils/printHtml` (#2102)
 
-Отдельной PDF-библиотеки в пайплайне нет: сервис собирает HTML, а
-`utils/openBookPreviewWindow.ts` (140) открывает его в отдельном окне, где
-пользователь печатает или сохраняет в PDF средствами браузера. Окно
-переиспользуется через глобальный ключ `__metravelBookPreviewWindow` и у него
-сбрасывается `opener`.
+Все печатные документы (план поездки, квест, книга) уходят в
+`printHtml(html, { title }) → 'printed' | 'cancelled' | 'unavailable'`
+(`utils/printHtml.ts` + `.web.ts` + `.native.ts`, типы — `printHtml.types.ts`):
 
-Отсюда следует главное ограничение: **на native книги нет**.
-`usePdfExportRuntime.ts:271` при `Platform.OS !== 'web'` показывает `Alert`
-«просмотр книги и печать доступны только в вебе» и выходит;
-`BookSettingsModal.tsx:295` на native не рендерится вовсе. Настройки хранятся в
-`localStorage`, тоже под web-гейтом.
+- **web** — HTML пишется в окно браузера (`utils/openBookPreviewWindow.ts`), где
+  пользователь печатает или сохраняет в PDF. Окно резервирует `beginPrint()`
+  синхронно в обработчике клика, до первого `await` (иначе блокировщик
+  всплывающих окон); HTML догружается позже в то же окно. Кнопка «Печать» в
+  документе помечена `data-print-action`, обработчик с `window.print()` вешает
+  только web-адаптер — единственный владелец `window.print` среди файлов печати,
+  которые проверяет governance-тест (`QuestFullMap.tsx` и
+  `BookHtmlExportService.ts` — вне его scope). Если окно не открылось (попап
+  заблокирован), `beginPrint().available` = false и вызывающий выходит с
+  `'unavailable'` до загрузки чеклиста, карт и картинок;
+- **iPhone/Android** — системный диалог печати (AirPrint, «Сохранить как PDF»)
+  через `expo-print` `printAsync({ html })`. На iOS закрытие листа без печати =
+  reject `PrintIncompleteException` (`code: 'ERR_PRINT_INCOMPLETE'`) → `'cancelled'`
+  (код `ERR_PICKER_CANCELED` тоже считается отменой, его даёт только
+  `selectPrinterAsync`). На Android `printAsync({ html })` резолвится сразу после
+  показа диалога (`PrintModule.kt`), поэтому там `'cancelled'` недостижим, а
+  `'printed'` означает «диалог показан».
+  `expo-print` — native-модуль: в сборках без него `isPrintAvailable()` = false
+  (проверка `requireOptionalNativeModule('ExpoPrint')`, не `Platform.OS`),
+  кнопки печати скрыты, `printHtml` отвечает `'unavailable'`;
+- **разметка не зависит от платформы**: `isPrintAvailable()` на web всегда true
+  (не смотрит на `window`), поэтому кнопки печати одинаковы в SSG и после гидрации;
+- строка `common:print.unavailable` — ошибка «печать недоступна»;
+- **гвард** `__tests__/config/print-governance.test.ts`: в файлах печати
+  (`components/**/print/**`, `components/quests/printable/**`, `QuestPrintable.tsx`,
+  `ListTravelExportControls.tsx`, `hooks/usePdfExport*.ts`) запрещены `window.print`
+  и `Platform.OS !== 'web'`.
+
+Картинки на native: печатные HTML используют абсолютные https-URL (первопартийные —
+через image-proxy `printImageUrl`). `printAsync` на iOS грузит их через WKWebView и
+не умеет локальные ассеты; карты дней плана и квеста строятся canvas'ом, которого на
+native нет, — там план печатается списком точек, квест — встроенной SVG-картой.
+Если на устройстве картинки не успевают, запасной путь — base64 или
+`printToFileAsync` + `expo-sharing` (проверяет #2113 на dev-сборке).
+
+**Книга на native пока недоступна**: генераторы (`ContentParser`) разбирают HTML через
+`DOMParser`, поэтому `usePdfExportRuntime` без DOM показывает `Alert`
+«просмотр книги и печать доступны только в вебе», а `BookSettingsModal` на native не
+рендерится. Сама печать результата уже идёт через `printHtml`; снять ограничение
+можно только заменой DOM-разбора на строковый.
 
 ### Картинки в печати
 
