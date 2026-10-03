@@ -49,6 +49,8 @@ export const sharedStaticResources = {
   "subscription.consentA11y": "Згода на обробку email для розсилки",
   "subscription.privacyLink": "Політика конфіденційності",
   "subscription.consentRequired": "Позначте згоду, щоб підписатися",
+  "subscription.checkMailQuest": "Перевірте пошту й підтвердьте підписку, після цього надішлемо цей квест.",
+  "subscription.checkMail": "Перевірте пошту й підтвердьте підписку, після цього надішлемо лист.",
   "subscriptionLink.loading": "Перевіряємо посилання…",
   "subscriptionLink.confirmedTitle": "Підписку підтверджено",
   "subscriptionLink.confirmedText": "Дякуємо! Тепер нові маршрути й квести надходитимуть на вашу пошту. Відписатися можна за посиланням у будь-якому листі.",

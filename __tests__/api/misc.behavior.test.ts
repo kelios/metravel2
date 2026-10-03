@@ -720,6 +720,27 @@ describe('api/misc', () => {
     })
   })
 
+  // #2124: адрес квеста уходит в page_url — по нему бэк выбирает квест письма.
+  it('subscribeEmail puts the quest canonical into page_url', async () => {
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 201 })
+    mockSafeJsonParse.mockResolvedValue({ ok: true, status: 'created' })
+
+    await subscribeEmail('a@b.com', 'quest', 'https://metravel.by/quests/12/luxembourg-old-town', {
+      granted: true,
+      version: 'email-subscribe-2026-08-20-v1',
+    })
+
+    const [, init] = mockFetchWithTimeout.mock.calls[mockFetchWithTimeout.mock.calls.length - 1]
+    expect(JSON.parse(init.body)).toEqual({
+      email: 'a@b.com',
+      source: 'quest',
+      page_url: 'https://metravel.by/quests/12/luxembourg-old-town',
+      consent: true,
+      consent_version: 'email-subscribe-2026-08-20-v1',
+    })
+  })
+
   it('subscribeEmail sends only an explicit non-empty consent pair', async () => {
     mockSanitizeInput.mockImplementation((v: string) => v.trim())
     mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 201 })

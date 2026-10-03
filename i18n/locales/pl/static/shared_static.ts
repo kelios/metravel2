@@ -49,6 +49,8 @@ export const sharedStaticResources = {
   "subscription.consentA11y": "Zgoda na przetwarzanie adresu e-mail w celu wysyłki newslettera",
   "subscription.privacyLink": "Polityka prywatności",
   "subscription.consentRequired": "Zaznacz zgodę, aby się zapisać",
+  "subscription.checkMailQuest": "Sprawdź skrzynkę i potwierdź subskrypcję — potem wyślemy ten quest.",
+  "subscription.checkMail": "Sprawdź skrzynkę i potwierdź subskrypcję — potem wyślemy wiadomość.",
   "subscriptionLink.loading": "Sprawdzamy link…",
   "subscriptionLink.confirmedTitle": "Subskrypcja potwierdzona",
   "subscriptionLink.confirmedText": "Dziękujemy! Nowe trasy i questy będą teraz trafiać na Twoją skrzynkę. Wypisać się możesz przez link w każdym mailu.",

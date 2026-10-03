@@ -16,6 +16,7 @@ import { queryKeys } from '@/api/queryKeys'
 import { useProgressiveLoad, type ProgressiveLoadConfig } from '@/hooks/useProgressiveLoading'
 import { useHomeViewport } from './useHomeViewport'
 import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm'
+import { buildCanonicalUrl } from '@/utils/seo'
 import {
   HomeAppPromoSection,
   HomeBottomCtaSection,
@@ -349,7 +350,7 @@ function Home() {
       </DeferredSection>
 
       <DeferredSection marginTop={gap.sections} minHeight={240} fallback={null} priority="low">
-        <EmailSubscriptionForm source="home" clientOnly />
+        <EmailSubscriptionForm source="home" pageUrl={buildCanonicalUrl('/')} clientOnly />
       </DeferredSection>
 
       <DeferredSection marginTop={gap.finalCta} minHeight={300} fallback={<SectionSkeleton />} priority="low">

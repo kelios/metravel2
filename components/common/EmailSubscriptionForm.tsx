@@ -19,6 +19,14 @@ import { translate as i18nT } from '@/i18n'
 
 interface EmailSubscriptionFormProps {
   source: SubscribeSource
+  /**
+   * Канонический абсолютный адрес страницы, где стоит форма (тот же, что в
+   * `<link rel="canonical">`). По нему сервер выбирает квест/маршрут для письма.
+   * Обязателен на всех платформах (#2124): раньше форма угадывала адрес из
+   * `window.location` и только на web, и в приложении `page_url` терялся.
+   * `null` — адрес неизвестен: лучше не отправить ничего, чем неверный адрес.
+   */
+  pageUrl: string | null
   title?: string
   subtitle?: string
   /**
@@ -45,6 +53,7 @@ const TEXT_MIN_WIDTH = 260
 
 function EmailSubscriptionForm({
   source,
+  pageUrl,
   title,
   subtitle,
   clientOnly = false,
@@ -66,9 +75,7 @@ function EmailSubscriptionForm({
 
   const mutation = useMutation({
     mutationFn: () => {
-      const pageUrl =
-        Platform.OS === 'web' && typeof window !== 'undefined' ? window.location?.href : undefined
-      return subscribeEmail(email, source, pageUrl, {
+      return subscribeEmail(email, source, pageUrl ?? undefined, {
         granted: true,
         version: EMAIL_SUBSCRIPTION_CONSENT.version,
       })
@@ -126,7 +133,9 @@ function EmailSubscriptionForm({
               <Text style={styles.successText}>
                 {alreadyExists
                   ? i18nT('shared:components.common.EmailSubscriptionForm.vy_uzhe_podpisany_spasibo_chto_s_nami_6014714e')
-                  : i18nT('shared:components.common.EmailSubscriptionForm.gotovo_pismo_s_novymi_marshrutami_skoro_prid_a7046d88')}
+                  : source === 'quest'
+                    ? i18nT('sharedStatic:subscription.checkMailQuest')
+                    : i18nT('sharedStatic:subscription.checkMail')}
               </Text>
             </View>
           ) : (

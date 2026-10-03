@@ -1,7 +1,7 @@
 import type { Travel } from '@/types/types';
 import { DEFAULT_LOCALE, i18n, translate as i18nT } from '@/i18n'
 import { SEO_TITLE_MAX_LENGTH, buildSeoTitle, htmlToPlainText, normalizeSeoLead } from '@/utils/seoText'
-import { normalizeOgImageUrl } from '@/utils/seo'
+import { buildCanonicalUrl, normalizeOgImageUrl } from '@/utils/seo'
 import { buildTravelPath as buildRouteTravelPath, buildTravelPathFromTravel } from '@/utils/routePaths'
 
 
@@ -53,7 +53,7 @@ export function buildIndexableTravelPath(value: unknown): string | null {
  * `/travels/<id>` прод отдаёт пустым 404, так что публиковать её краулерам
  * значит повторять тот же дефект другими словами.
  */
-function getTravelCanonicalUrl(
+export function getTravelCanonicalUrl(
   travel: Travel | null | undefined,
   canonicalUrl?: string | null,
 ): string | null {
@@ -61,7 +61,9 @@ function getTravelCanonicalUrl(
   if (!travel) return null;
 
   const slugPath = buildIndexableTravelPath(travel.slug);
-  return slugPath ? `${SITE_URL}${slugPath}` : null;
+  // Тот же построитель, что у `<link rel=canonical>` экрана (#2124): хост из
+  // `getSiteBaseUrl()`, а не зашитый, иначе форма подписки и голова расходятся.
+  return slugPath ? buildCanonicalUrl(slugPath) : null;
 }
 
 export function stripHtmlForSeo(html?: string | null): string {

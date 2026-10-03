@@ -535,18 +535,18 @@ export default function QuestByIdScreen() {
     );
   }, [bundle]);
 
-  // Email-захват под контентом квеста (INV2-06): показываем всем — гостям и
-  // залогиненным, — так как органический читатель квеста обычно гость.
+  // Email-захват (INV2-06) всем; адрес — canonical квеста, не адресная строка (#2124).
   const subscribeSlot = useMemo(
     () => (
       <EmailSubscriptionForm
         source="quest"
+        pageUrl={canonical}
         title={i18nT('sharedStatic:subscription.questTitle')}
         subtitle={i18nT('sharedStatic:subscription.questSubtitle')}
         clientOnly
       />
     ),
-    [],
+    [canonical],
   );
 
   const questConsent = useActionConsent(CONSENT_TYPES.QUEST_START);

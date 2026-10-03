@@ -204,7 +204,7 @@ export default function TabOneScreen() {
                     returnHref={articleListReturnHref}
                   />
                 ))}
-                <EmailSubscriptionForm source="article" clientOnly />
+                <EmailSubscriptionForm source="article" pageUrl={buildCanonicalUrl('/articles')} clientOnly />
                 <ContributionBanner variant="articles" />
               </ScrollView>
             ) : (
@@ -217,7 +217,7 @@ export default function TabOneScreen() {
                 {...({ estimatedItemSize: 120 } as any)}
                 ListFooterComponent={
                   <>
-                    <EmailSubscriptionForm source="article" clientOnly />
+                    <EmailSubscriptionForm source="article" pageUrl={buildCanonicalUrl('/articles')} clientOnly />
                     <ContributionBanner variant="articles" />
                   </>
                 }

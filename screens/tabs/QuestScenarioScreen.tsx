@@ -424,6 +424,7 @@ export default function QuestScenarioScreen() {
       <View style={{ maxWidth: COLUMN_MAX_WIDTH, width: '100%' }} testID="quest-scenario-email-subscribe">
         <EmailSubscriptionForm
           source="scenario"
+          pageUrl={canonical}
           title={i18nT('sharedStatic:subscription.scenarioTitle')}
           subtitle={i18nT('sharedStatic:subscription.scenarioSubtitle')}
         />

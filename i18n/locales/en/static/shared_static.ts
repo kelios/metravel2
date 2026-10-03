@@ -49,6 +49,8 @@ export const sharedStaticResources = {
   "subscription.consentA11y": "Consent to email processing for the newsletter",
   "subscription.privacyLink": "Privacy policy",
   "subscription.consentRequired": "Tick the consent box to subscribe",
+  "subscription.checkMailQuest": "Check your inbox and confirm your subscription, then we'll send you this quest.",
+  "subscription.checkMail": "Check your inbox and confirm your subscription, then we'll send you an email.",
   "subscriptionLink.loading": "Checking the link…",
   "subscriptionLink.confirmedTitle": "Subscription confirmed",
   "subscriptionLink.confirmedText": "Thank you! New routes and quests will now arrive in your inbox. You can unsubscribe via the link in any email.",

@@ -215,7 +215,6 @@ export const sharedGenerated1 = {
   "components.common.ContributionBanner.zaregistrirovatsya_f38770f0": "Register",
   "components.common.ContributionBanner.zaregistrirovatsya_i_dobavit_mesto_160382f2": "Register and add a place",
   "components.common.EmailSubscriptionForm.email_dlya_podpiski_na_novye_marshruty_54ea0434": "Email to subscribe to new routes",
-  "components.common.EmailSubscriptionForm.gotovo_pismo_s_novymi_marshrutami_skoro_prid_a7046d88": "Done! A letter with new routes will arrive soon.",
   "components.common.EmailSubscriptionForm.podpisatsya_593e3a3e": "Subscribe",
   "components.common.EmailSubscriptionForm.podpisatsya_na_rassylku_novyh_marshrutov_1ccbe1b4": "Subscribe to the newsletter for new routes",
   "components.common.EmailSubscriptionForm.vash_email_com_3f97bbae": "your@email.com",

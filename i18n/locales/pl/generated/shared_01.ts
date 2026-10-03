@@ -215,7 +215,6 @@ export const sharedGenerated1 = {
   "components.common.ContributionBanner.zaregistrirovatsya_f38770f0": "Zarejestruj się",
   "components.common.ContributionBanner.zaregistrirovatsya_i_dobavit_mesto_160382f2": "Zarejestruj się i dodaj miejsce",
   "components.common.EmailSubscriptionForm.email_dlya_podpiski_na_novye_marshruty_54ea0434": "Wyślij e-mail, aby zapisać się na nowe trasy",
-  "components.common.EmailSubscriptionForm.gotovo_pismo_s_novymi_marshrutami_skoro_prid_a7046d88": "Gotowe! Wkrótce nadejdzie list z nowymi trasami.",
   "components.common.EmailSubscriptionForm.podpisatsya_593e3a3e": "Subskrybuj",
   "components.common.EmailSubscriptionForm.podpisatsya_na_rassylku_novyh_marshrutov_1ccbe1b4": "Zapisz się do newslettera, aby otrzymywać informacje o nowych trasach",
   "components.common.EmailSubscriptionForm.vash_email_com_3f97bbae": "twój@email.com",

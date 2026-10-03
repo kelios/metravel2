@@ -215,7 +215,6 @@ export const sharedGenerated1 = {
   "components.common.ContributionBanner.zaregistrirovatsya_f38770f0": "Зарэгістравацца",
   "components.common.ContributionBanner.zaregistrirovatsya_i_dobavit_mesto_160382f2": "Зарэгістравацца і дадаць месца",
   "components.common.EmailSubscriptionForm.email_dlya_podpiski_na_novye_marshruty_54ea0434": "Email для падпіскі на новыя маршруты",
-  "components.common.EmailSubscriptionForm.gotovo_pismo_s_novymi_marshrutami_skoro_prid_a7046d88": "Гатова! Ліст з новымі маршрутамі хутка прыйдзе.",
   "components.common.EmailSubscriptionForm.podpisatsya_593e3a3e": "Падпісацца",
   "components.common.EmailSubscriptionForm.podpisatsya_na_rassylku_novyh_marshrutov_1ccbe1b4": "Падпісацца на рассылку новых маршрутаў",
   "components.common.EmailSubscriptionForm.vash_email_com_3f97bbae": "ваш@email.com",
