@@ -53,7 +53,7 @@ const DELETE_SURFACES = {
   'components/UserPoints/PointsListBulkMapBar.tsx': ['bulk', 'удалить выбранные точки из панели выбора'],
   'components/UserPoints/PointsListBulkModals.tsx': ['dialog', 'кнопки диалогов подтверждения массовых действий'],
   'components/UserPoints/UserPointsMapPointMarker.web.tsx': ['sheet', 'действие попапа точки на карте'],
-  'components/listTravel/RecommendationsTabs.tsx': ['row', 'очистить список вкладки; подтверждение на native не спрашивается сознательно (#1556)'],
+  'components/listTravel/RecommendationsTabs.tsx': ['row', 'очистить список вкладки; confirmAction на всех платформах (#1556, #2115)'],
   'components/listTravel/TravelListItem.tsx': ['row', 'админское удаление карточки в списке'],
   'components/mainPage/StickySearchBar.tsx': ['row', 'очистить недавние поиски в выпадающем списке'],
   'components/map/EditMarkerModal.tsx': ['editor', 'удалить фото в редакторе метки'],

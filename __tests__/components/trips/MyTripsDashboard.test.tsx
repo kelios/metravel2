@@ -23,14 +23,18 @@ jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ isMobile: false }),
 }));
 
+let mockPlannedTripsState: { data?: unknown; isLoading: boolean } = {
+  data: [{ id: 1, isOwner: true }, { id: 2, isOwner: false }],
+  isLoading: false,
+};
+const mockUseTripNotifications = jest.fn();
 jest.mock('@/hooks/usePlannedTripsApi', () => ({
-  useMyPlannedTrips: () => ({
-    data: [{ id: 1, isOwner: true }, { id: 2, isOwner: false }],
-  }),
+  useMyPlannedTrips: () => mockPlannedTripsState,
 }));
 
 jest.mock('@/hooks/usePublicTripsApi', () => ({
-  useMyTripApplications: () => ({ data: [{ id: 10 }, { id: 11 }] }),
+  useMyTripApplications: () => ({ data: [{ id: 10 }, { id: 11 }], isLoading: false }),
+  useTripNotifications: () => mockUseTripNotifications(),
 }));
 
 jest.mock('@/components/trips/MyCreatedTripsList', () => {
@@ -80,5 +84,34 @@ describe('MyTripsDashboard', () => {
 
     expect(mockPush).toHaveBeenNthCalledWith(1, '/trips/plan/create');
     expect(mockPush).toHaveBeenNthCalledWith(2, '/trips');
+  });
+
+  // #2114: блок «Обновления» не стоит над скелетоном списка — монтируется под
+  // устоявшимся списком; запрос уведомлений стартует сразу. Счётчики держат слот.
+  it('не монтирует «Обновления» и держит слот счётчика, пока список грузится', () => {
+    const prev = mockPlannedTripsState;
+    mockPlannedTripsState = { data: undefined, isLoading: true };
+    try {
+      const { queryByTestId, getByTestId } = render(<MyTripsDashboard />);
+      expect(queryByTestId('my-trips-updates')).toBeNull();
+      expect(mockUseTripNotifications).toHaveBeenCalled();
+      expect(getByTestId('my-trips-segment-organized-count-pending', { includeHiddenElements: true })).toBeTruthy();
+    } finally {
+      mockPlannedTripsState = prev;
+    }
+  });
+
+  it('после ответа списка «Обновления» на месте, а счётчики показаны, включая ноль', () => {
+    const prev = mockPlannedTripsState;
+    mockPlannedTripsState = { data: [{ id: 1, isOwner: true }], isLoading: false };
+    try {
+      const { getByTestId, getByText, queryByTestId } = render(<MyTripsDashboard />);
+      expect(getByTestId('my-trips-updates')).toBeTruthy();
+      expect(queryByTestId('my-trips-segment-organized-count-pending', { includeHiddenElements: true })).toBeNull();
+      expect(getByText('(1)')).toBeTruthy();
+      expect(getByText('(0)')).toBeTruthy();
+    } finally {
+      mockPlannedTripsState = prev;
+    }
   });
 });

@@ -11,7 +11,7 @@ import ScreenHeader from '@/components/ui/ScreenHeader';
 import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import Chip from '@/components/ui/Chip';
 import { useMyPlannedTrips } from '@/hooks/usePlannedTripsApi';
-import { useMyTripApplications } from '@/hooks/usePublicTripsApi';
+import { useMyTripApplications, useTripNotifications } from '@/hooks/usePublicTripsApi';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
@@ -42,11 +42,16 @@ export default function MyTripsDashboard() {
   const styles = useMemo(() => createStyles(colors, isMobile, contentPaddingBottom), [colors, contentPaddingBottom, isMobile]);
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<DashboardSection>('organized');
-  const { data: plannedTrips } = useMyPlannedTrips();
-  const { data: applications } = useMyTripApplications();
+  const { data: plannedTrips, isLoading: plannedTripsLoading } = useMyPlannedTrips();
+  const { data: applications, isLoading: applicationsLoading } = useMyTripApplications();
+  // #2114: уведомления запрашиваются сразу при входе (тот же кэш, что у
+  // TripNotificationsList), но блок монтируется только под устоявшимся списком —
+  // иначе он стоит в первом экране над скелетоном, и реальные карточки сдвигают его.
+  useTripNotifications();
 
   const organizedCount = plannedTrips?.filter((trip) => trip.isOwner).length;
   const participatingCount = plannedTrips?.filter((trip) => !trip.isOwner).length;
+  const activeListSettled = activeSection === 'applications' ? !applicationsLoading : !plannedTripsLoading;
   const copy = SECTION_COPY[activeSection];
   const isHeaderMobile = useIsScreenHeaderMobile();
 
@@ -92,7 +97,8 @@ export default function MyTripsDashboard() {
         >
           <Chip
             label={i18nT('trips:components.trips.MyTripsDashboard.organizuyu_5d9149a8')}
-            count={organizedCount && organizedCount > 0 ? organizedCount : undefined}
+            count={organizedCount}
+            countPending={plannedTripsLoading}
             selected={activeSection === 'organized'}
             onPress={() => setActiveSection('organized')}
             icon={isMobile ? undefined : <Feather name="briefcase" size={15} color={colors.primaryDark} />}
@@ -100,7 +106,8 @@ export default function MyTripsDashboard() {
           />
           <Chip
             label={i18nT('trips:components.trips.MyTripsDashboard.uchastvuyu_37ab4611')}
-            count={participatingCount && participatingCount > 0 ? participatingCount : undefined}
+            count={participatingCount}
+            countPending={plannedTripsLoading}
             selected={activeSection === 'participating'}
             onPress={() => setActiveSection('participating')}
             icon={isMobile ? undefined : <Feather name="users" size={15} color={colors.primaryDark} />}
@@ -108,7 +115,8 @@ export default function MyTripsDashboard() {
           />
           <Chip
             label={i18nT('trips:components.trips.MyTripsDashboard.zayavki_b21b670c')}
-            count={applications?.length ? applications.length : undefined}
+            count={applications?.length}
+            countPending={applicationsLoading}
             selected={activeSection === 'applications'}
             onPress={() => setActiveSection('applications')}
             icon={isMobile ? undefined : <Feather name="send" size={15} color={colors.primaryDark} />}
@@ -127,7 +135,7 @@ export default function MyTripsDashboard() {
         {activeSection === 'participating' ? <MyCreatedTripsList role="participating" /> : null}
         {activeSection === 'applications' ? <MyApplicationsList /> : null}
 
-        {activeSection !== 'applications' ? (
+        {activeSection !== 'applications' && activeListSettled ? (
           <View style={styles.updates} testID="my-trips-updates">
             <View style={styles.updatesHeadingRow}>
               <Feather name="bell" size={18} color={colors.primaryDark} />

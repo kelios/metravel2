@@ -146,5 +146,19 @@ describe('Chip', () => {
     
     expect(getByTestId('custom-chip')).toBeTruthy();
   });
-});
 
+  // #2114: пока число грузится, слот счётчика занят невидимым «(0)» — чип не расширяется.
+  it('countPending резервирует слот счётчика невидимым и скрытым от a11y', () => {
+    const { getByTestId } = render(<Chip label="Организую" countPending testID="chip" />);
+    const slot = getByTestId('chip-count-pending', { includeHiddenElements: true });
+    expect(slot.props.children).toBe('(0)');
+    expect(JSON.stringify(slot.props.style)).toMatch(/"opacity":0/);
+    expect(slot.props.importantForAccessibility).toBe('no-hide-descendants');
+  });
+
+  it('число важнее countPending', () => {
+    const { queryByTestId, getByText } = render(<Chip label="Организую" count={3} countPending testID="chip" />);
+    expect(queryByTestId('chip-count-pending', { includeHiddenElements: true })).toBeNull();
+    expect(getByText('(3)')).toBeTruthy();
+  });
+});

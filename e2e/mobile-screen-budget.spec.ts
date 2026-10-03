@@ -101,6 +101,47 @@ test.describe('Mobile screen budget (#2094)', () => {
     })
   }
 
+  // #2114: /trips/my без сдвигов при подгрузке данных — блок «Обновления по
+  // поездкам» монтируется под устоявшимся списком, счётчики сегментов держат слот.
+  // Прод до правки: 390 — 0,027; 800 — 0,035–0,045; 1024 — 0,045 (источник
+  // `my-trips-updates`). CLS считается с начала навигации, авторизация — живая сессия.
+  for (const viewport of [
+    { name: '390x844', width: 390, height: 844 },
+    { name: '800x1024', width: 800, height: 1024 },
+    { name: '1024x768', width: 1024, height: 768 },
+  ]) {
+    test(`trips-my CLS while data loads @ ${viewport.name}`, async ({ page, baseURL }) => {
+      await ensureLiveSession(page, baseURL)
+      await page.setViewportSize({ width: viewport.width, height: viewport.height })
+      await page.addInitScript(() => {
+        type Shift = { hadRecentInput: boolean; value: number; sources?: Array<{ node?: Element; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }> }
+        const w = window as unknown as { __mtCls: number; __mtShifts: string[] }
+        w.__mtCls = 0
+        w.__mtShifts = []
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries() as unknown as Shift[]) {
+            if (entry.hadRecentInput) continue
+            w.__mtCls += entry.value
+            const sources = (entry.sources ?? [])
+              .slice(0, 3)
+              .map((src) => `${src.node?.getAttribute?.('data-testid') ?? src.node?.nodeName ?? '?'}:${Math.round(src.previousRect.top)}>${Math.round(src.currentRect.top)}`)
+            w.__mtShifts.push(`${entry.value.toFixed(4)} ${sources.join(' ')}`)
+          }
+        }).observe({ type: 'layout-shift', buffered: true })
+      })
+      await page.goto('/trips/my')
+      await expect(page.getByTestId('my-trips-updates')).toBeVisible({ timeout: 60_000 })
+      // Дать догрузиться уведомлениям и картинкам карточек.
+      await page.waitForLoadState('networkidle').catch(() => null)
+      const { cls, shifts } = await page.evaluate(() => {
+        const w = window as unknown as { __mtCls: number; __mtShifts: string[] }
+        return { cls: w.__mtCls, shifts: w.__mtShifts }
+      })
+      console.log(`[mobile-screen-budget] trips-my @ ${viewport.name}: cls=${cls.toFixed(4)} shifts=${JSON.stringify(shifts)}`)
+      expect(cls).toBeLessThanOrEqual(0.05)
+    })
+  }
+
   test.afterAll(() => {
     printResultsTable(SCREENS.map((s) => s.key))
   })

@@ -8,6 +8,11 @@ interface ChipProps {
   label: string;
   selected?: boolean;
   count?: number;
+  /**
+   * Число ещё грузится: слот счётчика занят невидимым «(0)», чтобы появление числа
+   * не расширяло чип и не сдвигало соседние (#2114).
+   */
+  countPending?: boolean;
   icon?: React.ReactNode;
   onPress?: () => void;
   testID?: string;
@@ -18,7 +23,7 @@ interface ChipProps {
 const radii = DESIGN_TOKENS.radii;
 const spacing = DESIGN_TOKENS.spacing;
 
-function Chip({ label, selected = false, count, icon, onPress, testID, disabled = false, style }: ChipProps) {
+function Chip({ label, selected = false, count, countPending = false, icon, onPress, testID, disabled = false, style }: ChipProps) {
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Динамическая поддержка тем
 
   const styles = useMemo(() => StyleSheet.create({
@@ -82,6 +87,9 @@ function Chip({ label, selected = false, count, icon, onPress, testID, disabled 
     countSelected: {
       color: colors.primaryText,
     },
+    countPending: {
+      opacity: 0,
+    },
     icon: {
       marginRight: spacing.xs / 2,
     },
@@ -114,6 +122,16 @@ function Chip({ label, selected = false, count, icon, onPress, testID, disabled 
       </Text>
       {typeof count === 'number' ? (
         <Text style={[styles.count, selected && styles.countSelected]}>({count})</Text>
+      ) : countPending ? (
+        <Text
+          style={[styles.count, styles.countPending]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          aria-hidden
+          testID={testID ? `${testID}-count-pending` : undefined}
+        >
+          (0)
+        </Text>
       ) : null}
     </Pressable>
   );
