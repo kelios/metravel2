@@ -23,6 +23,10 @@ jest.mock('@/api/subscriptionLinks', () => ({
   resolveSubscriptionLink: (...args: unknown[]) => mockResolve(...args),
 }))
 
+jest.mock('@/components/layout/bottomChromeInset', () => ({
+  useScrollBottomPadding: () => 24,
+  asBottomDimension: (value: number) => value,
+}))
 jest.mock('@/components/seo/LazyInstantSEO', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/utils/seo', () => ({ buildCanonicalUrl: (p: string) => `https://metravel.by${p}` }))
 jest.mock('@/hooks/useTheme', () => ({

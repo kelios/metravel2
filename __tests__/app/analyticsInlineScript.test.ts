@@ -230,7 +230,10 @@ describe('analytics inline script', () => {
     jest.useRealTimers()
   })
 
-  it('strips e-mail link secrets from Metrika and GA page views (#2121)', () => {
+  // #2121: Metrika (watch, clickmap) and GA4 (enhanced measurement) read
+  // document.location by themselves, so the tags must not load at all while the
+  // address bar carries an e-mail-link secret.
+  it('holds Metrika and GA while the URL carries an e-mail link secret, starts on the first clean URL (#2121)', () => {
     jest.useFakeTimers()
     const { windowMock, documentMock, createdScripts, ymSpy } = setupDomEnv()
     windowMock.location = {
@@ -239,7 +242,52 @@ describe('analytics inline script', () => {
       pathname: '/subscribe/confirm',
       search: '?token=abc123&utm_source=mail',
     }
-    documentMock.referrer = 'https://metravel.by/accountconfirmation?hash=deadbeef'
+    documentMock.referrer = 'https://mail.example.com/inbox?hash=deadbeef'
+
+    runAnalyticsSnippet(windowMock, documentMock)
+    windowMock.metravelLoadAnalytics()
+    jest.runOnlyPendingTimers()
+
+    expect(createdScripts).toHaveLength(0)
+    expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
+    expect(ymSpy).not.toHaveBeenCalled()
+    expect(JSON.stringify(windowMock.dataLayer)).not.toMatch(/abc123|token=/)
+
+    // Same-page SPA updates that keep the secret do not start the tags either.
+    windowMock.history.replaceState({}, '', '/subscribe/confirm?token=abc123&utm_source=mail')
+    jest.runOnlyPendingTimers()
+    expect(createdScripts).toHaveLength(0)
+
+    windowMock.location.href = 'https://metravel.by/quests?utm_source=mail'
+    windowMock.location.pathname = '/quests'
+    windowMock.location.search = '?utm_source=mail'
+    windowMock.history.pushState({}, '', '/quests?utm_source=mail')
+    createdScripts
+      .find((entry) => entry.src === 'https://mc.yandex.ru/metrika/tag.js')
+      ?.onload?.()
+    jest.runOnlyPendingTimers()
+
+    expect(windowMock.__metravelAnalyticsLoaded).toBe(true)
+    expect(createdScripts.some((entry) => entry.src === 'https://mc.yandex.ru/metrika/tag.js')).toBe(true)
+    const hit = ymSpy.mock.calls.find((call) => call[1] === 'hit')
+    expect(hit?.[2]).toBe('https://metravel.by/quests?utm_source=mail')
+    expect(hit?.[3]?.referer).toBe('https://mail.example.com/inbox')
+
+    const sent = JSON.stringify([ymSpy.mock.calls, windowMock.dataLayer])
+    expect(sent).not.toMatch(/token=|hash=|abc123|deadbeef/)
+
+    jest.useRealTimers()
+  })
+
+  it('strips e-mail link secrets from hits and GA page_location after the tags are loaded (#2121)', () => {
+    jest.useFakeTimers()
+    const { windowMock, documentMock, createdScripts, ymSpy } = setupDomEnv()
+    windowMock.location = {
+      hostname: 'metravel.by',
+      href: 'https://metravel.by/quests',
+      pathname: '/quests',
+      search: '',
+    }
 
     runAnalyticsSnippet(windowMock, documentMock)
     windowMock.metravelLoadAnalytics()
@@ -248,36 +296,33 @@ describe('analytics inline script', () => {
       ?.onload?.()
     jest.runOnlyPendingTimers()
 
-    const hit = ymSpy.mock.calls.find((call) => call[1] === 'hit')
-    expect(hit?.[2]).toBe('https://metravel.by/subscribe/confirm?utm_source=mail')
-    expect(hit?.[3]?.referer).toBe('https://metravel.by/accountconfirmation')
-
-    const pageView = (windowMock.dataLayer || []).find(
-      (entry: any) => entry && entry[0] === 'event' && entry[1] === 'page_view'
-    )
-    expect(pageView?.[2]).toEqual(
-      expect.objectContaining({
-        page_location: 'https://metravel.by/subscribe/confirm?utm_source=mail',
-        page_path: '/subscribe/confirm?utm_source=mail',
-        page_referrer: 'https://metravel.by/accountconfirmation',
-      })
-    )
-
-    const gaSet = (windowMock.dataLayer || []).find((entry: any) => entry && entry[0] === 'set' && entry[1]?.page_location)
-    expect(gaSet?.[1]).toEqual({
-      page_location: 'https://metravel.by/subscribe/confirm?utm_source=mail',
-      page_referrer: 'https://metravel.by/accountconfirmation',
-    })
-
-    windowMock.location.href = 'https://metravel.by/set-password?password_reset_token=t1'
+    windowMock.location.href = 'https://metravel.by/set-password?password_reset_token=t1&utm_source=mail'
     windowMock.location.pathname = '/set-password'
-    windowMock.location.search = '?password_reset_token=t1'
-    windowMock.history.pushState({}, '', '/set-password?password_reset_token=t1')
+    windowMock.location.search = '?password_reset_token=t1&utm_source=mail'
+    windowMock.history.pushState({}, '', '/set-password?password_reset_token=t1&utm_source=mail')
     jest.runOnlyPendingTimers()
 
+    const hits = ymSpy.mock.calls.filter((call) => call[1] === 'hit')
+    expect(hits[hits.length - 1][2]).toBe('https://metravel.by/set-password?utm_source=mail')
+
+    const pageViews = (windowMock.dataLayer || []).filter(
+      (entry: any) => entry && entry[0] === 'event' && entry[1] === 'page_view'
+    )
+    expect(pageViews[pageViews.length - 1][2]).toEqual(
+      expect.objectContaining({
+        page_location: 'https://metravel.by/set-password?utm_source=mail',
+        page_path: '/set-password?utm_source=mail',
+        page_referrer: 'https://metravel.by/quests',
+      })
+    )
+    const gaSets = (windowMock.dataLayer || []).filter((entry: any) => entry && entry[0] === 'set' && entry[1]?.page_location)
+    expect(gaSets[gaSets.length - 1][1]).toEqual({
+      page_location: 'https://metravel.by/set-password?utm_source=mail',
+      page_referrer: 'https://metravel.by/quests',
+    })
+
     const sent = JSON.stringify([ymSpy.mock.calls, windowMock.dataLayer])
-    expect(sent).not.toMatch(/token=|hash=|abc123|deadbeef|t1"/)
-    expect(sent).toContain('https://metravel.by/set-password')
+    expect(sent).not.toMatch(/token=|t1/)
 
     jest.useRealTimers()
   })

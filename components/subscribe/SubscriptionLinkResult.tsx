@@ -13,6 +13,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import EmptyState from '@/components/ui/EmptyState';
+import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildCanonicalUrl } from '@/utils/seo';
@@ -46,6 +47,9 @@ type Props = {
 export default function SubscriptionLinkResult({ action }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  // Резерв под нижний док — общий слой #2097: на 320×640 кнопки состояния
+  // ошибки иначе уходили под док.
+  const scrollBottomPadding = useScrollBottomPadding(24);
   const router = useRouter();
   const isFocused = useIsFocused();
   const params = useLocalSearchParams<{ token?: string | string[]; status?: string | string[] }>();
@@ -169,7 +173,10 @@ export default function SubscriptionLinkResult({ action }: Props) {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[styles.content, { paddingBottom: asBottomDimension(scrollBottomPadding) }]}
+    >
       {isFocused && (
         <InstantSEO
           headKey={`subscription-link-${action}`}
@@ -195,7 +202,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 16,
-      paddingVertical: 24,
+      paddingTop: 24,
     },
     pending: {
       minHeight: 260,

@@ -178,8 +178,22 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     return s.slice(0, queryIndex) + (kept.length ? '?' + kept.join('&') : '') + fragment;
   }
 
+  // Third-party tags read document.location on their own (Metrika watch and
+  // clickmap, GA4 enhanced measurement such as scroll), so stripping our own hits
+  // is not enough (#2121 prod acceptance). While the address bar carries an
+  // e-mail-link secret the tags are not loaded at all; they start on the first
+  // clean URL of the session (e.g. after "To quests").
+  function hasSecretParams(value){
+    var s = String(value || '');
+    return stripSecretParams(s) !== s;
+  }
+
   function trackPage(){
     try {
+      if (window.__metravelAnalyticsHeldBySecret) {
+        if (!hasSecretParams(window.location.href)) loadAnalytics();
+        return;
+      }
       var url = stripSecretParams(window.location.href);
       if (window.__metravelLastTrackedUrl === url) return;
       // For SPA navigations report the previous in-app URL as referer,
@@ -225,6 +239,11 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   function loadAnalytics() {
     if (!isAnalyticsAllowed()) return;
     if (window.__metravelAnalyticsLoaded) return;
+    if (hasSecretParams(window.location.href)) {
+      window.__metravelAnalyticsHeldBySecret = true;
+      return;
+    }
+    window.__metravelAnalyticsHeldBySecret = false;
     window.__metravelAnalyticsLoaded = true;
 
     // GA bootstrap (may be skipped if explicitly disabled)
