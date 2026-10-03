@@ -294,6 +294,8 @@ export default function TabLayout() {
                 <Tabs.Screen name="metravel" options={HIDDEN_NOHREF} />
                 <Tabs.Screen name="profile" options={profileOptions} />
                 <Tabs.Screen name="accountconfirmation" options={HIDDEN_NOHREF} />
+                <Tabs.Screen name="subscribe/confirm" options={HIDDEN_NOHREF} />
+                <Tabs.Screen name="subscribe/unsubscribe" options={HIDDEN_NOHREF} />
             </Tabs>
         </>
     );

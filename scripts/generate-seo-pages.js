@@ -3782,6 +3782,18 @@ const STATIC_PAGES = [
     robots: 'noindex, nofollow',
   },
   {
+    route: '/subscribe/confirm',
+    title: 'Подтверждение подписки | Metravel',
+    description: 'Подтверждение подписки на рассылку Metravel.',
+    robots: 'noindex, nofollow',
+  },
+  {
+    route: '/subscribe/unsubscribe',
+    title: 'Отписка от рассылки | Metravel',
+    description: 'Отписка от рассылки Metravel.',
+    robots: 'noindex, nofollow',
+  },
+  {
     route: '/travelsby',
     title: 'Что посмотреть в Беларуси: места и маршруты | Metravel',
     description:

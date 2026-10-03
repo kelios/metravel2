@@ -15,6 +15,8 @@ const STATIC_ROUTES = [
   '/registration',
   '/search',
   '/set-password',
+  '/subscribe/confirm',
+  '/subscribe/unsubscribe',
   '/travel/new',
   '/travelsby',
 ]

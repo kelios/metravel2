@@ -19,6 +19,8 @@ export const navigationStaticResources = {
   "breadcrumb.favorites": "I want to go",
   "breadcrumb.accountconfirmation": "Account confirmation",
   "breadcrumb.setPassword": "Setting a password",
+  "breadcrumb.subscribeConfirm": "Subscription confirmation",
+  "breadcrumb.subscribeUnsubscribe": "Unsubscribe",
   "breadcrumb.newTravel": "New journey",
   "breadcrumb.userpoints": "My points",
   "breadcrumb.messages": "Messages",

@@ -21,6 +21,7 @@ import { METRAVEL_SOCIAL_LINKS } from '@/constants/socialLinks';
 import { PER_PAGE } from '@/components/listTravel/utils/listTravelConstants';
 import { translate as i18nT } from '@/i18n'
 import { getActiveLocaleDefinition } from '@/i18n/format'
+import { SECRET_LINK_ROUTE_PATHS } from '@/utils/secretLinkRoutes'
 
 export { getAnalyticsInlineScript };
 
@@ -379,9 +380,10 @@ const getCriticalHeadScript = () => {
     function isAssetLikePath(path){
       return /\.(?:avif|css|gif|ico|jpe?g|js|json|map|mp4|pdf|png|svg|webmanifest|webp|woff2?|xml)$/i.test(normalizePath(path));
     }
+    var SECRET_LINK_PATHS=${JSON.stringify(SECRET_LINK_ROUTE_PATHS)};
     function shouldNoindexPath(path){
       var p=normalizePath(path);
-      return p==='/login'||p==='/register'||p==='/registration'||p==='/accountconfirmation'||p==='/set-password'||p==='/favorites'||p==='/history'||p==='/profile'||p==='/settings'||p==='/subscriptions'||p==='/calendar'||p==='/export'||p==='/messages'||p==='/travel/new'||p==='/travels/create'||/^\/travel\/[^/]+$/.test(p)||/^\/user\/[^/]+$/.test(p)||isAssetLikePath(p);
+      return p==='/login'||p==='/register'||p==='/registration'||SECRET_LINK_PATHS.indexOf(p)!==-1||p==='/favorites'||p==='/history'||p==='/profile'||p==='/settings'||p==='/subscriptions'||p==='/calendar'||p==='/export'||p==='/messages'||p==='/travel/new'||p==='/travels/create'||/^\/travel\/[^/]+$/.test(p)||/^\/user\/[^/]+$/.test(p)||isAssetLikePath(p);
     }
     function isGenericTitle(value){
       var t=String(value||'').trim();

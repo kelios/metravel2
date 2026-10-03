@@ -483,6 +483,28 @@ describe('useBreadcrumbModel', () => {
     expect(result.current.items).toEqual([{ label: 'О сайте', path: '/about' }]);
   });
 
+  // #2121: /subscribe/* вложены по файлу, но промежуточного /subscribe нет —
+  // одна переведённая крошка под «Главной», «←» на главную, а не в тупик.
+  it.each([
+    ['/subscribe/confirm', 'Подтверждение подписки'],
+    ['/subscribe/unsubscribe', 'Отписка от рассылки'],
+  ])('builds one translated crumb under home for standalone nested route %s', async (path, label) => {
+    usePathname.mockReturnValue(path);
+    useLocalSearchParams.mockReturnValue({ token: 'abc' });
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy();
+    });
+
+    expect(result.current.items).toEqual([{ label, path }]);
+    expect(result.current.items.some((item) => item.path === '/subscribe')).toBe(false);
+    expect(result.current.currentTitle).toBe(label);
+    expect(result.current.pageContextTitle).toBe('Главная');
+    expect(result.current.backToPath).toBe('/');
+  });
+
   it('does not show breadcrumbs on top-level navigation pages', async () => {
     usePathname.mockReturnValue('/map');
     useLocalSearchParams.mockReturnValue({});

@@ -4,6 +4,8 @@
  * pulling in the full +html.tsx file (which contains String.raw templates
  * that confuse babel's TypeScript parser).
  */
+import { SECRET_LINK_QUERY_PARAMS } from '@/utils/secretLinkRoutes';
+
 export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   const metrikaWebvisorEnabled =
     String(process.env.EXPO_PUBLIC_YANDEX_WEBVISOR || '').toLowerCase() ===
@@ -156,14 +158,34 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     }
   }
 
+  // Secrets from e-mail links (?token=, ?hash=, ?password_reset_token=) must never
+  // reach Metrika/GA4: the list comes from utils/secretLinkRoutes.js (#2121).
+  var SECRET_QUERY_PARAMS = ${JSON.stringify(SECRET_LINK_QUERY_PARAMS)};
+  function stripSecretParams(value){
+    var s = String(value || '');
+    var hashIndex = s.indexOf('#');
+    var fragment = hashIndex >= 0 ? s.slice(hashIndex) : '';
+    if (hashIndex >= 0) s = s.slice(0, hashIndex);
+    var queryIndex = s.indexOf('?');
+    if (queryIndex < 0) return s + fragment;
+    var parts = s.slice(queryIndex + 1).split('&');
+    var kept = [];
+    for (var i = 0; i < parts.length; i++) {
+      var name = parts[i].split('=')[0];
+      try { name = decodeURIComponent(name.replace(/\+/g, ' ')); } catch(_e) {}
+      if (SECRET_QUERY_PARAMS.indexOf(name) === -1) kept.push(parts[i]);
+    }
+    return s.slice(0, queryIndex) + (kept.length ? '?' + kept.join('&') : '') + fragment;
+  }
+
   function trackPage(){
     try {
-      var url = window.location.href;
+      var url = stripSecretParams(window.location.href);
       if (window.__metravelLastTrackedUrl === url) return;
       // For SPA navigations report the previous in-app URL as referer,
       // so Metrika/GA4 reports show the real funnel between pages.
       // For the very first hit fall back to document.referrer (external entry).
-      var prev = window.__metravelLastTrackedUrl || document.referrer || '';
+      var prev = window.__metravelLastTrackedUrl || stripSecretParams(document.referrer);
       window.__metravelLastTrackedUrl = url;
       if (HAS_METRIKA && window.__metravelMetrikaReady && window.ym) {
         window.ym(${metrikaId || 0}, 'hit', url, {
@@ -173,10 +195,13 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
       }
       if (HAS_GA && GA_ID && window.gtag && isAnalyticsAllowed() && !window['ga-disable-' + GA_ID]) {
         var loc = window.location;
+        // Every later GA4 event on this page (custom events, user_engagement)
+        // reads page_location from here instead of the raw document.location.
+        window.gtag('set', { page_location: url, page_referrer: prev });
         window.gtag('event', 'page_view', {
           page_title: document.title,
           page_location: url,
-          page_path: (loc && loc.pathname ? loc.pathname : '') + (loc && loc.search ? loc.search : ''),
+          page_path: stripSecretParams((loc && loc.pathname ? loc.pathname : '') + (loc && loc.search ? loc.search : '')),
           page_referrer: prev
         });
       }

@@ -24,6 +24,7 @@ import type { PublicTrip } from '@/api/publicTrips';
 import { queryKeys } from '@/queryKeys';
 import { normalizeTravelRouteSegment } from '@/utils/travelRouteSegment';
 import { getActiveLocale, translate as i18nT } from '@/i18n'
+import { pageTranslations, STANDALONE_NESTED_ROUTE_LABELS } from '@/hooks/breadcrumbRouteLabels';
 
 
 type SearchParamsWithReturnTo = { returnTo?: string | string[] };
@@ -61,49 +62,6 @@ export type BreadcrumbModel = {
 };
 
 const MAX_BREADCRUMB_LENGTH = 50;
-
-const pageTranslations: Record<string, string> = {
-  get travelsby() { return i18nT('navigationStatic:breadcrumb.travelsby') },
-  get map() { return i18nT('navigationStatic:breadcrumb.map') },
-  get quests() { return i18nT('navigationStatic:breadcrumb.quests') },
-  get roulette() { return i18nT('navigationStatic:breadcrumb.roulette') },
-  get article() { return i18nT('navigationStatic:breadcrumb.article') },
-  get travel() { return i18nT('navigationStatic:breadcrumb.travel') },
-  get profile() { return i18nT('navigationStatic:breadcrumb.profile') },
-  get login() { return i18nT('navigationStatic:breadcrumb.login') },
-  get registration() { return i18nT('navigationStatic:breadcrumb.registration') },
-  get metravel() { return i18nT('navigationStatic:breadcrumb.metravel') },
-  get about() { return i18nT('navigationStatic:breadcrumb.about') },
-  get export() { return i18nT('navigationStatic:breadcrumb.export') },
-  get settings() { return i18nT('navigationStatic:breadcrumb.settings') },
-  get history() { return i18nT('navigationStatic:breadcrumb.history') },
-  get favorites() { return i18nT('navigationStatic:breadcrumb.favorites') },
-  get accountconfirmation() { return i18nT('navigationStatic:breadcrumb.accountconfirmation') },
-  get 'set-password'() { return i18nT('navigationStatic:breadcrumb.setPassword') },
-  get new() { return i18nT('navigationStatic:breadcrumb.newTravel') },
-  get userpoints() { return i18nT('navigationStatic:breadcrumb.userpoints') },
-  get messages() { return i18nT('navigationStatic:breadcrumb.messages') },
-  get subscriptions() { return i18nT('navigationStatic:breadcrumb.subscriptions') },
-  get contact() { return i18nT('navigationStatic:breadcrumb.contact') },
-  get places() { return i18nT('navigationStatic:breadcrumb.places') },
-  get articles() { return i18nT('navigationStatic:breadcrumb.articles') },
-  get calendar() { return i18nT('navigationStatic:breadcrumb.calendar') },
-  get search() { return i18nT('navigationStatic:breadcrumb.search') },
-  get cookies() { return i18nT('navigationStatic:breadcrumb.cookies') },
-  get privacy() { return i18nT('navigationStatic:breadcrumb.privacy') },
-  get register() { return i18nT('navigationStatic:breadcrumb.register') },
-  get terms() { return i18nT('navigationStatic:breadcrumb.terms') },
-  get disclaimer() { return i18nT('navigationStatic:breadcrumb.disclaimer') },
-  get 'community-rules'() { return i18nT('navigationStatic:breadcrumb.communityRules') },
-  get 'trip-rules'() { return i18nT('navigationStatic:breadcrumb.tripRules') },
-  get 'security-journal'() { return i18nT('navigationStatic:breadcrumb.securityJournal') },
-  get 'privacy-settings'() { return i18nT('navigationStatic:breadcrumb.privacySettings') },
-  get trips() { return i18nT('navigationStatic:breadcrumb.trips') },
-  get plan() { return i18nT('navigationStatic:breadcrumb.plan') },
-  get create() { return i18nT('navigationStatic:breadcrumb.create') },
-  get app() { return i18nT('navigationStatic:breadcrumb.app') },
-  get offline() { return i18nT('offline:title') },
-};
 
 const PROFILE_CRUMB: BreadcrumbModelItem = { get label() { return i18nT('sharedStatic:hooks.useBreadcrumbModel.profil_6d96d80b') }, path: '/profile' };
 const SETTINGS_CRUMB: BreadcrumbModelItem = { get label() { return i18nT('sharedStatic:hooks.useBreadcrumbModel.nastroyki_ef971c38') }, path: '/settings' };
@@ -146,6 +104,7 @@ const INFO_ROUTES = new Set<string>([
   '/community-rules',
   '/trip-rules',
 ]);
+
 
 function normalizePathname(pathname: string | null | undefined) {
   if (!pathname) return '/';
@@ -482,6 +441,19 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     }
 
     const parts = p.split('/').filter(Boolean);
+
+    const standaloneLabel = STANDALONE_NESTED_ROUTE_LABELS[p];
+    if (standaloneLabel) {
+      const label = standaloneLabel();
+      return {
+        items: [{ label, path: p }],
+        depth: 2,
+        currentTitle: label,
+        pageContextTitle: i18nT('shared:hooks.useBreadcrumbModel.glavnaya_6804642b'),
+        backToPath: '/',
+        showBreadcrumbs: true,
+      };
+    }
 
     if (parts.length === 1) {
       const pageContextTitle = getRootTitle(p);

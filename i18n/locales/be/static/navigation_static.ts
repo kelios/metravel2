@@ -19,6 +19,8 @@ export const navigationStaticResources = {
   "breadcrumb.favorites": "Хачу паехаць",
   "breadcrumb.accountconfirmation": "Пацвярджэнне акаўнта",
   "breadcrumb.setPassword": "Устаноўка пароля",
+  "breadcrumb.subscribeConfirm": "Пацвярджэнне падпіскі",
+  "breadcrumb.subscribeUnsubscribe": "Адпіска ад рассылкі",
   "breadcrumb.newTravel": "Новае падарожжа",
   "breadcrumb.userpoints": "Мае кропкі",
   "breadcrumb.messages": "Паведамлення",

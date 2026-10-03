@@ -230,6 +230,58 @@ describe('analytics inline script', () => {
     jest.useRealTimers()
   })
 
+  it('strips e-mail link secrets from Metrika and GA page views (#2121)', () => {
+    jest.useFakeTimers()
+    const { windowMock, documentMock, createdScripts, ymSpy } = setupDomEnv()
+    windowMock.location = {
+      hostname: 'metravel.by',
+      href: 'https://metravel.by/subscribe/confirm?token=abc123&utm_source=mail',
+      pathname: '/subscribe/confirm',
+      search: '?token=abc123&utm_source=mail',
+    }
+    documentMock.referrer = 'https://metravel.by/accountconfirmation?hash=deadbeef'
+
+    runAnalyticsSnippet(windowMock, documentMock)
+    windowMock.metravelLoadAnalytics()
+    createdScripts
+      .find((entry) => entry.src === 'https://mc.yandex.ru/metrika/tag.js')
+      ?.onload?.()
+    jest.runOnlyPendingTimers()
+
+    const hit = ymSpy.mock.calls.find((call) => call[1] === 'hit')
+    expect(hit?.[2]).toBe('https://metravel.by/subscribe/confirm?utm_source=mail')
+    expect(hit?.[3]?.referer).toBe('https://metravel.by/accountconfirmation')
+
+    const pageView = (windowMock.dataLayer || []).find(
+      (entry: any) => entry && entry[0] === 'event' && entry[1] === 'page_view'
+    )
+    expect(pageView?.[2]).toEqual(
+      expect.objectContaining({
+        page_location: 'https://metravel.by/subscribe/confirm?utm_source=mail',
+        page_path: '/subscribe/confirm?utm_source=mail',
+        page_referrer: 'https://metravel.by/accountconfirmation',
+      })
+    )
+
+    const gaSet = (windowMock.dataLayer || []).find((entry: any) => entry && entry[0] === 'set' && entry[1]?.page_location)
+    expect(gaSet?.[1]).toEqual({
+      page_location: 'https://metravel.by/subscribe/confirm?utm_source=mail',
+      page_referrer: 'https://metravel.by/accountconfirmation',
+    })
+
+    windowMock.location.href = 'https://metravel.by/set-password?password_reset_token=t1'
+    windowMock.location.pathname = '/set-password'
+    windowMock.location.search = '?password_reset_token=t1'
+    windowMock.history.pushState({}, '', '/set-password?password_reset_token=t1')
+    jest.runOnlyPendingTimers()
+
+    const sent = JSON.stringify([ymSpy.mock.calls, windowMock.dataLayer])
+    expect(sent).not.toMatch(/token=|hash=|abc123|deadbeef|t1"/)
+    expect(sent).toContain('https://metravel.by/set-password')
+
+    jest.useRealTimers()
+  })
+
   it('autoloads analytics shortly after page load for short passive sessions', () => {
     jest.useFakeTimers()
     const { windowMock, createdScripts, ymSpy } = setupDomEnv()
