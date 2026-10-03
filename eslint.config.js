@@ -23,6 +23,9 @@ const appRestrictedSyntax = ["error", linkingOpenUrlRule, jsonLdHelmetScriptRule
 
 const baseIgnores = [
   "node_modules/",
+  // Вендоренные сторонние пакеты (vendor/<pkg>/VENDORED.md) — чужой код в
+  // исходном виде, как node_modules; линтуются у себя в апстриме (#2077).
+  "vendor/",
   ".tmp/",
   ".tmp/**",
   ".expo/",
