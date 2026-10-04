@@ -81,16 +81,19 @@ test.describe('Шапка квеста на мобильных ширинах', 
     }
   })
 
-  test('счётчик заданий виден на всех мобильных ширинах', async ({ page }) => {
+  test('позиция в маршруте видна на всех мобильных ширинах', async ({ page }) => {
     await quest.open(page)
     await quest.answerCurrentStep(page, 'первый ответ', 1)
 
-    // Счётчик снова живёт в ряду действий и обязан оставаться видимым на каждой
-    // ширине; строка прогресса на телефоне содержит только полосу.
+    // #2149: на телефоне счётчик живёт в полосе маршрута рядом с позицией. У
+    // фикстуры нет явных ролей точек (`source: 'fallback'`), поэтому «Задания»
+    // полоса не показывает — только «Точка N из M», и строка обязана умещаться.
     for (const width of MOBILE_WIDTHS) {
       await page.setViewportSize({ width, height: 900 })
       await expect(headerActions(page)).toBeVisible({ timeout: 30_000 })
-      await expect(page.getByText(`Задания: 1 / ${quest.stepTotal}`)).toBeVisible({ timeout: 30_000 })
+      const strip = page.getByTestId('quest-route-strip')
+      await expect(strip).toBeVisible({ timeout: 30_000 })
+      await expect(strip.getByText(new RegExp(`Точка \\d+ из ${quest.stepTotal}`))).toBeVisible()
     }
   })
 

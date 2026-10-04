@@ -83,6 +83,18 @@ const STATE_LABEL_KEY_M: Record<QuestStepNavState, string> = {
   locked: 'quests:components.quests.questStepState.stateM.locked',
 }
 
+/** Слово состояния в роде места: «пройдена» у точки, «текущий» у старта и финала. */
+export function questStepStateWord(state: QuestStepNavState, kind: QuestStepNavKind): string {
+  return i18nT(kind === 'point' ? STATE_LABEL_KEY[state] : STATE_LABEL_KEY_M[state])
+}
+
+/** «Точка 3 из 14» / «Старт квеста» / «Финал» — одно место для полосы, листа и подписей. */
+export function questStepPlaceLabel(kind: QuestStepNavKind, index: number, total: number): string {
+  if (kind === 'intro') return i18nT('quests:components.quests.questStepState.intro')
+  if (kind === 'finale') return i18nT('quests:components.quests.questStepState.finale')
+  return i18nT('quests:components.quests.questStepState.point', { index, total })
+}
+
 function buildAccessibilityLabel(
   state: QuestStepNavState,
   kind: QuestStepNavKind,
@@ -90,14 +102,10 @@ function buildAccessibilityLabel(
   total: number,
   role: QuestPointRole | null | undefined,
 ): string {
-  const place =
-    kind === 'intro'
-      ? i18nT('quests:components.quests.questStepState.intro')
-      : kind === 'finale'
-        ? i18nT('quests:components.quests.questStepState.finale')
-        : i18nT('quests:components.quests.questStepState.point', { index, total })
-  const stateLabel = i18nT(kind === 'point' ? STATE_LABEL_KEY[state] : STATE_LABEL_KEY_M[state])
-  const base = i18nT('quests:components.quests.questStepState.label', { place, state: stateLabel })
+  const base = i18nT('quests:components.quests.questStepState.label', {
+    place: questStepPlaceLabel(kind, index, total),
+    state: questStepStateWord(state, kind),
+  })
   return kind === 'point' && role === 'optional'
     ? i18nT('quests:components.quests.questStepState.withOptional', { label: base })
     : base

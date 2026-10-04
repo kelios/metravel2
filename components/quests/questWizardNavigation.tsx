@@ -42,12 +42,6 @@ type StepPillProps = NavigationProps & {
   kind?: QuestStepNavKind
 }
 
-type StepDotProps = NavigationProps & {
-  isIntro?: boolean
-  label: string
-  small?: boolean
-}
-
 function resolveVisual(props: NavigationProps, kind: QuestStepNavKind): QuestStepVisual {
   return resolveQuestStepVisualState({
     state: resolveQuestStepNavState(props),
@@ -137,39 +131,27 @@ export function QuestStepPill(props: StepPillProps) {
   )
 }
 
-export function QuestStepDot(props: StepDotProps) {
-  const { styles, onPress, active = false, unlocked = true, isIntro = false, label, small = false } = props
-  const visual = resolveVisual(props, isIntro ? 'intro' : 'point')
-  const smallOverride = small ? { width: 28, height: 28, borderRadius: 14 } : undefined
-  // Нажимается прозрачная рамка 44dp (`stepDotTarget`), внутри неё — прежний
-  // видимый кружок 26–28dp. До #1274 Pressable был размером с кружок и добирал
-  // область через hitSlop, но ряд точек обтягивает их по высоте, а на Android
-  // hitSlop потомка проверяется только после попадания внутрь родителя — весь
-  // вертикальный добор срезался, и точка оставалась 26dp (регресс #192).
+/**
+ * #2149: видимый маркер состояния точки — кружок с номером или значком из модели
+ * #2146. Сам не нажимается: целью касания служит строка листа «Маршрут» (≥ 44 pt).
+ */
+export function QuestStepMarker({ visual, text, size = 26 }: { visual: QuestStepVisual; text: string; size?: number }) {
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={!unlocked}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: !unlocked, selected: active }}
-      accessibilityLabel={visual.accessibilityLabel}
-      style={styles.stepDotTarget}
+    <View
+      style={[
+        { width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center' },
+        visualStyle(visual),
+      ]}
     >
-      <View style={[styles.stepDotMini, visualStyle(visual), active && styles.stepDotMiniActive, smallOverride]}>
-        <StepGlyph
-          visual={visual}
-          text={label}
-          size={small ? 10 : 12}
-          textStyle={[styles.stepDotMiniText, small && { fontSize: 10 }]}
-        />
-      </View>
-    </Pressable>
+      <StepGlyph visual={visual} text={text} size={Math.round(size * 0.46)} textStyle={{ fontSize: Math.round(size * 0.42), fontWeight: '700' }} />
+    </View>
   )
 }
 
 /**
- * Вход в финал из навигации прохождения — один testID на точку и пилюлю: по нему
- * замер мобильного бюджета (#2147) открывает состояние «финал» в любой локали.
+ * Вход в финал из навигации прохождения — один testID на пилюлю (≥ 600 px) и
+ * строку листа «Маршрут» (телефон, #2149): по нему замер мобильного бюджета
+ * (#2147) открывает состояние «финал» в любой локали.
  */
 export const QUEST_NAV_FINALE_TEST_ID = 'quest-nav-finale'
 
@@ -182,23 +164,5 @@ export function QuestFinalePill(props: NavigationProps & { compact?: boolean }) 
       compact={props.compact}
       testID={QUEST_NAV_FINALE_TEST_ID}
     />
-  )
-}
-
-export function QuestFinaleDot(props: NavigationProps) {
-  const visual = resolveVisual(props, 'finale')
-  return (
-    <Pressable
-      testID={QUEST_NAV_FINALE_TEST_ID}
-      onPress={props.onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected: !!props.active }}
-      accessibilityLabel={visual.accessibilityLabel}
-      style={props.styles.stepDotTarget}
-    >
-      <View style={[props.styles.stepDotMini, visualStyle(visual), props.active && props.styles.stepDotMiniActive]}>
-        <StepGlyph visual={visual} text="" size={12} textStyle={props.styles.stepDotMiniText} />
-      </View>
-    </Pressable>
   )
 }

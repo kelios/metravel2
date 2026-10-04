@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { type QuestColors, SPACING } from './shared';
 
-export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _screenW: number) => ({
+export const createStepsNavStyles = (colors: QuestColors, _isMobile: boolean, _screenW: number) => ({
     stepsNavigation: {
         flexDirection: 'row',
         marginTop: SPACING.xs,
@@ -73,47 +73,6 @@ export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _sc
         letterSpacing: -0.2,
     },
 
-    // Прозрачная рамка тач-таргета вокруг видимой точки (#1274).
-    // Нажимается именно она, поэтому размер задан ей, а не точке: раньше
-    // Pressable был размером с точку (26dp), а её ряд — ровно такой же высоты,
-    // так что вертикальный hitSlop срезался целиком и добора не давал.
-    // Тот же приём, что `MAP_TOOLBAR_TOUCH_TARGET_SIZE` на тулбаре карты.
-    stepDotTarget: {
-        width: 44,
-        height: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...Platform.select({
-            web: { cursor: 'pointer' },
-        }),
-    },
-    // Видимый кружок: размер сохранён прежний, менять его задача не просила.
-    stepDotMini: {
-        width: isMobile ? 26 : 32,
-        height: isMobile ? 26 : 32,
-        borderRadius: isMobile ? 13 : 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...Platform.select({
-            web: {
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-            } as any,
-        }),
-    },
-    stepDotMiniActive: {
-        transform: [{ scale: 1.15 }],
-    },
-    stepDotMiniText: { fontSize: isMobile ? 10 : 12, fontWeight: '700' },
-
-    navActiveTitle: {
-        marginTop: 6,
-        marginBottom: isMobile ? SPACING.xs : 0,
-        fontSize: 13,
-        fontWeight: '700',
-        color: colors.text,
-        letterSpacing: -0.3,
-    },
     navHint: {
         fontSize: 12,
         color: colors.textMuted,

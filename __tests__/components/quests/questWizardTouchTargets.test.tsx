@@ -15,7 +15,7 @@
 import { cleanup, render } from '@testing-library/react-native'
 import { StyleSheet } from 'react-native'
 
-import { QuestFinaleDot, QuestStepDot, QuestStepPill } from '@/components/quests/questWizardNavigation'
+import { QuestStepPill } from '@/components/quests/questWizardNavigation'
 import { createQuestWizardStyles } from '@/components/quests/questWizardStyles'
 import { getThemedColors } from '@/constants/designSystem'
 
@@ -68,39 +68,11 @@ describe('мастер квеста — тач-таргеты шапки', () =>
 })
 
 describe('мастер квеста — тач-таргеты шагового навигатора', () => {
-  // Корень дерева — сам Pressable, первый потомок — видимая фигура внутри рамки.
+  // Корень дерева — сам Pressable.
   const targetStyle = (tree: any) => StyleSheet.flatten(tree.props.style) as any
-  const surfaceStyle = (tree: any) => StyleSheet.flatten(tree.children[0].props.style) as any
 
-  it('чип шага нажимается рамкой 44dp, а видимый кружок остаётся 26dp', () => {
-    const tree = render(<QuestStepDot {...(dotProps as any)} styles={mobileStyles} />).toJSON()
-
-    const target = targetStyle(tree)
-    expect({ width: target.width, height: target.height }).toEqual({
-      width: MIN_TOUCH_TARGET,
-      height: MIN_TOUCH_TARGET,
-    })
-
-    const circle = surfaceStyle(tree)
-    expect({ width: circle.width, height: circle.height }).toEqual({ width: 26, height: 26 })
-  })
-
-  it('узкий экран уменьшает кружок, но не тач-таргет', () => {
-    const tree = render(<QuestStepDot {...(dotProps as any)} styles={mobileStyles} small />).toJSON()
-
-    expect(targetStyle(tree).height).toBe(MIN_TOUCH_TARGET)
-    expect(surfaceStyle(tree).height).toBe(28)
-  })
-
-  it('точка финала нажимается той же рамкой 44dp', () => {
-    const tree = render(<QuestFinaleDot {...(dotProps as any)} styles={mobileStyles} active={false} />).toJSON()
-
-    const target = targetStyle(tree)
-    expect({ width: target.width, height: target.height }).toEqual({
-      width: MIN_TOUCH_TARGET,
-      height: MIN_TOUCH_TARGET,
-    })
-  })
+  // #2149: на телефоне ряда кружков больше нет — цели касания полосы маршрута и
+  // строк листа «Маршрут» (≥ 44 pt) держит `questRouteStrip.test.tsx`.
 
   it('широкоэкранная пилюля шага держит 44dp по высоте (было 28)', () => {
     const tree = render(

@@ -30,9 +30,9 @@ export function useQuestWizardResponsiveModel() {
   //     высоты веток разные
   //     (`questWizardShell.tsx`, `questWizardStyles/headerStyles.ts`);
   //   * лента шагов 1 → 44 px. Ветка `screenW < 600` в `questWizardShell.tsx`
-  //     рисует точки вместо пилюль. Оговорка: по стилям обе ветки заявляют 44 px
-  //     (`questWizardStyles/stepsNavStyles.ts` — `stepDotTarget` 44x44 и
-  //     `stepPill.minHeight` 44), так что 1 px — это транзиентный обмер самого
+  //     рисовала точки вместо пилюль (с #2149 — полосу маршрута `QuestRouteStrip`,
+  //     тоже ≥ 44 px). Оговорка: по стилям обе ветки заявляли 44 px
+  //     (рамка точки 44x44 и `stepPill.minHeight` 44), так что 1 px — это транзиентный обмер самого
   //     нулевого кадра, а не разница объявленных высот. Замер прода
   //     (`layout-shift.sources`) фиксировал ровно `[.,.,.,1] → [.,.,.,44]`.
   // Суммарно на проде это давало CLS 0,40 на desktop-ширинах < 1280 (#1562) —

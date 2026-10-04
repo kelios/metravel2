@@ -149,10 +149,16 @@ async function prepareQuestStep1(page: Page): Promise<void> {
   await expect(firstCard).toBeVisible({ timeout: QUEST_STATE_TIMEOUT })
 }
 
-/** Финал: кнопка финала в навигации прохождения (доступна всегда). */
+/**
+ * Финал: строка «Финал» в навигации прохождения (доступна всегда). На телефоне
+ * она в листе «Маршрут» за полосой маршрута (#2149), от 600 px — пилюля.
+ */
 async function prepareQuestFinale(page: Page): Promise<void> {
   const panel = page.getByTestId('quest-finale-panel')
   if (await panel.isVisible()) return
+  const strip = page.getByTestId('quest-route-strip')
+  await expect(strip.or(page.getByTestId('quest-nav-finale')).first()).toBeVisible({ timeout: QUEST_STATE_TIMEOUT })
+  if (await strip.isVisible()) await strip.click()
   const finale = page.getByTestId('quest-nav-finale').first()
   await expect(finale).toBeVisible({ timeout: QUEST_STATE_TIMEOUT })
   await finale.click()
@@ -665,9 +671,12 @@ export type ScreenBudget = {
 // нет оценок, и строки рейтинга (34 px) в шапке нет. Пороги — по проду, тяжёлому
 // реальному состоянию, с запасом в 2–4 px: блок +40 px в шапке роняет замер и на
 // локальном стеке (0,262 → 0,309). #2148 и #2149 понижают их к цели §9 (≤ 0,20).
+// #2149: полоса маршрута 44 px вместо полосы прогресса и ряда кружков — −15 px:
+// свой dist 0,244 / 0,236 и 0,197 / 0,190 (финал 0,201 / 0,195), прод — те же
+// −15 px от 199 + 56: 0,284 и 0,237 (финал 0,242). Пороги — по проду с запасом 2–5 px.
 const QUEST_RUN_BUDGET: ScreenBudget = {
-  firstContentTopRatioMax: 0.265,
-  pinnedChromeRatioMax: 0.305,
+  firstContentTopRatioMax: 0.245,
+  pinnedChromeRatioMax: 0.29,
   titleOccurrencesMax: 0,
   searchboxCountMax: 0,
   ctaOccludedAllowed: false,

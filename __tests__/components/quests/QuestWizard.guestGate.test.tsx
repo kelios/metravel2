@@ -315,7 +315,11 @@ describe('QuestWizard guest gate', () => {
     expect(mockQuestFinalePanel).toHaveBeenCalled()
 
     await act(async () => {
-      // #2146: пройденная точка несёт галочку вместо номера — ищем по подписи.
+      // #2149: на телефоне точки — в листе «Маршрут» за полосой маршрута;
+      // #2146: пройденная несёт галочку вместо номера — ищем по подписи.
+      fireEvent.press(getByTestId('quest-route-strip'))
+    })
+    await act(async () => {
       fireEvent.press(getByLabelText(/Точка 3 из \d+, пройдена/))
     })
     expect(getByRole('button', { name: 'Перейти к финалу' })).toBeTruthy()
@@ -366,7 +370,7 @@ describe('QuestWizard guest gate', () => {
       { ...makeStep('required', 'Обязательная точка'), pointRole: 'required' as const },
       { ...makeStep('optional', 'Необязательная точка'), pointRole: 'optional' as const },
     ]
-    const { getByLabelText, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = render(
       <QuestWizard
         title="Тест-квест"
         steps={stepsWithLastOptional}
@@ -390,7 +394,11 @@ describe('QuestWizard guest gate', () => {
     expect(mockQuestFinalePanel).toHaveBeenCalled()
 
     await act(async () => {
-      fireEvent.press(getByText('2'))
+      // #2149: точка открывается строкой листа «Маршрут» за полосой маршрута.
+      fireEvent.press(getByTestId('quest-route-strip'))
+    })
+    await act(async () => {
+      fireEvent.press(getByLabelText(/Точка 2 из \d+/))
     })
     mockQuestFinalePanel.mockClear()
     await act(async () => {

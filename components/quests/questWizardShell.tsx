@@ -1,14 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isPrintAvailable } from '@/utils/printHtml'
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
-import {
-  QuestFinaleDot,
-  QuestFinalePill,
-  QuestStepDot,
-  QuestStepPill,
-} from './questWizardNavigation'
+import { QuestFinalePill, QuestStepPill } from './questWizardNavigation'
+import QuestRouteStrip from './QuestRouteStrip'
+import { buildQuestRouteModel } from './questRouteModel'
 import { QuestCompactExcursions } from './questWizardSections'
 import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet'
 import EdgeFadeScrollRow from '@/components/ui/EdgeFadeScrollRow'
@@ -218,38 +215,59 @@ function QuestOfflineDownloadButton({
   )
 }
 
-function ActiveScrollNav({
-  currentIndex,
-  showFinaleOnly,
-  screenW,
+/**
+ * Лента пилюль шагов (≥ 600 px) держит активный шаг в видимой части. Позиция
+ * берётся из измеренной раскладки самих элементов: литерал ширины (35 у кружка,
+ * 130 у пилюли) разошёлся с реальной шириной после #1274 и уводил активный шаг
+ * за край на длинном маршруте (#2149), а ширина пилюли переменная вовсе.
+ */
+export function ActiveScrollNav({
+  activeIndex,
   style,
   contentContainerStyle,
   children,
 }: {
-  currentIndex: number
-  showFinaleOnly: boolean
-  screenW: number
+  /** Индекс среди детей; `-1` — ничего не центрировать (открыт финал). */
+  activeIndex: number
   style?: any
   contentContainerStyle?: any
   children: React.ReactNode
 }) {
   const scrollRef = useRef<ScrollView>(null)
-  const activeIdx = showFinaleOnly ? -1 : currentIndex
+  const itemLayouts = useRef(new Map<number, { x: number; width: number }>())
+  const [viewportWidth, setViewportWidth] = useState(0)
+  const [layoutVersion, setLayoutVersion] = useState(0)
 
   useEffect(() => {
-    if (!scrollRef.current) return
-    const pillW = screenW < 600 ? 35 : 130
-    const offset = Math.max(0, activeIdx * pillW - screenW / 2 + pillW / 2)
+    const item = itemLayouts.current.get(activeIndex)
+    if (!scrollRef.current || !item || viewportWidth <= 0) return
+    const offset = Math.max(0, item.x + item.width / 2 - viewportWidth / 2)
     scrollRef.current.scrollTo({ x: offset, animated: true })
-  }, [activeIdx, screenW])
+  }, [activeIndex, layoutVersion, viewportWidth])
+
+  const onItemLayout = useCallback((index: number, x: number, width: number) => {
+    const prev = itemLayouts.current.get(index)
+    if (prev && prev.x === x && prev.width === width) return
+    itemLayouts.current.set(index, { x, width })
+    setLayoutVersion((v) => v + 1)
+  }, [])
 
   return (
     <EdgeFadeScrollRow
       ref={scrollRef}
       style={style}
       contentContainerStyle={contentContainerStyle}
+      onLayout={(e: any) => setViewportWidth(e.nativeEvent.layout.width)}
     >
-      {children}
+      {React.Children.toArray(children).map((child, index) => (
+        <View
+          key={(child as React.ReactElement).key ?? index}
+          testID={`quest-steps-nav-item-${index}`}
+          onLayout={(e) => onItemLayout(index, e.nativeEvent.layout.x, e.nativeEvent.layout.width)}
+        >
+          {child}
+        </View>
+      ))}
     </EdgeFadeScrollRow>
   )
 }
@@ -596,6 +614,23 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
   const pointsTotal = countRoutePoints(allSteps)
 
   const wideDesktop = screenW >= 1100
+  const routeModel = useMemo(
+    () =>
+      buildQuestRouteModel({
+        allSteps,
+        answers,
+        postponedStepIds,
+        currentIndex,
+        unlockedIndex,
+        questFinished,
+        showFinaleOnly,
+        countModel,
+        completedCount,
+        stepsCount,
+        colors,
+      }),
+    [allSteps, answers, postponedStepIds, currentIndex, unlockedIndex, questFinished, showFinaleOnly, countModel, completedCount, stepsCount, colors],
+  )
   const showActionLabels = Platform.OS !== 'web' && !isMobile
   const hasHeaderMeta = Boolean(ratingSlot || completionSlot)
 
@@ -693,7 +728,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             isMobile && styles.headerActionRowMobile,
           ]}
         >
-          {isMobile && (
+          {isMobile && !compactNav && (
             <Text style={styles.headerActionCounter} numberOfLines={1}>
               {i18nT('quests:components.quests.questWizardShell.progressTasks', {
                 completed: completedCount,
@@ -812,18 +847,24 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
         </Text>
       )}
 
-      <QuestProgressSummary
-        styles={styles}
-        progress={progress}
-        completedCount={completedCount}
-        stepsCount={stepsCount}
-        countModel={countModel}
-        isMobile={isMobile}
-        showBreakdown={!isMobile}
-        showCounter={!isMobile}
-      />
+      {/* #2149: на телефоне (< 600 px) полоса прогресса, ряд кружков и счётчик
+          «Задания» — одна полоса маршрута с листом «Маршрут». */}
+      {compactNav ? null : (
+        <QuestProgressSummary
+          styles={styles}
+          progress={progress}
+          completedCount={completedCount}
+          stepsCount={stepsCount}
+          countModel={countModel}
+          isMobile={isMobile}
+          showBreakdown={!isMobile}
+          showCounter={!isMobile}
+        />
+      )}
 
-      {wideDesktop ? (
+      {compactNav ? (
+        <QuestRouteStrip model={routeModel} onGoToStep={goToStep} onShowFinale={onShowFinale} />
+      ) : wideDesktop ? (
         <View style={styles.stepsGrid}>
           {allSteps.map((step, index) => {
             const isActive = index === currentIndex && !showFinaleOnly
@@ -861,40 +902,15 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
         </View>
       ) : (
         <ActiveScrollNav
-          currentIndex={currentIndex}
-          showFinaleOnly={showFinaleOnly}
+          activeIndex={showFinaleOnly ? allSteps.length : currentIndex}
           style={styles.stepsNavigation}
           contentContainerStyle={{ paddingRight: 8, paddingLeft: isMobile ? 6 : 2 }}
-          screenW={screenW}
         >
           {allSteps.map((step, index) => {
             const isActive = index === currentIndex && !showFinaleOnly
             const isDone = !!answers[step.id] && step.id !== 'intro'
             const isPostponed = !isDone && postponedStepIds.has(step.id)
             const isUnlocked = index <= unlockedIndex || !!answers[step.id] || questFinished
-
-            if (screenW < 600) {
-              return (
-                <QuestStepDot
-                  key={step.id}
-                  colors={colors}
-                  styles={styles}
-                  active={isActive}
-                  done={isDone}
-                  pending={isPostponed}
-                  unlocked={isUnlocked}
-                  onPress={() => {
-                    if (isUnlocked) goToStep(index)
-                  }}
-                  label={String(index)}
-                  isIntro={step.id === 'intro'}
-                  position={index}
-                  total={pointsTotal}
-                  role={step.pointRole}
-                  small={screenW < 360}
-                />
-              )
-            }
 
             return (
               <QuestStepPill
@@ -918,28 +934,13 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
               />
             )
           })}
-          {compactNav ? (
-            <QuestFinaleDot
-              colors={colors}
-              styles={styles}
-              active={showFinaleOnly}
-              onPress={onShowFinale}
-            />
-          ) : (
-            <QuestFinalePill
-              colors={colors}
-              styles={styles}
-              active={showFinaleOnly}
-              onPress={onShowFinale}
-            />
-          )}
+          <QuestFinalePill
+            colors={colors}
+            styles={styles}
+            active={showFinaleOnly}
+            onPress={onShowFinale}
+          />
         </ActiveScrollNav>
-      )}
-
-      {!isMobile && compactNav && (
-        <Text style={styles.navActiveTitle} numberOfLines={1}>
-          {showFinaleOnly ? i18nT('quests:components.quests.questWizardShell.final_d1c11370') : currentIndex === 0 ? i18nT('quests:components.quests.questWizardShell.start_225f7a82') : allSteps[currentIndex]?.title}
-        </Text>
       )}
 
     </View>
