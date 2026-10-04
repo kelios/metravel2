@@ -33,9 +33,12 @@ const formatReviewDate = (iso: string | null): string | null => {
 
 function ReviewItem({ review, styles }: { review: QuestReview; styles: ReturnType<typeof createStyles> }) {
   const dateText = formatReviewDate(review.createdAt)
-  // #2133 (Apple 1.2): жалоба/скрытие отзыва. Автора бэк не отдаёт (#2163) —
-  // блокировки в меню нет, а фото отзыва покрывает жалоба на сам отзыв.
-  const safetyRef = useMemo(() => makeContentRef('quest_review', review.id, null), [review.id])
+  // #2133 (Apple 1.2): жалоба/скрытие отзыва; автор с #2163/#2169 — блокировка и
+  // скрытое меню на своём отзыве. Фото отзыва покрывает жалоба на сам отзыв.
+  const safetyRef = useMemo(
+    () => makeContentRef('quest_review', review.id, review.authorId),
+    [review.id, review.authorId],
+  )
   return (
     <HiddenContentGate contentRef={safetyRef}>
       <View style={styles.reviewItem} testID={`quest-review-item-${review.id}`}>

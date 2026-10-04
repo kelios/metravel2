@@ -28,7 +28,8 @@ const BLOCKED = 7
 const nearKey = queryKeys.travelsNear(1)
 const profileKey = queryKeys.userProfile(String(BLOCKED))
 const blockedKey = queryKeys.myBlockedUsers('1')
-const articlesKey = ['articles', { page: 1 }]
+// Refetch-only запись реестра: деталь статьи режет бэк (списки статей с #2169 вырезаются сразу).
+const articlesKey = ['article', 5]
 const favoritesKey = queryKeys.favorites('1')
 
 const setup = () => {
@@ -60,7 +61,7 @@ beforeEach(() => {
 describe('useBlockUser', () => {
   it('hides the author before the server answers and invalidates the registry on settle', async () => {
     const { qc, stop, wrapper } = setup()
-    qc.setQueryData(articlesKey, { data: [{ id: 5 }], total: 1 })
+    qc.setQueryData(articlesKey, { id: 5 })
     qc.setQueryData(favoritesKey, [{ id: 3 }])
     const request = deferred()
     ;(blockUser as jest.Mock).mockReturnValue(request.promise)
@@ -92,14 +93,14 @@ describe('useBlockUser', () => {
 
   it('rolls the cache back and shows an error toast when the request fails', async () => {
     const { qc, stop, wrapper } = setup()
-    qc.setQueryData(articlesKey, { data: [{ id: 5 }], total: 1 })
+    qc.setQueryData(articlesKey, { id: 5 })
     ;(blockUser as jest.Mock).mockRejectedValue(new Error('network'))
     const { result } = renderHook(() => useBlockUser(), { wrapper })
 
     act(() => result.current.mutate(BLOCKED))
     await waitFor(() => expect(result.current.isError).toBe(true))
     // Сервер ничего не менял: кэш вне экрана не сносится (в том числе без сети).
-    expect(qc.getQueryData(articlesKey)).toEqual({ data: [{ id: 5 }], total: 1 })
+    expect(qc.getQueryData(articlesKey)).toEqual({ id: 5 })
 
     expect((qc.getQueryData(nearKey) as any[]).map((t) => t.id)).toEqual([1, 2])
     expect((qc.getQueryData(profileKey) as any).is_blocked_by_me).toBe(false)

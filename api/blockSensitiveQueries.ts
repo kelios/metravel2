@@ -2,9 +2,9 @@
 //
 // Блокировка — не мутация двух ключей, а слой кэша. Реестр ниже перечисляет все
 // запросы, где лежит контент с автором, и как из каждого вырезать его объекты.
-// Записи без `strip` — refetch-only: в ответе нет id автора (отзывы квестов,
-// статьи — бэк их не сериализует), поэтому их только перезапрашиваем, а
-// фильтрует бэк (#2130).
+// Записи без `strip` — refetch-only: деталь или производная выдача, которую
+// фильтрует бэк (#2130, #2164). Отзывы квестов и списки статей с #2163/#2169
+// несут id автора (`authorId` отзыва, `author_id` статьи) и режутся сразу.
 //
 // Guard (`installBlockedAuthorGuard`) — канонический клиентский фильтр: он
 // повторно режет каждый успешный ответ из реестра по текущему набору
@@ -61,9 +61,10 @@ export const BLOCK_SENSITIVE_ENTRIES: readonly SensitiveEntry[] = [
   { key: ['trip-chat-messages'], strip: (data, blocked) => stripCollection(data, chatSenderIds, blocked) },
   { key: queryKeys.publicTripsAll(), strip: (data, blocked) => stripCollection(data, organizerIds, blocked) },
   { key: queryKeys.communityTripsAll(), strip: (data, blocked) => stripCollection(data, organizerIds, blocked) },
+  // Отзывы квестов: под корнем `quest` только queryKeys.questReviews; автор — `authorId` (#2169).
+  { key: ['quest'], strip: travels },
+  { key: ['articles'], strip: travels },
   // Refetch-only: в ответе нет id автора или это деталь/производная, которую фильтрует бэк.
-  { key: ['quest'] }, // queryKeys.questReviews — QuestPublicReviewSerializer без автора
-  { key: ['articles'] },
   { key: ['article'] },
   { key: queryKeys.travelAll() },
   { key: ['public-trip'] },

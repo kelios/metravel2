@@ -925,6 +925,8 @@ describe('api/quests', () => {
           disliked: '',
           authorName: 'Игрок',
           authorAvatar: null,
+          // #2169: бэк без #2163 автора не присылает — id не выдумывается.
+          authorId: null,
           createdAt: '2026-08-01T10:00:00Z',
           // Бэкенд без #1576 поля `photos` не присылает — читалка обязана
           // получить пустой список, а не `undefined` (#1579).

@@ -123,6 +123,9 @@ describe('applyAuthorBlock', () => {
     qc.setQueryData(queryKeys.publicTrips({}), [{ id: 1, organizer: { id: BLOCKED } }])
     qc.setQueryData(queryKeys.communityTrips({}), [{ id: 1, organizer: { id: 3 } }])
     qc.setQueryData(queryKeys.userProfile(String(BLOCKED)), { user: BLOCKED, is_blocked_by_me: false })
+    // #2169: отзывы квеста (authorId) и списки статей (author_id) режутся сразу.
+    qc.setQueryData(queryKeys.questReviews('minsk'), [{ id: 1, authorId: BLOCKED }, { id: 2, authorId: 3 }, { id: 3, authorId: null }])
+    qc.setQueryData(queryKeys.articles({ page: 0, itemsPerPage: 12 }), { data: [{ id: 1, author_id: BLOCKED }, { id: 2, author_id: null }], total: 2 })
     const events: Array<[number, boolean]> = []
     subscribeAuthorBlock((id, blocked) => events.push([id, blocked]))
 
@@ -136,6 +139,8 @@ describe('applyAuthorBlock', () => {
     expect(qc.getQueryData(queryKeys.publicTrips({}))).toEqual([])
     expect(qc.getQueryData(queryKeys.communityTrips({}))).toHaveLength(1)
     expect((qc.getQueryData(queryKeys.userProfile(String(BLOCKED))) as any).is_blocked_by_me).toBe(true)
+    expect((qc.getQueryData(queryKeys.questReviews('minsk')) as any[]).map((r) => r.id)).toEqual([2, 3])
+    expect(qc.getQueryData(queryKeys.articles({ page: 0, itemsPerPage: 12 }))).toEqual({ data: [{ id: 2, author_id: null }], total: 1 })
     expect(events).toEqual([[BLOCKED, true]])
   })
 })

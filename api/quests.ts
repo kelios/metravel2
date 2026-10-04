@@ -4,6 +4,7 @@ import { apiClient, ApiError } from '@/api/client';
 import { LONG_TIMEOUT } from '@/api/apiConfig';
 import { readEnvelopeTotal, unwrapList } from '@/api/clientResponse';
 import type { TravelMediaGroup, TravelMediaImage } from '@/types/types';
+import { toContentId } from '@/types/contentSafety';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { indexMediaImage } from '@/utils/mediaPlaceholderIndex';
 import { retry } from '@/utils/retry';
@@ -329,6 +330,11 @@ export type ApiQuestReview = {
     disliked: string;
     author_name: string | null;
     author_avatar: string | null;
+    /**
+     * #2163: id автора отзыва (nullable, read-only). На бэке до #2163 поля нет —
+     * потребитель не выдумывает id: без него нет блокировки автора и фильтра кэша.
+     */
+    user?: number | null;
     created_at: string | null;
     /**
      * Не больше трёх снимков, непромодерированные сервер уже вырезал
@@ -353,6 +359,8 @@ export type QuestReview = {
     disliked: string;
     authorName: string | null;
     authorAvatar: string | null;
+    /** #2169: id автора (`user` бэка); null — старый бэк или удалённый автор. */
+    authorId: number | null;
     createdAt: string | null;
     photos: QuestReviewPhoto[];
 };
@@ -380,6 +388,8 @@ function adaptQuestReview(raw: ApiQuestReview): QuestReview {
         disliked: raw.disliked ?? '',
         authorName: raw.author_name ?? null,
         authorAvatar: raw.author_avatar ? normalizeMediaUrl(raw.author_avatar) : null,
+        // Бэк отдаёт IntegerField; строку не принимаем — id не выдумывается.
+        authorId: typeof raw.user === 'number' ? toContentId(raw.user) : null,
         createdAt: raw.created_at ?? null,
         photos: adaptQuestReviewPhotos(raw.photos),
     };
