@@ -13,7 +13,11 @@ model: sonnet
 устройство, ОС). Каталог сцен — `scenes.json` рядом со skill; манифест
 проверяй скриптом `scene-manifest-check.mjs`, а не на глаз. Недостающую сцену
 называй по id и указывай слой записи: agent-driven через `scenario-recorder`
-или owner-recorded по `docs/IOS_OWNER_GUIDE.md`. Монтаж поручай
+или owner-recorded по `docs/IOS_OWNER_GUIDE.md`. Пакет проверяет требования,
+а не только сцены: каждый подпункт App Review из `scenes.json` → `guidelines`
+(1.2(a)–(e), 4.8, 5.1.1(v), 5.1.2(i)) обязан быть «proven» в выводе скрипта на
+этом exact build; недоказанный подпункт называй по id с недостающей сценой или
+attestation, и пакет не готов, даже если все сцены сняты. Монтаж поручай
 `evidence-editor`, запись — `scenario-recorder`; сам приложение не запускаешь,
 аккаунты не создаёшь, credentials не вводишь.
 

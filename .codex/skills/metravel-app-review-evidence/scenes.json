@@ -1,5 +1,5 @@
 {
-  "source": "Apple Guideline 2.1 Information Needed — New App Submission (2026-09-10); Task Contract #1889",
+  "source": "Apple Guideline 2.1 Information Needed — New App Submission (2026-09-10), Task Contract #1889; guideline sub-points from the 1.2/5.1.2(i) rejection (2026-09-25, docs/IOS_APP_REVIEW_REJECTION_20260925.md), Task Contract #2136",
   "scenes": [
     {
       "id": "launch-cold",
@@ -10,6 +10,11 @@
       "id": "guest-browse",
       "required": true,
       "name": "Guest: catalog, article, map with loaded tiles, quest"
+    },
+    {
+      "id": "eula-before-auth",
+      "required": true,
+      "name": "Fresh install: email/Apple/Google/Facebook disabled until the Terms checkbox is checked; Terms show zero tolerance for objectionable content and abusive users; same on Registration before the account exists"
     },
     {
       "id": "register",
@@ -42,6 +47,21 @@
       "name": "Block an author; blocked state shown"
     },
     {
+      "id": "ugc-flag-content",
+      "required": true,
+      "name": "Report every user-content type of another author — trip card, comment, direct message, trip chat message, quest review, photo: reason, send, confirmation that the report is reviewed within 24 hours (profile reports are ugc-report)"
+    },
+    {
+      "id": "ugc-block-hides-content",
+      "required": true,
+      "name": "Block author X from a trip card: consequences dialog, confirm, X's card and comment disappear without reload, X listed in Settings → Privacy → Blocked users"
+    },
+    {
+      "id": "no-cookie-ui",
+      "required": true,
+      "name": "iPad landscape: account menu has no cookie item; Privacy screen states the app does not track"
+    },
+    {
       "id": "account-delete",
       "required": true,
       "name": "Delete the disposable account; confirmation and failed re-login"
@@ -65,6 +85,69 @@
       "id": "ipv6-only-login",
       "required": true,
       "name": "Sign-in and guest browse on an IPv6-only NAT64 Wi-Fi (IOS-16); nginx log shows the device's requests"
+    }
+  ],
+  "guidelines": [
+    {
+      "id": "1.2(a)",
+      "name": "Terms (EULA) with zero tolerance for objectionable content and abusive users agreed before registration and every sign-in method",
+      "scenes": [
+        "eula-before-auth"
+      ]
+    },
+    {
+      "id": "1.2(b)",
+      "name": "Method for filtering objectionable content",
+      "scenes": [],
+      "attestation": "Production word filter for comments, messages and trip chat plus pre-moderation of trips and quest reviews, active for the candidate's API: backend SHA and a dated production probe"
+    },
+    {
+      "id": "1.2(c)",
+      "name": "Mechanism to report offensive content, on every type of user content",
+      "scenes": [
+        "ugc-flag-content",
+        "ugc-report"
+      ]
+    },
+    {
+      "id": "1.2(d)",
+      "name": "Block abusive users: content leaves the blocker's feed instantly and the developer is notified",
+      "scenes": [
+        "ugc-block-hides-content",
+        "ugc-block"
+      ],
+      "attestation": "Every block and report notifies the moderation team: backend SHA and a dated notification received for the recorded block"
+    },
+    {
+      "id": "1.2(e)",
+      "name": "Act on reports within 24 hours: remove content and eject the offending user",
+      "scenes": [
+        "ugc-flag-content"
+      ],
+      "attestation": "Owner-confirmed moderation rota and admin actions remove-content and ban-user on production, with the date of confirmation"
+    },
+    {
+      "id": "4.8",
+      "name": "Sign in with Apple offered next to the third-party login services",
+      "scenes": [
+        "eula-before-auth"
+      ],
+      "attestation": "ios:artifact:audit of the exact IPA lists com.apple.developer.applesignin in the signed entitlements"
+    },
+    {
+      "id": "5.1.1(v)",
+      "name": "Account deletion initiated inside the app",
+      "scenes": [
+        "account-delete"
+      ]
+    },
+    {
+      "id": "5.1.2(i)",
+      "name": "No tracking without ATT: no cookie prompts or cookie settings in the app",
+      "scenes": [
+        "no-cookie-ui"
+      ],
+      "attestation": "ios:artifact:audit of the exact IPA shows NSPrivacyTracking=false and no NSUserTrackingUsageDescription; App Privacy in ASC declares Tracking = No"
     }
   ]
 }

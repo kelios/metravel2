@@ -94,6 +94,17 @@ Read-only проверки (`ios:environment:check`, `ios:release:guard`, инс
 4. **Контент релиза.** `ios-analyst` подтверждает метаданные и privacy-ответы,
    `ios-designer` — иконку, splash и скриншоты. Открытые блокеры комплаенса
    закрываются до сборки кандидата, а не после.
+   - **Чек-лист App Review по подпунктам — до `ios:build:prod`.** Единственный
+     список — `.codex/skills/metravel-app-review-evidence/scenes.json` →
+     `guidelines`: 1.2(a) условия с нулевой терпимостью до регистрации и любого
+     входа, (b) фильтр контента, (c) жалоба на каждый тип UGC, (d) блокировка с
+     мгновенным скрытием и уведомлением разработчика, (e) реакция на жалобу
+     ≤24 ч; 4.8 Sign in with Apple; 5.1.1(v) удаление аккаунта в приложении;
+     5.1.2(i) нет cookie-UI и трекинга без ATT. По каждому подпункту `ios-analyst`
+     называет реализацию в коде на source revision кандидата (`path:line`, бэк-SHA)
+     и сцену или attestation, которой он будет доказан. Подпункт без реализации —
+     блокер сборки. Отказ 25.09.2026 (`docs/IOS_APP_REVIEW_REJECTION_20260925.md`)
+     случился ровно здесь: 1.2 закрыли «по кнопкам», не сверив пять подпунктов.
    - Guideline 4.8 (Sign in with Apple при живых Google/Facebook login) **по коду
      закрыт**, проверено 03.09.2026: entitlement `com.apple.developer.applesignin`
      лежит в трекаемом `ios/metravel/metravel.entitlements`, есть
@@ -109,6 +120,12 @@ Read-only проверки (`ios:environment:check`, `ios:release:guard`, инс
    signing, entitlements без секретов.
 6. **QA кандидата** — `ios-tester`. Симулятор не заменяет физический iPhone;
    релиз принимается только на exact processed TestFlight build.
+   - **Доказательство каждого подпункта на exact build.** Сцены снимает
+     `app-review-director`, пакет собирает `app-review-packager`;
+     `node .codex/skills/metravel-app-review-evidence/scripts/scene-manifest-check.mjs <manifest>`
+     обязан закончиться `PASS` — в том числе блок `guidelines` без `MISSING`.
+     Видео и attestations прошлой сборки не переносятся: новый build number —
+     новый манифест. Без `PASS` шаг 8 не выполняется.
 7. **Upload** — отдельная команда владельца: `npm run ios:submit <BUILD_ID>`.
    Один раз, дождаться processing, дубли не слать.
    - **`ios:artifact:audit` обязателен перед каждым upload** (`docs/WORKFLOW_OPERATIONS.md`
@@ -127,7 +144,8 @@ Read-only проверки (`ios:environment:check`, `ios:release:guard`, инс
      (`git reset --hard <commit>`), делается upload, и `main` возвращается на
      `origin/main`. Пересборка ради этого — пустая трата квоты владельца.
 8. **Submit в App Review** — отдельное решение владельца по принятому билду:
-   метаданные, privacy, скриншоты, reviewer notes и демо-аккаунт проверены.
+   метаданные, privacy, скриншоты, reviewer notes и демо-аккаунт проверены,
+   манифест сцен этого билда — `PASS` по всем подпунктам гайдлайнов (шаг 6).
 9. **Storefront release** — отдельное решение после одобрения Apple.
 
 Дефект релиза = новый более высокий build number и повтор гейта целиком.

@@ -32,6 +32,19 @@ not a pass: `account-delete` needs the confirmation and the failed re-login,
 `ugc-report`/`ugc-block` need the observable result, `register` needs the
 activated account signed in.
 
+## Guideline sub-points
+
+`scenes.json` → `guidelines` is the single list of App Review sub-points the
+candidate must prove (1.2(a)–(e), 4.8, 5.1.1(v), 5.1.2(i)); it replaces any
+prose checklist. A sub-point is proven only when every scene it names has
+`result: "pass"` on this build and, when the catalog sets `attestation`, the
+manifest carries an `attestations` entry with the same `build` and dated
+evidence (backend SHA, production probe, `ios:artifact:audit` output, owner
+confirmation). `notApplicable` scenes and attestations from another build never
+prove a sub-point. One unproven sub-point blocks the package and the submit;
+a new Apple guideline finding is added to `guidelines` with its scene or
+attestation, not to a document.
+
 Two evidence layers have equal weight when the build is visible in-frame:
 
 - agent-driven: `$metravel-scenario-recorder` over the signed XCTest helper
@@ -55,7 +68,8 @@ The manifest follows the Task Contract of the video card:
   "recordedAtISO": "2026-09-12T13:05:00Z",
   "video": { "path": "device/final.mp4", "sha256": "<hex>", "audio": false },
   "scenarios": [ { "id": "launch-cold", "result": "pass", "videoTimecode": "00:00" } ],
-  "notApplicable": [ { "id": "purchases", "reason": "no IAP", "evidence": "package.json; ASC Free" } ]
+  "notApplicable": [ { "id": "purchases", "reason": "no IAP", "evidence": "package.json; ASC Free" } ],
+  "attestations": [ { "id": "1.2(d)", "build": "9", "evidence": "backend <sha>; moderator mail 2026-09-12 for the recorded block" } ]
 }
 ```
 
@@ -65,7 +79,7 @@ Run before any external handoff:
 node .codex/skills/metravel-app-review-evidence/scripts/scene-manifest-check.mjs <manifest.json>
 ```
 
-It verifies required coverage, monotonic timecodes inside the probed
+It verifies required coverage, proof of every guideline sub-point, monotonic timecodes inside the probed
 duration, the SHA-256 of the video, H.264 4:2:0 profile and the audio
 declaration, then prints the coverage table. It cannot certify privacy: a
 continuous full playback of the final file with frame-level inspection of
@@ -96,5 +110,5 @@ Package readiness never authorizes Reply, Notes, build, upload, submit or
 release: each is a separate owner decision executed by the release operator.
 
 Return at most 12 lines: candidate identity, coverage (required/passed/
-missing/N-A), manifest check result, privacy review status, delivery form,
+missing/N-A), unproven guideline sub-points by id, manifest check result, privacy review status, delivery form,
 text consistency, open owner decisions, next step.

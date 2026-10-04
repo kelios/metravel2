@@ -43,8 +43,9 @@ and «3.2.1 iOS testing and release operations» (operation gate),
   tapping the link in the open Gmail tab, or the documented database-token
   recipe (`POST /api/user/confirm-registration/`) executed during a labelled
   cut. Neither path types the password through the model.
-- Author for `ugc-report`/`ugc-block`: the existing `E2E_EMAIL2` user (public
-  profile and trip exist). Report and block are reversible: unblock afterwards
+- Author for `ugc-report`/`ugc-block`/`ugc-flag-content`/
+  `ugc-block-hides-content`: the existing `E2E_EMAIL2` user (public profile,
+  trip, comment and message exist). Report and block are reversible: unblock afterwards
   and tell the owner the moderation report id to dismiss.
 - Cleanup: the delete scene destroys the disposable account; verify with a
   failed login. Nothing else on production is mutated.

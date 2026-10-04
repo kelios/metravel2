@@ -2,7 +2,8 @@
 // Verifies an App Review scene manifest against the final video file:
 // required scene coverage from ../scenes.json, monotonic timecodes inside the
 // probed duration, SHA-256 of the video, H.264/yuv420p profile and the audio
-// declaration. It does not certify privacy: that needs continuous playback.
+// declaration, and proof of every App Review guideline sub-point in the
+// catalog. It does not certify privacy: that needs continuous playback.
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -112,16 +113,52 @@ for (const scene of catalog.scenes) {
   else if (na) status = `n/a (${na.reason})`;
   else status = scene.required ? 'MISSING' : 'not recorded';
   if (scene.required && (!recorded || recorded.result !== 'pass') && !na) missing += 1;
-  rows.push(`${scene.required ? '*' : ' '} ${scene.id.padEnd(16)} ${status}`);
+  rows.push(`${scene.required ? '*' : ' '} ${scene.id.padEnd(24)} ${status}`);
 }
 if (missing > 0) fail(`${missing} required scene(s) without pass or notApplicable`);
+
+// Guideline sub-points (#2136): each one is proven on this exact build by its
+// passing scenes and, where the catalog asks, an attestation for what a video
+// cannot show. A scene marked notApplicable never proves a sub-point.
+const guidelines = Array.isArray(catalog.guidelines) ? catalog.guidelines : [];
+const guidelineById = new Map();
+for (const guideline of guidelines) {
+  if (guidelineById.has(guideline.id)) fail(`catalog: duplicate guideline "${guideline.id}"`);
+  guidelineById.set(guideline.id, guideline);
+  for (const id of guideline.scenes ?? []) {
+    if (!known.has(id)) fail(`catalog: guideline ${guideline.id} references unknown scene "${id}"`);
+  }
+  if (!(guideline.scenes ?? []).length && !guideline.attestation) fail(`catalog: guideline ${guideline.id} has no evidence source`);
+}
+const attestations = Array.isArray(manifest.attestations) ? manifest.attestations : [];
+const attestationById = new Map();
+for (const item of attestations) {
+  const problems = [];
+  const guideline = guidelineById.get(item.id);
+  if (!guideline) problems.push(`attestation: unknown guideline "${item.id}"`);
+  else if (!guideline.attestation) problems.push(`attestation ${item.id}: the catalog does not ask for one`);
+  if (attestationById.has(item.id)) problems.push(`attestation ${item.id}: duplicate`);
+  if (typeof item.evidence !== 'string' || !item.evidence.trim()) problems.push(`attestation ${item.id}: evidence is required`);
+  if (item.build !== manifest.build) problems.push(`attestation ${item.id}: build "${item.build}" is not the candidate build "${manifest.build}"`);
+  problems.forEach(fail);
+  // An invalid attestation never proves its sub-point.
+  if (!problems.length) attestationById.set(item.id, item);
+}
+const guidelineRows = [];
+for (const guideline of guidelines) {
+  const gaps = (guideline.scenes ?? []).filter((id) => byId.get(id)?.result !== 'pass').map((id) => `scene ${id}`);
+  if (guideline.attestation && !attestationById.has(guideline.id)) gaps.push('attestation');
+  if (gaps.length) fail(`guideline ${guideline.id} not proven on build ${manifest.build ?? '?'}: missing ${gaps.join(', ')}`);
+  guidelineRows.push(`${guideline.id.padEnd(9)} ${gaps.length ? `MISSING ${gaps.join(', ')}` : 'proven'}`);
+}
 
 out(`candidate ${manifest.version ?? '?'} (${manifest.build ?? '?'}) source ${manifest.sourceCommit ?? '?'} on ${manifest.device ?? '?'} ${manifest.osVersion ?? '?'}`);
 out(`video ${video.path ?? '?'} duration ${duration === null ? '?' : `${duration.toFixed(2)}s`} audio ${streams.some((s) => s.codec_type === 'audio')}`);
 out(rows.join('\n'));
+if (guidelineRows.length) out(`guidelines\n${guidelineRows.join('\n')}`);
 if (failures.length) {
   out(`FAIL (${failures.length})`);
   for (const message of failures) out(`- ${message}`);
   process.exit(1);
 }
-out('PASS: coverage and file integrity verified; privacy playback review is a separate step');
+out('PASS: coverage, file integrity and guideline sub-points verified; privacy playback review is a separate step');
