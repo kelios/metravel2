@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { isPrintAvailable } from '@/utils/printHtml'
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
@@ -12,6 +12,7 @@ import {
 import { QuestCompactExcursions } from './questWizardSections'
 import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet'
 import EdgeFadeScrollRow from '@/components/ui/EdgeFadeScrollRow'
+import ActionTooltip from '@/components/ui/ActionTooltip'
 import {
   QUEST_FONT_SCALE_STEPS,
   useQuestFontScaleStore,
@@ -140,29 +141,31 @@ function QuestActionButton({
   iconSize = 15,
   isMobile,
 }: QuestActionButtonProps) {
-  const [tooltipVisible, setTooltipVisible] = useState(false)
-  const showTooltip = Platform.OS === 'web' && !isMobile && !showLabel && tooltipVisible
+  const anchorRef = useRef<View>(null)
+  const [hovered, setHovered] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+  const dismissTooltip = useCallback(() => setDismissed(true), [])
+  const showTooltip = Platform.OS === 'web' && !isMobile && !showLabel && !disabled &&
+    !dismissed && (hovered || focused)
 
   return (
     <Pressable
+      ref={anchorRef}
       onPress={onPress}
       style={[baseStyle, !showLabel && styles.actionIconButton]}
       disabled={disabled}
       hitSlop={hitSlop}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      onHoverIn={() => setTooltipVisible(true)}
-      onHoverOut={() => setTooltipVisible(false)}
-      onFocus={() => setTooltipVisible(true)}
-      onBlur={() => setTooltipVisible(false)}
+      onHoverIn={() => { setHovered(true); setDismissed(false) }}
+      onHoverOut={() => setHovered(false)}
+      onFocus={() => { setFocused(true); setDismissed(false) }}
+      onBlur={() => setFocused(false)}
     >
       <Feather name={iconName} size={iconSize} color={iconColor} />
       {showLabel && <Text style={textStyle}>{label}</Text>}
-      {showTooltip && (
-        <Text pointerEvents="none" style={styles.actionTooltip}>
-          {label}
-        </Text>
-      )}
+      <ActionTooltip anchorRef={anchorRef} label={label} visible={showTooltip} onDismiss={dismissTooltip} />
     </Pressable>
   )
 }

@@ -12,11 +12,21 @@
  * целиком, без кнопки «Ещё».
  */
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native'
+import { Platform } from 'react-native'
 
 // Экскурсии к шапке отношения не имеют, а тянут за собой сеть.
 jest.mock('@/components/quests/questWizardSections', () => ({
   QuestCompactExcursions: () => null,
 }))
+jest.mock('@/components/ui/ActionTooltip', () => {
+  const React = require('react')
+  const { Text } = require('react-native')
+  return {
+    __esModule: true,
+    default: ({ visible, label, onDismiss }: { visible: boolean; label: string; onDismiss: () => void }) =>
+      visible ? React.createElement(Text, { testID: 'action-tooltip', onPress: onDismiss }, label) : null,
+  }
+})
 
 import { QuestHeaderPanel } from '@/components/quests/questWizardShell'
 import { createQuestWizardStyles } from '@/components/quests/questWizardStyles'
@@ -137,5 +147,47 @@ describe('шапка квеста — меню «Ещё» на телефоне'
     expect(getByLabelText(/Скачать GPX/)).toBeTruthy()
     expect(getByLabelText('Открыть точки квеста в приложении карт')).toBeTruthy()
     expect(getByLabelText('Скачать квест для офлайна')).toBeTruthy()
+  })
+})
+
+describe('подсказки действий квеста на web', () => {
+  const originalOS = Platform.OS
+  beforeEach(() => { Platform.OS = 'web' })
+  afterEach(() => { Platform.OS = originalOS })
+
+  it('остаётся видимой при уходе мыши с кнопки в фокусе', () => {
+    const { getByLabelText, getByTestId, queryByTestId } = renderHeader({ isMobile: false })
+    const button = getByLabelText('Скачать квест для офлайна')
+    fireEvent(button, 'hoverIn')
+    fireEvent(button, 'focus')
+    fireEvent(button, 'hoverOut')
+    expect(getByTestId('action-tooltip').props.children).toBe('Скачать офлайн')
+    fireEvent(button, 'blur')
+    expect(queryByTestId('action-tooltip')).toBeNull()
+  })
+
+  it('остаётся видимой при потере фокуса под мышью и закрывается по dismiss', () => {
+    const { getByLabelText, getByTestId, queryByTestId } = renderHeader({ isMobile: false })
+    const button = getByLabelText('Скачать квест для офлайна')
+    fireEvent(button, 'hoverIn')
+    fireEvent(button, 'focus')
+    fireEvent(button, 'blur')
+    fireEvent.press(getByTestId('action-tooltip'))
+    expect(queryByTestId('action-tooltip')).toBeNull()
+    fireEvent(button, 'hoverOut')
+    fireEvent(button, 'hoverIn')
+    expect(getByTestId('action-tooltip')).toBeTruthy()
+  })
+
+  it('не показывает подсказку у недоступного действия', () => {
+    const { getByLabelText, queryByTestId } = renderHeader({ isMobile: false, offlineMapPointsCount: 0 })
+    fireEvent(getByLabelText(/Скачать GPX/), 'hoverIn')
+    expect(queryByTestId('action-tooltip')).toBeNull()
+  })
+
+  it('не показывает desktop-подсказку на телефоне', () => {
+    const { getByLabelText, queryByTestId } = renderHeader({ isMobile: true })
+    fireEvent(getByLabelText('Скачать квест для офлайна'), 'focus')
+    expect(queryByTestId('action-tooltip')).toBeNull()
   })
 })
