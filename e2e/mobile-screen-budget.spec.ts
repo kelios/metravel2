@@ -5,14 +5,17 @@ import {
   MOBILE_SCREEN_BUDGET,
   MOBILE_VIEWPORTS,
   SCREENS,
+  type ScreenDef,
   measureEmptyCtaDockGap,
   measureScreenAllCombos,
   printResultsTable,
+  resolveScreenTarget,
 } from './helpers/mobileScreenBudget'
 
 /**
  * #2094: замер мобильного бюджета экрана — все 13 экранов без мутации
- * бэкенда (`/trips/plan/:id` со своей тестовой поездкой живёт отдельно в
+ * бэкенда и экран прохождения квеста в трёх состояниях (#2147, гостем;
+ * `/trips/plan/:id` со своей тестовой поездкой живёт отдельно в
  * `mobile-screen-budget-trip-plan.live.spec.ts`, тот же набор метрик и общий
  * JSON). Дефолтный suite — этот файл НЕ входит ни в `LIVE_CONTRACT_SPECS`,
  * ни в `PRODUCTION_SMOKE_SPECS` (`scripts/e2e-suite-classification.js`), это
@@ -66,20 +69,41 @@ async function ensureLiveSession(page: Page, baseURL: string | undefined): Promi
   }, userId)
 }
 
+async function measureScreen(page: Page, screen: ScreenDef): Promise<void> {
+  const target = await resolveScreenTarget(page, screen)
+  await measureScreenAllCombos(page, {
+    screenKey: screen.key,
+    path: target.path,
+    title: target.title,
+    viewports: MOBILE_VIEWPORTS,
+    ctaTestId: screen.ctaTestId,
+    budget: MOBILE_SCREEN_BUDGET[screen.key],
+    prepare: screen.prepare,
+  })
+}
+
 test.describe('Mobile screen budget (#2094)', () => {
-  for (const screen of SCREENS) {
+  for (const screen of SCREENS.filter((s) => !s.guest)) {
     test(screen.key, async ({ page, baseURL }) => {
       if (screen.requiresAuth) await ensureLiveSession(page, baseURL)
-      await measureScreenAllCombos(page, {
-        screenKey: screen.key,
-        path: screen.path,
-        title: screen.title,
-        viewports: MOBILE_VIEWPORTS,
-        ctaTestId: screen.ctaTestId,
-        budget: MOBILE_SCREEN_BUDGET[screen.key],
-      })
+      await measureScreen(page, screen)
     })
   }
+
+  // #2147: экран прохождения квеста — гостем даже в авторизованном прогоне
+  // (`E2E_AUTH_MODE=required`): вошедшему тот же адрес отдаёт экран согласия.
+  test.describe('guest', () => {
+    test.use({ storageState: { cookies: [], origins: [] } })
+    for (const screen of SCREENS.filter((s) => s.guest)) {
+      test(screen.key, async ({ page }) => {
+        // Состояние доводится действием и повторяется после перезагрузки при
+        // смене темы (на вложенном экране нет живого переключателя) — две
+        // полные загрузки квеста не укладываются в стандартные 120 с.
+        test.setTimeout(240_000)
+        await measureScreen(page, screen)
+      })
+    }
+  })
 
   // #2104: пустая вкладка профиля — компактная заглушка `ui/EmptyState`, кнопка
   // «Создать маршрут» целиком выше дока без прокрутки. Вкладка «Опубл.»: у

@@ -26,6 +26,7 @@ import {
   QuestWebVideo,
 } from './questWizardMedia'
 import { translate as i18nT, translatePlural } from '@/i18n'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
 
 type PointLike = {
@@ -514,7 +515,7 @@ export function QuestFinalePanel({
   cityLng?: number
 }) {
   return (
-    <View style={styles.completionScreen}>
+    <View {...SCREEN_CONTENT_FIRST_PROPS} style={styles.completionScreen} testID="quest-finale-panel">
       {questFinished ? (
         <View style={styles.finaleContent}>
           <Text style={styles.completionTitle}>

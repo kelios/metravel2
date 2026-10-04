@@ -6,7 +6,8 @@ import { gotoWithRetry, preacceptCookies } from './navigation'
 /**
  * #2094: общий замер мобильного бюджета экрана. Делится между тремя спеками:
  *  - `e2e/mobile-screen-budget.spec.ts` — все 13 экранов без мутаций
- *    бэкенда, дефолтный suite;
+ *    бэкенда и экран прохождения квеста в трёх состояниях (#2147, гостем),
+ *    дефолтный suite;
  *  - `e2e/mobile-screen-budget-production-smoke.spec.ts` — тот же код, но
  *    только `SCREENS[].isPublic`, для `E2E_SUITE=production-smoke`;
  *  - `e2e/mobile-screen-budget-trip-plan.live.spec.ts` — `/trips/plan/:id`,
@@ -58,6 +59,104 @@ export type ScreenDef = {
    * отчёте, а не подделывается.
    */
   ctaTestId?: string
+  /**
+   * #2147: экран без постоянного адреса (квест берётся из каталога) — реальные
+   * путь и заголовок вычисляются перед навигацией; `path`/`title` выше тогда
+   * только подпись.
+   */
+  resolveTarget?: (page: Page) => Promise<ScreenTarget>
+  /**
+   * #2147: состояние, до которого экран доводится действием пользователя после
+   * открытия («Начать квест», финал). Повторяется после перезагрузки страницы —
+   * должно быть идемпотентным.
+   */
+  prepare?: (page: Page) => Promise<void>
+  /**
+   * #2147: экран меряется гостем и в авторизованном прогоне — у вошедшего тот
+   * же квест открывается экраном согласия (`QuestConsentGate`), а не прохождением.
+   */
+  guest?: boolean
+}
+
+export type ScreenTarget = { path: string; title: string }
+
+/** Путь и заголовок экрана для замера: постоянные или вычисленные `resolveTarget`. */
+export async function resolveScreenTarget(page: Page, screen: ScreenDef): Promise<ScreenTarget> {
+  return screen.resolveTarget ? screen.resolveTarget(page) : { path: screen.path, title: screen.title }
+}
+
+type CatalogQuest = {
+  quest_id: string
+  city_id: string | number
+  title: string
+  points: number
+  point_counts?: { start?: number; final?: number }
+}
+
+// Эталон прохождения из карточки #2147: 14 точек, роли старта и финала.
+const QUEST_RUN_REFERENCE_ID = 'luxembourg-melusina'
+let questRunTarget: Promise<ScreenTarget> | null = null
+
+/**
+ * Квест для замера экрана прохождения — из публичного каталога, без жёсткого id:
+ * эталон, если он есть; иначе первый с 10+ точками и ролями старта и финала;
+ * иначе первый с 10+ точками и стартом (локальная копия базы старее прода, ролей
+ * финала в ней может не быть). Каталог читается один раз на воркер.
+ */
+function resolveQuestRunTarget(page: Page): Promise<ScreenTarget> {
+  if (!questRunTarget) {
+    questRunTarget = (async () => {
+      const quests: CatalogQuest[] = []
+      for (let pageNo = 1; pageNo <= 30; pageNo += 1) {
+        // Каталог без кэша на локальном бэке под нагрузкой отвечает до ~40 с.
+        const response = await page.request.get(`/api/quests/?compact=1&page=${pageNo}`, { timeout: 90_000 })
+        if (!response.ok()) break
+        const body = (await response.json()) as { results?: CatalogQuest[]; next?: string | null }
+        quests.push(...(body.results ?? []))
+        if (!body.next || quests.some((q) => q.quest_id === QUEST_RUN_REFERENCE_ID)) break
+      }
+      const long = quests.filter((q) => q.points >= 10 && (q.point_counts?.start ?? 0) > 0)
+      const quest =
+        quests.find((q) => q.quest_id === QUEST_RUN_REFERENCE_ID) ??
+        long.find((q) => (q.point_counts?.final ?? 0) > 0) ??
+        long[0]
+      if (!quest) throw new Error(`каталог квестов: нет квеста с 10+ точками (прочитано ${quests.length})`)
+      return { path: `/quests/${quest.city_id}/${quest.quest_id}`, title: quest.title }
+    })()
+    questRunTarget.catch(() => {
+      questRunTarget = null
+    })
+  }
+  return questRunTarget
+}
+
+const QUEST_STATE_TIMEOUT = 60_000
+
+/** До старта: стартовая карточка с кнопкой «Начать квест». */
+async function prepareQuestIntro(page: Page): Promise<void> {
+  await expect(page.getByTestId('quest-intro-start')).toBeVisible({ timeout: QUEST_STATE_TIMEOUT })
+  // Без метки метрики экрана — `null` и молча не проверяются: у квеста это провал.
+  await expect(page.locator('[data-screen-content="first"]').first()).toBeVisible({ timeout: QUEST_STATE_TIMEOUT })
+}
+
+/** Шаг 1: «Начать квест» нажата (гостевой прогресс живёт в браузере, бэкенд не меняется). */
+async function prepareQuestStep1(page: Page): Promise<void> {
+  const start = page.getByTestId('quest-intro-start')
+  const firstCard = page.locator('[data-screen-content="first"]').first()
+  await expect(firstCard).toBeVisible({ timeout: QUEST_STATE_TIMEOUT })
+  if (await start.isVisible()) await start.click()
+  await expect(start).toHaveCount(0, { timeout: QUEST_STATE_TIMEOUT })
+  await expect(firstCard).toBeVisible({ timeout: QUEST_STATE_TIMEOUT })
+}
+
+/** Финал: кнопка финала в навигации прохождения (доступна всегда). */
+async function prepareQuestFinale(page: Page): Promise<void> {
+  const panel = page.getByTestId('quest-finale-panel')
+  if (await panel.isVisible()) return
+  const finale = page.getByTestId('quest-nav-finale').first()
+  await expect(finale).toBeVisible({ timeout: QUEST_STATE_TIMEOUT })
+  await finale.click()
+  await expect(panel).toBeVisible({ timeout: QUEST_STATE_TIMEOUT })
 }
 
 export const SCREENS: ScreenDef[] = [
@@ -109,6 +208,23 @@ export const SCREENS: ScreenDef[] = [
   },
   { key: 'about', path: '/about', title: 'О проекте', requiresAuth: false, isPublic: true },
   { key: 'userpoints', path: '/userpoints', title: 'Мои точки', requiresAuth: true, isPublic: false },
+  // #2147: экран прохождения квеста — гостем, три состояния одного экрана.
+  // Шапка и полоса шагов закреплены вне прокручиваемого блока
+  // (`components/quests/QuestWizard.tsx`), это и меряет `pinnedChromeRatio`.
+  ...([
+    ['quest-run-intro', prepareQuestIntro],
+    ['quest-run-step1', prepareQuestStep1],
+    ['quest-run-finale', prepareQuestFinale],
+  ] as const).map(([key, prepare]) => ({
+    key,
+    path: '/quests/:city/:questId',
+    title: '',
+    requiresAuth: false,
+    isPublic: true,
+    guest: true,
+    resolveTarget: resolveQuestRunTarget,
+    prepare,
+  })),
 ]
 
 // `/trips/plan/:id` живёт в отдельной live-contract спеке (мутирует бэкенд —
@@ -143,6 +259,74 @@ export async function measureFirstContentTop(page: Page): Promise<FirstContentMe
   const viewport = page.viewportSize()
   if (!viewport) return null
   return { top: box.y, viewportHeight: viewport.height, ratio: box.y / viewport.height }
+}
+
+export type PinnedChromeMeasurement = { pinnedTop: number; dock: number; viewportHeight: number; ratio: number } | null
+
+/**
+ * #2147: доля высоты окна, которую занимает закреплённое — то, что стоит на
+ * месте, пока пользователь прокручивает содержимое. `firstContentTop` этого не
+ * отличает: шапка, уезжающая вместе с экраном, и шапка над внутренним
+ * прокручиваемым блоком дают одно и то же число.
+ *
+ * Закреплённый верх — максимум из (а) верха ближайшего прокручиваемого предка
+ * метки первого содержимого (`overflow-y: auto|scroll` и либо `scrollHeight >
+ * clientHeight`, либо высота блока ≥ 40% окна) и (б) низа видимых `fixed`/`sticky` элементов, прижатых к
+ * верху окна (верх ≤ 1 px, низ в верхней половине окна, ширина ≥ половины
+ * окна). (б) покрывает экраны, где прокручивается документ, и липкую шапку
+ * внутри блока; максимум, а не сумма, — шапка не считается дважды.
+ * Нижний док — реальный `footer-dock-wrapper` от его верха до низа окна, если
+ * отрисован: `--mt-dock-h` задан медиа-запросом и не знает, есть ли док на
+ * маршруте. Способ записан в §9 `docs/features/mobile-screen-shell-mock.md`.
+ */
+export async function measurePinnedChrome(page: Page): Promise<PinnedChromeMeasurement> {
+  return page.evaluate(() => {
+    const marker = document.querySelector('[data-screen-content="first"]')
+    if (!marker) return null
+    const vh = window.innerHeight
+    const vw = window.innerWidth
+    const isShown = (el: Element) => {
+      const cs = getComputedStyle(el)
+      const rect = el.getBoundingClientRect()
+      return cs.display !== 'none' && cs.visibility !== 'hidden' && rect.width > 0 && rect.height > 0
+    }
+
+    // Прокручиваемый блок — тот, что переполнен, ИЛИ высокий (≥ 40% окна): короткое
+    // содержимое (финал квеста) блок не переполняет, но шапка над ним всё равно
+    // стоит на месте. Без второго условия поиск уходил к внешнему контейнеру с
+    // верхом 0, и финал показывал 0,13 при той же шапке, что на шаге (0,26).
+    let scrollerTop = 0
+    for (let node = marker.parentElement; node && node !== document.body; node = node.parentElement) {
+      const overflowY = getComputedStyle(node).overflowY
+      if (
+        (overflowY === 'auto' || overflowY === 'scroll') &&
+        (node.scrollHeight > node.clientHeight + 1 || node.clientHeight >= vh * 0.4)
+      ) {
+        scrollerTop = Math.max(0, node.getBoundingClientRect().top)
+        break
+      }
+    }
+
+    let stuckBottom = 0
+    for (const el of Array.from(document.body.querySelectorAll<HTMLElement>('*'))) {
+      const position = getComputedStyle(el).position
+      if (position !== 'fixed' && position !== 'sticky') continue
+      if (!isShown(el)) continue
+      const rect = el.getBoundingClientRect()
+      if (rect.top > 1 || rect.bottom > vh / 2 || rect.width < vw / 2) continue
+      stuckBottom = Math.max(stuckBottom, rect.bottom)
+    }
+
+    let dock = 0
+    const dockEl = document.querySelector('[data-testid="footer-dock-wrapper"]')
+    if (dockEl && isShown(dockEl)) {
+      const top = dockEl.getBoundingClientRect().top
+      if (top < vh && top > vh / 2) dock = vh - top
+    }
+
+    const pinnedTop = Math.max(scrollerTop, stuckBottom)
+    return { pinnedTop, dock, viewportHeight: vh, ratio: (pinnedTop + dock) / vh }
+  })
 }
 
 /**
@@ -327,6 +511,8 @@ export type ScreenMetrics = {
   viewport: string
   theme: Theme
   firstContentTopRatio: number | null
+  /** #2147: (закреплённый верх + док) / высота окна, см. `measurePinnedChrome`. */
+  pinnedChromeRatio: number | null
   titleOccurrences: number
   searchboxCount: number
   ctaOccluded: boolean | null
@@ -393,6 +579,7 @@ export function printResultsTable(filterScreens?: string[]): void {
     'viewport',
     'theme',
     'firstContentTop',
+    'pinnedChrome',
     'titleCount',
     'searchbox',
     'ctaOccluded',
@@ -406,6 +593,7 @@ export function printResultsTable(filterScreens?: string[]): void {
     r.viewport,
     r.theme,
     r.firstContentTopRatio == null ? 'n/a' : r.firstContentTopRatio.toFixed(3),
+    r.pinnedChromeRatio == null ? 'n/a' : r.pinnedChromeRatio.toFixed(3),
     String(r.titleOccurrences),
     String(r.searchboxCount),
     r.ctaOccluded == null ? 'n/a' : String(r.ctaOccluded),
@@ -438,6 +626,12 @@ export function printResultsTable(filterScreens?: string[]): void {
  */
 export type ScreenBudget = {
   firstContentTopRatioMax: number
+  /**
+   * #2147: верхняя граница `pinnedChromeRatio`. Задана только там, где
+   * закреплённую часть держат порогом (экран прохождения квеста); у остальных
+   * экранов метрика пишется в таблицу без порога.
+   */
+  pinnedChromeRatioMax?: number
   titleOccurrencesMax: number
   searchboxCountMax: number
   ctaOccludedAllowed: boolean
@@ -464,6 +658,29 @@ export type ScreenBudget = {
 // #2100 (03.10.2026): вложенные экраны телефона потеряли бренд-строку (−64 px),
 // пороги пересняты на своём dist (critical CSS, 390×844/402×874, локальный бэк):
 // максимум наблюдённого +10%. `/trips/my` 0,227 → порог 0,25 (норма макета ≤ 0,30).
+// #2147, замер 04.10.2026 (luxembourg-melusina, гость, 390×844 / 402×874, все три
+// состояния и обе темы одинаково): прод — закреплённый верх 199 px + док 56 =
+// 0,302 / 0,292, верх задания 0,255 / 0,246 (финал +4 px); свой dist на локальном
+// бэке — 165 px, 0,262 / 0,253 и 0,214 / 0,207: в локальной копии базы у квеста
+// нет оценок, и строки рейтинга (34 px) в шапке нет. Пороги — по проду, тяжёлому
+// реальному состоянию, с запасом в 2–4 px: блок +40 px в шапке роняет замер и на
+// локальном стеке (0,262 → 0,309). #2148 и #2149 понижают их к цели §9 (≤ 0,20).
+const QUEST_RUN_BUDGET: ScreenBudget = {
+  firstContentTopRatioMax: 0.265,
+  pinnedChromeRatioMax: 0.305,
+  titleOccurrencesMax: 0,
+  searchboxCountMax: 0,
+  ctaOccludedAllowed: false,
+  darkBottomMatchesThemeExpected: false,
+  unlabeledInteractiveMax: 0,
+  brandRowExpected: false,
+}
+const QUEST_RUN_BUDGET_ENTRIES: Record<string, ScreenBudget> = {
+  'quest-run-intro': QUEST_RUN_BUDGET,
+  'quest-run-step1': QUEST_RUN_BUDGET,
+  'quest-run-finale': QUEST_RUN_BUDGET,
+}
+
 export const MOBILE_SCREEN_BUDGET: Record<string, ScreenBudget> = {
   home: { firstContentTopRatioMax: 0.09, titleOccurrencesMax: 0, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: true },
   search: { firstContentTopRatioMax: 0.22, titleOccurrencesMax: 0, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: true },
@@ -487,6 +704,8 @@ export const MOBILE_SCREEN_BUDGET: Record<string, ScreenBudget> = {
   // ~293%, см. §9 дока и разбор в отчёте задачи.
   about: { firstContentTopRatioMax: 3.14, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: false },
   userpoints: { firstContentTopRatioMax: 0.17, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: false },
+  // #2147: экран прохождения квеста, гость, три состояния (см. `QUEST_RUN_BUDGET`).
+  ...QUEST_RUN_BUDGET_ENTRIES,
   [TRIP_PLAN_SCREEN_KEY]: { firstContentTopRatioMax: 0.60, titleOccurrencesMax: 2, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: false },
 }
 
@@ -496,6 +715,15 @@ export function assertWithinBudget(metrics: ScreenMetrics, budget: ScreenBudget)
   if (metrics.firstContentTopRatio != null && metrics.firstContentTopRatio > budget.firstContentTopRatioMax) {
     failures.push(
       `${label}: firstContentTopRatio было ≤${budget.firstContentTopRatioMax}, стало ${metrics.firstContentTopRatio.toFixed(3)}`
+    )
+  }
+  if (
+    budget.pinnedChromeRatioMax != null &&
+    metrics.pinnedChromeRatio != null &&
+    metrics.pinnedChromeRatio > budget.pinnedChromeRatioMax
+  ) {
+    failures.push(
+      `${label}: pinnedChromeRatio было ≤${budget.pinnedChromeRatioMax}, стало ${metrics.pinnedChromeRatio.toFixed(3)}`
     )
   }
   if (metrics.titleOccurrences > budget.titleOccurrencesMax) {
@@ -660,7 +888,12 @@ async function closeMobileMenu(page: Page, panel: Locator): Promise<void> {
 }
 
 /** Меняет тему только если она реально отличается от текущей — 0 лишних кликов. */
-async function ensureTheme(page: Page, theme: Theme, path: string): Promise<void> {
+async function ensureTheme(
+  page: Page,
+  theme: Theme,
+  path: string,
+  prepare?: (page: Page) => Promise<void>
+): Promise<void> {
   const current = await page.evaluate(() => document.documentElement.getAttribute('data-theme')).catch(() => null)
   if (current === theme) return
   const switchedLive = await toggleThemeViaMenu(page, theme)
@@ -668,6 +901,8 @@ async function ensureTheme(page: Page, theme: Theme, path: string): Promise<void
   await seedTheme(page, theme)
   await gotoWithRetry(page, path)
   await waitForContentAttached(page)
+  // Перезагрузка сбрасывает состояние, до которого экран доводили действием.
+  if (prepare) await prepare(page)
 }
 
 async function collectMetrics(
@@ -677,6 +912,7 @@ async function collectMetrics(
   theme: Theme
 ): Promise<ScreenMetrics> {
   const firstContent = await measureFirstContentTop(page)
+  const pinnedChrome = await measurePinnedChrome(page)
   const titleOccurrences = await countVisibleTitleOccurrences(page, opts.title)
   const searchboxCount = await countSearchboxes(page)
   const ctaOccluded = await isCtaOccludedByDock(page, opts.ctaTestId)
@@ -691,6 +927,7 @@ async function collectMetrics(
     viewport: viewport.name,
     theme,
     firstContentTopRatio: firstContent?.ratio ?? null,
+    pinnedChromeRatio: pinnedChrome?.ratio ?? null,
     titleOccurrences,
     searchboxCount,
     ctaOccluded,
@@ -721,6 +958,8 @@ export async function measureScreenAllCombos(
     viewports: Viewport[]
     ctaTestId?: string
     budget: ScreenBudget
+    /** #2147: довести экран до измеряемого состояния после навигации. */
+    prepare?: (page: Page) => Promise<void>
   }
 ): Promise<void> {
   if (opts.viewports.length !== 2) {
@@ -739,6 +978,7 @@ export async function measureScreenAllCombos(
   await seedTheme(page, 'light')
   await gotoWithRetry(page, opts.path)
   await waitForContentAttached(page)
+  if (opts.prepare) await opts.prepare(page)
 
   const allFailures: string[] = []
 
@@ -750,7 +990,7 @@ export async function measureScreenAllCombos(
       await page.setViewportSize({ width: combo.viewport.width, height: combo.viewport.height })
     }
     if (!previous || previous.theme !== combo.theme) {
-      await ensureTheme(page, combo.theme, opts.path)
+      await ensureTheme(page, combo.theme, opts.path, opts.prepare)
     }
     await page.evaluate(() => window.scrollTo(0, 0)).catch(() => null)
     await waitForScreenSettled(page, opts.title)

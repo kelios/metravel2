@@ -29,6 +29,7 @@ import type { QuestAnswerChecker, QuestPoiInfo } from './types'
 import { formatDistance, formatTravelTime } from '@/utils/distanceCalculator'
 import { translate as i18nT, translatePlural } from '@/i18n'
 import type { QuestPointRole } from '@/utils/questCountModel'
+import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
 
 const SHOULD_USE_NATIVE_DRIVER = false
@@ -474,7 +475,8 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   }, [attempts, freeTextMinLength, hintVisible, isBruteForceable, onAnswerAttempt, onSubmit, onWrongAttempt, questNumericId, shake, step, triggerFlip, value])
 
   return (
-    <Animated.View style={[styles.card, isFlipping && { transform: [{ perspective: 800 }, { rotateY: rotation }] }]}>
+    // Метка первого содержимого — замер мобильного бюджета (#2147).
+    <Animated.View {...SCREEN_CONTENT_FIRST_PROPS} style={[styles.card, isFlipping && { transform: [{ perspective: 800 }, { rotateY: rotation }] }]}>
       <View style={styles.cardHeader}>
         {step.id !== 'intro' && (
           <View style={[styles.stepNumber, isPassed && styles.stepNumberCompleted]}>

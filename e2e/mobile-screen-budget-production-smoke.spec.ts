@@ -5,6 +5,7 @@ import {
   SCREENS,
   measureScreenAllCombos,
   printResultsTable,
+  resolveScreenTarget,
 } from './helpers/mobileScreenBudget'
 
 /**
@@ -28,13 +29,17 @@ const PUBLIC_SCREENS = SCREENS.filter((screen) => screen.isPublic)
 test.describe('Mobile screen budget — production smoke (#2094)', () => {
   for (const screen of PUBLIC_SCREENS) {
     test(screen.key, async ({ page }) => {
+      // #2147: экран с `prepare` (квест) грузится дважды — см. основной файл.
+      if (screen.prepare) test.setTimeout(240_000)
+      const target = await resolveScreenTarget(page, screen)
       await measureScreenAllCombos(page, {
         screenKey: screen.key,
-        path: screen.path,
-        title: screen.title,
+        path: target.path,
+        title: target.title,
         viewports: MOBILE_VIEWPORTS,
         ctaTestId: screen.ctaTestId,
         budget: MOBILE_SCREEN_BUDGET[screen.key],
+        prepare: screen.prepare,
       })
     })
   }

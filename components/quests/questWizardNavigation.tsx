@@ -28,6 +28,7 @@ type StepPillProps = NavigationProps & {
   label: string
   indexLabel?: string
   numberOfLines?: number
+  testID?: string
 }
 
 type StepDotProps = NavigationProps & {
@@ -50,9 +51,11 @@ export function QuestStepPill({
   label,
   indexLabel = '',
   numberOfLines = 1,
+  testID,
 }: StepPillProps) {
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={!unlocked}
       // Роль нужна именно здесь: без неё RNW рисует голый div, и `aria-label`
@@ -161,6 +164,12 @@ export function QuestStepDot({
   )
 }
 
+/**
+ * Вход в финал из навигации прохождения — один testID на точку и пилюлю: по нему
+ * замер мобильного бюджета (#2147) открывает состояние «финал» в любой локали.
+ */
+export const QUEST_NAV_FINALE_TEST_ID = 'quest-nav-finale'
+
 export function QuestFinalePill(props: NavigationProps & { compact?: boolean }) {
   return (
     <QuestStepPill
@@ -168,13 +177,14 @@ export function QuestFinalePill(props: NavigationProps & { compact?: boolean }) 
       indexLabel={i18nT('quests:components.quests.questWizardNavigation.f_67cbee49')}
       label={i18nT('quests:components.quests.questWizardNavigation.final_a5ec2c03')}
       compact={props.compact}
+      testID={QUEST_NAV_FINALE_TEST_ID}
     />
   )
 }
 
 export function QuestFinaleDot(props: NavigationProps) {
   return (
-    <Pressable onPress={props.onPress} style={props.styles.stepDotTarget}>
+    <Pressable testID={QUEST_NAV_FINALE_TEST_ID} onPress={props.onPress} style={props.styles.stepDotTarget}>
       <View
         style={[props.styles.stepDotMini, props.active ? props.styles.stepDotMiniActive : props.styles.stepDotMiniUnlocked]}
       >
