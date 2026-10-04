@@ -175,9 +175,10 @@ def audio_part(src, start, duration, out):
     else:
         source = ["-f", "lavfi", "-t", f"{duration:.3f}", "-i", "anullsrc=r=48000:cl=stereo"]
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *source, "-c:a", "pcm_s16le", str(out)], check=True)
+    return has_audio
 
 
-def mux_audio(video, parts, spec, total, tmp, out):
+def mux_audio(video, parts, spec, total, tmp, out, has_natural):
     """Склеивает звук кусков, подмешивает музыку и сводит с видео без перекодирования картинки."""
     listing = tmp / "audio.txt"
     listing.write_text("".join(f"file '{part}'\n" for part in parts), encoding="utf-8")
@@ -188,13 +189,15 @@ def mux_audio(video, parts, spec, total, tmp, out):
     )
     command = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(video), "-i", str(natural)]
     music = spec.get("music")
+    # На сплошной тишине (ролик из одних фото) loudnorm падает с NaN — выравниваем только живой звук.
+    level = LEVEL if has_natural else "anull"
     if music:
         volume = float(spec.get("music_volume", 0.25))
         command += ["-stream_loop", "-1", "-i", str(music), "-filter_complex",
-                    f"[1:a]{LEVEL},volume=0.8[n];[2:a]volume={volume},afade=t=out:st={max(0.0, total - 1.5):.3f}:d=1.5[m];"
+                    f"[1:a]{level},volume=0.8[n];[2:a]volume={volume},afade=t=out:st={max(0.0, total - 1.5):.3f}:d=1.5[m];"
                     "[n][m]amix=inputs=2:duration=first:normalize=0[a]", "-map", "0:v", "-map", "[a]"]
     else:
-        command += ["-map", "0:v", "-map", "1:a", "-af", LEVEL]
+        command += ["-map", "0:v", "-map", "1:a", "-af", level]
     command += ["-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-t", f"{total:.3f}", "-movflags", "+faststart", str(out)]
     subprocess.run(command, check=True)
 
@@ -207,7 +210,7 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
-        clips, sounds, cover_frame = [], [], None
+        clips, sounds, cover_frame, has_natural = [], [], None, False
         natural = spec.get("sound", "natural") == "natural"
         for s, segment in enumerate(spec["segments"]):
             overlay = tmp / f"text{s}.png"
@@ -233,7 +236,7 @@ def main():
                 clips.append(clip_path)
                 sound_path = tmp / f"sound{s}_{i}.wav"
                 is_video = Path(src).suffix.lower() in VIDEO_SUFFIXES
-                audio_part(src if natural and is_video else None, start or 0.0, share, sound_path)
+                has_natural |= audio_part(src if natural and is_video else None, start or 0.0, share, sound_path)
                 sounds.append(sound_path)
         listing = tmp / "list.txt"
         listing.write_text("".join(f"file '{c}'\n" for c in clips), encoding="utf-8")
@@ -246,7 +249,7 @@ def main():
             check=True,
         )
         if with_sound:
-            mux_audio(silent, sounds, spec, total, tmp, out)
+            mux_audio(silent, sounds, spec, total, tmp, out, has_natural)
         if spec.get("cover_text"):
             # Обложка — первый кадр ролика без текста хука, с названием сверху.
             cover = ImageOps.fit(Image.open(cover_frame).convert("RGB"), (W, H))
