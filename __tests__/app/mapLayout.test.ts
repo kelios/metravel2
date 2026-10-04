@@ -134,10 +134,21 @@ describe('map shell geometry is platform-independent (#2155)', () => {
 
     const styles = getStyles(true, 0, themedColors);
 
-    expect(styles.mapContainer.flexDirection).toBe('column');
-    expect(styles.mapContainer.columnGap).toBe(0);
-    expect(styles.mapContainer.paddingLeft).toBe(0);
-    expect(styles.mapContainer.paddingTop).toBe(0);
+    // Exact set: a future key leaking into the iPhone shell fails here.
+    expect(styles.mapContainer).toEqual({
+      flex: 1,
+      position: 'relative',
+      flexDirection: 'column',
+      columnGap: 0,
+      paddingLeft: 0,
+      paddingRight: 0,
+      paddingTop: 0,
+      paddingBottom: 0,
+      minHeight: 0,
+      minWidth: 0,
+      alignItems: 'stretch',
+      backgroundColor: '#ffffff',
+    });
     expect(styles.rightPanel.position).toBe('absolute');
   });
 
