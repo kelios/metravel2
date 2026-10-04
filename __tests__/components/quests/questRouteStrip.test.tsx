@@ -124,6 +124,22 @@ describe('QuestRouteStrip (#2149)', () => {
   })
 })
 
+describe('QuestRouteStrip — лист открывается на текущей точке (#2149, P3 ревью)', () => {
+  it('прокручивает список к строке текущей точки', () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype as any, 'scrollTo').mockImplementation(() => undefined)
+    const view = render(<QuestRouteStrip model={build()} onGoToStep={jest.fn()} onShowFinale={jest.fn()} />)
+    fireEvent.press(view.getByTestId('quest-route-strip'))
+    act(() => {
+      fireEvent(view.getByTestId('quest-route-row-p12'), 'layout', {
+        nativeEvent: { layout: { x: 0, y: 552, width: 340, height: 46 } },
+      })
+    })
+    // 552 − 2 × 44: текущая строка не у самого края, видны и две предыдущие.
+    expect(scrollTo).toHaveBeenLastCalledWith({ y: 464, animated: false })
+    scrollTo.mockRestore()
+  })
+})
+
 describe('ActiveScrollNav — активный шаг в видимой части на длинном маршруте (#2149)', () => {
   it('центрует 25-й элемент из 30 по измеренной раскладке, а не по литералу ширины', () => {
     const scrollTo = jest.spyOn(ScrollView.prototype as any, 'scrollTo').mockImplementation(() => undefined)

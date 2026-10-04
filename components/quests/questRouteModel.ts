@@ -9,6 +9,7 @@ import {
   type QuestStepVisualColors,
   questStepPlaceLabel,
   questStepStateWord,
+  resolveQuestStepNavFlags,
   resolveQuestStepNavState,
   resolveQuestStepVisualState,
 } from './questStepVisualState'
@@ -110,13 +111,18 @@ export function buildQuestRouteModel(input: BuildQuestRouteModelInput): QuestRou
 
   allSteps.forEach((step, stepIndex) => {
     const kind: QuestStepNavKind = isIntroStep(step) ? 'intro' : 'point'
-    const done = kind === 'point' && !!answers[step.id]
-    const state: QuestStepNavState = resolveQuestStepNavState({
-      active: stepIndex === currentIndex && !showFinaleOnly,
-      done,
-      pending: !done && postponedStepIds.has(step.id),
-      unlocked: stepIndex <= unlockedIndex || !!answers[step.id] || questFinished,
-    })
+    const state: QuestStepNavState = resolveQuestStepNavState(
+      resolveQuestStepNavFlags({
+        stepId: step.id,
+        index: stepIndex,
+        currentIndex,
+        unlockedIndex,
+        answers,
+        postponedStepIds,
+        questFinished,
+        showFinaleOnly,
+      }),
+    )
     const number = pointNumber(stepIndex)
     const role = step.pointRole ?? null
     const visual = resolveQuestStepVisualState({ state, kind, role, index: number, total, colors })

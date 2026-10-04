@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -28,6 +28,13 @@ export default function QuestRouteStrip({ model, onGoToStep, onShowFinale }: Pro
   const styles = useMemo(() => createStyles(colors), [colors])
   const [sheetOpen, setSheetOpen] = useState(false)
   const close = useCallback(() => setSheetOpen(false), [])
+  const sheetScrollRef = useRef<ScrollView>(null)
+  // Лист открывается на текущей точке, а не на старте: на 12-й из 14 её строка
+  // иначе ниже края листа (≈ 11 строк на 390×844, ≈ 8 на 320×640). Строки
+  // монтируются при каждом открытии, поэтому onLayout приходит каждый раз.
+  const onCurrentRowLayout = useCallback((y: number) => {
+    sheetScrollRef.current?.scrollTo({ y: Math.max(0, y - QUEST_ROUTE_ROW_MIN_HEIGHT * 2), animated: false })
+  }, [])
   const openRow = useCallback(
     (row: QuestRouteRow) => {
       // Закрытая точка не открывается, даже если платформа доставила нажатие.
@@ -80,7 +87,7 @@ export default function QuestRouteStrip({ model, onGoToStep, onShowFinale }: Pro
       </Pressable>
 
       <ActionListSheet visible={sheetOpen} onClose={close} title={i18nT('quests:components.quests.questRoute.title')}>
-        <ScrollView style={styles.sheetBody} testID="quest-route-sheet">
+        <ScrollView ref={sheetScrollRef} style={styles.sheetBody} testID="quest-route-sheet">
           {model.rows.map((row) => (
             <Pressable
               key={row.key}
@@ -90,6 +97,9 @@ export default function QuestRouteStrip({ model, onGoToStep, onShowFinale }: Pro
               accessibilityState={{ disabled: row.disabled, selected: row.visual.state === 'current' }}
               disabled={row.disabled}
               onPress={() => openRow(row)}
+              onLayout={
+                row.visual.state === 'current' ? (e) => onCurrentRowLayout(e.nativeEvent.layout.y) : undefined
+              }
               style={({ pressed }) => [styles.row, pressed && !row.disabled && styles.pressed]}
             >
               <QuestStepMarker visual={row.visual} text={row.numberLabel} />

@@ -66,6 +66,39 @@ export function resolveQuestStepNavState({
   return 'available'
 }
 
+/**
+ * #2149: флаги точки маршрута из прогресса визарда — одно правило для пилюль,
+ * полосы маршрута и листа «Маршрут». Раньше выражение стояло копией в каждом
+ * месте отрисовки, и смена правила разблокировки в одном из них развела бы вид.
+ */
+export function resolveQuestStepNavFlags({
+  stepId,
+  index,
+  currentIndex,
+  unlockedIndex,
+  answers,
+  postponedStepIds,
+  questFinished,
+  showFinaleOnly,
+}: {
+  stepId: string
+  index: number
+  currentIndex: number
+  unlockedIndex: number
+  answers: Record<string, unknown>
+  postponedStepIds: ReadonlySet<string>
+  questFinished: boolean
+  showFinaleOnly: boolean
+}): { active: boolean; done: boolean; pending: boolean; unlocked: boolean } {
+  const done = stepId !== 'intro' && !!answers[stepId]
+  return {
+    active: index === currentIndex && !showFinaleOnly,
+    done,
+    pending: !done && postponedStepIds.has(stepId),
+    unlocked: index <= unlockedIndex || !!answers[stepId] || questFinished,
+  }
+}
+
 const STATE_LABEL_KEY: Record<QuestStepNavState, string> = {
   done: 'quests:components.quests.questStepState.state.done',
   current: 'quests:components.quests.questStepState.state.current',

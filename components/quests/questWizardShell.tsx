@@ -6,6 +6,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { QuestFinalePill, QuestStepPill } from './questWizardNavigation'
 import QuestRouteStrip from './QuestRouteStrip'
 import { buildQuestRouteModel } from './questRouteModel'
+import { resolveQuestStepNavFlags } from './questStepVisualState'
 import { QuestCompactExcursions } from './questWizardSections'
 import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet'
 import EdgeFadeScrollRow from '@/components/ui/EdgeFadeScrollRow'
@@ -227,37 +228,48 @@ export function ActiveScrollNav({
   contentContainerStyle,
   children,
 }: {
-  /** Индекс среди детей; `-1` — ничего не центрировать (открыт финал). */
+  /** Индекс среди детей, который держим по центру (финал — последняя пилюля). */
   activeIndex: number
   style?: any
   contentContainerStyle?: any
   children: React.ReactNode
 }) {
   const scrollRef = useRef<ScrollView>(null)
+  // Раскладка — в ref, а не в state: onLayout каждого элемента приходит отдельно
+  // (RNW — своим setTimeout), и состояние перерисовывало бы всю ленту N раз.
   const itemLayouts = useRef(new Map<number, { x: number; width: number }>())
-  const [viewportWidth, setViewportWidth] = useState(0)
-  const [layoutVersion, setLayoutVersion] = useState(0)
+  const viewportWidth = useRef(0)
+  const activeIndexRef = useRef(activeIndex)
+  activeIndexRef.current = activeIndex
+
+  const scrollToActive = useCallback(() => {
+    const item = itemLayouts.current.get(activeIndexRef.current)
+    if (!scrollRef.current || !item || viewportWidth.current <= 0) return
+    const offset = Math.max(0, item.x + item.width / 2 - viewportWidth.current / 2)
+    scrollRef.current.scrollTo({ x: offset, animated: true })
+  }, [])
 
   useEffect(() => {
-    const item = itemLayouts.current.get(activeIndex)
-    if (!scrollRef.current || !item || viewportWidth <= 0) return
-    const offset = Math.max(0, item.x + item.width / 2 - viewportWidth / 2)
-    scrollRef.current.scrollTo({ x: offset, animated: true })
-  }, [activeIndex, layoutVersion, viewportWidth])
+    scrollToActive()
+  }, [activeIndex, scrollToActive])
 
-  const onItemLayout = useCallback((index: number, x: number, width: number) => {
-    const prev = itemLayouts.current.get(index)
-    if (prev && prev.x === x && prev.width === width) return
-    itemLayouts.current.set(index, { x, width })
-    setLayoutVersion((v) => v + 1)
-  }, [])
+  const onItemLayout = useCallback(
+    (index: number, x: number, width: number) => {
+      itemLayouts.current.set(index, { x, width })
+      if (index === activeIndexRef.current) scrollToActive()
+    },
+    [scrollToActive],
+  )
 
   return (
     <EdgeFadeScrollRow
       ref={scrollRef}
       style={style}
       contentContainerStyle={contentContainerStyle}
-      onLayout={(e: any) => setViewportWidth(e.nativeEvent.layout.width)}
+      onLayout={(e: any) => {
+        viewportWidth.current = e.nativeEvent.layout.width
+        scrollToActive()
+      }}
     >
       {React.Children.toArray(children).map((child, index) => (
         <View
@@ -460,10 +472,9 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
         contentContainerStyle={styles.compactStepsListContent}
       >
         {allSteps.map((step, index) => {
-          const isActive = index === currentIndex && !showFinaleOnly
-          const isDone = !!answers[step.id] && step.id !== 'intro'
-          const isPostponed = !isDone && postponedStepIds.has(step.id)
-          const isUnlocked = index <= unlockedIndex || !!answers[step.id] || questFinished
+          const { active: isActive, done: isDone, pending: isPostponed, unlocked: isUnlocked } = resolveQuestStepNavFlags({
+            stepId: step.id, index, currentIndex, unlockedIndex, answers, postponedStepIds, questFinished, showFinaleOnly,
+          })
 
           return (
             <QuestStepPill
@@ -614,9 +625,10 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
   const pointsTotal = countRoutePoints(allSteps)
 
   const wideDesktop = screenW >= 1100
+  // Модель полосы нужна только телефонной ветке (< 600 px): шире её не строим.
   const routeModel = useMemo(
     () =>
-      buildQuestRouteModel({
+      !compactNav ? null : buildQuestRouteModel({
         allSteps,
         answers,
         postponedStepIds,
@@ -629,7 +641,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
         stepsCount,
         colors,
       }),
-    [allSteps, answers, postponedStepIds, currentIndex, unlockedIndex, questFinished, showFinaleOnly, countModel, completedCount, stepsCount, colors],
+    [compactNav, allSteps, answers, postponedStepIds, currentIndex, unlockedIndex, questFinished, showFinaleOnly, countModel, completedCount, stepsCount, colors],
   )
   const showActionLabels = Platform.OS !== 'web' && !isMobile
   const hasHeaderMeta = Boolean(ratingSlot || completionSlot)
@@ -862,15 +874,14 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
         />
       )}
 
-      {compactNav ? (
+      {compactNav && routeModel ? (
         <QuestRouteStrip model={routeModel} onGoToStep={goToStep} onShowFinale={onShowFinale} />
       ) : wideDesktop ? (
         <View style={styles.stepsGrid}>
           {allSteps.map((step, index) => {
-            const isActive = index === currentIndex && !showFinaleOnly
-            const isDone = !!answers[step.id] && step.id !== 'intro'
-            const isPostponed = !isDone && postponedStepIds.has(step.id)
-            const isUnlocked = index <= unlockedIndex || !!answers[step.id] || questFinished
+            const { active: isActive, done: isDone, pending: isPostponed, unlocked: isUnlocked } = resolveQuestStepNavFlags({
+              stepId: step.id, index, currentIndex, unlockedIndex, answers, postponedStepIds, questFinished, showFinaleOnly,
+            })
 
             return (
               <QuestStepPill
@@ -907,10 +918,9 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           contentContainerStyle={{ paddingRight: 8, paddingLeft: isMobile ? 6 : 2 }}
         >
           {allSteps.map((step, index) => {
-            const isActive = index === currentIndex && !showFinaleOnly
-            const isDone = !!answers[step.id] && step.id !== 'intro'
-            const isPostponed = !isDone && postponedStepIds.has(step.id)
-            const isUnlocked = index <= unlockedIndex || !!answers[step.id] || questFinished
+            const { active: isActive, done: isDone, pending: isPostponed, unlocked: isUnlocked } = resolveQuestStepNavFlags({
+              stepId: step.id, index, currentIndex, unlockedIndex, answers, postponedStepIds, questFinished, showFinaleOnly,
+            })
 
             return (
               <QuestStepPill

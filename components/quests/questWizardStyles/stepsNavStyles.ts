@@ -36,8 +36,8 @@ export const createStepsNavStyles = (colors: QuestColors, _isMobile: boolean, _s
         maxWidth: 140,
         marginRight: 0,
         marginBottom: 0,
-        // Широкоэкранный вариант того же шагового навигатора, что и `stepDotTarget`
-        // на мобильном: тач-таргет задаётся высотой самой пилюли (#1274).
+        // Тач-таргет пилюли задаётся её собственной высотой (#1274); на телефоне
+        // вместо ряда кружков — строки листа «Маршрут» по 44 pt (#2149).
         minHeight: 44,
         ...Platform.select({
             web: {
