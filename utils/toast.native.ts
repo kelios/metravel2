@@ -1,3 +1,5 @@
+import Toast from 'react-native-toast-message';
+
 export type ToastPayload = {
   text1?: string;
   text2?: string;
@@ -24,32 +26,20 @@ export function toastBottomOffset(dockReservePx: number, safeAreaBottom: number)
   return base + TOAST_DOCK_GAP;
 }
 
-type NativeToastModule = {
-  default?: {
-    show?: (payload: Record<string, unknown>) => void;
-  };
-  show?: (payload: Record<string, unknown>) => void;
-};
-
-let toastModulePromise: Promise<NativeToastModule> | null = null;
-
+/**
+ * Тост уходит в тот же модуль, который рисует ToastHost, — статическим импортом
+ * и в том же тике (#2168). Ленивый `import()` в dev-клиенте с lazy-бандлом
+ * докачивал отдельный чанк на ~600 модулей при первом тосте: 2,3 с на спокойном
+ * эмуляторе и десятки секунд под нагрузкой, а `catch {}` глушил сбой — device-QA
+ * видела «тост не появился». В release-бандле чанков нет, ToastHost и так грузит
+ * библиотеку статически, поэтому выигрыша ленивость не давала.
+ */
 export async function showToast(payload: ToastPayload): Promise<void> {
-  try {
-    if (!toastModulePromise) {
-      toastModulePromise = Promise.resolve(import('react-native-toast-message')) as Promise<NativeToastModule>;
-    }
-    const mod = await toastModulePromise;
-    const Toast = mod.default ?? mod;
-    if (Toast && typeof Toast.show === 'function') {
-      const { action, ...rest } = payload;
-      Toast.show({
-        ...rest,
-        ...(action ? { props: { action } } : {}),
-      });
-    }
-  } catch {
-    // ignore
-  }
+  const { action, ...rest } = payload;
+  Toast.show({
+    ...rest,
+    ...(action ? { props: { action } } : {}),
+  });
 }
 
 export const showToastMessage = showToast

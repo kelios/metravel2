@@ -108,6 +108,11 @@ describe('toast.native: один источник отступа', () => {
     expect(toastBottomOffset(0, Number.NaN)).toBe(TOAST_DOCK_GAP)
   })
 
+  it('showToast зовёт Toast.show в том же тике — без ленивого чанка библиотеки (#2168)', () => {
+    void showToast({ type: 'success', text1: 'ok', position: 'bottom' })
+    expect(mockShow).toHaveBeenCalledTimes(1)
+  })
+
   it('showToast не подставляет свой bottomOffset — отступ задаёт хост', async () => {
     await showToast({ type: 'success', text1: 'ok', position: 'bottom' })
     expect(mockShow).toHaveBeenCalledTimes(1)
