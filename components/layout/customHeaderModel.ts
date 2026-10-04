@@ -56,7 +56,7 @@ export const shouldShowHeaderContextBar = (
   isMobile: boolean,
   hasFilterQuery: boolean = false,
   // Телефонную строку «←» рисует только мобильная ветка HeaderContextBar
-  // (web: < 768 px, native: isPhone||isLargePhone — `resolveHeaderContextBarIsMobile`),
+  // (web: < 768 px, native: isPhoneLayout, включая < 360 — `resolveHeaderContextBarIsMobile`),
   // а `isMobile` здесь — компактная шапка (< 1280 px). На 768–1279 бар для
   // страниц «только на телефоне» не нужен: иначе слот занят, а рисуется JSON-LD (#1144).
   isBarMobile: boolean = isMobile,
