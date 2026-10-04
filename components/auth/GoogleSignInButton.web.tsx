@@ -346,6 +346,9 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
             accessibilityRole="button"
             accessibilityLabel={i18nT('auth:components.auth.GoogleSignInButton.voyti_cherez_google_43bd772c')}
             accessibilityState={{ disabled: isButtonDisabled }}
+            // RN-web не переносит accessibilityState View в DOM: без явного
+            // aria-disabled скринридер и тесты видят активную кнопку (#2132).
+            aria-disabled={isButtonDisabled}
         >
             {shouldShowFallback ? (
                 <View style={styles.fallbackContainer}>

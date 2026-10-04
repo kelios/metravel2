@@ -32,6 +32,7 @@ import type { AppleCredentialPayload } from '@/api/appleAuth';
 import AppleSignInButton from '@/components/auth/AppleSignInButton';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import FacebookAuthFlow from '@/components/auth/FacebookAuthFlow';
+import AuthTermsGate, { useAuthTermsAcceptance } from '@/components/auth/AuthTermsGate';
 import { webTouchScrollStyle } from '@/utils';
 import { buildRegistrationHref, resolvePostAuthPath } from '@/utils/authNavigation';
 import { translate as i18nT } from '@/i18n'
@@ -82,6 +83,7 @@ export default function Login() {
     /* ---------- helpers ---------- */
     const router = useRouter();
     const { login, loginWithGoogle, loginWithApple, sendPassword, isAuthenticated } = useAuth();
+    const terms = useAuthTermsAcceptance();
     const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
 
     const isFocused = useIsFocused();
@@ -156,9 +158,14 @@ export default function Login() {
         values: LoginFormValues,
         { setSubmitting }: { setSubmitting: (v: boolean) => void }
     ) => {
+        // #2132: Enter в поле пароля тоже ведёт сюда — без согласия не отправляем.
+        if (!terms.accepted) {
+            setSubmitting(false);
+            return;
+        }
         try {
             showMsg('');
-            const outcome = await login(values.email.trim(), values.password);
+            const outcome = await login(values.email.trim(), values.password, terms.termsVersion);
             if (outcome.ok) {
                 sendAnalyticsEvent('login_success', { method: 'email', intent: String(intent || '') });
                 if (intent) {
@@ -185,12 +192,12 @@ export default function Login() {
     };
 
     const handleGoogleSignIn = async (credential: string) => {
-        if (googleBusy || facebookBusy || appleBusy || submitted) return;
+        if (googleBusy || facebookBusy || appleBusy || submitted || !terms.accepted) return;
         setGoogleBusy(true);
         let navigating = false;
         try {
             showMsg('');
-            const outcome = await loginWithGoogle(credential);
+            const outcome = await loginWithGoogle(credential, terms.termsVersion);
             if (outcome.ok) {
                 sendAnalyticsEvent('login_success', { method: 'google', intent: String(intent || '') });
                 if (intent) {
@@ -219,12 +226,12 @@ export default function Login() {
 
     // IOS-05: Apple отдаёт credential, серверную проверку делает #1412.
     const handleAppleSignIn = async (credential: AppleCredentialPayload) => {
-        if (googleBusy || facebookBusy || appleBusy || submitted) return;
+        if (googleBusy || facebookBusy || appleBusy || submitted || !terms.accepted) return;
         setAppleBusy(true);
         let navigating = false;
         try {
             showMsg('');
-            const result = await loginWithApple(credential);
+            const result = await loginWithApple(credential, terms.termsVersion);
             if (result.status === 'authenticated') {
                 sendAnalyticsEvent('login_success', { method: 'apple', intent: String(intent || '') });
                 if (intent) {
@@ -275,6 +282,8 @@ export default function Login() {
     const description =
         i18nT('auth:components.auth.LoginForm.voydite_v_akkaunt_metravel_chtoby_sohranyat__2df803f3');
     const busy = isSubmitting || submitted || googleBusy || facebookBusy || appleBusy;
+    // #2132: без согласия с условиями все способы входа видимы, но неактивны.
+    const authLocked = busy || !terms.accepted;
 
     /* ---------- render ---------- */
     return (
@@ -341,6 +350,8 @@ export default function Login() {
                                     </Text>
                                 )}
 
+                                <AuthTermsGate accepted={terms.accepted} onChange={terms.setAccepted} />
+
                                 {/* ---------- social first ---------- */}
                                 <View style={styles.socialActions}>
                                     {/* Apple первым: HIG требует показывать Sign in with Apple
@@ -348,17 +359,18 @@ export default function Login() {
                                     <AppleSignInButton
                                         onSuccess={handleAppleSignIn}
                                         onError={handleAppleError}
-                                        disabled={busy}
+                                        disabled={authLocked}
                                     />
                                     <GoogleSignInButton
                                         onSuccess={handleGoogleSignIn}
                                         onError={handleGoogleError}
-                                        disabled={busy}
+                                        disabled={authLocked}
                                     />
                                     <FacebookAuthFlow
                                         onAuthenticated={handleFacebookAuthenticated}
                                         onBusyChange={setFacebookBusy}
-                                        disabled={isSubmitting || submitted || googleBusy || appleBusy}
+                                        termsVersion={terms.termsVersion}
+                                        disabled={isSubmitting || submitted || googleBusy || appleBusy || !terms.accepted}
                                     />
                                 </View>
 
@@ -418,7 +430,7 @@ export default function Login() {
                                             textContentType="password"
                                             placeholderTextColor={colors.textMuted}
                                             returnKeyType="done"
-                                            onSubmitEditing={() => handleSubmit()}
+                                            onSubmitEditing={() => { if (terms.accepted) handleSubmit(); }}
                                         />
                                         <Pressable
                                             onPress={() => setShowPassword((v) => !v)}
@@ -439,7 +451,7 @@ export default function Login() {
                                 <Button
                                     label={isSubmitting || submitted ? i18nT('auth:components.auth.LoginForm.podozhdite_113cf4cf') : i18nT('auth:components.auth.LoginForm.voyti_608953ec')}
                                     onPress={() => handleSubmit()}
-                                    disabled={busy}
+                                    disabled={authLocked}
                                     loading={isSubmitting || submitted}
                                     variant="primary"
                                     size="lg"

@@ -8,6 +8,7 @@ import { safeJsonParse } from '@/utils/safeJsonParse';
 import { API_BASE_URL as URLAPI, DEFAULT_TIMEOUT } from '@/api/apiConfig';
 import {
     parseSocialSession,
+    withTermsVersion,
     type SocialAuthResponse,
     type SocialSessionPayload,
 } from '@/api/authShared';
@@ -355,7 +356,10 @@ export const setNewPasswordApi = async (password_reset_token: string, password: 
     }
 };
 
-export const registration = async (values: FormValues): Promise<{ ok: boolean; message: string }> => {
+export const registration = async (
+    values: FormValues,
+    termsVersion?: string,
+): Promise<{ ok: boolean; message: string }> => {
     try {
         if (values.password) {
             const passwordValidation = validatePassword(values.password);
@@ -372,7 +376,7 @@ export const registration = async (values: FormValues): Promise<{ ok: boolean; m
                     method: 'POST',
                     ...getApiRequestCredentials(),
                     headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
-                    body: JSON.stringify(values),
+                    body: JSON.stringify(withTermsVersion(values, termsVersion)),
                 }, DEFAULT_TIMEOUT);
             },
             {
@@ -462,7 +466,10 @@ export const confirmAccount = async (hash: string) => {
 };
 
 /** #1944: тот же контракт, что и у `loginApi` — причина отказа вместо `null` и `Alert`. */
-export const googleAuthApi = async (idToken: string): Promise<AuthAttempt<SocialSessionPayload>> => {
+export const googleAuthApi = async (
+    idToken: string,
+    termsVersion?: string,
+): Promise<AuthAttempt<SocialSessionPayload>> => {
     try {
         const trimmedToken = String(idToken || '').trim();
         if (!trimmedToken) {
@@ -475,7 +482,7 @@ export const googleAuthApi = async (idToken: string): Promise<AuthAttempt<Social
                     method: 'POST',
                     ...getApiRequestCredentials(),
                     headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
-                    body: JSON.stringify({ id_token: trimmedToken }),
+                    body: JSON.stringify(withTermsVersion({ id_token: trimmedToken }, termsVersion)),
                 }, DEFAULT_TIMEOUT);
             },
             {
@@ -566,23 +573,25 @@ const parseFacebookCompletion = (
 // клиентов, текст общий для обеих форм credential.
 export const getFacebookLoginBody = (
     credential: FacebookCredentialPayload,
+    termsVersion?: string,
 ): Record<string, string> | null => {
     if (credential.kind === 'authentication_token') {
         const token = String(credential.authenticationToken || '').trim();
         const nonce = String(credential.nonce || '').trim();
         if (!token || !nonce) return null;
-        return { authentication_token: token, nonce };
+        return withTermsVersion({ authentication_token: token, nonce }, termsVersion);
     }
     const token = String(credential.accessToken || '').trim();
     if (!token) return null;
-    return { access_token: token };
+    return withTermsVersion({ access_token: token }, termsVersion);
 };
 
 export const facebookAuthApi = async (
     credential: FacebookCredentialPayload,
+    termsVersion?: string,
 ): Promise<FacebookAuthResult> => {
     try {
-        const body = getFacebookLoginBody(credential);
+        const body = getFacebookLoginBody(credential, termsVersion);
         if (!body) {
             return {
                 status: 'error',
@@ -658,13 +667,16 @@ export const startFacebookEmailCompletionApi = async (
 export const confirmFacebookEmailCompletionApi = async (
     completionHandle: string,
     code: string,
+    termsVersion?: string,
 ): Promise<FacebookAuthResult> => {
     try {
         const response = await fetchWithTimeout(FACEBOOK_COMPLETION_CONFIRM, {
             method: 'POST',
             ...getApiRequestCredentials(),
             headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
-            body: JSON.stringify({ completion_handle: completionHandle, code: code.trim() }),
+            body: JSON.stringify(
+                withTermsVersion({ completion_handle: completionHandle, code: code.trim() }, termsVersion),
+            ),
         }, DEFAULT_TIMEOUT);
         const json = await safeJsonParse<FacebookAuthResponse>(response, {});
         if (!response.ok) return facebookErrorResult(json, response.status);

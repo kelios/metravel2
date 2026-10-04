@@ -18,6 +18,8 @@ export const CONSENT_TYPES = {
   TRIP_ORGANIZER: 'trip_organizer',
   CONTACT_EXCHANGE: 'contact_exchange',
   EMAIL_SUBSCRIBE: 'email_subscribe',
+  TERMS: 'terms',
+  COMMUNITY_RULES: 'community_rules',
 } as const
 
 export type ConsentType = (typeof CONSENT_TYPES)[keyof typeof CONSENT_TYPES]
@@ -37,6 +39,20 @@ export const EMAIL_SUBSCRIPTION_CONSENT = Object.freeze({
   type: CONSENT_TYPES.EMAIL_SUBSCRIBE,
   version: 'email-subscribe-2026-08-20-v1',
   labelKey: 'sharedStatic:subscription.consentLabel',
+} as const satisfies ActionConsentDescriptor)
+
+/**
+ * #2132: «Пользовательское соглашение» и «Правила сообщества», с которыми человек
+ * соглашается до входа и регистрации. Версия — та же, что `CURRENT_TERMS_VERSION`
+ * бэкенда (#2128, `GET /api/terms/version/`), и описывает тексты
+ * `legal:app.tabs.terms.*` и `legal:app.tabs.community_rules.*` во всех
+ * production-локалях. Существенная правка этих текстов = новая версия здесь и на
+ * бэкенде: иначе `/user/me/` не попросит повторного согласия.
+ */
+export const AUTH_TERMS_CONSENT = Object.freeze({
+  type: CONSENT_TYPES.TERMS,
+  version: '1',
+  labelKey: 'authStatic:terms.a11y',
 } as const satisfies ActionConsentDescriptor)
 
 export interface ActionConsentRecord {

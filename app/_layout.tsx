@@ -6,6 +6,7 @@ import NativeAppRuntime from "@/components/layout/NativeAppRuntime";
 import QuestProgressQueueRuntime from "@/components/quests/QuestProgressQueueRuntime";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import ConfirmDialogHost from "@/components/ui/ConfirmDialogHost";
+import TermsReacceptGate from "@/components/auth/TermsReacceptGate";
 import {
   NativeFooterComponent,
   ReactQueryDevtoolsComponent,
@@ -519,6 +520,8 @@ function ThemedContent({
             {isMounted && ToastComponent && (
               <ToastComponent />
             )}
+            {/* #2132: повторное согласие с условиями для вошедшего аккаунта. */}
+            {isMounted && <TermsReacceptGate />}
     </AppProviders>
     </BottomChromeInsetProvider>
   );

@@ -17,6 +17,7 @@ import { translate as i18nT } from '@/i18n';
 import { API_BASE_URL, DEFAULT_TIMEOUT } from '@/api/apiConfig';
 import {
     parseSocialSession,
+    withTermsVersion,
     type SocialAuthResponse,
     type SocialSessionPayload,
 } from '@/api/authShared';
@@ -75,7 +76,10 @@ const getAppleAuthErrorMessage = (payload: Partial<AppleAuthResponse>, status: n
  * на сервере. Тот же приём уже используют одноразовые Facebook-completion
  * эндпоинты выше.
  */
-export const appleAuthApi = async (credential: AppleCredentialPayload): Promise<AppleAuthResult> => {
+export const appleAuthApi = async (
+    credential: AppleCredentialPayload,
+    termsVersion?: string,
+): Promise<AppleAuthResult> => {
     try {
         const identityToken = String(credential?.identityToken || '').trim();
         if (!identityToken) {
@@ -102,7 +106,7 @@ export const appleAuthApi = async (credential: AppleCredentialPayload): Promise<
             method: 'POST',
             ...getApiRequestCredentials(),
             headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
-            body: JSON.stringify(body),
+            body: JSON.stringify(withTermsVersion(body, termsVersion)),
         }, DEFAULT_TIMEOUT);
 
         const json = await safeJsonParse<AppleAuthResponse>(response, {});

@@ -24,6 +24,8 @@ export type FacebookSignInButtonProps = {
 
 export type FacebookAuthFlowProps = {
     disabled?: boolean;
+    /** #2132: версия условий, отмеченная на форме; уходит во вход и в подтверждение email. */
+    termsVersion?: string;
     onAttempt?: () => void;
     onAuthenticated: () => void;
     onFailure?: (reason: string) => void;

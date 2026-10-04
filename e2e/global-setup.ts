@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { chromium, request, type FullConfig } from '@playwright/test';
 import { getTravelsListPath } from './helpers/routes';
+import { acceptAuthTerms } from './helpers/auth';
 
 const { resolveE2EAuthMode } = require('../scripts/e2e-target-safety');
 
@@ -148,6 +149,7 @@ async function fillLoginForm(page: any, email: string, password: string) {
   const passwordBox = await pickVisible(passwordCandidates, 30_000);
   if (!passwordBox) return false;
   await passwordBox.fill(password);
+  await acceptAuthTerms(page);
 
   return true;
 }

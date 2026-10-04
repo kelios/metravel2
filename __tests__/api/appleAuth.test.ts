@@ -96,6 +96,29 @@ describe('api/appleAuth.ts', () => {
       );
     });
 
+    it('#2132: передаёт отмеченную версию условий в terms_version', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        token: 'apple-session-token',
+        name: '',
+        email: '',
+        id: 51,
+        is_superuser: false,
+      } as any);
+
+      await expect(appleAuthApi({ identityToken: 'apple-identity-token' }, '1')).resolves.toMatchObject({
+        status: 'authenticated',
+      });
+
+      expect(mockedFetchWithTimeout).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          body: JSON.stringify({ identity_token: 'apple-identity-token', terms_version: '1' }),
+        }),
+        expect.any(Number),
+      );
+    });
+
     // IOS-17 (#1506): у веба свой audience (Services ID), у приложения — bundle ID.
     it('шлёт client_id, когда credential пришёл с веб-поверхности', async () => {
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);

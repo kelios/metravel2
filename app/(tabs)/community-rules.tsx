@@ -9,7 +9,7 @@ export default function CommunityRulesScreen() {
       seoTitle={i18nT('legal:app.tabs.community_rules.pravila_soobschestva_metravel_431ec805')}
       seoDescription={i18nT('legal:app.tabs.community_rules.pravila_soobschestva_metravel_kak_my_obschae_f024d655')}
       pageTitle={i18nT('legal:app.tabs.community_rules.pravila_soobschestva_24954009')}
-      effectiveDate="21.07.2026"
+      effectiveDate="04.10.2026"
       intro={[
         i18nT('legal:app.tabs.community_rules.metravel_soobschestvo_puteshestvennikov_eti__5869b99f'),
       ]}
@@ -30,6 +30,7 @@ export default function CommunityRulesScreen() {
         {
           heading: i18nT('legal:app.tabs.community_rules.3_chto_zaprescheno_5fc0fb1b'),
           paragraphs: [
+            i18nT('legal:app.tabs.community_rules.zeroTolerance'),
             i18nT('legal:app.tabs.community_rules.spam_navyazchivaya_reklama_i_massovye_rassyl_1b93e204'),
             i18nT('legal:app.tabs.community_rules.nezakonnyy_kontent_prizyvy_k_nasiliyu_materi_9967ee37'),
             i18nT('legal:app.tabs.community_rules.publikatsiya_personalnyh_dannyh_tretih_lits__8a4a1747'),
@@ -47,6 +48,7 @@ export default function CommunityRulesScreen() {
           heading: i18nT('legal:app.tabs.community_rules.5_moderatsiya_535cd1db'),
           paragraphs: [
             i18nT('legal:app.tabs.community_rules.narusheniya_mogut_privodit_k_udaleniyu_konte_19c5a5d5'),
+            i18nT('legal:app.tabs.community_rules.reportingAndBlocking'),
             i18nT('legal:app.tabs.community_rules.soobschit_o_narushenii_mozhno_po_adresu_metr_6a4f0f8b'),
           ],
         },

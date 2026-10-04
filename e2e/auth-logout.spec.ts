@@ -2,6 +2,7 @@ import type { Page, Response } from '@playwright/test';
 
 import { test, expect } from './fixtures';
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation';
+import { acceptAuthTerms } from './helpers/auth';
 
 const WEB_AUTH_COOKIE = 'authToken';
 const JS_AUTH_STORAGE_KEYS = [
@@ -36,6 +37,7 @@ async function fillLoginForm(page: Page, email: string, password: string): Promi
   await expect(passwordInput).toBeVisible({ timeout: 30_000 });
   await emailInput.fill(email);
   await passwordInput.fill(password);
+  await acceptAuthTerms(page);
 }
 
 async function clearCredentialInputs(page: Page): Promise<void> {

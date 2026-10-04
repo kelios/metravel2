@@ -44,10 +44,16 @@ export interface AuthActions {
     // #1944: вход возвращает причину отказа, а не голый `false`. Форма обязана
     // отличать обрыв связи от отказа сервера: на `false` она писала «Неверный
     // email или пароль» даже в авиарежиме.
-    login: (email: string, password: string) => Promise<AuthOutcome>;
-    loginWithGoogle: (credential: string) => Promise<AuthOutcome>;
-    loginWithApple: (credential: AppleCredentialPayload) => Promise<AppleAuthResult>;
-    loginWithFacebook: (credential: FacebookCredentialPayload) => Promise<FacebookAuthResult>;
+    // #2132: `termsVersion` — версия условий, которую человек отметил на форме
+    // входа или регистрации. Соцвход и регистрация передают её серверу в теле
+    // запроса (#2128), вход по паролю записывает согласие сразу после входа.
+    login: (email: string, password: string, termsVersion?: string) => Promise<AuthOutcome>;
+    loginWithGoogle: (credential: string, termsVersion?: string) => Promise<AuthOutcome>;
+    loginWithApple: (credential: AppleCredentialPayload, termsVersion?: string) => Promise<AppleAuthResult>;
+    loginWithFacebook: (
+        credential: FacebookCredentialPayload,
+        termsVersion?: string,
+    ) => Promise<FacebookAuthResult>;
     startFacebookEmailCompletion: (
         completionHandle: string,
         email: string,
@@ -55,6 +61,7 @@ export interface AuthActions {
     confirmFacebookEmailCompletion: (
         completionHandle: string,
         code: string,
+        termsVersion?: string,
     ) => Promise<FacebookAuthResult>;
     logout: () => Promise<void>;
     // #2042: успех/отказ сброса решает статус ответа, а не текст сообщения.

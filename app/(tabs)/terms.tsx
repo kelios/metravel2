@@ -9,7 +9,7 @@ export default function TermsScreen() {
       seoTitle={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_metravel_a107cf93')}
       seoDescription={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_metravel_usloviya_860ebcea')}
       pageTitle={i18nT('legal:app.tabs.terms.polzovatelskoe_soglashenie_13d561c9')}
-      effectiveDate="17.08.2026"
+      effectiveDate="04.10.2026"
       intro={[
         i18nT('legal:app.tabs.terms.nastoyaschee_polzovatelskoe_soglashenie_regu_15e5e27a'),
         i18nT('legal:app.tabs.terms.relatedDocuments'),
@@ -30,6 +30,7 @@ export default function TermsScreen() {
             i18nT('legal:app.tabs.terms.publikuya_materialy_teksty_fotografii_marshr_2e0c0e2a'),
             i18nT('legal:app.tabs.terms.vy_predostavlyaete_servisu_neisklyuchitelnoe_988417e0'),
             i18nT('legal:app.tabs.terms.zaprescheno_publikovat_nezakonnye_oskorbitel_bbb53e2a'),
+            i18nT('legal:app.tabs.terms.zeroTolerance'),
             i18nT('legal:app.tabs.terms.contentComplaints'),
           ],
         },

@@ -294,3 +294,15 @@ export async function ensureWebAuthCookie(
     }
   }, userId);
 }
+
+/**
+ * #2132: форма входа и регистрации блокирует все способы входа, пока не
+ * отмечено согласие с условиями. UI-вход в e2e отмечает его тем же действием,
+ * что и человек; на формах без гейта шаг ничего не делает.
+ */
+export async function acceptAuthTerms(page: Page): Promise<void> {
+  const checkbox = page.getByTestId('auth-terms-gate-checkbox').first();
+  if (!(await checkbox.isVisible().catch(() => false))) return;
+  if ((await checkbox.getAttribute('aria-checked').catch(() => null)) === 'true') return;
+  await checkbox.click();
+}

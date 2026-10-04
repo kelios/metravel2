@@ -35,3 +35,26 @@ export const postConsentRecord = async (
     // Непредвиденную ошибку тоже не пробрасываем — трекинг не должен ломать flow.
   }
 };
+
+/**
+ * #2132: согласие с условиями и правилами сообщества для уже вошедшего аккаунта
+ * (вход по паролю и повторное согласие после смены версии). В отличие от
+ * `postConsentRecord` ошибку НЕ глотает: экран повторного согласия обязан её
+ * показать, а не делать вид, что согласие записано. Бэкенд при регистрации и
+ * соцвходе пишет обе записи сам из `terms_version` (#2128); здесь — те же две.
+ */
+export const acceptTerms = async (version: string): Promise<void> => {
+  const termsTypes: readonly ConsentType[] = ['terms', 'community_rules'];
+  for (const consentType of termsTypes) {
+    await apiClient.post('/user/consents/', { consent_type: consentType, version });
+  }
+};
+
+/**
+ * `GET /user/me/` → `terms_accepted_current` (#2128). `null` — сервер поле не
+ * отдал: старый бэкенд или чужой ответ; повторное согласие тогда не требуется.
+ */
+export const fetchTermsAcceptedCurrent = async (): Promise<boolean | null> => {
+  const dto = await apiClient.get<{ terms_accepted_current?: unknown }>('/user/me/');
+  return typeof dto?.terms_accepted_current === 'boolean' ? dto.terms_accepted_current : null;
+};

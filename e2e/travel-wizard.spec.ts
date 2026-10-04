@@ -5,7 +5,7 @@ import { test, expect } from './fixtures';
 import { devices, request } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
-import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
+import { acceptAuthTerms, ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
 import { seedNecessaryConsent } from './helpers/storage';
 
 const tinyPngBuffer = Buffer.from(
@@ -388,6 +388,7 @@ const maybeLogin = async (page: Page) => {
   const passwordBox = await pickVisible(passwordCandidates, 30_000);
   if (!passwordBox) return false;
   await passwordBox.fill(e2ePassword);
+  await acceptAuthTerms(page);
 
   await page.getByText('Войти', { exact: true }).click({ timeout: 30_000 }).catch(() => null);
 

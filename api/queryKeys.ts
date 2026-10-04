@@ -60,6 +60,8 @@ export const queryKeys = {
   locationSearch: (query: string, locale: string) => ['location-search', locale, query] as const,
   reverseGeocode: (lat: number, lng: number, locale: string) =>
     ['reverse-geocode', locale, lat, lng] as const,
+  // #2132: `terms_accepted_current` из `/user/me/` для экрана повторного согласия.
+  termsAcceptedCurrent: (userId: string | null) => ['terms-accepted-current', userId] as const,
   mySubscriptions: (userId: string | null) => ['my-subscriptions', userId] as const,
   mySubscribers: (userId: string | null) => ['my-subscribers', userId] as const,
   userTravels: (userId: string | number | null | undefined) => ['user-travels', userId] as const,

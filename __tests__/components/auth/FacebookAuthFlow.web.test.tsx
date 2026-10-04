@@ -65,13 +65,15 @@ describe('FacebookAuthFlow web', () => {
       },
     });
     const onAuthenticated = jest.fn();
-    const screen = render(<FacebookAuthFlow onAuthenticated={onAuthenticated} />);
+    const screen = render(<FacebookAuthFlow onAuthenticated={onAuthenticated} termsVersion="1" />);
 
     fireEvent.press(screen.getByTestId('mock-facebook-sign_in'));
 
     await waitFor(() => {
+      // #2132: версия условий, отмеченная на форме, уходит вместе с credential.
       expect(loginWithFacebook).toHaveBeenCalledWith(
         expect.objectContaining({ kind: 'access_token', accessToken: 'fresh-login-token' }),
+        '1',
       );
       expect(onAuthenticated).toHaveBeenCalledTimes(1);
     });
@@ -96,6 +98,7 @@ describe('FacebookAuthFlow web', () => {
     await waitFor(() => {
       expect(loginWithFacebook).toHaveBeenCalledWith(
         expect.objectContaining({ kind: 'access_token', accessToken: 'fresh-rerequest-token' }),
+        undefined,
       );
       expect(screen.getByTestId('facebook-email-completion-panel')).toBeTruthy();
     });
@@ -120,7 +123,7 @@ describe('FacebookAuthFlow web', () => {
       },
     });
     const onAuthenticated = jest.fn();
-    const screen = render(<FacebookAuthFlow onAuthenticated={onAuthenticated} />);
+    const screen = render(<FacebookAuthFlow onAuthenticated={onAuthenticated} termsVersion="1" />);
 
     // Simulate a provider callback with email permission so the backend is called immediately.
     const initialButton = screen.getByTestId('mock-facebook-sign_in');
@@ -141,7 +144,7 @@ describe('FacebookAuthFlow web', () => {
     fireEvent.press(screen.getByTestId('facebook-completion-confirm'));
 
     await waitFor(() => {
-      expect(confirmFacebookEmailCompletion).toHaveBeenCalledWith('opaque-handle', '123456');
+      expect(confirmFacebookEmailCompletion).toHaveBeenCalledWith('opaque-handle', '123456', '1');
       expect(onAuthenticated).toHaveBeenCalledTimes(1);
     });
   });

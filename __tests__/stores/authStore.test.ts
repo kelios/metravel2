@@ -5,6 +5,10 @@ jest.mock('@/api/appleAuth', () => ({
   appleAuthApi: jest.fn(),
 }));
 
+jest.mock('@/api/consent', () => ({
+  acceptTerms: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('@/api/auth', () => ({
   loginApi: jest.fn(),
   facebookAuthApi: jest.fn(),
@@ -90,6 +94,7 @@ const { getStorageBatch, removeStorageBatch, setStorageBatch } = require('@/util
   setStorageBatch: jest.Mock;
 };
 const { fetchUserProfile } = require('@/api/user') as { fetchUserProfile: jest.Mock };
+const { acceptTerms } = require('@/api/consent') as { acceptTerms: jest.Mock };
 
 import { useAuthStore } from '@/stores/authStore';
 import { __resetSessionTokenWritesForTests } from '@/utils/authTokenStore';
@@ -425,6 +430,43 @@ describe('authStore', () => {
       expect(s.userAvatar).toBe('https://img/a.jpg');
     });
 
+    it('#2132: записывает отмеченное на форме согласие до публикации сессии', async () => {
+      loginApi.mockResolvedValue({
+        ok: true,
+        user: { token: 'abc', id: 5, name: 'Julia', email: 'j@test.com', is_superuser: false },
+      });
+      fetchUserProfile.mockResolvedValue({ first_name: 'Юлия', avatar: null });
+      let authenticatedAtAccept: boolean | null = null;
+      acceptTerms.mockImplementationOnce(async () => {
+        authenticatedAtAccept = useAuthStore.getState().isAuthenticated;
+      });
+
+      const result = await act(() => useAuthStore.getState().login('j@test.com', 'pass', '1'));
+
+      expect(result).toEqual({ ok: true });
+      expect(acceptTerms).toHaveBeenCalledWith('1');
+      expect(authenticatedAtAccept).toBe(false);
+      expect(useAuthStore.getState().isAuthenticated).toBe(true);
+    });
+
+    it('#2132: сбой записи согласия не валит вход, а без версии согласие не пишется', async () => {
+      loginApi.mockResolvedValue({
+        ok: true,
+        user: { token: 'abc', id: 5, name: 'Julia', email: 'j@test.com', is_superuser: false },
+      });
+      fetchUserProfile.mockResolvedValue({ first_name: 'Юлия', avatar: null });
+      acceptTerms.mockRejectedValueOnce(new Error('offline'));
+
+      const result = await act(() => useAuthStore.getState().login('j@test.com', 'pass', '1'));
+
+      expect(result).toEqual({ ok: true });
+      expect(useAuthStore.getState().isAuthenticated).toBe(true);
+
+      acceptTerms.mockClear();
+      await act(() => useAuthStore.getState().login('j@test.com', 'pass'));
+      expect(acceptTerms).not.toHaveBeenCalled();
+    });
+
     it('sanitizes profile URL values before persisting the display name', async () => {
       loginApi.mockResolvedValue({
         ok: true,
@@ -624,11 +666,11 @@ describe('authStore', () => {
       });
       fetchUserProfile.mockResolvedValue({ first_name: 'Apple', last_name: 'User', avatar: null });
 
-      await expect(useAuthStore.getState().loginWithApple(appleCredential)).resolves.toMatchObject({
+      await expect(useAuthStore.getState().loginWithApple(appleCredential, '1')).resolves.toMatchObject({
         status: 'authenticated',
       });
 
-      expect(appleAuthApi).toHaveBeenCalledWith(appleCredential);
+      expect(appleAuthApi).toHaveBeenCalledWith(appleCredential, '1');
       expect(setSecureItem).toHaveBeenCalledWith('userToken', 'apple-session-token');
       expect(setSecureItem).toHaveBeenCalledWith('refreshToken', 'apple-refresh');
       expect(useAuthStore.getState()).toEqual(expect.objectContaining({
@@ -645,7 +687,7 @@ describe('authStore', () => {
         message: 'disabled',
       });
 
-      await expect(useAuthStore.getState().loginWithApple(appleCredential)).resolves.toMatchObject({
+      await expect(useAuthStore.getState().loginWithApple(appleCredential, '1')).resolves.toMatchObject({
         status: 'error',
         errorCode: 'apple_account_disabled',
       });
@@ -672,7 +714,7 @@ describe('authStore', () => {
         return null;
       });
 
-      await expect(useAuthStore.getState().loginWithApple(appleCredential)).resolves.toMatchObject({
+      await expect(useAuthStore.getState().loginWithApple(appleCredential, '1')).resolves.toMatchObject({
         status: 'error',
       });
 
@@ -698,7 +740,7 @@ describe('authStore', () => {
         return null;
       });
 
-      await expect(useAuthStore.getState().loginWithApple(appleCredential)).resolves.toMatchObject({
+      await expect(useAuthStore.getState().loginWithApple(appleCredential, '1')).resolves.toMatchObject({
         status: 'error',
       });
 
@@ -712,7 +754,7 @@ describe('authStore', () => {
     it('исключение внутри адаптера не роняет вход', async () => {
       appleAuthApi.mockRejectedValue(new Error('boom'));
 
-      await expect(useAuthStore.getState().loginWithApple(appleCredential)).resolves.toMatchObject({
+      await expect(useAuthStore.getState().loginWithApple(appleCredential, '1')).resolves.toMatchObject({
         status: 'error',
       });
       expect(useAuthStore.getState().isAuthenticated).toBe(false);
@@ -738,7 +780,7 @@ describe('authStore', () => {
         status: 'authenticated',
       });
 
-      expect(facebookAuthApi).toHaveBeenCalledWith({ kind: 'access_token', accessToken: 'short-lived-facebook-token' });
+      expect(facebookAuthApi).toHaveBeenCalledWith({ kind: 'access_token', accessToken: 'short-lived-facebook-token' }, undefined);
       expect(setSecureItem).not.toHaveBeenCalled();
       expect(useAuthStore.getState()).toEqual(expect.objectContaining({
         isAuthenticated: true,

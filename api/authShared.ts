@@ -42,3 +42,13 @@ export const parseSocialSession = (payload: SocialAuthResponse): SocialSessionPa
         is_superuser: Boolean(payload.is_superuser),
     };
 };
+
+/**
+ * #2132: тело запроса создания или входа аккаунта с версией условий, которую
+ * человек отметил на форме. Без версии тело не меняется: клиент не придумывает
+ * согласие за пользователя, а сервер (#2128) без поля сохраняет прежнее поведение.
+ */
+export const withTermsVersion = <T extends object>(
+    body: T,
+    termsVersion?: string,
+): T & { terms_version?: string } => (termsVersion ? { ...body, terms_version: termsVersion } : body);

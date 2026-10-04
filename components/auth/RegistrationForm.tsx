@@ -41,6 +41,7 @@ import type { AppleCredentialPayload } from '@/api/appleAuth';
 import AppleSignInButton from '@/components/auth/AppleSignInButton';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import FacebookAuthFlow from '@/components/auth/FacebookAuthFlow';
+import AuthTermsGate, { useAuthTermsAcceptance } from '@/components/auth/AuthTermsGate';
 import { webTouchScrollStyle } from '@/utils';
 import { buildLoginHref, resolvePostAuthPath } from '@/utils/authNavigation';
 import { translate as i18nT } from '@/i18n'
@@ -76,6 +77,7 @@ export default function RegisterForm() {
     const isFocused = useIsFocused();
     const router = useRouter();
     const { loginWithGoogle, loginWithApple } = useAuth();
+    const terms = useAuthTermsAcceptance();
     const colors = useThemedColors();
     const { isMobile } = useResponsive();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -97,6 +99,11 @@ export default function RegisterForm() {
         values: RegistrationFormValues,
         { setSubmitting, resetForm }: { setSubmitting: (v: boolean) => void; resetForm: () => void },
     ) => {
+        // #2132: Enter в поле пароля тоже ведёт сюда — без согласия не отправляем.
+        if (!terms.accepted) {
+            setSubmitting(false);
+            return;
+        }
         setMsg({ text: '', error: false });
         trackRegistrationSubmitted({ source: 'registration', intent, redirect, method: 'email' });
         try {
@@ -110,7 +117,7 @@ export default function RegisterForm() {
                 password: values.password,
                 confirmPassword: values.password,
             };
-            const res = await registration(payload);
+            const res = await registration(payload, terms.termsVersion);
             const ok = typeof res === 'object' && 'ok' in res ? res.ok : false;
             const message = typeof res === 'object' && 'message' in res ? res.message : String(res ?? '');
 
@@ -158,13 +165,13 @@ export default function RegisterForm() {
     };
 
     const handleGoogleSignIn = async (credential: string) => {
-        if (googleBusy || facebookBusy || appleBusy || submitted) return;
+        if (googleBusy || facebookBusy || appleBusy || submitted || !terms.accepted) return;
         setGoogleBusy(true);
         let navigating = false;
         try {
             setMsg({ text: '', error: false });
             trackRegistrationSubmitted({ source: 'registration', intent, redirect, method: 'google' });
-            const outcome = await loginWithGoogle(credential);
+            const outcome = await loginWithGoogle(credential, terms.termsVersion);
             if (outcome.ok) {
                 trackRegistrationSucceeded({ source: 'registration', intent, redirect, method: 'google' });
                 if (intent) {
@@ -218,13 +225,13 @@ export default function RegisterForm() {
 
     // IOS-05: Apple отдаёт credential, серверную проверку делает #1412.
     const handleAppleSignIn = async (credential: AppleCredentialPayload) => {
-        if (googleBusy || facebookBusy || appleBusy || submitted) return;
+        if (googleBusy || facebookBusy || appleBusy || submitted || !terms.accepted) return;
         setAppleBusy(true);
         let navigating = false;
         try {
             setMsg({ text: '', error: false });
             trackRegistrationSubmitted({ source: 'registration', intent, redirect, method: 'apple' });
-            const result = await loginWithApple(credential);
+            const result = await loginWithApple(credential, terms.termsVersion);
             if (result.status === 'authenticated') {
                 trackRegistrationSucceeded({ source: 'registration', intent, redirect, method: 'apple' });
                 if (intent) {
@@ -319,6 +326,8 @@ export default function RegisterForm() {
     const description =
         i18nT('auth:components.auth.RegistrationForm.sozdayte_akkaunt_v_metravel_chtoby_publikova_7610c3f7');
     const busy = isSubmitting || submitted || googleBusy || facebookBusy || appleBusy;
+    // #2132: без согласия с условиями все способы регистрации видимы, но неактивны.
+    const authLocked = busy || !terms.accepted;
 
     return (
         <>
@@ -380,6 +389,8 @@ export default function RegisterForm() {
                                     </Text>
                                 )}
 
+                                <AuthTermsGate accepted={terms.accepted} onChange={terms.setAccepted} />
+
                                 {/* ---------- social first ---------- */}
                                 <View style={styles.socialActions}>
                                     {/* Apple первым: HIG требует показывать Sign in with Apple
@@ -387,20 +398,21 @@ export default function RegisterForm() {
                                     <AppleSignInButton
                                         onSuccess={handleAppleSignIn}
                                         onError={handleAppleError}
-                                        disabled={busy}
+                                        disabled={authLocked}
                                         mode="sign_up"
                                     />
                                     <GoogleSignInButton
                                         onSuccess={handleGoogleSignIn}
                                         onError={handleGoogleError}
-                                        disabled={busy}
+                                        disabled={authLocked}
                                     />
                                     <FacebookAuthFlow
                                         onAttempt={handleFacebookAttempt}
                                         onAuthenticated={handleFacebookAuthenticated}
                                         onFailure={handleFacebookFailure}
                                         onBusyChange={setFacebookBusy}
-                                        disabled={isSubmitting || submitted || googleBusy || appleBusy}
+                                        termsVersion={terms.termsVersion}
+                                        disabled={isSubmitting || submitted || googleBusy || appleBusy || !terms.accepted}
                                     />
                                 </View>
 
@@ -473,7 +485,7 @@ export default function RegisterForm() {
                                             autoComplete="new-password"
                                             textContentType="newPassword"
                                             returnKeyType="done"
-                                            onSubmitEditing={() => handleSubmit()}
+                                            onSubmitEditing={() => { if (terms.accepted) handleSubmit(); }}
                                         />
                                         <Pressable
                                             onPress={() => setShowPass(v => !v)}
@@ -528,7 +540,7 @@ export default function RegisterForm() {
                                 <Button
                                     label={isSubmitting || submitted ? i18nT('auth:components.auth.RegistrationForm.podozhdite_c6f74920') : i18nT('auth:components.auth.RegistrationForm.zaregistrirovatsya_3ca6aeb7')}
                                     onPress={() => handleSubmit()}
-                                    disabled={busy}
+                                    disabled={authLocked}
                                     loading={isSubmitting || submitted}
                                     variant="primary"
                                     size="lg"

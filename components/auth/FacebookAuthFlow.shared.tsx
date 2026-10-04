@@ -26,6 +26,7 @@ const isEmailAddress = (value: string) =>
 
 export default function FacebookAuthFlow({
   disabled = false,
+  termsVersion,
   onAttempt,
   onAuthenticated,
   onFailure,
@@ -116,7 +117,7 @@ export default function FacebookAuthFlow({
 
     setBusy(true)
     try {
-      const result = await loginWithFacebook(credential)
+      const result = await loginWithFacebook(credential, termsVersion)
       handleResult(result)
     } finally {
       setBusy(false)
@@ -175,6 +176,7 @@ export default function FacebookAuthFlow({
       const result = await confirmFacebookEmailCompletion(
         completion.completionHandle,
         code.trim(),
+        termsVersion,
       )
       handleResult(result)
       if (

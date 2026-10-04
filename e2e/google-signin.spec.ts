@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation';
+import { acceptAuthTerms } from './helpers/auth';
 
 const PRODUCTION_ORIGIN = 'https://metravel.by';
 
@@ -72,6 +73,7 @@ test.describe('@smoke Google auth', () => {
     });
 
     let receivedGoogleToken = '';
+    let receivedTermsVersion = '';
     let receivedGoogleLoginUrl = '';
     const unexpectedProductionMutations: string[] = [];
 
@@ -98,14 +100,15 @@ test.describe('@smoke Google auth', () => {
       }
 
       receivedGoogleLoginUrl = route.request().url();
-      let payload: { id_token?: unknown } = {};
+      let payload: { id_token?: unknown; terms_version?: unknown } = {};
       try {
-        payload = (route.request().postDataJSON() as { id_token?: unknown }) || {};
+        payload = (route.request().postDataJSON() as { id_token?: unknown; terms_version?: unknown }) || {};
       } catch {
         payload = {};
       }
 
       receivedGoogleToken = String(payload.id_token ?? '');
+      receivedTermsVersion = String(payload.terms_version ?? '');
 
       await route.fulfill({
         status: 200,
@@ -169,6 +172,9 @@ test.describe('@smoke Google auth', () => {
 
     const googleButton = page.getByRole('button', { name: 'Войти через Google' }).first();
     await expect(googleButton).toBeVisible({ timeout: 15_000 });
+    // #2132: до согласия с условиями вход через Google неактивен.
+    await expect(googleButton).toBeDisabled();
+    await acceptAuthTerms(page);
     await expect(googleButton).toBeEnabled();
 
     await googleButton.click();
@@ -196,6 +202,7 @@ test.describe('@smoke Google auth', () => {
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30_000 });
 
     expect(receivedGoogleToken).toBe('e2e-google-credential');
+    expect(receivedTermsVersion, 'Google login must carry the accepted terms version (#2132)').toBe('1');
     expect(new URL(receivedGoogleLoginUrl).origin).toBe(productionOrigin);
     expect(new URL(receivedGoogleLoginUrl).hostname).toBe('metravel.by');
     expect(new URL(receivedGoogleLoginUrl).pathname).toBe('/api/user/google-login/');

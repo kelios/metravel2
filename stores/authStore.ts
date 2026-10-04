@@ -437,7 +437,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     },
 
     // --- login ---
-    login: async (email, password) => {
+    login: async (email, password, termsVersion) => {
         const epochAtStart = authEpoch;
         // Метка диска на момент старта входа: если пока шёл запрос свои креды
         // записала другая сессия (подтверждение почты), запись входа отбрасывается
@@ -494,6 +494,19 @@ export const useAuthStore = create<AuthStore>((set, get) => {
                 return signInInterrupted();
             }
 
+            // #2132: `/user/login/` не принимает `terms_version`, поэтому согласие,
+            // отмеченное на форме, пишем сразу после входа и до публикации сессии —
+            // иначе TermsReacceptGate успел бы спросить `/user/me/` раньше записи.
+            // Сбой записи вход не валит: тот же гейт попросит согласие ещё раз.
+            if (termsVersion) {
+                try {
+                    const { acceptTerms } = await import('@/api/consent');
+                    await acceptTerms(termsVersion);
+                } catch (e) {
+                    if (__DEV__) console.warn('Не удалось записать согласие с условиями:', e);
+                }
+            }
+
             set((s) => ({
                 isAuthenticated: true,
                 userId: String(userData.id),
@@ -515,12 +528,12 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     },
 
     // --- login with Google ---
-    loginWithGoogle: async (credential) => {
+    loginWithGoogle: async (credential, termsVersion) => {
         const epochAtStart = authEpoch;
         const writeMarkAtStart = getSessionWriteMark();
         try {
             const { googleAuthApi } = await getAuthApi();
-            const attempt = await googleAuthApi(credential);
+            const attempt = await googleAuthApi(credential, termsVersion);
             if (!attempt.ok) return attempt;
             const applied = await applySocialSession(attempt.user, epochAtStart, writeMarkAtStart);
             return applied
@@ -535,12 +548,12 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     },
 
     // --- login with Apple (IOS-05) ---
-    loginWithApple: async (credential) => {
+    loginWithApple: async (credential, termsVersion) => {
         const epochAtStart = authEpoch;
         const writeMarkAtStart = getSessionWriteMark();
         try {
             const { appleAuthApi } = await getAppleAuthApi();
-            const result = await appleAuthApi(credential);
+            const result = await appleAuthApi(credential, termsVersion);
             if (result.status !== 'authenticated') return result;
             return await finishSocialAuthentication(result.user, epochAtStart, writeMarkAtStart, () =>
                 i18nT('errorsStatic:api.auth.appleSignInFailed'),
@@ -555,12 +568,12 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     },
 
     // --- login with Facebook ---
-    loginWithFacebook: async (credential) => {
+    loginWithFacebook: async (credential, termsVersion) => {
         const epochAtStart = authEpoch;
         const writeMarkAtStart = getSessionWriteMark();
         try {
             const { facebookAuthApi } = await getAuthApi();
-            const result = await facebookAuthApi(credential);
+            const result = await facebookAuthApi(credential, termsVersion);
             if (result.status !== 'authenticated') return result;
             return await finishFacebookAuthentication(result.user, epochAtStart, writeMarkAtStart);
         } catch (error) {
@@ -587,12 +600,12 @@ export const useAuthStore = create<AuthStore>((set, get) => {
         }
     },
 
-    confirmFacebookEmailCompletion: async (completionHandle, code) => {
+    confirmFacebookEmailCompletion: async (completionHandle, code, termsVersion) => {
         const epochAtStart = authEpoch;
         const writeMarkAtStart = getSessionWriteMark();
         try {
             const { confirmFacebookEmailCompletionApi } = await getAuthApi();
-            const result = await confirmFacebookEmailCompletionApi(completionHandle, code);
+            const result = await confirmFacebookEmailCompletionApi(completionHandle, code, termsVersion);
             if (result.status !== 'authenticated') return result;
             return await finishFacebookAuthentication(result.user, epochAtStart, writeMarkAtStart);
         } catch (error) {

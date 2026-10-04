@@ -1,5 +1,6 @@
 import { expect, request } from '@playwright/test';
 import fs from 'node:fs';
+import { acceptAuthTerms } from './auth';
 
 type LoginResponse = {
   token?: string;
@@ -422,6 +423,7 @@ export async function loginAsUser(page: any): Promise<{ userId?: string }> {
   await ensureLoginFormReady(page);
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
+  await acceptAuthTerms(page);
   await page.getByRole('button', { name: /^войти$/i }).click();
   await page.waitForTimeout(500);
 
@@ -457,6 +459,7 @@ export async function loginAsAdmin(page: any): Promise<{ userId?: string }> {
   await ensureLoginFormReady(page);
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
+  await acceptAuthTerms(page);
   await page.getByRole('button', { name: /^войти$/i }).click();
   await page.waitForTimeout(500);
 

@@ -102,6 +102,9 @@ const renderLogin = async (mockLogin?: jest.Mock, mockSendPassword?: jest.Mock) 
   // longer than the default 1000ms findBy timeout, so give it explicit headroom
   // to avoid flaky failures in full-suite runs.
   await utils.findByPlaceholderText('Email', undefined, { timeout: 10000 });
+  // #2132: без согласия с условиями вход заблокирован — сценарии ниже про
+  // валидацию и поток входа, поэтому согласие отмечаем сразу.
+  fireEvent.press(utils.getByTestId('auth-terms-gate-checkbox'));
 
   return utils;
 };
@@ -145,7 +148,7 @@ describe('Login Component', () => {
       fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
-        expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123');
+        expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123', '1');
       });
     });
 
@@ -161,7 +164,7 @@ describe('Login Component', () => {
       fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
-        expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123');
+        expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123', '1');
       });
     });
   });
@@ -235,7 +238,7 @@ describe('Login Component', () => {
       fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
-        expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123');
+        expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123', '1');
       });
     });
 
@@ -385,9 +388,10 @@ describe('Login Component', () => {
       };
       (useAuth as jest.Mock).mockImplementation(() => authValue);
 
-      const { getByPlaceholderText, findByPlaceholderText, getByText, rerender } =
+      const { getByPlaceholderText, findByPlaceholderText, getByTestId, getByText, rerender } =
         render(<Login />);
       await findByPlaceholderText('Email', undefined, { timeout: 10000 });
+      fireEvent.press(getByTestId('auth-terms-gate-checkbox'));
 
       // 1) Successful login latches `submitted` -> button shows "Подождите…".
       fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
@@ -675,7 +679,7 @@ describe('Login Component', () => {
       fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
-        expect(mockLogin).toHaveBeenCalledWith('test+tag@example.com', 'password123');
+        expect(mockLogin).toHaveBeenCalledWith('test+tag@example.com', 'password123', '1');
       });
     });
   });
