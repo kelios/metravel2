@@ -1,4 +1,5 @@
 import { getAnalyticsInlineScript } from '@/utils/analyticsInlineScript'
+import { SECRET_LINK_ROUTES } from '@/utils/secretLinkRoutes'
 
 type Consent = { necessary: boolean; analytics: boolean }
 
@@ -348,6 +349,50 @@ describe('analytics inline script', () => {
 
     const sent = JSON.stringify([ymSpy.mock.calls, windowMock.dataLayer])
     expect(sent).not.toMatch(/token=|t1/)
+
+    jest.useRealTimers()
+  })
+
+  // #2145: семейство «тэги уже загружены, в адрес вернулся секрет» — для каждого
+  // роута из общего списка и для обоих путей возврата (SPA-переход и «Назад»)
+  // ни один наш вызов Метрики/GA4 не несёт секрет. Авто-модули Метрики
+  // (clickmap, Вебвизор) этот тест не видят — их закрывает контракт
+  // useSecretLinkParam в secretLinkRoutes.governance.test.ts.
+  it.each(
+    SECRET_LINK_ROUTES.flatMap((entry) =>
+      entry.secretParams.flatMap((param) =>
+        (['pushState', 'popstate'] as const).map((via) => [entry.route, param, via] as const)
+      )
+    )
+  )('after the tags are loaded, %s?%s via %s never reaches ym/gtag (#2145)', (route, param, via) => {
+    jest.useFakeTimers()
+    const { windowMock, documentMock, createdScripts, ymSpy } = setupDomEnv()
+    windowMock.location = { hostname: 'metravel.by', href: 'https://metravel.by/quests', pathname: '/quests', search: '' }
+
+    runAnalyticsSnippet(windowMock, documentMock)
+    windowMock.metravelLoadAnalytics()
+    createdScripts.find((entry) => entry.src === 'https://mc.yandex.ru/metrika/tag.js')?.onload?.()
+    jest.runOnlyPendingTimers()
+    expect(windowMock.__metravelAnalyticsLoaded).toBe(true)
+
+    const search = `?${param}=s3cr3tValue&utm_source=mail`
+    windowMock.location.href = `https://metravel.by${route}${search}`
+    windowMock.location.pathname = route
+    windowMock.location.search = search
+    if (via === 'pushState') {
+      windowMock.history.pushState({}, '', `${route}${search}`)
+    } else {
+      const onPopState = windowMock.addEventListener.mock.calls.find((call: any[]) => call[0] === 'popstate')?.[1]
+      expect(typeof onPopState).toBe('function')
+      onPopState()
+    }
+    jest.runOnlyPendingTimers()
+
+    const hits = ymSpy.mock.calls.filter((call) => call[1] === 'hit')
+    expect(hits[hits.length - 1][2]).toBe(`https://metravel.by${route}?utm_source=mail`)
+    const sent = JSON.stringify([ymSpy.mock.calls, windowMock.dataLayer])
+    expect(sent).not.toMatch(/s3cr3tValue/)
+    expect(sent).not.toContain(`${param}=`)
 
     jest.useRealTimers()
   })

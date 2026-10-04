@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import { Button, Card } from '@/ui/paper';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { confirmAccount } from '@/api/auth';
 import { useAuth } from '@/context/AuthContext';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useSecretLinkParam } from '@/hooks/useSecretLinkParam';
 import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
@@ -18,14 +19,14 @@ export default function AccountConfirmation() {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const { hash } = useLocalSearchParams(); // ✅ заменили useRoute
+    // Секрет уходит из адресной строки сразу после посадки (#2145).
+    const hash = useSecretLinkParam('/accountconfirmation', 'hash');
     const router = useRouter();              // ✅ заменили useNavigation
     const { applyConfirmedAccountSession } = useAuth();
     const confirmedHashRef = useRef<string | null>(null);
 
     useEffect(() => {
-        const hashStr = Array.isArray(hash) ? hash[0] : hash;
-        if (!hashStr) {
+        if (!hash) {
             // Нет/невалидный hash — не оставляем бесконечный спиннер.
             setError(i18nT('auth:app.tabs.accountconfirmation.ssylka_podtverzhdeniya_nedeystvitelna_ili_us_529ee053'));
             setLoading(false);
@@ -33,13 +34,13 @@ export default function AccountConfirmation() {
         }
         // Токен подтверждения одноразовый: не вызываем confirmAccount повторно
         // (StrictMode double-invoke / нестабильный router в deps).
-        if (confirmedHashRef.current === hashStr) return;
-        confirmedHashRef.current = hashStr;
+        if (confirmedHashRef.current === hash) return;
+        confirmedHashRef.current = hash;
 
         let active = true;
         const confirm = async () => {
             try {
-                const response = await confirmAccount(hashStr);
+                const response = await confirmAccount(hash);
                 if (!active) return;
                 const confirmedUserId = response.userId;
                 // Личность ставим сразу: до #1462 экран поднимал только флаг

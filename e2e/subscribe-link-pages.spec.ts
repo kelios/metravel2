@@ -93,6 +93,37 @@ for (const viewport of [
       expect(requests).toEqual(['/api/subscribe/confirm/down/']);
     });
 
+    // #2145: после старта тэгов «Назад» не должен вернуть секрет в адрес —
+    // clickmap/Вебвизор Метрики берут page-url из document.location сами.
+    test('token leaves the address bar after landing; "To quests" → Back and reload stay clean', async ({ page }) => {
+      const requests = await mockSubscribeApi(page);
+
+      expect(await openAndReadState(page, '/subscribe/confirm?token=ok&utm_source=mail')).toBe(
+        'subscription-link-confirmed',
+      );
+      await expect.poll(() => new URL(page.url()).search).toBe('?utm_source=mail');
+      expect(requests).toEqual(['/api/subscribe/confirm/ok/']);
+
+      await page.getByRole('button', { name: 'К квестам' }).click();
+      await expect.poll(() => new URL(page.url()).pathname).toBe('/quests');
+
+      await page.goBack();
+      await expect.poll(() => new URL(page.url()).pathname).toBe('/subscribe/confirm');
+      expect(new URL(page.url()).searchParams.has('token')).toBe(false);
+      await expect(page.getByTestId('subscription-link-confirmed')).toBeVisible();
+
+      // F5 на очищенном адресе: секрет берётся из sessionStorage вкладки.
+      await page.reload();
+      await expect(page.getByTestId('subscription-link-confirmed')).toBeVisible({ timeout: 30_000 });
+      expect(new URL(page.url()).searchParams.has('token')).toBe(false);
+      expect(requests.every((path) => path === '/api/subscribe/confirm/ok/')).toBe(true);
+
+      // Снятие параметра заменяет запись посадки, а не добавляет новую: ещё один
+      // «Назад» уходит за пределы сайта, не на `?token=`.
+      await page.goBack();
+      expect(page.url()).not.toMatch(/[?&]token=/);
+    });
+
     test('?status= from the backend redirect renders without calling the API', async ({ page }) => {
       const requests = await mockSubscribeApi(page);
 

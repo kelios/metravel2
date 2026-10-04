@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {Image, StyleSheet, TextInput, View, Platform, Text} from 'react-native'
 import Button from '@/components/ui/Button'
 import {useNavigation} from 'expo-router'
-import {useRoute} from 'expo-router';
 import {useAuth} from "@/context/AuthContext";
 import { useYupForm } from '@/hooks/useYupForm';
 import {setNewPasswordSchema} from '@/utils/validation';
@@ -10,6 +9,7 @@ import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useThemedColors } from '@/hooks/useTheme';
+import { useSecretLinkParam } from '@/hooks/useSecretLinkParam';
 import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
@@ -24,7 +24,6 @@ interface SetPasswordFormValues {
 
 export default function SetPassword() {
     const navigation = useNavigation();
-    const route = useRoute();
     const isFocused = useIsFocused();
     const { setNewPassword } = useAuth();
     const [msg, setMsg] = useState<{ text: string; error: boolean }>({ text: '', error: false });
@@ -33,8 +32,8 @@ export default function SetPassword() {
     const styles = useMemo(() => createStyles(colors), [colors]);
     const navTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const routeParams = route.params as { password_reset_token?: string } || {};
-    const { password_reset_token } = routeParams;
+    // Секрет уходит из адресной строки сразу после посадки (#2145).
+    const password_reset_token = useSecretLinkParam('/set-password', 'password_reset_token');
     const hasToken = Boolean(password_reset_token);
 
     useEffect(() => {

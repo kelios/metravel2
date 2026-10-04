@@ -23,6 +23,7 @@ import {
   type SubscriptionLinkAction,
   type SubscriptionLinkResult as LinkResult,
 } from '@/api/subscriptionLinks';
+import { useSecretLinkParam } from '@/hooks/useSecretLinkParam';
 
 type ViewState = 'pending' | LinkResult;
 
@@ -52,8 +53,9 @@ export default function SubscriptionLinkResult({ action }: Props) {
   const scrollBottomPadding = useScrollBottomPadding(24);
   const router = useRouter();
   const isFocused = useIsFocused();
-  const params = useLocalSearchParams<{ token?: string | string[]; status?: string | string[] }>();
-  const token = firstParam(params.token).trim();
+  const params = useLocalSearchParams<{ status?: string | string[] }>();
+  // Токен уходит из адресной строки сразу после посадки (#2145).
+  const token = useSecretLinkParam(ROUTE_BY_ACTION[action], 'token');
   const statusParam = firstParam(params.status).trim();
 
   const [state, setState] = useState<ViewState>('pending');

@@ -10,9 +10,12 @@
  * - `app/+html.tsx` (`shouldNoindexPath`) — noindex до гидрации;
  * - `utils/analyticsInlineScript.ts` (`trackPage`) — секретные параметры
  *   вырезаются из URL до отправки в Метрику и GA4;
+ * - `hooks/useSecretLinkParam.ts` — экран читает секрет только через хук, а тот
+ *   сразу убирает его из адресной строки (#2145: после старта тэгов «Назад» не
+ *   должен вернуть секрет в `document.location` — clickmap/Вебвизор Метрики);
  * - governance-тест `__tests__/app/secretLinkRoutes.governance.test.ts`
- *   держит файл роута, запись noindex в `scripts/generate-seo-pages.js` и
- *   `robots="noindex, nofollow"` на экране.
+ *   держит файл роута, запись noindex в `scripts/generate-seo-pages.js`,
+ *   `robots="noindex, nofollow"` на экране и чтение секрета через хук.
  */
 
 const SECRET_LINK_ROUTES = Object.freeze([

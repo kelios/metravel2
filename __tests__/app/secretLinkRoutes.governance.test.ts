@@ -59,6 +59,41 @@ describe('secret e-mail link routes', () => {
     }
   })
 
+  // #2145: секрет не остаётся в адресной строке — иначе после старта тэгов
+  // «Назад» возвращает его в document.location, и clickmap/Вебвизор Метрики
+  // отправляют его как page-url. Экран (и его компоненты) читает секрет только
+  // через useSecretLinkParam, прямое чтение из query запрещено.
+  it.each(
+    SECRET_LINK_ROUTES.flatMap((entry) => entry.secretParams.map((param) => [entry.route, param] as const))
+  )('%s: ?%s is read only through useSecretLinkParam', (route, param) => {
+    const files = routeFiles(route)
+    expect(files.length).toBeGreaterThan(0)
+    const chain = new Set(files)
+    for (const file of files) {
+      for (const [, spec] of read(file).matchAll(/from '(@\/components\/[^']+)'/g)) {
+        const resolved = resolveAlias(spec)
+        if (resolved) chain.add(resolved)
+      }
+    }
+    const sources = [...chain].map((file) => ({ file, source: read(file) }))
+
+    const consumer = sources.find(({ source }) =>
+      new RegExp(`useSecretLinkParam\\([^)]*'${param}'\\)`).test(source) && source.includes(`'${route}'`)
+    )
+    expect({ route, param, consumer: consumer?.file ?? null }).toEqual({ route, param, consumer: expect.any(String) })
+
+    const directRead = new RegExp(
+      [
+        `\\{[^}]*\\b${param}\\b[^}]*\\}\\s*=\\s*(useLocalSearchParams|useGlobalSearchParams|route\\.params)`,
+        `(params|route\\.params)\\??\\.${param}\\b`,
+        `use(Local|Global)SearchParams<[^>]*\\b${param}\\b`,
+        `route\\.params as \\{[^}]*\\b${param}\\b`,
+      ].join('|')
+    )
+    const offenders = sources.filter(({ source }) => directRead.test(source)).map(({ file }) => file)
+    expect({ route, param, offenders }).toEqual({ route, param, offenders: [] })
+  })
+
   it.each(SECRET_LINK_ROUTES.map((entry) => entry.route))('%s: SSG page is noindex', (route) => {
     const entry = generatorEntry(generator, route)
     expect(entry).not.toBeNull()

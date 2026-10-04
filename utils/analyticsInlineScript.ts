@@ -188,7 +188,10 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   // clickmap, GA4 enhanced measurement such as scroll), so stripping our own hits
   // is not enough (#2121 prod acceptance). While the address bar carries an
   // e-mail-link secret the tags are not loaded at all; they start on the first
-  // clean URL of the session (e.g. after "To quests").
+  // clean URL of the session. Once loaded they cannot be paused (tag.js reads
+  // disableYaCounter only at init), so the secret must never come back to the
+  // address bar: screens consume it via hooks/useSecretLinkParam, which removes
+  // it from the URL with a replace right after landing (#2145).
   function hasSecretParams(value){
     var s = String(value || '');
     return stripSecretParams(s) !== s;
