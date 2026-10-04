@@ -254,4 +254,11 @@ describe('registry completeness', () => {
     expect(registryRoots.filter((root) => root in BLOCK_EXEMPT_ROOTS)).toEqual([])
     Object.values(BLOCK_EXEMPT_ROOTS).forEach((reason) => expect(reason.trim()).not.toBe(''))
   })
+
+  it('refetches the places catalog and place sources after a block (#2165)', () => {
+    // Оба несут путешествия авторов, а бэк режет их по сессии (#2164).
+    expect(registryRoots).toEqual(expect.arrayContaining(['places-catalog', 'map-place-sources']))
+    expect(BLOCK_EXEMPT_ROOTS).not.toHaveProperty('places-catalog')
+    expect(BLOCK_EXEMPT_ROOTS).not.toHaveProperty('map-place-sources')
+  })
 })

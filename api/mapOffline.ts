@@ -77,6 +77,11 @@ export async function fetchOfflineMapPoints(
   const url = `${rawApiUrl}/map/points_bulk/?bbox=${encodeURIComponent(serializeOfflineMapBBox(bbox))}`;
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (options.etag) headers['If-None-Match'] = options.etag;
+  // Анонимно намеренно (#2165): адаптер офлайн-региона сохраняет ответ как
+  // публичный пакет (`services/offline/mapOfflineAdapter.ts`, authScope 'public'),
+  // а выборка с сессией отфильтрована под вошедшего (#2164) — её нельзя отдать
+  // гостю (`docs/features/offline.md`, «Auth-only/private response»). При
+  // подключении региона с сессией адаптеру нужен authScope `user:<id>`.
   const response = await fetchWithTimeout(url, {
     method: 'GET',
     headers,

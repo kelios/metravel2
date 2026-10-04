@@ -12,6 +12,7 @@ import { normalizeNumericArray } from '@/utils/filterQuery';
 import { devError, devWarn } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { fetchPublicWithSession } from '@/api/publicFetchWithSession';
 import { Platform } from 'react-native';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
@@ -280,6 +281,9 @@ const MAP_FETCH_RETRY_DELAY_MS = process.env.NODE_ENV === 'test' ? 0 : 350;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// #2165: гео-выдача и ленты путешествий читаются с сессией — бэк режет в них
+// заблокированных авторов по тому, кто спрашивает (#2164). Справочник фильтров
+// (`filterformap`) авторского контента не содержит и остаётся анонимным.
 const fetchWithTransientRetry = async (
   url: string,
   init: RequestInit,
@@ -288,7 +292,7 @@ const fetchWithTransientRetry = async (
 ) => {
   let attempt = 0;
   while (true) {
-    const response = await fetchWithTimeout(url, init, timeoutMs);
+    const response = await fetchPublicWithSession(url, init, timeoutMs);
     const shouldRetry =
       attempt < retries && !response.ok && TRANSIENT_HTTP_STATUSES.has(response.status);
     if (!shouldRetry) return response;
@@ -329,7 +333,7 @@ export const fetchTravelsNear = async (
 ): Promise<Travel[]> => {
   try {
     const urlTravel = withOptionalLimit(`${GET_TRAVELS}${travel_id}/near/`, limit);
-    const res = await fetchWithTimeout(urlTravel, { signal }, DEFAULT_TIMEOUT);
+    const res = await fetchPublicWithSession(urlTravel, { signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
       devError('Error fetching travels near: HTTP', res.status, res.statusText, urlTravel);
       throw new ApiError(
@@ -419,7 +423,7 @@ export const fetchNearbyTravelMapPoints = async (
     });
 
     try {
-      const response = await fetchWithTimeout(
+      const response = await fetchPublicWithSession(
         `${SEARCH_TRAVELS_FOR_MAP_LITE}?${params.toString()}`,
         { signal },
         DEFAULT_TIMEOUT,
@@ -493,7 +497,7 @@ export const fetchNearbyTravelMapPoints = async (
 export const fetchTravelsPopular = async (options?: ApiOptions): Promise<TravelsMap> => {
   try {
     const urlTravel = withOptionalLimit(`${GET_TRAVELS}popular/`, options?.limit);
-    const res = await fetchWithTimeout(urlTravel, { signal: options?.signal }, DEFAULT_TIMEOUT);
+    const res = await fetchPublicWithSession(urlTravel, { signal: options?.signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
       // Keep behavior: return empty payload, but surface actionable info in dev.
       if (res.status === 404) {
@@ -520,7 +524,7 @@ export const fetchTravelsPopular = async (options?: ApiOptions): Promise<Travels
 export const fetchTravelsOfMonth = async (options?: ApiOptions): Promise<TravelsMap> => {
   try {
     const urlTravel = withOptionalLimit(GET_TRAVELS_OF_MONTH, options?.limit);
-    const res = await fetchWithTimeout(urlTravel, { signal: options?.signal }, DEFAULT_TIMEOUT);
+    const res = await fetchPublicWithSession(urlTravel, { signal: options?.signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
       const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
       if (options?.throwOnError) throw err;
@@ -540,7 +544,7 @@ export const fetchTravelsOfMonth = async (options?: ApiOptions): Promise<Travels
 export const fetchTravelsRandom = async (options?: ApiOptions): Promise<unknown[]> => {
   try {
     const urlTravel = withOptionalLimit(GET_TRAVELS_RANDOM, options?.limit);
-    const res = await fetchWithTimeout(urlTravel, { signal: options?.signal }, DEFAULT_TIMEOUT);
+    const res = await fetchPublicWithSession(urlTravel, { signal: options?.signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
       const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
       if (options?.throwOnError) throw err;
@@ -870,7 +874,8 @@ export const fetchTravelsNearRoute = async (
       tolerance: toleranceMeters,
     };
 
-    const res = await fetchWithTimeout(SEARCH_TRAVELS_NEAR_ROUTE, {
+    // POST: на web помощник добавляет X-CSRFToken (сессионная cookie без него → 403).
+    const res = await fetchPublicWithSession(SEARCH_TRAVELS_NEAR_ROUTE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

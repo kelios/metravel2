@@ -72,6 +72,9 @@ export const BLOCK_SENSITIVE_ENTRIES: readonly SensitiveEntry[] = [
   { key: queryKeys.travelsForMapAll() },
   { key: queryKeys.travelsForMapRouteAll() },
   { key: queryKeys.mapClustersAll() },
+  // #2165: каталог мест и материалы места несут путешествия авторов; бэк режет их по сессии (#2164).
+  { key: ['places-catalog'] },
+  { key: queryKeys.mapPlaceSourcesAll() },
   { key: ['recommendations'] },
   { key: ['favorites'] },
   { key: ['view-history'] },
@@ -98,7 +101,6 @@ export const BLOCK_EXEMPT_ROOTS: Readonly<Record<string, string>> = {
   travelUserRating: 'своя оценка',
   questUserReview: 'свой отзыв',
   'roulette-travel-facets': 'агрегаты фильтров без карточек',
-  'map-place-sources': 'материалы места, не автора',
   'location-search': 'геокодер',
   'reverse-geocode': 'геокодер',
   'terms-accepted-current': 'своё согласие',
@@ -132,7 +134,6 @@ export const BLOCK_EXEMPT_ROOTS: Readonly<Record<string, string>> = {
   'participant-rating': 'оценка участника; профиль скрыт при блоке',
   'telegram-link': 'своя привязка',
   'trip-telegram-group': 'группа поездки; доступ режет бэк',
-  'places-catalog': 'места, не авторский контент',
 }
 
 // ---- Набор заблокированных ----------------------------------------------------

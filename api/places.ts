@@ -1,7 +1,7 @@
 import { Platform } from 'react-native'
 
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl'
-import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
+import { fetchPublicWithSession } from '@/api/publicFetchWithSession'
 import { safeJsonParse } from '@/utils/safeJsonParse'
 import {
   mapPlacesCatalogResponse,
@@ -71,7 +71,8 @@ export const fetchPlacesCatalog = async (
   signal?: AbortSignal,
 ): Promise<PlacesCatalogPage> => {
   const url = `${PLACES_CATALOG_URL}?${buildQuery(params)}`
-  const res = await fetchWithTimeout(url, { signal }, PLACES_CATALOG_TIMEOUT_MS)
+  // #2165: каталог мест несёт путешествия авторов — с сессией, чтобы бэк скрыл заблокированных (#2164).
+  const res = await fetchPublicWithSession(url, { signal }, PLACES_CATALOG_TIMEOUT_MS)
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}: ${res.statusText}`)
   }

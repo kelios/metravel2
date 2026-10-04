@@ -2,19 +2,13 @@ import { Article } from '@/types/types';
 import { devError } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { unwrapList, unwrapPaginated } from '@/api/clientResponse';
-import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { Platform } from 'react-native';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
 import { translate as i18nT } from '@/i18n';
 import { onlineManager } from '@tanstack/react-query';
 import { isRecoverablePublicStaleError } from '@/utils/publicStaleCache';
 import { readArticleOffline, saveArticleOffline } from '@/services/offline/articleOfflineAdapter';
-import { getSecureItem } from '@/utils/secureStorage';
-import {
-  ACCESS_TOKEN_STORAGE_KEY,
-  getApiRequestCredentials,
-  shouldUseStoredAuthToken,
-} from '@/utils/authPlatform';
+import { fetchPublicWithSession } from '@/api/publicFetchWithSession';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
@@ -37,34 +31,13 @@ const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запро�
 
 const GET_ARTICLES = `${URLAPI}/articles`;
 
-/**
- * #2130/#2134: статьи читаются с сессией (web — cookie, native — `Token`), иначе бэк
- * не применит фильтр блокировок автора (`articles/views.py:107`) и вошедший
- * пользователь видел бы статьи заблокированного. 401 на чтении — устаревший токен
- * (бэк так отвечает на плохой заголовок): публичное чтение повторяется без сессии,
- * токен не трогаем — как у детали путешествия (`api/travelDetailsQueries.ts`).
- * Обёртка над сырым fetch, а не `apiClient`: ветки 404/офлайна ниже читают `Response`.
- */
-const fetchArticlesWithSession = async (
+// #2130/#2134: статьи читаются с сессией, иначе бэк не применит фильтр блокировок
+// автора (`articles/views.py:107`); общий помощник — `api/publicFetchWithSession.ts`.
+const fetchArticlesWithSession = (
   url: string,
   signal: AbortSignal | undefined,
   timeout: number,
-): Promise<Response> => {
-  const token = shouldUseStoredAuthToken()
-    ? await getSecureItem(ACCESS_TOKEN_STORAGE_KEY).catch(() => null)
-    : null;
-  const response = await fetchWithTimeout(
-    url,
-    {
-      signal,
-      ...getApiRequestCredentials(),
-      ...(token ? { headers: { Authorization: `Token ${token}` } } : {}),
-    },
-    timeout,
-  );
-  if (response.status !== 401) return response;
-  return fetchWithTimeout(url, { signal, ...getApiRequestCredentials(true) }, timeout);
-};
+): Promise<Response> => fetchPublicWithSession(url, { signal }, timeout);
 
 const ARTICLE_STOPWORDS = new Set([
   'a',
