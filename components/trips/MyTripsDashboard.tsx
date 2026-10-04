@@ -13,7 +13,6 @@ import Chip from '@/components/ui/Chip';
 import { useAuthedQuerySettled } from '@/hooks/useAuthedQuerySettled';
 import { useMyPlannedTrips } from '@/hooks/usePlannedTripsApi';
 import { useMyTripApplications, useTripNotifications } from '@/hooks/usePublicTripsApi';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
 import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
@@ -36,11 +35,13 @@ const SECTION_COPY: Record<DashboardSection, { title: string; description: strin
   },
 };
 
+// Иконки сегментов видны с ширины планшета — через реестр `CHIP_LAYOUT`, верно с первого кадра (#2157).
+const SEGMENT_ICON_SIZE = 15;
+
 export default function MyTripsDashboard() {
   const colors = useThemedColors();
-  const { isMobile } = useResponsive();
   const contentPaddingBottom = useScrollBottomPadding(32);
-  const styles = useMemo(() => createStyles(colors, isMobile, contentPaddingBottom), [colors, contentPaddingBottom, isMobile]);
+  const styles = useMemo(() => createStyles(colors, contentPaddingBottom), [colors, contentPaddingBottom]);
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<DashboardSection>('organized');
   const plannedTripsQuery = useMyPlannedTrips();
@@ -107,7 +108,9 @@ export default function MyTripsDashboard() {
             countPending={plannedTripsLoading}
             selected={activeSection === 'organized'}
             onPress={() => setActiveSection('organized')}
-            icon={isMobile ? undefined : <Feather name="briefcase" size={15} color={colors.primaryDark} />}
+            icon={<Feather name="briefcase" size={SEGMENT_ICON_SIZE} color={colors.primaryDark} />}
+            iconVisibility="fromTablet"
+            iconSlotSize={SEGMENT_ICON_SIZE}
             testID="my-trips-segment-organized"
           />
           <Chip
@@ -116,7 +119,9 @@ export default function MyTripsDashboard() {
             countPending={plannedTripsLoading}
             selected={activeSection === 'participating'}
             onPress={() => setActiveSection('participating')}
-            icon={isMobile ? undefined : <Feather name="users" size={15} color={colors.primaryDark} />}
+            icon={<Feather name="users" size={SEGMENT_ICON_SIZE} color={colors.primaryDark} />}
+            iconVisibility="fromTablet"
+            iconSlotSize={SEGMENT_ICON_SIZE}
             testID="my-trips-segment-participating"
           />
           <Chip
@@ -125,7 +130,9 @@ export default function MyTripsDashboard() {
             countPending={applicationsLoading}
             selected={activeSection === 'applications'}
             onPress={() => setActiveSection('applications')}
-            icon={isMobile ? undefined : <Feather name="send" size={15} color={colors.primaryDark} />}
+            icon={<Feather name="send" size={SEGMENT_ICON_SIZE} color={colors.primaryDark} />}
+            iconVisibility="fromTablet"
+            iconSlotSize={SEGMENT_ICON_SIZE}
             testID="my-trips-segment-applications"
           />
         </ScrollView>
@@ -155,7 +162,7 @@ export default function MyTripsDashboard() {
   );
 }
 
-const createStyles = (colors: ThemedColors, isMobile: boolean, contentPaddingBottom: number | string) =>
+const createStyles = (colors: ThemedColors, contentPaddingBottom: number | string) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: asBottomDimension(contentPaddingBottom), alignItems: 'center' },

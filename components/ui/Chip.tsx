@@ -3,6 +3,9 @@ import { Pressable, StyleSheet, Text, View, Platform, type StyleProp, type ViewS
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { useBreakpoints } from '@/hooks/useResponsive';
+import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout';
+import { CHIP_LAYOUT } from './chipLayout';
 
 interface ChipProps {
   label: string;
@@ -14,6 +17,17 @@ interface ChipProps {
    */
   countPending?: boolean;
   icon?: React.ReactNode;
+  /**
+   * `fromTablet` — иконка видна только с ширины планшета и верна с первого кадра:
+   * узел есть всегда, видимость задаёт `CHIP_LAYOUT` (React + critical CSS, #2157).
+   * Условный `icon={isMobile ? undefined : …}` расширял чип после гидратации.
+   */
+  iconVisibility?: 'always' | 'fromTablet';
+  /**
+   * Фиксированный бокс иконки: догрузка шрифта иконок не меняет ширину чипа
+   * (тот же приём, что `globeSlot` у `LanguageSwitcher`, #1298).
+   */
+  iconSlotSize?: number;
   onPress?: () => void;
   testID?: string;
   disabled?: boolean;
@@ -23,8 +37,24 @@ interface ChipProps {
 const radii = DESIGN_TOKENS.radii;
 const spacing = DESIGN_TOKENS.spacing;
 
-function Chip({ label, selected = false, count, countPending = false, icon, onPress, testID, disabled = false, style }: ChipProps) {
+function Chip({
+  label,
+  selected = false,
+  count,
+  countPending = false,
+  icon,
+  iconVisibility = 'always',
+  iconSlotSize,
+  onPress,
+  testID,
+  disabled = false,
+  style,
+}: ChipProps) {
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Динамическая поддержка тем
+  const iconSlotStyle = useMemo(
+    () => (iconSlotSize ? { width: iconSlotSize, height: iconSlotSize, alignItems: 'center' as const, justifyContent: 'center' as const } : null),
+    [iconSlotSize],
+  );
 
   const styles = useMemo(() => StyleSheet.create({
     base: {
@@ -116,7 +146,15 @@ function Chip({ label, selected = false, count, countPending = false, icon, onPr
         style,
       ]}
     >
-      {icon ? <View style={styles.icon}>{icon}</View> : null}
+      {icon ? (
+        iconVisibility === 'fromTablet' ? (
+          <TabletIconSlot style={[styles.icon, iconSlotStyle]} testID={testID ? `${testID}-icon` : undefined}>
+            {icon}
+          </TabletIconSlot>
+        ) : (
+          <View style={[styles.icon, iconSlotStyle]} testID={testID ? `${testID}-icon` : undefined}>{icon}</View>
+        )
+      ) : null}
       <Text style={[styles.label, selected && styles.labelSelected]} numberOfLines={1}>
         {label}
       </Text>
@@ -134,6 +172,24 @@ function Chip({ label, selected = false, count, countPending = false, icon, onPr
         </Text>
       ) : null}
     </Pressable>
+  );
+}
+
+/**
+ * Слот иконки «от ширины планшета»: узел есть на любой ширине, видимость — из
+ * `CHIP_LAYOUT` (React по живой ширине, первый кадр — critical CSS, #2157).
+ * Отдельный компонент, чтобы на ширину подписывались только такие чипы.
+ */
+function TabletIconSlot({ style, testID, children }: { style: StyleProp<ViewStyle>; testID?: string; children: React.ReactNode }) {
+  const { width } = useBreakpoints();
+  return (
+    <View
+      style={[style, breakpointStyle(CHIP_LAYOUT, 'tabletIcon', width >= CHIP_LAYOUT.minWidth)]}
+      {...breakpointLayoutProps(CHIP_LAYOUT, 'tabletIcon')}
+      testID={testID}
+    >
+      {children}
+    </View>
   );
 }
 

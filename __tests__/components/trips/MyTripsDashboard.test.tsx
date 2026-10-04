@@ -21,6 +21,7 @@ jest.mock('@/hooks/useTheme', () => ({
 
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ isMobile: false }),
+  useBreakpoints: () => ({ width: 1280 }),
 }));
 
 let mockPlannedTripsState: { data?: unknown; isLoading: boolean } = {

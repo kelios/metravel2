@@ -191,6 +191,9 @@ test.describe('Mobile screen budget (#2094)', () => {
       // Механизм #2114 не вернулся: ни блок «Обновления», ни сегменты не сдвигаются
       // (до правки они и были источником; один порог 0,05 этого не отличал).
       expect(shifts.filter((line) => /my-trips-updates/.test(line))).toEqual([])
+      // #2157: иконка сегмента «от планшета» стоит в разметке с первого кадра
+      // (CHIP_LAYOUT + critical CSS) — появление иконки не расширяет чип и не сдвигает соседей.
+      expect(shifts.filter((line) => /my-trips-segment-/.test(line))).toEqual([])
     })
   }
 

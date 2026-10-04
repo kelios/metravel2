@@ -1,6 +1,7 @@
 import { Platform } from 'react-native'
 
 import { ABOUT_LAYOUT, ABOUT_WIDE_MIN_WIDTH } from '@/components/about/aboutLayout'
+import { CHIP_LAYOUT } from '@/components/ui/chipLayout'
 import {
   assertBreakpointBlock,
   breakpointLayoutProps,
@@ -67,5 +68,13 @@ describe('breakpointLayout', () => {
     expect(css).toContain(
       '[data-bp-layout="about-categoriesCard"]{width:calc(25% - 12px) !important;min-width:180px !important}',
     )
+  })
+
+  it('иконка чипа «от планшета» (#2157): display из реестра попадает в critical CSS от 768 px', () => {
+    for (const [key, block] of Object.entries(CHIP_LAYOUT.blocks)) assertBreakpointBlock(key, block)
+    expect(breakpointStyle(CHIP_LAYOUT, 'tabletIcon', false)).toEqual({ display: 'none' })
+    const css = buildCriticalCSS()
+    expect(css).toContain('[data-bp-layout="chip-tabletIcon"]{display:flex !important}')
+    expect(buildBreakpointLayoutCss(CHIP_LAYOUT)).toContain('@media (min-width:768px){')
   })
 })
