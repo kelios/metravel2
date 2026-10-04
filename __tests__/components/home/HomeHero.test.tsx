@@ -122,15 +122,18 @@ describe('HomeHero Component', () => {
       )
     })
 
-    it('keeps metravel book cover links inside app navigation', () => {
+    it('native: book cover link goes through the single openExternalUrl decision point (#2144)', () => {
       const { getByLabelText } = render(<HomeHero />)
 
       fireEvent.press(getByLabelText(/Открыть маршрут недели: Озеро Сорапис/))
 
-      expect(mockPush).toHaveBeenCalledWith(
-        '/travels/ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom?returnTo=%2Fsearch',
+      // openExternalUrl opens a site path that has an app screen via
+      // expo-router (see the book-cover invariant below), so no own router.push.
+      expect(openExternalUrl).toHaveBeenCalledWith(
+        'https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom?returnTo=%2Fsearch',
+        expect.objectContaining({ allowRelative: true }),
       )
-      expect(openExternalUrl).not.toHaveBeenCalled()
+      expect(mockPush).not.toHaveBeenCalled()
       expect(openExternalUrlInNewTab).not.toHaveBeenCalled()
     })
   })
@@ -244,61 +247,17 @@ describe('HomeHero Component', () => {
     })
   })
 
-  describe('getInternalHrefPath — URL-free host/path parsing (Android bug 58)', () => {
-    const { getInternalHrefPath } = require('@/components/home/HomeHero')
-
-    it('returns absolute path verbatim', () => {
-      expect(getInternalHrefPath('/search')).toBe('/search')
-      expect(getInternalHrefPath('/travels/x?y=1')).toBe('/travels/x?y=1')
-    })
-
-    it('extracts path+query+hash for internal hosts', () => {
-      expect(
-        getInternalHrefPath(
-          'https://metravel.by/travels/morskoe-oko-v-mae',
-        ),
-      ).toBe('/travels/morskoe-oko-v-mae')
-      expect(
-        getInternalHrefPath(
-          'https://metravel.by/travels/ozero-sorapis?returnTo=%2Fsearch',
-        ),
-      ).toBe('/travels/ozero-sorapis?returnTo=%2Fsearch')
-      expect(getInternalHrefPath('https://www.metravel.by/foo?a=1#frag')).toBe(
-        '/foo?a=1#frag',
-      )
-    })
-
-    it('returns "/" for bare internal host without path', () => {
-      expect(getInternalHrefPath('https://metravel.by')).toBe('/')
-      expect(getInternalHrefPath('http://metravel.by')).toBe('/')
-      expect(getInternalHrefPath('https://metravel.by/')).toBe('/')
-    })
-
-    it('ignores port and is case-insensitive on host', () => {
-      expect(getInternalHrefPath('https://metravel.by:443/path?q=1')).toBe(
-        '/path?q=1',
-      )
-      expect(getInternalHrefPath('https://Metravel.BY/x')).toBe('/x')
-    })
-
-    it('returns null for external or non-http hrefs and host spoofing', () => {
-      expect(getInternalHrefPath('https://example.com/x')).toBeNull()
-      expect(getInternalHrefPath('https://metravel.by.evil.com/x')).toBeNull()
-      expect(getInternalHrefPath('mailto:a@b.com')).toBeNull()
-      expect(getInternalHrefPath('not a url')).toBeNull()
-    })
-
-    it('matches every internal book cover href to an in-app path', () => {
+  describe('book cover links (#2144)', () => {
+    it('every metravel book cover href has an app screen, so native opens it in the app', () => {
+      const { resolveAppRouteForSiteUrl } = require('@/utils/siteLinks')
       const { BOOK_IMAGES_FOR_TEST } = require('@/components/home/HomeHero')
-      BOOK_IMAGES_FOR_TEST.filter((img: any) => img.href).forEach(
-        (img: any) => {
-          const path = getInternalHrefPath(img.href)
-          expect(path).toBe(
-            img.href.replace(/^https?:\/\/(www\.)?metravel\.by/i, '') || '/',
-          )
-          expect(path?.startsWith('/')).toBe(true)
-        },
-      )
+      const hrefs = BOOK_IMAGES_FOR_TEST.filter((img: any) => img.href).map((img: any) => img.href)
+      expect(hrefs.length).toBeGreaterThan(0)
+      hrefs.forEach((href: string) => {
+        expect(resolveAppRouteForSiteUrl(href)).toBe(
+          href.replace(/^https?:\/\/(www\.)?metravel\.by/i, '').split('#')[0] || '/',
+        )
+      })
     })
   })
 

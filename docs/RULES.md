@@ -625,6 +625,10 @@ not by the fastest patch that makes the symptom disappear.
   `utils/siteLinks.ts` (`APP_ROUTE_ROOTS`, kept in sync with `app/` by
   `__tests__/utils/siteLinks.test.ts`); site paths without a screen (`/api/…`,
   `/media/…`, `/board`) and foreign hosts still open externally. Web is unchanged.
+  No other module decides «internal link» itself: rich text, home and related
+  travel links hand native navigation to `openExternalUrl`, and a module that
+  calls `router.push` holds no site-host literal or `new URL(...)` — guard
+  `__tests__/config/siteLinkResolver.guard.test.ts` (#2144).
 - Native navigation surfaces never link to web-only routes (`/cookies`,
   `/export`): every menu filters by `isNavRouteAvailable` from
   `constants/platformNavRoutes.ts` instead of its own `Platform.OS` check.

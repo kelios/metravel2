@@ -7,6 +7,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { ResponsiveContainer } from '@/components/layout'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks'
+import { getSiteBaseUrl } from '@/utils/seo'
+import { resolveSitePath } from '@/utils/siteLinks'
 import { createHomeHeroStyles } from './homeHeroStyles'
 import { useHomeViewport } from './useHomeViewport'
 import HomeHeroBookLayout from './HomeHeroBookLayout'
@@ -43,7 +45,6 @@ const SLIDER_MEDIA_WIDTH_WIDE = 500
 const SLIDER_MEDIA_WIDTH_COMPACT = 380
 const SLIDER_DESKTOP_BREAKPOINT = 1480
 const NAV_FEEDBACK_MS = 700
-const INTERNAL_HOSTS = new Set(['metravel.by', 'www.metravel.by'])
 
 interface HomeHeroProps {
   travelsCount?: number
@@ -87,21 +88,6 @@ function getEstimatedBookWrapperWidth(viewportWidth: number) {
 }
 
 const getBookSlideSource = (slide: (typeof BOOK_IMAGES)[number]) => slide.source
-
-// Hermes' built-in URL is not spec-compliant (no react-native-url-polyfill),
-// so parse host/path by string/regex for identical behavior on web and native.
-export function getInternalHrefPath(href: string) {
-  const trimmedHref = href.trim()
-  if (trimmedHref.startsWith('/')) return trimmedHref
-
-  const match = /^https?:\/\/([^/?#]+)([/?#][^]*)?$/i.exec(trimmedHref)
-  if (!match) return null
-
-  const host = match[1].toLowerCase().replace(/:\d+$/, '')
-  if (!INTERNAL_HOSTS.has(host)) return null
-
-  return match[2] || '/'
-}
 
 const HomeHero = memo(function HomeHero({
   travelsCount = 0,
@@ -278,13 +264,19 @@ const HomeHero = memo(function HomeHero({
         return
       }
       queueAnalyticsEvent('HomeClick_BookCover', { href })
-      const internalPath = getInternalHrefPath(href)
-      if (internalPath) {
-        router.push(internalPath as any)
+      // #2144: на web ссылка на свой сайт — SPA-переход; на native решение
+      // «экран приложения или браузер» принимает только `openExternalUrl`
+      // (хост сайта + экран `app/`, якорь отброшен), своего разбора хоста нет.
+      if (IS_WEB) {
+        const sitePath = resolveSitePath(href)
+        if (sitePath) {
+          router.push(sitePath as any)
+          return
+        }
+        openExternalUrlInNewTab(href)
         return
       }
-      if (IS_WEB) openExternalUrlInNewTab(href)
-      else openExternalUrl(href)
+      void openExternalUrl(href, { allowRelative: true, baseUrl: getSiteBaseUrl() })
     },
     [router],
   )

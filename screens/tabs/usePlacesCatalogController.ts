@@ -8,6 +8,7 @@ import { fetchPlacesCatalog, type PlacesCatalogSort } from '@/api/places'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import type { CatalogPlace } from '@/utils/placesCatalog'
 import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel'
+import { getSiteBaseUrl } from '@/utils/seo'
 
 import {
   type CategoryCollection,
@@ -239,7 +240,7 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
     if (!place.urlTravel) return
     const internalRoute = normalizeRelatedTravelRoute(place.urlTravel)
     if (internalRoute) router.push(internalRoute as Href)
-    else void openExternalUrlInNewTab(place.urlTravel)
+    else void openExternalUrlInNewTab(place.urlTravel, { allowRelative: true, baseUrl: getSiteBaseUrl() })
   }, [router])
 
   const hasActiveFilters = selectedCategories.length > 0 || Boolean(selectedCountry) || Boolean(query)

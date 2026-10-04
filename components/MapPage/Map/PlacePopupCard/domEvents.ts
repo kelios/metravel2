@@ -34,10 +34,3 @@ export const getPopupEventNodes = (node: any): EventTarget[] => {
   if (Platform.OS !== 'web' || !node?.addEventListener) return [];
   return [node];
 };
-
-export const isInternalArticleHref = (pathname: string) => (
-  pathname.startsWith('/travel/') ||
-  pathname.startsWith('/travels/') ||
-  pathname.startsWith('/article/') ||
-  pathname.startsWith('/articles/')
-);

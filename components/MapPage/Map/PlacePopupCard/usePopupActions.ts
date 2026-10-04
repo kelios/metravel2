@@ -10,7 +10,7 @@ import {
 } from '@/components/navigation/navigationActionMeta';
 
 import { getPopupTooltips } from './constants';
-import { isInternalArticleHref } from './domEvents';
+import { isSiteArticlePath, resolveSitePath } from '@/utils/siteLinks';
 import { translate as i18nT } from '@/i18n'
 import { formatInteger } from '@/i18n/format'
 import { formatDistanceMeters } from '@/utils/distanceCalculator'
@@ -69,23 +69,12 @@ export function usePopupActions({
   const popupTooltips = useMemo(getPopupTooltips, []);
   const hasCoord = !!coord;
 
+  // #2144: хост и путь — единый строковый `resolveSitePath` (без `new URL`,
+  // неспецифичного на Hermes), предикат статьи — `isSiteArticlePath`. Открытие
+  // по кнопке решает `createMapPopupComponent` тем же резолвером сайта.
   const normalizedArticleHref = useMemo(() => {
-    const rawHref = String(articleHref ?? '').trim();
-    if (!rawHref) return null;
-    if (isInternalArticleHref(rawHref)) return rawHref;
-
-    if (/^https?:\/\//i.test(rawHref)) {
-      try {
-        const parsed = new URL(rawHref);
-        if (isInternalArticleHref(parsed.pathname)) {
-          return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-        }
-      } catch {
-        return null;
-      }
-    }
-
-    return null;
+    const sitePath = resolveSitePath(String(articleHref ?? ''));
+    return sitePath && isSiteArticlePath(sitePath) ? sitePath : null;
   }, [articleHref]);
   const hasArticle = !!normalizedArticleHref && typeof onOpenArticle === 'function';
 

@@ -1,7 +1,7 @@
 import { Linking, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
-import { resolveAppRouteForSiteUrl } from '@/utils/siteLinks';
+import { resolveAppRouteForSiteUrl, resolveSitePath } from '@/utils/siteLinks';
 
 type OpenExternalUrlOptions = {
   allowRelative?: boolean;
@@ -154,14 +154,9 @@ export function normalizeHttpOrInternalUrl(rawUrl: string): string {
       baseUrl: INTERNAL_LINK_BASE_URL,
       allowedProtocols: HTTP_PROTOCOLS,
     });
-    try {
-      return normalized
-        && new URL(normalized).origin === new URL(INTERNAL_LINK_BASE_URL).origin
-        ? normalized
-        : '';
-    } catch {
-      return '';
-    }
+    // #2144: принадлежность сайту решает единый строковый `resolveSitePath`
+    // (хост без порта), а не сравнение origin через `new URL`.
+    return normalized && resolveSitePath(normalized) ? normalized : '';
   }
 
   if (EXPLICIT_SCHEME.test(trimmed) && !/^https?:/i.test(trimmed)) return '';

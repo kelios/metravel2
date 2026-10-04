@@ -29,7 +29,10 @@ const buildSiteHosts = (): ReadonlySet<string> => {
   return hosts
 }
 
-const SITE_HOSTS = buildSiteHosts()
+// Лениво, при первом разборе ссылки: модуль импортируют утилиты навигации, и
+// чтение конфигурации на импорте сделало бы порядок загрузки значимым (#2144).
+let siteHosts: ReadonlySet<string> | null = null
+const getSiteHosts = (): ReadonlySet<string> => (siteHosts ??= buildSiteHosts())
 
 /**
  * Если ссылка ведёт на наш сайт (относительный путь или абсолютный URL на
@@ -52,7 +55,7 @@ export function resolveSitePath(href?: string | null): string | null {
   const match = /^https?:\/\/([^/?#]+)(.*)$/i.exec(trimmed)
   if (!match) return null
   const host = match[1].toLowerCase()
-  if (!SITE_HOSTS.has(host)) return null
+  if (!getSiteHosts().has(host)) return null
   const rest = match[2] || '/'
   return rest.startsWith('/') ? rest : `/${rest}`
 }
@@ -133,4 +136,17 @@ export function resolveAppRouteForSiteUrl(href?: string | null): string | null {
   if (!sitePath || !isAppRoutePath(sitePath)) return null
   const [withoutHash] = sitePath.split('#')
   return withoutHash || '/'
+}
+
+const SITE_ARTICLE_ROOTS: ReadonlySet<string> = new Set(['travel', 'travels', 'article', 'articles'])
+
+/**
+ * Путь статьи сайта (`/travel(s)/<…>`, `/article(s)/<…>`) — доменное правило
+ * кнопки «Статья» карточки места (#2144). Принимает путь, а не URL: хост
+ * решает `resolveSitePath`.
+ */
+export function isSiteArticlePath(path: string): boolean {
+  const pathname = String(path || '').split(/[?#]/)[0]
+  const [root, param] = pathname.split('/').filter(Boolean)
+  return SITE_ARTICLE_ROOTS.has(root) && Boolean(param)
 }

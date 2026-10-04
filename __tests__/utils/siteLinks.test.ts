@@ -7,6 +7,7 @@ import {
   isAppRoutePath,
   resolveAppRouteForSiteUrl,
   resolveSitePath,
+  isSiteArticlePath,
 } from '@/utils/siteLinks'
 
 const APP_DIR = path.resolve(__dirname, '../../app')
@@ -81,5 +82,15 @@ describe('siteLinks', () => {
     expect(resolveAppRouteForSiteUrl('https://metravel.by/#top')).toBe('/')
     expect(resolveAppRouteForSiteUrl('https://metravel.by/board')).toBeNull()
     expect(resolveAppRouteForSiteUrl('https://example.com/travels/slug')).toBeNull()
+  })
+})
+
+describe('isSiteArticlePath (#2144)', () => {
+  it.each(['/travel/1', '/travels/slug?x=1', '/article/post', '/articles/post#h'])('%s — статья', (path) => {
+    expect(isSiteArticlePath(path)).toBe(true)
+  })
+
+  it.each(['/travels', '/travels/', '/quests/minsk', '/media/x.jpg', '/', ''])('%s — не статья', (path) => {
+    expect(isSiteArticlePath(path)).toBe(false)
   })
 })

@@ -1,41 +1,48 @@
 import { Platform } from 'react-native'
-import { router } from 'expo-router'
 
 import { openExternalUrl } from '@/utils/externalLinks'
+import { getSiteBaseUrl } from '@/utils/seo'
 import { resolveSitePath } from '@/utils/siteLinks'
 
 /**
- * Если ссылка ведёт на наш сайт (относительный путь или абсолютный URL на metravel.by),
- * возвращает внутренний путь (pathname+search+hash) для навигации внутри приложения.
- * Иначе — `null` (ссылка внешняя). Разбор хоста — единый `resolveSitePath`.
+ * Ведёт ли ссылка на наш сайт (относительный путь или абсолютный URL на
+ * metravel.by): путь (pathname+search+hash) или `null`. Это ТОЛЬКО проверка
+ * хоста — для web (навигация в той же вкладке). Есть ли у пути экран
+ * приложения, здесь не проверяется: на native решение принимает
+ * `openExternalUrl` через `resolveAppRouteForSiteUrl` (#2144).
  */
 export function resolveInternalHref(href?: string | null): string | null {
   return resolveSitePath(href)
 }
 
 /**
- * Единый обработчик клика по ссылке в rich-тексте (статьи, путешествия).
- * Внутренние ссылки открываются внутри приложения (expo-router на native,
- * обычная навигация на web), внешние — во внешнем браузере.
+ * Единый обработчик клика по ссылке в rich-тексте (статьи, путешествия, план
+ * поездки).
+ *
+ * - web: ссылка на свой сайт — навигация в той же вкладке, внешняя — новая
+ *   вкладка через `openExternalUrl`;
+ * - native: ссылка на свой сайт и внешняя http(s) уходят в `openExternalUrl` —
+ *   единственную точку решения: путь с экраном приложения открывается экраном
+ *   (якорь отброшен, NATIVE_COMPAT_RULES §9), путь без экрана (`/media/…`,
+ *   `/api/…`, `/board`) и чужой хост — в системном браузере (#2135, #2144).
+ *   Якорь `#id` и спецсхемы (`mailto:` и т.п.) ничего не открывают.
  */
 export function handleRichTextLinkPress(href?: string | null): void {
   if (!href) return
-  const internal = resolveInternalHref(href)
-  if (internal) {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.location.assign(internal)
-    } else {
-      router.push(internal as never)
-    }
+  const sitePath = resolveSitePath(href)
+  if (sitePath && Platform.OS === 'web' && typeof window !== 'undefined') {
+    window.location.assign(sitePath)
     return
   }
-  if (/^https?:\/\//i.test(href.trim())) {
-    void openExternalUrl(href, {
-      onError: (error) => {
-        if (__DEV__) {
-          console.warn('[richtext] Не удалось открыть URL:', error)
-        }
-      },
-    })
-  }
+  const target = sitePath ?? href.trim()
+  if (!sitePath && !/^https?:\/\//i.test(target)) return
+  void openExternalUrl(target, {
+    allowRelative: true,
+    baseUrl: getSiteBaseUrl(),
+    onError: (error) => {
+      if (__DEV__) {
+        console.warn('[richtext] Не удалось открыть URL:', error)
+      }
+    },
+  })
 }

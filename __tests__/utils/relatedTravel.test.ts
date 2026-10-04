@@ -4,6 +4,7 @@ import path from 'node:path'
 import {
   buildRelatedTravelTags,
   normalizeRelatedTravelId,
+  normalizeRelatedTravelRoute,
   resolveMapPointRelatedTravelId,
   toCanonicalTravelPath,
 } from '@/utils/relatedTravel'
@@ -168,5 +169,30 @@ describe('toCanonicalTravelPath (#1960)', () => {
     undefined,
   ])('returns null for a non-travel url %p', (raw) => {
     expect(toCanonicalTravelPath(raw)).toBeNull()
+  })
+})
+
+describe('normalizeRelatedTravelRoute (#2144)', () => {
+  it.each([
+    ['https://metravel.by/travels/slug?id=7', '/travels/slug?id=7'],
+    ['https://www.metravel.by/travels/slug#comments', '/travels/slug'],
+    ['/travels/slug', '/travels/slug'],
+    ['/article/post', '/article/post'],
+  ])('%s → экран приложения %s (якорь отброшен)', (url, route) => {
+    expect(normalizeRelatedTravelRoute(url)).toBe(route)
+  })
+
+  it.each([
+    'https://metravel.by/media/x.jpg',
+    '/media/x.jpg',
+    'https://metravel.by/board',
+    'https://metravel.by/api/travels/1/',
+    'https://example.com/travels/slug',
+    'https://metravel.by.evil.com/travels/slug',
+    '',
+    null,
+    undefined,
+  ])('%s → null (нет экрана или чужой хост: открывает openExternalUrl*)', (url) => {
+    expect(normalizeRelatedTravelRoute(url as string | null | undefined)).toBeNull()
   })
 })

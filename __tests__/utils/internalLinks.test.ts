@@ -3,10 +3,10 @@ import { Platform } from 'react-native'
 import { resolveInternalHref, handleRichTextLinkPress } from '@/utils/internalLinks'
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }))
-jest.mock('@/utils/externalLinks', () => ({ openExternalUrl: jest.fn() }))
+jest.mock('@/utils/seo', () => ({ getSiteBaseUrl: () => 'https://metravel.by' }))
 
 const { router } = require('expo-router')
-const { openExternalUrl } = require('@/utils/externalLinks')
+const { Linking } = require('react-native')
 
 describe('resolveInternalHref', () => {
   it('относительный путь на свой сайт → внутренний путь', () => {
@@ -44,30 +44,54 @@ describe('resolveInternalHref', () => {
   })
 })
 
-describe('handleRichTextLinkPress (native)', () => {
+// #2144: настоящий `openExternalUrl` — единая точка решения на native; моки
+// только на границе (router, системный Linking).
+describe.each(['ios', 'android'])('handleRichTextLinkPress (%s)', (os) => {
   const originalOS = Platform.OS
-  beforeEach(() => jest.clearAllMocks())
+  let openURL: jest.SpyInstance
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(Platform as { OS: string }).OS = os
+    openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true)
+  })
   afterEach(() => {
     ;(Platform as { OS: string }).OS = originalOS
+    openURL.mockRestore()
   })
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
-  it('внутренняя ссылка → router.push, без внешнего браузера', () => {
-    ;(Platform as { OS: string }).OS = 'android'
-    handleRichTextLinkPress('https://metravel.by/travels/42')
-    expect(router.push).toHaveBeenCalledWith('/travels/42')
-    expect(openExternalUrl).not.toHaveBeenCalled()
-  })
-
-  it('внешняя ссылка → openExternalUrl, без router.push', () => {
-    ;(Platform as { OS: string }).OS = 'android'
-    handleRichTextLinkPress('https://example.com/page')
-    expect(openExternalUrl).toHaveBeenCalledTimes(1)
+  it.each([
+    ['https://metravel.by/media/x.jpg', 'https://metravel.by/media/x.jpg'],
+    ['/media/x.jpg', 'https://metravel.by/media/x.jpg'],
+    ['about:///media/x.jpg', 'https://metravel.by/media/x.jpg'],
+    ['https://metravel.by/board', 'https://metravel.by/board'],
+    ['https://metravel.by/api/travels/1/', 'https://metravel.by/api/travels/1/'],
+    ['https://example.com/x', 'https://example.com/x'],
+    ['https://metravel.by.evil.com/x', 'https://metravel.by.evil.com/x'],
+  ])('%s → системный браузер, router.push не вызван', async (href, opened) => {
+    handleRichTextLinkPress(href)
+    await flush()
     expect(router.push).not.toHaveBeenCalled()
+    expect(openURL).toHaveBeenCalledWith(opened)
   })
 
-  it('пустой href — ничего не делает', () => {
-    handleRichTextLinkPress(undefined)
+  it.each([
+    ['https://metravel.by/travels/slug#comments', '/travels/slug'],
+    ['https://metravel.by/travels/42', '/travels/42'],
+    ['https://www.metravel.by/quests/city/q', '/quests/city/q'],
+    ['/article/slug?x=1#h', '/article/slug?x=1'],
+    ['about:///travels/oriavskii-zamok', '/travels/oriavskii-zamok'],
+  ])('%s → экран приложения %s без якоря, без браузера', async (href, route) => {
+    handleRichTextLinkPress(href)
+    await flush()
+    expect(router.push).toHaveBeenCalledWith(route)
+    expect(openURL).not.toHaveBeenCalled()
+  })
+
+  it.each(['#section', 'mailto:a@b.by', 'tel:+375', '', undefined])('%s → ничего не открывает', async (href) => {
+    handleRichTextLinkPress(href as string | undefined)
+    await flush()
     expect(router.push).not.toHaveBeenCalled()
-    expect(openExternalUrl).not.toHaveBeenCalled()
+    expect(openURL).not.toHaveBeenCalled()
   })
 })

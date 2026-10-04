@@ -1,4 +1,5 @@
 import { getSiteBaseUrl } from '@/utils/seo'
+import { resolveAppRouteForSiteUrl } from '@/utils/siteLinks'
 
 export type RelatedTravelRef = {
   route: string
@@ -6,21 +7,14 @@ export type RelatedTravelRef = {
   slug?: string
 }
 
-export const normalizeRelatedTravelRoute = (rawUrl: string | null | undefined): string | null => {
-  const trimmed = typeof rawUrl === 'string' ? rawUrl.trim() : ''
-  if (!trimmed) return null
-
-  if (trimmed.startsWith('/')) return trimmed
-
-  try {
-    const siteBase = new URL(getSiteBaseUrl())
-    const parsed = new URL(trimmed, siteBase)
-    if (parsed.host !== siteBase.host) return null
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`
-  } catch {
-    return null
-  }
-}
+/**
+ * Маршрут приложения для ссылки на статью с нашего сайта (#2144): только хост
+ * сайта и только путь, у которого есть экран `app/` (единый
+ * `resolveAppRouteForSiteUrl`, якорь отброшен — он запрещён в `router.push` на
+ * native). Иначе `null`: потребитель открывает ссылку через `openExternalUrl*`.
+ */
+export const normalizeRelatedTravelRoute = (rawUrl: string | null | undefined): string | null =>
+  resolveAppRouteForSiteUrl(typeof rawUrl === 'string' ? rawUrl : null)
 
 /**
  * Resolve an internal app route for a travel link regardless of host.
