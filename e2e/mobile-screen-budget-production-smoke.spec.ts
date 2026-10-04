@@ -1,8 +1,11 @@
+import type { Page } from '@playwright/test'
+
 import { test } from './fixtures'
 import {
   MOBILE_SCREEN_BUDGET,
   MOBILE_VIEWPORTS,
   SCREENS,
+  type ScreenDef,
   measureScreenAllCombos,
   printResultsTable,
   resolveScreenTarget,
@@ -26,23 +29,38 @@ import {
 
 const PUBLIC_SCREENS = SCREENS.filter((screen) => screen.isPublic)
 
+async function measureScreen(page: Page, screen: ScreenDef): Promise<void> {
+  // #2147: экран с `prepare` (квест) грузится дважды — см. основной файл.
+  if (screen.prepare) test.setTimeout(240_000)
+  const target = await resolveScreenTarget(page, screen)
+  await measureScreenAllCombos(page, {
+    screenKey: screen.key,
+    path: target.path,
+    title: target.title,
+    viewports: MOBILE_VIEWPORTS,
+    ctaTestId: screen.ctaTestId,
+    budget: MOBILE_SCREEN_BUDGET[screen.key],
+    prepare: screen.prepare,
+  })
+}
+
 test.describe('Mobile screen budget — production smoke (#2094)', () => {
-  for (const screen of PUBLIC_SCREENS) {
+  for (const screen of PUBLIC_SCREENS.filter((s) => !s.guest)) {
     test(screen.key, async ({ page }) => {
-      // #2147: экран с `prepare` (квест) грузится дважды — см. основной файл.
-      if (screen.prepare) test.setTimeout(240_000)
-      const target = await resolveScreenTarget(page, screen)
-      await measureScreenAllCombos(page, {
-        screenKey: screen.key,
-        path: target.path,
-        title: target.title,
-        viewports: MOBILE_VIEWPORTS,
-        ctaTestId: screen.ctaTestId,
-        budget: MOBILE_SCREEN_BUDGET[screen.key],
-        prepare: screen.prepare,
-      })
+      await measureScreen(page, screen)
     })
   }
+
+  // #2147: гостем и при `E2E_AUTH_MODE=required` — вошедшему квест отдаёт экран
+  // согласия вместо прохождения (так же, как в основном файле).
+  test.describe('guest', () => {
+    test.use({ storageState: { cookies: [], origins: [] } })
+    for (const screen of PUBLIC_SCREENS.filter((s) => s.guest)) {
+      test(screen.key, async ({ page }) => {
+        await measureScreen(page, screen)
+      })
+    }
+  })
 
   test.afterAll(() => {
     printResultsTable(PUBLIC_SCREENS.map((s) => s.key))
