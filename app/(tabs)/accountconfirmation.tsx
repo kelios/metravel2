@@ -26,6 +26,8 @@ export default function AccountConfirmation() {
     const confirmedHashRef = useRef<string | null>(null);
 
     useEffect(() => {
+        // `null` — hash ещё не прочитан (до гидратации, #2178): спиннер остаётся.
+        if (hash === null) return;
         if (!hash) {
             // Нет/невалидный hash — не оставляем бесконечный спиннер.
             setError(i18nT('auth:app.tabs.accountconfirmation.ssylka_podtverzhdeniya_nedeystvitelna_ili_us_529ee053'));

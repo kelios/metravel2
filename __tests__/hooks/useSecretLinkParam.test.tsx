@@ -75,10 +75,36 @@ describe('useSecretLinkParam', () => {
   it('native: reads the query as is, no address bar to clean and no storage', () => {
     Platform.OS = 'ios'
     mockParams = { hash: 'native-hash' }
-    const { result } = renderHook(() => useSecretLinkParam('/accountconfirmation', 'hash'))
+    const renders: Array<string | null> = []
+    const { result } = renderHook(() => {
+      const value = useSecretLinkParam('/accountconfirmation', 'hash')
+      renders.push(value)
+      return value
+    })
 
     expect(result.current).toBe('native-hash')
+    // Гидратации на native нет: секрет известен с первой отрисовки.
+    expect(renders[0]).toBe('native-hash')
     expect(mockSetParams).not.toHaveBeenCalled()
     expect(window.sessionStorage.length).toBe(0)
+  })
+
+  // #2178: SSG-разметка собрана без query и хранилища вкладки — первая web-отрисовка
+  // (гидратация) не знает секрета и не должна отличаться от неё.
+  it.each([
+    ['query', () => { mockParams = { token: 'abc123' } }, 'abc123'],
+    ['tab session', () => window.sessionStorage.setItem(KEY, 'stored-token'), 'stored-token'],
+    ['no secret', () => undefined, ''],
+  ])('web: the first render is unknown (null), the %s value comes after hydration', (_label, arrange, expected) => {
+    arrange()
+    const renders: Array<string | null> = []
+    const { result } = renderHook(() => {
+      const value = useSecretLinkParam('/subscribe/confirm', 'token')
+      renders.push(value)
+      return value
+    })
+
+    expect(renders[0]).toBeNull()
+    expect(result.current).toBe(expected)
   })
 })

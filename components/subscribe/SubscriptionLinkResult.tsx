@@ -77,6 +77,8 @@ export default function SubscriptionLinkResult({ action }: Props) {
       setState(STATUS_PARAM_RESULTS[statusParam] ?? 'invalid');
       return;
     }
+    // `null` — токен ещё не прочитан (до гидратации, #2178): экран остаётся в `pending`.
+    if (token === null) return;
     if (!token) {
       setState('invalid');
       return;

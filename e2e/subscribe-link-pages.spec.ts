@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { SECRET_LINK_ROUTES } from '../utils/secretLinkRoutes';
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation';
 
 // #2121: страницы сайта по ссылке из письма рассылки вместо голой страницы DRF.
@@ -136,6 +137,23 @@ for (const viewport of [
       expect(requests).toEqual([]);
 
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+    });
+
+    // #2178: SSG-разметка страниц из писем собрана без секрета; с секретом в
+    // адресе гидратация давала React #418. Все маршруты общего списка #2121.
+    test('secret link pages hydrate without React errors, with and without the secret', async ({ page }) => {
+      await mockSubscribeApi(page);
+      const errors: string[] = [];
+      page.on('pageerror', (error) => errors.push(`${new URL(page.url()).pathname}: ${error.message}`));
+
+      for (const { route, secretParams } of SECRET_LINK_ROUTES) {
+        for (const path of [route, `${route}?${secretParams[0]}=ok`]) {
+          await gotoWithRetry(page, path);
+          await page.waitForLoadState('networkidle');
+        }
+      }
+
+      expect(errors).toEqual([]);
     });
   });
 }

@@ -35,6 +35,9 @@ export default function SetPassword() {
     // Секрет уходит из адресной строки сразу после посадки (#2145).
     const password_reset_token = useSecretLinkParam('/set-password', 'password_reset_token');
     const hasToken = Boolean(password_reset_token);
+    // `null` — до гидратации токен ещё не прочитан (#2178): «ссылка недействительна»
+    // не рисуется, пока не известно, что токена действительно нет.
+    const tokenMissing = password_reset_token === '';
 
     useEffect(() => {
         return () => {
@@ -100,7 +103,7 @@ export default function SetPassword() {
                 />
             </View>
             <View style={styles.card}>
-                    {!hasToken && (
+                    {tokenMissing && (
                         <Text style={[styles.message, styles.err]}>
                             {i18nT('auth:components.auth.SetPasswordForm.ssylka_nedeystvitelna_ili_ustarela_d7694ae3')}</Text>
                     )}
