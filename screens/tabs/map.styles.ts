@@ -66,24 +66,29 @@ export const getStyles = (
         : null),
       backgroundColor: themedColors.background,
     },
+    // #2155 — the panel | map geometry is platform-independent. Native at
+    // ≥ 768pt (iPad, Android tablets) takes the desktop branch too; with the
+    // row direction only in the web block it stayed a column, the full-height
+    // panel took all of it and the map host got 0pt. Only CSS-only keys stay
+    // in the web block.
     mapContainer: {
       flex: 1,
       position: 'relative',
+      flexDirection: isMobile ? 'column' : 'row',
+      columnGap: isMobile ? 0 : PANEL_GAP,
+      paddingLeft: isMobile ? 0 : DESKTOP_SHELL_PADDING,
+      paddingRight: isMobile ? 0 : DESKTOP_SHELL_PADDING,
+      paddingTop: isMobile ? 0 : DESKTOP_SHELL_PADDING - 4,
+      paddingBottom: isMobile ? 0 : DESKTOP_SHELL_PADDING - 4,
+      minHeight: 0,
+      minWidth: 0,
+      alignItems: 'stretch',
+      backgroundColor: themedColors.background,
       ...(Platform.OS === 'web'
         ? ({
             display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            columnGap: isMobile ? 0 : PANEL_GAP,
-            paddingLeft: isMobile ? 0 : DESKTOP_SHELL_PADDING,
-            paddingRight: isMobile ? 0 : DESKTOP_SHELL_PADDING,
-            paddingTop: isMobile ? 0 : DESKTOP_SHELL_PADDING - 4,
-            paddingBottom: isMobile ? 0 : DESKTOP_SHELL_PADDING - 4,
             height: '100%',
-            minHeight: 0,
-            minWidth: 0,
-            alignItems: 'stretch',
             isolation: 'isolate',
-            backgroundColor: themedColors.background,
           } as any)
         : null),
     },

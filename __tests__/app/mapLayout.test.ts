@@ -78,3 +78,105 @@ describe('map layout header offset', () => {
     );
   });
 });
+
+// #2155 — native at ≥ 768pt (iPad 820/1180, Android tablets) takes the desktop
+// branch. The panel | map row used to live only in the web block, so native kept
+// a column: the full-height panel took all of it and the map host got 0pt.
+describe('map shell geometry is platform-independent (#2155)', () => {
+  const originalOS = Platform.OS;
+  const themedColors: any = {
+    background: '#ffffff',
+    surface: '#ffffff',
+    surfaceMuted: '#f5f5f5',
+    surfaceAlpha40: 'rgba(255,255,255,0.4)',
+    borderLight: '#eeeeee',
+    overlay: 'rgba(0,0,0,0.35)',
+    shadows: {
+      medium: { shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
+      heavy: { shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 14, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+    },
+    boxShadows: { card: '0 1px 2px rgba(0,0,0,0.1)', medium: '0 6px 16px rgba(0,0,0,0.12)' },
+  };
+
+  beforeAll(() => {
+    jest.spyOn(StyleSheet, 'create').mockImplementation((styles) => styles as any);
+  });
+
+  afterAll(() => {
+    (StyleSheet.create as jest.Mock).mockRestore?.();
+  });
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: originalOS });
+  });
+
+  it.each(['ios', 'android'])('%s tablet width: panel and map share one row', (os) => {
+    Object.defineProperty(Platform, 'OS', { value: os });
+
+    const styles = getStyles(false, 0, themedColors);
+
+    expect(styles.mapContainer.flexDirection).toBe('row');
+    expect(styles.mapContainer.columnGap).toBe(METRICS.spacing.m);
+    expect(styles.mapContainer.alignItems).toBe('stretch');
+    expect(styles.rightPanel.width).toBe(METRICS.baseUnit * 45);
+    expect(styles.rightPanel.position).toBe('relative');
+    expect(styles.rightPanel.flexShrink).toBe(0);
+    expect(styles.mapHost.flex).toBe(1);
+    expect(styles.mapHost.minWidth).toBe(0);
+    // Shell paddings + gap stay within the 48pt budget of the card.
+    const horizontal =
+      styles.mapContainer.paddingLeft + styles.mapContainer.paddingRight + styles.mapContainer.columnGap;
+    expect(horizontal).toBeLessThanOrEqual(48);
+  });
+
+  it.each(['ios', 'android'])('%s phone width: map is full-bleed, panel absolute', (os) => {
+    Object.defineProperty(Platform, 'OS', { value: os });
+
+    const styles = getStyles(true, 0, themedColors);
+
+    expect(styles.mapContainer.flexDirection).toBe('column');
+    expect(styles.mapContainer.columnGap).toBe(0);
+    expect(styles.mapContainer.paddingLeft).toBe(0);
+    expect(styles.mapContainer.paddingTop).toBe(0);
+    expect(styles.rightPanel.position).toBe('absolute');
+  });
+
+  it('web keeps the same shell values for desktop and mobile', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+    expect(getStyles(false, 0, themedColors).mapContainer).toEqual({
+      flex: 1,
+      position: 'relative',
+      flexDirection: 'row',
+      columnGap: 16,
+      paddingLeft: 16,
+      paddingRight: 16,
+      paddingTop: 12,
+      paddingBottom: 12,
+      minHeight: 0,
+      minWidth: 0,
+      alignItems: 'stretch',
+      backgroundColor: '#ffffff',
+      display: 'flex',
+      height: '100%',
+      isolation: 'isolate',
+    });
+    expect(getStyles(true, 0, themedColors).mapContainer).toEqual({
+      flex: 1,
+      position: 'relative',
+      flexDirection: 'column',
+      columnGap: 0,
+      paddingLeft: 0,
+      paddingRight: 0,
+      paddingTop: 0,
+      paddingBottom: 0,
+      minHeight: 0,
+      minWidth: 0,
+      alignItems: 'stretch',
+      backgroundColor: '#ffffff',
+      display: 'flex',
+      height: '100%',
+      isolation: 'isolate',
+    });
+  });
+});
