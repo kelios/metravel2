@@ -728,7 +728,8 @@ prod→data-file обязан это учитывать, иначе всё пр�
    существующей обложки — `scripts/upload-quest-media-prod.js` (шлёт
    `cover_image`, поле `QuestWriteSerializer`);
    `upload-missing-quest-covers-prod.js` непустой `cover_url` пропускает.
-9. **Финале-видео** — скилл `metravel-quest-finale` (finaleId == numeric quest id).
+9. **Финале-видео** — скилл `metravel-quest-finale` (finaleId не обязан совпадать с id
+   квеста — находить сверкой текста финала, см. тот скилл).
 10. **Пройди квест залогиненным** на мобильном вьюпорте: понятны ли задания,
    выполнимы ли на месте, работает ли проверка ответов, рендерится ли блок
    посетительской информации из `poi_info`; проверь печатную версию
@@ -766,7 +767,8 @@ prod→data-file обязан это учитывать, иначе всё пр�
   (intro + steps + finale + poi_info).
 - Запись (Token, admin): `/api/quest-cities/` (НЕ дедупит по имени!),
   `/api/quests/`, `/api/quest-steps/` (принимает `poi_info` объектом,
-  `geo_verify`), `/api/quest-finales/` (finale id == numeric quest id).
+  `geo_verify`), `/api/quest-finales/` (finale id не всегда равен id квеста —
+  сверять по тексту финала).
 - Фронт-роут детали: `/quests/{cityId}/{quest_id}` — тянет по строковому
   `quest_id`. Проверка ответов — `utils/questAdapters.ts` (`buildAnswerChecker`);
   посетительская информация шага — `poiInfo` (`adaptPoiInfo`) в

@@ -247,6 +247,10 @@ const QUESTS = [
     { questId: 'kuldiga-water-stone', dir: 'kuldigaWaterStone', city: 'Кулдига', finaleId: 206 },
     { questId: 'turaida-valley-song', dir: 'turaidaValleySong', city: 'Сигулда и Турайда', finaleId: 207 },
     { questId: 'liepaja-wind-melody', dir: 'liepajaWindMelody', city: 'Лиепая', finaleId: 208 },
+    // Пафос: finaleId НЕ равен id квеста (220/221/222) — сверено по тексту финала 2026-10-04
+    { questId: 'paphos-nea-paphos', dir: 'paphosNeaPaphos', city: 'Пафос', finaleId: 219 },
+    { questId: 'paphos-ktima', dir: 'paphosKtima', city: 'Пафос', finaleId: 220 },
+    { questId: 'paphos-myths-in-stone', dir: 'paphosMythsInStone', city: 'Пафос', finaleId: 221 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
