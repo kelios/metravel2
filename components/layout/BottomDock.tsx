@@ -297,7 +297,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             runAccountMenuTarget(item.accountTarget, 'mobile', {
               navigate: (path) => {
                 closeMenu();
-                router.push(path as any);
+                handleHeaderNavPress(router, path);
               },
               // Вкладка открывается в том же тапе, до закрытия листа: отложенный
               // window.open iOS Safari молча блокирует (#2139).
