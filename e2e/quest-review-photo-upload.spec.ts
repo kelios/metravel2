@@ -230,7 +230,7 @@ test.describe('#2150 quest review photo upload', () => {
     // Неактивного пикера «Выбрано 3 из 3» и второго «Загружаем фото…» больше нет.
     await expect(section.getByTestId('quest-review-section-photos-counter')).toHaveCount(0)
     await expect(section.getByText('Загружаем фото…')).toHaveCount(0)
-    await expect(section.getByText('Не загрузилось')).toHaveCount(1)
+    await expect(section.getByText('Не загрузилось', { exact: true })).toHaveCount(1)
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'failed-390.png') })
 
     const retry = section.getByRole('button', { name: /Повторить загрузку фото/ })
@@ -240,7 +240,7 @@ test.describe('#2150 quest review photo upload', () => {
     await retry.click()
 
     await expect(summary).toHaveText('Загружено 3 из 3', { timeout: 120_000 })
-    await expect(section.getByText('Не загрузилось')).toHaveCount(0)
+    await expect(section.getByText('Не загрузилось', { exact: true })).toHaveCount(0)
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'done-390.png') })
 
     fs.writeFileSync(path.join(ARTIFACT_DIR, 'uploads.json'), JSON.stringify({ uploadCalls, uploads }, null, 2))
