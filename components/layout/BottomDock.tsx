@@ -355,9 +355,13 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           styles.dockWrapper,
           Platform.OS === "web" ? ({ height: MOBILE_DOCK_HEIGHT_WEB } as any) : null,
         ]}
+        // Меряем весь док с нижней safe-area: это резерв useBottomChromeInset и
+        // отступ тостов. Ряд иконок без paddingBottom давал на iPhone ~40 pt
+        // меньше реального дока — тост уходил под док (#2161).
+        onLayout={handleDockLayout}
         testID="footer-dock-wrapper"
       >
-        <View style={styles.measure} onLayout={handleDockLayout} testID="footer-dock-measure">
+        <View style={styles.measure} testID="footer-dock-measure">
           <View
             style={styles.row}
             testID="footer-dock-row"

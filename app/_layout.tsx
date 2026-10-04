@@ -1,4 +1,4 @@
-import React, { startTransition, useCallback, useEffect, useMemo, useState } from "react";
+import React, { startTransition, useEffect, useMemo, useState } from "react";
 import { Image, Platform, StatusBar as RNStatusBar, StyleSheet, View, LogBox, useColorScheme, useWindowDimensions } from "react-native";
 import { DarkTheme, DefaultTheme, SplashScreen, Stack, ThemeProvider as NavigationThemeProvider, usePathname } from "expo-router";
 import AppProviders from "@/components/layout/AppProviders";
@@ -40,7 +40,6 @@ import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnost
 import { installQaDebug } from '@/utils/qaDebug';
 import { useAriaHiddenFocusGuard } from "@/hooks/useAriaHiddenFocusGuard";
 import { useWebScrollDelegation } from "@/hooks/useWebScrollDelegation";
-import { setToastDockInset } from "@/utils/toast";
 import { BottomChromeInsetProvider } from "@/components/layout/bottomChromeInset";
 import { ROOT_ICON_FONTS } from '@/components/layout/rootIconFonts';
 
@@ -256,15 +255,11 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
       return client;
     });
 
-    /** === динамическая высота ДОКА футера (только иконки) === */
+    /** === динамическая высота ДОКА футера (вместе с нижней safe-area) === */
     // null — замера ещё не было (экраны берут фолбэк). 0 — док скрыт.
-    const [dockHeight, setDockHeightState] = useState<number | null>(null);
-    // Feed the real dock height to the toast module so bottom toasts clear the
-    // tab bar exactly (the bug: «Добавлено в план» toast rendered under the dock).
-    const setDockHeight = useCallback((h: number) => {
-        setDockHeightState(h);
-        setToastDockInset(h);
-    }, []);
+    // Единственный потребитель — BottomChromeInsetProvider: экраны и ToastHost
+    // читают резерв оттуда (#2097, #2161).
+    const [dockHeight, setDockHeight] = useState<number | null>(null);
     useEffect(() => {
         if (!showFooter) setDockHeight(0);
     }, [showFooter, setDockHeight]);

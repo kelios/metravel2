@@ -71,7 +71,6 @@ jest.mock('@/utils/toast', () => ({
     __esModule: true,
     showToast: (...args: any[]) => mockShowToast(...args),
     showToastMessage: (...args: any[]) => mockShowToast(...args),
-    setToastDockInset: () => {},
 }));
 
 // Mock WebMapComponent

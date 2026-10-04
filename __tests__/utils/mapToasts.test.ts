@@ -7,7 +7,6 @@
 jest.mock('@/utils/toast', () => ({
   showToast: jest.fn(),
   showToastMessage: jest.fn(),
-  setToastDockInset: jest.fn(),
 }));
 
 import { showRouteBuiltToast } from '@/utils/mapToasts';

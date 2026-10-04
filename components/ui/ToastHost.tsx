@@ -1,10 +1,12 @@
 import React from 'react';
-import { Platform, Pressable, Text, StyleSheet } from 'react-native';
+import { Platform, Pressable, Text, StyleSheet, View } from 'react-native';
 import Toast, { BaseToast, ErrorToast, InfoToast, SuccessToast } from 'react-native-toast-message';
 
+import { useDockReservePx } from '@/components/layout/bottomChromeInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe';
 import { useThemedColors } from '@/hooks/useTheme';
-import type { ToastAction } from '@/utils/toast.native';
+import { toastBottomOffset, type ToastAction } from '@/utils/toast.native';
 
 type ToastRenderer = (params: any) => React.ReactElement;
 
@@ -49,12 +51,39 @@ const toastConfig = {
   warning: withAction(BaseToast),
 };
 
-export default function ToastHost() {
+type ToastHostProps = {
+  /**
+   * false — хост внутри полноэкранного Modal, где дока нет (#844): тост над
+   * home indicator, а не над доком корневого экрана.
+   */
+  overDock?: boolean;
+};
+
+/**
+ * Хост тостов native (#2161, #2168). Отступ — из того же резерва дока, что и
+ * у экранов (`useDockReservePx`, #2097), поэтому тост целиком над доком на
+ * любой нижней safe-area. Позиция по умолчанию — снизу, как у web-хоста и
+ * `useActionFeedback`. Слой — верхний: тост рисуется поверх дока и
+ * sticky-баров с `elevation` на Android.
+ */
+export default function ToastHost({ overDock = true }: ToastHostProps) {
+  const dockReservePx = useDockReservePx();
+  const insets = useSafeAreaInsetsSafe();
   if (Platform.OS === 'web') return null;
-  return <Toast config={toastConfig} />;
+  const bottomOffset = toastBottomOffset(overDock ? dockReservePx : 0, insets.bottom);
+  return (
+    <View pointerEvents="box-none" style={styles.layer} testID="toast-layer">
+      <Toast config={toastConfig} position="bottom" bottomOffset={bottomOffset} />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+  layer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: DESIGN_TOKENS.zIndex.toast,
+    elevation: DESIGN_TOKENS.zIndex.toast,
+  },
   action: {
     minHeight: 44,
     minWidth: 44,

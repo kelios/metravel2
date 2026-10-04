@@ -263,7 +263,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
               behind the modal and looked like a no-op. A nested Toast inside the
               Modal surfaces it above the sheet (react-native-toast-message picks the
               last-mounted <Toast/> ref, then falls back to root on unmount). */}
-          <ToastHost />
+          <ToastHost overDock={false} />
         </View>
       </Modal>
     </View>

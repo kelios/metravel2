@@ -22,7 +22,3 @@ export async function showToast(payload: ToastPayload): Promise<void> {
 }
 
 export const showToastMessage = showToast
-
-// No-op on web: web toasts are positioned by the web toast host, not the
-// native BottomDock. Kept for API parity with the native module.
-export function setToastDockInset(_height: number): void {}

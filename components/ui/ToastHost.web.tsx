@@ -32,7 +32,9 @@ const ACCENT_COLORS: Record<ToastType, string> = {
 
 const SLIDE_DURATION_MS = 250;
 
-export default function ToastHost() {
+// Сигнатура как у native-хоста: `overDock` там выбирает отступ над доком, на
+// web позицию задаёт CSS-резерв, проп не используется.
+export default function ToastHost(_props: { overDock?: boolean } = {}) {
   const [payload, setPayload] = useState<ToastPayload | null>(null);
   const [visible, setVisible] = useState(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

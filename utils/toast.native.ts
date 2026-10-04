@@ -11,23 +11,17 @@ export type ToastPayload = {
 
 export type ToastAction = { label: string; onPress: () => void };
 
-// The bottom tab bar (BottomDock) is pinned to the bottom and its real height
-// (content + safe-area inset) varies by device — on tall gesture-nav phones it
-// is ~100-110px. The library's default bottomOffset of 40 places bottom toasts
-// under the dock, hiding them. We lift bottom toasts above the measured dock
-// height; until it is reported, a generous fallback clears most devices.
-const DEFAULT_BOTTOM_OFFSET = 120;
-const TOAST_DOCK_GAP = 12;
+/**
+ * Зазор между тостом и верхом дока (#2161). Сам отступ тостов задаёт ToastHost
+ * из общего резерва дока (`useDockReservePx`, #2097): высота дока уже включает
+ * нижнюю safe-area, поэтому второго канала «высота дока для тостов» нет.
+ */
+export const TOAST_DOCK_GAP = 12;
 
-let measuredDockHeight = 0;
-
-/** Reported by the BottomDock layout so toasts can clear the tab bar exactly. */
-export function setToastDockInset(height: number): void {
-  measuredDockHeight = Number.isFinite(height) && height > 0 ? height : 0;
-}
-
-function resolveBottomOffset(): number {
-  return measuredDockHeight > 0 ? measuredDockHeight + TOAST_DOCK_GAP : DEFAULT_BOTTOM_OFFSET;
+/** Нижний отступ тоста: над доком, а без дока — над home indicator. */
+export function toastBottomOffset(dockReservePx: number, safeAreaBottom: number): number {
+  const base = dockReservePx > 0 ? dockReservePx : Math.max(0, safeAreaBottom || 0);
+  return base + TOAST_DOCK_GAP;
 }
 
 type NativeToastModule = {
@@ -47,13 +41,9 @@ export async function showToast(payload: ToastPayload): Promise<void> {
     const mod = await toastModulePromise;
     const Toast = mod.default ?? mod;
     if (Toast && typeof Toast.show === 'function') {
-      const isBottom = (payload.position ?? 'bottom') === 'bottom';
       const { action, ...rest } = payload;
       Toast.show({
         ...rest,
-        ...(isBottom && payload.bottomOffset === undefined
-          ? { bottomOffset: resolveBottomOffset() }
-          : {}),
         ...(action ? { props: { action } } : {}),
       });
     }
