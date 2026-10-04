@@ -13,10 +13,12 @@ import Feather from '@expo/vector-icons/Feather'
 import QuestModalSheet from '@/components/quests/QuestModalSheet'
 import QuestReviewSection from '@/components/quests/QuestReviewSection'
 import { useQuestReview } from '@/hooks/useQuestReview'
+import { useQuestReviewPhotoUpload } from '@/hooks/useQuestReviewPhotoUpload'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { trackQuestReviewPromptClick } from '@/utils/questReviewAnalytics'
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 
 type Props = {
   /** Строковый quest_id (слаг) — он же уходит в аналитику. */
@@ -57,6 +59,14 @@ function QuestReviewInvite({
 
   const handleClose = useCallback(() => setVisible(false), [])
 
+  // Окно закрыли посреди загрузки фото (#2150): отзыв уже есть, приглашения
+  // больше нет, а очередь продолжается — ссылка на её статус возвращает в окно.
+  const photoUpload = useQuestReviewPhotoUpload(review?.id)
+  const handleReopen = useCallback(() => {
+    setOpened(true)
+    setVisible(true)
+  }, [])
+
   if (!questNumericId) return null
 
   // Кнопка-вход прячется, когда отзыв уже есть; пока префилл грузится (в том
@@ -64,6 +74,12 @@ function QuestReviewInvite({
   // распространяется — иначе форма закрывалась бы прямо во время набора.
   const showCta = !isLoading && !review
   const ctaLabel = i18nT('quests:components.quests.QuestReviewInvite.cta')
+  const showPhotoStatus =
+    !!review && !visible && photoUpload.total > 0 && photoUpload.uploaded < photoUpload.total
+  const photoStatusLabel = i18nT('quests:components.quests.QuestReviewInvite.photoStatus', {
+    value1: formatInteger(photoUpload.uploaded),
+    value2: formatInteger(photoUpload.total),
+  })
 
   return (
     <>
@@ -77,6 +93,23 @@ function QuestReviewInvite({
         >
           <Feather name="star" size={13} color={colors.primaryDark} />
           <Text style={styles.ctaText}>{ctaLabel}</Text>
+        </Pressable>
+      ) : null}
+
+      {showPhotoStatus ? (
+        <Pressable
+          onPress={handleReopen}
+          style={styles.cta}
+          accessibilityRole="button"
+          accessibilityLabel={photoStatusLabel}
+          testID={`${testID}-photo-status`}
+        >
+          <Feather
+            name={photoUpload.isActive ? 'upload-cloud' : 'alert-circle'}
+            size={13}
+            color={photoUpload.isActive ? colors.primaryDark : colors.danger}
+          />
+          <Text style={styles.ctaText}>{photoStatusLabel}</Text>
         </Pressable>
       ) : null}
 

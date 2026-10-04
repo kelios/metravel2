@@ -1,11 +1,13 @@
 /**
  * Шаг «Как прошло?» с фото: порядок «подтверждённый отзыв → загрузка» и
- * частичный успех (#1579).
+ * частичный успех (#1579); после отправки — статусы по фото, итоговая строка и
+ * «Повторить» вместо неактивного пикера (#2150).
  */
 
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
 
 import QuestReviewSection from '@/components/quests/QuestReviewSection'
+import { useQuestReviewUploadStore } from '@/stores/questReviewUploadStore'
 
 const mockSubmit = jest.fn()
 const mockUploadPhoto = jest.fn()
@@ -45,6 +47,7 @@ jest.mock('@/api/questReviewPhoto', () => ({
 
 jest.mock('@/utils/questReviewAnalytics', () => ({
   trackQuestPhotoUpload: (...args: unknown[]) => mockTrackPhotoUpload(...args),
+  trackQuestPhotoUploadFailed: jest.fn(),
   trackQuestReviewSubmit: jest.fn(),
 }))
 
@@ -86,7 +89,8 @@ const rate = (view: ReturnType<typeof render>) => {
 describe('QuestReviewSection photos', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUploadPhoto.mockResolvedValue({ id: 1, url: 'https://cdn/a.jpg' })
+    useQuestReviewUploadStore.setState({ queues: {} })
+    mockUploadPhoto.mockResolvedValue({ id: 1, url: 'https://cdn/a.jpg', sizeBytes: null })
   })
 
   it('submits a photoless review exactly as before and uploads nothing', async () => {
@@ -128,9 +132,14 @@ describe('QuestReviewSection photos', () => {
       ),
     )
     expect(mockTrackPhotoUpload).toHaveBeenCalledTimes(1)
+    // После отправки — миниатюры со статусом, а не неактивный пикер «Выбрано 1 из 3».
+    expect(view.queryByTestId('quest-review-section-photos-counter')).toBeNull()
+    expect(view.getByTestId('quest-review-section-photo-upload-summary')).toHaveTextContent(
+      'Загружено 1 из 1',
+    )
   })
 
-  it('keeps the saved review saved when a photo fails and names the file', async () => {
+  it('keeps the saved review saved when a photo fails and retries only that photo', async () => {
     mockLaunchLibrary.mockResolvedValueOnce({
       canceled: false,
       assets: [{ uri: 'file:///broken.jpg', fileName: 'broken.jpg', mimeType: 'image/jpeg' }],
@@ -148,13 +157,29 @@ describe('QuestReviewSection photos', () => {
     rate(view)
     fireEvent.press(view.getByTestId('quest-review-section-submit'))
 
-    await waitFor(() =>
-      expect(view.getByTestId('quest-review-section-photo-error')).toHaveTextContent(
-        'Отзыв сохранён, но не удалось загрузить фото: broken.jpg.',
-      ),
+    const status = await waitFor(() => {
+      const node = view.getAllByText('Не загрузилось')[0]
+      expect(node).toBeTruthy()
+      return node
+    })
+    expect(status).toBeTruthy()
+    expect(view.getByTestId('quest-review-section-photo-upload-summary')).toHaveTextContent(
+      'Загружено 0 из 1',
     )
     // Сетевой сбой на снимке не заставляет писать отзыв заново.
     expect(view.getByText('Спасибо за отзыв!')).toBeTruthy()
+    expect(view.getByTestId('quest-review-section-photo-upload-failed-hint')).toBeTruthy()
     expect(mockTrackPhotoUpload).not.toHaveBeenCalled()
+
+    // «Повторить» догружает именно этот снимок.
+    fireEvent.press(view.getByLabelText('Повторить загрузку фото broken.jpg'))
+    await waitFor(() =>
+      expect(view.getByTestId('quest-review-section-photo-upload-summary')).toHaveTextContent(
+        'Загружено 1 из 1',
+      ),
+    )
+    expect(mockUploadPhoto).toHaveBeenCalledTimes(2)
+    expect(view.queryByTestId('quest-review-section-photo-upload-failed-hint')).toBeNull()
+    expect(view.getByTestId('quest-review-section-photo-moderation')).toBeTruthy()
   })
 })

@@ -49,13 +49,14 @@ jest.mock('@/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({ isAuthenticated: true, authReady: true, requireAuth: jest.fn() }),
 }))
 
+let mockPhotoUpload = { items: [] as unknown[], total: 0, uploaded: 0, failed: 0, isActive: false }
+
 jest.mock('@/hooks/useQuestReviewPhotoUpload', () => ({
   useQuestReviewPhotoUpload: () => ({
-    statuses: {},
-    failedNames: [],
-    isUploading: false,
-    hasUploaded: false,
+    ...mockPhotoUpload,
+    hasUploaded: mockPhotoUpload.uploaded > 0,
     uploadAll: jest.fn(),
+    retry: jest.fn(),
   }),
 }))
 
@@ -86,6 +87,7 @@ describe('QuestReviewInvite', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockReviewState = { review: null, isLoading: false }
+    mockPhotoUpload = { items: [], total: 0, uploaded: 0, failed: 0, isActive: false }
   })
 
   it('показывает вход в отзыв прошедшему квест без отзыва', () => {
@@ -157,5 +159,33 @@ describe('QuestReviewInvite', () => {
       cityId: '3',
       source: 'quest_page',
     })
+  })
+
+  // #2150: окно закрыли посреди загрузки фото — очередь продолжается, и на
+  // странице квеста остаётся ссылка на её статус, которая возвращает в окно.
+  it('показывает статус незавершённой загрузки фото и открывает по нему окно', () => {
+    mockReviewState = { review: { id: 5, rating: 5 }, isLoading: false }
+    mockPhotoUpload = { items: [], total: 3, uploaded: 2, failed: 1, isActive: false }
+
+    const { getByTestId, queryByTestId } = render(
+      <QuestReviewInvite questId="minsk-cmok" questNumericId={12} cityId="3" />,
+    )
+
+    expect(queryByTestId('quest-review-invite')).toBeNull()
+    expect(getByTestId('quest-review-invite-photo-status')).toHaveTextContent('Фото к отзыву: 2 из 3', { exact: false })
+    fireEvent.press(getByTestId('quest-review-invite-photo-status'))
+    expect(getByTestId('quest-review-invite-form')).toBeTruthy()
+    expect(mockTrackPromptClick).not.toHaveBeenCalled()
+  })
+
+  it('прячет статус, когда все фото загружены', () => {
+    mockReviewState = { review: { id: 5, rating: 5 }, isLoading: false }
+    mockPhotoUpload = { items: [], total: 3, uploaded: 3, failed: 0, isActive: false }
+
+    const { queryByTestId } = render(
+      <QuestReviewInvite questId="minsk-cmok" questNumericId={12} cityId="3" />,
+    )
+
+    expect(queryByTestId('quest-review-invite-photo-status')).toBeNull()
   })
 })

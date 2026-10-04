@@ -148,7 +148,19 @@ function fileFromJpegBlob(source: File, blob: Blob): File {
  * Теперь основной признак — размер в пикселях; вес остался вторым триггером для
  * случая «пикселей немного, а байт много» (см. `WEB_UPLOAD_COMPRESS_ABOVE_BYTES`).
  */
-export async function compressWebRasterImage(file: File): Promise<File> {
+export type WebImageUploadOptions = {
+  /**
+   * Длинная сторона результата. По умолчанию 2500 (`WEB_UPLOAD_MAX_SIDE`, print-вариант
+   * путешествий). Потребитель без печати сжимает сильнее — фото отзыва квеста
+   * отправляет 1920 = мастер сервера (#2150).
+   */
+  maxSide?: number;
+};
+
+export async function compressWebRasterImage(
+  file: File,
+  { maxSide = WEB_UPLOAD_MAX_SIDE }: WebImageUploadOptions = {},
+): Promise<File> {
   const normalizedType = String(file?.type || '').trim().toLowerCase();
   if (!WEB_COMPRESSIBLE_TYPES.has(normalizedType)) return file;
   if (!canUseCanvasCompression()) return file;
@@ -162,7 +174,7 @@ export async function compressWebRasterImage(file: File): Promise<File> {
   const sourceHeight = Number(image?.naturalHeight || image?.height || 0);
   if (!image || sourceWidth <= 0 || sourceHeight <= 0) return file;
 
-  const needsDownscale = Math.max(sourceWidth, sourceHeight) > WEB_UPLOAD_MAX_SIDE;
+  const needsDownscale = Math.max(sourceWidth, sourceHeight) > maxSide;
   const overServerLimit = file.size > SERVER_UPLOAD_MAX_BYTES;
   if (!needsDownscale && !exceedsUploadBudget && !overServerLimit) return file;
 
@@ -191,7 +203,7 @@ export async function compressWebRasterImage(file: File): Promise<File> {
   const acceptBlob = (blob: Blob): boolean =>
     blob.size > 0 && blob.size <= SERVER_UPLOAD_MAX_BYTES && blob.size < file.size;
 
-  const printTarget = getCompressedCanvasSize(sourceWidth, sourceHeight);
+  const printTarget = getCompressedCanvasSize(sourceWidth, sourceHeight, maxSide);
   const firstBlob = await encodeJpeg(printTarget.width, printTarget.height, WEB_UPLOAD_JPEG_QUALITY);
   if (firstBlob && acceptBlob(firstBlob)) return fileFromJpegBlob(file, firstBlob);
   // Оригинал уже в лимите сервера, а первый проход не выиграл — качество важнее
@@ -205,8 +217,9 @@ export async function compressWebRasterImage(file: File): Promise<File> {
     if (blob && acceptBlob(blob)) return fileFromJpegBlob(file, blob);
   }
 
-  for (const maxSide of WEB_UPLOAD_SIDE_RETRIES) {
-    const target = getCompressedCanvasSize(sourceWidth, sourceHeight, maxSide);
+  for (const retrySide of WEB_UPLOAD_SIDE_RETRIES) {
+    if (retrySide >= maxSide) continue;
+    const target = getCompressedCanvasSize(sourceWidth, sourceHeight, retrySide);
     const blob = await encodeJpeg(target.width, target.height, WEB_UPLOAD_QUALITY_RETRIES[WEB_UPLOAD_QUALITY_RETRIES.length - 1]);
     if (blob && blob.size > 0 && (!best || blob.size < best.size)) best = blob;
     if (blob && acceptBlob(blob)) return fileFromJpegBlob(file, blob);
@@ -216,9 +229,12 @@ export async function compressWebRasterImage(file: File): Promise<File> {
   return file;
 }
 
-export async function prepareWebImageFileForUpload(file: File): Promise<File> {
+export async function prepareWebImageFileForUpload(
+  file: File,
+  options: WebImageUploadOptions = {},
+): Promise<File> {
   if (typeof File === 'undefined' || !(file instanceof File)) return file;
-  if (!isHeicLikeFile(file)) return await compressWebRasterImage(file);
+  if (!isHeicLikeFile(file)) return await compressWebRasterImage(file, options);
 
   // heic-to (libheif-js ~1.18) декодирует современные iPhone HEIC (HEVC),
   // которые устаревший heic2any@0.0.4 не парсил (ERR_LIBHEIF format not supported).
@@ -245,5 +261,5 @@ export async function prepareWebImageFileForUpload(file: File): Promise<File> {
     lastModified: file.lastModified || Date.now(),
   });
 
-  return await compressWebRasterImage(convertedFile);
+  return await compressWebRasterImage(convertedFile, options);
 }

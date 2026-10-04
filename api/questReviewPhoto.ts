@@ -12,6 +12,9 @@
 //     step_id    — опционально, PK шага (не строковый `step_id` квеста!).
 //                  Разрешён ТОЛЬКО для этой коллекции: у остальных сервер
 //                  отвечает 400.
+//     client_upload_id — ключ снимка для идемпотентного повтора (#2171). Пока
+//                  бэк его не поддержал, DRF неизвестное поле игнорирует; после
+//                  выката повтор после потерянного ответа не создаёт дубль.
 //   Ответ: { id, url }.
 //
 // Ограничения сервера, которые обязан повторять клиент:
@@ -21,6 +24,7 @@
 
 import { uploadImage } from '@/api/misc'
 import { devError } from '@/utils/logger'
+import { prepareWebImageFileForUpload } from '@/utils/webImageUpload'
 
 /**
  * Предел сервера (`media_assets/views.py:2437`). Живёт здесь, а не в компоненте:
@@ -30,6 +34,14 @@ import { devError } from '@/utils/logger'
 export const QUEST_REVIEW_PHOTO_LIMIT = 3
 
 export const QUEST_REVIEW_PHOTO_COLLECTION = 'questReviewPhoto'
+
+/**
+ * Длинная сторона, до которой web сжимает фото отзыва перед отправкой (#2150).
+ * 1920 = мастер сервера (`ImageProcessingConfig.max_width`): больше он всё равно
+ * не хранит, а print-варианта 2500, ради которого редактор путешествий шлёт
+ * крупнее, у отзыва нет. Native жмёт при выборе (`compressTravelPhoto`).
+ */
+export const QUEST_REVIEW_PHOTO_MAX_SIDE = 1920
 
 /**
  * Файл в том виде, в каком его отдаёт пикер:
@@ -48,12 +60,39 @@ export type UploadQuestReviewPhotoParams = {
   file: QuestReviewPhotoFile
   /** PK шага квеста, если фото привязано к точке. Не строковый `step_id`. */
   stepId?: number | null
+  /** Ключ снимка, один на все попытки: делает повтор идемпотентным (#2171). */
+  clientUploadId?: string
+}
+
+export type QuestReviewPhotoUploadPhase = 'compressing' | 'uploading'
+
+export type UploadQuestReviewPhotoOptions = {
+  /** Фаза и размер уходящего файла — для статуса снимка и аналитики. */
+  onPhase?: (phase: QuestReviewPhotoUploadPhase, info: { sizeBytes: number | null }) => void
+  /** Доля отправленного тела 0–1. */
+  onProgress?: (fraction: number) => void
 }
 
 export type QuestReviewPhotoUploadResult = {
   id: number | null
   url: string | null
+  /** Сколько байт ушло на сервер (после сжатия); null — размер неизвестен (native). */
+  sizeBytes: number | null
 }
+
+const isWebFile = (file: QuestReviewPhotoFile): file is File =>
+  typeof File !== 'undefined' && file instanceof File
+
+/**
+ * На web — общий конвейер web-загрузки (#1164): HEIC → JPEG и уменьшение до
+ * `QUEST_REVIEW_PHOTO_MAX_SIDE`. На native файл уже уменьшен при выборе.
+ */
+export const prepareQuestReviewPhotoFile = async (
+  file: QuestReviewPhotoFile,
+): Promise<QuestReviewPhotoFile> =>
+  isWebFile(file)
+    ? await prepareWebImageFileForUpload(file, { maxSide: QUEST_REVIEW_PHOTO_MAX_SIDE })
+    : file
 
 /**
  * Собирает multipart ровно по контракту загрузки фото отзыва.
@@ -64,6 +103,7 @@ export const buildQuestReviewPhotoFormData = ({
   reviewId,
   file,
   stepId,
+  clientUploadId,
 }: UploadQuestReviewPhotoParams): FormData => {
   const form = new FormData()
   form.append('id', String(reviewId))
@@ -76,29 +116,40 @@ export const buildQuestReviewPhotoFormData = ({
   if (typeof stepId === 'number' && Number.isInteger(stepId) && stepId > 0) {
     form.append('step_id', String(stepId))
   }
+  if (clientUploadId) form.append('client_upload_id', clientUploadId)
   return form
 }
 
 /**
  * Грузит одно фото к уже сохранённому отзыву.
- * Поверх существующего `uploadImage` (`api/misc.ts:438`): там уже живут
+ * Поверх существующего `uploadImage` (`api/misc.ts`): там уже живут
  * авторизация, refresh на 401 и валидация файла — второй клиент загрузки
- * завёл бы вторую копию этой логики.
+ * завёл бы вторую копию этой логики. `onProgress` передаётся всегда: на web он
+ * включает XHR-ветку со сторожем простоя вместо 65 с на всю попытку (#2150).
  */
 export const uploadQuestReviewPhoto = async (
   params: UploadQuestReviewPhotoParams,
+  { onPhase, onProgress }: UploadQuestReviewPhotoOptions = {},
 ): Promise<QuestReviewPhotoUploadResult> => {
   if (!Number.isInteger(params.reviewId) || params.reviewId <= 0) {
     throw new Error('uploadQuestReviewPhoto: reviewId must be a positive integer')
   }
 
   try {
-    const response = await uploadImage(buildQuestReviewPhotoFormData(params))
+    onPhase?.('compressing', { sizeBytes: isWebFile(params.file) ? params.file.size : null })
+    const file = await prepareQuestReviewPhotoFile(params.file)
+    const sizeBytes = isWebFile(file) ? file.size : null
+    onPhase?.('uploading', { sizeBytes })
+    const response = await uploadImage(
+      buildQuestReviewPhotoFormData({ ...params, file }),
+      onProgress ?? (() => {}),
+    )
     const rawId = (response as { id?: unknown }).id
     const rawUrl = (response as { url?: unknown }).url
     return {
       id: typeof rawId === 'number' && Number.isFinite(rawId) ? rawId : null,
       url: typeof rawUrl === 'string' && rawUrl ? rawUrl : null,
+      sizeBytes,
     }
   } catch (error) {
     devError('Error uploading quest review photo:', error)

@@ -35,13 +35,14 @@ import {
 import { translate as i18nT } from '@/i18n';
 import type { DownloadResponse } from '@/api/clientTypes';
 import {
+    buildDetailedApiError,
     parseDownloadResponse,
     parseSuccessResponse,
     throwDetailedError,
 } from '@/api/clientResponse';
 import {
     fetchUploadWithTransientRetry,
-    isTransientUploadStatus,
+    sendXhrUploadWithTransientRetry,
 } from '@/api/clientUploadTransport';
 
 export { ApiError, isTimeoutError } from '@/api/clientErrors';
@@ -294,10 +295,6 @@ class ApiClient {
             ...getCsrfHeader(),
             ...extra,
         };
-    }
-
-    private isTransientUploadStatus(status: number): boolean {
-        return isTransientUploadStatus(status);
     }
 
     private async fetchUploadWithTransientRetry(
@@ -811,13 +808,14 @@ class ApiClient {
 
     /**
      * AND-15: Upload FormData with progress tracking via XMLHttpRequest.
-     * On native, xhr.upload.onprogress fires with loaded/total bytes.
-     * On web, falls back to fetch if XHR is unavailable.
+     * `onProgress` получает ДОЛЮ отправленного тела 0–1, не проценты (#2150).
+     * На web XHR включается передачей `onProgress`: только в этой ветке есть
+     * прогресс и сторож простоя; без него остаётся fetch.
      */
     async uploadFormDataWithProgress<T>(
         endpoint: string,
         formData: FormData,
-        onProgress?: (percent: number) => void,
+        onProgress?: (fraction: number) => void,
         method: 'POST' | 'PUT' | 'PATCH' = 'POST',
         timeout: number = LONG_TIMEOUT
     ): Promise<T> {
@@ -836,72 +834,42 @@ class ApiClient {
     }
 
     /**
-     * Internal: upload via XMLHttpRequest.
-     * На native корректно сериализует RN-части { uri, name, type } через нативный
-     * сетевой слой. Поддерживает опциональный onProgress.
+     * Internal: upload via XMLHttpRequest (`sendXhrUpload`: сторож простоя и один
+     * повтор на 502/503/504). На native корректно сериализует RN-части
+     * { uri, name, type } через нативный сетевой слой.
      */
-    private _uploadViaXhr<T>(
+    private async _uploadViaXhr<T>(
         endpoint: string,
         formData: FormData,
         token: string | null,
         method: string,
         timeout: number,
-        onProgress?: (percent: number) => void
+        onProgress?: (fraction: number) => void
     ): Promise<T> {
-        return new Promise<T>((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open(method, `${this.baseURL}${endpoint}`);
-            if (usesWebCookieAuth()) {
-                xhr.withCredentials = true;
-            }
+        const send = (authToken: string | null) =>
+            sendXhrUploadWithTransientRetry({
+                url: `${this.baseURL}${endpoint}`,
+                method,
+                formData,
+                headers: this.authHeaders(authToken),
+                withCredentials: usesWebCookieAuth(),
+                responseTimeoutMs: timeout,
+                onProgress,
+            });
 
-            const headers = this.authHeaders(token);
-            for (const [headerKey, headerValue] of Object.entries(headers)) {
-                if (typeof headerValue === 'string') {
-                    xhr.setRequestHeader(headerKey, headerValue);
-                }
-            }
-            xhr.timeout = timeout;
-
-            if (onProgress) {
-                xhr.upload.onprogress = (event) => {
-                    if (event.lengthComputable) {
-                        onProgress(event.loaded / event.total);
-                    }
-                };
-            }
-
-            xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    try {
-                        const data = JSON.parse(xhr.responseText);
-                        resolve(data as T);
-                    } catch {
-                        resolve(xhr.responseText as unknown as T);
-                    }
-                } else if (xhr.status === 401 && token && !isE2E && backendHasRefreshEndpoint) {
-                    // Retry with refreshed token via XHR (no progress on retry).
-                    // Пропускается, пока бэк без /user/refresh/ — 401 падает в общий else.
-                    this.refreshAccessToken()
-                        .then((newToken) =>
-                            this._uploadViaXhr<T>(endpoint, formData, newToken, method, timeout)
-                        )
-                        .then(resolve)
-                        .catch(reject);
-                } else if (this.isTransientUploadStatus(xhr.status)) {
-                    this._uploadViaXhr<T>(endpoint, formData, token, method, timeout)
-                        .then(resolve)
-                        .catch(reject);
-                } else {
-                    reject(new ApiError(xhr.status, i18nT('errorsStatic:api.client.uploadFailed', { details: xhr.statusText })));
-                }
-            };
-
-            xhr.onerror = () => reject(new ApiError(0, i18nT('errorsStatic:api.client.uploadNetworkError')));
-            xhr.ontimeout = () => reject(new ApiError(0, i18nT('errorsStatic:api.client.uploadTimeout')));
-
-            xhr.send(formData);
-        });
+        let response = await send(token);
+        if (response.status === 401 && token && !isE2E && backendHasRefreshEndpoint) {
+            // Пропускается, пока бэк без /user/refresh/ — 401 падает в общий отказ.
+            response = await send(await this.refreshAccessToken());
+        }
+        if (response.status < 200 || response.status >= 300) {
+            throw buildDetailedApiError(response.status, response.statusText, response.responseText);
+        }
+        try {
+            return JSON.parse(response.responseText) as T;
+        } catch {
+            return response.responseText as unknown as T;
+        }
     }
 
     /** Internal: upload via fetch (no progress). Web only — на native fetch не умеет { uri }-части. */

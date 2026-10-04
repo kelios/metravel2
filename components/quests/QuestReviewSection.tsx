@@ -6,6 +6,7 @@ import StarRating from '@/components/ui/StarRating'
 import QuestReviewPhotoPicker, {
   type QuestReviewPhotoDraft,
 } from '@/components/quests/QuestReviewPhotoPicker'
+import QuestReviewPhotoUploadList from '@/components/quests/QuestReviewPhotoUploadList'
 import { type QuestRating } from '@/api/questRating'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -57,13 +58,10 @@ function QuestReviewSection({
   const [disliked, setDisliked] = useState('')
   const [photos, setPhotos] = useState<QuestReviewPhotoDraft[]>([])
 
-  const {
-    statuses: photoStatuses,
-    failedNames: photoFailedNames,
-    isUploading: isUploadingPhotos,
-    hasUploaded: hasUploadedPhotos,
-    uploadAll: uploadPhotos,
-  } = useQuestReviewPhotoUpload({ questId, cityId })
+  // Очередь фото адресуется PK отзыва и живёт вне компонента (#2150): окно
+  // отзыва, открытое заново, и финал показывают одну и ту же загрузку.
+  const photoUpload = useQuestReviewPhotoUpload(submittedReview?.id ?? review?.id)
+  const { uploadAll: uploadPhotos } = photoUpload
 
   // Загрузка стартует ровно один раз и только после подтверждённого сервером
   // сохранения: до этого нет `id`, по которому адресуется фото. Ref нужен
@@ -72,8 +70,8 @@ function QuestReviewSection({
   useEffect(() => {
     if (!submittedReview || photos.length === 0 || photoUploadStartedRef.current) return
     photoUploadStartedRef.current = true
-    void uploadPhotos(submittedReview.id, photos)
-  }, [photos, submittedReview, uploadPhotos])
+    uploadPhotos(submittedReview.id, photos, { questId, cityId })
+  }, [cityId, photos, questId, submittedReview, uploadPhotos])
 
   const effectiveRating = rating || review?.rating || 0
   const alreadyReviewed = !!review && !isSubmitted
@@ -117,44 +115,22 @@ function QuestReviewSection({
         </View>
 
         {/* Фото продолжают грузиться уже после того, как отзыв сохранён:
-            прогресс обязан жить здесь, иначе он исчезнет вместе с формой и
+            статусы обязаны жить здесь, иначе они исчезнут вместе с формой и
             игрок решит, что снимки потерялись. */}
-        {photos.length > 0 && (
-          <QuestReviewPhotoPicker
-            value={photos}
-            onChange={setPhotos}
-            statuses={photoStatuses}
-            disabled
-            testID={`${testID}-photos`}
-          />
-        )}
-
-        {isUploadingPhotos && (
-          <Text style={styles.noteText} testID={`${testID}-photo-uploading`}>
-            {i18nT('quests:components.quests.QuestReviewSection.photoUploading')}
-          </Text>
-        )}
+        <QuestReviewPhotoUploadList
+          items={photoUpload.items}
+          uploaded={photoUpload.uploaded}
+          total={photoUpload.total}
+          isActive={photoUpload.isActive}
+          onRetry={photoUpload.retry}
+          testID={`${testID}-photo-upload`}
+        />
 
         {/* Модерация задерживает показ: без этой строки задержка читается как
             потеря файла (сервер к тому же снимает `moderation` при загрузке). */}
-        {!isUploadingPhotos && hasUploadedPhotos && (
+        {!photoUpload.isActive && photoUpload.hasUploaded && (
           <Text style={styles.noteText} testID={`${testID}-photo-moderation`}>
             {i18nT('quests:components.quests.QuestReviewSection.photoModerationNote')}
-          </Text>
-        )}
-
-        {/* Отзыв остаётся сохранённым: не доехали конкретные файлы, и они
-            названы поимённо. */}
-        {!isUploadingPhotos && photoFailedNames.length > 0 && (
-          <Text
-            style={styles.errorText}
-            accessibilityRole="alert"
-            accessibilityLiveRegion="polite"
-            testID={`${testID}-photo-error`}
-          >
-            {i18nT('quests:components.quests.QuestReviewSection.photoUploadFailed', {
-              value1: photoFailedNames.join(', '),
-            })}
           </Text>
         )}
       </View>

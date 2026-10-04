@@ -73,15 +73,27 @@ export const parseErrorBody = (text: string): unknown => {
     }
 };
 
-export const throwDetailedError = async (response: Response): Promise<never> => {
-    const errorText = await response.text().catch(() => 'Unknown error');
+/**
+ * Ошибка с причиной из тела ответа: по HTTP/2 statusText пустой, и без тела
+ * («at most 3 photos», «unsupported file type») причина теряется. Общая для
+ * fetch- и XHR-веток загрузки.
+ */
+export const buildDetailedApiError = (
+    status: number,
+    statusText: string,
+    errorText: string,
+): ApiError => {
     const errorData = parseErrorBody(errorText);
-    const fallbackStatusText = response.statusText || `HTTP ${response.status}`;
-    throw new ApiError(
-        response.status,
-        getApiErrorMessage(errorData, fallbackStatusText),
+    return new ApiError(
+        status,
+        getApiErrorMessage(errorData, statusText || `HTTP ${status}`),
         errorData
     );
+};
+
+export const throwDetailedError = async (response: Response): Promise<never> => {
+    const errorText = await response.text().catch(() => 'Unknown error');
+    throw buildDetailedApiError(response.status, response.statusText, errorText);
 };
 
 export const parseSuccessResponse = async <T>(response: Response): Promise<T> => {

@@ -29,12 +29,14 @@ export class HeicConversionError extends Error {
   }
 }
 
+export type WebImageUploadOptions = { maxSide?: number };
+
 /** Native uploads use the platform image pipeline; browser canvas/WASM is web-only. */
-export async function compressWebRasterImage(file: File): Promise<File> {
+export async function compressWebRasterImage(file: File, _options?: WebImageUploadOptions): Promise<File> {
   return file;
 }
 
 /** Keep shared callers safe without bundling the LGPL browser HEIC decoder on native. */
-export async function prepareWebImageFileForUpload(file: File): Promise<File> {
+export async function prepareWebImageFileForUpload(file: File, _options?: WebImageUploadOptions): Promise<File> {
   return file;
 }

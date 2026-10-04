@@ -286,6 +286,7 @@ export const questsGenerated2 = {
   "components.quests.QuestReviewInvite.modalTitle": "Opinia o queście",
   "components.quests.QuestReviewInvite.overlayClose": "Zamknij formularz opinii",
   "components.quests.QuestReviewInvite.close": "Zamknij",
+  "components.quests.QuestReviewInvite.photoStatus": "Zdjęcia do opinii: {{value1}} z {{value2}}",
   "components.quests.QuestReviewPromptBanner.title": "Jak Ci się podobał quest?",
   "components.quests.QuestReviewPromptBanner.titleWithQuest": "Jak Ci się podobał quest „{{value1}}”?",
   "components.quests.QuestReviewPromptBanner.subtitle": "Kilka słów pomoże innym wybrać trasę",

@@ -245,6 +245,38 @@ describe('webImageUpload', () => {
       expect(toBlobCalls).toHaveLength(0);
     });
 
+    // #2150: потребитель без print-варианта (фото отзыва квеста) жмёт до мастера
+    // сервера 1920, а редактор путешествий по умолчанию остаётся на 2500.
+    it('уменьшает до заданной maxSide, не трогая дефолт 2500', async () => {
+      mockCanvasPipeline(4032, 3024, 500 * 1024);
+      const source = new File([new Uint8Array(5 * 1024 * 1024)], 'review.jpg', { type: 'image/jpeg' });
+
+      const result = await compressWebRasterImage(source, { maxSide: 1920 });
+
+      expect(result).not.toBe(source);
+      expect(canvasSizes[0]).toEqual({ width: 1920, height: 1440 });
+    });
+
+    it('с maxSide 1920 жмёт кадр 2400 px, который дефолт 2500 пропустил бы', async () => {
+      mockCanvasPipeline(2400, 1600, 300 * 1024);
+      const source = new File([new Uint8Array(3 * 1024 * 1024)], 'mid.jpg', { type: 'image/jpeg' });
+
+      expect(await compressWebRasterImage(source)).toBe(source);
+      const result = await compressWebRasterImage(source, { maxSide: 1920 });
+      expect(result).not.toBe(source);
+      expect(canvasSizes[0]).toEqual({ width: 1920, height: 1280 });
+    });
+
+    it('prepareWebImageFileForUpload передаёт maxSide в сжатие', async () => {
+      mockCanvasPipeline(4000, 4000, 400 * 1024);
+      const source = new File([new Uint8Array(6 * 1024 * 1024)], 'square.jpg', { type: 'image/jpeg' });
+
+      const result = await prepareWebImageFileForUpload(source, { maxSide: 1920 });
+
+      expect(result.type).toBe('image/jpeg');
+      expect(canvasSizes[0]).toEqual({ width: 1920, height: 1920 });
+    });
+
     // Правило по пикселям требует декодировать файл, а декод — цена на КАЖДОЙ
     // загрузке. Ниже 512 КБ выигрыш от downscale исчезающе мал, поэтому файл даже
     // не открывается.

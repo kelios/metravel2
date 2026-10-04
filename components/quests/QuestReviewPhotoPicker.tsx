@@ -1,9 +1,10 @@
 // components/quests/QuestReviewPhotoPicker.tsx
 // Выбор до трёх фото к отзыву о квесте (#1579).
 //
-// Компонент только ВЫБИРАЕТ файлы: загрузка живёт в `QuestReviewSection`, потому
-// что до подтверждённого отзыва нет `id`, по которому адресуется загрузка
-// (см. `api/questReviewPhoto.ts`). Статусы загрузки приходят сюда сверху.
+// Компонент только ВЫБИРАЕТ файлы: загрузка стартует после подтверждённого
+// отзыва — до него нет `id`, по которому адресуется загрузка
+// (см. `api/questReviewPhoto.ts`). Статусы загрузки показывает
+// `QuestReviewPhotoUploadList` (#2150), а не пикер.
 
 import { memo, useCallback, useMemo, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
@@ -29,18 +30,16 @@ export type QuestReviewPhotoDraft = {
   file: QuestReviewPhotoFile
 }
 
-export type QuestReviewPhotoStatus = 'idle' | 'uploading' | 'uploaded' | 'failed'
-
 type Props = {
   value: QuestReviewPhotoDraft[]
   onChange: (next: QuestReviewPhotoDraft[]) => void
-  /** Статус загрузки по ключу снимка; пусто до отправки отзыва. */
-  statuses?: Record<string, QuestReviewPhotoStatus>
   disabled?: boolean
   testID?: string
 }
 
-const THUMB_SIZE = 88
+/** Миниатюра снимка — общая с `QuestReviewPhotoUploadList`: после отправки ряд не прыгает. */
+export const QUEST_REVIEW_THUMB_SIZE = 88
+const THUMB_SIZE = QUEST_REVIEW_THUMB_SIZE
 /** Минимальная цель нажатия проекта (`scripts/guard-touch-targets.js`). */
 const REMOVE_HIT_SIZE = 44
 
@@ -131,7 +130,6 @@ const toDraft = async (
 function QuestReviewPhotoPicker({
   value,
   onChange,
-  statuses,
   disabled = false,
   testID = 'quest-review-photo-picker',
 }: Props) {
@@ -242,19 +240,6 @@ function QuestReviewPhotoPicker({
     [onChange, value],
   )
 
-  const statusLabel = useCallback((status: QuestReviewPhotoStatus | undefined): string | null => {
-    switch (status) {
-      case 'uploading':
-        return i18nT('quests:components.quests.QuestReviewPhotoPicker.uploading')
-      case 'uploaded':
-        return i18nT('quests:components.quests.QuestReviewPhotoPicker.uploaded')
-      case 'failed':
-        return i18nT('quests:components.quests.QuestReviewPhotoPicker.uploadFailed')
-      default:
-        return null
-    }
-  }, [])
-
   return (
     <View style={styles.container} testID={testID}>
       <Text style={styles.label}>
@@ -268,63 +253,49 @@ function QuestReviewPhotoPicker({
 
       {value.length > 0 && (
         <View style={styles.thumbRow} testID={`${testID}-thumbs`}>
-          {value.map((draft) => {
-            const status = statuses?.[draft.key]
-            const label = statusLabel(status)
-            return (
-              <View key={draft.key} style={styles.thumbWrapper} testID={`${testID}-item-${draft.key}`}>
-                <View style={styles.thumb}>
-                  {/* Через `ImageCardMedia`, а не голый `expo-image`: прямой
-                      импорт примитива внутри `components/**` запрещён ADR
-                      `docs/adr/0002-images-via-image-card-media.md` и падает на
-                      `npm run check:image-architecture`. Прецедент локального
-                      превью выбранного файла — `PhotoUploadWithPreview.tsx:203`.
-                      Прокси локальный URI не переписывает: `file:`, `blob:` и
-                      `data:` возвращаются из `optimizeImageUrl` как есть
-                      (`utils/imageProxy.ts:228,258`). `contain` — инвариант
-                      docs/RULES.md → Images and placeholders. */}
-                  <ImageCardMedia
-                    src={draft.previewUri}
-                    width={THUMB_SIZE}
-                    height={THUMB_SIZE}
-                    fit="contain"
-                    alt={draft.name}
-                    style={styles.thumbImage}
-                    testID={`${testID}-preview-${draft.key}`}
-                  />
-                </View>
-                {!disabled && (
-                  <Pressable
-                    onPress={() => handleRemove(draft.key)}
-                    style={styles.removeButton}
-                    accessibilityRole="button"
-                    accessibilityLabel={i18nT(
-                      'quests:components.quests.QuestReviewPhotoPicker.remove',
-                      { value1: draft.name },
-                    )}
-                    testID={`${testID}-remove-${draft.key}`}
-                  >
-                    {/* Цель нажатия — все 44 dp прозрачной обёртки, видимый
-                        кружок меньше: сплошной круг в 44 dp закрыл бы четверть
-                        превью 88×88. */}
-                    <View style={styles.removeBadge}>
-                      <Feather name="x" size={14} color={colors.textOnPrimary} />
-                    </View>
-                  </Pressable>
-                )}
-                {/* Статус объявляется текстом, а не только цветом рамки:
-                    иначе он не существует для экранного диктора. */}
-                {label && (
-                  <Text
-                    style={[styles.statusText, status === 'failed' && styles.statusTextFailed]}
-                    testID={`${testID}-status-${draft.key}`}
-                  >
-                    {label}
-                  </Text>
-                )}
+          {value.map((draft) => (
+            <View key={draft.key} style={styles.thumbWrapper} testID={`${testID}-item-${draft.key}`}>
+              <View style={styles.thumb}>
+                {/* Через `ImageCardMedia`, а не голый `expo-image`: прямой
+                    импорт примитива внутри `components/**` запрещён ADR
+                    `docs/adr/0002-images-via-image-card-media.md` и падает на
+                    `npm run check:image-architecture`. Прецедент локального
+                    превью выбранного файла — `PhotoUploadWithPreview.tsx:203`.
+                    Прокси локальный URI не переписывает: `file:`, `blob:` и
+                    `data:` возвращаются из `optimizeImageUrl` как есть
+                    (`utils/imageProxy.ts:228,258`). `contain` — инвариант
+                    docs/RULES.md → Images and placeholders. */}
+                <ImageCardMedia
+                  src={draft.previewUri}
+                  width={THUMB_SIZE}
+                  height={THUMB_SIZE}
+                  fit="contain"
+                  alt={draft.name}
+                  style={styles.thumbImage}
+                  testID={`${testID}-preview-${draft.key}`}
+                />
               </View>
-            )
-          })}
+              {!disabled && (
+                <Pressable
+                  onPress={() => handleRemove(draft.key)}
+                  style={styles.removeButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={i18nT(
+                    'quests:components.quests.QuestReviewPhotoPicker.remove',
+                    { value1: draft.name },
+                  )}
+                  testID={`${testID}-remove-${draft.key}`}
+                >
+                  {/* Цель нажатия — все 44 dp прозрачной обёртки, видимый
+                      кружок меньше: сплошной круг в 44 dp закрыл бы четверть
+                      превью 88×88. */}
+                  <View style={styles.removeBadge}>
+                    <Feather name="x" size={14} color={colors.textOnPrimary} />
+                  </View>
+                </Pressable>
+              )}
+            </View>
+          ))}
         </View>
       )}
 
@@ -445,14 +416,6 @@ const createStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.primary,
-    },
-    statusText: {
-      fontSize: 11,
-      lineHeight: 15,
-      color: colors.textMuted,
-    },
-    statusTextFailed: {
-      color: colors.danger,
     },
     actionsRow: {
       flexDirection: 'row',

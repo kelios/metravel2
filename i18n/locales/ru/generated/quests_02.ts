@@ -286,6 +286,7 @@ export const questsGenerated2 = {
   "components.quests.QuestReviewInvite.modalTitle": "Отзыв о квесте",
   "components.quests.QuestReviewInvite.overlayClose": "Закрыть форму отзыва",
   "components.quests.QuestReviewInvite.close": "Закрыть",
+  "components.quests.QuestReviewInvite.photoStatus": "Фото к отзыву: {{value1}} из {{value2}}",
   "components.quests.QuestReviewPromptBanner.title": "Как вам квест?",
   "components.quests.QuestReviewPromptBanner.titleWithQuest": "Как вам квест «{{value1}}»?",
   "components.quests.QuestReviewPromptBanner.subtitle": "Пара слов помогут другим выбрать маршрут",

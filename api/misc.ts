@@ -58,6 +58,9 @@ const SAVE_TRAVEL_TIMEOUT = 65000;
 // `set_image` режет кадр, пишет webp и кладёт в S3 синхронно. Клиентские 30 с
 // короче сервера: запрос ещё жив, UI уже показывает «Превышено время ожидания
 // (30000ms)». Ждём чуть дольше 60 с, чтобы исход пришёл от nginx/бэка.
+// В XHR-ветке (передан `onProgress`) это потолок ожидания ОТВЕТА после отправки
+// тела, а пока тело уходит, загрузку держит сторож простоя `UPLOAD_IDLE_TIMEOUT_MS`
+// (#2150): медленная живая загрузка не рвётся, мёртвая не висит минутами.
 const UPLOAD_TIMEOUT = 65000;
 
 const GET_FILTERS = `${URLAPI}/getFiltersTravel/`;
@@ -453,7 +456,8 @@ export const deleteTravelMainImage = async (travelId: string | number) => {
 
 export const uploadImage = async (
   data: FormData,
-  onProgress?: (percent: number) => void,
+  /** Доля отправленного тела 0–1 (не проценты); на web включает XHR-ветку со сторожем простоя. */
+  onProgress?: (fraction: number) => void,
 ): Promise<{
   data?: { url?: string };
   url?: string;
