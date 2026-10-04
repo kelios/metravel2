@@ -11,9 +11,11 @@
     ]
   }
 
-Фото — локальный путь или URL (только свои фото автора 1). Каждое фото сегмента
-показывается равную долю его длительности: альбомное — панорамой слева направо,
-портретное — медленным наездом. Текст рисует Pillow (в сборке ffmpeg нет drawtext).
+Источник в `images` — фото (локальный путь или URL) либо видеоклип (.mov/.mp4), только
+свои материалы автора 1. Клип можно задать объектом {"src": "...", "start": 4.5}; без
+`start` берётся кусок с первой трети клипа. Каждый источник сегмента показывается равную
+долю его длительности: альбомное фото — панорамой слева направо, портретное — медленным
+наездом, видео — как снято, с обрезкой до 9:16 и без звука. Текст рисует Pillow (в сборке ffmpeg нет drawtext).
 Музыку добавляет владелец в приложении Instagram при публикации.
 
 Запуск: python3 scripts/instagram/make-reel.py spec.json
@@ -29,6 +31,9 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 W, H, FPS = 1080, 1920, 30
+VIDEO_SUFFIXES = {".mov", ".mp4", ".m4v"}
+# Одинаковые параметры кодирования у всех кусков — иначе склейка без перекодирования рвётся.
+ENCODE = ["-r", str(FPS), "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-video_track_timescale", "30000", "-an"]
 # Зоны, которые Instagram закрывает своим интерфейсом: шапка сверху, подпись и кнопки снизу.
 SAFE_TOP, SAFE_BOTTOM, SIDE = 260, 460, 80
 FONT_CANDIDATES = [
@@ -114,10 +119,31 @@ def clip(image, size, overlay, duration, out):
         [
             "ffmpeg", "-y", "-loglevel", "error", "-loop", "1", "-framerate", str(FPS), "-i", str(image),
             "-i", str(overlay), "-filter_complex", f"[0:v]{motion},setsar=1[bg];[bg][1:v]overlay=0:0,format=yuv420p",
-            "-t", f"{duration:.3f}", "-r", str(FPS), "-c:v", "libx264", "-preset", "medium", "-crf", "19", str(out),
+            "-t", f"{duration:.3f}", *ENCODE, str(out),
         ],
         check=True,
     )
+
+
+def video_clip(src, start, overlay, duration, out):
+    """Кусок видеоклипа: обрезка до 9:16, 30 кадров в секунду, без звука."""
+    if start is None:
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(src)],
+            check=True, capture_output=True, text=True,
+        )
+        start = max(0.0, min(float(probe.stdout.strip()) / 3, float(probe.stdout.strip()) - duration))
+    subprocess.run(
+        [
+            "ffmpeg", "-y", "-loglevel", "error", "-ss", f"{start:.3f}", "-i", str(src), "-i", str(overlay),
+            "-filter_complex",
+            f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS},setsar=1[bg];"
+            "[bg][1:v]overlay=0:0,format=yuv420p",
+            "-t", f"{duration:.3f}", *ENCODE, str(out),
+        ],
+        check=True,
+    )
+    return start
 
 
 def main():
@@ -128,16 +154,28 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
-        clips = []
+        clips, cover_frame = [], None
         for s, segment in enumerate(spec["segments"]):
             overlay = tmp / f"text{s}.png"
             text_overlay(segment["text"], overlay, size=segment.get("size", 64), anchor=segment.get("anchor", "bottom"))
             share = segment["duration"] / len(segment["images"])
-            for i, src in enumerate(segment["images"]):
-                image = tmp / f"img{s}_{i}.jpg"
-                size = fetch_image(src, image)
+            for i, source in enumerate(segment["images"]):
+                src, start = (source["src"], source.get("start")) if isinstance(source, dict) else (source, None)
                 clip_path = tmp / f"clip{s}_{i}.mp4"
-                clip(image, size, overlay, share, clip_path)
+                if Path(src).suffix.lower() in VIDEO_SUFFIXES:
+                    start = video_clip(src, start, overlay, share, clip_path)
+                    if cover_frame is None:
+                        cover_frame = tmp / "cover_frame.jpg"
+                        subprocess.run(
+                            ["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{start:.3f}", "-i", str(src),
+                             "-frames:v", "1", str(cover_frame)],
+                            check=True,
+                        )
+                else:
+                    image = tmp / f"img{s}_{i}.jpg"
+                    size = fetch_image(src, image)
+                    clip(image, size, overlay, share, clip_path)
+                    cover_frame = cover_frame or image
                 clips.append(clip_path)
         listing = tmp / "list.txt"
         listing.write_text("".join(f"file '{c}'\n" for c in clips), encoding="utf-8")
@@ -147,8 +185,8 @@ def main():
             check=True,
         )
         if spec.get("cover_text"):
-            first = Image.open(tmp / "img0_0.jpg")
-            cover = ImageOps.fit(first, (W, H))
+            # Обложка — первый кадр ролика без текста хука, с названием сверху.
+            cover = ImageOps.fit(Image.open(cover_frame).convert("RGB"), (W, H))
             cover_overlay = tmp / "cover.png"
             text_overlay(spec["cover_text"], cover_overlay, size=84, anchor="top")
             cover.paste(Image.open(cover_overlay), (0, 0), Image.open(cover_overlay))
