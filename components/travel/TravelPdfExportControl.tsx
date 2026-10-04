@@ -1,11 +1,12 @@
 import React, { Suspense, lazy, useCallback, useMemo, useState } from 'react'
-import { ActivityIndicator, Alert, Platform, Pressable, type StyleProp, type ViewStyle } from 'react-native'
+import { ActivityIndicator, Platform, Pressable, type StyleProp, type ViewStyle } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { Travel } from '@/types/types'
 import { ExportStage } from '@/types/pdf-export'
 import type { ShareButtonsPdfExportState } from '@/components/travel/ShareButtonsPdfExportBridge'
 import { translate as i18nT } from '@/i18n'
+import { showToast } from '@/utils/toast'
 
 
 const ShareButtonsPdfExportBridgeLazy = lazy(() => import('@/components/travel/ShareButtonsPdfExportBridge'))
@@ -52,7 +53,12 @@ function TravelPdfExportControl({
 
   const handleOpenExport = useCallback(() => {
     if (Platform.OS !== 'web') {
-      Alert.alert?.(i18nT('travel:components.travel.TravelPdfExportControl.nedostupno_09a30ee5'), i18nT('travel:components.travel.TravelPdfExportControl.eksport_pdf_dostupen_tolko_v_veb_versii_3d58ea06'))
+      void showToast({
+        type: 'info',
+        text1: i18nT('travel:components.travel.TravelPdfExportControl.nedostupno_09a30ee5'),
+        text2: i18nT('travel:components.travel.TravelPdfExportControl.eksport_pdf_dostupen_tolko_v_veb_versii_3d58ea06'),
+        position: 'bottom',
+      })
       return
     }
     setShouldMountPdfExport(true)

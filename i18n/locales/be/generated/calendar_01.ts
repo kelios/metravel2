@@ -6,7 +6,6 @@ export const calendarGenerated1 = {
   "app.tabs.calendar.pokazat_vse_302c971f": "Паказаць усе",
   "app.tabs.calendar.ubrat_77b9552b": "Прыбраць",
   "app.tabs.calendar.ubrat_iz_kalendarya_171623ca": "Прыбраць з календара",
-  "app.tabs.calendar.ubrat_value1_iz_kalendarya_4710e4cf": "Прыбраць \"{{value1}}\" з календара?",
   "app.tabs.calendar.ukazhite_datu_69ef3cd1": "Пазначце дату",
   "app.tabs.calendar.v_etot_den_poezdok_net_b39357eb": "У гэты дзень паездак няма",
   "app.tabs.calendar.value1_ischeznet_iz_kalendarya_sam_marshrut__79185a97": "«{{value1}}» знікне з календара. Сам маршрут застанецца даступны.",

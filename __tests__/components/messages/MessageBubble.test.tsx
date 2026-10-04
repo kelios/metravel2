@@ -1,6 +1,6 @@
-import { render as rtlRender } from '@testing-library/react-native';
+import { render as rtlRender, act, fireEvent, waitFor } from '@testing-library/react-native';
 import { createQueryWrapper } from '../../helpers/testQueryClient';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import MessageBubble from '@/components/messages/MessageBubble';
 import type { Message } from '@/api/messages';
 
@@ -84,46 +84,59 @@ describe('MessageBubble', () => {
         expect(getByLabelText('Удалить сообщение')).toBeTruthy();
     });
 
-    it('long press with onDelete shows Alert with Копировать and Удалить (native)', () => {
+    // #2127: меню долгого нажатия — ActionListSheet на всех платформах, без Alert.alert.
+    it('long press with onDelete opens the action sheet with Копировать and destructive Удалить', () => {
         const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-        const onDelete = jest.fn();
-        const { getByText } = render(
-            <MessageBubble message={baseMessage} isOwn={true} onDelete={onDelete} />
+        const { getByText, getByLabelText, getAllByLabelText } = render(
+            <MessageBubble message={baseMessage} isOwn={true} onDelete={jest.fn()} />
         );
+        expect(getAllByLabelText('Удалить сообщение')).toHaveLength(1);
         const node = findPressableWithLongPress(getByText('Hello world'));
-        expect(node).toBeTruthy();
-        node.props.onLongPress();
-        expect(alertSpy).toHaveBeenCalledWith(
-            'Сообщение',
-            undefined,
-            expect.arrayContaining([
-                expect.objectContaining({ text: 'Копировать' }),
-                expect.objectContaining({ text: 'Удалить', style: 'destructive' }),
-                expect.objectContaining({ text: 'Отмена', style: 'cancel' }),
-            ])
-        );
+        act(() => node.props.onLongPress());
+
+        expect(getByText('Сообщение')).toBeTruthy();
+        expect(getByLabelText('Копировать текст')).toBeTruthy();
+        // кнопка в строке сообщения + destructive-пункт меню
+        expect(getAllByLabelText('Удалить сообщение')).toHaveLength(2);
+        expect(alertSpy).not.toHaveBeenCalled();
         alertSpy.mockRestore();
     });
 
-    it('long press without onDelete shows Alert with Копировать only (native)', () => {
-        const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-        const { getByText } = render(
+    it('long press without onDelete offers Копировать only', () => {
+        const { getByText, getByLabelText, queryByText } = render(
             <MessageBubble message={baseMessage} isOwn={false} />
         );
         const node = findPressableWithLongPress(getByText('Hello world'));
-        expect(node).toBeTruthy();
-        node.props.onLongPress();
-        expect(alertSpy).toHaveBeenCalledWith(
-            'Сообщение',
-            undefined,
-            expect.arrayContaining([
-                expect.objectContaining({ text: 'Копировать' }),
-                expect.objectContaining({ text: 'Отмена', style: 'cancel' }),
-            ])
-        );
-        // Should NOT contain Удалить
-        const buttons = alertSpy.mock.calls[0][2] as any[];
-        expect(buttons.find((b: any) => b.text === 'Удалить')).toBeUndefined();
-        alertSpy.mockRestore();
+        act(() => node.props.onLongPress());
+
+        expect(getByLabelText('Копировать текст')).toBeTruthy();
+        expect(queryByText('Удалить')).toBeNull();
+    });
+
+    it('native: «Удалить» из меню спрашивает через confirmAction и удаляет после подтверждения', async () => {
+        const originalPlatform = Platform.OS;
+        Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+        const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const onDelete = jest.fn();
+        try {
+            const { getByText, getByLabelText } = render(
+                <MessageBubble message={baseMessage} isOwn={true} onDelete={onDelete} />
+            );
+            fireEvent.press(getByLabelText('Удалить сообщение'));
+            expect(onDelete).not.toHaveBeenCalled();
+            expect(alertSpy).toHaveBeenCalledWith(
+                'Удалить сообщение',
+                expect.any(String),
+                expect.any(Array),
+                expect.objectContaining({ cancelable: true }),
+            );
+            const buttons = alertSpy.mock.calls[0]?.[2] as any[];
+            buttons.find((b) => b.style === 'destructive')?.onPress?.();
+            await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
+            expect(getByText('Hello world')).toBeTruthy();
+        } finally {
+            alertSpy.mockRestore();
+            Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+        }
     });
 });

@@ -1030,9 +1030,10 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
 
   it('fails closed when unavailable quest PNG export requests library access', () => {
     const testRoot = fixture({
+      // #2127: якорь — native-ветка PNG-экспорта (сообщение тостом, не Alert).
       'components/quests/QuestFullMap.tsx': value => value.replace(
-        '            Alert.alert(i18nT(',
-        "            require('expo-media-library').requestPermissionsAsync();\n            Alert.alert(i18nT("
+        "            void showToast({\n                type: 'info',",
+        "            require('expo-media-library').requestPermissionsAsync();\n            void showToast({\n                type: 'info',"
       ),
     });
     expect(validateIosRelease(testRoot)).toEqual(

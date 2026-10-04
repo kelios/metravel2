@@ -100,16 +100,17 @@ function saveArtifactBlob(blob: Blob, filename: string): void {
   }
 }
 
-// true = серверный экспорт доставил артефакт; false = любой отказ (capability,
-// сетевые ошибки, failed job, таймаут) — работает текущий клиентский рантайм.
+// Итог доставки серверного артефакта: результат печати HTML или 'downloaded' (файл
+// скачан); null — любой отказ (capability, сетевые ошибки, failed job, таймаут) —
+// работает текущий клиентский рантайм.
 async function tryServerBookExport(
   selected: Travel[],
   settings: BookSettings,
   printSession: PrintSession,
   updateProgress: UpdateProgress,
-): Promise<boolean> {
+): Promise<PrintResult | 'downloaded' | null> {
   const travelIds = collectServerExportTravelIds(selected);
-  if (!travelIds) return false;
+  if (!travelIds) return null;
 
   try {
     const job = await requestServerBookExport({
@@ -117,27 +118,28 @@ async function tryServerBookExport(
       settings: toServerBookSettings(settings),
       format: SERVER_BOOK_EXPORT_FORMAT,
     });
-    if (!job) return false;
+    if (!job) return null;
 
     updateProgress(ExportStage.RENDERING, 90, i18nT('export:hooks.usePdfExportRuntime.skachivanie_gotovoy_knigi_fe0424ef'), [
       i18nT('export:hooks.usePdfExportRuntime.servernyy_eksport_d0e26c9d'),
     ]);
     const artifact = await downloadBookExportArtifact(job);
     if (artifact.contentType?.includes('text/html')) {
-      notifyPrintResult(await printSession.print(await artifact.blob.text(), { title: settings.title }));
-    } else {
-      saveArtifactBlob(
-        artifact.blob,
-        artifact.filename || `metravel-book-${job.job_id}.${SERVER_BOOK_EXPORT_FORMAT}`,
-      );
-      // Сервер отдал готовый файл и он скачан — окно-заглушка не нужно. Закрывается
-      // после скачивания: сбой скачивания уводит в клиентский рантайм, которому окно нужно.
-      printSession.cancel();
+      const printResult = await printSession.print(await artifact.blob.text(), { title: settings.title });
+      notifyPrintResult(printResult);
+      return printResult;
     }
-    return true;
+    saveArtifactBlob(
+      artifact.blob,
+      artifact.filename || `metravel-book-${job.job_id}.${SERVER_BOOK_EXPORT_FORMAT}`,
+    );
+    // Сервер отдал готовый файл и он скачан — окно-заглушка не нужно. Закрывается
+    // после скачивания: сбой скачивания уводит в клиентский рантайм, которому окно нужно.
+    printSession.cancel();
+    return 'downloaded';
   } catch (error) {
     console.warn('[usePdfExport] Серверный экспорт недоступен, используем клиентский рантайм', error);
-    return false;
+    return null;
   }
 }
 
@@ -287,9 +289,12 @@ export async function runPdfExport({
   try {
     updateProgress(ExportStage.VALIDATING, 2, i18nT('export:hooks.usePdfExportRuntime.proverka_dannyh_59cc6efe'), [i18nT('export:hooks.usePdfExportRuntime.proverka_puteshestviy_aee0e81c')]);
 
-    if (await tryServerBookExport(selected, settings, printSession, updateProgress)) {
+    const serverResult = await tryServerBookExport(selected, settings, printSession, updateProgress);
+    if (serverResult) {
       const elapsedTime = Math.round((Date.now() - startTime) / 1000);
-      if (isMountedRef.current) {
+      // Отмена или недоступное окно — не «Готово» (P3 ревью #2125).
+      const delivered = serverResult === 'printed' || serverResult === 'downloaded';
+      if (delivered && isMountedRef.current) {
         updateProgress(ExportStage.COMPLETE, 100, i18nT('export:hooks.usePdfExportRuntime.gotovo_value1_sek_32520275', { value1: elapsedTime }), [i18nT('export:hooks.usePdfExportRuntime.dokument_sozdan_67abc478')]);
       }
       return;

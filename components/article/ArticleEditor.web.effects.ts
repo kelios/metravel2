@@ -2,11 +2,11 @@ import {
   createForceSyncController,
   syncInitialQuillContent,
 } from './articleEditorLifecycleHelpers'
-import { Alert } from 'react-native'
 
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { normalizeArticleEditorHtmlForOutput } from './articleEditorConfig'
 import { translate as i18nT } from '@/i18n'
+import { showToast } from '@/utils/toast'
 
 
 export async function openArticleEditorPreview({
@@ -20,7 +20,12 @@ export async function openArticleEditorPreview({
 }): Promise<void> {
   if (!isWeb || !windowObject) return
   if (!idTravel) {
-    Alert.alert(i18nT('shared:components.article.ArticleEditor_web_effects.prevyu_bed49b2d'), i18nT('shared:components.article.ArticleEditor_web_effects.snachala_sohranite_puteshestvie_chtoby_otkry_7961d502'))
+    void showToast({
+      type: 'info',
+      text1: i18nT('shared:components.article.ArticleEditor_web_effects.prevyu_bed49b2d'),
+      text2: i18nT('shared:components.article.ArticleEditor_web_effects.snachala_sohranite_puteshestvie_chtoby_otkry_7961d502'),
+      position: 'bottom',
+    })
     return
   }
 

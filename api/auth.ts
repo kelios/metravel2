@@ -1,4 +1,3 @@
-import { Alert } from 'react-native';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -321,12 +320,19 @@ export const resetPasswordLinkApi = async (email: string): Promise<PasswordReset
     }
 };
 
-export const setNewPasswordApi = async (password_reset_token: string, password: string) => {
+/**
+ * #2127: слой api не показывает интерфейс — причину отказа и текст успеха
+ * возвращает экрану (раньше показывал `Alert.alert`, который на web пуст, а экран
+ * на `false` писал общий «Не удалось изменить пароль» и терял причину).
+ */
+export const setNewPasswordApi = async (
+    password_reset_token: string,
+    password: string,
+): Promise<PasswordResetOutcome> => {
     try {
         const passwordValidation = validatePassword(password);
         if (!passwordValidation.valid) {
-            Alert.alert(i18nT('errorsStatic:api.auth.validationErrorTitle'), passwordValidation.error || i18nT('errorsStatic:api.auth.passwordRequirements'));
-            return false;
+            return authFailure('rejected', passwordValidation.error || i18nT('errorsStatic:api.auth.passwordRequirements'));
         }
 
         const response = await fetchWithTimeout(SETNEWPASSWORD, {
@@ -337,22 +343,22 @@ export const setNewPasswordApi = async (password_reset_token: string, password: 
         }, DEFAULT_TIMEOUT);
 
         if (!response.ok) {
-            throw new Error('Network response was not ok.');
+            return authFailure(
+                authFailureReasonFromStatus(response.status),
+                i18nT('errorsStatic:api.auth.passwordChangeFailed'),
+            );
         }
 
         const json = await safeJsonParse<{ success?: boolean; detail?: string; message?: string }>(response, {});
         if (json.success || json.detail) {
-            Alert.alert(i18nT('errorsStatic:api.auth.successTitle'), json.detail || i18nT('errorsStatic:api.auth.passwordChanged'));
-            return true;
+            return { ok: true, message: json.detail || i18nT('errorsStatic:api.auth.passwordChanged') };
         }
-        Alert.alert(i18nT('errorsStatic:api.auth.errorTitle'), getUserFriendlyError(json.message || i18nT('errorsStatic:api.auth.passwordChangeFailed')));
-        return false;
+        return authFailure('rejected', getUserFriendlyError(json.message || i18nT('errorsStatic:api.auth.passwordChangeFailed')));
     } catch (error) {
         if (__DEV__) {
             console.error(error);
         }
-        Alert.alert(i18nT('errorsStatic:api.auth.errorTitle'), getUserFriendlyError(error));
-        return false;
+        return authFailureFromError(error, i18nT('errorsStatic:api.auth.passwordChangeFailed'));
     }
 };
 
@@ -364,8 +370,8 @@ export const registration = async (
         if (values.password) {
             const passwordValidation = validatePassword(values.password);
             if (!passwordValidation.valid) {
+                // Причина уходит экрану в ответе; слой api интерфейс не показывает (#2127).
                 const fallbackMessage = i18nT('errorsStatic:api.auth.passwordRequirements');
-                Alert.alert(i18nT('errorsStatic:api.auth.validationErrorTitle'), passwordValidation.error || fallbackMessage);
                 return { ok: false, message: passwordValidation.error || fallbackMessage };
             }
         }

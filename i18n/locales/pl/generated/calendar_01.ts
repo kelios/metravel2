@@ -6,7 +6,6 @@ export const calendarGenerated1 = {
   "app.tabs.calendar.pokazat_vse_302c971f": "Pokaż wszystko",
   "app.tabs.calendar.ubrat_77b9552b": "Usuń",
   "app.tabs.calendar.ubrat_iz_kalendarya_171623ca": "Usuń z kalendarza",
-  "app.tabs.calendar.ubrat_value1_iz_kalendarya_4710e4cf": "Usunąć „{{value1}}” z kalendarza?",
   "app.tabs.calendar.ukazhite_datu_69ef3cd1": "Proszę wprowadzić datę",
   "app.tabs.calendar.v_etot_den_poezdok_net_b39357eb": "W tym dniu nie ma żadnych wycieczek",
   "app.tabs.calendar.value1_ischeznet_iz_kalendarya_sam_marshrut__79185a97": "„{{value1}}” zniknie z kalendarza. Sama trasa pozostanie dostępna.",

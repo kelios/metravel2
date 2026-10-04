@@ -26,7 +26,7 @@ export const createAuthFallbackValue = (): AuthStore => ({
   confirmFacebookEmailCompletion: async () => ({ status: 'error', message: '' }),
   logout: async () => {},
   sendPassword: async () => ({ ok: false, reason: 'unknown', message: '' }),
-  setNewPassword: async () => false,
+  setNewPassword: async () => ({ ok: false, reason: 'unknown', message: '' }),
 });
 
 const globalForAuthContext = globalThis as any;

@@ -6,11 +6,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as ImagePicker from 'expo-image-picker';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { confirmAction } from '@/utils/confirmAction';
 import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
@@ -22,6 +22,7 @@ import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 import type { GalleryValueItem } from '@/components/travel/gallery/types';
 import { GalleryCaptionEditor } from '@/components/travel/gallery/GalleryCaptionEditor';
 import { translate as i18nT } from '@/i18n'
+import { showToast } from '@/utils/toast'
 
 
 const API_BASE_URL: string =
@@ -130,10 +131,12 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   const handleUploadImages = useCallback(
     async (assets: ImagePicker.ImagePickerAsset[]) => {
       if (images.length + assets.length > maxImages) {
-        Alert.alert(
-          i18nT('travel:components.travel.ImageGalleryComponent.limitTitle'),
-          i18nT('travel:components.travel.ImageGalleryComponent.maxImagesMessage', { max: maxImages }),
-        );
+        void showToast({
+          type: 'info',
+          text1: i18nT('travel:components.travel.ImageGalleryComponent.limitTitle'),
+          text2: i18nT('travel:components.travel.ImageGalleryComponent.maxImagesMessage', { max: maxImages }),
+          position: 'bottom',
+        });
         return;
       }
 
@@ -204,10 +207,12 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
           }
         } catch (error) {
           console.error('Upload error:', error);
-          Alert.alert(
-            i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
-            i18nT('travel:components.travel.ImageGalleryComponent.uploadFailed'),
-          );
+          void showToast({
+            type: 'error',
+            text1: i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
+            text2: i18nT('travel:components.travel.ImageGalleryComponent.uploadFailed'),
+            position: 'bottom',
+          });
         } finally {
           newLoading[currentIndex] = false;
           setLoading([...newLoading]);
@@ -224,20 +229,24 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
 
   const handlePickImages = useCallback(async () => {
     if (images.length >= maxImages) {
-      Alert.alert(
-        i18nT('travel:components.travel.ImageGalleryComponent.limitTitle'),
-        i18nT('travel:components.travel.ImageGalleryComponent.maxImagesMessage', { max: maxImages }),
-      );
+      void showToast({
+        type: 'info',
+        text1: i18nT('travel:components.travel.ImageGalleryComponent.limitTitle'),
+        text2: i18nT('travel:components.travel.ImageGalleryComponent.maxImagesMessage', { max: maxImages }),
+        position: 'bottom',
+      });
       return;
     }
 
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          i18nT('travel:components.travel.ImageGalleryComponent.permissionTitle'),
-          i18nT('travel:components.travel.ImageGalleryComponent.galleryPermissionMessage'),
-        );
+        void showToast({
+          type: 'info',
+          text1: i18nT('travel:components.travel.ImageGalleryComponent.permissionTitle'),
+          text2: i18nT('travel:components.travel.ImageGalleryComponent.galleryPermissionMessage'),
+          position: 'bottom',
+        });
         return;
       }
 
@@ -255,29 +264,35 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       }
     } catch (error) {
       console.error('Error picking images:', error);
-      Alert.alert(
-        i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
-        i18nT('travel:components.travel.ImageGalleryComponent.selectImagesFailed'),
-      );
+      void showToast({
+        type: 'error',
+        text1: i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
+        text2: i18nT('travel:components.travel.ImageGalleryComponent.selectImagesFailed'),
+        position: 'bottom',
+      });
     }
   }, [handleUploadImages, images.length, maxImages]);
 
   const handleTakePhoto = useCallback(async () => {
     if (images.length >= maxImages) {
-      Alert.alert(
-        i18nT('travel:components.travel.ImageGalleryComponent.limitTitle'),
-        i18nT('travel:components.travel.ImageGalleryComponent.maxImagesMessage', { max: maxImages }),
-      );
+      void showToast({
+        type: 'info',
+        text1: i18nT('travel:components.travel.ImageGalleryComponent.limitTitle'),
+        text2: i18nT('travel:components.travel.ImageGalleryComponent.maxImagesMessage', { max: maxImages }),
+        position: 'bottom',
+      });
       return;
     }
 
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          i18nT('travel:components.travel.ImageGalleryComponent.permissionTitle'),
-          i18nT('travel:components.travel.ImageGalleryComponent.cameraPermissionMessage'),
-        );
+        void showToast({
+          type: 'info',
+          text1: i18nT('travel:components.travel.ImageGalleryComponent.permissionTitle'),
+          text2: i18nT('travel:components.travel.ImageGalleryComponent.cameraPermissionMessage'),
+          position: 'bottom',
+        });
         return;
       }
 
@@ -291,10 +306,12 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert(
-        i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
-        i18nT('travel:components.travel.ImageGalleryComponent.takePhotoFailed'),
-      );
+      void showToast({
+        type: 'error',
+        text1: i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
+        text2: i18nT('travel:components.travel.ImageGalleryComponent.takePhotoFailed'),
+        position: 'bottom',
+      });
     }
   }, [handleUploadImages, images.length, maxImages]);
 
@@ -339,10 +356,12 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
         await deleteImageById(id);
       }
     } catch (error) {
-      Alert.alert(
-        i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
-        i18nT('travel:components.travel.ImageGalleryComponent.deleteFailed'),
-      );
+      void showToast({
+        type: 'error',
+        text1: i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
+        text2: i18nT('travel:components.travel.ImageGalleryComponent.deleteFailed'),
+        position: 'bottom',
+      });
       console.error('Error deleting images:', error);
     } finally {
       setSelectedIds(new Set());
@@ -351,18 +370,15 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
 
   const handleDeleteSelected = useCallback(() => {
     if (selectedIds.size === 0) return;
-    Alert.alert(
-      i18nT('travel:components.travel.ImageGalleryComponent.batchDeleteTitle'),
-      i18nT('travel:components.travel.ImageGalleryComponent.batchDeleteMessage', { value1: selectedIds.size }),
-      [
-        { text: i18nT('travel:components.travel.ImageGalleryComponent.otmena_03c4d548'), style: 'cancel' },
-        {
-          text: i18nT('travel:components.travel.ImageGalleryComponent.udalit_4f0a77b6'),
-          style: 'destructive',
-          onPress: () => { void performDeleteSelected(); },
-        },
-      ],
-    );
+    // #2127: вопрос — через общий confirmAction (на iOS — системный Alert).
+    void confirmAction({
+      title: i18nT('travel:components.travel.ImageGalleryComponent.batchDeleteTitle'),
+      message: i18nT('travel:components.travel.ImageGalleryComponent.batchDeleteMessage', { value1: selectedIds.size }),
+      confirmText: i18nT('travel:components.travel.ImageGalleryComponent.udalit_4f0a77b6'),
+      cancelText: i18nT('travel:components.travel.ImageGalleryComponent.otmena_03c4d548'),
+    }).then((confirmed) => {
+      if (confirmed) void performDeleteSelected();
+    });
   }, [performDeleteSelected, selectedIds.size]);
 
   const handleMoveImage = useCallback((imageId: string, direction: -1 | 1) => {
@@ -395,10 +411,12 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       }
       setImages((prev) => prev.filter((img) => img.id !== selectedImageId));
     } catch (error) {
-      Alert.alert(
-        i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
-        i18nT('travel:components.travel.ImageGalleryComponent.deleteFailed'),
-      );
+      void showToast({
+        type: 'error',
+        text1: i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
+        text2: i18nT('travel:components.travel.ImageGalleryComponent.deleteFailed'),
+        position: 'bottom',
+      });
       console.error('Error deleting image:', error);
     } finally {
       setDialogVisible(false);

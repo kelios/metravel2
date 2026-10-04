@@ -49,15 +49,17 @@ export default function SetPassword() {
         { setSubmitting }: { setSubmitting: (v: boolean) => void }
     ) => {
         try {
-            const success = await setNewPassword(password_reset_token as string, values.password);
-            if (success) {
+            const outcome = await setNewPassword(password_reset_token as string, values.password);
+            if (outcome.ok) {
                 setDone(true);
                 setMsg({ text: i18nT('auth:components.auth.SetPasswordForm.parol_uspeshno_izmenen_3d2b96b5'), error: false });
                 navTimeoutRef.current = setTimeout(() => {
                     navigation.navigate('login' as never);
                 }, 1500);
             } else {
-                setMsg({ text: i18nT('auth:components.auth.SetPasswordForm.ne_udalos_izmenit_parol_dd091b55'), error: true });
+                // #2127: причину знает слой api (слабый пароль, отказ сервера, нет связи) —
+                // показываем её, общий текст — только когда причины нет.
+                setMsg({ text: outcome.message || i18nT('auth:components.auth.SetPasswordForm.ne_udalos_izmenit_parol_dd091b55'), error: true });
             }
         } catch (e: any) {
             setMsg({ text: e?.message || i18nT('authStatic:password.changeFailed'), error: true });

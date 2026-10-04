@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, FlatList, ActivityIndicator, Image, TextInput, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, FlatList, ActivityIndicator, Image, TextInput, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -7,6 +7,7 @@ import IconButton from '@/components/ui/IconButton';
 import EmptyState from '@/components/ui/EmptyState';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { isOrphanedMessageThread, type MessageThread } from '@/api/messages';
+import { confirmAction } from '@/utils/confirmAction';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -45,33 +46,9 @@ function ThreadList({
     const [search, setSearch] = useState('');
     const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
-    const handleLongPressThread = useCallback(
-        (thread: MessageThread) => {
-            if (!onDeleteThread) return;
-            if (Platform.OS === 'web') {
-                setConfirmDeleteId((prev) => (prev === thread.id ? null : thread.id));
-            } else {
-                Alert.alert(
-                    i18nT('messages:components.messages.ThreadList.udalit_dialog_690a8668'),
-                    i18nT('messages:components.messages.ThreadList.vy_uvereny_chto_hotite_udalit_etot_dialog_cdd9a62d'),
-                    [
-                        { text: i18nT('messages:components.messages.ThreadList.otmena_c248c023'), style: 'cancel' },
-                        { text: i18nT('messages:components.messages.ThreadList.udalit_004e3e97'), style: 'destructive', onPress: () => onDeleteThread(thread.id) },
-                    ],
-                );
-            }
-        },
-        [onDeleteThread],
-    );
-
-    const handleConfirmDelete = useCallback(
-        (threadId: number) => {
-            setConfirmDeleteId(null);
-            onDeleteThread?.(threadId);
-        },
-        [onDeleteThread],
-    );
-
+    // #2127: удаление диалога спрашивает подтверждение. Web — встроенная строка
+    // подтверждения под диалогом (своя вёрстка в списке); native — общий
+    // confirmAction (системный Alert). Долгое нажатие и кнопка корзины — один путь.
     const handleDeletePress = useCallback(
         (threadId: number) => {
             if (!onDeleteThread) return;
@@ -81,14 +58,27 @@ function ThreadList({
                 return;
             }
 
-            Alert.alert(
-                i18nT('messages:components.messages.ThreadList.udalit_dialog_690a8668'),
-                i18nT('messages:components.messages.ThreadList.vy_uvereny_chto_hotite_udalit_etot_dialog_cdd9a62d'),
-                [
-                    { text: i18nT('messages:components.messages.ThreadList.otmena_c248c023'), style: 'cancel' },
-                    { text: i18nT('messages:components.messages.ThreadList.udalit_004e3e97'), style: 'destructive', onPress: () => onDeleteThread(threadId) },
-                ],
-            );
+            void confirmAction({
+                title: i18nT('messages:components.messages.ThreadList.udalit_dialog_690a8668'),
+                message: i18nT('messages:components.messages.ThreadList.vy_uvereny_chto_hotite_udalit_etot_dialog_cdd9a62d'),
+                confirmText: i18nT('messages:components.messages.ThreadList.udalit_004e3e97'),
+                cancelText: i18nT('messages:components.messages.ThreadList.otmena_c248c023'),
+            }).then((confirmed) => {
+                if (confirmed) onDeleteThread(threadId);
+            });
+        },
+        [onDeleteThread],
+    );
+
+    const handleLongPressThread = useCallback(
+        (thread: MessageThread) => handleDeletePress(thread.id),
+        [handleDeletePress],
+    );
+
+    const handleConfirmDelete = useCallback(
+        (threadId: number) => {
+            setConfirmDeleteId(null);
+            onDeleteThread?.(threadId);
         },
         [onDeleteThread],
     );

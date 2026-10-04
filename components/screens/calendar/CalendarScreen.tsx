@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   View,
   Text,
-  Alert,
   Platform,
   ScrollView,
   useWindowDimensions,
@@ -61,29 +60,17 @@ import { translate as i18nT } from '@/i18n'
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 
 
+// #1556/#2127: один вопрос на обе платформы — `confirmAction` (web `ConfirmDialog`,
+// native системный Alert); текст — полный, с пояснением, что маршрут остаётся.
 async function confirmRemoveFromCalendar(title: string, onConfirm: () => void) {
   const cleanTitle = title?.trim() || i18nT('calendarStatic:removeFallbackTravel')
-  if (Platform.OS === 'web') {
-    // #1556: дизайн-системный диалог вместо нативного `window.confirm`, который
-    // синхронно морозил вкладку. Подписи кнопок берём те же, что у native-ветки.
-    const confirmed = await confirmAction({
-      title: i18nT('calendar:app.tabs.calendar.ubrat_iz_kalendarya_171623ca'),
-      message: i18nT('calendar:app.tabs.calendar.ubrat_value1_iz_kalendarya_4710e4cf', { value1: cleanTitle }),
-      confirmText: i18nT('calendar:app.tabs.calendar.ubrat_77b9552b'),
-      cancelText: i18nT('calendar:app.tabs.calendar.otmena_57439d65'),
-    })
-    if (!confirmed) return
-    onConfirm()
-    return
-  }
-  Alert.alert(
-    i18nT('calendar:app.tabs.calendar.ubrat_iz_kalendarya_171623ca'),
-    i18nT('calendar:app.tabs.calendar.value1_ischeznet_iz_kalendarya_sam_marshrut__79185a97', { value1: cleanTitle }),
-    [
-      { text: i18nT('calendar:app.tabs.calendar.otmena_57439d65'), style: 'cancel' },
-      { text: i18nT('calendar:app.tabs.calendar.ubrat_77b9552b'), style: 'destructive', onPress: onConfirm },
-    ]
-  )
+  const confirmed = await confirmAction({
+    title: i18nT('calendar:app.tabs.calendar.ubrat_iz_kalendarya_171623ca'),
+    message: i18nT('calendar:app.tabs.calendar.value1_ischeznet_iz_kalendarya_sam_marshrut__79185a97', { value1: cleanTitle }),
+    confirmText: i18nT('calendar:app.tabs.calendar.ubrat_77b9552b'),
+    cancelText: i18nT('calendar:app.tabs.calendar.otmena_57439d65'),
+  })
+  if (confirmed) onConfirm()
 }
 
 function parseStatusParam(value: unknown): TravelStatus | null {

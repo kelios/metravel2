@@ -1,4 +1,4 @@
-import { Alert, Image, Linking, Platform } from 'react-native'
+import { Image, Linking, Platform } from 'react-native'
 
 import { openExternalUrl } from '@/utils/externalLinks'
 import { showToastMessage } from '@/utils/toast'
@@ -10,7 +10,7 @@ import {
   buildYandexNaviUrl,
 } from '@/components/MapPage/Map/mapLinks'
 
-import { requestConfirmDialog } from '@/components/ui/confirmDialogStore'
+import { confirmAction } from '@/utils/confirmAction'
 
 import { getQuestClipboard } from './questWizardMedia'
 import { translate as i18nT } from '@/i18n'
@@ -40,31 +40,15 @@ export const notifyQuest = (message: string) => {
   void showToastMessage({ text1: message, type: 'info', visibilityTime: 2500 })
 }
 
-export const confirmQuestAsync = (title: string, message: string): Promise<boolean> => {
-  // На web — дизайн-системный `ConfirmDialog` через общий `ConfirmDialogHost`
-  // (#1555; мост поднят из квестов в `components/ui` в #1556). Нативный
-  // `window.confirm` синхронно морозил JS-поток вкладки, поэтому и страница под
-  // ним, и автотесты вставали до закрытия окна.
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return requestConfirmDialog({
-      title,
-      message,
-      confirmText: i18nT('quests:components.quests.questWizardHelpers.ok_eaabc1d8'),
-      cancelText: i18nT('quests:components.quests.questWizardHelpers.otmena_9f846483'),
-    })
-  }
-  return new Promise((resolve) => {
-    Alert.alert(
-      title,
-      message,
-      [
-        { text: i18nT('quests:components.quests.questWizardHelpers.otmena_9f846483'), style: 'cancel', onPress: () => resolve(false) },
-        { text: i18nT('quests:components.quests.questWizardHelpers.ok_eaabc1d8'), style: 'destructive', onPress: () => resolve(true) },
-      ],
-      { cancelable: true, onDismiss: () => resolve(false) },
-    )
+// #1555/#2127: подтверждение квеста — общий `confirmAction` (web `ConfirmDialog`,
+// native системный Alert) с подписями квеста «ОК»/«Отмена».
+export const confirmQuestAsync = (title: string, message: string): Promise<boolean> =>
+  confirmAction({
+    title,
+    message,
+    confirmText: i18nT('quests:components.quests.questWizardHelpers.ok_eaabc1d8'),
+    cancelText: i18nT('quests:components.quests.questWizardHelpers.otmena_9f846483'),
   })
-}
 
 export const resolveQuestUri = (src: any | undefined): string | undefined => {
   if (!src) return undefined

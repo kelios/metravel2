@@ -252,7 +252,6 @@ export const travelGenerated1 = {
   "components.travel.compactSideBar.parts.AuthorBlock.value1_prosmotrov_bde67a56": "{{value1}} views",
   "components.travel.compactSideBar.parts.WidgetFallback.zagruzka_vidzheta_092bccd0": "Loading a widget",
   "components.travel.CompactSideBarTravel.nedostupno_d9fa1777": "Not available",
-  "components.travel.CompactSideBarTravel.razdel_nedostupen_52d85d28": "Section unavailable",
   "components.travel.CompactSideBarTravel.razdel_value1_nedostupen_7285035f": "Section \"{{value1}}\" is not available",
   "components.travel.CompactSideBarTravel.skachat_marshrut_4c1eda2d": "Download route",
   "components.travel.CompactSideBarTravel.skachivanie_cab4e4f1": "Downloading...",

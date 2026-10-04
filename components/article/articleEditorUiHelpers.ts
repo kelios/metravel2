@@ -1,7 +1,7 @@
-import { Alert } from 'react-native'
 
 import { escapeHtml, normalizeAnchorId } from '@/utils/htmlUtils'
 import { translate as i18nT } from '@/i18n'
+import { showToast } from '@/utils/toast'
 
 
 type HtmlSelection = { start: number; end: number }
@@ -255,7 +255,12 @@ export const confirmAnchorEditorModal = ({
   if (showHtml) {
     const id = normalizeAnchorId(anchorValue)
     if (!id) {
-      Alert.alert(i18nT('shared:components.article.articleEditorUiHelpers.yakor_e4219338'), i18nT('shared:components.article.articleEditorUiHelpers.vvedite_korrektnyy_identifikator_naprimer_da_095e84b3'))
+      void showToast({
+        type: 'info',
+        text1: i18nT('shared:components.article.articleEditorUiHelpers.yakor_e4219338'),
+        text2: i18nT('shared:components.article.articleEditorUiHelpers.vvedite_korrektnyy_identifikator_naprimer_da_095e84b3'),
+        position: 'bottom',
+      })
       return
     }
 

@@ -1,4 +1,3 @@
-import { Alert } from 'react-native'
 
 import { uploadImage } from '@/api/misc'
 import { normalizeMediaUrl } from '@/utils/mediaUrl'
@@ -10,6 +9,7 @@ import {
 } from './articleEditorConfig'
 import type { ArticleEditorSelection } from './articleEditor.types'
 import { translate as i18nT } from '@/i18n'
+import { showToast } from '@/utils/toast'
 
 
 type FireChange = (
@@ -125,7 +125,12 @@ export const uploadImageAndInsert = async ({
     if (__DEV__) {
       console.info('[ArticleEditor] upload blocked: not authenticated')
     }
-    Alert.alert(i18nT('shared:components.article.articleEditorMediaHelpers.avtorizatsiya_bdcce2b6'), i18nT('shared:components.article.articleEditorMediaHelpers.voydite_chtoby_zagruzhat_izobrazheniya_cebd5cf6'))
+    void showToast({
+      type: 'info',
+      text1: i18nT('shared:components.article.articleEditorMediaHelpers.avtorizatsiya_bdcce2b6'),
+      text2: i18nT('shared:components.article.articleEditorMediaHelpers.voydite_chtoby_zagruzhat_izobrazheniya_cebd5cf6'),
+      position: 'bottom',
+    })
     return
   }
 
@@ -196,7 +201,12 @@ export const uploadImageAndInsert = async ({
       err instanceof Error && err.message.trim().length > 0
         ? err.message
         : i18nT('shared:components.article.articleEditorMediaHelpers.ne_udalos_zagruzit_izobrazhenie_c6591767')
-    Alert.alert(i18nT('shared:components.article.articleEditorMediaHelpers.oshibka_840c6c20'), message)
+    void showToast({
+      type: 'error',
+      text1: i18nT('shared:components.article.articleEditorMediaHelpers.oshibka_840c6c20'),
+      text2: message,
+      position: 'bottom',
+    })
   } finally {
     setIsImageUploading(false)
   }

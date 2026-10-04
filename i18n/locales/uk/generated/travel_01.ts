@@ -252,7 +252,6 @@ export const travelGenerated1 = {
   "components.travel.compactSideBar.parts.AuthorBlock.value1_prosmotrov_bde67a56": "{{value1}} переглядів",
   "components.travel.compactSideBar.parts.WidgetFallback.zagruzka_vidzheta_092bccd0": "Завантаження віджету",
   "components.travel.CompactSideBarTravel.nedostupno_d9fa1777": "Недоступно",
-  "components.travel.CompactSideBarTravel.razdel_nedostupen_52d85d28": "Розділ недоступний",
   "components.travel.CompactSideBarTravel.razdel_value1_nedostupen_7285035f": "Розділ «{{value1}}» недоступний",
   "components.travel.CompactSideBarTravel.skachat_marshrut_4c1eda2d": "Завантажити маршрут",
   "components.travel.CompactSideBarTravel.skachivanie_cab4e4f1": "Скачування...",

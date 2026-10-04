@@ -1,9 +1,9 @@
-import { Alert } from 'react-native'
 
 import type { Dispatch, SetStateAction } from 'react'
 import { normalizeAnchorId, escapeHtml, normalizeHtmlForQuill } from '@/utils/htmlUtils'
 import type { ArticleEditorSelection } from './articleEditor.types'
 import { translate as i18nT } from '@/i18n'
+import { showToast } from '@/utils/toast'
 
 
 type EditorGetter = () => any
@@ -84,7 +84,12 @@ export const insertAnchorIntoEditor = ({
   if (!editor) return
   const id = normalizeAnchorId(idRaw)
   if (!id) {
-    Alert.alert(i18nT('shared:components.article.articleEditorQuillHelpers.yakor_0529bf09'), i18nT('shared:components.article.articleEditorQuillHelpers.vvedite_korrektnyy_identifikator_naprimer_da_a2375a98'))
+    void showToast({
+      type: 'info',
+      text1: i18nT('shared:components.article.articleEditorQuillHelpers.yakor_0529bf09'),
+      text2: i18nT('shared:components.article.articleEditorQuillHelpers.vvedite_korrektnyy_identifikator_naprimer_da_a2375a98'),
+      position: 'bottom',
+    })
     return
   }
 

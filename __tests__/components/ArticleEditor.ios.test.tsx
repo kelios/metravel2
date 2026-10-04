@@ -3,6 +3,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/api/misc';
+import { showToast } from '@/utils/toast';
 
 const mockWebViewPostMessage = jest.fn();
 let mockIsAuthenticated = true;
@@ -44,6 +45,12 @@ jest.mock('expo-image-picker', () => ({
 }));
 
 // Mock uploadImage
+// #2127: сообщения редактора — тостом (общий канал), Alert.alert не вызывается.
+jest.mock('@/utils/toast', () => ({
+  ...jest.requireActual('@/utils/toast'),
+  showToast: jest.fn(async () => undefined),
+}));
+
 jest.mock('@/api/misc', () => ({
   uploadImage: jest.fn(() =>
     Promise.resolve({ id: 'img-123', url: 'https://example.com/uploaded.jpg' })
@@ -304,7 +311,8 @@ describe('ArticleEditor.ios Component', () => {
     });
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledTimes(1);
+      expect(showToast).toHaveBeenCalledTimes(1);
+      expect(Alert.alert).not.toHaveBeenCalled();
       expect(ImagePicker.requestMediaLibraryPermissionsAsync as jest.Mock).not.toHaveBeenCalled();
       expect(uploadImage as jest.Mock).not.toHaveBeenCalled();
     });
@@ -326,7 +334,8 @@ describe('ArticleEditor.ios Component', () => {
     });
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledTimes(1);
+      expect(showToast).toHaveBeenCalledTimes(1);
+      expect(Alert.alert).not.toHaveBeenCalled();
       expect(ImagePicker.launchImageLibraryAsync as jest.Mock).not.toHaveBeenCalled();
       expect(uploadImage as jest.Mock).not.toHaveBeenCalled();
     });
@@ -345,7 +354,8 @@ describe('ArticleEditor.ios Component', () => {
 
     await waitFor(() => {
       expect(uploadImage as jest.Mock).toHaveBeenCalledTimes(1);
-      expect(Alert.alert).toHaveBeenCalledTimes(1);
+      expect(showToast).toHaveBeenCalledTimes(1);
+      expect(Alert.alert).not.toHaveBeenCalled();
       expect(mockWebViewPostMessage).not.toHaveBeenCalledWith(
         expect.stringContaining('insert-image'),
       );

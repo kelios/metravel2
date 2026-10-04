@@ -1,4 +1,4 @@
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert, Platform, StyleSheet } from 'react-native';
 import ThreadList from '@/components/messages/ThreadList';
 import type { MessageThread } from '@/api/messages';
@@ -165,7 +165,7 @@ describe('ThreadList', () => {
         }
     });
 
-    it('uses the native destructive confirmation before deleting a thread', () => {
+    it('uses the native destructive confirmation (confirmAction) before deleting a thread', async () => {
         const originalPlatform = Platform.OS;
         Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
         const onDeleteThread = jest.fn();
@@ -178,16 +178,19 @@ describe('ThreadList', () => {
 
             fireEvent.press(getByLabelText('Удалить диалог с Иван Петров'));
             expect(onDeleteThread).not.toHaveBeenCalled();
+            expect(alertSpy).toHaveBeenCalledTimes(1);
             expect(alertSpy).toHaveBeenCalledWith(
                 'Удалить диалог',
                 'Вы уверены, что хотите удалить этот диалог?',
                 expect.any(Array),
+                expect.objectContaining({ cancelable: true }),
             );
 
             const buttons = alertSpy.mock.calls[0]?.[2];
             const destructiveButton = buttons?.find((button) => button.style === 'destructive');
+            expect(destructiveButton?.text).toBe('Удалить');
             destructiveButton?.onPress?.();
-            expect(onDeleteThread).toHaveBeenCalledWith(1);
+            await waitFor(() => expect(onDeleteThread).toHaveBeenCalledWith(1));
         } finally {
             alertSpy.mockRestore();
             Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });

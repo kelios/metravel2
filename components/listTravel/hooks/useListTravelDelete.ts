@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Alert, Platform } from 'react-native'
+import { useCallback, useRef, useState } from 'react'
+import { Platform } from 'react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/api/queryKeys'
 import { showToastMessage } from '@/utils/toast'
+import { confirmAction } from '@/utils/confirmAction'
 import { translate as i18nT } from '@/i18n'
 import {
   describeTravelDeleteError,
@@ -62,20 +63,38 @@ export function useListTravelDelete(): UseListTravelDeleteReturn {
         if (Platform.OS === 'web') {
           // Показываем ошибку в диалоге; он остаётся открытым чтобы пользователь мог попробовать снова
           setDeleteError(`${errorMessage}. ${errorDetails}`)
-        } else {
-          // Для мобильных используем Alert из react-native
-          Alert.alert(errorMessage, errorDetails)
+          return
         }
-        // Не закрываем диалог при ошибке, чтобы пользователь мог попробовать снова
+        // #2127: на native подтверждение — системный Alert, он уже закрыт; причина отказа — тостом.
+        setDelete(null)
+        void showToastMessage({ type: 'error', text1: errorMessage, text2: errorDetails, position: 'bottom' })
       }
     },
     [deleteId, queryClient],
   )
 
-  const requestDelete = useCallback((id: number) => {
-    setDeleteError(null)
-    setDelete(id)
-  }, [])
+  // #2127: web — `ConfirmDialog` в ListTravelLayout (держит ошибку внутри и не
+  // закрывается при отказе сервера); native — общий confirmAction (системный Alert).
+  // Раньше native-вопрос показывал эффект по deleteId: закрытие Alert «Назад» на
+  // Android оставляло deleteId, и повторное «Удалить» того же маршрута молчало.
+  const requestDelete = useCallback(
+    (id: number) => {
+      setDeleteError(null)
+      if (Platform.OS === 'web') {
+        setDelete(id)
+        return
+      }
+      void confirmAction({
+        title: i18nT('travel:components.listTravel.ListTravelBase.udalit_puteshestvie_b9ed27f5'),
+        message: i18nT('travel:components.listTravel.ListTravelBase.eto_deystvie_nelzya_otmenit_dd4f9ae8'),
+        confirmText: i18nT('travel:components.listTravel.ListTravelBase.udalit_39199478'),
+        cancelText: i18nT('travel:components.listTravel.ListTravelBase.otmena_b3f645ff'),
+      }).then((confirmed) => {
+        if (confirmed) void handleDelete(id)
+      })
+    },
+    [handleDelete],
+  )
 
   const confirmDelete = useCallback(() => {
     void handleDelete(deleteId ?? undefined)
@@ -85,28 +104,6 @@ export function useListTravelDelete(): UseListTravelDeleteReturn {
     setDelete(null)
     setDeleteError(null)
   }, [])
-
-  // Подтверждение удаления — на native через Alert, на web — через ConfirmDialog (см. JSX в компоненте)
-  useEffect(() => {
-    if (!deleteId || Platform.OS === 'web') return
-
-    Alert.alert(
-      i18nT('travel:components.listTravel.ListTravelBase.udalit_puteshestvie_b9ed27f5'),
-      i18nT('travel:components.listTravel.ListTravelBase.eto_deystvie_nelzya_otmenit_dd4f9ae8'),
-      [
-        {
-          text: i18nT('travel:components.listTravel.ListTravelBase.otmena_b3f645ff'),
-          style: 'cancel',
-          onPress: () => setDelete(null),
-        },
-        {
-          text: i18nT('travel:components.listTravel.ListTravelBase.udalit_39199478'),
-          style: 'destructive',
-          onPress: () => handleDelete(),
-        },
-      ],
-    )
-  }, [deleteId, handleDelete])
 
   return {
     deleteId,

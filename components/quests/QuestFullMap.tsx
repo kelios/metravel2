@@ -7,7 +7,6 @@ import {
     Text,
     TouchableOpacity,
     Modal,
-    Alert,
     useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,6 +34,7 @@ import { createQuestFullMapStyles } from './questFullMapStyles';
 import { MapCanvas, type MapCanvasEngine } from '@/components/MapPage/Map/MapCanvas';
 import { translate as i18nT } from '@/i18n'
 import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
+import { showToast } from '@/utils/toast'
 
 
 const QUEST_NAV_PROVIDERS: Array<{ app: QuestMapApp; kind: 'google' | 'organic' | 'waze' | 'yandex' | 'osm' }> = [
@@ -281,7 +281,12 @@ function QuestFullMap({
                 return;
             }
 
-            Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_a573001b'), i18nT('quests:components.quests.QuestFullMap.funktsiya_eksporta_png_na_mobilnyh_ustroystv_38234d18'));
+            void showToast({
+                type: 'info',
+                text1: i18nT('quests:components.quests.QuestFullMap.eksport_a573001b'),
+                text2: i18nT('quests:components.quests.QuestFullMap.funktsiya_eksporta_png_na_mobilnyh_ustroystv_38234d18'),
+                position: 'bottom',
+            });
         } catch (error) {
             console.error('Error sharing PNG:', error);
         }
@@ -305,12 +310,14 @@ function QuestFullMap({
         try {
             const routedTrack = await resolveRoutedTrackForExport();
             if (!routedTrack) {
-                Alert.alert(
-                    i18nT('quests:components.quests.QuestFullMap.eksport_gpx_c785ac18'),
-                    routeMode === 'bike'
+                void showToast({
+                    type: 'error',
+                    text1: i18nT('quests:components.quests.QuestFullMap.eksport_gpx_c785ac18'),
+                    text2: routeMode === 'bike'
                         ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeBuildFailed')
                         : i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_590dfe0b'),
-                );
+                    position: 'bottom',
+                });
                 return;
             }
 
@@ -340,12 +347,14 @@ function QuestFullMap({
         try {
             const routedTrack = await resolveRoutedTrackForExport();
             if (!routedTrack) {
-                Alert.alert(
-                    i18nT('quests:components.quests.QuestFullMap.eksport_geojson_763e0f06'),
-                    routeMode === 'bike'
+                void showToast({
+                    type: 'error',
+                    text1: i18nT('quests:components.quests.QuestFullMap.eksport_geojson_763e0f06'),
+                    text2: routeMode === 'bike'
                         ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeBuildFailed')
                         : i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_4748c560'),
-                );
+                    position: 'bottom',
+                });
                 return;
             }
 

@@ -6,7 +6,6 @@ export const calendarGenerated1 = {
   "app.tabs.calendar.pokazat_vse_302c971f": "Show all",
   "app.tabs.calendar.ubrat_77b9552b": "Remove",
   "app.tabs.calendar.ubrat_iz_kalendarya_171623ca": "Remove from calendar",
-  "app.tabs.calendar.ubrat_value1_iz_kalendarya_4710e4cf": "Remove \"{{value1}}\" from the calendar?",
   "app.tabs.calendar.ukazhite_datu_69ef3cd1": "Please enter a date",
   "app.tabs.calendar.v_etot_den_poezdok_net_b39357eb": "There are no trips on this day",
   "app.tabs.calendar.value1_ischeznet_iz_kalendarya_sam_marshrut__79185a97": "\"{{value1}}\" will disappear from the calendar. The route itself will remain accessible.",

@@ -518,6 +518,27 @@ describe('usePdfExport', () => {
       expect(mockGenerateTravelsHtml).not.toHaveBeenCalled();
     });
 
+    it('сервер отдал HTML, а окно закрыто пользователем — без «Готово» и без тоста (P3 ревью #2125)', async () => {
+      const reserved = { closed: true };
+      mockOpenPendingBookPreviewWindow.mockReturnValueOnce(reserved);
+      mockRequestServerBookExport.mockResolvedValueOnce({ job_id: 'job-3' } as any);
+      mockDownloadBookExportArtifact.mockResolvedValueOnce({
+        blob: { text: async () => '<html><body>server book</body></html>' },
+        contentType: 'text/html',
+        filename: 'book.html',
+      } as any);
+      const { result } = renderHook(() => usePdfExport(mockTravels));
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(mockOpenBookPreviewWindow).not.toHaveBeenCalled();
+      expect(mockShowToast).not.toHaveBeenCalled();
+      expect(result.current.currentStage).not.toBe(ExportStage.COMPLETE);
+      expect(mockGenerateTravelsHtml).not.toHaveBeenCalled();
+    });
+
     it('окно закрыто пользователем во время сборки — тихий выход без тоста', async () => {
       const reserved = { closed: false };
       mockOpenPendingBookPreviewWindow.mockReturnValueOnce(reserved);

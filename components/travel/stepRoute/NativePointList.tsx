@@ -1,10 +1,11 @@
 import React, { useCallback } from 'react'
-import { Alert, Pressable, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors } from '@/hooks/useTheme'
 import type { MarkerData } from '@/types/types'
 import { translate as i18nT } from '@/i18n'
+import { confirmAction } from '@/utils/confirmAction'
 
 type NativePointListProps = {
   markers: MarkerData[]
@@ -50,19 +51,15 @@ export const NativePointList = React.memo(function NativePointList({
 
   const remove = useCallback(
     (index: number) => {
-      Alert.alert(
-        i18nT('travel:components.travel.stepRoute.NativePointList.removeTitle'),
-        i18nT('travel:components.travel.stepRoute.NativePointList.removeMessage'),
-        [
-          { text: i18nT('travel:components.travel.stepRoute.NativePointList.cancel'), style: 'cancel' },
-          {
-            text: i18nT('travel:components.travel.stepRoute.NativePointList.delete'),
-            style: 'destructive',
-            onPress: () => onChange(markers.filter((_, i) => i !== index)),
-          },
-        ],
-        { cancelable: true },
-      )
+      // #2127: вопрос — через общий confirmAction (на native — системный Alert).
+      void confirmAction({
+        title: i18nT('travel:components.travel.stepRoute.NativePointList.removeTitle'),
+        message: i18nT('travel:components.travel.stepRoute.NativePointList.removeMessage'),
+        confirmText: i18nT('travel:components.travel.stepRoute.NativePointList.delete'),
+        cancelText: i18nT('travel:components.travel.stepRoute.NativePointList.cancel'),
+      }).then((confirmed) => {
+        if (confirmed) onChange(markers.filter((_, i) => i !== index))
+      })
     },
     [markers, onChange],
   )

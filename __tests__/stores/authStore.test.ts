@@ -1,6 +1,11 @@
 import { act } from '@testing-library/react';
 import { Alert, Platform } from 'react-native';
 
+jest.mock('@/utils/toast', () => ({
+  ...jest.requireActual('@/utils/toast'),
+  showToast: jest.fn(async () => undefined),
+}));
+
 jest.mock('@/api/appleAuth', () => ({
   appleAuthApi: jest.fn(),
 }));
@@ -99,6 +104,7 @@ const { acceptTerms } = require('@/api/consent') as { acceptTerms: jest.Mock };
 import { useAuthStore } from '@/stores/authStore';
 import { __resetSessionTokenWritesForTests } from '@/utils/authTokenStore';
 import { translate as i18nT } from '@/i18n';
+import { showToast } from '@/utils/toast';
 
 const flushPromises = () => new Promise((r) => setTimeout(r, 0));
 const originalPlatformOS = Platform.OS;
@@ -352,6 +358,7 @@ describe('authStore', () => {
 
     it('handles storage errors gracefully', async () => {
       const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+      (showToast as jest.Mock).mockClear();
       getSecureItem.mockRejectedValue(new Error('storage fail'));
 
       await act(() => useAuthStore.getState().checkAuthentication());
@@ -398,9 +405,14 @@ describe('authStore', () => {
       expect(s.userId).toBe('7');
       expect(s.username).toBe('Julia');
       expect(s.authReady).toBe(true);
-      expect(alertSpy).toHaveBeenCalledWith(
-        i18nT('errorsStatic:api.auth.signInErrorTitle'),
-        i18nT('errorsStatic:api.client.sessionExpired'),
+      // #2127: сообщение — тостом, не Alert (на web Alert.alert пуст).
+      expect(alertSpy).not.toHaveBeenCalled();
+      expect(showToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'error',
+          text1: i18nT('errorsStatic:api.auth.signInErrorTitle'),
+          text2: i18nT('errorsStatic:api.client.sessionExpired'),
+        }),
       );
       alertSpy.mockRestore();
     });

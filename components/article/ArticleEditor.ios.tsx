@@ -1,6 +1,6 @@
 // components/ArticleEditor.ios.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Modal, TextInput } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as ImagePicker from 'expo-image-picker';
 import Feather from '@expo/vector-icons/Feather';
@@ -27,6 +27,7 @@ import {
 import { buildArticleEditorNativeHtml } from './articleEditorNativeHtml';
 import type { ArticleEditorProps } from './articleEditor.types';
 import { translate as i18nT } from '@/i18n'
+import { showToast } from '@/utils/toast'
 
 
 const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
@@ -231,14 +232,24 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   // Загрузка изображения
   const handleImagePick = useCallback(async () => {
     if (!isAuthenticated) {
-      Alert.alert(i18nT('shared:components.article.ArticleEditor.avtorizatsiya_458c0f15'), i18nT('shared:components.article.ArticleEditor.voydite_chtoby_zagruzhat_izobrazheniya_1419c326'));
+      void showToast({
+        type: 'info',
+        text1: i18nT('shared:components.article.ArticleEditor.avtorizatsiya_458c0f15'),
+        text2: i18nT('shared:components.article.ArticleEditor.voydite_chtoby_zagruzhat_izobrazheniya_1419c326'),
+        position: 'bottom',
+      });
       return;
     }
 
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(i18nT('shared:components.article.ArticleEditor.razreshenie_9a13b5d8'), i18nT('shared:components.article.ArticleEditor.neobhodim_dostup_k_galeree_5656f9ab'));
+        void showToast({
+          type: 'info',
+          text1: i18nT('shared:components.article.ArticleEditor.razreshenie_9a13b5d8'),
+          text2: i18nT('shared:components.article.ArticleEditor.neobhodim_dostup_k_galeree_5656f9ab'),
+          position: 'bottom',
+        });
         return;
       }
 
@@ -280,7 +291,12 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       }
     } catch (error) {
       console.error('Image upload error:', error);
-      Alert.alert(i18nT('shared:components.article.ArticleEditor.oshibka_25f2899b'), i18nT('shared:components.article.ArticleEditor.ne_udalos_zagruzit_izobrazhenie_978317da'));
+      void showToast({
+        type: 'error',
+        text1: i18nT('shared:components.article.ArticleEditor.oshibka_25f2899b'),
+        text2: i18nT('shared:components.article.ArticleEditor.ne_udalos_zagruzit_izobrazhenie_978317da'),
+        position: 'bottom',
+      });
     } finally {
       setIsUploading(false);
     }
@@ -413,7 +429,12 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
                 onPress={() => {
                   const id = normalizeAnchorId(anchorValue);
                   if (!id) {
-                    Alert.alert(i18nT('shared:components.article.ArticleEditor.yakor_544e6926'), i18nT('shared:components.article.ArticleEditor.vvedite_korrektnyy_identifikator_naprimer_da_db9f44db'));
+                    void showToast({
+                      type: 'info',
+                      text1: i18nT('shared:components.article.ArticleEditor.yakor_544e6926'),
+                      text2: i18nT('shared:components.article.ArticleEditor.vvedite_korrektnyy_identifikator_naprimer_da_db9f44db'),
+                      position: 'bottom',
+                    });
                     return;
                   }
                   setAnchorModalVisible(false);

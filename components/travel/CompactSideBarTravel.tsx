@@ -1,7 +1,6 @@
 import React, { memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -47,6 +46,7 @@ import { NavRow } from './compactSideBar/parts/NavRow'
 import { WeatherPlaceholder } from './compactSideBar/parts/WeatherPlaceholder'
 import { WidgetFallback } from './compactSideBar/parts/WidgetFallback'
 import { translate as i18nT } from '@/i18n'
+import { showToast } from '@/utils/toast'
 
 type SideBarProps = {
   refs: Record<string, React.RefObject<View>>
@@ -144,16 +144,14 @@ function CompactSideBarTravel({
     .join(' ')
   const views = parseViews(travel)
 
+  // #2127: одно сообщение на обе платформы — тост вместо блокирующего window.alert на web.
   const notifyUnavailable = useCallback((label: string) => {
-    if ((Platform.OS === 'web')) {
-      try {
-        window.alert?.(i18nT('travel:components.travel.CompactSideBarTravel.razdel_nedostupen_52d85d28'))
-      } catch {
-        /* noop */
-      }
-      return
-    }
-    Alert.alert?.(i18nT('travel:components.travel.CompactSideBarTravel.nedostupno_d9fa1777'), i18nT('travel:components.travel.CompactSideBarTravel.razdel_value1_nedostupen_7285035f', { value1: label }))
+    void showToast({
+      type: 'info',
+      text1: i18nT('travel:components.travel.CompactSideBarTravel.nedostupno_d9fa1777'),
+      text2: i18nT('travel:components.travel.CompactSideBarTravel.razdel_value1_nedostupen_7285035f', { value1: label }),
+      position: 'bottom',
+    })
   }, [])
 
   const isSectionAvailable = useCallback(

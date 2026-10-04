@@ -3,7 +3,6 @@
 // ранее находившиеся в AuthContext. AuthProvider остаётся тонким фасадом
 // для инициализации и регистрации invalidation handler.
 
-import { Alert } from 'react-native';
 import { create } from 'zustand';
 import { readSecureItem } from '@/utils/secureStorage';
 import {
@@ -29,6 +28,7 @@ import { ACCESS_TOKEN_STORAGE_KEY, shouldUseStoredAuthToken } from '@/utils/auth
 import { normalizeAvatarUrl } from '@/utils/mediaUrl';
 import { normalizeProfileName, resolveProfileFullName } from '@/utils/profileName';
 import { translate as i18nT } from '@/i18n'
+import { showToast } from '@/utils/toast'
 
 
 const getAuthApi = async () => import('@/api/auth');
@@ -303,10 +303,13 @@ export const useAuthStore = create<AuthStore>((set, get) => {
                         isSuperuser: storageData.isSuperuser === 'true' || current.isSuperuser,
                         userAvatar: restoredAvatar ?? current.userAvatar,
                     });
-                    Alert.alert(
-                        i18nT('errorsStatic:api.auth.signInErrorTitle'),
-                        i18nT('errorsStatic:api.client.sessionExpired'),
-                    );
+                    // #2127: сообщение — через общий канал тостов, а не Alert.
+                    void showToast({
+                        type: 'error',
+                        text1: i18nT('errorsStatic:api.auth.signInErrorTitle'),
+                        text2: i18nT('errorsStatic:api.client.sessionExpired'),
+                        position: 'bottom',
+                    });
                 }
                 return;
             }

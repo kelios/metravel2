@@ -124,6 +124,59 @@ describe('confirmAction', () => {
     await expect(pending).resolves.toBe(false)
   })
 
+  // #2127: web-ветка не трогает Alert.alert (в react-native-web он пустой и вопрос
+  // молча терялся бы), native-ветка — единственный владелец системного Alert.
+  it('web: Alert.alert не вызывается — вопрос идёт только в ConfirmDialogHost', async () => {
+    ;(Platform as { OS: string }).OS = 'web'
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {})
+    mountHost()
+
+    const pending = confirmAction(options)
+    expect(alert).not.toHaveBeenCalled()
+    resolveConfirmDialog(false)
+    await expect(pending).resolves.toBe(false)
+
+    alert.mockRestore()
+  })
+
+  it('native: один системный Alert с «Отмена» и деструктивным подтверждением', async () => {
+    ;(Platform as { OS: string }).OS = 'android'
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {})
+
+    const pending = confirmAction(options)
+
+    expect(alert).toHaveBeenCalledTimes(1)
+    const [title, message, buttons] = alert.mock.calls[0] as unknown as [
+      string,
+      string,
+      Array<{ text: string; style?: string; onPress?: () => void }>,
+    ]
+    expect(title).toBe(options.title)
+    expect(message).toBe(options.message)
+    expect(buttons.map((b) => [b.text, b.style])).toEqual([
+      ['Отмена', 'cancel'],
+      ['Очистить', 'destructive'],
+    ])
+    expect(getConfirmDialogRequest()).toBeNull()
+    buttons[1].onPress?.()
+    await expect(pending).resolves.toBe(true)
+
+    alert.mockRestore()
+  })
+
+  it('native: закрытие Alert без выбора (Android «Назад») — отказ, промис не висит', async () => {
+    ;(Platform as { OS: string }).OS = 'android'
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {})
+
+    const pending = confirmAction(options)
+    const alertOptions = alert.mock.calls[0][3] as unknown as { cancelable?: boolean; onDismiss?: () => void }
+    expect(alertOptions.cancelable).toBe(true)
+    alertOptions.onDismiss?.()
+    await expect(pending).resolves.toBe(false)
+
+    alert.mockRestore()
+  })
+
   it('owned #1556 call sites have no executable window.confirm', () => {
     const files = [
       'utils/confirmAction.ts',

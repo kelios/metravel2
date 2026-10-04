@@ -1,13 +1,15 @@
 import { memo, useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Platform, Pressable, Alert, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { Message } from '@/api/messages';
+import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet';
 import ContentSafetyActions from '@/components/safety/ContentSafetyActions';
 import HiddenContentGate from '@/components/safety/HiddenContentGate';
 import { makeContentRef } from '@/types/contentSafety';
+import { confirmAction } from '@/utils/confirmAction';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -23,7 +25,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
     const styles = useMemo(() => createStyles(colors), [colors]);
     const { width: windowWidth } = useWindowDimensions();
     const bubbleMaxWidth = Math.round(windowWidth * 0.75);
-    const [showActions, setShowActions] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     // #2133 (Apple 1.2): чужое сообщение — «…» (пожаловаться / скрыть / заблокировать).
     const safetyRef = useMemo(
@@ -63,39 +65,55 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
         }
     }, [message.text]);
 
+    // #2127: меню долгого нажатия — общий ActionListSheet на всех платформах
+    // (раньше на native — Alert с тремя кнопками, на web — строка кнопок).
     const handleLongPress = useCallback(() => {
-        if (Platform.OS === 'web') {
-            setShowActions((prev) => !prev);
-        } else {
-            const buttons: any[] = [
-                { text: i18nT('messages:components.messages.MessageBubble.kopirovat_649f5a88'), onPress: copyText },
-            ];
-            if (onDelete) {
-                buttons.push({ text: i18nT('messages:components.messages.MessageBubble.udalit_90cd7b34'), style: 'destructive', onPress: onDelete });
-            }
-            buttons.push({ text: i18nT('messages:components.messages.MessageBubble.otmena_c63270ad'), style: 'cancel' });
-            Alert.alert(i18nT('messages:components.messages.MessageBubble.soobschenie_bf2d70a6'), undefined, buttons);
-        }
-    }, [onDelete, copyText]);
+        setMenuOpen(true);
+    }, []);
 
     const handleDeletePress = useCallback(() => {
-        setShowActions(false);
+        setMenuOpen(false);
         if (!onDelete) return;
 
+        // Web: подтверждение встроено в строку сообщения (своя вёрстка в ленте);
+        // native: общий confirmAction (системный Alert).
         if (Platform.OS === 'web') {
             setShowDeleteConfirm(true);
             return;
         }
 
-        Alert.alert(
-            i18nT('messages:components.messages.MessageBubble.udalit_soobschenie_db3677e9'),
-            i18nT('messages:components.messages.MessageBubble.vy_uvereny_chto_hotite_udalit_eto_soobscheni_85438546'),
-            [
-                { text: i18nT('messages:components.messages.MessageBubble.otmena_c63270ad'), style: 'cancel' },
-                { text: i18nT('messages:components.messages.MessageBubble.udalit_90cd7b34'), style: 'destructive', onPress: onDelete },
-            ],
-        );
+        void confirmAction({
+            title: i18nT('messages:components.messages.MessageBubble.udalit_soobschenie_db3677e9'),
+            message: i18nT('messages:components.messages.MessageBubble.vy_uvereny_chto_hotite_udalit_eto_soobscheni_85438546'),
+            confirmText: i18nT('messages:components.messages.MessageBubble.udalit_90cd7b34'),
+            cancelText: i18nT('messages:components.messages.MessageBubble.otmena_c63270ad'),
+        }).then((confirmed) => {
+            if (confirmed) onDelete();
+        });
     }, [onDelete]);
+
+    const menuActions = useMemo<ActionListSheetItem[]>(() => {
+        const items: ActionListSheetItem[] = [
+            {
+                key: 'copy',
+                label: i18nT('messages:components.messages.MessageBubble.kopirovat_649f5a88'),
+                accessibilityLabel: i18nT('messages:components.messages.MessageBubble.kopirovat_tekst_3a304b34'),
+                icon: 'copy',
+                onPress: () => { void copyText(); },
+            },
+        ];
+        if (onDelete) {
+            items.push({
+                key: 'delete',
+                label: i18nT('messages:components.messages.MessageBubble.udalit_90cd7b34'),
+                accessibilityLabel: i18nT('messages:components.messages.MessageBubble.udalit_soobschenie_db3677e9'),
+                icon: 'trash-2',
+                destructive: true,
+                onPress: handleDeletePress,
+            });
+        }
+        return items;
+    }, [copyText, handleDeletePress, onDelete]);
 
     const handleConfirmDelete = useCallback(() => {
         setShowDeleteConfirm(false);
@@ -209,30 +227,12 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
                     </Pressable>
                 </View>
             )}
-            {showActions && (
-                <View style={styles.actionsRow}>
-                    <Pressable
-                        onPress={() => { setShowActions(false); copyText(); }}
-                        style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
-                        accessibilityRole="button"
-                        accessibilityLabel={i18nT('messages:components.messages.MessageBubble.kopirovat_tekst_3a304b34')}
-                    >
-                        <Feather name="copy" size={14} color={colors.textSecondary} />
-                        <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>{i18nT('messages:components.messages.MessageBubble.kopirovat_0f95196f')}</Text>
-                    </Pressable>
-                    {onDelete && (
-                        <Pressable
-                            onPress={handleDeletePress}
-                            style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
-                            accessibilityRole="button"
-                            accessibilityLabel={i18nT('messages:components.messages.MessageBubble.udalit_soobschenie_db3677e9')}
-                        >
-                            <Feather name="trash-2" size={14} color={colors.textSecondary} />
-                            <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>{i18nT('messages:components.messages.MessageBubble.udalit_080df1a5')}</Text>
-                        </Pressable>
-                    )}
-                </View>
-            )}
+            <ActionListSheet
+                visible={menuOpen}
+                onClose={() => setMenuOpen(false)}
+                title={i18nT('messages:components.messages.MessageBubble.soobschenie_bf2d70a6')}
+                actions={menuActions}
+            />
         </View>
     );
 

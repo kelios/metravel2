@@ -32,6 +32,7 @@ import {
   WEB_SUPPORTED_UPLOAD_EXTENSIONS,
 } from './utils'
 import { translate as i18nT } from '@/i18n'
+import { showToast } from '@/utils/toast'
 
 
 interface UploadImageResponse {
@@ -364,7 +365,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
       // два быстрых дропа подряд видели бы одинаковое устаревшее значение и могли
       // превысить maxImages.
       if (imagesRef.current.length + files.length > maxImages) {
-        alert(i18nT('travel:components.travel.gallery.ImageGallery.maksimum_value1_izobrazheniy_73dec95a', { value1: maxImages }))
+        void showToast({ type: 'info', text1: i18nT('travel:components.travel.gallery.ImageGallery.maksimum_value1_izobrazheniy_73dec95a', { value1: maxImages }), position: 'bottom' })
         return
       }
 

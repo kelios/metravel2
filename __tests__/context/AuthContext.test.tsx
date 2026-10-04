@@ -7,8 +7,14 @@ import { loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi } from '@/
 import { Alert, Platform } from 'react-native';
 import { getSecureItem, readSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { translate as i18nT } from '@/i18n';
+import { showToast } from '@/utils/toast';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import { fetchUserProfile } from '@/api/user';
+
+jest.mock('@/utils/toast', () => ({
+  ...jest.requireActual('@/utils/toast'),
+  showToast: jest.fn(async () => undefined),
+}));
 
 jest.mock('@react-native-async-storage/async-storage');
 jest.mock('@/api/auth', () => ({
@@ -198,6 +204,7 @@ describe('AuthContext', () => {
 
   it('does not collapse a Keychain outage into a silent guest session', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    (showToast as jest.Mock).mockClear();
     (readSecureItem as jest.Mock).mockResolvedValueOnce({ value: null, unavailable: true });
     (getStorageBatch as jest.Mock).mockResolvedValueOnce({
       userId: '7',
@@ -219,9 +226,14 @@ describe('AuthContext', () => {
       expect(contextValue.userId).toBe('7');
       expect(contextValue.username).toBe('Julia');
     });
-    expect(alertSpy).toHaveBeenCalledWith(
-      i18nT('errorsStatic:api.auth.signInErrorTitle'),
-      i18nT('errorsStatic:api.client.sessionExpired'),
+    // #2127: сообщение — тостом, не Alert (на web Alert.alert пуст).
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'error',
+        text1: i18nT('errorsStatic:api.auth.signInErrorTitle'),
+        text2: i18nT('errorsStatic:api.client.sessionExpired'),
+      }),
     );
     alertSpy.mockRestore();
   });

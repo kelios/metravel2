@@ -15,7 +15,6 @@ export const messagesGenerated1 = {
   "components.messages.ChatView.segodnya_df282097": "Сегодня",
   "components.messages.ChatView.udalit_dialog_a1169aef": "Удалить диалог",
   "components.messages.ChatView.vchera_c41c414f": "Вчера",
-  "components.messages.MessageBubble.kopirovat_0f95196f": "Копировать ",
   "components.messages.MessageBubble.kopirovat_649f5a88": "Копировать",
   "components.messages.MessageBubble.kopirovat_tekst_3a304b34": "Копировать текст",
   "components.messages.MessageBubble.otmena_240238ff": "Отмена ",

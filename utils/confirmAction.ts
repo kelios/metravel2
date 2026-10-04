@@ -27,10 +27,18 @@ export async function confirmAction({
     return requestConfirmDialog({ title, message, confirmText, cancelText })
   }
 
+  // #2127: единственный разрешённый Alert.alert в коде (guard web-alert-governance):
+  // на native вопрос с выбором — системный Alert. Закрытие без выбора (Android:
+  // «Назад», тап мимо) — отказ, иначе промис висел бы вечно.
   return await new Promise<boolean>((resolve) => {
-    Alert.alert(title, message, [
-      { text: cancelText, style: 'cancel', onPress: () => resolve(false) },
-      { text: confirmText, style: 'destructive', onPress: () => resolve(true) },
-    ])
+    Alert.alert(
+      title,
+      message,
+      [
+        { text: cancelText, style: 'cancel', onPress: () => resolve(false) },
+        { text: confirmText, style: 'destructive', onPress: () => resolve(true) },
+      ],
+      { cancelable: true, onDismiss: () => resolve(false) },
+    )
   })
 }

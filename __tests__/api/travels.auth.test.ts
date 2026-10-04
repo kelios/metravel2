@@ -857,25 +857,48 @@ describe('src/api/auth.ts auth/password API', () => {
     });
   });
 
+  // #2127: слой api интерфейс не показывает — причина отказа и текст успеха уходят экрану.
   describe('setNewPasswordApi', () => {
-    it('при невалидном пароле показывает Alert и возвращает false', async () => {
+    afterEach(() => {
+      expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    it('невалидный пароль — rejected с причиной валидации, без запроса', async () => {
       mockedValidatePassword.mockReturnValueOnce({ valid: false, error: 'weak' } as any);
 
       const result = await setNewPasswordApi('token', 'p');
 
-      expect(result).toBe(false);
+      expect(result).toEqual({ ok: false, reason: 'rejected', message: 'weak' });
       expect(fetchWithTimeout).not.toHaveBeenCalled();
     });
 
-    it('успешная смена пароля показывает Alert успеха', async () => {
+    it('успешная смена пароля — ok с текстом успеха', async () => {
       mockedValidatePassword.mockReturnValueOnce({ valid: true } as any);
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ success: true } as any);
 
       const result = await setNewPasswordApi('token', 'StrongPassword1!');
 
-      expect(result).toBe(true);
+      expect(result).toEqual({ ok: true, message: 'Пароль успешно изменен' });
+    });
+
+    it('сервер отказал (400, просроченная ссылка) — rejected, причина не теряется', async () => {
+      mockedValidatePassword.mockReturnValueOnce({ valid: true } as any);
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 400 } as any);
+
+      const result = await setNewPasswordApi('expired', 'StrongPassword1!');
+
+      expect(result).toMatchObject({ ok: false, reason: 'rejected' });
+      expect((result as { message: string }).message).toBeTruthy();
+    });
+
+    it('сбой сервера (503) — server', async () => {
+      mockedValidatePassword.mockReturnValueOnce({ valid: true } as any);
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 503 } as any);
+
+      await expect(setNewPasswordApi('token', 'StrongPassword1!')).resolves.toMatchObject({ ok: false, reason: 'server' });
     });
   });
+
 
 });

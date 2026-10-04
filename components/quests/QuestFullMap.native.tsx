@@ -5,7 +5,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     InteractionManager,
     Modal,
     StyleSheet,
@@ -40,6 +39,12 @@ import { buildQuestNativeMapHtml } from './questNativeMapHtml';
 import { selectPlural, translate as i18nT } from '@/i18n'
 import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
 import { openExternalUrl } from '@/utils/externalLinks';
+import { showToast } from '@/utils/toast'
+
+// #2127: ошибка экспорта — тостом через общий канал (раньше Alert.alert).
+const notifyExportError = (text1: string, text2: string) => {
+    void showToast({ type: 'error', text1, text2, position: 'bottom' });
+};
 
 
 const MIN_INLINE_MAP_HEIGHT = 420;
@@ -270,15 +275,12 @@ function QuestFullMap({
             const dataUrl = await requestQuestMapPng();
             const ok = await saveAndShareQuestMapPng({ dataUrl, title });
             if (!ok && dataUrl == null) {
-                Alert.alert(
-                    i18nT('quests:components.quests.QuestFullMap.eksport_png_f998b6c7'),
-                    i18nT('quests:components.quests.QuestFullMap.ne_udalos_sformirovat_izobrazhenie_karty_pop_8f0c211b')
-                );
+                notifyExportError(i18nT('quests:components.quests.QuestFullMap.eksport_png_f998b6c7'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_sformirovat_izobrazhenie_karty_pop_8f0c211b'));
             } else if (!ok) {
-                Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_png_f998b6c7'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_podelitsya_izobrazheniem_karty_f9e98473'));
+                notifyExportError(i18nT('quests:components.quests.QuestFullMap.eksport_png_f998b6c7'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_podelitsya_izobrazheniem_karty_f9e98473'));
             }
         } catch {
-            Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_png_f998b6c7'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_sformirovat_izobrazhenie_karty_91b89c4b'));
+            notifyExportError(i18nT('quests:components.quests.QuestFullMap.eksport_png_f998b6c7'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_sformirovat_izobrazhenie_karty_91b89c4b'));
         } finally {
             setIsExportingPng(false);
         }
@@ -309,12 +311,7 @@ function QuestFullMap({
         try {
             const routedTrack = await resolveRoutedTrackForExport();
             if (!routedTrack) {
-                Alert.alert(
-                    i18nT('quests:components.quests.QuestFullMap.eksport_gpx_5b594fb6'),
-                    routeMode === 'bike'
-                        ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeBuildFailed')
-                        : i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_01a5921d'),
-                );
+                notifyExportError(i18nT('quests:components.quests.QuestFullMap.eksport_gpx_5b594fb6'), routeMode === 'bike' ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeBuildFailed') : i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_01a5921d'));
                 return;
             }
 
@@ -329,7 +326,7 @@ function QuestFullMap({
                 });
             }
         } catch {
-            Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_d541404b'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_podelitsya_gpx_faylom_fbac86e9'));
+            notifyExportError(i18nT('quests:components.quests.QuestFullMap.eksport_d541404b'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_podelitsya_gpx_faylom_fbac86e9'));
         }
     };
 
@@ -337,12 +334,7 @@ function QuestFullMap({
         try {
             const routedTrack = await resolveRoutedTrackForExport();
             if (!routedTrack) {
-                Alert.alert(
-                    i18nT('quests:components.quests.QuestFullMap.eksport_geojson_2369b67f'),
-                    routeMode === 'bike'
-                        ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeBuildFailed')
-                        : i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_433c08de'),
-                );
+                notifyExportError(i18nT('quests:components.quests.QuestFullMap.eksport_geojson_2369b67f'), routeMode === 'bike' ? i18nT('quests:components.quests.QuestFullMap.routeStatus.bikeBuildFailed') : i18nT('quests:components.quests.QuestFullMap.ne_udalos_postroit_realnyy_peshiy_marshrut_s_433c08de'));
                 return;
             }
 
@@ -359,7 +351,7 @@ function QuestFullMap({
                 });
             }
         } catch {
-            Alert.alert(i18nT('quests:components.quests.QuestFullMap.eksport_d541404b'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_podelitsya_geojson_faylom_5bb0e239'));
+            notifyExportError(i18nT('quests:components.quests.QuestFullMap.eksport_d541404b'), i18nT('quests:components.quests.QuestFullMap.ne_udalos_podelitsya_geojson_faylom_5bb0e239'));
         }
     };
 

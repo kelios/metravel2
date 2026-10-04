@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Alert, Platform } from 'react-native'
+import { Platform } from 'react-native'
 import * as FileSystem from 'expo-file-system/legacy'
 import * as Sharing from 'expo-sharing'
 
@@ -10,6 +10,7 @@ import { downloadTravelRouteFileBlob } from '@/api/travelRoutes'
 import { downloadBlobOnWeb } from '@/utils/downloadUrlOnWeb'
 import { useTravelDetailsMapSectionHintsModel } from './useTravelDetailsMapSectionHintsModel'
 import { translate as i18nT } from '@/i18n'
+import { showToast } from '@/utils/toast'
 
 
 function getTravelDetailsMapSectionFlags(params: {
@@ -95,16 +96,14 @@ export function useTravelDetailsMapSectionModel({
     setMapOpenTrigger((prev) => prev + 1)
   }, [forceOpenKey])
 
+  // #2127: одно сообщение на обе платформы — тост вместо блокирующего window.alert на web.
   const notifyDownloadUnavailable = useCallback(() => {
-    if (Platform.OS === 'web') {
-      try {
-        window.alert?.(i18nT('travel:components.travel.details.hooks.useTravelDetailsMapSectionModel.fayl_marshruta_nedostupen_dlya_skachivaniya_eb34c600'))
-      } catch {
-        return
-      }
-      return
-    }
-    Alert.alert?.(i18nT('travel:components.travel.details.hooks.useTravelDetailsMapSectionModel.nedostupno_72fbad4f'), i18nT('travel:components.travel.details.hooks.useTravelDetailsMapSectionModel.fayl_marshruta_nedostupen_dlya_skachivaniya_eb34c600'))
+    void showToast({
+      type: 'info',
+      text1: i18nT('travel:components.travel.details.hooks.useTravelDetailsMapSectionModel.nedostupno_72fbad4f'),
+      text2: i18nT('travel:components.travel.details.hooks.useTravelDetailsMapSectionModel.fayl_marshruta_nedostupen_dlya_skachivaniya_eb34c600'),
+      position: 'bottom',
+    })
   }, [])
 
   const handleDownloadRoute = useCallback(async (file: TravelRouteFile) => {

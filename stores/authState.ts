@@ -66,7 +66,8 @@ export interface AuthActions {
     logout: () => Promise<void>;
     // #2042: успех/отказ сброса решает статус ответа, а не текст сообщения.
     sendPassword: (email: string) => Promise<PasswordResetOutcome>;
-    setNewPassword: (token: string, newPassword: string) => Promise<boolean>;
+    // #2127: причина отказа и текст успеха — из слоя api, экран показывает их сам.
+    setNewPassword: (token: string, newPassword: string) => Promise<PasswordResetOutcome>;
 }
 
 export type AuthStore = AuthState & AuthActions;

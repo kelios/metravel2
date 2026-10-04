@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
+import { showToast } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -18,9 +19,10 @@ const SetNewPasswordScreen: React.FC<SetNewPasswordScreenProps> = ({ route }) =>
     const { setNewPassword: submitNewPassword } = useAuth();
 
     const handleSetNewPassword = async () => {
-        const success = await submitNewPassword(token, newPassword);
-        if (success) {
-            // Перейти на экран входа или показать сообщение об успешной смене пароля
+        // #2127: результат показывается тостом — раньше его показывал Alert слоя api.
+        const outcome = await submitNewPassword(token, newPassword);
+        if (outcome.message) {
+            void showToast({ type: outcome.ok ? 'success' : 'error', text1: outcome.message, position: 'bottom' });
         }
     };
 
