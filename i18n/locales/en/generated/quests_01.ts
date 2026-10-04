@@ -235,7 +235,7 @@ export const questsGenerated1 = {
   "components.quests.questWizardShell.otkryt_tochki_kvesta_v_prilozhenii_kart_acb9e920": "Open quest points in the maps app",
   "components.quests.questWizardShell.otkryt_v_prilozhenii_818b6173": "Open in app",
   "components.quests.questWizardShell.pechat_76bdeffe": "Print",
-  "components.quests.questWizardShell.pechat_kvesta_f66c15e3": "Quest stamp",
+  "components.quests.questWizardShell.pechat_kvesta_f66c15e3": "Print quest",
   "components.quests.questWizardShell.progressTasks": "Tasks: {{completed}} / {{total}}",
   "components.quests.questWizardShell.sbrosit_dd613b60": "Reset",
   "components.quests.questWizardShell.sbrosit_progress_5f45dc36": "Reset progress",

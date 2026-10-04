@@ -235,7 +235,7 @@ export const questsGenerated1 = {
   "components.quests.questWizardShell.otkryt_tochki_kvesta_v_prilozhenii_kart_acb9e920": "Otwórz punkty zadań w aplikacji Mapy",
   "components.quests.questWizardShell.otkryt_v_prilozhenii_818b6173": "Otwórz w aplikacji",
   "components.quests.questWizardShell.pechat_76bdeffe": "Wydrukuj",
-  "components.quests.questWizardShell.pechat_kvesta_f66c15e3": "Znaczek poszukiwania",
+  "components.quests.questWizardShell.pechat_kvesta_f66c15e3": "Wydrukuj quest",
   "components.quests.questWizardShell.progressTasks": "Zadania: {{completed}} / {{total}}",
   "components.quests.questWizardShell.sbrosit_dd613b60": "Zresetuj",
   "components.quests.questWizardShell.sbrosit_progress_5f45dc36": "Zresetuj postęp",

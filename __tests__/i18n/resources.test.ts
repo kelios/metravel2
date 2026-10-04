@@ -78,6 +78,46 @@ describe('i18n resources', () => {
     }
   })
 
+  // #2126: «печать» в смысле печати документа переводили как штамп — «Quest stamp»,
+  // «Znaczek poszukiwania». Контроль по русскому значению во всех ключах, как у #2064.
+  it('translates printing as printing, not as a stamp (#2126)', () => {
+    const printKey = 'quests:components.quests.questWizardShell.pechat_kvesta_f66c15e3' as TranslationKey
+    expect({
+      ru: getFixedTranslator('ru')(printKey),
+      be: getFixedTranslator('be')(printKey),
+      uk: getFixedTranslator('uk')(printKey),
+      pl: getFixedTranslator('pl')(printKey),
+      en: getFixedTranslator('en')(printKey),
+    }).toEqual({
+      ru: 'Печать квеста',
+      be: 'Друк квэста',
+      uk: 'Друк квесту',
+      pl: 'Wydrukuj quest',
+      en: 'Print quest',
+    })
+
+    const printing = /[Пп]ечат|[Рр]аспечат/
+    const notPrinting = /впечатл|отпечат/i
+    const forbidden = { en: /\b(?:stamp|seal)/i, pl: /znaczek|pieczęć|pieczec|stempel/i } as const
+    const printKeys: TranslationKey[] = []
+    for (const [namespace, entries] of Object.entries(resources.ru)) {
+      for (const [key, value] of Object.entries(entries)) {
+        if (printing.test(value) && !notPrinting.test(value)) {
+          printKeys.push(`${namespace}:${key}` as TranslationKey)
+        }
+      }
+    }
+
+    expect(printKeys).toContain(printKey)
+    for (const locale of ['en', 'pl'] as const) {
+      const fixedTranslate = getFixedTranslator(locale)
+      const offenders = printKeys
+        .map((key) => ({ key, value: fixedTranslate(key) }))
+        .filter(({ value }) => forbidden[locale].test(value))
+      expect({ locale, offenders }).toEqual({ locale, offenders: [] })
+    }
+  })
+
   it('preserves interpolation placeholders in every translation', () => {
     const placeholderPattern = /\{\{\s*([^}\s]+)\s*\}\}/g
     const placeholders = (value: string) =>
