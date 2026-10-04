@@ -338,7 +338,6 @@ export const profileGenerated2 = {
   "components.profile.ProfileCompletedQuests.eyebrow": "Completed quest",
   "components.profile.ProfileCompletedQuests.showAll": "Show all {{value1}}",
   "components.profile.ProfileCompletedQuests.showAllA11y": "Show all completed quests, {{value1}}",
-  "components.profile.UserSafetyMenu.blockHint": "You will stop seeing their content, and they will not see yours or be able to message you.",
   "components.profile.UserSafetyMenu.blockConfirmTitle": "Block this user?",
   "components.profile.UserSafetyMenu.blockConfirmTitleNamed": "Block {{name}}?",
   "components.profile.UserSafetyMenu.blockConfirmMessage": "Their trips, comments and messages will be hidden from you right away. They will not see your content or be able to message you. We will be notified about the block. You can undo it in Settings under “Blocked users”.",

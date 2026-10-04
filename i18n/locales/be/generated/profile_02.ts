@@ -338,7 +338,6 @@ export const profileGenerated2 = {
   "components.profile.ProfileCompletedQuests.eyebrow": "Пройдзены квэст",
   "components.profile.ProfileCompletedQuests.showAll": "Паказаць усе {{value1}}",
   "components.profile.ProfileCompletedQuests.showAllA11y": "Паказаць усе пройдзеныя квэсты, {{value1}}",
-  "components.profile.UserSafetyMenu.blockHint": "Вы перастанеце бачыць яго кантэнт, а ён не ўбачыць ваш і не зможа вам пісаць.",
   "components.profile.UserSafetyMenu.blockConfirmTitle": "Заблакаваць карыстальніка?",
   "components.profile.UserSafetyMenu.blockConfirmTitleNamed": "Заблакаваць карыстальніка {{name}}?",
   "components.profile.UserSafetyMenu.blockConfirmMessage": "Яго падарожжы, каментарыі і паведамленні адразу знікнуць у вас. Ён не ўбачыць ваш кантэнт і не зможа вам пісаць. Мы атрымаем апавяшчэнне пра блакіроўку. Зняць яе можна ў наладах, у раздзеле «Заблакаваныя карыстальнікі».",

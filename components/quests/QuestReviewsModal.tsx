@@ -5,6 +5,9 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import StarRating from '@/components/ui/StarRating'
 import UserAvatar from '@/components/layout/UserAvatar'
 import QuestModalSheet from '@/components/quests/QuestModalSheet'
+import ContentSafetyActions from '@/components/safety/ContentSafetyActions'
+import HiddenContentGate from '@/components/safety/HiddenContentGate'
+import { makeContentRef } from '@/types/contentSafety'
 import { useQuestReviews } from '@/hooks/useQuestsApi'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -30,65 +33,75 @@ const formatReviewDate = (iso: string | null): string | null => {
 
 function ReviewItem({ review, styles }: { review: QuestReview; styles: ReturnType<typeof createStyles> }) {
   const dateText = formatReviewDate(review.createdAt)
+  // #2133 (Apple 1.2): жалоба/скрытие отзыва. Автора бэк не отдаёт (#2163) —
+  // блокировки в меню нет, а фото отзыва покрывает жалоба на сам отзыв.
+  const safetyRef = useMemo(() => makeContentRef('quest_review', review.id, null), [review.id])
   return (
-    <View style={styles.reviewItem} testID={`quest-review-item-${review.id}`}>
-      <View style={styles.reviewHeader}>
-        <UserAvatar uri={review.authorAvatar} size="md" />
-        <View style={styles.reviewHeaderText}>
-          <Text style={styles.reviewAuthor} numberOfLines={1}>
-            {review.authorName || i18nT('quests:components.quests.QuestReviewsModal.defaultAuthorName')}
-          </Text>
-          {dateText ? <Text style={styles.reviewDate}>{dateText}</Text> : null}
-        </View>
-        <StarRating rating={review.rating} size="small" showValue={false} showCount={false} />
-      </View>
-
-      {review.liked ? (
-        <View style={styles.reviewBlock}>
-          <Text style={styles.reviewBlockLabel}>{i18nT('quests:components.quests.QuestReviewsModal.ponravilos_dc466c74')}</Text>
-          <Text style={styles.reviewBlockText}>{review.liked}</Text>
-        </View>
-      ) : null}
-
-      {review.disliked ? (
-        <View style={styles.reviewBlock}>
-          <Text style={styles.reviewBlockLabel}>{i18nT('quests:components.quests.QuestReviewsModal.chto_uluchshit_74a4d291')}</Text>
-          <Text style={styles.reviewBlockText}>{review.disliked}</Text>
-        </View>
-      ) : null}
-
-      {/* Фото игрока (#1575/#1576). Сервер уже отдал только промодерированные и
-          не больше трёх, поэтому клиенту нечего фильтровать. Пустой список не
-          должен оставлять пустое место — блок целиком не монтируется. */}
-      {review.photos.length > 0 ? (
-        <View style={styles.reviewBlock} testID={`quest-review-photos-${review.id}`}>
-          <Text style={styles.reviewBlockLabel}>
-            {i18nT('quests:components.quests.QuestReviewsModal.photosLabel')}
-          </Text>
-          <View style={styles.photoRow}>
-            {review.photos.map((photo) => (
-              // Через `ImageCardMedia`, а не голый `ExpoImage`: это единственный
-              // путь доставки заливки полей и ресайза по прокси в проекте
-              // (docs/RULES.md → Images and placeholders). Голая картинка тянула
-              // бы в плитку 96×96 ОРИГИНАЛ снимка с телефона — та же ошибка, что
-              // чинили в #1115 на обложке квеста. `contain` обязателен:
-              // пропорции снимка игрока сохраняются, поле заливается фоном слота.
-              <ImageCardMedia
-                key={photo.id}
-                src={photo.url}
-                width={PHOTO_TILE_SIZE}
-                height={PHOTO_TILE_SIZE}
-                borderRadius={DESIGN_TOKENS.radii.sm}
-                fit="contain"
-                alt={i18nT('quests:components.quests.QuestReviewsModal.photoAlt')}
-                style={styles.photoTile}
-                testID={`quest-review-photo-${photo.id}`}
-              />
-            ))}
+    <HiddenContentGate contentRef={safetyRef}>
+      <View style={styles.reviewItem} testID={`quest-review-item-${review.id}`}>
+        <View style={styles.reviewHeader}>
+          <UserAvatar uri={review.authorAvatar} size="md" />
+          <View style={styles.reviewHeaderText}>
+            <Text style={styles.reviewAuthor} numberOfLines={1}>
+              {review.authorName || i18nT('quests:components.quests.QuestReviewsModal.defaultAuthorName')}
+            </Text>
+            {dateText ? <Text style={styles.reviewDate}>{dateText}</Text> : null}
           </View>
+          <StarRating rating={review.rating} size="small" showValue={false} showCount={false} />
+          <ContentSafetyActions
+            contentRef={safetyRef}
+            authorName={review.authorName}
+            testIDPrefix={`quest-review-${review.id}-safety`}
+          />
         </View>
-      ) : null}
-    </View>
+
+        {review.liked ? (
+          <View style={styles.reviewBlock}>
+            <Text style={styles.reviewBlockLabel}>{i18nT('quests:components.quests.QuestReviewsModal.ponravilos_dc466c74')}</Text>
+            <Text style={styles.reviewBlockText}>{review.liked}</Text>
+          </View>
+        ) : null}
+
+        {review.disliked ? (
+          <View style={styles.reviewBlock}>
+            <Text style={styles.reviewBlockLabel}>{i18nT('quests:components.quests.QuestReviewsModal.chto_uluchshit_74a4d291')}</Text>
+            <Text style={styles.reviewBlockText}>{review.disliked}</Text>
+          </View>
+        ) : null}
+
+        {/* Фото игрока (#1575/#1576). Сервер уже отдал только промодерированные и
+            не больше трёх, поэтому клиенту нечего фильтровать. Пустой список не
+            должен оставлять пустое место — блок целиком не монтируется. */}
+        {review.photos.length > 0 ? (
+          <View style={styles.reviewBlock} testID={`quest-review-photos-${review.id}`}>
+            <Text style={styles.reviewBlockLabel}>
+              {i18nT('quests:components.quests.QuestReviewsModal.photosLabel')}
+            </Text>
+            <View style={styles.photoRow}>
+              {review.photos.map((photo) => (
+                // Через `ImageCardMedia`, а не голый `ExpoImage`: это единственный
+                // путь доставки заливки полей и ресайза по прокси в проекте
+                // (docs/RULES.md → Images and placeholders). Голая картинка тянула
+                // бы в плитку 96×96 ОРИГИНАЛ снимка с телефона — та же ошибка, что
+                // чинили в #1115 на обложке квеста. `contain` обязателен:
+                // пропорции снимка игрока сохраняются, поле заливается фоном слота.
+                <ImageCardMedia
+                  key={photo.id}
+                  src={photo.url}
+                  width={PHOTO_TILE_SIZE}
+                  height={PHOTO_TILE_SIZE}
+                  borderRadius={DESIGN_TOKENS.radii.sm}
+                  fit="contain"
+                  alt={i18nT('quests:components.quests.QuestReviewsModal.photoAlt')}
+                  style={styles.photoTile}
+                  testID={`quest-review-photo-${photo.id}`}
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
+      </View>
+    </HiddenContentGate>
   )
 }
 

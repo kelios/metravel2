@@ -10,6 +10,7 @@ import { Platform, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
 import { useTdTrace } from '@/hooks/useTdTrace'
 import { isIOSWebKit } from '@/components/ui/ImageCardMediaWebHelpers'
+import { toContentId } from '@/types/contentSafety'
 import type { Travel, TravelMediaImage } from '@/types/types'
 import { findGalleryMediaImage } from '@/utils/travelMediaVariants'
 import { translate as i18nT } from '@/i18n'
@@ -22,6 +23,8 @@ type ImgLike = {
   height?: number
   updated_at?: string | null
   id?: number | string
+  /** Настоящий id фото галереи (#2133); `id` выше может быть индексом-заглушкой. */
+  photoId?: number | null
   media?: TravelMediaImage | null
 }
 type GalleryImage = ImgLike & Record<string, unknown>
@@ -54,6 +57,7 @@ const normalizeGalleryImage = (
     : ({
         ...(item as Record<string, unknown>),
         id: (item as Record<string, unknown>).id || fallbackId,
+        photoId: toContentId((item as Record<string, unknown>).id),
       } as GalleryImage)
 
 function useHeroMediaModel(

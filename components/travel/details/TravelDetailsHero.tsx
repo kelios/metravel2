@@ -4,6 +4,8 @@ import { Platform, View } from 'react-native'
 import type { Travel } from '@/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import { findGalleryMediaImage } from '@/utils/travelMediaVariants'
+import { resolveTravelAuthorName } from '@/components/listTravel/travelListItemHelpers'
+import { resolveOwnerId } from '@/components/travel/compactSideBar/helpers'
 import {
   QuickFactsSkeleton,
   QuickJumpSkeleton,
@@ -68,6 +70,8 @@ function TravelHeroSectionInner({
   suppressQuickJumps = false,
 }: Props) {
   const styles = useTravelDetailsHeroStyles()
+  const safetyAuthorId = useMemo(() => resolveOwnerId(travel), [travel])
+  const authorName = useMemo(() => resolveTravelAuthorName(travel, travel.userName), [travel])
 
   const {
     firstImg,
@@ -231,6 +235,8 @@ function TravelHeroSectionInner({
                       fullscreenVisible={fullscreenVisible}
                       fullscreenIndex={fullscreenIndex}
                       onCloseFullscreen={handleCloseFullscreen}
+                      safetyAuthorId={safetyAuthorId}
+                      authorName={authorName}
                     />
                   </Suspense>
                 </View>
@@ -270,6 +276,8 @@ function TravelHeroSectionInner({
                 fullscreenVisible={fullscreenVisible}
                 fullscreenIndex={fullscreenIndex}
                 onCloseFullscreen={handleCloseFullscreen}
+                safetyAuthorId={safetyAuthorId}
+                authorName={authorName}
               />
             </Suspense>
           )}

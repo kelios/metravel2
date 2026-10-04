@@ -1,8 +1,11 @@
 // api/userSafety.ts
-// Trust & Safety (Sprint 16, FE-430): жалоба на пользователя и блокировка.
+// Trust & Safety (Sprint 16, FE-430; #2133): жалоба на любой контент и блокировка.
 //
-// КОНТРАКТ ЭНДПОИНТОВ (BE-report-user #426, BE-block-user #427):
-//   POST   /user/{id}/report/   body { reason, comment? } → 201 { id, status }
+// КОНТРАКТ ЭНДПОИНТОВ (BE #2129, BE-block-user #427):
+//   POST   /reports/            body { content_type, object_id, reason, comment? }
+//                               → 201 { id, due_at }; 409 — открытая жалоба уже есть.
+//                               Профиль — тот же канал с content_type='user'
+//                               (бэк считает reported_by_me по нему).
 //   GET    /user/report-reasons/ → [{ key, label }]
 //   POST   /user/{id}/block/    → 201 { blocked: true } (снимает взаимную подписку)
 //   DELETE /user/{id}/block/    → 204
@@ -12,6 +15,7 @@
 
 import { apiClient, ApiError } from '@/api/client'
 import type { UserProfileDto } from '@/api/user'
+import { contentRefKey, type ContentRef } from '@/types/contentSafety'
 import { resolveDevMockFlag } from '@/utils/devMockFlags'
 import { devWarn } from '@/utils/logger'
 import { translate as i18nT } from '@/i18n'
@@ -30,14 +34,15 @@ export interface ReportReason {
 }
 
 export interface SubmitReportInput {
-  userId: string | number
+  target: ContentRef
   reason: ReportReasonKey
   comment?: string
 }
 
 export interface ReportResult {
   id: number
-  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed'
+  /** Срок ответа модерации (24 ч, #2129); null — жалоба уже была подана раньше (409). */
+  due_at: string | null
 }
 
 // Дефолтный справочник причин — используется, если BE не отдаёт /report-reasons/.
@@ -98,30 +103,33 @@ export async function fetchReportReasons(): Promise<ReportReason[]> {
   }
 }
 
-/** Подать жалобу на пользователя. 409 (повторная жалоба) трактуем как уже поданную. */
-export async function reportUser(input: SubmitReportInput): Promise<ReportResult> {
-  const body: { reason: ReportReasonKey; comment?: string } = { reason: input.reason }
+const mockReport = (target: ContentRef): ReportResult => {
+  mockReported.add(contentRefKey(target))
+  mockReportSeq += 1
+  return { id: mockReportSeq, due_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() }
+}
+
+/** Подать жалобу на объект. 409 (открытая жалоба уже есть) трактуем как поданную. */
+export async function reportContent(input: SubmitReportInput): Promise<ReportResult> {
+  const body: { content_type: string; object_id: number; reason: ReportReasonKey; comment?: string } = {
+    content_type: input.target.content_type,
+    object_id: input.target.object_id,
+    reason: input.reason,
+  }
   const comment = input.comment?.trim()
   if (comment) body.comment = comment
 
-  if (USE_MOCK) {
-    mockReported.add(key(input.userId))
-    mockReportSeq += 1
-    return { id: mockReportSeq, status: 'pending' }
-  }
+  if (USE_MOCK) return mockReport(input.target)
   try {
-    const res = await apiClient.post<ReportResult>(`/user/${input.userId}/report/`, body)
-    return res ?? { id: 0, status: 'pending' }
+    const res = await apiClient.post<ReportResult>('/reports/', body)
+    return { id: res?.id ?? 0, due_at: res?.due_at ?? null }
   } catch (error) {
-    // 409 — жалоба этого reporter на этого target уже существует (идемпотентно).
     if (error instanceof ApiError && error.status === 409) {
-      return { id: 0, status: 'pending' }
+      return { id: 0, due_at: null }
     }
     if (shouldFallbackToMock(error)) {
       devWarn('[safety] report → mock fallback')
-      mockReported.add(key(input.userId))
-      mockReportSeq += 1
-      return { id: mockReportSeq, status: 'pending' }
+      return mockReport(input.target)
     }
     throw error
   }
@@ -180,8 +188,8 @@ export async function fetchBlockedUsers(): Promise<UserProfileDto[]> {
 
 // DEV-хелперы: первичные флаги профиля приходят с BE (reported_by_me/is_blocked_by_me),
 // но в мок-режиме их нет — даём актуальное локальное состояние оптимистичным апдейтам.
-export const isMockReported = (userId: string | number): boolean =>
-  (USE_MOCK || __DEV__) && mockReported.has(key(userId))
+export const isMockReported = (target: Pick<ContentRef, 'content_type' | 'object_id'>): boolean =>
+  (USE_MOCK || __DEV__) && mockReported.has(contentRefKey(target))
 
 export const isMockBlocked = (userId: string | number): boolean =>
   (USE_MOCK || __DEV__) && mockBlocked.has(key(userId))

@@ -16,6 +16,9 @@ import {
   CARD_HOVER_LIFT_Y,
 } from '@/components/ui/unifiedTravelCardTokens'
 import CardActionPressable from '@/components/ui/CardActionPressable'
+import ContentSafetyActions from '@/components/safety/ContentSafetyActions'
+import HiddenContentGate from '@/components/safety/HiddenContentGate'
+import { makeContentRef } from '@/types/contentSafety'
 import { useThemedColors } from '@/hooks/useTheme'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { formatViewCount } from '@/components/travel/utils/travelHelpers'
@@ -37,7 +40,7 @@ import { createTravelListItemStyles } from './travelListItemStyles'
 import {
   buildCoverWidths,
   isLikelyWatermarked,
-  normalizeOwnerIds,
+  extractOwnerIds,
   CARD_MEDIA_SLOT_RATIO,
   resolveCoverSlotGeometry,
   resolveDisplayTravelYear,
@@ -118,18 +121,6 @@ const ANCHOR_FILL_STYLE = {
 function stopEvent(e: any) {
   e?.stopPropagation?.()
   e?.preventDefault?.()
-}
-
-function extractOwnerIds(travel: any): string[] {
-  return normalizeOwnerIds(
-    travel?.userIds ??
-      travel?.userId ??
-      travel?.user_id ??
-      travel?.ownerId ??
-      travel?.owner_id ??
-      travel?.user?.id ??
-      '',
-  )
 }
 
 type Props = {
@@ -220,6 +211,7 @@ function TravelListItem({
 
   const ownerIds = useMemo(() => extractOwnerIds(travel), [travel])
   const authorUserId = ownerIds[0] || null
+  const safetyRef = useMemo(() => makeContentRef('travel', id, authorUserId), [id, authorUserId])
 
   const canEdit = useMemo(() => {
     if (isSuperuser) return true
@@ -576,7 +568,9 @@ function TravelListItem({
         </>
       ) : null}
     </View>
-  ) : null
+  ) : selectable ? null : (
+    <ContentSafetyActions contentRef={safetyRef} authorName={authorDisplayName} appearance="surface" testIDPrefix="travel-card-safety" />
+  )
 
   // On narrow cards the meta row only has room for the country and compact badges.
   // Author is lower-priority in grid cards, while views always live on the media
@@ -814,43 +808,45 @@ function TravelListItem({
     )
 
   return (
-    <View
-      style={[
-        styles.wrap,
-        IS_WEB && typeof cardWidth === 'number' && { width: '100%' },
-        wrapOwnsHover && wrapHovered && WRAP_HOVER_LIFT_STYLE,
-      ]}
-      {...(wrapOwnsHover && {
-        onMouseEnter: () => setWrapHovered(true),
-        onMouseLeave: () => setWrapHovered(false),
-      })}
-    >
-      {wrappedCard}
-      {/*
-        Кнопки карточки живут СНАРУЖИ якоря, а не внутри него (#1626): внутри
-        `<a>` они давали три остановки Tab на карточку вместо одной и невалидную
-        по HTML вложенность интерактивного контента в ссылку. Обёртка не ловит
-        указатель (`box-none`), поэтому клик мимо кнопок по-прежнему достаётся
-        ссылке под ней.
+    <HiddenContentGate contentRef={safetyRef} style={styles.wrap}>
+      <View
+        style={[
+          styles.wrap,
+          IS_WEB && typeof cardWidth === 'number' && { width: '100%' },
+          wrapOwnsHover && wrapHovered && WRAP_HOVER_LIFT_STYLE,
+        ]}
+        {...(wrapOwnsHover && {
+          onMouseEnter: () => setWrapHovered(true),
+          onMouseLeave: () => setWrapHovered(false),
+        })}
+      >
+        {wrappedCard}
+        {/*
+          Кнопки карточки живут СНАРУЖИ якоря, а не внутри него (#1626): внутри
+          `<a>` они давали три остановки Tab на карточку вместо одной и невалидную
+          по HTML вложенность интерактивного контента в ссылку. Обёртка не ловит
+          указатель (`box-none`), поэтому клик мимо кнопок по-прежнему достаётся
+          ссылке под ней.
 
-        Плата за подъём: обёртки — соседи якоря, а не потомки контейнера
-        карточки, поэтому web-hover карточки (`UnifiedTravelCard`,
-        `containerHovered`: `translateY(-6px) scale(1.02)`) на них НЕ
-        распространяется, и наведение на саму кнопку снимает hover с карточки
-        (`mouseleave`, кнопка ей не потомок). Убрать это можно только сменой
-        владельца hover в самой карточке — см. #1626 → follow-up.
-      */}
-      {hoistsActionsOutOfAnchor && leftTopSlot ? (
-        <View style={HOISTED_LEFT_SLOT_STYLE} pointerEvents="box-none">
-          {leftTopSlot}
-        </View>
-      ) : null}
-      {hoistsActionsOutOfAnchor && rightTopSlot ? (
-        <View style={HOISTED_RIGHT_SLOT_STYLE} pointerEvents="box-none">
-          {rightTopSlot}
-        </View>
-      ) : null}
-    </View>
+          Плата за подъём: обёртки — соседи якоря, а не потомки контейнера
+          карточки, поэтому web-hover карточки (`UnifiedTravelCard`,
+          `containerHovered`: `translateY(-6px) scale(1.02)`) на них НЕ
+          распространяется, и наведение на саму кнопку снимает hover с карточки
+          (`mouseleave`, кнопка ей не потомок). Убрать это можно только сменой
+          владельца hover в самой карточке — см. #1626 → follow-up.
+        */}
+        {hoistsActionsOutOfAnchor && leftTopSlot ? (
+          <View style={HOISTED_LEFT_SLOT_STYLE} pointerEvents="box-none">
+            {leftTopSlot}
+          </View>
+        ) : null}
+        {hoistsActionsOutOfAnchor && rightTopSlot ? (
+          <View style={HOISTED_RIGHT_SLOT_STYLE} pointerEvents="box-none">
+            {rightTopSlot}
+          </View>
+        ) : null}
+      </View>
+    </HiddenContentGate>
   )
 }
 

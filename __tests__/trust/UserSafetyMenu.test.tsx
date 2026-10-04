@@ -14,7 +14,7 @@ jest.mock('@/stores/authStore', () => ({
 
 jest.mock('@/api/userSafety', () => ({
   __esModule: true,
-  reportUser: jest.fn(() => Promise.resolve({ id: 1, status: 'pending' })),
+  reportContent: jest.fn(() => Promise.resolve({ id: 1, due_at: '2026-10-05T10:00:00Z' })),
   blockUser: jest.fn(() => Promise.resolve()),
   unblockUser: jest.fn(() => Promise.resolve()),
   fetchReportReasons: jest.fn(() =>
@@ -33,10 +33,10 @@ jest.mock('@/utils/confirmAction', () => ({
 }))
 
 import UserSafetyMenu from '@/components/profile/UserSafetyMenu'
-import { reportUser, blockUser } from '@/api/userSafety'
+import { reportContent, blockUser } from '@/api/userSafety'
 import { confirmAction } from '@/utils/confirmAction'
 
-const mockedReportUser = reportUser as jest.Mock
+const mockedReportContent = reportContent as jest.Mock
 const mockedBlockUser = blockUser as jest.Mock
 const mockedConfirm = confirmAction as jest.Mock
 
@@ -77,10 +77,10 @@ describe('UserSafetyMenu', () => {
     fireEvent.press(getByTestId('report-submit'))
 
     await waitFor(() => {
-      expect(mockedReportUser).toHaveBeenCalled()
+      expect(mockedReportContent).toHaveBeenCalled()
     })
-    expect(mockedReportUser.mock.calls[0][0]).toEqual({
-      userId: 42,
+    expect(mockedReportContent.mock.calls[0][0]).toEqual({
+      target: { content_type: 'user', object_id: 42, author_id: 42 },
       reason: 'spam',
       comment: '',
     })
@@ -133,7 +133,7 @@ describe('UserSafetyMenu', () => {
 
     it('on iOS waits for the sheet dismissal before showing the dialog', async () => {
       Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true })
-      const { getByTestId, UNSAFE_getByType } = render(
+      const { getByTestId, UNSAFE_getAllByType } = render(
         <UserSafetyMenu targetUserId={42} targetName="Иван" />,
         { wrapper: createWrapper() },
       )
@@ -144,7 +144,7 @@ describe('UserSafetyMenu', () => {
       expect(mockedConfirm).not.toHaveBeenCalled()
 
       await act(async () => {
-        UNSAFE_getByType(Modal).props.onDismiss()
+        UNSAFE_getAllByType(Modal)[0].props.onDismiss()
       })
       await waitFor(() => expect(mockedBlockUser).toHaveBeenCalled())
       expect(mockedConfirm).toHaveBeenCalledTimes(1)

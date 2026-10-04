@@ -1,5 +1,6 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render as rtlRender } from '@testing-library/react-native';
+import { createQueryWrapper } from '../../helpers/testQueryClient';
 import { Platform, View } from 'react-native';
 
 import type { PublicTrip } from '@/api/publicTrips';
@@ -59,6 +60,10 @@ jest.mock('@/components/ui/UnifiedTravelCard', () => ({
 
 import PublicTripCard from '@/components/trips/PublicTripCard';
 import PublicTripDetail from '@/components/trips/PublicTripDetail';
+
+// #2133: меню жалобы в рендере зовёт мутации блокировки — нужен QueryClient, как в приложении.
+const render = (ui: Parameters<typeof rtlRender>[0]) =>
+  rtlRender(ui, { wrapper: createQueryWrapper().Wrapper });
 
 const baseTrip: PublicTrip = {
   id: 1,

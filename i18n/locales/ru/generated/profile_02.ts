@@ -338,7 +338,6 @@ export const profileGenerated2 = {
   "components.profile.ProfileCompletedQuests.eyebrow": "Пройденный квест",
   "components.profile.ProfileCompletedQuests.showAll": "Показать все {{value1}}",
   "components.profile.ProfileCompletedQuests.showAllA11y": "Показать все пройденные квесты, {{value1}}",
-  "components.profile.UserSafetyMenu.blockHint": "Вы перестанете видеть его контент, а он не увидит ваш и не сможет вам писать.",
   "components.profile.UserSafetyMenu.blockConfirmTitle": "Заблокировать пользователя?",
   "components.profile.UserSafetyMenu.blockConfirmTitleNamed": "Заблокировать пользователя {{name}}?",
   "components.profile.UserSafetyMenu.blockConfirmMessage": "Его путешествия, комментарии и сообщения сразу скроются у вас. Он не увидит ваш контент и не сможет вам писать. Мы получим уведомление о блокировке. Снять её можно в настройках, в разделе «Заблокированные пользователи».",

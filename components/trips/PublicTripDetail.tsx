@@ -14,6 +14,9 @@ import TripStatusBadge from '@/components/trips/TripStatusBadge';
 import TripApplyForm from '@/components/trips/TripApplyForm';
 import OrganizerApplicationsPanel from '@/components/trips/OrganizerApplicationsPanel';
 import TripTelegramGroupCard from '@/components/trips/communication/TripTelegramGroupCard';
+import ContentSafetyActions from '@/components/safety/ContentSafetyActions';
+import { useContentSafetyActions } from '@/components/safety/useContentSafetyActions';
+import { makeContentRef } from '@/types/contentSafety';
 import { formatSeats, formatTripDates } from '@/components/trips/tripFormatting';
 import { getTripFallbackCover } from '@/components/trips/planning/tripFallbackCover';
 import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext';
@@ -55,6 +58,17 @@ function PublicTripDetail({ tripId }: Props) {
   const headerMobile = useIsScreenHeaderMobile();
   const editLabel = i18nT('trips:app.tabs.trips.plan.id.redaktirovat_poezdku_535ddda6');
   const openPlanEditor = () => router.push(`/trips/plan/${tripId}?edit=1`);
+  // #2133 (Apple 1.2): чужую поездку можно обжаловать и заблокировать организатора.
+  // Телефон — пункты «⋯» строки экрана, desktop — «…» рядом с организатором.
+  const safetyRef = useMemo(
+    () => (trip && !trip.isOwner ? makeContentRef('trip', trip.id, trip.organizer.id) : null),
+    [trip],
+  );
+  const safety = useContentSafetyActions({
+    contentRef: safetyRef,
+    authorName: trip?.organizer.name,
+    testIDPrefix: 'trip-detail-safety',
+  });
   // #2101: заголовок один раз — в строке экрана; организатору правка — иконкой там
   // же, на desktop — кнопка с подписью рядом с заголовком.
   useScreenHeader({
@@ -62,6 +76,7 @@ function PublicTripDetail({ tripId }: Props) {
     primaryAction: trip?.isOwner
       ? { icon: 'edit-2', label: editLabel, onPress: openPlanEditor, testID: 'trip-detail-edit' }
       : undefined,
+    overflow: safety.items.length ? safety.items : undefined,
   });
 
   useEffect(() => {
@@ -168,18 +183,28 @@ function PublicTripDetail({ tripId }: Props) {
         {trip.tripType ? <InfoChip icon="tag" text={trip.tripType} /> : null}
       </View>
 
-      <Pressable
-        style={styles.organizer}
-        onPress={() => router.push(`/user/${trip.organizer.id}`)}
-        accessibilityRole="link"
-      >
-        <View style={styles.organizerAvatar}>
-          <Feather name="user" size={16} color={colors.textMuted} />
-        </View>
-        <Text style={styles.organizerText}>
-          {i18nT('trips:components.trips.PublicTripDetail.organizator_468e6261')}<Text style={styles.organizerName}>{trip.organizer.name}</Text>
-        </Text>
-      </Pressable>
+      <View style={styles.organizerRow}>
+        <Pressable
+          style={styles.organizer}
+          onPress={() => router.push(`/user/${trip.organizer.id}`)}
+          accessibilityRole="link"
+        >
+          <View style={styles.organizerAvatar}>
+            <Feather name="user" size={16} color={colors.textMuted} />
+          </View>
+          <Text style={styles.organizerText}>
+            {i18nT('trips:components.trips.PublicTripDetail.organizator_468e6261')}<Text style={styles.organizerName}>{trip.organizer.name}</Text>
+          </Text>
+        </Pressable>
+        {headerMobile ? null : (
+          <ContentSafetyActions
+            contentRef={safetyRef}
+            authorName={trip.organizer.name}
+            testIDPrefix="trip-detail-safety"
+          />
+        )}
+      </View>
+      {headerMobile ? safety.overlay : null}
 
       <Text style={styles.description}>{trip.description}</Text>
 
@@ -278,7 +303,8 @@ const createStyles = (colors: ThemedColors) =>
     title: { flex: 1, fontSize: 24, fontWeight: '800', color: colors.text, lineHeight: 30 },
     ownerActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
-    organizer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    organizerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+    organizer: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
     organizerAvatar: {
       width: 30,
       height: 30,

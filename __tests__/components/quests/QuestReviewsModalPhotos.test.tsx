@@ -5,10 +5,14 @@
  * (`screens/tabs/QuestCard.tsx:515`).
  */
 
-import { render } from '@testing-library/react-native'
-
+import { render as rtlRender } from '@testing-library/react-native'
+import { createQueryWrapper } from '../../helpers/testQueryClient'
 import QuestReviewsModal from '@/components/quests/QuestReviewsModal'
 import type { QuestReview } from '@/api/quests'
+
+// #2133: меню жалобы в рендере зовёт мутации блокировки — нужен QueryClient, как в приложении.
+const render = (ui: Parameters<typeof rtlRender>[0]) =>
+  rtlRender(ui, { wrapper: createQueryWrapper().Wrapper })
 
 let mockReviews: QuestReview[] = []
 

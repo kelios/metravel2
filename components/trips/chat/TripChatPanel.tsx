@@ -14,6 +14,9 @@ import Feather from '@expo/vector-icons/Feather'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
+import ContentSafetyActions from '@/components/safety/ContentSafetyActions'
+import HiddenContentGate from '@/components/safety/HiddenContentGate'
+import { makeContentRef } from '@/types/contentSafety'
 import { useAuthStore } from '@/stores/authStore'
 import type { TripChatMessage, TripChatStatus } from '@/api/tripChat'
 import {
@@ -259,34 +262,56 @@ function ChatMessageRow({
   colors: ThemedColors
 }) {
   const time = formatTime(message.createdAt)
-  return (
-    <View style={[styles.bubbleRow, isOwn ? styles.bubbleRowOwn : styles.bubbleRowOther]}>
-      <View
-        style={[
-          styles.bubble,
-          isOwn
-            ? [styles.bubbleOwn, { backgroundColor: colors.primary }]
-            : [styles.bubbleOther, { backgroundColor: colors.surface, borderColor: colors.borderLight }],
-        ]}
+  // #2133 (Apple 1.2): чужое сообщение — «…» (пожаловаться / скрыть / заблокировать).
+  const safetyRef = useMemo(
+    () => (isOwn ? null : makeContentRef('trip_chat_message', message.id, message.senderId)),
+    [isOwn, message.id, message.senderId],
+  )
+  const bubble = (
+    <View
+      style={[
+        styles.bubble,
+        isOwn
+          ? [styles.bubbleOwn, { backgroundColor: colors.primary }]
+          : [styles.bubbleOther, { backgroundColor: colors.surface, borderColor: colors.borderLight }],
+      ]}
+    >
+      <Text
+        style={[styles.bubbleText, { color: isOwn ? colors.textInverse : colors.text }]}
+        selectable
       >
+        {message.text}
+      </Text>
+      {!!time && (
         <Text
-          style={[styles.bubbleText, { color: isOwn ? colors.textInverse : colors.text }]}
-          selectable
+          style={[
+            styles.bubbleTime,
+            { color: isOwn ? colors.textInverse : colors.textMuted, opacity: isOwn ? 0.7 : 1 },
+          ]}
         >
-          {message.text}
+          {time}
         </Text>
-        {!!time && (
-          <Text
-            style={[
-              styles.bubbleTime,
-              { color: isOwn ? colors.textInverse : colors.textMuted, opacity: isOwn ? 0.7 : 1 },
-            ]}
-          >
-            {time}
-          </Text>
-        )}
-      </View>
+      )}
     </View>
+  )
+  if (isOwn) {
+    return <View style={[styles.bubbleRow, styles.bubbleRowOwn]}>{bubble}</View>
+  }
+  return (
+    <HiddenContentGate contentRef={safetyRef} style={styles.hiddenPlaceholder}>
+      <View style={[styles.bubbleRow, styles.bubbleRowOther]}>
+        <View style={styles.bubbleOtherLine}>
+          {bubble}
+          {safetyRef ? (
+            <ContentSafetyActions
+              contentRef={safetyRef}
+              testIDPrefix={`trip-chat-message-${message.id}-safety`}
+              style={styles.safetyTrigger}
+            />
+          ) : null}
+        </View>
+      </View>
+    </HiddenContentGate>
   )
 }
 
@@ -344,7 +369,14 @@ const createStyles = (colors: ThemedColors) =>
       borderRadius: DESIGN_TOKENS.radii.lg,
     },
     bubbleOwn: { borderBottomRightRadius: 4 },
-    bubbleOther: { borderBottomLeftRadius: 4, borderWidth: 1 },
+    bubbleOther: { borderBottomLeftRadius: 4, borderWidth: 1, flexShrink: 1 },
+    // Строка «баббл + …» на всю ширину, чтобы maxWidth баббла считался от колонки, а не от себя.
+    bubbleOtherLine: { flexDirection: 'row', alignItems: 'flex-end', alignSelf: 'stretch' },
+    safetyTrigger: { marginLeft: DESIGN_TOKENS.spacing.xxs },
+    hiddenPlaceholder: {
+      marginHorizontal: DESIGN_TOKENS.spacing.md,
+      marginBottom: DESIGN_TOKENS.spacing.sm,
+    },
     bubbleText: {
       fontSize: 15,
       lineHeight: 21,

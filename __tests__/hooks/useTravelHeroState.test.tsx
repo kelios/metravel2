@@ -113,6 +113,23 @@ describe('useTravelHeroState', () => {
     expect(result.current.heroSliderImages[1]?.url).toBe('https://example.com/gallery-2.jpg')
   })
 
+  it('keeps the real gallery photo id apart from the index fallback (#2133)', () => {
+    const travel = {
+      id: 42,
+      name: 'Photo ids',
+      gallery: [
+        { id: 17, url: 'https://example.com/a.jpg' },
+        { url: 'https://example.com/b.jpg' },
+        'https://example.com/c.jpg',
+      ],
+    } as any
+
+    const { result } = renderHook(() => useTravelHeroState(travel, false, jest.fn(), false))
+
+    expect(result.current.heroSliderImages.map((img) => img.photoId ?? null)).toEqual([17, null, null])
+    expect(result.current.heroSliderImages[1]?.id).toBe(1)
+  })
+
   it('keeps gallery order even when the first gallery image matches the cover media', () => {
     const onFirstImageLoad = jest.fn()
     const travel = {

@@ -72,6 +72,13 @@ export const normalizeOwnerIds = (raw: unknown): string[] => {
     .filter(Boolean)
 }
 
+export const extractOwnerIds = (travel: Travel): string[] => {
+  const raw = travel as Travel & Record<string, unknown>
+  return normalizeOwnerIds(
+    raw.userIds ?? raw.userId ?? raw.user_id ?? raw.ownerId ?? raw.owner_id ?? travel.user?.id ?? '',
+  )
+}
+
 export const resolveTravelAuthorName = (travel: Travel, userName: unknown): string => {
   const userObj = travel.user
   if (userObj) {

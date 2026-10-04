@@ -13,20 +13,26 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ContentSafetyActions from '@/components/safety/ContentSafetyActions';
 import ZoomableGalleryImage from '@/components/travel/ZoomableGalleryImage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { makeContentRef } from '@/types/contentSafety';
 import { translate as i18nT } from '@/i18n'
 
 
 interface FullscreenGalleryProps {
   visible: boolean;
-  images: { url: string; thumbUrl?: string; alt?: string; caption?: string }[];
+  images: GalleryImage[];
   initialIndex?: number;
   onClose: () => void;
+  /** Автор фото для жалобы (#2133); жалоба доступна только у фото с настоящим `id`. */
+  safetyAuthorId?: number | string | null;
+  authorName?: string | null;
 }
 
-type GalleryImage = { url: string; thumbUrl?: string; alt?: string; caption?: string };
+/** `id` — id фото галереи на бэке; индекс слайда сюда не кладётся. */
+type GalleryImage = { id?: number; url: string; thumbUrl?: string; alt?: string; caption?: string };
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -40,6 +46,8 @@ export default function FullscreenGallery({
   images,
   initialIndex = 0,
   onClose,
+  safetyAuthorId = null,
+  authorName,
 }: FullscreenGalleryProps) {
   const colors = useThemedColors();
   const insets = useSafeAreaInsets();
@@ -172,6 +180,11 @@ export default function FullscreenGallery({
   );
 
   const currentCaption = String(images[currentIndex]?.caption ?? '').trim();
+  const currentPhotoId = images[currentIndex]?.id;
+  const safetyRef = useMemo(
+    () => makeContentRef('photo', currentPhotoId, safetyAuthorId),
+    [currentPhotoId, safetyAuthorId],
+  );
 
   // Web: don't render (all hooks already called above)
   if (Platform.OS === 'web') return null;
@@ -217,6 +230,17 @@ export default function FullscreenGallery({
         >
           <Feather name="x" size={24} color={colors.textOnDark} />
         </Pressable>
+
+        {safetyRef ? (
+          <View style={[styles.safetySlot, { top: insets.top + 12 }]}>
+            <ContentSafetyActions
+              contentRef={safetyRef}
+              authorName={authorName}
+              appearance="surface"
+              testIDPrefix="travel-fullscreen-gallery-safety"
+            />
+          </View>
+        ) : null}
 
         {/* Counter (bottom-center) */}
         {images.length > 1 && (
@@ -266,6 +290,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
+  },
+  safetySlot: {
+    position: 'absolute',
+    left: 16,
     zIndex: 10,
   },
   counter: {

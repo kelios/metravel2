@@ -1,7 +1,12 @@
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render as rtlRender, fireEvent, waitFor } from '@testing-library/react-native';
+import { createQueryWrapper } from '../../helpers/testQueryClient';
 import { StyleSheet } from 'react-native';
 import ChatView from '@/components/messages/ChatView';
 import type { Message } from '@/api/messages';
+
+// #2133: меню жалобы в рендере зовёт мутации блокировки — нужен QueryClient, как в приложении.
+const render = (ui: Parameters<typeof rtlRender>[0]) =>
+    rtlRender(ui, { wrapper: createQueryWrapper().Wrapper });
 
 const mockMessages: Message[] = [
     { id: 1, thread: 10, sender: 100, text: 'Привет!', created_at: '2024-06-15T10:00:00Z' },

@@ -1,15 +1,23 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ZoomableGalleryImage from '@/components/travel/ZoomableGalleryImage.web';
 import { useThemedColors } from '@/hooks/useTheme';
+import { makeContentRef } from '@/types/contentSafety';
 import { translate as i18nT } from '@/i18n'
 
 
+// Меню жалобы грузится с открытием галереи, а не с чанком слайдера героя.
+const ContentSafetyActions = lazy(() => import('@/components/safety/ContentSafetyActions'));
+
 interface FullscreenGalleryProps {
   visible: boolean;
-  images: { url: string; thumbUrl?: string; alt?: string; caption?: string }[];
+  /** `id` — id фото галереи на бэке; индекс слайда сюда не кладётся. */
+  images: { id?: number; url: string; thumbUrl?: string; alt?: string; caption?: string }[];
   initialIndex?: number;
   onClose: () => void;
+  /** Автор фото для жалобы (#2133); жалоба доступна только у фото с настоящим `id`. */
+  safetyAuthorId?: number | string | null;
+  authorName?: string | null;
 }
 
 /**
@@ -25,11 +33,14 @@ export default function FullscreenGallery({
   images,
   initialIndex = 0,
   onClose,
+  safetyAuthorId = null,
+  authorName,
 }: FullscreenGalleryProps) {
   const colors = useThemedColors();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [zoomedIndex, setZoomedIndex] = useState<number | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (visible) {
@@ -51,7 +62,13 @@ export default function FullscreenGallery({
   useEffect(() => {
     if (!visible || typeof document === 'undefined') return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key !== 'Escape') return;
+      // Escape над открытым листом жалобы (#2133) закрывает лист, а не галерею:
+      // активный RN-web Modal — свой `[role=dialog][aria-modal]` вне корня галереи,
+      // и он сам закрывается по keyup.
+      const dialogs = Array.from(document.querySelectorAll('[role="dialog"][aria-modal="true"]'));
+      if (dialogs.some((node) => node !== rootRef.current && !rootRef.current?.contains(node))) return;
+      onClose();
     };
     window.addEventListener('keydown', onKeyDown);
     const prevOverflow = document.body.style.overflow;
@@ -72,6 +89,12 @@ export default function FullscreenGallery({
     setCurrentIndex((prev) => (prev === idx ? prev : idx));
   }, [images.length]);
 
+  const currentPhotoId = images[currentIndex]?.id;
+  const safetyRef = useMemo(
+    () => makeContentRef('photo', currentPhotoId, safetyAuthorId),
+    [currentPhotoId, safetyAuthorId],
+  );
+
   if (!visible || images.length === 0 || typeof document === 'undefined') {
     return null;
   }
@@ -80,6 +103,7 @@ export default function FullscreenGallery({
 
   return createPortal(
     <div
+      ref={rootRef}
       data-testid="travel-fullscreen-gallery"
       role="dialog"
       aria-modal="true"
@@ -166,6 +190,26 @@ export default function FullscreenGallery({
       >
         ×
       </button>
+
+      {safetyRef ? (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(env(safe-area-inset-top, 0px) + 14px)',
+            left: 16,
+            zIndex: 10,
+          }}
+        >
+          <Suspense fallback={null}>
+            <ContentSafetyActions
+              contentRef={safetyRef}
+              authorName={authorName}
+              appearance="surface"
+              testIDPrefix="travel-fullscreen-gallery-safety"
+            />
+          </Suspense>
+        </div>
+      ) : null}
 
       {images.length > 1 && (
         <div

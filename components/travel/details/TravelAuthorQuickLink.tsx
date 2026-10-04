@@ -3,6 +3,8 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
+import ContentSafetyActions from '@/components/safety/ContentSafetyActions'
+import { useContentSafetyAvailable } from '@/components/safety/useContentSafetyActions'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import SubscribeButton from '@/components/ui/SubscribeButton'
 import { resolveTravelAuthorName } from '@/components/listTravel/travelListItemHelpers'
@@ -11,6 +13,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useUserProfileCached } from '@/hooks/useUserProfileCached'
 import { useThemedColors } from '@/hooks/useTheme'
 import { globalFocusStyles } from '@/styles/globalFocus'
+import { makeContentRef } from '@/types/contentSafety'
 import type { Travel } from '@/types/types'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { routes } from '@/utils/routes'
@@ -90,6 +93,9 @@ function TravelAuthorQuickLink({ travel }: TravelAuthorQuickLinkProps) {
     [travel],
   )
   const authorUserId = useMemo(() => resolveOwnerId(travel), [travel])
+  const safetyRef = useMemo(() => makeContentRef('travel', travel.id, authorUserId), [travel.id, authorUserId])
+  // Строка соцсетей рисуется и ради «…»: без неё пустая строка дала бы колонке лишний gap.
+  const showSafety = useContentSafetyAvailable(safetyRef)
 
   const displayName =
     authorName ||
@@ -260,7 +266,7 @@ function TravelAuthorQuickLink({ travel }: TravelAuthorQuickLinkProps) {
             </Pressable>
           </View>
 
-          {socialLinks.length > 0 ? (
+          {socialLinks.length > 0 || showSafety ? (
             <View style={styles.socialActionsRow}>
               {socialLinks.map((social) => {
                 const socialTitle = i18nT('travel:components.travel.AuthorCard.otkryt_value1_2165b58d', {
@@ -285,6 +291,14 @@ function TravelAuthorQuickLink({ travel }: TravelAuthorQuickLinkProps) {
                   </Pressable>
                 )
               })}
+              {showSafety ? (
+                <ContentSafetyActions
+                  contentRef={safetyRef}
+                  authorName={displayName}
+                  style={[styles.actionButton, globalFocusStyles.focusable]}
+                  testIDPrefix="travel-author-safety"
+                />
+              ) : null}
             </View>
           ) : null}
         </View>

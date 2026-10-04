@@ -30,6 +30,8 @@ export default function TravelHeroInteractiveSlider({
   fullscreenVisible = false,
   fullscreenIndex = 0,
   onCloseFullscreen,
+  safetyAuthorId,
+  authorName,
 }: {
   galleryImages: GalleryImage[];
   isMobile: boolean;
@@ -45,6 +47,9 @@ export default function TravelHeroInteractiveSlider({
   fullscreenVisible?: boolean;
   fullscreenIndex?: number;
   onCloseFullscreen?: () => void;
+  /** Автор травела — автор его фото для жалобы в fullscreen (#2133). */
+  safetyAuthorId?: number | string | null;
+  authorName?: string | null;
 }) {
   if (!visible) return null;
 
@@ -79,6 +84,7 @@ export default function TravelHeroInteractiveSlider({
         .filter((img) => !!img.url)
         .map((img) => ({
           url: img.url!,
+          id: typeof img.photoId === 'number' ? img.photoId : undefined,
           caption: typeof img.caption === 'string' ? img.caption : '',
           alt: typeof img.caption === 'string' && img.caption.trim()
             ? img.caption.trim()
@@ -86,6 +92,8 @@ export default function TravelHeroInteractiveSlider({
         }))}
       initialIndex={fullscreenIndex}
       onClose={onCloseFullscreen ?? noop}
+      safetyAuthorId={safetyAuthorId}
+      authorName={authorName}
     />
     </>
   );

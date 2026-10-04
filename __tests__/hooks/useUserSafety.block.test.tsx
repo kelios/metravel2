@@ -10,7 +10,7 @@ jest.mock('@/api/userSafety', () => ({
   __esModule: true,
   blockUser: jest.fn(),
   unblockUser: jest.fn(),
-  reportUser: jest.fn(),
+  reportContent: jest.fn(),
   fetchReportReasons: jest.fn(() => Promise.resolve([])),
   fetchBlockedUsers: jest.fn(() => new Promise(() => {})),
 }))

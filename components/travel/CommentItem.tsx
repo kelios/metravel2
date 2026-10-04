@@ -6,6 +6,9 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import ContentSafetyActions from '@/components/safety/ContentSafetyActions';
+import HiddenContentGate from '@/components/safety/HiddenContentGate';
+import { makeContentRef } from '@/types/contentSafety';
 import type { TravelComment } from '../../types/comments';
 import { useAuth } from '../../context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -43,6 +46,11 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
   const canEdit = isAuthor;
   const isLiked = !!comment.is_liked;
   const showsAdminDeleteLabel = isSuperuser && !isAuthor;
+  // Временный id оптимистичного комментария — `Date.now()`, положительный: отсекаем по `user === 0`.
+  const safetyRef = useMemo(
+    () => (isOptimistic ? null : makeContentRef('travel_comment', comment.id, comment.user)),
+    [isOptimistic, comment.id, comment.user],
+  );
 
   const handleLikeToggle = () => {
     // Предотвращаем клик во время выполнения мутации
@@ -74,162 +82,172 @@ function CommentItemComponent({ comment, onReply, onEdit, level = 0 }: CommentIt
   })();
 
   return (
-    <View style={styles.wrapper}>
-      <View style={[styles.container, level > 0 && styles.nested]} testID="comment-item">
-      <View style={styles.header}>
-        <View style={styles.userInfo}>
-          <View style={styles.avatar}>
-            {comment.user_avatar && !avatarError ? (
-              <Image
-                source={{ uri: optimizeImageUrl(comment.user_avatar, { width: 72, quality: 70, fit: 'cover' }) ?? comment.user_avatar }}
-                style={styles.avatarImage}
-                onError={() => setAvatarError(true)}
-                accessibilityIgnoresInvertColors
-                testID="comment-avatar-image"
-              />
-            ) : (
-              <Text style={styles.avatarText}>
-                {comment.user_name?.[0]?.toUpperCase() || 'U'}
-              </Text>
-            )}
-          </View>
-          <View>
-            <Text style={styles.userName}>
-              {comment.user_name || i18nT('travel:components.travel.CommentItem.userFallback', { value1: comment.user })}
-            </Text>
-            <Text style={styles.date}>{formattedDate}</Text>
-          </View>
-        </View>
-        {(canEdit || canDelete) && (
-          <Pressable
-            onPress={() => setShowActions(!showActions)}
-            style={styles.moreButton}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('travel:components.travel.CommentItem.deystviya_s_kommentariem_c7fbcb60')}
-            accessibilityState={{ expanded: showActions }}
-            testID="comment-actions-trigger"
-          >
-            <Feather name={showActions ? 'x' : 'more-vertical'} size={20} color={colors.textMuted} />
-          </Pressable>
-        )}
-      </View>
-
-      <Text style={styles.text}>{comment.text}</Text>
-
-      {showActions && (canEdit || canDelete) && (
-        <View style={styles.actions}>
-          {canEdit && onEdit && (
-            <Pressable
-              onPress={() => {
-                onEdit(comment);
-                setShowActions(false);
-              }}
-              style={styles.actionButton}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('travel:components.travel.CommentItem.redaktirovat_kommentariy_4777db64')}
-              testID="comment-actions-edit"
-            >
-              <Feather name="edit-2" size={18} color={colors.primaryDark} />
-              <Text style={styles.actionLabel}>{i18nT('travel:components.travel.CommentItem.izmenit_3b5da3b2')}</Text>
-            </Pressable>
-          )}
-          {canDelete && (
-            <Pressable
-              onPress={handleDelete}
-              style={styles.actionButton}
-              disabled={deleteComment.isPending}
-              accessibilityRole="button"
-              accessibilityLabel={
-                showsAdminDeleteLabel ? i18nT('travel:components.travel.CommentItem.udalit_kommentariy_admin_d55d0a7c') : i18nT('travel:components.travel.CommentItem.udalit_kommentariy_25a8d8a8')
-              }
-              testID="comment-actions-delete"
-            >
-              {deleteComment.isPending ? (
-                <ActivityIndicator
-                  testID="activity-indicator"
-                  size="small"
-                  color={colors.danger}
+    <HiddenContentGate contentRef={safetyRef} style={[styles.wrapper, level > 0 && styles.hiddenNested]}>
+      <View style={styles.wrapper}>
+        <View style={[styles.container, level > 0 && styles.nested]} testID="comment-item">
+        <View style={styles.header}>
+          <View style={styles.userInfo}>
+            <View style={styles.avatar}>
+              {comment.user_avatar && !avatarError ? (
+                <Image
+                  source={{ uri: optimizeImageUrl(comment.user_avatar, { width: 72, quality: 70, fit: 'cover' }) ?? comment.user_avatar }}
+                  style={styles.avatarImage}
+                  onError={() => setAvatarError(true)}
+                  accessibilityIgnoresInvertColors
+                  testID="comment-avatar-image"
                 />
               ) : (
-                <>
-                  <Feather name="trash-2" size={18} color={colors.danger} />
-                  <Text style={showsAdminDeleteLabel ? styles.deleteAdminLabel : styles.deleteLabel}>
-                    {showsAdminDeleteLabel ? i18nT('travel:components.travel.CommentItem.udalit_admin_b33b3c72') : i18nT('travel:components.travel.CommentItem.udalit_15129e08')}
-                  </Text>
-                </>
+                <Text style={styles.avatarText}>
+                  {comment.user_name?.[0]?.toUpperCase() || 'U'}
+                </Text>
+              )}
+            </View>
+            <View>
+              <Text style={styles.userName}>
+                {comment.user_name || i18nT('travel:components.travel.CommentItem.userFallback', { value1: comment.user })}
+              </Text>
+              <Text style={styles.date}>{formattedDate}</Text>
+            </View>
+          </View>
+          {!isAuthor && (
+            <ContentSafetyActions
+              contentRef={safetyRef}
+              authorName={comment.user_name}
+              iconSize={20}
+              testIDPrefix="comment-safety"
+            />
+          )}
+          {(canEdit || canDelete) && (
+            <Pressable
+              onPress={() => setShowActions(!showActions)}
+              style={styles.moreButton}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={i18nT('travel:components.travel.CommentItem.deystviya_s_kommentariem_c7fbcb60')}
+              accessibilityState={{ expanded: showActions }}
+              testID="comment-actions-trigger"
+            >
+              <Feather name={showActions ? 'x' : 'more-vertical'} size={20} color={colors.textMuted} />
+            </Pressable>
+          )}
+        </View>
+
+        <Text style={styles.text}>{comment.text}</Text>
+
+        {showActions && (canEdit || canDelete) && (
+          <View style={styles.actions}>
+            {canEdit && onEdit && (
+              <Pressable
+                onPress={() => {
+                  onEdit(comment);
+                  setShowActions(false);
+                }}
+                style={styles.actionButton}
+                accessibilityRole="button"
+                accessibilityLabel={i18nT('travel:components.travel.CommentItem.redaktirovat_kommentariy_4777db64')}
+                testID="comment-actions-edit"
+              >
+                <Feather name="edit-2" size={18} color={colors.primaryDark} />
+                <Text style={styles.actionLabel}>{i18nT('travel:components.travel.CommentItem.izmenit_3b5da3b2')}</Text>
+              </Pressable>
+            )}
+            {canDelete && (
+              <Pressable
+                onPress={handleDelete}
+                style={styles.actionButton}
+                disabled={deleteComment.isPending}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  showsAdminDeleteLabel ? i18nT('travel:components.travel.CommentItem.udalit_kommentariy_admin_d55d0a7c') : i18nT('travel:components.travel.CommentItem.udalit_kommentariy_25a8d8a8')
+                }
+                testID="comment-actions-delete"
+              >
+                {deleteComment.isPending ? (
+                  <ActivityIndicator
+                    testID="activity-indicator"
+                    size="small"
+                    color={colors.danger}
+                  />
+                ) : (
+                  <>
+                    <Feather name="trash-2" size={18} color={colors.danger} />
+                    <Text style={showsAdminDeleteLabel ? styles.deleteAdminLabel : styles.deleteLabel}>
+                      {showsAdminDeleteLabel ? i18nT('travel:components.travel.CommentItem.udalit_admin_b33b3c72') : i18nT('travel:components.travel.CommentItem.udalit_15129e08')}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        <View style={styles.footer}>
+          {isAuthenticated && (
+            <Pressable
+              onPress={handleLikeToggle}
+              style={styles.footerButton}
+              hitSlop={8}
+              disabled={likeComment.isPending || unlikeComment.isPending}
+              accessibilityLabel={isLiked ? i18nT('travel:components.travel.CommentItem.ubrat_layk_8b9a9e57') : i18nT('travel:components.travel.CommentItem.postavit_layk_5d9b14ea')}
+              testID="comment-like"
+            >
+              <Feather
+                name="heart"
+                size={16}
+                color={isLiked ? colors.danger : colors.textMuted}
+              />
+              {comment.likes_count > 0 && (
+                <Text style={[styles.footerText, isLiked && styles.likedText]}>
+                  {comment.likes_count}
+                </Text>
               )}
             </Pressable>
           )}
+
+          {!isAuthenticated && (
+            <Pressable
+              onPress={requireAuth}
+              style={styles.footerButton}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={i18nT('travel:components.travel.CommentItem.voydite_chtoby_otsenit_kommentariy_84861e6c')}
+            >
+              <Feather name="heart" size={16} color={colors.textMuted} />
+              {comment.likes_count > 0 && (
+                <Text style={styles.footerText}>{comment.likes_count}</Text>
+              )}
+            </Pressable>
+          )}
+
+          {isAuthenticated && onReply && level < 2 && !isOptimistic && (
+            <Pressable
+              onPress={() => onReply(comment)}
+              style={styles.footerButton}
+              hitSlop={8}
+              accessibilityLabel={i18nT('travel:components.travel.CommentItem.otvetit_na_kommentariy_cff0c125')}
+              testID="comment-reply"
+            >
+              <Feather name="message-circle" size={16} color={colors.textMuted} />
+              <Text style={styles.footerText}>{i18nT('travel:components.travel.CommentItem.otvetit_5310e439')}</Text>
+            </Pressable>
+          )}
+
         </View>
-      )}
+        </View>
 
-      <View style={styles.footer}>
-        {isAuthenticated && (
-          <Pressable
-            onPress={handleLikeToggle}
-            style={styles.footerButton}
-            hitSlop={8}
-            disabled={likeComment.isPending || unlikeComment.isPending}
-            accessibilityLabel={isLiked ? i18nT('travel:components.travel.CommentItem.ubrat_layk_8b9a9e57') : i18nT('travel:components.travel.CommentItem.postavit_layk_5d9b14ea')}
-            testID="comment-like"
-          >
-            <Feather
-              name="heart"
-              size={16}
-              color={isLiked ? colors.danger : colors.textMuted}
-            />
-            {comment.likes_count > 0 && (
-              <Text style={[styles.footerText, isLiked && styles.likedText]}>
-                {comment.likes_count}
-              </Text>
-            )}
-          </Pressable>
-        )}
-
-        {!isAuthenticated && (
-          <Pressable
-            onPress={requireAuth}
-            style={styles.footerButton}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('travel:components.travel.CommentItem.voydite_chtoby_otsenit_kommentariy_84861e6c')}
-          >
-            <Feather name="heart" size={16} color={colors.textMuted} />
-            {comment.likes_count > 0 && (
-              <Text style={styles.footerText}>{comment.likes_count}</Text>
-            )}
-          </Pressable>
-        )}
-
-        {isAuthenticated && onReply && level < 2 && !isOptimistic && (
-          <Pressable
-            onPress={() => onReply(comment)}
-            style={styles.footerButton}
-            hitSlop={8}
-            accessibilityLabel={i18nT('travel:components.travel.CommentItem.otvetit_na_kommentariy_cff0c125')}
-            testID="comment-reply"
-          >
-            <Feather name="message-circle" size={16} color={colors.textMuted} />
-            <Text style={styles.footerText}>{i18nT('travel:components.travel.CommentItem.otvetit_5310e439')}</Text>
-          </Pressable>
-        )}
-
+        <ConfirmDialog
+          visible={confirmVisible}
+          onClose={() => setConfirmVisible(false)}
+          onConfirm={handleConfirmDelete}
+          title={i18nT('travel:components.travel.CommentItem.udalit_kommentariy_a5d75f50')}
+          message={i18nT('travel:components.travel.CommentItem.vy_uvereny_chto_hotite_udalit_kommentariy_et_d2432436')}
+          confirmText={i18nT('travel:components.travel.CommentItem.udalit_15129e08')}
+          cancelText={i18nT('travel:components.travel.CommentItem.otmena_6a66c8f0')}
+          confirmTestID="comment-delete-confirm"
+          cancelTestID="comment-delete-cancel"
+        />
       </View>
-      </View>
-
-      <ConfirmDialog
-        visible={confirmVisible}
-        onClose={() => setConfirmVisible(false)}
-        onConfirm={handleConfirmDelete}
-        title={i18nT('travel:components.travel.CommentItem.udalit_kommentariy_a5d75f50')}
-        message={i18nT('travel:components.travel.CommentItem.vy_uvereny_chto_hotite_udalit_kommentariy_et_d2432436')}
-        confirmText={i18nT('travel:components.travel.CommentItem.udalit_15129e08')}
-        cancelText={i18nT('travel:components.travel.CommentItem.otmena_6a66c8f0')}
-        confirmTestID="comment-delete-confirm"
-        cancelTestID="comment-delete-cancel"
-      />
-    </View>
+    </HiddenContentGate>
   );
 }
 
@@ -246,6 +264,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
     marginBottom: DESIGN_TOKENS.spacing.xs,
     borderWidth: 1,
     borderColor: colors.borderLight,
+  },
+  hiddenNested: {
+    marginLeft: isMobile ? 40 : 48,
   },
   nested: {
     marginLeft: isMobile ? 40 : 48,

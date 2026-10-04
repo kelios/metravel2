@@ -338,7 +338,6 @@ export const profileGenerated2 = {
   "components.profile.ProfileCompletedQuests.eyebrow": "Ukończony quest",
   "components.profile.ProfileCompletedQuests.showAll": "Pokaż wszystkie {{value1}}",
   "components.profile.ProfileCompletedQuests.showAllA11y": "Pokaż wszystkie ukończone questy, {{value1}}",
-  "components.profile.UserSafetyMenu.blockHint": "Przestaniesz widzieć treści tej osoby, a ona nie zobaczy Twoich i nie będzie mogła do Ciebie pisać.",
   "components.profile.UserSafetyMenu.blockConfirmTitle": "Zablokować użytkownika?",
   "components.profile.UserSafetyMenu.blockConfirmTitleNamed": "Zablokować użytkownika {{name}}?",
   "components.profile.UserSafetyMenu.blockConfirmMessage": "Podróże, komentarze i wiadomości tej osoby od razu znikną z Twojego widoku. Nie zobaczy ona Twoich treści i nie będzie mogła do Ciebie pisać. Otrzymamy powiadomienie o blokadzie. Możesz ją zdjąć w ustawieniach, w sekcji „Zablokowani użytkownicy”.",

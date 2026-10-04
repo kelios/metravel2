@@ -36,7 +36,7 @@ import {
   fetchReportReasons,
   isMockBlocked,
   isMockReported,
-  reportUser,
+  reportContent,
   unblockUser,
 } from '@/api/userSafety'
 
@@ -65,39 +65,45 @@ describe('fetchReportReasons', () => {
   })
 })
 
-describe('reportUser', () => {
-  it('posts reason (+comment) to the user report endpoint', async () => {
-    mockPost.mockResolvedValueOnce({ id: 7, status: 'pending' })
-    const res = await reportUser({ userId: 42, reason: 'harassment', comment: '  плохо  ' })
-    expect(mockPost).toHaveBeenCalledWith('/user/42/report/', {
+describe('reportContent (#2133)', () => {
+  const comment = { content_type: 'travel_comment' as const, object_id: 15, author_id: 42 }
+
+  it('posts content ref, reason and trimmed comment to /reports/', async () => {
+    mockPost.mockResolvedValueOnce({ id: 7, due_at: '2026-10-05T10:00:00Z' })
+    const res = await reportContent({ target: comment, reason: 'harassment', comment: '  плохо  ' })
+    expect(mockPost).toHaveBeenCalledWith('/reports/', {
+      content_type: 'travel_comment',
+      object_id: 15,
       reason: 'harassment',
       comment: 'плохо',
     })
-    expect(res).toEqual({ id: 7, status: 'pending' })
+    expect(res).toEqual({ id: 7, due_at: '2026-10-05T10:00:00Z' })
   })
 
-  it('omits empty comment from the body', async () => {
-    mockPost.mockResolvedValueOnce({ id: 8, status: 'pending' })
-    await reportUser({ userId: 42, reason: 'spam' })
-    expect(mockPost).toHaveBeenCalledWith('/user/42/report/', { reason: 'spam' })
+  it('reports a profile through the same endpoint with content_type user', async () => {
+    mockPost.mockResolvedValueOnce({ id: 8, due_at: '2026-10-05T10:00:00Z' })
+    await reportContent({ target: { content_type: 'user', object_id: 42, author_id: 42 }, reason: 'spam' })
+    expect(mockPost).toHaveBeenCalledWith('/reports/', { content_type: 'user', object_id: 42, reason: 'spam' })
   })
 
-  it('treats 409 (already reported) as a pending report, not an error', async () => {
+  it('treats 409 (open report exists) as already reported, not an error', async () => {
     mockPost.mockRejectedValueOnce(new ApiError(409))
-    const res = await reportUser({ userId: 42, reason: 'spam' })
-    expect(res.status).toBe('pending')
+    const res = await reportContent({ target: comment, reason: 'spam' })
+    expect(res).toEqual({ id: 0, due_at: null })
   })
 
-  it('falls back to mock on 404 in DEV and marks reported', async () => {
+  it('falls back to mock on 404 in DEV and marks the object reported', async () => {
     mockPost.mockRejectedValueOnce(new ApiError(404))
-    const res = await reportUser({ userId: 777, reason: 'scam' })
-    expect(res.status).toBe('pending')
-    expect(isMockReported(777)).toBe(true)
+    const target = { content_type: 'message' as const, object_id: 777, author_id: 3 }
+    const res = await reportContent({ target, reason: 'scam' })
+    expect(res.due_at).toEqual(expect.any(String))
+    expect(isMockReported(target)).toBe(true)
+    expect(isMockReported({ content_type: 'travel', object_id: 777 })).toBe(false)
   })
 
   it('rethrows non-fallback errors (500)', async () => {
     mockPost.mockRejectedValueOnce(new ApiError(500))
-    await expect(reportUser({ userId: 1, reason: 'other' })).rejects.toMatchObject({
+    await expect(reportContent({ target: comment, reason: 'other' })).rejects.toMatchObject({
       status: 500,
     })
   })

@@ -41,12 +41,12 @@ async function setupSafetyScenario(page: import('@playwright/test').Page) {
     }),
   );
 
-  await page.route(`**/api/user/${TARGET_USER_ID}/report/**`, async (route) => {
+  await page.route('**/api/reports/**', async (route) => {
     expect(route.request().method()).toBe('POST');
     await route.fulfill({
       status: 201,
       contentType: 'application/json',
-      body: JSON.stringify({ id: 1, status: 'created' }),
+      body: JSON.stringify({ id: 1, due_at: '2030-01-01T00:00:00Z' }),
     });
   });
 }
@@ -67,14 +67,18 @@ test.describe('Trust & Safety — report a user', () => {
 
     const reportRequest = page.waitForRequest((request) =>
       request.method() === 'POST' &&
-      new URL(request.url()).pathname.endsWith(`/api/user/${TARGET_USER_ID}/report/`),
+      new URL(request.url()).pathname.endsWith('/api/reports/'),
     );
     const submit = page.getByTestId('report-submit');
     await expect(submit).toBeEnabled();
     await submit.click();
 
     const request = await reportRequest;
-    expect(request.postDataJSON()).toMatchObject({ reason: 'spam' });
+    expect(request.postDataJSON()).toMatchObject({
+      content_type: 'user',
+      object_id: Number(TARGET_USER_ID),
+      reason: 'spam',
+    });
     await expect(page.getByTestId('report-submit')).not.toBeVisible();
   });
 });

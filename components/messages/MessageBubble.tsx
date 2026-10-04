@@ -5,6 +5,9 @@ import * as Clipboard from 'expo-clipboard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { Message } from '@/api/messages';
+import ContentSafetyActions from '@/components/safety/ContentSafetyActions';
+import HiddenContentGate from '@/components/safety/HiddenContentGate';
+import { makeContentRef } from '@/types/contentSafety';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -22,6 +25,11 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
     const bubbleMaxWidth = Math.round(windowWidth * 0.75);
     const [showActions, setShowActions] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    // #2133 (Apple 1.2): чужое сообщение — «…» (пожаловаться / скрыть / заблокировать).
+    const safetyRef = useMemo(
+        () => (isOwn || isSystem ? null : makeContentRef('message', message.id, message.sender)),
+        [isOwn, isSystem, message.id, message.sender],
+    );
 
     const formattedTime = useMemo(() => {
         if (!message.created_at) return '';
@@ -142,7 +150,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
         </>
     );
 
-    return (
+    const body = (
         <View style={styles.container}>
             <View style={isOwn ? styles.bubbleRowOwn : styles.bubbleRowOther}>
                 <Pressable
@@ -154,11 +162,18 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
                         { maxWidth: bubbleMaxWidth },
                         isOwn
                             ? [styles.bubbleOwn, { backgroundColor: colors.primary, borderColor: colors.primary }]
-                            : [styles.bubbleOther, { backgroundColor: colors.surface, borderColor: colors.borderLight }],
+                            : [styles.bubbleOther, styles.bubbleOtherShrink, { backgroundColor: colors.surface, borderColor: colors.borderLight }],
                     ]}
                 >
                     {bubbleContent}
                 </Pressable>
+                {safetyRef ? (
+                    <ContentSafetyActions
+                        contentRef={safetyRef}
+                        testIDPrefix={`message-${message.id}-safety`}
+                        style={styles.safetyTrigger}
+                    />
+                ) : null}
             </View>
             {onDelete && !showDeleteConfirm && (
                 <View style={styles.inlineActionRow}>
@@ -220,6 +235,14 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
             )}
         </View>
     );
+
+    if (isOwn) return body;
+
+    return (
+        <HiddenContentGate contentRef={safetyRef} style={styles.hiddenPlaceholder}>
+            {body}
+        </HiddenContentGate>
+    );
 }
 
 const createStyles = (_colors: ThemedColors) =>
@@ -235,6 +258,18 @@ const createStyles = (_colors: ThemedColors) =>
         bubbleRowOther: {
             flexDirection: 'row',
             justifyContent: 'flex-start',
+            alignItems: 'flex-end',
+        },
+        // Баббл ужимается, чтобы «…» не уезжал за край узкой колонки чата (desktop split).
+        bubbleOtherShrink: {
+            flexShrink: 1,
+        },
+        safetyTrigger: {
+            marginLeft: DESIGN_TOKENS.spacing.xxs,
+        },
+        hiddenPlaceholder: {
+            marginHorizontal: DESIGN_TOKENS.spacing.md,
+            marginBottom: DESIGN_TOKENS.spacing.sm,
         },
         bubble: {
             paddingHorizontal: DESIGN_TOKENS.spacing.md,

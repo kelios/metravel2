@@ -20,7 +20,10 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import MessageBubble from '@/components/messages/MessageBubble'
 import IconButton from '@/components/ui/IconButton'
-import ActionListSheet from '@/components/ui/ActionListSheet'
+import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet'
+import ContentSafetyActions from '@/components/safety/ContentSafetyActions'
+import { useContentSafetyActions } from '@/components/safety/useContentSafetyActions'
+import { makeContentRef } from '@/types/contentSafety'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { useIsScreenHeaderMobile } from '@/components/layout/ScreenHeaderContext'
 import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
@@ -385,23 +388,37 @@ function ChatHeader({
   // #2115 (правило #2101): «Удалить диалог» — действие над диалогом экрана. Телефон —
   // подписанный пункт «⋯» (destructive), desktop — иконка с подписью; везде через
   // подтверждение (раньше удаление шло сразу).
+  // #2133 (Apple 1.2): жалоба/блок собеседника — пункты того же «⋯» перед
+  // destructive «Удалить диалог» (destructive-последним); desktop — кнопка «…» рядом.
   const isPhone = useIsScreenHeaderMobile()
   const [actionsOpen, setActionsOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const deleteLabel = i18nT('messages:components.messages.ChatView.udalit_dialog_a1169aef')
-  const actions = useMemo(
+  const userRef = useMemo(() => makeContentRef('user', otherUserId, otherUserId), [otherUserId])
+  const safety = useContentSafetyActions({
+    contentRef: userRef,
+    authorName: otherUserName,
+    testIDPrefix: 'chat-header-safety',
+  })
+  const actions = useMemo<ActionListSheetItem[]>(
     () => [
-      {
-        key: 'delete-thread',
-        label: deleteLabel,
-        icon: 'trash-2' as const,
-        destructive: true,
-        onPress: () => setConfirmOpen(true),
-        testID: 'chat-header-delete-thread',
-      },
+      ...safety.items,
+      ...(onDeleteThread
+        ? [
+            {
+              key: 'delete-thread',
+              label: deleteLabel,
+              icon: 'trash-2' as const,
+              destructive: true,
+              onPress: () => setConfirmOpen(true),
+              testID: 'chat-header-delete-thread',
+            },
+          ]
+        : []),
     ],
-    [deleteLabel],
+    [deleteLabel, onDeleteThread, safety.items],
   )
+  const hasDesktopActions = Boolean(onDeleteThread) || safety.available
   return (
     <View style={styles.header}>
       {!hideBackButton && (
@@ -432,7 +449,7 @@ function ChatHeader({
           {otherUserName}
         </Text>
       </Pressable>
-      {onDeleteThread && isPhone ? (
+      {actions.length > 0 && isPhone ? (
         <>
           <IconButton
             icon={<Feather name="more-horizontal" size={18} color={colors.textSecondary} />}
@@ -446,21 +463,33 @@ function ChatHeader({
             onClose={() => setActionsOpen(false)}
             title={otherUserName}
             actions={actions}
-          />
+          >
+            {safety.hasBlock ? (
+              <Text style={styles.headerSafetyHint}>{i18nT('sharedStatic:contentSafety.blockHint')}</Text>
+            ) : null}
+          </ActionListSheet>
         </>
       ) : null}
-      {onDeleteThread && !isPhone ? (
-        <View {...SCREEN_HEADER_DESKTOP_PROPS}>
-          <IconButton
-            icon={<Feather name="trash-2" size={16} color={colors.textSecondary} />}
-            label={deleteLabel}
-            size="sm"
-            onPress={() => setConfirmOpen(true)}
-            showTooltip={IS_WEB}
-            testID="chat-header-delete"
+      {hasDesktopActions && !isPhone ? (
+        <View {...SCREEN_HEADER_DESKTOP_PROPS} style={styles.headerDesktopActions}>
+          <ContentSafetyActions
+            contentRef={userRef}
+            authorName={otherUserName}
+            testIDPrefix="chat-header-safety"
           />
+          {onDeleteThread ? (
+            <IconButton
+              icon={<Feather name="trash-2" size={16} color={colors.textSecondary} />}
+              label={deleteLabel}
+              size="sm"
+              onPress={() => setConfirmOpen(true)}
+              showTooltip={IS_WEB}
+              testID="chat-header-delete"
+            />
+          ) : null}
         </View>
       ) : null}
+      {isPhone ? safety.overlay : null}
       {onDeleteThread ? (
         <ConfirmDialog
           visible={confirmOpen}
@@ -589,6 +618,14 @@ const createStyles = (colors: ThemedColors) =>
       fontSize: DESIGN_TOKENS.typography.sizes.md,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
       color: colors.text,
+    },
+    headerDesktopActions: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
+    headerSafetyHint: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: colors.textMuted,
+      paddingHorizontal: DESIGN_TOKENS.spacing.md,
+      paddingBottom: DESIGN_TOKENS.spacing.sm,
     },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     safetyNotice: {

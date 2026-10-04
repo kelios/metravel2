@@ -1,7 +1,10 @@
 import React from 'react'
 import { fireEvent, render } from '@testing-library/react-native'
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
 import TravelAuthorQuickLink from '@/components/travel/details/TravelAuthorQuickLink'
+import { useAuthStore } from '@/stores/authStore'
 
 const mockPush = jest.fn()
 const mockSubscribePress = jest.fn()
@@ -40,6 +43,17 @@ jest.mock('@/components/ui/SubscribeButton', () => ({
 
 jest.mock('@/hooks/useUserProfileCached', () => ({
   useUserProfileCached: (...args: unknown[]) => mockUseUserProfileCached(...args),
+}))
+
+jest.mock('@/api/userSafety', () => ({
+  __esModule: true,
+  reportContent: jest.fn(() => Promise.resolve({ id: 1, status: 'pending' })),
+  blockUser: jest.fn(() => Promise.resolve()),
+  unblockUser: jest.fn(() => Promise.resolve()),
+  fetchReportReasons: jest.fn(() => Promise.resolve([])),
+  fetchBlockedUsers: jest.fn(() => Promise.resolve([])),
+  isMockReported: jest.fn(() => false),
+  isMockBlocked: jest.fn(() => false),
 }))
 
 jest.mock('@/utils/externalLinks', () => ({
@@ -150,5 +164,32 @@ describe('TravelAuthorQuickLink', () => {
         src: 'https://metravel.by/media/avatars/author.jpg',
       }),
     )
+  })
+  describe('content safety (#2133)', () => {
+    const travel: any = { id: 5, userName: 'Мария Иванова', userIds: '42' }
+    const renderSigned = () => {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+      return render(
+        <QueryClientProvider client={client}>
+          <TravelAuthorQuickLink travel={travel} />
+        </QueryClientProvider>,
+      )
+    }
+
+    afterEach(() => {
+      useAuthStore.setState({ isAuthenticated: false, userId: null })
+    })
+
+    it('offers the travel report menu to a signed-in reader', () => {
+      useAuthStore.setState({ isAuthenticated: true, userId: '7' })
+      expect(renderSigned().getByTestId('travel-author-safety-menu')).toBeTruthy()
+    })
+
+    it('hides it from the travel author and from guests', () => {
+      useAuthStore.setState({ isAuthenticated: true, userId: '42' })
+      expect(renderSigned().queryByTestId('travel-author-safety-menu')).toBeNull()
+      useAuthStore.setState({ isAuthenticated: false, userId: null })
+      expect(render(<TravelAuthorQuickLink travel={travel} />).queryByTestId('travel-author-safety-menu')).toBeNull()
+    })
   })
 })

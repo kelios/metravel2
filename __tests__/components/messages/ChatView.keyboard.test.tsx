@@ -1,6 +1,11 @@
-import { act, render } from '@testing-library/react-native';
+import { act, render as rtlRender } from '@testing-library/react-native';
+import { createQueryWrapper } from '../../helpers/testQueryClient';
 import { Keyboard, Platform, StyleSheet } from 'react-native';
 import type { Message } from '@/api/messages';
+
+// #2133: меню жалобы в рендере зовёт мутации блокировки — нужен QueryClient, как в приложении.
+const render = (ui: Parameters<typeof rtlRender>[0]) =>
+    rtlRender(ui, { wrapper: createQueryWrapper().Wrapper });
 
 const NAV_BAR_INSET = 24;
 

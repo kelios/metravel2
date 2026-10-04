@@ -1,6 +1,6 @@
 // hooks/useUserSafety.ts
-// React Query хуки Trust & Safety (Sprint 16, FE-430): причины жалоб, подача жалобы,
-// блокировка/разблокировка. Блок (#2134) — слой кэша, а не две инвалидации:
+// React Query хуки Trust & Safety (Sprint 16, FE-430): причины жалоб, подача жалобы
+// на любой контент (#2133), блокировка/разблокировка. Блок (#2134) — слой кэша, а не две инвалидации:
 // onMutate мгновенно вырезает контент автора из всех лент реестра
 // (`api/blockSensitiveQueries.ts`), onError откатывает снимок, onSettled
 // перезапрашивает реестр, профиль и список заблокированных.
@@ -11,7 +11,7 @@ import {
   blockUser,
   fetchBlockedUsers,
   fetchReportReasons,
-  reportUser,
+  reportContent,
   unblockUser,
   type ReportReason,
   type ReportResult,
@@ -65,18 +65,29 @@ export function useBlockedUsers(enabled = true) {
   })
 }
 
-export function useReportUser() {
+const invalidateProfileOf = (qc: QueryClient, userId: string | number) =>
+  qc.invalidateQueries({ predicate: (query) => isUserProfileOf(query.queryKey, userId) })
+
+/**
+ * Жалоба на объект любого типа (#2133). Подтверждение — один тост на все экраны:
+ * Apple 1.2 требует, чтобы человек видел срок реакции модерации (24 ч, #2129).
+ */
+export function useReportContent() {
   const qc = useQueryClient()
   return useMutation<ReportResult, unknown, SubmitReportInput>({
-    mutationFn: reportUser,
-    onSuccess: (_res, input) => {
-      void qc.invalidateQueries({ queryKey: queryKeys.userProfile(input.userId) })
+    mutationFn: reportContent,
+    onSuccess: (res, input) => {
+      if (input.target.content_type === 'user') {
+        void invalidateProfileOf(qc, input.target.object_id)
+      }
+      showToast({
+        type: 'success',
+        text1: i18nT(res.due_at ? 'sharedStatic:contentSafety.reportSent' : 'sharedStatic:contentSafety.reportAlreadySent'),
+        text2: i18nT('sharedStatic:contentSafety.reportSla'),
+      })
     },
   })
 }
-
-const invalidateProfileOf = (qc: QueryClient, userId: string | number) =>
-  qc.invalidateQueries({ predicate: (query) => isUserProfileOf(query.queryKey, userId) })
 
 type BlockContext = { authorId: number | null; snapshot: BlockSnapshot }
 

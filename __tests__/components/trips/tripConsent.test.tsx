@@ -1,5 +1,6 @@
 import React from 'react'
-import { fireEvent, render } from '@testing-library/react-native'
+import { fireEvent, render as rtlRender } from '@testing-library/react-native'
+import { createQueryWrapper } from '../../helpers/testQueryClient'
 import { Platform } from 'react-native'
 
 jest.mock('@expo/vector-icons', () => ({ Feather: 'Feather' }))
@@ -47,6 +48,10 @@ import OrganizerApplicationsPanel from '@/components/trips/OrganizerApplications
 import TripApplyForm from '@/components/trips/TripApplyForm'
 import { ApiError } from '@/api/client'
 import { CONSENT_TYPES, hasActionConsent, readActionConsentsSync } from '@/utils/actionConsent'
+
+// #2133: меню жалобы в рендере зовёт мутации блокировки — нужен QueryClient, как в приложении.
+const render = (ui: Parameters<typeof rtlRender>[0]) =>
+  rtlRender(ui, { wrapper: createQueryWrapper().Wrapper })
 
 const baseTrip = {
   id: 1,

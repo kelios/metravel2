@@ -9,6 +9,8 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import SubscribeButton from '@/components/ui/SubscribeButton'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import TravelPdfExportControl from '@/components/travel/TravelPdfExportControl'
+import ContentSafetyActions from '@/components/safety/ContentSafetyActions'
+import { makeContentRef } from '@/types/contentSafety'
 
 import { attachWebTitle, webOnly } from '../helpers'
 import { createStyles } from '../styles'
@@ -57,6 +59,8 @@ export const AuthorBlock = memo(function AuthorBlock({
   onWrite,
 }: AuthorBlockProps) {
   const showSubscribeAndWrite = !isOwn && !!authorUserId
+  // #2133: жалоба на путешествие в desktop-сайдбаре (на телефоне — TravelAuthorQuickLink).
+  const safetyRef = useMemo(() => makeContentRef('travel', travel?.id, authorUserId), [travel?.id, authorUserId])
   const displayName = userName || i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.userFallback')
   const avatarInitial = useMemo(() => {
     const ch = displayName?.trim().charAt(0)
@@ -204,6 +208,12 @@ export const AuthorBlock = memo(function AuthorBlock({
                   >
                     <Feather name="mail" size={18} color={textColor} />
                   </Pressable>
+                  <ContentSafetyActions
+                    contentRef={safetyRef}
+                    authorName={displayName}
+                    testIDPrefix="travel-sidebar-safety"
+                    style={styles.actionBtn}
+                  />
                 </>
               )}
             </View>

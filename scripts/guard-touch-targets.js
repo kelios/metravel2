@@ -88,6 +88,8 @@ const INTERACTIVE_ELEMENTS = new Set([
   'PlaceFirstBadgeCard',
   'QuestForCityCard',
   'UserSafetyMenu',
+  // #2133: общий «…» жалобы на контент; UserSafetyMenu — его случай `user`.
+  'ContentSafetyActions',
   // Общая кнопка проекта: `forwardRef` над `Pressable`, проп `style`
   // потребителя ложится ПОСЛЕ размеров варианта и может ужать таргет (#1748).
   // `ButtonBase` — тот же default-экспорт под алиасом импорта рядом с
