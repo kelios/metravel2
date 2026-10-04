@@ -66,16 +66,17 @@ test.describe('Долг маршрута после отложенной точ�
     await openQuest(page)
 
     // До пропуска состояния нет: точка просто ещё впереди.
-    await expect(page.getByRole('button', { name: 'Точка 1 — отложена, ждёт ответа' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /Точка 1 из 4, отложена, ждёт ответа/ })).toHaveCount(0)
 
     await postponeFirstAndReachLastStep(page)
 
-    // Долг назван словами, а не только цветом: состояние читается и скринридером.
-    await expect(page.getByRole('button', { name: 'Точка 1 — отложена, ждёт ответа' })).toBeVisible({
+    // Долг назван словами, а не только цветом: состояние читается и скринридером
+    // (подпись — модель `resolveQuestStepVisualState`, #2146: «Точка N из M, …»).
+    await expect(page.getByRole('button', { name: /Точка 1 из 4, отложена, ждёт ответа/ })).toBeVisible({
       timeout: 30_000,
     })
     // Пройденная точка тем же состоянием не метится.
-    await expect(page.getByRole('button', { name: 'Точка 2 — отложена, ждёт ответа' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /Точка 2 из 4, отложена, ждёт ответа/ })).toHaveCount(0)
   })
 
   test('возврат к отложенной точке закрывает гейт: прохождение засчитывается полностью', async ({ page }) => {

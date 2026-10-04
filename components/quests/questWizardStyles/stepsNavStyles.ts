@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { type QuestColors, SPACING, QUEST_DESIGN } from './shared';
+import { type QuestColors, SPACING } from './shared';
 
 export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _screenW: number) => ({
     stepsNavigation: {
@@ -24,17 +24,18 @@ export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _sc
         marginBottom: SPACING.xs,
     },
 
+    // #2146: цвет, контур и значок состояния точки — только из
+    // `resolveQuestStepVisualState` (`components/quests/questStepVisualState.ts`),
+    // одинаково на web, Android и iPhone. Здесь — геометрия.
     stepPill: {
         flexDirection: 'row',
         alignItems: 'center',
         borderRadius: 999,
         paddingVertical: 5,
         paddingHorizontal: 10,
-        backgroundColor: colors.backgroundSecondary,
         maxWidth: 140,
         marginRight: 0,
         marginBottom: 0,
-        borderWidth: 0,
         // Широкоэкранный вариант того же шагового навигатора, что и `stepDotTarget`
         // на мобильном: тач-таргет задаётся высотой самой пилюли (#1274).
         minHeight: 44,
@@ -46,9 +47,6 @@ export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _sc
         }),
     },
     stepPillNarrow: { maxWidth: 120, paddingHorizontal: 8 },
-    stepPillUnlocked: {
-        backgroundColor: colors.backgroundSecondary,
-    },
     // Наведение мыши на доступный шаг — состояние `hovered` у Pressable
     // (`QuestStepPill`): ключ-псевдокласс в стиле react-native-web компилирует
     // в битое правило (#2036). Активный шаг держит свой `scale` — он ниже в массиве.
@@ -56,40 +54,16 @@ export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _sc
         transform: [{ translateY: -1 }],
     },
     stepPillActive: {
-        backgroundColor: colors.brand,
-        ...Platform.select({
-            web: {
-                backgroundImage: QUEST_DESIGN.stepActiveGradient,
-                boxShadow: '0 2px 10px rgba(245, 132, 44, 0.35)',
-                transform: 'scale(1.04)',
-            } as any,
-        }),
+        transform: [{ scale: 1.04 }],
     },
-    stepPillDone: {
-        backgroundColor: colors.successSoft,
-        ...Platform.select({
-            web: {
-                backgroundImage: 'linear-gradient(135deg, rgba(82, 125, 102, 0.12) 0%, rgba(66, 109, 86, 0.08) 100%)',
-            } as any,
-        }),
+    stepPillGlyph: {
+        marginRight: 5,
+        minWidth: 12,
+        alignItems: 'center',
     },
-    // Долг маршрута (#1633): точка отложена и всё ещё держит финал. Рамка, а не
-    // один фон: `warningSoft` — 8% заливка, и на светлой подложке она даёт
-    // 1.04:1 к нейтральной точке и 1.00:1 к пройденной (`successSoft`), то есть
-    // состояние не читается вовсе. Контур `warning` даёт 4.3:1 и виден в
-    // оттенках серого, без опоры на цвет.
-    stepPillPending: {
-        backgroundColor: colors.warningSoft,
-        borderWidth: 1,
-        borderColor: colors.warning,
-    },
-    stepPillLocked: { opacity: 0.72 },
     stepPillIndex: {
         fontSize: 11,
         fontWeight: '700',
-        color: colors.brandText,
-        marginRight: 5,
-        minWidth: 12,
     },
     stepPillTitle: {
         fontSize: 11,
@@ -120,47 +94,17 @@ export const createStepsNavStyles = (colors: QuestColors, isMobile: boolean, _sc
         borderRadius: isMobile ? 13 : 16,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: colors.backgroundSecondary,
-        borderWidth: 0,
         ...Platform.select({
             web: {
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
             } as any,
         }),
     },
-    stepDotMiniUnlocked: { opacity: 1 },
     stepDotMiniActive: {
-        backgroundColor: colors.brand,
         transform: [{ scale: 1.15 }],
-        ...Platform.select({
-            web: {
-                backgroundImage: QUEST_DESIGN.stepActiveGradient,
-                boxShadow: '0 2px 10px rgba(245, 132, 44, 0.4)',
-                transform: 'scale(1.15)',
-            } as any,
-        }),
     },
-    stepDotMiniDone: {
-        backgroundColor: colors.successSoft,
-        ...Platform.select({
-            web: {
-                backgroundImage: 'linear-gradient(135deg, rgba(82, 125, 102, 0.15) 0%, rgba(66, 109, 86, 0.1) 100%)',
-            } as any,
-        }),
-    },
-    // На узком экране кружок несёт только номер, значка «вернуться» в нём нет,
-    // поэтому контур здесь — единственный видимый признак долга (#1633). Без
-    // него отложенная точка совпадала с пройденной один в один: на нативе у
-    // `stepDotMiniDone` нет и web-градиента, а обе заливки дают 1.00:1.
-    stepDotMiniPending: {
-        backgroundColor: colors.warningSoft,
-        borderWidth: 2,
-        borderColor: colors.warning,
-    },
-    stepDotMiniLocked: { opacity: 0.72 },
-    stepDotMiniText: { fontSize: isMobile ? 10 : 12, fontWeight: '700', color: colors.brandText },
+    stepDotMiniText: { fontSize: isMobile ? 10 : 12, fontWeight: '700' },
 
     navActiveTitle: {
         marginTop: 6,

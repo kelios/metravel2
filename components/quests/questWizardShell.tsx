@@ -27,6 +27,10 @@ type QuestNavigationStep = {
   pointRole?: QuestPointRole
 }
 
+// #2146: «Точка N из M» в подписи диктора — M без стартовой карточки.
+const countRoutePoints = (steps: QuestNavigationStep[]): number =>
+  steps.filter((step) => step.id !== 'intro').length
+
 const getNavigationStepLabel = (step: QuestNavigationStep): string => {
   if (step.id === 'intro' || step.pointRole === 'start') {
     return i18nT('quests:components.quests.questWizardShell.start_225f7a82')
@@ -335,6 +339,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     showExcursions = true,
     questId,
   } = props
+  const pointsTotal = countRoutePoints(allSteps)
   const iconOnlyActions = Platform.OS === 'web'
 
   return (
@@ -454,6 +459,9 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
               }}
               indexLabel={String(index)}
               isIntro={step.id === 'intro'}
+              position={index}
+              total={pointsTotal}
+              role={step.pointRole}
               label={getNavigationStepLabel(step)}
               numberOfLines={2}
             />
@@ -582,6 +590,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     ratingSlot,
     completionSlot,
   } = props
+  const pointsTotal = countRoutePoints(allSteps)
 
   const wideDesktop = screenW >= 1100
   const showActionLabels = Platform.OS !== 'web' && !isMobile
@@ -833,6 +842,9 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
                 }}
                 indexLabel={step.id === 'intro' ? '' : String(index)}
                 isIntro={step.id === 'intro'}
+                position={index}
+                total={pointsTotal}
+                role={step.pointRole}
                 label={getNavigationStepLabel(step)}
               />
             )
@@ -873,6 +885,9 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
                   }}
                   label={String(index)}
                   isIntro={step.id === 'intro'}
+                  position={index}
+                  total={pointsTotal}
+                  role={step.pointRole}
                   small={screenW < 360}
                 />
               )
@@ -893,6 +908,9 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
                 }}
                 indexLabel={step.id === 'intro' ? '' : String(index)}
                 isIntro={step.id === 'intro'}
+                position={index}
+                total={pointsTotal}
+                role={step.pointRole}
                 label={getNavigationStepLabel(step)}
               />
             )

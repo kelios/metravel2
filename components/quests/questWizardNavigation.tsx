@@ -1,13 +1,19 @@
-import { Pressable, Text, View } from 'react-native'
+import { Pressable, type StyleProp, Text, type TextStyle, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { translate as i18nT } from '@/i18n'
+import type { QuestPointRole } from '@/utils/questCountModel'
 
+import {
+  QUEST_STEP_GLYPH_ICON,
+  type QuestStepNavKind,
+  type QuestStepVisual,
+  type QuestStepVisualColors,
+  resolveQuestStepNavState,
+  resolveQuestStepVisualState,
+} from './questStepVisualState'
 
 type NavigationProps = {
-  colors: {
-    textOnPrimary: string
-    primaryText: string
-  }
+  colors: QuestStepVisualColors
   styles: any
   onPress: () => void
   active?: boolean
@@ -19,6 +25,10 @@ type NavigationProps = {
    */
   pending?: boolean
   unlocked?: boolean
+  /** #2146: позиция точки в маршруте и число точек без старта — для подписи диктора. */
+  position?: number
+  total?: number
+  role?: QuestPointRole | null
 }
 
 type StepPillProps = NavigationProps & {
@@ -29,6 +39,7 @@ type StepPillProps = NavigationProps & {
   indexLabel?: string
   numberOfLines?: number
   testID?: string
+  kind?: QuestStepNavKind
 }
 
 type StepDotProps = NavigationProps & {
@@ -37,64 +48,81 @@ type StepDotProps = NavigationProps & {
   small?: boolean
 }
 
-export function QuestStepPill({
-  colors,
-  styles,
-  onPress,
-  active = false,
-  done = false,
-  pending = false,
-  unlocked = true,
-  compact = false,
-  narrow = false,
-  isIntro = false,
-  label,
-  indexLabel = '',
-  numberOfLines = 1,
-  testID,
-}: StepPillProps) {
+function resolveVisual(props: NavigationProps, kind: QuestStepNavKind): QuestStepVisual {
+  return resolveQuestStepVisualState({
+    state: resolveQuestStepNavState(props),
+    kind,
+    role: props.role,
+    index: props.position ?? 0,
+    total: props.total ?? 0,
+    colors: props.colors,
+  })
+}
+
+/** Вид состояния — заливка и контур из модели (#2146); геометрию даёт стиль-основа. */
+function visualStyle(visual: QuestStepVisual) {
+  return {
+    backgroundColor: visual.backgroundColor,
+    borderColor: visual.borderColor,
+    borderWidth: visual.borderWidth,
+    borderStyle: visual.borderStyle,
+  }
+}
+
+function StepGlyph({ visual, text, size, textStyle }: { visual: QuestStepVisual; text: string; size: number; textStyle: StyleProp<TextStyle> }) {
+  if (visual.glyph === 'number') {
+    return <Text style={[textStyle, { color: visual.glyphColor }]}>{text}</Text>
+  }
+  return <Feather name={QUEST_STEP_GLYPH_ICON[visual.glyph]} size={size} color={visual.glyphColor} />
+}
+
+export function QuestStepPill(props: StepPillProps) {
+  const {
+    styles,
+    onPress,
+    active = false,
+    unlocked = true,
+    compact = false,
+    narrow = false,
+    isIntro = false,
+    label,
+    indexLabel = '',
+    numberOfLines = 1,
+    testID,
+    kind = isIntro ? 'intro' : 'point',
+  } = props
+  const visual = resolveVisual(props, kind)
+  // Заголовок шага на сплошной заливке берёт цвет значка (контраст держит
+  // модель), на контурной — обычный текст.
+  const titleColor = visual.fill === 'solid' ? visual.glyphColor : undefined
   return (
     <Pressable
       testID={testID}
       onPress={onPress}
       disabled={!unlocked}
       // Роль нужна именно здесь: без неё RNW рисует голый div, и `aria-label`
-      // с состоянием точки скринридер не озвучивает — метка долга оказалась бы
-      // видна только зрячему и только цветом.
+      // с состоянием точки скринридер не озвучивает.
       accessibilityRole="button"
-      accessibilityState={{ disabled: !unlocked }}
-      accessibilityLabel={
-        pending && !done
-          ? i18nT('quests:components.quests.questWizardNavigation.postponedLabel', { value1: label })
-          : undefined
-      }
+      accessibilityState={{ disabled: !unlocked, selected: active }}
+      accessibilityLabel={i18nT('quests:components.quests.questStepState.withTitle', {
+        label: visual.accessibilityLabel,
+        title: label,
+      })}
       style={({ hovered }) => [
         styles.stepPill,
         compact && styles.compactStepPill,
-        styles.stepPillUnlocked,
         hovered && unlocked && styles.stepPillHovered,
         narrow && styles.stepPillNarrow,
-        done && !active && styles.stepPillDone,
-        pending && !active && !done && styles.stepPillPending,
+        visualStyle(visual),
         active && styles.stepPillActive,
-        !unlocked && styles.stepPillLocked,
       ]}
       hitSlop={6}
     >
-      {isIntro || (pending && !done && !active) ? (
-        <Feather
-          name={isIntro ? 'play' : 'corner-up-left'}
-          size={12}
-          color={(active || done) ? colors.textOnPrimary : colors.primaryText}
-          style={{ marginRight: isIntro ? 8 : 5 }}
-        />
-      ) : (
-        <Text style={[styles.stepPillIndex, (active || done) && { color: colors.textOnPrimary }]}>
-          {indexLabel}
-        </Text>
-      )}
+      <View style={styles.stepPillGlyph}>
+        <StepGlyph visual={visual} text={indexLabel} size={12} textStyle={styles.stepPillIndex} />
+      </View>
       <Text
-        style={[styles.stepPillTitle, (active || done) && { color: colors.textOnPrimary }]}
+        style={[styles.stepPillTitle, titleColor ? { color: titleColor } : null]}
         numberOfLines={numberOfLines}
       >
         {label}
@@ -103,18 +131,9 @@ export function QuestStepPill({
   )
 }
 
-export function QuestStepDot({
-  colors,
-  styles,
-  onPress,
-  active = false,
-  done = false,
-  pending = false,
-  unlocked = true,
-  isIntro = false,
-  label,
-  small = false,
-}: StepDotProps) {
+export function QuestStepDot(props: StepDotProps) {
+  const { styles, onPress, active = false, unlocked = true, isIntro = false, label, small = false } = props
+  const visual = resolveVisual(props, isIntro ? 'intro' : 'point')
   const smallOverride = small ? { width: 28, height: 28, borderRadius: 14 } : undefined
   // Нажимается прозрачная рамка 44dp (`stepDotTarget`), внутри неё — прежний
   // видимый кружок 26–28dp. До #1274 Pressable был размером с кружок и добирал
@@ -125,40 +144,18 @@ export function QuestStepDot({
     <Pressable
       onPress={onPress}
       disabled={!unlocked}
-      // Роль нужна именно здесь: без неё RNW рисует голый div, и `aria-label`
-      // с состоянием точки скринридер не озвучивает — метка долга оказалась бы
-      // видна только зрячему и только цветом.
       accessibilityRole="button"
-      accessibilityState={{ disabled: !unlocked }}
-      accessibilityLabel={
-        pending && !done
-          ? i18nT('quests:components.quests.questWizardNavigation.postponedLabel', { value1: label })
-          : undefined
-      }
+      accessibilityState={{ disabled: !unlocked, selected: active }}
+      accessibilityLabel={visual.accessibilityLabel}
       style={styles.stepDotTarget}
     >
-      <View
-        style={[
-          styles.stepDotMini,
-          unlocked && styles.stepDotMiniUnlocked,
-          done && !active && styles.stepDotMiniDone,
-          pending && !active && !done && styles.stepDotMiniPending,
-          active && styles.stepDotMiniActive,
-          !unlocked && styles.stepDotMiniLocked,
-          smallOverride,
-        ]}
-      >
-        {isIntro ? (
-          <Feather
-            name="play"
-            size={small ? 10 : 12}
-            color={(active || done) ? colors.textOnPrimary : colors.primaryText}
-          />
-        ) : (
-          <Text style={[styles.stepDotMiniText, (active || done) && { color: colors.textOnPrimary }, small && { fontSize: 10 }]}>
-            {label}
-          </Text>
-        )}
+      <View style={[styles.stepDotMini, visualStyle(visual), active && styles.stepDotMiniActive, smallOverride]}>
+        <StepGlyph
+          visual={visual}
+          text={label}
+          size={small ? 10 : 12}
+          textStyle={[styles.stepDotMiniText, small && { fontSize: 10 }]}
+        />
       </View>
     </Pressable>
   )
@@ -174,7 +171,7 @@ export function QuestFinalePill(props: NavigationProps & { compact?: boolean }) 
   return (
     <QuestStepPill
       {...props}
-      indexLabel={i18nT('quests:components.quests.questWizardNavigation.f_67cbee49')}
+      kind="finale"
       label={i18nT('quests:components.quests.questWizardNavigation.final_a5ec2c03')}
       compact={props.compact}
       testID={QUEST_NAV_FINALE_TEST_ID}
@@ -183,12 +180,18 @@ export function QuestFinalePill(props: NavigationProps & { compact?: boolean }) 
 }
 
 export function QuestFinaleDot(props: NavigationProps) {
+  const visual = resolveVisual(props, 'finale')
   return (
-    <Pressable testID={QUEST_NAV_FINALE_TEST_ID} onPress={props.onPress} style={props.styles.stepDotTarget}>
-      <View
-        style={[props.styles.stepDotMini, props.active ? props.styles.stepDotMiniActive : props.styles.stepDotMiniUnlocked]}
-      >
-        <Text style={[props.styles.stepDotMiniText, props.active && { color: props.colors.textOnPrimary }]}>{i18nT('quests:components.quests.questWizardNavigation.f_67cbee49')}</Text>
+    <Pressable
+      testID={QUEST_NAV_FINALE_TEST_ID}
+      onPress={props.onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!props.active }}
+      accessibilityLabel={visual.accessibilityLabel}
+      style={props.styles.stepDotTarget}
+    >
+      <View style={[props.styles.stepDotMini, visualStyle(visual), props.active && props.styles.stepDotMiniActive]}>
+        <StepGlyph visual={visual} text="" size={12} textStyle={props.styles.stepDotMiniText} />
       </View>
     </Pressable>
   )

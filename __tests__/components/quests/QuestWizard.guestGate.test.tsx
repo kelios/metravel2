@@ -315,7 +315,8 @@ describe('QuestWizard guest gate', () => {
     expect(mockQuestFinalePanel).toHaveBeenCalled()
 
     await act(async () => {
-      fireEvent.press(getByText('3'))
+      // #2146: пройденная точка несёт галочку вместо номера — ищем по подписи.
+      fireEvent.press(getByLabelText(/Точка 3 из \d+, пройдена/))
     })
     expect(getByRole('button', { name: 'Перейти к финалу' })).toBeTruthy()
 
