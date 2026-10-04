@@ -1,0 +1,1451 @@
+{
+  "table-thead-tbody": [
+    {
+      "type": "table",
+      "headers": [
+        "Точка",
+        "Высота, м"
+      ],
+      "rows": [
+        [
+          "Старт",
+          "950"
+        ],
+        [
+          "Перевал",
+          "1 545"
+        ]
+      ]
+    }
+  ],
+  "table-without-tbody": [
+    {
+      "type": "table",
+      "headers": [
+        "День",
+        "Км"
+      ],
+      "rows": [
+        [
+          "1",
+          "16"
+        ],
+        [
+          "2",
+          "21"
+        ]
+      ]
+    }
+  ],
+  "table-no-header": [
+    {
+      "type": "table",
+      "rows": [
+        [
+          "Вход",
+          "25 zł"
+        ],
+        [
+          "Парковка",
+          "10 zł"
+        ]
+      ]
+    }
+  ],
+  "table-header-cells-only": [],
+  "table-unclosed-cells": [
+    {
+      "type": "table",
+      "rows": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          "c",
+          "d"
+        ]
+      ]
+    },
+    {
+      "type": "paragraph",
+      "text": "после таблицы"
+    }
+  ],
+  "table-foster-parenting": [
+    {
+      "type": "paragraph",
+      "text": "абзац внутри table"
+    },
+    {
+      "type": "table",
+      "rows": [
+        [
+          "ячейка"
+        ]
+      ]
+    },
+    {
+      "type": "paragraph",
+      "text": "текст"
+    },
+    {
+      "type": "paragraph",
+      "text": "внутри"
+    },
+    {
+      "type": "paragraph",
+      "text": "table"
+    }
+  ],
+  "table-nested": [
+    {
+      "type": "table",
+      "rows": [
+        [
+          "внешняявнутренняя",
+          "внутренняя",
+          "вторая"
+        ],
+        [
+          "внутренняя"
+        ]
+      ]
+    }
+  ],
+  "table-caption-colgroup": [
+    {
+      "type": "table",
+      "headers": [
+        "Рейс",
+        "Время"
+      ],
+      "rows": [
+        [
+          "Автобус 304",
+          "08:1509:40"
+        ]
+      ]
+    }
+  ],
+  "table-inside-paragraph": [
+    {
+      "type": "paragraph",
+      "text": "перед таблицейв абзацепосле таблицы",
+      "html": "перед таблицей<table><tbody><tr><td>в абзаце</td></tr></tbody></table>после таблицы"
+    }
+  ],
+  "list-nested": [
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        "ПервыйВложенный 1Вложенный 2Третий уровень",
+        "Вложенный 1",
+        "Вложенный 2Третий уровень",
+        "Третий уровень",
+        "Второй"
+      ]
+    }
+  ],
+  "list-ordered-with-blocks": [
+    {
+      "type": "list",
+      "ordered": true,
+      "items": [
+        "Абзац в пунктеВторой абзац",
+        "Жирный пункт с переносом"
+      ]
+    }
+  ],
+  "list-quill-indent": [
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        "Верхний",
+        "Отступ 1",
+        "Отступ 2"
+      ]
+    }
+  ],
+  "list-item-outside-list": [
+    {
+      "type": "paragraph",
+      "text": "Пункт без списка"
+    },
+    {
+      "type": "paragraph",
+      "text": "Ещё один"
+    },
+    {
+      "type": "paragraph",
+      "text": "Абзац после"
+    }
+  ],
+  "list-unclosed-items": [
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        "один",
+        "два",
+        "три"
+      ]
+    },
+    {
+      "type": "list",
+      "ordered": true,
+      "items": [
+        "четыре"
+      ]
+    }
+  ],
+  "list-empty": [
+    {
+      "type": "paragraph",
+      "text": "после пустых списков"
+    }
+  ],
+  "details-faq": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Частые вопросы"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "text": "Сколько идти?"
+    },
+    {
+      "type": "paragraph",
+      "text": "Около трёх часов."
+    },
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        "Подъём — 2 ч",
+        "Спуск — 1 ч"
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "text": "Нужна ли обувь?"
+    },
+    {
+      "type": "paragraph",
+      "text": "Да."
+    }
+  ],
+  "details-without-summary": [
+    {
+      "type": "paragraph",
+      "text": "Ответ без вопроса"
+    }
+  ],
+  "details-summary-not-first": [
+    {
+      "type": "paragraph",
+      "text": "Текст до вопроса"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "text": "Вопрос в середине"
+    },
+    {
+      "type": "paragraph",
+      "text": "Текст после вопроса"
+    },
+    {
+      "type": "image",
+      "src": "https://metravel.by/a.jpg",
+      "alt": "в ответе"
+    }
+  ],
+  "details-nested": [
+    {
+      "type": "heading",
+      "level": 4,
+      "text": "Внешний"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "text": "Внутренний"
+    },
+    {
+      "type": "paragraph",
+      "text": "Глубокий ответ"
+    }
+  ],
+  "details-empty-summary": [
+    {
+      "type": "paragraph",
+      "text": "Ответ"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "text": "Только вопрос"
+    }
+  ],
+  "figure-with-caption": [
+    {
+      "type": "image",
+      "src": "https://metravel.by/travel-description-image/1/a.jpg",
+      "alt": "Озеро",
+      "caption": "Озеро на рассвете",
+      "width": 1600,
+      "height": 900,
+      "layout": "single-wide"
+    }
+  ],
+  "figure-linked-image": [
+    {
+      "type": "image",
+      "src": "https://metravel.by/a.jpg",
+      "alt": "Башня",
+      "caption": "Башня XIV века",
+      "layout": "float-left"
+    }
+  ],
+  "figure-picture": [
+    {
+      "type": "image",
+      "src": "https://metravel.by/a.jpg",
+      "alt": "Мост"
+    }
+  ],
+  "figure-gallery-2": [
+    {
+      "type": "image-gallery",
+      "images": [
+        {
+          "src": "https://metravel.by/1.jpg",
+          "alt": "один",
+          "width": 1200,
+          "height": 800
+        },
+        {
+          "src": "https://metravel.by/2.jpg",
+          "width": 1200,
+          "height": 800
+        }
+      ],
+      "columns": 2,
+      "layout": "stack-landscape"
+    }
+  ],
+  "figure-gallery-3": [
+    {
+      "type": "image-gallery",
+      "images": [
+        {
+          "src": "https://metravel.by/1.jpg"
+        },
+        {
+          "src": "https://metravel.by/2.jpg"
+        },
+        {
+          "src": "https://metravel.by/3.jpg"
+        }
+      ],
+      "columns": 2,
+      "layout": "quilt-3"
+    }
+  ],
+  "figure-gallery-4": [
+    {
+      "type": "image-gallery",
+      "images": [
+        {
+          "src": "https://metravel.by/1.jpg"
+        },
+        {
+          "src": "https://metravel.by/2.jpg"
+        },
+        {
+          "src": "https://metravel.by/3.jpg"
+        },
+        {
+          "src": "https://metravel.by/4.jpg"
+        }
+      ],
+      "columns": 6,
+      "layout": "quilt-4"
+    }
+  ],
+  "figure-without-image": [],
+  "gallery-div-layouts": [
+    {
+      "type": "image-gallery",
+      "images": [
+        {
+          "src": "https://metravel.by/p1.jpg",
+          "alt": "п1",
+          "width": 800,
+          "height": 1200
+        },
+        {
+          "src": "https://metravel.by/p2.jpg",
+          "alt": "п2",
+          "width": 800,
+          "height": 1200
+        }
+      ],
+      "columns": 2,
+      "layout": "pair-portraits"
+    },
+    {
+      "type": "image-gallery",
+      "images": [
+        {
+          "src": "https://metravel.by/m1.jpg"
+        },
+        {
+          "src": "https://metravel.by/m2.jpg"
+        }
+      ],
+      "columns": 2,
+      "layout": "pair-mixed"
+    },
+    {
+      "type": "image-gallery",
+      "images": [
+        {
+          "src": "https://metravel.by/b1.jpg"
+        },
+        {
+          "src": "https://metravel.by/b2.jpg"
+        }
+      ],
+      "columns": 2,
+      "layout": "pair-balanced"
+    },
+    {
+      "type": "image-gallery",
+      "images": [
+        {
+          "src": "https://metravel.by/g1.jpg"
+        },
+        {
+          "src": "https://metravel.by/g2.jpg"
+        },
+        {
+          "src": "https://metravel.by/g3.jpg"
+        },
+        {
+          "src": "https://metravel.by/g4.jpg"
+        }
+      ],
+      "columns": 2,
+      "layout": "pair-grid"
+    },
+    {
+      "type": "image-gallery",
+      "images": [
+        {
+          "src": "https://metravel.by/c1.jpg"
+        },
+        {
+          "src": "https://metravel.by/c2.jpg"
+        },
+        {
+          "src": "https://metravel.by/c3.jpg"
+        }
+      ],
+      "columns": 2,
+      "layout": "column-portraits"
+    },
+    {
+      "type": "image-gallery",
+      "images": [
+        {
+          "src": "https://metravel.by/e1.jpg"
+        },
+        {
+          "src": "https://metravel.by/e2.jpg"
+        },
+        {
+          "src": "https://metravel.by/e3.jpg"
+        }
+      ],
+      "columns": 3,
+      "layout": "editorial-grid"
+    },
+    {
+      "type": "image-gallery",
+      "images": [
+        {
+          "src": "https://metravel.by/x1.jpg"
+        },
+        {
+          "src": "https://metravel.by/x2.jpg"
+        },
+        {
+          "src": "https://metravel.by/x3.jpg"
+        }
+      ],
+      "columns": 2,
+      "layout": "grid-mixed"
+    },
+    {
+      "type": "image-gallery",
+      "images": [
+        {
+          "src": "https://metravel.by/r1.jpg"
+        },
+        {
+          "src": "https://metravel.by/r2.jpg"
+        },
+        {
+          "src": "https://metravel.by/r3.jpg"
+        }
+      ],
+      "columns": 2,
+      "layout": "grid-mixed-reverse"
+    },
+    {
+      "type": "image-gallery",
+      "images": [
+        {
+          "src": "https://metravel.by/d1.jpg"
+        },
+        {
+          "src": "https://metravel.by/d2.jpg"
+        },
+        {
+          "src": "https://metravel.by/d3.jpg"
+        },
+        {
+          "src": "https://metravel.by/d4.jpg"
+        },
+        {
+          "src": "https://metravel.by/d5.jpg"
+        },
+        {
+          "src": "https://metravel.by/d6.jpg"
+        },
+        {
+          "src": "https://metravel.by/d7.jpg"
+        }
+      ],
+      "columns": 4,
+      "layout": "grid-default"
+    }
+  ],
+  "gallery-div-nested-wrappers": [
+    {
+      "type": "image-gallery",
+      "images": [
+        {
+          "src": "https://metravel.by/n1.jpg",
+          "alt": "в абзаце"
+        },
+        {
+          "src": "https://metravel.by/n2.jpg"
+        },
+        {
+          "src": "",
+          "alt": "без src"
+        }
+      ],
+      "columns": 2,
+      "layout": "grid-default"
+    }
+  ],
+  "paragraph-single-image": [
+    {
+      "type": "image",
+      "src": "https://metravel.by/one.jpg",
+      "alt": "Одна",
+      "width": 640,
+      "height": 480
+    }
+  ],
+  "paragraph-image-with-text": [
+    {
+      "type": "paragraph",
+      "text": "Текст до"
+    },
+    {
+      "type": "image",
+      "src": "https://metravel.by/mid.jpg",
+      "alt": "Середина",
+      "layout": "float-right"
+    },
+    {
+      "type": "paragraph",
+      "text": "текст после и перенос"
+    }
+  ],
+  "paragraph-linked-image-and-nested": [
+    {
+      "type": "image",
+      "src": "https://metravel.by/small.jpg",
+      "alt": "Ссылка",
+      "layout": "single-wide"
+    },
+    {
+      "type": "paragraph",
+      "text": "подпись в спане"
+    },
+    {
+      "type": "image",
+      "src": "https://metravel.by/in-span.jpg"
+    },
+    {
+      "type": "paragraph",
+      "text": "хвост"
+    }
+  ],
+  "paragraph-image-without-src": [
+    {
+      "type": "paragraph",
+      "text": "текст рядом с пустой картинкой"
+    }
+  ],
+  "image-top-level": [
+    {
+      "type": "image",
+      "src": "https://metravel.by/top.jpg",
+      "alt": "Верхний уровень",
+      "width": 100
+    },
+    {
+      "type": "image",
+      "src": "/relative/path.jpg"
+    },
+    {
+      "type": "image",
+      "src": "//metravel.by/protocol-relative.jpg"
+    }
+  ],
+  "broken-unclosed-paragraphs": [
+    {
+      "type": "paragraph",
+      "text": "Первый"
+    },
+    {
+      "type": "paragraph",
+      "text": "Второй"
+    },
+    {
+      "type": "paragraph",
+      "text": "Блок закрывает абзац"
+    },
+    {
+      "type": "paragraph",
+      "text": "Третий"
+    },
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        "список закрывает абзац"
+      ]
+    },
+    {
+      "type": "paragraph",
+      "text": "Четвёртый"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Заголовок закрывает абзац"
+    }
+  ],
+  "broken-stray-end-tags": [
+    {
+      "type": "paragraph",
+      "text": "Текст"
+    },
+    {
+      "type": "paragraph",
+      "text": "Ещё"
+    }
+  ],
+  "broken-misnested-inline": [
+    {
+      "type": "paragraph",
+      "text": "Обычный жирный жирный курсив только курсив обычный",
+      "html": "Обычный <b>жирный <i>жирный курсив</i></b><i> только курсив</i> обычный"
+    }
+  ],
+  "broken-block-in-inline": [
+    {
+      "type": "paragraph",
+      "text": "жирное начало",
+      "html": "<b>жирное начало</b>"
+    },
+    {
+      "type": "paragraph",
+      "text": "блок внутри b"
+    },
+    {
+      "type": "paragraph",
+      "text": "жирный хвост"
+    },
+    {
+      "type": "paragraph",
+      "text": "следующий абзац"
+    }
+  ],
+  "broken-div-in-paragraph": [
+    {
+      "type": "paragraph",
+      "text": "до"
+    },
+    {
+      "type": "paragraph",
+      "text": "внутри"
+    },
+    {
+      "type": "paragraph",
+      "text": "после"
+    }
+  ],
+  "broken-nested-links-and-headings": [
+    {
+      "type": "paragraph",
+      "text": "первая"
+    },
+    {
+      "type": "paragraph",
+      "text": "вторая"
+    },
+    {
+      "type": "paragraph",
+      "text": "хвост"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Заголовок"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "вложенный"
+    },
+    {
+      "type": "paragraph",
+      "text": "хвост"
+    }
+  ],
+  "broken-unclosed-at-end": [
+    {
+      "type": "paragraph",
+      "text": "Абзац жирный курсив",
+      "html": "Абзац <strong>жирный <em>курсив</em></strong>"
+    }
+  ],
+  "broken-attributes": [
+    {
+      "type": "paragraph",
+      "text": "Атрибуты без кавычек и дубль",
+      "html": "Атрибуты <a href=\"https://metravel.by/?a=1&amp;b=2\" target=\"_blank\">без кавычек</a> и <span class=\"x\">дубль</span>"
+    }
+  ],
+  "broken-tag-soup": [
+    {
+      "type": "paragraph",
+      "text": "текст <3 и 2 < 3 и a > b и <непонятный тег> и"
+    }
+  ],
+  "broken-uppercase-tags": [
+    {
+      "type": "paragraph",
+      "text": "Верхний РЕГИСТР"
+    },
+    {
+      "type": "paragraph",
+      "text": "перенос"
+    },
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        "Пункт"
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Заголовок"
+    },
+    {
+      "type": "image",
+      "src": "https://metravel.by/up.jpg",
+      "alt": "Верхний"
+    }
+  ],
+  "entities-named-and-numeric": [
+    {
+      "type": "paragraph",
+      "text": "Кавычки «ёлочки», тире — и — и —; амперсанд & знак <меньше> \"кавычки\" 'апостроф' © … €"
+    }
+  ],
+  "entities-legacy-and-broken": [
+    {
+      "type": "paragraph",
+      "text": "Без точки с запятой: © 2024, & текст, , ∉ против ¬it; и ¬ двойное &lt; неизвестная &foo; одиночный & и &#; и &#x; и � и 😀"
+    }
+  ],
+  "entities-in-attributes": [
+    {
+      "type": "paragraph",
+      "text": "ссылка с сущностями и"
+    },
+    {
+      "type": "image",
+      "src": "https://metravel.by/q.jpg?x=1&y=2",
+      "alt": "Tom & Jerry «шоу»"
+    }
+  ],
+  "entities-only-paragraphs": [
+    {
+      "type": "paragraph",
+      "text": "текст"
+    }
+  ],
+  "br-inside-paragraph": [
+    {
+      "type": "paragraph",
+      "text": "Строка 1"
+    },
+    {
+      "type": "paragraph",
+      "text": "Строка 2"
+    },
+    {
+      "type": "paragraph",
+      "text": "Строка 3"
+    },
+    {
+      "type": "paragraph",
+      "text": "Строка 4"
+    }
+  ],
+  "br-edges-and-doubles": [
+    {
+      "type": "paragraph",
+      "text": "Начало с br"
+    },
+    {
+      "type": "paragraph",
+      "text": "двойной"
+    },
+    {
+      "type": "paragraph",
+      "text": "слово",
+      "html": "слово<br>"
+    }
+  ],
+  "br-inside-inline-and-heading": [
+    {
+      "type": "paragraph",
+      "text": "До жирный"
+    },
+    {
+      "type": "paragraph",
+      "text": "с переносом после"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Заголовок в две строки"
+    },
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        "Пункт с переносом"
+      ]
+    },
+    {
+      "type": "quote",
+      "text": "Цитата в две строки"
+    }
+  ],
+  "br-closing-tag-form": [
+    {
+      "type": "paragraph",
+      "text": "Строка"
+    },
+    {
+      "type": "paragraph",
+      "text": "после закрывающего br"
+    }
+  ],
+  "script-style-leading": [
+    {
+      "type": "paragraph",
+      "text": "Абзац после ведущих style и script"
+    }
+  ],
+  "script-style-in-body": [
+    {
+      "type": "paragraph",
+      "text": "Первый абзац"
+    },
+    {
+      "type": "paragraph",
+      "text": ".y{color:blue}"
+    },
+    {
+      "type": "paragraph",
+      "text": "var a = \"<p>не абзац</p>\";"
+    },
+    {
+      "type": "paragraph",
+      "text": "Второй абзац"
+    }
+  ],
+  "script-style-inside-blocks": [
+    {
+      "type": "paragraph",
+      "text": "Текст продолжается дальше",
+      "html": "Текст<script>document.write(\"x\")</script> продолжается<style>p{margin:0}</style> дальше"
+    },
+    {
+      "type": "paragraph",
+      "text": "Блок со стилем"
+    },
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        "Пункт списка"
+      ]
+    }
+  ],
+  "head-elements-in-body": [
+    {
+      "type": "paragraph",
+      "text": "Абзац"
+    },
+    {
+      "type": "paragraph",
+      "text": "Второй title"
+    }
+  ],
+  "noscript-template-comment": [
+    {
+      "type": "paragraph",
+      "text": "Абзац в noscript"
+    },
+    {
+      "type": "paragraph",
+      "text": "Видимый абзац",
+      "html": "Видимый <!-- внутри --> абзац"
+    }
+  ],
+  "full-document": [
+    {
+      "type": "paragraph",
+      "text": "Абзац в полном документе"
+    }
+  ],
+  "full-document-text-after-body": [
+    {
+      "type": "paragraph",
+      "text": "В теле"
+    },
+    {
+      "type": "paragraph",
+      "text": "После html"
+    },
+    {
+      "type": "paragraph",
+      "text": "хвост"
+    }
+  ],
+  "react-native-tags": [
+    {
+      "type": "paragraph",
+      "text": "Текст в Text"
+    },
+    {
+      "type": "paragraph",
+      "text": "Абзац внутри View"
+    }
+  ],
+  "react-native-tags-nested-and-case": [
+    {
+      "type": "paragraph",
+      "text": "нижний регистрВложенные Text"
+    },
+    {
+      "type": "paragraph",
+      "text": "после Image"
+    }
+  ],
+  "special-blocks-by-class": [
+    {
+      "type": "tip-block",
+      "content": "Совет: берите воду.",
+      "title": "Совет:"
+    },
+    {
+      "type": "warning-block",
+      "content": "Важно — тропа скользкая",
+      "title": "Важно"
+    },
+    {
+      "type": "danger-block",
+      "content": "ОпасноОбрыв без ограждения",
+      "title": "Опасно"
+    },
+    {
+      "type": "info-block",
+      "content": "Справка Вход бесплатный",
+      "title": "Справка"
+    },
+    {
+      "type": "info-block",
+      "content": "Абзац-справка без заголовка"
+    }
+  ],
+  "special-blocks-localized-tokens": [
+    {
+      "type": "tip-block",
+      "content": "Локализованный класс совета"
+    },
+    {
+      "type": "warning-block",
+      "content": "Заголовок тело",
+      "title": "Заголовок"
+    },
+    {
+      "type": "info-block",
+      "content": "Справка"
+    },
+    {
+      "type": "tip-block",
+      "content": "Лайфхак в абзаце"
+    }
+  ],
+  "special-blocks-substring-classes": [
+    {
+      "type": "tip-block",
+      "content": "Подстрока tip в классе"
+    },
+    {
+      "type": "tip-block",
+      "content": "Тоже tip"
+    },
+    {
+      "type": "paragraph",
+      "text": "Триптих"
+    },
+    {
+      "type": "info-block",
+      "content": "Вложенный абзац"
+    }
+  ],
+  "quote-with-cite-and-footer": [
+    {
+      "type": "quote",
+      "text": "Горы зовут, и я должен идти.",
+      "author": "Джон Мьюр"
+    },
+    {
+      "type": "quote",
+      "text": "Дорога возникает под шагами идущего",
+      "author": "— пословица"
+    }
+  ],
+  "quote-plain-and-empty": [
+    {
+      "type": "quote",
+      "text": "Просто цитата без автора"
+    },
+    {
+      "type": "quote",
+      "text": "",
+      "author": "Только автор"
+    }
+  ],
+  "code-blocks": [
+    {
+      "type": "code",
+      "code": "const a = 1; const b = a < 2;"
+    },
+    {
+      "type": "code",
+      "code": "inline code верхнего уровня"
+    },
+    {
+      "type": "code",
+      "code": "npm run build",
+      "language": "bash"
+    }
+  ],
+  "headings-all-levels": [
+    {
+      "type": "heading",
+      "level": 1,
+      "text": "Первый"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Второй с курсивом"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Третий уровень"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "text": "Четвёртый"
+    },
+    {
+      "type": "heading",
+      "level": 5,
+      "text": "Пятый"
+    },
+    {
+      "type": "heading",
+      "level": 6,
+      "text": "Шестой"
+    }
+  ],
+  "headings-h1-h4": [
+    {
+      "type": "heading",
+      "level": 1,
+      "text": "Первый"
+    },
+    {
+      "type": "paragraph",
+      "text": "Абзац под первым"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Второй с курсивом"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Третий уровень"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "text": "Четвёртый"
+    },
+    {
+      "type": "paragraph",
+      "text": "Абзац под четвёртым"
+    }
+  ],
+  "separators-and-top-level-text": [
+    {
+      "type": "paragraph",
+      "text": "Текст до"
+    },
+    {
+      "type": "separator"
+    },
+    {
+      "type": "paragraph",
+      "text": "Текст после"
+    },
+    {
+      "type": "separator"
+    },
+    {
+      "type": "paragraph",
+      "text": "спан верхнего уровня"
+    },
+    {
+      "type": "paragraph",
+      "text": "жирный"
+    },
+    {
+      "type": "paragraph",
+      "text": "ссылка"
+    },
+    {
+      "type": "separator"
+    }
+  ],
+  "embeds-and-media": [
+    {
+      "type": "paragraph",
+      "text": "Видео не поддерживается"
+    },
+    {
+      "type": "paragraph",
+      "text": "Аудио не поддерживается"
+    },
+    {
+      "type": "paragraph",
+      "text": "Объект"
+    }
+  ],
+  "legacy-and-semantic-tags": [
+    {
+      "type": "paragraph",
+      "text": "Красный шрифт"
+    },
+    {
+      "type": "paragraph",
+      "text": "По центру"
+    },
+    {
+      "type": "paragraph",
+      "text": "Абзац в article"
+    },
+    {
+      "type": "paragraph",
+      "text": "Врезка"
+    },
+    {
+      "type": "paragraph",
+      "text": "Шапка"
+    },
+    {
+      "type": "paragraph",
+      "text": "Основное"
+    },
+    {
+      "type": "paragraph",
+      "text": "Навигация"
+    },
+    {
+      "type": "paragraph",
+      "text": "Адрес"
+    },
+    {
+      "type": "paragraph",
+      "text": "ТерминОпределение"
+    }
+  ],
+  "form-controls": [
+    {
+      "type": "paragraph",
+      "text": "Имя РазДваТекст в textareaКнопка"
+    }
+  ],
+  "foreign-content": [
+    {
+      "type": "paragraph",
+      "text": "До Иконкаsvg-текст после",
+      "html": "До <svg viewBox=\"0 0 10 10\"><title>Иконка</title>svg-текст<circle r=\"1\"></circle></svg> после"
+    },
+    {
+      "type": "paragraph",
+      "text": "Абзац в foreignObject"
+    },
+    {
+      "type": "paragraph",
+      "text": "x=1"
+    }
+  ],
+  "custom-elements": [
+    {
+      "type": "paragraph",
+      "text": "Содержимое виджета"
+    },
+    {
+      "type": "paragraph",
+      "text": "офисный тег"
+    },
+    {
+      "type": "paragraph",
+      "text": "абзац"
+    }
+  ],
+  "paragraph-inline-formatting": [
+    {
+      "type": "paragraph",
+      "text": "Обычный, жирный, курсив, подчёркнутый, зачёркнутый, ссылка, цветной, верх и низ.",
+      "html": "Обычный, <strong>жирный</strong>, <em>курсив</em>, <u>подчёркнутый</u>, <s>зачёркнутый</s>, <a href=\"https://metravel.by/travels/x/?a=1&amp;b=2\" target=\"_blank\" rel=\"noopener noreferrer\">ссылка</a>, <span style=\"color: rgb(230, 0, 0);\">цветной</span>, <sup>верх</sup> и <sub>низ</sub>."
+    }
+  ],
+  "paragraph-html-serialization": [
+    {
+      "type": "paragraph",
+      "text": "Текст с неразрывным, амперсандом & и знаками < > \"кавычки\" 'апострофы' атрибуты пробел в теге регистр 😀",
+      "html": "Текст с&nbsp;неразрывным, амперсандом &amp; и знаками &lt; &gt; \"кавычки\" 'апострофы' <span title=\"одинарные &quot;двойные&quot;\" data-a=\"<x>\" hidden=\"\">атрибуты</span> <b>пробел в теге</b> <i>регистр</i> 😀"
+    }
+  ],
+  "paragraph-plain-and-whitespace": [
+    {
+      "type": "paragraph",
+      "text": "Простой текст без разметки"
+    },
+    {
+      "type": "paragraph",
+      "text": "пробелы по краям"
+    },
+    {
+      "type": "paragraph",
+      "text": "перенос"
+    },
+    {
+      "type": "paragraph",
+      "text": "и табуляция"
+    }
+  ],
+  "paragraph-newlines-without-br": [
+    {
+      "type": "paragraph",
+      "text": "Первая строка"
+    },
+    {
+      "type": "paragraph",
+      "text": "вторая строка"
+    },
+    {
+      "type": "paragraph",
+      "text": "третья строка"
+    },
+    {
+      "type": "paragraph",
+      "text": "Жирная"
+    },
+    {
+      "type": "paragraph",
+      "text": "строка после разметки"
+    }
+  ],
+  "paragraph-quill-classes": [
+    {
+      "type": "paragraph",
+      "text": "По центру"
+    },
+    {
+      "type": "paragraph",
+      "text": "Крупный справа",
+      "html": "<span class=\"ql-size-large\">Крупный</span> справа"
+    },
+    {
+      "type": "paragraph",
+      "text": "По ширине"
+    }
+  ],
+  "invisible-characters": [
+    {
+      "type": "paragraph",
+      "text": "Нулевой пробел, не разрывный, BOM внутри, узкий пробел, идеографический пробел"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Заголовок"
+    },
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        "Пункт"
+      ]
+    }
+  ],
+  "crlf-and-indentation": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Заголовок"
+    },
+    {
+      "type": "paragraph",
+      "text": "Абзац с отступами"
+    },
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        "Пункт"
+      ]
+    }
+  ],
+  "container-text-only": [
+    {
+      "type": "paragraph",
+      "text": "Только текст"
+    },
+    {
+      "type": "paragraph",
+      "text": "Текст секции с жирным и ссылкой"
+    },
+    {
+      "type": "paragraph",
+      "text": "спанспан"
+    }
+  ],
+  "container-with-blocks": [
+    {
+      "type": "paragraph",
+      "text": "Текст до"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Заголовок"
+    },
+    {
+      "type": "paragraph",
+      "text": "текст между"
+    },
+    {
+      "type": "paragraph",
+      "text": "Абзац"
+    },
+    {
+      "type": "paragraph",
+      "text": "Глубокий абзац"
+    },
+    {
+      "type": "paragraph",
+      "text": "текст после"
+    },
+    {
+      "type": "image",
+      "src": "https://metravel.by/single-in-div.jpg",
+      "alt": "Одна в div"
+    }
+  ],
+  "container-empty-and-whitespace": [
+    {
+      "type": "paragraph",
+      "text": "после пустых"
+    }
+  ],
+  "plain-text-only": [
+    {
+      "type": "paragraph",
+      "text": "Просто текст без единого тега"
+    }
+  ],
+  "whitespace-only": [],
+  "lonely-symbols": [
+    {
+      "type": "paragraph",
+      "text": "<"
+    }
+  ],
+  "unterminated-tag": [
+    {
+      "type": "paragraph",
+      "text": "Абзац"
+    }
+  ],
+  "unterminated-comment": [
+    {
+      "type": "paragraph",
+      "text": "До комментария"
+    }
+  ]
+}
