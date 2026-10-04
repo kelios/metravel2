@@ -58,7 +58,7 @@ jest.mock('@/components/quests/questOfflineMapExport', () => ({
 }))
 
 import { QuestWizard } from '@/components/quests/QuestWizard'
-import { QuestStepPill } from '@/components/quests/questWizardNavigation'
+import { QuestFinalePill, QuestStepPill } from '@/components/quests/questWizardNavigation'
 import { resolveQuestStepVisualState } from '@/components/quests/questStepVisualState'
 import { createQuestWizardStyles } from '@/components/quests/questWizardStyles'
 import { getThemedColors } from '@/constants/designSystem'
@@ -156,6 +156,20 @@ describe('QuestStepPill — метка отложенной точки', () => {
     // #2146: пройденная читается словом и галочкой, а не номером.
     expect(view.getByLabelText(/Точка 3 из 3, пройдена/)).toBeTruthy()
     expect(view.queryByText('3')).toBeNull()
+  })
+})
+
+describe('QuestStepPill — подпись диктора без повторов (#2146)', () => {
+  it('финал не повторяет своё название', () => {
+    const view = render(<QuestFinalePill colors={colors} styles={desktopStyles} onPress={jest.fn()} />)
+    expect(view.getByLabelText('Финал, доступен')).toBeTruthy()
+  })
+
+  it('необязательная точка не повторяет роль: она уже в видимой подписи пилюли', () => {
+    const view = render(
+      <QuestStepPill {...(pillProps as any)} styles={desktopStyles} role="optional" label="Ратуша · Точка по желанию" />,
+    )
+    expect(view.getByLabelText('Ратуша · Точка по желанию: Точка 3 из 3, доступна')).toBeTruthy()
   })
 })
 

@@ -95,6 +95,15 @@ export function QuestStepPill(props: StepPillProps) {
   // Заголовок шага на сплошной заливке берёт цвет значка (контраст держит
   // модель), на контурной — обычный текст.
   const titleColor = visual.fill === 'solid' ? visual.glyphColor : undefined
+  // Видимая подпись пилюли уже несёт название старта/финала и роль точки
+  // («· Точка по желанию»): диктор не должен слышать их дважды.
+  const accessibilityLabel =
+    kind === 'point'
+      ? i18nT('quests:components.quests.questStepState.withTitle', {
+          label: resolveVisual({ ...props, role: null }, kind).accessibilityLabel,
+          title: label,
+        })
+      : visual.accessibilityLabel
   return (
     <Pressable
       testID={testID}
@@ -104,10 +113,7 @@ export function QuestStepPill(props: StepPillProps) {
       // с состоянием точки скринридер не озвучивает.
       accessibilityRole="button"
       accessibilityState={{ disabled: !unlocked, selected: active }}
-      accessibilityLabel={i18nT('quests:components.quests.questStepState.withTitle', {
-        label: visual.accessibilityLabel,
-        title: label,
-      })}
+      accessibilityLabel={accessibilityLabel}
       style={({ hovered }) => [
         styles.stepPill,
         compact && styles.compactStepPill,
