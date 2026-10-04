@@ -223,3 +223,53 @@ describe('очередь переживает офлайн', () => {
     expect(await readQueue()).toHaveLength(1)
   })
 })
+
+// #2182: приёмочные прогоны на проде отвечали на точки гостем и засоряли
+// воронку квестов. Признак автоматизации читается при импорте модуля, поэтому
+// каждый кейс поднимает свою копию модулей с нужными Platform.OS и webdriver.
+describe('браузер под автоматизацией не пишет телеметрию', () => {
+  const setWebdriver = (value: boolean) => {
+    Object.defineProperty(window.navigator, 'webdriver', { value, configurable: true })
+  }
+
+  // `Platform` в индексе react-native — ленивый геттер: после isolateModules он
+  // резолвится уже в основном реестре, поэтому OS выставляется в обоих.
+  const mainPlatform = require('react-native').Platform
+  const originalOS = mainPlatform.OS
+
+  afterEach(() => {
+    setWebdriver(false)
+    mainPlatform.OS = originalOS
+  })
+
+  const recordAndFlush = async (os: string, webdriver: boolean) => {
+    setWebdriver(webdriver)
+    mainPlatform.OS = os
+    let telemetry: typeof import('@/utils/questAnswerTelemetry') | undefined
+    jest.isolateModules(() => {
+      require('react-native').Platform.OS = os
+      telemetry = require('@/utils/questAnswerTelemetry')
+    })
+    if (!telemetry) throw new Error('модуль телеметрии не загрузился')
+    await telemetry.recordQuestAnswerAttempt(attempt({ verdict: 'accepted' }))
+    await telemetry.flushQuestAnswerAttempts()
+    telemetry.__resetQuestAnswerTelemetry()
+  }
+
+  it('web под webdriver: событие не ставится в очередь и не уходит', async () => {
+    await recordAndFlush('web', true)
+    expect(mockSendQuestAnswerAttempts).not.toHaveBeenCalled()
+  })
+
+  it('обычный web: событие уходит как раньше', async () => {
+    await recordAndFlush('web', false)
+    expect(mockSendQuestAnswerAttempts).toHaveBeenCalledTimes(1)
+    expect(mockSendQuestAnswerAttempts.mock.calls[0][0].attempts[0].platform).toBe('web')
+  })
+
+  it.each(['android', 'ios'])('%s: признак webdriver на native не действует', async (os) => {
+    await recordAndFlush(os, true)
+    expect(mockSendQuestAnswerAttempts).toHaveBeenCalledTimes(1)
+    expect(mockSendQuestAnswerAttempts.mock.calls[0][0].attempts[0].platform).toBe(os)
+  })
+})

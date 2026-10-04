@@ -11,10 +11,13 @@ const { UsageError } = require('@/scripts/lib/cli-contract')
 const {
   EXCLUDED_USER_IDS,
   GUEST_FREE_STEPS,
+  PROBE_CLUSTER_WINDOW_MINUTES,
+  PROBE_MAX_ELAPSED_MS,
   TELEMETRY_CLEAN_SINCE,
   buildFunnelSql,
   buildRemoteScript,
   buildReport,
+  classifyPairs,
   formatReport,
   parseArgs,
   resolveWindow,
@@ -22,53 +25,55 @@ const {
 
 const NOW = new Date('2026-09-23T10:00:00Z')
 
-const stageRow = (segment: string, value: string, counts: number[]) => {
-  const [answered, point1, p25, p50, p75, allPoints, singleAttempt] = counts
-  return {
-    segment,
-    value,
-    answered,
-    point1,
-    p25,
-    p50,
-    p75,
-    all_points: allPoints,
-    single_attempt: singleAttempt,
-  }
-}
+// Строка `pairs` из ответа базы. По умолчанию — живой гость: ответил через
+// 45 с, пара длится минуту.
+const T0 = Date.parse('2026-08-24T10:00:00Z') / 1000
+const pair = (overrides: Record<string, unknown> = {}) => ({
+  quest_id: 1,
+  slug: 'vitebsk-kids-skazki',
+  n_points: 4,
+  in_window: true,
+  first_epoch: T0,
+  week: '2026-08-24',
+  auth: 'guest',
+  platform: 'web',
+  attempts: 1,
+  accepted: 1,
+  rejected: 0,
+  max_elapsed_ms: 45000,
+  duration_s: 60,
+  tainted: false,
+  ...overrides,
+})
 
-// Форма ответа базы для buildReport, а не эталон воронки: числа взяты из
-// первого замера по всем не-intro точкам. Эталон по правилу точек клиента —
-// в карточке #2061.
+// Пара пробы по подписи #2182: гость в браузере, ответ за секунду, без ошибок.
+const probe = (questId: number, offsetS: number, overrides: Record<string, unknown> = {}) =>
+  pair({
+    quest_id: questId,
+    slug: `probe-quest-${questId}`,
+    first_epoch: T0 + offsetS,
+    max_elapsed_ms: 1040,
+    duration_s: 0,
+    ...overrides,
+  })
+
+// Форма ответа базы для buildReport, а не эталон воронки: шесть живых пар
+// разной глубины на двух квестах.
 const PROD_LIKE = {
   quest_found: true,
-  stages: [
-    stageRow('all', 'all', [39, 33, 24, 18, 12, 1, 7]),
-    stageRow('auth', 'guest', [17, 12, 4, 0, 0, 0, 5]),
-    stageRow('auth', 'guest_login', [10, 10, 10, 10, 7, 1, 0]),
-    stageRow('auth', 'user', [12, 11, 10, 8, 5, 0, 2]),
-    stageRow('platform', 'android', [8, 7, 7, 4, 3, 0, 1]),
-    stageRow('platform', 'ios', [1, 0, 0, 0, 0, 0, 1]),
-    stageRow('platform', 'web', [30, 26, 17, 14, 9, 1, 5]),
-  ],
-  depth: [
-    { auth: 'guest', accepted: 0, pairs: 5 },
-    { auth: 'guest', accepted: 1, pairs: 8 },
-    { auth: 'guest', accepted: 2, pairs: 4 },
-    { auth: 'guest_login', accepted: 6, pairs: 10 },
-    { auth: 'user', accepted: 5, pairs: 12 },
-  ],
-  weekly: [
-    { week: '2026-08-24', answered: 10, point1: 8, all_points: 0 },
-    { week: '2026-08-31', answered: 15, point1: 14, all_points: 1 },
+  pairs: [
+    pair({ accepted: 0, attempts: 2, rejected: 2 }),
+    pair({ accepted: 1, attempts: 1 }),
+    pair({ platform: 'android', accepted: 2, attempts: 3 }),
+    pair({ week: '2026-08-31', auth: 'guest_login', accepted: 4, attempts: 6 }),
+    pair({ week: '2026-08-31', auth: 'user', platform: 'ios', accepted: 3, attempts: 4 }),
+    pair({ week: '2026-08-31', auth: 'user', quest_id: 2, slug: 'brest-fortress', n_points: 5 }),
   ],
   weekly_completed: [
     { week: '2026-08-31', completed: 5 },
     { week: '2026-09-21', completed: 1 },
   ],
-  top_quests: [
-    { slug: 'vitebsk-kids-skazki', n_points: 8, answered: 7, point1: 6, all_points: 1, completed: 1 },
-  ],
+  completed_by_quest: [{ quest_id: 1, completed: 1 }],
   progress: {
     started: 33,
     players: 16,
@@ -163,6 +168,18 @@ describe('buildFunnelSql', () => {
     expect(sql).not.toContain('s.id = a.step_id')
   })
 
+  it('заражённые ключи ищет по всей таблице, а соседей серии берёт и до окна', () => {
+    const sql = buildFunnelSql({ since: '2026-09-23', quest: 'krakow-dragon' })
+    const tainted = sql.slice(sql.indexOf('tainted_keys AS ('), sql.indexOf('scope AS ('))
+    expect(tainted).toContain('WHERE user_id IN (SELECT id FROM excluded)')
+    // Ни окна, ни --quest: ключ служебного устройства заражён на всех квестах.
+    expect(tainted).not.toContain('DATE ')
+    expect(tainted).not.toContain('scope')
+    expect(sql).toContain('p.session_key IN (SELECT session_key FROM tainted_keys) AS tainted')
+    expect(sql).toContain(`DATE '2026-09-23' - interval '${PROBE_CLUSTER_WINDOW_MINUTES} minutes'`)
+    expect(sql).toContain("p.first_at >= DATE '2026-09-23' AS in_window")
+  })
+
   it('сужает отчёт до одного квеста', () => {
     expect(buildFunnelSql({ since: '2026-08-24', quest: 'vitebsk-kids-skazki' })).toContain(
       "WHERE quest_id = 'vitebsk-kids-skazki'",
@@ -195,40 +212,50 @@ describe('buildReport', () => {
   it('собирает воронку, сегменты и гостевой гейт', () => {
     const report = buildReport(PROD_LIKE, window)
     expect(report.stages.all).toEqual({
-      answered: 39,
-      point1: 33,
-      p25: 24,
-      p50: 18,
-      p75: 12,
+      answered: 6,
+      point1: 5,
+      p25: 4,
+      p50: 3,
+      p75: 2,
       allPoints: 1,
-      singleAttempt: 7,
+      singleAttempt: 2,
     })
-    expect(report.stages.byAuth.guest_login.p75).toBe(7)
+    expect(report.stages.byAuth.guest_login.allPoints).toBe(1)
+    expect(report.stages.byAuth.user.p75).toBe(1)
     expect(report.stages.byPlatform.ios.answered).toBe(1)
+    expect(report.stages.byPlatform.web.answered).toBe(4)
     expect(report.guestGate).toEqual({
       freeSteps: 2,
-      guestStarts: 27,
-      noAccepted: 5,
-      leftBeforeGate: 8,
-      leftAtGate: 4,
-      loggedIn: 10,
-      reachedGate: 14,
+      guestStarts: 4,
+      noAccepted: 1,
+      leftBeforeGate: 1,
+      leftAtGate: 1,
+      loggedIn: 1,
+      reachedGate: 2,
     })
+    expect(report.excludedProbes).toEqual({ probeSeries: 0, taintedSession: 0, total: 0 })
     expect(report.progress).toMatchObject({ started: 33, startedCompleted: 17, completedFast: 7 })
   })
 
   it('сводит недели ответов и засчитываний в одну строку на неделю', () => {
     const report = buildReport(PROD_LIKE, window)
     expect(report.weekly).toEqual([
-      { week: '2026-08-24', answered: 10, point1: 8, allPoints: 0, completed: 0 },
-      { week: '2026-08-31', answered: 15, point1: 14, allPoints: 1, completed: 5 },
+      { week: '2026-08-24', answered: 3, point1: 2, allPoints: 0, completed: 0 },
+      { week: '2026-08-31', answered: 3, point1: 3, allPoints: 1, completed: 5 },
       { week: '2026-09-21', answered: 0, point1: 0, allPoints: 0, completed: 1 },
+    ])
+  })
+
+  it('квесты по числу пар с засчитанными из quest_progress', () => {
+    expect(buildReport(PROD_LIKE, window).topQuests).toEqual([
+      { slug: 'vitebsk-kids-skazki', points: 4, answered: 5, point1: 4, allPoints: 1, completed: 1 },
+      { slug: 'brest-fortress', points: 5, answered: 1, point1: 1, allPoints: 0, completed: 0 },
     ])
   })
 
   it('пустое окно — нули, а не падение и не «undefined» в отчёте', () => {
     const report = buildReport(
-      { quest_found: true, stages: [], depth: [], weekly: [], weekly_completed: [], top_quests: [], progress: null },
+      { quest_found: true, pairs: [], weekly_completed: [], completed_by_quest: [], progress: null },
       window,
     )
     expect(report.stages.all.answered).toBe(0)
@@ -254,9 +281,108 @@ describe('formatReport', () => {
   it('печатает конверсию шага от предыдущего и гейт', () => {
     const text = formatReport(buildReport(PROD_LIKE, resolveWindow({ since: '2026-08-24' }, NOW)))
     expect(text).toContain('с 2026-08-24, все квесты')
-    expect(text).toMatch(/1-я точка\s+33\s+85%/)
-    expect(text).toContain('у гейта вошли 10 (71%), ушли 4')
+    expect(text).toMatch(/1-я точка\s+5\s+83%/)
+    expect(text).toContain('у гейта вошли 1 (50%), ушли 1')
     expect(text).toContain('vitebsk-kids-skazki')
+    expect(text).toContain('исключено автоматических проб: 0')
+  })
+})
+
+// #2182: наши приёмочные прогоны на проде пишут ответы гостем. Исключаем их
+// серией, а живого игрока — даже быстрого и одинокого — оставляем.
+describe('classifyPairs — пробы и служебные устройства', () => {
+  const window = resolveWindow({ since: '2026-08-24' }, NOW)
+
+  // Серия luxembourg-melusina 04.10 с прода: 11 новых сессий за 5 минут,
+  // ответ за 1,6–2,2 с, пара живёт до 1,6 с.
+  const LUXEMBOURG_SERIES = [0, 16, 35, 78, 91, 105, 135, 151, 223, 271, 292].map((offset, index) =>
+    probe(7, offset, { max_elapsed_ms: 1606 + index * 50, duration_s: index % 2 ? 1.6 : 0 }),
+  )
+
+  it('серия проб одного квеста исключается целиком и печатается отдельной строкой', () => {
+    const report = buildReport({ ...PROD_LIKE, pairs: [...PROD_LIKE.pairs, ...LUXEMBOURG_SERIES] }, window)
+    expect(report.excludedProbes).toEqual({ probeSeries: 11, taintedSession: 0, total: 11 })
+    expect(report.stages.all.answered).toBe(6)
+    // Гостевой гейт и разбивки считаются по очищенным парам.
+    expect(report.guestGate.guestStarts).toBe(4)
+    expect(report.weekly.find((week: { week: string }) => week.week === '2026-08-24').answered).toBe(3)
+    expect(report.topQuests.map((quest: { slug: string }) => quest.slug)).not.toContain('probe-quest-7')
+    expect(formatReport(report)).toContain(
+      'исключено автоматических проб: 11 (серии гостевых web-проб 11, сессии устройств служебных аккаунтов 0)',
+    )
+  })
+
+  it('одиночная быстрая пара живого гостя остаётся: решает серия, а не скорость', () => {
+    const { players, excluded } = classifyPairs([probe(7, 0)])
+    expect(players).toHaveLength(1)
+    expect(excluded.total).toBe(0)
+  })
+
+  it('две быстрые пары и третья за пределами окна — не серия', () => {
+    const beyond = PROBE_CLUSTER_WINDOW_MINUTES * 60 + 1
+    const { players, excluded } = classifyPairs([probe(7, 0), probe(7, 60), probe(7, beyond)])
+    expect(players).toHaveLength(3)
+    expect(excluded.probeSeries).toBe(0)
+  })
+
+  it('пары разных квестов в одно время серию не складывают', () => {
+    const { players } = classifyPairs([probe(7, 0), probe(8, 10), probe(9, 20)])
+    expect(players).toHaveLength(3)
+  })
+
+  it('пара с неверным ответом, долгая пара, медленный ответ и не-web остаются даже внутри серии', () => {
+    const live = [
+      probe(7, 30, { rejected: 2, attempts: 3 }),
+      probe(7, 40, { duration_s: 955 }),
+      probe(7, 50, { max_elapsed_ms: PROBE_MAX_ELAPSED_MS }),
+      probe(7, 55, { max_elapsed_ms: null }),
+      probe(7, 60, { platform: 'android' }),
+      probe(7, 70, { auth: 'guest_login' }),
+    ]
+    const { players, excluded } = classifyPairs([probe(7, 0), probe(7, 10), probe(7, 20), ...live])
+    expect(excluded.probeSeries).toBe(3)
+    expect(players).toHaveLength(live.length)
+  })
+
+  it('живые пары с прода 23.09–24.09 рядом с серией проб остаются', () => {
+    const live = [
+      // vitebsk-teens-street-art-map: один верный ответ за 23 с и ушёл.
+      pair({ quest_id: 3, slug: 'vitebsk-teens-street-art-map', max_elapsed_ms: 22796, duration_s: 0 }),
+      // yelnya-bog-bells: два верных ответа, 20 и 67 с.
+      pair({ quest_id: 4, slug: 'yelnya-bog-bells', accepted: 2, attempts: 2, max_elapsed_ms: 67236 }),
+      // brest-fortress: «5» за 5 с — быстрый, но живой.
+      pair({ quest_id: 5, slug: 'brest-fortress', max_elapsed_ms: 5000, duration_s: 0 }),
+    ]
+    const { players, excluded } = classifyPairs([...LUXEMBOURG_SERIES, ...live])
+    expect(excluded.probeSeries).toBe(LUXEMBOURG_SERIES.length)
+    expect(players.map((kept: { slug: string }) => kept.slug)).toEqual([
+      'vitebsk-teens-street-art-map',
+      'yelnya-bog-bells',
+      'brest-fortress',
+    ])
+  })
+
+  it('соседи серии до начала окна держат серию, но в счётчики не входят', () => {
+    const before = [probe(7, -120, { in_window: false }), probe(7, -60, { in_window: false })]
+    const { players, excluded } = classifyPairs([...before, probe(7, 0)])
+    expect(excluded).toEqual({ probeSeries: 1, taintedSession: 0, total: 1 })
+    expect(players).toHaveLength(0)
+  })
+
+  it('пара с ключом служебного устройства исключается, такая же с чужим ключом — нет', () => {
+    // nesvizh-radziwill 24.09: гость с «живыми» 77 и 45 с, но ключ QA-телефона.
+    const nesvizh = { quest_id: 6, slug: 'nesvizh-radziwill', platform: 'android', accepted: 2, attempts: 2 }
+    const tainted = classifyPairs([pair({ ...nesvizh, max_elapsed_ms: 76920, tainted: true })])
+    expect(tainted.players).toHaveLength(0)
+    expect(tainted.excluded).toEqual({ probeSeries: 0, taintedSession: 1, total: 1 })
+    const clean = classifyPairs([pair({ ...nesvizh, max_elapsed_ms: 76920 })])
+    expect(clean.players).toHaveLength(1)
+    expect(clean.excluded.total).toBe(0)
+  })
+
+  it('заражённая пара внутри серии считается один раз — по ключу', () => {
+    const { excluded } = classifyPairs([probe(7, 0), probe(7, 10), probe(7, 20, { tainted: true })])
+    expect(excluded).toEqual({ probeSeries: 2, taintedSession: 1, total: 3 })
   })
 })
 

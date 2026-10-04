@@ -16,6 +16,7 @@ import { sendQuestAnswerAttempts, type QuestAnswerAttemptPayload } from '@/api/q
 import { ApiError } from '@/api/client'
 import { getActiveLocale } from '@/i18n'
 import { queueAnalyticsEvent } from '@/utils/analytics'
+import { isWebAutomation } from '@/utils/isWebAutomation'
 import { devWarn } from '@/utils/logger'
 
 export const QUEST_ATTEMPTS_QUEUE_KEY = 'quest_attempts_queue_v1'
@@ -203,6 +204,10 @@ export async function recordQuestAnswerAttempt(input: RecordQuestAttemptInput): 
   // батч на конкретный quest_id. Молча копить неадресуемые события хуже, чем
   // не собирать их вовсе.
   if (!Number.isFinite(input.questNumericId)) return
+  // Браузер под автоматизацией — наш приёмочный прогон, а не игрок: его ответы
+  // попадали в прод-таблицу и засоряли воронку квестов (#2182). Тот же признак
+  // отключает GA4/Метрику в utils/analyticsInlineScript.ts.
+  if (isWebAutomation) return
 
   const event: QueuedQuestAttempt = {
     quest_id: Number(input.questNumericId),
