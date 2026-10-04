@@ -92,7 +92,7 @@ export const profileGenerated1 = {
   "app.tabs.settings.soobscheniya_79276690": "Messages",
   "app.tabs.settings.svetlaya_5011d52d": "Light",
   "app.tabs.settings.telegram_d271f81b": "Telegram",
-  "app.tabs.settings.tema_920e1112": "Subject",
+  "app.tabs.settings.tema_920e1112": "Theme",
   "app.tabs.settings.temnaya_f8f50e31": "Dark",
   "app.tabs.settings.udalit_67c7c30f": "Delete",
   "app.tabs.settings.udalit_akkaunt_bb9a5af4": "Delete account",

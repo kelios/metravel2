@@ -180,7 +180,7 @@ export const profileGenerated2 = {
   "components.settings.StravaSettingsSection.zagruzka_33437c29": "Loading...",
   "components.settings.ThemeSection.po_umolchaniyu_svetlaya_b13d797b": "Default light",
   "components.settings.ThemeSection.tema_oformleniya_78a345c8": "Theme",
-  "components.settings.ThemeSection.vybor_temy_oformleniya_dbeae2db": "Selecting a theme",
+  "components.settings.ThemeSection.vybor_temy_oformleniya_dbeae2db": "Theme selection",
   "hooks.usePrivacySettings.ne_udalos_sohranit_nastroyki_privatnosti_pop_6adb578d": "Failed to save privacy settings. Please try again later.",
   "hooks.usePrivacySettings.oshibka_572c75e2": "Error",
   "hooks.useSettingsProfileForm.nastroyki_uvedomleniy_sohraneny_9c74887c": "Notification settings saved",
