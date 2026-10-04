@@ -1,6 +1,10 @@
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
 import { safeJsonParse, safeJsonParseString } from '@/utils/safeJsonParse'
-import { openBookPreviewWindow, openPendingBookPreviewWindow } from '@/utils/openBookPreviewWindow'
+import {
+  discardPendingBookPreviewWindow,
+  openBookPreviewWindow,
+  openPendingBookPreviewWindow,
+} from '@/utils/openBookPreviewWindow'
 
 class FakeResponse {
   status: number
@@ -338,6 +342,46 @@ describe('openBookPreviewWindow', () => {
 
     expect(open).toHaveBeenCalledTimes(1)
     expect(pendingWrite).toHaveBeenCalledWith(html)
+  })
+
+  it('#2125: заглушка говорит «Готовим печатную версию…» — без «карты», она общая для книги, плана и квеста', () => {
+    const write = jest.fn()
+    const pendingWindow: any = { opener: {}, document: { open: jest.fn(), write, close: jest.fn() } }
+    global.window = { ...window, open: jest.fn(() => pendingWindow) } as any
+
+    openPendingBookPreviewWindow()
+
+    const stub = String(write.mock.calls[0][0])
+    expect(stub).toContain('<div class="card">Готовим печатную версию…</div>')
+    expect(stub).not.toContain('карты')
+  })
+
+  it('#2125: discard закрывает заглушку и забывает её — следующий документ не пишется в мёртвое окно', () => {
+    const pendingWrite = jest.fn()
+    const pendingWindow: any = {
+      opener: {},
+      closed: false,
+      close: jest.fn(),
+      document: { open: jest.fn(), write: pendingWrite, close: jest.fn() },
+    }
+    const blobWindow: any = {}
+    const open = jest.fn((url: string) => (url === 'about:blank' ? pendingWindow : blobWindow))
+    global.window = { ...window, open } as any
+
+    openPendingBookPreviewWindow()
+    discardPendingBookPreviewWindow(pendingWindow)
+    expect(pendingWindow.close).toHaveBeenCalledTimes(1)
+
+    pendingWrite.mockClear()
+    openBookPreviewWindow('<html><body>Next</body></html>')
+    expect(pendingWrite).not.toHaveBeenCalled()
+    expect(open).toHaveBeenLastCalledWith('blob:http://localhost/mock-preview', '_blank', 'noopener')
+  })
+
+  it('#2125: discard уже закрытого пользователем окна не зовёт close повторно', () => {
+    const closedWindow: any = { closed: true, close: jest.fn() }
+    discardPendingBookPreviewWindow(closedWindow)
+    expect(closedWindow.close).not.toHaveBeenCalled()
   })
 
   it('does not open a second window when the target write fails', () => {

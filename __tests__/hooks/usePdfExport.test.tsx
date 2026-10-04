@@ -2,6 +2,8 @@
 // ✅ ТЕСТЫ: Тесты для usePdfExport hook
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { Platform, Alert } from 'react-native';
+import { showToast } from '@/utils/toast';
+import { downloadBookExportArtifact, requestServerBookExport } from '@/api/bookExportApi';
 import { usePdfExport } from '@/hooks/usePdfExport';
 import { ExportStage } from '@/types/pdf-export';
 import type { ChecklistSection } from '@/components/export/BookSettingsModal';
@@ -9,7 +11,15 @@ import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 
 const mockGenerateTravelsHtml = jest.fn(async () => '<html><body><section class="pdf-page">Test</section></body></html>');
 const mockOpenBookPreviewWindow = jest.fn();
-const mockOpenPendingBookPreviewWindow = jest.fn((..._args: unknown[]) => ({}));
+const mockOpenPendingBookPreviewWindow = jest.fn((..._args: unknown[]): unknown => ({ closed: false }));
+const mockDiscardPendingBookPreviewWindow = jest.fn();
+
+jest.mock('@/utils/toast', () => ({ showToast: jest.fn(async () => undefined) }));
+
+jest.mock('@/api/bookExportApi', () => ({
+  requestServerBookExport: jest.fn(async () => null),
+  downloadBookExportArtifact: jest.fn(),
+}));
 
 jest.mock('@/api/travelDetailsQueries', () => ({
   fetchTravel: jest.fn(async () => ({
@@ -46,6 +56,7 @@ jest.mock('@/utils/printHtml', () => jest.requireActual('@/utils/printHtml.web')
 jest.mock('@/utils/openBookPreviewWindow', () => ({
   openPendingBookPreviewWindow: (...args: any[]) => mockOpenPendingBookPreviewWindow(...args),
   openBookPreviewWindow: (...args: any[]) => mockOpenBookPreviewWindow(...args),
+  discardPendingBookPreviewWindow: (...args: any[]) => mockDiscardPendingBookPreviewWindow(...args),
 }));
 
 global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
@@ -84,6 +95,9 @@ const originalPlatformOS = Platform.OS;
 const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
 const mockFetchTravel = fetchTravel as jest.MockedFunction<typeof fetchTravel>;
 const mockFetchTravelBySlug = fetchTravelBySlug as jest.MockedFunction<typeof fetchTravelBySlug>;
+const mockShowToast = showToast as jest.MockedFunction<typeof showToast>;
+const mockRequestServerBookExport = requestServerBookExport as jest.MockedFunction<typeof requestServerBookExport>;
+const mockDownloadBookExportArtifact = downloadBookExportArtifact as jest.MockedFunction<typeof downloadBookExportArtifact>;
 
 beforeAll(() => {
   Object.defineProperty(Platform, 'OS', {
@@ -234,7 +248,7 @@ describe('usePdfExport', () => {
   });
 
   describe('openPrintBook', () => {
-    it('должен показывать алерт, если нет DOM (генераторам книги нужен DOMParser)', async () => {
+    it('должен показывать тост, если нет DOM (генераторам книги нужен DOMParser)', async () => {
       const originalDomParser = (global as any).DOMParser;
       delete (global as any).DOMParser;
 
@@ -244,10 +258,14 @@ describe('usePdfExport', () => {
         await result.current.openPrintBook(mockSettings);
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Недоступно',
-        'Просмотр книги и печать доступны только в веб-версии MeTravel'
-      );
+      expect(mockShowToast).toHaveBeenCalledWith({
+        type: 'info',
+        text1: 'Недоступно',
+        text2: 'Просмотр книги и печать доступны только в веб-версии MeTravel',
+        position: 'bottom',
+      });
+      expect(mockDiscardPendingBookPreviewWindow).toHaveBeenCalledTimes(1);
+      expect(Alert.alert).not.toHaveBeenCalled();
 
       (global as any).DOMParser = originalDomParser;
     });
@@ -262,10 +280,14 @@ describe('usePdfExport', () => {
         await result.current.openPrintBook(mockSettings);
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Внимание',
-        'Выберите хотя бы одно путешествие для экспорта'
-      );
+      expect(mockShowToast).toHaveBeenCalledWith({
+        type: 'info',
+        text1: 'Внимание',
+        text2: 'Выберите хотя бы одно путешествие для экспорта',
+        position: 'bottom',
+      });
+      // #2125: нечего печатать — окно-заглушка закрыто, а не брошено.
+      expect(mockDiscardPendingBookPreviewWindow).toHaveBeenCalledTimes(1);
 
       expect(mockGenerateTravelsHtml).not.toHaveBeenCalled();
       expect(mockOpenBookPreviewWindow).not.toHaveBeenCalled();
@@ -374,7 +396,15 @@ describe('usePdfExport', () => {
         await result.current.openPrintBook(mockSettings);
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', error.message);
+      expect(mockShowToast).toHaveBeenCalledWith({
+        type: 'error',
+        text1: 'Ошибка',
+        text2: error.message,
+        position: 'bottom',
+      });
+      // #2125: книга не собралась — окно-заглушка закрыто.
+      expect(mockDiscardPendingBookPreviewWindow).toHaveBeenCalledTimes(1);
+      expect(mockOpenBookPreviewWindow).not.toHaveBeenCalled();
 
       await waitFor(() => {
         expect(result.current.error).toEqual(error);
@@ -392,10 +422,118 @@ describe('usePdfExport', () => {
         await result.current.openPrintBook(mockSettings);
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Ошибка',
-        'Предпросмотр книги недоступен'
-      );
+      expect(mockShowToast).toHaveBeenCalledWith({
+        type: 'error',
+        text1: 'Ошибка',
+        text2: 'Предпросмотр книги недоступен',
+        position: 'bottom',
+      });
+      expect(mockDiscardPendingBookPreviewWindow).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('#2125: окно печати резервируется в клике', () => {
+    it('окно открывается синхронно, до первого await', () => {
+      const { result } = renderHook(() => usePdfExport(mockTravels));
+
+      const pending = result.current.openPrintBook(mockSettings);
+      expect(mockOpenPendingBookPreviewWindow).toHaveBeenCalledTimes(1);
+      return act(async () => {
+        await pending;
+      });
+    });
+
+    it('окно заблокировано — тост «Печать недоступна…», сервер, детали и генерация не запускаются', async () => {
+      mockOpenPendingBookPreviewWindow.mockReturnValueOnce(null);
+      const { result } = renderHook(() => usePdfExport(mockTravels.map((t) => ({ ...t, description: undefined as any }))));
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(mockShowToast).toHaveBeenCalledTimes(1);
+      expect(mockShowToast).toHaveBeenCalledWith({
+        type: 'error',
+        text1: 'Печать недоступна. Разрешите всплывающие окна в браузере или обновите приложение.',
+        position: 'bottom',
+      });
+      expect(mockRequestServerBookExport).not.toHaveBeenCalled();
+      expect(mockFetchTravel).not.toHaveBeenCalled();
+      expect(mockGenerateTravelsHtml).not.toHaveBeenCalled();
+      expect(result.current.isGenerating).toBe(false);
+    });
+
+    it('книга пишется в окно, открытое в клике', async () => {
+      const reserved = { closed: false };
+      mockOpenPendingBookPreviewWindow.mockReturnValueOnce(reserved);
+      const { result } = renderHook(() => usePdfExport(mockTravels));
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(mockOpenBookPreviewWindow).toHaveBeenCalledTimes(1);
+      expect(mockOpenBookPreviewWindow.mock.calls[0][1]).toBe(reserved);
+      expect(mockDiscardPendingBookPreviewWindow).not.toHaveBeenCalled();
+      expect(mockShowToast).not.toHaveBeenCalled();
+    });
+
+    it('сервер отдал готовый файл — он скачивается, окно-заглушка закрывается', async () => {
+      mockRequestServerBookExport.mockResolvedValueOnce({ job_id: 'job-1' } as any);
+      mockDownloadBookExportArtifact.mockResolvedValueOnce({
+        blob: new Blob(['%PDF'], { type: 'application/pdf' }),
+        contentType: 'application/pdf',
+        filename: 'book.pdf',
+      } as any);
+      const { result } = renderHook(() => usePdfExport(mockTravels));
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(mockDiscardPendingBookPreviewWindow).toHaveBeenCalledTimes(1);
+      expect(mockOpenBookPreviewWindow).not.toHaveBeenCalled();
+      expect(mockGenerateTravelsHtml).not.toHaveBeenCalled();
+    });
+
+    it('сервер отдал HTML — он печатается в зарезервированное окно', async () => {
+      const reserved = { closed: false };
+      mockOpenPendingBookPreviewWindow.mockReturnValueOnce(reserved);
+      mockRequestServerBookExport.mockResolvedValueOnce({ job_id: 'job-2' } as any);
+      mockDownloadBookExportArtifact.mockResolvedValueOnce({
+        blob: { text: async () => '<html><body>server book</body></html>' },
+        contentType: 'text/html; charset=utf-8',
+        filename: 'book.html',
+      } as any);
+      const { result } = renderHook(() => usePdfExport(mockTravels));
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(mockOpenBookPreviewWindow).toHaveBeenCalledTimes(1);
+      const [written, target] = mockOpenBookPreviewWindow.mock.calls[0];
+      expect(written).toContain('server book');
+      expect(target).toBe(reserved);
+      expect(mockGenerateTravelsHtml).not.toHaveBeenCalled();
+    });
+
+    it('окно закрыто пользователем во время сборки — тихий выход без тоста', async () => {
+      const reserved = { closed: false };
+      mockOpenPendingBookPreviewWindow.mockReturnValueOnce(reserved);
+      mockGenerateTravelsHtml.mockImplementationOnce(async () => {
+        reserved.closed = true;
+        return '<html></html>';
+      });
+      const { result } = renderHook(() => usePdfExport(mockTravels));
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(mockOpenBookPreviewWindow).not.toHaveBeenCalled();
+      expect(mockShowToast).not.toHaveBeenCalled();
+      expect(result.current.currentStage).not.toBe(ExportStage.ERROR);
     });
   });
 });

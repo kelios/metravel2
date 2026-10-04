@@ -61,5 +61,5 @@ export async function printHtml(html: string, _options?: PrintOptions): Promise<
 
 /** На native резервировать нечего — печать запускается, когда HTML готов. */
 export function beginPrint(): PrintSession {
-  return { available: isPrintAvailable(), print: printHtml }
+  return { available: isPrintAvailable(), print: printHtml, cancel: () => {} }
 }

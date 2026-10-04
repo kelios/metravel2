@@ -7,6 +7,9 @@ import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { ExportStage, ExportConfig } from '@/types/pdf-export';
 import { queueAnalyticsEvent } from '@/utils/analytics';
+import { beginPrint } from '@/utils/printHtml';
+import { showToast } from '@/utils/toast';
+import { translate as i18nT } from '@/i18n';
 
 /**
  * React hook для экспорта путешествий в PDF
@@ -64,18 +67,39 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
   }, []);
 
   /**
-   * Открывает HTML-книгу в новом окне для печати (window.print)
+   * Открывает HTML-книгу в окне печати. #2125: единственное место резерва окна
+   * для всех входов в книгу — beginPrint() стоит до первого await, иначе
+   * блокировщик всплывающих окон отменит окно, открытое после генерации.
    */
   const openPrintBook = useCallback(
     async (settings: BookSettings): Promise<void> => {
+      const printSession = beginPrint();
+      if (!printSession.available) {
+        // Окно заблокировано — книгу не собираем впустую, причину показываем сразу.
+        void showToast({ type: 'error', text1: i18nT('common:print.unavailable'), position: 'bottom' });
+        return;
+      }
       queueAnalyticsEvent('PDF_Export', {
         travelsCount: Array.isArray(selected) ? selected.length : 0,
         template: settings?.template,
       });
-      const runtime = await loadRuntimeModule();
+      let runtime: typeof import('@/hooks/usePdfExportRuntime');
+      try {
+        runtime = await loadRuntimeModule();
+      } catch {
+        runtimeModuleRef.current = null;
+        printSession.cancel();
+        void showToast({
+          type: 'error',
+          text1: i18nT('export:hooks.usePdfExportRuntime.predprosmotr_knigi_nedostupen_7f86d03a'),
+          position: 'bottom',
+        });
+        return;
+      }
       await runtime.runPdfExport({
         selected,
         settings,
+        printSession,
         config,
         travelCacheRef,
         isMountedRef,

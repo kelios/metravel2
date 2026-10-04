@@ -293,7 +293,6 @@ export const sharedGenerated2 = {
   "utils.travelFaq.value1_dnya_7827b4d5": "{{value1}} of the day",
   "utils.travelRouteDownload.sohranit_fayl_marshruta_7edbd35d": "Save route file",
   "utils.openBookPreviewWindow.title": "We are preparing a printed version...",
-  "utils.openBookPreviewWindow.status": "We are preparing a printed version of the map...",
   "utils.travelTextLossGuard.otmena_d5b1e3ab": "Cancel",
   "utils.travelTextLossGuard.sohranit_6bb2a5f7": "Save",
   "utils.travelTextLossGuard.udalenie_teksta_a462d4b0": "Deleting text",

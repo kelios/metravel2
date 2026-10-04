@@ -293,7 +293,6 @@ export const sharedGenerated2 = {
   "utils.travelFaq.value1_dnya_7827b4d5": "{{value1}} dnia",
   "utils.travelRouteDownload.sohranit_fayl_marshruta_7edbd35d": "Zapisz plik trasy",
   "utils.openBookPreviewWindow.title": "Przygotowujemy wersję drukowaną...",
-  "utils.openBookPreviewWindow.status": "Przygotowujemy drukowaną wersję mapy...",
   "utils.travelTextLossGuard.otmena_d5b1e3ab": "Anuluj",
   "utils.travelTextLossGuard.sohranit_6bb2a5f7": "Zapisz",
   "utils.travelTextLossGuard.udalenie_teksta_a462d4b0": "Usuwanie tekstu",

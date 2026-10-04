@@ -8,6 +8,7 @@ jest.mock('@/utils/mapImageGenerator', () => ({
 
 const mockOpenPendingBookPreviewWindow = jest.fn(() => ({}));
 const mockOpenBookPreviewWindow = jest.fn();
+const mockDiscardPendingBookPreviewWindow = jest.fn();
 
 // Jest резолвит printHtml в native-адаптер; окно браузера — web-адаптер.
 jest.mock('@/utils/printHtml', () => jest.requireActual('@/utils/printHtml.web'));
@@ -16,10 +17,12 @@ jest.mock('@/utils/openBookPreviewWindow', () => ({
   // обёртки: адаптер печати импортирует модуль до объявления моков ниже
   openPendingBookPreviewWindow: () => mockOpenPendingBookPreviewWindow(),
   openBookPreviewWindow: (...args: unknown[]) => (mockOpenBookPreviewWindow as (...a: unknown[]) => void)(...args),
+  discardPendingBookPreviewWindow: (...args: unknown[]) => mockDiscardPendingBookPreviewWindow(...args),
 }));
 
 import { Platform } from 'react-native';
 import { generatePrintableQuest } from '@/components/quests/QuestPrintable';
+import * as printableMap from '@/components/quests/printable/map';
 
 describe('QuestPrintable', () => {
   beforeEach(() => {
@@ -118,5 +121,36 @@ describe('QuestPrintable', () => {
     expect(result).toBe('unavailable');
     expect(mockGenerateCanvasMapSnapshot).not.toHaveBeenCalled();
     expect(mockOpenBookPreviewWindow).not.toHaveBeenCalled();
+  });
+
+  // #2125: сборка документа упала после резерва — заглушка не остаётся висеть.
+  it('closes the reserved print window when building the document fails', async () => {
+    const win = { closed: false };
+    mockOpenPendingBookPreviewWindow.mockReturnValueOnce(win as never);
+    const spy = jest
+      .spyOn(printableMap, 'buildPrintableCanvasMapDataUrl')
+      .mockRejectedValueOnce(new Error('canvas failed'));
+
+    await expect(
+      generatePrintableQuest({
+        title: 'Урочище Вялое',
+        steps: [
+          {
+            id: 'step-1',
+            title: 'Шаг 1',
+            location: 'Опушка',
+            story: 'История',
+            task: 'Задание',
+            answer: () => true,
+            lat: 53.9756,
+            lng: 26.6891,
+            mapsUrl: 'https://maps.google.com/maps?q=53.9756,26.6891',
+          },
+        ],
+      }),
+    ).rejects.toThrow('canvas failed');
+    expect(mockDiscardPendingBookPreviewWindow).toHaveBeenCalledWith(win);
+    expect(mockOpenBookPreviewWindow).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

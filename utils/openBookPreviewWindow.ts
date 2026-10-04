@@ -79,12 +79,26 @@ export function openPendingBookPreviewWindow(): Window | null {
 </style>
 </head>
 <body>
-  <div class="card">${i18nT('shared:utils.openBookPreviewWindow.status')}</div>
+  <div class="card">${i18nT('shared:utils.openBookPreviewWindow.title')}</div>
 </body>
 </html>`;
 
   writeHtmlToWindow(win, loadingHtml);
   return win;
+}
+
+/**
+ * #2125: зарезервированное окно не понадобится — закрыть заглушку и снять ссылки
+ * на неё, чтобы следующий openBookPreviewWindow не писал в мёртвое окно.
+ */
+export function discardPendingBookPreviewWindow(win: Window): void {
+  if (pendingPreviewWindow === win) pendingPreviewWindow = null;
+  if (getGlobalPreviewWindow() === win) setGlobalPreviewWindow(null);
+  try {
+    if (!win.closed) win.close();
+  } catch {
+    // окно уже недоступно — закрывать нечего
+  }
 }
 
 export function openBookPreviewWindow(html: string, targetWindow?: Window | null): void {

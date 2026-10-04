@@ -1,5 +1,3 @@
-import { Alert } from 'react-native';
-
 import type { MutableRefObject } from 'react';
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
@@ -11,6 +9,8 @@ import { downloadBookExportArtifact, requestServerBookExport } from '@/api/bookE
 import type { BookHtmlExportService } from '@/services/book/BookHtmlExportService';
 import { activePdfEntitlementSource } from '@/services/pdf-export/entitlement/PdfEntitlementSource';
 import { translate as i18nT } from '@/i18n'
+import type { PrintResult, PrintSession } from '@/utils/printHtml';
+import { showToast } from '@/utils/toast';
 
 
 type UpdateProgress = (
@@ -24,6 +24,8 @@ type UpdateProgress = (
 type RunPdfExportOptions = {
   selected: Travel[];
   settings: BookSettings;
+  /** #2125: окно печати, зарезервированное в клике (usePdfExport.openPrintBook). */
+  printSession: PrintSession;
   config?: ExportConfig;
   travelCacheRef: MutableRefObject<Record<string | number, Travel>>;
   isMountedRef: MutableRefObject<boolean>;
@@ -50,11 +52,13 @@ async function getBookHtmlExportService(): Promise<BookHtmlExportService> {
   return bookHtmlExportServicePromise;
 }
 
-async function openBookPreview(html: string): Promise<void> {
-  // #2102: печать — через единую точку printHtml; нет окна/модуля печати — ошибка пользователю.
-  const { printHtml } = await import('@/utils/printHtml');
-  const result = await printHtml(html);
-  if (result === 'unavailable') throw new Error(i18nT('common:print.unavailable'));
+// #2125: в react-native-web Alert.alert — пустая функция, сообщения экспорта идут тостом.
+function notify(type: 'error' | 'info', text1: string, text2?: string): void {
+  void showToast({ type, text1, text2, position: 'bottom' });
+}
+
+function notifyPrintResult(result: PrintResult): void {
+  if (result === 'unavailable') notify('error', i18nT('common:print.unavailable'));
 }
 
 // #716/#713: canonical-путь экспорта = серверный async job (format:"pdf"); клиентский
@@ -101,6 +105,7 @@ function saveArtifactBlob(blob: Blob, filename: string): void {
 async function tryServerBookExport(
   selected: Travel[],
   settings: BookSettings,
+  printSession: PrintSession,
   updateProgress: UpdateProgress,
 ): Promise<boolean> {
   const travelIds = collectServerExportTravelIds(selected);
@@ -119,12 +124,15 @@ async function tryServerBookExport(
     ]);
     const artifact = await downloadBookExportArtifact(job);
     if (artifact.contentType?.includes('text/html')) {
-      await openBookPreview(await artifact.blob.text());
+      notifyPrintResult(await printSession.print(await artifact.blob.text(), { title: settings.title }));
     } else {
       saveArtifactBlob(
         artifact.blob,
         artifact.filename || `metravel-book-${job.job_id}.${SERVER_BOOK_EXPORT_FORMAT}`,
       );
+      // Сервер отдал готовый файл и он скачан — окно-заглушка не нужно. Закрывается
+      // после скачивания: сбой скачивания уводит в клиентский рантайм, которому окно нужно.
+      printSession.cancel();
     }
     return true;
   } catch (error) {
@@ -251,6 +259,7 @@ async function loadDetailedTravels(
 export async function runPdfExport({
   selected,
   settings,
+  printSession,
   config,
   travelCacheRef,
   isMountedRef,
@@ -261,7 +270,9 @@ export async function runPdfExport({
 }: RunPdfExportOptions): Promise<void> {
   // Генераторы книги разбирают HTML через DOMParser — без DOM (приложения) книга не собирается.
   if (typeof DOMParser === 'undefined') {
-    Alert.alert(
+    printSession.cancel();
+    notify(
+      'info',
       i18nT('export:hooks.usePdfExportRuntime.nedostupno_33f2b2de'),
       i18nT('export:hooks.usePdfExportRuntime.prosmotr_knigi_i_pechat_dostupny_tolko_v_veb_8f59a809'),
     );
@@ -276,7 +287,7 @@ export async function runPdfExport({
   try {
     updateProgress(ExportStage.VALIDATING, 2, i18nT('export:hooks.usePdfExportRuntime.proverka_dannyh_59cc6efe'), [i18nT('export:hooks.usePdfExportRuntime.proverka_puteshestviy_aee0e81c')]);
 
-    if (await tryServerBookExport(selected, settings, updateProgress)) {
+    if (await tryServerBookExport(selected, settings, printSession, updateProgress)) {
       const elapsedTime = Math.round((Date.now() - startTime) / 1000);
       if (isMountedRef.current) {
         updateProgress(ExportStage.COMPLETE, 100, i18nT('export:hooks.usePdfExportRuntime.gotovo_value1_sek_32520275', { value1: elapsedTime }), [i18nT('export:hooks.usePdfExportRuntime.dokument_sozdan_67abc478')]);
@@ -287,13 +298,15 @@ export async function runPdfExport({
     const htmlService = await getBookHtmlExportService();
 
     if (!isMountedRef.current) {
-      Alert.alert(i18nT('export:hooks.usePdfExportRuntime.oshibka_488ce4fc'), i18nT('export:hooks.usePdfExportRuntime.predprosmotr_knigi_nedostupen_7f86d03a'));
+      printSession.cancel();
+      notify('error', i18nT('export:hooks.usePdfExportRuntime.oshibka_488ce4fc'), i18nT('export:hooks.usePdfExportRuntime.predprosmotr_knigi_nedostupen_7f86d03a'));
       return;
     }
 
     const travelsForExport = await loadDetailedTravels(selected, settings, config, travelCacheRef, updateProgress);
     if (!travelsForExport.length) {
-      Alert.alert(i18nT('export:hooks.usePdfExportRuntime.vnimanie_9c60f2f4'), i18nT('export:hooks.usePdfExportRuntime.vyberite_hotya_by_odno_puteshestvie_dlya_eks_f99df420'));
+      printSession.cancel();
+      notify('info', i18nT('export:hooks.usePdfExportRuntime.vnimanie_9c60f2f4'), i18nT('export:hooks.usePdfExportRuntime.vyberite_hotya_by_odno_puteshestvie_dlya_eks_f99df420'));
       return;
     }
 
@@ -324,7 +337,11 @@ export async function runPdfExport({
       i18nT('export:hooks.usePdfExportRuntime.finalizatsiya_dokumenta_bd98e906'),
     ]);
 
-    await openBookPreview(html);
+    const printResult = await printSession.print(html, { title: settings.title });
+    if (printResult !== 'printed') {
+      notifyPrintResult(printResult);
+      return;
+    }
 
     const elapsedTime = Math.round((Date.now() - startTime) / 1000);
 
@@ -332,10 +349,11 @@ export async function runPdfExport({
       updateProgress(ExportStage.COMPLETE, 100, i18nT('export:hooks.usePdfExportRuntime.gotovo_value1_sek_32520275', { value1: elapsedTime }), [i18nT('export:hooks.usePdfExportRuntime.dokument_sozdan_67abc478')]);
     }
   } catch (err) {
+    printSession.cancel();
     const error = err instanceof Error ? err : new Error(String(err));
     if (isMountedRef.current) {
       setError(error);
-      Alert.alert(i18nT('export:hooks.usePdfExportRuntime.oshibka_488ce4fc'), error.message);
+      notify('error', i18nT('export:hooks.usePdfExportRuntime.oshibka_488ce4fc'), error.message);
       setCurrentStage(ExportStage.ERROR);
     }
   } finally {

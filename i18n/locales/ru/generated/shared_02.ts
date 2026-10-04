@@ -293,7 +293,6 @@ export const sharedGenerated2 = {
   "utils.travelFaq.value1_dnya_7827b4d5": "{{value1}} дня",
   "utils.travelRouteDownload.sohranit_fayl_marshruta_7edbd35d": "Сохранить файл маршрута",
   "utils.openBookPreviewWindow.title": "Готовим печатную версию…",
-  "utils.openBookPreviewWindow.status": "Готовим печатную версию карты…",
   "utils.travelTextLossGuard.otmena_d5b1e3ab": "Отмена",
   "utils.travelTextLossGuard.sohranit_6bb2a5f7": "Сохранить",
   "utils.travelTextLossGuard.udalenie_teksta_a462d4b0": "Удаление текста",

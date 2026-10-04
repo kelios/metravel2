@@ -4,7 +4,11 @@
 // «Печать» в самом документе. Среди файлов печати, которые проверяет
 // governance-тест (__tests__/config/print-governance.test.ts), это единственный
 // владелец window.print; QuestFullMap.tsx и BookHtmlExportService.ts — вне его scope.
-import { openBookPreviewWindow, openPendingBookPreviewWindow } from '@/utils/openBookPreviewWindow'
+import {
+  discardPendingBookPreviewWindow,
+  openBookPreviewWindow,
+  openPendingBookPreviewWindow,
+} from '@/utils/openBookPreviewWindow'
 import type { PrintOptions, PrintResult, PrintSession } from './printHtml.types'
 
 export type { PrintOptions, PrintResult, PrintSession } from './printHtml.types'
@@ -30,12 +34,25 @@ export function isPrintAvailable(): boolean {
 /** Открывает окно синхронно — вызывать до первого await в обработчике клика. */
 export function beginPrint(): PrintSession {
   const win = typeof window !== 'undefined' && typeof window.open === 'function' ? openPendingBookPreviewWindow() : null
+  let settled = false
   return {
     available: win != null,
     print: async (html: string, _options?: PrintOptions): Promise<PrintResult> => {
       if (!win) return 'unavailable'
+      if (settled) return 'cancelled'
+      settled = true
+      // Окно закрыл сам пользователь, пока документ собирался, — это отмена, а не сбой.
+      if (win.closed) {
+        discardPendingBookPreviewWindow(win)
+        return 'cancelled'
+      }
       openBookPreviewWindow(withPrintActionHandler(html), win)
       return 'printed'
+    },
+    cancel: () => {
+      if (!win || settled) return
+      settled = true
+      discardPendingBookPreviewWindow(win)
     },
   }
 }

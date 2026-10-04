@@ -43,16 +43,28 @@ type PrintableProps = {
  * Генерирует подарочную HTML-версию квеста для печати.
  * Включает: обложку, карту, шаги с QR-кодами навигации, QR на сайт.
  */
-export async function generatePrintableQuest({ title, steps, intro, coverUrl, questUrl, finaleText, closeLoop }: PrintableProps): Promise<PrintResult> {
+export async function generatePrintableQuest(props: PrintableProps): Promise<PrintResult> {
+    // Окно печати на web резервируется до первого await (попап-блокер).
+    const printSession = beginPrint();
+    // Окно заблокировано / модуля нет — выходим до canvas-карты и тайлов.
+    if (!printSession.available) return 'unavailable';
+    let html: string;
+    try {
+        html = await buildPrintableQuestHtml(props);
+    } catch (error) {
+        // #2125: документ не собрался — заглушка «Готовим печатную версию…» не остаётся висеть.
+        printSession.cancel();
+        throw error;
+    }
+    return printSession.print(html, { title: props.title });
+}
+
+async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl, finaleText, closeLoop }: PrintableProps): Promise<string> {
     const validSteps = steps.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng) && (s.lat !== 0 || s.lng !== 0));
     const mapPoints = buildPrintableMapPoints(validSteps);
     const coverImageUri = resolveStepImageUri(coverUrl);
     const coverLead = extractCoverLead(intro?.story);
     const siteQr = questUrl ? qrUrl(questUrl, QR_SITE) : '';
-    // Окно печати на web резервируется до первого await (попап-блокер).
-    const printSession = beginPrint();
-    // Окно заблокировано / модуля нет — выходим до canvas-карты и тайлов.
-    if (!printSession.available) return 'unavailable';
     const mapCanvasDataUrl = await buildPrintableCanvasMapDataUrl(mapPoints, closeLoop);
     const mapStaticUrl = mapCanvasDataUrl || await buildPrintableLeafletMapDataUrl(mapPoints, closeLoop);
     const mapSvg = buildPrintableMapSvg(mapPoints, closeLoop);
@@ -338,5 +350,5 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
 </body>
 </html>`;
 
-    return printSession.print(html, { title });
+    return html;
 }

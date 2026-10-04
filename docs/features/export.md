@@ -97,10 +97,31 @@ premium-настройки обязан быть явный free-фолбэк**,
 - **разметка не зависит от платформы**: `isPrintAvailable()` на web всегда true
   (не смотрит на `window`), поэтому кнопки печати одинаковы в SSG и после гидрации;
 - строка `common:print.unavailable` — ошибка «печать недоступна»;
+- **книга резервирует окно в одном месте (#2125)**: все входы (каталог
+  `ListTravelExportControls`, «Предпросмотр PDF» одного путешествия через
+  `ShareButtonsPdfExportBridge`/`useSingleTravelExport`) сходятся в
+  `usePdfExport.openPrintBook`, который первой строкой зовёт `beginPrint()` и
+  передаёт сессию в `runPdfExport({ printSession })`. Окно заблокировано — тост
+  `common:print.unavailable` и выход до аналитики, рантайма, серверного экспорта,
+  загрузки деталей и генерации. Серверный HTML и клиентская книга печатаются через
+  `printSession.print(html, { title })`; серверный файл-артефакт скачивается, и окно
+  закрывается;
+- **`PrintSession.cancel()` (#2125)**: документ печататься не будет (ошибка сборки,
+  нечего печатать, ранний выход, сервер отдал файл) — вызывающий закрывает
+  зарезервированное окно, заглушка «Готовим печатную версию…» не остаётся висеть.
+  Web закрывает только окно-заглушку (окно с записанным документом не трогает,
+  повторный вызов безопасен), native — без эффекта. План и квест зовут `cancel()` в
+  `catch` сборки документа и пробрасывают ошибку. Окно, закрытое пользователем во
+  время сборки, даёт `'cancelled'` без записи;
+- **сообщения печати и экспорта — `showToast`** (`@/utils/toast`, `position:
+  'bottom'`), не `Alert.alert`: в react-native-web он пустая функция, и сообщение на
+  сайте терялось (#2125);
 - **гвард** `__tests__/config/print-governance.test.ts`: в файлах печати
   (`components/**/print/**`, `components/quests/printable/**`, `QuestPrintable.tsx`,
   `ListTravelExportControls.tsx`, `hooks/usePdfExport*.ts`) запрещены `window.print`
-  и `Platform.OS !== 'web'`.
+  и `Platform.OS !== 'web'`; **гвард** `__tests__/config/web-alert-governance.test.ts`:
+  в файлах печати и экспорта `Alert.alert` запрещён, по всему коду — ратчет
+  BASELINE (сокращается до пустого в #2127).
 
 Картинки на native: печатные HTML используют абсолютные https-URL (первопартийные —
 через image-proxy `printImageUrl`). `printAsync` на iOS грузит их через WKWebView и

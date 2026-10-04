@@ -119,11 +119,18 @@ describe('printHtml.native', () => {
     await expect(native().beginPrint().print('<p>x</p>')).resolves.toBe('printed')
     expect(mockPrintAsync).toHaveBeenCalledWith({ html: '<p>x</p>' })
   })
+
+  it('#2125: cancel на native — без эффекта, печать после него работает', async () => {
+    const session = native().beginPrint()
+    expect(() => session.cancel()).not.toThrow()
+    await expect(session.print('<p>x</p>')).resolves.toBe('printed')
+  })
 })
 
 describe('printHtml.web', () => {
   const openPending = jest.fn()
   const openWindow = jest.fn()
+  const discardWindow = jest.fn()
 
   beforeEach(() => {
     jest.resetModules()
@@ -131,6 +138,7 @@ describe('printHtml.web', () => {
     jest.doMock('@/utils/openBookPreviewWindow', () => ({
       openPendingBookPreviewWindow: (...a: unknown[]) => openPending(...a),
       openBookPreviewWindow: (...a: unknown[]) => openWindow(...a),
+      discardPendingBookPreviewWindow: (...a: unknown[]) => discardWindow(...a),
     }))
     ;(global as unknown as { window: unknown }).window = { open: jest.fn() }
   })
@@ -165,6 +173,45 @@ describe('printHtml.web', () => {
     expect(web().beginPrint().available).toBe(false)
     await expect(web().printHtml('<p>x</p>')).resolves.toBe('unavailable')
     expect(openWindow).not.toHaveBeenCalled()
+  })
+
+  it('#2125: cancel до печати закрывает заглушку; печать после cancel ничего не пишет', async () => {
+    const win = { closed: false }
+    openPending.mockReturnValue(win)
+
+    const session = web().beginPrint()
+    session.cancel()
+    session.cancel()
+    expect(discardWindow).toHaveBeenCalledTimes(1)
+    expect(discardWindow).toHaveBeenCalledWith(win)
+    await expect(session.print('<p>x</p>')).resolves.toBe('cancelled')
+    expect(openWindow).not.toHaveBeenCalled()
+  })
+
+  it('#2125: cancel после печати не трогает окно с документом', async () => {
+    openPending.mockReturnValue({ closed: false })
+
+    const session = web().beginPrint()
+    await expect(session.print('<p>x</p>')).resolves.toBe('printed')
+    session.cancel()
+    expect(discardWindow).not.toHaveBeenCalled()
+  })
+
+  it('#2125: окно закрыто пользователем во время сборки — cancelled, документ не пишется', async () => {
+    const win = { closed: false }
+    openPending.mockReturnValue(win)
+
+    const session = web().beginPrint()
+    win.closed = true
+    await expect(session.print('<p>x</p>')).resolves.toBe('cancelled')
+    expect(openWindow).not.toHaveBeenCalled()
+    expect(discardWindow).toHaveBeenCalledWith(win)
+  })
+
+  it('#2125: окна нет — cancel без эффекта', () => {
+    openPending.mockReturnValue(null)
+    web().beginPrint().cancel()
+    expect(discardWindow).not.toHaveBeenCalled()
   })
 
   it('isPrintAvailable не зависит от window — разметка не меняется между SSG и гидрацией', () => {

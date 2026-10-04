@@ -64,13 +64,20 @@ export async function printTripPlan(trip: PlannedTrip): Promise<PrintResult> {
   const session = beginPrint()
   // Окно заблокировано / модуля нет — выходим до чеклиста, чанка карт и тайлов.
   if (!session.available) return 'unavailable'
-  const gear = await loadGear(trip)
-  const model = buildTripPlanPrintModel(trip, gear)
-  const maps = await renderDayMaps(model)
-  const html = buildTripPlanPrintHtml(model, {
-    maps,
-    pageUrl: buildTripPlanUrl(trip),
-    printedAt: new Date(),
-  })
+  let html: string
+  try {
+    const gear = await loadGear(trip)
+    const model = buildTripPlanPrintModel(trip, gear)
+    const maps = await renderDayMaps(model)
+    html = buildTripPlanPrintHtml(model, {
+      maps,
+      pageUrl: buildTripPlanUrl(trip),
+      printedAt: new Date(),
+    })
+  } catch (error) {
+    // #2125: документ не собрался — заглушка «Готовим печатную версию…» не остаётся висеть.
+    session.cancel()
+    throw error
+  }
   return session.print(html, { title: trip.title })
 }

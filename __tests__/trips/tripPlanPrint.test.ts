@@ -4,13 +4,19 @@ import { fetchTripGear, type TripGearItem } from '@/api/plannedTripsGear'
 import { buildTripPlanPrintModel } from '@/components/trips/planning/print/tripPlanPrintModel'
 import { buildTripPlanPrintHtml } from '@/components/trips/planning/print/tripPlanPrintHtml'
 import { printTripPlan } from '@/components/trips/planning/print/printTripPlan'
-import { openBookPreviewWindow, openPendingBookPreviewWindow } from '@/utils/openBookPreviewWindow'
+import {
+  discardPendingBookPreviewWindow,
+  openBookPreviewWindow,
+  openPendingBookPreviewWindow,
+} from '@/utils/openBookPreviewWindow'
+import * as tripPlanPrintHtml from '@/components/trips/planning/print/tripPlanPrintHtml'
 
 // Jest резолвит printHtml в native-адаптер; окно браузера — web-адаптер.
 jest.mock('@/utils/printHtml', () => jest.requireActual('@/utils/printHtml.web'))
 jest.mock('@/utils/openBookPreviewWindow', () => ({
   openPendingBookPreviewWindow: jest.fn(() => ({})),
   openBookPreviewWindow: jest.fn(),
+  discardPendingBookPreviewWindow: jest.fn(),
 }))
 jest.mock('@/api/plannedTripsGear', () => ({
   ...jest.requireActual('@/api/plannedTripsGear'),
@@ -231,6 +237,19 @@ describe('printTripPlan', () => {
     await expect(printTripPlan(trip(loopRoute()))).resolves.toBe('unavailable')
     expect(fetchTripGear).not.toHaveBeenCalled()
     expect(openBookPreviewWindow).not.toHaveBeenCalled()
+  })
+
+  it('#2125: сборка документа упала после резерва — окно-заглушка закрывается, ошибка уходит вызывающему', async () => {
+    const win = { closed: false }
+    ;(openPendingBookPreviewWindow as jest.Mock).mockReturnValueOnce(win)
+    const spy = jest.spyOn(tripPlanPrintHtml, 'buildTripPlanPrintHtml').mockImplementationOnce(() => {
+      throw new Error('build failed')
+    })
+
+    await expect(printTripPlan(trip(loopRoute()))).rejects.toThrow('build failed')
+    expect(discardPendingBookPreviewWindow).toHaveBeenCalledWith(win)
+    expect(openBookPreviewWindow).not.toHaveBeenCalled()
+    spy.mockRestore()
   })
 
   it('чеклист не запрашивается у того, кому он закрыт', async () => {
