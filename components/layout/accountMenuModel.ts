@@ -9,6 +9,7 @@ import { translate as i18nT } from '@/i18n'
 // меню шапки (CustomHeaderMobileMenu). Раньше каждый рендерер держал свой
 // список, и мобильный дрейфовал: «Борд задач» админа, «Подписки» и «Публичный
 // профиль» попали только в desktop (#2139). Рендереры отвечают лишь за вид.
+// Ролевые пункты (`buildAccountRoleEntries`) берёт и лист «Ещё» дока (#2152).
 
 export const TASK_BOARD_URL = 'https://metravel.by/board'
 
@@ -100,6 +101,25 @@ const buildTravelEntries = (): AccountMenuEntry[] => [
   },
 ]
 
+/**
+ * Ролевые пункты аккаунта — единственное место, где роль становится пунктом
+ * меню. Их обязана показывать КАЖДАЯ поверхность меню: desktop, гамбургер шапки
+ * и лист «Ещё» нижнего дока (#2152: после #2100 гамбургера на вложенных экранах
+ * нет, и «Борд задач» админа пропал). Состав поверхностей сверяет jest-guard
+ * `accountMenuModel.roleSurfaces.test.tsx`.
+ */
+export const buildAccountRoleEntries = ({ isSuperuser }: Pick<AccountMenuInput, 'isSuperuser'>): AccountMenuEntry[] =>
+  isSuperuser
+    ? [
+        {
+          key: 'task-board',
+          title: i18nT('navigation:components.layout.AccountMenu.bord_zadach_c032c12d'),
+          icon: 'trello',
+          target: { kind: 'external', url: TASK_BOARD_URL },
+        },
+      ]
+    : []
+
 const buildAccountEntries = ({
   surface,
   platform,
@@ -148,14 +168,7 @@ const buildAccountEntries = ({
     })
   }
 
-  if (isSuperuser) {
-    entries.push({
-      key: 'task-board',
-      title: i18nT('navigation:components.layout.AccountMenu.bord_zadach_c032c12d'),
-      icon: 'trello',
-      target: { kind: 'external', url: TASK_BOARD_URL },
-    })
-  }
+  entries.push(...buildAccountRoleEntries({ isSuperuser }))
 
   entries.push({
     key: 'logout',

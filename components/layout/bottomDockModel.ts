@@ -3,6 +3,7 @@ import type { Href } from 'expo-router'
 import { BOTTOM_DOCK_ROUTES } from '@/constants/bottomDockRoutes'
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import { translate as i18nT } from '@/i18n'
+import type { AccountMenuTarget } from './accountMenuModel'
 
 
 /**
@@ -32,6 +33,8 @@ export type BottomDockMoreMenuItem = {
   muted?: boolean
   /** Пункт-действие вместо перехода (#2100: «Язык интерфейса» открывает лист выбора). */
   action?: 'language'
+  /** Пункт аккаунта (#2152): цель исполняет общий `runAccountMenuTarget`, как в меню шапки. */
+  accountTarget?: AccountMenuTarget
   route?: Href
 }
 

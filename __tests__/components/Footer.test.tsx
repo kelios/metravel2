@@ -3,6 +3,11 @@ import Footer from '@/components/layout/Footer'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { SITE_OWNER_LEGAL_NAME } from '@/constants/legal'
 
+// Док читает роль для ролевых пунктов листа «Ещё» (#2152).
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({ isSuperuser: false, logout: jest.fn() }),
+}))
+
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () =>
     (global as any).__mockResponsive ?? {

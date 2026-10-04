@@ -4,7 +4,8 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { translate as i18nT } from '@/i18n'
-import { BOTTOM_DOCK_MORE_MENU_SECTIONS, type BottomDockMoreMenuItem } from './bottomDockModel'
+import type { BottomDockMoreMenuItem } from './bottomDockModel'
+import { buildBottomDockMoreSections } from './bottomDockMoreSections'
 import LanguageOptionList from './LanguageOptionList'
 
 type MoreListStyles = {
@@ -18,6 +19,8 @@ type MoreListStyles = {
 type Props = {
   styles: MoreListStyles
   iconColor: string
+  /** Ролевые пункты аккаунта в листе (#2152) — из общей модели меню аккаунта. */
+  isSuperuser?: boolean
   /** Какие пункты показывает эта ветка листа (web / native Modal / Gorhom). */
   itemFilter: (item: BottomDockMoreMenuItem) => boolean
   /** Рендер пункта-перехода; `openLanguage` — для пункта-действия «Язык интерфейса». */
@@ -33,7 +36,7 @@ type Props = {
  * Modal поверх закрывающегося на iOS UIKit не показывает (Fabric
  * `RCTModalHostViewComponentView` не ждёт закрытия первого).
  */
-function BottomDockMoreList({ styles, iconColor, itemFilter, renderItem, onClose, testID }: Props) {
+function BottomDockMoreList({ styles, iconColor, isSuperuser, itemFilter, renderItem, onClose, testID }: Props) {
   const [view, setView] = useState<'menu' | 'language'>('menu')
   const openLanguage = useCallback(() => setView('language'), [])
   const handleLanguageChosen = useCallback(() => {
@@ -63,12 +66,15 @@ function BottomDockMoreList({ styles, iconColor, itemFilter, renderItem, onClose
           <LanguageOptionList onChosen={handleLanguageChosen} testIDPrefix="more-language-option" />
         </>
       ) : (
-        BOTTOM_DOCK_MORE_MENU_SECTIONS.map((section, sectionIndex) => (
-          <React.Fragment key={section.key}>
-            {section.items.filter(itemFilter).map((item) => renderItem(item, openLanguage))}
-            {sectionIndex < BOTTOM_DOCK_MORE_MENU_SECTIONS.length - 1 ? <View style={styles.moreDivider} /> : null}
-          </React.Fragment>
-        ))
+        buildBottomDockMoreSections({ isSuperuser })
+          .map((section) => ({ key: section.key, items: section.items.filter(itemFilter) }))
+          .filter((section) => section.items.length > 0)
+          .map((section, sectionIndex, sections) => (
+            <React.Fragment key={section.key}>
+              {section.items.map((item) => renderItem(item, openLanguage))}
+              {sectionIndex < sections.length - 1 ? <View style={styles.moreDivider} /> : null}
+            </React.Fragment>
+          ))
       )}
     </ScrollView>
   )

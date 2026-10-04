@@ -31,6 +31,9 @@ import {
   normalizeBottomDockActivePath,
 } from "./bottomDockModel";
 import { isNavRouteAvailable } from "@/constants/platformNavRoutes";
+import { useAuth } from "@/context/AuthContext";
+import { runAccountMenuTarget } from "./accountMenuModel";
+import { handleHeaderNavPress } from "./customHeaderNavModel";
 import { translate as i18nT } from '@/i18n'
 
 
@@ -156,6 +159,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   const colors = useThemedColors();
   const router = useRouter();
   const pathname = usePathname();
+  const { isSuperuser, logout } = useAuth();
   const insets = useSafeAreaInsets();
   useFocusTrap(webMoreSheetRef, { enabled: showMore && Platform.OS === 'web' });
 
@@ -288,6 +292,26 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             openLanguage();
             return;
           }
+          // #2152: ролевой пункт аккаунта — общий исполнитель целей меню шапки.
+          if (item.accountTarget) {
+            runAccountMenuTarget(item.accountTarget, 'mobile', {
+              navigate: (path) => {
+                closeMenu();
+                router.push(path as any);
+              },
+              // Вкладка открывается в том же тапе, до закрытия листа: отложенный
+              // window.open iOS Safari молча блокирует (#2139).
+              openExternal: (url) => {
+                handleHeaderNavPress(router, url, true);
+                closeMenu();
+              },
+              logout: () => {
+                closeMenu();
+                void logout();
+              },
+            });
+            return;
+          }
           closeMenu();
           const route = Platform.OS !== 'web' && item.route === '/articles'
             ? buildArticlesHrefFromSource(pathname)
@@ -315,7 +339,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
         </Text>
       </Pressable>
     ),
-    [colors.primary, colors.textMuted, pathname, router, styles.moreItem, styles.moreItemIcon, styles.moreItemText, styles.moreItemTextMuted]
+    [colors.primary, colors.textMuted, logout, pathname, router, styles.moreItem, styles.moreItemIcon, styles.moreItemText, styles.moreItemTextMuted]
   );
 
   if (!isMobile) return null;
@@ -408,6 +432,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             <BottomDockMoreList
               styles={styles}
               iconColor={colors.primary}
+              isSuperuser={isSuperuser}
               itemFilter={(item) => item.route !== '/privacy' && item.route !== '/cookies'}
               renderItem={(item, openLanguage) => renderMoreMenuItem(item, () => setShowMore(false), openLanguage)}
               onClose={() => setShowMore(false)}
@@ -449,6 +474,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
               <BottomDockMoreList
                 styles={styles}
                 iconColor={colors.primary}
+                isSuperuser={isSuperuser}
                 // Настройки cookies (#2135) и PDF-экспорт (#495) — только web: общая политика.
                 itemFilter={(item) => item.route !== '/privacy' && isNavRouteAvailable(item.route)}
                 renderItem={(item, openLanguage) => renderMoreMenuItem(item, () => setShowMore(false), openLanguage)}
@@ -484,6 +510,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
               <BottomDockMoreList
                 styles={styles}
                 iconColor={colors.primary}
+                isSuperuser={isSuperuser}
                 // Настройки cookies (#2135) и PDF-экспорт (#495) — только web: общая политика.
                 itemFilter={(item) => (Platform.OS === 'web' || item.route !== '/privacy') && isNavRouteAvailable(item.route)}
                 renderItem={(item, openLanguage) => renderMoreMenuItem(item, () => nativeSheetRef.current?.close(), openLanguage)}
