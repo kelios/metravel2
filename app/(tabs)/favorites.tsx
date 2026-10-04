@@ -29,6 +29,7 @@ import ContributionBanner from '@/components/common/ContributionBanner';
 import { translate as i18nT } from '@/i18n'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { refreshFavoritesFromServer } from '@/hooks/useFavoritesData';
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 
 export default function FavoritesScreen() {
@@ -169,7 +170,7 @@ export default function FavoritesScreen() {
     );
 
     const { isPhone, isLargePhone, isTablet: isTabletSize, isDesktop: isDesktopSize, isPortrait } = useResponsive();
-    const isMobileDevice = isPhone || isLargePhone || (isTabletSize && isPortrait);
+    const isMobileDevice = isPhoneLayout({ width, isPhone, isLargePhone }) || (isTabletSize && isPortrait);
     const isCardsSingleColumn = (width || 0) < BREAKPOINTS.MOBILE;
 
     const gapSize = (width || 0) < BREAKPOINTS.XS ? 6

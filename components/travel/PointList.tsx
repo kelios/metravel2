@@ -31,6 +31,7 @@ import {
   usePointListResponsiveModel,
 } from '@/components/travel/hooks/usePointListResponsiveModel';
 import { createPointListStyles } from '@/components/travel/PointList.styles';
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 type Point = {
   id: string;
@@ -183,7 +184,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, baseTravelId, tr
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
   const safePoints = useMemo(() => (Array.isArray(points) ? points : []), [points]);
   const { width, isPhone, isLargePhone, isTablet } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
+  const isMobile = isPhoneLayout({ width, isPhone, isLargePhone });
   const isLargeDesktop = width >= 1440;
   const isWebGrid = Platform.OS === 'web' && !isMobile;
   const {

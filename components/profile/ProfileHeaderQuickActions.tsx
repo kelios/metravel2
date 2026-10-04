@@ -7,6 +7,8 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { translate as i18nT } from '@/i18n'
 
 
+const DENSE_GAP = 2;
+
 export type ProfileHeaderActionKey = 'messages' | 'trips' | 'userpoints' | 'calendar' | 'newTravel';
 
 export interface ProfileHeaderQuickActionsProps {
@@ -16,6 +18,11 @@ export interface ProfileHeaderQuickActionsProps {
   overlay?: boolean;
   /** Компактный режим для мобильного оверлея: icon-only, подпись — в a11y-label. */
   compact?: boolean;
+  /**
+   * Плотная полоса узкой шапки (< 360, #2141): зазоры и поля подложки 2 вместо 4,
+   * чтобы пять чипов на 320 оставались ≥ 44 px шириной.
+   */
+  dense?: boolean;
 }
 
 // Семантический тон на каждое действие — разбивает монотонный «весь зелёный»
@@ -76,6 +83,7 @@ export function ProfileHeaderQuickActions({
   unreadMessagesCount = 0,
   overlay = false,
   compact = false,
+  dense = false,
 }: ProfileHeaderQuickActionsProps) {
   const colors = useThemedColors();
   const items = createQuickActionItems();
@@ -96,7 +104,7 @@ export function ProfileHeaderQuickActions({
       StyleSheet.create({
         row: {
           flexDirection: 'row',
-          gap: overlay ? DESIGN_TOKENS.spacing.xxs : DESIGN_TOKENS.spacing.xs,
+          gap: dense ? DENSE_GAP : overlay ? DESIGN_TOKENS.spacing.xxs : DESIGN_TOKENS.spacing.xs,
           paddingHorizontal: overlay ? 0 : DESIGN_TOKENS.spacing.md,
           marginBottom: overlay ? 0 : DESIGN_TOKENS.spacing.sm,
           // На desktop-оверлее чипы не растягиваем на всю ширину баннера (иначе
@@ -106,7 +114,7 @@ export function ProfileHeaderQuickActions({
           ...(overlay
             ? {
                 borderRadius: DESIGN_TOKENS.radii.pill,
-                padding: 4,
+                padding: dense ? DENSE_GAP : 4,
                 // Frost-подложка под чипами: контраст поверх любого фото-кадра,
                 // но кадр остаётся видимым (узкая полоса у нижней кромки).
                 backgroundColor: colors.surfaceMuted,
@@ -177,7 +185,7 @@ export function ProfileHeaderQuickActions({
           color: colors.textOnDark,
         },
       }),
-    [colors, overlay, compact]
+    [colors, overlay, compact, dense]
   );
 
   return (

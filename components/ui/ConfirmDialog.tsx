@@ -9,6 +9,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { translate as i18nT } from '@/i18n'
 import { webAccessibilityProps } from '@/utils/webProps'
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 
 type ConfirmDialogProps = {
@@ -42,8 +43,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     const escapeOwnerRef = useRef({});
     const onCloseRef = useRef(onClose);
     onCloseRef.current = onClose;
-    const { isPhone, isLargePhone } = useResponsive();
-    const isMobile = isPhone || isLargePhone;
+    const { width, isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhoneLayout({ width, isPhone, isLargePhone });
     const colors = useThemedColors();
 
     // ✅ УЛУЧШЕНИЕ: Динамические стили в зависимости от темы

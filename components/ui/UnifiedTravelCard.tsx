@@ -24,6 +24,7 @@ import {
   CARD_TOP_SLOT_Z_INDEX,
   CARD_HOVER_LIFT_TRANSFORM,
 } from '@/components/ui/unifiedTravelCardTokens'
+import { isPhoneLayout } from '@/utils/phoneLayout'
 
 
 const MAP_PIN_ICON_STYLE = { marginRight: 4 } as const;
@@ -172,8 +173,8 @@ function UnifiedTravelCard({
   const [isFocused, setIsFocused] = useState(false);
   const isFeatured = visualVariant === 'featured';
   const enableWebHoverEffects = isWeb && webHoverScale;
-  const { isPhone, isLargePhone } = useBreakpoints();
-  const isMobileDevice = isPhone || isLargePhone;
+  const { width: viewportWidth, isPhone, isLargePhone } = useBreakpoints();
+  const isMobileDevice = isPhoneLayout({ width: viewportWidth, isPhone, isLargePhone });
   const cardActionLabel = i18nT('shared:components.ui.UnifiedTravelCard.otkryt_marshrut_value1_12fea2fb', { value1: title });
   const mediaActionLabel = i18nT('shared:components.ui.UnifiedTravelCard.otkryt_foto_marshruta_value1_485b08c5', { value1: title });
 

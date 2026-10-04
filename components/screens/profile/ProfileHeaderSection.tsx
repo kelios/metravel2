@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
+import { resolveProfileHeaderLayout } from '@/components/profile/profileHeaderLayout';
+import { useResponsive } from '@/hooks/useResponsive';
 import type { ProfileHeaderActionKey } from '@/components/profile/ProfileHeaderQuickActions';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import Button from '@/components/ui/Button';
@@ -54,6 +56,11 @@ export function ProfileHeaderSection({
   handleClearActiveTab,
 }: ProfileHeaderSectionProps) {
   const colors = useThemedColors();
+  const { width } = useResponsive();
+  // Скелет повторяет геометрию шапки из того же слоя (#2141): обложка и кольцо
+  // аватара; быстрые действия живут в обложке, отдельного ряда нет.
+  const headerLayout = resolveProfileHeaderLayout(width);
+  const skeletonAvatar = headerLayout.avatarSize + headerLayout.avatarBorder * 2;
   // «Очистить» — разрушающее ВТОРОСТЕПЕННОЕ действие над списком вкладки.
   // Залитый `danger` делал его самым контрастным пятном экрана на телефоне
   // (#1670), поэтому здесь ghost без заливки и рамки: вес несёт только красная
@@ -75,20 +82,14 @@ export function ProfileHeaderSection({
     <View style={[styles.headerComponent, styles.fullRow]}>
       {profileLoading ? (
         <View style={styles.skeletonWrap}>
-          {/* Cover skeleton — matches photo banner hero with inline quick actions (132px) */}
-          <SkeletonLoader width="100%" height={132} borderRadius={0} />
-          {/* Identity row: avatar left (84 + 3*2 ring), name+status right */}
-          <View style={styles.skeletonIdentityRow}>
-            <SkeletonLoader width={90} height={90} borderRadius={45} />
-            <View style={styles.skeletonIdentityText}>
+          <SkeletonLoader width="100%" height={headerLayout.coverHeight} borderRadius={0} />
+          <View style={[styles.skeletonIdentityRow, { marginTop: -headerLayout.avatarOverlap }]}>
+            <SkeletonLoader width={skeletonAvatar} height={skeletonAvatar} borderRadius={skeletonAvatar / 2} />
+            <View style={[styles.skeletonIdentityText, { paddingTop: headerLayout.avatarOverlap }]}>
               <SkeletonLoader width={180} height={22} borderRadius={4} />
               <SkeletonLoader width={140} height={16} borderRadius={4} />
               <SkeletonLoader width={200} height={14} borderRadius={4} />
             </View>
-          </View>
-          {/* Quick actions row */}
-          <View style={styles.skeletonStatsRow}>
-            <SkeletonLoader width="100%" height={56} borderRadius={12} />
           </View>
           {/* Tabs */}
           <View style={styles.skeletonStatsRow}>

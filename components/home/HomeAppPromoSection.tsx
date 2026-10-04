@@ -10,6 +10,7 @@ import { sendAnalyticsEvent } from '@/utils/analytics'
 import { trackAppDownloadClicked } from '@/utils/growthFunnelAnalytics'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { translate as i18nT } from '@/i18n'
+import { isPhoneLayout } from '@/utils/phoneLayout'
 
 
 const IS_WEB = Platform.OS === 'web'
@@ -28,8 +29,8 @@ const HIGHLIGHTS: { icon: 'map-pin' | 'flag' | 'download'; text: string }[] = [
 // Промо установки Android-приложения — только на web (в самом приложении не показываем).
 function HomeAppPromoSection() {
   const colors = useThemedColors()
-  const { isPhone, isLargePhone } = useResponsive()
-  const isMobile = isPhone || isLargePhone
+  const { width, isPhone, isLargePhone } = useResponsive()
+  const isMobile = isPhoneLayout({ width, isPhone, isLargePhone })
   const [hovered, setHovered] = useState(false)
 
   const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile])

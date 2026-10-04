@@ -24,6 +24,7 @@ import { normalizeUpsertFilterDictionaries } from '@/api/filterDictionaries';
 import { parseTravelStatusDateParts, useTravelStatus, setTravelStatus } from '@/stores/travelStatusStore';
 import { useAuthStore } from '@/stores/authStore';
 import { translate as i18nT } from '@/i18n'
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 
 const MultiSelectFieldAny: any = MultiSelectField;
@@ -67,8 +68,8 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const userId = useAuthStore((state) => state.userId);
     const travelStatusEntries = useTravelStatus();
-    const { isPhone, isLargePhone } = useResponsive();
-    const isMobile = isPhone || isLargePhone;
+    const { width, isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhoneLayout({ width, isPhone, isLargePhone });
     const isLoading = !formData || !filters;
 
     const styles = useMemo(() => createStyles(colors), [colors]);

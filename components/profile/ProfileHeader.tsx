@@ -24,6 +24,10 @@ import {
   ProfileHeaderQuickActions,
   type ProfileHeaderActionKey,
 } from './ProfileHeaderQuickActions';
+import {
+  PROFILE_HEADER_NARROW_ACTIONS_BAND,
+  resolveProfileHeaderLayout,
+} from './profileHeaderLayout';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -52,12 +56,6 @@ const SOCIAL_ICONS: Record<string, React.ComponentProps<typeof Feather>['name']>
   vk: 'link',
 };
 
-const AVATAR_SIZE = 84;
-// Баннер выше на мобильном/desktop, чтобы вместить ряд быстрых действий как
-// оверлей у нижней кромки, не затеняя основной кадр фото (доминанта — фото).
-const COVER_HEIGHT = 132;
-const AVATAR_BORDER = 3;
-
 // Дефолтный бандл-арт обложки (горы+озеро+хайкер). Metro отдаёт jpg и на web,
 // и на native — статичный require даёт ImageSourcePropType (number).
 const DEFAULT_COVER_SOURCE = require('@/assets/images/profile-cover-default.jpg');
@@ -84,7 +82,10 @@ export function ProfileHeader({
 }: ProfileHeaderProps) {
   const colors = useThemedColors();
   const { isMobile, width } = useResponsive();
-  const useNarrowActionsRow = isMobile && width < 360;
+  // Геометрия обложки и аватара — общий слой (#2141): на экранах < 360
+  // быстрые действия уходят полосой к верхней кромке обложки.
+  const layout = resolveProfileHeaderLayout(width);
+  const { coverHeight, avatarSize, avatarBorder } = layout;
   const [defaultCoverFailed, setDefaultCoverFailed] = useState(false);
 
   const coverPhoto = useMemo(
@@ -132,13 +133,13 @@ export function ProfileHeader({
           paddingBottom: DESIGN_TOKENS.spacing.sm,
         },
         cover: {
-          height: COVER_HEIGHT,
+          height: coverHeight,
           backgroundColor: colors.surface,
           position: 'relative',
           overflow: 'hidden',
         },
         coverMediaLayer: {
-          height: COVER_HEIGHT,
+          height: coverHeight,
           width: '100%',
           position: 'relative',
           zIndex: 0,
@@ -159,11 +160,14 @@ export function ProfileHeader({
           left: DESIGN_TOKENS.spacing.md,
           right: DESIGN_TOKENS.spacing.md,
           bottom: DESIGN_TOKENS.spacing.xs,
-          paddingLeft: AVATAR_SIZE + AVATAR_BORDER * 2 + DESIGN_TOKENS.spacing.sm,
+          paddingLeft: avatarSize + avatarBorder * 2 + DESIGN_TOKENS.spacing.sm,
           zIndex: 3,
         },
-        narrowActions: {
-          paddingTop: DESIGN_TOKENS.spacing.xs,
+        // Узкая шапка: полоса действий у верхней кромки обложки, слева от «⋮».
+        narrowActionsBand: {
+          position: 'absolute',
+          ...PROFILE_HEADER_NARROW_ACTIONS_BAND,
+          zIndex: 3,
         },
         menuChip: {
           backgroundColor: colors.surfaceMuted,
@@ -175,12 +179,12 @@ export function ProfileHeader({
           alignItems: 'flex-start',
           gap: DESIGN_TOKENS.spacing.sm,
           paddingHorizontal: DESIGN_TOKENS.spacing.md,
-          marginTop: -(AVATAR_SIZE / 2 + AVATAR_BORDER),
+          marginTop: -layout.avatarOverlap,
         },
         avatarRing: {
-          width: AVATAR_SIZE + AVATAR_BORDER * 2,
-          height: AVATAR_SIZE + AVATAR_BORDER * 2,
-          borderRadius: (AVATAR_SIZE + AVATAR_BORDER * 2) / 2,
+          width: avatarSize + avatarBorder * 2,
+          height: avatarSize + avatarBorder * 2,
+          borderRadius: (avatarSize + avatarBorder * 2) / 2,
           backgroundColor: colors.background,
           alignItems: 'center',
           justifyContent: 'center',
@@ -196,9 +200,9 @@ export function ProfileHeader({
           }),
         },
         avatar: {
-          width: AVATAR_SIZE,
-          height: AVATAR_SIZE,
-          borderRadius: AVATAR_SIZE / 2,
+          width: avatarSize,
+          height: avatarSize,
+          borderRadius: avatarSize / 2,
           backgroundColor: colors.primaryLight,
           alignItems: 'center',
           justifyContent: 'center',
@@ -209,12 +213,12 @@ export function ProfileHeader({
           }),
         },
         avatarImage: {
-          width: AVATAR_SIZE,
-          height: AVATAR_SIZE,
-          borderRadius: AVATAR_SIZE / 2,
+          width: avatarSize,
+          height: avatarSize,
+          borderRadius: avatarSize / 2,
         },
         avatarPlaceholder: {
-          fontSize: 28,
+          fontSize: Math.round(avatarSize / 3),
           fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
           color: colors.primaryText,
           letterSpacing: 0,
@@ -224,7 +228,7 @@ export function ProfileHeader({
           bottom: 0,
           left: 0,
           right: 0,
-          height: AVATAR_SIZE * 0.3,
+          height: avatarSize * 0.3,
           backgroundColor: colors.overlay,
           alignItems: 'center',
           justifyContent: 'center',
@@ -233,7 +237,7 @@ export function ProfileHeader({
         infoColumn: {
           flex: 1,
           minWidth: 0,
-          paddingTop: AVATAR_SIZE / 2 + AVATAR_BORDER,
+          paddingTop: layout.avatarOverlap,
           gap: 3,
         },
         nameRow: {
@@ -286,7 +290,7 @@ export function ProfileHeader({
           }),
         },
       }),
-    [colors]
+    [colors, layout, avatarBorder, avatarSize, coverHeight]
   );
 
   return (
@@ -303,7 +307,7 @@ export function ProfileHeader({
             <ImageCardMedia
               src={coverPhoto}
               alt={i18nT('profile:components.profile.ProfileHeader.oblozhka_profilya_b2ecd31d')}
-              height={COVER_HEIGHT}
+              height={coverHeight}
               width="100%"
               borderRadius={0}
               fit="cover"
@@ -322,7 +326,7 @@ export function ProfileHeader({
             <ImageCardMedia
               source={DEFAULT_COVER_SOURCE}
               alt={i18nT('profile:components.profile.ProfileHeader.oblozhka_profilya_b2ecd31d')}
-              height={COVER_HEIGHT}
+              height={coverHeight}
               width="100%"
               borderRadius={0}
               fit="cover"
@@ -332,27 +336,30 @@ export function ProfileHeader({
             />
           </View>
         ) : (
-          <CoverTopoTexture height={COVER_HEIGHT} />
+          <CoverTopoTexture height={coverHeight} />
         )}
-        <CoverScrim coverHeight={COVER_HEIGHT} />
+        <CoverScrim coverHeight={coverHeight} />
         <View style={styles.topActions}>
           <View style={styles.menuChip}>
             <ProfileMenu onLogout={onLogout} onSettings={onEdit} />
           </View>
         </View>
-        {/* Быстрые действия встроены в нижнюю кромку баннера как оверлей поверх
-            фото. На мобильном — компактные icon-only чипы, чтобы шапка не
-            раздувалась (правило «Шапка ≤20% экрана»). */}
-        {!useNarrowActionsRow ? (
-          <View style={styles.overlayActions} testID="profile-header-quick-actions">
-            <ProfileHeaderQuickActions
-              onPress={onQuickAction}
-              unreadMessagesCount={unreadMessagesCount}
-              overlay
-              compact={isMobile}
-            />
-          </View>
-        ) : null}
+        {/* Быстрые действия встроены в баннер как оверлей поверх фото: у нижней
+            кромки рядом с аватаром, а на узком экране (< 360) — полосой у верхней
+            кромки, где им хватает ширины. На мобильном — компактные icon-only
+            чипы, чтобы шапка не раздувалась (правило «Шапка ≤20% экрана»). */}
+        <View
+          style={layout.narrow ? styles.narrowActionsBand : styles.overlayActions}
+          testID="profile-header-quick-actions"
+        >
+          <ProfileHeaderQuickActions
+            onPress={onQuickAction}
+            unreadMessagesCount={unreadMessagesCount}
+            overlay
+            compact={isMobile}
+            dense={layout.narrow}
+          />
+        </View>
       </View>
 
       {/* Identity: avatar left, info right */}
@@ -433,16 +440,6 @@ export function ProfileHeader({
           ) : null}
         </View>
       </View>
-
-      {useNarrowActionsRow ? (
-        <View style={styles.narrowActions} testID="profile-header-quick-actions">
-          <ProfileHeaderQuickActions
-            onPress={onQuickAction}
-            unreadMessagesCount={unreadMessagesCount}
-            compact
-          />
-        </View>
-      ) : null}
     </View>
   );
 }

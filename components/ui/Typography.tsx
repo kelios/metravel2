@@ -3,6 +3,7 @@ import { Platform, Text, type TextProps, type TextStyle } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 // ─── RESP-04: Fluid typography helper ────────────────────────────────────────
 // Возвращает размер шрифта адаптированный к текущему breakpoint
@@ -55,8 +56,8 @@ const HEADING_A11Y_ROLES: Record<HeadingLevel, 'header'> = { 1: 'header', 2: 'he
 export function Heading({ level = 2, color, align, style, ...props }: HeadingProps) {
   const colors = useThemedColors();
   const config = HEADING_CONFIG[level];
-  const { isPhone, isLargePhone, isTablet, isDesktop } = useResponsive();
-  const isMobile = Platform.OS !== 'web' || isPhone || isLargePhone;
+  const { width, isPhone, isLargePhone, isTablet, isDesktop } = useResponsive();
+  const isMobile = Platform.OS !== 'web' || isPhoneLayout({ width, isPhone, isLargePhone });
   const bp = { isMobile, isTablet: isTablet && !isMobile, isDesktop };
 
   const computedStyle = useMemo<TextStyle>(() => {

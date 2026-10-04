@@ -11,6 +11,7 @@ import { resolveTravelCityName } from '@/utils/travelDisplayLocation';
 import { translate as i18nT } from '@/i18n';
 
 import { createTabCardTemplate, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 const ICON_MARGIN_STYLE = { marginRight: 4 } as const;
 const VIEW_ICON_SIZE = Platform.OS === 'web' ? 13 : 12;
@@ -59,8 +60,8 @@ function TabTravelCard({
 }: Props) {
   // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
   const colors = useThemedColors();
-  const { isPhone, isLargePhone } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
+  const { width: viewportWidth, isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhoneLayout({ width: viewportWidth, isPhone, isLargePhone });
   const tabCardTemplate = useMemo(() => createTabCardTemplate(colors), [colors]);
   const styles = useMemo(() => createStyles(tabCardTemplate), [tabCardTemplate]);
   const resolvedWebTouchAction = useMemo(

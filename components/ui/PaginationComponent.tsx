@@ -16,6 +16,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 
 type Props = {
@@ -215,8 +216,8 @@ function PaginationComponent({
                                  bottomInset = 0,
                              }: Props) {
     const colors = useThemedColors(); // ✅ УЛУЧШЕНИЕ: Поддержка темной темы
-    const { isPhone, isLargePhone } = useResponsive();
-    const isMobile = isPhone || isLargePhone;
+    const { width, isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhoneLayout({ width, isPhone, isLargePhone });
     const isVerySmall = isMobile && !isLargePhone;
 
     // ✅ УЛУЧШЕНИЕ: Динамические стили в зависимости от темы

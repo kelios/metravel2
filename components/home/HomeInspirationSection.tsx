@@ -17,6 +17,7 @@ import { queryConfigs } from '@/utils/reactQueryConfig'
 import { createSectionStyles } from './homeInspirationStyles'
 import { translate as i18nT } from '@/i18n'
 import { getUserFriendlyError } from '@/utils/userFriendlyErrors'
+import { isPhoneLayout } from '@/utils/phoneLayout'
 
 
 type Styles = ReturnType<typeof createSectionStyles>
@@ -173,7 +174,7 @@ export function HomeInspirationSection({
   const router = useRouter()
   const colors = useThemedColors()
   const { isPhone, isLargePhone, width: viewportWidth } = useResponsive()
-  const isMobile = isPhone || isLargePhone
+  const isMobile = isPhoneLayout({ width: viewportWidth, isPhone, isLargePhone })
   const isRail = layout === 'rail'
   const [openingCatalog, setOpeningCatalog] = useState(false)
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)

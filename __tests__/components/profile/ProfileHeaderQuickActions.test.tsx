@@ -8,8 +8,15 @@ const mockImageCardMedia = jest.fn((_props: any) => {
   return <View testID="mock-image-card-media" />;
 });
 
+let mockViewportWidth = 1280;
+
 jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => ({ isMobile: false, isHydrated: true, width: 1280, height: 900 }),
+  useResponsive: () => ({
+    isMobile: mockViewportWidth < 768,
+    isHydrated: true,
+    width: mockViewportWidth,
+    height: 900,
+  }),
 }));
 
 jest.mock('@/hooks/useTheme', () => ({
@@ -34,6 +41,26 @@ const baseProps = {
 describe('ProfileHeader quick actions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockViewportWidth = 1280;
+  });
+
+  it('moves quick actions to the top band of a compact cover below 360 (#2141)', () => {
+    mockViewportWidth = 320;
+    const { getByTestId, getAllByTestId } = render(<ProfileHeader {...baseProps} />);
+
+    expect(getAllByTestId('profile-header-quick-actions')).toHaveLength(1);
+    const bandStyle = StyleSheet.flatten(getByTestId('profile-header-quick-actions').props.style) ?? {};
+    expect(bandStyle).toMatchObject({ position: 'absolute', top: 4 });
+    expect(mockImageCardMedia).toHaveBeenCalledWith(expect.objectContaining({ height: 88 }));
+  });
+
+  it('keeps quick actions at the bottom edge of the regular cover from 360 up', () => {
+    mockViewportWidth = 390;
+    const { getByTestId } = render(<ProfileHeader {...baseProps} />);
+
+    const overlayStyle = StyleSheet.flatten(getByTestId('profile-header-quick-actions').props.style) ?? {};
+    expect(overlayStyle).toMatchObject({ position: 'absolute', bottom: 8 });
+    expect(mockImageCardMedia).toHaveBeenCalledWith(expect.objectContaining({ height: 132 }));
   });
 
   it('renders the profile cover as a sharp image without blur backdrop', () => {

@@ -23,6 +23,7 @@ import BadgeMedal from '@/components/achievements/BadgeMedal'
 import BadgeDetailSheet, { type BadgeDetail } from '@/components/achievements/BadgeDetailSheet'
 import VerifiedBadge from '@/components/profile/VerifiedBadge'
 import { translate as i18nT } from '@/i18n'
+import { isPhoneLayout } from '@/utils/phoneLayout'
 
 
 const STRICT_PLACEHOLDER = /^[.\s·•]+$/
@@ -174,8 +175,8 @@ interface AuthorCardProps {
 
 function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
   const router = useRouter()
-  const { isPhone, isLargePhone, isTablet } = useResponsive()
-  const isMobile = isPhone || isLargePhone
+  const { width, isPhone, isLargePhone, isTablet } = useResponsive()
+  const isMobile = isPhoneLayout({ width, isPhone, isLargePhone })
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
 

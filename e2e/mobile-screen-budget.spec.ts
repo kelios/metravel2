@@ -101,6 +101,26 @@ test.describe('Mobile screen budget (#2094)', () => {
     })
   }
 
+  // #2141: узкий экран 320×640. До правки вкладки профиля шли desktop-веткой
+  // (по одной в строку, tablist 464 px), быстрые действия — отдельным рядом, и
+  // заголовок заглушки стоял на 909 px (прод 04.10.2026, зазор кнопки −497).
+  test('profile empty tab fits the first screen @ 320x640', async ({ page, baseURL }) => {
+    await ensureLiveSession(page, baseURL)
+    await page.setViewportSize({ width: 320, height: 640 })
+    await page.goto('/profile')
+    const publishedTab = page.getByRole('tab', { name: /Опубл/ }).first()
+    await expect(publishedTab, 'профиль открыт гостем — нет веб-сессии на этом origin').toBeVisible({ timeout: 60_000 })
+    await publishedTab.click()
+    const cta = page.locator('[data-testid="empty-state-action"]').first()
+    await expect(cta).toBeVisible()
+    const tablistHeight = await page.locator('[role="tablist"]').first().evaluate((el) => el.getBoundingClientRect().height)
+    const gap = await measureEmptyCtaDockGap(page)
+    console.log(`[mobile-screen-budget] profile-published-empty @ 320x640: tablistHeight=${Math.round(tablistHeight)} emptyCtaDockGap=${gap}`)
+    expect(tablistHeight, 'вкладки профиля одной строкой, а не столбиком').toBeLessThan(100)
+    expect(gap, 'низ кнопки заглушки над доком без прокрутки').not.toBeNull()
+    expect(gap as number).toBeGreaterThanOrEqual(0)
+  })
+
   // #2114: /trips/my без сдвигов при подгрузке данных — блок «Обновления по
   // поездкам» монтируется под устоявшимся списком, счётчики сегментов держат слот.
   // Прод до правки: 390 — 0,027; 800 — 0,035–0,045; 1024 — 0,045 (источник

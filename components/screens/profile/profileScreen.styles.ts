@@ -70,13 +70,11 @@ export const createProfileScreenStyles = ({
       alignItems: 'flex-start',
       gap: 12,
       paddingHorizontal: 16,
-      marginTop: -45,
       paddingBottom: 12,
     },
     skeletonIdentityText: {
       flex: 1,
       gap: 8,
-      paddingTop: 48,
     },
     skeletonStatsRow: {
       paddingHorizontal: 16,

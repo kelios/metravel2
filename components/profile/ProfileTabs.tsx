@@ -7,6 +7,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { translate as i18nT } from '@/i18n'
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 
 export type ProfileTabKey =
@@ -55,8 +56,8 @@ const TAB_ICONS: Record<ProfileTabKey, React.ComponentProps<typeof Feather>['nam
 
 export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: ProfileTabsProps) {
   const colors = useThemedColors();
-  const { isPhone, isLargePhone } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
+  const { width, isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhoneLayout({ width, isPhone, isLargePhone });
 
   const styles = useMemo(
     () =>

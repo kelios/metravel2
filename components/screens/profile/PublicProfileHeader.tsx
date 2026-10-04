@@ -20,12 +20,11 @@ import type { PeerBadgeReceived, UserRank } from '@/api/achievements';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { CoverTopoTexture } from '@/components/profile/CoverTopoTexture';
 import { CoverScrim } from '@/components/profile/CoverScrim';
+import { resolveProfileHeaderLayout, type ProfileHeaderLayout } from '@/components/profile/profileHeaderLayout';
 import { translate as i18nT } from '@/i18n'
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 
-const AVATAR_SIZE = 84;
-const COVER_HEIGHT = 132;
-const AVATAR_BORDER = 3;
 const DEFAULT_COVER_SOURCE = require('@/assets/images/profile-cover-default.jpg');
 
 const getInitials = (name: string) =>
@@ -70,12 +69,14 @@ export function PublicProfileHeader({
   onWriteMessage,
 }: PublicProfileHeaderProps) {
   const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
   const [defaultCoverFailed, setDefaultCoverFailed] = useState(false);
-  const { isPhone, isLargePhone } = useResponsive();
+  const { width, isPhone, isLargePhone } = useResponsive();
+  // Обложка и аватар — общий слой шапки профиля (#2141), паритет со своей шапкой.
+  const layout = resolveProfileHeaderLayout(width);
+  const styles = useMemo(() => createStyles(colors, layout), [colors, layout]);
   // Мобильная шапка: вторичные действия («Написать», «Наградить») — иконками,
   // чтобы ряд действий занимал одну строку, а не три (правка по UX-ревью 20.07).
-  const compactActions = isPhone || isLargePhone;
+  const compactActions = isPhoneLayout({ width, isPhone, isLargePhone });
 
   const displayName = fullName || i18nT('profile:components.screens.profile.PublicProfileHeader.defaultUserName');
   // #2134: у заблокированного вами — только шапка и меню (чтобы разблокировать);
@@ -100,7 +101,7 @@ export function PublicProfileHeader({
             <ImageCardMedia
               src={coverPhoto}
               alt={i18nT('profile:components.screens.profile.PublicProfileHeader.oblozhka_profilya_bebc7e97')}
-              height={COVER_HEIGHT}
+              height={layout.coverHeight}
               width="100%"
               borderRadius={0}
               fit="cover"
@@ -113,7 +114,7 @@ export function PublicProfileHeader({
             <ImageCardMedia
               source={DEFAULT_COVER_SOURCE}
               alt={i18nT('profile:components.screens.profile.PublicProfileHeader.oblozhka_profilya_bebc7e97')}
-              height={COVER_HEIGHT}
+              height={layout.coverHeight}
               width="100%"
               borderRadius={0}
               fit="cover"
@@ -123,9 +124,9 @@ export function PublicProfileHeader({
             />
           </View>
         ) : (
-          <CoverTopoTexture height={COVER_HEIGHT} />
+          <CoverTopoTexture height={layout.coverHeight} />
         )}
-        <CoverScrim coverHeight={COVER_HEIGHT} />
+        <CoverScrim coverHeight={layout.coverHeight} />
         {!isOwnProfile && userId ? (
           <View style={styles.menuWrap} testID="public-profile-menu-wrap">
             <UserSafetyMenu
@@ -239,19 +240,22 @@ export function PublicProfileHeader({
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
+const createStyles = (
+  colors: ReturnType<typeof useThemedColors>,
+  { coverHeight, avatarSize, avatarBorder, avatarOverlap }: ProfileHeaderLayout,
+) =>
   StyleSheet.create({
     wrapper: {
       backgroundColor: colors.background,
     },
     cover: {
-      height: COVER_HEIGHT,
+      height: coverHeight,
       backgroundColor: colors.surface,
       position: 'relative',
       overflow: 'hidden',
     },
     coverMediaLayer: {
-      height: COVER_HEIGHT,
+      height: coverHeight,
       width: '100%',
       position: 'relative',
       zIndex: 0,
@@ -271,12 +275,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       alignItems: 'flex-start',
       gap: DESIGN_TOKENS.spacing.sm,
       paddingHorizontal: DESIGN_TOKENS.spacing.md,
-      marginTop: -(AVATAR_SIZE / 2 + AVATAR_BORDER),
+      marginTop: -avatarOverlap,
     },
     avatarRing: {
-      width: AVATAR_SIZE + AVATAR_BORDER * 2,
-      height: AVATAR_SIZE + AVATAR_BORDER * 2,
-      borderRadius: (AVATAR_SIZE + AVATAR_BORDER * 2) / 2,
+      width: avatarSize + avatarBorder * 2,
+      height: avatarSize + avatarBorder * 2,
+      borderRadius: (avatarSize + avatarBorder * 2) / 2,
       backgroundColor: colors.background,
       alignItems: 'center',
       justifyContent: 'center',
@@ -292,29 +296,29 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       }),
     },
     avatar: {
-      width: AVATAR_SIZE,
-      height: AVATAR_SIZE,
-      borderRadius: AVATAR_SIZE / 2,
+      width: avatarSize,
+      height: avatarSize,
+      borderRadius: avatarSize / 2,
       backgroundColor: colors.primaryLight,
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
     },
     avatarImage: {
-      width: AVATAR_SIZE,
-      height: AVATAR_SIZE,
-      borderRadius: AVATAR_SIZE / 2,
+      width: avatarSize,
+      height: avatarSize,
+      borderRadius: avatarSize / 2,
       resizeMode: 'cover',
     },
     avatarPlaceholder: {
-      fontSize: 28,
+      fontSize: Math.round(avatarSize / 3),
       fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
       color: colors.primaryText,
     },
     infoColumn: {
       flex: 1,
       minWidth: 0,
-      paddingTop: AVATAR_SIZE / 2 + AVATAR_BORDER,
+      paddingTop: avatarOverlap,
       gap: 3,
     },
     nameRow: {

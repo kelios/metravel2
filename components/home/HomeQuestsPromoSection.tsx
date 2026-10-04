@@ -10,6 +10,7 @@ import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import { translate as i18nT } from '@/i18n'
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 
 const IS_WEB = Platform.OS === 'web'
@@ -27,8 +28,8 @@ const SCENARIO_ROUTE = '/quests/scenario'
 function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
   const router = useRouter()
   const colors = useThemedColors()
-  const { isPhone, isLargePhone } = useResponsive()
-  const isMobile = isPhone || isLargePhone
+  const { width, isPhone, isLargePhone } = useResponsive()
+  const isMobile = isPhoneLayout({ width, isPhone, isLargePhone })
   const { quests: previewQuests, loading } = useQuestsPreview(MAX_QUESTS, { enabled })
   const [hovered, setHovered] = useState(false)
   const [scenarioHovered, setScenarioHovered] = useState(false)

@@ -32,6 +32,7 @@ import { getTravelLabel } from '@/utils/pluralize';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { translate as i18nT } from '@/i18n'
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 
 const MAP_BACKGROUND = require('../../../assets/travel/roulette-map-bg.jpg') as ImageSourcePropType;
@@ -150,7 +151,7 @@ export default function RouletteScreen() {
 
   // На web (SSR) до гидрации всегда desktop-ветка, чтобы серверный и первый
   // клиентский рендер совпали. После маунта — обычная адаптивная логика.
-  const layoutIsMobile = isPhone || isLargePhone;
+  const layoutIsMobile = isPhoneLayout({ width, isPhone, isLargePhone });
   const isMobile = Platform.OS === 'web' && !isMounted ? false : layoutIsMobile;
   const insets = useSafeAreaInsets();
   // Clear the global bottom tab bar (BottomDock, absolute overlay ~56px + safe

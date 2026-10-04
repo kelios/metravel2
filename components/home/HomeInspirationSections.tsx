@@ -11,6 +11,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import { createSectionsStyles } from './homeInspirationStyles'
 import { translate as i18nT } from '@/i18n'
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 
 const NAV_FEEDBACK_MS = 700
@@ -152,9 +153,9 @@ function QuickFilterChips({
 
 function HomeInspirationSections() {
   const router = useRouter()
-  const { isPhone, isLargePhone } = useResponsive()
+  const { width, isPhone, isLargePhone } = useResponsive()
   const colors = useThemedColors()
-  const isMobile = isPhone || isLargePhone
+  const isMobile = isPhoneLayout({ width, isPhone, isLargePhone })
   const [selectedChip, setSelectedChip] = useState<string | null>(null)
   const [pendingChip, setPendingChip] = useState<string | null>(null)
   const [openingAllRoutes, setOpeningAllRoutes] = useState(false)

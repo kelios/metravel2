@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { HEADER_LAYOUT_BREAKPOINTS } from './headerLayoutContract';
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 export type HeaderContextBarAction = 'map-panel' | 'travel-sections' | 'none';
 
@@ -18,7 +19,7 @@ export function resolveHeaderContextBarIsMobile({
   // Прямое чтение window.innerWidth здесь давало расхождение SSR→клиент (React #418).
   return Platform.OS === 'web'
     ? width < HEADER_LAYOUT_BREAKPOINTS.mobileContext
-    : isPhone || isLargePhone;
+    : isPhoneLayout({ width, isPhone, isLargePhone });
 }
 
 export function resolveHeaderContextBarAction(pathname: string | null | undefined): HeaderContextBarAction {

@@ -8,6 +8,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n';
 import { webAccessibilityProps } from '@/utils/webProps';
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 export interface WizardExitDialogProps {
   visible: boolean;
@@ -35,8 +36,8 @@ function WizardExitDialog({
   onDiscard,
   onSaveAndLeave,
 }: WizardExitDialogProps) {
-  const { isPhone, isLargePhone } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
+  const { width, isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhoneLayout({ width, isPhone, isLargePhone });
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 

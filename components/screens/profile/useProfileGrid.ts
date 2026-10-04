@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { calculateColumns } from '@/components/listTravel/utils/listTravelHelpers';
 import { BREAKPOINTS } from '@/components/listTravel/utils/listTravelConstants';
 import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 interface UseProfileGridArgs {
   width: number;
@@ -30,7 +31,7 @@ export function useProfileGrid({
     ? Math.min(effectiveWidth, maxContentWidth)
     : effectiveWidth;
 
-  const isMobileDevice = isPhone || isLargePhone || (isTablet && isPortrait);
+  const isMobileDevice = isPhoneLayout({ width, isPhone, isLargePhone }) || (isTablet && isPortrait);
   const isCardsSingleColumn = contentWidth < BREAKPOINTS.MOBILE;
 
   const gapSize = useMemo(() => {

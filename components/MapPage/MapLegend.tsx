@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
+import { isPhoneLayout } from '@/utils/phoneLayout';
 
 
 interface MapLegendProps {
@@ -11,8 +12,8 @@ interface MapLegendProps {
 }
 
 function MapLegend({ showRouteMode = false }: MapLegendProps) {
-  const { isPhone, isLargePhone } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
+  const { width, isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhoneLayout({ width, isPhone, isLargePhone });
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
