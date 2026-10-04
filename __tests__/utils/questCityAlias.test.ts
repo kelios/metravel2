@@ -156,6 +156,26 @@ describe('quest city alias for multi-word city names', () => {
     expect(aliases.get('60')).toBe('nn')
   })
 
+  it('reads a transliterated «-ий/-ый» adjective as the first word of the city name', () => {
+    // «Великий» -> `veliky` loses a letter in the ending (6 against 7), which
+    // is a spelling, not an abbreviation: the backend sitemap publishes
+    // /quests/veliky-novgorod, and a shorter alias here stops the prod deploy
+    // on the sitemap parity check (#2209).
+    const quests = [
+      { quest_id: 'veliky-novgorod-sadko', city_id: '184', city_name: 'Великий Новгород' },
+      { quest_id: 'stary-oskol-fortress', city_id: '185', city_name: 'Старый Оскол' },
+      { quest_id: 'novy-urengoy-gas', city_id: '186', city_name: 'Новый Уренгой' },
+      { quest_id: 'nizhny-novgorod-kremlin', city_id: '187', city_name: 'Нижний Новгород' },
+    ]
+    const aliases = buildQuestCityAliasMap(quests)
+
+    expect(aliases.get('184')).toBe('veliky-novgorod')
+    expect(aliases.get('185')).toBe('stary-oskol')
+    expect(aliases.get('186')).toBe('novy-urengoy')
+    expect(aliases.get('187')).toBe('nizhny-novgorod')
+    expect(resolveQuestCitySegment('veliky', quests)).toMatchObject({ segment: 'veliky-novgorod' })
+  })
+
   it('does not extend a landmark named after the nearest town', () => {
     // The record is «Голубая криница», the quest_id is built from Slavgorod
     // next door, so its second token is quest theme, not city name.

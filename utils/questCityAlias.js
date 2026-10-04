@@ -17,6 +17,14 @@
 // record).
 const CITY_ALIAS_MIN_LENGTH_RATIO = 0.9;
 const CITY_ALIAS_MAX_LENGTH_RATIO = 1.5;
+// The lead token alone answers a narrower question — "is this a spelling of the
+// first word or an abbreviation of the name?" — and a single word shrinks more
+// in transliteration than a whole name does: the adjective endings «-ий/-ый»
+// collapse into one «y» («Великий» -> `veliky` 6/7, «Новый» -> `novy` 4/5),
+// while an abbreviation drops most of the word («Санкт» -> `spb` 3/5). The
+// whole-name band above would reject those adjectives, so the anchor has its
+// own floor (#2209).
+const CITY_ALIAS_LEAD_MIN_LENGTH_RATIO = 0.75;
 
 function stableTextCompare(a, b) {
   const left = String(a ?? '').trim().toLowerCase();
@@ -83,7 +91,7 @@ function resolveCityAlias(leadToken, tokenLists, cityName) {
   // this anchor a single quest `spb-dostoevsky-secrets` fits the whole-name
   // band (13 letters against 14) and would publish the city as
   // /quests/spb-dostoevsky.
-  if (leadToken.length < nameWords[0].length * CITY_ALIAS_MIN_LENGTH_RATIO) return leadToken;
+  if (leadToken.length < nameWords[0].length * CITY_ALIAS_LEAD_MIN_LENGTH_RATIO) return leadToken;
 
   // quest_id is `<city>-<theme>`: the alias never swallows a whole quest_id,
   // otherwise /quests/<alias> would repeat the quest slug itself.
