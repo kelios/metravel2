@@ -11,12 +11,15 @@ const { UsageError } = require('@/scripts/lib/cli-contract')
 const {
   EXCLUDED_USER_IDS,
   GUEST_FREE_STEPS,
+  HOME_PACE_MEDIAN_SECONDS,
   PROBE_CLUSTER_WINDOW_MINUTES,
   PROBE_MAX_ELAPSED_MS,
   TELEMETRY_CLEAN_SINCE,
+  VISIT_BREAK_HOURS,
   buildFunnelSql,
   buildRemoteScript,
   buildReport,
+  classifyCompletionPace,
   classifyPairs,
   formatReport,
   parseArgs,
@@ -57,8 +60,24 @@ const probe = (questId: number, offsetS: number, overrides: Record<string, unkno
     ...overrides,
   })
 
+// #2191: эталоны темпа с прода (время Europe/Minsk) — первые принятые ответы
+// на точки засчитанного прохождения.
+const at = (local: string) => Date.parse(`${local}+03:00`) / 1000
+// brest-fortress, uid 194: две точки гостем 24.09, остальные четыре — 25.09
+// за 61 с. Разрыв в сутки между визитами не делает прохождение маршрутным.
+const BREST_FROM_HOME = [
+  at('2026-09-24T11:01:37'),
+  at('2026-09-24T11:02:35'),
+  at('2026-09-25T08:41:04'),
+  at('2026-09-25T08:41:20'),
+  at('2026-09-25T08:41:51'),
+  at('2026-09-25T08:42:05'),
+]
+// vitebsk-chagall, uid 198, 03.10: шесть точек с 17:38 до 19:02.
+const CHAGALL_ON_ROUTE = [0, 11, 24, 41, 73, 84].map((minutes) => at('2026-10-03T17:38:31') + minutes * 60)
+
 // Форма ответа базы для buildReport, а не эталон воронки: шесть живых пар
-// разной глубины на двух квестах.
+// разной глубины на двух квестах и четыре засчитанных прохождения.
 const PROD_LIKE = {
   quest_found: true,
   pairs: [
@@ -69,18 +88,18 @@ const PROD_LIKE = {
     pair({ week: '2026-08-31', auth: 'user', platform: 'ios', accepted: 3, attempts: 4 }),
     pair({ week: '2026-08-31', auth: 'user', quest_id: 2, slug: 'brest-fortress', n_points: 5 }),
   ],
-  weekly_completed: [
-    { week: '2026-08-31', completed: 5 },
-    { week: '2026-09-21', completed: 1 },
+  completions: [
+    { quest_id: 1, week: '2026-08-31', accepted_epochs: CHAGALL_ON_ROUTE },
+    { quest_id: 2, week: '2026-08-31', accepted_epochs: BREST_FROM_HOME },
+    { quest_id: 2, week: '2026-08-31', accepted_epochs: [] },
+    { quest_id: 1, week: '2026-09-21', accepted_epochs: CHAGALL_ON_ROUTE },
   ],
-  completed_by_quest: [{ quest_id: 1, completed: 1 }],
   progress: {
     started: 33,
     players: 16,
-    started_completed: 17,
-    completed: 17,
-    completed_early: 3,
-    completed_fast: 7,
+    started_completed: 4,
+    completed: 4,
+    completed_early: 1,
   },
 }
 
@@ -180,6 +199,19 @@ describe('buildFunnelSql', () => {
     expect(sql).toContain("p.first_at >= DATE '2026-09-23' AS in_window")
   })
 
+  it('склеивает телеметрию засчитанного прохождения по user_id + квест и гостевым ключам того же игрока', () => {
+    const sql = buildFunnelSql({ since: '2026-08-07' })
+    const keys = sql.slice(sql.indexOf('completion_keys AS ('), sql.indexOf('SELECT json_build_object('))
+    expect(keys).toContain('a.quest_id = c.quest_id AND a.user_id = c.user_id')
+    expect(keys).not.toContain('session_key =')
+    expect(sql).toContain('a.user_id = c.user_id OR (a.user_id IS NULL AND a.session_key IN (')
+    // Время точки — первый принятый ответ на неё, свободный ответ тоже считается:
+    // фильтра по raw_answer нет.
+    expect(sql).toContain("a.verdict = 'accepted'")
+    expect(sql).toContain('GROUP BY a.step_key')
+    expect(sql).not.toContain('raw_answer')
+  })
+
   it('сужает отчёт до одного квеста', () => {
     expect(buildFunnelSql({ since: '2026-08-24', quest: 'vitebsk-kids-skazki' })).toContain(
       "WHERE quest_id = 'vitebsk-kids-skazki'",
@@ -234,30 +266,39 @@ describe('buildReport', () => {
       reachedGate: 2,
     })
     expect(report.excludedProbes).toEqual({ probeSeries: 0, taintedSession: 0, total: 0 })
-    expect(report.progress).toMatchObject({ started: 33, startedCompleted: 17, completedFast: 7 })
+    expect(report.progress).toEqual({
+      started: 33,
+      players: 16,
+      startedCompleted: 4,
+      completed: 4,
+      completedEarly: 1,
+      pace: { total: 4, onRoute: 2, fromHome: 1, undetermined: 1 },
+    })
   })
 
-  it('сводит недели ответов и засчитываний в одну строку на неделю', () => {
+  it('сводит недели ответов и засчитываний с разбивкой по темпу в одну строку на неделю', () => {
     const report = buildReport(PROD_LIKE, window)
+    const zeroPace = { onRoute: 0, fromHome: 0, undetermined: 0 }
     expect(report.weekly).toEqual([
-      { week: '2026-08-24', answered: 3, point1: 2, allPoints: 0, completed: 0 },
-      { week: '2026-08-31', answered: 3, point1: 3, allPoints: 1, completed: 5 },
-      { week: '2026-09-21', answered: 0, point1: 0, allPoints: 0, completed: 1 },
+      { week: '2026-08-24', answered: 3, point1: 2, allPoints: 0, completed: 0, ...zeroPace },
+      { week: '2026-08-31', answered: 3, point1: 3, allPoints: 1, completed: 3, onRoute: 1, fromHome: 1, undetermined: 1 },
+      { week: '2026-09-21', answered: 0, point1: 0, allPoints: 0, completed: 1, ...zeroPace, onRoute: 1 },
     ])
+    for (const week of report.weekly) {
+      expect(week.onRoute + week.fromHome + week.undetermined).toBe(week.completed)
+    }
   })
 
   it('квесты по числу пар с засчитанными из quest_progress', () => {
     expect(buildReport(PROD_LIKE, window).topQuests).toEqual([
-      { slug: 'vitebsk-kids-skazki', points: 4, answered: 5, point1: 4, allPoints: 1, completed: 1 },
-      { slug: 'brest-fortress', points: 5, answered: 1, point1: 1, allPoints: 0, completed: 0 },
+      { slug: 'vitebsk-kids-skazki', points: 4, answered: 5, point1: 4, allPoints: 1, completed: 2 },
+      { slug: 'brest-fortress', points: 5, answered: 1, point1: 1, allPoints: 0, completed: 2 },
     ])
   })
 
   it('пустое окно — нули, а не падение и не «undefined» в отчёте', () => {
-    const report = buildReport(
-      { quest_found: true, pairs: [], weekly_completed: [], completed_by_quest: [], progress: null },
-      window,
-    )
+    const report = buildReport({ quest_found: true, pairs: [], completions: [], progress: null }, window)
+    expect(report.progress.pace).toEqual({ total: 0, onRoute: 0, fromHome: 0, undetermined: 0 })
     expect(report.stages.all.answered).toBe(0)
     expect(report.stages.byAuth.guest.point1).toBe(0)
     expect(report.guestGate.reachedGate).toBe(0)
@@ -285,6 +326,58 @@ describe('formatReport', () => {
     expect(text).toContain('у гейта вошли 1 (50%), ушли 1')
     expect(text).toContain('vitebsk-kids-skazki')
     expect(text).toContain('исключено автоматических проб: 0')
+    expect(text).toContain('по темпу: на маршруте 2 (50%), из дома 1 (25%), не определено 1 (25%)')
+    expect(text).not.toContain('быстрее 15 мин')
+  })
+})
+
+// #2191, решение владельца #2187 «а»: зачёт не трогаем, а в отчёте делим
+// засчитанные прохождения по темпу переходов между точками.
+describe('classifyCompletionPace — на маршруте или из дома', () => {
+  it('эталон «из дома»: brest-fortress uid 194, суточный разрыв между визитами не спасает', () => {
+    expect(classifyCompletionPace(BREST_FROM_HOME)).toBe('fromHome')
+  })
+
+  it('эталон «на маршруте»: vitebsk-chagall uid 198, 10–30 минут между точками', () => {
+    expect(classifyCompletionPace(CHAGALL_ON_ROUTE)).toBe('onRoute')
+  })
+
+  it('без телеметрии и с одной точкой — не определено', () => {
+    expect(classifyCompletionPace([])).toBe('undetermined')
+    expect(classifyCompletionPace([at('2026-09-25T08:41:04')])).toBe('undetermined')
+  })
+
+  it('по одной точке в каждом из двух визитов — не определено, а не «на маршруте»', () => {
+    const day = 24 * 3600
+    expect(classifyCompletionPace([at('2026-09-24T11:01:37'), at('2026-09-24T11:01:37') + day])).toBe(
+      'undetermined',
+    )
+  })
+
+  it('два визита с суточным разрывом и быстрыми ответами в каждом — из дома', () => {
+    const start = at('2026-09-10T18:53:00')
+    const day = 24 * 3600
+    const visits = [0, 40, 75, day, day + 30, day + 70]
+    expect(classifyCompletionPace(visits.map((offset) => start + offset))).toBe('fromHome')
+  })
+
+  it('порог по медиане, а не по одному переходу: одна долгая остановка не делает маршрут', () => {
+    const start = at('2026-09-10T18:53:00')
+    const quick = HOME_PACE_MEDIAN_SECONDS - 1
+    const slow = HOME_PACE_MEDIAN_SECONDS
+    expect(classifyCompletionPace([0, quick, quick * 2, quick * 2 + 3600].map((s) => start + s))).toBe('fromHome')
+    expect(classifyCompletionPace([0, slow, slow * 2].map((s) => start + s))).toBe('onRoute')
+  })
+
+  it('переход короче разрыва визитов остаётся путём между точками', () => {
+    const start = at('2026-09-10T18:53:00')
+    const longWalk = VISIT_BREAK_HOURS * 3600 - 1
+    expect(classifyCompletionPace([start, start + longWalk])).toBe('onRoute')
+    expect(classifyCompletionPace([start, start + longWalk + 1])).toBe('undetermined')
+  })
+
+  it('порядок строк из базы не важен', () => {
+    expect(classifyCompletionPace([...BREST_FROM_HOME].reverse())).toBe('fromHome')
   })
 })
 

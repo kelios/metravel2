@@ -77,8 +77,20 @@ const EXCLUDED_USER_IDS = [120]
 // Равно GUEST_QUEST_FREE_STEPS из utils/guestQuestProgress.ts — равенство держит тест.
 const GUEST_FREE_STEPS = 2
 const MILESTONES = [25, 50, 75]
-// Засчитанное быстрее — вероятно, ответы найдены не на месте.
-const FAST_COMPLETION_MINUTES = 15
+// Темп засчитанного прохождения (#2191, решение владельца #2187 «а»): зачёт не
+// трогаем, а в отчёте делим «на маршруте» и «из дома» по медиане переходов
+// между принятыми ответами на разные точки. Замер 04.10.2026 по всем 25
+// засчитанным с 07.08 (110 переходов): медианы «из дома» — 23–115 с (три квеста
+// в трёх городах за 27 минут у одного игрока, brest-fortress 4 точки за 61 с),
+// «на маршруте» — 186–1969 с (vitebsk-chagall 767 с); между 115 и 186 с — ни
+// одного прохождения. Порог — середина разрыва: 150 с — это 200 м пешком.
+// Медиана, а не сумма и не «быстрее N минут» от создания строки: короткий квест
+// на маршруте и долгий квест из дома с перерывом на сутки суммой не различить.
+const HOME_PACE_MEDIAN_SECONDS = 150
+// Переход дольше — разрыв между визитами, а не путь между точками: в медиану не
+// идёт. Внутри визита самый долгий переход в замере — 58 мин, самый короткий
+// разрыв — 22 ч (brest-fortress: 2 точки гостем 24.09, остальные 25.09).
+const VISIT_BREAK_HOURS = 2
 // Подпись пары-пробы (#2182). Прогон вписывает готовый ответ за 0,4–2,2 с от
 // показа точки; самый быстрый живой верный ответ с 23.09 — 5 с (brest-fortress,
 // «5»). Пара пробы живёт до 1,6 с между первым и последним ответом. Ни одной
@@ -239,6 +251,17 @@ pairs AS (
 progress AS (
   SELECT qp.* FROM quest_progress qp JOIN scope q ON q.id = qp.quest_id
   WHERE qp.user_id NOT IN (SELECT id FROM excluded)
+),
+completions AS (
+  SELECT id, user_id, quest_id, completed_at FROM progress
+  WHERE completed AND completed_at >= ${sinceSql}
+),
+-- Прохождение дробится на визиты и ключи сессии; гостевые ответы до входа
+-- приходят без user_id, но с ключом, которым потом отвечал пользователь.
+completion_keys AS (
+  SELECT DISTINCT c.id, a.session_key
+  FROM completions c
+  JOIN quest_answer_attempt a ON a.quest_id = c.quest_id AND a.user_id = c.user_id
 )
 SELECT json_build_object(
   'quest_found', (SELECT count(*) > 0 FROM scope),
@@ -258,13 +281,18 @@ SELECT json_build_object(
     WHERE NOT p.any_excluded
       AND p.first_at >= ${sinceSql} - interval '${PROBE_CLUSTER_WINDOW_MINUTES} minutes'
   ) t),
-  'weekly_completed', (SELECT coalesce(json_agg(t ORDER BY t.week), '[]'::json) FROM (
-    SELECT date_trunc('week', completed_at)::date AS week, count(*) AS completed
-    FROM progress WHERE completed AND completed_at >= ${sinceSql} GROUP BY 1
-  ) t),
-  'completed_by_quest', (SELECT coalesce(json_agg(t), '[]'::json) FROM (
-    SELECT quest_id, count(*) AS completed
-    FROM progress WHERE completed AND completed_at >= ${sinceSql} GROUP BY quest_id
+  -- Время первого принятого ответа на каждую точку — из них считается темп.
+  'completions', (SELECT coalesce(json_agg(t), '[]'::json) FROM (
+    SELECT c.quest_id, date_trunc('week', c.completed_at)::date AS week,
+      (SELECT coalesce(json_agg(s.first_epoch ORDER BY s.first_epoch), '[]'::json) FROM (
+        SELECT extract(epoch FROM min(a.occurred_at)) AS first_epoch
+        FROM quest_answer_attempt a
+        WHERE a.quest_id = c.quest_id AND a.verdict = 'accepted'
+          AND (a.user_id = c.user_id OR (a.user_id IS NULL AND a.session_key IN (
+            SELECT session_key FROM completion_keys k WHERE k.id = c.id)))
+        GROUP BY a.step_key
+      ) s) AS accepted_epochs
+    FROM completions c
   ) t),
   'progress', (SELECT row_to_json(t) FROM (
     SELECT
@@ -272,11 +300,7 @@ SELECT json_build_object(
       count(DISTINCT user_id) FILTER (WHERE created_at >= ${sinceSql}) AS players,
       count(*) FILTER (WHERE created_at >= ${sinceSql} AND completed) AS started_completed,
       count(*) FILTER (WHERE completed AND completed_at >= ${sinceSql}) AS completed,
-      count(*) FILTER (WHERE completed AND completed_at >= ${sinceSql} AND early_finish) AS completed_early,
-      count(*) FILTER (
-        WHERE completed AND completed_at >= ${sinceSql}
-          AND completed_at - created_at <= interval '${FAST_COMPLETION_MINUTES} minutes'
-      ) AS completed_fast
+      count(*) FILTER (WHERE completed AND completed_at >= ${sinceSql} AND early_finish) AS completed_early
     FROM progress
   ) t)
 );`
@@ -435,10 +459,59 @@ function guestGate(pairs) {
   }
 }
 
-function buildWeekly(pairs, weeklyCompleted) {
+const median = (values) => {
+  const sorted = [...values].sort((a, b) => a - b)
+  const middle = sorted.length >> 1
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
+}
+
+/**
+ * Темп засчитанного прохождения по времени первых принятых ответов на точки.
+ * Меньше двух ответов в одном визите — переходов нет, и прохождение честно
+ * остаётся «не определено», а не приписывается молча одной из сторон.
+ */
+function classifyCompletionPace(acceptedEpochs) {
+  const epochs = acceptedEpochs.map(Number).sort((a, b) => a - b)
+  const steps = epochs
+    .slice(1)
+    .map((epoch, index) => epoch - epochs[index])
+    .filter((seconds) => seconds < VISIT_BREAK_HOURS * 3600)
+  if (!steps.length) return 'undetermined'
+  return median(steps) < HOME_PACE_MEDIAN_SECONDS ? 'fromHome' : 'onRoute'
+}
+
+const emptyPace = () => ({ total: 0, onRoute: 0, fromHome: 0, undetermined: 0 })
+
+function toCompletions(rows) {
+  return rows.map((row) => ({
+    questId: toCount(row.quest_id),
+    week: row.week,
+    pace: classifyCompletionPace(Array.isArray(row.accepted_epochs) ? row.accepted_epochs : []),
+  }))
+}
+
+function countPace(completions) {
+  const pace = emptyPace()
+  for (const completion of completions) {
+    pace.total += 1
+    pace[completion.pace] += 1
+  }
+  return pace
+}
+
+function buildWeekly(pairs, completions) {
   const weeks = new Map()
   const weekOf = (week) => {
-    const entry = weeks.get(week) ?? { week, answered: 0, point1: 0, allPoints: 0, completed: 0 }
+    const entry = weeks.get(week) ?? {
+      week,
+      answered: 0,
+      point1: 0,
+      allPoints: 0,
+      completed: 0,
+      onRoute: 0,
+      fromHome: 0,
+      undetermined: 0,
+    }
     weeks.set(week, entry)
     return entry
   }
@@ -448,12 +521,19 @@ function buildWeekly(pairs, weeklyCompleted) {
     if (reachesStage.point1(pair)) entry.point1 += 1
     if (reachesStage.allPoints(pair)) entry.allPoints += 1
   }
-  for (const row of weeklyCompleted) weekOf(row.week).completed = toCount(row.completed)
+  for (const completion of completions) {
+    const entry = weekOf(completion.week)
+    entry.completed += 1
+    entry[completion.pace] += 1
+  }
   return [...weeks.values()].sort((a, b) => a.week.localeCompare(b.week))
 }
 
-function buildTopQuests(pairs, completedByQuest) {
-  const completed = new Map(completedByQuest.map((row) => [toCount(row.quest_id), toCount(row.completed)]))
+function buildTopQuests(pairs, completions) {
+  const completed = new Map()
+  for (const completion of completions) {
+    completed.set(completion.questId, (completed.get(completion.questId) ?? 0) + 1)
+  }
   const quests = new Map()
   for (const pair of pairs) {
     const entry = quests.get(pair.questId) ?? { slug: pair.slug, points: pair.nPoints, pairs: [] }
@@ -477,6 +557,7 @@ function buildTopQuests(pairs, completedByQuest) {
 function buildReport(data, window) {
   const { players, excluded } = classifyPairs(Array.isArray(data.pairs) ? data.pairs : [])
   const progress = data.progress ?? {}
+  const completions = toCompletions(Array.isArray(data.completions) ? data.completions : [])
   return {
     window: {
       since: window.since,
@@ -498,11 +579,10 @@ function buildReport(data, window) {
       startedCompleted: toCount(progress.started_completed),
       completed: toCount(progress.completed),
       completedEarly: toCount(progress.completed_early),
-      completedFast: toCount(progress.completed_fast),
-      fastMinutes: FAST_COMPLETION_MINUTES,
+      pace: countPace(completions),
     },
-    weekly: buildWeekly(players, Array.isArray(data.weekly_completed) ? data.weekly_completed : []),
-    topQuests: buildTopQuests(players, Array.isArray(data.completed_by_quest) ? data.completed_by_quest : []),
+    weekly: buildWeekly(players, completions),
+    topQuests: buildTopQuests(players, completions),
   }
 }
 
@@ -588,18 +668,34 @@ function formatReport(report) {
       `  ⚠️  до ${PROGRESS_STARTS_RELIABLE_SINCE} строку создавало открытие экрана — «начато» завышено`,
     )
   }
+  const { pace } = progress
+  lines.push(`  засчитано в окне ${progress.completed}: досрочно ${progress.completedEarly}`)
   lines.push(
-    `  засчитано в окне ${progress.completed}: досрочно ${progress.completedEarly}, ` +
-      `быстрее ${progress.fastMinutes} мин ${progress.completedFast} (${pct(progress.completedFast, progress.completed)})`,
+    `  по темпу: на маршруте ${pace.onRoute} (${pct(pace.onRoute, pace.total)}), ` +
+      `из дома ${pace.fromHome} (${pct(pace.fromHome, pace.total)}), ` +
+      `не определено ${pace.undetermined} (${pct(pace.undetermined, pace.total)})`,
+  )
+  lines.push(
+    `  из дома — медиана перехода между точками меньше ${HOME_PACE_MEDIAN_SECONDS} с; ` +
+      `переход дольше ${VISIT_BREAK_HOURS} ч — разрыв визитов; не определено — меньше двух ответов в визите`,
   )
   lines.push('  одно прохождение на нескольких визитах — несколько пар, поэтому засчитанных бывает больше пар «все точки»')
   lines.push('')
 
+  const paceColumns = [
+    ['onRoute', 'маршрут'],
+    ['fromHome', 'из дома'],
+    ['undetermined', 'не опр.'],
+  ]
   lines.push('По неделям (с понедельника)')
-  lines.push(`  ${'неделя'.padEnd(12)}${pad('ответили', 10)}${pad('1-я точка', 11)}${pad('все точки', 11)}${pad('засчитано', 11)}`)
+  lines.push(
+    `  ${'неделя'.padEnd(12)}${pad('ответили', 10)}${pad('1-я точка', 11)}${pad('все точки', 11)}${pad('засчитано', 11)}` +
+      paceColumns.map(([, label]) => pad(label, 9)).join(''),
+  )
   for (const week of report.weekly) {
     lines.push(
-      `  ${week.week.padEnd(12)}${pad(week.answered, 10)}${pad(week.point1, 11)}${pad(week.allPoints, 11)}${pad(week.completed, 11)}`,
+      `  ${week.week.padEnd(12)}${pad(week.answered, 10)}${pad(week.point1, 11)}${pad(week.allPoints, 11)}${pad(week.completed, 11)}` +
+        paceColumns.map(([key]) => pad(week[key], 9)).join(''),
     )
   }
   if (!report.weekly.length) lines.push('  за окно ни одного ответа')
@@ -640,14 +736,17 @@ if (require.main === module) {
 module.exports = {
   EXCLUDED_USER_IDS,
   GUEST_FREE_STEPS,
+  HOME_PACE_MEDIAN_SECONDS,
   PROBE_CLUSTER_MIN_PAIRS,
   PROBE_CLUSTER_WINDOW_MINUTES,
   PROBE_MAX_ELAPSED_MS,
   PROBE_MAX_PAIR_SECONDS,
   TELEMETRY_CLEAN_SINCE,
+  VISIT_BREAK_HOURS,
   buildFunnelSql,
   buildRemoteScript,
   buildReport,
+  classifyCompletionPace,
   classifyPairs,
   formatReport,
   parseArgs,
