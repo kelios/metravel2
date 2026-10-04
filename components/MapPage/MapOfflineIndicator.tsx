@@ -18,7 +18,7 @@ import { translate as i18nT } from '@/i18n'
  * целиком: скрытое слагаемое внутри компонента заставляло вычитать его на
  * стороне вызова.
  */
-const DEFAULT_TOP = 10
+export const MAP_OFFLINE_INDICATOR_TOP = 10
 
 interface MapOfflineIndicatorProps {
   visible: boolean
@@ -28,7 +28,7 @@ interface MapOfflineIndicatorProps {
 
 const MapOfflineIndicatorInner: React.FC<MapOfflineIndicatorProps> = ({
   visible,
-  top = DEFAULT_TOP,
+  top = MAP_OFFLINE_INDICATOR_TOP,
 }) => {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])

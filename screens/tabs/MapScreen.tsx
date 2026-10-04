@@ -20,6 +20,7 @@ import {
   buildQuickFiltersData,
   buildActiveFilterItems,
 } from '@/screens/tabs/mapScreenHelpers'
+import { getDesktopBranchTopInset } from '@/screens/tabs/map.styles'
 import { MapScreenMobile } from '@/components/MapPage/MapScreenParts/MapScreenMobile'
 import { MapScreenError } from '@/components/MapPage/MapScreenParts/MapScreenError'
 import {
@@ -78,17 +79,14 @@ export default function MapScreen() {
     mapReady,
     mapPanelProps,
     rightPanelTab,
-    rightPanelVisible,
     isDesktopCollapsed,
     desktopPanelWidth,
     selectFiltersTab,
     selectTravelsTab,
     openRightPanel,
-    closeRightPanel,
     toggleDesktopCollapse,
     onResizePanelWidth,
     panelStyle,
-    overlayStyle,
     filtersPanelProps,
     filtersValuesSlice,
     overlaySlice,
@@ -400,7 +398,7 @@ export default function MapScreen() {
     onChange('radius', String(Math.min(current * 2, RADIUS_EXPAND_MAX_KM)))
   }, [filtersValuesSlice])
 
-  // Desktop-web radius FAB reuses the same controlled source as the filters
+  // Desktop radius FAB (every platform, #2172) reuses the same controlled source as the filters
   // panel — onFilterChange('radius', id). No duplicated radius logic.
   const handleDesktopRadiusSelect = useCallback(
     (id: string) => {
@@ -436,9 +434,6 @@ export default function MapScreen() {
   const activePanelTab: 'search' | 'route' | 'travels' =
     rightPanelTab === 'travels' ? 'travels' : currentMode === 'route' ? 'route' : 'search'
 
-  // На мобиле радиус уже показан чипом «Радиус N км» в верхнем overlay — плавающая
-  // пилюля дублировала его и занимала отдельную строку (F-50). Прячем её на мобиле.
-  const shouldShowFloatingRadiusPill = Boolean(currentRadius && !isWeb && !isMobile)
   const showMapProgress =
     isDebouncingFilters ||
     (loading && !travelsData.length) ||
@@ -457,8 +452,6 @@ export default function MapScreen() {
         mapReady={mapReady}
         mapPanelProps={mapPanelProps}
         enabledOverlays={enabledOverlays}
-        currentRadius={currentRadius}
-        shouldShowFloatingRadiusPill={shouldShowFloatingRadiusPill}
         showGeoBanner={showGeoBanner}
         geoBannerStackOffset={geoBannerStackOffset}
         locationQualityStackOffset={locationQualityStackOffset}
@@ -472,8 +465,6 @@ export default function MapScreen() {
           void openLocationSettings()
         }}
         startManualRoute={startManualRouteFromLocationState}
-        handleSelectSearchTab={handleSelectSearchTab}
-        openRightPanel={openRightPanel}
         canSearchThisArea={canSearchThisArea}
         onSearchThisArea={handleSearchThisArea}
       />
@@ -485,8 +476,6 @@ export default function MapScreen() {
       mapReady,
       showMapProgress,
       enabledOverlays,
-      currentRadius,
-      shouldShowFloatingRadiusPill,
       styles,
       showGeoBanner,
       geoBannerStackOffset,
@@ -498,8 +487,6 @@ export default function MapScreen() {
       openLocationSettings,
       startManualRouteFromLocationState,
       themedColors,
-      handleSelectSearchTab,
-      openRightPanel,
       canSearchThisArea,
       handleSearchThisArea,
     ],
@@ -576,17 +563,13 @@ export default function MapScreen() {
       isDesktopCollapsed={isDesktopCollapsed}
       desktopPanelWidth={desktopPanelWidth}
       rightPanelTab={rightPanelTab}
-      rightPanelVisible={rightPanelVisible}
       activePanelTab={activePanelTab}
       panelRef={panelRef}
       panelStyle={panelStyle}
-      overlayStyle={overlayStyle}
       toggleDesktopCollapse={toggleDesktopCollapse}
       handleSelectSearchTab={handleSelectSearchTab}
       handleSelectRouteTab={handleSelectRouteTab}
       selectTravelsTab={selectTravelsTab}
-      closeRightPanel={closeRightPanel}
-      openRightPanel={openRightPanel}
       handleResizeMouseDown={handleResizeMouseDown}
       resetFiltersForPanel={resetFiltersForPanel}
       filtersPanelProps={filtersPanelProps}
@@ -618,9 +601,8 @@ export default function MapScreen() {
     <MapScreenDesktopOverlays
       styles={styles}
       themedColors={themedColors}
-      isWeb={isWeb}
       isMobile={isMobile}
-      openRightPanel={openRightPanel}
+      topInset={getDesktopBranchTopInset(insets.top)}
       isConnected={isConnected}
       mapReady={mapReady}
       shouldLoadOnboarding={shouldLoadOnboarding}

@@ -235,7 +235,6 @@ export const mapGenerated1 = {
   "components.MapPage.MapCanvas.poslednee_izvestnoe_mesto_2b6f90c3": "Ostatnie znane miejsce",
   "components.MapPage.MapCanvas.povtorit_66ddcbbc": "Spróbuj ponownie",
   "components.MapPage.MapCanvas.iskat_v_etoy_oblasti_80b413e4": "Szukaj w tym obszarze",
-  "components.MapPage.MapCanvas.radius_poiska_value1_km_nazhmite_chtoby_izme_d6b055e9": "Promień wyszukiwania: {{value1}} km. Kliknij, aby zmienić",
   "components.MapPage.MapCanvas.zakryt_uvedomlenie_ae069cb3": "Zamknij powiadomienie",
   "components.MapPage.MapCanvas.mestopolozhenie_obnovlyaetsya_live_1": "Aktualizujemy lokalizację…",
   "components.MapPage.MapCanvas.nizkaya_tochnost_geolokatsii_live_2": "Niska dokładność lokalizacji",

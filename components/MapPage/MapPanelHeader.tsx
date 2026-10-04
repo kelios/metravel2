@@ -1,5 +1,5 @@
 import React, { memo, useCallback } from 'react'
-import { Platform, Pressable, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { ThemedColors } from '@/hooks/useTheme'
@@ -14,8 +14,13 @@ type PanelTab = 'search' | 'route' | 'travels'
 const BADGE_COUNT_CAP = 999
 const PRESSED_OPACITY_07 = { opacity: 0.7 }
 
+/**
+ * Header of the map panel in the desktop branch of the map screen (width ≥ 768):
+ * desktop web and native tablets render the same header, segment and actions
+ * (#2172). The phone layout has its own sheet header (MapMobileLayout), so this
+ * component carries no phone-only branch.
+ */
 interface MapPanelHeaderProps {
-  isMobile: boolean
   activeTab: PanelTab
   travelsCount: number
   themedColors: ThemedColors
@@ -23,7 +28,6 @@ interface MapPanelHeaderProps {
   selectSearchTab: () => void
   selectRouteTab: () => void
   selectTravelsTab: () => void
-  closeRightPanel: () => void
   resetFilters?: () => void
   /**
    * The page-level `<h1>` when this header is the active anchor for it (#1640).
@@ -64,7 +68,6 @@ function TabButton({
         pressed && styles.tabPressed,
       ]}
       onPress={onPress}
-      hitSlop={8}
       android_ripple={{ color: themedColors.overlayLight }}
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
@@ -88,7 +91,6 @@ function TabButton({
 }
 
 const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
-  isMobile,
   activeTab,
   travelsCount,
   themedColors,
@@ -96,7 +98,6 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
   selectSearchTab,
   selectRouteTab,
   selectTravelsTab,
-  closeRightPanel,
   resetFilters,
   heading,
 }) => {
@@ -106,32 +107,17 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
     showFiltersResetToast()
   }, [selectSearchTab, resetFilters])
 
-  const showDesktopActions = Platform.OS === 'web' && !isMobile
-  // На desktop фильтры — это кнопка-иконка в ряду действий, а не вкладка.
-  // Сегмент сводится к двум вкладкам: «Места» и «Маршрут». Фильтры открыты,
-  // когда не выбрана ни одна из вкладок (activeTab === 'search').
+  // Фильтры — кнопка-иконка в ряду действий, а не вкладка. Сегмент сводится к
+  // двум вкладкам: «Места» и «Маршрут». Фильтры открыты, когда не выбрана ни
+  // одна из вкладок (activeTab === 'search').
   const filtersActive = activeTab === 'search'
 
   return (
     <View style={styles.tabsContainer}>
-      {isMobile && <View style={styles.dragHandle} />}
-
       {heading}
 
       <View style={styles.tabsRow}>
           <View style={styles.tabsSegment} accessibilityRole="tablist" aria-label={i18nT('map:components.MapPage.MapPanelHeader.panel_karty_951bb838')}>
-          {isMobile && (
-            <TabButton
-              tab="search"
-              activeTab={activeTab}
-              icon="search"
-              label={i18nT('map:components.MapPage.MapPanelHeader.poisk_787c6fe7')}
-              accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.poisk_787c6fe7')}
-              onPress={selectSearchTab}
-              themedColors={themedColors}
-              styles={styles}
-            />
-          )}
           <TabButton
             tab="travels"
             activeTab={activeTab}
@@ -155,72 +141,61 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
           />
         </View>
 
-        {showDesktopActions ? (
-          <View style={styles.panelHeaderActions}>
-            <Pressable
-              testID="map-filters-button"
-              style={({ pressed }) => [
-                styles.resetButton,
-                styles.resetButtonCompact,
-                filtersActive && styles.tabActive,
-                pressed && PRESSED_OPACITY_07,
-              ]}
-              onPress={selectSearchTab}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityState={{ selected: filtersActive }}
-              accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.filtry_95c57b1d')}
-              {...({ title: i18nT('map:components.MapPage.MapPanelHeader.filtry_95c57b1d') } as any)}
-            >
-              <Feather
-                name="sliders"
-                size={14}
-                color={filtersActive ? themedColors.textInverse : themedColors.textMuted}
-              />
-            </Pressable>
-            <Pressable
-              testID="map-help-button"
-              style={({ pressed }) => [
-                styles.resetButton,
-                styles.resetButtonCompact,
-                pressed && PRESSED_OPACITY_07,
-              ]}
-              onPress={restartMapOnboarding}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd')}
-              {...({ title: i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd') } as any)}
-            >
-              <Feather name="help-circle" size={13} color={themedColors.textMuted} />
-            </Pressable>
-            <Pressable
-              testID="map-reset-filters-button"
-              style={({ pressed }) => [
-                styles.resetButton,
-                styles.resetButtonCompact,
-                pressed && PRESSED_OPACITY_07,
-              ]}
-              onPress={handleReset}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.sbrosit_filtry_06292479')}
-              {...({ title: i18nT('map:components.MapPage.MapPanelHeader.sbrosit_filtry_06292479') } as any)}
-            >
-              <Feather name="rotate-cw" size={13} color={themedColors.textMuted} />
-            </Pressable>
-          </View>
-        ) : (
+        {/* Без hitSlop у вкладок и действий (#2172): тач-таргет — собственный
+            бокс 44 pt (guard-touch-targets). На native hitSlop шире зазора до
+            соседа (2 pt в сегменте, 6 pt здесь) залезал в его собственную
+            рамку: правые 4 pt «Подсказок» срабатывали как «Сбросить фильтры».
+            Web hitSlop не читает, его вид не меняется. */}
+        <View style={styles.panelHeaderActions}>
           <Pressable
-            testID="map-close-panel-button"
-            style={({ pressed }) => [styles.closePanelButton, pressed && PRESSED_OPACITY_07]}
-            onPress={closeRightPanel}
-            hitSlop={10}
+            testID="map-filters-button"
+            style={({ pressed }) => [
+              styles.resetButton,
+              styles.resetButtonCompact,
+              filtersActive && styles.tabActive,
+              pressed && PRESSED_OPACITY_07,
+            ]}
+            onPress={selectSearchTab}
             accessibilityRole="button"
-            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.skryt_panel_e9e1ec83')}
+            accessibilityState={{ selected: filtersActive }}
+            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.filtry_95c57b1d')}
+            {...({ title: i18nT('map:components.MapPage.MapPanelHeader.filtry_95c57b1d') } as any)}
           >
-            <Feather name="chevron-down" size={16} color={themedColors.textMuted} />
+            <Feather
+              name="sliders"
+              size={14}
+              color={filtersActive ? themedColors.textInverse : themedColors.textMuted}
+            />
           </Pressable>
-        )}
+          <Pressable
+            testID="map-help-button"
+            style={({ pressed }) => [
+              styles.resetButton,
+              styles.resetButtonCompact,
+              pressed && PRESSED_OPACITY_07,
+            ]}
+            onPress={restartMapOnboarding}
+            accessibilityRole="button"
+            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd')}
+            {...({ title: i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd') } as any)}
+          >
+            <Feather name="help-circle" size={13} color={themedColors.textMuted} />
+          </Pressable>
+          <Pressable
+            testID="map-reset-filters-button"
+            style={({ pressed }) => [
+              styles.resetButton,
+              styles.resetButtonCompact,
+              pressed && PRESSED_OPACITY_07,
+            ]}
+            onPress={handleReset}
+            accessibilityRole="button"
+            accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.sbrosit_filtry_06292479')}
+            {...({ title: i18nT('map:components.MapPage.MapPanelHeader.sbrosit_filtry_06292479') } as any)}
+          >
+            <Feather name="rotate-cw" size={13} color={themedColors.textMuted} />
+          </Pressable>
+        </View>
       </View>
     </View>
   )

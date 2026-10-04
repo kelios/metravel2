@@ -50,7 +50,6 @@ jest.mock('@/hooks/usePanelController', () => {
           openPanel: jest.fn(() => setIsPanelVisible(true)),
           closePanel: jest.fn(() => setIsPanelVisible(false)),
           panelStyle: {},
-          overlayStyle: {},
         }
       })(),
     }),

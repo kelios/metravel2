@@ -57,7 +57,6 @@ export function useMapScreenController() {
     isFocused,
     mapReady,
     rightPanelTab,
-    rightPanelVisible,
     isDesktopCollapsed,
     desktopPanelWidth,
     selectFiltersTab,
@@ -67,7 +66,6 @@ export function useMapScreenController() {
     toggleDesktopCollapse,
     onResizePanelWidth,
     panelStyle,
-    overlayStyle,
     panelRef,
   } = useMapPanelState({ isMobile });
 
@@ -283,7 +281,6 @@ export function useMapScreenController() {
 
     // Panel
     rightPanelTab,
-    rightPanelVisible,
     isDesktopCollapsed,
     desktopPanelWidth,
     selectFiltersTab,
@@ -293,7 +290,6 @@ export function useMapScreenController() {
     toggleDesktopCollapse,
     onResizePanelWidth,
     panelStyle,
-    overlayStyle,
 
     // Filters
     filtersPanelProps,
@@ -360,7 +356,6 @@ export function useMapScreenController() {
     mapReady,
     mapPanelProps,
     rightPanelTab,
-    rightPanelVisible,
     isDesktopCollapsed,
     desktopPanelWidth,
     selectFiltersTab,
@@ -370,7 +365,6 @@ export function useMapScreenController() {
     toggleDesktopCollapse,
     onResizePanelWidth,
     panelStyle,
-    overlayStyle,
     filtersPanelProps,
     filtersValuesSlice,
     overlaySlice,

@@ -59,15 +59,10 @@ export function usePanelController(isMobile: boolean = false) {
         opacity: progress.value,
     }));
 
-    const overlayStyle = useAnimatedStyle(() => ({
-        opacity: progress.value,
-    }));
-
     return useMemo(() => ({
         isPanelVisible,
         openPanel,
         closePanel,
         panelStyle,
-        overlayStyle,
-    }), [isPanelVisible, openPanel, closePanel, panelStyle, overlayStyle]);
+    }), [isPanelVisible, openPanel, closePanel, panelStyle]);
 }

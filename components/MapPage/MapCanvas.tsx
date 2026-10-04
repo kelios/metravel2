@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
-import { formatRadiusLabel, formatRadiusValue } from '@/constants/mapConfig'
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 import MapPanel from '@/components/MapPage/MapPanel'
 import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar'
@@ -55,8 +54,6 @@ type MapCanvasProps = {
   mapReady: boolean
   mapPanelProps: any
   enabledOverlays?: Record<string, boolean> | null
-  currentRadius: any
-  shouldShowFloatingRadiusPill: boolean
   showGeoBanner: boolean
   /**
    * На сколько опустить гео-баннер, чтобы он встал ПОД ряд чипов активных
@@ -73,8 +70,6 @@ type MapCanvasProps = {
   retryLocation: () => void
   openLocationSettings: () => void
   startManualRoute: () => void
-  handleSelectSearchTab: () => void
-  openRightPanel: () => void
   canSearchThisArea?: boolean
   onSearchThisArea?: () => void
 }
@@ -88,8 +83,6 @@ export function MapCanvas({
   mapReady,
   mapPanelProps,
   enabledOverlays,
-  currentRadius,
-  shouldShowFloatingRadiusPill,
   showGeoBanner,
   geoBannerStackOffset = 0,
   locationQualityStackOffset = 0,
@@ -99,8 +92,6 @@ export function MapCanvas({
   retryLocation,
   openLocationSettings,
   startManualRoute,
-  handleSelectSearchTab,
-  openRightPanel,
   canSearchThisArea,
   onSearchThisArea,
 }: MapCanvasProps) {
@@ -193,23 +184,6 @@ export function MapCanvas({
       )}
       {isWeb && (
         <WeatherLegend enabledOverlays={enabledOverlays} />
-      )}
-      {shouldShowFloatingRadiusPill && (
-        <Pressable
-          style={styles.radiusPill}
-          accessibilityRole="button"
-          accessibilityLabel={i18nT('map:components.MapPage.MapCanvas.radius_poiska_value1_km_nazhmite_chtoby_izme_d6b055e9', { value1: formatRadiusValue(currentRadius) })}
-          testID="map-radius-pill"
-          onPress={() => {
-            handleSelectSearchTab()
-            openRightPanel()
-          }}
-          hitSlop={8}
-        >
-          <Feather name="radio" size={12} color={themedColors.primary} />
-          <Text style={styles.radiusPillText}>{formatRadiusLabel(currentRadius)}</Text>
-          <Feather name="chevron-down" size={11} color={themedColors.textMuted} />
-        </Pressable>
       )}
       {!!locationQualityMessage && (
         <View

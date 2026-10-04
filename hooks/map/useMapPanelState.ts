@@ -73,7 +73,7 @@ interface UseMapPanelStateOptions {
 export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
   const { width: viewportWidth } = useWindowDimensions();
   const isFocused = useIsFocused();
-  const { isPanelVisible, openPanel, closePanel, panelStyle, overlayStyle } = usePanelController(isMobile);
+  const { isPanelVisible, openPanel, closePanel, panelStyle } = usePanelController(isMobile);
 
   const [rightPanelTab, setRightPanelTab] = useState<'filters' | 'travels'>('filters');
   // On web, start map loading immediately — no need for rAF delay.
@@ -257,7 +257,6 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
     isFocused,
     mapReady,
     rightPanelTab,
-    rightPanelVisible: isPanelVisible,
     isDesktopCollapsed,
     desktopPanelWidth: effectiveDesktopPanelWidth,
 
@@ -271,7 +270,6 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
 
     // Styles
     panelStyle,
-    overlayStyle,
 
     // Refs
     filtersTabRef,
@@ -280,7 +278,6 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
     isFocused,
     mapReady,
     rightPanelTab,
-    isPanelVisible,
     isDesktopCollapsed,
     effectiveDesktopPanelWidth,
     selectFiltersTab,
@@ -290,7 +287,6 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
     toggleDesktopCollapse,
     onResizePanelWidth,
     panelStyle,
-    overlayStyle,
     filtersTabRef,
     panelRef,
   ]);

@@ -27,8 +27,6 @@ jest.mock('@/components/MapPage/MapPageSkeleton', () => ({
 const baseProps = {
   styles: {
     mapArea: {},
-    radiusPill: {},
-    radiusPillText: {},
     locationQualityPill: {},
     locationQualityText: {},
     geoBanner: {},
@@ -60,8 +58,6 @@ const baseProps = {
     overlaysValue: '',
   },
   mapQuickActionButtons: [],
-  currentRadius: '',
-  shouldShowFloatingRadiusPill: false,
   showGeoBanner: false,
   locationState: {
     status: 'denied' as const,
@@ -75,8 +71,6 @@ const baseProps = {
   retryLocation: jest.fn(),
   openLocationSettings: jest.fn(),
   startManualRoute: jest.fn(),
-  handleSelectSearchTab: jest.fn(),
-  openRightPanel: jest.fn(),
 }
 
 describe('MapCanvas', () => {

@@ -1,9 +1,9 @@
-import { Suspense, useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, BackHandler, Platform, Pressable, Text, View } from 'react-native'
 import Animated from 'react-native-reanimated'
 import Feather from '@expo/vector-icons/Feather'
 
-import { MapOfflineIndicator } from '@/components/MapPage/MapOfflineIndicator'
+import { MAP_OFFLINE_INDICATOR_TOP, MapOfflineIndicator } from '@/components/MapPage/MapOfflineIndicator'
 import MapPanelHeader from '@/components/MapPage/MapPanelHeader'
 import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobileLayersPopover'
 import { MapMobileRadiusPopover } from '@/components/MapPage/MapMobile/MapMobileRadiusPopover'
@@ -32,17 +32,13 @@ type MapScreenDesktopProps = {
   isDesktopCollapsed: boolean
   desktopPanelWidth: number
   rightPanelTab: string
-  rightPanelVisible: boolean
   activePanelTab: 'search' | 'route' | 'travels'
   panelRef: any
   panelStyle: any
-  overlayStyle: any
   toggleDesktopCollapse: () => void
   handleSelectSearchTab: () => void
   handleSelectRouteTab: () => void
   selectTravelsTab: () => void
-  closeRightPanel: () => void
-  openRightPanel: () => void
   handleResizeMouseDown: (e: any) => void
   resetFiltersForPanel?: () => void
   filtersPanelProps: any
@@ -74,10 +70,15 @@ type MapScreenDesktopProps = {
 }
 
 /**
- * Desktop chrome: the left panel (or its collapsed strip) plus the in-map
- * overlay used while the mobile-style sheet animates. Rendered as a flex
+ * Desktop chrome: the left panel or its collapsed strip. Rendered as a flex
  * sibling BEFORE the stable map host (see MapScreenShell) so the map node is
  * never re-parented on a breakpoint flip. #217.
+ *
+ * #2172 — one panel model for every platform at width ≥ 768 (desktop web,
+ * iPad, Android tablets): the panel is either expanded or collapsed into the
+ * 56-wide strip, and there is no "hidden" state — an invisible panel left
+ * in the row was an empty, dead (iOS) or still tappable (Android) column. Only
+ * the mouse-driven resize handle and the persisted width stay web-only.
  */
 export function MapScreenDesktopChrome({
   styles,
@@ -87,16 +88,13 @@ export function MapScreenDesktopChrome({
   isDesktopCollapsed,
   desktopPanelWidth,
   rightPanelTab,
-  rightPanelVisible,
   activePanelTab,
   panelRef,
   panelStyle,
-  overlayStyle,
   toggleDesktopCollapse,
   handleSelectSearchTab,
   handleSelectRouteTab,
   selectTravelsTab,
-  closeRightPanel,
   handleResizeMouseDown,
   resetFiltersForPanel,
   filtersPanelProps,
@@ -119,7 +117,7 @@ export function MapScreenDesktopChrome({
   transportMode,
   panelHeading,
 }: MapScreenDesktopProps) {
-  const showDesktopCollapsedStrip = !isMobile && isDesktopCollapsed && isWeb
+  const showDesktopCollapsedStrip = !isMobile && isDesktopCollapsed
   const showDesktopExpandedPanel = !showDesktopCollapsedStrip
 
   return (
@@ -192,7 +190,11 @@ export function MapScreenDesktopChrome({
               {...({ onMouseDown: handleResizeMouseDown } as any)}
             />
           )}
-          {!isMobile && isWeb && (
+          {/* Same node and style on every platform (#2172). It sits past the
+              panel's right edge; native Fabric hit-tests children outside a
+              non-clipping parent, so `rightPanel` must never get
+              `overflow: hidden` on native (guarded in mapLayout.test.ts). */}
+          {!isMobile && (
             <Pressable
               testID="map-panel-collapse-button"
               hitSlop={8}
@@ -206,7 +208,6 @@ export function MapScreenDesktopChrome({
           )}
           <MapPanelHeader
             heading={panelHeading}
-            isMobile={isMobile}
             activeTab={activePanelTab}
             travelsCount={travelsCount}
             themedColors={themedColors}
@@ -214,7 +215,6 @@ export function MapScreenDesktopChrome({
             selectSearchTab={handleSelectSearchTab}
             selectRouteTab={handleSelectRouteTab}
             selectTravelsTab={selectTravelsTab}
-            closeRightPanel={closeRightPanel}
             resetFilters={resetFiltersForPanel}
           />
           {!isMobile && activePanelTab === 'search' && activeFilterItems.length > 0 && (
@@ -273,10 +273,6 @@ export function MapScreenDesktopChrome({
           </View>
         </Animated.View>
       )}
-
-      {rightPanelVisible && isMobile && (
-        <Animated.View style={[styles.overlay, overlayStyle]} />
-      )}
     </>
   )
 }
@@ -290,10 +286,13 @@ interface DesktopOverlayOption {
 type MapScreenDesktopOverlaysProps = {
   styles: any
   themedColors: any
-  isWeb: boolean
-  /** Desktop-web only: the left panel is hidden on mobile, so this is always false there. */
+  /** Desktop branch only (width ≥ 768, any platform): always false in practice. */
   isMobile: boolean
-  openRightPanel: () => void
+  /**
+   * #2172 — the branch's own top inset (`getDesktopBranchTopInset`): 0 on web,
+   * the status bar on native, which has no app header on /map.
+   */
+  topInset?: number
   isConnected: boolean
   mapReady: boolean
   shouldLoadOnboarding: boolean
@@ -312,16 +311,15 @@ type MapScreenDesktopOverlaysProps = {
 }
 
 /**
- * Desktop overlays that live OUTSIDE the map container (FAB, offline indicator,
- * loading overlay, onboarding). Rendered by the shell as breakpoint shared
- * chrome so they do not affect the map host position.
+ * Desktop overlays that live OUTSIDE the map container (layers/radius controls,
+ * offline indicator, loading overlay, onboarding). Rendered by the shell as
+ * breakpoint shared chrome so they do not affect the map host position.
  */
 export function MapScreenDesktopOverlays({
   styles,
   themedColors,
-  isWeb,
   isMobile,
-  openRightPanel,
+  topInset = 0,
   isConnected,
   mapReady,
   shouldLoadOnboarding,
@@ -334,10 +332,12 @@ export function MapScreenDesktopOverlays({
   radiusValue,
   onRadiusSelect,
 }: MapScreenDesktopOverlaysProps) {
-  // Desktop-web «Слои» floating control: layers live on the map (Google-Maps
+  // Desktop «Слои» floating control: layers live on the map (Google-Maps
   // style), no longer inside the left filters panel. Mobile keeps its own icon
-  // toolbar + popover, so this branch is desktop-web only.
-  const showDesktopLayersControl = isWeb && !isMobile
+  // toolbar + popover. #2172 — the desktop branch is the same on every
+  // platform: the popovers and `mapUiApi.setOverlayEnabled` already work on
+  // native phones, so iPad and Android tablets get the same controls.
+  const showDesktopLayersControl = !isMobile
   const [layersOpen, setLayersOpen] = useState(false)
   const toggleLayers = useCallback(() => {
     setLayersOpen((v) => !v)
@@ -345,7 +345,7 @@ export function MapScreenDesktopOverlays({
   }, [])
   const closeLayers = useCallback(() => setLayersOpen(false), [])
 
-  // Desktop-web «Радиус» floating control: same on-map cluster as «Слои» (sits
+  // Desktop «Радиус» floating control: same on-map cluster as «Слои» (sits
   // immediately to its left). Reuses the controlled radius source from the
   // filters panel; no duplicated radius logic.
   const [radiusOpen, setRadiusOpen] = useState(false)
@@ -360,19 +360,22 @@ export function MapScreenDesktopOverlays({
     return Number.isFinite(n) && n > 0 ? String(n) : ''
   }, [resolvedRadiusValue])
 
+  // #2172 — Android Back closes an open popover before navigating away
+  // (BUG-CLASS-5), like the phone layout does in MapMobileLayout. Registered
+  // only while a popover is open, so Back keeps its default otherwise.
+  const popoverOpen = layersOpen || radiusOpen
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !popoverOpen) return
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      setLayersOpen(false)
+      setRadiusOpen(false)
+      return true
+    })
+    return () => subscription.remove()
+  }, [popoverOpen])
+
   return (
     <>
-      {!isWeb && (
-        <Pressable
-          style={({ pressed }) => [styles.fab, pressed && PRESSED_OPACITY_085]}
-          onPress={openRightPanel}
-          accessibilityRole="button"
-          accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.filtry_i_spisok_mest_06aa2123')}
-        >
-          <Feather name="sliders" size={22} color={themedColors.textOnPrimary} />
-        </Pressable>
-      )}
-
       {showDesktopLayersControl && (
         <>
           <Pressable
@@ -401,7 +404,7 @@ export function MapScreenDesktopOverlays({
           {radiusOpen && (
             <MapMobileRadiusPopover
               colors={themedColors as ThemedColors}
-              top={16 + 44 + 8}
+              top={topInset + 16 + 44 + 8}
               right={16 + 44 + 8}
               minWidth={150}
               maxWidth={200}
@@ -431,7 +434,7 @@ export function MapScreenDesktopOverlays({
           {layersOpen && (
             <MapMobileLayersPopover
               colors={themedColors as ThemedColors}
-              top={16 + 44 + 8}
+              top={topInset + 16 + 44 + 8}
               right={16}
               // MapMobilePopover фиксирует ширину карточки по `minWidth` (width:
               // minWidth), поэтому без него карточка садилась на дефолтные 200px и
@@ -450,7 +453,7 @@ export function MapScreenDesktopOverlays({
         </>
       )}
 
-      <MapOfflineIndicator visible={!isConnected} />
+      <MapOfflineIndicator visible={!isConnected} top={MAP_OFFLINE_INDICATOR_TOP + topInset} />
 
       {!mapReady && (
         <View style={[styles.loadingOverlay, POINTER_EVENTS_NONE]} testID="map-loading-overlay">

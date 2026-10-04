@@ -590,6 +590,39 @@ describe('Map.ios Component', () => {
     expect(reconnectScripts[0]).toContain('window.__metravelBaseTileLayer.redraw()');
   });
 
+  // #2172 — collapsing the tablet panel, Split View, Stage Manager and rotation
+  // change the map WIDTH at the same height; Leaflet must re-measure then too.
+  it('re-measures Leaflet when only the container width changes', () => {
+    const rendered = render(
+      <Map travel={mockTravel} coordinates={mockCoordinates} />
+    );
+    const webView = getWebView(rendered);
+    act(() => {
+      webView.props.onLoadEnd();
+    });
+    const container = rendered
+      .UNSAFE_getAllByType(View)
+      .find((node) => typeof node.props?.onLayout === 'function' && !node.props?.source);
+    expect(container).toBeTruthy();
+    const layout = (width: number, height: number) =>
+      act(() => {
+        container!.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width, height } } });
+      });
+    const rnLayoutCalls = () =>
+      mockInjectJavaScript.mock.calls.filter(([script]) => String(script).includes('"rn-layout"')).length;
+
+    layout(764, 730);
+    expect(rnLayoutCalls()).toBe(1);
+
+    // Same size again: nothing to re-measure.
+    layout(764, 730);
+    expect(rnLayoutCalls()).toBe(1);
+
+    // Panel collapsed: +304pt width, same height.
+    layout(1068, 730);
+    expect(rnLayoutCalls()).toBe(2);
+  });
+
   it('should include all travel points in the map payload', () => {
     const rendered = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />

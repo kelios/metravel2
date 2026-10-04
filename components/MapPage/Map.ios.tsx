@@ -481,7 +481,10 @@ const Map: React.FC<TravelProps> = ({
   // серая полоса ~150px сверху), DOM-событие `resize` внутри WebView не стреляет.
   // Ловим изменение высоты контейнера в RN и дёргаем тот же __metravelScheduleInvalidate,
   // что уже вызывается на init/resize/renderPoints — лишний invalidateSize безвреден.
-  const lastLayoutHeightRef = useRef(0);
+  // #2172 — и ширину тоже: свёрнутая панель на iPad/Android-планшете, Split View,
+  // Stage Manager и поворот меняют ширину карты при той же высоте, а DOM `resize`
+  // внутри WebView при смене размера родительского View не гарантирован.
+  const lastLayoutSizeRef = useRef({ width: 0, height: 0 });
   // При переключении вкладки «Список → Карта» карта РЕ-монтируется: onLayout с
   // финальной высотой прилетает ДО onLoadEnd WebView (isReadyRef ещё false), и
   // прежний ранний return его терял → Leaflet кэшировал меньший размер, оставляя
@@ -489,11 +492,13 @@ const Map: React.FC<TravelProps> = ({
   // invalidateSize в handleReady, когда WebView готов.
   const pendingLayoutInvalidateRef = useRef(false);
   const handleContainerLayout = useCallback(
-    (event: { nativeEvent: { layout: { height: number } } }) => {
+    (event: { nativeEvent: { layout: { width: number; height: number } } }) => {
+      const width = event?.nativeEvent?.layout?.width ?? 0;
       const height = event?.nativeEvent?.layout?.height ?? 0;
-      if (!Number.isFinite(height) || height <= 0) return;
-      if (Math.abs(height - lastLayoutHeightRef.current) < 1) return;
-      lastLayoutHeightRef.current = height;
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return;
+      const last = lastLayoutSizeRef.current;
+      if (Math.abs(width - last.width) < 1 && Math.abs(height - last.height) < 1) return;
+      lastLayoutSizeRef.current = { width, height };
       if (!isReadyRef.current) {
         pendingLayoutInvalidateRef.current = true;
         return;

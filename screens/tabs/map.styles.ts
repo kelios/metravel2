@@ -32,6 +32,15 @@ const CONTROL_SIZE = 44;
 // неё же считается минимальная высота баннера под абсолютный крестик (#1780).
 const GEO_BANNER_PADDING_VERTICAL_MOBILE = 7;
 
+/**
+ * #2172 — top inset the desktop branch (width ≥ 768) takes itself. Native has
+ * no app header on /map (`app/(tabs)/_layout.tsx`), so the row would start
+ * under the iPad status bar; on web the page header owns that space. One rule
+ * for the shell row (`mapContainer`), the on-map controls and their popovers.
+ */
+export const getDesktopBranchTopInset = (insetTop: number): number =>
+  Platform.OS === 'web' ? 0 : Math.max(0, insetTop);
+
 export const getStyles = (
   isMobile: boolean,
   insetTop: number,
@@ -40,6 +49,14 @@ export const getStyles = (
 ) => {
   const shadowMedium = themedColors.shadows.medium;
   const shadowHeavy = themedColors.shadows.heavy;
+  // #2172 — native engine for the desktop-branch card shadow (web draws it with
+  // CSS boxShadow in the web blocks). iOS needs the full shadow set, Android
+  // only reads elevation.
+  const nativeCardShadow = Platform.OS === 'ios' ? shadowMedium : { elevation: shadowMedium.elevation };
+  // #2172 — native at width ≥ 768 (iPad, Android tablets) renders the same
+  // desktop-branch cards as web: radius, border, shadow. Web blocks stay as is.
+  const isNativeDesktop = Platform.OS !== 'web' && !isMobile;
+  const desktopTopInset = isMobile ? 0 : getDesktopBranchTopInset(insetTop);
   const webViewportReservedHeight = isMobile
     ? WEB_MOBILE_DOCK_INSET
     : usesWebBottomDock
@@ -78,7 +95,7 @@ export const getStyles = (
       columnGap: isMobile ? 0 : PANEL_GAP,
       paddingLeft: isMobile ? 0 : DESKTOP_SHELL_PADDING,
       paddingRight: isMobile ? 0 : DESKTOP_SHELL_PADDING,
-      paddingTop: isMobile ? 0 : DESKTOP_SHELL_PADDING - 4,
+      paddingTop: isMobile ? 0 : DESKTOP_SHELL_PADDING - 4 + desktopTopInset,
       paddingBottom: isMobile ? 0 : DESKTOP_SHELL_PADDING - 4,
       minHeight: 0,
       minWidth: 0,
@@ -107,11 +124,24 @@ export const getStyles = (
               height: '100%',
               minHeight: 0,
             } as any)
-          : null),
+          : isNativeDesktop
+            ? {
+                // #2172 — the map card's shadow: `mapArea` clips the WebView
+                // (overflow hidden drops an iOS shadow on the same view), so the
+                // host draws it. The opaque background lets iOS build the
+                // shadow path from the rounded rect instead of the moving map.
+                borderRadius: PANEL_RADIUS,
+                backgroundColor: themedColors.surface,
+                ...nativeCardShadow,
+              }
+            : null),
       },
       mapArea: {
         flex: 1,
-        minHeight: isMobile ? 260 : 500,
+        // #2172 — the desktop-branch map never grows past its host: a 500pt
+        // floor pushed it under the tab bar in a short Stage Manager window
+        // (native has no clipping container). Web already resets it to 0.
+        minHeight: isMobile ? 260 : 0,
         position: 'relative',
         zIndex: 0,
         ...(Platform.OS === 'web'
@@ -128,7 +158,16 @@ export const getStyles = (
               borderColor: themedColors.borderLight,
               boxShadow: isMobile ? 'none' : themedColors.boxShadows.card,
             } as any)
-          : null),
+          : isNativeDesktop
+            ? {
+                // #2172 — same card as web; overflow clips the WebView to the
+                // radius (uniform radius → cheap cornerRadius clip on iOS).
+                borderRadius: PANEL_RADIUS,
+                overflow: 'hidden',
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: themedColors.borderLight,
+              }
+            : null),
       },
       rightPanel: {
         position: isMobile ? 'absolute' : 'relative',
@@ -167,9 +206,20 @@ export const getStyles = (
               borderColor: themedColors.borderLight,
               overflow: isMobile ? 'hidden' : 'visible',
             } as any)
-          : Platform.OS === 'ios'
-          ? shadowHeavy
-          : { elevation: shadowHeavy.elevation }),
+          : isNativeDesktop
+            ? {
+                // #2172 — same card as web. Never `overflow: 'hidden'` here:
+                // `map-panel-collapse-button` sits past the right edge and native
+                // Fabric only hit-tests it while the panel does not clip. Android
+                // draws by elevation first, so it must stay ≥ the map host's.
+                borderRadius: PANEL_RADIUS,
+                borderWidth: 1,
+                borderColor: themedColors.borderLight,
+                ...nativeCardShadow,
+              }
+            : Platform.OS === 'ios'
+              ? shadowHeavy
+              : { elevation: shadowHeavy.elevation }),
         zIndex: 1000,
         ...(Platform.OS === 'web' && !isMobile
           ? ({
@@ -180,20 +230,6 @@ export const getStyles = (
         ...(Platform.OS === 'web' && isMobile
           ? ({
               transition: `transform ${TRANSITION_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
-            } as any)
-          : null),
-      },
-      overlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: isMobile && Platform.OS === 'web' ? WEB_MOBILE_DOCK_INSET : 0,
-        backgroundColor: themedColors.overlay,
-        zIndex: 999,
-        ...(Platform.OS === 'web'
-          ? ({
-              transition: `opacity ${TRANSITION_MS}ms ease`,
             } as any)
           : null),
       },
@@ -252,7 +288,14 @@ export const getStyles = (
                   }),
               boxShadow: '0 1px 0 rgba(15,23,42,0.06)',
             } as any)
-          : null),
+          : isNativeDesktop
+            ? {
+                // #2172 — the panel does not clip (see rightPanel), so its
+                // children round its corners themselves.
+                borderTopLeftRadius: PANEL_RADIUS,
+                borderTopRightRadius: PANEL_RADIUS,
+              }
+            : null),
       },
       // The former `tabsContainer` row: tab segment + action icons.
       tabsRow: {
@@ -327,7 +370,9 @@ export const getStyles = (
               borderBottomLeftRadius: isMobile ? 0 : 24,
               borderBottomRightRadius: isMobile ? 0 : 24,
             } as any)
-          : null),
+          : isNativeDesktop
+            ? { borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }
+            : null),
       },
       resetButton: {
         flexDirection: 'row',
@@ -367,37 +412,6 @@ export const getStyles = (
         height: 44,
         paddingHorizontal: 0,
       },
-      closePanelButton: {
-        width: CONTROL_SIZE,
-        height: CONTROL_SIZE,
-        borderRadius: CONTROL_RADIUS,
-        backgroundColor: themedColors.surfaceAlpha40,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: themedColors.borderLight,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...(Platform.OS === 'web' ? ({
-          cursor: 'pointer',
-          transition: 'background-color 0.15s ease',
-        } as any) : null),
-      },
-      fab: {
-        position: 'absolute',
-        right: 16,
-        bottom: 16,
-        width: 52,
-        height: 52,
-        borderRadius: 26,
-        backgroundColor: themedColors.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 1001,
-        ...(Platform.OS === 'web'
-          ? ({ boxShadow: `0 4px 16px ${themedColors.primary}50, 0 1px 4px rgba(0,0,0,0.08)` } as any)
-          : Platform.OS === 'ios'
-          ? shadowMedium
-          : { elevation: shadowMedium.elevation }),
-      },
       loadingOverlay: {
         ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
@@ -410,7 +424,7 @@ export const getStyles = (
       // surface + shadow, matching the other floating map controls.
       desktopLayersFab: {
         position: 'absolute',
-        top: 16,
+        top: 16 + desktopTopInset,
         right: 16,
         width: 44,
         height: 44,
@@ -437,7 +451,7 @@ export const getStyles = (
       // as the layers FAB, immediately to its left (44 button + 8 gap).
       desktopRadiusFab: {
         position: 'absolute',
-        top: 16,
+        top: 16 + desktopTopInset,
         right: 16 + 44 + 8,
         width: 44,
         height: 44,
@@ -562,7 +576,7 @@ export const getStyles = (
               WebkitBackdropFilter: 'blur(18px)',
               boxShadow: themedColors.boxShadows.card,
             } as any)
-          : null),
+          : nativeCardShadow),
       },
       collapseToggle: {
         width: CONTROL_SIZE,
@@ -598,7 +612,7 @@ export const getStyles = (
               boxShadow: themedColors.boxShadows.medium,
               transition: 'background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease',
             } as any)
-          : null),
+          : nativeCardShadow),
       },
       collapsedIconBtn: {
         width: CONTROL_SIZE,
@@ -637,36 +651,6 @@ export const getStyles = (
         ...(Platform.OS === 'web'
           ? ({ cursor: 'col-resize' } as any)
           : null),
-      },
-      radiusPill: {
-        position: 'absolute',
-        top: 16,
-        right: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        backgroundColor: themedColors.surface,
-        borderRadius: 999,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: themedColors.borderLight,
-        zIndex: 1005,
-        ...(Platform.OS === 'web'
-          ? ({
-              backgroundColor: themedColors.surfaceAlpha40,
-              backdropFilter: 'blur(14px) saturate(1.08)',
-              WebkitBackdropFilter: 'blur(14px) saturate(1.08)',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
-              cursor: 'pointer',
-              transition: 'opacity 0.15s ease',
-            } as any)
-          : themedColors.shadows.light),
-      },
-      radiusPillText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: themedColors.text,
       },
       locationQualityPill: {
         position: 'absolute',

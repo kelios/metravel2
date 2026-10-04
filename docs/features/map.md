@@ -85,6 +85,50 @@ generic web fallback; platform resolution выбирает `.web`, `.ios` или
 | Map events | React Leaflet handlers | `WebView.onMessage` |
 | Offline map data | point-index package only; no tile bulk download | transparent seven-day cache of tiles actually viewed; lawful PMTiles option is documented in ADR 0004 but remains `wont_do` until the owner approves its license and budget |
 
+### Desktop-ветка `/map` (ширина ≥ 768): одна модель на всех платформах
+
+Desktop web, iPad и Android-планшет рендерят одну desktop-ветку
+`components/MapPage/MapScreenParts/MapScreenDesktop.tsx`: строку «панель |
+карта» делает #2155, модель панели — #2172. Платформа меняет только движок
+(тень, касания), а не модель взаимодействия:
+
+- Состояний два: панель развёрнута или свёрнута в полосу 56 с иконками «Места»,
+  «Маршрут», «Фильтры». Состояния «скрыта» нет: невидимая панель в строке
+  оставляла пустую колонку, на iOS мёртвую, на Android нажимаемую.
+- Кнопка сворачивания `map-panel-collapse-button` — один узел со стилем
+  `collapseToggleInPanel` за правым краем панели на всех платформах. Native
+  Fabric доводит до неё касание, пока `rightPanel` не обрезает содержимое,
+  поэтому у native `rightPanel` нет `overflow: hidden`
+  (`__tests__/app/mapLayout.test.ts`).
+- `MapPanelHeader` — только desktop-шапка: вкладки «Места», «Маршрут» и действия
+  «Фильтры», «Подсказки», «Сброс» на всех платформах. Телефонная шторка — свой
+  слой `MapMobileLayout`.
+- «Слои» и «Радиус» — плавающие кнопки на карте на всех платформах, через тот же
+  `MapUiApi`. Плавающей кнопки фильтров и native-пилюли радиуса нет. Аппаратная
+  Back на Android сначала закрывает открытый поповер, как в телефонной раскладке.
+- Верхний отступ ветка берёт сама: на native у `/map` нет шапки приложения,
+  поэтому строка, кнопки на карте, их поповеры и плашка «нет сети» сдвигаются
+  на `insets.top` по одному правилу `getDesktopBranchTopInset`
+  (`screens/tabs/map.styles.ts`). На web место сверху держит шапка страницы,
+  отступ 0.
+- Только web по природе: ручка ширины (мышь), сохранённые ширина и
+  свёрнутость (localStorage). На native ширина панели 360, свёрнутость живёт в
+  памяти экрана.
+- Декор карточек (радиус 20, рамка, тень) общий. Тень на web — CSS, на native —
+  `shadows.medium`/`elevation`; тень карты рисует `mapHost`, а `mapArea`
+  обрезает WebView. Высота карты не превышает хост (`minHeight: 0`), а
+  `Map.ios.tsx` пересчитывает Leaflet при смене и ширины, и высоты контейнера.
+
+Регрессия: `__tests__/components/MapPage/MapScreenDesktop.native.test.tsx`
+(iOS и Android на ширине планшета).
+
+Открытые пробелы этой ветки, общие для web и native: вкладки шапки не вмещают
+«Места» с бейджем рядом с тремя действиями (на web при 820 содержимое выходит за
+вкладку, #2217); «Показать всё на карте» на native недоступно — у native
+`MapUiApi` нет `fitToResults` (#2218); на native-планшете нет кнопки «Моё
+местоположение» (#2219); пилюля качества геолокации заходит под кнопку
+сворачивания (#2220).
+
 ### Web cold-start viewport and tiles
 
 На основной web-карте готовность Leaflet и готовность базовой OSM-подложки —

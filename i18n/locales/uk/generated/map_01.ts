@@ -235,7 +235,6 @@ export const mapGenerated1 = {
   "components.MapPage.MapCanvas.poslednee_izvestnoe_mesto_2b6f90c3": "Останнє відоме місце",
   "components.MapPage.MapCanvas.povtorit_66ddcbbc": "Повторити",
   "components.MapPage.MapCanvas.iskat_v_etoy_oblasti_80b413e4": "Шукати в цій галузі",
-  "components.MapPage.MapCanvas.radius_poiska_value1_km_nazhmite_chtoby_izme_d6b055e9": "Радіус пошуку: {{value1}} км. Натисніть, щоб змінити",
   "components.MapPage.MapCanvas.zakryt_uvedomlenie_ae069cb3": "Закрити повідомлення",
   "components.MapPage.MapCanvas.mestopolozhenie_obnovlyaetsya_live_1": "Оновлюємо місцезнаходження…",
   "components.MapPage.MapCanvas.nizkaya_tochnost_geolokatsii_live_2": "Низька точність геолокації",
