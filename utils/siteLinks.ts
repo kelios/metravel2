@@ -142,11 +142,22 @@ const SITE_ARTICLE_ROOTS: ReadonlySet<string> = new Set(['travel', 'travels', 'a
 
 /**
  * Путь статьи сайта (`/travel(s)/<…>`, `/article(s)/<…>`) — доменное правило
- * кнопки «Статья» карточки места (#2144). Принимает путь, а не URL: хост
- * решает `resolveSitePath`.
+ * кнопки «Статья» карточки места (#2144). Принимает путь, а не URL.
  */
 export function isSiteArticlePath(path: string): boolean {
   const pathname = String(path || '').split(/[?#]/)[0]
   const [root, param] = pathname.split('/').filter(Boolean)
   return SITE_ARTICLE_ROOTS.has(root) && Boolean(param)
+}
+
+/**
+ * Путь статьи из ссылки маркера/точки или `null`. Хост — любой http(s): бэкенд
+ * собирает `urlTravel` от хоста запроса, на dev/local это не metravel.by (#501,
+ * тот же контракт, что `resolveInternalTravelRoute`). Решает только «есть ли
+ * статья»; открытие идёт через `resolveAppRouteForSiteUrl`/`openExternalUrl*`.
+ */
+export function resolveSiteArticlePath(href?: string | null): string | null {
+  const sitePath = resolveSitePath(href)
+  const anyHostPath = sitePath ?? /^https?:\/\/[^/?#]+(\/[^]*)$/i.exec(String(href ?? '').trim())?.[1] ?? null
+  return anyHostPath && isSiteArticlePath(anyHostPath) ? anyHostPath : null
 }

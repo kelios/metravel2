@@ -6,7 +6,7 @@ jest.mock('@/utils/seo', () => ({ getSiteBaseUrl: () => 'https://metravel.by' })
 
 // #2144: «Статья» карточки места — хост и путь через единый строковый
 // `resolveSitePath` (без `new URL`, неспецифичного на Hermes), предикат статьи —
-// `isSiteArticlePath` из `utils/siteLinks.ts`.
+// `isSiteArticlePath` из `utils/siteLinks.ts`; хост пути статьи — любой (#501).
 describe('usePopupActions: normalizedArticleHref (#2144)', () => {
   const render = (articleHref: string | null) =>
     renderHook(() =>
@@ -18,6 +18,9 @@ describe('usePopupActions: normalizedArticleHref (#2144)', () => {
     ['https://metravel.by/travels/slug?id=7', '/travels/slug?id=7'],
     ['https://www.metravel.by/article/post#h', '/article/post#h'],
     ['http://metravel.by/travel/12', '/travel/12'],
+    // #501: ссылки маркеров строятся от хоста API (dev/local) — кнопка есть.
+    ['http://localhost:8000/travels/slug', '/travels/slug'],
+    ['http://192.168.50.36/travel/12?id=3', '/travel/12?id=3'],
   ])('%s → %s, кнопка есть', (href, path) => {
     const actions = render(href)
     expect(actions.normalizedArticleHref).toBe(path)
@@ -25,9 +28,8 @@ describe('usePopupActions: normalizedArticleHref (#2144)', () => {
   })
 
   it.each([
-    'https://example.com/travels/slug',
-    'https://metravel.by.evil.com/travels/slug',
     'https://metravel.by/media/x.jpg',
+    'https://example.com/media/x.jpg',
     'https://metravel.by/travels/',
     '/quests/minsk',
     '',

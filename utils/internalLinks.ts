@@ -34,8 +34,13 @@ export function handleRichTextLinkPress(href?: string | null): void {
     window.location.assign(sitePath)
     return
   }
-  const target = sitePath ?? href.trim()
-  if (!sitePath && !/^https?:\/\//i.test(target)) return
+  // Абсолютный http(s) уходит как есть (хост ссылки сохраняется и на сборке с
+  // локальным EXPO_PUBLIC_SITE_URL); путь сайта — только для относительных и
+  // `about:///…` ссылок, его дополняет `baseUrl`.
+  const trimmed = href.trim()
+  const isAbsoluteHttp = /^https?:\/\//i.test(trimmed)
+  if (!sitePath && !isAbsoluteHttp) return
+  const target = isAbsoluteHttp ? trimmed : (sitePath as string)
   void openExternalUrl(target, {
     allowRelative: true,
     baseUrl: getSiteBaseUrl(),

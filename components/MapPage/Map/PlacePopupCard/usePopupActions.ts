@@ -10,7 +10,7 @@ import {
 } from '@/components/navigation/navigationActionMeta';
 
 import { getPopupTooltips } from './constants';
-import { isSiteArticlePath, resolveSitePath } from '@/utils/siteLinks';
+import { resolveSiteArticlePath } from '@/utils/siteLinks';
 import { translate as i18nT } from '@/i18n'
 import { formatInteger } from '@/i18n/format'
 import { formatDistanceMeters } from '@/utils/distanceCalculator'
@@ -69,13 +69,10 @@ export function usePopupActions({
   const popupTooltips = useMemo(getPopupTooltips, []);
   const hasCoord = !!coord;
 
-  // #2144: хост и путь — единый строковый `resolveSitePath` (без `new URL`,
-  // неспецифичного на Hermes), предикат статьи — `isSiteArticlePath`. Открытие
-  // по кнопке решает `createMapPopupComponent` тем же резолвером сайта.
-  const normalizedArticleHref = useMemo(() => {
-    const sitePath = resolveSitePath(String(articleHref ?? ''));
-    return sitePath && isSiteArticlePath(sitePath) ? sitePath : null;
-  }, [articleHref]);
+  // #2144: путь статьи — единый строковый `resolveSiteArticlePath` (без
+  // `new URL`, любой http(s)-хост — ссылки маркеров строятся от хоста API, #501).
+  // Открытие по кнопке решает `createMapPopupComponent` резолвером экранов.
+  const normalizedArticleHref = useMemo(() => resolveSiteArticlePath(articleHref), [articleHref]);
   const hasArticle = !!normalizedArticleHref && typeof onOpenArticle === 'function';
 
   const hasDrivingInfo =

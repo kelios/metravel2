@@ -155,7 +155,8 @@ export function normalizeHttpOrInternalUrl(rawUrl: string): string {
       allowedProtocols: HTTP_PROTOCOLS,
     });
     // #2144: принадлежность сайту решает единый строковый `resolveSitePath`
-    // (хост без порта), а не сравнение origin через `new URL`.
+    // (хост сайта без порта: `metravel.by:443` не пройдёт), а не сравнение
+    // origin через `new URL`.
     return normalized && resolveSitePath(normalized) ? normalized : '';
   }
 

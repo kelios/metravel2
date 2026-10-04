@@ -29,11 +29,13 @@ const HOST_ONLY_RESOLVER_CONSUMERS: Record<string, string> = {
   'components/home/HomeHero.tsx': 'только web-ветка (SPA-переход); native — openExternalUrl',
   'components/trips/planning/TripPlanLinkedText.tsx':
     'признак internal для web (та же вкладка); нажатие на native — handleRichTextLinkPress',
-  'components/MapPage/Map/PlacePopupCard/usePopupActions.ts':
-    'видимость кнопки «Статья» (isSiteArticlePath); открытие — resolveAppRouteForSiteUrl',
 }
 
-const NAVIGATES_IN_APP = /\b(?:router|navigation)\.(?:push|replace|navigate)\s*\(/
+// Навигирует в приложении: императивный `router.*` или любой импорт навигации
+// expo-router (`useRouter`, `router`, `Link`, `Redirect`) — деструктурированный
+// `push(` и `<Link href>` тоже переход.
+const NAVIGATES_IN_APP =
+  /\b(?:router|navigation)\.(?:push|replace|navigate)\s*\(|import\s*\{[^}]*\b(?:useRouter|router|Link|Redirect)\b[^}]*\}\s*from\s*['"]expo-router['"]/
 const SITE_HOST_LITERAL = /['"`](?:www\.)?metravel\.by['"`]/
 const URL_PARSE = /\bnew URL\(\s*(?!window\.location)/
 const HOST_ONLY_RESOLVER = /\b(?:resolveSitePath|resolveInternalHref)\b/
