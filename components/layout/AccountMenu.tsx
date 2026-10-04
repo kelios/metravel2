@@ -65,34 +65,31 @@ type MenuLinkItem = {
 type MenuStyles = ReturnType<typeof createMenuStyles>
 type ThemedColors = ReturnType<typeof useThemedColors>
 
+// Пункт меню из общего списка шапки. Подпись — геттер: читается при показе, а не
+// при загрузке модуля (#2156). Иначе в список ложилась строка языка по умолчанию
+// (RU), а сохранённый язык на native восстанавливается из AsyncStorage позже —
+// на iPad в EN «Навигация» оставалась русской. Guard семейства —
+// `__tests__/i18n/moduleScopeLabelGovernance.test.ts`.
+const toHeaderNavLink = (keyPrefix: 'nav' | 'doc') => (item: HeaderNavItem): MenuLinkItem => ({
+  key: `${keyPrefix}-${item.path}`,
+  get title() { return item.label },
+  path: item.path,
+  external: item.external,
+  icon: item.icon,
+})
+
 const STATIC_NAV_LINKS: MenuLinkItem[] = [
-  ...PRIMARY_HEADER_NAV_ITEMS.map((item) => ({
-    key: `nav-${item.path}`,
-    title: item.label,
-    path: item.path,
-    icon: item.icon,
-  })),
+  ...PRIMARY_HEADER_NAV_ITEMS.map(toHeaderNavLink('nav')),
   { key: 'nav-favorites', get title() { return i18nT('navigationStatic:components.layout.AccountMenu.hochu_poehat_fa6b46d5') }, path: '/favorites', icon: 'heart' },
   { key: 'nav-history', get title() { return i18nT('navigationStatic:components.layout.AccountMenu.vy_smotreli_7405801e') }, path: '/history', icon: 'clock' },
   { key: 'nav-about', get title() { return i18nT('navigationStatic:components.layout.AccountMenu.o_sayte_50990f19') }, path: '/about', icon: 'info' },
-  ...SECONDARY_HEADER_NAV_ITEMS.map((item) => ({
-    key: `nav-${item.path}`,
-    title: item.label,
-    path: item.path,
-    external: item.external,
-    icon: item.icon,
-  })),
+  ...SECONDARY_HEADER_NAV_ITEMS.map(toHeaderNavLink('nav')),
 ]
 
 // «Документы» — тот же список, что в мобильном меню шапки (`DOCUMENT_NAV_ITEMS`);
 // пункты, недоступные на платформе (настройки cookies на native, #2135), отсекает
 // общая политика `isNavRouteAvailable` в `renderLinks`.
-const toDocumentLink = (item: HeaderNavItem): MenuLinkItem => ({
-  key: `doc-${item.path}`,
-  get title() { return item.label },
-  icon: item.icon,
-  path: item.path,
-})
+const toDocumentLink = toHeaderNavLink('doc')
 
 const wrapperStyles = StyleSheet.create({
   ctaWrapper: {
