@@ -1,8 +1,10 @@
 import React, { startTransition, useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, Platform, StatusBar as RNStatusBar, StyleSheet, View, LogBox, useColorScheme, useWindowDimensions } from "react-native";
+import { Image, Platform, StatusBar as RNStatusBar, StyleSheet, View, LogBox, useColorScheme, useWindowDimensions } from "react-native";
 import { DarkTheme, DefaultTheme, SplashScreen, Stack, ThemeProvider as NavigationThemeProvider, usePathname } from "expo-router";
 import AppProviders from "@/components/layout/AppProviders";
 import NativeAppRuntime from "@/components/layout/NativeAppRuntime";
+import LaunchCover from "@/components/layout/LaunchCover";
+import { useLaunchSplash } from "@/hooks/useLaunchSplash";
 import QuestProgressQueueRuntime from "@/components/quests/QuestProgressQueueRuntime";
 import BlockedAuthorsRuntime from "@/components/profile/BlockedAuthorsRuntime";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
@@ -31,7 +33,7 @@ import { shouldPrefetchTravelStatics } from "@/utils/staticPrefetchRoutes";
 import { setActiveQueryClient } from "@/api/activeQueryClient";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
-import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
+import { ThemeProvider, useThemedColors } from "@/hooks/useTheme";
 import { navigationThemeColors } from "@/components/layout/navigationTheme";
 import SkipLinks from '@/components/layout/SkipLinks';
 import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnostics';
@@ -173,10 +175,6 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
 	    const colorScheme = colorSchemeRaw === 'unspecified' ? null : colorSchemeRaw;
       const { width } = useWindowDimensions();
       const [isViewportHydrated, setIsViewportHydrated] = useState(!isWeb);
-    const loadingColors = useMemo(
-      () => getThemedColors(colorScheme === 'dark'),
-      [colorScheme],
-    );
 
     // Web analytics page-view tracking is handled centrally in getAnalyticsInlineScript().
     // Keeping additional tracking here duplicates GA/Yandex events on route changes.
@@ -327,26 +325,11 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
     // `.web` map and does not pull native glyph maps into every route chunk.
     const [fontsLoaded, fontError] = useAppFonts(ROOT_ICON_FONTS);
 
-    // Старт не должен висеть на шрифтах: после таймаута показываем UI с системными глифами.
-    const [fontWaitExpired, setFontWaitExpired] = useState(isWeb);
-    useEffect(() => {
-      if (isWeb || fontsLoaded || fontError) return;
-      const t = setTimeout(() => setFontWaitExpired(true), 3000);
-      return () => clearTimeout(t);
-    }, [fontsLoaded, fontError]);
-
-    // AND-06: Hide splash screen after fonts are loaded OR failed to load (native).
-    // Gating on fontsLoaded alone hangs the start when fontError occurs
-    // (fontsLoaded stays false), so the splash/spinner never hides.
-    useEffect(() => {
-      if (!isWeb && (fontsLoaded || fontError || fontWaitExpired)) {
-        SplashScreen.hideAsync().catch((error) => {
-          if (__DEV__) {
-            console.warn('[RootLayout] Ошибка hideAsync:', error);
-          }
-        });
-      }
-    }, [fontsLoaded, fontError, fontWaitExpired]);
+    // Launch contract (#2142): the native splash hides once the icon font and
+    // the biometric gate are ready (see hooks/useLaunchSplash). AND-06: a font
+    // error counts as ready, otherwise fontsLoaded stays false and the start hangs.
+    const fontsReady = isWeb || Boolean(fontsLoaded || fontError);
+    const launchFailsafeExpired = useLaunchSplash(fontsReady);
 
     useEffect(() => {
       if (fontError && !isWeb) {
@@ -354,12 +337,10 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
       }
     }, [fontError]);
 
-    if (!fontsLoaded && !fontError && !isWeb && !fontWaitExpired) {
-      return (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: loadingColors.background }}>
-          <ActivityIndicator size="small" color={loadingColors.primary} />
-        </View>
-      );
+    // Behind the native splash until the font is ready; past the failsafe the
+    // UI renders with system glyphs.
+    if (!fontsReady && !launchFailsafeExpired) {
+      return <LaunchCover />;
     }
 
 

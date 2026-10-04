@@ -1,24 +1,33 @@
 // components/layout/BiometricGate.native.tsx
 // Cold-start biometric unlock gate (native only).
-// Shown ONLY when the user opted in to biometrics AND is logged in.
+// Armed ONLY when the user opted in to biometrics AND is logged in.
 // Web has a no-op sibling (BiometricGate.web.tsx) so the lock never blocks web.
+//
+// Launch contract (#2142): the gate is one of the launch conditions of
+// stores/launchReadinessStore — the native splash stays up until the gate has
+// decided. While deciding or prompting it shows LaunchCover (the splash's JS
+// twin); the lock screen appears only after a failed/cancelled prompt.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import Button from '@/components/ui/Button';
+import LaunchCover from '@/components/layout/LaunchCover';
+import {
+  isBiometricGateLaunchSettled,
+  resolveBiometricGateView,
+  type BiometricGatePhase,
+} from '@/components/layout/biometricGateModel';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useBiometricAuth } from '@/hooks/useBiometricAuth';
 import { useAuth } from '@/context/AuthContext';
+import { useLaunchReadinessStore } from '@/stores/launchReadinessStore';
 import { translate as i18nT } from '@/i18n'
-
-
-type GatePhase = 'idle' | 'prompting' | 'unlocked' | 'failed';
 
 export default function BiometricGate() {
   const colors = useThemedColors();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, authReady, logout } = useAuth();
   const {
     isAvailable,
     isEnrolled,
@@ -26,41 +35,53 @@ export default function BiometricGate() {
     isChecking,
     authenticate,
   } = useBiometricAuth();
+  const failsafeExpired = useLaunchReadinessStore((s) => s.failsafeExpired);
+  const markLaunchConditionReady = useLaunchReadinessStore((s) => s.markLaunchConditionReady);
 
   // The gate is "armed" only when: biometrics opted in, hardware present,
   // enrolled, and the user is logged in. Anything else → never lock.
   const shouldGate = isEnabled && isAvailable && isEnrolled && isAuthenticated;
+  // Whether the gate is armed is known only once the session is restored and
+  // the device probe settled. The launch failsafe only lifts the cover over a
+  // slow probe (fail-open, as before the contract); it does not consume the
+  // decision, so a probe that settles later still prompts.
+  const probeSettled = authReady && !isChecking;
+  const decided = probeSettled || failsafeExpired;
 
-  const [phase, setPhase] = useState<GatePhase>('idle');
-  const triggeredRef = useRef(false);
+  const [phase, setPhase] = useState<BiometricGatePhase>('idle');
+  // The gate decides once per cold start: a later sign-in does not prompt.
+  const consumedRef = useRef(false);
 
   const runAuth = useCallback(async () => {
-    if (triggeredRef.current && phase === 'prompting') return;
-    triggeredRef.current = true;
     setPhase('prompting');
     const ok = await authenticate(i18nT('navigation:components.layout.BiometricGate.razblokiruyte_metravel_e8f80743'));
     setPhase(ok ? 'unlocked' : 'failed');
-  }, [authenticate, phase]);
+  }, [authenticate]);
 
-  // Auto-prompt once, after the hardware/enrollment check settles and the gate is armed.
   useEffect(() => {
-    if (isChecking) return;
+    if (!decided) return;
     if (!shouldGate) {
       // Not armed (biometrics off, no hardware, logged out) → never block.
+      if (probeSettled) consumedRef.current = true;
       setPhase('unlocked');
       return;
     }
-    if (!triggeredRef.current) {
+    if (!consumedRef.current) {
+      consumedRef.current = true;
       void runAuth();
     }
-  }, [isChecking, shouldGate, runAuth]);
+  }, [decided, probeSettled, shouldGate, runAuth]);
 
-  // While the device check is in flight on an armed session, hold a neutral
-  // cover so app content is not briefly visible before the prompt.
-  if (!shouldGate || phase === 'unlocked') return null;
+  const view = resolveBiometricGateView({ phase, decided, shouldGate });
+
+  useEffect(() => {
+    if (isBiometricGateLaunchSettled(view)) markLaunchConditionReady('biometricGate');
+  }, [view, markLaunchConditionReady]);
+
+  if (view === 'open') return null;
+  if (view === 'pending' || view === 'prompting') return <LaunchCover />;
 
   const styles = createStyles(colors);
-  const isPrompting = phase === 'prompting' || isChecking;
 
   return (
     <View style={styles.overlay} pointerEvents="auto">
@@ -70,26 +91,20 @@ export default function BiometricGate() {
         <Text style={styles.subtitle}>
           {i18nT('navigation:components.layout.BiometricGate.podtverdite_vhod_s_pomoschyu_biometrii_chtob_3fa03608')}</Text>
 
-        {isPrompting ? (
-          <ActivityIndicator color={colors.primaryDark} style={styles.spinner} />
-        ) : (
-          <Button
-            label={i18nT('navigation:components.layout.BiometricGate.razblokirovat_f1634eec')}
-            onPress={() => void runAuth()}
-            variant="primary"
-            icon={<Feather name="unlock" size={18} color={colors.textOnPrimary} />}
-            style={styles.primaryButton}
-          />
-        )}
+        <Button
+          label={i18nT('navigation:components.layout.BiometricGate.razblokirovat_f1634eec')}
+          onPress={() => void runAuth()}
+          variant="primary"
+          icon={<Feather name="unlock" size={18} color={colors.textOnPrimary} />}
+          style={styles.primaryButton}
+        />
 
-        {phase === 'failed' ? (
-          <Button
-            label={i18nT('navigation:components.layout.BiometricGate.vyyti_iz_akkaunta_22641000')}
-            onPress={() => void logout()}
-            variant="ghost"
-            style={styles.secondaryButton}
-          />
-        ) : null}
+        <Button
+          label={i18nT('navigation:components.layout.BiometricGate.vyyti_iz_akkaunta_22641000')}
+          onPress={() => void logout()}
+          variant="ghost"
+          style={styles.secondaryButton}
+        />
       </View>
     </View>
   );
@@ -125,9 +140,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontSize: 15,
       lineHeight: 22,
       textAlign: 'center',
-    },
-    spinner: {
-      marginTop: 12,
     },
     primaryButton: {
       marginTop: 12,
