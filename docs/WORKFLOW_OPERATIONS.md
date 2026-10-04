@@ -189,6 +189,14 @@ curl -s -o /dev/null -w '%{http_code}\n' --max-time 60 http://localhost:8081/
 - Не запрашивай у пользователя повторно логин/пароль, если они уже заданы в `.env.e2e`.
 - Никогда не выводи секреты из `.env.e2e` в ответах, логах, скриншотах и коммитах.
 - Если task-board API/MCP отвечает `HTTP 401`, обнови staff token через программный login из `.env.e2e` по `docs/TASK_BOARD_MCP.md`, перезапиши `.secrets/metravel-task-board.env` без вывода токена и повтори `/api/tasks/`, `/api/tasks/board/`, `/api/sprints/`.
+- **Согласие с условиями у e2e-аккаунтов (#2173).** Прямой `POST /api/user/login/`
+  не пишет согласие, которое настоящий вход пишет с формы, а без текущей версии
+  условий лист повторного согласия перекрывает любой авторизованный экран.
+  `e2e/global-setup.ts` после входа приводит `E2E_EMAIL` и `E2E_EMAIL2` к принятой
+  версии (`ensureCurrentTermsAccepted` — те же записи, что «Принять» на листе),
+  кроме прода: там согласие пишет только человек, setup лишь предупреждает.
+  Проба «сессия жива?» из Node — токеном `webAuthTokenFromCookies` в заголовке
+  `Authorization: Token`: банк cookie на `http://127.0.0.1` Playwright не отправит.
 
 - **Аккаунты для Apple App Review (с 12.09.2026).** Постоянный reviewer demo,
   выданный Apple, хранится в `.env.e2e` как `APP_REVIEW_DEMO_EMAIL` /

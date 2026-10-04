@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 
 import { expect, test } from './fixtures'
+import { webAuthTokenFromCookies } from './helpers/auth'
 import {
   MOBILE_SCREEN_BUDGET,
   MOBILE_VIEWPORTS,
@@ -44,7 +45,13 @@ import {
 async function ensureLiveSession(page: Page, baseURL: string | undefined): Promise<void> {
   const base = String(baseURL || '').replace(/\/+$/, '')
   const request = page.context().request
-  if ((await request.get(`${base}/api/user/me/verifications/`)).ok()) return
+  // Сессия из storageState: токен — заголовком, банк cookie на 127.0.0.1
+  // Playwright из Node не отправит, и проба отвечала бы 401 (#2173).
+  const token = webAuthTokenFromCookies(await page.context().cookies(), base)
+  const probe = token
+    ? await request.get(`${base}/api/user/me/verifications/`, { headers: { Authorization: `Token ${token}` } })
+    : null
+  if (probe?.ok()) return
 
   const email = String(process.env.E2E_EMAIL || '').trim()
   const password = String(process.env.E2E_PASSWORD || '').trim()

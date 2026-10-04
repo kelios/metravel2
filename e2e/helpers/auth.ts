@@ -222,13 +222,100 @@ type BrowserCookie = { name: string; value: string; domain: string; path: string
  * чужом токене — чужой сессией.
  */
 export function hasWebAuthCookie(cookies: readonly BrowserCookie[], url: string): boolean {
+  return webAuthTokenFromCookies(cookies, url) !== '';
+}
+
+/**
+ * Токен веб-сессии из банка cookie для этого адреса; `''` — сессии нет.
+ *
+ * Тот же фильтр Playwright режет и запросы из Node: `APIRequestContext` не
+ * отправляет Secure-cookie на `http://127.0.0.1`, хотя Chromium её отправляет.
+ * Проба «сессия жива?» по банку контекста отвечала 401 на живом входе, и
+ * global-setup шёл во второй, UI-вход поверх уже вошедшего приложения (#2173).
+ * Значение cookie и есть токен сессии, поэтому Node-запрос несёт его заголовком
+ * `Authorization: Token`: бэкенд принимает его без CSRF
+ * (`metravel/common/authentication.py`, `CookieTokenAuthentication`).
+ */
+export function webAuthTokenFromCookies(cookies: readonly BrowserCookie[], url: string): string {
   const { hostname, pathname } = new URL(url);
-  return cookies.some((cookie) => {
+  const sessionCookie = cookies.find((cookie) => {
     if (cookie.name !== WEB_AUTH_COOKIE_NAME || !cookie.value) return false;
     const cookieDomain = cookie.domain.startsWith('.') ? cookie.domain : `.${cookie.domain}`;
     if (!`.${hostname}`.endsWith(cookieDomain)) return false;
     return (pathname || '/').startsWith(cookie.path || '/');
   });
+  return sessionCookie?.value ?? '';
+}
+
+/**
+ * Что пишет «Принять» листа повторного согласия: `acceptTerms(AUTH_TERMS_CONSENT.version)`
+ * (`api/consent.ts`, `utils/actionConsent.ts`). Импортировать их сюда нельзя —
+ * оба тянут React Native; совпадение держит
+ * `__tests__/e2e-helpers/terms-acceptance.test.ts`.
+ */
+export const E2E_TERMS_ACCEPTANCE = Object.freeze({
+  version: '1',
+  consentTypes: Object.freeze(['terms', 'community_rules'] as const),
+});
+
+type TermsApiResponse = { ok(): boolean; status(): number; json(): Promise<unknown> };
+
+/** `APIRequestContext` аккаунта с уже подставленным `Authorization: Token`. */
+export type TermsApi = {
+  get(path: string): Promise<TermsApiResponse>;
+  post(path: string, options: { data: Record<string, string> }): Promise<TermsApiResponse>;
+};
+
+/**
+ * `already` — версия принята; `accepted` — записали сейчас; `unsupported` —
+ * бэкенд не отдаёт `terms_accepted_current` (лист тогда не показывается);
+ * `refused` — версия не принята, а писать согласие нельзя (прод).
+ */
+export type TermsAcceptanceResult = 'already' | 'accepted' | 'unsupported' | 'refused';
+
+async function readTermsAcceptedCurrent(api: TermsApi): Promise<unknown> {
+  const me = await api.get('/api/user/me/');
+  if (!me.ok()) throw new Error(`ensureCurrentTermsAccepted: /api/user/me/ ответил HTTP ${me.status()}`);
+  return ((await me.json().catch(() => null)) as { terms_accepted_current?: unknown } | null)
+    ?.terms_accepted_current;
+}
+
+/**
+ * #2173: сессия, открытая прямым `POST /api/user/login/`, пропускает шаг
+ * настоящего входа — запись согласия, отмеченного на форме
+ * (`stores/authStore.ts`, сразу после `/user/login/`). Аккаунт без текущей
+ * версии условий видит тогда лист повторного согласия (`TermsReacceptGate`) на
+ * каждом экране, и лист перехватывает клики. Согласие хранится на аккаунте, а
+ * не на сессии, поэтому global-setup приводит каждый e2e-аккаунт к принятой
+ * версии один раз за прогон — теми же двумя записями, что «Принять» на листе.
+ *
+ * На проде согласие — юридическая запись человека: при `allowWrite: false`
+ * помощник ничего не пишет и возвращает `refused`.
+ */
+export async function ensureCurrentTermsAccepted(
+  api: TermsApi,
+  opts: { allowWrite: boolean },
+): Promise<TermsAcceptanceResult> {
+  const acceptedCurrent = await readTermsAcceptedCurrent(api);
+  if (typeof acceptedCurrent !== 'boolean') return 'unsupported';
+  if (acceptedCurrent) return 'already';
+  if (!opts.allowWrite) return 'refused';
+
+  const { version, consentTypes } = E2E_TERMS_ACCEPTANCE;
+  for (const consentType of consentTypes) {
+    const response = await api.post('/api/user/consents/', { data: { consent_type: consentType, version } });
+    if (!response.ok()) {
+      throw new Error(`ensureCurrentTermsAccepted: запись согласия ${consentType} ответила HTTP ${response.status()}`);
+    }
+  }
+  // Как и у листа, источник правды — `/user/me/`, а не ответ записи.
+  if ((await readTermsAcceptedCurrent(api)) !== true) {
+    throw new Error(
+      `ensureCurrentTermsAccepted: после записи версии ${version} сервер всё ещё не видит согласия — ` +
+        'версия приложения разошлась с текущей версией условий на бэкенде',
+    );
+  }
+  return 'accepted';
 }
 
 /**

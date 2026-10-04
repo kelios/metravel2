@@ -1,4 +1,4 @@
-import { WEB_AUTH_COOKIE_NAME, hasWebAuthCookie } from '../../e2e/helpers/auth';
+import { WEB_AUTH_COOKIE_NAME, hasWebAuthCookie, webAuthTokenFromCookies } from '../../e2e/helpers/auth';
 
 /**
  * #1950: `ensureWebAuthCookie()` подменяет cookie сессии только тогда, когда её
@@ -48,5 +48,16 @@ describe('hasWebAuthCookie (#1950)', () => {
     expect(hasWebAuthCookie([{ ...realSessionCookie, value: '' }], 'http://127.0.0.1:8085')).toBe(false);
     expect(hasWebAuthCookie([{ ...realSessionCookie, name: 'csrftoken' }], 'http://127.0.0.1:8085')).toBe(false);
     expect(hasWebAuthCookie([], 'http://127.0.0.1:8085')).toBe(false);
+  });
+});
+
+describe('webAuthTokenFromCookies (#2173)', () => {
+  it('отдаёт токен Secure-cookie на http-таргете 127.0.0.1 — для заголовка Node-запроса', () => {
+    expect(webAuthTokenFromCookies([realSessionCookie], 'http://127.0.0.1:8085')).toBe(realSessionCookie.value);
+  });
+
+  it('пусто, если сессия чужого хоста или её нет', () => {
+    expect(webAuthTokenFromCookies([{ ...realSessionCookie, domain: 'localhost' }], 'http://127.0.0.1:8085')).toBe('');
+    expect(webAuthTokenFromCookies([], 'http://127.0.0.1:8085')).toBe('');
   });
 });

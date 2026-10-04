@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { chromium, request, type FullConfig } from '@playwright/test';
+import { chromium, request, type APIRequestContext, type FullConfig } from '@playwright/test';
 import { getTravelsListPath } from './helpers/routes';
-import { acceptAuthTerms } from './helpers/auth';
+import { acceptAuthTerms, ensureCurrentTermsAccepted, webAuthTokenFromCookies } from './helpers/auth';
 
-const { resolveE2EAuthMode } = require('../scripts/e2e-target-safety');
+const { resolveE2EAuthMode, resolveE2ETargets } = require('../scripts/e2e-target-safety');
 
 const STORAGE_STATE_PATH = 'e2e/.auth/storageState.json';
 const STORAGE_STATE_B_PATH = 'e2e/.auth/storageState.b.json';
@@ -33,22 +33,69 @@ function readStorageStateValue(filePath: string, originUrl: string, key: string)
   return '';
 }
 
+function readStorageStateSessionToken(filePath: string, baseURL: string): string {
+  try {
+    if (!fs.existsSync(filePath)) return '';
+    const json = JSON.parse(fs.readFileSync(filePath, 'utf8')) as any;
+    return webAuthTokenFromCookies(Array.isArray(json?.cookies) ? json.cookies : [], baseURL);
+  } catch {
+    return '';
+  }
+}
+
+// Токен — заголовком, а не банком cookie: на `http://127.0.0.1` Playwright
+// Secure-cookie сессии из Node не отправит (`webAuthTokenFromCookies`, #2173).
+async function withSessionApi<T>(
+  baseURL: string,
+  token: string,
+  run: (api: APIRequestContext) => Promise<T>,
+): Promise<T> {
+  const api = await request.newContext({ baseURL, extraHTTPHeaders: { Authorization: `Token ${token}` } });
+  try {
+    return await run(api);
+  } finally {
+    await api.dispose();
+  }
+}
+
+async function sessionAnswers(baseURL: string, token: string): Promise<boolean> {
+  if (!token) return false;
+  try {
+    return await withSessionApi(baseURL, token, async (api) => (await api.get('/api/user/me/verifications/')).ok());
+  } catch {
+    return false;
+  }
+}
+
 async function storageStateHasValidSession(filePath: string, baseURL: string): Promise<boolean> {
   if (!fs.existsSync(filePath)) return false;
   const userId = readStorageStateValue(filePath, baseURL, 'userId');
   if (!userId) return false;
+  return sessionAnswers(baseURL, readStorageStateSessionToken(filePath, baseURL));
+}
 
-  const api = await request.newContext({
-    baseURL,
-    storageState: filePath,
-  });
-  try {
-    const resp = await api.get('/api/user/me/verifications/');
-    return resp.ok();
-  } catch {
-    return false;
-  } finally {
-    await api.dispose();
+/**
+ * #2173: сессия из `POST /api/user/login/` не записывает согласие, которое
+ * настоящий вход пишет с формы, а лист повторного согласия перекрывает каждый
+ * авторизованный экран. Согласие живёт на аккаунте — приводим его к принятой
+ * версии один раз за прогон; на проде пишет только человек.
+ */
+async function ensureAccountTermsAccepted(filePath: string, baseURL: string, label: string): Promise<void> {
+  const token = readStorageStateSessionToken(filePath, baseURL);
+  // Входа нет — спеки, которым он нужен, скажут об этом сами.
+  if (!token) return;
+  const { productionTarget } = resolveE2ETargets({ ...process.env, BASE_URL: baseURL });
+  const result = await withSessionApi(baseURL, token, (api) =>
+    ensureCurrentTermsAccepted(api, { allowWrite: !productionTarget }),
+  );
+  if (result === 'accepted') {
+    console.log(`[global-setup] ${label}: записано согласие с текущей версией условий`);
+  } else if (result === 'refused') {
+    console.warn(
+      `[global-setup] ${label}: аккаунт не принял текущую версию условий — лист повторного согласия ` +
+        'перекроет авторизованные экраны. На проде согласие записывает только человек: войдите этим ' +
+        'аккаунтом и примите условия в приложении.',
+    );
   }
 }
 
@@ -212,8 +259,7 @@ async function writeStorageStateForAccount(opts: {
           },
           { userId, userName, isSuperuser },
         );
-        const probe = await context.request.get(`${baseURL}/api/user/me/verifications/`);
-        if (probe.ok()) {
+        if (await sessionAnswers(baseURL, webAuthTokenFromCookies(await context.cookies(), baseURL))) {
           await done();
           return;
         }
@@ -223,7 +269,15 @@ async function writeStorageStateForAccount(opts: {
     // Fall back to the UI login below.
   }
 
-  // UI login fallback.
+  // UI login fallback — из гостевого состояния, как у человека. Сессия, которую
+  // API-вход открыл, а проба не подтвердила, уже вошла бы в приложение, и форма
+  // оказалась бы под листом повторного согласия (#2173).
+  await context.clearCookies();
+  await page
+    .evaluate(() => {
+      for (const key of ['userId', 'userName', 'isSuperuser']) window.localStorage.removeItem(key);
+    })
+    .catch(() => null);
   await page.goto(`${baseURL}/login`, { waitUntil: 'networkidle', timeout: 120_000 }).catch(() => null);
   try {
     await page.waitForURL((url: any) => url.pathname.includes('/login'), { timeout: 30_000 });
@@ -296,6 +350,7 @@ export default async function globalSetup(config: FullConfig) {
       outputPath: STORAGE_STATE_PATH,
     });
   }
+  await ensureAccountTermsAccepted(STORAGE_STATE_PATH, baseURL, 'E2E_EMAIL');
 
   // Account B (E2E_EMAIL2) for two-account flows (public-trips applicant etc.).
   // Gracefully skip if creds not set; specs that need B check for the file at runtime.
@@ -311,4 +366,5 @@ export default async function globalSetup(config: FullConfig) {
       outputPath: STORAGE_STATE_B_PATH,
     });
   }
+  if (emailB && passwordB) await ensureAccountTermsAccepted(STORAGE_STATE_B_PATH, baseURL, 'E2E_EMAIL2');
 }
