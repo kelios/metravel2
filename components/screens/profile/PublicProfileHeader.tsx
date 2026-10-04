@@ -78,6 +78,9 @@ export function PublicProfileHeader({
   const compactActions = isPhone || isLargePhone;
 
   const displayName = fullName || i18nT('profile:components.screens.profile.PublicProfileHeader.defaultUserName');
+  // #2134: у заблокированного вами — только шапка и меню (чтобы разблокировать);
+  // действия, контакты, счётчики и вкладки скрыты, контент экрана — PublicProfileBlockedState.
+  const isBlockedView = !isOwnProfile && profile.is_blocked_by_me === true;
   const rating = profile.participant_rating;
   // Ранг — единственный первичный статус под именем (#847). Компактно: «Ур.5 · Эксперт».
   const rankChipText = rank ? i18nT('profile:components.screens.profile.PublicProfileHeader.ur_value1_value2_8cacab38', { value1: rank.level, value2: rank.title }) : null;
@@ -175,59 +178,63 @@ export function PublicProfileHeader({
         </View>
       </View>
 
-      <View style={styles.actionsRow}>
-        <SubscribeButton targetUserId={userId} size="sm" />
-        {!isOwnProfile ? (
-          compactActions ? (
-            <IconButton
-              icon={<Feather name="mail" size={18} color={colors.primaryDark} />}
-              label={i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_value1_1156a332', { value1: fullName || i18nT('profile:components.screens.profile.PublicProfileHeader.defaultUserReference') })}
-              onPress={onWriteMessage}
-              testID="public-profile-write-message"
+      {isBlockedView ? null : (
+        <>
+          <View style={styles.actionsRow}>
+            <SubscribeButton targetUserId={userId} size="sm" />
+            {!isOwnProfile ? (
+              compactActions ? (
+                <IconButton
+                  icon={<Feather name="mail" size={18} color={colors.primaryDark} />}
+                  label={i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_value1_1156a332', { value1: fullName || i18nT('profile:components.screens.profile.PublicProfileHeader.defaultUserReference') })}
+                  onPress={onWriteMessage}
+                  testID="public-profile-write-message"
+                />
+              ) : (
+                <Button
+                  label={i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_6e0d896e')}
+                  onPress={onWriteMessage}
+                  variant="secondary"
+                  size="sm"
+                  icon={<Feather name="mail" size={16} color={colors.primaryDark} />}
+                  accessibilityLabel={i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_value1_1156a332', { value1: fullName || i18nT('profile:components.screens.profile.PublicProfileHeader.defaultUserReference') })}
+                />
+              )
+            ) : null}
+            {!isOwnProfile ? (
+              <PeerBadgeGiveButton
+                target="user"
+                recipientId={userId}
+                received={peerReceived}
+                iconOnly={compactActions}
+              />
+            ) : null}
+          </View>
+
+          <View style={styles.contactsSection}>
+            <ProtectedContacts
+              socials={socials}
+              isOwnProfile={isOwnProfile}
+              contactsHidden={profile.contacts_hidden}
+              contactAccess={profile.contact_access}
+              targetUserId={userId}
             />
-          ) : (
-            <Button
-              label={i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_6e0d896e')}
-              onPress={onWriteMessage}
-              variant="secondary"
-              size="sm"
-              icon={<Feather name="mail" size={16} color={colors.primaryDark} />}
-              accessibilityLabel={i18nT('profile:components.screens.profile.PublicProfileHeader.napisat_value1_1156a332', { value1: fullName || i18nT('profile:components.screens.profile.PublicProfileHeader.defaultUserReference') })}
-            />
-          )
-        ) : null}
-        {!isOwnProfile ? (
-          <PeerBadgeGiveButton
-            target="user"
-            recipientId={userId}
-            received={peerReceived}
-            iconOnly={compactActions}
+          </View>
+
+          {!isOwnProfile && socials.length > 0 ? (
+            <SafetyNotice storageKey="profile-contact-exchange" style={styles.safetyNotice} />
+          ) : null}
+
+          <ProfileStatPills pills={statPills} />
+
+          <ProfileTabs
+            activeTab={activeTab}
+            onChangeTab={onChangeTab}
+            counts={tabCounts}
+            tabKeys={isOwnProfile ? ['travels', 'subscribers', 'subscriptions', 'overview'] : ['travels', 'overview']}
           />
-        ) : null}
-      </View>
-
-      <View style={styles.contactsSection}>
-        <ProtectedContacts
-          socials={socials}
-          isOwnProfile={isOwnProfile}
-          contactsHidden={profile.contacts_hidden}
-          contactAccess={profile.contact_access}
-          targetUserId={userId}
-        />
-      </View>
-
-      {!isOwnProfile && socials.length > 0 ? (
-        <SafetyNotice storageKey="profile-contact-exchange" style={styles.safetyNotice} />
-      ) : null}
-
-      <ProfileStatPills pills={statPills} />
-
-      <ProfileTabs
-        activeTab={activeTab}
-        onChangeTab={onChangeTab}
-        counts={tabCounts}
-        tabKeys={isOwnProfile ? ['travels', 'subscribers', 'subscriptions', 'overview'] : ['travels', 'overview']}
-      />
+        </>
+      )}
     </View>
   );
 }

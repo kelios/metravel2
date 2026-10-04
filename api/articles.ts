@@ -9,6 +9,12 @@ import { translate as i18nT } from '@/i18n';
 import { onlineManager } from '@tanstack/react-query';
 import { isRecoverablePublicStaleError } from '@/utils/publicStaleCache';
 import { readArticleOffline, saveArticleOffline } from '@/services/offline/articleOfflineAdapter';
+import { getSecureItem } from '@/utils/secureStorage';
+import {
+  ACCESS_TOKEN_STORAGE_KEY,
+  getApiRequestCredentials,
+  shouldUseStoredAuthToken,
+} from '@/utils/authPlatform';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
@@ -30,6 +36,35 @@ const URLAPI = rawApiUrl;
 const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запросов
 
 const GET_ARTICLES = `${URLAPI}/articles`;
+
+/**
+ * #2130/#2134: статьи читаются с сессией (web — cookie, native — `Token`), иначе бэк
+ * не применит фильтр блокировок автора (`articles/views.py:107`) и вошедший
+ * пользователь видел бы статьи заблокированного. 401 на чтении — устаревший токен
+ * (бэк так отвечает на плохой заголовок): публичное чтение повторяется без сессии,
+ * токен не трогаем — как у детали путешествия (`api/travelDetailsQueries.ts`).
+ * Обёртка над сырым fetch, а не `apiClient`: ветки 404/офлайна ниже читают `Response`.
+ */
+const fetchArticlesWithSession = async (
+  url: string,
+  signal: AbortSignal | undefined,
+  timeout: number,
+): Promise<Response> => {
+  const token = shouldUseStoredAuthToken()
+    ? await getSecureItem(ACCESS_TOKEN_STORAGE_KEY).catch(() => null)
+    : null;
+  const response = await fetchWithTimeout(
+    url,
+    {
+      signal,
+      ...getApiRequestCredentials(),
+      ...(token ? { headers: { Authorization: `Token ${token}` } } : {}),
+    },
+    timeout,
+  );
+  if (response.status !== 401) return response;
+  return fetchWithTimeout(url, { signal, ...getApiRequestCredentials(true) }, timeout);
+};
 
 const ARTICLE_STOPWORDS = new Set([
   'a',
@@ -187,7 +222,7 @@ const fetchArticleFallbackCandidates = async (
     params.set('query', query);
   }
 
-  const res = await fetchWithTimeout(`${GET_ARTICLES}?${params.toString()}`, { signal: options?.signal }, LONG_TIMEOUT);
+  const res = await fetchArticlesWithSession(`${GET_ARTICLES}?${params.toString()}`, options?.signal, LONG_TIMEOUT);
   if (!res.ok) return [];
 
   const payload = await safeJsonParse<unknown>(res, []);
@@ -260,7 +295,7 @@ export const fetchArticles = async (
     }).toString();
 
     const urlArticles = `${GET_ARTICLES}?${params}`;
-    const res = await fetchWithTimeout(urlArticles, { signal }, LONG_TIMEOUT);
+    const res = await fetchArticlesWithSession(urlArticles, signal, LONG_TIMEOUT);
     if (!res.ok) {
       if (res.status === 404) {
         return { data: [], total: 0 };
@@ -301,7 +336,7 @@ export const fetchArticle = async (
   }
 
   try {
-    const res = await fetchWithTimeout(`${GET_ARTICLES}/${id}`, { signal: options?.signal }, 10000);
+    const res = await fetchArticlesWithSession(`${GET_ARTICLES}/${id}`, options?.signal, 10000);
     if (!res.ok) {
       const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
       if (options?.throwOnError) throw err;
@@ -347,9 +382,9 @@ export const fetchArticleBySlug = async (
   let canonicalNotFound = false;
 
   try {
-    const resolverRes = await fetchWithTimeout(
+    const resolverRes = await fetchArticlesWithSession(
       `${GET_ARTICLES}/resolve-slug/${safeSlug}/`,
-      { signal: options?.signal },
+      options?.signal,
       LONG_TIMEOUT
     );
 
@@ -369,9 +404,9 @@ export const fetchArticleBySlug = async (
     }
 
     if (resolverRes.status === 404) {
-      const directRes = await fetchWithTimeout(
+      const directRes = await fetchArticlesWithSession(
         `${GET_ARTICLES}/by-slug/${safeSlug}/`,
-        { signal: options?.signal },
+        options?.signal,
         10000
       );
 

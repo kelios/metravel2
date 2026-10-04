@@ -129,6 +129,7 @@ export const sharedStaticResources = {
   "hooks.useBreadcrumbModel.moi_tochki_c4f7a9e4": "My points",
   "hooks.useBreadcrumbModel.nastroyki_ef971c38": "Settings",
   "hooks.useBreadcrumbModel.nastroyki_privatnosti_b8161b9e": "Privacy Settings",
+  "hooks.useBreadcrumbModel.blockedUsers": "Blocked users",
   "hooks.useBreadcrumbModel.podpiski_81e9f04b": "Subscriptions",
   "hooks.useBreadcrumbModel.profil_6d96d80b": "Profile",
   "hooks.useBreadcrumbModel.soobscheniya_3dee5716": "Messages",

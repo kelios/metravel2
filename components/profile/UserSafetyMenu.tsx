@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -24,6 +24,7 @@ import {
   useUnblockUser,
 } from '@/hooks/useUserSafety'
 import { isMockBlocked, isMockReported, type ReportReasonKey } from '@/api/userSafety'
+import { confirmBlockUser } from '@/utils/confirmUserBlock'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -64,22 +65,49 @@ function UserSafetyMenu({
     () => !!isBlockedByMe || isMockBlocked(targetUserId),
   )
 
+  // Профиль патчится и из других мест (баннер профиля, список «Заблокированные», #2134).
+  useEffect(() => {
+    if (typeof isBlockedByMe === 'boolean') setBlocked(isBlockedByMe)
+  }, [isBlockedByMe])
+
+  // Подтверждение блока ждёт закрытия листа: диалог поверх уходящего Modal на iOS
+  // не показывается, поэтому там он открывается из onDismiss, на остальных — эффектом.
+  const [blockConfirmPending, setBlockConfirmPending] = useState(false)
+
   const reasonsQuery = useReportReasons()
   const reportMutation = useReportUser()
   const blockMutation = useBlockUser()
   const unblockMutation = useUnblockUser()
+  const blockUser = blockMutation.mutate
+
+  const runBlockConfirm = useCallback(async () => {
+    setBlockConfirmPending(false)
+    const confirmed = await confirmBlockUser(targetName)
+    if (!confirmed) return
+    // Оптимистично, как и вырез контента в onMutate; ошибка возвращает состояние.
+    setBlocked(true)
+    blockUser(targetUserId, { onError: () => setBlocked(false) })
+  }, [blockUser, targetName, targetUserId])
+
+  useEffect(() => {
+    if (open || !blockConfirmPending || Platform.OS === 'ios') return
+    void runBlockConfirm()
+  }, [open, blockConfirmPending, runBlockConfirm])
 
   // Меню только для авторизованных (жалоба/блок требуют токен).
   if (!isAuthenticated) return null
 
   const reasons = reasonsQuery.data ?? []
-  const name = targetName?.trim() || i18nT('profile:components.profile.UserSafetyMenu.defaultTargetName')
 
   const close = () => {
     setOpen(false)
     setView('menu')
     setReason(null)
     setComment('')
+  }
+
+  const handleSheetDismiss = () => {
+    if (blockConfirmPending) void runBlockConfirm()
   }
 
   const handleSubmitReport = () => {
@@ -103,14 +131,10 @@ function UserSafetyMenu({
           close()
         },
       })
-    } else {
-      blockMutation.mutate(targetUserId, {
-        onSuccess: () => {
-          setBlocked(true)
-          close()
-        },
-      })
+      return
     }
+    setBlockConfirmPending(true)
+    close()
   }
 
   const blockPending = blockMutation.isPending || unblockMutation.isPending
@@ -128,7 +152,13 @@ function UserSafetyMenu({
         <Feather name="more-horizontal" size={18} color={colors.textSecondary} />
       </Pressable>
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
+      <Modal
+        visible={open}
+        transparent
+        animationType="slide"
+        onRequestClose={close}
+        onDismiss={Platform.OS === 'ios' ? handleSheetDismiss : undefined}
+      >
         <Pressable style={styles.backdrop} onPress={close} accessibilityLabel={i18nT('profile:components.profile.UserSafetyMenu.zakryt_ef39ec99')}>
           <Pressable style={styles.sheet} onPress={() => {}}>
             <View style={styles.header}>
@@ -183,8 +213,7 @@ function UserSafetyMenu({
                   </Text>
                 </Pressable>
 
-                <Text style={styles.hint}>
-                  {i18nT('profile:components.profile.UserSafetyMenu.zablokirovannyy_b2a4a460')}{name} {i18nT('profile:components.profile.UserSafetyMenu.ne_smozhet_videt_vash_kontent_i_pisat_vam_6d3e590b')}</Text>
+                <Text style={styles.hint}>{i18nT('profile:components.profile.UserSafetyMenu.blockHint')}</Text>
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false}>

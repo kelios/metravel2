@@ -449,10 +449,10 @@ export async function fetchPublicTrips(
 ): Promise<PublicTrip[]> {
   if (USE_MOCK) return MOCK_PUBLIC_TRIPS.filter((t) => matchesFilters(t, filters));
   try {
+    // С сессией (#2134): бэк исключает поездки заблокированных организаторов только
+    // для вошедшего (`trips/views.py:1539`); 401 apiClient сам повторяет без токена.
     const res = await apiClient.get<Paginated<PublicTripDto>>(
       `/public-trips/${buildCatalogQuery(filters)}`,
-      undefined,
-      { skipAuth: true },
     );
     return unwrap(res).map(mapTrip).filter((t) => matchesFilters(t, filters));
   } catch (error) {

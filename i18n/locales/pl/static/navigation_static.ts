@@ -39,6 +39,7 @@ export const navigationStaticResources = {
   "breadcrumb.tripRules": "Zasady podróży",
   "breadcrumb.securityJournal": "Dziennik zabezpieczeń",
   "breadcrumb.privacySettings": "Ustawienia prywatności",
+  "breadcrumb.blockedUsers": "Zablokowani użytkownicy",
   "breadcrumb.trips": "Wycieczki",
   "breadcrumb.plan": "Planowanie",
   "breadcrumb.create": "Nowa podróż",

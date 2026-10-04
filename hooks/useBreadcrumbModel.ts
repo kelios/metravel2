@@ -90,6 +90,7 @@ const CABINET_ROUTE_CRUMBS: Record<string, BreadcrumbModelItem[]> = {
     SETTINGS_CRUMB,
     { get label() { return i18nT('sharedStatic:hooks.useBreadcrumbModel.nastroyki_privatnosti_b8161b9e') }, path: '/privacy-settings' },
   ],
+  '/blocked-users': [PROFILE_CRUMB, SETTINGS_CRUMB, { get label() { return i18nT('sharedStatic:hooks.useBreadcrumbModel.blockedUsers') }, path: '/blocked-users' }],
 };
 
 // Информационные/правовые одноуровневые страницы — одна крошка под «Главная».

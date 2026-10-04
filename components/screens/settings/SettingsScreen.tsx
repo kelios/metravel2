@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { View, Text, Platform, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
@@ -398,6 +398,16 @@ export default function SettingsScreen() {
                         meta={i18nT('profile:app.tabs.settings.kto_vidit_vashi_puteshestviya_marshruty_i_ko_5154416c')}
                         accessibilityLabel={i18nT('profile:app.tabs.settings.nastroyki_privatnosti_9f69f2ff')}
                         onPress={() => router.push('/privacy-settings' as any)}
+                    />
+
+                    <NavCardSection
+                        styles={styles}
+                        colors={colors}
+                        icon="slash"
+                        title={i18nT('profile:app.blocked_users.navTitle')}
+                        meta={i18nT('profile:app.blocked_users.navMeta')}
+                        accessibilityLabel={i18nT('profile:app.blocked_users.navTitle')}
+                        onPress={() => router.push('/blocked-users' as Href)}
                     />
 
                     <DataOwnershipSection />

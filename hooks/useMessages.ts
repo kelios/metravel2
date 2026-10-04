@@ -15,6 +15,7 @@ import {
     type PaginatedMessages,
 } from '@/api/messages';
 import { devError } from '@/utils/logger';
+import { getBlockedAuthorIds, subscribeAuthorBlock } from '@/api/blockSensitiveQueries';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -26,6 +27,21 @@ const getErrorMessage = (error: unknown, fallback: string): string =>
 // ---- useThreads ----
 
 const MAX_CONSECUTIVE_FAILURES = 3;
+
+// #2134: переписка с заблокированным скрывается сразу и после любого перечитывания.
+// Списки живут в useState, а не в React Query, поэтому guard кэша их не видит —
+// фильтр по набору заблокированных и подписка на блок стоят здесь.
+const withoutBlockedThreads = (threads: MessageThread[]): MessageThread[] => {
+    const blocked = getBlockedAuthorIds();
+    if (blocked.size === 0) return threads;
+    return threads.filter((thread) => !(thread.participants ?? []).some((id) => blocked.has(id)));
+};
+
+const withoutBlockedMessages = (messages: Message[]): Message[] => {
+    const blocked = getBlockedAuthorIds();
+    if (blocked.size === 0) return messages;
+    return messages.filter((message) => !blocked.has(message.sender));
+};
 
 export function useThreads(enabled: boolean = true, pollEnabled: boolean = true) {
     const [threads, setThreads] = useState<MessageThread[]>([]);
@@ -49,7 +65,7 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
             if (mountedRef.current) {
                 setThreads(
                     Array.isArray(data)
-                        ? data.filter((thread) => !hiddenThreadIdsRef.current.has(thread.id))
+                        ? withoutBlockedThreads(data.filter((thread) => !hiddenThreadIdsRef.current.has(thread.id)))
                         : [],
                 );
             }
@@ -71,7 +87,7 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
                 consecutiveFailuresRef.current = 0;
                 setThreads(
                     Array.isArray(data)
-                        ? data.filter((thread) => !hiddenThreadIdsRef.current.has(thread.id))
+                        ? withoutBlockedThreads(data.filter((thread) => !hiddenThreadIdsRef.current.has(thread.id)))
                         : [],
                 );
             }
@@ -81,6 +97,12 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
     }, []);
 
     useEffect(() => { if (enabled) load(); }, [enabled, load]);
+
+    useEffect(() => subscribeAuthorBlock((_authorId, blocked) => {
+        if (!mountedRef.current) return;
+        if (blocked) setThreads((prev) => withoutBlockedThreads(prev));
+        else if (enabled) void load();
+    }), [enabled, load]);
 
     useEffect(() => {
         if (!enabled || !pollEnabled) return;
@@ -147,7 +169,7 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
             const data: PaginatedMessages = await fetchMessages(requestThreadId, pageRef.current, 50);
             if (!mountedRef.current || requestThreadId !== threadId) return;
 
-            const results = data.results || [];
+            const results = withoutBlockedMessages(data.results || []);
 
             if (reset) {
                 setMessages(results);
@@ -181,7 +203,7 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
             const data: PaginatedMessages = await fetchMessages(requestThreadId, 1, 50);
             if (!mountedRef.current || requestThreadId !== threadId) return;
             consecutiveFailuresRef.current = 0;
-            const results = data.results || [];
+            const results = withoutBlockedMessages(data.results || []);
             setMessages((prev) => {
                 const ids = new Set(prev.map((m) => m.id));
                 const newOnes = results.filter((m) => !ids.has(m.id));
@@ -209,6 +231,12 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
             setMessages([]);
         }
     }, [threadId, load]);
+
+    useEffect(() => subscribeAuthorBlock((_authorId, blocked) => {
+        if (!mountedRef.current) return;
+        if (blocked) setMessages((prev) => withoutBlockedMessages(prev));
+        else void load(true);
+    }), [load]);
 
     useEffect(() => {
         if (threadId == null || threadId < 0 || !pollEnabled) return;

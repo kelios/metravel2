@@ -39,6 +39,7 @@ export const pageTranslations: Record<string, string> = {
   get 'trip-rules'() { return i18nT('navigationStatic:breadcrumb.tripRules') },
   get 'security-journal'() { return i18nT('navigationStatic:breadcrumb.securityJournal') },
   get 'privacy-settings'() { return i18nT('navigationStatic:breadcrumb.privacySettings') },
+  get 'blocked-users'() { return i18nT('navigationStatic:breadcrumb.blockedUsers') },
   get trips() { return i18nT('navigationStatic:breadcrumb.trips') },
   get plan() { return i18nT('navigationStatic:breadcrumb.plan') },
   get create() { return i18nT('navigationStatic:breadcrumb.create') },

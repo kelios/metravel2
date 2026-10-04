@@ -4,6 +4,7 @@ import { DarkTheme, DefaultTheme, SplashScreen, Stack, ThemeProvider as Navigati
 import AppProviders from "@/components/layout/AppProviders";
 import NativeAppRuntime from "@/components/layout/NativeAppRuntime";
 import QuestProgressQueueRuntime from "@/components/quests/QuestProgressQueueRuntime";
+import BlockedAuthorsRuntime from "@/components/profile/BlockedAuthorsRuntime";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import ConfirmDialogHost from "@/components/ui/ConfirmDialogHost";
 import TermsReacceptGate from "@/components/auth/TermsReacceptGate";
@@ -459,6 +460,8 @@ function ThemedContent({
                           <NativeAppRuntime />
                           {/* Досылка прогресса квеста, пройденного без сети (#1922) */}
                           <QuestProgressQueueRuntime />
+                          {/* Скрытие контента заблокированных авторов во всех лентах (#2134) */}
+                          <BlockedAuthorsRuntime />
                           {/* AND-08: Global StatusBar — syncs barStyle with current theme (native only) */}
                           {Platform.OS !== 'web' && (
                             <RNStatusBar

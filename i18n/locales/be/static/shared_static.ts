@@ -129,6 +129,7 @@ export const sharedStaticResources = {
   "hooks.useBreadcrumbModel.moi_tochki_c4f7a9e4": "Мае кропкі",
   "hooks.useBreadcrumbModel.nastroyki_ef971c38": "Налады",
   "hooks.useBreadcrumbModel.nastroyki_privatnosti_b8161b9e": "Налады прыватнасці",
+  "hooks.useBreadcrumbModel.blockedUsers": "Заблакаваныя карыстальнікі",
   "hooks.useBreadcrumbModel.podpiski_81e9f04b": "Падпіскі",
   "hooks.useBreadcrumbModel.profil_6d96d80b": "Профіль",
   "hooks.useBreadcrumbModel.soobscheniya_3dee5716": "Паведамлення",

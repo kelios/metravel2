@@ -1,6 +1,7 @@
 import type { Travel } from '@/types/types';
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
 import { resolveMediaVariantUrl } from '@/utils/travelMediaVariants';
+import { isAuthoredByBlocked } from '@/api/blockSensitiveQueries';
 import { offlineCatalog } from './offlineCatalog';
 import { offlineOperations } from './offlineOperations';
 import {
@@ -254,6 +255,9 @@ export async function readTravelOffline(
   });
   const snapshot = match ? await offlineCatalog.read<Travel>(match.key) : null;
   if (!snapshot) return null;
+  // #2134: снимок заблокированного автора не восстанавливается, но и не удаляется —
+  // после разблокировки сохранённое снова открывается.
+  if (isAuthoredByBlocked(snapshot)) return null;
   // Legacy public packages may contain the previous account's rating (#1799).
   const publicSnapshot = { ...snapshot };
   delete publicSnapshot.user_rating;

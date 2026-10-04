@@ -157,10 +157,10 @@ export async function fetchCommunityTrips(
     if (filters?.transport)
       params.set('transport_mode', transportToBe(filters.transport));
     if (filters?.region) params.set('region', filters.region);
+    // С сессией (#2134): бэк исключает поездки заблокированных организаторов только
+    // для вошедшего (`trips/views.py:1539`); 401 apiClient сам повторяет без токена.
     const res = await apiClient.get<Paginated<CommunityTripDto>>(
       `/public-trips/?${params.toString()}`,
-      undefined,
-      { skipAuth: true },
     );
     return unwrap(res).map(mapCommunityTrip);
   } catch (error) {

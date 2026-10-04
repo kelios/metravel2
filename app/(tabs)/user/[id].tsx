@@ -23,6 +23,7 @@ import { type ProfileStatPill } from '@/components/profile/ProfileStatPills';
 import { PublicProfileHeader } from '@/components/screens/profile/PublicProfileHeader';
 import { PublicProfileOverviewTab } from '@/components/screens/profile/PublicProfileOverviewTab';
 import { PublicProfileTravelsTab } from '@/components/screens/profile/PublicProfileTravelsTab';
+import { PublicProfileBlockedState } from '@/components/screens/profile/PublicProfileBlockedState';
 import { useUserAchievements } from '@/hooks/useAchievementsApi';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
@@ -91,6 +92,8 @@ export default function PublicUserProfileScreen() {
   // иначе разное форматирование (ведущие нули и т.п.) ломает own-profile UI.
   const isOwnProfile =
     currentUserId != null && userId != null && String(Number(currentUserId)) === userId;
+  // #2134: заблокированный вами — путешествия не запрашиваются и не показываются.
+  const isBlockedByMe = !isOwnProfile && profile?.is_blocked_by_me === true;
 
   const {
     subscriptions,
@@ -121,7 +124,7 @@ export default function PublicUserProfileScreen() {
     // F-14: публичная страница автора показывает только опубликованные маршруты
     // (как счётчик в профиле), без черновиков.
     queryFn: () => fetchTravels(0, travelsLimit, '', { user_id: userId, publish: 1, moderation: 1 }),
-    enabled: !!userId,
+    enabled: !!userId && !isBlockedByMe,
     staleTime: 5 * 60 * 1000,
     placeholderData: keepPreviousData,
     retry: (fc, err) => !(err instanceof ApiError && (err.status === 401 || err.status === 403)) && fc < 2,
@@ -294,7 +297,9 @@ export default function PublicUserProfileScreen() {
           onWriteMessage={handleWriteMessage}
         />
 
-        {isOverview ? (
+        {isBlockedByMe ? (
+          <PublicProfileBlockedState userId={userId} fullName={fullName || undefined} />
+        ) : isOverview ? (
           <PublicProfileOverviewTab userId={userId} fullName={fullName || ''} isOwnProfile={isOwnProfile} />
         ) : isSubscriptionsSection && isOwnProfile ? (
           <SubscriptionsTabContent

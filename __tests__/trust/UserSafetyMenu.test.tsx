@@ -3,7 +3,8 @@
 // причину → отправить) и блокировки (кнопка вызывает blockUser и переключает label).
 
 import React from 'react'
-import { render, fireEvent, waitFor } from '@testing-library/react-native'
+import { Modal, Platform } from 'react-native'
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 jest.mock('@/stores/authStore', () => ({
@@ -27,11 +28,17 @@ jest.mock('@/api/userSafety', () => ({
   isMockBlocked: jest.fn(() => false),
 }))
 
+jest.mock('@/utils/confirmAction', () => ({
+  confirmAction: jest.fn(() => Promise.resolve(true)),
+}))
+
 import UserSafetyMenu from '@/components/profile/UserSafetyMenu'
 import { reportUser, blockUser } from '@/api/userSafety'
+import { confirmAction } from '@/utils/confirmAction'
 
 const mockedReportUser = reportUser as jest.Mock
 const mockedBlockUser = blockUser as jest.Mock
+const mockedConfirm = confirmAction as jest.Mock
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -79,22 +86,68 @@ describe('UserSafetyMenu', () => {
     })
   })
 
-  it('blocks the user and switches the action to "Разблокировать"', async () => {
-    const { getByTestId, findByText } = render(
-      <UserSafetyMenu targetUserId={42} targetName="Иван" />,
-      { wrapper: createWrapper() },
-    )
-
-    fireEvent.press(getByTestId('user-safety-menu'))
-    fireEvent.press(getByTestId('user-safety-block'))
-
-    await waitFor(() => {
-      expect(mockedBlockUser).toHaveBeenCalled()
+  describe('block confirmation (#2134)', () => {
+    const originalOS = Platform.OS
+    afterEach(() => {
+      Object.defineProperty(Platform, 'OS', { value: originalOS, configurable: true })
     })
-    expect(mockedBlockUser.mock.calls[0][0]).toBe(42)
 
-    // Re-open the menu — the action now reads "Разблокировать".
-    fireEvent.press(getByTestId('user-safety-menu'))
-    expect(await findByText('Разблокировать')).toBeTruthy()
+    it('asks for confirmation after the sheet closes and blocks on confirm', async () => {
+      Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true })
+      const { getByTestId, findByText } = render(
+        <UserSafetyMenu targetUserId={42} targetName="Иван" />,
+        { wrapper: createWrapper() },
+      )
+
+      fireEvent.press(getByTestId('user-safety-menu'))
+      fireEvent.press(getByTestId('user-safety-block'))
+
+      await waitFor(() => expect(mockedConfirm).toHaveBeenCalledTimes(1))
+      const dialog = mockedConfirm.mock.calls[0][0]
+      expect(dialog.title).toContain('Иван')
+      expect(dialog.message).toMatch(/уведомление/)
+      await waitFor(() => expect(mockedBlockUser).toHaveBeenCalled())
+      expect(mockedBlockUser.mock.calls[0][0]).toBe(42)
+
+      fireEvent.press(getByTestId('user-safety-menu'))
+      expect(await findByText('Разблокировать')).toBeTruthy()
+    })
+
+    it('does not block when the confirmation is cancelled', async () => {
+      Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true })
+      mockedConfirm.mockResolvedValueOnce(false)
+      const { getByTestId, findByText } = render(
+        <UserSafetyMenu targetUserId={42} targetName="Иван" />,
+        { wrapper: createWrapper() },
+      )
+
+      fireEvent.press(getByTestId('user-safety-menu'))
+      fireEvent.press(getByTestId('user-safety-block'))
+
+      await waitFor(() => expect(mockedConfirm).toHaveBeenCalledTimes(1))
+      await act(async () => {})
+      expect(mockedBlockUser).not.toHaveBeenCalled()
+      fireEvent.press(getByTestId('user-safety-menu'))
+      expect(await findByText('Заблокировать')).toBeTruthy()
+    })
+
+    it('on iOS waits for the sheet dismissal before showing the dialog', async () => {
+      Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true })
+      const { getByTestId, UNSAFE_getByType } = render(
+        <UserSafetyMenu targetUserId={42} targetName="Иван" />,
+        { wrapper: createWrapper() },
+      )
+
+      fireEvent.press(getByTestId('user-safety-menu'))
+      fireEvent.press(getByTestId('user-safety-block'))
+      await act(async () => {})
+      expect(mockedConfirm).not.toHaveBeenCalled()
+
+      await act(async () => {
+        UNSAFE_getByType(Modal).props.onDismiss()
+      })
+      await waitFor(() => expect(mockedBlockUser).toHaveBeenCalled())
+      expect(mockedConfirm).toHaveBeenCalledTimes(1)
+    })
   })
 })
