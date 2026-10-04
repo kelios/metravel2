@@ -449,6 +449,22 @@ describe('authStore', () => {
       expect(useAuthStore.getState().isAuthenticated).toBe(true);
     });
 
+    it('#2132: сессия, сброшенная во время записи согласия, не публикуется', async () => {
+      loginApi.mockResolvedValue({
+        ok: true,
+        user: { token: 'abc', id: 5, name: 'Julia', email: 'j@test.com', is_superuser: false },
+      });
+      fetchUserProfile.mockResolvedValue({ first_name: 'Юлия', avatar: null });
+      acceptTerms.mockImplementationOnce(async () => {
+        await useAuthStore.getState().invalidateAuthState();
+      });
+
+      const result = await act(() => useAuthStore.getState().login('j@test.com', 'pass', '1'));
+
+      expect(result).toEqual(expect.objectContaining({ ok: false }));
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    });
+
     it('#2132: сбой записи согласия не валит вход, а без версии согласие не пишется', async () => {
       loginApi.mockResolvedValue({
         ok: true,

@@ -506,6 +506,12 @@ export const useAuthStore = create<AuthStore>((set, get) => {
                     if (__DEV__) console.warn('Не удалось записать согласие с условиями:', e);
                 }
             }
+            // Две записи согласия — тоже await: подтверждённый 401 или чужая сессия
+            // за это время сдвигают epoch, и публиковать вход поверх них нельзя.
+            if (epochAtStart !== authEpoch) {
+                await rollbackPersistedCredentials();
+                return signInInterrupted();
+            }
 
             set((s) => ({
                 isAuthenticated: true,
