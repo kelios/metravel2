@@ -37,6 +37,7 @@ import {
   type PerfProfile,
 } from './helpers/pagesPerfBudgets'
 import { isRecoverableReactHydrationError } from './helpers/consoleGuards'
+import { seedActionConsents } from './helpers/actionConsent'
 import { PERF_DESKTOP_VIEWPORTS, PERF_PROFILE_BY_PROJECT } from './helpers/perfProjects'
 
 type PageTarget = {
@@ -46,6 +47,13 @@ type PageTarget = {
   /** Page-specific ready selector; falls back to <h1> then networkidle. */
   readySelector: string
   requireReadySelector?: boolean
+  /**
+   * #2151: states that legitimately replace the measured page (a consent gate)
+   * when the fixture is incomplete. If the ready selector never shows up while
+   * one of these is on the page, readiness fails with this reason instead of a
+   * bare selector timeout.
+   */
+  blockingSelectors?: ReadonlyArray<{ selector: string; reason: string }>
 }
 
 type MapFixtureCounters = {
@@ -133,6 +141,12 @@ const PAGES: PageTarget[] = [
     path: PERF_QUEST_PATH,
     readySelector: '[data-testid="quest-trust-bar"]',
     requireReadySelector: true,
+    blockingSelectors: [
+      {
+        selector: '[data-testid="quest-consent-start"]',
+        reason: 'QuestConsentGate is shown: the quest_start consent was not seeded (seedActionConsents)',
+      },
+    ],
   },
   // #2112: /about перекладывал hero и колонки при гидратации на ширинах ≥ 900
   // (CLS 0,40 / 0,31 на проде). Страница статична, API не нужен.
@@ -283,9 +297,19 @@ function shouldIgnoreBudgetRequest(target: PageTarget, url: string) {
   }
 }
 
-async function waitForReady(page: Page, selector: string, requireReadySelector = false) {
-  if (requireReadySelector) {
-    await page.waitForSelector(selector, { timeout: 30_000 })
+async function waitForReady(page: Page, target: PageTarget) {
+  const selector = target.readySelector
+  if (target.requireReadySelector) {
+    try {
+      await page.waitForSelector(selector, { timeout: 30_000 })
+    } catch (error) {
+      for (const blocker of target.blockingSelectors ?? []) {
+        if ((await page.locator(blocker.selector).count()) > 0) {
+          throw new Error(`${target.key}: ${blocker.reason}; ${selector} never appeared`)
+        }
+      }
+      throw error
+    }
   } else {
     await Promise.race([
       page.waitForSelector(selector, { timeout: 30_000 }).catch(() => null),
@@ -484,6 +508,10 @@ async function installDeterministicQuestDetailApi(
   const counters: QuestDetailFixtureCounters = { detail: 0, list: 0 }
   if (target.key !== 'QUEST_DETAIL') return counters
 
+  // #2151: without the quest_start consent the route renders QuestConsentGate,
+  // not the wizard that is measured here.
+  await seedActionConsents(page)
+
   const fulfillJson = (route: Route, body: unknown, status = 200) =>
     route.fulfill({
       status,
@@ -587,6 +615,13 @@ function profileFromProject(projectName: string): PerfProfile {
  */
 const BASELINE_MODE = process.env.PERF_BUDGET_BASELINE === '1'
 
+// #2151: the gate measures a cold anonymous visit. Without this pin the page
+// state followed whatever session global-setup managed to log in: with a live
+// local backend the quest detail was an authenticated player (QuestConsentGate,
+// no consent seeded), with a dead one a guest wizard — two different pages under
+// one budget, decided by the environment instead of the sha.
+test.use({ storageState: { cookies: [], origins: [] } })
+
 // Проверка на уровне модуля, а не внутри теста: иначе защита зависела бы от
 // `mode: 'serial'` — при параллельном режиме второй тест молча пропустил бы
 // транспортные бюджеты.
@@ -624,7 +659,7 @@ for (const target of PAGES) {
       const questFixtureCounters = await installDeterministicQuestDetailApi(page, target)
 
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
-      await waitForReady(page, target.readySelector, target.requireReadySelector)
+      await waitForReady(page, target)
       expectHomeFixturesUsed(target, homeFixtureCounters)
       await expectMapFixturesUsed(target, mapFixtureCounters)
       expectCatalogFixturesUsed(target, catalogFixtureCounters)
@@ -759,7 +794,7 @@ for (const target of PAGES) {
         ignoreBudgetRequest: (url) => shouldIgnoreBudgetRequest(target, url),
       })
       await page.goto(target.path, { waitUntil: 'load', timeout: 60_000 })
-      await waitForReady(page, target.readySelector, target.requireReadySelector)
+      await waitForReady(page, target)
       expectHomeFixturesUsed(target, homeFixtureCounters)
       await expectMapFixturesUsed(target, mapFixtureCounters)
       expectCatalogFixturesUsed(target, catalogFixtureCounters)

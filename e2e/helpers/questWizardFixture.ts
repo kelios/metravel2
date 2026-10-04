@@ -2,6 +2,7 @@ import { expect, type Page, type Route } from '@playwright/test'
 
 import { ensureAuthedStorageFallback, mockFakeAuthApis } from './auth'
 import { preacceptCookies } from './navigation'
+import { seedActionConsents } from './actionConsent'
 
 /**
  * Детерминированный квест для спек визарда.
@@ -135,16 +136,7 @@ export function createQuestFixture(options: QuestFixtureOptions): QuestFixture {
 
     await preacceptCookies(page)
     await page.setViewportSize({ width: 1280, height: 900 })
-    await page.addInitScript(() => {
-      try {
-        window.localStorage.setItem(
-          'metravel_action_consents_v1',
-          JSON.stringify({ quest_start: { version: '1', date: new Date().toISOString() } }),
-        )
-      } catch {
-        // ignore
-      }
-    })
+    await seedActionConsents(page)
 
     await page.goto(`/quests/${questCity.id}/${questId}`, { waitUntil: 'domcontentloaded' })
     const startButton = page.getByRole('button', { name: 'Начать квест' })

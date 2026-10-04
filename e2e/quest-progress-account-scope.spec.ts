@@ -2,6 +2,7 @@ import type { Page, Route } from '@playwright/test'
 
 import { test, expect } from './fixtures'
 import { preacceptCookies } from './helpers/navigation'
+import { seedActionConsents } from './helpers/actionConsent'
 
 /**
  * #1456: одно устройство — два аккаунта. Локальная копия прогресса квеста лежала
@@ -122,16 +123,13 @@ const mockApis = async (page: Page, userId: string, patches: ProgressPatch[]) =>
 }
 
 const seedDevice = async (page: Page, userId: string) => {
+  await seedActionConsents(page)
   await page.addInitScript(
     ({ user, legacyKey, userAKey, leftover }) => {
       try {
         window.localStorage.setItem('userId', user)
         window.localStorage.setItem('userName', 'E2E')
         window.localStorage.setItem('isSuperuser', 'false')
-        window.localStorage.setItem(
-          'metravel_action_consents_v1',
-          JSON.stringify({ quest_start: { version: '1', date: new Date().toISOString() } }),
-        )
         // Записи, оставшиеся на устройстве от аккаунта A: старый (до #1456)
         // общий ключ и ключ самого аккаунта A.
         window.localStorage.setItem(legacyKey, JSON.stringify(leftover))

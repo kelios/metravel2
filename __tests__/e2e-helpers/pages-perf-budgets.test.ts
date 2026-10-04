@@ -95,14 +95,16 @@ describe('budget table rules', () => {
   })
 
   it.each([
-    ['desktop', 325],
-    ['desktop-narrow', 240],
-    ['mobile', 220],
-  ] as const)('pins QUEST_DETAIL/%s to its measured first-screen ceiling', (profile, ceiling) => {
+    ['desktop', 325, 76],
+    ['desktop-narrow', 240, 76],
+    ['mobile', 195, 78],
+  ] as const)('pins QUEST_DETAIL/%s to its measured first-screen and request ceilings', (profile, ceiling, requests) => {
     const budget = resolveBudget('QUEST_DETAIL', profile)
 
     expect(budget.clsMax).toBe(HEALTHY_CLS_MAX)
     expect(budget.firstScreenElementsMax).toBe(ceiling)
+    // #2151: first measurement of the wizard itself (63 / 63 / 65 requests).
+    expect(budget.requestsMax).toBe(requests)
   })
 
   // The browser loop iterates FORBIDDEN_SHIFT_SOURCES itself. Pin the complete

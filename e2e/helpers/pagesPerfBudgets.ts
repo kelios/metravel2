@@ -325,19 +325,26 @@ export const PAGE_BUDGETS: BudgetTable = {
   // route-scoped env clamps and reports cannot silently affect the other page.
   // Start with the already-enforced public-quests ceilings; CLS remains at the
   // healthy CWV threshold on all responsive layouts.
+  // #2151: the gate stood on QuestConsentGate until the spec seeded quest_start;
+  // first real measurement of the wizard, own dist 04.10.2026, 3 runs, identical
+  // counts: requests 63 / 63 / 65, first-screen elements 271 / 213 / 162,
+  // CLS ≤ 0.0017, JS 1311-1315 KB (catalog ceilings kept: +20% would exceed them).
   QUEST_DETAIL: {
     desktop: {
       ...QUESTS_CATALOG_BUDGETS.desktop,
-      firstScreenElementsMax: 325, // measured 270; +20% rounded up
+      firstScreenElementsMax: 325, // measured 271; +20% rounded up
+      requestsMax: 76, // measured 63; +20% rounded up
     },
     'desktop-narrow': {
       ...QUESTS_CATALOG_BUDGETS['desktop-narrow'],
-      firstScreenElementsMax: 240, // measured 199; +20% rounded up
+      firstScreenElementsMax: 240, // measured 213 (199 before #2151); kept
+      requestsMax: 76, // measured 63; +20% rounded up
     },
     mobile: {
       phoneNestedScreen: '#2100: вложенный экран телефона — одна строка «←», без бренд-строки',
       ...QUESTS_CATALOG_BUDGETS.mobile,
-      firstScreenElementsMax: 220, // measured 183; +20% rounded up
+      firstScreenElementsMax: 195, // measured 162; +20% rounded up
+      requestsMax: 78, // measured 65; +20% rounded up
     },
   },
   // #2112: /about — CLS ≤ 0,1 на всех раскладках (на проде было 0,31 на 1280 и

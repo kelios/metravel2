@@ -2,6 +2,7 @@ import type { Page, Route } from '@playwright/test'
 
 import { test, expect } from './fixtures'
 import { preacceptCookies } from './helpers/navigation'
+import { seedActionConsents } from './helpers/actionConsent'
 
 /**
  * #1667: лист «Поделиться результатом» на финале квеста. Юнит-тест компонента
@@ -143,6 +144,7 @@ const seedDevice = async (
   options: { webShare?: boolean } = {},
 ) => {
   const webShare = options.webShare ?? true
+  await seedActionConsents(page)
   await page.addInitScript(({ user, locale: chosen, share }) => {
     try {
       const now = new Date().toISOString()
@@ -158,10 +160,6 @@ const seedDevice = async (
       window.localStorage.setItem(
         'metravel_consent_v1',
         JSON.stringify({ necessary: true, analytics: true, date: now }),
-      )
-      window.localStorage.setItem(
-        'metravel_action_consents_v1',
-        JSON.stringify({ quest_start: { version: '1', date: now } }),
       )
     } catch {
       // ignore

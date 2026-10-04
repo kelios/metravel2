@@ -2,6 +2,7 @@ import type { Page, Route } from '@playwright/test'
 
 import { test, expect } from './fixtures'
 import { preacceptCookies } from './helpers/navigation'
+import { seedActionConsents } from './helpers/actionConsent'
 
 /**
  * #1462: окно между подтверждением почты и первой проверкой авторизации. Экран
@@ -157,13 +158,10 @@ const mockApis = async (page: Page) => {
 }
 
 const seedDevice = async (page: Page) => {
+  await seedActionConsents(page)
   await page.addInitScript(
     ({ pendingKey, leftover }) => {
       try {
-        window.localStorage.setItem(
-          'metravel_action_consents_v1',
-          JSON.stringify({ quest_start: { version: '1', date: new Date().toISOString() } }),
-        )
         window.localStorage.setItem(pendingKey, JSON.stringify(leftover))
       } catch {
         // ignore

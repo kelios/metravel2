@@ -2,6 +2,7 @@ import type { Page, Route } from '@playwright/test'
 
 import { test, expect } from './fixtures'
 import { preacceptCookies } from './helpers/navigation'
+import { seedActionConsents } from './helpers/actionConsent'
 
 /**
  * #1484: петля возврата после финиша квеста. До неё взаимодействие с продуктом
@@ -189,6 +190,7 @@ const mockApis = async (page: Page) => {
  * молчит без согласия, а загрузившийся GA перетёр бы наш перехватчик.
  */
 const seedDevice = async (page: Page, opts?: { finishRecord?: unknown; finishKey?: string }) => {
+  await seedActionConsents(page)
   await page.addInitScript(
     ({ user, finishRecord, finishKey }) => {
       try {
@@ -199,10 +201,6 @@ const seedDevice = async (page: Page, opts?: { finishRecord?: unknown; finishKey
         window.localStorage.setItem(
           'metravel_consent_v1',
           JSON.stringify({ necessary: true, analytics: true, date: now }),
-        )
-        window.localStorage.setItem(
-          'metravel_action_consents_v1',
-          JSON.stringify({ quest_start: { version: '1', date: now } }),
         )
         if (finishRecord && finishKey) {
           window.localStorage.setItem(finishKey, JSON.stringify(finishRecord))

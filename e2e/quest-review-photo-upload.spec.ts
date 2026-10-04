@@ -6,6 +6,7 @@ import type { Page, Route } from '@playwright/test'
 import { test, expect } from './fixtures'
 import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
+import { seedActionConsents } from './helpers/actionConsent'
 
 /**
  * #2150: загрузка фото отзыва после финиша на мобильном вьюпорте.
@@ -166,16 +167,7 @@ test.describe('#2150 quest review photo upload', () => {
     let failSecondOnce = true
 
     await preacceptCookies(page)
-    await page.addInitScript(() => {
-      try {
-        window.localStorage.setItem(
-          'metravel_action_consents_v1',
-          JSON.stringify({ quest_start: { version: '1', date: new Date().toISOString() } }),
-        )
-      } catch {
-        // ignore
-      }
-    })
+    await seedActionConsents(page)
     await ensureAuthedStorageFallback(page, { userId: USER_ID, userName: 'E2E' })
     await mockFakeAuthApis(page)
     await mockQuestApis(page)

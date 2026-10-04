@@ -6,6 +6,7 @@ import type { Page, Route } from '@playwright/test'
 import { test, expect } from './fixtures'
 import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
+import { seedActionConsents } from './helpers/actionConsent'
 
 /**
  * #1486: отзыв после финиша и порог показа агрегата в каталоге.
@@ -187,16 +188,7 @@ test.describe('#1486 quest review UGC', () => {
     const postedBodies: unknown[] = []
 
     await preacceptCookies(page)
-    await page.addInitScript(() => {
-      try {
-        window.localStorage.setItem(
-          'metravel_action_consents_v1',
-          JSON.stringify({ quest_start: { version: '1', date: new Date().toISOString() } }),
-        )
-      } catch {
-        // ignore
-      }
-    })
+    await seedActionConsents(page)
     await ensureAuthedStorageFallback(page, { userId: USER_ID, userName: 'E2E' })
     await mockFakeAuthApis(page)
 
