@@ -56,7 +56,10 @@ export function ProfileHeaderSection({
   handleClearActiveTab,
 }: ProfileHeaderSectionProps) {
   const colors = useThemedColors();
-  const { width } = useResponsive();
+  // Шапка монтируется только после гидратации (`ProfileScreen` держит спиннер до
+  // `authReady`), узла нет в статическом HTML: `clientOnly` снимает нулевой кадр
+  // width = 0, который рисовал обычную геометрию и прыгал в узкую (#2174).
+  const { width } = useResponsive({ clientOnly: true });
   // Скелет повторяет геометрию шапки из того же слоя (#2141): обложка и кольцо
   // аватара; быстрые действия живут в обложке, отдельного ряда нет.
   const headerLayout = resolveProfileHeaderLayout(width);

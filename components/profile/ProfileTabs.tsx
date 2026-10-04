@@ -56,7 +56,9 @@ const TAB_ICONS: Record<ProfileTabKey, React.ComponentProps<typeof Feather>['nam
 
 export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: ProfileTabsProps) {
   const colors = useThemedColors();
-  const { width, isPhone, isLargePhone } = useResponsive();
+  // Оба потребителя (своя и чужая шапка профиля) монтируются после гидратации:
+  // `clientOnly` снимает нулевой кадр с desktop-вкладками перед телефонными (#2174).
+  const { width, isPhone, isLargePhone } = useResponsive({ clientOnly: true });
   const isMobile = isPhoneLayout({ width, isPhone, isLargePhone });
 
   const styles = useMemo(

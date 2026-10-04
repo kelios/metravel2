@@ -14,8 +14,13 @@ let mockResponsiveValue = {
   height: 844,
 };
 
+const mockResponsiveOptions: unknown[] = [];
+
 jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => mockResponsiveValue,
+  useResponsive: (options?: unknown) => {
+    mockResponsiveOptions.push(options);
+    return mockResponsiveValue;
+  },
 }));
 
 jest.mock('@/hooks/useTheme', () => ({
@@ -31,6 +36,21 @@ jest.mock('@/hooks/useTheme', () => ({
 }));
 
 describe('ProfileTabs mobile layout', () => {
+  it('reads the live width from the first frame and keeps a 320 screen on the phone row (#2141, #2174)', () => {
+    mockResponsiveOptions.length = 0;
+    const previous = mockResponsiveValue;
+    mockResponsiveValue = { ...previous, isPhone: false, isLargePhone: false, width: 320, height: 640 };
+    try {
+      const { UNSAFE_queryAllByType } = render(<ProfileTabs activeTab="travels" onChangeTab={jest.fn()} />);
+      // телефонная строка — горизонтальная прокрутка, а не перенос desktop-вкладок столбиком
+      expect(UNSAFE_queryAllByType(ScrollView).length).toBeGreaterThan(0);
+      // вкладки монтируются после гидратации: нулевой кадр width = 0 снят
+      expect(mockResponsiveOptions).toContainEqual({ clientOnly: true });
+    } finally {
+      mockResponsiveValue = previous;
+    }
+  });
+
   beforeEach(() => {
     mockResponsiveValue = {
       isPhone: true,

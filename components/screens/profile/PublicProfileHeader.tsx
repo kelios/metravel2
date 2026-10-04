@@ -70,7 +70,10 @@ export function PublicProfileHeader({
 }: PublicProfileHeaderProps) {
   const colors = useThemedColors();
   const [defaultCoverFailed, setDefaultCoverFailed] = useState(false);
-  const { width, isPhone, isLargePhone } = useResponsive();
+  // `user/[id]` монтирует шапку после гидратации (загрузчик до `hydrationReady`),
+  // узла нет в статическом HTML: `clientOnly` снимает нулевой кадр, иначе на 320
+  // шапка рисовалась обычной и прыгала в узкую — CLS 0,189 (#2174).
+  const { width, isPhone, isLargePhone } = useResponsive({ clientOnly: true });
   // Обложка и аватар — общий слой шапки профиля (#2141), паритет со своей шапкой.
   const layout = resolveProfileHeaderLayout(width);
   const styles = useMemo(() => createStyles(colors, layout), [colors, layout]);

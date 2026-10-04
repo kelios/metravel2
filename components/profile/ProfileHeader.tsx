@@ -81,7 +81,9 @@ export function ProfileHeader({
   avatarUploading = false,
 }: ProfileHeaderProps) {
   const colors = useThemedColors();
-  const { isMobile, width } = useResponsive();
+  // Монтируется после гидратации (`ProfileScreen` — спиннер до `authReady`):
+  // `clientOnly` снимает нулевой кадр с обычной геометрией на узком экране (#2174).
+  const { isMobile, width } = useResponsive({ clientOnly: true });
   // Геометрия обложки и аватара — общий слой (#2141): на экранах < 360
   // быстрые действия уходят полосой к верхней кромке обложки.
   const layout = resolveProfileHeaderLayout(width);

@@ -9,14 +9,18 @@ const mockImageCardMedia = jest.fn((_props: any) => {
 });
 
 let mockViewportWidth = 1280;
+const mockResponsiveOptions: unknown[] = [];
 
 jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => ({
-    isMobile: mockViewportWidth < 768,
-    isHydrated: true,
-    width: mockViewportWidth,
-    height: 900,
-  }),
+  useResponsive: (options?: unknown) => {
+    mockResponsiveOptions.push(options);
+    return {
+      isMobile: mockViewportWidth < 768,
+      isHydrated: true,
+      width: mockViewportWidth,
+      height: 900,
+    };
+  },
 }));
 
 jest.mock('@/hooks/useTheme', () => ({
@@ -52,6 +56,14 @@ describe('ProfileHeader quick actions', () => {
     const bandStyle = StyleSheet.flatten(getByTestId('profile-header-quick-actions').props.style) ?? {};
     expect(bandStyle).toMatchObject({ position: 'absolute', top: 4 });
     expect(mockImageCardMedia).toHaveBeenCalledWith(expect.objectContaining({ height: 88 }));
+  });
+
+  it('reads the live width from the first frame — the header mounts after hydration (#2174)', () => {
+    mockResponsiveOptions.length = 0;
+    render(<ProfileHeader {...baseProps} />);
+
+    expect(mockResponsiveOptions.length).toBeGreaterThan(0);
+    expect(mockResponsiveOptions.every((options) => (options as { clientOnly?: boolean })?.clientOnly === true)).toBe(true);
   });
 
   it('keeps quick actions at the bottom edge of the regular cover from 360 up', () => {
