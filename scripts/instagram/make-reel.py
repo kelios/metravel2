@@ -15,8 +15,12 @@
 свои материалы автора 1. Клип можно задать объектом {"src": "...", "start": 4.5}; без
 `start` берётся кусок с первой трети клипа. Каждый источник сегмента показывается равную
 долю его длительности: альбомное фото — панорамой слева направо, портретное — медленным
-наездом, видео — как снято, с обрезкой до 9:16 и без звука. Текст рисует Pillow (в сборке ffmpeg нет drawtext).
-Музыку добавляет владелец в приложении Instagram при публикации.
+наездом, видео — как снято, с обрезкой до 9:16.
+
+Звук: по умолчанию остаётся родной звук клипов (`"sound": "natural"`; `"none"` — тишина).
+`"music": "путь.mp3"` подмешивает трек под родной звук (`"music_volume"`, по умолчанию 0.25)
+с затуханием в конце. Трек — только тот, на который есть права (своя запись или библиотека
+со свободной лицензией); музыку из каталога Instagram в файл вставить нельзя. Текст рисует Pillow (в сборке ffmpeg нет drawtext).
 
 Запуск: python3 scripts/instagram/make-reel.py spec.json
 Нужны ffmpeg и Pillow.
@@ -33,7 +37,10 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 W, H, FPS = 1080, 1920, 30
 VIDEO_SUFFIXES = {".mov", ".mp4", ".m4v"}
 # Одинаковые параметры кодирования у всех кусков — иначе склейка без перекодирования рвётся.
-ENCODE = ["-r", str(FPS), "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-video_track_timescale", "30000", "-an"]
+ENCODE = [
+    "-r", str(FPS), "-c:v", "libx264", "-preset", "medium", "-crf", "22", "-maxrate", "6M", "-bufsize", "12M",
+    "-video_track_timescale", "30000", "-an",
+]
 # Зоны, которые Instagram закрывает своим интерфейсом: шапка сверху, подпись и кнопки снизу.
 SAFE_TOP, SAFE_BOTTOM, SIDE = 260, 460, 80
 FONT_CANDIDATES = [
@@ -146,6 +153,52 @@ def video_clip(src, start, overlay, duration, out):
     return start
 
 
+# Родной звук с телефона на природе очень тихий (в среднем около -50 дБ) — подтягиваем до слышимого.
+LEVEL = "loudnorm=I=-26:TP=-2:LRA=11,aresample=48000"
+
+
+def audio_part(src, start, duration, out):
+    """Звуковая дорожка одного куска: родной звук клипа или тишина для фото."""
+    has_audio = False
+    if src is not None:
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name",
+             "-of", "csv=p=0", str(src)],
+            capture_output=True, text=True,
+        )
+        has_audio = bool(probe.stdout.strip())
+    if has_audio:
+        fade_out = max(0.0, duration - 0.08)
+        source = ["-ss", f"{start:.3f}", "-t", f"{duration:.3f}", "-i", str(src), "-vn", "-af",
+                  f"aresample=48000,aformat=channel_layouts=stereo,apad,atrim=0:{duration:.3f},"
+                  f"afade=t=in:d=0.08,afade=t=out:st={fade_out:.3f}:d=0.08"]
+    else:
+        source = ["-f", "lavfi", "-t", f"{duration:.3f}", "-i", "anullsrc=r=48000:cl=stereo"]
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *source, "-c:a", "pcm_s16le", str(out)], check=True)
+
+
+def mux_audio(video, parts, spec, total, tmp, out):
+    """Склеивает звук кусков, подмешивает музыку и сводит с видео без перекодирования картинки."""
+    listing = tmp / "audio.txt"
+    listing.write_text("".join(f"file '{part}'\n" for part in parts), encoding="utf-8")
+    natural = tmp / "natural.wav"
+    subprocess.run(
+        ["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(listing), "-c", "copy", str(natural)],
+        check=True,
+    )
+    command = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(video), "-i", str(natural)]
+    music = spec.get("music")
+    if music:
+        volume = float(spec.get("music_volume", 0.25))
+        command += ["-stream_loop", "-1", "-i", str(music), "-filter_complex",
+                    f"[1:a]{LEVEL},volume=0.8[n];[2:a]volume={volume},afade=t=out:st={max(0.0, total - 1.5):.3f}:d=1.5[m];"
+                    "[n][m]amix=inputs=2:duration=first:normalize=0[a]", "-map", "0:v", "-map", "[a]"]
+    else:
+        command += ["-map", "0:v", "-map", "1:a", "-af", LEVEL]
+    command += ["-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-t", f"{total:.3f}", "-movflags", "+faststart", str(out)]
+    subprocess.run(command, check=True)
+
+
 def main():
     if len(sys.argv) != 2:
         raise SystemExit(__doc__)
@@ -154,7 +207,8 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
-        clips, cover_frame = [], None
+        clips, sounds, cover_frame = [], [], None
+        natural = spec.get("sound", "natural") == "natural"
         for s, segment in enumerate(spec["segments"]):
             overlay = tmp / f"text{s}.png"
             text_overlay(segment["text"], overlay, size=segment.get("size", 64), anchor=segment.get("anchor", "bottom"))
@@ -177,13 +231,22 @@ def main():
                     clip(image, size, overlay, share, clip_path)
                     cover_frame = cover_frame or image
                 clips.append(clip_path)
+                sound_path = tmp / f"sound{s}_{i}.wav"
+                is_video = Path(src).suffix.lower() in VIDEO_SUFFIXES
+                audio_part(src if natural and is_video else None, start or 0.0, share, sound_path)
+                sounds.append(sound_path)
         listing = tmp / "list.txt"
         listing.write_text("".join(f"file '{c}'\n" for c in clips), encoding="utf-8")
+        total = sum(segment["duration"] for segment in spec["segments"])
+        with_sound = natural or spec.get("music")
+        silent = tmp / "silent.mp4" if with_sound else out
         subprocess.run(
             ["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(listing),
-             "-c", "copy", "-movflags", "+faststart", str(out)],
+             "-c", "copy", "-movflags", "+faststart", str(silent)],
             check=True,
         )
+        if with_sound:
+            mux_audio(silent, sounds, spec, total, tmp, out)
         if spec.get("cover_text"):
             # Обложка — первый кадр ролика без текста хука, с названием сверху.
             cover = ImageOps.fit(Image.open(cover_frame).convert("RGB"), (W, H))
