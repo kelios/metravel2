@@ -16,4 +16,12 @@ Disallow: /*?utm_*
 Disallow: /*?fbclid=*
 Disallow: /*?gclid=*
 
+# Crawlers closed entirely. Criterion: a material share of external load with
+# no traffic returned to the site. A named group replaces the "*" group for
+# that crawler, so each name here must stay in its own group: adding it to the
+# "*" group, or adding a search engine or facebookexternalhit (link previews)
+# here, changes who is blocked (#2189).
+User-agent: meta-externalagent
+Disallow: /
+
 Sitemap: https://metravel.by/sitemap.xml
