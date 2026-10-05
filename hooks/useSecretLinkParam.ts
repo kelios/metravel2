@@ -63,7 +63,10 @@ export function useSecretLinkParam(route: string, param: string): string | null 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (!fromQuery) {
-      setStored(readStored(key));
+      // Пустое чтение известный секрет не затирает: без хранилища вкладки запись
+      // после посадки не удалась, а снятие параметра уже обнулило query.
+      const restored = readStored(key);
+      if (restored) setStored(restored);
       return;
     }
     writeStored(key, fromQuery);

@@ -72,6 +72,24 @@ describe('useSecretLinkParam', () => {
     expect(other.result.current).toBe('')
   })
 
+  it('keeps the landed secret when the tab storage refuses writes', () => {
+    const setItem = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('storage blocked')
+    })
+    try {
+      mockParams = { token: 'abc123' }
+      const { result, rerender } = renderHook(() => useSecretLinkParam('/subscribe/confirm', 'token'))
+      expect(result.current).toBe('abc123')
+
+      // Роутер снял параметр, а хранилище пусто — экран всё равно видит секрет.
+      mockParams = {}
+      rerender({})
+      expect(result.current).toBe('abc123')
+    } finally {
+      setItem.mockRestore()
+    }
+  })
+
   it('native: reads the query as is, no address bar to clean and no storage', () => {
     Platform.OS = 'ios'
     mockParams = { hash: 'native-hash' }
