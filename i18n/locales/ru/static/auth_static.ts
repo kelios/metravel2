@@ -40,6 +40,7 @@ export const authStaticResources = {
   "facebook.confirmCode": "Подтвердить и войти",
   "facebook.cancelCompletion": "Отменить",
   "password.changeFailed": "Ошибка при изменении пароля",
+  "password.goToLogin": "Перейти ко входу",
   "utils.registrationPasswordStrength.silnyy_ac37343d": "Сильный",
   "utils.registrationPasswordStrength.slabyy_14e7800f": "Слабый",
   "utils.registrationPasswordStrength.sredniy_5f9e23d5": "Средний",

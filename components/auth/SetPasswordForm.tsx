@@ -26,7 +26,8 @@ export default function SetPassword() {
     const navigation = useNavigation();
     const isFocused = useIsFocused();
     const { setNewPassword } = useAuth();
-    const [msg, setMsg] = useState<{ text: string; error: boolean }>({ text: '', error: false });
+    // `linkInvalid` — сервер не принял саму ссылку (#2177): новый пароль не поможет.
+    const [msg, setMsg] = useState<{ text: string; error: boolean; linkInvalid?: boolean }>({ text: '', error: false });
     const [done, setDone] = useState(false);
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -38,6 +39,7 @@ export default function SetPassword() {
     // `null` — до гидратации токен ещё не прочитан (#2178): «ссылка недействительна»
     // не рисуется, пока не известно, что токена действительно нет.
     const tokenMissing = password_reset_token === '';
+    const goToLogin = () => navigation.navigate('login' as never);
 
     useEffect(() => {
         return () => {
@@ -56,13 +58,15 @@ export default function SetPassword() {
             if (outcome.ok) {
                 setDone(true);
                 setMsg({ text: i18nT('auth:components.auth.SetPasswordForm.parol_uspeshno_izmenen_3d2b96b5'), error: false });
-                navTimeoutRef.current = setTimeout(() => {
-                    navigation.navigate('login' as never);
-                }, 1500);
+                navTimeoutRef.current = setTimeout(goToLogin, 1500);
             } else {
                 // #2127: причину знает слой api (слабый пароль, отказ сервера, нет связи) —
                 // показываем её, общий текст — только когда причины нет.
-                setMsg({ text: outcome.message || i18nT('auth:components.auth.SetPasswordForm.ne_udalos_izmenit_parol_dd091b55'), error: true });
+                setMsg({
+                    text: outcome.message || i18nT('auth:components.auth.SetPasswordForm.ne_udalos_izmenit_parol_dd091b55'),
+                    error: true,
+                    linkInvalid: outcome.code === 'link_invalid',
+                });
             }
         } catch (e: any) {
             setMsg({ text: e?.message || i18nT('authStatic:password.changeFailed'), error: true });
@@ -111,6 +115,16 @@ export default function SetPassword() {
                         <Text style={[styles.message, msg.error ? styles.err : styles.ok]}>
                             {msg.text}
                         </Text>
+                    )}
+                    {/* #2177: недействительной ссылке нужна новая — она запрашивается на экране входа. */}
+                    {(tokenMissing || msg.linkInvalid) && (
+                        <Button
+                            label={i18nT('authStatic:password.goToLogin')}
+                            onPress={goToLogin}
+                            variant="outline"
+                            size="md"
+                            style={styles.goToLoginButton}
+                        />
                     )}
 
                                 {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для пароля */}
@@ -237,6 +251,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     applyButton: {
         backgroundColor: colors.primary
+    },
+    goToLoginButton: {
+        marginBottom: DESIGN_TOKENS.spacing.md,
     },
     message: {
         marginBottom: 15,

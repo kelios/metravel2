@@ -31,11 +31,19 @@ export type AuthAttempt<TUser> = { ok: true; user: TUser } | AuthFailure;
 export type AuthOutcome = { ok: true } | AuthFailure;
 
 /**
+ * #2177: машинный код отказа смены пароля по ссылке из письма. `link_invalid` —
+ * сервер не принял саму ссылку, и новый пароль тут не поможет: нужна новая ссылка.
+ */
+export type PasswordResetRejectionCode = 'link_invalid';
+
+/**
  * #2042: результат запроса ссылки сброса пароля. Успех и ошибку решает статус
  * ответа в слое api, а не текст: форма раньше угадывала ошибку регуляркой по
  * русским словам и в EN/BE/UK/PL красила отказ как успех.
  */
-export type PasswordResetOutcome = { ok: true; message: string } | AuthFailure;
+export type PasswordResetOutcome =
+    | { ok: true; message: string }
+    | (AuthFailure & { code?: PasswordResetRejectionCode });
 
 export const authFailure = (reason: AuthFailureReason, message: string): AuthFailure => ({
     ok: false,
@@ -137,4 +145,28 @@ export const authRejectionCode = ({
     return ACCOUNT_NOT_ACTIVATED_MARKERS.some((marker) => normalized.includes(marker))
         ? 'account_not_activated'
         : 'invalid_credentials';
+};
+
+/**
+ * #2177: классификация отказа смены пароля по ссылке из письма.
+ *
+ * Бэкенд (`users/views.py`, `set_password_after_reset`) на неизвестный токен
+ * отвечает `400 {"detail": "Комбинация email и токен не найдены"}` без машинного
+ * кода. Токен одноразовый, поэтому «уже использована» и «неизвестна» для сервера
+ * одно и то же, а срок он не проверяет. Ошибки полей сериализатора приходят картой
+ * полей: `{"password": [...]}` — про пароль, `{"password_reset_token": [...]}` —
+ * про ссылку.
+ *
+ * Причину выбирают статус и ФОРМА тела, а не текст: строка сервера только русская
+ * и в форму не выводится (#1946). Прочие отказы (поле `password`, 401/403/404,
+ * 429, 5xx) кода не получают — у них прежний общий текст.
+ */
+export const passwordResetRejectionCode = (
+    status: number,
+    body: unknown,
+): PasswordResetRejectionCode | undefined => {
+    if (status !== 400 || !body || typeof body !== 'object' || Array.isArray(body)) return undefined;
+    const fields = body as Record<string, unknown>;
+    if ('password_reset_token' in fields) return 'link_invalid';
+    return typeof fields.detail === 'string' && !('password' in fields) ? 'link_invalid' : undefined;
 };

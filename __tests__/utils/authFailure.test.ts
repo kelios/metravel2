@@ -5,6 +5,7 @@ import {
   authFailureReasonFromStatus,
   authFailureText,
   authRejectionCode,
+  passwordResetRejectionCode,
 } from '@/utils/authFailure';
 
 // #1944: таксономия отказа входа. Разделение «нет связи / отказ сервера / ошибка
@@ -177,6 +178,34 @@ describe('utils/authFailure', () => {
       expect(authRejectionCode({ code: 'account_locked', detail: 'Аккаунт не активирован' })).toBe(
         'invalid_credentials',
       );
+    });
+  });
+
+  // #2177: причину отказа смены пароля по ссылке выбирают статус и форма тела,
+  // а не текст сервера: строки ниже — маркеры, классификатор их не читает.
+  describe('passwordResetRejectionCode', () => {
+    it.each([
+      ['400 с одним строковым detail (токен не найден)', 400, { detail: 'marker' }],
+      ['400 с ошибкой поля password_reset_token', 400, { password_reset_token: ['marker'] }],
+      ['400 с ошибками ссылки и пароля сразу — сначала нужна новая ссылка', 400, { password_reset_token: ['marker'], password: ['marker'] }],
+    ])('%s — link_invalid', (_name, status, body) => {
+      expect(passwordResetRejectionCode(status, body)).toBe('link_invalid');
+    });
+
+    it.each([
+      ['400 с ошибкой поля password', 400, { password: ['marker'] }],
+      ['400 с detail рядом с ошибкой поля password', 400, { detail: 'marker', password: ['marker'] }],
+      ['400 с нестроковым detail', 400, { detail: ['marker'] }],
+      ['400 без тела', 400, null],
+      ['400 с телом-списком', 400, ['marker']],
+      ['400 с пустым объектом', 400, {}],
+      ['401 с detail', 401, { detail: 'marker' }],
+      ['403 с detail', 403, { detail: 'marker' }],
+      ['404 с detail', 404, { detail: 'marker' }],
+      ['429 с detail', 429, { detail: 'marker' }],
+      ['500 с ошибкой поля password_reset_token', 500, { password_reset_token: ['marker'] }],
+    ])('%s — без кода', (_name, status, body) => {
+      expect(passwordResetRejectionCode(status, body)).toBeUndefined();
     });
   });
 });

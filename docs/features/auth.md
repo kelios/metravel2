@@ -117,12 +117,20 @@ Connect можно вернуть к «Apple, Google или Facebook» — уб�
   аккаунт с такой почтой существует, мы отправили…» — одинаковую для известного
   и неизвестного адреса; `400` — «Введите корректный email», `429` — «Слишком
   много попыток»;
+- смена пароля по ссылке из письма (`/set-password`, #2177): `400` с одним
+  строковым `detail` (токен не найден — неизвестен или уже использован) или с
+  ошибкой поля `password_reset_token` — `code: 'link_invalid'`, текст «Ссылка
+  недействительна или устарела. Запросите новую…» и кнопка «Перейти ко входу»
+  (та же кнопка — у ссылки без токена); ошибка поля `password`, `401`/`403`/
+  `404`, `429`, `5xx` — общий «Не удалось изменить пароль». Классифицирует
+  `passwordResetRejectionCode` (`utils/authFailure.ts`) по статусу и форме тела;
 - строка сервера не показывается нигде (#1946), успех или ошибку формы решает
   статус ответа, а не текст сообщения.
 
 Требования — OpenSpec change `consume-auth-rejection-codes`, capability
 `email-auth-feedback`; unit — `__tests__/api/travels.auth.test.ts`,
-`__tests__/utils/authFailure.test.ts`, `__tests__/components/login.test.tsx`.
+`__tests__/utils/authFailure.test.ts`, `__tests__/components/login.test.tsx`,
+`__tests__/components/auth/SetPasswordForm.outcome.test.tsx`.
 
 ## Веб-вход через Apple (#1506)
 

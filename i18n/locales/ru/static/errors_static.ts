@@ -26,6 +26,7 @@ export const errorsStaticResources = {
   "api.auth.passwordRequirements": "Пароль не соответствует требованиям",
   "api.auth.passwordChanged": "Пароль успешно изменен",
   "api.auth.passwordChangeFailed": "Не удалось изменить пароль",
+  "api.auth.passwordResetLinkInvalid": "Ссылка недействительна или устарела. Запросите новую: на экране входа нажмите «Забыли пароль?»",
   "api.auth.registrationSucceeded": "Пользователь успешно зарегистрирован. Проверьте почту для активации.",
   "api.auth.confirmationFailed": "Произошла ошибка при подтверждении учетной записи.",
   "api.auth.googleIdTokenMissing": "Не удалось получить id_token от Google",

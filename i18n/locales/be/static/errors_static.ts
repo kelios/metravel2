@@ -26,6 +26,7 @@ export const errorsStaticResources = {
   "api.auth.passwordRequirements": "Пароль не адпавядае патрабаванням",
   "api.auth.passwordChanged": "Пароль паспяхова зменены",
   "api.auth.passwordChangeFailed": "Не ўдалося змяніць пароль",
+  "api.auth.passwordResetLinkInvalid": "Спасылка несапраўдная або састарэлая. Запытайце новую: на экране ўваходу націсніце «Забылі пароль?»",
   "api.auth.registrationSucceeded": "Карыстальнік паспяхова зарэгістраваны. Праверце пошту для актывацыі.",
   "api.auth.confirmationFailed": "Адбылася памылка пры пацверджанні ўліковага запісу.",
   "api.auth.googleIdTokenMissing": "Не атрымалася атрымаць id_token ад Google",

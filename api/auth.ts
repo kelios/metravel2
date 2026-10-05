@@ -16,6 +16,7 @@ import {
     authFailureFromError,
     authFailureReasonFromStatus,
     authRejectionCode,
+    passwordResetRejectionCode,
     type AuthAttempt,
     type AuthFailureReason,
     type PasswordResetOutcome,
@@ -343,6 +344,13 @@ export const setNewPasswordApi = async (
         }, DEFAULT_TIMEOUT);
 
         if (!response.ok) {
+            // #2177: тело отказа читаем, чтобы отличить недействительную ссылку от
+            // прочих отказов; строку сервера не показываем — форма тела лишь выбирает
+            // собственный локализованный текст.
+            const code = passwordResetRejectionCode(response.status, await safeJsonParse<unknown>(response, null));
+            if (code === 'link_invalid') {
+                return { ...authFailure('rejected', i18nT('errorsStatic:api.auth.passwordResetLinkInvalid')), code };
+            }
             return authFailure(
                 authFailureReasonFromStatus(response.status),
                 i18nT('errorsStatic:api.auth.passwordChangeFailed'),

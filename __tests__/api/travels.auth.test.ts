@@ -898,6 +898,86 @@ describe('src/api/auth.ts auth/password API', () => {
 
       await expect(setNewPasswordApi('token', 'StrongPassword1!')).resolves.toMatchObject({ ok: false, reason: 'server' });
     });
+
+    // #2177: тело отказа идёт через настоящий safeJsonParse — мокается только сеть.
+    // Сервер отвечает уникальной строкой-маркером: в результат она не попадает ни
+    // в одном случае, причину выбирают статус и форма тела.
+    describe('причина отказа по статусу и форме тела (#2177)', () => {
+      const SERVER_MARKER = 'server-detail-marker-2177';
+      const LINK_INVALID_RU =
+        'Ссылка недействительна или устарела. Запросите новую: на экране входа нажмите «Забыли пароль?»';
+      const CHANGE_FAILED_RU = 'Не удалось изменить пароль';
+      const { safeJsonParse: realSafeJsonParse } = jest.requireActual('@/utils/safeJsonParse');
+
+      const rejectWith = async (status: number, bodyText: string) => {
+        mockedValidatePassword.mockReturnValueOnce({ valid: true } as any);
+        mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status, text: async () => bodyText } as any);
+        const result = await setNewPasswordApi('invalid', 'StrongPassword1!');
+        expect(JSON.stringify(result)).not.toContain(SERVER_MARKER);
+        return result;
+      };
+
+      beforeEach(() => {
+        mockedSafeJsonParse.mockImplementation(realSafeJsonParse);
+      });
+
+      afterEach(() => {
+        mockedSafeJsonParse.mockReset();
+      });
+
+      it.each([
+        ['400 {detail} — токен не найден', { detail: SERVER_MARKER }],
+        ['400 {password_reset_token: […]} — ошибка поля ссылки', { password_reset_token: [SERVER_MARKER] }],
+      ])('%s: link_invalid и свой текст про ссылку', async (_name, body) => {
+        await expect(rejectWith(400, JSON.stringify(body))).resolves.toEqual({
+          ok: false,
+          reason: 'rejected',
+          code: 'link_invalid',
+          message: LINK_INVALID_RU,
+        });
+      });
+
+      it.each([
+        ['400 {password: […]}', 400, { password: [SERVER_MARKER] }, 'rejected'],
+        ['400 {detail, password: […]}', 400, { detail: SERVER_MARKER, password: [SERVER_MARKER] }, 'rejected'],
+        ['401 {detail}', 401, { detail: SERVER_MARKER }, 'rejected'],
+        ['404 {detail}', 404, { detail: SERVER_MARKER }, 'rejected'],
+        ['500 {detail}', 500, { detail: SERVER_MARKER }, 'server'],
+      ])('%s — прежний общий текст без кода', async (_name, status, body, reason) => {
+        const result = await rejectWith(status, JSON.stringify(body));
+
+        expect(result).toEqual({ ok: false, reason, message: CHANGE_FAILED_RU });
+        expect(result).not.toHaveProperty('code');
+      });
+
+      it('400 с телом не-JSON (страница прокси) — общий текст без кода', async () => {
+        const result = await rejectWith(400, `<html><body>${SERVER_MARKER}</body></html>`);
+
+        expect(result).toEqual({ ok: false, reason: 'rejected', message: CHANGE_FAILED_RU });
+      });
+
+      describe('на английской локали', () => {
+        beforeEach(async () => {
+          await i18n.changeLanguage('en');
+        });
+
+        afterEach(async () => {
+          await i18n.changeLanguage('ru');
+        });
+
+        it('400 с русским detail прода — английский текст про ссылку, строки сервера нет', async () => {
+          const result = await rejectWith(400, JSON.stringify({ detail: 'Комбинация email и токен не найдены' }));
+
+          expect(result).toEqual({
+            ok: false,
+            reason: 'rejected',
+            code: 'link_invalid',
+            message: 'This link is invalid or has expired. Request a new one: on the sign-in screen tap “Forgot your password?”',
+          });
+          expect(result.message).not.toMatch(/[А-Яа-я]/);
+        });
+      });
+    });
   });
 
 

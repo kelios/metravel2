@@ -4,24 +4,34 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
+import { setNewPasswordApi } from '@/api/auth';
 import SetPasswordForm from '@/components/auth/SetPasswordForm';
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 
 const mockSetNewPassword = jest.fn();
+const mockNavigate = jest.fn();
+let mockToken: string | null = 'reset-token';
 
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ setNewPassword: mockSetNewPassword }),
 }));
 
 jest.mock('@/hooks/useSecretLinkParam', () => ({
-  useSecretLinkParam: () => 'reset-token',
+  useSecretLinkParam: () => mockToken,
 }));
 
 jest.mock('@/components/seo/LazyInstantSEO', () => () => null);
 
 jest.mock('expo-router', () => ({
-  useNavigation: () => ({ navigate: jest.fn() }),
+  useNavigation: () => ({ navigate: mockNavigate }),
   useIsFocused: () => true,
 }));
+
+jest.mock('@/utils/fetchWithTimeout', () => ({
+  fetchWithTimeout: jest.fn(),
+}));
+
+const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>;
 
 const PASSWORD = 'StrongPassword1!';
 
@@ -66,5 +76,63 @@ describe('SetPasswordForm — причина отказа из слоя api (#21
     const { findByText } = await submit();
 
     await waitFor(async () => expect(await findByText(/успешно изменен/i)).toBeTruthy());
+  });
+});
+
+// #2177: отказ сервера из-за самой ссылки. Мокается только сеть: `setNewPasswordApi`,
+// классификация, форма и i18n настоящие. Сервер отвечает строкой-маркером — в форме
+// её быть не должно.
+describe('SetPasswordForm — недействительная ссылка (#2177)', () => {
+  const SERVER_MARKER = 'server-detail-marker-2177';
+  const GO_TO_LOGIN = 'Перейти ко входу';
+
+  const serverRejects = (status: number, body: unknown) => {
+    mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status, text: async () => JSON.stringify(body) } as any);
+    mockSetNewPassword.mockImplementationOnce(setNewPasswordApi);
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSetNewPassword.mockReset();
+    mockToken = 'reset-token';
+  });
+
+  it('400 {detail} — текст про ссылку и кнопка «Перейти ко входу», нажатие ведёт на вход', async () => {
+    serverRejects(400, { detail: SERVER_MARKER });
+    const view = await submit();
+
+    expect(
+      await view.findByText('Ссылка недействительна или устарела. Запросите новую: на экране входа нажмите «Забыли пароль?»'),
+    ).toBeTruthy();
+    expect(view.queryByText(new RegExp(SERVER_MARKER))).toBeNull();
+
+    fireEvent.press(view.getByLabelText(GO_TO_LOGIN));
+    expect(mockNavigate).toHaveBeenCalledWith('login');
+  });
+
+  it('400 {password: […]} — прежний общий текст без кнопки входа', async () => {
+    serverRejects(400, { password: [SERVER_MARKER] });
+    const view = await submit();
+
+    expect(await view.findByText('Не удалось изменить пароль')).toBeTruthy();
+    expect(view.queryByLabelText(GO_TO_LOGIN)).toBeNull();
+    expect(view.queryByText(new RegExp(SERVER_MARKER))).toBeNull();
+  });
+
+  it('без токена в ссылке — под «Ссылка недействительна» та же кнопка входа', () => {
+    mockToken = '';
+    const view = render(<SetPasswordForm />);
+
+    expect(view.getByText('Ссылка недействительна или устарела')).toBeTruthy();
+    fireEvent.press(view.getByLabelText(GO_TO_LOGIN));
+    expect(mockNavigate).toHaveBeenCalledWith('login');
+  });
+
+  it('до гидратации токен ещё не прочитан (#2178) — ни текста про ссылку, ни кнопки', () => {
+    mockToken = null;
+    const view = render(<SetPasswordForm />);
+
+    expect(view.queryByText('Ссылка недействительна или устарела')).toBeNull();
+    expect(view.queryByLabelText(GO_TO_LOGIN)).toBeNull();
   });
 });

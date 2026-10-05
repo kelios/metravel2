@@ -26,6 +26,7 @@ export const errorsStaticResources = {
   "api.auth.passwordRequirements": "Hasło nie spełnia wymagań",
   "api.auth.passwordChanged": "Hasło zostało pomyślnie zmienione",
   "api.auth.passwordChangeFailed": "Nie udało się zmienić hasła",
+  "api.auth.passwordResetLinkInvalid": "Link jest nieprawidłowy lub wygasł. Poproś o nowy: na ekranie logowania naciśnij „Zapomniałeś hasła?”",
   "api.auth.registrationSucceeded": "Użytkownik został pomyślnie zarejestrowany. Sprawdź swój e-mail w celu aktywacji.",
   "api.auth.confirmationFailed": "Wystąpił błąd podczas potwierdzania konta.",
   "api.auth.googleIdTokenMissing": "Nie udało się pobrać id_token z Google",
