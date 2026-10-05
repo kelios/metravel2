@@ -141,6 +141,8 @@ type StepCardProps = {
   /** Поле ответа получило фокус — родитель доматывает его над клавиатурой. */
   onAnswerFocus?: (node: TextInput | null) => void
   onAnswerBlur?: () => void
+  /** Обратная связь по ответу (метка её конца; null — нет) — родитель раскрывает её над клавиатурой (#1072). */
+  onAnswerFeedback?: (node: View | null) => void
 }
 
 /** «1,0 км · примерно 12 мин пешком» — расстояние и время через i18n-форматтеры. */
@@ -243,6 +245,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     onAnswerAttempt,
     onAnswerFocus,
     onAnswerBlur,
+    onAnswerFeedback,
   } = props
 
   const [value, setValue] = useState('')
@@ -255,6 +258,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   const [navExpanded, setNavExpanded] = useState(false)
   const shakeAnim = useRef(new Animated.Value(0)).current
   const answerInputRef = useRef<TextInput>(null)
+  const feedbackEndRef = useRef<View>(null)
 
   const handleAnswerFocus = useCallback(() => {
     onAnswerFocus?.(answerInputRef.current)
@@ -382,6 +386,14 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   const showApproachNote =
     step.id !== 'intro' && !isPassed && !showFarStepBlock && !!approachLeg?.notable
   const showNextLegNote = isPassed && !!nextLeg?.notable
+
+  // Метка конца обратной связи стоит за подсказкой, только когда та раскрыта:
+  // на web скрытая подсказка держит место, и раскрывать пустоту незачем.
+  // `attempts` — каждый новый отказ с тем же текстом ошибки раскрывает её заново.
+  const hasAnswerFeedback = !!error || hintVisible || showSkipPrompt || isCoolingDown
+  useEffect(() => {
+    onAnswerFeedback?.(hasAnswerFeedback ? feedbackEndRef.current : null)
+  }, [attempts, error, hasAnswerFeedback, hintVisible, onAnswerFeedback, showSkipPrompt])
 
   const hasValidCoords =
     Number.isFinite(step.lat) &&
@@ -698,11 +710,13 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
             )
         )}
 
+        {!hintVisible && <View ref={feedbackEndRef} collapsable={false} />}
         {step.hint && (
           <View style={[styles.hintContainer, !hintVisible && Platform.select({ web: { visibility: 'hidden' } as any, default: { display: 'none' } })]}>
             <Text style={styles.hintText}>{i18nT('quests:components.quests.questWizardStepCard.podskazka_5453c538')}{step.hint}</Text>
           </View>
         )}
+        {hintVisible && <View ref={feedbackEndRef} collapsable={false} />}
 
         {/* «Точка изменилась» — структурная отметка о самом объекте (#1579),
             поэтому живёт на точке, а не в общей форме жалобы. Интро исключено

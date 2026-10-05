@@ -273,6 +273,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         handleContentScroll,
         handleInputFocus,
         handleInputBlur,
+        handleAnswerFeedback,
     } = useQuestKeyboardReveal(contentScrollRef);
 
     useEffect(() => {
@@ -716,6 +717,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                 onAnswerAttempt={trackAnswerSubmitted}
                                 onAnswerFocus={handleInputFocus}
                                 onAnswerBlur={handleInputBlur}
+                                onAnswerFeedback={handleAnswerFeedback}
                                 introSlot={introTrustBar}
                             />
                         </View>
