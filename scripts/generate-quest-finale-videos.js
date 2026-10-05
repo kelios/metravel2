@@ -251,6 +251,30 @@ const QUESTS = [
     { questId: 'paphos-nea-paphos', dir: 'paphosNeaPaphos', city: 'Пафос', finaleId: 219 },
     { questId: 'paphos-ktima', dir: 'paphosKtima', city: 'Пафос', finaleId: 220 },
     { questId: 'paphos-myths-in-stone', dir: 'paphosMythsInStone', city: 'Пафос', finaleId: 221 },
+    // Венгрия: finaleId совпадает с id квеста (209–218) — сверено по тексту финала 2026-10-05
+    { questId: 'sopron-faithful-town', dir: 'sopronFaithfulTown', city: 'Шопрон', finaleId: 209 },
+    { questId: 'keszthely-festetics-helikon', dir: 'keszthelyFesteticsHelikon', city: 'Кестхей', finaleId: 210 },
+    { questId: 'heviz-warm-lake', dir: 'hevizWarmLake', city: 'Хевиз', finaleId: 211 },
+    { questId: 'pecs-sopianae-zsolnay', dir: 'pecsSopianaeZsolnay', city: 'Печ', finaleId: 212 },
+    { questId: 'veszprem-queens-castle', dir: 'veszpremQueensCastle', city: 'Веспрем', finaleId: 213 },
+    { questId: 'eger-bulls-blood', dir: 'egerBullsBlood', city: 'Эгер', finaleId: 214 },
+    { questId: 'tihany-echo-abbey', dir: 'tihanyEchoAbbey', city: 'Тихань', finaleId: 215 },
+    { questId: 'koszeg-jurisics-siege', dir: 'koszegJurisicsSiege', city: 'Кёсег', finaleId: 216 },
+    { questId: 'szentendre-serbian-artists', dir: 'szentendreSerbianArtists', city: 'Сентендре', finaleId: 217 },
+    { questId: 'visegrad-kings-congress', dir: 'visegradKingsCongress', city: 'Вишеград', finaleId: 218 },
+    // Волна D1–D3: finaleId сдвинут относительно id квеста (225–232, 236–239) — сверено по тексту финала 2026-10-05
+    { questId: 'oslo-hallvard', dir: 'osloHallvard', city: 'Осло', finaleId: 222 },
+    { questId: 'zurich-felix-regula', dir: 'zurichFelixRegula', city: 'Цюрих', finaleId: 223 },
+    { questId: 'stockholm-gamla-stan', dir: 'stockholmGamlaStan', city: 'Стокгольм', finaleId: 224 },
+    { questId: 'veliky-novgorod-sadko', dir: 'velikyNovgorodSadko', city: 'Великий Новгород', finaleId: 225 },
+    { questId: 'bergen-bryggen-hansa', dir: 'bergenBryggenHansa', city: 'Берген', finaleId: 226 },
+    { questId: 'lucerne-pilatus-dragon', dir: 'lucernePilatusDragon', city: 'Люцерн', finaleId: 227 },
+    { questId: 'madrid-oso-austrias', dir: 'madridOsoAustrias', city: 'Мадрид', finaleId: 228 },
+    { questId: 'zaslavl-rogneda', dir: 'zaslavlRogneda', city: 'Заславль', finaleId: 229 },
+    { questId: 'tokyo-asakusa-kannon', dir: 'tokyoAsakusaKannon', city: 'Токио', finaleId: 233 },
+    { questId: 'new-york-new-amsterdam', dir: 'newYorkNewAmsterdam', city: 'Нью-Йорк', finaleId: 234 },
+    { questId: 'beijing-drum-bell-hutongs', dir: 'beijingDrumBellHutongs', city: 'Пекин', finaleId: 235 },
+    { questId: 'baku-icheri-sheher', dir: 'bakuIcheriSheher', city: 'Баку', finaleId: 236 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
