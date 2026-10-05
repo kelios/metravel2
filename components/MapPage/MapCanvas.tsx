@@ -9,6 +9,7 @@ import WeatherLegend from '@/components/MapPage/WeatherLegend'
 import { translate as i18nT } from '@/i18n'
 import type { CoordinatesSource, MapLocationState } from '@/hooks/map/useMapCoordinates'
 import { getLiveUserPositionFixAt } from '@/hooks/map/liveUserPosition'
+import { DESKTOP_MAP_LEFT_COLUMN_TOP } from '@/screens/tabs/mapDesktopCorner'
 
 
 const PRESSED_OPACITY_06 = { opacity: 0.6 } as const
@@ -72,7 +73,19 @@ type MapCanvasProps = {
   startManualRoute: () => void
   canSearchThisArea?: boolean
   onSearchThisArea?: () => void
+  /**
+   * #2219 — «Моё местоположение» на планшетной ширине приложения. На web ту же
+   * кнопку рисует Leaflet-колонка `MapControls` внутри карты (движок), в
+   * WebView-карте плавающих контролов нет — их рисует этот слой. Обязателен:
+   * потеря проводки ловится `tsc`, а не пустым местом на iPad.
+   */
+  onCenterUser: () => void
 }
+
+// Та же точка, что у web-колонки `MapControls` на desktop: левый край карты,
+// под полосой шеврона панели (`mapDesktopCorner.ts`, #2220).
+const NATIVE_DESKTOP_LOCATE_LEFT = 16
+const NATIVE_DESKTOP_CONTROL_SIZE = 44
 
 export function MapCanvas({
   styles,
@@ -94,6 +107,7 @@ export function MapCanvas({
   startManualRoute,
   canSearchThisArea,
   onSearchThisArea,
+  onCenterUser,
 }: MapCanvasProps) {
   useMapPopupCss()
   const [locationClock, setLocationClock] = useState(() => Date.now())
@@ -160,7 +174,11 @@ export function MapCanvas({
       {...(Platform.OS === 'web' ? ({ dataSet: { mapArea: 'true' } } as any) : null)}
     >
       <MapLoadingBar visible={showProgress} />
-      {isWeb && !isMobile && canSearchThisArea && !!onSearchThisArea && (
+      {/* #2219 — the desktop branch on every platform: on the iPad/Android
+          tablet the gate used to be `isWeb`, left from the time the branch never
+          rendered on native (#2155). No hitSlop: over the native map WebView a
+          slop ring hands the tap to the map as well (#2236); own 44 box. */}
+      {!isMobile && canSearchThisArea && !!onSearchThisArea && (
         <Pressable
           style={({ pressed }) => [
             styles.desktopSearchAreaButton,
@@ -174,6 +192,34 @@ export function MapCanvas({
           <Feather name="refresh-cw" size={15} color={themedColors.textOnPrimary} />
           <Text style={styles.desktopSearchAreaButtonText} numberOfLines={1}>
             {i18nT('map:components.MapPage.MapCanvas.iskat_v_etoy_oblasti_80b413e4')}</Text>
+        </Pressable>
+      )}
+      {!isWeb && !isMobile && (
+        <Pressable
+          testID="map-desktop-locate-button"
+          onPress={onCenterUser}
+          accessibilityRole="button"
+          accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_moe_mestopolozhenie_e7418fde')}
+          style={({ pressed }) => [
+            {
+              position: 'absolute',
+              top: DESKTOP_MAP_LEFT_COLUMN_TOP,
+              left: NATIVE_DESKTOP_LOCATE_LEFT,
+              width: NATIVE_DESKTOP_CONTROL_SIZE,
+              height: NATIVE_DESKTOP_CONTROL_SIZE,
+              borderRadius: NATIVE_DESKTOP_CONTROL_SIZE / 2,
+              backgroundColor: themedColors.surfaceMuted,
+              borderWidth: 1,
+              borderColor: themedColors.borderLight,
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1001,
+              ...themedColors.shadows?.medium,
+            },
+            pressed && PRESSED_OPACITY_06,
+          ]}
+        >
+          <Feather name="crosshair" size={20} color={themedColors.primaryDark} />
         </Pressable>
       )}
       {mapReady ? (

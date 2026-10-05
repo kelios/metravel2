@@ -72,8 +72,12 @@ export function useMapScreenController() {
   const canonical = buildCanonicalUrl(pathname || '/map');
 
   const styles = useMemo(
-    () => getStyles(isMobile, insets.top, themedColors, usesWebBottomDock),
-    [isMobile, insets.top, themedColors, usesWebBottomDock]
+    () =>
+      getStyles(isMobile, insets.top, themedColors, usesWebBottomDock, {
+        left: insets.left,
+        right: insets.right,
+      }),
+    [isMobile, insets.top, insets.left, insets.right, themedColors, usesWebBottomDock]
   );
 
   useEffect(() => {

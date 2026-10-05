@@ -141,15 +141,44 @@ export const getOnboardingSteps = (): OnboardingStep[] => [
   },
 ]
 
-const getMobileWebOnboardingSteps = (): OnboardingStep[] => [
+// #2303 — phone tour (`MapMobileLayout` / `MapMobileTopOverlay`), one set for
+// mobile web and native phones. The set is chosen by the layout that is drawn,
+// not by the platform: native phones used to get the desktop steps aimed at
+// `map-panel-tab-*`, which the phone layout never renders, and mobile web aimed
+// its only step at `map-mobile-find-nearby`, which nothing rendered. Every
+// target here must exist in the phone top overlay —
+// `__tests__/components/MapPage/MapOnboarding.phoneTargets.test.tsx`.
+export const getPhoneOnboardingSteps = (): OnboardingStep[] => [
   {
-    title: i18nT('map:components.MapPage.MapOnboarding.s_chego_nachat_dfa48037'),
-    description: i18nT('map:components.MapPage.MapOnboarding.nazhmite_nayti_mesta_ryadom_chtoby_srazu_poluchit_e0f29476'),
-    icon: 'search',
-    targetTestID: 'map-mobile-find-nearby',
+    title: i18nT('map:components.MapPage.MapOnboarding.karta_puteshestviy_87500481'),
+    description: i18nT('map:components.MapPage.MapOnboarding.zdes_otobrazhayutsya_interesnye_mesta_i_marshruty_7732a21e'),
+    icon: 'map',
+    placement: 'bottom',
+  },
+  {
+    title: i18nT('map:components.MapPage.MapOnboarding.nastroyte_filtry_11653829'),
+    description: i18nT('map:components.MapPage.MapOnboarding.radius_zadaetsya_otdelnoy_knopkoy_pryamo_na_karte_6947594b'),
+    icon: 'filter',
+    targetTestID: 'map-mobile-filters-button',
+    placement: 'bottom',
+  },
+  {
+    title: i18nT('map:components.MapPage.MapOnboarding.spisok_mest_e8c5b25f'),
+    description: i18nT('map:components.MapPage.MapOnboarding.knopka_so_spiskom_otkryvaet_vse_naydennye_mesta_4fcd03d2'),
+    icon: 'list',
+    targetTestID: 'map-mobile-open-list',
+    placement: 'bottom',
+  },
+  {
+    title: i18nT('map:components.MapPage.MapOnboarding.stroyte_marshruty_ba7a03e3'),
+    description: i18nT('map:components.MapPage.MapOnboarding.pereklyuchites_v_rezhim_marshruta_chtoby_prolozhit_1a9fc39e'),
+    icon: 'navigation',
+    targetTestID: 'map-mobile-route-button',
     placement: 'bottom',
   },
 ]
+
+export type MapOnboardingLayout = 'phone' | 'desktop'
 
 interface Rect {
   top: number
@@ -236,12 +265,19 @@ export function tooltipPosition(
 
 interface MapOnboardingProps {
   onComplete?: () => void
+  /**
+   * #2303 — which layout is drawn: picks the step set. Without it the set
+   * follows `mobileWebCoachmark` (phone on mobile web, desktop otherwise).
+   */
+  layout?: MapOnboardingLayout
+  /** Mobile-web-only behaviour: auto-open on web, wait for the cookie banner. */
   mobileWebCoachmark?: boolean
   suspendAutoOpen?: boolean
 }
 
 export const MapOnboarding: React.FC<MapOnboardingProps> = ({
   onComplete,
+  layout,
   mobileWebCoachmark: mobileWebCoachmarkProp,
   suspendAutoOpen = false,
 }) => {
@@ -250,9 +286,10 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
   const [mobileWebCoachmark] = useState(
     () => mobileWebCoachmarkProp ?? isMobileWebViewport(),
   )
+  const resolvedLayout: MapOnboardingLayout = layout ?? (mobileWebCoachmark ? 'phone' : 'desktop')
   const steps = useMemo(
-    () => (mobileWebCoachmark ? getMobileWebOnboardingSteps() : getOnboardingSteps()),
-    [mobileWebCoachmark],
+    () => (resolvedLayout === 'phone' ? getPhoneOnboardingSteps() : getOnboardingSteps()),
+    [resolvedLayout],
   )
   const [currentStep, setCurrentStep] = useState(0)
   const [visible, setVisible] = useState(false)
@@ -398,6 +435,7 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
 
       {targetRect && IS_WEB && (
         <View
+          testID="onboarding-spotlight"
           style={[
             styles.spotlight,
             {

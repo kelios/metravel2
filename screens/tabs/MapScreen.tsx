@@ -20,7 +20,7 @@ import {
   buildQuickFiltersData,
   buildActiveFilterItems,
 } from '@/screens/tabs/mapScreenHelpers'
-import { getDesktopBranchTopInset } from '@/screens/tabs/map.styles'
+import { getDesktopBranchInsets } from '@/screens/tabs/mapDesktopInsets'
 import { MapScreenMobile } from '@/components/MapPage/MapScreenParts/MapScreenMobile'
 import { MapScreenError } from '@/components/MapPage/MapScreenParts/MapScreenError'
 import {
@@ -469,6 +469,7 @@ export default function MapScreen() {
         startManualRoute={startManualRouteFromLocationState}
         canSearchThisArea={canSearchThisArea}
         onSearchThisArea={handleSearchThisArea}
+        onCenterUser={centerOnUser}
       />
     ),
     [
@@ -491,6 +492,7 @@ export default function MapScreen() {
       themedColors,
       canSearchThisArea,
       handleSearchThisArea,
+      centerOnUser,
     ],
   )
 
@@ -603,7 +605,7 @@ export default function MapScreen() {
       styles={styles}
       themedColors={themedColors}
       isMobile={isMobile}
-      topInset={getDesktopBranchTopInset(insets.top)}
+      insets={getDesktopBranchInsets(insets)}
       isConnected={isConnected}
       mapReady={mapReady}
       shouldLoadOnboarding={shouldLoadOnboarding}

@@ -147,6 +147,7 @@ export function MapScreenMobile({
       {shouldLoadOnboarding && (
         <Suspense fallback={null}>
           <MapOnboarding
+            layout="phone"
             mobileWebCoachmark={isWeb && isMobile}
             suspendAutoOpen={isWeb && isMobile && consentBannerVisible}
           />

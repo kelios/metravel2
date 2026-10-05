@@ -122,8 +122,8 @@ describe('MapOnboarding', () => {
       await Promise.resolve();
     });
 
-    expect(getByText('С чего начать')).toBeTruthy();
-    expect(getByText(/Нажмите «Найти места рядом»/)).toBeTruthy();
+    // #2303 — the phone tour: the intro step, then steps on the phone toolbar.
+    expect(getByText('Карта путешествий')).toBeTruthy();
     expect(getByTestId('onboarding-next')).toBeTruthy();
   });
 
@@ -157,7 +157,7 @@ describe('MapOnboarding', () => {
       await Promise.resolve();
     });
 
-    expect(getByText('С чего начать')).toBeTruthy();
+    expect(getByText('Карта путешествий')).toBeTruthy();
   });
 
   it('still opens when restarted manually', async () => {

@@ -71,6 +71,7 @@ const baseProps = {
   retryLocation: jest.fn(),
   openLocationSettings: jest.fn(),
   startManualRoute: jest.fn(),
+  onCenterUser: jest.fn(),
 }
 
 describe('MapCanvas', () => {
@@ -82,6 +83,59 @@ describe('MapCanvas', () => {
 
   beforeEach(() => {
     mockMapLoadingBar.mockClear()
+  })
+
+  describe('#2219 — map actions of the desktop branch on the native tablet', () => {
+    it.each(['ios', 'android'] as const)('%s: «Искать в этой области» is offered and has no hitSlop', (os) => {
+      ;(Platform as any).OS = os
+      const onSearchThisArea = jest.fn()
+      const screen = render(
+        <MapCanvas {...baseProps} showProgress={false} canSearchThisArea onSearchThisArea={onSearchThisArea} />,
+      )
+      const button = screen.getByTestId('map-search-this-area-desktop')
+      expect(button.props.hitSlop).toBeUndefined()
+      fireEvent.press(button)
+      expect(onSearchThisArea).toHaveBeenCalledTimes(1)
+    })
+
+    it.each(['ios', 'android'] as const)('%s: «Моё местоположение» centres the map once, no hitSlop', (os) => {
+      ;(Platform as any).OS = os
+      const onCenterUser = jest.fn()
+      const screen = render(<MapCanvas {...baseProps} showProgress={false} onCenterUser={onCenterUser} />)
+      const button = screen.getByTestId('map-desktop-locate-button')
+      expect(button.props.accessibilityLabel).toBeTruthy()
+      expect(button.props.hitSlop).toBeUndefined()
+      expect(StyleSheet.flatten(button.props.style)).toEqual(
+        expect.objectContaining({ position: 'absolute', top: 72, left: 16, width: 44, height: 44 }),
+      )
+      fireEvent.press(button)
+      expect(onCenterUser).toHaveBeenCalledTimes(1)
+    })
+
+    it('neither button exists in the phone layout', () => {
+      ;(Platform as any).OS = 'ios'
+      const screen = render(
+        <MapCanvas {...baseProps} isMobile showProgress={false} canSearchThisArea onSearchThisArea={jest.fn()} />,
+      )
+      expect(screen.queryByTestId('map-search-this-area-desktop')).toBeNull()
+      expect(screen.queryByTestId('map-desktop-locate-button')).toBeNull()
+    })
+
+    it('no search pill until the map was moved far enough', () => {
+      const screen = render(
+        <MapCanvas {...baseProps} showProgress={false} canSearchThisArea={false} onSearchThisArea={jest.fn()} />,
+      )
+      expect(screen.queryByTestId('map-search-this-area-desktop')).toBeNull()
+    })
+
+    it('web keeps the pill and leaves «Моё местоположение» to the Leaflet MapControls column', () => {
+      ;(Platform as any).OS = 'web'
+      const screen = render(
+        <MapCanvas {...baseProps} isWeb showProgress={false} canSearchThisArea onSearchThisArea={jest.fn()} />,
+      )
+      expect(screen.getByTestId('map-search-this-area-desktop')).toBeTruthy()
+      expect(screen.queryByTestId('map-desktop-locate-button')).toBeNull()
+    })
   })
 
   it('passes the explicit map progress state to the top loading bar', () => {

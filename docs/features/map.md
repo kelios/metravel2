@@ -105,6 +105,14 @@ Desktop web, iPad и Android-планшет рендерят одну desktop-в
   шапки, «Подсказки», «Слои» и «Радиус» нет `hitSlop`: JS-цель на Android
   растёт на `hitSlop`, а нативное касание за границей кнопки уходит в карту.
   Таргет — собственный бокс 44.
+  Дикторы (#2243): на native шеврон стоит в дереве **перед** панелью (место
+  задают `collapseToggleInPanel` и `zIndex`, не порядок), поэтому VoiceOver и
+  TalkBack читают «Свернуть панель» до вкладок и содержимого панели. После
+  нажатия «Свернуть панель» фокус диктора переводится на «Развернуть панель»,
+  после «Развернуть панель» — обратно на «Свернуть панель»
+  (`AccessibilityInfo.sendAccessibilityEvent(ref, 'focus')` из эффекта коммита,
+  когда целевой узел уже смонтирован); иконки полосы фокус не переносят. Web
+  сохраняет DOM-модель фокуса. Контроль — `MapScreenDesktop.native.test.tsx`.
   Внутри открытого поповера касание мимо карточки забирает его подложка, а не
   карта.
 - `MapPanelHeader` — только desktop-шапка: ряд принадлежит только вкладкам.
@@ -133,11 +141,26 @@ Desktop web, iPad и Android-планшет рендерят одну desktop-в
   native текст шага не отсылает к невидимым вкладкам. Контроль —
   `MapScreenDesktop.native.test.tsx`, `__tests__/routes/map-screen.test.tsx` и
   «Map tour with the panel collapsed (#2263)» в `e2e/map-page.spec.ts`.
-- Верхний отступ ветка берёт сама: на native у `/map` нет шапки приложения,
-  поэтому строка, кнопки на карте, их поповеры и плашка «нет сети» сдвигаются
-  на `insets.top` по одному правилу `getDesktopBranchTopInset`
-  (`screens/tabs/map.styles.ts`). На web место сверху держит шапка страницы,
-  отступ 0.
+  Набор шагов выбирает нарисованная раскладка (`layout` у `MapOnboarding`), а
+  не платформа (#2303): desktop-ветка — шаги на вкладках `map-panel-tab-*`;
+  телефон (mobile web и native одинаково) — `getPhoneOnboardingSteps`: вводный
+  шаг, затем кнопки верхнего ряда `map-mobile-filters-button`,
+  `map-mobile-open-list`, `map-mobile-route-button`. Цель каждого телефонного
+  шага обязана существовать в `MapMobileTopOverlay` — это держит
+  `MapOnboarding.phoneTargets.test.tsx`; подсветку и границы карточки на 390 —
+  «layers card carries the map tour entry (#2251)» в
+  `e2e/map-mobile-route-toolbar.spec.ts`.
+- Безопасную зону ветка берёт сама, одним правилом `getDesktopBranchInsets`
+  (`screens/tabs/mapDesktopInsets.ts`) для всех сторон. Сверху: на native у
+  `/map` нет шапки приложения, поэтому строка, кнопки на карте, их поповеры и
+  плашка «нет сети» сдвигаются на `insets.top` (#2172). По бокам: телефон
+  Android в ландшафте (≥ 768 dp, edge-to-edge) попадает в эту ветку с вырезом
+  камеры сбоку — поля строки (`mapContainer`), шеврон (`collapseToggleInPanel`
+  читает те же `desktopRowPaddingLeft/Top`), «Слои», «Радиус», «Подсказки» и
+  их поповеры (`DESKTOP_LAYERS_FAB_RIGHT`/`DESKTOP_RADIUS_FAB_RIGHT` +
+  `insets.right`) сдвигаются на `insets.left`/`insets.right` (#2233). Кнопки
+  внутри карты (`MapCanvas`) едут вместе со строкой. На web место держит
+  страница, отступы 0. Связи держит `__tests__/app/mapLayout.test.ts`.
 - Только web по природе: ручка ширины (мышь), сохранённые ширина и
   свёрнутость (localStorage). На native ширина панели 360, свёрнутость живёт в
   памяти экрана.
@@ -163,11 +186,23 @@ Desktop web, iPad и Android-планшет рендерят одну desktop-в
 320, пять языков, «999+»: содержимое вкладки не выходит за неё) и тот же замер на
 820 в `map-page.spec.ts`.
 
-Открытые пробелы этой ветки, общие для web и native: «Показать всё на карте» на
-native недоступно — у native
-`MapUiApi` нет `fitToResults` (#2218); на native-планшете нет кнопки «Моё
-местоположение» (#2219); пилюля качества геолокации заходит под кнопку
-сворачивания (#2220).
+Действия над картой на планшетной ширине одинаковы на web и native (#2219):
+
+- «Моё местоположение» — круглая кнопка 44 у левого края карты под полосой
+  шеврона (`left 16`, `top = DESKTOP_MAP_LEFT_COLUMN_TOP` = 72, отсчёт от
+  `mapArea`). На web её рисует Leaflet-колонка `MapControls`, в native WebView
+  плавающих контролов нет — ту же кнопку в той же точке рисует `MapCanvas`
+  (`map-desktop-locate-button`, имя «Показать моё местоположение», без
+  `hitSlop`); различие — только движок. Масштаб и «Показать все места»
+  плавающими кнопками на native не добавляются: масштаб — жестом, «Показать
+  всё на карте» работает из поповера «Слои» (#2218).
+- «Искать в этой области» (`map-search-this-area-desktop`) — пилюля вверху по
+  центру карты на всех платформах: после значимого сдвига в режиме «Радиус»,
+  без `hitSlop` (#2236), гейт `!isMobile` без `isWeb`.
+
+Регрессия — `__tests__/components/MapPage/MapCanvas.test.tsx` (ios и android на
+планшетной ширине, телефон и web). Открытый пробел: на окне 768–925 пилюля
+качества геолокации может лечь на «Искать в этой области» (#2304).
 
 ### Web cold-start viewport and tiles
 
@@ -204,6 +239,17 @@ renderer, который сохраняет собственный tile lifecycl
   `MAP_VIEWPORT`, `TILE_REQ`;
 - dynamic payload передаётся через безопасную JSON-сериализацию и
   `injectJavaScript`, а не через пересборку HTML на каждое изменение данных.
+- `onMapUiApiReady` отдаёт **полный** `MapUiApi` (`types/mapUi.ts`), собранный
+  `Map/nativeMapUiApi.ts` (#2218): `zoomIn`/`zoomOut`, `centerOnUser`,
+  `fitToResults` (кадр по текущим местам, одиночное место — зум 14),
+  `fitToCoords`, `focusOnCoord`, `setOverlayEnabled`; `capabilities` —
+  `canCenterOnUser: true`, `canFitToResults` = есть места, `canExportRoute: false`.
+  Чего у движка приложения нет, то явный no-op с честной capability:
+  `exportGpx`/`exportKml` (экспорта файлом нет), `setBaseLayer` (подложка одна,
+  выбор подложки поповер показывает только при нескольких базовых слоях).
+  Объявлять API приложения через `Pick<MapUiApi, …>` нельзя: так потребители
+  поповера «Слои» и `showAllPlaces` молча получали пустоту. Контракт держит
+  `__tests__/components/Map.ios.test.tsx` («#2218: … full MapUiApi contract»).
 
 ### Native base tile lifecycle
 

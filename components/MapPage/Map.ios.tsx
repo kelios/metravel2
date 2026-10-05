@@ -31,7 +31,11 @@ import {
 import { normalizeRoutePointsWithMarkers, type NativeRoutePointMarkersPayload } from './Map/nativeRoutePointMarkersScript';
 import { buildNativeMapHtml } from './Map/nativeMapHtml';
 import { openNativeMapLink } from './Map/openNativeMapLink';
-import { buildNativeMapFitCoordsCommand, buildNativeMapFocusCoordCommand } from './Map/nativeMapViewCommandsScript';
+import {
+  buildNativeMapUiApi,
+  buildNativeSetOverlayCommand,
+  collectNativeResultCoords,
+} from './Map/nativeMapUiApi';
 import { fetchTileWithRetry } from './Map/tileFetchRetry';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
 import type { MapUiApi } from '@/types/mapUi';
@@ -139,9 +143,8 @@ interface TravelProps {
    * кластер-эндпоинт. Для карты квестов (`/quests`), где показываем только квесты.
    */
   pointsOnly?: boolean;
-  onMapUiApiReady?: (
-    api: Pick<MapUiApi, 'zoomIn' | 'zoomOut' | 'centerOnUser' | 'setOverlayEnabled' | 'fitToCoords' | 'focusOnCoord'> | null,
-  ) => void;
+  /** #2218: полный `MapUiApi` — см. `Map/nativeMapUiApi.ts`. */
+  onMapUiApiReady?: (api: MapUiApi | null) => void;
 }
 
 const DEFAULT_LAT = 53.8828449;
@@ -515,44 +518,31 @@ const Map: React.FC<TravelProps> = ({
   const setOverlayEnabled = useCallback(
     (id: string, enabled: boolean) => {
       enabledOverlaysRef.current[id] = enabled;
-      injectMapCommand(
-        `window.__metravelSetOverlay && window.__metravelSetOverlay(${serializeForInlineScript(id)}, ${enabled ? 'true' : 'false'})`,
-      );
+      injectMapCommand(buildNativeSetOverlayCommand(id, enabled));
     },
     [injectMapCommand],
   );
 
+  // #2218: «Показать всё на карте» и подгонка после «Сбросить всё» — по текущим
+  // местам. Координаты читаются из ref, API пересобирается только при смене
+  // возможности (есть места / нет), а не на каждый новый список.
+  const resultCoords = useMemo(() => collectNativeResultCoords(travelAddress), [travelAddress]);
+  const resultCoordsRef = useRef(resultCoords);
+  resultCoordsRef.current = resultCoords;
+  const canFitToResults = resultCoords.length > 0;
+
   useEffect(() => {
     if (!onMapUiApiReady) return undefined;
-
-    onMapUiApiReady({
-      zoomIn: () => injectMapCommand('window.__metravelMapZoomIn && window.__metravelMapZoomIn()'),
-      zoomOut: () => injectMapCommand('window.__metravelMapZoomOut && window.__metravelMapZoomOut()'),
-      centerOnUser: (target) => {
-        const lat = Number(target?.lat);
-        const lng = Number(target?.lng);
-        const hasValidTarget =
-          Number.isFinite(lat) &&
-          Number.isFinite(lng) &&
-          Math.abs(lat) <= 90 &&
-          Math.abs(lng) <= 180;
-        injectMapCommand(
-          hasValidTarget
-            ? `window.__metravelMapCenterOnUser && window.__metravelMapCenterOnUser(${lat}, ${lng})`
-            : 'window.__metravelMapCenterOnUser && window.__metravelMapCenterOnUser()',
-        );
-      },
-      setOverlayEnabled,
-      fitToCoords: (coords, { maxZoom, padding }) => injectMapCommand(buildNativeMapFitCoordsCommand(coords, maxZoom, padding)),
-      // #2066: тап по строке точки в списке планировщика — переход к координате.
-      focusOnCoord: (coord, options) => {
-        const command = buildNativeMapFocusCoordCommand(coord, options?.zoom);
-        if (command) injectMapCommand(command);
-      },
-    });
-
+    onMapUiApiReady(
+      buildNativeMapUiApi({
+        injectMapCommand,
+        setOverlayEnabled,
+        getResultCoords: () => resultCoordsRef.current,
+        canFitToResults,
+      }),
+    );
     return () => onMapUiApiReady(null);
-  }, [injectMapCommand, onMapUiApiReady, setOverlayEnabled]);
+  }, [canFitToResults, injectMapCommand, onMapUiApiReady, setOverlayEnabled]);
 
   // F-17b — на чистой установке при первом открытии «Карты» сверху висят
   // онбординг-коачмарки + системный диалог геолокации, пока WebView инициализируется.
@@ -738,7 +728,7 @@ const Map: React.FC<TravelProps> = ({
     Object.keys(enabled).forEach((id) => {
       if (!enabled[id]) return;
       injectMapCommand(
-        `window.__metravelSetOverlay && window.__metravelSetOverlay(${serializeForInlineScript(id)}, true)`,
+        buildNativeSetOverlayCommand(id, true),
       );
     });
   }, [autoCenterOnTrustedUserIfNeeded, injectMapCommand, redrawBaseTilesAfterReconnect]);

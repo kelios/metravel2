@@ -353,7 +353,24 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
     expect(
       await page.evaluate(() => window.localStorage.getItem('metravel_map_onboarding_completed')),
     ).toBeNull()
-    await next.click()
+    // #2303 — the phone tour: an intro, then every step lights a real toolbar
+    // node (non-zero spotlight) and its card stays inside the window.
+    const viewport = page.viewportSize()!
+    for (let step = 0; step < 4; step += 1) {
+      const card = await byTid(page, 'onboarding-card').boundingBox()
+      expect(card, `card at step ${step}`).toBeTruthy()
+      expect(card!.x).toBeGreaterThanOrEqual(0)
+      expect(card!.x + card!.width).toBeLessThanOrEqual(viewport.width)
+      expect(card!.y + card!.height).toBeLessThanOrEqual(viewport.height)
+      if (step > 0) {
+        await expect(byTid(page, 'onboarding-spotlight')).toBeVisible({ timeout: 5_000 })
+        const spot = await byTid(page, 'onboarding-spotlight').boundingBox()
+        expect(spot, `spotlight at step ${step}`).toBeTruthy()
+        expect(spot!.width).toBeGreaterThan(8)
+        expect(spot!.height).toBeGreaterThan(8)
+      }
+      await next.click()
+    }
     await expect(next).toHaveCount(0, { timeout: 10_000 })
     await expect
       .poll(() => page.evaluate(() => window.localStorage.getItem('metravel_map_onboarding_completed')))

@@ -8,6 +8,7 @@ import {
 } from '@/components/MapPage/MapMobile/MapMobileTopOverlay.styles';
 import type { ThemedColors } from '@/hooks/useTheme';
 import * as corner from '@/screens/tabs/mapDesktopCorner';
+import { getDesktopBranchInsets, NO_DESKTOP_INSETS } from '@/screens/tabs/mapDesktopInsets';
 import { webTextStyle } from '@/utils/webProps';
 
 // ✅ Токенизация: базируемся на 8pt-системе METRICS
@@ -63,20 +64,16 @@ export const MAP_PANEL_TAB_MAX_FONT_SCALE = 1.35;
 // неё же считается минимальная высота баннера под абсолютный крестик (#1780).
 const GEO_BANNER_PADDING_VERTICAL_MOBILE = 7;
 
-/**
- * #2172 — top inset the desktop branch (width ≥ 768) takes itself. Native has
- * no app header on /map (`app/(tabs)/_layout.tsx`), so the row would start
- * under the iPad status bar; on web the page header owns that space. One rule
- * for the shell row (`mapContainer`), the on-map controls and their popovers.
- */
-export const getDesktopBranchTopInset = (insetTop: number): number =>
-  Platform.OS === 'web' ? 0 : Math.max(0, insetTop);
+/** Right offsets of «Слои» and «Радиус» from the map edge: buttons and popovers read them. */
+export const DESKTOP_LAYERS_FAB_RIGHT = desktopMapFabRight(0);
+export const DESKTOP_RADIUS_FAB_RIGHT = desktopMapFabRight(1);
 
 export const getStyles = (
   isMobile: boolean,
   insetTop: number,
   themedColors: ThemedColors,
   usesWebBottomDock = false,
+  sideInsets?: { left: number; right: number }, // #2233; omitted = the old numbers
 ) => {
   const shadowMedium = themedColors.shadows.medium;
   const shadowHeavy = themedColors.shadows.heavy;
@@ -87,7 +84,10 @@ export const getStyles = (
   // #2172 — native at width ≥ 768 (iPad, Android tablets) renders the same
   // desktop-branch cards as web: radius, border, shadow. Web blocks stay as is.
   const isNativeDesktop = Platform.OS !== 'web' && !isMobile;
-  const desktopTopInset = isMobile ? 0 : getDesktopBranchTopInset(insetTop);
+  const desktopInsets = isMobile ? NO_DESKTOP_INSETS : getDesktopBranchInsets({ top: insetTop, ...sideInsets });
+  // #2233 — row padding, defined once: the shell row and the native chevron read it.
+  const desktopRowPaddingLeft = DESKTOP_SHELL_PADDING + desktopInsets.left;
+  const desktopRowPaddingTop = DESKTOP_SHELL_PADDING - 4 + desktopInsets.top;
   const webViewportReservedHeight = isMobile
     ? WEB_MOBILE_DOCK_INSET
     : usesWebBottomDock
@@ -98,7 +98,7 @@ export const getStyles = (
   // «Слои»): ключи отличаются только слотом `right` (Style key ownership).
   const desktopMapFab = {
     position: 'absolute' as const,
-    top: DESKTOP_MAP_FAB_INSET + desktopTopInset,
+    top: DESKTOP_MAP_FAB_INSET + desktopInsets.top,
     width: CONTROL_SIZE,
     height: CONTROL_SIZE,
     borderRadius: CONTROL_SIZE / 2,
@@ -146,9 +146,9 @@ export const getStyles = (
       position: 'relative',
       flexDirection: isMobile ? 'column' : 'row',
       columnGap: isMobile ? 0 : PANEL_GAP,
-      paddingLeft: isMobile ? 0 : DESKTOP_SHELL_PADDING,
-      paddingRight: isMobile ? 0 : DESKTOP_SHELL_PADDING,
-      paddingTop: isMobile ? 0 : DESKTOP_SHELL_PADDING - 4 + desktopTopInset,
+      paddingLeft: isMobile ? 0 : desktopRowPaddingLeft,
+      paddingRight: isMobile ? 0 : DESKTOP_SHELL_PADDING + desktopInsets.right,
+      paddingTop: isMobile ? 0 : desktopRowPaddingTop,
       paddingBottom: isMobile ? 0 : DESKTOP_SHELL_PADDING - 4,
       minHeight: 0,
       minWidth: 0,
@@ -440,7 +440,7 @@ export const getStyles = (
       // surface + shadow, matching the other floating map controls.
       desktopLayersFab: {
         ...desktopMapFab,
-        right: desktopMapFabRight(0),
+        right: DESKTOP_LAYERS_FAB_RIGHT + desktopInsets.right,
       },
       desktopLayersFabActive: {
         backgroundColor: themedColors.surface,
@@ -450,14 +450,14 @@ export const getStyles = (
       // left of «Слои».
       desktopRadiusFab: {
         ...desktopMapFab,
-        right: desktopMapFabRight(1),
+        right: DESKTOP_RADIUS_FAB_RIGHT + desktopInsets.right,
       },
       // #2217 — «Подсказки» left the panel header for the same cluster: second
       // row under «Слои», so the top row keeps two slots (see the cluster note).
       desktopHelpFab: {
         ...desktopMapFab,
         top: desktopMapFab.top + desktopMapFabRowOffset(1),
-        right: desktopMapFabRight(0),
+        right: DESKTOP_LAYERS_FAB_RIGHT + desktopInsets.right,
       },
       desktopRadiusFabActive: {
         backgroundColor: themedColors.surface,
@@ -588,14 +588,14 @@ export const getStyles = (
         // sibling of the panel in the row at the same spot — inside the row's
         // bounds, so Android routes the native touch to it, not to the map
         // WebView under a child that sticks out of the panel. The native offsets
-        // restate the row padding (`mapContainer`) and the native panel width:
-        // change them together.
+        // read the row padding (`desktopRowPaddingLeft/Top`, #2233) plus the native
+        // panel width, so a side inset moves the panel and the chevron together.
         // Geometry of the map's top-left corner: `mapDesktopCorner.ts` (#2220).
         ...(Platform.OS === 'web'
           ? { top: corner.COLLAPSE_TOGGLE_TOP, right: -(corner.COLLAPSE_TOGGLE_OUTSET + corner.COLLAPSE_TOGGLE_SIZE) }
           : {
-              top: DESKTOP_SHELL_PADDING - 4 + desktopTopInset + corner.COLLAPSE_TOGGLE_TOP,
-              left: DESKTOP_SHELL_PADDING + PANEL_WIDTH_DESKTOP + corner.COLLAPSE_TOGGLE_OUTSET,
+              top: desktopRowPaddingTop + corner.COLLAPSE_TOGGLE_TOP,
+              left: desktopRowPaddingLeft + PANEL_WIDTH_DESKTOP + corner.COLLAPSE_TOGGLE_OUTSET,
             }),
         width: corner.COLLAPSE_TOGGLE_SIZE,
         height: corner.COLLAPSE_TOGGLE_SIZE,

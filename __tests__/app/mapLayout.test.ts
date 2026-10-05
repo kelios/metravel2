@@ -5,9 +5,11 @@ import {
   MAP_PANEL_TAB_CONTENT_WIDTH,
   MAP_PANEL_TAB_COUNT,
   MAP_PANEL_TAB_WIDTH_RESERVE,
-  getDesktopBranchTopInset,
+  DESKTOP_LAYERS_FAB_RIGHT,
+  DESKTOP_RADIUS_FAB_RIGHT,
   getStyles,
 } from '@/screens/tabs/map.styles';
+import { getDesktopBranchInsets } from '@/screens/tabs/mapDesktopInsets';
 import { METRICS } from '@/constants/layout';
 
 describe('map layout header offset', () => {
@@ -287,7 +289,7 @@ describe('desktop-branch cards on native tablets (#2172)', () => {
     expect(tablet.desktopLayersFab.top).toBe(16 + STATUS_BAR);
     expect(tablet.desktopRadiusFab.top).toBe(16 + STATUS_BAR);
     expect(tablet.collapseToggleInPanel.top).toBe(12 + STATUS_BAR + 16);
-    expect(getDesktopBranchTopInset(STATUS_BAR)).toBe(STATUS_BAR);
+    expect(getDesktopBranchInsets({ top: STATUS_BAR }).top).toBe(STATUS_BAR);
     // Phones own their inset in the sheet/top overlay layer.
     expect(getStyles(true, STATUS_BAR, themedColors).mapContainer.paddingTop).toBe(0);
 
@@ -295,7 +297,48 @@ describe('desktop-branch cards on native tablets (#2172)', () => {
     const web = getStyles(false, STATUS_BAR, themedColors);
     expect(web.mapContainer.paddingTop).toBe(12);
     expect(web.desktopLayersFab.top).toBe(16);
-    expect(getDesktopBranchTopInset(STATUS_BAR)).toBe(0);
+    expect(getDesktopBranchInsets({ top: STATUS_BAR, left: 30, right: 30 })).toEqual({ top: 0, left: 0, right: 0 });
+  });
+
+  // #2233 — an Android phone in landscape (≥ 768 dp, edge-to-edge) lands in the
+  // desktop branch with the camera cutout on one side. The relations are held,
+  // not the numbers: the row, the chevron, the right-hand buttons and their
+  // popovers all move by the same side inset.
+  it.each([
+    ['android', 0, 0],
+    ['android', 32, 0],
+    ['android', 0, 32],
+    ['ios', 48, 48],
+  ])('%s left=%i right=%i: the desktop branch clears the side cutout as one piece', (os, left, right) => {
+    Object.defineProperty(Platform, 'OS', { value: os });
+    const insets = getDesktopBranchInsets({ top: 0, left, right });
+    expect(insets).toEqual({ top: 0, left, right });
+
+    const base = getStyles(false, 0, themedColors);
+    const styles = getStyles(false, 0, themedColors, false, { left, right });
+    expect(styles.mapContainer.paddingLeft).toBe(base.mapContainer.paddingLeft + left);
+    expect(styles.mapContainer.paddingRight).toBe(base.mapContainer.paddingRight + right);
+    // The chevron sits the same 4 off the panel's right edge at any inset.
+    expect(styles.collapseToggleInPanel.left - styles.mapContainer.paddingLeft).toBe(
+      base.collapseToggleInPanel.left - base.mapContainer.paddingLeft,
+    );
+    expect(styles.collapseToggleInPanel.top).toBe(base.collapseToggleInPanel.top);
+    for (const key of ['desktopLayersFab', 'desktopRadiusFab', 'desktopHelpFab'] as const) {
+      expect(styles[key].right).toBe(base[key].right + right);
+    }
+    // Popovers anchor on their buttons: the shared offset plus the same inset.
+    expect(base.desktopLayersFab.right).toBe(DESKTOP_LAYERS_FAB_RIGHT);
+    expect(base.desktopRadiusFab.right).toBe(DESKTOP_RADIUS_FAB_RIGHT);
+    // Without side insets the numbers are the old ones.
+    expect(base.mapContainer.paddingLeft).toBe(16);
+    expect(base.collapseToggleInPanel.left).toBe(380);
+    // Phones are untouched by the side insets.
+    expect(getStyles(true, 0, themedColors, false, { left, right }).mapContainer.paddingLeft).toBe(0);
+  });
+
+  it('negative insets never pull the desktop branch outwards', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'android' });
+    expect(getDesktopBranchInsets({ top: -1, left: -5, right: -5 })).toEqual({ top: 0, left: 0, right: 0 });
   });
 
   // #2217 — the top row of the on-map cluster shares its band with the centred

@@ -339,6 +339,46 @@ describe('Map.ios Component', () => {
     );
   });
 
+  it('#2218: hands consumers the full MapUiApi contract, fitToResults included', () => {
+    const onMapUiApiReady = jest.fn();
+    render(<Map travel={mockTravel} coordinates={mockCoordinates} onMapUiApiReady={onMapUiApiReady} />);
+    const api = onMapUiApiReady.mock.calls.find(([value]) => value)?.[0];
+
+    // Всё, что читают поповер «Слои» (FiltersPanelMapSettings) и ядро
+    // (useMapController.fitToResults / showAllPlaces): ключ пропал — тест падает.
+    for (const key of [
+      'zoomIn', 'zoomOut', 'centerOnUser', 'fitToResults', 'fitToCoords', 'focusOnCoord',
+      'setOverlayEnabled', 'setBaseLayer', 'exportGpx', 'exportKml',
+    ]) {
+      expect(typeof api[key]).toBe('function');
+    }
+    expect(api.capabilities).toEqual({ canCenterOnUser: true, canFitToResults: true, canExportRoute: false });
+
+    mockInjectJavaScript.mockClear();
+    act(() => {
+      api.fitToResults();
+    });
+    expect(mockInjectJavaScript).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'window.__metravelMapFitCoords && window.__metravelMapFitCoords([[53.9,27.5],[53.8,27.6]], 14)',
+      ),
+    );
+  });
+
+  it('#2218: without places fitToResults is unavailable and injects nothing', () => {
+    const onMapUiApiReady = jest.fn();
+    render(
+      <Map travel={{ travelAddress: { data: [] } }} coordinates={mockCoordinates} onMapUiApiReady={onMapUiApiReady} />,
+    );
+    const api = onMapUiApiReady.mock.calls.find(([value]) => value)?.[0];
+    expect(api.capabilities.canFitToResults).toBe(false);
+    mockInjectJavaScript.mockClear();
+    act(() => {
+      api.fitToResults();
+    });
+    expect(mockInjectJavaScript).not.toHaveBeenCalled();
+  });
+
   it('#2066: focuses on a coordinate through the WebView bridge', () => {
     const onMapUiApiReady = jest.fn();
     render(

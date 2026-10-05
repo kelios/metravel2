@@ -1,5 +1,5 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, BackHandler, Platform, Pressable, Text, View } from 'react-native'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, ActivityIndicator, BackHandler, Platform, Pressable, Text, View } from 'react-native'
 import Animated from 'react-native-reanimated'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -11,6 +11,8 @@ import { MapMobileRadiusPopover } from '@/components/MapPage/MapMobile/MapMobile
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
 import { webTitleRef } from '@/utils/webProps'
+import { DESKTOP_LAYERS_FAB_RIGHT, DESKTOP_RADIUS_FAB_RIGHT } from '@/screens/tabs/map.styles'
+import { NO_DESKTOP_INSETS, type DesktopBranchInsets } from '@/screens/tabs/mapDesktopInsets'
 import {
   ActiveFiltersBar,
   MapOnboarding,
@@ -120,6 +122,32 @@ export function MapScreenDesktopChrome({
   const showDesktopCollapsedStrip = !isMobile && isDesktopCollapsed
   const showDesktopExpandedPanel = !showDesktopCollapsedStrip
 
+  // #2243 — screen-reader focus follows the chevron on native (ios-designer,
+  // #2172 «Дизайн-решение п. 5»): after «Свернуть панель» it lands on
+  // «Развернуть панель», after «Развернуть панель» back on «Свернуть панель».
+  // The pressed button unmounts with the toggle, so without this VoiceOver and
+  // TalkBack fall back to the top of the screen. The target exists only after
+  // the state flip, so the event goes out from the commit effect, not from the
+  // press handler. Web keeps its DOM focus model (unchanged).
+  const collapseButtonRef = useRef<View>(null)
+  const expandButtonRef = useRef<View>(null)
+  const pendingFocusRef = useRef<'collapse' | 'expand' | null>(null)
+  const handleChevronPress = useCallback(
+    (next: 'collapse' | 'expand') => {
+      if (!isWeb) pendingFocusRef.current = next
+      toggleDesktopCollapse()
+    },
+    [isWeb, toggleDesktopCollapse],
+  )
+  useEffect(() => {
+    const target = pendingFocusRef.current
+    if (!target) return
+    const node = (target === 'expand' ? expandButtonRef : collapseButtonRef).current
+    if (!node) return
+    pendingFocusRef.current = null
+    AccessibilityInfo.sendAccessibilityEvent(node, 'focus')
+  }, [isDesktopCollapsed])
+
   // #2172 — one collapse control (same node, label and look) on every
   // platform; only its parent differs. Web: a child of the panel past its right
   // edge — DOM hit-testing reaches it. Native: a sibling of the panel in the
@@ -131,9 +159,10 @@ export function MapScreenDesktopChrome({
   // it while the native touch outside the view still lands on the map.
   const collapseButton = (
     <Pressable
+      ref={collapseButtonRef}
       testID="map-panel-collapse-button"
       style={({ pressed }) => [styles.collapseToggleInPanel, pressed && PRESSED_OPACITY_07]}
-      onPress={toggleDesktopCollapse}
+      onPress={() => handleChevronPress('expand')}
       accessibilityRole="button"
       accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.svernut_panel_2b99d933')}
     >
@@ -146,10 +175,11 @@ export function MapScreenDesktopChrome({
       {showDesktopCollapsedStrip && (
         <View testID="map-panel-collapsed" style={styles.collapsedPanel}>
           <Pressable
-            ref={webTitleRef(i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.razvernut_panel_4e58160a'))}
+            // Web: the hover title; native: the #2243 focus target.
+            ref={webTitleRef(i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.razvernut_panel_4e58160a')) ?? expandButtonRef}
             testID="map-panel-expand-button"
             style={({ pressed }) => [styles.collapseToggle, pressed && PRESSED_OPACITY_07]}
-            onPress={toggleDesktopCollapse}
+            onPress={() => handleChevronPress('collapse')}
             accessibilityRole="button"
             accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.razvernut_panel_4e58160a')}
           >
@@ -193,6 +223,12 @@ export function MapScreenDesktopChrome({
         </View>
       )}
 
+      {/* #2243 — on native the chevron is the panel's row sibling (#2172) and
+          precedes it in the tree: the screen readers walk siblings in tree
+          order (#2113 device QA read panel → content → chevron), so it now
+          reads before the tabs and the panel content. Its position comes from
+          `collapseToggleInPanel` (absolute, zIndex), not from this order. */}
+      {showDesktopExpandedPanel && !isWeb && collapseButton}
       {showDesktopExpandedPanel && (
         <Animated.View
           ref={panelRef}
@@ -280,7 +316,6 @@ export function MapScreenDesktopChrome({
           </View>
         </Animated.View>
       )}
-      {showDesktopExpandedPanel && !isWeb && collapseButton}
     </>
   )
 }
@@ -297,10 +332,11 @@ type MapScreenDesktopOverlaysProps = {
   /** Desktop branch only (width ≥ 768, any platform): always false in practice. */
   isMobile: boolean
   /**
-   * #2172 — the branch's own top inset (`getDesktopBranchTopInset`): 0 on web,
-   * the status bar on native, which has no app header on /map.
+   * #2172/#2233 — the branch's own safe-area insets (`getDesktopBranchInsets`):
+   * zeros on web; on native the status bar on top (no app header on /map) and
+   * the camera cutout on the sides (Android phone in landscape).
    */
-  topInset?: number
+  insets?: DesktopBranchInsets
   isConnected: boolean
   mapReady: boolean
   shouldLoadOnboarding: boolean
@@ -335,7 +371,7 @@ export function MapScreenDesktopOverlays({
   styles,
   themedColors,
   isMobile,
-  topInset = 0,
+  insets = NO_DESKTOP_INSETS,
   isConnected,
   mapReady,
   shouldLoadOnboarding,
@@ -425,8 +461,8 @@ export function MapScreenDesktopOverlays({
           {radiusOpen && (
             <MapMobileRadiusPopover
               colors={themedColors as ThemedColors}
-              top={topInset + 16 + 44 + 8}
-              right={16 + 44 + 8}
+              top={insets.top + 16 + 44 + 8}
+              right={DESKTOP_RADIUS_FAB_RIGHT + insets.right}
               minWidth={150}
               maxWidth={200}
               options={radiusOptions ?? []}
@@ -478,8 +514,8 @@ export function MapScreenDesktopOverlays({
           {layersOpen && (
             <MapMobileLayersPopover
               colors={themedColors as ThemedColors}
-              top={topInset + 16 + 44 + 8}
-              right={16}
+              top={insets.top + 16 + 44 + 8}
+              right={DESKTOP_LAYERS_FAB_RIGHT + insets.right}
               // MapMobilePopover фиксирует ширину карточки по `minWidth` (width:
               // minWidth), поэтому без него карточка садилась на дефолтные 200px и
               // «Топографическая»/«Показать всё на карте» рвались посреди слова.
@@ -497,7 +533,7 @@ export function MapScreenDesktopOverlays({
         </>
       )}
 
-      <MapOfflineIndicator visible={!isConnected} top={MAP_OFFLINE_INDICATOR_TOP + topInset} />
+      <MapOfflineIndicator visible={!isConnected} top={MAP_OFFLINE_INDICATOR_TOP + insets.top} />
 
       {!mapReady && (
         <View style={[styles.loadingOverlay, POINTER_EVENTS_NONE]} testID="map-loading-overlay">
@@ -508,7 +544,7 @@ export function MapScreenDesktopOverlays({
       {shouldLoadOnboarding && (
         <Suspense fallback={null}>
           {/* Desktop branch: coachmark is mobile-web only, so always false here. */}
-          <MapOnboarding mobileWebCoachmark={false} />
+          <MapOnboarding layout="desktop" mobileWebCoachmark={false} />
         </Suspense>
       )}
     </>
