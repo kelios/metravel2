@@ -46,9 +46,6 @@ export function makeFiltersContext(
     userLocation: null,
     onPlaceSelect: jest.fn(),
     onOpenList: jest.fn(),
-    hideTopControls: false,
-    hideFooterCta: false,
-    hideFooterReset: false,
     ...overrides,
   };
 }

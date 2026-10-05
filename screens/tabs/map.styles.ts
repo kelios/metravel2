@@ -28,6 +28,36 @@ const PANEL_RADIUS = 20;
 const CONTROL_RADIUS = 12;
 // Размер вью иконочных контролов карты и есть их тач-таргет — floor проекта 44dp.
 const CONTROL_SIZE = 44;
+// Кластер круглых кнопок desktop-ветки в правом верхнем углу карты: верхний ряд —
+// «Слои» у края, слева «Радиус»; «Подсказки» (#2217) — под «Слоями». Ряд не
+// растёт влево: третий слот на окне 768–925 px заходит под пилюлю «Искать в
+// этой области» по центру карты и перехватывает её клики. Слот — место от края,
+// ряд — от верха; верхний ряд держит не больше DESKTOP_MAP_FAB_TOP_ROW_SLOTS.
+const DESKTOP_MAP_FAB_INSET = 16;
+const DESKTOP_MAP_FAB_GAP = 8;
+export const DESKTOP_MAP_FAB_TOP_ROW_SLOTS = 2;
+const desktopMapFabRight = (slot: number): number =>
+  DESKTOP_MAP_FAB_INSET + slot * (CONTROL_SIZE + DESKTOP_MAP_FAB_GAP);
+const desktopMapFabRowOffset = (row: number): number =>
+  row * (CONTROL_SIZE + DESKTOP_MAP_FAB_GAP);
+// #2217 — шапка панели desktop-ветки (web, iPad, Android-планшет): ряд
+// принадлежит только вкладкам «Места», «Маршрут», «Фильтры», иконка над
+// подписью. Нормативы — docs/design/map-panel-header-tablet.md, «Бюджет ширины
+// после решения»; бюджет из этих стилей считает `__tests__/app/mapLayout.test.ts`.
+export const MAP_PANEL_TAB_COUNT = 3;
+// Содержимое самой широкой вкладки без полей при «999+» во всех пяти языках:
+// «Маршрут» RU/BE/UK по границе широких резервных шрифтов (77,5 − 7 − 7;
+// по SF — 58,9).
+export const MAP_PANEL_TAB_CONTENT_WIDTH = 63.5;
+// Запас между нужной и доступной шириной вкладки на любой ширине панели.
+export const MAP_PANEL_TAB_WIDTH_RESERVE = 8;
+// Подпись вкладки в любом языке: строке подписи при панели 320 остаётся 80 px,
+// самая длинная сейчас — «Маршрут», 7 знаков, 58,9 px.
+export const MAP_PANEL_TAB_LABEL_MAX_CHARS = 9;
+// Потолок Dynamic Type подписи и бейджа вкладки: последняя ступень до
+// «Увеличенных размеров» (1,353), запас самой широкой вкладки на native при нём
+// не меньше 16,7 pt. Крупнее подпись показывает Large Content Viewer (iOS).
+export const MAP_PANEL_TAB_MAX_FONT_SCALE = 1.35;
 // Вертикальные поля гео-баннера на мобиле. Отдельная константа, потому что из
 // неё же считается минимальная высота баннера под абсолютный крестик (#1780).
 const GEO_BANNER_PADDING_VERTICAL_MOBILE = 7;
@@ -63,6 +93,28 @@ export const getStyles = (
       ? WEB_TABLET_HEADER_AND_DOCK_RESERVED_HEIGHT
       : `${WEB_HEADER_RESERVED_HEIGHT}px`;
   const webPointerCursor = Platform.OS === 'web' ? { cursor: 'pointer' as const } : {};
+  // Общее тело трёх круглых кнопок карты desktop-ветки («Подсказки», «Радиус»,
+  // «Слои»): ключи отличаются только слотом `right` (Style key ownership).
+  const desktopMapFab = {
+    position: 'absolute' as const,
+    top: DESKTOP_MAP_FAB_INSET + desktopTopInset,
+    width: CONTROL_SIZE,
+    height: CONTROL_SIZE,
+    borderRadius: CONTROL_SIZE / 2,
+    backgroundColor: themedColors.surfaceMuted,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: themedColors.borderLight,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    zIndex: 1001,
+    ...(Platform.OS === 'web'
+      ? ({
+          cursor: 'pointer',
+          boxShadow: '0 4px 16px rgba(15,23,42,0.18), 0 1px 4px rgba(0,0,0,0.08)',
+          transition: 'background-color 0.15s ease',
+        } as any)
+      : shadowMedium),
+  };
 
   return StyleSheet.create({
     container: {
@@ -298,12 +350,14 @@ export const getStyles = (
               }
             : null),
       },
-      // The former `tabsContainer` row: tab segment + action icons.
+      // The former `tabsContainer` row. Desktop (#2217): the tab segment is its
+      // only child — «Подсказки» moved onto the map, «Сбросить» into the
+      // filters footer.
       tabsRow: {
         flexDirection: 'row',
         flexWrap: 'nowrap',
         alignItems: 'center',
-        columnGap: 10,
+        columnGap: isMobile ? 10 : undefined,
         minHeight: isMobile ? 48 : undefined,
       },
       tabsSegment: {
@@ -318,17 +372,29 @@ export const getStyles = (
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.borderLight,
       },
+      // Desktop (#2217): a column — the icon row over the label; the three tabs
+      // split the segment evenly (`minWidth: 0`), the own 44 box is the target.
       tab: {
         flex: 1,
-        flexDirection: 'row',
+        flexDirection: isMobile ? 'row' : 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: isMobile ? 7 : 8,
+        paddingVertical: isMobile ? 7 : 4,
         paddingHorizontal: isMobile ? 12 : 7,
         borderRadius: 11,
-        gap: isMobile ? 6 : 4,
-        minWidth: isMobile ? 48 : undefined,
+        ...(isMobile ? { gap: 6 } : { rowGap: 2 }),
+        minWidth: isMobile ? 48 : 0,
         minHeight: 44,
+      },
+      // The icon with the count badge to its right, above the label (#2217).
+      tabIconRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        columnGap: 4,
+        minHeight: 18,
+      },
+      tabPressed: {
+        opacity: 0.7,
       },
       tabActive: {
         backgroundColor: themedColors.primary,
@@ -338,22 +404,12 @@ export const getStyles = (
             } as any)
           : null),
       },
-      tabIconBubble: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: themedColors.surfaceAlpha40,
-      },
-      tabIconBubbleActive: {
-        backgroundColor: themedColors.primaryLight,
-      },
       tabText: {
         fontSize: 12,
         fontWeight: '600',
         color: themedColors.textMuted,
         letterSpacing: 0.15,
+        ...(isMobile ? null : { lineHeight: 15, textAlign: 'center' as const }),
       },
       tabTextActive: {
         color: themedColors.textOnPrimary,
@@ -375,44 +431,6 @@ export const getStyles = (
             ? { borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }
             : null),
       },
-      resetButton: {
-        flexDirection: 'row',
-        gap: 4,
-        paddingHorizontal: 10,
-        height: CONTROL_SIZE,
-        borderRadius: CONTROL_RADIUS,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: themedColors.surfaceAlpha40,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: themedColors.borderLight,
-        ...(Platform.OS === 'web' ? ({
-          cursor: 'pointer',
-          transition: 'background-color 0.15s ease',
-        } as any) : null),
-      },
-      resetButtonLabel: {
-        fontSize: 12,
-        color: themedColors.textMuted,
-        fontWeight: '500',
-      },
-      panelHeaderActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        flexShrink: 0,
-        gap: 6,
-        marginLeft: 8,
-        paddingLeft: 8,
-        borderLeftWidth: StyleSheet.hairlineWidth,
-        borderLeftColor: themedColors.borderLight,
-      },
-      resetButtonCompact: {
-        width: 44,
-        minWidth: 44,
-        height: 44,
-        paddingHorizontal: 0,
-      },
       loadingOverlay: {
         ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
@@ -420,56 +438,29 @@ export const getStyles = (
         backgroundColor: themedColors.overlay,
         zIndex: 1002,
       },
-      // Desktop-web floating «Слои» control: a Google-Maps-style round button
+      // Desktop floating «Слои» control: a Google-Maps-style round button
       // pinned to the top-right of the map area (NOT over the left panel). Frost
       // surface + shadow, matching the other floating map controls.
       desktopLayersFab: {
-        position: 'absolute',
-        top: 16 + desktopTopInset,
-        right: 16,
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: themedColors.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: themedColors.borderLight,
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 1001,
-        ...(Platform.OS === 'web'
-          ? ({
-              cursor: 'pointer',
-              boxShadow: '0 4px 16px rgba(15,23,42,0.18), 0 1px 4px rgba(0,0,0,0.08)',
-              transition: 'background-color 0.15s ease',
-            } as any)
-          : shadowMedium),
+        ...desktopMapFab,
+        right: desktopMapFabRight(0),
       },
       desktopLayersFabActive: {
         backgroundColor: themedColors.surface,
         borderColor: themedColors.primary,
       },
-      // Desktop-web floating «Радиус» control: sits in the same top-right cluster
-      // as the layers FAB, immediately to its left (44 button + 8 gap).
+      // Desktop floating «Радиус» control: the same cluster, immediately to the
+      // left of «Слои».
       desktopRadiusFab: {
-        position: 'absolute',
-        top: 16 + desktopTopInset,
-        right: 16 + 44 + 8,
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: themedColors.surfaceMuted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: themedColors.borderLight,
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 1001,
-        ...(Platform.OS === 'web'
-          ? ({
-              cursor: 'pointer',
-              boxShadow: '0 4px 16px rgba(15,23,42,0.18), 0 1px 4px rgba(0,0,0,0.08)',
-              transition: 'background-color 0.15s ease',
-            } as any)
-          : shadowMedium),
+        ...desktopMapFab,
+        right: desktopMapFabRight(1),
+      },
+      // #2217 — «Подсказки» left the panel header for the same cluster: second
+      // row under «Слои», so the top row keeps two slots (see the cluster note).
+      desktopHelpFab: {
+        ...desktopMapFab,
+        top: desktopMapFab.top + desktopMapFabRowOffset(1),
+        right: desktopMapFabRight(0),
       },
       desktopRadiusFabActive: {
         backgroundColor: themedColors.surface,
@@ -536,17 +527,19 @@ export const getStyles = (
         backgroundColor: themedColors.backgroundSecondary,
         borderRadius: 10,
         minWidth: isMobile ? 20 : 18,
-        height: isMobile ? 18 : 16,
+        ...(isMobile ? { height: 18 } : { minHeight: 16 }),
         paddingHorizontal: isMobile ? 5 : 4,
         alignItems: 'center',
         justifyContent: 'center',
-        marginLeft: isMobile ? 4 : 2,
+        // Desktop (#2217): the badge sits right of the icon in `tabIconRow`, whose
+        // columnGap is the spacing; minHeight lets the scaled count grow.
+        marginLeft: isMobile ? 4 : 0,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.borderLight,
       },
       badgeActive: {
-        backgroundColor: 'rgba(255, 255, 255, 0.28)',
-        borderColor: 'rgba(255,255,255,0.2)',
+        backgroundColor: themedColors.surfaceAlpha40,
+        borderColor: themedColors.borderLight,
       },
       badgeText: {
         fontSize: isMobile ? 10 : 9,

@@ -5,8 +5,6 @@ export const mapGenerated2 = {
   "components.MapPage.MapPanelHeader.panel_karty_951bb838": "Map panel",
   "components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd": "Show map tips",
   "components.MapPage.MapPanelHeader.postroenie_marshruta_7aa011b1": "Building a route",
-  "components.MapPage.MapPanelHeader.sbrosit_filtry_06292479": "Reset filters",
-  "components.MapPage.MapPanelHeader.spisok_value1_272d2a31": "List: {{value1}}",
   "components.MapPage.MapPlaceBottomCard.zakryt_kartochku_mesta_e4d7f18c": "Close place card",
   "components.MapPage.MapScreenParts.MapScreenDesktop.filtry_e60de25e": "Filters",
   "components.MapPage.MapScreenParts.MapScreenDesktop.postroenie_marshruta_c3fdf7cc": "Building a route",

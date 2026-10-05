@@ -16,7 +16,6 @@ interface FiltersPanelFooterProps {
   routePointsLength: number;
   routingLoading?: boolean;
   ctaLabel: string;
-  hideFooterReset: boolean;
   onReset: () => void;
   onBuildRoute?: () => void;
   totalPoints?: number;
@@ -33,7 +32,6 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
   routePointsLength,
   routingLoading,
   ctaLabel,
-  hideFooterReset,
   onReset,
   onBuildRoute,
   totalPoints = 0,
@@ -60,16 +58,14 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
     return (
       <View style={styles.stickyFooter} testID="filters-panel-footer">
         <View style={styles.footerButtons}>
-          {!hideFooterReset && (
-            <Button
-              label={i18nT('map:components.MapPage.FiltersPanelFooter.sbrosit_0abc4036')}
-              testID="filters-reset-button"
-              onPress={onReset}
-              accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelFooter.sbrosit_filtry_fc81efcc')}
-              variant="outline"
-              style={styles.ctaButton}
-            />
-          )}
+          <Button
+            label={i18nT('map:components.MapPage.FiltersPanelFooter.sbrosit_0abc4036')}
+            testID="filters-reset-button"
+            onPress={onReset}
+            accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelFooter.sbrosit_filtry_fc81efcc')}
+            variant="outline"
+            style={styles.ctaButton}
+          />
           {canOpenList && (
             <Button
               label={mobileOpenListLabel}
@@ -91,20 +87,24 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
         <Text style={styles.helperText}>{routeHelperText}</Text>
       ) : null}
       <View style={styles.footerButtons}>
-        {!hideFooterReset && (
-          <Button
-            label={i18nT('map:components.MapPage.FiltersPanelFooter.sbrosit_0abc4036')}
-            testID="filters-reset-button"
-            onPress={() => {
-              if (mode === 'route' && !routePointsLength) return;
-              onReset();
-            }}
-            disabled={mode === 'route' && !routePointsLength}
-            accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelFooter.sbrosit_0abc4036')}
-            variant="outline"
-            style={styles.ctaButton}
-          />
-        )}
+        <Button
+          label={i18nT('map:components.MapPage.FiltersPanelFooter.sbrosit_0abc4036')}
+          testID="filters-reset-button"
+          onPress={() => {
+            if (mode === 'route' && !routePointsLength) return;
+            onReset();
+          }}
+          disabled={mode === 'route' && !routePointsLength}
+          // In radius mode this resets the filters — on the desktop branch it is
+          // the panel's only reset (#2217), named like the phone sheet's one.
+          accessibilityLabel={
+            mode === 'radius'
+              ? i18nT('map:components.MapPage.FiltersPanelFooter.sbrosit_filtry_fc81efcc')
+              : i18nT('map:components.MapPage.FiltersPanelFooter.sbrosit_0abc4036')
+          }
+          variant="outline"
+          style={styles.ctaButton}
+        />
 
         {onBuildRoute && mode === 'route' && (
           <Button

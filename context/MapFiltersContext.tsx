@@ -84,11 +84,6 @@ export interface FiltersContextValue {
   // Actions
   onPlaceSelect?: (place: any) => void;
   onOpenList?: () => void;
-
-  // Visibility flags
-  hideTopControls: boolean;
-  hideFooterCta: boolean;
-  hideFooterReset: boolean;
 }
 
 /**
@@ -162,9 +157,6 @@ export function FiltersProvider({ children, ...contextValue }: FiltersProviderPr
     contextValue.userLocation,
     contextValue.onPlaceSelect,
     contextValue.onOpenList,
-    contextValue.hideTopControls,
-    contextValue.hideFooterCta,
-    contextValue.hideFooterReset,
   ]);
 
   return (

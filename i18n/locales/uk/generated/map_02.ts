@@ -5,8 +5,6 @@ export const mapGenerated2 = {
   "components.MapPage.MapPanelHeader.panel_karty_951bb838": "Панель карти",
   "components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd": "Показати підказки по карті",
   "components.MapPage.MapPanelHeader.postroenie_marshruta_7aa011b1": "Побудова маршруту",
-  "components.MapPage.MapPanelHeader.sbrosit_filtry_06292479": "Скинути фільтри",
-  "components.MapPage.MapPanelHeader.spisok_value1_272d2a31": "Список: {{value1}}",
   "components.MapPage.MapPlaceBottomCard.zakryt_kartochku_mesta_e4d7f18c": "Закрити картку місця",
   "components.MapPage.MapScreenParts.MapScreenDesktop.filtry_e60de25e": "Фільтри",
   "components.MapPage.MapScreenParts.MapScreenDesktop.postroenie_marshruta_c3fdf7cc": "Побудова маршруту",

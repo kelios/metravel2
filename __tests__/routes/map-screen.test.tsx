@@ -302,11 +302,10 @@ describe('MapScreen (map tab)', () => {
     })
 
     await waitFor(() => {
-      // На desktop фильтры — кнопка-иконка, а сегмент сводится к 2 вкладкам.
-      expect(getByTestId('map-filters-button')).toBeTruthy()
+      // #2217 — на desktop «Фильтры» — третья вкладка сегмента, а не кнопка.
+      expect(getByTestId('map-panel-tab-filters')).toBeTruthy()
       expect(getByTestId('map-panel-tab-route')).toBeTruthy()
       expect(getByTestId('map-panel-tab-travels')).toBeTruthy()
-      expect(getByTestId('map-reset-filters-button')).toBeTruthy()
       expect(getByTestId('filters-panel')).toBeTruthy()
     })
   })
@@ -336,36 +335,48 @@ describe('MapScreen (map tab)', () => {
     fireEvent.press(listTab)
   }
 
-  it('toggles right panel visibility using close and open buttons', async () => {
-    const { getByTestId, queryByTestId, getByLabelText } = renderWithClient()
+  it('desktop header: three tabs, «Фильтры» selected on start, help on the map, no header actions', async () => {
+    const { getByTestId, queryByTestId, getAllByRole } = renderWithClient()
 
-    // На mobile панель закрыта по умолчанию — открываем
     act(() => {
       useMapPanelStore.getState().requestOpen()
     })
 
     await waitFor(() => {
-      expect(getByTestId('map-filters-button')).toBeTruthy()
-      expect(getByTestId('map-panel-tab-route')).toBeTruthy()
-      expect(getByTestId('map-panel-tab-travels')).toBeTruthy()
+      expect(getByTestId('map-panel-tab-filters')).toBeTruthy()
     })
 
-    // На web+desktop вместо "Скрыть панель" показываем кнопку "Сбросить фильтры"
-    const resetButton = getByLabelText('Сбросить фильтры')
-    expect(resetButton).toBeTruthy()
+    // #2217 — ряд шапки принадлежит только вкладкам, в порядке полосы 56;
+    // на старте выбрана ровно одна — «Фильтры».
+    expect(getAllByRole('tab').map((tab) => tab.props.testID)).toEqual([
+      'map-panel-tab-travels',
+      'map-panel-tab-route',
+      'map-panel-tab-filters',
+    ])
+    // `accessibilityState.selected`: the jest Pressable mock mirrors it into a
+    // string `aria-selected`, which the `selected` query option does not match.
+    const selectedTabIds = () =>
+      getAllByRole('tab')
+        .filter((tab) => tab.props.accessibilityState?.selected === true)
+        .map((tab) => tab.props.testID)
+    expect(selectedTabIds()).toEqual(['map-panel-tab-filters'])
+    // «Подсказки» — кнопка на карте, «Сбросить» — в подвале фильтров.
+    expect(queryByTestId('map-filters-button')).toBeNull()
+    expect(queryByTestId('map-help-button')).toBeNull()
+    expect(queryByTestId('map-reset-filters-button')).toBeNull()
+    expect(getByTestId('map-desktop-help-button')).toBeTruthy()
 
-    // Панель на desktop не должна скрываться, вкладки/фильтры остаются доступны
-    expect(getByTestId('map-filters-button')).toBeTruthy()
-    expect(getByTestId('map-panel-tab-route')).toBeTruthy()
-    expect(getByTestId('map-panel-tab-travels')).toBeTruthy()
-
-    // Нажатие на reset не должно ломать наличие вкладок
-    act(() => {
-      fireEvent.press(resetButton)
+    // Панель на desktop не скрывается: выбор «Места» и возврат на «Фильтры»
+    // оставляют все три вкладки.
+    fireEvent.press(getByTestId('map-panel-tab-travels'))
+    await waitFor(() => {
+      expect(selectedTabIds()).toEqual(['map-panel-tab-travels'])
     })
-    expect(queryByTestId('map-filters-button')).toBeTruthy()
-    expect(queryByTestId('map-panel-tab-route')).toBeTruthy()
-    expect(queryByTestId('map-panel-tab-travels')).toBeTruthy()
+    fireEvent.press(getByTestId('map-panel-tab-filters'))
+    await waitFor(() => {
+      expect(getByTestId('filters-panel')).toBeTruthy()
+    })
+    expect(getAllByRole('tab')).toHaveLength(3)
   })
 
   it('shows correct travels count in list tab after data is loaded', async () => {
@@ -420,10 +431,10 @@ describe('MapScreen (map tab)', () => {
     });
 
     await waitFor(() => {
-      expect(getByTestId('map-filters-button')).toBeTruthy();
+      expect(getByTestId('map-panel-tab-filters')).toBeTruthy();
     });
 
-    fireEvent.press(getByTestId('map-filters-button'));
+    fireEvent.press(getByTestId('map-panel-tab-filters'));
 
     await waitFor(() => {
       expect(useRouteStore.getState().mode).toBe('radius');

@@ -2,6 +2,11 @@ import { test, expect } from './fixtures';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 import { preacceptCookies } from './helpers/navigation';
 import { expectFullyInViewport, expectTopmostAtCenter } from './helpers/layoutAsserts';
+import {
+  MAP_PANEL_TABS_VIEWPORTS,
+  assertMapPanelTabsContract,
+  openMapForPanelTabs,
+} from './helpers/mapPanelTabs';
 
 async function installTileMock(page: any) {
   const pngBase64 =
@@ -326,8 +331,11 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
 
     await expect(page.getByRole('tablist', { name: 'Панель карты' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: /Список/ })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Построение маршрута' })).toBeVisible();
+    // #2217 — names start with the visible label; «Фильтры» is the third tab,
+    // selected on start.
+    await expect(page.getByRole('tab', { name: /^Места/ })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Маршрут', exact: true })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Фильтры', exact: true })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('searchbox', { name: 'Поиск мест на карте' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Слои и настройки карты' })).toBeVisible();
   });
@@ -1059,7 +1067,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
 
     const travelsTab = page.getByTestId('map-panel-tab-travels');
-    const listTab = page.getByRole('tab', { name: /Список/i }).first();
+    const listTab = page.getByRole('tab', { name: /^Места/ }).first();
     const hasTravelsTab = await travelsTab.isVisible({ timeout: 30_000 }).catch(() => false);
     const tab = hasTravelsTab ? travelsTab : listTab;
     await expect(tab).toBeVisible({ timeout: 10_000 });
@@ -1083,7 +1091,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
 
     const travelsTab = page.getByTestId('map-panel-tab-travels');
-    const listTab = page.getByRole('tab', { name: /Список/i }).first();
+    const listTab = page.getByRole('tab', { name: /^Места/ }).first();
     const hasTravelsTab = await travelsTab.isVisible({ timeout: 30_000 }).catch(() => false);
     const tab = hasTravelsTab ? travelsTab : listTab;
     await expect(tab).toBeVisible({ timeout: 10_000 });
@@ -1120,9 +1128,11 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       el.scrollTop = el.scrollHeight;
     });
 
-    // Footer всегда должен быть на странице
+    // Footer всегда должен быть на странице; «Сбросить» живёт в нём, а не в
+    // шапке панели (#2217).
     await expect(page.getByTestId('filters-panel-footer')).toBeVisible();
-    await expect(page.getByTestId('map-reset-filters-button')).toBeVisible();
+    await expect(page.getByTestId('filters-panel-footer').getByTestId('filters-reset-button')).toBeVisible();
+    await expect(page.getByTestId('map-reset-filters-button')).toHaveCount(0);
   });
 
   test('mobile: compact preview opens list panel', async ({ page }) => {
@@ -1261,4 +1271,23 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       contentType: 'image/png',
     });
   });
+});
+
+// #2217 — the desktop-branch panel header tabs at the iPad width, with the count
+// above the cap («999+»): every child of every tab inside the tab, no ellipsis,
+// 44 high, the 8 px reserve, one selected tab. All sizes and languages run
+// against the production build in `map-panel-tabs-production-smoke.spec.ts`.
+test.describe('Map panel header tabs (#2217)', () => {
+  test.beforeEach(async ({ page }) => {
+    await installTileMock(page);
+  });
+
+  for (const locale of ['ru', 'pl'] as const) {
+    test(`desktop 820x1180 ${locale}: tab content stays inside the tab`, async ({ page }) => {
+      const viewport = MAP_PANEL_TABS_VIEWPORTS.find((item) => item.name === '820x1180');
+      if (!viewport) throw new Error('820x1180 is part of MAP_PANEL_TABS_VIEWPORTS');
+      await openMapForPanelTabs(page, { viewport, locale });
+      await assertMapPanelTabsContract(page, `820x1180 ${locale}`);
+    });
+  }
 });

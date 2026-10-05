@@ -102,12 +102,16 @@ interface OnboardingStep {
   placement: TooltipPosition
 }
 
-const getOnboardingSteps = (): OnboardingStep[] => [
+// Desktop tour. Its tab steps point at the panel header tabs
+// (`map-panel-tab-*`, MapPanelHeader) — the header renders them on every
+// desktop-branch platform; `filters-panel-header` is hidden there (#2217).
+// The intro step has no target: it introduces the whole screen, and the
+// `map-panel` it used to name was never rendered.
+export const getOnboardingSteps = (): OnboardingStep[] => [
   {
     title: i18nT('map:components.MapPage.MapOnboarding.karta_puteshestviy_87500481'),
     description: i18nT('map:components.MapPage.MapOnboarding.zdes_otobrazhayutsya_interesnye_mesta_i_marshruty_7732a21e'),
     icon: 'map',
-    targetTestID: 'map-panel',
     placement: 'bottom',
   },
   {
@@ -128,7 +132,7 @@ const getOnboardingSteps = (): OnboardingStep[] => [
     title: i18nT('map:components.MapPage.MapOnboarding.stroyte_marshruty_ba7a03e3'),
     description: i18nT('map:components.MapPage.MapOnboarding.pereklyuchites_v_rezhim_marshruta_chtoby_prolozhit_1a9fc39e'),
     icon: 'navigation',
-    targetTestID: 'filters-panel-header',
+    targetTestID: 'map-panel-tab-route',
     placement: 'bottom',
   },
 ]

@@ -256,9 +256,6 @@ export function useMapFiltersPanelProps(params: UseMapFiltersPanelPropsParams) {
       // empty-state «Ничего не нашлось», пока идёт запрос (иначе мигает при
       // смене вкладок/режимов и при первичной загрузке).
       isBusy: loading || isFetching || isDebouncingFilters,
-      hideTopControls: false,
-      hideFooterCta: false,
-      hideFooterReset: !isMobile,
     }),
     [
       allTravelsData,

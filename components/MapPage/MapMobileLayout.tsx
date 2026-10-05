@@ -22,7 +22,7 @@ import { MapMobileTopOverlay } from './MapMobile/MapMobileTopOverlay'
 import MapPlaceBottomCard from './MapPlaceBottomCard'
 import { getNextRadiusOption, shouldShowMapEmptyState } from './mapEmptyState'
 import { isMapFilterChipsRowVisible } from './mapFilterChips'
-import { getPlacesLabel, PLACE_COUNT_BADGE_CAP } from './TravelListPanel/helpers'
+import { formatPlaceCountBadge, getPlacesLabel } from './TravelListPanel/helpers'
 import type { TransportMode } from './transportModes'
 import { translate as i18nT } from '@/i18n'
 import { formatRadiusValue } from '@/constants/mapConfig'
@@ -329,14 +329,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const listBadge = useMemo(() => {
     const n = displayCount
     if (!n) return ''
-    return n > 999 ? '999+' : String(n)
+    return formatPlaceCountBadge(n)
   }, [displayCount])
   const currentRadiusKm = filtersContextProps?.filterValue?.radius ?? null
   const listHeaderSummaryText = useMemo(() => {
-    const placesCountLabel =
-      displayCount > PLACE_COUNT_BADGE_CAP
-        ? `${PLACE_COUNT_BADGE_CAP}+`
-        : String(displayCount)
+    const placesCountLabel = formatPlaceCountBadge(displayCount)
     const hasRadiusContext =
       currentRadiusKm != null && String(currentRadiusKm).trim() !== ''
 

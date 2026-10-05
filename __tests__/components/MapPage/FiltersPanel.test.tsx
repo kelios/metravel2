@@ -82,9 +82,6 @@ const defaultProps = {
   userLocation: null,
   onPlaceSelect: jest.fn(),
   onOpenList: jest.fn(),
-  hideTopControls: false,
-  hideFooterCta: false,
-  hideFooterReset: false,
 }
 
 const createQueryClient = () =>
@@ -126,8 +123,11 @@ describe('FiltersPanel', () => {
         categoryTravelAddress: ['Музеи'],
       },
     }
-    const { getByLabelText } = renderWithTheme(<FiltersPanel />, propsWithFilters)
-    expect(getByLabelText('Сбросить')).toBeTruthy()
+    const { getByTestId } = renderWithTheme(<FiltersPanel />, propsWithFilters)
+    // Radius mode: the footer reset is named for what it resets — on the
+    // desktop branch it is the panel's only reset (#2217). The empty state
+    // carries a second reset with the same name, hence the footer scope.
+    expect(within(getByTestId('filters-panel-footer')).getByLabelText('Сбросить фильтры')).toBeTruthy()
   })
 
   it('calls resetFilters when reset button is pressed', () => {
@@ -138,8 +138,8 @@ describe('FiltersPanel', () => {
         categoryTravelAddress: ['Музеи'],
       },
     }
-    const { getByLabelText } = renderWithTheme(<FiltersPanel />, propsWithFilters)
-    const resetButton = getByLabelText('Сбросить')
+    const { getByTestId } = renderWithTheme(<FiltersPanel />, propsWithFilters)
+    const resetButton = within(getByTestId('filters-panel-footer')).getByLabelText('Сбросить фильтры')
     fireEvent.press(resetButton)
     expect(defaultProps.resetFilters).toHaveBeenCalled()
   })

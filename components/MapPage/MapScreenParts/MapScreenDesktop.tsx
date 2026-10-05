@@ -4,11 +4,13 @@ import Animated from 'react-native-reanimated'
 import Feather from '@expo/vector-icons/Feather'
 
 import { MAP_OFFLINE_INDICATOR_TOP, MapOfflineIndicator } from '@/components/MapPage/MapOfflineIndicator'
+import { restartMapOnboarding } from '@/components/MapPage/MapOnboarding'
 import MapPanelHeader from '@/components/MapPage/MapPanelHeader'
 import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobileLayersPopover'
 import { MapMobileRadiusPopover } from '@/components/MapPage/MapMobile/MapMobileRadiusPopover'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
+import { webTitleProps } from '@/utils/webProps'
 import {
   ActiveFiltersBar,
   MapOnboarding,
@@ -40,7 +42,6 @@ type MapScreenDesktopProps = {
   handleSelectRouteTab: () => void
   selectTravelsTab: () => void
   handleResizeMouseDown: (e: any) => void
-  resetFiltersForPanel?: () => void
   filtersPanelProps: any
   activeFilterItems: any[]
   handleRemoveActiveFilter: (key: string) => void
@@ -96,7 +97,6 @@ export function MapScreenDesktopChrome({
   handleSelectRouteTab,
   selectTravelsTab,
   handleResizeMouseDown,
-  resetFiltersForPanel,
   filtersPanelProps,
   activeFilterItems,
   handleRemoveActiveFilter,
@@ -220,7 +220,6 @@ export function MapScreenDesktopChrome({
             selectSearchTab={handleSelectSearchTab}
             selectRouteTab={handleSelectRouteTab}
             selectTravelsTab={selectTravelsTab}
-            resetFilters={resetFiltersForPanel}
           />
           {!isMobile && activePanelTab === 'search' && activeFilterItems.length > 0 && (
             <Suspense fallback={null}>
@@ -242,7 +241,10 @@ export function MapScreenDesktopChrome({
                   }
                 >
                   <filtersPanelProps.Component {...filtersPanelProps.contextValue}>
-                    <filtersPanelProps.Panel hideTopControls hideFooterReset={!isMobile} />
+                    {/* #2217 — «Сбросить» lives in the filters footer on every
+                        branch (the same FiltersPanelFooter as the phone sheet);
+                        the panel header has no reset action any more. */}
+                    <filtersPanelProps.Panel hideTopControls />
                   </filtersPanelProps.Component>
                 </Suspense>
               ) : (
@@ -317,7 +319,7 @@ type MapScreenDesktopOverlaysProps = {
 }
 
 /**
- * Desktop overlays that live OUTSIDE the map container (layers/radius controls,
+ * Desktop overlays that live OUTSIDE the map container (help/radius/layers controls,
  * offline indicator, loading overlay, onboarding). Rendered by the shell as
  * breakpoint shared chrome so they do not affect the map host position.
  */
@@ -434,6 +436,30 @@ export function MapScreenDesktopOverlays({
           >
             <Feather name="layers" size={20} color={themedColors.text} />
           </Pressable>
+
+          {/* #2217 — «Подсказки» moved out of the panel header into this cluster,
+              under «Слои» at the map edge: the top row stays «Радиус», «Слои»,
+              because a third slot there reaches into the centred «Искать в этой
+              области» pill on a 768–925 px window. Reading order follows the
+              picture: «Радиус», «Слои», «Подсказки». While «Слои» is open the
+              button is not rendered: the layers card opens on its spot, and the
+              button (zIndex 1001, the popover root has none) would sit on the
+              card's «×» and start the tour instead of closing the card. Like its
+              neighbours: own 44 box inside the root, no hitSlop (#2172 — on
+              Android a slop ring over the map WebView leaks the tap into the
+              map). */}
+          {!layersOpen && (
+            <Pressable
+              testID="map-desktop-help-button"
+              onPress={restartMapOnboarding}
+              accessibilityRole="button"
+              accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd')}
+              {...webTitleProps(i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd'))}
+              style={({ pressed }) => [styles.desktopHelpFab, pressed && PRESSED_OPACITY_085]}
+            >
+              <Feather name="help-circle" size={20} color={themedColors.text} />
+            </Pressable>
+          )}
 
           {layersOpen && (
             <MapMobileLayersPopover

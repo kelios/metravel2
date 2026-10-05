@@ -28,8 +28,8 @@ import {
   getPlacesLabel,
   getTravelItemKey,
   IS_WEB,
+  formatPlaceCountBadge,
   LIST_BOTTOM_PADDING,
-  PLACE_COUNT_BADGE_CAP,
 } from './TravelListPanel/helpers'
 import { getWebCardWidth } from './AddressListItem/utils'
 import { translate as i18nT } from '@/i18n'
@@ -177,10 +177,7 @@ const TravelListPanel: React.FC<Props> = ({
     if (!showMobileSummary) return null
 
     const displayCount = totalCount ?? travelsData.length
-    const placesCountLabel =
-      displayCount > PLACE_COUNT_BADGE_CAP
-        ? `${PLACE_COUNT_BADGE_CAP}+`
-        : String(displayCount)
+    const placesCountLabel = formatPlaceCountBadge(displayCount)
     const placesWord = getPlacesLabel(displayCount)
     const hasRadiusContext =
       currentRadiusKm != null && String(currentRadiusKm).trim() !== ''

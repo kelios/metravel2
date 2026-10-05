@@ -6,6 +6,7 @@ import {
   MapScreenDesktopChrome,
   MapScreenDesktopOverlays,
 } from '@/components/MapPage/MapScreenParts/MapScreenDesktop'
+import { restartMapOnboarding } from '@/components/MapPage/MapOnboarding'
 import { getDesktopBranchTopInset, getStyles } from '@/screens/tabs/map.styles'
 import { translate as i18nT } from '@/i18n'
 
@@ -23,10 +24,6 @@ jest.mock('@/screens/tabs/mapDeferred', () => {
 jest.mock('@/components/MapPage/MapOnboarding', () => ({
   __esModule: true,
   restartMapOnboarding: jest.fn(),
-}))
-
-jest.mock('@/utils/mapToasts', () => ({
-  showFiltersResetToast: jest.fn(),
 }))
 
 jest.mock('@/components/MapPage/MapOfflineIndicator', () => {
@@ -155,45 +152,41 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     Object.defineProperty(Platform, 'OS', { value: originalOS })
   })
 
-  it('the panel header carries the desktop actions, not the phone «Скрыть панель»', () => {
+  // #2217 — the header row belongs to the tabs only: «Фильтры» became the third
+  // tab, «Подсказки» moved onto the map, «Сбросить» into the filters footer.
+  it('the panel header is the three tabs, without header actions or the phone «Скрыть панель»', () => {
     const utils = render(<Chrome />)
 
-    expect(utils.getByTestId('map-filters-button')).toBeTruthy()
-    expect(utils.getByTestId('map-help-button')).toBeTruthy()
-    expect(utils.getByTestId('map-reset-filters-button')).toBeTruthy()
-    expect(utils.getByTestId('map-panel-tab-travels')).toBeTruthy()
-    expect(utils.getByTestId('map-panel-tab-route')).toBeTruthy()
-    expect(utils.queryByTestId('map-close-panel-button')).toBeNull()
-    expect(utils.queryByTestId('map-panel-tab-search')).toBeNull()
+    for (const testID of ['map-panel-tab-travels', 'map-panel-tab-route', 'map-panel-tab-filters']) {
+      expect(utils.getByTestId(testID)).toBeTruthy()
+    }
+    for (const testID of [
+      'map-filters-button',
+      'map-help-button',
+      'map-reset-filters-button',
+      'map-close-panel-button',
+      'map-panel-tab-search',
+    ]) {
+      expect(utils.queryByTestId(testID)).toBeNull()
+    }
     // The mouse-driven resize handle stays web-only.
     expect(utils.queryByTestId('map-panel-resize-handle')).toBeNull()
   })
 
   // Native honours hitSlop (web ignores it): a slop wider than the gap to the
-  // neighbour reached into the neighbour's own 44pt box, so the right 4pt of
-  // «Подсказки» fired «Сбросить фильтры» and the right 6pt of «Места» opened
-  // «Маршрут». The own box is the target (scripts/guard-touch-targets.js).
-  it('header targets never reach into their neighbour', () => {
+  // neighbour reached into the neighbour's own 44pt box (the right 6pt of
+  // «Места» opened «Маршрут»). The own box is the target
+  // (scripts/guard-touch-targets.js).
+  it('header tabs never reach into their neighbour', () => {
     const utils = render(<Chrome />)
     const styles = getStyles(false, 0, themedColors)
-    const reach = (testID: string) => {
-      const slop = utils.getByTestId(testID).props.hitSlop
-      if (slop == null) return 0
-      return typeof slop === 'number' ? slop : Math.max(slop.left ?? 0, slop.right ?? 0)
-    }
-    const rows: [string[], number][] = [
-      [['map-panel-tab-travels', 'map-panel-tab-route'], Number(styles.tabsSegment.columnGap)],
-      [
-        ['map-filters-button', 'map-help-button', 'map-reset-filters-button'],
-        Number(styles.panelHeaderActions.gap),
-      ],
-    ]
+    const gap = Number(styles.tabsSegment.columnGap)
+    expect(Number.isFinite(gap)).toBe(true)
 
-    for (const [testIDs, gap] of rows) {
-      expect(Number.isFinite(gap)).toBe(true)
-      for (const testID of testIDs) {
-        expect(reach(testID)).toBeLessThanOrEqual(gap)
-      }
+    for (const testID of ['map-panel-tab-travels', 'map-panel-tab-route', 'map-panel-tab-filters']) {
+      const slop = utils.getByTestId(testID).props.hitSlop
+      const reach = slop == null ? 0 : typeof slop === 'number' ? slop : Math.max(slop.left ?? 0, slop.right ?? 0)
+      expect(reach).toBeLessThanOrEqual(gap)
     }
   })
 
@@ -271,6 +264,7 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     expect(chrome.getByTestId('map-panel-expand-button').props.hitSlop).toBeUndefined()
 
     const overlays = renderOverlays()
+    expect(overlays.getByTestId('map-desktop-help-button').props.hitSlop).toBeUndefined()
     expect(overlays.getByTestId('map-desktop-layers-button').props.hitSlop).toBeUndefined()
     expect(overlays.getByTestId('map-desktop-radius-button').props.hitSlop).toBeUndefined()
   })
@@ -312,16 +306,47 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     }
   })
 
-  it('the map carries the layers and radius controls; the floating filters button is gone', () => {
+  it('the map carries «Радиус», «Слои», «Подсказки» in reading order; the floating filters button is gone', () => {
     const utils = renderOverlays()
 
-    // Exactly the two on-map controls: the former FAB was a third button.
-    expect(utils.getAllByRole('button')).toHaveLength(2)
+    // Exactly the three on-map controls in the order of the picture: the top
+    // row left to right, then «Подсказки» under «Слои» (#2217 moved it here
+    // from the panel header); no floating filters button.
+    expect(utils.getAllByRole('button').map((button) => button.props.testID)).toEqual([
+      'map-desktop-radius-button',
+      'map-desktop-layers-button',
+      'map-desktop-help-button',
+    ])
+    expect(utils.getByLabelText(i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd'))).toBeTruthy()
+    ;(restartMapOnboarding as jest.Mock).mockClear()
+    fireEvent.press(utils.getByTestId('map-desktop-help-button'))
+    expect(restartMapOnboarding).toHaveBeenCalledTimes(1)
+
+    // One cluster of 44 boxes 8 apart: «Радиус» and «Слои» in the top row with
+    // «Слои» at the edge, «Подсказки» under «Слои» — the row does not grow left
+    // into the centred «Искать в этой области» pill.
+    const box = (testID: string) => StyleSheet.flatten(utils.getByTestId(testID).props.style)
+    const [help, radius, layers] = [
+      box('map-desktop-help-button'),
+      box('map-desktop-radius-button'),
+      box('map-desktop-layers-button'),
+    ]
+    expect(radius.top).toBe(layers.top)
+    for (const fab of [help, radius, layers]) expect([fab.width, fab.height]).toEqual([44, 44])
+    expect(layers.right).toBe(16)
+    expect(radius.right - layers.right - layers.width).toBe(8)
+    expect(help.right).toBe(layers.right)
+    expect(help.top - layers.top - layers.height).toBe(8)
+
+    // The «Слои» card opens on the spot of «Подсказки»: the button would sit
+    // on the card's «×» (and start the tour), so it is gone while «Слои» is open.
     fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
     expect(utils.getByTestId('layers-popover')).toBeTruthy()
+    expect(utils.queryByTestId('map-desktop-help-button')).toBeNull()
     fireEvent.press(utils.getByTestId('map-desktop-radius-button'))
     expect(utils.getByTestId('radius-popover')).toBeTruthy()
     expect(utils.queryByTestId('layers-popover')).toBeNull()
+    expect(utils.getByTestId('map-desktop-help-button')).toBeTruthy()
   })
 
   // The map route has no app header on native: the branch must clear the iPad
@@ -334,6 +359,7 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
 
     const utils = renderOverlays(STATUS_BAR, false)
     const topOf = (testID: string) => StyleSheet.flatten(utils.getByTestId(testID).props.style)?.top
+    expect(topOf('map-desktop-help-button')).toBe(16 + STATUS_BAR + 44 + 8)
     expect(topOf('map-desktop-layers-button')).toBe(16 + STATUS_BAR)
     expect(topOf('map-desktop-radius-button')).toBe(16 + STATUS_BAR)
     expect(utils.getByTestId('offline-indicator').props.top).toBe(10 + STATUS_BAR)

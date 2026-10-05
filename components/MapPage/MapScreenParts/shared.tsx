@@ -2,8 +2,7 @@ import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
-
-export const BADGE_COUNT_CAP = 999
+import { formatPlaceCountBadge } from '@/components/MapPage/TravelListPanel/helpers'
 
 export const PRESSED_OPACITY_07 = { opacity: 0.7 } as const
 export const PRESSED_OPACITY_085 = { opacity: 0.85 } as const
@@ -46,7 +45,7 @@ export function CollapsedIconButton({
       {badge != null && badge > 0 && badgeStyles && (
         <View style={badgeStyles.container}>
           <Text style={badgeStyles.text}>
-            {badge > BADGE_COUNT_CAP ? `${BADGE_COUNT_CAP}+` : badge}
+            {formatPlaceCountBadge(badge)}
           </Text>
         </View>
       )}

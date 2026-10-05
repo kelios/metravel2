@@ -1,6 +1,13 @@
 import { Platform, StyleSheet } from 'react-native';
 
-import { getDesktopBranchTopInset, getStyles } from '@/screens/tabs/map.styles';
+import {
+  DESKTOP_MAP_FAB_TOP_ROW_SLOTS,
+  MAP_PANEL_TAB_CONTENT_WIDTH,
+  MAP_PANEL_TAB_COUNT,
+  MAP_PANEL_TAB_WIDTH_RESERVE,
+  getDesktopBranchTopInset,
+  getStyles,
+} from '@/screens/tabs/map.styles';
 import { METRICS } from '@/constants/layout';
 
 describe('map layout header offset', () => {
@@ -291,6 +298,24 @@ describe('desktop-branch cards on native tablets (#2172)', () => {
     expect(getDesktopBranchTopInset(STATUS_BAR)).toBe(0);
   });
 
+  // #2217 — the top row of the on-map cluster shares its band with the centred
+  // «Искать в этой области» pill: on a 768–925 px window a third slot reaches
+  // under the pill's right end and takes its clicks. A new control goes down the
+  // map edge, not left along the row.
+  it.each(['web', 'ios'])('%s: the top row of the on-map cluster holds two controls, «Подсказки» sits under «Слои»', (os) => {
+    Object.defineProperty(Platform, 'OS', { value: os });
+    const styles: Record<string, any> = getStyles(false, 0, themedColors);
+    const topRowTop = styles.desktopLayersFab.top;
+    const topRow = Object.keys(styles)
+      .filter((key) => /^desktop[A-Za-z]*Fab$/.test(key) && styles[key].top === topRowTop)
+      .sort();
+
+    expect(topRow).toEqual(['desktopLayersFab', 'desktopRadiusFab']);
+    expect(topRow.length).toBeLessThanOrEqual(DESKTOP_MAP_FAB_TOP_ROW_SLOTS);
+    expect(styles.desktopHelpFab.right).toBe(styles.desktopLayersFab.right);
+    expect(styles.desktopHelpFab.top).toBe(topRowTop + 44 + 8);
+  });
+
   it('web keeps the exact panel and map card styles', () => {
     Object.defineProperty(Platform, 'OS', { value: 'web' });
   const WEB_DESKTOP = {
@@ -496,5 +521,110 @@ describe('desktop-branch cards on native tablets (#2172)', () => {
     });
     expect(pick(getStyles(false, 0, themedColors))).toEqual(WEB_DESKTOP);
     expect(pick(getStyles(true, 0, themedColors))).toEqual(WEB_MOBILE);
+  });
+});
+
+// #2217 — the desktop-branch panel header row belongs to the tabs only. One
+// tab's share of the narrowest panel each platform renders, computed from the
+// styles that build the row, must hold the widest tab content of all five
+// languages with «999+» plus the reserve (norms next to the styles,
+// docs/design/map-panel-header-tablet.md). Before #2217 three header actions
+// (161 px) shared this row and the tab got (panel − 207) / 2 — 56.5 at 320.
+describe('map panel header: tab width budget (#2217)', () => {
+  const originalOS = Platform.OS;
+  const themedColors: any = {
+    background: '#ffffff',
+    backgroundSecondary: '#f7f7f7',
+    surface: '#ffffff',
+    surfaceMuted: '#f5f5f5',
+    surfaceAlpha40: 'rgba(255,255,255,0.25)',
+    borderLight: '#eeeeee',
+    border: '#e5e5e5',
+    overlay: 'rgba(0,0,0,0.35)',
+    primary: '#000000',
+    textMuted: '#666666',
+    textOnPrimary: '#ffffff',
+    shadows: {
+      light: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+      medium: { shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
+      heavy: { shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 14, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+    },
+    boxShadows: { card: '0 1px 2px rgba(0,0,0,0.1)', medium: '0 6px 16px rgba(0,0,0,0.12)' },
+  };
+
+  // A hairline is 1 CSS px on web (react-native-web) and one physical pixel on
+  // native — never wider than 1 pt; the budget takes the widest.
+  const drawn = (borderWidth: unknown) =>
+    borderWidth === StyleSheet.hairlineWidth ? 1 : Number(borderWidth);
+
+  // Panel border, header side paddings, segment hairline and padding, the gaps
+  // between the tabs: what is left, split evenly between the tabs.
+  const tabShare = (styles: any, panelWidth: number) => {
+    const segment = styles.tabsSegment;
+    const inner =
+      panelWidth -
+      2 * drawn(styles.rightPanel.borderWidth) -
+      2 * Number(styles.tabsContainer.paddingHorizontal) -
+      2 * drawn(segment.borderWidth) -
+      2 * Number(segment.padding) -
+      (MAP_PANEL_TAB_COUNT - 1) * Number(segment.columnGap);
+    return inner / MAP_PANEL_TAB_COUNT;
+  };
+
+  // The widest tab with its own side paddings, plus the reserve.
+  const required = (styles: any) =>
+    MAP_PANEL_TAB_CONTENT_WIDTH + 2 * Number(styles.tab.paddingHorizontal) + MAP_PANEL_TAB_WIDTH_RESERVE;
+
+  beforeAll(() => {
+    jest.spyOn(StyleSheet, 'create').mockImplementation((styles) => styles as any);
+  });
+
+  afterAll(() => {
+    (StyleSheet.create as jest.Mock).mockRestore?.();
+  });
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: originalOS });
+  });
+
+  it('web: the narrowest panel (rightPanel.minWidth) holds the widest tab with the reserve', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web' });
+    const styles = getStyles(false, 0, themedColors);
+    const narrowest = Number(styles.rightPanel.minWidth);
+
+    expect(narrowest).toBe(320);
+    // (320 − 38) / 3 — the design doc's «минимум 320: 94,0».
+    expect(tabShare(styles, narrowest)).toBeCloseTo(94, 5);
+    expect(tabShare(styles, narrowest)).toBeGreaterThanOrEqual(required(styles));
+  });
+
+  it.each(['ios', 'android'])('%s: the 360 pt tablet panel holds the widest tab with the reserve', (os) => {
+    Object.defineProperty(Platform, 'OS', { value: os });
+    const styles = getStyles(false, 0, themedColors);
+    const panel = Number(styles.rightPanel.width);
+
+    expect(panel).toBe(360);
+    expect(tabShare(styles, panel)).toBeGreaterThanOrEqual(required(styles));
+  });
+
+  it.each(['web', 'ios', 'android'])('%s: the row is the segment alone; the tab is a 44 column', (os) => {
+    Object.defineProperty(Platform, 'OS', { value: os });
+    const styles = getStyles(false, 0, themedColors);
+
+    expect(styles.tabsRow.columnGap).toBeUndefined();
+    expect(styles.tabsSegment.flex).toBe(1);
+    expect(styles.tab).toMatchObject({
+      flex: 1,
+      flexDirection: 'column',
+      minWidth: 0,
+      minHeight: 44,
+      paddingHorizontal: 7,
+    });
+    expect(styles.tabIconRow.flexDirection).toBe('row');
+    expect(styles.badge.marginLeft).toBe(0);
+    // The header actions are gone with their readers.
+    for (const key of ['panelHeaderActions', 'resetButton', 'resetButtonCompact', 'resetButtonLabel', 'tabIconBubble', 'tabIconBubbleActive']) {
+      expect(styles).not.toHaveProperty(key);
+    }
   });
 });

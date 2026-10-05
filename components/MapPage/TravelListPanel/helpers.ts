@@ -11,6 +11,13 @@ export const WEB_ESTIMATED_ITEM_HEIGHT_PX = 340
 export const WEB_DEFAULT_VIEWPORT_HEIGHT = 600
 export const LOAD_MORE_THRESHOLD_RATIO = 0.5
 export const PLACE_COUNT_BADGE_CAP = 999
+/**
+ * Text of a place-count badge: the count itself up to the cap, «999+» above it.
+ * The one formula for every map badge and summary (list, sheet, panel header,
+ * collapsed strip), so the cap cannot drift between surfaces (#2217).
+ */
+export const formatPlaceCountBadge = (count: number): string =>
+  count > PLACE_COUNT_BADGE_CAP ? `${PLACE_COUNT_BADGE_CAP}+` : String(count)
 // Запас снизу для native-списка мест внутри шторки (+ safe-area inset сверху).
 export const LIST_BOTTOM_PADDING = 96
 
@@ -40,8 +47,7 @@ export function buildTravelListSummaryHint({
     return i18nT('map:components.MapPage.TravelListPanel.helpers.blizhayshie_mesta_odnim_vzglyadom_polnyy_spi_ffe8461e')
   }
 
-  const placesCountLabel =
-    travelsCount > PLACE_COUNT_BADGE_CAP ? `${PLACE_COUNT_BADGE_CAP}+` : String(travelsCount)
+  const placesCountLabel = formatPlaceCountBadge(travelsCount)
   const placesWord = getPlacesLabel(travelsCount)
   const hasRadiusContext = currentRadiusKm != null && String(currentRadiusKm).trim() !== ''
 

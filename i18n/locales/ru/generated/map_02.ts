@@ -5,8 +5,6 @@ export const mapGenerated2 = {
   "components.MapPage.MapPanelHeader.panel_karty_951bb838": "Панель карты",
   "components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd": "Показать подсказки по карте",
   "components.MapPage.MapPanelHeader.postroenie_marshruta_7aa011b1": "Построение маршрута",
-  "components.MapPage.MapPanelHeader.sbrosit_filtry_06292479": "Сбросить фильтры",
-  "components.MapPage.MapPanelHeader.spisok_value1_272d2a31": "Список: {{value1}}",
   "components.MapPage.MapPlaceBottomCard.zakryt_kartochku_mesta_e4d7f18c": "Закрыть карточку места",
   "components.MapPage.MapScreenParts.MapScreenDesktop.filtry_e60de25e": "Фильтры",
   "components.MapPage.MapScreenParts.MapScreenDesktop.postroenie_marshruta_c3fdf7cc": "Построение маршрута",

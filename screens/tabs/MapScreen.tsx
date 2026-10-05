@@ -407,7 +407,6 @@ export default function MapScreen() {
     [filtersValuesSlice],
   )
 
-  const resetFiltersForPanel = filtersValuesSlice?.resetFilters
   const setPanelMode = routingSlice?.setMode
 
   const handleSelectSearchTab = useCallback(() => {
@@ -571,7 +570,6 @@ export default function MapScreen() {
       handleSelectRouteTab={handleSelectRouteTab}
       selectTravelsTab={selectTravelsTab}
       handleResizeMouseDown={handleResizeMouseDown}
-      resetFiltersForPanel={resetFiltersForPanel}
       filtersPanelProps={filtersPanelProps}
       activeFilterItems={activeFilterItems}
       handleRemoveActiveFilter={handleRemoveActiveFilter}

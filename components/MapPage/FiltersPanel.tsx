@@ -27,13 +27,11 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 interface FiltersPanelProps {
   hideTopControls?: boolean;
   hideFooterCta?: boolean;
-  hideFooterReset?: boolean;
 }
 
 const FiltersPanel: React.FC<FiltersPanelProps> = ({
   hideTopControls = false,
   hideFooterCta = false,
-  hideFooterReset = false,
 }) => {
   // Get all state from context (instead of props)
   const {
@@ -182,7 +180,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           routePointsLength={routePoints.length}
           routingLoading={routingLoading}
           ctaLabel={ctaLabel}
-          hideFooterReset={hideFooterReset}
           onReset={handleResetAll}
           onBuildRoute={onBuildRoute}
           totalPoints={totalPoints}
