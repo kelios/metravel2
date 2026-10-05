@@ -28,6 +28,10 @@ export default function ThemeToggle({
       StyleSheet.create({
         container: {
           flexDirection: layout === 'horizontal' ? 'row' : 'column',
+          // Ряд укладывается в контейнер, а не распирает его: с длинной подписью
+          // (PL «Automatyczny», кнопка 132 px) три кнопки шире панели меню на
+          // 320 px, и правая обрезалась краем панели (#2244).
+          flexWrap: layout === 'horizontal' ? 'wrap' : undefined,
           gap: compact ? 6 : 8,
           padding: compact ? 0 : 12,
           backgroundColor: compact ? 'transparent' : colors.surface,
@@ -82,7 +86,7 @@ export default function ThemeToggle({
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="theme-toggle">
       {themeOptions.map((option) => {
         const isActive = theme === option.value;
 
