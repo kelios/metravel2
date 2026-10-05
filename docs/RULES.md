@@ -278,6 +278,7 @@ npm run lighthouse:travel:desktop
     - no query-param cache busting like `?__r=` / `?__cb=` appended to JS/CSS URLs at runtime.
   - Do not add pre-hydration "self-heal" scripts that reload the page on version mismatch/chunk error.
   - Keep release consistency at the HTTP layer (Nginx/CDN headers + atomic static deploy), not via browser-side reload hacks.
+  - That layer has two bounds, and one exception follows from them (owner decision 2026-10-05, #2186). The deploy keeps the chunks of earlier releases for open tabs within 14 days and within a byte budget (`EXPO_OVERLAY_MAX_MB`, 256 MB): on the 15 GB prod host the window cannot follow the number of deploys without a limit. A tab older than those bounds may ask for a chunk that is gone, and the only allowed recovery is the existing one-shot guard `utils/chunkReloadGuard.js`: one reload on a failed load of an `/_expo/static/js/web/*.js` chunk. It is a safety net behind the retention window, not a substitute for it — no other reload, version-polling or cache-bust recovery may be added, and the guard must not be widened to other failures. Budget, evidence and bounds: `docs/ops/prod-disk-growth.md`.
   - Do not set `Cache-Control: immutable` for `/_expo/static/*.js` by default.
   - For Expo JS bundles/chunks, keep revalidation (`max-age=0, must-revalidate`) unless content-addressed hash stability is explicitly verified across releases.
 
