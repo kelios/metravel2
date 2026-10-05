@@ -26,6 +26,14 @@ const META_TEXT_LINE_HEIGHT =
     : DESIGN_TOKENS.typography.scale.caption.lineHeight;
 const TITLE_TEXT_LINE_HEIGHT = Platform.OS === 'web' ? 20 : 19;
 
+/**
+ * Высоты текстового блока карточки — один источник для стилей ниже и для
+ * каркаса `TravelListItemSkeleton` (#2176): каркас занимает место настоящей
+ * карточки, а не «примерно столько же».
+ */
+export const TRAVEL_CARD_TITLE_MIN_HEIGHT = TITLE_TEXT_LINE_HEIGHT * 2;
+export const TRAVEL_CARD_META_LINE_HEIGHT = META_TEXT_LINE_HEIGHT;
+
 export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     wrap: {
@@ -232,7 +240,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
         ? DESIGN_TOKENS.typography.sizes.md
         : DESIGN_TOKENS.typography.sizes.sm,
       lineHeight: TITLE_TEXT_LINE_HEIGHT,
-      minHeight: TITLE_TEXT_LINE_HEIGHT * 2,
+      minHeight: TRAVEL_CARD_TITLE_MIN_HEIGHT,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
       color: colors.text,
       width: '100%',

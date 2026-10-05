@@ -24,7 +24,6 @@ import EmptyState from '@/components/ui/EmptyState';
 import { useMyTravels } from '@/hooks/useMyTravels';
 import type { Travel } from '@/types/types';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
-import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useProfileGrid } from '@/components/screens/profile/useProfileGrid';
 import { ProfileHeaderSection } from '@/components/screens/profile/ProfileHeaderSection';
 import { ProfileOverviewTab } from '@/components/screens/profile/ProfileOverviewTab';
@@ -768,13 +767,6 @@ export default function ProfileScreen() {
     />
   ), [isMobileDevice, userId, isSuperuser, activeTab, handleDeleteMyTravel, travelList.removingTravelId, width]);
 
-  const ListSkeleton = useMemo(() => (
-    <View style={styles.skeletonListWrap}>
-      <SkeletonLoader width="100%" height={200} borderRadius={12} />
-      <SkeletonLoader width="100%" height={200} borderRadius={12} />
-    </View>
-  ), [styles.skeletonListWrap]);
-
   if (!authReady) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -821,7 +813,6 @@ export default function ProfileScreen() {
         colors={colors}
         contentPaddingBottom={asBottomDimension(contentPaddingBottom)}
         listHeader={ListHeader}
-        listSkeleton={ListSkeleton}
         emptyStateProps={emptyStateProps}
         currentData={currentData}
         isSectionTab={isSectionTab}

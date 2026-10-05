@@ -11,7 +11,7 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import type { Travel } from '@/types/types';
 import EmptyState from '@/components/ui/EmptyState';
-import { ProfileTravelGrid } from '@/components/screens/profile/ProfileTravelGrid';
+import { ProfileTravelGrid, ProfileTravelGridSkeleton } from '@/components/screens/profile/ProfileTravelGrid';
 import { keyExtractor } from '@/components/screens/profile/profileScreen.helpers';
 import { webTouchScrollStyle } from '@/utils';
 import type { ProfileTabKey } from '@/components/profile/ProfileTabs';
@@ -28,7 +28,6 @@ type Props = {
   colors: ReturnType<typeof import('@/hooks/useTheme').useThemedColors>;
   contentPaddingBottom: number;
   listHeader: ReactElement;
-  listSkeleton: ReactElement;
   /** Заглушка вкладки профиля: всегда `compact` (#2104), вид задаёт этот файл. */
   emptyStateProps: Omit<React.ComponentProps<typeof EmptyState>, 'density'>;
   currentData: Travel[];
@@ -63,7 +62,6 @@ export function ProfileTravelListView({
   colors,
   contentPaddingBottom,
   listHeader,
-  listSkeleton,
   emptyStateProps,
   currentData,
   isSectionTab,
@@ -95,6 +93,17 @@ export function ProfileTravelListView({
       </View>
     ) : null;
 
+  // Каркас — та же сетка и та же ячейка, что у карточек (#2176): своего отступа
+  // у него нет, поэтому карточки встают ровно на его место.
+  const listSkeleton = (
+    <ProfileTravelGridSkeleton
+      styles={styles}
+      isCardsSingleColumn={isCardsSingleColumn}
+      gridColumns={gridColumns}
+      gapSize={gapSize}
+    />
+  );
+
   const emptyBody = isSectionTab ? null : isTravelsTabLoading ? (
     listSkeleton
   ) : (
@@ -115,13 +124,13 @@ export function ProfileTravelListView({
       >
         {listHeader}
         {isSectionTab ? null : isTravelsTabLoading ? (
-          listSkeleton
+          <View testID="profile-travel-list">{listSkeleton}</View>
         ) : currentData.length === 0 ? (
           <View style={styles.emptyWrap} {...SCREEN_CONTENT_FIRST_PROPS}>
             <EmptyState {...emptyStateProps} density="compact" />
           </View>
         ) : (
-          <View {...SCREEN_CONTENT_FIRST_PROPS}>
+          <View testID="profile-travel-list" {...SCREEN_CONTENT_FIRST_PROPS}>
             <ProfileTravelGrid
               currentData={currentData}
               styles={styles}

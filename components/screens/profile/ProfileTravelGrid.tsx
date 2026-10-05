@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import {
+  Platform,
   View,
   type ViewStyle,
   type DimensionValue,
 } from 'react-native';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
+import TravelListItemSkeleton from '@/components/listTravel/TravelListItemSkeleton';
 import type { Travel } from '@/types/types';
 import type { createProfileScreenStyles } from './profileScreen.styles';
 
@@ -28,6 +30,45 @@ interface ProfileTravelGridProps {
 const isOwnTravelTab = (tab: string) =>
   tab === 'travels' || tab === 'publishedTravels' || tab === 'draftTravels';
 
+type ProfileGridGeometryArgs = Pick<ProfileTravelGridProps, 'isCardsSingleColumn' | 'gridColumns' | 'gapSize'>;
+
+const SINGLE_COLUMN_CELL: ViewStyle = {
+  width: '100%', maxWidth: '100%', minWidth: 0, flexBasis: '100%',
+};
+
+/**
+ * Число колонок и ячейка сетки профиля — один расчёт для карточек и для их
+ * каркаса (#2176). Каркас, собранный отдельно от сетки, стоял ниже карточек и
+ * был другой формы, поэтому список прыгал в момент ответа API.
+ */
+export const resolveProfileGridGeometry = ({
+  isCardsSingleColumn,
+  gridColumns,
+  gapSize,
+}: ProfileGridGeometryArgs) => {
+  const cols = Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1);
+  // `calc()` понимает только web. На native ряд делит FlashList: `numColumns`
+  // равных долей без зазора — каркас повторяет эти доли процентом.
+  const cellWidth = (
+    cols === 1
+      ? '100%'
+      : Platform.OS === 'web'
+        ? `calc((100% - ${(cols - 1) * gapSize}px) / ${cols})`
+        : `${100 / cols}%`
+  ) as DimensionValue;
+  const cellStyle: ViewStyle = isCardsSingleColumn
+    ? SINGLE_COLUMN_CELL
+    : {
+        flexGrow: 0,
+        flexShrink: 0,
+        flexBasis: cellWidth,
+        width: cellWidth,
+        maxWidth: cellWidth,
+        minWidth: 0,
+      };
+  return { cols, cellWidth, cellStyle };
+};
+
 export function ProfileTravelGrid({
   currentData,
   styles,
@@ -42,18 +83,18 @@ export function ProfileTravelGrid({
   width,
   removingTravelId,
 }: ProfileTravelGridProps) {
+  const { cols, cellWidth, cellStyle } = useMemo(
+    () => resolveProfileGridGeometry({ isCardsSingleColumn, gridColumns, gapSize }),
+    [isCardsSingleColumn, gridColumns, gapSize],
+  );
+
   const rows = useMemo(() => {
-    const cols = Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1);
     const result: Travel[][] = [];
     for (let i = 0; i < currentData.length; i += cols) {
       result.push(currentData.slice(i, i + cols));
     }
     return result;
-  }, [currentData, gridColumns, isCardsSingleColumn]);
-
-  const singleColStyle = useMemo(() => ({
-    width: '100%', maxWidth: '100%', minWidth: 0, flexBasis: '100%',
-  } as ViewStyle), []);
+  }, [currentData, cols]);
 
   const placeholderBaseStyle = useMemo(() => ({
     flexGrow: 0, flexShrink: 0, minWidth: 0, opacity: 0, pointerEvents: 'none' as const,
@@ -62,32 +103,16 @@ export function ProfileTravelGrid({
   return (
     <>
       {rows.map((rowItems, rowIndex) => {
-        const cols = Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1);
         const missingSlots = Math.max(0, cols - rowItems.length);
-        const calcWidth =
-          cols > 1
-            ? `calc((100% - ${(cols - 1) * gapSize}px) / ${cols})`
-            : '100%';
 
         return (
           <View key={`row-${rowIndex}`}>
             <View style={styles.cardsRow}>
               {rowItems.map((travel, itemIndex) => {
-                const rowItemStyle: ViewStyle | undefined = isCardsSingleColumn
-                  ? singleColStyle
-                  : {
-                      flexGrow: 0,
-                      flexShrink: 0,
-                      flexBasis: calcWidth as DimensionValue,
-                      width: calcWidth as DimensionValue,
-                      maxWidth: calcWidth as DimensionValue,
-                      minWidth: 0,
-                    };
-
                 return (
                   <View
                     key={String(travel.id)}
-                    style={rowItemStyle}
+                    style={cellStyle}
                   >
                     <RenderTravelItem
                       item={travel}
@@ -108,9 +133,9 @@ export function ProfileTravelGrid({
                 ? Array.from({ length: missingSlots }).map((_, placeholderIndex) => {
                     const placeholderStyle: ViewStyle = {
                       ...placeholderBaseStyle,
-                      flexBasis: calcWidth as DimensionValue,
-                      width: calcWidth as DimensionValue,
-                      maxWidth: calcWidth as DimensionValue,
+                      flexBasis: cellWidth,
+                      width: cellWidth,
+                      maxWidth: cellWidth,
                     };
                     return (
                       <View
@@ -126,5 +151,36 @@ export function ProfileTravelGrid({
         );
       })}
     </>
+  );
+}
+
+type ProfileTravelGridSkeletonProps = ProfileGridGeometryArgs & {
+  styles: ProfileScreenStyles;
+};
+
+/**
+ * Каркас списка маршрутов профиля: один ряд той же сетки, что у карточек.
+ * Сколько маршрутов придёт, до ответа неизвестно, а первый ряд закрывает
+ * первый экран и на телефоне, и на мониторе.
+ */
+export function ProfileTravelGridSkeleton({
+  styles,
+  isCardsSingleColumn,
+  gridColumns,
+  gapSize,
+}: ProfileTravelGridSkeletonProps) {
+  const { cols, cellStyle } = useMemo(
+    () => resolveProfileGridGeometry({ isCardsSingleColumn, gridColumns, gapSize }),
+    [isCardsSingleColumn, gridColumns, gapSize],
+  );
+
+  return (
+    <View style={styles.cardsRow} testID="profile-travel-grid-skeleton">
+      {Array.from({ length: cols }).map((_, index) => (
+        <View key={index} style={cellStyle}>
+          <TravelListItemSkeleton />
+        </View>
+      ))}
+    </View>
   );
 }
