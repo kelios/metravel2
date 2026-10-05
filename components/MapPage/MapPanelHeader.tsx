@@ -1,5 +1,5 @@
 import React, { memo } from 'react'
-import { Pressable, Text, View } from 'react-native'
+import { Platform, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { ThemedColors } from '@/hooks/useTheme'
@@ -79,6 +79,10 @@ function TabButton({
       android_ripple={{ color: themedColors.overlayLight }}
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
+      // RN-web 0.21 does not turn `accessibilityState.selected` into
+      // `aria-selected`: the production probe of #2217 found role="tab" with no
+      // selected tab in the DOM. Web takes the ARIA prop itself, as BottomDock does.
+      aria-selected={Platform.OS === 'web' ? active : undefined}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       // iOS: the label is capped at MAP_PANEL_TAB_MAX_FONT_SCALE; at the

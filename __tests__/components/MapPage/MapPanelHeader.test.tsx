@@ -205,6 +205,39 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
 // The width budget (`__tests__/app/mapLayout.test.ts`) holds for labels up to
 // MAP_PANEL_TAB_LABEL_MAX_CHARS; a longer translation would break it in one
 // language only, so every locale is checked.
+// RN-web 0.21 drops `accessibilityState.selected`: on production the tabs had
+// role="tab" and no `aria-selected` (production smoke of #2217, 05.10). The jest
+// Pressable mock (`__tests__/setup.ts`) mirrors accessibilityState into
+// `aria-selected` and would hide that, so the raw prop is read from the
+// component element, not from the mocked host.
+describe('MapPanelHeader on web: the tabs carry aria-selected themselves (#2217)', () => {
+  const originalOS = Platform.OS
+
+  beforeEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: 'web' })
+  })
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: originalOS })
+  })
+
+  it.each([
+    ['search', 'map-panel-tab-filters'],
+    ['route', 'map-panel-tab-route'],
+    ['travels', 'map-panel-tab-travels'],
+  ] as const)('activeTab «%s»: only %s has aria-selected true', (activeTab, selectedId) => {
+    const utils = renderHeader(activeTab)
+    const rawAriaSelected = (testID: string) =>
+      utils
+        .UNSAFE_getAllByProps({ testID })
+        .find((node) => typeof node.props['aria-selected'] === 'boolean')?.props['aria-selected']
+
+    for (const testID of ['map-panel-tab-travels', 'map-panel-tab-route', 'map-panel-tab-filters']) {
+      expect(rawAriaSelected(testID)).toBe(testID === selectedId)
+    }
+  })
+})
+
 describe('panel tab labels stay short in every language (#2217)', () => {
   const TAB_LABEL_KEYS = ['mesta_3ad2b948', 'marshrut_486762dc', 'filtry_95c57b1d']
 
