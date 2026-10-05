@@ -1,7 +1,7 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { listSlides, parseArgs, readCaption } = require('../../scripts/instagram-post')
+const { listSlides, parseArgs, parseRange, readCaption } = require('../../scripts/instagram-post')
 
 describe('instagram-post', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ig-post-'))
@@ -37,5 +37,14 @@ describe('instagram-post', () => {
     expect(() => readCaption(file)).toThrow('2200')
     fs.writeFileSync(file, ' Татры \n')
     expect(readCaption(file)).toBe('Татры')
+  })
+
+  it('serves the byte ranges the video fetcher asks for', () => {
+    expect(parseRange(undefined, 100)).toBeNull()
+    expect(parseRange('bytes=0-9', 100)).toEqual({ start: 0, end: 9 })
+    expect(parseRange('bytes=90-', 100)).toEqual({ start: 90, end: 99 })
+    expect(parseRange('bytes=-10', 100)).toEqual({ start: 90, end: 99 })
+    expect(parseRange('bytes=50-500', 100)).toEqual({ start: 50, end: 99 })
+    expect(parseRange('bytes=200-300', 100)).toBeNull()
   })
 })
