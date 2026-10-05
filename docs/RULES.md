@@ -296,6 +296,12 @@ npm run lighthouse:travel:desktop
   delegation is unavailable, apply the same skill in the current agent. The
   reviewer re-reviews its own fixes and must not recursively launch another
   reviewer.
+- Review depth follows risk (owner rule, 2026-10-05). A small diff — up to 80
+  changed lines of code excluding tests and docs, one area, no change to
+  API/data contracts, `scripts/`, guards, hooks, navigation or auth — gets one
+  independent review: `code-review-gate`; the implementer fixes its findings and
+  the gate runs again. Everything else, including a multi-card train and
+  high/highest cards, goes through `review-auditor` and then `code-review-gate`.
 - Reviewer fixes stay inside the authorized task scope and preserve unrelated
   dirty worktree changes. Do not use this gate for taste-driven rewrites or as
   authority for an unrelated redesign, backend mutation, or broad migration.

@@ -14,6 +14,8 @@
  *   `metravel_task_update` с `description`     — блокирует запись дефектного описания.
  *   `metravel_task_update` со `status=todo`    — блокирует выдачу в работу карточки без контракта
  *                                                (правило: «не переводить в `todo` без проверяемой приёмки»).
+ * Плюс потолок размера постановки по срочности (`DESCRIPTION_LIMITS` контракта): новая карточка длиннее
+ * потолка блокируется, созданная до `DESCRIPTION_LIMIT_SINCE` — только предупреждение.
  * Остальные обновления (evidence, assignee, связи) не трогает: борд не должен вставать из-за
  * исторического долга в чужой карточке.
  *
@@ -23,7 +25,7 @@
  * Режимы:
  *   (stdin JSON)                    хук PreToolUse.
  *   check --task <id>               проверить карточку на борде (exit 0 = чисто, 1 = есть error).
- *   check --file <path.md>          проверить черновик описания из файла.
+ *   check --file <path.md>          проверить черновик описания из файла (`--urgency` задаёт потолок размера).
  *
  * Аварийный обход: BOARD_TASK_GATE_BYPASS=1 (пишется в systemMessage, чтобы обход был видимым).
  */
@@ -172,6 +174,7 @@ async function runHook() {
         depends_on: toolInput.depends_on_ids || [],
         assignee: toolInput.assignee || null,
         title: toolInput.title,
+        urgency: toolInput.urgency || 'medium',
       },
       { creating: true },
     );
@@ -200,6 +203,8 @@ async function runHook() {
     depends_on: toolInput.depends_on_ids ?? current?.depends_on ?? [],
     assignee: toolInput.assignee ?? current?.assignee ?? null,
     title: toolInput.title ?? current?.title ?? '',
+    urgency: toolInput.urgency ?? current?.urgency ?? 'medium',
+    created_at: current?.created_at ?? null,
   };
 
   decide(
@@ -227,6 +232,7 @@ async function runCheck(argv) {
       sprint: args.sprint ? Number(args.sprint) : 1,
       needs_human: args.human === true,
       depends_on: [],
+      urgency: String(args.urgency || 'medium'),
     };
   } else if (args.task) {
     task = await fetchTask(Number(args.task));
@@ -235,11 +241,12 @@ async function runCheck(argv) {
       process.exit(2);
     }
   } else {
-    process.stderr.write('usage: task-quality-gate.mjs check --task <id> | --file <путь.md> [--area front|back] [--kind bug|feature|task] [--human]\n');
+    process.stderr.write('usage: task-quality-gate.mjs check --task <id> | --file <путь.md> [--area front|back] [--kind bug|feature|task] [--urgency low|medium|high] [--human]\n');
     process.exit(2);
   }
 
-  const { errors, warnings } = validateBoardTask(task);
+  // Черновик из файла — будущая новая карточка: потолок размера проверяется как при создании.
+  const { errors, warnings } = validateBoardTask(task, { creating: Boolean(args.file) });
   const label = args.file ? String(args.file) : `#${args.task}`;
   if (!errors.length && !warnings.length) {
     process.stdout.write(`${label}: контракт описания соблюдён\n`);

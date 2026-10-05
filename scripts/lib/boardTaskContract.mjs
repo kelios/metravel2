@@ -56,6 +56,21 @@ export const TASK_CONTRACT_FIELDS = [
 /** Разделы карточки `needs_human=true` (шаблон `.claude/skills/metravel-issue/human-task.md`). */
 export const HUMAN_SECTIONS = ['Что нужно сделать', 'Зачем', 'Шаги', 'Где', 'Готово когда'];
 
+/**
+ * Потолок размера постановки по срочности, в символах (правило владельца 05.10.2026).
+ *
+ * Гейт годами проверял только минимум, и карточки росли: замер 05.10.2026 по 59 карточкам
+ * `todo` — медиана 7,3 тыс. символов, максимум 27 тыс. Карточку целиком читает каждый агент
+ * конвейера (исполнитель, два ревьюера, приёмщик), поэтому её длина умножается на число
+ * проходов. Считается постановка без раздела «Что уже сделано»: он — журнал работы и
+ * приёмки и растёт законно. Длинные доказательства (логи, таблицы замеров, перечни
+ * файлов, история поиска дублей) живут файлом в `.codex-temp/<id>/`, в карточке — путь и вывод.
+ */
+export const DESCRIPTION_LIMITS = { lowest: 6000, low: 6000, medium: 9000, high: 12000, highest: 12000 };
+/** Карточки, созданные до этой даты, потолок не блокирует — только предупреждает. */
+export const DESCRIPTION_LIMIT_SINCE = '2026-10-06';
+const LOG_SECTION = 'Что уже сделано';
+
 const AREAS_WITH_CONTRACT = ['front', 'back'];
 const PLATFORM_KEYWORDS = /(desktop web|mobile web|android|ios|iphone|ipados|shared|none)/i;
 const LOCALE_KEYWORDS = /(\bRU\b|\bBE\b|\bUK\b|\bPL\b|\bEN\b|none|локал)/i;
@@ -86,6 +101,13 @@ function readSection(description, heading) {
   const tail = source.slice(match.index + match[0].length);
   const nextHeading = tail.search(/^##\s+/m);
   return (nextHeading >= 0 ? tail.slice(0, nextHeading) : tail).trim();
+}
+
+/** Длина постановки: описание без тела раздела-журнала «Что уже сделано». */
+export function statementLength(description) {
+  const text = String(description ?? '');
+  const log = readSection(text, LOG_SECTION);
+  return text.length - (log ? log.length : 0);
 }
 
 /**
@@ -157,7 +179,7 @@ const problem = (level, code, message, scope = 'text') => ({ level, code, messag
  * Проверить карточку.
  *
  * @param {object} task — поля борда: description, area, kind, status, sprint, needs_human,
- *                        blocked_by, depends_on, assignee, title.
+ *                        blocked_by, depends_on, assignee, title, urgency, created_at.
  * @param {object} [options]
  * @param {boolean} [options.creating] — проверка на создании (спринт и area обязательны сразу).
  * @returns {{errors: object[], warnings: object[], problems: object[]}}
@@ -329,6 +351,22 @@ export function validateBoardTask(task, options = {}) {
 
   if (contractRequired && description.length < 400) {
     found.push(problem('warn', 'too-short', `описание ${description.length} символов: для контракта архитекторского уровня это заглушка`));
+  }
+
+  const urgency = Object.hasOwn(DESCRIPTION_LIMITS, task?.urgency) ? task.urgency : 'medium';
+  const limit = DESCRIPTION_LIMITS[urgency];
+  const size = statementLength(description);
+  if (!isHuman && size > limit) {
+    const enforced = creating || String(task?.created_at ?? '') >= DESCRIPTION_LIMIT_SINCE;
+    found.push(
+      problem(
+        enforced ? 'error' : 'warn',
+        'too-long',
+        `постановка ${size} символов при потолке ${limit} для urgency=${urgency} (раздел «${LOG_SECTION}» не считается): ` +
+          'логи, таблицы замеров, перечни файлов и историю поиска дублей вынести файлом в `.codex-temp/<id>/` ' +
+          'и оставить в карточке путь и вывод; механизм — одной цепочкой `path:line`, без пересказа кода',
+      ),
+    );
   }
 
   return {

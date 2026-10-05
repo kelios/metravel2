@@ -131,7 +131,13 @@ Validation:
 6. После code changes обязательный `$metravel-code-reviewer` review-and-fix по
    полному task diff. Предпочтителен независимый `review-auditor`; reviewer
    исправляет подтверждённые findings, перечитывает итоговый diff и повторяет
-   code-level проверки без рекурсивного reviewer. Стадия `review` ограничена
+   code-level проверки без рекурсивного reviewer. Ревью по риску (правило
+   владельца 05.10.2026): малый diff — до 80 изменённых строк кода без тестов и
+   документов, одна зона, без изменения контрактов API/данных, `scripts/`,
+   guards, hooks, навигации и auth — проходит одно независимое ревью,
+   `code-review-gate`; его находки чинит исполнитель, гейт запускается заново.
+   Всё остальное (в том числе поезд из нескольких карточек и high/highest) —
+   `review-auditor`, затем `code-review-gate`. Стадия `review` ограничена
    чтением/правкой diff и static/unit/guard checks: browser, API runtime,
    simulator и physical-device QA запускаются только после перехода тикета в
    `testing`.
@@ -216,6 +222,9 @@ Validation:
   guard; release/performance: только production build/real URL по профильному doc.
 - `SKIPPED` из-за чужого quality gate — coordination evidence, не pass. Если
   результат обязателен, запроси его и продолжи тот же acceptance pass.
+- Карточки ведутся ПОЕЗДАМИ (правило владельца 05.10.2026): 3–6 карточек одной
+  линии на одного исполнителя, одно ревью, один выкат, одна приёмка; одна сессия
+  — один поезд. Порядок — `docs/TASK_BOARD_MCP.md` → «Режим поездов».
 - Перед переводом задачи борда в `testing` отревьюенный diff коммитится явными
   путями задачи и пушится в `main`: вердикт `pass` → `git add <пути задачи>` →
   `git commit` → `PREFLIGHT_SKIP_E2E=1 git push origin main` →

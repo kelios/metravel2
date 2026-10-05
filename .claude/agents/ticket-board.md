@@ -59,7 +59,9 @@ model: sonnet
 - **Карточку проверяет машина, а не память.** Контракт описания формализован в
   `scripts/lib/boardTaskContract.mjs`, а PreToolUse-хук `.claude/hooks/task-quality-gate.mjs`
   блокирует `metravel_task_create`, запись дефектного `description` и перевод в `todo`.
-  Черновик прогоняй ДО отправки: `node .claude/hooks/task-quality-gate.mjs check --file <файл.md>`;
+  Черновик прогоняй ДО отправки: `node .claude/hooks/task-quality-gate.mjs check --file <файл.md> --urgency <low|medium|high>`;
+  потолок постановки без раздела «Что уже сделано» — 6 / 9 / 12 тыс. символов (low / medium / high),
+  длинные доказательства — файлом в `.codex-temp/<id>/`, в карточке путь и вывод;
   готовую карточку — `check --task <id>`; борд целиком — `npm run board:audit`. Отказ гейта
   закрывается текстом карточки, а не `BOARD_TASK_GATE_BYPASS=1` (обход — только по явной
   просьбе владельца, с пометкой причины в `description`).

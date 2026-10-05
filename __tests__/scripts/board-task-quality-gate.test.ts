@@ -2,8 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+  DESCRIPTION_LIMITS,
+  DESCRIPTION_LIMIT_SINCE,
   hasNonCanonicalField,
   readFieldValue,
+  statementLength,
   validateBoardTask,
 } from '../../scripts/lib/boardTaskContract.mjs';
 
@@ -191,6 +194,56 @@ describe('board task contract validator', () => {
     expect(
       codes({ ...validTask, status: 'blocked_by', blocked_by: 1513, depends_on: [] }),
     ).toEqual(expect.arrayContaining(['blocked-contradiction']));
+  });
+});
+
+describe('board task description size cap', () => {
+  // Замер 05.10.2026: медиана карточки `todo` — 7,3 тыс. символов, максимум 27 тыс.; каждую
+  // читает каждый агент конвейера. Потолок держит постановку, журнал работы в него не входит.
+  const padding = (chars: number) => `\n${'Подробность постановки. '.repeat(Math.ceil(chars / 24))}`;
+  const grow = (heading: string, chars: number) =>
+    validDescription.replace(`## ${heading}\n`, `## ${heading}\n${padding(chars)}\n`);
+  const warningCodes = (task: Record<string, unknown>, options?: Record<string, unknown>): string[] =>
+    validateBoardTask(task, options).warnings.map((w: { code: string }) => w.code);
+
+  it('blocks a new card whose statement exceeds the cap of its urgency', () => {
+    const description = grow('В чём проблема', DESCRIPTION_LIMITS.low);
+    expect(statementLength(description)).toBeGreaterThan(DESCRIPTION_LIMITS.low);
+    expect(codes({ ...validTask, urgency: 'low', description }, { creating: true })).toContain('too-long');
+    // Тот же текст укладывается в потолок срочной карточки.
+    expect(statementLength(description)).toBeLessThan(DESCRIPTION_LIMITS.high);
+    expect(codes({ ...validTask, urgency: 'high', description }, { creating: true })).not.toContain('too-long');
+  });
+
+  it('does not count the work log: acceptance records may grow without limit', () => {
+    const description = grow('Что уже сделано', DESCRIPTION_LIMITS.high * 2);
+    expect(description.length).toBeGreaterThan(DESCRIPTION_LIMITS.high * 2);
+    expect(statementLength(description)).toBeLessThan(DESCRIPTION_LIMITS.low);
+    expect(codes({ ...validTask, urgency: 'low', description }, { creating: true })).not.toContain('too-long');
+  });
+
+  it('only warns on a card created before the cap, and blocks one created after it', () => {
+    const description = grow('В чём проблема', DESCRIPTION_LIMITS.medium);
+    const legacy = { ...validTask, urgency: 'medium', description, created_at: '2026-10-05T01:22:15Z' };
+    expect(codes(legacy)).not.toContain('too-long');
+    expect(warningCodes(legacy)).toContain('too-long');
+    // Карточка без даты (строка списка борда в аудите) — тоже только предупреждение.
+    expect(codes({ ...legacy, created_at: undefined })).not.toContain('too-long');
+
+    const fresh = { ...legacy, created_at: `${DESCRIPTION_LIMIT_SINCE}T08:00:00Z` };
+    expect(codes(fresh)).toContain('too-long');
+    // Ошибка чинится правкой текста, поэтому блокирует и запись описания.
+    expect(validateBoardTask(fresh).textErrors.map((e: { code: string }) => e.code)).toContain('too-long');
+  });
+
+  it('treats an unknown urgency as medium and never caps a human instruction', () => {
+    const description = grow('В чём проблема', DESCRIPTION_LIMITS.medium);
+    expect(codes({ ...validTask, urgency: undefined, description }, { creating: true })).toContain('too-long');
+    expect(codes({ ...validTask, needs_human: true, description }, { creating: true })).not.toContain('too-long');
+  });
+
+  it('the documented card template itself fits the smallest cap with room to spare', () => {
+    expect(statementLength(validDescription)).toBeLessThan(DESCRIPTION_LIMITS.low / 2);
   });
 });
 
