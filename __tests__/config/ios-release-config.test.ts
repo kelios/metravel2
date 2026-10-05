@@ -35,7 +35,60 @@ function notificationPlugin(config: TestAppConfig): [string, Record<string, unkn
   return plugin;
 }
 
-function fixture(changes: Record<string, (value: string) => string>): string {
+const SPLASH_IMAGESET = 'ios/metravel/Images.xcassets/SplashScreenLogo.imageset';
+
+type SplashCatalogEntry = {
+  idiom: string;
+  scale: string;
+  filename?: string;
+  appearances?: Array<{ appearance: string; value: string }>;
+};
+
+type FixtureChanges = Record<string, (value: string) => string>;
+
+function rewriteSplashCatalog(
+  change: (images: SplashCatalogEntry[]) => SplashCatalogEntry[]
+): FixtureChanges {
+  return {
+    [`${SPLASH_IMAGESET}/Contents.json`]: value => {
+      const contents = JSON.parse(value);
+      return JSON.stringify({ ...contents, images: change(contents.images) });
+    },
+  };
+}
+
+function rewriteSplashConfig(change: (splash: Record<string, unknown>) => void): FixtureChanges {
+  return {
+    'app.json': value => {
+      const config = JSON.parse(value) as TestAppConfig;
+      const plugin = config.expo.plugins.find(
+        (entry): entry is [string, Record<string, unknown>] =>
+          Array.isArray(entry) && entry[0] === 'expo-splash-screen'
+      );
+      if (!plugin) throw new Error('splash plugin fixture is missing');
+      change(plugin[1]);
+      return JSON.stringify(config);
+    },
+  };
+}
+
+function splashFindings(testRoot: string): string[] {
+  return validateIosRelease(testRoot)
+    .filter((error: { code: string }) => error.code === 'IOS_SPLASH_ASSETS')
+    .map((error: { detail: string }) => error.detail);
+}
+
+// `.codex-temp` is ignored and absent in a fresh clone until ios-submit.sh
+// creates it, so "no runtime directories yet" must not be a read error.
+function submitRuntimeDirectories(): string[] {
+  const parent = path.join(root, '.codex-temp');
+  if (!fs.existsSync(parent)) return [];
+  return fs.readdirSync(parent)
+    .filter(name => name.startsWith('ios-submit-runtime.'))
+    .sort();
+}
+
+function fixture(changes: FixtureChanges): string {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'metravel-ios-release-'));
   tempRoots.push(tempRoot);
   const requiredFiles = [
@@ -70,6 +123,9 @@ function fixture(changes: Record<string, (value: string) => string>): string {
     'ios/metravel/Images.xcassets/SplashScreenLogo.imageset/image.png',
     'ios/metravel/Images.xcassets/SplashScreenLogo.imageset/image@2x.png',
     'ios/metravel/Images.xcassets/SplashScreenLogo.imageset/image@3x.png',
+    'ios/metravel/Images.xcassets/SplashScreenLogo.imageset/dark_image.png',
+    'ios/metravel/Images.xcassets/SplashScreenLogo.imageset/dark_image@2x.png',
+    'ios/metravel/Images.xcassets/SplashScreenLogo.imageset/dark_image@3x.png',
     'components/quests/QuestFullMap.tsx',
     'components/quests/QuestFullMap.native.tsx',
     'components/auth/FacebookSignInButton.native.tsx',
@@ -269,6 +325,135 @@ describe('iOS release configuration', () => {
     );
   });
 
+  it('accepts the light and dark splash triples that app.json declares', () => {
+    expect(splashFindings(fixture({}))).toEqual([]);
+  });
+
+  it.each(['image@3x.png', 'dark_image@3x.png'])(
+    'fails closed when the splash file %s is lost',
+    file => {
+      const testRoot = fixture({});
+      fs.rmSync(path.join(testRoot, SPLASH_IMAGESET, file));
+      expect(splashFindings(testRoot)).toEqual([
+        expect.stringContaining(`file ${file} is missing`),
+      ]);
+    }
+  );
+
+  it.each([
+    ['image@2x.png', 'universal light 2x'],
+    ['dark_image@2x.png', 'universal dark 2x'],
+  ])('fails closed when the splash catalog drops the entry of %s', (file, slot) => {
+    const testRoot = fixture(
+      rewriteSplashCatalog(images => images.filter(image => image.filename !== file))
+    );
+    expect(splashFindings(testRoot)).toEqual([
+      expect.stringContaining(`${slot}: 0 catalog entries`),
+    ]);
+  });
+
+  it('fails closed when the catalog returns to three files while app.json declares a dark splash', () => {
+    const testRoot = fixture(
+      rewriteSplashCatalog(images => images.filter(image => !image.appearances))
+    );
+    expect(splashFindings(testRoot)).toEqual([
+      expect.stringContaining('universal dark 1x: 0 catalog entries'),
+    ]);
+  });
+
+  it('follows app.json when the dark splash is withdrawn: stale dark entries fail, the light triple passes', () => {
+    const withoutDark = rewriteSplashConfig(splash => {
+      delete splash.dark;
+    });
+    expect(splashFindings(fixture(withoutDark))).toEqual([
+      expect.stringContaining('universal dark 1x: not declared by app.json'),
+    ]);
+    expect(splashFindings(fixture({
+      ...withoutDark,
+      ...rewriteSplashCatalog(images => images.filter(image => !image.appearances)),
+    }))).toEqual([]);
+  });
+
+  it('rejects a duplicated scale, an entry without a file name and an undeclared appearance', () => {
+    const duplicated = fixture(rewriteSplashCatalog(images => [...images, { ...images[0] }]));
+    expect(splashFindings(duplicated)).toEqual([
+      expect.stringContaining('universal light 1x: 2 catalog entries'),
+    ]);
+
+    const unnamed = fixture(rewriteSplashCatalog(images => images.map(
+      image => (image.filename === 'dark_image.png' ? { ...image, filename: undefined } : image)
+    )));
+    expect(splashFindings(unnamed)).toEqual([
+      expect.stringContaining('universal dark 1x: file (not named) is missing'),
+    ]);
+
+    const highContrast = fixture(rewriteSplashCatalog(images => [
+      ...images,
+      {
+        idiom: 'universal',
+        scale: '1x',
+        filename: 'image.png',
+        appearances: [{ appearance: 'contrast', value: 'high' }],
+      },
+    ]));
+    expect(splashFindings(highContrast)).toEqual([
+      expect.stringContaining('1x: not declared by app.json'),
+    ]);
+  });
+
+  it('requires the tablet pair once app.json declares a tablet splash', () => {
+    const withTablet = rewriteSplashConfig(splash => {
+      splash.tabletImage = './assets/images/splash.png';
+    });
+    expect(splashFindings(fixture(withTablet))).toEqual([
+      expect.stringContaining('ipad light 1x: 0 catalog entries'),
+    ]);
+    expect(splashFindings(fixture({
+      ...withTablet,
+      ...rewriteSplashCatalog(images => [
+        ...images,
+        { idiom: 'ipad', scale: '1x', filename: 'image.png' },
+        { idiom: 'ipad', scale: '2x', filename: 'image@2x.png' },
+      ]),
+    }))).toEqual([]);
+  });
+
+  it.each<[string[], boolean]>([
+    [['--skip-live-aasa'], false],
+    [[], true],
+  ])('runs the guard CLI with args %j as checkLiveAasa=%s', (args, checkLiveAasa) => {
+    const validate = jest.fn(() => []);
+    const log = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const argv = process.argv;
+    process.argv = [argv[0], 'ios-release-guard.js', ...args];
+    try {
+      jest.isolateModules(() => {
+        jest.doMock('../../scripts/ios-release-guard-lib', () => ({ validateIosRelease: validate }));
+        require('../../scripts/ios-release-guard');
+      });
+    } finally {
+      process.argv = argv;
+      log.mockRestore();
+      jest.dontMock('../../scripts/ios-release-guard-lib');
+    }
+    expect(validate).toHaveBeenCalledWith(process.cwd(), { checkLiveAasa });
+  });
+
+  it.each(['scripts/ios-build.sh', 'scripts/ios-submit.sh'])(
+    'fails closed when %s runs the guard without the live AASA check',
+    script => {
+      const testRoot = fixture({
+        [script]: value => value.replace(
+          'node scripts/ios-release-guard.js',
+          'node scripts/ios-release-guard.js --skip-live-aasa'
+        ),
+      });
+      expect(validateIosRelease(testRoot)).toEqual(
+        expect.arrayContaining([expect.objectContaining({ code: 'IOS_RELEASE_GUARD_SCOPE' })])
+      );
+    }
+  );
+
   it('fails closed if the Apple-rejected manual LSMinimumSystemVersion key returns', () => {
     const testRoot = fixture({
       'ios/metravel/Info.plist': value => value.replace(
@@ -421,9 +606,7 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
     fs.chmodSync(fakeNpx, 0o755);
 
     const trackedConfigBefore = fs.readFileSync(path.join(root, 'eas.json'), 'utf8');
-    const runtimeDirectoriesBefore = fs.readdirSync(path.join(root, '.codex-temp'))
-      .filter(name => name.startsWith('ios-submit-runtime.'))
-      .sort();
+    const runtimeDirectoriesBefore = submitRuntimeDirectories();
     execFileSync('bash', [path.join(root, 'scripts/ios-submit.sh'), exactBuildId], {
       cwd: root,
       env: {
@@ -437,11 +620,7 @@ for (const directory of ['node_modules', 'plugins', 'assets', 'ios']) {
     });
 
     expect(fs.readFileSync(path.join(root, 'eas.json'), 'utf8')).toBe(trackedConfigBefore);
-    expect(
-      fs.readdirSync(path.join(root, '.codex-temp'))
-        .filter(name => name.startsWith('ios-submit-runtime.'))
-        .sort()
-    ).toEqual(runtimeDirectoriesBefore);
+    expect(submitRuntimeDirectories()).toEqual(runtimeDirectoriesBefore);
   });
 
   it('refuses upload when the protected ASC app id is missing', () => {

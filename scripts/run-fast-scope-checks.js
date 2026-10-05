@@ -128,6 +128,17 @@ const getChangedQuestDataFiles = (changedFiles) => {
     .filter((filePath) => fs.existsSync(path.resolve(process.cwd(), filePath)))
 }
 
+// Входы iOS-релизного гейта: закоммиченное дерево `ios/`, конфиги Expo и EAS и
+// сами скрипты `scripts/ios-*`. Удалённый файл — тоже вход: пропавший ассет и
+// есть то, что гейт должен увидеть, поэтому проверки существования здесь нет.
+const IOS_RELEASE_INPUT_PATTERNS = [/^ios\//, /^app\.json$/, /^eas\.json$/, /^scripts\/ios-[^/]+$/]
+
+const getChangedIosReleaseInputs = (changedFiles) => {
+  return (changedFiles || [])
+    .map((filePath) => normalizeForMatching(filePath))
+    .filter((filePath) => IOS_RELEASE_INPUT_PATTERNS.some((pattern) => pattern.test(filePath)))
+}
+
 const getLintTargets = (changedFiles) => {
   return (changedFiles || []).filter((filePath) => {
     if (!LINTABLE_FILE_PATTERN.test(filePath)) {
@@ -361,6 +372,23 @@ const main = () => {
       process.exit(questDataSourcesGuardStatus)
     }
 
+    // #2221: дерево `ios/` закоммичено, и guard сверяет его с app.json и
+    // eas.json, но до сборки кандидата его никто не запускал — коммит #2142
+    // добавил тёмную тройку сплэша, и гейт простоял красным до подготовки
+    // build 11. Флаг оставляет только сверку дерева: живая сверка AASA ходит
+    // на прод и в Apple CDN и собирает matcher через Xcode, а этот гейт, как и
+    // quest-сканы ниже, не должен зависеть от сети и состояния прода. Полный
+    // прогон — `npm run ios:release:guard` и скрипты сборки и отправки.
+    if (getChangedIosReleaseInputs(input.files).length > 0) {
+      const iosReleaseGuardStatus = runCommand('node', [
+        'scripts/ios-release-guard.js',
+        '--skip-live-aasa',
+      ], { shell: false })
+      if (iosReleaseGuardStatus !== 0) {
+        process.exit(iosReleaseGuardStatus)
+      }
+    }
+
     // Скан достижимости идёт по изменённым локальным данным, а не по проду:
     // прогон по всей базе — это ~140 сетевых запросов, которым не место в
     // check:fast. Полный свип — `npm run quest:scan-answer-reachability`.
@@ -512,6 +540,7 @@ module.exports = {
   createIgnorePatternMatcher,
   getLintTargets,
   getChangedQuestDataFiles,
+  getChangedIosReleaseInputs,
   QUEST_DATA_FILE_PATTERN,
   buildEslintArgs,
   ESLINT_CACHE_LOCATION,

@@ -14,6 +14,7 @@ const {
   isIgnoredLintTarget,
   runFastScopeChecks,
   getChangedQuestDataFiles,
+  getChangedIosReleaseInputs,
 } = require('@/scripts/run-fast-scope-checks')
 
 describe('run-fast-scope-checks', () => {
@@ -53,6 +54,31 @@ describe('run-fast-scope-checks', () => {
 
   it('skips deleted quest data files so a removed source does not fail the run', () => {
     expect(getChangedQuestDataFiles(['scripts/atlantis-quest-data.js'])).toEqual([])
+  })
+
+  it('picks iOS release guard inputs, deleted files included (#2221)', () => {
+    expect(getChangedIosReleaseInputs([
+      'ios/metravel/Images.xcassets/SplashScreenLogo.imageset/removed@3x.png',
+      'ios\\metravel\\Info.plist',
+      'app.json',
+      'eas.json',
+      'scripts/ios-release-guard-lib.js',
+      'scripts/ios-build.sh',
+      'scripts/lib/ios-helper.js',
+      'scripts/android-release.sh',
+      'app.config.js',
+      'docs/ios/RELEASE.md',
+      'components/ios/Thing.tsx',
+      '__tests__/config/ios-release-config.test.ts',
+    ])).toEqual([
+      'ios/metravel/Images.xcassets/SplashScreenLogo.imageset/removed@3x.png',
+      'ios/metravel/Info.plist',
+      'app.json',
+      'eas.json',
+      'scripts/ios-release-guard-lib.js',
+      'scripts/ios-build.sh',
+    ])
+    expect(getChangedIosReleaseInputs(['components/MapPage/Map.ios.tsx', 'package.json'])).toEqual([])
   })
 
   it('keeps lint scope on changed source files only', () => {

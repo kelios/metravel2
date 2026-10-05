@@ -214,6 +214,63 @@ function pluginOptions(plugin) {
   return Array.isArray(plugin) ? plugin[1] || {} : {};
 }
 
+const SPLASH_IMAGESET = 'ios/metravel/Images.xcassets/SplashScreenLogo.imageset';
+// The committed splash catalog is what expo-splash-screen generates from
+// app.json (plugin/build/getIosSplashConfig.js and withIosSplashAssets.js): the
+// logo always ships 1x/2x/3x, and every further image the config declares adds
+// its own scale set. The guard reads that declaration instead of counting
+// files, so the catalog and app.json cannot drift apart in either direction
+// (#2221: an "exactly three files" check rejected the dark triple of #2142).
+const SPLASH_CATALOG_VARIANTS = Object.freeze([
+  { idiom: 'universal', theme: 'light', scales: ['1x', '2x', '3x'], declared: () => true },
+  { idiom: 'universal', theme: 'dark', scales: ['1x', '2x', '3x'], declared: splash => Boolean(splash.dark.image) },
+  { idiom: 'ipad', theme: 'light', scales: ['1x', '2x'], declared: splash => Boolean(splash.tabletImage) },
+  { idiom: 'ipad', theme: 'dark', scales: ['1x', '2x'], declared: splash => Boolean(splash.dark.tabletImage) },
+]);
+
+// Same merge as getIosSplashConfig: `ios` overrides the shared options and the
+// two `dark` objects are merged field by field.
+function iosSplashConfig(app) {
+  const { ios, ...shared } = pluginOptions(findPlugin(app, 'expo-splash-screen'));
+  return { ...shared, ...ios, dark: { ...shared.dark, ...ios?.dark } };
+}
+
+function splashCatalogSlot(entry) {
+  const appearances = Array.isArray(entry?.appearances) ? entry.appearances : [];
+  let theme = 'light';
+  if (appearances.length > 0) {
+    const [only] = appearances;
+    theme = appearances.length === 1 && only?.appearance === 'luminosity' && only?.value === 'dark'
+      ? 'dark'
+      : JSON.stringify(appearances);
+  }
+  return `${entry?.idiom} ${theme} ${entry?.scale}`;
+}
+
+function splashCatalogProblems(root, app, contents) {
+  const splash = iosSplashConfig(app);
+  const entries = Array.isArray(contents?.images) ? contents.images : [];
+  const declaredSlots = SPLASH_CATALOG_VARIANTS
+    .filter(variant => variant.declared(splash))
+    .flatMap(variant => variant.scales.map(scale => `${variant.idiom} ${variant.theme} ${scale}`));
+  const problems = [];
+  for (const slot of declaredSlots) {
+    const matches = entries.filter(entry => splashCatalogSlot(entry) === slot);
+    const filename = matches[0]?.filename;
+    if (matches.length !== 1) {
+      problems.push(`${slot}: ${matches.length} catalog entries instead of 1`);
+    } else if (typeof filename !== 'string' || !filename ||
+        !fs.existsSync(path.join(root, SPLASH_IMAGESET, filename))) {
+      problems.push(`${slot}: file ${filename || '(not named)'} is missing`);
+    }
+  }
+  for (const entry of entries) {
+    const slot = splashCatalogSlot(entry);
+    if (!declaredSlots.includes(slot)) problems.push(`${slot}: not declared by app.json`);
+  }
+  return problems;
+}
+
 function hasIosPodspec(packageRoot) {
   return ['.', 'ios'].some(segment => {
     try {
@@ -540,10 +597,7 @@ function validateIosRelease(root = process.cwd(), options = {}) {
       root,
       'ios/metravel/Images.xcassets/AppIcon.appiconset/Contents.json'
     );
-    splashContents = readJson(
-      root,
-      'ios/metravel/Images.xcassets/SplashScreenLogo.imageset/Contents.json'
-    );
+    splashContents = readJson(root, `${SPLASH_IMAGESET}/Contents.json`);
   } catch (error) {
     return [{ code: 'IOS_RELEASE_CONFIG_READ', detail: error.message }];
   }
@@ -738,6 +792,9 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   }
   if (buildScript.includes('--auto-submit') || submitScript.includes('--auto-submit')) {
     fail('IOS_AUTO_SUBMIT_FORBIDDEN', 'build and upload must remain separate operations');
+  }
+  if (buildScript.includes('--skip-live-aasa') || submitScript.includes('--skip-live-aasa')) {
+    fail('IOS_RELEASE_GUARD_SCOPE', 'build and upload must run the release guard with the live AASA check');
   }
   if (!buildScript.includes('IOS_SIGNED_BUILD_AUTHORIZATION') ||
       !submitScript.includes('IOS_UPLOAD_AUTHORIZATION')) {
@@ -1158,7 +1215,6 @@ function validateIosRelease(root = process.cwd(), options = {}) {
   }
 
   const iconEntry = appIconContents.images?.find(item => item.filename && item.size === '1024x1024');
-  const splashFiles = splashContents.images?.map(item => item.filename).filter(Boolean) || [];
   if (!iconEntry) fail('IOS_APP_ICON_CATALOG', '1024x1024 icon entry missing');
   else {
     const iconPath = path.join(root, 'ios/metravel/Images.xcassets/AppIcon.appiconset', iconEntry.filename);
@@ -1187,11 +1243,13 @@ function validateIosRelease(root = process.cwd(), options = {}) {
       );
     }
   }
-  if (splashFiles.length !== 3 || splashFiles.some(file => !fs.existsSync(path.join(
-    root,
-    'ios/metravel/Images.xcassets/SplashScreenLogo.imageset',
-    file
-  )))) fail('IOS_SPLASH_ASSETS', '1x/2x/3x splash assets are required');
+  const splashProblems = splashCatalogProblems(root, app, splashContents);
+  if (splashProblems.length > 0) {
+    fail(
+      'IOS_SPLASH_ASSETS',
+      `splash catalog must hold every scale of each image app.json declares: ${splashProblems.join('; ')}`
+    );
+  }
 
   const scanned = [JSON.stringify(app), JSON.stringify(eas), project, info, expoPlist, entitlements];
   const forbidden = [
