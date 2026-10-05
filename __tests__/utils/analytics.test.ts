@@ -163,7 +163,10 @@ describe('utils/analytics', () => {
     const gtag = jest.fn()
     const ym = jest.fn()
     const metravelLoadAnalytics = jest.fn()
+    // Оба счётчика готовы: без проверки автоматизации событие ушло бы сразу.
     ;(global as any).window = {
+      gtag,
+      ym,
       addEventListener: jest.fn(),
       localStorage: {
         getItem: jest.fn(() => JSON.stringify({ necessary: true, analytics: true })),
@@ -171,7 +174,7 @@ describe('utils/analytics', () => {
       metravelLoadAnalytics,
       __metravelGaId: 'G-TEST123',
       __metravelMetrikaId: 62803912,
-      __metravelMetrikaReady: false,
+      __metravelMetrikaReady: true,
     }
 
     try {
