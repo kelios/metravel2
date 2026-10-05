@@ -51,6 +51,13 @@ export const ICON_FONT_STYLE_ID = 'metravel-icon-font-face'
  * которым expo-font подключал её раньше, включая Safari. `document.fonts.load`
  * здесь только сообщает о готовности; если этого API нет или он ответил раньше
  * времени, показ ведёт `font-display:block` самого правила.
+ *
+ * Сбой загрузки. Упавшую гарнитуру браузер сам не перезапрашивает, поэтому
+ * правило снимается и объявляется заново: без сети — по `online`, в сети — один
+ * раз сразу (обрыв соединения, разовый 5xx). Второй сбой в сети означает, что
+ * шрифт недоступен надолго (блокировщик шрифтов, режим блокировки iOS): иконки
+ * открываются как есть — тем же глифом запасного шрифта, что был до #2170, — а
+ * не остаются невидимыми до перезагрузки.
  */
 export function buildIconFontLoaderScript(fontUrl: string): string {
   const url = JSON.stringify(fontUrl)
@@ -60,15 +67,19 @@ export function buildIconFontLoaderScript(fontUrl: string): string {
   const lcpSelector = JSON.stringify(ICON_FONT_LCP_IMAGE_SELECTOR)
   return (
     '(function(){' +
-    `var d=document,h=d.documentElement,u=${url},started=false,o=null,rule=null;` +
+    `var d=document,h=d.documentElement,u=${url},started=false,attempts=0,o=null,rule=null;` +
     `function ready(){h.classList.add(${readyClass})}` +
-    'function start(){if(started)return;started=true;if(o){try{o.disconnect()}catch(_){}o=null}' +
+    'function start(){if(started)return;started=true;attempts++;if(o){try{o.disconnect()}catch(_){}o=null}' +
     `rule=d.createElement('style');rule.id=${styleId};` +
     `rule.textContent='@font-face{font-family:'+${family}+';src:url("'+u+'");font-display:block}';d.head.appendChild(rule);` +
     "var fs=d.fonts;if(!fs||typeof fs.load!=='function'){ready();return}" +
-    // Обрыв сети: упавшую гарнитуру браузер сам не перезапрашивает — правило
-    // снимается и объявляется заново по `online`; до тех пор иконки скрыты.
-    `fs.load('1em '+${family}).then(ready,function(){try{d.head.removeChild(rule)}catch(_){}rule=null;started=false;window.addEventListener('online',start,{once:true})})}` +
+    `fs.load('1em '+${family}).then(ready,failed)}` +
+    // Последняя попытка оставляет правило на месте: открытые иконки дорисуются
+    // сами, если шрифт всё-таки дойдёт.
+    'function failed(){if(navigator.onLine!==false&&attempts>=2){ready();return}' +
+    'try{d.head.removeChild(rule)}catch(_){}rule=null;started=false;' +
+    "if(navigator.onLine===false){window.addEventListener('online',start,{once:true});return}" +
+    'start()}' +
     'try{' +
     `var img=d.querySelector(${lcpSelector});` +
     "if(!img||img.complete||h.classList.contains('app-hydrated')){start();return}" +

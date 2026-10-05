@@ -167,22 +167,66 @@ describe('iconFontShell', () => {
       expect(fontFaceRules()).toHaveLength(1)
     })
 
-    it('после обрыва сети иконки остаются скрытыми, а правило объявляется заново по online', async () => {
-      const calls = installFontLoadingApi()
-      runLoader()
+    describe('сбой загрузки шрифта', () => {
+      const setOnline = (online: boolean) =>
+        Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => online })
 
-      calls[0].reject()
-      await flush()
-      expect(isReady()).toBe(false)
-      // Упавшую гарнитуру браузер не перезапрашивает — старое правило снято.
-      expect(fontFaceRules()).toEqual([])
+      afterEach(() => {
+        setOnline(true)
+      })
 
-      window.dispatchEvent(new Event('online'))
-      expect(fontFaceRules()).toEqual([EXPECTED_RULE])
-      expect(calls).toHaveLength(2)
-      calls[1].resolve()
-      await flush()
-      expect(isReady()).toBe(true)
+      it('без сети иконки остаются скрытыми, а правило объявляется заново по online', async () => {
+        const calls = installFontLoadingApi()
+        setOnline(false)
+        runLoader()
+
+        calls[0].reject()
+        await flush()
+        expect(isReady()).toBe(false)
+        // Упавшую гарнитуру браузер не перезапрашивает — старое правило снято.
+        expect(fontFaceRules()).toEqual([])
+        expect(calls).toHaveLength(1)
+
+        setOnline(true)
+        window.dispatchEvent(new Event('online'))
+        expect(fontFaceRules()).toEqual([EXPECTED_RULE])
+        expect(calls).toHaveLength(2)
+        calls[1].resolve()
+        await flush()
+        expect(isReady()).toBe(true)
+      })
+
+      it('в сети повторяет один раз сразу: обрыв соединения не оставляет страницу без иконок', async () => {
+        const calls = installFontLoadingApi()
+        runLoader()
+
+        calls[0].reject()
+        await flush()
+        // События `online` при живой сети не будет — ждать его нельзя.
+        expect(calls).toHaveLength(2)
+        expect(fontFaceRules()).toEqual([EXPECTED_RULE])
+        expect(isReady()).toBe(false)
+
+        calls[1].resolve()
+        await flush()
+        expect(isReady()).toBe(true)
+      })
+
+      it('после второго сбоя в сети открывает иконки как есть, а не прячет их до перезагрузки', async () => {
+        const calls = installFontLoadingApi()
+        runLoader()
+
+        calls[0].reject()
+        await flush()
+        calls[1].reject()
+        await flush()
+
+        // Блокировщик шрифтов, режим блокировки iOS: шрифта не будет, но кнопки
+        // не должны остаться пустыми навсегда — показ ведёт запасной глиф, как до #2170.
+        expect(isReady()).toBe(true)
+        expect(fontFaceRules()).toEqual([EXPECTED_RULE])
+        expect(calls).toHaveLength(2)
+      })
     })
 
     it('без Font Loading API объявляет гарнитуру и сразу открывает иконки: показ ведёт font-display:block', () => {

@@ -1,3 +1,5 @@
+import { HEADER_LOGO_WEB_SRC } from '@/components/layout/headerLayoutContract';
+
 let preloadPromise: Promise<void> | null = null;
 
 const preloadImage = (src: string): Promise<void> => {
@@ -27,7 +29,7 @@ export function preloadOfflineRoute(): Promise<void> {
       import('@/components/layout/HeaderContextBar'),
       import('@/components/layout/CustomHeaderAccountSection'),
       import('@/components/layout/CustomHeaderMobileAccountSection'),
-      preloadImage('/assets/icons/logo_yellow_60x60.png'),
+      preloadImage(HEADER_LOGO_WEB_SRC),
     ]).then(() => undefined);
     preloadPromise = attempt.catch((error) => {
       preloadPromise = null;

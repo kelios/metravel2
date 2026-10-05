@@ -39,6 +39,14 @@ describe('+html: шрифт иконок и логотип', () => {
     expect(link).not.toMatch(/fetchPriority/i)
   })
 
+  it('шрифт иконок не греет и генератор SEO-страниц: у загрузки шрифта один владелец', () => {
+    const generator = fs.readFileSync(path.resolve(process.cwd(), 'scripts/generate-seo-pages.js'), 'utf8')
+    expect(generator).not.toMatch(/as=["']font["']/)
+    const offlinePreload = fs.readFileSync(path.resolve(process.cwd(), 'utils/offlineRoutePreload.web.ts'), 'utf8')
+    // Адрес логотипа — одна константа: иначе офлайн-прогрев скачает другой файл.
+    expect(offlinePreload).toContain('preloadImage(HEADER_LOGO_WEB_SRC)')
+  })
+
   it('иконочным гарнитурам expo-font ставит block, а не swap', () => {
     expect(head).toContain('buildFontDisplayPolicyScript()')
     expect(source).not.toContain('getFontFaceSwapScript')
