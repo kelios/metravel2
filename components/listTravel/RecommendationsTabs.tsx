@@ -45,6 +45,7 @@ import {
   type TabType,
 } from './recommendationsTabsModel';
 import { translate as i18nT } from '@/i18n'
+import { getTabA11yProps } from '@/utils/a11yTabRoles';
 
 
 interface RecommendationsTabsProps {
@@ -709,9 +710,8 @@ const RecommendationsTabs = memo(
                   isNarrowViewport && styles.tabCompact,
                   isActiveTab && styles.activeTab,
                 ]}
-                accessibilityRole="tab"
+                {...getTabA11yProps(isActiveTab)}
                 accessibilityLabel={tab.label}
-                accessibilityState={{ selected: isActiveTab }}
               >
                 <Feather
                   name={tab.icon as any}

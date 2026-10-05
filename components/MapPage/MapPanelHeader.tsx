@@ -1,5 +1,5 @@
 import React, { memo } from 'react'
-import { Platform, Pressable, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { ThemedColors } from '@/hooks/useTheme'
@@ -8,6 +8,7 @@ import { MAP_PANEL_TAB_MAX_FONT_SCALE } from '@/screens/tabs/map.styles'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { formatInteger } from '@/i18n/format'
 import { translate as i18nT } from '@/i18n'
+import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles'
 
 
 type PanelTab = 'search' | 'route' | 'travels'
@@ -77,12 +78,9 @@ function TabButton({
       ]}
       onPress={onPress}
       android_ripple={{ color: themedColors.overlayLight }}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: active }}
-      // RN-web 0.21 does not turn `accessibilityState.selected` into
-      // `aria-selected`: the production probe of #2217 found role="tab" with no
-      // selected tab in the DOM. Web takes the ARIA prop itself, as BottomDock does.
-      aria-selected={Platform.OS === 'web' ? active : undefined}
+      // iOS: `button` + selected, the row is `tabbar`; web gets `aria-selected`
+      // (RN-web 0.21 drops `accessibilityState.selected`, #2217). #2262.
+      {...getTabA11yProps(active)}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       // iOS: the label is capped at MAP_PANEL_TAB_MAX_FONT_SCALE; at the
@@ -141,7 +139,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
       <View style={styles.tabsRow}>
         <View
           style={styles.tabsSegment}
-          accessibilityRole="tablist"
+          {...getTabListA11yProps()}
           aria-label={i18nT('map:components.MapPage.MapPanelHeader.panel_karty_951bb838')}
         >
           {/* Accessible names start with the visible label (WCAG 2.5.3); the

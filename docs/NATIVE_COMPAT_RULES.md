@@ -74,6 +74,35 @@ resizable-window, portrait и landscape режимах.
   `{...(Platform.OS === 'web' ? ({ role: 'listitem' } as any) : {})}`.
   Валидные на native значения — см. `AccessibilityRole` в типах RN.
 
+### 4a. Роли вкладки на iOS: `tab`/`tablist` не дают трейта (#2262)
+
+- RN 0.86 переводит строку роли в `UIAccessibilityTraits` функцией `fromString`
+  (`node_modules/react-native/ReactCommon/react/renderer/components/view/accessibilityPropsConversions.h`):
+  из «вкладочных» ролей там есть только `tabbar` → `UIAccessibilityTraitTabBar`,
+  а `tab` и `tablist` уходят в `None`. VoiceOver на iPhone и iPad не называет
+  вкладку вкладкой, не слышит ряд и не объявляет «N из M». Если у View есть и
+  `role`, и `accessibilityRole`, трейт берётся из `role`
+  (`AccessibilityProps.cpp`) — `role="tab"` даёт тот же `None`.
+- Тот же обход стоит в expo-router (`build/react-navigation/bottom-tabs/views/BottomTabItem.js`:
+  `role: Platform.select({ ios: 'button', default: 'tab' })`, FIXME
+  «role: 'tab' doesn't seem to work as expected on iOS»).
+- **Правило:** роль вкладки и ряда ставится только через
+  `getTabA11yProps(selected)` / `getTabListA11yProps()` из
+  `utils/a11yTabRoles.ts` (реэкспорт — `utils/a11y.ts`). iOS: вкладка `button`
+  + `accessibilityState.selected` (`UIAccessibilityTraitButton | Selected`,
+  `RCTViewComponentView.mm`), ряд — `tabbar` (UIKit называет элементы такого
+  контейнера вкладками и считает «N из M»). Web и Android — прежние
+  `tab`/`tablist`; на web помощник добавляет `aria-selected` (RN-web 0.21 не
+  переводит `accessibilityState.selected` в DOM, прод-проба #2217), native его
+  не получает. Прямую запись роли ловит
+  `npm run guard:tab-roles` (цепочка `npm run lint`).
+- Выбор сделан по исходникам RN; замер Accessibility Inspector (трейты вкладки
+  и ряда, «выбрано», «N из M») — в native-окне поезда 4 (кейс `IOS-19` в
+  `docs/MANUAL_TEST_CASES.md`). Если замер покажет иное, меняется только
+  `TAB_ROLES_IOS` в `utils/a11yTabRoles.ts`.
+- Вкладки без ряда-контейнера (награды, рекомендации, план поездки) на iOS
+  дают «кнопка, выбрано» без «N из M»: ряда `tablist` у них нет и на web.
+
 ## 5. Постоянные патчи node_modules (postinstall) — главный подозреваемый
 
 - Скрипты вида `fix-react-native-compat.js` переживают миграции SDK и бьют

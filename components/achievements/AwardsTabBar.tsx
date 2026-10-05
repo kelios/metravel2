@@ -11,6 +11,7 @@ import {
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
+import { getTabA11yProps } from '@/utils/a11yTabRoles'
 
 export interface AwardsTab {
   key: string
@@ -45,8 +46,7 @@ function AwardsTabBar({ tabs, activeKey, onChange, testID, style }: Props) {
           <Pressable
             key={tab.key}
             onPress={() => onChange(tab.key)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: active }}
+            {...getTabA11yProps(active)}
             accessibilityLabel={tab.label}
             testID={`awards-tab-${tab.key}`}
             style={[styles.tab, active && styles.tabActive]}

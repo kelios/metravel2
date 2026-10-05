@@ -22,6 +22,7 @@ import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker';
 import type { AuthorWithTravels, SubscriptionTab } from '@/hooks/useSubscriptionsData';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { selectPlural, translate as i18nT } from '@/i18n'
+import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles';
 
 
 type WebEnhancedViewStyle = ViewStyle & { boxShadow?: string; cursor?: 'pointer' };
@@ -101,7 +102,7 @@ export default function SubscriptionsTabContent({
     if (!showTabBar || !onChangeTab) return null;
 
     return (
-      <View style={styles.tabBar} accessibilityRole="tablist">
+      <View style={styles.tabBar} {...getTabListA11yProps()}>
         {(['subscriptions', 'subscribers'] as const).map((tab) => {
           const isActive = activeTab === tab;
           const count = tab === 'subscriptions' ? subscriptions.length : subscribers.length;
@@ -111,8 +112,7 @@ export default function SubscriptionsTabContent({
               key={tab}
               style={[styles.tab, isActive && styles.tabActive, globalFocusStyles.focusable]}
               onPress={() => onChangeTab(tab)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isActive }}
+              {...getTabA11yProps(isActive)}
               accessibilityLabel={label}
               {...Platform.select({ web: { cursor: 'pointer' } })}
             >

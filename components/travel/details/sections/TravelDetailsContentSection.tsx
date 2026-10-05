@@ -16,6 +16,7 @@ import YouTubeSectionSlot from './YouTubeSectionSlot'
 import DeferredQuestForCitySection from './DeferredQuestForCitySection'
 import TravelRegisterCtaSection from './TravelRegisterCtaSection'
 import { translate as i18nT } from '@/i18n'
+import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles'
 
 
 // #1499: выбор web/native переехал в платформенную пару
@@ -179,7 +180,7 @@ export const TravelDetailsContentSection: React.FC<{
           <Text style={styles.mobileInsightLabel}>{i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.vpechatleniya_avtora_2f076a9a')}</Text>
           <View
             style={styles.mobileInsightTabs}
-            accessibilityRole={'tablist' as any}
+            {...getTabListA11yProps()}
             accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.vpechatleniya_avtora_2f076a9a')}
           >
             {insightConfigs.map((section) => (
@@ -190,8 +191,7 @@ export const TravelDetailsContentSection: React.FC<{
                   styles.mobileInsightChip,
                   mobileInsightKey === section.key && styles.mobileInsightChipActive,
                 ]}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: mobileInsightKey === section.key }}
+                {...getTabA11yProps(mobileInsightKey === section.key)}
                 accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.pokazat_razdel_value1_3669c273', { value1: section.label })}
               >
                 <Text

@@ -14,8 +14,11 @@ import {
   isWCAG_AA,
   isWCAG_AAA,
   getAccessibilityRole,
+  getTabA11yProps,
+  getTabListA11yProps,
   isGoodAltText,
 } from '@/utils/a11y';
+import { Platform } from 'react-native';
 import {
   useKeyboardNavigation,
   useFocusManager,
@@ -69,6 +72,47 @@ describe('a11y Utilities - ARIA Roles', () => {
 
   it('должен возвращать undefined для неизвестных ролей', () => {
     expect(getAccessibilityRole('unknown')).toBeUndefined();
+  });
+});
+
+// #2262 / IOS-TAB-ROLE-TRAIT-001: RN 0.86 на iOS не даёт трейта ролям `tab` и
+// `tablist` — помощник отдаёт там `button` + selected и `tabbar`; web и Android
+// сохраняют прежние роли (на них стоят e2e `getByRole('tab')`).
+describe.each([
+  ['web', 'tab', 'tablist'],
+  ['android', 'tab', 'tablist'],
+  ['ios', 'button', 'tabbar'],
+] as const)('a11y Utilities - tab roles on %s (#2262)', (os, tabRole, tablistRole) => {
+  const originalOS = Platform.OS;
+
+  beforeEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: os });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: originalOS });
+  });
+
+  it(`вкладка — ${tabRole} с selected, ряд — ${tablistRole}`, () => {
+    // RN-web 0.21 не переводит accessibilityState.selected в DOM (#2217): на web
+    // помощник ставит aria-selected сам; native-разметка без него — прежняя.
+    const web = (selected: boolean) => (os === 'web' ? { 'aria-selected': selected } : {});
+    expect(getTabA11yProps(true)).toStrictEqual({
+      accessibilityRole: tabRole,
+      accessibilityState: { selected: true },
+      ...web(true),
+    });
+    expect(getTabA11yProps(false)).toStrictEqual({
+      accessibilityRole: tabRole,
+      accessibilityState: { selected: false },
+      ...web(false),
+    });
+    expect(getTabListA11yProps()).toEqual({ accessibilityRole: tablistRole });
+  });
+
+  it('getAccessibilityRole отдаёт те же роли вкладки и ряда — второго владельца нет', () => {
+    expect(getAccessibilityRole('tab')).toBe(tabRole);
+    expect(getAccessibilityRole('tablist')).toBe(tablistRole);
   });
 });
 

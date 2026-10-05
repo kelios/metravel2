@@ -8,6 +8,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { translate as i18nT } from '@/i18n'
 import { isPhoneLayout } from '@/utils/phoneLayout';
+import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles';
 
 
 export type ProfileTabKey =
@@ -254,8 +255,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
           globalFocusStyles.focusable,
         ]}
         onPress={() => onChangeTab(tab.key)}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: isActive }}
+        {...getTabA11yProps(isActive)}
         accessibilityLabel={a11yLabel}
         accessibilityHint={tab.hint}
         onLayout={(event) => {
@@ -287,7 +287,7 @@ export function ProfileTabs({ activeTab, onChangeTab, counts, tabKeys }: Profile
   };
 
   return (
-    <View style={styles.wrapper} accessibilityRole="tablist">
+    <View style={styles.wrapper} {...getTabListA11yProps()}>
       {isMobile ? (
         useCompactMobileRow ? (
           <View style={styles.compactMobileTabRow}>{tabs.map(renderTab)}</View>

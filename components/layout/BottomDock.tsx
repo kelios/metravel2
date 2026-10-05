@@ -35,6 +35,7 @@ import { useAuth } from "@/context/AuthContext";
 import { runAccountMenuTarget } from "./accountMenuModel";
 import { handleHeaderNavPress } from "./customHeaderNavModel";
 import { translate as i18nT } from '@/i18n'
+import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles';
 
 
 let GorhomBottomSheet: any = null;
@@ -115,10 +116,8 @@ const DockButton = memo(function DockButton({
         // смонтированный таб без пересборки.
         router.navigate(href as any);
       }}
-      accessibilityRole="tab"
+      {...getTabA11yProps(isActive)}
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ selected: isActive }}
-      aria-selected={Platform.OS === 'web' ? isActive : undefined}
       hitSlop={10}
       testID={testID}
       android_ripple={{ color: 'rgba(0,0,0,0.12)', borderless: false }}
@@ -365,7 +364,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           <View
             style={styles.row}
             testID="footer-dock-row"
-            accessibilityRole="tablist"
+            {...getTabListA11yProps()}
             accessibilityLabel={i18nT('navigation:components.layout.BottomDock.navigatsiya_24d0f434')}
           >
             {items.map((item) => {

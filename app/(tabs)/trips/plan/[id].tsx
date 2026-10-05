@@ -73,6 +73,7 @@ import { ApiError } from '@/api/clientErrors';
 import { translate as i18nT } from '@/i18n'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
+import { getTabA11yProps } from '@/utils/a11yTabRoles';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import {
   createStyles,
@@ -943,8 +944,7 @@ export default function PlannedTripScreen() {
                 return (
                   <Pressable
                     key={tabItem.key}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: active }}
+                    {...getTabA11yProps(active)}
                     accessibilityLabel={tabLabel(tabItem, trip.status)}
                     onPress={() => setActiveTab(tabItem.key)}
                     style={[styles.tab, active && styles.tabActive]}

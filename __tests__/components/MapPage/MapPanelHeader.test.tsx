@@ -14,6 +14,7 @@ import {
 import { formatInteger } from '@/i18n/format'
 import { resources } from '@/i18n/resources'
 import { translate as i18nT } from '@/i18n'
+import { getTabRoles } from '@/utils/a11yTabRoles'
 
 // #2217 — the desktop-branch panel header (web, iPad, Android tablet): the row
 // belongs to the tabs only. Norms: docs/design/map-panel-header-tablet.md.
@@ -76,11 +77,16 @@ const renderHeader = (activeTab: PanelTab, travelsCount = 1234) => {
   return { ...utils, ...handlers }
 }
 
+// #2262: roles come from utils/a11yTabRoles — `tab`/`tablist` on web and
+// Android, `button` + selected / `tabbar` on iOS (no trait for `tab` there).
 describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) => {
   const originalOS = Platform.OS
+  let tabRole = 'tab'
+  let tablistRole = 'tablist'
 
   beforeEach(() => {
     Object.defineProperty(Platform, 'OS', { value: os })
+    ;({ tab: tabRole, tablist: tablistRole } = getTabRoles())
   })
 
   afterEach(() => {
@@ -90,7 +96,8 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
   it('the row holds one tablist of exactly three tabs, in the order of the strip', () => {
     const utils = renderHeader('search')
 
-    expect(utils.getAllByRole('tab').map((tab) => tab.props.testID)).toEqual(TAB_IDS)
+    expect(tabRole).toBe(os === 'ios' ? 'button' : 'tab')
+    expect(utils.getAllByRole(tabRole).map((tab) => tab.props.testID)).toEqual(TAB_IDS)
     expect(TAB_IDS).toHaveLength(MAP_PANEL_TAB_COUNT)
 
     // tabsContainer → tabsRow → the segment is the row's only child.
@@ -98,7 +105,8 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
     expect(container.children).toHaveLength(1)
     const row = container.children[0]
     expect(row.children).toHaveLength(1)
-    expect(row.children[0].props.accessibilityRole).toBe('tablist')
+    expect(tablistRole).toBe(os === 'ios' ? 'tabbar' : 'tablist')
+    expect(row.children[0].props.accessibilityRole).toBe(tablistRole)
     expect(row.children[0].children).toHaveLength(MAP_PANEL_TAB_COUNT)
   })
 
@@ -108,7 +116,10 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
     for (const testID of ['map-filters-button', 'map-help-button', 'map-reset-filters-button']) {
       expect(utils.queryByTestId(testID)).toBeNull()
     }
-    expect(utils.queryAllByRole('button')).toHaveLength(0)
+    // On iOS the tabs themselves are buttons (#2262): count only non-tab buttons.
+    expect(
+      utils.queryAllByRole('button').filter((node) => !TAB_IDS.includes(node.props.testID)),
+    ).toHaveLength(0)
   })
 
   it.each([
@@ -118,7 +129,7 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
   ] as const)('activeTab «%s» selects exactly %s', (activeTab, testID) => {
     const utils = renderHeader(activeTab)
 
-    expect(selectedTabIds(utils.getAllByRole('tab'))).toEqual([testID])
+    expect(selectedTabIds(utils.getAllByRole(tabRole))).toEqual([testID])
   })
 
   it('each tab switches its own view', () => {
@@ -137,18 +148,18 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
   it('names start with the visible label; «Места» carries the full count, the badge caps it', () => {
     const utils = renderHeader('search', 1234)
 
-    expect(utils.getByRole('tab', { name: `${PLACES()} (${formatInteger(1234)})` }).props.testID).toBe(
+    expect(utils.getByRole(tabRole, { name: `${PLACES()} (${formatInteger(1234)})` }).props.testID).toBe(
       'map-panel-tab-travels',
     )
-    expect(utils.getByRole('tab', { name: ROUTE() }).props.testID).toBe('map-panel-tab-route')
-    expect(utils.getByRole('tab', { name: FILTERS() }).props.testID).toBe('map-panel-tab-filters')
+    expect(utils.getByRole(tabRole, { name: ROUTE() }).props.testID).toBe('map-panel-tab-route')
+    expect(utils.getByRole(tabRole, { name: FILTERS() }).props.testID).toBe('map-panel-tab-filters')
     expect(utils.getByText('999+')).toBeTruthy()
   })
 
   it('no count yet: no badge, the name is the label', () => {
     const utils = renderHeader('search', 0)
 
-    expect(utils.getByRole('tab', { name: PLACES() }).props.testID).toBe('map-panel-tab-travels')
+    expect(utils.getByRole(tabRole, { name: PLACES() }).props.testID).toBe('map-panel-tab-travels')
     expect(utils.queryByText('0')).toBeNull()
   })
 

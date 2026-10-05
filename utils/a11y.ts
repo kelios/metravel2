@@ -7,20 +7,26 @@
 
 import { Platform, AccessibilityRole } from 'react-native';
 import { translate as i18nT } from '@/i18n'
+import { getTabA11yProps, getTabListA11yProps, getTabRoles } from './a11yTabRoles';
 
+// Роли вкладки и ряда вкладок (#2262): владелец — `./a11yTabRoles` (без
+// зависимостей, чтобы маршрутные чанки web не тянули весь этот модуль).
+export { getTabA11yProps, getTabListA11yProps };
+export type { TabA11yProps, TabListA11yProps } from './a11yTabRoles';
 
 /**
  * ARIA и Semantic Role Mapping
  * Используется для кроссплатформной поддержки доступности
  */
 export const getAccessibilityRole = (role: string): AccessibilityRole | undefined => {
+  const tabRoles = getTabRoles();
   // React Native поддерживает ограниченный набор ролей
   const roleMap: Record<string, AccessibilityRole> = {
     button: 'button',
     link: 'link',
     search: 'search',
-    tab: 'tab',
-    tablist: 'tablist',
+    tab: tabRoles.tab,
+    tablist: tabRoles.tablist,
     heading: 'header',
     alert: 'alert',
     // Web-leaning semantic roles (used by RN Web + our a11y helpers/tests).
@@ -350,6 +356,8 @@ export const isGoodAltText = (altText: string): boolean => {
 
 export default {
   getAccessibilityRole,
+  getTabA11yProps,
+  getTabListA11yProps,
   handleKeyboardEvent,
   createFocusManager,
   checkContrast,
