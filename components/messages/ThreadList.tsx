@@ -1,13 +1,15 @@
-import { memo, useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, FlatList, ActivityIndicator, Image, TextInput, Platform } from 'react-native';
+import { memo, useCallback, useMemo, useState, type ReactElement } from 'react';
+import { View, StyleSheet, Pressable, FlatList, ActivityIndicator, TextInput, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import IconButton from '@/components/ui/IconButton';
+import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
-import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { isOrphanedMessageThread, type MessageThread } from '@/api/messages';
 import { confirmAction } from '@/utils/confirmAction';
+import ThreadRow from '@/components/messages/ThreadRow';
+import { formatThreadTimestamp } from '@/components/messages/messageTime';
+import { webTitleRef } from '@/utils/webProps';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -24,6 +26,11 @@ interface ThreadListProps {
     onDeleteThread?: (threadId: number) => void;
     selectedThreadId?: number | null;
     showSearch?: boolean;
+    /**
+     * Пустой список без своей кнопки «Новый диалог»: на desktop её несёт пустая
+     * правая панель экрана, вторая такая же рядом — лишняя (#2267).
+     */
+    hideEmptyStateAction?: boolean;
 }
 
 function ThreadList({
@@ -39,6 +46,7 @@ function ThreadList({
     onDeleteThread,
     selectedThreadId,
     showSearch,
+    hideEmptyStateAction,
 }: ThreadListProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -48,7 +56,8 @@ function ThreadList({
 
     // #2127: удаление диалога спрашивает подтверждение. Web — встроенная строка
     // подтверждения под диалогом (своя вёрстка в списке); native — общий
-    // confirmAction (системный Alert). Долгое нажатие и кнопка корзины — один путь.
+    // confirmAction (системный Alert). Кнопка строки, долгое нажатие и действие
+    // скринридера (`ThreadRow`, #2264) — один путь.
     const handleDeletePress = useCallback(
         (threadId: number) => {
             if (!onDeleteThread) return;
@@ -68,11 +77,6 @@ function ThreadList({
             });
         },
         [onDeleteThread],
-    );
-
-    const handleLongPressThread = useCallback(
-        (thread: MessageThread) => handleDeletePress(thread.id),
-        [handleDeletePress],
     );
 
     const handleConfirmDelete = useCallback(
@@ -116,24 +120,6 @@ function ThreadList({
         [getOtherParticipantId, participantAvatars]
     );
 
-    const formatDate = useCallback((dateStr: string | null) => {
-        if (!dateStr) return '';
-        try {
-            const date = new Date(dateStr);
-            const now = new Date();
-            const isToday =
-                date.getDate() === now.getDate() &&
-                date.getMonth() === now.getMonth() &&
-                date.getFullYear() === now.getFullYear();
-            if (isToday) {
-                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            }
-            return date.toLocaleDateString([], { day: 'numeric', month: 'short' });
-        } catch {
-            return '';
-        }
-    }, []);
-
     const filteredThreads = useMemo(() => {
         if (!search.trim()) return threads;
         const q = search.trim().toLowerCase();
@@ -144,160 +130,84 @@ function ThreadList({
     }, [threads, search, getOtherParticipantName]);
 
     const renderItem = useCallback(
-        ({ item }: { item: MessageThread }) => {
-            const name = getOtherParticipantName(item);
-            const avatarUrl = getOtherParticipantAvatar(item);
-            const time = formatDate(item.last_message_created_at);
-            const isSelected = selectedThreadId != null && item.id === selectedThreadId;
-            const unreadCount = item.unread_count ?? 0;
-            const hasUnread = unreadCount > 0;
-            return (
-                <View>
-                    <View
-                        testID={`thread-item-${item.id}`}
-                        style={[
-                            styles.threadItem,
-                            { backgroundColor: isSelected ? colors.primarySoft : colors.surface, borderColor: isSelected ? colors.primary : colors.borderLight },
-                            hasUnread && !isSelected && { borderColor: colors.primary, borderWidth: 1.5 },
-                        ]}
-                    >
-                    <Pressable
-                        style={({ pressed }) => [
-                            styles.threadMainAction,
-                            pressed && { opacity: 0.85 },
-                        ]}
-                        onPress={() => onSelectThread(item)}
-                        onLongPress={() => handleLongPressThread(item)}
-                        delayLongPress={500}
-                        accessibilityRole="button"
-                        accessibilityLabel={hasUnread ? i18nT('messages:components.messages.ThreadList.dialog_s_value1_value2_neprochitannyh_62b679f3', { value1: name, value2: unreadCount }) : i18nT('messages:components.messages.ThreadList.dialog_s_value1_0ed1fb8e', { value1: name })}
-                    >
-                    <View style={[styles.avatar, { backgroundColor: hasUnread ? colors.primary : colors.primarySoft }]}>
-                        {avatarUrl ? (
-                            <Image
-                                source={{ uri: optimizeImageUrl(avatarUrl, { width: 88, quality: 70, fit: 'cover' }) ?? avatarUrl }}
-                                style={styles.avatarImage}
-                            />
-                        ) : (
-                            <Feather name="user" size={20} color={hasUnread ? colors.textInverse : colors.primary} />
-                        )}
-                    </View>
-                    <View style={styles.threadInfo}>
-                        <View style={styles.threadNameRow}>
-                            <Text style={[styles.threadName, { color: colors.text }, hasUnread && styles.threadNameUnread]} numberOfLines={1}>
-                                {name}
-                            </Text>
-                            <View style={styles.threadTimeRow}>
-                                {!!time && (
-                                    <Text style={[styles.threadTime, { color: hasUnread ? colors.primary : colors.textMuted }]}>
-                                        {time}
-                                    </Text>
-                                )}
-                                {hasUnread && (
-                                    <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
-                                        <Text style={[styles.unreadBadgeText, { color: colors.textInverse }]}>
-                                            {unreadCount > 99 ? '99+' : unreadCount}
-                                        </Text>
-                                    </View>
-                                )}
-                            </View>
-                        </View>
-                    </View>
-                    <View style={styles.threadChevron}>
-                        <Feather name="chevron-right" size={18} color={hasUnread ? colors.primary : colors.textMuted} />
-                    </View>
-                    </Pressable>
-                    {onDeleteThread && (
-                        <View style={styles.threadActions}>
-                            <IconButton
-                                icon={<Feather name="trash-2" size={14} color={colors.textSecondary} />}
-                                label={i18nT('messages:components.messages.ThreadList.udalit_dialog_s_value1_175bc2fd', { value1: name })}
-                                size="sm"
-                                style={styles.threadDeleteButton}
-                                onPress={() => handleDeletePress(item.id)}
-                                showTooltip={Platform.OS === 'web'}
-                                tooltipPlacement="left"
-                            />
-                        </View>
-                    )}
-                    </View>
-                {confirmDeleteId === item.id && (
-                    <View style={styles.deleteConfirmRow}>
-                        <Pressable
-                            onPress={() => handleConfirmDelete(item.id)}
-                            style={[styles.deleteConfirmButton, { backgroundColor: colors.danger }]}
-                            accessibilityRole="button"
-                            accessibilityLabel={i18nT('messages:components.messages.ThreadList.podtverdit_udalenie_dialoga_e5fd0b3d')}
-                        >
-                            <Feather name="trash-2" size={14} color={colors.textInverse} />
-                            <Text style={[styles.deleteConfirmText, { color: colors.textInverse }]}>{i18nT('messages:components.messages.ThreadList.udalit_dialog_690a8668')}</Text>
-                        </Pressable>
-                        <Pressable
-                            onPress={() => setConfirmDeleteId(null)}
-                            style={[styles.deleteConfirmButton, { backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: colors.borderLight }]}
-                            accessibilityRole="button"
-                            accessibilityLabel={i18nT('messages:components.messages.ThreadList.otmena_c248c023')}
-                        >
-                            <Text style={[styles.deleteConfirmText, { color: colors.text }]}>{i18nT('messages:components.messages.ThreadList.otmena_c248c023')}</Text>
-                        </Pressable>
-                    </View>
-                )}
-                </View>
-            );
-        },
-        [colors, styles, getOtherParticipantName, getOtherParticipantAvatar, formatDate, onSelectThread, selectedThreadId, handleLongPressThread, confirmDeleteId, handleConfirmDelete, onDeleteThread, handleDeletePress]
+        ({ item }: { item: MessageThread }) => (
+            <ThreadRow
+                threadId={item.id}
+                name={getOtherParticipantName(item)}
+                avatarUrl={getOtherParticipantAvatar(item)}
+                time={formatThreadTimestamp(item.last_message_created_at)}
+                unreadCount={item.unread_count ?? 0}
+                selected={selectedThreadId != null && item.id === selectedThreadId}
+                onPress={() => onSelectThread(item)}
+                onRequestDelete={onDeleteThread ? () => handleDeletePress(item.id) : undefined}
+                confirmingDelete={confirmDeleteId === item.id}
+                onConfirmDelete={() => handleConfirmDelete(item.id)}
+                onCancelDelete={() => setConfirmDeleteId(null)}
+            />
+        ),
+        [getOtherParticipantName, getOtherParticipantAvatar, onSelectThread, selectedThreadId, confirmDeleteId, handleConfirmDelete, onDeleteThread, handleDeletePress]
     );
 
-    const listHeader = useMemo(() => {
-        if (!onNewConversation) return null;
-        return (
-            <Pressable
-                style={({ pressed }) => [
-                    styles.newConversationRow,
-                    { backgroundColor: colors.surface, borderColor: colors.borderLight },
-                    pressed && { opacity: 0.85 },
-                ]}
-                onPress={onNewConversation}
-                accessibilityRole="button"
-                accessibilityLabel={i18nT('messages:components.messages.ThreadList.novyy_dialog_d3c8399a')}
-            >
-                <View style={[styles.newConversationIcon, { backgroundColor: colors.primary }]}>
-                    <Feather name="edit" size={18} color={colors.textInverse} />
+    // Шапка панели (#2267): поиск и главное действие панели — «Новый диалог».
+    // Раньше действие было карточкой той же формы, что строка диалога, первой в
+    // списке, и отличалось от собеседника только текстом.
+    const newConversationLabel = i18nT('messages:components.messages.ThreadList.novyy_dialog_d3c8399a');
+    const panelHeader = showSearch || onNewConversation ? (
+        <View style={styles.panelHeader} testID="thread-list-header">
+            {showSearch ? (
+                <View style={[styles.searchContainer, { borderColor: colors.borderLight, backgroundColor: colors.backgroundSecondary }]}>
+                    <Feather name="search" size={16} color={colors.textMuted} />
+                    <TextInput
+                        style={[styles.searchInput, { color: colors.text }]}
+                        value={search}
+                        onChangeText={setSearch}
+                        placeholder={i18nT('messages:components.messages.ThreadList.poisk_b2d1212d')}
+                        placeholderTextColor={colors.textMuted}
+                        accessibilityLabel={i18nT('messages:components.messages.ThreadList.poisk_dialogov_8088fbb1')}
+                    />
+                    {search.length > 0 && (
+                        <Pressable
+                            onPress={() => setSearch('')}
+                            style={styles.searchClear}
+                            accessibilityRole="button"
+                            accessibilityLabel={i18nT('messages:components.messages.ThreadList.ochistit_poisk_4c8b47a5')}
+                        >
+                            <Feather name="x" size={16} color={colors.textMuted} />
+                        </Pressable>
+                    )}
                 </View>
-                <Text style={[styles.newConversationText, { color: colors.primaryText }]}>{i18nT('messages:components.messages.ThreadList.novyy_dialog_d3c8399a')}</Text>
-            </Pressable>
-        );
-    }, [onNewConversation, colors, styles]);
-
-    const searchBar = showSearch ? (
-        <View style={[styles.searchContainer, { borderColor: colors.borderLight, backgroundColor: colors.backgroundSecondary }]}>
-            <Feather name="search" size={16} color={colors.textMuted} />
-            <TextInput
-                style={[styles.searchInput, { color: colors.text }]}
-                value={search}
-                onChangeText={setSearch}
-                placeholder={i18nT('messages:components.messages.ThreadList.poisk_b2d1212d')}
-                placeholderTextColor={colors.textMuted}
-                accessibilityLabel={i18nT('messages:components.messages.ThreadList.poisk_dialogov_8088fbb1')}
-            />
-            {search.length > 0 && (
-                <Pressable onPress={() => setSearch('')} accessibilityLabel={i18nT('messages:components.messages.ThreadList.ochistit_poisk_4c8b47a5')}>
-                    <Feather name="x" size={16} color={colors.textMuted} />
-                </Pressable>
+            ) : (
+                <View style={styles.panelHeaderSpacer} />
             )}
+            {onNewConversation ? (
+                <View ref={webTitleRef(newConversationLabel)}>
+                    <Button
+                        label={newConversationLabel}
+                        onPress={onNewConversation}
+                        variant="primary"
+                        iconOnly
+                        icon={<Feather name="edit" size={18} color={colors.textOnPrimary} />}
+                        testID="thread-list-new-conversation"
+                    />
+                </View>
+            ) : null}
         </View>
     ) : null;
 
+    // Шапка панели — рамка, а не содержимое: она стоит над загрузкой, ошибкой,
+    // пустым состоянием и списком одним и тем же узлом. Раньше её рисовала каждая
+    // ветка сама (в списке — как `ListHeaderComponent`), а ветка загрузки не
+    // рисовала вовсе: при открытии экрана поиск и «Новый диалог» снимались и
+    // монтировались заново.
+    let content: ReactElement;
     if (loading && threads.length === 0) {
-        return (
+        content = (
             <View style={styles.center}>
                 <ActivityIndicator size="large" color={colors.primaryDark} />
             </View>
         );
-    }
-
-    if (error) {
-        return (
+    } else if (error) {
+        content = (
             <View style={styles.emptyWrap}>
                 <EmptyState
                     density="compact"
@@ -312,156 +222,66 @@ function ThreadList({
                 />
             </View>
         );
-    }
-
-    if (threads.length === 0) {
-        return (
-            <View style={{ flex: 1 }}>
-                {searchBar}
-                <View style={styles.emptyWrap}>
-                    <EmptyState
-                        density="compact"
-                        variant="empty"
-                        icon="message-circle"
-                        title={i18nT('messages:components.messages.ThreadList.net_soobscheniy_714b7881')}
-                        description={i18nT('messages:components.messages.ThreadList.napishite_avtoru_puteshestviya_chtoby_nachat_81bd050e')}
-                        action={onNewConversation ? {
-                            label: i18nT('messages:components.messages.ThreadList.novyy_dialog_d3c8399a'),
-                            onPress: onNewConversation,
-                            icon: 'edit',
-                        } : undefined}
-                        testID="thread-list-empty"
-                    />
-                </View>
+    } else if (threads.length === 0) {
+        content = (
+            <View style={styles.emptyWrap}>
+                <EmptyState
+                    density="compact"
+                    variant="empty"
+                    icon="message-circle"
+                    title={i18nT('messages:components.messages.ThreadList.net_soobscheniy_714b7881')}
+                    description={i18nT('messages:components.messages.ThreadList.napishite_avtoru_puteshestviya_chtoby_nachat_81bd050e')}
+                    action={onNewConversation && !hideEmptyStateAction ? {
+                        label: newConversationLabel,
+                        onPress: onNewConversation,
+                        icon: 'edit',
+                    } : undefined}
+                    testID="thread-list-empty"
+                />
             </View>
+        );
+    } else {
+        content = (
+            <FlatList
+                data={filteredThreads}
+                extraData={[search, confirmDeleteId]}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={renderItem}
+                style={styles.listScroll}
+                contentContainerStyle={styles.list}
+                refreshing={loading}
+                onRefresh={onRefresh}
+                ListEmptyComponent={
+                    search.trim() ? (
+                        <EmptyState
+                            density="compact"
+                            variant="search"
+                            icon="search"
+                            title={i18nT('messages:components.messages.ThreadList.nichego_ne_naydeno_86511b0f')}
+                            description={i18nT('messages:components.messages.ThreadList.poprobuyte_izmenit_zapros_dc40a3c8')}
+                            testID="thread-list-search-empty"
+                        />
+                    ) : null
+                }
+            />
         );
     }
 
-    const header = (
-        <>
-            {searchBar}
-            {listHeader}
-        </>
-    );
-
     return (
-        <FlatList
-            data={filteredThreads}
-            extraData={[search, confirmDeleteId]}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={renderItem}
-            contentContainerStyle={styles.list}
-            refreshing={loading}
-            onRefresh={onRefresh}
-            ListHeaderComponent={header}
-            ListEmptyComponent={
-                search.trim() ? (
-                    <EmptyState
-                        density="compact"
-                        variant="search"
-                        icon="search"
-                        title={i18nT('messages:components.messages.ThreadList.nichego_ne_naydeno_86511b0f')}
-                        description={i18nT('messages:components.messages.ThreadList.poprobuyte_izmenit_zapros_dc40a3c8')}
-                        testID="thread-list-search-empty"
-                    />
-                ) : null
-            }
-        />
+        <View style={styles.panel}>
+            {panelHeader}
+            {content}
+        </View>
     );
 }
 
+const SEARCH_FIELD_HEIGHT = 44;
+
 const createStyles = (_colors: ThemedColors) =>
     StyleSheet.create({
+        // Верхний отступ даёт шапка панели: она стоит над списком и не прокручивается.
         list: {
-            paddingVertical: DESIGN_TOKENS.spacing.sm,
-        },
-        threadItem: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginHorizontal: DESIGN_TOKENS.spacing.md,
-            marginBottom: DESIGN_TOKENS.spacing.xs,
-            borderRadius: DESIGN_TOKENS.radii.md,
-            borderWidth: 1,
-            // IconButton renders its web tooltip outside the 74px row. Keeping
-            // native clipping preserves rounded touch/ripple visuals, while web
-            // must let the hover label escape the card boundary.
-            overflow: Platform.OS === 'web' ? 'visible' : 'hidden',
-        },
-        threadMainAction: {
-            flex: 1,
-            flexDirection: 'row',
-            alignItems: 'center',
-            minHeight: 74,
-            paddingLeft: DESIGN_TOKENS.spacing.md,
-            paddingVertical: DESIGN_TOKENS.spacing.md,
-        },
-        avatar: {
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginRight: DESIGN_TOKENS.spacing.sm,
-            overflow: 'hidden',
-        },
-        avatarImage: {
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-        },
-        threadInfo: {
-            flex: 1,
-            marginRight: DESIGN_TOKENS.spacing.xs,
-        },
-        threadActions: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingRight: DESIGN_TOKENS.spacing.sm,
-        },
-        threadDeleteButton: {
-            width: 44,
-            height: 44,
-            minWidth: 44,
-            minHeight: 44,
-        },
-        threadChevron: {
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: DESIGN_TOKENS.spacing.xs,
-        },
-        threadNameRow: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-        },
-        threadName: {
-            fontSize: DESIGN_TOKENS.typography.sizes.md,
-            fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-            flex: 1,
-        },
-        threadTime: {
-            fontSize: DESIGN_TOKENS.typography.sizes.xs,
-            marginLeft: DESIGN_TOKENS.spacing.xs,
-        },
-        threadTimeRow: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: DESIGN_TOKENS.spacing.xs,
-        },
-        threadNameUnread: {
-            fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-        },
-        unreadBadge: {
-            minWidth: 20,
-            height: 20,
-            borderRadius: 10,
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: 6,
-        },
-        unreadBadgeText: {
-            fontSize: 11,
-            fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
+            paddingBottom: DESIGN_TOKENS.spacing.sm,
         },
         center: {
             flex: 1,
@@ -474,64 +294,50 @@ const createStyles = (_colors: ThemedColors) =>
             flex: 1,
             justifyContent: 'center',
         },
-        newConversationRow: {
+        panel: {
+            flex: 1,
+            minHeight: 0,
+        },
+        listScroll: {
+            flex: 1,
+        },
+        panelHeader: {
             flexDirection: 'row',
             alignItems: 'center',
-            paddingHorizontal: DESIGN_TOKENS.spacing.md,
-            paddingVertical: DESIGN_TOKENS.spacing.md,
-            marginHorizontal: DESIGN_TOKENS.spacing.md,
-            marginBottom: DESIGN_TOKENS.spacing.sm,
-            borderRadius: DESIGN_TOKENS.radii.md,
-            borderWidth: 1,
-        },
-        newConversationIcon: {
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginRight: DESIGN_TOKENS.spacing.sm,
-        },
-        newConversationText: {
-            fontSize: DESIGN_TOKENS.typography.sizes.md,
-            fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-        },
-        searchContainer: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginHorizontal: DESIGN_TOKENS.spacing.md,
+            gap: DESIGN_TOKENS.spacing.xs,
+            marginHorizontal: DESIGN_TOKENS.spacing.sm,
             marginTop: DESIGN_TOKENS.spacing.sm,
             marginBottom: DESIGN_TOKENS.spacing.xs,
-            paddingHorizontal: DESIGN_TOKENS.spacing.md,
-            paddingVertical: DESIGN_TOKENS.spacing.xs,
+        },
+        panelHeaderSpacer: {
+            flex: 1,
+        },
+        searchContainer: {
+            flex: 1,
+            minWidth: 0,
+            flexDirection: 'row',
+            alignItems: 'center',
+            minHeight: SEARCH_FIELD_HEIGHT,
+            paddingLeft: DESIGN_TOKENS.spacing.md,
             borderWidth: 1,
             borderRadius: DESIGN_TOKENS.radii.lg,
             gap: DESIGN_TOKENS.spacing.xs,
         },
         searchInput: {
             flex: 1,
+            minWidth: 0,
             fontSize: DESIGN_TOKENS.typography.sizes.sm,
             paddingVertical: DESIGN_TOKENS.spacing.xs,
+            paddingRight: DESIGN_TOKENS.spacing.md,
             ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
         },
-        deleteConfirmRow: {
-            flexDirection: 'row',
-            gap: DESIGN_TOKENS.spacing.xs,
-            marginHorizontal: DESIGN_TOKENS.spacing.md,
-            marginBottom: DESIGN_TOKENS.spacing.xs,
-            paddingTop: DESIGN_TOKENS.spacing.xs,
-        },
-        deleteConfirmButton: {
-            flexDirection: 'row',
+        // Крестик 16px в рамке 44×44: вся рамка — тач-цель.
+        searchClear: {
+            width: SEARCH_FIELD_HEIGHT,
+            height: SEARCH_FIELD_HEIGHT,
+            marginLeft: -DESIGN_TOKENS.spacing.md,
             alignItems: 'center',
-            gap: 4,
-            paddingHorizontal: DESIGN_TOKENS.spacing.md,
-            paddingVertical: DESIGN_TOKENS.spacing.xs,
-            borderRadius: DESIGN_TOKENS.radii.sm,
-        },
-        deleteConfirmText: {
-            fontSize: DESIGN_TOKENS.typography.sizes.xs,
-            fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+            justifyContent: 'center',
         },
     });
 

@@ -10,6 +10,7 @@ import ContentSafetyActions from '@/components/safety/ContentSafetyActions';
 import HiddenContentGate from '@/components/safety/HiddenContentGate';
 import { makeContentRef } from '@/types/contentSafety';
 import { confirmAction } from '@/utils/confirmAction';
+import { formatMessageTimestamp } from '@/components/messages/messageTime';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -33,25 +34,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
         [isOwn, isSystem, message.id, message.sender],
     );
 
-    const formattedTime = useMemo(() => {
-        if (!message.created_at) return '';
-        try {
-            const date = new Date(message.created_at);
-            const now = new Date();
-            const isToday =
-                date.getDate() === now.getDate() &&
-                date.getMonth() === now.getMonth() &&
-                date.getFullYear() === now.getFullYear();
-
-            const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            if (isToday) return time;
-
-            const dateStr = date.toLocaleDateString([], { day: 'numeric', month: 'short' });
-            return `${dateStr}, ${time}`;
-        } catch {
-            return '';
-        }
-    }, [message.created_at]);
+    const formattedTime = useMemo(() => formatMessageTimestamp(message.created_at), [message.created_at]);
 
     const copyText = useCallback(async () => {
         try {

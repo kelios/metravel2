@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Platform, ActivityIndicator } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
+import { View, Platform, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useIsFocused } from 'expo-router';
 
@@ -52,7 +51,11 @@ function MessagesScreenContent() {
     const isFocused = useIsFocused();
     const { isAuthenticated, authReady, userId } = useAuth();
     const colors = useThemedColors();
-    const { isMobile } = useResponsive();
+    // `clientOnly`: это поддерево монтируется только после `useWebHydrationGate`
+    // (см. `MessagesScreen`), в статическом HTML его нет. Без флага первый коммит
+    // брал SSR-ширину 0 и рисовал мобильную раскладку, а следующий перекладывал её
+    // в двухпанельную — список диалогов с шапкой монтировался дважды (#2267).
+    const { isMobile } = useResponsive({ clientOnly: true });
     const isDesktop = Platform.OS === 'web' && !isMobile;
     const { screenRef, viewportHeight } = useMessagesViewportHeight(Platform.OS === 'web' && isFocused);
     const params = useLocalSearchParams<{ userId?: string | string[]; user_id?: string | string[]; threadId?: string | string[] }>();
@@ -82,6 +85,7 @@ function MessagesScreenContent() {
     const {
         threads,
         loading: threadsLoading,
+        loaded: threadsLoaded,
         error: threadsError,
         refresh: refreshThreads,
         setThreadUnreadCount,
@@ -419,7 +423,7 @@ function MessagesScreenContent() {
             ) : (
                 <ThreadList
                     threads={visibleThreads}
-                    loading={threadsLoading || initialLoading}
+                    loading={threadsLoading || initialLoading || !threadsLoaded}
                     error={threadsError}
                     currentUserId={userId}
                     participantNames={mergedNames}
@@ -430,6 +434,7 @@ function MessagesScreenContent() {
                     onDeleteThread={handleDeleteThread}
                     selectedThreadId={selectedThread?.id}
                     showSearch
+                    hideEmptyStateAction={isDesktop}
                 />
             )}
         </View>
@@ -457,11 +462,22 @@ function MessagesScreenContent() {
         />
     ) : null;
 
+    // Пустая правая панель (#2267): из неё можно сразу начать диалог — раньше
+    // текст предлагал «начать новый», а кнопки рядом не было.
     const emptyChat = (
         <View style={[styles.emptyChat, { backgroundColor: colors.background }]}>
-            <Feather name="message-circle" size={48} color={colors.textMuted} />
-            <Text style={[styles.emptyChatText, { color: colors.textSecondary }]}>
-                {i18nT('messages:app.tabs.messages.vyberite_dialog_ili_nachnite_novyy_0cc840a3')}</Text>
+            <EmptyState
+                density="compact"
+                variant="empty"
+                icon="message-circle"
+                title={i18nT('messages:app.tabs.messages.vyberite_dialog_ili_nachnite_novyy_0cc840a3')}
+                action={{
+                    label: i18nT('messages:components.messages.ThreadList.novyy_dialog_d3c8399a'),
+                    onPress: handleNewConversation,
+                    icon: 'edit',
+                }}
+                testID="messages-empty-chat"
+            />
         </View>
     );
 

@@ -36,6 +36,9 @@ export const styles = StyleSheet.create({
         borderRadius: DESIGN_TOKENS.radii.lg,
         overflow: 'hidden',
     },
+    // 320 px — решение #2267: после #2264 имя собеседника получает в строке 221 px
+    // (17 знаков целиком, 22 знака из длинного имени), а контейнер ограничен
+    // 1000 px — каждые +10 px панели отнимались бы у чата (680 px).
     sidebar: {
         width: 320,
         borderRightWidth: 1,
@@ -50,10 +53,5 @@ export const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: DESIGN_TOKENS.spacing.md,
-    },
-    emptyChatText: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        textAlign: 'center',
     },
 });

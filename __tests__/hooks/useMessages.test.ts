@@ -109,6 +109,35 @@ describe('useThreads', () => {
     expect(result.current.threads).toEqual([]);
   });
 
+  // #2267: пустой `threads` до первого ответа — «ещё не знаем», а не «диалогов нет».
+  it('reports loaded only after the first load settles — success, empty and error alike', async () => {
+    mockFetchMessageThreads.mockResolvedValueOnce([]);
+    const empty = renderHook(() => useThreads(true, false));
+    expect(empty.result.current.loaded).toBe(false);
+    await waitFor(() => expect(empty.result.current.loaded).toBe(true));
+    expect(empty.result.current.threads).toEqual([]);
+
+    mockFetchMessageThreads.mockRejectedValueOnce(new Error('Network error'));
+    const failed = renderHook(() => useThreads(true, false));
+    expect(failed.result.current.loaded).toBe(false);
+    await waitFor(() => expect(failed.result.current.loaded).toBe(true));
+    expect(failed.result.current.error).toBe('Network error');
+  });
+
+  it('stays not loaded while disabled, then loads once enabled', async () => {
+    mockFetchMessageThreads.mockResolvedValueOnce([THREAD_1]);
+    const { result, rerender } = renderHook(({ enabled }: { enabled: boolean }) => useThreads(enabled, false), {
+      initialProps: { enabled: false },
+    });
+
+    await act(async () => {});
+    expect(result.current).toMatchObject({ loaded: false, loading: false, threads: [] });
+
+    rerender({ enabled: true });
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(result.current.threads).toHaveLength(1);
+  });
+
   it('refresh reloads data', async () => {
     mockFetchMessageThreads.mockResolvedValueOnce([THREAD_1]);
 

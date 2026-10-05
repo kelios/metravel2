@@ -67,7 +67,7 @@ const DELETE_SURFACES = {
   'components/map/EditMarkerModal.tsx': ['editor', 'удалить фото в редакторе метки'],
   'components/map/MarkersListComponent.tsx': ['row', 'удалить метку из списка меток'],
   'components/messages/MessageBubble.tsx': ['row', 'удалить своё сообщение: подпись и подтверждение (web — строка, native — Alert)'],
-  'components/messages/ThreadList.tsx': ['row', 'удалить диалог из списка: подпись с именем и подтверждение'],
+  'components/messages/ThreadRow.tsx': ['row', 'удалить диалог из строки списка: кнопка по наведению и фокусу (web), долгое нажатие (native); подпись с именем и подтверждение (#2264)'],
   'components/offline/OfflineSaveControl.tsx': ['sheet', 'пункт меню офлайна маршрута, destructive'],
   'components/profile/ProfileCollectionHeader.tsx': ['row', 'desktop: очистить коллекцию в шапке коллекции, с подтверждением'],
   'components/screens/history/HistoryScreen.tsx': ['row', '«Очистить историю» — пункт «⋯» с destructive'],

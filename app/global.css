@@ -469,6 +469,45 @@ select:focus-visible {
 :root {
   --mt-keyboard-inset: 0px;
 }
+/* Строка диалога /messages (#2264): кнопка удаления не стоит в строке постоянно и
+   ширину у имени собеседника не берёт. Она появляется, пока мышь над строкой или
+   фокус клавиатуры внутри неё, и только на это время колонка текста отдаёт ей
+   место: кнопка 44px стоит в 4px от края, поле строки 8px — 40px плюс зазор 8px. В DOM кнопка
+   есть всегда — скринридер и Tab до неё доходят. На тач-экране наведения нет:
+   там удаление — долгое нажатие. Маркеры — dataSet в ThreadRow.tsx. */
+[data-thread-row-action="true"] {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+[data-thread-row="true"]:has(:focus-visible) [data-thread-row-action="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* Без `:has` правило выше отбрасывается целиком: фокус на самой кнопке всё равно
+   её показывает (Tab не попадает в невидимую кнопку). */
+[data-thread-row-action="true"]:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+[data-thread-row="true"]:has(:focus-visible) [data-thread-row-text="true"] {
+  padding-right: 48px;
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-thread-row="true"]:hover [data-thread-row-action="true"] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  [data-thread-row="true"]:hover [data-thread-row-text="true"] {
+    padding-right: 48px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-thread-row-action="true"] {
+    transition: none;
+  }
+}
+
 @media (max-width: 1023px) {
   /* /messages owns a viewport-bounded FlatList. Keep Safari's document itself
      fixed so swipes move only the conversation, never the global header/composer. */

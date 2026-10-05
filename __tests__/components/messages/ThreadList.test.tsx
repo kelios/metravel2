@@ -1,4 +1,4 @@
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { Alert, Platform, StyleSheet } from 'react-native';
 import ThreadList from '@/components/messages/ThreadList';
 import type { MessageThread } from '@/api/messages';
@@ -86,11 +86,91 @@ describe('ThreadList', () => {
 
     it('shows new conversation button in empty state', () => {
         const onNewConversation = jest.fn();
-        const { getByLabelText } = render(
+        const { getByTestId } = render(
             <ThreadList {...defaultProps} threads={[]} onNewConversation={onNewConversation} />
         );
-        fireEvent.press(getByLabelText('Новый диалог'));
-        expect(onNewConversation).toHaveBeenCalled();
+        fireEvent.press(getByTestId('thread-list-empty-action'));
+        expect(onNewConversation).toHaveBeenCalledTimes(1);
+    });
+
+    // #2267: «Новый диалог» — действие шапки панели рядом с поиском, а не первая
+    // карточка списка той же формы, что строка диалога.
+    describe('panel header (#2267)', () => {
+        it('puts «Новый диалог» into the header next to the search, outside the thread rows', () => {
+            const onNewConversation = jest.fn();
+            const { getByTestId, getByLabelText } = render(
+                <ThreadList {...defaultProps} onNewConversation={onNewConversation} />
+            );
+
+            const header = within(getByTestId('thread-list-header'));
+            expect(header.getByLabelText('Поиск диалогов')).toBeTruthy();
+            const button = header.getByTestId('thread-list-new-conversation');
+            expect(button.props.accessibilityLabel).toBe('Новый диалог');
+            // Единственный элемент с этой подписью: карточки-строки «Новый диалог» больше нет.
+            expect(getByLabelText('Новый диалог')).toBe(button);
+            for (const thread of mockThreads) {
+                expect(within(getByTestId(`thread-item-${thread.id}`)).queryByLabelText('Новый диалог')).toBeNull();
+            }
+
+            fireEvent.press(button);
+            expect(onNewConversation).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps the header over the empty list and can leave the empty-state button to the screen', () => {
+            const { getByTestId, queryByTestId, getByText } = render(
+                <ThreadList {...defaultProps} threads={[]} onNewConversation={jest.fn()} hideEmptyStateAction />
+            );
+
+            expect(getByText('Нет сообщений')).toBeTruthy();
+            expect(getByTestId('thread-list-new-conversation')).toBeTruthy();
+            expect(queryByTestId('thread-list-empty-action')).toBeNull();
+        });
+
+        // Шапка — рамка панели: при открытии экрана загрузка сменяется списком, и
+        // раньше поиск с кнопкой на это время снимались и монтировались заново.
+        it('keeps the same header node across loading, list, empty and error states', () => {
+            const props = { ...defaultProps, onNewConversation: jest.fn() };
+            const { getByTestId, queryByText, rerender } = render(<ThreadList {...props} threads={[]} loading />);
+
+            const button = getByTestId('thread-list-new-conversation');
+            const search = within(getByTestId('thread-list-header')).getByLabelText('Поиск диалогов');
+            expect(queryByText('Нет сообщений')).toBeNull();
+            fireEvent.changeText(search, 'Иван');
+
+            const states = [
+                <ThreadList key="list" {...props} />,
+                <ThreadList key="empty" {...props} threads={[]} />,
+                <ThreadList key="error" {...props} error="Ошибка загрузки" />,
+                <ThreadList key="loading" {...props} threads={[]} loading />,
+            ];
+            for (const state of states) {
+                // Один и тот же экземпляр: `key` у корня не меняется.
+                rerender(<ThreadList {...state.props} />);
+                expect(getByTestId('thread-list-new-conversation')).toBe(button);
+                const field = within(getByTestId('thread-list-header')).getByLabelText('Поиск диалогов');
+                expect(field).toBe(search);
+                expect(field.props.value).toBe('Иван');
+            }
+        });
+
+        it('shows the loader, not «Нет сообщений», while the first load is pending', () => {
+            const { queryByText, queryByTestId } = render(<ThreadList {...defaultProps} threads={[]} loading />);
+
+            expect(queryByText('Нет сообщений')).toBeNull();
+            expect(queryByTestId('thread-list-empty')).toBeNull();
+        });
+
+        it('renders no new-conversation button without a handler', () => {
+            const { queryByTestId } = render(<ThreadList {...defaultProps} />);
+            expect(queryByTestId('thread-list-new-conversation')).toBeNull();
+        });
+
+        it('gives the search clear control a 44px touch target', () => {
+            const { getByLabelText } = render(<ThreadList {...defaultProps} />);
+            fireEvent.changeText(getByLabelText('Поиск диалогов'), 'Мария');
+
+            expect(StyleSheet.flatten(getByLabelText('Очистить поиск').props.style)).toMatchObject({ width: 44, height: 44 });
+        });
     });
 
     it('filters threads by search query', () => {
@@ -121,12 +201,117 @@ describe('ThreadList', () => {
         expect(getByText('99+')).toBeTruthy();
     });
 
-    it('shows explicit delete button for a thread', () => {
-        const { getByLabelText } = render(
-            <ThreadList {...defaultProps} onDeleteThread={jest.fn()} />
-        );
+    // #2264: имя собеседника — главный элемент строки. Постоянная корзина, шеврон,
+    // дата и счётчик делили с ним одну линию и оставляли ему 62 px из 288.
+    describe('thread row composition (#2264)', () => {
+        const unread: MessageThread = { ...mockThreads[0], unread_count: 150 };
 
-        expect(getByLabelText('Удалить диалог с Иван Петров')).toBeTruthy();
+        it('keeps the name alone on its line: date and unread badge sit on the line below', () => {
+            const { getByTestId } = render(
+                <ThreadList {...defaultProps} threads={[unread]} onDeleteThread={jest.fn()} />
+            );
+
+            const name = getByTestId('thread-name-1');
+            expect(name.props.numberOfLines).toBe(1);
+            expect(name.props.children).toBe('Иван Петров');
+
+            // Колонка текста: имя и под ним строка меты — больше ничего.
+            const column = name.parent!.parent!;
+            const lines = column.props.children.filter(Boolean);
+            expect(lines).toHaveLength(2);
+            expect(StyleSheet.flatten(column.props.style)).toMatchObject({ flex: 1, minWidth: 0 });
+            expect(StyleSheet.flatten(column.props.style).flexDirection).toBeUndefined();
+
+            const time = getByTestId('thread-time-1');
+            const meta = time.parent!.parent!;
+            expect(StyleSheet.flatten(meta.props.style)).toMatchObject({ flexDirection: 'row' });
+            expect(within(meta).getByText('99+')).toBeTruthy();
+            expect(within(meta).queryByText('Иван Петров')).toBeNull();
+        });
+
+        it('draws no chevron and no in-flow delete button', () => {
+            const originalPlatform = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+
+            try {
+                const { getByTestId, getByLabelText, UNSAFE_queryAllByProps } = render(
+                    <ThreadList {...defaultProps} onDeleteThread={jest.fn()} />
+                );
+
+                expect(UNSAFE_queryAllByProps({ name: 'chevron-right' })).toHaveLength(0);
+
+                // Кнопка удаления лежит поверх строки и в потоке ширину не занимает;
+                // показывает её CSS по маркерам (app/global.css).
+                const row = getByTestId('thread-item-1');
+                expect(row.props.dataSet).toEqual({ threadRow: 'true' });
+                const [action] = row.findAll((node) => node.props.dataSet?.threadRowAction === 'true');
+                expect(StyleSheet.flatten(action.props.style)).toMatchObject({ position: 'absolute' });
+                expect(within(action).getByLabelText('Удалить диалог с Иван Петров')).toBeTruthy();
+                expect(StyleSheet.flatten(getByLabelText('Удалить диалог с Иван Петров').props.style)).toMatchObject({
+                    minWidth: 44,
+                    minHeight: 44,
+                });
+                expect(getByTestId('thread-name-1').parent!.parent!.props.dataSet).toEqual({ threadRowText: 'true' });
+            } finally {
+                Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+            }
+        });
+
+        it.each(['ios', 'android'])('on %s renders no delete button: long press and a screen-reader action delete', async (os) => {
+            const originalPlatform = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { configurable: true, value: os });
+            const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+
+            try {
+                const { getByLabelText, queryByLabelText } = render(
+                    <ThreadList {...defaultProps} onDeleteThread={jest.fn()} />
+                );
+
+                expect(queryByLabelText('Удалить диалог с Иван Петров')).toBeNull();
+
+                const row = getByLabelText('Диалог с Иван Петров');
+                expect(row.props.accessibilityActions).toEqual([
+                    { name: 'delete', label: 'Удалить диалог с Иван Петров' },
+                ]);
+
+                fireEvent(row, 'longPress');
+                expect(alertSpy).toHaveBeenCalledTimes(1);
+
+                fireEvent(row, 'accessibilityAction', { nativeEvent: { actionName: 'activate' } });
+                expect(alertSpy).toHaveBeenCalledTimes(1);
+                fireEvent(row, 'accessibilityAction', { nativeEvent: { actionName: 'delete' } });
+                expect(alertSpy).toHaveBeenCalledTimes(2);
+            } finally {
+                alertSpy.mockRestore();
+                Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+            }
+        });
+
+        it('offers no delete path at all without a handler', () => {
+            const { getByLabelText, queryByLabelText } = render(<ThreadList {...defaultProps} />);
+
+            expect(queryByLabelText('Удалить диалог с Иван Петров')).toBeNull();
+            expect(getByLabelText('Диалог с Иван Петров').props.accessibilityActions).toBeUndefined();
+        });
+
+        it('opens the web confirmation from a long press as well', () => {
+            const originalPlatform = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+
+            try {
+                const { getByLabelText, queryByLabelText } = render(
+                    <ThreadList {...defaultProps} onDeleteThread={jest.fn()} />
+                );
+
+                expect(queryByLabelText('Подтвердить удаление диалога')).toBeNull();
+                fireEvent(getByLabelText('Диалог с Иван Петров'), 'longPress');
+                expect(StyleSheet.flatten(getByLabelText('Подтвердить удаление диалога').props.style)).toMatchObject({ minHeight: 44 });
+                fireEvent.press(getByLabelText('Отмена'));
+                expect(queryByLabelText('Подтвердить удаление диалога')).toBeNull();
+            } finally {
+                Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+            }
+        });
     });
 
     it('does not clip the delete tooltip at the web thread-card boundary', () => {
@@ -176,7 +361,7 @@ describe('ThreadList', () => {
                 <ThreadList {...defaultProps} onDeleteThread={onDeleteThread} />
             );
 
-            fireEvent.press(getByLabelText('Удалить диалог с Иван Петров'));
+            fireEvent(getByLabelText('Диалог с Иван Петров'), 'longPress');
             expect(onDeleteThread).not.toHaveBeenCalled();
             expect(alertSpy).toHaveBeenCalledTimes(1);
             expect(alertSpy).toHaveBeenCalledWith(

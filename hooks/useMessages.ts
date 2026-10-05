@@ -46,6 +46,10 @@ const withoutBlockedMessages = (messages: Message[]): Message[] => {
 export function useThreads(enabled: boolean = true, pollEnabled: boolean = true) {
     const [threads, setThreads] = useState<MessageThread[]>([]);
     const [loading, setLoading] = useState(false);
+    // Первая загрузка завершилась (успехом или ошибкой). До этого пустой `threads`
+    // значит «ещё не знаем», а не «диалогов нет»: экран показывает загрузку, а не
+    // «Нет сообщений» (#2267 — пустое состояние мелькало до ответа сервера).
+    const [loaded, setLoaded] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const mountedRef = useRef(true);
     const consecutiveFailuresRef = useRef(0);
@@ -75,7 +79,10 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
                 setError(getErrorMessage(e, i18nT('messages:hooks.useMessages.oshibka_zagruzki_soobscheniy_b3faeb10')));
             }
         } finally {
-            if (mountedRef.current) setLoading(false);
+            if (mountedRef.current) {
+                setLoading(false);
+                setLoaded(true);
+            }
         }
     }, []);
 
@@ -138,7 +145,7 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
         };
     }, []);
 
-    return { threads, loading, error, refresh: load, setThreadUnreadCount, optimisticRemove };
+    return { threads, loading, loaded, error, refresh: load, setThreadUnreadCount, optimisticRemove };
 }
 
 // ---- useThreadMessages ----
