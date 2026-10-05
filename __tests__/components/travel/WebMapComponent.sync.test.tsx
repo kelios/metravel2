@@ -356,6 +356,119 @@ describe('WebMapComponent marker sync', () => {
     expect(screen.getByText('Новый адрес точки')).toBeTruthy();
   });
 
+  // Окно редактирования открыто на blob-превью; пока автор выбирает категорию,
+  // загрузка фото завершается и источник точки меняется на серверный url, а
+  // blob ревокается. Снимок фото на момент открытия при «Сохранить»/закрытии
+  // возвращал в точку мёртвый blob — чёрная миниатюра до перезагрузки.
+  it.each(['Сохранить', 'Отмена'])(
+    'keeps the uploaded point photo when the editor opened on its blob preview is closed via «%s»',
+    async (closeButtonName) => {
+      const blob = 'blob:https://example.com/preview';
+      const uploadedUrl = 'https://example.com/uploaded-point.webp';
+      const initialMarkers = [
+        { id: 42, lat: 41.7151, lng: 44.8271, address: 'Точка из фото', categories: [], image: blob, country: 268 },
+      ];
+      const onMarkersChange = jest.fn();
+      const onMarkerEditSave = jest.fn();
+      let finishPhotoUpload: () => void = () => {};
+
+      function StatefulRoutePointEditor() {
+        const [markers, setMarkers] = React.useState(initialMarkers);
+        finishPhotoUpload = () => {
+          setMarkers((current) => current.map((marker) => ({ ...marker, image: uploadedUrl })));
+        };
+        const handleMarkersChange = React.useCallback((updatedMarkers: any[]) => {
+          onMarkersChange(updatedMarkers);
+          setMarkers(updatedMarkers);
+        }, []);
+
+        return (
+          <WebMapComponent
+            {...baseProps}
+            markers={markers as any}
+            onMarkersChange={handleMarkersChange}
+            onMarkerEditSave={onMarkerEditSave}
+          />
+        );
+      }
+
+      render(<StatefulRoutePointEditor />);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Загрузка карты…')).toBeNull();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Редактировать' }));
+
+      // `useMarkerImageUpload.finishPreview`: файл на сервере, pending-запись снята,
+      // источник точки в форме подменён серверным url.
+      (getPendingImageFile as jest.Mock).mockReturnValue(null);
+      act(() => {
+        finishPhotoUpload();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: closeButtonName }));
+
+      if (closeButtonName === 'Сохранить') {
+        await waitFor(() => {
+          expect(onMarkerEditSave).toHaveBeenCalledTimes(1);
+        });
+        expect(onMarkerEditSave).toHaveBeenCalledWith([
+          expect.objectContaining({ id: 42, image: uploadedUrl }),
+        ]);
+      }
+
+      for (const [updatedMarkers] of onMarkersChange.mock.calls) {
+        expect(updatedMarkers[0].image).toBe(uploadedUrl);
+      }
+      const thumbnail = screen.getAllByRole('img', { name: /Фото/i })[0] as HTMLImageElement;
+      expect(thumbnail.src).toBe(uploadedUrl);
+    },
+  );
+
+  // Закрытие окна пишет поля точки несколькими вызовами `handleMarkerChange`
+  // подряд в одном обработчике. Каждый вызов обязан строиться на результате
+  // предыдущего, а не на снимке `localMarkers` из рендера, иначе последний
+  // вызов откатывает адрес, записанный первым.
+  it('keeps every field written while closing the editor without saving', async () => {
+    const onMarkersChange = jest.fn();
+
+    function StatefulRoutePointEditor() {
+      const [markers, setMarkers] = React.useState([
+        { id: 42, lat: 41.7151, lng: 44.8271, address: 'Старый адрес', categories: [1], image: null, country: 268 },
+      ]);
+      const handleMarkersChange = React.useCallback((updatedMarkers: any[]) => {
+        onMarkersChange(updatedMarkers);
+        setMarkers(updatedMarkers);
+      }, []);
+
+      return (
+        <WebMapComponent
+          {...baseProps}
+          markers={markers as any}
+          onMarkersChange={handleMarkersChange}
+        />
+      );
+    }
+
+    render(<StatefulRoutePointEditor />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Загрузка карты…')).toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Редактировать' }));
+    fireEvent.change(screen.getByDisplayValue('Старый адрес'), {
+      target: { value: 'Новый адрес точки' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Отмена' }));
+
+    const lastCommit = onMarkersChange.mock.calls[onMarkersChange.mock.calls.length - 1][0];
+    expect(lastCommit[0]).toEqual(
+      expect.objectContaining({ id: 42, address: 'Новый адрес точки', categories: ['1'] }),
+    );
+  });
+
   it('preserves the open editor draft when a parent echo assigns the point id', async () => {
     const initialMarkers = [
       {

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo, useId } from 'react';
 import MarkersListComponent from '@/components/map/MarkersListComponent';
+import type { MarkerEditPayload } from '@/components/map/EditMarkerModal';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
@@ -510,13 +511,16 @@ const WebMapComponent = ({
     };
 
     const handleMarkerChange = (index: number, field: string, value: any) => {
-        const updated = [...localMarkers];
+        // Окно редактирования пишет поля несколькими вызовами подряд в одном
+        // обработчике: база — последний коммит, а не снимок `localMarkers` из
+        // рендера, иначе каждый следующий вызов откатывает предыдущий.
+        const updated = [...lastMarkersRef.current];
         updated[index] = { ...updated[index], [field]: value };
         debouncedMarkersChange(updated);
     };
 
     const handleMarkerSave = useCallback(
-        async (index: number, payload: { address: string; categories: string[]; image: string }) => {
+        async (index: number, payload: MarkerEditPayload) => {
             const updated = [...localMarkers];
             const prevMarker = updated[index];
             if (!prevMarker) return;
@@ -529,7 +533,9 @@ const WebMapComponent = ({
                           .map((categoryId) => Number(categoryId))
                           .filter((categoryId) => Number.isFinite(categoryId))
                     : [],
-                image: payload.image || null,
+                // Фото меняем, только если автор сменил его в окне редактирования:
+                // иначе у точки остаётся актуальный источник из `localMarkers`.
+                ...(payload.image !== undefined ? { image: payload.image || null } : {}),
             };
 
             debouncedMarkersChange(updated);

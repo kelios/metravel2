@@ -203,14 +203,43 @@ describe('MarkersListComponent - Edit modal categories', () => {
         fireEvent.click(screen.getByText('Сохранить'));
 
         await waitFor(() => {
-            expect(handleMarkerSave).toHaveBeenCalledWith(
-                0,
-                expect.objectContaining({
-                    address: 'Test address',
-                    categories: ['1', '2'],
-                    image: '',
-                }),
-            );
+            // Фото в окне не трогали — `image` в payload нет: источник фото точки
+            // остаётся тем, что лежит в актуальном состоянии точки.
+            expect(handleMarkerSave).toHaveBeenCalledWith(0, {
+                address: 'Test address',
+                categories: ['1', '2'],
+            });
+        });
+    });
+
+    it('passes the photo to the marker save callback only when it was uploaded in the modal', async () => {
+        const handleMarkerSave = jest.fn().mockResolvedValue(undefined);
+
+        render(
+            <MarkersListComponent
+                markers={[baseMarker]}
+                categoryTravelAddress={[
+                    { id: 1, name: 'Кафе' },
+                    { id: 2, name: 'Парки' },
+                ]}
+                handleMarkerChange={jest.fn()}
+                handleImageUpload={jest.fn()}
+                handleMarkerSave={handleMarkerSave}
+                handleMarkerRemove={jest.fn()}
+                editingIndex={0}
+                setEditingIndex={jest.fn()}
+            />,
+        );
+
+        fireEvent.click(screen.getByTestId('photo-upload-trigger'));
+        fireEvent.click(screen.getByText('Сохранить'));
+
+        await waitFor(() => {
+            expect(handleMarkerSave).toHaveBeenCalledWith(0, {
+                address: 'Test address',
+                categories: ['1', '2'],
+                image: 'http://192.168.50.36/travel-image/17992/conversions/test.webp',
+            });
         });
     });
 

@@ -16,13 +16,24 @@ import { translate as i18nT } from '@/i18n'
 
 const MultiSelectFieldAny: any = MultiSelectField;
 
+/**
+ * `image` передаётся, только если автор загрузил или убрал фото в окне
+ * редактирования. Без него фото точки не трогается: источник правды —
+ * актуальное состояние точки, а не снимок на момент открытия окна.
+ */
+export interface MarkerEditPayload {
+    address: string;
+    categories: string[];
+    image?: string;
+}
+
 export interface EditMarkerModalProps {
     marker: MarkerData;
     index: number;
     categoryTravelAddress: { id: number | string; name: string }[];
     handleMarkerChange: (index: number, field: string, value: string | string[]) => void;
     handleImageUpload: (index: number, imageUrl: string) => void;
-    handleMarkerSave?: (index: number, payload: { address: string; categories: string[]; image: string }) => Promise<void> | void;
+    handleMarkerSave?: (index: number, payload: MarkerEditPayload) => Promise<void> | void;
     onClose: () => void;
     onRemove: (index: number) => void;
     styles: any;
@@ -53,7 +64,14 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
 
     const [address, setAddress] = useState<string>(marker.address || '');
     const [categories, setCategories] = useState<any[]>(normalizeCategories(marker.categories));
-    const [localImage, setLocalImage] = useState<string>(marker.image || '');
+    // Окно не владеет фото точки. Пока оно открыто, `marker.image` меняется и
+    // снаружи: загрузка blob-превью завершается, источник подменяется серверным
+    // url, а сам blob ревокается (`useMarkerImageUpload`). Снимок на момент
+    // открытия при «Сохранить» возвращал в точку уже мёртвый blob — чёрная
+    // миниатюра до перезагрузки. Поэтому храним только то, что автор загрузил
+    // или убрал в этом окне; `null` — фото не трогали.
+    const [editedImage, setEditedImage] = useState<string | null>(null);
+    const shownImage = editedImage ?? (marker.image || '');
     const [extraCategories, setExtraCategories] = useState<{ id: string; name: string }[]>([]);
 
     const categoryItems = useMemo(() => {
@@ -72,7 +90,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
     }, []);
 
     const handleLocalImageUpload = useCallback((imageUrl: string) => {
-        setLocalImage(imageUrl);
+        setEditedImage(imageUrl);
         handleImageUpload(index, imageUrl);
     }, [handleImageUpload, index]);
 
@@ -89,7 +107,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
     const persistEdits = () => {
         handleMarkerChange(index, 'address', address);
         handleMarkerChange(index, 'categories', categories);
-        handleMarkerChange(index, 'image', localImage);
+        if (editedImage !== null) handleMarkerChange(index, 'image', editedImage);
     };
 
     const handleClose = () => {
@@ -103,12 +121,12 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
             await handleMarkerSave(index, {
                 address: trimmedAddress,
                 categories,
-                image: localImage,
+                ...(editedImage !== null ? { image: editedImage } : {}),
             });
         } else {
             handleMarkerChange(index, 'address', trimmedAddress);
             handleMarkerChange(index, 'categories', categories);
-            handleMarkerChange(index, 'image', localImage);
+            if (editedImage !== null) handleMarkerChange(index, 'image', editedImage);
         }
         onClose();
     };
@@ -204,7 +222,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                                 <PhotoUploadWithPreview
                                     collection="travelImageAddress"
                                     idTravel={String(marker.id)}
-                                    oldImage={localImage}
+                                    oldImage={shownImage}
                                     onUpload={handleLocalImageUpload}
                                     placeholder={i18nT('map:components.map.EditMarkerModal.peretaschite_foto_tochki_marshruta_3a234cc4')}
                                     maxSizeMB={10}

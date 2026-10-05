@@ -6,7 +6,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { getTravelPointImageUrl } from '@/utils/travelPointImages';
 import { EXIF_IMAGE_INPUT_ACCEPT } from '@/utils/exifGps';
 import { useStyles } from './markersListStyles';
-import EditMarkerModal from './EditMarkerModal';
+import EditMarkerModal, { type MarkerEditPayload } from './EditMarkerModal';
 import { translate as i18nT } from '@/i18n'
 
 // Кастомный MIME-тип, которым помечается drag-and-drop переупорядочивания точки.
@@ -98,7 +98,7 @@ interface MarkersListComponentProps {
     categoryTravelAddress: { id: number | string; name: string }[];
     handleMarkerChange: (index: number, field: string, value: string | string[]) => void;
     handleImageUpload: (index: number, imageUrl: string) => void;
-    handleMarkerSave?: (index: number, payload: { address: string; categories: string[]; image: string }) => Promise<void> | void;
+    handleMarkerSave?: (index: number, payload: MarkerEditPayload) => Promise<void> | void;
     handleMarkerRemove: (index: number) => void;
     editingIndex: number | null;
     setEditingIndex: (index: number | null) => void;
