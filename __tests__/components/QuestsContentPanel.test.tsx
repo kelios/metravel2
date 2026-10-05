@@ -36,6 +36,8 @@ jest.mock('@/screens/tabs/QuestCard', () => {
     };
 });
 
+const HIDDEN = { includeHiddenElements: true } as const;
+
 describe('QuestsContentPanel', () => {
     const styles = {
         content: {},
@@ -61,8 +63,6 @@ describe('QuestsContentPanel', () => {
         mapContainer: {},
         mapSearchAreaBtn: {},
         mapSearchAreaBtnText: {},
-        skeletonGrid: {},
-        skeletonCard: {},
         questsGrid: {},
         questVirtualizedList: {},
         questVirtualizedListContent: {},
@@ -157,6 +157,47 @@ describe('QuestsContentPanel', () => {
                 <QuestsContentPanel {...makeBaseProps()} dataLoaded={false} availableSortOrders={['popular']} />,
             );
             expect(queryByTestId('quests-sort-popular')).toBeNull();
+        });
+
+        /**
+         * #2170: до ответа API строка счётчика и чип сортировки уже занимают своё
+         * место. Без резерва тело каталога сдвигалось на 38 px в момент ответа
+         * (CLS 0,036 на телефоне), а на медленной сети это происходит на 28-й
+         * секунде — под пальцем.
+         */
+        it('reserves the count line and the sort chip while the catalog is loading', () => {
+            const { getByTestId, queryByTestId, rerender } = render(
+                <QuestsContentPanel {...makeBaseProps()} selectedCityId="__all__" dataLoaded={false} questsAll={[]} />,
+            );
+            // Резерв скрыт от скринридера (aria-hidden), поэтому ищем и скрытые узлы.
+            expect(getByTestId('quests-sort-placeholder', HIDDEN)).toBeTruthy();
+            expect(getByTestId('quests-grid-skeleton').children).toHaveLength(6);
+
+            rerender(<QuestsContentPanel {...makeBaseProps()} availableSortOrders={['popular']} />);
+            expect(queryByTestId('quests-sort-placeholder', HIDDEN)).toBeNull();
+            expect(queryByTestId('quests-grid-skeleton')).toBeNull();
+            expect(getByTestId('quests-sort-popular')).toBeTruthy();
+        });
+
+        // В срезе города прохождений может не набраться на сортировку: зарезервированный
+        // чип, который не появился, дал бы тот же сдвиг, только вверх.
+        it.each([
+            ['a city slice', { selectedCityId: 'minsk' }],
+            ['the nearby slice', { selectedCityId: '__nearby__', userLoc: { latitude: 53.9, longitude: 27.56 } }],
+            ['a map-area slice', { selectedCityId: '__all__', isMapAreaActive: true }],
+        ])('does not reserve a sort chip for %s', (_name, props) => {
+            const { queryByTestId } = render(
+                <QuestsContentPanel {...makeBaseProps()} dataLoaded={false} questsAll={[]} {...props} />,
+            );
+            expect(queryByTestId('quests-sort-placeholder', HIDDEN)).toBeNull();
+        });
+
+        it('renders two phone-height skeleton cells on a phone', () => {
+            mockIsMobile = true;
+            const { getByTestId } = render(
+                <QuestsContentPanel {...makeBaseProps()} isMobile dataLoaded={false} questsAll={[]} />,
+            );
+            expect(getByTestId('quests-grid-skeleton').children).toHaveLength(2);
         });
 
         it('offers to sort, then to undo it, and reports the state to assistive tech', () => {

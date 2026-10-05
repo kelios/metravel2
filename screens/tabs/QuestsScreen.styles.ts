@@ -4,7 +4,12 @@ import { StyleSheet, Platform, type TextStyle, type ViewStyle } from 'react-nati
 import { asBottomDimension, webBottomChromeInset } from '@/components/layout/bottomChromeInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { LAYOUT } from '@/constants/layout';
-import { QUESTS_GRID_WEB_GAP, QUESTS_GRID_MIN_COLUMN_WIDTH } from '@/constants/questLayout';
+import {
+    QUEST_CARD_BASE_HEIGHT,
+    QUEST_CARD_PHONE_HEIGHT,
+    QUESTS_GRID_WEB_GAP,
+    QUESTS_GRID_MIN_COLUMN_WIDTH,
+} from '@/constants/questLayout';
 import type { ThemedColors } from '@/hooks/useTheme';
 
 const { spacing, radii, typography, touchTarget } = DESIGN_TOKENS;
@@ -798,17 +803,6 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             marginBottom: spacing.lg,
         },
 
-        /* ---- Skeleton ---- */
-        skeletonGrid: {
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: spacing.lg,
-        },
-        skeletonCard: {
-            width: '100%',
-            maxWidth: 600,
-        },
-
         /* ---- Mobile filter toggle (Modern pill) ---- */
         mobileFilterBtn: {
             flexDirection: 'row',
@@ -929,7 +923,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         },
         questCardImage: {
             width: '100%',
-            height: isMobileW ? 238 : 260,
+            height: isMobileW ? QUEST_CARD_PHONE_HEIGHT : QUEST_CARD_BASE_HEIGHT,
             position: 'relative',
             overflow: 'hidden',
         },

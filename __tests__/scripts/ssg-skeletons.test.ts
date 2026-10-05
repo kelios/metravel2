@@ -175,6 +175,14 @@ describe('ssg-skeletons', () => {
   });
 
   describe('buildHomeSkeletonHtml', () => {
+    // #2170: шелл собирается на этапе билда и TS-константу импортировать не
+    // может, поэтому адрес логотипа продублирован. Разойдись он с React-шапкой
+    // и с preload в `app/+html.tsx` — браузер скачал бы логотип дважды.
+    it('рисует логотип по тому же адресу, что React-шапка и preload', () => {
+      const { HEADER_LOGO_WEB_SRC } = require('../../components/layout/headerLayoutContract');
+      expect(buildHomeSkeletonHtml()).toContain(`<img class="ssg-home-bar-logo" src="${HEADER_LOGO_WEB_SRC}"`);
+    });
+
     it('carries the site owner legal name for crawlers that skip JavaScript (#1999)', () => {
       // Meta Business Verification читает https://metravel.by/ без JS: React-футер в
       // статическом HTML главной отсутствует, имя владельца обязана нести оболочка.

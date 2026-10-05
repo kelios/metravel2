@@ -1,7 +1,8 @@
 // SkeletonLoader.tsx - компонент для skeleton loading состояний
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, type ViewStyle } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
+import { webViewStyle } from '@/utils/webProps';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { TRAVEL_CARD_IMAGE_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
 
@@ -38,16 +39,13 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
       <View
         style={[
           ...baseStyle,
-          // @ts-ignore — web-only: CSS shimmer sweep
+          // @ts-ignore — web-only: мягкий градиент плашки
           {
             backgroundImage:
               `linear-gradient(90deg, ${colors.surfaceLight} 0%, ${colors.surface} 50%, ${colors.surfaceLight} 100%)`,
             backgroundSize: '200% 100%',
-            animationKeyframes: 'slider-shimmer',
-            animationDuration: '1.5s',
-            animationTimingFunction: 'cubic-bezier(0.4, 0, 0.6, 1)',
-            animationIterationCount: 'infinite',
           },
+          styles.webPulse,
         ]}
       />
     );
@@ -125,6 +123,21 @@ const styles = StyleSheet.create({
   nativeSkeleton: {
     opacity: 0.45,
   },
+  // #2170: анимация обязана жить в StyleSheet.create. RN-Web компилирует
+  // `animationKeyframes` только отсюда; в инлайн-стиле ключ уходил в DOM
+  // несуществующим свойством `animation-keyframes`, и плашка стояла статичной
+  // на web с первого дня. Кадры описаны объектом, поэтому правило лежит во
+  // встроенной таблице стилей документа и работает до гидратации. Пульс по
+  // `opacity` считает композитор — без перерисовки на каждый кадр.
+  webPulse: Platform.select<ViewStyle>({
+    web: webViewStyle({
+      animationKeyframes: { '0%': { opacity: 1 }, '50%': { opacity: 0.55 }, '100%': { opacity: 1 } },
+      animationDuration: '1.5s',
+      animationTimingFunction: 'ease-in-out',
+      animationIterationCount: 'infinite',
+    }),
+    default: {},
+  }),
   mapSkeletonContainer: {
     padding: 16,
   },

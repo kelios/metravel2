@@ -3,6 +3,10 @@ import { DESIGN_TOKENS } from './designSystem'
 // Общие размеры для модели карточек и CSS-сетки лендингов.
 export const QUESTS_GRID_WEB_GAP = DESIGN_TOKENS.spacing.xl
 export const QUESTS_GRID_MIN_COLUMN_WIDTH = 380
+// Высота карточки каталога: фиксированная на телефоне, а на широком экране
+// пропорциональна ширине трека сетки (QUEST_CARD_BASE_HEIGHT при минимальной).
+export const QUEST_CARD_PHONE_HEIGHT = 238
+export const QUEST_CARD_BASE_HEIGHT = 260
 export const QUESTS_LANDING_CONTENT_WIDTH = 840
 export const QUESTS_LANDING_PADDING = DESIGN_TOKENS.spacing.lg
 

@@ -3,6 +3,7 @@ import { Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-nativ
 import { router } from 'expo-router';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { webDataSetProps } from '@/utils/webProps';
+import { HEADER_LOGO_WEB_SRC } from '@/components/layout/headerLayoutContract';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -28,7 +29,7 @@ export default React.memo(function Logo({
     const [logoLoadFailed, setLogoLoadFailed] = useState(false);
     const primarySource =
         Platform.OS === 'web'
-            ? ({ uri: '/assets/icons/logo_yellow_60x60.png' } as const)
+            ? ({ uri: HEADER_LOGO_WEB_SRC } as const)
             : require('../../assets/icons/logo_yellow_60x60.png');
     const fallbackSource =
         Platform.OS === 'web'
@@ -44,6 +45,10 @@ export default React.memo(function Logo({
         >
             <Image
                 source={logoLoadFailed ? fallbackSource : primarySource}
+                // #2170: без defaultSource RN-Web ставит картинку только после её
+                // onLoad, то есть после гидратации — в статическом HTML логотипа
+                // не было вовсе. С ним адрес есть в разметке с первого кадра.
+                defaultSource={Platform.OS === 'web' ? primarySource : undefined}
                 style={[styles.logo, isCompact && styles.logoCompact]}
                 resizeMode="contain"
                 onError={() => setLogoLoadFailed(true)}

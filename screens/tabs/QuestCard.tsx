@@ -18,6 +18,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { IMAGE_QUALITY, IMAGE_WIDTHS } from '@/constants/imageContract';
+import { QUEST_CARD_BASE_HEIGHT, QUEST_CARD_PHONE_HEIGHT, QUESTS_GRID_MIN_COLUMN_WIDTH } from '@/constants/questLayout';
 
 import { pluralizeRu } from '@/utils/pluralize';
 import { getQuestAgeBadgeLabel, getQuestAgeCategory } from '@/utils/questAudience';
@@ -151,7 +152,9 @@ function QuestCard({
         setReviewsOpen(false);
     }, []);
 
-    const cardHeight = isPhone ? 238 : Math.round((cardWidth / 380) * 260);
+    const cardHeight = isPhone
+        ? QUEST_CARD_PHONE_HEIGHT
+        : Math.round((cardWidth / QUESTS_GRID_MIN_COLUMN_WIDTH) * QUEST_CARD_BASE_HEIGHT);
     const showOverlayMeta = !isPhone;
 
     // Ширина обложки = CSS-слот × плотность экрана, с потолком DPR 2.

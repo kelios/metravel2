@@ -22,6 +22,10 @@ import { PER_PAGE } from '@/components/listTravel/utils/listTravelConstants';
 import { translate as i18nT } from '@/i18n'
 import { getActiveLocaleDefinition } from '@/i18n/format'
 import { SECRET_LINK_ROUTE_PATHS } from '@/utils/secretLinkRoutes'
+import { Asset } from 'expo-asset'
+import Feather from '@expo/vector-icons/Feather'
+import { ICON_FONT_FAMILY, buildFontDisplayPolicyScript, buildIconFontLoaderScript } from '@/utils/iconFontShell'
+import { HEADER_LOGO_WEB_SRC } from '@/components/layout/headerLayoutContract'
 
 export { getAnalyticsInlineScript };
 
@@ -66,68 +70,6 @@ const getEntryPreloadScript = () => String.raw`
   } catch (_e) {}
 })();
 `;
-
-const getFontFaceSwapScript = () => String.raw`
-(function(){
-  try {
-    // Replace font-display:auto with font-display:swap in any @font-face rule string.
-    function forceFontSwap(css) {
-      return css.replace(/@font-face\s*\{([^}]*)\}/g, function(match, body) {
-        if (body.indexOf('font-display:swap') !== -1) return match;
-        if (body.indexOf('font-display') !== -1) {
-          return match.replace(/font-display\s*:\s*[^;}"']+/g, 'font-display:swap');
-        }
-        return match.replace(/\}\s*$/, ';font-display:swap;}');
-      });
-    }
-
-    // 1. Patch CSSStyleSheet.insertRule (catches dynamically inserted rules)
-    if (window.CSSStyleSheet) {
-      var proto = window.CSSStyleSheet.prototype;
-      if (proto && !proto.__metravelFontSwapPatched && typeof proto.insertRule === 'function') {
-        var originalInsertRule = proto.insertRule;
-        proto.insertRule = function(rule, index) {
-          try {
-            if (typeof rule === 'string' && rule.indexOf('@font-face') !== -1) {
-              rule = forceFontSwap(rule);
-            }
-          } catch (_e) {}
-          return originalInsertRule.call(this, rule, index);
-        };
-        proto.__metravelFontSwapPatched = true;
-      }
-    }
-
-    // 2. MutationObserver to catch <style> elements and text nodes injected into them
-    //    (expo-font appends text nodes to an existing <style> element)
-    function patchStyleElement(el) {
-      if (!el || !el.textContent || el.textContent.indexOf('@font-face') === -1) return;
-      var patched = forceFontSwap(el.textContent);
-      if (patched !== el.textContent) el.textContent = patched;
-    }
-    if (typeof MutationObserver !== 'undefined') {
-      new MutationObserver(function(mutations) {
-        for (var i = 0; i < mutations.length; i++) {
-          var m = mutations[i];
-          var nodes = m.addedNodes;
-          for (var j = 0; j < nodes.length; j++) {
-            var node = nodes[j];
-            // New <style> element added
-            if (node.tagName === 'STYLE') {
-              patchStyleElement(node);
-            }
-            // Text node appended to an existing <style> (expo-font pattern)
-            if (node.nodeType === 3 && m.target && m.target.tagName === 'STYLE') {
-              patchStyleElement(m.target);
-            }
-          }
-        }
-      }).observe(document.head || document.documentElement, { childList: true, subtree: true });
-    }
-  } catch (_e) {}
-})();
-`;
-
 
 /**
  * #1372: прогрев первой страницы каталога `/search` до гидратации.
@@ -513,6 +455,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
   const isProduction = typeof process !== 'undefined' && 
     (process.env.EXPO_PUBLIC_SITE_URL === 'https://metravel.by' || 
      process.env.NODE_ENV === 'production');
+  // Тот же адрес, что получил бы expo-font в рантайме: реестр ассетов сборки,
+  // а не строка в исходнике — у dev-сервера и экспорта он разный.
+  const iconFontUrl = Asset.fromModule(Feather.font[ICON_FONT_FAMILY]).uri;
+  // Без адреса скрипт оболочки не откроет ни одной иконки — лучше упавшая
+  // сборка, чем сайт с пустыми кнопками.
+  if (!iconFontUrl) throw new Error('[+html] icon font asset has no URL: check @expo/vector-icons Feather.font');
   
   return (
     <html lang={locale.htmlLang} dir={locale.direction} suppressHydrationWarning>
@@ -661,8 +609,14 @@ export default function Root({ children }: { children: React.ReactNode }) {
           On web the app uses system-ui / Inter from CSS; preloading unused .ttf files
           triggers "preloaded but not used" warnings in Chrome. */}
 
-      {/* Icon fonts (Feather, etc.) are loaded by expo-font at runtime.
-          Avoid hard-coding Metro's dev asset URLs here: they are not stable and can 404. */}
+      {/* #2170: шрифт иконок в <head> НЕ объявляется и не идёт в preload — он
+          отнимал бы канал у LCP-картинки. Его регистрирует скрипт после разметки
+          приложения (utils/iconFontShell.ts), адрес берётся из реестра ассетов. */}
+
+      {/* #2170: логотип бренд-строки есть в первом кадре каждой страницы. Без
+          fetchpriority: запрос идёт позади CSS и LCP-картинки, но впереди
+          скриптов приложения — на медленной сети это секунды, а не десятки. */}
+      <link rel="preload" as="image" href={HEADER_LOGO_WEB_SRC} />
       
       {/* Icons.
           #1151: PWA-иконки 192/512 здесь не объявляем. Как `rel="icon"` браузер
@@ -692,9 +646,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <style dangerouslySetInnerHTML={{ __html: '#root { visibility: visible !important; }' }} />
       </noscript>
 
-      {/* Ensure font-display=swap for dynamically injected icon fonts */}
+      {/* font-display для @font-face, которые expo-font дописывает в рантайме:
+          текстовым гарнитурам swap, иконочным block (utils/iconFontShell.ts) */}
       <script
-        dangerouslySetInnerHTML={{ __html: getFontFaceSwapScript() }}
+        dangerouslySetInnerHTML={{ __html: buildFontDisplayPolicyScript() }}
       />
 
       <script
@@ -717,6 +672,13 @@ export default function Root({ children }: { children: React.ReactNode }) {
     />
 
     {children}
+
+    {/* #2170: шрифт иконок — после разметки приложения, чтобы LCP-картинка
+        первого экрана уже была в DOM и скрипт мог её дождаться. */}
+    <script
+      id="metravel-icon-font"
+      dangerouslySetInnerHTML={{ __html: buildIconFontLoaderScript(iconFontUrl) }}
+    />
 
     {/* #2107: до entry-бандла. Холодный заход не трогает адрес. В тёплой
         вкладке (флаг sessionStorage с прошлого документа) /quests/<неизвестный>

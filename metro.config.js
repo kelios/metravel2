@@ -163,11 +163,13 @@ config.resolver.resolveRequest = ((orig) => {
         type: 'sourceFile',
       }
     }
-    // Expo's icon wrapper reads a process-global font cache in its constructor.
-    // During static hydration the root shell can load Feather before a lazy route
-    // boundary hydrates, so that boundary renders glyphs on the client while its
-    // server HTML contains empty icon placeholders. Keep every web icon neutral
-    // until its own component commits; native continues to use the package entry.
+    // Expo's icon wrapper reads a process-global font cache in its constructor:
+    // on the server it is always empty, so the static HTML carried no icons at
+    // all, and a lazy route boundary that hydrated after the font had loaded
+    // rendered glyphs against empty server placeholders (#418). The web icon is
+    // therefore a pure function of its props — the glyph is in the markup on the
+    // server and on the client alike, and the document shell owns the font
+    // (#2170, utils/iconFontShell.ts). Native keeps the package entry.
     if (platform === 'web' && moduleName === '@expo/vector-icons/Feather') {
       return {
         filePath: path.resolve(__dirname, 'metro-stubs/FeatherHydrationSafe.web.tsx'),

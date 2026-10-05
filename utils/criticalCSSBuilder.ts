@@ -8,6 +8,7 @@ import { ABOUT_LAYOUT } from '@/components/about/aboutLayout';
 import { EMPTY_STATE_LAYOUT } from '@/components/ui/emptyStateLayout';
 import { CHIP_LAYOUT } from '@/components/ui/chipLayout';
 import { buildBreakpointLayoutCss } from '@/utils/breakpointLayout';
+import { getIconFontGuardCss } from '@/utils/iconFontShell';
 
 /**
  * Build critical CSS string for the HTML shell.
@@ -56,6 +57,8 @@ export function buildCriticalCSS(): string {
     'button:focus-visible,a:focus-visible{outline:2px solid var(--color-focus,' + FL + ');outline-offset:2px}',
     'a{color:inherit;text-decoration:none}',
     '[hidden]{display:none !important}',
+    // #2170: иконка невидима и держит только свою клетку, пока не загружен её шрифт.
+    getIconFontGuardCss(),
     'img[data-lcp]{min-height:300px;background:var(--color-backgroundSecondary,' + BSL + ');aspect-ratio:16/9}',
     'img[width][height]:not([data-lcp]){height:auto}',
     'img[fetchpriority="high"]{display:block}',

@@ -33,7 +33,18 @@ export type WebDataSet = Record<string, string | number | boolean>
  */
 export const webDataSetProps = (dataSet: WebDataSet): { dataSet: WebDataSet } => ({ dataSet })
 
+/** Кадры RN-Web: имя готового `@keyframes` либо объект «шаг → стиль». */
+export type WebAnimationKeyframes = string | Record<string, ViewStyle>
+
 export type WebOnlyViewStyle = {
+  animationDuration?: React.CSSProperties['animationDuration']
+  animationIterationCount?: React.CSSProperties['animationIterationCount']
+  /**
+   * Только внутри `StyleSheet.create`: из инлайн-стиля RN-Web этот ключ не
+   * компилирует, и анимация молча не работает (#2170).
+   */
+  animationKeyframes?: WebAnimationKeyframes | WebAnimationKeyframes[]
+  animationTimingFunction?: React.CSSProperties['animationTimingFunction']
   backdropFilter?: React.CSSProperties['backdropFilter']
   boxShadow?: React.CSSProperties['boxShadow']
   cursor?: React.CSSProperties['cursor']

@@ -17,6 +17,13 @@ export const HEADER_MEDIA_MAX_WIDTHS = {
   compact: HEADER_LAYOUT_BREAKPOINTS.compactRow - 0.02,
 } as const
 
+/**
+ * Логотип бренд-строки на web: статичный путь без хеша. Один адрес для
+ * `Logo`, `preload` в `app/+html.tsx` и SSG-шелла (`scripts/ssg-skeletons.js`,
+ * парность держит `__tests__/scripts/ssg-skeletons.test.ts`).
+ */
+export const HEADER_LOGO_WEB_SRC = '/assets/icons/logo_yellow_60x60.png'
+
 export type HeaderViewportBand = 'mobile' | 'compact' | 'wide'
 // `screen` — только строка экрана без бренд-строки: вложенный экран телефона (#2100).
 export type HeaderVariant = `${HeaderViewportBand}-${'bar' | 'nobar' | 'screen'}`

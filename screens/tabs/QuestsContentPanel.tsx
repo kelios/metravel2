@@ -16,12 +16,12 @@ import { useRouter } from 'expo-router';
 import Map from '@/components/MapPage/Map';
 import NavigationIcon from '@/components/layout/NavigationIcon';
 import EmptyState from '@/components/ui/EmptyState';
-import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import type { MapMovePayload } from '@/components/MapPage/Map/types';
 import { useQuestGridCardWidth } from '@/hooks/useQuestCatalogResponsiveModel';
 
 import QuestCard from './QuestCard';
-import { COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID } from './QuestsScreen.helpers';
+import { QuestsCountPlaceholder, QuestsGridSkeleton } from './QuestsCatalogPlaceholders';
+import { ALL_QUESTS_ID, COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID } from './QuestsScreen.helpers';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
 import { pluralizeQuest, type QuestMeta, type QuestSortOrder } from './questsShared';
 import QuestsSortChips, { EMPTY_SORT_ORDERS } from './QuestsSortChips';
@@ -316,6 +316,14 @@ function QuestsContentPanel({
                                                                 : i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
                     </Text>
                     <View style={styles.contentCountRow}>
+                        {!dataLoaded && (
+                            <QuestsCountPlaceholder
+                                styles={styles}
+                                // Чип резервируется только для полного каталога: там он есть всегда, а в
+                                // срезе города или фильтра прохождений может не набраться.
+                                withSortChip={selectedCityId === ALL_QUESTS_ID && !isMapAreaActive}
+                            />
+                        )}
                         {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
                         {dataLoaded && !searchActive && filtersActive && (
                             <Pressable
@@ -625,15 +633,7 @@ function QuestsContentPanel({
 
                         {questsAll.length === 0 && completedEmptyState}
 
-                        {!dataLoaded && (
-                            <View style={styles.skeletonGrid}>
-                                {Array.from({ length: isMobile ? 2 : 4 }).map((_, i) => (
-                                    <View key={i} style={styles.skeletonCard}>
-                                        <SkeletonLoader width="100%" height={180} borderRadius={radiiLg} />
-                                    </View>
-                                ))}
-                            </View>
-                        )}
+                        {!dataLoaded && <QuestsGridSkeleton styles={styles} isMobile={isMobile} radius={radiiLg} />}
 
                         {dataLoaded && questsAll.length > 0 && (
                             <View ref={questsGridRef} style={styles.questsGrid} onLayout={handleQuestsGridLayout} testID="quests-grid">
@@ -712,15 +712,7 @@ function QuestsContentPanel({
 
             {completedEmptyState}
 
-            {!dataLoaded && (
-                <View style={styles.skeletonGrid}>
-                    {Array.from({ length: isMobile ? 2 : 4 }).map((_, i) => (
-                        <View key={i} style={styles.skeletonCard}>
-                            <SkeletonLoader width="100%" height={180} borderRadius={radiiLg} />
-                        </View>
-                    ))}
-                </View>
-            )}
+            {!dataLoaded && <QuestsGridSkeleton styles={styles} isMobile={isMobile} radius={radiiLg} />}
         </>
     );
 

@@ -365,3 +365,18 @@ describe('buildCriticalCSS: первый экран travel-detail не проп�
     expect(skipped).not.toContain('[data-testid="travel-details-quick-facts"]')
   })
 })
+
+describe('buildCriticalCSS: шрифт иконок (#2170)', () => {
+  it('прячет иконку до загрузки её шрифта — иначе запасной шрифт рисует код иконки «квадратом»', () => {
+    const { getIconFontGuardCss } = require('@/utils/iconFontShell')
+    const css = require('@/utils/criticalCSSBuilder').buildCriticalCSS()
+    expect(css).toContain(getIconFontGuardCss())
+    expect(css).toContain('html:not(.icon-font-ready) [data-icon-font]{visibility:hidden;font-size:0!important}')
+  })
+
+  it('не объявляет @font-face: гарнитуру регистрирует скрипт после LCP-картинки', () => {
+    const css = require('@/utils/criticalCSSBuilder').buildCriticalCSS()
+    expect(css).not.toContain('@font-face')
+  })
+})
+
