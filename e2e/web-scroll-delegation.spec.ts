@@ -16,6 +16,19 @@ import { preacceptCookies } from './helpers/navigation';
 
 const ROUTES = ['/quests', '/search', '/travelsby'] as const;
 
+/**
+ * #2154: каталог готов к пробе, когда отрисованы САМИ карточки, а не просто
+ * появился длинный контент. На /travelsby до прихода результатов SEO-интро
+ * живёт в отдельной области прокрутки (`cards-scroll-container`), и при
+ * появлении карточек владелец прокрутки меняется, обнуляя позицию (#2179) —
+ * проба в этой фазе мерила бы переходный экран.
+ */
+const CONTENT_READY: Record<(typeof ROUTES)[number], string> = {
+    '/quests': '[data-testid^="quest-card-"]',
+    '/search': '[data-testid="travel-row-1"]',
+    '/travelsby': '[data-testid="travel-row-1"]',
+};
+
 const DESKTOP = { width: 1280, height: 900 };
 const MOBILE = { width: 390, height: 844 };
 
@@ -88,6 +101,47 @@ async function readPrimaryOwnerExtent(page: Page): Promise<number> {
 }
 
 /**
+ * #2154: следующее колесо помечается на window — после обработчика оболочки
+ * видно, делегировал ли он жест (`defaultPrevented`). Нужен только для
+ * диагностики упавшей пробы.
+ */
+async function watchNextWheel(page: Page): Promise<void> {
+    await page.evaluate(() => {
+        const w = window as Window & { __e2eLastWheel?: unknown };
+        w.__e2eLastWheel = null;
+        window.addEventListener(
+            'wheel',
+            (event) => {
+                w.__e2eLastWheel = {
+                    defaultPrevented: event.defaultPrevented,
+                    target: (event.target as Element | null)?.getAttribute?.('data-testid') ?? (event.target as Element | null)?.tagName ?? null,
+                };
+            },
+            { once: true },
+        );
+    });
+}
+
+/** Что видела проба, когда экран не сдвинулся: для разбора без перезапуска. */
+async function readScrollDiagnostics(page: Page): Promise<Record<string, unknown>> {
+    return page.evaluate(() => {
+        const scrollers: Array<{ testId: string | null; top: number; extent: number }> = [];
+        document.querySelectorAll('*').forEach((el) => {
+            const cs = getComputedStyle(el);
+            if (cs.overflowY !== 'auto' && cs.overflowY !== 'scroll') return;
+            const extent = el.scrollHeight - el.clientHeight;
+            if (extent > 40) scrollers.push({ testId: el.getAttribute('data-testid'), top: el.scrollTop, extent });
+        });
+        return {
+            delegation: document.documentElement.getAttribute('data-scroll-delegation'),
+            windowScrollY: window.scrollY,
+            scrollers,
+            lastWheel: (window as Window & { __e2eLastWheel?: unknown }).__e2eLastWheel ?? 'not delivered',
+        };
+    });
+}
+
+/**
  * Сброс с временным снятием `scroll-behavior: smooth`: у колонки каталога
  * квестов он стоит в CSS, и обычное присваивание scrollTop анимировалось бы,
  * из-за чего следующий замер стартовал бы посреди анимации.
@@ -111,10 +165,13 @@ async function resetScroll(page: Page): Promise<void> {
         });
         window.scrollTo(0, 0);
     });
-    await page.waitForTimeout(250);
+    // Сброс считается сделанным, когда сигнал реально вернулся в ноль, а не
+    // через фиксированную паузу (#2154): иначе следующая проба под нагрузкой
+    // стартует с ненулевой прокрутки или посреди догрузки каталога.
+    await expect.poll(() => readScrollSignal(page), { message: 'прокрутка не вернулась в ноль после сброса' }).toBe(0);
 }
 
-async function openCatalog(page: Page, route: string): Promise<void> {
+async function openCatalog(page: Page, route: (typeof ROUTES)[number]): Promise<void> {
     await preacceptCookies(page);
     await page.goto(route, { waitUntil: 'load' });
 
@@ -122,6 +179,7 @@ async function openCatalog(page: Page, route: string): Promise<void> {
     // мёртвую зону, которой уже не существует. Гейт — собственный признак
     // готовности контракта, а не таймаут.
     await page.waitForSelector('html[data-scroll-delegation="on"]', { timeout: 45000 });
+    await page.locator(CONTENT_READY[route]).first().waitFor({ state: 'visible', timeout: 45000 });
 
     // И каталог должен быть наполнен: прокручивать нечего, пока карточки не
     // пришли, а список ещё и «дышит» — скелетоны сменяются карточками. Отделяет
@@ -129,15 +187,19 @@ async function openCatalog(page: Page, route: string): Promise<void> {
     // ничего не доказывает и обязана падать своим текстом.
     // Владелец должен быть УСТОЙЧИВ: список каталога доезжает рывками, и между
     // двумя соседними кадрами прокручиваемой области может не быть вовсе.
+    // Устойчивость — минимум двух соседних замеров poll (шаг 400 мс), а не сон
+    // внутри замера (#2154).
+    let previousExtent = 0;
     await expect
         .poll(
             async () => {
-                const first = await readPrimaryOwnerExtent(page);
-                if (first <= 400) return 0;
-                await page.waitForTimeout(400);
-                return Math.min(first, await readPrimaryOwnerExtent(page));
+                const current = await readPrimaryOwnerExtent(page);
+                const stable = Math.min(previousExtent, current);
+                previousExtent = current;
+                return stable;
             },
             {
+                intervals: [400],
                 timeout: 45000,
                 message: `${route}: в этом окружении нет длинного контента, проба прокрутки бессмысленна`,
             },
@@ -147,22 +209,50 @@ async function openCatalog(page: Page, route: string): Promise<void> {
     await resetScroll(page);
 }
 
-function assertRouteScrollsEverywhere(route: string, viewport: { width: number; height: number }) {
+function assertRouteScrollsEverywhere(route: (typeof ROUTES)[number], viewport: { width: number; height: number }) {
     test(`${route} прокручивается колесом в любой точке экрана`, async ({ page }) => {
         await openCatalog(page, route);
 
         const dead: string[] = [];
+        const diagnostics: unknown[] = [];
         for (const probe of probesFor(viewport.width, viewport.height)) {
             await page.mouse.move(probe.x, probe.y);
+            await watchNextWheel(page);
             await page.mouse.wheel(0, 600);
-            await page.waitForTimeout(500);
-            if ((await readScrollSignal(page)) <= 0) {
+            // Контракт #1615 — колесо сдвигает экран в момент жеста. Ждём сам
+            // сдвиг, а не фиксированные 500 мс (#2154): нативная прокрутка
+            // контента асинхронна, а на /travelsby до прихода карточек владелец
+            // прокрутки — интро, и смена владельца потом обнуляет позицию
+            // (продуктовая #2179) — разовое чтение через паузу видело этот откат
+            // как мёртвую зону. Настоящая мёртвая зона держит сигнал в нуле
+            // весь бюджет expect и попадает в список.
+            const waitError = await expect
+                .poll(() => readScrollSignal(page))
+                .toBeGreaterThan(0)
+                .then(
+                    () => null,
+                    // eslint-disable-next-line no-control-regex
+                    (error: Error) => error.message.replace(/\u001b\[\d+m/g, '').split('\n')[0],
+                );
+            if (waitError) {
                 dead.push(`${probe.name} (${probe.x},${probe.y})`);
+                const readStartedAt = Date.now();
+                const signalNow = await readScrollSignal(page);
+                diagnostics.push({
+                    probe: probe.name,
+                    waitError,
+                    signalNow,
+                    signalReadMs: Date.now() - readStartedAt,
+                    ...(await readScrollDiagnostics(page)),
+                });
             }
             await resetScroll(page);
         }
 
-        expect(dead, `Мёртвые зоны прокрутки на ${route}: ${dead.join(', ')}`).toEqual([]);
+        expect(
+            dead,
+            `Мёртвые зоны прокрутки на ${route}: ${dead.join(', ')}\n${JSON.stringify(diagnostics, null, 2)}`,
+        ).toEqual([]);
     });
 }
 
@@ -192,9 +282,8 @@ test.describe('Web scroll: единый владелец прокрутки эк
             await send('touchStart', 40);
             for (let y = 36; y >= 4; y -= 8) await send('touchMove', y);
             await send('touchEnd', 4);
-            await page.waitForTimeout(500);
 
-            expect(await readScrollSignal(page)).toBeGreaterThan(0);
+            await expect.poll(() => readScrollSignal(page)).toBeGreaterThan(0);
         });
     });
 });

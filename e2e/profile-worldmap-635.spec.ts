@@ -160,9 +160,24 @@ test('T3: клик по стране с маршрутами показывае�
   await expect(page.getByText('Минск за выходные').first()).toBeVisible({ timeout: 5000 })
 
   // Тап по мини-карточке → переход на /travels/<slug>.
+  // #2154: при провале нужно отличать потерянный клик (переход не вызывался)
+  // от медленного экрана /travels/* — фиксируем вызовы pushState.
+  await page.evaluate(() => {
+    const w = window as Window & { __e2ePushes?: string[] }
+    w.__e2ePushes = []
+    const push = history.pushState.bind(history)
+    history.pushState = (data, unused, url) => {
+      w.__e2ePushes?.push(String(url))
+      return push(data, unused, url)
+    }
+  })
   await page.locator('[aria-label="Минск за выходные"]').first().click()
-  await page.waitForFunction(() => location.pathname.includes('/travels/minsk-weekend'), undefined, { timeout: 8000 })
-  expect(page.url()).toContain('/travels/minsk-weekend')
+  // Ждём сам переход условием, а не 8 с через waitForFunction: под нагрузкой
+  // ленивый чанк /travels/* грузится дольше; toHaveURL печатает фактический адрес.
+  await expect(page).toHaveURL(/\/travels\/minsk-weekend/).catch(async (error: Error) => {
+    const pushes = await page.evaluate(() => (window as Window & { __e2ePushes?: string[] }).__e2ePushes ?? [])
+    throw new Error(`${error.message}\npushState после клика: ${JSON.stringify(pushes)}`)
+  })
 })
 
 test('пинч двумя пальцами зумит карту (mobile web)', async ({ page }) => {

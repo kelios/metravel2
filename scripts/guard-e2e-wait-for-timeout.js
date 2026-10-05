@@ -64,7 +64,6 @@ const WAIT_FOR_TIMEOUT_BASELINE = {
   'e2e/ui-layout-regressions.spec.ts': 1,
   'e2e/user-points-import.spec.ts': 3,
   'e2e/user-points.spec.ts': 4,
-  'e2e/web-scroll-delegation.spec.ts': 4,
   'e2e/web-vitals-list.spec.ts': 1,
 }
 
