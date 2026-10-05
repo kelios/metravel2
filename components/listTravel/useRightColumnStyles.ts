@@ -99,14 +99,15 @@ export function useRightColumnStyles({
     [contentPadding],
   )
 
+  // #2179: скелетоны живут в ListEmptyComponent списка — горизонтальный
+  // отступ и верхний зазор даёт контейнер содержимого, как рядам карточек.
   const recommendationsSkeletonStyle = useMemo(
     () => ({
       height: RECOMMENDATIONS_TOTAL_HEIGHT,
       marginBottom: 24,
       overflow: 'hidden' as const,
-      paddingHorizontal: contentPadding,
     }),
-    [contentPadding],
+    [],
   )
 
   const activeConditionChipStyles = useMemo(
@@ -228,11 +229,9 @@ export function useRightColumnStyles({
       flexDirection: 'row' as const,
       flexWrap: 'wrap' as const,
       gap: cardSpacing,
-      paddingHorizontal: contentPadding,
-      paddingTop: 8,
       paddingBottom: 24,
     }),
-    [cardSpacing, contentPadding],
+    [cardSpacing],
   )
 
   const skeletonCardWrapperStyle = useMemo<StyleProp<ViewStyle>>(

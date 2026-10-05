@@ -16,7 +16,6 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
-import EmptyState from '@/components/ui/EmptyState'
 import ContributionBanner from '@/components/common/ContributionBanner'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
@@ -31,8 +30,8 @@ import {
 import {
   RecommendationsPlaceholder,
   RecommendationsTabs,
-  TravelCardSkeletonComponent,
 } from '@/components/listTravel/RightColumn.parts'
+import RightColumnListStatus from '@/components/listTravel/RightColumnListStatus'
 import ListCatalogToolbar, {
   type ListStatusMode,
   type ListSortOption,
@@ -46,7 +45,7 @@ import { translate as i18nT } from '@/i18n'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
 
-interface RightColumnProps {
+export interface RightColumnProps {
   listIntroContent?: React.ReactNode
   search: string
   setSearch: (value: string) => void
@@ -117,9 +116,7 @@ interface RightColumnProps {
   }
 }
 
-const standaloneListIntroScrollStyle: ViewStyle & { overflowY: 'auto' } = {
-  overflowY: 'auto',
-}
+const EMPTY_ROWS: Travel[][] = []
 
 // The first row is above the fold and must be measured from its real contents.
 // Deferring it makes the browser report contain-intrinsic-size to FlashList
@@ -452,6 +449,11 @@ const RightColumn: React.FC<RightColumnProps> = (
       ]
     )
 
+    // #2179: один владелец прокрутки во всех фазах — FlashList смонтирован
+    // всегда, до результатов его содержимое — состояние списка (ListEmptyComponent).
+    const hasLoadedResults =
+      !showInitialLoading && !isError && !showEmptyState && travels.length > 0
+
     const ListHeader = useMemo(() => {
       // minHeight, а не height+overflow:hidden: вкладки с собственной шапкой
       // («Хочу поехать»/«История» — заголовок, счётчик, «Смотреть все») выше
@@ -465,6 +467,8 @@ const RightColumn: React.FC<RightColumnProps> = (
           {listIntroContent ? (
             <View style={paddingHorizontalStyle}>{listIntroContent}</View>
           ) : null}
+          {/* До результатов на месте рекомендаций — их плейсхолдер в состоянии списка. */}
+          {hasLoadedResults ? (
           <View
             testID="recommendations-list-header"
             onLayout={showRecommendations ? handleRecommendationsLayout : undefined}
@@ -483,10 +487,12 @@ const RightColumn: React.FC<RightColumnProps> = (
               </Suspense>
             )}
           </View>
+          ) : null}
         </>
       )
     }, [
       handleRecommendationsLayout,
+      hasLoadedResults,
       isMobile,
       listIntroContent,
       paddingHorizontalStyle,
@@ -536,11 +542,46 @@ const RightColumn: React.FC<RightColumnProps> = (
       [gridColumns, hasUserScrolled]
     )
 
-    const loadedResultsContent = useMemo(() => {
-      if (showInitialLoading || isError || showEmptyState || travels.length === 0) {
-        return null
-      }
+    const listStatus = useMemo(() => hasLoadedResults ? null : (
+      <RightColumnListStatus
+        shouldShowSkeleton={shouldShowSkeleton}
+        isRecommendationsVisible={isRecommendationsVisible}
+        showInitialLoading={showInitialLoading}
+        isError={isError}
+        isOffline={isOffline}
+        refetch={refetch}
+        showEmptyState={showEmptyState}
+        getEmptyStateMessage={getEmptyStateMessage}
+        activeFiltersCount={activeFiltersCount}
+        search={search}
+        onClearAll={onClearAll}
+        setSearch={setSearch}
+        initialSkeletonCount={initialSkeletonCount}
+        recommendationsSkeletonStyle={recommendationsSkeletonStyle}
+        skeletonGridStyle={skeletonGridStyle}
+        skeletonCardWrapperStyle={skeletonCardWrapperStyle}
+      />
+    ), [
+      activeFiltersCount,
+      getEmptyStateMessage,
+      hasLoadedResults,
+      initialSkeletonCount,
+      isError,
+      isOffline,
+      isRecommendationsVisible,
+      onClearAll,
+      recommendationsSkeletonStyle,
+      refetch,
+      search,
+      setSearch,
+      shouldShowSkeleton,
+      showEmptyState,
+      showInitialLoading,
+      skeletonCardWrapperStyle,
+      skeletonGridStyle,
+    ])
 
+    const listContent = useMemo(() => {
       // Web also uses FlashList to virtualize the grid and avoid unbounded DOM
       // growth across paginated pages. FlashList's internal ScrollView is the
       // single scroll container on web, so infinite scroll is driven through its
@@ -549,12 +590,13 @@ const RightColumn: React.FC<RightColumnProps> = (
       return (
         <FlashList
           ref={listRef as any}
-          data={rows}
+          data={hasLoadedResults ? rows : EMPTY_ROWS}
           renderItem={renderRow as any}
           extraData={flashListExtraData}
           keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
           ListHeaderComponent={ListHeader}
-          ListFooterComponent={listFooter}
+          ListEmptyComponent={listStatus}
+          ListFooterComponent={hasLoadedResults ? listFooter : null}
           ItemSeparatorComponent={isWeb ? RowSeparator : undefined}
           onEndReached={isWeb ? undefined : onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
@@ -593,27 +635,23 @@ const RightColumn: React.FC<RightColumnProps> = (
       listFooter,
       flashListExtraData,
       gridColumns,
-      isError,
+      hasLoadedResults,
       isExport,
       isMobile,
       isRefreshing,
       handleRefresh,
       colors.primary,
       listRef,
+      listStatus,
       nativeContentContainerStyle,
       onEndReached,
       onEndReachedThreshold,
       renderRow,
       rows,
-      showEmptyState,
-      showInitialLoading,
-      travels.length,
       virtualizationConfig,
       webContentContainerStyle,
       webScrollHandler,
     ])
-
-    const showStandaloneListIntro = !!listIntroContent && loadedResultsContent == null
 
     return (
       <View testID={testID} style={containerStyle}>
@@ -688,101 +726,9 @@ const RightColumn: React.FC<RightColumnProps> = (
         <View
           testID="cards-scroll-container"
           {...SCREEN_CONTENT_FIRST_PROPS}
-          style={[
-            cardsWrapperStyle,
-            showStandaloneListIntro && Platform.OS === 'web'
-              ? standaloneListIntroScrollStyle
-              : undefined,
-          ]}
+          style={cardsWrapperStyle}
         >
-          {showStandaloneListIntro ? (
-            <View style={paddingHorizontalStyle}>{listIntroContent}</View>
-          ) : null}
-
-          {shouldShowSkeleton && isRecommendationsVisible && (
-            <View
-              style={recommendationsSkeletonStyle}
-            >
-              <RecommendationsPlaceholder />
-            </View>
-          )}
-
-          {/* Initial Loading - local shell for all layouts */}
-          {shouldShowSkeleton && (
-            <View style={skeletonGridStyle}>
-              {Array.from({ length: initialSkeletonCount }).map((_, idx) => (
-                <View key={`travel-skeleton-${idx}`} style={skeletonCardWrapperStyle as any}>
-                  <TravelCardSkeletonComponent />
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* Error — на native при отсутствии сети показываем отдельный
-              «нет подключения», а не общий сбой загрузки. */}
-          {isError && !showInitialLoading && (
-            <View style={paddingHorizontalStyle}>
-              {isOffline ? (
-                <EmptyState
-                  density="compact"
-                  icon="wifi-off"
-                  title={i18nT('travel:components.listTravel.RightColumn.net_podklyucheniya_fb445d25')}
-                  description={i18nT('travel:components.listTravel.RightColumn.proverte_internet_soedinenie_i_poprobuyte_sn_99ebb55e')}
-                  variant="error"
-                  action={{
-                    label: i18nT('travel:components.listTravel.RightColumn.povtorit_340c3e03'),
-                    onPress: () => refetch(),
-                  }}
-                />
-              ) : (
-                <EmptyState
-                  density="compact"
-                  icon="alert-circle"
-                  title={i18nT('travel:components.listTravel.RightColumn.oshibka_zagruzki_3d856d87')}
-                  description={i18nT('travel:components.listTravel.RightColumn.ne_udalos_zagruzit_puteshestviya_7460434d')}
-                  variant="error"
-                  action={{
-                    label: i18nT('travel:components.listTravel.RightColumn.povtorit_340c3e03'),
-                    onPress: () => refetch(),
-                  }}
-                />
-              )}
-            </View>
-          )}
-
-          {/* Empty State */}
-          {!showInitialLoading &&
-            !isError &&
-            showEmptyState &&
-            getEmptyStateMessage && (
-              <View style={paddingHorizontalStyle}>
-                <EmptyState
-                  // Поиск с подсказками сохраняет полный вид (#2104 вне scope), прочее — компактно.
-                  density={getEmptyStateMessage.variant === 'search' ? 'full' : 'compact'}
-                  icon={getEmptyStateMessage.icon}
-                  title={getEmptyStateMessage.title}
-                  description={getEmptyStateMessage.description}
-                  variant={getEmptyStateMessage.variant}
-                  action={
-                    getEmptyStateMessage.action
-                      ? getEmptyStateMessage.action
-                      : activeFiltersCount > 0 || search
-                        ? {
-                            label: i18nT('travel:components.listTravel.RightColumn.sbrosit_usloviya_60d7d2cf'),
-                            onPress: () => {
-                              onClearAll?.();
-                              setSearch?.('');
-                            },
-                          }
-                        : undefined
-                  }
-                  suggestions={getEmptyStateMessage.suggestions}
-                />
-              </View>
-            )}
-
-          {/* Travel Cards Grid - Only show when we have data */}
-          {loadedResultsContent}
+          {listContent}
         </View>
       </View>
     )
