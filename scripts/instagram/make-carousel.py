@@ -4,7 +4,7 @@
 Вход — JSON-спецификация: {"out_dir": "...", "slides": [...]}. Типы слайдов:
   cover — {"type": "cover", "image", "kicker", "title", "subtitle"}
   list  — {"type": "list", "image"?, "kicker", "title", "items": [...]}
-  map   — {"type": "map", "title", "note", "points": [{"name", "lat", "lng"}]}
+  map   — {"type": "map", "title", "note", "points": [{"name", "lat", "lng"}], "line"?: false — без ломаной между точками}
   cta   — {"type": "cta", "image", "title", "text"}
 
 Фото — локальный путь или URL (только свои фото автора 1). Карта — плитки OpenStreetMap,
@@ -155,7 +155,8 @@ def slide_map(spec):
     draw = ImageDraw.Draw(img)
     k = W / span
     dots = [((x - left) * k, (y - top) * k) for x, y in xy]
-    draw.line(dots, fill=BRAND, width=7, joint="curve")
+    if spec.get("line", True):
+        draw.line(dots, fill=BRAND, width=7, joint="curve")
     for i, (x, y) in enumerate(dots, 1):
         draw.ellipse([x - 24, y - 24, x + 24, y + 24], fill=WHITE, outline=BRAND, width=5)
         label = str(i)
