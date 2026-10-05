@@ -1,5 +1,6 @@
 import { BlockRenderer } from '@/services/pdf-export/renderers/BlockRenderer'
-import { minimalTheme } from '@/services/pdf-export/themes/PdfThemeConfig'
+import { PDF_THEME_HEADING_LEVELS } from '@/services/pdf-export/themes/headingLevels'
+import { PDF_THEMES, minimalTheme } from '@/services/pdf-export/themes/PdfThemeConfig'
 
 describe('BlockRenderer', () => {
   it('keeps blob URLs for image blocks', () => {
@@ -143,5 +144,52 @@ describe('BlockRenderer', () => {
     expect(html).toContain('class="pdf-rich-image img-float-left"')
     expect(html).toContain('float: left')
     expect(html).not.toContain('class="pdf-rich-image img-float-right"')
+  })
+
+  // #2210: разметка описаний допускает h1–h6, темы описывают стиль только части
+  // уровней. Заголовок без своего стиля печатается самым мелким описанным — и
+  // тегом, и стилем, — а не роняет сборку книги на `undefined`.
+  describe('уровни заголовков', () => {
+    const themes = Object.entries(PDF_THEMES)
+    const renderHeading = (renderer: BlockRenderer, level: 1 | 2 | 3 | 4 | 5 | 6) =>
+      renderer.renderBlocks([{ type: 'heading', level, text: 'Заголовок' }])
+
+    it.each(themes)('тема %s: h1–h4 печатаются своим тегом и своим стилем', (_name, theme) => {
+      const renderer = new BlockRenderer(theme)
+
+      for (const level of PDF_THEME_HEADING_LEVELS) {
+        const style = theme.typography[`h${level}` as const]
+        const html = renderHeading(renderer, level)
+
+        expect(html).toMatch(new RegExp(`<h${level} style="[^"]*">Заголовок</h${level}>`))
+        expect(html).toContain(`font-size: ${style.size};`)
+        expect(html).toContain(`font-weight: ${style.weight};`)
+        expect(html).toContain(`line-height: ${style.lineHeight};`)
+        expect(html).toContain(`margin-bottom: ${style.marginBottom};`)
+      }
+    })
+
+    it.each(themes)('тема %s: h5 и h6 печатаются тегом и стилем h4', (_name, theme) => {
+      const renderer = new BlockRenderer(theme)
+      const asFourth = renderHeading(renderer, 4)
+
+      expect(renderHeading(renderer, 5)).toBe(asFourth)
+      expect(renderHeading(renderer, 6)).toBe(asFourth)
+    })
+
+    it('описание: понижение уровней прежнее, h5 и h6 печатаются как h4', () => {
+      const renderer = new BlockRenderer(minimalTheme)
+      const html = renderer.renderRichText(
+        '<h1>Первый</h1><h2>Второй</h2><h3>Третий</h3><h4>Четвёртый</h4><h5>Пятый</h5><h6>Шестой</h6>'
+      )
+
+      expect(html).toMatch(/<h3[^>]*>Первый<\/h3>/)
+      expect(html).toMatch(/<h3[^>]*>Второй<\/h3>/)
+      expect(html).toMatch(/<h4[^>]*>Третий<\/h4>/)
+      expect(html).toMatch(/<h4[^>]*>Четвёртый<\/h4>/)
+      expect(html).toMatch(/<h4[^>]*>Пятый<\/h4>/)
+      expect(html).toMatch(/<h4[^>]*>Шестой<\/h4>/)
+      expect(html).not.toMatch(/<h[1256]/)
+    })
   })
 })

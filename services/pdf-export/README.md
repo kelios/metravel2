@@ -20,7 +20,7 @@ BookSettingsModal
 - `TravelDataTransformer.ts` — валидация и нормализация выбранных travels;
 - `generators/EnhancedPdfGenerator.ts` — стабильный re-export генератора v2;
 - `generators/v2/` — page assembly, renderers, image processing и atlas pages;
-- `themes/` — типы, tiers и theme configs;
+- `themes/` — типы, tiers, уровни заголовков (`headingLevels.ts`) и theme configs;
 - `parsers/ContentParser.ts`, `renderers/BlockRenderer.ts` — rich content;
 - `parsers/contentParser/htmlTree*` — дерево HTML для разбора описаний: тонкий
   интерфейс (`htmlTree.types.ts`), `DOMParser` на web (`htmlTree.web.ts`), parse5

@@ -223,8 +223,9 @@ HTML-документ под печать, к пайплайну книги от
 ## Тесты
 
 - `__tests__/services/pdf-export/` — `TravelDataTransformer`, `BlockRenderer`,
-  `premiumSettingsGate`, `descriptionImageSizes`, `printImageFallbackMarkup`,
-  `printPageBreaks`, плюс подкаталоги `generators`, `layouts`, `themes`;
+  `bookHeadingLevels`, `premiumSettingsGate`, `descriptionImageSizes`,
+  `printImageFallbackMarkup`, `printPageBreaks`, плюс подкаталоги `generators`,
+  `layouts`, `themes`;
 - `__tests__/components/export/` — `BookSettingsModal` и его premium-ветка,
   `PresetSelector`, `ThemePreview` (обычная и premium);
 - `__tests__/services/pdf-export/bookGolden.test.ts` и `bookGolden.native.test.ts` —
@@ -246,6 +247,14 @@ HTML-документ под печать, к пайплайну книги от
   переносит в конец документа кусками (ошибка `insertTextBefore`), браузер и
   parse5 — одним узлом перед таблицей. Эталон разбора снят под jsdom, поэтому
   тест приложений держит для этого случая отдельное ожидание.
+- **Тема описывает заголовки h1–h4, а разметка блоков допускает h1–h6.**
+  Заголовок любого уровня в любом из четырёх блоков книги (описание,
+  рекомендации, плюсы, минусы) печатается; уровень без стиля в теме (h5, h6) —
+  тегом и стилем h4. Список уровней один —
+  `services/pdf-export/themes/headingLevels.ts`: из него выведены и ключи
+  `typography.h1`–`h4`, и выбор уровня в `BlockRenderer`
+  (`resolveThemeHeadingLevel`); стиль заголовка по уровню разметки в обход него
+  не берётся (#2210).
 - **Результат — печать браузера или системный диалог, а не файл.** Расхождения между превью и
   итоговым PDF (разрывы страниц, поля, фон) — это поведение печати конкретного
   браузера, а не баг генератора; воспроизводить надо в том же браузере.

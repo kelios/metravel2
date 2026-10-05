@@ -2,6 +2,7 @@
 // ✅ АРХИТЕКТУРА: Рендерер блоков контента в HTML
 
 import type { PdfThemeConfig } from '../themes/PdfThemeConfig';
+import { resolveThemeHeadingLevel } from '../themes/headingLevels';
 import type { ParsedContentBlock } from '../parsers/ContentParser';
 import { ContentParser } from '../parsers/ContentParser';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
@@ -12,6 +13,16 @@ import {
   PRINT_IMAGE_INLINE_WIDTH,
 } from '@/utils/printImageUrl';
 import { renderImageGallery } from './blockRenderer/galleryRenderer';
+
+/**
+ * Цвета темы для каждого типа информационного блока
+ */
+const INFO_BLOCK_THEME_COLORS = {
+  'info-block': 'infoBlock',
+  'warning-block': 'warningBlock',
+  'tip-block': 'tipBlock',
+  'danger-block': 'dangerBlock',
+} as const;
 
 /**
  * Рендерер блоков контента
@@ -210,7 +221,7 @@ export class BlockRenderer {
    *
    * Заголовки понижаются на уровень (h2→h3, h3→h4), чтобы не спорить с секционными
    * заголовками страницы («Описание», «Плюсы» — это h2 темы). Верхняя граница — h3:
-   * выше начинается кегль секций. Нижняя — h4: тем h5 не существует.
+   * выше начинается кегль секций. Нижняя — самый мелкий заголовок темы (h4).
    *
    * Раньше формула схлопывала в h4 вообще всё, и разделы статьи, подразделы и вопросы
    * FAQ печатались одним кеглем — иерархия описания на бумаге пропадала.
@@ -222,8 +233,7 @@ export class BlockRenderer {
     const blocks = parser.parse(formatted);
     const demoted = blocks.map((block) => {
       if (block.type === 'heading') {
-        const newLevel = Math.max(block.level + 1, 3);
-        return { ...block, level: Math.min(newLevel, 4) as 1 | 2 | 3 | 4 };
+        return { ...block, level: resolveThemeHeadingLevel(Math.max(block.level + 1, 3)) };
       }
       return block;
     });
@@ -264,19 +274,16 @@ export class BlockRenderer {
   }
 
   /**
-   * Рендерит заголовок
+   * Рендерит заголовок. Тег и стиль — одного уровня: заголовок без своего стиля
+   * в теме (h5, h6) печатается как самый мелкий описанный.
    */
   private renderHeading(
     block: ParsedContentBlock & { type: 'heading' },
     options: { keepWithNext?: boolean } = {}
   ): string {
-    const { level, text } = block;
-    const style = this.theme.typography[`h${level}` as keyof typeof this.theme.typography] as {
-      size: string;
-      weight: number;
-      lineHeight: number;
-      marginBottom: string;
-    };
+    const { text } = block;
+    const level = resolveThemeHeadingLevel(block.level);
+    const style = this.theme.typography[`h${level}` as const];
 
     return `
       <h${level} style="
@@ -471,12 +478,7 @@ export class BlockRenderer {
   private renderInfoBlock(block: ParsedContentBlock & { type: 'info-block' | 'warning-block' | 'tip-block' | 'danger-block' }): string {
     const { type, title, content } = block;
     
-    const config = this.theme.colors[`${type.replace('-block', '')}Block` as keyof typeof this.theme.colors] as {
-      background: string;
-      border: string;
-      text: string;
-      icon: string;
-    };
+    const config = this.theme.colors[INFO_BLOCK_THEME_COLORS[type]];
 
     const iconName =
       type === 'warning-block'

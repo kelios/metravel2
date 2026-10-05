@@ -1,6 +1,8 @@
 // src/services/pdf-export/themes/types.ts
 // ✅ АРХИТЕКТУРА: Типы конфигурации тем оформления PDF
 
+import type { PdfThemeHeadingTypography } from './headingLevels';
+
 /**
  * Тип темы оформления
  */
@@ -89,17 +91,11 @@ export interface PdfThemeConfig {
     };
   };
 
-  // Типографика
-  typography: {
+  // Типографика. Размеры заголовков (`h1`–`h4`) — по списку уровней из `headingLevels.ts`
+  typography: PdfThemeHeadingTypography & {
     headingFont: string;
     bodyFont: string;
     monoFont: string;
-
-    // Размеры заголовков
-    h1: { size: string; weight: number; lineHeight: number; marginBottom: string };
-    h2: { size: string; weight: number; lineHeight: number; marginBottom: string };
-    h3: { size: string; weight: number; lineHeight: number; marginBottom: string };
-    h4: { size: string; weight: number; lineHeight: number; marginBottom: string };
 
     // Размеры текста
     body: { size: string; lineHeight: number; marginBottom: string };

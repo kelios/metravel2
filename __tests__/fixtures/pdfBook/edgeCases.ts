@@ -323,13 +323,12 @@ export const PDF_BOOK_EDGE_CASES: PdfBookEdgeCase[] = [
 
   // ───────────── заголовки и разделители ─────────────
   {
+    // В книге h5 и h6 печатаются как h4: темы описывают стиль только h1–h4 (#2210).
     name: 'headings-all-levels',
     html: '<h1>Первый</h1><h2>Второй с <em>курсивом</em></h2><h3>Третий&nbsp;уровень</h3><h4> Четвёртый </h4><h5>Пятый</h5><h6>Шестой</h6><h2></h2><h3>   </h3>',
   },
   {
-    // h5/h6 в «Рекомендациях», «Плюсах» и «Минусах» роняют рендер книги: темы
-    // описывают только h1–h4 (#2210). Пока не починено, в эталон книги идёт этот
-    // случай, а `headings-all-levels` проверяется только разбором.
+    // Только эталон разбора: в эталон книги идёт `headings-all-levels`.
     name: 'headings-h1-h4',
     html: '<h1>Первый</h1><p>Абзац под первым</p><h2>Второй с <em>курсивом</em></h2><h3>Третий&nbsp;уровень</h3><h4> Четвёртый </h4><p>Абзац под четвёртым</p>',
   },
@@ -522,7 +521,7 @@ export const PIPELINE_EDGE_CASE_NAMES = [
   'special-blocks-localized-tokens',
   'quote-with-cite-and-footer',
   'code-blocks',
-  'headings-h1-h4',
+  'headings-all-levels',
   'separators-and-top-level-text',
   'embeds-and-media',
   'paragraph-inline-formatting',
