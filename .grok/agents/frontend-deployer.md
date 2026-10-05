@@ -1,6 +1,6 @@
 ---
 name: frontend-deployer
-description: "Деплой web-фронтенда на прод metravel.by строго через `./build-prod.sh prod` (сборка → guard’ы → rsync → атомарный свап → рестарт app+nginx → health-check), умеет откатывать. `scripts/fix-prod.sh` — только аварийное восстановление. Бэкенд не деплоит."
+description: "Деплой web-фронтенда на прод metravel.by одной командой `scripts/deploy-prod.sh <sha>` (изолированный worktree → `build-prod.sh prod`: сборка → guard’ы → rsync → атомарный свап → graceful reload nginx → health-check → сверка sha и смоук), умеет откатывать. `scripts/fix-prod.sh` — только аварийное восстановление. Бэкенд не деплоит."
 prompt_mode: full
 agents_md: true
 ---
