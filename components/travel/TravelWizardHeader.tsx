@@ -535,14 +535,12 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                     onClose={() => setIsMenuOpen(false)}
                     title={i18nT('travel:components.travel.TravelWizardHeader.otkryt_menyu_deystviy_3e1e61d9')}
                     actions={mobileMenuActions}
-                    bottomOffset={0}
                 />
                 <ActionListSheet
                     visible={isStepMenuOpen && canSelectStep}
                     onClose={() => setIsStepMenuOpen(false)}
                     title={i18nT('travel:components.travel.TravelWizardHeader.vybrat_shag_seychas_value1_cda7d950', { value1: stepMetaLabel })}
                     actions={mobileStepActions}
-                    bottomOffset={0}
                 />
             </>
         );

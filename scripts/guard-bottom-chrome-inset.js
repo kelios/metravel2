@@ -5,6 +5,10 @@
  * Локальные LAYOUT.tabBarHeight, BOTTOM_DOCK_HEIGHT и «56 рядом с insets»
  * снова прячут последнюю кнопку под док.
  *
+ * #2153: то же для нижних листов и оверлеев — литерал высоты дока в тернарнике
+ * `bottom` / `marginBottom` (`IS_WEB ? 58 : 0`) держит лист над краем там, где
+ * дока нет. Отступ листа — `useBottomChromeInset()` (см. `components/ui/BottomSheet`).
+ *
  * Док сам (BottomDock, его fallback в Footer и RootWebDeferredChrome) и
  * модуль хука константу читать могут. Клавиатура (#1072) и оверлеи поверх
  * всего экрана резервируют home indicator, а не док — они в SAFE_AREA_ONLY.
@@ -33,43 +37,70 @@ const SAFE_AREA_ONLY = new Set([
 
 const SOURCE = new Set(['.js', '.jsx', '.ts', '.tsx'])
 
-const violations = []
+/** Строка кода без комментариев; `null`, если от строки ничего не осталось. */
+const stripLineComments = (line) => {
+  const code = line.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/, '')
+  return code.trim() ? code : null
+}
 
-const walk = (dir) => {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === 'node_modules' || entry.name === '__tests__') continue
-    const full = path.join(dir, entry.name)
-    if (entry.isDirectory()) {
-      walk(full)
-      continue
-    }
-    if (!SOURCE.has(path.extname(entry.name))) continue
-    const rel = path.relative(ROOT, full).split(path.sep).join('/')
-    if (ALLOW_FILES.has(rel) || SAFE_AREA_ONLY.has(rel)) continue
-    const text = fs.readFileSync(full, 'utf8')
-    const lines = text.split('\n')
-    lines.forEach((line, index) => {
-      const code = line.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/, '')
-      if (!code.trim()) return
-      const dockSymbol = /LAYOUT\??\.tabBarHeight|\bBOTTOM_DOCK_HEIGHT\b|\bDOCK_CONTENT_HEIGHT\b/.test(code)
-      const dockLiteralWithInsets = /insets\.bottom[\s\S]{0,40}\b56\b|\b56\b[\s\S]{0,40}insets\.bottom/.test(code)
-      const namedDockLiteral = /(?:DOCK|TAB_BAR|FOOTER_RESERVE)[A-Z0-9_]*\s*=\s*56\b/.test(code)
-      if (dockSymbol || dockLiteralWithInsets || namedDockLiteral) {
-        violations.push(`${rel}:${index + 1}: ${line.trim()}`)
+/** Локальный расчёт высоты дока в одной строке кода (без комментариев). */
+const lineComputesDockHeight = (code) => {
+  const dockSymbol = /LAYOUT\??\.tabBarHeight|\bBOTTOM_DOCK_HEIGHT\b|\bDOCK_CONTENT_HEIGHT\b/.test(code)
+  const dockLiteralWithInsets = /insets\.bottom[\s\S]{0,40}\b56\b|\b56\b[\s\S]{0,40}insets\.bottom/.test(code)
+  const namedDockLiteral = /(?:DOCK|TAB_BAR|FOOTER_RESERVE)[A-Z0-9_]*\s*=\s*56\b/.test(code)
+  // #2153: `marginBottom: bottomOffset ?? (IS_WEB ? 58 : 0)` — высота дока (56 и
+  // 58 с рамкой) как ветка тернарника в нижнем отступе.
+  const dockLiteralInBottomTernary = /\b(?:marginBottom|bottom)\b\s*:[^\n]*\?\s*(?:56|58)\b/.test(code)
+  return dockSymbol || dockLiteralWithInsets || namedDockLiteral || dockLiteralInBottomTernary
+}
+
+/** Нарушения в тексте одного файла: `rel:line: исходная строка`. */
+const findViolationsInSource = (rel, text) => {
+  const found = []
+  text.split('\n').forEach((line, index) => {
+    const code = stripLineComments(line)
+    if (code && lineComputesDockHeight(code)) found.push(`${rel}:${index + 1}: ${line.trim()}`)
+  })
+  return found
+}
+
+const collectViolations = (rootDir = ROOT) => {
+  const violations = []
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name === '__tests__') continue
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) {
+        walk(full)
+        continue
       }
-    })
+      if (!SOURCE.has(path.extname(entry.name))) continue
+      const rel = path.relative(rootDir, full).split(path.sep).join('/')
+      if (ALLOW_FILES.has(rel) || SAFE_AREA_ONLY.has(rel)) continue
+      violations.push(...findViolationsInSource(rel, fs.readFileSync(full, 'utf8')))
+    }
   }
+  for (const dir of SCAN_DIRS) {
+    const full = path.join(rootDir, dir)
+    if (fs.existsSync(full)) walk(full)
+  }
+  return violations
 }
 
-for (const dir of SCAN_DIRS) {
-  const full = path.join(ROOT, dir)
-  if (fs.existsSync(full)) walk(full)
+function main() {
+  const violations = collectViolations()
+  if (violations.length) {
+    console.error('guard:bottom-chrome-inset: локальный расчёт высоты дока')
+    for (const item of violations) console.error(`  ${item}`)
+    process.exit(1)
+  }
+  console.log('guard:bottom-chrome-inset: ok')
 }
 
-if (violations.length) {
-  console.error('guard:bottom-chrome-inset: локальный расчёт высоты дока')
-  for (const item of violations) console.error(`  ${item}`)
-  process.exit(1)
-}
+if (require.main === module) main()
 
-console.log('guard:bottom-chrome-inset: ok')
+module.exports = {
+  collectViolations,
+  findViolationsInSource,
+  lineComputesDockHeight,
+}

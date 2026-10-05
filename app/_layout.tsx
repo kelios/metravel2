@@ -27,6 +27,8 @@ const isWeb = Platform.OS === "web";
 // отсутствует в нативной сборке) → чёрный экран. До пересборки dev-client с проверенным RNGH
 // корень остаётся обычным View; Gorhom-шит «Ещё» в BottomDock не монтируется (см. BottomDock).
 const RootContainerView: React.ComponentType<any> = View;
+// Метка экрана без нижнего дока → `data-mt-dock="off"` (читает app/global.css, #2153).
+const DOCK_OFF_DATASET = { mtDock: 'off' } as const;
 import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { shouldPrefetchTravelStatics } from "@/utils/staticPrefetchRoutes";
@@ -445,7 +447,11 @@ function ThemedContent({
                             />
                           )}
                           <NavigationThemeProvider value={navigationTheme}>
-                          <RootContainerView style={styles.container}>
+                          <RootContainerView
+                            style={styles.container}
+                            // #2153: экран без дока обнуляет web-резерв `--mt-dock-h` (app/global.css).
+                            {...(isWeb && !showFooter ? { dataSet: DOCK_OFF_DATASET } : null)}
+                          >
                               {isWeb ? <ConfirmDialogHost /> : null}
                               {showMapBackground && (
                                 <Image

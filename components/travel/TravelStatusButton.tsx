@@ -7,7 +7,6 @@ import {
   Modal,
   ScrollView,
   Platform,
-  PanResponder,
   type StyleProp,
   type ViewStyle,
 } from 'react-native'
@@ -15,6 +14,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { useAuth } from '@/context/AuthContext'
 import { parseTravelStatusDateParts, useTravelStatus, setTravelStatus, removeTravelStatus, type TravelStatus } from '@/stores/travelStatusStore'
 import MiniCalendar from '@/components/calendar/MiniCalendar'
+import BottomSheet from '@/components/ui/BottomSheet'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useBreakpoints } from '@/hooks/useResponsive'
@@ -22,6 +22,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { useActionFeedback } from '@/hooks/useActionFeedback'
 import { translate as i18nT } from '@/i18n'
+import { formatDate } from '@/i18n/format'
 import { webTitleRef } from '@/utils/webProps'
 
 
@@ -72,6 +73,21 @@ const isValidDate = (val: string) => {
   return parseTravelStatusDateParts(val) !== null
 }
 
+/**
+ * Дата поездки для показа (кнопка, лист, тост) — по активной локали (#2230).
+ * Календарный день собирается из частей как локальная дата: `new Date('2026-10-21')`
+ * — это полночь UTC, и к западу от Гринвича она показала бы 20-е.
+ */
+const formatPlannedDate = (value: string): string => {
+  const parts = parseTravelStatusDateParts(value)
+  if (!parts) return value
+  return formatDate(new Date(parts.year, parts.month - 1, parts.day), {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 const stopWebCardEvent = (e?: any) => {
   if (Platform.OS !== 'web') return
   e?.preventDefault?.()
@@ -102,6 +118,7 @@ export default function TravelStatusButton({
   style,
 }: Props) {
   const colors = useThemedColors()
+  const isWeb = Platform.OS === 'web'
   const { isMobile } = useBreakpoints()
   const { isAuthenticated, userId } = useAuth()
   const { requireAuth } = useRequireAuth({ intent: 'calendar' })
@@ -199,7 +216,7 @@ export default function TravelStatusButton({
         },
         userId
       ),
-      success: { message: i18nT('travel:components.travel.TravelStatusButton.dobavleno_v_plany_dfb57b79'), description: dateInput },
+      success: { message: i18nT('travel:components.travel.TravelStatusButton.dobavleno_v_plany_dfb57b79'), description: formatPlannedDate(dateInput) },
       error: {
         message: i18nT('travel:components.travel.TravelStatusButton.oshibka_1066f04c'),
         description: i18nT('travel:components.travel.TravelStatusButton.ne_udalos_sohranit_1db862ee'),
@@ -244,6 +261,11 @@ export default function TravelStatusButton({
     },
   }), [colors.textOnDark])
 
+  // Web-диалог ведёт боковые отступы сам; на native 16 px по бокам даёт панель
+  // общего листа, строки добирают остаток (как пункты `ActionListSheet`).
+  const rowInset = isWeb ? 20 : 8
+  const dateInset = isWeb ? 20 : 4
+
   const styles = useMemo(() => StyleSheet.create({
     btn: {
       flexDirection: 'row',
@@ -263,29 +285,24 @@ export default function TravelStatusButton({
       fontWeight: '600',
       color: current ? colors.primary : colors.primaryText,
     },
+    // overlay / sheet / handle / headerRow / sheetTitle / closeBtn — только web-диалог;
+    // на native окно, шапку и ручку рисует `BottomSheet`.
     overlay: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.45)',
-      justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end',
-      alignItems: Platform.OS === 'web' ? 'center' : 'stretch',
-      padding: Platform.OS === 'web' ? 20 : 0,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
     },
     sheet: {
       backgroundColor: colors.surface,
-      borderTopLeftRadius: DESIGN_TOKENS.radii.xl,
-      borderTopRightRadius: DESIGN_TOKENS.radii.xl,
+      borderRadius: DESIGN_TOKENS.radii.xl,
       paddingTop: 8,
-      paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+      paddingBottom: 24,
       maxHeight: '80%',
-      ...(Platform.OS === 'web'
-        ? {
-            width: 'min(520px, calc(100vw - 40px))',
-            borderBottomLeftRadius: DESIGN_TOKENS.radii.xl,
-            borderBottomRightRadius: DESIGN_TOKENS.radii.xl,
-            boxShadow: DESIGN_TOKENS.shadows.heavy,
-          } as any
-        : null),
-    },
+      width: 'min(520px, calc(100vw - 40px))',
+      boxShadow: DESIGN_TOKENS.shadows.heavy,
+    } as any,
     handle: {
       width: 36,
       height: 4,
@@ -320,8 +337,8 @@ export default function TravelStatusButton({
       alignItems: 'center',
       gap: 14,
       paddingVertical: 14,
-      paddingHorizontal: 20,
-      ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+      paddingHorizontal: rowInset,
+      ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : { borderRadius: 12 }),
     },
     optionActive: {
       backgroundColor: colors.primaryLight,
@@ -353,7 +370,7 @@ export default function TravelStatusButton({
     divider: {
       height: 1,
       backgroundColor: colors.borderLight,
-      marginHorizontal: 20,
+      marginHorizontal: rowInset,
       marginVertical: 4,
     },
     removeRow: {
@@ -361,7 +378,7 @@ export default function TravelStatusButton({
       alignItems: 'center',
       gap: 14,
       paddingVertical: 14,
-      paddingHorizontal: 20,
+      paddingHorizontal: rowInset,
       ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
     },
     removeText: {
@@ -369,8 +386,12 @@ export default function TravelStatusButton({
       fontWeight: '600',
       color: colors.danger,
     },
+    // В панели с ограниченной высотой список сжимается и прокручивается, а не растёт.
+    bodyScroll: {
+      flexGrow: 0,
+    },
     dateSection: {
-      paddingHorizontal: 20,
+      paddingHorizontal: dateInset,
       paddingTop: 4,
       paddingBottom: 8,
     },
@@ -442,42 +463,129 @@ export default function TravelStatusButton({
       fontWeight: '700',
       color: colors.surface,
     },
-  }), [colors, current, dateInput])
+  }), [colors, current, dateInput, rowInset, dateInset])
 
-  // Swipe-down-to-dismiss on the sheet header/grabber (native only; web uses ✕ / tap-outside).
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_evt, gesture) =>
-          Platform.OS !== 'web' && gesture.dy > 8 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
-        onPanResponderRelease: (_evt, gesture) => {
-          if (gesture.dy > 60 || gesture.vy > 0.5) {
-            setModalOpen(false)
-          }
-        },
-      }),
-    []
+  const closeModal = useCallback(() => setModalOpen(false), [])
+  const sheetTitle = datePicking
+    ? i18nT('travel:components.travel.TravelStatusButton.ukazhite_datu_poezdki_1a5b34eb')
+    : i18nT('travel:components.travel.TravelStatusButton.dobavit_v_plan_c8d5333c')
+
+  // --- sheet body (shared between the native bottom sheet and the web dialog) ---
+  const statusList = (
+    <ScrollView bounces={false} style={styles.bodyScroll}>
+      {STATUS_OPTIONS.map((opt) => {
+        const isActive = current?.status === opt.key
+        return (
+          <Pressable
+            key={opt.key}
+            style={[styles.option, isActive && styles.optionActive, globalFocusStyles.focusable]}
+            onPress={() => handleSelectStatus(opt.key)}
+            accessibilityRole="button"
+            accessibilityLabel={opt.label}
+            accessibilityHint={opt.hint}
+            accessibilityState={{ selected: isActive }}
+          >
+            <View style={[styles.optionIconWrap, isActive && styles.optionIconWrapActive]}>
+              <Feather name={opt.icon} size={20} color={isActive ? colors.primary : colors.textMuted} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, isActive && { color: colors.primaryText }]}>
+                {opt.label}
+              </Text>
+              <Text style={styles.optionHint}>{opt.hint}</Text>
+            </View>
+            {isActive && (
+              <Feather name="check" size={18} color={colors.primaryDark} style={styles.optionCheck} />
+            )}
+          </Pressable>
+        )
+      })}
+
+      {current && (
+        <>
+          <View style={styles.divider} />
+          <Pressable
+            style={[styles.removeRow, globalFocusStyles.focusable]}
+            onPress={handleRemove}
+            accessibilityRole="button"
+            accessibilityLabel={i18nT('travel:components.travel.TravelStatusButton.ubrat_iz_plana_3eacfe85')}
+          >
+            <Feather name="trash-2" size={18} color={colors.danger} />
+            <Text style={styles.removeText}>{i18nT('travel:components.travel.TravelStatusButton.ubrat_iz_plana_3eacfe85')}</Text>
+          </Pressable>
+        </>
+      )}
+    </ScrollView>
+  )
+
+  const dateSection = (
+    <View style={styles.dateSection}>
+      <Text style={styles.dateSectionTitle}>{i18nT('travel:components.travel.TravelStatusButton.data_poezdki_240d7a94')}</Text>
+      <Text style={styles.dateSectionHint}>{i18nT('travel:components.travel.TravelStatusButton.vyberite_den_v_kalendare_0b5e3516')}</Text>
+      <View style={styles.calendarWrap}>
+        <MiniCalendar
+          entries={[]}
+          selectedDate={dateInput || null}
+          focusDate={dateInput || current?.plannedDate || null}
+          onDayPress={handleCalendarDateSelect}
+          accentColor={colors.primary}
+          accentSoftColor={colors.primaryLight}
+        />
+      </View>
+      <View style={styles.selectedDateBox}>
+        <Feather name="calendar" size={15} color={dateInput ? colors.primary : colors.textMuted} />
+        <Text style={styles.selectedDateText}>
+          {dateInput ? i18nT('travel:components.travel.TravelStatusButton.vybrano_value1_35052aee', { value1: formatPlannedDate(dateInput) }) : i18nT('travel:components.travel.TravelStatusButton.data_ne_vybrana_40b85060')}
+        </Text>
+      </View>
+      {!!dateError && <Text style={styles.dateError}>{dateError}</Text>}
+      <View style={styles.dateActions}>
+        <Pressable
+          style={[styles.dateCancelBtn, globalFocusStyles.focusable]}
+          onPress={() => setDatePicking(false)}
+          accessibilityRole="button"
+          accessibilityLabel={i18nT('travel:components.travel.TravelStatusButton.nazad_k_vyboru_statusa_582b29fd')}
+        >
+          <Text style={styles.dateCancelText}>{i18nT('travel:components.travel.TravelStatusButton.nazad_ef2effb6')}</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.dateConfirmBtn, globalFocusStyles.focusable]}
+          onPress={handleConfirmDate}
+          accessibilityRole="button"
+          accessibilityLabel={i18nT('travel:components.travel.TravelStatusButton.sohranit_datu_ef1c2904')}
+        >
+          <Text style={styles.dateConfirmText}>{i18nT('travel:components.travel.TravelStatusButton.sohranit_0d739b23')}</Text>
+        </Pressable>
+      </View>
+    </View>
+  )
+
+  // Native: панель общего листа ограничена по высоте — на низком экране календарь
+  // с кнопками прокручивается, а не обрезается. Web-диалог остаётся как был.
+  const sheetBody = !datePicking ? statusList : isWeb ? dateSection : (
+    <ScrollView bounces={false} style={styles.bodyScroll}>{dateSection}</ScrollView>
   )
 
   // --- modal JSX (shared between compact and full) ---
-  const modalJsx = (
+  // Native: общий нижний лист — свайп вниз, граница касаний и нижний отступ живут
+  // в `BottomSheet`, своей копии Modal/ручки/жеста здесь нет (#2230). Web: это
+  // диалог по центру, а не нижний лист — закрывается ✕ и кликом по затемнению.
+  const modalJsx = isWeb ? (
     <Modal
       visible={modalOpen}
       transparent
       animationType="slide"
-      onRequestClose={() => setModalOpen(false)}
+      onRequestClose={closeModal}
     >
-      <Pressable style={styles.overlay} onPress={() => setModalOpen(false)}>
+      <Pressable style={styles.overlay} onPress={closeModal}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <View {...panResponder.panHandlers}>
+          <View>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
-              <Text style={styles.sheetTitle}>
-                {datePicking ? i18nT('travel:components.travel.TravelStatusButton.ukazhite_datu_poezdki_1a5b34eb') : i18nT('travel:components.travel.TravelStatusButton.dobavit_v_plan_c8d5333c')}
-              </Text>
+              <Text style={styles.sheetTitle}>{sheetTitle}</Text>
               <Pressable
                 style={[styles.closeBtn, globalFocusStyles.focusable]}
-                onPress={() => setModalOpen(false)}
+                onPress={closeModal}
                 accessibilityRole="button"
                 accessibilityLabel={i18nT('travel:components.travel.TravelStatusButton.zakryt_ee95ca3d')}
                 hitSlop={8}
@@ -486,96 +594,14 @@ export default function TravelStatusButton({
               </Pressable>
             </View>
           </View>
-
-          {!datePicking ? (
-            <ScrollView bounces={false}>
-              {STATUS_OPTIONS.map((opt) => {
-                const isActive = current?.status === opt.key
-                return (
-                  <Pressable
-                    key={opt.key}
-                    style={[styles.option, isActive && styles.optionActive, globalFocusStyles.focusable]}
-                    onPress={() => handleSelectStatus(opt.key)}
-                    accessibilityRole="button"
-                    accessibilityLabel={opt.label}
-                    accessibilityHint={opt.hint}
-                    accessibilityState={{ selected: isActive }}
-                  >
-                    <View style={[styles.optionIconWrap, isActive && styles.optionIconWrapActive]}>
-                      <Feather name={opt.icon} size={20} color={isActive ? colors.primary : colors.textMuted} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.optionLabel, isActive && { color: colors.primaryText }]}>
-                        {opt.label}
-                      </Text>
-                      <Text style={styles.optionHint}>{opt.hint}</Text>
-                    </View>
-                    {isActive && (
-                      <Feather name="check" size={18} color={colors.primaryDark} style={styles.optionCheck} />
-                    )}
-                  </Pressable>
-                )
-              })}
-
-              {current && (
-                <>
-                  <View style={styles.divider} />
-                  <Pressable
-                    style={[styles.removeRow, globalFocusStyles.focusable]}
-                    onPress={handleRemove}
-                    accessibilityRole="button"
-                    accessibilityLabel={i18nT('travel:components.travel.TravelStatusButton.ubrat_iz_plana_3eacfe85')}
-                  >
-                    <Feather name="trash-2" size={18} color={colors.danger} />
-                    <Text style={styles.removeText}>{i18nT('travel:components.travel.TravelStatusButton.ubrat_iz_plana_3eacfe85')}</Text>
-                  </Pressable>
-                </>
-              )}
-            </ScrollView>
-          ) : (
-            <View style={styles.dateSection}>
-              <Text style={styles.dateSectionTitle}>{i18nT('travel:components.travel.TravelStatusButton.data_poezdki_240d7a94')}</Text>
-              <Text style={styles.dateSectionHint}>{i18nT('travel:components.travel.TravelStatusButton.vyberite_den_v_kalendare_0b5e3516')}</Text>
-              <View style={styles.calendarWrap}>
-                <MiniCalendar
-                  entries={[]}
-                  selectedDate={dateInput || null}
-                  focusDate={dateInput || current?.plannedDate || null}
-                  onDayPress={handleCalendarDateSelect}
-                  accentColor={colors.primary}
-                  accentSoftColor={colors.primaryLight}
-                />
-              </View>
-              <View style={styles.selectedDateBox}>
-                <Feather name="calendar" size={15} color={dateInput ? colors.primary : colors.textMuted} />
-                <Text style={styles.selectedDateText}>
-                  {dateInput ? i18nT('travel:components.travel.TravelStatusButton.vybrano_value1_35052aee', { value1: dateInput }) : i18nT('travel:components.travel.TravelStatusButton.data_ne_vybrana_40b85060')}
-                </Text>
-              </View>
-              {!!dateError && <Text style={styles.dateError}>{dateError}</Text>}
-              <View style={styles.dateActions}>
-                <Pressable
-                  style={[styles.dateCancelBtn, globalFocusStyles.focusable]}
-                  onPress={() => setDatePicking(false)}
-                  accessibilityRole="button"
-                  accessibilityLabel={i18nT('travel:components.travel.TravelStatusButton.nazad_k_vyboru_statusa_582b29fd')}
-                >
-                  <Text style={styles.dateCancelText}>{i18nT('travel:components.travel.TravelStatusButton.nazad_ef2effb6')}</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.dateConfirmBtn, globalFocusStyles.focusable]}
-                  onPress={handleConfirmDate}
-                  accessibilityRole="button"
-                  accessibilityLabel={i18nT('travel:components.travel.TravelStatusButton.sohranit_datu_ef1c2904')}
-                >
-                  <Text style={styles.dateConfirmText}>{i18nT('travel:components.travel.TravelStatusButton.sohranit_0d739b23')}</Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
+          {sheetBody}
         </Pressable>
       </Pressable>
     </Modal>
+  ) : (
+    <BottomSheet visible={modalOpen} onClose={closeModal} title={sheetTitle}>
+      {sheetBody}
+    </BottomSheet>
   )
 
   // Compact mode — small overlay button with a visible status label.
@@ -669,7 +695,7 @@ export default function TravelStatusButton({
         </Text>
         {current && current.status === 'planned' && current.plannedDate && (
           <Text style={[styles.btnText, { fontWeight: '400', fontSize: 13, color: colors.textSecondary }]}>
-            · {current.plannedDate}
+            · {formatPlannedDate(current.plannedDate)}
           </Text>
         )}
       </Pressable>

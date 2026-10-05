@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native'
-import { Platform } from 'react-native'
+import { PanResponder, Platform, type PanResponderCallbacks, type PanResponderGestureState } from 'react-native'
 
 // --- mocks ---
 
@@ -117,7 +117,7 @@ describe('TravelStatusButton — полный режим (default)', () => {
   it('отображает plannedDate рядом с меткой', () => {
     useTravelStatus.mockReturnValue([currentEntry({ status: 'planned', plannedDate: '2026-08-15' })])
     render(<TravelStatusButton {...baseProps} />)
-    expect(screen.getByText('· 2026-08-15')).toBeTruthy()
+    expect(screen.getByText('· 15 августа 2026 г.')).toBeTruthy()
   })
 
   it('вызывает requireAuth и не открывает модал, если пользователь не авторизован', () => {
@@ -196,7 +196,7 @@ describe('TravelStatusButton — полный режим (default)', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
     fireEvent.press(screen.getByRole('button', { name: 'Планирую' }))
     fireEvent.press(screen.getByRole('button', { name: '15 Июль' }))
-    expect(screen.getByText('Выбрано: 2026-07-15')).toBeTruthy()
+    expect(screen.getByText('Выбрано: 15 июля 2026 г.')).toBeTruthy()
 
     await act(async () => {
       fireEvent.press(screen.getByRole('button', { name: 'Сохранить дату' }))
@@ -211,7 +211,7 @@ describe('TravelStatusButton — полный режим (default)', () => {
       '1'
     )
     expect(showToast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'success', text1: 'Добавлено в планы', text2: '2026-07-15' })
+      expect.objectContaining({ type: 'success', text1: 'Добавлено в планы', text2: '15 июля 2026 г.' })
     )
   })
 
@@ -248,6 +248,75 @@ describe('TravelStatusButton — полный режим (default)', () => {
     })
 
     expect(removeTravelStatus).toHaveBeenCalledWith(42, '1')
+  })
+})
+
+// #2230: лист «Добавить в план» на native — общий `BottomSheet`, без своей копии
+// Modal/ручки/жеста. Собственный жест висел внутри Pressable листа и имел только
+// `onMoveShouldSet*`: ответчиком на старте становился предок, шапку на движении
+// уже не спрашивали — свайп вниз не доходил (Android-эмулятор, 05.10.2026).
+describe('TravelStatusButton — лист на native (#2230)', () => {
+  const touch = {} as Parameters<NonNullable<PanResponderCallbacks['onPanResponderRelease']>>[0]
+  const gesture = (dy: number, dx = 0): PanResponderGestureState => ({
+    stateID: 1,
+    moveX: 0,
+    moveY: 0,
+    x0: 0,
+    y0: 0,
+    dx,
+    dy,
+    vx: 0,
+    vy: 0,
+    numberActiveTouches: 1,
+    _accountsForMovesUpTo: 0,
+  })
+
+  const openSheet = () => {
+    const createSpy = jest.spyOn(PanResponder, 'create')
+    useAuth.mockReturnValue(makeAuthMock(true, '1'))
+    render(<TravelStatusButton {...baseProps} />)
+    const config = createSpy.mock.calls.at(-1)?.[0] as PanResponderCallbacks
+    createSpy.mockRestore()
+    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    return config
+  }
+
+  it('шапка листа берёт касание на старте и не отдаёт жест на полпути', () => {
+    const config = openSheet()
+    expect(config.onStartShouldSetPanResponder?.(touch, gesture(0))).toBe(true)
+    expect(config.onStartShouldSetPanResponderCapture).toBeUndefined()
+    expect(config.onPanResponderTerminationRequest?.(touch, gesture(30))).toBe(false)
+  })
+
+  it('свайп вниз дальше порога закрывает лист, короткий и вверх — нет', () => {
+    const config = openSheet()
+    act(() => {
+      config.onPanResponderRelease?.(touch, gesture(30))
+      config.onPanResponderRelease?.(touch, gesture(-120))
+    })
+    expect(screen.getByRole('button', { name: 'Планирую' })).toBeTruthy()
+    act(() => {
+      config.onPanResponderRelease?.(touch, gesture(120))
+    })
+    expect(screen.queryByRole('button', { name: 'Планирую' })).toBeNull()
+  })
+
+  it('лист статуса — общий нижний лист: касания внутри него держит граница листа', () => {
+    openSheet()
+    expect(screen.getByTestId('bottom-sheet-touch-boundary')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Закрыть' })).toBeTruthy()
+  })
+
+  it('крестик и выбор статуса работают как раньше', async () => {
+    openSheet()
+    fireEvent.press(screen.getByRole('button', { name: 'Закрыть' }))
+    expect(screen.queryByRole('button', { name: 'Планирую' })).toBeNull()
+
+    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', { name: 'Был здесь' }))
+    })
+    expect(setTravelStatus).toHaveBeenCalledWith(expect.objectContaining({ id: 42, status: 'visited' }), '1')
   })
 })
 

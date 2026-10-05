@@ -535,6 +535,15 @@ select:focus-visible {
     --mt-dock-h: calc(56px + env(safe-area-inset-bottom, 0px));
   }
 
+  /* #2153: на экранах без дока (чат, вход/регистрация, мастер маршрута —
+     showFooter=false в app/_layout.tsx) корень помечен data-mt-dock="off", и
+     резерва под док нет. Обнуляется на body, а не на корне приложения: порталы
+     Modal (нижние листы) лежат вне него и наследуют переменную от body.
+     Без поддержки :has правило отбрасывается — остаётся прежний резерв. */
+  body:has([data-mt-dock="off"]) {
+    --mt-dock-h: 0px;
+  }
+
   body:has([data-testid="map-screen-root"]) .leaflet-control-attribution {
     max-width: calc(100vw - 32px);
     border-radius: 12px;
