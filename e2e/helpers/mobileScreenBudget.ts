@@ -674,10 +674,16 @@ export type ScreenBudget = {
 // #2149: полоса маршрута 44 px вместо полосы прогресса и ряда кружков — −15 px:
 // свой dist 0,244 / 0,236 и 0,197 / 0,190 (финал 0,201 / 0,195), прод — те же
 // −15 px от 199 + 56: 0,284 и 0,237 (финал 0,242). Пороги — по проду с запасом 2–5 px.
+// #2148 (05.10.2026): название, (i), офлайн и «⋯» — в строке экрана, ряда меты
+// (рейтинг — источник разницы прода и локальной базы) и ряда кнопок над заданием
+// нет. Свой dist, все три состояния, обе темы: закреплённый верх 106 px + док 56 =
+// 0,192 / 0,185, верх задания 0,145 / 0,140 (финал 0,149 / 0,144). Пороги — замер
+// с запасом 4–5 px. Название квеста теперь видно ровно один раз — в строке экрана
+// (раньше его не было в первом экране вовсе: sr-only h1 панели).
 const QUEST_RUN_BUDGET: ScreenBudget = {
-  firstContentTopRatioMax: 0.245,
-  pinnedChromeRatioMax: 0.29,
-  titleOccurrencesMax: 0,
+  firstContentTopRatioMax: 0.155,
+  pinnedChromeRatioMax: 0.197,
+  titleOccurrencesMax: 1,
   searchboxCountMax: 0,
   ctaOccludedAllowed: false,
   darkBottomMatchesThemeExpected: false,

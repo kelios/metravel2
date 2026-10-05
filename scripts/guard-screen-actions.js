@@ -20,6 +20,11 @@ const ACTION_SCREENS = [
   'components/UserPoints/PointCard.tsx',
   'components/screens/calendar/CalendarScreen.tsx',
   'components/screens/calendar/calendarScreen.parts.tsx',
+  // #2148: экран прохождения квеста — страница, визард, его панель и декларация.
+  'app/(tabs)/quests/[city]/[questId].tsx',
+  'components/quests/QuestWizard.tsx',
+  'components/quests/questWizardShell.tsx',
+  'components/quests/useQuestScreenHeader.ts',
 ]
 
 // Экран, который обязан объявить действия в шапке (`useScreenHeader` прямо или через
@@ -29,6 +34,9 @@ const REQUIRE_HEADER_DECLARATION = {
   'components/trips/planning/TripPlanScreenHeader.tsx': /useScreenHeader\s*\(/,
   'components/trips/PublicTripDetail.tsx': /useScreenHeader\s*\(/,
   'components/screens/calendar/CalendarScreen.tsx': /useScreenHeader\s*\(/,
+  // Визард — единственный владелец действий и сброса квеста: декларацию зовёт он.
+  'components/quests/QuestWizard.tsx': /useQuestScreenHeader\s*\(/,
+  'components/quests/useQuestScreenHeader.ts': /useScreenHeader\s*\(/,
 }
 
 // Файл → причина, почему корзина/danger-кнопка вне «⋯» допустима. Пусто = нарушение.

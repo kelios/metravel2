@@ -90,6 +90,7 @@ Country route — отдельный статический сегмент `coun
  └─ <QuestWizard>
      ├─ useQuestWizardProgress       (состояние прохождения + слияние)
      ├─ useQuestReminder / useQuestGeofence   (native-only, .web = no-op)
+     ├─ useQuestScreenHeader         (телефон: название, (i), офлайн, «⋯» — в строке экрана, #2148)
      ├─ <QuestHeaderPanel> | <QuestCompactSidebar>     questWizardShell
      ├─ <QuestGuestGate>             (гость исчерпал бесплатные точки)
      ├─ <QuestStepCard>              questWizardStepCard
@@ -443,7 +444,9 @@ breadcrumbs и секции заметок посадочной города: о
    одним `POST /api/quest-reviews/` отправляет их только по кнопке; отдельного
    `/rate/` и сохранения по тапу нет (#1578). Форма доступна только после
    засчитанного `questCompleted`. `QuestReviewsModal` показывает чужие отзывы и
-   открывается чипом рейтинга в шапке детали. «Спасибо за отзыв» показывается только за
+   открывается чипом рейтинга в шапке детали (на телефоне — пунктом «Отзывы (N)»
+   в «⋯» строки экрана; там же «Оставить отзыв», #2148 — §12
+   `docs/features/mobile-screen-shell-mock.md`). «Спасибо за отзыв» показывается только за
    подтверждённое сервером сохранение, при ошибке — сообщение и форма с
    введённым (#1486). Успешное сохранение шлёт `quest_review_submit`
    (`utils/questReviewAnalytics.ts`) из `onSuccess` мутации — один раз на

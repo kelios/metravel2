@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useIsFocused } from 'expo-router';
@@ -10,7 +10,12 @@ import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection';
 import QuestCompletionBadge from '@/components/quests/QuestCompletionBadge';
 import QuestProgressPendingNotice, { useQuestProgressPending } from '@/components/quests/QuestProgressPendingNotice';
 import QuestReviewsModal from '@/components/quests/QuestReviewsModal';
-import QuestReviewInvite from '@/components/quests/QuestReviewInvite';
+import {
+  QuestReviewInviteButton,
+  QuestReviewInviteModal,
+  QuestReviewPhotoStatus,
+  useQuestReviewInvite,
+} from '@/components/quests/QuestReviewInvite';
 import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useAuth } from '@/context/AuthContext';
@@ -31,6 +36,7 @@ import { buildQuestCountModel } from '@/utils/questCountModel';
 import { trackQuestView } from '@/utils/questFunnelAnalytics';
 
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
+import type { QuestScreenMeta } from '@/components/quests/questScreenHeaderModel';
 import type { FrontendQuestBundle } from '@/utils/questAdapters';
 import { getFormatLocale, translate as i18nT } from '@/i18n'
 import { formatRatingValue } from '@/utils/ratingHelpers';
@@ -409,6 +415,14 @@ export default function QuestByIdScreen() {
   // #1922 — прохождение, сделанное без сети, ждёт отправки: пометка живёт рядом
   // с бейджем «Пройден», иначе «ещё едет» неотличимо от «не засчитано».
   const progressPending = useQuestProgressPending(shouldLoadQuest ? questId : undefined);
+  // #1795/#2148: вход в отзыв — один экземпляр на страницу. Его рисуют кнопка
+  // рядом с бейджем (desktop) и пункт «⋯» строки экрана (телефон), окно — одно.
+  const reviewInvite = useQuestReviewInvite({
+    questId,
+    questNumericId: bundle?.id,
+    cityId: cityId || undefined,
+    enabled: completionMeta.isCompletedByMe && Boolean(questId),
+  });
   const completionSlot = useMemo(() => {
     const showCompletion = completionMeta.isCompletedByMe || completionMeta.completionsCount > 0;
     if (!showCompletion && !progressPending) return null;
@@ -425,20 +439,49 @@ export default function QuestByIdScreen() {
         {/* #1795 — второй вход в отзыв: форма на финале ловила игрока ровно в
             тот момент, когда он уже уходит с телефона, поэтому отзывов не было
             вовсе. Кнопка живёт рядом с бейджем «Пройден» и открывает ту же форму. */}
-        {completionMeta.isCompletedByMe && questId ? (
-          <QuestReviewInvite questId={questId} questNumericId={bundle?.id} cityId={cityId || undefined} />
-        ) : null}
+        <QuestReviewInviteButton invite={reviewInvite} />
+        <QuestReviewPhotoStatus invite={reviewInvite} />
       </View>
     );
   }, [
-    bundle?.id,
-    cityId,
     completionMeta.isCompletedByMe,
     completionMeta.completionsCount,
     progressPending,
     questId,
+    reviewInvite,
     styles.completionRow,
   ]);
+
+  // #2148: на телефоне сведения уходят в лист (i) и «⋯» строки экрана, а над
+  // навигацией остаются только статусы, требующие внимания игрока.
+  const openReviews = useCallback(() => setReviewsVisible(true), []);
+  const screenMeta = useMemo<QuestScreenMeta>(
+    () => ({
+      isCompletedByMe: completionMeta.isCompletedByMe,
+      completionsCount: completionMeta.completionsCount,
+      rating: { count: ratingMeta.ratingCount, average: ratingMeta.ratingAvg ?? null },
+      onOpenReviews: ratingMeta.ratingCount > 0 ? openReviews : undefined,
+      onLeaveReview: reviewInvite.canInvite ? reviewInvite.open : undefined,
+    }),
+    [
+      completionMeta.isCompletedByMe,
+      completionMeta.completionsCount,
+      openReviews,
+      ratingMeta.ratingAvg,
+      ratingMeta.ratingCount,
+      reviewInvite.canInvite,
+      reviewInvite.open,
+    ],
+  );
+  const statusSlot = useMemo(() => {
+    if (!progressPending && !reviewInvite.photoStatus) return null;
+    return (
+      <>
+        <QuestProgressPendingNotice questId={questId} compact />
+        <QuestReviewPhotoStatus invite={reviewInvite} />
+      </>
+    );
+  }, [progressPending, questId, reviewInvite]);
 
   const isLoading =
     isQuestLoading ||
@@ -571,7 +614,10 @@ export default function QuestByIdScreen() {
   }, [bundle, isFocused, isLoading]);
 
   const reviewsModal = (
-    <QuestReviewsModal questId={questId} visible={reviewsVisible} onClose={() => setReviewsVisible(false)} />
+    <>
+      <QuestReviewsModal questId={questId} visible={reviewsVisible} onClose={() => setReviewsVisible(false)} />
+      <QuestReviewInviteModal invite={reviewInvite} />
+    </>
   );
 
   if (isLoading) {
@@ -616,6 +662,8 @@ export default function QuestByIdScreen() {
               subscribeSlot={subscribeSlot}
               ratingSlot={ratingSlot}
               completionSlot={completionSlot}
+              screenMeta={screenMeta}
+              statusSlot={statusSlot}
               questId={questId}
               cityId={cityId}
               questNumericId={bundle.id}
@@ -643,6 +691,8 @@ export default function QuestByIdScreen() {
               subscribeSlot={subscribeSlot}
             ratingSlot={ratingSlot}
             completionSlot={completionSlot}
+            screenMeta={screenMeta}
+            statusSlot={statusSlot}
             questId={questId}
             cityId={cityId}
             questNumericId={bundle.id}
@@ -721,6 +771,8 @@ export default function QuestByIdScreen() {
               subscribeSlot={subscribeSlot}
             ratingSlot={ratingSlot}
             completionSlot={completionSlot}
+            screenMeta={screenMeta}
+            statusSlot={statusSlot}
             questId={questId}
             cityId={cityId}
             questNumericId={bundle.id}
@@ -745,6 +797,8 @@ export default function QuestByIdScreen() {
               subscribeSlot={subscribeSlot}
           ratingSlot={ratingSlot}
           completionSlot={completionSlot}
+          screenMeta={screenMeta}
+          statusSlot={statusSlot}
           questId={questId}
           cityId={cityId}
           questNumericId={bundle.id}

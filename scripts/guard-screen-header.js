@@ -8,8 +8,6 @@
 const fs = require('node:fs')
 const path = require('node:path')
 
-const ROOT = process.argv.includes('--root') ? path.resolve(process.argv[process.argv.indexOf('--root') + 1]) : process.cwd()
-
 // Вложенные экраны: файл, который владеет шапкой экрана.
 const SCREEN_HEADER_OWNERS = [
   'components/trips/MyTripsDashboard.tsx',
@@ -25,6 +23,9 @@ const SCREEN_HEADER_OWNERS = [
   'app/(tabs)/favorites.tsx',
   'components/screens/history/HistoryScreen.tsx',
   'components/screens/calendar/CalendarScreen.tsx',
+  // #2148: экран прохождения квеста — декларацию зовёт визард
+  // (`guard-screen-actions.js` требует вызов в `QuestWizard.tsx`).
+  'components/quests/useQuestScreenHeader.ts',
 ]
 
 // Файл → причина, почему прямой заголовок в теле допустим.
@@ -32,24 +33,38 @@ const DIRECT_HEADING_EXCEPTIONS = {}
 
 const HEADING_PATTERN = /accessibilityRole\s*=\s*["']header["']|role\s*=\s*["']heading["']|role:\s*["']heading["']/
 
-const failures = []
-for (const rel of SCREEN_HEADER_OWNERS) {
-  const file = path.join(ROOT, rel)
-  if (!fs.existsSync(file)) {
-    failures.push(`${rel}: файл из списка не найден — обнови scripts/guard-screen-header.js`)
-    continue
-  }
-  const source = fs.readFileSync(file, 'utf8')
+function scanOwnerSource(rel, source) {
+  const failures = []
   if (!/\buseScreenHeader\s*\(/.test(source)) {
     failures.push(`${rel}: вложенный экран обязан вызвать useScreenHeader (заголовок, (i), действия объявляются один раз)`)
   }
   if (HEADING_PATTERN.test(source) && !DIRECT_HEADING_EXCEPTIONS[rel]) {
     failures.push(`${rel}: прямой заголовок (accessibilityRole="header") в теле экрана запрещён — его рисует ScreenHeader/HeaderContextBar`)
   }
+  return failures
 }
 
-if (failures.length) {
-  console.error('guard-screen-header failed:\n' + failures.map((f) => `  - ${f}`).join('\n'))
-  process.exit(1)
+function scanScreenHeaders(root) {
+  const failures = []
+  for (const rel of SCREEN_HEADER_OWNERS) {
+    const file = path.join(root, rel)
+    if (!fs.existsSync(file)) {
+      failures.push(`${rel}: файл из списка не найден — обнови scripts/guard-screen-header.js`)
+      continue
+    }
+    failures.push(...scanOwnerSource(rel, fs.readFileSync(file, 'utf8')))
+  }
+  return failures
 }
-console.log(`guard-screen-header ok (${SCREEN_HEADER_OWNERS.length} screens)`)
+
+module.exports = { SCREEN_HEADER_OWNERS, DIRECT_HEADING_EXCEPTIONS, scanOwnerSource, scanScreenHeaders }
+
+if (require.main === module) {
+  const root = process.argv.includes('--root') ? path.resolve(process.argv[process.argv.indexOf('--root') + 1]) : process.cwd()
+  const failures = scanScreenHeaders(root)
+  if (failures.length) {
+    console.error('guard-screen-header failed:\n' + failures.map((f) => `  - ${f}`).join('\n'))
+    process.exit(1)
+  }
+  console.log(`guard-screen-header ok (${SCREEN_HEADER_OWNERS.length} screens)`)
+}

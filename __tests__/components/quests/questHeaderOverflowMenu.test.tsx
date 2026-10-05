@@ -1,18 +1,16 @@
 /**
- * #1669: редкие действия шапки квеста (сброс, GPX, «открыть в приложении»,
- * печать) уехали с телефона в лист «Ещё».
+ * Панель прохождения квеста (`QuestHeaderPanel`) на телефоне и на desktop.
  *
- * Тест держит проводку, а не раскладку. E2E-спека проверяет, что подписи в
- * листе ЕСТЬ, но не что строка листа действительно зовёт обработчик, — а именно
- * это ломается тише всего: `ActionListSheet` сам закрывает лист перед вызовом
- * (`components/ui/ActionListSheet.tsx`), и потерянный `onPress` выглядел бы как
- * «нажал сброс — ничего не произошло».
- *
- * Второй инвариант — десктоп: ветка `!isMobile` обязана сохранить прежний ряд
- * целиком, без кнопки «Ещё».
+ * #1669 увёл редкие действия с телефона в лист «Ещё», #2148 — весь ряд
+ * действий и мету в строку экрана (декларация `useQuestScreenHeader`, её
+ * проводку держит `questScreenHeader.test.tsx`). Здесь держится обратная
+ * сторона: на телефоне панель НЕ рисует ни ряд кнопок, ни ряд меты, ни второй
+ * заголовок первого уровня, но оставляет навигацию и статусы, требующие
+ * внимания. Desktop сохраняет прежний ряд целиком.
  */
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native'
-import { Platform } from 'react-native'
+import React from 'react'
+import { cleanup, fireEvent, render } from '@testing-library/react-native'
+import { Platform, Text } from 'react-native'
 
 // Экскурсии к шапке отношения не имеют, а тянут за собой сеть.
 jest.mock('@/components/quests/questWizardSections', () => ({
@@ -45,9 +43,17 @@ const countModel: QuestCountModel = {
   source: 'explicit',
 }
 
-const renderHeader = (overrides: { isMobile: boolean; offlineMapPointsCount?: number }) => {
-  const { isMobile, offlineMapPointsCount = 3 } = overrides
-  const screenW = isMobile ? 390 : 1024
+type HeaderOverrides = {
+  isMobile: boolean
+  compactNav?: boolean
+  offlineMapPointsCount?: number
+  statusSlot?: React.ReactNode
+}
+
+const renderHeader = (overrides: HeaderOverrides) => {
+  const { isMobile, offlineMapPointsCount = 3, statusSlot } = overrides
+  const compactNav = overrides.compactNav ?? isMobile
+  const screenW = isMobile ? (compactNav ? 390 : 680) : 1024
   const handlers = {
     onReset: jest.fn(),
     onPrintDownload: jest.fn(),
@@ -77,11 +83,14 @@ const renderHeader = (overrides: { isMobile: boolean; offlineMapPointsCount?: nu
       unlockedIndex={1}
       questFinished={false}
       showFinaleOnly={false}
-      isMobile={isMobile}
+      headerInScreenRow={isMobile}
       screenW={screenW}
-      compactNav={isMobile}
+      compactNav={compactNav}
       offlineMapPointsCount={offlineMapPointsCount}
       offlineQuestState="idle"
+      ratingSlot={<Text testID="rating-slot">4,6</Text>}
+      completionSlot={<Text testID="completion-slot">Пройден</Text>}
+      statusSlot={statusSlot}
       {...handlers}
     />,
   )
@@ -91,63 +100,67 @@ const renderHeader = (overrides: { isMobile: boolean; offlineMapPointsCount?: nu
 
 afterEach(cleanup)
 
-describe('шапка квеста — меню «Ещё» на телефоне', () => {
-  it('держит счётчик заданий однострочным', () => {
-    const { getByText } = renderHeader({ isMobile: true })
+describe('панель квеста на телефоне — действия и мета в строке экрана (#2148)', () => {
+  it('не рисует ряд кнопок, ряд меты и второй заголовок', () => {
+    const { queryByTestId, queryByLabelText, queryByRole } = renderHeader({ isMobile: true })
 
-    // Ищем счётчик по содержимому, а не по позиции среди Text-узлов: он обязан
-    // оставаться однострочным, иначе на узкой UK-локали ломается геометрия ряда.
-    // #2149: на телефоне (< 600 px) счётчик живёт в полосе маршрута рядом с позицией.
-    expect(getByText(/Задания: 1 \/ 2/).props.numberOfLines).toBe(1)
-  })
-
-  it('убирает редкие действия из ряда, но отдаёт их листу', () => {
-    const { queryByLabelText, getByLabelText } = renderHeader({ isMobile: true })
-
-    // Лист закрыт: действий нет нигде, включая сам ряд.
+    expect(queryByTestId('quest-header-actions')).toBeNull()
+    expect(queryByTestId('feather-more-horizontal')).toBeNull()
+    expect(queryByLabelText('Скачать квест для офлайна')).toBeNull()
     expect(queryByLabelText('Сбросить прогресс')).toBeNull()
-    expect(queryByLabelText(/Скачать GPX/)).toBeNull()
-    expect(queryByLabelText('Открыть точки квеста в приложении карт')).toBeNull()
-
-    fireEvent.press(getByLabelText('Действия с квестом'))
-
-    expect(getByLabelText('Сбросить прогресс')).toBeTruthy()
-    expect(getByLabelText(/Скачать GPX/)).toBeTruthy()
-    expect(getByLabelText('Открыть точки квеста в приложении карт')).toBeTruthy()
+    expect(queryByTestId('rating-slot')).toBeNull()
+    expect(queryByTestId('completion-slot')).toBeNull()
+    // Заголовок первого уровня на телефоне — название в строке экрана.
+    expect(queryByRole('header')).toBeNull()
   })
 
-  it('строка листа действительно вызывает действие', async () => {
-    const { getByLabelText, handlers } = renderHeader({ isMobile: true })
+  it('оставляет полосу маршрута (< 600 px)', () => {
+    const { getByTestId } = renderHeader({ isMobile: true })
 
-    fireEvent.press(getByLabelText('Действия с квестом'))
-    fireEvent.press(getByLabelText('Сбросить прогресс'))
-
-    // На iOS пункт листа выполняется после закрытия листа (onDismiss / таймер, #2115).
-    await waitFor(() => expect(handlers.onReset).toHaveBeenCalledTimes(1))
+    expect(getByTestId('quest-route-strip')).toBeTruthy()
   })
 
-  it('не показывает экспорт точек, когда точек нет', () => {
-    const { getByLabelText, queryByLabelText } = renderHeader({
-      isMobile: true,
-      offlineMapPointsCount: 0,
-    })
+  it('от 600 до 767 px — полоса прогресса со счётчиком и пилюли, без ряда кнопок', () => {
+    const { getByText, getByTestId, queryByTestId } = renderHeader({ isMobile: true, compactNav: false })
 
-    fireEvent.press(getByLabelText('Действия с квестом'))
-
-    // Мёртвая строка в листе запрещена: экспортировать нечего.
-    expect(queryByLabelText(/Скачать GPX/)).toBeNull()
-    expect(queryByLabelText('Открыть точки квеста в приложении карт')).toBeNull()
-    expect(getByLabelText('Сбросить прогресс')).toBeTruthy()
+    expect(getByText(/Задания: 1 \/ 2/)).toBeTruthy()
+    expect(getByTestId('quest-nav-finale')).toBeTruthy()
+    expect(queryByTestId('quest-header-actions')).toBeNull()
   })
 
-  it('на десктопе ряд остаётся прежним и без кнопки «Ещё»', () => {
-    const { getByLabelText, queryByLabelText } = renderHeader({ isMobile: false })
+  it('статусы, требующие внимания, видны над навигацией и только когда они есть', () => {
+    const withStatus = renderHeader({ isMobile: true, statusSlot: <Text testID="pending">Ждёт отправки</Text> })
+    expect(withStatus.getByTestId('quest-header-status')).toBeTruthy()
+    expect(withStatus.getByTestId('pending')).toBeTruthy()
+    withStatus.unmount()
 
-    expect(queryByLabelText('Действия с квестом')).toBeNull()
+    const withoutStatus = renderHeader({ isMobile: true })
+    expect(withoutStatus.queryByTestId('quest-header-status')).toBeNull()
+  })
+})
+
+describe('панель квеста на desktop', () => {
+  it('ряд остаётся прежним: название, мета и все действия с подписями для диктора', () => {
+    const { getByLabelText, getByRole, getByTestId, queryByTestId } = renderHeader({ isMobile: false })
+
+    expect(getByRole('header').props.children).toBe('Квест шапки')
+    expect(getByTestId('rating-slot')).toBeTruthy()
+    expect(getByTestId('completion-slot')).toBeTruthy()
+    expect(getByTestId('quest-header-actions')).toBeTruthy()
+    expect(queryByTestId('feather-more-horizontal')).toBeNull()
     expect(getByLabelText('Сбросить прогресс')).toBeTruthy()
     expect(getByLabelText(/Скачать GPX/)).toBeTruthy()
     expect(getByLabelText('Открыть точки квеста в приложении карт')).toBeTruthy()
     expect(getByLabelText('Скачать квест для офлайна')).toBeTruthy()
+    expect(queryByTestId('quest-header-status')).toBeNull()
+  })
+
+  it('кнопка ряда действительно вызывает действие', () => {
+    const { getByLabelText, handlers } = renderHeader({ isMobile: false })
+
+    fireEvent.press(getByLabelText('Сбросить прогресс'))
+
+    expect(handlers.onReset).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -186,9 +199,4 @@ describe('подсказки действий квеста на web', () => {
     expect(queryByTestId('action-tooltip')).toBeNull()
   })
 
-  it('не показывает desktop-подсказку на телефоне', () => {
-    const { getByLabelText, queryByTestId } = renderHeader({ isMobile: true })
-    fireEvent(getByLabelText('Скачать квест для офлайна'), 'focus')
-    expect(queryByTestId('action-tooltip')).toBeNull()
-  })
 })

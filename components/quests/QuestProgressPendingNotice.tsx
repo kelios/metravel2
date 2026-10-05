@@ -29,7 +29,16 @@ export function useQuestProgressPending(questId: string | undefined): boolean {
   return isPending
 }
 
-export default function QuestProgressPendingNotice({ questId }: { questId: string | undefined }) {
+type Props = {
+  questId: string | undefined
+  /**
+   * #2148: одна строка для закреплённой части экрана на телефоне — короткая
+   * подпись на экране, полный текст — подпись для диктора.
+   */
+  compact?: boolean
+}
+
+export default function QuestProgressPendingNotice({ questId, compact = false }: Props) {
   const colors = useThemedColors()
   const isPending = useQuestProgressPending(questId)
 
@@ -45,7 +54,9 @@ export default function QuestProgressPendingNotice({ questId }: { questId: strin
       testID="quest-progress-pending"
     >
       <Feather name="upload-cloud" size={13} color={colors.textMuted} />
-      <Text style={[styles.chipText, { color: colors.textMuted }]}>{label}</Text>
+      <Text style={[styles.chipText, { color: colors.textMuted }]} numberOfLines={compact ? 1 : undefined}>
+        {compact ? i18nT('quests:components.quests.QuestProgressPendingNotice.pendingDeliveryShort') : label}
+      </Text>
     </View>
   )
 }

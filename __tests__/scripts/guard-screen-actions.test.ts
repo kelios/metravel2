@@ -61,6 +61,37 @@ describe('guard-screen-actions (#2101)', () => {
     expect(scanSource('components/trips/PublicTripDetail.tsx', 'export const S = () => null')).toHaveLength(1)
   })
 
+  // #2148: экран прохождения квеста — под тем же правилом.
+  describe('экран прохождения квеста (#2148)', () => {
+    it('страница, визард, панель и декларация — в списке экранов', () => {
+      expect(ACTION_SCREENS).toEqual(expect.arrayContaining([
+        'app/(tabs)/quests/[city]/[questId].tsx',
+        'components/quests/QuestWizard.tsx',
+        'components/quests/questWizardShell.tsx',
+        'components/quests/useQuestScreenHeader.ts',
+      ]))
+    })
+
+    it('негативная проба: полноширинная danger-кнопка «Сбросить» в теле экрана падает', () => {
+      const source = `
+        useQuestScreenHeader({ title })
+        const reset = <Button label="Сбросить" variant="danger" fullWidth onPress={resetQuest} />
+      `
+      const findings = scanSource('components/quests/QuestWizard.tsx', source)
+      expect(findings).toEqual([expect.stringContaining('variant="danger"')])
+    })
+
+    it('негативная проба: визард без декларации шапки падает', () => {
+      const findings = scanSource('components/quests/QuestWizard.tsx', 'export function QuestWizard() { return null }')
+      expect(findings).toEqual([expect.stringContaining('обязан объявить действия шапки')])
+    })
+
+    it('негативная проба: декларация без useScreenHeader падает', () => {
+      const findings = scanSource('components/quests/useQuestScreenHeader.ts', 'export function useQuestScreenHeader() {}')
+      expect(findings).toEqual([expect.stringContaining('обязан объявить действия шапки')])
+    })
+  })
+
   // #2115: guard видит все поверхности удаления, а не только экраны деталей.
   describe('реестр поверхностей удаления (#2115)', () => {
     const makeRoot = (files: Record<string, string>) => {

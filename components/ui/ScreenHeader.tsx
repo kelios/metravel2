@@ -49,6 +49,7 @@ function ScreenHeader({ header, testID }: Props) {
               size="sm"
               variant={primary ? 'primary' : 'secondary'}
               onPress={action.onPress}
+              disabled={action.disabled}
               icon={<Feather name={action.icon} size={16} color={primary ? colors.textOnPrimary : colors.primaryDark} />}
               testID={action.testID}
             />

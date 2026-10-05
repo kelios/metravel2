@@ -20,6 +20,11 @@ export type ScreenHeaderAction = {
   /** Полный текст действия: подпись кнопки на desktop, a11y-label и title иконки на телефоне. */
   label: string
   onPress: () => void
+  /**
+   * Действие сейчас недоступно (идёт операция): строка рисует иконку без нажатия
+   * и с a11y-состоянием, desktop — неактивную кнопку (#2148, офлайн квеста).
+   */
+  disabled?: boolean
   testID?: string
 }
 
@@ -78,8 +83,10 @@ const signatureOf = (c: ScreenHeaderConfig) =>
   JSON.stringify([
     c.title,
     c.info ?? null,
-    c.primaryAction ? [c.primaryAction.icon, c.primaryAction.label, c.primaryAction.testID ?? null] : null,
-    (c.actions ?? []).map((a) => [a.icon, a.label, a.testID ?? null]),
+    c.primaryAction
+      ? [c.primaryAction.icon, c.primaryAction.label, c.primaryAction.disabled ?? false, c.primaryAction.testID ?? null]
+      : null,
+    (c.actions ?? []).map((a) => [a.icon, a.label, a.disabled ?? false, a.testID ?? null]),
     (c.overflow ?? []).map((o) => [o.key, o.label, o.icon, o.title ?? null, o.destructive ?? false]),
   ])
 

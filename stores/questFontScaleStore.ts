@@ -51,3 +51,20 @@ export const useQuestFontScaleStore = create<QuestFontScaleState>()(
     }
   )
 );
+
+/**
+ * Шаг шрифта и границы шкалы — одна точка для кнопок −/+ панели квеста
+ * (desktop) и листа «Размер шрифта» из «⋯» строки экрана (телефон, #2148).
+ */
+export function useQuestFontScaleControls() {
+  const fontScale = useQuestFontScaleStore((s) => s.fontScale);
+  const increase = useQuestFontScaleStore((s) => s.increase);
+  const decrease = useQuestFontScaleStore((s) => s.decrease);
+  return {
+    fontScale,
+    increase,
+    decrease,
+    atMin: fontScale <= QUEST_FONT_SCALE_STEPS[0],
+    atMax: fontScale >= QUEST_FONT_SCALE_STEPS[QUEST_FONT_SCALE_STEPS.length - 1],
+  };
+}

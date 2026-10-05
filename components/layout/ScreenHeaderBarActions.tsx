@@ -16,17 +16,20 @@ type IconButtonProps = {
   icon: keyof typeof Feather.glyphMap
   label: string
   onPress: () => void
+  disabled?: boolean
   testID?: string
   styles: ReturnType<typeof createStyles>
   color: string
 }
 
-function BarIconButton({ icon, label, onPress, testID, styles, color }: IconButtonProps) {
+function BarIconButton({ icon, label, onPress, disabled, testID, styles, color }: IconButtonProps) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={disabled ? { disabled: true } : undefined}
       style={[styles.button, globalFocusStyles.focusable]}
       testID={testID}
       {...webTitleProps(label)}
@@ -48,7 +51,9 @@ export default function ScreenHeaderBarActions({ header }: { header: ScreenHeade
 
   const overflow = useMemo<ActionListSheetItem[]>(
     () => [
-      ...(header.actions ?? []).map((a, i) => ({
+      // Пункт листа без состояния «недоступен»: недоступное действие в «⋯» не
+      // показывается вовсе (мёртвая строка меню запрещена, RULES → Component reuse).
+      ...(header.actions ?? []).filter((a) => !a.disabled).map((a, i) => ({
         key: `action-${i}`,
         label: a.label,
         icon: a.icon,
@@ -79,9 +84,10 @@ export default function ScreenHeaderBarActions({ header }: { header: ScreenHeade
             icon={header.primaryAction.icon}
             label={header.primaryAction.label}
             onPress={header.primaryAction.onPress}
+            disabled={header.primaryAction.disabled}
             testID={header.primaryAction.testID ?? 'screen-header-primary'}
             styles={styles}
-            color={colors.primaryDark}
+            color={header.primaryAction.disabled ? colors.textMuted : colors.primaryDark}
           />
         ) : null}
         {overflow.length ? (

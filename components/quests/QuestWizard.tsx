@@ -19,6 +19,10 @@ import QuestTrustBar from './QuestTrustBar';
 import { isBikeQuest, isLoopQuest } from '@/utils/questAudience';
 import { useQuestFinaleMedia } from './useQuestFinaleMedia';
 import { QuestCompactSidebar, QuestHeaderPanel } from './questWizardShell';
+import QuestFontScaleSheet from './QuestFontScaleSheet';
+import type { QuestScreenMeta } from './questScreenHeaderModel';
+import { useQuestScreenHeader } from './useQuestScreenHeader';
+import { isPrintAvailable } from '@/utils/printHtml';
 import {
     QuestDesktopMapPanel,
     QuestExcursionsInline,
@@ -100,6 +104,16 @@ export type QuestWizardProps = {
     ratingSlot?: React.ReactNode;
     /** Бейдж «Пройден» + «Пройдено N раз» под заголовком в шапке */
     completionSlot?: React.ReactNode;
+    /**
+     * #2148: те же сведения данными — на телефоне они уходят в лист (i) и «⋯»
+     * строки экрана; desktop рисует `ratingSlot`/`completionSlot`.
+     */
+    screenMeta?: QuestScreenMeta;
+    /**
+     * #2148: статусы, требующие внимания («прохождение ждёт отправки», фото
+     * отзыва) — на телефоне видимы в закреплённой части. `null`, когда их нет.
+     */
+    statusSlot?: React.ReactNode;
     /** Native: id города/квеста для deep-link локального напоминания о незавершённом квесте */
     questId?: string;
     cityId?: string;
@@ -132,7 +146,7 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, countModel, storageKey = 'quest_progress', city, coverUrl, tags, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, subscribeSlot, ratingSlot, completionSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, countModel, storageKey = 'quest_progress', city, coverUrl, tags, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, subscribeSlot, ratingSlot, completionSlot, screenMeta, statusSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
     const { t } = useTranslation();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
     const resolvedCountModel = useMemo(
@@ -148,7 +162,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
 
     const wizardModel = useQuestWizardResponsiveModel();
     const {
-        screenW, screenH, isMobile,
+        screenW, screenH, isMobile, headerInScreenRow,
         compactNav, compactDesktopLayout,
         useWideInlineLayout, useWideExcursionsSidebar,
     } = wizardModel;
@@ -625,6 +639,22 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         })();
     }, [cityId, offlineQuestState, questId]);
 
+    // #2148: шапка экрана объявляется один раз; на телефоне её рисует строка
+    // экрана, на desktop — панель визарда (декларация там не показывается).
+    const { fontScaleSheetOpen, closeFontScaleSheet } = useQuestScreenHeader({
+        title,
+        countModel: resolvedCountModel,
+        meta: screenMeta,
+        offlineQuestState,
+        canPrint: isPrintAvailable(),
+        offlineMapPointsCount,
+        onOfflineQuestDownload: handleOfflineQuestDownload,
+        onPrint: handlePrintDownload,
+        onOfflineMapDownload: handleOfflineMapDownload,
+        onOfflineMapOpenInApp: handleOfflineMapOpenInApp,
+        onReset: resetQuest,
+    });
+
     // Раскрытие об ИИ и метаданные маршрута — в футере стартовой карточки (#1480).
     // Гостевой гейт и финал стартовую карточку не показывают.
     const introTrustBar = useMemo(() => (
@@ -847,7 +877,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                 showFinaleOnly={showFinaleOnly}
                                 goToStep={goToStep}
                                 onShowFinale={showFinale}
-                                isMobile={isMobile}
+                                headerInScreenRow={headerInScreenRow}
                                 screenW={screenW}
                                 compactNav={compactNav}
                                 onReset={resetQuest}
@@ -859,6 +889,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                 offlineQuestState={offlineQuestState}
                                 ratingSlot={ratingSlot}
                                 completionSlot={completionSlot}
+                                statusSlot={statusSlot}
                             />
 
                             {/* Контент */}
@@ -879,6 +910,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                     )}
                 </KeyboardAvoidingView>
             </SafeAreaView>
+            <QuestFontScaleSheet visible={fontScaleSheetOpen} onClose={closeFontScaleSheet} />
         </GestureHandlerRootView>
     );
 }

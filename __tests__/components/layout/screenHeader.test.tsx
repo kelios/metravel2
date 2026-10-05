@@ -91,6 +91,36 @@ describe('useScreenHeader (#2099)', () => {
     expect(queryByTestId('screen-header-info')).toBeNull()
   })
 
+  // #2148: действие на время операции недоступно — и иконкой строки, и кнопкой desktop.
+  describe('недоступное действие (disabled)', () => {
+    const onBusy = jest.fn()
+    function BusyScreen() {
+      const header = useScreenHeader({
+        title: 'Квест',
+        primaryAction: { icon: 'download-cloud', label: 'Идёт сохранение', onPress: onBusy, disabled: true, testID: 'busy' },
+      })
+      return <ScreenHeader header={header} />
+    }
+
+    it('phone: иконка строки с a11y-состоянием и без нажатия', () => {
+      ;(global as any).__mockResponsive = phone
+      const { getByTestId } = render(
+        <>
+          <HeaderContextBar />
+          <BusyScreen />
+        </>,
+      )
+      expect(getByTestId('busy').props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }))
+      expect(getByTestId('busy')).toBeDisabled()
+    })
+
+    it('desktop: кнопка с подписью неактивна', () => {
+      ;(global as any).__mockResponsive = desktop
+      const { getByTestId } = render(<BusyScreen />)
+      expect(getByTestId('busy')).toBeDisabled()
+    })
+  })
+
   it('снятие экрана возвращает заголовок из хлебных крошек', () => {
     ;(global as any).__mockResponsive = phone
     const view = render(<Harness />)

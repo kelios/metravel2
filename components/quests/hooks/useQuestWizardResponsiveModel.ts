@@ -1,11 +1,18 @@
 import { useMemo } from 'react'
 import { Platform } from 'react-native'
 import { useResponsive } from '@/hooks/useResponsive'
+import { resolveHeaderContextBarIsMobile } from '@/components/layout/headerContextBarModel'
 
 export type QuestWizardResponsiveModel = {
   screenW: number
   screenH: number
   isMobile: boolean
+  /**
+   * #2148: шапка квеста живёт в строке экрана (`HeaderContextBar` + декларация
+   * `useQuestScreenHeader`), а не в панели визарда. Тот же предикат, что у
+   * самой строки, — иначе на какой-то ширине пропали бы и кнопки, и строка.
+   */
+  headerInScreenRow: boolean
   isSmallScreen: boolean
   compactNav: boolean
   wideDesktop: boolean
@@ -49,7 +56,11 @@ export function useQuestWizardResponsiveModel() {
   // под финальную геометрию. Не годится — высота ленты зависит от числа шагов и
   // длины названий, а горизонтальный padding контейнера всё равно переключается
   // 16 → 24 по тому же `isMobile`.
-  const { width, height, isMobile } = useResponsive({ clientOnly: true })
+  //
+  // #2148: `headerInScreenRow` считается из этого же снимка, а не через
+  // `useIsScreenHeaderMobile()`: тот рассчитан на узлы из SSR и на первом кадре
+  // позднего визарда отвечает «desktop» — ряд действий мигнул бы и пропал.
+  const { width, height, isMobile, isPhone, isLargePhone } = useResponsive({ clientOnly: true })
 
   return useMemo<QuestWizardResponsiveModel>(() => {
     const isSmallScreen = width < 360
@@ -67,6 +78,7 @@ export function useQuestWizardResponsiveModel() {
       screenW: width,
       screenH: height,
       isMobile,
+      headerInScreenRow: resolveHeaderContextBarIsMobile({ width, isPhone, isLargePhone }),
       isSmallScreen,
       compactNav,
       wideDesktop,
@@ -77,5 +89,5 @@ export function useQuestWizardResponsiveModel() {
       mapPanelWidth,
       answerPaneWidth,
     }
-  }, [width, height, isMobile])
+  }, [width, height, isMobile, isPhone, isLargePhone])
 }

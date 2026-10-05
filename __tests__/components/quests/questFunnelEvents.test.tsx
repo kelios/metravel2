@@ -17,6 +17,7 @@ const mockQuestWizardResponsiveModel = {
   screenW: 390,
   screenH: 844,
   isMobile: true,
+  headerInScreenRow: true,
   compactNav: true,
   compactDesktopLayout: false,
   useWideInlineLayout: false,

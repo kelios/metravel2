@@ -4,7 +4,12 @@ import { test, expect } from './fixtures'
 import { createQuestFixture } from './helpers/questWizardFixture'
 
 /**
- * Шапка квеста на телефоне: ряд действий не имеет права терять контролы.
+ * Шапка квеста на телефоне: строка экрана не имеет права терять контролы.
+ *
+ * #2148: название, (i), офлайн и «⋯» живут в строке экрана (`HeaderContextBar`
+ * + декларация `useQuestScreenHeader`); ряда действий `quest-header-actions`
+ * над заданием на телефоне больше нет. История ниже — про прежний ряд, её
+ * урок (проверять геометрию на реальных ширинах) держит первая проверка.
  *
  * Дефект, ради которого спека написана: `headerActionRowMobile` стоял с
  * `flexWrap: 'nowrap'` при унаследованном от десктопа `justifyContent:
@@ -21,16 +26,19 @@ import { createQuestFixture } from './helpers/questWizardFixture'
 const MOBILE_WIDTHS = [320, 360, 375, 414]
 
 /**
- * Ряд действий шапки. Он есть только в `QuestHeaderPanel`: на 1280px, откуда
- * стартует фикстура, визард рисует `QuestCompactSidebar` без него. Поэтому
- * ожидание именно этого узла доказывает, что React уже переложил разметку под
- * новую ширину, — кнопка сброса для этого не годится, она есть в обеих ветках.
+ * «⋯» строки экрана. Он есть только на телефоне: на 1280px, откуда стартует
+ * фикстура, строка показывает хлебные крошки, а визард — `QuestCompactSidebar`.
+ * Поэтому ожидание именно этого узла доказывает, что React уже переложил
+ * разметку под новую ширину, — кнопка сброса для этого не годится, на desktop
+ * она есть в панели.
  */
-const headerActions = (page: Page) => page.getByTestId('quest-header-actions')
+const screenRowMore = (page: Page) => page.getByTestId('screen-header-more')
+
+const QUEST_TITLE = 'E2E-квест шапки на телефоне'
 
 const quest = createQuestFixture({
   questId: 'e2e-header-layout-quest',
-  questTitle: 'E2E-квест шапки на телефоне',
+  questTitle: QUEST_TITLE,
   questNumericId: 91_634,
   progressId: 90_634,
   points: [
@@ -74,7 +82,7 @@ test.describe('Шапка квеста на мобильных ширинах', 
 
     for (const width of MOBILE_WIDTHS) {
       await page.setViewportSize({ width, height: 900 })
-      await expect(headerActions(page)).toBeVisible({ timeout: 30_000 })
+      await expect(screenRowMore(page)).toBeVisible({ timeout: 30_000 })
       await page.evaluate(() => window.scrollTo(0, 0))
 
       expect(await clippedHeaderElements(page), `ширина ${width}px`).toEqual([])
@@ -90,7 +98,7 @@ test.describe('Шапка квеста на мобильных ширинах', 
     // полоса не показывает — только «Точка N из M», и строка обязана умещаться.
     for (const width of MOBILE_WIDTHS) {
       await page.setViewportSize({ width, height: 900 })
-      await expect(headerActions(page)).toBeVisible({ timeout: 30_000 })
+      await expect(screenRowMore(page)).toBeVisible({ timeout: 30_000 })
       const strip = page.getByTestId('quest-route-strip')
       await expect(strip).toBeVisible({ timeout: 30_000 })
       await expect(strip.getByText(new RegExp(`Точка \\d+ из ${quest.stepTotal}`))).toBeVisible()
@@ -98,29 +106,30 @@ test.describe('Шапка квеста на мобильных ширинах', 
   })
 
   /**
-   * #1669: ряд дорос до шести иконок без подписей и вместе с прогрессом и лентой
-   * шагов съедал верх экрана. Редкие действия уехали в «Ещё» — проверяем именно
-   * то, что они ПЕРЕЕХАЛИ, а не пропали: тест на «в ряду стало меньше кнопок»
-   * прошёл бы и в случае, когда действие потеряно совсем.
+   * #1669 увёл редкие действия в «Ещё», #2148 — весь ряд в строку экрана.
+   * Проверяем именно то, что действия ПЕРЕЕХАЛИ, а не пропали: тест на «над
+   * заданием нет кнопок» прошёл бы и в случае, когда действие потеряно совсем.
    */
-  test('редкие действия шапки живут в меню «Ещё», а не пропадают', async ({ page }) => {
+  test('действия шапки живут в строке экрана и её «⋯», а не пропадают', async ({ page }) => {
     await quest.open(page)
     await quest.answerCurrentStep(page, 'первый ответ', 1)
     await page.setViewportSize({ width: 375, height: 900 })
 
-    const actions = headerActions(page)
-    await expect(actions).toBeVisible({ timeout: 30_000 })
+    await expect(screenRowMore(page)).toBeVisible({ timeout: 30_000 })
+    // Над заданием ряда кнопок нет; офлайн — главное действие строки.
+    await expect(page.getByTestId('quest-header-actions')).toHaveCount(0)
+    await expect(page.getByTestId('quest-header-offline')).toBeVisible()
+    await expect(page.getByTestId('screen-header-title')).toHaveText(QUEST_TITLE)
 
-    // В видимом ряду остаётся только то, что нужно во время прохождения.
-    await expect(actions.getByLabel('Сбросить прогресс')).toHaveCount(0)
-    await expect(actions.getByLabel(/Скачать GPX/)).toHaveCount(0)
-    await expect(actions.getByLabel('Действия с квестом')).toBeVisible()
+    await screenRowMore(page).click()
 
-    await actions.getByLabel('Действия с квестом').click()
-
-    // Лист открылся и несёт подписи, а не голые иконки.
-    await expect(page.getByText('Действия с квестом')).toBeVisible({ timeout: 30_000 })
-    await expect(page.getByText('Сбросить', { exact: true })).toBeVisible()
+    // Лист открылся и несёт подписи в порядке §12, сброс — последним.
+    const items = page.locator('[data-testid^="quest-menu-"]')
+    await expect(items.first()).toBeVisible({ timeout: 30_000 })
+    const order = await items.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-testid')))
+    expect(order[0]).toBe('quest-menu-font-size')
+    expect(order[order.length - 1]).toBe('quest-menu-reset')
+    await expect(page.getByText('Сбросить прогресс', { exact: true })).toBeVisible()
     await expect(page.getByText('Скачать GPX', { exact: true })).toBeVisible()
     await expect(page.getByText('Открыть в приложении', { exact: true })).toBeVisible()
   })

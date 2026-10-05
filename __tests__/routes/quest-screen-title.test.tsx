@@ -68,6 +68,11 @@ jest.mock('@/hooks/useQuestRatingMeta', () => ({
   useQuestRatingMeta: () => ({ ratingAvg: null, ratingCount: 0 }),
 }))
 
+// #2148: вход в отзыв живёт на странице (`useQuestReviewInvite`) — без сети и react-query.
+jest.mock('@/hooks/useQuestReview', () => ({
+  useQuestReview: () => ({ review: null, isLoading: false }),
+}))
+
 jest.mock('@/hooks/useQuestCompletionMeta', () => ({
   useQuestCompletionMeta: () => ({ isCompletedByMe: false, completionsCount: 0 }),
 }))

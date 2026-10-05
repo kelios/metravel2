@@ -2,10 +2,36 @@
  * #1795: второй вход в отзыв на странице квеста. Кнопка обязана появляться
  * только тому, кто квест прошёл и отзыв ещё не оставил, — иначе она зовёт
  * писать отзыв повторно.
+ *
+ * #2148: состояние входа — хук `useQuestReviewInvite`, один на страницу; его
+ * рисуют кнопка (desktop), пункт «⋯» строки экрана (телефон), статус фото и
+ * окно. Тест собирает их так же, как страница квеста.
  */
+import React from 'react'
+import { Pressable } from 'react-native'
 import { act, fireEvent, render } from '@testing-library/react-native'
 
-import QuestReviewInvite from '@/components/quests/QuestReviewInvite'
+import {
+  QuestReviewInviteButton,
+  QuestReviewInviteModal,
+  QuestReviewPhotoStatus,
+  useQuestReviewInvite,
+} from '@/components/quests/QuestReviewInvite'
+
+type HarnessProps = { questId: string; questNumericId?: number; cityId?: string; enabled?: boolean }
+
+/** Сборка страницы квеста: кнопка и статус в слоте меты, «⋯» строки экрана, окно — одно. */
+function QuestReviewInvite({ enabled = true, ...props }: HarnessProps) {
+  const invite = useQuestReviewInvite({ ...props, enabled })
+  return (
+    <>
+      <QuestReviewInviteButton invite={invite} />
+      <QuestReviewPhotoStatus invite={invite} />
+      {invite.canInvite ? <Pressable testID="menu-leave-review" onPress={invite.open} /> : null}
+      <QuestReviewInviteModal invite={invite} />
+    </>
+  )
+}
 
 const mockTrackPromptClick = jest.fn()
 
@@ -176,6 +202,30 @@ describe('QuestReviewInvite', () => {
     fireEvent.press(getByTestId('quest-review-invite-photo-status'))
     expect(getByTestId('quest-review-invite-form')).toBeTruthy()
     expect(mockTrackPromptClick).not.toHaveBeenCalled()
+  })
+
+  it('квест не пройден — входа нет ни кнопкой, ни пунктом «⋯»', () => {
+    const { queryByTestId } = render(
+      <QuestReviewInvite questId="minsk-cmok" questNumericId={12} cityId="3" enabled={false} />,
+    )
+
+    expect(queryByTestId('quest-review-invite')).toBeNull()
+    expect(queryByTestId('menu-leave-review')).toBeNull()
+  })
+
+  it('пункт «⋯» на телефоне открывает ту же форму, что кнопка, и отмечает переход', () => {
+    const { getByTestId } = render(
+      <QuestReviewInvite questId="minsk-cmok" questNumericId={12} cityId="3" />,
+    )
+
+    fireEvent.press(getByTestId('menu-leave-review'))
+
+    expect(getByTestId('quest-review-invite-form')).toBeTruthy()
+    expect(mockTrackPromptClick).toHaveBeenCalledWith({
+      questId: 'minsk-cmok',
+      cityId: '3',
+      source: 'quest_page',
+    })
   })
 
   it('прячет статус, когда все фото загружены', () => {

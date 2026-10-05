@@ -13,11 +13,11 @@ Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
 const { useQuestWizardResponsiveModel } =
   require('@/components/quests/hooks/useQuestWizardResponsiveModel') as typeof import('@/components/quests/hooks/useQuestWizardResponsiveModel')
 
-type Frame = { screenW: number; isMobile: boolean; compactNav: boolean }
+type Frame = { screenW: number; isMobile: boolean; compactNav: boolean; headerInScreenRow: boolean }
 
 function Probe({ frames }: { frames: Frame[] }) {
-  const { screenW, isMobile, compactNav } = useQuestWizardResponsiveModel()
-  frames.push({ screenW, isMobile, compactNav })
+  const { screenW, isMobile, compactNav, headerInScreenRow } = useQuestWizardResponsiveModel()
+  frames.push({ screenW, isMobile, compactNav, headerInScreenRow })
   return <span>{screenW}</span>
 }
 
@@ -77,6 +77,9 @@ describe('useQuestWizardResponsiveModel (web)', () => {
     // кадром: `isMobile` — высоту счётчика, `compactNav`/`screenW < 600` — ленту.
     expect(frames.every((frame) => frame.isMobile === false)).toBe(true)
     expect(frames.every((frame) => frame.compactNav === false)).toBe(true)
+    // #2148: и шапка не уезжает в строку экрана ни на одном кадре — иначе ряд
+    // действий панели мигнул бы на desktop-ширине.
+    expect(frames.every((frame) => frame.headerInScreenRow === false)).toBe(true)
 
     await probe.unmount()
   })

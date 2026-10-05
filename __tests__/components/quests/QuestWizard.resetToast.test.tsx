@@ -24,6 +24,7 @@ jest.mock('@/components/quests/hooks/useQuestWizardResponsiveModel', () => ({
     screenW: 1280,
     screenH: 900,
     isMobile: false,
+    headerInScreenRow: false,
     compactNav: false,
     compactDesktopLayout: false,
     useWideInlineLayout: false,
