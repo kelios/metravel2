@@ -62,6 +62,12 @@ interface MapMobileLayersPopoverProps {
   enabledOverlays?: Record<string, boolean>
   onOverlayToggle?: (id: string, enabled: boolean) => void
   onResetOverlays?: () => void
+  /**
+   * #2251 — phone layout: the entry to the map tour lives in this card, which
+   * the toolbar names «Слои и настройки карты». The desktop branch has its own
+   * «Подсказки» button on the map and does not pass it.
+   */
+  onShowHelp?: () => void
   onRequestClose: () => void
 }
 
@@ -79,6 +85,7 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
   enabledOverlays,
   onOverlayToggle,
   onResetOverlays,
+  onShowHelp,
   onRequestClose,
 }) => {
   const { width } = useWindowDimensions()
@@ -141,6 +148,24 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
           withContainer={false}
         />
       </ScrollView>
+
+      {onShowHelp ? (
+        <Pressable
+          testID="map-mobile-help-button"
+          onPress={onShowHelp}
+          accessibilityRole="button"
+          style={({ pressed }) => [
+            styles.helpRow,
+            { borderTopColor: colors.borderLight },
+            pressed && { opacity: 0.6 },
+          ]}
+        >
+          <Feather name="help-circle" size={18} color={colors.text} />
+          <Text style={[styles.helpText, { color: colors.text }]} numberOfLines={2}>
+            {i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd')}
+          </Text>
+        </Pressable>
+      ) : null}
     </MapMobilePopover>
   )
 }
@@ -177,6 +202,23 @@ const styles = StyleSheet.create({
   },
   scroll: {
     maxHeight: 420,
+  },
+  // A row with a visible label, its own ≥44 box inside the card (no hitSlop
+  // over the map, #2236); the label may wrap to two lines in long locales.
+  helpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 10,
+    minHeight: CLOSE_TOUCH_TARGET_SIZE,
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  helpText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
   },
   scrollContent: {
     paddingHorizontal: 4,

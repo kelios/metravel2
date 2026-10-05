@@ -399,7 +399,10 @@ describe('MapScreen (map tab)', () => {
     // Количество отображается в панели списка
   });
 
-  it('clears route state when switching from route tab back to search', async () => {
+  // #2252 — «Фильтры» меняют только режим (как «Места», #211): построенный
+  // маршрут переживает переход на всех трёх входах — вкладка шапки, иконка
+  // свёрнутой полосы 56 и значок фильтров на телефоне (`onOpenFilters`).
+  const seedBuiltRoute = () => {
     useRouteStore.setState({
       mode: 'route',
       transportMode: 'foot',
@@ -419,10 +422,21 @@ describe('MapScreen (map tab)', () => {
           timestamp: 2,
         },
       ],
-      route: null,
+      route: { coordinates: [[27.56, 53.9], [27.57, 53.91]], distance: 1500, duration: 900 } as any,
       isBuilding: false,
       error: null,
     });
+  };
+
+  const expectRoutePreserved = () => {
+    const state = useRouteStore.getState();
+    expect(state.mode).toBe('radius');
+    expect(state.points.map((p) => p.id)).toEqual(['start', 'end']);
+    expect(state.route).not.toBeNull();
+  };
+
+  it('keeps the built route when switching from route tab to «Фильтры» (#2252)', async () => {
+    seedBuiltRoute();
 
     const { getByTestId, queryByText } = renderWithClient();
 
@@ -438,10 +452,95 @@ describe('MapScreen (map tab)', () => {
 
     await waitFor(() => {
       expect(useRouteStore.getState().mode).toBe('radius');
-      expect(useRouteStore.getState().points).toHaveLength(0);
+    });
+    expectRoutePreserved();
+    // Режим мест: секция транспорта маршрута в панели не показывается.
+    expect(queryByText('Пешком')).toBeNull();
+
+    // Возврат во «Маршрут» показывает те же точки.
+    fireEvent.press(getByTestId('map-panel-tab-route'));
+    await waitFor(() => {
+      expect(useRouteStore.getState().mode).toBe('route');
+    });
+    expect(useRouteStore.getState().points).toHaveLength(2);
+  });
+
+  it('keeps the built route when «Фильтры» is pressed in the collapsed strip (#2252)', async () => {
+    seedBuiltRoute();
+
+    const { getByTestId, getByLabelText } = renderWithClient();
+
+    act(() => {
+      useMapPanelStore.getState().requestOpen();
     });
 
-    expect(queryByText('Пешком')).toBeNull();
+    await waitFor(() => {
+      expect(getByTestId('map-panel-collapse-button')).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId('map-panel-collapse-button'));
+
+    await waitFor(() => {
+      expect(getByTestId('map-panel-expand-button')).toBeTruthy();
+    });
+
+    fireEvent.press(getByLabelText('Фильтры'));
+
+    await waitFor(() => {
+      expect(useRouteStore.getState().mode).toBe('radius');
+    });
+    expectRoutePreserved();
+  });
+
+  it('keeps the built route when the phone layout opens filters (#2252)', async () => {
+    mockResponsiveState = { isPhone: true, isLargePhone: false, isMobile: true, width: 390 };
+    const RN = require('react-native');
+    (RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 390, height: 844 });
+    seedBuiltRoute();
+
+    renderWithClient();
+
+    await waitFor(() => {
+      expect(mockMapMobileLayout).toHaveBeenCalled();
+    });
+
+    const lastProps = mockMapMobileLayout.mock.calls.at(-1)?.[0];
+    act(() => {
+      lastProps.onOpenFilters();
+    });
+
+    await waitFor(() => {
+      expect(useRouteStore.getState().mode).toBe('radius');
+    });
+    expectRoutePreserved();
+  });
+
+  // #2263 — «Подсказки» on the map are pressable with the panel collapsed into
+  // the 56 strip; the tour's steps 2–4 point at the panel tabs, so the panel is
+  // expanded before the tour starts.
+  it('«Подсказки» with the panel collapsed expand it so the tour targets exist (#2263)', async () => {
+    const { getByTestId, queryByTestId } = renderWithClient();
+
+    act(() => {
+      useMapPanelStore.getState().requestOpen();
+    });
+    await waitFor(() => {
+      expect(getByTestId('map-panel-collapse-button')).toBeTruthy();
+    });
+    fireEvent.press(getByTestId('map-panel-collapse-button'));
+    await waitFor(() => {
+      expect(getByTestId('map-panel-expand-button')).toBeTruthy();
+    });
+    expect(queryByTestId('map-panel-tab-filters')).toBeNull();
+
+    fireEvent.press(getByTestId('map-desktop-help-button'));
+
+    await waitFor(() => {
+      expect(getByTestId('map-panel-tab-filters')).toBeTruthy();
+    });
+    expect(getByTestId('map-panel-tab-travels')).toBeTruthy();
+    expect(getByTestId('map-panel-tab-route')).toBeTruthy();
+    expect(queryByTestId('map-panel-expand-button')).toBeNull();
   });
 
   it('does not render floating list pill on mobile web', async () => {

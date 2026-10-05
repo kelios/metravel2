@@ -316,6 +316,14 @@ type MapScreenDesktopOverlaysProps = {
   radiusOptions?: ReadonlyArray<{ id: string; name: string }>
   radiusValue?: string | number
   onRadiusSelect?: (id: string) => void
+  /**
+   * #2263 — «Подсказки» live on the map, outside the panel, so they are
+   * reachable with the panel collapsed into the 56 strip. Steps 2–4 of the tour
+   * point at the panel tabs, which the strip does not render: the button expands
+   * the panel first, then starts the tour (same state as the chrome's chevron).
+   */
+  isDesktopCollapsed?: boolean
+  toggleDesktopCollapse?: () => void
 }
 
 /**
@@ -339,7 +347,13 @@ export function MapScreenDesktopOverlays({
   radiusOptions,
   radiusValue,
   onRadiusSelect,
+  isDesktopCollapsed = false,
+  toggleDesktopCollapse,
 }: MapScreenDesktopOverlaysProps) {
+  const openMapHelp = useCallback(() => {
+    if (isDesktopCollapsed) toggleDesktopCollapse?.()
+    restartMapOnboarding()
+  }, [isDesktopCollapsed, toggleDesktopCollapse])
   // Desktop «Слои» floating control: layers live on the map (Google-Maps
   // style), no longer inside the left filters panel. Mobile keeps its own icon
   // toolbar + popover. #2172 — the desktop branch is the same on every
@@ -452,7 +466,7 @@ export function MapScreenDesktopOverlays({
             <Pressable
               ref={webTitleRef(i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd'))}
               testID="map-desktop-help-button"
-              onPress={restartMapOnboarding}
+              onPress={openMapHelp}
               accessibilityRole="button"
               accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd')}
               style={({ pressed }) => [styles.desktopHelpFab, pressed && PRESSED_OPACITY_085]}

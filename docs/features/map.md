@@ -126,6 +126,13 @@ Desktop web, iPad и Android-планшет рендерят одну desktop-в
   «Радиус» и «Слои» работают через тот же `MapUiApi`. Плавающей кнопки фильтров и native-пилюли
   радиуса нет. Аппаратная Back на Android сначала закрывает открытый поповер, как
   в телефонной раскладке.
+- «Подсказки» стоят на карте и нажимаются и при свёрнутой панели, а шаги 2–4
+  тура указывают на вкладки шапки, которых в полосе 56 нет. Поэтому при
+  свёрнутой панели кнопка сначала разворачивает панель, затем запускает тур
+  (#2263): карточка шага стоит под своей вкладкой, а не по центру окна, и на
+  native текст шага не отсылает к невидимым вкладкам. Контроль —
+  `MapScreenDesktop.native.test.tsx`, `__tests__/routes/map-screen.test.tsx` и
+  «Map tour with the panel collapsed (#2263)» в `e2e/map-page.spec.ts`.
 - Верхний отступ ветка берёт сама: на native у `/map` нет шапки приложения,
   поэтому строка, кнопки на карте, их поповеры и плашка «нет сети» сдвигаются
   на `insets.top` по одному правилу `getDesktopBranchTopInset`
@@ -138,6 +145,15 @@ Desktop web, iPad и Android-планшет рендерят одну desktop-в
   `shadows.medium`/`elevation`; тень карты рисует `mapHost`, а `mapArea`
   обрезает WebView. Высота карты не превышает хост (`minHeight: 0`), а
   `Map.ios.tsx` пересчитывает Leaflet при смене и ширины, и высоты контейнера.
+- Панель (`rightPanel`) своё содержимое не обрезает: на web desktop за её правый
+  край выходят кнопка сворачивания и ручка ширины, на native `overflow: hidden`
+  снял бы тень. Поэтому углы скругляют дети: верхние — шапка `tabsContainer`
+  (`PANEL_RADIUS`, на web с #2245, на native с #2172), нижние — `panelContent`
+  (24). Любой новый крайний ребёнок панели с собственным фоном обязан делать то
+  же, иначе в тёмной теме по углам торчат «уши» цвета `surface` на `background`
+  (`MAP-PANEL-UNCLIPPED-CORNERS-001`). Инвариант держат тест-отношение в
+  `__tests__/app/mapLayout.test.ts` и проба «Map panel corners (#2245)» в
+  `e2e/map-page.spec.ts` (820/1180/1440, светлая и тёмная тема).
 
 Регрессия: `__tests__/components/MapPage/MapScreenDesktop.native.test.tsx`
 (iOS и Android на ширине планшета; на web шеврон остаётся ребёнком панели),
@@ -436,6 +452,20 @@ type MapPlaceSource = {
 
 Канонические UI-правила находятся в [docs/RULES.md](../RULES.md).
 
+Вход в тур по карте на телефоне (#2251, `MAP-ONBOARDING-PHONE-ENTRY-001`):
+строка «Показать подсказки по карте» (`map-mobile-help-button`, иконка
+`help-circle`, видимая подпись) внизу карточки «Слои и настройки карты»
+верхнего ряда (`MapMobileLayersPopover`, проп `onShowHelp` передаёт только
+`MapMobileTopOverlay`). Отдельной иконки в ряду нет: ряд на 320 уже ужимается.
+Нажатие закрывает карточку и вызывает `restartMapOnboarding()`. Нажатие до
+монтирования тура (`shouldLoadOnboarding`) запоминается и проигрывается при
+монтировании; при открытом cookie-баннере тур ждёт его закрытия (оверлеи по
+одному, #607/#1008). Desktop-ветка входа в карточке не получает — у неё своя
+кнопка «Подсказки» на карте. Контроль —
+`__tests__/components/MapPage/MapMobileTopOverlay.help.test.tsx`,
+`MapOnboarding.test.tsx` и шаг «layers card carries the map tour entry» в
+`e2e/map-mobile-route-toolbar.spec.ts`.
+
 ## Route mobile chrome contract
 
 Мобильный экран карты полноэкранный, поэтому всё, что стоит поверх полотна, —
@@ -489,6 +519,18 @@ type MapPlaceSource = {
   ноль, исключения «файл → причина» — только сплошные панели и `Modal`) и
   render-тест `__tests__/components/MapPage/mapOverlayNoHitSlop.native.test.tsx`
   под ios и android (ловит проп через spread, хелпер и `Platform.select`).
+
+Смена вкладки не уничтожает построенный маршрут (#2252, `MAP-ROUTE-CLEARED-ON-FILTERS-001`).
+«Фильтры» — вкладка и иконка свёрнутой полосы на desktop-ветке, значок фильтров в
+верхнем ряду и кнопка открытия фильтров в списке на телефоне — идут через один
+обработчик `handleSelectSearchTab` (`screens/tabs/MapScreen.tsx`), который только
+переводит карту в режим мест (`setMode('radius')`), как вкладка «Места» (#211).
+Точки, геометрия и сохранённое состояние (`points` в persist `routeStore`) остаются:
+в режиме мест линия маршрута не рисуется, возврат во «Маршрут» показывает те же
+точки. Стирают маршрут только явные действия: «Очистить маршрут», переключатель
+«Радиус/Маршрут» в панели фильтров и кнопки «начать маршрут заново» (выбор старта,
+«Маршрут сюда»). Регресс держат `__tests__/routes/map-screen.test.tsx` (desktop-вкладка,
+полоса и телефонный `onOpenFilters`).
 
 ## Проверки по scope
 

@@ -409,8 +409,11 @@ export default function MapScreen() {
 
   const setPanelMode = routingSlice?.setMode
 
+  // #2252 — «Фильтры» (вкладка, полоса 56, значок на телефоне) только меняют
+  // режим, как вкладка «Места» (#211): построенный маршрут не стирается. Стереть
+  // его — явное действие «Очистить маршрут» или переключатель «Радиус/Маршрут».
   const handleSelectSearchTab = useCallback(() => {
-    useRouteStore.getState().clearRouteAndSetMode('radius')
+    useRouteStore.getState().setMode('radius')
     selectFiltersTab()
   }, [selectFiltersTab])
 
@@ -612,6 +615,8 @@ export default function MapScreen() {
       radiusOptions={quickFilters.radiusOptions}
       radiusValue={currentRadius}
       onRadiusSelect={handleDesktopRadiusSelect}
+      isDesktopCollapsed={isDesktopCollapsed}
+      toggleDesktopCollapse={toggleDesktopCollapse}
     />
   )
 

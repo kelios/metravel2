@@ -349,6 +349,39 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     expect(utils.getByTestId('map-desktop-help-button')).toBeTruthy()
   })
 
+  // #2263 — «Подсказки» stay reachable with the panel collapsed into the strip,
+  // while tour steps 2–4 point at the panel tabs: the button expands the panel
+  // before the tour starts; with the panel open it only starts the tour.
+  it.each([
+    [true, 1],
+    [false, 0],
+  ])('«Подсказки» with the panel collapsed=%s expand it %i time(s) before the tour', (collapsed, expands) => {
+    const toggleDesktopCollapse = jest.fn()
+    const utils = render(
+      <MapScreenDesktopOverlays
+        styles={getStyles(false, 0, themedColors)}
+        themedColors={themedColors}
+        isMobile={false}
+        isConnected
+        mapReady
+        shouldLoadOnboarding={false}
+        isDesktopCollapsed={collapsed}
+        toggleDesktopCollapse={toggleDesktopCollapse}
+      />,
+    )
+    ;(restartMapOnboarding as jest.Mock).mockClear()
+
+    fireEvent.press(utils.getByTestId('map-desktop-help-button'))
+
+    expect(toggleDesktopCollapse).toHaveBeenCalledTimes(expands)
+    expect(restartMapOnboarding).toHaveBeenCalledTimes(1)
+    if (expands) {
+      expect(toggleDesktopCollapse.mock.invocationCallOrder[0]).toBeLessThan(
+        (restartMapOnboarding as jest.Mock).mock.invocationCallOrder[0],
+      )
+    }
+  })
+
   // The map route has no app header on native: the branch must clear the iPad
   // status bar itself — the row, the on-map controls, their popovers and the
   // offline pill all move down by the same inset.

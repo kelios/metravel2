@@ -184,6 +184,28 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
     }
   })
 
+  // #2263 — iOS-only traits (web and Android ignore them, so neither the site
+  // e2e nor an Android pass would notice their loss): at the accessibility sizes
+  // a long press shows the capped label in the Large Content Viewer, and
+  // «Маршрут» tells what it builds. Tabs by testID: #2262 may change the role.
+  it('every tab carries the Large Content Viewer title; «Маршрут» carries its hint', () => {
+    const utils = renderHeader('search')
+    const labels: Record<string, string> = {
+      'map-panel-tab-travels': i18nT('map:components.MapPage.MapPanelHeader.mesta_3ad2b948'),
+      'map-panel-tab-route': i18nT('map:components.MapPage.MapPanelHeader.marshrut_486762dc'),
+      'map-panel-tab-filters': i18nT('map:components.MapPage.MapPanelHeader.filtry_95c57b1d'),
+    }
+
+    for (const testID of TAB_IDS) {
+      const tab = utils.getByTestId(testID)
+      expect(tab.props.accessibilityShowsLargeContentViewer).toBe(true)
+      expect(tab.props.accessibilityLargeContentTitle).toBe(labels[testID])
+    }
+    expect(utils.getByTestId('map-panel-tab-route').props.accessibilityHint).toBe(
+      i18nT('map:components.MapPage.MapPanelHeader.postroenie_marshruta_7aa011b1'),
+    )
+  })
+
   // The tour used to point «Стройте маршруты» at `filters-panel-header`, which
   // the desktop branch hides, «Настройте фильтры» at a tab that did not exist and
   // the intro at a `map-panel` nobody rendered: a step whose target is missing

@@ -395,6 +395,23 @@ describe('desktop-branch cards on native tablets (#2172)', () => {
       WebkitBackdropFilter: 'blur(18px)',
       boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
     },
+    // #2245 — the panel does not clip on desktop, so the header rounds the
+    // panel's top corners itself (radius = PANEL_RADIUS).
+    tabsContainer: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      paddingTop: 14,
+      paddingBottom: 10,
+      paddingHorizontal: 12,
+      backgroundColor: '#ffffff',
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: '#eeeeee',
+      backdropFilter: 'blur(20px) saturate(1.05)',
+      WebkitBackdropFilter: 'blur(20px) saturate(1.05)',
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      boxShadow: '0 1px 0 rgba(15,23,42,0.06)',
+    },
     panelContent: {
       flex: 1,
       overflow: 'hidden',
@@ -492,6 +509,18 @@ describe('desktop-branch cards on native tablets (#2172)', () => {
       WebkitBackdropFilter: 'blur(18px)',
       boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
     },
+    // The phone sheet clips its children itself: no header radii.
+    tabsContainer: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      paddingTop: 10,
+      paddingBottom: 8,
+      paddingHorizontal: 10,
+      backgroundColor: '#f5f5f5',
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: '#eeeeee',
+      boxShadow: '0 1px 0 rgba(15,23,42,0.06)',
+    },
     panelContent: {
       flex: 1,
       overflow: 'hidden',
@@ -516,11 +545,49 @@ describe('desktop-branch cards on native tablets (#2172)', () => {
       rightPanel: styles.rightPanel,
       collapseToggleInPanel: styles.collapseToggleInPanel,
       collapsedPanel: styles.collapsedPanel,
+      tabsContainer: styles.tabsContainer,
       panelContent: styles.panelContent,
       mapHost: styles.mapHost,
     });
     expect(pick(getStyles(false, 0, themedColors))).toEqual(WEB_DESKTOP);
     expect(pick(getStyles(true, 0, themedColors))).toEqual(WEB_MOBILE);
+  });
+
+  // #2263 — the panel-header keys are read only by `MapPanelHeader`, which only
+  // the desktop branch renders (`isMobile === false`): a phone value there is
+  // dead code that reads like live behaviour.
+  it.each(['web', 'ios', 'android'])('%s: panel-header keys do not depend on isMobile', (os) => {
+    Object.defineProperty(Platform, 'OS', { value: os });
+    const desktop: Record<string, any> = getStyles(false, 0, themedColors);
+    const phone: Record<string, any> = getStyles(true, 0, themedColors);
+    for (const key of ['tabsRow', 'tabsSegment', 'tab', 'tabText', 'badge', 'badgeText']) {
+      expect({ key, style: phone[key] }).toEqual({ key, style: desktop[key] });
+    }
+  });
+
+  // #2245 (MAP-PANEL-UNCLIPPED-CORNERS-001) — a panel that does not clip its
+  // children only rounds its own background: an edge child with its own fill
+  // (the header on top, `panelContent` at the bottom) paints square corners over
+  // the page unless it carries radii at least as large as the panel's.
+  it.each([
+    ['web', false],
+    ['web', true],
+    ['ios', false],
+    ['android', false],
+  ] as const)('%s (isMobile=%s): an unclipped panel has its corners rounded by the edge children', (os, isMobile) => {
+    Object.defineProperty(Platform, 'OS', { value: os });
+    const styles: Record<string, any> = getStyles(isMobile, 0, themedColors);
+    const panel = styles.rightPanel;
+    if (panel.overflow === 'hidden') return;
+
+    const radius = (style: any, corner: string) => style[corner] ?? style.borderRadius ?? 0;
+    for (const corner of ['borderTopLeftRadius', 'borderTopRightRadius']) {
+      expect(radius(panel, corner)).toBeGreaterThan(0);
+      expect(radius(styles.tabsContainer, corner)).toBeGreaterThanOrEqual(radius(panel, corner));
+    }
+    for (const corner of ['borderBottomLeftRadius', 'borderBottomRightRadius']) {
+      expect(radius(styles.panelContent, corner)).toBeGreaterThanOrEqual(radius(panel, corner));
+    }
   });
 });
 

@@ -141,8 +141,9 @@ export function MapScreenMobile({
           на ряд кнопок. */}
       <MapOfflineIndicator visible={!isConnected} top={offlineIndicatorTop} />
 
-      {/* Онбординг монтируется и на мобильном: иначе restartMapOnboarding()
-          (кнопка «?») не имеет зарегистрированного _restartCb и ничего не показывает. */}
+      {/* Онбординг монтируется и на мобильном: вход в тур — строка «Показать
+          подсказки по карте» (`map-mobile-help-button`) в карточке «Слои и
+          настройки карты» (#2251); без смонтированного тура нажатие ждёт его. */}
       {shouldLoadOnboarding && (
         <Suspense fallback={null}>
           <MapOnboarding

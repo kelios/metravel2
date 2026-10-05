@@ -7,12 +7,13 @@ import {
   MAP_TOOLBAR_STACK_GAP,
 } from '@/components/MapPage/MapMobile/MapMobileTopOverlay.styles';
 import type { ThemedColors } from '@/hooks/useTheme';
+import * as corner from '@/screens/tabs/mapDesktopCorner';
 import { webTextStyle } from '@/utils/webProps';
 
 // ✅ Токенизация: базируемся на 8pt-системе METRICS
 const PANEL_WIDTH_DESKTOP = METRICS.baseUnit * 45; // 360px
 const PANEL_WIDTH_TABLET = METRICS.baseUnit * 40; // 320px
-const PANEL_GAP = METRICS.spacing.m; // 16px
+const PANEL_GAP = corner.MAP_PANEL_GAP; // 16px
 const DESKTOP_SHELL_PADDING = METRICS.spacing.m;
 const TRANSITION_MS = 200;
 export const MAP_WEB_MOBILE_BREAKPOINT_PX = METRICS.breakpoints.tablet;
@@ -329,6 +330,9 @@ export const getStyles = (
         backgroundColor: themedColors.surface,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: themedColors.borderLight,
+        // #2172 native, #2245 web — the desktop panel does not clip (see
+        // rightPanel), so the header rounds the panel's top corners itself.
+        ...(isMobile ? null : { borderTopLeftRadius: PANEL_RADIUS, borderTopRightRadius: PANEL_RADIUS }),
         ...(Platform.OS === 'web'
           ? ({
               backgroundColor: isMobile ? themedColors.surfaceMuted : themedColors.surface,
@@ -341,24 +345,16 @@ export const getStyles = (
                   }),
               boxShadow: '0 1px 0 rgba(15,23,42,0.06)',
             } as any)
-          : isNativeDesktop
-            ? {
-                // #2172 — the panel does not clip (see rightPanel), so its
-                // children round its corners themselves.
-                borderTopLeftRadius: PANEL_RADIUS,
-                borderTopRightRadius: PANEL_RADIUS,
-              }
-            : null),
+          : null),
       },
       // The former `tabsContainer` row. Desktop (#2217): the tab segment is its
       // only child — «Подсказки» moved onto the map, «Сбросить» into the
       // filters footer.
+      // #2263 — header keys (tabsRow…badgeText) are read only by the desktop branch.
       tabsRow: {
         flexDirection: 'row',
         flexWrap: 'nowrap',
         alignItems: 'center',
-        columnGap: isMobile ? 10 : undefined,
-        minHeight: isMobile ? 48 : undefined,
       },
       tabsSegment: {
         flexDirection: 'row',
@@ -366,8 +362,8 @@ export const getStyles = (
         borderRadius: 14,
         padding: 3,
         columnGap: 2,
-        alignSelf: isMobile ? 'flex-start' : 'stretch',
-        flex: isMobile ? 0 : 1,
+        alignSelf: 'stretch',
+        flex: 1,
         minWidth: 0,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.borderLight,
@@ -376,14 +372,14 @@ export const getStyles = (
       // split the segment evenly (`minWidth: 0`), the own 44 box is the target.
       tab: {
         flex: 1,
-        flexDirection: isMobile ? 'row' : 'column',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: isMobile ? 7 : 4,
-        paddingHorizontal: isMobile ? 12 : 7,
+        paddingVertical: 4,
+        paddingHorizontal: 7,
         borderRadius: 11,
-        ...(isMobile ? { gap: 6 } : { rowGap: 2 }),
-        minWidth: isMobile ? 48 : 0,
+        rowGap: 2,
+        minWidth: 0,
         minHeight: 44,
       },
       // The icon with the count badge to its right, above the label (#2217).
@@ -409,7 +405,8 @@ export const getStyles = (
         fontWeight: '600',
         color: themedColors.textMuted,
         letterSpacing: 0.15,
-        ...(isMobile ? null : { lineHeight: 15, textAlign: 'center' as const }),
+        lineHeight: 15,
+        textAlign: 'center',
       },
       tabTextActive: {
         color: themedColors.textOnPrimary,
@@ -526,14 +523,14 @@ export const getStyles = (
       badge: {
         backgroundColor: themedColors.backgroundSecondary,
         borderRadius: 10,
-        minWidth: isMobile ? 20 : 18,
-        ...(isMobile ? { height: 18 } : { minHeight: 16 }),
-        paddingHorizontal: isMobile ? 5 : 4,
+        minWidth: 18,
+        minHeight: 16,
+        paddingHorizontal: 4,
         alignItems: 'center',
         justifyContent: 'center',
         // Desktop (#2217): the badge sits right of the icon in `tabIconRow`, whose
         // columnGap is the spacing; minHeight lets the scaled count grow.
-        marginLeft: isMobile ? 4 : 0,
+        marginLeft: 0,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.borderLight,
       },
@@ -542,7 +539,7 @@ export const getStyles = (
         borderColor: themedColors.borderLight,
       },
       badgeText: {
-        fontSize: isMobile ? 10 : 9,
+        fontSize: 9,
         fontWeight: '700',
         color: themedColors.textMuted,
       },
@@ -593,14 +590,15 @@ export const getStyles = (
         // WebView under a child that sticks out of the panel. The native offsets
         // restate the row padding (`mapContainer`) and the native panel width:
         // change them together.
+        // Geometry of the map's top-left corner: `mapDesktopCorner.ts` (#2220).
         ...(Platform.OS === 'web'
-          ? { top: 16, right: -48 }
+          ? { top: corner.COLLAPSE_TOGGLE_TOP, right: -(corner.COLLAPSE_TOGGLE_OUTSET + corner.COLLAPSE_TOGGLE_SIZE) }
           : {
-              top: DESKTOP_SHELL_PADDING - 4 + desktopTopInset + 16,
-              left: DESKTOP_SHELL_PADDING + PANEL_WIDTH_DESKTOP + 4,
+              top: DESKTOP_SHELL_PADDING - 4 + desktopTopInset + corner.COLLAPSE_TOGGLE_TOP,
+              left: DESKTOP_SHELL_PADDING + PANEL_WIDTH_DESKTOP + corner.COLLAPSE_TOGGLE_OUTSET,
             }),
-        width: CONTROL_SIZE,
-        height: CONTROL_SIZE,
+        width: corner.COLLAPSE_TOGGLE_SIZE,
+        height: corner.COLLAPSE_TOGGLE_SIZE,
         borderRadius: CONTROL_RADIUS,
         alignItems: 'center',
         justifyContent: 'center',
@@ -665,10 +663,11 @@ export const getStyles = (
         // Ярус СВОЙ, а не MAP_TOOLBAR_STACK_GAP: пилюля и баннер взаимоисключены
         // (пилюля живёт при status === 'current', баннер — при остальных), и
         // держать её ниже баннера — осознанный выбор, а не следствие геометрии.
+        // Desktop (#2220): in the chevron's band, right of it — not under it.
         top: isMobile
           ? getMapToolbarBottom(insetTop) + MAP_LOCATION_QUALITY_PILL_STACK_OFFSET
-          : 20,
-        left: isMobile ? 10 : 16,
+          : corner.COLLAPSE_TOGGLE_TOP,
+        left: isMobile ? 10 : corner.DESKTOP_MAP_CORNER_ROW_LEFT,
         right: isMobile ? 10 : undefined,
         maxWidth: isMobile ? undefined : 360,
         flexDirection: 'row',

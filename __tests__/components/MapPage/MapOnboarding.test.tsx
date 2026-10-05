@@ -49,7 +49,12 @@ jest.mock('@/components/ui/Button', () => {
   };
 });
 
-import { MapOnboarding, restartMapOnboarding } from '@/components/MapPage/MapOnboarding';
+import {
+  MapOnboarding,
+  measureInFrame,
+  restartMapOnboarding,
+  tooltipPosition,
+} from '@/components/MapPage/MapOnboarding';
 
 describe('MapOnboarding', () => {
   const setViewportWidth = (width: number) => {
@@ -164,5 +169,79 @@ describe('MapOnboarding', () => {
 
     expect(getByText('Карта путешествий')).toBeTruthy();
     expect(getByTestId('onboarding-next')).toBeTruthy();
+  });
+
+  // #2251 — the tour mounts late (`shouldLoadOnboarding`): a «Подсказки» press
+  // before that is replayed on mount instead of being dropped.
+  it('a restart pressed before the tour mounts opens it on mount', async () => {
+    restartMapOnboarding();
+
+    const { getByText } = render(<MapOnboarding mobileWebCoachmark={false} />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(getByText('Карта путешествий')).toBeTruthy();
+  });
+
+  it('a restart pressed before the tour mounts under the cookie banner shows once it closes', async () => {
+    setViewportWidth(390);
+    restartMapOnboarding();
+
+    const { queryByTestId, getByTestId, rerender } = render(
+      <MapOnboarding mobileWebCoachmark suspendAutoOpen />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(queryByTestId('onboarding-next')).toBeNull();
+
+    await act(async () => {
+      rerender(<MapOnboarding mobileWebCoachmark suspendAutoOpen={false} />);
+      await Promise.resolve();
+    });
+
+    expect(getByTestId('onboarding-next')).toBeTruthy();
+  });
+
+  // #2251 — overlays show one at a time (#607, #1008): a manual restart while
+  // the cookie banner is open waits for the banner to close.
+  it('a manual restart while the cookie banner is open shows once the banner closes', async () => {
+    setViewportWidth(390);
+
+    const { queryByTestId, getByTestId, rerender } = render(
+      <MapOnboarding mobileWebCoachmark suspendAutoOpen />,
+    );
+    await act(async () => {
+      restartMapOnboarding();
+    });
+
+    expect(queryByTestId('onboarding-next')).toBeNull();
+
+    await act(async () => {
+      rerender(<MapOnboarding mobileWebCoachmark suspendAutoOpen={false} />);
+      await Promise.resolve();
+    });
+
+    expect(getByTestId('onboarding-next')).toBeTruthy();
+  });
+
+  // #2263 — the tour overlay is not the viewport: on desktop web it starts under
+  // the 64 px site header. Prod probe (1180×820): tab bottom 191 in the viewport,
+  // card `top` 203 inside an overlay at y=64 → card at 267, 76 under the tab.
+  // The target is measured in the overlay's coordinates, so the card stands
+  // TOOLTIP_GAP_PX (12) under it wherever the overlay starts.
+  it.each([0, 64])('the card stands 12 under its target with the overlay at y=%i', (frameTop) => {
+    const tab = { top: 147, left: 40, width: 102, height: 44 };
+    const frame = { top: frameTop, left: 0, width: 1180, height: 820 - frameTop };
+
+    const local = measureInFrame(tab, frame);
+    const pos = tooltipPosition(local, 'bottom');
+    const cardTopInViewport = frame.top + (pos.top as number);
+    const spotlightTopInViewport = frame.top + local.top;
+
+    expect(cardTopInViewport - (tab.top + tab.height)).toBe(12);
+    expect(spotlightTopInViewport).toBe(tab.top);
+    expect(pos.left).toBe(tab.left);
   });
 });

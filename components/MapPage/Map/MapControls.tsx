@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather'
 import type { LatLng } from '@/types/coordinates'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
+import { DESKTOP_MAP_LEFT_COLUMN_TOP } from '@/screens/tabs/mapDesktopCorner'
 
 
 const MOBILE_LAYOUT_MAX_WIDTH = 767
@@ -25,12 +26,11 @@ interface MapControlsProps {
 const MOBILE_WEB_TOP_GAP = 16
 const MOBILE_WEB_SIDE_GAP = 16
 const CONTROL_GROUP_GAP = 10
-// Desktop/web only: the left panel renders a collapse toggle at its right edge
-// (top 16, 40px tall, sticking ~48px into the map area). Pushing the floating
-// map controls below that band keeps the locate/zoom cluster from colliding with
-// the «<» collapse button at the panel/map seam. Mobile never reaches this
-// component (hideFloatingControls=isMobile), so the larger offset is safe.
-const DESKTOP_TOP_GAP = 72
+// Desktop/web only: the panel's collapse chevron reaches across the panel/map
+// seam into the map (`mapDesktopCorner.ts`, #2220). The locate/zoom column starts
+// below that band. Mobile never reaches this component
+// (hideFloatingControls=isMobile), so the larger offset is safe.
+const DESKTOP_TOP_GAP = DESKTOP_MAP_LEFT_COLUMN_TOP
 
 const getButtonStyle = (colors: ThemedColors, isMobile: boolean): React.CSSProperties => ({
   width: '44px',

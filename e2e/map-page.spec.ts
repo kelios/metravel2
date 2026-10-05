@@ -818,6 +818,49 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('filters-panel-footer')).toBeVisible();
   });
 
+  // #2252 — «Фильтры» меняют только режим: две точки маршрута остаются в
+  // сторе и в persist (`route-storage`), переживают перезагрузку и снова видны
+  // во вкладке «Маршрут».
+  test('desktop: «Фильтры» tab keeps the built route (#2252)', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.addInitScript(() => {
+      // Только первый заход: перезагрузка обязана прочитать то, что оставило приложение.
+      if (window.localStorage.getItem('route-storage')) return;
+      window.localStorage.setItem(
+        'route-storage',
+        JSON.stringify({
+          state: {
+            transportMode: 'car',
+            points: [
+              { id: 's', coordinates: { lat: 53.9006, lng: 27.559 }, address: 'Start', type: 'start', timestamp: 1 },
+              { id: 'e', coordinates: { lat: 53.9154, lng: 27.5461 }, address: 'End', type: 'end', timestamp: 2 },
+            ],
+          },
+          version: 0,
+        }),
+      );
+    });
+    const persistedPointCount = () =>
+      page.evaluate(() => {
+        const raw = window.localStorage.getItem('route-storage');
+        const points = raw ? JSON.parse(raw)?.state?.points : null;
+        return Array.isArray(points) ? points.length : 0;
+      });
+
+    await gotoMapWithRecovery(page);
+    await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
+
+    await page.getByTestId('map-panel-tab-route').click({ timeout: 60_000 });
+    await expect(page.getByTestId('route-builder')).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId('map-panel-tab-filters').click();
+    await expect(page.getByTestId('map-panel-tab-filters')).toHaveAttribute('aria-selected', 'true');
+    expect(await persistedPointCount()).toBe(2);
+
+    await page.reload();
+    await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
+    expect(await persistedPointCount()).toBe(2);
+  });
+
   test('desktop: route polyline is visible after entering start/end coordinates', async ({ page }, testInfo) => {
     await installTileMock(page);
     await page.addInitScript(() => {
@@ -1288,6 +1331,188 @@ test.describe('Map panel header tabs (#2217)', () => {
       if (!viewport) throw new Error('820x1180 is part of MAP_PANEL_TABS_VIEWPORTS');
       await openMapForPanelTabs(page, { viewport, locale });
       await assertMapPanelTabsContract(page, `820x1180 ${locale}`);
+    });
+  }
+});
+
+// #2245 (MAP-PANEL-UNCLIPPED-CORNERS-001) — the desktop panel does not clip its
+// children (the collapse button and the resize handle sit past its edge), so
+// every edge child with its own fill must round the panel's corner itself.
+// 1.5 px inside each vertex of the panel box nothing of the panel subtree with
+// an opaque background may be hit; 24 px inside, the header must be — otherwise
+// the probe could pass on an empty stack.
+test.describe('Map panel corners (#2245)', () => {
+  const CORNER_VIEWPORTS = [
+    { width: 820, height: 1180 },
+    { width: 1180, height: 820 },
+    { width: 1440, height: 900 },
+  ];
+
+  test.beforeEach(async ({ page }) => {
+    await installTileMock(page);
+    await preacceptCookies(page);
+    await page.addInitScript(() => {
+      window.localStorage.setItem('metravel_map_onboarding_completed', 'true');
+    });
+  });
+
+  for (const theme of ['light', 'dark'] as const) {
+    for (const viewport of CORNER_VIEWPORTS) {
+      test(`desktop ${viewport.width}x${viewport.height} ${theme}: no square header corners`, async ({ page }) => {
+        await page.addInitScript((saved) => {
+          window.localStorage.setItem('theme', saved);
+        }, theme);
+        await page.setViewportSize(viewport);
+        await gotoMapWithRecovery(page);
+        await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+        const collapseButton = page.getByTestId('map-panel-collapse-button');
+        await expect(collapseButton).toBeVisible({ timeout: 60_000 });
+        await expect(page.getByTestId('map-panel-tab-filters')).toBeVisible({ timeout: 60_000 });
+
+        const probe = await page.evaluate(() => {
+          const button = document.querySelector('[data-testid="map-panel-collapse-button"]');
+          const panel = button?.parentElement;
+          if (!panel) return null;
+          const box = panel.getBoundingClientRect();
+          const isOpaque = (el: Element) => {
+            const color = getComputedStyle(el).backgroundColor;
+            if (!color || color === 'transparent') return false;
+            const alpha = color.match(/rgba?\(([^)]+)\)/)?.[1]?.split(',')[3];
+            return alpha === undefined || Number(alpha) > 0;
+          };
+          const paintedBy = (x: number, y: number) =>
+            document
+              .elementsFromPoint(x, y)
+              .filter((el) => el !== panel && panel.contains(el) && isOpaque(el))
+              .map((el) => `${el.tagName}.${(el.getAttribute('data-testid') || '')}`);
+          const inset = 1.5;
+          const control = 24;
+          return {
+            top: [
+              paintedBy(box.left + inset, box.top + inset),
+              paintedBy(box.right - inset, box.top + inset),
+            ],
+            bottom: [
+              paintedBy(box.left + inset, box.bottom - inset),
+              paintedBy(box.right - inset, box.bottom - inset),
+            ],
+            control: paintedBy(box.left + control, box.top + control),
+            // The header is the panel's direct child that holds the tabs.
+            headerRadius: (() => {
+              const tab = panel.querySelector('[data-testid="map-panel-tab-filters"]');
+              const header = Array.from(panel.children).find((child) => child.contains(tab));
+              if (!header) return null;
+              const style = getComputedStyle(header);
+              return [style.borderTopLeftRadius, style.borderTopRightRadius];
+            })(),
+          };
+        });
+
+        expect(probe, 'panel must be the parent of map-panel-collapse-button').not.toBeNull();
+        expect(probe!.control.length, 'control point must hit the panel header').toBeGreaterThan(0);
+        expect(probe!.top).toEqual([[], []]);
+        expect(probe!.headerRadius).toEqual(['20px', '20px']);
+        // At 768–1279 px the bottom dock covers the panel's bottom edge; the
+        // bottom corners are asserted only where the dock is absent.
+        if (viewport.width >= 1280) {
+          expect(probe!.bottom).toEqual([[], []]);
+        }
+      });
+    }
+  }
+});
+
+// #2263 — «Подсказки» live on the map and are pressable with the panel
+// collapsed into the 56 strip. Steps 2–4 point at the panel tabs: the button
+// expands the panel first, so every step's card stands under its target
+// (TOOLTIP_GAP_PX 12 + 4 px tolerance), not in the middle of the window.
+test.describe('Map tour with the panel collapsed (#2263)', () => {
+  test.beforeEach(async ({ page }) => {
+    await installTileMock(page);
+    await preacceptCookies(page);
+    await page.addInitScript(() => {
+      window.localStorage.setItem('metravel_map_onboarding_completed', 'true');
+    });
+  });
+
+  test('desktop 1180x820: tour steps 2–4 stand under their tabs', async ({ page }) => {
+    await page.setViewportSize({ width: 1180, height: 820 });
+    await gotoMapWithRecovery(page);
+    await expect(page.getByTestId('map-panel-collapse-button')).toBeVisible({ timeout: 60_000 });
+    await page.getByTestId('map-panel-collapse-button').click();
+    await expect(page.getByTestId('map-panel-expand-button')).toBeVisible({ timeout: 15_000 });
+
+    // The tour mounts after the idle window (`shouldLoadOnboarding`); a press
+    // before that is replayed on mount (#2251), so one press is enough. A retry
+    // loop would click through the tour's own overlay once it is up.
+    await page.getByTestId('map-desktop-help-button').click();
+    await expect(page.getByTestId('onboarding-card')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('map-panel-expand-button')).toHaveCount(0);
+
+    for (const target of ['map-panel-tab-filters', 'map-panel-tab-travels', 'map-panel-tab-route']) {
+      await page.getByTestId('onboarding-next').click();
+      await expect
+        .poll(
+          async () => {
+            const targetBox = await page.getByTestId(target).boundingBox();
+            const cardBox = await page.getByTestId('onboarding-card').boundingBox();
+            if (!targetBox || !cardBox) return null;
+            return Math.round(cardBox.y - (targetBox.y + targetBox.height));
+          },
+          { timeout: 10_000, message: `tour card must stand under ${target}` },
+        )
+        .toBeGreaterThanOrEqual(0);
+      const targetBox = await page.getByTestId(target).boundingBox();
+      const cardBox = await page.getByTestId('onboarding-card').boundingBox();
+      const gap = cardBox!.y - (targetBox!.y + targetBox!.height);
+      expect(gap, `gap under ${target}`).toBeLessThanOrEqual(12 + 4);
+    }
+  });
+});
+
+// #2220 — in the desktop branch the panel's collapse chevron reaches 32 px into
+// the map; the location-quality pill shares that corner. A fix with accuracy
+// 150 m (> 100 m) shows «Низкая точность геолокации»; the two boxes must not
+// intersect on either axis-pair (before: ~15 px horizontal overlap).
+test.describe('Map location-quality pill vs collapse chevron (#2220)', () => {
+  test.beforeEach(async ({ page }) => {
+    await installTileMock(page);
+    await preacceptCookies(page);
+    await page.addInitScript(() => {
+      window.localStorage.setItem('metravel_map_onboarding_completed', 'true');
+    });
+    await page.context().grantPermissions(['geolocation']);
+    await page.context().setGeolocation({ latitude: 53.9006, longitude: 27.559, accuracy: 150 });
+  });
+
+  for (const viewport of [
+    { width: 820, height: 1180 },
+    { width: 1180, height: 820 },
+    { width: 1440, height: 900 },
+  ]) {
+    test(`desktop ${viewport.width}x${viewport.height}: the pill and the chevron do not overlap`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await gotoMapWithRecovery(page);
+      const chevron = page.getByTestId('map-panel-collapse-button');
+      const pill = page.getByTestId('map-location-quality');
+      await expect(chevron).toBeVisible({ timeout: 60_000 });
+      await expect(pill).toBeVisible({ timeout: 60_000 });
+
+      const a = await chevron.boundingBox();
+      const b = await pill.boundingBox();
+      expect(a && b).toBeTruthy();
+      const overlapX = Math.min(a!.x + a!.width, b!.x + b!.width) - Math.max(a!.x, b!.x);
+      const overlapY = Math.min(a!.y + a!.height, b!.y + b!.height) - Math.max(a!.y, b!.y);
+      expect(
+        overlapX <= 0 || overlapY <= 0,
+        `pill ${JSON.stringify(b)} vs chevron ${JSON.stringify(a)}`,
+      ).toBe(true);
+      // The chevron stays the topmost node at its centre: still pressable.
+      const topmost = await page.evaluate(({ x, y }) => {
+        const el = document.elementFromPoint(x, y);
+        return Boolean(el?.closest('[data-testid="map-panel-collapse-button"]'));
+      }, { x: a!.x + a!.width / 2, y: a!.y + a!.height / 2 });
+      expect(topmost).toBe(true);
     });
   }
 });

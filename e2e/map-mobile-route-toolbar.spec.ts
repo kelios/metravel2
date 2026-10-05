@@ -262,6 +262,104 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
     })
   })
 
+  // #2252 — открытие фильтров меняет только режим: построенный маршрут
+  // (и его persist-копия `route-storage`) переживает переход, возврат в
+  // маршрут показывает ту же сводку; стирает только «Очистить маршрут».
+  test('opening filters keeps the built route (#2252)', async ({ page }) => {
+    test.setTimeout(180_000)
+
+    await preacceptCookies(page)
+    await seedMobileMapEnvironment(page)
+    await installTileMock(page)
+    await installMapApiMocks(page)
+    await gotoMobileMap(page)
+
+    const persistedPointCount = () =>
+      page.evaluate(() => {
+        try {
+          const raw = window.localStorage.getItem('route-storage')
+          const points = raw ? JSON.parse(raw)?.state?.points : null
+          return Array.isArray(points) ? points.length : 0
+        } catch {
+          return -1
+        }
+      })
+
+    const marker = page.locator('.metravel-pin-marker').first()
+    await expect(marker).toBeVisible({ timeout: 30_000 })
+    await marker.click({ force: true })
+    const cardAction = byTid(page, 'popup-primary-action')
+    await expect(cardAction).toContainText('Маршрут от меня', { timeout: 15_000 })
+    await cardAction.click({ force: true })
+    await expect(byTid(page, 'map-mobile-route-summary')).toBeVisible({ timeout: 15_000 })
+    await expect.poll(persistedPointCount, { timeout: 10_000 }).toBe(2)
+
+    await byTid(page, 'map-mobile-filters-button').click()
+    // Режим мест: ярус маршрута уходит, точки остаются в сторе и в persist.
+    await expect(byTid(page, 'map-mobile-route-summary')).toHaveCount(0, { timeout: 15_000 })
+    await expect(byTid(page, 'map-mobile-radius-button')).toBeVisible({ timeout: 15_000 })
+    expect(await persistedPointCount()).toBe(2)
+
+    await byTid(page, 'map-mobile-route-button').click({ force: true })
+    await expect(byTid(page, 'map-mobile-route-summary')).toBeVisible({ timeout: 15_000 })
+    expect(await persistedPointCount()).toBe(2)
+
+    // Негативный контроль: явное действие по-прежнему стирает маршрут.
+    await byTid(page, 'map-mobile-route-clear-button').click({ force: true })
+    await expect.poll(persistedPointCount, { timeout: 10_000 }).toBe(0)
+  })
+
+  // #2251 — вход в тур на телефоне: строка «Показать подсказки по карте» в
+  // карточке «Слои и настройки карты». Бокс ≥ 44×44, в центре — сам вход,
+  // карточка не шире окна на 320/360/390; нажатие закрывает карточку и
+  // открывает тур, «Готово» снова пишет ключ пройденного тура.
+  test('layers card carries the map tour entry (#2251)', async ({ page }) => {
+    test.setTimeout(180_000)
+
+    await preacceptCookies(page)
+    await seedMobileMapEnvironment(page)
+    await installTileMock(page)
+    await installMapApiMocks(page)
+    await gotoMobileMap(page)
+
+    for (const width of [320, 360, 390]) {
+      await page.setViewportSize({ width, height: 844 })
+      const layersBtn = byTid(page, 'map-mobile-layers-button')
+      await layersBtn.click()
+      const entry = page.getByRole('button', { name: 'Показать подсказки по карте' })
+      await expect(entry).toBeVisible({ timeout: 15_000 })
+      const box = await entry.boundingBox()
+      expect(box, `entry box at ${width}`).toBeTruthy()
+      expect(box!.width).toBeGreaterThanOrEqual(44)
+      expect(box!.height).toBeGreaterThanOrEqual(44)
+      expect(box!.x).toBeGreaterThanOrEqual(0)
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width)
+      const hitsEntry = await page.evaluate(({ x, y }) => {
+        const el = document.elementFromPoint(x, y)
+        return Boolean(el?.closest('[data-testid="map-mobile-help-button"]'))
+      }, { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 })
+      expect(hitsEntry, `entry is topmost at ${width}`).toBe(true)
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      )
+      expect(overflow, `no horizontal overflow at ${width}`).toBeLessThanOrEqual(0)
+      if (width < 390) await byTid(page, 'map-mobile-layers-popover-close').click()
+    }
+
+    await page.getByRole('button', { name: 'Показать подсказки по карте' }).click()
+    await expect(byTid(page, 'map-mobile-layers-popover')).toHaveCount(0, { timeout: 10_000 })
+    const next = byTid(page, 'onboarding-next')
+    await expect(next).toBeVisible({ timeout: 15_000 })
+    expect(
+      await page.evaluate(() => window.localStorage.getItem('metravel_map_onboarding_completed')),
+    ).toBeNull()
+    await next.click()
+    await expect(next).toHaveCount(0, { timeout: 10_000 })
+    await expect
+      .poll(() => page.evaluate(() => window.localStorage.getItem('metravel_map_onboarding_completed')))
+      .toBe('true')
+  })
+
   test('denied location keeps fallback out of the route and offers a map start', async ({ page }) => {
     await preacceptCookies(page)
     await seedDeniedLocation(page)

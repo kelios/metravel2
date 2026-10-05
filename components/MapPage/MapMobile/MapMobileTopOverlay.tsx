@@ -12,7 +12,7 @@
  *
  * No persistent panel — this overlay floats above a full-screen map.
  */
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Platform, Pressable, Text as RNText, useWindowDimensions, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -26,6 +26,7 @@ import {
 } from '../mapFilterChips'
 import MapIcon from '../MapIcon'
 import { ROUTING_DIRECT_LINE } from '../RoutingStatus'
+import { restartMapOnboarding } from '../MapOnboarding'
 import {
   TRANSPORT_ICON,
   getTransportLabel,
@@ -347,6 +348,12 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
     RADIUS_POPOVER_WIDTH,
     viewportWidth,
   )
+  // #2251 — the phone's entry to the map tour, in «Слои и настройки карты»: the
+  // card closes first, so the tour is the only overlay (#607, #1008).
+  const showMapHelp = useCallback(() => {
+    onClosePopover()
+    restartMapOnboarding()
+  }, [onClosePopover])
   const transportPopoverRight = clampPopoverRight(
     TRANSPORT_POPOVER_RIGHT,
     TRANSPORT_POPOVER_WIDTH,
@@ -733,6 +740,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
           enabledOverlays={enabledOverlays}
           onOverlayToggle={onOverlayToggle}
           onResetOverlays={onResetOverlays}
+          onShowHelp={showMapHelp}
           onRequestClose={onClosePopover}
         />
       )}
