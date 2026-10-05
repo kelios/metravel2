@@ -128,10 +128,17 @@ const getChangedQuestDataFiles = (changedFiles) => {
     .filter((filePath) => fs.existsSync(path.resolve(process.cwd(), filePath)))
 }
 
-// Входы iOS-релизного гейта: закоммиченное дерево `ios/`, конфиги Expo и EAS и
-// сами скрипты `scripts/ios-*`. Удалённый файл — тоже вход: пропавший ассет и
-// есть то, что гейт должен увидеть, поэтому проверки существования здесь нет.
-const IOS_RELEASE_INPUT_PATTERNS = [/^ios\//, /^app\.json$/, /^eas\.json$/, /^scripts\/ios-[^/]+$/]
+// Входы iOS-релизного гейта: закоммиченное дерево `ios/`, конфиги Expo и EAS
+// (`app.config.js` guard исполняет и сверяет с `app.json`) и сами скрипты
+// `scripts/ios-*`. Удалённый файл — тоже вход: пропавший ассет и есть то, что
+// гейт должен увидеть, поэтому проверки существования здесь нет.
+const IOS_RELEASE_INPUT_PATTERNS = [
+  /^ios\//,
+  /^app\.json$/,
+  /^app\.config\.js$/,
+  /^eas\.json$/,
+  /^scripts\/ios-[^/]+$/,
+]
 
 const getChangedIosReleaseInputs = (changedFiles) => {
   return (changedFiles || [])
