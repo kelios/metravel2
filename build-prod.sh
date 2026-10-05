@@ -276,8 +276,22 @@ build_env() {
 deploy_prod() {
   local ENV="$1"
   local EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"
+  # Второй предел overlay — объём (#2186): срок ограничивает его в днях, а
+  # растёт он с числом выкатов. Только число: `.env.deploy` экспортируется
+  # целиком, и пустая строка в нём не должна молча снимать предел.
+  local EXPO_OVERLAY_MAX_MB="${EXPO_OVERLAY_MAX_MB:-256}"
   local EXPO_OVERLAY_HELPER="scripts/deploy-expo-overlay.sh"
   local EXPO_OVERLAY_HELPER_B64
+  # Место на диске прода (#2186). Резерв — то, что заливка обязана оставить
+  # свободным сверх размера релиза: 5 % диска, уровень, который хостовый
+  # монитор считает аварией. 1536 МБ требует preflight сборки образа бэкенда
+  # (`deploy/prod/app_image_retention.sh` в его репо): ниже этого выкат бэка
+  # невозможен, и отчёт выката об этом предупреждает.
+  local DEPLOY_DISK_RESERVE_MB="${DEPLOY_DISK_RESERVE_MB:-720}"
+  local DEPLOY_BACKEND_BUILD_MB=1536
+  local DISK_GUARD_HELPER="scripts/deploy-disk-guard.sh"
+  local DISK_GUARD_HELPER_B64
+  local PAYLOAD_KIB
   local CONTAINER_HELPER_B64
   local REMOTE_DONE_MARKER
 
@@ -285,11 +299,24 @@ deploy_prod() {
     echo "❌ EXPO_OVERLAY_RETENTION_DAYS must be a non-negative integer"
     return 1
   fi
+  if [[ ! "$EXPO_OVERLAY_MAX_MB" =~ ^[0-9]+$ ]]; then
+    echo "❌ EXPO_OVERLAY_MAX_MB must be a non-negative integer"
+    return 1
+  fi
+  if [[ ! "$DEPLOY_DISK_RESERVE_MB" =~ ^[0-9]+$ ]]; then
+    echo "❌ DEPLOY_DISK_RESERVE_MB must be a non-negative integer"
+    return 1
+  fi
   if [[ ! -f "$EXPO_OVERLAY_HELPER" ]]; then
     echo "❌ Expo overlay helper is missing: $EXPO_OVERLAY_HELPER"
     return 1
   fi
+  if [[ ! -f "$DISK_GUARD_HELPER" ]]; then
+    echo "❌ Disk guard helper is missing: $DISK_GUARD_HELPER"
+    return 1
+  fi
   EXPO_OVERLAY_HELPER_B64="$(base64 < "$EXPO_OVERLAY_HELPER" | tr -d '\n')"
+  DISK_GUARD_HELPER_B64="$(base64 < "$DISK_GUARD_HELPER" | tr -d '\n')"
   # Резолв имени контейнера едет тем же путём, что и overlay-хелпер: heredoc
   # ниже закавычен, поэтому подставить снипет прямо в текст нельзя. Регулярка
   # имени живёт только в scripts/deploy-target.sh (#1636, борд #733).
@@ -305,6 +332,19 @@ deploy_prod() {
   # rsync re-sent the whole ~370 MB artifact (~100 MB compressed) each time.
   # `--copy-dest` points it at the live release (#2013): unchanged files are
   # copied on the server, changed ones travel as deltas against the live copy.
+  #
+  # Copied, not linked: the whole release lands in staging next to the live
+  # one, so the server needs that much free space before the first byte is
+  # sent. The guard refuses here, while nothing has been written yet (#2186).
+  PAYLOAD_KIB="$(du -sk "./dist/$ENV" | awk '{ print $1 }')"
+  if ! ssh "$PROD_SSH_TARGET" bash -s -- preflight \
+    "$PROD_REMOTE_DIR" \
+    "$PAYLOAD_KIB" \
+    "$DEPLOY_DISK_RESERVE_MB" \
+    "$DEPLOY_BACKEND_BUILD_MB" < "$DISK_GUARD_HELPER"; then
+    echo "❌ Проверка места на диске прода не пройдена — заливка не начата"
+    return 1
+  fi
   local rsync_started=$SECONDS
   rsync -azhe "ssh" --delete --mkpath --stats \
     --copy-dest="$PROD_REMOTE_DIR/static/dist" \
@@ -325,13 +365,19 @@ deploy_prod() {
   # diagnostics into remote shell syntax before bash can parse the program.
   # The remote directory travels as an argument for the same reason: the
   # heredoc is quoted, so nothing local expands inside it.
+  # ssh joins the arguments into one command line and the remote shell splits
+  # it again, so an empty argument would vanish and shift the ones behind it:
+  # every argument below is validated as non-empty before this call.
   ssh "$PROD_SSH_TARGET" bash -s -- \
     "$ENV" \
     "$EXPO_OVERLAY_RETENTION_DAYS" \
     "$EXPO_OVERLAY_HELPER_B64" \
     "$PROD_REMOTE_DIR" \
     "$REMOTE_DONE_MARKER" \
-    "$CONTAINER_HELPER_B64" <<'REMOTE_DEPLOY_SCRIPT' | tee "$REMOTE_LOG"
+    "$CONTAINER_HELPER_B64" \
+    "$EXPO_OVERLAY_MAX_MB" \
+    "$DISK_GUARD_HELPER_B64" \
+    "$DEPLOY_BACKEND_BUILD_MB" <<'REMOTE_DEPLOY_SCRIPT' | tee "$REMOTE_LOG"
 set -e
 
 # The program itself is bash's stdin (ssh ... bash -s), read lazily while it
@@ -348,6 +394,9 @@ EXPO_OVERLAY_HELPER_B64="$3"
 REMOTE_DIR="$4"
 DEPLOY_SUCCESS_MARKER="$5"
 CONTAINER_HELPER_B64="$6"
+EXPO_OVERLAY_MAX_MB="$7"
+DISK_GUARD_HELPER_B64="$8"
+DEPLOY_BACKEND_BUILD_MB="$9"
 
 # Общий резолв имени контейнера (scripts/deploy-target.sh). Декодируется из
 # аргумента, а не читается со stdin: stdin здесь — сама эта программа.
@@ -425,12 +474,15 @@ mv dist/$ENV static/dist.new
 # that still execute older runtime chunks during a fresh deploy.
 # Backfill while the previous release is still live; the new HTML and its
 # static tree are exposed together only by the directory swap below.
+# The window is bounded twice: by age and by a byte budget, because its size
+# follows the number of deploys inside the window, not the days (#2186).
 if [ -d static/dist/_expo/static ]; then
   mkdir -p static/dist.new/_expo/static
   printf '%s' "$EXPO_OVERLAY_HELPER_B64" | base64 -d | bash -s -- \
     static/dist.new/_expo/static \
     static/dist/_expo/static \
-    "$EXPO_OVERLAY_RETENTION_DAYS"
+    "$EXPO_OVERLAY_RETENTION_DAYS" \
+    "$EXPO_OVERLAY_MAX_MB"
 fi
 
 rollback_dir=static/dist.old
@@ -562,6 +614,13 @@ rroot '/app/dist'
 if [ -e dist ]; then
   echo "❌ Failed to remove upload staging directory: dist"
   exit 1
+fi
+# Disk line for the report of every deploy (#2186): the release is published
+# and verified by now, so a failing measurement must not fail the deploy.
+if [ -n "$DISK_GUARD_HELPER_B64" ]; then
+  printf '%s' "$DISK_GUARD_HELPER_B64" | base64 -d | bash -s -- \
+    report "$REMOTE_DIR" static/dist "$DEPLOY_BACKEND_BUILD_MB" ||
+    echo "⚠️ Disk usage report failed; the deploy itself is published"
 fi
 # Last command by contract: the caller refuses success without this line.
 # The leading newline keeps the marker on its own line for the caller's

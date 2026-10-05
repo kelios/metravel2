@@ -52,6 +52,8 @@ const BUILD_STUB = [
   '} > "$STUB_OUT"',
   'echo "▶ stub stage"',
   'echo "noise line"',
+  'echo "📊 Диск прода после выката: занято 84 %, свободно 2300 МБ; static/dist — 655 МБ"',
+  'echo "⚠️ На диске прода свободно 1400 МБ — меньше 1536 МБ"',
   'echo "⏱  stub stage: 0 с"',
   'echo "⏱  Время этапов:"',
   'echo "      0 с  stub stage"',
@@ -207,6 +209,10 @@ describe('scripts/deploy-prod.sh', () => {
       expect(result.stdout.slice(0, tailStart)).toContain('▶ stub stage')
       // The stage table rows start with spaces and must survive the filter.
       expect(result.stdout.slice(0, tailStart)).toContain('      0 с  stub stage')
+      // The disk lines of the deploy report are what the owner reads in quiet
+      // mode (#2186): the filter must let both the line and the warning through.
+      expect(result.stdout.slice(0, tailStart)).toContain('📊 Диск прода после выката')
+      expect(result.stdout.slice(0, tailStart)).toContain('⚠️ На диске прода свободно')
       expect(result.stdout.slice(0, tailStart)).not.toContain('noise line')
       expect(result.stdout.slice(tailStart)).toContain('noise line')
       expect(fs.existsSync(fixture.worktree)).toBe(false)

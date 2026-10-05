@@ -33,6 +33,9 @@ const MARKER_ECHO = `printf '\\n%s\\n' "$DEPLOY_SUCCESS_MARKER"`
 const helperB64 = fs
   .readFileSync(path.resolve(process.cwd(), 'scripts/deploy-expo-overlay.sh'))
   .toString('base64')
+const diskGuardB64 = fs
+  .readFileSync(path.resolve(process.cwd(), 'scripts/deploy-disk-guard.sh'))
+  .toString('base64')
 
 // Резолв имени контейнера переехал из тела payload в общий дом
 // (scripts/deploy-target.sh, #1636) и приезжает на прод base64-аргументом.
@@ -149,14 +152,20 @@ function makeRemoteSandbox(root: string): { sandbox: string; stubBin: string } {
 function runPayload(
   root: string,
   payload: string,
+  extraStubs: Record<string, string[]> = {},
 ): { status: number; stdout: string; stderr: string } {
   const { sandbox, stubBin } = makeRemoteSandbox(root)
+  for (const [name, lines] of Object.entries(extraStubs)) {
+    writeExecutable(path.join(stubBin, name), lines)
+  }
   const payloadPath = path.join(root, 'payload.sh')
   fs.writeFileSync(payloadPath, payload)
   const harnessPath = path.join(root, 'harness.sh')
   writeExecutable(harnessPath, [
     '#!/bin/bash',
-    'exec bash -s -- prod 14 "$HELPER_B64" "$SANDBOX_ROOT" "$MARKER" "$CONTAINER_B64" < "$PAYLOAD"',
+    // Seven to nine: overlay byte budget, disk guard helper and the free
+    // space the backend image build needs (#2186).
+    'exec bash -s -- prod 14 "$HELPER_B64" "$SANDBOX_ROOT" "$MARKER" "$CONTAINER_B64" 256 "$DISK_GUARD_B64" 1536 < "$PAYLOAD"',
   ])
 
   return runCli('bash', [harnessPath], {
@@ -164,6 +173,7 @@ function runPayload(
       PATH: `${stubBin}:${process.env.PATH ?? ''}`,
       SANDBOX_ROOT: sandbox,
       HELPER_B64: helperB64,
+      DISK_GUARD_B64: diskGuardB64,
       CONTAINER_B64: Buffer.from(containerSnippet, 'utf8').toString('base64'),
       MARKER,
       PAYLOAD: payloadPath,
@@ -194,10 +204,12 @@ function runDeployProdHarness(
   fs.mkdirSync(path.join(cwd, 'dist/prod'), { recursive: true })
   fs.writeFileSync(path.join(cwd, 'dist/prod/index.html'), 'payload')
   fs.mkdirSync(path.join(cwd, 'scripts'), { recursive: true })
-  fs.copyFileSync(
-    path.resolve(process.cwd(), 'scripts/deploy-expo-overlay.sh'),
-    path.join(cwd, 'scripts/deploy-expo-overlay.sh'),
-  )
+  for (const helper of ['deploy-expo-overlay.sh', 'deploy-disk-guard.sh']) {
+    fs.copyFileSync(
+      path.resolve(process.cwd(), 'scripts', helper),
+      path.join(cwd, 'scripts', helper),
+    )
+  }
 
   const harnessPath = path.join(cwd, 'harness.sh')
   writeExecutable(harnessPath, [
@@ -252,8 +264,14 @@ describe('build-prod.sh remote stdin transport', () => {
     expect(remoteDeploy).not.toContain('MT_REMOTE_DEPLOY_OK')
     expect(remoteDeploy).toContain('DEPLOY_SUCCESS_MARKER="$5"')
 
+    // Anchored on the payload call: the disk preflight (#2186) is an earlier
+    // `ssh … bash -s --` in the same function and carries no marker.
+    const sshCallStart = source.indexOf(
+      'ssh "$PROD_SSH_TARGET" bash -s -- \\\n    "$ENV"',
+    )
+    expect(sshCallStart).toBeGreaterThan(-1)
     const sshCall = source.slice(
-      source.indexOf('ssh "$PROD_SSH_TARGET" bash -s --'),
+      sshCallStart,
       source.indexOf("<<'REMOTE_DEPLOY_SCRIPT'"),
     )
     expect(sshCall).toContain('"$REMOTE_DONE_MARKER"')
@@ -294,6 +312,34 @@ describe('build-prod.sh remote stdin transport', () => {
           path.join(sandbox, 'static/dist/_expo/static/js/previous-chunk.js'),
         ),
       ).toBe(true)
+      // Both helpers travel as base64 arguments and run as `bash -s` inside
+      // the payload; their lines in the output prove neither one swallowed
+      // the tail of the program that carries them (#2186).
+      expect(result.stdout).toContain(
+        '📊 Overlay старых чанков: перенесено — поколений 1, файлов 1',
+      )
+      expect(result.stdout).toContain('📊 Диск прода после выката: занято')
+    } finally {
+      removeDir(root)
+    }
+  })
+
+  // The disk measurement runs after the release is published and verified: a
+  // broken `df` on the host must cost the report line, never the deploy.
+  it('stays green when the disk report fails', () => {
+    const root = makeTempDir('metravel-remote-disk-report-')
+
+    try {
+      const result = runPayload(root, extractRemoteDeploy(), {
+        df: ['#!/bin/bash', 'exit 1'],
+      })
+
+      expect(result.status).toBe(0)
+      expect(result.stdout).toContain(
+        '⚠️ Disk usage report failed; the deploy itself is published',
+      )
+      expect(result.stdout).toContain(MARKER)
+      expect(fs.existsSync(path.join(root, 'remote/dist'))).toBe(false)
     } finally {
       removeDir(root)
     }
@@ -344,6 +390,37 @@ describe('build-prod.sh remote stdin transport', () => {
     }
   })
 
+  // The server is asked for room before the first byte is sent (#2186): a
+  // refusal has to stop the deploy while nothing has been written there.
+  it('does not start the upload when the disk preflight refuses', () => {
+    const root = makeTempDir('metravel-deploy-preflight-refused-')
+
+    try {
+      const harness = runDeployProdHarness(root, [
+        'rsync() { : > rsync-was-called; }',
+        'ssh() {',
+        '  cat >/dev/null',
+        '  if [ "${5:-}" = preflight ]; then',
+        '    echo "❌ Заливка не начата"',
+        '    return 1',
+        '  fi',
+        '  : > payload-was-sent',
+        '}',
+      ])
+
+      expect(harness.status).toBe(0)
+      expect(harness.stdout).toContain('HARNESS:FAILURE')
+      expect(harness.stdout).toContain(
+        '❌ Проверка места на диске прода не пройдена — заливка не начата',
+      )
+      expect(fs.existsSync(path.join(harness.cwd, 'rsync-was-called'))).toBe(false)
+      expect(fs.existsSync(path.join(harness.cwd, 'payload-was-sent'))).toBe(false)
+      expect(fs.existsSync(path.join(harness.cwd, 'dist'))).toBe(true)
+    } finally {
+      removeDir(root)
+    }
+  })
+
   it('accepts the deploy when the remote program echoes the marker back', () => {
     const root = makeTempDir('metravel-deploy-marker-present-')
 
@@ -351,6 +428,8 @@ describe('build-prod.sh remote stdin transport', () => {
       const harness = runDeployProdHarness(root, [
         'ssh() {',
         '  cat >/dev/null',
+        '  # Первым идёт preflight места на диске (#2186): ему достаточно кода 0.',
+        '  if [ "${5:-}" = preflight ]; then return 0; fi',
         '  # Маркер — пятый аргумент ПРОГРАММЫ (DEPLOY_SUCCESS_MARKER="$5"), а',
         '  # внутри ssh() ему предшествуют "<target> bash -s --", то есть это $9.',
         '  # Шестым за маркером едет base64 общего резолва имени контейнера',

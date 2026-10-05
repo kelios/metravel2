@@ -34,6 +34,9 @@
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist;
 - `docs/DB_BACKUP.md` — бэкап production-базы: где лежат копии, как снять дамп
   вручную, как включить регулярную выгрузку и как восстановиться;
+- `docs/ops/prod-disk-growth.md` — бюджет диска прод-сервера: состав по
+  классам, предел и владелец каждого, что проверяет выкат фронта и порядок
+  действий при предупреждении о заполнении;
 - `docs/NATIVE_COMPAT_RULES.md` — web/native compatibility contract;
 - `docs/TASK_BOARD_MCP.md` — единый task board и Task Contract workflow.
 - `docs/PROBLEM_MEMORY.md` — recurring problem families, root causes,

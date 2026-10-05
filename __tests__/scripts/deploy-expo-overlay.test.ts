@@ -103,10 +103,39 @@ function ageFile(filePath: string, days: number): void {
   fs.utimesSync(filePath, timestamp, timestamp)
 }
 
-function runOverlay(fresh: string, previous: string, days = 14): void {
+// One deploy stamps its whole payload within a single touch pass, so
+// `secondsAgo` places a file into the generation of the deploy that ran then.
+function writeGenerationFile(
+  root: string,
+  relativePath: string,
+  sizeKib: number,
+  secondsAgo: number,
+): string {
+  const filePath = writeFile(root, relativePath, 'x'.repeat(sizeKib * 1024))
+  const timestamp = new Date(Date.now() - secondsAgo * 1000)
+  fs.utimesSync(filePath, timestamp, timestamp)
+  return filePath
+}
+
+function listFiles(root: string, prefix = ''): string[] {
+  return fs
+    .readdirSync(path.join(root, prefix), { withFileTypes: true })
+    .flatMap((entry) => {
+      const relativePath = path.join(prefix, entry.name)
+      return entry.isDirectory() ? listFiles(root, relativePath) : [relativePath]
+    })
+    .sort()
+}
+
+function runOverlay(
+  fresh: string,
+  previous: string,
+  days = 14,
+  budgetMb: number | '' = '',
+): string {
   const result = runCli(
     'bash',
-    [helperPath, fresh, previous, String(days)],
+    [helperPath, fresh, previous, String(days), String(budgetMb)],
   )
 
   if (result.status !== 0) {
@@ -114,6 +143,23 @@ function runOverlay(fresh: string, previous: string, days = 14): void {
       `overlay helper failed (${result.status}): ${result.stderr || result.stdout}`,
     )
   }
+
+  return result.stdout
+}
+
+// The live tree as the next deploy finds it: `shared.js` survives into the
+// fresh payload, `replaced.js` is what the release being replaced leaves
+// behind, and three older generations sit under it.
+function makeGenerationFixture(): ReturnType<typeof makeFixture> {
+  const fixture = makeFixture()
+  writeGenerationFile(fixture.previous, 'js/web/shared.js', 1, 120)
+  writeFile(fixture.fresh, 'js/web/shared.js', 'current release')
+  writeGenerationFile(fixture.previous, 'js/web/replaced.js', 10, 120)
+  writeGenerationFile(fixture.previous, 'js/web/hour-a.js', 300, 3600)
+  writeGenerationFile(fixture.previous, 'css/hour-b.css', 300, 3605)
+  writeGenerationFile(fixture.previous, 'js/web/two-hours.js', 600, 7200)
+  writeGenerationFile(fixture.previous, 'js/web/three-hours.js', 10, 10800)
+  return fixture
 }
 
 describe('normal deploy Expo overlay retention', () => {
@@ -267,6 +313,14 @@ describe('normal deploy Expo overlay retention', () => {
     expect(source).toContain(
       'EXPO_OVERLAY_HELPER="scripts/deploy-expo-overlay.sh"',
     )
+    // `:-`, not `-`: .env.deploy is exported wholesale, and an empty line in
+    // it must fall back to the default instead of lifting the bound.
+    expect(source).toContain(
+      'EXPO_OVERLAY_MAX_MB="${EXPO_OVERLAY_MAX_MB:-256}"',
+    )
+    expect(extractRemoteDeploy(source)).toContain(
+      '    "$EXPO_OVERLAY_RETENTION_DAYS" \\\n    "$EXPO_OVERLAY_MAX_MB"\nfi',
+    )
     // Only dist/$ENV travels, so build-root dot paths never reach the server,
     // and the live release is the delta basis for the upload (#2013).
     expect(source).toContain('rsync -azhe "ssh" --delete --mkpath --stats')
@@ -378,5 +432,228 @@ describe('normal deploy Expo overlay retention', () => {
     expect(deployContractViolations(unsafeDeploy)).toContain(
       'upload staging cleanup is not verified',
     )
+  })
+})
+
+// The age window bounds the overlay in days, while its size follows the number
+// of deploys inside the window: 97 deploys left 943 MB on a 15 GB disk (#2186).
+describe('normal deploy Expo overlay byte budget', () => {
+  it('carries whole generations newest first and stops at the first that does not fit', () => {
+    const fixture = makeGenerationFixture()
+
+    try {
+      const report = runOverlay(fixture.fresh, fixture.previous, 14, 1)
+
+      // 10 KiB + 600 KiB fit into 1 MB; the two-hour generation does not, and
+      // the three-hour one stays out although it would fit on its own: a tab
+      // of that release also needs the generation that was just refused.
+      expect(listFiles(fixture.fresh)).toEqual([
+        'css/hour-b.css',
+        'js/web/hour-a.js',
+        'js/web/replaced.js',
+        'js/web/shared.js',
+      ])
+      expect(
+        fs.readFileSync(path.join(fixture.fresh, 'js/web/shared.js'), 'utf8'),
+      ).toBe('current release')
+      expect(report).toContain('перенесено — поколений 2, файлов 3, 1 МБ')
+      expect(report).toContain('отброшено — поколений 2, файлов 2, 1 МБ')
+      expect(report).toContain('(предел 1 МБ, срок 14 дн.)')
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
+  it('always carries the release being replaced, even with a zero budget', () => {
+    const fixture = makeGenerationFixture()
+
+    try {
+      const report = runOverlay(fixture.fresh, fixture.previous, 14, 0)
+
+      expect(listFiles(fixture.fresh)).toEqual([
+        'js/web/replaced.js',
+        'js/web/shared.js',
+      ])
+      expect(report).toContain('перенесено — поколений 1, файлов 1, 0 МБ')
+      expect(report).toContain('отброшено — поколений 3, файлов 4, 1 МБ')
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
+  it('never splits a generation across the budget', () => {
+    const fixture = makeFixture()
+
+    try {
+      writeGenerationFile(fixture.previous, 'js/web/shared.js', 1, 120)
+      writeFile(fixture.fresh, 'js/web/shared.js', 'current release')
+      writeGenerationFile(fixture.previous, 'js/web/half-a.js', 600, 3600)
+      writeGenerationFile(fixture.previous, 'js/web/half-b.js', 600, 3630)
+
+      const report = runOverlay(fixture.fresh, fixture.previous, 14, 1)
+
+      expect(listFiles(fixture.fresh)).toEqual(['js/web/shared.js'])
+      expect(report).toContain('отброшено — поколений 1, файлов 2, 1 МБ')
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
+  it('keeps the age bound when the budget has room', () => {
+    const fixture = makeFixture()
+
+    try {
+      writeFile(fixture.previous, 'js/web/recent.js', 'recent')
+      ageFile(writeFile(fixture.previous, 'js/web/expired.js', 'expired'), 16)
+
+      runOverlay(fixture.fresh, fixture.previous, 14, 512)
+
+      expect(listFiles(fixture.fresh)).toEqual(['js/web/recent.js'])
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
+  // A release that stayed live for longer than the age window is still the
+  // one open tabs run on until the swap; only what lay under it has expired.
+  it('carries the release being replaced even when it is older than the age window', () => {
+    const fixture = makeFixture()
+    const day = 24 * 60 * 60
+
+    try {
+      writeGenerationFile(fixture.previous, 'js/web/live.js', 10, 20 * day)
+      writeGenerationFile(fixture.previous, 'js/web/under.js', 10, 30 * day)
+
+      const report = runOverlay(fixture.fresh, fixture.previous, 14, 256)
+
+      expect(listFiles(fixture.fresh)).toEqual(['js/web/live.js'])
+      expect(report).toContain('перенесено — поколений 1, файлов 1')
+      expect(report).toContain('отброшено — поколений 1, файлов 1')
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
+  it('keeps every generation of the age window when no budget is given', () => {
+    const fixture = makeGenerationFixture()
+
+    try {
+      const report = runOverlay(fixture.fresh, fixture.previous)
+
+      expect(listFiles(fixture.fresh)).toEqual([
+        'css/hour-b.css',
+        'js/web/hour-a.js',
+        'js/web/replaced.js',
+        'js/web/shared.js',
+        'js/web/three-hours.js',
+        'js/web/two-hours.js',
+      ])
+      expect(report).toContain('перенесено — поколений 4, файлов 5, 1 МБ')
+      expect(report).toContain('(предел не задан, срок 14 дн.)')
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
+  // Both bounds are counted from the mtime a chunk got when its release was
+  // published. A carried chunk that came out with a fresh mtime would join the
+  // generation of the release being replaced and escape both bounds for good.
+  it('keeps the deploy stamp and inode of carried chunks', () => {
+    const fixture = makeFixture()
+    const second = path.join(fixture.root, 'second')
+    const third = path.join(fixture.root, 'third')
+
+    try {
+      const old = writeGenerationFile(fixture.previous, 'js/web/old.js', 10, 3600)
+      const oldStat = fs.statSync(old)
+      writeGenerationFile(fixture.previous, 'js/web/live.js', 10, 120)
+
+      writeFile(second, 'js/web/second.js', 'second release')
+      runOverlay(second, fixture.previous, 14, 256)
+      const carried = fs.statSync(path.join(second, 'js/web/old.js'))
+      expect(carried.ino).toBe(oldStat.ino)
+      expect(Math.floor(carried.mtimeMs / 1000)).toBe(
+        Math.floor(oldStat.mtimeMs / 1000),
+      )
+
+      // Next deploy, nothing but the replaced release allowed: `old.js` and
+      // `live.js` kept their stamps, so they are recognised as older and go.
+      writeFile(third, 'js/web/third.js', 'third release')
+      runOverlay(third, second, 14, 0)
+      expect(listFiles(third)).toEqual(['js/web/second.js', 'js/web/third.js'])
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
+  // The selection cannot run without perl. Carrying everything instead would
+  // bring the unbounded growth back silently, so the helper stops the deploy.
+  it('fails closed without perl', () => {
+    const fixture = makeFixture()
+    const toolBin = path.join(fixture.root, 'tool-bin')
+
+    try {
+      writeFile(fixture.previous, 'js/web/legacy.js', 'legacy')
+      fs.mkdirSync(toolBin)
+      for (const tool of ['bash', 'find', 'touch', 'mkdir', 'mktemp', 'rm', 'cat', 'cpio']) {
+        const resolved = runCli('bash', ['-c', `command -v ${tool}`]).stdout.trim()
+        fs.symlinkSync(resolved, path.join(toolBin, tool))
+      }
+
+      const result = runCli(
+        'bash',
+        [helperPath, fixture.fresh, fixture.previous, '14', '256'],
+        { env: { PATH: toolBin } },
+      )
+
+      expect(result.status).toBe(1)
+      expect(result.stderr).toContain('perl is required')
+      expect(listFiles(fixture.fresh)).toEqual([])
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
+  it('rejects a budget that is not a whole number', () => {
+    const fixture = makeFixture()
+
+    try {
+      const result = runCli('bash', [
+        helperPath,
+        fixture.fresh,
+        fixture.previous,
+        '14',
+        '1.5',
+      ])
+
+      expect(result.status).toBe(2)
+      expect(result.stderr).toContain('budget-mb must be a non-negative integer')
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
+  // Production shape: the helper arrives on bash stdin, so its own stdin
+  // readers would swallow the rest of the program. The selection must take its
+  // list from the pipe and still publish the summary line.
+  it('applies the budget when the helper itself arrives on stdin', () => {
+    const fixture = makeGenerationFixture()
+
+    try {
+      const result = runCli(
+        'bash',
+        ['-s', '--', fixture.fresh, fixture.previous, '14', '0'],
+        { input: fs.readFileSync(helperPath, 'utf8') },
+      )
+
+      expect(result.status).toBe(0)
+      expect(listFiles(fixture.fresh)).toEqual([
+        'js/web/replaced.js',
+        'js/web/shared.js',
+      ])
+      expect(result.stdout).toContain('📊 Overlay старых чанков: перенесено')
+    } finally {
+      removeDir(fixture.root)
+    }
   })
 })
