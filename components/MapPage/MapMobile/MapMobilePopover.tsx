@@ -95,7 +95,7 @@ const MapMobilePopoverInner: React.FC<MapMobilePopoverProps> = ({
             maxWidth,
             minWidth,
             width: minWidth,
-            ...(maxHeight != null ? { maxHeight, overflow: 'hidden' as const } : null),
+            ...(maxHeight != null ? { maxHeight } : null),
             backgroundColor: colors.surface,
             borderColor: colors.borderLight,
           },

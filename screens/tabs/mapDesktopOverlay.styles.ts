@@ -70,13 +70,14 @@ export const getDesktopOverlayStyles = ({
       borderColor: themedColors.warning,
       ...themedColors.shadows.light,
     } satisfies ViewStyle,
-    // `locationQualityText` is `flex: 1` (phone pill spans the width); in the
-    // row the pill sizes to its text, which shrinks and ellipsises instead.
-    desktopBandQualityText: {
-      flexGrow: 0,
-      flexShrink: 1,
-      flexBasis: 'auto',
-    } satisfies TextStyle,
+    // The pill's text is the phone pill's `locationQualityText` as is: content
+    // width, shrinks and wraps (two lines). It must carry NO `flex` shorthand —
+    // overriding `flex: 1` with longhands is platform-dependent: RN-web emits
+    // `flex` as a CSS shorthand the atomic longhands beat, while native Yoga
+    // treats an explicit `flexBasis: 'auto'` as unset and, with `flex > 0`,
+    // takes basis 0 (`Yoga Node::processFlexBasis`). With `flexGrow: 0` the
+    // text was 0 wide on iPad: a 45 pt icon chip, no message (#2304 recheck).
+    // Control: `__tests__/components/MapPage/mapBandQualityText.test.ts`.
     // Folded while «Искать в этой области» shows: the icon, same name for
     // screen readers (the message stays its accessibility label).
     desktopBandQualityPillCompact: {

@@ -671,7 +671,7 @@ export const getStyles = (
         ...themedColors.shadows.light,
       },
       locationQualityText: {
-        flex: 1,
+        flexShrink: 1, // no `flex` shorthand: see desktopBandQualityPill (#2304)
         fontSize: 12,
         lineHeight: 15,
         fontWeight: '600',

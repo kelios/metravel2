@@ -214,7 +214,7 @@ export function MapCanvas({
                   color={themedColors.warning}
                 />
                 {!showSearchThisArea && (
-                  <Text style={[styles.locationQualityText, styles.desktopBandQualityText]} numberOfLines={2}>
+                  <Text style={styles.locationQualityText} numberOfLines={2}>
                     {locationQualityMessage}
                   </Text>
                 )}

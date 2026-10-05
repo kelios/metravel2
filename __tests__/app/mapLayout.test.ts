@@ -407,7 +407,8 @@ describe('desktop-branch cards on native tablets (#2172)', () => {
     expect(slot).toMatchObject({ flexShrink: 1, minWidth: 0, alignItems: 'center' });
     expect(action.maxWidth).toBe('100%');
     expect(flat(styles.desktopSearchAreaButtonText).flexShrink).toBe(1);
-    expect(flat([styles.locationQualityText, styles.desktopBandQualityText])).toMatchObject({ flexGrow: 0, flexShrink: 1 });
+    // The message shrinks; its WIDTH per engine: mapBandQualityText.test.ts.
+    expect(flat(styles.locationQualityText)).toMatchObject({ flexShrink: 1 });
 
     // Worst case — the action next to the folded quality pill: the band holds
     // the icon chip, the gap and the action's icon with a few letters.
