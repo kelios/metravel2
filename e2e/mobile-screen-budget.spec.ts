@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 
 import { expect, test } from './fixtures'
 import { webAuthTokenFromCookies } from './helpers/auth'
@@ -201,6 +201,78 @@ test.describe('Mobile screen budget (#2094)', () => {
       // #2157: иконка сегмента «от планшета» стоит в разметке с первого кадра
       // (CHIP_LAYOUT + critical CSS) — появление иконки не расширяет чип и не сдвигает соседей.
       expect(shifts.filter((line) => /my-trips-segment-/.test(line))).toEqual([])
+    })
+  }
+
+  // #2176: вкладка «Маршруты» своего профиля — каркас списка стоит на месте
+  // карточек. Прод до правки (05.10.2026): каркас был собран отдельно от сетки
+  // (две плашки с `marginTop: 16`), и узел списка переезжал на 16 px вверх в
+  // момент ответа API — CLS 0,017 на 320, 0,029 на 390, 0,007 на 1280.
+  for (const viewport of [
+    { name: '320x640', width: 320, height: 640 },
+    { name: '390x844', width: 390, height: 844 },
+    { name: '1280x900', width: 1280, height: 900 },
+  ]) {
+    test(`profile travels skeleton holds the cards' place @ ${viewport.name}`, async ({ page, baseURL }) => {
+      await ensureLiveSession(page, baseURL)
+      await page.setViewportSize({ width: viewport.width, height: viewport.height })
+      await page.addInitScript(() => {
+        type Shift = { hadRecentInput: boolean; value: number; sources?: Array<{ node?: Element; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }> }
+        const w = window as unknown as { __mtShifts: string[] }
+        w.__mtShifts = []
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries() as unknown as Shift[]) {
+            if (entry.hadRecentInput) continue
+            const sources = (entry.sources ?? []).map(
+              (src) => `${src.node?.getAttribute?.('data-testid') ?? src.node?.nodeName ?? '?'}:${Math.round(src.previousRect.top)}>${Math.round(src.currentRect.top)}`,
+            )
+            w.__mtShifts.push(`${entry.value.toFixed(4)} ${sources.join(' ')}`)
+          }
+        }).observe({ type: 'layout-shift', buffered: true })
+      })
+      // Список придерживается, пока каркас не измерен: на быстрой сети он живёт ~200 мс.
+      let releaseTravels = () => {}
+      const travelsHeld = new Promise<void>((resolve) => {
+        releaseTravels = resolve
+      })
+      await page.route(/\/api\/travels\/\?/, async (route) => {
+        await travelsHeld
+        await route.continue()
+      })
+      const profileList = page.getByTestId('profile-travel-list')
+      const rectOf = (target: Locator) =>
+        target.first().evaluate((el) => {
+          const { top, left, width, height } = el.getBoundingClientRect()
+          return { top, left, width, height }
+        })
+
+      await page.goto('/profile')
+      await expect(page.getByRole('tab', { name: /Опубл/ }).first(), 'профиль открыт гостем — нет веб-сессии на этом origin').toBeVisible({ timeout: 60_000 })
+      await expect(page.getByTestId('profile-travel-grid-skeleton')).toBeVisible()
+      const skeletonList = await rectOf(profileList)
+      const skeletonCell = await rectOf(profileList.getByTestId('travel-list-item-skeleton'))
+
+      releaseTravels()
+      // У e2e-аккаунта есть черновики, поэтому «Маршруты» не пуста.
+      await expect(profileList.getByTestId('travel-card-link').first()).toBeVisible({ timeout: 60_000 })
+      await expect(page.getByTestId('profile-travel-grid-skeleton')).toHaveCount(0)
+      const list = await rectOf(profileList)
+      const card = await rectOf(profileList.getByTestId('travel-card-link'))
+      const shifts = await page.evaluate(() => (window as unknown as { __mtShifts: string[] }).__mtShifts)
+      console.log(
+        `[mobile-screen-budget] profile-travels @ ${viewport.name}: skeletonTop=${Math.round(skeletonCell.top)} cardTop=${Math.round(card.top)} ` +
+          `skeleton=${Math.round(skeletonCell.width)}x${Math.round(skeletonCell.height)} card=${Math.round(card.width)}x${Math.round(card.height)} shifts=${JSON.stringify(shifts)}`,
+      )
+
+      expect(Math.abs(list.top - skeletonList.top), 'верх списка не двигается при замене каркаса карточками').toBeLessThanOrEqual(0.5)
+      expect(Math.abs(card.top - skeletonCell.top)).toBeLessThanOrEqual(0.5)
+      expect(Math.abs(card.left - skeletonCell.left)).toBeLessThanOrEqual(0.5)
+      expect(Math.abs(card.width - skeletonCell.width), 'ячейка каркаса — той же ширины, что карточка').toBeLessThanOrEqual(0.5)
+      // Высота: медиа-слот у обоих квадратный, текстовый блок каркаса — карточка без
+      // значков; чип «Черновик» добавляет карточке 4 px.
+      expect(Math.abs(card.height - skeletonCell.height)).toBeLessThanOrEqual(6)
+      // Узел списка один и тот же до и после ответа: его сдвиг браузер записал бы сюда.
+      expect(shifts.filter((line) => /profile-travel-list/.test(line))).toEqual([])
     })
   }
 
