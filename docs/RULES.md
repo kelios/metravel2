@@ -387,9 +387,10 @@ git ls-files --error-unmatch -- path/relative/to/checkout
   hand the canonical source change and normal deploy to the backend owner.
 - The frontend deploy cleanliness gate has one exact, non-expanding exception
   for known production-owned runtime/ops artifacts: untracked
-  `deploy/prod/nginx/ssl/`, untracked `dump.sql`, and the permission warning for
-  `deploy/prod/postgis_1/data/`. Their presence or unreadability alone does not
-  block the project-owned frontend deploy. Agents must not inspect their
+  `deploy/prod/nginx/ssl/` and untracked `dump.sql`. Their presence or
+  unreadability alone does not block the project-owned frontend deploy. (The
+  former third item, the permission warning for `deploy/prod/postgis_1/data/`,
+  ended on 2026-10-05: the owner removed that stale database copy, #2186.) Agents must not inspect their
   contents or read, copy, patch, overwrite, move, delete, chmod, back up, or
   otherwise mutate them. Any other status entry, tracked change, or warning is
   still a dirty-checkout stop condition. Intended frontend deploy targets must
