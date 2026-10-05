@@ -57,14 +57,72 @@ function scanScreenHeaders(root) {
   return failures
 }
 
-module.exports = { SCREEN_HEADER_OWNERS, DIRECT_HEADING_EXCEPTIONS, scanOwnerSource, scanScreenHeaders }
+// #2234: верхний безопасный отступ шапки на native — у одного владельца, контейнера
+// `CustomHeader` (`useSafeAreaInsetsSafe().top` → `createCustomHeaderStyles`). Строки
+// шапки (бренд-строка, строка «←», действия) отступ под статус-бар не задают: на Android
+// его нёс стиль бренд-строки, #2100 убрал строку на вложенных экранах — и строка «←»
+// ушла под статус-бар. `StatusBar.currentHeight` в оболочке шапки запрещён.
+const HEADER_INSET_OWNER = 'components/layout/CustomHeader.tsx'
+const HEADER_SHELL_FILES = [
+  'components/layout/customHeaderStyles.ts',
+  'components/layout/HeaderContextBar.tsx',
+  'components/layout/ScreenHeaderBarActions.tsx',
+  'components/ui/ScreenHeader.tsx',
+]
+const STATUS_BAR_HEIGHT_PATTERN = /\bStatusBar\.currentHeight\b/
+const ROW_INSET_PATTERN = /\buseSafeAreaInsets(?:Safe)?\s*\(|\bSafeAreaView\b/
+const OWNER_INSET_PATTERN = /createCustomHeaderStyles\([^)]*\.top\b/
+
+const stripComments = (source) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
+
+function scanHeaderInsetSource(rel, source) {
+  const code = stripComments(source)
+  const failures = []
+  if (rel === HEADER_INSET_OWNER) {
+    if (!OWNER_INSET_PATTERN.test(code)) {
+      failures.push(`${rel}: контейнер шапки обязан передать верхний инсет (useSafeAreaInsetsSafe().top) в createCustomHeaderStyles (#2234)`)
+    }
+  } else if (ROW_INSET_PATTERN.test(code)) {
+    failures.push(`${rel}: строка шапки не берёт safe-area сама — верхний инсет у контейнера CustomHeader (#2234)`)
+  }
+  if (STATUS_BAR_HEIGHT_PATTERN.test(code)) {
+    failures.push(`${rel}: StatusBar.currentHeight в оболочке шапки запрещён — отступ под статус-бар даёт контейнер из useSafeAreaInsets (#2234)`)
+  }
+  return failures
+}
+
+function scanHeaderInsets(root) {
+  const failures = []
+  for (const rel of [HEADER_INSET_OWNER, ...HEADER_SHELL_FILES]) {
+    const file = path.join(root, rel)
+    if (!fs.existsSync(file)) {
+      failures.push(`${rel}: файл оболочки шапки не найден — обнови scripts/guard-screen-header.js`)
+      continue
+    }
+    failures.push(...scanHeaderInsetSource(rel, fs.readFileSync(file, 'utf8')))
+  }
+  return failures
+}
+
+module.exports = {
+  SCREEN_HEADER_OWNERS,
+  DIRECT_HEADING_EXCEPTIONS,
+  HEADER_INSET_OWNER,
+  HEADER_SHELL_FILES,
+  scanOwnerSource,
+  scanScreenHeaders,
+  scanHeaderInsetSource,
+  scanHeaderInsets,
+}
 
 if (require.main === module) {
   const root = process.argv.includes('--root') ? path.resolve(process.argv[process.argv.indexOf('--root') + 1]) : process.cwd()
-  const failures = scanScreenHeaders(root)
+  const failures = [...scanScreenHeaders(root), ...scanHeaderInsets(root)]
   if (failures.length) {
     console.error('guard-screen-header failed:\n' + failures.map((f) => `  - ${f}`).join('\n'))
     process.exit(1)
   }
-  console.log(`guard-screen-header ok (${SCREEN_HEADER_OWNERS.length} screens)`)
+  console.log(
+    `guard-screen-header ok (${SCREEN_HEADER_OWNERS.length} screens, ${HEADER_SHELL_FILES.length + 1} header shell files)`,
+  )
 }

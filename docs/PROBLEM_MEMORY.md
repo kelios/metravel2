@@ -3779,7 +3779,18 @@ guard, падающий в CI на попытке обойти этот конт
   shell task; create-linked only when the owning layout primitive differs.
 - **Каноническая структурная задача:** #2097 (`useBottomChromeInset` +
   `guard:bottom-chrome-inset`). Клавиатурный подъём остаётся у #1072.
-- **Последняя проверка:** 2026-09-25, #2097 в работе.
+- **Верхний край шапки (#2234, 2026-10-05):** на Android отступ под статус-бар
+  нёс стиль бренд-строки (`inner.paddingTop = StatusBar.currentHeight + 6`), а #2100
+  перестал монтировать её на вложенных экранах телефона — строка «←» встала под
+  статус-бар (Pixel 10 Pro: кнопки y=11–126 px при инсете 172 px, «Назад» и «⋯»
+  не нажимались). Инвариант: верхний инсет на native — только у контейнера
+  `CustomHeader` (`useSafeAreaInsetsSafe().top` → `createCustomHeaderStyles`, iOS
+  и Android), строки шапки отступа под статус-бар не задают. Контроль:
+  `guard:screen-header` (запрет `StatusBar.currentHeight` и safe-area в строках
+  оболочки, owner обязан передать `.top`), jest
+  `__tests__/components/layout/customHeaderTopInset.test.ts` и Android-кейсы
+  `CustomHeader.test.tsx`. Рецидив при зелёном guard — переоткрывать #2234.
+- **Последняя проверка:** 2026-10-05, #2234 (верхний край шапки) в ревью; #2097 в работе.
 
 ### MODAL-TOP-INSET-001 — шапка полноэкранного `Modal` под статус-баром iPhone
 

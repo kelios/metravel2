@@ -1,4 +1,4 @@
-import { Platform, StatusBar, StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { ThemedColors } from '@/hooks/useTheme';
 
@@ -56,13 +56,20 @@ export const createCustomHeaderStyles = (
   // #2100: без бренд-строки нижний отступ контейнера не нужен — под строкой «←» его нет.
   hasBrandRow = true,
 ) => {
-  const iosTopInset =
-    Platform.OS === 'ios' && Number.isFinite(safeAreaTop) ? Math.max(0, safeAreaTop) : 0;
+  // #2234: верхний безопасный отступ на native — у контейнера шапки, на iOS и Android
+  // одинаково, из `useSafeAreaInsets().top`. Какая строка первая (бренд-строка или
+  // строка «←»), та и встаёт под статус-бар; в стиле строки отступа нет. Прежде на
+  // Android его нёс `inner` (`StatusBar.currentHeight + 6`), и #2100 снял его вместе
+  // с бренд-строкой на вложенных экранах. `StatusBar.currentHeight` — константа,
+  // снятая один раз при старте модуля (0, если окно ещё не прикреплено), без
+  // обновления на поворот и вырез; safe-area-context читает живые инсеты окна.
+  const nativeTopInset =
+    Platform.OS !== 'web' && Number.isFinite(safeAreaTop) ? Math.max(0, safeAreaTop) : 0;
 
   return StyleSheet.create({
     container: {
       backgroundColor: Platform.OS === 'web' ? colors.background : colors.surface,
-      paddingTop: iosTopInset,
+      paddingTop: nativeTopInset,
       paddingBottom: Platform.OS === 'web' && hasBrandRow ? (isMobile ? 6 : 12) : 0,
       borderBottomWidth: Platform.OS === 'web' ? StyleSheet.hairlineWidth : 0,
       borderBottomColor: colors.border,
@@ -108,7 +115,7 @@ export const createCustomHeaderStyles = (
         },
         android: {
           minHeight: 48,
-          paddingTop: (StatusBar.currentHeight || 0) + 6,
+          paddingTop: 6,
         },
         web: {
           minHeight: 56,

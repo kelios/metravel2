@@ -187,8 +187,8 @@ describe('CustomHeader', () => {
             }
         });
 
-        it.each(['android', 'web'] as const)('does not apply the iOS top inset on %s', (os) => {
-            Object.defineProperty(Platform, 'OS', { value: os });
+        it('does not apply the native top inset on web', () => {
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
             mockSafeAreaInsets = { top: 59, right: 0, bottom: 34, left: 0 };
             (usePathname as jest.Mock).mockReturnValue('/');
 
@@ -196,6 +196,39 @@ describe('CustomHeader', () => {
             const headerStyle = StyleSheet.flatten(getByTestId('main-header').props.style);
 
             expect(headerStyle.paddingTop).toBe(0);
+        });
+    });
+
+    // #2234: на Android верхний инсет тоже принадлежит контейнеру шапки. Прежде его
+    // нёс стиль бренд-строки, и на вложенном экране (#2100, строки нет) строка «←»
+    // вставала под статус-бар: Pixel 10 Pro, кнопки y=11–126 px при инсете 172 px.
+    describe('Android safe area (#2234)', () => {
+        it.each([
+            ['/trips/my', false],
+            ['/quests/minsk/q1', false],
+            ['/search', true],
+        ] as const)('Android %s: инсет на контейнере, бренд-строка = %s', (path, hasBrandRow) => {
+            Object.defineProperty(Platform, 'OS', { value: 'android' });
+            mockSafeAreaInsets = { top: 63, right: 0, bottom: 24, left: 0 };
+            (global as any).__mockResponsive = {
+                width: 412,
+                height: 915,
+                isPhone: false,
+                isLargePhone: true,
+                isTablet: false,
+                isDesktop: false,
+                isMobile: true,
+                isHydrated: true,
+            };
+            (usePathname as jest.Mock).mockReturnValue(path);
+
+            try {
+                const { getByTestId, queryByTestId } = renderHeader();
+                expect(Boolean(queryByTestId('main-header-row'))).toBe(hasBrandRow);
+                expect(StyleSheet.flatten(getByTestId('main-header').props.style).paddingTop).toBe(63);
+            } finally {
+                (global as any).__mockResponsive = undefined;
+            }
         });
     });
 
