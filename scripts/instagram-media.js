@@ -12,67 +12,11 @@
 // Output:     .cache/instagram/media.json   (public data: permalinks + captions + dates)
 const fs = require('fs')
 const path = require('path')
+const { GRAPH, discoverIgAccount, gget, loadToken, redact } = require('./lib/instagramGraph')
 
-const GRAPH = 'https://graph.facebook.com/v19.0'
 const IG_GRAPH = 'https://graph.instagram.com'
-const SECRETS = path.join(process.cwd(), '.secrets')
-const TOKEN_PATH = path.join(SECRETS, 'instagram-token.json')
 const OUT_DIR = path.join(process.cwd(), '.cache', 'instagram')
 const OUT_PATH = path.join(OUT_DIR, 'media.json')
-
-function loadToken() {
-  if (!fs.existsSync(TOKEN_PATH)) {
-    throw new Error(
-      'Token not found at .secrets/instagram-token.json.\n' +
-        'See scripts/INSTAGRAM_SETUP.md — create the token and save it there (never paste it in chat).'
-    )
-  }
-  const j = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8'))
-  // Defensive: strip surrounding whitespace/quotes/commas accidentally copied in.
-  const token = String(j.access_token || j.token || '')
-    .trim()
-    .replace(/^["'\s,]+|["'\s,]+$/g, '')
-  if (!token) throw new Error('instagram-token.json has no "access_token".')
-  return { token, igUserId: j.ig_user_id ? String(j.ig_user_id).trim() : '' }
-}
-
-// Never let a token reach logs: redact anything token-shaped and any access_token= param.
-function redact(s) {
-  return String(s || '')
-    .replace(/EAA[A-Za-z0-9]+/g, 'EAA…[redacted]')
-    .replace(/(access_token=)[^&\s]+/gi, '$1[redacted]')
-}
-
-async function gget(url) {
-  const res = await fetch(url)
-  const j = await res.json().catch(() => ({}))
-  if (!res.ok || j.error) {
-    const e = j.error || {}
-    const malformed = /malformed|invalid/i.test(e.message || '') || e.code === 190
-    const hint = malformed
-      ? '\n  → Token rejected. Generate a FRESH token and re-save it (see scripts/INSTAGRAM_SETUP.md).'
-      : ''
-    throw new Error(`Graph API ${res.status}: ${redact(e.message || JSON.stringify(j))}${hint}`)
-  }
-  return j
-}
-
-// Resolve the IG business account id from the owner's Facebook Pages.
-async function discoverIgUserId(token) {
-  const j = await gget(
-    `${GRAPH}/me/accounts?fields=name,instagram_business_account{id,username}&access_token=${encodeURIComponent(token)}`
-  )
-  const pages = Array.isArray(j.data) ? j.data : []
-  for (const p of pages) {
-    const iba = p.instagram_business_account
-    if (iba && iba.id) return { id: String(iba.id), username: iba.username || '' }
-  }
-  throw new Error(
-    'No instagram_business_account linked to any Facebook Page for this token.\n' +
-      '  → Ensure @metravelby is a Business/Creator account linked to a FB Page,\n' +
-      '    and the token has scopes: instagram_basic, pages_show_list.'
-  )
-}
 
 const MEDIA_FIELDS =
   'id,caption,permalink,timestamp,media_type,media_url,thumbnail_url,children{media_url,media_type,thumbnail_url}'
@@ -123,7 +67,7 @@ async function main() {
   } else {
     // Facebook-Login token → discover IG business account via Pages
     if (!igUserId) {
-      const d = await discoverIgUserId(token)
+      const d = await discoverIgAccount(token)
       igUserId = d.id
       username = d.username
       console.log(`Resolved IG account: @${username} (id ${igUserId})`)

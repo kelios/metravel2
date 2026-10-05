@@ -12,17 +12,31 @@ git check-ignore .secrets/metravel-token.json
 
 ## Instagram Graph token
 
-Получите short-lived user token в Meta Graph API Explorer с минимально нужными
-permissions для чтения media account и сохраните локально:
+Один токен обслуживает `scripts/instagram-media.js` (ссылки на публикации) и
+`scripts/instagram-insights.js` (недельная статистика для агента `instagram-editor`).
+
+1. Meta Graph API Explorer → выбрать приложение MeTravel (то же, через которое сайт
+   публикует в Instagram) → User Token с permissions: `instagram_basic`,
+   `instagram_manage_insights`, `pages_show_list`, `pages_read_engagement`.
+2. Сохранить его локально, путь `.secrets/instagram-token.json`:
 
 ```json
 { "access_token": "..." }
 ```
 
-Путь: `.secrets/instagram-token.json`.
+3. Обменять на бессрочный Page token (app id/secret берутся из
+   `.secrets/metravel-instagram.env`, ничего секретного не печатается):
 
-Не документируйте конкретный token, App ID или аккаунт. Если Meta отклоняет
-token, создайте новый через официальный Explorer и замените локальный файл.
+```bash
+node scripts/instagram-insights.js --exchange
+```
+
+Скрипт перезапишет файл Page-токеном и покажет недостающие permissions. Page token,
+полученный из long-lived user token, не истекает, но умирает при выходе владельца из
+Facebook на всех устройствах, смене пароля или снятии доступа приложения — тогда
+повторить шаги 1–3.
+
+Не документируйте конкретный token, App ID или аккаунт.
 
 ## MeTravel API token
 
