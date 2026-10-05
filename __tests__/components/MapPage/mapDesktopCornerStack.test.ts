@@ -51,16 +51,21 @@ function chevronInMap(styles: any, panelWidth: number): Rect {
   }
 }
 
-/** The pill at its widest: `maxWidth`, two lines of text (`numberOfLines={2}`). */
+/**
+ * The pill at its widest: `maxWidth`, two lines of text (`numberOfLines={2}`).
+ * Since #2304 it is the first item of the top-row band (`desktopSearchAreaBand`,
+ * a flex row): its box starts at the band's left edge and top.
+ */
 function pillInMap(styles: any): Rect {
-  const pill = StyleSheet.flatten(styles.locationQualityPill)
+  const band = StyleSheet.flatten(styles.desktopSearchAreaBand)
+  const pill = StyleSheet.flatten(styles.desktopBandQualityPill)
   const text = StyleSheet.flatten(styles.locationQualityText)
   const height = 2 * (pill.paddingVertical as number) + 2 * (text.lineHeight as number)
   return {
-    left: pill.left as number,
-    right: (pill.left as number) + (pill.maxWidth as number),
-    top: pill.top as number,
-    bottom: (pill.top as number) + height,
+    left: band.left as number,
+    right: (band.left as number) + (pill.maxWidth as number),
+    top: band.top as number,
+    bottom: (band.top as number) + height,
   }
 }
 

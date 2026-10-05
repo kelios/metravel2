@@ -1,5 +1,5 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, BackHandler, Platform, Pressable, Text, View } from 'react-native'
+import { AccessibilityInfo, ActivityIndicator, BackHandler, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native'
 import Animated from 'react-native-reanimated'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -8,11 +8,13 @@ import { restartMapOnboarding } from '@/components/MapPage/MapOnboarding'
 import MapPanelHeader from '@/components/MapPage/MapPanelHeader'
 import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobileLayersPopover'
 import { MapMobileRadiusPopover } from '@/components/MapPage/MapMobile/MapMobileRadiusPopover'
+import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
 import { webTitleRef } from '@/utils/webProps'
+import { HIDDEN_FROM_SCREEN_READERS, screenReaderActivateProps } from '@/components/MapPage/screenReaderTwin'
 import { DESKTOP_LAYERS_FAB_RIGHT, DESKTOP_RADIUS_FAB_RIGHT } from '@/screens/tabs/map.styles'
-import { NO_DESKTOP_INSETS, type DesktopBranchInsets } from '@/screens/tabs/mapDesktopInsets'
+import { NO_DESKTOP_INSETS, getDesktopPopoverMaxHeight, type DesktopBranchInsets } from '@/screens/tabs/mapDesktopInsets'
 import {
   ActiveFiltersBar,
   MapOnboarding,
@@ -157,14 +159,18 @@ export function MapScreenDesktopChrome({
   // map WebView under it (#2113 device QA: in «Маршрут» it set a route point).
   // Desktop-branch controls carry no hitSlop: on Android the JS target grows by
   // it while the native touch outside the view still lands on the map.
+  // #2243 — on native the visible chevron is hidden from screen readers; its
+  // twin `map-panel-collapse-a11y` (below) is the node they read and focus.
+  const collapseLabel = i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.svernut_panel_2b99d933')
   const collapseButton = (
     <Pressable
-      ref={collapseButtonRef}
+      ref={isWeb ? collapseButtonRef : undefined}
       testID="map-panel-collapse-button"
       style={({ pressed }) => [styles.collapseToggleInPanel, pressed && PRESSED_OPACITY_07]}
       onPress={() => handleChevronPress('expand')}
       accessibilityRole="button"
-      accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.svernut_panel_2b99d933')}
+      accessibilityLabel={collapseLabel}
+      {...(isWeb ? null : HIDDEN_FROM_SCREEN_READERS)}
     >
       <Feather name="chevron-left" size={16} color={themedColors.textMuted} />
     </Pressable>
@@ -223,12 +229,29 @@ export function MapScreenDesktopChrome({
         </View>
       )}
 
-      {/* #2243 — on native the chevron is the panel's row sibling (#2172) and
-          precedes it in the tree: the screen readers walk siblings in tree
-          order (#2113 device QA read panel → content → chevron), so it now
-          reads before the tabs and the panel content. Its position comes from
-          `collapseToggleInPanel` (absolute, zIndex), not from this order. */}
-      {showDesktopExpandedPanel && !isWeb && collapseButton}
+      {/* #2243 — native: the chevron's screen-reader twin, first in the row
+          with no zIndex (iOS reads in mount order) inside a slot from the row's
+          top-left corner (Android sorts siblings by geometry) — see
+          `collapseToggleLead`. The visible chevron (zIndex, over the map's
+          edge) follows the panel and is hidden from screen readers. */}
+      {showDesktopExpandedPanel && !isWeb && (
+        <View
+          testID="map-panel-collapse-lead"
+          style={styles.collapseToggleLead}
+          pointerEvents="none"
+          collapsable={false}
+        >
+          <View
+            ref={collapseButtonRef}
+            testID="map-panel-collapse-a11y"
+            style={styles.collapseToggleA11y}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={collapseLabel}
+            {...screenReaderActivateProps(() => handleChevronPress('expand'))}
+          />
+        </View>
+      )}
       {showDesktopExpandedPanel && (
         <Animated.View
           ref={panelRef}
@@ -316,6 +339,7 @@ export function MapScreenDesktopChrome({
           </View>
         </Animated.View>
       )}
+      {showDesktopExpandedPanel && !isWeb && collapseButton}
     </>
   )
 }
@@ -396,6 +420,13 @@ export function MapScreenDesktopOverlays({
   // platform: the popovers and `mapUiApi.setOverlayEnabled` already work on
   // native phones, so iPad and Android tablets get the same controls.
   const showDesktopLayersControl = !isMobile
+  // #2243-III — on native the popovers end above the floating dock (its single
+  // owner `useDockReservePx`); web keeps its own page layout.
+  const { height: windowHeight } = useWindowDimensions()
+  const dockReserve = useDockReservePx()
+  const popoverTop = insets.top + 16 + 44 + 8
+  const popoverMaxHeight =
+    Platform.OS === 'web' ? undefined : getDesktopPopoverMaxHeight(windowHeight, popoverTop, dockReserve)
   const [layersOpen, setLayersOpen] = useState(false)
   const toggleLayers = useCallback(() => {
     setLayersOpen((v) => !v)
@@ -461,7 +492,8 @@ export function MapScreenDesktopOverlays({
           {radiusOpen && (
             <MapMobileRadiusPopover
               colors={themedColors as ThemedColors}
-              top={insets.top + 16 + 44 + 8}
+              top={popoverTop}
+              maxHeight={popoverMaxHeight}
               right={DESKTOP_RADIUS_FAB_RIGHT + insets.right}
               minWidth={150}
               maxWidth={200}
@@ -514,7 +546,8 @@ export function MapScreenDesktopOverlays({
           {layersOpen && (
             <MapMobileLayersPopover
               colors={themedColors as ThemedColors}
-              top={insets.top + 16 + 44 + 8}
+              top={popoverTop}
+              maxHeight={popoverMaxHeight}
               right={DESKTOP_LAYERS_FAB_RIGHT + insets.right}
               // MapMobilePopover фиксирует ширину карточки по `minWidth` (width:
               // minWidth), поэтому без него карточка садилась на дефолтные 200px и

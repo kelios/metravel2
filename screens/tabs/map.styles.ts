@@ -9,6 +9,7 @@ import {
 import type { ThemedColors } from '@/hooks/useTheme';
 import * as corner from '@/screens/tabs/mapDesktopCorner';
 import { getDesktopBranchInsets, NO_DESKTOP_INSETS } from '@/screens/tabs/mapDesktopInsets';
+import { getDesktopOverlayStyles } from '@/screens/tabs/mapDesktopOverlay.styles';
 import { webTextStyle } from '@/utils/webProps';
 
 // ✅ Токенизация: базируемся на 8pt-системе METRICS
@@ -67,13 +68,23 @@ const GEO_BANNER_PADDING_VERTICAL_MOBILE = 7;
 /** Right offsets of «Слои» and «Радиус» from the map edge: buttons and popovers read them. */
 export const DESKTOP_LAYERS_FAB_RIGHT = desktopMapFabRight(0);
 export const DESKTOP_RADIUS_FAB_RIGHT = desktopMapFabRight(1);
+/**
+ * #2219 — the free band of the map's top row (offsets from the map's edges).
+ * Left: past the chevron's reach into the map. Right: before «Радиус» — the
+ * buttons stand off the shell's right edge, the map off the row padding, both
+ * shifted by the same side inset, so the band does not depend on the inset.
+ */
+export const DESKTOP_SEARCH_AREA_BAND_LEFT = corner.DESKTOP_MAP_CORNER_ROW_LEFT;
+export const DESKTOP_SEARCH_AREA_BAND_RIGHT =
+  DESKTOP_RADIUS_FAB_RIGHT + CONTROL_SIZE + DESKTOP_MAP_FAB_GAP - DESKTOP_SHELL_PADDING;
 
 export const getStyles = (
   isMobile: boolean,
   insetTop: number,
   themedColors: ThemedColors,
   usesWebBottomDock = false,
-  sideInsets?: { left: number; right: number }, // #2233; omitted = the old numbers
+  // #2233 side insets; `dockReserve` = `useDockReservePx` (native; web: usesWebBottomDock).
+  shellInsets?: { left: number; right: number; dockReserve?: number },
 ) => {
   const shadowMedium = themedColors.shadows.medium;
   const shadowHeavy = themedColors.shadows.heavy;
@@ -84,7 +95,7 @@ export const getStyles = (
   // #2172 — native at width ≥ 768 (iPad, Android tablets) renders the same
   // desktop-branch cards as web: radius, border, shadow. Web blocks stay as is.
   const isNativeDesktop = Platform.OS !== 'web' && !isMobile;
-  const desktopInsets = isMobile ? NO_DESKTOP_INSETS : getDesktopBranchInsets({ top: insetTop, ...sideInsets });
+  const desktopInsets = isMobile ? NO_DESKTOP_INSETS : getDesktopBranchInsets({ top: insetTop, left: shellInsets?.left, right: shellInsets?.right });
   // #2233 — row padding, defined once: the shell row and the native chevron read it.
   const desktopRowPaddingLeft = DESKTOP_SHELL_PADDING + desktopInsets.left;
   const desktopRowPaddingTop = DESKTOP_SHELL_PADDING - 4 + desktopInsets.top;
@@ -118,6 +129,14 @@ export const getStyles = (
   };
 
   return StyleSheet.create({
+    ...getDesktopOverlayStyles({
+      themedColors,
+      rowPaddingLeft: desktopRowPaddingLeft,
+      rowPaddingTop: desktopRowPaddingTop,
+      panelWidth: PANEL_WIDTH_DESKTOP,
+      bandLeft: DESKTOP_SEARCH_AREA_BAND_LEFT,
+      bandRight: DESKTOP_SEARCH_AREA_BAND_RIGHT,
+    }),
     container: {
       flex: 1,
       ...(Platform.OS === 'web'
@@ -149,7 +168,7 @@ export const getStyles = (
       paddingLeft: isMobile ? 0 : desktopRowPaddingLeft,
       paddingRight: isMobile ? 0 : DESKTOP_SHELL_PADDING + desktopInsets.right,
       paddingTop: isMobile ? 0 : desktopRowPaddingTop,
-      paddingBottom: isMobile ? 0 : DESKTOP_SHELL_PADDING - 4,
+      paddingBottom: isMobile ? 0 : DESKTOP_SHELL_PADDING - 4 + (isNativeDesktop ? Math.max(0, shellInsets?.dockReserve ?? 0) : 0),
       minHeight: 0,
       minWidth: 0,
       alignItems: 'stretch',
@@ -481,35 +500,6 @@ export const getStyles = (
         fontWeight: '700',
         lineHeight: 12,
       },
-      // Desktop-web «Искать в этой области» pill: centered at the top of the map
-      // area, Google-Maps-style. Appears only after the map is panned away from
-      // the search anchor (controller-driven canSearchThisArea).
-      desktopSearchAreaButton: {
-        position: 'absolute',
-        top: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 16,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: themedColors.primary,
-        zIndex: 1001,
-        ...(Platform.OS === 'web'
-          ? ({
-              left: '50%',
-              transform: [{ translateX: '-50%' }],
-              cursor: 'pointer',
-              boxShadow: '0 4px 16px rgba(15,23,42,0.18), 0 1px 4px rgba(0,0,0,0.08)',
-              transition: 'background-color 0.15s ease',
-            } as any)
-          : { alignSelf: 'center', ...shadowMedium }),
-      },
-      desktopSearchAreaButtonText: {
-        color: themedColors.textOnPrimary,
-        fontSize: 13,
-        fontWeight: '600',
-      },
       panelPlaceholder: {
         flex: 1,
         justifyContent: 'center',
@@ -663,13 +653,11 @@ export const getStyles = (
         // Ярус СВОЙ, а не MAP_TOOLBAR_STACK_GAP: пилюля и баннер взаимоисключены
         // (пилюля живёт при status === 'current', баннер — при остальных), и
         // держать её ниже баннера — осознанный выбор, а не следствие геометрии.
-        // Desktop (#2220): in the chevron's band, right of it — not under it.
-        top: isMobile
-          ? getMapToolbarBottom(insetTop) + MAP_LOCATION_QUALITY_PILL_STACK_OFFSET
-          : corner.COLLAPSE_TOGGLE_TOP,
-        left: isMobile ? 10 : corner.DESKTOP_MAP_CORNER_ROW_LEFT,
-        right: isMobile ? 10 : undefined,
-        maxWidth: isMobile ? undefined : 360,
+        // Phone only: the desktop branch puts the pill in the top-row band
+        // (`desktopBandQualityPill`, #2220/#2304).
+        top: getMapToolbarBottom(insetTop) + MAP_LOCATION_QUALITY_PILL_STACK_OFFSET,
+        left: 10,
+        right: 10,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 7,

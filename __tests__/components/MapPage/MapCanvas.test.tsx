@@ -85,6 +85,47 @@ describe('MapCanvas', () => {
     mockMapLoadingBar.mockClear()
   })
 
+  // #2219 × #2304 — the quality pill and «Искать в этой области» share ONE
+  // flex row; while the action shows, the pill folds to its icon and keeps its
+  // message as the accessibility label.
+  it.each(['ios', 'android', 'web'] as const)('%s desktop: quality pill and the action are items of one top-row band', (os) => {
+    ;(Platform as any).OS = os
+    const lowAccuracy = {
+      status: 'current' as const,
+      coordinates: { latitude: 52.2, longitude: 20.98 },
+      accuracy: 180,
+      timestamp: Date.now(),
+      canAskAgain: true,
+    }
+    const screen = render(
+      <MapCanvas
+        {...baseProps}
+        isWeb={os === 'web'}
+        showProgress={false}
+        locationState={lowAccuracy}
+        coordinatesSource="geolocation"
+        canSearchThisArea
+        onSearchThisArea={jest.fn()}
+      />,
+    )
+    const band = screen.getByTestId('map-top-band')
+    const quality = screen.getByTestId('map-location-quality')
+    expect(band.findAll((node: any) => node.props?.testID === 'map-location-quality').length).toBeGreaterThan(0)
+    expect(band.findAll((node: any) => node.props?.testID === 'map-search-this-area-desktop').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Низкая точность геолокации')).toBeNull()
+    expect(quality.props.accessibilityLabel).toBe('Низкая точность геолокации')
+    // Web names the folded icon only as an `img` (a generic div exposes no name).
+    expect(quality.props.accessibilityRole).toBe(os === 'web' ? 'image' : undefined)
+    screen.unmount()
+
+    // Without the action the pill shows its message in the same band.
+    const alone = render(
+      <MapCanvas {...baseProps} isWeb={os === 'web'} showProgress={false} locationState={lowAccuracy} coordinatesSource="geolocation" />,
+    )
+    expect(alone.getByTestId('map-top-band')).toBeTruthy()
+    expect(alone.getByText('Низкая точность геолокации')).toBeTruthy()
+  })
+
   describe('#2219 — map actions of the desktop branch on the native tablet', () => {
     it.each(['ios', 'android'] as const)('%s: «Искать в этой области» is offered and has no hitSlop', (os) => {
       ;(Platform as any).OS = os

@@ -368,7 +368,7 @@ export const questsGenerated1 = {
   "screens.tabs.QuestCard.value1_min_1c47c0c7": "{{value1}} мін",
   "screens.tabs.QuestsContentPanel.geolokatsiya_otklyuchena_pokazyvaem_vse_kves_48d7a8ae": "Геалакацыя адключаная. Паказваем усе квэсты на мапе.",
   "screens.tabs.QuestsContentPanel.ischem_kvesty_ryadom_so_mnoy_f5a72f30": "Шукаем квэсты побач са мной",
-  "screens.tabs.QuestsContentPanel.iskat_v_etoy_oblasti_2dbf958f": "Шукаць у гэтай галіне",
+  "screens.tabs.QuestsContentPanel.iskat_v_etoy_oblasti_2dbf958f": "Шукаць у гэтай вобласці",
   "screens.tabs.QuestsContentPanel.kvesty_dlya_detey_fbda5ab0": "Квэсты для дзяцей",
   "screens.tabs.QuestsContentPanel.locationTitle": "Квэсты: {{value1}}",
   "components.quests.QuestForCityCard.difficulty.easy": "Лёгка",

@@ -260,17 +260,18 @@ const styles = StyleSheet.create({
             : null),
         borderRadius: DESIGN_TOKENS.radii.lg,
         overflow: 'hidden',
+        // Native: no shadow and, above all, no elevation (#2219). On Android
+        // elevation is Z, and siblings are dispatched by Z before index: the
+        // map surface at elevation 8 took the native touch from every control
+        // over it (JS still pressed the control) — a tap on «Моё
+        // местоположение» also set a route point. Its iOS shadow was dead too:
+        // `overflow: hidden` on the same view clips it. The desktop card shadow
+        // is drawn by `mapHost` (#2172); the phone map is full-bleed.
         ...(Platform.OS === 'web'
             ? ({
                   boxShadow: DESIGN_TOKENS.shadows.card,
               } as any)
-            : {
-                  shadowColor: DESIGN_TOKENS.colors.text,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 12,
-                  elevation: 8,
-              }),
+            : null),
     },
     placeholder: {
         flex: 1,

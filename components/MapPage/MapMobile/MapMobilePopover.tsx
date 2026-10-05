@@ -36,6 +36,12 @@ interface MapMobilePopoverProps {
   maxWidth?: number
   /** Card min width. Defaults to 200. Compact popovers (radius) pass a smaller value. */
   minWidth?: number
+  /**
+   * Card height cap (#2243-III): the desktop branch passes the room down to the
+   * floating dock (`useDockReservePx`), so the card never runs under it — the
+   * body scrolls instead (Android landscape: «Слои» ran over the dock).
+   */
+  maxHeight?: number
   onRequestClose: () => void
   children: React.ReactNode
   testID?: string
@@ -59,6 +65,7 @@ const MapMobilePopoverInner: React.FC<MapMobilePopoverProps> = ({
   right = 12,
   maxWidth = 280,
   minWidth = 200,
+  maxHeight,
   onRequestClose,
   children,
   testID,
@@ -88,6 +95,7 @@ const MapMobilePopoverInner: React.FC<MapMobilePopoverProps> = ({
             maxWidth,
             minWidth,
             width: minWidth,
+            ...(maxHeight != null ? { maxHeight, overflow: 'hidden' as const } : null),
             backgroundColor: colors.surface,
             borderColor: colors.borderLight,
           },

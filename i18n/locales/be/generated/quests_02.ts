@@ -1,6 +1,6 @@
 export const questsGenerated2 = {
   "screens.tabs.QuestsContentPanel.kvesty_poblizosti_02dcd1cf": "Квэсты паблізу",
-  "screens.tabs.QuestsContentPanel.kvesty_v_etoy_oblasti_f59f59da": "Квэсты ў гэтай галіне",
+  "screens.tabs.QuestsContentPanel.kvesty_v_etoy_oblasti_f59f59da": "Квэсты ў гэтай вобласці",
   "screens.tabs.QuestsContentPanel.nazhmite_gorod_chtoby_vybrat_bdb9cf3e": "Націсніце «Горад» каб выбраць",
   "screens.tabs.QuestsContentPanel.nichego_ne_naydeno_21857ccf": "Нічога не знойдзена",
   "screens.tabs.QuestsContentPanel.ochistit_poisk_c6fc5f29": "Ачысціць пошук",

@@ -9,7 +9,7 @@
  * Tapping a value applies it immediately (badge updates) and closes the popover.
  */
 import React, { useMemo } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 import { DEFAULT_RADIUS_KM, formatRadiusLabel } from '@/constants/mapConfig'
 import type { ThemedColors } from '@/hooks/useTheme'
@@ -32,6 +32,8 @@ interface MapMobileRadiusPopoverProps {
   currentValue: string
   onSelect: (id: string) => void
   onRequestClose: () => void
+  /** Card height cap down to the dock (desktop branch, #2243-III); the list scrolls. */
+  maxHeight?: number
 }
 
 const MapMobileRadiusPopoverInner: React.FC<MapMobileRadiusPopoverProps> = ({
@@ -44,6 +46,7 @@ const MapMobileRadiusPopoverInner: React.FC<MapMobileRadiusPopoverProps> = ({
   currentValue,
   onSelect,
   onRequestClose,
+  maxHeight,
 }) => {
   const resolvedValue = String(currentValue || DEFAULT_RADIUS_KM)
 
@@ -69,50 +72,63 @@ const MapMobileRadiusPopoverInner: React.FC<MapMobileRadiusPopoverProps> = ({
       right={right}
       minWidth={minWidth}
       maxWidth={maxWidth}
+      maxHeight={maxHeight}
       onRequestClose={onRequestClose}
       testID="map-mobile-radius-popover"
     >
-      <View accessibilityRole="radiogroup" testID="map-mobile-radius-options">
-        {radiusOptions.map((option) => {
-          const selected = String(option.id) === resolvedValue
-          const label = formatRadiusLabel(option.name || option.id)
-          return (
-            <Pressable
-              key={String(option.id)}
-              testID={`map-mobile-radius-option-${option.id}`}
-              accessibilityRole="radio"
-              accessibilityLabel={label}
-              accessibilityState={{ checked: selected }}
-              aria-checked={selected}
-              onPress={() => {
-                onSelect(String(option.id))
-                onRequestClose()
-              }}
-              style={({ pressed }) => [
-                styles.row,
-                selected && { backgroundColor: colors.primarySoft },
-                pressed && !selected && { backgroundColor: colors.surfaceMuted },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.rowText,
-                  { color: selected ? colors.primary : colors.text },
-                  selected && styles.rowTextSelected,
+      <ScrollView
+        style={styles.scroll}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+      >
+        <View accessibilityRole="radiogroup" testID="map-mobile-radius-options">
+          {radiusOptions.map((option) => {
+            const selected = String(option.id) === resolvedValue
+            const label = formatRadiusLabel(option.name || option.id)
+            return (
+              <Pressable
+                key={String(option.id)}
+                testID={`map-mobile-radius-option-${option.id}`}
+                accessibilityRole="radio"
+                accessibilityLabel={label}
+                accessibilityState={{ checked: selected }}
+                aria-checked={selected}
+                onPress={() => {
+                  onSelect(String(option.id))
+                  onRequestClose()
+                }}
+                style={({ pressed }) => [
+                  styles.row,
+                  selected && { backgroundColor: colors.primarySoft },
+                  pressed && !selected && { backgroundColor: colors.surfaceMuted },
                 ]}
-                numberOfLines={1}
               >
-                {label}
-              </Text>
-            </Pressable>
-          )
-        })}
-      </View>
+                <Text
+                  style={[
+                    styles.rowText,
+                    { color: selected ? colors.primary : colors.text },
+                    selected && styles.rowTextSelected,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            )
+          })}
+        </View>
+      </ScrollView>
     </MapMobilePopover>
   )
 }
 
 const styles = StyleSheet.create({
+  // Shrinks under the card's `maxHeight` (desktop branch above the dock).
+  scroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
   row: {
     minHeight: 44,
     minWidth: 144,

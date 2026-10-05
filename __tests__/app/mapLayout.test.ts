@@ -9,7 +9,8 @@ import {
   DESKTOP_RADIUS_FAB_RIGHT,
   getStyles,
 } from '@/screens/tabs/map.styles';
-import { getDesktopBranchInsets } from '@/screens/tabs/mapDesktopInsets';
+import { getDesktopBranchInsets, getDesktopPopoverMaxHeight } from '@/screens/tabs/mapDesktopInsets';
+import { MAP_PANEL_GAP } from '@/screens/tabs/mapDesktopCorner';
 import { METRICS } from '@/constants/layout';
 
 describe('map layout header offset', () => {
@@ -334,6 +335,108 @@ describe('desktop-branch cards on native tablets (#2172)', () => {
     expect(base.collapseToggleInPanel.left).toBe(380);
     // Phones are untouched by the side insets.
     expect(getStyles(true, 0, themedColors, false, { left, right }).mapContainer.paddingLeft).toBe(0);
+  });
+
+  // #2219 × #2233 (device QA, Android 807 dp, cutout 48): «Искать в этой
+  // области», centred in the whole map, ran 17.8 dp into «Радиус». The pill now
+  // sits in the free band of the top row and never grows past it, so the gap to
+  // the right-hand buttons and to the chevron holds at any width ≥ 768 and inset.
+  it.each([
+    [768, 0, 0],
+    [768, 48, 0],
+    [768, 0, 48],
+    [807, 0, 0],
+    [807, 48, 0],
+    [807, 0, 48],
+    [820, 0, 0],
+    [820, 48, 0],
+    [820, 0, 48],
+  ])('android %i dp, left=%i right=%i: the search pill band clears the chevron and «Радиус»', (width, left, right) => {
+    Object.defineProperty(Platform, 'OS', { value: 'android' });
+    const styles: Record<string, any> = getStyles(false, 0, themedColors, false, { left, right });
+    const mapLeft = styles.mapContainer.paddingLeft + styles.rightPanel.width + MAP_PANEL_GAP;
+    const mapRight = width - styles.mapContainer.paddingRight;
+    const band = styles.desktopSearchAreaBand;
+    const bandLeft = mapLeft + band.left;
+    const bandRight = mapRight - band.right;
+    const radiusLeft = width - styles.desktopRadiusFab.right - styles.desktopRadiusFab.width;
+    const chevronRight = styles.collapseToggleInPanel.left + styles.collapseToggleInPanel.width;
+
+    expect(bandRight).toBeLessThanOrEqual(radiusLeft - 8);
+    expect(bandLeft).toBeGreaterThanOrEqual(chevronRight + 8);
+    // Room for the icon and a few letters before the ellipsis in any locale.
+    expect(bandRight - bandLeft).toBeGreaterThanOrEqual(120);
+    // The pill is bounded by the band: no absolute escape, one ellipsised line.
+    expect(styles.desktopSearchAreaButton.maxWidth).toBe('100%');
+    expect(styles.desktopSearchAreaButton.position).toBeUndefined();
+    expect(styles.desktopSearchAreaButtonText.flexShrink).toBe(1);
+  });
+
+  // #2219 × #2304 (iPad device QA: «Местоположение давно не обновлялось»
+  // [432–792] covered «Искать в этой области» [497–699] and reached under
+  // «Радиус»). Both now live in ONE flex row in the band: neither is absolute,
+  // the quality pill shrinks (and folds to its icon while the action shows),
+  // the action's slot takes the rest and centres the action, so they cannot
+  // overlap and neither leaves the band — at every width, inset and locale.
+  const bandCases: Array<[string, number, number, number, number]> = [];
+  for (const width of [768, 807, 820, 925, 1180]) {
+    for (const [left, right] of [[0, 0], [48, 0], [0, 48]]) bandCases.push(['android', width, 360, left, right]);
+    bandCases.push(['ios', width, 360, 0, 0]);
+    for (const panel of [344, 384]) bandCases.push(['web', width, panel, 0, 0]);
+  }
+  it.each(bandCases)('%s %i px (panel %i, insets %i/%i): the quality pill and the action share the band without overlap', (os, width, panel, left, right) => {
+    Object.defineProperty(Platform, 'OS', { value: os });
+    const styles: Record<string, any> = getStyles(false, 0, themedColors, false, { left, right });
+    const flat = (style: any) => StyleSheet.flatten(style);
+    const band = flat(styles.desktopSearchAreaBand);
+    const mapLeft = styles.mapContainer.paddingLeft + panel + MAP_PANEL_GAP;
+    const mapRight = width - styles.mapContainer.paddingRight;
+    const bandWidth = mapRight - band.right - (mapLeft + band.left);
+    const radiusLeft = width - styles.desktopRadiusFab.right - styles.desktopRadiusFab.width;
+    expect(mapRight - band.right).toBeLessThanOrEqual(radiusLeft - 8);
+
+    // One flex row; its items are in flow (no absolute escape).
+    expect(band.flexDirection).toBe('row');
+    const quality = flat(styles.desktopBandQualityPill);
+    const compact = flat([styles.desktopBandQualityPill, styles.desktopBandQualityPillCompact]);
+    const slot = flat(styles.desktopSearchAreaSlot);
+    const action = flat(styles.desktopSearchAreaButton);
+    for (const item of [quality, slot, action]) expect(item.position).toBeUndefined();
+    expect(quality.flexShrink).toBe(1);
+    expect(quality.minWidth).toBe(0);
+    expect(slot).toMatchObject({ flexShrink: 1, minWidth: 0, alignItems: 'center' });
+    expect(action.maxWidth).toBe('100%');
+    expect(flat(styles.desktopSearchAreaButtonText).flexShrink).toBe(1);
+    expect(flat([styles.locationQualityText, styles.desktopBandQualityText])).toMatchObject({ flexGrow: 0, flexShrink: 1 });
+
+    // Worst case — the action next to the folded quality pill: the band holds
+    // the icon chip, the gap and the action's icon with a few letters.
+    const compactWidth = 2 * compact.paddingHorizontal + 13 + 2;
+    const actionMin = 2 * action.paddingHorizontal + 15 + action.gap + 24;
+    expect(bandWidth).toBeGreaterThanOrEqual(compactWidth + band.gap + actionMin);
+  });
+
+  // #2243-III (iPad, device QA): the floating dock covered the panel footer
+  // («Сбросить», «Построить маршрут»); a tap there opened the dock tab. On
+  // native the desktop row ends above the dock; the reserve comes from the
+  // dock's single owner (`useDockReservePx`), web keeps `usesWebBottomDock`.
+  it.each(['ios', 'android'])('%s desktop row ends above the floating dock', (os) => {
+    Object.defineProperty(Platform, 'OS', { value: os });
+    const base = getStyles(false, 0, themedColors, false, { left: 0, right: 0 });
+    const docked = getStyles(false, 0, themedColors, false, { left: 0, right: 0, dockReserve: 83 });
+    expect(docked.mapContainer.paddingBottom).toBe(base.mapContainer.paddingBottom + 83);
+    // Phones keep their own sheet layout.
+    expect(getStyles(true, 0, themedColors, false, { left: 0, right: 0, dockReserve: 83 }).mapContainer.paddingBottom).toBe(0);
+    Object.defineProperty(Platform, 'OS', { value: 'web' });
+    expect(getStyles(false, 0, themedColors, false, { left: 0, right: 0, dockReserve: 83 }).mapContainer.paddingBottom).toBe(
+      base.mapContainer.paddingBottom,
+    );
+  });
+
+  it('a desktop popover ends above the dock, never collapsing below a usable height', () => {
+    expect(getDesktopPopoverMaxHeight(820, 92, 83)).toBe(820 - 92 - 83 - 8);
+    expect(getDesktopPopoverMaxHeight(392, 92, 82)).toBe(392 - 92 - 82 - 8);
+    expect(getDesktopPopoverMaxHeight(200, 92, 82)).toBe(120);
   });
 
   it('negative insets never pull the desktop branch outwards', () => {

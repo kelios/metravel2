@@ -3,6 +3,8 @@ import { Platform } from 'react-native';
 import { usePathname } from 'expo-router';
 
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
+import { useFitToResultsWhenSettled } from '@/hooks/map/useFitToResultsWhenSettled';
+import { useDockReservePx } from '@/components/layout/bottomChromeInset';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getStyles } from '@/screens/tabs/map.styles';
 import { buildCanonicalUrl } from '@/utils/seo';
@@ -45,6 +47,9 @@ export function useMapScreenController() {
   // UI: responsive + panel state + theming + SEO (inlined from former useMapUIController)
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  // Single owner of the floating dock's height (#2097): the desktop branch on
+  // native ends above it.
+  const dockReserve = useDockReservePx();
   const themedColors = useThemedColors();
 
   const { isMobile, width: viewportWidth } = useMapResponsive();
@@ -76,8 +81,9 @@ export function useMapScreenController() {
       getStyles(isMobile, insets.top, themedColors, usesWebBottomDock, {
         left: insets.left,
         right: insets.right,
+        dockReserve,
       }),
-    [isMobile, insets.top, insets.left, insets.right, themedColors, usesWebBottomDock]
+    [isMobile, insets.top, insets.left, insets.right, dockReserve, themedColors, usesWebBottomDock]
   );
 
   useEffect(() => {
@@ -209,15 +215,15 @@ export function useMapScreenController() {
   // ВСЕ загруженные точки (fit ко всем маркерам). Служит и явной кнопкой сброса,
   // и escape-hatch на случай, когда геолокация отклонена/таймаут и карта «застряла»
   // на Минск-fallback — пользователь одним тапом видит все места.
+  // #2218 — подгонка идёт по результатам ПОСЛЕ сброса: ждём, пока debounce,
+  // запрос и placeholder предыдущего набора отработают (иначе карта подгонялась
+  // под набор до сброса — одно место «Амбар» или пустой результат).
+  const resultsSettled = !isDebouncingFilters && !isFetching && !isPlaceholderData;
+  const requestFitToResults = useFitToResultsWhenSettled(resultsSettled, fitToResults);
   const showAllPlaces = useCallback(() => {
     resetFilters();
-    // Даем сбросу отрисоваться, затем подгоняем карту под все точки на карте.
-    if (typeof requestAnimationFrame === 'function') {
-      requestAnimationFrame(fitToResults);
-    } else {
-      fitToResults();
-    }
-  }, [resetFilters, fitToResults]);
+    requestFitToResults();
+  }, [resetFilters, requestFitToResults]);
 
   // Filters panel props (FiltersProvider pattern) — assembled from independent
   // memoized slices in useMapFiltersPanelProps. The controller re-exposes the

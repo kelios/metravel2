@@ -113,6 +113,32 @@ describe('useDebouncedValue', () => {
     expect(result.current[1]).toBe(false)
   })
 
+  // #2218 — pending is true in the very render that carries the new value, not
+  // one render later: a consumer waiting for «results of the current input»
+  // must not see «settled» while the debounced value is still the old one.
+  it('reports pending in the same render as the change, and not for a deep-equal copy', () => {
+    jest.useFakeTimers()
+    const seen: Array<[string, boolean]> = []
+    const { rerender } = renderHook(
+      ({ value }: { value: { radius: string } }) => {
+        const [debounced, pending] = useDebouncedValueWithPending(value, 300)
+        seen.push([debounced.radius, pending])
+        return pending
+      },
+      { initialProps: { value: { radius: '60' } } },
+    )
+    seen.length = 0
+    rerender({ value: { radius: '120' } })
+    expect(seen[0]).toEqual(['60', true])
+    act(() => {
+      jest.advanceTimersByTime(300)
+    })
+    expect(seen.at(-1)).toEqual(['120', false])
+    seen.length = 0
+    rerender({ value: { radius: '120' } })
+    expect(seen.every(([, pending]) => pending === false)).toBe(true)
+  })
+
   it('treats deep-equal objects as equal even with different references', () => {
     expect(deepEqual({ radius: '60', categories: ['lake'] }, { radius: '60', categories: ['lake'] })).toBe(true)
     expect(deepEqual({ radius: '60', categories: ['lake'] }, { radius: '120', categories: ['lake'] })).toBe(false)

@@ -39,13 +39,13 @@ jest.mock('@/components/MapPage/MapOfflineIndicator', () => {
 jest.mock('@/components/MapPage/MapMobile/MapMobileLayersPopover', () => {
   const React = require('react')
   const { View } = require('react-native')
-  return { MapMobileLayersPopover: (props: any) => React.createElement(View, { testID: 'layers-popover', top: props.top, right: props.right }) }
+  return { MapMobileLayersPopover: (props: any) => React.createElement(View, { testID: 'layers-popover', top: props.top, right: props.right, maxHeight: props.maxHeight }) }
 })
 
 jest.mock('@/components/MapPage/MapMobile/MapMobileRadiusPopover', () => {
   const React = require('react')
   const { View } = require('react-native')
-  return { MapMobileRadiusPopover: (props: any) => React.createElement(View, { testID: 'radius-popover', top: props.top, right: props.right }) }
+  return { MapMobileRadiusPopover: (props: any) => React.createElement(View, { testID: 'radius-popover', top: props.top, right: props.right, maxHeight: props.maxHeight }) }
 })
 
 const themedColors: any = {
@@ -73,6 +73,11 @@ const themedColors: any = {
   },
   boxShadows: { card: '0 1px 2px rgba(0,0,0,0.1)', medium: '0 6px 16px rgba(0,0,0,0.12)' },
 }
+
+// #2243: the visible chevron is hidden from screen readers on native (its twin
+// is read); queries address it as the touch target, so ONLY its queries include
+// hidden elements — every other query still fails on an accidentally hidden node.
+const CHEVRON = ['map-panel-collapse-button', { includeHiddenElements: true }] as const
 
 const PANEL_WIDTH_NATIVE = 360
 const COLLAPSED_STRIP_WIDTH = 56
@@ -195,16 +200,18 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     const utils = render(<Chrome />)
 
     let row = rowChildren(utils)
-    // The chevron as the panel's row sibling (inside the row's bounds —
-    // Android routes the native touch by parent bounds), placed absolutely;
-    // it precedes the panel so screen readers reach it first (#2243).
-    expect(row).toHaveLength(3)
-    expect(row[0].props.testID).toBe('map-panel-collapse-button')
-    expect(StyleSheet.flatten(row[0].props.style).position).toBe('absolute')
-    expect(widthOf(row[1])).toBe(PANEL_WIDTH_NATIVE)
-    expect(row[2].props.testID).toBe('map-host')
+    // #2243: the chevron's screen-reader twin in its slot, then the panel, then
+    // the visible chevron — the panel's row sibling (inside the row's bounds:
+    // Android routes the native touch by parent bounds), placed absolutely.
+    expect(row.map((node) => node.props.testID ?? (widthOf(node) === PANEL_WIDTH_NATIVE ? 'panel' : '?'))).toEqual([
+      'map-panel-collapse-lead',
+      'panel',
+      'map-panel-collapse-button',
+      'map-host',
+    ])
+    expect(StyleSheet.flatten(row[2].props.style).position).toBe('absolute')
 
-    fireEvent.press(utils.getByTestId('map-panel-collapse-button'))
+    fireEvent.press(utils.getByTestId(...CHEVRON))
 
     row = rowChildren(utils)
     expect(row).toHaveLength(2)
@@ -216,25 +223,88 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     fireEvent.press(utils.getByTestId('map-panel-expand-button'))
 
     row = rowChildren(utils)
-    expect(row).toHaveLength(3)
-    expect(row[0].props.testID).toBe('map-panel-collapse-button')
+    expect(row).toHaveLength(4)
+    expect(row[0].props.testID).toBe('map-panel-collapse-lead')
     expect(widthOf(row[1])).toBe(PANEL_WIDTH_NATIVE)
   })
 
-  // #2243 — reading order and screen-reader focus around the chevron.
-  it('reads «Свернуть панель» before the panel tabs and moves focus across the toggle', () => {
+  // #2243 (device QA: iOS and Android both read the chevron after the panel
+  // content). What the reading order depends on, per platform:
+  // - iOS reads subviews in MOUNT order, and Fabric mounts siblings stably
+  //   sorted by zIndex for positioned views (`ConcreteViewShadowNode.h`
+  //   orderIndex, `sliceChildShadowNodeViewPairs.cpp`) — modelled below;
+  // - Android sorts a container's children by geometry (AOSP
+  //   `ViewGroup.ViewLocationHolder`, STRIPE: one above the other → top first;
+  //   vertically overlapping → smaller `left` first; then top, then the taller).
+  const orderIndex = (node: any) => {
+    const style = StyleSheet.flatten(node?.props?.style) ?? {}
+    return style.position && style.position !== 'static' ? Number(style.zIndex ?? 0) : 0
+  }
+  const mountOrder = (nodes: any[]) =>
+    nodes.map((node, index) => ({ node, index })).sort((a, b) => orderIndex(a.node) - orderIndex(b.node) || a.index - b.index)
+  const iosReadingOrder = (node: any, out: string[] = []): string[] => {
+    if (!node || typeof node !== 'object' || node.props?.accessibilityElementsHidden) return out
+    if (node.props?.accessible && node.props?.testID) out.push(node.props.testID)
+    for (const { node: kid } of mountOrder(node.children ?? [])) iosReadingOrder(kid, out)
+    return out
+  }
+
+  it('iOS mount order reads the chevron twin first; the visible chevron is hidden from screen readers', () => {
+    const utils = render(<Chrome />)
+    const order = iosReadingOrder(findByTestID(utils.toJSON(), 'map-row'))
+    expect(order[0]).toBe('map-panel-collapse-a11y')
+    expect(order.indexOf('map-panel-collapse-a11y')).toBeLessThan(order.indexOf('map-panel-tab-travels'))
+    expect(order).not.toContain('map-panel-collapse-button')
+    // Hidden from VoiceOver and TalkBack alike; the twin is not.
+    expect(utils.queryByTestId('map-panel-collapse-button')).toBeNull()
+    const twin = utils.getByTestId('map-panel-collapse-a11y')
+    expect(twin.props.accessibilityRole).toBe('button')
+    expect(twin.props.accessibilityLabel).toBe(utils.getByTestId(...CHEVRON).props.accessibilityLabel)
+    expect(findByTestID(utils.toJSON(), 'map-panel-collapse-lead').props.pointerEvents).toBe('none')
+    // The twin carries no zIndex: anything with one would mount after the panel.
+    expect(orderIndex(findByTestID(utils.toJSON(), 'map-panel-collapse-lead'))).toBe(0)
+  })
+
+  it.each([0, 48])('Android geometry reads the chevron twin before the panel and the map (left inset %i)', (leftInset) => {
+    const styles = getStyles(false, 24, themedColors, false, { left: leftInset, right: 0 })
+    const flat = (style: any) => StyleSheet.flatten(style)
+    const lead = flat(styles.collapseToggleLead)
+    const twin = flat(styles.collapseToggleA11y)
+    const chevron = flat(styles.collapseToggleInPanel)
+    const rowPadLeft = styles.mapContainer.paddingLeft as number
+    const rowPadTop = styles.mapContainer.paddingTop as number
+    const rect = (left: number, top: number, width: number, height: number) => ({ left, top, right: left + width, bottom: top + height })
+    const leadRect = rect(lead.left, lead.top, lead.width, lead.height)
+    const panelRect = rect(rowPadLeft, rowPadTop, PANEL_WIDTH_NATIVE, 600)
+    const mapRect = rect(rowPadLeft + PANEL_WIDTH_NATIVE + 16, rowPadTop, 400, 600)
+    const chevronRect = rect(chevron.left, chevron.top, chevron.width, chevron.height)
+    const stripe = (a: any, b: any) => {
+      if (a.bottom - b.top <= 0) return -1
+      if (a.top - b.bottom >= 0) return 1
+      if (a.left !== b.left) return a.left - b.left
+      if (a.top !== b.top) return a.top - b.top
+      return -((a.bottom - a.top) - (b.bottom - b.top))
+    }
+    const order = [
+      { id: 'panel', r: panelRect },
+      { id: 'map', r: mapRect },
+      { id: 'lead', r: leadRect },
+    ].sort((a, b) => stripe(a.r, b.r)).map((item) => item.id)
+    expect(order).toEqual(['lead', 'panel', 'map'])
+    // The twin's focus frame is the visible chevron's frame, inside its slot.
+    expect(rect(twin.left, twin.top, twin.width, twin.height)).toEqual(chevronRect)
+    expect(chevronRect.right).toBeLessThanOrEqual(leadRect.right)
+    expect(chevronRect.bottom).toBeLessThanOrEqual(leadRect.bottom)
+  })
+
+  // #2243 — screen-reader focus around the chevron, and its activation.
+  it('moves focus across the toggle; the twin activates the same toggle', () => {
     const focusSpy = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {})
     try {
       const utils = render(<Chrome />)
-      const order = utils.UNSAFE_root.findAll(
-        (node: any) =>
-          typeof node.type === 'string' &&
-          ['map-panel-collapse-button', 'map-panel-tab-travels'].includes(node.props?.testID),
-      ).map((node: any) => node.props.testID)
-      expect(order).toEqual(['map-panel-collapse-button', 'map-panel-tab-travels'])
       expect(focusSpy).not.toHaveBeenCalled()
 
-      fireEvent.press(utils.getByTestId('map-panel-collapse-button'))
+      fireEvent.press(utils.getByTestId(...CHEVRON))
       expect(focusSpy).toHaveBeenCalledTimes(1)
       const [expandNode, expandEvent] = focusSpy.mock.calls[0] as any[]
       expect(expandEvent).toBe('focus')
@@ -243,10 +313,20 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
       fireEvent.press(utils.getByTestId('map-panel-expand-button'))
       expect(focusSpy).toHaveBeenCalledTimes(2)
       expect(focusSpy.mock.calls[1][1]).toBe('focus')
-      expect((focusSpy.mock.calls[1][0] as any).props.testID).toBe('map-panel-collapse-button')
+      // Focus returns to the node screen readers read — the twin.
+      expect((focusSpy.mock.calls[1][0] as any).props.testID).toBe('map-panel-collapse-a11y')
+
+      // Screen-reader activation of the twin collapses the panel.
+      const twin = utils.getByTestId('map-panel-collapse-a11y')
+      act(() => {
+        if (Platform.OS === 'ios') twin.props.onAccessibilityTap()
+        else twin.props.onAccessibilityAction({ nativeEvent: { actionName: 'activate' } })
+      })
+      expect(utils.getByTestId('map-panel-collapsed')).toBeTruthy()
+      fireEvent.press(utils.getByTestId('map-panel-expand-button'))
 
       // A strip icon expands the panel on its tab — not a chevron: no focus jump.
-      fireEvent.press(utils.getByTestId('map-panel-collapse-button'))
+      fireEvent.press(utils.getByTestId(...CHEVRON))
       focusSpy.mockClear()
       fireEvent.press(
         utils.getByLabelText(
@@ -262,7 +342,7 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
   it('a strip icon expands the panel on its tab', () => {
     const utils = render(<Chrome />)
 
-    fireEvent.press(utils.getByTestId('map-panel-collapse-button'))
+    fireEvent.press(utils.getByTestId(...CHEVRON))
     fireEvent.press(
       utils.getByLabelText(
         i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.spisok_tochek_value1_3daae6f8', { value1: 123 }),
@@ -299,8 +379,8 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
   // map (a route point in «Маршрут»). Targets are their own 44pt boxes.
   it('controls over or beside the map carry no hitSlop', () => {
     const chrome = render(<Chrome />)
-    expect(chrome.getByTestId('map-panel-collapse-button').props.hitSlop).toBeUndefined()
-    fireEvent.press(chrome.getByTestId('map-panel-collapse-button'))
+    expect(chrome.getByTestId(...CHEVRON).props.hitSlop).toBeUndefined()
+    fireEvent.press(chrome.getByTestId(...CHEVRON))
     expect(chrome.getByTestId('map-panel-expand-button').props.hitSlop).toBeUndefined()
 
     const overlays = renderOverlays()
@@ -444,6 +524,28 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
   // #2233 — a side cutout (Android phone in landscape) moves the right-hand
   // buttons and their popovers by the same inset: each popover's `right` is its
   // button's `right`.
+  // #2243-III (iPad / Android landscape): the floating dock covered the bottom
+  // of the popovers; on native they end above it — the dock's height comes
+  // from its single owner `useDockReservePx` (no provider here: the fallback
+  // BOTTOM_DOCK_HEIGHT + insets.bottom).
+  it('popovers end above the floating dock', () => {
+    const dock = jest.spyOn(require('@/components/layout/bottomChromeInset'), 'useDockReservePx').mockReturnValue(83)
+    try {
+      const { renderHook } = require('@testing-library/react-native')
+      const windowHeight = renderHook(() => require('react-native').useWindowDimensions()).result.current.height
+      const utils = renderOverlays(24)
+      fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
+      const layers = utils.getByTestId('layers-popover').props
+      // The card's bottom edge stops 8 above the dock.
+      expect(layers.top + layers.maxHeight).toBe(windowHeight - 83 - 8)
+      fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
+      fireEvent.press(utils.getByTestId('map-desktop-radius-button'))
+      expect(utils.getByTestId('radius-popover').props.maxHeight).toBe(layers.maxHeight)
+    } finally {
+      dock.mockRestore()
+    }
+  })
+
   it.each([0, 32])('popovers stay anchored on their buttons with a right cutout of %i', (cutout) => {
     const utils = renderOverlays(0, true, { left: 0, right: cutout })
     const rightOf = (testID: string) => StyleSheet.flatten(utils.getByTestId(testID).props.style)?.right
@@ -482,17 +584,17 @@ describe('map desktop branch on web (#2172 containment)', () => {
     expect(chevronStyle).toMatchObject({ position: 'absolute', top: 16, right: -48 })
     expect(chevronStyle.left).toBeUndefined()
 
-    fireEvent.press(utils.getByTestId('map-panel-collapse-button'))
+    fireEvent.press(utils.getByTestId(...CHEVRON))
 
     expect(rowChildren(utils)[0].props.testID).toBe('map-panel-collapsed')
-    expect(utils.queryByTestId('map-panel-collapse-button')).toBeNull()
+    expect(utils.queryByTestId(...CHEVRON)).toBeNull()
   })
 
   it('#2243: web keeps its DOM focus model — no native focus events on toggle', () => {
     const focusSpy = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {})
     try {
       const utils = render(<Chrome isWeb />)
-      fireEvent.press(utils.getByTestId('map-panel-collapse-button'))
+      fireEvent.press(utils.getByTestId(...CHEVRON))
       fireEvent.press(utils.getByTestId('map-panel-expand-button'))
       expect(focusSpy).not.toHaveBeenCalled()
     } finally {

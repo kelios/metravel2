@@ -89,7 +89,14 @@ export function useMapController({
 }: UseMapControllerParams) {
   // Map API reference
   const [mapUiApi, setMapUiApi] = useState<MapUiApi | null>(null);
+  // #2218 — the latest API, written synchronously when the map hands it over.
+  // The map emits it from its own effect, which runs before the screen's
+  // effects in the same commit; the state copy reaches the screen one render
+  // later. Fitting «to the results» reads this ref so it never uses an API
+  // snapshot built over the previous result set (web rebuilds it per data).
+  const latestMapUiApiRef = useRef<MapUiApi | null>(null);
   const handleMapUiApiReady = useCallback((api: MapUiApi | null) => {
+    latestMapUiApiRef.current = api;
     setMapUiApi(api);
   }, []);
 
@@ -347,11 +354,11 @@ export function useMapController({
   // Ядерная часть showAllPlaces экрана: подгонка карты под все загруженные точки.
   const fitToResults = useCallback(() => {
     try {
-      mapUiApi?.fitToResults?.();
+      latestMapUiApiRef.current?.fitToResults?.();
     } catch {
       // noop
     }
-  }, [mapUiApi]);
+  }, []);
 
   // Center on user location
   const centerOnUser = useCallback(() => {

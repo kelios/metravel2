@@ -47,6 +47,8 @@ interface MapMobileLayersPopoverProps {
    * иначе карточка не влезает в её `overflow: hidden`.
    */
   scrollMaxHeight?: number
+  /** Card height cap down to the dock (desktop branch, #2243-III); the body scrolls. */
+  maxHeight?: number
   /**
    * Показывать выбор базовой подложки. `false` — у карты своя подложка, которой
    * `MapUiApi.setBaseLayer` не управляет (карта конструктора маршрута).
@@ -78,6 +80,7 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
   minWidth,
   maxWidth,
   scrollMaxHeight,
+  maxHeight,
   showBaseLayer,
   showMapControls,
   mapUiApi,
@@ -102,6 +105,7 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
       right={right}
       minWidth={minWidth}
       maxWidth={maxWidth}
+      maxHeight={maxHeight}
       onRequestClose={onRequestClose}
       testID="map-mobile-layers-popover"
     >
@@ -202,6 +206,8 @@ const styles = StyleSheet.create({
   },
   scroll: {
     maxHeight: 420,
+    // Shrinks under the card's `maxHeight` so the header stays and the body scrolls.
+    flexShrink: 1,
   },
   // A row with a visible label, its own ≥44 box inside the card (no hitSlop
   // over the map, #2236); the label may wrap to two lines in long locales.

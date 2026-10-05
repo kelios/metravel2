@@ -24,3 +24,24 @@ export const getDesktopBranchInsets = (insets: {
         left: Math.max(0, insets.left ?? 0),
         right: Math.max(0, insets.right ?? 0),
       };
+
+/** Gap between a desktop-branch popover card and the floating dock. */
+export const DESKTOP_POPOVER_DOCK_GAP = 8;
+/** Below this the card keeps a usable height and the body scrolls. */
+export const DESKTOP_POPOVER_MIN_HEIGHT = 120;
+
+/**
+ * #2243-III — height cap of a desktop-branch popover («Слои», «Радиус») on
+ * native: from its top down to the floating dock (`useDockReservePx`, the
+ * dock's single height owner) minus a gap. Android landscape: the «Слои» card
+ * ran over the dock.
+ */
+export const getDesktopPopoverMaxHeight = (
+  windowHeight: number,
+  popoverTop: number,
+  dockReserve: number,
+): number =>
+  Math.max(
+    DESKTOP_POPOVER_MIN_HEIGHT,
+    windowHeight - popoverTop - Math.max(0, dockReserve) - DESKTOP_POPOVER_DOCK_GAP,
+  );

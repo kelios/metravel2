@@ -100,6 +100,18 @@ const TERMS: Term[] = [
     },
   },
   {
+    // #2219 (device QA): BE «галіна» и UK «галузь» — «отрасль», а не область карты.
+    name: '«в этой области» — область карты, не отрасль',
+    ru: /(^|[^а-яё])в этой области/i,
+    minEntries: 6,
+    locales: {
+      en: { required: /\barea\b/i },
+      pl: { required: /(obszar|okolic)/i },
+      be: { required: /вобласц/i, forbidden: /галін/i },
+      uk: { required: /област/i, forbidden: /галуз/i },
+    },
+  },
+  {
     name: '«системная» — тема как в системе',
     ru: /^системн(ая|ый)$/i,
     minEntries: 1,

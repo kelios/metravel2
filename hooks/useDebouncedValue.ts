@@ -79,7 +79,13 @@ export function useDebouncedValueWithPending<T>(value: T, delay: number): [T, bo
     };
   }, []);
 
-  return [debouncedValue, pending];
+  // #2218 — `pending` from state lags one render: the render right after a change
+  // still says «settled» while the debounced value belongs to the old input, and
+  // a consumer waiting for «results of the current input» (fit after «Сбросить
+  // всё») acted on the previous result set. A value the effect has not seen yet
+  // is pending in the same render; the deep compare runs only on a new reference.
+  const unseenChange = value !== prevValueRef.current && !deepEqual(prevValueRef.current, value);
+  return [debouncedValue, pending || unseenChange];
 }
 
 /**
