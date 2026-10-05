@@ -138,6 +138,44 @@ async function mockCatalogApis(page: Page) {
   })
 }
 
+/**
+ * #2175: клик по карточке каталога — только когда она дорисована, в видимой
+ * зоне и стоит на месте. Колонка каталога квестов прокручивается с
+ * `scroll-behavior: smooth` (screens/tabs/QuestsScreen.styles.ts), и прокрутка
+ * к цели внутри клика под нагрузкой хоста не давала Playwright двух одинаковых
+ * кадров положения за 30 с. Ждём условие, а не время; при провале печатаем,
+ * что было на экране.
+ */
+async function clickSettledCatalogCard(page: Page, testId: string): Promise<void> {
+  const card = page.getByTestId(testId).first()
+  await expect(card, `в каталоге нет карточки ${testId}`).toBeVisible()
+  await card.scrollIntoViewIfNeeded()
+
+  const samples: string[] = []
+  try {
+    await expect
+      .poll(async () => {
+        const box = await card.boundingBox()
+        samples.push(box ? `${Math.round(box.x)},${Math.round(box.y)},${Math.round(box.width)}x${Math.round(box.height)}` : 'none')
+        const [previous, current] = samples.slice(-2)
+        return samples.length >= 2 && current !== 'none' && current === previous
+      })
+      .toBe(true)
+    await expect(card).toBeInViewport()
+  } catch (error) {
+    const diagnostics = await page.evaluate(() => ({
+      cards: document.querySelectorAll('[data-testid^="quest-card-"]').length,
+      modalOpen: !!document.querySelector('[data-testid="quest-reviews-modal"]'),
+      viewport: `${window.innerWidth}x${window.innerHeight}`,
+    }))
+    throw new Error(
+      `карточка ${testId} не встала на место: ${JSON.stringify({ ...diagnostics, lastBoxes: samples.slice(-4) })}\n${String(error)}`,
+    )
+  }
+
+  await card.click()
+}
+
 test.describe('#1486 quest review UGC', () => {
   test('catalog hides the average until 3 reviews and still opens the reader', async ({ page }) => {
     fs.mkdirSync(ARTIFACT_DIR, { recursive: true })
@@ -167,14 +205,16 @@ test.describe('#1486 quest review UGC', () => {
       })
     }
 
-    await page.getByTestId(`quest-card-reviews-${MANY_ID}`).first().click()
+    await clickSettledCatalogCard(page, `quest-card-reviews-${MANY_ID}`)
     const modal = page.getByTestId('quest-reviews-modal')
     await expect(modal).toBeVisible({ timeout: WAIT_MS })
     await expect(page.getByText('Тестовая Анна')).toBeVisible()
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'reader-many.png') })
     await page.getByTestId('quest-reviews-close').click()
+    // Модалка уходит с анимацией: следующий клик — по каталогу, а не по её оверлею.
+    await expect(modal, 'модалка отзывов не закрылась').toHaveCount(0)
 
-    await page.getByTestId(`quest-card-reviews-${FEW_ID}`).first().click()
+    await clickSettledCatalogCard(page, `quest-card-reviews-${FEW_ID}`)
     await expect(page.getByTestId('quest-reviews-empty')).toBeVisible({ timeout: WAIT_MS })
     await expect(page.getByText('Пока нет отзывов')).toBeVisible()
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'reader-empty.png') })

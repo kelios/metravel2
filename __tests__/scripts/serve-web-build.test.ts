@@ -12,10 +12,13 @@ fs.writeFileSync(path.join(buildDir, 'quests', '[city]', '[questId].html'), '<ht
 fs.mkdirSync(path.join(buildDir, 'travels'), { recursive: true })
 fs.writeFileSync(path.join(buildDir, 'travels', '[param].html'), '<html>travel</html>')
 fs.writeFileSync(path.join(buildDir, 'index.html'), '<html>home</html>')
+fs.writeFileSync(path.join(buildDir, 'quests', 'index.html'), '<html>quests</html>')
+fs.writeFileSync(path.join(buildDir, '[...missing].html'), '<html>not found</html>')
 process.env.E2E_BUILD_DIR = buildDir
 
 const {
   getDynamicRouteFallbackCandidates,
+  getHtmlFallbackCandidates,
   isExpectedProxyTransportFailure,
   resolveApiProxyTarget,
 } = require('../../scripts/serve-web-build')
@@ -146,5 +149,36 @@ describe('static route fallback for exported dynamic segments', () => {
 
   it('ignores asset paths that already carry an extension', () => {
     expect(candidatePaths('/_expo/static/js/web/[param]-hash.js')).toEqual([])
+  })
+})
+
+// #2175: порядок прод-nginx `try_files $uri $uri.html $uri/index.html`
+// (nginx.conf:829). Без шага `$uri/index.html` `/quests` отдавался корневым
+// `[...missing].html` — e2e видели «Страница не найдена» до гидратации.
+describe('html route resolution follows the production nginx order', () => {
+  const orderedExisting = (pathname: string) =>
+    getHtmlFallbackCandidates(pathname, path.join(buildDir, pathname))
+      .map((candidate: { filePath: string }) => candidate.filePath)
+      .filter((filePath: string) => fs.existsSync(filePath))
+      .map((filePath: string) => path.relative(buildDir, filePath))
+
+  it('serves a folder route from its index.html before any dynamic catch-all', () => {
+    expect(orderedExisting('/quests')[0]).toBe(path.join('quests', 'index.html'))
+  })
+
+  it('tries $uri.html, then $uri/index.html, then dynamic segments', () => {
+    const candidates = getHtmlFallbackCandidates('/quests', path.join(buildDir, 'quests')).map(
+      (candidate: { filePath: string }) => path.relative(buildDir, candidate.filePath),
+    )
+
+    expect(candidates.slice(0, 2)).toEqual(['quests.html', path.join('quests', 'index.html')])
+  })
+
+  it('still falls through to the catch-all for a route the build never exported', () => {
+    expect(orderedExisting('/definitely-missing')).toEqual(['[...missing].html'])
+  })
+
+  it('offers no html candidates for asset paths', () => {
+    expect(getHtmlFallbackCandidates('/_expo/static/js/web/app.js', path.join(buildDir, '_expo'))).toEqual([])
   })
 })

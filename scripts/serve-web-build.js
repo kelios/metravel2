@@ -95,6 +95,21 @@ function getDynamicRouteFallbackCandidates(pathname, resolvedPath) {
   return candidates
 }
 
+// Полный порядок прод-nginx для HTML-маршрута: `try_files $uri $uri.html
+// $uri/index.html` (nginx.conf:829, `/quests` — :445), затем литеральный
+// динамический сегмент. Без шага `$uri/index.html` маршрут-папка (`/quests`,
+// `/trips`, `/trips/plan`) уезжал в корневой `[...missing].html`, и e2e
+// получали первым кадром «Страница не найдена» вместо своей страницы; под
+// нагрузкой эта оболочка висела до гидратации и роняла `gotoWithRetry` (#2175).
+function getHtmlFallbackCandidates(pathname, resolvedPath) {
+  if (path.extname(pathname)) return []
+  return [
+    { filePath: `${resolvedPath}.html`, replacements: {} },
+    { filePath: path.join(resolvedPath, 'index.html'), replacements: {} },
+    ...getDynamicRouteFallbackCandidates(pathname, resolvedPath),
+  ]
+}
+
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -508,9 +523,7 @@ const server = http.createServer((req, res) => {
 
     fs.readFile(resolvedPath, (err, data) => {
       if (err) {
-        const hasExtension = path.extname(pathname) !== ''
-        const htmlCandidate = hasExtension ? null : `${resolvedPath}.html`
-        const dynamicCandidates = hasExtension ? [] : getDynamicRouteFallbackCandidates(pathname, resolvedPath)
+        const htmlCandidates = getHtmlFallbackCandidates(pathname, resolvedPath)
 
         const sendIndexFallback = () => {
           const indexPath = path.join(buildDir, 'index.html')
@@ -545,18 +558,7 @@ const server = http.createServer((req, res) => {
           })
         }
 
-        if (htmlCandidate) {
-          fs.readFile(htmlCandidate, (htmlErr, htmlData) => {
-            if (!htmlErr) {
-              sendCompressed(req, res, 'text/html; charset=utf-8', htmlData, '.html')
-              return
-            }
-            tryDynamicFallback(dynamicCandidates)
-          })
-          return
-        }
-
-        tryDynamicFallback(dynamicCandidates)
+        tryDynamicFallback(htmlCandidates)
         return
       }
 
@@ -612,6 +614,7 @@ if (require.main === module) {
 
 module.exports = {
   getDynamicRouteFallbackCandidates,
+  getHtmlFallbackCandidates,
   isExpectedProxyTransportFailure,
   resolveApiProxyTarget,
 }
