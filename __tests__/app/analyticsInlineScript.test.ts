@@ -1,11 +1,13 @@
 import { getAnalyticsInlineScript } from '@/utils/analyticsInlineScript'
 import { SECRET_LINK_ROUTES } from '@/utils/secretLinkRoutes'
+import { isWebAutomationNavigator } from '@/utils/isWebAutomation'
 
 type Consent = { necessary: boolean; analytics: boolean }
 
 type SetupOptions = {
   host?: string
   consent?: Consent | null
+  navigator?: Record<string, unknown>
 }
 
 const TEST_METRIKA_ID = '12345678'
@@ -16,7 +18,11 @@ const originalDocument = (global as any).document
 const originalHistory = (global as any).history
 const originalNavigator = (global as any).navigator
 
-const setupDomEnv = ({ host = 'metravel.by', consent = { necessary: true, analytics: true } }: SetupOptions = {}) => {
+const setupDomEnv = ({
+  host = 'metravel.by',
+  consent = { necessary: true, analytics: true },
+  navigator = {},
+}: SetupOptions = {}) => {
   const headMock = {
     appendChild: jest.fn(),
   }
@@ -77,7 +83,7 @@ const setupDomEnv = ({ host = 'metravel.by', consent = { necessary: true, analyt
   }
 
   windowMock.window = windowMock
-  windowMock.navigator = {}
+  windowMock.navigator = navigator
 
   ;(global as any).window = windowMock
   ;(global as any).document = documentMock
@@ -420,6 +426,79 @@ describe('analytics inline script', () => {
     )
 
     jest.useRealTimers()
+  })
+
+  describe('web automation (#2192): one sign with utils/isWebAutomation.ts', () => {
+    const INTERACTION_EVENTS = ['pointerdown', 'keydown', 'touchstart', 'click', 'visibilitychange', 'pagehide']
+
+    const listenerFor = (windowMock: Record<string, any>, name: string) =>
+      windowMock.addEventListener.mock.calls.find((call: unknown[]) => call[0] === name)?.[1]
+
+    it('under webdriver nothing starts: no interaction listeners, no timer start, the loader entry point is held', () => {
+      jest.useFakeTimers()
+      try {
+        const { windowMock, createdScripts } = setupDomEnv({ navigator: { webdriver: true } })
+
+        runAnalyticsSnippet(windowMock, windowMock.document)
+
+        const registered = windowMock.addEventListener.mock.calls.map((call: unknown[]) => call[0])
+        expect(registered.filter((name: string) => INTERACTION_EVENTS.includes(name))).toEqual([])
+
+        jest.advanceTimersByTime(5000)
+        expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
+
+        // Баннер согласия, настройки cookie и utils/analytics.ts зовут этот вход.
+        windowMock.metravelLoadAnalytics()
+
+        expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
+        expect(windowMock.__metravelAnalyticsHeldByAutomation).toBe(true)
+        expect(windowMock.__metravelGaBootstrapped).toBeUndefined()
+        expect(windowMock.__metravelMetrikaLoading).toBeUndefined()
+        expect(createdScripts).toHaveLength(0)
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    it('without webdriver the first interaction starts both counters as before', () => {
+      const { windowMock, createdScripts } = setupDomEnv({ navigator: { webdriver: false } })
+
+      runAnalyticsSnippet(windowMock, windowMock.document)
+
+      const onPointerDown = listenerFor(windowMock, 'pointerdown')
+      expect(typeof onPointerDown).toBe('function')
+      expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
+
+      onPointerDown()
+
+      expect(windowMock.__metravelAnalyticsLoaded).toBe(true)
+      expect(windowMock.__metravelAnalyticsHeldByAutomation).toBeUndefined()
+      expect(createdScripts.map((entry) => entry.src)).toEqual(
+        expect.arrayContaining([
+          'https://mc.yandex.ru/metrika/tag.js',
+          `https://www.googletagmanager.com/gtag/js?id=${TEST_GA_ID}`,
+        ])
+      )
+    })
+
+    it.each([
+      ['webdriver: true', { webdriver: true }],
+      ['webdriver: false', { webdriver: false }],
+      ['no webdriver field', {}],
+      ['webdriver: "true"', { webdriver: 'true' }],
+      ['webdriver: ""', { webdriver: '' }],
+      ['webdriver: 1', { webdriver: 1 }],
+      ['webdriver: 0', { webdriver: 0 }],
+      ['webdriver: null', { webdriver: null }],
+    ])('inline check matches isWebAutomationNavigator for %s', (_label, navigatorValue) => {
+      const { windowMock } = setupDomEnv({ navigator: navigatorValue })
+
+      runAnalyticsSnippet(windowMock, windowMock.document)
+      windowMock.metravelLoadAnalytics()
+
+      const inlineSeesAutomation = windowMock.__metravelAnalyticsLoaded !== true
+      expect(inlineSeesAutomation).toBe(isWebAutomationNavigator(navigatorValue))
+    })
   })
 
   it('marks metrika bootstrap as failed when the external script cannot be loaded', () => {

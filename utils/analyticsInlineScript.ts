@@ -21,6 +21,11 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   var isProdHost = host === 'metravel.by' || host === 'www.metravel.by';
   if (!isProdHost) return;
 
+  // #2192: под web-автоматизацией (наши приёмочные пробы) счётчики не стартуют
+  // никаким путём. То же выражение, что isWebAutomationNavigator в
+  // utils/isWebAutomation.ts — пару держит analyticsInlineScript.test.ts.
+  var IS_WEB_AUTOMATION = !!(window.navigator && window.navigator.webdriver);
+
   var CONSENT_KEY = 'metravel_consent_v1';
   var HAS_METRIKA = ${metrikaId ? 'true' : 'false'};
   var HAS_GA = ${gaId ? 'true' : 'false'};
@@ -248,6 +253,12 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   function loadAnalytics() {
     if (!isAnalyticsAllowed()) return;
     if (window.__metravelAnalyticsLoaded) return;
+    // Единственное узкое место для всех входов: таймер, взаимодействие, уход со
+    // страницы, баннер согласия, настройки cookie и события utils/analytics.ts.
+    if (IS_WEB_AUTOMATION) {
+      window.__metravelAnalyticsHeldByAutomation = true;
+      return;
+    }
     if (hasSecretParams(window.location.href)) {
       window.__metravelAnalyticsHeldBySecret = true;
       return;
@@ -282,7 +293,6 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     var loadTimer = null;
     var events = ['pointerdown', 'keydown', 'touchstart', 'click'];
     var visibilityEvents = ['visibilitychange', 'pagehide'];
-    var disableAutoBootstrap = !!(window.navigator && window.navigator.webdriver);
 
     function cleanup() {
       for (var i = 0; i < events.length; i++) {
@@ -328,10 +338,6 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
       try { window.addEventListener(visibilityEvents[j], triggerOnLeave, { capture: true }); } catch (_e5) {}
     }
 
-    if (disableAutoBootstrap) {
-      return;
-    }
-
     function scheduleAfterLoad() {
       loadTimer = setTimeout(trigger, 1000);
     }
@@ -349,7 +355,8 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   // - Вскоре после полной загрузки страницы.
   // - Либо при уходе со страницы (visibilitychange/pagehide) для коротких сессий без кликов.
   // Это снижает влияние аналитики на LCP/TBT в initial render.
-  if (isAnalyticsAllowed()) {
+  // Под автоматизацией слушатели не навешиваются вовсе (#2192).
+  if (isAnalyticsAllowed() && !IS_WEB_AUTOMATION) {
     scheduleAnalyticsBootstrap();
   }
 })();

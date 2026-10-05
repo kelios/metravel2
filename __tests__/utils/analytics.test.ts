@@ -153,6 +153,40 @@ describe('utils/analytics', () => {
     }
   })
 
+  it('drops web events under web automation: nothing queued, the counters loader is not woken (#2192)', async () => {
+    jest.doMock('react-native', () => ({
+      Platform: { OS: 'web' },
+    }))
+    const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+    Object.defineProperty(globalThis, 'navigator', { value: { webdriver: true }, configurable: true })
+
+    const gtag = jest.fn()
+    const ym = jest.fn()
+    const metravelLoadAnalytics = jest.fn()
+    ;(global as any).window = {
+      addEventListener: jest.fn(),
+      localStorage: {
+        getItem: jest.fn(() => JSON.stringify({ necessary: true, analytics: true })),
+      },
+      metravelLoadAnalytics,
+      __metravelGaId: 'G-TEST123',
+      __metravelMetrikaId: 62803912,
+      __metravelMetrikaReady: false,
+    }
+
+    try {
+      const { sendAnalyticsEvent } = require('@/utils/analytics')
+      await sendAnalyticsEvent('quest_view', { quest_id: 1 })
+
+      expect(metravelLoadAnalytics).not.toHaveBeenCalled()
+      expect(gtag).not.toHaveBeenCalled()
+      expect(ym).not.toHaveBeenCalled()
+      expect((global as any).window.__metravelAnalyticsEventQueue).toBeUndefined()
+    } finally {
+      if (navigatorDescriptor) Object.defineProperty(globalThis, 'navigator', navigatorDescriptor)
+    }
+  })
+
   it('queues early web events until analytics providers become ready', async () => {
     jest.doMock('react-native', () => ({
       Platform: { OS: 'web' },

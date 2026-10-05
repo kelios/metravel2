@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { readConsent } from '@/utils/consent';
+import { isWebAutomation } from '@/utils/isWebAutomation';
 
 let hasWarnedMissingConfig = false;
 const WEB_ANALYTICS_QUEUE_KEY = '__metravelAnalyticsEventQueue';
@@ -27,6 +28,9 @@ type WebAnalyticsEvent = {
 };
 
 const isWebAnalyticsAllowed = () => {
+    // #2192: события наших приёмочных проб не копятся в очередь и не будят
+    // загрузчик счётчиков — тот же признак, что у инлайн-скрипта.
+    if (isWebAutomation) return false;
     const consent = readConsent();
     return !!consent?.analytics;
 };
