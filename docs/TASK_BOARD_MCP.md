@@ -142,6 +142,13 @@ curl -s -H "Authorization: Token $METRAVEL_TASK_BOARD_API_TOKEN" https://metrave
   discovery → implement → review → test → release силами профильных FE-агентов, со сдвигом
   статуса на борде на каждом шаге. Зеркалит ролевой пайплайн бэка
   (`../metravel-backend/.codex/team`; в этом репозитории такого каталога нет).
+- **Хук `board-compact`** (`.claude/hooks/board-compact.mjs`, PostToolUse) сжимает ответы борда до
+  попадания в контекст: `update`/`create` возвращают квитанцию из трёх строк вместо эха карточки,
+  `tasks_list`/`task_board` — одну строку на карточку, `task_get` — описание целиком без дублей
+  служебных полей. Причина — счёт сессии равен «контекст × ходы», а сервер отдавал 10–27 тыс.
+  символов на каждую запись. Fail-open: ошибка и непонятная форма ответа остаются как есть;
+  `BOARD_COMPACT=0` выключает сжатие. Проверять запись нужно по квитанции (статус и связи в ней
+  есть), а не повторным `task_get`. Тест — `__tests__/scripts/board-compact-hook.test.ts`.
 
 ### Обязательный pre-create problem-history gate
 
