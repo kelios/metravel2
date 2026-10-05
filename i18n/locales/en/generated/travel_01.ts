@@ -50,7 +50,7 @@ export const travelGenerated1 = {
   "components.listTravel.ListTravelBase_helpers.poprobuyte_pozzhe_c8da8052": "Please try again later.",
   "components.listTravel.ListTravelBase_helpers.proverte_napisanie_4b385427": "Check your spelling",
   "components.listTravel.ListTravelBase_helpers.puteshestviya_poyavyatsya_zdes_kogda_budut_d_32234ae1": "Travel will appear here when added.",
-  "components.listTravel.ListTravelBase_helpers.slozhnost_86555384": "complexity",
+  "components.listTravel.ListTravelBase_helpers.slozhnost_86555384": "difficulty",
   "components.listTravel.ListTravelBase_helpers.slozhnost_91d3c863": "Difficulty",
   "components.listTravel.ListTravelBase_helpers.sortirovka_37dd0492": "sorting",
   "components.listTravel.ListTravelBase_helpers.sortirovka_value1_31551a22": "Sort: {{value1}}",

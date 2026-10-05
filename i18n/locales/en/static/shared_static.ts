@@ -174,7 +174,7 @@ export const sharedStaticResources = {
   "hooks.useTravelWizard.plyusy_minusy_rekomendatsii_i_byudzhet_chtob_1238afbb": "Pros/cons, recommendations and budget - to make the route more useful",
   "hooks.useTravelWizard.proverte_gotovnost_i_vyberite_status_chernov_4e8e3917": "Check readiness and select status - draft or moderation",
   "hooks.useTravelWizard.publikatsiya_puteshestviya_e195efbe": "Travel publication",
-  "hooks.useTravelWizard.transport_slozhnost_sezonnost_viza_i_drugie__71b95c16": "Transport, complexity, seasonality, visa and other settings",
+  "hooks.useTravelWizard.transport_slozhnost_sezonnost_viza_i_drugie__71b95c16": "Transport, difficulty, seasonality, visa and other settings",
   "services.notifications.ezhenedelnyy_daydzhest_i_rekomendatsii_marsh_a39d7cec": "Weekly digest and route recommendations",
   "services.notifications.novye_marshruty_obnovleniya_izbrannogo_moder_601c7f00": "New routes, favorites updates, moderation",
   "services.notifications.novye_soobscheniya_v_chatah_i_otvety_na_komm_4fe15b34": "New chat messages and replies to comments",

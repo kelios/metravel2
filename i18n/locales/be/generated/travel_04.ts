@@ -363,7 +363,7 @@ export const travelGenerated4 = {
   "hooks.useTravelFilters.companion.friends": "Сябры",
   "hooks.useTravelFilters.companion.family": "Сям'я",
   "hooks.useTravelFilters.complexity.easy": "Лёгка",
-  "hooks.useTravelFilters.complexity.medium": "Сярэдня",
+  "hooks.useTravelFilters.complexity.medium": "Сярэдне",
   "hooks.useTravelFilters.complexity.hard": "Цяжка",
   "hooks.useTravelFilters.month.january": "Студзень",
   "hooks.useTravelFilters.month.february": "Люты",

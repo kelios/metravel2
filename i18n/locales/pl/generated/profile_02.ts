@@ -178,7 +178,7 @@ export const profileGenerated2 = {
   "components.settings.StravaSettingsSection.zagruzhaem_aktivnosti_strava_ad2c8170": "Ładowanie aktywności Strava...",
   "components.settings.StravaSettingsSection.zagruzit_esche_a79ab121": "Załaduj więcej",
   "components.settings.StravaSettingsSection.zagruzka_33437c29": "Ładowanie...",
-  "components.settings.ThemeSection.po_umolchaniyu_svetlaya_b13d797b": "Domyślne światło",
+  "components.settings.ThemeSection.po_umolchaniyu_svetlaya_b13d797b": "Domyślnie jasny",
   "components.settings.ThemeSection.tema_oformleniya_78a345c8": "Motyw",
   "components.settings.ThemeSection.vybor_temy_oformleniya_dbeae2db": "Wybór motywu",
   "hooks.usePrivacySettings.ne_udalos_sohranit_nastroyki_privatnosti_pop_6adb578d": "Nie udało się zapisać ustawień prywatności. Spróbuj ponownie później.",

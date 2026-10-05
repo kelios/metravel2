@@ -246,7 +246,7 @@ export const tripsGenerated1 = {
   "components.trips.planning.TripPlanningEmptyState.zaplanirovat_poezdku_b9077e18": "Запланувати поїздку",
   "components.trips.planning.TripPlanRouteMap.karta_marshruta_8fbc6a38": "Карта маршруту",
   "components.trips.planning.TripPlanRouteMap.liniya_priblizitelnaya_proverte_dorogu_ili_t_9fb768f4": "Лінія приблизна: перевірте дорогу або стежку перед поїздкою.",
-  "components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6": "Натисніть на карту, щоб додати крапку. Після натискання можна відразу перейменувати її.",
+  "components.trips.planning.TripPlanRouteMap.nazhmite_na_kartu_chtoby_dobavit_tochku_posl_52845bf6": "Натисніть на карту, щоб додати точку. Після натискання можна відразу перейменувати її.",
   "components.trips.planning.TripPlanRouteMap.redaktirovat_0c9026cb": "Редагувати",
   "components.trips.planning.TripPlanRouteMap.tochki_marshruta_pokazany_na_karte_14e6732e": "Точки маршруту показані на карті.",
   "components.trips.planning.TripPlanRouteMap.zagruzka_karty_marshruta_5f48efc0": "Завантаження карти маршруту...",

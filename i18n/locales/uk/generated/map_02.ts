@@ -128,7 +128,7 @@ export const mapGenerated2 = {
   "components.UserPoints.ImportWizard.import_tochek_0a76b9d2": "Імпорт точок",
   "components.UserPoints.ImportWizard.import_zavershen_13bec714": "Імпорт завершено!",
   "components.UserPoints.ImportWizard.importirovat_0ee7724f": "Імпортувати",
-  "components.UserPoints.ImportWizard.naydeno_tochek_bc25057d": "Знайдено крапок:",
+  "components.UserPoints.ImportWizard.naydeno_tochek_bc25057d": "Знайдено точок: ",
   "components.UserPoints.ImportWizard.nazad_ec1e4298": "Назад",
   "components.UserPoints.ImportWizard.ne_udalos_razobrat_fayl_podderzhivayutsya_km_4d0757b1": "Не вдалося розібрати файл. Підтримуються: KML, KMZ, GPX, GeoJSON, JSON (Google Takeout).",
   "components.UserPoints.ImportWizard.obnovleno_value1_346dbca5": "Оновлено: {{value1}}",

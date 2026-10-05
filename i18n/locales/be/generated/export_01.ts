@@ -92,7 +92,7 @@ export const exportGenerated1 = {
   "services.book.BookHtmlExportService.progress.notLoaded": "(не загружана:",
   "services.book.BookHtmlExportService.progress.fontsLoading": "• шрыфты загружаюцца…",
   "services.book.BookHtmlExportService.progress.fontsReady": "• шрыфты ✓",
-  "services.pdf_export.generators.v2.runtime.atlas.htmlPages.ukazatel_tochek_f21c5b5d": "УКАЗАЛЬНІК ПУНКТ",
+  "services.pdf_export.generators.v2.runtime.atlas.htmlPages.ukazatel_tochek_f21c5b5d": "УКАЗАЛЬНІК КРОПАК",
   "services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.htmlDocument.sozdano_na_metravel_by_faba20d9": "Створана на metravel.by",
   "services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.inlineGallery.foto_puteshestviya_720ec355": "Фота падарожжа",
   "services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.inlineGallery.foto_value1_2d93b666": "Фота {{value1}}",

@@ -178,7 +178,7 @@ export const questsGenerated1 = {
   "components.quests.QuestWizard.progress_ochischen_54659954": "Прогрес очищений",
   "components.quests.QuestWizard.progressClearedServerPending": "Прогрес очищений — із сервера його видалимо, щойно з'явиться мережа",
   "components.quests.QuestWizard.sbrosit_progress_ffa455c0": "Скинути прогрес?",
-  "components.quests.QuestWizard.v_kveste_net_tochek_dlya_karty_e2d9a5ea": "У квесті немає крапок для картки",
+  "components.quests.QuestWizard.v_kveste_net_tochek_dlya_karty_e2d9a5ea": "У квесті немає точок для карти",
   "components.quests.QuestWizard.vse_vashi_otvety_budut_udaleny_103ee6ff": "Всі ваші відповіді будуть видалені.",
   "components.quests.questWizardHelpers.koordinaty_skopirovany_38015d96": "Координати скопійовані",
   "components.quests.questWizardHelpers.ne_udalos_otkryt_karty_proverte_chto_ustanov_a0858d1f": "Не вдалося відкрити карту. Перевірте, чи встановлено потрібну програму.",

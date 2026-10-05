@@ -135,7 +135,7 @@ export const questsGenerated2 = {
   "app.tabs.quests.city.index.routeDuration": "about {{value1}}",
   "app.tabs.quests.city.index.routeDifficulty": "difficulty — {{value1}}",
   "app.tabs.quests.city.index.routeDifficultyEasy": "easy",
-  "app.tabs.quests.city.index.routeDifficultyMedium": "medium",
+  "app.tabs.quests.city.index.routeDifficultyMedium": "moderate",
   "app.tabs.quests.city.index.routeDifficultyHard": "hard",
   "app.tabs.quests.city.index.routeOptional": "Optional — {{value1}}: you can skip them.",
   "app.tabs.quests.city.index.routeEnds": "Start — {{value1}}, finish — {{value2}}.",

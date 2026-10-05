@@ -400,7 +400,7 @@ export const exportGenerated1 = {
   "services.pdfExport.runtime.map.meters": "{{value1}} m",
   "services.pdfExport.runtime.map.distance": "{{value1}} km",
   "services.pdfExport.runtime.atlas.travelNounForms": "travel|travelling|travelling|travelling",
-  "services.pdfExport.runtime.atlas.pointNounForms": "dot|dots|dots|dots",
+  "services.pdfExport.runtime.atlas.pointNounForms": "point|points|points|points",
   "services.pdfExport.runtime.atlas.countryNounForms": "country|countries|countries|countries",
   "services.pdfExport.runtime.atlas.travelFallback": "Travel {{value1}}",
   "services.pdfExport.runtime.atlas.pointFallback": "Point {{value1}}",
