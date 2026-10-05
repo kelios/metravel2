@@ -17,6 +17,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import type { ShareButtonsPdfExportState } from '@/components/travel/ShareButtonsPdfExportBridge';
+import { isPrintAvailable } from '@/utils/printAvailability';
 import { devWarn } from '@/utils/logger';
 import { translate as i18nT } from '@/i18n'
 
@@ -236,8 +237,9 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
       color: palette.neutral,
       group: 'quick',
     },
-    // Экспорт в PDF доступен только в веб-версии
-    ...(Platform.OS === 'web'
+    // Экспорт в PDF — там, где есть чем печатать: окно браузера или системный
+    // диалог печати приложения (#2119); в сборке без модуля печати кнопки нет.
+    ...(isPrintAvailable()
       ? [{
           key: 'export' as const,
           label: isGenerating ? `PDF ${progress}%` : i18nT('travel:components.travel.ShareButtons.pdf_kniga_e2013fce'),
@@ -456,7 +458,7 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
                 ))}
               </View>
             )}
-            {isGenerating && Platform.OS === 'web' && (
+            {isGenerating && (
               <View style={styles.progressContainer}>
                 <View style={[styles.progressBar, { width: `${progress}%` }]} />
                 <Text style={styles.progressText}>
@@ -472,7 +474,7 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
           </>
         )}
       </View>
-      {Platform.OS === 'web' && shouldMountPdfExport && (
+      {shouldMountPdfExport && (
         <Suspense fallback={null}>
           <ShareButtonsPdfExportBridgeLazy
             travel={travel}

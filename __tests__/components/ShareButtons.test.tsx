@@ -30,6 +30,12 @@ jest.mock('@/utils/toast', () => ({
   showToast: (arg: unknown) => mockShowToast(arg),
 }));
 
+// #2119: в приложении кнопка книги зависит от модуля печати (expo-print).
+let mockPrintAvailable = true;
+jest.mock('@/utils/printAvailability', () => ({
+  isPrintAvailable: () => mockPrintAvailable,
+}));
+
 // Mock window for web platform
 const mockWindow = {
   location: { href: 'https://metravel.by/travels/test-travel' },
@@ -76,6 +82,28 @@ describe('ShareButtons', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  describe('кнопка «PDF / книга» (#2119)', () => {
+    afterEach(() => {
+      mockPrintAvailable = true;
+    });
+
+    it('на сайте кнопка есть', () => {
+      (Platform.OS as any) = 'web';
+      expect(render(<ShareButtons travel={mockTravel} />).queryByText('PDF / книга')).not.toBeNull();
+    });
+
+    it.each(['ios', 'android'])('в приложении %s кнопка есть, когда в сборке есть модуль печати', (os) => {
+      (Platform.OS as any) = os;
+      expect(render(<ShareButtons travel={mockTravel} />).queryByText('PDF / книга')).not.toBeNull();
+    });
+
+    it.each(['ios', 'android'])('в сборке приложения %s без модуля печати кнопки нет', (os) => {
+      (Platform.OS as any) = os;
+      mockPrintAvailable = false;
+      expect(render(<ShareButtons travel={mockTravel} />).queryByText('PDF / книга')).toBeNull();
+    });
   });
 
   it('should render share buttons', () => {

@@ -1,5 +1,5 @@
 import type { NavigationIconName } from '@/constants/navigationIcons'
-import { isNavRouteAvailable } from '@/constants/platformNavRoutes'
+import { BOOK_EXPORT_ROUTE, isBookExportEntryVisible, isNavRouteAvailable } from '@/constants/platformNavRoutes'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 import { routes } from '@/utils/routes'
@@ -148,14 +148,15 @@ const buildAccountEntries = ({
     },
   ]
 
-  // Экспорт в PDF («Книга путешествий») скрыт в мобильной версии сайта; на native
-  // его отсекает общая политика маршрутов (#495, #2135) — фильтр в конце.
-  if (surface === 'desktop') {
+  // Экспорт в PDF («Книга путешествий»): на сайте — только десктоп, в приложении —
+  // на любой поверхности, когда есть модуль печати (#2119). Правило одно на все
+  // входы — `isBookExportEntryVisible`.
+  if (isBookExportEntryVisible({ isDesktopSurface: surface === 'desktop' }, platform)) {
     entries.push({
       key: 'export',
       title: i18nT('navigation:components.layout.AccountMenu.eksport_v_pdf_234b675b'),
       icon: 'file-text',
-      target: { kind: 'route', path: '/export' },
+      target: { kind: 'route', path: BOOK_EXPORT_ROUTE },
     })
   }
 

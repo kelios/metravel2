@@ -23,13 +23,7 @@ export function withPrintActionHandler(html: string): string {
   return bodyEnd === -1 ? html + PRINT_ACTION_SCRIPT : html.slice(0, bodyEnd) + PRINT_ACTION_SCRIPT + html.slice(bodyEnd)
 }
 
-/**
- * Постоянно true: от ответа зависит разметка (кнопки печати), а она не должна
- * различаться между SSG-сборкой и гидрацией. Нет окна — beginPrint ответит 'unavailable'.
- */
-export function isPrintAvailable(): boolean {
-  return true
-}
+export { isPrintAvailable } from './printAvailability.web'
 
 /** Открывает окно синхронно — вызывать до первого await в обработчике клика. */
 export function beginPrint(): PrintSession {

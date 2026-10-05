@@ -328,6 +328,7 @@
     "leaflet.markercluster": "^1.5.3",
     "lightningcss": "1.32.0",
     "metro-react-native-babel-transformer": "^0.77.0",
+    "parse5": "^7.3.0",
     "picomatch": ">=2.3.2",
     "qrcode": "^1.5.4",
     "quill": "^2.0.3",

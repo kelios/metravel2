@@ -32,12 +32,25 @@ import type {
   TableBlock,
   ParsedContentBlock,
 } from './contentParser/types';
+import { HTML_ELEMENT_NODE, HTML_NAMESPACE, HTML_TEXT_NODE } from './contentParser/htmlTree.types';
+import type { HtmlTreeElement, HtmlTreeNode, ParseHtmlBody } from './contentParser/htmlTree.types';
+import { parseHtmlBody as platformParseHtmlBody } from './contentParser/htmlTree';
 import { translate as i18nT } from '@/i18n';
+
+// `instanceof HTMLElement` без глобала: HTML-элемент — тот, что в пространстве имён HTML.
+const isHtmlElement = (element: HtmlTreeElement | null | undefined): element is HtmlTreeElement =>
+  !!element && element.namespaceURI === HTML_NAMESPACE;
+
 /**
  * Парсер HTML/Markdown контента
  * ✅ ИСПРАВЛЕНИЕ: Объединяет текст в нормальные абзацы, нормализует пробелы
+ *
+ * #2119: дерево HTML читается через `contentParser/htmlTree` (web — DOMParser,
+ * приложения — parse5); браузерных глобалов здесь нет.
  */
 export class ContentParser {
+  constructor(private readonly parseHtmlBody: ParseHtmlBody = platformParseHtmlBody) {}
+
   private parseDimension(value: string | null): number | undefined {
     if (!value) return undefined;
     const numeric = parseInt(value, 10);
@@ -134,23 +147,34 @@ export class ContentParser {
   /**
    * Извлекает весь текст из элемента, объединяя вложенные элементы
    */
-  private extractTextContent(element: HTMLElement, preserveLineBreaks = false): string {
-    // Клонируем элемент, чтобы не изменять оригинал
-    const clone = element.cloneNode(true) as HTMLElement;
-    
-    // Удаляем скрипты и стили
-    const scripts = clone.querySelectorAll('script, style');
-    scripts.forEach(el => el.remove());
-    
-    // Заменяем <br> на переносы строк (или пробелы, если переносы не нужны)
-    const brs = clone.querySelectorAll('br');
-    brs.forEach(br => {
-      br.replaceWith(document.createTextNode(preserveLineBreaks ? '\n' : ' '));
-    });
-    
-    // Извлекаем текстовое содержимое
-    let text = clone.textContent || '';
-    
+  private extractTextContent(element: HtmlTreeElement, preserveLineBreaks = false): string {
+    // Текст потомков по порядку: вложенные <script>/<style> пропускаются, <br>
+    // становится переносом строки (или пробелом, если переносы не нужны).
+    // Обход вместо «клон → remove() → replaceWith() → textContent»: результат
+    // тот же, но без `document.createTextNode` и без изменения дерева.
+    const lineBreak = preserveLineBreaks ? '\n' : ' ';
+    let text = '';
+    const collect = (parent: HtmlTreeNode) => {
+      const children = parent.childNodes;
+      for (let index = 0; index < children.length; index += 1) {
+        const child = children[index];
+        if (child.nodeType === HTML_TEXT_NODE) {
+          text += child.textContent || '';
+          continue;
+        }
+        if (child.nodeType !== HTML_ELEMENT_NODE) continue;
+
+        const tagName = (child as HtmlTreeElement).tagName.toLowerCase();
+        if (tagName === 'script' || tagName === 'style') continue;
+        if (tagName === 'br') {
+          text += lineBreak;
+          continue;
+        }
+        collect(child);
+      }
+    };
+    collect(element);
+
     // Нормализуем текст
     text = preserveLineBreaks
       ? this.normalizeTextPreserveLineBreaks(text)
@@ -171,10 +195,7 @@ export class ContentParser {
     // Очищаем HTML от React Native компонентов
     const cleaned = this.cleanHtml(html);
 
-    // Создаем временный DOM элемент для парсинга
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(cleaned, 'text/html');
-    const body = doc.body;
+    const body = this.parseHtmlBody(cleaned);
 
     if (!body) {
       return [];
@@ -202,9 +223,9 @@ export class ContentParser {
    * Парсит один DOM узел
    * ✅ ИСПРАВЛЕНИЕ: Не создает блоки для текстовых узлов отдельно
    */
-  private parseNode(node: Node): ParsedContentBlock | ParsedContentBlock[] | null {
+  private parseNode(node: HtmlTreeNode): ParsedContentBlock | ParsedContentBlock[] | null {
     // ✅ ИСПРАВЛЕНИЕ: Игнорируем текстовые узлы на верхнем уровне - они будут обработаны в parseParagraph
-    if (node.nodeType === Node.TEXT_NODE) {
+    if (node.nodeType === HTML_TEXT_NODE) {
       const text = this.normalizeText(node.textContent || '');
       // Возвращаем null для текстовых узлов - они будут обработаны родительским элементом
       return text ? {
@@ -213,11 +234,11 @@ export class ContentParser {
       } : null;
     }
 
-    if (node.nodeType !== Node.ELEMENT_NODE) {
+    if (node.nodeType !== HTML_ELEMENT_NODE) {
       return null;
     }
 
-    const element = node as HTMLElement;
+    const element = node as HtmlTreeElement;
     const tagName = element.tagName.toLowerCase();
 
     switch (tagName) {
@@ -283,7 +304,7 @@ export class ContentParser {
   /**
    * Парсит заголовок
    */
-  private parseHeading(element: HTMLElement): HeadingBlock | null {
+  private parseHeading(element: HtmlTreeElement): HeadingBlock | null {
     const level = parseInt(element.tagName.charAt(1)) as 1 | 2 | 3 | 4 | 5 | 6;
     const text = this.normalizeText(this.extractTextContent(element));
     
@@ -301,7 +322,7 @@ export class ContentParser {
    * ✅ ИСПРАВЛЕНИЕ: Объединяет весь текст из вложенных элементов
    */
   private parseParagraph(
-    element: HTMLElement
+    element: HtmlTreeElement
   ): ParsedContentBlock | ParsedContentBlock[] | null {
     // Проверяем, не является ли это специальным блоком
     const specialBlock = this.detectSpecialBlock(element);
@@ -328,14 +349,14 @@ export class ContentParser {
 
       const childNodes = Array.from(element.childNodes);
       for (const child of childNodes) {
-        if (child.nodeType === Node.TEXT_NODE) {
+        if (child.nodeType === HTML_TEXT_NODE) {
           const t = this.normalizeTextPreserveLineBreaks(child.textContent || '');
           if (t) textParts.push(t);
           continue;
         }
 
-        if (child.nodeType === Node.ELEMENT_NODE) {
-          const el = child as HTMLElement;
+        if (child.nodeType === HTML_ELEMENT_NODE) {
+          const el = child as HtmlTreeElement;
           const tag = el.tagName.toLowerCase();
 
           if (tag === 'img') {
@@ -353,7 +374,7 @@ export class ContentParser {
             if (txt) textParts.push(txt);
             flushText();
             nestedImgs.forEach((img) => {
-              const imgBlock = this.parseImage(img as any);
+              const imgBlock = this.parseImage(img);
               if (imgBlock) blocks.push(imgBlock);
             });
             continue;
@@ -404,7 +425,7 @@ export class ContentParser {
   /**
    * Парсит список
    */
-  private parseList(element: HTMLElement): ListBlock | null {
+  private parseList(element: HtmlTreeElement): ListBlock | null {
     const ordered = element.tagName.toLowerCase() === 'ol';
     const items: string[] = [];
 
@@ -428,13 +449,13 @@ export class ContentParser {
   /**
    * Парсит цитату
    */
-  private parseQuote(element: HTMLElement): QuoteBlock | null {
+  private parseQuote(element: HtmlTreeElement): QuoteBlock | null {
     const text = this.normalizeText(this.extractTextContent(element));
     if (!text || text.length === 0) return null;
 
     // Пытаемся найти автора (обычно в <cite> или <footer>)
     const cite = element.querySelector('cite, footer');
-    const author = cite instanceof HTMLElement ? this.normalizeText(this.extractTextContent(cite)) : undefined;
+    const author = isHtmlElement(cite) ? this.normalizeText(this.extractTextContent(cite)) : undefined;
 
     return {
       type: 'quote',
@@ -446,7 +467,7 @@ export class ContentParser {
   /**
    * Парсит изображение
    */
-  private parseImage(element: HTMLElement): ImageBlock | null {
+  private parseImage(element: HtmlTreeElement): ImageBlock | null {
     const src = element.getAttribute('src') || '';
     if (!src) return null;
 
@@ -481,7 +502,7 @@ export class ContentParser {
   /**
    * Парсит figure (может содержать изображение с подписью или галерею)
    */
-  private parseFigure(element: HTMLElement): ParsedContentBlock | null {
+  private parseFigure(element: HtmlTreeElement): ParsedContentBlock | null {
     const images = element.querySelectorAll('img');
     const className = (element.className || '').toLowerCase();
     
@@ -490,7 +511,7 @@ export class ContentParser {
     if (images.length === 1) {
       // Один и тот же путь сохраняет layout, размеры, alt и подпись независимо
       // от того, пришло фото как p > img или figure > img + figcaption.
-      return this.parseImage(images[0] as HTMLElement);
+      return this.parseImage(images[0]);
     } else {
       // Галерея изображений
       const galleryImages = Array.from(images).map((img) => ({
@@ -515,7 +536,7 @@ export class ContentParser {
    * Парсит контейнер (div, section) - может содержать специальные блоки
    * ✅ ИСПРАВЛЕНИЕ: Объединяет текст из вложенных элементов
    */
-  private parseContainer(element: HTMLElement): ParsedContentBlock | ParsedContentBlock[] | null {
+  private parseContainer(element: HtmlTreeElement): ParsedContentBlock | ParsedContentBlock[] | null {
     // Проверяем на специальные блоки
     const specialBlock = this.detectSpecialBlock(element);
     if (specialBlock) {
@@ -578,16 +599,16 @@ export class ContentParser {
    * заголовком (он же прижимается к первому блоку ответа), остальное содержимое
    * разбирается обычными правилами — абзацы, списки, картинки.
    */
-  private parseDetails(element: HTMLElement): ParsedContentBlock | ParsedContentBlock[] | null {
+  private parseDetails(element: HtmlTreeElement): ParsedContentBlock | ParsedContentBlock[] | null {
     const blocks: ParsedContentBlock[] = [];
 
     for (const child of Array.from(element.childNodes)) {
       const isSummary =
-        child.nodeType === Node.ELEMENT_NODE &&
-        (child as HTMLElement).tagName.toLowerCase() === 'summary';
+        child.nodeType === HTML_ELEMENT_NODE &&
+        (child as HtmlTreeElement).tagName.toLowerCase() === 'summary';
 
       if (isSummary) {
-        const question = this.normalizeText(this.extractTextContent(child as HTMLElement));
+        const question = this.normalizeText(this.extractTextContent(child as HtmlTreeElement));
         if (question) {
           blocks.push({ type: 'heading', level: 4, text: question });
         }
@@ -610,7 +631,7 @@ export class ContentParser {
   /**
    * Определяет специальный блок (Совет, Важно, и т.д.)
    */
-  private detectSpecialBlock(element: HTMLElement): InfoBlock | null {
+  private detectSpecialBlock(element: HtmlTreeElement): InfoBlock | null {
     const className = element.className?.toLowerCase() || '';
     const text = this.normalizeText(this.extractTextContent(element));
     
@@ -666,16 +687,16 @@ export class ContentParser {
   /**
    * Извлекает заголовок из элемента (обычно первый strong/b или специальный класс)
    */
-  private extractTitle(element: HTMLElement): string | undefined {
+  private extractTitle(element: HtmlTreeElement): string | undefined {
     const titleElement = element.querySelector('strong, b, .title, .heading, h1, h2, h3, h4, h5, h6');
-    if (!(titleElement instanceof HTMLElement)) return undefined;
+    if (!isHtmlElement(titleElement)) return undefined;
     return this.normalizeText(this.extractTextContent(titleElement)) || undefined;
   }
 
   /**
    * Парсит код
    */
-  private parseCode(element: HTMLElement): CodeBlock | null {
+  private parseCode(element: HtmlTreeElement): CodeBlock | null {
     const code = this.normalizeText(element.textContent || '');
     if (!code || code.length === 0) return null;
 
@@ -691,7 +712,7 @@ export class ContentParser {
   /**
    * Парсит таблицу
    */
-  private parseTable(element: HTMLElement): TableBlock | null {
+  private parseTable(element: HtmlTreeElement): TableBlock | null {
     const rows = element.querySelectorAll('tr');
     if (rows.length === 0) return null;
 

@@ -10,6 +10,7 @@ import { Caption } from '@/components/ui/Typography';
 import UIButton from '@/components/ui/Button';
 import ProgressIndicator from '@/components/ui/ProgressIndicator';
 import BookSettingsModal from '@/components/export/BookSettingsModal';
+import { isBookSettingsWindowAvailable } from '@/components/export/bookSettingsWindow';
 import SelectedTravelOrderCard from './SelectedTravelOrderCard';
 import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -293,7 +294,7 @@ function ListTravelExportControls({
           </View>
 
           <View style={[asViewStyle(s.exportBarButtons), isMobile ? asViewStyle(s.exportBarButtonsMobile) : null]}>
-            {hasSelection && (
+            {hasSelection && isBookSettingsWindowAvailable() && (
               <CompactActionLink
                 label={i18nT('travel:components.listTravel.ListTravelExportControls.nastroyki_bd33425d')}
                 onPress={handleOpenSettings}
@@ -312,7 +313,7 @@ function ListTravelExportControls({
         </View>
 
         {/* Progress bar */}
-        {pdfExport.isGenerating && isWeb && (
+        {pdfExport.isGenerating && (
           <View style={asViewStyle(s.progressWrapper)}>
             <ProgressIndicator
               progress={pdfExport.progress ?? 0}

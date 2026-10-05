@@ -3,20 +3,11 @@
 // «Сохранить как PDF») через expo-print. expo-print — native-модуль: в
 // сборках, где его нет, он не подгружается (его require бросает на старте),
 // а печать честно отвечает 'unavailable'.
-import { requireOptionalNativeModule } from 'expo'
+import { isPrintAvailable } from './printAvailability.native'
 import type { PrintOptions, PrintResult, PrintSession } from './printHtml.types'
 
 export type { PrintOptions, PrintResult, PrintSession } from './printHtml.types'
-
-const PRINT_NATIVE_MODULE = 'ExpoPrint'
-
-export function isPrintAvailable(): boolean {
-  try {
-    return requireOptionalNativeModule(PRINT_NATIVE_MODULE) != null
-  } catch {
-    return false
-  }
-}
+export { isPrintAvailable }
 
 /**
  * Отмена пользователем — по коду ошибки expo-print или по причине (#2160, см. ниже)

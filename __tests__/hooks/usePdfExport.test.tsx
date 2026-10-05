@@ -248,26 +248,23 @@ describe('usePdfExport', () => {
   });
 
   describe('openPrintBook', () => {
-    it('должен показывать тост, если нет DOM (генераторам книги нужен DOMParser)', async () => {
+    it('без DOMParser книга собирается и уходит в печать — гейта «только в веб-версии» больше нет (#2119)', async () => {
       const originalDomParser = (global as any).DOMParser;
       delete (global as any).DOMParser;
 
-      const { result } = renderHook(() => usePdfExport(mockTravels));
+      try {
+        const { result } = renderHook(() => usePdfExport(mockTravels));
 
-      await act(async () => {
-        await result.current.openPrintBook(mockSettings);
-      });
+        await act(async () => {
+          await result.current.openPrintBook(mockSettings);
+        });
 
-      expect(mockShowToast).toHaveBeenCalledWith({
-        type: 'info',
-        text1: 'Недоступно',
-        text2: 'Просмотр книги и печать доступны только в веб-версии MeTravel',
-        position: 'bottom',
-      });
-      expect(mockDiscardPendingBookPreviewWindow).toHaveBeenCalledTimes(1);
-      expect(Alert.alert).not.toHaveBeenCalled();
-
-      (global as any).DOMParser = originalDomParser;
+        expect(mockGenerateTravelsHtml).toHaveBeenCalledTimes(1);
+        expect(mockShowToast).not.toHaveBeenCalledWith(expect.objectContaining({ text1: 'Недоступно' }));
+        expect(mockDiscardPendingBookPreviewWindow).not.toHaveBeenCalled();
+      } finally {
+        (global as any).DOMParser = originalDomParser;
+      }
     });
 
     it('должен показывать предупреждение, если не выбрано ни одного путешествия', async () => {

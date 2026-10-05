@@ -5,8 +5,9 @@
 // реальные; подменены только границы: сеть (файлы маршрута), canvas (снимок
 // карты), генератор QR, случайность цитат и текущая дата.
 //
-// Эталоны сняты на коде ДО замены разборщика: любое изменение web-вывода
-// роняет этот тест. Перезапись — `UPDATE_PDF_BOOK_GOLDEN=1 npx jest <этот файл>`.
+// Эталоны сняты на коде ДО замены разборщика (коммит 974405d43): любое изменение
+// web-вывода роняет этот тест. Перезапись — `UPDATE_PDF_BOOK_GOLDEN=1 npx jest
+// <этот файл>`. Те же эталоны читает native-тест `bookGolden.native.test.ts`.
 import path from 'path'
 import { Platform } from 'react-native'
 
@@ -26,6 +27,15 @@ import {
   toTravel,
 } from '../../fixtures/pdfBook/corpus'
 import { expectToMatchGoldenFile } from '../../helpers/goldenFile'
+
+// Jest по умолчанию берёт платформенный файл приложений (`htmlTree.native.ts`);
+// здесь проверяется web, поэтому дерево HTML — явно браузерное (`DOMParser`).
+jest.mock('@/services/pdf-export/parsers/contentParser/htmlTree', () =>
+  jest.requireActual('@/services/pdf-export/parsers/contentParser/htmlTree.web')
+)
+
+// То же для обвязки печати: окно браузера получает панель «Печать».
+jest.mock('@/services/book/bookPrintChrome', () => jest.requireActual('@/services/book/bookPrintChrome.web'))
 
 jest.mock('qrcode', () => ({
   toDataURL: jest.fn((text: string) => Promise.resolve(`data:image/png;base64,QR:${text}`)),
@@ -76,7 +86,10 @@ describe('эталоны PDF-книги (web)', () => {
     ;(Platform as { OS: string }).OS = originalPlatform
   })
 
+  let domParserSpy: jest.SpyInstance
+
   beforeEach(() => {
+    domParserSpy = jest.spyOn(DOMParser.prototype, 'parseFromString')
     jest.spyOn(Math, 'random').mockReturnValue(0.42)
     mockCanvasSnapshot.mockReset().mockResolvedValue(MAP_SNAPSHOT)
     mockLeafletSnapshot.mockReset().mockResolvedValue(null)
@@ -102,6 +115,10 @@ describe('эталоны PDF-книги (web)', () => {
         result[document.key] = parser.parse(document.html)
       }
       expectToMatchGoldenFile(`${JSON.stringify(result, null, 2)}\n`, parseGolden(group))
+      // Страховка от тихой подмены: описания разбирал именно браузерный DOMParser
+      // (пустую строку разбор отдаёт сразу, до дерева).
+      const parsedDocuments = (groups.get(group) ?? []).filter((document) => document.html.trim().length > 0)
+      expect(domParserSpy).toHaveBeenCalledTimes(parsedDocuments.length)
     })
   })
 
@@ -125,6 +142,7 @@ describe('эталоны PDF-книги (web)', () => {
         { isPremium: false }
       )
       expectToMatchGoldenFile(html, bookGolden('catalog-two-travels-free'))
+      expect(domParserSpy).toHaveBeenCalled()
     })
 
     it('одно путешествие («Предпросмотр PDF»): настройки по умолчанию, снимка карты нет', async () => {
@@ -136,6 +154,7 @@ describe('эталоны PDF-книги (web)', () => {
         { isPremium: false }
       )
       expectToMatchGoldenFile(html, bookGolden('single-travel-default'))
+      expect(domParserSpy).toHaveBeenCalled()
     })
 
     it('синтетика и премиум-настройки: тема, раскладка галереи, чеклисты, снимка карты нет', async () => {
@@ -155,6 +174,7 @@ describe('эталоны PDF-книги (web)', () => {
         isPremium: true,
       })
       expectToMatchGoldenFile(html, bookGolden('edge-cases-premium'))
+      expect(domParserSpy).toHaveBeenCalled()
     })
   })
 })

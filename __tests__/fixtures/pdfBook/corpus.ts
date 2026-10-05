@@ -6,7 +6,7 @@ import path from 'path'
 
 import type { Travel } from '@/types/types'
 
-import { PDF_BOOK_EDGE_CASES, PIPELINE_EDGE_CASE_NAMES } from './edgeCases'
+import { PDF_BOOK_EDGE_CASES, PDF_BOOK_EDGE_CASES_EXTRA, PIPELINE_EDGE_CASE_NAMES } from './edgeCases'
 
 export const PDF_BOOK_FIXTURES_DIR = __dirname
 export const PDF_BOOK_GOLDEN_DIR = path.join(PDF_BOOK_FIXTURES_DIR, 'golden')
@@ -127,6 +127,9 @@ export function loadParseCorpus(): ParseCorpusDocument[] {
   }
   for (const edgeCase of PDF_BOOK_EDGE_CASES) {
     documents.push({ group: 'edge', key: edgeCase.name, html: edgeCase.html })
+  }
+  for (const edgeCase of PDF_BOOK_EDGE_CASES_EXTRA) {
+    documents.push({ group: 'edge-extra', key: edgeCase.name, html: edgeCase.html })
   }
   return documents
 }

@@ -13,6 +13,12 @@ jest.mock('@/utils/growthFunnelAnalytics', () => ({
   trackRegisterCtaClicked: jest.fn(),
 }))
 
+// #2119: в приложении вход в книгу зависит от модуля печати (expo-print).
+let mockPrintAvailable = false
+jest.mock('@/utils/printAvailability', () => ({
+  isPrintAvailable: () => mockPrintAvailable,
+}))
+
 const base: AccountMenuInput = {
   surface: 'desktop',
   platform: 'web',
@@ -46,6 +52,34 @@ describe('accountMenuModel (#2139)', () => {
   it('обычному пользователю борд не показывается', () => {
     for (const surface of ['desktop', 'mobile'] as const) {
       expect(keysOf(buildAccountMenuModel({ ...base, surface }))).not.toContain('task-board')
+    }
+  })
+
+  it('в приложении «Экспорт в PDF» есть на обеих поверхностях, когда есть модуль печати (#2119)', () => {
+    mockPrintAvailable = true
+    try {
+      for (const platform of ['ios', 'android']) {
+        for (const surface of ['desktop', 'mobile'] as const) {
+          const model = buildAccountMenuModel({ ...base, platform, surface })
+          expect({ platform, surface, target: model.account.find((entry) => entry.key === 'export')?.target }).toEqual({
+            platform,
+            surface,
+            target: { kind: 'route', path: '/export' },
+          })
+        }
+      }
+      // Сайт от модуля печати не зависит: мобильная поверхность — по-прежнему без книги.
+      expect(keysOf(buildAccountMenuModel({ ...base, surface: 'mobile' }))).not.toContain('export')
+    } finally {
+      mockPrintAvailable = false
+    }
+  })
+
+  it('в сборке приложения без модуля печати пункта «Экспорт в PDF» нет', () => {
+    for (const platform of ['ios', 'android']) {
+      for (const surface of ['desktop', 'mobile'] as const) {
+        expect(keysOf(buildAccountMenuModel({ ...base, platform, surface }))).not.toContain('export')
+      }
     }
   })
 

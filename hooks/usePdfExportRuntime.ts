@@ -109,6 +109,11 @@ async function tryServerBookExport(
   printSession: PrintSession,
   updateProgress: UpdateProgress,
 ): Promise<PrintResult | 'downloaded' | null> {
+  // Серверный артефакт — файл, а сохранить его умеет только браузер
+  // (`saveArtifactBlob`: <a download>). В приложениях книгу собирает клиентский
+  // рантайм; серверный путь на native — вне #2119.
+  if (typeof document === 'undefined') return null;
+
   const travelIds = collectServerExportTravelIds(selected);
   if (!travelIds) return null;
 
@@ -141,15 +146,6 @@ async function tryServerBookExport(
     console.warn('[usePdfExport] Серверный экспорт недоступен, используем клиентский рантайм', error);
     return null;
   }
-}
-
-export async function prewarmPdfExportRuntime(): Promise<void> {
-  const canUseDom = typeof document !== 'undefined';
-  if (!canUseDom) {
-    return;
-  }
-
-  await getBookHtmlExportService();
 }
 
 function isNonEmptyArray(value: unknown): value is unknown[] {
@@ -270,17 +266,6 @@ export async function runPdfExport({
   setCurrentStage,
   updateProgress,
 }: RunPdfExportOptions): Promise<void> {
-  // Генераторы книги разбирают HTML через DOMParser — без DOM (приложения) книга не собирается.
-  if (typeof DOMParser === 'undefined') {
-    printSession.cancel();
-    notify(
-      'info',
-      i18nT('export:hooks.usePdfExportRuntime.nedostupno_33f2b2de'),
-      i18nT('export:hooks.usePdfExportRuntime.prosmotr_knigi_i_pechat_dostupny_tolko_v_veb_8f59a809'),
-    );
-    return;
-  }
-
   setIsGenerating(true);
   setError(null);
 

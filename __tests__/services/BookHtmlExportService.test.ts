@@ -1,5 +1,5 @@
-import { Platform } from 'react-native'
 import { BookHtmlExportService } from '@/services/book/BookHtmlExportService'
+import { addBookPrintChrome as addWebPrintChrome } from '@/services/book/bookPrintChrome.web'
 import type { Travel } from '@/types/types'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
 
@@ -66,44 +66,43 @@ const settings: BookSettings = {
   gallerySpacing: 'normal',
 }
 
-describe('BookHtmlExportService', () => {
-  const originalPlatform = Platform.OS
+const GENERATED_HTML = '<html><head></head><body><section class="pdf-page">page</section></body></html>'
 
+describe('BookHtmlExportService', () => {
   beforeEach(() => {
     mockGenerate.mockReset()
     mockValidate.mockReset()
     mockTransform.mockReset()
-    ;(Platform as any).OS = 'web'
   })
 
-  afterAll(() => {
-    ;(Platform as any).OS = originalPlatform
-  })
-
-  it('throws when invoked outside web platform', async () => {
-    ;(Platform as any).OS = 'ios'
-    const service = new BookHtmlExportService()
-
-    await expect(service.generateTravelsHtml([baseTravel], settings)).rejects.toThrow(
-      'Предпросмотр HTML-книги доступен только в веб-версии',
-    )
-  })
-
-  it('generates and enhances HTML output with toolbar and styles', async () => {
+  // Jest берёт платформенные файлы приложений: `bookPrintChrome.native.ts`.
+  it('в приложении отдаёт документ книги как есть — без панели «Печать» и скрипта (#2119)', async () => {
     const service = new BookHtmlExportService()
     const travelForBook = [{ id: 1, userName: 'Tester' }] as any
     mockTransform.mockReturnValue(travelForBook)
-    mockGenerate.mockResolvedValue(
-      '<html><head></head><body><section class="pdf-page">page</section></body></html>'
-    )
+    mockGenerate.mockResolvedValue(GENERATED_HTML)
 
     const html = await service.generateTravelsHtml([baseTravel], settings)
 
     expect(mockValidate).toHaveBeenCalledWith([baseTravel])
     expect(mockTransform).toHaveBeenCalled()
     expect(mockGenerate).toHaveBeenCalledWith(travelForBook, settings, { isPremium: true })
+    expect(html).toBe(GENERATED_HTML)
+    expect(html).not.toContain('print-toolbar')
+    expect(html).not.toContain('<script')
+    expect(html).not.toContain('window.print')
+  })
+
+  it('web-обвязка добавляет панель «Печать», стили и скрипт ровно один раз', () => {
+    const html = addWebPrintChrome(GENERATED_HTML)
+
     expect(html).toContain('print-toolbar')
     expect(html).toContain('@media print')
+    expect(html).toContain('window.__metravelPrint')
+    expect(html.indexOf('<style>')).toBeLessThan(html.indexOf('</head>'))
+    expect(html.indexOf('print-toolbar')).toBeGreaterThan(html.indexOf('<body>'))
+    // Повторный вызов панель не дублирует.
+    expect(addWebPrintChrome(html)).toBe(html)
   })
 
   it('fails fast when generated html has no pdf pages', async () => {

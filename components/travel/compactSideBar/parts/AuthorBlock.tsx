@@ -9,6 +9,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import SubscribeButton from '@/components/ui/SubscribeButton'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import TravelPdfExportControl from '@/components/travel/TravelPdfExportControl'
+import { isPrintAvailable } from '@/utils/printAvailability'
 import ContentSafetyActions from '@/components/safety/ContentSafetyActions'
 import { makeContentRef } from '@/types/contentSafety'
 
@@ -171,7 +172,7 @@ export const AuthorBlock = memo(function AuthorBlock({
                 </Pressable>
               )}
 
-              {(Platform.OS === 'web') && (
+              {isPrintAvailable() && (
                 <TravelPdfExportControl
                   travel={travel}
                   mutedText={mutedText}

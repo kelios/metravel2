@@ -1,10 +1,17 @@
 import { ContentParser } from '@/services/pdf-export/parsers/ContentParser'
+import { parseHtmlBody as parseHtmlBodyNative } from '@/services/pdf-export/parsers/contentParser/htmlTree.native'
+import { parseHtmlBody as parseHtmlBodyWeb } from '@/services/pdf-export/parsers/contentParser/htmlTree.web'
 
-describe('ContentParser', () => {
+// #2119: один и тот же разбор на двух деревьях HTML — браузерном (`DOMParser`,
+// сайт) и parse5 (приложения). Ожидания общие: расхождение = разная книга.
+describe.each([
+  ['web: DOMParser', parseHtmlBodyWeb],
+  ['приложения: parse5', parseHtmlBodyNative],
+])('ContentParser (%s)', (_treeName, parseHtmlBody) => {
   let parser: ContentParser
 
   beforeEach(() => {
-    parser = new ContentParser()
+    parser = new ContentParser(parseHtmlBody)
   })
 
   it('preserves paragraph boundaries and normalizes invisible characters', () => {

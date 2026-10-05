@@ -22,6 +22,9 @@ BookSettingsModal
 - `generators/v2/` — page assembly, renderers, image processing и atlas pages;
 - `themes/` — типы, tiers и theme configs;
 - `parsers/ContentParser.ts`, `renderers/BlockRenderer.ts` — rich content;
+- `parsers/contentParser/htmlTree*` — дерево HTML для разбора описаний: тонкий
+  интерфейс (`htmlTree.types.ts`), `DOMParser` на web (`htmlTree.web.ts`), parse5
+  в приложениях (`htmlTree.native.ts`);
 - `entitlement/` и `premiumSettingsGate.ts` — источник premium availability;
 - `utils/` — локальные helpers без feature-level imports.
 
@@ -33,11 +36,17 @@ BookSettingsModal
   renderer classes;
 - premium-only setting должен иметь явный free fallback;
 - HTML/rich text и URLs проходят существующую sanitization/normalization;
-- legacy comments с префиксом `src/` не означают наличие каталога `src/`.
+- legacy comments с префиксом `src/` не означают наличие каталога `src/`;
+- книга собирается и в приложениях (Hermes: нет `DOMParser`, `document`, `Node`,
+  `Image`), поэтому браузерные глобалы допустимы только в платформенных файлах
+  `*.web.ts` — правило держит `__tests__/config/pdf-export-dom-governance.test.ts`.
 
 ## Проверки
 
 Запускайте ближайшие тесты в `__tests__/services/pdf-export/`, export-hook tests и
-`BookSettingsModal` tests. Для видимого результата дополнительно проверяйте
+`BookSettingsModal` tests. Вывод книги зафиксирован эталонами
+(`__tests__/fixtures/pdfBook/`, `bookGolden.test.ts` и `bookGolden.native.test.ts`):
+после намеренной правки шаблонов эталон переснимается командой
+`UPDATE_PDF_BOOK_GOLDEN=1 npx jest __tests__/services/pdf-export/bookGolden.test.ts`. Для видимого результата дополнительно проверяйте
 preview/download/print flow в реальном браузере. Полный PDF UI audit не хранится
 как отдельный статичный отчёт: открытые изменения должны жить на task board.

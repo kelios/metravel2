@@ -1,7 +1,8 @@
-import React, { Suspense, lazy, useCallback, useEffect } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useRef } from 'react';
 
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
+import { isBookSettingsWindowAvailable } from '@/components/export/bookSettingsWindow';
 import * as useSingleTravelExportModule from '@/components/travel/hooks/useSingleTravelExport';
 import { ExportStage } from '@/types/pdf-export';
 import { resolveExportedFunction } from '@/utils/moduleInterop';
@@ -73,6 +74,24 @@ function ShareButtonsPdfExportBridge({ travel, visible, onClose, onStateChange }
     },
     [handleOpenPrintBookWithSettings, onClose],
   );
+
+  // #2119: там, где окна настроек нет (приложения), запрос экспорта сразу печатает
+  // книгу с настройками по умолчанию. Один запрос — один запуск: пока `visible`
+  // не сброшен, повторные рендеры (прогресс сборки) печать не перезапускают.
+  const hasSettingsWindow = isBookSettingsWindowAvailable();
+  const requestHandledRef = useRef(false);
+  useEffect(() => {
+    if (!visible) {
+      requestHandledRef.current = false;
+      return;
+    }
+    if (hasSettingsWindow || requestHandledRef.current) return;
+    requestHandledRef.current = true;
+    onClose();
+    void handleOpenPrintBookWithSettings(lastSettings);
+  }, [handleOpenPrintBookWithSettings, hasSettingsWindow, lastSettings, onClose, visible]);
+
+  if (!hasSettingsWindow) return null;
 
   return (
     <Suspense fallback={null}>

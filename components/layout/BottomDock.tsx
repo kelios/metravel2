@@ -479,7 +479,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                 styles={styles}
                 iconColor={colors.primary}
                 isSuperuser={isSuperuser}
-                // Настройки cookies (#2135) и PDF-экспорт (#495) — только web: общая политика.
+                // Настройки cookies (#2135) — только web: общая политика маршрутов.
                 itemFilter={(item) => item.route !== '/privacy' && isNavRouteAvailable(item.route)}
                 renderItem={(item, openLanguage) => renderMoreMenuItem(item, () => setShowMore(false), openLanguage)}
                 onClose={() => setShowMore(false)}
@@ -515,7 +515,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                 styles={styles}
                 iconColor={colors.primary}
                 isSuperuser={isSuperuser}
-                // Настройки cookies (#2135) и PDF-экспорт (#495) — только web: общая политика.
+                // Настройки cookies (#2135) — только web: общая политика маршрутов.
                 itemFilter={(item) => (Platform.OS === 'web' || item.route !== '/privacy') && isNavRouteAvailable(item.route)}
                 renderItem={(item, openLanguage) => renderMoreMenuItem(item, () => nativeSheetRef.current?.close(), openLanguage)}
                 onClose={() => nativeSheetRef.current?.close()}

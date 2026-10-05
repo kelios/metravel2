@@ -629,9 +629,14 @@ not by the fastest patch that makes the symptom disappear.
   travel links hand native navigation to `openExternalUrl`, and a module that
   calls `router.push` holds no site-host literal or `new URL(...)` — guard
   `__tests__/config/siteLinkResolver.guard.test.ts` (#2144).
-- Native navigation surfaces never link to web-only routes (`/cookies`,
-  `/export`): every menu filters by `isNavRouteAvailable` from
+- Native navigation surfaces never link to web-only routes (`/cookies`):
+  every menu filters by `isNavRouteAvailable` from
   `constants/platformNavRoutes.ts` instead of its own `Platform.OS` check.
+  Routes that need the system print dialog (`PRINT_NAV_ROUTES`: the PDF book
+  catalog `/export`, #2119) are shown in the app only when the build carries
+  the print module (`isPrintAvailable()`); whether a surface shows the book
+  entry at all is one rule, `isBookExportEntryVisible` — desktop-only on the
+  site, any surface in the app.
 - WebViews with third-party content spread, as their last attributes,
   `THIRD_PARTY_WEBVIEW_PRIVACY_PROPS` (incognito, no shared or third-party
   cookies) and the props of `createThirdPartyNavigationGuard`

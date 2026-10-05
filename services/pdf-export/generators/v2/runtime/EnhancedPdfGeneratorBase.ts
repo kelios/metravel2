@@ -50,6 +50,11 @@ import { RuntimeFinalRenderer } from './renderers/FinalPageRenderer';
 import { RuntimeGalleryRenderer } from './renderers/GalleryPageRenderer';
 import { RuntimeMapRenderer } from './renderers/MapPageRenderer';
 
+type QrCodeModule = {
+  toDataURL: (text: string, options: Record<string, unknown>) => Promise<string>;
+  toString: (text: string, options: Record<string, unknown>) => Promise<string>;
+};
+
 /**
  * Базовый runtime для полной генерации PDF-книги.
  * Канонический public entrypoint живет в ../EnhancedPdfGenerator.ts.
@@ -318,10 +323,9 @@ export class EnhancedPdfGeneratorBase {
     const contentRuntimeData = buildPdfTravelContentRuntimeData({
       travel,
       includeGallery: this.currentSettings?.includeGallery,
-      descriptionHtml:
-        this.blockRenderer && travel.description
-          ? this.blockRenderer.renderRichText(travel.description)
-          : '',
+      descriptionHtml: travel.description
+        ? this.getBlockRendererSync().renderRichText(travel.description)
+        : '',
       parseBlocks: (content) => parser.parse(content),
       buildInlineGallerySection: () => this.buildInlineGallerySection(travel, colors, typography, spacing),
       buildSafeImageUrl: (url) => this.buildSafeImageUrl(url),
@@ -512,13 +516,29 @@ export class EnhancedPdfGeneratorBase {
           ? `https://metravel.by/travels/${travel.slug}/`
           : travel.url || '';
         if (!url) return '';
-        try {
-          return QRCode.toDataURL(url, { margin: 1, scale: 4, width: 200 });
-        } catch {
-          return '';
-        }
+        return this.renderQrCode(QRCode, url, 200);
       })
     );
+  }
+
+  /**
+   * QR-код картинкой для `<img src>`. В браузере — PNG через canvas, как раньше.
+   * В приложениях canvas нет, и `toDataURL` отклоняет промис: там тот же код
+   * рисуется SVG-строкой (`toString`), которой DOM не нужен. Если не вышло ни
+   * то ни другое, книга собирается без этого QR-кода.
+   */
+  private async renderQrCode(QRCode: QrCodeModule, url: string, width: number): Promise<string> {
+    try {
+      return await QRCode.toDataURL(url, { margin: 1, scale: 4, width });
+    } catch {
+      // Нет canvas — пробуем SVG.
+    }
+    try {
+      const svg = await QRCode.toString(url, { type: 'svg', margin: 1, width });
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    } catch {
+      return '';
+    }
   }
 
   private buildTravelMeta(
@@ -539,11 +559,7 @@ export class EnhancedPdfGeneratorBase {
       locations.map(async (location) => {
         const url = sharedBuildGoogleMapsUrl(location);
         if (!url) return '';
-        try {
-          return await QRCode.toDataURL(url, { margin: 1, scale: 4, width: 120 });
-        } catch {
-          return '';
-        }
+        return this.renderQrCode(QRCode, url, 120);
       })
     );
   }
@@ -587,6 +603,11 @@ export class EnhancedPdfGeneratorBase {
    * Замеряет aspect-ratio (width/height) браузерным Image по карте
    * «ключ → загружаемый URL». Не замеренные фото (таймаут/ошибка/SSR) в карту
    * не попадают — вызывающий код обязан иметь фолбэк.
+   *
+   * В приложениях глобального `Image` нет: замера нет, книга собирается на
+   * фолбэках (галерея — contain с полями, фото описания — раскладка из разметки).
+   * Решение #2119: отличие раскладки принято; пропорции из медиа-манифеста API
+   * вместо загрузки каждой картинки — #2232.
    */
   private async measureImageAspects(targets: Map<string, string>): Promise<Map<string, number>> {
     const aspects = new Map<string, number>();
@@ -706,35 +727,14 @@ export class EnhancedPdfGeneratorBase {
    * Рендерит блоки контента
    */
   private renderBlocks(blocks: ParsedContentBlock[]): string {
-    if (this.blockRenderer) {
-      return this.blockRenderer.renderBlocks(blocks);
+    return this.getBlockRendererSync().renderBlocks(blocks);
+  }
+
+  private getBlockRendererSync(): BlockRenderer {
+    if (!this.blockRenderer) {
+      throw new Error('BlockRenderer is not initialized');
     }
-    // Fallback: простой рендеринг без BlockRenderer
-    return blocks
-      .map((block) => {
-        switch (block.type) {
-          case 'heading':
-            return `<h${block.level}>${this.escapeHtml(block.text)}</h${block.level}>`;
-          case 'paragraph':
-            return `<p>${this.escapeHtml(block.text)}</p>`;
-          case 'list': {
-            const tag = block.ordered ? 'ol' : 'ul';
-            const items = block.items.map((item) => `<li>${this.escapeHtml(item)}</li>`).join('');
-            return `<${tag}>${items}</${tag}>`;
-          }
-          case 'quote':
-            return `<blockquote>${this.escapeHtml(block.text)}${
-              block.author ? `<cite>— ${this.escapeHtml(block.author)}</cite>` : ''
-            }</blockquote>`;
-          case 'image':
-            return `<img src="${this.escapeHtml(block.src)}" alt="${this.escapeHtml(
-              block.alt || ''
-            )}" style="${this.getImageFilterStyle()}" />${block.caption ? `<figcaption>${this.escapeHtml(block.caption)}</figcaption>` : ''}`;
-          default:
-            return '';
-        }
-      })
-      .join('\n');
+    return this.blockRenderer;
   }
 
   private getParserSync(): ContentParser {
@@ -751,15 +751,14 @@ export class EnhancedPdfGeneratorBase {
     return this.parser;
   }
 
-  private async ensureBlockRenderer(): Promise<BlockRenderer | null> {
-    if (typeof document === 'undefined') return null;
+  private async ensureBlockRenderer(): Promise<BlockRenderer> {
     if (this.blockRenderer) return this.blockRenderer;
     const mod = await import('../../../renderers/BlockRenderer');
     this.blockRenderer = new mod.BlockRenderer(this.theme);
     return this.blockRenderer;
   }
 
-  private async getQRCode(): Promise<{ toDataURL: (text: string, options: Record<string, unknown>) => Promise<string> }> {
+  private async getQRCode(): Promise<QrCodeModule> {
     const mod = await import('qrcode');
     const QRCode = (mod as any).default ?? mod;
     return QRCode as any;

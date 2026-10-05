@@ -239,19 +239,14 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(generator.escapeHtml('<tag>')).toBe('&lt;tag&gt;')
   })
 
-  it('renders blocks fallback when BlockRenderer is unavailable', () => {
-    generator.blockRenderer = null
-    const rendered = generator.renderBlocks([
-      { type: 'heading', level: 1, text: 'Заголовок' } as any,
-      { type: 'paragraph', text: 'Текст' } as any,
-      { type: 'list', ordered: false, items: ['a', 'b'] } as any,
-      { type: 'quote', text: 'Цитата', author: 'Автор' } as any,
-      { type: 'image', src: 'photo', alt: 'альт', caption: 'cap' } as any,
-    ])
+  it('renders blocks through BlockRenderer and refuses to run before it is initialized', async () => {
+    const blocks = [{ type: 'paragraph', text: 'Текст' } as any]
 
-    expect(rendered).toContain('<h1>')
-    expect(rendered).toContain('<ul>')
-    expect(rendered).toContain('<blockquote>')
+    generator.blockRenderer = null
+    expect(() => generator.renderBlocks(blocks)).toThrow('BlockRenderer is not initialized')
+
+    await generator.ensureBlockRenderer()
+    expect(generator.renderBlocks(blocks)).toBe('<p>rendered</p>')
   })
 
   it('generates full HTML document with cover, pages and final screen', async () => {

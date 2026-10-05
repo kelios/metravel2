@@ -216,7 +216,13 @@ describe('printHtml.web', () => {
 
   it('isPrintAvailable не зависит от window — разметка не меняется между SSG и гидрацией', () => {
     delete (global as unknown as { window?: unknown }).window
+    // Web-ответ не спрашивает и native-модуль: даже без него на сайте печатать есть чем.
+    mockRequireOptionalNativeModule.mockReturnValue(null)
     expect(web().isPrintAvailable()).toBe(true)
+    expect(
+      (jest.requireActual('@/utils/printAvailability.web') as typeof import('@/utils/printAvailability.web')).isPrintAvailable()
+    ).toBe(true)
+    expect(mockRequireOptionalNativeModule).not.toHaveBeenCalled()
   })
 
   it('документ без кнопки печати остаётся как есть', () => {

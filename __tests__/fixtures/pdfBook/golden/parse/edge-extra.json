@@ -1,0 +1,112 @@
+{
+  "quirks-class-case-insensitive": [
+    {
+      "type": "tip-block",
+      "content": "Заголовок совета Текст совета",
+      "title": "Заголовок совета"
+    },
+    {
+      "type": "warning-block",
+      "content": "Внимание текст",
+      "title": "Внимание"
+    }
+  ],
+  "no-quirks-class-case-sensitive": [
+    {
+      "type": "tip-block",
+      "content": "Заголовок совета Текст совета"
+    },
+    {
+      "type": "warning-block",
+      "content": "Внимание текст",
+      "title": "Внимание"
+    }
+  ],
+  "special-block-title-is-svg": [
+    {
+      "type": "tip-block",
+      "content": "Жирный текст совета"
+    },
+    {
+      "type": "quote",
+      "text": "Цитатаподвал в svgАвтор"
+    }
+  ],
+  "frameset-document": [
+    {
+      "type": "paragraph",
+      "text": "Текст noframes"
+    }
+  ],
+  "formatting-reconstruction": [
+    {
+      "type": "paragraph",
+      "text": "Первый жирныйВторой жирный"
+    },
+    {
+      "type": "paragraph",
+      "text": "курсив"
+    },
+    {
+      "type": "paragraph",
+      "text": "Абзац в курсиве хвост",
+      "html": "<i>Абзац в курсиве</i> хвост"
+    },
+    {
+      "type": "paragraph",
+      "text": "после"
+    }
+  ],
+  "null-and-control-characters": [
+    {
+      "type": "paragraph",
+      "text": "нулевойсимвол и вертикальная табуляция"
+    },
+    {
+      "type": "paragraph",
+      "text": "в svgтоже"
+    }
+  ],
+  "image-inside-template-and-noscript": [
+    {
+      "type": "paragraph",
+      "text": "Абзац с шаблоном",
+      "html": "Абзац <template><img src=\"https://metravel.by/in-template.jpg\"></template> с шаблоном"
+    }
+  ],
+  "attribute-name-case-and-duplicates": [
+    {
+      "type": "image",
+      "src": "https://metravel.by/case.jpg",
+      "alt": "Регистр",
+      "width": 640,
+      "height": 480
+    },
+    {
+      "type": "image",
+      "src": "https://metravel.by/fig.jpg",
+      "caption": "Подпись",
+      "layout": "float-left"
+    }
+  ],
+  "select-and-option-implied-ends": [
+    {
+      "type": "paragraph",
+      "text": "РазДваТри"
+    },
+    {
+      "type": "paragraph",
+      "text": "после select"
+    }
+  ],
+  "definition-list-and-ruby": [
+    {
+      "type": "paragraph",
+      "text": "ТерминОпределениеВторойЕщё"
+    },
+    {
+      "type": "paragraph",
+      "text": "漢кан("
+    }
+  ]
+}

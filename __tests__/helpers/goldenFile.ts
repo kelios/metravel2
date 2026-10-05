@@ -26,9 +26,25 @@ function describeFirstDifference(actual: string, expected: string): string {
 }
 
 /**
- * Сверяет строку с эталонным файлом побайтно. Сообщение об ошибке показывает
- * первое расхождение с контекстом, а не дифф двух мегабайтных строк.
+ * Побайтное сравнение двух больших строк. Сообщение об ошибке показывает первое
+ * расхождение с контекстом, а не дифф двух мегабайтных строк.
  */
+export function expectSameText(actual: string, expected: string, label: string): void {
+  if (actual !== expected) {
+    throw new Error(`Результат разошёлся с эталоном ${label}\n${describeFirstDifference(actual, expected)}`)
+  }
+}
+
+export function readGoldenFile(goldenPath: string): string {
+  if (!fs.existsSync(goldenPath)) {
+    throw new Error(
+      `Нет эталонного файла ${goldenPath}. Эталон снимается явной командой: ${GOLDEN_UPDATE_ENV}=1 npx jest <web-тест эталонов>`
+    )
+  }
+  return fs.readFileSync(goldenPath, 'utf8')
+}
+
+/** Сверяет строку с эталонным файлом побайтно; в режиме перезаписи — записывает эталон. */
 export function expectToMatchGoldenFile(actual: string, goldenPath: string): void {
   if (isUpdateRun()) {
     fs.mkdirSync(path.dirname(goldenPath), { recursive: true })
@@ -36,18 +52,5 @@ export function expectToMatchGoldenFile(actual: string, goldenPath: string): voi
     return
   }
 
-  if (!fs.existsSync(goldenPath)) {
-    throw new Error(
-      `Нет эталонного файла ${goldenPath}. Эталон снимается явной командой: ${GOLDEN_UPDATE_ENV}=1 npx jest <тест>`
-    )
-  }
-
-  const expected = fs.readFileSync(goldenPath, 'utf8')
-  if (actual !== expected) {
-    throw new Error(`Результат разошёлся с эталоном ${goldenPath}\n${describeFirstDifference(actual, expected)}`)
-  }
-}
-
-export function readGoldenFile(goldenPath: string): string {
-  return fs.readFileSync(goldenPath, 'utf8')
+  expectSameText(actual, readGoldenFile(goldenPath), goldenPath)
 }

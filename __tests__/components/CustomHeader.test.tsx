@@ -30,6 +30,12 @@ const mockFiltersContext = {
     updateFilters: jest.fn(),
 };
 
+// #2119: в приложении вход в PDF-книгу зависит от модуля печати (expo-print).
+let mockPrintAvailable = false;
+jest.mock('@/utils/printAvailability', () => ({
+    isPrintAvailable: () => mockPrintAvailable,
+}));
+
 jest.mock('@/context/AuthContext', () => ({
     useAuth: () => mockAuthContext,
 }));
@@ -435,8 +441,17 @@ describe('CustomHeader', () => {
                 fireEvent.press(utils.getByTestId('mobile-menu-open'));
                 expect(utils.getByText('Борд задач')).toBeTruthy();
                 expect(utils.getByText('Подписки')).toBeTruthy();
+                // Сборка приложения без модуля печати: входа в PDF-книгу нет.
                 expect(utils.queryByText('Экспорт в PDF')).toBeNull();
                 utils.unmount();
+
+                // #2119: с модулем печати «Экспорт в PDF» есть и в мобильном меню приложения.
+                mockPrintAvailable = true;
+                const printable = renderHeader();
+                fireEvent.press(printable.getByTestId('mobile-menu-open'));
+                expect(printable.getByText('Экспорт в PDF')).toBeTruthy();
+                printable.unmount();
+                mockPrintAvailable = false;
 
                 Object.assign(mockAuthContext, { isSuperuser: false });
                 const regular = renderHeader();
@@ -444,6 +459,7 @@ describe('CustomHeader', () => {
                 expect(regular.getByText('Подписки')).toBeTruthy();
                 expect(regular.queryByText('Борд задач')).toBeNull();
             } finally {
+                mockPrintAvailable = false;
                 Object.assign(mockAuthContext, authBefore, { isSuperuser: undefined });
             }
         });

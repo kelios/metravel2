@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { isBookExportEntryVisible } from '@/constants/platformNavRoutes'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useResponsive } from '@/hooks/useResponsive'
 import { globalFocusStyles } from '@/styles/globalFocus'
@@ -74,11 +75,14 @@ export function ProfileSectionsHub({ userId }: ProfileSectionsHubProps) {
   const router = useRouter()
   const { isDesktop, isMobile, isHydrated } = useResponsive()
 
-  // Экспорт в PDF скрыт в мобильной версии сайта (фича только для десктопа).
+  // Экспорт в PDF скрыт в мобильной версии сайта (фича только для десктопа); в
+  // приложении плитка есть на любом экране, когда есть модуль печати (#2119) —
+  // общее правило `isBookExportEntryVisible`.
   // Гейт по isHydrated, чтобы на десктопе не мигала плитка и не было hydration mismatch:
   // до гидрации (SSR + первый клиентский рендер) плитка есть, скрываем её только после
   // гидрации и только на мобильном.
-  const hideExport = isHydrated && isMobile
+  const isPhoneLayout = isHydrated && isMobile
+  const hideExport = !isBookExportEntryVisible({ isDesktopSurface: !isPhoneLayout })
 
   const items = useMemo<HubItem[]>(() => {
     const baseItems = createBaseItems()
@@ -98,8 +102,9 @@ export function ProfileSectionsHub({ userId }: ProfileSectionsHubProps) {
 
   const styles = useMemo(() => getStyles(colors), [colors])
   // На телефоне (~390px) две колонки обрезают подписи («Мои поезд…», «Кто видит кон…») —
-  // раскладываем плитки в одну колонку; тот же гейт мобильной раскладки, что у hideExport.
-  const itemWidth = isDesktop ? '31.5%' : hideExport ? '100%' : '48%'
+  // раскладываем плитки в одну колонку. Раскладка зависит от экрана, а не от того,
+  // показана ли плитка книги: в приложении она есть и на телефоне (#2119).
+  const itemWidth = isDesktop ? '31.5%' : isPhoneLayout ? '100%' : '48%'
 
   return (
     <View>

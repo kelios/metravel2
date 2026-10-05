@@ -327,8 +327,9 @@ export const PDF_BOOK_EDGE_CASES: PdfBookEdgeCase[] = [
     html: '<h1>Первый</h1><h2>Второй с <em>курсивом</em></h2><h3>Третий&nbsp;уровень</h3><h4> Четвёртый </h4><h5>Пятый</h5><h6>Шестой</h6><h2></h2><h3>   </h3>',
   },
   {
-    // h5/h6 в пути книги сейчас роняют рендер (темы описывают только h1–h4),
-    // поэтому в эталон книги идёт этот случай, а не `headings-all-levels`.
+    // h5/h6 в «Рекомендациях», «Плюсах» и «Минусах» роняют рендер книги: темы
+    // описывают только h1–h4 (#2210). Пока не починено, в эталон книги идёт этот
+    // случай, а `headings-all-levels` проверяется только разбором.
     name: 'headings-h1-h4',
     html: '<h1>Первый</h1><p>Абзац под первым</p><h2>Второй с <em>курсивом</em></h2><h3>Третий&nbsp;уровень</h3><h4> Четвёртый </h4><p>Абзац под четвёртым</p>',
   },
@@ -425,6 +426,60 @@ export const PDF_BOOK_EDGE_CASES: PdfBookEdgeCase[] = [
   {
     name: 'unterminated-comment',
     html: '<p>До комментария</p><!-- незакрытый <p>внутри</p>',
+  },
+]
+
+/**
+ * Случаи, добавленные после снятия базового эталона (коммит 974405d43). Они
+ * лежат отдельной группой, чтобы `golden/parse/edge.json` оставался побайтно
+ * тем же файлом, что был снят на коде до замены разборщика. Их эталон
+ * (`golden/parse/edge-extra.json`) сверен с прежним ContentParser прогоном обеих
+ * версий на этих же строках.
+ */
+export const PDF_BOOK_EDGE_CASES_EXTRA: PdfBookEdgeCase[] = [
+  {
+    // Документ без doctype — режим совместимости: классы в селекторе `.title`
+    // сравниваются без учёта регистра.
+    name: 'quirks-class-case-insensitive',
+    html: '<div class="tip"><span class="Title">Заголовок совета</span> Текст совета</div><div class="warning"><span class="HEADING">Внимание</span> текст</div>',
+  },
+  {
+    name: 'no-quirks-class-case-sensitive',
+    html: '<!DOCTYPE html><div class="tip"><span class="Title">Заголовок совета</span> Текст совета</div><div class="warning"><span class="heading">Внимание</span> текст</div>',
+  },
+  {
+    // Первым под селектор заголовка попадает SVG-элемент (не HTMLElement) —
+    // заголовка у блока нет, хотя дальше стоит <b>.
+    name: 'special-block-title-is-svg',
+    html: '<div class="tip"><svg class="title"><circle r="1"></circle></svg><b>Жирный</b> текст совета</div><blockquote>Цитата<svg><footer>подвал в svg</footer></svg><cite>Автор</cite></blockquote>',
+  },
+  {
+    name: 'frameset-document',
+    html: '<frameset cols="50%,50%"><frame src="a.html"><noframes>Текст noframes</noframes></frameset>',
+  },
+  {
+    name: 'formatting-reconstruction',
+    html: '<b><p>Первый жирный</p><p>Второй жирный</p></b><i>курсив<p>Абзац в курсиве</i> хвост</p><p>после</p>',
+  },
+  {
+    name: 'null-and-control-characters',
+    html: '<p>нулевой\u0000символ и вертикальная\u000Bтабуляция</p><svg><title>в svg\u0000тоже</title></svg>',
+  },
+  {
+    name: 'image-inside-template-and-noscript',
+    html: '<p>Абзац <template><img src="https://metravel.by/in-template.jpg"></template> с шаблоном</p><noscript><img src="https://metravel.by/in-noscript.jpg" alt="noscript"></noscript>',
+  },
+  {
+    name: 'attribute-name-case-and-duplicates',
+    html: '<img SRC="https://metravel.by/case.jpg" Alt="Регистр" WIDTH="640" height="480" height="1"><figure CLASS="IMG-FLOAT-LEFT"><IMG src="https://metravel.by/fig.jpg"><FIGCAPTION>Подпись</FIGCAPTION></figure>',
+  },
+  {
+    name: 'select-and-option-implied-ends',
+    html: '<select><option>Раз<option>Два<optgroup label="г"><option>Три</select><p>после select</p>',
+  },
+  {
+    name: 'definition-list-and-ruby',
+    html: '<dl><dt>Термин<dd>Определение<dt>Второй<dd>Ещё</dl><ruby>漢<rt>кан<rp>(</rp></ruby>',
   },
 ]
 

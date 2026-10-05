@@ -121,7 +121,7 @@ describe('native app has no cookie UI (#2135)', () => {
 
   describe('route policy', () => {
     it.each(['ios', 'android'] as const)('%s hides web-only routes in any spelling', (os) => {
-      for (const route of ['/cookies', '/cookies/', '/cookies?from=menu', '/export', { pathname: '/cookies' }]) {
+      for (const route of ['/cookies', '/cookies/', '/cookies?from=menu', { pathname: '/cookies' }]) {
         expect(isNavRouteAvailable(route, os)).toBe(false)
       }
       expect(isNavRouteAvailable('/privacy', os)).toBe(true)
