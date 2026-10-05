@@ -99,7 +99,13 @@ const ActionListSheet: React.FC<Props> = ({
   const swipeHandlers = useMemo(() => {
     if (IS_WEB) return null
     return PanResponder.create({
+      // #2159: шапка берёт касание на старте. Иначе ответчиком на старте
+      // становится предок листа вне Modal, и `onMoveShouldSet*` шапке уже не
+      // задаётся — свайп не доходил ни на iOS, ни на Android. ✕ глубже и
+      // выигрывает своё касание сам; отдавать жест на полпути нечему.
+      onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_evt, g) => g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+      onPanResponderTerminationRequest: () => false,
       onPanResponderRelease: (_evt, g) => {
         if (g.dy > 56) onCloseRef.current()
       },
