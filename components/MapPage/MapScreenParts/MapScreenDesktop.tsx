@@ -120,13 +120,33 @@ export function MapScreenDesktopChrome({
   const showDesktopCollapsedStrip = !isMobile && isDesktopCollapsed
   const showDesktopExpandedPanel = !showDesktopCollapsedStrip
 
+  // #2172 — one collapse control (same node, label and look) on every
+  // platform; only its parent differs. Web: a child of the panel past its right
+  // edge — DOM hit-testing reaches it. Native: a sibling of the panel in the
+  // row at the same spot (`collapseToggleInPanel` positions it), inside the
+  // row's bounds and above the map: Android dispatches the native touch by
+  // parent bounds, so a child past the panel edge also leaked the tap into the
+  // map WebView under it (#2113 device QA: in «Маршрут» it set a route point).
+  // Desktop-branch controls carry no hitSlop: on Android the JS target grows by
+  // it while the native touch outside the view still lands on the map.
+  const collapseButton = (
+    <Pressable
+      testID="map-panel-collapse-button"
+      style={({ pressed }) => [styles.collapseToggleInPanel, pressed && PRESSED_OPACITY_07]}
+      onPress={toggleDesktopCollapse}
+      accessibilityRole="button"
+      accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.svernut_panel_2b99d933')}
+    >
+      <Feather name="chevron-left" size={16} color={themedColors.textMuted} />
+    </Pressable>
+  )
+
   return (
     <>
       {showDesktopCollapsedStrip && (
         <View testID="map-panel-collapsed" style={styles.collapsedPanel}>
           <Pressable
             testID="map-panel-expand-button"
-            hitSlop={8}
             style={({ pressed }) => [styles.collapseToggle, pressed && PRESSED_OPACITY_07]}
             onPress={toggleDesktopCollapse}
             accessibilityRole="button"
@@ -190,22 +210,7 @@ export function MapScreenDesktopChrome({
               {...({ onMouseDown: handleResizeMouseDown } as any)}
             />
           )}
-          {/* Same node and style on every platform (#2172). It sits past the
-              panel's right edge; native Fabric hit-tests children outside a
-              non-clipping parent, so `rightPanel` must never get
-              `overflow: hidden` on native (guarded in mapLayout.test.ts). */}
-          {!isMobile && (
-            <Pressable
-              testID="map-panel-collapse-button"
-              hitSlop={8}
-              style={({ pressed }) => [styles.collapseToggleInPanel, pressed && PRESSED_OPACITY_07]}
-              onPress={toggleDesktopCollapse}
-              accessibilityRole="button"
-              accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.svernut_panel_2b99d933')}
-            >
-              <Feather name="chevron-left" size={16} color={themedColors.textMuted} />
-            </Pressable>
-          )}
+          {isWeb && collapseButton}
           <MapPanelHeader
             heading={panelHeading}
             activeTab={activePanelTab}
@@ -273,6 +278,7 @@ export function MapScreenDesktopChrome({
           </View>
         </Animated.View>
       )}
+      {showDesktopExpandedPanel && !isWeb && collapseButton}
     </>
   )
 }
@@ -384,7 +390,6 @@ export function MapScreenDesktopOverlays({
             accessibilityRole="button"
             accessibilityState={{ expanded: radiusOpen }}
             accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.radius_value1_934e2db6', { value1: radiusBadge ? ` ${radiusBadge}` : '' })}
-            hitSlop={6}
             style={({ pressed }) => [
               styles.desktopRadiusFab,
               radiusOpen && styles.desktopRadiusFabActive,
@@ -421,7 +426,6 @@ export function MapScreenDesktopOverlays({
             accessibilityRole="button"
             accessibilityState={{ expanded: layersOpen }}
             accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.sloi_i_nastroyki_karty_ed15c793')}
-            hitSlop={6}
             style={({ pressed }) => [
               styles.desktopLayersFab,
               layersOpen && styles.desktopLayersFabActive,

@@ -239,17 +239,26 @@ describe('desktop-branch cards on native tablets (#2172)', () => {
     expect(styles.mapHost.backgroundColor).toBe('#ffffff');
   });
 
-  it.each(['ios', 'android'])('%s tablet: the panel never clips, so the collapse chevron past its edge stays tappable', (os) => {
+  it.each(['ios', 'android'])('%s tablet: the collapse chevron sits beside the panel inside the row, above the map', (os) => {
     Object.defineProperty(Platform, 'OS', { value: os });
 
     const styles = getStyles(false, 0, themedColors);
 
-    expect(styles.rightPanel.overflow).toBeUndefined();
-    expect(styles.collapseToggleInPanel.right).toBeLessThan(0);
-    expect(styles.rightPanel.borderRadius).toBe(20);
-    // Android draws siblings by elevation before zIndex: the panel (and its
-    // chevron) must not sink under the map host.
+    // A row sibling at the panel's right edge, never sticking out of its parent:
+    // Android routes the native touch by parent bounds, so a chevron past the
+    // panel edge also tapped the map WebView under it (#2113 device QA).
+    expect(styles.collapseToggleInPanel.right).toBeUndefined();
+    expect(styles.collapseToggleInPanel.left).toBe(16 + METRICS.baseUnit * 45 + 4);
+    expect(styles.collapseToggleInPanel.top).toBe(12 + 16);
+    expect(styles.collapseToggleInPanel.zIndex).toBeGreaterThan(styles.rightPanel.zIndex);
+    // Android orders touch dispatch and drawing by elevation before zIndex: the
+    // panel and the chevron must not sink under the map host.
     expect(styles.rightPanel.elevation ?? 0).toBeGreaterThanOrEqual(styles.mapHost.elevation ?? 0);
+    expect(styles.collapseToggleInPanel.elevation ?? 0).toBeGreaterThanOrEqual(styles.mapHost.elevation ?? 0);
+    // The panel keeps its own shadow, so it does not clip (iOS drops the shadow
+    // of a clipping view); its children round the corners instead.
+    expect(styles.rightPanel.overflow).toBeUndefined();
+    expect(styles.rightPanel.borderRadius).toBe(20);
   });
 
   it.each(['ios', 'android'])('%s phone: the map floor and the sheet keep their values', (os) => {
@@ -270,6 +279,7 @@ describe('desktop-branch cards on native tablets (#2172)', () => {
     expect(tablet.mapContainer.paddingTop).toBe(12 + STATUS_BAR);
     expect(tablet.desktopLayersFab.top).toBe(16 + STATUS_BAR);
     expect(tablet.desktopRadiusFab.top).toBe(16 + STATUS_BAR);
+    expect(tablet.collapseToggleInPanel.top).toBe(12 + STATUS_BAR + 16);
     expect(getDesktopBranchTopInset(STATUS_BAR)).toBe(STATUS_BAR);
     // Phones own their inset in the sheet/top overlay layer.
     expect(getStyles(true, STATUS_BAR, themedColors).mapContainer.paddingTop).toBe(0);

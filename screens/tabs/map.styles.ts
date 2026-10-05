@@ -208,10 +208,11 @@ export const getStyles = (
             } as any)
           : isNativeDesktop
             ? {
-                // #2172 — same card as web. Never `overflow: 'hidden'` here:
-                // `map-panel-collapse-button` sits past the right edge and native
-                // Fabric only hit-tests it while the panel does not clip. Android
-                // draws by elevation first, so it must stay ≥ the map host's.
+                // #2172 — same card as web. No `overflow: 'hidden'`: iOS drops
+                // the `shadow*` shadow of a clipping view, so the panel's children
+                // round its corners instead. The collapse chevron is a row sibling
+                // on native, not a child (`collapseToggleInPanel`). Android draws
+                // by elevation first, so it must stay ≥ the map host's.
                 borderRadius: PANEL_RADIUS,
                 borderWidth: 1,
                 borderColor: themedColors.borderLight,
@@ -593,8 +594,18 @@ export const getStyles = (
       },
       collapseToggleInPanel: {
         position: 'absolute',
-        top: 16,
-        right: -48,
+        // Web: a child of the panel, 4px past its right edge. Native (#2172): a
+        // sibling of the panel in the row at the same spot — inside the row's
+        // bounds, so Android routes the native touch to it, not to the map
+        // WebView under a child that sticks out of the panel. The native offsets
+        // restate the row padding (`mapContainer`) and the native panel width:
+        // change them together.
+        ...(Platform.OS === 'web'
+          ? { top: 16, right: -48 }
+          : {
+              top: DESKTOP_SHELL_PADDING - 4 + desktopTopInset + 16,
+              left: DESKTOP_SHELL_PADDING + PANEL_WIDTH_DESKTOP + 4,
+            }),
         width: CONTROL_SIZE,
         height: CONTROL_SIZE,
         borderRadius: CONTROL_RADIUS,

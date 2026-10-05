@@ -79,6 +79,67 @@ const themedColors: any = {
 const PANEL_WIDTH_NATIVE = 360
 const COLLAPSED_STRIP_WIDTH = 56
 
+// The desktop chrome beside a stand-in map host, inside the shell row.
+function Chrome({ isWeb = false }: { isWeb?: boolean }) {
+  const [collapsed, setCollapsed] = React.useState(false)
+  const [tab, setTab] = React.useState<'filters' | 'travels'>('filters')
+  const styles = getStyles(false, 0, themedColors)
+  return (
+    <View testID="map-row" style={styles.mapContainer}>
+      <MapScreenDesktopChrome
+        styles={styles}
+        themedColors={themedColors}
+        isWeb={isWeb}
+        isMobile={false}
+        isDesktopCollapsed={collapsed}
+        desktopPanelWidth={384}
+        rightPanelTab={tab}
+        activePanelTab={tab === 'travels' ? 'travels' : 'search'}
+        panelRef={null}
+        panelStyle={null}
+        toggleDesktopCollapse={() => setCollapsed((value) => !value)}
+        handleSelectSearchTab={() => setTab('filters')}
+        handleSelectRouteTab={() => setTab('filters')}
+        selectTravelsTab={() => setTab('travels')}
+        handleResizeMouseDown={jest.fn()}
+        filtersPanelProps={null}
+        activeFilterItems={[]}
+        handleRemoveActiveFilter={jest.fn()}
+        handleClearAllFilters={jest.fn()}
+        handleExpandRadius={jest.fn()}
+        travelsData={[]}
+        loading={false}
+        isFetching={false}
+        isPlaceholderData={false}
+        hasMore={false}
+        refetchMapData={jest.fn()}
+        buildRouteTo={jest.fn()}
+        travelsCount={123}
+        currentRadius="60"
+        coordinates={null}
+        transportMode="car"
+        isConnected
+        mapReady
+        shouldLoadOnboarding={false}
+      />
+      <View testID="map-host" style={styles.mapHost} />
+    </View>
+  )
+}
+
+const findByTestID = (node: any, testID: string): any => {
+  if (!node || typeof node !== 'object') return null
+  if (node.props?.testID === testID) return node
+  for (const kid of node.children ?? []) {
+    const found = findByTestID(kid, testID)
+    if (found) return found
+  }
+  return null
+}
+const rowChildren = (utils: ReturnType<typeof render>) =>
+  (findByTestID(utils.toJSON(), 'map-row')?.children ?? []) as any[]
+const widthOf = (node: any) => StyleSheet.flatten(node?.props?.style)?.width
+
 // #2172 — iPad and Android tablets (width ≥ 768) render the desktop branch. It
 // used to be assembled from web gates: the header showed the phone «Скрыть
 // панель», which left an invisible 360pt column in the row, and the strip,
@@ -93,67 +154,6 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
   afterEach(() => {
     Object.defineProperty(Platform, 'OS', { value: originalOS })
   })
-
-  function Chrome() {
-    const [collapsed, setCollapsed] = React.useState(false)
-    const [tab, setTab] = React.useState<'filters' | 'travels'>('filters')
-    const styles = getStyles(false, 0, themedColors)
-    return (
-      <View testID="map-row" style={styles.mapContainer}>
-        <MapScreenDesktopChrome
-          styles={styles}
-          themedColors={themedColors}
-          isWeb={false}
-          isMobile={false}
-          isDesktopCollapsed={collapsed}
-          desktopPanelWidth={384}
-          rightPanelTab={tab}
-          activePanelTab={tab === 'travels' ? 'travels' : 'search'}
-          panelRef={null}
-          panelStyle={null}
-          toggleDesktopCollapse={() => setCollapsed((value) => !value)}
-          handleSelectSearchTab={() => setTab('filters')}
-          handleSelectRouteTab={() => setTab('filters')}
-          selectTravelsTab={() => setTab('travels')}
-          handleResizeMouseDown={jest.fn()}
-          filtersPanelProps={null}
-          activeFilterItems={[]}
-          handleRemoveActiveFilter={jest.fn()}
-          handleClearAllFilters={jest.fn()}
-          handleExpandRadius={jest.fn()}
-          travelsData={[]}
-          loading={false}
-          isFetching={false}
-          isPlaceholderData={false}
-          hasMore={false}
-          refetchMapData={jest.fn()}
-          buildRouteTo={jest.fn()}
-          travelsCount={123}
-          currentRadius="60"
-          coordinates={null}
-          transportMode="car"
-          isConnected
-          mapReady
-          shouldLoadOnboarding={false}
-        />
-        <View testID="map-host" style={styles.mapHost} />
-      </View>
-    )
-  }
-
-  const rowChildren = (utils: ReturnType<typeof render>) => {
-    const findRow = (node: any): any => {
-      if (!node || typeof node !== 'object') return null
-      if (node.props?.testID === 'map-row') return node
-      for (const kid of node.children ?? []) {
-        const found = findRow(kid)
-        if (found) return found
-      }
-      return null
-    }
-    return (findRow(utils.toJSON())?.children ?? []) as any[]
-  }
-  const widthOf = (node: any) => StyleSheet.flatten(node?.props?.style)?.width
 
   it('the panel header carries the desktop actions, not the phone «Скрыть панель»', () => {
     const utils = render(<Chrome />)
@@ -201,9 +201,13 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     const utils = render(<Chrome />)
 
     let row = rowChildren(utils)
-    expect(row).toHaveLength(2)
+    // Panel, then the chevron as its row sibling (inside the row's bounds —
+    // Android routes the native touch by parent bounds), then the map host.
+    expect(row).toHaveLength(3)
     expect(widthOf(row[0])).toBe(PANEL_WIDTH_NATIVE)
-    expect(row[1].props.testID).toBe('map-host')
+    expect(row[1].props.testID).toBe('map-panel-collapse-button')
+    expect(StyleSheet.flatten(row[1].props.style).position).toBe('absolute')
+    expect(row[2].props.testID).toBe('map-host')
 
     fireEvent.press(utils.getByTestId('map-panel-collapse-button'))
 
@@ -217,9 +221,9 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     fireEvent.press(utils.getByTestId('map-panel-expand-button'))
 
     row = rowChildren(utils)
-    expect(row).toHaveLength(2)
+    expect(row).toHaveLength(3)
     expect(widthOf(row[0])).toBe(PANEL_WIDTH_NATIVE)
-    expect(utils.getByTestId('map-panel-collapse-button')).toBeTruthy()
+    expect(row[1].props.testID).toBe('map-panel-collapse-button')
   })
 
   it('a strip icon expands the panel on its tab', () => {
@@ -256,6 +260,20 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
         onRadiusSelect={jest.fn()}
       />,
     )
+
+  // Over the native map WebView a hitSlop ring leaks taps on Android: the JS
+  // target grows by it while the native touch outside the view lands on the
+  // map (a route point in «Маршрут»). Targets are their own 44pt boxes.
+  it('controls over or beside the map carry no hitSlop', () => {
+    const chrome = render(<Chrome />)
+    expect(chrome.getByTestId('map-panel-collapse-button').props.hitSlop).toBeUndefined()
+    fireEvent.press(chrome.getByTestId('map-panel-collapse-button'))
+    expect(chrome.getByTestId('map-panel-expand-button').props.hitSlop).toBeUndefined()
+
+    const overlays = renderOverlays()
+    expect(overlays.getByTestId('map-desktop-layers-button').props.hitSlop).toBeUndefined()
+    expect(overlays.getByTestId('map-desktop-radius-button').props.hitSlop).toBeUndefined()
+  })
 
   // BUG-CLASS-5: an open overlay closes on Android Back before Back navigates
   // away, as the phone layout already does for the same popovers.
@@ -322,5 +340,38 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
 
     fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
     expect(utils.getByTestId('layers-popover').props.top).toBe(STATUS_BAR + 16 + 44 + 8)
+  })
+})
+
+// #2172 containment: the shared chrome forks only the chevron's parent. On web
+// it stays a child of the panel past its right edge (DOM hit-testing reaches
+// it); a row sibling with the web offsets would sit off the panel.
+describe('map desktop branch on web (#2172 containment)', () => {
+  const originalOS = Platform.OS
+
+  beforeEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: 'web' })
+  })
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: originalOS })
+  })
+
+  it('keeps the collapse chevron inside the panel; the row holds the panel and the map', () => {
+    const utils = render(<Chrome isWeb />)
+
+    const row = rowChildren(utils)
+    expect(row).toHaveLength(2)
+    expect(row[1].props.testID).toBe('map-host')
+    const chevron = findByTestID(row[0], 'map-panel-collapse-button')
+    expect(chevron).toBeTruthy()
+    const chevronStyle = StyleSheet.flatten(chevron.props.style)
+    expect(chevronStyle).toMatchObject({ position: 'absolute', top: 16, right: -48 })
+    expect(chevronStyle.left).toBeUndefined()
+
+    fireEvent.press(utils.getByTestId('map-panel-collapse-button'))
+
+    expect(rowChildren(utils)[0].props.testID).toBe('map-panel-collapsed')
+    expect(utils.queryByTestId('map-panel-collapse-button')).toBeNull()
   })
 })
