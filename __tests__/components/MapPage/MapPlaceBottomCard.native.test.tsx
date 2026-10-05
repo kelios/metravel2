@@ -172,4 +172,47 @@ describe('MapPlaceBottomCard native layout', () => {
     })
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+  // #2300 — reproduction step for the #2230 family («the header is never asked
+  // on move»). RN's responder negotiation (ReactFabric ResponderEventPlugin)
+  // asks move-capture/bubble from the lowest common ancestor of the current
+  // responder and the target, skipping the responder itself: the header loses
+  // the drag only when one of ITS ANCESTORS already holds the touch from start.
+  // A child responder (the ✕ Pressable) is fine — the header captures on move.
+  it('#2300: the swipe reaches the header — no ancestor claims the touch start, a child yields on move', () => {
+    const onClose = jest.fn()
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(<MapPlaceBottomCard point={point} userLocation={null} onClose={onClose} />)
+    })
+    const handleRow = tree.root.find(
+      (node: any) => typeof node.props?.onMoveShouldSetResponderCapture === 'function',
+    )
+    // The header (found by its move-capture handler) wraps the ✕ child, so it
+    // joins on move in the capture phase — ahead of the ✕.
+    expect(handleRow.findByProps({ testID: 'map-place-bottom-card-close' })).toBeTruthy()
+    // No ancestor of the header inside the card claims the touch at start.
+    const claimsStart = (node: any) =>
+      ['onStartShouldSetResponder', 'onStartShouldSetResponderCapture', 'onResponderGrant'].some(
+        (key) => typeof node.props?.[key] === 'function',
+      )
+    const ancestorClaims: string[] = []
+    for (let node = handleRow.parent; node; node = node.parent) {
+      if (claimsStart(node)) ancestorClaims.push(String(node.props?.testID ?? node.type?.displayName ?? node.type))
+    }
+    expect(ancestorClaims).toEqual([])
+
+    const config = mockPanResponderConfigs.at(-1)
+    // Vertical drag is captured, a horizontal one is left to the content.
+    expect(config.onMoveShouldSetPanResponderCapture({}, { dy: 12, dx: 1 })).toBe(true)
+    expect(config.onMoveShouldSetPanResponderCapture({}, { dy: 4, dx: 20 })).toBe(false)
+    // A short drag does not close; one past the threshold (64) does.
+    renderer.act(() => {
+      config.onPanResponderRelease({}, { dy: 40, dx: 0 })
+    })
+    expect(onClose).not.toHaveBeenCalled()
+    renderer.act(() => {
+      config.onPanResponderRelease({}, { dy: 80, dx: 0 })
+    })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })
