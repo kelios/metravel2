@@ -456,7 +456,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       // причина отказа — слишком короткий текст. Говорим об этом прямо:
       // «Неверный ответ» здесь врёт, правильного варианта не существует.
       setError(freeTextMinLength
-        ? i18nT('quests:components.quests.questWizardStepCard.slishkom_korotko_value1_3c7f91ab', { value1: freeTextMinLength })
+        ? translatePlural('quests:components.quests.questWizardStepCard.freeTextTooShort', freeTextMinLength)
         : i18nT('quests:components.quests.questWizardStepCard.nevernyy_otvet_22371740'))
       onWrongAttempt()
       if (isBruteForceable) {
@@ -653,7 +653,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
                 )}
                 {!!freeTextMinLength && !error && (
                   <Text style={styles.freeTextNote}>
-                    {i18nT('quests:components.quests.questWizardStepCard.svobodnyy_otvet_value1_9d4a2f10', { value1: freeTextMinLength })}
+                    {translatePlural('quests:components.quests.questWizardStepCard.freeTextNote', freeTextMinLength)}
                   </Text>
                 )}
                 {!!error && (
