@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { translate as i18nT } from '@/i18n'
+import { applyWebTitle } from '@/utils/webProps'
 
 
 interface SubscribeButtonProps {
@@ -66,10 +67,7 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, hoverStyle
     }, [scaleAnim, originalHandlePress]);
 
     useEffect(() => {
-        if (Platform.OS === 'web' && btnRef.current) {
-            const node = btnRef.current;
-            if (node?.setAttribute) node.setAttribute('title', titleText);
-        }
+        if (Platform.OS === 'web') applyWebTitle(btnRef.current, titleText);
     }, [titleText]);
 
     if (!canSubscribe && isAuthenticated) return null;

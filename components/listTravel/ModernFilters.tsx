@@ -29,6 +29,7 @@ export type { FilterOption, FilterGroup, FilterState } from './filters/types';
 import type { FilterGroup, FilterState } from './filters/types';
 import { translate as i18nT } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider'
+import { webTitleRef } from '@/utils/webProps'
 
 
 function getModernFiltersReserveState(params: {
@@ -378,9 +379,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               ]}
               accessibilityRole="button"
               accessibilityLabel={areAllGroupsExpanded ? i18nT('travel:components.listTravel.ModernFilters.svernut_vse_gruppy_filtrov_c5e05236') : i18nT('travel:components.listTravel.ModernFilters.razvernut_vse_gruppy_filtrov_1022c93e')}
-              {...(Platform.OS === 'web'
-                ? ({ title: areAllGroupsExpanded ? i18nT('travel:components.listTravel.ModernFilters.svernut_vse_957f730d') : i18nT('travel:components.listTravel.ModernFilters.razvernut_vse_a8506446') } as any)
-                : null)}
+              ref={webTitleRef(areAllGroupsExpanded ? i18nT('travel:components.listTravel.ModernFilters.svernut_vse_957f730d') : i18nT('travel:components.listTravel.ModernFilters.razvernut_vse_a8506446'))}
             >
               <View style={styles.toggleAllButtonInner}>
                 <Feather

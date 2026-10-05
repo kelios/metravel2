@@ -1,5 +1,5 @@
 import type React from 'react'
-import { Platform, type PressableProps, type TextProps, type TextStyle, type ViewStyle } from 'react-native'
+import { Platform, type TextProps, type TextStyle, type ViewStyle } from 'react-native'
 
 type Booleanish = boolean | 'false' | 'true'
 
@@ -109,9 +109,47 @@ export const headingLevel1Props = (): TextProps =>
     ? ({ role: 'heading', 'aria-level': 1 } as TextProps)
     : { accessibilityRole: 'header' }
 
-/** Нативная web-подсказка `title` для иконки без текста; на native — пусто. */
-export const webTitleProps = (title: string): PressableProps =>
-  Platform.OS === 'web' ? ({ title } as PressableProps) : {}
+type WebTitleNode = {
+  setAttribute?: (name: string, value: string) => void
+  removeAttribute?: (name: string) => void
+}
+
+/**
+ * Ставит DOM-атрибут `title` на узел; пустой текст атрибут снимает. Для компонента
+ * со своим ref (`CardActionPressable`); остальным хватает `webTitleRef`.
+ */
+export const applyWebTitle = (node: unknown, title?: string | null): void => {
+  const target = node as WebTitleNode | null | undefined
+  if (!target?.setAttribute) return
+  if (title) target.setAttribute('title', title)
+  else target.removeAttribute?.('title')
+}
+
+// Колбэк на текст: тот же текст — тот же ref, и React перевызывает его только при
+// смене подсказки. Тексты — подписи интерфейса; потолок страхует от динамических.
+const WEB_TITLE_REF_LIMIT = 500
+const webTitleRefs = new Map<string, (node: unknown) => void>()
+const clearWebTitle = (node: unknown): void => applyWebTitle(node, null)
+
+/**
+ * Браузерная подсказка наведения `title` (#2261). react-native-web 0.21.2 проп
+ * `title` до DOM не доносит (его нет в `forwardedProps`), и запасного канала, как
+ * `dataSet` у `data-*`, у него нет — атрибут ставится на узел по ref:
+ * `<Pressable ref={webTitleRef(label)} …>`. Не хук: годится в `map` и в условной
+ * ветке. Смена текста обновляет атрибут, пустой текст снимает; на native — `undefined`.
+ * Спред `{...({ title } as any)}` запрещён `guard:web-style-channels`.
+ */
+export const webTitleRef = <T = unknown>(title?: string | null): React.RefCallback<T> | undefined => {
+  if (Platform.OS !== 'web') return undefined
+  if (!title) return clearWebTitle
+  let ref = webTitleRefs.get(title)
+  if (!ref) {
+    if (webTitleRefs.size >= WEB_TITLE_REF_LIMIT) webTitleRefs.clear()
+    ref = (node) => applyWebTitle(node, title)
+    webTitleRefs.set(title, ref)
+  }
+  return ref
+}
 
 /**
  * Метка десктопной шапки экрана (#2099): до гидратации статический HTML несёт её

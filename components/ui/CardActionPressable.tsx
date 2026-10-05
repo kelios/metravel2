@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
+import { applyWebTitle } from '@/utils/webProps';
 import {
   Platform,
   Pressable,
@@ -52,25 +53,6 @@ export const buildWebAccessibilityAttributes = (
       ? { 'aria-busy': String(accessibilityState.busy) }
       : null),
   };
-};
-
-export const applyWebTooltipAttributes = (
-  node: {
-    setAttribute?: (name: string, value: string) => void;
-    removeAttribute?: (name: string) => void;
-  } | null | undefined,
-  tooltipText?: string | null,
-) => {
-  if (!node?.setAttribute) return;
-
-  if (tooltipText) {
-    node.setAttribute('title', tooltipText);
-    node.setAttribute('data-tooltip', tooltipText);
-    return;
-  }
-
-  node.removeAttribute?.('title');
-  node.removeAttribute?.('data-tooltip');
 };
 
 export const stopWebPointerEvent = (e?: any) => {
@@ -142,7 +124,7 @@ const CardActionPressable = ({
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    applyWebTooltipAttributes(webRef.current, tooltipText);
+    applyWebTitle(webRef.current, tooltipText);
   }, [tooltipText]);
 
   useEffect(() => {

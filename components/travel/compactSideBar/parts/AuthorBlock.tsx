@@ -13,9 +13,10 @@ import { isPrintAvailable } from '@/utils/printAvailability'
 import ContentSafetyActions from '@/components/safety/ContentSafetyActions'
 import { makeContentRef } from '@/types/contentSafety'
 
-import { attachWebTitle, webOnly } from '../helpers'
+import { webOnly } from '../helpers'
 import { createStyles } from '../styles'
 import { translate as i18nT } from '@/i18n'
+import { webTitleRef } from '@/utils/webProps'
 
 
 // Детерминированное форматирование тысяч: встроенное locale-форматирование может давать
@@ -69,8 +70,6 @@ export const AuthorBlock = memo(function AuthorBlock({
   }, [displayName])
   const editTitle = i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.redaktirovat_609c8bab')
   const writeTitle = i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.napisat_avtoru_e9dfca99')
-  const editTitleRef = useMemo(() => attachWebTitle(editTitle), [editTitle])
-  const writeTitleRef = useMemo(() => attachWebTitle(writeTitle), [writeTitle])
 
   return (
     <View
@@ -107,6 +106,7 @@ export const AuthorBlock = memo(function AuthorBlock({
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={styles.userRow}>
             <Pressable
+              ref={webTitleRef(authorUserId ? i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.otkryt_profil_avtora_value1_ef516528', { value1: displayName }) : null)}
               onPress={onOpenProfile}
               disabled={!authorUserId}
               accessibilityRole={authorUserId ? 'button' : undefined}
@@ -124,7 +124,6 @@ export const AuthorBlock = memo(function AuthorBlock({
                       cursor: 'pointer',
                       role: 'button',
                       'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.otkryt_profil_avtora_value1_ef516528', { value1: displayName }),
-                      title: i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.otkryt_profil_avtora_value1_ef516528', { value1: displayName }),
                     } as any)
                   : {},
               )}
@@ -162,7 +161,7 @@ export const AuthorBlock = memo(function AuthorBlock({
                     hovered && styles.actionBtnHovered,
                     pressed && styles.actionBtnPressed,
                   ]}
-                  ref={editTitleRef}
+                  ref={webTitleRef(editTitle)}
                   {...webOnly({
                     role: 'button',
                     'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.redaktirovat_puteshestvie_8010aa7b'),
@@ -201,7 +200,7 @@ export const AuthorBlock = memo(function AuthorBlock({
                       hovered && styles.actionBtnHovered,
                       pressed && styles.actionBtnPressed,
                     ]}
-                    ref={writeTitleRef}
+                    ref={webTitleRef(writeTitle)}
                     {...webOnly({
                       role: 'button',
                       'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.napisat_avtoru_value1_191ed8f0', { value1: displayName }),

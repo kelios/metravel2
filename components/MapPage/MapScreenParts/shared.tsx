@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from 'react-native'
+import { webTitleRef } from '@/utils/webProps'
 import Feather from '@expo/vector-icons/Feather'
 
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
@@ -35,11 +36,11 @@ export function CollapsedIconButton({
 }) {
   return (
     <Pressable
+      ref={webTitleRef(title)}
       style={({ pressed }) => [styles.collapsedIconBtn, pressed && PRESSED_OPACITY_07]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      {...({ title } as any)}
     >
       <Feather name={icon} size={18} color={iconColor} />
       {badge != null && badge > 0 && badgeStyles && (

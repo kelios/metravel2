@@ -6,6 +6,7 @@ import type { Travel } from '@/types/types'
 import { ExportStage } from '@/types/pdf-export'
 import type { ShareButtonsPdfExportState } from '@/components/travel/ShareButtonsPdfExportBridge'
 import { translate as i18nT } from '@/i18n'
+import { webTitleRef } from '@/utils/webProps'
 
 
 const ShareButtonsPdfExportBridgeLazy = lazy(() => import('@/components/travel/ShareButtonsPdfExportBridge'))
@@ -63,13 +64,6 @@ function TravelPdfExportControl({
     return <Feather name="file-text" size={18} color={mutedText} />
   }, [isGenerating, mutedText])
 
-  const setWebTitle = useCallback((el: any) => {
-    if (Platform.OS === 'web' && el) {
-      const node = el instanceof HTMLElement ? el : el._nativeTag ?? el
-      if (node?.setAttribute) node.setAttribute('title', i18nT('travel:components.travel.TravelPdfExportControl.eksport_v_pdf_94c24fb3'))
-    }
-  }, [])
-
   return (
     <>
       <Pressable
@@ -77,7 +71,7 @@ function TravelPdfExportControl({
         disabled={isGenerating}
         accessibilityRole="button"
         accessibilityLabel={i18nT('travel:components.travel.TravelPdfExportControl.eksport_v_pdf_94c24fb3')}
-        ref={setWebTitle}
+        ref={webTitleRef(i18nT('travel:components.travel.TravelPdfExportControl.eksport_v_pdf_94c24fb3'))}
         style={({ pressed, hovered }) => [
           actionBtnStyle,
           hovered && !isGenerating ? actionBtnHoveredStyle : null,

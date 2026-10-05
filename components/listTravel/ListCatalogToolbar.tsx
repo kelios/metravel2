@@ -7,6 +7,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { getTravelLabel } from '@/utils/pluralize'
 import type { ListDensity } from '@/stores/listViewStore'
 import { translate as i18nT } from '@/i18n'
+import { webTitleRef } from '@/utils/webProps'
 
 
 export type ListSortOption = { id: string; name: string }
@@ -112,13 +113,13 @@ function ListCatalogToolbar({
         return (
           <Pressable
             key={option.id}
+            ref={webTitleRef(option.name)}
             testID={`sort-chip-${option.id}`}
             onPress={() => onSortChange(option.id)}
             accessibilityRole="button"
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={i18nT('travel:components.listTravel.ListCatalogToolbar.sortirovat_value1_36ec73e5', { value1: option.name })}
             style={[styles.chip, isActive && styles.chipActive]}
-            {...Platform.select({ web: { title: option.name } as any })}
           >
             <Text
               style={[styles.chipText, isActive && styles.chipTextActive]}
@@ -151,13 +152,13 @@ function ListCatalogToolbar({
         return (
           <Pressable
             key={button.value}
+            ref={webTitleRef(button.label)}
             testID={`density-${button.value}`}
             onPress={() => onDensityChange(button.value)}
             accessibilityRole="button"
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={button.label}
             style={[styles.densityButton, isActive && styles.densityButtonActive]}
-            {...Platform.select({ web: { title: button.label } as any })}
           >
             <Feather
               name={button.icon}
@@ -181,13 +182,13 @@ function ListCatalogToolbar({
         return (
           <Pressable
             key={button.value}
+            ref={webTitleRef(button.label)}
             testID={`travel-status-${button.value}`}
             onPress={() => onStatusModeChange?.(button.value)}
             accessibilityRole="button"
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={button.label}
             style={[styles.densityButton, isActive && styles.densityButtonActive]}
-            {...Platform.select({ web: { title: button.label } as any })}
           >
             <Feather
               name={button.icon}

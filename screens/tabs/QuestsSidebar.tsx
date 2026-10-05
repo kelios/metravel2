@@ -13,6 +13,7 @@ import { COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID,
 import { OTHER_COUNTRY_CODE } from './useQuestCountrySelection';
 import { toCountrySelectionId } from '@/utils/questCatalogSelection';
 import { translate as i18nT } from '@/i18n'
+import { webTitleRef } from '@/utils/webProps'
 
 
 type SidebarActionButtonProps = {
@@ -55,6 +56,7 @@ function SidebarActionButton({
     if (isMobile) {
         return (
             <Pressable
+                ref={webTitleRef(label)}
                 style={[
                     styles.sidebarActionIconBtn,
                     active && styles.sidebarActionIconBtnActive,
@@ -66,7 +68,6 @@ function SidebarActionButton({
                 accessibilityLabel={accessibilityLabel}
                 accessibilityState={accessibilityState}
                 testID={testID}
-                {...({ title: label } as any)}
             >
                 <NavigationIcon name={icon} size={18} color={iconColor} />
             </Pressable>

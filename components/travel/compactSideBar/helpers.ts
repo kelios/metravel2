@@ -66,13 +66,6 @@ export function emitOpenSection(key: string) {
   }
 }
 
-export function attachWebTitle(title: string) {
-  if (!(Platform.OS === 'web')) return undefined
-  return (el: any) => {
-    if (el instanceof HTMLElement) el.setAttribute('title', title)
-  }
-}
-
 export function shouldShowDivider(links: TravelSectionLink[], index: number) {
   if (index === 0) return false
   const cur = links[index].key

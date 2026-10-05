@@ -20,6 +20,7 @@ import { usePopupActions } from './usePopupActions';
 import { getPlacePopupCoordinate, getPlacePopupSubtitle } from './placePopupModel';
 import PlaceSourcePager, { usePlaceSourceSwipeHandlers } from './PlaceSourcePager';
 import { translate as i18nT } from '@/i18n'
+import { webTitleRef } from '@/utils/webProps'
 
 // Static dark frost for the hero caption (no live backdrop blur on mobile —
 // recomposites the map region, CLAUDE.md arch #2). Theme-invariant over photos.
@@ -1042,6 +1043,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
   const heroImage = imageUrl ? (
     <Pressable
+      ref={webTitleRef(popupTooltips.openPhoto)}
       onPress={handleOpenFullscreen}
       onMouseDown={stopWebPopupEvent as any}
       onPointerDown={stopWebPopupEvent as any}
@@ -1051,7 +1053,6 @@ const PlacePopupCard: React.FC<Props> = ({
       {...(Platform.OS === 'web'
         ? ({
             dataSet: { cardAction: 'true' },
-            title: popupTooltips.openPhoto,
             onMouseDownCapture: handleOpenFullscreen,
             onPointerDownCapture: handleOpenFullscreen,
             onClickCapture: handleOpenFullscreen,

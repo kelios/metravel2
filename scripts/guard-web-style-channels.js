@@ -32,6 +32,12 @@ const ts = require('typescript')
  *      состояние `hovered`/`pressed`/`focused` у `Pressable` или правило на маркере
  *      `dataSet` в `app/global.css` под `@media (hover: hover) and (pointer: fine)`.
  *
+ * Четвёртый случай того же allowlist — `title` (#2261): в `forwardedProps` его нет,
+ * и запасного канала, как `dataSet`, тоже. Подсказка наведения, развёрнутая спредом
+ * (`{...({ title } as any)}`, `{...Platform.select({ web: { title } })}`), до DOM не
+ * доходила в 16 местах; приведение типа глушило TypeScript. Канал — атрибут на узле
+ * по ref: `ref={webTitleRef(label)}` из `utils/webProps.ts`.
+ *
  * Правила:
  *   - `raw-data-attribute` — литеральный `data-…` (JSX-атрибут или ключ объекта,
  *     уходящего в JSX-спред или `createElement`) на чём угодно, кроме
@@ -48,6 +54,10 @@ const ts = require('typescript')
  *     которого начинается с псевдокласса/псевдоэлемента: `:x`, `::x`, `&:x`.
  *     Проверяется любой литерал, а не только аргумент `StyleSheet.create`: ключ
  *     живёт и в фабриках стилей, и в `Platform.select`, и в пропах-спредах;
+ *   - `title-spread` — ключ `title` в литерале, который доходит до JSX-спреда на
+ *     компоненте (не на DOM-элементе). Литерал — значение пропа (`options={{ title }}`)
+ *     и объект с недоказанным адресатом правило не трогает: `title` — обычное имя
+ *     поля. Долгового списка нет: все 16 мест переведены на `webTitleRef` в #2261;
  *   - `debt-count` / `stale-entry` — места, жившие в дереве до правила, перечислены
  *     в `KNOWN_RAW_DATA_ATTRIBUTE_DEBT` и `KNOWN_PSEUDO_CLASS_STYLE_KEY_DEBT` с
  *     точным числом. Число только убывает: новое место в файле из списка красит
@@ -94,11 +104,12 @@ const NON_WEB_FILE = /\.(?:native|ios|android)\.[cm]?[jt]sx?$/
 const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/
 
 const DATA_ATTRIBUTE = /^data-/
+const TITLE_ATTRIBUTE = 'title'
 const STYLESHEET_SPECIFIER = /\.css(?:[?#].*)?$/
 // Селектор вместо имени свойства: `:hover`, `::before`, `&:hover`, `& :focus`.
 const PSEUDO_SELECTOR_KEY = /^&?\s*::?[a-z]/i
 // Дешёвый предфильтр: файл без этих подстрок не парсится вовсе.
-const PREFILTER = /data-|\.css|['"`]&?\s*::?[a-z]/i
+const PREFILTER = /data-|\.css|['"`]&?\s*::?[a-z]|\.\.\.[\s\S]*\btitle\b|\btitle\b[\s\S]*\.\.\./i
 
 const normalizePath = (value) => String(value || '').replace(/\\/g, '/')
 
@@ -202,6 +213,18 @@ const jsxElementOfAttributes = (attributes) => attributes.parent
 
 const tagLabel = (element, sourceFile) => `<${element.tagName.getText(sourceFile)}>`
 
+const isPlatformSelectArgument = (objectLiteral) => {
+  const call = objectLiteral.parent
+  if (!call || !ts.isCallExpression(call) || call.arguments[0] !== objectLiteral) return false
+  const callee = call.expression
+  return (
+    ts.isPropertyAccessExpression(callee) &&
+    callee.name.text === 'select' &&
+    ts.isIdentifier(callee.expression) &&
+    callee.expression.text === 'Platform'
+  )
+}
+
 /**
  * Куда уходит объектный литерал с ключом `data-…`. Подъём идёт только сквозь
  * выражения, которые возвращают сам объект: скобки и приведения, ветки тернарника
@@ -243,6 +266,11 @@ const resolveObjectSink = (objectLiteral, sourceFile) => {
       current = parent.parent
       continue
     }
+    // Ветка `Platform.select({ web: { … } })`: вызов возвращает сам объект ветки.
+    if (ts.isPropertyAssignment(parent) && isPlatformSelectArgument(parent.parent)) {
+      current = parent.parent.parent
+      continue
+    }
     if (ts.isCallExpression(parent)) {
       if (isCreateElementCall(parent)) {
         if (parent.arguments[1] !== current) return { dom: false, target: 'unresolved' }
@@ -260,7 +288,11 @@ const resolveObjectSink = (objectLiteral, sourceFile) => {
     }
     if (ts.isJsxSpreadAttribute(parent)) {
       const element = jsxElementOfAttributes(parent.parent)
-      return { dom: isIntrinsicTagName(element.tagName), target: tagLabel(element, sourceFile) }
+      return {
+        dom: isIntrinsicTagName(element.tagName),
+        target: tagLabel(element, sourceFile),
+        spread: true,
+      }
     }
     if (ts.isJsxExpression(parent) && parent.parent && ts.isJsxAttribute(parent.parent)) {
       const element = jsxElementOfAttributes(parent.parent.parent)
@@ -309,13 +341,23 @@ const stylesheetSpecifierOf = (node) => {
  * (`pseudoClassKeys`).
  */
 const analyzeSource = ({ filePath, content }) => {
-  const result = { attributes: [], dataSetKeys: [], stylesheets: [], pseudoClassKeys: [] }
+  const result = { attributes: [], dataSetKeys: [], stylesheets: [], pseudoClassKeys: [], titleSpreads: [] }
   const text = String(content || '')
   if (!PREFILTER.test(text)) return result
 
   const file = normalizePath(filePath)
   const sourceFile = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, scriptKindFor(file))
   const lineOf = (node) => sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1
+
+  // `title` в литерале, развёрнутом спредом на компонент: `{...({ title } as any)}`,
+  // `{...Platform.select({ web: { title } })}`. Литерал — значение пропа
+  // (`options={{ title }}`) сюда не попадает: у него `spread` нет.
+  const pushTitleSpread = (property) => {
+    const sink = resolveObjectSink(property.parent, sourceFile)
+    if (sink.spread && !sink.dom) {
+      result.titleSpreads.push({ line: lineOf(property), target: sink.target })
+    }
+  }
 
   const visit = (node) => {
     if (ts.isJsxAttribute(node)) {
@@ -331,6 +373,7 @@ const analyzeSource = ({ filePath, content }) => {
       if (name && PSEUDO_SELECTOR_KEY.test(name)) {
         result.pseudoClassKeys.push({ line: lineOf(node), name })
       }
+      if (name === TITLE_ATTRIBUTE) pushTitleSpread(node)
       if (name && DATA_ATTRIBUTE.test(name) && !ts.isIdentifier(node.name)) {
         const objectLiteral = node.parent
         if (isDataSetObject(objectLiteral)) {
@@ -340,6 +383,8 @@ const analyzeSource = ({ filePath, content }) => {
           if (!sink.dom) result.attributes.push({ line: lineOf(node), name, target: sink.target })
         }
       }
+    } else if (ts.isShorthandPropertyAssignment(node)) {
+      if (node.name.text === TITLE_ATTRIBUTE) pushTitleSpread(node)
     } else if (ts.isPropertySignature(node)) {
       // Поле типа стиля (`':hover'?: ViewStyle`) — приглашение писать мёртвый ключ.
       const name = propertyNameText(node.name)
@@ -425,7 +470,7 @@ const evaluateGuard = ({
 
   for (const source of sources) {
     const file = normalizePath(source.filePath)
-    const { attributes, dataSetKeys, stylesheets, pseudoClassKeys } = analyzeSource(source)
+    const { attributes, dataSetKeys, stylesheets, pseudoClassKeys, titleSpreads } = analyzeSource(source)
 
     if (attributes.length) attributeFiles.set(file, attributes)
     if (pseudoClassKeys.length) pseudoClassFiles.set(file, pseudoClassKeys)
@@ -436,6 +481,15 @@ const evaluateGuard = ({
         file,
         line: site.line,
         snippet: `'${site.name}' inside dataSet renders as data-${site.name}; use a camelCase key`,
+      })
+    }
+
+    for (const site of titleSpreads) {
+      violations.push({
+        rule: 'title-spread',
+        file,
+        line: site.line,
+        snippet: `'title' -> ${site.target}: react-native-web drops it before the DOM; use ref={webTitleRef(text)} from @/utils/webProps`,
       })
     }
 
@@ -490,6 +544,7 @@ const evaluateGuard = ({
         `no raw data-* outside dataSet beyond the recorded debt (${sumDebt(debt)} site(s) in ` +
         `${Object.keys(debt).length} file(s)); no pseudo-class style key beyond the recorded debt ` +
         `(${sumDebt(pseudoClassDebt)} site(s) in ${Object.keys(pseudoClassDebt).length} file(s)); ` +
+        'no title spread on a component; ' +
         `the only stylesheet import is ${ROOT_STYLESHEET.file} -> ${ROOT_STYLESHEET.specifier}`,
       violations: [],
     }
@@ -547,7 +602,9 @@ const main = () => {
       'a raw data-* prop is dropped before the DOM. Web CSS goes into app/global.css — a stylesheet ' +
       'imported anywhere else never reaches the web export. A pseudo-class key in a style object is ' +
       'not CSS either: use `style={({ hovered, pressed }) => …}` on Pressable or a dataSet-marked rule ' +
-      'in app/global.css under @media (hover: hover) and (pointer: fine). See docs/RULES.md → «Design system».',
+      'in app/global.css under @media (hover: hover) and (pointer: fine). A hover hint is ' +
+      '`ref={webTitleRef(text)}` from utils/webProps.ts — a `title` prop is dropped like a raw data-*. ' +
+      'See docs/RULES.md → «Design system».',
   )
   process.exit(1)
 }

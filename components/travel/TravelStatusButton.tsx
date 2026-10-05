@@ -22,6 +22,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { useActionFeedback } from '@/hooks/useActionFeedback'
 import { translate as i18nT } from '@/i18n'
+import { webTitleRef } from '@/utils/webProps'
 
 
 const STATUS_OPTIONS: Array<{
@@ -595,13 +596,13 @@ export default function TravelStatusButton({
       return (
         <>
           <View
+            ref={webTitleRef(i18nT('travel:components.travel.TravelStatusButton.upravlenie_statusom_puteshestviya_443c9fae'))}
             style={[compactStyles.btn, globalFocusStyles.focusable]}
             {...({
               tabIndex: 0,
               role: 'button',
               'aria-label': compactAccessibilityLabel,
               'aria-pressed': Boolean(current),
-              title: i18nT('travel:components.travel.TravelStatusButton.upravlenie_statusom_puteshestviya_443c9fae'),
               dataSet: { cardAction: 'true' },
               onClick: handleMainPress,
               onMouseEnter: isMobile ? undefined : () => setHovered(true),

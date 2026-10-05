@@ -25,6 +25,7 @@ import {
 } from '@/components/mainPage/stickySearchBarModel';
 import { translate as i18nT } from '@/i18n'
 import { useStickySearchBarStyles as useStyles } from './StickySearchBar.styles';
+import { webTitleRef } from '@/utils/webProps';
 
 
 interface StickySearchBarProps {
@@ -201,11 +202,7 @@ function StickySearchBar({
     <Pressable
       testID={testID}
       onPress={onPress}
-      {...Platform.select({
-        web: {
-          title: accessibilityLabel,
-        } as any,
-      })}
+      ref={webTitleRef(accessibilityLabel)}
       style={({ hovered }: any) => [
         styles.actionButton,
         isMobile && Platform.OS === 'web' ? styles.actionButtonMobileWeb : null,
@@ -288,11 +285,7 @@ function StickySearchBar({
               onPress={clearSearch}
               accessibilityRole="button"
               accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.ochistit_poisk_b1c2bdab')}
-              {...Platform.select({
-                web: {
-                  title: i18nT('home:components.mainPage.StickySearchBar.ochistit_poisk_b1c2bdab'),
-                } as any,
-              })}
+              ref={webTitleRef(i18nT('home:components.mainPage.StickySearchBar.ochistit_poisk_b1c2bdab'))}
               style={[styles.clearButton, { pointerEvents: 'box-only' }, globalFocusStyles.focusable]}
             >
               <View style={styles.clearButtonIconWrap}>
@@ -391,11 +384,7 @@ function StickySearchBar({
               onPress={showClearAll ? onClearAll : undefined}
               disabled={!showClearAll}
               accessibilityRole="button"
-              {...Platform.select({
-                web: {
-                  title: i18nT('home:components.mainPage.StickySearchBar.sbrosit_usloviya_c412986e'),
-                } as any,
-              })}
+              ref={webTitleRef(i18nT('home:components.mainPage.StickySearchBar.sbrosit_usloviya_c412986e'))}
               style={[
                 styles.clearAllButton,
                 !showClearAll ? ({ opacity: 0 } as any) : null,
@@ -433,9 +422,9 @@ function StickySearchBar({
               onPress={() => runHistoryActionOnPress(() => void clearHistory())}
               accessibilityRole="button"
               accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.ochistit_istoriyu_poiska_cd08f48a')}
+              ref={webTitleRef(i18nT('home:components.mainPage.StickySearchBar.ochistit_istoriyu_f9889e79'))}
               {...Platform.select({
                 web: {
-                  title: i18nT('home:components.mainPage.StickySearchBar.ochistit_istoriyu_f9889e79'),
                   onMouseDown: (event: unknown) => runHistoryActionOnMouseDown(event, () => void clearHistory()),
                 } as any,
               })}
@@ -452,9 +441,9 @@ function StickySearchBar({
                 onPress={() => runHistoryActionOnPress(() => applyHistoryQuery(query))}
                 accessibilityRole="button"
                 accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.nayti_value1_0d916130', { value1: query })}
+                ref={webTitleRef(query)}
                 {...Platform.select({
                   web: {
-                    title: query,
                     onMouseDown: (event: unknown) => runHistoryActionOnMouseDown(event, () => applyHistoryQuery(query)),
                   } as any,
                 })}
@@ -470,9 +459,9 @@ function StickySearchBar({
                 onPress={() => runHistoryActionOnPress(() => void removeQuery(query))}
                 accessibilityRole="button"
                 accessibilityLabel={i18nT('home:components.mainPage.StickySearchBar.udalit_iz_istorii_value1_f59529ef', { value1: query })}
+                ref={webTitleRef(i18nT('home:components.mainPage.StickySearchBar.udalit_da76c0e4'))}
                 {...Platform.select({
                   web: {
-                    title: i18nT('home:components.mainPage.StickySearchBar.udalit_da76c0e4'),
                     onMouseDown: (event: unknown) => runHistoryActionOnMouseDown(event, () => void removeQuery(query)),
                   } as any,
                 })}

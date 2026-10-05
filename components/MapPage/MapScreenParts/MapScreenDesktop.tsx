@@ -10,7 +10,7 @@ import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobile
 import { MapMobileRadiusPopover } from '@/components/MapPage/MapMobile/MapMobileRadiusPopover'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { MapUiApi } from '@/types/mapUi'
-import { webTitleProps } from '@/utils/webProps'
+import { webTitleRef } from '@/utils/webProps'
 import {
   ActiveFiltersBar,
   MapOnboarding,
@@ -146,12 +146,12 @@ export function MapScreenDesktopChrome({
       {showDesktopCollapsedStrip && (
         <View testID="map-panel-collapsed" style={styles.collapsedPanel}>
           <Pressable
+            ref={webTitleRef(i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.razvernut_panel_4e58160a'))}
             testID="map-panel-expand-button"
             style={({ pressed }) => [styles.collapseToggle, pressed && PRESSED_OPACITY_07]}
             onPress={toggleDesktopCollapse}
             accessibilityRole="button"
             accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.razvernut_panel_4e58160a')}
-            {...({ title: i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.razvernut_panel_4e58160a') } as any)}
           >
             <Feather name="chevron-right" size={18} color={themedColors.text} />
           </Pressable>
@@ -450,11 +450,11 @@ export function MapScreenDesktopOverlays({
               map). */}
           {!layersOpen && (
             <Pressable
+              ref={webTitleRef(i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd'))}
               testID="map-desktop-help-button"
               onPress={restartMapOnboarding}
               accessibilityRole="button"
               accessibilityLabel={i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd')}
-              {...webTitleProps(i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd'))}
               style={({ pressed }) => [styles.desktopHelpFab, pressed && PRESSED_OPACITY_085]}
             >
               <Feather name="help-circle" size={20} color={themedColors.text} />

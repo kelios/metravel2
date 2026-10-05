@@ -341,6 +341,61 @@ describe('guard-web-style-channels', () => {
     })
   })
 
+  describe('title spreads (#2261)', () => {
+    it('flags the #2261 shapes: a cast literal, Platform.select and a ternary spread on a component', () => {
+      const source = tsx(`
+        export const Sample = ({ label, open }) => (
+          <>
+            <Pressable accessibilityLabel={label} {...({ title: label } as any)} />
+            <Pressable {...({ title } as any)} />
+            <Pressable {...Platform.select({ web: { title: label, onMouseDown } as any })} />
+            <View {...(Platform.OS === 'web' ? ({ role: 'button', title: open ? 'a' : 'b' } as any) : null)} />
+            <Pressable {...webOnly(label ? ({ cursor: 'pointer', title: label } as any) : {})} />
+          </>
+        )
+      `)
+
+      expect(analyzeSource(source).titleSpreads).toEqual([
+        { line: 4, target: '<Pressable>' },
+        { line: 5, target: '<Pressable>' },
+        { line: 6, target: '<Pressable>' },
+        { line: 7, target: '<View>' },
+        { line: 8, target: '<Pressable>' },
+      ])
+
+      const result = evaluateGuard({ sources: [ROOT_LAYOUT, source], debt: {} })
+      expect(result.ok).toBe(false)
+      expect(rulesOf(result)).toEqual(Array(5).fill('title-spread'))
+      expect(result.violations[0].snippet).toContain('webTitleRef')
+    })
+
+    it('leaves title alone where it is an ordinary field: prop value, DOM element, data object', () => {
+      const source = tsx(`
+        const screen = { title: 'Профиль' }
+        const select = Platform.select({ web: { title: 'x' } })
+        const helper = (title) => (Platform.OS === 'web' ? ({ title } as any) : {})
+        export const Sample = ({ label }) => (
+          <>
+            <Stack.Screen options={{ title: label }} />
+            <Card title={label} meta={{ ...screen, title: label }} />
+            <div {...({ title: label } as any)} />
+            <button {...Platform.select({ web: { title: label } })} />
+            <Pressable ref={webTitleRef(label)} {...screen} />
+            <Text>{i18nT('key', { title: label })}</Text>
+          </>
+        )
+      `)
+
+      expect(analyzeSource(source).titleSpreads).toEqual([])
+      expect(evaluateGuard({ sources: [ROOT_LAYOUT, source], debt: {} }).ok).toBe(true)
+    })
+
+    it('parses a file that has nothing but a title spread', () => {
+      const source = tsx(`export const A = ({ t }) => (\n  <Pressable\n    {...({\n      title: t,\n    } as any)}\n  />\n)\n`)
+      expect(analyzeSource(source).titleSpreads).toEqual([{ line: 4, target: '<Pressable>' }])
+    })
+  })
+
   describe('recorded debt', () => {
     const debtFile = 'components/Old.tsx'
     const twoSites = tsx(

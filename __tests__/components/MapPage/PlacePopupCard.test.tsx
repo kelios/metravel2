@@ -298,7 +298,6 @@ describe('PlacePopupCard', () => {
     const heroPressable = findHeroPressable(tree);
     expect(heroPressable).toBeTruthy();
     expect(heroPressable.props.dataSet).toEqual({ cardAction: 'true' });
-    expect(heroPressable.props.title).toBeTruthy();
 
     const stopPropagation = jest.fn();
     renderer.act(() => {

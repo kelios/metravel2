@@ -5518,6 +5518,25 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   (фикстуры #2032: литеральный ключ в спреде, условный `require` `.web.css`; дерево
   зелёное); доказательство для конкретного экрана — тест на настоящем RNW DOM
   (`TravelDetailsSectionAnchors.web.test.tsx`, `CompactSideBarTravel.dom.web.test.tsx`).
+- **`title` — тот же allowlist, другой канал (#2261, 05.10.2026):** подсказка
+  наведения `title` в `forwardedProps` тоже не входит, а запасного канала вроде
+  `dataSet` у неё нет. Помощник `webTitleProps` (#2099) и спреды
+  `{...({ title } as any)}` / `{...Platform.select({ web: { title } })}` не рисовали
+  ничего в 19 местах (строка вложенного экрана, лист шрифта квеста, панель карты,
+  тулбар каталога, поиск главной, попап точки, статус путешествия, блок автора);
+  `aria-label` при этом доходил, поэтому потерю никто не видел. Канал — атрибут на
+  узле по ref: `ref={webTitleRef(text)}` из `utils/webProps.ts` (не хук — годится в
+  `map`; смена текста обновляет, пустой снимает, на native `undefined`),
+  `applyWebTitle` — для компонента со своим ref (`CardActionPressable`,
+  `SubscribeButton`). Три самодельных сеттера (`attachWebTitle`, `setWebTitle`,
+  `applyWebTooltipAttributes` с никем не читаемым `data-tooltip`) сведены к нему.
+  Контроль: правило `title-spread` того же guard (ключ `title` в литерале, дошедшем
+  до JSX-спреда на компоненте; ложных срабатываний на дереве 0, долга нет) и
+  `__tests__/utils/webTitleRef.dom.web.test.tsx` — `getAttribute('title')` на
+  настоящем RNW DOM у механизма и у потребителей. Мутация: вернуть спред в
+  `ScreenHeaderBarActions` — красные и тест (1 из 11), и guard. Guard не видит
+  `title`, возвращённый из функции-помощника (форма самого `webTitleProps`):
+  адресат объекта не доказан, а `title` — обычное имя поля.
 - **Чего guard не видит:** вычисляемый ключ (`` [`data-${x}`] ``) и маркер,
   переданный обёртке под другим именем пропа. Ключи-псевдоклассы RN StyleSheet
   (`':hover'`) с #2036 ловит тот же guard — `RNW-STYLESHEET-PSEUDO-CLASS-DEAD-001`.

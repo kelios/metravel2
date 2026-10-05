@@ -8,7 +8,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { translate as i18nT } from '@/i18n'
-import { webTitleProps } from '@/utils/webProps'
+import { webTitleRef } from '@/utils/webProps'
 
 import type { ScreenHeaderConfig } from './ScreenHeaderContext'
 
@@ -25,6 +25,7 @@ type IconButtonProps = {
 function BarIconButton({ icon, label, onPress, disabled, testID, styles, color }: IconButtonProps) {
   return (
     <Pressable
+      ref={webTitleRef(label)}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
@@ -32,7 +33,6 @@ function BarIconButton({ icon, label, onPress, disabled, testID, styles, color }
       accessibilityState={disabled ? { disabled: true } : undefined}
       style={[styles.button, globalFocusStyles.focusable]}
       testID={testID}
-      {...webTitleProps(label)}
     >
       <Feather name={icon} size={20} color={color} />
     </Pressable>

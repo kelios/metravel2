@@ -8,7 +8,7 @@ import { translate as i18nT } from '@/i18n'
 import { formatNumber } from '@/i18n/format'
 import { useQuestFontScaleControls } from '@/stores/questFontScaleStore'
 import { globalFocusStyles } from '@/styles/globalFocus'
-import { webTitleProps } from '@/utils/webProps'
+import { webTitleRef } from '@/utils/webProps'
 
 type StepProps = {
   icon: 'zoom-in' | 'zoom-out'
@@ -23,6 +23,7 @@ type StepProps = {
 function StepButton({ icon, label, disabled, onPress, testID, styles, colors }: StepProps) {
   return (
     <Pressable
+      ref={webTitleRef(label)}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
@@ -30,7 +31,6 @@ function StepButton({ icon, label, disabled, onPress, testID, styles, colors }: 
       accessibilityState={{ disabled }}
       style={[styles.step, globalFocusStyles.focusable]}
       testID={testID}
-      {...webTitleProps(label)}
     >
       <Feather name={icon} size={20} color={disabled ? colors.disabled : colors.text} />
     </Pressable>
