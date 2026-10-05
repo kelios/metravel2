@@ -9,6 +9,7 @@ import type { ComponentType } from 'react'
 import { Platform, Text } from 'react-native'
 
 import { resources } from '@/i18n/resources'
+import { writeConsent } from '@/utils/consent'
 
 // #2135: на мобильном web текст баннера ограничен `numberOfLines={2}` (решение
 // дизайна: баннер компактный). На ширине 320 бокс текста — 262 px (320 − 2×16
@@ -115,5 +116,32 @@ describe('ConsentBanner text (#2135)', () => {
       expect(textNode).toBeDefined()
       expect(textNode?.props.numberOfLines).toBe(2)
     })
+  })
+})
+
+// #2162: e2e закрывают баннер только по testID (`e2e/helpers/consentBanner.ts`),
+// поэтому testID кнопок — контракт, а не деталь вёрстки.
+describe('ConsentBanner choice buttons are addressable by testID (#2162)', () => {
+  const originalPlatform = Platform.OS
+
+  afterEach(() => {
+    Platform.OS = originalPlatform
+    ;(writeConsent as jest.Mock).mockClear()
+  })
+
+  it.each([
+    ['consent-accept', true],
+    ['consent-decline', false],
+  ] as const)('%s saves the matching consent', (testID, analytics) => {
+    Platform.OS = 'web'
+    const ConsentBanner: ComponentType = require('@/components/layout/ConsentBanner').default
+    const screen = render(<ConsentBanner />)
+
+    // Обёртка баннера несёт `pointerEvents: 'none'` (CSS-семантика web: клики
+    // проходят к кнопкам с `auto`), а RNTL по RN-семантике гасит такой press —
+    // поэтому связку testID → обработчик проверяем через сам компонент кнопки.
+    screen.UNSAFE_getByProps({ testID }).props.onPress()
+
+    expect(writeConsent).toHaveBeenCalledWith(expect.objectContaining({ necessary: true, analytics }))
   })
 })

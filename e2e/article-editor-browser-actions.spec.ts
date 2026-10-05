@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
 import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
+import { dismissConsentBanner } from './helpers/consentBanner';
 
 const tinyPngBuffer = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
@@ -16,21 +17,6 @@ const upsertPatterns = [
   '**/travels/upsert/**',
   '**/travels/upsert/',
 ];
-
-async function maybeAcceptCookies(page: Page) {
-  const candidates = [
-    page.getByText('Принять всё', { exact: true }),
-    page.getByText('Только необходимые', { exact: true }),
-    page.getByRole('button', { name: /принять/i }).first(),
-  ];
-
-  for (const candidate of candidates) {
-    if (await candidate.isVisible().catch(() => false)) {
-      await candidate.click({ force: true }).catch(() => null);
-      break;
-    }
-  }
-}
 
 async function mockTravelUpsert(page: Page) {
   let nextId = draftTravelId;
@@ -117,7 +103,7 @@ async function openWizard(page: Page) {
   await mockImageUpload(page);
 
   await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
-  await maybeAcceptCookies(page);
+  await dismissConsentBanner(page);
   await page.waitForFunction(
     () => !document.body?.innerText?.includes('Bundling...') && !document.body?.innerText?.includes('Загрузка...'),
     undefined,

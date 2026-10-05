@@ -7,6 +7,7 @@ import type { Page } from '@playwright/test';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 import { acceptAuthTerms, ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
 import { seedNecessaryConsent } from './helpers/storage';
+import { dismissConsentBanner } from './helpers/consentBanner';
 
 const tinyPngBuffer = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
@@ -219,55 +220,8 @@ const maybeDismissRouteCoachmark = async (page: Page) => {
   }
 };
 
-const maybeAcceptCookies = async (page: Page) => {
-  const acceptCandidates = [
-    page.getByText('Принять', { exact: true }),
-    page.getByText('Принять всё', { exact: true }),
-    page.getByRole('button', { name: /принять/i }).first(),
-  ];
-  const rejectCandidates = [
-    page.getByText('Отклонить', { exact: true }),
-    page.getByText('Только необходимые', { exact: true }),
-  ];
-  const bannerTitleCandidates = [
-    page.getByText('Мы ценим вашу приватность', { exact: true }),
-    page.getByText(/Используем аналитику/i).first(),
-    page.getByTestId('consent-banner'),
-  ];
-
-  await Promise.race([
-    ...bannerTitleCandidates.map((c) => c.waitFor({ state: 'visible', timeout: 1500 }).catch(() => null)),
-    ...acceptCandidates.map((c) => c.waitFor({ state: 'visible', timeout: 1500 }).catch(() => null)),
-    ...rejectCandidates.map((c) => c.waitFor({ state: 'visible', timeout: 1500 }).catch(() => null)),
-  ]);
-
-  let clicked = false;
-  for (const candidate of acceptCandidates) {
-    if (await candidate.isVisible().catch(() => false)) {
-      await candidate.click({ force: true }).catch(() => null);
-      clicked = true;
-      break;
-    }
-  }
-
-  if (!clicked) {
-    for (const candidate of rejectCandidates) {
-      if (await candidate.isVisible().catch(() => false)) {
-        await candidate.click({ force: true }).catch(() => null);
-        break;
-      }
-    }
-  }
-
-  for (const banner of bannerTitleCandidates) {
-    if (await banner.isVisible().catch(() => false)) {
-      await banner.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => null);
-    }
-  }
-};
-
 const ensureCanCreateTravel = async (page: Page): Promise<void> => {
-  await maybeAcceptCookies(page);
+  await dismissConsentBanner(page);
   const authGate = page.getByText('Войдите, чтобы создать путешествие', { exact: true });
   const nameInput = page.getByPlaceholder('Например: Неделя в Грузии');
   if (await authGate.isVisible().catch(() => false)) {
@@ -275,7 +229,7 @@ const ensureCanCreateTravel = async (page: Page): Promise<void> => {
     // deterministic regression mode is seeded in the file-level beforeEach.
     await maybeLogin(page);
     await page.goto('/travel/new');
-    await maybeAcceptCookies(page);
+    await dismissConsentBanner(page);
   }
 
   await expect(authGate).toBeHidden({ timeout: 15_000 });
@@ -334,7 +288,7 @@ const maybeLogin = async (page: Page) => {
   if (!e2eEmail || !e2ePassword) return false;
 
   await page.goto('/login');
-  await maybeAcceptCookies(page);
+  await dismissConsentBanner(page);
 
   const emailCandidates = [
     page.locator('input[type="email"]'),

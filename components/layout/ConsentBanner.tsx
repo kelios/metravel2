@@ -195,6 +195,7 @@ function ConsentBanner() {
               { borderColor: colors.border, borderWidth: 1, backgroundColor: 'transparent' },
             ]}
             accessibilityLabel={i18nT('navigation:components.layout.ConsentBanner.otklonit_054e0823')}
+            testID="consent-decline"
           />
           <Button
             label={i18nT('navigation:components.layout.ConsentBanner.prinyat_007a0122')}
@@ -207,6 +208,7 @@ function ConsentBanner() {
               { backgroundColor: colors.primary },
             ]}
             accessibilityLabel={i18nT('navigation:components.layout.ConsentBanner.prinyat_007a0122')}
+            testID="consent-accept"
           />
         </View>
       </View>

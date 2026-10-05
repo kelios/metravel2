@@ -124,30 +124,12 @@ async function waitForBaseURL(baseURL: string, timeoutMs: number) {
   throw new Error(`[global-setup] Timed out waiting for baseURL to be reachable: ${baseURL}. Last error: ${msg}`);
 }
 
-async function maybeAcceptCookies(page: any) {
-  const acceptAll = page.getByText('Принять всё', { exact: true });
-  const necessaryOnly = page.getByText('Только необходимые', { exact: true });
-  const bannerTitle = page.getByTestId('consent-banner');
-
-  await Promise.race([
-    bannerTitle.waitFor({ state: 'visible', timeout: 1500 }).catch(() => null),
-    acceptAll.waitFor({ state: 'visible', timeout: 1500 }).catch(() => null),
-    necessaryOnly.waitFor({ state: 'visible', timeout: 1500 }).catch(() => null),
-  ]);
-
-  if (await acceptAll.isVisible().catch(() => false)) {
-    await acceptAll.click({ force: true });
-  } else if (await necessaryOnly.isVisible().catch(() => false)) {
-    await necessaryOnly.click({ force: true });
-  }
-
-  if (await bannerTitle.isVisible().catch(() => false)) {
-    await bannerTitle.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => null);
-  }
-}
-
 async function fillLoginForm(page: any, email: string, password: string) {
-  await maybeAcceptCookies(page);
+  // Cookie-баннер здесь намеренно не закрывается (#2162): контекст логина
+  // сохраняется в общий storageState, и посеянное тут согласие спрятало бы
+  // баннер у спек, которые его ждут (auth-entrypoints, footer-navigation).
+  // Прежняя копия maybeAcceptCookies искала несуществующие кнопки и тоже
+  // ничего не нажимала — поведение то же, без мёртвого кода.
 
   // Иногда RN-web/Expo рендерит доступные атрибуты нестабильно, поэтому пробуем несколько вариантов.
   const emailCandidates = [
