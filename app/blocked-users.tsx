@@ -2,12 +2,12 @@ import { useCallback, useMemo } from 'react';
 import { View, Text, Pressable, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter, useIsFocused, type Href } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { goBackOrReplace } from '@/utils/backNavigation';
 import EmptyState from '@/components/ui/EmptyState';
+import StandaloneScreen from '@/components/layout/StandaloneScreen';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
 import { webTouchScrollStyle } from '@/utils';
@@ -41,7 +41,7 @@ export default function BlockedUsersScreen() {
 
     if (authReady && !isAuthenticated) {
         return (
-            <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+            <StandaloneScreen style={styles.container}>
                 <EmptyState
                     density="full"
                     icon="lock"
@@ -53,12 +53,12 @@ export default function BlockedUsersScreen() {
                             router.push(buildLoginHref({ redirect: '/blocked-users', intent: 'settings' }) as Href),
                     }}
                 />
-            </SafeAreaView>
+            </StandaloneScreen>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+        <StandaloneScreen style={styles.container}>
             {isFocused && (
                 <InstantSEO
                     headKey="blocked-users"
@@ -94,6 +94,6 @@ export default function BlockedUsersScreen() {
                     </View>
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </StandaloneScreen>
     );
 }

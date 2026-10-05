@@ -2,6 +2,7 @@ import { Stack, router } from 'expo-router'
 import { useMemo } from 'react'
 import { StyleSheet } from 'react-native'
 
+import StandaloneScreen from '@/components/layout/StandaloneScreen'
 import Button from '@/components/ui/Button'
 import { Text, View } from '@/components/ui/Themed'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -25,26 +26,28 @@ export default function ErrorScreen({ error, retry }: ErrorScreenProps) {
   return (
     <>
       <Stack.Screen options={{ title: i18nT('errors:app.error.oshibka_cecac702') }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>{i18nT('errors:app.error.chto_to_poshlo_ne_tak_2bd9c3e0')}</Text>
+      <StandaloneScreen>
+        <View style={styles.container}>
+          <Text style={styles.title}>{i18nT('errors:app.error.chto_to_poshlo_ne_tak_2bd9c3e0')}</Text>
 
-        <Text style={styles.subtitle}>{message}</Text>
+          <Text style={styles.subtitle}>{message}</Text>
 
-        <Button
-          variant="primary"
-          label={i18nT('errors:app.error.poprobovat_snova_86f28e83')}
-          onPress={retry}
-          style={styles.ctaButton}
-        />
+          <Button
+            variant="primary"
+            label={i18nT('errors:app.error.poprobovat_snova_86f28e83')}
+            onPress={retry}
+            style={styles.ctaButton}
+          />
 
-        <Button
-          variant="ghost"
-          label={i18nT('errors:app.error.na_glavnuyu_cdb90635')}
-          onPress={() => router.replace('/')}
-          style={styles.ctaButtonSecondary}
-        />
+          <Button
+            variant="ghost"
+            label={i18nT('errors:app.error.na_glavnuyu_cdb90635')}
+            onPress={() => router.replace('/')}
+            style={styles.ctaButtonSecondary}
+          />
 
-      </View>
+        </View>
+      </StandaloneScreen>
     </>
   )
 }

@@ -4,6 +4,7 @@ import { Platform, StyleSheet } from 'react-native'
 import { useEffect, useMemo } from 'react'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
+import StandaloneScreen from '@/components/layout/StandaloneScreen'
 import Button from '@/components/ui/Button'
 import { Text, View } from '@/components/ui/Themed'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -48,36 +49,38 @@ export default function NotFoundScreen() {
         description={i18nT('shared:app.missing.stranitsa_ne_naydena_pereydite_na_glavnuyu_i_0cfdec3b')}
         robots="noindex, nofollow"
       />
-      <View
-        nativeID={UNKNOWN_CITY_NOT_FOUND_ELEMENT_ID}
-        testID={UNKNOWN_CITY_NOT_FOUND_ELEMENT_ID}
-        style={styles.container}
-      >
-        <Text style={styles.title}>{i18nT('shared:app.missing.stranitsa_ne_naydena_8663ccb9')}</Text>
+      <StandaloneScreen>
+        <View
+          nativeID={UNKNOWN_CITY_NOT_FOUND_ELEMENT_ID}
+          testID={UNKNOWN_CITY_NOT_FOUND_ELEMENT_ID}
+          style={styles.container}
+        >
+          <Text style={styles.title}>{i18nT('shared:app.missing.stranitsa_ne_naydena_8663ccb9')}</Text>
 
-        <Text style={styles.subtitle}>
-          {i18nT('shared:app.missing.pohozhe_vy_pereshli_po_nevernoy_ssylke_ili_s_3d66babf')}</Text>
+          <Text style={styles.subtitle}>
+            {i18nT('shared:app.missing.pohozhe_vy_pereshli_po_nevernoy_ssylke_ili_s_3d66babf')}</Text>
 
-        <Button
-          variant="primary"
-          label={i18nT('shared:app.missing.na_glavnuyu_58d8ad67')}
-          style={styles.ctaButton}
-          onPress={() => router.replace('/')}
-        />
+          <Button
+            variant="primary"
+            label={i18nT('shared:app.missing.na_glavnuyu_58d8ad67')}
+            style={styles.ctaButton}
+            onPress={() => router.replace('/')}
+          />
 
-        <Button
-          variant="ghost"
-          label={i18nT('shared:app.missing.nazad_50acffff')}
-          style={styles.ctaButtonSecondary}
-          onPress={() => {
-            if (Platform.OS === 'web') {
-              router.replace('/')
-              return
-            }
-            router.back()
-          }}
-        />
-      </View>
+          <Button
+            variant="ghost"
+            label={i18nT('shared:app.missing.nazad_50acffff')}
+            style={styles.ctaButtonSecondary}
+            onPress={() => {
+              if (Platform.OS === 'web') {
+                router.replace('/')
+                return
+              }
+              router.back()
+            }}
+          />
+        </View>
+      </StandaloneScreen>
     </>
   )
 }

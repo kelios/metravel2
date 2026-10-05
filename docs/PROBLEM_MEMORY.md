@@ -127,6 +127,34 @@ guard, падающий в CI на попытке обойти этот конт
   Старт-захват всей панели так не чинить: на Android JS-ответчик перехватывает
   касания потомков (`JSResponderHandler`), и `ScrollView` тела листа теряет
   прокрутку.
+- Один владелец листа (#2230, #2231, 2026-10-05): окно, шапка, жест и граница
+  касаний вынесены в `components/ui/BottomSheet.tsx`; `ActionListSheet` — список
+  действий поверх него, лист «Добавить в план» (`TravelStatusButton`, вторая
+  копия со своим Modal и жестом из #798, свайп не доходил — подтверждено на
+  Android-эмуляторе) на native переведён на тот же лист.
+- Граница касаний (#2231): касание пустой поверхности листа доставалось
+  нажимаемому предку вне Modal — подтверждено тестом всплытия, на устройстве не
+  замерялось. Границу держит обёртка `bottom-sheet-touch-boundary` ВНЕ Modal
+  (`onStartShouldSetResponder: () => true`, `onResponderTerminationRequest:
+  () => false`): в дереве React она предок содержимого листа и забирает всё, что
+  не взял потомок, а нативно лежит в окне экрана, не предок вью листа, и
+  `JSResponderHandler.onInterceptTouchEvent` (ключ — id вью-ответчика, RN 0.86
+  `SurfaceMountingManager.setJSResponder`) прокрутку тела не перехватывает.
+  Следствие: жест в теле листа, которому нужно движение, берёт касание на старте
+  или строится на gesture-handler — `onMoveShouldSet*` внутри листа не
+  опрашивается никогда (раньше — только при нажимаемом предке).
+  Web — тот же класс другим каналом (confirmed, настоящий DOM react-native-web):
+  Modal — портал React, синтетический click всплывает по дереву React до
+  `onClick` карточки (`UnifiedTravelCard`), и клик по пустой поверхности листа
+  открывал карточку. Корень листа несёт `data-card-action="true"` — метку,
+  которую обработчики карточек уже пропускают.
+- Контроль: `ActionListSheet.touchBoundary.test.tsx` (всплытие от пустой
+  поверхности, пункт/✕/шапка выигрывают сами), `BottomSheet.dom.web.test.tsx`
+  (клик в DOM-портале не доходит до карточки), `TravelStatusButton.test.tsx`
+  (лист статуса), `__tests__/config/bottom-sheet-governance.test.ts` (Modal со
+  своим `PanResponder` — только у владельца). Не проверено на железе: тап по
+  пустому месту листа над компактной карточкой места и свайп листа статуса на
+  iPhone/Android после перевода.
 
 ### MOBILE-ACTION-LABELS-001 — иконки без подписей и громоздкие ряды действий правятся по экрану, а не слоем
 
@@ -3818,6 +3846,38 @@ guard, падающий в CI на попытке обойти этот конт
   оболочки, owner обязан передать `.top`), jest
   `__tests__/components/layout/customHeaderTopInset.test.ts` и Android-кейсы
   `CustomHeader.test.tsx`. Рецидив при зелёном guard — переоткрывать #2234.
+- **Нижний лист (#2153, 2026-10-05):** `ActionListSheet` держал собственную
+  высоту дока (`marginBottom: bottomOffset ?? (IS_WEB ? 58 : 0)`) мимо #2097, а
+  потребители гасили её руками (`bottomOffset={0}`). Корень глубже константы:
+  `--mt-dock-h` на mobile web был 56px + safe-area на любом экране, в том числе
+  без дока (`showFooter=false`: чат, вход/регистрация, мастер маршрута), и
+  `useBottomChromeInset()` там отдавал тот же лишний резерв. Инвариант: корневой
+  layout помечает экран без дока (`dataSet={{ mtDock: 'off' }}`), `app/global.css`
+  обнуляет `--mt-dock-h` на `body:has([data-mt-dock="off"])` (на body — порталы
+  Modal наследуют от него); лист (`components/ui/BottomSheet.tsx`) на web берёт
+  отступ из `useBottomChromeInset()`, на native — 0 от края и
+  `max(insets.bottom, 16)` снизу панели; пропа `bottomOffset` нет. Контроль:
+  `guard:bottom-chrome-inset` (литерал 56/58 в тернарнике `bottom`/`marginBottom`,
+  jest `__tests__/scripts/guard-bottom-chrome-inset.test.ts` с негативной пробой),
+  `ActionListSheet.bottomInset.test.tsx`, `bottom-sheet-governance.test.ts`.
+  Соседний хвост того же семейства: `useDockReservePx()` на web отдаёт константу
+  дока и там, где дока нет (плашка согласия и web-тосты на чате и desktop).
+- **Верхний край экранов вне шапки (#2272, 2026-10-05):** экраны `app/` вне
+  группы `(tabs)` лежат под корневым `Stack` с `headerShown: false` — контейнер
+  шапки (#2234) верхний инсет им не даёт. Каждый держал свой `SafeAreaView`, и
+  шаблон `edges={['left','right','bottom']}` без `top` разошёлся копированием:
+  «Журнал безопасности» целиком, гостевые ветки «Приватности» и «Чёрного списка»
+  (#796 лечил тот же класс правкой `edges` на одном экране); у `error` и
+  `[...missing]` владельца верха не было вовсе. Найдено по коду, на устройстве не
+  замерялось. Инвариант: у экрана вне оболочки шапки верхний отступ держит один
+  из двух владельцев — контейнер `components/layout/StandaloneScreen` (края
+  постоянные, пропа `edges` нет) или собственный `<CustomHeader />` (`contact`,
+  `app`); прямой `SafeAreaView` в таких экранах запрещён. Контроль:
+  `guard:screen-header` → `scanStandaloneScreens` (AST: каждая ветка `return`
+  экрана содержит владельца, либо `<Redirect>`/`null`; исключения — поимённо,
+  сейчас пусто), jest `__tests__/scripts/guard-screen-header.test.ts` и
+  `__tests__/components/layout/StandaloneScreen.test.tsx`. Рецидив при зелёном
+  guard — переоткрывать #2272.
 - **Последняя проверка:** 2026-10-05, #2234 (верхний край шапки) в ревью; #2097 в работе.
 
 ### MODAL-TOP-INSET-001 — шапка полноэкранного `Modal` под статус-баром iPhone
