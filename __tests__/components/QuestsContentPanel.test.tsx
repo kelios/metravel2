@@ -171,7 +171,7 @@ describe('QuestsContentPanel', () => {
             );
             // Резерв скрыт от скринридера (aria-hidden), поэтому ищем и скрытые узлы.
             expect(getByTestId('quests-sort-placeholder', HIDDEN)).toBeTruthy();
-            expect(getByTestId('quests-grid-skeleton').children).toHaveLength(6);
+            expect(getByTestId('quests-grid-skeleton')).toBeTruthy();
 
             rerender(<QuestsContentPanel {...makeBaseProps()} availableSortOrders={['popular']} />);
             expect(queryByTestId('quests-sort-placeholder', HIDDEN)).toBeNull();
@@ -192,10 +192,16 @@ describe('QuestsContentPanel', () => {
             expect(queryByTestId('quests-sort-placeholder', HIDDEN)).toBeNull();
         });
 
-        it('renders two phone-height skeleton cells on a phone', () => {
-            mockIsMobile = true;
+        // Каркас не зависит от признака «телефон»: серверная разметка web всегда узкая,
+        // и зависящий от неё каркас на широком экране перекладывался бы при гидратации
+        // (замер прода: CLS 0,034 на 1280, 0,057 на 1440). На native клеток две.
+        it.each([
+            ['a phone', true],
+            ['a wide screen', false],
+        ])('renders the same skeleton cells on %s', (_name, isMobile) => {
+            mockIsMobile = isMobile;
             const { getByTestId } = render(
-                <QuestsContentPanel {...makeBaseProps()} isMobile dataLoaded={false} questsAll={[]} />,
+                <QuestsContentPanel {...makeBaseProps()} isMobile={isMobile} dataLoaded={false} questsAll={[]} />,
             );
             expect(getByTestId('quests-grid-skeleton').children).toHaveLength(2);
         });

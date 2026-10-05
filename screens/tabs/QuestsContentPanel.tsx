@@ -633,7 +633,7 @@ function QuestsContentPanel({
 
                         {questsAll.length === 0 && completedEmptyState}
 
-                        {!dataLoaded && <QuestsGridSkeleton styles={styles} isMobile={isMobile} radius={radiiLg} />}
+                        {!dataLoaded && <QuestsGridSkeleton styles={styles} radius={radiiLg} />}
 
                         {dataLoaded && questsAll.length > 0 && (
                             <View ref={questsGridRef} style={styles.questsGrid} onLayout={handleQuestsGridLayout} testID="quests-grid">
@@ -712,7 +712,7 @@ function QuestsContentPanel({
 
             {completedEmptyState}
 
-            {!dataLoaded && <QuestsGridSkeleton styles={styles} isMobile={isMobile} radius={radiiLg} />}
+            {!dataLoaded && <QuestsGridSkeleton styles={styles} radius={radiiLg} />}
         </>
     );
 

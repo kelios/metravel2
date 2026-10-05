@@ -1,9 +1,10 @@
 import { memo } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { QUEST_CARD_BASE_HEIGHT, QUEST_CARD_PHONE_HEIGHT, QUESTS_GRID_MIN_COLUMN_WIDTH } from '@/constants/questLayout';
 import { translate as i18nT } from '@/i18n';
+import { webViewStyle } from '@/utils/webProps';
 
 import { pluralizeQuest } from './questsShared';
 
@@ -19,19 +20,26 @@ import { pluralizeQuest } from './questsShared';
 
 type GridSkeletonProps = {
     styles: any;
-    isMobile: boolean;
     radius: number;
 };
 
-/** Клетки той же сетки и той же высоты, что у `QuestCard`. */
-export const QuestsGridSkeleton = memo(function QuestsGridSkeleton({ styles, isMobile, radius }: GridSkeletonProps) {
+// На web каркас одинаков до и после гидратации на любой ширине: число колонок
+// и высоту клетки считает CSS, а не признак «телефон». Серверная разметка
+// всегда узкая (ширина на сервере неизвестна), и каркас, зависящий от неё,
+// на широком экране перекладывался при гидратации — вторая клетка выезжала
+// из-под сгиба во вторую колонку (замер прода 05.10.2026: CLS 0,034 на 1280 и
+// 0,057 на 1440).
+const SKELETON_CELLS = Platform.OS === 'web' ? 6 : 2;
+
+/** Клетки той же сетки и той же пропорции, что у `QuestCard`. */
+export const QuestsGridSkeleton = memo(function QuestsGridSkeleton({ styles, radius }: GridSkeletonProps) {
     return (
-        <View style={styles.questsGrid} testID="quests-grid-skeleton">
-            {Array.from({ length: isMobile ? 2 : 6 }).map((_, i) => (
-                <View key={i} style={isMobile ? placeholderStyles.phoneCell : placeholderStyles.wideCell}>
-                    {/* Плашка позиционирована абсолютно: высота клетки на широком экране
-                        приходит из aspect-ratio, а процент от такой высоты у потомка в
-                        потоке считается не во всех браузерах. */}
+        <View style={[styles.questsGrid, placeholderStyles.grid]} testID="quests-grid-skeleton">
+            {Array.from({ length: SKELETON_CELLS }).map((_, i) => (
+                <View key={i} style={placeholderStyles.cell}>
+                    {/* Плашка позиционирована абсолютно: высота клетки приходит из
+                        aspect-ratio, а процент от такой высоты у потомка в потоке
+                        считается не во всех браузерах. */}
                     <SkeletonLoader width="100%" height="100%" borderRadius={radius} style={StyleSheet.absoluteFill} />
                 </View>
             ))}
@@ -72,16 +80,19 @@ export const QuestsCountPlaceholder = memo(function QuestsCountPlaceholder({
 });
 
 const placeholderStyles = StyleSheet.create({
-    phoneCell: {
+    grid: Platform.select<ViewStyle>({
+        // Та же формула, что у широкой сетки каталога; на телефоне она даёт одну колонку.
+        web: webViewStyle({
+            gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${QUESTS_GRID_MIN_COLUMN_WIDTH}px), 1fr))`,
+        }),
+        default: {},
+    }),
+    cell: {
         width: '100%',
-        height: QUEST_CARD_PHONE_HEIGHT,
-    },
-    wideCell: {
-        width: '100%',
-        ...Platform.select({
-            // Та же пропорция, что `QuestCard` считает из ширины трека сетки.
+        ...Platform.select<ViewStyle>({
+            // Пропорция, которую `QuestCard` считает из ширины трека сетки.
             web: { aspectRatio: QUESTS_GRID_MIN_COLUMN_WIDTH / QUEST_CARD_BASE_HEIGHT },
-            default: { height: QUEST_CARD_BASE_HEIGHT },
+            default: { height: QUEST_CARD_PHONE_HEIGHT },
         }),
     },
     ghostText: {

@@ -14,6 +14,7 @@ let Feather: React.ComponentType<any> & { glyphMap: Record<string, number>; font
 let Logo: React.ComponentType<any>
 let SkeletonLoader: React.ComponentType<any>
 let HEADER_LOGO_WEB_SRC: string
+let QuestsGridSkeleton: React.ComponentType<any>
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }))
 
@@ -28,6 +29,7 @@ beforeAll(() => {
   Logo = require('@/components/layout/Logo').default
   ;({ SkeletonLoader } = require('@/components/ui/SkeletonLoader'))
   ;({ HEADER_LOGO_WEB_SRC } = require('@/components/layout/headerLayoutContract'))
+  ;({ QuestsGridSkeleton } = require('@/screens/tabs/QuestsCatalogPlaceholders'))
 })
 
 const toDom = (markup: string): HTMLElement => {
@@ -118,6 +120,27 @@ describe('статический HTML первого кадра (#2170)', () => 
       // Пульс по opacity считает композитор; сам кадр лежит во встроенной таблице
       // стилей документа и потому работает до гидратации.
       expect(keyframes).toContain('opacity:0.55')
+    })
+  })
+
+  describe('каркас каталога квестов', () => {
+    // Серверная разметка всегда узкая: ширины экрана на сервере нет. Каркас,
+    // который выбирал бы колонки и высоту по признаку «телефон», на широком
+    // экране перекладывался при гидратации (замер прода 05.10.2026: CLS 0,034
+    // на 1280 и 0,057 на 1440). Поэтому геометрию считает CSS.
+    it('одинаков до и после гидратации: колонки и высоту клетки задаёт CSS, а не ширина из JS', () => {
+      const node = toDom(renderToStaticMarkup(createElement(QuestsGridSkeleton, { styles: {}, radius: 20 })))
+
+      expect(node.getAttribute('data-testid')).toBe('quests-grid-skeleton')
+      expect(declarationsOf(node)).toContain(
+        'grid-template-columns:repeat(auto-fill, minmax(min(100%, 380px), 1fr))',
+      )
+      const cells = Array.from(node.children)
+      expect(cells).toHaveLength(6)
+      for (const cell of cells) {
+        expect(declarationsOf(cell)).toMatch(/aspect-ratio:1\.46\d*/)
+        expect((cell as HTMLElement).style.height).toBe('')
+      }
     })
   })
 })
