@@ -14,29 +14,38 @@ git check-ignore .secrets/metravel-token.json
 
 Один токен обслуживает `scripts/instagram-media.js` (ссылки на публикации) и
 `scripts/instagram-insights.js` (недельная статистика для агента `instagram-editor`).
+Действующий токен — бессрочный Page token, получен 05.10.2026. Он умирает при выходе
+владельца из Facebook на всех устройствах, смене пароля или снятии доступа приложения;
+тогда скрипты отвечают `Token rejected` и токен перевыпускается так:
 
-1. Meta Graph API Explorer → выбрать приложение MeTravel (то же, через которое сайт
-   публикует в Instagram) → User Token с permissions: `instagram_basic`,
-   `instagram_manage_insights`, `pages_show_list`, `pages_read_engagement`.
-2. Сохранить его локально, путь `.secrets/instagram-token.json`:
-
-```json
-{ "access_token": "..." }
-```
-
-3. Обменять на бессрочный Page token (app id/secret берутся из
-   `.secrets/metravel-instagram.env`, ничего секретного не печатается):
+1. Напечатать адрес окна согласия и открыть его в браузере, где владелец вошёл в Facebook:
 
 ```bash
-node scripts/instagram-insights.js --exchange
+node scripts/instagram-insights.js --auth-url
 ```
 
-Скрипт перезапишет файл Page-токеном и покажет недостающие permissions. Page token,
-полученный из long-lived user token, не истекает, но умирает при выходе владельца из
-Facebook на всех устройствах, смене пароля или снятии доступа приложения — тогда
-повторить шаги 1–3.
+2. Пройти окно до конца («Продолжить» … «Сохранить»). Согласие даёт только владелец сам.
+   Браузер попадёт на страницу metravel.by с ответом 400 «OAuth callback requires code and
+   state» — это ожидаемо: сайт код не использует, он остаётся для шага 3.
+3. В течение ~10 минут скопировать адрес этой страницы (или весь её текст: Cmd+A, Cmd+C) и
+   обменять код на токен — ничего секретного не печатается:
 
-Не документируйте конкретный token, App ID или аккаунт.
+```bash
+pbpaste | node scripts/instagram-insights.js --exchange-code
+```
+
+Скрипт покажет выданные permissions и сохранит Page token в `.secrets/instagram-token.json`.
+Нужны `instagram_basic`, `instagram_manage_insights`, `pages_show_list`,
+`pages_read_engagement`, `business_management` (Страница принадлежит Business Manager — без
+него список Страниц пуст). Право должно быть добавлено приложению в Meta for Developers →
+«Сценарии использования» → Instagram → «Разрешения и функции», иначе окно согласия отвечает
+`Invalid Scopes`.
+
+Запасной путь — short-lived user token из Graph API Explorer: сохранить его как
+`{ "access_token": "..." }` в `.secrets/instagram-token.json` и выполнить
+`node scripts/instagram-insights.js --exchange`.
+
+Не документируйте конкретный token или секрет приложения.
 
 ## MeTravel API token
 

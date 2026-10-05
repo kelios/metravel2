@@ -3,10 +3,15 @@
 // the owner's browser session for the instagram-editor `review` mode.
 //
 // Usage:
+//   node scripts/instagram-insights.js --auth-url
+//   pbpaste | node scripts/instagram-insights.js --exchange-code
+//       one-time: open the printed consent URL, approve, copy the address the browser
+//       lands on (the site answers 400 there — expected, the code stays unused) and pipe
+//       it in; the code becomes a non-expiring Page token in .secrets/instagram-token.json.
 //   node scripts/instagram-insights.js --exchange
-//       one-time: turn a fresh short-lived Graph API Explorer token (saved to
-//       .secrets/instagram-token.json) into a non-expiring Page token; app id/secret
-//       are read from .secrets/metravel-instagram.env. Nothing secret is printed.
+//       same, starting from a short-lived Graph API Explorer token already saved to
+//       .secrets/instagram-token.json. App id/secret come from
+//       .secrets/metravel-instagram.env. Nothing secret is printed.
 //   node scripts/instagram-insights.js [--since YYYY-MM-DD --until YYYY-MM-DD]
 //       statistics for the window (default: previous Monday–Sunday), Markdown summary
 //       to stdout, raw data to .cache/instagram/insights-<since>_<until>.json.
@@ -19,6 +24,7 @@ const fs = require('fs')
 const path = require('path')
 const {
   GRAPH,
+  GRAPH_VERSION,
   discoverIgAccount,
   gget,
   graphUrl,
@@ -70,7 +76,11 @@ function pickLeaderAndOutsider(reels) {
 }
 
 function parseArgs(argv) {
-  const args = { exchange: argv.includes('--exchange') }
+  const args = {
+    exchange: argv.includes('--exchange'),
+    exchangeCode: argv.includes('--exchange-code'),
+    authUrl: argv.includes('--auth-url'),
+  }
   for (const key of ['since', 'until']) {
     const i = argv.indexOf(`--${key}`)
     if (i >= 0) {
@@ -81,21 +91,53 @@ function parseArgs(argv) {
   return args
 }
 
-async function exchangeToken() {
-  const { token } = loadToken()
+const REQUIRED_PERMISSIONS = [
+  'instagram_basic',
+  'instagram_manage_insights',
+  'pages_show_list',
+  'pages_read_engagement',
+  // the Page is owned through Business Manager: without it /me/accounts comes back empty
+  'business_management',
+]
+// Consent is asked for the site's publish grant set too, so re-consent never narrows it.
+const AUTH_SCOPES = [...REQUIRED_PERMISSIONS, 'instagram_content_publish']
+
+function buildAuthUrl({ appId, redirectUri }) {
+  return `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth?${new URLSearchParams({
+    client_id: appId,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: AUTH_SCOPES.join(','),
+  })}`
+}
+
+/** Accepts the redirect address (…/callback/?code=…#_=_), any text containing it, or the bare code. */
+function extractCode(input) {
+  const text = String(input || '').trim()
+  if (!text) throw new Error('Nothing on stdin — copy the redirect address first.')
+  const m = text.match(/[?&]code=([^&#\s"'<>]+)/)
+  if (m) return decodeURIComponent(m[1])
+  if (/\s|^https?:\/\//.test(text)) throw new Error('The text has no ?code= parameter — approve the consent dialog first.')
+  return text
+}
+
+async function persistPageToken(userToken) {
   const { appId, appSecret } = loadAppCredentials()
   const longLived = await gget(
     `${GRAPH}/oauth/access_token?${new URLSearchParams({
       grant_type: 'fb_exchange_token',
       client_id: appId,
       client_secret: appSecret,
-      fb_exchange_token: token,
+      fb_exchange_token: userToken,
     })}`
   )
-  const account = await discoverIgAccount(longLived.access_token)
-  if (!account.pageToken) throw new Error('Page access token missing — the token needs pages_show_list.')
   const perms = await gget(graphUrl('me/permissions', {}, longLived.access_token))
   const granted = (perms.data || []).filter((p) => p.status === 'granted').map((p) => p.permission)
+  console.log(`Granted: ${granted.join(', ') || 'none'}`)
+  // Keep the user token first: a failed Page lookup stays diagnosable without a new consent.
+  saveToken({ access_token: longLived.access_token, token_kind: 'user', obtained_at: new Date().toISOString() })
+  const account = await discoverIgAccount(longLived.access_token)
+  if (!account.pageToken) throw new Error('Page access token missing — the token needs pages_show_list.')
   saveToken({
     access_token: account.pageToken,
     ig_user_id: account.id,
@@ -103,11 +145,23 @@ async function exchangeToken() {
     obtained_at: new Date().toISOString(),
     granted_permissions: granted,
   })
-  const missing = ['instagram_basic', 'instagram_manage_insights', 'pages_read_engagement'].filter(
-    (p) => !granted.includes(p)
-  )
+  const missing = REQUIRED_PERMISSIONS.filter((p) => !granted.includes(p))
   console.log(`Saved non-expiring Page token for @${account.username} (ig id ${account.id}).`)
   console.log(missing.length ? `MISSING permissions: ${missing.join(', ')}` : 'All required permissions granted.')
+}
+
+async function exchangeCode() {
+  const { appId, appSecret, redirectUri } = loadAppCredentials()
+  const code = extractCode(fs.readFileSync(0, 'utf8'))
+  const j = await gget(
+    `${GRAPH}/oauth/access_token?${new URLSearchParams({
+      client_id: appId,
+      client_secret: appSecret,
+      redirect_uri: redirectUri,
+      code,
+    })}`
+  )
+  await persistPageToken(j.access_token)
 }
 
 async function tryGet(errors, label, url) {
@@ -129,6 +183,15 @@ function breakdownShares(entry) {
   const total = results.reduce((s, r) => s + (r.value || 0), 0)
   const out = {}
   for (const r of results) out[(r.dimension_values || []).join('/')] = total ? Math.round((1000 * r.value) / total) / 10 : 0
+  return out
+}
+
+function toWarsawHours(day) {
+  if (!day) return null
+  const dayStart = Date.parse(day.end_time) - DAY_MS
+  const hourOf = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: 'Europe/Warsaw' })
+  const out = {}
+  for (const [h, value] of Object.entries(day.value)) out[Number(hourOf.format(dayStart + Number(h) * 3600000))] = value
   return out
 }
 
@@ -180,12 +243,17 @@ async function collect(window) {
       .sort((a, b) => b.value - a.value)
       .slice(0, 10)
   }
+  // The newest days come back empty, and hour keys count from the Pacific midnight the day
+  // starts at — take the latest filled day and re-key it to Europe/Warsaw hours.
+  const now = Math.floor(Date.now() / 1000)
   const online = await tryGet(
     errors,
     'audience.online_followers',
-    graphUrl(`${igId}/insights`, { metric: 'online_followers', period: 'lifetime' }, token)
+    graphUrl(`${igId}/insights`, { metric: 'online_followers', period: 'lifetime', since: now - 6 * 86400, until: now - 86400 }, token)
   )
-  audience.online_followers_by_hour = online?.data?.[0]?.values?.at(-1)?.value || null
+  audience.online_followers_by_hour = toWarsawHours(
+    (online?.data?.[0]?.values || []).filter((v) => Object.keys(v.value || {}).length).at(-1)
+  )
 
   const media = []
   let url = graphUrl(
@@ -258,7 +326,9 @@ function renderMarkdown(data) {
   ]
   if (audience.online_followers_by_hour) {
     const hours = Object.entries(audience.online_followers_by_hour).sort((a, b) => b[1] - a[1])
-    lines.push(`Пик онлайна подписчиков (час, время аккаунта): ${hours.slice(0, 3).map(([h, v]) => `${h}:00 — ${v}`).join(', ')}`)
+    const list = (items) => items.map(([h, v]) => `${h}:00 — ${v}`).join(', ')
+    lines.push(`Пик онлайна подписчиков (час по Варшаве): ${list(hours.slice(0, 4))}`)
+    lines.push(`Провал онлайна (час по Варшаве): ${list(hours.slice(-4).reverse())}`)
   }
   if (Object.keys(errors).length) {
     lines.push('', 'Meta не отдала:', ...Object.entries(errors).map(([k, v]) => `- ${k}: ${v}`))
@@ -268,7 +338,9 @@ function renderMarkdown(data) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2))
-  if (args.exchange) return exchangeToken()
+  if (args.authUrl) return console.log(buildAuthUrl(loadAppCredentials()))
+  if (args.exchangeCode) return exchangeCode()
+  if (args.exchange) return persistPageToken(loadToken().token)
   const window = args.since && args.until ? { since: args.since, until: args.until } : previousWeekWindow()
   const data = await collect(window)
   fs.mkdirSync(OUT_DIR, { recursive: true })
@@ -285,4 +357,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { median, parseArgs, pickLeaderAndOutsider, previousWeekWindow, renderMarkdown }
+module.exports = { buildAuthUrl, toWarsawHours, extractCode, median, parseArgs, pickLeaderAndOutsider, previousWeekWindow, renderMarkdown }

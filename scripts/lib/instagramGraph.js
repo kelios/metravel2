@@ -54,7 +54,11 @@ function loadAppCredentials() {
   if (!env.INSTAGRAM_GRAPH_APP_ID || !env.INSTAGRAM_GRAPH_APP_SECRET) {
     throw new Error('INSTAGRAM_GRAPH_APP_ID / INSTAGRAM_GRAPH_APP_SECRET missing in .secrets/metravel-instagram.env')
   }
-  return { appId: env.INSTAGRAM_GRAPH_APP_ID, appSecret: env.INSTAGRAM_GRAPH_APP_SECRET }
+  return {
+    appId: env.INSTAGRAM_GRAPH_APP_ID,
+    appSecret: env.INSTAGRAM_GRAPH_APP_SECRET,
+    redirectUri: env.INSTAGRAM_GRAPH_REDIRECT_URI || '',
+  }
 }
 
 async function gget(url) {
