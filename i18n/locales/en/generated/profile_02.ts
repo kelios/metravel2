@@ -44,7 +44,7 @@ export const profileGenerated2 = {
   "components.screens.profile.ProfileWorldMapTab.ne_posescheno_2882e15a": "Not visited",
   "components.screens.profile.ProfileWorldMapTab.net_marshrutov_v_etoy_strane_0d2e3533": "No routes in this country",
   "components.screens.profile.ProfileWorldMapTab.ostalos_ac89d2ac": "Remaining",
-  "components.screens.profile.ProfileWorldMapTab.otdalit_kartu_46122c74": "Remove card",
+  "components.screens.profile.ProfileWorldMapTab.otdalit_kartu_46122c74": "Zoom out on the map",
   "components.screens.profile.ProfileWorldMapTab.otkryt_kartu_vo_ves_ekran_b743e70f": "Open the map in full screen",
   "components.screens.profile.ProfileWorldMapTab.posescheno_c0485db4": "Visited ·",
   "components.screens.profile.ProfileWorldMapTab.posescheno_cc5df481": "Visited",

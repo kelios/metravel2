@@ -155,7 +155,7 @@ export const mapGenerated1 = {
   "components.MapPage.Map.createMapPopupComponent.zagruzka_80ba0ae0": "Загрузка…",
   "components.MapPage.Map.MapControls.moe_mestopolozhenie_af3a8b09": "Маё месцазнаходжанне",
   "components.MapPage.Map.MapControls.opredelit_moe_mestopolozhenie_f2c532ec": "Вызначыць маё месцазнаходжанне",
-  "components.MapPage.Map.MapControls.otdalit_8cf49ec6": "Выдаліць",
+  "components.MapPage.Map.MapControls.otdalit_8cf49ec6": "Аддаліць",
   "components.MapPage.Map.MapControls.otdalit_kartu_335bc514": "Аддаліць карту",
   "components.MapPage.Map.MapControls.pokazat_vse_mesta_735f4640": "Паказаць усе месцы",
   "components.MapPage.Map.MapControls.pokazat_vse_mesta_na_karte_8d9ee8dd": "Паказаць усе месцы на мапе",

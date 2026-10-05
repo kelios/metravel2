@@ -44,7 +44,7 @@ export const profileGenerated2 = {
   "components.screens.profile.ProfileWorldMapTab.ne_posescheno_2882e15a": "Nie odwiedzony",
   "components.screens.profile.ProfileWorldMapTab.net_marshrutov_v_etoy_strane_0d2e3533": "Brak tras w tym kraju",
   "components.screens.profile.ProfileWorldMapTab.ostalos_ac89d2ac": "Pozostało",
-  "components.screens.profile.ProfileWorldMapTab.otdalit_kartu_46122c74": "Usuń kartę",
+  "components.screens.profile.ProfileWorldMapTab.otdalit_kartu_46122c74": "Pomniejsz mapę",
   "components.screens.profile.ProfileWorldMapTab.otkryt_kartu_vo_ves_ekran_b743e70f": "Otwórz mapę na pełnym ekranie",
   "components.screens.profile.ProfileWorldMapTab.posescheno_c0485db4": "Odwiedziłem ·",
   "components.screens.profile.ProfileWorldMapTab.posescheno_cc5df481": "Odwiedziłem",

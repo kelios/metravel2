@@ -3,9 +3,11 @@ import { resources } from '@/i18n/resources'
 // Глоссарий терминов интерфейса. Значения `generated/*` переведены машинно, и
 // короткая подпись без окружения уходит в самый частый словарный смысл: «тема»
 // стала «Temat» (#2180), «Светлая» — «Światło» (свет), «лёгкий» — «light»,
-// «точка» на карте — «dot» и «kropka» (#2188). Строка TERMS — это термин: какие
-// RU-значения им считаются и что перевод обязан или не вправе содержать. Новое
-// слово добавляется строкой сюда; отдельный тест на слово не пишется.
+// «точка» на карте — «dot» и «kropka» (#2188), «карта» — «card», «karta» и
+// «картка», «отдалить» — «Remove», «спутники» — «Satellites» (#2242). Строка
+// TERMS — это термин: какие RU-значения им считаются и что перевод обязан или
+// не вправе содержать. Новое слово добавляется строкой сюда; отдельный тест на
+// слово не пишется.
 
 type Locale = 'en' | 'pl' | 'be' | 'uk'
 type Expectation = { required?: RegExp; forbidden?: RegExp }
@@ -15,6 +17,8 @@ type Term = {
   ru: RegExp
   /** Сужение по ключу — для слова, чья форма зависит от строки интерфейса. */
   keys?: RegExp
+  /** То же RU-слово, но другой термин: по соседнему слову или по ключу. */
+  except?: { ru?: RegExp; keys?: RegExp }
   /** Сколько RU-ключей термин обязан находить: правило без находок мертво. */
   minEntries: number
   locales: Partial<Record<Locale, Expectation>>
@@ -27,6 +31,41 @@ const RU_THEME_WORD = /(^|[^а-яё])тем(а|у|ы|е|ой|ам|ами|ах)([
 const RU_LIGHT_WORD = /(^|[^а-яё])светл(ая|ый|ое|ые|ую|ой)([^а-яё]|$)/i
 const RU_POINT_WORD = /(^|[^а-яё])точ(к|ек)/i
 const RU_DIFFICULTY_NOUN = /(^|[^а-яё])сложност/i
+
+// «Карта» многозначна: географическая, банковская, карта памяти. Глоссарий
+// держит географическую: «карты памяти» отсекает сам шаблон, банковскую
+// («Без карты» в значках доверия главной) — ключ. «Карточка» — отдельный
+// термин: её шаблон начинается с «карточ» и с «картой» не пересекается.
+const RU_MAP_WORD = /(^|[^а-яё])карт(а|у|ы|е|ой|ою|ам|ами|ах)?(?![а-яё])(?! памяти)/i
+const RU_CARD_WORD = /(^|[^а-яё])карточ(к|ек)/i
+const BANK_CARD_KEYS = /HomeFinalCTA\.bez_karty_/
+// «Приблизительная линия» — не приближение карты: после «приблизит» идёт
+// окончание глагола и конец слова.
+const RU_ZOOM_IN_WORD = /(^|[^а-яё])приблизит(ь|е)(?![а-яё])/i
+const RU_ZOOM_OUT_WORD = /(^|[^а-яё])отдалит(ь|е)(?![а-яё])/i
+
+// Слово перевода ищется целиком: в PL «kartka» (лист A4) — не «karta», в UK
+// «картка» — не «карта», и граница слова учитывает буквы своего алфавита.
+const PL_LETTER = 'a-ząćęłńóśźż'
+const UK_LETTER = "а-яіїєґ'’"
+const BE_LETTER = "а-яіўё'’"
+const PL_MAP_WORD = new RegExp(`(^|[^${PL_LETTER}])map`, 'i')
+const UK_MAP_WORD = new RegExp(
+  `(^|[^${UK_LETTER}])(карт(а|у|и|і|ою|ам|ами|ах)?|мап[а-яіїєґ]*)(?![${UK_LETTER}])`,
+  'i',
+)
+const BE_MAP_WORD = new RegExp(
+  `(^|[^${BE_LETTER}])(карт(а|у|ы|е|ай|аю|ам|амі|ах)?|карце|мап[а-яіўё]*)(?![${BE_LETTER}])`,
+  'i',
+)
+const EN_CARD_WORD = /\bcards?\b/i
+const PL_CARD_WORD = new RegExp(`(^|[^${PL_LETTER}])kar(t|c)`, 'i')
+const PL_CARD_NOT_SHEET = new RegExp(
+  `(^|[^${PL_LETTER}])kar(t(a|y|ę|ą|o|om|ami|ach)?|cie)(?![${PL_LETTER}])`,
+  'i',
+)
+const UK_CARD_WORD = /картк|картц|карток/i
+const BE_CARD_WORD = /картк|картц|картак/i
 
 // Одна шкала сложности на всех поверхностях: бейдж и карточка квеста, попап
 // карты, каталог города, фильтр путешествий. В PL слово согласуется с «poziom»
@@ -130,6 +169,88 @@ const TERMS: Term[] = [
       uk: { forbidden: /крап(к|ок)/i },
     },
   },
+  {
+    name: '«карта» — географическая карта',
+    ru: RU_MAP_WORD,
+    except: { keys: BANK_CARD_KEYS },
+    minEntries: 250,
+    locales: {
+      en: { required: /\bmaps?\b/i },
+      pl: { required: PL_MAP_WORD },
+      uk: { required: UK_MAP_WORD },
+      be: { required: BE_MAP_WORD },
+    },
+  },
+  {
+    // Отдельной строкой: «Шари картки карти» прошло бы строку выше.
+    name: '«карта» без «карточки» — в переводе нет card / karta / картка',
+    ru: RU_MAP_WORD,
+    except: { ru: RU_CARD_WORD, keys: BANK_CARD_KEYS },
+    minEntries: 250,
+    locales: {
+      en: { forbidden: EN_CARD_WORD },
+      pl: { forbidden: PL_CARD_NOT_SHEET },
+      uk: { forbidden: UK_CARD_WORD },
+      be: { forbidden: BE_CARD_WORD },
+    },
+  },
+  {
+    name: '«карточка» — карточка, не карта',
+    ru: RU_CARD_WORD,
+    minEntries: 25,
+    locales: {
+      en: { required: EN_CARD_WORD },
+      pl: { required: PL_CARD_WORD },
+      uk: { required: UK_CARD_WORD },
+      be: { required: BE_CARD_WORD },
+    },
+  },
+  {
+    name: '«отдалить» — уменьшить масштаб, не удалить',
+    ru: RU_ZOOM_OUT_WORD,
+    minEntries: 4,
+    locales: {
+      en: { required: /\bzoom out\b/i },
+      pl: { required: /pomniejsz/i },
+      uk: { required: /віддал/i },
+      be: { required: /аддал/i },
+    },
+  },
+  {
+    name: '«приблизить» — увеличить масштаб',
+    ru: RU_ZOOM_IN_WORD,
+    minEntries: 5,
+    locales: {
+      en: { required: /\bzoom in\b/i },
+      pl: { required: /powiększ/i },
+      uk: { required: /наблиз/i },
+      be: { required: /набліз/i },
+    },
+  },
+  {
+    // Фильтр каталога «Спутники», поле мастера «Компания» и «компания по душе»
+    // в поездках — одно и то же: с кем едут. Правило по слову во всех падежах, а
+    // не по одиночной подписи. Слой карты «Спутник» стоит в единственном числе
+    // и сюда не входит.
+    name: '«спутники», «компания» — с кем едут, не аппараты и не фирма',
+    ru: /(^|[^а-яё])(спутники|компани(я|и|ю|ей|й|ям|ями|ях))(?![а-яё])/i,
+    minEntries: 6,
+    locales: {
+      en: { forbidden: /satellit|\bcompan(y|ies)\b/i },
+      pl: { forbidden: /satelit|firm/i },
+    },
+  },
+  {
+    name: '«черновик» — неопубликованная запись, не сквозняк и не проект',
+    ru: /(^|[^а-яё])черновик/i,
+    minEntries: 40,
+    locales: {
+      en: { required: /\bdrafts?\b/i },
+      pl: { required: /robocz|szkic/i },
+      uk: { required: /чернет(к|ок)|чорнов/i },
+      be: { required: /чарнавік/i },
+    },
+  },
 ]
 
 type Bundle = Record<string, Record<string, unknown>>
@@ -139,7 +260,11 @@ const entriesOf = (term: Term) =>
     Object.entries(entries)
       .filter(
         ([key, value]) =>
-          typeof value === 'string' && term.ru.test(value) && (!term.keys || term.keys.test(key)),
+          typeof value === 'string' &&
+          term.ru.test(value) &&
+          (!term.keys || term.keys.test(key)) &&
+          !term.except?.ru?.test(value) &&
+          !term.except?.keys?.test(key),
       )
       .map(([key]) => ({ namespace, key })),
   )
@@ -148,7 +273,7 @@ const localeCases = TERMS.flatMap((term) =>
   (Object.keys(term.locales) as Locale[]).map((locale) => ({ locale, term, name: term.name })),
 )
 
-describe('глоссарий терминов интерфейса (#2180, #2188)', () => {
+describe('глоссарий терминов интерфейса (#2180, #2188, #2242)', () => {
   it.each(TERMS)('$name: правило находит свои RU-ключи', (term) => {
     expect(entriesOf(term).length).toBeGreaterThanOrEqual(term.minEntries)
   })
@@ -166,6 +291,30 @@ describe('глоссарий терминов интерфейса (#2180, #2188
     expect(RU_POINT_WORD.test('Найдено точек: ')).toBe(true)
     expect(RU_DIFFICULTY_NOUN.test('Транспорт, сложность, сезонность')).toBe(true)
     expect(RU_DIFFICULTY_NOUN.test('Используйте более сложный пароль')).toBe(false)
+    expect(RU_MAP_WORD.test('Слои карты')).toBe(true)
+    expect(RU_MAP_WORD.test('Импорт в офлайн-карты')).toBe(true)
+    expect(RU_MAP_WORD.test('Запасные карты памяти')).toBe(false)
+    expect(RU_MAP_WORD.test('Карточки маршрутов')).toBe(false)
+    expect(RU_MAP_WORD.test('Картинка не загрузилась')).toBe(false)
+    expect(RU_CARD_WORD.test('Нажмите на карточку')).toBe(true)
+    expect(RU_CARD_WORD.test('Нажмите на карту')).toBe(false)
+    expect(RU_ZOOM_IN_WORD.test('Приблизить карту')).toBe(true)
+    expect(RU_ZOOM_IN_WORD.test('Показана приблизительная линия')).toBe(false)
+    expect(RU_ZOOM_OUT_WORD.test('Отдалить')).toBe(true)
+  })
+
+  it('шаблоны перевода различают карту, карточку и лист', () => {
+    expect(PL_CARD_NOT_SHEET.test('Usuń kartę')).toBe(true)
+    expect(PL_CARD_NOT_SHEET.test('Ładowanie danych karty')).toBe(true)
+    expect(PL_CARD_NOT_SHEET.test('Nie udało się otworzyć kart.')).toBe(true)
+    expect(PL_CARD_NOT_SHEET.test('zwykłą kartkę A4')).toBe(false)
+    expect(PL_CARD_NOT_SHEET.test('na kartkach A4')).toBe(false)
+    expect(PL_MAP_WORD.test('Pomniejsz mapę')).toBe(true)
+    expect(UK_MAP_WORD.test('Шари карти')).toBe(true)
+    expect(UK_MAP_WORD.test('Шари картки')).toBe(false)
+    expect(UK_MAP_WORD.test('в офлайн-карти')).toBe(true)
+    expect(BE_MAP_WORD.test('{{value1}} на карце')).toBe(true)
+    expect(BE_MAP_WORD.test('Не ўдалося адкрыць Яндэкс')).toBe(false)
   })
 
   it.each(localeCases)('$locale: $name', ({ locale, term }) => {

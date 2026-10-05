@@ -28,7 +28,7 @@ export const tripsGenerated2 = {
   "components.trips.PublicTripsCatalog.poisk_po_poezdkam_5627fcb8": "Szukaj według podróży",
   "components.trips.PublicTripsCatalog.poka_net_otkrytyh_poezdok_zaglyanite_pozzhe_fdb683cb": "Nie ma jeszcze żadnych otwartych wycieczek. Sprawdź później.",
   "components.trips.PublicTripsCatalog.pokazat_informatsiyu_o_poezdkah_81e78d07": "Pokaż informacje o podróży",
-  "components.trips.PublicTripsCatalog.publichnye_poezdki_ot_drugih_puteshestvennik_facc5972": "Wycieczki publiczne od innych podróżnych. Jeśli znajdziesz firmę, która Ci się podoba, złóż wniosek „Chcę iść”. Lub zorganizuj własną wycieczkę i znajdź towarzyszy podróży.",
+  "components.trips.PublicTripsCatalog.publichnye_poezdki_ot_drugih_puteshestvennik_facc5972": "Wycieczki publiczne od innych podróżnych. Jeśli znajdziesz towarzystwo, które Ci odpowiada, złóż wniosek „Chcę iść”. Lub zorganizuj własną wycieczkę i znajdź towarzyszy podróży.",
   "components.trips.PublicTripsCatalog.sbrosit_09d93db0": "Zresetuj",
   "components.trips.PublicTripsCatalog.skryt_3d16fdf4": "Ukryj",
   "components.trips.PublicTripsCatalog.skryt_vvodnuyu_informatsiyu_14678353": "Ukryj informacje wprowadzające",

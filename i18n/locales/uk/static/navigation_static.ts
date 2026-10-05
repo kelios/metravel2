@@ -1,7 +1,7 @@
 export const navigationStaticResources = {
   "navigationAction.save": "Зберегти",
   "navigationAction.yandexNavigator": "Яндекс Нави",
-  "navigationAction.yandexMaps": "Яндекс Картки",
+  "navigationAction.yandexMaps": "Яндекс Карти",
   "breadcrumb.travelsby": "Білорусь",
   "breadcrumb.map": "Карта",
   "breadcrumb.quests": "Квести",

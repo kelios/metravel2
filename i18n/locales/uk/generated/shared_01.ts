@@ -46,7 +46,7 @@ export const sharedGenerated1 = {
   "app.tabs.favorites.hochu_poehat_metravel_ece49980": "Хочу поїхати | Metravel",
   "app.tabs.favorites.marshruty_kuda_vy_hotite_poehat_c9209d67": "Маршрути, куди ви хочете поїхати",
   "app.tabs.favorites.nayti_marshruty_ab318302": "Знайти маршрути",
-  "app.tabs.favorites.nazhmite_na_kartochke_marshruta_chtoby_dobav_80112c03": "Натисніть ♥ на карті маршруту, щоб додати місце, куди хочете поїхати.",
+  "app.tabs.favorites.nazhmite_na_kartochke_marshruta_chtoby_dobav_80112c03": "Натисніть ♥ на картці маршруту, щоб додати місце, куди хочете поїхати.",
   "app.tabs.favorites.ochistit_97020d69": "Очистити",
   "app.tabs.favorites.ochistit_hochu_poehat_250e6c33": "Очистити «Хочу поїхати»",
   "app.tabs.favorites.ochistit_hochu_poehat_8e2219f3": "Очистити «Хочу поїхати»?",

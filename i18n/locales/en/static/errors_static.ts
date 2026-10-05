@@ -131,7 +131,7 @@ export const errorsStaticResources = {
   "utils.travelWizardValidation.galereya_fotografiy_751bf667": "Photo gallery",
   "utils.travelWizardValidation.glavnoe_izobrazhenie_e97ccba0": "Main image",
   "utils.travelWizardValidation.kategorii_0f84d789": "Categories",
-  "utils.travelWizardValidation.kompaniya_3cdbd9a3": "Company",
+  "utils.travelWizardValidation.kompaniya_3cdbd9a3": "Companions",
   "utils.travelWizardValidation.minusy_puteshestviya_1f8fbc38": "Disadvantages of travel",
   "utils.travelWizardValidation.nazvanie_puteshestviya_7d8dd724": "Trip name",
   "utils.travelWizardValidation.opisanie_a9350f71": "Description",

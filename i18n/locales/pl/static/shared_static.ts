@@ -146,7 +146,7 @@ export const sharedStaticResources = {
   "components.common.ContributionBanner.spasibo_chto_polzuetes_servisom_esli_sohrane_b4513fe0": "Dziękujemy za skorzystanie z usługi! Jeśli zainspirowały Cię zapisane trasy, dodaj swoje miejsce. Inni podróżnicy będą Ci bardzo wdzięczni.",
   "components.common.ContributionBanner.stante_chastyu_soobschestva_puteshestvenniko_ff32b805": "Zostań częścią społeczności podróżników",
   "components.common.ContributionBanner.vse_marshruty_zdes_sozdany_takimi_zhe_lyudmi_9cbfd905": "Wszystkie trasy tutaj są tworzone przez ludzi takich jak Ty. Jeśli masz coś do powiedzenia na temat danego miejsca, dodaj to, a zobaczą to setki osób.",
-  "components.common.ContributionBanner.vy_tozhe_mozhete_popolnit_kartu_73eb12e1": "Ty też możesz doładować swoją kartę!",
+  "components.common.ContributionBanner.vy_tozhe_mozhete_popolnit_kartu_73eb12e1": "Ty też możesz uzupełnić mapę!",
   "components.common.ContributionBanner.znaete_mesto_kotorogo_zdes_net_f35f5706": "Znasz miejsce, którego tu nie ma?",
   "components.onboarding.OnboardingScreen.gorodskie_kvesty_e3751b8f": "Questy miejskie",
   "components.onboarding.OnboardingScreen.karta_i_mesta_ryadom_cf21d908": "Mapa i miejsca w pobliżu",

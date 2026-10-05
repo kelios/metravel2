@@ -296,7 +296,7 @@ export const mapGenerated2 = {
   "components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_ssylku_f3b28577": "Не атрымалася адкрыць спасылку",
   "components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_stranitsu_50207480": "Не ўдалося адкрыць старонку",
   "components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_waze_d35ab6c9": "Не ўдалося адкрыць Waze",
-  "components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_yandeks_karty_860260b8": "Не ўдалося адкрыць Яндэкс",
+  "components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_yandeks_karty_860260b8": "Не ўдалося адкрыць Яндэкс Карты",
   "components.UserPoints.UserPointsMapPointMarker.ne_udalos_otkryt_yandeks_navigator_d112999a": "Не ўдалося адкрыць Яндэкс Навігатар",
   "components.UserPoints.UserPointsMapPointMarker.ne_udalos_podelitsya_1ff7407d": "Не ўдалося падзяліцца",
   "components.UserPoints.UserPointsMapPointMarker.ne_udalos_skopirovat_koordinaty_251cf34d": "Не ўдалося скапіяваць каардынаты",

@@ -44,7 +44,7 @@ export const profileGenerated2 = {
   "components.screens.profile.ProfileWorldMapTab.ne_posescheno_2882e15a": "Не відвідано",
   "components.screens.profile.ProfileWorldMapTab.net_marshrutov_v_etoy_strane_0d2e3533": "Немає маршрутів у цій країні",
   "components.screens.profile.ProfileWorldMapTab.ostalos_ac89d2ac": "Залишилось",
-  "components.screens.profile.ProfileWorldMapTab.otdalit_kartu_46122c74": "Видалити карту",
+  "components.screens.profile.ProfileWorldMapTab.otdalit_kartu_46122c74": "Віддалити карту",
   "components.screens.profile.ProfileWorldMapTab.otkryt_kartu_vo_ves_ekran_b743e70f": "Відкрити карту на весь екран",
   "components.screens.profile.ProfileWorldMapTab.posescheno_c0485db4": "Відвідано ·",
   "components.screens.profile.ProfileWorldMapTab.posescheno_cc5df481": "Відвідано",

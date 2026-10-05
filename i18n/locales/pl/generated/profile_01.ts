@@ -229,7 +229,7 @@ export const profileGenerated1 = {
   "components.profile.ProfileSectionHeader.nazad_k_razdelu_value1_3ca73e99": "Powrót do sekcji „{{value1}}”.",
   "components.profile.ProfileSectionHeader.uroven_e2239f0f": "Poziom",
   "components.profile.ProfileTabs.chernoviki_5cd596df": "Szkice",
-  "components.profile.ProfileTabs.chernoviki_marshrutov_7818add1": "Projekty tras",
+  "components.profile.ProfileTabs.chernoviki_marshrutov_7818add1": "Szkice tras",
   "components.profile.ProfileTabs.hochu_poehat_6d285e47": "Chcę iść",
   "components.profile.ProfileTabs.istoriya_6b1e228d": "Historia",
   "components.profile.ProfileTabs.karta_f1f34fd3": "Mapa",

@@ -131,7 +131,7 @@ export const errorsStaticResources = {
   "utils.travelWizardValidation.galereya_fotografiy_751bf667": "Galeria zdjęć",
   "utils.travelWizardValidation.glavnoe_izobrazhenie_e97ccba0": "Główny obraz",
   "utils.travelWizardValidation.kategorii_0f84d789": "Kategorie",
-  "utils.travelWizardValidation.kompaniya_3cdbd9a3": "Firma",
+  "utils.travelWizardValidation.kompaniya_3cdbd9a3": "Towarzystwo",
   "utils.travelWizardValidation.minusy_puteshestviya_1f8fbc38": "Wady podróży",
   "utils.travelWizardValidation.nazvanie_puteshestviya_7d8dd724": "Nazwa wycieczki",
   "utils.travelWizardValidation.opisanie_a9350f71": "Opis",

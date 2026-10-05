@@ -146,7 +146,7 @@ export const sharedStaticResources = {
   "components.common.ContributionBanner.spasibo_chto_polzuetes_servisom_esli_sohrane_b4513fe0": "Thank you for using the service! If the saved routes inspired you, add your place. Other travelers will be very grateful to you.",
   "components.common.ContributionBanner.stante_chastyu_soobschestva_puteshestvenniko_ff32b805": "Become part of the travel community",
   "components.common.ContributionBanner.vse_marshruty_zdes_sozdany_takimi_zhe_lyudmi_9cbfd905": "All the routes here are created by people just like you. If you have something to tell about a place, add it and hundreds of people will see it.",
-  "components.common.ContributionBanner.vy_tozhe_mozhete_popolnit_kartu_73eb12e1": "You can top up your card too!",
+  "components.common.ContributionBanner.vy_tozhe_mozhete_popolnit_kartu_73eb12e1": "You can add to the map too!",
   "components.common.ContributionBanner.znaete_mesto_kotorogo_zdes_net_f35f5706": "Do you know a place that isn't here?",
   "components.onboarding.OnboardingScreen.gorodskie_kvesty_e3751b8f": "City quests",
   "components.onboarding.OnboardingScreen.karta_i_mesta_ryadom_cf21d908": "Map and nearby places",
