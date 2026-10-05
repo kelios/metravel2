@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Platform, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native'
+import { Platform, Text, View, type LayoutChangeEvent } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import Feather from '@expo/vector-icons/Feather'
@@ -15,6 +15,13 @@ import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { queryConfigs } from '@/utils/reactQueryConfig'
 import { createSectionStyles } from './homeInspirationStyles'
+import {
+  SHOWCASE_EXPECTED_ITEMS,
+  chunkArray,
+  getShowcaseCardCount,
+  getShowcaseCardWidth,
+  getShowcaseColumns,
+} from './homeShowcaseGrid'
 import { translate as i18nT } from '@/i18n'
 import { getUserFriendlyError } from '@/utils/userFriendlyErrors'
 import { isPhoneLayout } from '@/utils/phoneLayout'
@@ -95,50 +102,6 @@ function getItemKey(item: any, queryKey: string, index: number) {
   return `${queryKey}-${index}`
 }
 
-/**
- * #1487: оценка ширины карточки редакционной сетки для сайзинга обложки.
- * Обязана быть оценкой СВЕРХУ (#1285): контент секции на 1280 занимает
- * ~1170 px (замер прода 2026-08-23: hero 643, стек 454), поэтому базой берём
- * вьюпорт минус минимальные поля, а доли — из grid-раскладки 7/12 и 5/12.
- * Без неё TravelListItem падал в фолбэк min(viewport, 720), и рейл 298 px
- * просил ступень srcSet 720w/960w втрое крупнее своей отрисовки.
- */
-export function getEditorialCardWidth(index: number, count: number, viewportWidth: number) {
-  const contentWidth = Math.min(viewportWidth, 1280) - 96
-  // Спаны зеркалят getEditorialCardStyle: широкие (7/12) — hero (index 0) и,
-  // при четырёх карточках, нижняя stack-bottom (index 3, gridColumn '6 / span 7');
-  // остальные — 5/12. Индексная оценка без учёта span давала нижней широкой
-  // карточке sizes узкого слота (493 на отрисовке 643) — мыло на DPR 1.
-  const isWide = index === 0 || (count >= 4 && index === 3)
-  return Math.max(1, Math.round((contentWidth * (isWide ? 7 : 5)) / 12))
-}
-
-function getEditorialCardStyle(styles: Styles, index: number, count: number) {
-  if (count === 1) return styles.editorialCardHero
-  if (count === 2) {
-    return index === 0 ? styles.editorialCardHero : styles.editorialCardStackTop
-  }
-  if (count === 3) {
-    if (index === 0) return styles.editorialCardHeroTall
-    if (index === 1) return styles.editorialCardStackTop
-    return styles.editorialCardStackMiddle
-  }
-  if (index === 0) return styles.editorialCardHero
-  if (index === 1) return styles.editorialCardStackTop
-  if (index === 2) return styles.editorialCardStackMiddle
-  return styles.editorialCardStackBottom
-}
-
-function chunkArray<T>(array: T[], columns: number): T[][] {
-  const result: T[][] = []
-  for (let i = 0; i < array.length; i += columns) result.push(array.slice(i, i + columns))
-  return result
-}
-
-const separatorStyles = StyleSheet.create({
-  separator: { height: 20 },
-})
-
 function buildEmptyPillStyle(colors: ThemedColors) {
   return {
     paddingHorizontal: 12,
@@ -176,6 +139,7 @@ export function HomeInspirationSection({
   const { isPhone, isLargePhone, width: viewportWidth } = useResponsive()
   const isMobile = isPhoneLayout({ width: viewportWidth, isPhone, isLargePhone })
   const isRail = layout === 'rail'
+  const showcaseColumns = getShowcaseColumns(viewportWidth)
   const [openingCatalog, setOpeningCatalog] = useState(false)
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -209,9 +173,8 @@ export function HomeInspirationSection({
         : RAIL_COUNT_DESKTOP
       return arr.slice(0, railCount)
     }
-    if (isWeekendShowcase) return isMobile ? arr : arr.slice(0, 4)
-    return arr.slice(0, isMobile ? 4 : 6)
-  }, [travelData, isMobile, isWeekendShowcase, isRail, fixedCount, queryKey])
+    return arr.slice(0, getShowcaseCardCount(arr.length, showcaseColumns))
+  }, [travelData, isMobile, isRail, fixedCount, queryKey, showcaseColumns])
 
   useEffect(() => {
     return () => {
@@ -235,10 +198,7 @@ export function HomeInspirationSection({
   const sectionBadge = SECTION_BADGES[queryKey]
 
   const styles = useMemo(() => createSectionStyles(colors, isMobile), [colors, isMobile])
-  const isDesktopEditorial = IS_WEB && !isMobile && !isRail
   const railCardWidth = isMobile ? Math.min(Math.round(viewportWidth * 0.78), 320) : 300
-  const shouldUseThreeColumnRow =
-    IS_WEB && !isMobile && queryKey === 'home-random-travels' && travelsList.length === 3
 
   const renderViewMoreButton = (extraStyle?: any) => (
     <Button
@@ -265,7 +225,8 @@ export function HomeInspirationSection({
           <LoadingSkeleton
             styles={styles}
             isMobile={isMobile}
-            isDesktopEditorial={isDesktopEditorial}
+            isRail={isRail}
+            columns={showcaseColumns}
           />
         </View>
       </View>
@@ -352,49 +313,30 @@ export function HomeInspirationSection({
             viewportWidth={viewportWidth}
             cardWidth={railCardWidth}
           />
-        ) : isMobile ? (
-          <MobileBento
-            styles={styles}
-            items={travelsList}
-            queryKey={queryKey}
-            isMobile
-            hideAuthor={hideAuthor}
-            viewportWidth={viewportWidth}
-          />
-        ) : shouldUseThreeColumnRow ? (
-          <ThreeColumn
-            styles={styles}
-            items={travelsList}
-            queryKey={queryKey}
-            isMobile={isMobile}
-            hideAuthor={hideAuthor}
-            viewportWidth={viewportWidth}
-          />
-        ) : isDesktopEditorial && travelsList.length >= 2 ? (
-          <EditorialGrid
-            styles={styles}
-            items={travelsList}
-            queryKey={queryKey}
-            isMobile={isMobile}
-            hideAuthor={hideAuthor}
-            viewportWidth={viewportWidth}
-          />
-        ) : travelsList.length === 3 ? (
-          <TrioGrid
-            styles={styles}
-            items={travelsList}
-            isMobile={isMobile}
-            hideAuthor={hideAuthor}
-            viewportWidth={viewportWidth}
-          />
         ) : (
-          <DefaultBento
+          <ShowcaseGrid
             styles={styles}
             items={travelsList}
-            queryKey={queryKey}
-            isMobile={isMobile}
-            hideAuthor={hideAuthor}
-            viewportWidth={viewportWidth}
+            columns={showcaseColumns}
+            getKey={(item, index) => getItemKey(item, queryKey, index)}
+            renderItem={(item, index) => (
+              <RenderTravelItem
+                item={item}
+                index={index}
+                isMobile={isMobile}
+                // На native `cardWidth` задаёт карточке фиксированную ширину,
+                // а оценка сверху шире ячейки — там ширину даёт flex-ячейка.
+                cardWidth={
+                  IS_WEB && showcaseColumns > 1
+                    ? getShowcaseCardWidth(showcaseColumns, viewportWidth)
+                    : undefined
+                }
+                hideAuthor={hideAuthor}
+                viewportWidth={viewportWidth}
+                visualVariant="home-featured"
+                mediaLoading="lazy"
+              />
+            )}
           />
         )}
 
@@ -411,11 +353,13 @@ export function HomeInspirationSection({
 function LoadingSkeleton({
   styles,
   isMobile,
-  isDesktopEditorial,
+  isRail,
+  columns,
 }: {
   styles: Styles
   isMobile: boolean
-  isDesktopEditorial: boolean
+  isRail: boolean
+  columns: number
 }) {
   return (
     <>
@@ -440,41 +384,94 @@ function LoadingSkeleton({
           />
         </View>
       </View>
-      <View style={styles.bentoGrid}>
-        {isMobile
-          ? Array.from({ length: 2 }, (_, i) => (
-              <SkeletonLoader key={i} width="100%" height={260} borderRadius={12} />
-            ))
-          : isDesktopEditorial
-            ? (
-                <View style={[styles.editorialGrid, styles.editorialGridFour]}>
-                  {[
-                    styles.editorialCardHero,
-                    styles.editorialCardStackTop,
-                    styles.editorialCardStackMiddle,
-                    styles.editorialCardStackBottom,
-                  ].map((cardStyle, i) => (
-                    <View key={i} style={[styles.editorialCard, cardStyle]}>
-                      <SkeletonLoader width="100%" height="100%" borderRadius={12} />
-                    </View>
-                  ))}
-                </View>
-              )
-            : [0, 1].map((rowIdx) => {
-                const wideFirst = rowIdx % 2 === 0
-                return (
-                  <View key={rowIdx} style={styles.bentoRow}>
-                    <View style={wideFirst ? styles.bentoCardWide : styles.bentoCardNarrow}>
-                      <SkeletonLoader width="100%" height={340} borderRadius={12} />
-                    </View>
-                    <View style={wideFirst ? styles.bentoCardNarrow : styles.bentoCardWide}>
-                      <SkeletonLoader width="100%" height={340} borderRadius={12} />
-                    </View>
-                  </View>
-                )
-              })}
-      </View>
+      {isRail ? (
+        <RailSkeleton styles={styles} isMobile={isMobile} />
+      ) : (
+        <ShowcaseGrid
+          styles={styles}
+          items={Array.from(
+            { length: getShowcaseCardCount(SHOWCASE_EXPECTED_ITEMS, columns) },
+            (_, i) => i,
+          )}
+          columns={columns}
+          getKey={(slot) => `skeleton-${slot}`}
+          renderItem={() => (
+            <View testID="home-showcase-skeleton-slot">
+              <View style={styles.showcaseSkeletonMedia}>
+                <SkeletonLoader width="100%" height="100%" borderRadius={12} />
+              </View>
+              <SkeletonLoader width="100%" height={77} borderRadius={8} style={{ marginTop: 8 }} />
+            </View>
+          )}
+        />
+      )}
     </>
+  )
+}
+
+function RailSkeleton({ styles, isMobile }: { styles: Styles; isMobile: boolean }) {
+  return (
+    <View style={styles.bentoGrid}>
+      {isMobile
+        ? Array.from({ length: 2 }, (_, i) => (
+            <SkeletonLoader key={i} width="100%" height={260} borderRadius={12} />
+          ))
+        : [0, 1].map((rowIdx) => {
+            const wideFirst = rowIdx % 2 === 0
+            return (
+              <View key={rowIdx} style={styles.bentoRow}>
+                <View style={wideFirst ? styles.bentoCardWide : styles.bentoCardNarrow}>
+                  <SkeletonLoader width="100%" height={340} borderRadius={12} />
+                </View>
+                <View style={wideFirst ? styles.bentoCardNarrow : styles.bentoCardWide}>
+                  <SkeletonLoader width="100%" height={340} borderRadius={12} />
+                </View>
+              </View>
+            )
+          })}
+    </View>
+  )
+}
+
+// #2289: ровная сетка витрины. Ячейка `flexBasis: 100/cols %` без роста:
+// в полном ряду ячейки поровну ужимаются под gap, неполный ряд (n < cols)
+// остаётся шириной колонки и стоит по центру — без onLayout и второго кадра.
+function ShowcaseGrid<T>({
+  styles,
+  items,
+  columns,
+  getKey,
+  renderItem,
+}: {
+  styles: Styles
+  items: T[]
+  columns: number
+  getKey: (item: T, index: number) => string
+  renderItem: (item: T, index: number) => React.ReactNode
+}) {
+  const cellBasis = useMemo(() => ({ flexBasis: `${100 / columns}%` as const }), [columns])
+  return (
+    <View
+      testID="home-showcase-grid"
+      style={[styles.showcaseGrid, columns === 1 && styles.showcaseGridSingleColumn]}
+    >
+      {chunkArray(items, columns).map((row, rowIdx) => (
+        <View key={`row-${rowIdx}`} testID="home-showcase-row" style={styles.showcaseRow}>
+          {row.map((item, colIdx) => {
+            const index = rowIdx * columns + colIdx
+            return (
+              <View
+                key={getKey(item, index)}
+                testID="home-showcase-cell"
+                style={[styles.showcaseCardWrapper, cellBasis]}
+              >
+                {renderItem(item, index)}
+              </View>
+            )
+          })}
+        </View>
+      ))}
+    </View>
   )
 }
 
@@ -524,36 +521,6 @@ type GridListProps = {
   viewportWidth: number
 }
 
-function MobileBento({
-  styles,
-  items,
-  queryKey,
-  isMobile,
-  hideAuthor,
-  viewportWidth,
-}: GridListProps) {
-  return (
-    <View style={styles.bentoGrid}>
-      {items.map((item: any, index: number) => (
-        <React.Fragment key={getItemKey(item, queryKey, index)}>
-          {index > 0 && <View style={separatorStyles.separator} />}
-          <View style={styles.bentoCardWide}>
-            <RenderTravelItem
-              item={item}
-              index={index}
-              isMobile={isMobile}
-              hideAuthor={hideAuthor}
-              viewportWidth={viewportWidth}
-              visualVariant="home-featured"
-              mediaLoading="lazy"
-            />
-          </View>
-        </React.Fragment>
-      ))}
-    </View>
-  )
-}
-
 function Rail({
   styles,
   items,
@@ -600,190 +567,6 @@ function Rail({
           </View>
         ))}
       </CardRail>
-    </View>
-  )
-}
-
-function ThreeColumn({
-  styles,
-  items,
-  queryKey,
-  isMobile,
-  hideAuthor,
-  viewportWidth,
-}: GridListProps) {
-  return (
-    <View style={styles.threeColumnGrid}>
-      {items.map((item: any, index: number) => (
-        <View key={getItemKey(item, queryKey, index)} style={styles.threeColumnCard}>
-          <RenderTravelItem
-            item={item}
-            index={index}
-            isMobile={isMobile}
-            hideAuthor={hideAuthor}
-            viewportWidth={viewportWidth}
-            visualVariant="home-featured"
-            mediaLoading="lazy"
-          />
-        </View>
-      ))}
-    </View>
-  )
-}
-
-function EditorialGrid({
-  styles,
-  items,
-  queryKey,
-  isMobile,
-  hideAuthor,
-  viewportWidth,
-}: GridListProps) {
-  const visibleCount = Math.min(items.length, 4)
-  return (
-    <View
-      style={[
-        styles.editorialGrid,
-        items.length === 3 ? styles.editorialGridThree : styles.editorialGridFour,
-      ]}
-    >
-      {items.slice(0, 4).map((item: any, index: number) => (
-        <View
-          key={getItemKey(item, queryKey, index)}
-          style={[styles.editorialCard, getEditorialCardStyle(styles, index, visibleCount)]}
-        >
-          <RenderTravelItem
-            item={item}
-            index={index}
-            isMobile={isMobile}
-            cardWidth={isMobile ? undefined : getEditorialCardWidth(index, visibleCount, viewportWidth)}
-            hideAuthor={hideAuthor}
-            viewportWidth={viewportWidth}
-            visualVariant="home-featured"
-            mediaLoading="lazy"
-          />
-        </View>
-      ))}
-    </View>
-  )
-}
-
-function TrioGrid({
-  styles,
-  items,
-  isMobile,
-  hideAuthor,
-  viewportWidth,
-}: Omit<GridListProps, 'queryKey'>) {
-  return (
-    <View style={styles.trioGrid}>
-      <View style={styles.trioCardTop}>
-        <RenderTravelItem
-          item={items[0]}
-          index={0}
-          isMobile={isMobile}
-          hideAuthor={hideAuthor}
-          viewportWidth={viewportWidth}
-          visualVariant="home-featured"
-          mediaLoading="lazy"
-        />
-      </View>
-      <View style={styles.trioBottomRow}>
-        {[1, 2].map((i) => (
-          <View key={i} style={styles.trioCardBottom}>
-            <RenderTravelItem
-              item={items[i]}
-              index={i}
-              isMobile={isMobile}
-              hideAuthor={hideAuthor}
-              viewportWidth={viewportWidth}
-              visualVariant="home-featured"
-              mediaLoading="lazy"
-            />
-          </View>
-        ))}
-      </View>
-    </View>
-  )
-}
-
-function BentoSlot({
-  item,
-  index,
-  wide,
-  styles,
-  isMobile,
-  hideAuthor,
-  viewportWidth,
-}: {
-  item: any | null
-  index: number
-  wide: boolean
-  styles: Styles
-  isMobile: boolean
-  hideAuthor: boolean
-  viewportWidth: number
-}) {
-  const slotStyle = wide ? styles.bentoCardWide : styles.bentoCardNarrow
-  if (!item) {
-    return (
-      <View
-        style={[slotStyle, styles.cardWrapperPlaceholder]}
-        aria-hidden={IS_WEB ? true : undefined}
-        importantForAccessibility="no-hide-descendants"
-      />
-    )
-  }
-  return (
-    <View style={slotStyle}>
-      <RenderTravelItem
-        item={item}
-        index={index}
-        isMobile={isMobile}
-        hideAuthor={hideAuthor}
-        viewportWidth={viewportWidth}
-        visualVariant="home-featured"
-        mediaLoading="lazy"
-      />
-    </View>
-  )
-}
-
-function DefaultBento({
-  styles,
-  items,
-  queryKey,
-  isMobile,
-  hideAuthor,
-  viewportWidth,
-}: GridListProps) {
-  return (
-    <View style={styles.bentoGrid}>
-      {chunkArray(items, 2).map((pair, rowIdx) => {
-        const wideFirst = rowIdx % 2 === 0
-        return (
-          <View key={`${queryKey}-row-${rowIdx}`} style={styles.bentoRow}>
-            <BentoSlot
-              item={pair[0] ?? null}
-              index={rowIdx * 2}
-              wide={wideFirst}
-              styles={styles}
-              isMobile={isMobile}
-              hideAuthor={hideAuthor}
-              viewportWidth={viewportWidth}
-            />
-            <BentoSlot
-              item={pair[1] ?? null}
-              index={rowIdx * 2 + 1}
-              wide={!wideFirst}
-              styles={styles}
-              isMobile={isMobile}
-              hideAuthor={hideAuthor}
-              viewportWidth={viewportWidth}
-            />
-          </View>
-        )
-      })}
     </View>
   )
 }

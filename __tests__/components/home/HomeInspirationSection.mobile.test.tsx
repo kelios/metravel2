@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native'
 import { render, screen, fireEvent } from '@testing-library/react-native'
 import { useQuery } from '@tanstack/react-query'
 import { HomeInspirationSection } from '@/components/home/HomeInspirationSection'
@@ -72,20 +73,112 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
     jest.clearAllMocks()
   })
 
-  it('renders every weekend route on mobile instead of truncating to two cards', () => {
-    render(
-      <HomeInspirationSection
-        title="Идеи для ближайших выходных"
-        subtitle="Реальные маршруты без долгого планирования"
-        queryKey="home-travels-of-month"
-        fetchFn={jest.fn()}
-      />,
-    )
+  // #2289: ровная сетка одинаковых карточек вместо зигзага 7/12+5/12 на
+  // десктопе и шести карточек столбцом (блок 2941 px) на телефоне.
+  describe('weekend showcase grid', () => {
+    const renderShowcase = (width: number, count: number) => {
+      mockViewport = { isPhone: width < 480, isLargePhone: width >= 480 && width < 768, width }
+      mockUseQuery.mockReturnValue({
+        data: {
+          results: Array.from({ length: count }, (_, index) => ({
+            id: index + 1,
+            name: `Маршрут ${index + 1}`,
+          })),
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: jest.fn(),
+      } as any)
 
-    expect(screen.getByText('Маршрут 1')).toBeTruthy()
-    expect(screen.getByText('Маршрут 2')).toBeTruthy()
-    expect(screen.getByText('Маршрут 3')).toBeTruthy()
-    expect(screen.getByText('Маршрут 4')).toBeTruthy()
+      return render(
+        <HomeInspirationSection
+          title="Идеи для ближайших выходных"
+          subtitle="Реальные маршруты без долгого планирования"
+          queryKey="home-travels-of-month"
+          fetchFn={jest.fn()}
+        />,
+      )
+    }
+
+    const rowSizes = (view: ReturnType<typeof render>) =>
+      view.getAllByTestId('home-showcase-row').map(
+        (row) => row.findAll((node) => node.props.testID === 'home-showcase-cell', { deep: false }).length,
+      )
+    const cellStyles = (view: ReturnType<typeof render>) =>
+      view.getAllByTestId('home-showcase-cell').map((cell) => StyleSheet.flatten(cell.props.style))
+
+    it.each([
+      [390, 6, [1, 1, 1]],
+      [390, 2, [1, 1]],
+      [768, 6, [2, 2]],
+      [768, 3, [2]],
+      [1440, 6, [3, 3]],
+      [1440, 5, [3]],
+      [1440, 2, [2]],
+    ])('%ipx, %i маршрутов → ряды %j', (width, count, rows) => {
+      const view = renderShowcase(width, count)
+      expect(rowSizes(view)).toEqual(rows)
+    })
+
+    it('все ячейки одной ширины колонки, не растягиваются и ужимаются поровну', () => {
+      for (const [width, basis] of [[390, '100%'], [768, '50%'], [1440, `${100 / 3}%`]] as const) {
+        const view = renderShowcase(width, 6)
+        for (const style of cellStyles(view)) {
+          expect(style).toMatchObject({ flexBasis: basis, flexGrow: 0, flexShrink: 1, minWidth: 0 })
+          expect(style.width).toBeUndefined()
+        }
+        view.unmount()
+      }
+    })
+
+    it('неполный ряд стоит по центру шириной колонки', () => {
+      const view = renderShowcase(1440, 2)
+      const row = view.getByTestId('home-showcase-row')
+      expect(StyleSheet.flatten(row.props.style)).toMatchObject({
+        flexDirection: 'row',
+        justifyContent: 'center',
+      })
+      expect(cellStyles(view).map((style) => style.flexBasis)).toEqual([`${100 / 3}%`, `${100 / 3}%`])
+    })
+
+    it('сетка не шире 1136 и по центру; в одну колонку — зазор 12 без сепараторов', () => {
+      const desktop = renderShowcase(1440, 6)
+      expect(StyleSheet.flatten(desktop.getByTestId('home-showcase-grid').props.style)).toMatchObject({
+        width: '100%',
+        maxWidth: 1136,
+        alignSelf: 'center',
+        gap: 16,
+      })
+      desktop.unmount()
+
+      const phone = renderShowcase(390, 6)
+      const grid = phone.getByTestId('home-showcase-grid')
+      expect(StyleSheet.flatten(grid.props.style)).toMatchObject({ gap: 12 })
+      // Прямые дети сетки — только ряды карточек, никаких View-сепараторов.
+      const children = grid.children.map((child) => (typeof child === 'string' ? child : child.props.testID))
+      expect(children).toEqual(['home-showcase-row', 'home-showcase-row', 'home-showcase-row'])
+    })
+
+    it('скелетон зеркалит сетку: те же ряды и число слотов', () => {
+      mockViewport = { isPhone: false, isLargePhone: false, width: 1440 }
+      mockUseQuery.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        isError: false,
+        error: null,
+        refetch: jest.fn(),
+      } as any)
+      const view = render(
+        <HomeInspirationSection
+          title="Идеи для ближайших выходных"
+          queryKey="home-travels-of-month"
+          fetchFn={jest.fn()}
+        />,
+      )
+      expect(rowSizes(view)).toEqual([3, 3])
+      expect(view.getAllByTestId('home-showcase-skeleton-slot')).toHaveLength(6)
+    })
   })
 
   // #1414 (TestFlight 1.0.5 (8)): бейдж секции дублировал её же заголовок и

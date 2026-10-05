@@ -4,6 +4,7 @@
 import { StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { useThemedColors } from '@/hooks/useTheme';
+import { SHOWCASE_GAP, SHOWCASE_MAX_WIDTH, SHOWCASE_SINGLE_COLUMN_GAP } from './homeShowcaseGrid';
 
 type Colors = ReturnType<typeof useThemedColors>;
 
@@ -26,20 +27,6 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
       } as any,
     }),
   },
-  sectionGlow: {
-    display: 'none',
-  } as any,
-  sectionAccent: {
-    display: 'none',
-  } as any,
-  header: {
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    gap: isMobile ? 8 : 12,
-    marginBottom: isMobile ? 16 : 24,
-  },
-  headerMobile: { flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 8 },
   titleContainer: { flex: 1, gap: 8, minWidth: 0, alignItems: 'center' },
   headerActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, flexShrink: 0 },
   sectionBadge: {
@@ -48,14 +35,6 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
     backgroundColor: colors.surface, paddingHorizontal: 13, paddingVertical: 6,
   },
   sectionBadgeText: { color: colors.textMuted, fontSize: 10, lineHeight: 14, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase' },
-  title: {
-    fontSize: isMobile ? 28 : 42, fontWeight: '800', color: colors.text,
-    lineHeight: isMobile ? 34 : 50, letterSpacing: isMobile ? -0.7 : -1.2,
-    textAlign: 'center', maxWidth: 760,
-  },
-  titleMobile: { fontSize: 28, lineHeight: 34, letterSpacing: -0.7 },
-  subtitle: { fontSize: isMobile ? 15 : 17, color: colors.textMuted, lineHeight: isMobile ? 23 : 26, textAlign: 'center', maxWidth: 680, letterSpacing: 0.1 },
-  subtitleMobile: { fontSize: 15, lineHeight: 22, maxWidth: 440 },
   showcaseSectionFrame: {
     backgroundColor: colors.backgroundSecondary,
     borderColor: colors.borderLight,
@@ -73,43 +52,6 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
     alignItems: 'center',
     gap: isMobile ? 8 : 12,
     marginBottom: isMobile ? 14 : 20,
-  },
-  showcaseTitle: {
-    fontSize: isMobile ? 26 : 38,
-    lineHeight: isMobile ? 32 : 46,
-    fontWeight: '800',
-    letterSpacing: isMobile ? -0.6 : -1.0,
-    textAlign: 'center',
-    color: colors.text,
-    maxWidth: 760,
-  },
-  showcaseSubtitle: {
-    fontSize: isMobile ? 14 : 16,
-    lineHeight: isMobile ? 21 : 24,
-    color: colors.textMuted,
-    textAlign: 'center',
-    maxWidth: 640,
-  },
-  showcaseBadge: {
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 13,
-    paddingVertical: 6,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    borderWidth: 1,
-    borderColor: colors.primaryAlpha30,
-    backgroundColor: colors.primarySoft,
-    ...Platform.select({ web: { boxShadow: `0 1px 5px ${colors.primary}12` } }),
-  },
-  showcaseBadgeText: {
-    color: colors.primaryText,
-    fontSize: 10,
-    lineHeight: 14,
-    fontWeight: '700',
-    letterSpacing: 0.9,
-    textTransform: 'uppercase',
   },
   heroTitle: {
     fontSize: isMobile ? 28 : 40,
@@ -154,44 +96,13 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
     paddingBottom: isMobile ? 16 : 48,
     gap: isMobile ? 8 : 14,
   },
-  showcaseGrid: {
-    gap: isMobile ? 12 : 14,
-  },
-  showcaseRow: {
-    gap: isMobile ? 12 : 14,
-  },
-  showcaseCardWrapper: {
-    minHeight: isMobile ? 220 : 300,
-  },
-  trioGrid: {
-    gap: isMobile ? 12 : 14,
-    width: '100%',
-  },
-  trioCardTop: {
-    width: '100%',
-    minHeight: isMobile ? 220 : 360,
-  },
-  trioBottomRow: {
-    flexDirection: isMobile ? 'column' : 'row',
-    gap: isMobile ? 12 : 14,
-    alignItems: 'stretch',
-  },
-  trioCardBottom: {
-    flex: 1,
-    minHeight: isMobile ? 200 : 280,
-  },
-  threeColumnGrid: {
-    flexDirection: isMobile ? 'column' : 'row',
-    gap: isMobile ? 12 : 14,
-    alignItems: 'stretch',
-    width: '100%',
-  },
-  threeColumnCard: {
-    flex: isMobile ? undefined : 1,
-    width: isMobile ? '100%' : undefined,
-    minHeight: isMobile ? 220 : 320,
-    minWidth: 0,
-  },
+  // #2289: ровная сетка витрины «Идеи для ближайших выходных» — одна flex-сетка
+  // для web и native; ширину ячейки задаёт `flexBasis` из HomeInspirationSection.
+  showcaseGrid: { width: '100%', maxWidth: SHOWCASE_MAX_WIDTH, alignSelf: 'center', gap: SHOWCASE_GAP },
+  showcaseGridSingleColumn: { gap: SHOWCASE_SINGLE_COLUMN_GAP },
+  showcaseRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'stretch', gap: SHOWCASE_GAP },
+  showcaseCardWrapper: { flexGrow: 0, flexShrink: 1, minWidth: 0 },
+  showcaseSkeletonMedia: { width: '100%', aspectRatio: 1 },
   bentoGrid: {
     gap: isMobile ? 12 : 14,
     width: '100%',
@@ -212,96 +123,9 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
     width: isMobile ? '100%' : undefined,
     minHeight: isMobile ? 200 : 280,
   },
-  editorialGrid: {
-    width: '100%',
-    gap: isMobile ? 12 : 18,
-    ...Platform.select({
-      web: !isMobile
-        ? ({
-            display: 'grid',
-            gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
-            alignItems: 'stretch',
-          } as any)
-        : null,
-    }),
-  },
-  editorialGridThree: Platform.select({
-    web: !isMobile
-      ? ({
-          gridTemplateRows: 'minmax(176px, auto) minmax(176px, auto)',
-        } as any)
-      : {},
-  }) as any,
-  editorialGridFour: Platform.select({
-    web: !isMobile
-      ? ({
-          gridTemplateRows: 'minmax(184px, auto) minmax(184px, auto)',
-        } as any)
-      : {},
-  }) as any,
-  editorialCard: {
-    minWidth: 0,
-    ...Platform.select({
-      web: !isMobile
-        ? ({
-            height: '100%',
-          } as any)
-        : null,
-    }),
-  },
-  editorialCardHero: Platform.select({
-    web: !isMobile
-      ? ({
-          gridColumn: '1 / span 7',
-          gridRow: '1 / span 1',
-        } as any)
-      : {},
-  }) as any,
-  editorialCardHeroTall: Platform.select({
-    web: !isMobile
-      ? ({
-          gridColumn: '1 / span 7',
-          gridRow: '1 / span 2',
-        } as any)
-      : {},
-  }) as any,
-  editorialCardStackTop: Platform.select({
-    web: !isMobile
-      ? ({
-          gridColumn: '8 / span 5',
-          gridRow: '1 / span 1',
-        } as any)
-      : {},
-  }) as any,
-  editorialCardStackMiddle: Platform.select({
-    web: !isMobile
-      ? ({
-          gridColumn: '1 / span 5',
-          gridRow: '2 / span 1',
-        } as any)
-      : {},
-  }) as any,
-  editorialCardStackBottom: Platform.select({
-    web: !isMobile
-      ? ({
-          gridColumn: '6 / span 7',
-          gridRow: '2 / span 1',
-        } as any)
-      : {},
-  }) as any,
   // ── Horizontal rail (carousel) layout ────────────────────────────────────
   // Used by the "Популярное"/"Новые" feeds so they don't repeat the editorial
   // grid rhythm of the weekend showcase right above them.
-  railScroll: {
-    width: '100%',
-    ...Platform.select({ web: { scrollSnapType: 'x mandatory', overscrollBehaviorX: 'contain' } as any }),
-  },
-  railContent: {
-    flexDirection: 'row',
-    gap: isMobile ? 12 : 16,
-    paddingVertical: 4,
-    paddingRight: isMobile ? 16 : 6,
-  },
   railCard: {
     minHeight: isMobile ? 250 : 300,
     ...Platform.select({ web: { scrollSnapAlign: 'start' } as any }),
@@ -322,32 +146,6 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
     ...Platform.select({ web: { transform: 'translateY(-3px) scale(1.02)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' } }),
   },
   viewMoreText: { fontSize: isMobile ? 14 : 15, fontWeight: '600', color: colors.text },
-  articlesButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    paddingHorizontal: isMobile ? 18 : 26, paddingVertical: isMobile ? 11 : 14,
-    borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 0, backgroundColor: colors.primarySoft, flexShrink: 0,
-    ...Platform.select({ web: {
-      transition: 'background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease',
-    } }),
-  },
-  articlesButtonHover: {
-    backgroundColor: colors.primaryLight,
-    ...Platform.select({ web: { transform: 'translateY(-2px)', boxShadow: `0 6px 18px ${colors.primary}18` } }),
-  },
-  articlesButtonText: { color: colors.primaryText, fontSize: isMobile ? 14 : 15, lineHeight: isMobile ? 20 : 22, fontWeight: '700' },
-  grid: { width: '100%', gap: isMobile ? 12 : 16 },
-  row: {
-    flexDirection: 'row', gap: isMobile ? 12 : 16, justifyContent: 'flex-start', alignItems: 'stretch', width: '100%',
-    ...Platform.select({ web: { justifyContent: 'flex-start' } as any }),
-  },
-  rowWebCentered: { justifyContent: 'center' },
-  cardWrapper: {
-    flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0, minHeight: isMobile ? 0 : 300,
-    ...Platform.select({ web: { flexGrow: 1, flexShrink: 1, flexBasis: 0, alignSelf: 'stretch' } as any }),
-  },
-  cardWrapperSingleColumn: { width: '100%', flexGrow: 0, flexShrink: 0, flexBasis: 'auto', alignSelf: 'stretch' },
-  cardWrapperMobile: { width: '100%', minWidth: 150 },
-  cardWrapperPlaceholder: { opacity: 0, ...Platform.select({ web: { visibility: 'hidden', pointerEvents: 'none' } as any }) },
   emptyState: {
     borderRadius: DESIGN_TOKENS.radii.xl, borderWidth: 1, borderColor: colors.borderLight,
     backgroundColor: colors.surface, paddingHorizontal: isMobile ? 24 : 40, paddingVertical: isMobile ? 32 : 48,
