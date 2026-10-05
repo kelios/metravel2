@@ -1,6 +1,7 @@
 import React from 'react'
 import {
   type StyleProp,
+  Text,
   View,
   type ViewStyle,
   useWindowDimensions,
@@ -20,6 +21,7 @@ import {
 import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
 import PlaceListCard from '@/components/places/PlaceListCard'
 import PlaceRatingSection from '@/components/places/PlaceRatingSection'
+import Button from '@/components/ui/Button'
 import EmptyState, { type EmptyStateProps } from '@/components/ui/EmptyState'
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem'
 import { useSavedPointToggle } from '@/hooks/map/useSavedPointToggle'
@@ -362,6 +364,47 @@ export function SkeletonGrid({
           </View>
         </View>
       ))}
+    </View>
+  )
+}
+
+// Подвал списка: «показано N из M» и дозагрузка. После сбоя дозагрузки (#2184)
+// список остаётся на экране, а кнопка повторяет только несостоявшуюся страницу.
+export function LoadMoreFooter({
+  styles,
+  shown,
+  total,
+  failed,
+  loading,
+  onPress,
+}: {
+  styles: PlacesStyles
+  shown: number
+  total: number
+  failed: boolean
+  loading: boolean
+  onPress: () => void
+}) {
+  return (
+    <View style={styles.loadMoreFooter} testID="places-load-more">
+      {failed ? (
+        <Text style={styles.loadMoreText}>
+          {i18nT('map:screens.tabs.PlacesScreen.ne_udalos_zagruzit_mesta_b8af7ba1')}
+        </Text>
+      ) : (
+        <Text style={styles.loadMoreText}>
+          {i18nT('map:screens.tabs.PlacesScreen.pokazano_673c959e')}{shown} {i18nT('map:screens.tabs.PlacesScreen.iz_897ff3eb')}{total}
+        </Text>
+      )}
+      <Button
+        label={failed
+          ? i18nT('map:screens.tabs.PlacesScreen.povtorit_e910f968')
+          : i18nT('map:screens.tabs.PlacesScreen.pokazat_esche_f7728927')}
+        variant="secondary"
+        size="sm"
+        onPress={onPress}
+        loading={loading}
+      />
     </View>
   )
 }

@@ -4,6 +4,7 @@
 
 import { QueryClient, DefaultOptions } from '@tanstack/react-query';
 import { Platform } from 'react-native';
+import { isServerStillWorkingAfter } from '@/api/clientErrors';
 import { setupQueryOnlineManager } from '@/utils/queryOnlineManager';
 
 interface QueryClientRuntimeOptions {
@@ -27,16 +28,17 @@ const defaultQueryOptions: DefaultOptions = {
     
     // Количество повторных попыток при ошибке
     retry: (failureCount, error: any) => {
+      // Таймаут и 504: сервер ещё досчитывает брошенный запрос, повтор — второй
+      // такой же расчёт рядом с первым. Опознаём по имени ошибки и статусу, а не
+      // по тексту: текст таймаута локализован, и по нему правило работало только
+      // в RU и EN — в BE/UK/PL таймаут повторялся дважды (#2184).
+      if (isServerStillWorkingAfter(error)) return false
+
       const message = String(error?.message || '').toLowerCase()
 
-      // Не повторяем запросы при таймаутах/сетевых сбоях:
-      // иначе мы искусственно растягиваем "loading" и можем сильно ухудшить LCP.
-      if (
-        message.includes('превышено время ожидания') ||
-        message.includes('timeout') ||
-        message.includes('failed to fetch') ||
-        message.includes('network request failed')
-      ) {
+      // Сетевые сбои тоже не повторяем: иначе мы искусственно растягиваем
+      // "loading" и можем сильно ухудшить LCP.
+      if (message.includes('failed to fetch') || message.includes('network request failed')) {
         return false
       }
 

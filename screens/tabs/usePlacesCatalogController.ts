@@ -2,9 +2,9 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'rea
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native'
 import { Platform } from 'react-native'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
-import { keepPreviousData, useInfiniteQuery, useQueries, useQuery } from '@tanstack/react-query'
 
-import { fetchPlacesCatalog, type PlacesCatalogSort } from '@/api/places'
+import type { PlacesCatalogSort } from '@/api/places'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import type { CatalogPlace } from '@/utils/placesCatalog'
 import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel'
@@ -15,22 +15,30 @@ import {
   getInterestingCategoryCollections,
   LOAD_MORE_SCROLL_THRESHOLD,
   MAP_FOCUS_RADIUS_KM,
-  PLACES_PAGE_SIZE,
+  PLACES_SEARCH_DEBOUNCE_MS,
   getActiveCategoryTitle,
+  getCatalogLoadErrorDescription,
   isSameCategorySet,
   parseCategoryParam,
 } from './PlacesScreen.helpers'
+import { usePlacesCatalogQueries } from './usePlacesCatalogQueries'
 
 type PlacesCatalogControllerInput = {
   isCompact: boolean
   isWide: boolean
 }
 
+const isBlankQuery = (value: string) => !value.trim()
+
 export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogControllerInput) {
   const router = useRouter()
   const params = useLocalSearchParams<{ category?: string; country?: string; q?: string }>()
   const [query, setQuery] = useState(() => typeof params.q === 'string' ? params.q : '')
-  const deferredQuery = useDeferredValue(query)
+  // В запрос уходит значение после паузы ввода: `useDeferredValue` паузой не
+  // был, и каждый набранный символ стоил бэкенду отдельного расчёта (#2184).
+  // Очищенный поиск применяется сразу, иначе «Сбросить» слал бы запрос со
+  // старым поиском и уже сброшенными фильтрами.
+  const appliedQuery = useDebouncedValue(query, PLACES_SEARCH_DEBOUNCE_MS, isBlankQuery).trim()
   const [categoryQuery, setCategoryQuery] = useState('')
   const deferredCategoryQuery = useDeferredValue(categoryQuery)
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
@@ -51,66 +59,14 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
     if (height > 0) setTopBarHeight((current) => (Math.abs(current - height) < 1 ? current : height))
   }, [])
 
-  const listParams = useMemo(() => ({
-    q: deferredQuery.trim() || undefined,
-    categories: selectedCategories.length > 0 ? selectedCategories : undefined,
-    country: selectedCountry ?? undefined,
-    sort: sortMode,
-  }), [deferredQuery, selectedCategories, selectedCountry, sortMode])
-
-  const placesQuery = useInfiniteQuery({
-    queryKey: ['places-catalog', 'list', listParams],
-    queryFn: ({ pageParam, signal }) =>
-      fetchPlacesCatalog({ page: pageParam, perPage: PLACES_PAGE_SIZE, ...listParams }, signal),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, allPages) => {
-      const loaded = allPages.reduce((sum, page) => sum + page.places.length, 0)
-      return loaded < lastPage.count ? allPages.length + 1 : undefined
-    },
-    placeholderData: keepPreviousData,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 20 * 60 * 1000,
-    retry: 2,
-    retryDelay: (attempt) => Math.min(800 * 2 ** attempt, 2400),
-    refetchOnWindowFocus: false,
-  })
-
-  const facetsParams = useMemo(
-    () => ({ q: deferredQuery.trim() || undefined, country: selectedCountry ?? undefined }),
-    [deferredQuery, selectedCountry],
-  )
-  const facetsQuery = useQuery({
-    queryKey: ['places-catalog', 'facets', facetsParams],
-    queryFn: ({ signal }) => fetchPlacesCatalog({ page: 1, perPage: 1, ...facetsParams }, signal),
-    placeholderData: keepPreviousData,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 20 * 60 * 1000,
-    retry: 2,
-    refetchOnWindowFocus: false,
-  })
-
   const showCollections = Platform.OS === 'web' && !isCompact
   const interestingCategoryCollections = useMemo(getInterestingCategoryCollections, [])
-  const collectionCountsParams = useMemo(
-    () => ({ country: selectedCountry ?? undefined }),
-    [selectedCountry],
-  )
-  const collectionCountQueries = useQueries({
-    queries: interestingCategoryCollections.map((collection) => ({
-      queryKey: ['places-catalog', 'collection', collection.id, collectionCountsParams],
-      queryFn: ({ signal }: { signal: AbortSignal }) => fetchPlacesCatalog({
-        page: 1,
-        perPage: 1,
-        categories: [...collection.categories],
-        ...collectionCountsParams,
-      }, signal),
-      enabled: showCollections,
-      placeholderData: keepPreviousData,
-      staleTime: 5 * 60 * 1000,
-      gcTime: 20 * 60 * 1000,
-      retry: 2,
-      refetchOnWindowFocus: false,
-    })),
+  const { collectionCounts, isScopeLoading, placesQuery, scope } = usePlacesCatalogQueries({
+    q: appliedQuery || undefined,
+    categories: selectedCategories,
+    country: selectedCountry,
+    sort: sortMode,
+    collections: interestingCategoryCollections,
   })
 
   const visiblePlaces = useMemo(
@@ -118,16 +74,15 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
     [placesQuery.data],
   )
   const totalCount = placesQuery.data?.pages[0]?.count ?? 0
-  const catalogTotal = facetsQuery.data?.count ?? 0
-  const categoryFacets = useMemo(() => facetsQuery.data?.categoryFacets ?? [], [facetsQuery.data])
-  const countryFacets = useMemo(() => facetsQuery.data?.countryFacets ?? [], [facetsQuery.data])
+  const catalogTotal = scope?.count ?? 0
+  const categoryFacets = useMemo(() => scope?.categoryFacets ?? [], [scope])
+  const countryFacets = useMemo(() => scope?.countryFacets ?? [], [scope])
   const collectionCards = useMemo(
-    () => interestingCategoryCollections.map((collection, index) => ({
-      ...collection,
-      count: collectionCountQueries[index]?.data?.count ?? 0,
-      countReady: Boolean(collectionCountQueries[index]?.data),
-    })),
-    [collectionCountQueries, interestingCategoryCollections],
+    () => interestingCategoryCollections.map((collection) => {
+      const count = collectionCounts?.[collection.id]
+      return { ...collection, count: count ?? 0, countReady: count !== undefined }
+    }),
+    [collectionCounts, interestingCategoryCollections],
   )
   const filteredCategoryFacets = useMemo(() => {
     const normalized = deferredCategoryQuery.trim().toLowerCase()
@@ -174,8 +129,11 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
   const loadMorePlaces = useCallback(() => {
     if (placesQuery.hasNextPage && !placesQuery.isFetchingNextPage) void placesQuery.fetchNextPage()
   }, [placesQuery])
+  // После сбоя дозагрузки страницу повторяет только кнопка в подвале списка:
+  // автодогрузка по скроллу сама слала бы тяжёлый запрос на каждое движение.
+  const loadMoreFailed = placesQuery.isFetchNextPageError
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (!placesQuery.hasNextPage || placesQuery.isFetchingNextPage) return
+    if (!placesQuery.hasNextPage || placesQuery.isFetchingNextPage || loadMoreFailed) return
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent
     const layoutHeight = Number(layoutMeasurement?.height ?? 0)
     const offsetY = Number(contentOffset?.y ?? 0)
@@ -183,7 +141,7 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
     if (layoutHeight && contentHeight && contentHeight - (layoutHeight + offsetY) <= LOAD_MORE_SCROLL_THRESHOLD) {
       loadMorePlaces()
     }
-  }, [loadMorePlaces, placesQuery.hasNextPage, placesQuery.isFetchingNextPage])
+  }, [loadMoreFailed, loadMorePlaces, placesQuery.hasNextPage, placesQuery.isFetchingNextPage])
   const handleToggleCategory = useCallback((category: string) => {
     setSelectedCategories((current) => {
       const next = current.includes(category)
@@ -250,24 +208,25 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
     handleClearCategories()
     handleSelectCountry(null)
   }, [handleClearCategories, handleQueryChange, handleSelectCountry])
+  // Загруженный список остаётся на экране и при сбое фонового обновления или
+  // дозагрузки: блок ошибки заменяет его, только когда показать нечего.
   const resultsStatus: 'loading' | 'error' | 'empty' | 'list' = placesQuery.isLoading
     ? 'loading'
-    : placesQuery.isError
-      ? 'error'
-      : visiblePlaces.length === 0
-        ? 'empty'
-        : 'list'
+    : visiblePlaces.length > 0
+      ? 'list'
+      : placesQuery.isError
+        ? 'error'
+        : 'empty'
 
   return {
     activeCategoryTitle: getActiveCategoryTitle(selectedCategories),
+    appliedQuery,
     catalogTotal,
     categoryQuery,
     collectionCards,
     countryFacets,
     countryMenuVisible,
     deferredCategoryQuery,
-    deferredQuery,
-    facetsQuery,
     filteredCategoryFacets,
     filtersOpen,
     firstScreenCount: (isWide ? 3 : isCompact ? 1 : 2) * 2,
@@ -282,6 +241,9 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
     hasCategorySearch: deferredCategoryQuery.trim().length > 0,
     hasMorePlaces: placesQuery.hasNextPage,
     isInitialLoading: placesQuery.isLoading,
+    isScopeLoading,
+    loadErrorDescription: getCatalogLoadErrorDescription(placesQuery.error),
+    loadMoreFailed,
     loadMorePlaces,
     openOnMap,
     openTravel,
@@ -299,7 +261,7 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
     showCollections,
     sortMenuVisible,
     sortMode,
-    showLoadedCounts: !facetsQuery.isLoading && !facetsQuery.isError,
+    showLoadedCounts: scope !== undefined,
     topBarHeight,
     totalCount,
     visiblePlaces,

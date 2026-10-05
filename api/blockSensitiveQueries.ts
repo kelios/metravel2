@@ -74,7 +74,7 @@ export const BLOCK_SENSITIVE_ENTRIES: readonly SensitiveEntry[] = [
   { key: queryKeys.travelsForMapRouteAll() },
   { key: queryKeys.mapClustersAll() },
   // #2165: каталог мест и материалы места несут путешествия авторов; бэк режет их по сессии (#2164).
-  { key: ['places-catalog'] },
+  { key: queryKeys.placesCatalogAll() },
   { key: queryKeys.mapPlaceSourcesAll() },
   { key: ['recommendations'] },
   { key: ['favorites'] },

@@ -27,7 +27,7 @@ import {
   getPlacesCountLabel,
   isSameCategorySet,
 } from './PlacesScreen.helpers'
-import { PlaceCard, SkeletonGrid, StateBlock } from './PlacesScreen.parts'
+import { LoadMoreFooter, PlaceCard, SkeletonGrid, StateBlock } from './PlacesScreen.parts'
 import { createStyles } from './PlacesScreen.styles'
 import { usePlacesCatalogController } from './usePlacesCatalogController'
 import { translate as i18nT } from '@/i18n'
@@ -49,14 +49,13 @@ export default function PlacesScreen() {
   const styles = useMemo(() => createStyles(colors, isCompact, isWide), [colors, isCompact, isWide])
   const {
     activeCategoryTitle,
+    appliedQuery,
     catalogTotal,
     categoryQuery,
     collectionCards,
     countryFacets,
     countryMenuVisible,
     deferredCategoryQuery,
-    deferredQuery,
-    facetsQuery,
     filteredCategoryFacets,
     filtersOpen,
     firstScreenCount,
@@ -71,6 +70,9 @@ export default function PlacesScreen() {
     hasCategorySearch,
     hasMorePlaces,
     isInitialLoading,
+    isScopeLoading,
+    loadErrorDescription,
+    loadMoreFailed,
     loadMorePlaces,
     openOnMap,
     openTravel,
@@ -209,18 +211,14 @@ export default function PlacesScreen() {
   const renderCompactBar = mobileCompact || (Platform.OS === 'web' && !hasMeasuredWidth)
 
   const loadMoreBlock = hasMorePlaces ? (
-    <View style={styles.loadMoreFooter}>
-      <Text style={styles.loadMoreText}>
-        {i18nT('map:screens.tabs.PlacesScreen.pokazano_673c959e')}{visiblePlaces.length} {i18nT('map:screens.tabs.PlacesScreen.iz_897ff3eb')}{totalCount}
-      </Text>
-      <Button
-        label={i18nT('map:screens.tabs.PlacesScreen.pokazat_esche_f7728927')}
-        variant="secondary"
-        size="sm"
-        onPress={loadMorePlaces}
-        loading={placesQuery.isFetchingNextPage}
-      />
-    </View>
+    <LoadMoreFooter
+      styles={styles}
+      shown={visiblePlaces.length}
+      total={totalCount}
+      failed={loadMoreFailed}
+      loading={placesQuery.isFetchingNextPage}
+      onPress={loadMorePlaces}
+    />
   ) : null
 
   let resultsContent: React.ReactNode
@@ -232,7 +230,7 @@ export default function PlacesScreen() {
         icon="alert-circle"
         variant="error"
         title={i18nT('map:screens.tabs.PlacesScreen.ne_udalos_zagruzit_mesta_b8af7ba1')}
-        description={i18nT('map:screens.tabs.PlacesScreen.proverte_soedinenie_i_poprobuyte_snova_198a2bc9')}
+        description={loadErrorDescription}
         actionLabel={i18nT('map:screens.tabs.PlacesScreen.povtorit_e910f968')}
         onAction={() => placesQuery.refetch()}
         pending={placesQuery.isFetching}
@@ -256,12 +254,12 @@ export default function PlacesScreen() {
         icon="map-pin"
         variant="search"
         title={
-          deferredQuery
-            ? i18nT('map:screens.tabs.PlacesScreen.po_zaprosu_value1_nichego_ne_naydeno_2c354d86', { value1: deferredQuery })
+          appliedQuery
+            ? i18nT('map:screens.tabs.PlacesScreen.po_zaprosu_value1_nichego_ne_naydeno_2c354d86', { value1: appliedQuery })
             : i18nT('map:screens.tabs.PlacesScreen.mesta_ne_naydeny_bad57b88')
         }
         description={
-          deferredQuery
+          appliedQuery
             ? i18nT('map:screens.tabs.PlacesScreen.poprobuyte_drugoe_nazvanie_ili_sbroste_filtr_7cf6a42b')
             : i18nT('map:screens.tabs.PlacesScreen.izmenite_kategoriyu_ili_stranu_5611fa44')
         }
@@ -345,13 +343,13 @@ export default function PlacesScreen() {
                   onPress={() => setCountryMenuVisible(true)}
                   accessibilityRole="button"
                   accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.vybrat_stranu_a7b66c0c')}
-                  accessibilityState={{ expanded: countryMenuVisible, disabled: facetsQuery.isLoading }}
-                  disabled={facetsQuery.isLoading}
+                  accessibilityState={{ expanded: countryMenuVisible, disabled: isScopeLoading }}
+                  disabled={isScopeLoading}
                   style={({ pressed }) => [
                     styles.countrySelect,
                     !!selectedCountry && styles.countrySelectActive,
-                    pressed && !facetsQuery.isLoading && PRESSED_OPACITY,
-                    facetsQuery.isLoading && styles.countrySelectDisabled,
+                    pressed && !isScopeLoading && PRESSED_OPACITY,
+                    isScopeLoading && styles.countrySelectDisabled,
                   ]}
                 >
                   <View style={styles.iconSlot16}>
@@ -667,13 +665,13 @@ export default function PlacesScreen() {
                 onPress={() => setCountryMenuVisible(true)}
                 accessibilityRole="button"
                 accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.vybrat_stranu_a7b66c0c')}
-                accessibilityState={{ expanded: countryMenuVisible, disabled: facetsQuery.isLoading }}
-                disabled={facetsQuery.isLoading}
+                accessibilityState={{ expanded: countryMenuVisible, disabled: isScopeLoading }}
+                disabled={isScopeLoading}
                 style={({ pressed }) => [
                   styles.compactCountrySelect,
                   !!selectedCountry && styles.compactCountrySelectActive,
-                  pressed && !facetsQuery.isLoading && PRESSED_OPACITY,
-                  facetsQuery.isLoading && styles.countrySelectDisabled,
+                  pressed && !isScopeLoading && PRESSED_OPACITY,
+                  isScopeLoading && styles.countrySelectDisabled,
                 ]}
               >
                 <View style={styles.iconSlot16}>

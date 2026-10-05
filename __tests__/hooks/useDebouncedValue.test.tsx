@@ -50,6 +50,31 @@ describe('useDebouncedValue', () => {
     expect(result.current).toEqual({ term: 'minsk' })
   })
 
+  // #2184: очищенный поиск применяется сразу, а следующий ввод отсчитывает паузу
+  // от него и не воскрешает значение, которое было до сброса.
+  it('applies immediate values in the same render and never resurrects the previous one', () => {
+    jest.useFakeTimers()
+    const isBlank = (value: string) => !value.trim()
+    const { result, rerender } = renderHook(
+      ({ value }: { value: string }) => useDebouncedValue(value, 300, isBlank),
+      { initialProps: { value: 'замок' } }
+    )
+
+    rerender({ value: '' })
+    expect(result.current).toBe('')
+
+    rerender({ value: 'н' })
+    expect(result.current).toBe('')
+    act(() => {
+      jest.advanceTimersByTime(299)
+    })
+    expect(result.current).toBe('')
+    act(() => {
+      jest.advanceTimersByTime(1)
+    })
+    expect(result.current).toBe('н')
+  })
+
   it('does not cancel a pending debounced update on a deep-equal rerender', () => {
     jest.useFakeTimers()
     const { result, rerender } = renderHook(

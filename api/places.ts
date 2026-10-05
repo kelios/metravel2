@@ -1,6 +1,7 @@
 import { Platform } from 'react-native'
 
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl'
+import { ApiError } from '@/api/clientErrors'
 import { fetchPublicWithSession } from '@/api/publicFetchWithSession'
 import { safeJsonParse } from '@/utils/safeJsonParse'
 import {
@@ -74,7 +75,9 @@ export const fetchPlacesCatalog = async (
   // #2165: каталог мест несёт путешествия авторов — с сессией, чтобы бэк скрыл заблокированных (#2164).
   const res = await fetchPublicWithSession(url, { signal }, PLACES_CATALOG_TIMEOUT_MS)
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+    // Статус — полем, а не только текстом: политика повторов отличает по нему
+    // 502/503 (сервер запрос не считает) от 504 (ещё считает) и 4xx (#2184).
+    throw new ApiError(res.status, `HTTP ${res.status}: ${res.statusText}`)
   }
   const payload = await safeJsonParse<RawPlacesCatalogResponse>(res, {})
   return mapPlacesCatalogResponse(payload)

@@ -1,10 +1,14 @@
 import type React from 'react'
 import type Feather from '@expo/vector-icons/Feather'
+import { isServerStillWorkingAfter } from '@/api/clientErrors'
 import { selectPlural, translate as i18nT, type TranslationKey } from '@/i18n'
+import { getUserFriendlyError } from '@/utils/userFriendlyErrors'
 
 
 export const MAP_FOCUS_RADIUS_KM = '5'
 export const PLACES_PAGE_SIZE = 20
+// Пауза ввода перед запросом каталога: каждый запрос — серверный расчёт (#2184).
+export const PLACES_SEARCH_DEBOUNCE_MS = 400
 export const LOAD_MORE_SCROLL_THRESHOLD = 420
 export const PRESSED_OPACITY = { opacity: 0.72 } as const
 
@@ -129,6 +133,18 @@ export const getActiveCategoryTitle = (categories: string[]): string => {
   if (collection) return i18nT(collection.titleKey)
   if (categories.length <= 2) return categories.join(', ')
   return i18nT('map:screens.tabs.PlacesScreen_helpers.value1_kategoriy_57a6c780', { value1: categories.length })
+}
+
+/**
+ * Описание в блоке ошибки каталога. Сервер молчит или отказал (таймаут, 5xx) —
+ * общий текст ошибок проекта; остальное — подсказка про соединение.
+ */
+export function getCatalogLoadErrorDescription(error: unknown): string {
+  const status = (error as { status?: unknown } | null)?.status
+  const serverFailed = isServerStillWorkingAfter(error) || (typeof status === 'number' && status >= 500)
+  return serverFailed
+    ? getUserFriendlyError(error)
+    : i18nT('map:screens.tabs.PlacesScreen.proverte_soedinenie_i_poprobuyte_snova_198a2bc9')
 }
 
 export function getPlacesCountLabel(count: number): string {

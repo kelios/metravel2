@@ -82,10 +82,17 @@ export function useDebouncedValueWithPending<T>(value: T, delay: number): [T, bo
   return [debouncedValue, pending];
 }
 
-export function useDebouncedValue<T>(value: T, delay: number): T {
+/**
+ * `isImmediate` называет значения, которые применяются без паузы — в тот же
+ * рендер. Нужен поиску: очищенное поле (крестик, «Сбросить») не должно ещё
+ * `delay` мс держать прежний запрос и отправлять его вместе с уже сброшенными
+ * фильтрами (#2184). Функция должна быть стабильной (объявлена вне компонента).
+ */
+export function useDebouncedValue<T>(value: T, delay: number, isImmediate?: (value: T) => boolean): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   const prevValueRef = useRef<T>(value);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const immediate = Boolean(isImmediate?.(value));
 
   useEffect(() => {
     // ✅ ИСПРАВЛЕНИЕ: Используем глубокое сравнение для объектов и массивов
@@ -99,12 +106,19 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
+
+    // Запоминаем и немедленное значение: следующий ввод отсчитывает паузу от
+    // него, а не воскрешает то, что было до сброса.
+    if (immediate) {
+      setDebouncedValue(value);
+      return;
+    }
     
     timeoutRef.current = setTimeout(() => {
       setDebouncedValue(value);
       timeoutRef.current = null;
     }, delay);
-  }, [value, delay]);
+  }, [value, delay, immediate]);
 
   useEffect(() => {
     return () => {
@@ -115,5 +129,5 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
     };
   }, []);
 
-  return debouncedValue;
+  return immediate ? value : debouncedValue;
 }

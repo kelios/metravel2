@@ -51,6 +51,16 @@ export const queryKeys = {
   // на cache lifetime, повторное открытие карточки идёт из кэша.
   mapPlaceSources: (placeKey: string) => ['map-place-sources', placeKey] as const,
   mapPlaceSourcesAll: () => ['map-place-sources'] as const,
+  // Каталог мест (#2184): список и его проекции под одним корнем. Проекции
+  // («объём без категорий» — итог и фасеты, счётчики подборок) заполняются из
+  // ответа списка, а не отдельными запросами: screens/tabs/usePlacesCatalogQueries.ts.
+  placesCatalogAll: () => ['places-catalog'] as const,
+  placesCatalogList: (params: Record<string, unknown>) =>
+    ['places-catalog', 'list', params] as const,
+  placesCatalogScope: (params: Record<string, unknown>) =>
+    ['places-catalog', 'scope', params] as const,
+  placesCatalogCollectionCounts: (params: Record<string, unknown>) =>
+    ['places-catalog', 'collection-counts', params] as const,
   articles: (params: { page: number; itemsPerPage: number; user_id?: string }) =>
     ['articles', params] as const,
   // Язык ответа геокодера зависит от локали интерфейса (#1742/#1782), поэтому
