@@ -21,6 +21,11 @@ const {
   toBaselineEntries,
   compareToBaseline,
   parseArgs,
+  run,
+  MAP_OVERLAY_HITSLOP_EXCEPTIONS,
+  isMapOverlayHitSlopScope,
+  scanMapOverlayHitSlopFile,
+  scanMapOverlayHitSlop,
 } = require('@/scripts/guard-touch-targets')
 
 const ts = require('typescript')
@@ -753,5 +758,142 @@ describe('guard-touch-targets', () => {
     )
 
     expect(compareToBaseline(scanTouchTargets(process.cwd()), committed)).toEqual([])
+  })
+
+  /**
+   * #2236: над native-картой `hitSlop` — ошибка без baseline. На Android кольцо
+   * отдаёт касание кнопке в JS, а нативное касание — WebView карты под ней
+   * (лишняя точка маршрута, закрытая карточка места).
+   */
+  describe('hitSlop over the native map (#2236)', () => {
+    const writeFile = (rootDir: string, relative: string, content: string) => {
+      fs.mkdirSync(path.dirname(path.join(rootDir, relative)), { recursive: true })
+      fs.writeFileSync(path.join(rootDir, relative), content, 'utf8')
+    }
+
+    const buttonWithHitSlop = `
+      import { Pressable } from 'react-native'
+      export const Probe = () => (
+        <Pressable testID="probe-close" hitSlop={6} style={{ width: 44, height: 44 }} />
+      )
+    `
+
+    it('flags hitSlop in a map layer with file:line and testID (negative probe)', () => {
+      const rootDir = makeTempDir('guard-touch-targets-')
+      try {
+        writeFile(rootDir, 'components/MapPage/MapMobile/Probe.tsx', buttonWithHitSlop)
+
+        const { findings, staleExceptions } = scanMapOverlayHitSlop(rootDir, { exceptions: {} })
+
+        expect(staleExceptions).toEqual([])
+        expect(findings).toEqual([
+          {
+            file: 'components/MapPage/MapMobile/Probe.tsx',
+            line: 4,
+            element: 'Pressable',
+            testID: 'probe-close',
+            via: 'jsx-prop',
+          },
+        ])
+      } finally {
+        removeDir(rootDir)
+      }
+    })
+
+    it('fails the CLI with exit 1 and names file:line, testID and #2236', () => {
+      const rootDir = makeTempDir('guard-touch-targets-')
+      const stderr = jest.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      const stdout = jest.spyOn(process.stdout, 'write').mockImplementation(() => true)
+      try {
+        writeFile(rootDir, 'components/quests/QuestFullMap.native.tsx', buttonWithHitSlop)
+        writeFile(
+          rootDir,
+          'scripts/touch-targets-baseline.json',
+          JSON.stringify({ contractVersion: CONTRACT_VERSION, minTouchTarget: MIN_TOUCH_TARGET, scope: [...SCAN_DIRS], entries: {} }),
+        )
+
+        expect(run(parseArgs(['--root', rootDir]))).toBe(1)
+        const output = stderr.mock.calls.map(([chunk]) => String(chunk)).join('')
+        expect(output).toContain('components/quests/QuestFullMap.native.tsx:4')
+        expect(output).toContain('testID=probe-close')
+        expect(output).toContain('#2236')
+      } finally {
+        stderr.mockRestore()
+        stdout.mockRestore()
+        removeDir(rootDir)
+      }
+    })
+
+    it('catches hitSlop on any JSX element and in object literals (spread, Platform.select)', () => {
+      const findings = scanMapOverlayHitSlopFile({
+        filePath: 'components/MapPage/Probe.tsx',
+        content: `
+          import { Platform, Pressable } from 'react-native'
+          const pressProps = { hitSlop: 8, testID: 'spread-target' }
+          const slop = Platform.select({ android: { hitSlop: 4 }, default: {} })
+          type Props = { hitSlop?: number }
+          const Wrapper = ({ hitSlop }: Props) => <Pressable hitSlop={hitSlop} />
+          export const Probe = () => <Wrapper {...pressProps} {...slop} />
+        `,
+      })
+
+      expect(findings.map(({ line, element, testID, via }: any) => ({ line, element, testID, via }))).toEqual([
+        { line: 3, element: 'object-literal', testID: 'spread-target', via: 'object-key' },
+        { line: 4, element: 'object-literal', testID: null, via: 'object-key' },
+        // Тип и деструктуризация пропа — не находки; проброс в JSX — находка.
+        { line: 6, element: 'Pressable', testID: null, via: 'jsx-prop' },
+      ])
+    })
+
+    it('skips an exception file and keeps its reason; a stale exception is reported', () => {
+      const rootDir = makeTempDir('guard-touch-targets-')
+      try {
+        writeFile(rootDir, 'components/MapPage/SolidPanel.tsx', buttonWithHitSlop)
+        writeFile(rootDir, 'components/MapPage/Clean.tsx', 'export const Clean = () => null\n')
+        const exceptions = {
+          'components/MapPage/SolidPanel.tsx': 'внутри панели со сплошным фоном',
+          'components/MapPage/Clean.tsx': 'hitSlop отсюда уже убран',
+        }
+
+        const { findings, staleExceptions } = scanMapOverlayHitSlop(rootDir, { exceptions })
+
+        expect(findings).toEqual([])
+        expect(staleExceptions).toEqual([
+          { file: 'components/MapPage/Clean.tsx', reason: 'hitSlop отсюда уже убран' },
+        ])
+      } finally {
+        removeDir(rootDir)
+      }
+    })
+
+    it('every committed exception carries a reason', () => {
+      const entries = Object.entries(MAP_OVERLAY_HITSLOP_EXCEPTIONS)
+      expect(entries.length).toBeGreaterThan(0)
+      for (const [file, reason] of entries) {
+        expect({ file, reasonLength: String(reason).trim().length > 10 }).toEqual({ file, reasonLength: true })
+      }
+    })
+
+    it('ignores files outside the map scope', () => {
+      expect(isMapOverlayHitSlopScope('components/MapPage/MapCanvas.tsx')).toBe(true)
+      expect(isMapOverlayHitSlopScope('components/quests/QuestFullMap.native.tsx')).toBe(true)
+      expect(isMapOverlayHitSlopScope('components/quests/QuestFullMap.tsx')).toBe(true)
+      expect(isMapOverlayHitSlopScope('components/quests/QuestStepCard.tsx')).toBe(false)
+      expect(isMapOverlayHitSlopScope('components/travel/stepRoute/NativePointList.tsx')).toBe(false)
+
+      const rootDir = makeTempDir('guard-touch-targets-')
+      try {
+        writeFile(rootDir, 'components/profile/Probe.tsx', buttonWithHitSlop)
+        writeFile(rootDir, 'components/quests/QuestStepCard.tsx', buttonWithHitSlop)
+
+        expect(scanMapOverlayHitSlop(rootDir, { exceptions: {} })).toEqual({ findings: [], staleExceptions: [] })
+      } finally {
+        removeDir(rootDir)
+      }
+    })
+
+    it('keeps the repository at zero findings and no stale exceptions (baseline is zero)', () => {
+      expect(scanMapOverlayHitSlop(process.cwd())).toEqual({ findings: [], staleExceptions: [] })
+    })
   })
 })

@@ -364,9 +364,9 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         onPress={onCenterOnUser}
         accessibilityRole="button"
         accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_moe_mestopolozhenie_e7418fde')}
-        // У этой кнопки нет соседей, а её родитель — полноэкранный root, поэтому
-        // hitSlop реально расширяет таргет (в отличие от кнопок внутри ряда).
-        hitSlop={6}
+        // Таргет — собственная рамка 48dp, без hitSlop (#2236): родитель —
+        // полноэкранный box-none root, поэтому на Android кольцо hitSlop отдало
+        // бы касание кнопке в JS, а нативное касание — WebView карты под ней.
         style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
       >
         <View style={styles.iconButton} pointerEvents="none">
@@ -375,8 +375,9 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
       </Pressable>
 
       <View style={styles.toolbarStack} pointerEvents="box-none">
-        {/* Кнопки ряда идут вплотную своими 48dp-таргетами, поэтому hitSlop у них
-            нет: он перекрывал бы соседа, а победил бы более поздний sibling. */}
+        {/* Кнопки ряда идут вплотную своими 48dp-таргетами. hitSlop над картой
+            запрещён (#2236, guard-touch-targets): он перекрывал бы соседа, а
+            кольцо за краем ряда отдавало бы нативное касание карте. */}
         <View
           style={[styles.toolbar, toolbarMaxWidth ? { maxWidth: toolbarMaxWidth } : null]}
           pointerEvents="auto"
@@ -591,7 +592,6 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               testID="map-mobile-route-start-user"
               onPress={onUseUserLocationStart}
               disabled={!onUseUserLocationStart}
-              hitSlop={4}
               accessibilityRole="button"
               accessibilityState={{ selected: !routeManualStartActive }}
               aria-pressed={!routeManualStartActive}
@@ -621,7 +621,6 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               testID="map-mobile-route-start-map"
               onPress={onStartManualRoute}
               disabled={!onStartManualRoute}
-              hitSlop={4}
               accessibilityRole="button"
               accessibilityState={{ selected: routeManualStartActive }}
               aria-pressed={routeManualStartActive}
@@ -770,7 +769,6 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               onPress={onRequestLocation}
               accessibilityRole="button"
               accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.razreshit_geolokatsiyu_dlya_marshruta_027a0102')}
-              hitSlop={6}
               style={({ pressed }) => [
                 styles.routeHintActionPrimary,
                 pressed && styles.routeHintActionPressed,

@@ -476,7 +476,19 @@ type MapPlaceSource = {
   `MapMobileTopOverlay.styles.ts` (высота ряда + зазор стека): у вертикали один
   источник правды, как у `MAP_FILTER_CHIPS_STACK_OFFSET` в `mapFilterChips.ts`;
 - регресс держат `__tests__/components/MapPage/MapMobileTopOverlay.routeRow.test.tsx`
-  и шаг «сводка заменяет выбор старта» в `e2e/map-mobile-route-toolbar.spec.ts`.
+  и шаг «сводка заменяет выбор старта» в `e2e/map-mobile-route-toolbar.spec.ts`;
+- над native-картой нет `hitSlop`, таргет — собственный бокс 44/48 (#2236,
+  `MAP-OVERLAY-HITSLOP-LEAK-001`): одно касание — одна реакция. На Android кольцо
+  `hitSlop` отдаёт касание кнопке в JS, а нативное касание — WebView карты под
+  ней (`MAP_CLICK`: лишняя точка маршрута, закрытая карточка места). Касается
+  тулбара, выбора старта, подсказки маршрута, плашки пустого состояния, поповера
+  «Слои» (крестик — рамка 44×44 внутри карточки), шапки нижней шторки, нижней
+  карточки места и полноэкранной карты квеста. Контроль — правило
+  `MAP_OVERLAY_HITSLOP_*` в `scripts/guard-touch-targets.js` (`npm run lint`,
+  охват `components/MapPage/**` и `components/quests/QuestFullMap*.tsx`, baseline
+  ноль, исключения «файл → причина» — только сплошные панели и `Modal`) и
+  render-тест `__tests__/components/MapPage/mapOverlayNoHitSlop.native.test.tsx`
+  под ios и android (ловит проп через spread, хелпер и `Platform.select`).
 
 ## Проверки по scope
 

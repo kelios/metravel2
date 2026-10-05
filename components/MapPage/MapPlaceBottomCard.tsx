@@ -282,7 +282,6 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       onPress={handleClose}
       accessibilityRole="button"
       accessibilityLabel={i18nT('map:components.MapPage.MapPlaceBottomCard.zakryt_kartochku_mesta_e4d7f18c')}
-      hitSlop={10}
       style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.7 }]}
       {...(webCloseHandlers ?? {})}
     >
@@ -304,7 +303,6 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
       onPress={handleClose}
       accessibilityRole="button"
       accessibilityLabel={i18nT('map:components.MapPage.MapPlaceBottomCard.zakryt_kartochku_mesta_e4d7f18c')}
-      hitSlop={12}
       style={({ pressed }) => [styles.headerCloseButton, pressed && { opacity: 0.6 }]}
       {...(webCloseHandlers ?? {})}
     >
@@ -395,7 +393,6 @@ const MapPlaceBottomCard: React.FC<MapPlaceBottomCardProps> = ({
             onPress={handleClose}
             accessibilityRole="button"
             accessibilityLabel={i18nT('map:components.MapPage.MapPlaceBottomCard.zakryt_kartochku_mesta_e4d7f18c')}
-            hitSlop={12}
             style={({ pressed }) => [styles.headerCloseButton, pressed && { opacity: 0.6 }]}
           >
             <Feather name="x" size={20} color={colors.text} />

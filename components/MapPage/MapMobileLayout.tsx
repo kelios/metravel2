@@ -700,7 +700,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
               onPress={openFiltersSheet}
               accessibilityRole="button"
               accessibilityLabel={i18nT('map:components.MapPage.MapMobileLayout.otkryt_filtry_b6f552ba')}
-              hitSlop={8}
               style={({ pressed }) => [
                 styles.sheetListFiltersButton,
                 pressed && styles.sheetListFiltersButtonPressed,
@@ -721,7 +720,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           onPress={handleCloseSheet}
           accessibilityRole="button"
           accessibilityLabel={i18nT('map:components.MapPage.MapMobileLayout.zakryt_d55e477b')}
-          hitSlop={8}
           style={({ pressed }) => [
             styles.sheetCloseButton,
             pressed && { opacity: 0.7 },

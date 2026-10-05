@@ -16,6 +16,9 @@
 // видимый круг/пилюля остаётся прежним внутри неё — см.
 // `MAP_TOOLBAR_TOUCH_TARGET_SIZE` в
 // `components/MapPage/MapMobile/MapMobileTopOverlay.styles.ts`.
+//
+// ВТОРОЕ ПРАВИЛО (#2236): над native-картой `hitSlop` запрещён совсем — см.
+// `MAP_OVERLAY_HITSLOP_*` и `scanMapOverlayHitSlop` ниже.
 
 const fs = require('node:fs')
 const path = require('node:path')
@@ -792,6 +795,149 @@ const scanTouchTargets = (rootDir) => {
   return findings
 }
 
+// ── Правило #2236: `hitSlop` над native-картой ──────────────────────────────
+//
+// Инвариант: одно касание — одна реакция. На Android `ReactRootView` отдаёт
+// касание в JS, но не перехватывает нативное событие: JS-цель ищет
+// `TouchTargetHelper` с учётом `hitSlop`, а нативное касание достаётся тому вью,
+// в чьи границы попала точка. В кольце `hitSlop` вокруг кнопки над картой JS
+// срабатывает на кнопку, а нативное касание получает WebView карты — карта шлёт
+// `MAP_CLICK`: в режиме маршрута ставится лишняя точка, на мобильной раскладке
+// закрывается открытая карточка места (device-проба #2113). Поэтому в слоях над
+// картой тач-таргет — только собственная рамка вью (44, тулбар 48), а проп
+// `hitSlop` — ошибка без baseline: разрешённых записей ноль, исключения — только
+// явный список «файл → причина» ниже.
+//
+// Ловится проп в ЛЮБОМ JSX-элементе охвата (не только из INTERACTIVE_ELEMENTS:
+// обёртка, пробрасывающая проп дальше, протекает так же) и ключ `hitSlop` в
+// объектном литерале — так видны `{...pressProps}`, `Platform.select({...})` и
+// `createElement(X, { hitSlop })`. Проп, собранный хелпером из другого модуля,
+// статически не виден — его ловит render-тест
+// `__tests__/components/MapPage/mapOverlayNoHitSlop.native.test.tsx`.
+const MAP_OVERLAY_HITSLOP_TASK = '#2236'
+const MAP_OVERLAY_HITSLOP_SCOPE_DIRS = Object.freeze(['components/MapPage/'])
+const MAP_OVERLAY_HITSLOP_SCOPE_FILES = Object.freeze([/^components\/quests\/QuestFullMap[^/]*\.tsx$/])
+const MAP_OVERLAY_HITSLOP_EXCEPTIONS = Object.freeze({
+  'components/MapPage/TravelListPanel.tsx':
+    'кнопки внутри панели списка со сплошным фоном (шторка/панель), не над картой',
+  'components/MapPage/CollapsibleSection.tsx':
+    'заголовок секции внутри панели фильтров со сплошным фоном, не над картой',
+  'components/MapPage/MapSearchInput.tsx':
+    'поле поиска внутри FiltersPanelRadiusSection — сплошная панель фильтров, не над картой',
+  'components/MapPage/Map/PlacePopupCard/FullscreenImageViewer.tsx':
+    'внутри Modal — отдельное окно, касание до WebView карты не доходит',
+})
+
+const isMapOverlayHitSlopScope = (filePath) => {
+  const normalized = normalizePath(filePath)
+  if (!SOURCE_EXTENSIONS.has(path.extname(normalized))) return false
+  return (
+    MAP_OVERLAY_HITSLOP_SCOPE_DIRS.some((dir) => normalized.startsWith(dir)) ||
+    MAP_OVERLAY_HITSLOP_SCOPE_FILES.some((pattern) => pattern.test(normalized))
+  )
+}
+
+const jsxAttributeText = (attribute, sourceFile) => {
+  const initializer = attribute.initializer
+  if (!initializer) return null
+  if (ts.isStringLiteral(initializer)) return initializer.text
+  if (ts.isJsxExpression(initializer) && initializer.expression) {
+    const expression = initializer.expression
+    if (ts.isStringLiteralLike(expression)) return expression.text
+    return `{${expression.getText(sourceFile)}}`
+  }
+  return null
+}
+
+const objectPropertyName = (property) => {
+  if (ts.isShorthandPropertyAssignment(property)) return property.name.text
+  if (ts.isPropertyAssignment(property) || ts.isMethodDeclaration(property)) return propertyName(property) || ''
+  return ''
+}
+
+const objectTestId = (objectLiteral, sourceFile) => {
+  for (const property of objectLiteral.properties) {
+    if (objectPropertyName(property) !== 'testID') continue
+    if (ts.isPropertyAssignment(property)) {
+      const value = unwrap(property.initializer)
+      return ts.isStringLiteralLike(value) ? value.text : `{${value.getText(sourceFile)}}`
+    }
+    return `{${property.name.text}}`
+  }
+  return null
+}
+
+/**
+ * Находки правила в одном файле (охват и исключения здесь не проверяются —
+ * это делает `scanMapOverlayHitSlop`). `line` — 1-based строка самого `hitSlop`.
+ */
+const scanMapOverlayHitSlopFile = ({ filePath, content }) => {
+  if (!content.includes('hitSlop')) return []
+  const sourceFile = parseSource(filePath, content)
+  const findings = []
+  const lineOf = (node) => sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1
+
+  const visit = (node) => {
+    if (isJsxElement(node)) {
+      const hitSlop = jsxAttribute(node, 'hitSlop')
+      if (hitSlop) {
+        const testIdAttribute = jsxAttribute(node, 'testID')
+        findings.push({
+          file: normalizePath(filePath),
+          line: lineOf(hitSlop),
+          element: elementName(node) || node.tagName.getText(sourceFile),
+          testID: testIdAttribute ? jsxAttributeText(testIdAttribute, sourceFile) : null,
+          via: 'jsx-prop',
+        })
+      }
+    } else if (ts.isObjectLiteralExpression(node)) {
+      for (const property of node.properties) {
+        if (objectPropertyName(property) !== 'hitSlop') continue
+        findings.push({
+          file: normalizePath(filePath),
+          line: lineOf(property),
+          element: 'object-literal',
+          testID: objectTestId(node, sourceFile),
+          via: 'object-key',
+        })
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+  return findings
+}
+
+/**
+ * Проход правила #2236 по репозиторию. Возвращает находки в охвате (кроме
+ * файлов-исключений) и устаревшие исключения: файл исключения удалён или в нём
+ * больше нет `hitSlop` — запись надо убрать, иначе список молча превращается в
+ * дыру для будущего кольца в том же файле.
+ */
+const scanMapOverlayHitSlop = (rootDir, { exceptions = MAP_OVERLAY_HITSLOP_EXCEPTIONS } = {}) => {
+  const findings = []
+  const exceptionHits = new Map(Object.keys(exceptions).map((file) => [file, 0]))
+  for (const filePath of collectSourceFiles(rootDir)) {
+    if (!isMapOverlayHitSlopScope(filePath)) continue
+    const content = fs.readFileSync(path.join(rootDir, filePath), 'utf8')
+    const fileFindings = scanMapOverlayHitSlopFile({ filePath, content })
+    if (exceptionHits.has(filePath)) {
+      exceptionHits.set(filePath, fileFindings.length)
+      continue
+    }
+    findings.push(...fileFindings)
+  }
+  const staleExceptions = [...exceptionHits.entries()]
+    .filter(([, count]) => count === 0)
+    .map(([file]) => ({ file, reason: exceptions[file] }))
+  return { findings, staleExceptions }
+}
+
+const formatMapOverlayHitSlopFinding = (finding) =>
+  `- ${finding.file}:${finding.line} <${finding.element}> testID=${finding.testID ?? '(нет testID)'} ` +
+  `hitSlop над native-картой (${MAP_OVERLAY_HITSLOP_TASK})`
+
 /**
  * Имена, которые файл экспортирует: `default` → идентификатор default-экспорта
  * (сквозь `memo(X)`, `React.memo(X)`, `forwardRef(...)`), остальные — как есть.
@@ -1031,6 +1177,9 @@ const run = (args = parseArgs([])) => {
   const unlistedWrappers = findUnlistedWrappers(args.root)
   const findings = scanTouchTargets(args.root)
   const violations = compareToBaseline(findings, baseline)
+  const mapOverlayHitSlop = scanMapOverlayHitSlop(args.root)
+  const mapOverlayHitSlopFailed =
+    mapOverlayHitSlop.findings.length > 0 || mapOverlayHitSlop.staleExceptions.length > 0
   const result = {
     contractVersion: CONTRACT_VERSION,
     minTouchTarget: MIN_TOUCH_TARGET,
@@ -1038,6 +1187,7 @@ const run = (args = parseArgs([])) => {
     violationCount: violations.length,
     violations,
     unlistedWrappers,
+    mapOverlayHitSlop,
   }
 
   if (args.json) {
@@ -1054,7 +1204,7 @@ const run = (args = parseArgs([])) => {
       'add its JSX name to INTERACTIVE_ELEMENTS in scripts/guard-touch-targets.js so its callers are checked.\n',
     )
   } else if (violations.length === 0) {
-    process.stdout.write(
+    if (!mapOverlayHitSlopFailed) process.stdout.write(
       `Touch-target guard passed. min=${MIN_TOUCH_TARGET}dp baseline=${Object.keys(baseline.entries || {}).length}\n`,
     )
   } else {
@@ -1070,7 +1220,30 @@ const run = (args = parseArgs([])) => {
     )
   }
 
-  return violations.length === 0 && unlistedWrappers.length === 0 ? 0 : 1
+  if (!args.json && mapOverlayHitSlop.findings.length > 0) {
+    process.stderr.write(
+      `Touch-target guard found ${mapOverlayHitSlop.findings.length} hitSlop prop(s) in layers over the native map:\n`,
+    )
+    for (const finding of mapOverlayHitSlop.findings) {
+      process.stderr.write(`${formatMapOverlayHitSlopFinding(finding)}\n`)
+    }
+    process.stderr.write(
+      `Over the native map (${MAP_OVERLAY_HITSLOP_TASK}) a hitSlop ring hands the touch to the button in JS ` +
+      'while Android delivers the native touch to the map WebView underneath (extra route point, ' +
+      'closed place card). Remove hitSlop and size the view itself (>= 44dp, toolbar 48dp). ' +
+      'If the element is not over the map (solid panel, Modal), add the file with a reason to ' +
+      'MAP_OVERLAY_HITSLOP_EXCEPTIONS in scripts/guard-touch-targets.js.\n',
+    )
+  }
+  if (!args.json && mapOverlayHitSlop.staleExceptions.length > 0) {
+    process.stderr.write('Touch-target guard: stale MAP_OVERLAY_HITSLOP_EXCEPTIONS entries (no hitSlop left):\n')
+    for (const stale of mapOverlayHitSlop.staleExceptions) {
+      process.stderr.write(`- ${stale.file} (${stale.reason})\n`)
+    }
+    process.stderr.write('Remove these entries from scripts/guard-touch-targets.js.\n')
+  }
+
+  return violations.length === 0 && unlistedWrappers.length === 0 && !mapOverlayHitSlopFailed ? 0 : 1
 }
 
 if (require.main === module) {
@@ -1078,6 +1251,12 @@ if (require.main === module) {
 }
 
 module.exports = {
+  MAP_OVERLAY_HITSLOP_EXCEPTIONS,
+  MAP_OVERLAY_HITSLOP_SCOPE_DIRS,
+  isMapOverlayHitSlopScope,
+  scanMapOverlayHitSlopFile,
+  scanMapOverlayHitSlop,
+  formatMapOverlayHitSlopFinding,
   CONTRACT_VERSION,
   MIN_TOUCH_TARGET,
   SCAN_DIRS,

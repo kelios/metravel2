@@ -170,7 +170,6 @@ export function MapCanvas({
           accessibilityLabel={i18nT('map:components.MapPage.MapCanvas.iskat_v_etoy_oblasti_80b413e4')}
           testID="map-search-this-area-desktop"
           onPress={onSearchThisArea}
-          hitSlop={8}
         >
           <Feather name="refresh-cw" size={15} color={themedColors.textOnPrimary} />
           <Text style={styles.desktopSearchAreaButtonText} numberOfLines={1}>

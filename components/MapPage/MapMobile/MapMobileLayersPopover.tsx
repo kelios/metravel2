@@ -106,8 +106,7 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
           onPress={onRequestClose}
           accessibilityRole="button"
           accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileLayersPopover.zakryt_ceb4ed2d')}
-          hitSlop={13}
-          style={({ pressed }) => [pressed && { opacity: 0.6 }]}
+          style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.6 }]}
         >
           <Feather name="x" size={18} color={colors.textMuted} />
         </Pressable>
@@ -146,14 +145,30 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
   )
 }
 
+/** Совпадает с `paddingVertical`/`paddingHorizontal` карточки `MapMobilePopover`. */
+const CARD_PADDING = 8
+const CLOSE_TOUCH_TARGET_SIZE = 44
+
 const styles = StyleSheet.create({
+  // Крестик — собственная рамка 44×44 вместо иконки 18 с hitSlop (#2236): над
+  // native-картой кольцо hitSlop на Android отдаёт касание кнопке в JS, а
+  // нативное — тому, что под точкой. Чтобы рамка не раздувала карточку, шапка
+  // заходит в верхний и правый padding карточки (8): её верх и правый край —
+  // внутренняя граница карточки, рамка крестика целиком внутри карточки, а
+  // заголовок и иконка остаются на прежней высоте (центр 22 от верха).
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    paddingTop: 4,
-    paddingBottom: 8,
+    marginTop: -CARD_PADDING,
+    marginRight: -CARD_PADDING,
+    paddingLeft: 8,
+  },
+  closeButton: {
+    width: CLOSE_TOUCH_TARGET_SIZE,
+    height: CLOSE_TOUCH_TARGET_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     flex: 1,

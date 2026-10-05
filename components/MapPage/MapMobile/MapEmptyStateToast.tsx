@@ -69,7 +69,6 @@ const MapEmptyStateToastInner: React.FC<MapEmptyStateToastProps> = ({
                 'map:components.MapPage.FiltersPanelBody.uvelichit_radius_do_value1_kilometrov_92dd77b0',
                 { value1: formatRadiusValue(nextRadiusOption.name) },
               )}
-              hitSlop={6}
               style={({ pressed }) => [styles.actionPrimary, pressed && styles.actionPressed]}
             >
               <Text style={styles.actionPrimaryText} numberOfLines={1}>
@@ -87,7 +86,6 @@ const MapEmptyStateToastInner: React.FC<MapEmptyStateToastProps> = ({
               accessibilityLabel={i18nT(
                 'map:components.MapPage.FiltersPanelBody.sbrosit_filtry_f14ca19f',
               )}
-              hitSlop={6}
               style={({ pressed }) => [styles.actionSecondary, pressed && styles.actionPressed]}
             >
               <Text style={styles.actionSecondaryText} numberOfLines={1}>

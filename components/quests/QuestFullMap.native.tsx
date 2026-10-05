@@ -395,7 +395,6 @@ function QuestFullMap({
                         <TouchableOpacity
                             style={styles.fullscreenClose}
                             onPress={onClose}
-                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                             accessibilityRole="button"
                             accessibilityLabel={i18nT('quests:components.quests.QuestFullMap.zakryt_polnoekrannuyu_kartu_kvesta_dbff4c11')}
                         >
