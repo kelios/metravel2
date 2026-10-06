@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import Feather from '@expo/vector-icons/Feather';
 import ZoomableGalleryImage from '@/components/travel/ZoomableGalleryImage.web';
 import { useThemedColors } from '@/hooks/useTheme';
 import { makeContentRef } from '@/types/contentSafety';
@@ -41,6 +42,17 @@ export default function FullscreenGallery({
   const [zoomedIndex, setZoomedIndex] = useState<number | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  const navigate = useCallback((direction: number) => {
+    const node = scrollerRef.current;
+    if (!node || images.length < 2) return;
+    const nextIndex = (currentIndex + direction + images.length) % images.length;
+    node.scrollTo({ left: nextIndex * node.clientWidth, behavior: 'smooth' });
+    setZoomedIndex(null);
+    setCurrentIndex(nextIndex);
+  }, [currentIndex, images.length]);
 
   useEffect(() => {
     if (visible) {
@@ -61,23 +73,28 @@ export default function FullscreenGallery({
   // Escape закрывает; скролл страницы под оверлеем заблокирован.
   useEffect(() => {
     if (!visible || typeof document === 'undefined') return;
-    const onKeyDown = (event: KeyboardEvent) => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    rootRef.current?.focus();
+    const onKeyUp = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       // Escape над открытым листом жалобы (#2133) закрывает лист, а не галерею:
       // активный RN-web Modal — свой `[role=dialog][aria-modal]` вне корня галереи,
       // и он сам закрывается по keyup.
       const dialogs = Array.from(document.querySelectorAll('[role="dialog"][aria-modal="true"]'));
       if (dialogs.some((node) => node !== rootRef.current && !rootRef.current?.contains(node))) return;
-      onClose();
+      onCloseRef.current();
     };
-    window.addEventListener('keydown', onKeyDown);
+    // RN-web modals also close on keyup. Closing here avoids passing the release
+    // of a held Escape to the reviews sheet that is mounted when we close.
+    window.addEventListener('keyup', onKeyUp);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
-      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
       document.body.style.overflow = prevOverflow;
+      previousFocus?.focus();
     };
-  }, [visible, onClose]);
+  }, [visible]);
 
   const handleScroll = useCallback(() => {
     const node = scrollerRef.current;
@@ -107,6 +124,29 @@ export default function FullscreenGallery({
       data-testid="travel-fullscreen-gallery"
       role="dialog"
       aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        const root = rootRef.current;
+        const target = event.target;
+        // React portal events bubble through the gallery from safety dialogs.
+        if (event.defaultPrevented || !root || !(target instanceof HTMLElement) || !root.contains(target)) return;
+        if (event.key === 'Tab') {
+          const controls = Array.from(root.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex="0"]',
+          ));
+          const first = controls[0];
+          const last = controls[controls.length - 1];
+          if (!first || (event.shiftKey && (target === first || target === root)) || (!event.shiftKey && target === last)) {
+            event.preventDefault();
+            (event.shiftKey ? last : first)?.focus();
+          }
+          return;
+        }
+        if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        event.preventDefault();
+        navigate(event.key === 'ArrowLeft' ? -1 : 1);
+      }}
       aria-label={i18nT('travel:components.travel.FullscreenGallery.prosmotr_fotografiy_vo_ves_ekran_63f790d9')}
       style={{
         position: 'fixed',
@@ -154,7 +194,7 @@ export default function FullscreenGallery({
                 height="100%"
                 priority={index === currentIndex ? 'high' : 'normal'}
                 alt={img.alt || i18nT('travel:components.travel.FullscreenGalleryWeb.routePhotoAlt', { value1: index + 1, value2: images.length })}
-                resetKey={`${visible}-${index}`}
+                resetKey={`${visible}-${index}-${currentIndex}`}
                 onInteractionChange={(active) => {
                   setZoomedIndex((current) => {
                     if (active) return index;
@@ -190,6 +230,35 @@ export default function FullscreenGallery({
       >
         ×
       </button>
+
+      {images.length > 1 && (['previous', 'next'] as const).map((direction) => (
+        <button
+          key={direction}
+          type="button"
+          data-testid={`travel-fullscreen-gallery-${direction}`}
+          aria-label={i18nT(direction === 'previous'
+            ? 'travel:components.travel.NavigationArrows.predyduschee_93e3f9c1'
+            : 'travel:components.travel.NavigationArrows.sleduyuschee_8a76bd06')}
+          onClick={() => navigate(direction === 'previous' ? -1 : 1)}
+          style={{
+            position: 'absolute',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            ...(direction === 'previous' ? { left: 16 } : { right: 16 }),
+            width: 48,
+            height: 48,
+            borderRadius: 24,
+            border: 'none',
+            background: colors.overlay,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Feather name={direction === 'previous' ? 'chevron-left' : 'chevron-right'} size={24} color={colors.textOnDark} />
+        </button>
+      ))}
 
       {safetyRef ? (
         <div

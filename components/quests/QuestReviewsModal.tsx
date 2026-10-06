@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
@@ -14,6 +14,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { QuestReview } from '@/api/quests'
 import { formatDate, translate as i18nT } from '@/i18n'
 
+const FullscreenGallery = lazy(() => import('@/components/travel/FullscreenGallery'))
 
 type Props = {
   questId: string
@@ -31,7 +32,11 @@ const formatReviewDate = (iso: string | null): string | null => {
   return formatDate(date, { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-function ReviewItem({ review, styles }: { review: QuestReview; styles: ReturnType<typeof createStyles> }) {
+function ReviewItem({ review, styles, onPhotoPress }: {
+  review: QuestReview
+  styles: ReturnType<typeof createStyles>
+  onPhotoPress: (review: QuestReview, index: number) => void
+}) {
   const dateText = formatReviewDate(review.createdAt)
   // #2133 (Apple 1.2): жалоба/скрытие отзыва; автор с #2163/#2169 — блокировка и
   // скрытое меню на своём отзыве. Фото отзыва покрывает жалоба на сам отзыв.
@@ -81,24 +86,31 @@ function ReviewItem({ review, styles }: { review: QuestReview; styles: ReturnTyp
               {i18nT('quests:components.quests.QuestReviewsModal.photosLabel')}
             </Text>
             <View style={styles.photoRow}>
-              {review.photos.map((photo) => (
+              {review.photos.map((photo, index) => (
                 // Через `ImageCardMedia`, а не голый `ExpoImage`: это единственный
                 // путь доставки заливки полей и ресайза по прокси в проекте
                 // (docs/RULES.md → Images and placeholders). Голая картинка тянула
                 // бы в плитку 96×96 ОРИГИНАЛ снимка с телефона — та же ошибка, что
                 // чинили в #1115 на обложке квеста. `contain` обязателен:
                 // пропорции снимка игрока сохраняются, поле заливается фоном слота.
-                <ImageCardMedia
+                <Pressable
                   key={photo.id}
-                  src={photo.url}
-                  width={PHOTO_TILE_SIZE}
-                  height={PHOTO_TILE_SIZE}
-                  borderRadius={DESIGN_TOKENS.radii.sm}
-                  fit="contain"
-                  alt={i18nT('quests:components.quests.QuestReviewsModal.photoAlt')}
-                  style={styles.photoTile}
-                  testID={`quest-review-photo-${photo.id}`}
-                />
+                  onPress={() => onPhotoPress(review, index)}
+                  accessibilityRole="button"
+                  accessibilityLabel={i18nT('quests:components.quests.QuestReviewsModal.photoAlt')}
+                  testID={`quest-review-photo-open-${photo.id}`}
+                >
+                  <ImageCardMedia
+                    src={photo.url}
+                    width={PHOTO_TILE_SIZE}
+                    height={PHOTO_TILE_SIZE}
+                    borderRadius={DESIGN_TOKENS.radii.sm}
+                    fit="contain"
+                    alt={i18nT('quests:components.quests.QuestReviewsModal.photoAlt')}
+                    style={styles.photoTile}
+                    testID={`quest-review-photo-${photo.id}`}
+                  />
+                </Pressable>
               ))}
             </View>
           </View>
@@ -112,10 +124,30 @@ function QuestReviewsModal({ questId, visible, onClose }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const { data, isLoading, isError, refetch } = useQuestReviews(questId, visible)
+  const [gallery, setGallery] = useState<{
+    images: { url: string; alt: string }[]
+    initialIndex: number
+  } | null>(null)
+
+  const openGallery = useCallback((review: QuestReview, initialIndex: number) => {
+    setGallery({
+      // Quest review photo IDs are not travel gallery IDs; safety actions stay on the review.
+      images: review.photos.map((photo) => ({
+        url: photo.url,
+        alt: i18nT('quests:components.quests.QuestReviewsModal.photoAlt'),
+      })),
+      initialIndex,
+    })
+  }, [])
+  const closeGallery = useCallback(() => setGallery(null), [])
+
+  useEffect(() => {
+    setGallery(null)
+  }, [questId, visible])
 
   const reviews = data ?? []
 
-  return (
+  const reviewsSheet = (
     <QuestModalSheet
       visible={visible}
       onClose={onClose}
@@ -152,11 +184,19 @@ function QuestReviewsModal({ questId, visible, onClose }: Props) {
           showsVerticalScrollIndicator={false}
         >
           {reviews.map((review) => (
-            <ReviewItem key={review.id} review={review} styles={styles} />
+            <ReviewItem key={review.id} review={review} styles={styles} onPhotoPress={openGallery} />
           ))}
         </ScrollView>
       )}
     </QuestModalSheet>
+  )
+
+  return (
+    <Suspense fallback={reviewsSheet}>
+      {visible && gallery ? (
+        <FullscreenGallery visible images={gallery.images} initialIndex={gallery.initialIndex} onClose={closeGallery} />
+      ) : reviewsSheet}
+    </Suspense>
   )
 }
 
