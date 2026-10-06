@@ -96,18 +96,6 @@ export async function installMessagingMocks(
     releaseThreadDelete: () => releaseThreadDelete?.(),
   };
 
-  // Под авторизацией приложение на любом экране спрашивает список заблокированных
-  // (`api/userSafety.ts`) и `terms_accepted_current` из `/user/me/` (`api/consent.ts`).
-  // Без мока запрос уходит в живой локальный бэкенд с фейковым токеном и
-  // возвращает 401 — ошибка в консоли через 350–550 мс после открытия, то есть
-  // иногда уже после того, как тест начал слушать консоль (плавающий
-  // `hoverConsoleErrors`). Тот же пробел общего `mockFakeAuthApis` — #2268: когда
-  // он закроет его в `helpers/auth.ts`, эти два маршрута отсюда уходят.
-  await page.route('**/api/user/blocked/**', (route) => fulfillJson(route, []));
-  await page.route('**/api/user/me/', (route) =>
-    fulfillJson(route, { id: MOCK_CURRENT_USER_ID, terms_accepted_current: true }),
-  );
-
   await page.route('**/api/message-threads/*/mark-read/**', async (route) => {
     const match = new URL(route.request().url()).pathname.match(/message-threads\/(\d+)\/mark-read/);
     const threadId = Number(match?.[1]);

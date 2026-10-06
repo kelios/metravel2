@@ -5,6 +5,7 @@ import { Platform } from 'react-native'
 import type { Travel } from '@/types/types'
 import { devWarn } from '@/utils/logger'
 import { rIC } from '@/utils/rIC'
+import { isWebAutomationNavigator } from '@/utils/isWebAutomation'
 
 const NON_TRAVEL_PERFORMANCE_INIT_DELAY_MS = 1000
 // When the hero onLoad is lost, the safety net below reveals the first-screen chrome and the
@@ -196,7 +197,7 @@ export function useTravelDetailsPerformance({
 
     const isWebAutomation =
       typeof navigator !== 'undefined' &&
-      Boolean((navigator as unknown as Record<string, unknown>).webdriver)
+      isWebAutomationNavigator(navigator)
 
     if (isWebAutomation) {
       setHeroEnhancersReady(true)
@@ -255,7 +256,7 @@ export function useTravelDetailsPerformance({
 
       const isWebAutomation =
         typeof navigator !== 'undefined' &&
-        Boolean((navigator as unknown as Record<string, unknown>).webdriver)
+        isWebAutomationNavigator(navigator)
 
       if (isWebAutomation) {
         runPerformanceMonitoring()

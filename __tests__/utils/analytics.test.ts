@@ -253,6 +253,95 @@ describe('utils/analytics', () => {
     expect((global as any).window.__metravelAnalyticsEventQueue).toEqual([])
   })
 
+  describe('pre-provider analytics intent (#2281)', () => {
+    let navigatorDescriptor: PropertyDescriptor | undefined
+    beforeEach(() => { navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator') })
+    afterEach(() => {
+      if (navigatorDescriptor) Object.defineProperty(globalThis, 'navigator', navigatorDescriptor)
+      else Reflect.deleteProperty(globalThis, 'navigator')
+    })
+    const setup = (automation: boolean, consent = true, os = 'web') => {
+      jest.doMock('react-native', () => ({ Platform: { OS: os } }))
+      jest.doMock('@/utils/consent', () => ({ readConsent: () => ({ necessary: true, analytics: consent }) }))
+      Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { webdriver: automation } })
+      const listeners: Record<string, Array<(event: Event) => void>> = {}
+      const w: any = {
+        gtag: jest.fn(), ym: jest.fn(), metravelLoadAnalytics: jest.fn(),
+        __metravelGaId: 'G-TEST123', __metravelMetrikaId: 62803912, __metravelMetrikaReady: true,
+        addEventListener: jest.fn((name: string, handler: (event: Event) => void) => {
+          ;(listeners[name] ??= []).push(handler)
+        }),
+        dispatchEvent: jest.fn((event: Event) => {
+          for (const listener of listeners[event.type] ?? []) listener(event)
+          return true
+        }),
+      }
+      ;(global as any).window = w
+      const intents = () => w.dispatchEvent.mock.calls
+        .filter(([event]: [Event]) => event.type === 'metravel:analytics-intent')
+        .map(([event]: [CustomEvent]) => event.detail)
+      return { w, intents }
+    }
+    it.each([[true, true, false], [false, false, false], [false, true, true]])(
+      'observes one intent with automation=%s consent=%s, preserving provider delivery=%s',
+      async (automation, consent, delivered) => {
+        const { w, intents } = setup(automation, consent)
+        const { sendAnalyticsEvent } = require('@/utils/analytics')
+        const params = { quest_id: 'q1', source: 'collection' }
+        await sendAnalyticsEvent('next_quest_click', params)
+        params.source = 'changed later'
+        expect(intents()).toEqual([{ name: 'next_quest_click', params: { quest_id: 'q1', source: 'collection' } }])
+        expect(w.gtag).toHaveBeenCalledTimes(delivered ? 1 : 0)
+        expect(w.ym).toHaveBeenCalledTimes(delivered ? 1 : 0)
+        expect(w.__metravelAnalyticsEventQueue).toBeUndefined()
+        expect(w.metravelLoadAnalytics).not.toHaveBeenCalled()
+      },
+    )
+    it('provider-ready flushes deliver each provider once without repeating local intent', async () => {
+      const { w, intents } = setup(false)
+      const ga = w.gtag, metrika = w.ym
+      delete w.gtag
+      delete w.ym
+      w.__metravelMetrikaReady = false
+      const { sendAnalyticsEvent } = require('@/utils/analytics')
+      await sendAnalyticsEvent('return_visit_after_finish', { quest_id: 'q1', elapsed_ms: 42 })
+      expect(intents()).toHaveLength(1)
+      expect(w.__metravelAnalyticsEventQueue).toHaveLength(1)
+      w.gtag = ga
+      w.dispatchEvent(new CustomEvent('metravel:analytics-ready'))
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(ga).toHaveBeenCalledTimes(1)
+      expect(metrika).not.toHaveBeenCalled()
+      w.ym = metrika
+      w.__metravelMetrikaReady = true
+      w.dispatchEvent(new CustomEvent('metravel:analytics-ready'))
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(ga).toHaveBeenCalledTimes(1)
+      expect(metrika).toHaveBeenCalledTimes(1)
+      expect(w.__metravelAnalyticsEventQueue).toEqual([])
+      expect(intents()).toEqual([{ name: 'return_visit_after_finish', params: { quest_id: 'q1', elapsed_ms: 42 } }])
+    })
+    it('a failed intent observer cannot prevent ordinary provider delivery', async () => {
+      const { w } = setup(false)
+      w.dispatchEvent.mockImplementation(() => { throw new Error('observer unavailable') })
+      await require('@/utils/analytics').sendAnalyticsEvent('city_collection_view', { city_id: 'minsk' })
+      expect(w.gtag).toHaveBeenCalledWith('event', 'city_collection_view', { city_id: 'minsk' })
+      expect(w.ym).toHaveBeenCalledTimes(1)
+    })
+    it.each(['ios', 'android', 'test', 'jest'])('preserves native/test silence for %s', async (mode) => {
+      const { w, intents } = setup(false, true, ['ios', 'android'].includes(mode) ? mode : 'web')
+      if (mode === 'test') process.env.NODE_ENV = 'test'
+      if (mode === 'jest') process.env.JEST_WORKER_ID = '1'
+      await require('@/utils/analytics').sendAnalyticsEvent('next_quest_click', { quest_id: 'q1' })
+      expect(intents()).toEqual([])
+      expect(w.gtag).not.toHaveBeenCalled()
+      expect(w.ym).not.toHaveBeenCalled()
+      expect(w.metravelLoadAnalytics).not.toHaveBeenCalled()
+    })
+  })
+
   // #2062: the production inline script dispatches `metravel:analytics-ready`
   // from bootstrapGa() while Metrika is still loading tag.js, so the first
   // flush sees GA4 ready and Metrika not ready. An event delivered only to GA4

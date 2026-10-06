@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react-native'
 import { useActiveSection } from '@/hooks/useActiveSection'
+import * as React from 'react'
 
 let lastObserverCallback: IntersectionObserverCallback | null = null
 
@@ -271,5 +272,50 @@ describe('useActiveSection', () => {
     expect(observerMock.mock.calls[0]?.[1]?.root).toBeNull()
 
     getComputedStyleSpy.mockRestore()
+  })
+
+  it.each([
+    { helperFlag: false, moduleFlag: true, laterFlag: false, worker: undefined, synchronous: true },
+    { helperFlag: true, moduleFlag: false, laterFlag: true, worker: undefined, synchronous: false },
+    { helperFlag: false, moduleFlag: false, laterFlag: false, worker: '1', synchronous: true },
+  ])('reads automation at its own module phase, retaining the worker branch: %j', ({ helperFlag, moduleFlag, laterFlag, worker, synchronous }) => {
+    const workerId = process.env.JEST_WORKER_ID
+    const flag = Object.getOwnPropertyDescriptor(navigator, 'webdriver')
+    const RN = require('react-native')
+    const raf = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1)
+    const setFlag = (value: boolean) => Object.defineProperty(navigator, 'webdriver', { configurable: true, value })
+    let hook: typeof useActiveSection = useActiveSection
+    try {
+      if (worker === undefined) delete process.env.JEST_WORKER_ID
+      else process.env.JEST_WORKER_ID = worker
+      jest.resetModules()
+      jest.isolateModules(() => {
+        // The helper may already have computed its exported constant at an earlier phase.
+        jest.doMock('react', () => React)
+        jest.doMock('react-native', () => ({ Platform: { OS: 'web' }, View: RN.View }))
+        setFlag(helperFlag)
+        expect(require('@/utils/isWebAutomation').isWebAutomation).toBe(helperFlag)
+        setFlag(moduleFlag)
+        hook = require('@/hooks/useActiveSection').useActiveSection
+      })
+      setFlag(laterFlag)
+      const { result, unmount } = renderHook(() => hook({ 'section-1': { current: null } }, 0))
+      if (synchronous) {
+        expect(result.current.activeSection).toBe('section-1')
+        expect(raf).not.toHaveBeenCalled()
+      } else {
+        expect(result.current.activeSection).toBe('')
+        expect(raf).toHaveBeenCalled()
+      }
+      unmount()
+    } finally {
+      raf.mockRestore()
+      if (flag) Object.defineProperty(navigator, 'webdriver', flag)
+      else Reflect.deleteProperty(navigator, 'webdriver')
+      if (workerId === undefined) delete process.env.JEST_WORKER_ID
+      else process.env.JEST_WORKER_ID = workerId
+      jest.dontMock('react')
+      jest.dontMock('react-native')
+    }
   })
 })

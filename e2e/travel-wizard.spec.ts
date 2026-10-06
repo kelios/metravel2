@@ -8,6 +8,7 @@ import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 import { acceptAuthTerms, ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
 import { seedNecessaryConsent } from './helpers/storage';
 import { dismissConsentBanner } from './helpers/consentBanner';
+import { runtimeViewport } from './helpers/runtimeViewport';
 
 const tinyPngBuffer = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
@@ -20,7 +21,7 @@ const e2ePassword = process.env.E2E_PASSWORD;
 const USE_REAL_API = process.env.E2E_USE_REAL_API === '1';
 const pixel7MobileWeb = {
   userAgent: devices['Pixel 7'].userAgent,
-  viewport: devices['Pixel 7'].viewport,
+  viewport: runtimeViewport(devices['Pixel 7'].viewport),
   deviceScaleFactor: devices['Pixel 7'].deviceScaleFactor,
   isMobile: devices['Pixel 7'].isMobile,
   hasTouch: devices['Pixel 7'].hasTouch,

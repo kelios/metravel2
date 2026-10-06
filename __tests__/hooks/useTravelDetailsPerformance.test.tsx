@@ -141,6 +141,38 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.postLcpRuntimeReady).toBe(false)
   })
 
+  it.each([false, true])('reads late automation in the LCP and monitoring effects (%s)', async (automation) => {
+    const flag = Object.getOwnPropertyDescriptor(navigator, 'webdriver')
+    Object.defineProperty(navigator, 'webdriver', { configurable: true, value: automation })
+    try {
+      const { result } = renderHook(() => useTravelDetailsPerformance({ travel: heroTravel, isMobile: true, isLoading: false }))
+      await act(async () => { result.current.setLcpLoaded(true) })
+      expect(result.current.heroEnhancersReady).toBe(automation)
+      expect(result.current.postLcpRuntimeReady).toBe(automation)
+      await act(async () => { jest.advanceTimersByTime(1000); await Promise.resolve() })
+      expect(initPerformanceMonitoring).toHaveBeenCalledTimes(automation ? 1 : 0)
+    } finally {
+      if (flag) Object.defineProperty(navigator, 'webdriver', flag)
+      else Reflect.deleteProperty(navigator, 'webdriver')
+    }
+  })
+
+  it('reads navigator again when LCP changes after the hook has mounted', async () => {
+    const flag = Object.getOwnPropertyDescriptor(navigator, 'webdriver')
+    Object.defineProperty(navigator, 'webdriver', { configurable: true, value: false })
+    try {
+      const { result } = renderHook(() => useTravelDetailsPerformance({ travel: heroTravel, isMobile: true, isLoading: false }))
+      expect(result.current.postLcpRuntimeReady).toBe(false)
+      Object.defineProperty(navigator, 'webdriver', { configurable: true, value: true })
+      await act(async () => { result.current.setLcpLoaded(true) })
+      expect(result.current.heroEnhancersReady).toBe(true)
+      expect(result.current.postLcpRuntimeReady).toBe(true)
+    } finally {
+      if (flag) Object.defineProperty(navigator, 'webdriver', flag)
+      else Reflect.deleteProperty(navigator, 'webdriver')
+    }
+  })
+
   it('releases the first-screen gate within the 1000 ms «Timeout policy» cap when the hero onLoad is lost', () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({

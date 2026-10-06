@@ -1,6 +1,7 @@
 import { test, expect } from './fixtures'
 import fs from 'node:fs'
 import path from 'node:path'
+import { runtimeViewport } from './helpers/runtimeViewport'
 import {
   ensureAuthedStorageFallback,
   mockFakeAuthApis,
@@ -455,7 +456,8 @@ test.describe('Trip planner — happy path', () => {
       if (message.type() === 'error') consoleErrors.push(message.text())
     })
 
-    await page.setViewportSize({ width: 1440, height: 1000 })
+    const firstViewport = runtimeViewport({ width: 1440, height: 1000 })
+    await page.setViewportSize(firstViewport)
     await page.goto('/trips/plan/99002', { waitUntil: 'domcontentloaded' })
     await expect.poll(() => page.evaluate(() => window.localStorage.getItem('userId'))).toBe('1')
     await waitForFakeAuth(page)
@@ -475,7 +477,7 @@ test.describe('Trip planner — happy path', () => {
 
     const evidenceDir = path.join(process.cwd(), '.codex-temp', 'trips-transport-switch')
     fs.mkdirSync(evidenceDir, { recursive: true })
-    await control.screenshot({ path: path.join(evidenceDir, 'desktop-owner-control.png') })
+    await control.screenshot({ path: path.join(evidenceDir, firstViewport.width === 390 ? 'mobile-initial-owner-control.png' : 'desktop-owner-control.png') })
 
     await page.getByTestId('segmented-foot').click()
     await expect(page.getByTestId('route-builder-transport-pending')).toBeVisible()

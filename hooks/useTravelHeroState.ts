@@ -14,6 +14,7 @@ import { toContentId } from '@/types/contentSafety'
 import type { Travel, TravelMediaImage } from '@/types/types'
 import { findGalleryMediaImage } from '@/utils/travelMediaVariants'
 import { translate as i18nT } from '@/i18n'
+import { isWebAutomationNavigator } from '@/utils/isWebAutomation'
 
 
 type ImgLike = {
@@ -262,7 +263,7 @@ function useDeferredHeroExtras(deferExtras: boolean) {
   const isWebAutomation =
     Platform.OS === 'web' &&
     typeof navigator !== 'undefined' &&
-    Boolean((navigator as unknown as Record<string, unknown>).webdriver)
+    isWebAutomationNavigator(navigator)
   const [extrasReady, setExtrasReady] = useState(
     Platform.OS !== 'web' || (!deferExtras && isWebAutomation),
   )

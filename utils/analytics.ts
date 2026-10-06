@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { readConsent } from '@/utils/consent';
 import { isWebAutomation } from '@/utils/isWebAutomation';
+import { ANALYTICS_INTENT_EVENT, type AnalyticsIntent } from '@/utils/analyticsIntent';
 
 let hasWarnedMissingConfig = false;
 const WEB_ANALYTICS_QUEUE_KEY = '__metravelAnalyticsEventQueue';
@@ -161,6 +162,16 @@ export const sendAnalyticsEvent = async (
     // Browser-side Measurement Protocol would expose provider credentials.
     if (Platform.OS === 'web') {
         const w = typeof window !== 'undefined' ? (window as any) : undefined;
+        // Observe intent exactly once, before consent/bot delivery checks.
+        // Queued provider retries never pass through this point again.
+        if (typeof w?.dispatchEvent === 'function') {
+            try {
+                const detail: AnalyticsIntent = { name: eventName, params: { ...eventParams } };
+                w.dispatchEvent(new CustomEvent(ANALYTICS_INTENT_EVENT, { detail }));
+            } catch {
+                // Observation must not change the provider delivery contract.
+            }
+        }
         ensureWebAnalyticsQueueListener(w);
         await deliverWebAnalyticsEvent(w, { eventName, eventParams });
         return;

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import { Platform } from 'react-native'
+import { isWebAutomationNavigator } from '@/utils/isWebAutomation'
 import { useIsFocused, useNavigation } from 'expo-router'
 import { useRouter } from 'expo-router'
 
@@ -43,7 +44,7 @@ function isWebAutomationRuntime() {
   return (
     Platform.OS === 'web' &&
     typeof navigator !== 'undefined' &&
-    Boolean((navigator as { webdriver?: boolean }).webdriver)
+    isWebAutomationNavigator(navigator)
   )
 }
 

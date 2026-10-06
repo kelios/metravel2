@@ -11,6 +11,7 @@ import { createTestQueryClient } from '@/__tests__/helpers/testQueryClient'
 
 const mockSetOptions = jest.fn()
 const mockTravelHeroSection = jest.fn<any, [any]>(() => null)
+let mockGallery: Array<{ id: number; url: string }> = []
 const mockPerformanceState = {
   lcpLoaded: false,
   setLcpLoaded: jest.fn(),
@@ -51,7 +52,7 @@ jest.mock('@/hooks/travel-details', () => ({
         name: 'Маршрут в Бескидах',
         slug: 'marshrut-v-beskidakh',
         description: '<p>Описание</p>',
-        gallery: [],
+        gallery: mockGallery,
       },
       isLoading: false,
       isError: false,
@@ -169,6 +170,7 @@ describe('TravelDetailsContainer skeleton gating (web)', () => {
   beforeEach(() => {
     jest.useFakeTimers()
     mockTravelHeroSection.mockClear()
+    mockGallery = []
     mockPerformanceState.lcpLoaded = false
     mockPerformanceState.sliderReady = false
     mockPerformanceState.deferAllowed = false
@@ -239,5 +241,24 @@ describe('TravelDetailsContainer skeleton gating (web)', () => {
     )
 
     expect(getLastHeroSectionProps()?.renderSlider).toBe(true)
+  })
+
+  it('re-reads navigator on actual container rerender before the 500ms visual backstop', () => {
+    const flag = Object.getOwnPropertyDescriptor(navigator, 'webdriver')
+    Object.defineProperty(navigator, 'webdriver', { configurable: true, value: false })
+    mockGallery = [{ id: 1, url: 'https://example.com/hero.jpg' }]
+    const Wrapper = withQueryClient()
+    try {
+      const { UNSAFE_getByProps, rerender } = render(<Wrapper><TravelDetailsContainer /></Wrapper>)
+      act(() => { jest.advanceTimersByTime(20) })
+      expect(UNSAFE_getByProps({ testID: 'travel-details-skeleton-overlay' }).props.style.visibility).toBe('visible')
+      Object.defineProperty(navigator, 'webdriver', { configurable: true, value: true })
+      rerender(<Wrapper><TravelDetailsContainer /></Wrapper>)
+      act(() => { jest.advanceTimersByTime(20) })
+      expect(UNSAFE_getByProps({ testID: 'travel-details-skeleton-overlay' }).props.style.visibility).toBe('hidden')
+    } finally {
+      if (flag) Object.defineProperty(navigator, 'webdriver', flag)
+      else Reflect.deleteProperty(navigator, 'webdriver')
+    }
   })
 })

@@ -148,6 +148,24 @@ export async function ensureAuthedStorageFallback(
  * Call this BEFORE navigating to any page that requires auth.
  */
 export async function mockFakeAuthApis(page: Page): Promise<void> {
+  const fixtureUserId = async () => {
+    const id = Number(await getUserId(page));
+    return Number.isSafeInteger(id) && id > 0 ? id : 1;
+  };
+  // Match the pathname exactly: /me/verifications and other user subroutes
+  // retain their own handlers. Query strings do not change endpoint identity.
+  await page.route((url) => url.pathname === '/api/user/me/', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: await fixtureUserId(), terms_accepted_current: true }),
+    });
+  });
+  await page.route((url) => url.pathname === '/api/user/blocked/', (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+  });
   await page.route('**/api/user/me/verifications/**', (route) => {
     if (route.request().method() === 'GET') {
       return route.fulfill({
@@ -159,14 +177,15 @@ export async function mockFakeAuthApis(page: Page): Promise<void> {
     return route.continue();
   });
 
-  await page.route('**/api/user/*/profile/**', (route) => {
+  await page.route('**/api/user/*/profile/**', async (route) => {
     if (route.request().method() === 'GET') {
+      const id = await fixtureUserId();
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          id: 1,
-          user: 1,
+          id,
+          user: id,
           first_name: 'E2E',
           last_name: 'User',
           avatar: null,

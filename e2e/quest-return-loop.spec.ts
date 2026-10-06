@@ -3,6 +3,8 @@ import type { Page, Route } from '@playwright/test'
 import { test, expect } from './fixtures'
 import { preacceptCookies } from './helpers/navigation'
 import { seedActionConsents } from './helpers/actionConsent'
+import { installAnalyticsIntentRecorder, readAnalyticsIntents as readEvents } from './helpers/analytics'
+import { runtimeViewport } from './helpers/runtimeViewport'
 
 /**
  * #1484: петля возврата после финиша квеста. До неё взаимодействие с продуктом
@@ -11,7 +13,8 @@ import { seedActionConsents } from './helpers/actionConsent'
  * Спека доказывает на реальном экране финала три вещи, которые невозможно
  * проверить юнит-тестом компонента: блок «Следующий квест рядом» доживает до
  * DOM внутри визарда, полоса коллекции считает реальные числа каталога, и оба
- * события аналитики уходят в `gtag` с ожидаемыми параметрами.
+ * события аналитики запрошены с ожидаемыми параметрами. Доставку провайдерам
+ * отдельно ограничивает production-гейт автоматизации (#2192).
  *
  * Прохождение здесь целиком на моках: настоящий прогон на проде занял бы бейдж
  * первопроходца безвозвратно (#1434).
@@ -186,8 +189,8 @@ const mockApis = async (page: Page) => {
 }
 
 /**
- * Согласие на аналитику плюс несменяемый `window.gtag`: `sendAnalyticsEvent`
- * молчит без согласия, а загрузившийся GA перетёр бы наш перехватчик.
+ * Наблюдение локального intent ставится до навигации; согласие сохраняет
+ * обычный сценарий устройства, provider/bot delivery gate остаётся активным.
  */
 const seedDevice = async (page: Page, opts?: { finishRecord?: unknown; finishKey?: string }) => {
   await seedActionConsents(page)
@@ -209,29 +212,11 @@ const seedDevice = async (page: Page, opts?: { finishRecord?: unknown; finishKey
         // ignore
       }
 
-      const events: { name: string; params: Record<string, unknown> }[] = []
-      const recorder = (...args: any[]) => {
-        if (args[0] === 'event') events.push({ name: String(args[1]), params: args[2] ?? {} })
-      }
-      Object.defineProperty(window, '__e2eAnalyticsEvents', { value: events, configurable: false })
-      Object.defineProperty(window, 'gtag', {
-        configurable: false,
-        get: () => recorder,
-        set: () => {},
-      })
     },
     { user: USER_ID, finishRecord: opts?.finishRecord ?? null, finishKey: opts?.finishKey ?? null },
   )
+  await installAnalyticsIntentRecorder(page)
 }
-
-type CapturedEvent = { name: string; params: Record<string, unknown> }
-
-const readEvents = (page: Page, name: string): Promise<CapturedEvent[]> =>
-  page.evaluate(
-    (eventName) =>
-      ((window as any).__e2eAnalyticsEvents ?? []).filter((e: CapturedEvent) => e.name === eventName),
-    name,
-  )
 
 /** Прогон квеста до засчитанного финала: интро-шаг плюс обе точки. */
 const finishQuest = async (page: Page) => {
@@ -267,7 +252,7 @@ const finishQuest = async (page: Page) => {
 test.describe('Петля возврата после финиша квеста (#1484)', () => {
   test('финал предлагает соседние квесты и считает коллекцию города', async ({ page }) => {
     await preacceptCookies(page)
-    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.setViewportSize(runtimeViewport({ width: 1280, height: 900 }))
     await mockApis(page)
     await seedDevice(page)
 
@@ -332,7 +317,7 @@ test.describe('Петля возврата после финиша квеста 
   test('возврат в каталог после финиша шлёт return_visit_after_finish', async ({ page }) => {
     const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000
     await preacceptCookies(page)
-    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.setViewportSize(runtimeViewport({ width: 1280, height: 900 }))
     await mockApis(page)
     await seedDevice(page, {
       finishKey: `questFinish:v2:${encodeURIComponent(`user:${USER_ID}`)}`,

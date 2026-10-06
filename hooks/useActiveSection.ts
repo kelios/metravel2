@@ -6,6 +6,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Platform, View } from 'react-native';
 import type { RefObject } from 'react';
+import { isWebAutomationNavigator } from '@/utils/isWebAutomation';
 
 import {
   SECTION_READING_LINE_BUFFER_PX,
@@ -15,7 +16,7 @@ import {
 
 const isTestEnv =
   (typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined) ||
-  (typeof navigator !== 'undefined' && Boolean((navigator as Navigator & { webdriver?: boolean }).webdriver));
+  (typeof navigator !== 'undefined' && isWebAutomationNavigator(navigator));
 
 const scheduleObserverCallback = (cb: () => void) => {
   if (isTestEnv) {
