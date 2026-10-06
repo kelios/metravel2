@@ -40,8 +40,7 @@ function WeatherWidget({ points, countryName, onSettled }: Props) {
       <View style={styles.wrapper}>
           <View style={styles.titleContainer}>
               <Text style={[styles.title, { color: colors.text }]}>
-                  {i18nT('home:components.home.WeatherWidget.pogoda_v_cdab7f8f')}{locationLabel}
-              </Text>
+                  {i18nT('home:components.home.WeatherWidget.pogoda_v_cdab7f8f', { value1: locationLabel })}</Text>
           </View>
 
           {hasForecast ? (

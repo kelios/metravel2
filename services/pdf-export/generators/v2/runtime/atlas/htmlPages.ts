@@ -4,23 +4,8 @@
 import type { PdfThemeConfig } from '../../../../themes/PdfThemeConfig'
 import { buildAtlasMapSvg } from './mapSvg'
 import type { AtlasTravelEntry } from './types'
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 
-
-function localizedNoun(count: number, key: Parameters<typeof i18nT>[0]): string {
-  const forms = i18nT(key).split('|').map((form) => form.trim())
-  const fallback = forms[3] || forms[2] || forms[0] || ''
-  return selectPlural(count, {
-    one: forms[0] || fallback,
-    few: forms[1] || fallback,
-    many: forms[2] || fallback,
-    other: fallback,
-  })
-}
-
-function localizedCount(count: number, key: Parameters<typeof i18nT>[0]): string {
-  return `${count} ${localizedNoun(count, key)}`
-}
 
 export function renderAtlasMapPage({
   entries,
@@ -45,9 +30,9 @@ export function renderAtlasMapPage({
   ).size
 
   const statKicker = [
-    localizedCount(totalTravels, 'export:services.pdfExport.runtime.atlas.travelNounForms'),
-    localizedCount(totalPoints, 'export:services.pdfExport.runtime.atlas.pointNounForms'),
-    countries > 0 ? localizedCount(countries, 'export:services.pdfExport.runtime.atlas.countryNounForms') : '',
+    translatePlural('export:services.pdfExport.runtime.atlas.travelCount', totalTravels),
+    translatePlural('export:services.pdfExport.runtime.atlas.pointCount', totalPoints),
+    countries > 0 ? translatePlural('export:services.pdfExport.runtime.atlas.countryCount', countries) : '',
   ]
     .filter(Boolean)
     .join(' · ')
@@ -297,7 +282,7 @@ export function renderAtlasIndexPage({
       const travel = entry.meta.travel
       const country = travel.countryName ? escapeHtml(travel.countryName) : ''
       const year = travel.year ? escapeHtml(String(travel.year)) : ''
-      const metaLine = [country, year, localizedCount(entry.pointCount, 'export:services.pdfExport.runtime.atlas.pointNounForms')]
+      const metaLine = [country, year, translatePlural('export:services.pdfExport.runtime.atlas.pointCount', entry.pointCount)]
         .filter(Boolean)
         .join(' · ')
 
@@ -484,7 +469,7 @@ export function renderAtlasIndexPage({
             color: ${colors.text};
             font-family: ${typography.bodyFont};
             font-weight: 600;
-          ">${totalTravels} · ${totalPoints} ${localizedNoun(totalPoints, 'export:services.pdfExport.runtime.atlas.pointNounForms')}</div>
+          ">${totalTravels} · ${translatePlural('export:services.pdfExport.runtime.atlas.pointCount', totalPoints)}</div>
         </div>
       </div>
 

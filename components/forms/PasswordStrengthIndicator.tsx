@@ -47,8 +47,7 @@ export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps>
       </View>
       <View style={styles.labelContainer}>
         <Text style={[styles.label, { color }]}>
-          {i18nT('auth:components.forms.PasswordStrengthIndicator.sila_parolya_64fc0a52')}{label}
-        </Text>
+          {i18nT('auth:components.forms.PasswordStrengthIndicator.sila_parolya_64fc0a52', { value1: label })}</Text>
       </View>
       {showFeedback && feedback.length > 0 && (
         <View style={styles.feedbackContainer}>

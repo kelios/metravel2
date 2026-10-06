@@ -155,8 +155,7 @@ export default function RouteElevationProfile({
               color={colors.textMuted}
             />
             <Text style={styles.tagItem} numberOfLines={1}>
-              {i18nT('travel:components.travel.details.sections.RouteElevationProfile.transport_83487c96')}{transportHints.join(', ')}
-            </Text>
+              {i18nT('travel:components.travel.details.sections.RouteElevationProfile.transport_83487c96', { value1: transportHints.join(', ') })}</Text>
           </View>
         ) : null}
         {canDownloadTrack && onDownloadTrack ? (

@@ -122,15 +122,13 @@ export const PointListPreview = React.memo(function PointListPreview({
       ))}
       {hiddenPreviewCount > 0 && (
         <Text style={styles.previewMore}>
-          {i18nT('travel:components.travel.PointListChrome.esche_11f20093')}{hiddenPreviewCount}
-        </Text>
+          {i18nT('travel:components.travel.PointListChrome.esche_11f20093', { value1: hiddenPreviewCount })}</Text>
       )}
       <View style={styles.previewFooter}>
         <View style={styles.previewFooterLead}>
           <Feather name="list" size={14} color={colors.primaryDark} />
           <Text style={styles.previewFooterText}>
-            {i18nT('travel:components.travel.PointListChrome.otkryt_spisok_872269f1')}{pointsLabel}
-          </Text>
+            {i18nT('travel:components.travel.PointListChrome.otkryt_spisok_872269f1', { value1: pointsLabel })}</Text>
         </View>
         <Feather name="chevron-right" size={16} color={colors.primaryDark} />
       </View>

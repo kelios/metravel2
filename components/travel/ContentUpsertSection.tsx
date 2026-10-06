@@ -129,7 +129,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         }
         if (descriptionPlainLength < 50) {
             const remaining = 50 - descriptionPlainLength;
-            return i18nT('travel:components.travel.ContentUpsertSection.ostalos_value1_value2_do_minimuma_07d2d15c', { value1: remaining, value2: translatePlural('travel:common.characterNoun', remaining) });
+            return translatePlural('travel:components.travel.ContentUpsertSection.ostalos_value1_value2_do_minimuma_07d2d15c', remaining);
         }
         if (descriptionPlainLength <= 150) {
             return i18nT('travel:components.travel.ContentUpsertSection.horoshee_kratkoe_opisanie_mozhno_dobavit_chu_a7c25864');

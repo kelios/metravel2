@@ -123,8 +123,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const readinessNote = (
         <View style={styles.readinessNote}>
             <Text style={styles.readinessNoteText}>
-                {i18nT('travel:components.travel.TravelWizardStepPublish.vy_na_poslednem_shage_mastera_indikator_poka_df37fcf6')}{qualityScore.score}%.
-            </Text>
+                {i18nT('travel:components.travel.TravelWizardStepPublish.vy_na_poslednem_shage_mastera_indikator_poka_df37fcf6', { value1: qualityScore.score })}</Text>
         </View>
     );
 

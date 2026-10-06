@@ -230,8 +230,7 @@ export const CalendarTravelCard = memo(function CalendarTravelCard({
               <View style={styles.cardMetaContent}>
                 <Feather name="clock" size={12} color={colors.textMuted} style={CARD_META_ICON_STYLE} />
                 <Text style={styles.cardMetaText} numberOfLines={1}>
-                  {i18nT('calendar:components.screens.calendar.calendarScreen_parts.god_mesyats_4b45d53c')}{travelPeriod}
-                </Text>
+                  {i18nT('calendar:components.screens.calendar.calendarScreen_parts.god_mesyats_4b45d53c', { value1: travelPeriod })}</Text>
               </View>
             )}
             <View style={styles.cardMetaContent}>

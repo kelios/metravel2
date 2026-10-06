@@ -77,8 +77,7 @@ export const PointsListWebLazyScroll: React.FC<Props> = ({
       ))}
       {hasMoreItems ? (
         <RNText style={localStyles.listProgressText}>
-          {i18nT('map:components.UserPoints.PointsListWebLazyScroll.pokazano_1660d084')}{visiblePoints.length} {i18nT('map:components.UserPoints.PointsListWebLazyScroll.iz_b7920f29')}{filteredPoints.length}
-        </RNText>
+          {i18nT('map:components.UserPoints.PointsListWebLazyScroll.pokazano_1660d084', { value1: visiblePoints.length, value2: filteredPoints.length })}</RNText>
       ) : null}
     </ScrollView>
   )

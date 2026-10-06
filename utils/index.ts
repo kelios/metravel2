@@ -79,12 +79,11 @@ export function createAppVersionInfo(
       ? firstNonEmpty(config.ios?.bundleIdentifier)
       : undefined
   const buildMode = getBuildModeLabel(isDev)
-  const buildPart = buildVersion ? i18nT('shared:utils.index.sborka_value1_7f6e458f', { value1: buildVersion }) : ''
 
   return {
     appVersion,
     buildVersion,
-    displayVersion: `${platformLabel} ${appVersion}${buildPart} · ${buildMode}`,
+    displayVersion: buildVersion ? i18nT('shared:utils.index.sborka_value1_7f6e458f', { value1: platformLabel, value2: appVersion, value3: buildVersion, value4: buildMode }) : `${platformLabel} ${appVersion} · ${buildMode}`,
     packageName,
     platformLabel,
   }

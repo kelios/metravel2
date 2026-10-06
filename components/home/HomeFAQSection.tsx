@@ -87,7 +87,7 @@ function FAQItemCard({
       >
         <View style={styles.questionWrap}>
           <View style={styles.questionMetaRow}>
-            <Text style={styles.questionMeta}>{i18nT('home:components.home.HomeFAQSection.vopros_8958223d')}{index + 1}</Text>
+            <Text style={styles.questionMeta}>{i18nT('home:components.home.HomeFAQSection.vopros_8958223d', { value1: index + 1 })}</Text>
           </View>
           <Text style={[styles.question, isOpen && styles.questionOpen]}>{item.q}</Text>
         </View>

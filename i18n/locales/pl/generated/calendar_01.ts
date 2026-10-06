@@ -28,7 +28,7 @@ export const calendarGenerated1 = {
   "components.screens.calendar.calendarScreen_parts.dlya_statusa_hochu_dostatochno_prosto_sohran_23fb4882": "Aby uzyskać status „Chcę”, wystarczy zapisać trasę.",
   "components.screens.calendar.calendarScreen_parts.dobavit_datu_6851e94d": "Dodaj datę",
   "components.screens.calendar.calendarScreen_parts.gggg_mm_dd_8d160578": "RRRR-MM-DD",
-  "components.screens.calendar.calendarScreen_parts.god_mesyats_4b45d53c": "Rok/miesiąc: ",
+  "components.screens.calendar.calendarScreen_parts.god_mesyats_4b45d53c": "Rok/miesiąc: {{value1}}",
   "components.screens.calendar.calendarScreen_parts.izmenit_datu_value1_234c04d5": "Zmień datę {{value1}}",
   "components.screens.calendar.calendarScreen_parts.izmenit_status_0823b656": "Zmień status",
   "components.screens.calendar.calendarScreen_parts.lichnyy_status_bez_daty_fd9e801a": "Status osobisty bez daty",

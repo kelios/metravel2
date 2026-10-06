@@ -78,7 +78,7 @@ export const authGenerated1 = {
   "components.auth.SetPasswordForm.smena_parolya_metravel_bf28783a": "Смена пароля | Metravel",
   "components.auth.SetPasswordForm.smenit_parol_5237ebd6": "Сменить пароль",
   "components.auth.SetPasswordForm.ssylka_nedeystvitelna_ili_ustarela_d7694ae3": "Ссылка недействительна или устарела",
-  "components.forms.PasswordStrengthIndicator.sila_parolya_64fc0a52": "Сила пароля: ",
+  "components.forms.PasswordStrengthIndicator.sila_parolya_64fc0a52": "Сила пароля: {{value1}}",
   "utils.passwordStrength.dobavte_spetsialnye_simvoly_i_t_d_b4748276": "Добавьте специальные символы (!@#$%^&* и т.д.)",
   "utils.passwordStrength.dobavte_strochnye_bukvy_e00bac42": "Добавьте строчные буквы",
   "utils.passwordStrength.dobavte_tsifry_e055c31d": "Добавьте цифры",

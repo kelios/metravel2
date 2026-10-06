@@ -31,6 +31,7 @@ import { Asset } from 'expo-asset'
 import Feather from '@expo/vector-icons/Feather'
 import { ICON_FONT_FAMILY, buildFontDisplayPolicyScript, buildIconFontLoaderScript } from '@/utils/iconFontShell'
 import { HEADER_LOGO_WEB_SRC } from '@/components/layout/headerLayoutContract'
+import { getLocaleBootCss, getLocaleBootScript } from '@/i18n/localeBootShell'
 
 export { getAnalyticsInlineScript };
 
@@ -352,10 +353,10 @@ const getCriticalHeadScript = () => {
       if(normalized==='/travelsby')return{title:${JSON.stringify(TRAVELSBY_TITLE)},description:${JSON.stringify(TRAVELSBY_DESCRIPTION)},ogType:'website'};
       if(normalized==='/quests')return{title:${JSON.stringify(QUESTS_TITLE)},description:${JSON.stringify(QUESTS_DESCRIPTION)},ogType:'website'};
       if(normalized==='/roulette')return{title:${JSON.stringify(ROULETTE_TITLE)},description:${JSON.stringify(ROULETTE_DESCRIPTION)},ogType:'website'};
-      if(normalized.indexOf('/travels/')===0)return{title:(lastSegment?lastSegment+' | ':${JSON.stringify(i18nT('seoStatic:critical.travel.titleFallback'))})+${JSON.stringify(SITE_BRAND)},description:lastSegment?(${JSON.stringify(i18nT('seoStatic:critical.travel.descriptionPrefix'))}+lastSegment+${JSON.stringify(i18nT('seoStatic:critical.travel.descriptionSuffix'))}):${JSON.stringify(DEFAULT_DESCRIPTION)},ogType:'article',robots:normalized==='/travels/create'?'noindex, nofollow':undefined};
-      if(normalized.indexOf('/travel/')===0)return{title:(lastSegment?(${JSON.stringify(i18nT('seoStatic:critical.edit.titlePrefix'))}+lastSegment+' | '):${JSON.stringify(i18nT('seoStatic:critical.edit.titleFallback'))})+${JSON.stringify(SITE_BRAND)},description:${JSON.stringify(i18nT('seoStatic:critical.edit.description'))},ogType:'website',robots:'noindex, nofollow'};
+      if(normalized.indexOf('/travels/')===0)return{title:(lastSegment?lastSegment+' | '+${JSON.stringify(SITE_BRAND)}:${JSON.stringify(i18nT('seoStatic:critical.travel.titleFallback'))}),description:lastSegment?${JSON.stringify(i18nT('seoStatic:critical.travel.descriptionPrefix'))}.replace('{{value1}}', function(){return lastSegment}):${JSON.stringify(DEFAULT_DESCRIPTION)},ogType:'article',robots:normalized==='/travels/create'?'noindex, nofollow':undefined};
+      if(normalized.indexOf('/travel/')===0)return{title:(lastSegment?${JSON.stringify(i18nT('seoStatic:critical.edit.titlePrefix'))}.replace('{{value1}}', function(){return lastSegment}):${JSON.stringify(i18nT('seoStatic:critical.edit.titleFallback'))}),description:${JSON.stringify(i18nT('seoStatic:critical.edit.description'))},ogType:'website',robots:'noindex, nofollow'};
       if(normalized==='/travel/new')return{title:${JSON.stringify(i18nT('seoStatic:critical.create.title'))},description:${JSON.stringify(i18nT('seoStatic:critical.create.description'))},ogType:'website',robots:'noindex, nofollow'};
-      if(normalized.indexOf('/article/')===0)return{title:lastSegment?(lastSegment+' | '+${JSON.stringify(SITE_BRAND)}):${JSON.stringify(ARTICLE_FALLBACK_TITLE)},description:lastSegment?(${JSON.stringify(i18nT('seoStatic:critical.article.descriptionPrefix'))}+lastSegment+${JSON.stringify(i18nT('seoStatic:critical.article.descriptionSuffix'))}):${JSON.stringify(ARTICLE_FALLBACK_DESCRIPTION)},ogType:'article'};
+      if(normalized.indexOf('/article/')===0)return{title:lastSegment?(lastSegment+' | '+${JSON.stringify(SITE_BRAND)}):${JSON.stringify(ARTICLE_FALLBACK_TITLE)},description:lastSegment?${JSON.stringify(i18nT('seoStatic:critical.article.descriptionPrefix'))}.replace('{{value1}}', function(){return lastSegment}):${JSON.stringify(ARTICLE_FALLBACK_DESCRIPTION)},ogType:'article'};
       if(normalized.indexOf('/quests/')===0)return{title:${JSON.stringify(HOME_TITLE)},description:${JSON.stringify(HOME_DESCRIPTION)},ogType:'website'};
       if(normalized==='/registration'||normalized==='/register')return{title:${JSON.stringify(i18nT('seoStatic:critical.registration.title'))},description:${JSON.stringify(i18nT('seoStatic:critical.registration.description'))},ogType:'website',robots:'noindex, nofollow'};
       if(isAssetLikePath(normalized))return{title:${JSON.stringify(i18nT('seoStatic:critical.asset.title'))},description:${JSON.stringify(i18nT('seoStatic:critical.asset.description'))},ogType:'website',robots:'noindex, nofollow'};
@@ -470,6 +471,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
   return (
     <html lang={locale.htmlLang} dir={locale.direction} suppressHydrationWarning>
     <head>
+      <style dangerouslySetInnerHTML={{ __html: getLocaleBootCss() }} />
+      <script dangerouslySetInnerHTML={{ __html: getLocaleBootScript() }} />
 	      <meta charSet="utf-8" />
 	      <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
 	      <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />

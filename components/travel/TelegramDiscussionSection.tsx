@@ -47,7 +47,7 @@ function TelegramDiscussionSection({ travel }: TelegramDiscussionSectionProps) {
     <View style={styles.container}>
       <Text style={styles.title}>{i18nT('travel:components.travel.TelegramDiscussionSection.obsuzhdenie_marshruta_v_telegram_a7792961')}</Text>
       <Text style={styles.subtitle}>
-        {i18nT('travel:components.travel.TelegramDiscussionSection.zadayte_vopros_ili_podelites_vpechatleniyami_15f6b1d4')}{travelName ? ` «${travelName}»` : ''} {i18nT('travel:components.travel.TelegramDiscussionSection.v_nashem_telegram_kanale_d0dc2fd7')}</Text>
+        {i18nT('travel:components.travel.TelegramDiscussionSection.v_nashem_telegram_kanale_d0dc2fd7', { value1: travelName ? ` «${travelName}»` : '' })}</Text>
       <Button
         onPress={handleOpen}
         disabled={!hasUrl}

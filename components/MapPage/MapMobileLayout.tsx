@@ -337,7 +337,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     const hasRadiusContext =
       currentRadiusKm != null && String(currentRadiusKm).trim() !== ''
 
-    return `${placesCountLabel} ${getPlacesLabel(displayCount)}${hasRadiusContext ? i18nT('map:components.MapPage.MapMobileLayout.value1_km_9e970651', { value1: formatRadiusValue(currentRadiusKm) }) : ''}`
+    return hasRadiusContext ? i18nT('map:components.MapPage.MapMobileLayout.value1_km_9e970651', { value1: placesCountLabel, value2: getPlacesLabel(displayCount), value3: formatRadiusValue(currentRadiusKm) }) : `${placesCountLabel} ${getPlacesLabel(displayCount)}`
   }, [currentRadiusKm, displayCount])
 
   // Радиус-поповер и слои-поповер переиспользуют ту же модель, что и шит:

@@ -5,8 +5,10 @@ import { transformSync } from '@babel/core'
 
 import i18n from '@/i18n/instance.web'
 import { ruResources } from '@/i18n/locales/ru'
+import { resources } from '@/i18n/resources'
 import type { TranslationKey } from '@/i18n/resources'
 import {
+  compileLocaleCatalog,
   getFixedTranslator,
   hashTranslationKey,
   loadWebLocale,
@@ -20,7 +22,7 @@ describe('web compile-time localization', () => {
       `
         import { translate as i18nT, translatePlural } from '@/i18n'
         export const language = i18nT('common:language.ru')
-        export const characters = translatePlural('travel:common.characterNoun', 2)
+        export const characters = translatePlural('travel:components.travel.ValidationFeedback.characterCount', 2)
       `,
       {
         caller: { name: 'metro', platform: 'web' },
@@ -29,7 +31,7 @@ describe('web compile-time localization', () => {
     )
 
     expect(result?.code).not.toContain('common:language.ru')
-    expect(result?.code).not.toContain('travel:common.characterNoun')
+    expect(result?.code).not.toContain('travel:components.travel.ValidationFeedback.characterCount')
     expect(result?.code).toContain('h:')
     expect(result?.code).toContain('v:')
     expect(result?.code).toContain('p:')
@@ -69,16 +71,16 @@ describe('web compile-time localization', () => {
   it('keeps interpolation and Russian plural rules in the eager runtime', () => {
     const fixedRu = getFixedTranslator('ru')
     const compiledNoun = {
-      h: hashTranslationKey('travel:common.characterNoun'),
-      v: 'символов',
-      p: { one: 'символ', few: 'символа', many: 'символов', other: 'символов' },
+      h: hashTranslationKey('travel:components.travel.ValidationFeedback.characterCount'),
+      v: '{{count}} символов',
+      p: { one: '{{count}} символ', few: '{{count}} символа', many: '{{count}} символов', other: '{{count}} символов' },
     } as unknown as TranslationKey
 
     expect(
       translate('Осталось {{count}}' as TranslationKey, { count: 3 }),
     ).toBe('Осталось 3')
-    expect(fixedRu(compiledNoun, { count: 2 })).toBe('символа')
-    expect(translatePlural(compiledNoun, 2)).toBe('символа')
+    expect(fixedRu(compiledNoun, { count: 2 })).toBe('2 символа')
+    expect(translatePlural(compiledNoun, 2)).toBe('2 символа')
   })
 
   it('loads every non-default locale outside the eager bundle', async () => {
@@ -100,6 +102,40 @@ describe('web compile-time localization', () => {
     expect(getFixedTranslator('pl')(languageName)).toBe('Rosyjski')
 
     await i18n.changeLanguage('ru')
+  })
+
+  it.each(['be', 'uk', 'pl', 'en'] as const)('every Babel-compiled literal key returns %s without parameters', async (locale) => {
+    const { loadCatalogs } = require('@/i18n/babel-inline-plugin')
+    const catalog: Map<string, string> = loadCatalogs(process.cwd()).catalogs.get('ru')
+    const keys = Array.from(catalog.keys())
+    // Exercise the actual web transform, including explicit _one/_few forms.
+    const result = transformSync(`capture(${JSON.stringify(keys)})`, {
+      configFile: false,
+      babelrc: false,
+      compact: true,
+      plugins: [[require('@/i18n/babel-inline-plugin'), { projectRoot: process.cwd() }]],
+    })
+    let compiled: TranslationKey[] = []
+    new Function('capture', result!.code!)((values: TranslationKey[]) => { compiled = values })
+    await loadWebLocale(locale)
+    const fixed = getFixedTranslator(locale)
+    const expected = resources[locale] as unknown as Record<string, Record<string, string>>
+    const failures = keys.flatMap((key, index) => {
+      const [namespace, resourceKey] = key.split(':')
+      const value = fixed(compiled[index])
+      return value === expected[namespace][resourceKey] ? [] : [`${key}: ${value}`]
+    })
+    expect(failures).toEqual([])
+  })
+
+  it('keeps literal forms and plural selection when the base key comes last', () => {
+    const catalog = compileLocaleCatalog({ probe: {
+      noun_other: 'characters', noun_one: 'character', noun: 'characters',
+    } })
+    expect(catalog.get(hashTranslationKey('probe:noun_one'))?.value).toBe('character')
+    expect(catalog.get(hashTranslationKey('probe:noun'))).toEqual({
+      value: 'characters', plurals: { one: 'character', other: 'characters' },
+    })
   })
 
   it('does not expose an uninlined translation key to the user', () => {

@@ -33,7 +33,7 @@ export const achievementsGenerated1 = {
   "components.achievements.BadgeDetailSheet.podelitsya_dostizheniem_52b86d7a": "Share achievement",
   "components.achievements.BadgeDetailSheet.poluchen_value1_0c966f04": "Received {{value1}}",
   "components.achievements.BadgeDetailSheet.progress_638229b7": "Progress",
-  "components.achievements.BadgeDetailSheet.xp_3878de4b": " XP",
+  "components.achievements.BadgeDetailSheet.xp_3878de4b": "{{value1}} XP",
   "components.achievements.BadgeDetailSheet.za_chto_poluchen_504e69c3": "What was it received for?",
   "components.achievements.BadgeDetailSheet.zakryt_f1ccd424": "Close",
   "components.achievements.BadgeDetailSheet.znachok_poluchen_66bd211f": "Badge received",

@@ -393,8 +393,7 @@ function QuestCard({
                         <View style={styles.questCardPioneerRow}>
                             <UserAvatar uri={quest.firstCompleter.avatar} size="sm" />
                             <Text style={styles.questCardPioneerText} numberOfLines={1}>
-                                {i18nT('quests:screens.tabs.QuestCard.pervym_proshel_0647d9f1')}{quest.firstCompleter.name}
-                            </Text>
+                                {i18nT('quests:screens.tabs.QuestCard.pervym_proshel_0647d9f1', { value1: quest.firstCompleter.name })}</Text>
                         </View>
                     )}
                 </View>

@@ -156,7 +156,7 @@ export const PointsListBulkModals: React.FC<PointsListBulkModalsProps> = ({
           />
           <View style={styles.actionsModal}>
             <Text style={styles.actionsTitle}>{i18nT('map:components.UserPoints.PointsListBulkModals.udalit_vybrannye_e97d9bbe')}</Text>
-            <Text style={styles.modalSubtext}>{i18nT('map:components.UserPoints.PointsListBulkModals.budut_udaleny_625a665a')}{selectedCount}</Text>
+            <Text style={styles.modalSubtext}>{i18nT('map:components.UserPoints.PointsListBulkModals.budut_udaleny_625a665a', { value1: selectedCount })}</Text>
 
             <Button
               label={i18nT('map:components.UserPoints.PointsListBulkModals.udalit_0873ed30')}

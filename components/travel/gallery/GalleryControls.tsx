@@ -1,3 +1,4 @@
+import { renderLocalizedText } from '@/i18n/richText'
 import React from 'react'
 import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
@@ -87,9 +88,7 @@ export const GalleryControls: React.FC<{
           <Text style={[styles.galleryTitle, { color: colors.text }]}>{i18nT('travel:components.travel.gallery.GalleryControls.galereya_16f9feaf')}</Text>
         </View>
         <Text style={[styles.imageCount, { color: colors.textMuted }]}>
-          {i18nT('travel:components.travel.gallery.GalleryControls.zagruzheno_4681bcc7')}<Text style={[styles.highlight, { color: colors.primaryText }]}>{imagesCount}</Text> {i18nT('travel:components.travel.gallery.GalleryControls.iz_75be492c')}{' '}
-          {maxImages}
-        </Text>
+          {renderLocalizedText(i18nT('travel:components.travel.gallery.GalleryControls.zagruzheno_4681bcc7'), { value1: <Text style={[styles.highlight, { color: colors.primaryText }]}>{imagesCount}</Text>, value2: maxImages })}</Text>
       </View>
 
       {selectableCount > 0 ? (
@@ -210,8 +209,7 @@ export const GalleryControls: React.FC<{
           </View>
           <Text style={[styles.batchProgressText, { color: colors.infoDark }]}
           >
-            {i18nT('travel:components.travel.gallery.GalleryControls.zagruzka_aefa6291')}{batchUploadProgress.current} {i18nT('travel:components.travel.gallery.GalleryControls.iz_03953c46')}{batchUploadProgress.total}
-          </Text>
+            {i18nT('travel:components.travel.gallery.GalleryControls.zagruzka_aefa6291', { value1: batchUploadProgress.current, value2: batchUploadProgress.total })}</Text>
         </View>
       )}
 

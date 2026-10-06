@@ -269,7 +269,7 @@ function CollapsibleBlock({
           accessibilityLabel={i18nT('shared:components.ui.CollapsibleBlock.pokazat_blok_value1_344c683d', { value1: title })}
         >
           <Feather name="eye-off" size={14} color={colors.textMuted} />
-          <Text style={styles.showHiddenText}>{i18nT('shared:components.ui.CollapsibleBlock.pokazat_8b661577')}{title}</Text>
+          <Text style={styles.showHiddenText}>{i18nT('shared:components.ui.CollapsibleBlock.pokazat_8b661577', { value1: title })}</Text>
         </Pressable>
       </View>
     );

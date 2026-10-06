@@ -37,7 +37,7 @@ export default function QuestGuestGate({
     <View style={styles.card} testID={testID}>
       <Text style={styles.title}>{i18nT('quests:components.quests.QuestGuestGate.sohranim_tvoy_progress_b99df14f')}</Text>
       <Text style={styles.lead}>
-        {i18nT('quests:components.quests.QuestGuestGate.ty_proshel_ca229b47')}{passedCount} {pluralPoints(passedCount)} {i18nT('quests:components.quests.QuestGuestGate.zdorovo_chtoby_prodolzhit_kvest_sohranit_rez_1b7311fc')}</Text>
+        {i18nT('quests:components.quests.QuestGuestGate.ty_proshel_ca229b47', { value1: passedCount, value2: pluralPoints(passedCount) })}</Text>
 
       <Button
         variant="primary"

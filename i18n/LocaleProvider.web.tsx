@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 
@@ -21,6 +22,8 @@ import {
   type LocalePreference,
 } from './localeStorage'
 import { isWebLocaleLoaded, loadWebLocale, translate } from './translate'
+import { releaseLocaleBootShell } from './localeBootShell'
+import { getBootLocaleRecoveryCopy } from './bootLocaleRecoveryCopy'
 
 type LocaleContextValue = {
   locale: SupportedLocale
@@ -41,31 +44,13 @@ const syncDocumentLocale = (locale: SupportedLocale) => {
 }
 
 /**
- * Загрузка сохранённой локали при старте не перемонтирует приложение (#2239,
- * `I18N-LOCALE-BOOT-REMOUNT-001`).
- *
- * Статический HTML всегда русский (#938: первый клиентский кадр равен ему), а
- * ~800 модулей зовут `translate` прямо в рендере и не подписаны на смену языка.
- * Поэтому смена языка перемонтирует поддерево ключом `legacyRenderRevision` —
- * и раньше это случалось и на старте: дерево гидратировалось по-русски, экраны
- * отправляли стартовые запросы, затем ключ размонтировал всё и запросы уходили
- * второй раз.
- *
- * Теперь, если сохранённая локаль не совпадает с активной, поддерево остаётся
- * НЕгидратированным: граница `Suspense` держит серверный HTML как есть (без
- * расхождения разметки и без эффектов), а смена ключа заменяет её свежим деревом
- * уже на нужном языке — одно монтирование.
- *
- * Негидратированная граница переживает только рендеры без смены контекста выше:
- * на любую смену React отрисовывает её клиентом с `fallback` (те же дети —
- * прежние два монтирования, но без пустого кадра). Над приложением стоят
- * провайдеры expo-router (кадр `SafeAreaProvider`, состояние навигации), их
- * значения меняются сразу после гидратации — так было на проде после первой
- * версии исправления. Поэтому каталог грузится ДО гидратации (`entry.js` →
- * `prepareBootLocale`, см. `bootLocale.web.ts`), и локаль применяется в layout
- * effect коммита гидратации — синхронно, раньше эффектов провайдеров выше.
- * Если каталог к гидратации не успел (таймаут), остаётся асинхронный путь с
- * той же деградацией. Явная смена языка пользователем перемонтирует поддерево.
+ * The RU SSG tree hydrates deterministically, but the head bootstrap hides it
+ * for a persisted non-RU preference until the final locale commit (#2327).
+ * Catalogue preloading before Expo hydration plus the suspended boundary keep
+ * screens mounted once (#2239). A null fallback prevents outer-context changes
+ * from mounting a temporary Russian tree. Slow/failed boot exposes localized
+ * recovery controls; choosing RU invalidates any older pending completion.
+ * Explicit language switches after boot retain the legacy subtree revision.
  */
 const BOOT_LOCALE_PENDING: Promise<never> = new Promise(() => {})
 
@@ -85,7 +70,7 @@ const BootLocaleBoundary = React.memo(
     children: React.ReactNode
   }) {
     return (
-      <Suspense fallback={children}>
+      <Suspense fallback={null}>
         <BootLocaleGate pending={pending} />
         {children}
       </Suspense>
@@ -108,6 +93,14 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   // откладывает гидратацию, разметку она не меняет.
   const [bootLocale] = useState(resolvePendingBootLocale)
   const [isBootPending, setIsBootPending] = useState(bootLocale !== null)
+  const [bootRecovery, setBootRecovery] = useState<'loading' | 'slow' | 'failed'>('loading')
+  const bootAbandoned = useRef(false)
+
+  // Reveal only a committed tree in its final boot locale. No reveal timer:
+  // a slow catalogue must not mount Russian screens and send requests twice.
+  useLayoutEffect(() => {
+    if (!isBootPending) releaseLocaleBootShell()
+  }, [isBootPending, locale])
 
   // Подписка — в layout effect, чтобы смена языка ниже уже меняла ключ.
   useLayoutEffect(() => {
@@ -142,26 +135,32 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       released = true
       setIsBootPending(false)
     }
-    const bootTimeout = setTimeout(releaseBootGate, BOOT_LOCALE_TIMEOUT_MS)
+    // This timer displays recovery controls; it never reveals Russian screens.
+    const recoveryTimeout = setTimeout(() => {
+      if (!cancelled) setBootRecovery('slow')
+    }, BOOT_LOCALE_TIMEOUT_MS)
 
     void readLocalePreference().then(async (storedPreference) => {
       if (cancelled) return
       const nextLocale = resolveLocalePreference(storedPreference)
+      let failed = false
       try {
         if (nextLocale !== normalizeActiveLocale(i18n.resolvedLanguage)) {
           await loadWebLocale(nextLocale)
-          if (cancelled) return
+          if (cancelled || bootAbandoned.current) return
           // Снятие ворот и смена ключа (обработчик `languageChanged`) идут одним
           // синхронным блоком — одним рендером, без промежуточной гидратации.
           releaseBootGate()
           await i18n.changeLanguage(nextLocale)
         }
       } catch {
-        // Каталог не загрузился — остаётся русский интерфейс.
+        failed = true
+        if (!cancelled) setBootRecovery('failed')
       } finally {
-        clearTimeout(bootTimeout)
-        if (!cancelled) releaseBootGate()
+        clearTimeout(recoveryTimeout)
+        if (!cancelled && !failed) releaseBootGate()
       }
+      if (failed) return
       if (cancelled) return
       const activeLocale = normalizeActiveLocale(i18n.resolvedLanguage)
       setPreference(storedPreference)
@@ -171,13 +170,13 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     })
     return () => {
       cancelled = true
-      clearTimeout(bootTimeout)
+      clearTimeout(recoveryTimeout)
     }
   }, [])
 
   const setLocale = useCallback(async (nextLocale: SupportedLocale) => {
     const nextPreference: LocalePreference = { version: 1, mode: 'explicit', locale: nextLocale }
-    await loadWebLocale(nextLocale)
+    if (!isWebLocaleLoaded(nextLocale)) await loadWebLocale(nextLocale)
     await writeLocalePreference(nextPreference)
     setPreference(nextPreference)
     await i18n.changeLanguage(nextLocale)
@@ -202,9 +201,23 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     }),
     [isHydrated, locale, preference, setLocale, useSystemLocale],
   )
+  const recoveryCopy = getBootLocaleRecoveryCopy(bootLocale ?? locale)
 
   return (
     <LocaleContext.Provider value={value}>
+      {isBootPending && bootRecovery !== 'loading' && (
+        <div id="locale-boot-recovery" lang={bootLocale ?? locale}>
+          <p role="status">{bootRecovery === 'failed' ? recoveryCopy.failed : recoveryCopy.slow}</p>
+          <button type="button" onClick={() => window.location.reload()}>{recoveryCopy.retry}</button>
+          <button type="button" onClick={() => {
+            bootAbandoned.current = true
+            void setLocale('ru').then(() => {
+              setIsHydrated(true)
+              setIsBootPending(false)
+            })
+          }}>{recoveryCopy.fallback}</button>
+        </div>
+      )}
       <BootLocaleBoundary key={legacyRenderRevision} pending={isBootPending}>
         {children}
       </BootLocaleBoundary>

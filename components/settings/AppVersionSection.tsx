@@ -27,7 +27,7 @@ export default function AppVersionSection({ styles, colors, versionInfo }: AppVe
                     <Text style={styles.cardTitle}>{i18nT('profile:components.settings.AppVersionSection.versiya_prilozheniya_2081ca7b')}</Text>
                     <Text style={styles.cardMeta}>{versionInfo.displayVersion}</Text>
                     {versionInfo.packageName ? (
-                        <Text style={styles.cardMeta}>{i18nT('profile:components.settings.AppVersionSection.paket_3e680e0f')}{versionInfo.packageName}</Text>
+                        <Text style={styles.cardMeta}>{i18nT('profile:components.settings.AppVersionSection.paket_3e680e0f', { value1: versionInfo.packageName })}</Text>
                     ) : null}
                 </View>
             </View>

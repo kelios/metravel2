@@ -573,12 +573,12 @@ export default function QuestsScreen() {
         if (!selectedCityId) return i18nT('quests:screens.tabs.QuestsScreen.kvesty_metravel_1ee1a636');
         if (selectedCityId === NEARBY_ID) {
             if (!userLoc) {
-                return i18nT('quests:screens.tabs.QuestsScreen.kvesty_ryadom_value1_metravel_684d20db', { value1: i18nT('quests:screens.tabs.QuestsScreen.geolokatsiya_otklyuchena_c6dfaf4a') });
+                return i18nT('quests:screens.tabs.QuestsScreen.geolokatsiya_otklyuchena_c6dfaf4a');
             }
-            const suffix = nearbyCount && nearbyCount > 0
+            const title = nearbyCount && nearbyCount > 0
                 ? i18nT('quests:screens.tabs.QuestsScreen.value1_poblizosti_5f29a880', { value1: nearbyCount })
                 : i18nT('quests:screens.tabs.QuestsScreen.ryadom_nichego_ne_naydeno_ac852a3a');
-            return i18nT('quests:screens.tabs.QuestsScreen.kvesty_ryadom_value1_metravel_684d20db', { value1: suffix });
+            return title;
         }
         if (selectedCityId === KIDS_FILTER_ID) {
             return i18nT('quests:screens.tabs.QuestsScreen.kvesty_dlya_detey_value1_value2_metravel_3ce19948', { value1: kidsQuests.length, value2: i18nT('quests:screens.tabs.QuestsScreen.questNoun', { count: kidsQuests.length }) });

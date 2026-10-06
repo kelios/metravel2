@@ -930,7 +930,7 @@ ${ESCAPE_HTML_FN_SCRIPT}
             var tags = el.tags || {};
             var title = tags['name:' + MAP_LANGUAGE] || tags.name || tags['name:en'] || tags.tourism || tags.natural || tags.historic || tags.amenity || tags.railway || ${serializeForInlineScript(i18nT('map:components.MapPage.Map.nativeWebView.osmPoint'))};
             var eleNum = tags.ele != null ? Number(tags.ele) : NaN;
-            var eleLine = isFinite(eleNum) ? ('<div style="margin-top:4px;font-size:12px;color:#888">' + ${serializeForInlineScript(i18nT('map:components.MapPage.Map.nativeWebView.elevationPrefix'))} + Math.round(eleNum) + ${serializeForInlineScript(i18nT('map:components.MapPage.Map.nativeWebView.meterSuffix'))} + '</div>') : '';
+            var eleLine = isFinite(eleNum) ? ('<div style="margin-top:4px;font-size:12px;color:#888">' + ${serializeForInlineScript(i18nT('map:components.MapPage.Map.nativeWebView.elevationPrefix'))}.replace('{{value1}}', String(Math.round(eleNum))) + '</div>') : '';
             var m = L.circleMarker([lat, lng], {
               radius: 6, color: ROUTE_SURFACE, weight: 2, fillColor: (color || '#ff9f0a'), fillOpacity: 0.95
             });

@@ -86,7 +86,7 @@ export default function LegalPage({
         </Text>
 
         {effectiveDate ? (
-          <Text style={styles.paragraph}>{i18nT('shared:components.legal.LegalPage.data_vstupleniya_v_silu_32c18af2')}{effectiveDate}</Text>
+          <Text style={styles.paragraph}>{i18nT('shared:components.legal.LegalPage.data_vstupleniya_v_silu_32c18af2', { value1: effectiveDate })}</Text>
         ) : null}
 
         {intro?.map((paragraph, index) => (

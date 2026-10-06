@@ -15,11 +15,12 @@ interface Props {
   compact?: boolean;
   /** Префикс перед названием ранга, напр. «Ранг: » — делает слово понятным. */
   titlePrefix?: string;
+  title?: string;
   testID?: string;
   style?: StyleProp<ViewStyle>;
 }
 
-function RankBar({ rank, compact = false, titlePrefix = '', testID, style }: Props) {
+function RankBar({ rank, compact = false, titlePrefix = '', title, testID, style }: Props) {
   const colors = useThemedColors();
 
   // 'max' — достигнут максимум; 'progress' — есть следующий уровень; 'unknown' —
@@ -118,7 +119,7 @@ function RankBar({ rank, compact = false, titlePrefix = '', testID, style }: Pro
         </View>
         <View style={styles.titleWrap}>
           <Text style={styles.title} numberOfLines={1}>
-            {`${titlePrefix}${rank.title}`}
+            {title ?? `${titlePrefix}${rank.title}`}
           </Text>
           {!compact ? (
             <Text style={styles.points}>

@@ -193,8 +193,7 @@ const TravelListPanel: React.FC<Props> = ({
             {i18nT('map:components.MapPage.TravelListPanel.mesta_ryadom_a41e7282')}</Text>
           <View pointerEvents="none" style={styles.listHeaderCountChip}>
             <Text style={styles.listHeaderCountChipText}>
-              {placesCountLabel} {placesWord}
-              {hasRadiusContext ? i18nT('map:components.MapPage.TravelListPanel.value1_km_ff41a766', { value1: formatRadiusValue(currentRadiusKm) }) : ''}
+              {hasRadiusContext ? i18nT('map:components.MapPage.TravelListPanel.value1_km_ff41a766', { value1: placesCountLabel, value2: placesWord, value3: formatRadiusValue(currentRadiusKm) }) : `${placesCountLabel} ${placesWord}`}
             </Text>
           </View>
           {onOpenFilters && (

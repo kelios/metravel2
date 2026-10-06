@@ -38,4 +38,19 @@ describe('ValidationFeedback native plural fallback', () => {
       screen.unmount()
     }
   })
+  it.each(characterPluralCases)('localizes entire minimum/maximum messages for %s', async (locale, expected) => {
+    await i18n.changeLanguage(locale)
+    const minimum = { ru: 'минимум', be: 'мінімум', uk: 'мінімум', pl: 'minimum', en: 'minimum' }[locale]
+    const exceeded = { ru: 'превышен лимит', be: 'перавышаны ліміт', uk: 'перевищений ліміт', pl: 'przekroczono limit', en: 'limit exceeded' }[locale]
+    for (const [index, limit] of [1, 2, 5].entries()) {
+      const noun = expected[index + 1].replace(/^\d+ /, '')
+      const below = render(<CharacterCounter current={0} min={limit} showProgress={false} />)
+      expect(below.getByText(`0 / ${limit} ${noun} (${minimum})`)).toBeTruthy()
+      below.unmount()
+      const over = render(<CharacterCounter current={limit + 1} max={limit} showProgress={false} />)
+      expect(over.getByText(`${limit + 1} / ${limit} ${noun} (${exceeded})`)).toBeTruthy()
+      over.unmount()
+    }
+  })
+
 })

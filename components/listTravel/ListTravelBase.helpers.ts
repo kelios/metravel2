@@ -404,7 +404,7 @@ export const buildEmptyStateMessage = ({
       .map((cat: any) => cat.name)
       .slice(0, 2)
     if (categoryNames.length > 0) {
-      activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.kategorii_value1_value2_f79c6656', { value1: categoryNames.join('", "'), value2: categoryNames.length < filter.categories.length ? i18nT('travel:components.listTravel.ListTravelBaseHelpers.andOtherPlural') : '' }))
+      activeFilters.push(categoryNames.length < filter.categories.length ? i18nT('travel:components.listTravel.ListTravelBase_helpers.kategorii_value1_value2_f79c6656WithOthers', { value1: categoryNames.join('", "') }) : i18nT('travel:components.listTravel.ListTravelBase_helpers.kategorii_value1_value2_f79c6656', { value1: categoryNames.join('", "'), value2: '' }))
     }
   }
 
@@ -414,7 +414,7 @@ export const buildEmptyStateMessage = ({
       .map((t: any) => t.name)
       .slice(0, 2)
     if (transportNames.length > 0) {
-      activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.transport_value1_value2_6990bba2', { value1: transportNames.join('", "'), value2: transportNames.length < filter.transports.length ? i18nT('travel:components.listTravel.ListTravelBaseHelpers.andOtherMasculine') : '' }))
+      activeFilters.push(transportNames.length < filter.transports.length ? i18nT('travel:components.listTravel.ListTravelBase_helpers.transport_value1_value2_6990bba2WithOthers', { value1: transportNames.join('", "') }) : i18nT('travel:components.listTravel.ListTravelBase_helpers.transport_value1_value2_6990bba2', { value1: transportNames.join('", "'), value2: '' }))
     }
   }
 
@@ -424,7 +424,7 @@ export const buildEmptyStateMessage = ({
       .map((obj: any) => obj.name)
       .slice(0, 2)
     if (objectNames.length > 0) {
-      activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.chto_posmotret_value1_value2_d8d4cfc2', { value1: objectNames.join('", "'), value2: objectNames.length < filter.categoryTravelAddress.length ? i18nT('travel:components.listTravel.ListTravelBaseHelpers.andOtherPlural') : '' }))
+      activeFilters.push(objectNames.length < filter.categoryTravelAddress.length ? i18nT('travel:components.listTravel.ListTravelBase_helpers.chto_posmotret_value1_value2_d8d4cfc2WithOthers', { value1: objectNames.join('", "') }) : i18nT('travel:components.listTravel.ListTravelBase_helpers.chto_posmotret_value1_value2_d8d4cfc2', { value1: objectNames.join('", "'), value2: '' }))
     }
   }
 
@@ -475,7 +475,7 @@ export const buildEmptyStateMessage = ({
     description = i18nT('travel:components.listTravel.ListTravelBaseHelpers.manyFiltersEmpty', { value1: otherFilters, value2: lastFilter })
   }
 
-  description += i18nT('travel:components.listTravel.ListTravelBaseHelpers.filterSuggestionSuffix')
+  description = i18nT('travel:components.listTravel.ListTravelBaseHelpers.filterSuggestionSuffix', { value1: description })
 
   const suggestions = debSearch
     ? [i18nT('travel:components.listTravel.ListTravelBase_helpers.proverte_napisanie_4b385427'), i18nT('travel:components.listTravel.ListTravelBase_helpers.poprobuyte_drugie_klyuchevye_slova_981edc0e')]

@@ -109,8 +109,7 @@ export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
                  offset={[0, -10]}
                  permanent={false}
                >
-                 {i18nT('map:components.MapPage.Map.RouteMarkersLayer.tochka_77ecea35')}{index + 2}
-               </Tooltip>
+                 {i18nT('map:components.MapPage.Map.RouteMarkersLayer.tochka_77ecea35', { value1: index + 2 })}</Tooltip>
              )}
            </Marker>
          );

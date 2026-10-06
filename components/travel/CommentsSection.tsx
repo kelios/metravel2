@@ -93,7 +93,7 @@ export function CommentsSection({
     <View style={styles.container} nativeID="comments" onLayout={handleRuntimeFrameLayout}>
       <View style={styles.header}>
         <Feather name="message-circle" size={24} color={colors.text} />
-        <Text style={styles.title}>{i18nT('travel:components.travel.CommentsSection.kommentarii_df5d792f')}{comments.length > 0 && `(${comments.length})`}</Text>
+        <Text style={styles.title}>{i18nT('travel:components.travel.CommentsSection.kommentarii_df5d792f', { value1: (comments.length > 0 && `(${comments.length})`) || '' })}</Text>
       </View>
 
       {!isEnabled && (

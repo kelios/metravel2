@@ -153,9 +153,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
     <View style={styles.stepContainer}>
       <Text style={styles.title}>{i18nT('map:components.UserPoints.ImportWizard.import_tochek_0a76b9d2')}</Text>
       <Text style={styles.subtitle}>
-        {i18nT('map:components.UserPoints.ImportWizard.podderzhivaemye_formaty_eec72024')}
-        {'KML, KMZ, GPX, GeoJSON, JSON (Google Takeout)'}
-      </Text>
+        {i18nT('map:components.UserPoints.ImportWizard.podderzhivaemye_formaty_eec72024', { value1: 'KML, KMZ, GPX, GeoJSON, JSON (Google Takeout)' })}</Text>
 
       <Button
         label={isLoading ? i18nT('map:components.UserPoints.ImportWizard.otkryvaem_3cd3b931') : i18nT('map:components.UserPoints.ImportWizard.import_tochek_0a76b9d2')}
@@ -165,7 +163,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       />
 
       {file ? (
-        <Text style={[styles.subtitle, { marginTop: DESIGN_TOKENS.spacing.md }]}>{i18nT('map:components.UserPoints.ImportWizard.vybran_eb1f6ef5')}{file.name}</Text>
+        <Text style={[styles.subtitle, { marginTop: DESIGN_TOKENS.spacing.md }]}>{i18nT('map:components.UserPoints.ImportWizard.vybran_eb1f6ef5', { value1: file.name })}</Text>
       ) : null}
 
       {isLoading && <ActivityIndicator size="large" style={styles.loader} />}
@@ -253,14 +251,13 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
     <View style={styles.stepContainer}>
       <Text style={styles.title}>{i18nT('map:components.UserPoints.ImportWizard.import_zavershen_13bec714')}</Text>
       <Text style={styles.subtitle}>
-        {translatePlural('map:components.UserPoints.ImportWizard.createdPointsCount', importResult?.created ?? 0)}{typeof importResult?.updated === 'number' ? i18nT('map:components.UserPoints.ImportWizard.obnovleno_value1_346dbca5', { value1: importResult.updated }) : ''}
-        {importResult?.skipped ? i18nT('map:components.UserPoints.ImportWizard.propuscheno_value1_8a402a35', { value1: importResult.skipped }) : ''}
+        {[translatePlural('map:components.UserPoints.ImportWizard.createdPointsCount', importResult?.created ?? 0), typeof importResult?.updated === 'number' ? i18nT('map:components.UserPoints.ImportWizard.obnovleno_value1_346dbca5', { value1: importResult.updated }) : '', importResult?.skipped ? i18nT('map:components.UserPoints.ImportWizard.propuscheno_value1_8a402a35', { value1: importResult.skipped }) : ''].filter(Boolean).join('\n')}
       </Text>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       {importResult?.errors?.length ? (
-        <Text style={styles.errorText}>{i18nT('map:components.UserPoints.ImportWizard.oshibki_a939e151')}{importResult.errors.length}</Text>
+        <Text style={styles.errorText}>{i18nT('map:components.UserPoints.ImportWizard.oshibki_a939e151', { value1: importResult.errors.length })}</Text>
       ) : null}
 
       <Button label={i18nT('map:components.UserPoints.ImportWizard.gotovo_4585c81e')} onPress={onComplete} fullWidth />

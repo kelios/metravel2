@@ -71,7 +71,7 @@ export function DraftRecoveryDialog({
 
           <Text style={styles.title}>{i18nT('travel:components.travel.DraftRecoveryDialog.est_nesohranennye_izmeneniya_b2189b41')}</Text>
           <Text style={styles.message}>
-            {i18nT('travel:components.travel.DraftRecoveryDialog.my_nashli_lokalnyy_chernovik_etogo_puteshest_252112b5')}{formattedTime}{i18nT('travel:components.travel.DraftRecoveryDialog.vy_mozhete_prodolzhit_s_nim_ili_otkryt_sohra_83454798')}</Text>
+            {i18nT('travel:components.travel.DraftRecoveryDialog.my_nashli_lokalnyy_chernovik_etogo_puteshest_252112b5', { value1: formattedTime })}</Text>
 
           <View style={styles.note}>
             <Feather name="info" size={16} color={colors.primaryDark} />

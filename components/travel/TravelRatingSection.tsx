@@ -147,8 +147,7 @@ function TravelRatingSection({
                         {i18nT('travel:components.travel.TravelRatingSection.spasibo_za_otsenku_3fc0202d')}</Text>
                 ) : userRating != null && userRating > 0 ? (
                     <Text style={styles.yourRatingText}>
-                        {i18nT('travel:components.travel.TravelRatingSection.vasha_otsenka_f730b8df')}{userRating}
-                    </Text>
+                        {i18nT('travel:components.travel.TravelRatingSection.vasha_otsenka_f730b8df', { value1: userRating })}</Text>
                 ) : null}
             </View>
         );

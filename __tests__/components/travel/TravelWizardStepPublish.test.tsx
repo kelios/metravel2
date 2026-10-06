@@ -970,7 +970,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
 
     expect(getByLabelText('Текст поста для Instagram').props.value).toBe('Новый caption');
     expect(getByLabelText('Хэштеги для Instagram').props.value).toBe('#metravelby #польша #краков');
-    expect(getByText('Текст: 13 символов. Итоговый caption с тегами должен быть не длиннее 2200 символов.')).toBeTruthy();
+    expect(getByText('Длина текста: 13. Максимум символов в caption с тегами: 2200.')).toBeTruthy();
   });
 
   it('keeps manual instagram image reorder controls working', async () => {

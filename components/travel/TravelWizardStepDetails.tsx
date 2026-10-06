@@ -201,8 +201,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                             <View style={styles.progressHeader}>
                                 <Text style={styles.sectionTitle}>{i18nT('travel:components.travel.TravelWizardStepDetails.dlya_kogo_eto_puteshestvie_c1ebae55')}</Text>
                                 <Text style={styles.progressValue}>
-                                    {recommendationFieldsFilled.filled} {i18nT('travel:components.travel.TravelWizardStepDetails.iz_c59b2d5a')}{recommendationFieldsFilled.total}
-                                </Text>
+                                    {i18nT('travel:components.travel.TravelWizardStepDetails.iz_c59b2d5a', { value1: recommendationFieldsFilled.filled, value2: recommendationFieldsFilled.total })}</Text>
                             </View>
                             <Text style={styles.sectionHint}>
                                 {i18nT('travel:components.travel.TravelWizardStepDetails.opishite_plyusy_i_minusy_marshruta_vashi_rek_6bb57742')}</Text>

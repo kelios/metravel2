@@ -83,7 +83,7 @@ const StepErrorFallback = ({
   return (
     <View style={styles.centeredScreen}>
       <Feather name="alert-triangle" size={48} color={colors.warning} style={styles.iconSpacing} />
-      <Text style={styles.errorTitle}>{i18nT('travel:components.travel.upsert.WizardStepRouter.oshibka_na_shage_1f45926b')}{stepNumber}</Text>
+      <Text style={styles.errorTitle}>{i18nT('travel:components.travel.upsert.WizardStepRouter.oshibka_na_shage_1f45926b', { value1: stepNumber })}</Text>
       <Text style={styles.errorText}>{i18nT('travel:components.travel.upsert.WizardStepRouter.proizoshla_oshibka_pri_otobrazhenii_etogo_sh_fa95b77d')}</Text>
       {actions.length > 0 && (
         <View style={styles.actionRow}>

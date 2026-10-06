@@ -126,7 +126,7 @@ export const TravelDetailsContentSection: React.FC<{
                 <Text style={styles.descriptionIntroText}>
                   {travel.monthName
                     ? i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.luchshiy_sezon_value1_value2_302b32f3', { value1: travel.monthName.toLowerCase(), value2: readingTimeLabel })
-                    : readingTimeLabel.replace(/^ · /, '')}
+                    : readingTimeLabel}
                 </Text>
               </View>
               <TravelRegisterCtaSection

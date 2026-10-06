@@ -723,7 +723,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         {!hintVisible && <View ref={feedbackEndRef} collapsable={false} />}
         {step.hint && (
           <View style={[styles.hintContainer, !hintVisible && Platform.select({ web: { visibility: 'hidden' } as any, default: { display: 'none' } })]}>
-            <Text style={styles.hintText}>{i18nT('quests:components.quests.questWizardStepCard.podskazka_5453c538')}{step.hint}</Text>
+            <Text style={styles.hintText}>{i18nT('quests:components.quests.questWizardStepCard.podskazka_5453c538', { value1: step.hint })}</Text>
           </View>
         )}
         {hintVisible && <View ref={feedbackEndRef} collapsable={false} />}

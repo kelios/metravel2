@@ -109,8 +109,7 @@ export function CommentForm({
         <View style={styles.replyBanner}>
           <Feather name="corner-down-right" size={14} color={colors.info} />
           <Text style={styles.replyText}>
-            {i18nT('travel:components.travel.CommentForm.otvet_na_kommentariy_a0809c56')}{replyTo.user_name || `пользователя #${replyTo.user}`}
-          </Text>
+            {i18nT('travel:components.travel.CommentForm.otvet_na_kommentariy_a0809c56', { value1: replyTo.user_name || `пользователя #${replyTo.user}` })}</Text>
         </View>
       )}
       {editComment && (

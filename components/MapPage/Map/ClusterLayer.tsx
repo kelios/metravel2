@@ -404,7 +404,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             <Popup>
               <View style={{ gap: 6, maxWidth: 260 }}>
                 <Text style={{ fontWeight: '800' }}>
-                  {formatPlaces(cluster.count)} {i18nT('map:components.MapPage.Map.ClusterLayer.poblizosti_10effd4f')}</Text>
+                  {i18nT('map:components.MapPage.Map.ClusterLayer.poblizosti_10effd4f', { value1: formatPlaces(cluster.count) })}</Text>
                 <Text style={{ color: colors.textMuted, fontSize: 12 }}>
                   {i18nT('map:components.MapPage.Map.ClusterLayer.nazhmite_chtoby_priblizit_i_raskryt_markery_ef4fc361')}</Text>
                 {cluster.items.slice(0, 6).map((p, i) => (
@@ -419,8 +419,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                 ))}
                 {cluster.items.length > 6 && (
                   <Text style={{ fontSize: 12, color: colors.textMuted }}>
-                    {i18nT('map:components.MapPage.Map.ClusterLayer.i_esche_d89cf31c')}{cluster.items.length - 6}
-                  </Text>
+                    {i18nT('map:components.MapPage.Map.ClusterLayer.i_esche_d89cf31c', { value1: cluster.items.length - 6 })}</Text>
                 )}
               </View>
             </Popup>

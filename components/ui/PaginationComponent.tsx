@@ -449,7 +449,7 @@ function PaginationComponent({
 	                        returnKeyType="done"
 	                        accessibilityLabel={i18nT('shared:components.ui.PaginationComponent.tekuschaya_stranitsa_1e19b782')}
 	                      />
-	                      <Text style={styles.desktopTotal}>{i18nT('shared:components.ui.PaginationComponent.iz_f4230cda')}{totalPages}</Text>
+	                      <Text style={styles.desktopTotal}>{i18nT('shared:components.ui.PaginationComponent.iz_f4230cda', { value1: totalPages })}</Text>
 	                  </View>
 
                   <IconButton

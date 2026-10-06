@@ -249,8 +249,7 @@ function RecentViews({
     return (
       <View style={styles.compactContainer}>
         <Text style={styles.compactText}>
-          {i18nT('travel:components.travel.RecentViews.nedavno_prosmotreno_b486a4fb')}{recentTravels.length}
-        </Text>
+          {i18nT('travel:components.travel.RecentViews.nedavno_prosmotreno_b486a4fb', { value1: recentTravels.length })}</Text>
       </View>
     );
   }

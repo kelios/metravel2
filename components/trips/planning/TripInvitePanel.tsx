@@ -154,8 +154,7 @@ function TripInvitePanel({ trip }: Props) {
           </View>
           {selectedNames.length ? (
             <Text style={styles.selectedNames} numberOfLines={2} testID="trip-invite-selected-names">
-              {i18nT('trips:components.trips.planning.TripInvitePanel.vybrano_6c0e58ad')}{selectedNames.join(', ')}
-            </Text>
+              {i18nT('trips:components.trips.planning.TripInvitePanel.vybrano_6c0e58ad', { value1: selectedNames.join(', ') })}</Text>
           ) : null}
           <Button
             label={i18nT('trips:components.trips.planning.TripInvitePanel.priglasit_vybrannyh_value1_5a89baa2', { value1: selected.length })}
@@ -166,7 +165,7 @@ function TripInvitePanel({ trip }: Props) {
             testID="trip-invite-submit"
           />
           {invitedCount != null ? (
-            <Text style={styles.success}>{i18nT('trips:components.trips.planning.TripInvitePanel.priglasheno_ddca88d3')}{invitedCount}</Text>
+            <Text style={styles.success}>{i18nT('trips:components.trips.planning.TripInvitePanel.priglasheno_ddca88d3', { value1: invitedCount })}</Text>
           ) : null}
         </>
       ) : (

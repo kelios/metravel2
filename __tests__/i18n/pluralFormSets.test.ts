@@ -39,6 +39,7 @@ const SAME_FEW_MANY: Partial<Record<Locale, RegExp>> = {
 
 // Наборы, где совпадение форм верно для всей фразы, а не для слова.
 const SAME_FORM_SETS: Record<string, { locales: Locale[]; reason: string }> = {
+  'travel:components.travel.ValidationFeedback.warningCount': { locales: ['uk'], reason: 'UK «1 попередження» / «2 попередження» — нормативна форма' },
   'tripsStatic:plan.card.goingSeats': {
     locales: ['en', 'pl'],
     reason: 'EN «1 of 4 going» / «5 of 8 going»; PL «Jedzie 1 z 4» / «Jedzie 5 z 8» — глагол в ед. ч. при 5+',
@@ -162,11 +163,12 @@ const collectSplitSetsFrom = (
           if (CATEGORIES.includes(category) && key) keys[category] = key
         }
       }
-      if (name === 'pluralizeRu') {
-        const [one, few, many] = node.arguments.slice(1).map(keyOfCall)
+      if (name === 'pluralizeRu' || node.arguments.slice(1).filter(keyOfCall).length >= 3) {
+        const [one, few, many, other] = node.arguments.slice(1).map(keyOfCall)
         if (one) keys.one = one
         if (few) keys.few = few
-        if (many) keys.many = keys.other = many
+        if (many) keys.many = many
+        if (other || many) keys.other = other || many
       }
       if (Object.keys(keys).length >= 2) sets.push({ file: relative, keys })
     }
@@ -187,7 +189,7 @@ const collectSplitSetsFrom = (
 const collectSplitSets = (): SplitSet[] =>
   SOURCE_ROOTS.flatMap((root) => walk(path.join(ROOT, root))).flatMap((file) => {
     const text = fs.readFileSync(file, 'utf8')
-    if (!/selectPlural\(|pluralizeRu\(|[<>=]=?\s*\d+\s*\?/.test(text)) return []
+
     const relative = path.relative(ROOT, file).split(path.sep).join('/')
     return relative === 'utils/pluralize.ts' ? [] : collectSplitSetsFrom(relative, text)
   })
@@ -386,7 +388,7 @@ const countedNounKeys = (bundle: Bundle): string[] =>
 describe('наборы форм числа (#2238)', () => {
   it('гейт находит семейства ключей и списки форм', () => {
     expect(familySets().length).toBeGreaterThanOrEqual(30)
-    expect(listSets().length).toBeGreaterThanOrEqual(3)
+    expect(listSets()).toEqual([])
   })
 
   it('набор форм заводится семейством ключей, а не разрозненными ключами', () => {
@@ -397,6 +399,8 @@ describe('наборы форм числа (#2238)', () => {
     const probe = [
       "selectPlural(n, { one: i18nT('ns:a'), few: i18nT('ns:b'), many: i18nT('ns:c') })",
       "pluralizeRu(n, i18nT('ns:a'), i18nT('ns:b'), i18nT('ns:c'))",
+      "chooseForm(n, i18nT('ns:a'), i18nT('ns:b'), i18nT('ns:c')),",
+      "selectLocalizedPlural(n, i18nT('ns:a'), i18nT('ns:b'), i18nT('ns:c'), i18nT('ns:d'))",
       "`${n} ${n === 1 ? i18nT('ns:a') : n < 5 ? i18nT('ns:b') : i18nT('ns:c')}`",
       "const flag = n > 0 ? i18nT('ns:x') : i18nT('ns:y')",
       "const stage = p < 25 ? i18nT('ns:s1') : p < 50 ? i18nT('ns:s2') : i18nT('ns:s3')",
@@ -404,7 +408,7 @@ describe('наборы форм числа (#2238)', () => {
       "const heading = n === 1 ? i18nT('ns:phrase1') : i18nT('ns:phraseMany')",
     ].join('\n')
     const ru: Record<string, string> = { 'ns:photo': 'фото', 'ns:phrase1': 'Квест по этому городу', 'ns:phraseMany': 'Квесты по этому городу' }
-    expect(collectSplitSetsFrom('probe.ts', probe, (key) => ru[key])).toHaveLength(4)
+    expect(collectSplitSetsFrom('probe.ts', probe, (key) => ru[key])).toHaveLength(6)
   })
 
   it('семейство ключей объявлено во всех локалях теми же категориями, что в RU', () => {

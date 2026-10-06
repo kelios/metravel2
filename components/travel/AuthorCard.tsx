@@ -128,7 +128,7 @@ function AuthorAchievements({ userId, ownerName, styles, colors }: AuthorAchieve
 
   return (
     <View style={styles.achievementsBlock}>
-      <RankBar rank={data.rank} compact titlePrefix={i18nT('travel:components.travel.AuthorCard.uroven_ffdcb900')} />
+      <RankBar rank={data.rank} compact title={i18nT('travel:components.travel.AuthorCard.uroven_ffdcb900', { value1: data.rank.title })} />
       {topBadges.length > 0 && (
         <>
           <View style={styles.badgesHeaderRow}>

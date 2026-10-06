@@ -137,8 +137,7 @@ function EmptyState({
                 </Text>
                 {example.author && (
                   <Text style={styles.exampleAuthor} numberOfLines={1}>
-                    {i18nT('shared:components.ui.EmptyState.ot_823c5a22')}{example.author}
-                  </Text>
+                    {i18nT('shared:components.ui.EmptyState.ot_823c5a22', { value1: example.author })}</Text>
                 )}
               </View>
             ))}

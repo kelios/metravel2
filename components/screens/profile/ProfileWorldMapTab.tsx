@@ -554,12 +554,7 @@ export function ProfileWorldMapTab({
             </View>
             {selected.visited ? (
               <Text style={styles.infoMeta}>
-                {i18nT('profile:components.screens.profile.ProfileWorldMapTab.posescheno_cc5df481')}{selected.visitedTravelsCount > 0
-                  ? ` · ${formatRoutesLabel(selected.visitedTravelsCount)}`
-                  : ''}
-                {selected.firstVisitedDate
-                  ? i18nT('profile:components.screens.profile.ProfileWorldMapTab.s_value1_ffc67c78', { value1: selected.firstVisitedDate.slice(0, 4) })
-                  : ''}
+                {selected.firstVisitedDate ? i18nT('profile:components.screens.profile.ProfileWorldMapTab.s_value1_ffc67c78', { value1: selected.visitedTravelsCount > 0 ? ` · ${formatRoutesLabel(selected.visitedTravelsCount)}` : '', value2: selected.firstVisitedDate.slice(0, 4) }) : i18nT('profile:components.screens.profile.ProfileWorldMapTab.posescheno_value1_value2_13f06767', { value1: selected.visitedTravelsCount > 0 ? ` · ${formatRoutesLabel(selected.visitedTravelsCount)}` : '', value2: '' })}
               </Text>
             ) : (
               <Text style={styles.infoMeta}>{i18nT('profile:components.screens.profile.ProfileWorldMapTab.esche_ne_posescheno_e8d56073')}</Text>
@@ -584,8 +579,7 @@ export function ProfileWorldMapTab({
           <View style={styles.legendItem}>
             <View style={[styles.legendSwatch, { backgroundColor: colors.primary }]} />
             <Text style={styles.legendText}>
-              {i18nT('profile:components.screens.profile.ProfileWorldMapTab.posescheno_c0485db4')}{formatCountriesLabel(visitedCount)}
-            </Text>
+              {i18nT('profile:components.screens.profile.ProfileWorldMapTab.posescheno_c0485db4', { value1: formatCountriesLabel(visitedCount) })}</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendSwatch, { backgroundColor: getWorldMapUnvisitedFill(isDark), borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]} />
@@ -636,11 +630,7 @@ export function ProfileWorldMapTab({
                 </View>
                 <Text style={styles.infoMeta}>
                   {selected.visited
-                    ? i18nT('profile:components.screens.profile.ProfileWorldMapTab.posescheno_value1_value2_13f06767', { value1: selected.visitedTravelsCount > 0
-                          ? ` · ${formatRoutesLabel(selected.visitedTravelsCount)}`
-                          : '', value2: selected.firstVisitedDate
-                          ? i18nT('profile:components.screens.profile.ProfileWorldMapTab.sinceYearSuffix', { value1: selected.firstVisitedDate.slice(0, 4) })
-                          : '' })
+                    ? (selected.firstVisitedDate ? i18nT('profile:components.screens.profile.ProfileWorldMapTab.sinceYearSuffix', { value1: selected.visitedTravelsCount > 0 ? ` · ${formatRoutesLabel(selected.visitedTravelsCount)}` : '', value2: selected.firstVisitedDate.slice(0, 4) }) : i18nT('profile:components.screens.profile.ProfileWorldMapTab.posescheno_value1_value2_13f06767', { value1: selected.visitedTravelsCount > 0 ? ` · ${formatRoutesLabel(selected.visitedTravelsCount)}` : '', value2: '' }))
                     : i18nT('profile:components.screens.profile.ProfileWorldMapTab.esche_ne_posescheno_e8d56073')}
                 </Text>
 

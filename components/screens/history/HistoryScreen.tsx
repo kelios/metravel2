@@ -281,8 +281,7 @@ export default function HistoryScreen() {
                         <View style={styles.cardCaptionRow}>
                             <Feather name="eye" size={13} color={colors.textMuted} />
                             <Text style={styles.cardCaptionText} numberOfLines={1}>
-                                {i18nT('shared:app.tabs.history.prosmotreno_708c9fc4')}{viewedLabel}
-                            </Text>
+                                {i18nT('shared:app.tabs.history.prosmotreno_708c9fc4', { value1: viewedLabel })}</Text>
                         </View>
                     ) : null}
                 </View>
@@ -356,15 +355,14 @@ export default function HistoryScreen() {
                         <View style={styles.summaryMetaPill}>
                             <Feather name="layers" size={16} color={colors.primaryDark} />
                             <Text style={styles.summaryMetaText}>
-                                {data.length} {translatePlural('shared:app.tabs.history.itemNoun', data.length)} {i18nT('shared:app.tabs.history.v_istorii_6c948436')}</Text>
+                                {translatePlural('shared:app.tabs.history.v_istorii_6c948436', data.length)}</Text>
                         </View>
 
                         {latestHistoryTitle ? (
                             <View style={styles.summaryMetaPill}>
                                 <Feather name="arrow-up-right" size={16} color={colors.primaryDark} />
                                 <Text style={styles.summaryMetaText} numberOfLines={1}>
-                                    {i18nT('shared:app.tabs.history.poslednee_bc246b4e')}{latestHistoryTitle}
-                                </Text>
+                                    {i18nT('shared:app.tabs.history.poslednee_bc246b4e', { value1: latestHistoryTitle })}</Text>
                             </View>
                         ) : null}
                     </View>

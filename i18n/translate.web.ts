@@ -43,10 +43,16 @@ export const hashTranslationKey = (key: string): number => {
   return hash >>> 0
 }
 
-const compileLocaleCatalog = (resources: LocaleResources): Map<number, LoadedTranslation> => {
+export const compileLocaleCatalog = (resources: LocaleResources): Map<number, LoadedTranslation> => {
   const catalog = new Map<number, LoadedTranslation>()
 
   for (const [namespace, entries] of Object.entries(resources)) {
+    for (const [key, value] of Object.entries(entries)) {
+      // Every literal key must remain addressable, including explicit plural forms.
+      // Babel hashes the complete key; folding suffixes into only the base key
+      // made translate("..._one") silently fall back to the Russian inline value.
+      catalog.set(hashTranslationKey(`${namespace}:${key}`), { value })
+    }
     for (const [key, value] of Object.entries(entries)) {
       const suffixMatch = key.match(PLURAL_SUFFIX_PATTERN)
       const baseKey = suffixMatch ? key.slice(0, -suffixMatch[0].length) : key

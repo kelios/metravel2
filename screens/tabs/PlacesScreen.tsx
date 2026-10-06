@@ -296,7 +296,7 @@ export default function PlacesScreen() {
               </View>
               <Text style={styles.heroTitle}>{i18nT('map:screens.tabs.PlacesScreen.mesta_eff0ba98')}</Text>
               {showLoadedCounts ? (
-                <Text style={styles.heroCount}>· {catalogTotal} {i18nT('map:screens.tabs.PlacesScreen.v_kataloge_af576304')}</Text>
+                <Text style={styles.heroCount}>{i18nT('map:screens.tabs.PlacesScreen.v_kataloge_af576304', { value1: catalogTotal })}</Text>
               ) : null}
             </View>
             <Text style={styles.topBarHint} numberOfLines={1}>

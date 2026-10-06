@@ -133,7 +133,7 @@ const SavedCollectionHeader = ({
   <View style={styles.favoritesHeaderRow}>
     <View style={styles.headerTitleBlock}>
       <Text style={styles.favoritesHeaderTitle}>{title}</Text>
-      <Text style={styles.headerSubtitle}>{count} {i18nT('travel:components.listTravel.RecommendationsTabs.sht_ff238378')}</Text>
+      <Text style={styles.headerSubtitle}>{i18nT('travel:components.listTravel.RecommendationsTabs.sht_ff238378', { value1: count })}</Text>
     </View>
 
     <View style={styles.headerActions}>

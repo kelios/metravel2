@@ -17,6 +17,7 @@ import { getMapGeocoderLanguage } from '@/utils/mapLocale'
 
 import type { PointsListStyles } from './types'
 import { translate as i18nT } from '@/i18n'
+import { formatNumber } from '@/i18n/format'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { createLocalStyles } from './PointsListGrid.styles'
 
@@ -383,7 +384,7 @@ export const PointsListGrid: React.FC<{
           {showingRecommendations && routeInfo ? (
             <View style={localStyles.routeInfo}>
               <RNText style={localStyles.routeInfoText}>
-                {routeInfo.distance} {i18nT('map:components.UserPoints.PointsListGrid.km_5098801f')}{routeInfo.duration} {i18nT('map:components.UserPoints.PointsListGrid.min_912426a2')}</RNText>
+                {i18nT('map:components.UserPoints.PointsListGrid.km_5098801f', { value1: formatNumber(routeInfo.distance), value2: formatNumber(routeInfo.duration) })}</RNText>
             </View>
           ) : null}
         </View>

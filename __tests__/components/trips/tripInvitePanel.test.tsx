@@ -167,13 +167,13 @@ describe('TripInvitePanel', () => {
     expect(getByText('trail_friend')).toBeTruthy();
 
     fireEvent.press(getByTestId('trip-invite-subscriber-101'));
-    expect(getByTestId('trip-invite-selected-names').props.children.join('')).toContain(longName);
+    expect(getByText(`Выбрано: ${longName}`)).toBeTruthy();
 
     fireEvent.press(getByTestId('trip-invite-subscriber-101'));
     expect(queryByTestId('trip-invite-selected-names')).toBeNull();
 
     fireEvent.press(getByTestId('trip-invite-subscriber-202'));
-    expect(getByTestId('trip-invite-selected-names').props.children.join('')).toContain('trail_friend');
+    expect(getByText('Выбрано: trail_friend')).toBeTruthy();
   });
 
   it('opens generic system share and remains repeat-safe after cancellation', async () => {

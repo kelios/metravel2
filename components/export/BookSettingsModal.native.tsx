@@ -1,3 +1,4 @@
+import { renderLocalizedText } from '@/i18n/richText'
 // components/export/BookSettingsModal.native.tsx
 // #2229: окно «Настройки фотоальбома» в приложениях. Тот же публичный контракт и
 // те же поля `BookSettings`, что у окна сайта (`BookSettingsModal.tsx`, DOM-разметка);
@@ -87,9 +88,7 @@ export default function BookSettingsModal({
             ) : null}
           </View>
           <Text style={partStyles.hint}>
-            {i18nT('profile:components.export.BookSettingsModal.vybrano_puteshestviy_nbsp_4b4623d9')}
-            <Text style={styles.count}>{travelCount}</Text>
-          </Text>
+            {renderLocalizedText(i18nT('profile:components.export.BookSettingsModal.vybrano_puteshestviy_nbsp_4b4623d9'), { value1: <Text style={styles.count}>{travelCount}</Text> })}</Text>
           <Text style={partStyles.hint}>
             {translatePlural(
               'profile:components.export.BookSettingsModal.budet_sozdana_kniga_s_value1_puteshestviyami_a78b68c9',

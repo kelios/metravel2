@@ -204,7 +204,7 @@ export const createWebDropzoneView = (
             <Feather name="upload-cloud" size={40} color={colors.primaryDark} />
             <Text style={styles.placeholderText}>{placeholder}</Text>
             <Text style={styles.placeholderSubtext}>{i18nT('travel:components.travel.PhotoUploadWithPreview.ili_nazhmite_dlya_vybora_fayla_8e7a14a9')}</Text>
-            <Text style={styles.placeholderHint}>{i18nT('travel:components.travel.PhotoUploadWithPreview.maks_razmer_3c63e70c')}{maxSizeMB}{i18nT('travel:components.travel.PhotoUploadWithPreview.mb_18863aeb')}</Text>
+            <Text style={styles.placeholderHint}>{i18nT('travel:components.travel.PhotoUploadWithPreview.maks_razmer_3c63e70c', { value1: formatInteger(maxSizeMB) })}</Text>
           </View>
         )}
       </div>

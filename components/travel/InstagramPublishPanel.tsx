@@ -12,7 +12,7 @@ import {
 import Button from '@/components/ui/Button'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
-import { translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 
 
 type InstagramPublishPanelProps = {
@@ -380,7 +380,7 @@ export default function InstagramPublishPanel({
               isInstagramCaptionTooLong && styles.instagramCounterDanger,
             ]}
           >
-            {instagramFinalLength}/{instagramCaptionMaxLength} {i18nT('travel:components.travel.InstagramPublishPanel.simvolov_6dd28e72')}</Text>
+            {translatePlural('travel:components.travel.InstagramPublishPanel.simvolov_6dd28e72', instagramCaptionMaxLength, { value1: instagramFinalLength, value2: instagramCaptionMaxLength })}</Text>
         </View>
         <TextInput
           style={[
@@ -405,7 +405,7 @@ export default function InstagramPublishPanel({
             isInstagramCaptionTooLong && styles.instagramHintDanger,
           ]}
         >
-          {i18nT('travel:components.travel.InstagramPublishPanel.tekst_7756018e')}{instagramCaptionLength} {i18nT('travel:components.travel.InstagramPublishPanel.simvolov_itogovyy_caption_s_tegami_dolzhen_b_545f384a')}{instagramCaptionMaxLength} {i18nT('travel:components.travel.InstagramPublishPanel.simvolov_e806e0ee')}</Text>
+          {i18nT('travel:components.travel.InstagramPublishPanel.tekst_7756018e', { value1: instagramCaptionLength, value2: instagramCaptionMaxLength })}</Text>
       </View>
 
       <View style={styles.instagramPreview}>
@@ -417,7 +417,7 @@ export default function InstagramPublishPanel({
               isInstagramHashtagCountTooHigh && styles.instagramCounterDanger,
             ]}
           >
-            {instagramHashtagCount}/{instagramHashtagMaxCount} {i18nT('travel:components.travel.InstagramPublishPanel.tegov_ecb02fbb')}</Text>
+            {i18nT('travel:components.travel.InstagramPublishPanel.tegov_ecb02fbb', { value1: instagramHashtagCount, value2: instagramHashtagMaxCount })}</Text>
         </View>
         <TextInput
           style={[
@@ -441,8 +441,7 @@ export default function InstagramPublishPanel({
             isInstagramHashtagCountTooHigh && styles.instagramHintDanger,
           ]}
         >
-          {i18nT('travel:components.travel.InstagramPublishPanel.instagram_dopuskaet_do_d2797a8f')}{instagramHashtagMaxCount} {i18nT('travel:components.travel.InstagramPublishPanel.heshtegov_seychas_raspoznano_257e2896')}{instagramHashtagCount}.
-        </Text>
+          {i18nT('travel:components.travel.InstagramPublishPanel.instagram_dopuskaet_do_d2797a8f', { value1: instagramHashtagMaxCount, value2: instagramHashtagCount })}</Text>
       </View>
 
       <View style={styles.instagramPreview}>

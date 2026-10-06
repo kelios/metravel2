@@ -393,8 +393,7 @@ export function LoadMoreFooter({
         </Text>
       ) : (
         <Text style={styles.loadMoreText}>
-          {i18nT('map:screens.tabs.PlacesScreen.pokazano_673c959e')}{shown} {i18nT('map:screens.tabs.PlacesScreen.iz_897ff3eb')}{total}
-        </Text>
+          {i18nT('map:screens.tabs.PlacesScreen.pokazano_673c959e', { value1: shown, value2: total })}</Text>
       )}
       <Button
         label={failed

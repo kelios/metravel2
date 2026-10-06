@@ -36,7 +36,7 @@ export default function DataManagementSection({
                     </View>
                     <View style={styles.cardText}>
                         <Text style={styles.cardTitle}>{i18nT('profile:components.settings.DataManagementSection.hochu_poehat_5f921b1c')}</Text>
-                        <Text style={styles.cardMeta}>{Array.isArray(favorites) ? favorites.length : 0} {i18nT('profile:components.settings.DataManagementSection.sht_345a19d5')}</Text>
+                        <Text style={styles.cardMeta}>{i18nT('profile:components.settings.DataManagementSection.sht_345a19d5', { value1: Array.isArray(favorites) ? favorites.length : 0 })}</Text>
                     </View>
                 </View>
 
@@ -59,7 +59,7 @@ export default function DataManagementSection({
                     </View>
                     <View style={styles.cardText}>
                         <Text style={styles.cardTitle}>{i18nT('profile:components.settings.DataManagementSection.istoriya_prosmotrov_f059f6d6')}</Text>
-                        <Text style={styles.cardMeta}>{Array.isArray(viewHistory) ? viewHistory.length : 0} {i18nT('profile:components.settings.DataManagementSection.sht_345a19d5')}</Text>
+                        <Text style={styles.cardMeta}>{i18nT('profile:components.settings.DataManagementSection.sht_345a19d5', { value1: Array.isArray(viewHistory) ? viewHistory.length : 0 })}</Text>
                     </View>
                 </View>
 

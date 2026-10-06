@@ -62,6 +62,8 @@ const createDeferred = (): Deferred => {
   return { promise, resolve, reject }
 }
 
+import { getLocaleBootCss, getLocaleBootScript, LOCALE_BOOT_PENDING_CLASS } from '@/i18n/localeBootShell'
+
 const STORAGE_KEY = '@metravel/locale-preference:v1'
 
 // Один экземпляр модулей на файл: `jest.resetModules` дал бы провайдеру свою
@@ -89,6 +91,7 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     isWebLocaleLoaded.mockReset()
     isWebLocaleLoaded.mockImplementation((locale: string) => locale === 'ru')
     document.documentElement.lang = 'ru'
+    document.documentElement.classList.remove(LOCALE_BOOT_PENDING_CLASS)
     window.localStorage.clear()
     container = document.createElement('div')
     document.body.appendChild(container)
@@ -100,6 +103,7 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
   afterEach(async () => {
     await act(async () => root?.unmount())
     container.remove()
+    document.getElementById('test-locale-boot-css')?.remove()
     consoleError.mockRestore()
   })
 
@@ -107,11 +111,12 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     const modules = loadProvider()
     const mounts: string[] = []
     const Screen = ({ label = 'screen' }: { label?: string }) => {
+      const { isHydrated } = modules.useLocale()
       useEffect(() => {
         // Аналог стартового запроса экрана: ровно один на монтирование.
         mounts.push(String(modules.i18n.resolvedLanguage))
       }, [])
-      return <p>{`${label}:${modules.i18n.resolvedLanguage}`}</p>
+      return <p data-locale-hydrated={String(isHydrated)}>{`${label}:${modules.i18n.resolvedLanguage}`}</p>
     }
     // Статический HTML собирается без сохранённой локали, как на сервере.
     const serverHtml = renderToString(
@@ -121,6 +126,11 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     )
     container.innerHTML = serverHtml
     if (stored) window.localStorage.setItem(STORAGE_KEY, stored)
+    new Function(getLocaleBootScript())()
+    const style = document.createElement('style')
+    style.id = 'test-locale-boot-css'
+    style.textContent = getLocaleBootCss()
+    document.head.appendChild(style)
     const hydrate = async (element: React.ReactElement) => {
       await act(async () => {
         root = hydrateRoot(container, element, {
@@ -193,6 +203,26 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     expect(hydrationErrors()).toEqual([])
   })
 
+  it.each(['pl', 'en', 'be', 'uk'])('hides the Russian SSG frame before any app script for %s, then reveals one translated mount', async (locale) => {
+    const { LocaleProvider, Screen, mounts, hydrate } = setup(JSON.stringify({ version: 1, mode: 'explicit', locale }))
+    const catalogue = createDeferred()
+    loadWebLocale.mockReturnValue(catalogue.promise)
+    expect(container.textContent).toBe('screen:ru') // SEO HTML remains intact.
+    expect(getComputedStyle(container.querySelector('p')!).visibility).toBe('hidden')
+    await hydrate(<LocaleProvider><Screen /></LocaleProvider>)
+    expect(mounts).toEqual([])
+    await act(async () => catalogue.resolve())
+    expect(mounts).toEqual([locale])
+    expect(container.textContent).toBe(`screen:${locale}`)
+    expect(getComputedStyle(container.querySelector('p')!).visibility).toBe('visible')
+  })
+
+  it.each([null, '{invalid', JSON.stringify({ version: 1, mode: 'explicit', locale: 'ru' }), JSON.stringify({ version: 1, mode: 'explicit', locale: 'xx' })])('keeps Russian SSR visible for default or invalid preference %s', (stored) => {
+    setup(stored)
+    expect(document.documentElement.classList.contains(LOCALE_BOOT_PENDING_CLASS)).toBe(false)
+    expect(getComputedStyle(container.querySelector('p')!).visibility).toBe('visible')
+  })
+
   it('prepares nothing before hydration without a stored non-Russian locale', () => {
     expect(prepareBootLocale()).toBeNull()
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, mode: 'explicit', locale: 'ru' }))
@@ -261,7 +291,7 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     expect(recoverableErrors).toEqual([])
   })
 
-  it('never blanks the page when a context above changes before the catalogue loads', async () => {
+  it('keeps Russian screens unmounted when an outer context changes during boot', async () => {
     const { LocaleProvider, Screen, mounts, loadWebLocale, hydrate } = setup(
       JSON.stringify({ version: 1, mode: 'explicit', locale: 'uk' }),
     )
@@ -287,13 +317,15 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
 
     await hydrate(<Outer />)
     await act(async () => bumpOuter())
-    // Худший случай — прежнее поведение (русские дети на месте), но не пустой кадр.
-    expect(container.textContent).toBe('screen:ru')
+    expect(container.textContent).toBe('')
+    expect(mounts).toEqual([])
+    expect(document.documentElement.classList.contains(LOCALE_BOOT_PENDING_CLASS)).toBe(true)
 
     await act(async () => catalogue.resolve())
     expect(container.textContent).toBe('screen:uk')
     expect(mounts[mounts.length - 1]).toBe('uk')
-    expect(mounts.length).toBeLessThanOrEqual(2)
+    expect(mounts).toEqual(['uk'])
+    expect(document.documentElement.classList.contains(LOCALE_BOOT_PENDING_CLASS)).toBe(false)
     expect(recoverableErrors).toEqual([])
     expect(hydrationErrors()).toEqual([])
   })
@@ -314,7 +346,7 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     expect(recoverableErrors).toEqual([])
   })
 
-  it('falls back to the Russian tree, mounted once, when the catalogue fails to load', async () => {
+  it('shows Belarusian recovery controls without mounting a Russian screen when the catalogue fails', async () => {
     const { LocaleProvider, Screen, mounts, loadWebLocale, hydrate } = setup(
       JSON.stringify({ version: 1, mode: 'explicit', locale: 'be' }),
     )
@@ -327,10 +359,58 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     )
     await act(async () => {})
 
+    expect(mounts).toEqual([])
+    expect(container.textContent).toContain('Не ўдалося загрузіць мову інтэрфейсу.')
+    const serverScreen = Array.from(container.querySelectorAll('p')).find((element) => element.textContent === 'screen:ru')!
+    expect(getComputedStyle(serverScreen).visibility).toBe('hidden')
+    expect(getComputedStyle(container.querySelector('#locale-boot-recovery p')!).visibility).toBe('visible')
+    const fallback = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Працягнуць па-руску')!
+    await act(async () => fallback.click())
     expect(mounts).toEqual(['ru'])
     expect(container.textContent).toBe('screen:ru')
+    expect(container.querySelector('[data-locale-hydrated]')?.getAttribute('data-locale-hydrated')).toBe('true')
+    expect(document.documentElement.classList.contains(LOCALE_BOOT_PENDING_CLASS)).toBe(false)
     expect(recoverableErrors).toEqual([])
     expect(hydrationErrors()).toEqual([])
+  })
+
+  it('keeps an explicit Russian fallback when the original slow catalogue resolves later', async () => {
+    jest.useFakeTimers()
+    try {
+      const { LocaleProvider, Screen, mounts, hydrate } = setup(JSON.stringify({ version: 1, mode: 'explicit', locale: 'pl' }))
+      const catalogue = createDeferred()
+      loadWebLocale.mockReturnValue(catalogue.promise)
+      await hydrate(<LocaleProvider><Screen /></LocaleProvider>)
+      await act(async () => { jest.advanceTimersByTime(3001) })
+      expect(mounts).toEqual([])
+      expect(container.textContent).toContain('Ładowanie języka interfejsu…')
+      const fallback = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'Kontynuuj po rosyjsku')!
+      await act(async () => fallback.click())
+      expect(mounts).toEqual(['ru'])
+      expect(container.querySelector('[data-locale-hydrated]')?.getAttribute('data-locale-hydrated')).toBe('true')
+      await act(async () => catalogue.resolve())
+      expect(mounts).toEqual(['ru'])
+      expect(i18n.resolvedLanguage).toBe('ru')
+      expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)!)).toEqual({ version: 1, mode: 'explicit', locale: 'ru' })
+    } finally { jest.useRealTimers() }
+  })
+
+  it('provides Polish recovery after the guarded retry if the React entry script fails', () => {
+    setup(JSON.stringify({ version: 1, mode: 'explicit', locale: 'pl' }))
+    window.__metravelReloadStaleChunk = jest.fn(() => false)
+    const script = document.createElement('script')
+    script.src = `${window.location.origin}/_expo/static/js/web/entry-broken.js`
+    document.body.appendChild(script)
+    script.dispatchEvent(new Event('error'))
+    const status = document.querySelector('#locale-boot-recovery [role="status"]')!
+    expect(status.textContent).toBe('Nie udało się załadować języka interfejsu.')
+    expect(getComputedStyle(status).visibility).toBe('visible')
+    expect(window.__metravelReloadStaleChunk).toHaveBeenCalled()
+    const fallback = Array.from(document.querySelectorAll('#locale-boot-recovery button')).find((button) => button.textContent === 'Kontynuuj po rosyjsku')! as HTMLButtonElement
+    fallback.click()
+    expect(document.documentElement.classList.contains(LOCALE_BOOT_PENDING_CLASS)).toBe(false)
+    script.remove()
+    delete window.__metravelReloadStaleChunk
   })
 
   it('still remounts on an explicit language change by the user', async () => {

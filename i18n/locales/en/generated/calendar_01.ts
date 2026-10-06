@@ -28,7 +28,7 @@ export const calendarGenerated1 = {
   "components.screens.calendar.calendarScreen_parts.dlya_statusa_hochu_dostatochno_prosto_sohran_23fb4882": "For the “I want” status, you just need to save the route.",
   "components.screens.calendar.calendarScreen_parts.dobavit_datu_6851e94d": "Add date",
   "components.screens.calendar.calendarScreen_parts.gggg_mm_dd_8d160578": "YYYY-MM-DD",
-  "components.screens.calendar.calendarScreen_parts.god_mesyats_4b45d53c": "Year/month: ",
+  "components.screens.calendar.calendarScreen_parts.god_mesyats_4b45d53c": "Year/month: {{value1}}",
   "components.screens.calendar.calendarScreen_parts.izmenit_datu_value1_234c04d5": "Change date {{value1}}",
   "components.screens.calendar.calendarScreen_parts.izmenit_status_0823b656": "Change status",
   "components.screens.calendar.calendarScreen_parts.lichnyy_status_bez_daty_fd9e801a": "Personal status without date",

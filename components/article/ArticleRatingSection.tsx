@@ -104,7 +104,7 @@ function ArticleRatingSection({
                             <Text style={styles.savingText}>{i18nT('shared:components.article.ArticleRatingSection.sohranenie_9d9151b6')}</Text>
                         )}
                         {userRating != null && userRating > 0 && !isSubmitting && !isLoading && (
-                            <Text style={styles.yourRatingText}>{i18nT('shared:components.article.ArticleRatingSection.vasha_otsenka_cccfdba6')}{userRating}</Text>
+                            <Text style={styles.yourRatingText}>{i18nT('shared:components.article.ArticleRatingSection.vasha_otsenka_cccfdba6', { value1: userRating })}</Text>
                         )}
                     </View>
                 )}

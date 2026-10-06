@@ -1,3 +1,4 @@
+import { renderLocalizedText } from '@/i18n/richText'
 // components/export/BookSettingsModal.tsx
 // ✅ УЛУЧШЕНИЕ: Модальное окно настроек фотоальбома
 
@@ -280,8 +281,7 @@ export default function BookSettingsModal({
             </span>
             <div>
               <div style={{ color: MODAL_COLORS.text, fontSize: '14px', fontWeight: 500 }}>
-                {i18nT('profile:components.export.BookSettingsModal.vybrano_puteshestviy_nbsp_4b4623d9')}<span style={{ fontWeight: 700, color: MODAL_COLORS.primary }}>{travelCount}</span>
-              </div>
+                {renderLocalizedText(i18nT('profile:components.export.BookSettingsModal.vybrano_puteshestviy_nbsp_4b4623d9'), { value1: <span style={{ fontWeight: 700, color: MODAL_COLORS.primary }}>{travelCount}</span> })}</div>
               <div style={{ fontSize: '12px', color: MODAL_COLORS.textMuted, marginTop: '2px' }}>
                 {translatePlural('profile:components.export.BookSettingsModal.budet_sozdana_kniga_s_value1_puteshestviyami_a78b68c9', travelCount)}
               </div>

@@ -1,3 +1,6 @@
+import { i18n } from '@/i18n'
+import { renderAtlasMapPage } from '@/services/pdf-export/generators/v2/runtime/atlas/htmlPages'
+import { buildEntries } from '@/services/pdf-export/generators/v2/runtime/atlas/entries'
 import {
   getAtlasPageCount,
   renderAtlasPages,
@@ -152,6 +155,34 @@ describe('Travel atlas (global map + index)', () => {
       expect(pages[0]).toContain('3 страны')
     } finally {
       if (descriptor) Object.defineProperty(Intl, 'PluralRules', descriptor)
+    }
+  })
+})
+
+
+describe('atlas localized count phrases (#2328)', () => {
+  afterEach(async () => { await i18n.changeLanguage('ru') })
+  const forms = {
+    en: { travel: ['trip', 'trips', 'trips'], point: ['point', 'points', 'points'], country: ['country', 'countries', 'countries'] },
+    pl: { travel: ['podróż', 'podróże', 'podróży'], point: ['punkt', 'punkty', 'punktów'], country: ['kraj', 'kraje', 'krajów'] },
+    be: { travel: ['падарожжа', 'падарожжы', 'падарожжаў'], point: ['кропка', 'кропкі', 'кропак'], country: ['краіна', 'краіны', 'краін'] },
+  }
+  it.each(['pl', 'en', 'be'] as const)('renders actual HTML in %s for 1/2/5/21/22', async (locale) => {
+    await i18n.changeLanguage(locale)
+    for (const count of [1, 2, 5, 21, 22]) {
+      const entries = buildEntries(Array.from({ length: count }, (_, index) =>
+        makeMeta(`Route ${index}`, `Country ${index}`, '2026', 4, 6, [{ name: `Point ${index}`, lat: 50 + index / 10, lng: 20 }]),
+      ))
+      const html = renderAtlasMapPage({ entries, theme: getThemeConfig('minimal'), pageNumber: 1, totalAtlasPages: 2, escapeHtml: (value) => value })
+      const category = locale === 'en' ? (count === 1 ? 0 : 2)
+        : locale === 'pl' ? (count === 1 ? 0 : [2, 22].includes(count) ? 1 : 2)
+          : ([1, 21].includes(count) ? 0 : [2, 22].includes(count) ? 1 : 2)
+      const expectedKicker = Object.values(forms[locale]).map((nouns) => `${count} ${nouns[category]}`).join(' · ')
+      // Exact element text prevents singular prefixes matching plural endings.
+      expect(html).toMatch(new RegExp(`>\\s*${expectedKicker}\\s*<`))
+      expect(html).not.toContain('путешествий')
+      expect(html).not.toContain('точек')
+      expect(html).not.toContain('{{count}}')
     }
   })
 })

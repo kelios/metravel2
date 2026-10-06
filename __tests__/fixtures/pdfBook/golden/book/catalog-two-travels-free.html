@@ -466,8 +466,8 @@
     var loaded = 0;
     var globalStart = Date.now();
 
-    function updateProgress(extra){
-      setStatus("Загрузка изображений: " + loaded + '/' + total + (extra || ''));
+    function updateProgress(){
+      setStatus("Загрузка изображений: {{value1}}/{{value2}}".replace('{{value1}}', String(loaded)).replace('{{value2}}', String(total)));
     }
     updateProgress();
 
@@ -488,7 +488,7 @@
         return { total: total, loaded: loaded, failed: failedItems.length, failedUrls: failedItems.map(function(f){ return f.src; }) };
       }
 
-      updateProgress(" • повтор " + failedItems.length + " изобр…");
+      setStatus("Загрузка изображений: {{value1}}/{{value2}} • повтор {{value3}} изобр…".replace('{{value1}}', String(loaded)).replace('{{value2}}', String(total)).replace('{{value3}}', String(failedItems.length)));
 
       var retryRound = function(items, attempt){
         if (!items.length || attempt > MAX_RETRIES || (Date.now() - globalStart) > GLOBAL_TIMEOUT) {
@@ -496,7 +496,7 @@
         }
         var retryPromises = items.map(function(item){
           return retryImage(item.img).then(function(ok){
-            if (ok) { loaded++; updateProgress(" • повтор " + attempt + '/' + MAX_RETRIES); }
+            if (ok) { loaded++; setStatus("Загрузка изображений: {{value1}}/{{value2}} • повтор {{value3}}/{{value4}}".replace('{{value1}}', String(loaded)).replace('{{value2}}', String(total)).replace('{{value3}}', String(attempt)).replace('{{value4}}', String(MAX_RETRIES))); }
             return { item: item, ok: ok };
           });
         });
@@ -536,7 +536,7 @@
     ]);
     return Promise.all([waitForImages(), fontsReady]).then(function(results){
       var res = results[0];
-      setStatus("Изображения: " + res.loaded + '/' + res.total + (res.failed ? (" (не загружено: " + res.failed + ')') : ' ✓'));
+      setStatus((res.failed ? "Изображения: {{value1}}/{{value2}} (не загружено: {{value3}})".replace('{{value1}}', String(res.loaded)).replace('{{value2}}', String(res.total)).replace('{{value3}}', String(res.failed)) : "Изображения: {{value1}}/{{value2}} ✓".replace('{{value1}}', String(res.loaded)).replace('{{value2}}', String(res.total))));
       if (res.failed && res.failedUrls && res.failedUrls.length) {
         try { console.warn('[print] failed images after retries', res.failedUrls.slice(0, 30)); } catch (e) {}
       }
@@ -559,13 +559,13 @@
     for (var i=0;i<imgs.length;i++) {
       if (imgs[i].complete && imgs[i].naturalWidth) complete++;
     }
-    setStatus("Изображения: " + complete + '/' + total + " • шрифты загружаются…");
+    setStatus("Изображения: {{value1}}/{{value2}} • шрифты загружаются…".replace('{{value1}}', String(complete)).replace('{{value2}}', String(total)));
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(function() {
         var updated = getImages();
         var done = 0;
         for (var j=0;j<updated.length;j++) { if (updated[j].complete && updated[j].naturalWidth) done++; }
-        setStatus("Изображения: " + done + '/' + updated.length + " • шрифты ✓");
+        setStatus("Изображения: {{value1}}/{{value2}} • шрифты ✓".replace('{{value1}}', String(done)).replace('{{value2}}', String(updated.length)));
       });
     }
   } catch (e) {}

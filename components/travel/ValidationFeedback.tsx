@@ -9,7 +9,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { FieldValidationResult } from '@/utils/travelWizardValidation';
 import { useThemedColors } from '@/hooks/useTheme';
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 
 
 interface CharacterCounterProps {
@@ -34,29 +34,22 @@ export const CharacterCounter: React.FC<CharacterCounterProps> = ({
   
   let status: 'error' | 'warning' | 'success' = 'success';
   let message = '';
-  const characterNoun = (count: number) => selectLocalizedPlural(
-    count,
-    i18nT('travel:common.characterNoun_one'),
-    i18nT('travel:common.characterNoun_few'),
-    i18nT('travel:common.characterNoun_many'),
-    i18nT('travel:common.characterNoun_other'),
-  );
   
   if (hasMin && current < min) {
     status = 'error';
-    message = i18nT('travel:components.travel.ValidationFeedback.minimum', { value1: current, value2: min, value3: characterNoun(min) });
+    message = translatePlural('travel:components.travel.ValidationFeedback.minimum', min, { value1: current });
   } else if (hasMax && current > max) {
     status = 'error';
-    message = i18nT('travel:components.travel.ValidationFeedback.limitExceeded', { value1: current, value2: max, value3: characterNoun(max) });
+    message = translatePlural('travel:components.travel.ValidationFeedback.limitExceeded', max, { value1: current });
   } else if (hasMax) {
-    message = i18nT('travel:components.travel.ValidationFeedback.withMaximum', { value1: current, value2: max, value3: characterNoun(max) });
+    message = translatePlural('travel:components.travel.ValidationFeedback.withMaximum', max, { value1: current });
     if (current > max * 0.9) {
       status = 'warning';
     }
   } else if (hasMin) {
-    message = i18nT('travel:components.travel.ValidationFeedback.characterCount', { value1: current, value2: characterNoun(current) });
+    message = translatePlural('travel:components.travel.ValidationFeedback.characterCount', current);
   } else {
-    message = i18nT('travel:components.travel.ValidationFeedback.characterCount', { value1: current, value2: characterNoun(current) });
+    message = translatePlural('travel:components.travel.ValidationFeedback.characterCount', current);
   }
 
   const getColor = () => {
@@ -277,15 +270,6 @@ interface ValidationSummaryProps {
   warningMessages?: string[];
 }
 
-function selectLocalizedPlural(
-  count: number,
-  one: string,
-  few: string,
-  many: string,
-  other: string = many,
-): string {
-  return selectPlural(count, { one, few, many, other });
-}
 
 /**
  * Сводка по валидации (количество ошибок/предупреждений)
@@ -386,7 +370,7 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
           <View style={summaryStyles.summaryItem}>
             <Feather name="alert-circle" size={16} color={colors.danger} />
             <Text style={summaryStyles.errorSummaryText}>
-              {errorCount} {selectLocalizedPlural(errorCount, i18nT('travel:components.travel.ValidationFeedback.oshibka_a754c58d'), i18nT('travel:components.travel.ValidationFeedback.oshibki_71f0a30f'), i18nT('travel:components.travel.ValidationFeedback.oshibok_b6b2ef44'))}
+              {translatePlural('travel:components.travel.ValidationFeedback.errorCount', errorCount)}
             </Text>
           </View>
         )}
@@ -394,7 +378,7 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
           <View style={summaryStyles.summaryItem}>
             <Feather name="info" size={16} color={colors.warning} />
             <Text style={summaryStyles.warningSummaryText}>
-              {warningCount} {selectLocalizedPlural(warningCount, i18nT('travel:components.travel.ValidationFeedback.preduprezhdenie_bf607953'), i18nT('travel:components.travel.ValidationFeedback.preduprezhdeniya_e11e2b0f'), i18nT('travel:components.travel.ValidationFeedback.preduprezhdeniy_b07ba364'))}
+              {translatePlural('travel:components.travel.ValidationFeedback.warningCount', warningCount)}
             </Text>
           </View>
         )}
@@ -467,11 +451,11 @@ export const CollapsibleValidationSummary: React.FC<ValidationSummaryProps> = ({
 
   const summaryParts: string[] = [];
   if (errorCount > 0) {
-    summaryParts.push(`${errorCount} ${selectLocalizedPlural(errorCount, i18nT('travel:components.travel.ValidationFeedback.oshibka_a754c58d'), i18nT('travel:components.travel.ValidationFeedback.oshibki_71f0a30f'), i18nT('travel:components.travel.ValidationFeedback.oshibok_b6b2ef44'))}`);
+    summaryParts.push(translatePlural('travel:components.travel.ValidationFeedback.errorCount', errorCount));
   }
   if (warningCount > 0) {
     summaryParts.push(
-      `${warningCount} ${selectLocalizedPlural(warningCount, i18nT('travel:components.travel.ValidationFeedback.rekomendatsiya_4d886a5e'), i18nT('travel:components.travel.ValidationFeedback.rekomendatsii_bb776a51'), i18nT('travel:components.travel.ValidationFeedback.rekomendatsiy_6a21604e'))}`,
+      translatePlural('travel:components.travel.ValidationFeedback.recommendationCount', warningCount),
     );
   }
 

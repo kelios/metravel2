@@ -92,6 +92,12 @@ const DIFFICULTY_SCALE_KEYS = new RegExp(
 
 const TERMS: Term[] = [
   {
+    name: '«квест» — единое белорусское написание «квэст»',
+    ru: /(^|[^а-яё])квест/i,
+    minEntries: 40,
+    locales: { be: { required: /квэс[тц]/i, forbidden: /квест/i } },
+  },
+  {
     name: '«тема» — тема оформления',
     ru: RU_THEME_WORD,
     minEntries: 8,

@@ -350,7 +350,7 @@ function ListTravelExportControls({
               <View style={asViewStyle(s.selectedOrderStripHeader)}>
                 <Feather name="layers" size={13} color={undefined} style={s.selectedOrderStripIcon as any} />
                 <Caption style={asTextStyle(s.selectedOrderStripLabel)}>
-                  {i18nT('travel:components.listTravel.ListTravelExportControls.poryadok_v_knige_value1_986eceab', { value1: Platform.OS === 'web' ? i18nT('travel:components.listTravel.ListTravelExportControls.dragToSortSuffix') : '' })}
+                  {Platform.OS === 'web' ? i18nT('travel:components.listTravel.ListTravelExportControls.dragToSortSuffix') : i18nT('travel:components.listTravel.ListTravelExportControls.poryadok_v_knige_value1_986eceab', { value1: '' })}
                 </Caption>
               </View>
               <View style={asViewStyle(s.selectedOrderScroller)}>

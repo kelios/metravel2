@@ -263,12 +263,12 @@ describe('i18n resources', () => {
     const fixedBe = getFixedTranslator('be')
     const fixedUk = getFixedTranslator('uk')
 
-    expect(translatePlural('travel:common.characterNoun', 1)).toBe('символ')
-    expect(translatePlural('travel:common.characterNoun', 2)).toBe('символа')
-    expect(translatePlural('travel:common.characterNoun', 5)).toBe('символов')
+    expect(translatePlural('travel:components.travel.ValidationFeedback.characterCount', 1)).toBe('1 символ')
+    expect(translatePlural('travel:components.travel.ValidationFeedback.characterCount', 2)).toBe('2 символа')
+    expect(translatePlural('travel:components.travel.ValidationFeedback.characterCount', 5)).toBe('5 символов')
     expect(translatePlural('export:services.pdfExport.runtime.map.pointNoun', 21)).toBe('точка')
-    expect(fixedBe('travel:common.characterNoun', { count: 2 })).toBe('знакі')
-    expect(fixedUk('travel:common.characterNoun', { count: 2 })).toBe('символи')
+    expect(fixedBe('travel:components.travel.ValidationFeedback.characterCount', { count: 2 })).toBe('2 знакі')
+    expect(fixedUk('travel:components.travel.ValidationFeedback.characterCount', { count: 2 })).toBe('2 символи')
   })
 
   it.each([

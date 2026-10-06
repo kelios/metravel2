@@ -1,3 +1,4 @@
+import { renderLocalizedText } from '@/i18n/richText'
 // components/travel/ImageGalleryComponent.ios.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -432,8 +433,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
           <Text style={[styles.galleryTitle, { color: colors.text }]}>{i18nT('travel:components.travel.ImageGalleryComponent.galereya_394a39e3')}</Text>
         </View>
         <Text style={[styles.imageCount, { color: colors.textMuted }]}>
-          {i18nT('travel:components.travel.ImageGalleryComponent.zagruzheno_3283e913')}<Text style={[styles.highlight, { color: colors.primaryText }]}>{images.length}</Text> {i18nT('travel:components.travel.ImageGalleryComponent.iz_9fa7e764')}{maxImages}
-        </Text>
+          {renderLocalizedText(i18nT('travel:components.travel.ImageGalleryComponent.zagruzheno_3283e913'), { value1: <Text style={[styles.highlight, { color: colors.primaryText }]}>{images.length}</Text>, value2: maxImages })}</Text>
       </View>
 
       {images.length < maxImages && (

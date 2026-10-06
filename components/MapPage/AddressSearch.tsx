@@ -17,7 +17,7 @@ import type { LatLng } from '@/types/coordinates'
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import MapIcon from './MapIcon'
 import IconButton from '@/components/ui/IconButton'
-import { translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 
 
 // Совпадает с порогом внутри `useLocationSearchQuery` (#1819): здесь он нужен
@@ -290,7 +290,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
 
       {showMinCharsHint && (
         <Text style={styles.minCharsHint}>
-          {i18nT('map:components.MapPage.AddressSearch.vvedite_minimum_b27f28ab')}{MIN_QUERY_LENGTH} {i18nT('map:components.MapPage.AddressSearch.simvola_dlya_poiska_cde32fee')}</Text>
+          {translatePlural('map:components.MapPage.AddressSearch.vvedite_minimum_b27f28ab', MIN_QUERY_LENGTH, { value1: MIN_QUERY_LENGTH })}</Text>
       )}
     </View>
   )

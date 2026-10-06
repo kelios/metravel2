@@ -157,8 +157,8 @@ export function addBookPrintChrome(html: string): string {
     var loaded = 0;
     var globalStart = Date.now();
 
-    function updateProgress(extra){
-      setStatus(${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.loadingImages'))} + loaded + '/' + total + (extra || ''));
+    function updateProgress(){
+      setStatus(${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.loadingImages'))}.replace('{{value1}}', String(loaded)).replace('{{value2}}', String(total)));
     }
     updateProgress();
 
@@ -179,7 +179,7 @@ export function addBookPrintChrome(html: string): string {
         return { total: total, loaded: loaded, failed: failedItems.length, failedUrls: failedItems.map(function(f){ return f.src; }) };
       }
 
-      updateProgress(${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.retry'))} + failedItems.length + ${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.imagesShort'))});
+      setStatus(${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.imagesShort'))}.replace('{{value1}}', String(loaded)).replace('{{value2}}', String(total)).replace('{{value3}}', String(failedItems.length)));
 
       var retryRound = function(items, attempt){
         if (!items.length || attempt > MAX_RETRIES || (Date.now() - globalStart) > GLOBAL_TIMEOUT) {
@@ -187,7 +187,7 @@ export function addBookPrintChrome(html: string): string {
         }
         var retryPromises = items.map(function(item){
           return retryImage(item.img).then(function(ok){
-            if (ok) { loaded++; updateProgress(${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.retry'))} + attempt + '/' + MAX_RETRIES); }
+            if (ok) { loaded++; setStatus(${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.retry'))}.replace('{{value1}}', String(loaded)).replace('{{value2}}', String(total)).replace('{{value3}}', String(attempt)).replace('{{value4}}', String(MAX_RETRIES))); }
             return { item: item, ok: ok };
           });
         });
@@ -227,7 +227,7 @@ export function addBookPrintChrome(html: string): string {
     ]);
     return Promise.all([waitForImages(), fontsReady]).then(function(results){
       var res = results[0];
-      setStatus(${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.images'))} + res.loaded + '/' + res.total + (res.failed ? (${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.notLoaded'))} + res.failed + ')') : ' ✓'));
+      setStatus((res.failed ? ${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.notLoaded'))}.replace('{{value1}}', String(res.loaded)).replace('{{value2}}', String(res.total)).replace('{{value3}}', String(res.failed)) : ${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.images'))}.replace('{{value1}}', String(res.loaded)).replace('{{value2}}', String(res.total))));
       if (res.failed && res.failedUrls && res.failedUrls.length) {
         try { console.warn('[print] failed images after retries', res.failedUrls.slice(0, 30)); } catch (e) {}
       }
@@ -250,13 +250,13 @@ export function addBookPrintChrome(html: string): string {
     for (var i=0;i<imgs.length;i++) {
       if (imgs[i].complete && imgs[i].naturalWidth) complete++;
     }
-    setStatus(${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.images'))} + complete + '/' + total + ${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.fontsLoading'))});
+    setStatus(${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.fontsLoading'))}.replace('{{value1}}', String(complete)).replace('{{value2}}', String(total)));
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(function() {
         var updated = getImages();
         var done = 0;
         for (var j=0;j<updated.length;j++) { if (updated[j].complete && updated[j].naturalWidth) done++; }
-        setStatus(${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.images'))} + done + '/' + updated.length + ${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.fontsReady'))});
+        setStatus(${JSON.stringify(i18nT('export:services.book.BookHtmlExportService.progress.fontsReady'))}.replace('{{value1}}', String(done)).replace('{{value2}}', String(updated.length)));
       });
     }
   } catch (e) {}

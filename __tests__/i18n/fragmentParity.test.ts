@@ -17,7 +17,7 @@ type Locale = 'en' | 'pl' | 'be' | 'uk'
 type Bundle = Record<string, Record<string, unknown>>
 
 const LOCALES: Locale[] = ['en', 'pl', 'be', 'uk']
-const FRAGMENT_BASELINE = 129
+const FRAGMENT_BASELINE = 0
 
 // Имя собственное со строчной буквы — не потеря регистра.
 const LOWERCASE_PROPER_NAME = /^(iOS|iPhone|iPad|macOS|eSIM)\b/

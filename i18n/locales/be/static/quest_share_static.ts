@@ -1,4 +1,4 @@
-// Шаринг результата квеста ([INV2-02], тикет борда #1472). Ручной namespace (BE).
+// Шаринг результата квэста ([INV2-02], тикет борда #1472). Ручной namespace (BE).
 export const questShareStaticResources = {
   "finaleShare.button": "Падзяліцца вынікам",
   "finaleShare.sheetTitle": "Падзяліцца вынікам",

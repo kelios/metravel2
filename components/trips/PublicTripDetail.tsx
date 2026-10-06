@@ -1,3 +1,4 @@
+import { renderLocalizedText } from '@/i18n/richText'
 // components/trips/PublicTripDetail.tsx
 // Деталь публичной поездки: обложка, описание, действие «Хочу поехать» (#412),
 // панель организатора (#413) и раскрытие места встречи/чата только участнику с
@@ -193,8 +194,7 @@ function PublicTripDetail({ tripId }: Props) {
             <Feather name="user" size={16} color={colors.textMuted} />
           </View>
           <Text style={styles.organizerText}>
-            {i18nT('trips:components.trips.PublicTripDetail.organizator_468e6261')}<Text style={styles.organizerName}>{trip.organizer.name}</Text>
-          </Text>
+            {renderLocalizedText(i18nT('trips:components.trips.PublicTripDetail.organizator_468e6261'), { value1: <Text style={styles.organizerName}>{trip.organizer.name}</Text> })}</Text>
         </Pressable>
         {headerMobile ? null : (
           <ContentSafetyActions
@@ -228,7 +228,7 @@ function PublicTripDetail({ tripId }: Props) {
             <Text style={styles.revealTitle}>
               <Feather name="unlock" size={14} color={colors.success} /> {i18nT('trips:components.trips.PublicTripDetail.detali_dlya_uchastnikov_d5a9baa8')}</Text>
             {trip.meetingPoint ? (
-              <Text style={styles.revealText}>{i18nT('trips:components.trips.PublicTripDetail.mesto_vstrechi_45944b40')}{trip.meetingPoint}</Text>
+              <Text style={styles.revealText}>{i18nT('trips:components.trips.PublicTripDetail.mesto_vstrechi_45944b40', { value1: trip.meetingPoint })}</Text>
             ) : null}
             {trip.contactNote ? (
               <Text style={styles.revealText}>{trip.contactNote}</Text>

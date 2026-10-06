@@ -338,8 +338,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
             <View style={styles.modalContent}> 
             <View style={styles.modalHeader}> 
               <Text style={styles.modalTitle}>
-                {i18nT('shared:components.forms.SimpleMultiSelect.vybrano_12c5cecd')}{selectedItems.length}
-              </Text>
+                {i18nT('shared:components.forms.SimpleMultiSelect.vybrano_12c5cecd', { value1: selectedItems.length })}</Text>
               <Pressable
                 onPress={handleClose}
                 hitSlop={compactControlHitSlop}

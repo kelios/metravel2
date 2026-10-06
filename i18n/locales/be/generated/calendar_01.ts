@@ -28,7 +28,7 @@ export const calendarGenerated1 = {
   "components.screens.calendar.calendarScreen_parts.dlya_statusa_hochu_dostatochno_prosto_sohran_23fb4882": "Для статусу «Хачу» дастаткова проста захаваць маршрут.",
   "components.screens.calendar.calendarScreen_parts.dobavit_datu_6851e94d": "Дадаць дату",
   "components.screens.calendar.calendarScreen_parts.gggg_mm_dd_8d160578": "ГГГГ-ММ-ДД",
-  "components.screens.calendar.calendarScreen_parts.god_mesyats_4b45d53c": "Год/месяц: ",
+  "components.screens.calendar.calendarScreen_parts.god_mesyats_4b45d53c": "Год/месяц: {{value1}}",
   "components.screens.calendar.calendarScreen_parts.izmenit_datu_value1_234c04d5": "Змяніць дату {{value1}}",
   "components.screens.calendar.calendarScreen_parts.izmenit_status_0823b656": "Змяніць статус",
   "components.screens.calendar.calendarScreen_parts.lichnyy_status_bez_daty_fd9e801a": "Асабісты статус без даты",

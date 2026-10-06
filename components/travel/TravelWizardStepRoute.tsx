@@ -581,7 +581,7 @@ function TravelWizardStepRoute({
                   <Text style={styles.mapHint}>
                     {i18nT('travel:components.travel.TravelWizardStepRoute.dobavte_tochki_marshruta_na_karte_dlya_moder_a157e621')}</Text>
                 </View>
-                <Text style={styles.mapCount}>{i18nT('travel:components.travel.TravelWizardStepRoute.tochek_7455fcf5')}{markers.length}</Text>
+                <Text style={styles.mapCount}>{i18nT('travel:components.travel.TravelWizardStepRoute.tochek_7455fcf5', { value1: markers.length })}</Text>
               </View>
 
               {isCoachmarkVisible && !hasPoints && (

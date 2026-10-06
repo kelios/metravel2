@@ -254,13 +254,12 @@ export function ProfileTravelEngagementSummary({
         {!isCalendarMode && travelsCount != null ? (
           <View style={styles.sectionMetaRow}>
             <View style={styles.sectionMetaChip}>
-              <Text style={styles.sectionMetaChipText}>{i18nT('profile:components.profile.ProfileTravelEngagementSection.marshrutov_0c70d1ac')}{travelsCount}</Text>
+              <Text style={styles.sectionMetaChipText}>{i18nT('profile:components.profile.ProfileTravelEngagementSection.marshrutov_0c70d1ac', { value1: travelsCount })}</Text>
             </View>
             {isPartiallyLoaded ? (
               <View style={styles.sectionMetaChip}>
                 <Text style={styles.sectionMetaChipText}>
-                  {i18nT('profile:components.profile.ProfileTravelEngagementSection.zagruzheno_8a574f0a')}{loadedTravelsCount} {i18nT('profile:components.profile.ProfileTravelEngagementSection.iz_01234bb3')}{travelsCount}
-                </Text>
+                  {i18nT('profile:components.profile.ProfileTravelEngagementSection.zagruzheno_8a574f0a', { value1: loadedTravelsCount, value2: travelsCount })}</Text>
               </View>
             ) : null}
           </View>

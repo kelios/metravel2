@@ -682,8 +682,7 @@ export function QuestFinalePanel({
       ) : (
         <>
           <Text style={[styles.completionText, { opacity: 0.8 }]}>
-            {i18nT('quests:components.quests.questWizardSections.chtoby_otkryt_priz_i_video_zavershite_vse_sh_fd0438f8')}{completedCount} {i18nT('quests:components.quests.questWizardSections.iz_277be07e')}{stepsCount}.
-          </Text>
+            {i18nT('quests:components.quests.questWizardSections.chtoby_otkryt_priz_i_video_zavershite_vse_sh_fd0438f8', { value1: completedCount, value2: stepsCount })}</Text>
           <QuestFinaleContinueButton styles={styles} onContinue={onContinue} />
         </>
       )}

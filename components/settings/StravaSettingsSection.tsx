@@ -130,7 +130,7 @@ function ActivityCard({
         </Text>
       ) : null}
       {activity.cacheExpiresAt ? (
-        <Text style={styles.cacheHint}>{i18nT('profile:components.settings.StravaSettingsSection.kesh_dostupen_do_c4dee12c')}{formatDate(activity.cacheExpiresAt)}</Text>
+        <Text style={styles.cacheHint}>{i18nT('profile:components.settings.StravaSettingsSection.kesh_dostupen_do_c4dee12c', { value1: formatDate(activity.cacheExpiresAt) })}</Text>
       ) : null}
     </Pressable>
   );
@@ -222,10 +222,10 @@ export default function StravaSettingsSection() {
             <Text style={styles.statusText}>{statusLabel}</Text>
             {strava.statusQuery.isFetching ? <ActivityIndicator size="small" color={colors.primaryDark} /> : null}
           </View>
-          {athleteName ? <Text style={styles.statusMeta}>{i18nT('profile:components.settings.StravaSettingsSection.atlet_26905d50')}{athleteName}</Text> : null}
-          {status?.lastSyncAt ? <Text style={styles.statusMeta}>{i18nT('profile:components.settings.StravaSettingsSection.poslednyaya_sinhronizatsiya_58488896')}{formatDate(status.lastSyncAt)}</Text> : null}
+          {athleteName ? <Text style={styles.statusMeta}>{i18nT('profile:components.settings.StravaSettingsSection.atlet_26905d50', { value1: athleteName })}</Text> : null}
+          {status?.lastSyncAt ? <Text style={styles.statusMeta}>{i18nT('profile:components.settings.StravaSettingsSection.poslednyaya_sinhronizatsiya_58488896', { value1: formatDate(status.lastSyncAt) })}</Text> : null}
           {status?.missingScopes?.length ? (
-            <Text style={styles.warningText}>{i18nT('profile:components.settings.StravaSettingsSection.ne_hvataet_scope_34f1e878')}{status.missingScopes.join(', ')}{i18nT('profile:components.settings.StravaSettingsSection.podklyuchite_strava_povtorno_36a67da7')}</Text>
+            <Text style={styles.warningText}>{i18nT('profile:components.settings.StravaSettingsSection.ne_hvataet_scope_34f1e878', { value1: status.missingScopes.join(', ') })}</Text>
           ) : null}
           {status?.message ? <Text style={styles.statusMeta}>{status.message}</Text> : null}
         </View>
@@ -237,8 +237,7 @@ export default function StravaSettingsSection() {
           <Text style={styles.copyText}>
             {i18nT('profile:components.settings.StravaSettingsSection.dannye_strava_otobrazhayutsya_tolko_vam_kak__47ce026e')}</Text>
           <Text style={styles.copyText}>
-            {i18nT('profile:components.settings.StravaSettingsSection.otklyuchit_strava_i_zaprosit_udalenie_lokaln_35d5a4f9')}{SUPPORT_EMAIL}.
-          </Text>
+            {i18nT('profile:components.settings.StravaSettingsSection.otklyuchit_strava_i_zaprosit_udalenie_lokaln_35d5a4f9', { value1: SUPPORT_EMAIL })}</Text>
         </View>
 
         <View style={styles.actionsRow}>
@@ -282,7 +281,7 @@ export default function StravaSettingsSection() {
           <View style={styles.noticeBox}>
             <Text style={styles.noticeTitle}>{i18nT('profile:components.settings.StravaSettingsSection.limit_strava_d730116e')}</Text>
             <Text style={styles.noticeText}>
-              {i18nT('profile:components.settings.StravaSettingsSection.ne_vypolnyaem_agressivnyy_refetch_povtorite__13a96240')}{status?.rateLimit?.retryAfterSeconds ? i18nT('profile:components.settings.StravaSettingsSection.cherez_value1_sek_268630b0', { value1: status.rateLimit.retryAfterSeconds }) : '.'}
+              {status?.rateLimit?.retryAfterSeconds ? i18nT('profile:components.settings.StravaSettingsSection.cherez_value1_sek_268630b0', { value1: status.rateLimit.retryAfterSeconds }) : i18nT('profile:components.settings.StravaSettingsSection.ne_vypolnyaem_agressivnyy_refetch_povtorite__13a96240') + '.'}
             </Text>
           </View>
         ) : null}

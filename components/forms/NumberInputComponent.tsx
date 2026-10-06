@@ -150,7 +150,7 @@ const NumberInputComponent: React.FC<NumberInputComponentProps> = ({
                 placeholderTextColor={colors.textMuted}
                 editable={!disabled}
                 accessibilityLabel={label}
-                accessibilityHint={hint || `Введите число${min !== undefined ? i18nT('shared:components.forms.NumberInputComponent.ot_value1_77a163f8', { value1: min }) : ''}${max !== undefined ? i18nT('shared:components.forms.NumberInputComponent.do_value1_3379aab5', { value1: max }) : ''}`}
+                accessibilityHint={hint || (min !== undefined && max !== undefined ? i18nT('shared:components.forms.NumberInputComponent.boundedHint', { value1: min, value2: max }) : min !== undefined ? i18nT('shared:components.forms.NumberInputComponent.ot_value1_77a163f8', { value1: min }) : max !== undefined ? i18nT('shared:components.forms.NumberInputComponent.do_value1_3379aab5', { value1: max }) : i18nT('shared:components.forms.NumberInputComponent.numberHint'))}
                 accessibilityState={{ disabled }}
                 {...Platform.select({
                     web: {

@@ -101,11 +101,10 @@ export function buildTravelFaqItems(travel: Travel | null | undefined): TravelFa
     : []
   if (pointNames.length > 0) {
     const shown = pointNames.slice(0, MAX_POINTS_IN_ANSWER)
-    const tail = pointNames.length > shown.length ? i18nT('shared:utils.travelFaq.i_esche_value1_a40205f6', { value1: pointNames.length - shown.length }) : ''
     items.push({
       q: i18nT('shared:utils.travelFaq.chto_obyazatelno_posmotret_na_etom_marshrute_24f75df4'),
       a: clamp(
-        i18nT('shared:utils.travelFaq.klyuchevye_tochki_marshruta_value1_value2_u__3daa077c', { value1: shown.join('; '), value2: tail }),
+        pointNames.length > shown.length ? i18nT('shared:utils.travelFaq.i_esche_value1_a40205f6', { value1: shown.join('; '), value2: pointNames.length - shown.length }) : i18nT('shared:utils.travelFaq.klyuchevye_tochki_marshruta_value1_value2_u__3daa077c', { value1: shown.join('; '), value2: '' }),
       ),
     })
   }

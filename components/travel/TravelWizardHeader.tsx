@@ -204,7 +204,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         () => stepOptions.map((step) => ({
             key: `step-${step}`,
             icon: step === currentStep ? 'check-circle' : 'circle',
-            label: `${i18nT('travel:components.travel.TravelWizardHeader.shag_6e830528')}${step}${i18nT('travel:components.travel.TravelWizardHeader.iz_28d07309')}${totalSteps} · ${getStepLabel(step)}`,
+            label: i18nT('travel:components.travel.TravelWizardHeader.stepProgressLabel', { value1: step, value2: totalSteps, value3: getStepLabel(step) }),
             accessibilityLabel: i18nT('travel:components.travel.TravelWizardHeader.pereyti_k_shagu_value1_value2_01355266', { value1: step, value2: getStepLabel(step) }),
             onPress: () => handleStepOptionPress(step),
         })),
@@ -453,8 +453,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                         </View>
                         <View style={styles.stepSelectItemTextGroup}>
                             <Text style={[styles.stepSelectItemTitle, isActive && styles.stepSelectItemTitleActive]} numberOfLines={1}>
-                                {i18nT('travel:components.travel.TravelWizardHeader.shag_6e830528')}{step} {i18nT('travel:components.travel.TravelWizardHeader.iz_28d07309')}{totalSteps}
-                            </Text>
+                                {i18nT('travel:components.travel.TravelWizardHeader.shag_6e830528', { value1: step, value2: totalSteps })}</Text>
                             <Text style={styles.stepSelectItemSubtitle} numberOfLines={1}>
                                 {getStepLabel(step)}
                             </Text>
@@ -469,8 +468,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         <View style={styles.progressErrorBadge}>
             <Feather name="alert-circle" size={12} color={colors.danger} />
             <Text style={styles.progressErrorText} numberOfLines={1}>
-                {i18nT('travel:components.travel.TravelWizardHeader.oshibki_2328a64c')}{errorCount}
-            </Text>
+                {i18nT('travel:components.travel.TravelWizardHeader.oshibki_2328a64c', { value1: errorCount })}</Text>
         </View>
     ) : null;
 

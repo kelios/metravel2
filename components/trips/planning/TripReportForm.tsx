@@ -15,7 +15,7 @@ import type { PlannedTrip, SubmitReportInput } from '@/api/plannedTrips';
 import { useSubmitTripReport } from '@/hooks/usePlannedTripsApi';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { CatalogPlace } from '@/utils/placesCatalog';
-import { translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 import { formatDate } from '@/i18n/format'
 
 
@@ -166,7 +166,7 @@ function TripReportForm({ trip }: Props) {
           <Text style={styles.note}>{i18nT('trips:components.trips.planning.TripReportForm.marshrut_dobavlen_v_katalog_soobschestva_f666e7fa')}</Text>
         ) : null}
         {publishedAt ? (
-          <Text style={styles.hint}>{i18nT('trips:components.trips.planning.TripReportForm.opublikovano_012a83fe')}{publishedAt}</Text>
+          <Text style={styles.hint}>{i18nT('trips:components.trips.planning.TripReportForm.opublikovano_012a83fe', { value1: publishedAt })}</Text>
         ) : null}
       </View>
     );
@@ -210,7 +210,7 @@ function TripReportForm({ trip }: Props) {
       />
       {touched && summaryTooShort ? (
         <Text style={styles.error}>
-          {i18nT('trips:components.trips.planning.TripReportForm.opishite_poezdku_ne_koroche_fcdd6901')}{SUMMARY_MIN} {i18nT('trips:components.trips.planning.TripReportForm.simvolov_f0f55dc2')}</Text>
+          {translatePlural('trips:components.trips.planning.TripReportForm.opishite_poezdku_ne_koroche_fcdd6901', SUMMARY_MIN, { value1: SUMMARY_MIN })}</Text>
       ) : null}
 
       <Text style={styles.label}>{i18nT('trips:components.trips.planning.TripReportForm.poseschennye_mesta_metravel_c389926f')}</Text>
@@ -247,7 +247,7 @@ function TripReportForm({ trip }: Props) {
       {placeQuery.trim().length > 0 ? (
         <View style={styles.placeResults} testID="trip-report-place-results">
           {placeQuery.trim().length < PLACE_SEARCH_MIN ? (
-            <Text style={styles.hint}>{i18nT('trips:components.trips.planning.TripReportForm.vvedite_minimum_f0e4805a')}{PLACE_SEARCH_MIN} {i18nT('trips:components.trips.planning.TripReportForm.simvola_1599ea15')}</Text>
+            <Text style={styles.hint}>{translatePlural('trips:components.trips.planning.TripReportForm.vvedite_minimum_f0e4805a', PLACE_SEARCH_MIN, { value1: PLACE_SEARCH_MIN })}</Text>
           ) : placesLoading ? (
             <Text style={styles.hint}>{i18nT('trips:components.trips.planning.TripReportForm.ischem_mesta_d6e33a69')}</Text>
           ) : placesError ? (
