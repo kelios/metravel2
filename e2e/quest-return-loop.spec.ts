@@ -299,7 +299,9 @@ test.describe('Петля возврата после финиша квеста 
       total_count: 4,
     })
 
-    await section.getByText('Соседний квест рядом', { exact: true }).click()
+    await section.getByRole('link', {
+      name: 'Пройти квест по городу Минск: Соседний квест рядом', exact: true,
+    }).click()
 
     await expect.poll(async () => (await readEvents(page, 'next_quest_click')).length, {
       timeout: 15_000,

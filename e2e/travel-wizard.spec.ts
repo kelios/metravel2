@@ -9,6 +9,7 @@ import { acceptAuthTerms, ensureAuthedStorageFallback, mockFakeAuthApis } from '
 import { seedNecessaryConsent } from './helpers/storage';
 import { dismissConsentBanner } from './helpers/consentBanner';
 import { runtimeViewport } from './helpers/runtimeViewport';
+import { mockTravelWizardUpsert } from './helpers/travelWizardFixture';
 
 const tinyPngBuffer = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
@@ -148,40 +149,7 @@ const maybeMockNominatimSearch = async (page: Page) => {
 const maybeMockTravelUpsert = async (page: Page, options?: { forceMock?: boolean }) => {
   if (USE_REAL_API && !options?.forceMock) return;
 
-  let lastId = 10_000;
-
-  const upsertPatterns = ['**/api/travels/upsert/**', '**/api/travels/upsert/', '**/travels/upsert/**', '**/travels/upsert/'];
-
-  for (const pattern of upsertPatterns) {
-    await page.route(pattern, async (route) => {
-      const req = route.request();
-      if (req.method().toUpperCase() !== 'PUT' && req.method().toUpperCase() !== 'POST') {
-        await route.fallback();
-        return;
-      }
-
-      let body: any = null;
-      try {
-        const raw = req.postData();
-        body = raw ? JSON.parse(raw) : null;
-      } catch {
-        body = null;
-      }
-
-      const payload = body?.data ?? body ?? {};
-      const id = payload?.id ?? lastId++;
-
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          ...payload,
-          id,
-          name: payload?.name ?? 'E2E Travel',
-        }),
-      });
-    });
-  }
+  await mockTravelWizardUpsert(page);
 };
 
 const maybeMockExifGps = async (page: Page) => {
