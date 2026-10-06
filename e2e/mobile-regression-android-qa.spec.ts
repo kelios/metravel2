@@ -150,6 +150,25 @@ test.describe('@mobile BUG-CLASS-2: header ≤20% viewport height', () => {
     ).toBeLessThanOrEqual(maxHeaderPx);
   });
 
+  test('quests catalog: sticky header does not exceed 20% of viewport on mobile', async ({ page }) => {
+    await setMobileViewport(page);
+    await gotoWithRetry(page, '/quests');
+
+    // Шапка каталога рисуется до ответа API, поэтому мок данных не нужен.
+    // Раньше заголовок, пять кнопок, чипы и поиск опускали её низ до 265px.
+    const header = page.getByTestId('quests-content-header').first();
+    await expect(header).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('quests-mobile-chips')).toBeVisible();
+
+    const headerBox = await header.boundingBox();
+    expect(headerBox, 'quests header must have a bounding box').not.toBeNull();
+    const maxHeaderPx = MOBILE_VIEWPORT.height * MAX_HEADER_RATIO;
+    expect(
+      headerBox!.y + headerBox!.height,
+      `Quests header bottom must be within ${maxHeaderPx}px from top. Got ${headerBox!.y + headerBox!.height}px`
+    ).toBeLessThanOrEqual(maxHeaderPx);
+  });
+
   test('travel wizard header does not exceed 20% of viewport on mobile', async ({ page }) => {
     await setMobileViewport(page);
     await ensureAuthedStorageFallback(page);

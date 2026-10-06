@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Pressable, Text } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import { translate as i18nT, type TranslationKey } from '@/i18n';
@@ -58,6 +58,11 @@ type QuestsSortChipsProps = {
     availableSortOrders: QuestSortOrder[];
     activeSortOrder: QuestSortOrder;
     onSelectSortOrder: (order: QuestSortOrder) => void;
+    /**
+     * Мобильная лента шапки (#2314): чип оборачивается в прозрачную зону касания
+     * 44px, пилюля остаётся 32px. В ряду счётчика на desktop не передаётся.
+     */
+    touchTarget?: boolean;
 };
 
 function QuestsSortChips({
@@ -66,23 +71,16 @@ function QuestsSortChips({
     availableSortOrders,
     activeSortOrder,
     onSelectSortOrder,
+    touchTarget = false,
 }: QuestsSortChipsProps) {
     return (
         <>
             {SORT_ORDER_CHIPS.map((chip) => {
                 if (!availableSortOrders.includes(chip.order)) return null;
                 const isActive = activeSortOrder === chip.order;
-                return (
-                    <Pressable
-                        key={chip.order}
-                        style={[styles.sortChip, isActive && styles.sortChipActive]}
-                        onPress={() => onSelectSortOrder(chip.order)}
-                        accessibilityRole="button"
-                        accessibilityLabel={isActive ? i18nT(chip.offKey) : i18nT(chip.onKey)}
-                        accessibilityState={{ selected: isActive }}
-                        hitSlop={8}
-                        testID={chip.testID}
-                    >
+                const chipStyle = [styles.sortChip, isActive && styles.sortChipActive];
+                const content = (
+                    <>
                         <Feather
                             name={chip.icon}
                             size={13}
@@ -91,6 +89,20 @@ function QuestsSortChips({
                         <Text style={[styles.sortChipText, isActive && styles.sortChipTextActive]}>
                             {i18nT(chip.labelKey)}
                         </Text>
+                    </>
+                );
+                return (
+                    <Pressable
+                        key={chip.order}
+                        style={touchTarget ? styles.mobileChipHit : chipStyle}
+                        onPress={() => onSelectSortOrder(chip.order)}
+                        accessibilityRole="button"
+                        accessibilityLabel={isActive ? i18nT(chip.offKey) : i18nT(chip.onKey)}
+                        accessibilityState={{ selected: isActive }}
+                        hitSlop={8}
+                        testID={chip.testID}
+                    >
+                        {touchTarget ? <View style={chipStyle}>{content}</View> : content}
                     </Pressable>
                 );
             })}

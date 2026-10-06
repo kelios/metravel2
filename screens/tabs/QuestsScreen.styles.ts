@@ -52,9 +52,11 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        marginTop: 2,
+        // На телефоне чипы живут в ленте липкой шапки (`QuestsMobileToolbar`):
+        // пилюля 32px внутри зоны касания 44px (`mobileChipHit`).
+        marginTop: isMobileW ? 0 : 2,
         paddingHorizontal: spacing.sm,
-        paddingVertical: 3,
+        paddingVertical: isMobileW ? 6 : 3,
         borderRadius: 999,
         borderWidth: 1,
         borderColor: colors.primary,
@@ -66,6 +68,10 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
     const headerChipText: TextStyle = {
         color: colors.primary,
         fontSize: typography.sizes.sm,
+        // Явная высота строки: ряд счётчика на desktop резервируется в
+        // `app/global.css` (28px = 18 + паддинги + рамка + marginTop), и
+        // «normal» системного шрифта не должен её расшатывать.
+        lineHeight: 18,
         fontWeight: '600',
     };
 
@@ -497,10 +503,15 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         },
         contentHeader: {
             flexDirection: 'column',
-            gap: isMobileW ? spacing.sm : spacing.md,
+            // Мобильная шапка — два ряда (поиск+кнопки, лента чипов) и обязана
+            // уложиться в ~20% вьюпорта вместе с глобальной шапкой, поэтому
+            // вертикальные отступы минимальные.
+            // Между рядами зазора нет: у чипов прозрачная зона касания 44px,
+            // и видимый отступ до пилюли (6px) даёт она.
+            gap: isMobileW ? 0 : spacing.md,
             paddingHorizontal: headerPadding,
-            paddingTop: isMobileW ? spacing.lg : spacing.xl,
-            paddingBottom: isMobileW ? spacing.sm : spacing.md,
+            paddingTop: isMobileW ? spacing.xs : spacing.xl,
+            paddingBottom: isMobileW ? spacing.xxs : spacing.md,
             borderBottomWidth: 0,
             borderBottomColor: colors.borderLight,
             backgroundColor: colors.background,
@@ -516,7 +527,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                           top: 0,
                           zIndex: 10,
                           backgroundColor: colors.surface,
-                          paddingTop: `calc(${spacing.lg}px + env(safe-area-inset-top, 0px))`,
+                          paddingTop: `calc(${spacing.xs}px + env(safe-area-inset-top, 0px))`,
                       } as any)
                     : ({
                           position: 'sticky',
@@ -527,12 +538,6 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
                           backgroundColor: colors.surface,
                       } as any),
             }),
-        },
-        contentHeaderTopRow: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: spacing.sm,
         },
         contentTitle: {
             color: colors.text,
@@ -576,6 +581,35 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         contentTitleBlock: {
             flex: 1,
             minWidth: 0,
+        },
+        mobileTitleRow: {
+            paddingHorizontal: headerPadding,
+            paddingTop: spacing.sm,
+        },
+        mobileToolbarRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+        },
+        mobileSearchSlot: {
+            flex: 1,
+            minWidth: 0,
+        },
+        // Лента чипов уходит под край экрана (отрицательный отступ = паддинг
+        // шапки): обрезанный крайний чип подсказывает, что ленту можно листать.
+        mobileChipScroller: {
+            flexGrow: 0,
+            marginHorizontal: -headerPadding,
+        },
+        mobileChipHit: {
+            minHeight: touchTarget.minHeight,
+            justifyContent: 'center',
+        },
+        mobileChipScrollerContent: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+            paddingHorizontal: headerPadding,
         },
         headerToggleRow: {
             flexDirection: 'row',

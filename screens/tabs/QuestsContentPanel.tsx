@@ -14,7 +14,6 @@ import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
 import Map from '@/components/MapPage/Map';
-import NavigationIcon from '@/components/layout/NavigationIcon';
 import EmptyState from '@/components/ui/EmptyState';
 import type { MapMovePayload } from '@/components/MapPage/Map/types';
 import { useQuestGridCardWidth } from '@/hooks/useQuestCatalogResponsiveModel';
@@ -22,6 +21,7 @@ import { useQuestGridCardWidth } from '@/hooks/useQuestCatalogResponsiveModel';
 import QuestCard from './QuestCard';
 import { QuestsCountPlaceholder, QuestsGridSkeleton } from './QuestsCatalogPlaceholders';
 import { ALL_QUESTS_ID, COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID } from './QuestsScreen.helpers';
+import QuestsMobileToolbar from './QuestsMobileToolbar';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
 import { pluralizeQuest, type QuestMeta, type QuestSortOrder } from './questsShared';
 import QuestsSortChips, { EMPTY_SORT_ORDERS } from './QuestsSortChips';
@@ -282,176 +282,141 @@ function QuestsContentPanel({
 
     const questKeyExtractor = useCallback((quest: QuestListItem) => String(quest.id), []);
 
-    const contentHeader = (
-        <View style={styles.contentHeader} testID="quests-content-header">
-            <View style={styles.contentHeaderTopRow}>
-                <View style={styles.contentTitleBlock}>
-                    <Text
-                        style={styles.contentTitle}
-                        numberOfLines={2}
-                        accessibilityRole="header"
-                        {...({ 'aria-level': 1 } as Record<string, unknown>)}
-                        testID="quests-content-title"
-                    >
-                        {searchActive
-                            ? i18nT('quests:screens.tabs.QuestsContentPanel.rezultaty_poiska_5ebb750c')
-                            : isMapAreaActive
-                                ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_v_etoy_oblasti_f59f59da')
-                                : selectedCityId === nearbyId
-                                    ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_poblizosti_02dcd1cf')
-                                    : selectedCityId === kidsFilterId
-                                        ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_dlya_detey_fbda5ab0')
-                                        : selectedCityId === bikeFilterId
-                                            ? i18nT('quests:screens.tabs.QuestsContentPanel.veloTitle')
-                                            : selectedCityId === REVIEWED_FILTER_ID
-                                                ? i18nT('quests:screens.tabs.QuestsScreen.reviewedTitle')
-                                                : selectedCityId === COMPLETED_FILTER_ID
-                                                    ? i18nT('quests:screens.tabs.QuestsContentPanel.completedTitle')
-                                                    : selectedCityId === COMPLETED_BY_OTHERS_FILTER_ID
-                                                        ? i18nT('quests:screens.tabs.QuestsContentPanel.completedByOthersTitle')
-                                                        : selectedCityId === UNCOMPLETED_FILTER_ID
-                                                            ? i18nT('quests:screens.tabs.QuestsContentPanel.uncompletedTitle')
-                                                            : selectedCityName
-                                                                ? i18nT('quests:screens.tabs.QuestsContentPanel.locationTitle', { value1: selectedCityName })
-                                                                : i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}
-                    </Text>
-                    <View style={styles.contentCountRow}>
-                        {!dataLoaded && (
-                            <QuestsCountPlaceholder
-                                styles={styles}
-                                // Чип резервируется только для полного каталога: там он есть всегда, а в
-                                // срезе города или фильтра прохождений может не набраться.
-                                withSortChip={selectedCityId === ALL_QUESTS_ID && !isMapAreaActive}
-                            />
-                        )}
-                        {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
-                        {dataLoaded && !searchActive && filtersActive && (
-                            <Pressable
-                                style={styles.resetFiltersChip}
-                                onPress={onResetFilters}
-                                accessibilityRole="button"
-                                accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.sbrosit_filtry_i_pokazat_vse_kvesty_79d935b0')}
-                                hitSlop={8}
-                                testID="quests-reset-filters"
-                            >
-                                <Feather name="x" size={13} color={colors.primary} />
-                                <Text style={styles.resetFiltersChipText}>{i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}</Text>
-                            </Pressable>
-                        )}
-                        {dataLoaded && (
-                            <QuestsSortChips
-                                styles={styles}
-                                colors={colors}
-                                availableSortOrders={availableSortOrders}
-                                activeSortOrder={activeSortOrder}
-                                onSelectSortOrder={onSelectSortOrder}
-                            />
-                        )}
-                    </View>
-                </View>
-                {isMobile && (
-                    <View style={styles.headerToggleRow} testID="quests-mobile-controls">
-                        <Pressable
-                            style={[styles.headerIconBtn, viewMode === 'map' && styles.headerIconBtnActive]}
-                            onPress={onToggleViewMode}
-                            accessibilityRole="button"
-                            accessibilityLabel={viewMode === 'map' ? i18nT('quests:screens.tabs.QuestsContentPanel.pokazat_spisok_kvestov_a0806030') : i18nT('quests:screens.tabs.QuestsContentPanel.pokazat_kvesty_na_karte_afca9878')}
-                            testID="quests-toggle-view-mode"
-                        >
-                            <Feather
-                                name={viewMode === 'map' ? 'list' : 'map'}
-                                size={17}
-                                color={viewMode === 'map' ? colors.textOnPrimary : colors.text}
-                            />
-                        </Pressable>
-                        <Pressable
-                            style={styles.headerIconBtn}
-                            onPress={onOpenFilterDrawer}
-                            accessibilityRole="button"
-                            accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.vybrat_gorod_0bc4253e')}
-                        >
-                            <Feather name="filter" size={17} color={colors.text} />
-                        </Pressable>
-                        <Pressable
-                            style={[styles.headerIconBtn, selectedCityId === kidsFilterId && styles.headerIconBtnActive]}
-                            onPress={onShowKids}
-                            accessibilityRole="button"
-                            accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.pokazat_kvesty_dlya_detey_dd437d45')}
-                            accessibilityState={{ selected: selectedCityId === kidsFilterId }}
-                            testID="quests-show-kids"
-                        >
-                            <Feather
-                                name="smile"
-                                size={17}
-                                color={selectedCityId === kidsFilterId ? colors.textOnPrimary : colors.text}
-                            />
-                        </Pressable>
-                        <Pressable
-                            style={[styles.headerIconBtn, selectedCityId === bikeFilterId && styles.headerIconBtnActive]}
-                            onPress={onShowBike}
-                            accessibilityRole="button"
-                            accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.veloShowA11y')}
-                            accessibilityState={{ selected: selectedCityId === bikeFilterId }}
-                            testID="quests-show-bike"
-                        >
-                            <NavigationIcon
-                                name="bike"
-                                size={17}
-                                color={selectedCityId === bikeFilterId ? colors.textOnPrimary : colors.text}
-                            />
-                        </Pressable>
-                        <Pressable
-                            style={[
-                                styles.headerIconBtn,
-                                selectedCityId === nearbyId && styles.headerIconBtnActive,
-                                geoRequesting && styles.headerIconBtnDisabled,
-                            ]}
-                            onPress={onShowNearby}
-                            disabled={geoRequesting}
-                            accessibilityRole="button"
-                            accessibilityLabel={geoRequesting ? i18nT('quests:screens.tabs.QuestsContentPanel.ischem_kvesty_ryadom_so_mnoy_f5a72f30') : i18nT('quests:screens.tabs.QuestsContentPanel.pokazat_kvesty_ryadom_so_mnoy_d7a7ee55')}
-                            accessibilityState={{ selected: selectedCityId === nearbyId, disabled: geoRequesting }}
-                            testID="quests-show-nearby"
-                        >
-                            <Feather
-                                name="navigation"
-                                size={17}
-                                color={selectedCityId === nearbyId ? colors.textOnPrimary : colors.text}
-                            />
-                        </Pressable>
-                    </View>
-                )}
-            </View>
+    const contentTitleText = searchActive
+            ? i18nT('quests:screens.tabs.QuestsContentPanel.rezultaty_poiska_5ebb750c')
+            : isMapAreaActive
+                ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_v_etoy_oblasti_f59f59da')
+                : selectedCityId === nearbyId
+                    ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_poblizosti_02dcd1cf')
+                    : selectedCityId === kidsFilterId
+                        ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_dlya_detey_fbda5ab0')
+                        : selectedCityId === bikeFilterId
+                            ? i18nT('quests:screens.tabs.QuestsContentPanel.veloTitle')
+                            : selectedCityId === REVIEWED_FILTER_ID
+                                ? i18nT('quests:screens.tabs.QuestsScreen.reviewedTitle')
+                                : selectedCityId === COMPLETED_FILTER_ID
+                                    ? i18nT('quests:screens.tabs.QuestsContentPanel.completedTitle')
+                                    : selectedCityId === COMPLETED_BY_OTHERS_FILTER_ID
+                                        ? i18nT('quests:screens.tabs.QuestsContentPanel.completedByOthersTitle')
+                                        : selectedCityId === UNCOMPLETED_FILTER_ID
+                                            ? i18nT('quests:screens.tabs.QuestsContentPanel.uncompletedTitle')
+                                            : selectedCityName
+                                                ? i18nT('quests:screens.tabs.QuestsContentPanel.locationTitle', { value1: selectedCityName })
+                                                : i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd');
 
-            <View style={styles.searchRow}>
-                <Feather name="search" size={16} color={colors.textMuted} />
-                <TextInput
-                    style={styles.searchInput}
-                    value={searchQuery}
-                    onChangeText={onSearchChange}
-                    placeholder={i18nT('quests:screens.tabs.QuestsContentPanel.poisk_po_nazvaniyu_gorodu_ili_syuzhetu_cb3eef48')}
-                    placeholderTextColor={colors.textMuted}
-                    returnKeyType="search"
-                    autoCorrect={false}
-                    clearButtonMode="never"
-                    accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.poisk_kvestov_po_nazvaniyu_gorodu_ili_syuzhe_8ff547ba')}
-                    testID="quests-search-input"
-                />
-                {searchActive && (
+    const sortChips = dataLoaded ? (
+        <QuestsSortChips
+            styles={styles}
+            colors={colors}
+            availableSortOrders={availableSortOrders}
+            activeSortOrder={activeSortOrder}
+            onSelectSortOrder={onSelectSortOrder}
+            touchTarget={isMobile}
+        />
+    ) : null;
+    const showResetChip = dataLoaded && !searchActive && filtersActive;
+
+    // На телефоне заголовок с количеством живёт в начале прокручиваемого списка,
+    // а не в липкой шапке: шапка обязана укладываться в ~20% вьюпорта.
+    const titleBlock = (
+        <View
+            style={isMobile ? styles.mobileTitleRow : styles.contentTitleBlock}
+            testID={isMobile ? 'quests-mobile-title' : undefined}
+        >
+            <Text
+                style={styles.contentTitle}
+                numberOfLines={2}
+                accessibilityRole="header"
+                {...({ 'aria-level': 1 } as Record<string, unknown>)}
+                testID="quests-content-title"
+            >
+                {contentTitleText}
+            </Text>
+            <View style={styles.contentCountRow} testID="quests-count-row">
+                {!dataLoaded && (
+                    <QuestsCountPlaceholder
+                        styles={styles}
+                        // Чип резервируется только для полного каталога: там он есть всегда, а в
+                        // срезе города или фильтра прохождений может не набраться.
+                        withSortChip={!isMobile && selectedCityId === ALL_QUESTS_ID && !isMapAreaActive}
+                    />
+                )}
+                {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
+                {!isMobile && showResetChip && (
                     <Pressable
-                        style={styles.searchClearBtn}
-                        onPress={() => onSearchChange('')}
+                        style={styles.resetFiltersChip}
+                        onPress={onResetFilters}
                         accessibilityRole="button"
-                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.ochistit_poisk_c6fc5f29')}
+                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.sbrosit_filtry_i_pokazat_vse_kvesty_79d935b0')}
                         hitSlop={8}
-                        testID="quests-search-clear"
+                        testID="quests-reset-filters"
                     >
-                        <Feather name="x" size={16} color={colors.textMuted} />
+                        <Feather name="x" size={13} color={colors.primary} />
+                        <Text style={styles.resetFiltersChipText}>{i18nT('quests:screens.tabs.QuestsContentPanel.vse_kvesty_1c003efd')}</Text>
                     </Pressable>
                 )}
+                {!isMobile && sortChips}
             </View>
         </View>
     );
+
+    const searchField = (
+    <View style={styles.searchRow}>
+        <Feather name="search" size={16} color={colors.textMuted} />
+        <TextInput
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={onSearchChange}
+            placeholder={i18nT('quests:screens.tabs.QuestsContentPanel.poisk_po_nazvaniyu_gorodu_ili_syuzhetu_cb3eef48')}
+            placeholderTextColor={colors.textMuted}
+            returnKeyType="search"
+            autoCorrect={false}
+            clearButtonMode="never"
+            accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.poisk_kvestov_po_nazvaniyu_gorodu_ili_syuzhe_8ff547ba')}
+            testID="quests-search-input"
+        />
+        {searchActive && (
+            <Pressable
+                style={styles.searchClearBtn}
+                onPress={() => onSearchChange('')}
+                accessibilityRole="button"
+                accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.ochistit_poisk_c6fc5f29')}
+                hitSlop={8}
+                testID="quests-search-clear"
+            >
+                <Feather name="x" size={16} color={colors.textMuted} />
+            </Pressable>
+        )}
+    </View>
+    );
+
+    const contentHeader = isMobile ? (
+        <QuestsMobileToolbar
+            styles={styles}
+            colors={colors}
+            searchField={searchField}
+            sortChips={sortChips}
+            viewMode={viewMode}
+            onToggleViewMode={onToggleViewMode}
+            onOpenFilterDrawer={onOpenFilterDrawer}
+            selectedCityId={selectedCityId}
+            kidsFilterId={kidsFilterId}
+            bikeFilterId={bikeFilterId}
+            nearbyId={nearbyId}
+            onShowKids={onShowKids}
+            onShowBike={onShowBike}
+            onShowNearby={onShowNearby}
+            geoRequesting={geoRequesting}
+            showResetChip={showResetChip}
+            onResetFilters={onResetFilters}
+        />
+    ) : (
+        <View style={styles.contentHeader} testID="quests-content-header">
+            {titleBlock}
+            {searchField}
+        </View>
+    );
+    const mobileTitleBlock = isMobile ? titleBlock : null;
 
     // «Пройденные» — единственный срез, который может оказаться пустым при
     // живом фильтре: он показывается любому вошедшему игроку, в том числе тому,
@@ -485,6 +450,8 @@ function QuestsContentPanel({
     const inner = (
         <>
             {contentHeader}
+
+            {mobileTitleBlock}
 
             {noticeSlot}
 
@@ -728,6 +695,7 @@ function QuestsContentPanel({
                     contentContainerStyle={styles.questVirtualizedListContent}
                     ListHeaderComponent={
                         <>
+                            {mobileTitleBlock}
                             {geoMessageBlock}
                             {seoIntroSlot}
                         </>

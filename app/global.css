@@ -822,6 +822,27 @@ select:focus-visible {
     display: none !important;
   }
 
+  /* Мобильная шапка каталога (#2314): в серверном (всегда узком) кадре заголовок
+     стоит под липкой шапкой, а лента чипов — в ней. На desktop заголовок —
+     первая строка шапки, ленты нет: переставляем заголовок наверх, прячем ленту
+     и снимаем верхний паддинг шапки, чтобы кадр до гидратации совпал с desktop. */
+  [data-testid="quests-mobile-chips"] {
+    display: none !important;
+  }
+
+  [data-testid="quests-mobile-title"] {
+    order: -1;
+    padding: 32px 24px 0 !important;
+  }
+
+  [data-testid="quests-content-header"]:has([data-testid="quests-mobile-chips"]) {
+    padding-top: 16px !important;
+  }
+
+  [data-testid="quests-count-row"] {
+    min-height: 28px !important;
+  }
+
   [data-testid="quests-content-body"] {
     padding: 16px 24px 24px !important;
   }

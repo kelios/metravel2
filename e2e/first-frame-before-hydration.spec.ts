@@ -81,7 +81,7 @@ type StaticFrame = {
   }[]
   fontLoaded: boolean
   skeletonCells: { width: number; height: number; animated: boolean }[]
-  sortPlaceholder: boolean
+  countRow: boolean
 }
 
 const readStaticFrame = (page: Page): Promise<StaticFrame> =>
@@ -116,7 +116,9 @@ const readStaticFrame = (page: Page): Promise<StaticFrame> =>
       })
     const controls = Array.from(
       document.querySelectorAll<HTMLElement>(
-        '[data-testid="quests-mobile-controls"] button',
+        // Кнопки шапки (#2314): «карта» и «город» — в ряду поиска, фильтры —
+        // в горизонтальной ленте чипов.
+        '[data-testid="quests-mobile-controls"] button, [data-testid="quests-mobile-chips"] button',
       ),
     ).map((button) => {
       const glyph = button.querySelector<HTMLElement>('[data-icon-font]')
@@ -152,8 +154,8 @@ const readStaticFrame = (page: Page): Promise<StaticFrame> =>
       icons,
       fontLoaded: document.fonts.check('17px feather'),
       skeletonCells,
-      sortPlaceholder: Boolean(
-        document.querySelector('[data-testid="quests-sort-placeholder"]'),
+      countRow: Boolean(
+        document.querySelector('[data-testid="quests-count-row"]'),
       ),
     }
   })
@@ -185,7 +187,8 @@ test.describe('кадр до гидратации (#2170)', () => {
       'логотип бренд-строки загружен до гидратации',
     ).toBe(true)
 
-    // Пять кнопок шапки каталога: ни одной пустой клетки.
+    // Пять кнопок шапки каталога (две в ряду поиска, три чипа фильтров): ни
+    // одной пустой клетки.
     expect(frame.controls.length).toBeGreaterThanOrEqual(5)
     expect(frame.controls.filter((control) => !control.drawn)).toEqual([])
 
@@ -207,10 +210,9 @@ test.describe('кадр до гидратации (#2170)', () => {
         Math.abs(cell.height - (cell.width * 260) / 380),
       ).toBeLessThanOrEqual(1)
     }
-    expect(
-      frame.sortPlaceholder,
-      'строка счётчика и чип сортировки зарезервированы',
-    ).toBe(true)
+    // Чипы сортировки на телефоне дописываются в конец горизонтальной ленты и
+    // по вертикали ничего не сдвигают — резервировать под них место не нужно.
+    expect(frame.countRow, 'строка счётчика зарезервирована').toBe(true)
   })
 
   test('медленная сеть: логотип и шрифт иконок готовы раньше гидратации', async ({
