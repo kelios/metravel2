@@ -422,7 +422,7 @@ export async function waitForMainListRender(page: Page) {
     page.waitForSelector('#search-input', { timeout: 30_000 }),
     page.waitForSelector('[placeholder*="Найти путешествия"]', { timeout: 30_000 }),
     page.waitForSelector(
-      '[data-testid="travel-card-link"], [testID="travel-card-link"], [data-testid="travel-card-skeleton"], [testID="travel-card-skeleton"], [data-testid="list-travel-skeleton"], [testID="list-travel-skeleton"]',
+      '[data-testid="travel-card-link"], [testID="travel-card-link"], [data-testid="travel-list-item-skeleton"], [testID="travel-list-item-skeleton"], [data-testid="list-travel-skeleton"], [testID="list-travel-skeleton"]',
       { timeout: 30_000 }
     ),
     page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),

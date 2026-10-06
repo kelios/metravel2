@@ -1,7 +1,6 @@
 import { memo, lazy } from 'react'
 import { ActivityIndicator, Text, View } from 'react-native'
 
-import { SkeletonLoader, TravelCardSkeleton } from '@/components/ui/SkeletonLoader'
 import { RECOMMENDATIONS_TOTAL_HEIGHT } from '@/components/listTravel/rightColumnModel'
 import { devError } from '@/utils/logger'
 import { translate as i18nT } from '@/i18n'
@@ -57,9 +56,3 @@ export const RecommendationsPlaceholder = () => (
     <ActivityIndicator size="small" />
   </View>
 )
-
-const FallbackTravelCardSkeleton = () => (
-  <SkeletonLoader width="100%" height={320} borderRadius={16} />
-)
-
-export const TravelCardSkeletonComponent = TravelCardSkeleton ?? FallbackTravelCardSkeleton

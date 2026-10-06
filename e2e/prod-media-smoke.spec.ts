@@ -435,10 +435,9 @@ const sampleVisibleCovers = () => {
     (el) => {
       const id = el.getAttribute('data-testid') || '';
       // `travel-card-link` — обёртка-ссылка вокруг той же карточки (дубль).
-      // `travel-card-skeleton*` (components/ui/SkeletonLoader.tsx) рендерятся
-      // и при первой загрузке, и при пагинации, и в Suspense-фолбэке /search.
-      // У них нет <img> по определению, поэтому без этого фильтра каждый
-      // скелетон в кадре засчитывался бы как «залитая обложка».
+      // Каркасы карточек (`*skeleton*`) рендерятся и при первой загрузке, и в
+      // Suspense-фолбэке /search. У них нет <img> по определению, поэтому без
+      // этого фильтра каждый каркас в кадре засчитывался бы как «залитая обложка».
       return id !== 'travel-card-link' && !id.includes('skeleton');
     },
   );

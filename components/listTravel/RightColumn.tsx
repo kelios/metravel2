@@ -118,17 +118,6 @@ export interface RightColumnProps {
 
 const EMPTY_ROWS: Travel[][] = []
 
-// The first row is above the fold and must be measured from its real contents.
-// Deferring it makes the browser report contain-intrinsic-size to FlashList
-// first, so the second row jumps when the real height arrives (#1298).
-const eagerFirstWebRowStyle: ViewStyle & {
-  contentVisibility: 'visible'
-  containIntrinsicSize: 'none'
-} = {
-  contentVisibility: 'visible',
-  containIntrinsicSize: 'none',
-}
-
 const RightColumn: React.FC<RightColumnProps> = (
   ({
      listIntroContent,
@@ -310,8 +299,6 @@ const RightColumn: React.FC<RightColumnProps> = (
       recommendationsSkeletonStyle,
       activeConditionChipStyles,
       rowLayout,
-      skeletonGridStyle,
-      skeletonCardWrapperStyle,
     } = useRightColumnStyles({
       colors,
       cardSpacing,
@@ -331,10 +318,13 @@ const RightColumn: React.FC<RightColumnProps> = (
       [isMobile],
     )
 
-    const rowSeparatorStyle = useMemo(() => ({ height: cardSpacing }), [cardSpacing])
-    const RowSeparator = useCallback(() => {
-      return <View style={rowSeparatorStyle} />
-    }, [rowSeparatorStyle])
+    const { rowSeparatorStyle } = rowLayout
+    // Разделитель рядов есть только там, где его задаёт rowLayout (web); каркас
+    // в RightColumnListStatus читает тот же стиль.
+    const RowSeparator = useMemo(
+      () => (rowSeparatorStyle ? () => <View style={rowSeparatorStyle} /> : undefined),
+      [rowSeparatorStyle],
+    )
 
     // Web: infinite scroll via onScroll instead of FlashList's onEndReached
     const evaluateEndReached = useCallback((contentHeight: number, viewportHeight: number, offsetY: number) => {
@@ -392,16 +382,12 @@ const RightColumn: React.FC<RightColumnProps> = (
 
     const renderRow = useCallback((item: { item: Travel[]; index: number }) => {
         const { item: rowItems, index: rowIndex } = item;
-        const { cols, rowStyle, itemWrapperStyle, placeholderStyle } = rowLayout;
+        const { cols, rowStyle, firstRowStyle, itemWrapperStyle, placeholderStyle } = rowLayout;
         const missingSlots = Math.max(0, cols - rowItems.length);
         return (
           <View
             testID={`travel-row-${rowIndex}`}
-            style={
-              isWeb && !isExport && rowIndex === 0
-                ? [rowStyle, eagerFirstWebRowStyle]
-                : rowStyle
-            }
+            style={rowIndex === 0 ? firstRowStyle : rowStyle}
           >
             {rowItems.map((travel, itemIndex) => (
               // Slot-stable key (position in the row), NOT travel.id. FlashList
@@ -441,7 +427,6 @@ const RightColumn: React.FC<RightColumnProps> = (
         rowLayout,
         renderItem,
         hasUserScrolled,
-        isExport,
         isMobile,
         showNextPageLoading,
         rows.length,
@@ -558,8 +543,7 @@ const RightColumn: React.FC<RightColumnProps> = (
         setSearch={setSearch}
         initialSkeletonCount={initialSkeletonCount}
         recommendationsSkeletonStyle={recommendationsSkeletonStyle}
-        skeletonGridStyle={skeletonGridStyle}
-        skeletonCardWrapperStyle={skeletonCardWrapperStyle}
+        rowLayout={rowLayout}
       />
     ), [
       activeFiltersCount,
@@ -572,13 +556,12 @@ const RightColumn: React.FC<RightColumnProps> = (
       onClearAll,
       recommendationsSkeletonStyle,
       refetch,
+      rowLayout,
       search,
       setSearch,
       shouldShowSkeleton,
       showEmptyState,
       showInitialLoading,
-      skeletonCardWrapperStyle,
-      skeletonGridStyle,
     ])
 
     const listContent = useMemo(() => {
@@ -597,7 +580,7 @@ const RightColumn: React.FC<RightColumnProps> = (
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={listStatus}
           ListFooterComponent={hasLoadedResults ? listFooter : null}
-          ItemSeparatorComponent={isWeb ? RowSeparator : undefined}
+          ItemSeparatorComponent={RowSeparator}
           onEndReached={isWeb ? undefined : onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
           onScroll={isWeb ? webScrollHandler : undefined}

@@ -117,7 +117,7 @@ test.describe('@perf Render audit: main and travel details (responsive + perf)',
 
       // Either list skeleton, list content, or empty state should render.
       const cards = page.locator('[data-testid="travel-card-link"], [testID="travel-card-link"]');
-      const cardSkeleton = page.locator('[data-testid="travel-card-skeleton"], [testID="travel-card-skeleton"]');
+      const cardSkeleton = page.locator('[data-testid="travel-list-item-skeleton"], [testID="travel-list-item-skeleton"]');
       const listSkeleton = page.locator('[data-testid="list-travel-skeleton"], [testID="list-travel-skeleton"]');
       const emptyState = page.locator('text=Пока нет путешествий');
       const foundCountText = page.locator('text=Найдено:');

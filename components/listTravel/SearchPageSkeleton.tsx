@@ -1,7 +1,8 @@
 import { memo, useMemo } from 'react'
 import { Platform, ScrollView, StyleSheet, View } from 'react-native'
 
-import { SkeletonLoader, TravelCardSkeleton } from '@/components/ui/SkeletonLoader'
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
+import TravelListItemSkeleton from '@/components/listTravel/TravelListItemSkeleton'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -166,7 +167,7 @@ const SearchCardsSkeleton = memo(
       <View style={styles.grid}>
         {Array.from({ length: count }).map((_, index) => (
           <View key={`search-card-skeleton-${index}`} style={styles.item}>
-            <TravelCardSkeleton />
+            <TravelListItemSkeleton />
           </View>
         ))}
       </View>

@@ -20,6 +20,7 @@ import { resolveTravelAuthorDisplayName, resolveTravelAuthorName } from '@/compo
 import { formatViewCount } from '@/components/travel/utils/travelHelpers';
 import { translate as i18nT } from '@/i18n'
 import { formatRatingValue } from '@/utils/ratingHelpers';
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 
 
 type Props = { travel: Travel };
@@ -252,6 +253,23 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
 
 export default memo(TravelTmlRound);
 
+/**
+ * Каркас этой карточки (#2253): та же обёртка фиксированной высоты и та же
+ * рамка карточки, медиа — тот же `CARD_IMAGE_HEIGHT`. Список занимает место
+ * карточек, которые его заменят.
+ */
+export const TravelTmlRoundSkeleton = memo(function TravelTmlRoundSkeleton() {
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+    return (
+        <View style={styles.container} testID="travel-tml-round-skeleton" aria-hidden>
+            <View style={[styles.card, styles.skeletonCard]}>
+                <SkeletonLoader width="100%" height={CARD_IMAGE_HEIGHT} borderRadius={0} />
+            </View>
+        </View>
+    );
+});
+
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {
         width: '100%',
@@ -276,6 +294,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
                 transition: 'border-color 0.2s ease' as any,
             },
         }),
+    },
+    skeletonCard: {
+        height: '100%',
     },
     cardPressed: { 
         opacity: 0.92,

@@ -63,8 +63,8 @@ jest.mock('@/components/ui/SkeletonLoader', () => {
   const React = require('react')
   const { Text } = require('react-native')
   return {
-    TravelListSkeleton: () => React.createElement(Text, { testID: 'travel-list-skeleton-mock' }, 'skeleton'),
-    TravelCardSkeleton: () => React.createElement(Text, { testID: 'travel-card-skeleton-mock' }, 'skeleton'),
+    // Каркас каталога — TravelListItemSkeleton на SkeletonLoader (#2253).
+    SkeletonLoader: () => React.createElement(Text, { testID: 'skeleton-loader-mock' }, 'skeleton'),
   }
 })
 

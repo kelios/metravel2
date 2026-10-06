@@ -2,11 +2,10 @@ import React, { memo } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
 
 import EmptyState from '@/components/ui/EmptyState'
-import {
-  RecommendationsPlaceholder,
-  TravelCardSkeletonComponent,
-} from '@/components/listTravel/RightColumn.parts'
+import { RecommendationsPlaceholder } from '@/components/listTravel/RightColumn.parts'
 import type { RightColumnProps } from '@/components/listTravel/RightColumn'
+import TravelListItemSkeleton from '@/components/listTravel/TravelListItemSkeleton'
+import type { useRightColumnStyles } from '@/components/listTravel/useRightColumnStyles'
 import { translate as i18nT } from '@/i18n'
 
 /**
@@ -15,6 +14,9 @@ import { translate as i18nT } from '@/i18n'
  * каталога один владелец прокрутки во всех фазах, поэтому SEO-интро в шапке
  * списка не теряет позицию, когда приходят результаты. Горизонтальный отступ
  * и верхний зазор даёт контейнер содержимого списка, как и рядам карточек.
+ *
+ * #2253: каркас стоит в рядах карточек — те же `rowLayout` (ряд, ячейка,
+ * разделитель рядов), ячейка — `TravelListItemSkeleton` из стилей карточки.
  */
 type RightColumnListStatusProps = Pick<
   RightColumnProps,
@@ -33,8 +35,7 @@ type RightColumnListStatusProps = Pick<
   isOffline: boolean
   initialSkeletonCount: number
   recommendationsSkeletonStyle: StyleProp<ViewStyle>
-  skeletonGridStyle: StyleProp<ViewStyle>
-  skeletonCardWrapperStyle: StyleProp<ViewStyle>
+  rowLayout: ReturnType<typeof useRightColumnStyles>['rowLayout']
 }
 
 function RightColumnListStatus({
@@ -52,9 +53,11 @@ function RightColumnListStatus({
   setSearch,
   initialSkeletonCount,
   recommendationsSkeletonStyle,
-  skeletonGridStyle,
-  skeletonCardWrapperStyle,
+  rowLayout,
 }: RightColumnListStatusProps) {
+  const { cols, rowStyle, firstRowStyle, rowSeparatorStyle, itemWrapperStyle } = rowLayout
+  const skeletonRowCount = Math.ceil(initialSkeletonCount / cols)
+
   return (
     <>
       {shouldShowSkeleton && isRecommendationsVisible && (
@@ -66,15 +69,19 @@ function RightColumnListStatus({
       )}
 
       {/* Initial Loading - local shell for all layouts */}
-      {shouldShowSkeleton && (
-        <View style={skeletonGridStyle}>
-          {Array.from({ length: initialSkeletonCount }).map((_, idx) => (
-            <View key={`travel-skeleton-${idx}`} style={skeletonCardWrapperStyle}>
-              <TravelCardSkeletonComponent />
+      {shouldShowSkeleton &&
+        Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
+          <React.Fragment key={`travel-skeleton-row-${rowIndex}`}>
+            {rowSeparatorStyle && rowIndex > 0 ? <View style={rowSeparatorStyle} /> : null}
+            <View style={rowIndex === 0 ? firstRowStyle : rowStyle}>
+              {Array.from({ length: cols }).map((__, itemIndex) => (
+                <View key={`slot-${itemIndex}`} style={itemWrapperStyle}>
+                  <TravelListItemSkeleton />
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
-      )}
+          </React.Fragment>
+        ))}
 
       {/* Error — на native при отсутствии сети показываем отдельный
           «нет подключения», а не общий сбой загрузки. */}

@@ -10,7 +10,7 @@ const waitForSearchResults = async (page: Page) => {
   // We accept either cards, skeletons, or empty state as valid.
   await Promise.any([
     page.waitForSelector('[data-testid="travel-card-link"], [testID="travel-card-link"]', { timeout: SEARCH_TIMEOUT_MS }),
-    page.waitForSelector('[data-testid="travel-card-skeleton"], [testID="travel-card-skeleton"]', { timeout: SEARCH_TIMEOUT_MS }),
+    page.waitForSelector('[data-testid="travel-list-item-skeleton"], [testID="travel-list-item-skeleton"]', { timeout: SEARCH_TIMEOUT_MS }),
     page.waitForSelector('text=Пока нет путешествий', { timeout: SEARCH_TIMEOUT_MS }),
     page.waitForSelector('text=Ничего не найдено', { timeout: SEARCH_TIMEOUT_MS }),
     page.waitForSelector('[data-testid="results-count-wrapper"], [testID="results-count-wrapper"]', { timeout: SEARCH_TIMEOUT_MS }),

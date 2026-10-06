@@ -84,9 +84,9 @@ test.describe('@perf Skeleton transition (no layout shift)', () => {
     const search = page.getByRole('textbox', { name: /Поиск путешествий/i });
     await expect(search).toBeVisible({ timeout: 30_000 });
 
-    // Main page uses TravelListSkeleton -> TravelCardSkeleton.
+    // Каталог стоит каркасами TravelListItemSkeleton в рядах карточек (#2253).
     // But if data resolves very quickly, skeleton may not appear.
-    const skeletonCard = page.locator('[data-testid="travel-card-skeleton"]').first();
+    const skeletonCard = page.locator('[data-testid="travel-list-item-skeleton"]').first();
     const cardLink = page.locator('[data-testid="travel-card-link"]').first();
 
     await Promise.race([
@@ -141,46 +141,26 @@ test.describe('@perf Skeleton transition (no layout shift)', () => {
       await page.waitForTimeout(100);
     }
 
-    // Performance invariant: on web-mobile the skeleton card must not be excessively tall.
-    // This catches regressions where skeleton height is wrong and causes large layout shifts.
-    if (skeletonBox) {
-      expect(
-        skeletonBox.height,
-        `Unexpected skeleton card height on mobile: ${skeletonBox.height}px`
-      ).toBeLessThanOrEqual(360);
-      expect(
-        skeletonBox.height,
-        `Unexpected skeleton card height on mobile: ${skeletonBox.height}px`
-      ).toBeGreaterThanOrEqual(280);
-    }
-
     // Now wait for real content.
     await page.waitForSelector('[data-testid="travel-card-link"]', { timeout: 45_000 });
 
     // Skeleton should be gone once content is ready (final state should hide it).
     // If it never appeared, this is already satisfied.
-    await expect(page.locator('[data-testid="travel-card-skeleton"]')).toHaveCount(0, { timeout: 45_000 });
+    await expect(page.locator('[data-testid="travel-list-item-skeleton"]')).toHaveCount(0, { timeout: 45_000 });
 
-    // If there are cards, compare dimensions between skeleton and the first real card.
-    const cards = page.locator('[data-testid="travel-card"]');
-    const cardCount = await cards.count();
-
-    if (cardCount > 0 && skeletonBox) {
-      const firstCard = cards.first();
+    // #2253: каркас — ячейка той же сетки, что карточка: верх, левый край и
+    // ширина совпадают, высота — в пределах значков карточки.
+    const firstCard = page.locator('[data-testid="travel-row-0-item-0"]').first();
+    if (skeletonBox && (await firstCard.count()) > 0) {
       await expect(firstCard).toBeVisible({ timeout: 30_000 });
       const cardBox = await firstCard.boundingBox();
       expect(cardBox).not.toBeNull();
 
       if (cardBox) {
-        const widthDiff = Math.abs(cardBox.width - skeletonBox.width);
-        const heightDiff = Math.abs(cardBox.height - skeletonBox.height);
-
-        // Not pixel-perfect: just prevent major jumps.
-        // Width should be close (mobile is single-column full width).
-        expect(widthDiff, `Width jump too large: ${widthDiff}px`).toBeLessThanOrEqual(40);
-        // Height should be very close. Big jumps here usually indicate wrong skeleton height,
-        // which increases CLS and hurts perceived performance.
-        expect(heightDiff, `Height jump too large: ${heightDiff}px`).toBeLessThanOrEqual(60);
+        expect(Math.abs(cardBox.x - skeletonBox.x), `left: card ${cardBox.x} vs skeleton ${skeletonBox.x}`).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(cardBox.y - skeletonBox.y), `top: card ${cardBox.y} vs skeleton ${skeletonBox.y}`).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(cardBox.width - skeletonBox.width), `width: card ${cardBox.width} vs skeleton ${skeletonBox.width}`).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(cardBox.height - skeletonBox.height), `height: card ${cardBox.height} vs skeleton ${skeletonBox.height}`).toBeLessThanOrEqual(24);
       }
     }
 

@@ -78,10 +78,6 @@ jest.mock('@/components/listTravel/RightColumn.parts', () => {
       { testID: 'recommendations-tabs-mock' },
       'recommendations',
     ),
-    TravelCardSkeletonComponent: () => React.createElement(
-      View,
-      { testID: 'travel-card-skeleton-mock' },
-    ),
   };
 });
 

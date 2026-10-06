@@ -18,8 +18,9 @@ import Feather from '@expo/vector-icons/Feather';
 import { Title } from '@/ui/paper';
 
 import { Travel } from '@/types/types';
-import TravelTmlRound from '@/components/travel/TravelTmlRound';
+import TravelTmlRound, { TravelTmlRoundSkeleton } from '@/components/travel/TravelTmlRound';
 import TravelListItem from '@/components/listTravel/TravelListItem';
+import TravelListItemSkeleton from '@/components/listTravel/TravelListItemSkeleton';
 import { getTravelDetailsListColumnWidth } from '@/components/travel/utils/travelDetailsListLayout';
 import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -49,58 +50,6 @@ type NearTravelListProps = {
   embedded?: boolean;
   // Gate the near-request on the section's real viewport visibility (web observer).
   fetchEnabled?: boolean;
-};
-
-const TravelCardSkeleton = ({ colors }: { colors: ReturnType<typeof useThemedColors> }) => {
-  // ✅ РЕДИЗАЙН: Стили скелетона с поддержкой темной темы
-  const skeletonStyles = useMemo(() => StyleSheet.create({
-    card: {
-      backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      overflow: 'hidden',
-      marginBottom: DESIGN_TOKENS.spacing.md,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-    },
-    image: {
-      width: '100%',
-      height: 180,
-      backgroundColor: colors.backgroundSecondary,
-    },
-    content: {
-      padding: DESIGN_TOKENS.spacing.md,
-      gap: DESIGN_TOKENS.spacing.sm,
-    },
-    title: {
-      height: 20,
-      backgroundColor: colors.backgroundSecondary,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      width: '70%',
-    },
-    description: {
-      height: 16,
-      backgroundColor: colors.backgroundSecondary,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      width: '90%',
-    },
-    meta: {
-      height: 14,
-      backgroundColor: colors.backgroundSecondary,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      width: '50%',
-    },
-  }), [colors]);
-
-  return (
-  <View style={skeletonStyles.card}>
-    <View style={skeletonStyles.image} />
-    <View style={skeletonStyles.content}>
-      <View style={skeletonStyles.title} />
-      <View style={skeletonStyles.description} />
-      <View style={skeletonStyles.meta} />
-    </View>
-  </View>
-  );
 };
 
 // Новый компонент для карты с ограниченной высотой
@@ -515,6 +464,12 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       </View>
     ), [keyExtractor, numColumns, styles.travelItem, styles.travelItemOdd, styles.webGridItem, width]);
 
+    // #2253: пока /near/ едет, ряд стоит каркасами тех карточек, которые его
+    // заменят: один ряд сетки на широком экране, одна карточка в столбце.
+    const skeletonSlots = isLoading && displayedTravels.length === 0
+      ? Array.from({ length: isMobile ? 1 : numColumns }, (_, i) => i)
+      : [];
+
     const webGridStyle = useMemo(() => {
       if (Platform.OS !== 'web') return undefined;
       if (width <= 640) {
@@ -627,6 +582,11 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                 >
                   <View style={[styles.travelsGrid, webGridStyle]}>
                     {displayedTravels.map((item, index) => renderWebSearchLikeTravelItem(item, index))}
+                    {skeletonSlots.map((i) => (
+                      <View key={`skeleton-${i}`} style={[styles.travelItem, styles.webGridItem]}>
+                        <TravelListItemSkeleton />
+                      </View>
+                    ))}
                   </View>
                 </View>
               </View>
@@ -653,6 +613,11 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                       <TravelTmlRound travel={item} />
                     </View>
                   ))}
+                  {skeletonSlots.map((i) => (
+                    <View key={`skeleton-${i}`} style={styles.travelItem}>
+                      <TravelTmlRoundSkeleton />
+                    </View>
+                  ))}
                 </View>
               ) : (
               <FlashList
@@ -668,7 +633,9 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                   isLoading ? (
                     <View style={styles.skeletonContainer}>
                       {[1, 2].map((i) => (
-                        <TravelCardSkeleton key={i} colors={colors} />
+                        <View key={i} style={styles.travelItem}>
+                          <TravelTmlRoundSkeleton />
+                        </View>
                       ))}
                     </View>
                   ) : null

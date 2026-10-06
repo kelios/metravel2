@@ -10,7 +10,7 @@ test.describe('@smoke Auth smoke', () => {
 
     // Page should render travel list (cards/skeletons) OR empty state OR landing hero on new homepage.
     await Promise.any([
-      page.waitForSelector('[data-testid="travel-card-link"], [testID="travel-card-link"], [data-testid="travel-card-skeleton"], [testID="travel-card-skeleton"]', {
+      page.waitForSelector('[data-testid="travel-card-link"], [testID="travel-card-link"], [data-testid="travel-list-item-skeleton"], [testID="travel-list-item-skeleton"]', {
         timeout: 30_000,
       }),
       page.waitForSelector('[data-testid="list-travel-skeleton"], [testID="list-travel-skeleton"]', { timeout: 30_000 }),

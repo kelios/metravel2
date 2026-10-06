@@ -11,6 +11,11 @@ import {
 
 const isWeb = Platform.OS === 'web'
 
+const eagerFirstWebRowStyle = {
+  contentVisibility: 'visible',
+  containIntrinsicSize: 'none',
+} as ViewStyle
+
 type ThemedColors = {
   border: string
   surface: string
@@ -214,35 +219,19 @@ export function useRightColumnStyles({
       } as any) as ViewStyle,
     ]
 
-    return { cols, rowStyle, itemWrapperStyle, placeholderStyle }
+    // Первый ряд в первом экране и меряется по содержимому: отложенный ряд
+    // отдал бы FlashList contain-intrinsic-size, и второй ряд прыгал бы при
+    // приходе настоящей высоты (#1298). Тот же стиль у первого ряда каркаса (#2253).
+    const firstRowStyle =
+      Platform.OS === 'web' && !isExport ? [rowStyle, eagerFirstWebRowStyle] : rowStyle
+
+    // Ряды на web разделяет ItemSeparatorComponent списка этой высоты; на native
+    // зазор даёт paddingBottom ячейки, разделителя нет (null) — для карточек и каркаса.
+    const rowSeparatorStyle: ViewStyle | null =
+      Platform.OS === 'web' ? { height: cardSpacing } : null
+
+    return { cols, rowStyle, firstRowStyle, rowSeparatorStyle, itemWrapperStyle, placeholderStyle }
   }, [cardsGridStyle, cardSpacing, gridColumns, isMobile, isExport])
-
-  const skeletonCardWidth = useMemo(() => {
-    if (Platform.OS !== 'web') return '100%'
-    const columns = Math.max(gridColumns, 1)
-    if (isMobile || columns === 1) return '100%'
-    return `calc((100% - ${(columns - 1) * cardSpacing}px) / ${columns})`
-  }, [cardSpacing, gridColumns, isMobile])
-
-  const skeletonGridStyle = useMemo(
-    () => ({
-      flexDirection: 'row' as const,
-      flexWrap: 'wrap' as const,
-      gap: cardSpacing,
-      paddingBottom: 24,
-    }),
-    [cardSpacing],
-  )
-
-  const skeletonCardWrapperStyle = useMemo<StyleProp<ViewStyle>>(
-    () => ({
-      width: skeletonCardWidth as any,
-      ...(Platform.OS === 'web'
-        ? ({ flexGrow: 0, flexShrink: 0, flexBasis: skeletonCardWidth as any } as const)
-        : null),
-    }),
-    [skeletonCardWidth],
-  )
 
   return {
     cardsWrapperStyle,
@@ -252,8 +241,6 @@ export function useRightColumnStyles({
     recommendationsSkeletonStyle,
     activeConditionChipStyles,
     rowLayout,
-    skeletonGridStyle,
-    skeletonCardWrapperStyle,
   }
 }
 
