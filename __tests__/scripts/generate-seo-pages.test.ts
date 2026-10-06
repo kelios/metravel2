@@ -1503,9 +1503,23 @@ describe('injectHomeQuestsSection', () => {
     expect(html).toMatch(/<h2[^>]*>Городские квесты<\/h2>/i)
   })
 
-  it('hides the block once RNW styles are ready, like the sibling quest blocks', () => {
+  it('hides the block from the first frame on the visible-shell home route (#2257)', () => {
     const html = injectHomeQuestsSection(MINIMAL_BASE, QUESTS)
-    expect(html).toContain('html.rnw-styles-ready [data-ssg-home-quests="true"]{display:none!important}')
+    // `travel-route` is set by a synchronous head script before <body> is parsed,
+    // so the block is gone before the first paint; `rnw-styles-ready` stays as
+    // the late fallback.
+    expect(html).toContain(
+      'html.travel-route [data-ssg-home-quests="true"],html.rnw-styles-ready [data-ssg-home-quests="true"]{display:none!important}',
+    )
+  })
+
+  it('stays out of the #root flex row — a sibling before #root, not its child (#2257)', () => {
+    const html = injectHomeQuestsSection(MINIMAL_BASE, QUESTS)
+    const sectionAt = html.indexOf('<section data-ssg-home-quests="true"')
+    const rootAt = html.indexOf('<div id="root">')
+    expect(sectionAt).toBeGreaterThan(-1)
+    expect(sectionAt).toBeLessThan(rootAt)
+    expect(html).toContain('</section><div id="root"></div>')
   })
 
   it('is idempotent — re-running replaces rather than duplicates', () => {

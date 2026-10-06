@@ -2713,8 +2713,17 @@ const HOME_QUESTS_FEATURED_LIMIT = 8;
  * featured quest links and CTAs into /quests and /quests/scenario, so the
  * flagship asset is present in SSG-HTML, not only after hydration. It stays
  * text-only (no <img>) to avoid adding LCP-competing image loads to the home
- * first screen; covers live in the hydrated React card grid. Hidden once RNW
- * styles are ready, exactly like the sibling /quests and city-landing blocks.
+ * first screen; covers live in the hydrated React card grid.
+ *
+ * #2257: unlike the /quests and city landings, the home route is a
+ * `travel-route` — its React shell (#root) is visible in the very first frame,
+ * so this crawler twin must never take part in the shell's layout. It is a
+ * sibling BEFORE #root (inside it, it stood in #root's `display:flex` row and
+ * squeezed `#main-content` to the leftover width — CLS 0.65 at 1280×800), and it
+ * is `display:none` from the first frame via the synchronous head class
+ * `travel-route`, not only after the rAF-deferred `rnw-styles-ready`. Without JS
+ * neither class is set, so a no-JS visitor still sees the section; the links
+ * stay in the static HTML for crawlers either way.
  *
  * The featured slice is picked by popularity, by the same rule the hydrated
  * promo block gets from the backend's `?sort=popular` (#1798) — see
@@ -2769,7 +2778,7 @@ function injectHomeQuestsSection(baseHtml, quests) {
 
   const styleTag = [
     '<style data-ssg-home-quests-style="true">',
-    'html.rnw-styles-ready [data-ssg-home-quests="true"]{display:none!important}',
+    'html.travel-route [data-ssg-home-quests="true"],html.rnw-styles-ready [data-ssg-home-quests="true"]{display:none!important}',
     '@media(max-width:640px){[data-ssg-home-quests="true"]{margin:12px;padding:16px 14px}[data-ssg-home-quests="true"] h2{font-size:21px!important}}',
     '</style>',
   ].join('');
@@ -2784,7 +2793,7 @@ function injectHomeQuestsSection(baseHtml, quests) {
   );
 
   if (/<div\s+id="root"[^>]*>/i.test(html)) {
-    return applyHtmlFragment(html, /<div\s+id="root"[^>]*>/i, section, 'after');
+    return applyHtmlFragment(html, /<div\s+id="root"[^>]*>/i, section, 'before');
   }
   if (/<body[^>]*>/i.test(html)) {
     return applyHtmlFragment(html, /<body[^>]*>/i, section, 'after');

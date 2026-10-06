@@ -10,7 +10,6 @@ import {
   stripHtml,
   createSafeImageUrl,
   getSafeOrigin,
-  isSafePreconnectDomain,
 } from '@/utils/travelDetailsSecure';
 import type { Travel } from '@/types/types';
 
@@ -177,21 +176,6 @@ describe('TravelDetailsContainer - Security & Sanitization', () => {
       expect(getSafeOrigin('not a url')).toBeNull();
       expect(getSafeOrigin('')).toBeNull();
       expect(getSafeOrigin(undefined)).toBeNull();
-    });
-  });
-
-  describe('Preconnect Domain Whitelisting', () => {
-    it('should allow whitelisted preconnect domains', () => {
-      expect(isSafePreconnectDomain('https://maps.googleapis.com')).toBe(true);
-      expect(isSafePreconnectDomain('https://img.youtube.com')).toBe(true);
-      expect(isSafePreconnectDomain('https://api.metravel.by')).toBe(true);
-    });
-
-    it('should reject non-whitelisted domains', () => {
-      expect(isSafePreconnectDomain('https://evil.com')).toBe(false);
-      expect(isSafePreconnectDomain('http://example.com')).toBe(false);
-      expect(isSafePreconnectDomain(null)).toBe(false);
-      expect(isSafePreconnectDomain('')).toBe(false);
     });
   });
 });

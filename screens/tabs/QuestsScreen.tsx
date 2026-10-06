@@ -22,6 +22,7 @@ import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit';
 import { useQuestReviewPrompt } from '@/hooks/useQuestReviewPrompt';
 import QuestReviewPromptBanner from '@/components/quests/QuestReviewPromptBanner';
 import QuestsContentPanel from './QuestsContentPanel';
+import { releaseQuestCatalogRestoredClass } from '@/utils/questCatalogSelection';
 import { useQuestPersonalSlices } from './useQuestPersonalSlices';
 import QuestsSidebar from './QuestsSidebar';
 import { getQuestFaqItems } from './QuestsSeoIntroFaq';
@@ -139,6 +140,8 @@ export default function QuestsScreen() {
     const s = useMemo(() => getStyles(colors, width, height, dockPx), [colors, width, height, dockPx]);
 
     // ── Persistent city selection ──
+    // #2320: восстановленный выбор отрисован — класс первого кадра больше не нужен.
+    const [selectionRestored, setSelectionRestored] = useState(false);
     useEffect(() => {
         (async () => {
             try {
@@ -151,9 +154,17 @@ export default function QuestsScreen() {
                 }
             } catch {
                 if (!selectionChangedRef.current) setSelectedCityId(ALL_QUESTS_ID);
+            } finally {
+                setSelectionRestored(true);
             }
         })();
     }, []);
+    // Эффект идёт после коммита, в котором вводка уже снята React-ом (срез
+    // сужает каталог) или уже стоит (срез «Все квесты») — снятие класса ничего
+    // не двигает.
+    useEffect(() => {
+        if (selectionRestored && Platform.OS === 'web') releaseQuestCatalogRestoredClass();
+    }, [selectionRestored]);
 
     const handleSelectCity = useCallback(async (id: string) => {
         if (id === NEARBY_ID && geoRequesting) return;

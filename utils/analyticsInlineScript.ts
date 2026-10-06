@@ -5,6 +5,7 @@
  * that confuse babel's TypeScript parser).
  */
 import { SECRET_LINK_QUERY_PARAMS } from '@/utils/secretLinkRoutes';
+import { ANALYTICS_ORIGINS } from '@/utils/webResourceHints';
 
 export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   const metrikaWebvisorEnabled =
@@ -90,7 +91,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     var ga = document.createElement('script');
     ga.async = true;
     ga.defer = true;
-    ga.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA_ID);
+    ga.src = '${ANALYTICS_ORIGINS.gtag}/gtag/js?id=' + encodeURIComponent(GA_ID);
     document.head.appendChild(ga);
   }
 
@@ -140,7 +141,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     var metrikaScript = document.createElement('script');
     metrikaScript.async = true;
     metrikaScript.defer = true;
-    metrikaScript.src = 'https://mc.yandex.ru/metrika/tag.js';
+    metrikaScript.src = '${ANALYTICS_ORIGINS.metrika}/metrika/tag.js';
     try { metrikaScript.setAttribute('data-metravel-metrika', '1'); } catch(_e) {}
 
     metrikaScript.onload = function(){

@@ -7,6 +7,8 @@ import CustomHeader from '@/components/layout/CustomHeader'
 import Button from '@/components/ui/Button'
 import { Heading, Body, Caption, Eyebrow } from '@/components/ui/Typography'
 import { useResponsive } from '@/hooks/useResponsive'
+import { APP_DOWNLOAD_LAYOUT, APP_DOWNLOAD_WIDE_MIN_WIDTH } from '@/components/appDownload/appDownloadLayout'
+import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
 import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
@@ -40,8 +42,8 @@ function AppDownloadScreen() {
   const { isDark } = useTheme()
   const { width } = useResponsive()
   const isFocused = useIsFocused()
-  const isWide = width >= 900
-  const styles = useMemo(() => createStyles(colors, isWide), [colors, isWide])
+  const isWide = width >= APP_DOWNLOAD_WIDE_MIN_WIDTH
+  const styles = useMemo(() => createStyles(colors), [colors])
 
   const title = i18nT('shared:app.app.prilozhenie_metravel_dlya_android_skachat_f1964a43')
   const description =
@@ -112,7 +114,11 @@ function AppDownloadScreen() {
             {i18nT('shared:app.app.chto_vnutri_89e8167a')}</Heading>
           <View style={styles.featureGrid}>
             {FEATURES.map((f) => (
-              <View key={f.title} style={styles.featureCard}>
+              <View
+                key={f.title}
+                style={[styles.featureCard, breakpointStyle(APP_DOWNLOAD_LAYOUT, 'featureCard', isWide)]}
+                {...breakpointLayoutProps(APP_DOWNLOAD_LAYOUT, 'featureCard')}
+              >
                 <Feather name={f.icon} size={28} color={colors.primary} style={styles.featureIcon} />
                 <Heading level={4} color={colors.text}>
                   {f.title}
@@ -162,7 +168,7 @@ function AppDownloadScreen() {
   )
 }
 
-const createStyles = (colors: ThemedColors, isWide: boolean) => {
+const createStyles = (colors: ThemedColors) => {
   const spacing = DESIGN_TOKENS.spacing
   const radii = DESIGN_TOKENS.radii
   const card: ViewStyle = {
@@ -234,7 +240,6 @@ const createStyles = (colors: ThemedColors, isWide: boolean) => {
     },
     featureCard: {
       ...card,
-      width: isWide ? '46%' : '100%',
       gap: spacing.xs,
     },
     featureIcon: {

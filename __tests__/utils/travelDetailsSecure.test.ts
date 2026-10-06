@@ -10,9 +10,6 @@ import {
   createSafeImageUrl,
   getSafeOrigin,
   createSafeJsonLd,
-  isSafePreconnectDomain,
-  isWhitelistedOrigin,
-  SAFE_PRECONNECT_DOMAINS,
 } from '@/utils/travelDetailsSecure';
 
 describe('travelDetailsSecure', () => {
@@ -276,49 +273,6 @@ describe('travelDetailsSecure', () => {
       const result = createSafeJsonLd(travel);
       expect(result?.headline.length).toBeLessThanOrEqual(200);
       expect(result?.description.length).toBeLessThanOrEqual(500);
-    });
-  });
-
-  describe('isSafePreconnectDomain', () => {
-    it('should accept whitelisted domains', () => {
-      expect(isSafePreconnectDomain('https://maps.googleapis.com')).toBe(true);
-      expect(isSafePreconnectDomain('https://img.youtube.com')).toBe(true);
-      expect(isSafePreconnectDomain('https://api.metravel.by')).toBe(true);
-    });
-
-    it('should reject non-whitelisted domains', () => {
-      expect(isSafePreconnectDomain('https://example.com')).toBe(false);
-      expect(isSafePreconnectDomain('https://malicious.com')).toBe(false);
-    });
-
-    it('should return false for null/undefined', () => {
-      expect(isSafePreconnectDomain(null)).toBe(false);
-      expect(isSafePreconnectDomain(undefined)).toBe(false);
-    });
-
-    it('should have properly defined whitelist', () => {
-      expect(Array.isArray(SAFE_PRECONNECT_DOMAINS)).toBe(true);
-      expect(SAFE_PRECONNECT_DOMAINS.length).toBeGreaterThan(0);
-      SAFE_PRECONNECT_DOMAINS.forEach(domain => {
-        expect(domain).toMatch(/^https:\/\//);
-      });
-    });
-  });
-
-  describe('isWhitelistedOrigin', () => {
-    it('should accept origins from whitelisted domains', () => {
-      expect(isWhitelistedOrigin('https://maps.googleapis.com')).toBe(true);
-      expect(isWhitelistedOrigin('https://api.metravel.by')).toBe(true);
-    });
-
-    it('should reject non-whitelisted origins', () => {
-      expect(isWhitelistedOrigin('https://example.com')).toBe(false);
-      expect(isWhitelistedOrigin('https://malicious.com')).toBe(false);
-    });
-
-    it('should return false for null/undefined', () => {
-      expect(isWhitelistedOrigin(null)).toBe(false);
-      expect(isWhitelistedOrigin(undefined)).toBe(false);
     });
   });
 

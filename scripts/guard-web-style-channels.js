@@ -58,6 +58,14 @@ const ts = require('typescript')
  *     компоненте (не на DOM-элементе). Литерал — значение пропа (`options={{ title }}`)
  *     и объект с недоказанным адресатом правило не трогает: `title` — обычное имя
  *     поля. Долгового списка нет: все 16 мест переведены на `webTitleRef` в #2261;
+ *   - `inline-animation-keyframes` — ключ `animationKeyframes` в литерале, который
+ *     не доходит до первого аргумента `StyleSheet.create`. RN-Web компилирует
+ *     кадры анимации только оттуда; в инлайн-стиле ключ уходит в DOM
+ *     несуществующим свойством `animation-keyframes`, и анимация молча мертва
+ *     (#2170 `SkeletonLoader`, #2215 `ShimmerOverlay`). Подъём от литерала идёт
+ *     сквозь скобки/приведения, ветки тернарника и `&&`/`||`/`??`, спред, значение
+ *     ключа внешнего литерала и аргумент вызова-обёртки (`webViewStyle`,
+ *     `Platform.select`). Долгового списка нет;
  *   - `debt-count` / `stale-entry` — места, жившие в дереве до правила, перечислены
  *     в `KNOWN_RAW_DATA_ATTRIBUTE_DEBT` и `KNOWN_PSEUDO_CLASS_STYLE_KEY_DEBT` с
  *     точным числом. Число только убывает: новое место в файле из списка красит
@@ -109,7 +117,8 @@ const STYLESHEET_SPECIFIER = /\.css(?:[?#].*)?$/
 // Селектор вместо имени свойства: `:hover`, `::before`, `&:hover`, `& :focus`.
 const PSEUDO_SELECTOR_KEY = /^&?\s*::?[a-z]/i
 // Дешёвый предфильтр: файл без этих подстрок не парсится вовсе.
-const PREFILTER = /data-|\.css|['"`]&?\s*::?[a-z]|\.\.\.[\s\S]*\btitle\b|\btitle\b[\s\S]*\.\.\./i
+const ANIMATION_KEYFRAMES_KEY = 'animationKeyframes'
+const PREFILTER = /data-|\.css|['"`]&?\s*::?[a-z]|\.\.\.[\s\S]*\btitle\b|\btitle\b[\s\S]*\.\.\.|animationKeyframes/i
 
 const normalizePath = (value) => String(value || '').replace(/\\/g, '/')
 
@@ -223,6 +232,57 @@ const isPlatformSelectArgument = (objectLiteral) => {
     ts.isIdentifier(callee.expression) &&
     callee.expression.text === 'Platform'
   )
+}
+
+const isStyleSheetCreateCall = (call) => {
+  const callee = call.expression
+  return (
+    ts.isPropertyAccessExpression(callee) &&
+    callee.name.text === 'create' &&
+    ts.isIdentifier(callee.expression) &&
+    callee.expression.text === 'StyleSheet'
+  )
+}
+
+/**
+ * Доходит ли литерал до первого аргумента `StyleSheet.create` (#2215): только
+ * оттуда RN-Web компилирует `animationKeyframes`. Литерал внутри значения ключа
+ * внешнего литерала (`{ pulse: { … } }`), ветка `Platform.select`, аргумент
+ * обёртки (`webViewStyle({ … })`), спред и ветки условий поднимаются дальше.
+ */
+const reachesStyleSheetCreate = (objectLiteral) => {
+  let current = objectLiteral
+  for (;;) {
+    const parent = current.parent
+    if (!parent) return false
+    if (
+      ts.isParenthesizedExpression(parent) ||
+      ts.isAsExpression(parent) ||
+      ts.isTypeAssertionExpression(parent) ||
+      ts.isNonNullExpression(parent) ||
+      (ts.isSatisfiesExpression && ts.isSatisfiesExpression(parent)) ||
+      (ts.isConditionalExpression(parent) && parent.condition !== current) ||
+      (ts.isBinaryExpression(parent) &&
+        [
+          ts.SyntaxKind.AmpersandAmpersandToken,
+          ts.SyntaxKind.BarBarToken,
+          ts.SyntaxKind.QuestionQuestionToken,
+        ].includes(parent.operatorToken.kind))
+    ) {
+      current = parent
+      continue
+    }
+    if (ts.isSpreadAssignment(parent) || (ts.isPropertyAssignment(parent) && parent.initializer === current)) {
+      current = parent.parent
+      continue
+    }
+    if (ts.isCallExpression(parent) && parent.arguments.includes(current)) {
+      if (isStyleSheetCreateCall(parent)) return parent.arguments[0] === current
+      current = parent
+      continue
+    }
+    return false
+  }
 }
 
 /**
@@ -341,7 +401,14 @@ const stylesheetSpecifierOf = (node) => {
  * (`pseudoClassKeys`).
  */
 const analyzeSource = ({ filePath, content }) => {
-  const result = { attributes: [], dataSetKeys: [], stylesheets: [], pseudoClassKeys: [], titleSpreads: [] }
+  const result = {
+    attributes: [],
+    dataSetKeys: [],
+    stylesheets: [],
+    pseudoClassKeys: [],
+    titleSpreads: [],
+    inlineKeyframes: [],
+  }
   const text = String(content || '')
   if (!PREFILTER.test(text)) return result
 
@@ -374,6 +441,9 @@ const analyzeSource = ({ filePath, content }) => {
         result.pseudoClassKeys.push({ line: lineOf(node), name })
       }
       if (name === TITLE_ATTRIBUTE) pushTitleSpread(node)
+      if (name === ANIMATION_KEYFRAMES_KEY && !reachesStyleSheetCreate(node.parent)) {
+        result.inlineKeyframes.push({ line: lineOf(node) })
+      }
       if (name && DATA_ATTRIBUTE.test(name) && !ts.isIdentifier(node.name)) {
         const objectLiteral = node.parent
         if (isDataSetObject(objectLiteral)) {
@@ -470,7 +540,8 @@ const evaluateGuard = ({
 
   for (const source of sources) {
     const file = normalizePath(source.filePath)
-    const { attributes, dataSetKeys, stylesheets, pseudoClassKeys, titleSpreads } = analyzeSource(source)
+    const { attributes, dataSetKeys, stylesheets, pseudoClassKeys, titleSpreads, inlineKeyframes } =
+      analyzeSource(source)
 
     if (attributes.length) attributeFiles.set(file, attributes)
     if (pseudoClassKeys.length) pseudoClassFiles.set(file, pseudoClassKeys)
@@ -481,6 +552,17 @@ const evaluateGuard = ({
         file,
         line: site.line,
         snippet: `'${site.name}' inside dataSet renders as data-${site.name}; use a camelCase key`,
+      })
+    }
+
+    for (const site of inlineKeyframes) {
+      violations.push({
+        rule: 'inline-animation-keyframes',
+        file,
+        line: site.line,
+        snippet:
+          "'animationKeyframes' outside StyleSheet.create: react-native-web compiles keyframes only there " +
+          '(inline it renders a dead animation-keyframes property); move the style into StyleSheet.create via webViewStyle',
       })
     }
 
@@ -544,7 +626,7 @@ const evaluateGuard = ({
         `no raw data-* outside dataSet beyond the recorded debt (${sumDebt(debt)} site(s) in ` +
         `${Object.keys(debt).length} file(s)); no pseudo-class style key beyond the recorded debt ` +
         `(${sumDebt(pseudoClassDebt)} site(s) in ${Object.keys(pseudoClassDebt).length} file(s)); ` +
-        'no title spread on a component; ' +
+        'no title spread on a component; no animationKeyframes outside StyleSheet.create; ' +
         `the only stylesheet import is ${ROOT_STYLESHEET.file} -> ${ROOT_STYLESHEET.specifier}`,
       violations: [],
     }

@@ -7,6 +7,8 @@ import {
 import { ABOUT_LAYOUT } from '@/components/about/aboutLayout';
 import { EMPTY_STATE_LAYOUT } from '@/components/ui/emptyStateLayout';
 import { CHIP_LAYOUT } from '@/components/ui/chipLayout';
+import { HEADING_LAYOUTS } from '@/components/ui/headingLayout';
+import { APP_DOWNLOAD_LAYOUT } from '@/components/appDownload/appDownloadLayout';
 import { buildBreakpointLayoutCss } from '@/utils/breakpointLayout';
 import { getIconFontGuardCss } from '@/utils/iconFontShell';
 
@@ -252,5 +254,10 @@ export function buildCriticalCSS(): string {
     buildBreakpointLayoutCss(EMPTY_STATE_LAYOUT),
     // #2157: иконка чипа «от планшета» видна с первого кадра — ширина чипа не меняется.
     buildBreakpointLayoutCss(CHIP_LAYOUT),
+    // #2258: /app — карточки возможностей в две колонки от 900 px с первого кадра.
+    buildBreakpointLayoutCss(APP_DOWNLOAD_LAYOUT),
+    // #2258: кегль `Heading` по ступеням ширины (по возрастанию — позднее правило
+    // побеждает); статический HTML несёт узкую ступень, как телефон и native.
+    ...HEADING_LAYOUTS.map(buildBreakpointLayoutCss),
   ].join('\n');
 }

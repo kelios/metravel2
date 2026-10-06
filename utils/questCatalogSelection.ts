@@ -90,3 +90,40 @@ export function resolveStoredQuestCatalogSelection(savedId: string | null): stri
     if (!savedId || savedId === NEARBY_ID) return ALL_QUESTS_ID;
     return savedId;
 }
+
+/**
+ * #2320: сохранённый срез, сужающий каталог, — тот же предикат, по которому
+ * каталог прячет SEO-вводку (`filtersActive` в `QuestsScreen`): любой
+ * восстановленный выбор, кроме «Все квесты».
+ */
+export function isNarrowingStoredQuestCatalogSelection(savedId: string | null): boolean {
+    return resolveStoredQuestCatalogSelection(savedId) !== ALL_QUESTS_ID;
+}
+
+/**
+ * #2320: статический HTML `/quests` один для всех и рисует общий каталог с
+ * SEO-вводкой над сеткой; сохранённый срез React применяет только после
+ * гидратации, вводка исчезает — сетка прыгала вверх (CLS 0,32 на 390). Срез
+ * лежит в `localStorage`, поэтому его признак ставит синхронный скрипт головы
+ * классом на `<html>` ДО первого кадра, а CSS прячет слоты вводки — первый кадр
+ * совпадает с итогом. Класс снимает экран, когда восстановленный выбор уже
+ * отрисован (`releaseQuestCatalogRestoredClass`), иначе «Все квесты» после сброса
+ * остались бы без вводки. Краулер `localStorage` не имеет — вводка у него видна.
+ */
+export const QUEST_CATALOG_RESTORED_CLASS = 'quests-slice-restored';
+
+export function getQuestCatalogRestoredSelectionScript(): string {
+    const key = JSON.stringify(STORAGE_SELECTED_CITY);
+    const keep = JSON.stringify([ALL_QUESTS_ID, NEARBY_ID]);
+    const cls = JSON.stringify(QUEST_CATALOG_RESTORED_CLASS);
+    return `(function(){try{var p=window.location.pathname.replace(/\\/+$/,'');if(p!=='/quests')return;var v=window.localStorage.getItem(${key});if(v&&${keep}.indexOf(v)<0)document.documentElement.classList.add(${cls})}catch(_){}})();`;
+}
+
+export function getQuestCatalogRestoredSelectionCss(): string {
+    return `html.${QUEST_CATALOG_RESTORED_CLASS} [data-quests-seo-slot]{display:none!important}`;
+}
+
+export function releaseQuestCatalogRestoredClass(): void {
+    if (typeof document === 'undefined') return;
+    document.documentElement.classList.remove(QUEST_CATALOG_RESTORED_CLASS);
+}

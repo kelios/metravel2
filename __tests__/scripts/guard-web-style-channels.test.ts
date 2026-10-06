@@ -460,6 +460,53 @@ describe('guard-web-style-channels', () => {
     expect(result.ok).toBe(true)
   })
 
+  describe('inline animationKeyframes (#2215)', () => {
+    it("flags the ShimmerOverlay shape: keyframes in an inline style object", () => {
+      const result = evaluateGuard({
+        sources: [
+          ROOT_LAYOUT,
+          tsx(
+            `import { View, StyleSheet } from 'react-native'\n` +
+              `export const A = () => <View style={{ ...StyleSheet.absoluteFillObject, animationKeyframes: 'slider-shimmer' }} />\n`,
+          ),
+        ],
+      })
+      expect(rulesOf(result)).toEqual(['inline-animation-keyframes'])
+      expect(result.violations[0].line).toBe(2)
+    })
+
+    it('flags keyframes in a style factory that never reaches StyleSheet.create', () => {
+      const { inlineKeyframes } = analyzeSource(
+        tsx(`const pulse = (on: boolean) => (on ? { animationKeyframes: { '0%': { opacity: 1 } } } : {})\n`),
+      )
+      expect(inlineKeyframes).toHaveLength(1)
+    })
+
+    it('accepts keyframes inside StyleSheet.create: nested, Platform.select, wrapper call, conditional spread', () => {
+      const { inlineKeyframes } = analyzeSource(
+        tsx(
+          [
+            `import { Platform, StyleSheet } from 'react-native'`,
+            `import { webViewStyle } from '@/utils/webProps'`,
+            `const s = (open: boolean) => StyleSheet.create({`,
+            `  a: { animationKeyframes: 'fadeIn' },`,
+            `  b: Platform.select({ web: webViewStyle({ animationKeyframes: { '0%': { opacity: 1 } } }), default: {} }),`,
+            `  c: { ...(open ? ({ animationKeyframes: 'sheet-slide-up' } as any) : {}) },`,
+            `})`,
+          ].join('\n'),
+        ),
+      )
+      expect(inlineKeyframes).toEqual([])
+    })
+
+    it('flags keyframes passed as a non-first StyleSheet.create argument or to another call', () => {
+      const { inlineKeyframes } = analyzeSource(
+        tsx(`import { StyleSheet } from 'react-native'\nStyleSheet.flatten([{}, { animationKeyframes: 'x' }])\n`),
+      )
+      expect(inlineKeyframes).toHaveLength(1)
+    })
+  })
+
   it('builds a versioned json result', () => {
     const json = buildJsonResult({
       ok: false,

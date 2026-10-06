@@ -28,6 +28,7 @@ import QuestsSortChips, { EMPTY_SORT_ORDERS } from './QuestsSortChips';
 
 import { translate as i18nT } from '@/i18n'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
+import { webDataSetProps } from '@/utils/webProps'
 
 const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
@@ -99,6 +100,8 @@ type QuestListItem = QuestMeta & { _distanceKm?: number };
 const QUEST_GRID_PAGE_SIZE = 24;
 const QUEST_GRID_REVEAL_DISTANCE = 800;
 const QUEST_GRID_SCROLL_THROTTLE = 32;
+const SEO_INTRO_SLOT_PROPS = webDataSetProps({ questsSeoSlot: 'intro' });
+const SEO_FAQ_SLOT_PROPS = webDataSetProps({ questsSeoSlot: 'faq' });
 
 function QuestsContentPanel({
     styles,
@@ -245,13 +248,15 @@ function QuestsContentPanel({
     // list view (not in map mode, not while searching) so the visible copy matches
     // the crawlable static block generated for /quests.
     const showSeoContent = viewMode === 'list' && !searchActive && !filtersActive;
+    // #2320: метка слота — для CSS первого кадра при сохранённом срезе
+    // (`utils/questCatalogSelection.ts` → `QUEST_CATALOG_RESTORED_CLASS`).
     const seoIntroSlot = showSeoContent ? (
-        <View style={styles.seoContentBlock}>
+        <View style={styles.seoContentBlock} {...SEO_INTRO_SLOT_PROPS}>
             <QuestsSeoIntroFaq variant="intro" />
         </View>
     ) : null;
     const seoFaqSlot = showSeoContent ? (
-        <View style={styles.seoContentBlock}>
+        <View style={styles.seoContentBlock} {...SEO_FAQ_SLOT_PROPS}>
             <QuestsSeoIntroFaq variant="faq" />
         </View>
     ) : null;

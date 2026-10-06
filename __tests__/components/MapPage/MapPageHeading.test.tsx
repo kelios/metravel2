@@ -113,12 +113,17 @@ describe('MapPageHeading (#1640)', () => {
   it('marks both anchors with the dataSet hook react-native-web turns into data-map-page-heading', () => {
     // The resulting `data-map-page-heading` attribute is react-native-web's
     // output; this unit test guards the input prop and exact anchor value.
+    // #2258: панельный заголовок задаёт свой кегль — CSS-ступени `Heading` к нему
+    // не цепляются, dataSet остаётся ровно якорем. Визуально скрытый угловой
+    // заголовок кегля не задаёт и получает метку ступени `bpLayout`, слитую
+    // с якорем (а не затирающую его).
     const panel = render(<MapPageHeading anchor="panel-head" styles={styles} />)
     expect(panel.getByRole('header').props.dataSet).toEqual({ mapPageHeading: 'panel-head' })
 
     const corner = render(<MapPageHeading anchor="map-corner" styles={styles} />)
     expect(corner.getByRole('header').props.dataSet).toEqual({
       mapPageHeading: 'map-corner',
+      bpLayout: 'heading-h1',
     })
   })
 })

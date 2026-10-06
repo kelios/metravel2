@@ -1,29 +1,20 @@
 import { useMemo } from 'react';
-import { Platform, Text, type TextProps, type TextStyle } from 'react-native';
+import { Platform, StyleSheet, Text, type TextProps, type TextStyle } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { isPhoneLayout } from '@/utils/phoneLayout';
-
-// ─── RESP-04: Fluid typography helper ────────────────────────────────────────
-// Возвращает размер шрифта адаптированный к текущему breakpoint
-// min (mobile) → max (desktop) через 3 промежуточных значения
-
-function fluidSize(
-  minSize: number,
-  maxSize: number,
-  breakpoint: { isMobile: boolean; isTablet: boolean; isDesktop: boolean },
-): number {
-  const { isMobile, isTablet, isDesktop } = breakpoint;
-  if (isDesktop) return maxSize;
-  if (isTablet) return Math.round(minSize + (maxSize - minSize) * 0.65);
-  if (!isMobile) return Math.round(minSize + (maxSize - minSize) * 0.35); // large phone
-  return minSize;
-}
+import { breakpointLayoutProps } from '@/utils/breakpointLayout';
+import type { WebDataSet } from '@/utils/webProps';
+import {
+  HEADING_LAYOUTS,
+  HEADING_LAYOUT_KEY,
+  headingTypography,
+  type HeadingLevel,
+  type HeadingTier,
+} from '@/components/ui/headingLayout';
 
 // ─── Heading ────────────────────────────────────────────────────────────────
-
-type HeadingLevel = 1 | 2 | 3 | 4;
 
 interface HeadingProps extends TextProps {
   level?: HeadingLevel;
@@ -33,15 +24,7 @@ interface HeadingProps extends TextProps {
   align?: TextStyle['textAlign'];
 }
 
-const HEADING_CONFIG: Record<
-  HeadingLevel,
-  { minFontSize: number; maxFontSize: number; fontWeight: TextStyle['fontWeight']; lineHeightRatio: number; letterSpacing: number }
-> = {
-  1: { minFontSize: 22, maxFontSize: 32, fontWeight: '800', lineHeightRatio: 1.2, letterSpacing: -0.8 },
-  2: { minFontSize: 18, maxFontSize: 24, fontWeight: '700', lineHeightRatio: 1.25, letterSpacing: -0.5 },
-  3: { minFontSize: 16, maxFontSize: 20, fontWeight: '600', lineHeightRatio: 1.3, letterSpacing: -0.3 },
-  4: { minFontSize: 14, maxFontSize: 16, fontWeight: '600', lineHeightRatio: 1.375, letterSpacing: -0.1 },
-};
+const HEADING_WEIGHT: Record<HeadingLevel, TextStyle['fontWeight']> = { 1: '800', 2: '700', 3: '600', 4: '600' };
 
 const HEADING_A11Y_ROLES: Record<HeadingLevel, 'header'> = { 1: 'header', 2: 'header', 3: 'header', 4: 'header' };
 // #1617: every level maps to the same RN accessibilityRole="header" ->
@@ -53,37 +36,62 @@ const HEADING_A11Y_ROLES: Record<HeadingLevel, 'header'> = { 1: 'header', 2: 'he
 // feature-card subheadings). Passing aria-level={level} makes react-native-web
 // emit the matching h1..h4 tag instead.
 
+/**
+ * Ступень типографики по живому брейкпоинту (#2258). Нулевой кадр до гидратации
+ * (`width = 0`) и native — `narrow`: так статический HTML совпадает с телефоном,
+ * а более широкие ступени первому кадру отдаёт critical CSS из `HEADING_LAYOUTS`.
+ *
+ * Native всегда `narrow` независимо от ширины — наследственный долг #1788
+ * («платформа решает режим»), прежде записанный в `LEGACY_ALLOWLIST`
+ * `__tests__/config/layout-mode-governance.test.ts` (форма строки сменилась,
+ * регэксп стража его больше не видит). Оставлен ради паритета с прежним
+ * `minFontSize` на native; перевод native на ширину — отдельная задача.
+ */
+function resolveHeadingTier(r: {
+  width?: number;
+  isPhone?: boolean;
+  isLargePhone?: boolean;
+  isTablet?: boolean;
+  isDesktop?: boolean;
+}): HeadingTier {
+  if (Platform.OS !== 'web') return 'narrow';
+  if (r.isDesktop) return 'desktop';
+  const isMobile = isPhoneLayout(r);
+  if (r.isTablet && !isMobile) return 'tablet';
+  if (!isMobile && typeof r.width === 'number' && r.width > 0) return 'largeTablet';
+  return 'narrow';
+}
+
+/** Свой кегль/интерлиньяж/трекинг у вызывающего — его размер, CSS-ступени к узлу не цепляются. */
+const ownsTypography = (style: HeadingProps['style']): boolean => {
+  const flat = StyleSheet.flatten(style) as TextStyle | undefined;
+  return Boolean(flat && (flat.fontSize != null || flat.lineHeight != null || flat.letterSpacing != null));
+};
+
 export function Heading({ level = 2, color, align, style, ...props }: HeadingProps) {
   const colors = useThemedColors();
-  const config = HEADING_CONFIG[level];
-  const { width, isPhone, isLargePhone, isTablet, isDesktop } = useResponsive();
-  const isMobile = Platform.OS !== 'web' || isPhoneLayout({ width, isPhone, isLargePhone });
-  const bp = { isMobile, isTablet: isTablet && !isMobile, isDesktop };
+  const responsive = useResponsive();
+  const tier = resolveHeadingTier(responsive);
 
-  const computedStyle = useMemo<TextStyle>(() => {
-    const fontSize = Platform.OS === 'web'
-      ? fluidSize(config.minFontSize, config.maxFontSize, bp)
-      : config.minFontSize;
-    return {
-      fontSize,
-      fontWeight: config.fontWeight,
-      lineHeight: Math.round(fontSize * config.lineHeightRatio),
-      letterSpacing: isMobile
-        ? Math.max(config.letterSpacing * 0.7, -0.5)
-        : config.letterSpacing,
-      color: color ?? colors.text,
-      ...(align ? { textAlign: align } : {}),
-    };
-  // bp object is recreated each render; its primitive fields are listed instead to avoid churn
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config, bp.isMobile, bp.isTablet, bp.isDesktop, color, colors.text, align, isMobile]);
+  const computedStyle = useMemo<TextStyle>(() => ({
+    ...headingTypography(level, tier),
+    fontWeight: HEADING_WEIGHT[level],
+    color: color ?? colors.text,
+    ...(align ? { textAlign: align } : {}),
+  }), [level, tier, color, colors.text, align]);
+
+  const { dataSet, ...rest } = props as HeadingProps & { dataSet?: WebDataSet };
+  const layoutProps = ownsTypography(style)
+    ? (dataSet ? { dataSet } : null)
+    : breakpointLayoutProps(HEADING_LAYOUTS[0], HEADING_LAYOUT_KEY[level], dataSet ? { dataSet } : null);
 
   return (
     <Text
       accessibilityRole={HEADING_A11Y_ROLES[level]}
       {...({ 'aria-level': level } as Record<string, unknown>)}
       style={[computedStyle, style]}
-      {...props}
+      {...rest}
+      {...layoutProps}
     />
   );
 }

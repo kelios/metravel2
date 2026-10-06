@@ -37,7 +37,6 @@ const PLATFORM_DECIDES_MODE = new RegExp(
  */
 const LEGACY_ALLOWLIST = new Set([
   'app/_layout.tsx',
-  'components/ui/Typography.tsx',
   'components/layout/BottomDock.tsx',
 ]);
 

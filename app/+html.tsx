@@ -3,9 +3,14 @@ import { ScrollViewStyleReset } from 'expo-router/html';
 import React from 'react';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { getAnalyticsInlineScript } from '@/utils/analyticsInlineScript';
+import { ANALYTICS_ORIGINS, WEB_RESOURCE_HINTS } from '@/utils/webResourceHints';
 import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCriticalCSS } from '@/utils/criticalCSSBuilder';
 import { getRootVisibilityGateCss, getTravelRouteClassScript } from '@/utils/htmlShell';
+import {
+  getQuestCatalogRestoredSelectionCss,
+  getQuestCatalogRestoredSelectionScript,
+} from '@/utils/questCatalogSelection';
 import { buildMapHeadBootstrapScript } from '@/utils/mapHeadBootstrap';
 import { CHUNK_RELOAD_SCRIPT_ID, getChunkReloadBootstrapScript } from '@/utils/chunkReloadGuard';
 import { buildUnknownCityNotFoundHydrationScript } from '@/utils/unknownCityNotFoundHydration';
@@ -600,10 +605,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
           легаси-URL, у которых внутри нет разбираемого `url=` — развернуть их
           невозможно, и они по-прежнему запрашиваются с weserv. Снимать запись из CSP
           можно только вместе с миграцией контента, задачей на стороне бэкенда. */}
-      <link rel="preconnect" href="https://metravel.by" crossOrigin="anonymous" />
-      <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
-      <link rel="dns-prefetch" href="https://mc.yandex.ru" />
-      <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+      {/* #2269: подсказки строятся только из единого списка utils/webResourceHints.ts. */}
+      {WEB_RESOURCE_HINTS.map((hint) => (
+        <link key={`${hint.rel}:${hint.href}`} rel={hint.rel} href={hint.href} crossOrigin={hint.crossOrigin} />
+      ))}
 
       {/* Font preloads removed: Roboto is loaded via expo-font on native only.
           On web the app uses system-ui / Inter from CSS; preloading unused .ttf files
@@ -636,6 +641,13 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <style dangerouslySetInnerHTML={{ __html: '[data-testid="filter-scrollview"]::-webkit-scrollbar{display:none}' }} />
       <script
         dangerouslySetInnerHTML={{ __html: getTravelRouteClassScript() }}
+      />
+      {/* #2320: сохранённый срез каталога квестов — до первого кадра (utils/questCatalogSelection.ts). */}
+      <script
+        dangerouslySetInnerHTML={{ __html: getQuestCatalogRestoredSelectionScript() }}
+      />
+      <style
+        dangerouslySetInnerHTML={{ __html: getQuestCatalogRestoredSelectionCss() }}
       />
       <style
         dangerouslySetInnerHTML={{
@@ -709,7 +721,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <noscript>
         <div>
           <img
-            src={`https://mc.yandex.ru/watch/${METRIKA_ID}`}
+            src={`${ANALYTICS_ORIGINS.metrika}/watch/${METRIKA_ID}`}
             style={{ position: 'absolute', left: '-9999px' }}
             alt=""
           />

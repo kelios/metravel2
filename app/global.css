@@ -679,12 +679,6 @@ select:focus-visible {
   }
 }
 
-/* Slider shimmer skeleton (web) */
-@keyframes slider-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
 /* NAV-02: Bottom sheet slide-up */
 @keyframes sheet-slide-up {
   from { transform: translateY(100%); opacity: 0.6; }

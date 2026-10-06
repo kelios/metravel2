@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
+import { webViewStyle } from '@/utils/webProps';
 
 interface ShimmerOverlayProps {
   style?: any;
@@ -10,7 +11,8 @@ interface ShimmerOverlayProps {
 /**
  * Modern shimmer/skeleton loading overlay.
  *
- * - **Web**: CSS `@keyframes slider-shimmer` sweep (GPU-accelerated, defined in global.css).
+ * - **Web**: sweep by `transform` (compositor-only), keyframes declared in
+ *   `StyleSheet.create` below — the only place react-native-web compiles them.
  * - **Native**: static neutral overlay. Keep this off Reanimated so startup
  *   skeletons do not trigger Fabric synchronous-props warnings before the
  *   surface is fully mounted.
@@ -33,24 +35,7 @@ function ShimmerOverlayInner({ style, testID }: ShimmerOverlayProps) {
         style={baseStyle}
       >
         <View style={shimmerStyles.overflow}>
-          <View
-            style={{
-              ...StyleSheet.absoluteFillObject,
-              // @ts-ignore -- backgroundImage is a web-only CSS property not in RN style types
-              backgroundImage:
-                'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 20%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.08) 80%, transparent 100%)',
-              // @ts-ignore -- web-only animation fields in RN style types
-              animationKeyframes: 'slider-shimmer',
-              // @ts-ignore -- web-only animation fields in RN style types
-              animationDuration: '1.8s',
-              // @ts-ignore -- web-only animation fields in RN style types
-              animationTimingFunction: 'ease-in-out',
-              // @ts-ignore -- web-only animation fields in RN style types
-              animationIterationCount: 'infinite',
-              // @ts-ignore -- willChange is a web-only CSS property not in RN style types
-              willChange: 'transform',
-            }}
-          />
+          <View style={shimmerStyles.webSweep} />
         </View>
       </View>
     );
@@ -75,6 +60,30 @@ const shimmerStyles = StyleSheet.create({
   nativeStatic: {
     opacity: 0.55,
   },
+  // #2215: анимация обязана жить в StyleSheet.create (как `webPulse` в
+  // SkeletonLoader, #2170). Инлайн-объектом RN-Web не компилирует
+  // `animationKeyframes`: в DOM уходило несуществующее свойство
+  // `animation-keyframes`, и перелив не работал ни на одной странице. Кадры
+  // описаны объектом — правило лежит во встроенной таблице стилей документа и
+  // работает до гидратации, без зависимости от app/global.css.
+  webSweep: Platform.select<ViewStyle>({
+    web: webViewStyle({
+      ...StyleSheet.absoluteFillObject,
+      backgroundImage:
+        'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 20%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.08) 80%, transparent 100%)',
+      // Кадры RN-Web не раскрывают массив `transform` (выходит `[object Object]`),
+      // поэтому значение — готовая CSS-строка.
+      animationKeyframes: {
+        '0%': { transform: 'translateX(-100%)' },
+        '100%': { transform: 'translateX(100%)' },
+      },
+      animationDuration: '1.8s',
+      animationTimingFunction: 'ease-in-out',
+      animationIterationCount: 'infinite',
+      willChange: 'transform',
+    }),
+    default: {},
+  }),
 });
 
 export const ShimmerOverlay = memo(ShimmerOverlayInner);

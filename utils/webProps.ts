@@ -46,6 +46,7 @@ export type WebOnlyViewStyle = {
   animationKeyframes?: WebAnimationKeyframes | WebAnimationKeyframes[]
   animationTimingFunction?: React.CSSProperties['animationTimingFunction']
   backdropFilter?: React.CSSProperties['backdropFilter']
+  backgroundImage?: React.CSSProperties['backgroundImage']
   boxShadow?: React.CSSProperties['boxShadow']
   cursor?: React.CSSProperties['cursor']
   gridTemplateColumns?: React.CSSProperties['gridTemplateColumns']

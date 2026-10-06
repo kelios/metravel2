@@ -39,6 +39,7 @@ export type BreakpointBlockStyle = Pick<
   | 'flexBasis'
   | 'fontSize'
   | 'lineHeight'
+  | 'letterSpacing'
   // `'none' | 'flex'` — показ узла от брейкпоинта (иконка чипа с ширины планшета, #2157)
   | 'display'
 >

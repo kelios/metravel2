@@ -322,3 +322,188 @@ test.describe('кадр до гидратации (#2170)', () => {
     })
   }
 })
+
+/**
+ * #2257: на главной (`travel-route`) оболочка приложения видна с первого кадра,
+ * а класс `rnw-styles-ready` встаёт только через два кадра. Состояние «между»
+ * снимается детерминированно: чанки приложения заблокированы, а сам класс
+ * запрещён init-скриптом. SSG-двойник «Городских квестов» вставляется в
+ * документ настоящим генератором, даже если локальная сборка шла без каталога.
+ */
+const HOME_SSG_QUESTS = [
+  { quest_id: 'e2e-home-ssg-1', city_id: '990170', title: 'E2E: квест главной', city_name: 'Минск' },
+  { quest_id: 'e2e-home-ssg-2', city_id: '990171', title: 'E2E: второй квест главной', city_name: 'Гродно' },
+]
+
+test.describe('главная до гидратации (#2257)', () => {
+  for (const viewport of [
+    { width: 1024, height: 768 },
+    { width: 1280, height: 800 },
+    PHONE,
+  ]) {
+    test(`${viewport.width}: SSG-блок квестов не сжимает оболочку в первом кадре`, async ({
+      page,
+    }) => {
+      const { injectHomeQuestsSection } = require('../scripts/generate-seo-pages.js') as {
+        injectHomeQuestsSection: (html: string, quests: unknown[]) => string
+      }
+      await page.setViewportSize(viewport)
+      await preacceptCookies(page)
+      await page.route(APP_SCRIPTS, (route) => route.abort())
+      await page.route(
+        (url) => url.pathname === '/',
+        async (route) => {
+          const response = await route.fetch()
+          const body = await response.text()
+          await route.fulfill({
+            response,
+            body: body.includes('data-ssg-home-quests')
+              ? body
+              : injectHomeQuestsSection(body, HOME_SSG_QUESTS),
+          })
+        },
+      )
+      await page.addInitScript(() => {
+        const add = DOMTokenList.prototype.add
+        DOMTokenList.prototype.add = function (...tokens: string[]) {
+          return add.apply(this, tokens.filter((token) => token !== 'rnw-styles-ready'))
+        }
+      })
+
+      await page.goto('/', { waitUntil: 'load' })
+
+      const frame = await page.evaluate(() => {
+        const main = document.getElementById('main-content')
+        const block = document.querySelector('[data-ssg-home-quests]')
+        const rect = main?.getBoundingClientRect()
+        return {
+          travelRoute: document.documentElement.classList.contains('travel-route'),
+          stylesReady: document.documentElement.classList.contains('rnw-styles-ready'),
+          mainX: rect?.x ?? -1,
+          mainWidth: rect?.width ?? 0,
+          rootWidth: document.getElementById('root')?.getBoundingClientRect().width ?? 0,
+          blockDisplay: block ? getComputedStyle(block).display : null,
+          blockInRoot: Boolean(block?.closest('#root')),
+          blockLinks: block ? block.querySelectorAll('a[href^="/quests/"]').length : 0,
+        }
+      })
+
+      expect(frame.travelRoute).toBe(true)
+      expect(frame.stylesReady, 'состояние до rnw-styles-ready').toBe(false)
+      // Ссылки для краулера на месте, но блок не в ряду #root и не нарисован.
+      expect(frame.blockLinks).toBeGreaterThanOrEqual(2)
+      expect(frame.blockInRoot).toBe(false)
+      expect(frame.blockDisplay).toBe('none')
+      // Оболочка с первого кадра во всю ширину (было 840,0 425×800 на 1280).
+      expect(frame.mainX).toBe(0)
+      expect(frame.rootWidth).toBeGreaterThan(0)
+      expect(Math.abs(frame.mainWidth - frame.rootWidth)).toBeLessThanOrEqual(1)
+    })
+  }
+})
+
+/**
+ * #2258 (механизм #2112): раскладка «от ширины» на статической странице /app.
+ * Первый кадр снимается без скриптов приложения, итог — после гидратации; узлы,
+ * зависящие от ширины (кегль `Heading`, карточки возможностей), обязаны стоять
+ * там же. Было на 1280: `h1` 31 → 38 px, всё ниже съезжало на 7 px (CLS 0,095).
+ */
+test.describe('/app до и после гидратации (#2258)', () => {
+  for (const viewport of [
+    { width: 1280, height: 800 },
+    { width: 1024, height: 768 },
+    { width: 768, height: 1024 },
+    PHONE,
+  ]) {
+    test(`${viewport.width}: заголовки и карточки не перекладываются гидратацией`, async ({
+      browser,
+    }) => {
+      const measure = (page: Page) =>
+        page.evaluate(() =>
+          // h4 — заголовки карточек возможностей и шагов: их ширина — ширина карточки.
+          [...document.querySelectorAll('#main-content h1, #main-content h2, #main-content h4')].map(
+              (node) => {
+              const rect = node.getBoundingClientRect()
+              const main = document.getElementById('main-content')!.getBoundingClientRect()
+              return [node.tagName, Math.round(rect.x - main.x), Math.round(rect.width), Math.round(rect.height)].join(':')
+            },
+          ),
+        )
+
+      const staticContext = await browser.newContext({ viewport })
+      const staticPage = await staticContext.newPage()
+      await preacceptCookies(staticPage)
+      await staticPage.route(APP_SCRIPTS, (route) => route.abort())
+      await staticPage.goto('/app', { waitUntil: 'load' })
+      await staticPage.waitForFunction(
+        () => document.documentElement.classList.contains('rnw-styles-ready'),
+        null,
+        { timeout: 30_000 },
+      )
+      const firstFrame = await measure(staticPage)
+      await staticContext.close()
+
+      const liveContext = await browser.newContext({ viewport })
+      const livePage = await liveContext.newPage()
+      await preacceptCookies(livePage)
+      await livePage.goto('/app', { waitUntil: 'load' })
+      await livePage.waitForFunction(APP_HYDRATED, null, { timeout: 60_000 })
+      const hydrated = await measure(livePage)
+      await liveContext.close()
+
+      expect(firstFrame.length).toBeGreaterThanOrEqual(7)
+      expect(hydrated).toEqual(firstFrame)
+    })
+  }
+})
+
+/**
+ * #2320: сохранённый срез каталога (`quests_selected_city_v2`) React применяет
+ * после гидратации, а статический HTML один для всех и несёт SEO-вводку над
+ * сеткой. Скрипт головы ставит класс до первого кадра, и CSS прячет вводку —
+ * снятие её React-ом ничего не двигает (было: сетка 645 → 234 на 390, CLS 0,32).
+ */
+test.describe('каталог квестов с сохранённым срезом (#2320)', () => {
+  for (const viewport of [PHONE, { width: 1280, height: 800 }]) {
+    test(`${viewport.width}: восстановленный срез не сдвигает сетку`, async ({ page }) => {
+      await page.setViewportSize(viewport)
+      await preacceptCookies(page)
+      await page.addInitScript((cityId) => {
+        window.localStorage.setItem('quests_selected_city_v2', cityId)
+        ;(window as any).__firstFrameCls = 0
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries() as any[]) {
+            if (!entry.hadRecentInput) (window as any).__firstFrameCls += entry.value
+          }
+        }).observe({ type: 'layout-shift', buffered: true })
+      }, QUEST.city_id)
+
+      let releaseCatalog: () => void = () => {}
+      const catalogGate = new Promise<void>((resolve) => {
+        releaseCatalog = resolve
+      })
+      await page.route(
+        (url) => url.pathname === '/api/quests/',
+        async (route) => {
+          await catalogGate
+          await fulfillJson(route, CATALOG)
+        },
+      )
+
+      await page.goto('/quests', { waitUntil: 'domcontentloaded' })
+      await expect(page.getByTestId('quests-grid-skeleton')).toBeVisible({ timeout: 30_000 })
+      await page.waitForFunction(APP_HYDRATED, null, { timeout: 60_000 })
+
+      releaseCatalog()
+      await expect(page.getByTestId('quests-grid')).toBeVisible({ timeout: 30_000 })
+      // Срез восстановлен и отрисован: класс первого кадра снят, вводки нет.
+      await page.waitForFunction(
+        () => !document.documentElement.classList.contains('quests-slice-restored'),
+        null,
+        { timeout: 30_000 },
+      )
+      await expect(page.locator('[data-quests-seo-slot]')).toHaveCount(0)
+      expect(await page.evaluate(() => (window as any).__firstFrameCls)).toBeLessThanOrEqual(0.01)
+    })
+  }
+})
