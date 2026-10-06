@@ -6,7 +6,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { MaxLevelLaurel } from '@/components/achievements/GamificationIcons';
 import type { UserRank } from '@/api/achievements';
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 
 interface Props {
@@ -122,7 +122,7 @@ function RankBar({ rank, compact = false, titlePrefix = '', testID, style }: Pro
           </Text>
           {!compact ? (
             <Text style={styles.points}>
-              {rank.totalPoints} {i18nT('achievements:components.achievements.RankBar.ochkov_opyta_znachkov_f241c47e')}{rank.badgesCount}
+              {translatePlural('achievements:components.achievements.RankBar.pointsAndBadges', rank.totalPoints, { value2: rank.badgesCount })}
             </Text>
           ) : null}
         </View>
@@ -147,7 +147,7 @@ function RankBar({ rank, compact = false, titlePrefix = '', testID, style }: Pro
           </View>
         ) : (
           <Text style={styles.caption}>
-            {i18nT('achievements:components.achievements.RankBar.do_1761ac98')}{rank.nextLevelTitle}{i18nT('achievements:components.achievements.RankBar.esche_bddbafc0')}{remaining} {i18nT('achievements:components.achievements.RankBar.ochkov_opyta_add93c72')}</Text>
+            {translatePlural('achievements:components.achievements.RankBar.nextRankCaption', remaining, { value1: rank.nextLevelTitle })}</Text>
         )
       ) : null}
     </View>

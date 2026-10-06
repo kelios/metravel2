@@ -91,12 +91,12 @@ function PlaceFirstBadgeCard({ item, testID, style }: Props) {
       <View style={styles.body}>
         <View style={styles.statusRow}>
           <Feather name="award" size={13} color={colors.primaryDark} />
-          <Text style={styles.status}>{item.authorStatus} {i18nT('achievements:components.achievements.PlaceFirstBadgeCard.mesta_9ea7c2fe')}</Text>
+          <Text style={styles.status}>{i18nT('achievements:components.achievements.PlaceFirstBadgeCard.statusOfPlace', { value1: item.authorStatus })}</Text>
         </View>
         <Text style={styles.placeName} numberOfLines={2}>
           {item.placeName}
         </Text>
-        {date ? <Text style={styles.date}>{i18nT('achievements:components.achievements.PlaceFirstBadgeCard.otkryto_66797293')}{date}</Text> : null}
+        {date ? <Text style={styles.date}>{i18nT('achievements:components.achievements.PlaceFirstBadgeCard.discoveredOn', { value1: date })}</Text> : null}
 
         <View style={styles.statsRow}>
           {stats.map((s) => (

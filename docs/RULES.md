@@ -44,6 +44,14 @@
 - Use `useTranslation()` from `@/i18n` in React code and the shared translation
   helpers outside React. Use `i18n/format.ts` for locale-sensitive formatting,
   plural selection, and collation; do not hardcode `ru-RU` or manual plural rules.
+- A set of plural forms is one key family `<key>_one/_few/_many/_other` in every
+  locale, read through `translatePlural`; separate keys per form
+  (`selectPlural(n, { one: t(k1), … })`) fail `__tests__/i18n/pluralFormSets.test.ts`,
+  and `|` lists are legacy kept to the same form checks (#2238). A phrase
+  around a number, date or link is one value with `{{value1}}`, not fragments
+  glued by edge spaces; `__tests__/i18n/fragmentParity.test.ts` keeps edge
+  whitespace and first-letter case equal to RU and the fragment count from
+  growing (#2237).
 - Never build a displayed number on the call site: `toFixed` plus a hardcoded
   unit (`4.6`, `1.2K`, `1.5 KB`) is `LOCALE-NUMBER-FORMAT-001` and fails
   `npm run guard:locale-number-format`. Units come from a translation key, and

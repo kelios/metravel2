@@ -86,9 +86,9 @@ export const AboutIntroCard: React.FC<Props> = ({
         {i18nT('home:components.about.AboutIntroCard.vladelets_sayta_value1_5dd33620', { value1: SITE_OWNER_LEGAL_NAME })}</Text>
       {versionInfo ? (
         <View style={styles.versionInfoBlock} testID="about-app-version">
-          <Text style={styles.footerText}>{i18nT('home:components.about.AboutIntroCard.versiya_prilozheniya_01aa3c56')}{versionInfo.displayVersion ?? versionInfo.appVersion}</Text>
+          <Text style={styles.footerText}>{i18nT('home:components.about.AboutIntroCard.versionLine', { value1: versionInfo.displayVersion ?? versionInfo.appVersion })}</Text>
           {versionInfo.webBuildVersion ? (
-            <Text style={styles.footerText}>{i18nT('home:components.about.AboutIntroCard.web_build_c7a80e75')}{versionInfo.webBuildVersion}</Text>
+            <Text style={styles.footerText}>{i18nT('home:components.about.AboutIntroCard.webBuildLine', { value1: versionInfo.webBuildVersion })}</Text>
           ) : null}
         </View>
       ) : null}

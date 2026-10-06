@@ -13,7 +13,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
 import Button from '@/components/ui/Button';
-import { translate as i18nT, type TranslationKey } from '@/i18n'
+import { translate as i18nT, translatePlural, type TranslationKey } from '@/i18n'
 
 
 type ImportStep = 'intro' | 'preview' | 'progress' | 'complete';
@@ -192,8 +192,9 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
     <View style={styles.stepContainer}>
       <Text style={styles.title}>{i18nT('map:components.UserPoints.ImportWizard.predprosmotr_dannyh_2ffa6e9f')}</Text>
       <Text style={styles.subtitle}>
-        {i18nT('map:components.UserPoints.ImportWizard.naydeno_tochek_bc25057d')}{previewPoints.length}
-        {preview?.source ? i18nT('map:components.UserPoints.ImportWizard.format_value1_5fc29aa2', { value1: preview.source }) : ''}
+        {preview?.source
+          ? i18nT('map:components.UserPoints.ImportWizard.pointsFoundWithFormat', { value1: previewPoints.length, value2: preview.source })
+          : i18nT('map:components.UserPoints.ImportWizard.pointsFound', { value1: previewPoints.length })}
       </Text>
 
       <ScrollView style={styles.previewList}>
@@ -205,7 +206,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
         ))}
         {previewPoints.length > 10 && (
           <Text style={styles.moreText}>
-            {i18nT('map:components.UserPoints.ImportWizard.i_esche_e623fbb3')}{previewPoints.length - 10} {i18nT('map:components.UserPoints.ImportWizard.tochek_12a5d808')}</Text>
+            {translatePlural('map:components.UserPoints.ImportWizard.morePointsCount', previewPoints.length - 10)}</Text>
         )}
       </ScrollView>
 
@@ -252,7 +253,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
     <View style={styles.stepContainer}>
       <Text style={styles.title}>{i18nT('map:components.UserPoints.ImportWizard.import_zavershen_13bec714')}</Text>
       <Text style={styles.subtitle}>
-        {i18nT('map:components.UserPoints.ImportWizard.sozdano_5a7310b7')}{importResult?.created ?? 0} {i18nT('map:components.UserPoints.ImportWizard.tochek_12a5d808')}{typeof importResult?.updated === 'number' ? i18nT('map:components.UserPoints.ImportWizard.obnovleno_value1_346dbca5', { value1: importResult.updated }) : ''}
+        {translatePlural('map:components.UserPoints.ImportWizard.createdPointsCount', importResult?.created ?? 0)}{typeof importResult?.updated === 'number' ? i18nT('map:components.UserPoints.ImportWizard.obnovleno_value1_346dbca5', { value1: importResult.updated }) : ''}
         {importResult?.skipped ? i18nT('map:components.UserPoints.ImportWizard.propuscheno_value1_8a402a35', { value1: importResult.skipped }) : ''}
       </Text>
 

@@ -90,7 +90,7 @@ function ProgressionLineBar({ line, testID, style }: Props) {
               {line.activityName}
             </Text>
             <View style={styles.levelChip}>
-              <Text style={styles.levelChipText}>{i18nT('achievements:components.achievements.ProgressionLineBar.ur_7b30937f')}{line.level}</Text>
+              <Text style={styles.levelChipText}>{i18nT('achievements:components.achievements.ProgressionLineBar.levelChip', { value1: line.level })}</Text>
             </View>
           </View>
           <Text style={styles.desc} numberOfLines={2}>
@@ -117,7 +117,11 @@ function ProgressionLineBar({ line, testID, style }: Props) {
         </View>
       ) : (
         <Text style={styles.caption} numberOfLines={1}>
-          «{line.levelTitle}{i18nT('achievements:components.achievements.ProgressionLineBar.esche_a9e72d18')}{remaining} {i18nT('achievements:components.achievements.ProgressionLineBar.do_e75f69c8')}{line.nextLevelTitle}»
+          {i18nT('achievements:components.achievements.ProgressionLineBar.nextLevelCaption', {
+            value1: line.levelTitle,
+            value2: remaining,
+            value3: line.nextLevelTitle,
+          })}
         </Text>
       )}
     </View>

@@ -15,7 +15,8 @@ import {
   type ProfileCountryRow,
 } from './profileCountries'
 import { useProfileCountriesData } from './useProfileCountriesData'
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translate as i18nT } from '@/i18n'
+import { formatVisitCount } from './profileCountryApplication'
 
 
 interface ProfileCountriesTabProps {
@@ -27,15 +28,6 @@ interface ProfileCountriesTabProps {
   /** `null` — счётчик маршрутов недоступен из-за сбоя, а не равен нулю (#1871). */
   totalTravelsCount: number | null
   onBackToOverview: () => void
-}
-
-const formatVisitCount = (count: number) => {
-  return selectPlural(count, {
-    one: i18nT('profile:components.screens.profile.ProfileCountriesTab.value1_raz_1479fc9e', { value1: count }),
-    few: i18nT('profile:components.screens.profile.ProfileCountriesTab.value1_raza_0ab39799', { value1: count }),
-    many: i18nT('profile:components.screens.profile.ProfileCountriesTab.value1_raz_1479fc9e', { value1: count }),
-    other: i18nT('profile:components.screens.profile.ProfileCountriesTab.value1_raz_1479fc9e', { value1: count }),
-  })
 }
 
 const getCountryFlagLabel = (country: Pick<ProfileCountryRow, 'code' | 'name'>) => {
@@ -295,11 +287,11 @@ export function ProfileCountriesTab({
           <View style={styles.regionTitleWrap}>
             <Text style={styles.regionTitle}>{group.label}</Text>
             <Text style={styles.regionSubtitle}>
-              {i18nT('profile:components.screens.profile.ProfileCountriesTab.posetili_a24308d2')}{group.visitedCount} {i18nT('profile:components.screens.profile.ProfileCountriesTab.vsego_5c6b3497')}{group.totalCount}
+              {i18nT('profile:components.screens.profile.ProfileCountriesTab.visitedOfTotal', { value1: group.visitedCount, value2: group.totalCount })}
             </Text>
           </View>
           <View style={styles.regionBadge}>
-            <Text style={styles.regionBadgeText}>{group.remainingCount} {i18nT('profile:components.screens.profile.ProfileCountriesTab.ostalos_c2cf7caa')}</Text>
+            <Text style={styles.regionBadgeText}>{i18nT('profile:components.screens.profile.ProfileCountriesTab.remainingCount', { value1: group.remainingCount })}</Text>
           </View>
         </View>
         <View style={styles.countryGrid}>

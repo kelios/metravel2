@@ -475,7 +475,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                     >
                                         {descriptionStatusText}
                                     </Text>
-                                    <Text style={styles.descriptionCounterText}>{descriptionPlainLength} {i18nT('travel:components.travel.ContentUpsertSection.simvolov_d0f4cacb')}</Text>
+                                    <Text style={styles.descriptionCounterText}>{translatePlural('travel:components.travel.ContentUpsertSection.charactersCount', descriptionPlainLength)}</Text>
                                 </View>
 
                                 <ToolActionsRow
@@ -614,7 +614,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                             </View>
                                             <View style={styles.modalHeaderCenter}>
                                                 <Text style={styles.modalHeaderTitle}>{i18nT('travel:components.travel.ContentUpsertSection.opisanie_cdbe94cb')}</Text>
-                                                <Text style={styles.modalHeaderSubtitle}>{descriptionPlainLength} {i18nT('travel:components.travel.ContentUpsertSection.simvolov_d0f4cacb')}</Text>
+                                                <Text style={styles.modalHeaderSubtitle}>{translatePlural('travel:components.travel.ContentUpsertSection.charactersCount', descriptionPlainLength)}</Text>
                                             </View>
                                             <View style={[styles.modalHeaderSide, styles.modalHeaderSideRight]}>
                                                 <TouchableOpacity

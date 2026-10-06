@@ -100,7 +100,7 @@ export const errorsStaticResources = {
   "api.plannedTrips.routePointFallback": "Point {{index}}",
   "api.plannedTrips.organizerFallback": "Organizer",
   "api.plannedTrips.tripFallback": "Trip #{{id}}",
-  "api.plannedTrips.currentUser": "you",
+  "api.plannedTrips.currentUser": "You",
   "api.publicTrips.applicationTargetNamed": "trip \"{{title}}\"",
   "api.publicTrips.applicationTarget": "trip",
   "api.publicTrips.newApplication": "New application for {{target}}.",

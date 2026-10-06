@@ -733,6 +733,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     loginContainer: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
+        // Разделитель вопроса и ссылки — отступ раскладки, а не пробел в переводе (#2237).
+        columnGap: 4,
         justifyContent: 'center',
         alignItems: 'center',
         marginTop: 16,

@@ -1,4 +1,4 @@
-import { createCollator, formatDate, selectPlural, translate as i18nT } from '@/i18n'
+import { createCollator, formatDate, translate as i18nT, translatePlural } from '@/i18n'
 
 import type {
   ProfileCountryRow,
@@ -66,12 +66,8 @@ const formatApplicationDate = (value: unknown): string | null => {
   return trimmed
 }
 
-const formatVisitCount = (count: number) => selectPlural(count, {
-  one: i18nT('profile:components.screens.profile.profileCountries.value1_raz_7fb1bf15', { value1: count }),
-  few: i18nT('profile:components.screens.profile.profileCountries.value1_raza_f1710173', { value1: count }),
-  many: i18nT('profile:components.screens.profile.profileCountries.value1_raz_7fb1bf15', { value1: count }),
-  other: i18nT('profile:components.screens.profile.profileCountries.value1_raz_7fb1bf15', { value1: count }),
-})
+export const formatVisitCount = (count: number) =>
+  translatePlural('profile:components.screens.profile.profileCountries.visitCount', count)
 
 const mergeVisits = (a: VisitedCountryVisit[], b: VisitedCountryVisit[]): VisitedCountryVisit[] => {
   if (a.length === 0) return b

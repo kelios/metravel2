@@ -249,7 +249,7 @@ function BadgeDetailSheet({ visible, onClose, detail, ownerName }: Props) {
                   {progress.current} / {progress.threshold}
                 </Text>
                 <Text style={styles.progressRemaining}>
-                  {i18nT('achievements:components.achievements.BadgeDetailSheet.ostalos_9237468c')}{remaining}
+                  {i18nT('achievements:components.achievements.BadgeDetailSheet.remaining', { value1: remaining })}
                 </Text>
               </View>
               <View style={styles.track}>

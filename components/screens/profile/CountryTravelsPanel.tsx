@@ -134,7 +134,7 @@ export function CountryTravelsPanel({
         accessibilityLabel={i18nT('profile:components.screens.profile.CountryTravelsPanel.pokazat_vse_marshruty_value1_c2b42b90', { value1: hiddenCount })}
         style={styles.showAll}
       >
-        <Text style={styles.showAllText}>{i18nT('profile:components.screens.profile.CountryTravelsPanel.esche_e7efd189')}{hiddenCount}</Text>
+        <Text style={styles.showAllText}>{i18nT('profile:components.screens.profile.CountryTravelsPanel.moreCount', { value1: hiddenCount })}</Text>
         <Feather name="chevron-down" size={16} color={colors.text} />
       </Pressable>
     ) : travels.length > INITIAL_LIMIT ? (

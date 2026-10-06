@@ -15,7 +15,7 @@ import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 
 
 const WEB_HORIZONTAL_SCROLL_STYLE = {
@@ -63,12 +63,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
 
   const travelCountText = useMemo(() => {
     const n = travelsTotal;
-    return selectPlural(n, {
-      one: i18nT('shared:components.subscriptions.AuthorCard.1_puteshestvie_bf5a4d11', { value1: n }),
-      few: i18nT('shared:components.subscriptions.AuthorCard.value1_puteshestviya_17b149a5', { value1: n }),
-      many: i18nT('shared:components.subscriptions.AuthorCard.value1_puteshestviy_2e6c250d', { value1: n }),
-      other: i18nT('shared:components.subscriptions.AuthorCard.value1_puteshestviy_2e6c250d', { value1: n }),
-    });
+    return translatePlural('shared:components.subscriptions.AuthorCard.travelsCount', n, { value1: n });
   }, [travelsTotal]);
 
   const hiddenTravelsCount = Math.max(travelsTotal - travels.length, 0);
@@ -175,7 +170,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
               {...Platform.select({ web: { cursor: 'pointer' } })}
             >
               <Feather name="arrow-right" size={24} color={colors.primaryDark} />
-              <Text style={styles.showMoreText}>{i18nT('shared:components.subscriptions.AuthorCard.esche_7e20b968')}{hiddenTravelsCount}</Text>
+              <Text style={styles.showMoreText}>{i18nT('shared:components.subscriptions.AuthorCard.moreCount', { value1: hiddenTravelsCount })}</Text>
             </Pressable>
           )}
         </ScrollView>
