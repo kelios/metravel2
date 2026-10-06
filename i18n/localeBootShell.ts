@@ -5,6 +5,13 @@ import { getBootLocaleRecoveryCopy } from './bootLocaleRecoveryCopy'
 
 export const LOCALE_BOOT_PENDING_CLASS = 'locale-boot-pending'
 
+declare global {
+  interface Window {
+    __metravelLocaleBootErrorHandler?: EventListener
+    __metravelLocaleBootRecoveryOwner?: 'static' | 'react'
+  }
+}
+
 /** Runs in <head>, before the Russian SSG body can paint (#2327). */
 export const getLocaleBootScript = (): string => `
 (function(){try{
@@ -22,13 +29,17 @@ export const getLocaleBootScript = (): string => `
   }
   if(locale===${JSON.stringify(DEFAULT_LOCALE)}||locales.indexOf(locale)===-1)return;
   document.documentElement.classList.add(${JSON.stringify(LOCALE_BOOT_PENDING_CLASS)});
+  window.__metravelLocaleBootRecoveryOwner='static';
   var copy=${JSON.stringify(Object.fromEntries(SUPPORTED_LOCALES.map((locale) => [locale, getBootLocaleRecoveryCopy(locale)])))}[locale];
   function recover(){
+    if(window.__metravelLocaleBootRecoveryOwner==='react')return;
     if(!document.documentElement.classList.contains(${JSON.stringify(LOCALE_BOOT_PENDING_CLASS)}))return;
     // Reuse the existing guarded stale-chunk reload; after its one retry, give
     // the visitor controls even if the React entry point never executed.
     if(window.__metravelReloadStaleChunk&&window.__metravelReloadStaleChunk())return;
     function show(){
+      if(window.__metravelLocaleBootRecoveryOwner==='react')return;
+      if(!document.documentElement.classList.contains(${JSON.stringify(LOCALE_BOOT_PENDING_CLASS)}))return;
       if(document.getElementById('locale-boot-recovery'))return;
       var panel=document.createElement('div');
       panel.id='locale-boot-recovery';panel.lang=locale;
@@ -65,9 +76,20 @@ export const getLocaleBootCss = (): string =>
    #locale-boot-recovery { position: fixed; inset: 0; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; background: var(--color-surface, ${DESIGN_COLORS.criticalSurfaceLight}); color: var(--color-text, ${DESIGN_COLORS.criticalTextLight}); font: 16px/1.5 system-ui, sans-serif; }
    #locale-boot-recovery button { min-height: 44px; padding: 10px 18px; cursor: pointer; color: inherit; background: var(--color-backgroundSecondary, ${DESIGN_COLORS.criticalBgSecondaryLight}); border: 1px solid currentColor; border-radius: 8px; }`
 
+/** React can now recover catalogue errors itself; never stack both panels. */
+export const claimLocaleBootRecovery = (): void => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return
+  window.__metravelLocaleBootRecoveryOwner = 'react'
+  if (window.__metravelLocaleBootErrorHandler) {
+    window.removeEventListener('error', window.__metravelLocaleBootErrorHandler, true)
+    delete window.__metravelLocaleBootErrorHandler
+  }
+  document.querySelectorAll('[data-static-recovery="true"]').forEach((panel) => panel.remove())
+}
+
 export const releaseLocaleBootShell = (): void => {
   if (typeof document !== 'undefined') {
     document.documentElement.classList.remove(LOCALE_BOOT_PENDING_CLASS)
-    document.querySelector('[data-static-recovery="true"]')?.remove()
+    document.querySelectorAll('[data-static-recovery="true"]').forEach((panel) => panel.remove())
   }
 }

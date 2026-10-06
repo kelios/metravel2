@@ -22,7 +22,7 @@ import {
   type LocalePreference,
 } from './localeStorage'
 import { isWebLocaleLoaded, loadWebLocale, translate } from './translate'
-import { releaseLocaleBootShell } from './localeBootShell'
+import { claimLocaleBootRecovery, releaseLocaleBootShell } from './localeBootShell'
 import { getBootLocaleRecoveryCopy } from './bootLocaleRecoveryCopy'
 
 type LocaleContextValue = {
@@ -95,6 +95,12 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [isBootPending, setIsBootPending] = useState(bootLocale !== null)
   const [bootRecovery, setBootRecovery] = useState<'loading' | 'slow' | 'failed'>('loading')
   const bootAbandoned = useRef(false)
+
+  // The head recovery owns failures before React arrives. Hand off in the first
+  // commit, before catalogue effects can fail and render our recovery controls.
+  useLayoutEffect(() => {
+    claimLocaleBootRecovery()
+  }, [])
 
   // Reveal only a committed tree in its final boot locale. No reveal timer:
   // a slow catalogue must not mount Russian screens and send requests twice.

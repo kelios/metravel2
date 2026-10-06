@@ -62,7 +62,7 @@ const createDeferred = (): Deferred => {
   return { promise, resolve, reject }
 }
 
-import { getLocaleBootCss, getLocaleBootScript, LOCALE_BOOT_PENDING_CLASS } from '@/i18n/localeBootShell'
+import { getLocaleBootCss, getLocaleBootScript, LOCALE_BOOT_PENDING_CLASS, releaseLocaleBootShell } from '@/i18n/localeBootShell'
 
 const STORAGE_KEY = '@metravel/locale-preference:v1'
 
@@ -143,6 +143,15 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
 
   const hydrationErrors = () =>
     consoleError.mock.calls.filter((call) => /hydrat|did not match|#418|#419/i.test(String(call[0])))
+
+  const failChunk = (name = 'locale-pl-broken.js') => {
+    window.__metravelReloadStaleChunk = jest.fn(() => false)
+    const script = document.createElement('script')
+    script.src = `${window.location.origin}/_expo/static/js/web/${name}`
+    document.body.appendChild(script)
+    script.dispatchEvent(new Event('error'))
+    script.remove()
+  }
 
   it('mounts the screen once in Polish when contexts above change right after hydration (prod order)', async () => {
     // Прод (приёмка 06.10.2026): над `LocaleProvider` стоят провайдеры
@@ -410,6 +419,102 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     fallback.click()
     expect(document.documentElement.classList.contains(LOCALE_BOOT_PENDING_CLASS)).toBe(false)
     script.remove()
+    delete window.__metravelReloadStaleChunk
+  })
+
+  it('hands pre-React chunk recovery to the provider without an overlapping panel after catalogue rejection', async () => {
+    const { LocaleProvider, Screen, mounts, hydrate } = setup(JSON.stringify({ version: 1, mode: 'explicit', locale: 'pl' }))
+    const catalogue = createDeferred()
+    loadWebLocale.mockReturnValue(catalogue.promise)
+    failChunk()
+    expect(document.querySelectorAll('[data-static-recovery="true"]')).toHaveLength(1)
+    await hydrate(<LocaleProvider><Screen /></LocaleProvider>)
+    expect(window.__metravelLocaleBootRecoveryOwner).toBe('react')
+    expect(document.querySelectorAll('[data-static-recovery="true"]')).toHaveLength(0)
+    // A later failed chunk cannot reclaim the recovery surface from React.
+    failChunk()
+    expect(document.querySelectorAll('[data-static-recovery="true"]')).toHaveLength(0)
+    await act(async () => catalogue.reject(new Error('catalogue blocked')))
+    const panels = document.querySelectorAll('#locale-boot-recovery')
+    expect(panels).toHaveLength(1)
+    expect(panels[0].querySelectorAll('button')).toHaveLength(2)
+    const fallback = Array.from(panels[0].querySelectorAll('button')).find((button) => button.textContent === 'Kontynuuj po rosyjsku')!
+    expect(getComputedStyle(fallback).visibility).toBe('visible')
+    expect(getComputedStyle(fallback).pointerEvents).toBe('auto')
+    expect(getComputedStyle(panels[0]).position).toBe('fixed')
+    await act(async () => fallback.click())
+    expect(document.querySelectorAll('#locale-boot-recovery')).toHaveLength(0)
+    expect(document.documentElement.classList.contains(LOCALE_BOOT_PENDING_CLASS)).toBe(false)
+    expect(mounts).toEqual(['ru'])
+    expect(i18n.resolvedLanguage).toBe('ru')
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)!)).toEqual({ version: 1, mode: 'explicit', locale: 'ru' })
+    expect(recoverableErrors).toEqual([])
+    expect(hydrationErrors()).toEqual([])
+    delete window.__metravelReloadStaleChunk
+  })
+
+  it('keeps one clickable provider recovery and RU mount when a late locale chunk resolves after the handoff', async () => {
+    jest.useFakeTimers()
+    try {
+      const { LocaleProvider, Screen, mounts, hydrate } = setup(JSON.stringify({ version: 1, mode: 'explicit', locale: 'pl' }))
+      const catalogue = createDeferred()
+      loadWebLocale.mockReturnValue(catalogue.promise)
+      failChunk('providers-broken.js')
+      await hydrate(<LocaleProvider><Screen /></LocaleProvider>)
+      await act(async () => { jest.advanceTimersByTime(3001) })
+      failChunk()
+      expect(document.querySelectorAll('#locale-boot-recovery')).toHaveLength(1)
+      expect(document.querySelectorAll('[data-static-recovery="true"]')).toHaveLength(0)
+      const fallback = Array.from(document.querySelectorAll('#locale-boot-recovery button')).find((button) => button.textContent === 'Kontynuuj po rosyjsku')! as HTMLButtonElement
+      expect(getComputedStyle(fallback).visibility).toBe('visible')
+      expect(getComputedStyle(fallback).pointerEvents).toBe('auto')
+      await act(async () => fallback.click())
+      await act(async () => catalogue.resolve())
+      expect(mounts).toEqual(['ru'])
+      expect(i18n.resolvedLanguage).toBe('ru')
+      expect(document.querySelectorAll('#locale-boot-recovery')).toHaveLength(0)
+      expect(recoverableErrors).toEqual([])
+      expect(hydrationErrors()).toEqual([])
+    } finally {
+      delete window.__metravelReloadStaleChunk
+      jest.useRealTimers()
+    }
+  })
+
+  it('preserves an explicit static RU choice made before the provider arrives', async () => {
+    const { LocaleProvider, Screen, mounts, hydrate } = setup(JSON.stringify({ version: 1, mode: 'explicit', locale: 'pl' }))
+    const catalogue = createDeferred()
+    loadWebLocale.mockReturnValue(catalogue.promise)
+    const prepared = prepareBootLocale()
+    failChunk()
+    const fallback = Array.from(document.querySelectorAll('#locale-boot-recovery button')).find((button) => button.textContent === 'Kontynuuj po rosyjsku')! as HTMLButtonElement
+    fallback.click()
+    await hydrate(<LocaleProvider><Screen /></LocaleProvider>)
+    await act(async () => catalogue.resolve())
+    await prepared
+    expect(mounts).toEqual(['ru'])
+    expect(i18n.resolvedLanguage).toBe('ru')
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)!)).toEqual({ version: 1, mode: 'explicit', locale: 'ru' })
+    expect(document.querySelectorAll('#locale-boot-recovery')).toHaveLength(0)
+    expect(recoverableErrors).toEqual([])
+    expect(hydrationErrors()).toEqual([])
+    delete window.__metravelReloadStaleChunk
+  })
+
+  it('cancels a queued head recovery when the boot shell is released before the body becomes available', () => {
+    setup(JSON.stringify({ version: 1, mode: 'explicit', locale: 'pl' }))
+    window.__metravelReloadStaleChunk = jest.fn(() => false)
+    // A resource may fail in <head>, before document.body exists.
+    Object.defineProperty(document, 'body', { configurable: true, value: null })
+    try {
+      window.dispatchEvent(new ErrorEvent('error', { filename: `${window.location.origin}/_expo/static/js/web/entry-broken.js` }))
+    } finally {
+      Reflect.deleteProperty(document, 'body')
+    }
+    releaseLocaleBootShell()
+    document.dispatchEvent(new Event('DOMContentLoaded'))
+    expect(document.querySelectorAll('#locale-boot-recovery')).toHaveLength(0)
+    expect(document.documentElement.classList.contains(LOCALE_BOOT_PENDING_CLASS)).toBe(false)
     delete window.__metravelReloadStaleChunk
   })
 
