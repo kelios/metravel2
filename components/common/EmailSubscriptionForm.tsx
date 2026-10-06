@@ -1,6 +1,6 @@
-import { memo, useMemo, useState } from 'react'
-import { Platform, StyleSheet, Text, TextInput, View } from 'react-native'
-import { useMutation } from '@tanstack/react-query'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Feather from '@expo/vector-icons/Feather'
 import { Link } from 'expo-router'
 
@@ -11,6 +11,14 @@ import { ResponsiveContainer } from '@/components/layout'
 import Button from '@/components/ui/Button'
 import ConsentCheckbox from '@/components/legal/ConsentCheckbox'
 import { subscribeEmail, type SubscribeSource } from '@/api/misc'
+import {
+  fetchEmailSubscriptionStatus,
+  NotSubscribedError,
+  sendQuestToEmail,
+  type EmailSubscriptionStatus,
+} from '@/api/emailSubscription'
+import { queryKeys } from '@/api/queryKeys'
+import { useAuth } from '@/context/AuthContext'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { useActionConsent } from '@/hooks/useActionConsent'
 import { EMAIL_SUBSCRIPTION_CONSENT } from '@/utils/actionConsent'
@@ -35,6 +43,12 @@ interface EmailSubscriptionFormProps {
    * their first visible render instead of briefly drawing the width-0 layout.
    */
   clientOnly?: boolean
+  /**
+   * #2318: вошедшему пользователю, чей email аккаунта уже подписан, вместо формы
+   * показывается одна кнопка «Прислать на почту» — квест со страницы `pageUrl`
+   * уходит на email аккаунта. Гостю и неподписанному — прежняя форма подписки.
+   */
+  accountDelivery?: boolean
 }
 
 // Быстрый клиентский гейт: ловит основную массу опечаток без запроса. Он
@@ -57,6 +71,7 @@ function EmailSubscriptionForm({
   title,
   subtitle,
   clientOnly = false,
+  accountDelivery = false,
 }: EmailSubscriptionFormProps) {
   const { isMobile } = useResponsive({ clientOnly })
   const colors = useThemedColors()
@@ -73,6 +88,37 @@ function EmailSubscriptionForm({
     EMAIL_SUBSCRIPTION_CONSENT.version,
   )
 
+  const { isAuthenticated, userId } = useAuth()
+  const queryClient = useQueryClient()
+  const accountStatusKey = queryKeys.emailSubscriptionStatus(userId ?? null)
+  const accountStatusEnabled = accountDelivery && isAuthenticated
+  const accountStatusQuery = useQuery({
+    queryKey: accountStatusKey,
+    queryFn: fetchEmailSubscriptionStatus,
+    enabled: accountStatusEnabled,
+    staleTime: 5 * 60_000,
+    retry: false,
+  })
+  const account = accountStatusEnabled ? accountStatusQuery.data : undefined
+  // Статус не пришёл (сеть, 5xx) — честный запасной вариант: обычная форма.
+  const accountStatusPending = accountStatusEnabled && accountStatusQuery.isPending
+  const showAccountSend = account?.subscribed === true && Boolean(pageUrl)
+
+  const sendMutation = useMutation({
+    mutationFn: () => sendQuestToEmail(pageUrl ?? ''),
+    onSuccess: () => {
+      queueAnalyticsEvent('quest_email_send', { source })
+    },
+    onError: (error) => {
+      if (!(error instanceof NotSubscribedError)) return
+      // Отписался в другой вкладке/письме: возвращаем форму подписки с причиной.
+      setLocalError(error.message)
+      queryClient.setQueryData<EmailSubscriptionStatus>(accountStatusKey, (current) =>
+        current ? { ...current, subscribed: false } : current,
+      )
+    },
+  })
+
   const mutation = useMutation({
     mutationFn: () => {
       return subscribeEmail(email, source, pageUrl ?? undefined, {
@@ -85,8 +131,31 @@ function EmailSubscriptionForm({
     },
   })
 
+  // Выход или вход другим аккаунтом без размонтирования экрана: итог отправки,
+  // ошибка и подставленный email прошлого аккаунта новому не достаются.
+  const previousUserIdRef = useRef(userId)
+  const resetSend = sendMutation.reset
+  const resetSubscribe = mutation.reset
+  useEffect(() => {
+    const previousUserId = previousUserIdRef.current
+    previousUserIdRef.current = userId
+    if (previousUserId == null || previousUserId === userId) return
+    resetSend()
+    resetSubscribe()
+    setEmail('')
+    setLocalError(null)
+  }, [resetSend, resetSubscribe, userId])
+
+  // Неподписанному вошедшему подставляем email аккаунта: обычно подписывают его.
+  const accountEmail = account?.email ?? ''
+  const accountSubscribed = account?.subscribed === true
+  useEffect(() => {
+    if (accountEmail && !accountSubscribed) setEmail((current) => current || accountEmail)
+  }, [accountEmail, accountSubscribed])
+
   const succeeded = mutation.isSuccess
   const alreadyExists = mutation.data?.status === 'exists'
+  const sentToExisting = mutation.data?.status === 'sent'
 
   const handleSubmit = () => {
     if (!consentChecked) {
@@ -124,14 +193,56 @@ function EmailSubscriptionForm({
 
           <View style={[styles.textBlock, isMobile ? styles.textBlockStacked : styles.textBlockRow]}>
             <Text style={styles.title}>{title ?? i18nT('sharedStatic:subscription.defaultTitle')}</Text>
-            <Text style={styles.subtitle}>{subtitle ?? i18nT('sharedStatic:subscription.defaultSubtitle')}</Text>
+            <Text style={styles.subtitle}>
+              {showAccountSend
+                ? i18nT('sharedStatic:subscription.sendQuestSubtitle', { email: account?.email ?? '' })
+                : (subtitle ?? i18nT('sharedStatic:subscription.defaultSubtitle'))}
+            </Text>
           </View>
 
-          {succeeded ? (
+          {accountStatusPending ? (
+            <View style={[styles.formCol, isMobile ? styles.formColStacked : styles.formColRow]}>
+              <ActivityIndicator color={colors.primaryDark} />
+            </View>
+          ) : showAccountSend ? (
+            sendMutation.isSuccess ? (
+              <View style={[styles.successRow, isMobile ? styles.fieldsStacked : styles.fieldsRow]}>
+                <Feather name="check-circle" size={18} color={colors.primaryDark} />
+                <Text style={styles.successText} accessibilityLiveRegion="polite">
+                  {i18nT('sharedStatic:subscription.sendQuestSent', { email: account?.email ?? '' })}
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.formCol, isMobile ? styles.formColStacked : styles.formColRow]}>
+                <Button
+                  label={i18nT('sharedStatic:subscription.sendQuestButton')}
+                  onPress={() => sendMutation.mutate()}
+                  variant="primary"
+                  size="md"
+                  fullWidth={isMobile}
+                  loading={sendMutation.isPending}
+                  disabled={sendMutation.isPending}
+                  icon={<Feather name="send" size={16} color={colors.textOnPrimary} />}
+                  style={styles.submitBtn}
+                  accessibilityLabel={i18nT('sharedStatic:subscription.sendQuestA11y', {
+                    email: account?.email ?? '',
+                  })}
+                  testID="quest-email-send"
+                />
+                {sendMutation.isError && (
+                  <Text style={styles.errorText} accessibilityLiveRegion="polite">
+                    {(sendMutation.error as Error)?.message}
+                  </Text>
+                )}
+              </View>
+            )
+          ) : succeeded ? (
             <View style={[styles.successRow, isMobile ? styles.fieldsStacked : styles.fieldsRow]}>
               <Feather name="check-circle" size={18} color={colors.primaryDark} />
               <Text style={styles.successText}>
-                {alreadyExists
+                {sentToExisting
+                  ? i18nT('sharedStatic:subscription.questSentExisting')
+                  : alreadyExists
                   ? i18nT('shared:components.common.EmailSubscriptionForm.vy_uzhe_podpisany_spasibo_chto_s_nami_6014714e')
                   : source === 'quest'
                     ? i18nT('sharedStatic:subscription.checkMailQuest')

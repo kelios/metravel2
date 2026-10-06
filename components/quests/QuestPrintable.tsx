@@ -1,5 +1,5 @@
 import type { QuestStep } from './types';
-import { beginPrint, type PrintResult } from '@/utils/printHtml';
+import { beginPrint, type BeginPrintOptions, type PrintResult } from '@/utils/printHtml';
 import {
     QR_NAV,
     QR_SITE,
@@ -43,9 +43,12 @@ type PrintableProps = {
  * Генерирует подарочную HTML-версию квеста для печати.
  * Включает: обложку, карту, шаги с QR-кодами навигации, QR на сайт.
  */
-export async function generatePrintableQuest(props: PrintableProps): Promise<PrintResult> {
+export async function generatePrintableQuest(
+    props: PrintableProps,
+    options?: BeginPrintOptions,
+): Promise<PrintResult> {
     // Окно печати на web резервируется до первого await (попап-блокер).
-    const printSession = beginPrint();
+    const printSession = beginPrint(options);
     // Окно заблокировано / модуля нет — выходим до canvas-карты и тайлов.
     if (!printSession.available) return 'unavailable';
     let html: string;

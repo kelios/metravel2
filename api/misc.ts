@@ -779,7 +779,11 @@ export type SubscribeSource = 'home' | 'article' | 'footer' | 'quest' | 'scenari
 
 export interface SubscribeResult {
   ok: boolean;
-  status: 'created' | 'exists';
+  /**
+   * `sent` (#2317): адрес уже подписан и подтверждён, а квест со страницы формы
+   * бэк отправил на почту сразу, без нового подтверждения.
+   */
+  status: 'created' | 'exists' | 'sent';
 }
 
 export interface SubscribeEmailConsent {
@@ -788,7 +792,7 @@ export interface SubscribeEmailConsent {
 }
 
 // Public email lead subscription (growth forms on home/articles). Backend BE-3:
-// POST /api/subscribe/ -> 201 {ok,status:"created"} | 200 {ok,status:"exists"}
+// POST /api/subscribe/ -> 201 {ok,status:"created"} | 200 {ok,status:"exists"|"sent"}
 // | 400 {email:[...]} | 429 (scoped throttle). No auth required.
 export const subscribeEmail = async (
   email: string,
@@ -842,7 +846,7 @@ export const subscribeEmail = async (
 
     return {
       ok: Boolean(json?.ok ?? true),
-      status: json?.status === 'exists' ? 'exists' : 'created',
+      status: json?.status === 'exists' || json?.status === 'sent' ? json.status : 'created',
     };
   } catch (e: unknown) {
     if (__DEV__) {

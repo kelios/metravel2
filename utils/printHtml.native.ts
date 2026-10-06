@@ -4,9 +4,9 @@
 // сборках, где его нет, он не подгружается (его require бросает на старте),
 // а печать честно отвечает 'unavailable'.
 import { isPrintAvailable } from './printAvailability.native'
-import type { PrintOptions, PrintResult, PrintSession } from './printHtml.types'
+import type { BeginPrintOptions, PrintOptions, PrintResult, PrintSession } from './printHtml.types'
 
-export type { PrintOptions, PrintResult, PrintSession } from './printHtml.types'
+export type { BeginPrintOptions, PrintOptions, PrintResult, PrintSession } from './printHtml.types'
 export { isPrintAvailable }
 
 /**
@@ -50,7 +50,10 @@ export async function printHtml(html: string, _options?: PrintOptions): Promise<
   }
 }
 
-/** На native резервировать нечего — печать запускается, когда HTML готов. */
-export function beginPrint(): PrintSession {
+/**
+ * На native резервировать нечего — печать запускается, когда HTML готов;
+ * `inPlace` не нужен: системный просмотр печати и так открывается поверх экрана.
+ */
+export function beginPrint(_options?: BeginPrintOptions): PrintSession {
   return { available: isPrintAvailable(), print: printHtml, cancel: () => {} }
 }

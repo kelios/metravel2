@@ -9,9 +9,9 @@ import {
   openBookPreviewWindow,
   openPendingBookPreviewWindow,
 } from '@/utils/openBookPreviewWindow'
-import type { PrintOptions, PrintResult, PrintSession } from './printHtml.types'
+import type { BeginPrintOptions, PrintOptions, PrintResult, PrintSession } from './printHtml.types'
 
-export type { PrintOptions, PrintResult, PrintSession } from './printHtml.types'
+export type { BeginPrintOptions, PrintOptions, PrintResult, PrintSession } from './printHtml.types'
 
 /** Документы помечают кнопку печати атрибутом `data-print-action`, не скриптом. */
 const PRINT_ACTION_SCRIPT =
@@ -25,8 +25,40 @@ export function withPrintActionHandler(html: string): string {
 
 export { isPrintAvailable } from './printAvailability.web'
 
+/**
+ * Печатная версия в этой же вкладке: документ страницы заменяется печатным.
+ * Окно не открывается, поэтому жест пользователя не нужен.
+ */
+function beginInPlacePrint(signal?: AbortSignal): PrintSession {
+  const available = typeof window !== 'undefined'
+  let settled = false
+  return {
+    available,
+    print: async (html: string, _options?: PrintOptions): Promise<PrintResult> => {
+      if (!available) return 'unavailable'
+      if (settled || signal?.aborted) return 'cancelled'
+      settled = true
+      // Без запасного about:blank из openBookPreviewWindow: он рассчитан на
+      // отдельное окно, а здесь увёл бы со страницы саму вкладку приложения.
+      try {
+        const doc = window.document
+        doc.open()
+        doc.write(withPrintActionHandler(html))
+        doc.close()
+        return 'printed'
+      } catch {
+        return 'unavailable'
+      }
+    },
+    cancel: () => {
+      settled = true
+    },
+  }
+}
+
 /** Открывает окно синхронно — вызывать до первого await в обработчике клика. */
-export function beginPrint(): PrintSession {
+export function beginPrint(options?: BeginPrintOptions): PrintSession {
+  if (options?.inPlace) return beginInPlacePrint(options.signal)
   const win = typeof window !== 'undefined' && typeof window.open === 'function' ? openPendingBookPreviewWindow() : null
   let settled = false
   return {

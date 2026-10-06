@@ -225,6 +225,56 @@ describe('printHtml.web', () => {
     expect(mockRequireOptionalNativeModule).not.toHaveBeenCalled()
   })
 
+  describe('#2318 inPlace', () => {
+    const doc = { open: jest.fn(), write: jest.fn(), close: jest.fn() }
+    beforeEach(() => {
+      doc.open.mockReset()
+      doc.write.mockReset()
+      doc.close.mockReset()
+      ;(global as unknown as { window: unknown }).window = { open: jest.fn(), document: doc }
+    })
+
+    it('окно не открывается, печатная версия пишется в документ этой вкладки', async () => {
+      const session = web().beginPrint({ inPlace: true })
+      expect(openPending).not.toHaveBeenCalled()
+      expect(session.available).toBe(true)
+
+      await expect(session.print(realHtml())).resolves.toBe('printed')
+      expect(doc.open).toHaveBeenCalledTimes(1)
+      expect(doc.close).toHaveBeenCalledTimes(1)
+      const [written] = doc.write.mock.calls[0]
+      expect(written).toContain('Кольцо вокруг озера')
+      expect(written).toContain('window.print()')
+      expect(openWindow).not.toHaveBeenCalled()
+      await expect(session.print('<p>x</p>')).resolves.toBe('cancelled')
+      expect(doc.write).toHaveBeenCalledTimes(1)
+    })
+
+    it('cancel до печати — документ страницы не трогается', async () => {
+      const session = web().beginPrint({ inPlace: true })
+      session.cancel()
+      await expect(session.print('<p>x</p>')).resolves.toBe('cancelled')
+      expect(doc.open).not.toHaveBeenCalled()
+      expect(discardWindow).not.toHaveBeenCalled()
+    })
+
+    it('отменённый signal (ушли с экрана) — документ страницы не трогается', async () => {
+      const controller = new AbortController()
+      const session = web().beginPrint({ inPlace: true, signal: controller.signal })
+      controller.abort()
+      await expect(session.print('<p>x</p>')).resolves.toBe('cancelled')
+      expect(doc.open).not.toHaveBeenCalled()
+    })
+
+    it('запись не удалась — unavailable, вкладку на about:blank не уводит', async () => {
+      doc.write.mockImplementation(() => {
+        throw new Error('blocked')
+      })
+      await expect(web().beginPrint({ inPlace: true }).print('<p>x</p>')).resolves.toBe('unavailable')
+      expect(openWindow).not.toHaveBeenCalled()
+    })
+  })
+
   it('документ без кнопки печати остаётся как есть', () => {
     expect(web().withPrintActionHandler('<p>x</p>')).toBe('<p>x</p>')
   })

@@ -20,6 +20,11 @@ import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useAuth } from '@/context/AuthContext';
 import { useQuestBundle, useQuestProgressSync } from '@/hooks/useQuestsApi';
+import {
+  QUEST_PRINT_PARAM,
+  isQuestPrintRequested,
+  useQuestPrintLanding,
+} from '@/components/quests/hooks/useQuestPrintLanding';
 import { useQuestRatingMeta } from '@/hooks/useQuestRatingMeta';
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -335,7 +340,11 @@ const ErrorState = ({
 };
 
 export default function QuestByIdScreen() {
-  const params = useLocalSearchParams<{ city?: string | string[]; questId?: string | string[] }>();
+  const params = useLocalSearchParams<{
+    city?: string | string[];
+    questId?: string | string[];
+    [QUEST_PRINT_PARAM]?: string | string[];
+  }>();
   const cityId = getRouteParam(params.city);
   const questId = getRouteParam(params.questId);
   const isFocused = useIsFocused();
@@ -497,6 +506,11 @@ export default function QuestByIdScreen() {
     () => buildCanonicalUrl(`/quests/${canonicalCityId}/${questId}`),
     [canonicalCityId, questId],
   );
+  useQuestPrintLanding({
+    enabled: isFocused && isQuestPrintRequested(params[QUEST_PRINT_PARAM]),
+    bundle,
+    questUrl: canonical,
+  });
   const seo = useMemo(() => getQuestSeo(bundle, questId, isLoading), [bundle, isLoading, questId]);
   const countModel = bundle ? resolveBundleCountModel(bundle) : null;
   // SSG/Expo Head and the delayed head patches must agree on the derivative URL.
@@ -587,6 +601,7 @@ export default function QuestByIdScreen() {
         title={i18nT('sharedStatic:subscription.questTitle')}
         subtitle={i18nT('sharedStatic:subscription.questSubtitle')}
         clientOnly
+        accountDelivery
       />
     ),
     [canonical],

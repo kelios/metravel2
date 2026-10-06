@@ -93,6 +93,7 @@ export const BLOCK_SENSITIVE_QUERIES: readonly QueryKey[] = BLOCK_SENSITIVE_ENTR
 /** Корни кэша без чужого авторского контента — с причиной, почему блок их не касается. */
 export const BLOCK_EXEMPT_ROOTS: Readonly<Record<string, string>> = {
   'travel-route-files': 'файлы трека открытого путешествия; сама деталь перезапрашивается',
+  'email-subscription-status': 'подписка email своего аккаунта на рассылку; чужого контента нет',
   filters: 'справочник',
   'filter-options': 'справочник',
   'travel-facets': 'агрегаты фильтров без карточек',

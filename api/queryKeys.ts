@@ -73,6 +73,8 @@ export const queryKeys = {
   // #2132: `terms_accepted_current` из `/user/me/` для экрана повторного согласия.
   termsAcceptedCurrent: (userId: string | null) => ['terms-accepted-current', userId] as const,
   mySubscriptions: (userId: string | null) => ['my-subscriptions', userId] as const,
+  // Подписка email аккаунта на рассылку (#2318): «Прислать на почту» вместо формы.
+  emailSubscriptionStatus: (userId: string | null) => ['email-subscription-status', userId] as const,
   mySubscribers: (userId: string | null) => ['my-subscribers', userId] as const,
   userTravels: (userId: string | number | null | undefined) => ['user-travels', userId] as const,
   userProfile: (id: string | number | null | undefined, suffix?: unknown) =>
