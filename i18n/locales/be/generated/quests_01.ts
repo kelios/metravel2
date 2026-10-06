@@ -269,6 +269,7 @@ export const questsGenerated1 = {
   "components.quests.QuestProgressPendingNotice.pendingDelivery": "Праходжанне яшчэ не адпраўлена — пойдзе, як з'явіцца сетка",
   "components.quests.QuestProgressPendingNotice.pendingDeliveryShort": "Праходжанне чакае адпраўкі",
   "components.quests.QuestContentLocaleNotice.availableIn": "Квэст пакуль даступны на мове: {{language}}",
+  "components.quests.QuestContentLocaleNotice.availableInShort": "Мова квэста: {{language}}",
   "components.quests.questWizardSections.partialTitle": "Квэст пройдзены часткова",
   "components.quests.questWizardSections.partialNotCredited": "Пройдзена {{value1}} з {{value2}} пунктаў. Квэст залічыцца, калі пройдзеце яшчэ {{count}} пунктаў.",
   "components.quests.questWizardSections.partialNotCredited_one": "Пройдзена {{value1}} з {{value2}} пунктаў. Квэст залічыцца, калі пройдзеце яшчэ {{count}} пункт.",

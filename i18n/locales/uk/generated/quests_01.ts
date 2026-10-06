@@ -269,6 +269,7 @@ export const questsGenerated1 = {
   "components.quests.QuestProgressPendingNotice.pendingDelivery": "Проходження ще не надіслано — надішлемо, щойно з'явиться мережа",
   "components.quests.QuestProgressPendingNotice.pendingDeliveryShort": "Проходження чекає на надсилання",
   "components.quests.QuestContentLocaleNotice.availableIn": "Квест поки доступний мовою: {{language}}",
+  "components.quests.QuestContentLocaleNotice.availableInShort": "Мова квесту: {{language}}",
   "components.quests.questWizardSections.partialTitle": "Квест пройдено частково",
   "components.quests.questWizardSections.partialNotCredited": "Пройдено {{value1}} з {{value2}} точок. Квест зарахується, коли пройдете ще {{count}} точок.",
   "components.quests.questWizardSections.partialNotCredited_one": "Пройдено {{value1}} з {{value2}} точок. Квест зарахується, коли пройдете ще {{count}} точку.",

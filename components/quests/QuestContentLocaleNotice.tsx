@@ -23,7 +23,10 @@ export function useQuestForeignContentLocale(contentLocale: string | undefined):
 
 type Props = {
   contentLocale: string | undefined
-  /** Одна строка для закреплённой части экрана на телефоне (как `QuestProgressPendingNotice`). */
+  /**
+   * Одна строка для закреплённой части экрана на телефоне: короткая подпись на
+   * экране, полный текст — подпись для диктора (как `QuestProgressPendingNotice`).
+   */
   compact?: boolean
 }
 
@@ -46,6 +49,11 @@ export default function QuestContentLocaleNotice({ contentLocale, compact = fals
   const label = i18nT('quests:components.quests.QuestContentLocaleNotice.availableIn', {
     language: languageName,
   })
+  // На телефоне строка статусов — одна строка: короткая подпись влезает в 320
+  // на всех языках, полная остаётся подписью для диктора.
+  const shortLabel = i18nT('quests:components.quests.QuestContentLocaleNotice.availableInShort', {
+    language: languageName,
+  })
 
   return (
     <View
@@ -56,7 +64,7 @@ export default function QuestContentLocaleNotice({ contentLocale, compact = fals
     >
       <Feather name="globe" size={13} color={colors.textMuted} />
       <Text style={[styles.chipText, { color: colors.textMuted }]} numberOfLines={compact ? 1 : undefined}>
-        {label}
+        {compact ? shortLabel : label}
       </Text>
     </View>
   )

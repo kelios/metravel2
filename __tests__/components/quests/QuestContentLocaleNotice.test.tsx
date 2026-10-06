@@ -28,8 +28,11 @@ describe('QuestContentLocaleNotice', () => {
 
   it('офлайн-копия на другом языке (регион в коде) — та же пометка', () => {
     mockLocale = 'en'
-    const { getByTestId } = render(<QuestContentLocaleNotice contentLocale="pl-PL" compact />)
-    expect(getByTestId('quest-content-locale-notice')).toBeTruthy()
+    const { getByTestId, getByText } = render(<QuestContentLocaleNotice contentLocale="pl-PL" compact />)
+    const notice = getByTestId('quest-content-locale-notice')
+    // На экране — короткая подпись, полный текст — для диктора.
+    const shortText = getByText(/:/).props.children as string
+    expect(shortText.length).toBeLessThan(String(notice.props.accessibilityLabel).length)
   })
 
   it('русский интерфейс и русский квест — пометки нет нигде', () => {

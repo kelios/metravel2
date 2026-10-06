@@ -269,6 +269,7 @@ export const questsGenerated1 = {
   "components.quests.QuestProgressPendingNotice.pendingDelivery": "Your run hasn't been sent yet — it will go out once you're online",
   "components.quests.QuestProgressPendingNotice.pendingDeliveryShort": "Run not sent yet",
   "components.quests.QuestContentLocaleNotice.availableIn": "This quest is currently available in {{language}}",
+  "components.quests.QuestContentLocaleNotice.availableInShort": "Quest language: {{language}}",
   "components.quests.questWizardSections.partialTitle": "Quest partly completed",
   "components.quests.questWizardSections.partialNotCredited": "You visited {{value1}} of {{value2}} points. The quest counts as completed once you visit {{count}} more points.",
   "components.quests.questWizardSections.partialNotCredited_one": "You visited {{value1}} of {{value2}} points. The quest counts as completed once you visit {{count}} more point.",
