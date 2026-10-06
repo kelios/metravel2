@@ -103,6 +103,7 @@ test.each([false, true])('uses the theme background on the actual Leaflet owner 
   await waitFor(() => {
     const props = (globalThis as any).__lastUserPointsMapContainerProps
     expect(props.style.background).toBe(require('@/constants/designSystem').getThemedColors(isDark).background)
+    expect(props.style['--metravel-map-background']).toBe(require('@/constants/designSystem').getThemedColors(isDark).background)
   })
   screen.unmount()
 })

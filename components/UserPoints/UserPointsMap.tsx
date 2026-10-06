@@ -375,6 +375,13 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
     );
   }
 
+  const leafletContainerStyle: React.CSSProperties & { '--metravel-map-background': string } = {
+    height: '100%',
+    width: '100%',
+    background: colors.background,
+    '--metravel-map-background': colors.background,
+  };
+
   return (
     <View style={[styles.container, height ? { height } : null]}>
       {Platform.OS === 'web' ? <UserPointsMapWebStyles colors={colors} /> : null}
@@ -383,7 +390,7 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
         center={[center.lat, center.lng]}
         zoom={safePoints.length > 0 ? 10 : 5}
         whenReady={handleWhenReady}
-        style={{ height: '100%', width: '100%', background: colors.background }}
+        style={leafletContainerStyle}
       >
 	        <WebMapInstanceBinder useMap={mods.useMap} onMapReady={handleMapReady} />
 	        <WebMapAutoResize useMap={mods.useMap} />

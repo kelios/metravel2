@@ -43,6 +43,40 @@ describe('ensureLeafletCss', () => {
     )
   })
 
+  it('lets an instance theme survive every important container background, preserving other-map fallbacks', () => {
+    ensureLeafletCss()
+    const sheet = (document.getElementById('metravel-leaflet-overrides') as HTMLStyleElement).sheet!
+    const backgrounds = (rules: CSSRuleList): Array<{ value: string; priority: string }> =>
+      Array.from(rules).flatMap((rule) => {
+        if ('cssRules' in rule) return backgrounds((rule as CSSGroupingRule).cssRules)
+        const styleRule = rule as CSSStyleRule
+        if (!styleRule.selectorText?.endsWith('.leaflet-container')) return []
+        const value = styleRule.style.getPropertyValue('background-color')
+        return value ? [{ value, priority: styleRule.style.getPropertyPriority('background-color') }] : []
+      })
+    const assertInstanceBackgroundWins = () => {
+      const declarations = backgrounds(sheet.cssRules)
+      expect(declarations.length).toBeGreaterThan(0)
+      for (const declaration of declarations) {
+        expect(declaration.priority).toBe('important')
+        expect(declaration.value).toMatch(/^var\(--metravel-map-background,/)
+      }
+    }
+    assertInstanceBackgroundWins()
+    expect(backgrounds(sheet.cssRules).map(({ value }) => value)).toEqual([
+      'var(--metravel-map-background,var(--color-backgroundTertiary))',
+      'var(--metravel-map-background,#e8ebe4)',
+      'var(--metravel-map-background,#e8ebe4)',
+    ])
+    // A later important rule with a fixed fill recreates the real production
+    // failure even though the component's ordinary inline background is correct.
+    const index = sheet.cssRules.length
+    sheet.insertRule('@media (max-width:767.98px){html[data-theme="dark"] .leaflet-container{background-color:#e8ebe4!important}}', index)
+    expect(assertInstanceBackgroundWins).toThrow()
+    sheet.deleteRule(index)
+    assertInstanceBackgroundWins()
+  })
+
   it('falls back to the CDN when the self-hosted leaflet css fails to load (prod 404)', () => {
     ensureLeafletCss()
 

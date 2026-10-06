@@ -551,6 +551,8 @@ export type ScreenMetrics = {
   pinnedChromeRatio: number | null
   titleOccurrences: number
   searchboxCount: number
+  /** Positive DOM evidence of the resolved, unfiltered public catalog empty state. */
+  publicTripsUnfilteredEmpty?: boolean
   ctaOccluded: boolean | null
   darkBottomMatchesTheme: boolean | null
   /** #2298: pixel failure coordinates and checked zone for reproducible evidence. */
@@ -673,6 +675,8 @@ export type ScreenBudget = {
   pinnedChromeRatioMax?: number
   titleOccurrencesMax: number
   searchboxCountExpected: number
+  /** Only /trips omits existing controls when its unfiltered catalog is empty. */
+  searchboxCountWhenUnfilteredEmpty?: 0
   ctaOccludedAllowed: boolean
   /** #2298: screenshot zone must contain no light strip/underlay in dark theme. */
   darkBottomMatchesThemeExpected: boolean
@@ -735,7 +739,7 @@ export const MOBILE_SCREEN_BUDGET: Record<string, ScreenBudget> = {
   // (0,26–0,27) — заниженное число, не «после». `waitForContentAttached`
   // теперь ждёт `networkidle`, поэтому верное значение — то, что сейчас.
   quests: { firstContentTopRatioMax: 0.35, titleOccurrencesMax: 1, searchboxCountExpected: 1, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: true },
-  trips: { firstContentTopRatioMax: 0.29, titleOccurrencesMax: 1, searchboxCountExpected: 1, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: false },
+  trips: { firstContentTopRatioMax: 0.29, titleOccurrencesMax: 1, searchboxCountExpected: 1, searchboxCountWhenUnfilteredEmpty: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: false },
   'trips-my': { firstContentTopRatioMax: 0.25, titleOccurrencesMax: 1, searchboxCountExpected: 1, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: false },
   'profile-routes': { firstContentTopRatioMax: 0.48, titleOccurrencesMax: 1, searchboxCountExpected: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: true },
   favorites: { firstContentTopRatioMax: 0.09, titleOccurrencesMax: 1, searchboxCountExpected: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: false },
@@ -774,8 +778,11 @@ export function assertWithinBudget(metrics: ScreenMetrics, budget: ScreenBudget)
   if (metrics.titleOccurrences > budget.titleOccurrencesMax) {
     failures.push(`${label}: titleOccurrences было ≤${budget.titleOccurrencesMax}, стало ${metrics.titleOccurrences}`)
   }
-  if (metrics.searchboxCount !== budget.searchboxCountExpected) {
-    failures.push(`${label}: searchboxCount ожидалось ${budget.searchboxCountExpected}, стало ${metrics.searchboxCount}`)
+  const expectedSearchboxes = metrics.screen === 'trips' && metrics.publicTripsUnfilteredEmpty === true
+    ? budget.searchboxCountWhenUnfilteredEmpty ?? budget.searchboxCountExpected
+    : budget.searchboxCountExpected
+  if (metrics.searchboxCount !== expectedSearchboxes) {
+    failures.push(`${label}: searchboxCount ожидалось ${expectedSearchboxes}, стало ${metrics.searchboxCount}`)
   }
   if (metrics.ctaOccluded != null && metrics.ctaOccluded !== budget.ctaOccludedAllowed) {
     failures.push(`${label}: ctaOccluded было ${budget.ctaOccludedAllowed}, стало ${metrics.ctaOccluded}`)
@@ -950,6 +957,13 @@ async function ensureTheme(
   if (prepare) await prepare(page)
 }
 
+/** Absence of a role alone never proves the no-controls state. Uses existing producer markers. */
+export function isPublicTripsUnfilteredEmpty(root: ParentNode = document): boolean {
+  const catalog = root.querySelector('[data-testid="public-trips-catalog"]')
+  return Boolean(catalog?.querySelector('[data-testid="public-trips-empty"]') &&
+    !catalog.querySelector('[data-testid="public-trips-search"], [data-testid="public-trips-reset-empty"], [data-testid="public-trips-loading"], input, textarea'))
+}
+
 async function collectMetrics(
   page: Page,
   opts: { screenKey: string; path: string; title: string; ctaTestId?: string },
@@ -960,6 +974,10 @@ async function collectMetrics(
   const pinnedChrome = await measurePinnedChrome(page)
   const titleOccurrences = await countVisibleTitleOccurrences(page, opts.title)
   const searchboxCount = await countSearchboxes(page)
+  const publicTripsUnfilteredEmpty = opts.screenKey === 'trips'
+    ? await page.getByTestId('public-trips-empty').isVisible().catch(() => false) &&
+      await page.evaluate(isPublicTripsUnfilteredEmpty)
+    : undefined
   const ctaOccluded = await isCtaOccludedByDock(page, opts.ctaTestId)
   const unlabeledInteractive = await countUnlabeledInteractive(page)
   const emptyCtaDockGap = await measureEmptyCtaDockGap(page)
@@ -975,6 +993,7 @@ async function collectMetrics(
     pinnedChromeRatio: pinnedChrome?.ratio ?? null,
     titleOccurrences,
     searchboxCount,
+    ...(publicTripsUnfilteredEmpty === undefined ? {} : { publicTripsUnfilteredEmpty }),
     ctaOccluded,
     darkBottomMatchesTheme: darkBottom ? darkBottom.matchesThemeBackground : null,
     darkBottomSample: darkBottom,

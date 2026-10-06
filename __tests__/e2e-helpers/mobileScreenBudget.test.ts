@@ -29,6 +29,15 @@ describe('mobile screen budget semantics (#2297/#2298)', () => {
       `trips-my @ 390x844/dark: searchboxCount ожидалось 1, стало ${searchboxCount}`,
     ])
   })
+  it('permits zero only with positive unfiltered-empty evidence on public trips', () => {
+    expect(Object.entries(MOBILE_SCREEN_BUDGET).filter(([, budget]) => budget.searchboxCountWhenUnfilteredEmpty !== undefined).map(([key]) => key)).toEqual(['trips'])
+    const metrics = tripsMetrics({ screen: 'trips', path: '/trips', searchboxCount: 0 })
+    expect(assertWithinBudget(metrics, MOBILE_SCREEN_BUDGET.trips).join()).toContain('searchboxCount ожидалось 1, стало 0')
+    expect(assertWithinBudget({ ...metrics, publicTripsUnfilteredEmpty: false }, MOBILE_SCREEN_BUDGET.trips).join()).toContain('searchboxCount ожидалось 1, стало 0')
+    expect(assertWithinBudget({ ...metrics, publicTripsUnfilteredEmpty: true }, MOBILE_SCREEN_BUDGET.trips)).toEqual([])
+    expect(assertWithinBudget({ ...metrics, searchboxCount: 1, publicTripsUnfilteredEmpty: true }, MOBILE_SCREEN_BUDGET.trips).join()).toContain('searchboxCount ожидалось 0, стало 1')
+    expect(assertWithinBudget(tripsMetrics({ searchboxCount: 0, publicTripsUnfilteredEmpty: true }), MOBILE_SCREEN_BUDGET['trips-my']).join()).toContain('searchboxCount ожидалось 1, стало 0')
+  })
   it('fails when the screenshot reports a light underlay', () => {
     expect(assertWithinBudget(tripsMetrics({ darkBottomMatchesTheme: false }), MOBILE_SCREEN_BUDGET['trips-my']).join()).toContain('darkBottomMatchesTheme было true, стало false')
   })
