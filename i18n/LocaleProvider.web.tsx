@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react'
+import React, { createContext, Suspense, use, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   DEFAULT_LOCALE,
@@ -11,6 +11,7 @@ import i18n from './instance'
 import {
   DEFAULT_LOCALE_PREFERENCE,
   readLocalePreference,
+  readWebLocalePreferenceSync,
   resolveLocalePreference,
   SYSTEM_LOCALE_PREFERENCE,
   writeLocalePreference,
@@ -39,6 +40,64 @@ const syncDocumentLocale = (locale: SupportedLocale) => {
   document.documentElement.dir = definition.direction
 }
 
+/**
+ * Загрузка сохранённой локали при старте не перемонтирует приложение (#2239,
+ * `I18N-LOCALE-BOOT-REMOUNT-001`).
+ *
+ * Статический HTML всегда русский (#938: первый клиентский кадр равен ему), а
+ * ~800 модулей зовут `translate` прямо в рендере и не подписаны на смену языка.
+ * Поэтому смена языка перемонтирует поддерево ключом `legacyRenderRevision` —
+ * и раньше это случалось и на старте: дерево гидратировалось по-русски, экраны
+ * отправляли стартовые запросы, затем ключ размонтировал всё и запросы уходили
+ * второй раз.
+ *
+ * Теперь, если сохранённая локаль не совпадает с активной, поддерево на время
+ * загрузки её каталога остаётся НЕгидратированным: граница `Suspense` держит
+ * серверный HTML как есть (без расхождения разметки и без эффектов), а когда
+ * каталог готов, смена ключа заменяет её свежим деревом уже на нужном языке —
+ * одно монтирование. Если на границу до этого придёт обновление сверху
+ * (контекст родителя), React отрисует её клиентом с `fallback` — это те же
+ * дети, то есть прежнее поведение с двумя монтированиями, но без пустого кадра.
+ * Явная смена языка пользователем по-прежнему перемонтирует поддерево.
+ */
+const BOOT_LOCALE_PENDING: Promise<never> = new Promise(() => {})
+
+/** Сколько держать статический HTML, если каталог локали не грузится. */
+export const BOOT_LOCALE_TIMEOUT_MS = 3000
+
+const readPendingBootLocale = (): SupportedLocale | null => {
+  const storedPreference = readWebLocalePreferenceSync()
+  if (!storedPreference) return null
+  const target = resolveLocalePreference(storedPreference)
+  return target === normalizeActiveLocale(i18n.resolvedLanguage) ? null : target
+}
+
+function BootLocaleGate({ pending }: { pending: boolean }) {
+  if (pending) use(BOOT_LOCALE_PENDING)
+  return null
+}
+
+const BootLocaleBoundary = React.memo(
+  function BootLocaleBoundary({
+    pending,
+    children,
+  }: {
+    pending: boolean
+    children: React.ReactNode
+  }) {
+    return (
+      <Suspense fallback={children}>
+        <BootLocaleGate pending={pending} />
+        {children}
+      </Suspense>
+    )
+  },
+  // Пока граница ждёт локаль, новые `children` от родителя ей не передаются:
+  // обновление пропсов негидратированной границы заставило бы React отрисовать
+  // её клиентом раньше времени. Свежие дети придут вместе со сменой ключа.
+  (previous, next) => previous.pending && next.pending,
+)
+
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<SupportedLocale>(() =>
     normalizeActiveLocale(i18n.resolvedLanguage),
@@ -46,24 +105,48 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [preference, setPreference] = useState<LocalePreference>(DEFAULT_LOCALE_PREFERENCE)
   const [isHydrated, setIsHydrated] = useState(false)
   const [legacyRenderRevision, setLegacyRenderRevision] = useState(0)
+  // На сервере `window` нет — разметка всегда полная; на клиенте граница лишь
+  // откладывает гидратацию, разметку она не меняет.
+  const [isBootPending, setIsBootPending] = useState(() => readPendingBootLocale() !== null)
 
   useEffect(() => {
     let cancelled = false
+    let released = false
+    const releaseBootGate = () => {
+      if (released) return
+      released = true
+      setIsBootPending(false)
+    }
+    const bootTimeout = setTimeout(releaseBootGate, BOOT_LOCALE_TIMEOUT_MS)
+
     void readLocalePreference().then(async (storedPreference) => {
       if (cancelled) return
       const nextLocale = resolveLocalePreference(storedPreference)
-      setPreference(storedPreference)
-      if (nextLocale !== normalizeActiveLocale(i18n.resolvedLanguage)) {
-        await loadWebLocale(nextLocale)
-        await i18n.changeLanguage(nextLocale)
+      try {
+        if (nextLocale !== normalizeActiveLocale(i18n.resolvedLanguage)) {
+          await loadWebLocale(nextLocale)
+          if (cancelled) return
+          // Снятие ворот и смена ключа (обработчик `languageChanged`) идут одним
+          // синхронным блоком — одним рендером, без промежуточной гидратации.
+          releaseBootGate()
+          await i18n.changeLanguage(nextLocale)
+        }
+      } catch {
+        // Каталог не загрузился — остаётся русский интерфейс.
+      } finally {
+        clearTimeout(bootTimeout)
+        if (!cancelled) releaseBootGate()
       }
       if (cancelled) return
-      setLocaleState(nextLocale)
-      syncDocumentLocale(nextLocale)
+      const activeLocale = normalizeActiveLocale(i18n.resolvedLanguage)
+      setPreference(storedPreference)
+      setLocaleState(activeLocale)
+      syncDocumentLocale(activeLocale)
       setIsHydrated(true)
     })
     return () => {
       cancelled = true
+      clearTimeout(bootTimeout)
     }
   }, [])
 
@@ -112,7 +195,9 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <LocaleContext.Provider value={value}>
-      <React.Fragment key={legacyRenderRevision}>{children}</React.Fragment>
+      <BootLocaleBoundary key={legacyRenderRevision} pending={isBootPending}>
+        {children}
+      </BootLocaleBoundary>
     </LocaleContext.Provider>
   )
 }

@@ -156,7 +156,12 @@ LocaleProvider
 Первый web-render детерминирован: static SSR использует default locale, клиент
 гидратирует локаль из уже отданного `<html lang>`, а сохранённое или системное
 предпочтение применяется `LocaleProvider` только после hydration. Это не даёт
-смене языка создать расхождение server/client markup.
+смене языка создать расхождение server/client markup. Если сохранённая локаль
+не русская, `LocaleProvider` держит поддерево негидратированным (`Suspense`
+поверх статического HTML), пока грузится каталог, и монтирует его один раз уже
+на нужном языке (#2239); на native дети монтируются после чтения предпочтения.
+`i18n/format.ts` проверяет данные локали в движке и без них берёт свои данные
+или формат RU, но не язык системы (#2283).
 `i18n/config.ts` хранит registry языка (BCP 47 tag, HTML lang,
 OpenGraph locale, direction и язык геокодера), `LocaleProvider` синхронизирует
 активный язык и versioned AsyncStorage preference, а `i18n/format.ts` централизует

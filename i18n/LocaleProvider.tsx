@@ -29,6 +29,9 @@ type LocaleContextValue = {
 
 const LocaleContext = createContext<LocaleContextValue | null>(null)
 
+/** Сколько ждать сохранённое предпочтение языка до монтирования приложения. */
+const BOOT_LOCALE_TIMEOUT_MS = 3000
+
 const normalizeActiveLocale = (value: string | undefined): SupportedLocale =>
   isSupportedLocale(value) ? value : DEFAULT_LOCALE
 
@@ -48,25 +51,42 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   )
   const [isHydrated, setIsHydrated] = useState(false)
   const [legacyRenderRevision, setLegacyRenderRevision] = useState(0)
+  // #2239: дерево приложения монтируется, когда сохранённая локаль уже
+  // применена. Раньше оно монтировалось на системном языке, а смена языка из
+  // AsyncStorage перемонтировала его ключом — экраны слали стартовые запросы
+  // дважды. Native не гидратирует серверный HTML, поэтому достаточно не
+  // монтировать детей до чтения предпочтения (сплэш ещё на экране).
+  const [isBootReady, setIsBootReady] = useState(false)
 
   useEffect(() => {
     let cancelled = false
+    // Зависшее хранилище не должно держать приложение на сплэше.
+    const bootTimeout = setTimeout(() => setIsBootReady(true), BOOT_LOCALE_TIMEOUT_MS)
 
     void readLocalePreference().then(async (storedPreference) => {
       if (cancelled) return
       const nextLocale = resolveLocalePreference(storedPreference)
-      setPreference(storedPreference)
-      if (nextLocale !== normalizeActiveLocale(i18n.resolvedLanguage)) {
-        await i18n.changeLanguage(nextLocale)
+      try {
+        if (nextLocale !== normalizeActiveLocale(i18n.resolvedLanguage)) {
+          await i18n.changeLanguage(nextLocale)
+        }
+      } catch {
+        // Язык не переключился — остаётся системный.
+      } finally {
+        clearTimeout(bootTimeout)
       }
       if (cancelled) return
-      setLocaleState(nextLocale)
-      syncDocumentLocale(nextLocale)
+      const activeLocale = normalizeActiveLocale(i18n.resolvedLanguage)
+      setPreference(storedPreference)
+      setLocaleState(activeLocale)
+      syncDocumentLocale(activeLocale)
       setIsHydrated(true)
+      setIsBootReady(true)
     })
 
     return () => {
       cancelled = true
+      clearTimeout(bootTimeout)
     }
   }, [])
 
@@ -119,7 +139,9 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   return (
     <I18nextProvider i18n={i18n}>
       <LocaleContext.Provider value={value}>
-        <React.Fragment key={legacyRenderRevision}>{children}</React.Fragment>
+        {isBootReady ? (
+          <React.Fragment key={legacyRenderRevision}>{children}</React.Fragment>
+        ) : null}
       </LocaleContext.Provider>
     </I18nextProvider>
   )

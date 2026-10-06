@@ -56,6 +56,21 @@ export const readLocalePreference = async (): Promise<LocalePreference> => {
   }
 }
 
+/**
+ * Синхронное чтение предпочтения на web (#2239): `AsyncStorage` там хранит ключ
+ * в `window.localStorage` как есть, поэтому первый клиентский рендер может узнать
+ * сохранённую локаль, не дожидаясь промиса. Вне браузера — `null`.
+ */
+export const readWebLocalePreferenceSync = (): LocalePreference | null => {
+  try {
+    const storage = typeof window === 'undefined' ? undefined : window.localStorage
+    if (!storage) return null
+    return parseLocalePreference(storage.getItem(LOCALE_PREFERENCE_STORAGE_KEY))
+  } catch {
+    return null
+  }
+}
+
 export const writeLocalePreference = async (
   preference: LocalePreference,
 ): Promise<void> => {

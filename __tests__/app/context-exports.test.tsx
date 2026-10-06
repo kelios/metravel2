@@ -11,7 +11,7 @@
  *   2. Providers compose without crashing and hooks return valid values.
  */
 import React from 'react';
-import { act, renderHook } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // ── Real imports (no jest.mock for these) ──────────────────────────
@@ -134,7 +134,8 @@ describe('Context module exports (prod-build regression)', () => {
         </AppProviders>
       );
 
-      expect(rendered).toBe(true);
+      // #2239: дети монтируются, когда LocaleProvider применил сохранённый язык.
+      await waitFor(() => expect(rendered).toBe(true));
     });
 
     it('keeps useAuth callable while AuthProvider is deferred', async () => {
@@ -160,7 +161,8 @@ describe('Context module exports (prod-build regression)', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
-      expect(result.current).toBeDefined();
+      // #2239: дети монтируются, когда LocaleProvider применил сохранённый язык.
+      await waitFor(() => expect(result.current).toBeTruthy());
       expect(result.current.isAuthenticated).toBe(false);
       expect(result.current.authReady).toBe(false);
     });
