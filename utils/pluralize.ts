@@ -1,4 +1,4 @@
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { selectPlural, translatePlural } from '@/i18n'
 /**
  * Функции склонения русских существительных.
  * Канонический модуль; ранее жил в services/pdf-export/utils/pluralize.ts.
@@ -10,66 +10,34 @@ export function formatDays(days?: number | null): string {
   if (typeof days !== 'number' || Number.isNaN(days)) return '';
   const n = Math.max(0, Math.round(days));
   if (n === 0) return '';
-  return selectPlural(n, {
-    one: i18nT('errors:utils.pluralize.value1_den_ccf4a6cb', { value1: n }),
-    few: i18nT('errors:utils.pluralize.value1_dnya_eb5bfa3c', { value1: n }),
-    many: i18nT('errors:utils.pluralize.value1_dney_b4bd2392', { value1: n }),
-    other: i18nT('errors:utils.pluralize.value1_dney_b4bd2392', { value1: n }),
-  });
+  return translatePlural('errors:utils.pluralize.daysCount', n);
 }
 
+// Каждый набор форм — одно семейство ключей `<ключ>_one/_few/_many/_other`
+// во всех локалях (#2238): форму выбирает `translatePlural` по правилам языка,
+// а гейт `__tests__/i18n/pluralFormSets.test.ts` сверяет набор целиком.
 export function getDayLabel(count: number): string {
-  return selectPlural(count, {
-    one: i18nT('errors:utils.pluralize.den_915a5af4'),
-    few: i18nT('errors:utils.pluralize.dnya_8134108a'),
-    many: i18nT('errors:utils.pluralize.dney_dcbc0521'),
-    other: i18nT('errors:utils.pluralize.dney_dcbc0521'),
-  });
+  return translatePlural('errors:utils.pluralize.dayNoun', count);
 }
 
 export function getTravelLabel(count: number): string {
-  return selectPlural(count, {
-    one: i18nT('errors:utils.pluralize.puteshestvie_af5bdd17'),
-    few: i18nT('errors:utils.pluralize.puteshestviya_39b91aa9'),
-    many: i18nT('errors:utils.pluralize.puteshestviy_d2163ca2'),
-    other: i18nT('errors:utils.pluralize.puteshestviy_d2163ca2'),
-  });
+  return translatePlural('errors:utils.pluralize.travelNoun', count);
 }
 
 export function getPhotoLabel(count: number): string {
-  return selectPlural(count, {
-    one: i18nT('errors:utils.pluralize.fotografiya_c07ae562'),
-    few: i18nT('errors:utils.pluralize.fotografii_7c873ad1'),
-    many: i18nT('errors:utils.pluralize.fotografiy_e6a63104'),
-    other: i18nT('errors:utils.pluralize.fotografiy_e6a63104'),
-  });
+  return translatePlural('errors:utils.pluralize.photoNoun', count);
 }
 
 export function getCountryLabel(count: number): string {
-  return selectPlural(count, {
-    one: i18nT('errors:utils.pluralize.strana_37a706b2'),
-    few: i18nT('errors:utils.pluralize.strany_97e54e0d'),
-    many: i18nT('errors:utils.pluralize.stran_ee2fb9ba'),
-    other: i18nT('errors:utils.pluralize.stran_ee2fb9ba'),
-  });
+  return translatePlural('errors:utils.pluralize.countryNoun', count);
 }
 
 export function getLocationLabel(count: number): string {
-  return selectPlural(count, {
-    one: i18nT('errors:utils.pluralize.lokatsiya_33a76b5c'),
-    few: i18nT('errors:utils.pluralize.lokatsii_e2abc332'),
-    many: i18nT('errors:utils.pluralize.lokatsiy_d23139a0'),
-    other: i18nT('errors:utils.pluralize.lokatsiy_d23139a0'),
-  });
+  return translatePlural('errors:utils.pluralize.locationNoun', count);
 }
 
 export function getPlaceLabel(count: number): string {
-  return selectPlural(count, {
-    one: i18nT('errors:utils.pluralize.mesto_f62e3de3'),
-    few: i18nT('errors:utils.pluralize.mesta_2a37b18a'),
-    many: i18nT('errors:utils.pluralize.mest_a176fbe2'),
-    other: i18nT('errors:utils.pluralize.mest_a176fbe2'),
-  });
+  return translatePlural('errors:utils.pluralize.placeNoun', count);
 }
 
 /** «3 места», «1 место», «5 мест» — число + склонённое существительное. */

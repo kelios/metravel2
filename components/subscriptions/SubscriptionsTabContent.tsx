@@ -21,7 +21,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker';
 import type { AuthorWithTravels, SubscriptionTab } from '@/hooks/useSubscriptionsData';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles';
 
 
@@ -32,20 +32,10 @@ const WEB_CARD_SHADOW_STYLE: WebEnhancedViewStyle = { boxShadow: DESIGN_TOKENS.s
 const WEB_TEXT_OUTLINE_NONE_STYLE = { outlineStyle: 'none' } as WebEnhancedTextStyle;
 
 const formatAuthorsCount = (count: number) =>
-  `${count} ${selectPlural(count, {
-    one: i18nT('shared:components.subscriptions.SubscriptionsTabContent.avtor_5d6c4cc2'),
-    few: i18nT('shared:components.subscriptions.SubscriptionsTabContent.avtora_ab6b344d'),
-    many: i18nT('shared:components.subscriptions.SubscriptionsTabContent.avtorov_1228ef6a'),
-    other: i18nT('shared:components.subscriptions.SubscriptionsTabContent.avtorov_1228ef6a'),
-  })}`;
+  `${count} ${translatePlural('shared:components.subscriptions.SubscriptionsTabContent.authorNoun', count)}`;
 
 const formatSubscribersCount = (count: number) =>
-  `${count} ${selectPlural(count, {
-    one: i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpischik_015c98e8'),
-    few: i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpischika_5468c76c'),
-    many: i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpischikov_047f694a'),
-    other: i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpischikov_047f694a'),
-  })}`;
+  `${count} ${translatePlural('shared:components.subscriptions.SubscriptionsTabContent.subscriberNoun', count)}`;
 
 interface SubscriptionsTabContentProps {
   activeTab: SubscriptionTab;

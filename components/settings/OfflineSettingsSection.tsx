@@ -3,7 +3,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import type { createSettingsStyles } from '@/components/screens/settings/settings.styles';
 import { useOfflineCatalog } from '@/hooks/useOfflineCatalog';
-import { selectPlural } from '@/i18n/format';
+import { translatePlural } from '@/i18n';
 import type { useThemedColors } from '@/hooks/useTheme';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -22,12 +22,7 @@ export default function OfflineSettingsSection({
   const router = useRouter();
   const { t } = useTranslation();
   const { summary } = useOfflineCatalog(userId);
-  const objectLabel = selectPlural(summary.packageCount, {
-    one: t('offline:objectOne'),
-    few: t('offline:objectFew'),
-    many: t('offline:objectMany'),
-    other: t('offline:objectOther'),
-  });
+  const objectLabel = translatePlural('offline:objectNoun', summary.packageCount);
 
   return (
     <Pressable

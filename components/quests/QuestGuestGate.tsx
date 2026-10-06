@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native'
 
 import Button from '@/components/ui/Button'
 import { useThemedColors } from '@/hooks/useTheme'
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 
 
 type Colors = ReturnType<typeof useThemedColors>
@@ -72,12 +72,7 @@ export default function QuestGuestGate({
 }
 
 const pluralPoints = (count: number): string => {
-  return selectPlural(count, {
-    one: i18nT('quests:components.quests.QuestGuestGate.tochku_6dcdfa1f'),
-    few: i18nT('quests:components.quests.QuestGuestGate.tochki_13f25999'),
-    many: i18nT('quests:components.quests.QuestGuestGate.tochek_9ebfcb56'),
-    other: i18nT('quests:components.quests.QuestGuestGate.tochek_9ebfcb56'),
-  })
+  return translatePlural('quests:components.quests.QuestGuestGate.pointNounAccusative', count)
 }
 
 const createStyles = (colors: Colors) =>

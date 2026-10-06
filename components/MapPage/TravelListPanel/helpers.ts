@@ -2,7 +2,7 @@ import { Platform } from 'react-native'
 
 import { getMapPointKey } from '@/hooks/map/useMapTravels'
 import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 
 
 export const IS_WEB = Platform.OS === 'web'
@@ -24,12 +24,7 @@ export const LIST_BOTTOM_PADDING = 96
 export const EMPTY_FAVORITES = new Set<string | number>()
 
 export function getPlacesLabel(count: number) {
-  return selectPlural(count, {
-    one: i18nT('map:components.MapPage.TravelListPanel.helpers.mesto_f9c2e628'),
-    few: i18nT('map:components.MapPage.TravelListPanel.helpers.mesta_2341066c'),
-    many: i18nT('map:components.MapPage.TravelListPanel.helpers.mest_2b967bae'),
-    other: i18nT('map:components.MapPage.TravelListPanel.helpers.mest_2b967bae'),
-  })
+  return translatePlural('map:components.MapPage.TravelListPanel.helpers.placeNoun', count)
 }
 
 export function buildTravelListSummaryHint({

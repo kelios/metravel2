@@ -7,7 +7,7 @@ import { isTravelListItem, normalizeToTravel } from '@/components/profile/travel
 import type { TravelPublicationCounts } from '@/hooks/useMyTravels'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
 import type { Travel } from '@/types/types'
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 import { computeTravelEngagementSummary, type TravelEngagementStats } from '@/utils/travelEngagementStats'
 import { isTravelDraft } from '@/utils/travelPublicationStatus'
 
@@ -293,12 +293,7 @@ export function useProfileTravelSections({
   }, [activeTab, activeTravelMetric, hasDraftTravels, hasPublishedTravels, onRetryTravels, router, setActiveTab, setActiveTravelMetric, travelsError])
   const formatTripsCount = useCallback((count: number) => count === 0
     ? i18nT('profile:app.tabs.profile.poka_pusto_bfb75bfd')
-    : selectPlural(count, {
-        one: i18nT('profile:app.tabs.profile.value1_poezdka_d109ae10', { value1: count }),
-        few: i18nT('profile:app.tabs.profile.value1_poezdki_dfb10844', { value1: count }),
-        many: i18nT('profile:app.tabs.profile.value1_poezdok_8d356025', { value1: count }),
-        other: i18nT('profile:app.tabs.profile.value1_poezdok_8d356025', { value1: count }),
-      }), [])
+    : translatePlural('profile:app.tabs.profile.tripsCount', count, { value1: count }), [])
 
   return {
     authoredTravelEngagementScope,

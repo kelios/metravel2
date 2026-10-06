@@ -10,7 +10,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useAuth } from '@/context/AuthContext';
 import { useOfflineCatalog } from '@/hooks/useOfflineCatalog';
 import { useThemedColors } from '@/hooks/useTheme';
-import { formatDate, formatInteger, selectPlural } from '@/i18n/format';
+import { formatDate, formatInteger } from '@/i18n/format';
+import { translatePlural } from '@/i18n';
 import { formatFileSize } from '@/utils/fileSize';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import type { OfflineContentType, OfflinePackageManifest } from '@/services/offline/types';
@@ -59,12 +60,7 @@ export default function OfflineLibraryScreen() {
   );
   const pinned = filtered.filter((item) => item.pinned);
   const recent = filtered.filter((item) => !item.pinned);
-  const objectLabel = selectPlural(summary.packageCount, {
-    one: t('offline:objectOne'),
-    few: t('offline:objectFew'),
-    many: t('offline:objectMany'),
-    other: t('offline:objectOther'),
-  });
+  const objectLabel = translatePlural('offline:objectNoun', summary.packageCount);
   const filterLabels = useMemo(() => ({
     all: t('offline:all'),
     travels: t('offline:travels'),

@@ -20,12 +20,11 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { IMAGE_QUALITY, IMAGE_WIDTHS } from '@/constants/imageContract';
 import { QUEST_CARD_BASE_HEIGHT, QUEST_CARD_PHONE_HEIGHT, QUESTS_GRID_MIN_COLUMN_WIDTH } from '@/constants/questLayout';
 
-import { pluralizeRu } from '@/utils/pluralize';
 import { getQuestAgeBadgeLabel, getQuestAgeCategory } from '@/utils/questAudience';
 import { isBikeQuest } from './QuestsScreen.helpers';
 
 import { pluralizePoints, type QuestMeta } from './questsShared';
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 import { formatInteger } from '@/i18n/format'
 import { formatDistance } from '@/utils/distanceCalculator'
 import { formatRatingValue } from '@/utils/ratingHelpers'
@@ -98,7 +97,7 @@ function QuestCard({
     const showAggregateRating = hasPublicQuestRating(quest.ratingCount);
     const questPath = buildQuestPath(cityId, quest.id);
     const questLinkLabel = i18nT('quests:screens.tabs.QuestCard.nachat_priklyuchenie_value1_43ad4b32', { value1: quest.title });
-    const reviewsLabel = `${quest.ratingCount} ${pluralizeRu(quest.ratingCount, i18nT('quests:screens.tabs.QuestCard.otzyv_9b980975'), i18nT('quests:screens.tabs.QuestCard.otzyva_7e8267a2'), i18nT('quests:screens.tabs.QuestCard.otzyvov_5a06b55c'))}`;
+    const reviewsLabel = translatePlural('quests:app.tabs.quests.city.questId.reviewCount', quest.ratingCount);
 
     const imageUrl = typeof quest.cover === 'string' ? quest.cover : null;
     const cacheKey = imageUrl ? String(imageUrl).trim() : '';
@@ -383,7 +382,7 @@ function QuestCard({
                                     >
                                         <Feather name="check-circle" size={13} color="rgba(255,255,255,0.9)" />
                                         <Text style={styles.questCardMetaText}>
-                                            {i18nT('quests:screens.tabs.QuestCard.proydeno_5cec53cc')}{quest.completionsCount} {pluralizeRu(quest.completionsCount, i18nT('quests:screens.tabs.QuestCard.raz_cb5ff63c'), i18nT('quests:screens.tabs.QuestCard.raza_7014923e'), i18nT('quests:screens.tabs.QuestCard.raz_cb5ff63c'))}
+                                            {translatePlural('quests:components.quests.QuestCompletionBadge.completionCount', quest.completionsCount)}
                                         </Text>
                                     </View>
                                 )}

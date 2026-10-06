@@ -1,5 +1,5 @@
 import type { Travel, TravelAddressItem } from '@/types/types'
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 import { resolveTravelPointLabel } from '@/utils/travelDisplayLocation'
 
 
@@ -42,12 +42,7 @@ const clamp = (text: string, max = MAX_ANSWER_LENGTH): string => {
 }
 
 const pluralizeDays = (n: number): string => {
-  return selectPlural(n, {
-    one: i18nT('shared:utils.travelFaq.value1_den_76898066', { value1: n }),
-    few: i18nT('shared:utils.travelFaq.value1_dnya_7827b4d5', { value1: n }),
-    many: i18nT('shared:utils.travelFaq.value1_dney_afdb77ec', { value1: n }),
-    other: i18nT('shared:utils.travelFaq.value1_dney_afdb77ec', { value1: n }),
-  })
+  return translatePlural('shared:utils.travelFaq.daysCount', n, { value1: n })
 }
 
 /**

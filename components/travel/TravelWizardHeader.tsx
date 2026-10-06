@@ -5,7 +5,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { createWizardHeaderStyles } from './travelWizardHeaderStyles';
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet';
 
 
@@ -54,12 +54,7 @@ const getStepLabel = (step: number) => {
         : i18nT('travel:components.travel.TravelWizardHeader.step.fallback', { value1: step });
 };
 const getErrorWord = (count: number) => {
-    return selectPlural(count, {
-        one: i18nT('travel:components.travel.TravelWizardHeader.oshibka_a24d9705'),
-        few: i18nT('travel:components.travel.TravelWizardHeader.oshibki_7adc89cc'),
-        many: i18nT('travel:components.travel.TravelWizardHeader.oshibok_1e6e7337'),
-        other: i18nT('travel:components.travel.TravelWizardHeader.oshibok_1e6e7337'),
-    });
+    return translatePlural('travel:components.travel.TravelWizardHeader.errorNoun', count);
 };
 
 const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({

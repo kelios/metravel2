@@ -162,7 +162,8 @@ describe('ImportWizard', () => {
     });
 
     expect(await screen.findByText('Импорт завершен!')).toBeTruthy();
-    expect(screen.getByText(/Создано:\s*1\s*точек/)).toBeTruthy();
+    // #2238: форма числа по правилам языка — «1 точка», не «1 точек».
+    expect(screen.getByText(/Создано:\s*1\s*точка/)).toBeTruthy();
   });
 
   it('should invalidate userPoints query after successful import', async () => {

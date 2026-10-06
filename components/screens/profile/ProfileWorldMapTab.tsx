@@ -39,7 +39,7 @@ import {
   getCountryGeometry,
   getWorldMapUnvisitedFill,
 } from './worldMap/worldGeometry'
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 
 
 interface ProfileWorldMapTabProps {
@@ -54,21 +54,11 @@ interface ProfileWorldMapTabProps {
 const FULLSCREEN_HEADER_HEIGHT = 56
 
 const formatCountriesLabel = (count: number) => {
-  return selectPlural(count, {
-    one: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_strana_e6f0e1db', { value1: count }),
-    few: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_strany_376fa642', { value1: count }),
-    many: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_stran_c44237e0', { value1: count }),
-    other: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_stran_c44237e0', { value1: count }),
-  })
+  return translatePlural('profile:components.screens.profile.ProfileWorldMapTab.countriesCount', count, { value1: count })
 }
 
 const formatRoutesLabel = (count: number) => {
-  return selectPlural(count, {
-    one: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_marshrut_63e26e9c', { value1: count }),
-    few: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_marshruta_64d72f90', { value1: count }),
-    many: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_marshrutov_9be4e19a', { value1: count }),
-    other: i18nT('profile:components.screens.profile.ProfileWorldMapTab.value1_marshrutov_9be4e19a', { value1: count }),
-  })
+  return translatePlural('profile:components.screens.profile.ProfileWorldMapTab.routesCount', count, { value1: count })
 }
 
 export function ProfileWorldMapTab({

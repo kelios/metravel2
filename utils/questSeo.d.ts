@@ -11,6 +11,7 @@ export type QuestSeoInput = {
   points?: number | string | null;
   durationMin?: number | string | null;
   translate?: (key: QuestSeoTranslationKey, params?: TranslationParams) => string;
+  translatePlural?: (key: QuestSeoTranslationKey, count: number, params?: TranslationParams) => string;
   locale?: string;
 };
 

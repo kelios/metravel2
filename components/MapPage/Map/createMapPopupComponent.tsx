@@ -34,7 +34,7 @@ import { resolveMapPointRelatedTravelId } from '@/utils/relatedTravel';
 import { osrmRoute } from '@/api/external/osrm';
 import { buildPlaceTitleParts, stripCountryFromCategoryString } from './placeTitle';
 import { useHasUserLocation, type UserLocationSignal } from './userLocationSignal';
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 import { formatInteger } from '@/i18n/format'
 
 /**
@@ -510,7 +510,6 @@ export const createMapPopupComponent = ({
     const questSubtitle = useMemo(() => {
       if (!questMeta) return undefined;
       const stepCount = typeof questMeta.points === 'number' ? questMeta.points : 0;
-      const stepWord = stepCount === 1 ? i18nT('map:components.MapPage.Map.createMapPopupComponent.shag_72f70013') : stepCount >= 2 && stepCount <= 4 ? i18nT('map:components.MapPage.Map.createMapPopupComponent.shaga_bec8550a') : i18nT('map:components.MapPage.Map.createMapPopupComponent.shagov_a4067391');
       const difficultyLabel =
         questMeta.difficulty === 'easy'
           ? i18nT('map:components.MapPage.Map.createMapPopupComponent.legkiy_3e464a1e')
@@ -522,7 +521,7 @@ export const createMapPopupComponent = ({
       const parts = [
         [questMeta.cityName, questMeta.countryName].filter(Boolean).join(', ') || null,
         questMeta.durationMin ? i18nT('map:components.MapPage.Map.createMapPopupComponent.value1_min_f86f860f', { value1: formatInteger(questMeta.durationMin) }) : null,
-        stepCount > 0 ? `${stepCount} ${stepWord}` : null,
+        stepCount > 0 ? translatePlural('map:components.MapPage.Map.createMapPopupComponent.stepsCount', stepCount) : null,
         difficultyLabel,
       ].filter(Boolean);
       return parts.length ? parts.join(' · ') : undefined;

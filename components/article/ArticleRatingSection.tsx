@@ -4,7 +4,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import StarRating from '@/components/ui/StarRating';
 import { useArticleRating } from '@/hooks/useArticleRating';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 import { formatRatingValue } from '@/utils/ratingHelpers'
 
 
@@ -119,12 +119,7 @@ function ArticleRatingSection({
 }
 
 function getCountLabel(count: number): string {
-    return selectPlural(count, {
-        one: i18nT('shared:components.article.ArticleRatingSection.otsenka_f65ce63f'),
-        few: i18nT('shared:components.article.ArticleRatingSection.otsenki_d41c6edf'),
-        many: i18nT('shared:components.article.ArticleRatingSection.otsenok_0f83ec1c'),
-        other: i18nT('shared:components.article.ArticleRatingSection.otsenok_0f83ec1c'),
-    });
+    return translatePlural('shared:components.article.ArticleRatingSection.ratingNoun', count);
 }
 
 const createStyles = (colors: any) =>

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 
 import PointListRow from '@/components/travel/PointListRow';
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 import {
   getMediaPlaceholderData,
   type MediaPlaceholderData,
@@ -28,12 +28,7 @@ type PointLike = {
 };
 
 const getPointsLabel = (count: number) => {
-  return selectPlural(count, {
-    one: i18nT('travel:components.travel.PointListChrome.tochka_b56842ff'),
-    few: i18nT('travel:components.travel.PointListChrome.tochki_2fec67ae'),
-    many: i18nT('travel:components.travel.PointListChrome.tochek_fe4d794f'),
-    other: i18nT('travel:components.travel.PointListChrome.tochek_fe4d794f'),
-  });
+  return translatePlural('travel:components.travel.PointListChrome.pointNoun', count);
 };
 
 export const PointListToggleButton = React.memo(function PointListToggleButton({

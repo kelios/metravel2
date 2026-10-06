@@ -184,6 +184,23 @@ describe('RankBar', () => {
     expect(getByText('До «Писатель»: ещё 500 очков опыта')).toBeTruthy()
   })
 
+  it('agrees the noun with the number of points (#2238)', () => {
+    const { getByText, getByLabelText } = render(
+      <RankBar
+        rank={makeRank({
+          totalPoints: 1,
+          currentLevelMinPoints: 0,
+          nextLevelMinPoints: 3,
+          progressRatio: 0.3,
+          remainingPoints: 2,
+        })}
+      />,
+    )
+    expect(getByText('1 очко опыта · значков: 5')).toBeTruthy()
+    expect(getByText('До «Писатель»: ещё 2 очка опыта')).toBeTruthy()
+    expect(getByLabelText('Уровень 3, Бывалый. Очков опыта: 1, до уровня Писатель осталось 2')).toBeTruthy()
+  })
+
   it('uses server-provided remainingPoints when present (canonical #721)', () => {
     // Server summary: remainingPoints=35 must win over any client-computed value
     // (totalPoints/nextLevelMinPoints here would give 450, but server says 35).

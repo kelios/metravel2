@@ -15,7 +15,7 @@ import {
     type AuthoredContentSummaryDto,
     type DataExportDto,
 } from '@/api/privacy';
-import { formatInteger, selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, formatInteger, translate as i18nT } from '@/i18n'
 
 
 const errorMessage = (error: unknown, fallback: string): string =>
@@ -38,27 +38,15 @@ const describeAffectedContent = (summary: AuthoredContentSummaryDto): string | n
 
     if (summary.travels_to_delete > 0) {
         const value1 = formatInteger(summary.travels_to_delete);
-        const many = i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedOwnedMany', { value1 });
         phrases.push(
-            selectPlural(summary.travels_to_delete, {
-                one: i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedOwnedOne', { value1 }),
-                few: i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedOwnedFew', { value1 }),
-                many,
-                other: many,
-            })
+            translatePlural('shared:hooks.useDataOwnership.deleteTravelsAffectedOwnedCount', summary.travels_to_delete, { value1 })
         );
     }
 
     if (summary.co_authored_to_detach > 0) {
         const value1 = formatInteger(summary.co_authored_to_detach);
-        const many = i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedSharedMany', { value1 });
         phrases.push(
-            selectPlural(summary.co_authored_to_detach, {
-                one: i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedSharedOne', { value1 }),
-                few: i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedSharedFew', { value1 }),
-                many,
-                other: many,
-            })
+            translatePlural('shared:hooks.useDataOwnership.deleteTravelsAffectedSharedCount', summary.co_authored_to_detach, { value1 })
         );
     }
 

@@ -19,7 +19,7 @@ import {
   PREVIEW_SCHEMATIC_PROVIDER,
 } from '@/components/trips/planning/tripRoutingProviders';
 import type { ThemedColors } from '@/hooks/useTheme';
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 import { formatInteger } from '@/i18n/format'
 import { formatDistance as formatDistanceKm } from '@/utils/distanceCalculator'
 import { formatTripDateLong, formatTripDateTimeRangeLong } from '@/utils/tripDateTime'
@@ -383,12 +383,7 @@ export function routingStateRetryable(routingState: RoutingState | null | undefi
 }
 
 function pluralStops(n: number): string {
-  return selectPlural(n, {
-    one: i18nT('trips:components.trips.planning.tripPlanFormatting.ostanovka_19da4ade'),
-    few: i18nT('trips:components.trips.planning.tripPlanFormatting.ostanovki_9b530687'),
-    many: i18nT('trips:components.trips.planning.tripPlanFormatting.ostanovok_0abc545a'),
-    other: i18nT('trips:components.trips.planning.tripPlanFormatting.ostanovok_0abc545a'),
-  });
+  return translatePlural('trips:components.trips.planning.tripPlanFormatting.stopNoun', n);
 }
 
 /**

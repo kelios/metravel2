@@ -1,7 +1,7 @@
 import type React from 'react'
 import type Feather from '@expo/vector-icons/Feather'
 import { isServerStillWorkingAfter } from '@/api/clientErrors'
-import { selectPlural, translate as i18nT, type TranslationKey } from '@/i18n'
+import { translatePlural, translate as i18nT, type TranslationKey } from '@/i18n'
 import { getUserFriendlyError } from '@/utils/userFriendlyErrors'
 
 
@@ -148,10 +148,5 @@ export function getCatalogLoadErrorDescription(error: unknown): string {
 }
 
 export function getPlacesCountLabel(count: number): string {
-  return selectPlural(count, {
-    one: i18nT('map:screens.tabs.PlacesScreen_helpers.mesto_d355b0e5'),
-    few: i18nT('map:screens.tabs.PlacesScreen_helpers.mesta_bd09fde1'),
-    many: i18nT('map:screens.tabs.PlacesScreen_helpers.mest_cad64ed8'),
-    other: i18nT('map:screens.tabs.PlacesScreen_helpers.mest_cad64ed8'),
-  })
+  return translatePlural('map:screens.tabs.PlacesScreen_helpers.placeNoun', count)
 }

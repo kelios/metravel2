@@ -6,7 +6,7 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import StarRating from '@/components/ui/StarRating';
 import { useTravelRating } from '@/hooks/useTravelRating';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 
 
 type Props = {
@@ -291,12 +291,7 @@ function TravelRatingSection({
 }
 
 function getCountLabel(count: number): string {
-    return selectPlural(count, {
-        one: i18nT('travel:components.travel.TravelRatingSection.otsenka_912ec6a8'),
-        few: i18nT('travel:components.travel.TravelRatingSection.otsenki_1f7548c9'),
-        many: i18nT('travel:components.travel.TravelRatingSection.otsenok_ab81d5a5'),
-        other: i18nT('travel:components.travel.TravelRatingSection.otsenok_ab81d5a5'),
-    });
+    return translatePlural('travel:components.travel.TravelRatingSection.ratingNoun', count);
 }
 
 const createStyles = (colors: any) =>

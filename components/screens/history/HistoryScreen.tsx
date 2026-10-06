@@ -22,13 +22,12 @@ import { buildCanonicalUrl } from '@/utils/seo';
 import { useIsFocused } from 'expo-router';
 import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
 import { formatRelativeTime } from '@/utils/relativeTime';
-import { pluralizeRu } from '@/utils/pluralize';
 import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
 import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import { goBackOrReplace } from '@/utils/backNavigation';
 import ContributionBanner from '@/components/common/ContributionBanner';
 import { refreshViewHistory, type ViewHistoryItem } from '@/hooks/useViewHistory';
-import { translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
@@ -357,7 +356,7 @@ export default function HistoryScreen() {
                         <View style={styles.summaryMetaPill}>
                             <Feather name="layers" size={16} color={colors.primaryDark} />
                             <Text style={styles.summaryMetaText}>
-                                {data.length} {pluralizeRu(data.length, i18nT('shared:app.tabs.history.element_503c6985'), i18nT('shared:app.tabs.history.elementa_0031c492'), i18nT('shared:app.tabs.history.elementov_8c06bb27'))} {i18nT('shared:app.tabs.history.v_istorii_6c948436')}</Text>
+                                {data.length} {translatePlural('shared:app.tabs.history.itemNoun', data.length)} {i18nT('shared:app.tabs.history.v_istorii_6c948436')}</Text>
                         </View>
 
                         {latestHistoryTitle ? (

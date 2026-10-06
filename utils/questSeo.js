@@ -16,9 +16,12 @@ function defaultTranslate(key, params = {}) {
   return interpolateTranslation(questSeoRu[resourceKey] || key, params);
 }
 
-function selectPlural(count, forms, locale) {
-  const category = selectPluralCategory(count, locale);
-  return forms[category] || forms.other;
+// Набор форм числа — семейство `<ключ>_one/_few/_many/_other` (#2238); без
+// переданного `translatePlural` (SSG-генератор) форму выбирают правила RU.
+function defaultTranslatePlural(key, count, params = {}, locale = DEFAULT_QUEST_SEO_LOCALE) {
+  const resourceKey = String(key).replace(/^seo:/, '');
+  const form = questSeoRu[`${resourceKey}_${selectPluralCategory(count, locale)}`];
+  return interpolateTranslation(form || questSeoRu[resourceKey] || key, { ...params, count });
 }
 
 const SEO_DESCRIPTION_MAX_ENCODED_LENGTH = 160;
@@ -110,8 +113,13 @@ function buildQuestSeoMetadata({
   points,
   durationMin,
   translate = defaultTranslate,
+  translatePlural,
   locale = DEFAULT_QUEST_SEO_LOCALE,
 } = {}) {
+  const pluralize = translatePlural
+    || (translate === defaultTranslate
+      ? (key, count, params) => defaultTranslatePlural(key, count, params, locale)
+      : (key, count, params) => translate(key, { ...params, count }));
   const questTitle = normalizeText(title, translate('seo:utils.questSeo.gorodskoy_kvest_2737d6fc'));
   const city = normalizeText(cityName);
   const shortTitle = stripRepeatedCityPrefix(questTitle, city);
@@ -135,12 +143,7 @@ function buildQuestSeoMetadata({
   ];
   const pointsCount = Number(points) || 0;
   if (pointsCount > 0) {
-    descriptionParts.push(`${pointsCount} ${selectPlural(pointsCount, {
-      one: translate('seo:utils.questSeo.tochka_1aa8f86f'),
-      few: translate('seo:utils.questSeo.tochki_8aa14238'),
-      many: translate('seo:utils.questSeo.tochek_0509b34c'),
-      other: translate('seo:utils.questSeo.tochek_0509b34c'),
-    }, locale)}.`);
+    descriptionParts.push(`${pointsCount} ${pluralize('seo:utils.questSeo.pointNoun', pointsCount)}.`);
   }
   const duration = formatDuration(durationMin, translate);
   if (duration) descriptionParts.push(translate('seo:utils.questSeo.primerno_value1_cc8b37aa', { value1: duration }));

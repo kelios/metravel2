@@ -24,7 +24,7 @@ import {
   trackQuestCardClicked,
   trackQuestCardImpression,
 } from '@/utils/growthFunnelAnalytics'
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 import { formatInteger, formatNumber } from '@/i18n/format'
 
 const createDifficultyLabels = (): Record<string, string> => ({
@@ -34,12 +34,7 @@ const createDifficultyLabels = (): Record<string, string> => ({
 })
 
 function formatPoints(points: number): string {
-  return selectPlural(points, {
-    one: i18nT('quests:components.quests.QuestForCityCard.value1_tochka_48728e6c', { value1: points }),
-    few: i18nT('quests:components.quests.QuestForCityCard.value1_tochki_62e11867', { value1: points }),
-    many: i18nT('quests:components.quests.QuestForCityCard.value1_tochek_eabc4aac', { value1: points }),
-    other: i18nT('quests:components.quests.QuestForCityCard.value1_tochek_eabc4aac', { value1: points }),
-  })
+  return translatePlural('quests:components.quests.QuestForCityCard.pointsCount', points, { value1: points })
 }
 
 function formatDuration(durationMin: number): string {

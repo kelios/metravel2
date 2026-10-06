@@ -44,12 +44,14 @@ const LOCALES = ['ru', 'be', 'uk', 'pl', 'en'] as const;
 
 /** Обе половины счётчика во всех формах числа. */
 const AFFECTED_KEYS = [
-  'hooks.useDataOwnership.deleteTravelsAffectedOwnedOne',
-  'hooks.useDataOwnership.deleteTravelsAffectedOwnedFew',
-  'hooks.useDataOwnership.deleteTravelsAffectedOwnedMany',
-  'hooks.useDataOwnership.deleteTravelsAffectedSharedOne',
-  'hooks.useDataOwnership.deleteTravelsAffectedSharedFew',
-  'hooks.useDataOwnership.deleteTravelsAffectedSharedMany',
+  'hooks.useDataOwnership.deleteTravelsAffectedOwnedCount_one',
+  'hooks.useDataOwnership.deleteTravelsAffectedOwnedCount_few',
+  'hooks.useDataOwnership.deleteTravelsAffectedOwnedCount_many',
+  'hooks.useDataOwnership.deleteTravelsAffectedOwnedCount_other',
+  'hooks.useDataOwnership.deleteTravelsAffectedSharedCount_one',
+  'hooks.useDataOwnership.deleteTravelsAffectedSharedCount_few',
+  'hooks.useDataOwnership.deleteTravelsAffectedSharedCount_many',
+  'hooks.useDataOwnership.deleteTravelsAffectedSharedCount_other',
 ] as const;
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -260,7 +262,7 @@ describe('#1878 how many travels the confirmation names', () => {
     const message = mockConfirm.mock.calls[0][0].message;
     expect(message).toBe(
       i18nT('shared:hooks.useDataOwnership.deleteTravelsMessageCounted', {
-        value1: `${i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedOwnedMany', { value1: '7' })} ${i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedSharedFew', { value1: '2' })}`,
+        value1: `${i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedOwnedCount_many', { value1: '7' })} ${i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedSharedCount_few', { value1: '2' })}`,
       }),
     );
     expect(message).toContain('7');
@@ -292,10 +294,10 @@ describe('#1878 how many travels the confirmation names', () => {
 
     const message = mockConfirm.mock.calls[0][0].message;
     expect(message).toContain(
-      i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedSharedMany', { value1: '3' }),
+      i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedSharedCount_many', { value1: '3' }),
     );
     expect(message).not.toContain(
-      i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedOwnedMany', { value1: '0' }),
+      i18nT('shared:hooks.useDataOwnership.deleteTravelsAffectedOwnedCount_many', { value1: '0' }),
     );
   });
 

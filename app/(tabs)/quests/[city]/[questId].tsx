@@ -44,7 +44,7 @@ import { trackQuestView } from '@/utils/questFunnelAnalytics';
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
 import type { QuestScreenMeta } from '@/components/quests/questScreenHeaderModel';
 import type { FrontendQuestBundle } from '@/utils/questAdapters';
-import { getFormatLocale, translate as i18nT } from '@/i18n'
+import { getFormatLocale, translate as i18nT, translatePlural } from '@/i18n'
 import { formatRatingValue } from '@/utils/ratingHelpers';
 import { hasPublicQuestRating } from '@/api/questRating';
 
@@ -115,6 +115,7 @@ const getQuestSeo = (bundle: FrontendQuestBundle | null, questId: string, isLoad
     cityName: bundle.city?.name,
     points: resolveBundleCountModel(bundle).total,
     translate: i18nT,
+    translatePlural,
     locale: getFormatLocale(),
   });
 

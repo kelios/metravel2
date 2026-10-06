@@ -36,7 +36,7 @@ import {
 } from './questMapPoints';
 import { openQuestMap, type QuestMapApp } from './questWizardHelpers';
 import { buildQuestNativeMapHtml } from './questNativeMapHtml';
-import { selectPlural, translate as i18nT } from '@/i18n'
+import { translatePlural, translate as i18nT } from '@/i18n'
 import { formatDistanceMeters, ROUTE_DISTANCE_FORMAT } from '@/utils/distanceCalculator'
 import { openExternalUrl } from '@/utils/externalLinks';
 import { showToast } from '@/utils/toast'
@@ -50,12 +50,7 @@ const notifyExportError = (text1: string, text2: string) => {
 const MIN_INLINE_MAP_HEIGHT = 420;
 
 function formatPointCount(count: number) {
-    return selectPlural(count, {
-        one: i18nT('quests:components.quests.QuestFullMap.value1_tochka_c8481435', { value1: count }),
-        few: i18nT('quests:components.quests.QuestFullMap.value1_tochki_a2cd5a87', { value1: count }),
-        many: i18nT('quests:components.quests.QuestFullMap.value1_tochek_75c461c8', { value1: count }),
-        other: i18nT('quests:components.quests.QuestFullMap.value1_tochek_75c461c8', { value1: count }),
-    });
+    return translatePlural('quests:components.quests.QuestFullMap.pointsCount', count, { value1: count });
 }
 
 // Панель маршрута квеста — маршрутная поверхность (#1440/#1449): дробный

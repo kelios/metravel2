@@ -4,7 +4,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import StarRating from '@/components/ui/StarRating';
 import { usePlaceRating } from '@/hooks/usePlaceRating';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { selectPlural, translate as i18nT } from '@/i18n';
+import { translatePlural, translate as i18nT } from '@/i18n';
 import { formatRatingValue } from '@/utils/ratingHelpers';
 
 type Props = {
@@ -122,12 +122,7 @@ function PlaceRatingSection({
 }
 
 function getCountLabel(count: number): string {
-  return selectPlural(count, {
-    one: i18nT('map:components.places.PlaceRatingSection.otsenka_89103505'),
-    few: i18nT('map:components.places.PlaceRatingSection.otsenki_9110419d'),
-    many: i18nT('map:components.places.PlaceRatingSection.otsenok_07066e03'),
-    other: i18nT('map:components.places.PlaceRatingSection.otsenok_07066e03'),
-  });
+  return translatePlural('map:components.places.PlaceRatingSection.ratingNoun', count);
 }
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
