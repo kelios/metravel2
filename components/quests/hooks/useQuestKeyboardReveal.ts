@@ -43,18 +43,25 @@ function measureWindowRect(node: MeasurableInput): Promise<WindowRect | null> {
  * нечем. Хук отдаёт реальное перекрытие (резерв снизу для контент-скролла) и
  * сам доматывает сфокусированное поле над клавиатурой.
  *
- * Раскрытие над клавиатурой — обязанность только этого хука: вместе с полем он
- * раскрывает и обратную связь по ответу под ним (ошибка, пауза, подсказка,
- * приглашение пропустить шаг), когда она появляется при открытой клавиатуре
- * (#1072). Поле при этом не уезжает за верх области прокрутки — игрок видит и
- * то, что ввёл, и вердикт. Клавиатуру хук не прячет: после неверного ответа
- * игрок вводит следующий.
+ * Раскрытие поля ответа и обратной связи по нему — обязанность только этого
+ * хука. Поле он доматывает над открытой клавиатурой; обратную связь под полем
+ * (ошибка, пауза, подсказка, приглашение пропустить шаг) — всегда, когда она
+ * появляется: над клавиатурой, если та открыта (#1072), и над нижним краем
+ * области прокрутки, если закрыта (#2271: на web и тап по «Проверить», и Enter
+ * снимают фокус, клавиатура уходит — это основной путь, а на desktop области
+ * прокрутки снизу подпирает футер). Поле при этом не уезжает за верх области
+ * прокрутки — игрок видит и то, что ввёл, и вердикт. Клавиатуру хук не прячет:
+ * после неверного ответа игрок вводит следующий.
  *
  * Android: RN отдаёт высоту клавиатуры как `imeInsets.bottom - systemBars.bottom`,
  * то есть БЕЗ nav-bar инсета, тогда как корневая вьюха рисуется за этим баром —
  * поэтому добавляем `insets.bottom` обратно.
+ *
+ * `bottomChromePx` — нижняя панель навигации, которая лежит поверх области
+ * прокрутки (на телефоне ScrollView уходит под неё): её полоса тоже не видна,
+ * и вердикт под ней игрок не прочтёт (замер Android, #2271).
  */
-export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | null>) {
+export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | null>, bottomChromePx = 0) {
   const insets = useSafeAreaInsets()
   const { height: windowHeight } = useWindowDimensions()
   const webKeyboardInset = useWebKeyboardInset()
@@ -71,9 +78,14 @@ export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | n
   keyboardInsetRef.current = keyboardInset
   const windowHeightRef = useRef(windowHeight)
   windowHeightRef.current = windowHeight
+  const bottomChromeRef = useRef(bottomChromePx)
+  bottomChromeRef.current = bottomChromePx
 
   const scrollOffsetRef = useRef(0)
   const focusedInputRef = useRef<MeasurableInput | null>(null)
+  // Поле ответа, к которому относится обратная связь: фокус к её появлению уже
+  // снят (blur на отправке), а верхняя граница раскрытия считается по полю.
+  const answerInputRef = useRef<MeasurableInput | null>(null)
   const feedbackEndRef = useRef<MeasurableInput | null>(null)
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -81,12 +93,17 @@ export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | n
     scrollOffsetRef.current = event.nativeEvent?.contentOffset?.y ?? 0
   }, [])
 
-  const revealAnswerArea = useCallback(() => {
-    const input = focusedInputRef.current
+  // `freshFeedback` — обратная связь появилась только что, в этой сессии шага
+  // (отказ, тап по подсказке): её раскрываем и без клавиатуры. Начальное
+  // состояние шага (подсказка/попытки из сохранённого прогресса) без клавиатуры
+  // экран не двигает — иначе он уезжал вниз сразу после входа на шаг.
+  const revealAnswerArea = useCallback((freshFeedback = false) => {
+    const feedbackEnd = feedbackEndRef.current
+    const input = focusedInputRef.current ?? (feedbackEnd ? answerInputRef.current : null)
     const scroll = scrollRef.current
     if (!input || !scroll) return
-    if (keyboardInsetRef.current <= 0) return
-    const feedbackEnd = feedbackEndRef.current
+    // Одно поле без клавиатуры уже там, где игрок по нему кликнул.
+    if (keyboardInsetRef.current <= 0 && !(feedbackEnd && freshFeedback)) return
 
     // Ref ScrollView и в RN, и в RNW — сам хост-узел с методами прокрутки,
     // поэтому `measureInWindow` у него есть, хотя в типах ScrollView его нет.
@@ -96,7 +113,12 @@ export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | n
       feedbackEnd ? measureWindowRect(feedbackEnd) : null,
     ]).then(([inputRect, viewportRect, feedbackRect]) => {
       if (!inputRect) return
-      const visibleBottom = windowHeightRef.current - keyboardInsetRef.current
+      // Видимый низ — самый высокий из: верха клавиатуры, верха нижней панели
+      // поверх области прокрутки и низа самой области (под ней футер на desktop).
+      const aboveChrome = windowHeightRef.current - Math.max(keyboardInsetRef.current, bottomChromeRef.current)
+      const visibleBottom = viewportRect
+        ? Math.min(aboveChrome, viewportRect.y + viewportRect.height)
+        : aboveChrome
       const inputDelta = inputRect.y + inputRect.height + REVEAL_GAP - visibleBottom
       // Низ обратной связи — над клавиатурой, но не ценой поля: верх поля
       // остаётся в области прокрутки, а само поле видно в любом случае.
@@ -117,6 +139,7 @@ export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | n
   const handleInputFocus = useCallback(
     (node: MeasurableInput | null) => {
       focusedInputRef.current = node
+      if (node) answerInputRef.current = node
       // Клавиатура ещё выезжает — меряем после её появления (эффект ниже), а этот
       // прогон помогает, когда клавиатура уже открыта и меняется только фокус.
       revealAnswerArea()
@@ -130,13 +153,16 @@ export function useQuestKeyboardReveal(scrollRef: React.RefObject<ScrollView | n
 
   /**
    * Под полем появилась, сменилась или исчезла обратная связь по ответу.
-   * `node` — метка конца этой обратной связи (null — её нет, раскрываем одно поле).
+   * `node` — метка конца этой обратной связи (null — её нет, раскрываем одно поле),
+   * `input` — поле ответа, к которому она относится; `fresh` — появилась в этой
+   * сессии шага, а не пришла с сохранённым прогрессом при входе на шаг.
    */
   const handleAnswerFeedback = useCallback(
-    (node: MeasurableInput | null) => {
+    (node: MeasurableInput | null, input?: MeasurableInput | null, fresh = true) => {
       feedbackEndRef.current = node
+      if (input) answerInputRef.current = input
       if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current)
-      feedbackTimerRef.current = node ? setTimeout(revealAnswerArea, REVEAL_SETTLE_MS) : null
+      feedbackTimerRef.current = node ? setTimeout(() => revealAnswerArea(fresh), REVEAL_SETTLE_MS) : null
     },
     [revealAnswerArea],
   )

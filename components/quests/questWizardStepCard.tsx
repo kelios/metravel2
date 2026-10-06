@@ -144,7 +144,7 @@ type StepCardProps = {
   onAnswerFocus?: (node: TextInput | null) => void
   onAnswerBlur?: () => void
   /** Обратная связь по ответу (метка её конца; null — нет) — родитель раскрывает её над клавиатурой (#1072). */
-  onAnswerFeedback?: (node: View | null) => void
+  onAnswerFeedback?: (node: View | null, input?: TextInput | null, fresh?: boolean) => void
 }
 
 /** «1,0 км · примерно 12 мин пешком» — расстояние и время через i18n-форматтеры. */
@@ -392,10 +392,17 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
   // Метка конца обратной связи стоит за подсказкой, только когда та раскрыта:
   // на web скрытая подсказка держит место, и раскрывать пустоту незачем.
   // `attempts` — каждый новый отказ с тем же текстом ошибки раскрывает её заново.
+  // Первый отчёт на шаге — его начальное состояние (подсказка и попытки из
+  // сохранённого прогресса), а не реакция игрока: без клавиатуры оно экран не
+  // двигает (#2271).
   const hasAnswerFeedback = !!error || hintVisible || showSkipPrompt || isCoolingDown
+  const feedbackStepIdRef = useRef<string | null>(null)
   useEffect(() => {
-    onAnswerFeedback?.(hasAnswerFeedback ? feedbackEndRef.current : null)
-  }, [attempts, error, hasAnswerFeedback, hintVisible, onAnswerFeedback, showSkipPrompt])
+    const fresh = feedbackStepIdRef.current === step.id
+    feedbackStepIdRef.current = step.id
+    if (hasAnswerFeedback) onAnswerFeedback?.(feedbackEndRef.current, answerInputRef.current, fresh)
+    else onAnswerFeedback?.(null)
+  }, [attempts, error, hasAnswerFeedback, hintVisible, onAnswerFeedback, showSkipPrompt, step.id])
 
   const hasValidCoords =
     Number.isFinite(step.lat) &&
