@@ -118,6 +118,11 @@ describe('MyCreatedTripsList', () => {
     });
   });
 
+  it('announces exactly one native search field', () => {
+    const screen = render(<MyCreatedTripsList />);
+    expect(screen.getAllByRole('search')).toHaveLength(1);
+  });
+
   it('shows only trips organized by the current user and opens a trip', () => {
     const { getByText, queryByText, getByTestId } = render(<MyCreatedTripsList />);
 

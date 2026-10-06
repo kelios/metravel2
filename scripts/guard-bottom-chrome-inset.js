@@ -35,6 +35,12 @@ const SAFE_AREA_ONLY = new Set([
   'components/layout/CustomHeaderMobileMenu.tsx',
 ])
 
+const WEB_DOCK_ANCHORS = new Set([
+  'components/layout/ConsentBanner.tsx',
+  'components/layout/AppInstallBar.tsx',
+  'components/ui/ToastHost.web.tsx',
+])
+
 const SOURCE = new Set(['.js', '.jsx', '.ts', '.tsx'])
 
 /** Строка кода без комментариев; `null`, если от строки ничего не осталось. */
@@ -59,7 +65,8 @@ const findViolationsInSource = (rel, text) => {
   const found = []
   text.split('\n').forEach((line, index) => {
     const code = stripLineComments(line)
-    if (code && lineComputesDockHeight(code)) found.push(`${rel}:${index + 1}: ${line.trim()}`)
+    if (code && (lineComputesDockHeight(code) ||
+      (WEB_DOCK_ANCHORS.has(rel) && /\bbottom\s*:\s*(?:56|58|64|72)\b/.test(code)))) found.push(`${rel}:${index + 1}: ${line.trim()}`)
   })
   return found
 }

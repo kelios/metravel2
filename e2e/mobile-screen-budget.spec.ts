@@ -11,7 +11,11 @@ import {
   measureScreenAllCombos,
   printResultsTable,
   resolveScreenTarget,
+  sampleDarkBottomColor,
+  seedTheme,
+  assertWithinBudget,
 } from './helpers/mobileScreenBudget'
+import { preacceptCookies } from './helpers/navigation'
 
 /**
  * #2094: замер мобильного бюджета экрана — все 13 экранов без мутации
@@ -90,6 +94,45 @@ async function measureScreen(page: Page, screen: ScreenDef): Promise<void> {
 }
 
 test.describe('Mobile screen budget (#2094)', () => {
+  test('dark bottom rejects a white underlay behind the unchanged dock @ 390x844', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await preacceptCookies(page)
+    await seedTheme(page, 'dark')
+    await page.goto('/')
+    const dock = page.getByTestId('footer-dock-wrapper')
+    await expect(dock).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    const natural = await sampleDarkBottomColor(page)
+    expect(natural.matchesThemeBackground, JSON.stringify(natural)).toBe(true)
+    const frostBackground = await dock.evaluate((el) => getComputedStyle(el).backgroundColor)
+    const previous = await dock.evaluate((el) => {
+      if (!el.parentElement) throw new Error('Dock underlay owner missing')
+      const old = el.parentElement.style.backgroundColor
+      el.parentElement.style.backgroundColor = '#fff'
+      return old
+    })
+    try {
+      const injected = await sampleDarkBottomColor(page)
+      expect(await dock.evaluate((el) => getComputedStyle(el).backgroundColor), 'frost panel CSS stays unchanged').toBe(frostBackground)
+      console.log('[mobile-screen-budget] injected white underlay', JSON.stringify(injected))
+      expect(injected.matchesThemeBackground, 'the same pixel gate must reject an actual white underlay').toBe(false)
+      expect(injected.failures.length).toBeGreaterThan(0)
+      // Isolate the injected color metric through the production budget assertion.
+      const budget = MOBILE_SCREEN_BUDGET.home
+      expect(assertWithinBudget({
+        screen: 'home', path: '/', viewport: '390x844', theme: 'dark',
+        firstContentTopRatio: null, pinnedChromeRatio: null,
+        titleOccurrences: 0, searchboxCount: budget.searchboxCountExpected,
+        ctaOccluded: null, darkBottomMatchesTheme: injected.matchesThemeBackground,
+        unlabeledInteractive: 0, emptyCtaDockGap: null, brandRowVisible: budget.brandRowExpected,
+      }, budget)).toEqual(['home @ 390x844/dark: darkBottomMatchesTheme было true, стало false'])
+    } finally {
+      await dock.evaluate((el, old) => {
+        if (el.parentElement) el.parentElement.style.backgroundColor = old
+      }, previous)
+    }
+    expect((await sampleDarkBottomColor(page)).matchesThemeBackground, 'control restored').toBe(true)
+  })
   for (const screen of SCREENS.filter((s) => !s.guest)) {
     test(screen.key, async ({ page, baseURL }) => {
       if (screen.requiresAuth) await ensureLiveSession(page, baseURL)

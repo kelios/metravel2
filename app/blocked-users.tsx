@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { View, Text, Pressable, Platform, ScrollView } from 'react-native';
+import { View, Text, Pressable, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter, useIsFocused, type Href } from 'expo-router';
 
@@ -39,7 +39,15 @@ export default function BlockedUsersScreen() {
 
     useAndroidBackHandler(undefined, { resolveBack: handleBackToSource });
 
-    if (authReady && !isAuthenticated) {
+    if (!authReady) {
+        return (
+            <StandaloneScreen style={styles.container}>
+                <ActivityIndicator color={colors.primaryDark} testID="blocked-users-auth-loading" />
+            </StandaloneScreen>
+        );
+    }
+
+    if (!isAuthenticated) {
         return (
             <StandaloneScreen style={styles.container}>
                 <EmptyState

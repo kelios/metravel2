@@ -1,3 +1,4 @@
+import { searchInputAccessibilityProps } from '@/utils/webProps'
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -120,6 +121,7 @@ export default function SubscriptionsTabContent({
     <View style={[styles.searchContainer, { backgroundColor: colors.backgroundSecondary, borderColor: colors.borderLight }]}>
       <Feather name="search" size={16} color={colors.textMuted} />
       <TextInput
+            {...searchInputAccessibilityProps()}
         style={[styles.searchInput, { color: colors.text }]}
         value={search}
         onChangeText={setSearch}

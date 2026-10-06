@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, usePathname } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useDockReservePx } from '@/components/layout/bottomChromeInset';
+import { asBottomDimension, useDockReservePx, webDockReserve } from '@/components/layout/bottomChromeInset';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
@@ -24,7 +24,9 @@ function ConsentBanner() {
   const { isMobile, width } = useResponsive();
   const isNarrowMobile = isMobile && width > 0 && width < 360;
   const dockReservePx = useDockReservePx();
-  const bottomOffset = dockReservePx + (isMobile ? 8 : DESIGN_TOKENS.spacing.xs);
+  const anchorGap = isMobile ? 8 : DESIGN_TOKENS.spacing.xs;
+  const bottomOffset = dockReservePx + anchorGap;
+  const bottomPosition = isWeb ? webDockReserve(anchorGap) : bottomOffset;
   const isConsentSettingsRoute = pathname === '/cookies' || pathname === '/privacy';
 
   useEffect(() => {
@@ -130,7 +132,7 @@ function ConsentBanner() {
         styles.pointerEventsNone,
         isMobile && styles.wrapperMobile,
         !isMobile && styles.wrapperDesktop,
-        { bottom: bottomOffset },
+        { bottom: asBottomDimension(bottomPosition) },
         suspendForOverlay && styles.wrapperHidden,
       ]}
     >

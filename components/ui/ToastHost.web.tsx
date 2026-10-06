@@ -1,3 +1,4 @@
+import { webDockReserve } from '@/components/layout/bottomChromeInset';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -102,7 +103,7 @@ export default function ToastHost(_props: { overDock?: boolean } = {}) {
       ? 'translateX(-50%) translateY(0)'
       : `translateX(-50%) translateY(${isBottom ? '20px' : '-20px'})`,
     opacity: visible ? 1 : 0,
-    ...(isBottom ? { bottom: 72 } : { top: 12 }),
+    ...(isBottom ? { bottom: webDockReserve(DESIGN_TOKENS.spacing.md) } : { top: 12 }),
   }), [visible, isBottom]);
 
   const cardStyle = useMemo((): React.CSSProperties => ({

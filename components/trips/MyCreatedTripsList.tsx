@@ -1,3 +1,4 @@
+import { searchInputAccessibilityProps } from '@/utils/webProps'
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   Pressable,
@@ -203,6 +204,7 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
     <View style={styles.searchBox} testID="my-created-trips-search">
       <Feather name="search" size={18} color={colors.textMuted} />
       <TextInput
+            {...searchInputAccessibilityProps()}
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder={role === 'organized' ? i18nT('trips:components.trips.MyCreatedTripsList.poisk_po_moim_poezdkam_22d7088e') : i18nT('trips:components.trips.MyCreatedTripsList.poisk_sredi_poezdok_b0279567')}

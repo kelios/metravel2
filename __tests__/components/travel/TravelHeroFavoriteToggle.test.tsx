@@ -192,7 +192,7 @@ describe('TravelHeroFavoriteToggle', () => {
     expect(showToast).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'success',
-        text1: 'Добавлено в избранное',
+        text1: 'Добавлено в «Хочу поехать»',
       })
     )
   })
@@ -217,7 +217,7 @@ describe('TravelHeroFavoriteToggle', () => {
     expect(showToast).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'info',
-        text1: 'Удалено из избранного',
+        text1: 'Удалено из «Хочу поехать»',
       })
     )
   })

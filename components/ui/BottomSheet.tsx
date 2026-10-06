@@ -210,4 +210,4 @@ const createStyles = (colors: ThemedColors) =>
     },
   })
 
-export default React.memo(BottomSheet)
+export default BottomSheet

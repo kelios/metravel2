@@ -5,6 +5,7 @@ import { fireEvent, render, waitFor, act } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 jest.mock('@/hooks/useQueryOwner', () => ({ useQueryOwner: () => '1' }))
+jest.mock('@/stores/authStore', () => ({ useAuthStore: (selector: (state: { authReady: boolean }) => unknown) => selector({ authReady: true }) }))
 jest.mock('@/utils/toast', () => ({ showToast: jest.fn() }))
 jest.mock('@/utils/confirmAction', () => ({ confirmAction: jest.fn(() => Promise.resolve(true)) }))
 jest.mock('@/api/userSafety', () => ({

@@ -79,6 +79,13 @@ describe('thread list in the real React Native Web DOM (#2264, #2267)', () => {
     container.remove()
   })
 
+  it('exposes exactly one searchbox only when the search field is shown', async () => {
+    await render();
+    expect(container.querySelectorAll('input[role="searchbox"]')).toHaveLength(1);
+    await render({ showSearch: false });
+    expect(container.querySelectorAll('input[role="searchbox"]')).toHaveLength(0);
+  });
+
   it('gives the name its own line: the only sibling is the meta line with the date and the badge', async () => {
     await render()
 

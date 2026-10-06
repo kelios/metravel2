@@ -1,3 +1,4 @@
+import { searchInputAccessibilityProps } from '@/utils/webProps'
 // components/trips/PublicTripsCatalog.tsx
 // Каталог публичных поездок «Поехали со мной» (#411): заголовок, дисклеймер,
 // фильтры и адаптивная сетка карточек. Featured-поездки идут первыми (#463).
@@ -106,6 +107,7 @@ function PublicTripsCatalog() {
       >
         <Feather name="search" size={17} color={colors.textMuted} />
         <TextInput
+            {...searchInputAccessibilityProps()}
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder={i18nT('trips:components.trips.PublicTripsCatalog.poisk_po_poezdkam_5627fcb8')}

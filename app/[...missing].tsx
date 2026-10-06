@@ -1,3 +1,4 @@
+import { goBackOrReplace } from '@/utils/backNavigation'
 import { Stack, router } from 'expo-router'
 import type { Href } from 'expo-router'
 import { Platform, StyleSheet } from 'react-native'
@@ -71,13 +72,7 @@ export default function NotFoundScreen() {
             variant="ghost"
             label={i18nT('shared:app.missing.nazad_50acffff')}
             style={styles.ctaButtonSecondary}
-            onPress={() => {
-              if (Platform.OS === 'web') {
-                router.replace('/')
-                return
-              }
-              router.back()
-            }}
+            onPress={() => goBackOrReplace(router, '/')}
           />
         </View>
       </StandaloneScreen>

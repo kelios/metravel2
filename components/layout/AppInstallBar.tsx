@@ -6,7 +6,7 @@ import Feather from '@expo/vector-icons/Feather'
 import Button from '@/components/ui/Button'
 import { GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { useDockReservePx } from '@/components/layout/bottomChromeInset'
+import { asBottomDimension, useDockReservePx, webDockReserve } from '@/components/layout/bottomChromeInset'
 import { useFooterOverlayOpen } from '@/hooks/useFooterOverlayOpen'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
@@ -67,6 +67,7 @@ function AppInstallBar() {
 
   const dockReservePx = useDockReservePx()
   const bottomOffset = dockReservePx + 8
+  const bottomPosition = IS_WEB ? webDockReserve(8) : bottomOffset
 
   useEffect(() => {
     if (!IS_WEB || typeof window === 'undefined') return
@@ -178,7 +179,7 @@ function AppInstallBar() {
       testID="app-install-bar"
       style={[
         styles.wrapper,
-        { bottom: bottomOffset },
+        { bottom: asBottomDimension(bottomPosition) },
         {
           opacity: appear,
           transform: [

@@ -1,6 +1,5 @@
 import { Platform } from 'react-native'
 
-import { METRICS } from '@/constants/layout'
 import { isCompactHeaderWidth } from './headerLayoutContract'
 import { isTopLevelSectionPath, needsGlobalBackAffordance } from './topLevelSections'
 
@@ -18,7 +17,7 @@ export const getIsHeaderMobile = (width: number, effectiveWebWidth: number) => {
     // large-tablet sizes it otherwise clips links while hiding the overflow.
     return isCompactHeaderWidth(effectiveWebWidth)
   }
-  return width < METRICS.breakpoints.largeTablet
+  return isCompactHeaderWidth(width)
 }
 
 const ACTIVE_PATH_PREFIXES = ['/search', '/travelsby', '/export', '/map', '/places', '/trips', '/quests', '/roulette']

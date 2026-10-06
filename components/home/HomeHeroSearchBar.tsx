@@ -1,3 +1,4 @@
+import { searchInputAccessibilityProps } from '@/utils/webProps'
 import React, { memo, useCallback, useState } from 'react'
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
@@ -41,6 +42,7 @@ function HomeHeroSearchBar({
       <View style={styles.field}>
         <Feather name="search" size={18} color={inputMutedColor} />
         <TextInput
+            {...searchInputAccessibilityProps()}
           value={value}
           onChangeText={setValue}
           onSubmitEditing={handleSubmit}

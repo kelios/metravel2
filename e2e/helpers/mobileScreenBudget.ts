@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { expect, type Locator, type Page } from '@playwright/test'
 import { gotoWithRetry, preacceptCookies } from './navigation'
+import { classifyDarkBottomPixels, type BottomPixelResult } from './darkBottomPixels'
 
 /**
  * #2094: общий замер мобильного бюджета экрана. Делится между тремя спеками:
@@ -392,7 +393,7 @@ export async function countVisibleTitleOccurrences(page: Page, title: string): P
 
 /** Playwright-роль `searchbox` — реальная accessibility-роль, а не сырой DOM-атрибут. */
 export async function countSearchboxes(page: Page): Promise<number> {
-  return page.getByRole('searchbox').count()
+  return page.getByRole('searchbox').filter({ visible: true }).count()
 }
 
 /**
@@ -445,40 +446,50 @@ export async function isBrandRowVisible(page: Page): Promise<boolean> {
   })
 }
 
-export type DarkBottomColorSample = { bodyBackground: string; bottomBackground: string; matchesThemeBackground: boolean }
+export type DarkBottomColorSample = BottomPixelResult & { bodyBackground: string; clipTop: number }
 
-/**
- * Только для тёмной темы: цвет фона в точке у нижнего края документа
- * (после скролла до конца) сравнивается с фоном `<body>` — тем самым цветом
- * темы, что виден в остальной части экрана. Несовпадение — это и есть «белая
- * полоса» из отчёта TestFlight.
- */
+/** Actual compositor pixels around/below the dock, including its translucent panel. */
 export async function sampleDarkBottomColor(page: Page): Promise<DarkBottomColorSample> {
-  await page.evaluate(async () => {
-    window.scrollTo(0, document.body.scrollHeight)
-    // Два кадра вместо фиксированной паузы (гейт `guard:e2e-wait-for-timeout`
-    // запрещает новый `waitForTimeout`): достаточно, чтобы браузер применил
-    // скролл-привязанные repaint (sticky/fixed элементы) перед сэмплом цвета.
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-  })
-  const sample = await page.evaluate(() => {
-    function backgroundAt(el: Element | null): string {
-      let node: Element | null = el
-      while (node) {
-        const bg = getComputedStyle(node).backgroundColor
-        if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') return bg
-        node = node.parentElement
+  const originalScroll = await page.evaluate(() => ({ x: scrollX, y: scrollY }))
+  try {
+    const geometry = await page.evaluate(async () => {
+      window.scrollTo(0, document.body.scrollHeight)
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      const el = document.querySelector('[data-testid="footer-dock-wrapper"]')
+      const rect = el?.getBoundingClientRect()
+      const dockVisible = !!el && !!rect && rect.height > 0 && rect.top < innerHeight && getComputedStyle(el).visibility !== 'hidden'
+      const dock = dockVisible && rect ? { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom } : null
+      const clipTop = Math.max(0, Math.floor(dock ? dock.top - 12 : innerHeight - 24))
+      const bodyBackground = getComputedStyle(document.body).backgroundColor
+      // Computed RGB channels are numeric; alpha is already painted in the screenshot.
+      const channels = (css: string) => (css.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number)
+      const darkSurfaceChannel = Math.max(...channels(bodyBackground), ...(el ? channels(getComputedStyle(el).backgroundColor) : []))
+      return { width: innerWidth, height: innerHeight - clipTop, clipTop, bodyBackground, darkSurfaceChannel, dock }
+    })
+    const png = await page.screenshot({
+      type: 'png', scale: 'css', fullPage: false,
+    })
+    // Decode the browser's PNG in a detached canvas; no transitive pngjs dependency.
+    const image = await page.evaluate(async ({ base64, clipTop, width, height }) => {
+      const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
+      const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }))
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = bitmap.width
+        canvas.height = bitmap.height
+        const context = canvas.getContext('2d')
+        if (!context) throw new Error('Cannot decode bottom screenshot')
+        context.drawImage(bitmap, 0, 0)
+        return { width, height, data: Array.from(context.getImageData(0, clipTop, width, height).data) }
+      } finally {
+        bitmap.close()
       }
-      return getComputedStyle(document.body).backgroundColor
-    }
-    const bodyBackground = getComputedStyle(document.body).backgroundColor
-    const point = { x: Math.floor(window.innerWidth / 2), y: Math.max(1, window.innerHeight - 4) }
-    const hit = document.elementFromPoint(point.x, point.y)
-    const bottomBackground = backgroundAt(hit)
-    return { bodyBackground, bottomBackground, matchesThemeBackground: bodyBackground === bottomBackground }
-  })
-  await page.evaluate(() => window.scrollTo(0, 0))
-  return sample
+    }, { base64: png.toString('base64'), clipTop: geometry.clipTop, width: geometry.width, height: geometry.height })
+    const dock = geometry.dock ? { ...geometry.dock, top: geometry.dock.top - geometry.clipTop, bottom: geometry.dock.bottom - geometry.clipTop } : null
+    return { ...classifyDarkBottomPixels(image, { dock, darkSurfaceChannel: geometry.darkSurfaceChannel }), bodyBackground: geometry.bodyBackground, clipTop: geometry.clipTop }
+  } finally {
+    await page.evaluate(({ x, y }) => window.scrollTo(x, y), originalScroll)
+  }
 }
 
 const INTERACTIVE_ROLES = ['button', 'link', 'checkbox', 'switch', 'tab', 'menuitem', 'searchbox', 'combobox', 'radio']
@@ -542,6 +553,8 @@ export type ScreenMetrics = {
   searchboxCount: number
   ctaOccluded: boolean | null
   darkBottomMatchesTheme: boolean | null
+  /** #2298: pixel failure coordinates and checked zone for reproducible evidence. */
+  darkBottomSample?: DarkBottomColorSample | null
   unlabeledInteractive: number
   emptyCtaDockGap: number | null
   brandRowVisible: boolean
@@ -644,8 +657,9 @@ export function printResultsTable(filterScreens?: string[]): void {
  * §9 `docs/features/mobile-screen-shell-mock.md`); каждая карточка эпика
  * #2105 ужесточает свой порог в собственном diff. `firstContentTopRatioMax` —
  * верхняя граница (меньше = контент начинается раньше, лучше). Счётчики
- * (`titleOccurrencesMax`, `searchboxCountMax`, `unlabeledInteractiveMax`) —
- * тоже верхняя граница. `ctaOccludedAllowed` — пока CTA не перекрыт нигде,
+ * (`titleOccurrencesMax`, `unlabeledInteractiveMax`) — тоже верхняя граница.
+ * `searchboxCountExpected` — точное число видимых полей существующего поиска.
+ * `ctaOccludedAllowed` — пока CTA не перекрыт нигде,
  * держим `false`; экран, где измерение вернуло `null` (нет стабильного
  * testID), в бюджет не входит и не проверяется.
  */
@@ -658,15 +672,12 @@ export type ScreenBudget = {
    */
   pinnedChromeRatioMax?: number
   titleOccurrencesMax: number
-  searchboxCountMax: number
+  searchboxCountExpected: number
   ctaOccludedAllowed: boolean
-  /**
-   * Текущее состояние «белой полосы» в тёмной теме (см. `sampleDarkBottomColor`):
-   * `false` — известный текущий дефект (цвет у нижнего края НЕ совпадает с
-   * фоном темы), запрет ухудшения не требует немедленного `true`. Если
-   * значение уже `true`, откат до `false` роняет прогон.
-   */
+  /** #2298: screenshot zone must contain no light strip/underlay in dark theme. */
   darkBottomMatchesThemeExpected: boolean
+  /** Map raster content may be light; container chrome is verified separately. */
+  darkBottomThemeException?: string
   unlabeledInteractiveMax: number
   /** #2100: бренд-строка на телефоне — только у разделов навигации. */
   brandRowExpected: boolean
@@ -676,10 +687,9 @@ export type ScreenBudget = {
 // бэкенд 24.09.2026) — максимум наблюдённых значений по всем
 // вьюпорт/тема-комбинациям плюс ~10% запас на дрожание измерения
 // (`firstContentTopRatioMax`; счётчики — точное наблюдённое значение, для них
-// запас не нужен). darkBottomMatchesThemeExpected: false — текущий дефект
-// «белая полоса» в тёмной теме воспроизводится почти на каждом экране (см.
-// §9 `docs/features/mobile-screen-shell-mock.md`), эпик #2105 переводит его в
-// `true` по экрану за экраном.
+// запас не нужен). #2297: поиск — exact count, включая отсутствие роли (0 вместо1).
+// #2298: darkBottomMatchesThemeExpected=true проверяет реальный screenshot,
+// а не равенство CSS-цвета полупрозрачного дока и body.
 // #2100 (03.10.2026): вложенные экраны телефона потеряли бренд-строку (−64 px),
 // пороги пересняты на своём dist (critical CSS, 390×844/402×874, локальный бэк):
 // максимум наблюдённого +10%. `/trips/my` 0,227 → порог 0,25 (норма макета ≤ 0,30).
@@ -703,9 +713,9 @@ const QUEST_RUN_BUDGET: ScreenBudget = {
   firstContentTopRatioMax: 0.155,
   pinnedChromeRatioMax: 0.197,
   titleOccurrencesMax: 1,
-  searchboxCountMax: 0,
+  searchboxCountExpected: 0,
   ctaOccludedAllowed: false,
-  darkBottomMatchesThemeExpected: false,
+  darkBottomMatchesThemeExpected: true,
   unlabeledInteractiveMax: 0,
   brandRowExpected: false,
 }
@@ -717,31 +727,31 @@ const QUEST_RUN_BUDGET_ENTRIES: Record<string, ScreenBudget> = {
 }
 
 export const MOBILE_SCREEN_BUDGET: Record<string, ScreenBudget> = {
-  home: { firstContentTopRatioMax: 0.09, titleOccurrencesMax: 0, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: true },
-  search: { firstContentTopRatioMax: 0.22, titleOccurrencesMax: 0, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: true },
+  home: { firstContentTopRatioMax: 0.09, titleOccurrencesMax: 0, searchboxCountExpected: 1, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: true },
+  search: { firstContentTopRatioMax: 0.22, titleOccurrencesMax: 0, searchboxCountExpected: 1, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: true },
   // 0,304–0,315: `/quests` рендерит «N квестов» только при `dataLoaded`
   // (`screens/tabs/QuestsContentPanel.tsx:319`) — число сдвигает высоту
   // блока над меткой. Раньше замер снимал метрику ДО прихода данных
   // (0,26–0,27) — заниженное число, не «после». `waitForContentAttached`
   // теперь ждёт `networkidle`, поэтому верное значение — то, что сейчас.
-  quests: { firstContentTopRatioMax: 0.35, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: true },
-  trips: { firstContentTopRatioMax: 0.29, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: false },
-  'trips-my': { firstContentTopRatioMax: 0.25, titleOccurrencesMax: 1, searchboxCountMax: 1, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: false },
-  'profile-routes': { firstContentTopRatioMax: 0.48, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: true },
-  favorites: { firstContentTopRatioMax: 0.09, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: false },
-  history: { firstContentTopRatioMax: 0.67, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: false },
-  subscriptions: { firstContentTopRatioMax: 0.28, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: false },
-  settings: { firstContentTopRatioMax: 0.07, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: false },
-  contact: { firstContentTopRatioMax: 0.1, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: false },
+  quests: { firstContentTopRatioMax: 0.35, titleOccurrencesMax: 1, searchboxCountExpected: 1, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: true },
+  trips: { firstContentTopRatioMax: 0.29, titleOccurrencesMax: 1, searchboxCountExpected: 1, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: false },
+  'trips-my': { firstContentTopRatioMax: 0.25, titleOccurrencesMax: 1, searchboxCountExpected: 1, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: false },
+  'profile-routes': { firstContentTopRatioMax: 0.48, titleOccurrencesMax: 1, searchboxCountExpected: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: true },
+  favorites: { firstContentTopRatioMax: 0.09, titleOccurrencesMax: 1, searchboxCountExpected: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: false },
+  history: { firstContentTopRatioMax: 0.67, titleOccurrencesMax: 1, searchboxCountExpected: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: false },
+  subscriptions: { firstContentTopRatioMax: 0.28, titleOccurrencesMax: 1, searchboxCountExpected: 1, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: false },
+  settings: { firstContentTopRatioMax: 0.07, titleOccurrencesMax: 1, searchboxCountExpected: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: false },
+  contact: { firstContentTopRatioMax: 0.1, titleOccurrencesMax: 1, searchboxCountExpected: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: false },
   // `/about`: метка стоит на `AboutIntroCard isPageHeading` (H1 «О проекте»)
   // — первый смысловой текстовый блок ПОСЛЕ `HeroBanner`+`StatsBanner`+
   // `CategoriesShowcase`. Три секции-баннера перед H1 — честная причина
   // ~293%, см. §9 дока и разбор в отчёте задачи.
-  about: { firstContentTopRatioMax: 3.14, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: false },
-  userpoints: { firstContentTopRatioMax: 0.17, titleOccurrencesMax: 1, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: false },
+  about: { firstContentTopRatioMax: 3.14, titleOccurrencesMax: 1, searchboxCountExpected: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: false },
+  userpoints: { firstContentTopRatioMax: 0.17, titleOccurrencesMax: 1, searchboxCountExpected: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, darkBottomThemeException: 'Raster map tiles can contain light terrain in the sampled zone; the themed Leaflet container before delayed/failed tiles is checked separately (#2302 p5).', unlabeledInteractiveMax: 0, brandRowExpected: false },
   // #2147: экран прохождения квеста, гость, три состояния (см. `QUEST_RUN_BUDGET`).
   ...QUEST_RUN_BUDGET_ENTRIES,
-  [TRIP_PLAN_SCREEN_KEY]: { firstContentTopRatioMax: 0.60, titleOccurrencesMax: 2, searchboxCountMax: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: false, unlabeledInteractiveMax: 0, brandRowExpected: false },
+  [TRIP_PLAN_SCREEN_KEY]: { firstContentTopRatioMax: 0.60, titleOccurrencesMax: 2, searchboxCountExpected: 0, ctaOccludedAllowed: false, darkBottomMatchesThemeExpected: true, unlabeledInteractiveMax: 0, brandRowExpected: false },
 }
 
 export function assertWithinBudget(metrics: ScreenMetrics, budget: ScreenBudget): string[] {
@@ -764,13 +774,13 @@ export function assertWithinBudget(metrics: ScreenMetrics, budget: ScreenBudget)
   if (metrics.titleOccurrences > budget.titleOccurrencesMax) {
     failures.push(`${label}: titleOccurrences было ≤${budget.titleOccurrencesMax}, стало ${metrics.titleOccurrences}`)
   }
-  if (metrics.searchboxCount > budget.searchboxCountMax) {
-    failures.push(`${label}: searchboxCount было ≤${budget.searchboxCountMax}, стало ${metrics.searchboxCount}`)
+  if (metrics.searchboxCount !== budget.searchboxCountExpected) {
+    failures.push(`${label}: searchboxCount ожидалось ${budget.searchboxCountExpected}, стало ${metrics.searchboxCount}`)
   }
   if (metrics.ctaOccluded != null && metrics.ctaOccluded !== budget.ctaOccludedAllowed) {
     failures.push(`${label}: ctaOccluded было ${budget.ctaOccludedAllowed}, стало ${metrics.ctaOccluded}`)
   }
-  if (metrics.darkBottomMatchesTheme != null && metrics.darkBottomMatchesTheme !== budget.darkBottomMatchesThemeExpected) {
+  if (!budget.darkBottomThemeException && metrics.darkBottomMatchesTheme != null && metrics.darkBottomMatchesTheme !== budget.darkBottomMatchesThemeExpected) {
     failures.push(
       `${label}: darkBottomMatchesTheme было ${budget.darkBottomMatchesThemeExpected}, стало ${metrics.darkBottomMatchesTheme}`
     )
@@ -967,6 +977,7 @@ async function collectMetrics(
     searchboxCount,
     ctaOccluded,
     darkBottomMatchesTheme: darkBottom ? darkBottom.matchesThemeBackground : null,
+    darkBottomSample: darkBottom,
     unlabeledInteractive,
     emptyCtaDockGap,
     brandRowVisible,

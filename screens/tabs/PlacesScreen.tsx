@@ -1,3 +1,4 @@
+import { searchInputAccessibilityProps } from '@/utils/webProps'
 import React, { useMemo } from 'react'
 import {
   Platform,
@@ -311,6 +312,7 @@ export default function PlacesScreen() {
                 <Feather name="search" size={18} color={colors.textMuted} />
               </View>
               <TextInput
+            {...searchInputAccessibilityProps()}
                 value={query}
                 onChangeText={handleQueryChange}
                 placeholder={i18nT('map:screens.tabs.PlacesScreen.poisk_po_nazvaniyu_ili_adresu_ef70caf8')}
@@ -440,6 +442,7 @@ export default function PlacesScreen() {
                   />
                 </View>
                 <TextInput
+            {...searchInputAccessibilityProps()}
                   value={categoryQuery}
                   onChangeText={setCategoryQuery}
                   placeholder={i18nT('map:screens.tabs.PlacesScreen.nayti_kategoriyu_9e5e9459')}
@@ -614,6 +617,7 @@ export default function PlacesScreen() {
             <Feather name="search" size={18} color={colors.textMuted} />
           </View>
           <TextInput
+            {...searchInputAccessibilityProps()}
             value={query}
             onChangeText={handleQueryChange}
             placeholder={i18nT('map:screens.tabs.PlacesScreen.poisk_mesta_642f16e6')}

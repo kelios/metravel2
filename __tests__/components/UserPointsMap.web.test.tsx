@@ -3,6 +3,11 @@ const { render, waitFor } = require('@testing-library/react-native')
 const RN = require('react-native')
 const originalPlatformOS = RN.Platform.OS
 RN.Platform.OS = 'web'
+let mockIsDark = false
+jest.mock('@/hooks/useTheme', () => ({
+  ...jest.requireActual('@/hooks/useTheme'),
+  useThemedColors: () => require('@/constants/designSystem').getThemedColors(mockIsDark),
+}))
 
 afterAll(() => {
   RN.Platform.OS = originalPlatformOS
@@ -92,3 +97,12 @@ test('UserPointsMap.web wires MapContainer via whenReady/ref and emits map UI ap
   expect(props?.whenCreated).toBeUndefined()
 })
 
+test.each([false, true])('uses the theme background on the actual Leaflet owner before tiles arrive (dark=%s)', async (isDark) => {
+  mockIsDark = isDark
+  const screen = render(<UserPointsMap points={[]} />)
+  await waitFor(() => {
+    const props = (globalThis as any).__lastUserPointsMapContainerProps
+    expect(props.style.background).toBe(require('@/constants/designSystem').getThemedColors(isDark).background)
+  })
+  screen.unmount()
+})

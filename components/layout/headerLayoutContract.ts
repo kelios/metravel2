@@ -1,7 +1,7 @@
 import { METRICS } from '@/constants/layout'
 
 /**
- * Shared responsive contract for the global web header.
+ * Shared responsive contract for the global header.
  *
  * The top row becomes compact below desktop, while HeaderContextBar keeps its
  * phone layout only below tablet. The outer header slot must therefore model

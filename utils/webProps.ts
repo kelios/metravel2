@@ -1,5 +1,5 @@
 import type React from 'react'
-import { Platform, type TextProps, type TextStyle, type ViewStyle } from 'react-native'
+import { Platform, type TextInputProps, type TextProps, type TextStyle, type ViewStyle } from 'react-native'
 
 type Booleanish = boolean | 'false' | 'true'
 
@@ -158,3 +158,7 @@ export const webTitleRef = <T = unknown>(title?: string | null): React.RefCallba
  * на телефоне, чтобы после гидратации контент не прыгал вверх.
  */
 export const SCREEN_HEADER_DESKTOP_PROPS = webDataSetProps({ screenHeader: 'desktop' })
+
+/** Search fields announce their purpose on both RN and the web DOM. */
+export const searchInputAccessibilityProps = (): TextInputProps =>
+  Platform.OS === 'web' ? { role: 'searchbox' } : { accessibilityRole: 'search' }

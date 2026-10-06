@@ -1,3 +1,4 @@
+import { searchInputAccessibilityProps } from '@/utils/webProps'
 import React from 'react'
 import { Platform, StyleSheet, Text, TextInput, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
@@ -255,6 +256,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
         <View style={local.searchField}>
           <Feather name="search" size={16} color={colors.textMuted} />
           <TextInput
+            {...searchInputAccessibilityProps()}
             style={[styles.searchInput, local.searchInput]}
             placeholder={i18nT('map:components.UserPoints.PointsListHeader.poisk_po_nazvaniyu_80c6e794')}
             value={searchQuery}

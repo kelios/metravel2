@@ -270,9 +270,9 @@ Load-bearing web-контракт. На мобильном web поверх ко
 
 **Кто пишет переменные**
 
-- `--mt-dock-h` — статически в `app/global.css:477`: `0px` на desktop и
+- `--mt-dock-h` — статически в `app/global.css`: `0px` на desktop и
   `calc(56px + env(safe-area-inset-bottom, 0px))` при `max-width: 1023px`.
-  Ничего в рантайме её не выставляет.
+  На экранах с `data-mt-dock="off"` CSS обнуляет резерв. Ничего в рантайме её не выставляет.
 - `--mt-consent-h` — динамически, через `utils/bottomChromeReserve.ts`.
   Владельцы регистрируются по имени (`setBottomChromeReserve(owner, px)` /
   `releaseBottomChromeReserve(owner)`), в CSS уходит **максимум** по всем
@@ -294,7 +294,10 @@ Load-bearing web-контракт. На мобильном web поверх ко
 
 - Единственный способ — хуки из `components/layout/bottomChromeInset.tsx`
   (#2097): `useBottomChromeInset()`, `useScrollBottomPadding(extra)`,
-  `useDockReservePx()` для позиции самой плашки. `LAYOUT.tabBarHeight` и
+  `useDockReservePx()` для числового резерва самой плашки. На web он измеряет
+  тот же `--mt-dock-h` общим CSS-пробником, подписанным на смену dock-маркера и
+  размер окна; до SSR-коммита — 0. Для web-позиции consent/install/toast используйте
+  `webDockReserve(extra)` (dock-only, без собственного `--mt-consent-h`). `LAYOUT.tabBarHeight` и
   `BOTTOM_DOCK_HEIGHT` снаружи модуля дока не читаются (`npm run guard:bottom-chrome-inset`).
 - На web хук возвращает `calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)))`.
   Голая переменная без `max()` уменьшает существующий отступ на desktop, где она `0px`.

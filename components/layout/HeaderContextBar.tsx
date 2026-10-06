@@ -77,7 +77,7 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const colors = useThemedColors();
-  const { isPhone, isLargePhone, width } = useResponsive();
+  const { isPhone, isLargePhone, width } = useResponsive({ clientOnly: true });
   const isMobile = resolveHeaderContextBarIsMobile({ width, isPhone, isLargePhone });
   const requestOpen = useTravelSectionsStore((s) => s.requestOpen);
   // Бар монтируется только после гидратации (CustomHeader держит его за

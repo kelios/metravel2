@@ -63,6 +63,45 @@ const ROUTES_FULL: string[] = [
 const ROUTES_LOCAL_DEFAULT: string[] = ['/', '/travelsby', '/roulette'];
 
 test.describe('@perf CLS audit', () => {
+  // #2331: source regression for the late context-bar mount. Desktop execution
+  // is deferred when the current acceptance scope is mobile web only.
+  for (const width of [1024, 1280, 1440]) {
+    test(`late header context keeps its hydration geometry @ ${width}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await preacceptCookies(page);
+      await page.addInitScript(() => {
+        const state = { heights: [] as number[], headerShifts: [] as number[] };
+        (window as any).__headerHydration = state;
+        const sample = () => {
+          const header = document.querySelector('[data-testid="main-header"]');
+          const height = header?.getBoundingClientRect().height ?? 0;
+          if (height > 0) state.heights.push(height);
+          (window as any).__headerHydrationFrame = requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+        const observer = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries() as any[]) {
+            if (entry.hadRecentInput) continue;
+            if (entry.sources?.some((source: any) => source.node instanceof Element &&
+              source.node.closest('[data-testid="main-header"]'))) state.headerShifts.push(entry.value);
+          }
+        });
+        observer.observe({ type: 'layout-shift', buffered: true });
+      });
+      await page.goto('/app', { waitUntil: 'domcontentloaded' });
+      await expect(page.getByTestId('header-context-bar')).toBeVisible();
+      const state = await page.evaluate(async () => {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        cancelAnimationFrame((window as any).__headerHydrationFrame);
+        return (window as any).__headerHydration as { heights: number[]; headerShifts: number[] };
+      });
+      expect(state.heights.length).toBeGreaterThan(1);
+      expect(Math.max(...state.heights) - Math.min(...state.heights)).toBeLessThanOrEqual(0.5);
+      if (width === 1280) expect(state.heights.at(-1)).toBe(124);
+      expect(state.headerShifts).toEqual([]);
+    });
+  }
+
   test('audit core routes (clsTotal / clsAfterRender)', async ({ page }, testInfo) => {
     // This audit can take a while on dev servers (cold start / heavy routes).
     test.setTimeout(5 * 60_000);

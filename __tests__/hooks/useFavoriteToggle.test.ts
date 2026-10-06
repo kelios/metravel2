@@ -37,14 +37,14 @@ describe('useFavoriteToggle', () => {
     ;(Platform as any).OS = originalOS
   })
 
-  it('adds, toasts «Добавлено в избранное» with undo, and undo removes', async () => {
+  it('adds, toasts «Добавлено в «Хочу поехать»» with undo, and undo removes', async () => {
     const { result } = renderHook(() => useFavoriteToggle())
     await act(async () => {
       expect(await result.current.toggle(target)).toBe('success')
     })
     expect(mockAdd).toHaveBeenCalledWith(expect.objectContaining({ id: 7, type: 'travel', url: '/travels/t' }))
     const payload = toast.mock.calls[0][0]
-    expect(payload).toMatchObject({ type: 'success', text1: 'Добавлено в избранное' })
+    expect(payload).toMatchObject({ type: 'success', text1: 'Добавлено в «Хочу поехать»' })
     await act(async () => {
       payload.action.onPress()
     })
@@ -59,7 +59,7 @@ describe('useFavoriteToggle', () => {
     })
     expect(mockRemove).toHaveBeenCalledWith(7, 'travel')
     const payload = toast.mock.calls[0][0]
-    expect(payload.text1).toBe('Удалено из избранного')
+    expect(payload.text1).toBe('Удалено из «Хочу поехать»')
     await act(async () => {
       payload.action.onPress()
     })
@@ -72,7 +72,7 @@ describe('useFavoriteToggle', () => {
     await act(async () => {
       expect(await result.current.toggle(target)).toBe('error')
     })
-    expect(toast.mock.calls[0][0]).toMatchObject({ type: 'error', text1: 'Не удалось обновить избранное' })
+    expect(toast.mock.calls[0][0]).toMatchObject({ type: 'error', text1: 'Не удалось обновить «Хочу поехать»' })
   })
 
   it('ignores a double tap while the first is in flight', async () => {
@@ -118,7 +118,7 @@ describe('useFavoriteToggle', () => {
       rerender({})
     })
     expect(mockAdd).toHaveBeenCalledTimes(1)
-    expect(toast.mock.calls[0][0].text1).toBe('Добавлено в избранное')
+    expect(toast.mock.calls[0][0].text1).toBe('Добавлено в «Хочу поехать»')
   })
 
   it('!authReady then guest: the replay opens sign-in', async () => {

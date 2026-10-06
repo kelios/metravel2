@@ -40,7 +40,7 @@ describe('FavoriteButton: оба варианта дают один и тот ж
     fireEvent.press(getByLabelText(/Добавить/))
     await waitFor(() => expect(showToast).toHaveBeenCalled())
     const payload = (showToast as jest.Mock).mock.calls[0][0]
-    expect(payload.text1).toBe('Добавлено в избранное')
+    expect(payload.text1).toBe('Добавлено в «Хочу поехать»')
     expect(payload.action?.label).toBe('Отменить')
   })
 

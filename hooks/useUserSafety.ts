@@ -33,6 +33,7 @@ import {
   toAuthorId,
   type BlockSnapshot,
 } from '@/api/blockSensitiveQueries'
+import { useAuthStore } from '@/stores/authStore'
 import { useQueryOwner } from '@/hooks/useQueryOwner'
 import { showToast } from '@/utils/toast'
 import { translate as i18nT } from '@/i18n'
@@ -56,10 +57,11 @@ export function useReportReasons() {
 
 export function useBlockedUsers(enabled = true) {
   const owner = useQueryOwner()
+  const authReady = useAuthStore((state) => state.authReady)
   return useQuery<UserProfileDto[]>({
     queryKey: queryKeys.myBlockedUsers(owner),
     queryFn: fetchBlockedUsers,
-    enabled,
+    enabled: enabled && authReady && owner !== null,
     staleTime: STALE_TIME,
     retry,
   })

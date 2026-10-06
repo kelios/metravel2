@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { View, Text, Pressable, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import { goBackOrReplace } from '@/utils/backNavigation';
 import { useRouter, useIsFocused } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
@@ -68,7 +69,7 @@ export default function SecurityJournalScreen() {
                             </View>
                             <Pressable
                                 style={[styles.backToProfileButton, globalFocusStyles.focusable]}
-                                onPress={() => router.back()}
+                                onPress={() => goBackOrReplace(router, '/profile')}
                                 accessibilityRole="button"
                                 accessibilityLabel={i18nT('profile:app.security_journal.nazad_2e1d6be6')}
                                 {...Platform.select({ web: { cursor: 'pointer' } })}

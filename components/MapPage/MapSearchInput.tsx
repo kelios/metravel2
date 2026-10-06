@@ -1,3 +1,4 @@
+import { searchInputAccessibilityProps } from '@/utils/webProps'
 /**
  * MapSearchInput - поисковое поле для фильтрации мест на карте по названию
  */
@@ -159,6 +160,7 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
       >
         <Feather name="search" size={16} color={colors.textMuted} style={styles.searchIcon} />
         <FocusableInput
+          {...searchInputAccessibilityProps()}
           ref={inputRef}
           testID={testID}
           style={styles.input}

@@ -390,3 +390,15 @@ describe('глоссарий терминов интерфейса (#2180, #2188
     expect(violations).toEqual([])
   })
 })
+
+it.each(['ru', 'be', 'uk', 'pl', 'en'] as const)('uses the same wishlist name in common feedback and travel buttons: %s', (locale) => {
+  const common = resources[locale].common as Record<string, string>
+  const travel = resources[locale].travel as Record<string, string>
+  const profile = resources[locale].profile as Record<string, string>
+  const name = profile['components.profile.ProfileTabs.hochu_poehat_6d285e47']
+  expect(common['feedback.favoriteAdded']).toBe(travel['components.travel.FavoriteButton.dobavleno_v_hochu_poehat_442a2566'])
+  expect(common['feedback.favoriteRemoved']).toBe(travel['components.travel.FavoriteButton.udaleno_iz_hochu_poehat_3ea076cb'])
+  for (const key of ['feedback.favoriteAdded', 'feedback.favoriteRemoved', 'feedback.favoriteError']) expect(common[key]).toContain(name)
+  expect(common['feedback.favoriteAdded']).not.toMatch(/избранн|абран|обран|ulubion|favorites/i)
+  expect(common['feedback.favoriteRemoved']).not.toMatch(/избранн|абран|обран|ulubion|favorites/i)
+})

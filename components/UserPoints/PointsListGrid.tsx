@@ -1,3 +1,4 @@
+import { searchInputAccessibilityProps } from '@/utils/webProps'
 import React, { useMemo } from 'react'
 import { Platform, View, ScrollView, TextInput, Text as RNText, RefreshControl } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
@@ -281,6 +282,7 @@ export const PointsListGrid: React.FC<{
       <>
         <View style={localStyles.listControlsRow}>
           <TextInput
+            {...searchInputAccessibilityProps()}
             style={localStyles.listSearchInput as any}
             value={searchQuery}
             onChangeText={onSearch}

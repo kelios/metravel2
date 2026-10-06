@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNode } from 'react'
 import { Platform } from 'react-native'
 
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
@@ -23,6 +23,64 @@ export const WEB_BOTTOM_CHROME_INSET =
   'calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)))'
 
 const BottomChromeInsetContext = createContext<number | null>(null)
+
+/** The dock itself must not include the banners' own --mt-consent-h reserve. */
+export function webDockReserve(extra = 0): string {
+  return `calc(var(--mt-dock-h, 0px) + ${extra}px)`
+}
+
+let webDockHeight = 0
+const webDockListeners = new Set<() => void>()
+let stopWebDockMeasurement: (() => void) | null = null
+
+const subscribeWebDock = (listener: () => void): (() => void) => {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return () => {}
+  webDockListeners.add(listener)
+  if (!stopWebDockMeasurement) {
+    // Let the browser resolve calc()/env() rather than duplicating media-query,
+    // route visibility or safe-area rules in JS. One shared probe for all callers.
+    const probe = document.createElement('div')
+    probe.setAttribute('data-mt-dock-measure', '')
+    probe.style.cssText = 'position:fixed;width:0;visibility:hidden;pointer-events:none;'
+    probe.style.height = 'var(--mt-dock-h, 0px)'
+    const measure = () => {
+      const next = Math.max(0, probe.getBoundingClientRect().height)
+      if (next === webDockHeight) return
+      webDockHeight = next
+      webDockListeners.forEach((notify) => notify())
+    }
+    const body = document.body
+    body.appendChild(probe)
+    const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+    resizeObserver?.observe(probe)
+    const containsDockMarker = (node: Node) => node instanceof Element &&
+      (node.matches('[data-mt-dock]') || node.querySelector('[data-mt-dock]') !== null)
+    const mutationObserver = new MutationObserver((mutations) => {
+      if (mutations.some((mutation) => mutation.type === 'attributes' ||
+        [...mutation.addedNodes, ...mutation.removedNodes].some(containsDockMarker))) measure()
+    })
+    mutationObserver.observe(body, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-mt-dock'] })
+    window.addEventListener('resize', measure)
+    measure()
+    stopWebDockMeasurement = () => {
+      resizeObserver?.disconnect()
+      mutationObserver.disconnect()
+      window.removeEventListener('resize', measure)
+      probe.remove()
+      webDockHeight = 0
+    }
+  }
+  return () => {
+    webDockListeners.delete(listener)
+    if (webDockListeners.size === 0) {
+      stopWebDockMeasurement?.()
+      stopWebDockMeasurement = null
+    }
+  }
+}
+
+const getWebDockSnapshot = () => webDockHeight
+const getServerDockSnapshot = () => 0
 
 export function webBottomChromeInset(extra = 0): string {
   if (!extra) return WEB_BOTTOM_CHROME_INSET
@@ -52,14 +110,15 @@ export function BottomChromeInsetProvider({
 /**
  * Высота дока в пикселях для позиций самих плашек (consent, install), которым
  * нужна числовая величина, а не CSS max() с их собственным резервом.
- * Web: константа дока (safe-area уже внутри `--mt-dock-h`, insets.bottom = 0).
+ * Web: измерение того же CSS --mt-dock-h, включая calc/env и dock-off.
  * Native: измеренная высота, включая safe-area; 0 если док скрыт.
  */
 export function useDockReservePx(): number {
   const measuredHeight = useContext(BottomChromeInsetContext)
   const insets = useSafeAreaInsetsSafe()
+  const webHeight = useSyncExternalStore(subscribeWebDock, getWebDockSnapshot, getServerDockSnapshot)
 
-  if (Platform.OS === 'web') return BOTTOM_DOCK_HEIGHT
+  if (Platform.OS === 'web') return webHeight
   if (measuredHeight === 0) return 0
   if (measuredHeight == null) {
     return BOTTOM_DOCK_HEIGHT + Math.max(0, insets.bottom || 0)

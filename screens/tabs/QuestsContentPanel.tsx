@@ -1,3 +1,4 @@
+import { searchInputAccessibilityProps } from '@/utils/webProps'
 import { Suspense, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -369,6 +370,7 @@ function QuestsContentPanel({
     <View style={styles.searchRow}>
         <Feather name="search" size={16} color={colors.textMuted} />
         <TextInput
+            {...searchInputAccessibilityProps()}
             style={styles.searchInput}
             value={searchQuery}
             onChangeText={onSearchChange}

@@ -1,3 +1,4 @@
+import { searchInputAccessibilityProps } from '@/utils/webProps'
 import { memo, useCallback, useMemo, useState, type ReactElement } from 'react';
 import { View, StyleSheet, Pressable, FlatList, ActivityIndicator, TextInput, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
@@ -158,6 +159,7 @@ function ThreadList({
                 <View style={[styles.searchContainer, { borderColor: colors.borderLight, backgroundColor: colors.backgroundSecondary }]}>
                     <Feather name="search" size={16} color={colors.textMuted} />
                     <TextInput
+            {...searchInputAccessibilityProps()}
                         style={[styles.searchInput, { color: colors.text }]}
                         value={search}
                         onChangeText={setSearch}

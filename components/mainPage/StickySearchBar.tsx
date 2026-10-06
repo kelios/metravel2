@@ -1,3 +1,4 @@
+import { searchInputAccessibilityProps } from '@/utils/webProps'
 // StickySearchBar.tsx
 // ✅ НОВЫЙ КОМПОНЕНТ: Sticky поисковая строка с быстрыми действиями
 
@@ -257,6 +258,7 @@ function StickySearchBar({
             />
           </View>
           <TextInput
+            {...searchInputAccessibilityProps()}
             ref={inputRef}
             value={search}
             onChangeText={onSearchChange}

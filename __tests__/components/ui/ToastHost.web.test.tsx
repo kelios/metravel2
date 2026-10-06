@@ -5,6 +5,8 @@ import { WEB_TOAST_EVENT_NAME } from '@/utils/toast.web';
 
 describe('ToastHost (web)', () => {
   it('does not let the global #root min-height:100vh stretch the toast container', async () => {
+    // jsdom cannot parse CSS var() dimensions; retain the actual style assignment.
+    const bottomAssignment = jest.spyOn(CSSStyleDeclaration.prototype, 'bottom', 'set');
     const { container } = render(<ToastHost />);
 
     act(() => {
@@ -23,7 +25,8 @@ describe('ToastHost (web)', () => {
     // sizes to the card and stays at the bottom edge.
     expect(host?.style.minHeight).toBe('0');
     expect(host?.style.position).toBe('fixed');
-    expect(host?.style.bottom).toBe('72px');
+    expect(bottomAssignment).toHaveBeenCalledWith('calc(var(--mt-dock-h, 0px) + 16px)');
+    bottomAssignment.mockRestore();
   });
 
   it('renders an action button («Отменить») that runs the action', () => {

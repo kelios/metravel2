@@ -383,7 +383,7 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
         center={[center.lat, center.lng]}
         zoom={safePoints.length > 0 ? 10 : 5}
         whenReady={handleWhenReady}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: '100%', width: '100%', background: colors.background }}
       >
 	        <WebMapInstanceBinder useMap={mods.useMap} onMapReady={handleMapReady} />
 	        <WebMapAutoResize useMap={mods.useMap} />
