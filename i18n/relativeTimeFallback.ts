@@ -1,4 +1,5 @@
 import type { SupportedLocale } from './config'
+import { resolveIntlLanguageTag } from './intlSupport'
 import { selectPluralCategory } from './pluralRules'
 
 /**
@@ -211,7 +212,8 @@ const formatMagnitude = (magnitude: number, languageTag: string): string => {
 
   let formatter = numberFormatCache.get(languageTag)
   if (!formatter) {
-    formatter = new Intl.NumberFormat(languageTag)
+    // Число — форматом RU, если движок не знает локаль (BE в Chromium, #2283).
+    formatter = new Intl.NumberFormat(resolveIntlLanguageTag('NumberFormat', languageTag))
     numberFormatCache.set(languageTag, formatter)
   }
   return formatter.format(magnitude)

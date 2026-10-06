@@ -41,8 +41,28 @@ function getPluralRules(locale) {
   return rules;
 }
 
+// #2283: без данных локали `Intl.PluralRules` молча берёт правила хоста
+// (английские «one/other» вместо «few/many»). Поддержку спрашиваем явно; если
+// данных нет, работают собственные правила ниже, как на Hermes.
+const pluralSupportCache = new Map();
+
+function hasPluralRulesData(locale) {
+  const cached = pluralSupportCache.get(locale);
+  if (cached !== undefined) return cached;
+  let supported = true;
+  if (typeof Intl.PluralRules.supportedLocalesOf === 'function') {
+    try {
+      supported = Intl.PluralRules.supportedLocalesOf([locale]).length > 0;
+    } catch {
+      supported = false;
+    }
+  }
+  pluralSupportCache.set(locale, supported);
+  return supported;
+}
+
 function selectPluralCategory(count, locale) {
-  if (typeof Intl.PluralRules === 'function') {
+  if (typeof Intl.PluralRules === 'function' && hasPluralRulesData(locale)) {
     return getPluralRules(locale).select(count);
   }
 

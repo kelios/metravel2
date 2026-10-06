@@ -99,10 +99,13 @@ const OPTIONAL_INTL_CONSTRUCTORS = ['ListFormat', 'PluralRules', 'RelativeTimeFo
 // Present on Hermes, so a formatter may construct them unguarded.
 const REQUIRED_INTL_CONSTRUCTORS = ['Collator', 'DateTimeFormat', 'NumberFormat'] as const
 
-// The canonical formatting layer: `i18n/format.ts` plus the two modules it
-// leans on for the constructors Hermes does not carry.
+// The canonical formatting layer: `i18n/format.ts` plus the modules it leans
+// on for the constructors Hermes does not carry and for locale data an engine
+// lacks (#2283: `be` in Chromium).
 const CANONICAL_FORMAT_SOURCES = [
   'i18n/format.ts',
+  'i18n/beDateFormat.ts',
+  'i18n/intlSupport.ts',
   'i18n/pluralRules.js',
   'i18n/relativeTimeFallback.ts',
 ] as const

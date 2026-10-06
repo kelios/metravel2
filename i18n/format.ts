@@ -5,6 +5,8 @@ import {
   isSupportedLocale,
   type SupportedLocale,
 } from './config'
+import { formatBelarusianDate } from './beDateFormat'
+import { isIntlLocaleSupported, resolveIntlLanguageTag } from './intlSupport'
 import { selectPluralCategory } from './pluralRules'
 import { formatRelativeTimeFallback } from './relativeTimeFallback'
 
@@ -76,7 +78,7 @@ const getDateTimeFormat = (
   options: Intl.DateTimeFormatOptions = {},
   locale: SupportedLocale = getActiveLocale(),
 ): Intl.DateTimeFormat => {
-  const languageTag = getFormatLocale(locale)
+  const languageTag = resolveIntlLanguageTag('DateTimeFormat', getFormatLocale(locale))
   return getCachedFormatter(
     'datetime',
     languageTag,
@@ -85,11 +87,15 @@ const getDateTimeFormat = (
   )
 }
 
+// Без данных локали в движке числа идут форматом RU, не локалью хоста
+// (#2283). Для BE это совпадает с CLDR `be` во всём, что печатает приложение
+// (группы, десятичная запятая, компактное «тыс.», проценты); расходятся только
+// символ BYN («Br» против «BYN») и длинные названия единиц — их call site'ов нет.
 const getNumberFormat = (
   options: Intl.NumberFormatOptions = {},
   locale: SupportedLocale = getActiveLocale(),
 ): Intl.NumberFormat => {
-  const languageTag = getFormatLocale(locale)
+  const languageTag = resolveIntlLanguageTag('NumberFormat', getFormatLocale(locale))
   return getCachedFormatter(
     'number',
     languageTag,
@@ -98,11 +104,30 @@ const getNumberFormat = (
   )
 }
 
+/**
+ * Свои данные дат для локалей, которых нет в распространённых движках (#2283):
+ * Chromium не несёт `be`, и без этого BE-дата печаталась локалью хоста.
+ * Используются, только когда `Intl.DateTimeFormat` локаль не знает.
+ */
+const OWN_DATE_FORMATTERS: Partial<
+  Record<SupportedLocale, (date: Date, options: Intl.DateTimeFormatOptions) => string | null>
+> = {
+  be: formatBelarusianDate,
+}
+
 export const formatDate = (
   value: Date | number | string,
   options: Intl.DateTimeFormatOptions = {},
   locale: SupportedLocale = getActiveLocale(),
-): string => getDateTimeFormat(options, locale).format(new Date(value))
+): string => {
+  const date = new Date(value)
+  const ownFormatter = OWN_DATE_FORMATTERS[locale]
+  if (ownFormatter && !isIntlLocaleSupported('DateTimeFormat', getFormatLocale(locale))) {
+    const formatted = ownFormatter(date, options)
+    if (formatted !== null) return formatted
+  }
+  return getDateTimeFormat(options, locale).format(date)
+}
 
 export const formatDateTime = (
   value: Date | number | string,
@@ -185,8 +210,11 @@ export const formatRelativeTime = (
   options: Intl.RelativeTimeFormatOptions = { numeric: 'auto' },
   locale: SupportedLocale = getActiveLocale(),
 ): string => {
-  if (typeof Intl.RelativeTimeFormat === 'function') {
-    const languageTag = getFormatLocale(locale)
+  const languageTag = getFormatLocale(locale)
+  if (
+    typeof Intl.RelativeTimeFormat === 'function' &&
+    isIntlLocaleSupported('RelativeTimeFormat', languageTag)
+  ) {
     return getCachedFormatter(
       'relativetime',
       languageTag,
@@ -194,7 +222,8 @@ export const formatRelativeTime = (
       () => new Intl.RelativeTimeFormat(languageTag, options),
     ).format(value, unit)
   }
-  return formatRelativeTimeFallback(value, unit, options, locale, getFormatLocale(locale))
+  // Нет конструктора (Hermes) или данных локали (BE в Chromium) — CLDR-таблица.
+  return formatRelativeTimeFallback(value, unit, options, locale, languageTag)
 }
 
 export const formatList = (
@@ -202,8 +231,8 @@ export const formatList = (
   options: Intl.ListFormatOptions = { style: 'long', type: 'conjunction' },
   locale: SupportedLocale = getActiveLocale(),
 ): string => {
-  if (typeof Intl.ListFormat === 'function') {
-    const languageTag = getFormatLocale(locale)
+  const languageTag = getFormatLocale(locale)
+  if (typeof Intl.ListFormat === 'function' && isIntlLocaleSupported('ListFormat', languageTag)) {
     return getCachedFormatter(
       'list',
       languageTag,
@@ -211,6 +240,7 @@ export const formatList = (
       () => new Intl.ListFormat(languageTag, options),
     ).format(values)
   }
+  // Нейтральная склейка вместо союза чужого языка (хоста или RU).
   return values.join(', ')
 }
 
@@ -218,7 +248,9 @@ export const createCollator = (
   options: Intl.CollatorOptions = {},
   locale: SupportedLocale = getActiveLocale(),
 ): Intl.Collator => {
-  const languageTag = getFormatLocale(locale)
+  // Порядок RU совпадает с BE: корневая сортировка ставит «і» после «и»/перед
+  // «й» и «ў» после «у», как в белорусском алфавите.
+  const languageTag = resolveIntlLanguageTag('Collator', getFormatLocale(locale))
   return getCachedFormatter(
     'collator',
     languageTag,
