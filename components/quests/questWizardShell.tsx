@@ -312,7 +312,7 @@ function QuestProgressSummary({
         </Text>
       )}
       {showBreakdown && countModel.source === 'explicit' && (
-        <Text style={styles.progressText}>
+        <Text style={styles.progressBreakdownText}>
           {i18nT('quests:components.quests.questWizardShell.countBreakdown', {
             total: countModel.total,
             required: countModel.required,

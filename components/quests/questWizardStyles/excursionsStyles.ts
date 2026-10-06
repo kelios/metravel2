@@ -115,4 +115,15 @@ export const createExcursionsStyles = (colors: QuestColors, isMobile: boolean, s
         alignSelf: 'stretch',
         maxWidth: isMobile ? screenW - 64 : undefined,
     },
+    // Рассказ финала — несколько абзацев: центрированный длинный текст читается
+    // рваным краем, поэтому история идёт от левого края колонки финала.
+    finaleStoryText: {
+        textAlign: 'left',
+    },
+    // Кнопка «Поделиться» стоит между значком/заголовком и видео: без своих
+    // отступов она прилипала к карточке «Первопроходец» и к кадру видео.
+    finaleShareButton: {
+        marginTop: SPACING.sm,
+        marginBottom: isMobile ? SPACING.lg : SPACING.xl,
+    },
 } as const);

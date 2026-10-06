@@ -435,7 +435,7 @@ function QuestFinaleShareAction({
   return (
     <>
       <Pressable
-        style={styles.primaryButton}
+        style={[styles.primaryButton, styles.finaleShareButton]}
         onPress={() => setShareVisible(true)}
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -636,7 +636,7 @@ export function QuestFinalePanel({
             </View>
           )}
 
-          <Text style={styles.completionText}>{finale.text}</Text>
+          <Text style={[styles.completionText, styles.finaleStoryText]}>{finale.text}</Text>
 
           {/* «Прошли N человек, включая вас» — тоже про засчитанное прохождение:
               при частичном игрока в этот счётчик бэкенд не берёт. */}

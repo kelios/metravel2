@@ -147,6 +147,16 @@ export const createHeaderStyles = (colors: QuestColors, isMobile: boolean, _scre
         fontWeight: '700',
         letterSpacing: -0.1,
     },
+    // Разбор «маршрут · обязательные · по желанию…» — длинная строка, в узкой
+    // колонке переносится; прижатая вправо, она рассыпалась рваными хвостами.
+    progressBreakdownText: {
+        marginTop: 2,
+        fontSize: 11,
+        lineHeight: 15,
+        color: colors.textMuted,
+        textAlign: 'left',
+        fontWeight: '500',
+    },
     headerActionRow: {
         flex: 1,
         minWidth: 0,

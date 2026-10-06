@@ -53,7 +53,7 @@ export const createMediaStyles = (colors: QuestColors, isMobile: boolean, screen
         backgroundColor: colors.text,
         borderRadius: 12,
         overflow: 'hidden',
-        marginBottom: SPACING.md,
+        marginBottom: isMobile ? SPACING.md : SPACING.lg,
         position: 'relative',
     },
     videoFallbackOverlay: {
