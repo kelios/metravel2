@@ -129,8 +129,6 @@ export const errorsGenerated1 = {
   "utils.travelWizardValidation.dobavte_glavnoe_izobrazhenie_9fc0ee73": "Дадайце галоўную выяву",
   "utils.travelWizardValidation.dobavte_minimum_3_foto_v_galereyu_f7e7a6c1": "Дадайце мінімум 3 фота ў галерэю",
   "utils.travelWizardValidation.dobavte_rekomendatsii_a9facebb": "Дадайце рэкамендацыі",
-  "utils.travelWizardValidation.element_c7ec4fb7": "элемент",
-  "utils.travelWizardValidation.elementa_fb75a182": "элемента",
   "utils.travelWizardValidation.opishite_minusy_puteshestviya_c5391d5f": "Апішыце мінусы падарожжа",
   "utils.travelWizardValidation.opishite_plyusy_puteshestviya_02447f46": "Апішыце плюсы падарожжа",
   "utils.travelWizardValidation.rekomenduetsya_zapolnit_value1_52401d05": "Рэкамендуецца запоўніць: {{value1}}",

@@ -80,7 +80,62 @@ const keyOfCall = (node: ts.Node | undefined): string | undefined => {
 
 type SplitSet = { file: string; keys: Partial<Record<Category, string>> }
 
-const collectSplitSetsFrom = (relative: string, text: string): SplitSet[] => {
+// Рукописная форма наследия 3: `n === 1 ? i18nT(k1) : n < 5 ? i18nT(k2) : i18nT(k3)` —
+// сравнение счётчика с числом и ключи перевода в ветках (#2238, QuickFacts «2 day»).
+const COMPARISON = new Set([
+  ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.EqualsEqualsToken,
+  ts.SyntaxKind.ExclamationEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsToken,
+  ts.SyntaxKind.LessThanToken, ts.SyntaxKind.LessThanEqualsToken,
+  ts.SyntaxKind.GreaterThanToken, ts.SyntaxKind.GreaterThanEqualsToken,
+])
+const isCountConditional = (node: ts.Node): node is ts.ConditionalExpression => {
+  if (!ts.isConditionalExpression(node)) return false
+  let condition: ts.Expression = node.condition
+  while (ts.isParenthesizedExpression(condition)) condition = condition.expression
+  return ts.isBinaryExpression(condition) && COMPARISON.has(condition.operatorToken.kind)
+    && (ts.isNumericLiteral(condition.left) || ts.isNumericLiteral(condition.right))
+}
+// Признак ручного правила числа: в цепочке есть сравнение с 1 и либо с 2–5 (граница
+// «few»), либо ветки дают однословное существительное без подстановки — подпись к
+// числу («1 фото» / «5 фото», PDF FinalPageRenderer). «Пусто / не пусто», пороги
+// прогресса (25, 50…) и фразы «Квест по этому городу» / «Квесты…» наборами не считаются.
+const conditionLiterals = (node: ts.Expression): number[] => {
+  let branch: ts.Expression = node
+  while (ts.isParenthesizedExpression(branch)) branch = branch.expression
+  if (!isCountConditional(branch)) return []
+  let condition: ts.Expression = branch.condition
+  while (ts.isParenthesizedExpression(condition)) condition = condition.expression
+  const { left, right } = condition as ts.BinaryExpression
+  const literal = ts.isNumericLiteral(left) ? left : (right as ts.NumericLiteral)
+  return [Number(literal.text), ...conditionLiterals(branch.whenTrue), ...conditionLiterals(branch.whenFalse)]
+}
+const isNounForm = (fullKey: string, ruValue: (key: string) => string | undefined): boolean => {
+  const value = ruValue(fullKey)
+  return typeof value === 'string' && /^[^\s{}]+$/.test(value.trim())
+}
+const isHandWrittenPluralRule = (
+  node: ts.ConditionalExpression,
+  keys: string[],
+  ruValue: (key: string) => string | undefined,
+): boolean => {
+  const literals = conditionLiterals(node)
+  if (!literals.includes(1)) return false
+  return literals.some((value) => value >= 2 && value <= 5)
+    || (keys.length >= 2 && keys.every((key) => isNounForm(key, ruValue)))
+}
+const conditionalKeys = (node: ts.Expression): string[] => {
+  let branch: ts.Expression = node
+  while (ts.isParenthesizedExpression(branch)) branch = branch.expression
+  if (isCountConditional(branch)) return [...conditionalKeys(branch.whenTrue), ...conditionalKeys(branch.whenFalse)]
+  const key = keyOfCall(branch)
+  return key ? [key] : []
+}
+
+const collectSplitSetsFrom = (
+  relative: string,
+  text: string,
+  ruValue: (key: string) => string | undefined = (key) => lookup('ru', key),
+): SplitSet[] => {
   const sets: SplitSet[] = []
   const source = ts.createSourceFile(relative, text, ts.ScriptTarget.Latest, true)
   const visit = (node: ts.Node) => {
@@ -103,6 +158,14 @@ const collectSplitSetsFrom = (relative: string, text: string): SplitSet[] => {
       }
       if (Object.keys(keys).length >= 2) sets.push({ file: relative, keys })
     }
+    if (isCountConditional(node) && !(ts.isConditionalExpression(node.parent) && isCountConditional(node.parent))) {
+      const chain = conditionalKeys(node)
+      if (chain.length >= 2 && isHandWrittenPluralRule(node, chain, ruValue)) {
+        const keys: Partial<Record<Category, string>> = {}
+        chain.forEach((key, index) => { keys[CATEGORIES[Math.min(index, CATEGORIES.length - 1)]] = key })
+        sets.push({ file: relative, keys })
+      }
+    }
     ts.forEachChild(node, visit)
   }
   visit(source)
@@ -112,7 +175,7 @@ const collectSplitSetsFrom = (relative: string, text: string): SplitSet[] => {
 const collectSplitSets = (): SplitSet[] =>
   SOURCE_ROOTS.flatMap((root) => walk(path.join(ROOT, root))).flatMap((file) => {
     const text = fs.readFileSync(file, 'utf8')
-    if (!/selectPlural\(|pluralizeRu\(/.test(text)) return []
+    if (!/selectPlural\(|pluralizeRu\(|[<>=]=?\s*\d+\s*\?/.test(text)) return []
     const relative = path.relative(ROOT, file).split(path.sep).join('/')
     return relative === 'utils/pluralize.ts' ? [] : collectSplitSetsFrom(relative, text)
   })
@@ -260,12 +323,18 @@ describe('наборы форм числа (#2238)', () => {
     expect(splitSets.map(({ file, keys }) => `${file} → ${Object.values(keys).join(', ')}`)).toEqual([])
   })
 
-  it('детектор разрозненных наборов видит selectPlural и pluralizeRu с ключами', () => {
+  it('детектор разрозненных наборов видит selectPlural, pluralizeRu и тернарник по числу с ключами', () => {
     const probe = [
       "selectPlural(n, { one: i18nT('ns:a'), few: i18nT('ns:b'), many: i18nT('ns:c') })",
       "pluralizeRu(n, i18nT('ns:a'), i18nT('ns:b'), i18nT('ns:c'))",
+      "`${n} ${n === 1 ? i18nT('ns:a') : n < 5 ? i18nT('ns:b') : i18nT('ns:c')}`",
+      "const flag = n > 0 ? i18nT('ns:x') : i18nT('ns:y')",
+      "const stage = p < 25 ? i18nT('ns:s1') : p < 50 ? i18nT('ns:s2') : i18nT('ns:s3')",
+      "const label = n === 1 ? i18nT('ns:photo') : i18nT('ns:photo')",
+      "const heading = n === 1 ? i18nT('ns:phrase1') : i18nT('ns:phraseMany')",
     ].join('\n')
-    expect(collectSplitSetsFrom('probe.ts', probe)).toHaveLength(2)
+    const ru: Record<string, string> = { 'ns:photo': 'фото', 'ns:phrase1': 'Квест по этому городу', 'ns:phraseMany': 'Квесты по этому городу' }
+    expect(collectSplitSetsFrom('probe.ts', probe, (key) => ru[key])).toHaveLength(4)
   })
 
   it('семейство ключей объявлено во всех локалях теми же категориями, что в RU', () => {

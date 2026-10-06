@@ -129,8 +129,6 @@ export const errorsGenerated1 = {
   "utils.travelWizardValidation.dobavte_glavnoe_izobrazhenie_9fc0ee73": "Add a main image",
   "utils.travelWizardValidation.dobavte_minimum_3_foto_v_galereyu_f7e7a6c1": "Add at least 3 photos to the gallery",
   "utils.travelWizardValidation.dobavte_rekomendatsii_a9facebb": "Add recommendations",
-  "utils.travelWizardValidation.element_c7ec4fb7": "element",
-  "utils.travelWizardValidation.elementa_fb75a182": "element",
   "utils.travelWizardValidation.opishite_minusy_puteshestviya_c5391d5f": "Describe the disadvantages of traveling",
   "utils.travelWizardValidation.opishite_plyusy_puteshestviya_02447f46": "Describe the benefits of traveling",
   "utils.travelWizardValidation.rekomenduetsya_zapolnit_value1_52401d05": "It is recommended to fill in: {{value1}}",

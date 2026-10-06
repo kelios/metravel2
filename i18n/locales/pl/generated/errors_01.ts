@@ -129,8 +129,6 @@ export const errorsGenerated1 = {
   "utils.travelWizardValidation.dobavte_glavnoe_izobrazhenie_9fc0ee73": "Dodaj główny obraz",
   "utils.travelWizardValidation.dobavte_minimum_3_foto_v_galereyu_f7e7a6c1": "Dodaj minimum 3 zdjęcia do galerii",
   "utils.travelWizardValidation.dobavte_rekomendatsii_a9facebb": "Dodaj rekomendacje",
-  "utils.travelWizardValidation.element_c7ec4fb7": "element",
-  "utils.travelWizardValidation.elementa_fb75a182": "element",
   "utils.travelWizardValidation.opishite_minusy_puteshestviya_c5391d5f": "Opisz wady podróżowania",
   "utils.travelWizardValidation.opishite_plyusy_puteshestviya_02447f46": "Opisz korzyści płynące z podróżowania",
   "utils.travelWizardValidation.rekomenduetsya_zapolnit_value1_52401d05": "Zalecane jest wypełnienie: {{value1}}",

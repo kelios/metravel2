@@ -4,7 +4,7 @@
  */
 
 import { TravelFormData } from '@/types/types';
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 
 type UnknownRecord = Record<string, unknown>;
@@ -288,12 +288,7 @@ export function validateField(
   if (rules.minItems !== undefined && Array.isArray(value)) {
     if (value.length < rules.minItems) {
       result.isValid = false;
-      result.error = i18nT('travel:utils.travelWizardValidation.minItems', {
-        value1: rules.minItems,
-        value2: rules.minItems === 1
-          ? i18nT('errors:utils.travelWizardValidation.element_c7ec4fb7')
-          : i18nT('errors:utils.travelWizardValidation.elementa_fb75a182'),
-      });
+      result.error = translatePlural('travel:utils.travelWizardValidation.minItems', rules.minItems);
     }
   }
 

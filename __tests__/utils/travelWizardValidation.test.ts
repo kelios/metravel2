@@ -42,7 +42,9 @@ describe('travelWizardValidation', () => {
       
       const resultTooFew = validateField('test', ['item1'], rules);
       expect(resultTooFew.isValid).toBe(false);
-      expect(resultTooFew.error).toContain('Необходимо минимум 2');
+      expect(resultTooFew.error).toBe('Необходимо минимум 2 элемента');
+      expect(validateField('test', [], { minItems: 1, label: 'x' }).error).toBe('Необходимо минимум 1 элемент');
+      expect(validateField('test', [], { minItems: 5, label: 'x' }).error).toBe('Необходимо минимум 5 элементов');
       
       const resultValid = validateField('test', ['item1', 'item2'], rules);
       expect(resultValid.isValid).toBe(true);

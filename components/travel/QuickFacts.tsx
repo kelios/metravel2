@@ -12,6 +12,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
+import { formatDays } from '@/utils/pluralize'
 
 
 const isWeb = Platform.OS === 'web' || typeof document !== 'undefined';
@@ -98,7 +99,7 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
   
   // Форматируем длительность
   const daysText = numberDays != null && Number.isFinite(numberDays)
-    ? `${numberDays} ${numberDays === 1 ? i18nT('travel:components.travel.QuickFacts.den_5d590b5e') : numberDays < 5 ? i18nT('travel:components.travel.QuickFacts.dnya_4cd61ae4') : i18nT('travel:components.travel.QuickFacts.dney_7912e49c')}`
+    ? formatDays(numberDays) || null
     : null;
 
   // Если нет данных, не показываем компонент

@@ -3,6 +3,7 @@ import type {
   BuildRunningHeaderParams,
 } from './types'
 import { translate as i18nT } from '@/i18n'
+import { formatPlaces } from '@/utils/pluralize'
 
 
 export function buildPdfStatsMiniCard({
@@ -42,7 +43,7 @@ export function buildPdfStatsMiniCard({
   if (locationCount > 0) {
     items.push({
       icon: renderPdfIcon('map-pin', iconColor, iconSize),
-      value: `${locationCount} ${locationCount === 1 ? i18nT('export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.statsAndHeader.mesto_0a39836a') : locationCount < 5 ? i18nT('export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.statsAndHeader.mesta_b1efe410') : i18nT('export:services.pdf_export.generators.v2.runtime.pdfRuntimeMarkup.statsAndHeader.mest_535feb3c')}`,
+      value: formatPlaces(locationCount),
     })
   }
 

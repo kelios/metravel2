@@ -2,6 +2,7 @@ import type { TravelForBook } from '@/types/pdf-export'
 import type { TravelQuote } from '../../../../quotes/travelQuotes'
 import { escapeHtml, formatDays, getTravelLabel, type RuntimeRenderContext } from './renderHelpers'
 import { translate as i18nT } from '@/i18n'
+import { getCountryLabel, getPhotoLabel } from '@/utils/pluralize'
 
 
 export class RuntimeFinalRenderer {
@@ -28,7 +29,7 @@ export class RuntimeFinalRenderer {
     }
     if (countries.size > 0) {
       const cl = countries.size
-      stats.push({ value: cl, label: cl === 1 ? i18nT('export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.strana_844f89f7') : cl < 5 ? i18nT('export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.strany_fb143431') : i18nT('export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.stran_d9546eb7') })
+      stats.push({ value: cl, label: getCountryLabel(cl) })
     }
     if (totalDays > 0) {
       stats.push({
@@ -38,7 +39,7 @@ export class RuntimeFinalRenderer {
       })
     }
     if (totalPhotos > 0) {
-      stats.push({ value: totalPhotos, label: totalPhotos === 1 ? i18nT('export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.foto_c827a5d9') : i18nT('export:services.pdf_export.generators.v2.runtime.renderers.FinalPageRenderer.foto_c827a5d9') })
+      stats.push({ value: totalPhotos, label: getPhotoLabel(totalPhotos) })
     }
 
     const statsHtml = stats.length > 0 ? `

@@ -51,6 +51,14 @@ describe('QuickFacts', () => {
     expect(getByText('Польша')).toBeTruthy()
   })
 
+  it('agrees the day noun with the number by the language rule (#2238)', () => {
+    for (const [days, text] of [[1, '1 день'], [2, '2 дня'], [21, '21 день'], [22, '22 дня'], [11, '11 дней']] as const) {
+      const { getByText, unmount } = render(<QuickFacts travel={{ ...baseTravel, number_days: days } as any} />)
+      expect(getByText(text)).toBeTruthy()
+      unmount()
+    }
+  })
+
   it('normalizes categoryName from string and object and splits by comma', () => {
     const travelWithCategories: any = {
       ...baseTravel,
