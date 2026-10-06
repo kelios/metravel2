@@ -43,12 +43,22 @@ const BANK_CARD_KEYS = /HomeFinalCTA\.bez_karty_/
 // окончание глагола и конец слова.
 const RU_ZOOM_IN_WORD = /(^|[^а-яё])приблизит(ь|е)(?![а-яё])/i
 const RU_ZOOM_OUT_WORD = /(^|[^а-яё])отдалит(ь|е)(?![а-яё])/i
+// Список «Хочу поехать» и глагол поездки (#2254): посредник «go» дал в PL и
+// «iść» (идти пешком), и «jechać»; имя списка одно — «Chcę pojechać».
+const RU_WISHLIST_NAME = /хочу\s+поехать/i
+const RU_GO_BY_TRANSPORT = /(^|[^а-яё])(поехать|поехали|поеду|поедут|едут|ехать)(?![а-яё])/i
+// «Очистить / очищен» через «clear» стало прилагательным «jasne» (ясно).
+const RU_CLEAR_WORD = /(^|[^а-яё])(очист|очищ)/i
 
 // Слово перевода ищется целиком: в PL «kartka» (лист A4) — не «karta», в UK
 // «картка» — не «карта», и граница слова учитывает буквы своего алфавита.
 const PL_LETTER = 'a-ząćęłńóśźż'
 const UK_LETTER = "а-яіїєґ'’"
 const BE_LETTER = "а-яіўё'’"
+const PL_WALK_VERB = new RegExp(
+  `(^|[^${PL_LETTER}])(iść|pójść|pójdę|idę|chodź|chodźmy)(?![${PL_LETTER}])`,
+  'i',
+)
 const PL_MAP_WORD = new RegExp(`(^|[^${PL_LETTER}])map`, 'i')
 const UK_MAP_WORD = new RegExp(
   `(^|[^${UK_LETTER}])(карт(а|у|и|і|ою|ам|ами|ах)?|мап[а-яіїєґ]*)(?![${UK_LETTER}])`,
@@ -258,10 +268,34 @@ const TERMS: Term[] = [
     minEntries: 40,
     locales: {
       en: { required: /\bdrafts?\b/i },
-      pl: { required: /robocz|szkic/i },
+      // Одно слово на всех экранах (#2254): «wersja robocza», не «szkic».
+      pl: { required: /robocz/i, forbidden: /szkic/i },
       uk: { required: /чернет(к|ок)|чорнов/i },
       be: { required: /чарнавік/i },
     },
+  },
+  {
+    name: '«Хочу поехать» — одно имя списка на всех экранах',
+    ru: RU_WISHLIST_NAME,
+    minEntries: 90,
+    locales: {
+      en: { required: /\bI want to go\b/i, forbidden: /want to travel/i },
+      pl: { required: /Chcę pojechać/, forbidden: PL_WALK_VERB },
+      be: { required: /хачу паехаць/i },
+      uk: { required: /хочу поїхати/i },
+    },
+  },
+  {
+    name: '«поехать / едут» — поездка, не ходьба пешком',
+    ru: RU_GO_BY_TRANSPORT,
+    minEntries: 20,
+    locales: { pl: { forbidden: PL_WALK_VERB } },
+  },
+  {
+    name: '«очистить / очищен» — убрать содержимое, не «ясно»',
+    ru: RU_CLEAR_WORD,
+    minEntries: 20,
+    locales: { pl: { forbidden: new RegExp(`(^|[^${PL_LETTER}])jasn`, 'i') } },
   },
 ]
 
@@ -285,7 +319,7 @@ const localeCases = TERMS.flatMap((term) =>
   (Object.keys(term.locales) as Locale[]).map((locale) => ({ locale, term, name: term.name })),
 )
 
-describe('глоссарий терминов интерфейса (#2180, #2188, #2242)', () => {
+describe('глоссарий терминов интерфейса (#2180, #2188, #2242, #2254)', () => {
   it.each(TERMS)('$name: правило находит свои RU-ключи', (term) => {
     expect(entriesOf(term).length).toBeGreaterThanOrEqual(term.minEntries)
   })
@@ -313,6 +347,15 @@ describe('глоссарий терминов интерфейса (#2180, #2188
     expect(RU_ZOOM_IN_WORD.test('Приблизить карту')).toBe(true)
     expect(RU_ZOOM_IN_WORD.test('Показана приблизительная линия')).toBe(false)
     expect(RU_ZOOM_OUT_WORD.test('Отдалить')).toBe(true)
+    expect(RU_GO_BY_TRANSPORT.test('Не знаешь, куда поехать?')).toBe(true)
+    expect(RU_GO_BY_TRANSPORT.test('{{count}} едут')).toBe(true)
+    expect(RU_GO_BY_TRANSPORT.test('Переехать в другой город')).toBe(false)
+    expect(RU_GO_BY_TRANSPORT.test('Едуны')).toBe(false)
+    expect(RU_CLEAR_WORD.test('«Хочу поехать» очищен')).toBe(true)
+    expect(RU_CLEAR_WORD.test('Очистить')).toBe(true)
+    expect(PL_WALK_VERB.test('Nie wiesz gdzie iść?')).toBe(true)
+    expect(PL_WALK_VERB.test('Chcę pojechać')).toBe(false)
+    expect(PL_WALK_VERB.test('przyjść na spotkanie')).toBe(false)
   })
 
   it('шаблоны перевода различают карту, карточку и лист', () => {
