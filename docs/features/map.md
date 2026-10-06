@@ -278,6 +278,19 @@ renderer, который сохраняет собственный tile lifecycl
 неизвестны финальные zoom и tile coordinates, поэтому любой такой запрос мог бы
 стать отдельным лишним уровнем до runtime base-layer attach.
 
+Для всех web-карт (основная `/map`, карта квеста, встроенные карты travel,
+планировщик, точки пользователя) действует общий контракт «первый кадр карты =
+итоговая геометрия»: `utils/loadLeafletRuntime.ts` отдаёт движок только после
+`whenLeafletCssReady()` из `utils/ensureLeafletCss.ts` — leaflet.css применён
+(self-hosted или CDN-копия) либо подложена минимальная раскладка панелей и
+тайлов — сразу после ошибки CDN-копии или по таймауту 3 с. Ожидание идёт параллельно с JS-чанком и не роняет загрузку.
+Без него первые кадры рисовали тайлы, SVG-слой маршрута и контролы в обычном
+потоке, а приход стиля переставлял их в `position:absolute` — layout shift 0,11
+на каждой перезагрузке карты квеста на desktop (#2324). Признак применённого CSS —
+`.leaflet-pane { z-index: 400 }`; у `.leaflet-map-pane` своего z-index нет.
+Регрессия — `e2e/quest-map-leaflet-css-first-frame.spec.ts` (leaflet.css
+задерживается намеренно).
+
 ### Native bridge ownership
 
 `components/MapPage/Map.ios.tsx` владеет протоколом основной native-карты:

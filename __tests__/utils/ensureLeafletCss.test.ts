@@ -1,4 +1,4 @@
-import { ensureLeafletCss } from '@/utils/ensureLeafletCss'
+import { ensureLeafletCss, isLeafletCoreCssApplied, whenLeafletCssReady } from '@/utils/ensureLeafletCss'
 
 describe('ensureLeafletCss', () => {
   beforeEach(() => {
@@ -69,5 +69,86 @@ describe('ensureLeafletCss', () => {
 
     expect(leaflet.getAttribute('href')).toBe(afterFirst)
     expect(leaflet.getAttribute('data-css-fallback')).toBe('cdn')
+  })
+})
+
+// #2324: движок Leaflet монтируется только после применения leaflet.css,
+// иначе первые кадры рисуют тайлы/SVG в обычном потоке и дают layout shift.
+describe('whenLeafletCssReady', () => {
+  const applyLeafletCoreCss = () => {
+    const style = document.createElement('style')
+    style.textContent = '.leaflet-pane{z-index:400}'
+    document.head.appendChild(style)
+  }
+  const settledFlag = (promise: Promise<void>) => {
+    const state = { settled: false }
+    promise.then(() => { state.settled = true })
+    return state
+  }
+
+  beforeEach(() => {
+    document.head.innerHTML = ''
+    jest.useFakeTimers()
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it('resolves only after the injected leaflet.css link has loaded and applied', async () => {
+    const state = settledFlag(whenLeafletCssReady({ waitInTestEnv: true }))
+    await Promise.resolve()
+    expect(state.settled).toBe(false)
+    expect(isLeafletCoreCssApplied()).toBe(false)
+
+    applyLeafletCoreCss()
+    document.getElementById('metravel-leaflet-css')!.dispatchEvent(new Event('load'))
+    await Promise.resolve()
+    expect(state.settled).toBe(true)
+    expect(document.querySelector('style[data-leaflet-fallback="true"]')).toBeNull()
+  })
+
+  it('falls back to the minimal pane/tile layout when leaflet.css never applies', async () => {
+    const state = settledFlag(whenLeafletCssReady({ waitInTestEnv: true, timeoutMs: 3000 }))
+    jest.advanceTimersByTime(2999)
+    await Promise.resolve()
+    expect(state.settled).toBe(false)
+
+    jest.advanceTimersByTime(1)
+    await Promise.resolve()
+    expect(state.settled).toBe(true)
+    const fallback = document.querySelector('style[data-leaflet-fallback="true"]')?.textContent
+    expect(fallback).toContain('.leaflet-tile')
+    expect(fallback).toContain('position:absolute')
+    expect(isLeafletCoreCssApplied()).toBe(true)
+  })
+
+  it('applies the fallback layout right after the CDN copy also fails, without waiting for the timeout', async () => {
+    const state = settledFlag(whenLeafletCssReady({ waitInTestEnv: true }))
+    const link = document.getElementById('metravel-leaflet-css') as HTMLLinkElement
+
+    link.dispatchEvent(new Event('error'))
+    await Promise.resolve()
+    expect(link.getAttribute('data-css-fallback')).toBe('cdn')
+    expect(state.settled).toBe(false)
+
+    link.dispatchEvent(new Event('error'))
+    await Promise.resolve()
+    expect(state.settled).toBe(true)
+    expect(document.querySelector('style[data-leaflet-fallback="true"]')).toBeTruthy()
+  })
+
+  it('resolves immediately when Leaflet core CSS is already applied', async () => {
+    applyLeafletCoreCss()
+    const state = settledFlag(whenLeafletCssReady({ waitInTestEnv: true }))
+    await Promise.resolve()
+    expect(state.settled).toBe(true)
+  })
+
+  it('does not hold the engine in the test environment by default', async () => {
+    const state = settledFlag(whenLeafletCssReady())
+    await Promise.resolve()
+    expect(state.settled).toBe(true)
+    expect(document.querySelector('style[data-leaflet-fallback="true"]')).toBeTruthy()
   })
 })

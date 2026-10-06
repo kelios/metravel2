@@ -223,8 +223,8 @@ function QuestFullMap({
         let cancelled = false;
         (async () => {
             try {
-                const { ensureLeafletCss } = await import('@/utils/ensureLeafletCss');
-                await ensureLeafletCss();
+                // loadLeafletRuntime сам дожидается leaflet.css (#2324): раньше здесь
+                // ждали синхронный boolean, и карта монтировалась до применения CSS.
                 const { loadLeafletRuntime } = await import('@/utils/loadLeafletRuntime');
                 const { L, RL } = await loadLeafletRuntime();
                 if (cancelled) return;

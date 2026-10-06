@@ -10,9 +10,15 @@ export async function loadLeafletRuntime(): Promise<{
 }> {
   // #765: leaflet/react-leaflet/markercluster импортируются sync ТОЛЬКО внутри
   // leafletVendor — единый async-чанк вместо хойста вендора в eager __common.
+  // #2324: движок отдаётся только после применения leaflet.css — иначе первый
+  // кадр карты рисует тайлы/SVG в обычном потоке, и приход CSS даёт layout shift.
+  // Ожидание идёт параллельно с JS-чанком и никогда не роняет загрузку движка.
   const [vendorModule, leafletFixModule] = await Promise.all([
     import('@/utils/leafletVendor'),
     import('@/utils/leafletFix'),
+    import('@/utils/ensureLeafletCss')
+      .then((m) => m.whenLeafletCssReady())
+      .catch(() => undefined),
   ])
 
   const { leafletModule, reactLeafletModule, reactLeafletCoreModule } = vendorModule

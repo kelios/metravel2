@@ -21,7 +21,7 @@ export function ensureLeafletCss(): boolean {
   if (typeof document === 'undefined') return false
 
   try {
-    const id = 'metravel-leaflet-css'
+    const id = LEAFLET_CSS_LINK_ID
     if (document.getElementById(id)) {
       ensureMarkerClusterCss()
       ensureLeafletOverrides()
@@ -50,6 +50,144 @@ export function ensureLeafletCss(): boolean {
   } catch {
     return false
   }
+}
+
+const LEAFLET_CSS_LINK_ID = 'metravel-leaflet-css'
+const LEAFLET_FALLBACK_STYLE_SELECTOR = 'style[data-leaflet-fallback="true"]'
+const LEAFLET_CSS_READY_TIMEOUT_MS = 3000
+
+let leafletCssReadyPromise: Promise<void> | null = null
+
+/**
+ * Leaflet core CSS реально применён к документу (а не только вставлен `<link>`):
+ * leaflet.css задаёт `.leaflet-pane { z-index: 400 }` (у `.leaflet-map-pane` своего
+ * z-index нет — прежняя проба в useLeafletLoader поэтому не видела настоящий CSS).
+ */
+export function isLeafletCoreCssApplied(): boolean {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return false
+  try {
+    const probe = document.createElement('div')
+    probe.className = 'leaflet-pane'
+    probe.style.position = 'absolute'
+    probe.style.top = '-9999px'
+    probe.style.left = '-9999px'
+    document.body.appendChild(probe)
+    const z = window.getComputedStyle(probe).zIndex
+    probe.remove()
+    return z === '400'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Минимальная раскладка панелей/тайлов Leaflet, если leaflet.css не пришёл ни
+ * с self-hosted, ни с CDN: без неё тайлы и SVG-слой лежат в обычном потоке.
+ */
+function injectLeafletLayoutFallback(): void {
+  if (document.querySelector(LEAFLET_FALLBACK_STYLE_SELECTOR)) return
+  const style = document.createElement('style')
+  style.setAttribute('data-leaflet-fallback', 'true')
+  style.textContent = [
+    '.leaflet-container{position:relative;overflow:hidden;outline:0}',
+    '.leaflet-pane,.leaflet-map-pane,.leaflet-tile-pane,.leaflet-overlay-pane,.leaflet-shadow-pane,.leaflet-marker-pane,.leaflet-tooltip-pane,.leaflet-popup-pane{position:absolute;top:0;left:0}',
+    '.leaflet-pane,.leaflet-map-pane{z-index:400}',
+    '.leaflet-tile-pane{z-index:200}',
+    '.leaflet-overlay-pane{z-index:400}',
+    '.leaflet-shadow-pane{z-index:500}',
+    '.leaflet-marker-pane{z-index:600}',
+    '.leaflet-tooltip-pane{z-index:650}',
+    '.leaflet-popup-pane{z-index:700}',
+    '.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-zoom-box,.leaflet-image-layer{position:absolute;left:0;top:0}',
+    '.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-layer{position:absolute;left:0;top:0}',
+    '.leaflet-tile{filter:inherit;visibility:inherit}',
+    '.leaflet-zoom-animated{transform-origin:0 0}',
+    '.leaflet-control-container{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}',
+    '.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}',
+    '.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}',
+    '.leaflet-control{position:relative;z-index:1000;pointer-events:auto;float:left;clear:both}',
+    '.leaflet-right .leaflet-control{float:right}',
+    '.leaflet-control-attribution{margin:0;padding:0 5px;font-size:11px;background:rgba(255,255,255,0.7)}',
+  ].join('\n')
+  document.head.appendChild(style)
+}
+
+export interface WhenLeafletCssReadyOptions {
+  /** Верхняя граница ожидания; дальше подкладывается минимальная раскладка. */
+  timeoutMs?: number
+  /**
+   * В Jest/JSDOM внешние стили не грузятся: по умолчанию сразу подкладываем
+   * раскладку и не держим движок. `true` — проверить настоящее ожидание.
+   */
+  waitInTestEnv?: boolean
+}
+
+/**
+ * Контракт «первый кадр карты = итоговая геометрия» (#2324): движок Leaflet
+ * нельзя монтировать, пока core CSS не применён. Иначе первые кадры рисуются
+ * с тайлами/SVG/контролами в обычном потоке (тайлы столбиком под контейнером),
+ * а приход leaflet.css переставляет их в `position:absolute` — layout shift.
+ *
+ * Вставляет стили (как `ensureLeafletCss`) и резолвится, когда leaflet.css
+ * применён (load self-hosted или CDN-фолбэка) либо по таймауту — тогда с
+ * минимальной раскладкой. Никогда не реджектится: CSS не должен ронять карту.
+ */
+export function whenLeafletCssReady(options: WhenLeafletCssReadyOptions = {}): Promise<void> {
+  const { timeoutMs = LEAFLET_CSS_READY_TIMEOUT_MS, waitInTestEnv = false } = options
+  if (typeof document === 'undefined' || typeof window === 'undefined') return Promise.resolve()
+
+  ensureLeafletCss()
+  if (isLeafletCoreCssApplied()) return Promise.resolve()
+
+  const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test'
+  if (isTestEnv && !waitInTestEnv) {
+    injectLeafletLayoutFallback()
+    return Promise.resolve()
+  }
+
+  if (leafletCssReadyPromise) return leafletCssReadyPromise
+
+  const link = document.getElementById(LEAFLET_CSS_LINK_ID) as HTMLLinkElement | null
+  if (!link) {
+    injectLeafletLayoutFallback()
+    return Promise.resolve()
+  }
+
+  leafletCssReadyPromise = new Promise<void>((resolve) => {
+    let settled = false
+    // Первую ошибку self-hosted обрабатывает withCdnFallback (href → CDN);
+    // ошибка CDN-копии — финальная: раскладка сразу, без ожидания таймаута.
+    let errorsUntilFinal = link.getAttribute('data-css-fallback') === 'cdn' ? 1 : 2
+
+    const finish = () => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      link.removeEventListener('load', onLoad)
+      link.removeEventListener('error', onError)
+      leafletCssReadyPromise = null
+      resolve()
+    }
+    // load приходит и для CDN-копии: onerror в withCdnFallback меняет href.
+    function onLoad() {
+      if (isLeafletCoreCssApplied()) finish()
+    }
+    function onError() {
+      errorsUntilFinal -= 1
+      if (errorsUntilFinal > 0) return
+      injectLeafletLayoutFallback()
+      finish()
+    }
+
+    link.addEventListener('load', onLoad)
+    link.addEventListener('error', onError)
+    const timer = setTimeout(() => {
+      if (!isLeafletCoreCssApplied()) injectLeafletLayoutFallback()
+      finish()
+    }, timeoutMs)
+  })
+
+  return leafletCssReadyPromise
 }
 
 function ensureMarkerClusterCss(): void {

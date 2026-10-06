@@ -6,8 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
-import { DESIGN_COLORS } from '@/constants/designSystem';
-import { ensureLeafletCss as ensureLeafletCssOverrides } from '@/utils/ensureLeafletCss';
+import { whenLeafletCssReady } from '@/utils/ensureLeafletCss';
 
 type LeafletRuntime = typeof import('leaflet');
 type ReactLeafletRuntime = typeof import('react-leaflet');
@@ -80,171 +79,6 @@ interface UseLeafletLoaderResult {
 const runtimeProcess = typeof process !== 'undefined' ? (process as ProcessLike) : undefined;
 const isTestEnv = runtimeProcess?.env?.NODE_ENV === 'test';
 
-const LEAFLET_CSS_HREF = '/vendor/leaflet.css';
-
-const leafletCssSeemsApplied = () => {
-  if (typeof document === 'undefined' || typeof window === 'undefined') return false;
-  try {
-    const probe = document.createElement('div');
-    probe.className = 'leaflet-map-pane';
-    probe.style.position = 'absolute';
-    probe.style.top = '-9999px';
-    probe.style.left = '-9999px';
-    document.body.appendChild(probe);
-    const z = window.getComputedStyle(probe).zIndex;
-    probe.remove();
-    // Leaflet core CSS sets .leaflet-map-pane { z-index: 400; }
-    return z === '400';
-  } catch {
-    return false;
-  }
-};
-
-const ensureLeafletCss = async (): Promise<void> => {
-  if (typeof document === 'undefined') return;
-
-  // If Leaflet core CSS is already applied, do nothing.
-  if (leafletCssSeemsApplied()) return;
-
-  // In Jest/JSDOM we don't load real external stylesheets reliably.
-  // Keep tests deterministic by injecting a small known-good fallback and exiting early.
-  if (isTestEnv) {
-    if (document.querySelector('style[data-leaflet-fallback="true"]')) return;
-
-    const style = document.createElement('style');
-    style.setAttribute('data-leaflet-fallback', 'true');
-    style.textContent =
-      '.leaflet-pane,.leaflet-map-pane{z-index:400}' +
-      '.leaflet-tile-pane{z-index:200}' +
-      '.leaflet-overlay-pane{z-index:400}' +
-      '.leaflet-shadow-pane{z-index:500}' +
-      '.leaflet-marker-pane{z-index:600}' +
-      '.leaflet-tooltip-pane{z-index:650}' +
-      '.leaflet-popup-pane{z-index:700}' +
-      // Prevent global SVG/img resets from scaling Leaflet overlays/tiles.
-      '.leaflet-container svg{max-width:none !important;max-height:none !important}' +
-      '.leaflet-container img{max-width:none !important}' +
-      '.leaflet-control-container{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}' +
-      '.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}' +
-      '.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}' +
-      '.leaflet-control{position:relative;z-index:1000;pointer-events:auto;float:left;clear:both}' +
-      '.leaflet-right .leaflet-control{float:right}' +
-      `.leaflet-control-attribution{margin:0;padding:0 5px;color:var(--color-text,${DESIGN_COLORS.criticalTextLight});font-size:11px;background:rgba(255,255,255,0.7)}`;
-    document.head.appendChild(style);
-    return;
-  }
-
-  // If bundling failed, try CDN CSS. If that fails (CSP/offline), inject a minimal layout fallback.
-  if (document.querySelector('style[data-leaflet-fallback="true"]')) return;
-
-  const existing = document.querySelector(`link[rel="stylesheet"][href="${LEAFLET_CSS_HREF}"]`) as
-    | HTMLLinkElement
-    | null;
-  if (existing) {
-    // A link tag was injected elsewhere (e.g. app layout). Give it a moment to apply.
-    const started = Date.now();
-    while (Date.now() - started < 3000) {
-      if (leafletCssSeemsApplied()) return;
-      await new Promise((r) => setTimeout(r, 50));
-    }
-    // Still not applied → fall back to minimal CSS.
-    const style = document.createElement('style');
-    style.setAttribute('data-leaflet-fallback', 'true');
-    style.textContent =
-      '.leaflet-container{position:relative;overflow:hidden;outline:0}' +
-      '.leaflet-pane,.leaflet-map-pane,.leaflet-tile-pane,.leaflet-overlay-pane,.leaflet-shadow-pane,.leaflet-marker-pane,.leaflet-tooltip-pane,.leaflet-popup-pane{position:absolute;top:0;left:0}' +
-      '.leaflet-pane,.leaflet-map-pane{z-index:400}' +
-      '.leaflet-tile-pane{z-index:200}' +
-      '.leaflet-overlay-pane{z-index:400}' +
-      '.leaflet-shadow-pane{z-index:500}' +
-      '.leaflet-marker-pane{z-index:600}' +
-      '.leaflet-tooltip-pane{z-index:650}' +
-      '.leaflet-popup-pane{z-index:700}' +
-      '.leaflet-tile{position:absolute;left:0;top:0;filter:inherit;visibility:inherit}' +
-      '.leaflet-zoom-animated{transform-origin:0 0}' +
-      // Prevent global SVG/img resets from scaling Leaflet overlays/tiles.
-      '.leaflet-container svg{max-width:none !important;max-height:none !important}' +
-      '.leaflet-container img{max-width:none !important}' +
-      '.leaflet-control-container{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}' +
-      '.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}' +
-      '.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}' +
-      '.leaflet-control{position:relative;z-index:1000;pointer-events:auto;float:left;clear:both}' +
-      '.leaflet-right .leaflet-control{float:right}' +
-      `.leaflet-control-attribution{margin:0;padding:0 5px;color:var(--color-text,${DESIGN_COLORS.criticalTextLight});font-size:11px;background:rgba(255,255,255,0.7)}`;
-    document.head.appendChild(style);
-    return;
-  }
-
-  await new Promise<void>((resolve) => {
-    const fallback = () => {
-      if (document.querySelector('style[data-leaflet-fallback="true"]')) {
-        resolve();
-        return;
-      }
-
-      const style = document.createElement('style');
-      style.setAttribute('data-leaflet-fallback', 'true');
-      style.textContent =
-        // Core pane layout (critical for tiles + SVG overlays)
-        '.leaflet-container{position:relative;overflow:hidden;outline:0}' +
-        '.leaflet-pane,.leaflet-map-pane,.leaflet-tile-pane,.leaflet-overlay-pane,.leaflet-shadow-pane,.leaflet-marker-pane,.leaflet-tooltip-pane,.leaflet-popup-pane{position:absolute;top:0;left:0}' +
-        '.leaflet-pane,.leaflet-map-pane{z-index:400}' +
-        '.leaflet-tile-pane{z-index:200}' +
-        '.leaflet-overlay-pane{z-index:400}' +
-        '.leaflet-shadow-pane{z-index:500}' +
-        '.leaflet-marker-pane{z-index:600}' +
-        '.leaflet-tooltip-pane{z-index:650}' +
-        '.leaflet-popup-pane{z-index:700}' +
-        '.leaflet-tile{position:absolute;left:0;top:0;filter:inherit;visibility:inherit}' +
-        '.leaflet-zoom-animated{transform-origin:0 0}' +
-        // Prevent global SVG/img resets from scaling Leaflet overlays/tiles.
-        '.leaflet-container svg{max-width:none !important;max-height:none !important}' +
-        '.leaflet-container img{max-width:none !important}' +
-        // Controls positioning
-        '.leaflet-control-container{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}' +
-        '.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}' +
-        '.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}' +
-        '.leaflet-control{position:relative;z-index:1000;pointer-events:auto;float:left;clear:both}' +
-        '.leaflet-right .leaflet-control{float:right}' +
-        `.leaflet-control-attribution{margin:0;padding:0 5px;color:var(--color-text,${DESIGN_COLORS.criticalTextLight});font-size:11px;background:rgba(255,255,255,0.7)}`;
-      document.head.appendChild(style);
-      resolve();
-    };
-
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = LEAFLET_CSS_HREF;
-    link.setAttribute('data-metravel-leaflet-css', 'self-hosted');
-
-    let settled = false;
-    const settleResolve = () => {
-      if (settled) return;
-      settled = true;
-      resolve();
-    };
-    const settleFallback = () => {
-      if (settled) return;
-      settled = true;
-      fallback();
-    };
-
-    const timeout = window.setTimeout(() => {
-      settleFallback();
-    }, 5000);
-
-    link.onload = () => {
-      window.clearTimeout(timeout);
-      settleResolve();
-    };
-    link.onerror = () => {
-      window.clearTimeout(timeout);
-      settleFallback();
-    };
-
-    document.head.appendChild(link);
-  });
-};
-
 /**
  * Lazy load Leaflet and React-Leaflet for web platform
  *
@@ -289,11 +123,11 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
     if (Platform.OS !== 'web') return;
     if (!enabled) return;
 
-    ensureLeafletCss().catch(() => {
+    // Единый источник стилей Leaflet (core + overrides + markercluster). Движок
+    // всё равно ждёт применения CSS в loadLeafletRuntime (#2324); здесь — ранний старт.
+    whenLeafletCssReady().catch(() => {
       // noop: map can still attempt to render; error will be handled during JS load.
     });
-    // Also inject leaflet-overrides (tile sizing fixes for global img rules).
-    try { ensureLeafletCssOverrides(); } catch { /* noop */ }
   }, [enabled]);
 
   // Schedule loading with idle callback or timeout
@@ -348,8 +182,8 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
 
     const loadModules = async (attempt: number): Promise<void> => {
       try {
-        // ensureLeafletCss is already triggered in the earlier useEffect;
-        // avoid awaiting it here to not serialise CSS polling with JS loading.
+        // loadLeafletRuntime waits for Leaflet CSS in parallel with the JS chunk
+        // (#2324), so the engine never mounts before leaflet.css is applied.
         const { loadLeafletRuntime } = await import('@/utils/loadLeafletRuntime');
         const { L: LeafletResolved, RL: ReactLeafletResolved } = await loadLeafletRuntime();
         if (cancelled) return;
