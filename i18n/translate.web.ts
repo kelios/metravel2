@@ -103,6 +103,10 @@ export const loadWebLocale = async (locale: SupportedLocale): Promise<void> => {
   }
 }
 
+/** Каталог локали уже в памяти — её можно применить синхронно. */
+export const isWebLocaleLoaded = (locale: SupportedLocale): boolean =>
+  locale === FALLBACK_LOCALE || loadedCatalogs.has(locale)
+
 const normalizeLocale = (locale: string | undefined): SupportedLocale =>
   isSupportedLocale(locale) ? locale : FALLBACK_LOCALE
 

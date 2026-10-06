@@ -44,7 +44,9 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   },
 }))
 jest.mock('@/i18n/instance', () => jest.requireActual('@/i18n/instance.web'))
+jest.mock('@/i18n/bootLocale', () => jest.requireActual('@/i18n/bootLocale.web'))
 jest.mock('@/i18n/translate', () => ({
+  isWebLocaleLoaded: jest.fn(),
   loadWebLocale: jest.fn(),
   translate: jest.fn((value: unknown) => String(value)),
 }))
@@ -67,7 +69,11 @@ const STORAGE_KEY = '@metravel/locale-preference:v1'
 const i18n = (require('@/i18n/instance') as typeof import('@/i18n/instance.web')).default
 const { LocaleProvider, useLocale } =
   require('@/i18n/LocaleProvider.web') as typeof import('@/i18n/LocaleProvider.web')
-const { loadWebLocale } = require('@/i18n/translate') as { loadWebLocale: jest.Mock }
+const { prepareBootLocale } = require('@/i18n/bootLocale') as typeof import('@/i18n/bootLocale.web')
+const { isWebLocaleLoaded, loadWebLocale } = require('@/i18n/translate') as {
+  isWebLocaleLoaded: jest.Mock
+  loadWebLocale: jest.Mock
+}
 const loadProvider = () => ({ i18n, LocaleProvider, useLocale, loadWebLocale })
 
 describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
@@ -79,6 +85,9 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('ru')
     loadWebLocale.mockReset()
+    // По умолчанию каталог к гидратации не загружен (асинхронный путь).
+    isWebLocaleLoaded.mockReset()
+    isWebLocaleLoaded.mockImplementation((locale: string) => locale === 'ru')
     document.documentElement.lang = 'ru'
     window.localStorage.clear()
     container = document.createElement('div')
@@ -124,6 +133,80 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
 
   const hydrationErrors = () =>
     consoleError.mock.calls.filter((call) => /hydrat|did not match|#418|#419/i.test(String(call[0])))
+
+  it('mounts the screen once in Polish when contexts above change right after hydration (prod order)', async () => {
+    // Прод (приёмка 06.10.2026): над `LocaleProvider` стоят провайдеры
+    // expo-router, их значения меняются в эффектах сразу после гидратации —
+    // кадр окна `SafeAreaProvider`, состояние навигации. Смена контекста выше
+    // негидратированной границы заставляла React отрисовать её клиентом с
+    // `fallback` (русские дети, стартовый запрос), а после загрузки каталога
+    // дерево монтировалось второй раз: 2 запроса, 2 монтирования.
+    const { LocaleProvider, Screen, mounts, loadWebLocale, hydrate } = setup(
+      JSON.stringify({ version: 1, mode: 'explicit', locale: 'pl' }),
+    )
+    const loaded = new Set<string>(['ru'])
+    loadWebLocale.mockImplementation(async (locale: string) => {
+      loaded.add(locale)
+    })
+    isWebLocaleLoaded.mockImplementation((locale: string) => loaded.has(locale))
+    const FrameContext = createContext({ width: 0 })
+    const NavigationStateContext = createContext({ index: -1 })
+    const Reader = () => {
+      useContext(FrameContext)
+      useContext(NavigationStateContext)
+      return <Screen />
+    }
+    const ExpoRouterRoot = ({ children }: { children: React.ReactNode }) => {
+      const [frame, setFrame] = useState({ width: 0 })
+      const [navigation, setNavigation] = useState({ index: -1 })
+      useEffect(() => {
+        setFrame({ width: 1440 })
+        setNavigation({ index: 0 })
+      }, [])
+      return (
+        <FrameContext.Provider value={frame}>
+          <NavigationStateContext.Provider value={navigation}>{children}</NavigationStateContext.Provider>
+        </FrameContext.Provider>
+      )
+    }
+
+    // Как `entry.js`: каталог сохранённой локали — до `hydrateRoot`.
+    const ready = prepareBootLocale()
+    expect(ready).not.toBeNull()
+    await ready
+    expect(loadWebLocale).toHaveBeenCalledWith('pl')
+
+    await hydrate(
+      <ExpoRouterRoot>
+        <LocaleProvider>
+          <Reader />
+        </LocaleProvider>
+      </ExpoRouterRoot>,
+    )
+    await act(async () => {})
+
+    expect(mounts).toEqual(['pl'])
+    expect(container.textContent).toBe('screen:pl')
+    expect(document.documentElement.lang).toBe('pl')
+    expect(loadWebLocale).toHaveBeenCalledTimes(1)
+    expect(recoverableErrors).toEqual([])
+    expect(hydrationErrors()).toEqual([])
+  })
+
+  it('prepares nothing before hydration without a stored non-Russian locale', () => {
+    expect(prepareBootLocale()).toBeNull()
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, mode: 'explicit', locale: 'ru' }))
+    expect(prepareBootLocale()).toBeNull()
+    expect(loadWebLocale).not.toHaveBeenCalled()
+  })
+
+  it('starts the app even when the catalogue fails to load before hydration', async () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, mode: 'explicit', locale: 'en' }))
+    loadWebLocale.mockRejectedValue(new Error('chunk failed'))
+
+    await expect(prepareBootLocale()).resolves.toBeUndefined()
+    expect(loadWebLocale).toHaveBeenCalledWith('en')
+  })
 
   it('keeps the static HTML until the catalogue loads, then mounts the screen once in Polish', async () => {
     const { LocaleProvider, Screen, mounts, loadWebLocale, hydrate } = setup(

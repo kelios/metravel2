@@ -337,5 +337,23 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
   });
 }
 
-
-require('expo-router/entry');
+// #2239: каталог сохранённой не русской локали грузится ДО гидратации — иначе
+// приложение монтируется по-русски, отправляет стартовые запросы и
+// перемонтируется после загрузки каталога (подробно в i18n/bootLocale.web.ts).
+// Без сохранённой локали и на native `prepareBootLocale` возвращает null —
+// запуск синхронный, как раньше.
+const startExpoRouter = () => {
+  require('expo-router/entry');
+};
+let bootLocaleReady = null;
+try {
+  bootLocaleReady = require('./i18n/bootLocale').prepareBootLocale();
+} catch {
+  // Сбой подготовки локали не должен останавливать запуск: русский интерфейс.
+  bootLocaleReady = null;
+}
+if (bootLocaleReady) {
+  bootLocaleReady.then(startExpoRouter);
+} else {
+  startExpoRouter();
+}
