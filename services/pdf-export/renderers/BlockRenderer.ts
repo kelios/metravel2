@@ -2,7 +2,12 @@
 // ✅ АРХИТЕКТУРА: Рендерер блоков контента в HTML
 
 import type { PdfThemeConfig } from '../themes/PdfThemeConfig';
-import { resolveThemeHeadingLevel } from '../themes/headingLevels';
+import {
+  resolveHeadingStyle,
+  resolveSectionHeadingLevel,
+  type PdfPrintHeadingLevel,
+  type PdfRichTextSection,
+} from '../themes/headingLevels';
 import type { ParsedContentBlock } from '../parsers/ContentParser';
 import { ContentParser } from '../parsers/ContentParser';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
@@ -203,50 +208,38 @@ export class BlockRenderer {
   }
 
   /**
-   * Рендерит массив блоков в HTML
+   * Рендерит блоки rich-text раздела книги. Заголовки автора печатаются уровнем
+   * от названия раздела (`resolveSectionHeadingLevel`): мельче названия блока,
+   * с сохранением двух ступеней автора.
    */
-  renderBlocks(blocks: ParsedContentBlock[]): string {
+  renderBlocks(blocks: ParsedContentBlock[], section: PdfRichTextSection): string {
     return blocks
-      .map((block, index) =>
-        this.renderBlock(block, {
-          keepWithNext: this.shouldKeepWithNext(block, blocks[index + 1]),
-        })
-      )
+      .map((block, index) => {
+        const options = { keepWithNext: this.shouldKeepWithNext(block, blocks[index + 1]) };
+        if (block.type === 'heading') {
+          return this.renderHeading(block.text, resolveSectionHeadingLevel(section, block.level), options);
+        }
+        return this.renderBlock(block, options);
+      })
       .join('\n');
   }
 
   /**
    * Рендерит сырой rich-text HTML: применяет умную раскладку изображений,
    * парсит в блоки и рендерит. Централизует паттерн applySmartImageLayout → parse → render.
-   *
-   * Заголовки понижаются на уровень (h2→h3, h3→h4), чтобы не спорить с секционными
-   * заголовками страницы («Описание», «Плюсы» — это h2 темы). Верхняя граница — h3:
-   * выше начинается кегль секций. Нижняя — самый мелкий заголовок темы (h4).
-   *
-   * Раньше формула схлопывала в h4 вообще всё, и разделы статьи, подразделы и вопросы
-   * FAQ печатались одним кеглем — иерархия описания на бумаге пропадала.
    */
-  renderRichText(rawHtml: string): string {
+  renderRichText(rawHtml: string, section: PdfRichTextSection): string {
     if (!rawHtml) return '';
     const formatted = applySmartImageLayout(rawHtml);
     const parser = new ContentParser();
-    const blocks = parser.parse(formatted);
-    const demoted = blocks.map((block) => {
-      if (block.type === 'heading') {
-        return { ...block, level: resolveThemeHeadingLevel(Math.max(block.level + 1, 3)) };
-      }
-      return block;
-    });
-    return this.renderBlocks(demoted);
+    return this.renderBlocks(parser.parse(formatted), section);
   }
 
   /**
    * Рендерит один блок
    */
-  renderBlock(block: ParsedContentBlock, options: { keepWithNext?: boolean } = {}): string {
+  private renderBlock(block: ParsedContentBlock, options: { keepWithNext?: boolean } = {}): string {
     switch (block.type) {
-      case 'heading':
-        return this.renderHeading(block, options);
       case 'paragraph':
         return this.renderParagraph(block, options);
       case 'list':
@@ -274,16 +267,14 @@ export class BlockRenderer {
   }
 
   /**
-   * Рендерит заголовок. Тег и стиль — одного уровня: заголовок без своего стиля
-   * в теме (h5, h6) печатается как самый мелкий описанный.
+   * Рендерит заголовок печатной шкалы книги: тег и стиль одного уровня.
    */
   private renderHeading(
-    block: ParsedContentBlock & { type: 'heading' },
+    text: string,
+    level: PdfPrintHeadingLevel,
     options: { keepWithNext?: boolean } = {}
   ): string {
-    const { text } = block;
-    const level = resolveThemeHeadingLevel(block.level);
-    const style = this.theme.typography[`h${level}` as const];
+    const style = resolveHeadingStyle(this.theme.typography, level);
 
     return `
       <h${level} style="

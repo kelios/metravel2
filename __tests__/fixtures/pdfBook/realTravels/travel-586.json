@@ -137,5 +137,139 @@
       "categoryName": "Лес, Обзорная точка",
       "travelImageThumbUrl": "https://metravel.by/address-image/16136/conversions/ddc1814598564ab8acdcf1d56d13ff07.webp"
     }
-  ]
+  ],
+  "media": {
+    "gallery": [
+      {
+        "id": 3932,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/586/gallery/566ea922c5bf4da197d4c4efc3b35692.webp?w=640"
+      },
+      {
+        "id": 3930,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/586/gallery/a33a353c61cb48fba7ea1474241a249f.webp?w=640"
+      },
+      {
+        "id": 3935,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/586/gallery/fc932ab3adf14d1288436c681579934a.webp?w=640"
+      },
+      {
+        "id": 3936,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/586/gallery/6b0858c2e3d8446dbf1ff86a09fbff94.webp?w=640"
+      },
+      {
+        "id": 3937,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/586/gallery/e3158f9af2aa44f090996615e58d5e9f.webp?w=640"
+      },
+      {
+        "id": 3938,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/586/gallery/383b5942bf3b4899b31bb07fb9a9c561.webp?w=640"
+      },
+      {
+        "id": 3939,
+        "width": 1024,
+        "height": 768,
+        "aspect_ratio": 1.333333,
+        "src": "/gallery/586/gallery/e998dac056e6446c86b858a8e13dcec8.webp?w=640"
+      },
+      {
+        "id": 3940,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/586/gallery/23bb2b7a22ac4aa791b8974a0e1e62c9.webp?w=640"
+      },
+      {
+        "id": 3941,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/586/gallery/15d24e38ccdb4091ac5af04e5b6f551d.webp?w=640"
+      },
+      {
+        "id": 3942,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/586/gallery/62220114a0b84faf8e4259df25791c7b.webp?w=640"
+      },
+      {
+        "id": 3943,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/586/gallery/ea36e32e1162454eb96704ff88f9cd9a.webp?w=640"
+      }
+    ],
+    "article_body": {
+      "gallery": [
+        {
+          "id": 0,
+          "width": 1440,
+          "height": 1920,
+          "aspect_ratio": 0.75,
+          "src": "https://metravel.by/travel-description-image/97a062ac6d6d4eb694f56dfe34f8d6ec.jpg.webp?pv=2&w=1600"
+        },
+        {
+          "id": 1,
+          "width": 1920,
+          "height": 1440,
+          "aspect_ratio": 1.333333,
+          "src": "https://metravel.by/travel-description-image/cb81faff490d41bf97663fb92d270712.jpg.webp?pv=2&w=1600"
+        },
+        {
+          "id": 2,
+          "width": 1440,
+          "height": 1920,
+          "aspect_ratio": 0.75,
+          "src": "https://metravel.by/travel-description-image/48417185bd5e4c6cb50b300320450827.jpg.webp?pv=2&w=1600"
+        },
+        {
+          "id": 3,
+          "width": 1440,
+          "height": 1920,
+          "aspect_ratio": 0.75,
+          "src": "https://metravel.by/travel-description-image/1f1c1da67b9a44408f4a0a5abfa9e1f5.jpg.webp?pv=2&w=1600"
+        },
+        {
+          "id": 4,
+          "width": 1440,
+          "height": 1920,
+          "aspect_ratio": 0.75,
+          "src": "https://metravel.by/travel-description-image/79e512a9b6864d24ac4412e816383c97.jpg.webp?pv=2&w=1600"
+        },
+        {
+          "id": 5,
+          "width": 1920,
+          "height": 1440,
+          "aspect_ratio": 1.333333,
+          "src": "https://metravel.by/travel-description-image/81867fb371b64b7dbcba72582ef030b0.jpg.webp?pv=2&w=1600"
+        },
+        {
+          "id": 6,
+          "width": 1440,
+          "height": 1920,
+          "aspect_ratio": 0.75,
+          "src": "https://metravel.by/travel-description-image/2e4f50ef352541f080b359f86852a2c0.jpg.webp?pv=2&w=1600"
+        }
+      ]
+    }
+  }
 }

@@ -5,6 +5,12 @@ import { Platform } from 'react-native'
 import BookSettingsModal from '@/components/export/BookSettingsModal'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
 
+// #2229: у окна есть нативная пара (`BookSettingsModal.native.tsx`), а Jest берёт
+// платформенный файл приложений; здесь проверяется окно сайта.
+jest.mock('@/components/export/BookSettingsModal', () =>
+  jest.requireActual('@/components/export/BookSettingsModal.tsx')
+)
+
 const mockRequireUnlock = jest.fn()
 const mockTrackPaywallView = jest.fn()
 let mockIsPremium = true

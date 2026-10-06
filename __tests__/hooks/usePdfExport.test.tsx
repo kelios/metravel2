@@ -4,6 +4,7 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { Platform, Alert } from 'react-native';
 import { showToast } from '@/utils/toast';
 import { downloadBookExportArtifact, requestServerBookExport } from '@/api/bookExportApi';
+import * as printBoundary from '@/utils/printHtml';
 import { usePdfExport } from '@/hooks/usePdfExport';
 import { ExportStage } from '@/types/pdf-export';
 import type { ChecklistSection } from '@/components/export/BookSettingsModal';
@@ -75,6 +76,7 @@ const mockDocument = {
       src: '',
       download: '',
       click: jest.fn(),
+      remove: jest.fn(),
       parentNode: {
         removeChild: jest.fn(),
       },
@@ -552,6 +554,100 @@ describe('usePdfExport', () => {
       expect(mockOpenBookPreviewWindow).not.toHaveBeenCalled();
       expect(mockShowToast).not.toHaveBeenCalled();
       expect(result.current.currentStage).not.toBe(ExportStage.ERROR);
+    });
+  });
+
+  describe('#2274: «Отмена» на время сборки', () => {
+    it('сбрасывает прогресс сразу; документ не печатается позже, ни ошибки, ни тоста', async () => {
+      let finishGeneration: (html: string) => void = () => {};
+      mockGenerateTravelsHtml.mockImplementationOnce(
+        () => new Promise<string>((resolve) => { finishGeneration = resolve; }),
+      );
+      const { result } = renderHook(() => usePdfExport(mockTravels as any));
+
+      let exportPromise: Promise<void> = Promise.resolve();
+      act(() => {
+        exportPromise = result.current.openPrintBook(mockSettings);
+      });
+      await waitFor(() => expect(result.current.progress).toBeGreaterThanOrEqual(15));
+      expect(result.current.isGenerating).toBe(true);
+
+      act(() => {
+        result.current.cancel();
+      });
+      expect(result.current.isGenerating).toBe(false);
+      expect(result.current.progress).toBe(0);
+      expect(mockDiscardPendingBookPreviewWindow).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        finishGeneration('<html><body><section class="pdf-page">Late</section></body></html>');
+        await exportPromise;
+      });
+
+      expect(mockOpenBookPreviewWindow).not.toHaveBeenCalled();
+      expect(mockShowToast).not.toHaveBeenCalled();
+      expect(result.current.isGenerating).toBe(false);
+      expect(result.current.progress).toBe(0);
+      expect(result.current.error).toBeNull();
+      expect(result.current.currentStage).not.toBe(ExportStage.ERROR);
+    });
+
+    it('cancel during server artifact download never creates a late download or print', async () => {
+      mockRequestServerBookExport.mockResolvedValueOnce({ job_id: 'late-job' } as Awaited<ReturnType<typeof requestServerBookExport>>);
+      let finish: (artifact: Awaited<ReturnType<typeof downloadBookExportArtifact>>) => void = () => {};
+      mockDownloadBookExportArtifact.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+      const { result } = renderHook(() => usePdfExport(mockTravels));
+      let pending: Promise<void> = Promise.resolve();
+      act(() => { pending = result.current.openPrintBook(mockSettings); });
+      await waitFor(() => expect(mockDownloadBookExportArtifact).toHaveBeenCalledTimes(1));
+      act(() => result.current.cancel());
+      await act(async () => { await pending; });
+      await act(async () => {
+        finish({ blob: new Blob(['%PDF']), contentType: 'application/pdf', filename: 'late.pdf' });
+        await Promise.resolve();
+      });
+      expect(URL.createObjectURL).not.toHaveBeenCalled();
+      expect(mockOpenBookPreviewWindow).not.toHaveBeenCalled();
+      expect(mockShowToast).not.toHaveBeenCalled();
+    });
+
+    it('native preparation timeout settles the caller while generation is pending; late HTML never prints', async () => {
+      const preparation = new AbortController();
+      let preparationError: Error | undefined;
+      const print = jest.fn(async () => 'printed' as const);
+      const cancelSession = jest.fn();
+      const reserve = jest.spyOn(printBoundary, 'beginPrint').mockReturnValue({
+        available: true, preparationSignal: preparation.signal, getPreparationError: () => preparationError, print, cancel: cancelSession,
+      });
+      let finishGeneration: (html: string) => void = () => {};
+      mockGenerateTravelsHtml.mockImplementationOnce(() => new Promise((resolve) => { finishGeneration = resolve; }));
+      try {
+        const { result } = renderHook(() => usePdfExport(mockTravels));
+        let pending: Promise<void> = Promise.resolve();
+        act(() => { pending = result.current.openPrintBook(mockSettings); });
+        await waitFor(() => expect(result.current.progress).toBeGreaterThanOrEqual(15));
+        await act(async () => {
+          preparationError = new Error('Preparation exceeded 120 seconds');
+          preparation.abort();
+          await pending;
+        });
+        expect(result.current.isGenerating).toBe(false);
+        expect(result.current.currentStage).toBe(ExportStage.ERROR);
+        expect(result.current.error?.message).toContain('120');
+        expect(mockShowToast).toHaveBeenCalledTimes(1);
+        await act(async () => { finishGeneration('<p>late</p>'); await Promise.resolve(); });
+        expect(print).not.toHaveBeenCalled();
+        expect(cancelSession).toHaveBeenCalledTimes(1);
+      } finally { reserve.mockRestore(); }
+    });
+
+    it('без идущей сборки ничего не делает', () => {
+      const { result } = renderHook(() => usePdfExport(mockTravels as any));
+      act(() => {
+        result.current.cancel();
+      });
+      expect(result.current.isGenerating).toBe(false);
+      expect(mockDiscardPendingBookPreviewWindow).not.toHaveBeenCalled();
     });
   });
 });

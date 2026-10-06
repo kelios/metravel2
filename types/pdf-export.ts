@@ -26,7 +26,11 @@ export interface TravelForBook {
     id?: number | string;
     updated_at?: string;
     caption?: string;
+    /** width / height из медиа-манифеста API (#2232); нет — пропорция неизвестна. */
+    aspect?: number;
   }>;
+  /** Пропорции картинок описания из медиа-манифеста: ключ файла → width / height (#2232). */
+  descriptionImageAspects?: Record<string, number>;
   travelAddress?: Array<{
     id: string;
     address: string;

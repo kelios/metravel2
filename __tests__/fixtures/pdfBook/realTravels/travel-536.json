@@ -136,5 +136,97 @@
       "categoryName": "Гостиница, Приют",
       "travelImageThumbUrl": "https://metravel.by/address-image/14742/conversions/5a1eae586d7f4c7ca7d0b6238bb80a81.JPG"
     }
-  ]
+  ],
+  "media": {
+    "gallery": [
+      {
+        "id": 3326,
+        "width": 1024,
+        "height": 576,
+        "aspect_ratio": 1.777778,
+        "src": "/gallery/3f78c969897f4bc0830b8aed3e1b8a69.webp?w=640"
+      },
+      {
+        "id": 3328,
+        "width": 576,
+        "height": 1024,
+        "aspect_ratio": 0.5625,
+        "src": "/gallery/94e33d62aae34f84b9e1e2819d5b42ec.webp?w=640"
+      },
+      {
+        "id": 3329,
+        "width": 1024,
+        "height": 768,
+        "aspect_ratio": 1.333333,
+        "src": "/gallery/f9e300fc754b4bd0acee7d32ccdf553f.webp?w=640"
+      },
+      {
+        "id": 3330,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/5fea5222fca045d9abc92aaa20f8effb.webp?w=640"
+      },
+      {
+        "id": 3331,
+        "width": 1024,
+        "height": 768,
+        "aspect_ratio": 1.333333,
+        "src": "/gallery/cc72295d17ea4adebbef8a589604888e.webp?w=640"
+      },
+      {
+        "id": 3332,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/9e525a7a4dc44db28e5d518d05177ef5.webp?w=640"
+      },
+      {
+        "id": 3333,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/6ee9b3d2804746139e7042d2da335755.webp?w=640"
+      },
+      {
+        "id": 3334,
+        "width": 1024,
+        "height": 768,
+        "aspect_ratio": 1.333333,
+        "src": "/gallery/5b172cc1fb6345cb9930c3c88febe06e.webp?w=640"
+      },
+      {
+        "id": 3335,
+        "width": 1024,
+        "height": 768,
+        "aspect_ratio": 1.333333,
+        "src": "/gallery/44654b9f28834bc8973652dbbf9e5678.webp?w=640"
+      },
+      {
+        "id": 3336,
+        "width": 1024,
+        "height": 768,
+        "aspect_ratio": 1.333333,
+        "src": "/gallery/65bcd6d2fa544dab9a2e78d9f7b644da.webp?w=640"
+      }
+    ],
+    "article_body": {
+      "gallery": [
+        {
+          "id": 0,
+          "width": 768,
+          "height": 1024,
+          "aspect_ratio": 0.75,
+          "src": "https://metravel.by/travel-description-image/9502f0b44b3041f3b51ffb685d05bf4c.webp?pv=2&w=800"
+        },
+        {
+          "id": 1,
+          "width": 1024,
+          "height": 768,
+          "aspect_ratio": 1.333333,
+          "src": "https://metravel.by/travel-description-image/d470a02801e242d58ed3e652e8b4bc34.webp?pv=2&w=1600"
+        }
+      ]
+    }
+  }
 }

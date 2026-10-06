@@ -1,18 +1,26 @@
 // #2102: единая точка печати. Построение HTML — реальное (tripPlanPrintHtml),
 // мокается только граница модуля: expo-print и наличие native-модуля.
+import { Platform } from 'react-native'
 import type { PlannedTrip } from '@/api/plannedTripsTypes'
 import { buildTripPlanPrintHtml } from '@/components/trips/planning/print/tripPlanPrintHtml'
 import { buildTripPlanPrintModel } from '@/components/trips/planning/print/tripPlanPrintModel'
 
 const mockRequireOptionalNativeModule = jest.fn()
 const mockPrintAsync = jest.fn()
+const mockPrintToFileAsync = jest.fn()
+const mockDeleteAsync = jest.fn(async () => undefined)
+const mockShowToast = jest.fn(async () => undefined)
+const mockFetch = jest.fn()
 
 jest.mock('expo', () => ({
   requireOptionalNativeModule: (...args: unknown[]) => mockRequireOptionalNativeModule(...args),
 }))
 jest.mock('expo-print', () => ({
   printAsync: (...args: unknown[]) => mockPrintAsync(...args),
+  printToFileAsync: (...args: unknown[]) => mockPrintToFileAsync(...args),
 }))
+jest.mock('expo-file-system/legacy', () => ({ deleteAsync: (...args: unknown[]) => mockDeleteAsync(...args) }))
+jest.mock('@/utils/toast', () => ({ showToast: (...args: unknown[]) => mockShowToast(...(args as [])) }))
 
 const trip = {
   id: 7,
@@ -53,20 +61,33 @@ const realHtml = () =>
 describe('printHtml.native', () => {
   const native = () => require('@/utils/printHtml.native') as typeof import('@/utils/printHtml.native')
 
+  const originalFetch = global.fetch
+  const originalOS = Platform.OS
+
   beforeEach(() => {
     jest.clearAllMocks()
     mockRequireOptionalNativeModule.mockReturnValue({})
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' })
     mockPrintAsync.mockResolvedValue(undefined)
+    mockPrintToFileAsync.mockResolvedValue({ uri: 'file:///cache/book.pdf', numberOfPages: 1 })
+    mockFetch.mockResolvedValue({ ok: true, headers: { get: () => 'image/jpeg' }, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer })
+    global.fetch = mockFetch as unknown as typeof fetch
   })
 
-  it('передаёт в printAsync реальный HTML плана поездки', async () => {
+  afterAll(() => {
+    global.fetch = originalFetch
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOS })
+  })
+
+  it('renders the real trip HTML into a bounded PDF file and prints its URI', async () => {
     const html = realHtml()
 
     await expect(native().printHtml(html, { title: trip.title })).resolves.toBe('printed')
 
     expect(mockPrintAsync).toHaveBeenCalledTimes(1)
-    const [options] = mockPrintAsync.mock.calls[0]
-    expect(options.html).toBe(html)
+    expect(mockPrintAsync).toHaveBeenCalledWith({ uri: 'file:///cache/book.pdf' })
+    const [options] = mockPrintToFileAsync.mock.calls[0]
+    expect(options.html).toContain('data-print-resource-policy')
     expect(options.html).toContain('Кольцо вокруг озера')
     expect(options.html).toContain('<section class="day"')
   })
@@ -117,13 +138,125 @@ describe('printHtml.native', () => {
 
   it('beginPrint на native ничего не резервирует и печатает по готовому HTML', async () => {
     await expect(native().beginPrint().print('<p>x</p>')).resolves.toBe('printed')
-    expect(mockPrintAsync).toHaveBeenCalledWith({ html: '<p>x</p>' })
+    expect(mockPrintToFileAsync).toHaveBeenCalledWith({ html: expect.stringContaining('<p>x</p>') })
+    expect(mockPrintAsync).toHaveBeenCalledWith({ uri: 'file:///cache/book.pdf' })
   })
 
-  it('#2125: cancel на native — без эффекта, печать после него работает', async () => {
+  it('#2274: cancel до печати — cancelled, лист не открывается (как web-сессия #2125)', async () => {
     const session = native().beginPrint()
     expect(() => session.cancel()).not.toThrow()
-    await expect(session.print('<p>x</p>')).resolves.toBe('printed')
+    await expect(session.print('<p>x</p>')).resolves.toBe('cancelled')
+    expect(mockPrintAsync).not.toHaveBeenCalled()
+  })
+
+  const withImages =
+    '<html><body><img src="https://img.example/a.jpg?w=1&amp;q=2"><img src="https://dead.example/b.jpg"></body></html>'
+
+  it('#2274: картинки проверяются до печати; не ответившая убирается, тост с числом', async () => {
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.startsWith('https://dead.example/')) throw new TypeError('Network request failed')
+      return { ok: true, headers: { get: () => 'image/jpeg' }, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer }
+    })
+
+    await expect(native().beginPrint().print(withImages)).resolves.toBe('printed')
+
+    expect(mockFetch).toHaveBeenCalledWith('https://img.example/a.jpg?w=1&q=2', expect.objectContaining({ method: 'GET' }))
+    const { html } = mockPrintToFileAsync.mock.calls[0][0] as { html: string }
+    expect(html).toContain('src="data:image/jpeg;base64,AQID"')
+    expect(html).not.toContain('dead.example')
+    expect(mockShowToast).toHaveBeenCalledTimes(1)
+    expect(mockShowToast.mock.calls[0][0]).toEqual(expect.objectContaining({ type: 'info' }))
+  })
+
+  it('#2274: deadline is 120 seconds from beginPrint, without an extra resource window', async () => {
+    jest.useFakeTimers();
+    try {
+      const session = native().beginPrint();
+      await jest.advanceTimersByTimeAsync(120_000);
+      await expect(session.print(withImages)).rejects.toThrow('120');
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(mockPrintAsync).not.toHaveBeenCalled();
+    } finally { jest.useRealTimers(); }
+  });
+
+  it('#2274: a hung native file renderer reaches the deadline without presenting; its late file is removed', async () => {
+    jest.useFakeTimers();
+    let finish: (file: { uri: string; numberOfPages: number }) => void = () => {};
+    mockPrintToFileAsync.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    try {
+      const session = native().beginPrint();
+      const printing = session.print('<p>x</p>');
+      const rejected = expect(printing).rejects.toThrow('120');
+      await jest.advanceTimersByTimeAsync(0);
+      expect(mockPrintToFileAsync).toHaveBeenCalledTimes(1);
+      await jest.advanceTimersByTimeAsync(120_000);
+      await rejected;
+      expect(mockPrintAsync).not.toHaveBeenCalled();
+      finish({ uri: 'file:///cache/late-timeout.pdf', numberOfPages: 1 });
+      await jest.advanceTimersByTimeAsync(0);
+      expect(mockPrintAsync).not.toHaveBeenCalled();
+      expect(mockDeleteAsync).toHaveBeenCalledWith('file:///cache/late-timeout.pdf', { idempotent: true });
+    } finally { jest.useRealTimers(); }
+  });
+
+  it('#2274: cancel during native rendering settles immediately and removes late PDF without a sheet', async () => {
+    jest.useFakeTimers();
+    let finish: (file: { uri: string; numberOfPages: number }) => void = () => {};
+    mockPrintToFileAsync.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    try {
+      const session = native().beginPrint();
+      const printing = session.print('<p>x</p>');
+      await jest.advanceTimersByTimeAsync(0);
+      expect(mockPrintToFileAsync).toHaveBeenCalledTimes(1);
+      session.cancel();
+      await expect(printing).resolves.toBe('cancelled');
+      finish({ uri: 'file:///cache/late-cancel.pdf', numberOfPages: 1 });
+      await jest.advanceTimersByTimeAsync(0);
+      expect(mockPrintAsync).not.toHaveBeenCalled();
+      expect(mockDeleteAsync).toHaveBeenCalledWith('file:///cache/late-cancel.pdf', { idempotent: true });
+      expect(mockShowToast).not.toHaveBeenCalled();
+    } finally { jest.useRealTimers(); }
+  });
+
+  it('retains the submitted Android PDF because onWrite reads it after printAsync resolves', async () => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+    await expect(native().printHtml('<p>x</p>')).resolves.toBe('printed');
+    expect(mockPrintAsync).toHaveBeenCalledWith({ uri: 'file:///cache/book.pdf' });
+    expect(mockDeleteAsync).not.toHaveBeenCalled();
+  });
+
+  it('#2274: the preparation deadline does not cancel an already opened system sheet', async () => {
+    jest.useFakeTimers();
+    let finish: () => void = () => {};
+    mockPrintAsync.mockImplementation(() => new Promise<void>((resolve) => { finish = resolve; }));
+    try {
+      const session = native().beginPrint();
+      const printing = session.print('<p>x</p>');
+      await jest.advanceTimersByTimeAsync(0);
+      expect(mockPrintAsync).toHaveBeenCalledWith({ uri: 'file:///cache/book.pdf' });
+      expect(mockDeleteAsync).not.toHaveBeenCalled();
+      await jest.advanceTimersByTimeAsync(120_001);
+      expect(session.preparationSignal?.aborted).toBe(false);
+      finish();
+      await expect(printing).resolves.toBe('printed');
+      await jest.advanceTimersByTimeAsync(0);
+      expect(mockDeleteAsync).toHaveBeenCalledWith('file:///cache/book.pdf', { idempotent: true });
+    } finally { jest.useRealTimers(); }
+  });
+
+  it('#2274: cancel во время проверки картинок — cancelled, лист не открывается и позже', async () => {
+    mockFetch.mockImplementation(
+      (_url: string, init: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(new Error('aborted')))),
+    )
+    const session = native().beginPrint()
+    const printing = session.print(withImages)
+    await Promise.resolve()
+    session.cancel()
+
+    await expect(printing).resolves.toBe('cancelled')
+    expect(mockPrintAsync).not.toHaveBeenCalled()
+    expect(mockShowToast).not.toHaveBeenCalled()
   })
 })
 

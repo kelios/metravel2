@@ -23,13 +23,13 @@ describe('картинка тела статьи в книге', () => {
   const renderer = new BlockRenderer(minimalTheme)
 
   it('просит ступень, которую семейство обслуживает', () => {
-    const html = renderer.renderBlocks([{ type: 'image', src: ADDRESS_IMAGE } as any])
+    const html = renderer.renderBlocks([{ type: 'image', src: ADDRESS_IMAGE } as any], 'description')
     expect(html).toContain('w=1200')
     expect(html).not.toContain('w=1600')
   })
 
   it('несёт запасной адрес и пробует его до того, как спрятать кадр', () => {
-    const html = renderer.renderBlocks([{ type: 'image', src: ADDRESS_IMAGE } as any])
+    const html = renderer.renderBlocks([{ type: 'image', src: ADDRESS_IMAGE } as any], 'description')
     expect(html).toContain('data-print-fallback=')
     expect(html).toContain('dataset.printFallback')
     // Запасной адрес — тот же кадр без параметров прокси.
@@ -44,12 +44,12 @@ describe('картинка тела статьи в книге', () => {
         columns: 2,
         images: [{ src: ADDRESS_IMAGE }, { src: ADDRESS_IMAGE }],
       } as any,
-    ])
+    ], 'description')
     expect(html.match(/data-print-fallback=/g)?.length).toBeGreaterThanOrEqual(2)
   })
 
   it('blob-кадру запасной адрес не нужен — он и есть локальный источник', () => {
-    const html = renderer.renderBlocks([{ type: 'image', src: 'blob:local-image' } as any])
+    const html = renderer.renderBlocks([{ type: 'image', src: 'blob:local-image' } as any], 'description')
     expect(html).not.toContain('data-print-fallback=')
     expect(html).toContain("onerror=\"this.style.display='none';\"")
   })

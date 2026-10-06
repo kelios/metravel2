@@ -49,12 +49,17 @@ function TravelPdfExportControl({
 }: Props) {
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [shouldMountPdfExport, setShouldMountPdfExport] = useState(false)
-  const [{ isGenerating }, setPdfExportState] = useState<ShareButtonsPdfExportState>(INITIAL_PDF_EXPORT_STATE)
+  const [{ isGenerating, cancel }, setPdfExportState] = useState<ShareButtonsPdfExportState>(INITIAL_PDF_EXPORT_STATE)
 
   const handleOpenExport = useCallback(() => {
     setShouldMountPdfExport(true)
     setShowSettingsModal(true)
   }, [])
+
+  // #2274: на время сборки нажатие отменяет её — лист печати не откроется.
+  const label = isGenerating
+    ? i18nT('shared:components.ui.ProgressIndicator.otmenit_ac1629b1')
+    : i18nT('travel:components.travel.TravelPdfExportControl.eksport_v_pdf_94c24fb3')
 
   const buttonContent = useMemo(() => {
     if (isGenerating) {
@@ -67,11 +72,10 @@ function TravelPdfExportControl({
   return (
     <>
       <Pressable
-        onPress={handleOpenExport}
-        disabled={isGenerating}
+        onPress={isGenerating ? () => cancel?.() : handleOpenExport}
         accessibilityRole="button"
-        accessibilityLabel={i18nT('travel:components.travel.TravelPdfExportControl.eksport_v_pdf_94c24fb3')}
-        ref={webTitleRef(i18nT('travel:components.travel.TravelPdfExportControl.eksport_v_pdf_94c24fb3'))}
+        accessibilityLabel={label}
+        ref={webTitleRef(label)}
         style={({ pressed, hovered }) => [
           actionBtnStyle,
           hovered && !isGenerating ? actionBtnHoveredStyle : null,
@@ -81,7 +85,7 @@ function TravelPdfExportControl({
         {...(Platform.OS === 'web'
           ? {
               role: 'button',
-              'aria-label': i18nT('travel:components.travel.TravelPdfExportControl.eksport_v_pdf_94c24fb3'),
+              'aria-label': label,
             }
           : {})}
       >

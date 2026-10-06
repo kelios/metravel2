@@ -10,7 +10,6 @@ import { Caption } from '@/components/ui/Typography';
 import UIButton from '@/components/ui/Button';
 import ProgressIndicator from '@/components/ui/ProgressIndicator';
 import BookSettingsModal from '@/components/export/BookSettingsModal';
-import { isBookSettingsWindowAvailable } from '@/components/export/bookSettingsWindow';
 import SelectedTravelOrderCard from './SelectedTravelOrderCard';
 import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -140,8 +139,10 @@ function ListTravelExportControls({
   const asTextStyle = (style: unknown): StyleProp<TextStyle> => style as StyleProp<TextStyle>;
 
   const handleCloseSettings = useCallback(() => {
+    // The native settings modal covers the underlying progress Cancel button.
+    pdfExport.cancel();
     setIsBookSettingsOpen(false);
-  }, []);
+  }, [pdfExport]);
 
   const handleImmediateSave = useCallback(() => {
     void pdfExport.openPrintBook(lastSettings);
@@ -294,7 +295,7 @@ function ListTravelExportControls({
           </View>
 
           <View style={[asViewStyle(s.exportBarButtons), isMobile ? asViewStyle(s.exportBarButtonsMobile) : null]}>
-            {hasSelection && isBookSettingsWindowAvailable() && (
+            {hasSelection && (
               <CompactActionLink
                 label={i18nT('travel:components.listTravel.ListTravelExportControls.nastroyki_bd33425d')}
                 onPress={handleOpenSettings}
@@ -336,6 +337,7 @@ function ListTravelExportControls({
                       : i18nT('travel:components.listTravel.ListTravelExportControls.finalnaya_obrabotka_ee356100')
               }
               showPercentage
+              onCancel={pdfExport.cancel}
             />
           </View>
         )}

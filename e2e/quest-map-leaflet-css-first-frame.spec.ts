@@ -110,8 +110,17 @@ test.describe('@perf quest map: Leaflet CSS before the first map frame (#2324)',
 
     const check = async (label: string) => {
       await expect(page.locator('.leaflet-container img.leaflet-tile').first()).toBeAttached({ timeout: 60_000 })
-      // Окно, в котором раньше приходил CSS и переставлял слои.
-      await page.waitForTimeout(LEAFLET_CSS_DELAY_MS + 1000)
+      await page.waitForFunction(() => {
+        const cssReady = Array.from(document.styleSheets).some((sheet) =>
+          sheet.href?.includes('/vendor/leaflet.css'),
+        )
+        const tiles = Array.from(document.querySelectorAll<HTMLImageElement>('.leaflet-container img.leaflet-tile'))
+        return cssReady && tiles.length > 0 && tiles.every((tile) => tile.complete)
+      })
+      // Два кадра дают PerformanceObserver получить сдвиги после применения CSS.
+      await page.evaluate(() => new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      }))
       const probe = await readProbe(page)
       expect(probe.firstTilePosition, `${label}: первый тайл вставлен до применения leaflet.css`).toBe('absolute')
       expect(probe.mapShifts, `${label}: layout shift от узлов карты`).toEqual([])

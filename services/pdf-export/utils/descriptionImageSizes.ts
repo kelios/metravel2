@@ -37,6 +37,15 @@ export function extractUnsizedImageSources(html: string | null | undefined): str
 }
 
 /**
+ * Адрес из значения атрибута `src`: сериализованная разметка экранирует `&` в
+ * query (`?w=1600&amp;q=85`), а грузить нужно тот же URL, что браузер возьмёт
+ * из разобранного `<img>`.
+ */
+export function decodeImageSrcAttribute(src: string): string {
+  return src.replace(/&amp;/gi, '&');
+}
+
+/**
  * Проставляет `width`/`height` картинкам описания по замеренным пропорциям
  * (`src` → width/height). Кадры с объявленными размерами и незамеренные
  * (таймаут, ошибка загрузки, SSR) остаются как есть — раскладка для них

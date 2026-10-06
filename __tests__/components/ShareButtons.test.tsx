@@ -36,6 +36,25 @@ jest.mock('@/utils/printAvailability', () => ({
   isPrintAvailable: () => mockPrintAvailable,
 }));
 
+// #2274: мост экспорта отдаёт состояние «идёт сборка» с отменой.
+const mockCancelPdfExport = jest.fn();
+jest.mock('@/components/travel/ShareButtonsPdfExportBridge', () => {
+  const React = require('react');
+  function MockPdfExportBridge({ onStateChange }: { onStateChange: (state: unknown) => void }) {
+    React.useEffect(() => {
+      onStateChange({
+        isGenerating: true,
+        progress: 85,
+        currentStage: 'rendering',
+        lastSettings: {},
+        cancel: mockCancelPdfExport,
+      });
+    }, [onStateChange]);
+    return null;
+  }
+  return { __esModule: true, default: MockPdfExportBridge };
+});
+
 // Mock window for web platform
 const mockWindow = {
   location: { href: 'https://metravel.by/travels/test-travel' },
@@ -103,6 +122,18 @@ describe('ShareButtons', () => {
       (Platform.OS as any) = os;
       mockPrintAvailable = false;
       expect(render(<ShareButtons travel={mockTravel} />).queryByText('PDF / книга')).toBeNull();
+    });
+
+    it.each(['ios', 'web'])('#2274 %s: на время сборки кнопка отменяет её, а не заблокирована', async (os) => {
+      (Platform.OS as any) = os;
+      const view = render(<ShareButtons travel={mockTravel} />);
+      fireEvent.press(view.getByText('PDF / книга'));
+
+      const progressButton = await view.findByText('PDF 85%');
+      fireEvent.press(progressButton);
+
+      expect(mockCancelPdfExport).toHaveBeenCalledTimes(1);
+      expect(view.getByLabelText(/Отменить/)).toBeTruthy();
     });
   });
 

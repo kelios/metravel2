@@ -72,7 +72,7 @@ describe('#303 BOOK-Q5: смысловые блоки не рвутся урод
   it('info/warning/tip/danger-блок получает break-inside: avoid', () => {
     const html = renderer.renderBlocks([
       { type: 'tip-block', title: 'Совет', content: 'Берите термос' } as never,
-    ])
+    ], 'description')
     expect(html).toContain('break-inside: avoid')
     expect(html).toContain('page-break-inside: avoid')
   })
@@ -80,7 +80,7 @@ describe('#303 BOOK-Q5: смысловые блоки не рвутся урод
   it('пункты списка (plus/minus) атомарны: break-inside: avoid на каждом li', () => {
     const html = renderer.renderBlocks([
       { type: 'list', ordered: false, items: ['Тихо', 'Красиво', 'Бесплатно'] } as never,
-    ])
+    ], 'description')
     const liAvoid = (html.match(/break-inside: avoid/g) || []).length
     expect(liAvoid).toBeGreaterThanOrEqual(3)
   })
@@ -88,7 +88,7 @@ describe('#303 BOOK-Q5: смысловые блоки не рвутся урод
   it('сам список остаётся разрываемым (break-inside: auto), чтобы длинный список не плодил пустые страницы', () => {
     const html = renderer.renderBlocks([
       { type: 'list', ordered: false, items: ['a', 'b'] } as never,
-    ])
+    ], 'description')
     expect(html).toMatch(/<ul[\s\S]*?break-inside: auto/)
     expect(html).toMatch(/<ul[\s\S]*?page-break-inside: auto/)
   })

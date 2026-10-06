@@ -1,8 +1,7 @@
-import React, { Suspense, lazy, useCallback, useEffect, useRef } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect } from 'react';
 
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
-import { isBookSettingsWindowAvailable } from '@/components/export/bookSettingsWindow';
 import * as useSingleTravelExportModule from '@/components/travel/hooks/useSingleTravelExport';
 import { ExportStage } from '@/types/pdf-export';
 import { resolveExportedFunction } from '@/utils/moduleInterop';
@@ -28,6 +27,7 @@ const fallbackUseSingleTravelExport: typeof useSingleTravelExportModule.useSingl
     isGenerating: false,
     progress: 0,
     currentStage: ExportStage.ERROR,
+    cancel: () => {},
   } as any,
   lastSettings: FALLBACK_BOOK_SETTINGS,
   settingsSummary: 'minimal',
@@ -45,6 +45,8 @@ export type ShareButtonsPdfExportState = {
   progress: number;
   currentStage: ExportStage;
   lastSettings: BookSettings;
+  /** #2274: «Отмена» на время сборки; без идущей сборки ничего не делает. */
+  cancel?: () => void;
 };
 
 type Props = {
@@ -56,7 +58,7 @@ type Props = {
 
 function ShareButtonsPdfExportBridge({ travel, visible, onClose, onStateChange }: Props) {
   const { pdfExport, lastSettings, handleOpenPrintBookWithSettings } = useSingleTravelExportSafe(travel);
-  const { isGenerating, progress, currentStage } = pdfExport;
+  const { isGenerating, progress, currentStage, cancel } = pdfExport;
 
   useEffect(() => {
     onStateChange({
@@ -64,8 +66,15 @@ function ShareButtonsPdfExportBridge({ travel, visible, onClose, onStateChange }
       progress: progress ?? 0,
       currentStage: currentStage ?? ExportStage.ERROR,
       lastSettings,
+      cancel,
     });
-  }, [currentStage, isGenerating, lastSettings, onStateChange, progress]);
+  }, [cancel, currentStage, isGenerating, lastSettings, onStateChange, progress]);
+
+  const handleCloseSettings = useCallback(() => {
+    // Also covers native Modal dismissal while its async Save is pending.
+    cancel();
+    onClose();
+  }, [cancel, onClose]);
 
   const handleExport = useCallback(
     async (settings: BookSettings) => {
@@ -75,29 +84,11 @@ function ShareButtonsPdfExportBridge({ travel, visible, onClose, onStateChange }
     [handleOpenPrintBookWithSettings, onClose],
   );
 
-  // #2119: там, где окна настроек нет (приложения), запрос экспорта сразу печатает
-  // книгу с настройками по умолчанию. Один запрос — один запуск: пока `visible`
-  // не сброшен, повторные рендеры (прогресс сборки) печать не перезапускают.
-  const hasSettingsWindow = isBookSettingsWindowAvailable();
-  const requestHandledRef = useRef(false);
-  useEffect(() => {
-    if (!visible) {
-      requestHandledRef.current = false;
-      return;
-    }
-    if (hasSettingsWindow || requestHandledRef.current) return;
-    requestHandledRef.current = true;
-    onClose();
-    void handleOpenPrintBookWithSettings(lastSettings);
-  }, [handleOpenPrintBookWithSettings, hasSettingsWindow, lastSettings, onClose, visible]);
-
-  if (!hasSettingsWindow) return null;
-
   return (
     <Suspense fallback={null}>
       <BookSettingsModalLazy
         visible={visible}
-        onClose={onClose}
+        onClose={handleCloseSettings}
         onSave={handleExport}
         onPreview={handleExport}
         travelCount={1}

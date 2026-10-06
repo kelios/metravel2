@@ -108,7 +108,7 @@ export function buildPdfHtmlDocument({
         image-rendering: -webkit-optimize-contrast;
         image-rendering: crisp-edges;
       }
-      h1, h2, h3, h4 {
+      h1, h2, h3, h4, h5, h6 {
         font-family: ${typography.headingFont};
         color: ${colors.text};
         page-break-after: avoid;
@@ -118,8 +118,11 @@ export function buildPdfHtmlDocument({
         text-rendering: optimizeLegibility;
         font-feature-settings: "kern" 1;
       }
-      h1 + p, h2 + p, h3 + p, h4 + p {
+      h1 + p, h2 + p, h3 + p, h4 + p, h5 + p, h6 + p {
         page-break-before: avoid;
+      }
+      h5, h6 {
+        margin-top: 1.33em;
       }
       p {
         orphans: 2;

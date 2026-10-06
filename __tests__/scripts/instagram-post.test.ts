@@ -1,10 +1,10 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { makeTempDir } = require('./cli-test-utils')
 const { listSlides, parseArgs, parseRange, readCaption } = require('../../scripts/instagram-post')
 
 describe('instagram-post', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ig-post-'))
+  const dir = makeTempDir('ig-post-')
   afterAll(() => fs.rmSync(dir, { recursive: true, force: true }))
 
   it('publishes only with the explicit approval flag', () => {

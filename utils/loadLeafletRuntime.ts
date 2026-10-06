@@ -16,7 +16,7 @@ export async function loadLeafletRuntime(): Promise<{
   const [vendorModule, leafletFixModule] = await Promise.all([
     import('@/utils/leafletVendor'),
     import('@/utils/leafletFix'),
-    import('@/utils/ensureLeafletCss')
+    Promise.resolve(import('@/utils/ensureLeafletCss'))
       .then((m) => m.whenLeafletCssReady())
       .catch(() => undefined),
   ])

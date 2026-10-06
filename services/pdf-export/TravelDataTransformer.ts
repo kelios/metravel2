@@ -11,6 +11,7 @@ import {
   PRINT_IMAGE_THUMB_WIDTH,
 } from '@/utils/printImageUrl';
 import { sanitizeRichTextForPdf } from '@/utils/sanitizeRichText';
+import { buildDescriptionImageAspects, buildGalleryAspectsById } from './utils/imageAspects';
 import { translate as i18nT, translatePlural } from '@/i18n'
 
 
@@ -70,7 +71,8 @@ export class TravelDataTransformer {
                 PRINT_IMAGE_FULL_WIDTH,
               )
             : undefined,
-        gallery: this.transformGallery(travel.gallery),
+        gallery: this.transformGallery(travel.gallery, buildGalleryAspectsById(travel.media)),
+        descriptionImageAspects: buildDescriptionImageAspects(travel.media),
         travelAddress: this.transformAddresses(travel.travelAddress),
         youtube_link: travel.youtube_link || null,
         userName: travel.userName || null,
@@ -219,7 +221,7 @@ export class TravelDataTransformer {
   /**
    * Преобразует галерею в нормализованный формат
    */
-  private transformGallery(gallery: any): TravelForBook['gallery'] {
+  private transformGallery(gallery: any, aspectsById: Map<string, number>): TravelForBook['gallery'] {
     if (!gallery) return undefined;
     if (!Array.isArray(gallery)) {
       return undefined;
@@ -238,6 +240,7 @@ export class TravelDataTransformer {
           typeof g === 'string' ? g : (g.print_url || g.url || g)
         ),
         id: typeof g === 'string' ? undefined : (g.id || g.url),
+        aspect: typeof g === 'string' ? undefined : aspectsById.get(String(g.id)),
         updated_at: typeof g === 'string' ? undefined : g.updated_at,
         caption:
           typeof g === 'string' || typeof g.caption !== 'string' || !g.caption.trim()

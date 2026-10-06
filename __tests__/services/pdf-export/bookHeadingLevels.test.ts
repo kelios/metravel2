@@ -1,16 +1,22 @@
 /**
  * @jest-environment-options {"url": "https://metravel.by/"}
  */
-// #2210: заголовок любого уровня h1–h6 в любом из четырёх текстовых блоков
-// путешествия не роняет сборку книги; уровни без стиля в теме (h5, h6)
-// печатаются тегом и стилем h4. Санитайзер, разбор и рендер — реальные;
+// #2210, #2255: заголовок автора любого уровня h1–h6 в любом из четырёх
+// текстовых блоков путешествия не роняет сборку книги и в готовом документе
+// напечатан мельче названия своего блока. Санитайзер, разбор и рендер — реальные;
 // подменены только границы, как в `bookGolden.test.ts`: сеть (файлы маршрута),
 // canvas (снимок карты) и генератор QR.
 import { Platform } from 'react-native'
 
 import { buildDefaultSettingsForTravel } from '@/components/travel/hooks/useSingleTravelExport'
 import { BookHtmlExportService } from '@/services/book/BookHtmlExportService'
+import { translate } from '@/i18n'
 import { getThemeConfig } from '@/services/pdf-export/themes/PdfThemeConfig'
+import {
+  PDF_RICH_TEXT_SECTIONS,
+  resolveHeadingStyle,
+  resolveSectionHeadingLevel,
+} from '@/services/pdf-export/themes/headingLevels'
 import { generateCanvasMapSnapshot, generateLeafletRouteSnapshot } from '@/utils/mapImageGenerator'
 
 import { RICH_TEXT_FIELDS, loadRealTravelFixtures, toTravel } from '../../fixtures/pdfBook/corpus'
@@ -37,13 +43,33 @@ jest.mock('@/api/travelRoutes', () => ({
   downloadTravelRouteFileBlob: jest.fn(),
 }))
 
-const HEADINGS_HTML = '<h4>Четвёртый</h4><h5>Пятый</h5><h6>Шестой</h6>'
+const AUTHOR_LEVELS = [1, 2, 3, 4, 5, 6] as const
+
+const authorHeadingText = (level: number) => `Заголовок автора h${level}`
+
+const HEADINGS_HTML = AUTHOR_LEVELS.map((level) => `<h${level}>${authorHeadingText(level)}</h${level}>`).join('')
+
+/** Название блока в книге — ключ, которым его печатает `travelContentPage.ts` (вариант `runtime`). */
+const SECTION_TITLE_KEYS = {
+  description: 'export:services.pdf_export.generators.v2.runtime.travelContentPage.opisanie_1c179656',
+  recommendation: 'export:services.pdf_export.generators.v2.runtime.travelContentPage.rekomendatsii_9768c7c8',
+  plus: 'export:services.pdf_export.generators.v2.runtime.travelContentPage.div_style_background_value1_border_radius_va_761264be.text01',
+  minus: 'export:services.pdf_export.generators.v2.runtime.travelContentPage.div_style_background_value1_border_radius_va_961e5788.text01',
+} as const
 
 const HEADING_TYPOGRAPHY = ['font-size', 'font-weight', 'line-height', 'margin-bottom'] as const
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const pt = (size: string | undefined) => {
+  const match = size?.match(/^(\d+(?:\.\d+)?)pt$/)
+  if (!match) throw new Error(`Кегль не в pt: ${size}`)
+  return Number(match[1])
+}
+
 /** Тег и типографика заголовка с текстом `text`, как он напечатан в книге. */
 function printedHeading(html: string, text: string) {
-  const match = html.match(new RegExp(`<(h[1-6]) style="([^"]*)">${text}</h[1-6]>`))
+  const match = html.match(new RegExp(`<(h[1-6]) style="([^"]*)">${escapeRegExp(text)}</h[1-6]>`))
   if (!match) throw new Error(`В книге нет заголовка «${text}»`)
   const [, tag, style] = match
   const declarations = new Map(
@@ -77,32 +103,43 @@ describe('PDF-книга: уровни заголовков в текстовы�
     ;(generateLeafletRouteSnapshot as jest.Mock).mockReset().mockResolvedValue(null)
   })
 
-  it.each(RICH_TEXT_FIELDS)('поле %s: книга собирается, h5 и h6 напечатаны тегом и стилем h4', async (field) => {
-    const travel = toTravel({
-      ...fixture,
-      description: '',
-      recommendation: '',
-      plus: '',
-      minus: '',
-      [field]: HEADINGS_HTML,
-    })
-    const settings = buildDefaultSettingsForTravel(travel)
-    const h4 = getThemeConfig(settings.template).typography.h4
-    const asFourth = {
-      tag: 'h4',
-      typography: {
-        'font-size': h4.size,
-        'font-weight': String(h4.weight),
-        'line-height': String(h4.lineHeight),
-        'margin-bottom': h4.marginBottom,
-      },
-    }
-
-    const html = await new BookHtmlExportService().generateTravelsHtml([travel], settings, { isPremium: false })
-
-    expect(printedHeading(html, 'Четвёртый')).toEqual(asFourth)
-    expect(printedHeading(html, 'Пятый')).toEqual(asFourth)
-    expect(printedHeading(html, 'Шестой')).toEqual(asFourth)
-    expect(html).not.toMatch(/<h[56][\s>]/)
+  it('список блоков книги с заголовками автора совпадает с rich-text полями путешествия', () => {
+    expect([...PDF_RICH_TEXT_SECTIONS].sort()).toEqual([...RICH_TEXT_FIELDS].sort())
   })
+
+  it.each(RICH_TEXT_FIELDS)(
+    'поле %s: книга собирается, заголовки автора h1–h6 напечатаны по карте и мельче названия блока',
+    async (field) => {
+      const travel = toTravel({
+        ...fixture,
+        description: '',
+        recommendation: '',
+        plus: '',
+        minus: '',
+        [field]: HEADINGS_HTML,
+      })
+      const settings = buildDefaultSettingsForTravel(travel)
+      const { typography } = getThemeConfig(settings.template)
+
+      const html = await new BookHtmlExportService().generateTravelsHtml([travel], settings, { isPremium: false })
+      const titleSize = pt(printedHeading(html, translate(SECTION_TITLE_KEYS[field])).typography['font-size'])
+
+      for (const level of AUTHOR_LEVELS) {
+        const printed = resolveSectionHeadingLevel(field, level)
+        const style = resolveHeadingStyle(typography, printed)
+        const heading = printedHeading(html, authorHeadingText(level))
+
+        expect(heading).toEqual({
+          tag: `h${printed}`,
+          typography: {
+            'font-size': style.size,
+            'font-weight': String(style.weight),
+            'line-height': String(style.lineHeight),
+            'margin-bottom': style.marginBottom,
+          },
+        })
+        expect(pt(heading.typography['font-size'])).toBeLessThan(titleSize)
+      }
+    }
+  )
 })

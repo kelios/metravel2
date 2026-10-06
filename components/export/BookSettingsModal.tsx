@@ -7,28 +7,34 @@ import Feather from '@expo/vector-icons/Feather';
 import ThemePreview, { type PdfThemeName } from './ThemePreview';
 import PresetSelector from './PresetSelector';
 import GalleryLayoutSelector from './GalleryLayoutSelector';
-import type { BookPreset } from '@/types/pdf-presets';
 import { METRICS } from '@/constants/layout';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useTheme } from '@/hooks/useTheme';
-import { usePdfPremium } from '@/hooks/usePdfPremium';
-import { showToast } from '@/utils/toast';
-import type { BookSettings, ChecklistSection } from './BookSettingsModal.types';
-import {
-  gallerySettingNeedsPremium,
-  isPremiumCoverType,
-} from './BookSettingsModal.premium';
-import { DEFAULT_CHECKLIST_SELECTION } from './BookSettingsModal.constants';
-import {
-  buildInitialSettings,
-  buildModalColors,
-  resolveThemed,
-} from './BookSettingsModal.helpers';
+import type { BookSettings } from './BookSettingsModal.types';
+import { buildModalColors, resolveThemed } from './BookSettingsModal.helpers';
+import { useBookSettingsForm } from './useBookSettingsForm';
 import { ChecklistFieldset, ModalFooter } from './BookSettingsModal.parts';
 import { translate as i18nT, translatePlural } from '@/i18n'
 
-// ✅ ИСПРАВЛЕНИЕ: Picker не используется в веб-версии модального окна
-// import { Picker } from '@react-native-picker/picker';
+function loadSavedSettings(): Partial<BookSettings> | undefined {
+  if (Platform.OS !== 'web' || typeof localStorage === 'undefined') return;
+  try {
+    const stored = localStorage.getItem('metravel_pdf_settings');
+    return stored ? JSON.parse(stored) as Partial<BookSettings> : undefined;
+  } catch (error) {
+    console.warn('Failed to load settings from localStorage:', error);
+    return undefined;
+  }
+}
+
+function persistSettings(settings: BookSettings): void {
+  if (Platform.OS !== 'web' || typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem('metravel_pdf_settings', JSON.stringify(settings));
+  } catch (error) {
+    console.warn('Failed to save settings to localStorage:', error);
+  }
+}
 
 export type { BookSettings, ChecklistSection } from './BookSettingsModal.types';
 export type { PdfThemeName };
@@ -55,69 +61,29 @@ export default function BookSettingsModal({
   mode: _mode = 'save',
 }: BookSettingsModalProps) {
   const { isDark } = useTheme();
-  const { isPremium, requireUnlock, trackPaywallView } = usePdfPremium();
   const themed = resolveThemed(isDark);
   const MODAL_COLORS = buildModalColors(themed);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const firstFocusableRef = useRef<HTMLButtonElement | null>(null);
 
-  const [settings, setSettings] = useState<BookSettings>(() =>
-    buildInitialSettings(defaultSettings)
-  );
+  const {
+    settings, isPremium, selectedPresetId, isSaving, validationErrors,
+    hasUnsavedChanges, hasSubtitleError,
+    selectPreset: handlePresetSelect, selectTheme: handleThemeSelect,
+    updateSettings: handleSettingsChange, updateGallery: handleGalleryChange,
+    selectCoverType: handleCoverTypeChange, toggleChecklistSection,
+    toggleChecklists: handleToggleChecklists, save: handleSave, preview: handlePreview,
+  } = useBookSettingsForm({
+    visible, defaultSettings, onSave, onPreview, onClose,
+    loadSettings: loadSavedSettings, persistSettings,
+  });
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [selectedPresetId, setSelectedPresetId] = useState<string | undefined>();
-  const [isSaving, setIsSaving] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
 
   // ✅ УЛУЧШЕНИЕ: Focus trap для доступности
   useFocusTrap(dialogRef, {
     enabled: visible && Platform.OS === 'web',
     initialFocus: firstFocusableRef,
   });
-
-  useEffect(() => {
-    if (!visible) return;
-    // ✅ УЛУЧШЕНИЕ: Загружаем сохраненные настройки из localStorage
-    let savedSettings: Partial<BookSettings> | undefined;
-    if (Platform.OS === 'web' && typeof localStorage !== 'undefined' && !defaultSettings) {
-      try {
-        const stored = localStorage.getItem('metravel_pdf_settings');
-        if (stored) {
-          savedSettings = JSON.parse(stored) as Partial<BookSettings>;
-        }
-      } catch (e) {
-        console.warn('Failed to load settings from localStorage:', e);
-      }
-    }
-
-    setSettings(buildInitialSettings(savedSettings || defaultSettings));
-    setHasUnsavedChanges(false);
-    setValidationErrors([]);
-  }, [visible, defaultSettings]);
-
-  // ✅ УЛУЧШЕНИЕ: Валидация настроек
-  useEffect(() => {
-    const errors: string[] = [];
-
-    if (settings.subtitle && settings.subtitle.length > 150) {
-      errors.push(i18nT('profile:components.export.BookSettingsModal.podzagolovok_ne_dolzhen_prevyshat_150_simvol_67705c6a'));
-    }
-
-    if (settings.includeChecklists && settings.checklistSections.length === 0) {
-      errors.push(i18nT('profile:components.export.BookSettingsModal.vyberite_hotya_by_odin_razdel_chek_lista_ili_18ec07d4'));
-    }
-
-    setValidationErrors(errors);
-  }, [settings]);
 
   // ✅ Обработчик закрытия: несохраненные правки отбрасываются (стандартно для модалки настроек)
   const handleClose = useCallback(() => {
@@ -160,142 +126,11 @@ export default function BookSettingsModal({
     };
   }, [visible]);
 
-  const handlePresetSelect = useCallback((preset: BookPreset) => {
-    setSettings((prev) => ({
-      ...preset.settings,
-      title: prev.title, // Сохраняем пользовательский заголовок
-      subtitle: prev.subtitle,
-    }));
-    setSelectedPresetId(preset.id);
-    setHasUnsavedChanges(true);
-  }, []);
-
-  const handleThemeSelect = useCallback((theme: PdfThemeName) => {
-    setSettings((prev) => ({ ...prev, template: theme }));
-    setHasUnsavedChanges(true);
-  }, []);
-
-  const handleSettingsChange = useCallback((updates: Partial<BookSettings>) => {
-    setSettings((prev) => ({ ...prev, ...updates }));
-    setHasUnsavedChanges(true);
-  }, []);
-
-  // Гейт галерейных правок: журнальные раскладки / overlay-подписи / full-bleed
-  // доступны только в премиуме (#298). Не-премиум значения проходят как обычно.
-  const handleGalleryChange = useCallback(
-    (updates: Partial<BookSettings>) => {
-      if (!isPremium && gallerySettingNeedsPremium(updates)) {
-        trackPaywallView('gallery-premium');
-        requireUnlock('gallery-premium');
-        return;
-      }
-      handleSettingsChange(updates);
-    },
-    [isPremium, trackPaywallView, requireUnlock, handleSettingsChange],
-  );
-
-  // Гейт типа обложки: «Свое изображение» (custom) — премиум (#298).
-  const handleCoverTypeChange = useCallback(
-    (coverType: BookSettings['coverType']) => {
-      if (!isPremium && isPremiumCoverType(coverType)) {
-        trackPaywallView('cover-custom');
-        requireUnlock('cover-custom');
-        return;
-      }
-      handleSettingsChange({ coverType });
-    },
-    [isPremium, trackPaywallView, requireUnlock, handleSettingsChange],
-  );
-
   const checklistSections = settings.checklistSections || [];
-
-  const toggleChecklistSection = (section: ChecklistSection) => {
-    setSettings((prev) => {
-      const current = prev.checklistSections || [];
-      const exists = current.includes(section);
-      return {
-        ...prev,
-        checklistSections: exists
-          ? current.filter((item) => item !== section)
-          : [...current, section],
-      };
-    });
-  };
-
-  const handleToggleChecklists = useCallback((enabled: boolean) => {
-    setSettings((prev) => ({
-      ...prev,
-      includeChecklists: enabled,
-      checklistSections:
-        enabled && (!prev.checklistSections || prev.checklistSections.length === 0)
-          ? DEFAULT_CHECKLIST_SELECTION
-          : prev.checklistSections,
-    }));
-    setHasUnsavedChanges(true);
-  }, []);
-
-  const handleSave = useCallback(async () => {
-    if (isSaving) return;
-    if (validationErrors.length > 0) {
-      // Ошибки уже показаны в UI, просто не даем сохранить
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      // Сохраняем в localStorage для будущего использования
-      if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
-        try {
-          localStorage.setItem('metravel_pdf_settings', JSON.stringify(settings));
-        } catch (e) {
-          console.warn('Failed to save settings to localStorage:', e);
-        }
-      }
-
-      await onSave(settings);
-      setHasUnsavedChanges(false);
-      if (mountedRef.current) setIsSaving(false);
-      onClose();
-    } catch (error) {
-      console.error('Failed to save PDF settings:', error);
-      void showToast({
-        type: 'error',
-        text1: i18nT('profile:components.export.BookSettingsModal.ne_udalos_sohranit_nastroyki_pdf_c17e83ed'),
-        position: 'bottom',
-      });
-      if (mountedRef.current) setIsSaving(false);
-    }
-  }, [isSaving, settings, validationErrors, onSave, onClose]);
-
-  const handlePreview = useCallback(async () => {
-    if (!onPreview) return;
-    if (isSaving) return;
-
-    if (validationErrors.length > 0) {
-      // Ошибки уже показаны в UI, просто не даем создать превью
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      await onPreview(settings);
-      if (mountedRef.current) setIsSaving(false);
-      onClose();
-    } catch (error) {
-      console.error('Failed to generate preview:', error);
-      void showToast({
-        type: 'error',
-        text1: i18nT('profile:components.export.BookSettingsModal.ne_udalos_sozdat_prevyu_pdf_66bbe2ed'),
-        position: 'bottom',
-      });
-      if (mountedRef.current) setIsSaving(false);
-    }
-  }, [isSaving, settings, validationErrors, onPreview, onClose]);
 
   if (Platform.OS !== 'web') {
     return null; // Только для web
   }
-  const hasSubtitleError = Boolean(settings.subtitle && settings.subtitle.length > 150);
 
   return (
     <Modal

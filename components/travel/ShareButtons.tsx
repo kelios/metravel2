@@ -62,7 +62,7 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
   const [showExportModal, setShowExportModal] = useState(false);
   const [shouldMountPdfExport, setShouldMountPdfExport] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [{ isGenerating, progress, currentStage }, setPdfExportState] =
+  const [{ isGenerating, progress, currentStage, cancel: cancelPdfExport }, setPdfExportState] =
     useState<ShareButtonsPdfExportState>(INITIAL_PDF_EXPORT_STATE);
 
   // Формируем URL для поделиться
@@ -243,11 +243,14 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
       ? [{
           key: 'export' as const,
           label: isGenerating ? `PDF ${progress}%` : i18nT('travel:components.travel.ShareButtons.pdf_kniga_e2013fce'),
-          accessibilityLabel: isGenerating ? i18nT('travel:components.travel.ShareButtons.sozdanie_knigi_pdf_value1_53c04d94', { value1: progress }) : i18nT('travel:components.travel.ShareButtons.otkryt_eksport_v_pdf_92bdc8ac'),
-          icon: 'file-text' as const,
-          onPress: handleOpenExport,
+          // #2274: на время сборки кнопка — «Отмена»: сборка прерывается, лист не откроется.
+          accessibilityLabel: isGenerating
+            ? `${i18nT('travel:components.travel.ShareButtons.sozdanie_knigi_pdf_value1_53c04d94', { value1: progress })}. ${i18nT('shared:components.ui.ProgressIndicator.otmenit_ac1629b1')}`
+            : i18nT('travel:components.travel.ShareButtons.otkryt_eksport_v_pdf_92bdc8ac'),
+          icon: isGenerating ? ('x' as const) : ('file-text' as const),
+          onPress: isGenerating ? () => cancelPdfExport?.() : handleOpenExport,
           color: palette.export,
-          disabled: isGenerating,
+          disabled: false,
           group: 'export',
         }]
       : []),

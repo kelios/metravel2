@@ -9,11 +9,13 @@ import { DEFAULT_FREE_PDF_THEME, isPremiumThemeName } from '../../../themes/them
 import { downgradeNonPremiumSettings } from '../../../premiumSettingsGate';
 import type { ContentParser, ParsedContentBlock } from '../../../parsers/ContentParser';
 import type { BlockRenderer } from '../../../renderers/BlockRenderer';
+import type { PdfRichTextSection } from '../../../themes/headingLevels';
 import type { TravelQuote } from '../../../quotes/travelQuotes';
 import { pickRandomQuote } from '../../../quotes/travelQuotes';
 import { CoverPageGenerator } from '../pages/CoverPageGenerator';
 import { buildSafeImageUrl, escapeHtml as sharedEscapeHtml } from '../../../utils/htmlUtils';
-import { annotateImageSizes, extractUnsizedImageSources } from '../../../utils/descriptionImageSizes';
+import { annotateImageSizes, decodeImageSrcAttribute, extractUnsizedImageSources } from '../../../utils/descriptionImageSizes';
+import { lookupDescriptionImageAspect, splitImageAspectTargets, type ImageAspectTarget } from '../../../utils/imageAspects';
 import { formatDays as sharedFormatDays, getTravelLabel as sharedGetTravelLabel, getPhotoLabel as sharedGetPhotoLabel } from '../../../utils/pluralize';
 import {
   buildGoogleMapsUrl as sharedBuildGoogleMapsUrl,
@@ -188,8 +190,8 @@ export class EnhancedPdfGeneratorBase {
     // Генерируем QR коды
     const qrCodes = await this.generateQRCodes(sortedTravels);
 
-    // Замеряем пропорции фото галерей: journal-раскладка страниц «Фотогалерея»
-    // строит ряды от реальных aspect-ratio (заодно прогревает кэш изображений)
+    // Пропорции фото галерей (манифест, без записи — замер): journal-раскладка
+    // страниц «Фотогалерея» строит ряды от реальных aspect-ratio
     this.galleryRenderer.setImageAspects(await this.preloadGalleryImageAspects(sortedTravels));
 
     // Собираем метаданные для оглавления
@@ -324,7 +326,7 @@ export class EnhancedPdfGeneratorBase {
       travel,
       includeGallery: this.currentSettings?.includeGallery,
       descriptionHtml: travel.description
-        ? this.getBlockRendererSync().renderRichText(travel.description)
+        ? this.getBlockRendererSync().renderRichText(travel.description, 'description')
         : '',
       parseBlocks: (content) => parser.parse(content),
       buildInlineGallerySection: () => this.buildInlineGallerySection(travel, colors, typography, spacing),
@@ -341,7 +343,7 @@ export class EnhancedPdfGeneratorBase {
       recommendationBlocks: contentRuntimeData.recommendationBlocks,
       plusBlocks: contentRuntimeData.plusBlocks,
       minusBlocks: contentRuntimeData.minusBlocks,
-      renderBlocks: (blocks) => this.renderBlocks(blocks),
+      renderBlocks: (blocks, section) => this.renderBlocks(blocks, section),
       renderPdfIcon: (name, color, size) => this.renderPdfIcon(name as any, color, size),
       escapeHtml: (value) => this.escapeHtml(value),
       headerHtml: this.buildRunningHeader(travel.name, pageNumber),
@@ -604,10 +606,10 @@ export class EnhancedPdfGeneratorBase {
    * «ключ → загружаемый URL». Не замеренные фото (таймаут/ошибка/SSR) в карту
    * не попадают — вызывающий код обязан иметь фолбэк.
    *
-   * В приложениях глобального `Image` нет: замера нет, книга собирается на
-   * фолбэках (галерея — contain с полями, фото описания — раскладка из разметки).
-   * Решение #2119: отличие раскладки принято; пропорции из медиа-манифеста API
-   * вместо загрузки каждой картинки — #2232.
+   * Сюда идут только кадры без пропорции в медиа-манифесте API (#2232,
+   * `splitImageAspectTargets`). В приложениях глобального `Image` нет: такие
+   * кадры остаются на фолбэке (галерея — contain с полями, фото описания —
+   * раскладка из разметки), сеть ради замера не трогается.
    */
   private async measureImageAspects(targets: Map<string, string>): Promise<Map<string, number>> {
     const aspects = new Map<string, number>();
@@ -647,19 +649,24 @@ export class EnhancedPdfGeneratorBase {
   }
 
   /**
-   * Замеряет aspect-ratio фото галерей: journal-раскладка строит ряды от
-   * реальных пропорций, незамеренные падают на contain+blur letterbox-фолбэк.
+   * Пропорции фото галерей: из медиа-манифеста (`gallery[].aspect`), без записи —
+   * браузерный замер. Journal-раскладка строит ряды по ним, кадры без пропорции
+   * падают на contain+blur letterbox-фолбэк.
    */
   private async preloadGalleryImageAspects(travels: TravelForBook[]): Promise<Map<string, number>> {
-    const targets = new Map<string, string>();
+    const targets: ImageAspectTarget[] = [];
     for (const travel of travels) {
       for (const item of travel.gallery || []) {
         const raw = typeof item === 'string' ? item : item?.url;
         const safe = this.buildSafeImageUrl(raw);
-        if (safe && safe.trim().length) targets.set(safe, safe);
+        if (safe && safe.trim().length) {
+          targets.push({ key: safe, url: safe, aspect: typeof item === 'string' ? null : item?.aspect });
+        }
       }
     }
-    return this.measureImageAspects(targets);
+    const { known, toMeasure } = splitImageAspectTargets(targets);
+    const measured = await this.measureImageAspects(toMeasure);
+    return new Map([...known, ...measured]);
   }
 
   /**
@@ -667,21 +674,25 @@ export class EnhancedPdfGeneratorBase {
    *
    * Раскладка фото описания выбирается ориентацией кадров, а разметка редактора
    * её не несёт. На странице пропорции доезжают из web-конвейера (резерв +
-   * правка после загрузки), книга же собирается из сырого описания — без этого
-   * замера портрет и ландшафт попадают в один слот, и книга расходится со
-   * страницей. Замер не удался — раскладка остаётся прежней, книга собирается.
+   * правка после загрузки), книга же собирается из сырого описания — без них
+   * портрет и ландшафт попадают в один слот, и книга расходится со страницей.
+   * Источник — медиа-манифест (`descriptionImageAspects`, по ключу файла), без
+   * записи — браузерный замер; не удалось — раскладка прежняя, книга собирается.
    */
   private async annotateDescriptionImageSizes(travels: TravelForBook[]): Promise<TravelForBook[]> {
-    const targets = new Map<string, string>();
+    const targets: ImageAspectTarget[] = [];
     for (const travel of travels) {
       for (const src of extractUnsizedImageSources(travel.description)) {
-        const safe = this.buildSafeImageUrl(src);
-        if (safe && safe.trim().length) targets.set(src, safe);
+        const safe = this.buildSafeImageUrl(decodeImageSrcAttribute(src));
+        if (safe && safe.trim().length) {
+          targets.push({ key: src, url: safe, aspect: lookupDescriptionImageAspect(travel.descriptionImageAspects, src) });
+        }
       }
     }
-    if (!targets.size) return travels;
+    if (!targets.length) return travels;
 
-    const aspects = await this.measureImageAspects(targets);
+    const { known, toMeasure } = splitImageAspectTargets(targets);
+    const aspects = new Map([...known, ...(await this.measureImageAspects(toMeasure))]);
     if (!aspects.size) return travels;
 
     return travels.map((travel) =>
@@ -726,8 +737,8 @@ export class EnhancedPdfGeneratorBase {
   /**
    * Рендерит блоки контента
    */
-  private renderBlocks(blocks: ParsedContentBlock[]): string {
-    return this.getBlockRendererSync().renderBlocks(blocks);
+  private renderBlocks(blocks: ParsedContentBlock[], section: PdfRichTextSection): string {
+    return this.getBlockRendererSync().renderBlocks(blocks, section);
   }
 
   private getBlockRendererSync(): BlockRenderer {

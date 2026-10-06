@@ -36,6 +36,10 @@ export type PrintSession = {
    * выходит с 'unavailable' ДО загрузки данных, карт и картинок для документа.
    */
   available: boolean
+  /** Native: aborts if preparation has not reached the system dialog in 120 s. */
+  preparationSignal?: AbortSignal
+  /** Native deadline error, set before abort; RN signals do not carry reason. */
+  getPreparationError?: () => Error | undefined
   print: (html: string, options?: PrintOptions) => Promise<PrintResult>
   /**
    * #2125: документ печататься не будет (ошибка сборки, нечего печатать, сервер

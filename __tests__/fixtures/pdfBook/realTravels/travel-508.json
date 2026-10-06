@@ -115,5 +115,104 @@
       "categoryName": "Замок",
       "travelImageThumbUrl": "https://metravel.by/address-image/14686/conversions/6a13e61f2fe649aab736af5455d2b704.JPG"
     }
-  ]
+  ],
+  "media": {
+    "gallery": [
+      {
+        "id": 3162,
+        "width": 1024,
+        "height": 576,
+        "aspect_ratio": 1.777778,
+        "src": "/gallery/22e4cf59fe274302b3de07fc3de9f6cf.webp?w=640"
+      },
+      {
+        "id": 3164,
+        "width": 1024,
+        "height": 576,
+        "aspect_ratio": 1.777778,
+        "src": "/gallery/8baab416d6364dd0804d91e568064f94.webp?w=640"
+      },
+      {
+        "id": 3165,
+        "width": 1024,
+        "height": 576,
+        "aspect_ratio": 1.777778,
+        "src": "/gallery/76bb2f71207e493d8b670a3fca0b6edb.webp?w=640"
+      },
+      {
+        "id": 3166,
+        "width": 1024,
+        "height": 576,
+        "aspect_ratio": 1.777778,
+        "src": "/gallery/17268c105e954d038dbccf432046b463.webp?w=640"
+      },
+      {
+        "id": 3167,
+        "width": 1024,
+        "height": 768,
+        "aspect_ratio": 1.333333,
+        "src": "/gallery/98fcd32aabc14513bde90bf5bf1d6c97.webp?w=640"
+      },
+      {
+        "id": 3168,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/38e8043cc97b48e29ec17d2feee3d968.webp?w=640"
+      },
+      {
+        "id": 3169,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/f6d38b2b6ed643b19598cef8fb239bfc.webp?w=640"
+      },
+      {
+        "id": 3170,
+        "width": 768,
+        "height": 1024,
+        "aspect_ratio": 0.75,
+        "src": "/gallery/745ea8f03d0840d09638d7b5218fad7e.webp?w=640"
+      },
+      {
+        "id": 3171,
+        "width": 1024,
+        "height": 576,
+        "aspect_ratio": 1.777778,
+        "src": "/gallery/e48b875fa5d24f119a36cbc668a74383.webp?w=640"
+      },
+      {
+        "id": 3172,
+        "width": 1024,
+        "height": 576,
+        "aspect_ratio": 1.777778,
+        "src": "/gallery/499d9eb4d81343e1b7bc98eb3883e9db.webp?w=640"
+      }
+    ],
+    "article_body": {
+      "gallery": [
+        {
+          "id": 0,
+          "width": 768,
+          "height": 1024,
+          "aspect_ratio": 0.75,
+          "src": "https://metravel.by/travel-description-image/38c840e0125742358f2554195e6277a4.webp?pv=2&w=800"
+        },
+        {
+          "id": 1,
+          "width": 768,
+          "height": 1024,
+          "aspect_ratio": 0.75,
+          "src": "https://metravel.by/travel-description-image/79951744ac1b4d27a76d599533233284.webp?pv=2&w=800"
+        },
+        {
+          "id": 2,
+          "width": 768,
+          "height": 1024,
+          "aspect_ratio": 0.75,
+          "src": "https://metravel.by/travel-description-image/96137ef7e6d14ab5bd885d9bb3a21226.webp?pv=2&w=800"
+        }
+      ]
+    }
+  }
 }

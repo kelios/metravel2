@@ -334,13 +334,13 @@ describe('i18n resources', () => {
           value1: 1,
           value2: 9,
         }),
-      ).toBe('Пройдено 1 из 9 точек. Квест засчитается, когда пройдёте ещё 2 точки.')
+      ).toBe('Пройдено точек: 1 из 9. Квест засчитается, когда пройдёте ещё 2 точки.')
       expect(
         translatePlural('quests:components.quests.questWizardSections.partialNotCredited', 5, {
           value1: 1,
           value2: 9,
         }),
-      ).toBe('Пройдено 1 из 9 точек. Квест засчитается, когда пройдёте ещё 5 точек.')
+      ).toBe('Пройдено точек: 1 из 9. Квест засчитается, когда пройдёте ещё 5 точек.')
     } finally {
       Intl.PluralRules = originalPluralRules
     }

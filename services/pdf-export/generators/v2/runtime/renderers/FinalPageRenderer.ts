@@ -4,6 +4,30 @@ import { escapeHtml, formatDays, getTravelLabel, type RuntimeRenderContext } fro
 import { translate as i18nT } from '@/i18n'
 import { getCountryLabel, getPhotoLabel } from '@/utils/pluralize'
 
+/**
+ * #2275: печать WebKit на iOS (и в Safari/macOS) теряет альфу у цветов
+ * градиента: `rgba(…, a)` и `transparent` в `linear/radial-gradient` выходят
+ * непрозрачными — свечение рисовалось белым кругом на чёрной странице, тонкие
+ * линии — сплошными. Однотонная `rgba` и градиенты из непрозрачных цветов
+ * печатаются верно. Поэтому светлые полупрозрачные слои страницы заданы
+ * непрозрачными градиентами в режиме наложения `screen`: для белого с альфой a
+ * `screen(фон, серый a·255)` = `фон + a·(1 − фон)` — ровно то же, что прежнее
+ * наложение, а чёрный (`#000`) в `screen` фон не меняет.
+ */
+const screenGray = (alpha: number): string => {
+  const level = Math.round(alpha * 255)
+  return `rgb(${level},${level},${level})`
+}
+
+const SCREEN_LAYER = 'mix-blend-mode: screen;'
+
+/**
+ * Тёплое свечение внизу было `rgba(217,115,85,0.16)`. Цветной слой через
+ * `screen` точно не повторить (он только осветляет), поэтому цвет подобран под
+ * средние тёмные обложки: на них отличие ≤ 1/255, на синих (`light`) свечение
+ * светлее прежнего до 16/255 в синем канале.
+ */
+const ORANGE_GLOW_SCREEN = 'rgb(29,3,0)'
 
 export class RuntimeFinalRenderer {
   constructor(private ctx: RuntimeRenderContext) {}
@@ -106,8 +130,10 @@ export class RuntimeFinalRenderer {
           position: absolute;
           top: 0; right: 0; bottom: 0; left: 0;
           background:
-            radial-gradient(circle at 50% 25%, rgba(255,255,255,0.08), transparent 36%),
-            radial-gradient(circle at 50% 80%, rgba(217,115,85,0.16), transparent 32%);
+            radial-gradient(circle at 50% 25%, ${screenGray(0.08)}, #000 36%),
+            radial-gradient(circle at 50% 80%, ${ORANGE_GLOW_SCREEN}, #000 32%);
+          background-blend-mode: screen;
+          ${SCREEN_LAYER}
           pointer-events: none;
         "></div>
         <svg class="final-route-line" viewBox="0 0 320 120" aria-hidden="true" style="
@@ -129,7 +155,6 @@ export class RuntimeFinalRenderer {
 
         <div style="
           position: relative;
-          z-index: 1;
           width: 148mm;
           padding: 26mm 18mm 18mm;
           border-radius: 26px;
@@ -146,7 +171,8 @@ export class RuntimeFinalRenderer {
           <div style="
             width: 38mm;
             height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+            background: linear-gradient(90deg, #000, ${screenGray(0.55)}, #000);
+            ${SCREEN_LAYER}
             border-radius: 999px;
             margin: 0 auto 8mm auto;
           "></div>
@@ -175,7 +201,8 @@ export class RuntimeFinalRenderer {
             <div style="
               width: 24mm;
               height: 1px;
-              background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+              background: linear-gradient(90deg, #000, ${screenGray(0.3)}, #000);
+              ${SCREEN_LAYER}
               margin: 0 auto 8mm auto;
             "></div>
             <div style="

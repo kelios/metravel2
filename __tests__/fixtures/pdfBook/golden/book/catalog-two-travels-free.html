@@ -71,7 +71,7 @@
         image-rendering: -webkit-optimize-contrast;
         image-rendering: crisp-edges;
       }
-      h1, h2, h3, h4 {
+      h1, h2, h3, h4, h5, h6 {
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
         color: #0f172a;
         page-break-after: avoid;
@@ -81,8 +81,11 @@
         text-rendering: optimizeLegibility;
         font-feature-settings: "kern" 1;
       }
-      h1 + p, h2 + p, h3 + p, h4 + p {
+      h1 + p, h2 + p, h3 + p, h4 + p, h5 + p, h6 + p {
         page-break-before: avoid;
+      }
+      h5, h6 {
+        margin-top: 1.33em;
       }
       p {
         orphans: 2;
@@ -2707,16 +2710,17 @@
     
 
       <figure
-        class="pdf-rich-image img-single-wide"
-        data-layout="single-wide"
-        
-        
+        class="pdf-rich-image img-float-right"
+        data-layout="float-right"
+        data-width="1000"
+        data-height="1333"
         style="
         
-          width: 100%;
-          max-width: 100%;
-          margin: calc(16pt * 0.95) auto calc(16pt * 1.05);
+          float: right;
           clear: both;
+          width: 45%;
+          max-width: 45%;
+          margin: calc(16pt * 0.45) 0 calc(16pt * 0.85) 4mm;
         
         page-break-inside: avoid;
         break-inside: avoid;
@@ -2727,8 +2731,8 @@
       ">
         
       <div
-        
-        
+        data-width="1000"
+        data-height="1333"
         style="
           border-radius: calc(12px * 1.65);
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -2766,8 +2770,8 @@
         <img
           src="https://metravel.by/travel-description-image/38c840e0125742358f2554195e6277a4.webp?w=1600&amp;q=85&amp;fit=contain"
           alt="" data-print-fallback="https://metravel.by/travel-description-image/38c840e0125742358f2554195e6277a4.webp"
-          
-          
+          width="1000"
+          height="1333"
           style="
             position: relative;
             z-index: 1;
@@ -2870,16 +2874,17 @@
     
 
       <figure
-        class="pdf-rich-image img-single-wide"
-        data-layout="single-wide"
-        
-        
+        class="pdf-rich-image img-float-left"
+        data-layout="float-left"
+        data-width="1000"
+        data-height="1333"
         style="
         
-          width: 100%;
-          max-width: 100%;
-          margin: calc(16pt * 0.95) auto calc(16pt * 1.05);
+          float: left;
           clear: both;
+          width: 45%;
+          max-width: 45%;
+          margin: calc(16pt * 0.45) 4mm calc(16pt * 0.85) 0;
         
         page-break-inside: avoid;
         break-inside: avoid;
@@ -2890,8 +2895,8 @@
       ">
         
       <div
-        
-        
+        data-width="1000"
+        data-height="1333"
         style="
           border-radius: calc(12px * 1.65);
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -2929,8 +2934,8 @@
         <img
           src="https://metravel.by/travel-description-image/79951744ac1b4d27a76d599533233284.webp?w=1600&amp;q=85&amp;fit=contain"
           alt="" data-print-fallback="https://metravel.by/travel-description-image/79951744ac1b4d27a76d599533233284.webp"
-          
-          
+          width="1000"
+          height="1333"
           style="
             position: relative;
             z-index: 1;
@@ -3533,16 +3538,17 @@
     
 
       <figure
-        class="pdf-rich-image img-single-wide"
-        data-layout="single-wide"
-        
-        
+        class="pdf-rich-image img-float-right"
+        data-layout="float-right"
+        data-width="1000"
+        data-height="1333"
         style="
         
-          width: 100%;
-          max-width: 100%;
-          margin: calc(16pt * 0.95) auto calc(16pt * 1.05);
+          float: right;
           clear: both;
+          width: 45%;
+          max-width: 45%;
+          margin: calc(16pt * 0.45) 0 calc(16pt * 0.85) 4mm;
         
         page-break-inside: avoid;
         break-inside: avoid;
@@ -3553,8 +3559,8 @@
       ">
         
       <div
-        
-        
+        data-width="1000"
+        data-height="1333"
         style="
           border-radius: calc(12px * 1.65);
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -3592,8 +3598,8 @@
         <img
           src="https://metravel.by/travel-description-image/96137ef7e6d14ab5bd885d9bb3a21226.webp?w=1600&amp;q=85&amp;fit=contain"
           alt="" data-print-fallback="https://metravel.by/travel-description-image/96137ef7e6d14ab5bd885d9bb3a21226.webp"
-          
-          
+          width="1000"
+          height="1333"
           style="
             position: relative;
             z-index: 1;
@@ -3901,11 +3907,11 @@
               color: #0f172a;
               font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
             ">
-      <h3 style="
-        font-size: 18pt;
+      <h4 style="
+        font-size: 14pt;
         font-weight: 600;
         line-height: 1.4;
-        margin-bottom: 10pt;
+        margin-bottom: 8pt;
         color: #0f172a;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
         page-break-after: avoid;
@@ -3915,7 +3921,7 @@
         overflow-wrap: anywhere;
         word-break: break-word;
         hyphens: auto;
-      ">🍽 Полезное</h3>
+      ">🍽 Полезное</h4>
     
 
       <ul style="
@@ -3965,11 +3971,11 @@
     </ul>
     
 
-      <h3 style="
-        font-size: 18pt;
+      <h4 style="
+        font-size: 14pt;
         font-weight: 600;
         line-height: 1.4;
-        margin-bottom: 10pt;
+        margin-bottom: 8pt;
         color: #0f172a;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
         page-break-after: avoid;
@@ -3979,7 +3985,7 @@
         overflow-wrap: anywhere;
         word-break: break-word;
         hyphens: auto;
-      ">🧭 Совет: где ещё пройтись</h3>
+      ">🧭 Совет: где ещё пройтись</h4>
     
 
       <ul style="
@@ -4245,11 +4251,11 @@
             gap: 6mm;
             margin-bottom: 6mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 130.00mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 160.00mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 97.50mm;
+          height: 90.00mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -4303,11 +4309,11 @@
             gap: 6mm;
             margin-bottom: 0mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 130.00mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 160.00mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 97.50mm;
+          height: 90.00mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -4452,11 +4458,11 @@
             gap: 6mm;
             margin-bottom: 6mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 130.00mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 160.00mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 97.50mm;
+          height: 90.00mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -4510,11 +4516,11 @@
             gap: 6mm;
             margin-bottom: 0mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 130.00mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 160.00mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 97.50mm;
+          height: 90.00mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -4659,11 +4665,11 @@
             gap: 6mm;
             margin-bottom: 6mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 130.00mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 93.60mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 97.50mm;
+          height: 70.20mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -4717,11 +4723,11 @@
             gap: 6mm;
             margin-bottom: 0mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 130.00mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 93.60mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 97.50mm;
+          height: 124.80mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -4864,13 +4870,13 @@
             justify-content: center;
             align-items: flex-start;
             gap: 6mm;
-            margin-bottom: 6mm;
+            margin-bottom: 0mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 124.67mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 77.00mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 93.50mm;
+          height: 102.67mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -4926,19 +4932,12 @@
           color: #334155;
           font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
         ">Оравский замок на скале</figcaption>
-      </figure></div>
-          <div class="gallery-justified-row" style="
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            gap: 6mm;
-            margin-bottom: 0mm;
-          ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 124.67mm; flex: 0 0 auto; min-width: 0;">
+      </figure>
+      <figure class="gallery-photo-frame" style="margin: 0; width: 77.00mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 93.50mm;
+          height: 102.67mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -5083,11 +5082,11 @@
             gap: 6mm;
             margin-bottom: 6mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 130.00mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 160.00mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 97.50mm;
+          height: 90.00mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -5141,11 +5140,11 @@
             gap: 6mm;
             margin-bottom: 0mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 130.00mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 160.00mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 97.50mm;
+          height: 90.00mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -7905,11 +7904,11 @@
             gap: 6mm;
             margin-bottom: 6mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 124.67mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 89.76mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 93.50mm;
+          height: 67.32mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -7963,11 +7962,11 @@
             gap: 6mm;
             margin-bottom: 0mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 124.67mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 89.76mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 93.50mm;
+          height: 119.68mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -8120,13 +8119,13 @@
             justify-content: center;
             align-items: flex-start;
             gap: 6mm;
-            margin-bottom: 6mm;
+            margin-bottom: 0mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 124.67mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 77.00mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 93.50mm;
+          height: 102.67mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -8172,19 +8171,12 @@
           ">3</span>
         </div>
         
-      </figure></div>
-          <div class="gallery-justified-row" style="
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            gap: 6mm;
-            margin-bottom: 0mm;
-          ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 124.67mm; flex: 0 0 auto; min-width: 0;">
+      </figure>
+      <figure class="gallery-photo-frame" style="margin: 0; width: 77.00mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 93.50mm;
+          height: 102.67mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -8337,13 +8329,13 @@
             justify-content: center;
             align-items: flex-start;
             gap: 6mm;
-            margin-bottom: 6mm;
+            margin-bottom: 0mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 124.67mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 77.00mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 93.50mm;
+          height: 102.67mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -8389,19 +8381,12 @@
           ">5</span>
         </div>
         
-      </figure></div>
-          <div class="gallery-justified-row" style="
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            gap: 6mm;
-            margin-bottom: 0mm;
-          ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 124.67mm; flex: 0 0 auto; min-width: 0;">
+      </figure>
+      <figure class="gallery-photo-frame" style="margin: 0; width: 77.00mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 93.50mm;
+          height: 102.67mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -8556,11 +8541,11 @@
             gap: 6mm;
             margin-bottom: 6mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 124.67mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 89.76mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 93.50mm;
+          height: 119.68mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -8624,11 +8609,11 @@
             gap: 6mm;
             margin-bottom: 0mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 124.67mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 89.76mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 93.50mm;
+          height: 67.32mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -8773,11 +8758,11 @@
             gap: 6mm;
             margin-bottom: 6mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 130.00mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 93.60mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 97.50mm;
+          height: 124.80mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -8831,11 +8816,11 @@
             gap: 6mm;
             margin-bottom: 0mm;
           ">
-      <figure class="gallery-photo-frame" style="margin: 0; width: 130.00mm; flex: 0 0 auto; min-width: 0;">
+      <figure class="gallery-photo-frame" style="margin: 0; width: 93.60mm; flex: 0 0 auto; min-width: 0;">
         <div style="
           position: relative;
           width: 100%;
-          height: 97.50mm;
+          height: 70.20mm;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 4px 12px rgba(15,23,42,0.08);
@@ -9990,8 +9975,10 @@
           position: absolute;
           top: 0; right: 0; bottom: 0; left: 0;
           background:
-            radial-gradient(circle at 50% 25%, rgba(255,255,255,0.08), transparent 36%),
-            radial-gradient(circle at 50% 80%, rgba(217,115,85,0.16), transparent 32%);
+            radial-gradient(circle at 50% 25%, rgb(20,20,20), #000 36%),
+            radial-gradient(circle at 50% 80%, rgb(29,3,0), #000 32%);
+          background-blend-mode: screen;
+          mix-blend-mode: screen;
           pointer-events: none;
         "></div>
         <svg class="final-route-line" viewBox="0 0 320 120" aria-hidden="true" style="
@@ -10013,7 +10000,6 @@
 
         <div style="
           position: relative;
-          z-index: 1;
           width: 148mm;
           padding: 26mm 18mm 18mm;
           border-radius: 26px;
@@ -10030,7 +10016,8 @@
           <div style="
             width: 38mm;
             height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+            background: linear-gradient(90deg, #000, rgb(140,140,140), #000);
+            mix-blend-mode: screen;
             border-radius: 999px;
             margin: 0 auto 8mm auto;
           "></div>
@@ -10174,7 +10161,8 @@
             <div style="
               width: 24mm;
               height: 1px;
-              background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+              background: linear-gradient(90deg, #000, rgb(77,77,77), #000);
+              mix-blend-mode: screen;
               margin: 0 auto 8mm auto;
             "></div>
             <div style="

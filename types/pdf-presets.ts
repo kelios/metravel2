@@ -2,6 +2,7 @@
 // Типы и пресеты для настроек PDF экспорта
 
 import type { BookSettings } from '@/components/export/BookSettingsModal';
+import { translate as i18nT } from '@/i18n';
 
 export type PresetCategory = 'minimal' | 'detailed' | 'photo-focused' | 'map-focused' | 'print';
 
@@ -23,8 +24,8 @@ export interface BookPreset {
 export const BOOK_PRESETS: BookPreset[] = [
   {
     id: 'minimalist',
-    name: 'Минималист',
-    description: 'Только текст и ключевые фото. Идеально для быстрого обзора.',
+    get name() { return i18nT('common:pdfPresets.minimalist.name') },
+    get description() { return i18nT('common:pdfPresets.minimalist.description') },
     category: 'minimal',
     icon: '📝',
     isDefault: true,
@@ -43,8 +44,8 @@ export const BOOK_PRESETS: BookPreset[] = [
   },
   {
     id: 'photo-album',
-    name: 'Фотоальбом',
-    description: 'Акцент на фотографии с минимумом текста. Для визуального восприятия.',
+    get name() { return i18nT('common:pdfPresets.photoAlbum.name') },
+    get description() { return i18nT('common:pdfPresets.photoAlbum.description') },
     category: 'photo-focused',
     icon: '📸',
     settings: {
@@ -62,8 +63,8 @@ export const BOOK_PRESETS: BookPreset[] = [
   },
   {
     id: 'travel-guide',
-    name: 'Путеводитель',
-    description: 'Карты, адреса и рекомендации. Практичный формат для планирования.',
+    get name() { return i18nT('common:pdfPresets.travelGuide.name') },
+    get description() { return i18nT('common:pdfPresets.travelGuide.description') },
     category: 'map-focused',
     icon: '🗺️',
     settings: {
@@ -82,8 +83,8 @@ export const BOOK_PRESETS: BookPreset[] = [
   },
   {
     id: 'travel-journal',
-    name: 'Журнал путешественника',
-    description: 'Полный формат со всеми деталями. Максимум информации.',
+    get name() { return i18nT('common:pdfPresets.travelJournal.name') },
+    get description() { return i18nT('common:pdfPresets.travelJournal.description') },
     category: 'detailed',
     icon: '📖',
     settings: {
@@ -102,8 +103,8 @@ export const BOOK_PRESETS: BookPreset[] = [
   },
   {
     id: 'for-print',
-    name: 'Для печати',
-    description: 'Оптимизировано для типографии. Высокое качество и правильные отступы.',
+    get name() { return i18nT('common:pdfPresets.forPrint.name') },
+    get description() { return i18nT('common:pdfPresets.forPrint.description') },
     category: 'print',
     icon: '🖨️',
     settings: {
@@ -122,8 +123,8 @@ export const BOOK_PRESETS: BookPreset[] = [
   },
   {
     id: 'romantic',
-    name: 'Романтическое путешествие',
-    description: 'Нежный дизайн для особенных воспоминаний.',
+    get name() { return i18nT('common:pdfPresets.romantic.name') },
+    get description() { return i18nT('common:pdfPresets.romantic.description') },
     category: 'photo-focused',
     icon: '💕',
     settings: {
@@ -141,8 +142,8 @@ export const BOOK_PRESETS: BookPreset[] = [
   },
   {
     id: 'adventure',
-    name: 'Приключение',
-    description: 'Динамичный стиль для активных путешествий.',
+    get name() { return i18nT('common:pdfPresets.adventure.name') },
+    get description() { return i18nT('common:pdfPresets.adventure.description') },
     category: 'detailed',
     icon: '⛰️',
     settings: {
@@ -161,8 +162,8 @@ export const BOOK_PRESETS: BookPreset[] = [
   },
   {
     id: 'modern-minimal',
-    name: 'Современный минимализм',
-    description: 'Стильный и лаконичный дизайн для современных путешественников.',
+    get name() { return i18nT('common:pdfPresets.modernMinimal.name') },
+    get description() { return i18nT('common:pdfPresets.modernMinimal.description') },
     category: 'minimal',
     icon: '✨',
     settings: {
@@ -181,28 +182,29 @@ export const BOOK_PRESETS: BookPreset[] = [
 ];
 
 /**
- * Категории пресетов с описаниями
+ * Категории пресетов с описаниями. Подписи встроенных пресетов и категорий —
+ * через `@/i18n` геттерами: один источник для окна сайта и нативного окна (#2229).
  */
 export const PRESET_CATEGORIES: Record<PresetCategory, { name: string; description: string }> = {
   minimal: {
-    name: 'Минимализм',
-    description: 'Простые и лаконичные форматы',
+    get name() { return i18nT('common:pdfPresets.category.minimal.name') },
+    get description() { return i18nT('common:pdfPresets.category.minimal.description') },
   },
   detailed: {
-    name: 'Детальные',
-    description: 'Полная информация о путешествиях',
+    get name() { return i18nT('common:pdfPresets.category.detailed.name') },
+    get description() { return i18nT('common:pdfPresets.category.detailed.description') },
   },
   'photo-focused': {
-    name: 'Фото',
-    description: 'Акцент на визуальном контенте',
+    get name() { return i18nT('common:pdfPresets.category.photoFocused.name') },
+    get description() { return i18nT('common:pdfPresets.category.photoFocused.description') },
   },
   'map-focused': {
-    name: 'Карты',
-    description: 'С картами и навигацией',
+    get name() { return i18nT('common:pdfPresets.category.mapFocused.name') },
+    get description() { return i18nT('common:pdfPresets.category.mapFocused.description') },
   },
   print: {
-    name: 'Печать',
-    description: 'Оптимизировано для типографии',
+    get name() { return i18nT('common:pdfPresets.category.print.name') },
+    get description() { return i18nT('common:pdfPresets.category.print.description') },
   },
 };
 

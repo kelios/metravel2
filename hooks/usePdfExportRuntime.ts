@@ -26,6 +26,11 @@ type RunPdfExportOptions = {
   settings: BookSettings;
   /** #2125: окно печати, зарезервированное в клике (usePdfExport.openPrintBook). */
   printSession: PrintSession;
+  /**
+   * #2274: отмена сборки пользователем. После неё рантайм молча выходит на
+   * ближайшем шаге: без тостов, ошибки и печати.
+   */
+  signal?: AbortSignal;
   config?: ExportConfig;
   travelCacheRef: MutableRefObject<Record<string | number, Travel>>;
   isMountedRef: MutableRefObject<boolean>;
@@ -108,6 +113,7 @@ async function tryServerBookExport(
   settings: BookSettings,
   printSession: PrintSession,
   updateProgress: UpdateProgress,
+  signal?: AbortSignal,
 ): Promise<PrintResult | 'downloaded' | null> {
   // Серверный артефакт — файл, а сохранить его умеет только браузер
   // (`saveArtifactBlob`: <a download>). В приложениях книгу собирает клиентский
@@ -123,14 +129,18 @@ async function tryServerBookExport(
       settings: toServerBookSettings(settings),
       format: SERVER_BOOK_EXPORT_FORMAT,
     });
-    if (!job) return null;
+    if (signal?.aborted || !job) return null;
 
     updateProgress(ExportStage.RENDERING, 90, i18nT('export:hooks.usePdfExportRuntime.skachivanie_gotovoy_knigi_fe0424ef'), [
       i18nT('export:hooks.usePdfExportRuntime.servernyy_eksport_d0e26c9d'),
     ]);
     const artifact = await downloadBookExportArtifact(job);
+    if (signal?.aborted) return null;
     if (artifact.contentType?.includes('text/html')) {
-      const printResult = await printSession.print(await artifact.blob.text(), { title: settings.title });
+      const html = await artifact.blob.text();
+      if (signal?.aborted) return null;
+      const printResult = await printSession.print(html, { title: settings.title });
+      if (signal?.aborted) return null;
       notifyPrintResult(printResult);
       return printResult;
     }
@@ -143,6 +153,7 @@ async function tryServerBookExport(
     printSession.cancel();
     return 'downloaded';
   } catch (error) {
+    if (signal?.aborted) return null;
     console.warn('[usePdfExport] Серверный экспорт недоступен, используем клиентский рантайм', error);
     return null;
   }
@@ -187,6 +198,7 @@ async function loadDetailedTravels(
   config: ExportConfig | undefined,
   travelCacheRef: MutableRefObject<Record<string | number, Travel>>,
   updateProgress?: UpdateProgress,
+  signal?: AbortSignal,
 ): Promise<Travel[]> {
   if (!selected?.length) return [];
 
@@ -195,9 +207,11 @@ async function loadDetailedTravels(
   const results: Travel[] = [];
 
   for (let start = 0; start < selected.length; start += batchSize) {
+    if (signal?.aborted) break;
     const batch = selected.slice(start, start + batchSize);
     const batchResults = await Promise.all(
       batch.map(async (travel) => {
+      if (signal?.aborted) return travel;
       const cacheKey = travel.id ?? travel.slug ?? travel.url;
       const cachedTravel = cacheKey != null ? travelCacheRef.current[cacheKey] : undefined;
 
@@ -213,6 +227,7 @@ async function loadDetailedTravels(
       }
 
       for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+        if (signal?.aborted) return travel;
         try {
           const numericId = Number(travel.id);
           let detailed: Travel;
@@ -225,12 +240,14 @@ async function loadDetailedTravels(
             detailed = travel;
           }
 
+          if (signal?.aborted) return travel;
           const merged = mergeTravelData(travel, detailed);
           if (cacheKey != null) {
             travelCacheRef.current[cacheKey] = merged;
           }
           return merged;
         } catch (error) {
+          if (signal?.aborted) return travel;
           if (attempt === maxRetries) {
             console.warn('[usePdfExport] Не удалось загрузить детали путешествия', travel.id, error);
             return travel;
@@ -258,6 +275,7 @@ export async function runPdfExport({
   selected,
   settings,
   printSession,
+  signal,
   config,
   travelCacheRef,
   isMountedRef,
@@ -266,15 +284,18 @@ export async function runPdfExport({
   setCurrentStage,
   updateProgress,
 }: RunPdfExportOptions): Promise<void> {
+  if (signal?.aborted) return;
   setIsGenerating(true);
   setError(null);
 
   const startTime = Date.now();
+  const isCancelled = () => signal?.aborted === true;
 
   try {
     updateProgress(ExportStage.VALIDATING, 2, i18nT('export:hooks.usePdfExportRuntime.proverka_dannyh_59cc6efe'), [i18nT('export:hooks.usePdfExportRuntime.proverka_puteshestviy_aee0e81c')]);
 
-    const serverResult = await tryServerBookExport(selected, settings, printSession, updateProgress);
+    const serverResult = await tryServerBookExport(selected, settings, printSession, updateProgress, signal);
+    if (isCancelled()) return;
     if (serverResult) {
       const elapsedTime = Math.round((Date.now() - startTime) / 1000);
       // Отмена или недоступное окно — не «Готово» (P3 ревью #2125).
@@ -286,6 +307,7 @@ export async function runPdfExport({
     }
 
     const htmlService = await getBookHtmlExportService();
+    if (isCancelled()) return;
 
     if (!isMountedRef.current) {
       printSession.cancel();
@@ -293,7 +315,8 @@ export async function runPdfExport({
       return;
     }
 
-    const travelsForExport = await loadDetailedTravels(selected, settings, config, travelCacheRef, updateProgress);
+    const travelsForExport = await loadDetailedTravels(selected, settings, config, travelCacheRef, updateProgress, signal);
+    if (isCancelled()) return;
     if (!travelsForExport.length) {
       printSession.cancel();
       notify('info', i18nT('export:hooks.usePdfExportRuntime.vnimanie_9c60f2f4'), i18nT('export:hooks.usePdfExportRuntime.vyberite_hotya_by_odno_puteshestvie_dlya_eks_f99df420'));
@@ -314,6 +337,7 @@ export async function runPdfExport({
     ]);
 
     const html = await htmlService.generateTravelsHtml(travelsForExport, settings, { isPremium });
+    if (isCancelled()) return;
 
     updateProgress(ExportStage.GENERATING_HTML, 30, i18nT('export:hooks.usePdfExportRuntime.stranitsy_sgenerirovany_882dd947'), [
       i18nT('export:hooks.usePdfExportRuntime.oblozhka_e5e8ac7b'),
@@ -328,6 +352,7 @@ export async function runPdfExport({
     ]);
 
     const printResult = await printSession.print(html, { title: settings.title });
+    if (isCancelled()) return;
     if (printResult !== 'printed') {
       notifyPrintResult(printResult);
       return;
@@ -340,6 +365,7 @@ export async function runPdfExport({
     }
   } catch (err) {
     printSession.cancel();
+    if (isCancelled()) return;
     const error = err instanceof Error ? err : new Error(String(err));
     if (isMountedRef.current) {
       setError(error);

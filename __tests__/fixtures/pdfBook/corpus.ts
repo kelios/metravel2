@@ -4,7 +4,7 @@
 import fs from 'fs'
 import path from 'path'
 
-import type { Travel } from '@/types/types'
+import type { Travel, TravelMediaImage } from '@/types/types'
 
 import { PDF_BOOK_EDGE_CASES, PDF_BOOK_EDGE_CASES_EXTRA, PIPELINE_EDGE_CASE_NAMES } from './edgeCases'
 
@@ -16,11 +16,15 @@ const REAL_TRAVELS_DIR = path.join(PDF_BOOK_FIXTURES_DIR, 'realTravels')
 export const RICH_TEXT_FIELDS = ['description', 'recommendation', 'plus', 'minus'] as const
 export type RichTextField = (typeof RICH_TEXT_FIELDS)[number]
 
+type RealTravelMediaEntry = Pick<TravelMediaImage, 'id' | 'width' | 'height' | 'aspect_ratio' | 'src'>
+
 /**
  * Срез ответа `GET /api/travels/<id>/` (снят 04.10.2026): rich-text поля, галерея,
  * точки и обложка — как отдал бэкенд. Отличия от сырого ответа: служебное
  * `__draft_placeholder__` приведено к пустой строке (так делает
- * `api/travelsNormalize.ts`), `userName` заменён на нейтральный.
+ * `api/travelsNormalize.ts`), `userName` заменён на нейтральный. `media` (снят
+ * 06.10.2026, #2232) — записи `media.gallery` и `media.article_body.gallery` с
+ * полями, которые читает книга: `id`, `width`, `height`, `aspect_ratio`, `src`.
  */
 export type RealTravelFixture = {
   id: number
@@ -44,6 +48,7 @@ export type RealTravelFixture = {
   minus: string
   gallery: Array<{ id: number; url: string; thumb_url: string; print_url: string; order: number; caption: string }>
   travelAddress: Array<{ id: number; address: string; coord: string; categoryName: string; travelImageThumbUrl: string }>
+  media: { gallery: RealTravelMediaEntry[]; article_body: { gallery: RealTravelMediaEntry[] } }
 }
 
 export function loadRealTravelFixtures(): RealTravelFixture[] {

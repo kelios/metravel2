@@ -1,6 +1,7 @@
 import type { TravelForBook } from '@/types/pdf-export'
 import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig'
 import type { ParsedContentBlock } from '../../../parsers/ContentParser'
+import type { PdfRichTextSection } from '../../../themes/headingLevels'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
 import type { PdfIconName } from './pdfVisualHelpers'
 import { translate as i18nT } from '@/i18n'
@@ -58,7 +59,7 @@ export function renderTravelContentPageMarkup(args: {
   recommendationBlocks: ParsedContentBlock[]
   plusBlocks: ParsedContentBlock[]
   minusBlocks: ParsedContentBlock[]
-  renderBlocks: (blocks: ParsedContentBlock[]) => string
+  renderBlocks: (blocks: ParsedContentBlock[], section: PdfRichTextSection) => string
   renderPdfIcon: (name: PdfIconName, color: string, size: number) => string
   escapeHtml: (value: string | null | undefined) => string
   headerHtml?: string
@@ -240,7 +241,7 @@ export function renderTravelContentPageMarkup(args: {
               line-height: ${typography.body.lineHeight};
               color: ${colors.text};
               font-family: ${typography.bodyFont};
-            ">${renderBlocks(recommendationBlocks)}</div>
+            ">${renderBlocks(recommendationBlocks, 'recommendation')}</div>
           </div>
         `
       : ''
@@ -298,7 +299,7 @@ export function renderTravelContentPageMarkup(args: {
                   line-height: ${typography.small.lineHeight};
                   color: ${colors.tipBlock.text};
                   font-family: ${typography.bodyFont};
-                ">${renderBlocks(plusBlocks)}</div>
+                ">${renderBlocks(plusBlocks, 'plus')}</div>
               </div>
             ` : ''}
             ${minusBlocks.length > 0 ? `
@@ -341,7 +342,7 @@ export function renderTravelContentPageMarkup(args: {
                   line-height: ${typography.small.lineHeight};
                   color: ${colors.dangerBlock.text};
                   font-family: ${typography.bodyFont};
-                ">${renderBlocks(minusBlocks)}</div>
+                ">${renderBlocks(minusBlocks, 'minus')}</div>
               </div>
             ` : ''}
           </div>
@@ -375,7 +376,7 @@ export function renderTravelContentPageMarkup(args: {
                   line-height: ${typography.body.lineHeight};
                   color: ${colors.text};
                   font-family: ${typography.bodyFont};
-                ">${renderBlocks(plusBlocks)}</div>
+                ">${renderBlocks(plusBlocks, 'plus')}</div>
               </div>
             ` : ''}
             ${minusBlocks.length > 0 ? `
@@ -400,7 +401,7 @@ export function renderTravelContentPageMarkup(args: {
                   line-height: ${typography.body.lineHeight};
                   color: ${colors.text};
                   font-family: ${typography.bodyFont};
-                ">${renderBlocks(minusBlocks)}</div>
+                ">${renderBlocks(minusBlocks, 'minus')}</div>
               </div>
             ` : ''}
           </div>
