@@ -23,10 +23,22 @@ import {
 } from './printable/map';
 import {
     formatDate,
-    getActiveLocaleDefinition,
+    getLocaleDefinition,
+    resolveSupportedLocale,
     translate as i18nT,
     translatePlural,
 } from '@/i18n'
+
+/**
+ * #2198: `<html lang>` — язык текста квеста, а не интерфейса. Непереведённый
+ * квест в польском интерфейсе печатается русским текстом, и разметка обязана
+ * это сказать (переносы, озвучка). Язык шагов — `contentLocale` бандла;
+ * без него — язык источника.
+ */
+function resolvePrintableLocale(intro: QuestStep | undefined, steps: QuestStep[]) {
+    const raw = intro?.contentLocale ?? steps.find((step) => step.contentLocale)?.contentLocale;
+    return getLocaleDefinition(resolveSupportedLocale([raw]));
+}
 
 
 type PrintableProps = {
@@ -71,7 +83,7 @@ async function buildPrintableQuestHtml({ title, steps, intro, coverUrl, questUrl
     const mapCanvasDataUrl = await buildPrintableCanvasMapDataUrl(mapPoints, closeLoop);
     const mapStaticUrl = mapCanvasDataUrl || await buildPrintableLeafletMapDataUrl(mapPoints, closeLoop);
     const mapSvg = buildPrintableMapSvg(mapPoints, closeLoop);
-    const locale = getActiveLocaleDefinition();
+    const locale = resolvePrintableLocale(intro, steps);
 
     const mapHtml = mapStaticUrl ? `
         <div class="map-card">

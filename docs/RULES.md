@@ -37,6 +37,10 @@
   empty states, legal/SEO/PDF UI, and display dictionaries. Do not client-translate
   user/editorial/API content, place names, comments, messages, or stable backend
   codes without a separate content-locale/API contract.
+- Quests are the first consumer of such a content-locale contract (#2197): reads
+  carry `lang`, quest content query keys end with the locale, the response's
+  `content_locale` (absent = `ru`) is what the player actually reads. Contract —
+  `docs/features/quests.md` → «Язык контента».
 - Use `useTranslation()` from `@/i18n` in React code and the shared translation
   helpers outside React. Use `i18n/format.ts` for locale-sensitive formatting,
   plural selection, and collation; do not hardcode `ru-RU` or manual plural rules.

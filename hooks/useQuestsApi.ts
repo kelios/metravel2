@@ -17,6 +17,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy';
 import { questsListQueryOptions } from '@/hooks/questsListQuery';
 import { useQuestBundleQuery } from '@/hooks/questBundleQuery';
+import { useQuestContentLocale } from '@/hooks/useQuestContentLocale';
 import { useHydrationReady } from '@/hooks/useHydrationReady';
 import {
     adaptMeta,
@@ -90,7 +91,7 @@ const getErrorMessage = (error: unknown, fallback: string): string =>
 export function useQuestsList(opts?: { enabled?: boolean }) {
     const enabled = opts?.enabled ?? true;
     const { data, isPending, error } = useQuery<ApiQuestMeta[]>({
-        ...questsListQueryOptions(),
+        ...questsListQueryOptions(useQuestContentLocale()),
         enabled,
     });
 
@@ -109,7 +110,7 @@ export function useQuestsList(opts?: { enabled?: boolean }) {
 
 /**
  * Первые N квестов каталога для промо-блоков (главная показывает два).
- * Ключ отдельный от queryKeys.quests(): полный каталог грузится страницами и
+ * Ключ отдельный от queryKeys.questsCatalog(): полный каталог грузится страницами и
  * весит сотни килобайт, а промо-блоку хватает одного лёгкого запроса. Если
  * полный список уже в кеше (пришли с экрана квестов) — берём срез из него и в
  * сеть не идём.
@@ -117,10 +118,11 @@ export function useQuestsList(opts?: { enabled?: boolean }) {
 export function useQuestsPreview(limit: number, opts?: { enabled?: boolean }) {
     const enabled = opts?.enabled ?? true;
     const queryClient = useQueryClient();
+    const locale = useQuestContentLocale();
 
     const { data, isPending, error } = useQuery<ApiQuestMeta[]>({
-        queryKey: queryKeys.questsPreview(limit),
-        queryFn: ({ signal }) => fetchQuestsPreview(limit, { signal }),
+        queryKey: queryKeys.questsPreview(limit, locale),
+        queryFn: ({ signal }) => fetchQuestsPreview(limit, { signal, locale }),
         enabled,
         staleTime: QUESTS_LIST_STALE_TIME,
         gcTime: QUESTS_LIST_GC_TIME,
@@ -128,12 +130,12 @@ export function useQuestsPreview(limit: number, opts?: { enabled?: boolean }) {
             // Полный каталог в кэше лежит в порядке id, а промо-блок показывает
             // популярные (#1798): без пересортировки блок мигал бы выборкой по
             // id всякий раз, когда главную открывают после экрана квестов.
-            const fullList = queryClient.getQueryData<ApiQuestMeta[]>(queryKeys.quests());
+            const fullList = queryClient.getQueryData<ApiQuestMeta[]>(queryKeys.questsCatalog(locale));
             return fullList?.length ? selectPopularQuests(fullList, limit) : undefined;
         },
         // Возраст среза = возраст каталога, из которого он взят: иначе свежий
         // initialData вечно считался бы актуальным и промо-блок не обновлялся.
-        initialDataUpdatedAt: () => queryClient.getQueryState(queryKeys.quests())?.dataUpdatedAt,
+        initialDataUpdatedAt: () => queryClient.getQueryState(queryKeys.questsCatalog(locale))?.dataUpdatedAt,
     });
 
     const quests = useMemo<QuestMeta[]>(
@@ -151,6 +153,7 @@ export function useQuestsPreview(limit: number, opts?: { enabled?: boolean }) {
 
 /** Хук для загрузки полного бандла квеста по quest_id */
 export function useQuestBundle(questId: string | undefined) {
+    const locale = useQuestContentLocale();
     const { data, isPending, isFetching, error, refetch } = useQuestBundleQuery(questId);
     // #1562/#418: маршрут по `loading` делает ранний return LoadingState, и на
     // кадре гидратации статического HTML визард (clientOnly-раскладка) не
@@ -161,8 +164,8 @@ export function useQuestBundle(questId: string | undefined) {
     const hydrationReady = useHydrationReady();
     const cityId = data?.city?.id;
     const { data: classification, isPending: classificationPending, isError: classificationFailed } = useQuery({
-        queryKey: queryKeys.questCityClassification(cityId),
-        queryFn: async () => (await fetchQuestsByCity(cityId!)).map((meta) => {
+        queryKey: queryKeys.questCityClassification(cityId, locale),
+        queryFn: async () => (await fetchQuestsByCity(cityId!, locale)).map((meta) => {
             const adapted = adaptMeta(meta);
             return { questId: meta.quest_id, tags: adapted.tags ?? [], cover: adapted.cover };
         }),

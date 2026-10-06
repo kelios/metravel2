@@ -71,6 +71,7 @@ import {
   useQuestProgressSync,
 } from '@/hooks/useQuestsApi';
 import { queryKeys } from '@/api/queryKeys';
+import { getQuestContentLocale } from '@/api/questContentLocale';
 
 // ---- Fixtures ----
 
@@ -210,7 +211,7 @@ describe('useQuestsApi hooks', () => {
     it('reuses an already loaded catalog without a network call', async () => {
       const meta2 = { ...API_META, quest_id: 'minsk-cmok' };
       const meta3 = { ...API_META, quest_id: 'gomel-palace' };
-      queryClient.setQueryData(queryKeys.quests(), [API_META, meta2, meta3]);
+      queryClient.setQueryData(queryKeys.questsCatalog(getQuestContentLocale()), [API_META, meta2, meta3]);
 
       const { result } = renderHook(() => useQuestsPreview(2), { wrapper });
 
@@ -222,11 +223,11 @@ describe('useQuestsApi hooks', () => {
       expect(mockFetchQuestsPreview).not.toHaveBeenCalled();
     });
 
-    // #1798: в кэше `['quests']` каталог лежит в порядке id, а промо-блок
+    // #1798: в кэше каталога лежит в порядке id, а промо-блок
     // показывает популярные. Без пересортировки `initialData` блок мигал бы
     // выборкой по id всякий раз, когда главную открывают после экрана квестов.
     it('seeds the block from the cached catalog by popularity, not by id', async () => {
-      queryClient.setQueryData(queryKeys.quests(), [
+      queryClient.setQueryData(queryKeys.questsCatalog(getQuestContentLocale()), [
         { ...API_META, id: 1, quest_id: 'oldest', completions_count: 0, views_count: 3 },
         { ...API_META, id: 2, quest_id: 'seen-more', completions_count: 0, views_count: 9 },
         { ...API_META, id: 3, quest_id: 'played', completions_count: 2, views_count: 1 },
@@ -287,7 +288,7 @@ describe('useQuestsApi hooks', () => {
       const originalPlatform = Platform.OS;
       Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
       try {
-        queryClient.setQueryData(queryKeys.questBundle('krakow-dragon'), API_BUNDLE);
+        queryClient.setQueryData(queryKeys.questBundle('krakow-dragon', getQuestContentLocale()), API_BUNDLE);
         const frames: boolean[] = [];
         const { result } = renderHook(
           () => {
@@ -308,7 +309,7 @@ describe('useQuestsApi hooks', () => {
     });
 
     it('на native тёплый кэш отдаёт бандл первым же кадром — гидратации там нет', () => {
-      queryClient.setQueryData(queryKeys.questBundle('krakow-dragon'), API_BUNDLE);
+      queryClient.setQueryData(queryKeys.questBundle('krakow-dragon', getQuestContentLocale()), API_BUNDLE);
       const frames: boolean[] = [];
       renderHook(
         () => {

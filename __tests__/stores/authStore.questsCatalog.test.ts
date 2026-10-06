@@ -51,13 +51,13 @@ describe('auth identity → exact quests catalog', () => {
     jest.restoreAllMocks()
   })
   const observe = (queryFn: () => Promise<ApiQuestMeta[]>) => {
-    const observer = new QueryObserver(client, { queryKey: queryKeys.quests(), queryFn, staleTime: QUESTS_LIST_STALE_TIME })
+    const observer = new QueryObserver(client, { queryKey: queryKeys.questsCatalog('ru'), queryFn, staleTime: QUESTS_LIST_STALE_TIME })
     unsubscribe = observer.subscribe(() => undefined)
   }
 
   it('guest→A refreshes once; profile/auth-ready changes do not refresh; other keys stay fresh', async () => {
-    client.setQueryData(queryKeys.quests(), meta(false))
-    client.setQueryData(queryKeys.questsPreview(2), meta(false))
+    client.setQueryData(queryKeys.questsCatalog('ru'), meta(false))
+    client.setQueryData(queryKeys.questsPreview(2, 'ru'), meta(false))
     client.setQueryData(queryKeys.userPointsAll('A'), ['point'])
     const fetchCatalog = jest.fn().mockResolvedValue(meta(true))
     observe(fetchCatalog)
@@ -71,21 +71,21 @@ describe('auth identity → exact quests catalog', () => {
     await tick()
 
     expect(fetchCatalog).toHaveBeenCalledTimes(1)
-    expect(client.getQueryData(queryKeys.quests())).toEqual(meta(true))
-    expect(client.getQueryState(queryKeys.questsPreview(2))?.isInvalidated).toBe(false)
+    expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(meta(true))
+    expect(client.getQueryState(queryKeys.questsPreview(2, 'ru'))?.isInvalidated).toBe(false)
     expect(client.getQueryState(queryKeys.userPointsAll('A'))?.isInvalidated).toBe(false)
   })
 
   it('A→B immediately removes personal fields while B request is pending', async () => {
     useAuthStore.getState().applyConfirmedAccountSession({ userId: 'A' })
     await tick()
-    client.setQueryData(queryKeys.quests(), meta(true))
+    client.setQueryData(queryKeys.questsCatalog('ru'), meta(true))
     let resolveB!: (data: ApiQuestMeta[]) => void
     const fetchCatalog = jest.fn(() => new Promise<ApiQuestMeta[]>((resolve) => { resolveB = resolve }))
     observe(fetchCatalog)
 
     useAuthStore.getState().applyConfirmedAccountSession({ userId: 'B' })
-    const pending = client.getQueryData<ApiQuestMeta[]>(queryKeys.quests())![0]
+    const pending = client.getQueryData<ApiQuestMeta[]>(queryKeys.questsCatalog('ru'))![0]
     expect(pending).not.toHaveProperty('is_completed_by_me')
     expect(pending).not.toHaveProperty('user_rating')
     expect(pending.title).toBe('Quest')
@@ -93,7 +93,7 @@ describe('auth identity → exact quests catalog', () => {
     resolveB(meta(false))
     await tick()
     expect(fetchCatalog).toHaveBeenCalledTimes(1)
-    expect(client.getQueryData(queryKeys.quests())).toEqual(meta(false))
+    expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(meta(false))
   })
 
   it('cancelled in-flight guest response cannot overwrite signed-in data', async () => {
@@ -107,13 +107,13 @@ describe('auth identity → exact quests catalog', () => {
     resolveGuest(meta(false))
     await tick()
     expect(fetchCatalog).toHaveBeenCalledTimes(2)
-    expect(client.getQueryData(queryKeys.quests())).toEqual(meta(true))
+    expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(meta(true))
   })
 
   it('logout does not refresh until server logout and credential cleanup finish', async () => {
     useAuthStore.getState().applyConfirmedAccountSession({ userId: 'A' })
     await tick()
-    client.setQueryData(queryKeys.quests(), meta(true))
+    client.setQueryData(queryKeys.questsCatalog('ru'), meta(true))
     const fetchCatalog = jest.fn().mockResolvedValue(meta(false))
     observe(fetchCatalog)
     let resolveLogout!: () => void
@@ -122,7 +122,7 @@ describe('auth identity → exact quests catalog', () => {
     const logout = useAuthStore.getState().logout()
     await tick()
     expect(fetchCatalog).not.toHaveBeenCalled()
-    expect(client.getQueryData<ApiQuestMeta[]>(queryKeys.quests())![0]).not.toHaveProperty('is_completed_by_me')
+    expect(client.getQueryData<ApiQuestMeta[]>(queryKeys.questsCatalog('ru'))![0]).not.toHaveProperty('is_completed_by_me')
     resolveLogout()
     await logout
     await tick()
@@ -132,19 +132,19 @@ describe('auth identity → exact quests catalog', () => {
   it('inactive catalog is only invalidated and absent catalog is not created', async () => {
     useAuthStore.getState().applyConfirmedAccountSession({ userId: 'A' })
     await tick()
-    expect(client.getQueryState(queryKeys.quests())).toBeUndefined()
-    client.setQueryData(queryKeys.quests(), meta(true))
+    expect(client.getQueryState(queryKeys.questsCatalog('ru'))).toBeUndefined()
+    client.setQueryData(queryKeys.questsCatalog('ru'), meta(true))
     const fetch = jest.spyOn(client, 'fetchQuery')
     useAuthStore.getState().invalidateAuthState()
     await tick()
-    expect(client.getQueryState(queryKeys.quests())?.isInvalidated).toBe(true)
+    expect(client.getQueryState(queryKeys.questsCatalog('ru'))?.isInvalidated).toBe(true)
     expect(fetch).not.toHaveBeenCalled()
   })
 
   it.each([true, false])('catalog mounting during logout waits for credentials (cached=%s)', async (cached) => {
     useAuthStore.getState().applyConfirmedAccountSession({ userId: 'A' })
     await tick()
-    if (cached) client.setQueryData(queryKeys.quests(), meta(true))
+    if (cached) client.setQueryData(queryKeys.questsCatalog('ru'), meta(true))
     let resolveLogout!: () => void
     logoutApi.mockImplementationOnce(() => new Promise<void>((resolve) => { resolveLogout = resolve }))
     fetchQuestsList.mockResolvedValue(meta(false))
@@ -159,13 +159,13 @@ describe('auth identity → exact quests catalog', () => {
     await logout
     await tick()
     expect(fetchQuestsList).toHaveBeenCalledTimes(1)
-    expect(client.getQueryData(queryKeys.quests())).toEqual(meta(false))
+    expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(meta(false))
   })
 
   it('reconnect during logout cannot bypass the credentials barrier', async () => {
     useAuthStore.getState().applyConfirmedAccountSession({ userId: 'A' })
     await tick()
-    client.setQueryData(queryKeys.quests(), meta(true))
+    client.setQueryData(queryKeys.questsCatalog('ru'), meta(true))
     client.mount()
     let resolveLogout!: () => void
     logoutApi.mockImplementationOnce(() => new Promise<void>((resolve) => { resolveLogout = resolve }))
@@ -221,6 +221,6 @@ describe('auth identity → exact quests catalog', () => {
     await old
     await tick()
     expect(fetchQuestsList).toHaveBeenCalledTimes(1)
-    expect(client.getQueryData(queryKeys.quests())).toEqual(meta(false))
+    expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(meta(false))
   })
 })

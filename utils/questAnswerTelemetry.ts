@@ -49,6 +49,8 @@ export type RecordQuestAttemptInput = {
   attemptNo: number
   hintShown: boolean
   elapsedMs?: number
+  /** Язык, на котором игрок читал задание (`step.contentLocale`, #2197). */
+  contentLocale?: string
 }
 
 // Состояние модульное, а не хуковое: флаш обязан пережить размонтирование
@@ -221,7 +223,8 @@ export async function recordQuestAnswerAttempt(input: RecordQuestAttemptInput): 
     hint_shown: input.hintShown,
     ...(Number.isFinite(input.elapsedMs) ? { elapsed_ms: Math.max(0, Math.round(input.elapsedMs as number)) } : {}),
     platform: resolvePlatform(),
-    locale: getActiveLocale(),
+    // Ответ сверяется с текстом задания, а не с языком интерфейса (#2197).
+    locale: input.contentLocale ?? getActiveLocale(),
     occurred_at: new Date().toISOString(),
   }
 

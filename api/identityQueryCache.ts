@@ -11,7 +11,8 @@ import type { Query, QueryClient } from '@tanstack/react-query'
  * запрета: сносится всё, кроме явно очищаемых quest-данных. Лишний сброс
  * публичных данных стоит одного запроса, пропущенный личный ключ — утечки.
  *
- * Исключения — точный каталог `['quests']` и бандлы `['quest-bundle', slug]`. У
+ * Исключения — каталог `['quests', 'catalog', locale]` и бандлы
+ * `['quest-bundle', slug, locale]` на любой локали контента (#2197). У
  * него есть собственный механизм смены личности
  * (`api/questsCatalogInvalidation.ts`), который держит публичную часть списка на
  * экране и снимает с неё личные поля; снос каталога отсюда сломал бы его и
@@ -21,14 +22,12 @@ import type { Query, QueryClient } from '@tanstack/react-query'
  * `is_completed_by_me`/`user_rating` в них лежат. Поэтому исключение сверяет всю
  * форму ключа, а не только его корень.
  */
-const QUESTS_CATALOG_KEY_ROOT = 'quests'
-
 /** Что переживает смену владельца сессии. Экспортировано ради проверки состава. */
 export const survivesIdentityChange = (queryKey: unknown): boolean =>
   Array.isArray(queryKey) && (
-    (queryKey.length === 1 && queryKey[0] === QUESTS_CATALOG_KEY_ROOT) ||
+    (queryKey.length === 3 && queryKey[0] === 'quests' && queryKey[1] === 'catalog' && typeof queryKey[2] === 'string') ||
     // Bundle metadata uses the same credential barrier and personal-field scrub.
-    (queryKey.length === 2 && queryKey[0] === 'quest-bundle' && typeof queryKey[1] === 'string')
+    (queryKey.length === 3 && queryKey[0] === 'quest-bundle' && typeof queryKey[1] === 'string' && typeof queryKey[2] === 'string')
   )
 
 const isDroppedOnIdentityChange = (query: Query): boolean => !survivesIdentityChange(query.queryKey)

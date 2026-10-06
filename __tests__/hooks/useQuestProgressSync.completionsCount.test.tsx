@@ -63,7 +63,7 @@ describe('«Сбросить» обновляет число прохожден�
     sync: useQuestProgressSync(QUEST_ID, true),
     completion: useQuestCompletionMeta(QUEST_ID, 7),
     // Каталог под экраном квеста: по нему считается «Пройденные другими».
-    catalog: useQuery({ queryKey: queryKeys.quests(), queryFn: fetchCatalog }).data,
+    catalog: useQuery({ queryKey: queryKeys.questsCatalog('ru'), queryFn: fetchCatalog }).data,
   }), { wrapper })
 
   beforeEach(() => {

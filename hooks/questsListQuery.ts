@@ -1,4 +1,5 @@
 import { queryKeys } from '@/api/queryKeys'
+import { getQuestContentLocale } from '@/api/questContentLocale'
 import type { QueryFunctionContext } from '@tanstack/react-query'
 import { waitForQuestsCatalogCredentials } from '@/api/questsCatalogInvalidation'
 import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy'
@@ -6,7 +7,7 @@ import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListC
 /**
  * Единственное определение запроса списка квестов.
  *
- * #1393: под ключом `queryKeys.quests()` ходят экран квестов, промо-блок
+ * #1393: под ключом `queryKeys.questsCatalog(locale)` ходят экран квестов, промо-блок
  * главной, три мета-хука детали и крошка города. Дедупликация в ОДИН запрос
  * `/quests/` держится на том, что у всех совпадают ключ, queryFn и времена
  * кеша, — а держалась она копипастой в двух местах, где разъехаться могли и
@@ -20,14 +21,17 @@ import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListC
  * ровно тогда, когда запрос реально стартует, поэтому маршруты без списка
  * квестов (travel-детали — основная масса страниц) больше не держат чанк
  * квестового API в стартовом графе.
+ *
+ * #2197: ключ и запрос берут одну `locale`. Хуки передают её из
+ * `useQuestContentLocale()`, остальные вызовы — текущую по резолверу.
  */
-export function questsListQueryOptions() {
+export function questsListQueryOptions(locale: string = getQuestContentLocale()) {
   return {
-    queryKey: queryKeys.quests(),
+    queryKey: queryKeys.questsCatalog(locale),
     queryFn: async ({ signal, client }: QueryFunctionContext) => {
       const { fetchQuestsList } = await import('@/api/quests')
       await waitForQuestsCatalogCredentials(client, signal)
-      return fetchQuestsList({ signal })
+      return fetchQuestsList({ signal, locale })
     },
     staleTime: QUESTS_LIST_STALE_TIME,
     gcTime: QUESTS_LIST_GC_TIME,

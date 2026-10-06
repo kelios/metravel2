@@ -74,7 +74,7 @@ describe('паритет нормализации со средой выполн
   const read = (file: string) => fs.readFileSync(path.resolve(process.cwd(), file), 'utf8')
 
   it('сверяет сам список преобразований, а не только выборку значений', () => {
-    const runtimeChain = extractChain(read('utils/questAdapters.ts'), 'export function normalize(s: string): string {')
+    const runtimeChain = extractChain(read('utils/questAnswerNormalization.ts'), 'export function normalize(s: string): string {')
     const scanChain = extractChain(read('scripts/lib/questAnswerNormalize.js'), 'function normalizeRuntime(s) {')
 
     expect(runtimeChain.length).toBeGreaterThanOrEqual(7)

@@ -265,16 +265,17 @@ export function currentQuestProgressWriteEpoch(): number {
 }
 
 /**
- * «Мои квесты» читает не `['quests']`. Точная инвалидация каталога компактный
- * срез не задевает, а список прохождений лежит под другим префиксом. Оба держат
- * staleTime 30 минут — «Пройден» переживал и сброс, и финиш (#2096).
+ * «Мои квесты» читает не каталог: его инвалидация компактный срез не задевает,
+ * а список прохождений лежит под другим префиксом. Оба держат staleTime
+ * 30 минут — «Пройден» переживал и сброс, и финиш (#2096). Срез сбрасывается
+ * на всех локалях контента (#2197).
  */
 const invalidateOwnedQuestCollections = (ownerId: string): void => {
     const client = getActiveQueryClient()
     if (!client) return
     const userId = String(ownerId)
     void client.invalidateQueries({ queryKey: queryKeys.questProgressAll(userId), exact: true })
-    void client.invalidateQueries({ queryKey: queryKeys.questsCompactCatalog(userId), exact: true })
+    void client.invalidateQueries({ queryKey: queryKeys.questsCompactCatalogAllLocales(userId) })
 }
 
 /**

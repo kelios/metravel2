@@ -4,6 +4,7 @@ import { useQueries } from '@tanstack/react-query'
 
 import type { ApiQuestBundle } from '@/api/quests'
 import { questBundleQueryOptions } from '@/hooks/questBundleQuery'
+import { useQuestContentLocale } from '@/hooks/useQuestContentLocale'
 import type { QuestCityWalkModel } from '@/utils/questCityWalk'
 import type { QuestMeta } from '@/utils/questAdapters'
 
@@ -115,6 +116,7 @@ export function useQuestCityWalk(
   const enabled = opts?.enabled !== false
   const ready = useDeferredUntilIdle(enabled)
   const runtime = useQuestCityWalkRuntime(enabled)
+  const locale = useQuestContentLocale()
 
   const walkQuestIds = useMemo(
     () => (runtime ? runtime.questCityWalkQuestIds(quests) : []),
@@ -138,12 +140,12 @@ export function useQuestCityWalk(
   return useQueries({
     queries: walkQuestIds.map((questId) => ({
       // Определение запроса у ключа ОДНО (`questBundleQueryOptions`), своей
-      // копии здесь нет: с #1992 ключ `['quest-bundle', slug]` переживает смену
+      // копии здесь нет: с #1992 ключ `['quest-bundle', slug, locale]` переживает смену
       // владельца сессии (`api/identityQueryCache.ts`), и держит его публичным
       // ровно барьер `waitForQuestsCatalogCredentials` внутри того queryFn.
       // Вторая, безбарьерная копия запроса снова положила бы в переживший ключ
       // `is_completed_by_me`/`user_rating` ещё не закрытой сессии.
-      ...questBundleQueryOptions(questId),
+      ...questBundleQueryOptions(questId, locale),
       enabled: enabled && ready,
       // Своя политика повтора сохранена: недоступный бандл убирает свой квест из
       // секции, поэтому одна повторная попытка здесь дешевле пустого слота.

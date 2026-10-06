@@ -19,6 +19,12 @@ import {
   fetchQuestReviews,
 } from '@/api/quests';
 
+// Локаль контента закреплена: ожидаемые URL ниже несут `lang=ru` (#2197).
+jest.mock('@/api/questContentLocale', () => ({
+  ...jest.requireActual('@/api/questContentLocale'),
+  getQuestContentLocale: () => 'ru',
+}));
+
 jest.mock('@/api/client', () => ({
   apiClient: {
     get: jest.fn(),
@@ -91,7 +97,7 @@ describe('api/quests', () => {
     it('calls GET /quests/ with the maximum page size', async () => {
       mockedGet.mockResolvedValueOnce([]);
       const result = await fetchQuestsList();
-      expect(mockedGet).toHaveBeenCalledWith('/quests/?page_size=100');
+      expect(mockedGet).toHaveBeenCalledWith('/quests/?lang=ru&page_size=100');
       expect(result).toEqual([]);
     });
 
@@ -108,8 +114,8 @@ describe('api/quests', () => {
       const result = await fetchQuestsList();
 
       expect(mockedGet).toHaveBeenCalledTimes(2);
-      expect(mockedGet).toHaveBeenNthCalledWith(1, '/quests/?page_size=100');
-      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/?page_size=100&page=2');
+      expect(mockedGet).toHaveBeenNthCalledWith(1, '/quests/?lang=ru&page_size=100');
+      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/?lang=ru&page_size=100&page=2');
       expect(result.map((quest) => quest.quest_id)).toEqual(['krakow-dragon', 'pakocim-voices']);
     });
 
@@ -129,8 +135,8 @@ describe('api/quests', () => {
 
       // Ни один ответ ещё не пришёл, а вторая страница уже запрошена.
       expect(mockedGet).toHaveBeenCalledTimes(2);
-      expect(mockedGet).toHaveBeenNthCalledWith(1, '/quests/?page_size=100');
-      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/?page_size=100&page=2');
+      expect(mockedGet).toHaveBeenNthCalledWith(1, '/quests/?lang=ru&page_size=100');
+      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/?lang=ru&page_size=100&page=2');
 
       pending[1]({ results: [{ id: 2, quest_id: 'pakocim-voices' }], count: 2, next: null });
       pending[0]({
@@ -166,7 +172,7 @@ describe('api/quests', () => {
 
       // Четвёртая страница запрошена, хотя третья ещё не ответила.
       expect(mockedGet).toHaveBeenCalledTimes(4);
-      expect(mockedGet).toHaveBeenNthCalledWith(4, '/quests/?page_size=100&page=4');
+      expect(mockedGet).toHaveBeenNthCalledWith(4, '/quests/?lang=ru&page_size=100&page=4');
 
       // Порядок записей не зависит от порядка ответов.
       pending[1]({ results: [{ id: 4, quest_id: 'd' }], next: null });
@@ -215,7 +221,7 @@ describe('api/quests', () => {
       const result = await fetchQuestsList();
 
       expect(mockedGet).toHaveBeenCalledTimes(3);
-      expect(mockedGet).toHaveBeenNthCalledWith(3, '/quests/?page_size=100&page=3');
+      expect(mockedGet).toHaveBeenNthCalledWith(3, '/quests/?lang=ru&page_size=100&page=3');
       expect(result.map((quest) => quest.quest_id)).toEqual(['a', 'b', 'c']);
     });
 
@@ -244,7 +250,7 @@ describe('api/quests', () => {
 
       await expect(fetchQuestsList()).rejects.toBe(error);
       expect(mockedGet).toHaveBeenCalledTimes(2);
-      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/?page_size=100&page=2');
+      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/?lang=ru&page_size=100&page=2');
     });
 
     // #1664: хвостовые страницы посчитаны из размера выборки и ссылкой `next`
@@ -271,7 +277,7 @@ describe('api/quests', () => {
       // Ровно три запроса: ссылка `next` второй страницы ведёт на ту самую
       // третью, которой нет, и последовательный дочит не запрашивает её снова.
       expect(mockedGet).toHaveBeenCalledTimes(3);
-      expect(mockedGet).toHaveBeenNthCalledWith(3, '/quests/?page_size=100&page=3');
+      expect(mockedGet).toHaveBeenNthCalledWith(3, '/quests/?lang=ru&page_size=100&page=3');
     });
 
     // Обратная сторона того же правила: глушить всё подряд нельзя, иначе
@@ -327,7 +333,7 @@ describe('api/quests', () => {
 
       expect(mockedGet).toHaveBeenCalledTimes(1);
       expect(mockedGet).toHaveBeenCalledWith(
-        '/quests/?sort=popular&page_size=2',
+        '/quests/?sort=popular&page_size=2&lang=ru',
         undefined,
         undefined,
       );
@@ -356,7 +362,7 @@ describe('api/quests', () => {
       expect(mockedGet).toHaveBeenCalledTimes(2);
       expect(mockedGet).toHaveBeenNthCalledWith(
         2,
-        '/quests/?page_size=1',
+        '/quests/?page_size=1&lang=ru',
         undefined,
         undefined,
       );
@@ -422,7 +428,7 @@ describe('api/quests', () => {
       const bundle = { id: 1, quest_id: 'krakow-dragon', title: 'Test' };
       mockedGet.mockResolvedValueOnce(bundle);
       const result = await fetchQuestByQuestId('krakow-dragon');
-      expect(mockedGet).toHaveBeenCalledWith('/quests/by-quest-id/krakow-dragon/', 30000);
+      expect(mockedGet).toHaveBeenCalledWith('/quests/by-quest-id/krakow-dragon/?lang=ru', 30000);
       expect(result).toEqual(bundle);
     });
 
@@ -435,8 +441,8 @@ describe('api/quests', () => {
       await expect(fetchQuestByQuestId('krakow-dragon')).resolves.toEqual(bundle);
 
       expect(mockedGet).toHaveBeenCalledTimes(2);
-      expect(mockedGet).toHaveBeenNthCalledWith(1, '/quests/by-quest-id/krakow-dragon/', 30000);
-      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/by-quest-id/krakow-dragon/', 30000);
+      expect(mockedGet).toHaveBeenNthCalledWith(1, '/quests/by-quest-id/krakow-dragon/?lang=ru', 30000);
+      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/by-quest-id/krakow-dragon/?lang=ru', 30000);
     });
 
     it('does not retry a permanent not-found response', async () => {
@@ -445,7 +451,7 @@ describe('api/quests', () => {
       await expect(fetchQuestByQuestId('missing-quest')).rejects.toThrow('Квест не найден');
 
       expect(mockedGet).toHaveBeenCalledTimes(1);
-      expect(mockedGet).toHaveBeenCalledWith('/quests/by-quest-id/missing-quest/', 30000);
+      expect(mockedGet).toHaveBeenCalledWith('/quests/by-quest-id/missing-quest/?lang=ru', 30000);
     });
 
     // #1185: попав на битую ссылку /quests/undefined/undefined, экран отдавал
@@ -533,7 +539,7 @@ describe('api/quests', () => {
       });
 
       expect(mockedGet).toHaveBeenCalledWith(
-        '/quests/by-quest-id/krakow-dragon/',
+        '/quests/by-quest-id/krakow-dragon/?lang=ru',
         expect.anything(),
         { signal: controller.signal },
       );
@@ -571,7 +577,7 @@ describe('api/quests', () => {
       await fetchQuestByQuestId('krakow-dragon', { persistOffline: false });
 
       expect(mockedGet).toHaveBeenCalledWith(
-        '/quests/by-quest-id/krakow-dragon/',
+        '/quests/by-quest-id/krakow-dragon/?lang=ru',
         expect.anything(),
       );
     });
@@ -602,7 +608,7 @@ describe('api/quests', () => {
       // Should have called GET for progress, then GET for quest, then POST
       expect(mockedGet).toHaveBeenCalledTimes(2);
       expect(mockedGet).toHaveBeenNthCalledWith(1, '/quest-progress/quest/krakow-dragon/');
-      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/by-quest-id/krakow-dragon/');
+      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/by-quest-id/krakow-dragon/?lang=ru');
       expect(mockedPost).toHaveBeenCalledWith('/quest-progress/', { quest: 5 });
       expect(result).toEqual(newProgress);
     });
@@ -616,7 +622,8 @@ describe('api/quests', () => {
      */
     it('берёт числовой id из кэша бандла и не тянет бандл второй раз', async () => {
       const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-      client.setQueryData(queryKeys.questBundle('krakow-dragon'), { id: 5 });
+      // Числовой id не зависит от языка: годится копия на любой локали (#2197).
+      client.setQueryData(queryKeys.questBundle('krakow-dragon', 'pl'), { id: 5 });
       setActiveQueryClient(client);
       try {
         const error404 = new (ApiError as any)(404, 'Not found');
@@ -628,7 +635,7 @@ describe('api/quests', () => {
 
         expect(mockedGet).toHaveBeenCalledTimes(1);
         expect(mockedGet).toHaveBeenCalledWith('/quest-progress/quest/krakow-dragon/');
-        expect(mockedGet).not.toHaveBeenCalledWith('/quests/by-quest-id/krakow-dragon/');
+        expect(mockedGet).not.toHaveBeenCalledWith('/quests/by-quest-id/krakow-dragon/?lang=ru');
         expect(mockedPost).toHaveBeenCalledWith('/quest-progress/', { quest: 5 });
         expect(result).toEqual(newProgress);
       } finally {
@@ -766,7 +773,7 @@ describe('api/quests', () => {
         if (url === '/quest-progress/quest/krakow-dragon/') {
           return row ? Promise.resolve(row) : Promise.reject(error404);
         }
-        if (url === '/quests/by-quest-id/krakow-dragon/') return Promise.resolve({ id: 5 });
+        if (url === '/quests/by-quest-id/krakow-dragon/?lang=ru') return Promise.resolve({ id: 5 });
         return Promise.reject(new Error(`unexpected GET ${url}`));
       }) as any);
       mockedPost.mockImplementation((() => {

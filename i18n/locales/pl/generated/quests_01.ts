@@ -268,6 +268,7 @@ export const questsGenerated1 = {
   "components.quests.questWizardStepCard.pointRole.start": "Punkt startowy",
   "components.quests.QuestProgressPendingNotice.pendingDelivery": "Przejście nie zostało jeszcze wysłane — wyślemy, gdy pojawi się sieć",
   "components.quests.QuestProgressPendingNotice.pendingDeliveryShort": "Przejście czeka na wysłanie",
+  "components.quests.QuestContentLocaleNotice.availableIn": "Quest jest na razie dostępny w języku: {{language}}",
   "components.quests.questWizardSections.partialTitle": "Zadanie ukończone częściowo",
   "components.quests.questWizardSections.partialNotCredited": "Odwiedzono {{value1}} z {{value2}} punktów. Zadanie zostanie zaliczone, gdy odwiedzisz jeszcze {{count}} punktów.",
   "components.quests.questWizardSections.partialNotCredited_one": "Odwiedzono {{value1}} z {{value2}} punktów. Zadanie zostanie zaliczone, gdy odwiedzisz jeszcze {{count}} punkt.",

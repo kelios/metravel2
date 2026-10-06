@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
 import type { ApiQuestBundle } from '@/api/quests'
 import { queryKeys } from '@/api/queryKeys'
+import { getQuestContentLocale } from '@/api/questContentLocale'
 import { useQuestBundle } from '@/hooks/useQuestsApi'
 import { useQuestRatingMeta } from '@/hooks/useQuestRatingMeta'
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta'
@@ -69,9 +70,9 @@ describe('single-quest metadata (#1992)', () => {
     expect(result.current.rating).toEqual({ ratingAvg: 4.5, ratingCount: 8 })
     expect(result.current.completion.completionsCount).toBe(12)
     expect(result.current.pioneer).toEqual(base.first_completer)
-    expect(fetchQuestsByCity).toHaveBeenCalledWith(11)
+    expect(fetchQuestsByCity).toHaveBeenCalledWith(11, getQuestContentLocale())
     expect(fetchQuestsList).not.toHaveBeenCalled()
-    expect(client.getQueryState(queryKeys.quests())).toBeUndefined()
+    expect(client.getQueryState(queryKeys.questsCatalog(getQuestContentLocale()))).toBeUndefined()
   })
 
   it('preserves classification loading and uses addressed cover fallback for legacy bundles', async () => {
@@ -88,7 +89,7 @@ describe('single-quest metadata (#1992)', () => {
   })
 
   it('bundle-supplied tags avoid even the city lookup and opened cached bundles persist offline', async () => {
-    client.setQueryData(queryKeys.questBundle('quest-a'), { ...base, tags: { bike: true } })
+    client.setQueryData(queryKeys.questBundle('quest-a', getQuestContentLocale()), { ...base, tags: { bike: true } })
     const { result } = renderHook(() => useDetail(), { wrapper })
     expect(result.current.bundle?.tags).toEqual(['bike'])
     expect(fetchQuestByQuestId).not.toHaveBeenCalled()
@@ -130,7 +131,7 @@ describe('single-quest metadata (#1992)', () => {
     })
     await waitFor(() => expect(result.current.completion.isCompletedByMe).toBe(false))
     expect(result.current.bundle?.title).toBe('Quest A')
-    expect(client.getQueryData(queryKeys.questBundle('quest-a'))).not.toHaveProperty('user_rating')
+    expect(client.getQueryData(queryKeys.questBundle('quest-a', getQuestContentLocale()))).not.toHaveProperty('user_rating')
     expect(fetchQuestByQuestId).toHaveBeenCalledTimes(1)
     await act(async () => { release(); await Promise.all([refresh, drop]) })
     expect(fetchQuestByQuestId).toHaveBeenCalledTimes(2)

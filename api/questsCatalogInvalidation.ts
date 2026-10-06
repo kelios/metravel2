@@ -6,8 +6,12 @@ import type { ApiQuestBundle, ApiQuestMeta } from '@/api/quests'
 type CatalogQuestWithoutIdentity = Omit<ApiQuestMeta, 'is_completed_by_me' | 'user_rating'> &
   Partial<Pick<ApiQuestMeta, 'is_completed_by_me' | 'user_rating'>>
 
-const catalogFilter = { queryKey: queryKeys.quests(), exact: true } as const
+// Каталог и бандлы лежат под ключом на каждую локаль контента (#2197): все
+// фильтры здесь — префиксы «все локали», иначе после смены языка всплыл бы
+// устаревший личный статус из копии на другом языке.
+const catalogFilter = { queryKey: queryKeys.questsCatalogAllLocales() } as const
 const bundlesFilter = { queryKey: queryKeys.questBundles() } as const
+const questBundleFilter = (questId: string) => ({ queryKey: queryKeys.questBundleAllLocales(questId) }) as const
 const completionRefreshes = new WeakMap<QueryClient, Map<string, Promise<void>>>()
 const credentialBarriers = new WeakMap<QueryClient, Promise<void>>()
 
@@ -40,7 +44,7 @@ export function refreshQuestsCatalogIdentity(
 ): Promise<void> {
   credentialBarriers.set(client, credentialsReady)
   const cancelled = Promise.all([client.cancelQueries(catalogFilter), client.cancelQueries(bundlesFilter)])
-  client.setQueryData<CatalogQuestWithoutIdentity[]>(catalogFilter.queryKey, (quests) => quests?.map((quest) => {
+  client.setQueriesData<CatalogQuestWithoutIdentity[]>(catalogFilter, (quests) => quests?.map((quest) => {
     const publicQuest = { ...quest }
     delete publicQuest.is_completed_by_me
     delete publicQuest.user_rating
@@ -65,11 +69,29 @@ export function refreshQuestsCatalogIdentity(
   })
 }
 
+const markCatalogQuest = (questId: string, mark: boolean) => (current: ApiQuestMeta[] | undefined) =>
+  current?.map((quest) => (quest.quest_id === questId ? { ...quest, is_completed_by_me: mark } : quest))
+
+const markBundle = (mark: boolean) => (current: ApiQuestBundle | undefined) =>
+  current ? { ...current, is_completed_by_me: mark } : current
+
+/** Отметки квеста во всех закэшированных копиях: бандлах и каталогах на любой локали. */
+function cachedCompletionMarks(client: QueryClient, questId: string): boolean[] {
+  const bundles = client.getQueriesData<ApiQuestBundle>(questBundleFilter(questId))
+    .flatMap(([, bundle]) => (bundle ? [Boolean(bundle.is_completed_by_me)] : []))
+  const catalogs = client.getQueriesData<ApiQuestMeta[]>(catalogFilter)
+    .flatMap(([, quests]) => {
+      const quest = quests?.find((item) => item.quest_id === questId)
+      return quest ? [Boolean(quest.is_completed_by_me)] : []
+    })
+  return [...bundles, ...catalogs]
+}
+
 export function refreshQuestsCatalogCompletion(client: QueryClient, questId: string): Promise<void> {
-  const quests = client.getQueryData<ApiQuestMeta[]>(catalogFilter.queryKey)
-  const bundleKey = queryKeys.questBundle(questId)
-  const bundle = client.getQueryData<ApiQuestBundle>(bundleKey)
-  if (bundle?.is_completed_by_me || quests?.find((quest) => quest.quest_id === questId)?.is_completed_by_me) return Promise.resolve()
+  // Повторная отметка ничего не меняет, только если ни одна копия на любой
+  // локали её ещё не ждёт.
+  const marks = cachedCompletionMarks(client, questId)
+  if (marks.length > 0 && marks.every(Boolean)) return Promise.resolve()
   let pending = completionRefreshes.get(client)
   if (!pending) {
     pending = new Map()
@@ -79,14 +101,12 @@ export function refreshQuestsCatalogCompletion(client: QueryClient, questId: str
   if (existing) return existing
 
   void client.cancelQueries(catalogFilter)
-  client.setQueryData<ApiQuestMeta[]>(catalogFilter.queryKey, (current) => current?.map((quest) => (
-    quest.quest_id === questId ? { ...quest, is_completed_by_me: true } : quest
-  )))
-  void client.cancelQueries({ queryKey: bundleKey, exact: true })
-  client.setQueryData<ApiQuestBundle>(bundleKey, (current) => current ? { ...current, is_completed_by_me: true } : current)
+  client.setQueriesData<ApiQuestMeta[]>(catalogFilter, markCatalogQuest(questId, true))
+  void client.cancelQueries(questBundleFilter(questId))
+  client.setQueriesData<ApiQuestBundle>(questBundleFilter(questId), markBundle(true))
   const refreshed = Promise.all([
     client.invalidateQueries(catalogFilter),
-    client.invalidateQueries({ queryKey: bundleKey, exact: true }),
+    client.invalidateQueries(questBundleFilter(questId)),
   ]).then(() => undefined).finally(() => pending.delete(questId))
   pending.set(questId, refreshed)
   return refreshed
@@ -95,19 +115,18 @@ export function refreshQuestsCatalogCompletion(client: QueryClient, questId: str
 // Снимается только стоящая отметка. Кэш без неё чинить нечего, а отмена его
 // первой загрузки откатывает запрос в pending без повтора — экран квеста или
 // каталога остался бы в вечной загрузке. Сброс зовёт и очередь, в том числе на
-// старте приложения, пока бандл ещё грузится (#2033).
+// старте приложения, пока бандл ещё грузится (#2033). Копии на разных локалях
+// проверяются и чинятся по отдельности (#2197).
 export function resetQuestsCatalogCompletion(client: QueryClient, questId: string): void {
-  const bundleKey = queryKeys.questBundle(questId)
-  if (client.getQueryData<ApiQuestBundle>(bundleKey)?.is_completed_by_me) {
-    void client.cancelQueries({ queryKey: bundleKey, exact: true })
-    client.setQueryData<ApiQuestBundle>(bundleKey, (bundle) => bundle ? { ...bundle, is_completed_by_me: false } : bundle)
+  for (const [queryKey, bundle] of client.getQueriesData<ApiQuestBundle>(questBundleFilter(questId))) {
+    if (!bundle?.is_completed_by_me) continue
+    void client.cancelQueries({ queryKey, exact: true })
+    client.setQueryData<ApiQuestBundle>(queryKey, markBundle(false))
   }
-  const quests = client.getQueryData<ApiQuestMeta[]>(catalogFilter.queryKey)
-  if (quests?.some((quest) => quest.quest_id === questId && quest.is_completed_by_me)) {
-    void client.cancelQueries(catalogFilter)
-    client.setQueryData<ApiQuestMeta[]>(catalogFilter.queryKey, (current) => current?.map((quest) => (
-      quest.quest_id === questId ? { ...quest, is_completed_by_me: false } : quest
-    )))
+  for (const [queryKey, quests] of client.getQueriesData<ApiQuestMeta[]>(catalogFilter)) {
+    if (!quests?.some((quest) => quest.quest_id === questId && quest.is_completed_by_me)) continue
+    void client.cancelQueries({ queryKey, exact: true })
+    client.setQueryData<ApiQuestMeta[]>(queryKey, markCatalogQuest(questId, false))
   }
 }
 
@@ -118,6 +137,6 @@ export function resetQuestsCatalogCompletion(client: QueryClient, questId: strin
 export function refreshQuestCompletionsCount(client: QueryClient, questId: string): Promise<void> {
   return Promise.all([
     client.invalidateQueries(catalogFilter),
-    client.invalidateQueries({ queryKey: queryKeys.questBundle(questId), exact: true }),
+    client.invalidateQueries(questBundleFilter(questId)),
   ]).then(() => undefined)
 }

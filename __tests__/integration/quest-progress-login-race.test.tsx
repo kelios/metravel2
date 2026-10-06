@@ -76,7 +76,8 @@ describe('#1905 два писателя прохождения после лог
         if (row) return row
         throw new ApiError(404, 'Not found')
       }
-      if (url === QUEST_URL) return { id: 46 }
+      // Чтение бандла несёт `lang` (#2197); числовой id от языка не зависит.
+      if (url.split('?')[0] === QUEST_URL) return { id: 46 }
       throw new Error(`unexpected GET ${url}`)
     }) as never)
 

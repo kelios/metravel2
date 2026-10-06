@@ -18,6 +18,7 @@
 - `Серверный стейт (React Query)`
 - `Клиентский стейт`
 - `Офлайн и кэш`
+- `Язык контента`
 - `Пользовательские флоу`
 - `Правила проверки ответа`
 - `Телеметрия и тестовые данные`
@@ -250,12 +251,12 @@ tripvenue резолвит по ближайшему городу каталог
 
 | Query / Mutation | Файл | Ключ | Примечания |
 | --- | --- | --- | --- |
-| `useQuestsList` | `hooks/useQuestsApi.ts` + `hooks/questsListQuery.ts` | `['quests']` | единственное определение запроса; `staleTime` 30 мин, `gcTime` 60 мин (`hooks/questsListCachePolicy.ts`) |
-| `useQuestsPreview(limit)` | `hooks/useQuestsApi.ts` | `['quests','preview',limit]` | `GET /quests/?sort=popular&page_size=N` одним запросом (при `400` — повтор без `sort`); `initialData` — топ-N по популярности из `['quests']` с наследованием `dataUpdatedAt` |
-| `useQuestBundle` / `useQuestRatingMeta` / `useQuestCompletionMeta` / `useQuestPioneerMeta` | `hooks/useQuestsApi.ts`, `hooks/useQuest*Meta.ts`, `hooks/questBundleQuery.ts` | `['quest-bundle', slug]` | один сырой бандл для страницы, breadcrumbs и метаданных; полный каталог для детали не загружается (#1992) |
+| `useQuestsList` | `hooks/useQuestsApi.ts` + `hooks/questsListQuery.ts` | `['quests','catalog',locale]` | единственное определение запроса; `staleTime` 30 мин, `gcTime` 60 мин (`hooks/questsListCachePolicy.ts`) |
+| `useQuestsPreview(limit)` | `hooks/useQuestsApi.ts` | `['quests','preview',limit,locale]` | `GET /quests/?sort=popular&page_size=N` одним запросом (при `400` — повтор без `sort`); `initialData` — топ-N по популярности из каталога той же локали с наследованием `dataUpdatedAt` |
+| `useQuestBundle` / `useQuestRatingMeta` / `useQuestCompletionMeta` / `useQuestPioneerMeta` | `hooks/useQuestsApi.ts`, `hooks/useQuest*Meta.ts`, `hooks/questBundleQuery.ts` | `['quest-bundle', slug, locale]` | один сырой бандл для страницы, breadcrumbs и метаданных; полный каталог для детали не загружается (#1992) |
 | `useQuestReviews` | `hooks/useQuestsApi.ts` | `['quest', questId, 'reviews']` | `staleTime` 60 с |
 | `useQuestReview` | `hooks/useQuestReview.ts` | `['questUserReview', userId, id]` | один `POST /quest-reviews/`; personal review изолирован по аккаунту, после успеха инвалидируются каталог/detail/публичная читалка |
-| `useQuestForLocation` | `hooks/useQuestForLocation.ts` | `['quests-near-location', key]` | серверный score/distance; при `404` — клиентский фолбэк по `['quests']` |
+| `useQuestForLocation` | `hooks/useQuestForLocation.ts` | `['quests-near-location', key, locale]` | серверный score/distance; при `404` — клиентский фолбэк по каталогу |
 | `useTravelsForQuest` | `hooks/useTravelsForQuest.ts` | `['travels-for-quest', term]` | обратная перелинковка квест → travel |
 
 `questBundleQueryOptions` задаёт единый запрос для страницы, мета-хуков,
@@ -278,7 +279,9 @@ breadcrumbs и секции заметок посадочной города: о
 `fetchQuestsCompactCatalog` ради этих полей не запрашиваются. Отдельная
 компактная коллекция/рекомендации после финиша сохраняет свой контракт #1484.
 
-Единый ключ `['quests']` принадлежит потребителям полного каталога: экрану
+Локаль в ключах и префиксы «все локали» — раздел «Язык контента» (#2197).
+
+Единый ключ каталога `['quests','catalog',locale]` принадлежит потребителям полного каталога: экрану
 квестов и лендингам. Промо главной использует отдельное превью, деталь — бандл.
 Разные `staleTime` под одним ключом ломают дедупликацию.
 
@@ -303,8 +306,8 @@ breadcrumbs и секции заметок посадочной города: о
 ## Офлайн и кэш
 
 - `fetchQuestsList` / `fetchQuestsPreview` пишут сырой каталог в AsyncStorage
-  (`quest-list:v1`, `QUEST_LIST_CACHE_VERSION = 1`) и читают его при сетевом
-  фейле. Превью в кэш каталога НЕ пишет (это срез, он затёр бы полный список).
+  (`quest-list:v2:{locale}`, `QUEST_LIST_CACHE_VERSION = 2`; порядок чтения —
+  раздел «Язык контента») и читают его при сетевом фейле. Превью в кэш каталога НЕ пишет (это срез, он затёр бы полный список).
 - Ключ каталога общий на устройство, а не на аккаунт, поэтому персональные поля
   (`is_completed_by_me`, `user_rating`) снимаются и при записи, и при чтении
   (`stripPersonalQuestFields`, #1793): иначе после выхода или смены аккаунта
@@ -336,6 +339,112 @@ breadcrumbs и секции заметок посадочной города: о
   `useOfflineCatalog()` по `type === 'quest' && pinned`.
 - Список офлайн-ассетов квеста — обложка, картинка intro, картинки шагов,
   постер финала (`buildQuestAssetSources`).
+
+## Язык контента
+
+Квесты — первый потребитель content-locale контракта (#2193 бэк, #2197 фронт;
+OpenSpec change `openspec/changes/add-quest-content-localization/`, решение D5).
+Квест запрашивается на языке интерфейса; на каком языке он пришёл на самом деле,
+говорит ответ. Перевода нет — приходит русский источник.
+
+- **Запрос.** Единственный резолвер — `getQuestContentLocale()`
+  (`api/questContentLocale.ts`, возвращает `getActiveLocale()`). Каждое чтение
+  каталога и бандла в `api/quests.ts` (список, compact, preview, by-quest-id,
+  by-city, near-location, `/quests/{id}/`) добавляет `lang` через
+  `withQuestLang`. Отзывы, прогресс и попытки ответа — не контент, `lang` не
+  несут. Фетчеры принимают `locale` опционально (по умолчанию — резолвер);
+  `queryFn` передаёт локаль из своего ключа явно, чтобы ключ и запрос не
+  разошлись. Клиентского чтения `/quests/cities/` сейчас нет.
+- **Ответ.** `content_locale`, `available_locales` (элемент каталога и бандл),
+  `source_locale` (бандл), `city_name_canonical` (каталог), `city.name_canonical`
+  (бандл, `/quests/cities/`). Шаги поля не несут — язык шага = `content_locale`
+  бандла. Ответ без полей (старый бэкенд, кэш до переводов) читается как `ru`.
+- **Модель.** `QuestMeta.contentLocale` / `availableLocales` /
+  `cityNameCanonical`, `FrontendQuestBundle.contentLocale` /
+  `availableLocales`, `QuestCity.nameCanonical`, `QuestStep.contentLocale` —
+  у каждого шага и интро (по нему #2196 выбирает правило проверки ответа).
+- **Ключи React Query.** Локаль — последний элемент каждого контентного ключа:
+  `['quest-bundle', slug, locale]`, `['quests', 'catalog', locale]`,
+  `['quests', 'preview', limit, locale]`,
+  `['quests', 'compact-catalog', userId, locale]`,
+  `['quest-city-classification', cityId, locale]`,
+  `['quests-near-location', loc, locale]`. Префиксы «все локали» —
+  `questBundles()`, `questBundleAllLocales(slug)`, `questsCatalogAllLocales()`,
+  `questsCompactCatalogAllLocales(userId)`; через них
+  `api/questsCatalogInvalidation.ts` ставит и снимает «Пройден», обновляет
+  `completions_count` и снимает личные поля при смене identity на копиях всех
+  языков. `['quests', 'catalog']` не накрывает preview и compact — прежнее
+  разграничение с `exact: true` сохранено формой ключа. Смену identity
+  переживают ровно `['quests', 'catalog', locale]` и
+  `['quest-bundle', slug, locale]` (`api/identityQueryCache.ts`). Хуки берут
+  локаль реактивно — `useQuestContentLocale()` (подписка на `languageChanged`
+  экземпляра i18n, им управляет `LocaleProvider`; `useLocale()` бросает вне
+  провайдера), поэтому смена языка меняет ключ и перезапрашивает квест без
+  перезагрузки. Не-хуковые места — через резолвер.
+- **Офлайн.** Каталог — `quest-list:v2:{locale}`; чтение: своя локаль, затем
+  остальные `SUPPORTED_LOCALES`, затем легаси `quest-list:v1` (это `ru`, не
+  мигрируется; первая запись v2 его удаляет — дальше он недостижим). Сохранённый квест — **одна** запись `quest:{questId}` в
+  `OfflineCatalog`, а не `quest-bundle:{questId}:{locale}` из D5: снимок несёт
+  `content_locale`, поэтому любая сохранённая копия читается как есть (лучше
+  пройти квест на другом языке, чем потерять его без сети), а список офлайна не
+  дублирует один квест по языкам. Пометку языка показывает UI (#2198). Легаси-
+  ключ `quest-bundle:{id}` (v1) читается как раньше — это `ru`;
+  `QUEST_BUNDLE_CACHE_VERSION` не поднят: форма бандла выросла только
+  необязательными полями.
+- **Адрес города.** Эвристика alias (`questCityAliasName` в
+  `utils/questCityAlias.js`) мерит `city_name_canonical` →
+  `cityNameCanonical` → `city.name_canonical`, затем прежнее имя: локализованное
+  «Kraków» не должно двигать `/quests/<alias>`. Отображаемое имя группы
+  (`cityName`) остаётся локализованным. SSG-скрипты (`generate-seo-pages.js`,
+  `generate-sitemap.js`) `lang` не передают и отдают алиасу записи API целиком —
+  статика остаётся русской, адреса до = после. Контроль — фикстура всех городов
+  прода `__tests__/fixtures/questCitiesLocalized.json`.
+- **Телеметрия.** `recordQuestAnswerAttempt` шлёт `locale` = язык контента шага
+  (`step.contentLocale` из `questWizardStepCard`), фолбэк — язык интерфейса.
+- **Гварды.** `__tests__/api/questContentLocale.contract.test.ts` — каждое
+  чтение несёт `lang`, каждый контентный ключ кончается локалью, новые фетчеры и
+  ключи обязаны быть классифицированы.
+
+### Язык контента: пометка fallback
+
+Design evidence #2198. Перевод идёт волнами, поэтому при не-русском интерфейсе
+часть квестов приходит на русском источнике, а офлайн-копия — на языке, на
+котором её сохранили. Это состояние экрана, а не поломка, и оно подписано.
+
+| Состояние | Условие | Что видно |
+| --- | --- | --- |
+| Контент на языке интерфейса | `contentLocale` бандла = локаль интерфейса | пометки нет |
+| Контент на другом языке | перевода нет, пришёл источник | пометка |
+| Офлайн-копия на другом языке | сохранённый снимок с другим `content_locale` | та же пометка |
+
+- **Текст.** Одна строка `quests:components.quests.QuestContentLocaleNotice.availableIn`
+  («Квест пока доступен на языке: {{language}}»), название языка —
+  `getLocaleDisplayName` из существующих `language.*`. Иконка Feather `globe`,
+  токены `surfaceMuted`/`border`/`textMuted`, чип-таблетка как у
+  `QuestProgressPendingNotice`: кегль 12, вертикальный отступ 4 — строка
+  ~22 px, не уже касания соседних статусов.
+- **Место.** Своего отступа в шапке нет (#2105): пометка живёт в существующих
+  слотах статусов детали — на телефоне `statusSlot` (строка над навигацией,
+  `compact`, одна строка с обрезкой), на desktop и в экране согласия
+  `completionSlot` (ряд под заголовком, перенос по словам). Порядок в строке
+  телефона: язык контента → неотправленное прохождение → статус фото отзыва.
+  Видна до старта прохождения и на шагах; шапку визарда не перекрывает.
+- **Где решается.** `useQuestForeignContentLocale(bundle.contentLocale)` в
+  `components/quests/QuestContentLocaleNotice.tsx` сравнивает язык контента с
+  `useQuestContentLocale()` (регион отбрасывается: `pl-PL` = `pl`).
+- **Смежные поверхности.** Печать ставит `<html lang>` по языку текста шагов
+  (`resolvePrintableLocale` в `QuestPrintable.tsx`); подписи печати остаются на
+  языке интерфейса. Текст шаринга финала и локальные напоминания берут название
+  квеста из бандла — после перевода они на языке контента без отдельной правки.
+  Поиск каталога (`utils/questCatalogSearch.ts`) сверяет запрос с
+  локализованным и каноническим названием города: «Kraków» и «Краков» находят
+  один город.
+- **Не входит.** Бейджи языка на карточках каталога — вернуться, когда
+  переведено больше половины квестов; отдельный переключатель языка квестов.
+- **Контроль.** `__tests__/components/quests/QuestContentLocaleNotice.test.tsx`
+  (три состояния), `__tests__/utils/questCatalogSearch.test.ts`, экран
+  `quest-run-intro-foreign-content` в `e2e/mobile-screen-budget.spec.ts`
+  (польский интерфейс, непереведённый квест, бюджет экрана прохождения).
 
 ## Пользовательские флоу
 
@@ -532,6 +641,18 @@ breadcrumbs и секции заметок посадочной города: о
   схлопывающийся в пустую строку, выбрасывается при сборке чекера: иначе
   словарь с `"-"` принимал бы любой ввод (аудит прода 06.08.2026 — 161
   недостижимый вариант в 93 шагах).
+- **Правило нормализации — по языку контента шага (#2196).** Реестр
+  `utils/questAnswerNormalization.ts`: `ru`/`be` — правило выше (`normalize`,
+  снятие ведущих «от/и», морфология #1631); `uk` — апострофы и `ґ → г`; `pl` —
+  без диакритики и `ł → l`; `en` — то же плюс ведущий артикль `the/a/an`; любая
+  другая локаль — универсальное (NFKD без диакритики, регистр, пунктуация,
+  пробелы). Ключи реестра типизированы `SupportedLocale`, своего списка языков
+  в коде проверки нет. Ответ принят, если совпал под правилом языка контента
+  ИЛИ источника `ru`: русские варианты словаря принимаются в квесте на любом
+  языке. `evaluateQuestAnswer` берёт `step.contentLocale ?? 'ru'`, поэтому
+  русский квест проверяется ровно как до #2196. Регрессия —
+  `__tests__/utils/questAnswerVariantCorpus.test.ts` на выгрузке всех
+  `exact`/`exact_any` прода (11 079 вариантов).
 - Оценка выполняется ТОЛЬКО в `utils/questAnswerEvaluation.ts`
   (`normalizeQuestAnswerInput` + `evaluateQuestAnswer`). Прямой вызов
   `step.answer(...)` вне этого модуля и `questAdapters.ts` запрещён

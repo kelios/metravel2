@@ -59,6 +59,34 @@ describe('QuestPrintable', () => {
     expect(html).toContain('https://img.example.com/cover.jpg');
   });
 
+  // #2198: язык разметки — язык текста квеста, а не интерфейса.
+  it.each([
+    ['pl', /<html lang="pl/],
+    ['en', /<html lang="en/],
+    [undefined, /<html lang="ru/],
+  ])('ставит <html lang> по языку контента шагов (%s)', async (contentLocale, expected) => {
+    await generatePrintableQuest({
+      title: 'Quest',
+      steps: [
+        {
+          id: 'step-1',
+          title: 'Krok 1',
+          location: 'Rynek',
+          story: 'Historia',
+          task: 'Zadanie',
+          answer: () => true,
+          contentLocale,
+          lat: 50.0614,
+          lng: 19.9366,
+          mapsUrl: '',
+        },
+      ],
+    });
+
+    const html = mockOpenBookPreviewWindow.mock.calls[0][0];
+    expect(html).toMatch(expected);
+  });
+
   it('requests a close printable map snapshot so short quest routes stay readable', async () => {
     await generatePrintableQuest({
       title: 'Урочище Вялое',

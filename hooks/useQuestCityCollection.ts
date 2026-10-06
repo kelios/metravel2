@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchAllProgress, fetchQuestsCompactCatalog, type ApiQuestMeta, type ApiQuestProgress } from '@/api/quests'
 import { queryKeys } from '@/api/queryKeys'
 import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy'
+import { useQuestContentLocale } from '@/hooks/useQuestContentLocale'
 import { adaptMeta, type QuestMeta } from '@/utils/questAdapters'
 import {
   buildQuestCityCollection,
@@ -31,9 +32,10 @@ export function useQuestsCompactCatalog(opts?: { enabled?: boolean }): {
   const enabled = opts?.enabled ?? true
   const userId = useAuthStore((state) => state.userId)
   const identity = userId == null ? null : String(userId)
+  const locale = useQuestContentLocale()
   const { data, isPending, error } = useQuery<ApiQuestMeta[]>({
-    queryKey: queryKeys.questsCompactCatalog(identity),
-    queryFn: ({ signal }) => fetchQuestsCompactCatalog({ signal }),
+    queryKey: queryKeys.questsCompactCatalog(identity, locale),
+    queryFn: ({ signal }) => fetchQuestsCompactCatalog({ signal, locale }),
     enabled,
     staleTime: QUESTS_LIST_STALE_TIME,
     gcTime: QUESTS_LIST_GC_TIME,

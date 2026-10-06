@@ -26,7 +26,8 @@ import {
   readCachedQuestsList,
   writeCachedQuestsList,
   QUEST_BUNDLE_CACHE_PREFIX,
-  QUEST_LIST_CACHE_KEY,
+  LEGACY_QUEST_LIST_CACHE_KEY,
+  questListCacheKey,
 } from '@/api/questBundleCache'
 import { adaptBundle, adaptMeta } from '@/utils/questAdapters'
 import { filterQuestsCompletedByOthers } from '@/utils/questCatalogSelection'
@@ -190,19 +191,19 @@ describe('questsList offline round-trip', () => {
 
   it('preserves public metadata and marks the shared snapshot personal status unavailable', async () => {
     const list = makeRawMeta()
-    await writeCachedQuestsList(list, 1_700_000_000_000)
+    await writeCachedQuestsList(list, 'ru', 1_700_000_000_000)
 
-    const stored = await AsyncStorage.getItem(QUEST_LIST_CACHE_KEY)
-    expect(stored).toContain('"version":1')
+    const stored = await AsyncStorage.getItem(questListCacheKey('ru'))
+    expect(stored).toContain('"version":2')
 
-    expect(await readCachedQuestsList()).toEqual(list.map((quest) => ({
+    expect(await readCachedQuestsList('ru')).toEqual(list.map((quest) => ({
       ...quest,
       personal_status_unavailable: true,
     })))
   })
 
   it('returns null when nothing is cached', async () => {
-    expect(await readCachedQuestsList()).toBeNull()
+    expect(await readCachedQuestsList('ru')).toBeNull()
   })
 
   it('caches the raw list on a successful fetch', async () => {
@@ -212,12 +213,12 @@ describe('questsList offline round-trip', () => {
     // Даём отработать fire-and-forget записи в кэш.
     await Promise.resolve()
 
-    const cached = await readCachedQuestsList()
+    const cached = await readCachedQuestsList('ru')
     expect(cached?.[0]?.quest_id).toBe(QUEST_ID)
   })
 
   it('falls back to the cached list when the network fetch fails', async () => {
-    await writeCachedQuestsList(makeRawMeta())
+    await writeCachedQuestsList(makeRawMeta(), 'ru')
     mockedGet.mockRejectedValue(new Error('offline'))
 
     const list = await fetchQuestsList()
@@ -232,7 +233,7 @@ describe('questsList offline round-trip', () => {
 
   it('does not attribute sanitized own completions to others and restores filtering after a fresh response', async () => {
     const mineOnly = { ...makeRawMeta()[0], is_completed_by_me: true, completions_count: 1 }
-    await writeCachedQuestsList([mineOnly])
+    await writeCachedQuestsList([mineOnly], 'ru')
     mockedGet.mockRejectedValue(new Error('offline'))
 
     const offline = (await fetchQuestsList()).map(adaptMeta)
@@ -256,7 +257,7 @@ describe('questsList cache keeps personal fields out of device-shared storage', 
 
   const writeLegacyEnvelope = async (list: ApiQuestMeta[]) => {
     await AsyncStorage.setItem(
-      QUEST_LIST_CACHE_KEY,
+      LEGACY_QUEST_LIST_CACHE_KEY,
       JSON.stringify({ version: 1, savedAt: 1_700_000_000_000, list }),
     )
   }
@@ -268,9 +269,9 @@ describe('questsList cache keeps personal fields out of device-shared storage', 
   })
 
   it('does not persist the personal flag or rating', async () => {
-    await writeCachedQuestsList(makeCompletedMeta())
+    await writeCachedQuestsList(makeCompletedMeta(), 'ru')
 
-    const stored = JSON.parse((await AsyncStorage.getItem(QUEST_LIST_CACHE_KEY)) as string)
+    const stored = JSON.parse((await AsyncStorage.getItem(questListCacheKey('ru'))) as string)
     expect(stored.list[0].is_completed_by_me).toBe(false)
     expect(stored.list[0].user_rating).toBeNull()
     // Общие поля остаются: офлайн-карточка по-прежнему знает рейтинг и счётчик.
@@ -281,7 +282,7 @@ describe('questsList cache keeps personal fields out of device-shared storage', 
   it('drops the personal flag from a cache written by an older client', async () => {
     await writeLegacyEnvelope(makeCompletedMeta())
 
-    const cached = await readCachedQuestsList()
+    const cached = await readCachedQuestsList('ru')
     expect(cached?.[0]?.is_completed_by_me).toBe(false)
     expect(cached?.[0]?.user_rating).toBeNull()
     expect(cached?.[0]?.personal_status_unavailable).toBe(true)
@@ -301,5 +302,79 @@ describe('questsList cache keeps personal fields out of device-shared storage', 
 
     const list = await fetchQuestsCompactCatalog()
     expect(list[0].is_completed_by_me).toBe(false)
+  })
+})
+
+// #2197: каталог хранится по локали контента, сохранённый квест — одной записью
+// с `content_locale` в снимке. Без сети лучше пройти квест на другом языке, чем
+// потерять его.
+describe('offline copies by content locale', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    AsyncStorage.__reset?.()
+    mockOfflinePackages.clear()
+  })
+
+  const metaOn = (locale: string): ApiQuestMeta[] =>
+    makeRawMeta().map((meta) => ({ ...meta, title: `title-${locale}`, content_locale: locale }))
+
+  it('writes the catalog under its own locale and reads that copy first', async () => {
+    await writeCachedQuestsList(metaOn('ru'), 'ru')
+    await writeCachedQuestsList(metaOn('pl'), 'pl')
+
+    expect(await AsyncStorage.getItem(questListCacheKey('pl'))).toContain('title-pl')
+    expect((await readCachedQuestsList('pl'))?.[0]?.title).toBe('title-pl')
+    expect((await readCachedQuestsList('ru'))?.[0]?.title).toBe('title-ru')
+  })
+
+  it('falls back to a copy on another locale before the legacy list', async () => {
+    await writeCachedQuestsList(metaOn('be'), 'be')
+    await AsyncStorage.setItem(
+      LEGACY_QUEST_LIST_CACHE_KEY,
+      JSON.stringify({ version: 1, savedAt: 1, list: makeRawMeta().map((meta) => ({ ...meta, title: 'legacy' })) }),
+    )
+
+    const cached = await readCachedQuestsList('pl')
+    expect(cached?.[0]?.title).toBe('title-be')
+    expect(adaptMeta(cached![0]).contentLocale).toBe('be')
+  })
+
+  it('drops the unreachable legacy list once a localized copy is written', async () => {
+    await AsyncStorage.setItem(
+      LEGACY_QUEST_LIST_CACHE_KEY,
+      JSON.stringify({ version: 1, savedAt: 1, list: makeRawMeta() }),
+    )
+    await writeCachedQuestsList(metaOn('pl'), 'pl')
+
+    expect(await AsyncStorage.getItem(LEGACY_QUEST_LIST_CACHE_KEY)).toBeNull()
+    expect((await readCachedQuestsList('ru'))?.[0]?.title).toBe('title-pl')
+  })
+
+  it('reads the pre-translation v1 list as Russian when no localized copy exists', async () => {
+    await AsyncStorage.setItem(
+      LEGACY_QUEST_LIST_CACHE_KEY,
+      JSON.stringify({ version: 1, savedAt: 1, list: makeRawMeta() }),
+    )
+    mockedGet.mockRejectedValue(new Error('offline'))
+
+    const list = await fetchQuestsList({ locale: 'en' })
+    expect(list[0].quest_id).toBe(QUEST_ID)
+    expect(adaptMeta(list[0]).contentLocale).toBe('ru')
+    // Легаси-копия не мигрируется и не переписывается.
+    expect(await AsyncStorage.getItem(questListCacheKey('en'))).toBeNull()
+  })
+
+  it('opens the saved quest offline on another language and keeps one catalog record', async () => {
+    mockedGet.mockResolvedValue({ ...makeRawBundle(), title: 'Smok', content_locale: 'pl', available_locales: ['ru', 'pl'] })
+    await fetchQuestByQuestId(QUEST_ID, { locale: 'pl' })
+    expect(mockedGet.mock.calls[0][0]).toBe(`/quests/by-quest-id/${QUEST_ID}/?lang=pl`)
+
+    mockedGet.mockRejectedValue(new Error('offline'))
+    const offline = await fetchQuestByQuestId(QUEST_ID, { locale: 'en' })
+    expect(offline.title).toBe('Smok')
+    const adapted = adaptBundle(offline)
+    expect(adapted.contentLocale).toBe('pl')
+    expect(adapted.steps.every((step) => step.contentLocale === 'pl')).toBe(true)
+    expect([...mockOfflinePackages.keys()].filter((key) => key.includes(QUEST_ID))).toEqual([`quest:${QUEST_ID}`])
   })
 })

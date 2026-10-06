@@ -7,7 +7,12 @@ export type QuestPoiInfo = {
   website?: string;
 };
 
-export type QuestAnswerChecker = ((input: string) => boolean) & {
+/**
+ * Проверка ответа шага. `contentLocale` — язык, на котором игрок читал задание
+ * (#2196): правило нормализации выбирается по нему, ответ сверяется ещё и под
+ * правилом источника `ru`. Без локали — `ru`, поведение до переводов.
+ */
+export type QuestAnswerChecker = ((input: string, contentLocale?: string) => boolean) & {
   /** Шаг без проверяемого ответа: карточка может пройти его автоматически. */
   _isAny?: boolean;
   /** Минимальная длина свободного ответа для понятной подсказки в UI. */
@@ -37,6 +42,11 @@ export type QuestStep = {
   task: string;
   hint?: string;
   answer: QuestAnswerChecker;
+  /**
+   * Язык контента шага (`content_locale` бандла, #2197). Отсутствие — `ru`:
+   * квест без перевода и ответ старого бэкенда.
+   */
+  contentLocale?: string;
   /** Человекочитаемый ожидаемый ответ — для «страницы ведущего» в печатной версии. */
   answerDisplay?: string;
   lat: number;
@@ -53,6 +63,8 @@ export type QuestCity = {
   /** Числовой id города — канонический сегмент квестового URL (#1938). */
   id?: number;
   name?: string;
+  /** Русское имя города при локализованном `name` (#2197). */
+  nameCanonical?: string;
   lat: number;
   lng: number;
   countryCode?: string;

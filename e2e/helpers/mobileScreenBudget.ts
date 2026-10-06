@@ -139,6 +139,24 @@ async function prepareQuestIntro(page: Page): Promise<void> {
   await expect(page.locator('[data-screen-content="first"]').first()).toBeVisible({ timeout: QUEST_STATE_TIMEOUT })
 }
 
+/**
+ * #2198: до старта в польском интерфейсе на непереведённом квесте — в строке
+ * статусов стоит пометка языка контента и не раздвигает шапку. Язык ставится
+ * через сохранённое предпочтение и переживает перезагрузку при смене темы.
+ */
+async function prepareQuestIntroForeignContent(page: Page): Promise<void> {
+  const notice = page.getByTestId('quest-content-locale-notice').first()
+  if (!(await notice.isVisible().catch(() => false))) {
+    await page.evaluate(() => localStorage.setItem(
+      '@metravel/locale-preference:v1',
+      JSON.stringify({ version: 1, mode: 'explicit', locale: 'pl' }),
+    ))
+    await page.reload()
+  }
+  await prepareQuestIntro(page)
+  await expect(notice).toBeVisible({ timeout: QUEST_STATE_TIMEOUT })
+}
+
 /** Шаг 1: «Начать квест» нажата (гостевой прогресс живёт в браузере, бэкенд не меняется). */
 async function prepareQuestStep1(page: Page): Promise<void> {
   const start = page.getByTestId('quest-intro-start')
@@ -219,6 +237,7 @@ export const SCREENS: ScreenDef[] = [
   // (`components/quests/QuestWizard.tsx`), это и меряет `pinnedChromeRatio`.
   ...([
     ['quest-run-intro', prepareQuestIntro],
+    ['quest-run-intro-foreign-content', prepareQuestIntroForeignContent],
     ['quest-run-step1', prepareQuestStep1],
     ['quest-run-finale', prepareQuestFinale],
   ] as const).map(([key, prepare]) => ({
@@ -692,6 +711,7 @@ const QUEST_RUN_BUDGET: ScreenBudget = {
 }
 const QUEST_RUN_BUDGET_ENTRIES: Record<string, ScreenBudget> = {
   'quest-run-intro': QUEST_RUN_BUDGET,
+  'quest-run-intro-foreign-content': QUEST_RUN_BUDGET,
   'quest-run-step1': QUEST_RUN_BUDGET,
   'quest-run-finale': QUEST_RUN_BUDGET,
 }

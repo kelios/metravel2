@@ -18,6 +18,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import type { ApiQuestMeta } from '@/api/quests'
 import { queryKeys } from '@/api/queryKeys'
+import { getQuestContentLocale } from '@/api/questContentLocale'
 import type { ProgressiveLoadConfig } from '@/hooks/useProgressiveLoading'
 
 let mockShouldLoad = false
@@ -200,7 +201,7 @@ describe('Блок «следующий квест рядом»: каталог 
   })
 
   it('каталог из кэша показывается сразу, а перепроверяется только на экране', async () => {
-    client.setQueryData(queryKeys.questsCompactCatalog(null), CATALOG, { updatedAt: 1 })
+    client.setQueryData(queryKeys.questsCompactCatalog(null, getQuestContentLocale()), CATALOG, { updatedAt: 1 })
     const { getByText, rerender } = render(finale())
 
     expect(getByText('Дворики')).toBeTruthy()

@@ -23,7 +23,7 @@ describe('shouldPersistQuery (#1015 persist whitelist)', () => {
     ['mapClusters', ['mapClusters', {}]],
     ['travels list', ['travels']],
     ['travel detail', ['travel', 5]],
-    ['quest-bundle', ['quest-bundle', 'minsk']],
+    ['quest-bundle', ['quest-bundle', 'minsk', 'ru']],
     ['gamification', ['gamification', 'progress', 'me']],
     ['achievements', ['achievements', 'me']],
   ])('НЕ персистит несписочный домен %s', (_label, key) => {

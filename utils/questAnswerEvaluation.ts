@@ -8,11 +8,14 @@
 // `scripts/guard-quest-answer-eval.js`.
 
 import type { QuestAnswerChecker } from '@/components/quests/types'
+import { QUEST_ANSWER_SOURCE_LOCALE } from '@/utils/questAnswerNormalization'
 
 /** Минимум от шага, нужный для оценки ответа. */
 export type EvaluableQuestStep = {
   answer: QuestAnswerChecker
   inputType?: 'number' | 'text'
+  /** Язык контента шага; правило нормализации ответа выбирается по нему (#2196). */
+  contentLocale?: string
 }
 
 export type QuestAnswerEvaluation = {
@@ -59,7 +62,7 @@ const BRUTE_FORCEABLE_ANSWER_TYPES = new Set([
  * Нормализация ввода перед проверкой. Числовой шаг принимает запятую как
  * десятичный разделитель, текстовый — приводится к нижнему регистру со
  * схлопыванием пробелов. Более глубокую нормализацию (пунктуация, «ё») делает
- * сам чекер в `questAdapters.normalize`.
+ * сам чекер правилом языка контента (`utils/questAnswerNormalization.ts`).
  */
 export function normalizeQuestAnswerInput(
   rawInput: string,
@@ -122,7 +125,10 @@ export function evaluateQuestAnswer(
   const { answerType, isFreeText, freeTextMinLength } = describeQuestAnswer(step)
 
   return {
-    ok: typeof checker === 'function' ? checker(normalized) : false,
+    ok:
+      typeof checker === 'function'
+        ? checker(normalized, step.contentLocale ?? QUEST_ANSWER_SOURCE_LOCALE)
+        : false,
     normalized,
     answerType,
     isFreeText,

@@ -9,6 +9,7 @@ import QuestConsentGate from '@/components/quests/QuestConsentGate';
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection';
 import QuestCompletionBadge from '@/components/quests/QuestCompletionBadge';
 import QuestProgressPendingNotice, { useQuestProgressPending } from '@/components/quests/QuestProgressPendingNotice';
+import QuestContentLocaleNotice, { useQuestForeignContentLocale } from '@/components/quests/QuestContentLocaleNotice';
 import QuestReviewsModal from '@/components/quests/QuestReviewsModal';
 import {
   QuestReviewInviteButton,
@@ -432,9 +433,11 @@ export default function QuestByIdScreen() {
     cityId: cityId || undefined,
     enabled: completionMeta.isCompletedByMe && Boolean(questId),
   });
+  // #2198 — квест или его офлайн-копия на другом языке, чем интерфейс.
+  const foreignContentLocale = useQuestForeignContentLocale(bundle?.contentLocale);
   const completionSlot = useMemo(() => {
     const showCompletion = completionMeta.isCompletedByMe || completionMeta.completionsCount > 0;
-    if (!showCompletion && !progressPending) return null;
+    if (!showCompletion && !progressPending && !foreignContentLocale) return null;
     return (
       <View style={styles.completionRow}>
         {showCompletion ? (
@@ -445,6 +448,7 @@ export default function QuestByIdScreen() {
           />
         ) : null}
         <QuestProgressPendingNotice questId={questId} />
+        <QuestContentLocaleNotice contentLocale={foreignContentLocale ?? undefined} />
         {/* #1795 — второй вход в отзыв: форма на финале ловила игрока ровно в
             тот момент, когда он уже уходит с телефона, поэтому отзывов не было
             вовсе. Кнопка живёт рядом с бейджем «Пройден» и открывает ту же форму. */}
@@ -455,6 +459,7 @@ export default function QuestByIdScreen() {
   }, [
     completionMeta.isCompletedByMe,
     completionMeta.completionsCount,
+    foreignContentLocale,
     progressPending,
     questId,
     reviewInvite,
@@ -483,14 +488,15 @@ export default function QuestByIdScreen() {
     ],
   );
   const statusSlot = useMemo(() => {
-    if (!progressPending && !reviewInvite.photoStatus) return null;
+    if (!progressPending && !reviewInvite.photoStatus && !foreignContentLocale) return null;
     return (
       <>
+        <QuestContentLocaleNotice contentLocale={foreignContentLocale ?? undefined} compact />
         <QuestProgressPendingNotice questId={questId} compact />
         <QuestReviewPhotoStatus invite={reviewInvite} />
       </>
     );
-  }, [progressPending, questId, reviewInvite]);
+  }, [foreignContentLocale, progressPending, questId, reviewInvite]);
 
   const isLoading =
     isQuestLoading ||

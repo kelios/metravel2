@@ -96,26 +96,38 @@ export const queryKeys = {
   // текущий пользователь, поэтому ключ scoped по userId, как остальные личные коллекции.
   authorEngagementDetails: (userId: string | null, metric: string) =>
     ['author-engagement', userId, metric] as const,
+  // Контент квестов приходит на языке интерфейса (#2197): локаль — ПОСЛЕДНИЙ
+  // элемент каждого контентного ключа квестов, поэтому смена языка даёт новый
+  // ключ, а префиксы без локали (`questBundles`, `questBundleAllLocales`,
+  // `questsCatalogAllLocales`, `quests`) накрывают копии на всех языках —
+  // отметка «Пройден», сброс и смена identity обязаны дойти до каждой.
   questBundles: () => ['quest-bundle'] as const,
-  questBundle: (slug: string | null | undefined) => ['quest-bundle', slug] as const,
+  questBundleAllLocales: (slug: string | null | undefined) => ['quest-bundle', slug] as const,
+  questBundle: (slug: string | null | undefined, locale: string) => ['quest-bundle', slug, locale] as const,
+  // Корень всех списков квестов: каталог, промо-срез, компактный каталог.
+  // Сам по себе данных не адресует — только префикс инвалидации.
   quests: () => ['quests'] as const,
+  questsCatalogAllLocales: () => ['quests', 'catalog'] as const,
+  questsCatalog: (locale: string) => ['quests', 'catalog', locale] as const,
   // Классификация квестов одного города: теги для замыкания кольцевого
   // маршрута и запасная обложка. Бандл их не отдаёт, а полный каталог ради
   // двух полей не загружается (#1992). Ключ адресный по городу и намеренно
   // НЕ живёт под префиксом quests(): это ограниченный список одного города,
   // и инвалидация каталога его не касается.
-  questCityClassification: (cityId: number | undefined) =>
-    ['quest-city-classification', cityId] as const,
+  questCityClassification: (cityId: number | undefined, locale: string) =>
+    ['quest-city-classification', cityId, locale] as const,
   // Срез каталога для промо-блоков (главная): отдельный ключ, чтобы пара
   // карточек не тянула весь список квестов. Префикс общий с quests(), поэтому
   // инвалидация каталога подхватывает и его.
-  questsPreview: (limit: number) => ['quests', 'preview', limit] as const,
+  questsPreview: (limit: number, locale: string) => ['quests', 'preview', limit, locale] as const,
   questReviews: (questId: string | undefined) => ['quest', questId, 'reviews'] as const,
   travelsForQuest: (searchTerm: string) => ['travels-for-quest', searchTerm] as const,
-  questsNearLocation: (loc: string) => ['quests-near-location', loc] as const,
+  questsNearLocation: (loc: string, locale: string) => ['quests-near-location', loc, locale] as const,
   // #1484: компактный каталог для коллекции города и блока «следующий квест».
   // Префикс общий с quests(), чтобы инвалидация каталога чистила и его.
-  questsCompactCatalog: (userId: string | null) => ['quests', 'compact-catalog', userId] as const,
+  questsCompactCatalogAllLocales: (userId: string | null) => ['quests', 'compact-catalog', userId] as const,
+  questsCompactCatalog: (userId: string | null, locale: string) =>
+    ['quests', 'compact-catalog', userId, locale] as const,
   // Прохождения текущего пользователя: дешёвый гейт перед каталогом (#1484).
   questProgressAll: (userId: string | null) => ['quest-progress', userId] as const,
   travelsNearLocation: (loc: string) => ['travels-near-location', loc] as const,

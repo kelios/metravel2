@@ -5,6 +5,7 @@ import { ApiError } from '@/api/client'
 import { fetchQuestsNearLocation, type NearLocationParams } from '@/api/quests'
 import { queryKeys } from '@/api/queryKeys'
 import { useQuestsList } from '@/hooks/useQuestsApi'
+import { useQuestContentLocale } from '@/hooks/useQuestContentLocale'
 import { adaptMeta } from '@/utils/questAdapters'
 import { queryConfigs } from '@/utils/reactQueryConfig'
 import {
@@ -59,11 +60,12 @@ function useServerQuestsNearLocation(query: LocationQuery, limit?: number): Near
   // клиент. Статический Беларусь-only deny прятал квесты Кракова на travel 737
   // (#1647); пустой HTTP 200 — авторитетный ответ «здесь квестов нет».
   const enabled = hasQuestLocation(query)
+  const locale = useQuestContentLocale()
 
   const { data, isLoading, error } = useQuery({
-    queryKey: queryKeys.questsNearLocation(nearLocationKey(query, limit)),
+    queryKey: queryKeys.questsNearLocation(nearLocationKey(query, limit), locale),
     enabled,
-    queryFn: async ({ signal }) => fetchQuestsNearLocation(toNearParams(query, limit), { signal }),
+    queryFn: async ({ signal }) => fetchQuestsNearLocation(toNearParams(query, limit), { signal, locale }),
     retry: (count, err) => !(err instanceof ApiError && err.status === 404) && count < 2,
     ...queryConfigs.paginated,
   })

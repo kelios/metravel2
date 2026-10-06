@@ -129,41 +129,47 @@ describe('#1829 смена владельца сессии сбрасывает 
 
   // У каталога квестов свой механизм смены личности: он держит публичную часть
   // на экране и снимает только личные поля. Сброс не имеет права его ломать.
-  it('каталог квестов переживает смену владельца', async () => {
+  it('каталог квестов переживает смену владельца на каждой локали контента', async () => {
     useAuthStore.getState().applyConfirmedAccountSession({ userId: 'A' })
     await tick()
-    client.setQueryData(queryKeys.quests(), [{ quest_id: 'q', title: 'Quest' }])
+    client.setQueryData(queryKeys.questsCatalog('ru'), [{ quest_id: 'q', title: 'Quest' }])
+    client.setQueryData(queryKeys.questsCatalog('pl'), [{ quest_id: 'q', title: 'Smok' }])
 
     useAuthStore.getState().applyConfirmedAccountSession({ userId: 'B' })
 
-    expect(client.getQueryData(queryKeys.quests())).toEqual([{ quest_id: 'q', title: 'Quest' }])
+    expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual([{ quest_id: 'q', title: 'Quest' }])
+    expect(client.getQueryData(queryKeys.questsCatalog('pl'))).toEqual([{ quest_id: 'q', title: 'Smok' }])
   })
 
-  // Механизм каталога бьёт по ТОЧНОМУ ключу ['quests'] (`catalogFilter` там
-  // `exact: true`), поэтому срезы под тем же корнем он не чистит — а личные поля
+  // Механизм каталога бьёт по префиксу ['quests', 'catalog'] (#2197), поэтому
+  // срезы под корнем quests он не чистит — а личные поля
   // `is_completed_by_me`/`user_rating` в них лежат. Под исключение они попадать
   // не имеют права.
   it('срезы под корнем quests исключением не прикрыты', async () => {
     useAuthStore.getState().applyConfirmedAccountSession({ userId: 'A' })
     await tick()
     const personal = [{ quest_id: 'q', title: 'Quest', is_completed_by_me: true, user_rating: 5 }]
-    client.setQueryData(queryKeys.questsPreview(2), personal)
-    client.setQueryData(queryKeys.questsCompactCatalog('A'), personal)
+    client.setQueryData(queryKeys.questsPreview(2, 'ru'), personal)
+    client.setQueryData(queryKeys.questsCompactCatalog('A', 'ru'), personal)
     client.setQueryData(queryKeys.questProgressAll('A'), { q: 'done' })
 
     useAuthStore.getState().applyConfirmedAccountSession({ userId: 'B' })
 
     expect({
-      preview: client.getQueryData(queryKeys.questsPreview(2)),
-      compact: client.getQueryData(queryKeys.questsCompactCatalog('A')),
+      preview: client.getQueryData(queryKeys.questsPreview(2, 'ru')),
+      compact: client.getQueryData(queryKeys.questsCompactCatalog('A', 'ru')),
       progress: client.getQueryData(queryKeys.questProgressAll('A')),
     }).toEqual({ preview: undefined, compact: undefined, progress: undefined })
   })
 
-  it('исключение — ровно один точный ключ, а не префикс', () => {
-    expect(survivesIdentityChange(queryKeys.quests())).toBe(true)
-    expect(survivesIdentityChange(queryKeys.questsPreview(2))).toBe(false)
-    expect(survivesIdentityChange(queryKeys.questsCompactCatalog('A'))).toBe(false)
+  it('исключение — точная форма ключа каталога и бандла, а не префикс', () => {
+    expect(survivesIdentityChange(queryKeys.questsCatalog('ru'))).toBe(true)
+    expect(survivesIdentityChange(queryKeys.questsCatalog('pl'))).toBe(true)
+    expect(survivesIdentityChange(queryKeys.questBundle('q', 'pl'))).toBe(true)
+    expect(survivesIdentityChange(queryKeys.quests())).toBe(false)
+    expect(survivesIdentityChange(queryKeys.questsCatalogAllLocales())).toBe(false)
+    expect(survivesIdentityChange(queryKeys.questsPreview(2, 'ru'))).toBe(false)
+    expect(survivesIdentityChange(queryKeys.questsCompactCatalog('A', 'ru'))).toBe(false)
     expect(survivesIdentityChange(queryKeys.privacySettings('A'))).toBe(false)
   })
 

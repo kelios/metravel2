@@ -11,6 +11,7 @@ jest.mock('@/api/quests', () => ({
 }))
 
 import { ApiError } from '@/api/clientErrors'
+import { getActiveLocale } from '@/i18n'
 import {
   FLUSH_BATCH_SIZE,
   QUEST_ATTEMPTS_QUEUE_KEY,
@@ -87,6 +88,22 @@ describe('приватность свободного ответа', () => {
   it('событие без числового id квеста не копится: его некуда доставить', async () => {
     await recordQuestAnswerAttempt(attempt({ questNumericId: undefined }))
     expect(await readQueue()).toHaveLength(0)
+  })
+})
+
+// #2197: ответ сверяется с текстом задания, поэтому в событии — язык контента
+// шага, а не интерфейса; без него (старый вызов) — язык интерфейса.
+describe('локаль события', () => {
+  it('берёт язык контента шага', async () => {
+    await recordQuestAnswerAttempt(attempt({ contentLocale: 'pl' }))
+    const [event] = await readQueue()
+    expect(event.locale).toBe('pl')
+  })
+
+  it('без языка контента падает на язык интерфейса', async () => {
+    await recordQuestAnswerAttempt(attempt())
+    const [event] = await readQueue()
+    expect(event.locale).toBe(getActiveLocale())
   })
 })
 

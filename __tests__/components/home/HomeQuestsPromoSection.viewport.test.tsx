@@ -12,6 +12,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import HomeQuestsPromoSection from '@/components/home/HomeQuestsPromoSection'
 import { queryKeys } from '@/api/queryKeys'
+import { getQuestContentLocale } from '@/api/questContentLocale'
 
 const mockPush = jest.fn()
 
@@ -63,7 +64,7 @@ const apiQuests = Array.from({ length: 6 }, (_, i) => ({
 
 const renderSection = () => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  queryClient.setQueryData(queryKeys.questsPreview(6), apiQuests)
+  queryClient.setQueryData(queryKeys.questsPreview(6, getQuestContentLocale()), apiQuests)
 
   return render(
     <QueryClientProvider client={queryClient}>
@@ -128,7 +129,7 @@ describe('HomeQuestsPromoSection — сетка по вьюпорту (#1475)', 
 
   it('без данных секции нет вовсе — пустая выдача не ломает главную', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    queryClient.setQueryData(queryKeys.questsPreview(6), [])
+    queryClient.setQueryData(queryKeys.questsPreview(6, getQuestContentLocale()), [])
 
     const { queryByText } = render(
       <QueryClientProvider client={queryClient}>

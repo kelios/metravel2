@@ -86,6 +86,8 @@ type QuestStepLike = {
   task: string
   hint?: string
   answer: QuestAnswerChecker
+  /** Язык контента шага (#2197): проверка ответа и телеметрия. */
+  contentLocale?: string
   lat: number
   lng: number
   image?: any
@@ -450,6 +452,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       attemptNo: attempts + 1,
       hintShown: hintVisible,
       elapsedMs: Date.now() - stepShownAtRef.current,
+      contentLocale: step.contentLocale,
     })
     // Тот же факт во внешнюю воронку: серверная очередь отвечает на «что игрок
     // писал», GA4 — на «на каком шаге сыплются попытки» (#1498).

@@ -82,7 +82,7 @@ export function useQuestReview({
       // несуществующего endpoint инвалидация принадлежит точке реального save.
       void queryClient.invalidateQueries({ queryKey: queryKeys.quests() })
       if (questSlug) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.questBundle(questSlug), exact: true })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.questBundleAllLocales(questSlug) })
         void queryClient.invalidateQueries({
           queryKey: queryKeys.questReviews(questSlug),
           exact: true,

@@ -11,7 +11,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo';
-import { getQuestAgeSearchTerms } from '@/utils/questAudience';
+import { questMatchesSearch } from '@/utils/questCatalogSearch';
 import { useIsFocused } from 'expo-router';
 import { useBreakpoints } from '@/hooks/useResponsive';
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel';
@@ -350,20 +350,7 @@ export default function QuestsScreen() {
         if (!dataLoaded) return EMPTY_QUESTS;
         // Свободный поиск перекрывает город/«Рядом»: ищем по всему каталогу.
         if (searchTerm) {
-            return ALL_QUESTS
-                .filter((q) => {
-                    const haystack = [
-                        q.title,
-                        q.cityName,
-                        q.countryName,
-                        ...(q.tags || []),
-                        ...(getQuestAgeSearchTerms(q.tags)),
-                    ]
-                        .filter(Boolean)
-                        .join(' ')
-                        .toLowerCase();
-                    return haystack.includes(searchTerm);
-                });
+            return ALL_QUESTS.filter((q) => questMatchesSearch(q, searchTerm));
         }
         if (!selectedCityId) return EMPTY_QUESTS;
         if (activeMapAreaCenter) {

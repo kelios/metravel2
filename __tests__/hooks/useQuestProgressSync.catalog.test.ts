@@ -38,10 +38,10 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     updateProgress.mockResolvedValue({ ...progress, completed: true })
     client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
     setActiveQueryClient(client)
-    client.setQueryData(queryKeys.quests(), catalog(false))
+    client.setQueryData(queryKeys.questsCatalog('ru'), catalog(false))
     client.setQueryData(queryKeys.userPointsAll('A'), ['point'])
     fetchCatalog = jest.fn().mockResolvedValue(catalog(true))
-    const observer = new QueryObserver(client, { queryKey: queryKeys.quests(), queryFn: fetchCatalog, staleTime: QUESTS_LIST_STALE_TIME })
+    const observer = new QueryObserver(client, { queryKey: queryKeys.questsCatalog('ru'), queryFn: fetchCatalog, staleTime: QUESTS_LIST_STALE_TIME })
     unsubscribe = observer.subscribe(() => undefined)
   })
   afterEach(() => {
@@ -110,7 +110,7 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     acknowledge({ ...progress, completed: true })
     await flush()
     expect(fetchCatalog).not.toHaveBeenCalled()
-    expect(client.getQueryData(queryKeys.quests())).toEqual(catalog(false))
+    expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(catalog(false))
     unmount()
   })
 
@@ -124,7 +124,7 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     await act(async () => result.current.resetProgress())
     await flush()
     expect(fetchCatalog).toHaveBeenCalledTimes(2)
-    expect(client.getQueryData(queryKeys.quests())).toEqual(catalog(false))
+    expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(catalog(false))
     await save(result)
     expect(fetchCatalog).toHaveBeenCalledTimes(3)
     unmount()
@@ -134,21 +134,21 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
   // «Пройден» в кэше каталога и бандла этого устройства жил бы до 30 минут.
   it('confirmed missing progress drops a stale completion mark; a failed read keeps it', async () => {
     const markCompleted = () => {
-      client.setQueryData(queryKeys.quests(), catalog(true))
-      client.setQueryData(queryKeys.questBundle('q'), { id: 1, quest_id: 'q', is_completed_by_me: true })
+      client.setQueryData(queryKeys.questsCatalog('ru'), catalog(true))
+      client.setQueryData(queryKeys.questBundle('q', 'ru'), { id: 1, quest_id: 'q', is_completed_by_me: true })
     }
-    const bundleMark = () => client.getQueryData<{ is_completed_by_me?: boolean }>(queryKeys.questBundle('q'))?.is_completed_by_me
+    const bundleMark = () => client.getQueryData<{ is_completed_by_me?: boolean }>(queryKeys.questBundle('q', 'ru'))?.is_completed_by_me
 
     markCompleted()
     fetchQuestProgress.mockRejectedValueOnce(new Error('Network request failed'))
     const failed = await mount()
-    expect(client.getQueryData(queryKeys.quests())).toEqual(catalog(true))
+    expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(catalog(true))
     expect(bundleMark()).toBe(true)
     failed.unmount()
 
     fetchQuestProgress.mockResolvedValueOnce(null)
     const missing = await mount()
-    expect(client.getQueryData(queryKeys.quests())).toEqual(catalog(false))
+    expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(catalog(false))
     expect(bundleMark()).toBe(false)
     missing.unmount()
 
@@ -171,8 +171,8 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     const { result, unmount } = await mount()
     await save(result)
     expect(fetchCatalog).not.toHaveBeenCalled()
-    expect(client.getQueryState(queryKeys.quests())?.isInvalidated).toBe(true)
-    expect(client.getQueryData(queryKeys.quests())).toEqual(catalog(true))
+    expect(client.getQueryState(queryKeys.questsCatalog('ru'))?.isInvalidated).toBe(true)
+    expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(catalog(true))
     unmount()
   })
 })

@@ -20,6 +20,7 @@ import {
 } from '@/api/questBundleCache';
 import { getActiveQueryClient } from '@/api/activeQueryClient';
 import { queryKeys } from '@/api/queryKeys';
+import { getQuestContentLocale, withQuestLang } from '@/api/questContentLocale';
 
 // ===================== ТИПЫ (соответствуют OpenAPI схеме бэкенда) =====================
 
@@ -60,6 +61,8 @@ export type ApiQuestCity = {
     lat: ApiQuestCoordinate;
     lng: ApiQuestCoordinate;
     country_code?: string | null;
+    /** Русское имя города при локализованном `name` (#2197): по нему считается alias. */
+    name_canonical?: string | null;
 };
 
 /** Финал квеста (из бэкенда) */
@@ -147,6 +150,14 @@ export type ApiQuestMeta = {
     pet_friendly: boolean;
     cover_url: string | null;
     /**
+     * Язык контента квеста (#2197): `lang` запроса, если перевод опубликован,
+     * иначе язык источника. Отсутствие поля — `ru` (старый бэкенд, офлайн-кэш).
+     */
+    content_locale?: string;
+    available_locales?: string[];
+    /** Русское имя города при локализованном `city_name`: по нему считается alias. */
+    city_name_canonical?: string;
+    /**
      * Медиа-манифест обложки (#1208): отсюда берётся `dominant_color` для заливки
      * полей letterbox. В UI не пробрасывается — прогревает общий индекс, см.
      * `utils/mediaPlaceholderIndex.ts`.
@@ -223,6 +234,10 @@ export type ApiQuestBundle = {
     intro: ApiQuestStep | string | null;
     storage_key: string;
     city: ApiQuestCity;
+    /** Язык контента бандла и его шагов (#2197); отсутствие — `ru`. */
+    content_locale?: string;
+    source_locale?: string;
+    available_locales?: string[];
     /** См. `ApiQuestMeta.media`: манифест обложки для индекса заливки (#1208). */
     media?: TravelMediaGroup | null;
 } & ApiQuestOptionalRatingSnapshot;
@@ -608,14 +623,17 @@ async function fetchAllQuestPages<T>(
  * Кэш общий на устройство, поэтому персональных полей (`is_completed_by_me`,
  * `user_rating`) в офлайн-ответе нет: их снимает слой кэша (#1793).
  */
-export async function fetchQuestsList(options?: { signal?: AbortSignal }): Promise<ApiQuestMeta[]> {
+export async function fetchQuestsList(
+    options?: { signal?: AbortSignal; locale?: string },
+): Promise<ApiQuestMeta[]> {
+    const locale = options?.locale ?? getQuestContentLocale();
     try {
-        const list = await fetchAllQuestPages<ApiQuestMeta>('/quests/', 20, { ...options, eagerPages: CATALOG_EAGER_PAGES });
+        const list = await fetchAllQuestPages<ApiQuestMeta>(withQuestLang('/quests/', locale), 20, { signal: options?.signal, eagerPages: CATALOG_EAGER_PAGES });
         const withDefaults = list.map(withQuestMetaDefaults);
-        void writeCachedQuestsList(withDefaults);
+        void writeCachedQuestsList(withDefaults, locale);
         return withDefaults;
     } catch (err) {
-        const cached = await readCachedQuestsList();
+        const cached = await readCachedQuestsList(locale);
         if (cached) return cached;
         throw err;
     }
@@ -634,12 +652,13 @@ export async function fetchQuestsList(options?: { signal?: AbortSignal }): Promi
  */
 export async function fetchQuestsPreview(
     limit: number,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; locale?: string },
 ): Promise<ApiQuestMeta[]> {
+    const locale = options?.locale ?? getQuestContentLocale();
     const signalOption = options?.signal ? { signal: options.signal } : undefined;
     const request = (query: string) =>
         apiClient.get<ApiQuestMeta[] | PaginatedEnvelope<ApiQuestMeta>>(
-            `/quests/?${query}`,
+            withQuestLang(`/quests/?${query}`, locale),
             undefined,
             signalOption,
         );
@@ -662,7 +681,7 @@ export async function fetchQuestsPreview(
         // Офлайн-контракт тот же, что у полного списка: лучше показать кэш
         // каталога, чем пустой промо-блок. Сортировать его приходится самим —
         // в кэше лежит полный каталог в порядке id.
-        const cached = await readCachedQuestsList();
+        const cached = await readCachedQuestsList(locale);
         if (cached) return selectPopularQuests(cached, limit);
         throw err;
     }
@@ -681,17 +700,18 @@ export async function fetchQuestsPreview(
  * нет вовсе: общий на устройство кэш каталога персональных полей не хранит.
  */
 export async function fetchQuestsCompactCatalog(
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; locale?: string },
 ): Promise<ApiQuestMeta[]> {
+    const locale = options?.locale ?? getQuestContentLocale();
     try {
-        const list = await fetchAllQuestPages<ApiQuestMeta>('/quests/?compact=1', 20, { ...options, eagerPages: CATALOG_EAGER_PAGES });
+        const list = await fetchAllQuestPages<ApiQuestMeta>(withQuestLang('/quests/?compact=1', locale), 20, { signal: options?.signal, eagerPages: CATALOG_EAGER_PAGES });
         return list.map(withQuestMetaDefaults);
     } catch (err) {
         // Офлайн-контракт тот же, что у полного списка: лучше показать кэш
         // каталога, чем спрятать блок следующего шага. Персональный флаг из
         // кэша не придёт — он снимается в `readCachedQuestsList` (#1793),
         // иначе после смены аккаунта коллекция показывала чужие прохождения.
-        const cached = await readCachedQuestsList();
+        const cached = await readCachedQuestsList(locale);
         if (cached) return cached;
         throw err;
     }
@@ -747,13 +767,13 @@ function buildNearLocationQuery(params: NearLocationParams): string {
  */
 export async function fetchQuestsNearLocation(
     params: NearLocationParams,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; locale?: string },
 ): Promise<ApiQuestNearLocation[]> {
     const query = buildNearLocationQuery(params);
     const res = await apiClient.get<NearLocationResponse<ApiQuestNearLocation>>(
-        `/quests/near-location/${query ? `?${query}` : ''}`,
+        withQuestLang(`/quests/near-location/${query ? `?${query}` : ''}`, options?.locale ?? getQuestContentLocale()),
         undefined,
-        options,
+        options?.signal ? { signal: options.signal } : undefined,
     );
     return (res?.results ?? []).map((item) => ({
         ...item,
@@ -774,12 +794,15 @@ function assertUsableQuestId(questId: string, caller: string): void {
 }
 
 /** Addressed classification/cover fallback; never downloads the whole catalog. */
-export async function fetchQuestsByCity(cityId: number): Promise<ApiQuestMeta[]> {
+export async function fetchQuestsByCity(
+    cityId: number,
+    locale: string = getQuestContentLocale(),
+): Promise<ApiQuestMeta[]> {
     try {
-        const list = await apiClient.get<ApiQuestMeta[]>(`/quests/by-city/${cityId}/`);
+        const list = await apiClient.get<ApiQuestMeta[]>(withQuestLang(`/quests/by-city/${cityId}/`, locale));
         return list.map(withQuestMetaDefaults);
     } catch (error) {
-        const cached = await readCachedQuestsList();
+        const cached = await readCachedQuestsList(locale);
         if (cached) return cached.filter((quest) => String(quest.city_id) === String(cityId));
         throw error;
     }
@@ -792,9 +815,10 @@ export async function fetchQuestsByCity(cityId: number): Promise<ApiQuestMeta[]>
  */
 export async function fetchQuestByQuestId(
     questId: string,
-    options: { persistOffline?: boolean; signal?: AbortSignal } = {},
+    options: { persistOffline?: boolean; signal?: AbortSignal; locale?: string } = {},
 ): Promise<ApiQuestBundle> {
     assertUsableQuestId(questId, 'fetchQuestByQuestId');
+    const path = withQuestLang(`/quests/by-quest-id/${questId}/`, options.locale ?? getQuestContentLocale());
     try {
         const bundle = await retry(
             // Quest bundles include the intro, all steps and finale media. Do not
@@ -806,12 +830,8 @@ export async function fetchQuestByQuestId(
             // по сети — смена identity на bootstrap отменяет летящий запрос и
             // тут же повторяет его (#1992).
             () => (options.signal
-                ? apiClient.get<ApiQuestBundle>(
-                    `/quests/by-quest-id/${questId}/`,
-                    LONG_TIMEOUT,
-                    { signal: options.signal },
-                )
-                : apiClient.get<ApiQuestBundle>(`/quests/by-quest-id/${questId}/`, LONG_TIMEOUT)),
+                ? apiClient.get<ApiQuestBundle>(path, LONG_TIMEOUT, { signal: options.signal })
+                : apiClient.get<ApiQuestBundle>(path, LONG_TIMEOUT)),
             {
                 maxAttempts: 2,
                 delay: 300,
@@ -851,8 +871,11 @@ export async function fetchQuestByQuestId(
 }
 
 /** Получить полный бандл квеста по числовому ID */
-export async function fetchQuestById(id: number): Promise<ApiQuestBundle> {
-    const bundle = await apiClient.get<ApiQuestBundle>(`/quests/${id}/`);
+export async function fetchQuestById(
+    id: number,
+    locale: string = getQuestContentLocale(),
+): Promise<ApiQuestBundle> {
+    const bundle = await apiClient.get<ApiQuestBundle>(withQuestLang(`/quests/${id}/`, locale));
     return normalizeQuestBundle(bundle);
 }
 
@@ -931,12 +954,13 @@ const readOrCreateProgress = async (questId: string, lineageId: number): Promise
     // холодном открытии квеста это был третий за загрузку запрос к
     // `by-quest-id` (#1992). Запрос остаётся фолбэком: очередь прогресса
     // флашится и без экрана квеста, там кэш пуст.
-    const cachedBundle = getActiveQueryClient()?.getQueryData<ApiQuestBundle>(
-        queryKeys.questBundle(questId),
-    );
-    const questNumericId = typeof cachedBundle?.id === 'number'
-        ? cachedBundle.id
-        : (await apiClient.get<{ id: number }>(`/quests/by-quest-id/${questId}/`)).id;
+    // Числовой id от языка не зависит: годится копия на любой локали (#2197).
+    const cachedNumericId = getActiveQueryClient()
+        ?.getQueriesData<ApiQuestBundle>({ queryKey: queryKeys.questBundleAllLocales(questId) })
+        .map(([, bundle]) => bundle?.id)
+        .find((id): id is number => typeof id === 'number');
+    const questNumericId = cachedNumericId
+        ?? (await apiClient.get<{ id: number }>(withQuestLang(`/quests/by-quest-id/${questId}/`, getQuestContentLocale()))).id;
     try {
         return await apiClient.post<ApiQuestProgress>('/quest-progress/', {
             quest: questNumericId,

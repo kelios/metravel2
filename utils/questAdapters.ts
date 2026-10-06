@@ -11,8 +11,18 @@ import type {
     ApiQuestFinale,
     ApiQuestFirstCompleter,
 } from '@/api/quests';
+import {
+    QUEST_SOURCE_LOCALE,
+    readQuestAvailableLocales,
+    readQuestContentLocale,
+} from '@/api/questContentLocale';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { isSameWordForm, matchesAnyWordForm } from '@/utils/questAnswerMorphology';
+import {
+    normalize,
+    questAnswerNormalizers,
+    type QuestAnswerNormalizer,
+} from '@/utils/questAnswerNormalization';
 import { devError } from '@/utils/logger';
 import { getQuestAgeCategory, type QuestAgeCategory } from '@/utils/questAudience';
 import {
@@ -85,6 +95,11 @@ export type QuestMeta = {
     points: number;
     cityId: string;
     cityName?: string;
+    /** Русское имя города при локализованном `cityName` (#2197). */
+    cityNameCanonical?: string;
+    /** Язык контента (#2197): без поля в ответе — `ru`; переводы — `availableLocales`. */
+    contentLocale: string;
+    availableLocales: string[];
     countryName?: string;
     countryCode?: string;
     lat: number;
@@ -185,6 +200,9 @@ export type FrontendQuestBundle = {
     countModel: QuestCountModel;
     storageKey?: string;
     city?: QuestCity;
+    /** Язык контента бандла, он же язык каждого шага (#2197); без поля — `ru`. */
+    contentLocale: string;
+    availableLocales: string[];
     coverUrl?: string;
     /** Теги квеста (meta.tags). В detail-API их нет — хук дообогащает из списка. */
     tags?: string[];
@@ -217,41 +235,32 @@ function adaptPointRole(apiStep: ApiQuestStep): QuestPointRole | undefined {
 
 // ===================== АДАПТЕРЫ: API → Frontend =====================
 
-/**
- * Нормализация ответа пользователя (дублирует логику из data файлов).
- * Косметика обеих сторон сравнения: регистр, пробелы, пунктуация, «ё»→«е»,
- * белорусские «і»→«и» и «э»→«е», служебное «ад»→«от» (#1927). Не стеммер.
- */
-export function normalize(s: string): string {
-    return s
-        .toLowerCase()
-        .replace(/\s+/g, ' ')
-        .replace(/[.,;:!?'„""–—-]/g, '')
-        .replace(/ё/g, 'е')
-        .replace(/і/g, 'и')
-        .replace(/э/g, 'е')
-        .replace(/(^| )ад(?= |$)/g, '$1от')
-        .trim();
-}
+// Нормализация ответа и реестр правил по языку контента — `utils/questAnswerNormalization.ts`
+// (#2196). `normalize` (правило RU/BE) реэкспортируется для прежних потребителей.
+export { normalize, stripLeadingFunctionWords } from '@/utils/questAnswerNormalization';
 
-/** Предлог/союз, который игрок ставит перед уже принимаемым ответом (#1927). */
-const LEADING_FUNCTION_WORDS = new Set(['от', 'и']);
+const matchesNormalizedVariants = (
+    value: string,
+    variants: readonly string[],
+    rule: QuestAnswerNormalizer,
+): boolean =>
+    variants.some((variant) => value === variant) || (rule.morphology && matchesAnyWordForm(value, variants));
 
 /**
- * Снимает одно ведущее служебное слово. Числовой остаток не трогаем: «от 6»
- * на счётном шаге не имеет права стать «6».
+ * Эталон шага, нормализованный под каждым правилом один раз: правило выбирает
+ * язык контента в момент проверки, а не сборки чекера.
  */
-export function stripLeadingFunctionWords(value: string): string {
-    const words = value.split(' ');
-    if (words.length < 2) return value;
-    if (!LEADING_FUNCTION_WORDS.has(words[0])) return value;
-    const rest = words.slice(1).join(' ');
-    if (!rest || /^\d+$/.test(rest)) return value;
-    return rest;
-}
-
-const matchesNormalizedVariants = (value: string, variants: readonly string[]): boolean =>
-    variants.some((variant) => value === variant) || matchesAnyWordForm(value, variants);
+const memoizeByRule = <T>(build: (rule: QuestAnswerNormalizer) => T) => {
+    const cache = new Map<QuestAnswerNormalizer, T>();
+    return (rule: QuestAnswerNormalizer): T => {
+        let value = cache.get(rule);
+        if (value === undefined) {
+            value = build(rule);
+            cache.set(rule, value);
+        }
+        return value;
+    };
+};
 
 /**
  * Создаёт функцию проверки ответа из бэкенд-конфига.
@@ -277,17 +286,20 @@ function createAnswerChecker(answerType: string, answerValue: string): QuestStep
             // Обе стороны сравнения проходят одну нормализацию. Раньше эталон брался
             // как `toLowerCase()`, и значение с «ё», дефисом или пунктуацией было
             // недостижимо: ввод игрока их терял, эталон — нет.
-            const target = normalize(answerValue);
-            return (input: string) => {
-                const n = normalize(input);
+            const targetFor = memoizeByRule((rule) => rule.normalize(answerValue));
+            return (input: string, contentLocale?: string) => {
                 // Пробуем как число
                 const asNum = parseInt(input, 10);
-                if (!Number.isNaN(asNum) && String(asNum) === target) return true;
-                if (n === target) return true;
-                // Второй проход — словоформа эталона (#1631). Он не способен
-                // отменить уже работающий ответ: до него доходят только вводы,
-                // которые строгое сравнение отвергло.
-                return isSameWordForm(n, target);
+                return questAnswerNormalizers(contentLocale).some((rule) => {
+                    const target = targetFor(rule);
+                    const n = rule.normalize(input);
+                    if (!Number.isNaN(asNum) && String(asNum) === target) return true;
+                    if (n === target) return true;
+                    // Второй проход — словоформа эталона (#1631). Он не способен
+                    // отменить уже работающий ответ: до него доходят только вводы,
+                    // которые строгое сравнение отвергло.
+                    return rule.morphology && isSameWordForm(n, target);
+                });
             };
         }
 
@@ -300,17 +312,19 @@ function createAnswerChecker(answerType: string, answerValue: string): QuestStep
                 // словарь с `"-"` принимал бы любой ввод, схлопнувшийся в пустую
                 // строку. Аудит прода 06.08.2026: 161 вариант в 93 шагах был
                 // недостижим, из них 63 — единственная форма ответа на шаге.
-                const variants = parsed
-                    .map((v) => normalize(String(v)))
-                    .filter((v) => v.length > 0);
-                return (input: string) => {
-                    const n = normalize(input);
-                    if (matchesNormalizedVariants(n, variants)) return true;
-                    // «ад куль» при словаре «куль»: служебное слово не часть
-                    // ответа, его снимаем только после провала полного совпадения.
-                    const stripped = stripLeadingFunctionWords(n);
-                    return stripped !== n && matchesNormalizedVariants(stripped, variants);
-                };
+                const variantsFor = memoizeByRule((rule) => parsed
+                    .map((v) => rule.normalize(String(v)))
+                    .filter((v) => v.length > 0));
+                return (input: string, contentLocale?: string) =>
+                    questAnswerNormalizers(contentLocale).some((rule) => {
+                        const variants = variantsFor(rule);
+                        const n = rule.normalize(input);
+                        if (matchesNormalizedVariants(n, variants, rule)) return true;
+                        // «ад куль» при словаре «куль»: служебное слово не часть
+                        // ответа, его снимаем только после провала полного совпадения.
+                        const stripped = rule.stripLeadingWords?.(n) ?? n;
+                        return stripped !== n && matchesNormalizedVariants(stripped, variants, rule);
+                    });
             } catch {
                 return () => false;
             }
@@ -472,7 +486,7 @@ export function buildAnswerDisplay(answerType: string, answerValue: string): str
 }
 
 /** Конвертирует шаг из API формата во фронтенд формат */
-export function adaptStep(apiStep: ApiQuestStep): QuestStep {
+export function adaptStep(apiStep: ApiQuestStep, contentLocale: string = QUEST_SOURCE_LOCALE): QuestStep {
     // answer_pattern (новый формат) или answer_type/answer_value (старый)
     const answerPattern = resolveAnswerPattern(apiStep.answer_pattern);
     const answerType = answerPattern.type ?? apiStep.answer_type ?? 'any';
@@ -501,6 +515,7 @@ export function adaptStep(apiStep: ApiQuestStep): QuestStep {
         task: normalizeQuestText(apiStep.task),
         hint: apiStep.hint ? normalizeQuestText(apiStep.hint) : undefined,
         answer: buildAnswerChecker(answerType, answerValue),
+        contentLocale,
         answerDisplay: buildAnswerDisplay(answerType, answerValue),
         lat: coordNum(apiStep.lat),
         lng: coordNum(apiStep.lng),
@@ -561,6 +576,7 @@ export function adaptCity(apiCity: ApiQuestCity): QuestCity {
     return {
         id: Number.isInteger(cityId) && cityId > 0 ? cityId : undefined,
         name: apiCity.name || undefined,
+        nameCanonical: apiCity.name_canonical || undefined,
         lat,
         lng,
         countryCode,
@@ -577,6 +593,8 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
         if (!step) return false;
         return Boolean(step.is_intro) || normalizeStepKey(step) === INTRO_STEP_ID;
     };
+    // Шаги поля не несут: их язык — язык бандла.
+    const contentLocale = readQuestContentLocale(apiBundle.content_locale);
 
     let rawSteps: ApiQuestStep[] = [];
     let steps: QuestStep[] = [];
@@ -602,7 +620,7 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
             .filter((s) => !isIntroStep(s))
             .map((s) => {
                 try {
-                    return adaptStep(s);
+                    return adaptStep(s, contentLocale);
                 } catch (e) {
                     console.error('Error adapting quest step:', s?.step_id ?? s?.id, e);
                     return null;
@@ -619,11 +637,11 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
             const rawIntro: ApiQuestStep = typeof apiBundle.intro === 'string'
                 ? JSON.parse(apiBundle.intro)
                 : apiBundle.intro;
-            intro = { ...adaptStep(rawIntro), id: INTRO_STEP_ID, pointRole: 'start' };
+            intro = { ...adaptStep(rawIntro, contentLocale), id: INTRO_STEP_ID, pointRole: 'start' };
         } else {
             const introFromSteps = rawSteps.find((s) => isIntroStep(s));
             if (introFromSteps) {
-                intro = { ...adaptStep(introFromSteps), id: INTRO_STEP_ID, pointRole: 'start' };
+                intro = { ...adaptStep(introFromSteps, contentLocale), id: INTRO_STEP_ID, pointRole: 'start' };
             }
         }
     } catch (e) {
@@ -641,6 +659,7 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
             story: i18nT('quests:utils.questAdapters.routeIntro', { count: stepCount }),
             task: i18nT('shared:utils.questAdapters.nazhmite_knopku_nachat_kvest_0676ff7c'),
             answer: () => true,
+            contentLocale,
             lat: coordNum(apiBundle.city?.lat || 0),
             lng: coordNum(apiBundle.city?.lng || 0),
             mapsUrl: 'https://metravel.by/quests',
@@ -668,6 +687,8 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
         countModel,
         storageKey: apiBundle.storage_key,
         city: adaptCity(apiBundle.city),
+        contentLocale,
+        availableLocales: readQuestAvailableLocales(apiBundle.available_locales, contentLocale),
         coverUrl: fixMediaUrl(apiBundle.cover_url),
         ratingAvg: apiBundle.rating_avg ?? null,
         ratingCount: apiBundle.rating_count ?? 0,
@@ -685,6 +706,7 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
     const normalizedCountryCode = normalizeQuestCountryCode(apiMeta.country_code);
     const tags = apiMeta.tags ? Object.keys(apiMeta.tags) : undefined;
     const squareCoverWebResponsiveSource = adaptSquareCoverMedia(apiMeta);
+    const contentLocale = readQuestContentLocale(apiMeta.content_locale);
 
     return {
         id: apiMeta.quest_id,
@@ -693,6 +715,9 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
         points: parseInt(String(apiMeta.points), 10) || 0,
         cityId: apiMeta.city_id,
         cityName: apiMeta.city_name || undefined,
+        cityNameCanonical: apiMeta.city_name_canonical || undefined,
+        contentLocale,
+        availableLocales: readQuestAvailableLocales(apiMeta.available_locales, contentLocale),
         countryName: apiMeta.country_name || undefined,
         countryCode: normalizedCountryCode,
         lat,

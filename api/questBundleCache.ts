@@ -2,16 +2,30 @@
 // Персист сырого ApiQuestBundle в AsyncStorage для офлайн-прохождения квеста.
 // Кэшируем именно СЫРОЙ (нормализованный) бандл — adaptBundle гоняет чекеры-функции
 // ответов, которые не сериализуются, поэтому адаптация делается на клиенте при чтении.
+//
+// Язык контента (#2197): сохранённый квест — ОДНА запись `quest:{questId}` в
+// OfflineCatalog, его снимок несёт `content_locale`, поэтому любая сохранённая
+// копия читается как есть (лучше пройти квест на другом языке, чем потерять его
+// без сети), а список офлайна не плодит дубли одного квеста по языкам. Легаси-
+// ключ `quest-bundle:{id}` — копия до переводов, то есть `ru`; форма бандла
+// выросла только необязательными полями, поэтому его версия не меняется.
+// Каталог — `quest-list:v2:{locale}`; чтение — своя локаль, затем остальные,
+// затем легаси `quest-list:v1` (это `ru`, не мигрируется; первая запись v2 его
+// удаляет).
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { ApiQuestBundle, ApiQuestMeta } from '@/api/quests';
+import { SUPPORTED_LOCALES } from '@/i18n/config';
 import { readQuestOffline, saveQuestOffline } from '@/services/offline/questOfflineAdapter';
 
 export const QUEST_BUNDLE_CACHE_PREFIX = 'quest-bundle:';
 export const QUEST_BUNDLE_CACHE_VERSION = 1;
 
-export const QUEST_LIST_CACHE_KEY = 'quest-list:v1';
-export const QUEST_LIST_CACHE_VERSION = 1;
+export const QUEST_LIST_CACHE_KEY_PREFIX = 'quest-list:v2:';
+export const QUEST_LIST_CACHE_VERSION = 2;
+export const questListCacheKey = (locale: string): string => `${QUEST_LIST_CACHE_KEY_PREFIX}${locale}`;
+export const LEGACY_QUEST_LIST_CACHE_KEY = 'quest-list:v1';
+const LEGACY_QUEST_LIST_CACHE_VERSION = 1;
 
 type CachedQuestBundleEnvelope = {
     version: number;
@@ -76,7 +90,7 @@ type CachedQuestsListEnvelope = {
 };
 
 /**
- * Снимает персональные поля каталога. Ключ `QUEST_LIST_CACHE_KEY` один на
+ * Снимает персональные поля каталога. Ключ каталога один на
  * устройство, а не на аккаунт: после выхода или входа под другим пользователем
  * прежний владелец отдавал бы следующему свои «Пройден» и свою оценку (#1793).
  *
@@ -97,19 +111,13 @@ function stripPersonalQuestFields(list: ApiQuestMeta[]): ApiQuestMeta[] {
     }));
 }
 
-/**
- * Читает сырой список квестов из офлайн-кэша (null — если нет/повреждён/другая
- * версия). Персональные поля снимаются: см. `stripPersonalQuestFields`.
- */
-export async function readCachedQuestsList(): Promise<ApiQuestMeta[] | null> {
+async function readQuestsListEnvelope(key: string, version: number): Promise<ApiQuestMeta[] | null> {
     try {
-        const raw = await AsyncStorage.getItem(QUEST_LIST_CACHE_KEY);
+        const raw = await AsyncStorage.getItem(key);
         if (!raw) return null;
         const parsed = JSON.parse(raw) as Partial<CachedQuestsListEnvelope>;
-        if (!parsed || parsed.version !== QUEST_LIST_CACHE_VERSION || !Array.isArray(parsed.list)) {
-            return null;
-        }
-        return stripPersonalQuestFields(parsed.list);
+        if (!parsed || parsed.version !== version || !Array.isArray(parsed.list)) return null;
+        return parsed.list;
     } catch {
         // Приватный режим / повреждённый JSON — ведём себя как без кэша.
         return null;
@@ -117,11 +125,30 @@ export async function readCachedQuestsList(): Promise<ApiQuestMeta[] | null> {
 }
 
 /**
- * Пишет сырой список квестов в офлайн-кэш (best-effort, ошибки записи глушим).
- * Персональные поля не сохраняются: см. `stripPersonalQuestFields`.
+ * Читает сырой список квестов из офлайн-кэша (null — если нет/повреждён/другая
+ * версия): сначала копия на `locale`, затем на любой другой локали, затем
+ * легаси-копия до переводов. Персональные поля снимаются: см.
+ * `stripPersonalQuestFields`.
+ */
+export async function readCachedQuestsList(locale: string): Promise<ApiQuestMeta[] | null> {
+    const fallbacks = SUPPORTED_LOCALES.filter((item) => item !== locale);
+    for (const candidate of [locale, ...fallbacks]) {
+        const list = await readQuestsListEnvelope(questListCacheKey(candidate), QUEST_LIST_CACHE_VERSION);
+        if (list) return stripPersonalQuestFields(list);
+    }
+    const legacy = await readQuestsListEnvelope(LEGACY_QUEST_LIST_CACHE_KEY, LEGACY_QUEST_LIST_CACHE_VERSION);
+    return legacy ? stripPersonalQuestFields(legacy) : null;
+}
+
+/**
+ * Пишет сырой список квестов на `locale` в офлайн-кэш (best-effort, ошибки
+ * записи глушим). Персональные поля не сохраняются: см. `stripPersonalQuestFields`.
+ * После записи легаси `quest-list:v1` недостижим — копия v2 читается раньше, —
+ * поэтому удаляется, а не держит в хранилище лишний каталог.
  */
 export async function writeCachedQuestsList(
     list: ApiQuestMeta[],
+    locale: string,
     savedAt: number = Date.now(),
 ): Promise<void> {
     const envelope: CachedQuestsListEnvelope = {
@@ -130,7 +157,8 @@ export async function writeCachedQuestsList(
         list: stripPersonalQuestFields(list),
     };
     try {
-        await AsyncStorage.setItem(QUEST_LIST_CACHE_KEY, JSON.stringify(envelope));
+        await AsyncStorage.setItem(questListCacheKey(locale), JSON.stringify(envelope));
+        await AsyncStorage.removeItem(LEGACY_QUEST_LIST_CACHE_KEY);
     } catch (err) {
         console.warn('Failed to cache quests list for offline:', err);
     }

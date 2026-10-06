@@ -136,7 +136,7 @@ function buildQuestCityAliasMap(quests) {
     const byLead = city.tokensByLead.get(leadToken) || [];
     byLead.push(tokens);
     city.tokensByLead.set(leadToken, byLead);
-    if (!city.name) city.name = questCityName(quest);
+    if (!city.name) city.name = questCityAliasName(quest);
     cities.set(route.cityId, city);
   }
 
@@ -172,6 +172,20 @@ function questRouteVariants(quest, cityAliasMap) {
 
 function questCityName(quest) {
   return String(quest?.city_name ?? quest?.cityName ?? quest?.city?.name ?? '').trim();
+}
+
+/**
+ * The name the alias heuristic measures. The API localizes `city_name` by
+ * `?lang=` («Kraków»), while the alias is a latin spelling of the Russian
+ * source name; reading the localized one would move `/quests/<alias>` with the
+ * UI language (#2197). Old responses carry no canonical field — their
+ * `city_name` is the Russian source.
+ */
+function questCityAliasName(quest) {
+  const canonical = String(
+    quest?.city_name_canonical || quest?.cityNameCanonical || quest?.city?.name_canonical || '',
+  ).trim();
+  return canonical || questCityName(quest);
 }
 
 function questCountryName(quest) {
