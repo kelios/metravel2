@@ -13,6 +13,7 @@
 Запуск: python3 scripts/instagram/make-carousel.py spec.json
 Нужен Pillow.
 """
+import os
 import io
 import json
 import math
@@ -75,8 +76,21 @@ def shade(img, top, bottom, strength):
     img.paste(Image.new("RGB", (W, H), (0, 0, 0)), (0, 0), overlay.resize((W, H)))
 
 
+BRAND_BIRD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "brand-bird.png")
+
+
 def footer(draw, index, total, fill):
-    draw.text((PAD, H - 78), "metravel.by", font=font("bold", 30), fill=fill)
+    """Подвал слайда: птичка metravel и @metravelby слева, номер слайда справа (бренд, решение владельца 06.10.2026)."""
+    bird = Image.open(BRAND_BIRD).convert("RGBA")
+    bird.thumbnail((46, 46))
+    if fill == WHITE:  # на фото — знак на тёмной полупрозрачной подложке, как на всех фото-слайдах
+        width = bird.width + 12 + draw.textlength("@metravelby", font=font("bold", 30)) + 32
+        base = draw._image
+        layer = Image.new("RGBA", base.size, (0, 0, 0, 0))
+        ImageDraw.Draw(layer).rounded_rectangle((PAD - 14, H - 94, PAD - 14 + width, H - 30), radius=32, fill=(0, 0, 0, 175))
+        base.paste(Image.alpha_composite(base.convert("RGBA"), layer).convert(base.mode))
+    draw._image.paste(bird, (PAD - 2, H - 86), bird)
+    draw.text((PAD + bird.width + 10, H - 79), "@metravelby", font=font("bold", 30), fill=fill)
     label = f"{index} / {total}"
     draw.text((W - PAD - draw.textlength(label, font=font("sans", 30)), H - 78), label, font=font("sans", 30), fill=fill)
 
