@@ -48,7 +48,9 @@ export default function BreadcrumbsJsonLd({ model: modelProp, pathname: pathname
 
   const itemListElement = useMemo(() => {
     const modelItems = model?.items ?? [];
-    if (!model?.showBreadcrumbs || modelItems.length === 0) return null;
+    // Крошка без подписи ещё ждёт данных (город квестов до каталога, #2167):
+    // `ListItem` без `name` невалиден, разметка выходит, когда модель полна.
+    if (!model?.showBreadcrumbs || modelItems.length === 0 || modelItems.some((item) => !item.label)) return null;
     const items = [{ label: i18nT('seo:components.seo.BreadcrumbsJsonLd.glavnaya_c0447583'), path: '/' }, ...modelItems];
     return items.map((item, index) => ({
       '@type': 'ListItem',

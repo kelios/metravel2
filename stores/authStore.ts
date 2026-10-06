@@ -696,10 +696,18 @@ useAuthStore.subscribe((state, previous) => {
         return version === catalogIdentityVersion && (current.isAuthenticated ? current.userId : null) === identity;
     };
     const credentialsReady = identity === null ? logoutCredentialsReady : undefined;
+    // Восстановление сессии на старте (`checkAuthentication`, оба состояния без
+    // `authReady`): «гость» до него значит «ещё не прочитано», а не выход.
+    // Запросы этого окна уже ушли с учётными данными восстанавливаемой сессии —
+    // `api/client.ts` берёт их на каждый запрос (cookie на web, токен из
+    // хранилища на native), — так что ответ каталога уже личный. Отмена и второй
+    // проход каталога удваивали ожидание лендинга города у вошедшего (#2167).
+    // Вход и выход ставят `authReady` в том же `set` и сюда не попадают.
+    const restoringSession = previousIdentity === null && !previous.authReady && !state.authReady;
     // Барьер учётных данных регистрируется до сброса: сброс поднимет активные
     // запросы на повторную загрузку, и каталог квестов не должен уехать за
     // данными раньше, чем сессия действительно закрыта.
-    void refreshQuestsCatalogIdentity(client, isCurrentIdentity, credentialsReady);
+    if (!restoringSession) void refreshQuestsCatalogIdentity(client, isCurrentIdentity, credentialsReady);
     // #1829: чужой кэш не переживает смену владельца сессии. Вход тоже считается
     // сменой, если в этом процессе уже был вошедший пользователь: между сбросом
     // на выходе и входом следующего в кэш мог лечь ответ, стартовавший ещё со

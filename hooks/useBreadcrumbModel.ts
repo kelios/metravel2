@@ -311,7 +311,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   //
   // Ключ, queryFn и времена кеша совпадают с `useQuestsList`, поэтому экран
   // квестов и крошка по-прежнему дедуплицируются в один запрос `/quests/`.
-  const { data: questsForLocationCrumb } = useQuery<ApiQuestMeta[]>({
+  const { data: questsForLocationCrumb, isPending: questsCrumbPending } = useQuery<ApiQuestMeta[]>({
     ...questsListQueryOptions(),
     enabled: !!questCitySegment || !!questCountryAlias,
   });
@@ -703,7 +703,9 @@ export function useBreadcrumbModel(): BreadcrumbModel {
 
     const isQuestCityLanding = p.startsWith('/quests/') && parts.length === 2;
     if (isQuestCityLanding) {
-      const cityLabel = truncateLabel(questCityName || toTitleFromSegment(parts[1]));
+      // Пока каталог в пути, имени города нет: подпись из сегмента адреса —
+      // латиница («Paphos») на любой локали, поэтому место остаётся пустым (#2167).
+      const cityLabel = truncateLabel(questCityName || (questsCrumbPending ? '' : toTitleFromSegment(parts[1])));
       const items = [
         { label: i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10'), path: '/quests' },
         { label: cityLabel, path: p },
@@ -791,7 +793,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       backToPath,
       showBreadcrumbs: computed.length >= 1,
     };
-  }, [resolvedPathname, hasFilterQuery, normalizedReturnToParam, travelData, travelSlug, questApiTitle, questCityName, questCountryName, userProfileName, articleTitle, plannedTripData, publicTripData]);
+  }, [resolvedPathname, hasFilterQuery, normalizedReturnToParam, travelData, travelSlug, questApiTitle, questCityName, questsCrumbPending, questCountryName, userProfileName, articleTitle, plannedTripData, publicTripData]);
 }
 
 export default useBreadcrumbModel;

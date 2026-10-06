@@ -63,6 +63,40 @@ describe('useQuestWizardProgress', () => {
     expect(onProgressChange).not.toHaveBeenCalled()
   })
 
+  it('первый кадр уже стоит на известном шаге, а не на интро (#2270)', async () => {
+    // Роут монтирует визард с прочитанным прогрессом; дефолты первого рендера
+    // показывали интро, и через кадр карточка шага прыгала (CLS при перезагрузке).
+    const renders: number[] = []
+    const onProgressChange = jest.fn()
+    const { result } = renderHook(() => {
+      const state = useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey: 'quest_progress_first_frame',
+        initialProgress: {
+          currentIndex: 1,
+          unlockedIndex: 1,
+          answers: { intro: 'start' },
+          attempts: {},
+          hints: {},
+          showMap: false,
+        },
+        onProgressChange,
+      })
+      renders.push(state.currentIndex)
+      return state
+    })
+
+    expect(renders[0]).toBe(1)
+    expect(result.current.showMap).toBe(false)
+    await waitFor(async () => {
+      expect(await AsyncStorage.getItem('quest_progress_first_frame')).not.toBeNull()
+    })
+    expect(renders).not.toContain(0)
+    // Стартовое состояние — не правка игрока: на сервер оно не уходит.
+    expect(onProgressChange).not.toHaveBeenCalled()
+  })
+
   it('keeps richer local progress instead of letting a poorer backend one overwrite it', async () => {
     // Баг sasino-stilo 2026-07-28: ответы, данные без сети, оставались только
     // локально, а бэкенд знал лишь про intro. Сидирование безусловно затирало

@@ -76,6 +76,27 @@ describe('auth identity → exact quests catalog', () => {
     expect(client.getQueryState(queryKeys.userPointsAll('A'))?.isInvalidated).toBe(false)
   })
 
+  it('session restore on start keeps the in-flight catalog: no cancel, no second traversal (#2167)', async () => {
+    // `checkAuthentication` ставит личность до `authReady`; запрос каталога этого
+    // окна уже ушёл с cookie/токеном восстанавливаемой сессии и личный.
+    let resolveFirst!: (data: ApiQuestMeta[]) => void
+    const fetchCatalog = jest.fn()
+      .mockImplementationOnce(() => new Promise<ApiQuestMeta[]>((resolve) => { resolveFirst = resolve }))
+      .mockResolvedValue(meta(false))
+    observe(fetchCatalog)
+    await tick()
+    expect(useAuthStore.getState().authReady).toBe(false)
+
+    useAuthStore.setState({ isAuthenticated: true, userId: 'A' })
+    useAuthStore.setState({ authReady: true })
+    await tick()
+    resolveFirst(meta(true))
+    await tick()
+
+    expect(fetchCatalog).toHaveBeenCalledTimes(1)
+    expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(meta(true))
+  })
+
   it('A→B immediately removes personal fields while B request is pending', async () => {
     useAuthStore.getState().applyConfirmedAccountSession({ userId: 'A' })
     await tick()

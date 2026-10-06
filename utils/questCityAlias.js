@@ -120,12 +120,35 @@ function questCityLegacyAlias(alias) {
   return separator > 0 ? value.slice(0, separator) : null;
 }
 
+/**
+ * The alias the catalog API publishes for the quest's city (#2211), or
+ * `undefined` for a response that predates the field (offline cache, old
+ * backend). An empty string is the backend's own verdict "this city has no
+ * alias" and stays authoritative: the city is then addressed by city_id only,
+ * exactly as the backend sitemap publishes it.
+ */
+function questCityApiAlias(quest) {
+  const raw = quest?.city_alias ?? quest?.cityAlias;
+  return typeof raw === 'string' ? raw.trim().toLowerCase() : undefined;
+}
+
+/**
+ * city_id -> public alias. The API field is the single source; the quest_id
+ * heuristic below only fills cities whose records do not carry the field.
+ */
 function buildQuestCityAliasMap(quests) {
   const cities = new Map();
+  const apiAliases = new Map();
 
   for (const quest of Array.isArray(quests) ? quests : []) {
     const route = questRouteKey(quest);
     if (!route) continue;
+
+    const apiAlias = questCityApiAlias(quest);
+    if (apiAlias !== undefined) {
+      if (!apiAliases.get(route.cityId)) apiAliases.set(route.cityId, apiAlias);
+      continue;
+    }
 
     const tokens = questIdTokens(route.questId);
     const leadToken = tokens[0];
@@ -148,6 +171,11 @@ function buildQuestCityAliasMap(quests) {
     })[0]?.[0];
     if (!winner) continue;
     aliases.set(cityId, resolveCityAlias(winner, city.tokensByLead.get(winner) || [], city.name));
+  }
+
+  for (const [cityId, apiAlias] of apiAliases) {
+    if (apiAlias && apiAlias !== cityId.toLowerCase()) aliases.set(cityId, apiAlias);
+    else aliases.delete(cityId);
   }
 
   return aliases;

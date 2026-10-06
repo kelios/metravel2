@@ -166,22 +166,30 @@ export function useQuestWizardProgress({
   onProgressChange,
   onProgressReset,
 }: UseQuestWizardProgressParams) {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [unlockedIndex, setUnlockedIndex] = useState(0)
-  const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [attempts, setAttempts] = useState<Record<string, number>>({})
-  const [hints, setHints] = useState<Record<string, boolean>>({})
-  const [showMap, setShowMap] = useState(true)
+  // Первый кадр рисуется уже по известному прогрессу: роут монтирует визард,
+  // только когда гостевой или серверный прогресс прочитан. С дефолтами первый
+  // кадр показывал интро, а через кадр load-эффект переводил на сохранённый
+  // шаг — карточка шага прыгала при перезагрузке (CLS до 0,17, #2270).
+  // Load-эффект по-прежнему сливает его с локальной копией.
+  const [initialSnapshot] = useState(() => normalizeQuestProgressSnapshot(
+    initialProgress ? { ...initialProgress, serverId: initialProgress.serverId ?? undefined } : null,
+  ))
+  const [currentIndex, setCurrentIndex] = useState(initialSnapshot.currentIndex)
+  const [unlockedIndex, setUnlockedIndex] = useState(initialSnapshot.unlockedIndex)
+  const [answers, setAnswers] = useState<Record<string, string>>(initialSnapshot.answers)
+  const [attempts, setAttempts] = useState<Record<string, number>>(initialSnapshot.attempts)
+  const [hints, setHints] = useState<Record<string, boolean>>(initialSnapshot.hints)
+  const [showMap, setShowMap] = useState(initialSnapshot.showMap)
   // Точки, которые игрок официально пропустил на карточке «эта точка далеко».
   // Пропуск обязан снимать точку с гейта финала: иначе обещание «квест
   // засчитается и без неё» не выполняется, а далёкая точка в СЕРЕДИНЕ маршрута
   // закрывает финал навсегда.
-  const [skipped, setSkipped] = useState<Record<string, boolean>>({})
+  const [skipped, setSkipped] = useState<Record<string, boolean>>(initialSnapshot.skipped)
   // Игрок закончил квест, не дойдя до точек за длинным перегоном. Хранится
   // отдельно от `completed`: `completed` монотонен и приходит в том числе с
   // сервера, и если в квест добавят шаг (#1431), прежний финишер иначе получил
   // бы форс-редирект в финал и чужую строку «дальние вы отложили».
-  const [earlyFinish, setEarlyFinish] = useState(false)
+  const [earlyFinish, setEarlyFinish] = useState(initialSnapshot.earlyFinish)
   // Timestamp существует только для перехода incomplete → completed в текущей
   // смонтированной сессии. Гидратация уже завершённого прогресса его не ставит,
   // поэтому повторное открытие финала не создаёт новый retention-цикл.
@@ -193,17 +201,8 @@ export function useQuestWizardProgress({
   // Отпечаток состояния, которое хук засеял сам (слияние, AsyncStorage, сброс).
   // Save-эффект пропускает ровно его — без прежней гонки `suppressSave` с
   // `setTimeout(0)`, где лишний await в load-эффекте решал, сработает гейт или
-  // нет. Стартовое значение гасит сейв дефолтов на первом рендере.
-  const seededSnapshotRef = useRef<string | null>(stateFingerprint({
-    currentIndex: 0,
-    unlockedIndex: 0,
-    answers: {},
-    attempts: {},
-    hints: {},
-    showMap: true,
-    skipped: {},
-    earlyFinish: false,
-  }))
+  // нет. Стартовое значение гасит сейв стартового состояния на первом рендере.
+  const seededSnapshotRef = useRef<string | null>(stateFingerprint(initialSnapshot))
   // Какой storageKey уже засеян бэкенд-прогрессом. initialProgress пересоздаётся
   // в роуте через useMemo на каждое setProgress (эхо нашего же debounced-сейва),
   // поэтому без этого гейта load-эффект перезапускался на каждое эхо и откатывал

@@ -188,3 +188,55 @@ describe('quest city alias for multi-word city names', () => {
     expect(buildQuestCityAliasMap([quest]).get('66')).toBe('slavgorod')
   })
 })
+
+// #2212: the catalog API publishes the city alias itself (#2211); the quest_id
+// heuristic only covers records that predate the field.
+describe('quest city alias from the catalog API field', () => {
+  it('prefers the API alias over the quest_id heuristic', () => {
+    // The heuristic would read `veliky` here (single quest, theme-only tail).
+    const quests = [
+      { quest_id: 'veliky-sadko', city_id: '184', city_name: 'Великий Новгород', city_alias: 'veliky-novgorod' },
+    ]
+
+    expect(buildQuestCityAliasMap(quests).get('184')).toBe('veliky-novgorod')
+    expect(resolveQuestCitySegment('veliky-novgorod', quests)).toMatchObject({ cityId: '184' })
+  })
+
+  it('keeps the short legacy alias resolvable when it comes from the API field', () => {
+    const quests = [
+      { quest_id: 'kutna-hora-silver', city_id: '140', city_name: 'Кутна-Гора', city_alias: 'kutna-hora' },
+    ]
+
+    expect(resolveQuestCitySegment('kutna', quests)).toMatchObject({
+      cityId: '140',
+      segment: 'kutna-hora',
+    })
+  })
+
+  it('treats an empty API alias as "no alias" instead of guessing one', () => {
+    const quests = [{ quest_id: 'gomel-park', city_id: '19', city_name: 'Гомель', city_alias: '' }]
+
+    expect(buildQuestCityAliasMap(quests).has('19')).toBe(false)
+    expect(buildQuestCityLandingGroups(quests)[0]).toMatchObject({ segment: '19', alias: null })
+  })
+
+  it('falls back to the heuristic for records without the field', () => {
+    const quests = [
+      { quest_id: 'minsk-cmok', city_id: '4', city_name: 'Минск' },
+      { quest_id: 'rome-forum', city_id: '121', city_name: 'Рим', city_alias: 'roma' },
+    ]
+    const aliases = buildQuestCityAliasMap(quests)
+
+    expect(aliases.get('4')).toBe('minsk')
+    expect(aliases.get('121')).toBe('roma')
+  })
+
+  it('lets the API alias win when one city mixes fresh and cached records', () => {
+    const quests = [
+      { quest_id: 'gomel-park', city_id: '19', city_name: 'Гомель' },
+      { quest_id: 'gomel-river', city_id: '19', city_name: 'Гомель', city_alias: 'homel' },
+    ]
+
+    expect(buildQuestCityAliasMap(quests).get('19')).toBe('homel')
+  })
+})

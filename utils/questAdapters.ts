@@ -97,6 +97,8 @@ export type QuestMeta = {
     cityName?: string;
     /** Русское имя города при локализованном `cityName` (#2197). */
     cityNameCanonical?: string;
+    /** Публичный alias города из API (#2211): `''` — alias нет, отсутствие — эвристика (#2212). */
+    cityAlias?: string;
     /** Язык контента (#2197): без поля в ответе — `ru`; переводы — `availableLocales`. */
     contentLocale: string;
     availableLocales: string[];
@@ -716,6 +718,7 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
         cityId: apiMeta.city_id,
         cityName: apiMeta.city_name || undefined,
         cityNameCanonical: apiMeta.city_name_canonical || undefined,
+        cityAlias: apiMeta.city_alias,
         contentLocale,
         availableLocales: readQuestAvailableLocales(apiMeta.available_locales, contentLocale),
         countryName: apiMeta.country_name || undefined,

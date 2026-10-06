@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { Platform } from 'react-native';
@@ -377,9 +377,32 @@ describe('useBreadcrumbModel', () => {
     expect(result.current.backToPath).toBe('/quests');
   });
 
-  it('falls back to the segment for a city landing whose quests are not loaded yet', async () => {
-    const { useQuestsList } = jest.requireMock('@/hooks/useQuestsApi') as { useQuestsList: jest.Mock };
-    useQuestsList.mockReturnValue({ quests: [], cityQuestsIndex: {}, loading: true, error: null });
+  it('does not titleize the URL segment while the quest catalog is in flight (#2167)', async () => {
+    const { fetchQuestsList } = jest.requireMock('@/api/quests') as { fetchQuestsList: jest.Mock };
+    let resolveCatalog!: (quests: unknown[]) => void;
+    fetchQuestsList.mockImplementationOnce(() => new Promise((resolve) => { resolveCatalog = resolve; }));
+    usePathname.mockReturnValue('/quests/paphos');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const seen: string[] = [result.current.currentTitle];
+    await waitFor(() => expect(fetchQuestsList).toHaveBeenCalled());
+    seen.push(result.current.currentTitle);
+    expect(result.current.items).toEqual([
+      { label: 'Квесты', path: '/quests' },
+      { label: '', path: '/quests/paphos' },
+    ]);
+
+    await act(async () => {
+      resolveCatalog([{ quest_id: 'paphos-ktima', city_id: '170', city_name: 'Пафос', title: 'Квест' }]);
+    });
+    await waitFor(() => expect(result.current.currentTitle).toBe('Пафос'));
+    expect(seen).not.toContain('Paphos');
+  });
+
+  it('falls back to the segment once the loaded catalog has no such city', async () => {
+    const { fetchQuestsList } = jest.requireMock('@/api/quests') as { fetchQuestsList: jest.Mock };
+    fetchQuestsList.mockResolvedValue([]);
     usePathname.mockReturnValue('/quests/minsk');
     useLocalSearchParams.mockReturnValue({});
 

@@ -675,6 +675,25 @@ describe('questAdapters', () => {
       expect(result.cover).toBe('https://img.com/cover.jpg');
     });
 
+    it('carries the API city alias, so landings built from adapted meta skip the heuristic (#2212)', () => {
+      const { buildQuestCityAliasMap, resolveQuestCitySegment } = require('@/utils/questCityAlias');
+      // Эвристика по одному квесту читала бы `veliky`; бэкенд публикует полный alias.
+      const quest = adaptMeta(makeQuestMeta({
+        quest_id: 'veliky-sadko',
+        city_id: '184',
+        city_name: 'Великий Новгород',
+        city_alias: 'veliky-novgorod',
+      }));
+
+      expect(quest.cityAlias).toBe('veliky-novgorod');
+      expect(buildQuestCityAliasMap([quest]).get('184')).toBe('veliky-novgorod');
+      expect(resolveQuestCitySegment('veliky-novgorod', [quest])).toMatchObject({ cityId: '184' });
+
+      const legacy = adaptMeta(makeQuestMeta({ quest_id: 'veliky-sadko', city_id: '184', city_name: 'Великий Новгород' }));
+      expect(legacy.cityAlias).toBeUndefined();
+      expect(buildQuestCityAliasMap([legacy]).get('184')).toBe('veliky');
+    });
+
     it('normalizes backend country code and yields undefined when it is blank', () => {
       expect(adaptMeta({
         quest_id: 'krakow-dragon',

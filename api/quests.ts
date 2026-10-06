@@ -139,6 +139,12 @@ export type ApiQuestMeta = {
     points: number | string; // readOnly from backend
     city_id: string; // readOnly
     city_name: string; // readOnly
+    /**
+     * Публичный alias города (#2211): единственный источник `/quests/<alias>`.
+     * Пустая строка — у города alias нет; отсутствие поля — старый ответ/кэш,
+     * тогда alias выводит эвристика `utils/questCityAlias.js`.
+     */
+    city_alias?: string; // readOnly
     country_id?: string | null;
     country_name?: string | null;
     country_code?: string | null;
