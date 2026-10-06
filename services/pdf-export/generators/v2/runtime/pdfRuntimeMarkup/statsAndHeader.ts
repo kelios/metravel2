@@ -2,8 +2,7 @@ import type {
   BuildStatsMiniCardParams,
   BuildRunningHeaderParams,
 } from './types'
-import { translate as i18nT } from '@/i18n'
-import { formatPlaces } from '@/utils/pluralize'
+import { formatPhotos, formatPlaces } from '@/utils/pluralize'
 
 
 export function buildPdfStatsMiniCard({
@@ -35,7 +34,7 @@ export function buildPdfStatsMiniCard({
   if (photoCount > 0) {
     items.push({
       icon: renderPdfIcon('camera', iconColor, iconSize),
-      value: i18nT('export:services.pdfExport.runtime.stats.photoCount', { value1: photoCount }),
+      value: formatPhotos(photoCount),
     })
   }
 

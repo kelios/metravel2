@@ -4,7 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 
 const DENSE_GAP = 2;
@@ -202,7 +202,7 @@ export function ProfileHeaderQuickActions({
             onPress={() => onPress(item.key)}
             accessibilityRole="menuitem"
             accessibilityLabel={
-              showBadge ? i18nT('profile:components.profile.ProfileHeaderQuickActions.value1_value2_neprochitannyh_be8896bb', { value1: item.label, value2: unreadMessagesCount }) : item.label
+              showBadge ? translatePlural('profile:components.profile.ProfileHeaderQuickActions.value1_value2_neprochitannyh_be8896bb', unreadMessagesCount, { value1: item.label }) : item.label
             }
             accessibilityHint={item.accessibilityHint}
             style={({ pressed }) => [

@@ -40,6 +40,15 @@ export function getPlaceLabel(count: number): string {
   return translatePlural('errors:utils.pluralize.placeNoun', count);
 }
 
+/**
+ * «1 фото», «5 фото»; PL «1 zdjęcie», «2 zdjęcia», «5 zdjęć»; EN «1 photo», «5 photos».
+ * Число и слово — одно значение семейства: подпись «N фото» больше не заводится
+ * отдельным ключом со словом в одной форме (#2238, PDF «9 zdjęcie»).
+ */
+export function formatPhotos(count: number): string {
+  return translatePlural('errors:utils.pluralize.photosCount', count);
+}
+
 /** «3 места», «1 место», «5 мест» — число + склонённое существительное. */
 export function formatPlaces(count: number): string {
   return `${count} ${getPlaceLabel(count)}`;

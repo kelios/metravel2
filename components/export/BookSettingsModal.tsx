@@ -25,7 +25,7 @@ import {
   resolveThemed,
 } from './BookSettingsModal.helpers';
 import { ChecklistFieldset, ModalFooter } from './BookSettingsModal.parts';
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 // ✅ ИСПРАВЛЕНИЕ: Picker не используется в веб-версии модального окна
 // import { Picker } from '@react-native-picker/picker';
@@ -448,9 +448,7 @@ export default function BookSettingsModal({
                 {i18nT('profile:components.export.BookSettingsModal.vybrano_puteshestviy_nbsp_4b4623d9')}<span style={{ fontWeight: 700, color: MODAL_COLORS.primary }}>{travelCount}</span>
               </div>
               <div style={{ fontSize: '12px', color: MODAL_COLORS.textMuted, marginTop: '2px' }}>
-                {travelCount === 1
-                  ? i18nT('profile:components.export.BookSettingsModal.budet_sozdana_kniga_s_odnim_puteshestviem_d6b28f6a')
-                  : i18nT('profile:components.export.BookSettingsModal.budet_sozdana_kniga_s_value1_puteshestviyami_a78b68c9', { value1: travelCount })}
+                {translatePlural('profile:components.export.BookSettingsModal.budet_sozdana_kniga_s_value1_puteshestviyami_a78b68c9', travelCount)}
               </div>
             </div>
           </div>

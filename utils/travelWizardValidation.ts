@@ -268,7 +268,7 @@ export function validateField(
 
     if (length < rules.minLength && !isEmpty) {
       result.isValid = false;
-      result.error = i18nT('travel:utils.travelWizardValidation.minLength', { value1: rules.minLength, value2: length });
+      result.error = translatePlural('travel:utils.travelWizardValidation.minLength', rules.minLength, { value2: length });
     }
   }
 
@@ -280,7 +280,7 @@ export function validateField(
 
     if (length > rules.maxLength) {
       result.isValid = false;
-      result.error = i18nT('travel:utils.travelWizardValidation.maxLength', { value1: rules.maxLength, value2: length });
+      result.error = translatePlural('travel:utils.travelWizardValidation.maxLength', rules.maxLength, { value2: length });
     }
   }
 

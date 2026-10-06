@@ -6,7 +6,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { webDataSetProps, webTitleRef } from '@/utils/webProps';
-import { translate as i18nT } from '@/i18n';
+import { translate as i18nT, translatePlural } from '@/i18n';
 
 const AVATAR_SIZE = 44;
 const DELETE_ACTION_SIZE = 44;
@@ -100,7 +100,7 @@ function ThreadRow({
                     accessibilityRole="button"
                     accessibilityLabel={
                         hasUnread
-                            ? i18nT('messages:components.messages.ThreadList.dialog_s_value1_value2_neprochitannyh_62b679f3', { value1: name, value2: unreadCount })
+                            ? translatePlural('messages:components.messages.ThreadList.dialog_s_value1_value2_neprochitannyh_62b679f3', unreadCount, { value1: name })
                             : i18nT('messages:components.messages.ThreadList.dialog_s_value1_0ed1fb8e', { value1: name })
                     }
                     {...nativeDeleteA11y}

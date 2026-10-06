@@ -5,7 +5,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 
 export type ProfileQuickActionKey = 'messages' | 'subscriptions' | 'settings' | 'userpoints' | 'calendar';
@@ -168,7 +168,7 @@ export function ProfileQuickActions({
         onPress={() => onPress(item.key)}
         accessibilityRole="menuitem"
         accessibilityLabel={
-          showBadge ? i18nT('profile:components.profile.ProfileQuickActions.value1_value2_neprochitannyh_c3a0b009', { value1: item.title, value2: unreadMessagesCount }) : item.title
+          showBadge ? translatePlural('profile:components.profile.ProfileQuickActions.value1_value2_neprochitannyh_c3a0b009', unreadMessagesCount, { value1: item.title }) : item.title
         }
         accessibilityHint={item.accessibilityHint}
         style={({ pressed }) => [

@@ -19,7 +19,7 @@ import {
   TRANSPORT_SPEED_KMH,
   type TransportMode,
 } from './transportModes'
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 
 /**
@@ -226,7 +226,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
             <Text style={styles.noPointsSubtitle}>
               {routePoints.length === 0
                 ? i18nT('map:components.MapPage.FiltersPanelRouteSection.nachnite_s_adresa_ili_otmette_pervuyu_tochku_1296572f')
-                : i18nT('map:components.MapPage.FiltersPanelRouteSection.marshrut_pochti_gotov_dobavte_esche_value1_t_c7314962', { value1: remainingPoints })}
+                : translatePlural('map:components.MapPage.FiltersPanelRouteSection.marshrut_pochti_gotov_dobavte_esche_value1_t_c7314962', remainingPoints)}
             </Text>
             {routePoints.length > 0 && onClearRoute && (
               <View style={styles.noPointsActions}>

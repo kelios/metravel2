@@ -356,7 +356,7 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
         onPress={onShowMore}
         style={({ pressed, hovered }) => [styles.toggle, (pressed || hovered) && styles.togglePressed]}
         accessibilityRole="button"
-        accessibilityLabel={i18nT('travel:components.travel.PointListChrome.pokazat_esche_value1_tochek_f428791c', { value1: remaining })}
+        accessibilityLabel={translatePlural('travel:components.travel.PointListChrome.pokazat_esche_value1_tochek_f428791c', remaining)}
       >
         <View style={styles.toggleRow}>
           <Feather name="chevron-down" size={16} color={colors.primaryDark} />

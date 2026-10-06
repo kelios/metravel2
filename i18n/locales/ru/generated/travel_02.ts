@@ -198,8 +198,6 @@ export const travelGenerated2 = {
   "components.travel.DraftRecoveryDialog.prodolzhit_s_chernovika_238fa662": "Продолжить с черновика",
   "components.travel.DraftRecoveryDialog.prodolzhit_s_lokalnogo_chernovika_4e5e67fc": "Продолжить с локального черновика",
   "components.travel.DraftRecoveryDialog.tolko_chto_a2c21d64": "только что",
-  "components.travel.DraftRecoveryDialog.value1_ch_nazad_54cc86ac": "{{value1}} ч. назад",
-  "components.travel.DraftRecoveryDialog.value1_min_nazad_9eb6bbea": "{{value1}} мин. назад",
   "components.travel.DraftRecoveryDialog.vosstanovlenie_9af70ff1": "Восстановление...",
   "components.travel.DraftRecoveryDialog.vy_mozhete_prodolzhit_s_nim_ili_otkryt_sohra_83454798": ". Вы можете продолжить с ним или открыть сохранённую версию.",
   "components.travel.FavoriteButton.dobavit_v_hochu_poehat_fbf5211c": "Добавить в «Хочу поехать»",

@@ -535,7 +535,7 @@ export function QuestFinalePanel({
               шаг могли добавить в квест уже после прохождения (#1431). */}
           {questCompleted && finishedEarly && completedCount < stepsCount && (
             <Text style={[styles.completionText, { opacity: 0.8 }]} testID="quest-finale-partial">
-              {i18nT('quests:components.quests.questWizardSections.finishedEarly', { value1: completedCount, value2: stepsCount })}
+              {translatePlural('quests:components.quests.questWizardSections.finishedEarly', stepsCount, { value1: completedCount })}
             </Text>
           )}
 

@@ -132,7 +132,7 @@ export const getActiveCategoryTitle = (categories: string[]): string => {
   const collection = getMatchingCollection(categories)
   if (collection) return i18nT(collection.titleKey)
   if (categories.length <= 2) return categories.join(', ')
-  return i18nT('map:screens.tabs.PlacesScreen_helpers.value1_kategoriy_57a6c780', { value1: categories.length })
+  return translatePlural('map:screens.tabs.PlacesScreen_helpers.value1_kategoriy_57a6c780', categories.length)
 }
 
 /**

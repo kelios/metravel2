@@ -1,4 +1,4 @@
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 import { formatInteger } from '@/i18n/format'
 // src/utils/validation.ts
 // ✅ Утилиты для валидации входных данных
@@ -105,11 +105,11 @@ export function validateTextLength(
     const trimmed = text.trim();
     
     if (trimmed.length < minLength) {
-        return { valid: false, error: i18nT('errors:utils.aiValidation.value1_slishkom_korotkoe_minimum_value2_simv_888d2b30', { value1: fieldName, value2: minLength }) };
+        return { valid: false, error: translatePlural('errors:utils.aiValidation.value1_slishkom_korotkoe_minimum_value2_simv_888d2b30', minLength, { value1: fieldName }) };
     }
 
     if (trimmed.length > maxLength) {
-        return { valid: false, error: i18nT('errors:utils.aiValidation.value1_slishkom_dlinnoe_maksimum_value2_simv_c8402beb', { value1: fieldName, value2: maxLength }) };
+        return { valid: false, error: translatePlural('errors:utils.aiValidation.value1_slishkom_dlinnoe_maksimum_value2_simv_c8402beb', maxLength, { value1: fieldName }) };
     }
 
     return { valid: true };

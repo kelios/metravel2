@@ -20,7 +20,7 @@ describe('travelWizardValidation', () => {
       
       const resultTooShort = validateField('test', 'AB', rules);
       expect(resultTooShort.isValid).toBe(false);
-      expect(resultTooShort.error).toContain('Минимум 3 символов');
+      expect(resultTooShort.error).toContain('Минимум 3 символа');
       
       const resultValid = validateField('test', 'ABC', rules);
       expect(resultValid.isValid).toBe(true);
@@ -82,7 +82,7 @@ describe('travelWizardValidation', () => {
 
       const resultTooShort = validateField('description', '<p>Hi</p>', rules);
       expect(resultTooShort.isValid).toBe(false);
-      expect(resultTooShort.error).toContain('Минимум 3 символов');
+      expect(resultTooShort.error).toContain('Минимум 3 символа');
     });
   });
 

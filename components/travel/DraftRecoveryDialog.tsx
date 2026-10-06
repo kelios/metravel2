@@ -4,8 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
-import { formatDate, translate as i18nT } from '@/i18n'
-import { formatInteger } from '@/i18n/format'
+import { formatDate, formatRelativeTime, translate as i18nT } from '@/i18n'
 
 
 interface DraftRecoveryDialogProps {
@@ -26,8 +25,10 @@ function formatTimestamp(timestamp: number | null): string {
   const diffHours = Math.floor(diffMs / 3600000);
 
   if (diffMins < 1) return i18nT('travel:components.travel.DraftRecoveryDialog.tolko_chto_a2c21d64');
-  if (diffMins < 60) return i18nT('travel:components.travel.DraftRecoveryDialog.value1_min_nazad_9eb6bbea', { value1: formatInteger(diffMins) });
-  if (diffHours < 24) return i18nT('travel:components.travel.DraftRecoveryDialog.value1_ch_nazad_54cc86ac', { value1: formatInteger(diffHours) });
+  // Число и единица — одна форма из CLDR («2 часа назад», PL «2 godziny temu»),
+  // а не подпись «N ч. назад» в одной форме (#2238).
+  if (diffMins < 60) return formatRelativeTime(-diffMins, 'minute', { numeric: 'always' });
+  if (diffHours < 24) return formatRelativeTime(-diffHours, 'hour', { numeric: 'always' });
 
   return formatDate(date, {
     day: 'numeric',

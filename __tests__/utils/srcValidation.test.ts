@@ -129,7 +129,7 @@ describe('src/utils/validation', () => {
       const result = validateTextLength('a', 2, 10, 'Поле');
       expect(result).toEqual({
         valid: false,
-        error: 'Поле слишком короткое (минимум 2 символов)',
+        error: 'Поле слишком короткое (минимум 2 символа)',
       });
     });
 

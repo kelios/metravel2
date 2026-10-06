@@ -5,8 +5,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { TravelFormData } from '@/types/types';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import { getCountryLabel } from '@/utils/pluralize';
-import { translate as i18nT } from '@/i18n'
+import { formatDays, getCountryLabel } from '@/utils/pluralize';
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 
 interface TravelPreviewModalProps {
@@ -54,14 +54,14 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
         const result = [];
 
         if ((formData as any).number_days) {
-            result.push(i18nT('travel:components.travel.TravelPreviewModal.value1_dn_277ff571', { value1: (formData as any).number_days }));
+            result.push(formatDays(Number((formData as any).number_days)));
         }
 
         const markersCount = Array.isArray((formData as any).coordsMeTravel)
             ? ((formData as any).coordsMeTravel as any[]).length
             : 0;
         if (markersCount > 0) {
-            result.push(i18nT('travel:components.travel.TravelPreviewModal.value1_tochek_863e3e69', { value1: markersCount }));
+            result.push(translatePlural('travel:components.travel.TravelPreviewModal.value1_tochek_863e3e69', markersCount));
         }
 
         const countriesCount = Array.isArray((formData as any).countries)

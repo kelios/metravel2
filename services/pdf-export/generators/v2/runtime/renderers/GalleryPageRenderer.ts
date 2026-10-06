@@ -4,6 +4,7 @@ import { calculateOptimalColumns } from '@/types/pdf-gallery'
 import { escapeHtml, type RuntimeRenderContext, buildRunningHeader, getImageFilterStyle } from './renderHelpers'
 import { buildSafeImageUrl } from '../../../../utils/htmlUtils'
 import { translate as i18nT } from '@/i18n'
+import { formatPhotos } from '@/utils/pluralize'
 
 
 interface GalleryPagePhoto {
@@ -133,7 +134,7 @@ export class RuntimeGalleryRenderer {
             font-size: 8pt;
             font-weight: 700;
             font-family: ${this.ctx.theme.typography.bodyFont};
-          ">${i18nT("export:services.pdf_export.generators.v2.runtime.renderers.GalleryPageRenderer.div_style_display_flex_align_items_center_ga_5dd34671.text02", { value8: totalPhotos })}</span>
+          ">${formatPhotos(totalPhotos)}</span>
         </div>
         <div style="
           height: 3px;

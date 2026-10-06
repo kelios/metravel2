@@ -2,7 +2,7 @@ import type { BookSettings } from '@/components/export/BookSettingsModal'
 import { getThemeConfig } from '../../../themes/PdfThemeConfig'
 
 import type { TravelSectionMeta } from './types'
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 
 const CHECKLIST_LIBRARY: Record<BookSettings['checklistSections'][number], string[]> = {
@@ -351,7 +351,7 @@ export function renderChecklistPageSection(args: {
                 font-weight: 600;
                 font-family: ${typography.bodyFont};
                 line-height: 1.2;
-              ">${i18nT("export:services.pdf_export.generators.v2.runtime.pdfSectionRenderers.div_style_border_value1_solid_value2_border__37a9fc0c.text01", { value20: section.items.length })}</span>
+              ">${translatePlural("export:services.pdf_export.generators.v2.runtime.pdfSectionRenderers.div_style_border_value1_solid_value2_border__37a9fc0c.text01", section.items.length)}</span>
             </div>
           </div>
           <div style="

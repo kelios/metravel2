@@ -15,7 +15,7 @@ import { makeContentRef } from '@/types/contentSafety'
 
 import { webOnly } from '../helpers'
 import { createStyles } from '../styles'
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 import { webTitleRef } from '@/utils/webProps'
 
 
@@ -236,9 +236,9 @@ export const AuthorBlock = memo(function AuthorBlock({
                 <View
                   style={styles.metaPill}
                   accessibilityRole={(Platform.OS === 'web') ? undefined : 'text'}
-                  accessibilityLabel={i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.value1_prosmotrov_bde67a56', { value1: formatViews(views) })}
+                  accessibilityLabel={translatePlural('travel:components.travel.compactSideBar.parts.AuthorBlock.value1_prosmotrov_bde67a56', Math.round(views), { value1: formatViews(views) })}
                   {...webOnly({
-                    'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.value1_prosmotrov_bde67a56', { value1: formatViews(views) }),
+                    'aria-label': translatePlural('travel:components.travel.compactSideBar.parts.AuthorBlock.value1_prosmotrov_bde67a56', Math.round(views), { value1: formatViews(views) }),
                   } as any)}
                 >
                   <Feather name="eye" size={14} color={mutedText} />

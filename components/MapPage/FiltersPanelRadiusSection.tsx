@@ -8,7 +8,7 @@ import type { ThemedColors } from '@/hooks/useTheme'
 
 import { CATEGORY_ICONS } from './mapCategoryIcons'
 import { getCategoryName, type CategoryOption } from '@/components/MapPage/categoryName'
-import { createCollator, translate as i18nT } from '@/i18n'
+import { createCollator, translate as i18nT, translatePlural } from '@/i18n'
 
 
 const COLLAPSED_UNSELECTED_LIMIT = 8
@@ -249,7 +249,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                 accessibilityLabel={
                   categoriesExpanded
                     ? i18nT('map:components.MapPage.FiltersPanelRadiusSection.svernut_spisok_kategoriy_30bcc426')
-                    : i18nT('map:components.MapPage.FiltersPanelRadiusSection.pokazat_esche_value1_kategoriy_c9368920', { value1: hiddenUnselectedCount })
+                    : translatePlural('map:components.MapPage.FiltersPanelRadiusSection.pokazat_esche_value1_kategoriy_c9368920', hiddenUnselectedCount)
                 }
                 style={styles.categoriesToggle}
               >

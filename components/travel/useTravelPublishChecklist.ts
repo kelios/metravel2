@@ -3,6 +3,7 @@ import type { TravelFormData } from '@/types/types';
 import { getModerationIssues, getPointsWithoutCategories, type ModerationIssue } from '@/utils/formValidation';
 import { getQualityScore } from '@/utils/travelWizardValidation';
 import { translate as i18nT } from '@/i18n'
+import { formatPhotos } from '@/utils/pluralize'
 
 
 type UnknownRecord = Record<string, unknown>;
@@ -82,7 +83,7 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
       { key: 'plus', label: i18nT('travel:components.travel.useTravelPublishChecklist.plyusy_marshruta_b9d8d4b4'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.opishite_preimuschestva_shag_4_1567b1f1'), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.povyshaet_doverie_chitateley_a07f4e63'), ok: hasPlus },
       { key: 'minus', label: i18nT('travel:components.travel.useTravelPublishChecklist.minusy_marshruta_f083b6fd'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.ukazhite_nedostatki_shag_4_dfc31708'), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.pomogaet_prinyat_reshenie_171de921'), ok: hasMinus },
       { key: 'recommendation', label: i18nT('travel:components.travel.useTravelPublishChecklist.rekomendatsii_i_layfhaki_8f5cef9b'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.podelites_sovetami_shag_4_76eecab2'), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.uvelichivaet_tsennost_marshruta_ee350669'), ok: hasRecommendation },
-      { key: 'gallery3', label: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_3_foto_v_galeree_7ea4c6df'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.seychas_value1_foto_shag_3_9d2ca97a', { value1: galleryItems.length }), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.marshruty_s_foto_poluchayut_bolshe_prosmotro_d11e6185'), ok: hasGallery3 },
+      { key: 'gallery3', label: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_3_foto_v_galeree_7ea4c6df'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.seychas_value1_foto_shag_3_9d2ca97a', { value1: formatPhotos(galleryItems.length) }), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.marshruty_s_foto_poluchayut_bolshe_prosmotro_d11e6185'), ok: hasGallery3 },
       { key: 'video', label: i18nT('travel:components.travel.useTravelPublishChecklist.video_o_puteshestvii_7045907e'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.youtube_ssylka_shag_3_01055795'), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.video_povyshaet_vovlechennost_7ca45a3f'), ok: hasVideo },
     ];
   }, [formData.plus, formData.minus, formData.recommendation, formData.youtube_link, galleryItems.length]);

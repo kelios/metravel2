@@ -11,7 +11,7 @@ import { QuestCompactExcursions } from './questWizardSections'
 import EdgeFadeScrollRow from '@/components/ui/EdgeFadeScrollRow'
 import ActionTooltip from '@/components/ui/ActionTooltip'
 import { useQuestFontScaleControls } from '@/stores/questFontScaleStore'
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 import type { QuestCountModel, QuestPointRole } from '@/utils/questCountModel'
 import { getQuestPointRoleLabel } from './questMapPoints'
 import { describeOfflineQuestAction, type OfflineQuestDownloadState } from './questScreenHeaderModel'
@@ -399,7 +399,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
           <QuestActionButton
             styles={styles}
             label={i18nT('quests:components.quests.questWizardShell.skachat_gpx_a032dca6')}
-            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.skachat_gpx_s_value1_tochkami_kvesta_83ac2431', { value1: offlineMapPointsCount })}
+            accessibilityLabel={translatePlural('quests:components.quests.questWizardShell.skachat_gpx_s_value1_tochkami_kvesta_83ac2431', offlineMapPointsCount)}
             iconName="download"
             iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
             onPress={onOfflineMapDownload}
@@ -749,7 +749,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           <QuestActionButton
             styles={styles}
             label={i18nT('quests:components.quests.questWizardShell.skachat_gpx_a032dca6')}
-            accessibilityLabel={i18nT('quests:components.quests.questWizardShell.skachat_gpx_s_value1_tochkami_kvesta_83ac2431', { value1: offlineMapPointsCount })}
+            accessibilityLabel={translatePlural('quests:components.quests.questWizardShell.skachat_gpx_s_value1_tochkami_kvesta_83ac2431', offlineMapPointsCount)}
             iconName="download"
             iconColor={offlineMapPointsCount === 0 ? colors.disabled : colors.textMuted}
             onPress={onOfflineMapDownload}

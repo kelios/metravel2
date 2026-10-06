@@ -3,7 +3,7 @@ import { BOOK_EXPORT_ROUTE, isBookExportEntryVisible, isNavRouteAvailable } from
 import { buildLoginHref } from '@/utils/authNavigation'
 import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 import { routes } from '@/utils/routes'
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 // Единый источник пунктов меню аккаунта для desktop (AccountMenu) и мобильного
 // меню шапки (CustomHeaderMobileMenu). Раньше каждый рендерер держал свой
@@ -136,7 +136,7 @@ const buildAccountEntries = ({
       icon: 'mail',
       target: { kind: 'route', path: '/messages' },
       accessibilityLabel: unreadCount > 0
-        ? i18nT('navigation:components.layout.CustomHeaderMobileMenu.soobscheniya_value1_neprochitannyh_06035ae9', { value1: unreadCount })
+        ? translatePlural('navigation:components.layout.CustomHeaderMobileMenu.soobscheniya_value1_neprochitannyh_06035ae9', unreadCount)
         : undefined,
       unreadCount,
     },

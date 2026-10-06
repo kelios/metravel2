@@ -48,6 +48,18 @@ const SAME_FORM_SETS: Record<string, { locales: Locale[]; reason: string }> = {
     locales: ['pl'],
     reason: 'PL «potrzeba» управляет родительным: «2 znaków», «5 znaków»',
   },
+  'errors:utils.pluralize.photosCount': {
+    locales: ['be', 'uk'],
+    reason: 'BE «фота» и UK «фото» не склоняются: «1 фото», «5 фото»',
+  },
+  ...Object.fromEntries(
+    [
+      'profile:components.profile.ProfileHeaderQuickActions.value1_value2_neprochitannyh_be8896bb',
+      'profile:components.profile.ProfileQuickActions.value1_value2_neprochitannyh_c3a0b009',
+      'navigation:components.layout.CustomHeaderMobileMenu.soobscheniya_value1_neprochitannyh_06035ae9',
+      'messages:components.messages.ThreadList.dialog_s_value1_value2_neprochitannyh_62b679f3',
+    ].map((id) => [id, { locales: ['en'] as Locale[], reason: 'EN «unread» не согласуется с числом: «1 unread», «5 unread»' }]),
+  ),
 }
 
 // Наследие формы 3 переведено на семейства ключей целиком (#2238): разрозненный
@@ -313,6 +325,64 @@ const violationsOf = (set: FormSet, locale: Locale): string[] => {
   return problems.map((problem) => `${set.id}: ${problem}`)
 }
 
+// Число рядом с исчисляемым словом в несемейном ключе (#2238, приёмка: шапка
+// галереи PDF в PL «9 zdjęcie»). В RU «фото» не склоняется, и дефект в исходнике
+// не виден, а PL/BE/UK/EN показывают одну форму при любом числе. Ключ, в EN-значении
+// которого подстановка стоит перед таким словом, — семейство `_one/_few/_many/_other`
+// или канонический помощник `utils/pluralize.ts`; единицы (km, m, min) словами
+// списка не считаются. Исключение — только число-константа, при которой форма
+// верна во всех локалях, с причиной в списке ниже.
+const COUNTED_WORDS: Array<[string, string]> = [
+  ['photo', 'photos'], ['image', 'images'], ['picture', 'pictures'], ['point', 'points'], ['place', 'places'],
+  ['category', 'categories'], ['trip', 'trips'], ['travel', 'travels'], ['journey', 'journeys'], ['day', 'days'],
+  ['night', 'nights'], ['hour', 'hours'], ['minute', 'minutes'], ['week', 'weeks'], ['month', 'months'],
+  ['year', 'years'], ['country', 'countries'], ['city', 'cities'], ['step', 'steps'], ['stop', 'stops'],
+  ['quest', 'quests'], ['review', 'reviews'], ['comment', 'comments'], ['view', 'views'], ['like', 'likes'],
+  ['participant', 'participants'], ['member', 'members'], ['follower', 'followers'], ['subscriber', 'subscribers'],
+  ['author', 'authors'], ['item', 'items'], ['element', 'elements'], ['character', 'characters'], ['time', 'times'],
+  ['badge', 'badges'], ['route', 'routes'], ['location', 'locations'], ['message', 'messages'],
+  ['notification', 'notifications'], ['file', 'files'], ['task', 'tasks'], ['question', 'questions'],
+  ['answer', 'answers'], ['article', 'articles'], ['story', 'stories'], ['entry', 'entries'], ['result', 'results'],
+  // Прилагательное без существительного: RU «1 непрочитанное» / «5 непрочитанных».
+  ['unread', 'unread'],
+]
+const COUNTED_NOUN = new RegExp(
+  `\\{\\{\\s*\\w+\\s*\\}\\}\\s+(?:(?:more|new|other|hidden|selected|remaining)\\s+)?(?:${COUNTED_WORDS.flat().join('|')})(?![\\w-])`,
+  'i',
+)
+
+const COUNTED_NOUN_ALLOWLIST: Record<string, string> = {
+  'export:services.pdf_export.TravelDataTransformer.puteshestvie_value1_soderzhit_slishkom_mnogo_aacc3fd9':
+    'максимум — константа MAX_IMAGES_PER_TRAVEL = 30: «30 изображений», PL «30 obrazów», UK «30 зображень»',
+  'export:services.pdf_export.TravelDataTransformer.slishkom_mnogo_izobrazheniy_v_vybrannyh_pute_cded7c5a':
+    'максимум — константа MAX_TOTAL_IMAGES = 200: «200 изображений», PL «200 obrazów»',
+  'export:services.pdf_export.TravelDataTransformer.slishkom_mnogo_puteshestviy_vybrano_value1_m_406dc555':
+    'максимум — константа MAX_TRAVELS = 50: «50 путешествий», PL «50 podróży», UK «50 подорожей»',
+  'quests:components.quests.QuestReviewPhotoPicker.hint':
+    'лимит — константа QUEST_REVIEW_PHOTO_LIMIT = 3: RU/UK «фото», BE «фота» не склоняются, PL «do 3 zdjęć»',
+  'quests:components.quests.QuestReviewPhotoPicker.limitReached':
+    'лимит — константа QUEST_REVIEW_PHOTO_LIMIT = 3: PL «więcej niż 3 zdjęcia», RU/BE/UK «фото/фота» не склоняются',
+  'travel:components.travel.FacebookPublishPanel.photoPickerHint':
+    'лимит — константа FACEBOOK_PUBLISH_PHOTO_MAX_COUNT = 10: PL «10 zdjęć», RU/BE/UK «фото/фота» не склоняются',
+  'travel:components.travel.gallery.ImageGallery.maksimum_value1_izobrazheniy_73dec95a':
+    'maxImages по умолчанию 10, единственный вызов (GallerySection) передаёт 10: «10 изображений», PL «10 obrazów»',
+  'travel:components.travel.ImageGalleryComponent.maxImagesMessage':
+    'maxImages по умолчанию 10, единственный вызов (GallerySection) передаёт 10: PL «10 zdjęć», RU/BE/UK «фото/фота»',
+  'tripsStatic:plan.orderSuggestion.hint.tooMany':
+    'максимум — константа ROUTE_ORDER_MAX_POINTS = 50: «до 50 точек», PL «do 50 punktów»',
+}
+
+const countedNounKeys = (bundle: Bundle): string[] =>
+  Object.entries(bundle).flatMap(([namespace, entries]) =>
+    Object.entries(entries)
+      .filter(([key, value]) =>
+        typeof value === 'string'
+        && !/_(one|few|many|other)$/.test(key)
+        && !Object.prototype.hasOwnProperty.call(entries, `${key}_one`)
+        && COUNTED_NOUN.test(value))
+      .map(([key]) => `${namespace}:${key}`),
+  )
+
 describe('наборы форм числа (#2238)', () => {
   it('гейт находит семейства ключей и списки форм', () => {
     expect(familySets().length).toBeGreaterThanOrEqual(30)
@@ -375,5 +445,34 @@ describe('наборы форм числа (#2238)', () => {
     expect(violationsOf(copied, 'pl')).toEqual(['copied: one = few «Zadanie #»'])
     expect(violationsOf(copied, 'uk')).toEqual(['copied: few в род. п. ед. ч. «автора»'])
     expect(SAME_FEW_MANY.pl?.test('{{value1}} dni')).toBe(true)
+  })
+
+  it('число рядом с исчисляемым словом — семейство ключей или канонический помощник', () => {
+    expect(countedNounKeys(bundles.en).filter((key) => !(key in COUNTED_NOUN_ALLOWLIST))).toEqual([])
+  })
+
+  it('исключения «число рядом со словом» не устарели', () => {
+    const current = new Set(countedNounKeys(bundles.en))
+    expect(Object.keys(COUNTED_NOUN_ALLOWLIST).filter((key) => !current.has(key))).toEqual([])
+  })
+
+  it('правило ловит число рядом с исчисляемым словом в несемейном ключе', () => {
+    const probe: Bundle = {
+      ns: {
+        galleryBadge: '{{value8}} photo',
+        showMore: 'Show {{value1}} more categories',
+        gpx: 'Download GPX with {{value1}} quest points',
+        unread: 'Messages, {{value1}} unread',
+        distance: '{{value1}} km',
+        radius: 'Radius: {{value1}} km',
+        ordinal: 'Photo {{value1}}',
+        phrase: '{{value1}} {{value2}} within a radius of {{value3}} km',
+        hyphen: 'The {{value1}}-photo limit has been reached',
+        family: '{{count}} photos',
+        family_one: '{{count}} photo',
+        family_other: '{{count}} photos',
+      },
+    }
+    expect(countedNounKeys(probe)).toEqual(['ns:galleryBadge', 'ns:showMore', 'ns:gpx', 'ns:unread'])
   })
 })

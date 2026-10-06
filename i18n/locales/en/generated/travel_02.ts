@@ -198,8 +198,6 @@ export const travelGenerated2 = {
   "components.travel.DraftRecoveryDialog.prodolzhit_s_chernovika_238fa662": "Continue from draft",
   "components.travel.DraftRecoveryDialog.prodolzhit_s_lokalnogo_chernovika_4e5e67fc": "Continue from local draft",
   "components.travel.DraftRecoveryDialog.tolko_chto_a2c21d64": "just now",
-  "components.travel.DraftRecoveryDialog.value1_ch_nazad_54cc86ac": "{{value1}} hours ago",
-  "components.travel.DraftRecoveryDialog.value1_min_nazad_9eb6bbea": "{{value1}} min. back",
   "components.travel.DraftRecoveryDialog.vosstanovlenie_9af70ff1": "Recovery...",
   "components.travel.DraftRecoveryDialog.vy_mozhete_prodolzhit_s_nim_ili_otkryt_sohra_83454798": ". You can continue with it or open a saved version.",
   "components.travel.FavoriteButton.dobavit_v_hochu_poehat_fbf5211c": "Add to \"I want to go\"",

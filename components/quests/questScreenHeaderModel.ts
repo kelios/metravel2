@@ -141,9 +141,9 @@ export function buildQuestScreenHeader(input: QuestScreenHeaderInput): ScreenHea
           {
             key: 'gpx',
             label: i18nT('quests:components.quests.questWizardShell.skachat_gpx_a032dca6'),
-            accessibilityLabel: i18nT(
+            accessibilityLabel: translatePlural(
               'quests:components.quests.questWizardShell.skachat_gpx_s_value1_tochkami_kvesta_83ac2431',
-              { value1: offlineMapPointsCount },
+              offlineMapPointsCount,
             ),
             icon: 'download' as const,
             onPress: input.onOfflineMapDownload,

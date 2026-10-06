@@ -198,8 +198,6 @@ export const travelGenerated2 = {
   "components.travel.DraftRecoveryDialog.prodolzhit_s_chernovika_238fa662": "Kontynuuj od wersji roboczej",
   "components.travel.DraftRecoveryDialog.prodolzhit_s_lokalnogo_chernovika_4e5e67fc": "Kontynuuj z lokalnej wersji roboczej",
   "components.travel.DraftRecoveryDialog.tolko_chto_a2c21d64": "właśnie teraz",
-  "components.travel.DraftRecoveryDialog.value1_ch_nazad_54cc86ac": "{{value1}} godzin temu",
-  "components.travel.DraftRecoveryDialog.value1_min_nazad_9eb6bbea": "{{value1}} min. z powrotem",
   "components.travel.DraftRecoveryDialog.vosstanovlenie_9af70ff1": "Odzyskiwanie...",
   "components.travel.DraftRecoveryDialog.vy_mozhete_prodolzhit_s_nim_ili_otkryt_sohra_83454798": ". Możesz kontynuować lub otworzyć zapisaną wersję.",
   "components.travel.FavoriteButton.dobavit_v_hochu_poehat_fbf5211c": "Dodaj do „Chcę pojechać”",

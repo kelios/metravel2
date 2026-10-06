@@ -11,7 +11,7 @@ import {
   PRINT_IMAGE_THUMB_WIDTH,
 } from '@/utils/printImageUrl';
 import { sanitizeRichTextForPdf } from '@/utils/sanitizeRichText';
-import { translate as i18nT } from '@/i18n'
+import { translate as i18nT, translatePlural } from '@/i18n'
 
 
 const SAFE_COLOR_FALLBACK = 'rgb(31, 41, 55)';
@@ -339,7 +339,7 @@ export class TravelDataTransformer {
           const fieldNames = [i18nT('export:services.pdf_export.TravelDataTransformer.opisanie_bd44d0b5'), i18nT('export:services.pdf_export.TravelDataTransformer.rekomendatsii_5b88b537'), i18nT('export:services.pdf_export.TravelDataTransformer.plyusy_204f01be'), i18nT('export:services.pdf_export.TravelDataTransformer.minusy_11a8c846')];
           throw new ExportError(
             ExportErrorType.VALIDATION_ERROR,
-            i18nT('export:services.pdf_export.TravelDataTransformer.puteshestvie_value1_soderzhit_slishkom_dlinn_f4b87eee', { value1: travel.name, value2: fieldNames[fieldIndex], value3: textLength, value4: MAX_TEXT_LENGTH })
+            translatePlural('export:services.pdf_export.TravelDataTransformer.puteshestvie_value1_soderzhit_slishkom_dlinn_f4b87eee', textLength, { value1: travel.name, value2: fieldNames[fieldIndex], value4: MAX_TEXT_LENGTH })
           );
         }
         totalTextLength += textLength;
@@ -372,7 +372,7 @@ export class TravelDataTransformer {
     if (totalTextLength > MAX_TOTAL_TEXT_LENGTH) {
       throw new ExportError(
         ExportErrorType.VALIDATION_ERROR,
-        i18nT('export:services.pdf_export.TravelDataTransformer.slishkom_mnogo_teksta_v_vybrannyh_puteshestv_ccae281b', { value1: totalTextLength, value2: MAX_TOTAL_TEXT_LENGTH })
+        translatePlural('export:services.pdf_export.TravelDataTransformer.slishkom_mnogo_teksta_v_vybrannyh_puteshestv_ccae281b', totalTextLength, { value2: MAX_TOTAL_TEXT_LENGTH })
       );
     }
   }

@@ -51,8 +51,6 @@ export const tripsGenerated2 = {
   "components.trips.TripNotificationsList.ne_udalos_zagruzit_uvedomleniya_e227aca0": "Не удалось загрузить уведомления.",
   "components.trips.TripNotificationsList.tolko_chto_efbf164e": "только что",
   "components.trips.TripNotificationsList.uvedomleniy_poka_net_ee139f4f": "Уведомлений пока нет.",
-  "components.trips.TripNotificationsList.value1_ch_nazad_8fcf483e": "{{value1}} ч назад",
-  "components.trips.TripNotificationsList.value1_dn_nazad_01c7bb11": "{{value1}} дн назад",
   "components.trips.TripStatusBadge.status_value1_9575ba65": "Статус: {{value1}}",
   "utils.shareTripPlan.podelitsya_poezdkoy_value1_677b9d34": "Поделиться поездкой «{{value1}}»",
   "utils.shareTripPlan.value1_value2_cff6d5b0": "{{value1}}\n{{value2}}",
