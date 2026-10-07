@@ -805,3 +805,105 @@ it.each([
     HTMLElement.prototype.getBoundingClientRect = originalRect
   }
 })
+
+
+it.each([
+  [false, 'observer'], [true, 'observer'],
+  [false, 'layout-commit'], [true, 'layout-commit'],
+] as const)('preserves Comments inside the outer runtime across nested reserve slack (natural=%s, delivery=%s)', (natural, delivery) => {
+  const host = document.createElement('div')
+  const owner = document.createElement('div')
+  const mount = document.createElement('div')
+  owner.style.overflowY = 'auto'
+  owner.append(mount)
+  host.append(owner)
+  document.body.append(host)
+  const initialTop = 22382
+  let top = initialTop
+  let adjustment = 0
+  const writes: number[] = []
+  const node = (id: string) => mount.querySelector<HTMLElement>(`[data-testid="slack-${id}"]`)!
+  const height = (id: string) => Number.parseFloat(node(id)?.style.height || '0')
+  const sidebarFlow = () => Math.max(844, height('sidebar'))
+  Object.defineProperties(owner, {
+    clientHeight: { configurable: true, value: 790 },
+    clientWidth: { configurable: true, value: 390 },
+    scrollHeight: { configurable: true, get: () => 30000 + height('outer') },
+    scrollTop: {
+      configurable: true,
+      get: () => natural ? initialTop + sidebarFlow() - 844 + adjustment : top,
+      set: value => { top = value; adjustment = value - initialTop - sidebarFlow() + 844; writes.push(value) },
+    },
+  })
+  owner.getBoundingClientRect = () => rect(54, 790)
+  const originalRect = HTMLElement.prototype.getBoundingClientRect
+  HTMLElement.prototype.getBoundingClientRect = function () {
+    const shift = owner.scrollTop - initialTop
+    switch (this.dataset.testid) {
+      case 'slack-navigation-runtime': {
+        const leaf = this.firstElementChild as HTMLElement
+        return rect(0, Number.parseFloat(leaf.style.height) + Number.parseFloat(leaf.style.marginBottom || '0'))
+      }
+      case 'slack-sidebar-runtime': return rect(0, 822 + height('navigation'))
+      case 'slack-outer-runtime': return rect(0, sidebarFlow() + 930)
+      case 'slack-popular': return rect(322.96875 + height('navigation') - shift, 364)
+      case 'slack-comments': return rect(740.96875 + sidebarFlow() - 844 - shift, 930)
+      default: return originalRect.call(this)
+    }
+  }
+  const root = createRoot(mount)
+  const resize = (id: string) => {
+    const layer = node(`${id}-runtime`)
+    for (const observer of MeasuredResizeObserver.instances.filter(candidate => candidate.targets.has(layer))) {
+      observer.callback([{ target: layer } as ResizeObserverEntry], observer as unknown as ResizeObserver)
+    }
+  }
+  const tree = (navigationHeight: number) => createElement(Transition, {
+    isMobile: true, pending: false, placeholder: null, runtimeFrameReady: true,
+    testID: 'slack-outer', children: createElement('div', null,
+      createElement(Transition, {
+        isMobile: true, pending: false, placeholder: null, runtimeFrameReady: false, runtimeVisibilityReady: true,
+        reserveHeight: 844, testID: 'slack-sidebar', children: createElement('div', null,
+          createElement(Transition, {
+            isMobile: true, pending: false, placeholder: null, runtimeFrameReady: true,
+            allowEmptyRuntime: true, testID: 'slack-navigation',
+            children: createElement('div', { 'data-testid': 'slack-navigation-content', style: { height: navigationHeight, marginBottom: navigationHeight ? 32 : 0 } }),
+          }),
+          createElement('div', { 'data-testid': 'slack-popular' }),
+        ),
+      }),
+      createElement('div', { 'data-testid': 'slack-comments', style: { height: 930 } }),
+    ),
+  })
+  try {
+    act(() => root.render(tree(0)))
+    owner.scrollTop = initialTop
+    writes.length = 0
+    const before = node('comments').getBoundingClientRect().top
+    expect(before).toBe(740.96875)
+    expect(height('sidebar')).toBe(822)
+    expect(sidebarFlow()).toBe(844)
+    act(() => {
+      if (delivery === 'layout-commit') root.render(tree(125))
+      else {
+        node('navigation-content').style.height = '125px'
+        node('navigation-content').style.marginBottom = '32px'
+        resize('navigation')
+      }
+      resize('sidebar')
+      resize('outer')
+    })
+    expect(height('navigation')).toBe(157)
+    expect(height('sidebar')).toBe(979)
+    expect(height('outer')).toBe(1909)
+    // The parent only grows135: its old844 reserve already covered22 of157.
+    // Preserve the actual drawn following frame, rather than a leaf's157 delta.
+    expect(node('comments').getBoundingClientRect().top).toBe(before)
+    expect(owner.scrollTop).toBe(initialTop + 135)
+    expect(writes).toEqual(natural ? [] : [initialTop + 135])
+  } finally {
+    act(() => root.unmount())
+    host.remove()
+    HTMLElement.prototype.getBoundingClientRect = originalRect
+  }
+})

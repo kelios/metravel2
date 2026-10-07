@@ -107,9 +107,10 @@ type ReserveReleaseAnchor = {
 
 type ReserveReleaseState = 'reserved' | 'released' | 'anchored' | 'clamped'
 
-// Absolute runtimes can contain other measured transitions. Commit all their
-// normal-flow owners before correcting the ORIGINAL visible anchor; a later
-// ancestor observer must not capture a different frame after the first scroll.
+// Absolute runtimes can contain other measured transitions. Their reserves can
+// absorb part of a leaf's growth, so the highest measured owner with a visible
+// following frame owns the transaction anchor. Fall back to the leaf when no
+// ancestor has one, then commit all heights before a single correction.
 const measuredTransitions = new WeakMap<HTMLElement, () => boolean>()
 
 function measureAncestorTransitions(node: HTMLElement) {
@@ -141,16 +142,22 @@ function isDrawnWithinOwner(node: HTMLElement, owner: HTMLElement): boolean {
   return false
 }
 
-function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | null {
-  if (!node.isConnected) return null
+function findMeasuredScrollOwner(node: HTMLElement): HTMLElement | null {
   const view = node.ownerDocument.defaultView
-  if (!view) return null
+  if (!node.isConnected || !view) return null
   let owner = node.parentElement
   while (owner) {
     const overflowY = view.getComputedStyle(owner).overflowY
     if (/^(auto|scroll)$/.test(overflowY) && owner.scrollHeight > owner.clientHeight) break
     owner = owner.parentElement
   }
+  return owner
+}
+
+function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | null {
+  const view = node.ownerDocument.defaultView
+  const owner = findMeasuredScrollOwner(node)
+  if (!view) return null
   if (!owner || owner.clientHeight <= 0) return null
   const ownerRect = owner.getBoundingClientRect()
   const top = Math.max(0, ownerRect.top + owner.clientTop)
@@ -184,6 +191,21 @@ function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | nul
   if (!anchor || !owner.contains(anchor)) return null
   const rect = anchor.getBoundingClientRect()
   return { anchor, owner, beforeTop: rect.top }
+}
+
+function findMeasuredTransactionAnchor(node: HTMLElement): ReserveReleaseAnchor | null {
+  const owner = findMeasuredScrollOwner(node)
+  if (!owner) return null
+  let capture = findReserveReleaseAnchor(node)
+  let ancestor = node.parentElement
+  while (ancestor && ancestor !== owner) {
+    if (measuredTransitions.has(ancestor)) {
+      const following = findReserveReleaseAnchor(ancestor)
+      if (following) capture = following
+    }
+    ancestor = ancestor.parentElement
+  }
+  return capture
 }
 
 function correctMeasuredAnchor(capture: ReserveReleaseAnchor | null, node: HTMLElement): ReserveReleaseState | null {
@@ -226,6 +248,7 @@ export function TravelDetailsDeferredTransition({
   const [optionalFlowFallback, setOptionalFlowFallback] = useState(false)
   const runtimeRef = useRef<View>(null)
   const measuredHeightRef = useRef<number | null>(null)
+  const currentMeasureRef = useRef<(() => boolean) | null>(null)
   const observerGenerationRef = useRef(0)
   const revealCorrectionRef = useRef<ReserveReleaseState | null>(null)
   const [reserveReleaseState, setReserveReleaseState] = useState<ReserveReleaseState>('reserved')
@@ -257,6 +280,21 @@ export function TravelDetailsDeferredTransition({
     if (Platform.OS === 'web') setOptionalFlowFallback(allowEmptyRuntime && !supportsResizeObservation)
   }, [allowEmptyRuntime, supportsResizeObservation])
 
+  // Keep geometry ownership registered for the DOM lifetime. React cleans up
+  // child-dependent effects before running the next leaf layout effect; deleting
+  // parent ownership there would make that leaf capture the wrong inner frame.
+  // The delegated measurement still carries the current generation fence.
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'web') return
+    const node = connectedDOMView(transitionRef.current)
+    if (!node) return
+    const measure = () => currentMeasureRef.current?.() ?? false
+    measuredTransitions.set(node, measure)
+    return () => {
+      if (measuredTransitions.get(node) === measure) measuredTransitions.delete(node)
+    }
+  }, [])
+
   // Runtime remains absolute at current width even while drawn. Its measured
   // outer border box alone owns the normal-flow height. Capture BEFORE changing
   // that height, then reconcile against the CURRENT offset/range: native browser
@@ -265,6 +303,7 @@ export function TravelDetailsDeferredTransition({
     if (Platform.OS !== 'web') return
     const generationRef = observerGenerationRef
     const generation = ++generationRef.current
+    currentMeasureRef.current = null
     const node = connectedDOMView(transitionRef.current)
     const runtime = connectedDOMView(runtimeRef.current)
     if (!wantsRuntimeVisible) {
@@ -290,7 +329,7 @@ export function TravelDetailsDeferredTransition({
     }
     const commitMeasuredHeight = () => {
       if (!node) return
-      const capture = findReserveReleaseAnchor(node)
+      const capture = findMeasuredTransactionAnchor(node)
       if (!measureRuntimeHeight()) return
       measureAncestorTransitions(node)
       const corrected = correctMeasuredAnchor(capture, node)
@@ -299,14 +338,13 @@ export function TravelDetailsDeferredTransition({
         if ((allowEmptyRuntime && reserveHeight == null) || (reserveReleaseState !== 'reserved' && reserveReleaseState !== 'released')) setReserveReleaseState(revealCorrectionRef.current)
       }
     }
-    if (node) measuredTransitions.set(node, measureRuntimeHeight)
+    currentMeasureRef.current = measureRuntimeHeight
     commitMeasuredHeight()
     const observer = supportsResizeObservation && node && runtime && node.contains(runtime) ? new ResizeObserver(commitMeasuredHeight) : null
     if (runtime) observer?.observe(runtime)
     return () => {
       generationRef.current++
       observer?.disconnect()
-      if (node && measuredTransitions.get(node) === measureRuntimeHeight) measuredTransitions.delete(node)
     }
   }, [allowEmptyRuntime, children, reserveHeight, reserveReleaseState, runtimeMeasured, supportsResizeObservation, wantsRuntimeVisible])
 
@@ -317,7 +355,7 @@ export function TravelDetailsDeferredTransition({
     if (Platform.OS !== 'web' || !wantsRuntimeVisible || !runtimeMeasured || !runtimeFrameReady || reserveHeight == null) return
     const node = connectedDOMView(transitionRef.current)
     if (reserveReleaseState === 'reserved') {
-      releaseAnchorRef.current = node ? findReserveReleaseAnchor(node) : null
+      releaseAnchorRef.current = node ? findMeasuredTransactionAnchor(node) : null
       setReserveReleaseState('released')
       return
     }
