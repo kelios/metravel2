@@ -48,7 +48,7 @@ interface PublicProfileHeaderProps {
   statPills: ProfileStatPill[];
   activeTab: ProfileTabKey;
   onChangeTab: (tab: ProfileTabKey) => void;
-  tabCounts: Partial<Record<ProfileTabKey, number>>;
+  tabCounts: Partial<Record<ProfileTabKey, number | null>>;
   onWriteMessage: () => void;
 }
 

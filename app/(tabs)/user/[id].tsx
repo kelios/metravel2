@@ -126,12 +126,13 @@ export default function PublicUserProfileScreen() {
     queryFn: () => fetchTravels(0, travelsLimit, '', { user_id: userId, publish: 1, moderation: 1 }),
     enabled: !!userId && !isBlockedByMe,
     staleTime: 5 * 60 * 1000,
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[1] === userId ? keepPreviousData(previousData) : undefined,
     retry: readRetryTwice,
   });
 
   const authorTravels = authorTravelsQuery.data?.data ?? [];
-  const authorTravelsTotal = authorTravelsQuery.data?.total ?? 0;
+  const authorTravelsTotal = authorTravelsQuery.data?.total ?? (authorTravelsQuery.isError ? null : undefined);
 
   const handleOpenTravel = useCallback(
     (travel: Travel) => {
@@ -142,6 +143,7 @@ export default function PublicUserProfileScreen() {
   );
 
   const handleLoadMoreTravels = useCallback(() => {
+    if (typeof authorTravelsTotal !== 'number') return;
     setTravelsLimit((current) => Math.min(current + AUTHOR_TRAVELS_LIMIT, authorTravelsTotal));
   }, [authorTravelsTotal]);
 
@@ -170,7 +172,7 @@ export default function PublicUserProfileScreen() {
 
   // Таб «Уровень» без счётчика: badgesCount на нём читался как «Уровень 13»
   // и противоречил рангу в шапке («Ур.5»). Число достижений остаётся в пилюле.
-  const tabCounts = useMemo<Partial<Record<ProfileTabKey, number>>>(
+  const tabCounts = useMemo<Partial<Record<ProfileTabKey, number | null>>>(
     () => ({
       travels: authorTravelsTotal,
       subscribers: subscribersCount,
@@ -320,7 +322,7 @@ export default function PublicUserProfileScreen() {
         ) : (
           <PublicProfileTravelsTab
             travels={authorTravels}
-            total={authorTravelsTotal}
+            total={authorTravelsTotal ?? 0}
             isLoading={authorTravelsQuery.isLoading}
             isError={authorTravelsQuery.isError}
             isMobile={isMobile}

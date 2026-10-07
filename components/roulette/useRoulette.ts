@@ -128,7 +128,7 @@ export function useRoulette() {
     return params;
   }, [queryParams, defaultCountries]);
 
-  const { data: facetsData } = useQuery({
+  const { data: facetsData, isFetching: resultsLoading, isError: resultsError } = useQuery({
     queryKey: queryKeys.rouletteTravelFacets(rouletteQueryParams),
     queryFn: ({ signal }) =>
       fetchTravelFacets('', rouletteQueryParams, { signal, suppressErrors: true }),
@@ -141,7 +141,7 @@ export function useRoulette() {
     [facetsData?.facets],
   );
 
-  const totalCount = facetsData?.total ?? 0;
+  const totalCount = facetsData?.total;
 
   const filterGroups = useMemo<FilterGroup[]>(
     () =>
@@ -272,6 +272,8 @@ export function useRoulette() {
     activeFiltersCount,
     travels,
     totalCount,
+    resultsLoading,
+    resultsError,
     isEmpty,
     isLoading,
     isFetching,

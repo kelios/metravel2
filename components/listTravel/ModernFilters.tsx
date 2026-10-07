@@ -132,6 +132,8 @@ interface ModernFiltersProps {
   onFilterChange: (groupKey: string, optionId: string) => void;
   onClearAll: () => void;
   resultsCount?: number;
+  resultsLoading?: boolean;
+  resultsError?: boolean;
   isCompact?: boolean;
   isLoading?: boolean;
   year?: string | number | undefined;
@@ -160,6 +162,8 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   onFilterChange,
   onClearAll,
   resultsCount,
+  resultsLoading = false,
+  resultsError = false,
   isCompact = false,
   isLoading = false,
   year,
@@ -270,6 +274,11 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   );
 
   const resultsText = useMemo(() => getModernFiltersResultsText(resultsCount), [resultsCount]);
+  const resultsStatusText = resultsError
+    ? t('common:feedback.actionError')
+    : resultsLoading
+      ? t('home:app.tabs.index.zagruzhaem_4bc2d2f4')
+      : '';
   const orderedOptionsByGroup = useMemo(() => {
     const map: Record<string, ReturnType<typeof getOrderedModernFilterOptions>> = {};
     for (const group of groupsWithoutSort) {
@@ -314,15 +323,21 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               </>
             )}
             {optionalHint && <Text style={styles.optionalHint}>{i18nT('travel:components.listTravel.ModernFilters.neobyazatelno_6bf70c13')}</Text>}
-            {!!resultsText && (
+            {(!!resultsText || !!resultsStatusText) && (
               <View
                 style={[
                   styles.headerCountChip,
                   embeddedSidebar && styles.headerCountChipEmbeddedSidebar,
+                  !!resultsStatusText && { flexShrink: 1 },
                 ]}
                 testID="filters-results-chip"
               >
-                <Text style={styles.headerCountChipText} numberOfLines={1}>{resultsText}</Text>
+                {!!resultsText && <Text style={styles.headerCountChipText} numberOfLines={1}>{resultsText}</Text>}
+                {!!resultsStatusText && (
+                  <Text style={styles.headerCountChipText} testID="filters-results-status" accessibilityLiveRegion="polite">
+                    {resultsStatusText}
+                  </Text>
+                )}
               </View>
             )}
           </View>

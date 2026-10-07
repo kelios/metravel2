@@ -131,18 +131,22 @@ export const fetchTravelFacets = async (
                 { maxAttempts: 2, delay: 1000, shouldRetry: (error) => isRetryableError(error) }
             );
 
-        const payload = await safeJsonParse<Record<string, unknown>>(res, {});
         if (!res.ok) {
-            if (!options?.suppressErrors) {
-                devError('Error fetching travel facets: HTTP', res.status, res.statusText);
-            }
-            return { total: 0, facets: {} };
+            throw createTravelQueryError(`Travel facets request failed (HTTP ${res.status})`, res.status);
         }
 
-        const total = coerceTotal(payload?.total, 0);
+        const payload = await safeJsonParse<Record<string, unknown>>(res, {});
+        const rawTotal = payload?.total;
+        const total = coerceTotal(rawTotal, NaN);
         const rawFacets = payload?.facets;
-        if (!rawFacets || typeof rawFacets !== 'object' || Array.isArray(rawFacets)) {
-            return { total, facets: {} };
+        if (
+            (typeof rawTotal !== 'number' && typeof rawTotal !== 'string') ||
+            (typeof rawTotal === 'string' && rawTotal.trim() === '') ||
+            !Number.isInteger(total) || total < 0 ||
+            !rawFacets || typeof rawFacets !== 'object' || Array.isArray(rawFacets) ||
+            Object.values(rawFacets).some((value) => !Array.isArray(value))
+        ) {
+            throw createTravelQueryError('Travel facets response has an invalid format');
         }
 
         const facets = Object.entries(rawFacets as Record<string, unknown>).reduce<Record<string, TravelFacetItem[]>>(
@@ -169,7 +173,7 @@ export const fetchTravelFacets = async (
         if (!options?.suppressErrors) {
             devError('Error fetching travel facets:', e);
         }
-        return { total: 0, facets: {} };
+        throw e;
     }
 };
 

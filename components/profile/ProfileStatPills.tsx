@@ -4,12 +4,13 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { useTranslation } from '@/i18n/LocaleProvider';
 
 export interface ProfileStatPill {
   key: string;
   label: string;
-  /** Если число задано — показывается крупно; иначе пилюля работает как навигация (иконка). */
-  value?: number;
+  /** Число — подтверждённое значение; null — недоступно; undefined — навигационная иконка. */
+  value?: number | null;
   icon: React.ComponentProps<typeof Feather>['name'];
   onPress: () => void;
   accessibilityHint?: string;
@@ -22,6 +23,7 @@ interface ProfileStatPillsProps {
 const formatValue = (value: number) => (value > 999 ? '999+' : String(value));
 
 export function ProfileStatPills({ pills }: ProfileStatPillsProps) {
+  const { t } = useTranslation();
   const colors = useThemedColors();
 
   const styles = useMemo(
@@ -73,7 +75,9 @@ export function ProfileStatPills({ pills }: ProfileStatPillsProps) {
           key={pill.key}
           onPress={pill.onPress}
           accessibilityRole="button"
-          accessibilityLabel={pill.value != null ? `${pill.label}: ${pill.value}` : pill.label}
+          accessibilityLabel={pill.value === null
+            ? `${pill.label}: ${t('sharedStatic:profileTabs.countUnavailable')}`
+            : pill.value !== undefined ? `${pill.label}: ${pill.value}` : pill.label}
           accessibilityHint={pill.accessibilityHint}
           style={({ pressed }) => [
             styles.pill,
@@ -81,8 +85,8 @@ export function ProfileStatPills({ pills }: ProfileStatPillsProps) {
             { opacity: pressed ? 0.85 : 1 },
           ]}
         >
-          {pill.value != null ? (
-            <Text style={styles.value}>{formatValue(pill.value)}</Text>
+          {pill.value !== undefined ? (
+            <Text style={styles.value}>{pill.value === null ? '—' : formatValue(pill.value)}</Text>
           ) : (
             <Feather name={pill.icon} size={18} color={colors.primaryDark} />
           )}

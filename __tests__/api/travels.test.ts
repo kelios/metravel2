@@ -610,26 +610,59 @@ describe('src/api/travelsApi.ts', () => {
       });
     });
 
-    it('возвращает пустые facets при неуспешном HTTP-ответе', async () => {
+    it('пробрасывает неуспешный HTTP-ответ facets со статусом', async () => {
       const { fetchTravelFacets } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce({ detail: 'error' } as any);
 
-      const result = await fetchTravelFacets('', {}, {} as any);
-
-      expect(result).toEqual({ total: 0, facets: {} });
-      expect(devError).toHaveBeenCalledWith('Error fetching travel facets: HTTP', 500, 'Server Error');
+      await expect(fetchTravelFacets('', {}, {} as any)).rejects.toMatchObject({ status: 500 });
+      expect(devError).toHaveBeenCalled();
     });
 
     it('подавляет devError при suppressErrors=true', async () => {
       const { fetchTravelFacets } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 502, statusText: 'Bad Gateway' } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce({ detail: 'bad gateway' } as any);
 
-      const result = await fetchTravelFacets('', {}, { suppressErrors: true } as any);
-
-      expect(result).toEqual({ total: 0, facets: {} });
+      await expect(fetchTravelFacets('', {}, { suppressErrors: true } as any))
+        .rejects.toMatchObject({ status: 502 });
       expect(devError).not.toHaveBeenCalled();
+    });
+
+    it('не превращает сетевой сбой в успешный ноль при suppressErrors', async () => {
+      const { fetchTravelFacets } = loadTravelsApi();
+      const networkError = new TypeError('Failed to fetch');
+      const signal = new AbortController().signal;
+      mockedFetchWithTimeout.mockRejectedValueOnce(networkError);
+
+      await expect(fetchTravelFacets('', { countries: [3] }, { signal, suppressErrors: true }))
+        .rejects.toBe(networkError);
+      expect(mockedFetchWithTimeout.mock.calls[0][1]?.signal).toBe(signal);
+      expect(devError).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      {},
+      { total: null, facets: {} },
+      { total: '', facets: {} },
+      { total: true, facets: {} },
+      { total: -1, facets: {} },
+      { total: 'invalid', facets: {} },
+      { total: 0, facets: [] },
+      { total: 0, facets: { countries: null } },
+    ])('отклоняет неверный facets payload %j', async (payload) => {
+      const { fetchTravelFacets } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as Response);
+      mockedSafeJsonParse.mockResolvedValueOnce(payload);
+
+      await expect(fetchTravelFacets('', {}, { suppressErrors: true })).rejects.toThrow();
+    });
+
+    it('оставляет настоящий успешный ноль', async () => {
+      const { fetchTravelFacets } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as Response);
+      mockedSafeJsonParse.mockResolvedValueOnce({ total: 0, facets: {} });
+
+      await expect(fetchTravelFacets('', {}, { suppressErrors: true }))
+        .resolves.toEqual({ total: 0, facets: {} });
     });
 
     it('пробрасывает AbortError без логирования', async () => {

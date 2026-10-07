@@ -96,9 +96,9 @@ const CompassDial = memo(function CompassDial({
 // ---------------------------------------------------------------------------
 type FiltersPanelProps = Pick<
   ReturnType<typeof useRouletteLogic>,
-  'filter' | 'filterGroups' | 'handleFilterChange' | 'handleClearAll' | 'filtersLoading'
+  'filter' | 'filterGroups' | 'handleFilterChange' | 'handleClearAll' | 'filtersLoading' | 'resultsLoading' | 'resultsError'
 > & {
-  resultsCount: number;
+  resultsCount?: number;
   onYearChange: (value: unknown) => void;
   onClose?: () => void;
   onApply?: () => void;
@@ -111,6 +111,8 @@ const FiltersPanel = memo(function FiltersPanel({
   handleClearAll,
   filtersLoading,
   resultsCount,
+  resultsLoading,
+  resultsError,
   onYearChange,
   onClose,
   onApply,
@@ -122,6 +124,8 @@ const FiltersPanel = memo(function FiltersPanel({
       onFilterChange={handleFilterChange}
       onClearAll={handleClearAll}
       resultsCount={resultsCount}
+      resultsLoading={resultsLoading}
+      resultsError={resultsError}
       isLoading={filtersLoading}
       year={filter.year}
       onYearChange={onYearChange}
@@ -165,6 +169,8 @@ export default function RouletteScreen() {
     filtersSummary,
     activeFiltersCount,
     totalCount,
+    resultsLoading,
+    resultsError,
     isEmpty,
     result,
     spinning,
@@ -254,6 +260,8 @@ export default function RouletteScreen() {
               handleClearAll={handleClearAll}
               filtersLoading={filtersLoading}
               resultsCount={totalCount}
+              resultsLoading={resultsLoading}
+              resultsError={resultsError}
               onYearChange={onYearChange}
             />
           </View>
@@ -356,7 +364,7 @@ export default function RouletteScreen() {
                       iconSize={22}
                     />
 
-                    {result.length === 0 && totalCount > 0 && (
+                    {result.length === 0 && typeof totalCount === 'number' && totalCount > 0 && (
                       <>
                         <Text style={styles.poolHint}>
                           {i18nT('shared:app.tabs.roulette.sluchaynyy_vybor_iz_value1_value2_02b741a7', { value1: totalCount, value2: getTravelLabel(totalCount) })}
@@ -435,7 +443,7 @@ export default function RouletteScreen() {
                           buttonStyle={styles.mobileRouletteCompassButton}
                           iconSize={20}
                         />
-                        {totalCount > 0 && (
+                        {typeof totalCount === 'number' && totalCount > 0 && (
                           <Text style={styles.poolHint}>
                             {i18nT('shared:app.tabs.roulette.sluchaynyy_vybor_iz_value1_value2_02b741a7', { value1: totalCount, value2: getTravelLabel(totalCount) })}
                           </Text>
@@ -516,6 +524,8 @@ export default function RouletteScreen() {
               handleClearAll={handleClearAll}
               filtersLoading={filtersLoading}
               resultsCount={totalCount}
+              resultsLoading={resultsLoading}
+              resultsError={resultsError}
               onYearChange={onYearChange}
               onClose={closeFilters}
               onApply={closeFilters}

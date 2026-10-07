@@ -219,12 +219,8 @@ function Home() {
     queryKey: queryKeys.myTravelsCount(userId),
     queryFn: async (): Promise<{ items: Record<string, unknown>[]; total: number }> => {
       if (!userId) return { items: [], total: 0 }
-      try {
-        const payload = await fetchMyTravels({ user_id: userId, perPage: 1 })
-        return unwrapMyTravelsPayload(payload)
-      } catch {
-        return { items: [], total: 0 }
-      }
+      const payload = await fetchMyTravels({ user_id: userId, perPage: 1, throwOnError: true })
+      return unwrapMyTravelsPayload(payload)
     },
     enabled: isAuthenticated && !!userId && isFocused,
     staleTime: 10 * 60 * 1000,
@@ -233,7 +229,7 @@ function Home() {
     refetchOnMount: false,
   })
 
-  const travelsCount = myTravelsData?.total ?? 0
+  const travelsCount = myTravelsData?.total
 
   useEffect(() => {
     if (!isFocused) return

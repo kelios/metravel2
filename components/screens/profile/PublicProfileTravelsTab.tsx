@@ -79,7 +79,7 @@ export function PublicProfileTravelsTab({
     );
   }
 
-  if (isError) {
+  if (isError && travels.length === 0) {
     return <Text style={styles.stateText}>{i18nT('profile:components.screens.profile.PublicProfileTravelsTab.ne_udalos_zagruzit_puteshestviya_avtora_9b0811fb')}</Text>;
   }
 
@@ -89,6 +89,9 @@ export function PublicProfileTravelsTab({
 
   return (
     <View style={styles.wrap}>
+      {isError && (
+        <Text style={styles.stateText}>{i18nT('profile:components.screens.profile.PublicProfileTravelsTab.ne_udalos_zagruzit_puteshestviya_avtora_9b0811fb')}</Text>
+      )}
       <View style={styles.grid}>
         {travels.map((travel, index) => {
           // `cityName` приходит адресом первой точки: в одну строку карточки он

@@ -12,13 +12,14 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import Button from '@/components/ui/Button'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 
 
 interface HomeFinalCTAProps {
   travelsCount?: number
 }
 
-type CtaState = 'guest' | 'empty' | 'started'
+type CtaState = 'guest' | 'unknown' | 'empty' | 'started'
 
 const TRUST_BADGES = [
   { icon: 'check-circle', get label() { return i18nT('homeStatic:components.home.HomeFinalCTA.besplatno_7db7b3ed') } },
@@ -26,13 +27,19 @@ const TRUST_BADGES = [
   { icon: 'zap', get label() { return i18nT('homeStatic:components.home.HomeFinalCTA.mgnovenno_3314e6a0') } },
 ] as const
 
-function getCtaState(isAuthenticated: boolean, travelsCount: number): CtaState {
+function getCtaState(isAuthenticated: boolean, travelsCount?: number): CtaState {
   if (!isAuthenticated) return 'guest'
+  if (travelsCount == null) return 'unknown'
   if (travelsCount === 0) return 'empty'
   return 'started'
 }
 
 const CTA_COPY: Record<CtaState, { eyebrow: string; button: string; subtitle: string }> = {
+  unknown: {
+    get eyebrow() { return i18nT('homeStatic:finalCta.guest.eyebrow') },
+    get button() { return i18nT('navigationStatic:components.layout.AccountMenu.dobavit_puteshestvie_bebd3820') },
+    get subtitle() { return i18nT('homeStatic:components.home.HomeFinalCTA.sohranyayte_marshruty_s_foto_i_zametkami_cht_ba8853fc') },
+  },
   guest: {
     get eyebrow() { return i18nT('homeStatic:finalCta.guest.eyebrow') },
     get button() { return i18nT('homeStatic:finalCta.guest.button') },
@@ -52,16 +59,17 @@ const CTA_COPY: Record<CtaState, { eyebrow: string; button: string; subtitle: st
 
 function getNextPath(state: CtaState) {
   if (state === 'guest') return buildLoginHref({ redirect: '/', intent: 'create-book' })
-  if (state === 'empty') return '/travel/new'
+  if (state === 'empty' || state === 'unknown') return '/travel/new'
   return '/export'
 }
 
-function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
+function HomeFinalCTA({ travelsCount }: HomeFinalCTAProps) {
   const router = useRouter()
   const { isAuthenticated } = useAuth()
   const { isSmallPhone, isPhone, isLargePhone } = useResponsive()
   const isMobile = isSmallPhone || isPhone || isLargePhone
   const colors = useThemedColors()
+  useTranslation()
 
   const ctaState = getCtaState(isAuthenticated, travelsCount)
   const copy = CTA_COPY[ctaState]
