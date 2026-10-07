@@ -826,7 +826,7 @@ it.each([
   [false, 'observer', true, false, 'width'],
   [false, 'layout-commit', true, false, 'height'],
   [false, 'layout-commit', true, false, 'reserve'],
-] as const)('preserves both reading frames inside the outer runtime across nested reserve slack (natural=%s, delivery=%s, hidden Comments runtime=%s, Popular first=%s, reflow=%s)', (natural, delivery, hiddenComments, popularFirst, reflow) => {
+] as const)('preserves both frames for nested geometry and visible following Comments for own payload/release (natural=%s, delivery=%s, hidden Comments runtime=%s, Popular first=%s, reflow=%s)', (natural, delivery, hiddenComments, popularFirst, reflow) => {
   const host = document.createElement('div')
   const owner = document.createElement('div')
   const mount = document.createElement('div')
@@ -915,8 +915,8 @@ it.each([
     owner.scrollTop = initialTop
     writes.length = 0
     const readingAnchor = node('popular')
-    let beforeComments = node('comments').getBoundingClientRect().top
-    const before = readingAnchor.getBoundingClientRect().top
+    const beforeComments = node('comments').getBoundingClientRect().top
+    let before = readingAnchor.getBoundingClientRect().top
     expect(before).toBe(hiddenComments ? 187.96875 : 322.96875)
     if (hiddenComments) {
       expect(node('comments-transition').dataset.deferredTransitionState).toBe('measuring-runtime')
@@ -927,12 +927,15 @@ it.each([
     if (popularFirst) {
       popularGrowth = 2494
       act(() => { resize('sidebar'); resize('outer') })
-      expect(readingAnchor.getBoundingClientRect().top).toBe(before)
+      // Own payload growth preserves the already-visible following Comments.
+      // The Popular top legitimately scrolls by its added payload height.
+      expect(node('comments').getBoundingClientRect().top).toBe(beforeComments)
+      expect(readingAnchor.getBoundingClientRect().top).toBe(before - popularGrowth)
       expect(height('sidebar')).toBe(3338)
-      expect(owner.scrollTop).toBe(initialTop)
-      expect(writes).toEqual(natural ? [initialTop] : [])
+      expect(owner.scrollTop).toBe(initialTop + popularGrowth)
+      expect(writes).toEqual(natural ? [] : [initialTop + popularGrowth])
       writes.length = 0
-      beforeComments = node('comments').getBoundingClientRect().top
+      before = readingAnchor.getBoundingClientRect().top
     }
     act(() => {
       if (delivery === 'layout-commit') root.render(tree(125))
@@ -951,18 +954,19 @@ it.each([
     // the leaf, so both the inner reading frame and following Comments agree.
     expect(readingAnchor.getBoundingClientRect().top).toBe(before)
     expect(node('comments').getBoundingClientRect().top).toBe(beforeComments)
-    expect(owner.scrollTop).toBe(initialTop + 157)
-    expect(writes).toEqual(natural ? [] : [initialTop + 157])
-    if (hiddenComments && !natural) {
-      // Real Popular payload grows inside the absolute Sidebar runtime. A
-      // following hidden Comments reserve must not pull the reading list away.
+    expect(owner.scrollTop).toBe(initialTop + 157 + popularGrowth)
+    expect(writes).toEqual(natural ? [] : [initialTop + 157 + popularGrowth])
+    if (hiddenComments && !natural && !popularFirst) {
+      // The Comments wrapper is drawn even while its absolute runtime is
+      // measuring. Preserve its original paint position during own payload growth.
       popularGrowth = 2494
       act(() => { resize('sidebar'); resize('outer') })
       expect(height('sidebar')).toBe(3495)
-      expect(readingAnchor.getBoundingClientRect().top).toBe(before)
-      expect(owner.scrollTop).toBe(initialTop + 157)
-      expect(writes).toEqual([initialTop + 157])
-      beforeComments = node('comments').getBoundingClientRect().top
+      expect(readingAnchor.getBoundingClientRect().top).toBe(before - popularGrowth)
+      expect(node('comments').getBoundingClientRect().top).toBe(beforeComments)
+      expect(owner.scrollTop).toBe(initialTop + 157 + popularGrowth)
+      expect(writes).toEqual([initialTop + 157, initialTop + 157 + popularGrowth])
+      before = readingAnchor.getBoundingClientRect().top
     }
     // Duplicate observations/React children commits cannot collect the same
     // slack twice. Shrink and a second growth preserve both existing frames.
@@ -981,14 +985,14 @@ it.each([
     const beforeReleaseWrites = writes.slice()
     settledSidebar = true
     act(() => root.render(tree(125)))
-    // Release only the actual22 blank reserve. The current runtime reading
-    // frame stays in place, including when native anchoring moves the owner.
+    // Release only the actual22 blank reserve under the same visible-following
+    // ownership. Inner content moves22 while Comments remains at its original top.
     expect(node('sidebar').style.minHeight).toBe('')
     expect(height('sidebar')).toBe(979 + popularGrowth)
-    expect(readingAnchor.getBoundingClientRect().top).toBe(before)
-    expect(owner.scrollTop).toBe(initialTop + 157)
-    expect(node('comments').getBoundingClientRect().top).toBe(beforeComments - 22)
-    expect(writes).toEqual(natural ? [...beforeReleaseWrites, initialTop + 157] : beforeReleaseWrites)
+    expect(readingAnchor.getBoundingClientRect().top).toBe(before + 22)
+    expect(owner.scrollTop).toBe(initialTop + 135 + popularGrowth)
+    expect(node('comments').getBoundingClientRect().top).toBe(beforeComments)
+    expect(writes).toEqual(natural ? beforeReleaseWrites : [...beforeReleaseWrites, initialTop + 135 + popularGrowth])
     const releasedWrites = writes.slice()
     act(() => { resize('sidebar'); resize('outer') })
     expect(writes).toEqual(releasedWrites)
@@ -1000,6 +1004,9 @@ it.each([
     act(() => root.render(tree(0)))
     expect(height('sidebar')).toBe(822)
     expect(sidebarFlow()).toBe(844)
+    // The new visit no longer contains the previous2494 payload. Establish its
+    // reading position before testing anchoring in that fresh coordinate frame.
+    owner.scrollTop = initialTop
     act(() => root.render(tree(125)))
     expect(height('sidebar')).toBe(1001)
     if (reflow) {
@@ -1076,5 +1083,164 @@ it('allows genuine bottom clamping during settled responsive shrink without a sy
     expect(f.owner.scrollTop).toBe(f.owner.scrollHeight - f.owner.clientHeight)
     expect(f.writes).toEqual([])
     expect(f.transition().dataset.reserveReleaseState).toBe(state)
+  } finally { f.cleanup() }
+})
+
+// Production Sidebar has ONE aggregate child containing Near, Navigation and
+// Popular. A payload can make that previously offscreen child intersect the
+// viewport; its post-insertion bounds cannot replace the visible Comments frame.
+function aggregateSidebarFixture(rawHeight: number, commentsTop: number, natural: boolean, delivery: 'observer' | 'layout-commit', visibleFollowing = true) {
+  const host = document.createElement('div')
+  const owner = document.createElement('div')
+  const mount = document.createElement('div')
+  owner.style.overflowY = 'auto'
+  owner.append(mount)
+  host.append(owner)
+  document.body.append(host)
+  const initialTop = 23035
+  let top = initialTop
+  let adjustment = 0
+  let payload = 0
+  let near = 0
+  let settled = false
+  const writes: number[] = []
+  const node = (id: string) => mount.querySelector<HTMLElement>(`[data-testid="aggregate-${id}"]`)!
+  const height = (id: string) => Number.parseFloat(node(id)?.style.height || '0')
+  const flow = () => Math.max(Number.parseFloat(node('sidebar')?.style.minHeight || '0'), height('sidebar'))
+  const intrinsic = () => rawHeight + payload + near + height('navigation')
+  Object.defineProperties(owner, {
+    clientHeight: { configurable: true, value: 790 },
+    clientWidth: { configurable: true, value: 390 },
+    scrollHeight: { configurable: true, get: () => 30000 + height('outer') },
+    scrollTop: {
+      configurable: true,
+      get: () => natural ? initialTop + flow() - 844 + adjustment : top,
+      set: value => { top = value; adjustment = value - initialTop - flow() + 844; writes.push(value) },
+    },
+  })
+  owner.getBoundingClientRect = () => rect(54, 790)
+  const originalRect = HTMLElement.prototype.getBoundingClientRect
+  HTMLElement.prototype.getBoundingClientRect = function () {
+    const shift = owner.scrollTop - initialTop
+    const sidebarTop = commentsTop - 844 - shift
+    switch (this.dataset.testid) {
+      case 'aggregate-sidebar': return rect(sidebarTop, flow())
+      case 'aggregate-sidebar-runtime': return rect(sidebarTop, intrinsic())
+      case 'aggregate-sidebar-runtime-frame': return rect(sidebarTop, intrinsic())
+      case 'aggregate-popular': return rect(sidebarTop + rawHeight - 396 + near + height('navigation'), 364 + payload)
+      case 'aggregate-navigation-runtime': return rect(0, Number.parseFloat((this.firstElementChild as HTMLElement).style.height || '0'))
+      case 'aggregate-comments': return rect(commentsTop + flow() - 844 - shift, 844)
+      case 'aggregate-comments-transition-runtime': return rect(0, 226)
+      case 'aggregate-outer-runtime': return rect(sidebarTop, flow() + 844)
+      default: return originalRect.call(this)
+    }
+  }
+  const root = createRoot(mount)
+  const tree = (navigation = 0) => createElement(Transition, {
+    isMobile: true, pending: false, placeholder: null, runtimeFrameReady: true, testID: 'aggregate-outer',
+    children: createElement('div', null,
+      createElement(Transition, {
+        isMobile: true, pending: false, placeholder: null, runtimeFrameReady: settled, runtimeVisibilityReady: true,
+        reserveHeight: 844, testID: 'aggregate-sidebar',
+        children: createElement('div', { 'data-testid': 'aggregate-sidebar-runtime-frame' },
+          createElement('div', { 'data-testid': 'aggregate-near' }),
+          createElement(Transition, {
+            isMobile: true, pending: false, placeholder: null, runtimeFrameReady: true, allowEmptyRuntime: true,
+            testID: 'aggregate-navigation', children: createElement('div', { style: { height: navigation } }),
+          }),
+          createElement('div', { 'data-testid': 'aggregate-popular' }),
+        ),
+      }),
+      createElement('div', { 'data-testid': 'aggregate-comments', style: visibleFollowing ? undefined : { opacity: 0 } },
+        createElement(Transition, {
+          isMobile: true, pending: false, runtimeFrameReady: false, reserveHeight: 844,
+          testID: 'aggregate-comments-transition', placeholder: null, children: createElement('div', { style: { height: 226 } }),
+        }),
+      ),
+    ),
+  })
+  const resize = (id: string) => {
+    const layer = node(`${id}-runtime`)
+    for (const observer of MeasuredResizeObserver.instances.filter(candidate => candidate.targets.has(layer))) {
+      observer.callback([{ target: layer } as ResizeObserverEntry], observer as unknown as ResizeObserver)
+    }
+  }
+  const update = () => act(() => {
+    if (delivery === 'layout-commit') root.render(tree(height('navigation')))
+    else { resize('sidebar'); resize('outer') }
+  })
+  act(() => root.render(tree()))
+  owner.scrollTop = initialTop
+  writes.length = 0
+  return {
+    node, height, flow, owner, writes, initialTop,
+    payload: (value: number) => { payload = value; update() },
+    near: (value: number) => { near = value; update() },
+    navigation: (value: number) => act(() => root.render(tree(value))),
+    release: () => { settled = true; act(() => root.render(tree(height('navigation')))) },
+    repeat: update,
+    cleanup: () => { act(() => root.unmount()); host.remove(); HTMLElement.prototype.getBoundingClientRect = originalRect },
+  }
+}
+
+it.each([
+  [613, 87.96875, 2494, false, 'observer'], [613, 87.96875, 2494, true, 'observer'],
+  [613, 87.96875, 2494, false, 'layout-commit'], [613, 87.96875, 2494, true, 'layout-commit'],
+  [822, 740.96875, 2630, false, 'observer'], [822, 740.96875, 2630, true, 'observer'],
+  [822, 740.96875, 2630, false, 'layout-commit'], [822, 740.96875, 2630, true, 'layout-commit'],
+] as const)('keeps visible Comments across real aggregate payload/release (raw=%s, y=%s, payload=%s, natural=%s, delivery=%s)', (raw, y, payload, natural, delivery) => {
+  const f = aggregateSidebarFixture(raw, y, natural, delivery)
+  try {
+    const before = f.node('comments').getBoundingClientRect().top
+    expect(f.flow()).toBe(844)
+    expect(f.height('sidebar')).toBe(raw)
+    if (raw === 613) expect(f.node('sidebar-runtime-frame').getBoundingClientRect().bottom).toBeLessThan(54)
+    f.payload(payload)
+    expect(f.node('comments').getBoundingClientRect().top).toBe(before)
+    expect(f.owner.scrollTop).toBe(f.initialTop + payload)
+    expect(f.writes).toEqual(natural ? [] : [f.initialTop + payload])
+    expect(f.flow()).toBe(844 + payload)
+    f.repeat()
+    expect(f.writes).toEqual(natural ? [] : [f.initialTop + payload])
+    f.payload(payload - 100)
+    expect(f.node('comments').getBoundingClientRect().top).toBe(before)
+    f.payload(payload)
+    expect(f.node('comments').getBoundingClientRect().top).toBe(before)
+    f.release()
+    expect(f.flow()).toBe(raw + payload)
+    expect(f.node('comments').getBoundingClientRect().top).toBe(before)
+    expect(f.owner.scrollTop).toBe(f.initialTop + payload - (844 - raw))
+    f.near(209)
+    expect(f.node('comments').getBoundingClientRect().top).toBe(before)
+    f.navigation(157)
+    expect(f.node('comments').getBoundingClientRect().top).toBe(before)
+  } finally { f.cleanup() }
+})
+
+it.each([
+  [613, 87.96875, false], [613, 87.96875, true],
+  [822, 740.96875, false], [822, 740.96875, true],
+] as const)('keeps the visible following frame when releasing conserved reserve (raw=%s, y=%s, natural=%s)', (raw, y, natural) => {
+  const f = aggregateSidebarFixture(raw, y, natural, 'observer')
+  try {
+    const before = f.node('comments').getBoundingClientRect().top
+    f.navigation(157)
+    expect(f.node('comments').getBoundingClientRect().top).toBe(before)
+    f.writes.length = 0
+    f.release()
+    expect(f.node('comments').getBoundingClientRect().top).toBe(before)
+    expect(f.owner.scrollTop).toBe(f.initialTop + 157 - (844 - raw))
+    expect(f.writes).toEqual(natural ? [] : [f.initialTop + 157 - (844 - raw)])
+  } finally { f.cleanup() }
+})
+
+it.each([false, true])('uses a drawn runtime only as the release fallback without a visible following frame (natural=%s)', natural => {
+  const f = aggregateSidebarFixture(822, 740.96875, natural, 'observer', false)
+  try {
+    f.navigation(157)
+    const before = f.node('sidebar-runtime-frame').getBoundingClientRect().top
+    f.release()
+    expect(f.node('sidebar-runtime-frame').getBoundingClientRect().top).toBe(before)
+    expect(f.flow()).toBe(979)
   } finally { f.cleanup() }
 })

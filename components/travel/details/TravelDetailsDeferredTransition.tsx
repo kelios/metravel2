@@ -147,9 +147,9 @@ function captureAncestorReserveSlack(node: HTMLElement) {
   }
 }
 
-// A reserved runtime may grow inside its pinned flow frame. Prefer its drawn
-// content when changing/releasing conserved slack; a following reserve should
-// not pull that current reading content out of the viewport.
+// When releasing conserved slack, a drawn runtime is a fallback only if no
+// visible following frame owns the transaction. Its post-insertion aggregate
+// bounds cannot identify the reading anchor for a runtime payload mutation.
 function findRuntimeReadingAnchor(node: HTMLElement, runtime: HTMLElement | null): ReserveReleaseAnchor | null {
   const owner = findMeasuredScrollOwner(node)
   const view = node.ownerDocument.defaultView
@@ -440,10 +440,7 @@ export function TravelDetailsDeferredTransition({
         if (!obsoleteSlack) currentReserveSlackCaptureRef.current?.()
         captureAncestorReserveSlack(node)
       }
-      const readingAnchor = reserveSlackRef.current && !currentResponsiveWidthChangeRef.current?.() && runtime &&
-        Math.abs(reserveSlackRef.current.width - runtime.getBoundingClientRect().width) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX
-        ? findRuntimeReadingAnchor(node, runtime) : null
-      const capture = obsoleteSlack ? null : readingAnchor ?? findMeasuredTransactionAnchor(node)
+      const capture = obsoleteSlack ? null : findMeasuredTransactionAnchor(node)
       if (!measureRuntimeHeight()) return
       measureAncestorTransitions(node)
       const corrected = correctMeasuredAnchor(capture, node)
@@ -475,8 +472,8 @@ export function TravelDetailsDeferredTransition({
     if (Platform.OS !== 'web' || !wantsRuntimeVisible || !runtimeMeasured || !runtimeFrameReady || reserveHeight == null) return
     const node = connectedDOMView(transitionRef.current)
     if (reserveReleaseState === 'reserved') {
-      const readingAnchor = node && reserveSlackRef.current ? findRuntimeReadingAnchor(node, connectedDOMView(runtimeRef.current)) : null
-      releaseAnchorRef.current = node ? readingAnchor ?? findMeasuredTransactionAnchor(node) : null
+      releaseAnchorRef.current = node ? findMeasuredTransactionAnchor(node) ??
+        (reserveSlackRef.current ? findRuntimeReadingAnchor(node, connectedDOMView(runtimeRef.current)) : null) : null
       setReserveReleaseState('released')
       return
     }
