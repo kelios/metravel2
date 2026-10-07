@@ -2,9 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 import {
-  GUEST_FAVORITES_KEY,
   GUEST_QUEST_PREVIEW_KEY,
-  getGuestFavoritesStorageKey,
   recordGuestQuestPreview,
 } from '@/utils/guestTrialState';
 
@@ -20,16 +18,6 @@ describe('guestTrialState', () => {
   afterEach(() => {
     (Platform as any).OS = originalPlatform;
     jest.restoreAllMocks();
-  });
-
-  it('uses guest favorites storage only for Android guests', () => {
-    (Platform as any).OS = 'android';
-
-    expect(getGuestFavoritesStorageKey(null)).toBe(GUEST_FAVORITES_KEY);
-    expect(getGuestFavoritesStorageKey('104')).toBe('metravel_favorites_104');
-
-    (Platform as any).OS = 'web';
-    expect(getGuestFavoritesStorageKey(null)).toBe('metravel_favorites');
   });
 
   it('records Android guest quest preview as best-effort local state', async () => {

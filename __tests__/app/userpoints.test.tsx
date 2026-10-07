@@ -17,6 +17,10 @@ jest.mock('expo-router', () => ({
   usePathname: jest.fn(() => '/userpoints'),
   useLocalSearchParams: () => mockParams,
   useIsFocused: () => true,
+  useFocusEffect: (effect: () => undefined | (() => void)) => {
+    const ReactLib = require('react');
+    ReactLib.useEffect(() => effect(), [effect]);
+  },
 }));
 
 jest.mock('@/hooks/useResponsive', () => ({

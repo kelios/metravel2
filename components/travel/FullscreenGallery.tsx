@@ -210,6 +210,12 @@ export default function FullscreenGallery({
           renderItem={renderItem}
           horizontal
           pagingEnabled
+          // One full-screen photo per page: keep only the neighbours mounted.
+          // The FlatList default (windowSize 21) held ~21 decoded full-size
+          // bitmaps at once — an OOM risk on Android (PERF-2).
+          windowSize={3}
+          initialNumToRender={1}
+          maxToRenderPerBatch={1}
           scrollEnabled={zoomedRawIndex == null}
           showsHorizontalScrollIndicator={false}
           initialScrollIndex={toRawIndex(initialIndex)}

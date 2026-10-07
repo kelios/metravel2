@@ -65,6 +65,15 @@ export const NOTIFICATION_CHANNELS: NotificationChannel[] = [
     get description() { return i18nT('sharedStatic:services.notifications.ezhenedelnyy_daydzhest_i_rekomendatsii_marsh_a39d7cec') },
     importance: 2, // LOW
   },
+  {
+    // Локальные квестовые уведомления: «вы рядом с точкой», напоминание о
+    // незавершённом квесте и «вернуться к квестам города». Раньше уходили в
+    // `recommendations` (LOW) — без звука и heads-up на Android (PUSH-1).
+    id: 'quests',
+    get name() { return i18nT('sharedStatic:notifications.quests.name') },
+    get description() { return i18nT('sharedStatic:notifications.quests.description') },
+    importance: 3, // DEFAULT
+  },
 ];
 
 // --- Lazy module loading ---
@@ -393,7 +402,7 @@ export async function presentLocalQuestNotification(
         title,
         body,
         data: { url: `/quests/${deepLinkUrl}` },
-        ...(Platform.OS === 'android' ? { channelId: 'recommendations' } : {}),
+        ...(Platform.OS === 'android' ? { channelId: 'quests' } : {}),
       },
       // null trigger → present immediately.
       trigger: null,
@@ -433,7 +442,7 @@ export async function scheduleQuestReminder(
         title: i18nT('shared:services.notifications.prodolzhite_priklyuchenie_85f79e46'),
         body: i18nT('shared:services.notifications.vy_ostanovilis_na_shage_value1_value2_v_kves_8393cf7d', { value1: step, value2: total, value3: title }),
         data: { url: `/quests/${deepLinkUrl}` },
-        ...(Platform.OS === 'android' ? { channelId: 'recommendations' } : {}),
+        ...(Platform.OS === 'android' ? { channelId: 'quests' } : {}),
       },
       trigger: {
         // SECONDS trigger — fires once after the delay.
@@ -488,7 +497,7 @@ export async function scheduleQuestReturnReminder(
           count: remainingCount,
         }),
         data: { url: `/quests/${cityDeepLink}` },
-        ...(Platform.OS === 'android' ? { channelId: 'recommendations' } : {}),
+        ...(Platform.OS === 'android' ? { channelId: 'quests' } : {}),
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,

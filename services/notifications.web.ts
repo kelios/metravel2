@@ -52,6 +52,12 @@ export const NOTIFICATION_CHANNELS: NotificationChannel[] = [
     get description() { return i18nT('sharedStatic:services.notifications.ezhenedelnyy_daydzhest_i_rekomendatsii_marsh_a39d7cec') },
     importance: 2,
   },
+  {
+    id: 'quests',
+    get name() { return i18nT('sharedStatic:notifications.quests.name') },
+    get description() { return i18nT('sharedStatic:notifications.quests.description') },
+    importance: 3,
+  },
 ]
 
 export async function setupNotificationChannels(): Promise<void> {}

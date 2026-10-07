@@ -116,48 +116,66 @@ export interface FiltersProviderProps extends FiltersContextValue {
  * </FiltersProvider>
  * ```
  */
+/**
+ * Every field of `FiltersContextValue`, in one place. The provider memoises the
+ * context value over exactly these fields, and `FiltersContextKeysAreExhaustive`
+ * below fails `tsc` when a field is added to the interface but not listed here.
+ * The hand-written dependency list this replaces had silently dropped `isBusy`,
+ * so the panel showed «Ничего не нашлось» while the map was still loading (ST-2).
+ */
+const FILTERS_CONTEXT_KEYS = [
+  'filters',
+  'filterValue',
+  'onFilterChange',
+  'resetFilters',
+  'overlayOptions',
+  'enabledOverlays',
+  'onOverlayToggle',
+  'onResetOverlays',
+  'travelsData',
+  'filteredTravelsData',
+  'resultsTotal',
+  'isBusy',
+  'isMobile',
+  'closeMenu',
+  'mode',
+  'setMode',
+  'transportMode',
+  'setTransportMode',
+  'startAddress',
+  'endAddress',
+  'routeDistance',
+  'routeDuration',
+  'routeElevationGain',
+  'routeElevationLoss',
+  'routePoints',
+  'onRemoveRoutePoint',
+  'onClearRoute',
+  'swapStartEnd',
+  'routeHintDismissed',
+  'onRouteHintDismiss',
+  'onAddressSelect',
+  'onAddressClear',
+  'routingLoading',
+  'routingError',
+  'onBuildRoute',
+  'mapUiApi',
+  'userLocation',
+  'onPlaceSelect',
+  'onOpenList',
+] as const satisfies ReadonlyArray<keyof FiltersContextValue>;
+
+type AssertExhaustive<T extends never> = T;
+/** Compile-time guard: resolves to `never` only when no interface key is missing above. */
+export type FiltersContextKeysAreExhaustive = AssertExhaustive<
+  Exclude<keyof FiltersContextValue, (typeof FILTERS_CONTEXT_KEYS)[number]>
+>;
+
 export function FiltersProvider({ children, ...contextValue }: FiltersProviderProps) {
+  // The dependency list is derived from FILTERS_CONTEXT_KEYS (constant length), so
+  // the lint rule cannot verify it statically; exhaustiveness is checked by `tsc`.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const value = useMemo(() => contextValue, [
-    contextValue.filters,
-    contextValue.filterValue,
-    contextValue.onFilterChange,
-    contextValue.resetFilters,
-    contextValue.overlayOptions,
-    contextValue.enabledOverlays,
-    contextValue.onOverlayToggle,
-    contextValue.onResetOverlays,
-    contextValue.travelsData,
-    contextValue.filteredTravelsData,
-    contextValue.resultsTotal,
-    contextValue.isMobile,
-    contextValue.closeMenu,
-    contextValue.mode,
-    contextValue.setMode,
-    contextValue.transportMode,
-    contextValue.setTransportMode,
-    contextValue.startAddress,
-    contextValue.endAddress,
-    contextValue.routeDistance,
-    contextValue.routeDuration,
-    contextValue.routeElevationGain,
-    contextValue.routeElevationLoss,
-    contextValue.routePoints,
-    contextValue.onRemoveRoutePoint,
-    contextValue.onClearRoute,
-    contextValue.swapStartEnd,
-    contextValue.routeHintDismissed,
-    contextValue.onRouteHintDismiss,
-    contextValue.onAddressSelect,
-    contextValue.onAddressClear,
-    contextValue.routingLoading,
-    contextValue.routingError,
-    contextValue.onBuildRoute,
-    contextValue.mapUiApi,
-    contextValue.userLocation,
-    contextValue.onPlaceSelect,
-    contextValue.onOpenList,
-  ]);
+  const value = useMemo(() => contextValue, FILTERS_CONTEXT_KEYS.map((key) => contextValue[key]));
 
   return (
     <FiltersContext.Provider value={value}>

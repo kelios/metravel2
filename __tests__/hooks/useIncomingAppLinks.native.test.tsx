@@ -73,6 +73,11 @@ describe('mapIncomingAppLinkToHref', () => {
     ['https://metravel.by/trips/plan/31?edit=1#notes', '/trips/plan/31?edit=1'],
     ['metravel:///trips', '/trips'],
     ['metravel:///trips/my', '/trips/my'],
+    // DL-3: напоминание «вернуться к квестам города» ведёт на лендинг города,
+    // который раньше отбраковывался как неизвестный трёхсегментный путь.
+    ['https://metravel.by/quests', '/quests'],
+    ['https://metravel.by/quests/krakow?from=reminder', '/quests/krakow?from=reminder'],
+    ['metravel:///quests/krakow', '/quests/krakow'],
   ])('normalizes %s', (url, expected) => {
     expect(mapIncomingAppLinkToHref(url)).toBe(expected);
   });
@@ -155,6 +160,8 @@ describe('mapIncomingAppLinkToHref', () => {
 describe('mapNotificationPayloadToHref', () => {
   it.each([
     [{ url: '/travels/test-slug' }, '/travels/test-slug'],
+    // DL-3: payload возвратного напоминания о квестах города.
+    [{ url: '/quests/krakow' }, '/quests/krakow'],
     [{ screen: '/map?lat=50.06&lng=19.94' }, '/map?lat=50.06&lng=19.94'],
     [{ screen: 'quest', city: 'krakow', quest_id: 'krakow-dragon' }, '/quests/krakow/krakow-dragon'],
     [{ screen: 'message', userId: 17 }, '/messages?userId=17'],

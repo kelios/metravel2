@@ -65,6 +65,8 @@ export const sharedStaticResources = {
   "notifications.messages.name": "Wiadomości",
   "notifications.updates.name": "Aktualizacje",
   "notifications.recommendations.name": "Zalecenia",
+  "notifications.quests.name": "Questy",
+  "notifications.quests.description": "Przypomnienia o questach: jesteś blisko punktu lub trasa nie została ukończona",
   "subscription.defaultTitle": "Subskrybuj nowe trasy",
   "subscription.defaultSubtitle": "Co kilka tygodni - najlepsze wycieczki, pomysły na weekendy i wyprawy po miastach. Żadnego spamu, możesz zrezygnować z subskrypcji jednym kliknięciem.",
   "subscription.articleTitle": "Wyślemy Ci tę trasę na e-mail",

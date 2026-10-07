@@ -106,6 +106,7 @@ function isSafePreservedSearch(search: string): boolean {
  */
 const PUBLIC_STATIC_ROUTES = new Set<string>([
   '/map',
+  '/quests',
   '/trips',
   '/trips/my',
   '/trips/community',
@@ -118,8 +119,13 @@ const PUBLIC_STATIC_ROUTES = new Set<string>([
  */
 const IN_APP_STATIC_ROUTES = new Set<string>(['search', 'favorites', 'messages']);
 
-/** Одноуровневые маршруты со свободным сегментом-слагом. */
-const SLUG_ROUTE_PARENTS = new Set<string>(['travels', 'article', 'user']);
+/**
+ * Одноуровневые маршруты со свободным сегментом-слагом. `quests` — лендинг
+ * города (`app/(tabs)/quests/[city]`): на него ведёт локальное напоминание
+ * «вернуться к квестам города» (`services/notifications.ts`), и без этой записи
+ * тап по уведомлению молча ничего не открывал (DL-3).
+ */
+const SLUG_ROUTE_PARENTS = new Set<string>(['travels', 'article', 'user', 'quests']);
 
 const isPositiveIntegerSegment = (segment: string): boolean =>
   /^[1-9]\d*$/.test(segment);

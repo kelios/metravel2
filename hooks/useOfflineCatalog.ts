@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { offlineCatalog } from '@/services/offline/offlineCatalog';
 import { offlineOperations } from '@/services/offline/offlineOperations';
 import type {
@@ -6,6 +6,7 @@ import type {
   OfflinePackageOperation,
   OfflineStorageSummary,
 } from '@/services/offline/types';
+import { devWarn } from '@/utils/logger';
 
 const EMPTY_SUMMARY: OfflineStorageSummary = {
   packageCount: 0,
@@ -19,15 +20,27 @@ export function useOfflineCatalog(currentUserId?: string | number | null) {
   const [summary, setSummary] = useState<OfflineStorageSummary>(EMPTY_SUMMARY);
   const [operations, setOperations] = useState<OfflinePackageOperation[]>(() => offlineOperations.list());
   const [isLoading, setIsLoading] = useState(true);
+  // Monotonic refresh counter: a slow read for the previous account must not land
+  // after the current account's result (account switch), and a failed read must
+  // not leave the screen in `isLoading` forever (OFF-3).
+  const refreshVersionRef = useRef(0);
 
   const refresh = useCallback(async () => {
-    const [nextItems, nextSummary] = await Promise.all([
-      offlineCatalog.list(currentUserId),
-      offlineCatalog.summary(currentUserId),
-    ]);
-    setItems(nextItems);
-    setSummary(nextSummary);
-    setIsLoading(false);
+    const version = ++refreshVersionRef.current;
+    try {
+      const [nextItems, nextSummary] = await Promise.all([
+        offlineCatalog.list(currentUserId),
+        offlineCatalog.summary(currentUserId),
+      ]);
+      if (version !== refreshVersionRef.current) return;
+      setItems(nextItems);
+      setSummary(nextSummary);
+    } catch (error) {
+      if (version !== refreshVersionRef.current) return;
+      devWarn('[useOfflineCatalog] refresh failed', error);
+    } finally {
+      if (version === refreshVersionRef.current) setIsLoading(false);
+    }
   }, [currentUserId]);
 
   useEffect(() => {

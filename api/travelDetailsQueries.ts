@@ -21,9 +21,17 @@ import {
     unwrapTravelsList,
     isAbortError,
 } from './travelQueryShared';
+import {
+    getSlugCacheKey,
+    guestTravelMemoryCache,
+    observeTravelDetailSession,
+} from './travelDetailMemoryCache';
 
-const travelCache = new Map<number, Travel>();
-const travelSlugCache = new Map<string, Travel>();
+export {
+    clearTravelDetailMemoryCache,
+    invalidateTravelDetailMemoryCache,
+} from './travelDetailMemoryCache';
+
 const travelInFlight = new Map<string, Promise<Travel>>();
 
 type PublicTravelRequestOptions = { signal?: AbortSignal; skipAuth?: boolean };
@@ -47,27 +55,6 @@ type TravelPreloadWindow = Window & typeof globalThis & {
     };
     __metravelTravelPreloadPending?: boolean;
     __metravelTravelPreloadPromise?: Promise<unknown>;
-};
-
-const getSlugCacheKey = (slug: string): string =>
-    String(slug || '').replace(/^\/+/, '').trim();
-
-export const invalidateTravelDetailMemoryCache = (
-    ...travelKeys: Array<string | number | null | undefined>
-): void => {
-    travelKeys.forEach((key) => {
-        if (key == null) return;
-        const normalizedKey = String(key).trim();
-        if (!normalizedKey) return;
-
-        const numericId = Number(normalizedKey);
-        if (Number.isFinite(numericId) && numericId > 0) {
-            travelCache.delete(numericId);
-            return;
-        }
-
-        travelSlugCache.delete(getSlugCacheKey(normalizedKey));
-    });
 };
 
 const runSharedGuestTravelRequest = async (
@@ -486,19 +473,25 @@ export const fetchTravel = async (
     id: number,
     options?: FetchTravelOptions
 ): Promise<Travel> => {
-    const token = shouldUseStoredAuthToken() ? await getSecureItem(TOKEN_KEY) : null;
-    const isAuthenticated = Boolean(token);
+    // Native: the stored token is authoritative. Web: the auth store decides
+    // (HttpOnly cookie session, see travelDetailMemoryCache). Inlined on purpose:
+    // the guest in-flight dedupe depends on exactly this microtask shape.
+    const session = observeTravelDetailSession();
+    const isAuthenticated = shouldUseStoredAuthToken()
+        ? Boolean(await getSecureItem(TOKEN_KEY))
+        : session.isAuthenticated;
     const cacheKey = `id:${id}`;
 
-    if (!isAuthenticated && !options?.forceRefresh && travelCache.has(id)) {
-        return travelCache.get(id) as Travel;
+    if (!isAuthenticated && !options?.forceRefresh) {
+        const cached = guestTravelMemoryCache.getById(id);
+        if (cached) return cached;
     }
 
     if (!isAuthenticated) {
         if (!options?.forceRefresh) {
             const preloaded = await waitForDirectApiWindowPreload(id, true);
             if (preloaded) {
-                travelCache.set(id, preloaded);
+                guestTravelMemoryCache.rememberById(id, preloaded);
                 await saveStaleTravelDetail(`/travels/${id}/`, preloaded);
                 return preloaded;
             }
@@ -512,9 +505,9 @@ export const fetchTravel = async (
                     ...(options?.forceRefresh ? { skipAuth: true } : {}),
                 });
                 const normalized = normalizeTravelItem(travel);
-                travelCache.set(id, normalized);
+                guestTravelMemoryCache.rememberById(id, normalized);
                 if (typeof normalized.slug === 'string' && normalized.slug.trim()) {
-                    travelSlugCache.set(getSlugCacheKey(normalized.slug), normalized);
+                    guestTravelMemoryCache.rememberBySlugKey(getSlugCacheKey(normalized.slug), normalized);
                 }
                 await saveStaleTravelDetail(endpoint, normalized);
                 return normalized;
@@ -569,13 +562,19 @@ export const fetchTravelBySlug = async (
     slug: string,
     options?: { signal?: AbortSignal }
 ): Promise<Travel> => {
-    const token = shouldUseStoredAuthToken() ? await getSecureItem(TOKEN_KEY) : null;
-    const isAuthenticated = Boolean(token);
+    // Native: the stored token is authoritative. Web: the auth store decides
+    // (HttpOnly cookie session, see travelDetailMemoryCache). Inlined on purpose:
+    // the guest in-flight dedupe depends on exactly this microtask shape.
+    const session = observeTravelDetailSession();
+    const isAuthenticated = shouldUseStoredAuthToken()
+        ? Boolean(await getSecureItem(TOKEN_KEY))
+        : session.isAuthenticated;
     const slugCacheKey = getSlugCacheKey(slug);
     const cacheKey = `slug:${slugCacheKey}`;
 
-    if (!isAuthenticated && travelSlugCache.has(slugCacheKey)) {
-        return travelSlugCache.get(slugCacheKey) as Travel;
+    if (!isAuthenticated) {
+        const cached = guestTravelMemoryCache.getBySlugKey(slugCacheKey);
+        if (cached) return cached;
     }
 
     const fetchBySlug = async (requestOptions?: PublicTravelRequestOptions) => {
@@ -739,9 +738,9 @@ export const fetchTravelBySlug = async (
     if (!isAuthenticated) {
         const preloaded = await waitForDirectApiWindowPreload(slugCacheKey, false);
         if (preloaded) {
-            travelSlugCache.set(slugCacheKey, preloaded);
+            guestTravelMemoryCache.rememberBySlugKey(slugCacheKey, preloaded);
             if (typeof preloaded.id === 'number' && Number.isFinite(preloaded.id) && preloaded.id > 0) {
-                travelCache.set(preloaded.id, preloaded);
+                guestTravelMemoryCache.rememberById(preloaded.id, preloaded);
             }
             await saveStaleTravelDetail(`/travels/by-slug/${encodeURIComponent(slugCacheKey)}/`, preloaded);
             return preloaded;
@@ -749,9 +748,9 @@ export const fetchTravelBySlug = async (
 
         return runSharedGuestTravelRequest(cacheKey, async () => {
             const normalized = await fetchBySlugWithFallback();
-            travelSlugCache.set(slugCacheKey, normalized);
+            guestTravelMemoryCache.rememberBySlugKey(slugCacheKey, normalized);
             if (typeof normalized.id === 'number' && Number.isFinite(normalized.id) && normalized.id > 0) {
-                travelCache.set(normalized.id, normalized);
+                guestTravelMemoryCache.rememberById(normalized.id, normalized);
             }
             return normalized;
         });

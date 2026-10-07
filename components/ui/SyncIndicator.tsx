@@ -45,12 +45,18 @@ function SyncIndicatorNative() {
       setVisible(true);
       translateY.value = withTiming(0, { duration: 300 });
 
-      const timer = setTimeout(() => {
+      let settleTimer: ReturnType<typeof setTimeout> | null = null;
+      const hideTimer = setTimeout(() => {
         translateY.value = withTiming(-60, { duration: 300 });
-        setTimeout(() => setVisible(false), 350);
+        settleTimer = setTimeout(() => setVisible(false), 350);
       }, 3000);
 
-      return () => { clearTimeout(timer); };
+      return () => {
+        clearTimeout(hideTimer);
+        // The nested timer used to outlive the effect and set state on an
+        // unmounted/re-rendered indicator (LC-3).
+        if (settleTimer) clearTimeout(settleTimer);
+      };
     }
   }, [isConnected, translateY]);
 

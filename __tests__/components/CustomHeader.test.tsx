@@ -44,10 +44,6 @@ jest.mock('@/context/FavoritesContext', () => ({
     useFavorites: () => mockFavoritesContext,
 }));
 
-jest.mock('@/context/FiltersProvider', () => ({
-    useFilters: () => mockFiltersContext,
-}));
-
 jest.mock('@/i18n/LocaleProvider', () => ({
     useLocale: () => ({
         locale: 'ru',

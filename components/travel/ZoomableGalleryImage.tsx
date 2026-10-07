@@ -182,6 +182,11 @@ export default function ZoomableGalleryImage({
             >
               <ImageCardMedia
                 src={src}
+                // Numeric size props (not only `style`) let ImageCardMedia build a
+                // resized sharp source; with `style` alone it loaded the original
+                // file for every page of the gallery (PERF-2).
+                width={width}
+                height={height}
                 style={{ width, height }}
                 fit="contain"
                 blurBackground

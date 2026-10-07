@@ -65,6 +65,8 @@ export const sharedStaticResources = {
   "notifications.messages.name": "Сообщения",
   "notifications.updates.name": "Обновления",
   "notifications.recommendations.name": "Рекомендации",
+  "notifications.quests.name": "Квесты",
+  "notifications.quests.description": "Напоминания о квестах: вы рядом с точкой или не закончили маршрут",
   "subscription.defaultTitle": "Подпишитесь на новые маршруты",
   "subscription.defaultSubtitle": "Раз в пару недель — лучшие путешествия, идеи на выходные и квесты по городам. Без спама, отписаться можно в один клик.",
   "subscription.articleTitle": "Пришлём этот маршрут на почту",
