@@ -2,6 +2,7 @@
 // travel-страница ↔ квест по тому же городу.
 import { normalize } from '@/utils/questAdapters'
 import type { QuestMeta } from '@/utils/questAdapters'
+import { haversineKm } from '@/utils/geoDistance'
 
 export type LocationQuery = {
   cityName?: string | null
@@ -54,19 +55,6 @@ export function hasQuestLocation(query: LocationQuery): boolean {
   return Boolean(
     query.cityName?.trim() || query.countryName?.trim() || firstQuestCoord(query.coords),
   )
-}
-
-const EARTH_R = 6371 // км
-
-function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
-  const toRad = (d: number) => (d * Math.PI) / 180
-  const dLat = toRad(bLat - aLat)
-  const dLng = toRad(bLng - aLng)
-  const lat1 = toRad(aLat)
-  const lat2 = toRad(bLat)
-  const h =
-    Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2)
-  return 2 * EARTH_R * Math.asin(Math.min(1, Math.sqrt(h)))
 }
 
 function minDistanceKm(coords: LocationQuery['coords'], lat: number, lng: number): number {

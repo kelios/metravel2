@@ -12,7 +12,7 @@ import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 
 import type { Travel } from '@/types/types';
 import { Platform } from 'react-native';
-import { queryKeys } from '@/queryKeys';
+import { queryKeys } from '@/api/queryKeys';
 import { isWebAutomation } from '@/utils/isWebAutomation';
 import {
   getPublicStalePayloadMeta,

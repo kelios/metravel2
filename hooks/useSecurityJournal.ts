@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 
-import { queryKeys } from '@/queryKeys';
+import { queryKeys } from '@/api/queryKeys';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { fetchSecurityJournal, type SecurityJournalEntryDto, type SecurityJournalPage } from '@/api/privacy';
 

@@ -4,7 +4,7 @@ import React from 'react';
 import { Platform } from 'react-native';
 
 import { useBreadcrumbModel } from '@/hooks/useBreadcrumbModel';
-import { queryKeys } from '@/queryKeys';
+import { queryKeys } from '@/api/queryKeys';
 import { questsListQueryOptions } from '@/hooks/questsListQuery';
 import { i18n } from '@/i18n';
 

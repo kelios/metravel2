@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { MapClusterBBox } from '@/api/map';
+import { haversineKm } from '@/utils/geoDistance';
 import type { MapMovePayload } from '@/components/MapPage/Map/types';
 
 // F-49 — "Search this area" (Google/Organic-Maps style). Извлечено из
@@ -14,17 +15,8 @@ type LatLng = { latitude: number; longitude: number };
 // Used only to decide whether the map center moved far enough from the active
 // query anchor to surface the "Search this area" affordance, so a cheap
 // haversine is plenty (no need for the full CoordinateConverter on this path).
-const EARTH_RADIUS_KM = 6371;
-export const distanceKm = (a: LatLng, b: LatLng): number => {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(b.latitude - a.latitude);
-  const dLng = toRad(b.longitude - a.longitude);
-  const lat1 = toRad(a.latitude);
-  const lat2 = toRad(b.latitude);
-  const h =
-    Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
-  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
-};
+export const distanceKm = (a: LatLng, b: LatLng): number =>
+  haversineKm(a.latitude, a.longitude, b.latitude, b.longitude);
 
 // Диагональ видимой области в км. Нужна, чтобы порог «значимого сдвига» знал не
 // только про радиус поиска, но и про то, сколько на экране вообще помещается.

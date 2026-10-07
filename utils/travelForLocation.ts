@@ -2,6 +2,7 @@
 // перелинковки квест → travel того же города/рядом. Зеркало questForLocation.ts.
 import { normalize } from '@/utils/questAdapters'
 import { parseTravelCoords } from '@/utils/questForLocation'
+import { haversineKm } from '@/utils/geoDistance'
 import type { Travel } from '@/types/types'
 
 export type TravelLocationQuery = {
@@ -10,19 +11,6 @@ export type TravelLocationQuery = {
   countryCode?: string | null
   /** координаты точек квеста — матчинг travel по близости */
   coords?: Array<{ lat: number; lng: number }>
-}
-
-const EARTH_R = 6371 // км
-
-function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
-  const toRad = (d: number) => (d * Math.PI) / 180
-  const dLat = toRad(bLat - aLat)
-  const dLng = toRad(bLng - aLng)
-  const lat1 = toRad(aLat)
-  const lat2 = toRad(bLat)
-  const h =
-    Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2)
-  return 2 * EARTH_R * Math.asin(Math.min(1, Math.sqrt(h)))
 }
 
 function minPairDistanceKm(

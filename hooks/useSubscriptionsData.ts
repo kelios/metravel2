@@ -9,7 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { fetchMySubscriptions, fetchMySubscribers, resolveProfileFullName, unsubscribeFromUser, type UserProfileDto } from '@/api/user';
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries';
 
-import { queryKeys } from '@/queryKeys';
+import { queryKeys } from '@/api/queryKeys';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { confirmAction } from '@/utils/confirmAction';
 import { normalizeTravelPreview, type TravelPreview } from '@/utils/subscriptionsHelpers';

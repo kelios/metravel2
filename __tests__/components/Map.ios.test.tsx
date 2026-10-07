@@ -827,8 +827,10 @@ describe('Map.ios Component', () => {
     );
     
     const injectedScript = getInjectedPayloadScript(rendered);
-    expect(getWebViewHtml(rendered)).toContain('setView([53.8828449, 27.7273595], 10)');
-    expect(injectedScript).toContain('"center":{"lat":53.8828449,"lng":27.7273595}');
+    // D2: центр по умолчанию — `DEFAULT_MAP_CENTER` из `constants/mapConfig.ts`,
+    // а не прежний захардкоженный 53.8828449/27.7273595.
+    expect(getWebViewHtml(rendered)).toContain('setView([53.9006, 27.559], 10)');
+    expect(injectedScript).toContain('"center":{"lat":53.9006,"lng":27.559}');
   });
 
   it('should parse coordinates correctly', () => {

@@ -228,6 +228,8 @@ export const mapGenerated2 = {
   "components.UserPoints.PointsListBulkModals.udalit_vybrannye_e97d9bbe": "Выдаліць выбраныя?",
   "components.UserPoints.PointsListBulkModals.zakryt_1fe45ea3": "Зачыніць",
   "components.UserPoints.PointsListGrid.3_sluchaynye_tochki_iz_vashih_24a90489": "3 выпадковыя кропкі з вашых",
+  "components.UserPoints.PointsListGrid.recommendationsLocateCta": "Вызначыць месцазнаходжанне",
+  "components.UserPoints.PointsListGrid.recommendationsNeedLocation": "Без геалакацыі адлегласць і маршрут да кропак не палічыць.",
   "components.UserPoints.PointsListGrid.filtry_a9025123": "Фільтры",
   "components.UserPoints.PointsListGrid.filtry_karty_bf82f2ec": "Фільтры карты",
   "components.UserPoints.PointsListGrid.karta_b48708d8": "Карта",

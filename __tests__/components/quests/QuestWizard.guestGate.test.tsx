@@ -58,7 +58,6 @@ jest.mock('@/components/quests/useQuestFinaleMedia', () => ({
   }),
 }))
 jest.mock('@/components/quests/useQuestReminder', () => ({ useQuestReminder: jest.fn() }))
-jest.mock('@/components/quests/useQuestGeofence', () => ({ useQuestGeofence: jest.fn() }))
 jest.mock('@/components/quests/QuestPrintable', () => ({ generatePrintableQuest: jest.fn() }))
 jest.mock('@/components/quests/questOfflineMapExport', () => ({
   exportQuestOfflineMap: jest.fn(),

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { listTravelRouteFiles } from '@/api/travelRoutes';
-import { queryKeys } from '@/queryKeys';
+import { queryKeys } from '@/api/queryKeys';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 
 type Options = {

@@ -187,7 +187,8 @@ Sev: low. `hooks/useIncomingAppLinks.native.ts:63-75` plus expo-router's own
 `focusManager` is never wired to `AppState`; `queryConfigs.critical`
 (`:133`) is a no-op on native. Risk: an app resumed after hours shows stale
 lists. Fix: `AppState` → `focusManager.setFocused`, enable focus refetch for
-native only. Effort: S. RR: low.
+native only. Effort: S. RR: low. → **Fixed in Phase 2
+(`utils/queryFocusManager.ts`).**
 
 **LC-2 — Two `QueryClient`s.** Sev: medium. Where: mounted client
 `app/_layout.tsx:242-257` (via `api/activeQueryClient.ts`); module singleton
@@ -196,7 +197,8 @@ native only. Effort: S. RR: low.
 singleton never purged on identity change, inherits defaults the mounted
 client overrides (mutation retry). Fix: `getActiveQueryClient()` in
 `fetchReverseGeocode`, delete the singleton and the root `queryClient.ts` /
-`queryKeys.ts` shims (13 importers). Effort: S. RR: low.
+`queryKeys.ts` shims (13 importers). Effort: S. RR: low. → **Fixed in
+Phase 2** (lazy fallback client only until the layout mounts).
 
 **LC-3 — Timers/listeners left running.** Sev: low.
 `components/ui/SyncIndicator.tsx:50` nested `setTimeout` never cleared;
@@ -219,6 +221,7 @@ Effort: S. Localisation: all five locales. → **Fixed in Phase 1.**
 `cancelAllScheduledNotificationsAsync` is never called. Risk: previous user's
 quest titles appear for the next account on a shared device. Fix: cancel
 scheduled reminders in `authStore.logout` / identity change. Effort: S.
+→ **Fixed in Phase 2** (`cancelScheduledQuestReminders` on owner change).
 
 **PUSH-3 — Duplication and drift.** Sev: low. `services/notifications.web.ts`
 duplicates types and `NOTIFICATION_CHANNELS`; response de-dupe window is 1 s
@@ -251,12 +254,15 @@ request → rationale → open-settings. Effort: M.
 **PERM-3 — Location prompt without user intent.** Sev: medium.
 `hooks/usePointsRecommendations.ts:46-75` requests location on mount (web:
 high-accuracy geolocation on page load). Ask on user action. Effort: S.
+→ **Fixed in Phase 2** (request on "recommendations" / "locate me" only;
+no-location CTA in RU/BE/UK/PL/EN).
 
 **PERM-4 — Dead geofencing would request background location.** Sev: medium
 (latent). `services/questGeofencing.native.ts:176-178` returns early
 (`expo-task-manager` not installed) but `:141-161` would request background
 location, which `app.json` forbids. Remove or gate behind a deliberate config
-change. Effort: S.
+change. Effort: S. → **Fixed in Phase 2** (module, `useQuestGeofence` hook
+and the geofence-only notification helper removed).
 
 **PERM-5 — `expo-media-library` installed, configured, never imported.**
 Sev: low. Remove the dependency and plugin entry (iOS release guard checks
@@ -425,7 +431,9 @@ for ETag/304 callers; standardise on `ApiError`. Effort: M–L. RR: medium.
 endpoints that accept anonymous calls (telemetry, quest results) user data is
 saved as anonymous; doubled write traffic. Fix: limit the anonymous retry to
 GET/HEAD. Effort: S. RR: low (the fallback path has tests:
-`__tests__/api/client.test.ts:492-714`).
+`__tests__/api/client.test.ts:492-714`). → **Fixed in Phase 2** (unsafe
+methods rethrow the original 401 after the probe; `request()` and
+`download()`).
 
 **API-3 — Logged-in web responses stored in guest-only module caches that
 survive logout.** Sev: medium. `api/travelDetailsQueries.ts:489-494,572-578`
@@ -730,7 +738,11 @@ forks the web gallery (re-declares `safeEncodeUrl`, `ensureAbsoluteUrl`,
 `UnifiedSlider.tsx` is native-only yet carries 11 `isWeb` branches and 227
 LOC of web-only slider parts. Fix: `utils/geo/distance.ts` + lint ban on the
 literal `6371`; `useQuestMapExport`; shared `useGalleryModel`; adapters.
-Effort: S–M each. RR: low–medium.
+Effort: S–M each. RR: low–medium. → **Geo part fixed in Phase 2**: one
+`utils/geoDistance.ts` (`haversineMeters` / `haversineKm`, `EARTH_RADIUS_*`)
+behind every former copy, units preserved per call site; native default
+center now reads `constants/mapConfig.ts` (D2). Lint ban on `6371` is
+`scripts/`-owned and not done; gallery/export/adapters remain.
 
 **CQ-3 — Dead code: 43 unreachable files (6 758 LOC), 137 unused exports.**
 Sev: medium. Largest: `services/pdf-export/.../legacyGalleryLayouts.ts` 688,
@@ -1079,23 +1091,20 @@ HK-10 (`useNetworkStatus` catch, `useYupForm` logging, visited-countries
 dedupe), API-3, PERF-2 (sizing + window props), NAV-5 (identical `.native`
 copies), DEP-7 (`metro.config.optimized.js`), small dead code.
 
+Done in Phase 2 (see §4): LC-1, LC-2, PERM-3, PERM-4, PUSH-2, API-2,
+CQ-2 (geo + D2).
+
 Remaining quick wins:
 
-- LC-1: wire `AppState` → `focusManager`, enable focus refetch on native.
-- LC-2: `getActiveQueryClient()` in `fetchReverseGeocode`; delete
-  `api/queryClient.ts` and the root shims (13 imports).
 - PERM-1: drop the iOS photo-library gate in 5 files (verified against the
   installed Swift module; needs one iOS device QA pass).
-- PERM-3: request location on user action in `usePointsRecommendations`.
-- PERM-4: delete `questGeofencing.native.ts` and its call sites.
-- PUSH-2: cancel scheduled quest reminders on logout.
 - OFF-2: fall back to the saved package on network errors.
-- API-2: anonymous 401 retry only for GET/HEAD.
 - API-5/API-6: delete `uploadFile` (after moving the script onto the
   client) and the always-true `checkNetworkStatus` branches; fix
   `clientResponse` non-JSON 2xx; stop retrying registration.
-- CQ-2 (geo): one `haversineKm()` and replace 17 copies; fix the native
-  default center (D2).
+- CQ-2 (rest): `useQuestMapExport`, shared `useGalleryModel`, `Point`
+  adapters, `formatDate`/`formatDistance`/`formatDuration` dedupe; lint ban
+  on the literal `6371` (`scripts/`-owned).
 - CQ-3: next dead-code batch (test-only files + their tests), stale
   `tsconfig` excludes, `scratch-lh/`.
 - CQ-5: move `openQuestMap`/`getQuestClipboard` out of `questWizardHelpers`.
@@ -1369,3 +1378,41 @@ Deliberately not touched (owner-gated by `AGENTS.md` or needing a product
 decision): `scripts/`, `.github/workflows/`, `app.json`, `plugins/`,
 `nginx/`, dependency removals, ST-1 favorites persistence, retry policy for
 500s and 504 uploads, PERM-1 (needs an iOS device pass), NAV-2.
+
+### Phase 2 (second quick-win batch)
+
+Behaviour-preserving unless stated; each item has targeted Jest tests:
+
+- LC-1: `utils/queryFocusManager.ts` (new) wires `AppState` →
+  `focusManager.setFocused` once per process on Android/iOS;
+  `createOptimizedQueryClient` enables `refetchOnWindowFocus` on native only
+  (web unchanged). Tests: `queryFocusManager.test.ts`, `reactQueryConfig.test.ts`.
+- LC-2: `fetchReverseGeocode` resolves the mounted client via
+  `getActiveQueryClient()` (a lazy, prefetch-free fallback client exists only
+  until `app/_layout.tsx` mounts); `api/queryClient.ts` and the root
+  `queryClient.ts` / `queryKeys.ts` shims deleted, 13 importers moved to
+  `@/api/queryKeys`. Test: `geoQueries.fetchReverseGeocode.test.ts`.
+- PUSH-2: `cancelScheduledQuestReminders()` in `services/notifications*.ts`
+  (prefix-scoped: 24h and 7-day quest reminders only); the auth-store identity
+  subscriber calls it lazily whenever a signed-in owner leaves (logout,
+  invalidation, direct account switch); never on web. Tests:
+  `notifications.cancelQuestReminders.test.ts`, `authStore.questRemindersLogout.test.ts`.
+- API-2: after the 401 probe (token cleanup unchanged) `request()` and
+  `download()` re-send anonymously only for safe methods; POST/PUT/PATCH/
+  DELETE rethrow the original 401. Test: `client.unsafeMethod401.test.ts`.
+- PERM-3: `usePointsRecommendations` no longer asks for geolocation on
+  mount; the request runs on "recommendations" or "locate me" (web + native),
+  "locate me" fills routes for the already shown trio, and `PointsListGrid`
+  shows a hint + CTA when recommendations have no location (RU/BE/UK/PL/EN).
+  Test: `usePointsRecommendations.test.tsx`.
+- PERM-4: `services/questGeofencing.{native,web}.ts`,
+  `components/quests/useQuestGeofence.{native,web}.ts`, the QuestWizard
+  call, the geofence-only `presentLocalQuestNotification`/`getNotifications`
+  helpers, their locale keys and five stale test mocks removed; `app.json`
+  untouched.
+- CQ-2 (geo) + D2: `utils/geoDistance.ts` (new) is the single Haversine;
+  the 17 copies now delegate with their original units (`haversineKm` where
+  km, `haversineMeters` where m; `MapLogicComponent` uses `EARTH_RADIUS_M`).
+  `Map.ios.tsx` and `nativeMapHtml.ts` read `DEFAULT_MAP_CENTER` from
+  `constants/mapConfig.ts` instead of the stale 53.8828449/27.7273595.
+  Test: `geoDistance.test.ts` (cross-checks every former copy).

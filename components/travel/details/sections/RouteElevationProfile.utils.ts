@@ -1,5 +1,6 @@
 import type { ParsedRoutePoint } from '@/types/travelRoutes'
 import { translate as i18nT } from '@/i18n'
+import { haversineMeters as haversineMetersLatLng } from '@/utils/geoDistance'
 import { formatInteger, formatNumber } from '@/i18n/format'
 
 
@@ -48,17 +49,8 @@ export const parseProfileCoord = (coord: string): LatLng | null => {
   return { lat, lng }
 }
 
-export const haversineMeters = (a: LatLng, b: LatLng): number => {
-  const toRad = (value: number) => (value * Math.PI) / 180
-  const radiusMeters = 6371000
-  const dLat = toRad(b.lat - a.lat)
-  const dLng = toRad(b.lng - a.lng)
-  const s1 = Math.sin(dLat / 2)
-  const s2 = Math.sin(dLng / 2)
-  const h =
-    s1 * s1 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * s2 * s2
-  return 2 * radiusMeters * Math.asin(Math.min(1, Math.sqrt(h)))
-}
+export const haversineMeters = (a: LatLng, b: LatLng): number =>
+  haversineMetersLatLng(a.lat, a.lng, b.lat, b.lng)
 
 export const resolveNearestHintName = (
   target: LatLng | null,

@@ -1,16 +1,10 @@
 // src/utils/geo.ts
 
-const R_EARTH_KM = 6371;
+import { haversineKm } from '@/utils/geoDistance';
 
-export function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
-    const toRad = (d: number) => (d * Math.PI) / 180;
-    const dLat = toRad(bLat - aLat);
-    const dLng = toRad(bLng - aLng);
-    const lat1 = toRad(aLat);
-    const lat2 = toRad(bLat);
-    const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-    return 2 * R_EARTH_KM * Math.asin(Math.sqrt(h));
-}
+// CQ-2: единая реализация живёт в `utils/geoDistance.ts`; здесь — ре-экспорт
+// для существующих импортёров.
+export { haversineKm };
 
 type QuestLike = {
     lat: number; lng: number;

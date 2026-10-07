@@ -9,7 +9,7 @@ import {
     type UserProfileDto,
 } from '@/api/user';
 
-import { queryKeys } from '@/queryKeys';
+import { queryKeys } from '@/api/queryKeys';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { useActionFeedback } from '@/hooks/useActionFeedback';
 import { translate as i18nT } from '@/i18n'

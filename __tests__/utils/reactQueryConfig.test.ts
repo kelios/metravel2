@@ -39,17 +39,19 @@ describe('createOptimizedQueryClient', () => {
     expect(requestIdleCallback).not.toHaveBeenCalled();
   });
 
-  // Синглтон для не-хукового кода (geoQueries) не привязан к маршруту: раньше
-  // его загрузка давала второй, дублирующий префетч фильтров и стран.
-  it('does not schedule a prefetch for the shared module-level client', () => {
-    const requestIdleCallback = jest.fn(() => 1);
-    (window as any).requestIdleCallback = requestIdleCallback;
+  // LC-1: refetch по фокусу включён только на native, где фокус приходит из
+  // `AppState`; web сохраняет прежнее поведение (без refetch по фокусу вкладки).
+  it('web keeps refetchOnWindowFocus disabled', () => {
+    const client = createOptimizedQueryClient(undefined, { enableStaticPrefetch: false });
 
-    jest.isolateModules(() => {
-      require('@/api/queryClient');
-    });
+    expect(client.getDefaultOptions().queries?.refetchOnWindowFocus).toBe(false);
+  });
 
-    expect(requestIdleCallback).not.toHaveBeenCalled();
+  it('native enables refetchOnWindowFocus', () => {
+    Platform.OS = 'android';
+    const client = createOptimizedQueryClient(undefined, { enableStaticPrefetch: false });
+
+    expect(client.getDefaultOptions().queries?.refetchOnWindowFocus).toBe(true);
   });
 
   it('pauses first requests while the platform is offline', () => {

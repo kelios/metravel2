@@ -119,6 +119,23 @@ export const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) =>
     gap: 8,
     flexShrink: 0,
   },
+  // PERM-3: подсказка + CTA «определить местоположение» под шапкой рекомендаций.
+  recommendationsLocationRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 16,
+    marginHorizontal: 4,
+    paddingHorizontal: 16,
+  },
+  recommendationsLocationHint: {
+    flex: 1,
+    minWidth: 180,
+    fontSize: 13,
+    color: colors.textMuted,
+  },
   recommendationsTitle: {
     fontSize: 15,
     fontWeight: '600',

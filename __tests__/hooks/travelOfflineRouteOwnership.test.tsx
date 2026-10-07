@@ -22,7 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useBreadcrumbModel } from '@/hooks/useBreadcrumbModel';
 import { useTravelDetails } from '@/hooks/useTravelDetails';
 import { saveTravelOffline } from '@/services/offline/travelOfflineAdapter';
-import { queryKeys } from '@/queryKeys';
+import { queryKeys } from '@/api/queryKeys';
 import type { Travel } from '@/types/types';
 
 jest.mock('@react-native-async-storage/async-storage', () =>

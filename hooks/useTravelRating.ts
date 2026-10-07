@@ -7,7 +7,7 @@ import { rateTravel, getUserTravelRating } from '@/api/travelRating';
 import { useAuth } from '@/context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
-import { queryKeys } from '@/queryKeys';
+import { queryKeys } from '@/api/queryKeys';
 import { calculateNewRating } from '@/utils/ratingHelpers';
 import { translate as i18nT } from '@/i18n'
 

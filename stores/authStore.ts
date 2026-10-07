@@ -3,6 +3,7 @@
 // ранее находившиеся в AuthContext. AuthProvider остаётся тонким фасадом
 // для инициализации и регистрации invalidation handler.
 
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { readSecureItem } from '@/utils/secureStorage';
 import {
@@ -35,6 +36,9 @@ const getAuthApi = async () => import('@/api/auth');
 const getAppleAuthApi = async () => import('@/api/appleAuth');
 const getUserApi = async () => import('@/api/user');
 const getPushRegistration = async () => import('@/services/pushRegistration');
+// PUSH-2: expo-notifications в стор статически не тянем — тот же ленивый
+// паттерн, что и у push-регистрации; на web резолвится пустой `.web.ts`.
+const getNotificationsService = async () => import('@/services/notifications');
 
 // Fetch the current user's profile through the mounted QueryClient so the request
 // dedupes with useUserProfile (shared queryKey) and serves the cache when fresh.
@@ -688,6 +692,14 @@ useAuthStore.subscribe((state, previous) => {
     const identity = state.isAuthenticated ? state.userId : null;
     const previousIdentity = previous.isAuthenticated ? previous.userId : null;
     if (identity === previousIdentity) return;
+    // PUSH-2: владелец сессии уходит (выход, инвалидация, смена аккаунта) —
+    // его локальные квестовые напоминания не должны всплыть у следующего
+    // пользователя общего устройства. Best-effort и не зависит от кэша.
+    if (previousIdentity !== null && Platform.OS !== 'web') {
+        void getNotificationsService()
+            .then(({ cancelScheduledQuestReminders }) => cancelScheduledQuestReminders())
+            .catch(() => undefined);
+    }
     const version = ++catalogIdentityVersion;
     const client = getActiveQueryClient();
     if (!client) return;

@@ -13,7 +13,7 @@ jest.mock('@/api/misc', () => ({
   fetchFilters: (...args: any[]) => mockFetchFilters(...args),
 }));
 
-jest.mock('@/queryKeys', () => ({
+jest.mock('@/api/queryKeys', () => ({
   queryKeys: {
     filters: () => ['filters'],
   },

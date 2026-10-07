@@ -33,7 +33,6 @@ import { QuestStepCard, clearQuestCooldowns } from './questWizardStepCard';
 import QuestGuestGate from './QuestGuestGate';
 import { useQuestWizardProgress } from './useQuestWizardProgress';
 import { useQuestReminder } from './useQuestReminder';
-import { useQuestGeofence } from './useQuestGeofence';
 import {
     confirmQuestAsync,
     copyQuestCoords,
@@ -215,15 +214,6 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         // закончил маршрут частично, напоминать «вернитесь к точке» не нужно.
         questFinished,
     });
-    useQuestGeofence({
-        questId,
-        cityId,
-        title,
-        steps,
-        answers,
-        questFinished,
-    });
-
     const [showFinaleOnly, setShowFinaleOnly] = useState(false);
     const [desktopNavExpanded, setDesktopNavExpanded] = useState(false);
 

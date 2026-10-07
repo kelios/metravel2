@@ -1,5 +1,5 @@
 import { fetchFiltersOptimized } from '@/api/miscOptimized'
-import { queryKeys } from '@/queryKeys'
+import { queryKeys } from '@/api/queryKeys'
 import { normalizeCategoryDictionary, type CategoryDictionaryItem } from '@/utils/userPointsCategories'
 
 /**

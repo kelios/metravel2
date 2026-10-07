@@ -39,7 +39,6 @@ model: opus
   `utils/questAdapters.ts` (`normalize`, `buildAnswerChecker`, `adaptStep`,
   `adaptBundle`), `hooks/useQuestsApi.ts`, `api/questBundleCache.ts`,
   `components/quests/useQuestWizardProgress.ts`,
-  `components/quests/useQuestGeofence.native.ts` / `.web.ts`,
   `utils/questCityAlias.js`, `scripts/generate-seo-pages.js`.
 
 **Как воспроизвести**
@@ -84,8 +83,8 @@ Jest/static guards ниже можно запускать до review; browser/e
 - Правка контента напрямую через `apply-quest-patches.js` без синхронизации
   локального `scripts/<city>-quest-data.js`: следующая перезаливка квеста
   возвращает старый текст, и починка выглядит как рецидив.
-- Geofence и напоминания разведены платформенно
-  (`useQuestGeofence.native.ts` / `.web.ts`): правка в одном файле не даёт
+- Напоминания разведены платформенно
+  (`useQuestReminder.native.ts` / `.web.ts`): правка в одном файле не даёт
   паритета, а web-ветка молча не имеет фоновых прав.
 
 **Чем доказывается результат по стадиям**

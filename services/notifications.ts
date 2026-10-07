@@ -342,13 +342,51 @@ const QUEST_REMINDER_DELAY_SECONDS = 24 * 60 * 60;
 /** Возвратное напоминание после финиша — ровно через неделю (#1484). */
 const QUEST_RETURN_REMINDER_DELAY_SECONDS = 7 * 24 * 60 * 60;
 
+const QUEST_REMINDER_ID_PREFIX = 'quest-reminder-';
+const QUEST_RETURN_REMINDER_ID_PREFIX = 'quest-return-';
+
 /** Stable notification identifier per quest so we can cancel/reschedule. */
 function questReminderId(questId: string): string {
-  return `quest-reminder-${questId}`;
+  return `${QUEST_REMINDER_ID_PREFIX}${questId}`;
 }
 
 function questReturnReminderId(ownerId: string, questId: string): string {
-  return `quest-return-${encodeURIComponent(ownerId)}-${questId}`;
+  return `${QUEST_RETURN_REMINDER_ID_PREFIX}${encodeURIComponent(ownerId)}-${questId}`;
+}
+
+/** Квестовое ли это напоминание (24h «продолжите» или 7-дневное «вернитесь»). */
+export function isQuestReminderIdentifier(identifier: string): boolean {
+  return (
+    identifier.startsWith(QUEST_REMINDER_ID_PREFIX) ||
+    identifier.startsWith(QUEST_RETURN_REMINDER_ID_PREFIX)
+  );
+}
+
+/**
+ * PUSH-2: снять ВСЕ запланированные квестовые напоминания. Вызывается при
+ * выходе / смене владельца сессии: `questReminderId` не привязан к аккаунту,
+ * и без этого названия квестов прошлого пользователя всплывали бы у
+ * следующего на общем устройстве. Чужие расписания (не квестовые) не трогаем.
+ * Best-effort: любая ошибка модуля глотается, выход не блокируется.
+ */
+export async function cancelScheduledQuestReminders(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
+
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    await Promise.all(
+      scheduled
+        .map((request) => request.identifier)
+        .filter((identifier) => typeof identifier === 'string' && isQuestReminderIdentifier(identifier))
+        .map((identifier) =>
+          Notifications.cancelScheduledNotificationAsync(identifier).catch(() => undefined),
+        ),
+    );
+  } catch {
+    devError('[Notifications] Failed to cancel scheduled quest reminders');
+  }
 }
 
 /**
@@ -365,50 +403,6 @@ export async function ensureLocalNotificationPermission(
     );
   } catch {
     return false;
-  }
-}
-
-/**
- * Re-export of the lazily-loaded expo-notifications module so background tasks
- * (e.g. geofencing) can present notifications through the same guarded loader.
- * Returns null on web or when the module isn't in the bundle.
- */
-export function getNotifications(): typeof NotificationsModule {
-  return getNotificationsModule();
-}
-
-/**
- * Present an instant local notification (no schedule delay). Best-effort:
- * no-op on web / missing module / permission not already allowed.
- * Used by quest geofencing on region ENTER. `data.url` deep-links to the quest.
- */
-export async function presentLocalQuestNotification(
-  identifier: string,
-  title: string,
-  body: string,
-  deepLinkUrl: string,
-): Promise<void> {
-  if (Platform.OS === 'web') return;
-  const Notifications = getNotificationsModule();
-  if (!Notifications) return;
-
-  try {
-    const granted = await ensureLocalNotificationPermission(Notifications);
-    if (!granted) return;
-
-    await Notifications.scheduleNotificationAsync({
-      identifier,
-      content: {
-        title,
-        body,
-        data: { url: `/quests/${deepLinkUrl}` },
-        ...(Platform.OS === 'android' ? { channelId: 'quests' } : {}),
-      },
-      // null trigger → present immediately.
-      trigger: null,
-    });
-  } catch {
-    devError('[Notifications] Failed to present local notification');
   }
 }
 

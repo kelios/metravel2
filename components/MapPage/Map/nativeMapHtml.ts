@@ -8,6 +8,7 @@ import {
 import type { ThemedColors } from '@/hooks/useTheme';
 import { getActiveLocaleDefinition, translate as i18nT } from '@/i18n';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
+import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
 import {
   buildInvalidateSchedulerScript,
   buildLeafletWebViewHtml,
@@ -33,8 +34,9 @@ import {
   LEAFLET_MARKERCLUSTER_JS,
 } from '@/utils/leafletMarkerClusterInlineAsset';
 
-const DEFAULT_LAT = 53.8828449;
-const DEFAULT_LNG = 27.7273595;
+// D2: единственный источник центра по умолчанию — `constants/mapConfig.ts`.
+const DEFAULT_LAT = DEFAULT_MAP_CENTER.latitude;
+const DEFAULT_LNG = DEFAULT_MAP_CENTER.longitude;
 const OVERPASS_ENDPOINT =
   process.env.EXPO_PUBLIC_OVERPASS_ENDPOINT || 'https://overpass-api.de/api/interpreter';
 

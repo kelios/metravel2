@@ -59,8 +59,8 @@ describe('reverseGeocodePoint (#1738)', () => {
 })
 
 /**
- * #1746 — модульный `queryClient` из `api/queryClient` никогда не монтируется,
- * значит не подписан на `onlineManager` и не возобновляет `paused`-запросы.
+ * #1746 — резервный клиент геокода (LC-2: `resolveGeoQueryClient` до монтирования
+ * корневого) не подписан на `onlineManager` и не возобновляет `paused`-запросы.
  * С наследуемым `networkMode: 'online'` вызов в момент `isOnline() === false`
  * висел бесконечно, и `addPointAtCoords` визарда не добавлял точку. Императивный
  * геокод обязан завершаться и офлайн — ответом сервиса или `null`.

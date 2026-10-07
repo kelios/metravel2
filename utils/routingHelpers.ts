@@ -1,5 +1,6 @@
 import { translate as i18nT } from '@/i18n'
 import { decodeEncodedPolyline } from '@/utils/encodedPolyline'
+import { haversineMeters as haversineMetersLatLng } from '@/utils/geoDistance'
 // utils/routingHelpers.ts
 // Чистые утилиты для маршрутизации, извлечённые из components/MapPage/useRouting.ts.
 // Независимо тестируемы, без React-зависимостей.
@@ -74,21 +75,8 @@ export const getValhallaCosting = (mode: 'car' | 'bike' | 'foot') => {
 // ===================== Геометрия =====================
 
 /** Расстояние между двумя точками [lng, lat] в метрах (формула Haversine) */
-export const haversineMeters = (a: [number, number], b: [number, number]): number => {
-    const toRad = (deg: number) => (deg * Math.PI) / 180
-    const R = 6371000
-    const lng1 = a[0], lat1 = a[1]
-    const lng2 = b[0], lat2 = b[1]
-    const dLat = toRad(lat2 - lat1)
-    const dLng = toRad(lng2 - lng1)
-    const s1 = Math.sin(dLat / 2)
-    const s2 = Math.sin(dLng / 2)
-    const aa =
-        s1 * s1 +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * s2 * s2
-    const c = 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa))
-    return R * c
-}
+export const haversineMeters = (a: [number, number], b: [number, number]): number =>
+    haversineMetersLatLng(a[1], a[0], b[1], b[0])
 
 /** Оценка длительности поездки в секундах по расстоянию и режиму */
 export const estimateDurationSeconds = (meters: number, mode: 'car' | 'bike' | 'foot'): number => {

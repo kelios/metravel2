@@ -90,7 +90,7 @@ Country route — отдельный статический сегмент `coun
  ├─ <QuestConsentGate>               (авторизованный, согласие не выдано)
  └─ <QuestWizard>
      ├─ useQuestWizardProgress       (состояние прохождения + слияние)
-     ├─ useQuestReminder / useQuestGeofence   (native-only, .web = no-op)
+     ├─ useQuestReminder             (native-only, .web = no-op; геофенсинг удалён — PERM-4)
      ├─ useQuestScreenHeader         (телефон: название, (i), офлайн, «⋯» — в строке экрана, #2148)
      ├─ <QuestHeaderPanel> | <QuestCompactSidebar>     questWizardShell
      ├─ <QuestGuestGate>             (гость исчерпал бесплатные точки)
@@ -941,7 +941,6 @@ Design evidence #2198. Перевод идёт волнами, поэтому п
 | Bridge карты | нет | `questMapBridge.ts`: `quest-map-png`, `quest-map-nav`, `quest-map-status`, `OPEN_URL` |
 | Ленивая загрузка карты | `QuestFullMapLazy.tsx` = `React.lazy` | `QuestFullMapLazy.native.tsx` = прямой ре-экспорт (чанков нет) |
 | Компас до точки | `QuestPointNavigator.web.tsx` — `null` (никаких sensor-API) | `QuestPointNavigator.native.tsx` — heading + дистанция |
-| Геозоны | `useQuestGeofence.web.ts` — no-op | `useQuestGeofence.native.ts` → `services/questGeofencing`; регионы = неотвеченные шаги, старт при фокусе, стоп при финале/blur/unmount |
 | Напоминания | `useQuestReminder.web.ts` — no-op | `useQuestReminder.native.ts` → локальное уведомление «продолжить квест» |
 | Печать | `generatePrintableQuest` работает | ранний `return` при `Platform.OS !== 'web'` |
 | Визард | грузится через `React.lazy` + `Suspense` | прямой импорт (`QuestWizardDirect`) |
@@ -1115,7 +1114,7 @@ E2E (Playwright): `e2e/quests-list-detail.spec.ts` (каталог → дета�
   `QuestScenarioScreen`, `app/(tabs)/quests/map.tsx`, `app/(tabs)/quests/[city]/index.tsx`
   (alias-резолв покрыт только на уровне SSG-гейта);
 - `QuestConsentGate`, `QuestReviewsModal`, `QuestPioneerBlock`,
-  `useQuestGeofence.native`, `useQuestReminder.native`, `QuestPointNavigator.native`;
+  `useQuestReminder.native`, `QuestPointNavigator.native`;
 - `useQuestBundle` (обогащение тегами и адресный фолбэк обложки) покрыт
   `__tests__/hooks/questDetailMetadata.test.tsx` — вместе с офлайн-веткой и
   отсутствием полного каталога на холодной детали (#1992).

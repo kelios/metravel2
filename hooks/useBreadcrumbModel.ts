@@ -21,7 +21,7 @@ import { resolveQuestCountryAlias } from '@/utils/questCountryLanding';
 import { fetchUserProfile, resolveProfileFullName, type UserProfileDto } from '@/api/user';
 import type { PlannedTrip } from '@/api/plannedTrips';
 import type { PublicTrip } from '@/api/publicTrips';
-import { queryKeys } from '@/queryKeys';
+import { queryKeys } from '@/api/queryKeys';
 import { normalizeTravelRouteSegment } from '@/utils/travelRouteSegment';
 import { getActiveLocale, translate as i18nT } from '@/i18n'
 import { pageTranslations, STANDALONE_NESTED_ROUTE_LABELS } from '@/hooks/breadcrumbRouteLabels';

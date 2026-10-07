@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import { Text, View } from 'react-native'
+import { haversineMeters as haversineMetersLatLng } from '@/utils/geoDistance'
 
 import Button from '@/components/ui/Button'
 import IconButton from '@/components/ui/IconButton'
@@ -29,23 +30,11 @@ import { translate as i18nT, translatePlural } from '@/i18n'
  */
 const LIGHT_POINT_REMOVE_VISUAL_SIZE = 32
 
-function toRad(deg: number) {
-  return (deg * Math.PI) / 180
-}
-
 function haversineMeters(
   a: { lat: number; lng: number },
   b: { lat: number; lng: number },
 ) {
-  const R = 6371000
-  const dLat = toRad(b.lat - a.lat)
-  const dLng = toRad(b.lng - a.lng)
-  const lat1 = toRad(a.lat)
-  const lat2 = toRad(b.lat)
-  const sinLat = Math.sin(dLat / 2)
-  const sinLng = Math.sin(dLng / 2)
-  const h = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLng * sinLng
-  return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
+  return haversineMetersLatLng(a.lat, a.lng, b.lat, b.lng)
 }
 
 function sumHaversineDistance(points: RoutePoint[]) {

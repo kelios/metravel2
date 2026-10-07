@@ -6,6 +6,7 @@ import { buildSafeImageUrl } from '../../../utils/htmlUtils';
 import { getAtlasPageCount, shouldRenderAtlas } from './atlasPages';
 import type { NormalizedLocation, TravelSectionMeta } from './types';
 import { createCollator, translate as i18nT } from '@/i18n'
+import { haversineKm } from '@/utils/geoDistance'
 
 
 export const TOC_ITEMS_PER_PAGE = 7;
@@ -401,9 +402,6 @@ export function calculateRouteDistanceFromPreview(
   const linePoints = Array.isArray(preview?.linePoints) ? preview.linePoints : [];
   if (linePoints.length < 2) return 0;
 
-  const toRad = (value: number) => (value * Math.PI) / 180;
-  const radiusKm = 6371;
-
   let totalKm = 0;
   let prevCoord: { lat: number; lng: number } | null = null;
 
@@ -414,13 +412,7 @@ export function calculateRouteDistanceFromPreview(
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
 
     if (prevCoord) {
-      const dLat = toRad(lat - prevCoord.lat);
-      const dLng = toRad(lng - prevCoord.lng);
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRad(prevCoord.lat)) * Math.cos(toRad(lat)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      totalKm += radiusKm * c;
+      totalKm += haversineKm(prevCoord.lat, prevCoord.lng, lat, lng);
     }
     prevCoord = { lat, lng };
   }

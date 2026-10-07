@@ -1,6 +1,7 @@
 // MapLogicComponent.tsx - Internal component for map event handling and initialization
 import React, { useCallback, useEffect, useRef } from 'react';
 import type { LatLng } from '@/types/coordinates';
+import { EARTH_RADIUS_M } from '@/utils/geoDistance';
 import type { LeafletControlRef } from './leafletBridgeTypes';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { strToLatLng } from './utils';
@@ -60,10 +61,9 @@ function computeCircleBounds(
   ) {
     return null;
   }
-  const EARTH_RADIUS = 6371000; // meters
-  const latDelta = (radiusMeters / EARTH_RADIUS) * (180 / Math.PI);
+  const latDelta = (radiusMeters / EARTH_RADIUS_M) * (180 / Math.PI);
   const lngDelta =
-    (radiusMeters / (EARTH_RADIUS * Math.cos((center.lat * Math.PI) / 180))) *
+    (radiusMeters / (EARTH_RADIUS_M * Math.cos((center.lat * Math.PI) / 180))) *
     (180 / Math.PI);
 
   const sw = { lat: center.lat - latDelta, lng: center.lng - lngDelta };

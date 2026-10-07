@@ -293,6 +293,19 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
   const handleLocateMe = locateMe;
 
+  // PERM-3: радиус фильтрует только относительно геолокации, а её больше не
+  // спрашивают при загрузке. Выбор другого радиуса — действие пользователя,
+  // поэтому без локации запрашиваем её здесь; иначе чип молча ничего не делал бы.
+  const handleFilterChangeWithLocation = useCallback(
+    (next: Parameters<typeof handleFilterChange>[0]) => {
+      handleFilterChange(next);
+      if (!currentLocation && !isLocating && next.radiusKm != null && next.radiusKm !== filters.radiusKm) {
+        void locateMe();
+      }
+    },
+    [currentLocation, filters.radiusKm, handleFilterChange, isLocating, locateMe],
+  );
+
   const handleOpenActions = useCallback(() => {
     blurActiveElementForModal();
     setShowActions(true);
@@ -323,7 +336,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     searchQuery,
     onSearch: handleSearch,
     filters,
-    onFilterChange: handleFilterChange,
+    onFilterChange: handleFilterChangeWithLocation,
     activePresetId,
     onPresetChange: handlePresetChange,
     siteCategoryOptions: availableCategoryOptions,

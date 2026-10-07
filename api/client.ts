@@ -469,6 +469,14 @@ class ApiClient {
                     await this.clearTokens();
                 }
 
+                // API-2: анонимно повторяем только чтение (GET/HEAD). Запись без
+                // учётных данных на эндпоинте, который принимает анонимные вызовы
+                // (телеметрия, результаты квеста), сохранилась бы как чужая/анонимная
+                // и удваивала бы трафик записи — отдаём исходный 401 вызывающему.
+                if (isUnsafeHttpMethod(options.method)) {
+                    await throwDetailedError(response);
+                }
+
                 // Пробуем повторить запрос без авторизации: публичные эндпоинты могут
                 // работать без токена, но падать из‑за некорректного токена в хранилище.
                 const fallbackHeaders = this.authHeaders(null, {
@@ -635,6 +643,10 @@ class ApiClient {
                 // станет гостем из-за чужой неудачной ротации. Ни пробы, ни очистки (#1551).
                 if (!rotationSuperseded && (await this.isSessionRejectedByServer(token))) {
                     await this.clearTokens();
+                }
+                // API-2: см. request() — небезопасный метод анонимно не повторяем.
+                if (isUnsafeHttpMethod(options.method)) {
+                    return await parseDownloadResponse(resp);
                 }
                 const fallbackHeaders = this.authHeaders(null, { extra: options.headers });
                 const fallbackResp = await fetchWithTimeout(

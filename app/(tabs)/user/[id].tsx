@@ -14,7 +14,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { mapProfileRank } from '@/api/user';
 
-import { queryKeys } from '@/queryKeys';
+import { queryKeys } from '@/api/queryKeys';
 import { webTouchScrollStyle } from '@/utils';
 import { routes } from '@/utils/routes';
 import { fetchTravels } from '@/api/travelListQueries';

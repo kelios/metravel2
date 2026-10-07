@@ -228,6 +228,8 @@ export const mapGenerated2 = {
   "components.UserPoints.PointsListBulkModals.udalit_vybrannye_e97d9bbe": "Usunąć wybrane?",
   "components.UserPoints.PointsListBulkModals.zakryt_1fe45ea3": "Zamknij",
   "components.UserPoints.PointsListGrid.3_sluchaynye_tochki_iz_vashih_24a90489": "3 losowe punkty od Ciebie",
+  "components.UserPoints.PointsListGrid.recommendationsLocateCta": "Ustal moją lokalizację",
+  "components.UserPoints.PointsListGrid.recommendationsNeedLocation": "Bez geolokalizacji nie da się policzyć odległości i trasy do punktów.",
   "components.UserPoints.PointsListGrid.filtry_a9025123": "Filtry",
   "components.UserPoints.PointsListGrid.filtry_karty_bf82f2ec": "Filtry map",
   "components.UserPoints.PointsListGrid.karta_b48708d8": "Mapa",

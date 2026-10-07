@@ -3,7 +3,7 @@ import { useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/api/client';
-import { queryKeys } from '@/queryKeys';
+import { queryKeys } from '@/api/queryKeys';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { showToast } from '@/utils/toast';
 import {

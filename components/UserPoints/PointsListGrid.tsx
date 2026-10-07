@@ -347,9 +347,31 @@ export const PointsListGrid: React.FC<{
             </View>
           </View>
         ) : null}
+        {/* PERM-3: геолокации нет — маршрутов к точкам тоже; просим её по кнопке, а не при загрузке. */}
+        {showingRecommendations && !currentLocation ? (
+          <View style={localStyles.recommendationsLocationRow} testID="userpoints-recommendations-need-location">
+            <RNText style={localStyles.recommendationsLocationHint}>
+              {i18nT('map:components.UserPoints.PointsListGrid.recommendationsNeedLocation')}
+            </RNText>
+            <IconButton
+              icon={<Feather name="crosshair" size={16} color={themedColors.text} />}
+              label={i18nT('map:components.UserPoints.PointsListGrid.recommendationsLocateCta')}
+              onPress={onLocateMe}
+              disabled={isLocating}
+              size="sm"
+              showLabel
+              testID="userpoints-recommendations-locate"
+            />
+          </View>
+        ) : null}
       </>
     ),
     [
+      currentLocation,
+      isLocating,
+      onLocateMe,
+      localStyles.recommendationsLocationHint,
+      localStyles.recommendationsLocationRow,
       hasFilters,
       localStyles.listControlsRow,
       localStyles.listControlsActions,

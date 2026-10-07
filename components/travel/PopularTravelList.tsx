@@ -27,7 +27,7 @@ import type { TravelsMap } from "@/types/types";
 import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme'; // РЕДИЗАЙН: Темная тема
-import { queryKeys } from '@/queryKeys';
+import { queryKeys } from '@/api/queryKeys';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 import {
   FLATLIST_CONFIG,

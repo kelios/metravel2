@@ -6,8 +6,9 @@ import type { QueryClient } from '@tanstack/react-query';
 // the SAME cache the UI hooks read, so a profile fetch in checkAuthentication and
 // a profile fetch in useUserProfile dedupe into one network request.
 //
-// Note: this is intentionally NOT the api/queryClient.ts singleton — the provider
-// uses its own instance, so the singleton would target a different cache.
+// LC-2: this is the ONLY client in the app — the former module singleton
+// (`api/queryClient.ts`) targeted a separate cache and was removed; imperative
+// callers (`api/geoQueries.ts`) resolve the mounted client through here.
 
 let activeClient: QueryClient | null = null;
 

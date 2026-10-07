@@ -361,7 +361,7 @@ code-review pass. Release operations сохраняют отдельные autho
 | Location When-In-Use | кнопка геопозиции на `/map`, квесты «рядом», навигатор точки квеста, route picker мастера | `components/MapPage/Map/useMapUserLocation.ts`, `screens/tabs/QuestsScreen.tsx`, `components/quests/QuestPointNavigator.native.tsx` |
 | Photo Library | выбор фото в мастере travel, галерее, редакторе статьи | `components/travel/PhotoUploadWithPreview.tsx`, `components/travel/ImageGalleryComponent.ios.tsx` |
 | Camera | «снять фото» на тех же экранах | `components/travel/PhotoUploadWithPreview.tsx` |
-| Notifications | **локальные**, не push: напоминание о незаконченном квесте и геофенсинг | `components/quests/useQuestReminder.native.ts`, `services/questGeofencing.native.ts` |
+| Notifications | **локальные**, не push: напоминание о незаконченном квесте (геофенсинг удалён — PERM-4) | `components/quests/useQuestReminder.native.ts` |
 
 В принятом source `8ae84cb56` и build 9 remote push включается по действию
 пользователя в `NotificationSettingsSection.native.tsx`: обработчик вызывает

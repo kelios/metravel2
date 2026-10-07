@@ -1,5 +1,6 @@
 import { translate as i18nT } from '@/i18n'
 import { formatInteger, formatNumber } from '@/i18n/format'
+import { haversineKm } from '@/utils/geoDistance'
 /**
  * Утилита для расчета расстояния и времени в пути
  */
@@ -16,23 +17,9 @@ export interface Coordinates {
  * @returns расстояние в километрах
  */
 export function calculateDistance(from: Coordinates, to: Coordinates): number {
-  const R = 6371; // Радиус Земли в км
-  const dLat = toRad(to.lat - from.lat);
-  const dLng = toRad(to.lng - from.lng);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(from.lat)) * Math.cos(toRad(to.lat)) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const distance = R * c;
+  const distance = haversineKm(from.lat, from.lng, to.lat, to.lng); // км
 
   return Math.round(distance * 10) / 10; // Округляем до 1 знака после запятой
-}
-
-function toRad(degrees: number): number {
-  return degrees * (Math.PI / 180);
 }
 
 export interface DistanceFormatOptions {

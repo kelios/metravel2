@@ -185,8 +185,6 @@ export const sharedGenerated2 = {
   "screens.tabs.UserPointsScreen.voyti_784c8ba4": "Zaloguj się",
   "services.notifications.prodolzhite_priklyuchenie_85f79e46": "Kontynuuj przygodę",
   "services.notifications.vy_ostanovilis_na_shage_value1_value2_v_kves_8393cf7d": "Zatrzymałeś się na kroku {{value1}}/{{value2}} w zadaniu „{{value3}}”. Kontynuuj przejście!",
-  "services.questGeofencing.vy_na_meste_otkroyte_zagadku_09e0702f": "Jesteś tam - otwórz zagadkę",
-  "services.questGeofencing.vy_podoshli_k_tochke_value1_kvesta_value2_ot_5709191a": "Osiągnąłeś punkt{{value1}} zadania „{{value2}}”. Odkryj zagadkę!",
   "stores.authStore.proizoshla_oshibka_poprobuyte_esche_raz_fa0eb9e8": "Wystąpił błąd. Spróbuj ponownie.",
   "stores.travelStatusStore.puteshestvie_value1_a99c3208": "Podróżuj {{value1}}",
   "utils.a11y.skip_to_main_content_48220d7c": "Skip to main content",

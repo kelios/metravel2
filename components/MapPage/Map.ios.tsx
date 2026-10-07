@@ -40,6 +40,7 @@ import { fetchTileWithRetry } from './Map/tileFetchRetry';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
 import type { MapUiApi } from '@/types/mapUi';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
+import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
 
 type Point = {
   id?: number | string;
@@ -148,8 +149,9 @@ interface TravelProps {
   onMapUiApiReady?: (api: MapUiApi | null) => void;
 }
 
-const DEFAULT_LAT = 53.8828449;
-const DEFAULT_LNG = 27.7273595;
+// D2: единственный источник центра по умолчанию — `constants/mapConfig.ts`.
+const DEFAULT_LAT = DEFAULT_MAP_CENTER.latitude;
+const DEFAULT_LNG = DEFAULT_MAP_CENTER.longitude;
 
 // Стабильная ссылка вместо литерала в дефолте пропа: пустой массив на каждом
 // рендере пересобирал бы memo сегментов и payload карты на всех экранах, где

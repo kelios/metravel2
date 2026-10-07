@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AppState, Linking, Platform } from 'react-native';
+import { haversineMeters } from '@/utils/geoDistance';
 import { useIsFocused } from 'expo-router';
 import { logError, logMessage } from '@/utils/logger';
 import { loadExpoLocation } from '@/hooks/map/expoLocationLoader';
@@ -106,16 +107,7 @@ function readWebCachedLocation(): LocationSnapshot | null {
 }
 
 function distanceMeters(a: Coordinates, b: Coordinates): number {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const earthRadiusM = 6371000;
-  const dLat = toRad(b.latitude - a.latitude);
-  const dLng = toRad(b.longitude - a.longitude);
-  const lat1 = toRad(a.latitude);
-  const lat2 = toRad(b.latitude);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
-  return 2 * earthRadiusM * Math.asin(Math.min(1, Math.sqrt(h)));
+  return haversineMeters(a.latitude, a.longitude, b.latitude, b.longitude);
 }
 
 /**

@@ -12,7 +12,7 @@
 import { QueryClient } from '@tanstack/react-query';
 
 import { fetchFiltersOptimized } from '@/api/miscOptimized';
-import { queryKeys } from '@/queryKeys';
+import { queryKeys } from '@/api/queryKeys';
 import { runStaticQueryClientPrefetch } from '@/utils/queryClientStaticPrefetch';
 
 jest.mock('@/api/miscOptimized', () => ({

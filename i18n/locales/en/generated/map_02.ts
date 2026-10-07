@@ -228,6 +228,8 @@ export const mapGenerated2 = {
   "components.UserPoints.PointsListBulkModals.udalit_vybrannye_e97d9bbe": "Delete selected ones?",
   "components.UserPoints.PointsListBulkModals.zakryt_1fe45ea3": "Close",
   "components.UserPoints.PointsListGrid.3_sluchaynye_tochki_iz_vashih_24a90489": "3 random points from yours",
+  "components.UserPoints.PointsListGrid.recommendationsLocateCta": "Find my location",
+  "components.UserPoints.PointsListGrid.recommendationsNeedLocation": "Without your location we can’t show distance and routes to the points.",
   "components.UserPoints.PointsListGrid.filtry_a9025123": "Filters",
   "components.UserPoints.PointsListGrid.filtry_karty_bf82f2ec": "Map filters",
   "components.UserPoints.PointsListGrid.karta_b48708d8": "Map",

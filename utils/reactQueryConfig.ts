@@ -6,6 +6,7 @@ import { QueryClient, DefaultOptions } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 import { isServerStillWorkingAfter } from '@/api/clientErrors';
 import { setupQueryOnlineManager } from '@/utils/queryOnlineManager';
+import { setupQueryFocusManager } from '@/utils/queryFocusManager';
 
 interface QueryClientRuntimeOptions {
   enableStaticPrefetch?: boolean;
@@ -53,9 +54,10 @@ const defaultQueryOptions: DefaultOptions = {
     // Задержка между повторными попытками (exponential backoff)
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     
-    // Не перезагружать при фокусе окна
+    // Web: не перезагружать при фокусе окна. Native: значение выставляет
+    // `createOptimizedQueryClient` (LC-1) — там фокус приходит из `AppState`.
     refetchOnWindowFocus: false,
-    
+
     // Перезагружать при восстановлении сети
     refetchOnReconnect: true,
     
@@ -66,9 +68,8 @@ const defaultQueryOptions: DefaultOptions = {
     // Мутации по умолчанию НЕ повторяются: POST/PUT/DELETE без ключа
     // идемпотентности при таймауте или 5xx создавал бы дубликат (поездка,
     // сообщение, комментарий). Корневой клиент (`app/_layout.tsx`) всегда
-    // переопределял это значение; теперь то же правило получает и модульный
-    // клиент `api/queryClient.ts`. Повтор включается точечно в конкретной
-    // мутации, если операция идемпотентна.
+    // переопределял это значение; теперь это дефолт для любого клиента.
+    // Повтор включается точечно в конкретной мутации, если операция идемпотентна.
     retry: false,
   },
 };
@@ -81,10 +82,18 @@ export function createOptimizedQueryClient(
   runtimeOptions?: QueryClientRuntimeOptions
 ): QueryClient {
   setupQueryOnlineManager();
+  setupQueryFocusManager();
 
   const client = new QueryClient({
     defaultOptions: {
       ...defaultQueryOptions,
+      queries: {
+        ...defaultQueryOptions.queries,
+        // LC-1: на Android/iOS возврат приложения на передний план (`AppState`
+        // → `focusManager`) перезапрашивает устаревшие запросы; на web
+        // поведение прежнее — без refetch по фокусу вкладки.
+        refetchOnWindowFocus: Platform.OS !== 'web',
+      },
       ...customOptions,
     },
   });

@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Linking, Pressable, Text, View } from 'react-native'
+import { haversineMeters } from '@/utils/geoDistance'
 import Feather from '@expo/vector-icons/Feather'
 
 import { hapticNotification } from '@/utils/haptics'
@@ -24,22 +25,12 @@ async function loadExpoLocation() {
 }
 
 const ARRIVAL_THRESHOLD_M = 40
-const EARTH_RADIUS_M = 6371000
 
 function toRad(deg: number): number {
   return (deg * Math.PI) / 180
 }
 function toDeg(rad: number): number {
   return (rad * 180) / Math.PI
-}
-
-function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const dLat = toRad(lat2 - lat1)
-  const dLng = toRad(lng2 - lng1)
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
-  return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(a)))
 }
 
 // Initial bearing from point 1 to point 2, degrees clockwise from true north [0..360).

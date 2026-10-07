@@ -1,7 +1,8 @@
-import { useQuery, type QueryFunctionContext } from '@tanstack/react-query'
+import { useQuery, type QueryClient, type QueryFunctionContext } from '@tanstack/react-query'
 
-import { queryClient } from '@/api/queryClient'
+import { getActiveQueryClient } from '@/api/activeQueryClient'
 import { queryKeys } from '@/api/queryKeys'
+import { createOptimizedQueryClient } from '@/utils/reactQueryConfig'
 import { bigDataCloudReverse } from '@/api/external/bigdatacloud'
 import { nominatimReverse, nominatimSearch } from '@/api/external/nominatim'
 import { getActiveLocale, getActiveLocaleDefinition, translate as i18nT } from '@/i18n'
@@ -227,6 +228,30 @@ export async function reverseGeocodePoint(lat: number, lng: number): Promise<Rev
   return null
 }
 
+// LC-2: резервный клиент только для вызова до монтирования корневого layout
+// (SSR, тесты, ранний boot). Создаётся лениво и без стартового префетча
+// словарей, чтобы загрузка geoQueries не давала второго запроса фильтров.
+let fallbackGeoQueryClient: QueryClient | null = null
+
+/**
+ * Клиент для императивного геокода: тот же, что смонтирован в React-дереве
+ * (`api/activeQueryClient.ts`), поэтому `fetchReverseGeocode` и
+ * `useReverseGeocodeQuery` делят один кэш и дедуплицируют запросы.
+ */
+function resolveGeoQueryClient(): QueryClient {
+  const active = getActiveQueryClient()
+  if (active) return active
+  if (!fallbackGeoQueryClient) {
+    fallbackGeoQueryClient = createOptimizedQueryClient(undefined, { enableStaticPrefetch: false })
+  }
+  return fallbackGeoQueryClient
+}
+
+/** Только для тестов: сбросить ленивый резервный клиент. */
+export function __resetGeoQueryClientForTests(): void {
+  fallbackGeoQueryClient = null
+}
+
 /**
  * Imperative reverse-geocode for event-driven flows (map click, photo EXIF)
  * where a hook can't be used. Shares the same cache, key and staleTime as
@@ -234,18 +259,17 @@ export async function reverseGeocodePoint(lat: number, lng: number): Promise<Rev
  */
 export function fetchReverseGeocode(lat: number, lng: number): Promise<ReverseGeocodeResult | null> {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return Promise.resolve(null)
-  return queryClient.fetchQuery<ReverseGeocodeResult | null, Error, ReverseGeocodeResult | null, ReverseGeocodeKey>({
+  return resolveGeoQueryClient().fetchQuery<ReverseGeocodeResult | null, Error, ReverseGeocodeResult | null, ReverseGeocodeKey>({
     queryKey: queryKeys.reverseGeocode(lat, lng, getActiveLocale()),
     staleTime: GEO_STALE_TIME_MS,
     gcTime: GEO_GC_TIME_MS,
     retry: false,
-    // #1746 — `networkMode: 'always'`, а не наследуемый 'online'. Модульный
-    // `queryClient` никогда не монтируется в React-дерево, поэтому не подписан на
-    // `onlineManager` и не умеет возобновлять свои `paused`-запросы: запрос,
-    // стартовавший в момент `isOnline() === false`, висел бы вечно, а с ним —
-    // `addPointAtCoords` визарда (точка так и не добавлялась). Для императивного
-    // потока «пользователь нажал добавить» правильный ответ офлайн — быстрый отказ
-    // и фолбэк вызывающего (координаты вместо названия), как было до #1738.
+    // #1746 — `networkMode: 'always'`, а не наследуемый 'online'. Императивный
+    // поток «пользователь нажал добавить» не должен зависать `paused` при
+    // `isOnline() === false` (резервный клиент не монтируется и не возобновляет
+    // такие запросы; у смонтированного ожидание тоже не нужно): правильный ответ
+    // офлайн — быстрый отказ и фолбэк вызывающего (координаты вместо названия),
+    // как было до #1738.
     networkMode: 'always',
     queryFn: reverseGeocodeQueryFn,
   })

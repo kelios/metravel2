@@ -1,7 +1,6 @@
 import type { ParsedRoutePoint, ParsedRoutePreview, RouteElevationSample } from '@/types/travelRoutes';
 import { DOMParser as SafeXmlDomParser } from '@xmldom/xmldom';
-
-const EARTH_RADIUS_M = 6371000;
+import { haversineMeters } from '@/utils/geoDistance';
 
 export type RouteFileFormat = 'gpx' | 'kml';
 
@@ -77,17 +76,8 @@ const parseCoordPair = (coord: string): { lat: number; lng: number } | null => {
   return { lat, lng };
 };
 
-const distanceMeters = (a: { lat: number; lng: number }, b: { lat: number; lng: number }): number => {
-  const toRad = (v: number) => (v * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const lat1 = toRad(a.lat);
-  const lat2 = toRad(b.lat);
-  const s1 = Math.sin(dLat / 2);
-  const s2 = Math.sin(dLng / 2);
-  const h = s1 * s1 + Math.cos(lat1) * Math.cos(lat2) * s2 * s2;
-  return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)));
-};
+const distanceMeters = (a: { lat: number; lng: number }, b: { lat: number; lng: number }): number =>
+  haversineMeters(a.lat, a.lng, b.lat, b.lng);
 
 const medianOf = (values: number[]): number => {
   if (values.length === 0) return 0;

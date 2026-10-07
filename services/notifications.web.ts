@@ -99,15 +99,10 @@ export async function ensureLocalNotificationPermission(
 ): Promise<boolean> {
   return false
 }
-export function getNotifications(): NotificationsModule | null {
-  return null
+export function isQuestReminderIdentifier(_identifier: string): boolean {
+  return false
 }
-export async function presentLocalQuestNotification(
-  _identifier: string,
-  _title: string,
-  _body: string,
-  _deepLinkUrl: string,
-): Promise<void> {}
+export async function cancelScheduledQuestReminders(): Promise<void> {}
 export async function scheduleQuestReminder(
   _questId: string,
   _title: string,
