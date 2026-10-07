@@ -384,12 +384,19 @@ describe('локали и справочные данные', () => {
     expect(fs.existsSync(path.join(ROOT, GUIDE_PATH))).toBe(true)
   })
 
-  it('подпись кнопки из текста квеста берётся из интерфейса на языке перевода', () => {
+  it('подпись кнопки из текста квеста берётся из интерфейса на языке перевода; кнопки мастера — всегда', () => {
     const source = sourceFromBundle(makeBundle())
     for (const locale of targets) {
       const labels = collectUiLabels({ source, sourceLocale, locale })
-      expect(labels.map((label: { source: string }) => label.source)).toEqual(['Начать квест'])
-      expect(labels[0].target).toBeTruthy()
+      // Процитированный «Начать квест» и есть первая кнопка мастера — дубля нет.
+      expect(labels.map((label: { source: string }) => label.source)).toEqual([
+        'Начать квест',
+        'Далее',
+        'Проверить ответ',
+        'Пропустить',
+        'Подсказка',
+      ])
+      for (const label of labels) expect(label.target).toBeTruthy()
     }
   })
 })
