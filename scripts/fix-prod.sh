@@ -29,10 +29,9 @@ for arg in "$@"; do
     --allow-dirty) ALLOW_DIRTY=1 ;;
   esac
 done
-# Overlay assets older than this only serve HTML cached weeks ago — dead weight
-# on a 15G disk (board #898: _expo grew to 668M/4732 files/82 deploy
-# generations in 12 days; 14 days caps steady-state at ~700M).
-EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"
+metravel_deploy_defaults
+EXPO_OVERLAY_HELPER="scripts/deploy-expo-overlay.sh"
+DISK_GUARD_HELPER="scripts/deploy-disk-guard.sh"
 
 # Health-check curls MUST be bounded: under `set -e` a hung/slow request (no
 # timeout) silently aborts an otherwise-successful deploy. Bound + retry so a
@@ -116,98 +115,105 @@ if [ "$ENV" = "prod" ]; then
   node scripts/verify-prod-config.js --dist "dist/$ENV"
 fi
 
+# Recovery uploads all three trees, then copies the selected artifact and assets
+# into static/dist.new. Reserve BOTH allocations before the first upload byte.
+UPLOAD_KIB="$(du -sk ./dist ./assets/icons ./assets/images | awk '{ total += $1 } END { print total }')"
+STAGING_KIB="$(du -sk "./dist/$ENV" ./assets/icons ./assets/images | awk '{ total += $1 } END { print total }')"
+PAYLOAD_KIB=$((UPLOAD_KIB + STAGING_KIB))
+if ! ssh "$SERVER" bash -s -- preflight "$REMOTE_DIR" "$PAYLOAD_KIB" \
+  "$DEPLOY_DISK_RESERVE_MB" "$DEPLOY_BACKEND_BUILD_MB" < "$DISK_GUARD_HELPER"; then
+  echo "ERROR: disk preflight refused recovery; upload has not started"
+  exit 1
+fi
+EXPO_OVERLAY_HELPER_B64="$(base64 < "$EXPO_OVERLAY_HELPER" | tr -d '\n')"
+DISK_GUARD_HELPER_B64="$(base64 < "$DISK_GUARD_HELPER" | tr -d '\n')"
+CONTAINER_HELPER_B64="$(metravel_container_remote_snippet | base64 | tr -d '\n')"
+
 echo "Uploading build payload to server..."
-# Never ship build-orchestration dotdirs: build-web-prod.js stages into
-# dist/.prod-staging and writes dist/.prod-build.lock. With --delete a leftover
-# staging/lock from an aborted run would otherwise be pushed to prod.
-rsync -avzhe "ssh" --delete \
+# Preserve paired SSG hardlinks; omit build-orchestration dotdirs.
+rsync -avzHhe "ssh" --delete \
   --exclude='/.prod-staging' --exclude='/.prod-build.lock' --exclude='/.tmp' \
   ./dist/ "$SERVER:$REMOTE_DIR/dist/"
 rsync -avzhe "ssh" --delete ./assets/icons/ "$SERVER:$REMOTE_DIR/icons/"
 rsync -avzhe "ssh" --delete ./assets/images/ "$SERVER:$REMOTE_DIR/images/"
 
 echo "Applying release atomically on server..."
-# static/ is owned by uid 1984 (the container user); the host login is in
-# "other" and cannot write into it, so a host-side `mv` into static/ fails with
-# Permission denied. The swap therefore runs INSIDE the app container
-# (metravel-app-1, uid 1984), which owns static/ and mounts the whole repo at
-# /app, so it also sees the freshly-uploaded dist/ icons/ images/.
-#   - shipped via base64 over stdin to sidestep ssh+docker quoting pitfalls
-#   - the app image has no rsync, so the _expo overlay uses `cp -an` (no-clobber)
-#   - the new bundle is copied (cp -a), not moved: dist/ belongs to the host user
-#     and its entries can't be unlinked from inside the container
-# $ENV expands locally before encoding.
-SWAP_SCRIPT="set -eu
-cd /app
-test -d dist/$ENV
-rm -rf static/dist.new
-cp -a dist/$ENV static/dist.new
+# The shared overlay needs host Bash/Perl/cpio, verified by disk preflight.
+# Create only the fresh staging tree for the host uid, then rsync/overlay there, preserving SSG links on every host.
+# The final rename stays inside the app container that owns static/.
+REMOTE_DONE_MARKER="MT_FIX_PROD_OK:$(date +%s).$$.$RANDOM"
+if ! REMOTE_OUTPUT=$(ssh "$SERVER" bash -s -- "$ENV" "$REMOTE_DIR" "$CONTAINER_HELPER_B64" \
+  "$EXPO_OVERLAY_HELPER_B64" "$EXPO_OVERLAY_RETENTION_DAYS" "$EXPO_OVERLAY_MAX_MB" \
+  "$DISK_GUARD_HELPER_B64" "$DEPLOY_BACKEND_BUILD_MB" "$REMOTE_DONE_MARKER" <<'REMOTE_FIX_SCRIPT'
+set -euo pipefail
+ENV="$1"
+REMOTE_DIR="$2"
+CONTAINER_HELPER_B64="$3"
+EXPO_OVERLAY_HELPER_B64="$4"
+EXPO_OVERLAY_RETENTION_DAYS="$5"
+EXPO_OVERLAY_MAX_MB="$6"
+DISK_GUARD_HELPER_B64="$7"
+DEPLOY_BACKEND_BUILD_MB="$8"
+DEPLOY_SUCCESS_MARKER="$9"
+test -n "$DEPLOY_SUCCESS_MARKER"
+cd "$REMOTE_DIR"
+test -d "dist/$ENV"
+eval "$(printf '%s' "$CONTAINER_HELPER_B64" | base64 -d)"
+app_ctr="$(metravel_resolve_container app)"
+nginx_ctr="$(metravel_resolve_container nginx)"
+# Retain existing top-level ownership normalization; the new permission change
+# applies only to dist.new. Host writes never rely on tools in the app image.
+docker exec -u 0 "$app_ctr" sh -c '
+  set -eu
+  chown 1984:1000 /app/static
+  chmod 2775 /app/static
+  rm -rf /app/static/dist.new /app/static/dist.old
+  mkdir /app/static/dist.new
+  chown "$1:$2" /app/static/dist.new
+' sh "$(id -u)" "$(id -g)" </dev/null
+rsync -aH "dist/$ENV/" static/dist.new/
 find static/dist.new/_expo/static/js/web -type f -name '*.js' >/dev/null
-if [ -d static/dist/_expo/static ]; then
-  mkdir -p static/dist.new/_expo/static
-  cp -an static/dist/_expo/static/. static/dist.new/_expo/static/ 2>/dev/null || true
-fi
-# Overlay retention (board #898): the no-clobber overlay accumulates every
-# historical hashed asset forever. Prune overlay files older than the retention
-# window, but never a file present in the fresh payload — so even a stale-built
-# dist (FORCE_REBUILD=0) cannot lose its own chunks to the mtime filter.
-if [ -d static/dist.new/_expo ]; then
-  ( cd static/dist.new/_expo
-    find . -type f -mtime +$EXPO_OVERLAY_RETENTION_DAYS | while IFS= read -r f; do
-      [ -e \"/app/dist/$ENV/_expo/\$f\" ] || rm -f \"\$f\"
-    done
-    find . -type d -empty -delete 2>/dev/null || true )
-fi
-rm -rf static/dist.old 2>/dev/null || true
-mv static/dist static/dist.old 2>/dev/null || true
-mv static/dist.new static/dist
-# Tolerant: a dir left by an out-of-band deploy may be owned by another uid the
-# container cannot unlink. The bundle is already live by here, so never abort.
-rm -rf static/dist.old 2>/dev/null || true
-mkdir -p static/dist/assets/icons static/dist/assets/images
-cp -R icons/. static/dist/assets/icons/
-cp -R images/. static/dist/assets/images/"
-SWAP_B64="$(printf '%s' "$SWAP_SCRIPT" | base64 | tr -d '\n')"
-ssh "$SERVER" "set -euo pipefail
-  cd '$REMOTE_DIR'
-  test -d dist/$ENV
-  # Имя контейнера резолвится на месте, а не хардкодится: compose меняет схему
-  # именования при пересоздании, и захардкоженное имя роняло swap с 'No such
-  # container' (борд #733). Регулярка живёт в одном месте — в
-  # scripts/deploy-target.sh; сюда её тело подставляется локально командной
-  # подстановкой, поэтому \$-переменные снипета уезжают на прод как есть (#1636).
-$(metravel_container_remote_snippet)
-  app_ctr=\"\$(metravel_resolve_container app)\"
-  nginx_ctr=\"\$(metravel_resolve_container nginx)\"
-  # Self-heal static/ ownership drift before the swap (recurring infra bug,
-  # board #653). The swap below runs as the container user (uid 1984); if an
-  # out-of-band op left the TOP static/ dir owned by the host user (1000), uid
-  # 1984 falls into 'other' (no write) and the swap dies creating dist.new with
-  # 'Permission denied'. Normalize the top dir only (root via docker exec, no
-  # container restart) and keep setgid; children (Django collectstatic output)
-  # are left untouched. Idempotent — a no-op when ownership is already correct.
-  # Remove once the backend entrypoint owns this (#653 permanent fix, verified).
-  # Same root step also force-removes stale swap dirs (dist.new/dist.old): a
-  # prior interrupted or manual deploy can leave dist.old owned by another uid
-  # (1000) that the container user cannot unlink, so the in-container swap's
-  # 'rm -rf dist.old' silently fails and the next 'mv dist dist.old' nests
-  # inside the leftover dir instead of replacing it (past manual-recovery need).
-  docker exec -u 0 \"\$app_ctr\" sh -c 'chown 1984:1000 /app/static && chmod 2775 /app/static && rm -rf /app/static/dist.new /app/static/dist.old'
-  printf '%s' '$SWAP_B64' | base64 -d | docker exec -i \"\$app_ctr\" sh -s
-  # Static files are already live through the bind mount. Validate the active
-  # config and ask the existing Nginx master to reload gracefully; a frontend
-  # recovery must not stop or recreate any application/infra container.
-  docker exec \"\$nginx_ctr\" /etc/nginx/sbin/nginx -t -c /etc/nginx/conf/nginx.conf
-  docker exec \"\$nginx_ctr\" /etc/nginx/sbin/nginx -s reload -c /etc/nginx/conf/nginx.conf
-  rm -rf dist icons images
-  # Leftovers from the tar+ssh fallback deploy path (board #898): harmless to
-  # remove after a successful release, 90M of dead weight otherwise.
-  rm -f /tmp/dist-prod-upload.tar.gz dist-prod-upload.tar.gz
-  disk_pct=\"\$(df -P / | awk 'NR==2{print \$5}' | tr -d %)\"
-  if [ \"\$disk_pct\" -gt 88 ]; then
-    echo \"WARN: server root disk at \${disk_pct}% — clean old artifacts (see board #898)\"
+mkdir -p static/dist.new/assets/icons static/dist.new/assets/images
+cp -R icons/. static/dist.new/assets/icons/
+cp -R images/. static/dist.new/assets/images/
+# Also stamp cached fresh chunks on a first release; the helper handles an
+# absent previous tree after assigning the new generation's publication time.
+printf '%s' "$EXPO_OVERLAY_HELPER_B64" | base64 -d | bash -s -- \
+  static/dist.new/_expo/static static/dist/_expo/static \
+  "$EXPO_OVERLAY_RETENTION_DAYS" "$EXPO_OVERLAY_MAX_MB"
+# No copy/link/write failure above can reach the swap; an absent first release
+# is allowed explicitly, while rename failures restore the previous tree.
+docker exec "$app_ctr" sh -c '
+  set -eu
+  cd /app
+  if [ -d static/dist ]; then mv static/dist static/dist.old; fi
+  if ! mv static/dist.new static/dist; then
+    if [ ! -e static/dist ] && [ -d static/dist.old ]; then mv static/dist.old static/dist; fi
+    exit 1
   fi
-"
+' </dev/null
+# Preserve the recovery activation order: validate then gracefully reload.
+docker exec "$nginx_ctr" /etc/nginx/sbin/nginx -t -c /etc/nginx/conf/nginx.conf </dev/null
+docker exec "$nginx_ctr" /etc/nginx/sbin/nginx -s reload -c /etc/nginx/conf/nginx.conf </dev/null
+docker exec -u 0 "$app_ctr" sh -c 'rm -rf /app/static/dist.old' </dev/null
+rm -rf dist icons images
+rm -f /tmp/dist-prod-upload.tar.gz dist-prod-upload.tar.gz
+if ! printf '%s' "$DISK_GUARD_HELPER_B64" | base64 -d | bash -s -- \
+  report "$REMOTE_DIR" "$REMOTE_DIR/static/dist" "$DEPLOY_BACKEND_BUILD_MB"; then
+  echo "WARN: disk report failed; recovery is already published"
+fi
+printf '\n%s\n' "$DEPLOY_SUCCESS_MARKER"
+REMOTE_FIX_SCRIPT
+); then
+  printf '%s\n' "$REMOTE_OUTPUT"
+  echo "ERROR: recovery publication failed"
+  exit 1
+fi
+printf '%s\n' "$REMOTE_OUTPUT"
+if ! printf '%s\n' "$REMOTE_OUTPUT" | grep -qxF -- "$REMOTE_DONE_MARKER"; then
+  echo "ERROR: recovery program did not reach its final success marker"
+  exit 1
+fi
 
 echo "Validating deployed entry chunk..."
 entry_chunk="$(grep -oE 'entry-[a-f0-9]+\.js' "dist/$ENV/index.html" | head -1 || true)"

@@ -34,6 +34,7 @@ let translations: Map<string, Json>
 let cityNames: Map<string, string>
 let sourceStepIds: number[]
 let staleStepIds: number[]
+let finaleStatuses: Map<string, string>
 // Правка русского источника после `prepare`: поля поверх бандла демо-квеста.
 let bundlePatch: Json
 let requests: string[]
@@ -60,6 +61,7 @@ const statusRows = (locale: string | null) =>
           missing_step_ids: ids.filter((id) => !have.has(id)),
           stale_step_ids: row && quest.id === 7 ? staleStepIds.filter((id) => have.has(id)) : [],
           updated_at: row ? '2026-10-05T10:00:00Z' : null,
+          ...(finaleStatuses.has(`${quest.id}:${code}`) ? { finale: finaleStatuses.get(`${quest.id}:${code}`) } : {}),
         }
       }),
   )
@@ -136,6 +138,7 @@ beforeEach(() => {
   cityNames = new Map()
   sourceStepIds = [INTRO_ID, GATE_ID, TOWER_ID]
   staleStepIds = []
+  finaleStatuses = new Map()
   bundlePatch = {}
   requests = []
   QUESTS = [...BASE_QUESTS]
@@ -663,8 +666,56 @@ describe('next, status, city-name', () => {
     await cli(['status', '--json'])
     const summary = printed()
     expect(summary.map((row: Json) => row.locale)).toEqual(['be', 'uk', 'pl', 'en'])
-    expect(summary[2]).toEqual({ locale: 'pl', quests: 2, published: 1, draft: 1, missing: 0, stale: 1, incomplete: 0 })
+    expect(summary[2]).toEqual({ locale: 'pl', quests: 2, published: 1, draft: 1, missing: 0, stale: 1, incomplete: 0, finale_missing: 0, finale_stale: 0 })
     expect(summary[0]).toMatchObject({ published: 0, draft: 0, missing: 2 })
+  })
+
+  it.each(['missing', 'stale'])('next and sweep select a published finale-only %s pair without any PUT', async (finale) => {
+    QUESTS = [BASE_QUESTS[0]]
+    for (const code of ['be', 'uk', 'pl', 'en']) translations.set(`7:${code}`, { ...makePolishTranslation(), status: 'published' })
+    finaleStatuses.set('7:pl', finale)
+    await cli(['next', '--count', '10', '--order', 'catalog', '--json'])
+    expect(printed()).toMatchObject({ remaining: 1, quests: [{ locales: { pl: `published, finale ${finale}` } }] })
+    expect(Object.keys(printed().quests[0].locales)).toEqual(['pl'])
+    stdoutSpy.mockClear()
+    await cli(['sweep', 'demo-quest', '--json'])
+    expect(printed().pairs.find((pair: Json) => pair.locale === 'pl').status).toBe('no_task')
+    stdoutSpy.mockClear()
+    await cli(['sweep', '--from-next', '1', '--order', 'catalog', '--json'])
+    expect(printed().quests).toEqual(['demo-quest'])
+    expect(printed().pairs.find((pair: Json) => pair.locale === 'pl').status).toBe('no_task')
+    expect(writes()).toEqual([])
+  })
+
+  it.each([undefined, 'none', 'ok'])('absent/clean finale %s preserves legacy completeness', async (finale) => {
+    QUESTS = [BASE_QUESTS[0]]
+    for (const code of ['be', 'uk', 'pl', 'en']) {
+      translations.set(`7:${code}`, { ...makePolishTranslation(), status: 'published' })
+      if (finale) finaleStatuses.set(`7:${code}`, finale)
+    }
+    await cli(['next', '--count', '10', '--order', 'catalog', '--json'])
+    expect(printed()).toMatchObject({ remaining: 0, quests: [] })
+    stdoutSpy.mockClear()
+    await cli(['sweep', 'demo-quest', '--json'])
+    expect(printed().summary).toEqual({ published: 4 })
+    expect(writes()).toEqual([])
+  })
+
+  it('status counts finales independently, honors locale filter and leaves step/state counts intact', async () => {
+    for (const quest of QUESTS) {
+      for (const code of ['be', 'uk', 'pl', 'en']) translations.set(`${quest.id}:${code}`, { ...makePolishTranslation(), status: 'published' })
+    }
+    finaleStatuses.set('7:pl', 'missing')
+    finaleStatuses.set('9:pl', 'stale')
+    finaleStatuses.set('7:en', 'none')
+    await cli(['status', '--locale', 'pl', '--json'])
+    expect(printed()).toEqual([{ locale: 'pl', quests: 2, published: 2, draft: 0, missing: 0, stale: 0, incomplete: 0, finale_missing: 1, finale_stale: 1 }])
+    stdoutSpy.mockClear()
+    await cli(['status', '--locale', 'en', '--json'])
+    expect(printed()[0]).toMatchObject({ finale_missing: 0, finale_stale: 0 })
+    await cli(['status', '--locale', 'pl'])
+    expect(logged()).toContain('finale_missing  finale_stale')
+    expect(writes()).toEqual([])
   })
 
   it('city-name пишет название города на локали', async () => {

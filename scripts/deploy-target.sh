@@ -70,6 +70,23 @@ require_deploy_target() {
   return 0
 }
 
+# Both frontend publication paths share these limits. Preserve explicit overrides,
+# including zero; empty values use the default, never disable a bound accidentally.
+metravel_deploy_defaults() {
+  EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"
+  EXPO_OVERLAY_MAX_MB="${EXPO_OVERLAY_MAX_MB:-256}"
+  DEPLOY_DISK_RESERVE_MB="${DEPLOY_DISK_RESERVE_MB:-720}"
+  # Backend image-build floor is a contract, not a new frontend override.
+  DEPLOY_BACKEND_BUILD_MB=1536
+  local setting
+  for setting in EXPO_OVERLAY_RETENTION_DAYS EXPO_OVERLAY_MAX_MB DEPLOY_DISK_RESERVE_MB DEPLOY_BACKEND_BUILD_MB; do
+    if [[ ! "${!setting}" =~ ^[0-9]+$ ]]; then
+      echo "ERROR: $setting must be a non-negative integer" >&2
+      return 1
+    fi
+  done
+}
+
 # ---------------------------------------------------------------------------
 # Имена docker-контейнеров прода
 # ---------------------------------------------------------------------------

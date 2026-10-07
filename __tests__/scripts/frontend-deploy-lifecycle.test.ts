@@ -70,18 +70,23 @@ describe('frontend deploy container lifecycle contract', () => {
 
   it('validates and gracefully reloads recovery Nginx after the static swap', () => {
     const source = readRecoveryDeploy()
-    const swapIndex = source.indexOf(
-      "printf '%s' '$SWAP_B64' | base64 -d | docker exec -i",
+    const remote = source.match(/<<'REMOTE_FIX_SCRIPT'[^\n]*\n([\s\S]*?)\nREMOTE_FIX_SCRIPT/)?.[1] || ''
+    expect(remote).not.toBe('')
+    const swapIndex = remote.indexOf(
+      'docker exec "$app_ctr" sh -c \'',
     )
-    const validationIndex = source.indexOf(
-      'docker exec \\"\\$nginx_ctr\\" /etc/nginx/sbin/nginx -t -c /etc/nginx/conf/nginx.conf',
+    const swapEnd = remote.indexOf("' </dev/null", swapIndex)
+    const validationIndex = remote.indexOf(
+      'docker exec "$nginx_ctr" /etc/nginx/sbin/nginx -t -c /etc/nginx/conf/nginx.conf',
     )
-    const reloadIndex = source.indexOf(
-      'docker exec \\"\\$nginx_ctr\\" /etc/nginx/sbin/nginx -s reload -c /etc/nginx/conf/nginx.conf',
+    const reloadIndex = remote.indexOf(
+      'docker exec "$nginx_ctr" /etc/nginx/sbin/nginx -s reload -c /etc/nginx/conf/nginx.conf',
     )
 
     expect(swapIndex).toBeGreaterThan(-1)
-    expect(validationIndex).toBeGreaterThan(swapIndex)
+    expect(swapEnd).toBeGreaterThan(swapIndex)
+    expect(remote.slice(swapIndex, swapEnd)).toContain('if ! mv static/dist.new static/dist; then')
+    expect(validationIndex).toBeGreaterThan(swapEnd)
     expect(reloadIndex).toBeGreaterThan(validationIndex)
   })
 })

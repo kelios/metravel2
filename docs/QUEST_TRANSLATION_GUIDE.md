@@ -24,7 +24,7 @@
 | смысловая проверка | новый экземпляр `quest-translator` по `<id>.review-task.json` | `<id>.review.json` |
 | запись | `npm run quest:translate -- upload --quest <id> --locale <код> [--publish]` | черновик или публикация |
 | волна | `npm run quest:translate -- sweep <id>… \| --from-next <n> [--json]` | строка на каждую пару «квест + локаль»; готовые пары публикуются |
-| сводка | `npm run quest:translations:status -- [--locale <код>]` | published / draft / missing / stale |
+| сводка | `npm run quest:translations:status -- [--locale <код>]` | published / draft / missing / stale + finale_missing / finale_stale |
 
 Правила конвейера:
 
@@ -40,6 +40,11 @@
   и устаревшие шаги; остальные копируются из принятого перевода без изменений.
 - Шаги с ручным переводом (`origin: human`) не переводятся и не перезаписываются
   без `--force`.
+- `next` и `sweep --from-next` выбирают также опубликованные пары с актуальными
+  шагами, если status API сообщает `finale: missing` или `finale: stale`. Причина
+  видна в списке (`published, finale missing/stale`). `none`, `ok` и отсутствие
+  поля на старом сервере сохраняют прежнюю полноту. `status` считает
+  `finale_missing`/`finale_stale` отдельно, не меняя published/draft и счётчики шагов.
 - Порядок `next` — по числу стартов из `npm run quest:funnel` (топ за 90 дней),
   дальше по каталогу. Если воронка недоступна, порядок каталожный — это видно в
   выводе.

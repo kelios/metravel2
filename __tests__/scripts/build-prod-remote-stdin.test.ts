@@ -153,8 +153,20 @@ function runPayload(
   root: string,
   payload: string,
   extraStubs: Record<string, string[]> = {},
+  firstCachedRelease = false,
 ): { status: number; stdout: string; stderr: string } {
   const { sandbox, stubBin } = makeRemoteSandbox(root)
+  if (firstCachedRelease) {
+    fs.rmSync(path.join(sandbox, 'static/dist'), { recursive: true })
+    const chunks = path.join(sandbox, 'dist/prod/_expo/static/js/web')
+    fs.mkdirSync(chunks, { recursive: true })
+    for (const [name, days] of [['cached.js', 40], ['cached.css', 80]] as const) {
+      const file = path.join(chunks, name)
+      fs.writeFileSync(file, name)
+      const old = new Date(Date.now() - days * 86400000)
+      fs.utimesSync(file, old, old)
+    }
+  }
   for (const [name, lines] of Object.entries(extraStubs)) {
     writeExecutable(path.join(stubBin, name), lines)
   }
@@ -216,6 +228,7 @@ function runDeployProdHarness(
     '#!/bin/bash',
     'set -Eeuo pipefail',
     "IFS=$'\\n\\t'",
+    `DEPLOY_ENV_FILE=/nonexistent source '${path.resolve(process.cwd(), 'scripts/deploy-target.sh')}'`,
     'PROD_SSH_TARGET="stub@host"',
     'PROD_REMOTE_DIR="/srv/metravel"',
     'require_deploy_target() { return 0; }',
@@ -319,6 +332,26 @@ describe('build-prod.sh remote stdin transport', () => {
         '📊 Overlay старых чанков: перенесено — поколений 1, файлов 1',
       )
       expect(result.stdout).toContain('📊 Диск прода после выката: занято')
+    } finally {
+      removeDir(root)
+    }
+  })
+
+  it('stamps every cached chunk on a first deploy before retaining that generation on the next one', () => {
+    const root = makeTempDir('metravel-first-cached-release-')
+    try {
+      const publishedAt = Date.now()
+      const result = runPayload(root, extractRemoteDeploy(), {}, true)
+      expect(result.status).toBe(0)
+      const current = path.join(root, 'remote/static/dist/_expo/static')
+      for (const chunk of ['cached.js', 'cached.css']) {
+        expect(fs.statSync(path.join(current, 'js/web', chunk)).mtimeMs).toBeGreaterThanOrEqual(publishedAt - 1000)
+      }
+      const next = path.join(root, 'next-static')
+      expect(runCli('bash', [path.resolve('scripts/deploy-expo-overlay.sh'), next, current, '0', '0']).status).toBe(0)
+      for (const chunk of ['cached.js', 'cached.css']) {
+        expect(fs.readFileSync(path.join(next, 'js/web', chunk), 'utf8')).toBe(chunk)
+      }
     } finally {
       removeDir(root)
     }

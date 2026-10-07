@@ -201,7 +201,8 @@ function resolveInvocation(args) {
 const parseArgs = (tokens) => parseCliTokens(tokens, CLI_SPEC)
 
 const isIncomplete = (row) =>
-  !row || row.state !== 'published' || row.missing_step_ids.length > 0 || row.stale_step_ids.length > 0
+  !row || row.state !== 'published' || row.missing_step_ids.length > 0 || row.stale_step_ids.length > 0 ||
+  row.finale === 'missing' || row.finale === 'stale'
 
 /** Статус переводов, сгруппированный по квесту: `Map<quest_id, Map<locale, row>>`. */
 function indexStatus(rows) {
@@ -283,7 +284,8 @@ async function commandNext(args, api) {
     if (!row) return 'missing'
     const stale = row.stale_step_ids.length ? `, stale ${row.stale_step_ids.length}` : ''
     const missing = row.state !== 'missing' && row.missing_step_ids.length ? `, без ${row.missing_step_ids.length} шагов` : ''
-    return `${row.state}${stale}${missing}`
+    const finale = row.finale === 'missing' || row.finale === 'stale' ? `, finale ${row.finale}` : ''
+    return `${row.state}${stale}${missing}${finale}`
   }
   const result = {
     order,
@@ -668,22 +670,25 @@ async function commandStatus(args, api) {
   const inCatalog = new Set(catalog.map((quest) => quest.quest_id))
   const status = indexStatus(rows)
   const summary = locales.map((code) => {
-    const counts = { locale: code, quests: catalog.length, published: 0, draft: 0, missing: 0, stale: 0, incomplete: 0 }
+    const counts = { locale: code, quests: catalog.length, published: 0, draft: 0, missing: 0, stale: 0, incomplete: 0, finale_missing: 0, finale_stale: 0 }
     for (const questId of inCatalog) {
       const row = (status.get(questId) || new Map()).get(code)
       counts[row ? row.state : 'missing'] += 1
       if (row && row.stale_step_ids.length) counts.stale += 1
       if (row && row.state === 'published' && row.missing_step_ids.length) counts.incomplete += 1
+      if (row && row.finale === 'missing') counts.finale_missing += 1
+      if (row && row.finale === 'stale') counts.finale_stale += 1
     }
     return counts
   })
   if (args.json) return process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`)
   console.log(`Переводы квестов (квестов в каталоге: ${catalog.length})`)
-  console.log('  локаль  published  draft  missing  stale  опубликован без шагов')
+  console.log('  локаль  published  draft  missing  stale  опубликован без шагов  finale_missing  finale_stale')
   for (const row of summary) {
     console.log(
       `  ${row.locale.padEnd(6)}  ${String(row.published).padStart(9)}  ${String(row.draft).padStart(5)}  ` +
-        `${String(row.missing).padStart(7)}  ${String(row.stale).padStart(5)}  ${String(row.incomplete).padStart(8)}`,
+        `${String(row.missing).padStart(7)}  ${String(row.stale).padStart(5)}  ${String(row.incomplete).padStart(8)}  ` +
+        `${String(row.finale_missing).padStart(14)}  ${String(row.finale_stale).padStart(12)}`,
     )
   }
   return undefined

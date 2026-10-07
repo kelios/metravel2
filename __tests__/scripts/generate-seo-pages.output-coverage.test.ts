@@ -4,6 +4,7 @@ const { makeTempDir } = require('./cli-test-utils');
 const {
   assertTravelStaticPagesComplete,
   travelStaticPagePaths,
+  writePairedPage,
 } = require('@/scripts/generate-seo-pages');
 const { travelPageVariants } = require('@/scripts/verify-static-travel-seo');
 
@@ -16,10 +17,8 @@ describe('travel static output coverage', () => {
   function writeTravelPage(distDir: string, routeKey: string) {
     const explicitFile = path.join(distDir, 'travels', `${routeKey}.html`);
     const directoryIndex = path.join(distDir, 'travels', routeKey, 'index.html');
-    fs.mkdirSync(path.dirname(explicitFile), { recursive: true });
-    fs.mkdirSync(path.dirname(directoryIndex), { recursive: true });
-    fs.writeFileSync(explicitFile, '<html></html>', 'utf8');
-    fs.writeFileSync(directoryIndex, '<html></html>', 'utf8');
+    writePairedPage(explicitFile, directoryIndex, '<html></html>');
+    expect(fs.statSync(explicitFile).ino).toBe(fs.statSync(directoryIndex).ino);
   }
 
   it('accepts a snapshot that contains both static variants for every published travel', () => {

@@ -307,7 +307,9 @@ describe('normal deploy Expo overlay retention', () => {
   it('wires the tested helper into the canonical deploy before the static swap', () => {
     const source = readCanonicalDeploy()
 
-    expect(source).toContain(
+    const defaults = fs.readFileSync(path.resolve('scripts/deploy-target.sh'), 'utf8')
+    expect(source).toContain('metravel_deploy_defaults')
+    expect(defaults).toContain(
       'EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"',
     )
     expect(source).toContain(
@@ -315,15 +317,15 @@ describe('normal deploy Expo overlay retention', () => {
     )
     // `:-`, not `-`: .env.deploy is exported wholesale, and an empty line in
     // it must fall back to the default instead of lifting the bound.
-    expect(source).toContain(
+    expect(defaults).toContain(
       'EXPO_OVERLAY_MAX_MB="${EXPO_OVERLAY_MAX_MB:-256}"',
     )
     expect(extractRemoteDeploy(source)).toContain(
-      '    "$EXPO_OVERLAY_RETENTION_DAYS" \\\n    "$EXPO_OVERLAY_MAX_MB"\nfi',
+      '  "$EXPO_OVERLAY_RETENTION_DAYS" \\\n  "$EXPO_OVERLAY_MAX_MB"',
     )
     // Only dist/$ENV travels, so build-root dot paths never reach the server,
     // and the live release is the delta basis for the upload (#2013).
-    expect(source).toContain('rsync -azhe "ssh" --delete --mkpath --stats')
+    expect(source).toContain('rsync -azHhe "ssh" --delete --mkpath --stats')
     expect(source).toContain('--copy-dest="$PROD_REMOTE_DIR/static/dist"')
     expect(source).toContain(
       '"./dist/$ENV/" \\\n    "$PROD_SSH_TARGET:$PROD_REMOTE_DIR/dist/$ENV/"',

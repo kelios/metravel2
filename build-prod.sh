@@ -275,38 +275,17 @@ build_env() {
 
 deploy_prod() {
   local ENV="$1"
-  local EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"
-  # Второй предел overlay — объём (#2186): срок ограничивает его в днях, а
-  # растёт он с числом выкатов. Только число: `.env.deploy` экспортируется
-  # целиком, и пустая строка в нём не должна молча снимать предел.
-  local EXPO_OVERLAY_MAX_MB="${EXPO_OVERLAY_MAX_MB:-256}"
+  local EXPO_OVERLAY_RETENTION_DAYS EXPO_OVERLAY_MAX_MB
+  local DEPLOY_DISK_RESERVE_MB DEPLOY_BACKEND_BUILD_MB
+  metravel_deploy_defaults || return 1
   local EXPO_OVERLAY_HELPER="scripts/deploy-expo-overlay.sh"
   local EXPO_OVERLAY_HELPER_B64
-  # Место на диске прода (#2186). Резерв — то, что заливка обязана оставить
-  # свободным сверх размера релиза: 5 % диска, уровень, который хостовый
-  # монитор считает аварией. 1536 МБ требует preflight сборки образа бэкенда
-  # (`deploy/prod/app_image_retention.sh` в его репо): ниже этого выкат бэка
-  # невозможен, и отчёт выката об этом предупреждает.
-  local DEPLOY_DISK_RESERVE_MB="${DEPLOY_DISK_RESERVE_MB:-720}"
-  local DEPLOY_BACKEND_BUILD_MB=1536
   local DISK_GUARD_HELPER="scripts/deploy-disk-guard.sh"
   local DISK_GUARD_HELPER_B64
   local PAYLOAD_KIB
   local CONTAINER_HELPER_B64
   local REMOTE_DONE_MARKER
 
-  if [[ ! "$EXPO_OVERLAY_RETENTION_DAYS" =~ ^[0-9]+$ ]]; then
-    echo "❌ EXPO_OVERLAY_RETENTION_DAYS must be a non-negative integer"
-    return 1
-  fi
-  if [[ ! "$EXPO_OVERLAY_MAX_MB" =~ ^[0-9]+$ ]]; then
-    echo "❌ EXPO_OVERLAY_MAX_MB must be a non-negative integer"
-    return 1
-  fi
-  if [[ ! "$DEPLOY_DISK_RESERVE_MB" =~ ^[0-9]+$ ]]; then
-    echo "❌ DEPLOY_DISK_RESERVE_MB must be a non-negative integer"
-    return 1
-  fi
   if [[ ! -f "$EXPO_OVERLAY_HELPER" ]]; then
     echo "❌ Expo overlay helper is missing: $EXPO_OVERLAY_HELPER"
     return 1
@@ -346,7 +325,7 @@ deploy_prod() {
     return 1
   fi
   local rsync_started=$SECONDS
-  rsync -azhe "ssh" --delete --mkpath --stats \
+  rsync -azHhe "ssh" --delete --mkpath --stats \
     --copy-dest="$PROD_REMOTE_DIR/static/dist" \
     "./dist/$ENV/" \
     "$PROD_SSH_TARGET:$PROD_REMOTE_DIR/dist/$ENV/"
@@ -476,14 +455,12 @@ mv dist/$ENV static/dist.new
 # static tree are exposed together only by the directory swap below.
 # The window is bounded twice: by age and by a byte budget, because its size
 # follows the number of deploys inside the window, not the days (#2186).
-if [ -d static/dist/_expo/static ]; then
-  mkdir -p static/dist.new/_expo/static
-  printf '%s' "$EXPO_OVERLAY_HELPER_B64" | base64 -d | bash -s -- \
-    static/dist.new/_expo/static \
-    static/dist/_expo/static \
-    "$EXPO_OVERLAY_RETENTION_DAYS" \
-    "$EXPO_OVERLAY_MAX_MB"
-fi
+# The helper stamps the fresh generation even when no previous tree exists.
+printf '%s' "$EXPO_OVERLAY_HELPER_B64" | base64 -d | bash -s -- \
+  static/dist.new/_expo/static \
+  static/dist/_expo/static \
+  "$EXPO_OVERLAY_RETENTION_DAYS" \
+  "$EXPO_OVERLAY_MAX_MB"
 
 rollback_dir=static/dist.old
 rollback_moved=0

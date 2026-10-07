@@ -370,13 +370,15 @@ describe('frontend deploy disk guard: wiring in build-prod.sh', () => {
     )
 
     expect(source).toContain('DISK_GUARD_HELPER="scripts/deploy-disk-guard.sh"')
-    expect(source).toContain(
-      'local DEPLOY_DISK_RESERVE_MB="${DEPLOY_DISK_RESERVE_MB:-720}"',
+    const defaults = fs.readFileSync(path.resolve('scripts/deploy-target.sh'), 'utf8')
+    expect(source).toContain('metravel_deploy_defaults')
+    expect(defaults).toContain(
+      'DEPLOY_DISK_RESERVE_MB="${DEPLOY_DISK_RESERVE_MB:-720}"',
     )
     expect(source).toContain('PAYLOAD_KIB="$(du -sk "./dist/$ENV" | awk \'{ print $1 }\')"')
     expect(preflightIndex).toBeGreaterThan(-1)
     expect(preflightIndex).toBeLessThan(
-      source.indexOf('rsync -azhe "ssh" --delete --mkpath --stats'),
+      source.indexOf('rsync -azHhe "ssh" --delete --mkpath --stats'),
     )
     // The helper is the program on ssh stdin; a refusal stops the deploy.
     const preflightCall = source.slice(
@@ -387,7 +389,7 @@ describe('frontend deploy disk guard: wiring in build-prod.sh', () => {
     expect(preflightCall).toContain('return 1')
     // Same floor as the backend's own build preflight
     // (METRAVEL_BUILD_MIN_FREE_MIB in deploy/prod/app_image_retention.sh).
-    expect(source).toContain('local DEPLOY_BACKEND_BUILD_MB=1536')
+    expect(defaults).toContain('DEPLOY_BACKEND_BUILD_MB=1536')
   })
 
   it('keeps the success marker in place and appends the new arguments after it', () => {

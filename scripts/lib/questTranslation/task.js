@@ -235,8 +235,8 @@ function planSteps({ source, statusRow, existing, force }) {
   }
   const wanted = new Set([...statusRow.missing_step_ids, ...statusRow.stale_step_ids])
   for (const id of allIds) if (!existingById.has(id)) wanted.add(id)
-  // Статус сервера финал не учитывает: устаревший, добавленный или снятый в
-  // источнике финал виден только по самому переводу (`finale.stale`).
+  // Status finale selects the pair; prepare compares the actual source and
+  // accepted finale as well, including removal and older servers without it.
   const finaleOutdated = source.finale
     ? !existing.finale || Boolean(existing.finale.stale)
     : Boolean(existing.finale)

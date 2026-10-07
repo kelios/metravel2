@@ -1,7 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { spawnSync } from 'node:child_process'
-import { makeTempDir, removeDir } from './cli-test-utils'
+import { makeTempDir, removeDir, runNodeCli } from './cli-test-utils'
 
 const { findViolations, collectViolations } = require('../../scripts/guard-query-retry-policy')
 
@@ -53,7 +52,7 @@ it('empty baseline has no suppression: removing a new numeric override restores 
 it('actual CLI rejects both newly reintroduced numeric and local-predicate overrides with an empty baseline', () => {
   const root = makeTempDir('query-retry-cli-')
   const script = path.resolve(__dirname, '../../scripts/guard-query-retry-policy.js')
-  const run = () => spawnSync(process.execPath, [script], { cwd: root, encoding: 'utf8' })
+  const run = () => runNodeCli([script], {}, { cwd: root })
   try {
     fs.mkdirSync(path.join(root, 'hooks'))
     const file = path.join(root, 'hooks/read.ts')

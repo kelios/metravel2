@@ -278,6 +278,7 @@ const SOCIAL_PREVIEW_WIDTH_BY_ROUTE = new Map([
   ['quest-cover', 800],
   ['address-image', 960],
   ['quest-step-image', 800],
+  ['quest-review-photo', 800],
   ['quest-poster', 800],
   ['trip-cover', 960],
   ['travel-image', 1280],
@@ -3481,6 +3482,32 @@ function writeFileSafe(filePath, content) {
   fs.writeFileSync(filePath, content, 'utf8');
 }
 
+/** Replace both served addresses without ever overwriting a linked inode.
+ * Link before publishing either name: unsupported hardlinks fail the build,
+ * rather than silently restoring the duplicated allocation.
+ */
+function writePairedPage(flatPath, indexPath, content) {
+  fs.mkdirSync(path.dirname(flatPath), { recursive: true });
+  fs.mkdirSync(path.dirname(indexPath), { recursive: true });
+  const nonce = require('crypto').randomUUID();
+  const flatTemp = `${flatPath}.${nonce}.tmp`;
+  const indexTemp = `${indexPath}.${nonce}.tmp`;
+  let cleanupFailure;
+  try {
+    fs.writeFileSync(flatTemp, content, { encoding: 'utf8', flag: 'wx' });
+    fs.linkSync(flatTemp, indexTemp);
+    fs.renameSync(flatTemp, flatPath);
+    fs.renameSync(indexTemp, indexPath);
+  } finally {
+    for (const temporary of [flatTemp, indexTemp]) {
+      try { fs.unlinkSync(temporary); } catch (error) {
+        if (error.code !== 'ENOENT' && !cleanupFailure) cleanupFailure = error;
+      }
+    }
+  }
+  if (cleanupFailure) throw cleanupFailure;
+}
+
 /**
  * Both forms the deploy serves for one travel route key, in one place: the flat
  * file that `/travels/<slug>` falls through to (nginx `try_files
@@ -3935,8 +3962,7 @@ async function main() {
     } else {
       const routePath = page.route.replace(/^\/+/, '');
       // Keep both variants to match nginx try_files order and avoid stale route shells.
-      writeFileSafe(path.join(DIST_DIR, `${routePath}.html`), html);
-      writeFileSafe(path.join(DIST_DIR, routePath, 'index.html'), html);
+      writePairedPage(path.join(DIST_DIR, `${routePath}.html`), path.join(DIST_DIR, routePath, 'index.html'), html);
     }
     totalPages++;
     console.log(`  ✅ ${page.route}${(page.route === '/' || page.route === '/search') ? ' (with SSG skeleton)' : ''}`);
@@ -4221,9 +4247,7 @@ async function main() {
       // Write both explicit-file and directory-index variants.
       // NOTE: we intentionally avoid writing an extensionless file because
       // it conflicts with creating `${routeKey}/index.html` on POSIX filesystems.
-      for (const filePath of travelStaticPagePaths(DIST_DIR, routeKey)) {
-        writeFileSafe(filePath, finalTravelHtml);
-      }
+      writePairedPage(...travelStaticPagePaths(DIST_DIR, routeKey), finalTravelHtml);
 
       generated++;
     }
@@ -4363,8 +4387,7 @@ async function main() {
       }
       const routeVariants = questRouteVariants(quest, questCityAliasMap);
       for (const variant of routeVariants) {
-        writeFileSafe(path.join(DIST_DIR, 'quests', variant.cityId, `${variant.questId}.html`), html);
-        writeFileSafe(path.join(DIST_DIR, 'quests', variant.cityId, variant.questId, 'index.html'), html);
+        writePairedPage(path.join(DIST_DIR, 'quests', variant.cityId, `${variant.questId}.html`), path.join(DIST_DIR, 'quests', variant.cityId, variant.questId, 'index.html'), html);
       }
       questAliasesGenerated += Math.max(0, routeVariants.length - 1);
       questGenerated++;
@@ -4587,8 +4610,7 @@ async function main() {
       });
 
       const idStr = String(id);
-      writeFileSafe(path.join(DIST_DIR, 'article', `${idStr}.html`), html);
-      writeFileSafe(path.join(DIST_DIR, 'article', idStr, 'index.html'), html);
+      writePairedPage(path.join(DIST_DIR, 'article', `${idStr}.html`), path.join(DIST_DIR, 'article', idStr, 'index.html'), html);
       generated++;
     }
 
@@ -4660,9 +4682,7 @@ async function main() {
         continue;
       }
       const stub = buildRedirectStubHtml(to);
-      for (const filePath of travelStaticPagePaths(DIST_DIR, from)) {
-        writeFileSafe(filePath, stub);
-      }
+      writePairedPage(...travelStaticPagePaths(DIST_DIR, from), stub);
       redirected++;
     }
     totalPages += redirected;
@@ -4702,6 +4722,7 @@ if (typeof module !== 'undefined' && module.exports) {
     assertTravelDetailsComplete,
     assertTravelStaticPagesComplete,
     travelStaticPagePaths,
+    writePairedPage,
     batchAsync,
     createRequestPacer,
     fetchTravelDetail,
