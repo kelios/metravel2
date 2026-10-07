@@ -153,6 +153,11 @@ function buildSkeletonCSS() {
 .ssg-home-bar-spacer{flex:1}
 .ssg-home-bar-login,.ssg-home-bar-guest{display:none}
 .ssg-home-bar-burger{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:${COLORS.light.bgSecondary};color:${COLORS.light.text}}
+/* #2216: keep the LCP shell opaque, but expose the existing root dock below it.
+   A root dock must actually exist; unrelated shells and desktop keep inset:0. */
+@media(max-width:1279.98px){body:has(#root [data-testid="web-mobile-dock-shell"]) #ssg-skeleton:has(.ssg-home-bar),body:has(#root [data-testid="web-mobile-dock-shell"]) #ssg-skeleton:has(.ssg-travel-hero){bottom:calc(56px + env(safe-area-inset-bottom,0px))}}
+.ssg-header-more{display:none;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;margin-left:auto;color:inherit;text-decoration:none}
+@media(max-width:1279.98px){.ssg-header-more{display:inline-flex}}
 .ssg-home-shell{width:100%;max-width:1200px;margin:0 auto;padding:0 16px}
 .ssg-home-book{display:flex;flex-direction:column;gap:14px;width:100%}
 .ssg-home-page{display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:44px 20px 20px;border-radius:24px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
@@ -556,7 +561,7 @@ function buildHomeSkeletonHtml({ heroHref } = {}) {
 <span class="ssg-home-bar-lang" aria-hidden="true">${featherSvg('globe', 17, 'ssg-home-bar-globe')}RU</span>
 <span class="ssg-home-bar-login" aria-hidden="true">${featherSvg('log-in', 14, 'ssg-home-bar-login-ico')}Войти</span>
 <span class="ssg-home-bar-guest" aria-hidden="true">${featherSvg('user', 15, 'ssg-home-bar-guest-ico')}Гость</span>
-<span class="ssg-home-bar-burger" aria-hidden="true">${featherSvg('menu', 24, 'ssg-home-bar-burger-ico')}</span>
+<a class="ssg-home-bar-burger ssg-header-more" href="/more" aria-label="Открыть меню" data-testid="ssg-header-more-fallback">${featherSvg('menu', 24, 'ssg-home-bar-burger-ico')}</a>
 </div>
 <main class="ssg-home-shell">
 <div class="ssg-home-book">
@@ -893,7 +898,7 @@ function buildTravelSkeletonHtml({ heroPreload, name, descriptionHtml, related }
 <div class="ssg-travel-line w75 ssg-pulse"></div>`;
 
   return `<div id="ssg-skeleton">
-<div class="ssg-bar"><div class="ssg-bar-logo">MeTravel</div></div>
+<div class="ssg-bar"><div class="ssg-bar-logo">MeTravel</div><a class="ssg-header-more" href="/more" aria-label="Открыть меню" data-testid="ssg-header-more-fallback">${featherSvg('menu', 24, 'ssg-header-more-ico')}</a></div>
 <div class="ssg-travel-spacer"></div>
 <div class="ssg-travel-wrap">
 <div class="ssg-travel-first-screen">

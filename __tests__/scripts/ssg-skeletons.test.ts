@@ -22,6 +22,74 @@ const { BOTTOM_DOCK_HEIGHT: WEB_MOBILE_FOOTER_RESERVE_HEIGHT } = require('../../
 const { buildCriticalCSS } = require('../../utils/criticalCSSBuilder');
 
 describe('ssg-skeletons', () => {
+  describe('actual SSG navigation before app JavaScript (#2216)', () => {
+    const rootWithDock = '<div id="root"><div data-testid="web-mobile-dock-shell"><div data-testid="footer-dock-row"><a href="/more">Ещё</a></div></div></div>';
+    const documentWithRoot = (root: string) => `<!DOCTYPE html><html><head></head><body>${root}</body></html>`;
+    const parse = (html: string) => new DOMParser().parseFromString(html, 'text/html');
+    const emittedOpeningRule = () => {
+      const style = document.createElement('style');
+      style.textContent = buildSkeletonCSS().replace(/^<style[^>]*>|<\/style>$/g, '');
+      document.head.appendChild(style);
+      try {
+        for (const candidate of Array.from(style.sheet!.cssRules)) {
+          if (candidate.type !== CSSRule.MEDIA_RULE) continue;
+          const media = candidate as CSSMediaRule;
+          for (const rule of Array.from(media.cssRules)) {
+            const selector = (rule as CSSStyleRule).selectorText;
+            if (selector?.includes('body:has(#root') && selector.includes('#ssg-skeleton')) {
+              return { media: media.media.mediaText, selector, bottom: (rule as CSSStyleRule).style.bottom };
+            }
+          }
+        }
+        throw new Error('Actual emitted SSG opening rule missing');
+      } finally { style.remove(); }
+    };
+
+    it.each(['/', '/travels/actual-article'])('makes the existing single %s SSG header an ordinary accessible More destination', (route) => {
+      const html = injectSkeletonShell(documentWithRoot(rootWithDock), route, { name: 'Путешествие', descriptionHtml: '<p>Текст</p>' });
+      const dom = parse(html), shell = dom.getElementById('ssg-skeleton')!;
+      const headers = shell.querySelectorAll('.ssg-bar');
+      expect(headers).toHaveLength(1);
+      const link = shell.querySelector('[data-testid="ssg-header-more-fallback"]')!;
+      const { navigationGenerated1 } = require('../../i18n/locales/ru/generated/navigation_01');
+      expect(link.tagName).toBe('A');
+      expect(link.getAttribute('href')).toBe('/more');
+      expect(link.getAttribute('aria-label')).toBe(navigationGenerated1['components.layout.CustomHeaderMobileAccountSection.otkryt_menyu_e43b6ae3']);
+      expect(link.hasAttribute('aria-hidden')).toBe(false);
+      expect(headers[0].contains(link)).toBe(true);
+      expect(shell.querySelectorAll('[data-testid="ssg-header-more-fallback"]')).toHaveLength(1);
+      expect(shell.querySelectorAll('[data-testid="footer-dock-row"]')).toHaveLength(0);
+      expect(dom.querySelectorAll('#root [data-testid="footer-dock-row"]')).toHaveLength(1);
+      expect(buildSkeletonCSS()).toContain('.ssg-header-more{display:none;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px');
+      expect(buildSkeletonCSS()).toContain('.ssg-bar{width:100%;height:56px');
+      expect(buildSkeletonCSS()).toContain('.ssg-home-bar{height:64px');
+    });
+
+    it('opens only Home/travel below1280 and only for a genuine dock inside root, preserving opaque LCP ownership', () => {
+      const rule = emittedOpeningRule();
+      const maximum = Number(rule.media.match(/^\(max-width:\s*([\d.]+)px\)$/)?.[1]);
+      expect(Number.isFinite(maximum)).toBe(true);
+      for (const width of [320, 390, 1279.98]) expect(width <= maximum).toBe(true);
+      expect(1280 <= maximum).toBe(false);
+      expect(rule.bottom).toBe('calc(56px + env(safe-area-inset-bottom,0px))');
+      for (const route of ['/', '/travels/actual-article']) {
+        const html = injectSkeletonShell(documentWithRoot(rootWithDock), route);
+        expect(parse(html).querySelectorAll(rule.selector)).toHaveLength(1);
+        const withoutDock = injectSkeletonShell(documentWithRoot('<div id="root"><div>Загрузка</div></div>'), route);
+        expect(parse(withoutDock).querySelectorAll(rule.selector)).toHaveLength(0);
+        const outsideRoot = injectSkeletonShell(documentWithRoot('<div id="root"></div><div data-testid="web-mobile-dock-shell"></div>'), route);
+        expect(parse(outsideRoot).querySelectorAll(rule.selector)).toHaveLength(0);
+      }
+      for (const route of ['/search', '/map', '/about']) {
+        expect(parse(injectSkeletonShell(documentWithRoot(rootWithDock), route)).querySelectorAll(rule.selector)).toHaveLength(0);
+      }
+      const css = buildSkeletonCSS();
+      expect(css).toMatch(/#ssg-skeleton\{[^}]*position:fixed;inset:0;z-index:99999;overflow-x:hidden;overflow-y:auto;background:/);
+      expect(buildRemovalScript()).toContain('data-first-screen-ready');
+      expect(buildRemovalScript()).toContain('app-hydrated');
+    });
+  });
+
   describe('buildSkeletonCSS', () => {
     it('returns a <style> tag with id ssg-skeleton-css', () => {
       const css = buildSkeletonCSS();

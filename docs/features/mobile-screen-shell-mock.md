@@ -503,6 +503,20 @@ auth, messages и upsert; скрытая бренд-строка вложенн�
 пока не смонтирован настоящий mobile-menu-open; auth/sheet graph не переносится
 в критический путь. Native dock/desktop footer остаются прежними владельцами.
 
+SSG Home и статьи имеют отдельный непрозрачный LCP shell с z-index99999.
+Он сохраняет картинку, прокрутку и прежнее условие снятия; поднимать весь React
+root над ним нельзя. Если в root уже есть постоянный dock, только на Home/статье
+при ширине <1280 shell оставляет снизу 56px + safe area для этого же ряда.
+На остальных SSG маршрутах, без root dock и от1280 проёма нет; второго ряда нет.
+Пока shell виден, настоящий верхний href /more принадлежит его существующей
+шапке (`ssg-header-more-fallback`): Home64px, статья56px, anchor44×44.
+Декоративный Home burger заменён ссылкой; React бренд-строка вложенного phone
+не восстановлена (#2100). После снятия shell работают прежние hydrated controls.
+Этот producer отличается от скрытого за shell React `header-more-fallback`;
+приёмка проверяет видимый SSG anchor и обычный переход, а не наличие hidden DOM.
+Raw production3bfb no-app-JS Home/article FAIL сохранён; исправление source/unit
+ещё не означает runtime PASS и требует новой опубликованной mobile-приёмки.
+
 Actual-root SSR, настоящий RNW DOM/hydration и web lazy Footer без Jest
 escape проверены unit tests; удаление eager root mount даёт raw FAIL и
 byte-exact restore проходит. Ссылки/no-app-JS e2e подготовлены, не исполнены.

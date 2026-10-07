@@ -81,7 +81,6 @@ export default function MapScreen() {
     'map-panel-tab-travels': placesTabTarget,
     'map-panel-tab-route': routeTabTarget,
   }), [])
-  useEffect(() => () => cancelMapOnboardingRestart(), [])
   const isWeb = Platform.OS === 'web'
   // Web-only: keep --metravel-map-vh in sync with the real visible viewport so
   // the map container has a reliable height in in-app WebViews where `dvh` is
@@ -139,8 +138,16 @@ export default function MapScreen() {
     selectedPlaceUserLocation,
   } = useMapScreenController()
 
+  // Navigation retains tab screens: leaving the map ends the tour visit even
+  // when MapScreen itself stays mounted. A deferred restart cannot cross visits.
+  useEffect(() => {
+    if (!isFocused) cancelMapOnboardingRestart()
+    return () => cancelMapOnboardingRestart()
+  }, [isFocused])
+
   const [geoBannerDismissed, setGeoBannerDismissed] = useState(false)
   const [shouldLoadOnboarding, setShouldLoadOnboarding] = useState(false)
+  const onboardingActive = isFocused && shouldLoadOnboarding
   // Первый вход показывает оверлеи ПО ОДНОМУ, а не стопкой поверх карты. Онбординг
   // и cookie-баннер публикуют своё состояние в DOM (`data-map-onboarding-open` /
   // `data-consent-banner-open`); пока открыт любой из них, гео-баннер не
@@ -198,7 +205,7 @@ export default function MapScreen() {
   }, [geoBannerDismissed, locationState.status])
 
   useEffect(() => {
-    if (shouldLoadOnboarding) return
+    if (!isFocused || shouldLoadOnboarding) return
     if (!isWeb) {
       setShouldLoadOnboarding(true)
       return
@@ -211,7 +218,7 @@ export default function MapScreen() {
     }
     const timer = setTimeout(() => setShouldLoadOnboarding(true), ONBOARDING_DEFER_MS)
     return () => clearTimeout(timer)
-  }, [isWeb, shouldLoadOnboarding])
+  }, [isFocused, isWeb, shouldLoadOnboarding])
 
   const { isConnected } = useNetworkStatus()
   const wasDisconnectedRef = useRef(!isConnected)
@@ -569,7 +576,7 @@ export default function MapScreen() {
       isConnected={isConnected}
       offlineIndicatorTop={offlineIndicatorTop}
       targetRegistry={targetRegistry}
-      shouldLoadOnboarding={shouldLoadOnboarding}
+      shouldLoadOnboarding={onboardingActive}
       isWeb={isWeb}
       isMobile={isMobile}
       selectedPlace={selectedPlace}
@@ -614,7 +621,7 @@ export default function MapScreen() {
       isConnected={isConnected}
       mapReady={mapReady}
       targetRegistry={targetRegistry}
-      shouldLoadOnboarding={shouldLoadOnboarding}
+      shouldLoadOnboarding={onboardingActive}
       panelHeading={headingAnchor === 'panel-head' ? pageHeading : undefined}
     />
   )
@@ -628,7 +635,7 @@ export default function MapScreen() {
       isConnected={isConnected}
       mapReady={mapReady}
       targetRegistry={targetRegistry}
-      shouldLoadOnboarding={shouldLoadOnboarding}
+      shouldLoadOnboarding={onboardingActive}
       mapUiApi={filtersPanelProps?.contextValue?.mapUiApi ?? null}
       overlayOptions={quickFilters.overlayOptions}
       enabledOverlays={enabledOverlays}
