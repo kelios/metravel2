@@ -100,6 +100,7 @@ Match the task grammar to the checker. A prompt asking for a number must not use
 9. When repository implementation is requested, use the current data/migration pattern and route code/contract changes to `$metravel-quest-expert`. Keep the migration idempotent and perform its documented dry run.
 10. Validate data parsing, nested JSON values, unique IDs/orders, route continuity, answer leakage, and GET payload shape.
 11. Publish only when explicitly requested, then re-fetch the quest and verify the authenticated mobile flow and printable view. Media/finale video is a separate requested workflow.
+12. After publishing a new Russian quest or editing its source, include translation preparation, independent review, and authorized publication for all content locales in the same authoring pass. Follow `docs/features/quests.md` → «Перевод квеста» for exact `quest:translate` commands, before/after status, manual-translation preservation, and rollback; do not report authoring complete while required translations remain stale or missing.
 
 ## Handoff
 

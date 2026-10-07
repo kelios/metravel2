@@ -493,16 +493,18 @@ export default function QuestByIdScreen() {
       reviewInvite.open,
     ],
   );
+  const contentLocaleSlot = useMemo(() => foreignContentLocale
+    ? <QuestContentLocaleNotice contentLocale={foreignContentLocale} compact />
+    : null, [foreignContentLocale]);
   const statusSlot = useMemo(() => {
-    if (!progressPending && !reviewInvite.photoStatus && !foreignContentLocale) return null;
+    if (!progressPending && !reviewInvite.photoStatus) return null;
     return (
       <>
-        <QuestContentLocaleNotice contentLocale={foreignContentLocale ?? undefined} compact />
         <QuestProgressPendingNotice questId={questId} compact />
         <QuestReviewPhotoStatus invite={reviewInvite} />
       </>
     );
-  }, [foreignContentLocale, progressPending, questId, reviewInvite]);
+  }, [progressPending, questId, reviewInvite]);
 
   const isLoading =
     isQuestLoading ||
@@ -691,6 +693,7 @@ export default function QuestByIdScreen() {
               ratingSlot={ratingSlot}
               completionSlot={completionSlot}
               screenMeta={screenMeta}
+              contentLocaleSlot={contentLocaleSlot}
               statusSlot={statusSlot}
               questId={questId}
               cityId={cityId}
@@ -720,6 +723,7 @@ export default function QuestByIdScreen() {
             ratingSlot={ratingSlot}
             completionSlot={completionSlot}
             screenMeta={screenMeta}
+            contentLocaleSlot={contentLocaleSlot}
             statusSlot={statusSlot}
             questId={questId}
             cityId={cityId}
@@ -800,6 +804,7 @@ export default function QuestByIdScreen() {
             ratingSlot={ratingSlot}
             completionSlot={completionSlot}
             screenMeta={screenMeta}
+            contentLocaleSlot={contentLocaleSlot}
             statusSlot={statusSlot}
             questId={questId}
             cityId={cityId}
@@ -826,6 +831,7 @@ export default function QuestByIdScreen() {
           ratingSlot={ratingSlot}
           completionSlot={completionSlot}
           screenMeta={screenMeta}
+          contentLocaleSlot={contentLocaleSlot}
           statusSlot={statusSlot}
           questId={questId}
           cityId={cityId}

@@ -42,7 +42,8 @@ Additional conditional context:
 2. Audit each step for story, task, hint, answer pattern, and consistency with the described place. For child/family quests, also audit the declared age band, reading load, agency, escalation, final meta-payoff, safe route, adult role, and vocabulary: remove material/architecture jargon from tasks unless it is taught and essential.
 3. If writing changes, save a local rollback snapshot in an ignored folder and patch only the intended fields.
 4. Re-fetch and verify the changed quest content.
-5. Report any coordinate uncertainty as handoff for `$metravel-quest-geo-verifier`.
+5. After an authorized Russian-source edit, update affected translations through the existing pipeline in `docs/features/quests.md` → «Перевод квеста», including before/after step and finale status, independent review, and authorized publication. An answer-variant error confined to one locale belongs in that translation pair; preserve the Russian source and other steps. Preserve `origin: human` without separately authorized overwrite.
+6. Report any coordinate uncertainty as handoff for `$metravel-quest-geo-verifier`.
 
 ## Output
 

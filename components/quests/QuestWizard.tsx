@@ -114,6 +114,8 @@ export type QuestWizardProps = {
      * отзыва) — на телефоне видимы в закреплённой части. `null`, когда их нет.
      */
     statusSlot?: React.ReactNode;
+    /** Пассивная пометка языка: на телефоне рядом с действием маршрута. */
+    contentLocaleSlot?: React.ReactNode;
     /** Native: id города/квеста для deep-link локального напоминания о незавершённом квесте */
     questId?: string;
     cityId?: string;
@@ -146,7 +148,7 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, countModel, storageKey = 'quest_progress', city, coverUrl, tags, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, subscribeSlot, ratingSlot, completionSlot, screenMeta, statusSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, countModel, storageKey = 'quest_progress', city, coverUrl, tags, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, subscribeSlot, ratingSlot, completionSlot, screenMeta, statusSlot, contentLocaleSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = 2, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
     const { t } = useTranslation();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
     const resolvedCountModel = useMemo(
@@ -884,6 +886,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                 offlineQuestState={offlineQuestState}
                                 ratingSlot={ratingSlot}
                                 completionSlot={completionSlot}
+                                contentLocaleSlot={contentLocaleSlot}
                                 statusSlot={statusSlot}
                             />
 

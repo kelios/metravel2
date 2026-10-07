@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { isPrintAvailable } from '@/utils/printHtml'
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
@@ -12,6 +12,7 @@ import EdgeFadeScrollRow from '@/components/ui/EdgeFadeScrollRow'
 import ActionTooltip from '@/components/ui/ActionTooltip'
 import { useQuestFontScaleControls } from '@/stores/questFontScaleStore'
 import { translate as i18nT, translatePlural } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 import type { QuestCountModel, QuestPointRole } from '@/utils/questCountModel'
 import { getQuestPointRoleAnnotation } from './questMapPoints'
 import { describeOfflineQuestAction, type OfflineQuestDownloadState } from './questScreenHeaderModel'
@@ -106,6 +107,8 @@ type QuestHeaderPanelProps = NavigationSharedProps & {
   completionSlot?: React.ReactNode
   /** Статусы, требующие внимания: на телефоне — единственная строка над навигацией. */
   statusSlot?: React.ReactNode
+  /** Пассивная пометка языка, отдельно от статусов, требующих действий. */
+  contentLocaleSlot?: React.ReactNode
 }
 
 type QuestActionButtonProps = {
@@ -619,6 +622,7 @@ function QuestStepsNavigation({
 }
 
 export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
+  useTranslation()
   const {
     colors,
     styles,
@@ -649,27 +653,25 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     ratingSlot,
     completionSlot,
     statusSlot,
+    contentLocaleSlot,
   } = props
 
   const wideDesktop = screenW >= 1100
-  // Модель полосы нужна только телефонной ветке (< 600 px): шире её не строим.
-  const routeModel = useMemo(
-    () =>
-      !compactNav ? null : buildQuestRouteModel({
-        allSteps,
-        answers,
-        postponedStepIds,
-        currentIndex,
-        unlockedIndex,
-        questFinished,
-        showFinaleOnly,
-        countModel,
-        completedCount,
-        stepsCount,
-        colors,
-      }),
-    [compactNav, allSteps, answers, postponedStepIds, currentIndex, unlockedIndex, questFinished, showFinaleOnly, countModel, completedCount, stepsCount, colors],
-  )
+  // Модель содержит переведённые подписи: строим при рендере после смены языка,
+  // только для телефонной ветки (< 600 px).
+  const routeModel = !compactNav ? null : buildQuestRouteModel({
+    allSteps,
+    answers,
+    postponedStepIds,
+    currentIndex,
+    unlockedIndex,
+    questFinished,
+    showFinaleOnly,
+    countModel,
+    completedCount,
+    stepsCount,
+    colors,
+  })
 
   // #2148: на телефоне название (h1 строки), мета (лист (i)) и действия («⋯»,
   // офлайн) — в строке экрана. В закреплённой части остаются статусы, которые
@@ -678,13 +680,14 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
   if (headerInScreenRow) {
     return (
       <View style={styles.header}>
-        {statusSlot ? (
+        {statusSlot || (!compactNav && contentLocaleSlot) ? (
           <View style={styles.headerStatusRow} testID="quest-header-status">
+            {!compactNav ? contentLocaleSlot : null}
             {statusSlot}
           </View>
         ) : null}
         {compactNav && routeModel ? (
-          <QuestRouteStrip model={routeModel} onGoToStep={goToStep} onShowFinale={onShowFinale} />
+          <QuestRouteStrip model={routeModel} contentLocaleSlot={contentLocaleSlot} onGoToStep={goToStep} onShowFinale={onShowFinale} />
         ) : (
           <>
             <QuestProgressSummary

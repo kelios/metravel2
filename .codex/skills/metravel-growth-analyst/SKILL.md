@@ -18,6 +18,7 @@ heading required by the requested metric.
 - GA4: `npm run stats:ga4 -- --days <N>` or `npm run stats:ga4:json -- --days <N>`.
 - GSC: `npm run stats:gsc -- --days <N>` or `npm run stats:gsc:json -- --days <N>`.
 - Growth baseline and monthly review: `docs/GROWTH_PLAN.md`.
+- Quest funnel: when assigned the weekly quest review, pair `npm run quest:funnel` with `npm run quest:translations:status -- --json` for all content locales. Follow `docs/features/quests.md` → «Перевод квеста» for stale-step/finale evidence and the board handoff; analytics does not authorize content writes or a new schedule.
 - Public production API read-only checks may use `https://metravel.by/api/...`.
 - Yandex Metrika and affiliate dashboards do not have automatic local access unless
   the user provides manual numbers. Never print OAuth tokens, `.secrets`, `.env`,

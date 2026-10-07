@@ -730,6 +730,15 @@ prod→data-file обязан это учитывать, иначе всё пр�
 7. **Проверь GET-ом** `GET /api/quests/by-quest-id/<quest_id>/`: на месте
    `intro`, все `steps`, `finale`, корректные типы `answer_pattern`, координаты,
    `mapsUrl`, `poi_info` на музеях/опциональных, теги (детские — возрастной тир).
+7a. **Перевод после заливки или правки русского текста (#2206).**
+   По всем целевым локалям из `i18n/config.ts` (be/uk/pl/en):
+   `npm run quest:translate -- prepare --quest <quest_id> --locale <код>` →
+   агент `quest-translator` → `check` → независимая смысловая проверка →
+   `upload --publish` при разрешённой публикации и зелёных проверках.
+   Точные команды, status до/после, сохранение ручных переводов и откат —
+   `docs/features/quests.md` → «Перевод квеста». Нулевой stale по шагам
+   не заменяет проверку финала. Ошибку одного перевода не правь в русском
+   `answer_pattern`; локальная правка проходит тот же конвейер для своей пары.
 8. **Обложку** — AI-арт: напиши `assets/quests/<camelCaseId>/PROMPT.md`,
    генерит владелец; заливка `upload-missing-quest-covers-prod.js` (НЕ
    require()-ить его для проверки — сразу исполняет main()).

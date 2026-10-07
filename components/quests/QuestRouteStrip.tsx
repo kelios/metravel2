@@ -4,7 +4,8 @@ import Feather from '@expo/vector-icons/Feather'
 
 import ActionListSheet from '@/components/ui/ActionListSheet'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
-import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
+import { formatInteger } from '@/i18n/format'
 
 import type { QuestRouteModel, QuestRouteRow } from './questRouteModel'
 import { QUEST_NAV_FINALE_TEST_ID, QuestStepMarker } from './questWizardNavigation'
@@ -16,6 +17,8 @@ type Props = {
   model: QuestRouteModel
   onGoToStep: (stepIndex: number) => void
   onShowFinale: () => void
+  /** Пассивная пометка языка, отдельный сосед кнопки маршрута в строке 44 px. */
+  contentLocaleSlot?: React.ReactNode
 }
 
 /**
@@ -23,7 +26,8 @@ type Props = {
  * кружков. Одна кнопка: «Точка 12 из 14 · Задания 10/11» и шкала из сегментов,
  * по нажатию — лист «Маршрут» со всеми точками. Вид и подписи — `buildQuestRouteModel`.
  */
-export default function QuestRouteStrip({ model, onGoToStep, onShowFinale }: Props) {
+export default function QuestRouteStrip({ model, onGoToStep, onShowFinale, contentLocaleSlot }: Props) {
+  const { t } = useTranslation()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -46,20 +50,43 @@ export default function QuestRouteStrip({ model, onGoToStep, onShowFinale }: Pro
     [onGoToStep, onShowFinale],
   )
 
-  return (
-    <>
-      <Pressable
+  const hasLocaleSlot = Boolean(contentLocaleSlot)
+  const positionText = !hasLocaleSlot ? '' : model.position.kind === 'point'
+    ? `${formatInteger(model.position.index)}/${formatInteger(model.position.total)}`
+    : model.position.kind === 'intro'
+      ? t('quests:components.quests.questWizardShell.start_225f7a82')
+      : t('quests:components.quests.questStepState.finale')
+
+  const routeButton = (
+    <Pressable
         testID="quest-route-strip"
         accessibilityRole="button"
         accessibilityLabel={model.stripAccessibilityLabel}
-        accessibilityHint={i18nT('quests:components.quests.questRoute.stripHint')}
+        accessibilityHint={t('quests:components.quests.questRoute.stripHint')}
         onPress={() => setSheetOpen(true)}
-        style={({ pressed }) => [styles.strip, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.strip, hasLocaleSlot && styles.stripWithLocale, pressed && styles.pressed]}
       >
         <View style={styles.stripTextRow}>
-          <Text style={styles.stripText} numberOfLines={1}>
-            {model.stripText}
-          </Text>
+          {hasLocaleSlot ? (
+            <View style={styles.compactMetrics}>
+              <View style={styles.compactMetric}>
+                <Feather name={model.position.kind === 'point' ? 'map-pin' : model.position.kind === 'intro' ? 'play' : 'flag'} size={12} color={colors.textMuted} />
+                <Text style={styles.compactMetricText} numberOfLines={1}>{positionText}</Text>
+              </View>
+              {model.tasks ? (
+                <View style={styles.compactMetric}>
+                  <Feather name="check-square" size={12} color={colors.textMuted} />
+                  <Text style={styles.compactMetricText} numberOfLines={1}>
+                    {`${formatInteger(model.tasks.completed)}/${formatInteger(model.tasks.total)}`}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          ) : (
+            <Text style={styles.stripText} numberOfLines={1}>
+              {model.stripText}
+            </Text>
+          )}
           <Feather name="chevron-down" size={16} color={colors.textMuted} />
         </View>
         <View style={styles.segments} testID="quest-route-segments">
@@ -85,8 +112,18 @@ export default function QuestRouteStrip({ model, onGoToStep, onShowFinale }: Pro
           ))}
         </View>
       </Pressable>
+  )
 
-      <ActionListSheet visible={sheetOpen} onClose={close} title={i18nT('quests:components.quests.questRoute.title')}>
+  return (
+    <>
+      {hasLocaleSlot ? (
+        <View style={styles.localeRouteRow} testID="quest-locale-route-row">
+          {routeButton}
+          <View style={styles.localeSlot}>{contentLocaleSlot}</View>
+        </View>
+      ) : routeButton}
+
+      <ActionListSheet visible={sheetOpen} onClose={close} title={t('quests:components.quests.questRoute.title')}>
         <ScrollView ref={sheetScrollRef} style={styles.sheetBody} testID="quest-route-sheet">
           {model.rows.map((row) => (
             <Pressable
@@ -130,6 +167,23 @@ const createStyles = (colors: ThemedColors) =>
       gap: 5,
       paddingVertical: 4,
     },
+    localeRouteRow: {
+      height: QUEST_ROUTE_ROW_MIN_HEIGHT,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    localeSlot: { flexShrink: 0 },
+    stripWithLocale: {
+      flex: 1,
+      minWidth: 0,
+      height: QUEST_ROUTE_ROW_MIN_HEIGHT,
+      gap: 2,
+      paddingVertical: 2,
+    },
+    compactMetrics: { flex: 1, minWidth: 0 },
+    compactMetric: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+    compactMetricText: { fontSize: 13, lineHeight: 14, fontWeight: '700', color: colors.text },
     pressed: { opacity: 0.7 },
     stripTextRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     stripText: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.text },
