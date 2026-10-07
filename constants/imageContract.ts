@@ -96,7 +96,7 @@ export const IMAGE_STORAGE_POLICY_V1 = {
     ],
   },
   questSupplement: {
-    routes: ['quest-step-image', 'quest-poster'],
+    routes: ['quest-step-image', 'quest-poster', 'quest-review-photo'],
     master: { width: 1200, quality: IMAGE_QUALITY.master },
     derivatives: [
       { width: 320, quality: IMAGE_QUALITY.small },

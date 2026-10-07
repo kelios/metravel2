@@ -37,7 +37,7 @@ const MEDIA_FILE_PATH = /^\/(gallery|travel-image|travel-description-image|addre
 // EXPO_PUBLIC_API_URL. В dev/preprod с проксированным API это молча снимало `w`.
 // Список зеркалит `route_behavior.model_owned.routes` proxy-contract v3.
 const PROXY_MEDIA_PREFIX =
-  /^\/(quest-cover|avatar|trip-cover|quest-step-image|quest-poster|badge-image)\//i;
+  /^\/(quest-cover|avatar|trip-cover|quest-step-image|quest-poster|quest-review-photo|badge-image)\//i;
 
 // Legacy-роуты того же прокси: `route_behavior.legacy_upload` и
 // `legacy_conversion` в proxy-contract v4. Ширину они понимают так же, поэтому

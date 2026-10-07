@@ -94,6 +94,17 @@ describe('ImageCardMedia: srcSet не перерастает слот', () => {
     expect(mainImage.props.loading).toBe('eager');
   });
 
+  it.each([[390, 480], [640, 640]])('keeps review gallery %ipx media within supported derivatives', (width, sourceWidth) => {
+    const photo = 'https://metravel.by/quest-review-photo/quests/32/reviews/24/sample.webp';
+    const tree = renderMedia({ src: photo, width, height: 640, fit: 'contain', loading: 'eager', priority: 'high' });
+    const mainImage = tree.root.find((node: any) => node.type === 'img' && !node.props?.['aria-hidden']);
+    expect(mainImage.props.src).toBe(`${photo}?w=${sourceWidth}`);
+    const widths = srcSetWidths(tree);
+    expect(widths.length).toBeGreaterThan(0);
+    expect(Math.max(...widths)).toBe(800);
+    expect(new Set(widths).size).toBe(widths.length);
+  });
+
   it('не повторяет неизменный server URL как ложные width-кандидаты', () => {
     const serverUrl = 'https://example.com/travel-address/point.png';
     const tree = renderMedia({

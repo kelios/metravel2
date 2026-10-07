@@ -478,6 +478,7 @@ describe('utils/imageOptimization', () => {
         for (const path of [
           '/trip-cover/trips/7/cover/sample.webp',
           '/quest-step-image/quests/16/step/2/sample.webp',
+          '/quest-review-photo/quests/32/reviews/24/sample.webp',
           '/quest-poster/quests/16/poster/sample.webp',
           '/badge-image/achievements/badges/sample.webp',
         ]) {
@@ -494,6 +495,24 @@ describe('utils/imageOptimization', () => {
       } finally {
         process.env.EXPO_PUBLIC_API_URL = previousApiUrl
       }
+    })
+
+    it('caps quest review gallery sources and responsive candidates at the supplement ceiling', () => {
+      withPlatform('web', () => {
+        const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
+        const photo = 'https://metravel.by/quest-review-photo/quests/32/reviews/24/sample.webp'
+        try {
+          for (const origin of ['https://metravel.by/api', 'http://localhost:8000']) {
+            process.env.EXPO_PUBLIC_API_URL = origin
+            expect(optimizeImageUrl(photo, { width: 1280, quality: 60, fit: 'contain' }))
+              .toBe(`${photo}?w=800`)
+            expect(generateSrcSet(photo, [390, 640, 960, 1280], { quality: 60, fit: 'contain' }))
+              .toBe(`${photo}?w=480 480w, ${photo}?w=640 640w, ${photo}?w=800 800w`)
+          }
+        } finally {
+          process.env.EXPO_PUBLIC_API_URL = previousApiUrl
+        }
+      })
     })
 
     // #1176: прямая ссылка на бакет не понимает `w` — S3 отдаёт мастер (замер прода

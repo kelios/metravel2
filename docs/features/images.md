@@ -624,7 +624,7 @@ Backfill прогнан: выборка 4 статей даёт 100% покры�
 | badge / `badge-image` | 320 q85 | 96, 160 q70 | **3** |
 | quest cover / `quest-cover` | 1200 q85 | 320, 480, 640, 800 **q60** | **5** |
 | route point / `address-image` | 1200 q85 | 320, 480, 640 q70; 800, 960 q80 | **6** |
-| quest supplement / `quest-step-image`, `quest-poster` | 1200 q85 | 320, 480, 640 q70; 800 q80 | **5** |
+| quest supplement / `quest-step-image`, `quest-poster`, `quest-review-photo` | 1200 q85 | 320, 480, 640 q70; 800 q80 | **5** |
 | trip cover / `trip-cover` | 1200 q85 | 320, 480, 640 q70; 800, 960 q80 | **6** |
 | travel cover/gallery / `travel-image`, `gallery` | **2500 q85** | 96, 160, 320, 480, 640 q70; 720, 800, 960, 1280 q80; 1600 q85 | **11** |
 | article body / `travel-description-image` | 1920 q85 | 480 q70; 800, 960 q80; 1600 q85 | **5** |
