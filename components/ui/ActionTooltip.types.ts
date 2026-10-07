@@ -6,4 +6,6 @@ export type ActionTooltipProps = {
   label: string
   visible: boolean
   onDismiss: () => void
+  /** Default action labels sit above; IconButton preserves bottom/left placement. */
+  placement?: 'top' | 'bottom' | 'left'
 }

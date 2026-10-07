@@ -160,6 +160,7 @@ describe('TravelDetailsSidebarSection', () => {
     // the wrapper's height reserve right before the real content lands.
     mockIsFetchingCount = 1
     const onRuntimeFrameReady = jest.fn()
+    const onRuntimeVisibilityReady = jest.fn()
     render(
       <TravelDetailsSidebarSection
         travel={{ id: 654, slug: 'in-flight' } as Travel}
@@ -179,6 +180,7 @@ describe('TravelDetailsSidebarSection', () => {
         }}
         canRenderHeavy
         onRuntimeFrameReady={onRuntimeFrameReady}
+        onRuntimeVisibilityReady={onRuntimeVisibilityReady}
       />,
       { wrapper },
     )
@@ -187,6 +189,12 @@ describe('TravelDetailsSidebarSection', () => {
     fireEvent(screen.getByTestId('travel-details-sidebar-runtime-frame'), 'layout', {
       nativeEvent: { layout: { height: 572, width: 920, x: 0, y: 0 } },
     })
+    expect(onRuntimeFrameReady).not.toHaveBeenCalled()
+    expect(onRuntimeVisibilityReady).toHaveBeenCalledTimes(1)
+    fireEvent(screen.getByTestId('travel-details-sidebar-runtime-frame'), 'layout', {
+      nativeEvent: { layout: { height: 0, width: 920, x: 0, y: 0 } },
+    })
+    expect(onRuntimeVisibilityReady).toHaveBeenCalledTimes(1)
     expect(onRuntimeFrameReady).not.toHaveBeenCalled()
   })
 })

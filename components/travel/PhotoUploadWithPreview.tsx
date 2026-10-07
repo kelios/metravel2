@@ -1,5 +1,5 @@
 // E5: Refactored — state/logic extracted to usePhotoUpload hook
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { Platform, Pressable, View, Text } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Feather from '@expo/vector-icons/Feather';
@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
+import { useActionFeedback } from '@/hooks/useActionFeedback';
 import { usePhotoUpload, chooseFallbackUrl, type NativeUploadFile } from '@/hooks/usePhotoUpload';
 import safeLazy from '@/components/layout/safeLazy';
 import { translate as i18nT } from '@/i18n'
@@ -50,14 +51,17 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   const viewportWidth = useResponsiveWidth();
   const isMobileWeb = Platform.OS === 'web' && viewportWidth <= 767;
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [pickerError, setPickerError] = useState<string | null>(null);
+  const { notify } = useActionFeedback();
+  const notifyUploadError = useCallback((message: string) => {
+    if (Platform.OS !== 'web') notify(message);
+  }, [notify]);
 
   const {
     loading, uploadProgress, error, uploadMessage,
     hasValidImage, currentDisplayUrl,
     handleUploadImage, handleRemovePress,
     handleImageLoadCheck, handleImageError, reportClientError,
-  } = usePhotoUpload({ collection, idTravel, oldImage, onUpload, onPreviewChange, onRequestRemove, disabled, maxSizeMB });
+  } = usePhotoUpload({ collection, idTravel, oldImage, onUpload, onError: notifyUploadError, onPreviewChange, onRequestRemove, disabled, maxSizeMB });
 
   useEffect(() => {
     onUploadStateChange?.(loading);
@@ -81,13 +85,12 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     if (disabled) return;
     if (Platform.OS === 'web') return;
     try {
-      setPickerError(null);
       // Android uses the system Photo Picker and must not request broad
       // READ_MEDIA_IMAGES/VIDEO access. iOS still requires library permission.
       if (Platform.OS === 'ios') {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
-          setPickerError(i18nT('travel:components.travel.ImageGalleryComponent.galleryPermissionMessage'));
+          notify(i18nT('travel:components.travel.ImageGalleryComponent.galleryPermissionMessage'));
           return;
         }
       }
@@ -100,17 +103,16 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
       const asset = result.assets?.[0];
       if (asset) await uploadPickedAsset(asset);
     } catch {
-      setPickerError(i18nT('shared:hooks.usePhotoUpload.proizoshla_oshibka_pri_zagruzke_cc3f9675'));
+      notify(i18nT('shared:hooks.usePhotoUpload.proizoshla_oshibka_pri_zagruzke_cc3f9675'));
     }
   };
 
   const takePhoto = async () => {
     if (disabled || Platform.OS === 'web') return;
     try {
-      setPickerError(null);
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
-        setPickerError(i18nT('travel:components.travel.ImageGalleryComponent.cameraPermissionMessage'));
+        notify(i18nT('travel:components.travel.ImageGalleryComponent.cameraPermissionMessage'));
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -122,7 +124,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
       const asset = result.assets?.[0];
       if (asset) await uploadPickedAsset(asset);
     } catch {
-      setPickerError(i18nT('travel:components.travel.ImageGalleryComponent.takePhotoFailed'));
+      notify(i18nT('travel:components.travel.ImageGalleryComponent.takePhotoFailed'));
     }
   };
 
@@ -209,9 +211,6 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
           )}
         </View>
       ) : null}
-      {(error || pickerError) && (
-        <View style={styles.errorContainer}><Feather name="alert-circle" size={14} color={colors.danger} /><Text style={styles.errorText}>{error || pickerError}</Text></View>
-      )}
       {uploadMessage && !error && (
         <View style={styles.successContainer}><Feather name="check-circle" size={14} color={colors.success} /><Text style={styles.successText}>{uploadMessage}</Text></View>
       )}

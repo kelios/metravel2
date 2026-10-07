@@ -15,6 +15,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useFavoriteToggle } from '@/hooks/useFavoriteToggle';
 import { translate as i18nT } from '@/i18n';
+import { webTitleRef } from '@/utils/webProps';
 
 
 type FavoriteVariant = 'overlay' | 'plain';
@@ -133,6 +134,7 @@ function FavoriteButton({
                         {icon}
                     </WebView>
                     <WebView
+                        ref={webTitleRef(overlayLabel)}
                         role="button"
                         accessibilityRole="button"
                         tabIndex={0}
@@ -175,9 +177,13 @@ function FavoriteButton({
     // -------- PLAIN variant --------
     const WebButton: any = View;
     const ButtonComponent = Platform.OS === 'web' ? WebButton : TouchableOpacity;
+    const plainWebLabel = isFav
+        ? i18nT('travel:components.travel.FavoriteButton.udalit_iz_hochu_poehat_b6ff82c1')
+        : i18nT('travel:components.travel.FavoriteButton.dobavit_v_hochu_poehat_fbf5211c');
 
     return (
         <ButtonComponent
+            ref={webTitleRef(plainWebLabel)}
             style={[styles.plainButton, isFav && styles.activeDisc, globalFocusStyles.focusable, style, isPending && { opacity: 0.6 }]}
             {...(Platform.OS === 'web'
                 ? {
@@ -194,9 +200,7 @@ function FavoriteButton({
                       onMouseDown: (e: any) => {
                           if (e?.stopPropagation) e.stopPropagation();
                       },
-                      'aria-label': isFav
-                          ? i18nT('travel:components.travel.FavoriteButton.udalit_iz_hochu_poehat_b6ff82c1')
-                          : i18nT('travel:components.travel.FavoriteButton.dobavit_v_hochu_poehat_fbf5211c'),
+                      'aria-label': plainWebLabel,
                       'aria-pressed': isFav,
                   }
                 : {

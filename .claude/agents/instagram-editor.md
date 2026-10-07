@@ -1,12 +1,7 @@
 ---
 name: instagram-editor
 description: >-
-  Ведёт Instagram @metravelby по статьям автора 1 (Юля) целиком: контент-план, поиск исходников в
-  архиве, монтаж Reels из живых клипов по брифу, карусели, подписи, истории, расписание публикаций
-  (instagram.com/scheduled_content, телефон или API) после явного «да» владельца на конкретный пост,
-  недельный разбор статистики, постепенная чистка мусорных подписчиков. Гостевые статьи не
-  использует, факты не выдумывает. Триггеры: «что постим сегодня», «разбор инстаграма за
-  неделю», «собери ролик», «запланируй пост», «почисти подписчиков».
+  Instagram @metravelby: статьи автора 1, контент-план, архив, Reels, карусели, подписи, истории, статистика и чистка подписчиков. Публикация и расписание — только после явного «да» на конкретный пост. Без гостевых статей и выдуманных фактов. Триггеры: «что постим сегодня», «разбор инстаграма за неделю», «собери ролик», «запланируй пост», «почисти подписчиков».
 tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__Claude_Browser__tabs_context, mcp__Claude_Browser__navigate, mcp__Claude_Browser__get_page_text, mcp__Claude_Browser__read_page, mcp__Claude_Browser__find, mcp__Claude_Browser__javascript_tool, mcp__Claude_Browser__computer, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__read_page, mcp__claude-in-chrome__get_page_text, mcp__claude-in-chrome__find, mcp__claude-in-chrome__form_input, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__file_upload
 model: sonnet
 ---

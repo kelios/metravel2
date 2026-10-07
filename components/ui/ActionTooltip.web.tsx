@@ -11,19 +11,28 @@ export function positionActionTooltip(
   anchor: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>,
   tooltip: Pick<DOMRect, 'width' | 'height'>,
   viewport: { width: number; height: number },
+  placement: ActionTooltipProps['placement'] = 'top',
 ) {
   const above = anchor.top - tooltip.height - GAP
-  const top = above >= INSET ? above : anchor.bottom + GAP
+  const below = anchor.bottom + GAP
+  const top = placement === 'left'
+    ? (anchor.top + anchor.bottom - tooltip.height) / 2
+    : placement === 'bottom' && below + tooltip.height <= viewport.height - INSET
+      ? below
+      : above >= INSET ? above : below
+  const left = placement === 'left'
+    ? anchor.left - tooltip.width - GAP
+    : (anchor.left + anchor.right - tooltip.width) / 2
   return {
     left: Math.max(INSET, Math.min(
-      (anchor.left + anchor.right - tooltip.width) / 2,
+      left,
       viewport.width - tooltip.width - INSET,
     )),
     top: Math.max(INSET, Math.min(top, viewport.height - tooltip.height - INSET)),
   }
 }
 
-export default function ActionTooltip({ anchorRef, label, visible, onDismiss }: ActionTooltipProps) {
+export default function ActionTooltip({ anchorRef, label, visible, onDismiss, placement }: ActionTooltipProps) {
   const colors = useThemedColors()
   const tooltipRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null)
@@ -47,7 +56,7 @@ export default function ActionTooltip({ anchorRef, label, visible, onDismiss }: 
       setPosition(positionActionTooltip(rect, tooltip.getBoundingClientRect(), {
         width: window.innerWidth,
         height: window.innerHeight,
-      }))
+      }, placement))
     }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onDismiss()
@@ -66,7 +75,7 @@ export default function ActionTooltip({ anchorRef, label, visible, onDismiss }: 
       document.removeEventListener('keydown', handleKeyDown)
       observer?.disconnect()
     }
-  }, [anchorRef, label, visible, onDismiss])
+  }, [anchorRef, label, visible, onDismiss, placement])
 
   if (!visible || typeof document === 'undefined') return null
 

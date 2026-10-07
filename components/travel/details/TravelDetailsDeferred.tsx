@@ -1,4 +1,4 @@
-import React, { Suspense, memo, useCallback, useEffect, useState } from 'react'
+import React, { Suspense, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, Text, View, type LayoutChangeEvent } from 'react-native'
 import type { Travel } from '@/types/types'
 import {
@@ -156,6 +156,24 @@ export const TravelDeferredSections: React.FC<{
     active: Platform.OS === 'web' && shouldLoadSidebarSection,
     resetKey: travel.id,
   })
+  // The displayed actual sidebar and its settled reserve are separate signals.
+  // A new travel/load visit invalidates old layout callbacks before they can
+  // expose the previous travel's frame. No query, timer or module is eager.
+  const sidebarVisit = useMemo(
+    () => ({ travelId: travel.id, active: shouldLoadSidebarSection }),
+    [travel.id, shouldLoadSidebarSection],
+  )
+  const currentSidebarVisit = useRef(sidebarVisit)
+  currentSidebarVisit.current = sidebarVisit
+  const [visibleSidebarVisit, setVisibleSidebarVisit] = useState<typeof sidebarVisit | null>(null)
+  const handleSidebarRuntimeVisibilityLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout
+    if (Platform.OS !== 'web' || !shouldLoadSidebarSection || sidebarVisit.travelId == null ||
+        currentSidebarVisit.current !== sidebarVisit || width <= 0 || height <= 0) return
+    setVisibleSidebarVisit(sidebarVisit)
+  }, [shouldLoadSidebarSection, sidebarVisit])
+  const sidebarRuntimeVisibilityReady = Platform.OS === 'web' &&
+    shouldLoadSidebarSection && visibleSidebarVisit === sidebarVisit
   const commentsSettle = useDeferredSectionRuntimeSettle({
     active: Platform.OS === 'web' && canMountCommentsSection,
     resetKey: travel.id,
@@ -245,6 +263,7 @@ export const TravelDeferredSections: React.FC<{
           placeholder={SIDEBAR_PLACEHOLDER}
           reserveHeight={TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT}
           runtimeFrameReady={sidebarSettle.settled}
+          runtimeVisibilityReady={sidebarRuntimeVisibilityReady}
         >
           {shouldLoadSidebarSection ? (
             <Suspense fallback={SIDEBAR_PLACEHOLDER}>
@@ -253,6 +272,7 @@ export const TravelDeferredSections: React.FC<{
                 anchors={anchors}
                 canRenderHeavy={canRenderHeavy}
                 onRuntimeFrameReady={sidebarSettle.onRuntimeFrameLayout}
+                onRuntimeVisibilityReady={handleSidebarRuntimeVisibilityLayout}
               />
             </Suspense>
           ) : null}

@@ -211,3 +211,51 @@ describe('findingKeys — ключ на каждое значение, а не �
     expect(keysOf(after)).not.toContain('q|wall|dict-material-surface|из кирпича')
   })
 })
+
+// Criterion v2: portable regression evidence, no ignored .quest-audit dependency.
+const colorControlsV2 = require('./fixtures/quest-surface-color-controls-v2.json')
+const colorCorpusV2 = require('./fixtures/quest-surface-color-lexemes-v2.json')
+const { COLOR_ROOTS: oldColorRoots } = require('@/scripts/scan-quest-surface-answer')
+
+describe('surface-color lexical criterion v2', () => {
+  it.each(colorControlsV2.positive as string[])('preserves real color form %s in both consumers', (word) => {
+    expect(isColorWord(word)).toBe(true)
+    expect(classifyStep(step({ task: '', answer_pattern: { type: 'exact', value: word } })).reason).toContain('dict-color')
+    if (word.length > 3) {
+      expect(classifyStep(step({ task: `Назови ${word}`, answer_pattern: { type: 'exact', value: 'мост' } })).reason).toContain('task-color-word')
+    }
+  })
+
+  it.each(colorControlsV2.negative as string[])('rejects unrelated root collision %s', (word) => {
+    expect(isColorWord(word)).toBe(false)
+    expect(classifyStep(step({ task: `Назови ${word}`, answer_pattern: { type: 'exact', value: 'тито' } }))).toBeNull()
+  })
+
+  it('has a genuine positive lexical control for every original root', () => {
+    const norm = (value: string) => value.toLowerCase().replace(/ё/g, 'е').trim()
+    for (const root of oldColorRoots as string[]) {
+      expect((colorControlsV2.rootExamples as string[]).some(word => norm(word).includes(norm(root)))).toBe(true)
+    }
+  })
+
+  it('preserves the exact unchanged Ogulin surname question', () => {
+    const ogulin = require('@/scripts/ogulin-quest-data')
+    const quest = (Array.isArray(ogulin) ? ogulin : [ogulin]).find(q => q.quest_id === 'ogulin-grad-bajki')
+    expect(classifyStep(quest.steps.find((row: {step_id: string}) => row.step_id === '6-kastel'))).toBeNull()
+  })
+
+  it('reconciles reviewed historical cases and independent signals portably', () => {
+    const counts: Record<string, number> = {}
+    for (const row of colorCorpusV2.rows) {
+      const verdict = classifyStep(row.step)
+      counts[row.group] = (counts[row.group] || 0) + 1
+      if (row.group === 'false-positive') expect(verdict).toBeNull()
+      else expect(verdict).toMatchObject({ structural: row.group === 'structural' })
+      if (row.preservedSignal) expect(verdict.markers).toContainEqual(row.preservedSignal)
+    }
+    expect(counts.resolved).toBe(colorCorpusV2.expectedResolved)
+    expect(counts.structural).toBe(colorCorpusV2.expectedStructural)
+    expect(counts['false-positive']).toBe(colorCorpusV2.expectedFalsePositivesRemoved)
+    expect(counts['independent-signal']).toBe(2)
+  })
+})

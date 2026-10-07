@@ -281,7 +281,6 @@ export const travelGenerated2 = {
   "components.travel.gallery.ImageGallery.udalit_7c7423a6": "Delete",
   "components.travel.gallery.ImageGallery.vy_uvereny_chto_hotite_udalit_eto_izobrazhen_6f7f41ae": "Are you sure you want to delete this image?",
   "components.travel.GallerySection.galereya_stanet_dostupna_posle_sohraneniya_p_176414da": "The gallery will become available after saving the journey.",
-  "components.travel.GallerySection.net_zagruzhennyh_izobrazheniy_c0e4d456": "No images loaded",
   "components.travel.GallerySection.zagruzka_galerei_8049b0b6": "Loading gallery...",
   "components.travel.GallerySection.zagruzka_galerei_8a152505": "Loading gallery",
   "components.travel.hooks.createPointListItemModel.apple_maps_fafa477e": "Apple Maps",

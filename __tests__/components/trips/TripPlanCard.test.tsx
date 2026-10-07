@@ -1,10 +1,13 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
 import TripPlanCard from '@/components/trips/planning/TripPlanCard';
+import TripPlanCardSkeleton from '@/components/trips/planning/TripPlanCardSkeleton';
 import { formatTripDateTime } from '@/components/trips/planning/tripPlanFormatting';
+import { createTripPlanCardStyles } from '@/components/trips/planning/TripPlanCard.styles';
+import { getThemedColors } from '@/constants/designSystem';
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -228,3 +231,26 @@ describe('TripPlanCard organizer actions', () => {
     expect(queryByTestId('trip-plan-card-delete-1')).toBeNull();
   });
 });
+
+
+describe('TripPlanCard shared web text slots preserve native wrap contract', () => {
+  it.each(['ios', 'android'])('keeps original%s title/metadata styles and unbounded single metadata Text', platform => {
+    const descriptor = Object.getOwnPropertyDescriptor(Platform, 'OS')!
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: platform })
+    try {
+      const colors = getThemedColors(false)
+      const styles = createTripPlanCardStyles(colors)
+      expect(StyleSheet.flatten(styles.title)).toEqual({ fontSize: 16, fontWeight: '700', color: colors.text })
+      expect(StyleSheet.flatten(styles.meta)).toEqual({ fontSize: 13, color: colors.textSecondary, flex: 1 })
+      const { getByText } = render(<TripPlanCard trip={{ ...trip, startDate: '2026-09-26', endDate: '2026-10-04', startTime: null }} />)
+      const metadata = getByText(`На машине · ${formatTripDateTime('2026-09-26', null, '2026-10-04')}`)
+      expect(metadata.props.numberOfLines).toBeUndefined()
+      expect(StyleSheet.flatten(metadata.props.style).flex).toBe(1)
+      expect(metadata.props.children).toBe(`На машине · ${formatTripDateTime('2026-09-26', null, '2026-10-04')}`)
+      const skeleton = render(<TripPlanCardSkeleton />)
+      const lines = skeleton.getAllByText('\u00a0', { includeHiddenElements: true, normalizer: text => text })
+      expect(lines).toHaveLength(8)
+      expect(lines.every(line => line.props.children === '\u00a0')).toBe(true)
+    } finally { Object.defineProperty(Platform, 'OS', descriptor) }
+  })
+})

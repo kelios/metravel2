@@ -3,13 +3,14 @@ import {
   persistSessionTokens,
   __resetSessionTokenWritesForTests,
 } from '@/utils/authTokenStore';
-import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { fetchStatusWithTimeout, fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getSecureItem, readSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { devError, devWarn } from '@/utils/logger';
 import { Platform } from 'react-native';
 
 jest.mock('@/utils/fetchWithTimeout', () => ({
   fetchWithTimeout: jest.fn(),
+  fetchStatusWithTimeout: jest.fn(),
 }));
 
 jest.mock('@/utils/secureStorage', () => ({
@@ -24,6 +25,7 @@ jest.mock('@/utils/logger', () => ({
   devWarn: jest.fn(),
 }));
 
+const mockedFetchStatusWithTimeout = fetchStatusWithTimeout as jest.MockedFunction<typeof fetchStatusWithTimeout>;
 const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>;
 const mockedGetSecureItem = getSecureItem as jest.MockedFunction<typeof getSecureItem>;
 const mockedReadSecureItem = readSecureItem as jest.MockedFunction<typeof readSecureItem>;
@@ -43,6 +45,13 @@ describe('src/api/client.ts apiClient', () => {
     // deliberately skips secureStorage reads, so an unused queue entry must
     // not leak into the following native test.
     mockedFetchWithTimeout.mockReset();
+    mockedFetchStatusWithTimeout.mockReset();
+    // Preserve historical request queues/order; status-only probe contract is explicit.
+    // Real body/deadline consumption is covered by actual helper tests and integration below.
+    mockedFetchStatusWithTimeout.mockImplementation(async (...args) => {
+      const response = await mockedFetchWithTimeout(...args);
+      return { status: response.status, ok: response.ok };
+    });
     mockedGetSecureItem.mockReset();
     mockedReadSecureItem.mockReset();
     // Клиент читает токен через `readSecureItem` (#1921: ему нужно отличать
@@ -399,8 +408,40 @@ describe('src/api/client.ts apiClient', () => {
     expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2);
     const [probeUrl, probeOptions] = mockedFetchWithTimeout.mock.calls[1];
     expect(String(probeUrl)).toContain('/user/me/verifications/');
+    expect(mockedFetchStatusWithTimeout).toHaveBeenCalledWith(probeUrl, probeOptions, expect.any(Number));
     expect((probeOptions as any).credentials).toBe('include');
     expect((probeOptions as any).headers.Authorization).toBeUndefined();
+  });
+
+  it.each([503, 'body-timeout'])('web: inconclusive status/body probe%s never clears cookie-session tokens', async mode => {
+    Platform.OS = 'web' as typeof Platform.OS;
+    mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 401, text: async () => 'fixture endpoint rejection' } as Response);
+    if (mode === 503) mockedFetchStatusWithTimeout.mockResolvedValueOnce({ status: 503, ok: false });
+    else { const timeout = new Error('fixture body timeout'); timeout.name = 'TimeoutError'; mockedFetchStatusWithTimeout.mockRejectedValueOnce(timeout); }
+    await expect(apiClient.get('/fixture-rejected')).rejects.toEqual(expect.objectContaining({ status: 401 }));
+    expect(mockedFetchStatusWithTimeout).toHaveBeenCalledTimes(1);
+    expect(mockedRemoveSecureItems).not.toHaveBeenCalled();
+  });
+
+  it('actual status helper waits for deferred verification body before returning endpoint-specific401', async () => {
+    Platform.OS = 'web' as typeof Platform.OS;
+    const realFetch = global.fetch;
+    let releaseBody: () => void;
+    let bodyStarted: () => void;
+    const started = new Promise<void>(resolve => { bodyStarted = resolve; });
+    global.fetch = jest.fn(async () => ({ status: 200, ok: true, arrayBuffer: () => new Promise<ArrayBuffer>(resolve => {
+      releaseBody = () => resolve(new ArrayBuffer(0)); bodyStarted();
+    }) } as Response)) as typeof fetch;
+    mockedFetchStatusWithTimeout.mockImplementation(jest.requireActual('@/utils/fetchWithTimeout').fetchStatusWithTimeout);
+    mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 401, text: async () => 'fixture endpoint rejection' } as Response);
+    let completed = false;
+    const result = apiClient.get('/fixture-rejected').catch(error => { completed = true; return error; });
+    try {
+      await started; expect(completed).toBe(false); expect(mockedRemoveSecureItems).not.toHaveBeenCalled();
+      releaseBody!(); await expect(result).resolves.toEqual(expect.objectContaining({ status: 401 }));
+      expect(mockedRemoveSecureItems).not.toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/user/me/verifications/'), expect.objectContaining({ method: 'GET', credentials: 'include' }));
+    } finally { releaseBody!(); await result; global.fetch = realFetch; }
   });
 
   it('web: инвалидирует cookie-сессию только когда контрольная проба тоже вернула 401', async () => {

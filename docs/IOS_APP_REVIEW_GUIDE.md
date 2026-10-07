@@ -174,7 +174,7 @@ Settings (Notifications), not requested automatically at first launch.
 ## 7. User-generated content & moderation
 
 - Reports submitted through **Complain** go to the team's moderation queue and
-  are reviewed within **24–48 hours**.
+  are reviewed within **24 hours**.
 - Reviewer or user questions about a report/moderation outcome can be sent to
   **metraveldev@gmail.com**.
 - A blocked user can no longer see the blocking user's content or contact

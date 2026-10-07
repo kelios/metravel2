@@ -976,7 +976,7 @@ async function collectMetrics(
   const searchboxCount = await countSearchboxes(page)
   const publicTripsUnfilteredEmpty = opts.screenKey === 'trips'
     ? await page.getByTestId('public-trips-empty').isVisible().catch(() => false) &&
-      await page.evaluate(isPublicTripsUnfilteredEmpty)
+      await page.evaluate(isPublicTripsUnfilteredEmpty, undefined)
     : undefined
   const ctaOccluded = await isCtaOccludedByDock(page, opts.ctaTestId)
   const unlabeledInteractive = await countUnlabeledInteractive(page)

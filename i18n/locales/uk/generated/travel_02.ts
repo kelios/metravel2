@@ -281,7 +281,6 @@ export const travelGenerated2 = {
   "components.travel.gallery.ImageGallery.udalit_7c7423a6": "Видалити",
   "components.travel.gallery.ImageGallery.vy_uvereny_chto_hotite_udalit_eto_izobrazhen_6f7f41ae": "Ви впевнені, що хочете видалити це зображення?",
   "components.travel.GallerySection.galereya_stanet_dostupna_posle_sohraneniya_p_176414da": "Галерея стане доступною після збереження подорожі.",
-  "components.travel.GallerySection.net_zagruzhennyh_izobrazheniy_c0e4d456": "Немає завантажених зображень",
   "components.travel.GallerySection.zagruzka_galerei_8049b0b6": "Завантаження галереї…",
   "components.travel.GallerySection.zagruzka_galerei_8a152505": "Завантаження галереї",
   "components.travel.hooks.createPointListItemModel.apple_maps_fafa477e": "Apple Maps",

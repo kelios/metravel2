@@ -29,6 +29,17 @@ describe('ActionTooltip — viewport positioning', () => {
     expect(position.top).toBeGreaterThan(anchor.bottom)
     expect(position.top + tooltip.height).toBeLessThanOrEqual(viewport.height)
   })
+
+  it('preserves bottom/left preferences and flips a bottom tooltip at the viewport edge', () => {
+    const anchor = { left: 250, right: 294, top: 150, bottom: 194 }
+    const bottom = positionActionTooltip(anchor, tooltip, viewport, 'bottom')
+    expect(bottom.top).toBeGreaterThan(anchor.bottom)
+    const left = positionActionTooltip(anchor, tooltip, viewport, 'left')
+    expect(left.left + tooltip.width).toBeLessThan(anchor.left)
+    const lowAnchor = { ...anchor, top: 570, bottom: 614 }
+    expect(positionActionTooltip(lowAnchor, tooltip, viewport, 'bottom').top + tooltip.height)
+      .toBeLessThan(lowAnchor.top)
+  })
 })
 
 describe('ActionTooltip — portal lifecycle', () => {

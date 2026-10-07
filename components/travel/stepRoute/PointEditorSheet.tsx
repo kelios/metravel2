@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   KeyboardAvoidingView,
   Modal,
@@ -13,6 +13,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
 import ModalSafeArea from '@/components/ui/ModalSafeArea'
+import ToastHost from '@/components/ui/ToastHost'
 import MultiSelectField from '@/components/forms/MultiSelectField'
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview'
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard'
@@ -64,10 +65,17 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
   const [image, setImage] = useState<string>('')
   const [extraCategories, setExtraCategories] = useState<{ id: string; name: string }[]>([])
   const [confirmingRemove, setConfirmingRemove] = useState(false)
+  const openPointRef = useRef<{ index: number; id: MarkerData['id'] } | null>(null)
 
   // Синхронизация с открытой точкой (в т.ч. при переключении между точками).
   useEffect(() => {
-    if (!visible || !marker) return
+    if (!visible || !marker) {
+      openPointRef.current = null
+      return
+    }
+    const previous = openPointRef.current
+    openPointRef.current = { index, id: marker.id }
+    if (previous && previous.index === index && (previous.id == null || previous.id === marker.id)) return
     setAddress(marker.address || '')
     setCategories(Array.isArray(marker.categories) ? marker.categories.map((c) => String(c)) : [])
     setImage(marker.image || '')
@@ -254,6 +262,7 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
             />
           </View>
         </KeyboardAvoidingView>
+        <ToastHost overDock={false} />
       </ModalSafeArea>
     </Modal>
   )

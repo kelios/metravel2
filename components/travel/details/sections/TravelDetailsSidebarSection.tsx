@@ -38,11 +38,13 @@ export const TravelDetailsSidebarSection: React.FC<{
   anchors: AnchorsMap
   canRenderHeavy: boolean
   onRuntimeFrameReady?: (event: LayoutChangeEvent) => void
+  onRuntimeVisibilityReady?: (event: LayoutChangeEvent) => void
 }> = ({
   travel,
   anchors,
   canRenderHeavy,
   onRuntimeFrameReady,
+  onRuntimeVisibilityReady,
 }) => {
   const styles = useTravelDetailsStyles()
   const colors = useThemedColors()
@@ -67,10 +69,15 @@ export const TravelDetailsSidebarSection: React.FC<{
   // right before the real cards arrive.
   const handleRuntimeFrameLayout = useCallback(
     (event: LayoutChangeEvent) => {
+      const { width, height } = event.nativeEvent.layout
+      if (width <= 0 || height <= 0) return
+      // Loading/error/empty branches belong to the actual mounted section.
+      // Their visibility does not declare the query geometry settled.
+      onRuntimeVisibilityReady?.(event)
       if (listsFetching) return
       onRuntimeFrameReady?.(event)
     },
-    [listsFetching, onRuntimeFrameReady],
+    [listsFetching, onRuntimeFrameReady, onRuntimeVisibilityReady],
   )
 
   return (

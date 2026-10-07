@@ -278,49 +278,108 @@ describe('guard-text-row-sizing', () => {
     ).toBe(true)
   })
 
-  it('rejects split-label iterations and accepts the combined-label result', () => {
+  const tripFixture = () => {
     const filePath = 'components/trips/planning/TripPlanCard.tsx'
-    const afterSource = fs.readFileSync(path.resolve(process.cwd(), filePath), 'utf8')
-    const combinedLabel = [
+    const stylePath = 'components/trips/planning/TripPlanCard.styles.ts'
+    const card = fs.readFileSync(path.resolve(process.cwd(), filePath), 'utf8')
+    const styles = fs.readFileSync(path.resolve(process.cwd(), stylePath), 'utf8')
+    const combined = [
       '        <Text style={styles.meta}>',
       '          {`${TRANSPORT_LABEL[trip.transport]} · ${formatTripDateTime(trip.startDate, trip.startTime, trip.endDate)}`}',
       '        </Text>',
     ].join('\n')
-    const competingLabels = [
+    const competing = [
       '        <Text style={styles.meta}>{TRANSPORT_LABEL[trip.transport]}</Text>',
       '        <Text style={styles.metaDot}>·</Text>',
       '        <Text style={styles.meta}>{formatTripDateTime(trip.startDate, trip.startTime, trip.endDate)}</Text>',
     ].join('\n')
-    const failedCompetingFlexSource = afterSource.replace(combinedLabel, competingLabels)
-    const failedFlexShrinkSource = failedCompetingFlexSource.replace(
-      'meta: { fontSize: 13, color: colors.textSecondary, flex: 1 },',
-      'meta: { fontSize: 13, color: colors.textSecondary, flexShrink: 1 },',
-    )
-    const beforeSource = failedCompetingFlexSource
-      .replace(
-        'meta: { fontSize: 13, color: colors.textSecondary, flex: 1 },',
-        'meta: { fontSize: 13, color: colors.textSecondary },',
-      )
-      .replaceAll('<Text style={styles.meta}>', '<Text style={styles.meta} numberOfLines={1}>')
+    expect(card.split(combined)).toHaveLength(2)
+    const metaPrefix = 'meta: { fontSize: 13, color: colors.textSecondary, flex: 1,'
+    expect(styles.split(metaPrefix)).toHaveLength(2)
+    return { filePath, stylePath, card, styles, competingCard: card.replace(combined, competing), metaPrefix }
+  }
 
-    expect(beforeSource).not.toBe(afterSource)
-    expect(failedFlexShrinkSource).not.toBe(afterSource)
-    expect(failedCompetingFlexSource).not.toBe(afterSource)
-    expect(afterSource).toContain(combinedLabel)
-    expect(beforeSource.match(/style=\{styles\.meta\} numberOfLines=\{1\}/g)).toHaveLength(2)
-    expect(scanFile({ filePath, content: beforeSource }).findings).toEqual(
-      expect.arrayContaining([expect.objectContaining({ key: `${filePath}::metaRow::meta` })]),
-    )
-    expect(scanFile({ filePath, content: failedFlexShrinkSource }).findings).toEqual(
-      expect.arrayContaining([expect.objectContaining({ key: `${filePath}::metaRow::meta` })]),
-    )
-    expect(scanFile({ filePath, content: failedCompetingFlexSource }).findings).toEqual(
-      expect.arrayContaining([expect.objectContaining({ key: `${filePath}::metaRow::meta` })]),
-    )
-    const afterResult = scanFile({ filePath, content: afterSource })
-    expect(afterResult.findings).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ key: `${filePath}::metaRow::meta` })]),
-    )
+  const withTripRoot = (check: (data: ReturnType<typeof tripFixture> & { rootDir: string }) => void) => {
+    const data = tripFixture()
+    const rootDir = makeTempDir('guard-trip-imported-styles-')
+    try {
+      writeTextFile(path.join(rootDir, data.filePath), data.card)
+      writeTextFile(path.join(rootDir, data.stylePath), data.styles)
+      check({ ...data, rootDir })
+    } finally { removeDir(rootDir) }
+  }
+
+  it('rejects split-label iterations and accepts the combined-label result', () => {
+    withTripRoot(({ filePath, stylePath, card, styles, competingCard, metaPrefix, rootDir }) => {
+      const positive = scanFile({ filePath, content: card, rootDir })
+      expect(positive.rowCount).toBeGreaterThan(0)
+      expect(positive.dynamicTextCount).toBeGreaterThan(0)
+      expect(positive.findings).toEqual([])
+      expect(scanTextRowSizing(rootDir).ok).toBe(true)
+      const variants = [
+        { card: competingCard, styles },
+        { card: competingCard, styles: styles.replace(metaPrefix, 'meta: { fontSize: 13, color: colors.textSecondary, flexShrink: 1,') },
+        { card: competingCard.replaceAll('<Text style={styles.meta}>', '<Text style={styles.meta} numberOfLines={1}>'), styles: styles.replace(metaPrefix, 'meta: { fontSize: 13, color: colors.textSecondary,') },
+      ]
+      for (const variant of variants) {
+        expect(variant.card).not.toBe(card)
+        writeTextFile(path.join(rootDir, stylePath), variant.styles)
+        writeTextFile(path.join(rootDir, filePath), variant.card)
+        const result = scanFile({ filePath, content: variant.card, rootDir })
+        expect(result.rowCount).toBeGreaterThan(0)
+        expect(result.dynamicTextCount).toBeGreaterThan(0)
+        expect(result.findings).toEqual(expect.arrayContaining([
+          expect.objectContaining({ key: `${filePath}::metaRow::meta` }),
+        ]))
+        const productionResult = scanTextRowSizing(rootDir)
+        expect(productionResult.ok).toBe(false)
+        expect(productionResult.vacuous).toBe(false)
+        expect(productionResult.violations).toEqual(expect.arrayContaining([
+          expect.objectContaining({ key: `${filePath}::metaRow::meta` }),
+        ]))
+      }
+    })
+  })
+
+  it('resolves the same actual named factory through relative and repo alias imports', () => {
+    withTripRoot(({ filePath, card, rootDir }) => {
+      const alias = card.replace("from './TripPlanCard.styles'", "from '@/components/trips/planning/TripPlanCard.styles'")
+      expect(alias).not.toBe(card)
+      expect(scanFile({ filePath, content: alias, rootDir })).toEqual(scanFile({ filePath, content: card, rootDir }))
+      const namedAlias = card.replace('createTripPlanCardStyles,', 'createTripPlanCardStyles as createStyles,').replace('createTripPlanCardStyles(colors)', 'createStyles(colors)')
+      expect(namedAlias).not.toBe(card)
+      expect(scanFile({ filePath, content: namedAlias, rootDir })).toEqual(scanFile({ filePath, content: card, rootDir }))
+    })
+  })
+
+  it('keeps local static property overrides after the imported factory facts', () => {
+    withTripRoot(({ filePath, competingCard, rootDir }) => {
+      const overridden = `${competingCard}
+const localStyles = StyleSheet.create({ meta: { flex: 0, maxWidth: 100 } })`
+      const result = scanFile({ filePath, content: overridden, rootDir })
+      expect(result.rowCount).toBeGreaterThan(0)
+      expect(result.dynamicTextCount).toBeGreaterThan(0)
+      expect(result.findings).toEqual([])
+    })
+  })
+
+  it('does not select unrelated imports and rejects a missing recognized factory', () => {
+    withTripRoot(({ filePath, stylePath, card, rootDir }) => {
+      const unrelated = card.replaceAll('createTripPlanCardStyles', 'createUnrelatedStyles')
+      expect(scanFile({ filePath, content: unrelated, rootDir }).rowCount).toBe(0)
+      expect(() => scanFile({ filePath, content: card.replace("'./TripPlanCard.styles'", "'outside-package'"), rootDir })).toThrow('Unsupported Trip style factory dependency')
+      fs.unlinkSync(path.join(rootDir, stylePath))
+      expect(() => scanFile({ filePath, content: card, rootDir })).toThrow()
+      expect(() => scanTextRowSizing(rootDir)).toThrow()
+    })
+  })
+
+  it('rejects ambiguous exported Trip factories', () => {
+    withTripRoot(({ filePath, stylePath, card, styles, rootDir }) => {
+      writeTextFile(path.join(rootDir, stylePath), `${styles}
+export const createTripPlanCardStyles = () => StyleSheet.create({});`)
+      expect(() => scanFile({ filePath, content: card, rootDir })).toThrow('Expected one exported static Trip style factory')
+    })
   })
 
   it('keeps the clean-checkout repository scan non-vacuous and allowlisted', () => {

@@ -51,6 +51,8 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
   };
 });
 
+let mockDeferPointUpload = false;
+let mockCompletePointUpload: () => void = () => {};
 jest.mock('@/components/travel/PhotoUploadWithPreview', () => {
   const React = require('react');
 
@@ -61,7 +63,11 @@ jest.mock('@/components/travel/PhotoUploadWithPreview', () => {
       {
         type: 'button',
         'aria-label': 'Загрузить новое фото точки',
-        onClick: () => onUpload('https://example.com/edited-point.webp'),
+        onClick: () => {
+          const complete = () => onUpload('https://example.com/edited-point.webp');
+          if (mockDeferPointUpload) mockCompletePointUpload = complete;
+          else complete();
+        },
       },
       'Загрузить новое фото точки',
     ),
@@ -140,6 +146,7 @@ describe('WebMapComponent marker sync', () => {
   };
 
   beforeEach(() => {
+    mockDeferPointUpload = false;
     lastMapEvents = null;
     jest.clearAllMocks();
     Object.defineProperty(window, 'innerWidth', {
@@ -467,6 +474,35 @@ describe('WebMapComponent marker sync', () => {
     expect(lastCommit[0]).toEqual(
       expect.objectContaining({ id: 42, address: 'Новый адрес точки', categories: ['1'] }),
     );
+  });
+
+  it.each(['keep', 'reorder', 'delete'])('applies upload after editor close to the latest point state: %s', async (change) => {
+    mockDeferPointUpload = true;
+    const point = { id: 42, lat: 41.7, lng: 44.8, address: 'Original', categories: [1], image: 'https://example.com/old.jpg', country: 268 };
+    const other = { ...point, id: 43, lat: 41.8, address: 'Other' };
+    let changeRoute: () => void = () => {};
+    let latest: typeof point[] = [];
+    function Route() {
+      const [markers, setMarkers] = React.useState([point, other]);
+      latest = markers;
+      changeRoute = () => setMarkers((current) => change === 'delete' ? current.filter((marker) => marker.id !== 42) : change === 'reorder' ? [...current].reverse() : current);
+      return <WebMapComponent {...baseProps} markers={markers} onMarkersChange={setMarkers} />;
+    }
+    render(<Route />);
+    await waitFor(() => expect(screen.queryByText('Загрузка карты…')).toBeNull());
+    fireEvent.click(screen.getAllByRole('button', { name: 'Редактировать' })[0]);
+    fireEvent.change(screen.getByDisplayValue('Original'), { target: { value: 'Saved address' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Загрузить новое фото точки' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Отмена' }));
+    act(() => changeRoute());
+    act(() => mockCompletePointUpload());
+    if (change === 'delete') {
+      expect(latest.map((marker) => marker.id)).toEqual([43]);
+      expect(latest[0].image).toBe(other.image);
+    } else {
+      expect(latest.find((marker) => marker.id === 42)).toEqual(expect.objectContaining({ address: 'Saved address', image: 'https://example.com/edited-point.webp' }));
+      expect(latest.find((marker) => marker.id === 43)?.image).toBe(other.image);
+    }
   });
 
   it('preserves the open editor draft when a parent echo assigns the point id', async () => {

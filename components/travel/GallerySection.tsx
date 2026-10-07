@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, Platform } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ImageGalleryComponent from '@/components/travel/ImageGalleryComponent';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -70,10 +70,6 @@ const GallerySection: React.FC<GallerySectionProps> = ({ images, travelId, onCha
                 maxImages={10}
                 onChange={onChange}
             />
-            {Platform.OS !== 'web' && normalizedImages.length === 0 && (
-                <Text style={styles.infoText}>
-                    {i18nT('travel:components.travel.GallerySection.net_zagruzhennyh_izobrazheniy_c0e4d456')}</Text>
-            )}
         </View>
     );
 };

@@ -1,6 +1,6 @@
 // components/map/EditMarkerModal.tsx
 // C3.2: Extracted from MarkersListComponent.tsx
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import Feather from '@expo/vector-icons/Feather';
 import { MarkerData } from '@/types/types';
@@ -71,6 +71,11 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
     // миниатюра до перезагрузки. Поэтому храним только то, что автор загрузил
     // или убрал в этом окне; `null` — фото не трогали.
     const [editedImage, setEditedImage] = useState<string | null>(null);
+    const mountedRef = useRef(true);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
     const shownImage = editedImage ?? (marker.image || '');
     const [extraCategories, setExtraCategories] = useState<{ id: string; name: string }[]>([]);
 
@@ -90,7 +95,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
     }, []);
 
     const handleLocalImageUpload = useCallback((imageUrl: string) => {
-        setEditedImage(imageUrl);
+        if (mountedRef.current) setEditedImage(imageUrl);
         handleImageUpload(index, imageUrl);
     }, [handleImageUpload, index]);
 

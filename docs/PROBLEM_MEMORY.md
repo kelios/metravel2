@@ -3538,6 +3538,41 @@ guard, падающий в CI на попытке обойти этот конт
   «голубой». Ранее: 2026-08-15 — точечный фикс `mir-castle / church` применён
   (шаг уведён с цвета на неперекрашиваемый признак).
 
+
+- **Уточнение измерительного критерия v2 (2026-10-07):** отдельный механизм
+  ложного отбора — цветовой корень внутри постороннего слова. Например,
+  `охр` в «сохранённую» давал `task-color-word` для неизменённого вопроса
+  `ogulin-grad-bajki/6-kastel` о фамилии. Это `create-linked` к канонической
+  #1431: принятый контентный фикс устаревшего вида объекта и его история
+  сохраняются; закрытая #1431 не переоткрывается из-за артефакта измерения.
+  Связанная инструментальная карточка — #2339; датированное уточнение v1/v2
+  добавлено в историю #1431 без удаления прежних исходов.
+  Постоянный контроль: `scripts/scan-quest-surface-answer.js` сохраняет
+  прежние корни/стоп-лист и добавляет общую проверку целых цветовых лексем
+  из `scripts/lib/questColorLexemes.js` для словаря и задания. Уточнение
+  монотонно — каждый ключ v2 уже существовал в v1; baseline не расширен и
+  не перегенерирован. Материал поверхности, конструктивная идентичность и
+  повалюйный дрейф эталона остаются самостоятельными контролями.
+  Замороженный неизменённый корпус 17.08: 139 квестов/1160 шагов,
+  surface 107→85, structural 40→40; все 60 resolved остаются. Сняты только
+  22 ранее excluded id: 110, 103, 115, 129, 165, 178, 186, 269, 280, 316,
+  417, 419, 447, 466, 546, 548, 705, 796, 1107, 1102, 1162, 1349.
+  Историческая арифметика v1 **60+47+40=147** остаётся фактом прежнего
+  критерия; арифметика v2 — **60+25+40=125**. Material-surface 27→27;
+  восемь structural-строк теряют нецветовые markers, но не идентичность.
+  Подготовленный local-снапшот 204 квеста/1857 шагов: surface 115→91,
+  material-surface 28→28, structural 52→52; одиннадцать structural-строк
+  теряют ложные markers. Переносимые fixtures
+  `__tests__/scripts/fixtures/quest-surface-color-lexemes-v2.json` и
+  `quest-surface-color-controls-v2.json` фиксируют 124 строки
+  (60 resolved +40 structural +22 снятых +2 независимых сигнала),
+  171 настоящую положительную форму, 17 отрицательных и настоящую форму
+  для каждого из 92 прежних корней. Слитные составные формы ограничены RU,
+  другие поддерживаемые языки сохраняют пробел/дефис как границы токенов.
+  Fresh-photo порог и контентные вердикты #1431 остаются прежними; отдельная
+  source-приёмка lexical-изменения и обновление канонического board-контракта
+  выполняются после независимого code review.
+
 ### QUEST-ANSWER-GRANULARITY-001 — шаг требует различения, которого игроку никто не дал
 
 - **Инвариант:** принимаемый ответ шага обязан быть отличим от похожих теми
@@ -5897,3 +5932,114 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   awaited persisted payload без увеличения timeout; unchanged feedback echo не
   запускает fresh reveal, новая попытка/подсказка запускает. Runtime mobile
   320/390 после reviewed deploy проверяется отдельно; native physical deferred.
+
+### HOME-SSG-BLOCK-IN-SHELL-FLOW-001 — crawler-блок не занимает место оболочки
+
+- **Инвариант:** когда оболочка главной видна с первого кадра, служебные ссылки
+  SSG остаются в HTML для поисковика, но не участвуют в её flex-раскладке и не
+  показываются посетителю до гидратации.
+- **Surface/owner:** главная `/`; `scripts/generate-seo-pages.js`
+  (`data-ssg-home-quests`), synchronous head class в `utils/htmlShell.ts` и
+  `app/+html.tsx`. Каноническая #2257; related #2320/#2332.
+- **Подтверждённый механизм:** section стоял первым ребёнком flex-row `#root`
+  и скрывался только после двух rAF классом `rnw-styles-ready`: shell получал
+  остаток ширины. 05.10 на 1280: CLS 0,6486; на 390 ширина shell была нулевой,
+  поэтому отсутствие CLS не означало правильный первый кадр.
+- **Корректирующий слой:** section — sibling перед `#root`; synchronous
+  `travel-route` и critical CSS скрывают его сразу, crawler-ссылки сохранены.
+  Source `e90e118f9`. Перенос назад в flex-row или позднее скрытие нарушают
+  тот же инвариант и требуют reopen #2257.
+- **Историческая приёмка (06.10.2026, prod `6652b89c3`):** без JS shell
+  во всю ширину на 390/1024/1280/1440, section display:none, 10 ссылок в HTML;
+  CLS 0 на 390/1024/1280. Это сохранённая приёмка, не новый runtime PASS.
+- **Regression control:** `__tests__/scripts/generate-seo-pages.test.ts`
+  проверяет sibling/скрытие/ссылки; `e2e/first-frame-before-hydration.spec.ts`
+  контролирует первый кадр. Последний e2e не объявляется выполненным этой
+  записью: обязательный повтор остаётся #2332 g. Мобильная раскладка скелета
+  `/` и `/search` (#2332 b) — отдельный остаток, не закрытый этим переносом.
+
+### HTML-RESOURCE-HINT-DEAD-ORIGIN-001 — подсказка браузеру имеет живого владельца
+
+- **Инвариант:** `preconnect`/`dns-prefetch` документного head указывают на
+  действительный origin, с которого страница загружает ресурс; hint и loader
+  читают один источник. Собственный origin уже соединён документом.
+- **Surface/owner:** `app/+html.tsx`, `utils/webResourceHints.ts`,
+  `utils/analyticsInlineScript.ts`; каноническая #2269, related #2257/#2332.
+- **Подтверждённый механизм:** ручной preconnect на `cdn.metravel.by`
+  (NXDOMAIN) давал лишний DNS/ошибку Safari, хотя ресурсы первого кадра шли
+  с собственного origin. Тип `<link>` не проверяет DNS и реальный loader.
+- **Корректирующий слой:** head использует `WEB_RESOURCE_HINTS`, аналитика
+  берёт `ANALYTICS_ORIGINS` из того же файла. Для поздней consent-аналитики
+  остаётся dns-prefetch, не преждевременный TLS preconnect; source `e90e118f9`.
+- **Историческая приёмка (06.10.2026, prod `6652b89c3`):** head без
+  preconnect/вхождений `cdn.metravel.by` на `/`, `/quests`, `/app`, `/travels/*`;
+  dns-prefetch остаются mc.yandex.ru/Google Tag Manager. Это историческое
+  наблюдение, не новая DNS/Safari-проверка.
+- **Regression control:** `__tests__/app/html.resourceHints.test.ts`
+  запрещает ручные hints, требует bare HTTPS origins/уникальность/реальный
+  loader и общий origin-owner. Runtime DNS остаётся отдельным доказательством.
+  Копии списка «своих» хостов/`api.metravel.by` в rich-text/print/transform
+  ещё относятся к #2332 c: этот HTML-head control их не закрывает.
+- **Правило recurrence:** мёртвый или неиспользуемый hint того же head —
+  reopen #2269; иной владелец списка — связанная карточка после диагностики.
+
+### RNW-INLINE-ANIMATION-KEYFRAMES-DEAD-001 — keyframes должны дойти до CSS
+
+- **Инвариант:** пока штатный компонент показывает web-перелив, его анимация
+  скомпилирована в настоящую CSS-таблицу с первого кадра; наличие ключа в props
+  не является доказательством анимации.
+- **Surface/owner:** `components/ui/ShimmerOverlay.tsx`; каноническая #2215,
+  related #2170 (`SkeletonLoader`), #2036 (псевдоклассы), #2032 (DOM data),
+  #2332 f/g. Потребители — ImageCardMedia/OptimizedImage/QuestCard/GalleryGrid.
+- **Подтверждённый механизм:** RN-Web 0.21 компилирует `animationKeyframes`
+  только внутри `StyleSheet.create`; inline-литерал давал мёртвое
+  `animation-keyframes`. `@ts-ignore` и props-snapshot ошибку не удержали.
+  Массив transform внутри кадров также не раскрывался (`[object Object]`).
+- **Корректирующий слой:** `webViewStyle`/`Platform.select` в StyleSheet,
+  object-keyframes во встроенном sheet, transform как CSS-строка; source
+  `e90e118f9`. Guard `inline-animation-keyframes` ловит inline-литералы без
+  debt-list; реальный RN-Web server-markup проверяет класс/кадры.
+- **Историческая приёмка (06.10.2026, prod `6652b89c3`):** `/quests` —
+  24 анимированные плашки, animationName r-aj3i9e, 1,8 s. Это сохранённая проба,
+  не новый runtime PASS всех потребителей.
+- **Regression control:** `__tests__/components/ui/ShimmerOverlay.staticMarkup.dom.web.test.tsx`,
+  `__tests__/scripts/guard-web-style-channels.test.ts`,
+  `npm run guard:web-style-channels` в lint/check:fast. Двусторонние
+  `npm run verify:slider` и `npm run verify:slider-perf` остаются обязательными
+  (#2215/#2332 f): они исторически не выполнены, SKIPPED не pass. Бесконечный
+  перелив каталогов нельзя считать принятой нормой: ImageCardMedia не рисует
+  его на web-карточках по замыслу, цена/решение остаются #2332 f.
+- **Правило recurrence:** возврат мёртвых keyframes в том же chokepoint —
+  reopen #2215; иной канал RNW/CSS — create-linked с собственным control.
+
+### QUEST-MAP-TILES-CLS-001 — Leaflet получает CSS до первого кадра движка
+
+- **Инвариант:** первый кадр карты имеет итоговую геометрию; тайлы/SVG и
+  контролы не входят в обычный поток до последующего прихода leaflet.css.
+- **Surface/owner:** QuestDesktopMapPanel → QuestFullMap → общий MapCanvas;
+  `utils/loadLeafletRuntime.ts`/`utils/ensureLeafletCss.ts`, useLeafletLoader;
+  каноническая #2324, related #2270 (карточка шага), #1333 (контейнер /map),
+  #1562/#1879 (другие узлы квеста), #2332 a/g/h.
+- **Подтверждённый механизм:** на 1280 контейнер был стабилен, но SVG/IMG
+  тайлы меняли положение: 10/10 reload, CLS 0,1135. Удаление panTo/выравнивание
+  FitBounds не помогло. Движок монтировался до применения core CSS; тайлы/SVG
+  поздно получали absolute-позиционирование.
+- **Корректирующий слой:** shared runtime ждёт `whenLeafletCssReady`
+  параллельно с JS; применяется core stylesheet или layout fallback.
+  Source `dbbfc17f2`; mounted engine не должен обгонять реальное применение
+  CSS. Один вставленный link или только minHeight обёртки это не доказывает.
+- **Историческая приёмка (06.10.2026, prod `6652b89c3`):** квест Кракова
+  на 1280 — 8/8 без map-shift, первый tile absolute/CLS 0; CSS +1,5 s — 3/3;
+  mobile 390 — 2/2, тайлы 1,1–1,4 s. Это сохранённые результаты, не новая проверка
+  полного исходного 10 reload gate или остальных потребителей.
+- **Regression control:** `__tests__/utils/ensureLeafletCss.test.ts`,
+  `e2e/quest-map-leaflet-css-first-frame.spec.ts`, CLS-проба реальные узлы
+  карты при задержке CSS. Новый e2e ещё требует запуска (#2332 g), unit не
+  заменяет его. Атрибуция #2332 a и fallback #2332 h остаются открытыми.
+- **Открытый остаток:** нынешний 3000 ms CSS-ready timeout и неполная fallback
+  геометрия контролов не объявлены разрешённым исключением Timeout policy.
+  Поздний настоящий CSS может сдвигать контролы до 10 px; заранее упавшие два
+  stylesheet URL могут всё равно ждать 3000 ms. Это #2332 h, не accepted-pass
+  #2324 и не повод легализовать таймер записью в RULES.
+- **Правило recurrence:** прежний тайл/SVG-before-CSS shift — reopen #2324;
+  иной control/fallback/атрибуция owner — связанный дефект после измерения.

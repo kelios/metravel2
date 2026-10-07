@@ -87,6 +87,7 @@ function ThreadList({
         },
         [onDeleteThread],
     );
+    const handleCancelDelete = useCallback(() => setConfirmDeleteId(null), []);
 
     const getOtherParticipantId = useCallback(
         (thread: MessageThread): number | null => {
@@ -133,20 +134,20 @@ function ThreadList({
     const renderItem = useCallback(
         ({ item }: { item: MessageThread }) => (
             <ThreadRow
-                threadId={item.id}
+                thread={item}
                 name={getOtherParticipantName(item)}
                 avatarUrl={getOtherParticipantAvatar(item)}
                 time={formatThreadTimestamp(item.last_message_created_at)}
                 unreadCount={item.unread_count ?? 0}
                 selected={selectedThreadId != null && item.id === selectedThreadId}
-                onPress={() => onSelectThread(item)}
-                onRequestDelete={onDeleteThread ? () => handleDeletePress(item.id) : undefined}
+                onSelectThread={onSelectThread}
+                onRequestDelete={onDeleteThread ? handleDeletePress : undefined}
                 confirmingDelete={confirmDeleteId === item.id}
-                onConfirmDelete={() => handleConfirmDelete(item.id)}
-                onCancelDelete={() => setConfirmDeleteId(null)}
+                onConfirmDelete={handleConfirmDelete}
+                onCancelDelete={handleCancelDelete}
             />
         ),
-        [getOtherParticipantName, getOtherParticipantAvatar, onSelectThread, selectedThreadId, confirmDeleteId, handleConfirmDelete, onDeleteThread, handleDeletePress]
+        [getOtherParticipantName, getOtherParticipantAvatar, onSelectThread, selectedThreadId, confirmDeleteId, handleConfirmDelete, handleCancelDelete, onDeleteThread, handleDeletePress]
     );
 
     // Шапка панели (#2267): поиск и главное действие панели — «Новый диалог».

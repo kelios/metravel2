@@ -24,7 +24,7 @@ import {
 import { isConnectionFailure } from '@/utils/networkFailureTag';
 import { sanitizeInput } from '@/utils/security';
 import { validatePassword } from '@/utils/aiValidation';
-import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { fetchStatusWithTimeout, fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getUserFriendlyError } from '@/utils/userFriendlyErrors';
 import { retry, isRetryableError } from '@/utils/retry';
 import { getSecureItem } from '@/utils/secureStorage';
@@ -62,7 +62,7 @@ const getStoredAuthToken = async (): Promise<string | null> =>
 export const validateWebCookieSessionApi = async (): Promise<boolean> => {
     if (shouldUseStoredAuthToken()) return false;
 
-    const response = await fetchWithTimeout(WEB_SESSION_PROBE, {
+    const response = await fetchStatusWithTimeout(WEB_SESSION_PROBE, {
         method: 'GET',
         ...getApiRequestCredentials(),
         headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },

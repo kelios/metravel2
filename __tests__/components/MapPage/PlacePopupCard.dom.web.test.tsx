@@ -122,6 +122,10 @@ describe('PlacePopupCard in the real React Native Web DOM (#2035)', () => {
   const hero = () => container.querySelector('[aria-label="Открыть фото на весь экран"]')
   const fullscreenOpen = () => document.querySelector('[data-testid="fullscreen-viewer"]') !== null
 
+  it('keeps the hero photo hover title in the actual DOM (#2284)', () => {
+    expect(hero()?.getAttribute('title')).toBe('Открыть фото на весь экран')
+  })
+
   it('marks the photo and every action in the DOM, and leaves the text unmarked', () => {
     expect(hero()?.getAttribute('data-card-action')).toBe('true')
     for (const label of ['Закрыть попап', 'Следующий материал', 'Предыдущий материал']) {

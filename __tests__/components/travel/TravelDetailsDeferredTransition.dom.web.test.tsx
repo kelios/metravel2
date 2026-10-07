@@ -3,11 +3,23 @@ import type { ReactNode } from 'react'
 
 let createElement: typeof import('react').createElement
 let act: typeof import('react').act
+let useLayoutEffect: typeof import('react').useLayoutEffect
+let useRuntimeSettle: typeof import('@/components/travel/details/TravelDetailsDeferredTransition').useDeferredSectionRuntimeSettle
 let createRoot: typeof import('react-dom/client').createRoot
 let Transition: typeof import('@/components/travel/details/TravelDetailsDeferredTransition').TravelDetailsDeferredTransition
 let Platform: typeof import('react-native').Platform
 
+class MeasuredResizeObserver {
+  static instances: MeasuredResizeObserver[] = []
+  targets = new Set<Element>()
+  constructor(readonly callback: ResizeObserverCallback) { MeasuredResizeObserver.instances.push(this) }
+  observe(target: Element) { this.targets.add(target) }
+  unobserve(target: Element) { this.targets.delete(target) }
+  disconnect() { this.targets.clear() }
+}
+
 beforeAll(() => {
+  Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: MeasuredResizeObserver })
   jest.resetModules()
   jest.doMock('react-native', () => jest.requireActual('react-native-web'))
   // Deferred content leaves only: the actual transition/layout effects render.
@@ -16,10 +28,11 @@ beforeAll(() => {
     FooterSectionSkeleton: () => null, MapSectionSkeleton: () => null,
     RatingSectionSkeleton: () => null, SidebarSectionSkeleton: () => null,
   }))
-  ;({ createElement, act } = require('react'))
+  ;({ createElement, act, useLayoutEffect } = require('react'))
   ;({ createRoot } = require('react-dom/client'))
   ;({ Platform } = require('react-native'))
   Transition = require('@/components/travel/details/TravelDetailsDeferredTransition').TravelDetailsDeferredTransition
+  useRuntimeSettle = require('@/components/travel/details/TravelDetailsDeferredTransition').useDeferredSectionRuntimeSettle
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 })
 })
@@ -40,6 +53,7 @@ type FixtureOptions = {
   noScrollOwner?: boolean
   differentOwner?: boolean
   precedingOverlay?: 'fixed' | 'absolute' | 'sticky'
+  runtimeGrowth?: number
 }
 
 function fixture(options: FixtureOptions = {}) {
@@ -63,23 +77,44 @@ function fixture(options: FixtureOptions = {}) {
     owner.insertBefore(overlay, anchor)
   }
   document.body.append(host)
+  let runtimeWidth = 390
   let top = initialTop
   let root: Root
   const writes: number[] = []
   const transition = () => mount.querySelector<HTMLElement>('[data-testid="measured-transition"]')!
   const released = () => !!transition() && transition().style.minHeight !== '100vh'
+  const runtimeLayer = () => mount.querySelector<HTMLElement>('[data-testid="measured-transition-runtime"]')
+  const baselineHeight = options.runtimeGrowth == null ? 844 : 873
+  // Browser flow model follows the actual committed container height and CSS.
+  // Absolute child's intrinsic height does not affect its parent's flow height.
+  const layoutDelta = () => {
+    const declaredHeight = Number.parseFloat(transition()?.style.height || '0')
+    const runtime = runtimeLayer()
+    const intrinsicHeight = Number.parseFloat((runtime?.firstElementChild as HTMLElement | null)?.style.height || '0')
+    const uncontrolledIntrinsic = runtime && getComputedStyle(runtime).position !== 'absolute' ? intrinsicHeight : 0
+    const flowHeight = Math.max(declaredHeight, uncontrolledIntrinsic, released() ? 0 : baselineHeight)
+    return flowHeight - baselineHeight
+  }
+  const originalRect = HTMLElement.prototype.getBoundingClientRect
+  HTMLElement.prototype.getBoundingClientRect = function () {
+    if (this.dataset.testid === 'measured-transition-runtime') {
+      const leaf = this.firstElementChild as HTMLElement | null
+      return rect(0, Number.parseFloat(leaf?.style.height || '0'), runtimeWidth)
+    }
+    return originalRect.call(this)
+  }
   // Genuine DOM lifecycle + an independent browser geometry/clamp model.
   // React changes the real reserve style; measurements follow that style,
   // rather than injecting a fabricated ready callback into the product hook.
   Object.defineProperties(owner, {
     clientHeight: { configurable: true, get: () => ownerHeight },
-    clientWidth: { configurable: true, get: () => 390 },
-    scrollHeight: { configurable: true, get: () => (released() ? 26706 : 26848) + ownerHeight },
+    clientWidth: { configurable: true, get: () => runtimeWidth },
+    scrollHeight: { configurable: true, get: () => 26848 + layoutDelta() + ownerHeight },
     scrollTop: {
       configurable: true,
       get: () => {
-        const max = released() ? 26706 : 26848
-        if (released() && options.naturalAnchor) top = Math.min(top, initialTop - 142)
+        const max = 26848 + layoutDelta()
+        if (options.naturalAnchor) top = initialTop + layoutDelta()
         top = Math.max(0, Math.min(max, top))
         return top
       },
@@ -87,16 +122,30 @@ function fixture(options: FixtureOptions = {}) {
     },
   })
   owner.getBoundingClientRect = () => rect(ownerTop, ownerHeight)
-  anchor.getBoundingClientRect = () => rect(anchorTop + initialTop - owner.scrollTop - (released() ? 142 : 0), options.anchorHeight ?? 930)
+  anchor.getBoundingClientRect = () => rect(anchorTop + initialTop - owner.scrollTop + layoutDelta(), options.anchorHeight ?? 930)
   if (options.disconnectedAfterRelease) Object.defineProperty(anchor, 'isConnected', { configurable: true, get: () => !released() })
-  const render = (ready: boolean, pending = false, child: ReactNode = createElement('div', { 'data-testid': 'actual-runtime-leaf' })) => {
+  const render = (ready: boolean, pending = false, child: ReactNode = createElement('div', { 'data-testid': 'actual-runtime-leaf', style: { height: options.runtimeGrowth == null ? 702 : ready ? 873 + options.runtimeGrowth : 873 } }), runtimeVisibilityReady?: boolean) => {
     act(() => {
       root ??= createRoot(mount)
-      root.render(createElement(Transition, { isMobile: true, pending, placeholder: createElement('div', { 'data-testid': 'actual-placeholder-leaf' }), reserveHeight: '100vh', runtimeFrameReady: ready, testID: 'measured-transition', children: child }))
+      root.render(createElement(Transition, { isMobile: true, pending, placeholder: createElement('div', { 'data-testid': 'actual-placeholder-leaf' }), reserveHeight: '100vh', runtimeFrameReady: ready, runtimeVisibilityReady, testID: 'measured-transition', children: child }))
     })
   }
   render(false)
-  return { owner, anchor, writes, render, transition, cleanup: () => { act(() => root.unmount()); host.remove() } }
+  const currentCallbacks = () => MeasuredResizeObserver.instances.filter(observer => runtimeLayer() && observer.targets.has(runtimeLayer()!)).map(observer => observer.callback)
+  const resizeRuntime = (height: number, width = runtimeWidth) => {
+    const layer = runtimeLayer()!
+    const leaf = layer.firstElementChild as HTMLElement
+    const callbacks = currentCallbacks()
+    act(() => {
+      runtimeWidth = width
+      owner.style.width = `${width}px`
+      leaf.style.height = `${height}px`
+      for (const callback of callbacks) callback([{ target: layer } as ResizeObserverEntry], {} as ResizeObserver)
+    })
+  }
+  const renderTree = (tree: ReactNode) => { act(() => root.render(tree)) }
+  const cleanup = () => { act(() => root.unmount()); host.remove(); HTMLElement.prototype.getBoundingClientRect = originalRect }
+  return { owner, anchor, writes, render, renderTree, transition, resizeRuntime, currentCallbacks, cleanup }
 }
 
 it.each([
@@ -167,7 +216,7 @@ it('reports an impossible top clamp explicitly instead of claiming preserved geo
 
 it.each(['nonempty', 'empty', 'error'])('releases the measured %s frame without leaving permanent reserved space', state => {
   const f = fixture()
-  f.render(true, false, createElement('div', { 'data-testid': `actual-${state}-frame` }))
+  f.render(true, false, createElement('div', { 'data-testid': `actual-${state}-frame`, style: { height: 702 } }))
   expect(f.transition().querySelector(`[data-testid="actual-${state}-frame"]`)).not.toBeNull()
   expect(f.transition().style.minHeight).toBe('')
   expect(f.transition().dataset.reserveReleaseState).toBe('anchored')
@@ -191,6 +240,291 @@ it('clears capture/readiness when pending resets for a new travel, then measures
   f.cleanup()
 })
 
+
+it('keeps an unready tall runtime measurable at current width without changing following flow', () => {
+  const f = fixture({ runtimeGrowth: 2600, initialTop: 22800 })
+  const before = f.anchor.getBoundingClientRect().top
+  const height = f.owner.scrollHeight
+  const layer = f.transition().querySelector<HTMLElement>('[data-testid="measured-transition-runtime"]')!
+  expect(getComputedStyle(layer).position).toBe('absolute')
+  expect(getComputedStyle(layer).width).toBe('100%')
+  expect(getComputedStyle(f.transition()).overflowX).toBe('hidden')
+  expect(getComputedStyle(f.transition()).overflowY).toBe('hidden')
+  expect(layer.hasAttribute('inert')).toBe(true)
+  expect(layer.getAttribute('aria-hidden')).toBe('true')
+  expect(f.transition().dataset.deferredTransitionState).toBe('measuring-runtime')
+  f.render(false, false, createElement('div', { style: { height: 3473 }, 'data-testid': 'actual-tall-runtime' }))
+  expect(f.owner.scrollHeight).toBe(height)
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.writes).toHaveLength(0)
+  f.render(true)
+  expect(f.owner.scrollTop).toBe(25400)
+  expect(f.writes).toEqual([25400])
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.transition().dataset.reserveReleaseState).toBe('anchored')
+  expect(f.transition().style.minHeight).toBe('')
+  f.cleanup()
+})
+
+it('does not double compensate a naturally browser-anchored signed growth reveal', () => {
+  const f = fixture({ runtimeGrowth: 2600, initialTop: 22800, naturalAnchor: true })
+  const before = f.anchor.getBoundingClientRect().top
+  f.render(true)
+  expect(f.owner.scrollTop).toBe(25400)
+  expect(f.writes).toHaveLength(0)
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.transition().dataset.reserveReleaseState).toBe('anchored')
+  f.cleanup()
+})
+
+it('shows opt-in actual loading tree with honest state while reserve stays until settling', () => {
+  const f = fixture({ runtimeGrowth: 2600, initialTop: 22800 })
+  const before = f.anchor.getBoundingClientRect().top
+  f.render(false, false, createElement('div', { 'data-testid': 'actual-loading-tree', style: { height: 3473 } }), true)
+  const layer = f.transition().querySelector<HTMLElement>('[data-testid="measured-transition-runtime"]')!
+  expect(layer.hasAttribute('inert')).toBe(false)
+  expect(layer.getAttribute('aria-hidden')).toBeNull()
+  expect(f.transition().querySelector('[data-testid="actual-placeholder-leaf"]')).toBeNull()
+  expect(f.transition().querySelector('[data-testid="actual-loading-tree"]')).not.toBeNull()
+  expect(f.transition().dataset.deferredTransitionState).toBe('shown-pending')
+  expect(f.transition().dataset.reserveReleaseState).toBe('reserved')
+  expect(f.transition().style.minHeight).toBe('100vh')
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.writes).toEqual([25400])
+  f.render(true, false, createElement('div', { 'data-testid': 'actual-loaded-tree', style: { height: 3473 } }), true)
+  expect(f.transition().dataset.deferredTransitionState).toBe('runtime')
+  expect(f.transition().style.minHeight).toBe('')
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.writes).toEqual([25400])
+  f.cleanup()
+})
+
+it.each([false, true])('commits actual opt-in visible growth and shrink before paint (browser anchoring=%s)', naturalAnchor => {
+  const f = fixture({ initialTop: 22800, runtimeGrowth: 2600, naturalAnchor })
+  f.render(false, false, createElement('div', { 'data-testid': 'actual-loading-tree', style: { height: 873 } }), true)
+  const before = f.anchor.getBoundingClientRect().top
+  expect(f.transition().style.height).toBe('873px')
+  expect(f.transition().dataset.deferredTransitionState).toBe('shown-pending')
+  f.resizeRuntime(3473)
+  expect(f.transition().style.height).toBe('3473px')
+  expect(f.transition().style.minHeight).toBe('100vh')
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.owner.scrollTop).toBe(25400)
+  expect(f.writes).toEqual(naturalAnchor ? [] : [25400])
+  f.resizeRuntime(873)
+  expect(f.transition().style.height).toBe('873px')
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.owner.scrollTop).toBe(22800)
+  expect(f.writes).toEqual(naturalAnchor ? [] : [25400, 22800])
+  f.cleanup()
+})
+
+it('uses the current width frame and rejects nonpositive resize measurements', () => {
+  const f = fixture({ initialTop: 22800, runtimeGrowth: 2600 })
+  f.render(false, false, createElement('div', { style: { height: 873 } }), true)
+  const before = f.anchor.getBoundingClientRect().top
+  f.resizeRuntime(3473, 0)
+  expect(f.transition().style.height).toBe('873px')
+  expect(f.writes).toHaveLength(0)
+  f.resizeRuntime(3473, 320)
+  expect(f.transition().style.height).toBe('3473px')
+  expect(f.transition().querySelector<HTMLElement>('[data-testid="measured-transition-runtime"]')!.getBoundingClientRect().width).toBe(320)
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.writes).toEqual([25400])
+  f.resizeRuntime(0, 320)
+  expect(f.transition().style.height).toBe('3473px')
+  expect(f.writes).toEqual([25400])
+  f.cleanup()
+})
+
+it('reports opt-in visible shrink at an impossible owner top as clamped at settled release', () => {
+  const f = fixture({ initialTop: 10 })
+  f.render(false, false, createElement('div', { style: { height: 844 } }), true)
+  const before = f.anchor.getBoundingClientRect().top
+  f.resizeRuntime(702)
+  expect(f.transition().style.minHeight).toBe('100vh')
+  f.render(true, false, createElement('div', { style: { height: 702 } }), true)
+  expect(f.owner.scrollTop).toBe(0)
+  expect(Math.abs(f.anchor.getBoundingClientRect().top - before)).toBeGreaterThan(1)
+  expect(f.transition().dataset.reserveReleaseState).toBe('clamped')
+  f.cleanup()
+})
+
+it('rejects queued measured updates from the previous pending visit', () => {
+  const f = fixture({ initialTop: 22800, runtimeGrowth: 2600 })
+  f.render(false, false, createElement('div', { style: { height: 873 } }), true)
+  const callbacks = f.currentCallbacks()
+  expect(callbacks.length).toBeGreaterThan(0)
+  const staleLayer = f.transition().querySelector('[data-testid="measured-transition-runtime"]')!
+  f.render(false, true)
+  const writes = f.writes.length
+  act(() => { for (const callback of callbacks) callback([{ target: staleLayer } as ResizeObserverEntry], {} as ResizeObserver) })
+  expect(f.transition().style.height).toBe('')
+  expect(f.transition().dataset.deferredTransitionState).toBe('placeholder')
+  expect(f.writes).toHaveLength(writes)
+  f.render(false, false, createElement('div', { style: { height: 873 } }), true)
+  const before = f.anchor.getBoundingClientRect().top
+  f.resizeRuntime(3473)
+  expect(f.transition().style.height).toBe('3473px')
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  f.cleanup()
+})
+
+it('fails closed for unsupported observation instead of exposing untracked opt-in growth', () => {
+  const installed = window.ResizeObserver
+  Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: undefined })
+  try {
+    const f = fixture()
+    f.render(false, false, createElement('div', { style: { height: 702 } }), true)
+    expect(f.transition().dataset.deferredTransitionState).toBe('measuring-runtime')
+    expect(f.transition().querySelector('[data-testid="actual-placeholder-leaf"]')).not.toBeNull()
+    f.render(true)
+    expect(f.transition().dataset.deferredTransitionState).toBe('runtime')
+    expect(f.transition().style.minHeight).toBe('')
+    f.cleanup()
+  } finally { Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: installed }) }
+})
+
+it.each([undefined, false])('keeps default/non-opt-in runtime hidden until settling (%s)', runtimeVisibilityReady => {
+  const f = fixture()
+  f.render(false, false, createElement('div', { 'data-testid': 'actual-default-loading', style: { height: 702 } }), runtimeVisibilityReady)
+  expect(f.transition().dataset.deferredTransitionState).toBe('measuring-runtime')
+  expect(f.transition().querySelector('[data-testid="actual-placeholder-leaf"]')).not.toBeNull()
+  expect(f.transition().querySelector('[data-testid="measured-transition-runtime"]')?.getAttribute('aria-hidden')).toBe('true')
+  expect(f.transition().style.minHeight).toBe('100vh')
+  expect(f.writes).toHaveLength(0)
+  f.cleanup()
+})
+
+it('pending/reset wins over opt-in, then current mounted tree can reveal again', () => {
+  const f = fixture()
+  f.render(false, false, createElement('div', { style: { height: 702 } }), true)
+  expect(f.transition().dataset.deferredTransitionState).toBe('shown-pending')
+  f.render(false, true, createElement('div', { style: { height: 702 } }), true)
+  expect(f.transition().dataset.deferredTransitionState).toBe('placeholder')
+  expect(f.transition().querySelector('[data-testid="measured-transition-runtime"]')).toBeNull()
+  expect(f.transition().style.minHeight).toBe('100vh')
+  const before = f.anchor.getBoundingClientRect().top
+  f.render(false, false, createElement('div', { style: { height: 702 } }), true)
+  expect(f.transition().dataset.deferredTransitionState).toBe('shown-pending')
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  f.cleanup()
+})
+
+it.each(['new resetKey', 'inactive then same key'] as const)('fences FIRST commit readiness and stale callbacks for %s', boundary => {
+  jest.useFakeTimers()
+  const timers = jest.spyOn(global, 'setTimeout')
+  const f = fixture()
+  const commits: Array<{ key: string; active: boolean; settled: boolean; transitionState: string | undefined; reserve: string }> = []
+  let currentLayout: ReturnType<typeof useRuntimeSettle>['onRuntimeFrameLayout']
+  function RealSettleConsumer({ visitKey, active }: { visitKey: string; active: boolean }) {
+    const result = useRuntimeSettle({ resetKey: visitKey, active })
+    currentLayout = result.onRuntimeFrameLayout
+    // This runs in the FIRST layout commit, before passive reset/timeout effects.
+    // Retain every commit so later act/effects cannot conceal transient TRUE.
+    useLayoutEffect(() => {
+      commits.push({ key: visitKey, active, settled: result.settled, transitionState: f.transition().dataset.deferredTransitionState, reserve: f.transition().style.minHeight })
+    })
+    return createElement(Transition, {
+      isMobile: true, pending: !active, placeholder: createElement('div', { 'data-testid': 'actual-placeholder-leaf' }),
+      reserveHeight: '100vh', runtimeFrameReady: result.settled, runtimeVisibilityReady: false,
+      testID: 'measured-transition', children: createElement('div', { style: { height: 702 } }),
+    })
+  }
+  const layout = (height: number) => ({ nativeEvent: { layout: { x: 0, y: 0, width: 390, height } } }) as Parameters<typeof currentLayout>[0]
+  try {
+    f.renderTree(createElement(RealSettleConsumer, { visitKey: 'old', active: true }))
+    const oldLayout = currentLayout!
+    const oldTimeout = timers.mock.calls.find(([, ms]) => ms === 6000)![0] as () => void
+    act(() => { oldLayout(layout(702)); jest.advanceTimersByTime(320) })
+    expect(commits.some(commit => commit.key === 'old' && commit.settled)).toBe(true)
+    expect(f.transition().dataset.deferredTransitionState).toBe('runtime')
+    act(() => oldLayout(layout(704)))
+    const oldQuiet = timers.mock.calls.filter(([, ms]) => ms === 320).at(-1)![0] as () => void
+    if (boundary === 'inactive then same key') {
+      const start = commits.length
+      f.renderTree(createElement(RealSettleConsumer, { visitKey: 'old', active: false }))
+      expect(commits[start].settled).toBe(false)
+      expect(commits[start].transitionState).toBe('placeholder')
+    }
+    const nextKey = boundary === 'new resetKey' ? 'new' : 'old'
+    const first = commits.length
+    f.renderTree(createElement(RealSettleConsumer, { visitKey: nextKey, active: true }))
+    expect(commits[first]).toMatchObject({ key: nextKey, active: true, settled: false, transitionState: 'measuring-runtime', reserve: '100vh' })
+    const newLayout = currentLayout!
+    act(() => { newLayout(layout(702)); oldLayout(layout(999)); oldQuiet(); oldTimeout(); jest.advanceTimersByTime(319) })
+    expect(f.transition().dataset.deferredTransitionState).toBe('measuring-runtime')
+    expect(commits.slice(first).every(commit => !commit.settled)).toBe(true)
+    act(() => jest.advanceTimersByTime(1))
+    expect(f.transition().dataset.deferredTransitionState).toBe('runtime')
+    expect(commits.at(-1)!.settled).toBe(true)
+    // Stale delivery AFTER new readiness must not revoke or replace it either.
+    act(() => { oldLayout(layout(1200)); oldQuiet(); oldTimeout(); jest.advanceTimersByTime(320) })
+    expect(f.transition().dataset.deferredTransitionState).toBe('runtime')
+    expect(commits.at(-1)!.settled).toBe(true)
+  } finally {
+    f.cleanup()
+    timers.mockRestore()
+    jest.useRealTimers()
+  }
+})
+
+it('retains current-visit fail-open at6000ms without premature readiness from an old timeout', () => {
+  jest.useFakeTimers()
+  const timers = jest.spyOn(global, 'setTimeout')
+  const f = fixture()
+  const commits: Array<{ key: string; settled: boolean }> = []
+  function RealSettleConsumer({ visitKey }: { visitKey: string }) {
+    const result = useRuntimeSettle({ resetKey: visitKey, active: true })
+    useLayoutEffect(() => { commits.push({ key: visitKey, settled: result.settled }) })
+    return createElement(Transition, {
+      isMobile: true, pending: false, placeholder: createElement('div'), reserveHeight: '100vh',
+      runtimeFrameReady: result.settled, testID: 'measured-transition', children: createElement('div', { style: { height: 702 } }),
+    })
+  }
+  try {
+    f.renderTree(createElement(RealSettleConsumer, { visitKey: 'old' }))
+    const oldTimeout = timers.mock.calls.find(([, ms]) => ms === 6000)![0] as () => void
+    act(() => jest.advanceTimersByTime(6000))
+    expect(commits.at(-1)).toEqual({ key: 'old', settled: true })
+    const first = commits.length
+    f.renderTree(createElement(RealSettleConsumer, { visitKey: 'new' }))
+    expect(commits[first]).toEqual({ key: 'new', settled: false })
+    act(() => { oldTimeout(); jest.advanceTimersByTime(5999) })
+    expect(commits.slice(first).every(commit => !commit.settled)).toBe(true)
+    act(() => jest.advanceTimersByTime(1))
+    expect(commits.at(-1)).toEqual({ key: 'new', settled: true })
+    act(() => oldTimeout())
+    expect(commits.at(-1)).toEqual({ key: 'new', settled: true })
+    expect(f.transition().dataset.deferredTransitionState).toBe('runtime')
+  } finally {
+    f.cleanup()
+    timers.mockRestore()
+    jest.useRealTimers()
+  }
+})
+
+it.each(['native-handle', 'detached-DOM'] as const)('keeps actual renderer%s refs unmeasured without mutating style or observing them', kind => {
+  const renderer = require('react-test-renderer') as typeof import('react-test-renderer')
+  const ref = kind === 'native-handle' ? { nativeTag: 11 } : document.createElement('div')
+  if (ref instanceof HTMLElement) ref.style.height = '41px'
+  let tree: ReturnType<typeof renderer.create> | undefined
+  const element = (ready: boolean) => createElement(Transition, {
+    isMobile: true, pending: false, placeholder: createElement('div'), reserveHeight: '100vh',
+    runtimeFrameReady: ready, runtimeVisibilityReady: true, testID: 'non-DOM-ref-boundary', children: createElement('div'),
+  })
+  try {
+    act(() => { tree = renderer.create(element(false), { createNodeMock: () => ref }) })
+    expect(tree!.root.findByProps({ 'data-testid': 'non-DOM-ref-boundary' }).props['data-deferred-transition-state']).toBe('measuring-runtime')
+    act(() => { tree!.update(element(true)) })
+    expect(tree!.root.findByProps({ 'data-testid': 'non-DOM-ref-boundary' }).props['data-deferred-transition-state']).toBe('measuring-runtime')
+    expect(tree!.root.findByProps({ 'data-testid': 'non-DOM-ref-boundary' }).props['data-reserve-release-state']).toBe('reserved')
+    expect(MeasuredResizeObserver.instances.some(observer => observer.targets.has(ref as Element))).toBe(false)
+    if (ref instanceof HTMLElement) expect(ref.style.height).toBe('41px')
+    else expect(ref).not.toHaveProperty('style')
+  } finally { act(() => tree?.unmount()) }
+})
+
 it('keeps native placeholder/children parity without DOM reserve/scroll correction', () => {
   Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' })
   try {
@@ -198,7 +532,7 @@ it('keeps native placeholder/children parity without DOM reserve/scroll correcti
     f.render(false, true)
     expect(f.transition()).toBeNull()
     expect(f.owner.querySelector('[data-testid="actual-placeholder-leaf"]')).not.toBeNull()
-    f.render(true)
+    f.render(true, false, createElement('div', { 'data-testid': 'actual-runtime-leaf', style: { height: 702 } }), true)
     expect(f.transition()).toBeNull()
     expect(f.owner.querySelector('[data-testid="actual-runtime-leaf"]')).not.toBeNull()
     expect(f.owner.querySelector('[data-testid="actual-placeholder-leaf"]')).toBeNull()

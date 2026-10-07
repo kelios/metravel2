@@ -580,13 +580,15 @@ const WebMapComponent = ({
     );
 
     const handleImageUpload = (index: number, imageUrl: string) => {
-        const updated = [...localMarkers];
-        updated[index] = { ...updated[index], image: imageUrl };
-        
-        // Немедленное обновление локального состояния
-        setLocalMarkers(updated);
-        
-        // Обновление родительского компонента
+        const source = localMarkers[index];
+        if (!source) return;
+        const current = lastMarkersRef.current;
+        const targetIndex = source.id != null
+            ? current.findIndex((marker) => String(marker.id) === String(source.id))
+            : current.indexOf(source);
+        if (targetIndex < 0) return;
+        const updated = [...current];
+        updated[targetIndex] = { ...updated[targetIndex], image: imageUrl };
         debouncedMarkersChange(updated);
     };
 

@@ -1,11 +1,18 @@
 import React, { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { useWindowDimensions } from 'react-native'
 import FullscreenGallery from '@/components/travel/FullscreenGallery.web'
 
 jest.mock('@expo/vector-icons/Feather', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/travel/ZoomableGalleryImage.web', () => ({
   __esModule: true,
-  default: ({ src, resetKey }: { src: string; resetKey: string }) => <div data-src={src} data-reset-key={resetKey} />,
+  default: ({ src, resetKey, width, height }: { src: string; resetKey: string; width: number; height: number }) =>
+    <div data-src={src} data-reset-key={resetKey} data-width={width} data-height={height} />,
+}))
+jest.mock('@/components/ui/ImageCardMedia', () => ({
+  __esModule: true,
+  default: ({ width, height }: { width: number; height: number }) =>
+    <div data-testid="gallery-sharp-media" data-width={width} data-height={height} />,
 }))
 jest.mock('@/components/safety/ContentSafetyActions', () => ({
   __esModule: true,
@@ -27,6 +34,7 @@ describe('FullscreenGallery web navigation', () => {
   const get = (id: string) => document.querySelector(`[data-testid="${id}"]`) as HTMLElement
 
   beforeEach(() => {
+    (useWindowDimensions as jest.Mock).mockReturnValue({ width: 1440, height: 1000 })
     widthSpy = jest.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(500)
     container = document.createElement('div')
     document.body.appendChild(container)
@@ -126,5 +134,27 @@ describe('FullscreenGallery web navigation', () => {
     expect(get('travel-fullscreen-gallery-next')).toBeNull()
     expect(get('travel-fullscreen-gallery-previous')).toBeNull()
     expect(get('travel-fullscreen-gallery-counter')).toBeNull()
+  })
+
+  it('caps review photos and gives media the actual viewport size instead of card defaults', () => {
+    act(() => root.render(<FullscreenGallery visible images={images} maxImageSize={640} onClose={onClose} />))
+    const photo = document.querySelector('[data-src="one.jpg"]') as HTMLElement
+    expect(photo.dataset.width).toBe('640')
+    expect(photo.dataset.height).toBe('640')
+    act(() => root.render(<FullscreenGallery visible images={images} onClose={onClose} />))
+    expect(photo.dataset.width).toBe('1440')
+    expect(photo.dataset.height).toBe('1000')
+    ;(useWindowDimensions as jest.Mock).mockReturnValue({ width: 390, height: 844 })
+    act(() => root.render(<FullscreenGallery visible images={images} maxImageSize={640} onClose={onClose} />))
+    expect(photo.dataset.width).toBe('390')
+    expect(photo.dataset.height).toBe('640')
+  })
+
+  it('passes numeric image dimensions to the media primitive for correctly sized sharp sources', () => {
+    const ZoomableImage = jest.requireActual('@/components/travel/ZoomableGalleryImage.web').default
+    act(() => root.render(<ZoomableImage src="one.jpg" alt="Photo" width={640} height={640} />))
+    const media = get('gallery-sharp-media')
+    expect(media.dataset.width).toBe('640')
+    expect(media.dataset.height).toBe('640')
   })
 })

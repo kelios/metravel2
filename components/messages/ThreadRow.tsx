@@ -1,4 +1,5 @@
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
+import type { MessageThread } from '@/api/messages';
 import { View, Text, StyleSheet, Pressable, Image, Platform, type AccessibilityActionEvent, type TextStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -23,17 +24,17 @@ const TEXT_MARKER = webDataSetProps({ threadRowText: 'true' });
 const ACTION_MARKER = webDataSetProps({ threadRowAction: 'true' });
 
 interface ThreadRowProps {
-    threadId: number;
+    thread: MessageThread;
     name: string;
     avatarUrl: string | null;
     time: string;
     unreadCount: number;
     selected: boolean;
-    onPress: () => void;
+    onSelectThread: (thread: MessageThread) => void;
     /** Запрос удаления: кнопка строки (web), долгое нажатие и действие скринридера (native). */
-    onRequestDelete?: () => void;
+    onRequestDelete?: (threadId: number) => void;
     confirmingDelete: boolean;
-    onConfirmDelete: () => void;
+    onConfirmDelete: (threadId: number) => void;
     onCancelDelete: () => void;
 }
 
@@ -48,19 +49,23 @@ interface ThreadRowProps {
  *   - native: долгое нажатие и действие доступности «Удалить диалог с …».
  */
 function ThreadRow({
-    threadId,
+    thread,
     name,
     avatarUrl,
     time,
     unreadCount,
     selected,
-    onPress,
+    onSelectThread,
     onRequestDelete,
     confirmingDelete,
     onConfirmDelete,
     onCancelDelete,
 }: ThreadRowProps) {
     const colors = useThemedColors();
+    const threadId = thread.id;
+    const handleSelect = useCallback(() => onSelectThread(thread), [onSelectThread, thread]);
+    const handleDelete = useCallback(() => onRequestDelete?.(threadId), [onRequestDelete, threadId]);
+    const handleConfirmDelete = useCallback(() => onConfirmDelete(threadId), [onConfirmDelete, threadId]);
     const hasUnread = unreadCount > 0;
     const deleteLabel = i18nT('messages:components.messages.ThreadList.udalit_dialog_s_value1_175bc2fd', { value1: name });
     const isWeb = Platform.OS === 'web';
@@ -72,10 +77,10 @@ function ThreadRow({
                 : {
                       accessibilityActions: [{ name: DELETE_A11Y_ACTION, label: deleteLabel }],
                       onAccessibilityAction: (event: AccessibilityActionEvent) => {
-                          if (event.nativeEvent.actionName === DELETE_A11Y_ACTION) onRequestDelete();
+                          if (event.nativeEvent.actionName === DELETE_A11Y_ACTION) handleDelete();
                       },
                   },
-        [isWeb, onRequestDelete, deleteLabel],
+        [isWeb, onRequestDelete, deleteLabel, handleDelete],
     );
 
     return (
@@ -94,8 +99,8 @@ function ThreadRow({
             >
                 <Pressable
                     style={({ pressed }) => [styles.main, pressed && styles.mainPressed]}
-                    onPress={onPress}
-                    onLongPress={onRequestDelete}
+                    onPress={handleSelect}
+                    onLongPress={onRequestDelete ? handleDelete : undefined}
                     delayLongPress={500}
                     accessibilityRole="button"
                     accessibilityLabel={
@@ -151,7 +156,7 @@ function ThreadRow({
                             label={deleteLabel}
                             size="sm"
                             style={styles.deleteButton}
-                            onPress={onRequestDelete}
+                            onPress={handleDelete}
                             showTooltip
                             tooltipPlacement="left"
                         />
@@ -161,7 +166,7 @@ function ThreadRow({
             {confirmingDelete && (
                 <View style={styles.deleteConfirmRow}>
                     <Pressable
-                        onPress={onConfirmDelete}
+                        onPress={handleConfirmDelete}
                         style={[styles.deleteConfirmButton, { backgroundColor: colors.danger }]}
                         accessibilityRole="button"
                         accessibilityLabel={i18nT('messages:components.messages.ThreadList.podtverdit_udalenie_dialoga_e5fd0b3d')}

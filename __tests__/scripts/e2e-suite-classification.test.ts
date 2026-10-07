@@ -29,6 +29,19 @@ describe('e2e suite classification', () => {
     )
   })
 
+  it('keeps the public mobile CLS companion separate from the complete audit', () => {
+    const companion = 'travel-cls-production-smoke.spec.ts'
+    const original = 'cls-audit.spec.ts'
+    expect(PRODUCTION_SMOKE_SPECS).toContain(companion)
+    expect(PRODUCTION_SMOKE_SPECS).not.toContain(original)
+    expect(LIVE_CONTRACT_SPECS).not.toContain(companion)
+    expect(LIVE_CONTRACT_SPECS).not.toContain(original)
+    expect(getE2ESuiteSelection('').testIgnore).toContain(companion)
+    expect(getE2ESuiteSelection('').testIgnore).not.toContain(original)
+    expect(getE2ESuiteSelection('production-smoke').testMatch).toContain(companion)
+    expect(getE2ESuiteSelection('production-smoke').testMatch).not.toContain(original)
+  })
+
   it('classifies unique, existing specs without overlap', () => {
     const all = [...LIVE_CONTRACT_SPECS, ...PRODUCTION_SMOKE_SPECS]
     expect(new Set(all).size).toBe(all.length)

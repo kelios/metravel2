@@ -3,6 +3,9 @@ import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { uploadImage } from '@/api/misc';
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { showToast } from '@/utils/toast';
+
+jest.mock('@/utils/toast', () => ({ showToast: jest.fn() }));
 
 const ORIGINAL_PLATFORM_OS = Platform.OS;
 
@@ -127,7 +130,8 @@ describe('PhotoUploadWithPreview', () => {
                 await Promise.resolve();
             });
 
-            expect(screen.getByText('Требуется доступ к камере')).toBeTruthy();
+            expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ text1: 'Требуется доступ к камере', position: 'bottom' }));
+            expect(screen.queryByText('Требуется доступ к камере')).toBeNull();
             expect(ImagePicker.launchCameraAsync).not.toHaveBeenCalled();
         });
 

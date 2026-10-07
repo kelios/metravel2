@@ -194,7 +194,7 @@ function QuestReviewsModal({ questId, visible, onClose }: Props) {
   return (
     <Suspense fallback={reviewsSheet}>
       {visible && gallery ? (
-        <FullscreenGallery visible images={gallery.images} initialIndex={gallery.initialIndex} onClose={closeGallery} />
+        <FullscreenGallery visible images={gallery.images} initialIndex={gallery.initialIndex} onClose={closeGallery} maxImageSize={640} />
       ) : reviewsSheet}
     </Suspense>
   )

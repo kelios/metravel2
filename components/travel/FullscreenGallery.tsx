@@ -26,6 +26,8 @@ interface FullscreenGalleryProps {
   images: GalleryImage[];
   initialIndex?: number;
   onClose: () => void;
+  /** Cap the photo viewport while keeping full-screen navigation and gestures. */
+  maxImageSize?: number;
   /** Автор фото для жалобы (#2133); жалоба доступна только у фото с настоящим `id`. */
   safetyAuthorId?: number | string | null;
   authorName?: string | null;
@@ -46,6 +48,7 @@ export default function FullscreenGallery({
   images,
   initialIndex = 0,
   onClose,
+  maxImageSize,
   safetyAuthorId = null,
   authorName,
 }: FullscreenGalleryProps) {
@@ -143,8 +146,8 @@ export default function FullscreenGallery({
       <View style={styles.slideContainer}>
         <ZoomableGalleryImage
           src={item.url}
-          width={SCREEN_WIDTH}
-          height={SCREEN_HEIGHT}
+          width={Math.min(SCREEN_WIDTH, maxImageSize ?? SCREEN_WIDTH)}
+          height={Math.min(SCREEN_HEIGHT, maxImageSize ?? SCREEN_HEIGHT)}
           priority="high"
           alt={item.alt || i18nT('travel:components.travel.FullscreenGallery.routePhotoAlt')}
           resetKey={`${visible}-${index}`}
@@ -157,7 +160,7 @@ export default function FullscreenGallery({
         />
       </View>
     ),
-    [visible],
+    [visible, maxImageSize],
   );
 
   const getItemLayout = useCallback(

@@ -12,8 +12,8 @@ const NOOP = () => undefined;
 function TripPlanCardSkeleton() {
   const colors = useThemedColors();
   const styles = useMemo(() => createTripPlanCardStyles(colors), [colors]);
-  const line = (style: StyleProp<TextStyle>, width: number | `${number}%` = '80%') => (
-    <View style={{ width }}><Text style={[style, { color: 'transparent', backgroundColor: colors.surfaceLight }]} accessible={false}>{'\u00a0'}</Text></View>
+  const line = (style: StyleProp<TextStyle>, width: number | `${number}%` = '80%', twoWebLines = false) => (
+    <View style={{ width }}><Text style={[style, { color: 'transparent', backgroundColor: colors.surfaceLight }]} accessible={false}>{twoWebLines && Platform.OS === 'web' ? '\u00a0\n\u00a0' : '\u00a0'}</Text></View>
   );
   const content = (
     <View style={styles.contentStack}>
@@ -21,8 +21,8 @@ function TripPlanCardSkeleton() {
         <View style={styles.statusBadge}>{line(styles.badgeText, 74)}</View>
         <View style={styles.visibilityBadge}>{line(styles.visibilityText, 88)}</View>
       </View>
-      {line(styles.title)}
-      <View style={styles.metaRow}>{line(styles.meta)}</View>
+      {line(styles.title, Platform.OS === 'web' ? '100%' : '80%', true)}
+      <View style={styles.metaRow}>{line(styles.meta, Platform.OS === 'web' ? '100%' : '80%', true)}</View>
       {line(styles.route)}
       <View style={styles.footer}>
         <View style={styles.occupancyRow}>
@@ -40,6 +40,7 @@ function TripPlanCardSkeleton() {
       <UnifiedTravelCard
         title=""
         imageUrl={null}
+        mediaFit="cover"
         imageHeight={TRIP_PLAN_CARD_MEDIA_HEIGHT}
         heroTitleOverlay={false}
         contentPosition="belowMedia"

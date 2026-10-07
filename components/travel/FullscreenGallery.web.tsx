@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import ZoomableGalleryImage from '@/components/travel/ZoomableGalleryImage.web';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -16,6 +17,8 @@ interface FullscreenGalleryProps {
   images: { id?: number; url: string; thumbUrl?: string; alt?: string; caption?: string }[];
   initialIndex?: number;
   onClose: () => void;
+  /** Cap the photo viewport while keeping full-screen navigation and gestures. */
+  maxImageSize?: number;
   /** Автор фото для жалобы (#2133); жалоба доступна только у фото с настоящим `id`. */
   safetyAuthorId?: number | string | null;
   authorName?: string | null;
@@ -34,10 +37,14 @@ export default function FullscreenGallery({
   images,
   initialIndex = 0,
   onClose,
+  maxImageSize,
   safetyAuthorId = null,
   authorName,
 }: FullscreenGalleryProps) {
   const colors = useThemedColors();
+  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
+  const imageWidth = Math.min(viewportWidth, maxImageSize ?? viewportWidth);
+  const imageHeight = Math.min(viewportHeight, maxImageSize ?? viewportHeight);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [zoomedIndex, setZoomedIndex] = useState<number | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
@@ -185,13 +192,16 @@ export default function FullscreenGallery({
               scrollSnapAlign: 'center',
               scrollSnapStop: 'always',
               position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             {Math.abs(index - currentIndex) <= RENDER_WINDOW ? (
               <ZoomableGalleryImage
                 src={img.url}
-                width="100%"
-                height="100%"
+                width={imageWidth}
+                height={imageHeight}
                 priority={index === currentIndex ? 'high' : 'normal'}
                 alt={img.alt || i18nT('travel:components.travel.FullscreenGalleryWeb.routePhotoAlt', { value1: index + 1, value2: images.length })}
                 resetKey={`${visible}-${index}-${currentIndex}`}

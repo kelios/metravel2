@@ -4,7 +4,7 @@
  */
 
 import type { Travel } from "@/types/types";
-import { BREAKPOINTS, GRID_COLUMNS } from "./listTravelConstants";
+export { calculateColumns } from "./listTravelConstants";
 
 export function normalizeApiResponse(data: any): { items: Travel[]; total: number } {
   if (!data) {
@@ -68,59 +68,4 @@ export function deduplicateTravels(travels: Travel[]): Travel[] {
     seenIds.add(id);
     return true;
   });
-}
-
-
-const MIN_CARD_WIDTH = 240; // Минимальная комфортная ширина карточки
-const GAP = 16; // Отступ между карточками
-
-// Функция для расчета padding контейнера
-function getContainerPadding(width: number): number {
-  if (width < BREAKPOINTS.XS) return 8;
-  if (width < BREAKPOINTS.SM) return 12;
-  if (width < BREAKPOINTS.MOBILE) return 16;
-  if (width < BREAKPOINTS.TABLET) return 20;
-  if (width < BREAKPOINTS.DESKTOP) return 24;
-  if (width < BREAKPOINTS.DESKTOP_LARGE) return 32;
-  return 40;
-}
-
-export function calculateColumns(width: number, orientation: 'portrait' | 'landscape' = 'landscape'): number {
-  // Single column only for very narrow content areas
-  // (full-viewport mobile check is handled by isCardsSingleColumn before this function is called)
-  if (width < BREAKPOINTS.SM) {
-    return 1;
-  }
-  
-  // Рассчитываем доступную ширину с учетом padding
-  const containerPadding = width >= BREAKPOINTS.DESKTOP ? 0 : getContainerPadding(width);
-  const availableWidth = width - containerPadding * 2;
-  
-  // Рассчитываем максимальное количество колонок на основе минимальной ширины карточки
-  let columns = Math.floor((availableWidth + GAP) / (MIN_CARD_WIDTH + GAP));
-
-  // Ограничиваем максимум колонок по брейкпоинтам, чтобы сетка не расползалась на широких экранах
-  // и соответствовала дизайн-решению (desktop/large desktop: до 4 колонок).
-  let maxColumns = Number.POSITIVE_INFINITY;
-  if (width >= BREAKPOINTS.DESKTOP_LARGE) {
-    maxColumns = GRID_COLUMNS.DESKTOP_LARGE;
-  } else if (width >= BREAKPOINTS.DESKTOP) {
-    maxColumns = GRID_COLUMNS.DESKTOP;
-  } else if (width >= BREAKPOINTS.TABLET_LANDSCAPE) {
-    maxColumns = GRID_COLUMNS.TABLET_LANDSCAPE;
-  } else if (width >= BREAKPOINTS.MOBILE) {
-    maxColumns = GRID_COLUMNS.TABLET;
-  }
-
-  if (Number.isFinite(maxColumns)) {
-    columns = Math.min(columns, maxColumns);
-  }
-
-  // Учитываем ориентацию для планшетов (effective content area width)
-  if (orientation === 'portrait' && width >= BREAKPOINTS.SM && width < BREAKPOINTS.DESKTOP) {
-    columns = Math.min(columns, 2);
-  }
-  
-  // Минимум 1 колонка
-  return Math.max(columns, 1);
 }

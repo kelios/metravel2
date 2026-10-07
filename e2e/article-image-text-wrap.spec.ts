@@ -433,7 +433,7 @@ test.describe('#1602 rich-text single-image flow', () => {
         { length: 34 },
         (_, index) => `<p>Печатный хвост ${index + 1}: ${wrapText(`page-${index + 1}`).slice(0, 240)}</p>`,
       ).join('')
-      rendered = renderer.renderRichText(`${descriptionFixture}${tail}<p>КОНЕЦ-ПЕЧАТНОГО-КОНТЕНТА</p>`)
+      rendered = renderer.renderRichText(`${descriptionFixture}${tail}<p>КОНЕЦ-ПЕЧАТНОГО-КОНТЕНТА</p>`, 'description')
     } finally {
       Object.assign(globalThis, previousGlobals)
       dom.window.close()

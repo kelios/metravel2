@@ -75,6 +75,11 @@ describe('IconButton', () => {
     expect(button.props.accessibilityState.selected).toBe(false)
   })
 
+  it.each([false, true])('ordinary action omits selection state (showLabel=%s)', (showLabel) => {
+    const { getByRole } = renderIconButton({ showLabel })
+    expect(getByRole('button').props.accessibilityState).not.toHaveProperty('selected')
+  })
+
   it('обе размерности держат минимальный тач-таргет 44dp (#1280)', () => {
     // Здесь `Pressable` и есть видимая поверхность — внешней рамки нет, поэтому
     // объявленный размер И ЕСТЬ тач-таргет. До #1280 стояло 36/42: минимум был

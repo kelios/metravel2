@@ -1,12 +1,14 @@
-import React, { memo, useMemo, useState } from 'react';
+import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, Platform, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import ActionTooltip from '@/components/ui/ActionTooltip';
 
 interface IconButtonProps {
   icon: React.ReactNode;
   label: string;
+  /** Explicit boolean marks a toggle; omit for ordinary actions. */
   active?: boolean;
   onPress?: () => void;
   disabled?: boolean;
@@ -64,7 +66,7 @@ const getBoxShadows = (colors: ThemedColors) => {
 function IconButton({
   icon,
   label,
-  active = false,
+  active,
   onPress,
   disabled = false,
   size = 'md',
@@ -79,6 +81,9 @@ function IconButton({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [hovered, setHovered] = useState(false);
+  const anchorRef = useRef<View>(null);
+  const dismissTooltip = useCallback(() => setHovered(false), []);
+  const accessibilityState = active == null ? { disabled } : { disabled, selected: active };
   const dimension = TOUCH_TARGET_BY_SIZE[size];
   const handlePress = disabled ? undefined : onPress
   const visualInset = visualSize != null && visualSize < dimension ? (dimension - visualSize) / 2 : 0;
@@ -91,7 +96,7 @@ function IconButton({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
-        accessibilityState={{ disabled, selected: active }}
+        accessibilityState={accessibilityState}
         disabled={disabled}
         onPress={handlePress}
         testID={testID}
@@ -128,7 +133,8 @@ function IconButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled, selected: active }}
+      ref={anchorRef}
+      accessibilityState={accessibilityState}
       disabled={disabled}
       onPress={handlePress}
       testID={testID}
@@ -179,16 +185,9 @@ function IconButton({
       ) : (
         <View style={styles.icon}>{icon}</View>
       )}
-      {Platform.OS === 'web' && showTooltip && hovered && !disabled ? (
-        <View
-          style={[
-            styles.tooltip,
-            tooltipPlacement === 'left' ? styles.tooltipLeft : styles.tooltipBottom,
-            { backgroundColor: colors.text },
-          ]}
-        >
-          <Text style={[styles.tooltipText, { color: colors.surface }]}>{label}</Text>
-        </View>
+      {Platform.OS === 'web' && showTooltip ? (
+        <ActionTooltip anchorRef={anchorRef} label={label} visible={hovered && !disabled}
+          onDismiss={dismissTooltip} placement={tooltipPlacement} />
       ) : null}
     </Pressable>
   );
@@ -281,39 +280,6 @@ const getStyles = (colors: ThemedColors) => {
   icon: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  tooltip: {
-    position: 'absolute',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.sm,
-    minWidth: 120,
-    maxWidth: 180,
-    zIndex: 9999,
-    pointerEvents: 'none',
-    ...Platform.select({
-      web: {
-        whiteSpace: 'normal',
-        wordBreak: 'break-word',
-        boxShadow: boxShadows.heavy,
-      },
-    }),
-  },
-  tooltipBottom: {
-    top: '100%',
-    marginTop: 4,
-    right: 0,
-  },
-  tooltipLeft: {
-    right: '100%',
-    top: -10,
-    marginRight: 4,
-  },
-  tooltipText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    lineHeight: DESIGN_TOKENS.typography.sizes.xs + 4,
-    fontWeight: '500' as any,
-    textAlign: 'left',
   },
   disabled: {
     opacity: 0.5,

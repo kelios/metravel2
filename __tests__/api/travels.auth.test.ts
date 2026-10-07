@@ -12,7 +12,7 @@ import {
 } from '@/api/auth';
 import { Alert, Platform } from 'react-native';
 import { i18n } from '@/i18n';
-import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { fetchStatusWithTimeout, fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { validatePassword } from '@/utils/aiValidation';
 import { sanitizeInput } from '@/utils/security';
 import { safeJsonParse } from '@/utils/safeJsonParse';
@@ -29,6 +29,7 @@ jest.mock('react-native', () => ({
 
 jest.mock('@/utils/fetchWithTimeout', () => ({
   fetchWithTimeout: jest.fn(),
+  fetchStatusWithTimeout: jest.fn(),
 }));
 
 jest.mock('@/utils/aiValidation', () => ({
@@ -57,6 +58,7 @@ jest.mock('@/utils/storageBatch', () => ({
   removeStorageBatch: jest.fn(),
 }));
 
+const mockedFetchStatusWithTimeout = fetchStatusWithTimeout as jest.MockedFunction<typeof fetchStatusWithTimeout>;
 const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>;
 const mockedSafeJsonParse = safeJsonParse as jest.MockedFunction<typeof safeJsonParse>;
 const mockedValidatePassword = validatePassword as jest.MockedFunction<typeof validatePassword>;
@@ -81,11 +83,11 @@ describe('src/api/auth.ts auth/password API', () => {
   describe('validateWebCookieSessionApi', () => {
     it('probes a private endpoint with cookie credentials on web', async () => {
       Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
-      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+      mockedFetchStatusWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 });
 
       await expect(validateWebCookieSessionApi()).resolves.toBe(true);
 
-      expect(mockedFetchWithTimeout).toHaveBeenCalledWith(
+      expect(mockedFetchStatusWithTimeout).toHaveBeenCalledWith(
         expect.stringContaining('/user/me/verifications/'),
         expect.objectContaining({ method: 'GET', credentials: 'include' }),
         expect.any(Number),
@@ -94,16 +96,30 @@ describe('src/api/auth.ts auth/password API', () => {
 
     it.each([401, 403])('fails closed for HTTP %s', async (status) => {
       Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
-      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status } as any);
+      mockedFetchStatusWithTimeout.mockResolvedValueOnce({ ok: false, status });
 
       await expect(validateWebCookieSessionApi()).resolves.toBe(false);
     });
 
     it('keeps transient probe failures visible', async () => {
       Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
-      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 503 } as any);
+      mockedFetchStatusWithTimeout.mockResolvedValueOnce({ ok: false, status: 503 });
 
       await expect(validateWebCookieSessionApi()).rejects.toThrow('Web session probe failed: 503');
+    });
+
+    it('body deadline failure stays visible and never reports valid cookie session', async () => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      const timeout = new Error('fixture body deadline'); timeout.name = 'TimeoutError';
+      mockedFetchStatusWithTimeout.mockRejectedValueOnce(timeout);
+      await expect(validateWebCookieSessionApi()).rejects.toBe(timeout);
+      expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
+    });
+
+    it('native branch does not issue a web-cookie status probe', async () => {
+      await expect(validateWebCookieSessionApi()).resolves.toBe(false);
+      expect(mockedFetchStatusWithTimeout).not.toHaveBeenCalled();
+      expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
     });
   });
 

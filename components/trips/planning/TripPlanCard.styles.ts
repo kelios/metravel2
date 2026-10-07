@@ -1,7 +1,15 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import type { ThemedColors } from '@/hooks/useTheme';
 
 export const TRIP_PLAN_CARD_MEDIA_HEIGHT = 176;
+
+// #2253: font-ready web observations show title18px and metadata16px lines.
+// Reserve two lines consistently for short/loading/normal two-line content.
+// Metadata remains unbounded: this is a minimum, never a truncation or total card height.
+export const TRIP_PLAN_CARD_WEB_TEXT_SLOTS = {
+  title: { lineHeight: 18, minHeight: 36 },
+  meta: { lineHeight: 16, minHeight: 32 },
+} as const;
 
 export const createTripPlanCardStyles = (colors: ThemedColors) =>
   StyleSheet.create({
@@ -29,12 +37,12 @@ export const createTripPlanCardStyles = (colors: ThemedColors) =>
       backgroundColor: colors.surfaceMuted,
     },
     visibilityText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
-    title: { fontSize: 16, fontWeight: '700', color: colors.text },
+    title: { fontSize: 16, fontWeight: '700', color: colors.text, ...(Platform.OS === 'web' ? TRIP_PLAN_CARD_WEB_TEXT_SLOTS.title : {}) },
     metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
     // #1344: two independently measured dynamic Text siblings clipped at every
     // intrinsic/flex allocation tried on Pixel. One flexible string gives Yoga
     // a single remaining-width outlet and preserves normal wrapping.
-    meta: { fontSize: 13, color: colors.textSecondary, flex: 1 },
+    meta: { fontSize: 13, color: colors.textSecondary, flex: 1, ...(Platform.OS === 'web' ? TRIP_PLAN_CARD_WEB_TEXT_SLOTS.meta : {}) },
     route: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
     footer: {
       marginTop: 4,

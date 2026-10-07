@@ -2,7 +2,7 @@
 
 import { devError, devWarn } from '@/utils/logger';
 import { Platform } from 'react-native';
-import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { fetchStatusWithTimeout, fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getCsrfHeader } from '@/utils/csrf';
 import {
     getApiRequestCredentials,
@@ -243,7 +243,7 @@ class ApiClient {
      */
     private async isSessionRejectedByServer(token: string | null): Promise<boolean> {
         try {
-            const probe = await fetchWithTimeout(
+            const probe = await fetchStatusWithTimeout(
                 `${this.baseURL}/user/me/verifications/`,
                 {
                     method: 'GET',

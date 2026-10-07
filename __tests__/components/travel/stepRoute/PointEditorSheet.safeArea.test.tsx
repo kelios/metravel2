@@ -7,6 +7,7 @@ import { fireEvent, render, within } from '@testing-library/react-native';
 
 jest.mock('@/components/forms/MultiSelectField', () => () => null);
 jest.mock('@/components/travel/PhotoUploadWithPreview', () => () => null);
+jest.mock('@/components/ui/ToastHost', () => () => null);
 jest.mock('@/api/misc', () => ({ createPointCategory: jest.fn() }));
 jest.mock('@/utils/pointCategoryDictionaryQuery', () => ({ requestPointCategoryDictionaryRefresh: jest.fn() }));
 

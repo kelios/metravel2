@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import renderer, { act } from 'react-test-renderer'
-import { Animated, Platform, StyleSheet } from 'react-native'
+import { Animated, Platform } from 'react-native'
 
 const mockAuthorCardSpy: jest.Mock<any, any> = jest.fn(() => null)
 const mockMapSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
@@ -370,7 +370,7 @@ describe('TravelDeferredSections (web author defer)', () => {
     )
   })
 
-  it('holds the web sidebar/comments reserve until the real frame stops resizing', async () => {
+  it('passes mounted and settled signals separately and rejects stale travel callbacks', async () => {
     const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred.tsx')
     const travel: any = {
       id: 6,
@@ -395,10 +395,13 @@ describe('TravelDeferredSections (web author defer)', () => {
     const layoutEvent = (height: number) => ({
       nativeEvent: { layout: { height, width: 920, x: 0, y: 0 } },
     })
+    const { TravelDetailsDeferredTransition } = require('@/components/travel/details/TravelDetailsDeferredTransition')
+    // This renderer has disconnected/null DOM refs: it verifies caller signals,
+    // not visibility or geometry. The real RNW/ReactDOM Transition suite proves
+    // positive DOM measurements, pre-paint display and reserve/anchor behavior.
     const transitionOf = (tree: renderer.ReactTestRenderer, testID: string) =>
-      tree.root
-        .findAllByProps({ testID })
-        .find((node) => node.props.dataSet?.deferredTransitionState != null)!
+      tree.root.findAllByType(TravelDetailsDeferredTransition)
+        .find((node) => node.props.testID === testID)!
 
     let sidebarTree: renderer.ReactTestRenderer
     await act(async () => {
@@ -417,32 +420,60 @@ describe('TravelDeferredSections (web author defer)', () => {
     })
 
     const sidebarTransition = transitionOf(sidebarTree!, 'travel-details-sidebar-transition')
-    expect(sidebarTransition.props.dataSet.deferredTransitionState).toBe('measuring-runtime')
-    expect(StyleSheet.flatten(sidebarTransition.props.style).minHeight).toBe('100vh')
+    expect(sidebarTransition.props.runtimeFrameReady).toBe(false)
 
     const sidebarRuntimeLayout = mockSidebarSectionSpy.mock.calls.at(-1)?.[0]?.onRuntimeFrameReady
     expect(sidebarRuntimeLayout).toEqual(expect.any(Function))
+
+    const sidebarVisibilityLayout = mockSidebarSectionSpy.mock.calls.at(-1)?.[0]?.onRuntimeVisibilityReady
+    expect(sidebarVisibilityLayout).toEqual(expect.any(Function))
+    expect(sidebarTransition.props.runtimeFrameReady).toBe(false)
+    await act(async () => { sidebarVisibilityLayout(layoutEvent(300)) })
+    expect(sidebarTransition.props.runtimeVisibilityReady).toBe(true)
+    expect(sidebarTransition.props.runtimeFrameReady).toBe(false)
 
     // First real frame is not the settled frame: `Популярные` is still growing.
     await act(async () => {
       sidebarRuntimeLayout(layoutEvent(300))
       jest.advanceTimersByTime(200)
     })
-    expect(sidebarTransition.props.dataSet.deferredTransitionState).toBe('measuring-runtime')
-    expect(StyleSheet.flatten(sidebarTransition.props.style).minHeight).toBe('100vh')
+    expect(sidebarTransition.props.runtimeVisibilityReady).toBe(true)
+    expect(sidebarTransition.props.runtimeFrameReady).toBe(false)
 
     // A new height restarts the quiet window instead of releasing the reserve.
     await act(async () => {
       sidebarRuntimeLayout(layoutEvent(548))
       jest.advanceTimersByTime(200)
     })
-    expect(sidebarTransition.props.dataSet.deferredTransitionState).toBe('measuring-runtime')
+    expect(sidebarTransition.props.runtimeVisibilityReady).toBe(true)
+    expect(sidebarTransition.props.runtimeFrameReady).toBe(false)
 
     await act(async () => {
       jest.advanceTimersByTime(400)
     })
-    expect(sidebarTransition.props.dataSet.deferredTransitionState).toBe('runtime')
-    expect(StyleSheet.flatten(sidebarTransition.props.style).minHeight).toBeUndefined()
+    expect(sidebarTransition.props.runtimeFrameReady).toBe(true)
+
+    // Old travel callbacks must not expose a new visit, even on back navigation.
+    await act(async () => {
+      sidebarTree!.update(<Suspense fallback={null}><TravelDeferredSections
+        travel={{ ...travel, id: 999 }} isMobile={false} forceOpenKey="near"
+        anchors={anchors} scrollToMapSection={() => {}} /></Suspense>)
+      await Promise.resolve()
+    })
+    const newTransition = transitionOf(sidebarTree!, 'travel-details-sidebar-transition')
+    await act(async () => { sidebarVisibilityLayout(layoutEvent(300)) })
+    expect(newTransition.props.runtimeVisibilityReady).toBe(false)
+    expect(newTransition.props.runtimeFrameReady).toBe(false)
+    // The old settle/layout callback must also belong to its original visit.
+    await act(async () => {
+      sidebarRuntimeLayout(layoutEvent(548))
+      jest.advanceTimersByTime(400)
+    })
+    expect(newTransition.props.runtimeFrameReady).toBe(false)
+    const newVisibilityLayout = mockSidebarSectionSpy.mock.calls.at(-1)?.[0]?.onRuntimeVisibilityReady
+    await act(async () => { newVisibilityLayout(layoutEvent(300)) })
+    expect(newTransition.props.runtimeVisibilityReady).toBe(true)
+    expect(newTransition.props.runtimeFrameReady).toBe(false)
 
     mockCommentsSectionSpy.mockClear()
     let commentsTree: renderer.ReactTestRenderer
@@ -462,15 +493,14 @@ describe('TravelDeferredSections (web author defer)', () => {
     })
 
     const commentsTransition = transitionOf(commentsTree!, 'travel-details-comments-transition')
-    expect(commentsTransition.props.dataSet.deferredTransitionState).toBe('measuring-runtime')
-    expect(StyleSheet.flatten(commentsTransition.props.style).minHeight).toBe('100vh')
+    expect(commentsTransition.props.runtimeFrameReady).toBe(false)
+    expect(commentsTransition.props.runtimeVisibilityReady).toBeUndefined()
 
     // A section whose data never arrives must still become interactive: the
     // fail-open timeout releases the reserve without a single layout event.
     await act(async () => {
       jest.advanceTimersByTime(6000)
     })
-    expect(commentsTransition.props.dataSet.deferredTransitionState).toBe('runtime')
-    expect(StyleSheet.flatten(commentsTransition.props.style).minHeight).toBeUndefined()
+    expect(commentsTransition.props.runtimeFrameReady).toBe(true)
   })
 })

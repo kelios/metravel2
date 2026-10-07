@@ -1,10 +1,13 @@
 import TravelListItemSkeleton from '@/components/listTravel/TravelListItemSkeleton'
 import React, { useMemo } from 'react'
-import { Platform, StyleSheet, View } from 'react-native'
+import { Platform, StyleSheet, Text, View } from 'react-native'
 
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { useResponsiveWidth } from '@/hooks/useResponsive'
 import { METRICS } from '@/constants/layout'
+import { translate as i18nT } from '@/i18n'
+import { getNearbyTravelsSubtitle } from '@/constants/nearby'
+import { createTravelDetailsSectionHeaderStyles } from './details/styles/travelDetailsSectionHeaderStyles'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import ReservedSpace from '@/components/ui/ReservedSpace'
@@ -106,6 +109,10 @@ const staticStyles = StyleSheet.create({
   ratingBox: { flex: 1, minWidth: 220, gap: DESIGN_TOKENS.spacing.sm },
   sidebarContainer: { width: '100%', gap: DESIGN_TOKENS.spacing.xl },
   sidebarSection: { width: '100%', gap: DESIGN_TOKENS.spacing.sm },
+  sidebarWebSection: { width: '100%' },
+  sidebarCardContent: { marginTop: 8 },
+  sidebarIconPlaceholder: { width: 18, height: 18, flexShrink: 0 },
+  sidebarDecorativeText: { color: 'transparent' },
   // marginTop повторяет отступ первой секции футера (leadSection в
   // TravelDetailsFooterSection), чтобы подмена скелетона на реальный футер
   // не сдвигала страницу.
@@ -301,10 +308,11 @@ const RoundSidebarCardSkeleton: React.FC = () => {
 
 export const SidebarSectionSkeleton: React.FC = () => {
   const width = useResponsiveWidth()
-  // Exactly the NearTravelList branch: embedded mobile renders TravelTmlRound,
-  // while its wider grid and every web Popular card use TravelListItem.
+  const colors = useThemedColors()
+  const headers = useMemo(() => createTravelDetailsSectionHeaderStyles(colors), [colors])
   const isNearMobile = width < METRICS.breakpoints.tablet
-  return (
+  if (Platform.OS !== 'web') {
+    return (
     <View style={staticStyles.sidebarContainer}>
       <View style={staticStyles.sidebarSection} testID="travel-sidebar-near-skeleton">
         <SkeletonLoader width={220} height={26} borderRadius={8} />
@@ -314,7 +322,37 @@ export const SidebarSectionSkeleton: React.FC = () => {
       <View style={staticStyles.sidebarSection} testID="travel-sidebar-popular-skeleton">
         <SkeletonLoader width={210} height={26} borderRadius={8} />
         <SkeletonLoader width="58%" height={18} borderRadius={6} />
-        {Platform.OS === 'web' ? <TravelListItemSkeleton /> : <RoundSidebarCardSkeleton />}
+        <RoundSidebarCardSkeleton />
+      </View>
+    </View>
+  )
+  }
+  // Real strings with real lightweight typography preserve natural wrapping;
+  // these decorative headers announce no duplicate content to screen readers.
+  const header = (kind: 'near' | 'popular', title: string, subtitle: string) => (
+    <View aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <View style={headers.sectionHeaderRow}>
+        <View style={[staticStyles.sidebarIconPlaceholder, { backgroundColor: colors.borderLight }]} />
+        <Text testID={`travel-sidebar-${kind}-skeleton-title`}
+          style={[headers.sectionHeaderText, staticStyles.sidebarDecorativeText, { backgroundColor: colors.borderLight }]}>{title}</Text>
+      </View>
+      <Text testID={`travel-sidebar-${kind}-skeleton-subtitle`}
+        style={[headers.sectionSubtitle, staticStyles.sidebarDecorativeText, { backgroundColor: colors.borderLight }]}>{subtitle}</Text>
+    </View>
+  )
+  return (
+    <View style={staticStyles.sidebarContainer}>
+      <View style={staticStyles.sidebarWebSection} testID="travel-sidebar-near-skeleton">
+        {header('near', i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.ryadom_mozhno_posmotret_3f015f94'), getNearbyTravelsSubtitle())}
+        <View style={staticStyles.sidebarCardContent}>
+          {isNearMobile ? <RoundSidebarCardSkeleton /> : <TravelListItemSkeleton />}
+        </View>
+      </View>
+      <View style={staticStyles.sidebarWebSection} testID="travel-sidebar-popular-skeleton">
+        {header('popular', i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.populyarnye_marshruty_e9bc8e8c'), i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.samye_prosmatrivaemye_napravleniya_za_nedely_e8d2c61d'))}
+        <View style={staticStyles.sidebarCardContent}>
+          {Platform.OS === 'web' ? <TravelListItemSkeleton /> : <RoundSidebarCardSkeleton />}
+        </View>
       </View>
     </View>
   )

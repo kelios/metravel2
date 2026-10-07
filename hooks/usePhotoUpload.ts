@@ -47,6 +47,7 @@ export interface UsePhotoUploadOptions {
   idTravel?: string | null;
   oldImage?: string | null;
   onUpload?: (imageUrl: string) => void;
+  onError?: (message: string) => void;
   onPreviewChange?: (previewUrl: string | null) => void;
   onRequestRemove?: () => void;
   disabled?: boolean;
@@ -54,7 +55,7 @@ export interface UsePhotoUploadOptions {
 }
 
 export function usePhotoUpload(opts: UsePhotoUploadOptions) {
-  const { collection, idTravel, oldImage, onUpload, onPreviewChange, onRequestRemove, disabled = false, maxSizeMB = 10 } = opts;
+  const { collection, idTravel, oldImage, onUpload, onError, onPreviewChange, onRequestRemove, disabled = false, maxSizeMB = 10 } = opts;
 
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -81,6 +82,13 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   const currentDisplayUrl = previewUrl ?? imageUri ?? '';
 
   // --- Internal helpers ---
+
+  const reportClientError = useCallback((message: string) => {
+    if (!message || !mountedRef.current) return;
+    setError(message);
+    setUploadMessage(null);
+    onError?.(message);
+  }, [onError]);
 
   const applyFallback = useCallback((candidateFallback: string) => {
     setHasTriedFallback(true);
@@ -135,7 +143,10 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
       const uploadedUrlRaw = (response?.url || response?.data?.url || response?.path || response?.file_url) as string | undefined;
       const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : null;
 
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {
+        if (Platform.OS === 'web' && collection === 'travelImageAddress' && uploadedUrl) onUpload?.(uploadedUrl);
+        return;
+      }
       if (uploadedUrl) {
         setImageUri(uploadedUrl); setPreviewUrl(null);
         setFallbackImageUrl(lastPreviewUrl || uploadedUrlRaw || uploadedUrl);
@@ -156,6 +167,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
 
   // Cleanup on unmount
   useEffect(() => {
+    mountedRef.current = true;
     const currentBlobUrls = blobUrlsRef.current;
     return () => {
       mountedRef.current = false;
@@ -227,37 +239,45 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   }, [maxSizeMB]);
 
   const handleUploadImage = useCallback(async (file: File | NativeUploadFile) => {
+    if (!mountedRef.current) return;
     try {
       setError(null); setUploadMessage(null); setUploadProgress(0); setHasTriedFallback(false);
+      const normalizedId = (idTravel ?? '').toString();
+      const hasUploadId = Boolean(normalizedId && normalizedId !== 'null' && normalizedId !== 'undefined');
       const uploadableFile =
         Platform.OS === 'web' && typeof File !== 'undefined' && file instanceof File
           ? await prepareWebImageFileForUpload(file)
           : file;
+      if (!mountedRef.current && !(Platform.OS === 'web' && collection === 'travelImageAddress' && hasUploadId)) return;
 
       const validationError = validateFile(uploadableFile);
-      if (validationError) { setError(validationError); setPreviewUrl(null); return; }
-
-      let previewCandidate: string;
-      if (Platform.OS === 'web' && uploadableFile instanceof File) {
-        blobUrlsRef.current.forEach((url) => {
-          if (url !== previewUrl) { try { URL.revokeObjectURL(url); } catch { /* noop */ } blobUrlsRef.current.delete(url); }
-        });
-        previewCandidate = URL.createObjectURL(uploadableFile);
-        blobUrlsRef.current.add(previewCandidate);
-      } else {
-        previewCandidate = (uploadableFile as { uri: string }).uri;
+      if (validationError) {
+        if (mountedRef.current) { reportClientError(validationError); setPreviewUrl(null); }
+        return;
       }
-      setPreviewUrl(previewCandidate); setIsManuallySelected(true); setLastPreviewUrl(previewCandidate);
 
-      const normalizedId = (idTravel ?? '').toString();
-      if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') {
+      let previewCandidate = '';
+      if (mountedRef.current) {
+        if (Platform.OS === 'web' && uploadableFile instanceof File) {
+          blobUrlsRef.current.forEach((url) => {
+            if (url !== previewUrl) { try { URL.revokeObjectURL(url); } catch { /* noop */ } blobUrlsRef.current.delete(url); }
+          });
+          previewCandidate = URL.createObjectURL(uploadableFile);
+          blobUrlsRef.current.add(previewCandidate);
+        } else {
+          previewCandidate = (uploadableFile as { uri: string }).uri;
+        }
+        setPreviewUrl(previewCandidate); setIsManuallySelected(true); setLastPreviewUrl(previewCandidate);
+      }
+
+      if (!hasUploadId) {
         setUploadMessage(i18nT('shared:hooks.usePhotoUpload.prevyu_gotovo_sohranite_tochku_dlya_zagruzki_0d630d1b'));
         pendingUploadRef.current = uploadableFile;
         onUpload?.(previewCandidate);
         return;
       }
 
-      setLoading(true);
+      if (mountedRef.current) setLoading(true);
       const formData = new FormData();
       if (Platform.OS === 'web' && uploadableFile instanceof File) {
         formData.append('file', uploadableFile);
@@ -272,11 +292,13 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         if (!mountedRef.current) return;
         setUploadProgress(Math.min(99, Math.round(percent * 100)));
       }) as Record<string, unknown> & { data?: Record<string, unknown> };
-      if (!mountedRef.current) return;
-      setUploadProgress(100);
-
       const uploadedUrlRaw = (response?.url || response?.data?.url || response?.path || response?.file_url) as string | undefined;
       const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : null;
+      if (!mountedRef.current) {
+        if (Platform.OS === 'web' && collection === 'travelImageAddress' && uploadedUrl) onUpload?.(uploadedUrl);
+        return;
+      }
+      setUploadProgress(100);
 
       if (uploadedUrl) {
         setImageUri(uploadedUrl); setPreviewUrl(null);
@@ -284,17 +306,20 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         setHasTriedFallback(false);
         setUploadMessage(i18nT('shared:hooks.usePhotoUpload.fotografiya_uspeshno_zagruzhena_21b2e8f4'));
         onUpload?.(uploadedUrl); setError(null);
+      } else if (Platform.OS === 'web' && collection === 'travelImageAddress') {
+        setImageUri(normalizeImageUrl(oldImage)); setPreviewUrl(null);
+        reportClientError(i18nT('shared:hooks.usePhotoUpload.oshibka_pri_zagruzke_27a0bd4b'));
       } else if (previewCandidate) {
         setImageUri(previewCandidate); setPreviewUrl(null);
         setUploadMessage(i18nT('shared:hooks.usePhotoUpload.prevyu_sohraneno_poprobuyte_zagruzit_pozzhe_ad990114'));
         onUpload?.(previewCandidate); setFallbackImageUrl(null); setHasTriedFallback(false); setError(null);
       } else {
-        setError(i18nT('shared:hooks.usePhotoUpload.oshibka_pri_zagruzke_27a0bd4b')); setPreviewUrl(null);
+        reportClientError(i18nT('shared:hooks.usePhotoUpload.oshibka_pri_zagruzke_27a0bd4b')); setPreviewUrl(null);
       }
     } catch (err) {
       console.error('Ошибка при загрузке:', err);
       if (mountedRef.current) {
-        setError(
+        reportClientError(
           err instanceof HeicConversionError
             ? i18nT('shared:hooks.usePhotoUpload.ne_udalos_preobrazovat_heic_sohranite_foto_k_e692768e')
             : i18nT('shared:hooks.usePhotoUpload.proizoshla_oshibka_pri_zagruzke_cc3f9675')
@@ -304,7 +329,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     } finally {
       if (mountedRef.current) { setLoading(false); setUploadProgress(0); }
     }
-  }, [collection, idTravel, previewUrl, onUpload, validateFile]);
+  }, [collection, idTravel, oldImage, previewUrl, onUpload, validateFile, reportClientError]);
 
   // Image error/load handlers for web
   const handleImageLoadCheck = useCallback((imgEl: HTMLImageElement) => {
@@ -315,8 +340,8 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     if (/^(blob:|data:)/i.test(currentDisplayUrl)) { ignoredOldImageRef.current = currentDisplayUrl; handleRemoveImage(); return; }
     const apiCandidate = buildApiPrefixedUrl(currentDisplayUrl);
     if (apiCandidate) { applyFallback(apiCandidate); return; }
-    setImageUri(null); setPreviewUrl(null); setError(i18nT('shared:hooks.usePhotoUpload.izobrazhenie_ne_naydeno_6a0466ad'));
-  }, [currentDisplayUrl, fallbackImageUrl, lastPreviewUrl, hasTriedFallback, applyFallback, handleRemoveImage]);
+    setImageUri(null); setPreviewUrl(null); reportClientError(i18nT('shared:hooks.usePhotoUpload.izobrazhenie_ne_naydeno_6a0466ad'));
+  }, [currentDisplayUrl, fallbackImageUrl, lastPreviewUrl, hasTriedFallback, applyFallback, handleRemoveImage, reportClientError]);
 
   const handleImageError = useCallback(() => {
     if (scheduleRemoteRetry(currentDisplayUrl)) return;
@@ -325,14 +350,8 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     if (/^(blob:|data:)/i.test(currentDisplayUrl)) { ignoredOldImageRef.current = currentDisplayUrl; handleRemoveImage(); return; }
     const apiCandidate = buildApiPrefixedUrl(currentDisplayUrl);
     if (apiCandidate) { applyFallback(apiCandidate); return; }
-    setImageUri(null); setPreviewUrl(null); setError(i18nT('shared:hooks.usePhotoUpload.izobrazhenie_ne_naydeno_6a0466ad'));
-  }, [currentDisplayUrl, fallbackImageUrl, lastPreviewUrl, hasTriedFallback, applyFallback, handleRemoveImage, scheduleRemoteRetry]);
-
-  const reportClientError = useCallback((message: string) => {
-    if (!message) return;
-    setError(message);
-    setUploadMessage(null);
-  }, []);
+    setImageUri(null); setPreviewUrl(null); reportClientError(i18nT('shared:hooks.usePhotoUpload.izobrazhenie_ne_naydeno_6a0466ad'));
+  }, [currentDisplayUrl, fallbackImageUrl, lastPreviewUrl, hasTriedFallback, applyFallback, handleRemoveImage, scheduleRemoteRetry, reportClientError]);
 
   return {
     imageUri, previewUrl, loading, uploadProgress, error, uploadMessage,

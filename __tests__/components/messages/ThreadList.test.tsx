@@ -2,6 +2,12 @@ import { render, fireEvent, waitFor, within } from '@testing-library/react-nativ
 import { Alert, Platform, StyleSheet } from 'react-native';
 import ThreadList from '@/components/messages/ThreadList';
 import type { MessageThread } from '@/api/messages';
+import * as imageOptimization from '@/utils/imageOptimization';
+
+jest.mock('@/utils/imageOptimization', () => ({
+    ...jest.requireActual('@/utils/imageOptimization'),
+    optimizeImageUrl: jest.fn(jest.requireActual('@/utils/imageOptimization').optimizeImageUrl),
+}));
 
 const mockThreads: MessageThread[] = [
     {
@@ -58,6 +64,16 @@ describe('ThreadList', () => {
         );
         fireEvent.press(getByText('Иван Петров'));
         expect(onSelectThread).toHaveBeenCalledWith(mockThreads[0]);
+    });
+
+    it('keeps an unchanged row memoized when another row is selected (#2284)', () => {
+        const optimize = imageOptimization.optimizeImageUrl as jest.Mock;
+        const avatars = new Map([[2, 'https://example.com/a.jpg'], [3, 'https://example.com/b.jpg']]);
+        const props = { ...defaultProps, participantAvatars: avatars, onDeleteThread: jest.fn() };
+        const { rerender } = render(<ThreadList {...props} />);
+        optimize.mockClear();
+        rerender(<ThreadList {...props} selectedThreadId={1} />);
+        expect(optimize.mock.calls.map(([url]) => url)).toEqual(['https://example.com/a.jpg']);
     });
 
     it('shows loading indicator when loading with no threads', () => {

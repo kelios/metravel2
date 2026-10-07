@@ -68,6 +68,11 @@ const declarationsOf = (node: Element): string => {
 }
 
 const geometryOf = (node: Element): string => `${declarationsOf(node)}|${node.getAttribute('style') ?? ''}`
+// RNW compiles StyleSheet.create rules into classes but emits factory plain
+// styles through inline(). Both are actual SSR CSS channels, not fallbacks to
+// guessed geometry. Inline longhand wins over the base Text font shorthand.
+const effectiveCssValue = (node: Element, property: string): string =>
+  (node as HTMLElement).style.getPropertyValue(property) || window.getComputedStyle(node).getPropertyValue(property)
 
 const GRIDS = [
   { name: 'одна колонка (телефон)', isMobile: true, gridColumns: 1, count: 4, cols: 1 },
@@ -146,7 +151,7 @@ describe('каркас карточки «Рядом» на телефоне (#2
 
 
 describe('actual web sidebar skeleton families (#2253 Near/Popular correction)', () => {
-  it.each([0, 390, 767, 768, 1280])('Near uses its actual width branch and Popular stays catalog at %s', width => {
+  it.each([0, 320, 390, 767, 768, 1280])('Near uses its actual width branch and Popular stays catalog at %s', width => {
     mockSidebarWidth = width
     const host = toHost(createElement(SidebarSectionSkeleton))
     const near = host.querySelector('[data-testid="travel-sidebar-near-skeleton"]')!
@@ -172,4 +177,52 @@ describe('actual web sidebar skeleton families (#2253 Near/Popular correction)',
       expect(geometryOf(nearCatalog)).toBe(geometryOf(catalog))
     }
   })
+})
+
+describe('actual lightweight sidebar header typography (#2253)', () => {
+  it.each([320, 390])('uses natural text wrapping and actual subtitle spacing at %s', width => {
+    mockSidebarWidth = width
+    const host = toHost(createElement(SidebarSectionSkeleton))
+    for (const kind of ['near', 'popular']) {
+      const title = host.querySelector(`[data-testid="travel-sidebar-${kind}-skeleton-title"]`)!
+      const subtitle = host.querySelector(`[data-testid="travel-sidebar-${kind}-skeleton-subtitle"]`)!
+      expect(title.textContent?.length).toBeGreaterThan(0)
+      expect(subtitle.textContent?.length).toBeGreaterThan(0)
+      expect(geometryOf(title)).toContain('line-height:26px;')
+      expect(geometryOf(subtitle)).toContain('line-height:22px;')
+      expect(geometryOf(subtitle)).toContain('margin-top:8px;')
+      expect({
+        titleFont: effectiveCssValue(title, 'font-size'),
+        titleLine: effectiveCssValue(title, 'line-height'),
+        subtitleFont: effectiveCssValue(subtitle, 'font-size'),
+        subtitleLine: effectiveCssValue(subtitle, 'line-height'),
+        subtitleMargin: effectiveCssValue(subtitle, 'margin-top'),
+      }).toEqual({ titleFont: '20px', titleLine: '26px', subtitleFont: '14px', subtitleLine: '22px', subtitleMargin: '8px' })
+      expect(geometryOf(subtitle)).not.toContain('height:18px;')
+      expect(title.parentElement!.parentElement!.getAttribute('aria-hidden')).toBe('true')
+      // JSDOM does not lay out font lines: runtime 320/390 must measure wrap.
+      expect(subtitle.getAttribute('style') ?? '').not.toContain('white-space:nowrap')
+    }
+  })
+})
+
+// Native consumer branch keeps the pre-correction placeholder JSX and gaps.
+it('keeps the original native Near/Popular skeleton structure', () => {
+  const { Platform } = require('react-native')
+  const originalOS = Platform.OS
+  try {
+    Platform.OS = 'ios'
+    mockSidebarWidth = 390
+    const host = toHost(createElement(SidebarSectionSkeleton))
+    for (const kind of ['near', 'popular']) {
+      const section = host.querySelector(`[data-testid="travel-sidebar-${kind}-skeleton"]`)!
+      expect(section.children).toHaveLength(3)
+      expect(host.querySelector(`[data-testid="travel-sidebar-${kind}-skeleton-title"]`)).toBeNull()
+      expect(host.querySelector(`[data-testid="travel-sidebar-${kind}-skeleton-subtitle"]`)).toBeNull()
+      expect(declarationsOf(section)).toContain('gap:12px;')
+      expect(geometryOf(section.children[0])).toContain('height:26px;')
+      expect(geometryOf(section.children[1])).toContain('height:18px;')
+      expect(section.querySelector('[data-testid="travel-sidebar-round-card-skeleton"]')).not.toBeNull()
+    }
+  } finally { Platform.OS = originalOS }
 })

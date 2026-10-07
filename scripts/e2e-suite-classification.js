@@ -29,6 +29,8 @@ const PRODUCTION_SMOKE_SPECS = [
   // list below, so adding it here would drop it out of the default local
   // regression run entirely.
   'mobile-screen-budget-production-smoke.spec.ts',
+  // #2329: thin read-only five-traversal companion; cls-audit stays local.
+  'travel-cls-production-smoke.spec.ts',
   'prod-media-smoke.spec.ts',
   'public-regressions.spec.ts',
   // #2117: real-article companion of `travel-sticky-actions-viewport.spec.ts`

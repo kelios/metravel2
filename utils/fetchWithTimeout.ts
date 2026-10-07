@@ -19,11 +19,12 @@ function createTimeoutError(timeout: number): Error {
     return err;
 }
 
-export async function fetchWithTimeout(
+async function fetchWithTimeoutLifecycle<Result>(
     url: string,
-    options: RequestInit = {},
-    timeout: number = 10000
-): Promise<Response> {
+    options: RequestInit,
+    timeout: number,
+    consume: (response: Response) => Result | Promise<Result>
+): Promise<Result> {
     const createAbortError = (): Error => {
         if (typeof DOMException !== 'undefined') {
             return new DOMException('Aborted', 'AbortError') as unknown as Error;
@@ -85,7 +86,8 @@ export async function fetchWithTimeout(
         if (response.status === 502 && shouldRetryLocalApiProxy502(url, options)) {
             response = await runFetch();
         }
-        return response;
+        // Keep the same deadline and external abort listener until this consumer finishes.
+        return await consume(response);
     } catch (error: unknown) {
         const errObj = error as { code?: string; message?: string; name?: string } | null;
         const isPrematureCloseError =
@@ -127,4 +129,25 @@ export async function fetchWithTimeout(
         clearTimeout(timeoutId);
         cleanupExternalAbort?.();
     }
+}
+
+/** Default callers retain the untouched Response and may read its body themselves. */
+export function fetchWithTimeout(
+    url: string,
+    options: RequestInit = {},
+    timeout: number = 10000
+): Promise<Response> {
+    return fetchWithTimeoutLifecycle(url, options, timeout, response => response);
+}
+
+/** Status-only probes finish the actual body before releasing deadline/abort ownership. */
+export function fetchStatusWithTimeout(
+    url: string,
+    options: RequestInit = {},
+    timeout: number = 10000
+): Promise<Pick<Response, 'status' | 'ok'>> {
+    return fetchWithTimeoutLifecycle(url, options, timeout, async response => {
+        await response.arrayBuffer();
+        return { status: response.status, ok: response.ok };
+    });
 }

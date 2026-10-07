@@ -92,6 +92,13 @@ const DIFFICULTY_SCALE_KEYS = new RegExp(
 
 const TERMS: Term[] = [
   {
+    name: '«диалог» в сообщениях — переписка, не диалоговое окно (#2284)',
+    ru: /диалог/i,
+    keys: /^components\.messages\./,
+    minEntries: 8,
+    locales: { pl: { required: /rozmow|dialog(?!ow)/i, forbidden: /okn[oa]? dialogow/i } },
+  },
+  {
     name: '«квест» — единое белорусское написание «квэст»',
     ru: /(^|[^а-яё])квест/i,
     minEntries: 40,

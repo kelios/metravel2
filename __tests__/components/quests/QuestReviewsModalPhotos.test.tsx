@@ -90,6 +90,7 @@ describe('QuestReviewsModal photos', () => {
     fireEvent.press(view.getByTestId('quest-review-photo-open-12'))
     const gallery = await view.findByTestId('review-fullscreen-gallery')
     expect(gallery.props.initialIndex).toBe(1)
+    expect(gallery.props.maxImageSize).toBe(640)
     expect(gallery.props.images).toEqual([
       { url: 'https://cdn/one.jpg', alt: 'Фото из отзыва о квесте' },
       { url: 'https://cdn/two.jpg', alt: 'Фото из отзыва о квесте' },

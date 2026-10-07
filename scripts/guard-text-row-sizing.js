@@ -142,6 +142,42 @@ const collectStyleDefinitions = (sourceFile) => {
   return definitions
 }
 
+// Resolve only the extracted Trip factory whose native row contract this guard
+// already protects. Read static AST facts; never execute or recursively import it.
+const collectImportedTripStyles = (sourceFile, filePath, rootDir) => {
+  const imports = sourceFile.statements.filter((node) =>
+    ts.isImportDeclaration(node) && node.importClause?.namedBindings &&
+    ts.isNamedImports(node.importClause.namedBindings) &&
+    node.importClause.namedBindings.elements.some((binding) =>
+      (binding.propertyName || binding.name).text === 'createTripPlanCardStyles'))
+  if (imports.length === 0) return new Map()
+  if (imports.length !== 1) throw new Error(`Ambiguous Trip style factory import in ${filePath}`)
+  const declaration = imports[0]
+  const specifier = declaration.moduleSpecifier.text
+  const root = fs.realpathSync(rootDir)
+  const expected = path.join(root, 'components/trips/planning/TripPlanCard.styles.ts')
+  const unresolved = specifier.startsWith('.')
+    ? path.resolve(root, path.dirname(filePath), specifier)
+    : specifier.startsWith('@/') ? path.resolve(root, specifier.slice(2)) : null
+  if (!unresolved || ![expected, expected.slice(0, -3)].includes(unresolved)) {
+    throw new Error(`Unsupported Trip style factory dependency in ${filePath}`)
+  }
+  const resolved = fs.realpathSync(expected)
+  if (resolved !== expected || !fs.statSync(resolved).isFile()) {
+    throw new Error(`Trip style factory must be a regular repo file in ${filePath}`)
+  }
+  const dependency = parseSource(resolved, fs.readFileSync(resolved, 'utf8'))
+  const factories = dependency.statements.flatMap((statement) =>
+    ts.isVariableStatement(statement) && statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+      ? statement.declarationList.declarations.filter((item) => ts.isIdentifier(item.name) && item.name.text === 'createTripPlanCardStyles')
+      : [])
+  const initializer = factories[0]?.initializer
+  if (factories.length !== 1 || !initializer || !ts.isArrowFunction(initializer) || !isStyleSheetCreateCall(initializer.body)) {
+    throw new Error(`Expected one exported static Trip style factory in ${filePath}`)
+  }
+  return collectStyleDefinitions(initializer.body)
+}
+
 const jsxAttribute = (opening, name) => {
   for (const property of opening.attributes.properties) {
     if (!ts.isJsxAttribute(property)) continue
@@ -387,14 +423,19 @@ const findingKey = ({ filePath, rowStyleNames, textStyleNames }) =>
     textStyleNames.length > 0 ? textStyleNames.join('+') : 'unstyled-text',
   ].join('::')
 
-const scanFile = ({ filePath, content }) => {
+const scanFile = ({ filePath, content, rootDir = process.cwd() }) => {
   const sourceFile = parseSource(filePath, content)
   const textNames = importedReactNativeTextNames(sourceFile)
   if (textNames.size === 0) {
     return { rowCount: 0, dynamicTextCount: 0, findings: [] }
   }
 
-  const definitions = collectStyleDefinitions(sourceFile)
+  const definitions = collectImportedTripStyles(sourceFile, filePath, rootDir)
+  for (const [name, properties] of collectStyleDefinitions(sourceFile)) {
+    const current = definitions.get(name) || new Map()
+    for (const [key, value] of properties) current.set(key, value)
+    definitions.set(name, current)
+  }
   const findingsByKey = new Map()
   const countedDynamicTextNodes = new Set()
   let rowCount = 0
@@ -576,6 +617,7 @@ const scanTextRowSizing = (rootDir, { allowlist = ALLOWLIST } = {}) => {
     const result = scanFile({
       filePath,
       content: fs.readFileSync(path.join(rootDir, filePath), 'utf8'),
+      rootDir,
     })
     rowCount += result.rowCount
     dynamicTextCount += result.dynamicTextCount
@@ -642,6 +684,7 @@ module.exports = {
   parseSource,
   collectSourceFiles,
   collectStyleDefinitions,
+  collectImportedTripStyles,
   resolveStyle,
   hasSizingContract,
   hasGuaranteedSizingContract,

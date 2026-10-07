@@ -1,7 +1,6 @@
 import { Platform } from 'react-native'
 import type { ViewStyle } from 'react-native'
-import { BREAKPOINTS } from './utils/listTravelConstants'
-import { calculateColumns } from './utils/listTravelHelpers'
+import { BREAKPOINTS, calculateColumns } from './utils/listTravelConstants'
 import { translate as i18nT } from '@/i18n'
 
 export function buildCardsGridDynamicStyle(cardsGridStyle: ViewStyle, gapSize: number): ViewStyle[] {
