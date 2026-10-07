@@ -80,8 +80,11 @@ Validation:
   `nginx/nginx.conf` не править; нужное изменение оформлять как `area=back` task
   с точным diff и проверкой.
 - Не меняй без прямого запроса `eas.json`, `app.json`, `.github/workflows/`,
-  `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml`,
+  `nginx/`, `plugins/`, `public/robots.txt`, `public/sitemap.xml`,
   `entry.js`.
+- `scripts/` можно менять самостоятельно в рамках порученной задачи без
+  отдельного разрешения владельца; обязательные ревью, проверки и operation
+  gates сохраняются (`docs/RULES.md` → «Development workflow»).
 - Не выводи secrets из `.env*`, `.env.e2e`, `.secrets`, SSH, EAS, Play или
   deploy configs. Временные логи/screenshots/traces/JSON храни только в ignored
   `.codex-temp/`, `.codex-debug/`, `test-results/` или `playwright-report/`.

@@ -127,7 +127,7 @@ describe('guard-root-scratch-artifacts', () => {
     for (const file of [
       'metro.config.js',
       'app.config.js',
-      'queryKeys.ts',
+      'package.json',
       'scripts/_tmp-probe.mjs',
       'scripts/x.tmp.js',
       'scripts/probe.mjs',

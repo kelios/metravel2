@@ -108,7 +108,8 @@
   the cycle repeats. Store releases, the dev host, `area=back` and `needs_human` stay outside
   this chain. Protocol: `docs/TASK_BOARD_MCP.md` → «Выкат и приёмка на проде — часть перехода
   `testing → done`».
-- Protected project/release files (`eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml`, `entry.js`) require an explicit user request that puts the file or its behavior in scope. Do not change them as incidental cleanup.
+- Protected project/release files (`eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `public/robots.txt`, `public/sitemap.xml`, `entry.js`) require an explicit user request that puts the file or its behavior in scope. Do not change them as incidental cleanup.
+- Changes to `scripts/` within an assigned task do not require separate owner approval (owner instruction, 07.10.2026). Apply the same mandatory review, validation and operation gates as for other task-owned source files; authorization to edit a script does not authorize an otherwise gated external operation.
 - Before deploying to production, validate the local code in production-like conditions:
   - build a production web export (`dist/prod`)
   - run checks against that build (not against a dev server)
