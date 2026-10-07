@@ -19,20 +19,43 @@
 //     npm run quest:translate -- prepare --quest krakow-dragon --locale pl
 //     npm run quest:translate -- check --quest krakow-dragon --locale pl
 //     npm run quest:translate -- upload --quest krakow-dragon --locale pl [--publish]
+//     npm run quest:translate -- sweep krakow-dragon warsaw-mermaid … | --from-next 10
 //     npm run quest:translate -- city-name --city 1 --locale pl --name Kraków
 //     npm run quest:translations:status -- [--locale pl]
 //
+// Волна «10 квестов × 4 локали» — это 40 пар, и без `sweep` оператор гонял
+// `check` и `upload --publish` по 40 раз, ведя учёт состояний вручную (сессия
+// 07.10.2026 закрывала это одноразовым shell-скриптом). `sweep` проходит все пары
+// списка, публикует готовые и печатает состояние остальных одной строкой на пару.
+//
 // Правила перевода и порядок работы — docs/QUEST_TRANSLATION_GUIDE.md.
 
+const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')
 
-const { ExpectedFailureError, UsageError, parseCliArgs, parseCliTokens, runCli } = require('./lib/cli-contract')
+const {
+  ExpectedFailureError,
+  UsageError,
+  parseCliArgs,
+  parseCliTokens,
+  requireNoBatchFailures,
+  requireNonEmptySelection,
+  runCli,
+} = require('./lib/cli-contract')
 const { createApi, resolveToken } = require('./lib/questTranslation/api')
-const { mergeReview, runStructuralChecks, uploadBlockers } = require('./lib/questTranslation/checks')
+const {
+  mergeReview,
+  reviewState,
+  runStructuralChecks,
+  sourceDigest,
+  translationDigest,
+  uploadBlockers,
+} = require('./lib/questTranslation/checks')
 const { getQuestContentLocales } = require('./lib/questTranslation/locales')
 const {
   DEFAULT_WORK_DIR,
+  QUEST_ID_PATTERN,
   ROOT,
   apiStep,
   artifactPaths,
@@ -59,16 +82,35 @@ const COMMANDS = {
   prepare: { required: ['quest', 'locale'], optional: ['force'] },
   check: { required: ['quest', 'locale'], optional: [] },
   upload: { required: ['quest', 'locale'], optional: ['publish', 'force', 'unpublish'] },
+  sweep: { required: [], optional: ['from-next', 'order', 'json'] },
   status: { required: [], optional: ['locale', 'json'] },
   'city-name': { required: ['city', 'locale', 'name'], optional: [] },
 }
 const SHARED_FLAGS = ['api-url', 'token', 'work-dir']
+
+// Состояния пары «квест + локаль» в отчёте `sweep` — в порядке конвейера.
+const SWEEP = {
+  NO_TASK: 'no_task',
+  AWAITING_TRANSLATION: 'awaiting_translation',
+  STRUCT_FAIL: 'struct_fail',
+  NEEDS_REVIEW: 'needs_review',
+  REVIEW_REFUSED: 'review_refused',
+  UPLOAD_FAILED: 'upload_failed',
+  // Пара не дошла до вердикта: сервер не отдал источник или перевод, битый task.json.
+  ERROR: 'error',
+  PUBLISHED: 'published',
+}
+// Отказы: пара требует правки, а не ожидания агента. Они и дают ненулевой выход.
+const SWEEP_FAILURES = new Set([SWEEP.STRUCT_FAIL, SWEEP.REVIEW_REFUSED, SWEEP.UPLOAD_FAILED, SWEEP.ERROR])
+// Сколько причин отказа показывать в строке отчёта; полный список — в --json.
+const SWEEP_DETAILS_SHOWN = 2
 
 const USAGE = `Usage:
   node scripts/quest-translate.js next --count <n> [--order starts|catalog] [--json]
   node scripts/quest-translate.js prepare --quest <quest_id> --locale <код> [--force]
   node scripts/quest-translate.js check --quest <quest_id> --locale <код>
   node scripts/quest-translate.js upload --quest <quest_id> --locale <код> [--publish | --unpublish] [--force]
+  node scripts/quest-translate.js sweep <quest_id>… | --from-next <n> [--order starts|catalog] [--json]
   node scripts/quest-translate.js status [--locale <код>] [--json]
   node scripts/quest-translate.js city-name --city <id> --locale <код> --name <название>
 
@@ -77,11 +119,13 @@ const USAGE = `Usage:
   prepare     задание агенту quest-translator: <work-dir>/<locale>/<quest_id>.task.json
   check       структурные проверки <quest_id>.json и вердикт смысловой проверки
   upload      запись перевода через API: черновик, с --publish — публикация
+  sweep       волна: по каждой паре «квест + локаль» — состояние, готовые публикуются
   status      сводка published/draft/missing/stale по локалям
   city-name   название города квеста на локали
 
 Опции:
   --count <n>          сколько квестов вернуть (next)
+  --from-next <n>      sweep по первым <n> квестам выборки next вместо списка quest_id
   --order <порядок>    starts — по числу стартов (по умолчанию), catalog — по каталогу
   --publish            опубликовать: только при зелёных структурных и смысловой проверках
   --unpublish          записать черновик поверх опубликованного перевода: игроки вернутся на русский
@@ -94,13 +138,15 @@ const USAGE = `Usage:
 const CLI_SPEC = {
   name: NAME,
   usage: USAGE,
-  // Каждый запуск работает с одной названной парой «квест + локаль» либо печатает
-  // отчёт; пустой `next` — законный итог серии, а не ошибка выборки.
-  selection: 'none',
+  // Подкоманды работают с одной названной парой «квест + локаль» либо печатают
+  // отчёт (пустой `next` — законный итог серии, а не ошибка выборки); выборку
+  // делает только `sweep`: список квестов — явный или первые n из `next`.
+  selection: 'квесты волны sweep (аргументы или --from-next)',
   flags: {
     quest: { type: 'string', valueName: 'quest_id' },
     locale: { type: 'string', valueName: 'код локали' },
     count: { type: 'int', min: 1 },
+    'from-next': { type: 'int', min: 1 },
     city: { type: 'int', min: 1 },
     name: { type: 'string', allowLeadingDash: true },
     order: { type: 'string', valueName: 'starts|catalog' },
@@ -118,12 +164,22 @@ const CLI_SPEC = {
 const camel = (flag) => flag.replace(/-([a-z])/g, (_match, char) => char.toUpperCase())
 const isSet = (value) => value !== null && value !== false && value !== undefined
 
-/** Разбор и проверка вызова: одна подкоманда, только её флаги, известная локаль. */
+/**
+ * Разбор и проверка вызова: одна подкоманда, только её флаги, известная локаль.
+ * Операнды после подкоманды принимает только `sweep` — это quest_id волны.
+ */
 function resolveInvocation(args) {
-  if (args.commands.length !== 1 || !COMMANDS[args.commands[0]]) {
+  const [command, ...operands] = args.commands
+  if (!Object.hasOwn(COMMANDS, command) || (operands.length && command !== 'sweep')) {
     throw new UsageError(`нужна одна подкоманда: ${Object.keys(COMMANDS).join(', ')}`)
   }
-  const command = args.commands[0]
+  if (command === 'sweep') {
+    if (operands.length && isSet(args.fromNext)) throw new UsageError('sweep: либо список quest_id, либо --from-next')
+    if (!operands.length && !isSet(args.fromNext)) throw new UsageError('sweep: нужен список quest_id или --from-next <n>')
+    if (operands.length && isSet(args.order)) throw new UsageError('sweep: --order имеет смысл только с --from-next')
+    const bad = operands.find((questId) => !QUEST_ID_PATTERN.test(questId))
+    if (bad) throw new UsageError(`sweep: "${bad}" — не quest_id (slug вида krakow-dragon)`)
+  }
   const { required, optional } = COMMANDS[command]
   const allowed = new Set([...required, ...optional, ...SHARED_FLAGS])
   for (const flag of Object.keys(CLI_SPEC.flags)) {
@@ -179,7 +235,8 @@ function readStartsRanking() {
   }
 }
 
-async function commandNext(args, api) {
+/** Квесты без полного перевода в порядке приоритета; первые `count` — пачка. */
+async function selectPending({ count, order }, api) {
   const { targets } = getQuestContentLocales()
   const [statusRows, catalog] = [await api.getStatus(), await api.getCatalog()]
   const status = indexStatus(statusRows)
@@ -191,7 +248,7 @@ async function commandNext(args, api) {
     })
     .filter((entry) => entry.locales.length > 0)
 
-  const starts = (args.order || 'starts') === 'starts' ? readStartsRanking() : null
+  const starts = (order || 'starts') === 'starts' ? readStartsRanking() : null
   const startsOf = (entry) => (starts && starts.get(entry.quest.quest_id)) || 0
   pending.sort(
     (a, b) =>
@@ -199,21 +256,28 @@ async function commandNext(args, api) {
       (b.quest.completions_count || 0) - (a.quest.completions_count || 0) ||
       a.quest.id - b.quest.id,
   )
-  const batch = pending.slice(0, args.count)
+  return { order: starts ? 'starts' : 'catalog', remaining: pending.length, batch: pending.slice(0, count), status }
+}
 
-  // Город без названия на локали: под `?lang=` сервер отдаёт каноническое имя.
+/** Города пачки без названия на локали: под `?lang=` сервер отдаёт каноническое имя. */
+async function collectCitiesWithoutName(api, batch) {
   const cities = new Map()
-  if (batch.length) {
-    const wanted = new Set(batch.map((entry) => entry.quest.quest_id))
-    for (const code of targets) {
-      for (const quest of await api.getCatalog(code)) {
-        if (!wanted.has(quest.quest_id) || quest.city_name !== quest.city_name_canonical) continue
-        const cityId = Number(quest.city_id)
-        if (!cities.has(cityId)) cities.set(cityId, { city_id: cityId, name: quest.city_name_canonical, locales: [] })
-        if (!cities.get(cityId).locales.includes(code)) cities.get(cityId).locales.push(code)
-      }
+  if (!batch.length) return []
+  const wanted = new Set(batch.map((entry) => entry.quest.quest_id))
+  for (const code of getQuestContentLocales().targets) {
+    for (const quest of await api.getCatalog(code)) {
+      if (!wanted.has(quest.quest_id) || quest.city_name !== quest.city_name_canonical) continue
+      const cityId = Number(quest.city_id)
+      if (!cities.has(cityId)) cities.set(cityId, { city_id: cityId, name: quest.city_name_canonical, locales: [] })
+      if (!cities.get(cityId).locales.includes(code)) cities.get(cityId).locales.push(code)
     }
   }
+  return [...cities.values()]
+}
+
+async function commandNext(args, api) {
+  const { order, remaining, batch } = await selectPending(args, api)
+  const cities = await collectCitiesWithoutName(api, batch)
 
   const describe = (row) => {
     if (!row) return 'missing'
@@ -222,8 +286,8 @@ async function commandNext(args, api) {
     return `${row.state}${stale}${missing}`
   }
   const result = {
-    order: starts ? 'starts' : 'catalog',
-    remaining: pending.length,
+    order,
+    remaining,
     quests: batch.map(({ quest, rows, locales }) => ({
       id: quest.id,
       quest_id: quest.quest_id,
@@ -231,7 +295,7 @@ async function commandNext(args, api) {
       city_id: Number(quest.city_id),
       locales: Object.fromEntries(locales.map((code) => [code, describe(rows.get(code))])),
     })),
-    cities: [...cities.values()],
+    cities,
   }
   if (args.json) return process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
 
@@ -314,16 +378,20 @@ async function commandPrepare(args, api) {
   console.log(`  режим ${plan.mode}; шагов к переводу ${plan.translate.length} из ${source.steps.length}; результат → ${relative(paths.translation)}`)
 }
 
+/** Файл артефакта пары: битый JSON — отказ с путём, а не стек посреди волны `sweep`. */
+function readAgentJson(filePath) {
+  try {
+    return readJsonFile(filePath)
+  } catch (error) {
+    throw new ExpectedFailureError(`${relative(filePath)} — не JSON: ${error.message}`)
+  }
+}
+
 function loadArtifacts(args) {
   const paths = artifactPaths(args.workDir, args.locale, args.quest)
   const task = readJsonFile(paths.task)
   if (!task) throw new ExpectedFailureError(`нет задания ${relative(paths.task)} — сначала prepare`)
-  let translation
-  try {
-    translation = readJsonFile(paths.translation)
-  } catch (error) {
-    throw new ExpectedFailureError(`${relative(paths.translation)} — не JSON: ${error.message}`)
-  }
+  const translation = readAgentJson(paths.translation)
   if (!translation) throw new ExpectedFailureError(`нет файла перевода ${relative(paths.translation)}`)
   return { paths, task, translation }
 }
@@ -333,7 +401,8 @@ function evaluate(args) {
   const { paths, task, translation } = loadArtifacts(args)
   const structural = runStructuralChecks({ task, translation })
   const structuralOk = structural.every((entry) => entry.ok)
-  const semantic = structuralOk ? mergeReview({ task, translation, review: readJsonFile(paths.review) }) : []
+  const review = structuralOk ? readAgentJson(paths.review) : null
+  const semantic = structuralOk ? mergeReview({ task, translation, review }) : []
   const checks = [...structural, ...semantic]
   if (translation && typeof translation === 'object' && !Array.isArray(translation)) {
     writeJsonFile(paths.translation, { ...translation, checks })
@@ -341,7 +410,15 @@ function evaluate(args) {
   // Задание проверяющему пересобирается каждый раз: после правки перевода старый
   // вердикт недействителен, и проверять нужно уже новую версию.
   if (structuralOk) writeJsonFile(paths.reviewTask, buildReviewTask({ task, translation, paths }))
-  return { paths, task, translation, checks, structuralOk, reviewed: semantic.length > 0 }
+  return {
+    paths,
+    task,
+    translation,
+    checks,
+    structuralOk,
+    reviewed: semantic.length > 0,
+    reviewState: structuralOk ? reviewState({ task, translation, review }) : 'none',
+  }
 }
 
 function printCheckReport({ task, checks }) {
@@ -388,26 +465,28 @@ function buildDocument({ translation, existing, publish, force }) {
   }
 }
 
-async function commandUpload(args, api) {
-  if (args.publish && args.unpublish) throw new UsageError('--publish и --unpublish исключают друг друга')
-  const result = evaluate(args)
-  const blockers = uploadBlockers(result.checks, { publish: args.publish })
+/**
+ * Запись проверенного перевода: гейт публикации, защита опубликованного от
+ * черновика, PUT и разбор отказа сервера. Общее ядро `upload` и `sweep`.
+ * `existing` — перевод с сервера, если вызывающий его уже прочитал.
+ */
+async function uploadEvaluated({ api, result, quest, locale, publish, unpublish = false, force = false, existing }) {
+  const blockers = uploadBlockers(result.checks, { publish })
   if (blockers.length) {
-    printCheckReport(result)
     throw new ExpectedFailureError(
-      `${args.quest} → ${args.locale}: ${args.publish ? 'публикация' : 'запись черновика'} закрыта — ${blockers[0]}` +
+      `${quest} → ${locale}: ${publish ? 'публикация' : 'запись черновика'} закрыта — ${blockers[0]}` +
         (blockers.length > 1 ? ` (и ещё ${blockers.length - 1})` : ''),
     )
   }
   const questPk = result.task.quest.id
-  const existing = await api.getTranslation(questPk, args.locale)
-  if (existing && existing.status === 'published' && !args.publish && !args.unpublish) {
+  const server = existing === undefined ? await api.getTranslation(questPk, locale) : existing
+  if (server && server.status === 'published' && !publish && !unpublish) {
     throw new ExpectedFailureError(
-      `${args.quest} → ${args.locale}: перевод опубликован, запись черновиком снимет его с показа — нужен --publish (или --unpublish)`,
+      `${quest} → ${locale}: перевод опубликован, запись черновиком снимет его с показа — нужен --publish (или --unpublish)`,
     )
   }
-  const { document, keptHuman } = buildDocument({ translation: result.translation, existing, publish: args.publish, force: args.force })
-  const response = await api.putTranslation(questPk, args.locale, document)
+  const { document, keptHuman } = buildDocument({ translation: result.translation, existing: server, publish, force })
+  const response = await api.putTranslation(questPk, locale, document)
   if (response.status === 400) {
     const errors = ((response.json && response.json.errors) || []).map(
       (error) => `${error.code}${error.step_id ? ` step ${error.step_id}` : ''}${error.field ? ` (${error.field})` : ''}`,
@@ -421,12 +500,165 @@ async function commandUpload(args, api) {
   if (response.status !== 200) {
     throw new ExpectedFailureError(`PUT перевода: HTTP ${response.status} ${response.text.slice(0, 300)}`)
   }
+  return { document, keptHuman }
+}
+
+async function commandUpload(args, api) {
+  if (args.publish && args.unpublish) throw new UsageError('--publish и --unpublish исключают друг друга')
+  const result = evaluate(args)
+  if (uploadBlockers(result.checks, { publish: args.publish }).length) printCheckReport(result)
+  const { quest, locale, publish, unpublish, force } = args
+  const { document, keptHuman } = await uploadEvaluated({ api, result, quest, locale, publish, unpublish, force })
   const failed = result.checks.filter((entry) => !entry.ok).length
   console.log(
     `${args.quest} → ${args.locale}: записан как ${document.status}, шагов ${document.steps.length}` +
       (keptHuman.length ? `; ручной перевод сохранён в шагах ${keptHuman.join(', ')}` : '') +
       (failed ? `; не пройдено проверок: ${failed} — остаётся черновиком` : ''),
   )
+}
+
+const failedChecks = (checks) => checks.filter((entry) => !entry.ok).map((entry) => `${entry.check}: ${entry.detail}`)
+
+/** Опубликованный перевод сервера совпадает с тем, что было бы записано: PUT не нужен. */
+const alreadyPublished = (existing, document) =>
+  Boolean(existing) && existing.status === 'published' && translationDigest(existing) === translationDigest(document)
+
+/**
+ * Состояние одной пары волны; публикует, если структурные и смысловая проверки
+ * зелёные. `currentSource` — русский источник с сервера, один запрос на квест.
+ */
+async function sweepPair({ api, workDir, quest, locale, statusRow, currentSource }) {
+  const paths = artifactPaths(workDir, locale, quest)
+  // Сервер считает перевод полным и актуальным: на нём `prepare` задания не создаёт
+  // («переводить нечего»), поэтому локальные файлы такой пары — прошлая работа.
+  const serverDone = !isIncomplete(statusRow)
+  const task = readAgentJson(paths.task)
+  if (!task) {
+    if (serverDone) return { status: SWEEP.PUBLISHED, details: ['уже опубликован на сервере'] }
+    return { status: SWEEP.NO_TASK, details: [`нет ${relative(paths.task)} — prepare`] }
+  }
+  // Сервер уже показывает этот файл: ни проверять, ни писать нечего. Проверка по
+  // содержимому, а не только по статусу: после `prepare --force` и повторного
+  // перевода опубликованная пара снова становится работой.
+  let existing
+  const hasTranslation = fs.existsSync(paths.translation)
+  if (serverDone && hasTranslation) {
+    existing = await api.getTranslation(task.quest.id, locale)
+    let local = null
+    try {
+      local = readJsonFile(paths.translation)
+    } catch {
+      local = null
+    }
+    if (local && alreadyPublished(existing, local)) return { status: SWEEP.PUBLISHED, details: ['уже опубликован на сервере'] }
+  }
+  // Квест правили после `prepare`: перевод и вердикт относятся к прежнему тексту,
+  // а запись отметила бы их на сервере как актуальные. Такое задание — не задание,
+  // и переводить по нему тоже нельзя — проверка идёт до ожидания переводчика.
+  if (sourceDigest(task.source) !== sourceDigest(await currentSource(quest))) {
+    const why = `${relative(paths.task)} — задание от прежней версии источника`
+    if (serverDone) return { status: SWEEP.PUBLISHED, details: [`уже опубликован на сервере; ${why}`] }
+    return { status: SWEEP.NO_TASK, details: [`${why}: prepare заново`] }
+  }
+  if (!hasTranslation) {
+    return { status: SWEEP.AWAITING_TRANSLATION, details: [`нет ${relative(paths.translation)} — quest-translator по ${relative(paths.task)}`] }
+  }
+
+  let result
+  try {
+    result = evaluate({ workDir, quest, locale })
+  } catch (error) {
+    if (!(error instanceof ExpectedFailureError)) throw error
+    return { status: SWEEP.STRUCT_FAIL, details: [error.message] }
+  }
+  if (!result.structuralOk) return { status: SWEEP.STRUCT_FAIL, details: failedChecks(result.checks) }
+  if (result.reviewState !== 'current') {
+    const why = result.reviewState === 'stale' ? 'вердикт от другой версии перевода или источника' : 'нет вердикта'
+    return { status: SWEEP.NEEDS_REVIEW, details: [`${why} — quest-translator по ${relative(result.paths.reviewTask)}`] }
+  }
+  const refused = failedChecks(result.checks)
+  if (refused.length) return { status: SWEEP.REVIEW_REFUSED, details: refused }
+
+  if (existing === undefined) existing = await api.getTranslation(task.quest.id, locale)
+  // Ручные шаги сервера остаются его: если с ними документ не меняется и сервер
+  // считает перевод полным и актуальным, PUT лишний. Перевод с устаревшими или
+  // недостающими шагами при том же тексте записывается заново — так сервер
+  // узнаёт, что его проверили по новому источнику.
+  const { document } = buildDocument({ translation: result.translation, existing, publish: true, force: false })
+  if (serverDone && alreadyPublished(existing, document)) {
+    return { status: SWEEP.PUBLISHED, details: ['уже опубликован на сервере'] }
+  }
+  try {
+    const uploaded = await uploadEvaluated({ api, result, quest, locale, publish: true, existing })
+    const kept = uploaded.keptHuman.length ? `; ручной перевод сохранён в шагах ${uploaded.keptHuman.join(', ')}` : ''
+    return { status: SWEEP.PUBLISHED, details: [`опубликован, шагов ${uploaded.document.steps.length}${kept}`] }
+  } catch (error) {
+    if (!(error instanceof ExpectedFailureError)) throw error
+    return { status: SWEEP.UPLOAD_FAILED, details: [error.message] }
+  }
+}
+
+function printSweepReport({ quests, pairs, summary }) {
+  const width = Math.max(...pairs.map((pair) => pair.quest_id.length))
+  const statusWidth = Math.max(...Object.values(SWEEP).map((name) => name.length))
+  console.log(`Волна: квестов ${quests.length}, пар ${pairs.length}`)
+  for (const pair of pairs) {
+    const shown = pair.details.slice(0, SWEEP_DETAILS_SHOWN)
+    const more = pair.details.length > shown.length ? ` (и ещё ${pair.details.length - shown.length})` : ''
+    console.log(`  ${pair.quest_id.padEnd(width)}  ${pair.locale}  ${pair.status.padEnd(statusWidth)}  ${shown.join('; ')}${more}`)
+  }
+  console.log(`Итого: ${Object.entries(summary).map(([status, count]) => `${status} ${count}`).join(', ')}`)
+}
+
+async function commandSweep(args, api) {
+  const { targets } = getQuestContentLocales()
+  let quests = [...new Set(args.commands.slice(1))]
+  let status = null
+  if (isSet(args.fromNext)) {
+    const pending = await selectPending({ count: args.fromNext, order: args.order }, api)
+    quests = pending.batch.map((entry) => entry.quest.quest_id)
+    status = pending.status
+  }
+  requireNonEmptySelection(quests, { message: 'next: квестов без полного перевода не осталось — волне нечего делать' })
+  if (!status) status = indexStatus(await api.getStatus())
+
+  // Кэш по обещанию, а не по результату: отказ сервера по квесту тоже один на
+  // все его локали, а не четыре цикла повторов.
+  const sources = new Map()
+  const currentSource = (quest) => {
+    if (!sources.has(quest)) sources.set(quest, api.getBundle(quest).then(sourceFromBundle))
+    return sources.get(quest)
+  }
+  const pairs = []
+  for (const quest of quests) {
+    for (const locale of targets) {
+      const statusRow = (status.get(quest) || new Map()).get(locale) || null
+      let outcome
+      try {
+        outcome = await sweepPair({ api, workDir: args.workDir, quest, locale, statusRow, currentSource })
+      } catch (error) {
+        // Отказ одной пары (квест снят, 5xx после повторов) не прячет отчёт по уже
+        // опубликованным; повтор волны безопасен — опубликованное пропускается.
+        if (!(error instanceof ExpectedFailureError)) throw error
+        outcome = { status: SWEEP.ERROR, details: [error.message] }
+      }
+      pairs.push({ quest_id: quest, locale, ...outcome })
+    }
+  }
+  const summary = {}
+  for (const name of Object.values(SWEEP)) {
+    const count = pairs.filter((pair) => pair.status === name).length
+    if (count) summary[name] = count
+  }
+  const failed = pairs.filter((pair) => SWEEP_FAILURES.has(pair.status)).length
+  const report = { quests, pairs, summary, failed }
+  if (args.json) process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
+  else printSweepReport(report)
+  requireNoBatchFailures(failed, {
+    total: pairs.length,
+    what: 'пар',
+    message: `${failed} из ${pairs.length} пар с отказом (${[...SWEEP_FAILURES].join(', ')}) — см. отчёт`,
+  })
 }
 
 async function commandStatus(args, api) {
@@ -471,6 +703,7 @@ async function run(args, { fetchImpl, tokenSources } = {}) {
   if (command === 'prepare') return commandPrepare(args, api)
   if (command === 'check') return commandCheck(args)
   if (command === 'upload') return commandUpload(args, api)
+  if (command === 'sweep') return commandSweep(args, api)
   if (command === 'status') return commandStatus(args, api)
   return commandCityName(args, api)
 }
@@ -483,4 +716,4 @@ if (require.main === module) {
   runCli(main, { name: NAME, usage: USAGE })
 }
 
-module.exports = { CLI_SPEC, COMMANDS, buildDocument, indexStatus, isIncomplete, parseArgs, resolveInvocation, run }
+module.exports = { CLI_SPEC, COMMANDS, SWEEP, SWEEP_FAILURES, buildDocument, indexStatus, isIncomplete, parseArgs, resolveInvocation, run }

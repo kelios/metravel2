@@ -16,6 +16,8 @@ const {
   missingNumbers,
   runStructuralChecks,
   reviewDigest,
+  reviewState,
+  sourceDigest,
   uploadBlockers,
 } = require('@/scripts/lib/questTranslation/checks')
 const { getQuestContentLocales } = require('@/scripts/lib/questTranslation/locales')
@@ -26,12 +28,14 @@ const {
   buildReviewTask,
   buildTask,
   collectUiLabels,
+  describeAnswerRule,
   loadGlossary,
   planSteps,
   sourceFromBundle,
 } = require('@/scripts/lib/questTranslation/task')
 
 type Check = { step_id: number | null; check: string; ok: boolean; detail: string }
+type Json = Record<string, any>
 
 const makeTask = (locale = 'pl', overrides: Record<string, unknown> = {}) => {
   const bundle = makeBundle()
@@ -63,6 +67,16 @@ describe('источник из бандла', () => {
     expect(source.steps.map((step: { step_id: number }) => step.step_id)).toEqual([INTRO_ID, GATE_ID, TOWER_ID])
     expect(source.steps[1]).toMatchObject({ slug: '1-gate', answer_type: 'exact_any', answer_variants: ['орел', 'орёл', 'eagle', 'orzel'] })
     expect(source.steps[2]).toMatchObject({ answer_type: 'range', answer_variants: [], poi_ticket_price: 'обычный 35 PLN, льготный 25 PLN' })
+  })
+
+  it('числовой ответ описан правилом: у range и approx список вариантов пуст, верное число — словами', () => {
+    const source = sourceFromBundle(makeBundle())
+    expect(source.steps.map((step: { answer_rule: string }) => step.answer_rule)).toEqual(['', '', 'целое число от 6 до 8'])
+    expect(describeAnswerRule({ type: 'approx', value: '{"target":50.5,"tolerance":0.5}' })).toBe('число около 50.5, допуск ±0.5')
+    expect(describeAnswerRule({ type: 'range', value: { min: 1, max: 3 } })).toBe('целое число от 1 до 3')
+    expect(describeAnswerRule({ type: 'range', value: 'не json' })).toBe('')
+    expect(describeAnswerRule({ type: 'range', value: '{"min":"a","max":3}' })).toBe('')
+    expect(describeAnswerRule({ type: 'exact_any', value: '["орёл"]' })).toBe('')
   })
 })
 
@@ -276,11 +290,42 @@ describe('смысловая проверка и гейт публикации',
   const verdicts = [INTRO_ID, GATE_ID, TOWER_ID, null].map((id) => ({ step_id: id, ok: true, detail: '' }))
   const review = { kind: 'quest-translation-review', translation_sha256: reviewDigest({ task, translation }), verdicts }
 
+  const paths = artifactPaths('.codex-temp/quest-translations', 'pl', 'demo-quest')
+
   it('задание проверяющему несёт хеш перевода и объединённые ответы шага', () => {
-    const reviewTask = buildReviewTask({ task, translation, paths: artifactPaths('.codex-temp/quest-translations', 'pl', 'demo-quest') })
+    const reviewTask = buildReviewTask({ task, translation, paths })
     expect(reviewTask.translation_sha256).toBe(review.translation_sha256)
     expect(reviewTask.steps[1].accepted_answers).toEqual(['orzeł', 'orzel', 'orła', 'орел', 'орёл', 'eagle'])
     expect(reviewTask.output_path).toMatch(/pl\/demo-quest\.review\.json$/)
+  })
+
+  it('у числового шага проверяющий получает правило ответа вместо пустого списка', () => {
+    const reviewTask = buildReviewTask({ task, translation, paths })
+    expect(reviewTask.steps[2]).toMatchObject({ answer_type: 'range', accepted_answers: [], answer_rule: 'целое число от 6 до 8' })
+    expect(reviewTask.steps[1].answer_rule).toBe('')
+    expect(reviewTask.instructions.join('\n')).toContain('answer_rule')
+    // Задание, подготовленное до появления поля, проверяется без падения.
+    const legacySteps = task.source.steps.map(({ answer_rule: _rule, ...step }: { answer_rule: string }) => step)
+    const legacy = buildReviewTask({ task: { ...task, source: { ...task.source, steps: legacySteps } }, translation, paths })
+    expect(legacy.steps[2].answer_rule).toBe('')
+  })
+
+  it('хеш источника: служебные поля снимка не считаются, текст и тип ответа — считаются', () => {
+    const source = sourceFromBundle(makeBundle())
+    const legacy = { ...source, steps: source.steps.map(({ answer_rule: _rule, slug: _slug, ...step }: Json) => step) }
+    expect(sourceDigest(legacy)).toBe(sourceDigest(source))
+    const retitled = { ...source, title: `${source.title} (новая редакция)` }
+    expect(sourceDigest(retitled)).not.toBe(sourceDigest(source))
+    const retyped = { ...source, steps: source.steps.map((step: Json) => (step.step_id === TOWER_ID ? { ...step, answer_type: 'any_number' } : step)) }
+    expect(sourceDigest(retyped)).not.toBe(sourceDigest(source))
+  })
+
+  it('состояние вердикта: нет файла, вынесен по другой версии, актуален', () => {
+    expect(reviewState({ task, translation, review: null })).toBe('none')
+    expect(reviewState({ task, translation, review })).toBe('current')
+    const edited = makePolishTranslation()
+    stepOf(edited, GATE_ID).hint += ' Spójrz wyżej.'
+    expect(reviewState({ task, translation: edited, review })).toBe('stale')
   })
 
   it('нет вердикта — записей semantic нет, публикация закрыта, черновик открыт', () => {
@@ -384,12 +429,22 @@ describe('локали и справочные данные', () => {
     expect(fs.existsSync(path.join(ROOT, GUIDE_PATH))).toBe(true)
   })
 
-  it('подпись кнопки из текста квеста берётся из интерфейса на языке перевода', () => {
+  it('подписи кнопок: из текста квеста и кнопки карточки шага — из интерфейса на языке перевода', () => {
     const source = sourceFromBundle(makeBundle())
     for (const locale of targets) {
       const labels = collectUiLabels({ source, sourceLocale, locale })
-      expect(labels.map((label: { source: string }) => label.source)).toEqual(['Начать квест'])
-      expect(labels[0].target).toBeTruthy()
+      expect(labels.map((label: { source: string }) => label.source)).toEqual(['Начать квест', 'Далее', 'Проверить ответ'])
+      for (const label of labels) expect({ locale, source: label.source, translated: label.target !== label.source }).toEqual({ locale, source: label.source, translated: true })
     }
+    expect(collectUiLabels({ source, sourceLocale, locale: 'pl' }).slice(1)).toEqual([
+      { source: 'Далее', target: 'Następny' },
+      { source: 'Проверить ответ', target: 'Sprawdź odpowiedź' },
+    ])
+    // Квест без кнопки в кавычках всё равно получает кнопки карточки шага.
+    const plain = { ...source, steps: source.steps.map((step: { task: string }) => ({ ...step, task: step.task.replace(/[«»]/g, '') })) }
+    expect(collectUiLabels({ source: plain, sourceLocale, locale: 'en' })).toEqual([
+      { source: 'Далее', target: 'Next' },
+      { source: 'Проверить ответ', target: 'Check answer' },
+    ])
   })
 })

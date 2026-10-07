@@ -12,7 +12,7 @@ const fs = require('fs')
 const http = require('http')
 const path = require('path')
 
-const { UsageError, ExpectedFailureError } = require('@/scripts/lib/cli-contract')
+const { EmptySelectionError, ExpectedFailureError, UsageError } = require('@/scripts/lib/cli-contract')
 const { RETRY_DELAYS_MS, createApi, resolveToken } = require('@/scripts/lib/questTranslation/api')
 const { reviewDigest } = require('@/scripts/lib/questTranslation/checks')
 const { parseArgs, run } = require('@/scripts/quest-translate')
@@ -34,6 +34,8 @@ let translations: Map<string, Json>
 let cityNames: Map<string, string>
 let sourceStepIds: number[]
 let staleStepIds: number[]
+// Правка русского источника после `prepare`: поля поверх бандла демо-квеста.
+let bundlePatch: Json
 let requests: string[]
 let QUESTS: typeof BASE_QUESTS
 
@@ -69,7 +71,11 @@ const handle = (req: any, res: any, body: Json | null) => {
 
   const bundleOf = /^\/api\/quests\/by-quest-id\/([a-z0-9-]+)\/$/.exec(url.pathname)
   const bundleQuest = bundleOf && QUESTS.find((quest) => quest.quest_id === bundleOf[1] && quest.city_id === '1')
-  if (req.method === 'GET' && bundleQuest) return sendJson(res, 200, { ...makeBundle(), id: bundleQuest.id, quest_id: bundleQuest.quest_id })
+  if (req.method === 'GET' && bundleQuest) {
+    return sendJson(res, 200, { ...makeBundle(), ...bundlePatch, id: bundleQuest.id, quest_id: bundleQuest.quest_id })
+  }
+  // Публичный источник: неизвестный квест — 404, а не отказ в доступе.
+  if (req.method === 'GET' && bundleOf) return sendJson(res, 404, { detail: 'Not found.' })
   if (req.method === 'GET' && url.pathname === '/api/quests/') {
     const lang = url.searchParams.get('lang')
     return sendJson(res, 200, {
@@ -130,6 +136,7 @@ beforeEach(() => {
   cityNames = new Map()
   sourceStepIds = [INTRO_ID, GATE_ID, TOWER_ID]
   staleStepIds = []
+  bundlePatch = {}
   requests = []
   QUESTS = [...BASE_QUESTS]
   logSpy = jest.spyOn(console, 'log').mockImplementation(() => {})
@@ -192,6 +199,13 @@ describe('разбор вызова', () => {
     [['next', '--count', '3', '--order', 'random'], '--order random'],
     [['translate', ...QUEST], 'нужна одна подкоманда'],
     [['next', 'status', '--count', '1'], 'нужна одна подкоманда'],
+    [['check', 'demo-quest', ...QUEST], 'нужна одна подкоманда'],
+    [['toString', ...QUEST], 'нужна одна подкоманда'],
+    [['sweep'], 'нужен список quest_id или --from-next'],
+    [['sweep', 'demo-quest', '--from-next', '2'], 'либо список quest_id, либо --from-next'],
+    [['sweep', 'demo-quest', 'Demo_Quest'], '"Demo_Quest" — не quest_id'],
+    [['sweep', 'demo-quest', '--order', 'catalog'], '--order имеет смысл только с --from-next'],
+    [['sweep', 'demo-quest', '--publish'], '--publish не относится к sweep'],
   ])('%j — ошибка вызова', async (tokens, message) => {
     await expect(cli(tokens)).rejects.toThrow(UsageError)
     await expect(cli(tokens)).rejects.toThrow(message)
@@ -405,6 +419,212 @@ describe('upload', () => {
     sourceStepIds = [INTRO_ID, GATE_ID, TOWER_ID, 73]
     await expect(cli(['upload', ...QUEST, '--publish'])).rejects.toThrow('сервер отклонил перевод: missing_steps (steps); missing_step_ids: 73')
     expect(stored()).toBeUndefined()
+  })
+})
+
+describe('sweep', () => {
+  const printed = () => JSON.parse(stdoutSpy.mock.calls.map((call) => call[0]).join(''))
+  const pairOf = (report: Json, locale: string, questId = 'demo-quest') =>
+    report.pairs.find((pair: Json) => pair.quest_id === questId && pair.locale === locale)
+  const prepareLocale = async (locale: string, translation: unknown = null) => {
+    await cli(['prepare', '--quest', 'demo-quest', '--locale', locale])
+    if (translation) fs.writeFileSync(artifact('.json', locale), JSON.stringify(translation))
+  }
+
+  it('одна волна: готовая пара публикуется, остальные получают состояние по месту в конвейере', async () => {
+    await prepareAndTranslate()
+    writeReview(makePolishTranslation())
+    // Польский текст проходит структурные проверки и для en: ни кириллицы, ни потерь.
+    await prepareLocale('en', makePolishTranslation())
+    await prepareLocale('be')
+    requests = []
+    await cli(['sweep', 'demo-quest', '--json'])
+    const report = printed()
+    expect(report.quests).toEqual(['demo-quest'])
+    expect(report.summary).toEqual({ no_task: 1, awaiting_translation: 1, needs_review: 1, published: 1 })
+    expect(report.failed).toBe(0)
+    expect(pairOf(report, 'pl')).toMatchObject({ status: 'published', details: ['опубликован, шагов 3'] })
+    expect(pairOf(report, 'en')).toMatchObject({ status: 'needs_review', details: [expect.stringContaining('нет вердикта')] })
+    expect(pairOf(report, 'en').details[0]).toContain('en/demo-quest.review-task.json')
+    expect(pairOf(report, 'be')).toMatchObject({ status: 'awaiting_translation', details: [expect.stringContaining('be/demo-quest.json')] })
+    expect(pairOf(report, 'uk')).toMatchObject({ status: 'no_task', details: [expect.stringContaining('prepare')] })
+    expect(writes()).toEqual(['PUT /api/quests/7/translations/pl/'])
+    expect(stored()!.status).toBe('published')
+    // Задание проверяющему для en уже лежит рядом — его и отдают агенту.
+    expect(fs.existsSync(artifact('.review-task.json', 'en'))).toBe(true)
+  })
+
+  it('повторная волна пропускает опубликованную пару по статусу сервера: ни проверок, ни записи', async () => {
+    await prepareAndTranslate()
+    writeReview(makePolishTranslation())
+    await cli(['sweep', 'demo-quest', '--json'])
+    fs.unlinkSync(artifact('.review-task.json'))
+    requests = []
+    stdoutSpy.mockClear()
+    await cli(['sweep', 'demo-quest', '--json'])
+    expect(pairOf(printed(), 'pl')).toMatchObject({ status: 'published', details: ['уже опубликован на сервере'] })
+    expect(requests).toContain('GET /api/quests/7/translations/pl/')
+    expect(writes()).toEqual([])
+    expect(fs.existsSync(artifact('.review-task.json'))).toBe(false)
+  })
+
+  it('старый вердикт после повторного перевода — needs_review, а не отказ проверяющего', async () => {
+    await prepareAndTranslate()
+    writeReview(makePolishTranslation())
+    const retranslated = makePolishTranslation()
+    retranslated.steps[1].hint = 'Płaskorzeźba jest wysoko, tuż pod dachem bramy.'
+    writeArtifact('.json', retranslated)
+    await cli(['sweep', 'demo-quest', '--json'])
+    const report = printed()
+    expect(pairOf(report, 'pl')).toMatchObject({ status: 'needs_review', details: [expect.stringContaining('другой версии')] })
+    expect(report.failed).toBe(0)
+    expect(writes()).toEqual([])
+    expect(readArtifact('.review-task.json').translation_sha256).toBe(
+      reviewDigest({ task: readArtifact('.task.json'), translation: retranslated }),
+    )
+  })
+
+  it('отказ проверяющего и структурный отказ — красные строки с причиной и ненулевой выход', async () => {
+    await prepareAndTranslate()
+    writeReview(makePolishTranslation(), false)
+    const broken = makePolishTranslation()
+    broken.steps[1].hint = 'Барельеф bardzo wysoko, pod dachem bramy.'
+    await prepareLocale('en', broken)
+    await expect(cli(['sweep', 'demo-quest'])).rejects.toThrow('2 из 4 пар с отказом')
+    expect(logged()).toMatch(/demo-quest\s+pl\s+review_refused\s+semantic: смысл искажён; semantic: смысл искажён \(и ещё 2\)/)
+    expect(logged()).toMatch(/demo-quest\s+en\s+struct_fail\s+script: шаг «1-gate» \(Флорианские ворота — страж на рубеже\): кириллица/)
+    expect(logged()).toContain('Итого: no_task 2, struct_fail 1, review_refused 1')
+    expect(writes()).toEqual([])
+  })
+
+  it('отказ сервера при публикации — upload_failed с причиной сервера, остальные пары не теряются', async () => {
+    await prepareAndTranslate()
+    writeReview(makePolishTranslation())
+    sourceStepIds = [INTRO_ID, GATE_ID, TOWER_ID, 73]
+    await expect(cli(['sweep', 'demo-quest', '--json'])).rejects.toThrow(ExpectedFailureError)
+    const report = printed()
+    expect(pairOf(report, 'pl')).toMatchObject({ status: 'upload_failed', details: [expect.stringContaining('missing_step_ids: 73')] })
+    expect(report.summary).toEqual({ no_task: 3, upload_failed: 1 })
+    expect(stored()).toBeUndefined()
+  })
+
+  it('квест правили после prepare: задание от прежней версии — no_task, перевод прежнего текста не публикуется', async () => {
+    await prepareAndTranslate()
+    writeReview(makePolishTranslation())
+    bundlePatch = { title: 'Квест по Кракову: демо, новая редакция' }
+    requests = []
+    await cli(['sweep', 'demo-quest', '--json'])
+    const report = printed()
+    expect(pairOf(report, 'pl')).toMatchObject({ status: 'no_task', details: [expect.stringContaining('прежней версии источника')] })
+    expect(report.failed).toBe(0)
+    expect(writes()).toEqual([])
+    // Источник читается один раз на квест, а не на каждую пару.
+    expect(requests.filter((line) => line === 'GET /api/quests/by-quest-id/demo-quest/')).toHaveLength(1)
+  })
+
+  it('задание от прежней версии без перевода — no_task до того, как переводчик переведёт старый текст', async () => {
+    await prepareLocale('en')
+    bundlePatch = { title: 'Квест по Кракову: демо, новая редакция' }
+    await cli(['sweep', 'demo-quest', '--json'])
+    expect(pairOf(printed(), 'en')).toMatchObject({ status: 'no_task', details: [expect.stringContaining('прежней версии источника')] })
+  })
+
+  it('задание от прежней версии при полном опубликованном переводе — published, а не круг «prepare»', async () => {
+    await prepareAndTranslate()
+    translations.set('7:pl', { ...makePolishTranslation(), status: 'published' })
+    bundlePatch = { title: 'Квест по Кракову: демо, новая редакция' }
+    fs.unlinkSync(artifact('.json'))
+    await cli(['sweep', 'demo-quest', '--json'])
+    expect(pairOf(printed(), 'pl')).toMatchObject({
+      status: 'published',
+      details: [expect.stringMatching(/^уже опубликован на сервере; .*прежней версии источника/)],
+    })
+    expect(writes()).toEqual([])
+  })
+
+  it('квест, которого сервер не отдаёт, — error этой пары с причиной; отчёт и остальные пары на месте', async () => {
+    await prepareAndTranslate()
+    writeReview(makePolishTranslation())
+    fs.mkdirSync(path.join(workDir, 'pl'), { recursive: true })
+    fs.copyFileSync(artifact('.task.json'), path.join(workDir, 'pl', 'second-quest.task.json'))
+    fs.copyFileSync(artifact('.json'), path.join(workDir, 'pl', 'second-quest.json'))
+    await expect(cli(['sweep', 'second-quest', 'demo-quest', '--json'])).rejects.toThrow('1 из 8 пар с отказом')
+    const report = printed()
+    expect(pairOf(report, 'pl', 'second-quest')).toMatchObject({ status: 'error', details: ['квест second-quest не найден'] })
+    expect(pairOf(report, 'pl')).toMatchObject({ status: 'published' })
+    expect(report.summary).toEqual({ no_task: 6, error: 1, published: 1 })
+    expect(writes()).toEqual(['PUT /api/quests/7/translations/pl/'])
+    // Отказ сервера по квесту тоже один на все локали, а не повтор на каждую пару.
+    expect(requests.filter((line) => line === 'GET /api/quests/by-quest-id/second-quest/')).toHaveLength(1)
+  })
+
+  it('устаревший на сервере шаг при том же тексте записывается заново: сервер узнаёт о проверке по новому источнику', async () => {
+    translations.set('7:pl', { ...makePolishTranslation(), status: 'published' })
+    staleStepIds = [TOWER_ID]
+    await cli(['prepare', ...QUEST])
+    expect(readArtifact('.task.json')).toMatchObject({ mode: 'incremental', translate_step_ids: [TOWER_ID] })
+    writeArtifact('.json', makePolishTranslation())
+    writeReview(makePolishTranslation())
+    requests = []
+    await cli(['sweep', 'demo-quest', '--json'])
+    expect(pairOf(printed(), 'pl')).toMatchObject({ status: 'published', details: ['опубликован, шагов 3'] })
+    expect(writes()).toEqual(['PUT /api/quests/7/translations/pl/'])
+  })
+
+  it('ручные шаги на сервере: если документ не изменился бы, пара опубликована без записи', async () => {
+    await prepareAndTranslate()
+    writeReview(makePolishTranslation())
+    const human = makePolishTranslation()
+    human.steps[1] = { ...human.steps[1], task: 'Ręcznie poprawione zadanie.', origin: 'human' }
+    translations.set('7:pl', { ...human, status: 'published' })
+    await cli(['sweep', 'demo-quest', '--json'])
+    expect(pairOf(printed(), 'pl')).toMatchObject({ status: 'published', details: ['уже опубликован на сервере'] })
+    expect(writes()).toEqual([])
+    expect(stored()!.steps[1].origin).toBe('human')
+  })
+
+  it('пара без задания: полный опубликованный перевод на сервере — published, неполный — no_task', async () => {
+    // `prepare` на полном опубликованном переводе задания не создаёт — совет «prepare» был бы пустым кругом.
+    translations.set('7:uk', { ...makePolishTranslation(), status: 'published' })
+    const partial = makePolishTranslation()
+    partial.steps = partial.steps.filter((step: Json) => step.step_id !== TOWER_ID)
+    translations.set('7:en', { ...partial, status: 'published' })
+    await cli(['sweep', 'demo-quest', '--json'])
+    const report = printed()
+    expect(pairOf(report, 'uk')).toMatchObject({ status: 'published', details: ['уже опубликован на сервере'] })
+    expect(pairOf(report, 'en')).toMatchObject({ status: 'no_task', details: [expect.stringContaining('prepare')] })
+    expect(report.summary).toEqual({ no_task: 3, published: 1 })
+    expect(requests.filter((line) => line.includes('/translations/') && !line.includes('/status/'))).toEqual([])
+  })
+
+  it('битый вердикт проверяющего — отказ этой пары с путём файла, остальные пары в отчёте', async () => {
+    await prepareAndTranslate()
+    fs.writeFileSync(artifact('.review.json'), '{"verdicts": [')
+    await expect(cli(['sweep', 'demo-quest', '--json'])).rejects.toThrow('1 из 4 пар с отказом')
+    const report = printed()
+    expect(pairOf(report, 'pl')).toMatchObject({ status: 'struct_fail', details: [expect.stringContaining('pl/demo-quest.review.json — не JSON')] })
+    expect(report.summary).toEqual({ no_task: 3, struct_fail: 1 })
+    expect(writes()).toEqual([])
+  })
+
+  it('--from-next берёт квесты из выборки next; пустая выборка — ненулевой выход, а не зелёный отчёт', async () => {
+    await cli(['sweep', '--from-next', '1', '--order', 'catalog', '--json'])
+    const report = printed()
+    expect(report.quests).toEqual(['second-quest'])
+    expect(report.pairs.map((pair: Json) => [pair.locale, pair.status])).toEqual([
+      ['be', 'no_task'],
+      ['uk', 'no_task'],
+      ['pl', 'no_task'],
+      ['en', 'no_task'],
+    ])
+    expect(requests.filter((line) => line.includes('/translations/status/'))).toHaveLength(1)
+
+    for (const code of ['be', 'uk', 'pl', 'en']) {
+      translations.set(`9:${code}`, { status: 'published', steps: [] })
+      translations.set(`7:${code}`, { ...makePolishTranslation(), status: 'published' })
+    }
+    await expect(cli(['sweep', '--from-next', '5', '--order', 'catalog'])).rejects.toThrow(EmptySelectionError)
+    expect(writes()).toEqual([])
   })
 })
 

@@ -87,20 +87,29 @@ function missingNumbers(sourceText, translatedText) {
   })
 }
 
-/** Хеш содержимого перевода: к нему привязан вердикт смысловой проверки. */
-function translationDigest(translation) {
-  const steps = Array.isArray(translation && translation.steps) ? translation.steps : []
+function contentDigest(document, stepFields) {
+  const steps = Array.isArray(document && document.steps) ? document.steps : []
   const canonical = {
-    title: asText(translation && translation.title),
-    finale: translation && translation.finale ? asText(translation.finale.text) : null,
+    title: asText(document && document.title),
+    finale: document && document.finale ? asText(document.finale.text) : null,
     steps: steps.map((step) => ({
       step_id: step && step.step_id,
-      ...Object.fromEntries(STEP_FIELDS.map((field) => [field, asText(step && step[field])])),
+      ...Object.fromEntries(stepFields.map((field) => [field, asText(step && step[field])])),
       answer_variants: Array.isArray(step && step.answer_variants) ? step.answer_variants : [],
     })),
   }
   return crypto.createHash('sha256').update(JSON.stringify(canonical)).digest('hex')
 }
+
+/** Хеш содержимого перевода: к нему привязан вердикт смысловой проверки. */
+const translationDigest = (translation) => contentDigest(translation, STEP_FIELDS)
+
+/**
+ * Хеш русского источника по содержанию: тексты, тип и варианты ответа. Служебные
+ * поля снимка (slug, is_intro, answer_rule) не входят, поэтому задание,
+ * подготовленное до их появления, остаётся актуальным, пока не правили сам квест.
+ */
+const sourceDigest = (source) => contentDigest(source, [...STEP_FIELDS, 'answer_type'])
 
 /**
  * К чему привязан вердикт смысловой проверки: к переводу И к русскому источнику,
@@ -291,6 +300,19 @@ function runStructuralChecks({ task, translation }) {
 }
 
 /**
+ * Состояние вердикта смысловой проверки относительно текущих перевода и источника:
+ * `none` — вердикта нет, `stale` — вынесен по другой версии (после правки
+ * перевода или повторного `prepare --force` старый файл остаётся на месте),
+ * `current` — относится к этой версии. Единственное место, где решается
+ * «устарел ли вердикт»: `mergeReview` красит им проверки, `sweep` по нему
+ * отличает «нужна повторная проверка» от отказа проверяющего.
+ */
+function reviewState({ task, translation, review }) {
+  if (!review) return 'none'
+  return review.translation_sha256 === reviewDigest({ task, translation }) ? 'current' : 'stale'
+}
+
+/**
  * Вердикты смысловой проверки как записи `semantic`. Нет файла вердикта — записей
  * нет (перевод ещё не проверен); вердикт от другой версии перевода — отказ.
  */
@@ -298,7 +320,7 @@ function mergeReview({ task, translation, review }) {
   if (!review) return []
   // `null` — вердикт по названию и финалу: название у квеста есть всегда, даже без финала.
   const expected = [...task.source.steps.map((step) => step.step_id), null]
-  if (review.translation_sha256 !== reviewDigest({ task, translation })) {
+  if (reviewState({ task, translation, review }) === 'stale') {
     return expected.map((stepId) => ({
       step_id: stepId,
       check: 'semantic',
@@ -339,6 +361,8 @@ module.exports = {
   missingNumbers,
   runStructuralChecks,
   reviewDigest,
+  reviewState,
+  sourceDigest,
   translationDigest,
   uploadBlockers,
 }
