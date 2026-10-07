@@ -111,12 +111,15 @@ type ReserveReleaseState = 'reserved' | 'released' | 'anchored' | 'clamped'
 // absorb part of a leaf's growth, so the highest measured owner with a visible
 // following frame owns the transaction anchor. Fall back to the leaf when no
 // ancestor has one, then commit all heights before a single correction.
-const measuredTransitions = new WeakMap<HTMLElement, () => boolean>()
+const measuredTransitions = new WeakMap<HTMLElement, {
+  measure: () => boolean
+  hasResponsiveWidthChange: () => boolean
+}>()
 
 function measureAncestorTransitions(node: HTMLElement) {
   let ancestor = node.parentElement
   while (ancestor) {
-    measuredTransitions.get(ancestor)?.()
+    measuredTransitions.get(ancestor)?.measure()
     ancestor = ancestor.parentElement
   }
 }
@@ -196,10 +199,13 @@ function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | nul
 function findMeasuredTransactionAnchor(node: HTMLElement): ReserveReleaseAnchor | null {
   const owner = findMeasuredScrollOwner(node)
   if (!owner) return null
+  if (measuredTransitions.get(node)?.hasResponsiveWidthChange()) return null
   let capture = findReserveReleaseAnchor(node)
   let ancestor = node.parentElement
   while (ancestor && ancestor !== owner) {
-    if (measuredTransitions.has(ancestor)) {
+    const transition = measuredTransitions.get(ancestor)
+    if (transition) {
+      if (transition.hasResponsiveWidthChange()) return null
       const following = findReserveReleaseAnchor(ancestor)
       if (following) capture = following
     }
@@ -248,7 +254,9 @@ export function TravelDetailsDeferredTransition({
   const [optionalFlowFallback, setOptionalFlowFallback] = useState(false)
   const runtimeRef = useRef<View>(null)
   const measuredHeightRef = useRef<number | null>(null)
+  const measuredWidthRef = useRef<number | null>(null)
   const currentMeasureRef = useRef<(() => boolean) | null>(null)
+  const currentResponsiveWidthChangeRef = useRef<(() => boolean) | null>(null)
   const observerGenerationRef = useRef(0)
   const revealCorrectionRef = useRef<ReserveReleaseState | null>(null)
   const [reserveReleaseState, setReserveReleaseState] = useState<ReserveReleaseState>('reserved')
@@ -288,10 +296,13 @@ export function TravelDetailsDeferredTransition({
     if (Platform.OS !== 'web') return
     const node = connectedDOMView(transitionRef.current)
     if (!node) return
-    const measure = () => currentMeasureRef.current?.() ?? false
-    measuredTransitions.set(node, measure)
+    const transition = {
+      measure: () => currentMeasureRef.current?.() ?? false,
+      hasResponsiveWidthChange: () => currentResponsiveWidthChangeRef.current?.() ?? false,
+    }
+    measuredTransitions.set(node, transition)
     return () => {
-      if (measuredTransitions.get(node) === measure) measuredTransitions.delete(node)
+      if (measuredTransitions.get(node) === transition) measuredTransitions.delete(node)
     }
   }, [])
 
@@ -304,12 +315,14 @@ export function TravelDetailsDeferredTransition({
     const generationRef = observerGenerationRef
     const generation = ++generationRef.current
     currentMeasureRef.current = null
+    currentResponsiveWidthChangeRef.current = null
     const node = connectedDOMView(transitionRef.current)
     const runtime = connectedDOMView(runtimeRef.current)
     if (!wantsRuntimeVisible) {
       releaseAnchorRef.current = null
       revealCorrectionRef.current = null
       measuredHeightRef.current = null
+      measuredWidthRef.current = null
       if (node) node.style.height = ''
       if (runtimeMeasured) setRuntimeMeasured(false)
       if (reserveReleaseState !== 'reserved') setReserveReleaseState('reserved')
@@ -319,6 +332,7 @@ export function TravelDetailsDeferredTransition({
       if (generationRef.current !== generation || !node?.isConnected || !runtime?.isConnected || !node.contains(runtime)) return false
       const { width, height } = runtime.getBoundingClientRect()
       if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height < 0 || (!allowEmptyRuntime && height === 0)) return false
+      measuredWidthRef.current = width
       if (measuredHeightRef.current != null && Math.abs(measuredHeightRef.current - height) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX) return false
       // This imperative geometry owner deliberately runs within ResizeObserver's
       // pre-paint callback, rather than awaiting RNW onLayout's async UIManager.
@@ -326,6 +340,17 @@ export function TravelDetailsDeferredTransition({
       measuredHeightRef.current = height
       setRuntimeMeasured(true)
       return true
+    }
+    // A settled responsive frame reflows following content outside this height
+    // transaction. Keep browser responsive anchoring; only same-width content
+    // changes and the initial reserve release own an isolated anchor target.
+    currentResponsiveWidthChangeRef.current = () => {
+      // React cleans up parent effects before a leaf's layout commit. This
+      // read-only DOM check still describes that connected parent's width;
+      // only the imperative measurement requires the current generation.
+      if (!runtimeFrameReady || !node?.isConnected || !runtime?.isConnected || !node.contains(runtime) || measuredWidthRef.current == null) return false
+      const width = runtime.getBoundingClientRect().width
+      return Number.isFinite(width) && width > 0 && Math.abs(measuredWidthRef.current - width) > RUNTIME_SETTLE_HEIGHT_EPSILON_PX
     }
     const commitMeasuredHeight = () => {
       if (!node) return
@@ -346,7 +371,7 @@ export function TravelDetailsDeferredTransition({
       generationRef.current++
       observer?.disconnect()
     }
-  }, [allowEmptyRuntime, children, reserveHeight, reserveReleaseState, runtimeMeasured, supportsResizeObservation, wantsRuntimeVisible])
+  }, [allowEmptyRuntime, children, reserveHeight, reserveReleaseState, runtimeFrameReady, runtimeMeasured, supportsResizeObservation, wantsRuntimeVisible])
 
   // Releasing the original reserve is separate from early visibility and every
   // measured growth update. Capture prior to the React style change; correct in

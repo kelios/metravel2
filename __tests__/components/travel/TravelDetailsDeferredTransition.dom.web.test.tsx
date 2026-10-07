@@ -708,10 +708,12 @@ it('keeps the optional server markup stable with and without browser resize obse
 })
 
 it.each([
-  [false, false, true], [true, false, true],
-  [false, true, true], [true, true, true],
-  [false, false, false], [true, false, false],
-] as const)('preserves the original inner Popular anchor through nested measured parents (outer=%s, natural=%s, settled=%s)', (outer, natural, settled) => {
+  [false, false, true, false, false], [true, false, true, false, false],
+  [false, true, true, false, false], [true, true, true, false, false],
+  [false, false, false, false, false], [true, false, false, false, false],
+  [true, false, true, true, false],
+  [true, false, true, true, true],
+] as const)('preserves the original inner Popular anchor through nested measured parents (outer=%s, natural=%s, settled=%s, responsive ancestor=%s, layout commit=%s)', (outer, natural, settled, responsiveAncestor, layoutCommit) => {
   const host = document.createElement('div')
   const owner = document.createElement('div')
   const mount = document.createElement('div')
@@ -721,6 +723,7 @@ it.each([
   host.append(owner)
   document.body.append(host)
   let top = 600
+  let parentWidth = 390
   const writes: number[] = []
   const node = (id: string) => mount.querySelector<HTMLElement>(`[data-testid="${id}"]`)!
   const height = (id: string) => Math.max(Number.parseFloat(node(id)?.style.height || '0'), Number.parseFloat(node(id)?.style.minHeight || '0'))
@@ -742,24 +745,30 @@ it.each([
         const leaf = this.firstElementChild as HTMLElement
         return rect(0, Number.parseFloat(leaf.style.height) + Number.parseFloat(leaf.style.marginBottom || '0'))
       }
-      case 'nested-sidebar-runtime': return rect(0, 822 + height('nested-navigation'))
-      case 'nested-outer-runtime': return rect(0, height('nested-sidebar'))
+      case 'nested-sidebar-runtime': return rect(0, 822 + height('nested-navigation'), parentWidth)
+      case 'nested-outer-runtime': return rect(0, height('nested-sidebar'), parentWidth)
       case 'nested-popular': return rect(505 + height('nested-navigation') - shift, 317)
       default: return originalRect.call(this)
     }
   }
   comments.getBoundingClientRect = () => rect(50 + flowHeight() - (owner.scrollTop - 600), 930)
   const root = createRoot(mount)
-  const navigation = createElement(Transition, {
-    isMobile: true, pending: false, placeholder: null, runtimeFrameReady: true,
-    allowEmptyRuntime: true, testID: 'nested-navigation',
-    children: createElement('div', { 'data-testid': 'nested-navigation-content', style: { height: 0 } }),
-  })
-  const sidebar = createElement(Transition, {
-    isMobile: true, pending: false, placeholder: null, runtimeFrameReady: settled, runtimeVisibilityReady: true,
-    reserveHeight: 822, testID: 'nested-sidebar',
-    children: createElement('div', null, navigation, createElement('div', { 'data-testid': 'nested-popular' })),
-  })
+  const tree = (navigationHeight: number) => {
+    const navigation = createElement(Transition, {
+      isMobile: true, pending: false, placeholder: null, runtimeFrameReady: true,
+      allowEmptyRuntime: true, testID: 'nested-navigation',
+      children: createElement('div', { 'data-testid': 'nested-navigation-content', style: { height: navigationHeight, marginBottom: navigationHeight ? 32 : 0 } }),
+    })
+    const sidebar = createElement(Transition, {
+      isMobile: true, pending: false, placeholder: null, runtimeFrameReady: settled, runtimeVisibilityReady: true,
+      reserveHeight: 822, testID: 'nested-sidebar',
+      children: createElement('div', null, navigation, createElement('div', { 'data-testid': 'nested-popular' })),
+    })
+    return outer ? createElement(Transition, {
+      isMobile: true, pending: false, placeholder: null, runtimeFrameReady: settled, runtimeVisibilityReady: true,
+      reserveHeight: 822, testID: 'nested-outer', children: sidebar,
+    }) : sidebar
+  }
   const resize = (id: string) => {
     const layer = node(`${id}-runtime`)
     for (const observer of MeasuredResizeObserver.instances.filter(candidate => candidate.targets.has(layer))) {
@@ -767,26 +776,27 @@ it.each([
     }
   }
   try {
-    act(() => root.render(outer ? createElement(Transition, {
-      isMobile: true, pending: false, placeholder: null, runtimeFrameReady: settled, runtimeVisibilityReady: true,
-      reserveHeight: 822, testID: 'nested-outer', children: sidebar,
-    }) : sidebar))
+    act(() => root.render(tree(0)))
     writes.length = 0
     const before = node('nested-popular').getBoundingClientRect().top
     expect(before).toBe(505)
     expect(comments.getBoundingClientRect().top).toBe(872)
     act(() => {
-      node('nested-navigation-content').style.height = '125px'
-      node('nested-navigation-content').style.marginBottom = '32px'
-      resize('nested-navigation')
+      if (responsiveAncestor) parentWidth = 320
+      if (layoutCommit) root.render(tree(125))
+      else {
+        node('nested-navigation-content').style.height = '125px'
+        node('nested-navigation-content').style.marginBottom = '32px'
+        resize('nested-navigation')
+      }
     })
     // Ancestor flow must already be current before another ResizeObserver
     // delivery; otherwise Comments enters view and is compensated a second time.
     const immediateSidebarHeight = height('nested-sidebar')
     const immediateOuterHeight = outer ? height('nested-outer') : 979
     act(() => { resize('nested-sidebar'); if (outer) resize('nested-outer') })
-    expect(node('nested-popular').getBoundingClientRect().top).toBe(before)
-    expect(writes).toEqual(natural ? [] : [757])
+    expect(node('nested-popular').getBoundingClientRect().top).toBe(before + (responsiveAncestor ? 157 : 0))
+    expect(writes).toEqual(natural || responsiveAncestor ? [] : [757])
     expect(immediateSidebarHeight).toBe(979)
     expect(immediateOuterHeight).toBe(979)
     act(() => {
@@ -797,8 +807,8 @@ it.each([
     expect(height('nested-sidebar')).toBe(822)
     if (outer) expect(height('nested-outer')).toBe(822)
     act(() => { resize('nested-sidebar'); if (outer) resize('nested-outer') })
-    expect(node('nested-popular').getBoundingClientRect().top).toBe(before)
-    expect(writes).toEqual(natural ? [] : [757, 600])
+    expect(node('nested-popular').getBoundingClientRect().top).toBe(before + (responsiveAncestor ? 157 : 0))
+    expect(writes).toEqual(natural ? [] : responsiveAncestor ? [443] : [757, 600])
   } finally {
     act(() => root.unmount())
     host.remove()
@@ -906,4 +916,50 @@ it.each([
     host.remove()
     HTMLElement.prototype.getBoundingClientRect = originalRect
   }
+})
+
+
+it.each([false, true])('responsive reflow does not turn settled geometry into a new deferred anchor transaction (optional=%s)', optional => {
+  const f = fixture({ initialTop: 10, optional, anchorTop: optional ? -700 : undefined })
+  try {
+    f.render(true, false, createElement('div', { style: { height: 873 } }))
+    f.owner.scrollTop = 10
+    f.writes.length = 0
+    const releaseState = f.transition().dataset.reserveReleaseState
+    f.resizeRuntime(702, 320)
+    expect(f.transition().style.height).toBe('702px')
+    expect(f.owner.scrollTop).toBe(10)
+    expect(f.writes).toEqual([])
+    expect(f.transition().dataset.reserveReleaseState).toBe(releaseState)
+  } finally { f.cleanup() }
+})
+
+
+it('records a width-only reflow before preserving the next same-width content update', () => {
+  const f = fixture({ initialTop: 600 })
+  try {
+    f.render(true, false, createElement('div', { style: { height: 873 } }))
+    f.writes.length = 0
+    f.resizeRuntime(873, 320)
+    expect(f.writes).toEqual([])
+    const before = f.anchor.getBoundingClientRect().top
+    f.resizeRuntime(1000, 320)
+    expect(f.anchor.getBoundingClientRect().top).toBe(before)
+    expect(f.writes).toEqual([756])
+    expect(f.transition().dataset.reserveReleaseState).toBe('anchored')
+  } finally { f.cleanup() }
+})
+
+it('allows genuine bottom clamping during settled responsive shrink without a synthetic owner write', () => {
+  const f = fixture({ initialTop: 26848 })
+  try {
+    f.render(true, false, createElement('div', { style: { height: 873 } }))
+    f.owner.scrollTop = f.owner.scrollHeight - f.owner.clientHeight
+    f.writes.length = 0
+    const state = f.transition().dataset.reserveReleaseState
+    f.resizeRuntime(702, 320)
+    expect(f.owner.scrollTop).toBe(f.owner.scrollHeight - f.owner.clientHeight)
+    expect(f.writes).toEqual([])
+    expect(f.transition().dataset.reserveReleaseState).toBe(state)
+  } finally { f.cleanup() }
 })

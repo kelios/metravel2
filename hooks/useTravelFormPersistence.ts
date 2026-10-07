@@ -14,7 +14,6 @@ import {
   stripMarkerCoverFallbacks,
 } from '@/utils/travelFormUtils';
 import {
-  mergeMarkersPreserveImages,
   ensureRequiredDraftFields,
   normalizeDraftPlaceholders,
   keepCurrentField,
@@ -27,6 +26,7 @@ import {
   mergeOverridePreservingUserInput,
   isLocalPreviewUrl,
 } from '@/utils/travelFormNormalization';
+import { findUnusedMarkerIndex, mergeSavedMarkersIntoLive } from '@/utils/travelMarkerSaveResponse';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 import {
   planTravelContentSave,
@@ -181,79 +181,6 @@ async function runWithSaveAbortController<T>(
   }
 }
 
-const markerIdentityMatches = (left: MarkerData, right: MarkerData): boolean => {
-  const leftId = left.id == null ? '' : String(left.id).trim();
-  const rightId = right.id == null ? '' : String(right.id).trim();
-  if (leftId && rightId) return leftId === rightId;
-
-  const leftLat = Number(left.lat);
-  const leftLng = Number(left.lng);
-  const rightLat = Number(right.lat);
-  const rightLng = Number(right.lng);
-  if (![leftLat, leftLng, rightLat, rightLng].every(Number.isFinite)) return false;
-
-  return (
-    Math.abs(leftLat - rightLat) + Math.abs(leftLng - rightLng) <= 1e-5
-  );
-};
-
-const findUnusedMarkerIndex = (
-  candidates: MarkerData[],
-  usedIndexes: Set<number>,
-  target: MarkerData,
-): number => candidates.findIndex(
-  (candidate, index) =>
-    !usedIndexes.has(index) && markerIdentityMatches(candidate, target),
-);
-
-const findUnusedMarkerMergeIndex = (
-  candidates: MarkerData[],
-  usedIndexes: Set<number>,
-  target: MarkerData,
-): number => {
-  const targetId = target.id == null ? '' : String(target.id).trim();
-  if (targetId) {
-    const idMatch = candidates.findIndex((candidate, index) =>
-      !usedIndexes.has(index) && String(candidate.id ?? '').trim() === targetId,
-    );
-    if (idMatch >= 0) return idMatch;
-  }
-
-  const targetWithoutId = { ...target, id: null };
-  return candidates.findIndex((candidate, index) =>
-    !usedIndexes.has(index) &&
-    markerIdentityMatches({ ...candidate, id: null }, targetWithoutId),
-  );
-};
-
-const mergeMarkersPreserveImagesOneToOne = (
-  serverMarkers: MarkerData[],
-  currentMarkers: MarkerData[],
-): MarkerData[] => {
-  if (serverMarkers.length === 0) return currentMarkers;
-  if (currentMarkers.length === 0) return serverMarkers;
-
-  const usedCurrentIndexes = new Set<number>();
-  const mergedServerMarkers = serverMarkers.map((serverMarker) => {
-    const currentIndex = findUnusedMarkerMergeIndex(
-      currentMarkers,
-      usedCurrentIndexes,
-      serverMarker,
-    );
-    if (currentIndex < 0) return serverMarker;
-
-    usedCurrentIndexes.add(currentIndex);
-    return (mergeMarkersPreserveImages(
-      [serverMarker],
-      [currentMarkers[currentIndex]],
-    ) as MarkerData[])[0] ?? serverMarker;
-  });
-  const unmatchedCurrentMarkers = currentMarkers.filter(
-    (_marker, index) => !usedCurrentIndexes.has(index),
-  );
-  return [...mergedServerMarkers, ...unmatchedCurrentMarkers];
-};
-
 const restoreSourcePreviewAfterCoverFallback = (
   markers: MarkerData[],
   liveMarkers: MarkerData[],
@@ -299,10 +226,19 @@ const restoreSourcePreviewAfterCoverFallback = (
 const mergeRehydratedMarkerIdsIntoLive = (
   refreshedMarkers: MarkerData[],
   liveMarkers: MarkerData[],
+  previouslySavedMarkers: MarkerData[],
 ): MarkerData[] => {
+  const knownIds = new Set([...liveMarkers, ...previouslySavedMarkers]
+    .filter(marker => marker.id != null).map(marker => String(marker.id)));
+  // Returned IDs already belonged to the earlier save. A point introduced
+  // since then must wait for its own save, not inherit a deleted point's ID.
   const usedRefreshedIndexes = new Set<number>();
+  refreshedMarkers.forEach((marker, index) => {
+    if (marker.id != null && knownIds.has(String(marker.id))) usedRefreshedIndexes.add(index);
+  });
 
   return liveMarkers.map((liveMarker) => {
+    if (liveMarker.id != null) return liveMarker;
     const refreshedIndex = findUnusedMarkerIndex(
       refreshedMarkers,
       usedRefreshedIndexes,
@@ -641,7 +577,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       ];
       // Если бэкенд не вернул точки (например, черновик без coords в ответе), сохраняем локальные маркеры.
       const effectiveMarkersRaw = markersFromResponse.length > 0
-        ? mergeMarkersPreserveImagesOneToOne(markersFromResponse, currentMarkers)
+        ? mergeSavedMarkersIntoLive(markersFromResponse, currentMarkers, sourceData ? sourceMarkers : undefined)
         : currentMarkers;
       const effectiveMarkers = restoreSourcePreviewAfterCoverFallback(
         stripMarkerCoverFallbacks(
@@ -711,6 +647,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
           markersForUpload = mergeRehydratedMarkerIdsIntoLive(
             refreshedMarkers,
             liveMarkers,
+            markersFromResponse,
           );
           const refreshedData = {
             ...liveDataSnapshot,
