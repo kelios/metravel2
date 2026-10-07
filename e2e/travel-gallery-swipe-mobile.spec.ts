@@ -117,7 +117,17 @@ test.describe('Галерея на странице путешествия — �
     // Свайп внутри fullscreen листает фото (scroll-snap paging).
     const gbox = await fullscreen.boundingBox();
     expect(gbox).toBeTruthy();
-    const gMidY = gbox!.y + gbox!.height / 2;
+    // Боковые кнопки находятся на середине экрана. Жест начинается на фото,
+    // чтобы палец попадал в scroll-snap контейнер, а не в кнопку навигации.
+    const gMidY = gbox!.y + gbox!.height * 0.35;
+    const swipeTargets = await page.evaluate(({ startX, endX, y }) => {
+      const scroller = document.querySelector('[data-testid="travel-fullscreen-gallery-scroller"]');
+      return [startX, endX].map((x) => {
+        const hit = document.elementFromPoint(x, y);
+        return !!hit && !!scroller?.contains(hit) && !hit.closest('button');
+      });
+    }, { startX: gbox!.x + gbox!.width - 30, endX: gbox!.x + 30, y: gMidY });
+    expect(swipeTargets, 'оба конца жеста должны попадать на фото вне кнопок').toEqual([true, true]);
     await touchSwipe(page, cdp, { x: gbox!.x + gbox!.width - 30, y: gMidY }, { x: gbox!.x + 30, y: gMidY });
     await expect(page.getByText('3 / 3', { exact: true })).toBeVisible({ timeout: 10_000 });
 
