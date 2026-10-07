@@ -60,6 +60,36 @@ function sourceAnswerVariants(pattern) {
   }
 }
 
+/** Параметры числового ответа: `value` приходит JSON-строкой либо уже объектом. */
+function parsePatternObject(value) {
+  if (value && typeof value === 'object') return value
+  try {
+    const parsed = JSON.parse(value)
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Какое число примет сервер у `range` и `approx` — словами. Список вариантов у
+ * этих типов пуст, и без правила проверяющий не может решить, достижим ли ответ
+ * («сосчитай башенки» → сколько именно сойдёт за верный ответ).
+ */
+function describeAnswerRule(pattern) {
+  const value = parsePatternObject(pattern.value)
+  if (!value) return ''
+  if (pattern.type === 'range') {
+    const [min, max] = [Number(value.min), Number(value.max)]
+    return Number.isFinite(min) && Number.isFinite(max) ? `целое число от ${min} до ${max}` : ''
+  }
+  if (pattern.type === 'approx') {
+    const [target, tolerance] = [Number(value.target), Number(value.tolerance)]
+    return Number.isFinite(target) && Number.isFinite(tolerance) ? `число около ${target}, допуск ±${tolerance}` : ''
+  }
+  return ''
+}
+
 function sourceStepFromBundle(step) {
   const pattern = step.answer_pattern || {}
   const poi = step.poi_info || {}
@@ -74,6 +104,7 @@ function sourceStepFromBundle(step) {
     hint: step.hint || '',
     answer_type: pattern.type || 'any',
     answer_variants: sourceAnswerVariants(pattern),
+    answer_rule: describeAnswerRule(pattern),
     poi_opening_hours: poi.opening_hours || '',
     poi_ticket_price: poi.ticket_price || '',
   }
@@ -122,6 +153,13 @@ function loadGlossary(locale, guideFile = path.join(ROOT, GUIDE_PATH)) {
 const I18N_ENTRY = /^\s*"([^"]+)":\s*"((?:[^"\\]|\\.)*)",?\s*$/
 // Подписи интерфейса квестов: только их квест вправе называть «кнопкой».
 const QUEST_UI_KEY = /^(components\.quests\.|utils\.quest)/
+// Кнопки карточки шага, которые упоминает почти каждый квест («нажми Далее»,
+// «введи ответ и нажми Проверить») — в задании всегда, даже без кавычек в тексте:
+// иначе переводчик ищет их по i18n сам и находит не ту подпись.
+const WIZARD_UI_LABEL_KEYS = [
+  'components.quests.questWizardStepCard.dalee_74add698',
+  'components.quests.questWizardStepCard.proverit_otvet_76814505',
+]
 
 function readQuestUiStrings(locale, localesDir) {
   const strings = new Map()
@@ -142,19 +180,22 @@ function readQuestUiStrings(locale, localesDir) {
 }
 
 /**
- * Подписи кнопок, на которые ссылается текст квеста («Нажми «Начать квест»»), —
- * в том виде, в каком их показывает интерфейс на языке перевода. Перевод,
- * придумавший свою подпись, отправит игрока искать кнопку, которой нет.
+ * Подписи кнопок, на которые ссылается текст квеста («Нажми «Начать квест»»), и
+ * кнопки карточки шага — в том виде, в каком их показывает интерфейс на языке
+ * перевода. Перевод, придумавший свою подпись, отправит игрока искать кнопку,
+ * которой нет.
  */
 function collectUiLabels({ source, sourceLocale, locale, localesDir = path.join(ROOT, 'i18n', 'locales') }) {
   const text = [source.title, source.finale ? source.finale.text : '', ...source.steps.flatMap((step) => STEP_FIELDS.map((field) => step[field]))].join('\n')
   const quoted = new Set([...text.matchAll(/«([^«»]{2,60})»/g)].map((match) => match[1].trim()))
-  if (!quoted.size) return []
+  const origin = readQuestUiStrings(sourceLocale, localesDir)
   const target = readQuestUiStrings(locale, localesDir)
   const labels = new Map()
-  for (const [key, value] of readQuestUiStrings(sourceLocale, localesDir)) {
-    if (quoted.has(value) && target.has(key) && !labels.has(value)) labels.set(value, { source: value, target: target.get(key) })
+  const add = (key, value) => {
+    if (target.has(key) && !labels.has(value)) labels.set(value, { source: value, target: target.get(key) })
   }
+  for (const [key, value] of origin) if (quoted.has(value)) add(key, value)
+  for (const key of WIZARD_UI_LABEL_KEYS) if (origin.has(key)) add(key, origin.get(key))
   return [...labels.values()]
 }
 
@@ -266,7 +307,7 @@ function buildReviewTask({ task, translation, paths }) {
     translation_sha256: reviewDigest({ task, translation }),
     instructions: [
       `Ты независимый проверяющий: прочитай раздел «Смысловая проверка» в ${GUIDE_PATH}.`,
-      'По каждому шагу реши: (1) по переведённым заданию и подсказке игрок на месте приходит к ответу из accepted_answers; (2) смысл истории и задания сохранён, надписи «как на табличке» не переведены.',
+      'По каждому шагу реши: (1) по переведённым заданию и подсказке игрок на месте приходит к ответу из accepted_answers — у числовых шагов (range, approx) список пуст, и верное число описывает answer_rule; (2) смысл истории и задания сохранён, надписи «как на табличке» не переведены.',
       'Перевод не правь. Отказ — это ok: false и одна фраза в detail, что именно не так.',
       `Запиши вердикт в ${relative(paths.review)} в форме output_shape; translation_sha256 перенеси без изменений.`,
     ],
@@ -292,6 +333,8 @@ function buildReviewTask({ task, translation, paths }) {
         translation: step,
         // Сервер отдаёт игроку объединение: варианты локали + варианты источника.
         accepted_answers: [...new Set([...(step.answer_variants || []), ...sourceStep.answer_variants])],
+        // У range/approx вариантов нет — верное число задано правилом (задания до этого поля его не несут).
+        answer_rule: sourceStep.answer_rule || '',
       }
     }),
   }
@@ -300,12 +343,15 @@ function buildReviewTask({ task, translation, paths }) {
 module.exports = {
   DEFAULT_WORK_DIR,
   GUIDE_PATH,
+  QUEST_ID_PATTERN,
   ROOT,
+  WIZARD_UI_LABEL_KEYS,
   apiStep,
   artifactPaths,
   buildReviewTask,
   buildTask,
   collectUiLabels,
+  describeAnswerRule,
   loadGlossary,
   parseGlossary,
   planSteps,
