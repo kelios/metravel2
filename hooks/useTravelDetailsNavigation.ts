@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DeviceEventEmitter, Platform } from 'react-native'
 import type { RefObject, TransitionStartFunction } from 'react'
 
@@ -57,6 +57,7 @@ export function useTravelDetailsNavigation({
   const [scrollRootEl, setScrollRootEl] = useState<HTMLElement | null>(null)
   const { activeSection, setActiveSection } = useActiveSection(anchors, headerOffset, scrollRootEl)
   const [forceOpenKey, setForceOpenKey] = useState<string | null>(null)
+  const cancelStartupResetRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return
@@ -176,11 +177,10 @@ export function useTravelDetailsNavigation({
     }
 
     const scrollNode = readScrollNode()
-    const scrollContainer = scrollNode ? findScrollableContainer(scrollNode) || scrollNode : null
+    const scrollContainer = scrollNode ? findScrollableContainer(scrollNode) : null
 
-    if (scrollContainer) {
-      safeReset(scrollContainer)
-    }
+    if (!scrollContainer) return false
+    const ownerResetAttempted = safeReset(scrollContainer)
 
     const scrollingEl = document.scrollingElement || document.documentElement || document.body
     safeReset(scrollingEl)
@@ -195,7 +195,11 @@ export function useTravelDetailsNavigation({
       }
     }
 
-    return Boolean(scrollContainer)
+    try {
+      return ownerResetAttempted && scrollContainer.scrollTop === 0
+    } catch {
+      return false
+    }
   }, [findScrollableContainer, readScrollNode])
 
   useEffect(() => {
@@ -265,6 +269,7 @@ export function useTravelDetailsNavigation({
 
   const handleSectionOpen = useCallback(
     (key: string) => {
+      if (key) cancelStartupResetRef.current?.()
       // A direct user action must commit the lazy-section key immediately.
       // Wrapping this update in a transition can retain the previous skeleton
       // while the newly requested chunk suspends, leaving the section stranded.
@@ -336,28 +341,66 @@ export function useTravelDetailsNavigation({
   }, [anchors, handleSectionOpen, slug])
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ y: 0, animated: false })
-    // Default active section is gallery for initial render.
+    // A new native screen still starts at the gallery. Web owns one startup
+    // transaction: availability retries must never undo subsequent input.
     setActiveSection('gallery')
-    if (Platform.OS === 'web') {
-      let cancelled = false
-      const timers: Array<ReturnType<typeof setTimeout>> = []
-      const attempts = [0, 32, 96, 180, 320]
+    if (Platform.OS !== 'web') {
+      scrollRef.current?.scrollTo({ y: 0, animated: false })
+      return undefined
+    }
+    if (typeof window === 'undefined' || typeof document === 'undefined') return undefined
 
-      attempts.forEach((delay) => {
+    let cancelled = false
+    const timers: Array<ReturnType<typeof setTimeout>> = []
+    const ownsInput = (target: EventTarget | null) => {
+      const node = readScrollNode()
+      return Boolean(node && target instanceof Node && (target === node || node.contains(target)))
+    }
+    const cancel = () => {
+      cancelled = true
+      timers.forEach(clearTimeout)
+      window.removeEventListener('wheel', onReaderIntent, true)
+      window.removeEventListener('touchstart', onReaderIntent, true)
+      window.removeEventListener('keydown', onScrollKey, true)
+      if (cancelStartupResetRef.current === cancel) cancelStartupResetRef.current = null
+    }
+    const onReaderIntent = (event: Event) => {
+      if (ownsInput(event.target)) cancel()
+    }
+    const onScrollKey = (event: KeyboardEvent) => {
+      if (!['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ', 'Spacebar'].includes(event.key)) return
+      const target = event.target
+      if (target instanceof Element && target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return
+      if (ownsInput(target)) cancel()
+    }
+    const attempt = () => {
+      if (cancelled) return
+      if (window.location.hash) {
+        cancel()
+        return
+      }
+      // The initial empty ScrollView is not the hydrated article owner yet.
+      // Wait for its actual scrolling geometry instead of committing retries
+      // that may later reset a replaced or already-used owner.
+      if (resetWebScrollTop()) cancel()
+    }
+
+    cancelStartupResetRef.current = cancel
+    window.addEventListener('wheel', onReaderIntent, { capture: true, passive: true })
+    window.addEventListener('touchstart', onReaderIntent, { capture: true, passive: true })
+    window.addEventListener('keydown', onScrollKey, true)
+    attempt()
+    if (!cancelled) {
+      const delays = [0, 32, 96, 180, 320]
+      delays.forEach((delay, index) => {
         timers.push(setTimeout(() => {
-          if (cancelled) return
-          resetWebScrollTop()
+          attempt()
+          if (index === delays.length - 1) cancel()
         }, delay))
       })
-
-      return () => {
-        cancelled = true
-        timers.forEach(clearTimeout)
-      }
     }
-    return undefined
-  }, [resetWebScrollTop, scrollRef, setActiveSection, slug])
+    return cancel
+  }, [readScrollNode, resetWebScrollTop, scrollRef, setActiveSection, slug])
 
   return useMemo(() => ({
     anchors,

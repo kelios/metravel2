@@ -169,8 +169,10 @@ describe('useTravelDetailsNavigation', () => {
     const scrollTo = jest.fn()
     const scrollContainer = document.createElement('div') as any
     scrollContainer.setAttribute('data-testid', 'travel-details-scroll')
-    scrollContainer.scrollHeight = 1200
-    scrollContainer.clientHeight = 400
+    Object.defineProperties(scrollContainer, {
+      scrollHeight: { configurable: true, value: 1200 },
+      clientHeight: { configurable: true, value: 400 },
+    })
     scrollContainer.scrollTop = 240
     scrollContainer.getBoundingClientRect = jest.fn(() => ({ top: 0, bottom: 400 } as any))
     scrollContainer.scrollTo = jest.fn((arg: any) => {
@@ -225,21 +227,24 @@ describe('useTravelDetailsNavigation', () => {
       jest.advanceTimersByTime(320)
     })
 
-    expect(scrollRef.current.scrollTo).toHaveBeenCalledWith({ y: 0, animated: false })
+    expect(scrollRef.current.scrollTo).not.toHaveBeenCalled()
     expect(scrollContainer.scrollTo).toHaveBeenCalled()
     expect(scrollContainer.scrollTop).toBe(0)
     expect(docScrollEl.scrollTop).toBe(0)
     expect(window.scrollTo).toHaveBeenCalled()
 
     window.scrollTo = originalWindowScrollTo
+    scrollContainer.remove()
   })
 
   it('does not reset web scroll to top when the current URL already contains a hash', () => {
     const scrollTo = jest.fn()
     const scrollContainer = document.createElement('div') as any
     scrollContainer.setAttribute('data-testid', 'travel-details-scroll')
-    scrollContainer.scrollHeight = 1200
-    scrollContainer.clientHeight = 400
+    Object.defineProperties(scrollContainer, {
+      scrollHeight: { configurable: true, value: 1200 },
+      clientHeight: { configurable: true, value: 400 },
+    })
     scrollContainer.scrollTop = 240
     scrollContainer.getBoundingClientRect = jest.fn(() => ({ top: 0, bottom: 400 } as any))
     scrollContainer.scrollTo = jest.fn()
@@ -291,12 +296,13 @@ describe('useTravelDetailsNavigation', () => {
       jest.advanceTimersByTime(320)
     })
 
-    expect(scrollRef.current.scrollTo).toHaveBeenCalledWith({ y: 0, animated: false })
+    expect(scrollRef.current.scrollTo).not.toHaveBeenCalled()
     expect(scrollContainer.scrollTo).not.toHaveBeenCalled()
     expect(docScrollEl.scrollTop).toBe(180)
     expect(window.scrollTo).not.toHaveBeenCalled()
 
     window.scrollTo = originalWindowScrollTo
+    scrollContainer.remove()
     window.history.replaceState(null, '', '/')
   })
 })

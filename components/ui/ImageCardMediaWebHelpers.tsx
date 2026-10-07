@@ -450,9 +450,11 @@ export const WebMainImage = memo(function WebMainImage({
   return (
     <img
       ref={attachImgRef}
-      src={src}
-      srcSet={srcSet}
+      // Reused DOM images select responsive candidates on each attribute write.
+      // Set the slot and candidate set before src to avoid requesting the old image.
       sizes={sizes}
+      srcSet={srcSet}
+      src={src}
       alt={alt}
       width={width}
       height={height}

@@ -484,7 +484,47 @@ guard, падающий в CI на попытке обойти этот конт
   следующим anchor, фиксирует все измеренные высоты и компенсирует один раз;
   registration живёт вместе с DOM, сохраняя generation fence. Четыре DOM
   регрессии reserve/native anchoring/React cleanup сначала FAIL, после правки
-  PASS. Новая production-приёмка первых пяти прогонов без retry ещё предстоит.
+  PASS. Production `0b38a4aad`: первые пять без retry дали 3/5 PASS; два
+  прохода прервались на первом wheel (top 0, высота 6298 → 10592px).
+  Неинструментированный диагностический повтор воспроизвёл это в 3/5.
+  Подробная и облегчённая диагностики не поймали этот ранний момент и не
+  доказали сброс после wheel; их успешные проходы не заменяют исходный FAIL.
+  Подробный прогон также сохранил два превышения CLS 0,1. Приёмка открыта.
+
+### TRAVEL-STARTUP-SCROLL-RESET-INTENT-001 — начальный сброс уступает читателю
+
+- **Инвариант:** начальный web-сброс позиции относится к одной route generation;
+  после доступного scroll owner либо пользовательского wheel/touch/scroll key
+  и явного перехода к разделу оставшиеся startup-повторы не меняют позицию.
+  Если контейнер ещё отсутствует, ограниченные availability-повторы допустимы.
+- **Owner:** `hooks/useTravelDetailsNavigation.ts`, web; связанные #2329/#2024.
+  Native сохраняет прежний одиночный начальный сброс. Localization none.
+  Поиск истории useTravelDetailsNavigation/сброса прокрутки не выявил дубля;
+  #2024 — другой механизм поздних section anchors.
+- **Подтверждённый source-дефект:** прежний mount-effect безусловно запускал
+  resetWebScrollTop через 0/32/96/180/320ms. Реальный mounted-hook DOM-test на
+  неизменённом `0b38a4aad` дал пять FAIL: wheel, touch, scroll key, section jump
+  и новая route generation возвращали выбранные 600–800px к нулю; шесть
+  controls (late owner, unrelated input, hash, unmount, native) прошли.
+- **Граница доказательства:** этот deterministic source bug не объявлен
+  установленной причиной исходного production-first-wheel FAIL #2329.
+  Диагностика реального раннего сбоя сохранила top0/6298→10592px, но отдельные
+  native-инструментированные проходы с более поздним первым жестом не поймали
+  сброс. Их PASS не заменяет обязательные первые пять после нового выката.
+- **Control:** `useTravelDetailsNavigation.startupScroll.dom.web.test.tsx`;
+  явное route-generation завершение, отмена после input/navigation и cleanup.
+  Control сбоя доступного owner тоже сначала FAIL: наличие узла не равно
+  успешному сбросу; завершение требует успешного API и наблюдаемого top0.
+  После исчерпания availability-повторов startup снимает capture listeners,
+  даже если owner не появился: дальнейших reset-попыток уже нет.
+  Авторские шесть профильных suites: 69 PASS, 0 FAIL, 0 SKIP; старые jsdom
+  geometry-fixtures исправлены descriptor-ами без ослабления reset/hash checks.
+  Независимый review исправил оставшиеся после последней попытки обработчики;
+  новый cleanup-test дал FAIL на копии неизменённого авторского source и PASS
+  после правки. Итоговые 11 suites: 135 PASS, 0 FAIL, 0 SKIP; owned ESLint PASS.
+  Новая production-приёмка #2329, без retry и без readiness-обхода, впереди.
+- **Evidence:** `cls135/readiness/startup-reset-negative-result.json` и
+  сохранённые исходные five-raw/faithful diagnostics в `.codex-temp/publish-20261007/`.
 
 ### LIST-SKELETON-GEOMETRY-001 — каркас списка занимает место карточек, которые его заменят
 
@@ -6057,6 +6097,37 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   #2324 и не повод легализовать таймер записью в RULES.
 - **Правило recurrence:** прежний тайл/SVG-before-CSS shift — reopen #2324;
   иной control/fallback/атрибуция owner — связанный дефект после измерения.
+
+### WEB-RESPONSIVE-IMAGE-SOURCE-SWAP-001 — новый src не выбирает старый srcSet
+
+- **Инвариант:** при смене фото на сохранённом web img responsive candidates
+  и sizes обновляются перед fallback src; новый fallback src не применяется
+  с прежним srcSet. DOM node и callbacks сохраняются.
+- **Owner:** `components/ui/ImageCardMediaWebHelpers.tsx`, `WebMainImage`;
+  каноническая карточка #2285, related #2282. Desktop/mobile web; native и
+  localization вне scope. Исторические #1544/#1212/#751 — другие причины;
+  all-status поиск srcSet/ImageCardMedia/миниатюр не нашёл открытого дубля.
+- **Подтверждение:** 07.10.2026, prod `0b38a4aad`, собственная статья796,
+  mobile390. После настоящего upload stable connected img elementId3 получил
+  src=new при srcSet=old, затем srcSet=new. CDP связал старый GET с
+  Element.setAttribute/ReactDOM commit и его ERR_ABORTED; новый GET завершился
+  200. Исходное изображение уже было decoded, все его запросы завершились до
+  выбора файла: дополнительное ожидание не устраняет механизм. ReactDOM update
+  обходит props в порядке объявления; текущий JSX ставил src раньше srcSet.
+- **Решение:** общий renderer обновляет sizes → srcSet → src. Это порядок
+  операций, не атомарная смена. Remount, скрытие requestfailed и request keeper
+  не используются. Реальный ReactDOM DOM-test проверяет stable node и tuples
+  при замене, удалении/добавлении candidates, sizes-only и src-only изменениях.
+- **Приёмка:** R5/R6/R7 остаются FAIL, функциональное обновление миниатюры не
+  заменяет строгий network gate. Своя статья796 удалена204, GET404. На прежнем
+  source четыре DOM assertions FAIL, три PASS; после исправления 19 tests /
+  пять suites PASS, ESLint/types PASS. Ранний test-observer casing error
+  сохранён отдельно и исправлен до настоящего negative. Независимое ревью,
+  публикация и пять production-сценариев впереди.
+  Evidence: `marker-qa/responsive-attribute-causal-proof.json` и
+  `runtime-r7-diagnostic/runtime-receipt.json` в `.codex-temp/publish-20261007/`.
+- **Recurrence:** тот же порядок старого/нового responsive source — reuse
+  #2285; новая причина требует собственного source/network доказательства.
 
 ### PARTNER-IFRAME-LOGO-ORIGIN-001 — логотип стороннего iframe отклонён браузером
 
