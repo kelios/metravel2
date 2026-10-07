@@ -1669,6 +1669,7 @@ test.describe('Создание путешествия - Полный flow', () 
 
     await fillMinimumValidBasics(page, 'Фото-точка e2e');
     await waitForAutosaveOk(page, 30_000).catch(() => null);
+    await dismissConsentBanner(page);
     await clickNext(page);
     await ensureOnStep2(page);
     await maybeDismissRouteCoachmark(page);

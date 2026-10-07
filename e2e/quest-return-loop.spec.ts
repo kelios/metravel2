@@ -247,6 +247,12 @@ const finishQuest = async (page: Page) => {
     await page.getByText('Финал', { exact: true }).first().click()
   }
   await expect(finaleText, 'финал открыт').toBeVisible({ timeout: 30_000 })
+  const routeSheet = page.getByTestId('quest-route-sheet')
+  if (await routeSheet.isVisible()) {
+    const routePanel = page.getByTestId('bottom-sheet-panel').filter({ has: routeSheet })
+    await routePanel.getByRole('button', { name: 'Закрыть', exact: true }).click()
+    await expect(routeSheet).toBeHidden()
+  }
 }
 
 test.describe('Петля возврата после финиша квеста (#1484)', () => {
