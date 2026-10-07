@@ -818,9 +818,15 @@ it.each([
 
 
 it.each([
-  [false, 'observer'], [true, 'observer'],
-  [false, 'layout-commit'], [true, 'layout-commit'],
-] as const)('preserves Comments inside the outer runtime across nested reserve slack (natural=%s, delivery=%s)', (natural, delivery) => {
+  [false, 'observer', false, false, undefined], [true, 'observer', false, false, undefined],
+  [false, 'layout-commit', false, false, undefined], [true, 'layout-commit', false, false, undefined],
+  [false, 'observer', true, false, undefined], [true, 'observer', true, false, undefined],
+  [false, 'layout-commit', true, false, undefined], [true, 'layout-commit', true, false, undefined],
+  [false, 'observer', true, true, undefined], [true, 'layout-commit', true, true, undefined],
+  [false, 'observer', true, false, 'width'],
+  [false, 'layout-commit', true, false, 'height'],
+  [false, 'layout-commit', true, false, 'reserve'],
+] as const)('preserves both reading frames inside the outer runtime across nested reserve slack (natural=%s, delivery=%s, hidden Comments runtime=%s, Popular first=%s, reflow=%s)', (natural, delivery, hiddenComments, popularFirst, reflow) => {
   const host = document.createElement('div')
   const owner = document.createElement('div')
   const mount = document.createElement('div')
@@ -831,13 +837,23 @@ it.each([
   const initialTop = 22382
   let top = initialTop
   let adjustment = 0
+  let popularGrowth = 0
+  let settledSidebar = false
+  let visitKey = 1
+  let frameWidth = 390
+  let ownerHeight = 790
+  let currentReserve: number | '100vh' = reflow === 'height' ? '100vh' : 844
   const writes: number[] = []
   const node = (id: string) => mount.querySelector<HTMLElement>(`[data-testid="slack-${id}"]`)!
   const height = (id: string) => Number.parseFloat(node(id)?.style.height || '0')
-  const sidebarFlow = () => Math.max(844, height('sidebar'))
+  const sidebarFlow = () => {
+    const minHeight = node('sidebar')?.style.minHeight || '0'
+    const reserve = Number.parseFloat(minHeight) * (minHeight.endsWith('vh') ? window.innerHeight / 100 : 1)
+    return Math.max(reserve, height('sidebar'))
+  }
   Object.defineProperties(owner, {
-    clientHeight: { configurable: true, value: 790 },
-    clientWidth: { configurable: true, value: 390 },
+    clientHeight: { configurable: true, get: () => ownerHeight },
+    clientWidth: { configurable: true, get: () => frameWidth },
     scrollHeight: { configurable: true, get: () => 30000 + height('outer') },
     scrollTop: {
       configurable: true,
@@ -845,19 +861,22 @@ it.each([
       set: value => { top = value; adjustment = value - initialTop - sidebarFlow() + 844; writes.push(value) },
     },
   })
-  owner.getBoundingClientRect = () => rect(54, 790)
+  owner.getBoundingClientRect = () => rect(54, ownerHeight, frameWidth)
   const originalRect = HTMLElement.prototype.getBoundingClientRect
   HTMLElement.prototype.getBoundingClientRect = function () {
     const shift = owner.scrollTop - initialTop
     switch (this.dataset.testid) {
       case 'slack-navigation-runtime': {
         const leaf = this.firstElementChild as HTMLElement
-        return rect(0, Number.parseFloat(leaf.style.height) + Number.parseFloat(leaf.style.marginBottom || '0'))
+        return rect(0, Number.parseFloat(leaf.style.height) + Number.parseFloat(leaf.style.marginBottom || '0'), frameWidth)
       }
-      case 'slack-sidebar-runtime': return rect(0, 822 + height('navigation'))
-      case 'slack-outer-runtime': return rect(0, sidebarFlow() + 930)
-      case 'slack-popular': return rect(322.96875 + height('navigation') - shift, 364)
-      case 'slack-comments': return rect(740.96875 + sidebarFlow() - 844 - shift, 930)
+      case 'slack-sidebar': return rect((hiddenComments ? -238.03125 : -103.03125) - shift, sidebarFlow())
+      case 'slack-sidebar-runtime': return rect(0, 822 + height('navigation') + popularGrowth, frameWidth)
+      case 'slack-sidebar-content': return rect((hiddenComments ? -238.03125 : -103.03125) - shift, 822 + height('navigation') + popularGrowth)
+      case 'slack-outer-runtime': return rect(0, sidebarFlow() + (hiddenComments ? 844 : 930), frameWidth)
+      case 'slack-popular': return rect((hiddenComments ? 187.96875 : 322.96875) + height('navigation') - shift, 364 + popularGrowth)
+      case 'slack-comments': return rect((hiddenComments ? 605.96875 : 740.96875) + sidebarFlow() - 844 - shift, hiddenComments ? 844 : 930)
+      case 'slack-comments-transition-runtime': return rect(0, 226)
       default: return originalRect.call(this)
     }
   }
@@ -872,8 +891,8 @@ it.each([
     isMobile: true, pending: false, placeholder: null, runtimeFrameReady: true,
     testID: 'slack-outer', children: createElement('div', null,
       createElement(Transition, {
-        isMobile: true, pending: false, placeholder: null, runtimeFrameReady: false, runtimeVisibilityReady: true,
-        reserveHeight: 844, testID: 'slack-sidebar', children: createElement('div', null,
+        key: visitKey, isMobile: true, pending: false, placeholder: null, runtimeFrameReady: settledSidebar, runtimeVisibilityReady: true,
+        reserveHeight: currentReserve, testID: 'slack-sidebar', children: createElement('div', { 'data-testid': 'slack-sidebar-content' },
           createElement(Transition, {
             isMobile: true, pending: false, placeholder: null, runtimeFrameReady: true,
             allowEmptyRuntime: true, testID: 'slack-navigation',
@@ -882,17 +901,39 @@ it.each([
           createElement('div', { 'data-testid': 'slack-popular' }),
         ),
       }),
-      createElement('div', { 'data-testid': 'slack-comments', style: { height: 930 } }),
+      createElement('div', { 'data-testid': 'slack-comments', style: hiddenComments ? undefined : { height: 930 } },
+        hiddenComments ? createElement(Transition, {
+          isMobile: true, pending: false, runtimeFrameReady: false, reserveHeight: 844,
+          placeholder: createElement('div', { style: { height: 226 } }), testID: 'slack-comments-transition',
+          children: createElement('div', { style: { height: 226 } }),
+        }) : null,
+      ),
     ),
   })
   try {
     act(() => root.render(tree(0)))
     owner.scrollTop = initialTop
     writes.length = 0
-    const before = node('comments').getBoundingClientRect().top
-    expect(before).toBe(740.96875)
+    const readingAnchor = node('popular')
+    let beforeComments = node('comments').getBoundingClientRect().top
+    const before = readingAnchor.getBoundingClientRect().top
+    expect(before).toBe(hiddenComments ? 187.96875 : 322.96875)
+    if (hiddenComments) {
+      expect(node('comments-transition').dataset.deferredTransitionState).toBe('measuring-runtime')
+      expect(getComputedStyle(node('comments-transition-runtime')).opacity).toBe('0')
+    }
     expect(height('sidebar')).toBe(822)
     expect(sidebarFlow()).toBe(844)
+    if (popularFirst) {
+      popularGrowth = 2494
+      act(() => { resize('sidebar'); resize('outer') })
+      expect(readingAnchor.getBoundingClientRect().top).toBe(before)
+      expect(height('sidebar')).toBe(3338)
+      expect(owner.scrollTop).toBe(initialTop)
+      expect(writes).toEqual(natural ? [initialTop] : [])
+      writes.length = 0
+      beforeComments = node('comments').getBoundingClientRect().top
+    }
     act(() => {
       if (delivery === 'layout-commit') root.render(tree(125))
       else {
@@ -904,17 +945,91 @@ it.each([
       resize('outer')
     })
     expect(height('navigation')).toBe(157)
-    expect(height('sidebar')).toBe(979)
-    expect(height('outer')).toBe(1909)
-    // The parent only grows135: its old844 reserve already covered22 of157.
-    // Preserve the actual drawn following frame, rather than a leaf's157 delta.
-    expect(node('comments').getBoundingClientRect().top).toBe(before)
-    expect(owner.scrollTop).toBe(initialTop + 135)
-    expect(writes).toEqual(natural ? [] : [initialTop + 135])
+    expect(height('sidebar')).toBe(1001 + popularGrowth)
+    expect(height('outer')).toBe((hiddenComments ? 1845 : 1931) + popularGrowth)
+    // Preserve the actual22 reserve slack: flow844→1001 grows157 just like
+    // the leaf, so both the inner reading frame and following Comments agree.
+    expect(readingAnchor.getBoundingClientRect().top).toBe(before)
+    expect(node('comments').getBoundingClientRect().top).toBe(beforeComments)
+    expect(owner.scrollTop).toBe(initialTop + 157)
+    expect(writes).toEqual(natural ? [] : [initialTop + 157])
+    if (hiddenComments && !natural) {
+      // Real Popular payload grows inside the absolute Sidebar runtime. A
+      // following hidden Comments reserve must not pull the reading list away.
+      popularGrowth = 2494
+      act(() => { resize('sidebar'); resize('outer') })
+      expect(height('sidebar')).toBe(3495)
+      expect(readingAnchor.getBoundingClientRect().top).toBe(before)
+      expect(owner.scrollTop).toBe(initialTop + 157)
+      expect(writes).toEqual([initialTop + 157])
+      beforeComments = node('comments').getBoundingClientRect().top
+    }
+    // Duplicate observations/React children commits cannot collect the same
+    // slack twice. Shrink and a second growth preserve both existing frames.
+    const stableWrites = writes.slice()
+    act(() => { resize('sidebar'); resize('outer'); root.render(tree(125)) })
+    expect(height('sidebar')).toBe(1001 + popularGrowth)
+    expect(writes).toEqual(stableWrites)
+    act(() => root.render(tree(0)))
+    expect(height('sidebar')).toBe(844 + popularGrowth)
+    expect(readingAnchor.getBoundingClientRect().top).toBe(before)
+    expect(node('comments').getBoundingClientRect().top).toBe(beforeComments)
+    act(() => root.render(tree(125)))
+    expect(height('sidebar')).toBe(1001 + popularGrowth)
+    expect(readingAnchor.getBoundingClientRect().top).toBe(before)
+    expect(node('comments').getBoundingClientRect().top).toBe(beforeComments)
+    const beforeReleaseWrites = writes.slice()
+    settledSidebar = true
+    act(() => root.render(tree(125)))
+    // Release only the actual22 blank reserve. The current runtime reading
+    // frame stays in place, including when native anchoring moves the owner.
+    expect(node('sidebar').style.minHeight).toBe('')
+    expect(height('sidebar')).toBe(979 + popularGrowth)
+    expect(readingAnchor.getBoundingClientRect().top).toBe(before)
+    expect(owner.scrollTop).toBe(initialTop + 157)
+    expect(node('comments').getBoundingClientRect().top).toBe(beforeComments - 22)
+    expect(writes).toEqual(natural ? [...beforeReleaseWrites, initialTop + 157] : beforeReleaseWrites)
+    const releasedWrites = writes.slice()
+    act(() => { resize('sidebar'); resize('outer') })
+    expect(writes).toEqual(releasedWrites)
+    // A different DOM visit starts with its current822/844 geometry, without
+    // carrying padding or disposed observers from the previous settled visit.
+    settledSidebar = false
+    visitKey++
+    popularGrowth = 0
+    act(() => root.render(tree(0)))
+    expect(height('sidebar')).toBe(822)
+    expect(sidebarFlow()).toBe(844)
+    act(() => root.render(tree(125)))
+    expect(height('sidebar')).toBe(1001)
+    if (reflow) {
+      const beforeReflowWrites = writes.slice()
+      if (reflow === 'width') {
+        frameWidth = 320
+        Object.defineProperty(window, 'innerWidth', { configurable: true, value: frameWidth })
+      } else if (reflow === 'height') {
+        ownerHeight = 846
+        Object.defineProperty(window, 'innerHeight', { configurable: true, value: 900 })
+      } else currentReserve = 900
+      act(() => { root.render(tree(125)); resize('sidebar'); resize('outer') })
+      expect(height('sidebar')).toBe(979)
+      expect(writes).toEqual(beforeReflowWrites)
+      // The next same-frame content mutation owns a fresh coordinate frame;
+      // stale22 padding must neither return nor steal its genuine anchor.
+      const sameWidthPopular = node('popular').getBoundingClientRect().top
+      const sameWidthComments = node('comments').getBoundingClientRect().top
+      act(() => root.render(tree(200)))
+      expect(height('sidebar')).toBe(1054)
+      expect(node('popular').getBoundingClientRect().top).toBe(sameWidthPopular)
+      expect(node('comments').getBoundingClientRect().top).toBe(sameWidthComments)
+      expect(node('sidebar').dataset.reserveReleaseState).not.toBe('clamped')
+    }
   } finally {
     act(() => root.unmount())
     host.remove()
     HTMLElement.prototype.getBoundingClientRect = originalRect
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 })
   }
 })
 

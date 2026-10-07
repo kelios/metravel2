@@ -107,21 +107,64 @@ type ReserveReleaseAnchor = {
 
 type ReserveReleaseState = 'reserved' | 'released' | 'anchored' | 'clamped'
 
+type MeasuredReserveSlack = {
+  height: number
+  width: number
+  owner: HTMLElement
+  runtime: HTMLElement
+  reserveHeight: number | typeof TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT | undefined
+  minHeight: string
+  viewportHeight: number
+  ownerWidth: number
+  ownerHeight: number
+}
+
 // Absolute runtimes can contain other measured transitions. Their reserves can
-// absorb part of a leaf's growth, so the highest measured owner with a visible
-// following frame owns the transaction anchor. Fall back to the leaf when no
+// preserve their measured reserve slack so leaf and ancestor flow grow together.
+// The highest measured owner with a visible following frame owns the anchor. Fall back to the leaf when no
 // ancestor has one, then commit all heights before a single correction.
 const measuredTransitions = new WeakMap<HTMLElement, {
   measure: () => boolean
   hasResponsiveWidthChange: () => boolean
+  captureReserveSlack: () => void
 }>()
 
 function measureAncestorTransitions(node: HTMLElement) {
+  const owner = findMeasuredScrollOwner(node)
   let ancestor = node.parentElement
-  while (ancestor) {
+  while (ancestor && ancestor !== owner) {
     measuredTransitions.get(ancestor)?.measure()
     ancestor = ancestor.parentElement
   }
+}
+
+function captureAncestorReserveSlack(node: HTMLElement) {
+  const owner = findMeasuredScrollOwner(node)
+  let ancestor = node.parentElement
+  while (ancestor && ancestor !== owner) {
+    measuredTransitions.get(ancestor)?.captureReserveSlack()
+    ancestor = ancestor.parentElement
+  }
+}
+
+// A reserved runtime may grow inside its pinned flow frame. Prefer its drawn
+// content when changing/releasing conserved slack; a following reserve should
+// not pull that current reading content out of the viewport.
+function findRuntimeReadingAnchor(node: HTMLElement, runtime: HTMLElement | null): ReserveReleaseAnchor | null {
+  const owner = findMeasuredScrollOwner(node)
+  const view = node.ownerDocument.defaultView
+  if (!owner || !view || !runtime?.isConnected || !node.contains(runtime)) return null
+  const bounds = owner.getBoundingClientRect()
+  for (const child of Array.from(runtime.children)) {
+    if (!(child instanceof view.HTMLElement)) continue
+    const rect = child.getBoundingClientRect()
+    if (/^(absolute|fixed|sticky)$/.test(view.getComputedStyle(child).position)) continue
+    if (rect.width > 0 && rect.height > 0 &&
+        rect.bottom > Math.max(0, bounds.top + owner.clientTop) && rect.top < Math.min(view.innerHeight, bounds.top + owner.clientTop + owner.clientHeight) &&
+        rect.right > Math.max(0, bounds.left + owner.clientLeft) && rect.left < Math.min(view.innerWidth, bounds.left + owner.clientLeft + owner.clientWidth) &&
+        isDrawnWithinOwner(child, owner)) return { anchor: child, owner, beforeTop: rect.top }
+  }
+  return null
 }
 
 function connectedDOMView(ref: View | null): HTMLElement | null {
@@ -255,6 +298,8 @@ export function TravelDetailsDeferredTransition({
   const runtimeRef = useRef<View>(null)
   const measuredHeightRef = useRef<number | null>(null)
   const measuredWidthRef = useRef<number | null>(null)
+  const reserveSlackRef = useRef<MeasuredReserveSlack | null>(null)
+  const currentReserveSlackCaptureRef = useRef<(() => void) | null>(null)
   const currentMeasureRef = useRef<(() => boolean) | null>(null)
   const currentResponsiveWidthChangeRef = useRef<(() => boolean) | null>(null)
   const observerGenerationRef = useRef(0)
@@ -291,7 +336,8 @@ export function TravelDetailsDeferredTransition({
   // Keep geometry ownership registered for the DOM lifetime. React cleans up
   // child-dependent effects before running the next leaf layout effect; deleting
   // parent ownership there would make that leaf capture the wrong inner frame.
-  // The delegated measurement still carries the current generation fence.
+  // Registered measurements validate current drawn DOM; observer callbacks keep
+  // their captured generation fence.
   useLayoutEffect(() => {
     if (Platform.OS !== 'web') return
     const node = connectedDOMView(transitionRef.current)
@@ -299,6 +345,7 @@ export function TravelDetailsDeferredTransition({
     const transition = {
       measure: () => currentMeasureRef.current?.() ?? false,
       hasResponsiveWidthChange: () => currentResponsiveWidthChangeRef.current?.() ?? false,
+      captureReserveSlack: () => currentReserveSlackCaptureRef.current?.(),
     }
     measuredTransitions.set(node, transition)
     return () => {
@@ -307,7 +354,7 @@ export function TravelDetailsDeferredTransition({
   }, [])
 
   // Runtime remains absolute at current width even while drawn. Its measured
-  // outer border box alone owns the normal-flow height. Capture BEFORE changing
+  // outer border box plus current drawn reserve slack owns normal-flow height. Capture BEFORE changing
   // that height, then reconcile against the CURRENT offset/range: native browser
   // anchoring/clamping that already preserved the frame needs no second write.
   useLayoutEffect(() => {
@@ -316,6 +363,7 @@ export function TravelDetailsDeferredTransition({
     const generation = ++generationRef.current
     currentMeasureRef.current = null
     currentResponsiveWidthChangeRef.current = null
+    currentReserveSlackCaptureRef.current = null
     const node = connectedDOMView(transitionRef.current)
     const runtime = connectedDOMView(runtimeRef.current)
     if (!wantsRuntimeVisible) {
@@ -323,21 +371,31 @@ export function TravelDetailsDeferredTransition({
       revealCorrectionRef.current = null
       measuredHeightRef.current = null
       measuredWidthRef.current = null
+      reserveSlackRef.current = null
       if (node) node.style.height = ''
       if (runtimeMeasured) setRuntimeMeasured(false)
       if (reserveReleaseState !== 'reserved') setReserveReleaseState('reserved')
       return
     }
-    const measureRuntimeHeight = () => {
-      if (generationRef.current !== generation || !node?.isConnected || !runtime?.isConnected || !node.contains(runtime)) return false
+    const reserveSlackMatchesFrame = (slack: MeasuredReserveSlack) => !!node && !!runtime &&
+      slack.runtime === runtime && slack.owner === findMeasuredScrollOwner(node) && slack.reserveHeight === reserveHeight &&
+      slack.viewportHeight === node.ownerDocument.defaultView?.innerHeight && slack.ownerWidth === slack.owner.clientWidth && slack.ownerHeight === slack.owner.clientHeight &&
+      (node.dataset.reserveReleaseState !== 'reserved' || slack.minHeight === node.ownerDocument.defaultView?.getComputedStyle(node).minHeight) &&
+      Math.abs(slack.width - runtime.getBoundingClientRect().width) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX
+    const measureRuntimeHeight = (expectedGeneration = generation) => {
+      if (generationRef.current !== expectedGeneration || !node?.isConnected || !runtime?.isConnected || !node.contains(runtime)) return false
       const { width, height } = runtime.getBoundingClientRect()
       if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height < 0 || (!allowEmptyRuntime && height === 0)) return false
+      const slack = reserveSlackRef.current
+      if (slack && !reserveSlackMatchesFrame(slack)) reserveSlackRef.current = null
+      const flowHeight = height + (node.dataset.reserveReleaseState === 'reserved' ? reserveSlackRef.current?.height ?? 0 : 0)
       measuredWidthRef.current = width
-      if (measuredHeightRef.current != null && Math.abs(measuredHeightRef.current - height) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX) return false
+      if (measuredHeightRef.current != null && Math.abs(measuredHeightRef.current - height) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX && Math.abs(Number.parseFloat(node.style.height) - flowHeight) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX) return false
       // This imperative geometry owner deliberately runs within ResizeObserver's
       // pre-paint callback, rather than awaiting RNW onLayout's async UIManager.
-      node.style.height = `${height}px`
+      node.style.height = `${flowHeight}px`
       measuredHeightRef.current = height
+      if (node.dataset.reserveReleaseState !== 'reserved') reserveSlackRef.current = null
       setRuntimeMeasured(true)
       return true
     }
@@ -352,9 +410,40 @@ export function TravelDetailsDeferredTransition({
       const width = runtime.getBoundingClientRect().width
       return Number.isFinite(width) && width > 0 && Math.abs(measuredWidthRef.current - width) > RUNTIME_SETTLE_HEIGHT_EPSILON_PX
     }
+    currentReserveSlackCaptureRef.current = () => {
+      if (reserveSlackRef.current && !reserveSlackMatchesFrame(reserveSlackRef.current)) {
+        reserveSlackRef.current = null
+        return
+      }
+      if (reserveSlackRef.current || !node?.isConnected || !runtime?.isConnected || !node.contains(runtime) ||
+          node.dataset.reserveReleaseState !== 'reserved' || !/^(runtime|shown-pending)$/.test(node.dataset.deferredTransitionState ?? '') || measuredHeightRef.current == null) return
+      const owner = findMeasuredScrollOwner(node)
+      const view = node.ownerDocument.defaultView
+      const width = runtime.getBoundingClientRect().width
+      const flowHeight = node.getBoundingClientRect().height
+      if (!owner || !view || !Number.isFinite(width) || width <= 0 || measuredWidthRef.current == null || Math.abs(width - measuredWidthRef.current) > RUNTIME_SETTLE_HEIGHT_EPSILON_PX || !Number.isFinite(flowHeight)) return
+      // Latch the prior drawn flow difference once, before any nested height
+      // write. Subsequent measurements add this difference without collecting
+      // it again from a flow height which already includes conserved slack.
+      const height = Math.max(0, flowHeight - measuredHeightRef.current)
+      if (height > RUNTIME_SETTLE_HEIGHT_EPSILON_PX) reserveSlackRef.current = {
+        height, width, owner, runtime, reserveHeight, minHeight: view.getComputedStyle(node).minHeight,
+        viewportHeight: view.innerHeight, ownerWidth: owner.clientWidth, ownerHeight: owner.clientHeight,
+      }
+    }
     const commitMeasuredHeight = () => {
-      if (!node) return
-      const capture = findMeasuredTransactionAnchor(node)
+      if (!node || generationRef.current !== generation) return
+      const obsoleteSlack = !!reserveSlackRef.current && !reserveSlackMatchesFrame(reserveSlackRef.current)
+      if (obsoleteSlack) reserveSlackRef.current = null
+      const nextHeight = runtime?.getBoundingClientRect().height
+      if (nextHeight != null && Math.abs(nextHeight - (measuredHeightRef.current ?? 0)) > RUNTIME_SETTLE_HEIGHT_EPSILON_PX) {
+        if (!obsoleteSlack) currentReserveSlackCaptureRef.current?.()
+        captureAncestorReserveSlack(node)
+      }
+      const readingAnchor = reserveSlackRef.current && !currentResponsiveWidthChangeRef.current?.() && runtime &&
+        Math.abs(reserveSlackRef.current.width - runtime.getBoundingClientRect().width) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX
+        ? findRuntimeReadingAnchor(node, runtime) : null
+      const capture = obsoleteSlack ? null : readingAnchor ?? findMeasuredTransactionAnchor(node)
       if (!measureRuntimeHeight()) return
       measureAncestorTransitions(node)
       const corrected = correctMeasuredAnchor(capture, node)
@@ -363,7 +452,13 @@ export function TravelDetailsDeferredTransition({
         if ((allowEmptyRuntime && reserveHeight == null) || (reserveReleaseState !== 'reserved' && reserveReleaseState !== 'released')) setReserveReleaseState(revealCorrectionRef.current)
       }
     }
-    currentMeasureRef.current = measureRuntimeHeight
+    // Child-dependent React cleanup may precede a leaf layout commit. The
+    // registry owns this still-connected drawn DOM; stale observer callbacks
+    // remain fenced by their captured generation above.
+    currentMeasureRef.current = () => {
+      const owner = node ? findMeasuredScrollOwner(node) : null
+      return owner && runtime && isDrawnWithinOwner(runtime, owner) ? measureRuntimeHeight(generationRef.current) : false
+    }
     commitMeasuredHeight()
     const observer = supportsResizeObservation && node && runtime && node.contains(runtime) ? new ResizeObserver(commitMeasuredHeight) : null
     if (runtime) observer?.observe(runtime)
@@ -380,7 +475,8 @@ export function TravelDetailsDeferredTransition({
     if (Platform.OS !== 'web' || !wantsRuntimeVisible || !runtimeMeasured || !runtimeFrameReady || reserveHeight == null) return
     const node = connectedDOMView(transitionRef.current)
     if (reserveReleaseState === 'reserved') {
-      releaseAnchorRef.current = node ? findMeasuredTransactionAnchor(node) : null
+      const readingAnchor = node && reserveSlackRef.current ? findRuntimeReadingAnchor(node, connectedDOMView(runtimeRef.current)) : null
+      releaseAnchorRef.current = node ? readingAnchor ?? findMeasuredTransactionAnchor(node) : null
       setReserveReleaseState('released')
       return
     }
