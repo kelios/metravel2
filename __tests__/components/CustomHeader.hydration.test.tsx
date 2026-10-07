@@ -146,8 +146,8 @@ describe('CustomHeader: до-гидрационная геометрия стр�
     expect(findByDataSet(utils, 'headerLogoWordmark', 'true')).toHaveLength(0)
     expect(findByDataSet(utils, 'headerSlot', 'nav')).toHaveLength(0)
     expect(findByDataSet(utils, 'headerLangChevron', 'true')).toHaveLength(0)
-    // Реальная секция аккаунта уже смонтирована — плейсхолдера больше нет.
-    expect(findByDataSet(utils, 'headerSlot', 'account')).toHaveLength(0)
+    // Стабильный внешний слот остаётся; fallback скрывает CSS только после готового burger.
+    expect(findByDataSet(utils, 'headerSlot', 'account')).toHaveLength(1)
   })
 
   it('после гидратации на desktop оставляет полную строку с навигацией', () => {
@@ -211,4 +211,18 @@ describe('CustomHeader: до-гидрационная геометрия стр�
       expect(findByDataSet(utils, 'headerContextFallback', 'travel')).toHaveLength(0)
     },
   )
+
+  // The fallback is a real no-JS route in the existing visible account slot.
+  it('before hydration keeps a working More href instead of an aria-hidden empty account box', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    ;(useRouter as jest.Mock).mockReturnValue({ push: jest.fn() })
+    ;(usePathname as jest.Mock).mockReturnValue('/')
+    mockContextBarShouldSuspend = false
+    setResponsive(390, false)
+    const utils = renderHeader()
+    const anchor = utils.UNSAFE_getByType('a' as any)
+    expect(anchor.props.href).toBe('/more')
+    expect(anchor.props['aria-label']).toBeTruthy()
+    expect(findByDataSet(utils, 'headerSlot', 'account')[0].props['aria-hidden']).toBeUndefined()
+  })
 })

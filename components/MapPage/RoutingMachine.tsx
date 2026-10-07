@@ -1,3 +1,4 @@
+import type { RouteResultPublisher } from '@/types/route'
 // components/MapPage/RoutingMachine.tsx
 import { useEffect, useMemo, useRef, useCallback } from 'react'
 import { useRouting } from './useRouting'
@@ -6,6 +7,8 @@ import { useElevation } from '@/components/map-core/useElevation'
 import type { RoutingErrorCode } from '@/utils/routingHelpers'
 
 interface RoutingMachineProps {
+    rebuildRevision?: number
+    publishRouteResult?: RouteResultPublisher
     routePoints: [number, number][]
     transportMode: 'car' | 'bike' | 'foot'
     setRoutingLoading: (loading: boolean) => void
@@ -33,6 +36,8 @@ interface RoutingMachineProps {
 
 const RoutingMachine: React.FC<RoutingMachineProps> = ({
     routePoints,
+    rebuildRevision = 0,
+    publishRouteResult,
     transportMode,
     setRoutingLoading,
     setErrors,
@@ -48,6 +53,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         return flag === '1' || flag === 'true'
     }, [])
     const prevStateRef = useRef<{
+        generation: string
         loading: boolean
         error: string | boolean
         distance: number
@@ -56,6 +62,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         errorCode: RoutingErrorCode | null
     } | null>(null)
     const lastSentRef = useRef<{
+        generation: string
         loading: boolean
         error: string | boolean
         distance: number
@@ -65,7 +72,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
     } | null>(null)
 
     // Use custom hook for routing logic
-    const routingState = useRouting(routePoints, transportMode, ORS_API_KEY)
+    const routingState = useRouting(routePoints, transportMode, ORS_API_KEY, rebuildRevision)
     const hasTwoPoints = routePoints.length >= 2
 
     const clearedNoPointsRef = useRef(false)
@@ -80,11 +87,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
     const coordsKeyForSync = useMemo(() => {
         const coords = routingState.coords
         if (!Array.isArray(coords) || coords.length < 2) return ''
-        const first = coords[0]
-        const last = coords[coords.length - 1]
-        const safeNum = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : 0)
-        const fmt = (v: any) => safeNum(v).toFixed(5)
-        return `${coords.length}:${fmt(first?.[0])},${fmt(first?.[1])}:${fmt(last?.[0])},${fmt(last?.[1])}`
+        return JSON.stringify(coords)
     }, [routingState.coords])
     
     // Если точек меньше двух — сбрасываем состояние и выходим (без лишних setState на каждом рендере)
@@ -109,15 +112,19 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
     // Явно сигнализируем о старте построения маршрута при смене ключа маршрута
     useEffect(() => {
         if (!hasTwoPoints || !routeKey) return
-        if (lastRouteKeyLoadingRef.current === routeKey) return
-        lastRouteKeyLoadingRef.current = routeKey
+        const generation = `${routeKey}:${rebuildRevision}`
+        if (lastRouteKeyLoadingRef.current === generation) return
+        lastRouteKeyLoadingRef.current = generation
         setRoutingLoading(true)
-    }, [hasTwoPoints, routeKey, setRoutingLoading])
+    }, [hasTwoPoints, routeKey, rebuildRevision, setRoutingLoading])
 
     useEffect(() => {
         if (!hasTwoPoints) return
+        if (publishRouteResult && (routingState.routeKey !== routeKey ||
+            routingState.rebuildRevision !== rebuildRevision)) return
 
         const currentState = {
+            generation: `${routingState.routeKey}:${routingState.rebuildRevision}`,
             loading: routingState.loading,
             error: routingState.error,
             distance: routingState.distance,
@@ -133,6 +140,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             return
         }
         const hasChanged = !prevState ||
+            prevState.generation !== currentState.generation ||
             prevState.loading !== currentState.loading ||
             prevState.error !== currentState.error ||
             prevState.distance !== currentState.distance ||
@@ -146,6 +154,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             const lastSent = lastSentRef.current
             const isNew =
                 !lastSent ||
+                lastSent.generation !== currentState.generation ||
                 lastSent.loading !== currentState.loading ||
                 lastSent.error !== currentState.error ||
                 lastSent.distance !== currentState.distance ||
@@ -183,12 +192,6 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                 }
             }
             
-            setRouteDistance(routingState.distance)
-            try {
-                setRouteDuration?.(routingState.duration)
-            } catch {
-                // noop
-            }
             if (debugRouting) {
                 try {
                     console.info('[RoutingMachine] sync -> setFullRouteCoords', {
@@ -204,15 +207,27 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                     // noop
                 }
             }
-            // Не сбрасываем fullRouteCoords в [] при старте загрузки: это создает "прямую линию" миганием
-            // и может триггерить лишние эффекты/перерендеры. Очищаем только когда точек < 2 (отдельный эффект),
-            // либо когда реально есть геометрия.
-            if (Array.isArray(routingState.coords) && routingState.coords.length >= 2) {
-                setFullRouteCoords(routingState.coords)
+            if (publishRouteResult) {
+                if (!routingState.loading) publishRouteResult({
+                    routeKey: routingState.routeKey,
+                    rebuildRevision: routingState.rebuildRevision,
+                    coords: routingState.coords,
+                    distance: routingState.distance,
+                    duration: routingState.duration,
+                    isOptimal: routingState.isOptimal,
+                    error: typeof routingState.error === 'string' ? routingState.error : null,
+                })
+            } else {
+                setRouteDistance(routingState.distance)
+                setRouteDuration?.(routingState.duration)
+                if (routingState.coords.length >= 2) setFullRouteCoords(routingState.coords)
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
+        routingState.routeKey,
+        routingState.rebuildRevision,
+        routingState.isOptimal,
         routingState.loading,
         routingState.error,
         routingState.errorCode,
@@ -220,6 +235,9 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         routingState.duration,
         coordsKeyForSync,
         hasTwoPoints,
+        routeKey,
+        rebuildRevision,
+        publishRouteResult,
         setRouteDuration,
         // Не включаем setters в зависимости - они стабильны
     ])

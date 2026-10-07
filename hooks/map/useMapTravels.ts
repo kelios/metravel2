@@ -341,7 +341,7 @@ export function useMapTravels({
           ? String(radiusNum)
           : String(DEFAULT_RADIUS_KM),
         mode: dataMode,
-        routeKey: routeSignature,
+        ...(dataMode === 'route' ? { routeKey: routeSignature } : {}),
         filtersKey: JSON.stringify(backendFilters),
         query: searchQuery,
       };

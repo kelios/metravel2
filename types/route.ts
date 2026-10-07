@@ -61,3 +61,16 @@ export interface SavedRoute {
   tags: string[];
   thumbnail?: string;
 }
+
+/** Internal routing publication; identity is checked before committing geometry. */
+export interface RouteCalculationResult {
+  routeKey: string;
+  rebuildRevision: number;
+  coords: [number, number][];
+  distance: number;
+  duration: number;
+  isOptimal: boolean;
+  error: string | null;
+}
+
+export type RouteResultPublisher = (result: RouteCalculationResult) => void;

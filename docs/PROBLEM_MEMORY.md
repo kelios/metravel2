@@ -403,6 +403,16 @@ guard, падающий в CI на попытке обойти этот конт
   route-specific дополнительный ряд/контекст — `create-linked` к семье (как
   `#1563`), а не новый общий «CLS страницы».
 - **Последняя проверка:** 2026-08-30, production acceptance `#1298` закрыт.
+- **Связанная #2330 (2026-10-07):** свежий production c4fa mobile390
+  baseline пять раз дал CLS `0.078766`; основной вклад `0.075829` — map content
+  `y64/h780 → y0/h844` из-за SSR header64, снимаемого после гидратации.
+  Маркер существующего map header slot и critical CSS max767.98 скрывают его
+  до первого paint; SSR/первый клиент используют одинаковый marker. Другие
+  маршруты/desktop/native не скрываются, отрицательные map offsets и бюджеты
+  не меняются. Problem key `MAP-PAGE-MOBILE-CLS-001` связан с этой семьёй;
+  accepted runtime fix требует fresh reviewed SHA, mobile390×5 и настоящего
+  удаления CSS как negative control. После-фикса runtime пока pending.
+
   Общий `mobile/compact/wide` контракт резервирования и critical-CSS breakpoint
   живут на `metravel.by` (`[data-header-slot=""]` = 78 px, `64 px` под
   `@media (max-width:1279.98px)`, `64 px` под `max-width:767.98px`). Холодная
@@ -4466,6 +4476,16 @@ guard, падающий в CI на попытке обойти этот конт
   backend degraded-response issue относится к `ROUTING-ORS-001`, state/DTO/
   bridge drift — к этой семье; не создавать общую карточку «карта сломана».
 - **Последняя проверка:** 2026-07-28; migration debt остаётся.
+- **Связанный контракт #2311 (2026-10-07, source implementation):** явный
+  повторный Build имеет собственную revision, отдельно от semantic cache key.
+  Для того же ключа healthy road geometry/metadata сохраняются до результата;
+  geometry/key/revision публикуются атомарно. Новые точки/transport не удерживают
+  геометрию другого ключа. Problem key карточки:
+  `MAP-ROUTE-REBUILD-REPLACES-ROAD-WITH-DIRECT-001`; это scoped state-correction,
+  не закрытие общего migration debt и не разрешение direct как healthy road.
+  Контроль — два настоящих build цикла через actual store/adapter; mobile
+  production API/геометрия и degraded branch ещё runtime-unverified.
+
 
 ### TRAVEL-POINT-EDIT-PHOTO-IMPORT-ISOLATION-001 — фото существующей точки не является командой создания новой
 
@@ -5789,3 +5809,76 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   касания; CSS-правила маркеров есть, только под hover-media и находят элементы.
 - **Чего guard не видит:** ключ из переменной (`[HOVER]`) и объект стиля, собранный
   в рантайме.
+
+### FIRST-FRAME-NAV-CHROME-001 — рабочая навигация отсутствует до приложения
+
+- **Инвариант:** разрешённый mobile web dock содержит пять рабочих href в SSR и
+  остаётся тем же рядом при гидратации; отсутствие JS не означает отсутствие
+  базовой навигации. Desktop1280 и showFooter exclusions остаются без дока.
+- **Surface/owner:** app/_layout, WebMobileDockShell, лёгкие bottomDockItemDefs,
+  CustomHeader account slot, criticalCSS. Native/desktop runtime вне текущей приёмки.
+- **Каноническая задача:** #2216; история #2170/#1298/#2112 резервировала геометрию
+  и иконки, но не создаёт отсутствующий lazy Footer/BottomDock markup. Не reopen
+  этой истории по одному сходству первого кадра.
+- **Корректирующий слой:** source implementation 2026-10-07, постоянный eager
+  ряд, настоящая /more fallback, прежний deferred sheet controller без второго
+  ряда. Вложенная phone brand row #2100 не раскрывается. Runtime пока не доказан.
+- **Regression control:** actual-root SSR5href/exclusions, RNW hydration той же
+  ноды/active state/обычный More с реальным deferred Footer без Jest escape;
+  first-frame-before-hydration e2e. Actual-root/RNW units PASS; удаление
+  eager root mount даёт raw FAIL1, exact restore normal PASS. E2E ещё не
+  исполнен; unit не доказывает визуальную доступность без ExpoJS.
+- **Done gate:** reviewed/published SHA, реальные mobile390 no-app-JS href/burger,
+  обычный sheet после гидратации, единственный ряд/стабильная геометрия/CLS<=.05,
+  bundle guard в fail mode с прежними caps. Статические1280 проверки не равны
+  desktop browser PASS.
+
+### STATUS-BAR-THEME-001 — корень читает другую тему
+
+- **Инвариант:** navigation dark/base, app palette и native status-bar contrast
+  определяет resolved useTheme().isDark; ручная тема не следует отдельно системе.
+- **Surface/owner:** app/_layout.tsx/ThemedContent; ThemeProvider/storage/app.json
+  не меняются. Web native status-bar не содержит.
+- **Каноническая задача:** #2273; #2095 контролировал литералы barStyle вне root
+  и palette mapping, но не источник темы в actual root consumer.
+- **Корректирующий слой:** source implementation 2026-10-07 удаляет отдельный
+  системный prop/hook в root; barStyle и NavigationThemeProvider читают isDark.
+- **Regression control:** actual RootLayout consumer units app/system2x2,
+  Android/iOS/web mount, manual-system independence и смена app theme. Это
+  исполненный unit контроль: система как source даёт raw FAIL9, exact restore
+  normal PASS. AST guard проверяет named/namespace/prop aliases и controls;
+  это не device evidence.
+- **Done gate:** source review/checks и согласованная mobile-only приёмка с
+  честным разделением web/native unit/native runtime. Device icon contrast
+  остаётся runtime-unverified; не объявлять его проверенным на браузере.
+
+
+### MAP-WEB-TRAIN3-TAILS-001 — отложенная команда принадлежит визиту экрана
+
+- **Инвариант:** отложенный UI command/tour принадлежит текущему visit родителя;
+  cleanup при уходе отменяет команду даже до монтирования ленивого тура. Старый
+  visit не открывает меню/overlay на новой странице.
+- **Surface/owner:** MapScreen, mapOnboardingCommands и MapOnboarding;
+  каноническая #2305, related #2307. Runtime scope — mobile web; исторические
+  принятые native/static tails не переоткрываются этой записью.
+- **Корректирующий слой (2026-10-07, source):** parent visit отменяет replay;
+  manual restart не очищает saved completion, пока новый tour не завершён.
+  Query/cache semantic identity не зависит от route-only UI revision.
+- **Regression control:** actual parent unmount/late replay и finish/completion
+  consumer tests. Source/units не заменяют наблюдение реального UI.
+- **Done gate:** reviewed SHA, actual mobile cleanup/restart/return без позднего
+  тура; текущая post-fix runtime приёмка pending.
+
+### MAP-NATIVE-ONBOARDING-NO-SPOTLIGHT-001 — координаты цели принадлежат overlay
+
+- **Инвариант:** native tour target измеряется через measureInWindow относительно
+  actual overlay ровно один раз; viewport/safe-area origin не вычитается повторно.
+- **Surface/owner:** MapOnboarding и реальные target refs MapMobileTopOverlay;
+  каноническая #2307, related #2305/#2303/#2251/#2263.
+- **Корректирующий слой (2026-10-07, source):** actual mounted refs/measurement
+  и layout пересчёт заменяют native null spotlight; размер и координаты
+  приводятся к координатам actual overlay, а не предполагаемому экрану.
+- **Regression control:** реальные consumer/native target measurement units,
+  включая ненулевой overlay origin; unit не является hardware пиксельным замером.
+- **Done gate:** scoped source/units и согласованная mobile web проверка;
+  native physical spotlight alignment остаётся runtime-unverified в этом проходе.

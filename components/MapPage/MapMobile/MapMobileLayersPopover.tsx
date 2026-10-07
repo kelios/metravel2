@@ -139,6 +139,7 @@ const MapMobileLayersPopoverInner: React.FC<MapMobileLayersPopoverProps> = ({
           isMobile
           mode="radius"
           mapUiApi={mapUiApi}
+          onFitToResults={onRequestClose}
           showBaseLayer={showBaseLayer}
           showMapControls={showMapControls}
           overlayOptions={overlayOptions ? [...overlayOptions] : undefined}

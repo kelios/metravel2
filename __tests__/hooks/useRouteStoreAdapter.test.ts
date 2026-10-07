@@ -272,29 +272,10 @@ describe('useRouteStoreAdapter', () => {
   });
 
   describe('setFullRouteCoords', () => {
-    it('should convert [lng, lat][] to LatLng[] and set route', () => {
+    it('does not manufacture a healthy road from scalar coordinates before atomic publication', () => {
       const { result } = renderHook(() => useRouteStoreAdapter());
-
-      const coords: [number, number][] = [
-        [27.56, 53.9],
-        [27.57, 53.91],
-        [27.58, 53.92],
-      ];
-
-      act(() => {
-        result.current.setFullRouteCoords(coords);
-      });
-
-      expect(mockStore.setRoute).toHaveBeenCalledWith({
-        coordinates: [
-          { lat: 53.9, lng: 27.56 },
-          { lat: 53.91, lng: 27.57 },
-          { lat: 53.92, lng: 27.58 },
-        ],
-        distance: 0,
-        duration: 0,
-        isOptimal: true,
-      });
+      act(() => result.current.setFullRouteCoords([[27.56, 53.9], [27.57, 53.91], [27.58, 53.92]]));
+      expect(mockStore.setRoute).not.toHaveBeenCalled();
     });
 
     it('should not update if route coordinates are the same', () => {
@@ -324,11 +305,16 @@ describe('useRouteStoreAdapter', () => {
   });
 
   describe('setRouteDistance', () => {
-    it('should set route with distance', () => {
+    it('updates published route distance without relabeling degraded geometry healthy', () => {
       mockStore.points = [
         { id: '1', coordinates: { lat: 53.9, lng: 27.56 }, address: 'Start', type: 'start' },
         { id: '2', coordinates: { lat: 54.0, lng: 28.0 }, address: 'End', type: 'end' },
       ];
+
+      mockStore.route = {
+        coordinates: mockStore.points.map((point: any) => point.coordinates),
+        distance: 0, duration: 0, isOptimal: false,
+      };
 
       const { result } = renderHook(() => useRouteStoreAdapter());
 
@@ -343,7 +329,7 @@ describe('useRouteStoreAdapter', () => {
         ],
         distance: 12500,
         duration: 0,
-        isOptimal: true,
+        isOptimal: false,
       });
     });
 

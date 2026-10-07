@@ -11,7 +11,7 @@ import {
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
-import { getTabA11yProps } from '@/utils/a11yTabRoles'
+import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles'
 
 export interface AwardsTab {
   key: string
@@ -34,6 +34,7 @@ function AwardsTabBar({ tabs, activeKey, onChange, testID, style }: Props) {
 
   return (
     <ScrollView
+      {...getTabListA11yProps()}
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Animated, Platform } from 'react-native';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 
+import { getTabRoles } from '@/utils/a11yTabRoles';
 import RecommendationsTabs from '@/components/listTravel/RecommendationsTabs';
 import {
   getConfirmDialogRequest,
@@ -107,6 +108,21 @@ describe('RecommendationsTabs', () => {
     jest.restoreAllMocks();
   });
 
+
+  it.each(['web', 'ios', 'android'] as const)('the expanded consumer row owns its tabs and selection on %s', async os => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: os });
+    mockUseResponsive.mockReturnValue({ isMobile: false });
+    const view = render(<RecommendationsTabs forceVisible={true} />);
+    await screen.findByText('WeeklyHighlights');
+    const roles = getTabRoles();
+    const getRow = () => view.UNSAFE_getAllByProps({ accessibilityRole: roles.tablist }).find(node => node.type === 'RCTScrollView')!;
+    const row = getRow();
+    expect(row).toBeDefined();
+    expect(within(row).getAllByRole(roles.tab)).toHaveLength(4);
+    expect(within(row).getAllByRole(roles.tab).filter(tab => tab.props.accessibilityState?.selected)).toHaveLength(1);
+    fireEvent.press(view.getByLabelText('Хочу поехать'));
+    expect(within(getRow()).getAllByRole(roles.tab).filter(tab => tab.props.accessibilityState?.selected).map(tab => tab.props.accessibilityLabel)).toEqual(['Хочу поехать']);
+  });
 
   it('renders default tab (highlights) content', async () => {
     const { getByTestId } = render(<RecommendationsTabs forceVisible={true} />);

@@ -3,7 +3,7 @@ import { Platform } from 'react-native'
 
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
 
-import { BOTTOM_DOCK_HEIGHT } from './bottomDockModel'
+import { BOTTOM_DOCK_HEIGHT } from './bottomDockItemDefs'
 
 /**
  * Единственный резерв под плавающим нижним доком и плашками (#2097).

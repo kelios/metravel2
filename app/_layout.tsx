@@ -1,5 +1,5 @@
 import React, { startTransition, useEffect, useMemo, useState } from "react";
-import { Image, Platform, StatusBar as RNStatusBar, StyleSheet, View, LogBox, useColorScheme, useWindowDimensions } from "react-native";
+import { Image, Platform, StatusBar as RNStatusBar, StyleSheet, View, LogBox, useWindowDimensions } from "react-native";
 import { DarkTheme, DefaultTheme, SplashScreen, Stack, ThemeProvider as NavigationThemeProvider, usePathname } from "expo-router";
 import AppProviders from "@/components/layout/AppProviders";
 import NativeAppRuntime from "@/components/layout/NativeAppRuntime";
@@ -35,7 +35,8 @@ import { shouldPrefetchTravelStatics } from "@/utils/staticPrefetchRoutes";
 import { setActiveQueryClient } from "@/api/activeQueryClient";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
-import { ThemeProvider, useThemedColors } from "@/hooks/useTheme";
+import { ThemeProvider, useThemedColors, useTheme } from "@/hooks/useTheme";
+import WebMobileDockShell from '@/components/layout/WebMobileDockShell';
 import { navigationThemeColors } from "@/components/layout/navigationTheme";
 import SkipLinks from '@/components/layout/SkipLinks';
 import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnostics';
@@ -172,8 +173,6 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
 
 	function RootLayoutNav() {
 	    const pathname = usePathname();
-	    const colorSchemeRaw = useColorScheme();
-	    const colorScheme = colorSchemeRaw === 'unspecified' ? null : colorSchemeRaw;
       const { width } = useWindowDimensions();
       const [isViewportHydrated, setIsViewportHydrated] = useState(!isWeb);
 
@@ -356,7 +355,6 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
             showFooter={showFooter}
             isMobile={isMobile}
             pathname={effectivePathname}
-            currentColorScheme={colorScheme}
             setDockHeight={setDockHeight}
             measuredDockHeight={dockHeight}
             isMounted={isMounted}
@@ -373,7 +371,6 @@ function ThemedContent({
   showFooter,
   isMobile,
   pathname,
-  currentColorScheme,
   setDockHeight,
   measuredDockHeight,
   isMounted,
@@ -383,13 +380,13 @@ function ThemedContent({
   showFooter: boolean;
   isMobile: boolean;
   pathname?: string;
-  currentColorScheme: 'light' | 'dark' | null | undefined;
   setDockHeight: (h: number) => void;
   measuredDockHeight: number | null;
   isMounted: boolean;
   queryClient: any;
 }) {
   const colors = useThemedColors();
+  const { isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const mapBackground = showMapBackground ? require("../assets/travel/roulette-map-bg.jpg") : null;
@@ -413,7 +410,6 @@ function ThemedContent({
     isTravelRoute ? 'interaction' : 'idle';
   const showRootWebDeferredChrome = useDeferredRootWebChrome(isTravelRoute, isMounted);
   const navigationTheme = useMemo(() => {
-    const isDark = currentColorScheme === 'dark'
     const base = isDark ? DarkTheme : DefaultTheme
     return {
       ...base,
@@ -423,7 +419,7 @@ function ThemedContent({
         ...navigationThemeColors(colors),
       },
     }
-  }, [colors, currentColorScheme]);
+  }, [colors, isDark]);
 
   return (
     <BottomChromeInsetProvider measuredHeight={measuredDockHeight}>
@@ -443,7 +439,7 @@ function ThemedContent({
                           {/* AND-08: Global StatusBar — syncs barStyle with current theme (native only) */}
                           {Platform.OS !== 'web' && (
                             <RNStatusBar
-                              barStyle={currentColorScheme === 'dark' ? 'light-content' : 'dark-content'}
+                              barStyle={isDark ? 'light-content' : 'dark-content'}
                             />
                           )}
                           <NavigationThemeProvider value={navigationTheme}>
@@ -481,6 +477,8 @@ function ThemedContent({
                                   <ReactQueryDevtoolsComponent initialIsOpen={false} />
                                 </React.Suspense>
                               ) : null}
+
+                              {isWeb && showFooter && <WebMobileDockShell />}
 
                               {isWeb && isMounted && showRootWebDeferredChrome && RootWebDeferredChromeComponent && (
                                 <React.Suspense fallback={null}>

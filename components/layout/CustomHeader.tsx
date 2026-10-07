@@ -25,6 +25,7 @@ import { useHasListFilterQuery } from './useListFilterQuery'
 import { webDataSetProps } from '@/utils/webProps'
 import Logo from './Logo'
 import LanguageSwitcher from './LanguageSwitcher'
+import { WebHeaderMoreFallback } from './WebMobileDockShell'
 
 const CONTEXT_BAR_HEIGHT_MOBILE = 52
 const CONTEXT_BAR_HEIGHT_DESKTOP = 40
@@ -176,7 +177,7 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
             <LanguageSwitcher compact={rowIsMobile} />
 
             {/* Account section is auth-specific (no SSR/SEO value). Render only the
-                empty placeholder during prerender + first client render — mounting the
+                lightweight ordinary More link during prerender + first client render — mounting the
                 lazy section on the server emits an errored Suspense boundary (<!--$!-->)
                 that throws React #419 on hydration. isHydrated is false on the server and
                 first client render, true after hydration (and always true on native).
@@ -184,20 +185,17 @@ function CustomHeader({ onHeightChange, isNavigationTarget = true }: CustomHeade
                 иначе её появление уводит переключатель языка влево (#1298): на web
                 это `rightSection` с зарезервированной шириной, а ниже 1280px CSS
                 превращает его в мобильный `flex:1`. */}
-            {isHydrated ? (
-              <Suspense fallback={<View style={rowIsMobile ? styles.rightSectionMobile : styles.rightSection} />}>
-                <CustomHeaderAccountSectionComp
-                  activePath={activePath}
-                  isMobile={rowIsMobile}
-                  styles={styles}
-                />
-              </Suspense>
+            {Platform.OS === 'web' ? (
+              <View style={rowIsMobile ? styles.rightSectionMobile : styles.rightSection} {...webSlotProps('account')}>
+                <WebHeaderMoreFallback color={colors.text} />
+                {isHydrated && <Suspense fallback={null}>
+                  <CustomHeaderAccountSectionComp activePath={activePath} isMobile={rowIsMobile} styles={styles} />
+                </Suspense>}
+              </View>
             ) : (
-              <View
-                style={rowIsMobile ? styles.rightSectionMobile : styles.rightSection}
-                {...webSlotProps('account')}
-                aria-hidden
-              />
+              <Suspense fallback={<View style={rowIsMobile ? styles.rightSectionMobile : styles.rightSection} />}>
+                <CustomHeaderAccountSectionComp activePath={activePath} isMobile={rowIsMobile} styles={styles} />
+              </Suspense>
             )}
           </View>
         ) : null}

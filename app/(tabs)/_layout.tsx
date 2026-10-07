@@ -75,7 +75,7 @@ const isMapRoute = (pathname: string) => pathname === '/map' || pathname.startsW
 const shouldHideHeaderForMap = (pathname: string): boolean => {
     if (!isMapRoute(pathname)) return false;
     if (Platform.OS !== 'web') return true;
-    // SSR/desktop snapshot keeps header (no CLS for mobile-only hide).
+    // The SSR marker lets critical CSS hide this slot on mobile before paint.
     // `readViewportWidth()` отдаёт null не только без окна, но и когда браузер
     // вернул 0/NaN (скрытая вкладка, панель нулевой ширины). Раньше нулевая
     // ширина проходила как «мобильный» и прятала шапку; теперь непригодное
@@ -198,6 +198,7 @@ const Header = React.memo(function Header({ isNavigationTarget }: { isNavigation
             'div',
             {
                 'data-header-slot': '',
+                'data-map-header-slot': isMapRoute(pathname) ? 'true' : undefined,
                 style: headerSlotStyle,
             },
             <CustomHeader

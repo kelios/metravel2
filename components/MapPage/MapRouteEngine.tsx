@@ -1,3 +1,4 @@
+import type { RouteResultPublisher } from '@/types/route';
 // components/MapPage/MapRouteEngine.tsx
 // Headless-движок маршрутизации для native: на web маршрут строит RoutingMachine
 // внутри Map.web (react-leaflet), а на native карта — WebView+Leaflet без движка ORS,
@@ -15,6 +16,8 @@ import type { TransportMode } from '@/components/map-core/types';
 
 interface MapRouteEngineProps {
   routePoints: [number, number][];
+  rebuildRevision?: number;
+  publishRouteResult?: RouteResultPublisher;
   transportMode: TransportMode;
   setRouteDistance: (distance: number) => void;
   setRouteDuration?: (durationSeconds: number) => void;
@@ -26,6 +29,8 @@ interface MapRouteEngineProps {
 
 const MapRouteEngine: React.FC<MapRouteEngineProps> = ({
   routePoints,
+  rebuildRevision,
+  publishRouteResult,
   transportMode,
   setRouteDistance,
   setRouteDuration,
@@ -36,14 +41,26 @@ const MapRouteEngine: React.FC<MapRouteEngineProps> = ({
 }) => {
   const handleRouteChange = useCallback(
     (result: UseMapRoutingResult) => {
-      setFullRouteCoords(result.coords);
-      setRouteDistance(result.distance);
-      setRouteDuration?.(result.duration);
-      setRouteElevationStats?.(result.elevationGain, result.elevationLoss);
+      const key = routePoints.length >= 2 ? `${transportMode}-${routePoints.map(p => p.join(',')).join('|')}` : '';
+      if (publishRouteResult && (result.routeKey !== key || result.rebuildRevision !== (rebuildRevision ?? 0))) return;
+      if (publishRouteResult) {
+        if (!result.loading) publishRouteResult(result);
+      } else {
+        setFullRouteCoords(result.coords);
+        setRouteDistance(result.distance);
+        setRouteDuration?.(result.duration);
+      }
+      if (!result.loading && !result.error) {
+        setRouteElevationStats?.(result.elevationGain, result.elevationLoss);
+      }
       setRoutingLoading?.(result.loading);
       setRoutingError?.(result.error);
     },
     [
+      routePoints,
+      transportMode,
+      rebuildRevision,
+      publishRouteResult,
       setFullRouteCoords,
       setRouteDistance,
       setRouteDuration,
@@ -56,6 +73,7 @@ const MapRouteEngine: React.FC<MapRouteEngineProps> = ({
   useMapRouting(
     {
       routePoints,
+      rebuildRevision,
       transportMode,
       apiKey: process.env.EXPO_PUBLIC_ORS_API_KEY,
     },

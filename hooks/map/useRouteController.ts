@@ -1,3 +1,4 @@
+import type { RouteResultPublisher } from '@/types/route';
 /**
  * Route controller - manages route building, points, and actions
  * @module hooks/map/useRouteController
@@ -96,6 +97,8 @@ interface UseRouteControllerResult {
    * Full route coordinates
    */
   fullRouteCoords: [number, number][];
+  rebuildRevision: number;
+  publishRouteResult: RouteResultPublisher;
 
   /**
    * Set route points
@@ -253,6 +256,8 @@ export function useRouteController(
     routeElevationGain,
     routeElevationLoss,
     fullRouteCoords,
+    rebuildRevision,
+    publishRouteResult,
     setRoutePoints,
     setRouteDistance,
     setRouteDuration,
@@ -535,6 +540,8 @@ export function useRouteController(
     routeElevationGain,
     routeElevationLoss,
     fullRouteCoords,
+    rebuildRevision,
+    publishRouteResult,
     setRoutePoints,
     setRouteDistance,
     setRouteDuration,
@@ -567,6 +574,8 @@ export function useRouteController(
     routeElevationGain,
     routeElevationLoss,
     fullRouteCoords,
+    rebuildRevision,
+    publishRouteResult,
     setRoutePoints,
     setRouteDistance,
     setRouteDuration,

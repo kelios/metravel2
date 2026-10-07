@@ -68,6 +68,28 @@ describe('guard-bottom-chrome-inset', () => {
     }
   })
 
+  it('allows the actual moved definition/producer only; the same symbol in another consumer still fails (#2216)', () => {
+    const root = makeTempDir('guard-bottom-chrome-canonical-producers-')
+    try {
+      fs.mkdirSync(path.join(root, 'components/layout'), { recursive: true })
+      fs.mkdirSync(path.join(root, 'components/ui'), { recursive: true })
+      for (const file of ['bottomDockItemDefs.ts', 'WebMobileDockShell.tsx']) {
+        fs.copyFileSync(path.join(__dirname, '../../components/layout', file), path.join(root, 'components/layout', file))
+      }
+      expect(collectViolations(root)).toEqual([])
+      // Same producer filename in another directory is an ordinary consumer;
+      // the two exact owner allowances must not become a basename/global exemption.
+      fs.writeFileSync(path.join(root, 'components/ui/WebMobileDockShell.tsx'),
+        "import { BOTTOM_DOCK_HEIGHT } from '../layout/bottomDockItemDefs'\nexport const padding = BOTTOM_DOCK_HEIGHT + 8\n")
+      expect(collectViolations(root)).toEqual([
+        "components/ui/WebMobileDockShell.tsx:1: import { BOTTOM_DOCK_HEIGHT } from '../layout/bottomDockItemDefs'",
+        'components/ui/WebMobileDockShell.tsx:2: export const padding = BOTTOM_DOCK_HEIGHT + 8',
+      ])
+    } finally {
+      removeDir(root)
+    }
+  })
+
   it('реальное дерево проекта чистое', () => {
     expect(collectViolations()).toEqual([])
   })

@@ -83,13 +83,14 @@ const PANEL_WIDTH_NATIVE = 360
 const COLLAPSED_STRIP_WIDTH = 56
 
 // The desktop chrome beside a stand-in map host, inside the shell row.
-function Chrome({ isWeb = false }: { isWeb?: boolean }) {
+function Chrome({ isWeb = false, targetRegistry }: { isWeb?: boolean; targetRegistry?: any }) {
   const [collapsed, setCollapsed] = React.useState(false)
   const [tab, setTab] = React.useState<'filters' | 'travels'>('filters')
   const styles = getStyles(false, 0, themedColors)
   return (
     <View testID="map-row" style={styles.mapContainer}>
       <MapScreenDesktopChrome
+        targetRegistry={targetRegistry}
         styles={styles}
         themedColors={themedColors}
         isWeb={isWeb}
@@ -139,6 +140,21 @@ const findByTestID = (node: any, testID: string): any => {
   }
   return null
 }
+it('native wide chrome registers its actual three panel tab hosts for tour measurements', () => {
+  const original = Platform.OS
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' })
+  const registry = Object.fromEntries(['filters', 'travels', 'route'].map(name => [`map-panel-tab-${name}`, React.createRef<View>()]))
+  const view = render(<Chrome targetRegistry={registry} />)
+  for (const [id, ref] of Object.entries(registry)) {
+    expect(view.getByTestId(id)).toBeTruthy()
+    expect((ref.current as any)?.props.testID).toBe(id)
+    expect(ref.current?.measureInWindow).toEqual(expect.any(Function))
+  }
+  expect(view.queryByTestId('map-mobile-filters-button')).toBeNull()
+  view.unmount()
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: original })
+})
+
 const rowChildren = (utils: ReturnType<typeof render>) =>
   (findByTestID(utils.toJSON(), 'map-row')?.children ?? []) as any[]
 const widthOf = (node: any) => StyleSheet.flatten(node?.props?.style)?.width

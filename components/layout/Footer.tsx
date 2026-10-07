@@ -2,7 +2,7 @@ import React, { Suspense, lazy } from "react";
 import { View, Platform } from "react-native";
 import { useResponsive } from "@/hooks/useResponsive";
 import FooterDesktop from '@/components/layout/FooterDesktop';
-import { BOTTOM_DOCK_HEIGHT } from '@/components/layout/bottomDockModel';
+import { BOTTOM_DOCK_HEIGHT } from '@/components/layout/bottomDockItemDefs';
 
 export { BOTTOM_DOCK_HEIGHT };
 
@@ -10,18 +10,19 @@ export { BOTTOM_DOCK_HEIGHT };
 type FooterProps = {
   /** Высота горизонтального «дока» с иконками на мобайле. На десктопе = 0. */
   onDockHeight?: (h: number) => void;
+  webDockManagedByRoot?: boolean;
 };
 
 const isFooterTestEnv =
   typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
 
 const BottomDockComp = isFooterTestEnv
-  ? (require('@/components/layout/BottomDock').default as React.ComponentType<FooterProps>)
+  ? (require('@/components/layout/BottomDock').default as React.ComponentType<FooterProps & { renderDock?: boolean }>)
   : lazy(() => import('@/components/layout/BottomDock'));
 
 const WEB_MOBILE_DOCK_RESERVE_HEIGHT = BOTTOM_DOCK_HEIGHT;
 
-const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
+const Footer: React.FC<FooterProps> = ({ onDockHeight, webDockManagedByRoot = false }) => {
   const { isDesktop } = useResponsive();
   const shouldRenderMobileDock = Platform.OS !== "web" ? true : !isDesktop;
 
@@ -29,10 +30,10 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
     return (
       <Suspense
         fallback={
-          Platform.OS === 'web' ? <View style={{ height: WEB_MOBILE_DOCK_RESERVE_HEIGHT }} /> : null
+          Platform.OS === 'web' && !webDockManagedByRoot ? <View style={{ height: WEB_MOBILE_DOCK_RESERVE_HEIGHT }} /> : null
         }
       >
-        <BottomDockComp onDockHeight={onDockHeight} />
+        <BottomDockComp onDockHeight={onDockHeight} renderDock={!(Platform.OS === "web" && webDockManagedByRoot)} />
       </Suspense>
     );
   }

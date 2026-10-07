@@ -5,6 +5,8 @@
  * and native phones got the desktop steps aimed at `map-panel-tab-*`, which the
  * phone layout never renders.
  */
+import { createRef } from 'react'
+import { View } from 'react-native'
 import { cleanup, render } from '@testing-library/react-native'
 
 import { MapMobileTopOverlay } from '@/components/MapPage/MapMobile/MapMobileTopOverlay'
@@ -46,6 +48,16 @@ describe('map tour on the phone layout (#2303)', () => {
       'map-panel-tab-travels',
       'map-panel-tab-route',
     ])
+  })
+
+  it.each(['radius', 'route'] as const)('registers measurable refs on the actual phone controls (%s)', mode => {
+    const targetRegistry = Object.fromEntries(phoneTargets.map(id => [id, createRef<View>()]))
+    const view = render(<MapMobileTopOverlay {...(baseProps as any)} mode={mode} targetRegistry={targetRegistry} />)
+    for (const id of phoneTargets) {
+      expect(view.getByTestId(id)).toBeTruthy()
+      expect((targetRegistry[id].current as any)?.props.testID).toBe(id)
+      expect(targetRegistry[id].current?.measureInWindow).toEqual(expect.any(Function))
+    }
   })
 
   it.each(['radius', 'route'] as const)('every step target exists in the phone top overlay (%s mode)', (mode) => {

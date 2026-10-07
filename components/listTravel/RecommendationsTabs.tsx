@@ -45,7 +45,7 @@ import {
   type TabType,
 } from './recommendationsTabsModel';
 import { translate as i18nT } from '@/i18n'
-import { getTabA11yProps } from '@/utils/a11yTabRoles';
+import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles';
 
 
 interface RecommendationsTabsProps {
@@ -688,6 +688,7 @@ const RecommendationsTabs = memo(
       <View style={[styles.container, isMobileWeb ? styles.containerMobileWebExpanded : styles.containerFixedHeight]}>
         <View style={styles.header}>
           <ScrollView
+            {...getTabListA11yProps()}
             ref={scrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}

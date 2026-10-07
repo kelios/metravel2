@@ -42,8 +42,8 @@ describe('guard-tab-roles', () => {
       findViolationsInSource('components/ui/Tabs.tsx', "<Tab href='http://x' accessibilityRole=\"tab\" />\n"),
     ).toEqual(["components/ui/Tabs.tsx:1: <Tab href='http://x' accessibilityRole=\"tab\" />"])
     expect(
-      findViolationsInSource('components/ui/Tabs.tsx', 'const a = 1\n  accessibilityRole="tab" // вкладка\n'),
-    ).toEqual(['components/ui/Tabs.tsx:2: accessibilityRole="tab" // вкладка'])
+      findViolationsInSource('components/ui/Tabs.tsx', 'const a = 1\n  const row = <View accessibilityRole="tab" /> // вкладка\n'),
+    ).toEqual(['components/ui/Tabs.tsx:2: const row = <View accessibilityRole="tab" /> // вкладка'])
   })
 
   it('негативная проба на дереве: прямая роль роняет стража, владелец ролей — нет', () => {
@@ -69,7 +69,39 @@ describe('guard-tab-roles', () => {
     }
   })
 
+  it('detects multiline JSX/conditional/Platform.select roles without reading comments or selectors', () => {
+    const code = `const tabs = <View accessibilityRole={
+      condition ? 'tablist' : 'button'
+    } />;
+    const props = { role: Platform.select({
+      ios: 'button',
+      default: 'tab'
+    }) };
+    // accessibilityRole={'tab'}
+    const selector = '[role="tab"]';
+    const label = { title: 'tablist' };`;
+    expect(findViolationsInSource('components/Tabs.tsx', code)).toEqual([
+      'components/Tabs.tsx:1: const tabs = <View accessibilityRole={',
+      'components/Tabs.tsx:4: const props = { role: Platform.select({',
+    ]);
+    expect(findViolationsInSource('components/Tabs.tsx', code.replaceAll("'tablist'", "'button'").replaceAll("'tab'", "'button'"))).toEqual([]);
+  })
+
   it('реальное дерево проекта чистое', () => {
     expect(collectViolations()).toEqual([])
+  })
+})
+
+describe('canonical helper pairs (#2309)', () => {
+  it('rejects a called tab helper with only an imported or commented list helper', () => {
+    const source = `import {getTabA11yProps as tab, getTabListA11yProps as row} from '@/utils/a11yTabRoles';
+      // row()
+      const literal='row()'; const control=<View {...tab(true)} />;`
+    expect(findViolationsInSource('components/Row.tsx', source)).toHaveLength(1)
+  })
+  it('accepts actual aliased and namespace pairs and ignores unrelated same names', () => {
+    expect(findViolationsInSource('components/Row.tsx', `import {getTabA11yProps as tab,getTabListA11yProps as row} from '@/utils/a11yTabRoles'; const x=<View {...row()}><View {...tab(true)}/></View>`)).toEqual([])
+    expect(findViolationsInSource('components/Row.tsx', `import * as roles from '@/utils/a11yTabRoles'; const x=<View {...roles.getTabListA11yProps()}><View {...roles.getTabA11yProps(true)}/></View>`)).toEqual([])
+    expect(findViolationsInSource('components/Other.tsx', `import {getTabA11yProps} from './unrelated'; getTabA11yProps(true)`)).toEqual([])
   })
 })

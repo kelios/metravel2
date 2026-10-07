@@ -39,6 +39,7 @@ import {
 import { fetchTileWithRetry } from './Map/tileFetchRetry';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
 import type { MapUiApi } from '@/types/mapUi';
+import { useBottomSheetStore } from '@/stores/bottomSheetStore';
 
 type Point = {
   id?: number | string;
@@ -538,6 +539,11 @@ const Map: React.FC<TravelProps> = ({
         injectMapCommand,
         setOverlayEnabled,
         getResultCoords: () => resultCoordsRef.current,
+        getFitPadding: () => ({
+          topLeft: [50, 50],
+          bottomRight: [50, Math.max(50, useBottomSheetStore.getState().heightPx)],
+          maxShare: 1,
+        }),
         canFitToResults,
       }),
     );

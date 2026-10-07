@@ -1,3 +1,4 @@
+import type { MapOnboardingTargetRegistry } from '@/components/MapPage/MapOnboarding';
 import { Suspense, useEffect, useState } from 'react';
 
 import { MapOfflineIndicator } from '@/components/MapPage/MapOfflineIndicator'
@@ -6,6 +7,7 @@ import { MapMobileLayout, MapOnboarding } from '@/screens/tabs/mapDeferred'
 import { MAP_PANEL_PLACEHOLDER } from './shared'
 
 type MapScreenMobileProps = {
+  targetRegistry?: MapOnboardingTargetRegistry
   travelsData: any[]
   hasMore: boolean
   onLoadMore?: () => void
@@ -47,6 +49,7 @@ type MapScreenMobileProps = {
  * map node is never rendered here, so a breakpoint flip cannot remount it. #217.
  */
 export function MapScreenMobile({
+  targetRegistry,
   travelsData,
   hasMore,
   onLoadMore,
@@ -104,6 +107,7 @@ export function MapScreenMobile({
     <>
       <Suspense fallback={MAP_PANEL_PLACEHOLDER}>
         <MapMobileLayout
+          targetRegistry={targetRegistry}
           travelsData={travelsData}
           hasMore={hasMore}
           onLoadMore={onLoadMore}
@@ -147,6 +151,7 @@ export function MapScreenMobile({
       {shouldLoadOnboarding && (
         <Suspense fallback={null}>
           <MapOnboarding
+            targetRegistry={targetRegistry}
             layout="phone"
             mobileWebCoachmark={isWeb && isMobile}
             suspendAutoOpen={isWeb && isMobile && consentBannerVisible}

@@ -3,7 +3,10 @@ import { AppState, Linking, Platform } from 'react-native'
 
 import { useMapCoordinates } from '@/hooks/map/useMapCoordinates'
 import { loadExpoLocation } from '@/hooks/map/expoLocationLoader'
+import { logError, logMessage } from '@/utils/logger'
 import { getLiveUserPosition, publishLiveUserPosition } from '@/hooks/map/liveUserPosition'
+
+jest.mock('@/utils/logger', () => ({ logError: jest.fn(), logMessage: jest.fn() }))
 
 jest.mock('@/hooks/map/expoLocationLoader', () => ({
   loadExpoLocation: jest.fn(),
@@ -445,6 +448,30 @@ describe('useMapCoordinates live location updates', () => {
 
     await waitFor(() => expect(result.current.locationState.status).toBe('denied'))
     expect(getCurrentPosition).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['denied', null], ['unavailable', { code: 'ERR_LOCATION_UNAVAILABLE', message: 'Cannot obtain current location' }],
+    ['unknown', new Error('native implementation failure')],
+  ])('classifies native %s as warning or unknown error without changing fallback', async (kind, failure) => {
+    jest.mocked(logMessage).mockClear()
+    jest.mocked(logError).mockClear()
+    ;(Platform as any).OS = 'android'
+    ;(loadExpoLocation as jest.Mock).mockResolvedValue({
+      requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: kind === 'denied' ? 'denied' : 'granted', granted: kind !== 'denied', canAskAgain: false }),
+      getCurrentPositionAsync: jest.fn().mockRejectedValue(failure),
+      getLastKnownPositionAsync: jest.fn().mockResolvedValue(null),
+      Accuracy: { Balanced: 3 },
+    })
+    const view = renderHook(() => useMapCoordinates())
+    await waitFor(() => expect(kind === 'unknown' ? logError : logMessage).toHaveBeenCalled())
+    if (kind === 'unknown') expect(logError).toHaveBeenCalledWith(failure, expect.objectContaining({ step: 'getLocation' }))
+    else {
+      expect(logMessage).toHaveBeenCalledWith(expect.any(String), 'warning', expect.objectContaining({ step: 'getLocation' }))
+      expect(logError).not.toHaveBeenCalled()
+    }
+    expect(view.result.current.coordinatesAreFallback).toBe(true)
+    view.unmount()
   })
 
   it('preserves native canAskAgain=false for the settings flow', async () => {

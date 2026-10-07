@@ -488,3 +488,30 @@ web-only градиентов и теней у состояний нет. Цве
   ставятся по замеру (§9). Контроль: экран в `ACTION_SCREENS`
   (`scripts/guard-screen-actions.js`, декларация обязательна) и в
   `SCREEN_HEADER_OWNERS` (`scripts/guard-screen-header.js`).
+
+## Навигация до JS (#2216, source implementation 2026-10-07)
+
+WebMobileDockShell — лёгкий постоянный ряд из пяти настоящих href, монтируемый
+корнем сразу. Определения/высота — bottomDockItemDefs, видимость из реестра
+webMobileDockLayout: док скрыт начиная с1280, не с корневых768. Состав/56px,
+матовый фон, радиусы и компактные подписи сохранены. showFooter исключает
+auth, messages и upsert; скрытая бренд-строка вложенного phone не восстановлена.
+
+До JS «Ещё»/бургер ведут на реальную лёгкую /more с существующими ссылками.
+После загрузки обычный More перехватывает прежний sheet controller; eager ряд
+не заменяется и второй ряд не появляется. Бургер остаётся в существующем слоте
+пока не смонтирован настоящий mobile-menu-open; auth/sheet graph не переносится
+в критический путь. Native dock/desktop footer остаются прежними владельцами.
+
+Actual-root SSR, настоящий RNW DOM/hydration и web lazy Footer без Jest
+escape проверены unit tests; удаление eager root mount даёт raw FAIL и
+byte-exact restore проходит. Ссылки/no-app-JS e2e подготовлены, не исполнены.
+Живой CLS/бюджеты ещё не выполнены; unit PASS не является Done/runtime PASS. Приёмка
+mobile390 после публикации SHA, desktop/native runtime исключены пользователем.
+
+#2273: root navigation dark/base и native RNStatusBar используют одну resolved
+useTheme().isDark. Системная тема влияет через auto-режим ThemeProvider,
+не отдельную root ветку. Подготовлены actual-root units четырёх комбинаций и
+смены темы: consumer units и AST guard PASS; возврат системного source даёт
+raw FAIL9, byte-exact restore проходит. Native runtime не выполнен, на web
+native bar не монтируется.

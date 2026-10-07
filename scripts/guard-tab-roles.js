@@ -16,7 +16,7 @@
  */
 const fs = require('node:fs')
 const path = require('node:path')
-const { maskSource } = require('./lib/maskSource')
+const ts = require('typescript')
 
 const ROOT = path.resolve(__dirname, '..')
 const SCAN_DIRS = ['app', 'components', 'screens', 'hooks', 'context', 'ui', 'utils']
@@ -41,16 +41,59 @@ const PATTERNS = [
 const lineWritesTabRole = (code) => PATTERNS.some((pattern) => pattern.test(code))
 
 /**
- * Нарушения в тексте одного файла: `rel:line: исходная строка`. Комментарии
- * (в том числе многострочные JSDoc) гасит общий сканер `lib/maskSource` —
- * литералы он сохраняет, номера строк не сдвигает.
+ * Нарушения в тексте одного файла: `rel:line: исходная строка`. AST обходит только записи props и вызовы импортированных помощников;
+ * комментарии, селекторы и упоминания имён не считаются вызовами.
  */
 const findViolationsInSource = (rel, text) => {
   const lines = text.split('\n')
   const found = []
-  maskSource(text).split('\n').forEach((code, index) => {
-    if (lineWritesTabRole(code)) found.push(`${rel}:${index + 1}: ${lines[index].trim()}`)
-  })
+  const source = ts.createSourceFile(rel, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  const tabHelpers = new Set()
+  const listHelpers = new Set()
+  const helperNamespaces = new Set()
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier) ||
+        !/(?:^|\/)a11yTabRoles$/.test(statement.moduleSpecifier.text)) continue
+    const bindings = statement.importClause?.namedBindings
+    if (bindings && ts.isNamedImports(bindings)) {
+      for (const specifier of bindings.elements) {
+        const original = (specifier.propertyName || specifier.name).text
+        if (original === 'getTabA11yProps') tabHelpers.add(specifier.name.text)
+        if (original === 'getTabListA11yProps') listHelpers.add(specifier.name.text)
+      }
+    } else if (bindings && ts.isNamespaceImport(bindings)) helperNamespaces.add(bindings.name.text)
+  }
+  let firstTabCall = null
+  let hasListCall = false
+  const isHelperCall = (expression, names, original) =>
+    (ts.isIdentifier(expression) && names.has(expression.text)) ||
+    (ts.isPropertyAccessExpression(expression) && ts.isIdentifier(expression.expression) &&
+      helperNamespaces.has(expression.expression.text) && expression.name.text === original)
+  const containsTabValue = (node) => {
+    if (ts.isStringLiteralLike(node) && (node.text === 'tab' || node.text === 'tablist')) return true
+    return ts.forEachChild(node, containsTabValue) === true
+  }
+  const visit = (node) => {
+    if (ts.isCallExpression(node)) {
+      if (isHelperCall(node.expression, tabHelpers, 'getTabA11yProps')) firstTabCall ||= node
+      if (isHelperCall(node.expression, listHelpers, 'getTabListA11yProps')) hasListCall = true
+    }
+    const writesRole = ts.isJsxAttribute(node) || ts.isPropertyAssignment(node)
+    const name = writesRole && node.name && (node.name.text || node.name.getText(source))
+    if (writesRole && (name === 'role' || name === 'accessibilityRole') &&
+        node.initializer && containsTabValue(node.initializer)) {
+      const line = source.getLineAndCharacterOfPosition(node.getStart(source)).line
+      found.push(`${rel}:${line + 1}: ${lines[line].trim()}`)
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+  // File-level pair proves both helper calls exist, not their rendered ancestry.
+  // Consumer tests retain the stronger row/child/single-selection contract.
+  if (firstTabCall && !hasListCall) {
+    const line = source.getLineAndCharacterOfPosition(firstTabCall.getStart(source)).line
+    found.push(`${rel}:${line + 1}: tab helper call has no canonical list helper call`)
+  }
   return found
 }
 

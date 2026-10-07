@@ -1,3 +1,4 @@
+import type { MapOnboardingTargetRegistry } from './MapOnboarding'
 import React, { memo } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
@@ -26,6 +27,7 @@ type PanelTab = 'search' | 'route' | 'travels'
  * (`filters-reset-button`). Norms — docs/design/map-panel-header-tablet.md.
  */
 interface MapPanelHeaderProps {
+  targetRegistry?: MapOnboardingTargetRegistry
   activeTab: PanelTab
   travelsCount: number
   themedColors: ThemedColors
@@ -42,6 +44,7 @@ interface MapPanelHeaderProps {
 }
 
 function TabButton({
+  targetRef,
   testID,
   active,
   icon,
@@ -53,6 +56,7 @@ function TabButton({
   styles,
   badge,
 }: {
+  targetRef?: MapOnboardingTargetRegistry[string]
   testID: string
   active: boolean
   icon: React.ComponentProps<typeof Feather>['name']
@@ -70,6 +74,7 @@ function TabButton({
     // into the neighbour's box.
     <Pressable
       testID={testID}
+      ref={targetRef}
       style={({ pressed }) => [
         styles.tab,
         active && styles.tabActive,
@@ -119,6 +124,7 @@ function TabButton({
 }
 
 const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
+  targetRegistry,
   activeTab,
   travelsCount,
   themedColors,
@@ -146,6 +152,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
               count is the full one, not the capped «999+» of the badge. */}
           <TabButton
             testID="map-panel-tab-travels"
+            targetRef={targetRegistry?.['map-panel-tab-travels']}
             active={activeTab === 'travels'}
             icon="list"
             label={placesLabel}
@@ -159,6 +166,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
           />
           <TabButton
             testID="map-panel-tab-route"
+            targetRef={targetRegistry?.['map-panel-tab-route']}
             active={activeTab === 'route'}
             icon="navigation"
             label={routeLabel}
@@ -172,6 +180,7 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
               not an action: selected on start, so exactly one tab is selected. */}
           <TabButton
             testID="map-panel-tab-filters"
+            targetRef={targetRegistry?.['map-panel-tab-filters']}
             active={activeTab === 'search'}
             icon="sliders"
             label={filtersLabel}

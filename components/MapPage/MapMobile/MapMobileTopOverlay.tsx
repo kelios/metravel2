@@ -1,3 +1,4 @@
+import type { MapOnboardingTargetRegistry } from '../MapOnboarding'
 /**
  * MapMobileTopOverlay — compact icon toolbar floating on top of the map.
  *
@@ -82,6 +83,7 @@ function clampPopoverRight(anchorRight: number, width: number, viewportWidth: nu
 const ROUTE_HINT_TIMEOUT_MS = 6000
 
 interface MapMobileTopOverlayProps {
+  targetRegistry?: MapOnboardingTargetRegistry
   colors: ThemedColors
   topInset: number
   /** Short radius value shown as a badge on the radius button (e.g. "50"). */
@@ -156,6 +158,7 @@ interface MapMobileTopOverlayProps {
 }
 
 const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
+  targetRegistry,
   colors,
   topInset,
   radiusBadge,
@@ -391,6 +394,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         >
           <Pressable
             testID="map-mobile-filters-button"
+            ref={targetRegistry?.['map-mobile-filters-button']}
             onPress={onOpenFilters}
             accessibilityRole="button"
             accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.otkryt_filtry_2e8bb063')}
@@ -450,6 +454,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
 
           <Pressable
             testID="map-mobile-open-list"
+            ref={targetRegistry?.['map-mobile-open-list']}
             onPress={onOpenList}
             accessibilityRole="button"
             accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.pokazat_spisok_ryadom_value1_1dee15c6', { value1: listBadge ? ` — ${listBadge}` : '' })}
@@ -494,6 +499,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
           {!isRouteMode && onEnterRoute && (
             <Pressable
               testID="map-mobile-route-button"
+            ref={targetRegistry?.['map-mobile-route-button']}
               onPress={onEnterRoute}
               accessibilityRole="button"
               accessibilityLabel={routeAccessibilityLabel}
@@ -513,6 +519,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
             >
               <View
                 testID="map-mobile-route-button"
+            ref={targetRegistry?.['map-mobile-route-button']}
                 accessibilityRole="text"
                 accessibilityLabel={routeAccessibilityLabel}
                 style={styles.iconButtonTouch}

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import type { RoutePoint, RouteData, TransportMode } from '@/types/route';
+import type { RoutePoint, RouteData, TransportMode, RouteCalculationResult } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
 import { RouteValidator } from '@/utils/routeValidator';
 
@@ -16,6 +16,8 @@ interface RouteState {
   
   // Calculated route
   route: RouteData | null;
+  routeKey: string | null;
+  rebuildRevision: number;
   
   // Loading state
   isBuilding: boolean;
@@ -35,6 +37,7 @@ interface RouteState {
   forceRebuild: () => void;
   
   setRoute: (route: RouteData | null) => void;
+  publishRouteResult: (result: RouteCalculationResult) => void;
   setBuilding: (isBuilding: boolean) => void;
   setError: (error: string | null) => void;
   
@@ -44,6 +47,11 @@ interface RouteState {
   getWaypoints: () => RoutePoint[];
 }
 
+const currentRouteKey = (state: Pick<RouteState, 'points' | 'transportMode'>) =>
+  state.points.length >= 2
+    ? `${state.transportMode}-${state.points.map(p => `${p.coordinates.lng},${p.coordinates.lat}`).join('|')}`
+    : '';
+
 export const useRouteStore = create<RouteState>()(
   persist(
     (set, get) => ({
@@ -52,6 +60,8 @@ export const useRouteStore = create<RouteState>()(
       transportMode: 'car',
       points: [],
       route: null,
+      routeKey: null,
+      rebuildRevision: 0,
       isBuilding: false,
       error: null,
 
@@ -184,21 +194,49 @@ export const useRouteStore = create<RouteState>()(
       },
 
       forceRebuild: () => {
-        const points = get().points;
-        if (points.length < 2) return;
-        // Create new point array references to trigger useRouting re-computation
+        const state = get();
+        if (state.points.length < 2) return;
+        const healthy = state.route?.isOptimal && state.routeKey === currentRouteKey(state);
         set({
-          points: points.map(p => ({ ...p })),
-          route: null,
+          rebuildRevision: state.rebuildRevision + 1,
+          route: healthy ? state.route : null,
           error: null,
+          isBuilding: true,
         });
       },
 
-      setRoute: (route) => set({ route, isBuilding: false }),
-      
+      setRoute: (route) => set({ route, routeKey: route ? currentRouteKey(get()) : null, isBuilding: false }),
+
+      publishRouteResult: (result) => {
+        const state = get();
+        if (!result.routeKey || result.routeKey !== currentRouteKey(state) ||
+            result.rebuildRevision !== state.rebuildRevision) return;
+        const validGeometry = result.coords.length >= 2 && result.coords.every(([lng, lat]) =>
+          Number.isFinite(lng) && Number.isFinite(lat) && Math.abs(lng) <= 180 && Math.abs(lat) <= 90);
+        if (!validGeometry || !Number.isFinite(result.distance) || !Number.isFinite(result.duration)) return;
+        const healthy = state.route?.isOptimal && state.routeKey === result.routeKey;
+        if (!result.isOptimal && healthy) {
+          set({ error: result.error, isBuilding: false });
+          return;
+        }
+        set({
+          route: {
+            coordinates: result.coords.map(([lng, lat]) => ({ lng, lat })),
+            distance: result.distance,
+            duration: result.duration,
+            isOptimal: result.isOptimal,
+            error: result.error ?? undefined,
+            ...(healthy ? { elevationGain: state.route?.elevationGain, elevationLoss: state.route?.elevationLoss } : {}),
+          },
+          routeKey: result.routeKey,
+          error: result.error,
+          isBuilding: false,
+        });
+      },
+
       setBuilding: (isBuilding) => set({ isBuilding }),
       
-      setError: (error) => set({ error, isBuilding: false }),
+      setError: (error) => set(error ? { error, isBuilding: false } : { error }),
 
       // Computed getters
       getStartPoint: () => {

@@ -58,6 +58,7 @@ interface FiltersPanelMapSettingsProps {
   onReset?: () => void
   hideReset?: boolean
   onOpenList?: () => void
+  onFitToResults?: () => void
   showLayers?: boolean
   showBaseLayer?: boolean
   showOverlays?: boolean
@@ -80,6 +81,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   enabledOverlays: controlledEnabledOverlays,
   onOverlayToggle,
   canBuildRoute,
+  onFitToResults,
   showLayers = true,
   showBaseLayer,
   showOverlays,
@@ -204,7 +206,11 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
           <Button
             label={i18nT('map:components.MapPage.FiltersPanelMapSettings.pokazat_vse_na_karte_ba0f263b')}
             icon={<MapIcon name="zoom-out-map" size={18} color={colors.text} />}
-            onPress={() => safeMapUiCall(mapUiApi?.fitToResults)}
+            onPress={() => {
+              if (!mapUiApi || !canFitToResults) return
+              safeMapUiCall(mapUiApi?.fitToResults)
+              onFitToResults?.()
+            }}
             disabled={!mapUiApi || !canFitToResults}
             accessibilityLabel={i18nT('map:components.MapPage.FiltersPanelMapSettings.pokazat_vse_rezultaty_na_karte_03fcd330')}
             size="sm"

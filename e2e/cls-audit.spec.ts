@@ -62,6 +62,85 @@ const ROUTES_FULL: string[] = [
 
 const ROUTES_LOCAL_DEFAULT: string[] = ['/', '/travelsby', '/roulette'];
 
+
+// #2330: selectable mobile-only audit; existing desktop audits retain their defaults.
+// Capture supported pre-navigation observation and raw source rectangles in each fresh guest context.
+const MAP_MOBILE_CLS_OBSERVER = String.raw`function installMapClsObserver() {
+  const state = { supported: PerformanceObserver.supportedEntryTypes.includes('layout-shift'), entries: [], marks: [], readyAt: null, fontsReady: false, observerError: null };
+  window.__mapMobileCls = state;
+  const mark = (name, detail) => state.marks.push({ name, time: performance.now(), detail });
+  mark('observer-init');
+  const rect = value => value ? { x: value.x, y: value.y, width: value.width, height: value.height } : null;
+  const describe = node => {
+    if (!(node instanceof Element)) return null;
+    const ancestors = [];
+    for (let current = node, depth = 0; current && depth < 8; current = current.parentElement, depth++) {
+      ancestors.push({ tag: current.tagName, id: current.id, testID: current.getAttribute('data-testid'), className: String(current.className || '').slice(0, 160) });
+    }
+    return { ancestors, rect: rect(node.getBoundingClientRect()) };
+  };
+  if (state.supported) {
+    try {
+      const observer = new PerformanceObserver(list => {
+        for (const entry of list.getEntries()) state.entries.push({ value: entry.value, time: entry.startTime, hadRecentInput: entry.hadRecentInput, sources: (entry.sources || []).map(source => ({ node: describe(source.node), previousRect: rect(source.previousRect), currentRect: rect(source.currentRect) })) });
+      });
+      observer.observe({ type: 'layout-shift', buffered: true });
+    } catch (error) { state.observerError = String(error); }
+  }
+  let mapMounted = false;
+  const mutations = new MutationObserver(records => {
+    if (!mapMounted && document.querySelector('.leaflet-container')) { mapMounted = true; mark('leaflet-dom-mounted'); }
+    if (state.readyAt === null && document.querySelector('#root[data-map-route-ready="true"]')) { state.readyAt = performance.now(); mark('map-route-ready-after-tile-paint'); }
+    for (const record of records) for (const node of record.addedNodes) if (node instanceof Element && (node.tagName === 'STYLE' || node.tagName === 'LINK')) mark('style-insert', { tag: node.tagName, id: node.id, href: node.getAttribute('href'), reactNative: node.hasAttribute('data-rnw') });
+  });
+  mutations.observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-map-route-ready'] });
+  document.addEventListener('DOMContentLoaded', () => {
+    mark('dom-content-loaded');
+    document.fonts.ready.then(() => { state.fontsReady = true; mark('fonts-ready', { status: document.fonts.status }); });
+  }, { once: true });
+}`;
+test('@map-mobile-cls390 five fresh guest frames stay <=0.05', async ({ browser, baseURL }, testInfo) => {
+  const results: any[] = [];
+  for (let sample = 1; sample <= 5; sample++) {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, storageState: { cookies: [], origins: [] }, baseURL });
+    const page = await context.newPage();
+    const errors: string[] = [], writes: string[] = [], apiFailures: string[] = [];
+    page.on('pageerror', error => errors.push(error.name));
+    page.on('console', message => { if (message.type() === 'error') errors.push('console-error'); });
+    page.on('response', response => { if (new URL(response.url()).pathname.startsWith('/api/') && response.status() >= 400) apiFailures.push(String(response.status())); });
+    page.on('requestfailed', request => { if (new URL(request.url()).pathname.startsWith('/api/')) apiFailures.push(request.failure()?.errorText || 'request-failed'); });
+    await context.route('**/api/**', async route => {
+      if (!['GET', 'HEAD', 'OPTIONS'].includes(route.request().method())) {
+        writes.push(route.request().method()); await route.abort('blockedbyclient');
+      } else await route.continue();
+    });
+    await preacceptCookies(page);
+    await page.addInitScript({ content: `(${MAP_MOBILE_CLS_OBSERVER})();` });
+    let observation: any = null, failure: string | null = null;
+    try {
+      await page.goto('/map', { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction(() => {
+        const state = (window as any).__mapMobileCls;
+        return state && (state.supported === false || state.observerError ||
+          (state.fontsReady && state.readyAt !== null && performance.now() - state.readyAt >= 3000));
+      });
+      observation = await page.evaluate(() => (window as any).__mapMobileCls);
+      await page.screenshot({ path: testInfo.outputPath(`map-mobile-cls390-${sample}.png`) });
+    } catch (error) { failure = error instanceof Error ? error.name : 'runtime-failure'; }
+    await context.close();
+    const valid = observation?.supported === true && !observation.observerError && observation.fontsReady === true &&
+      observation.readyAt !== null && observation.marks?.some((mark: any) => mark.name === 'observer-init') && Array.isArray(observation.entries);
+    const entries = valid ? observation.entries.filter((entry: any) => !entry.hadRecentInput) : [];
+    const finite = entries.every((entry: any) => Number.isFinite(entry.value) && Number.isFinite(entry.time));
+    const cumulative = valid && finite ? entries.reduce((total: number, entry: any) => total + entry.value, 0) : null;
+    results.push({ sample, viewport: { width: 390, height: 844 }, observation, cumulative, errors, writes, apiFailures, failure,
+      pass: valid && finite && cumulative <= 0.05 && errors.length === 0 && writes.length === 0 && apiFailures.length === 0 && !failure });
+  }
+  await testInfo.attach('map-mobile-cls390-five-raw', { body: JSON.stringify(results, null, 2), contentType: 'application/json' });
+  expect(results).toHaveLength(5);
+  expect(results.filter(result => !result.pass).map(result => ({ sample: result.sample, cumulative: result.cumulative, failure: result.failure, supported: result.observation?.supported }))).toEqual([]);
+});
+
 test.describe('@perf CLS audit', () => {
   // #2331: source regression for the late context-bar mount. Desktop execution
   // is deferred when the current acceptance scope is mobile web only.

@@ -1,3 +1,4 @@
+import type { RouteResultPublisher } from '@/types/route';
 import React from 'react'
 import { ActivityIndicator, Platform, Text, View } from 'react-native'
 
@@ -152,6 +153,8 @@ type MapWebLeafletCanvasProps = {
   setRoutingLoading?: (loading: boolean) => void
   setErrors: (next: any) => void
   setRoutingError?: (value: string | null) => void
+  rebuildRevision?: number
+  publishRouteResult?: RouteResultPublisher
   setRouteDistance: (distance: number) => void
   setRouteDuration?: (durationSeconds: number) => void
   setFullRouteCoords: (coords: [number, number][]) => void
@@ -222,6 +225,8 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
   setRoutingLoading,
   setErrors,
   setRoutingError,
+  rebuildRevision,
+  publishRouteResult,
   setRouteDistance,
   setRouteDuration,
   setFullRouteCoords,
@@ -375,6 +380,8 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
               }
             }
           }}
+          rebuildRevision={rebuildRevision}
+          publishRouteResult={publishRouteResult}
           setRouteDistance={setRouteDistance}
           setRouteDuration={setRouteDuration}
           setFullRouteCoords={setFullRouteCoords}

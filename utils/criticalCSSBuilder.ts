@@ -8,6 +8,7 @@ import { ABOUT_LAYOUT } from '@/components/about/aboutLayout';
 import { EMPTY_STATE_LAYOUT } from '@/components/ui/emptyStateLayout';
 import { CHIP_LAYOUT } from '@/components/ui/chipLayout';
 import { HEADING_LAYOUTS } from '@/components/ui/headingLayout';
+import { WEB_MOBILE_DOCK_LAYOUT, WEB_MOBILE_DOCK_LABEL_LAYOUT, WEB_MOBILE_DOCK_SIDE_PADDING_CSS } from '@/components/layout/webMobileDockLayout';
 import { APP_DOWNLOAD_LAYOUT } from '@/components/appDownload/appDownloadLayout';
 import { buildBreakpointLayoutCss } from '@/utils/breakpointLayout';
 import { getIconFontGuardCss } from '@/utils/iconFontShell';
@@ -108,6 +109,7 @@ export function buildCriticalCSS(): string {
     '  [data-testid="header-language-switcher"]{min-width:54px !important;padding-left:8px !important;padding-right:8px !important}',
     '}',
     `@media (max-width:${HEADER_MEDIA_MAX_WIDTHS.mobile}px){`,
+    '  [data-header-slot=""][data-map-header-slot="true"]{display:none !important;height:0 !important;min-height:0 !important}',
     `  [data-header-slot=""]{height:var(--mt-header-slot-mobile,${HEADER_HEIGHT_FALLBACK['mobile-nobar']}px)}`,
     // #2100: вложенный экран телефона — без бренд-строки (`shouldShowBrandRow`).
     // Статический HTML несёт строку desktop-геометрии; на телефоне её снимает этот
@@ -256,6 +258,13 @@ export function buildCriticalCSS(): string {
     buildBreakpointLayoutCss(CHIP_LAYOUT),
     // #2258: /app — карточки возможностей в две колонки от 900 px с первого кадра.
     buildBreakpointLayoutCss(APP_DOWNLOAD_LAYOUT),
+    buildBreakpointLayoutCss(WEB_MOBILE_DOCK_LAYOUT),
+    buildBreakpointLayoutCss(WEB_MOBILE_DOCK_LABEL_LAYOUT),
+    WEB_MOBILE_DOCK_SIDE_PADDING_CSS,
+    '[data-testid="web-mobile-dock-shell"]{-webkit-user-select:none;-webkit-touch-callout:none}',
+    '[data-testid="header-more-fallback"]{display:none !important}',
+    `@media (max-width:${HEADER_MEDIA_MAX_WIDTHS.compact}px){[data-testid="header-more-fallback"]{display:flex !important}}`,
+    '[data-header-slot="account"]:has([data-testid="mobile-menu-open"]) [data-testid="header-more-fallback"]{display:none !important}',
     // #2258: кегль `Heading` по ступеням ширины (по возрастанию — позднее правило
     // побеждает); статический HTML несёт узкую ступень, как телефон и native.
     ...HEADING_LAYOUTS.map(buildBreakpointLayoutCss),

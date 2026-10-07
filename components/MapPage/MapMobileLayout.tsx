@@ -1,3 +1,4 @@
+import type { MapOnboardingTargetRegistry } from './MapOnboarding'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BackHandler, Platform, Pressable, Text as RNText, useWindowDimensions, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
@@ -34,6 +35,7 @@ type SheetContentKind = 'list' | 'filters' | 'route'
 type FiltersMode = 'radius' | 'route'
 
 interface MapMobileLayoutProps {
+  targetRegistry?: MapOnboardingTargetRegistry
   travelsData: any[]
   hasMore?: boolean
   onLoadMore?: () => void
@@ -83,6 +85,7 @@ const WEB_MOBILE_CONSENT_BANNER_INSET = 112
 const NATIVE_DOCK_BREATHING_ROOM = 16
 
 export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
+  targetRegistry,
   travelsData,
   hasMore,
   onLoadMore,
@@ -790,6 +793,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             иконки фильтров/слоёв/списка наезжают на hero-фото карточки места). */}
         {sheetState !== 'full' && !hasSelectedPlace && (
           <MapMobileTopOverlay
+            targetRegistry={targetRegistry}
             colors={colors}
             topInset={insets.top}
             radiusBadge={radiusBadge}

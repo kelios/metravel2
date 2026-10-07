@@ -68,6 +68,20 @@ describe('useMapTravels — data source while a route is being built', () => {
     mockFetchTravelsNearRoute.mockResolvedValue(ROUTE_POINTS)
   })
 
+  it('radius query identity ignores route geometry edits and retains its dataset', async () => {
+    const wrapper = makeWrapper()
+    const { result, rerender } = renderHook(({ coords }) => useMapTravels({
+      coordinates: COORDINATES, filterValues: FILTER_VALUES, filters: FILTERS,
+      mode: 'radius', fullRouteCoords: coords, isFocused: true,
+    }), { wrapper, initialProps: { coords: [[27.56, 53.9], [27.1, 53.5]] as [number, number][] } })
+    await waitFor(() => expect(result.current.total).toBe(1))
+    const before = mockFetchTravelsForMap.mock.calls.length
+    rerender({ coords: [[27.56, 53.9], [28.4, 54.3]] })
+    await waitFor(() => expect(result.current.total).toBe(1))
+    expect(mockFetchTravelsForMap).toHaveBeenCalledTimes(before)
+    expect(mockFetchTravelsNearRoute).not.toHaveBeenCalled()
+  })
+
   it('keeps places visible in route mode with no route points yet', async () => {
     const { result } = renderTravels('route', [])
 

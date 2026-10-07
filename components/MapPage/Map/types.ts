@@ -1,3 +1,4 @@
+import type { RouteResultPublisher } from '@/types/route';
 // components/MapPage/map/types.ts
 import type { MapUiApi } from '@/types/mapUi';
 import type { MapClusterBBox, MapClustersFilters } from '@/api/map';
@@ -24,6 +25,8 @@ export interface MapProps {
   userLocation?: Coordinates | null;
   routePoints: [number, number][];
   fullRouteCoords?: [number, number][];
+  rebuildRevision?: number;
+  publishRouteResult?: RouteResultPublisher;
   setRoutePoints?: (points: [number, number][]) => void;
   onMapClick: (lng: number, lat: number) => void;
   mode: MapMode;

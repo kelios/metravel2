@@ -572,7 +572,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
       if (signal?.aborted) return;
 
       if (permission.status !== 'granted') {
-        logMessage('[map] Location permission denied, using default coordinates', 'info', {
+        logMessage('[map] Location permission denied, using default coordinates', 'warning', {
           scope: 'map',
           step: 'getLocation',
         });
@@ -679,7 +679,15 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
     } catch (err) {
       if (signal?.aborted) return;
 
-      if (isLocationTimeoutError(err)) {
+      const locationError = err as { code?: string; message?: string } | null;
+      const expectedUnavailable = locationError?.code === 'E_LOCATION_UNAVAILABLE' ||
+        locationError?.code === 'ERR_LOCATION_UNAVAILABLE' ||
+        locationError?.message === 'Cannot obtain current location';
+      if (expectedUnavailable) {
+        logMessage(locationError?.message || '[map] Current location unavailable', 'warning', {
+          scope: 'map', step: 'getLocation',
+        });
+      } else if (isLocationTimeoutError(err)) {
         logMessage('[map] Location request timed out, using default coordinates', 'warning', {
           scope: 'map',
           step: 'getLocation',

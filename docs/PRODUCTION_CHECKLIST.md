@@ -134,7 +134,7 @@ iPad full-screen/windowed portrait/landscape и обязательные tablet 
 - [ ] iPhone/iPad Simulator подтвердил compilation/basic UI и adaptive tablet
       windowing; physical iPhone закрыл нужные device-capability кейсы, а
       physical iPad — exact tablet window/rotation acceptance. Перед App Review
-      exact processed TestFlight build прошёл `IOS-01..15` scope из Task Contract.
+      exact processed TestFlight build прошёл `IOS-01..19` scope из Task Contract.
 - [ ] Upload выполнен один раз; processing не привёл к duplicate upload.
       Фактические version/build и App Store Connect state сверены после
       операции.

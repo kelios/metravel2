@@ -16,6 +16,8 @@ export function useRouteStoreAdapter() {
   const mode = useRouteStore((s) => s.mode);
   const transportMode = useRouteStore((s) => s.transportMode);
   const route = useRouteStore((s) => s.route);
+  const rebuildRevision = useRouteStore((s) => s.rebuildRevision);
+  const publishRouteResult = useRouteStore((s) => s.publishRouteResult);
   const isBuilding = useRouteStore((s) => s.isBuilding);
   const error = useRouteStore((s) => s.error);
 
@@ -131,6 +133,7 @@ export function useRouteStoreAdapter() {
 
   const setRouteDistance = useCallback((distance: number) => {
     const state = useRouteStore.getState();
+    if (!state.route) return;
     const existingCoords =
       state.route?.coordinates ?? state.points.map((p) => p.coordinates);
 
@@ -150,7 +153,7 @@ export function useRouteStoreAdapter() {
       coordinates: existingCoords,
       distance,
       duration: existingDuration,
-      isOptimal: true,
+      isOptimal: state.route?.isOptimal ?? false,
       elevationGain: prevElevationGain,
       elevationLoss: prevElevationLoss,
     });
@@ -158,6 +161,7 @@ export function useRouteStoreAdapter() {
 
   const setRouteDuration = useCallback((durationSeconds: number) => {
     const state = useRouteStore.getState();
+    if (!state.route) return;
     const existingCoords =
       state.route?.coordinates ?? state.points.map((p) => p.coordinates);
     const existingDistance = state.route?.distance ?? 0;
@@ -168,7 +172,7 @@ export function useRouteStoreAdapter() {
       coordinates: existingCoords,
       distance: existingDistance,
       duration: Number(durationSeconds) || 0,
-      isOptimal: true,
+      isOptimal: state.route?.isOptimal ?? false,
       elevationGain: prevElevationGain,
       elevationLoss: prevElevationLoss,
     });
@@ -177,6 +181,8 @@ export function useRouteStoreAdapter() {
   const setFullRouteCoords = useCallback((coords: [number, number][]) => {
     const state = useRouteStore.getState();
 
+    if (coords.length === 0) { state.setRoute(null); return; }
+    if (!state.route) return;
     const latLngCoords: LatLng[] = coords.map(([lng, lat]) => ({ lat, lng }));
     const distance = state.route?.distance ?? 0;
     const duration = state.route?.duration ?? 0;
@@ -198,7 +204,7 @@ export function useRouteStoreAdapter() {
       coordinates: latLngCoords,
       distance,
       duration,
-      isOptimal: true,
+      isOptimal: state.route?.isOptimal ?? false,
       elevationGain: prevElevationGain,
       elevationLoss: prevElevationLoss,
     });
@@ -206,29 +212,25 @@ export function useRouteStoreAdapter() {
 
   const setRouteElevationStats = useCallback((elevationGainMeters: number | null, elevationLossMeters: number | null) => {
     const state = useRouteStore.getState();
+    if (!state.route) return;
     const existingCoords =
       state.route?.coordinates ?? state.points.map((p) => p.coordinates);
     const existingDistance = state.route?.distance ?? 0;
     const existingDuration = state.route?.duration ?? 0;
-    const isOptimal = state.route?.isOptimal ?? true;
+    const isOptimal = state.route?.isOptimal ?? false;
 
+    const normalizeElevation = (value: number | null) =>
+      value != null && Number.isFinite(value) ? Math.max(0, Math.round(value)) : undefined;
+    const elevationGain = normalizeElevation(elevationGainMeters);
+    const elevationLoss = normalizeElevation(elevationLossMeters);
+    if (state.route.elevationGain === elevationGain && state.route.elevationLoss === elevationLoss) return;
     state.setRoute({
       coordinates: existingCoords,
       distance: existingDistance,
       duration: existingDuration,
       isOptimal,
-      elevationGain:
-        elevationGainMeters == null
-          ? undefined
-          : Number.isFinite(elevationGainMeters)
-            ? Math.max(0, Math.round(elevationGainMeters))
-            : undefined,
-      elevationLoss:
-        elevationLossMeters == null
-          ? undefined
-          : Number.isFinite(elevationLossMeters)
-            ? Math.max(0, Math.round(elevationLossMeters))
-            : undefined,
+      elevationGain,
+      elevationLoss,
     });
   }, []);
 
@@ -311,6 +313,8 @@ export function useRouteStoreAdapter() {
     routeElevationGain,
     routeElevationLoss,
     fullRouteCoords,
+    rebuildRevision,
+    publishRouteResult,
     isBuilding,
     error,
 
@@ -352,6 +356,8 @@ export function useRouteStoreAdapter() {
     routeElevationGain,
     routeElevationLoss,
     fullRouteCoords,
+    rebuildRevision,
+    publishRouteResult,
     isBuilding,
     error,
     setBuilding,

@@ -1,7 +1,8 @@
 import React from 'react'
 import { Platform, View } from 'react-native'
-import { render } from '@testing-library/react-native'
+import { act, render } from '@testing-library/react-native'
 
+import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import MapBottomSheet from '@/components/MapPage/MapBottomSheet'
 
 const mockBottomSheet = jest.fn(({ children }: any) => (
@@ -13,6 +14,15 @@ const mockBottomSheetView = jest.fn(({ children, ...props }: any) =>
 const mockBottomSheetScrollView = jest.fn(({ children, ...props }: any) =>
   React.createElement(View, { ...props, testID: 'gorhom-bottom-sheet-scroll-view' }, children),
 )
+
+let mockPrepare: (() => { height: number; position: number }) | undefined
+let mockReactToPosition: ((current: any, previous: any) => void) | undefined
+jest.mock('react-native-reanimated', () => ({
+  ...jest.requireActual('react-native-reanimated'),
+  useSharedValue: (value: unknown) => require('react').useRef({ value }).current,
+  useAnimatedReaction: (prepare: any, react: any) => { mockPrepare = prepare; mockReactToPosition = react },
+  runOnJS: (callback: any) => callback,
+}))
 
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = require('react')
@@ -28,7 +38,26 @@ jest.mock('@gorhom/bottom-sheet', () => {
 })
 
 describe('MapBottomSheet', () => {
+  it('publishes actual container-minus-position, ignores unknown geometry, and clears on close/unmount', () => {
+    const view = render(<MapBottomSheet bottomInset={34}><View /></MapBottomSheet>)
+    const props = mockBottomSheet.mock.calls.at(-1)![0]
+    act(() => mockReactToPosition!(mockPrepare!(), null))
+    expect(useBottomSheetStore.getState().heightPx).toBe(117)
+    props.containerLayoutState.value = { height: 810, offset: { top: 0, bottom: 34, left: 0, right: 0 } }
+    props.animatedPosition.value = 220
+    act(() => mockReactToPosition!(mockPrepare!(), null))
+    expect(useBottomSheetStore.getState().heightPx).toBe(590)
+    props.animatedPosition.value = 530
+    act(() => mockReactToPosition!(mockPrepare!(), { height: 810, position: 220 }))
+    expect(useBottomSheetStore.getState().heightPx).toBe(280)
+    act(() => props.onChange(-1))
+    expect(useBottomSheetStore.getState().heightPx).toBe(0)
+    useBottomSheetStore.getState().setHeightPx(590)
+    view.unmount()
+    expect(useBottomSheetStore.getState().heightPx).toBe(0)
+  })
   beforeEach(() => {
+    useBottomSheetStore.setState({ heightPx: 117 })
     mockBottomSheet.mockClear()
     mockBottomSheetView.mockClear()
     mockBottomSheetScrollView.mockClear()

@@ -65,13 +65,17 @@ interface RoutingState {
     duration: number
     coords: [number, number][]
     errorCode: RoutingErrorCode | null
+    routeKey: string
+    rebuildRevision: number
+    isOptimal: boolean
 }
 
 
 export const useRouting = (
     routePoints: [number, number][],
     transportMode: 'car' | 'bike' | 'foot',
-    ORS_API_KEY: string | undefined
+    ORS_API_KEY: string | undefined,
+    rebuildRevision = 0,
 ) => {
     const isTestEnv = typeof process !== 'undefined' && (process.env as any)?.NODE_ENV === 'test'
     const [state, setState] = useState<RoutingState>({
@@ -81,8 +85,12 @@ export const useRouting = (
         duration: 0,
         coords: [],
         errorCode: null,
+        routeKey: '',
+        rebuildRevision,
+        isOptimal: false,
     })
 
+    const lastRevisionRef = useRef(rebuildRevision)
     const abortRef = useRef<AbortController | null>(null)
     const lastRouteKeyRef = useRef<string | null>(null)
     const isProcessingRef = useRef(false)
@@ -438,13 +446,18 @@ export const useRouting = (
                 duration: 0,
                 coords: [],
                 errorCode: null,
+                routeKey: '',
+                rebuildRevision,
+                isOptimal: false,
             })
             return
         }
-    }, [hasTwoPoints, setState])
+    }, [hasTwoPoints, rebuildRevision, setState])
 
     useEffect(() => {
         if (!hasTwoPoints || !routeKey) return
+        const forcedRebuild = lastRevisionRef.current !== rebuildRevision
+        lastRevisionRef.current = rebuildRevision
 
         // При смене routeKey (включая смену транспорта) сбрасываем isProcessing
         if (lastRouteKeyRef.current !== routeKey) {
@@ -457,7 +470,7 @@ export const useRouting = (
         // (lastRouteKeyRef присваивается только внутри отложенного fetchRoute, и завязка на него
         // приводила к лишним запросам к лимитированному ORS на валидном кэше нового routeKey.)
         const cached = routeCache.get(routePointsRef.current, transportMode)
-        if (cached) {
+        if (cached && !forcedRebuild) {
             // Помечаем routeKey как обработанный и фиксируем его, чтобы отложенный
             // fetchRoute из этого же прохода считался stale и не дублировал запрос.
             lastRouteKeyRef.current = routeKey
@@ -470,13 +483,14 @@ export const useRouting = (
                 duration: cached.duration || estimateDurationSeconds(cached.distance, transportMode),
                 coords: cached.coords,
                 errorCode: null,
+                routeKey, rebuildRevision, isOptimal: true,
             })
             // routeKey уже включает transportMode, поэтому безопасно не перестраивать маршрут повторно.
             return
         }
 
         // Skip if already processing this exact route
-        if (lastRouteKeyRef.current === routeKey && isProcessingRef.current) {
+        if (!forcedRebuild && lastRouteKeyRef.current === routeKey && isProcessingRef.current) {
             return
         }
 
@@ -492,17 +506,19 @@ export const useRouting = (
         // Rate limiting (avoid spamming free endpoints)
         if (!isTestEnv && !routeCache.canMakeRequest()) {
             const waitTime = routeCache.getTimeUntilNextRequest()
-            if (rateLimitKeyRef.current !== routeKey) {
-                rateLimitKeyRef.current = routeKey
+            const generationKey = `${routeKey}:${rebuildRevision}`
+            if (rateLimitKeyRef.current !== generationKey) {
+                rateLimitKeyRef.current = generationKey
                 const directDistance = calculateDirectDistance(currentPoints)
                 setState((prev) => ({
                     ...prev,
                     loading: false,
                     error: i18nT('map:components.MapPage.useRouting.slishkom_mnogo_zaprosov_podozhdite_value1_s_ef8e6bb3', { value1: Math.ceil(waitTime / 1000) }),
                     errorCode: 'rate_limit',
-                    distance: directDistance,
-                    duration: estimateDurationSeconds(directDistance, transportMode),
-                    coords: currentPoints,
+                    distance: cached?.distance ?? directDistance,
+                    duration: cached?.duration || estimateDurationSeconds(directDistance, transportMode),
+                    coords: cached?.coords ?? currentPoints,
+                    routeKey, rebuildRevision, isOptimal: !!cached,
                 }))
             }
             return
@@ -531,7 +547,12 @@ export const useRouting = (
 
             try {
                 commitIfCurrent(() => {
-                    setState((prev) => ({ ...prev, loading: true, error: false, errorCode: null }))
+                    setState({
+                        loading: true, error: false, errorCode: null,
+                        distance: cached?.distance ?? 0, duration: cached?.duration ?? 0,
+                        coords: cached?.coords ?? [],
+                        routeKey, rebuildRevision, isOptimal: !!cached,
+                    })
                 })
                 // Record request even if stale-check would skip UI updates; it still counts towards rate limiting.
                 routeCache.recordRequest()
@@ -613,6 +634,7 @@ export const useRouting = (
                         duration,
                         coords: result.coords,
                         errorCode: null,
+                        routeKey, rebuildRevision, isOptimal: true,
                     })
                 })
             } catch (primaryError: any) {
@@ -636,10 +658,11 @@ export const useRouting = (
                     setState({
                         loading: false,
                         error: msg,
-                        distance: directDistance,
-                        duration,
-                        coords: currentPoints,
+                        distance: cached?.distance ?? directDistance,
+                        duration: cached?.duration || duration,
+                        coords: cached?.coords ?? currentPoints,
                         errorCode,
+                        routeKey, rebuildRevision, isOptimal: !!cached,
                     })
                 })
                 if (isStale()) return
@@ -669,7 +692,7 @@ export const useRouting = (
                 // noop
             }
         }
-    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, fetchServerRoute, fetchORS, fetchOSRM, fetchValhalla, forceOsrm, isTestEnv])
+    }, [hasTwoPoints, routePointsKey, routeKey, rebuildRevision, transportMode, ORS_API_KEY, calculateDirectDistance, fetchServerRoute, fetchORS, fetchOSRM, fetchValhalla, forceOsrm, isTestEnv])
 
     useEffect(() => {
         return () => {

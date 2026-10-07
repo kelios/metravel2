@@ -73,7 +73,7 @@ import { ApiError } from '@/api/clientErrors';
 import { translate as i18nT } from '@/i18n'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
-import { getTabA11yProps } from '@/utils/a11yTabRoles';
+import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import {
   createStyles,
@@ -938,7 +938,7 @@ export default function PlannedTripScreen() {
             ) : null}
 
             {/* ── Workspace tabs: turn the long stack into a planning workspace ── */}
-            <View style={styles.tabBar} testID="trip-plan-tabs">
+            <View style={styles.tabBar} testID="trip-plan-tabs" {...getTabListA11yProps()}>
               {PLANNER_TABS.map((tabItem) => {
                 const active = tabItem.key === activeTab;
                 return (

@@ -5,6 +5,23 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { useRouteStore } from '@/stores/routeStore';
 
+// Complete result for the fixed car waypoints used below. Production engines
+// publish this identity/revision/geometry together, before scalar refinements.
+const routingServiceResponse = {
+  routeKey: 'car-27.559,53.9006|27.5615,53.9045',
+  coords: [
+    [27.559, 53.9006],
+    [27.5595, 53.9015],
+    [27.56, 53.9025],
+    [27.5605, 53.9035],
+    [27.5615, 53.9045],
+  ] as [number, number][],
+  distance: 1250,
+  duration: 120,
+  isOptimal: true,
+  error: null,
+};
+
 describe('Map Route Integration Tests', () => {
   beforeEach(() => {
     // Clear any persisted state
@@ -12,6 +29,7 @@ describe('Map Route Integration Tests', () => {
 
     // Also clear in-memory zustand singleton state between tests
     useRouteStore.getState().clearRoute();
+    useRouteStore.getState().setTransportMode('car');
   });
 
   describe('Building a route from scratch', () => {
@@ -142,29 +160,16 @@ describe('Map Route Integration Tests', () => {
         expect(result.current.points).toHaveLength(2);
       });
 
-      // Simulate routing service response
-      const fullRouteCoords: [number, number][] = [
-        [27.559, 53.9006],
-        [27.5595, 53.9015],
-        [27.56, 53.9025],
-        [27.5605, 53.9035],
-        [27.5615, 53.9045],
-      ];
-
+      // Publish the complete real adapter result at the routing boundary.
       act(() => {
-        result.current.setFullRouteCoords(fullRouteCoords);
+        result.current.publishRouteResult({
+          ...routingServiceResponse,
+          rebuildRevision: result.current.rebuildRevision,
+        });
       });
 
       await waitFor(() => {
         expect(result.current.fullRouteCoords).toHaveLength(5);
-      });
-
-      // Set distance
-      act(() => {
-        result.current.setRouteDistance(1250); // 1.25 km in meters
-      });
-
-      await waitFor(() => {
         expect(result.current.routeDistance).toBe(1250);
       });
 
@@ -188,7 +193,10 @@ describe('Map Route Integration Tests', () => {
       });
 
       act(() => {
-        result.current.setRouteDistance(1250);
+        result.current.publishRouteResult({
+          ...routingServiceResponse,
+          rebuildRevision: result.current.rebuildRevision,
+        });
       });
 
       await waitFor(() => {
@@ -256,15 +264,17 @@ describe('Map Route Integration Tests', () => {
       });
 
       act(() => {
-        result.current.setFullRouteCoords([
-          [27.559, 53.9006],
-          [27.56, 53.902],
-          [27.5615, 53.9045],
-        ]);
+        result.current.publishRouteResult({
+          ...routingServiceResponse,
+          rebuildRevision: result.current.rebuildRevision,
+        });
       });
 
       await waitFor(() => {
-        expect(result.current.route).toBeDefined();
+        expect(result.current.route).not.toBeNull();
+        expect(result.current.route?.isOptimal).toBe(true);
+        expect(result.current.fullRouteCoords).toHaveLength(5);
+        expect(result.current.routeDistance).toBe(1250);
       });
 
       // Change transport mode

@@ -1,3 +1,4 @@
+import type { MapOnboardingTargetRegistry } from '@/components/MapPage/MapOnboarding';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, BackHandler, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native'
 import Animated from 'react-native-reanimated'
@@ -31,6 +32,7 @@ import { translate as i18nT } from '@/i18n'
 
 
 type MapScreenDesktopProps = {
+  targetRegistry?: MapOnboardingTargetRegistry
   styles: any
   themedColors: any
   isWeb: boolean
@@ -86,6 +88,7 @@ type MapScreenDesktopProps = {
  * the mouse-driven resize handle and the persisted width stay web-only.
  */
 export function MapScreenDesktopChrome({
+  targetRegistry,
   styles,
   themedColors,
   isWeb,
@@ -271,6 +274,7 @@ export function MapScreenDesktopChrome({
           )}
           {isWeb && collapseButton}
           <MapPanelHeader
+            targetRegistry={targetRegistry}
             heading={panelHeading}
             activeTab={activePanelTab}
             travelsCount={travelsCount}
@@ -351,6 +355,7 @@ interface DesktopOverlayOption {
 }
 
 type MapScreenDesktopOverlaysProps = {
+  targetRegistry?: MapOnboardingTargetRegistry
   styles: any
   themedColors: any
   /** Desktop branch only (width ≥ 768, any platform): always false in practice. */
@@ -392,6 +397,7 @@ type MapScreenDesktopOverlaysProps = {
  * breakpoint shared chrome so they do not affect the map host position.
  */
 export function MapScreenDesktopOverlays({
+  targetRegistry,
   styles,
   themedColors,
   isMobile,
@@ -577,7 +583,7 @@ export function MapScreenDesktopOverlays({
       {shouldLoadOnboarding && (
         <Suspense fallback={null}>
           {/* Desktop branch: coachmark is mobile-web only, so always false here. */}
-          <MapOnboarding layout="desktop" mobileWebCoachmark={false} />
+          <MapOnboarding targetRegistry={targetRegistry} layout="desktop" mobileWebCoachmark={false} />
         </Suspense>
       )}
     </>

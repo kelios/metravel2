@@ -1,4 +1,4 @@
-import type { MapUiApi } from '@/types/mapUi';
+import type { MapUiApi, MapFitPadding } from '@/types/mapUi';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { serializeForInlineScript } from '@/utils/webViewBridge';
 import { buildNativeMapFitCoordsCommand, buildNativeMapFocusCoordCommand } from './nativeMapViewCommandsScript';
@@ -41,6 +41,7 @@ type BuildNativeMapUiApiArgs = {
   /** Читается в момент вызова: функция стабильна, пока не сменилась возможность. */
   getResultCoords: () => ReadonlyArray<{ lat: number; lng: number }>;
   canFitToResults: boolean;
+  getFitPadding?: () => MapFitPadding;
 };
 
 const noop = () => {};
@@ -50,6 +51,7 @@ export const buildNativeMapUiApi = ({
   setOverlayEnabled,
   getResultCoords,
   canFitToResults,
+  getFitPadding,
 }: BuildNativeMapUiApiArgs): MapUiApi => ({
   zoomIn: () => injectMapCommand('window.__metravelMapZoomIn && window.__metravelMapZoomIn()'),
   zoomOut: () => injectMapCommand('window.__metravelMapZoomOut && window.__metravelMapZoomOut()'),
@@ -67,7 +69,7 @@ export const buildNativeMapUiApi = ({
   fitToResults: () => {
     const coords = getResultCoords();
     if (coords.length === 0) return;
-    injectMapCommand(buildNativeMapFitCoordsCommand(coords, NATIVE_FIT_TO_RESULTS_MAX_ZOOM));
+    injectMapCommand(buildNativeMapFitCoordsCommand(coords, NATIVE_FIT_TO_RESULTS_MAX_ZOOM, getFitPadding?.()));
   },
   fitToCoords: (coords, { maxZoom, padding }) =>
     injectMapCommand(buildNativeMapFitCoordsCommand(coords, maxZoom, padding)),

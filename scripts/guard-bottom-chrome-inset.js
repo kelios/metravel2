@@ -20,6 +20,9 @@ const ROOT = path.resolve(__dirname, '..')
 const SCAN_DIRS = ['app', 'components', 'screens']
 const ALLOW_FILES = new Set([
   'components/layout/bottomDockModel.ts',
+  // #2216: lightweight canonical definition + actual persistent web dock producer.
+  'components/layout/bottomDockItemDefs.ts',
+  'components/layout/WebMobileDockShell.tsx',
   'components/layout/bottomChromeInset.tsx',
   'components/layout/BottomDock.tsx',
   'components/layout/Footer.tsx',

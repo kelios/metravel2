@@ -3,6 +3,7 @@ import type { Page, Route } from '@playwright/test'
 import type { ApiQuestMeta } from '../api/quests'
 import { expect, test } from './fixtures'
 import { preacceptCookies } from './helpers/navigation'
+import { LOCALE_PREFERENCE_STORAGE_KEY } from '../i18n/localeStorage'
 
 /**
  * #2170: кадр до гидратации. Его рисует браузер из статического HTML, и на
@@ -504,6 +505,39 @@ test.describe('каталог квестов с сохранённым срез�
       )
       await expect(page.locator('[data-quests-seo-slot]')).toHaveCount(0)
       expect(await page.evaluate(() => (window as any).__firstFrameCls)).toBeLessThanOrEqual(0.01)
+    })
+  }
+})
+
+// #2216: inspect real static hrefs while application chunks never execute.
+test.describe('eager mobile navigation without application JS', () => {
+  for (const route of ['/quests', '/']) {
+    test(`${route}:5 real no-JS dock destinations and working More fallback on mobile390`, async ({ page }) => {
+      await page.setViewportSize(PHONE)
+      await preacceptCookies(page)
+      await page.addInitScript(key => window.localStorage.setItem(key, JSON.stringify({ version: 1, mode: 'explicit', locale: 'ru' })), LOCALE_PREFERENCE_STORAGE_KEY)
+      await page.route(APP_SCRIPTS, route => route.abort('blockedbyclient'))
+      await page.goto(route, { waitUntil: 'domcontentloaded' })
+      const dock = page.getByTestId('footer-dock-row')
+      await expect(dock).toBeVisible()
+      const anchors = dock.locator('a')
+      await expect(anchors).toHaveCount(5)
+      expect(await anchors.evaluateAll(nodes => nodes.map(a => a.getAttribute('href')))).toEqual(['/search', '/map', '/quests', '/profile', '/more'])
+      await expect(page.getByTestId('header-more-fallback')).toBeVisible()
+      expect(await anchors.evaluateAll(nodes => nodes.every(node => {
+        const rect = node.getBoundingClientRect()
+        const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)
+        return rect.width > 0 && rect.height >= 44 && !!hit && node.contains(hit) && getComputedStyle(node).pointerEvents !== 'none'
+      }))).toBe(true)
+      expect(await page.evaluate(APP_HYDRATED)).toBe(false)
+      await page.getByTestId(route === '/' ? 'header-more-fallback' : 'footer-item-more').click()
+      await expect(page).toHaveURL(/\/more(?:[?#]|$)/)
+      await expect(page.getByTestId('more-navigation-page')).toBeVisible()
+      const links = page.getByTestId('more-navigation-page').locator('a')
+      await expect(links).toHaveCount(8)
+      await expect(links.first()).toBeVisible()
+      expect(await page.evaluate(APP_HYDRATED)).toBe(false)
+      expect(await links.evaluateAll(nodes => nodes.every(a => a.getAttribute('href')?.startsWith('/') && a.getAttribute('href') !== '/more'))).toBe(true)
     })
   }
 })

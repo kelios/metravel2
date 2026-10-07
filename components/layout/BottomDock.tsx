@@ -30,6 +30,7 @@ import {
   BOTTOM_DOCK_MORE_MENU_SECTIONS,
   normalizeBottomDockActivePath,
 } from "./bottomDockModel";
+import { OPEN_WEB_DOCK_MORE_EVENT } from './bottomDockItemDefs';
 import { isNavRouteAvailable } from "@/constants/platformNavRoutes";
 import { useAuth } from "@/context/AuthContext";
 import { runAccountMenuTarget } from "./accountMenuModel";
@@ -59,6 +60,7 @@ if (Platform.OS !== 'web') {
 const NATIVE_MORE_SHEET_ENABLED = false;
 
 type BottomDockProps = {
+  renderDock?: boolean;
   onDockHeight?: (h: number) => void;
 };
 
@@ -145,7 +147,7 @@ const DockButton = memo(function DockButton({
   );
 });
 
-function BottomDock({ onDockHeight }: BottomDockProps) {
+function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
   const { isDesktop } = useResponsive();
   const { width: viewportWidth } = useWindowDimensions();
   const isMobile = Platform.OS !== "web" ? true : !isDesktop;
@@ -190,6 +192,13 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
     return false;
   }, [showMore, pathname]);
   useAndroidBackHandler(handleDismissSheet);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !isMobile || renderDock) return;
+    const openMore = (event: Event) => { event.preventDefault(); setShowMore(true); };
+    document.addEventListener(OPEN_WEB_DOCK_MORE_EVENT, openMore);
+    return () => document.removeEventListener(OPEN_WEB_DOCK_MORE_EVENT, openMore);
+  }, [isMobile, renderDock]);
 
   const styles = useMemo(
     () => createStyles(colors, safeBottomPadding, isCompactMobileWidth),
@@ -348,8 +357,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   const containerProps = isNativeContainer ? ({ edges: ['left', 'right'] } as any) : {};
 
   return (
-    <Container style={[styles.container, showMore && styles.containerOpen]} {...containerProps}>
-      <View
+    <Container style={[styles.container, !renderDock && styles.controllerOnly, showMore && styles.containerOpen]} {...containerProps}>
+      {renderDock && <View
         style={[
           styles.dockWrapper,
           Platform.OS === "web" ? ({ height: MOBILE_DOCK_HEIGHT_WEB } as any) : null,
@@ -393,7 +402,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             })}
           </View>
         </View>
-      </View>
+      </View>}
       {showMore && Platform.OS === "web" && (
         <>
           <Pressable
@@ -552,6 +561,7 @@ const createStyles = (
       web: { height: MOBILE_DOCK_HEIGHT_WEB } as any,
     }),
   },
+  controllerOnly: { height: 0, backgroundColor: "transparent" },
   containerOpen: {
     zIndex: 11000,
   },

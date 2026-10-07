@@ -6,6 +6,7 @@
 
 import React, {
   forwardRef,
+  useEffect,
   useCallback,
   useImperativeHandle,
   useMemo,
@@ -22,6 +23,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { translate as i18nT } from '@/i18n'
+import { useAnimatedReaction, useSharedValue, runOnJS } from 'react-native-reanimated'
+import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 
 
 type SheetState = 'collapsed' | 'quarter' | 'half' | 'seventy' | 'full'
@@ -65,6 +68,26 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     scrollableContent = true,
     onStateChange,
   }, ref) => {
+    // Gorhom fills both public shared values from its actual hosting layout and
+    // sheet position. Its hosting container already excludes bottomInset.
+    const containerLayoutState = useSharedValue({
+      height: 0,
+      offset: { top: 0, bottom: 0, left: 0, right: 0 },
+    })
+    const animatedPosition = useSharedValue(Number.NaN)
+    const publishHeight = useCallback((height: number) => {
+      useBottomSheetStore.getState().setHeightPx(height)
+    }, [])
+    useAnimatedReaction(
+      () => ({ height: containerLayoutState.value.height, position: animatedPosition.value }),
+      (current, previous) => {
+        if (!(current.height > 0) || !Number.isFinite(current.position)) return
+        if (current.height === previous?.height && current.position === previous?.position) return
+        runOnJS(publishHeight)(Math.max(0, current.height - current.position))
+      },
+      [publishHeight],
+    )
+    useEffect(() => () => publishHeight(0), [publishHeight])
     const colors = useThemedColors()
     const styles = useMemo(() => getStyles(colors), [colors])
     const insets = useSafeAreaInsets()
@@ -98,6 +121,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     const handleSheetChanges = useCallback(
       (index: number) => {
         setIsFullySnapped(index === SNAP_INDEX_FULL)
+        if (index < 0) publishHeight(0)
         if (!onStateChange) return
         if (index < 0) {
           onStateChange('collapsed')
@@ -106,7 +130,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         const states: SheetState[] = ['quarter', 'half', 'seventy', 'full']
         onStateChange(states[index] ?? 'collapsed')
       },
-      [onStateChange],
+      [onStateChange, publishHeight],
     )
 
     // Backdrop + dismiss-Pressable монтируются ТОЛЬКО на FULL-снапе.
@@ -161,6 +185,8 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
       <BottomSheet
         ref={bottomSheetRef}
         index={-1}
+        containerLayoutState={containerLayoutState}
+        animatedPosition={animatedPosition}
         snapPoints={NATIVE_SNAP_POINTS}
         enableDynamicSizing={false}
         // @gorhom defaults the whole content container to one accessible

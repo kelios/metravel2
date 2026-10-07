@@ -124,6 +124,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
     onMapClick,
     mode,
     transportMode,
+    rebuildRevision,
+    publishRouteResult,
     setRouteDistance,
     setRouteDuration,
     setFullRouteCoords,
@@ -895,6 +897,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
         setRoutingLoading={setRoutingLoading}
         setErrors={setErrors}
         setRoutingError={setRoutingError}
+        rebuildRevision={rebuildRevision}
+        publishRouteResult={publishRouteResult}
         setRouteDistance={setRouteDistance}
         setRouteDuration={setRouteDuration}
         setFullRouteCoords={setFullRouteCoords}
@@ -978,6 +982,9 @@ export const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
   if (prevProps.mode !== nextProps.mode || prevProps.transportMode !== nextProps.transportMode) {
     return false
   }
+
+  if (prevProps.rebuildRevision !== nextProps.rebuildRevision) return false
+  if (prevProps.publishRouteResult !== nextProps.publishRouteResult) return false
 
   const prevRP = prevProps.routePoints ?? []
   const nextRP = nextProps.routePoints ?? []

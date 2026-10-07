@@ -14,6 +14,7 @@ import { translate as i18nT } from '@/i18n';
 export interface UseMapRoutingOptions {
   /** Route waypoints as [lng, lat] tuples */
   routePoints: [number, number][];
+  rebuildRevision?: number;
   /** Transport mode */
   transportMode: TransportMode;
   /** ORS API key */
@@ -29,6 +30,9 @@ export interface UseMapRoutingOptions {
 }
 
 export interface UseMapRoutingResult {
+  routeKey: string;
+  rebuildRevision: number;
+  isOptimal: boolean;
   /** True while the route is being computed */
   loading: boolean;
   /** Error message (or null if no error) */
@@ -66,6 +70,7 @@ export function useMapRouting(
 ): UseMapRoutingResult {
   const {
     routePoints,
+    rebuildRevision = 0,
     transportMode,
     apiKey,
     enableElevation = true,
@@ -73,16 +78,13 @@ export function useMapRouting(
   } = options;
 
   const hasTwoPoints = routePoints.length >= 2;
-  const routingState = useRouting(routePoints, transportMode, apiKey);
+  const routingState = useRouting(routePoints, transportMode, apiKey, rebuildRevision);
 
   // Stable key for coords comparison
   const coordsKey = useMemo(() => {
     const coords = routingState.coords;
     if (!Array.isArray(coords) || coords.length < 2) return '';
-    const first = coords[0];
-    const last = coords[coords.length - 1];
-    const fmt = (v: any) => (Number.isFinite(Number(v)) ? Number(v).toFixed(5) : '0');
-    return `${coords.length}:${fmt(first?.[0])},${fmt(first?.[1])}:${fmt(last?.[0])},${fmt(last?.[1])}`;
+    return JSON.stringify(coords);
   }, [routingState.coords]);
 
   // Elevation: храним в state (а не ref), чтобы приход высот ПОСЛЕ построения
@@ -112,6 +114,9 @@ export function useMapRouting(
 
   // Build result
   const result = useMemo<UseMapRoutingResult>(() => ({
+    routeKey: routingState.routeKey,
+    rebuildRevision: routingState.rebuildRevision,
+    isOptimal: routingState.isOptimal,
     loading: routingState.loading,
     error: typeof routingState.error === 'string' && routingState.error ? routingState.error : null,
     distance: routingState.distance,
@@ -120,7 +125,7 @@ export function useMapRouting(
     elevationGain,
     elevationLoss,
     elevationSamples,
-  }), [routingState.loading, routingState.error, routingState.distance, routingState.duration, routingState.coords, elevationGain, elevationLoss, elevationSamples]);
+  }), [routingState.routeKey, routingState.rebuildRevision, routingState.isOptimal, routingState.loading, routingState.error, routingState.distance, routingState.duration, routingState.coords, elevationGain, elevationLoss, elevationSamples]);
 
   // Sync to parent & show toasts
   const prevStateRef = useRef<string>('');
@@ -130,6 +135,9 @@ export function useMapRouting(
     if (!hasTwoPoints) {
       // Clear when not enough points
       const emptyResult: UseMapRoutingResult = {
+        routeKey: '',
+        rebuildRevision,
+        isOptimal: false,
         loading: false,
         error: null,
         distance: 0,
@@ -143,7 +151,7 @@ export function useMapRouting(
       return;
     }
 
-    const stateKey = `${result.loading}|${result.error}|${result.distance}|${result.duration}|${coordsKey}|${result.elevationGain}|${result.elevationLoss}`;
+    const stateKey = `${result.routeKey}|${result.rebuildRevision}|${result.isOptimal}|${result.loading}|${result.error}|${result.distance}|${result.duration}|${coordsKey}|${result.elevationGain}|${result.elevationLoss}`;
     if (stateKey === prevStateRef.current) return;
     prevStateRef.current = stateKey;
 
@@ -162,7 +170,7 @@ export function useMapRouting(
     onRouteChange?.(result);
     // result is derived from the listed primitives; onRouteChange omitted intentionally as a stable parent callback
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasTwoPoints, showToasts, result.loading, result.error, result.distance, result.duration, coordsKey, result.elevationGain, result.elevationLoss]);
+  }, [hasTwoPoints, rebuildRevision, showToasts, result.routeKey, result.rebuildRevision, result.isOptimal, result.loading, result.error, result.distance, result.duration, coordsKey, result.elevationGain, result.elevationLoss]);
 
   return result;
 }

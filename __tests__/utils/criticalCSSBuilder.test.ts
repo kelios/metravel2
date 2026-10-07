@@ -2,6 +2,7 @@ import { Platform, StyleSheet } from 'react-native'
 
 import { getThemedColors } from '@/constants/designSystem'
 import { createStyles } from '@/screens/tabs/PlacesScreen.styles'
+import { WEB_MOBILE_DOCK_LAYOUT } from '@/components/layout/webMobileDockLayout'
 import { buildCriticalCSS } from '@/utils/criticalCSSBuilder'
 
 // Регресс #1: широкое правило `[data-testid="travel-details-hero"] img{max-width:720px}`
@@ -380,3 +381,28 @@ describe('buildCriticalCSS: шрифт иконок (#2170)', () => {
   })
 })
 
+
+// #2216: CSS must hide the eager markup at the actual Footer1280 boundary before JS.
+describe('eager mobile dock critical geometry', () => {
+  const css = buildCriticalCSS()
+  it('registers dock visibility at1280 and keeps the compact label/side-padding contract', () => {
+    expect(css).toMatch(/@media \(min-width:1280px\)\{\s*\[data-bp-layout="web-mobile-dock-shell"\]\{display:none !important\}/u)
+    expect(WEB_MOBILE_DOCK_LAYOUT.blocks.shell.narrow).toEqual({ display: 'flex' })
+    expect(css).toContain('@media (min-width:391px)')
+    expect(css).toContain('padding-left:4px !important;padding-right:4px !important')
+  })
+  it('keeps hidden phone brand rows hidden and fallback burger conditional on actual loaded control', () => {
+    expect(css).toContain('[data-header-brand="phone-hidden"] [data-header-inner="true"]{display:none !important}')
+    expect(css).toContain('[data-header-slot="account"]:has([data-testid="mobile-menu-open"]) [data-testid="header-more-fallback"]{display:none !important}')
+  })
+})
+
+// Shared #2330 marker owner is app/(tabs)/_layout.tsx (MAP author); no generic header hiding.
+it('hides only the marked map header slot in the768 mobile media before first paint', () => {
+  const css = buildCriticalCSS()
+  const start = css.indexOf('@media (max-width:767.98px){')
+  const block = css.slice(start, css.indexOf('\n}', start))
+  expect(start).toBeGreaterThanOrEqual(0)
+  expect(block).toContain('[data-header-slot=""][data-map-header-slot="true"]{display:none !important;height:0 !important;min-height:0 !important}')
+  expect(css.match(/\[data-header-slot=""\]\[data-map-header-slot="true"\]/gu)).toHaveLength(1)
+})

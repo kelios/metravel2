@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Platform } from 'react-native'
+import { Platform, type View } from 'react-native'
+import type { MapOnboardingTargetRegistry } from '@/components/MapPage/MapOnboarding'
+import { cancelMapOnboardingRestart } from '@/components/MapPage/mapOnboardingCommands'
 import { translate as i18nT } from '@/i18n'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
@@ -65,6 +67,21 @@ if (CAN_PRELOAD_LEAFLET) {
 }
 
 export default function MapScreen() {
+  const filtersTarget = useRef<View>(null)
+  const placesTarget = useRef<View>(null)
+  const routeTarget = useRef<View>(null)
+  const filtersTabTarget = useRef<View>(null)
+  const placesTabTarget = useRef<View>(null)
+  const routeTabTarget = useRef<View>(null)
+  const targetRegistry = useMemo<MapOnboardingTargetRegistry>(() => ({
+    'map-mobile-filters-button': filtersTarget,
+    'map-mobile-open-list': placesTarget,
+    'map-mobile-route-button': routeTarget,
+    'map-panel-tab-filters': filtersTabTarget,
+    'map-panel-tab-travels': placesTabTarget,
+    'map-panel-tab-route': routeTabTarget,
+  }), [])
+  useEffect(() => () => cancelMapOnboardingRestart(), [])
   const isWeb = Platform.OS === 'web'
   // Web-only: keep --metravel-map-vh in sync with the real visible viewport so
   // the map container has a reliable height in in-app WebViews where `dvh` is
@@ -551,6 +568,7 @@ export default function MapScreen() {
       handleExpandRadius={handleExpandRadius}
       isConnected={isConnected}
       offlineIndicatorTop={offlineIndicatorTop}
+      targetRegistry={targetRegistry}
       shouldLoadOnboarding={shouldLoadOnboarding}
       isWeb={isWeb}
       isMobile={isMobile}
@@ -595,6 +613,7 @@ export default function MapScreen() {
       transportMode={transportMode}
       isConnected={isConnected}
       mapReady={mapReady}
+      targetRegistry={targetRegistry}
       shouldLoadOnboarding={shouldLoadOnboarding}
       panelHeading={headingAnchor === 'panel-head' ? pageHeading : undefined}
     />
@@ -608,6 +627,7 @@ export default function MapScreen() {
       insets={getDesktopBranchInsets(insets)}
       isConnected={isConnected}
       mapReady={mapReady}
+      targetRegistry={targetRegistry}
       shouldLoadOnboarding={shouldLoadOnboarding}
       mapUiApi={filtersPanelProps?.contextValue?.mapUiApi ?? null}
       overlayOptions={quickFilters.overlayOptions}

@@ -25,7 +25,7 @@ export const NATIVE_MAP_VIEW_COMMANDS_SCRIPT = `        window.__metravelMapZoom
             }
             if (!latLngs.length) return false;
             __metravelProgrammaticMoveUntil = Date.now() + 700;
-            if (latLngs.length === 1) {
+            if (latLngs.length === 1 && !padding) {
               map.setView(latLngs[0], Math.max(map.getZoom ? map.getZoom() : maxZoom, maxZoom));
             } else {
               map.fitBounds(L.latLngBounds(latLngs), metravelFitOptions(padding, [50, 50], maxZoom));

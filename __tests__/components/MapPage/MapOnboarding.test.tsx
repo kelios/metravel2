@@ -1,5 +1,6 @@
 import React from 'react';
-import { act, render } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
@@ -49,12 +50,15 @@ jest.mock('@/components/ui/Button', () => {
   };
 });
 
-import {
-  MapOnboarding,
-  measureInFrame,
-  restartMapOnboarding,
-  tooltipPosition,
-} from '@/components/MapPage/MapOnboarding';
+// setup.ts has already loaded RN; establish the platform before the tour's
+// module-time IS_WEB read instead of replacing a cached module factory.
+const cachedRN = require('react-native')
+const initialPlatform = cachedRN.Platform.OS
+cachedRN.Platform.OS = 'web'
+const { MapOnboarding, measureInFrame, restartMapOnboarding, tooltipPosition } =
+  require('@/components/MapPage/MapOnboarding') as typeof import('@/components/MapPage/MapOnboarding')
+afterAll(() => { cachedRN.Platform.OS = initialPlatform })
+afterEach(() => jest.useRealTimers())
 
 describe('MapOnboarding', () => {
   const setViewportWidth = (width: number) => {
@@ -245,3 +249,54 @@ describe('MapOnboarding', () => {
     expect(pos.left).toBe(tab.left);
   });
 });
+
+describe('deferred restart lifetime (#2305)', () => {
+  it('consumes a delayed mount intent once and cancellation prevents a later visit reopening', async () => {
+    const { cancelMapOnboardingRestart } = require('@/components/MapPage/mapOnboardingCommands')
+    restartMapOnboarding()
+    cancelMapOnboardingRestart()
+    const cancelled = render(<MapOnboarding mobileWebCoachmark={false} />)
+    await act(async () => Promise.resolve())
+    expect(cancelled.queryByTestId('onboarding-card')).toBeNull()
+    cancelled.unmount()
+    restartMapOnboarding()
+    const first = render(<MapOnboarding mobileWebCoachmark={false} />)
+    await act(async () => Promise.resolve())
+    expect(first.getByTestId('onboarding-card')).toBeTruthy()
+    first.unmount()
+    const second = render(<MapOnboarding mobileWebCoachmark={false} />)
+    await act(async () => Promise.resolve())
+    expect(second.queryByTestId('onboarding-card')).toBeNull()
+  })
+})
+
+describe('web tour follows rendered target movement (#2305)', () => {
+  it('remeasures the actual DOM target on resize and captured scroll without remounting', async () => {
+    expect(cachedRN.Platform.OS).toBe('web')
+    jest.useFakeTimers()
+    const target = document.createElement('div')
+    target.setAttribute('data-testid', 'map-panel-tab-filters')
+    document.body.appendChild(target)
+    let targetTop = 150, frameTop = 64
+    target.getBoundingClientRect = () => ({ top: targetTop, left: 24, width: 102, height: 44 } as DOMRect)
+    Object.defineProperty((require('react-native').View as any).prototype, 'getBoundingClientRect', { configurable: true, value: () => ({ top: frameTop, left: 0, width: 1180, height: 756 }) })
+    const query = jest.spyOn(document, 'querySelector')
+    const view = render(<MapOnboarding layout="desktop" mobileWebCoachmark={false} />)
+    await act(async () => restartMapOnboarding())
+    fireEvent.press(view.getByTestId('onboarding-next'))
+    act(() => jest.advanceTimersByTime(30))
+    expect(query).toHaveBeenCalledWith('[data-testid="map-panel-tab-filters"]')
+    expect(StyleSheet.flatten(view.getByTestId('onboarding-spotlight').props.style).top).toBe(82)
+    targetTop = 260
+    act(() => { window.dispatchEvent(new Event('resize')); jest.advanceTimersByTime(30) })
+    expect(StyleSheet.flatten(view.getByTestId('onboarding-spotlight').props.style).top).toBe(192)
+    frameTop = 100
+    act(() => { window.dispatchEvent(new Event('scroll')); jest.advanceTimersByTime(30) })
+    expect(StyleSheet.flatten(view.getByTestId('onboarding-spotlight').props.style).top).toBe(156)
+    view.unmount()
+    target.remove()
+    query.mockRestore()
+    delete (require('react-native').View as any).prototype.getBoundingClientRect
+    jest.useRealTimers()
+  })
+})

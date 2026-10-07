@@ -1,3 +1,4 @@
+import type { RouteResultPublisher } from '@/types/route';
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, Platform, Text, ActivityIndicator } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -40,6 +41,8 @@ interface MapPanelProps {
     coordinatesAreFallback?: boolean;
     routePoints?: [number, number][];
     fullRouteCoords?: [number, number][];
+    rebuildRevision?: number;
+    publishRouteResult?: RouteResultPublisher;
     placesAlongRoute?: any[];
     mode?: 'radius' | 'route';
     setRoutePoints?: (points: [number, number][]) => void;
@@ -97,6 +100,8 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                setRoutePoints = () => {},
                                                onMapClick = () => {},
                                                transportMode = 'car',
+                                               rebuildRevision,
+                                               publishRouteResult,
                                                setRouteDistance,
                                                setRouteDuration,
                                                setFullRouteCoords,
@@ -172,6 +177,8 @@ const MapPanel: React.FC<MapPanelProps> = ({
                     <MapRouteEngine
                         routePoints={routePoints}
                         transportMode={transportMode}
+                        rebuildRevision={rebuildRevision}
+                        publishRouteResult={publishRouteResult}
                         setRouteDistance={setRouteDistance}
                         setRouteDuration={setRouteDuration}
                         setFullRouteCoords={setFullRouteCoords}
@@ -221,6 +228,8 @@ const MapPanel: React.FC<MapPanelProps> = ({
                       setRoutePoints={setRoutePoints}
                       onMapClick={onMapClick}
                       transportMode={transportMode}
+                      rebuildRevision={rebuildRevision}
+                      publishRouteResult={publishRouteResult}
                       setRouteDistance={setRouteDistance}
                       setRouteDuration={setRouteDuration}
                       setFullRouteCoords={setFullRouteCoords}

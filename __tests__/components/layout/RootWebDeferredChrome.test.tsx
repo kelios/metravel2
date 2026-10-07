@@ -12,9 +12,9 @@ jest.mock('@/components/ui/NetworkStatus', () => ({
 
 jest.mock('@/components/layout/Footer', () => ({
   __esModule: true,
-  default: () => {
+  default: ({ webDockManagedByRoot }: any) => {
     const { Text } = require('react-native')
-    return <Text testID="footer">footer</Text>
+    return <Text testID="footer" accessibilityHint={String(webDockManagedByRoot)}>footer</Text>
   },
 }))
 
@@ -79,11 +79,11 @@ describe('RootWebDeferredChrome', () => {
     )
 
     await waitFor(() => {
-      expect(getByTestId('footer')).toBeTruthy()
+      expect(getByTestId('footer').props.accessibilityHint).toBe('true')
       expect(getByTestId('runtime-effects')).toBeTruthy()
     })
 
-    expect(getByTestId('footer')).toBeTruthy()
+    expect(getByTestId('footer').props.accessibilityHint).toBe('true')
     expect(getByTestId('runtime-effects')).toBeTruthy()
   })
 
@@ -99,7 +99,7 @@ describe('RootWebDeferredChrome', () => {
     )
 
     await waitFor(() => {
-      expect(getByTestId('footer')).toBeTruthy()
+      expect(getByTestId('footer').props.accessibilityHint).toBe('true')
     })
   })
 

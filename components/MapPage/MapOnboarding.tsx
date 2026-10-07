@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { DeviceEventEmitter, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { DeviceEventEmitter, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import Feather from '@expo/vector-icons/Feather'
 import type { ComponentProps } from 'react'
@@ -8,6 +8,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import Button from '@/components/ui/Button'
 import { translate as i18nT } from '@/i18n'
+import { requestMapOnboardingRestart, registerMapOnboardingRestart, consumeMapOnboardingRestart } from './mapOnboardingCommands'
 
 
 type FeatherIconName = ComponentProps<typeof Feather>['name']
@@ -23,26 +24,15 @@ const TOOLTIP_SIDE_MARGIN = 12
 const TOOLTIP_LEFT_MIN = TOOLTIP_SIDE_MARGIN
 const MOBILE_WEB_ONBOARDING_MAX_WIDTH = 767
 
-let _restartCb: (() => void) | null = null
-// #2251 — the tour mounts late (`shouldLoadOnboarding`, up to a second on web):
-// a «Подсказки» press before that is kept and replayed on mount, not lost.
-let _restartPending = false
-
 function ignoreOnboardingStorageError() {
   return
 }
 
 /** Call from settings / menu to re-show the onboarding tour. */
 export function restartMapOnboarding(): void {
-  if (IS_WEB && typeof localStorage !== 'undefined') {
-    try {
-      localStorage.removeItem(ONBOARDING_STORAGE_KEY)
-    } catch {
-      ignoreOnboardingStorageError()
-    }
-  }
-  if (_restartCb) _restartCb()
-  else _restartPending = true
+  // Manual replay does not require clearing completion. An abandoned lazy
+  // request must not turn the next visit into a first-time auto-open.
+  requestMapOnboardingRestart()
 }
 
 function getViewportWidth() {
@@ -179,6 +169,7 @@ export const getPhoneOnboardingSteps = (): OnboardingStep[] => [
 ]
 
 export type MapOnboardingLayout = 'phone' | 'desktop'
+export type MapOnboardingTargetRegistry = Readonly<Record<string, React.RefObject<View | null>>>
 
 interface Rect {
   top: number
@@ -264,6 +255,7 @@ export function tooltipPosition(
 }
 
 interface MapOnboardingProps {
+  targetRegistry?: MapOnboardingTargetRegistry
   onComplete?: () => void
   /**
    * #2303 — which layout is drawn: picks the step set. Without it the set
@@ -277,10 +269,12 @@ interface MapOnboardingProps {
 
 export const MapOnboarding: React.FC<MapOnboardingProps> = ({
   onComplete,
+  targetRegistry,
   layout,
   mobileWebCoachmark: mobileWebCoachmarkProp,
   suspendAutoOpen = false,
 }) => {
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions()
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
   const [mobileWebCoachmark] = useState(
@@ -297,22 +291,21 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null)
   const overlayRef = useRef<View>(null)
   const rafRef = useRef(0)
+  const measurementGeneration = useRef(0)
+  const remeasureRef = useRef<() => void>(() => {})
+  const [cardHeight, setCardHeight] = useState(0)
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const shouldSuspendAutoOpen = Boolean(suspendAutoOpen || (mobileWebCoachmark && consentBannerOpen))
   // #2251 — overlays show one at a time (#607, #1008): a manual restart while the
   // cookie banner is open waits for it to close instead of covering it.
   const shown = visible && !shouldSuspendAutoOpen
 
-  // Register restart callback
-  useEffect(() => {
-    _restartCb = () => {
-      setCurrentStep(0)
-      setVisible(true)
-    }
-    return () => {
-      _restartCb = null
-    }
-  }, [])
+  // The command belongs to this screen visit, including its deferred mount.
+  useEffect(() => registerMapOnboardingRestart(() => {
+    setCurrentStep(0)
+    setVisible(true)
+  }), [])
+
 
   useEffect(() => {
     if (!IS_WEB || !mobileWebCoachmark || typeof document === 'undefined') return
@@ -341,9 +334,7 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
   // on a mount with the cookie banner open that effect hides the auto-open, and
   // running first it would swallow the replayed manual press too.
   useEffect(() => {
-    if (!_restartPending) return
-    _restartPending = false
-    _restartCb?.()
+    consumeMapOnboardingRestart()
   }, [])
 
   // Auto-show on first visit for native and mobile web; desktop web stays manual.
@@ -384,16 +375,62 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
     }
   }, [shown])
 
-  // Re-measure target when step changes
+  // One animation-frame batch for step, layout, resize and scroll changes.
+  // Native rectangles are window-relative; subtract the measured overlay once.
   useEffect(() => {
+    setTargetRect(null)
     if (!shown) return
+    const generationRef = measurementGeneration
+    let disposed = false
     const measure = () => {
-      const step = steps[currentStep]
-      setTargetRect(getTargetRect(step?.targetTestID, overlayRef.current as unknown as Element | null))
+      const generation = ++generationRef.current
+      const testID = steps[currentStep]?.targetTestID
+      if (!testID) { setTargetRect(null); return }
+      if (IS_WEB) {
+        setTargetRect(getTargetRect(testID, overlayRef.current as unknown as Element | null))
+        return
+      }
+      const frame = overlayRef.current
+      const target = targetRegistry?.[testID]?.current
+      if (!frame?.measureInWindow || !target?.measureInWindow) { setTargetRect(null); return }
+      frame.measureInWindow((frameX, frameY, frameWidth, frameHeight) => {
+        if (disposed || generation !== generationRef.current) return
+        target.measureInWindow((x, y, width, height) => {
+          if (disposed || generation !== generationRef.current) return
+          const values = [frameX, frameY, frameWidth, frameHeight, x, y, width, height]
+          if (!values.every(Number.isFinite) || width <= 0 || height <= 0 || frameWidth <= 0 || frameHeight <= 0) {
+            setTargetRect(null)
+            return
+          }
+          setTargetRect(measureInFrame(
+            { left: x, top: y, width, height },
+            { left: frameX, top: frameY, width: frameWidth, height: frameHeight },
+          ))
+        })
+      })
     }
-    rafRef.current = requestAnimationFrame(measure)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [shown, currentStep, steps])
+    const schedule = () => {
+      ++generationRef.current
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = requestAnimationFrame(measure)
+    }
+    remeasureRef.current = schedule
+    schedule()
+    if (IS_WEB && typeof window !== 'undefined') {
+      window.addEventListener('resize', schedule)
+      window.addEventListener('scroll', schedule, true)
+    }
+    return () => {
+      disposed = true
+      ++generationRef.current
+      cancelAnimationFrame(rafRef.current)
+      remeasureRef.current = () => {}
+      if (IS_WEB && typeof window !== 'undefined') {
+        window.removeEventListener('resize', schedule)
+        window.removeEventListener('scroll', schedule, true)
+      }
+    }
+  }, [shown, currentStep, steps, targetRegistry, windowWidth, windowHeight])
 
   const handleComplete = useCallback(() => {
     saveOnboardingCompleted()
@@ -417,6 +454,13 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
   const step = steps[currentStep]
   const isLastStep = currentStep === steps.length - 1
   const pos = tooltipPosition(targetRect, step.placement)
+  if (!IS_WEB && targetRect && cardHeight > 0) {
+    const below = targetRect.top + targetRect.height + TOOLTIP_GAP_PX
+    const above = targetRect.top - TOOLTIP_GAP_PX - cardHeight
+    pos.top = below + cardHeight <= targetRect.frameHeight - TOOLTIP_SIDE_MARGIN
+      ? below : Math.max(TOOLTIP_SIDE_MARGIN, above)
+    delete pos.bottom
+  }
   // Когда карточка позиционируется абсолютно (привязана к таргету), задаём явную
   // ширину, вписанную во вьюпорт, иначе width:'90%' резолвится от overlay (всё
   // окно) и absolute-left уводит правый край за экран на мобильном.
@@ -424,7 +468,7 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
   const cardWidthStyle = targetRect ? ({ width: cardWidth, maxWidth: cardWidth } as const) : null
 
   return (
-    <View ref={overlayRef} style={[styles.overlay, { pointerEvents: 'auto' }]}>
+    <View ref={overlayRef} collapsable={false} onLayout={() => remeasureRef.current()} style={[styles.overlay, { pointerEvents: 'auto' }]}>
       <Pressable
         style={styles.backdrop}
         onPress={handleComplete}
@@ -433,7 +477,7 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
         testID="onboarding-backdrop"
       />
 
-      {targetRect && IS_WEB && (
+      {targetRect && (
         <View
           testID="onboarding-spotlight"
           style={[
@@ -451,6 +495,7 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({
 
       <View
         testID="onboarding-card"
+        onLayout={IS_WEB ? undefined : (event) => setCardHeight(event.nativeEvent.layout.height)}
         style={[styles.card, targetRect ? ({ position: 'absolute', ...pos, ...cardWidthStyle } as any) : null]}
       >
         {targetRect && step.placement === 'bottom' && <View style={styles.arrowUp} />}

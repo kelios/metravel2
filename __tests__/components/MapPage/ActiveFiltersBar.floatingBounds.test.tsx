@@ -36,6 +36,14 @@ const renderBar = (variant: 'panel' | 'floating') =>
   )
 
 describe('ActiveFiltersBar — границы floating-полосы (#1279)', () => {
+  it('clear-all has its own44px target while the floating row stays bounded', () => {
+    const view = renderBar('floating')
+    const style = StyleSheet.flatten(view.getByTestId('map-active-filters-clear-all').props.style)
+    expect(style.minWidth).toBeGreaterThanOrEqual(44)
+    expect(style.minHeight).toBeGreaterThanOrEqual(44)
+    expect(StyleSheet.flatten(view.getByTestId('active-filters').props.style).maxHeight).toBeLessThanOrEqual(48)
+  })
+
   it('floating-контейнер объявляет конечную высоту', () => {
     const { getByTestId } = renderBar('floating')
     const style = StyleSheet.flatten(getByTestId('active-filters').props.style)

@@ -202,6 +202,9 @@ const getStyles = (colors: ThemedColors) =>
       letterSpacing: 0.1,
     },
     clearBtn: {
+      minWidth: 44,
+      minHeight: 44,
+      justifyContent: 'center',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,

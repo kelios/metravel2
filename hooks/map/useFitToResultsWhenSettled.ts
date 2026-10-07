@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+// A fit is a short-lived user command, not an instruction to move the map
+// whenever an offline query eventually recovers. Expiration only cancels it.
+export const FIT_REQUEST_EXPIRY_MS = 10_000;
+
 /**
  * #2218 — «fit the map to the results» for actions that change the result set
  * first («Сбросить всё» in the chips row, `map-mobile-show-all`). The fit used
@@ -17,17 +21,30 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export function useFitToResultsWhenSettled(settled: boolean, fit: () => void): () => void {
   const [request, setRequest] = useState(0);
   const pendingRef = useRef(false);
+  const expiryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fitRef = useRef(fit);
   fitRef.current = fit;
 
   useEffect(() => {
     if (!pendingRef.current || !settled) return;
     pendingRef.current = false;
+    if (expiryRef.current !== null) clearTimeout(expiryRef.current);
+    expiryRef.current = null;
     fitRef.current();
   }, [request, settled]);
 
+  useEffect(() => () => {
+    pendingRef.current = false;
+    if (expiryRef.current !== null) clearTimeout(expiryRef.current);
+  }, []);
+
   return useCallback(() => {
     pendingRef.current = true;
+    if (expiryRef.current !== null) clearTimeout(expiryRef.current);
+    expiryRef.current = setTimeout(() => {
+      pendingRef.current = false;
+      expiryRef.current = null;
+    }, FIT_REQUEST_EXPIRY_MS);
     setRequest((value) => value + 1);
   }, []);
 }

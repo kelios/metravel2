@@ -1,5 +1,6 @@
-import { act, render, fireEvent } from '@testing-library/react-native';
+import { act, render, fireEvent, within } from '@testing-library/react-native';
 import { Platform } from 'react-native';
+import { getTabRoles } from '@/utils/a11yTabRoles';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
 import { useActiveScreenHeader, resetScreenHeaderForTests } from '@/components/layout/ScreenHeaderContext';
@@ -308,6 +309,21 @@ describe('PlannedTripScreen — действия экрана (#2101)', () => {
     openDeleteFromMenu();
     act(() => getByTestId('trip-plan-delete-confirm').props.onPress());
     expect(mockDeleteMutate).toHaveBeenCalledWith(8001, expect.anything());
+  });
+
+  it.each(['web', 'ios', 'android'] as const)('workspace tabs have their real row ancestor and one selected child on %s', os => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, get: () => os });
+    mockResponsive = PHONE;
+    mockTrip(makeTrip({ isOwner: true, status: 'planning' }));
+    const view = renderScreen();
+    const roles = getTabRoles();
+    const row = view.getByTestId('trip-plan-tabs');
+    expect(row.props.accessibilityRole).toBe(roles.tablist);
+    const children = within(row).getAllByRole(roles.tab);
+    expect(children).toHaveLength(4);
+    expect(children.filter(child => child.props.accessibilityState?.selected)).toHaveLength(1);
+    fireEvent.press(view.getByTestId('trip-plan-tab-people'));
+    expect(within(view.getByTestId('trip-plan-tabs')).getAllByRole(roles.tab).filter(child => child.props.accessibilityState?.selected).map(child => child.props.testID)).toEqual(['trip-plan-tab-people']);
   });
 
   it('телефон: у каждой вкладки подпись; «Ещё» названа по содержимому', () => {
