@@ -65,6 +65,8 @@ export const sharedStaticResources = {
   "notifications.messages.name": "Messages",
   "notifications.updates.name": "Updates",
   "notifications.recommendations.name": "Recommendations",
+  "notifications.quests.name": "Quests",
+  "notifications.quests.description": "Quest reminders: you are near a point or have an unfinished route",
   "subscription.defaultTitle": "Subscribe to new routes",
   "subscription.defaultSubtitle": "Every couple of weeks - the best trips, ideas for weekends and quests around the cities. No spam, you can unsubscribe in one click.",
   "subscription.articleTitle": "We'll email you this route",

@@ -60,6 +60,14 @@ describe('createOptimizedQueryClient', () => {
     expect(client.getDefaultOptions().queries?.networkMode).toBe('online');
   });
 
+  it('does not retry mutations by default: writes carry no idempotency key', () => {
+    const client = createOptimizedQueryClient(undefined, {
+      enableStaticPrefetch: false,
+    });
+
+    expect(client.getDefaultOptions().mutations?.retry).toBe(false);
+  });
+
   // #2184: правило «сервер ещё считает — не повторять» опознаёт таймаут по имени
   // ошибки и 504 по статусу. По тексту оно работало только в RU и EN: текст
   // таймаута локализован, и в BE/UK/PL брошенный запрос повторялся дважды.

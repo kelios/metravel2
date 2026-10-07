@@ -9,6 +9,7 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import type { AnyObject, ObjectSchema } from 'yup'
+import { devError } from '@/utils/logger'
 
 type SchemaInput<T extends AnyObject> = ObjectSchema<T> | (() => Promise<ObjectSchema<T>>)
 
@@ -124,8 +125,11 @@ export function useYupForm<T extends AnyObject>({ initialValues, validationSchem
 
             if (mountedRef.current) setIsSubmitting(true)
             await onSubmit(snapshot, { setSubmitting: setIsSubmitting, resetForm })
-        } catch {
-            // Ошибку показывает сам onSubmit-потребитель; флаг сбросим в finally.
+        } catch (error) {
+            // Ошибку пользователю показывает сам onSubmit-потребитель; флаг сбросим в
+            // finally. Но молча глотать её нельзя: неожиданное исключение внутри
+            // onSubmit иначе не видно ни в dev-консоли, ни в мониторинге (HK-10).
+            devError('[useYupForm] onSubmit rejected', error)
         } finally {
             submittingRef.current = false
             // На success-пути тоже сбрасываем (не залипаем, если onSubmit не вызвал setSubmitting).

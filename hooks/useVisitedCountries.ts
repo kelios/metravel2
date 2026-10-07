@@ -1,18 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
 
-import { fetchAllCountriesOptimized } from '@/api/miscOptimized'
-import { queryKeys } from '@/api/queryKeys'
-import { fetchUserCountryProgress } from '@/api/user'
 import {
-  buildProfileCountryStats,
-  buildProfileCountryStatsFromProgress,
   buildVisitedCountryIndex,
   type VisitedCountryMeta,
 } from '@/components/screens/profile/profileCountries'
+import { useCountryProgressStats } from '@/hooks/useCountryProgressStats'
 import type { TravelStatusEntry } from '@/stores/travelStatusStore'
 import type { Travel } from '@/types/types'
-import { queryConfigs } from '@/utils/reactQueryConfig'
 
 export type UseVisitedCountriesParams = {
   userId: string | number | null | undefined
@@ -44,82 +38,13 @@ export function useVisitedCountries({
   travels = EMPTY_TRAVELS,
   personalTravelStatusEntries = EMPTY_STATUS_ENTRIES,
 }: UseVisitedCountriesParams): UseVisitedCountriesResult {
-  const countryProgressQuery = useQuery({
-    queryKey: queryKeys.userCountryProgress(userId),
-    queryFn: () => fetchUserCountryProgress(userId as string | number),
-    enabled: Boolean(userId),
-    ...queryConfigs.dynamic,
+  const { stats, isInitialLoading, hasCatalogError } = useCountryProgressStats({
+    userId,
+    travels,
+    personalTravelStatusEntries,
   })
 
-  const shouldLoadFallbackCatalog = !userId || countryProgressQuery.isError
-
-  const [countries, setCountries] = useState<unknown[]>([])
-  const [countriesLoading, setCountriesLoading] = useState(false)
-  const [countriesError, setCountriesError] = useState(false)
-
-  useEffect(() => {
-    if (!shouldLoadFallbackCatalog) {
-      setCountries([])
-      setCountriesLoading(false)
-      setCountriesError(false)
-      return
-    }
-
-    const controller = new AbortController()
-    let mounted = true
-
-    setCountriesLoading(true)
-    setCountriesError(false)
-
-    fetchAllCountriesOptimized({ signal: controller.signal })
-      .then((nextCountries) => {
-        if (!mounted) return
-        setCountries(nextCountries)
-      })
-      .catch((error: unknown) => {
-        if (!mounted) return
-        if (error instanceof Error && error.name === 'AbortError') return
-        setCountriesError(true)
-        setCountries([])
-      })
-      .finally(() => {
-        if (mounted) setCountriesLoading(false)
-      })
-
-    return () => {
-      mounted = false
-      controller.abort()
-    }
-  }, [shouldLoadFallbackCatalog])
-
-  const backendStats = useMemo(
-    () =>
-      countryProgressQuery.data
-        ? buildProfileCountryStatsFromProgress(countryProgressQuery.data)
-        : null,
-    [countryProgressQuery.data],
-  )
-
-  const fallbackStats = useMemo(
-    () =>
-      buildProfileCountryStats({
-        countries,
-        travels,
-        personalTravelStatusEntries,
-      }),
-    [countries, personalTravelStatusEntries, travels],
-  )
-
-  const stats = backendStats ?? fallbackStats
-
   const index = useMemo(() => buildVisitedCountryIndex(stats.rows), [stats.rows])
-
-  const isLoading =
-    (countryProgressQuery.isLoading && !backendStats && stats.rows.length === 0) ||
-    (shouldLoadFallbackCatalog && countriesLoading && stats.rows.length === 0)
-
-  const isError =
-    (countryProgressQuery.isError || countriesError) && stats.rows.length === 0
 
   return {
     visitedCodes: index.visitedCodes,
@@ -127,7 +52,7 @@ export function useVisitedCountries({
     visitedCount: stats.visitedCount,
     remainingCount: stats.remainingCount,
     totalCount: stats.totalCount,
-    isLoading,
-    isError,
+    isLoading: isInitialLoading,
+    isError: hasCatalogError,
   }
 }

@@ -3,9 +3,9 @@
 // - Home screen: double-tap to exit with Toast.
 // - Modals/sheets: close on back press.
 // - Default: let the router handle navigation.
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { BackHandler, Platform, ToastAndroid } from 'react-native';
-import { usePathname, useRouter } from 'expo-router';
+import { useFocusEffect, usePathname, useRouter } from 'expo-router';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -24,6 +24,13 @@ type AndroidBackHandlerOptions = {
 /**
  * Hook that manages Android hardware back button behavior.
  *
+ * The BackHandler subscription lives only while the calling screen is focused.
+ * `BackHandler` serves the NEWEST subscription first and tab screens stay mounted
+ * after the user leaves them, so a subscription that followed every render (it
+ * used to re-subscribe on each `pathname` or callback change) let a hidden
+ * screen win the hardware Back press — Calendar sent the user to the profile,
+ * Messages closed an invisible thread (NAV-1).
+ *
  * @param onDismiss - Optional callback to close a visible modal/sheet.
  *                    Return `true` if the modal was dismissed (back press consumed).
  *                    Return `false` to let the default behavior proceed.
@@ -38,21 +45,28 @@ export function useAndroidBackHandler(
   const lastBackPressTime = useRef(0);
   const resolveBack = options?.resolveBack;
 
+  // Latest inputs live in refs so the subscription depends on focus only, not on
+  // the identity of the callbacks or the current route.
+  const pathnameRef = useRef(pathname);
+  const onDismissRef = useRef(onDismiss);
+  const resolveBackRef = useRef(resolveBack);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+    onDismissRef.current = onDismiss;
+    resolveBackRef.current = resolveBack;
+  });
+
   const handleBackPress = useCallback((): boolean => {
     // 1. Try to dismiss active modal/sheet first
-    if (onDismiss) {
-      const dismissed = onDismiss();
-      if (dismissed) return true;
-    }
+    const dismiss = onDismissRef.current;
+    if (dismiss && dismiss()) return true;
 
     // 2. Explicit back target (e.g. Профиль для экранов, открытых из профиля).
-    if (resolveBack) {
-      const handled = resolveBack();
-      if (handled) return true;
-    }
+    const resolve = resolveBackRef.current;
+    if (resolve && resolve()) return true;
 
     // 3. On home screen — double-tap to exit
-    const normalized = pathname.replace(/^\/\(tabs\)/, '') || '/';
+    const normalized = pathnameRef.current.replace(/^\/\(tabs\)/, '') || '/';
     const isHome = HOME_PATHS.includes(normalized);
 
     if (isHome) {
@@ -73,13 +87,14 @@ export function useAndroidBackHandler(
     }
 
     return false;
-  }, [pathname, router, onDismiss, resolveBack]);
+  }, [router]);
 
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android') return undefined;
 
-    const subscription = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
-    return () => subscription.remove();
-  }, [handleBackPress]);
+      const subscription = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+      return () => subscription.remove();
+    }, [handleBackPress]),
+  );
 }
-

@@ -52,16 +52,22 @@ export function useNetworkStatus(): NetworkStatus {
       const NetInfo = require('@react-native-community/netinfo') as NetInfoModuleLike;
 
       // Устанавливаем начальное состояние
-      NetInfo.fetch().then((state: NetInfoStateLike) => {
-        if (cancelled) return;
-        setNetworkStatus({
-          // NetInfo reports null while connectivity is still being resolved.
-          // Only an explicit false is offline; unknown stays provisionally online.
-          isConnected: state.isConnected !== false,
-          isInternetReachable: state.isInternetReachable ?? null,
-          type: state.type ?? null,
+      NetInfo.fetch()
+        .then((state: NetInfoStateLike) => {
+          if (cancelled) return;
+          setNetworkStatus({
+            // NetInfo reports null while connectivity is still being resolved.
+            // Only an explicit false is offline; unknown stays provisionally online.
+            isConnected: state.isConnected !== false,
+            isInternetReachable: state.isInternetReachable ?? null,
+            type: state.type ?? null,
+          });
+        })
+        .catch(() => {
+          // NetInfo failed to resolve the initial state: keep the provisional
+          // online default instead of surfacing an unhandled rejection; the
+          // listener below still delivers the first real state (HK-10).
         });
-      });
 
       // Подписываемся на изменения
       const unsubscribe = NetInfo.addEventListener((state: NetInfoStateLike) => {

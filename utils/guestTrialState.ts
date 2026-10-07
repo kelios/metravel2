@@ -13,11 +13,6 @@ type GuestQuestPreviewEntry = {
 
 const isAndroidGuestTrialEnabled = () => Platform.OS === 'android';
 
-export const getGuestFavoritesStorageKey = (userId: string | null): string => {
-  if (!userId && isAndroidGuestTrialEnabled()) return GUEST_FAVORITES_KEY;
-  return userId ? `metravel_favorites_${userId}` : 'metravel_favorites';
-};
-
 export async function recordGuestQuestPreview(params: {
   questId: string;
   cityId?: string;

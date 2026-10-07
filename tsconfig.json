@@ -34,8 +34,6 @@
     "coverage/**/*",
     "dist/**/*",
     "playwright-report/**/*",
-    "test-results/**/*",
-    "components/ui/examples/**/*",
-    "components/ui/ModernTravelCard.tsx"
+    "test-results/**/*"
   ]
 }

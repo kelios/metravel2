@@ -12,14 +12,13 @@
  */
 import React from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
 
 // ── Real imports (no jest.mock for these) ──────────────────────────
-import useFiltersDefault,
-{
-  useFilters,
-  FiltersProvider,
-} from '@/context/FiltersProvider';
+// `context/FiltersProvider` (the module whose broken `useFilters` export
+// motivated this test) had no app consumer left and was removed in the
+// 2026-10 architecture audit; the regression coverage stays on the live
+// context modules below.
 import { useAuth } from '@/context/AuthContext';
 
 // ── Mocks for transitive deps that need native/network ─────────────
@@ -58,52 +57,9 @@ jest.mock('@/stores/authStore', () => {
 // ────────────────────────────────────────────────────────────────────
 
 describe('Context module exports (prod-build regression)', () => {
-  describe('FiltersProvider exports', () => {
-    it('exports useFilters as a function', () => {
-      expect(typeof useFilters).toBe('function');
-    });
-
-    it('keeps default export alias for interop safety', () => {
-      expect(useFiltersDefault).toBe(useFilters);
-    });
-
-    it('exports FiltersProvider as a function', () => {
-      expect(typeof FiltersProvider).toBe('function');
-    });
-  });
-
-  describe('useFilters returns valid context inside FiltersProvider', () => {
-    it('returns filters and updateFilters without crashing', () => {
-      const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false } },
-      });
-
-      const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <QueryClientProvider client={queryClient}>
-          <FiltersProvider>{children}</FiltersProvider>
-        </QueryClientProvider>
-      );
-
-      const { result } = renderHook(() => useFilters(), { wrapper });
-
-      expect(result.current).toBeDefined();
-      expect(typeof result.current.updateFilters).toBe('function');
-      expect(result.current.filters).toBeDefined();
-      expect(Array.isArray(result.current.filters.countries)).toBe(true);
-      expect(Array.isArray(result.current.filters.categories)).toBe(true);
-    });
-  });
-
-  describe('useFilters throws outside provider', () => {
-    it('throws a descriptive error when used without FiltersProvider', () => {
-      // Suppress expected console.error from renderHook error boundary
-      const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
-      expect(() => {
-        renderHook(() => useFilters());
-      }).toThrow('useFilters must be used within a FiltersProvider');
-
-      spy.mockRestore();
+  describe('AuthContext exports', () => {
+    it('exports useAuth as a function', () => {
+      expect(typeof useAuth).toBe('function');
     });
   });
 

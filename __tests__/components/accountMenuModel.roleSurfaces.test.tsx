@@ -29,6 +29,10 @@ const mockRouter = { push: jest.fn(), navigate: jest.fn() }
 jest.mock('expo-router', () => ({
   useRouter: () => mockRouter,
   usePathname: () => '/quests/minsk/old-town',
+  useFocusEffect: (effect: () => undefined | (() => void)) => {
+    const ReactLib = require('react')
+    ReactLib.useEffect(() => effect(), [effect])
+  },
 }))
 jest.mock('@/utils/externalLinks', () => ({
   openExternalUrl: jest.fn(async () => true),

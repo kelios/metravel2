@@ -84,6 +84,9 @@
 - `docs/ACHIEVEMENTS_DESIGN.md` — achievements/ranks/peer/rare contract;
 - `docs/PERF_014_EAGER_BUNDLE_AUDIT.md` — rationale и guard contract для web
   eager bundle;
+- `docs/ARCHITECTURE_AUDIT_2026-10.md` — аудит архитектуры и технического
+  долга (навигация, state, API/security, perf, hooks, тесты, зависимости):
+  каталог проблем с ID, top-20, quick wins, roadmap, целевая структура;
 - `docs/ICON_ART_PROMPTS.md` — canonical raster icon/art prompt specification;
 - `docs/ACHIEVEMENTS_BADGE_PROMPTS.md` — badge visual spec: векторная эмблема
   (`components/achievements/BadgeEmblem.tsx`, `badgeMotif`) как дефолт и

@@ -35,12 +35,6 @@ jest.mock('@/context/FavoritesContext', () => ({
   })),
 }));
 
-jest.mock('@/context/FiltersProvider', () => ({
-  useFilters: jest.fn(() => ({
-    updateFilters: jest.fn(),
-  })),
-}));
-
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => 'Icon');
 jest.mock('react-native-paper', () => {
   const React = require('react');
@@ -102,14 +96,12 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import { useFilters } from '@/context/FiltersProvider';
 import AccountMenu from '@/components/layout/AccountMenu';
 
 const getLastImageSourceUri = () => (global as any).__lastImageSourceUri as string | null;
 
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockUseFavorites = useFavorites as jest.MockedFunction<typeof useFavorites>;
-const mockUseFilters = useFilters as jest.MockedFunction<typeof useFilters>;
 
 const renderWithClient = (ui: React.ReactElement) => {
   const queryClient = new QueryClient({
@@ -149,10 +141,6 @@ describe('AccountMenu', () => {
       addToHistory: jest.fn(),
       clearHistory: jest.fn(),
       getRecommendations: jest.fn(),
-    } as any);
-    mockUseFilters.mockReturnValue({
-      updateFilters: mockUpdateFilters,
-      filters: {} as any,
     } as any);
   });
 

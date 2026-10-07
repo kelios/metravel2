@@ -65,6 +65,8 @@ export const sharedStaticResources = {
   "notifications.messages.name": "Паведамлення",
   "notifications.updates.name": "Абнаўленні",
   "notifications.recommendations.name": "Рэкамендацыі",
+  "notifications.quests.name": "Квэсты",
+  "notifications.quests.description": "Напаміны пра квэсты: вы побач з пунктам або не скончылі маршрут",
   "subscription.defaultTitle": "Падпішыцеся на новыя маршруты",
   "subscription.defaultSubtitle": "Раз у пару тыдняў — лепшыя вандраванні, ідэі на выходныя і квэсты па гарадах. Без спаму, адпісацца можна ў адзін клік.",
   "subscription.articleTitle": "Дашлём гэты маршрут на пошту",

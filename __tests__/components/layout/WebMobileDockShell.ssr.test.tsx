@@ -13,7 +13,14 @@ beforeAll(() => {
   jest.doMock('react-native', () => jest.requireActual('react-native-web'))
   jest.doMock('expo-router', () => {
     const React = require('react')
-    return { usePathname: () => mockPath, useRouter: () => ({ navigate: mockNavigate, push: mockNavigate }), Link: ({ href, children, ...props }: any) => React.createElement('a', { href, ...props }, children) }
+    return {
+      usePathname: () => mockPath,
+      useRouter: () => ({ navigate: mockNavigate, push: mockNavigate }),
+      useFocusEffect: (effect: () => undefined | (() => void)) => {
+        React.useEffect(() => effect(), [effect])
+      },
+      Link: ({ href, children, ...props }: any) => React.createElement('a', { href, ...props }, children),
+    }
   })
   jest.doMock('@/hooks/useResponsive', () => ({ useResponsive: () => ({ isDesktop: false, width: 390 }) }))
   jest.doMock('@/hooks/useTheme', () => ({ useThemedColors: () => require('@/constants/designSystem').getThemedColors(false) }))

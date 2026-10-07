@@ -198,10 +198,10 @@ describe('notifications service', () => {
   });
 
   describe('NOTIFICATION_CHANNELS', () => {
-    it('should have 3 channels defined', () => {
+    it('should have 4 channels defined', () => {
       const { NOTIFICATION_CHANNELS } = require('@/services/notifications');
-      expect(NOTIFICATION_CHANNELS).toHaveLength(3);
-      expect(NOTIFICATION_CHANNELS.map((c: any) => c.id)).toEqual(['messages', 'updates', 'recommendations']);
+      expect(NOTIFICATION_CHANNELS).toHaveLength(4);
+      expect(NOTIFICATION_CHANNELS.map((c: any) => c.id)).toEqual(['messages', 'updates', 'recommendations', 'quests']);
     });
   });
 
