@@ -33,6 +33,9 @@ const PRODUCTION_SMOKE_SPECS = [
   'travel-cls-production-smoke.spec.ts',
   'prod-media-smoke.spec.ts',
   'public-regressions.spec.ts',
+  // #864: actual deployed static HTML and real guest catalog, source-pinned on
+  // production. The cold route unit fixture stays in deterministic regression.
+  'trips-cold-hydration.spec.ts',
   // #2117: real-article companion of `travel-sticky-actions-viewport.spec.ts`
   // (that one stays in the default suite with a mocked long article).
   'travel-sticky-actions-production-smoke.spec.ts',

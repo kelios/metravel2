@@ -1,14 +1,14 @@
 ## 1. Apply entry and permanent cold regression
 
-- [ ] 1.1 Obtain the separate apply request for this reviewed planning package; recheck main, exact owned-path status and shared quality/Git/build ownership. Preserve foreign source and existing immutable evidence.
-- [ ] 1.2 Turn the original code-level cold reproducer into a permanent real route/catalog/provider regression: assert catalog/loading before any await, zero failed server markers, preserved head, and no server HTTP. Demonstrate RED on the existing lazy route; enumerate infrastructure adapters and preserve unfiltered errors. Covers cold loading and initial-state requirements.
-- [ ] 1.3 Make the DOM harness capable of hydration with a documented font/CSS adapter, keeping actual query/theme/locale/head/UI and raw recoverable/uncaught errors. Add genuine loading, populated, unfiltered-empty, filtered-empty, request-error/retry and locale initialization controls; no catalog stub, pre-resolved lazy payload, `.skip` or error filtering.
+- [x] 1.1 Obtain the separate apply request for this reviewed planning package; recheck main, exact owned-path status and shared quality/Git/build ownership. Preserve foreign source and existing immutable evidence.
+- [x] 1.2 Turn the original code-level cold reproducer into a permanent real route/catalog/provider regression: assert catalog/loading before any await, zero failed server markers, preserved head, and no server HTTP. Demonstrate RED on the existing lazy route; enumerate infrastructure adapters and preserve unfiltered errors. Covers cold loading and initial-state requirements.
+- [x] 1.3 Make the DOM harness capable of hydration with a documented font/CSS adapter, keeping actual query/theme/locale/head/UI and raw recoverable/uncaught errors. Add genuine loading, populated, unfiltered-empty, filtered-empty, request-error/retry and locale initialization controls; no catalog stub, pre-resolved lazy payload, `.skip` or error filtering.
 
 ## 2. Route ownership and source checks
 
-- [ ] 2.1 Use an ordinary synchronous public catalog import in the web index route, preserving TripsPageSeo and the catalog's real state owners. Remove only the obsolete immediate lazy/Suspense route fallback; leave native and other trip routes unchanged.
-- [ ] 2.2 Update the existing route/SSR explanation in docs/features/trips.md and record the scheduling mechanism with exact source references. Retain all historical authenticated-flow acceptance requirements and provenance limits.
-- [ ] 2.3 Run the narrow permanent regressions, relevant existing trip/head/hydration tests, scoped lint and main TypeScript checks under the shared operation gate. Check RU/BE/UK/PL/EN first-render semantics without introducing translation or formatter changes; repeat only for actual repairs or unresolved failures.
+- [x] 2.1 Use an ordinary synchronous public catalog import in the web index route, preserving TripsPageSeo and the catalog's real state owners. Remove only the obsolete immediate lazy/Suspense route fallback; leave native and other trip routes unchanged.
+- [x] 2.2 Update the existing route/SSR explanation in docs/features/trips.md and record the scheduling mechanism with exact source references. Retain all historical authenticated-flow acceptance requirements and provenance limits.
+- [x] 2.3 Run the narrow permanent regressions, relevant existing trip/head/hydration tests, scoped lint and main TypeScript checks under the shared operation gate. Check RU/BE/UK/PL/EN first-render semantics without introducing translation or formatter changes; repeat only for actual repairs or unresolved failures.
 
 ## 3. Independent review and publication
 

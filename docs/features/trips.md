@@ -1,6 +1,6 @@
 # Фича: trips (совместные поездки и планировщик маршрута)
 
-**Последняя актуализация:** 2026-09-06 (дописана правка точки с карты #1781;
+**Последняя актуализация:** 2026-10-08 (холодный SSR каталога #864; правка точки с карты #1781;
 точная история — `git log -- docs/features/trips.md`)
 
 **Ответственный домен:** frontend trips/planning
@@ -71,13 +71,35 @@
 
 | Путь | Web-вариант | Native-вариант | Отличие |
 | --- | --- | --- | --- |
-| `/trips` | `app/(tabs)/trips/index.tsx` | `index.native.tsx` (6 LOC) | web: `TripsPageSeo` + `React.lazy` + `Suspense`; native: прямой импорт `PublicTripsCatalog` |
+| `/trips` | `app/(tabs)/trips/index.tsx` | `index.native.tsx` (6 LOC) | web: `TripsPageSeo` + прямой импорт `PublicTripsCatalog`; native: тот же прямой импорт |
 | `/trips/my` | `my.tsx` | `my.native.tsx` (5 LOC) | web добавляет только SEO; lazy нет |
 | `/trips/community` | `community.tsx` | `community.native.tsx` (6 LOC) | web: SEO + `useWebHydrationGate()` + `React.lazy`/`Suspense` |
 | `/trips/:id` | `[id].tsx` (57 LOC) | `[id].native.tsx` (59 LOC) | разные резервы под нижний док, см. ниже |
 | `/trips/plan` | `plan/index.tsx` (12 LOC) | — | `router.replace('/trips/my')` в `useEffect`, рендерит `null` |
 | `/trips/plan/create` | `plan/create.tsx` (106 LOC) | — | один файл на обе платформы; auth-гейт по `authReady`/`isAuthenticated` |
 | `/trips/plan/:id` | `plan/[id].tsx` (688 LOC) | — | один файл на обе платформы, без гидрационного гейта |
+
+Холодный `/trips` рендерит настоящий `PublicTripsCatalog` синхронно:
+`app/(tabs)/trips/index.tsx:4` импортирует каталог, чей query-loading branch
+находится в `components/trips/PublicTripsCatalog.tsx:174`. Немедленный
+`React.lazy` раньше оставлял pending boundary для синхронного Expo
+`renderToString`; начальный HTML не содержал каталога, а клиент восстанавливал
+прерванный серверный блок (#864). SEO и владельцы loading/content/error
+остаются прежними. Постоянный `__tests__/app/tripsColdRender.test.tsx`
+проверяет свежий настоящий route/RNW/query/theme/locale/Head до любого await
+и гидратацию его серверного HTML; инфраструктурные web/font/navigation
+адаптеры перечислены в `__tests__/app/tripsStaticRender/`. Это не заменяет
+проверку полного ExpoRoot/Metro export и source-pinned приёмку: guest390
+light/dark × RU/BE/UK/PL/EN, все состояния каталога и обязательный реальный
+A-create/B-view/apply/cancel/my flow. Исторические #938/#864 gates сохранены;
+перенос стоимости cold chunks измеряется после rollout.
+
+`e2e/trips-cold-hydration.spec.ts` входит только в production-smoke,
+а холодный unit-fixture остаётся в обычном regression. На production
+приёмка требует `TRIPS_EXPECTED_SOURCE_SHA` с полным SHA отревьюенного
+коммита; значение сверяется с `.build-source.json` до и после сценария.
+Удержанные JS/API GET завершаются до снятия interception; raw route errors
+сохраняются и запрещают PASS вместе с console/page/request errors.
 
 Два разных гидрационных хука, не взаимозаменяемые:
 

@@ -1,11 +1,7 @@
-import React, { Suspense } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import React from 'react';
 
 import TripsPageSeo from '@/components/trips/TripsPageSeo';
-
-const PublicTripsCatalog = React.lazy(
-  () => import('@/components/trips/PublicTripsCatalog'),
-);
+import PublicTripsCatalog from '@/components/trips/PublicTripsCatalog';
 
 export default function TripsScreen() {
   return (
@@ -14,15 +10,7 @@ export default function TripsScreen() {
         canonicalPath="/trips"
         fallbackTitle="catalog"
       />
-      <Suspense
-        fallback={
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator />
-          </View>
-        }
-      >
-        <PublicTripsCatalog />
-      </Suspense>
+      <PublicTripsCatalog />
     </>
   );
 }

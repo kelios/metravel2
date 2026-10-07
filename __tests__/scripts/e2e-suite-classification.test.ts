@@ -48,6 +48,17 @@ describe('e2e suite classification', () => {
     expect(all.filter((file: string) => !fs.existsSync(path.resolve(__dirname, '../../e2e', file)))).toEqual([])
   })
 
+  it('keeps real cold-trip acceptance in production smoke without dropping planned-trip regression', () => {
+    const companion = 'trips-cold-hydration.spec.ts'
+    const original = 'planned-trips.spec.ts'
+    expect(PRODUCTION_SMOKE_SPECS).toContain(companion)
+    expect(LIVE_CONTRACT_SPECS).not.toContain(companion)
+    expect(getE2ESuiteSelection('').testIgnore).toContain(companion)
+    expect(getE2ESuiteSelection('').testIgnore).not.toContain(original)
+    expect(getE2ESuiteSelection('production-smoke').testMatch).toContain(companion)
+    expect(getE2ESuiteSelection('production-smoke').testMatch).not.toContain(original)
+  })
+
   it('keeps live-contract prerequisites fail-closed instead of downgrading to smoke', () => {
     const weakFallback = /falling back to (?:a )?ui smoke|running a minimal smoke|(?:was |were )?not exercised|skipping:/i
     const violations = LIVE_CONTRACT_SPECS.filter((file: string) => {
