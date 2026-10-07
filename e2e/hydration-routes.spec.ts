@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures';
 import { gotoWithRetry, mockUnavailableApi, preacceptCookies } from './helpers/navigation';
+import { runtimeViewport } from './helpers/runtimeViewport';
 
 const HYDRATION_ERROR = /Minified React error #418\b|Hydration failed because the server rendered/i;
 
@@ -40,7 +41,7 @@ function findBlankWindow(samples: ShellSample[]): { from: number; to: number | n
 
 test.describe('SSR route hydration', () => {
   test('responsive lazy routes hydrate without replacing their server HTML', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.setViewportSize(runtimeViewport({ width: 1280, height: 800 }));
     await preacceptCookies(page);
     await mockUnavailableApi(page);
 
@@ -55,7 +56,8 @@ test.describe('SSR route hydration', () => {
       if (HYDRATION_ERROR.test(text)) hydrationErrors.push(text);
     });
 
-    for (const route of ['/login', '/registration', '/places', '/roulette']) {
+    for (const route of ['/login', '/registration', '/places',
+      '/places?category=Замок', '/places?q=замок', '/places?country=Беларусь', '/roulette']) {
       await gotoWithRetry(page, route);
       await expect(page.locator('#main-content')).toBeVisible({ timeout: 30_000 });
       await page.waitForTimeout(750);
@@ -71,7 +73,7 @@ test.describe('SSR route hydration', () => {
   test('static header stays in the DOM for every frame between server HTML and app', async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 412, height: 823 });
+    await page.setViewportSize(runtimeViewport({ width: 412, height: 823 }));
     await preacceptCookies(page);
     await mockUnavailableApi(page);
     await sampleShellPresence(page);

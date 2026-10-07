@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 // hooks/useTripGearApi.ts
 // React Query для чеклиста снаряжения поездки (#1839).
 //
@@ -18,15 +19,13 @@ import {
   type TripGearItem,
   type UpdateTripGearInput,
 } from '@/api/plannedTripsGear'
-import { ApiError, isTimeoutError } from '@/api/client'
+
 import { queryKeys } from '@/api/queryKeys'
 
 const STALE_TIME = 60 * 1000
 
 // 401/403 не чинятся повтором, а 404/501 означают «эндпоинта нет» — повтор
 // такого запроса только задерживает показ пустого состояния.
-const isFinalError = (error: unknown): boolean =>
-  error instanceof ApiError && [401, 403, 404, 501].includes(error.status)
 
 const writeList = (
   qc: QueryClient,
@@ -45,8 +44,7 @@ export function useTripGear(tripId: number | string | null | undefined, enabled 
     queryFn: () => fetchTripGear(tripId as number | string),
     enabled: tripId != null && enabled,
     staleTime: STALE_TIME,
-    retry: (failureCount, error) =>
-      !isFinalError(error) && !isTimeoutError(error) && failureCount < 2,
+    retry: readRetryTwice,
   })
 }
 

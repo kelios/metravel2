@@ -148,7 +148,7 @@ const getGoogleAuthErrorMessage = (status: number): string => {
 
 /** Тело отказа входа: `code` (#1993) и текст — fallback для старого бэкенда без `code`. */
 type LoginRejectionPayload = Pick<SocialAuthResponse, 'detail' | 'error' | 'message'> & { code?: unknown };
-type LoginHttpError = Error & { detail?: string; rejectionCode?: string };
+type LoginHttpError = Error & { status: number; detail?: string; rejectionCode?: string };
 
 /**
  * #1944: результат входа несёт причину отказа, а `Alert` отсюда убран.
@@ -178,8 +178,8 @@ export const loginApi = async (
                     headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
                     body: JSON.stringify({ email: trimmedEmail, password }),
                 }, DEFAULT_TIMEOUT);
-                // Проверяем статус ВНУТРИ retry: статус в сообщении позволяет shouldRetry
-                // ретраить 5xx (isRetryableError матчит /50\d/) и не ретраить 4xx.
+                // Проверяем статус внутри retry; общий предикат читает структурированный
+                // HTTP-статус, а сообщение и тело отказа остаются для существующего UI.
                 if (!res.ok) {
                     // Тело читаем ДО throw — иначе причина отказа (`code`, #1993, и
                     // текст `detail`/`error`/`message` для старого бэкенда) теряется,
@@ -188,6 +188,7 @@ export const loginApi = async (
                     const errorPayload = await safeJsonParse<LoginRejectionPayload>(res, {});
                     const detail = errorPayload.detail || errorPayload.error || errorPayload.message;
                     const httpError = new Error(`Login failed: ${res.status}`) as LoginHttpError;
+                    httpError.status = res.status;
                     if (typeof detail === 'string' && detail.trim()) {
                         httpError.detail = detail.trim();
                     }

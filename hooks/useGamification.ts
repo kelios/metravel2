@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 // hooks/useGamification.ts
 // React Query хуки геймификации-2 (Sprint 10). Серверный стейт — только через
 // React Query. Мутация выбора пути инвалидирует состояние персонажа и шлёт аналитику.
@@ -20,7 +21,7 @@ import {
   type GamificationProgress,
   type PlaceFirstBadge,
 } from '@/api/gamification';
-import { ApiError, isTimeoutError } from '@/api/client';
+
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
@@ -32,12 +33,6 @@ import {
 import type { PublicAchievements } from '@/api/achievements';
 
 const STALE_TIME = 5 * 60 * 1000;
-
-const isAuthError = (error: unknown): boolean =>
-  error instanceof ApiError && (error.status === 401 || error.status === 403);
-
-const retry = (failureCount: number, error: unknown): boolean =>
-  !isAuthError(error) && !isTimeoutError(error) && failureCount < 2;
 
 const hasId = (userId: string | number | null | undefined): boolean =>
   userId != null && userId !== '';
@@ -52,7 +47,7 @@ export function useMyPlaceFirstBadges(options: { enabled?: boolean } = {}) {
     queryFn: fetchMyPlaceFirstBadges,
     enabled: isAuthenticated && (options.enabled ?? true),
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 
@@ -62,7 +57,7 @@ export function useUserPlaceFirstBadges(userId: string | number | null | undefin
     queryFn: () => fetchUserPlaceFirstBadges(userId as string | number),
     enabled: hasId(userId),
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 
@@ -88,7 +83,7 @@ export function useMyGamificationProgress() {
     queryFn: fetchMyGamificationProgress,
     enabled: isAuthenticated && needsSeparateFetch,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
     initialData: () => {
       const cached = qc.getQueryData<{ progressionDto?: unknown }>(
         queryKeys.achievementsMe(owner),
@@ -121,7 +116,7 @@ export function useUserGamificationProgress(
     queryFn: () => fetchUserGamificationProgress(userId as string | number),
     enabled: hasId(userId) && needsSeparateFetch,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
     initialData: () => {
       const cached = qc.getQueryData<PublicAchievements>(
         queryKeys.achievementsUser(userId),
@@ -156,7 +151,7 @@ export function useMyCharacter() {
     // /character/me/ дёргаем только если его там не оказалось.
     enabled: isAuthenticated && needsSeparateFetch,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
     initialData: () => {
       const cached = qc.getQueryData(queryKeys.achievementsMe(owner)) as
         | { characterDto?: Parameters<typeof mapCharacter>[0] | null }
@@ -189,7 +184,7 @@ export function useUserCharacter(userId: string | number | null | undefined) {
     queryFn: () => fetchUserCharacter(userId as string | number),
     enabled: hasId(userId) && needsSeparateFetch,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
     initialData: () => {
       const cached = qc.getQueryData<PublicAchievements>(
         queryKeys.achievementsUser(userId),

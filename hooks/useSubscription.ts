@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 import { useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
@@ -7,12 +8,11 @@ import {
     unsubscribeFromUser,
     type UserProfileDto,
 } from '@/api/user';
-import { ApiError, isTimeoutError } from '@/api/client';
+
 import { queryKeys } from '@/queryKeys';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { useActionFeedback } from '@/hooks/useActionFeedback';
 import { translate as i18nT } from '@/i18n'
-
 
 /**
  * Hook to manage subscription state for a target user.
@@ -43,13 +43,7 @@ export function useSubscription(targetUserId: string | number | null | undefined
         queryFn: fetchMySubscriptions,
         enabled,
         staleTime: 5 * 60 * 1000,
-        retry: (failureCount, error) => {
-            if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-                return false;
-            }
-            if (isTimeoutError(error)) return false;
-            return failureCount < 2;
-        },
+        retry: readRetryTwice,
     });
 
     const isSubscribed = useMemo(() => {

@@ -1,3 +1,4 @@
+import { readRetryOnce } from '@/utils/queryRetryPolicy';
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Platform } from 'react-native'
 import { useQueries } from '@tanstack/react-query'
@@ -149,7 +150,7 @@ export function useQuestCityWalk(
       enabled: enabled && ready,
       // Своя политика повтора сохранена: недоступный бандл убирает свой квест из
       // секции, поэтому одна повторная попытка здесь дешевле пустого слота.
-      retry: 1,
+      retry: readRetryOnce,
     })),
     combine,
   })

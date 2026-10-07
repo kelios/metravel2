@@ -95,7 +95,7 @@ describe('planned-trip query retry through the real HTTP pipeline', () => {
     else process.env.EXPO_PUBLIC_TRIPS_MOCK = originalTripsMock
   })
 
-  it.each([400, 401, 403, 404, 409, 410, 422, 429])(
+  it.each([400, 401, 403, 404, 408, 409, 410, 422, 429, 500, 501, 504])(
     'settles HTTP %i as an error after exactly one request',
     async (status) => {
       // No session credential means apiClient has no refresh/fallback request
@@ -114,7 +114,7 @@ describe('planned-trip query retry through the real HTTP pipeline', () => {
     },
   )
 
-  it.each([408, 500, 501, 502, 503, 504])(
+  it.each([502, 503])(
     'exhausts two retries for HTTP %i, then exposes the terminal server error',
     async (status) => {
       fetchSpy.mockImplementation(async () => response(status, { detail: 'Upstream timeout' }))

@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
@@ -66,7 +67,7 @@ function useServerQuestsNearLocation(query: LocationQuery, limit?: number): Near
     queryKey: queryKeys.questsNearLocation(nearLocationKey(query, limit), locale),
     enabled,
     queryFn: async ({ signal }) => fetchQuestsNearLocation(toNearParams(query, limit), { signal, locale }),
-    retry: (count, err) => !(err instanceof ApiError && err.status === 404) && count < 2,
+    retry: readRetryTwice,
     ...queryConfigs.paginated,
   })
 

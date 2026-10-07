@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 // hooks/useAchievementsApi.ts
 // React Query хуки системы достижений. Серверный стейт — только через React Query
 // (docs/ACHIEVEMENTS_DESIGN.md §8).
@@ -27,24 +28,16 @@ import {
   type RareAwardCatalogItem,
   type RareAwardGrant,
 } from '@/api/achievements';
-import { ApiError, isTimeoutError } from '@/api/client';
+
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
 
 const STALE_TIME = 5 * 60 * 1000;
 
-const isAuthError = (error: unknown): boolean =>
-  error instanceof ApiError && (error.status === 401 || error.status === 403);
-
-const isAbortError = (error: unknown): boolean =>
-  error instanceof Error && error.name === 'AbortError';
-
 // Не ретраим отмену И таймаут: эти секции (автор/достижения/peer-badges) deferred,
 // а повтор зависшего бэка лишь утраивает мёртвое ожидание под спиннером (~33с вместо
 // ~10с). Таймаут fetchWithTimeout — это name='TimeoutError', не 'AbortError'.
-const retry = (failureCount: number, error: unknown): boolean =>
-  !isAuthError(error) && !isAbortError(error) && !isTimeoutError(error) && failureCount < 2;
 
 /** Справочник всех значков (галерея, в т.ч. ещё не полученных). */
 export function useBadgeCatalog() {
@@ -52,7 +45,7 @@ export function useBadgeCatalog() {
     queryKey: queryKeys.achievementsBadges(),
     queryFn: fetchBadgeCatalog,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 
@@ -65,7 +58,7 @@ export function useMyAchievements(options: { enabled?: boolean } = {}) {
     queryFn: fetchMyAchievements,
     enabled: isAuthenticated && (options.enabled ?? true),
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 
@@ -76,7 +69,7 @@ export function useUserAchievements(userId: string | number | null | undefined) 
     queryFn: () => fetchUserAchievements(userId as string | number),
     enabled: userId != null && userId !== '',
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 
@@ -88,7 +81,7 @@ export function usePeerBadgeCatalog() {
     queryKey: queryKeys.achievementsPeerCatalog(),
     queryFn: fetchPeerBadgeCatalog,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 
@@ -99,7 +92,7 @@ export function useTravelPeerBadges(travelId: string | number | null | undefined
     queryFn: () => fetchTravelPeerBadges(travelId as string | number),
     enabled: travelId != null && travelId !== '',
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 
@@ -122,7 +115,7 @@ export function useMyRareAwards() {
     queryFn: fetchMyRareAwards,
     enabled: isAuthenticated && needsSeparateFetch,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
     initialData: () => {
       const cached = qc.getQueryData<MyAchievements>(queryKeys.achievementsMe(owner));
       return cached?.rareAwards ?? undefined;
@@ -150,7 +143,7 @@ export function useUserRareAwards(userId: string | number | null | undefined) {
     queryFn: () => fetchUserRareAwards(userId as string | number),
     enabled: userId != null && userId !== '' && needsSeparateFetch,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
     initialData: () => {
       const cached = qc.getQueryData<PublicAchievements>(
         queryKeys.achievementsUser(userId),
@@ -172,7 +165,7 @@ export function useRareAwardCatalog(enabled = true) {
     queryFn: fetchRareAwardCatalog,
     enabled,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 

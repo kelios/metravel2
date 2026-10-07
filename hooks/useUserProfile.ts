@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
@@ -7,12 +8,11 @@ import {
     resolveProfileFullName,
     type UserProfileDto,
 } from '@/api/user';
-import { ApiError, isTimeoutError } from '@/api/client';
+import { ApiError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import { showToast } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n'
-
 
 /**
  * Shared hook for loading and managing user profile state.
@@ -53,13 +53,7 @@ export function useUserProfile() {
         },
         enabled: isAuthenticated && !!userId,
         staleTime: 5 * 60 * 1000,
-        retry: (failureCount, error) => {
-            if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-                return false;
-            }
-            if (isTimeoutError(error)) return false;
-            return failureCount < 2;
-        },
+        retry: readRetryTwice,
     });
 
     const profile = query.data ?? null;

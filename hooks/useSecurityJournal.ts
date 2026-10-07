@@ -1,7 +1,8 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 import { useMemo } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
-import { ApiError, isTimeoutError } from '@/api/client';
+
 import { queryKeys } from '@/queryKeys';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { fetchSecurityJournal, type SecurityJournalEntryDto, type SecurityJournalPage } from '@/api/privacy';
@@ -21,13 +22,7 @@ export function useSecurityJournal(enabled = true) {
         getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
         enabled: isAuthenticated && enabled,
         staleTime: 60 * 1000,
-        retry: (failureCount, error) => {
-            if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-                return false;
-            }
-            if (isTimeoutError(error)) return false;
-            return failureCount < 2;
-        },
+        retry: readRetryTwice,
     });
 
     const entries: SecurityJournalEntryDto[] = useMemo(

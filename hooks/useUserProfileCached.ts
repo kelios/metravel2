@@ -1,7 +1,8 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchUserProfile, resolveProfileFullName, type UserProfileDto } from '@/api/user';
-import { ApiError, isTimeoutError } from '@/api/client';
+import { ApiError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 
 type Options = {
@@ -33,15 +34,7 @@ export function useUserProfileCached(userId: string | number | null | undefined,
     },
     enabled: enabled && !!normalizedUserId,
     staleTime: options.staleTimeMs ?? 10 * 60 * 1000,
-    retry: (failureCount, error) => {
-      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-        return false;
-      }
-      // Не ретраим таймаут: повтор зависшего бэка лишь утраивает ожидание под
-      // спиннером карточки автора (~33с вместо ~10с).
-      if (isTimeoutError(error)) return false;
-      return failureCount < 2;
-    },
+    retry: readRetryTwice,
   });
 
   const fullName = useMemo(() => {

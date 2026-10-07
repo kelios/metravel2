@@ -1,3 +1,4 @@
+import { stravaReadRetryOnce } from '@/utils/queryRetryPolicy';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -18,7 +19,6 @@ import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { showToast } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n'
-
 
 const DEFAULT_PER_PAGE = 10;
 
@@ -75,12 +75,7 @@ export function useStravaIntegration() {
     queryFn: fetchStravaStatus,
     enabled: isAuthenticated,
     staleTime: 60 * 1000,
-    retry: (failureCount, error) => {
-      if (error instanceof ApiError && [401, 403, 404, 501, 503].includes(error.status)) {
-        return false;
-      }
-      return failureCount < 1;
-    },
+    retry: stravaReadRetryOnce,
   });
 
   const status = statusQuery.data;
@@ -94,12 +89,7 @@ export function useStravaIntegration() {
     queryFn: () => fetchStravaActivities(activitiesQueryParams),
     enabled: canLoadActivities,
     staleTime: 60 * 1000,
-    retry: (failureCount, error) => {
-      if (error instanceof ApiError && [401, 403, 404, 429, 501, 503].includes(error.status)) {
-        return false;
-      }
-      return failureCount < 1;
-    },
+    retry: stravaReadRetryOnce,
   });
 
   const selectedActivityQuery = useQuery<StravaActivityDetail | null>({
@@ -107,12 +97,7 @@ export function useStravaIntegration() {
     queryFn: () => fetchStravaActivityDetail(selectedActivityId as string),
     enabled: canLoadActivities && Boolean(selectedActivityId),
     staleTime: 60 * 1000,
-    retry: (failureCount, error) => {
-      if (error instanceof ApiError && [401, 403, 404, 429, 501, 503].includes(error.status)) {
-        return false;
-      }
-      return failureCount < 1;
-    },
+    retry: stravaReadRetryOnce,
   });
 
   const invalidateStrava = useCallback(() => {

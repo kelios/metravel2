@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 // hooks/useTripChatApi.ts
 // React Query хуки чата участников поездки (Sprint 15 / блок 6, #422).
 // Серверный стейт — только через React Query. Отправка дизейблится, когда
@@ -15,18 +16,12 @@ import {
   type TripChatMessage,
   type TripChatThread,
 } from '@/api/tripChat'
-import { ApiError, isTimeoutError } from '@/api/client'
+
 import { queryKeys } from '@/api/queryKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { useQueryOwner } from '@/hooks/useQueryOwner'
 
 const STALE_TIME = 60 * 1000
-
-const isAuthError = (error: unknown): boolean =>
-  error instanceof ApiError && (error.status === 401 || error.status === 403)
-
-const retry = (failureCount: number, error: unknown): boolean =>
-  !isAuthError(error) && !isTimeoutError(error) && failureCount < 2
 
 /** Тред чата поездки + статус/can_post (#418). */
 export function useTripChat(tripId: string | number | null | undefined) {
@@ -36,7 +31,7 @@ export function useTripChat(tripId: string | number | null | undefined) {
     queryFn: () => fetchTripChat(tripId as string | number),
     enabled: isAuthenticated && tripId != null && tripId !== '',
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   })
 }
 
@@ -55,7 +50,7 @@ export function useTripChatMessages(threadId: string | number | null | undefined
     queryFn: () => fetchTripChatMessages(threadId as string | number),
     enabled: isAuthenticated && threadId != null && threadId !== '',
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   })
 }
 

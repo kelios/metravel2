@@ -71,6 +71,8 @@ export default function PlacesScreen() {
     hasCategorySearch,
     hasMorePlaces,
     isInitialLoading,
+    isResultsRefreshing,
+    hasResultCount,
     isScopeLoading,
     loadErrorDescription,
     loadMoreFailed,
@@ -95,7 +97,7 @@ export default function PlacesScreen() {
     topBarHeight,
     totalCount,
     visiblePlaces,
-  } = usePlacesCatalogController({ isCompact, isWide })
+  } = usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth })
 
   // Sort control shared by the desktop results header and the compact sticky bar.
   const sortOptions = useMemo(
@@ -578,10 +580,10 @@ export default function PlacesScreen() {
                 <Text style={styles.resultsTitle} numberOfLines={2} testID="places-results-title">
                   {activeCategoryTitle}
                 </Text>
-                <Text style={styles.resultsMeta}>
-                  {isInitialLoading
+                <Text style={styles.resultsMeta} numberOfLines={1} testID="places-results-meta">
+                  {isInitialLoading || isResultsRefreshing
                     ? i18nT('map:screens.tabs.PlacesScreen.zagruzhaem_podborku_b98517c7')
-                    : `${totalCount} ${getPlacesCountLabel(totalCount)}`}
+                    : hasResultCount ? `${totalCount} ${getPlacesCountLabel(totalCount)}` : '\u00a0'}
                 </Text>
               </View>
               <View style={styles.resultsHeaderControls}>

@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 // hooks/useContactRequestsApi.ts
 // React Query хуки заявок на раскрытие контактов (Sprint 15 / FE-424).
 // Серверный стейт — только через React Query. Мутация (grant/decline/revoke)
@@ -13,18 +14,12 @@ import {
   type ContactRequestDirection,
   type ContactRequestStatus,
 } from '@/api/contactRequests';
-import { ApiError, isTimeoutError } from '@/api/client';
+
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
 
 const STALE_TIME = 60 * 1000;
-
-const isAuthError = (error: unknown): boolean =>
-  error instanceof ApiError && (error.status === 401 || error.status === 403);
-
-const retry = (failureCount: number, error: unknown): boolean =>
-  !isAuthError(error) && !isTimeoutError(error) && failureCount < 2;
 
 /** Список заявок текущего пользователя в заданном направлении/статусе (#419). */
 export function useContactRequests(
@@ -38,7 +33,7 @@ export function useContactRequests(
     queryFn: () => fetchContactRequests(direction, status),
     enabled: isAuthenticated,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 

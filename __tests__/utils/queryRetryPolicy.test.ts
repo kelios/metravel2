@@ -1,7 +1,7 @@
 // #2184: политика повторов тяжёлого чтения — не больше одного повтора и только
 // когда сервер этот запрос уже не считает.
 import { ApiError } from '@/api/clientErrors'
-import { heavyReadRetry, noServerWorkInFlight } from '@/utils/queryRetryPolicy'
+import { heavyReadRetry, noServerWorkInFlight, readRetryOnce, readRetryTwice, stravaReadRetryOnce } from '@/utils/queryRetryPolicy'
 
 const named = (name: string, message: string) => Object.assign(new Error(message), { name })
 
@@ -67,4 +67,23 @@ describe('noServerWorkInFlight', () => {
     // timeout; для повтора таймаут — обратный случай: сервер занят расчётом.
     expect(noServerWorkInFlight(new Error('Request timeout'))).toBe(false)
   })
+})
+
+
+it('retains each prior retry maximum and the Strava503 exception', () => {
+  for (const error of [new ApiError(502, 'unavailable'), new TypeError('Failed to fetch')]) {
+    expect(readRetryOnce(0, error)).toBe(true)
+    expect(readRetryOnce(1, error)).toBe(false)
+    expect(readRetryTwice(1, error)).toBe(true)
+    expect(readRetryTwice(2, error)).toBe(false)
+    expect(stravaReadRetryOnce(0, error)).toBe(true)
+    expect(stravaReadRetryOnce(1, error)).toBe(false)
+  }
+  expect(readRetryTwice(0, new ApiError(503, 'busy'))).toBe(true)
+  expect(stravaReadRetryOnce(0, new ApiError(503, 'busy'))).toBe(false)
+  for (const policy of [readRetryOnce, readRetryTwice, stravaReadRetryOnce]) {
+    for (const status of [400, 401, 403, 404, 408, 429, 500, 504]) expect(policy(0, new ApiError(status, 'Failed to fetch'))).toBe(false)
+    expect(policy(0, named('TimeoutError', 'Przekroczono limit czasu'))).toBe(false)
+    expect(policy(0, new Error('Login failed: 503'))).toBe(false)
+  }
 })

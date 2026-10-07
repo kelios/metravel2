@@ -13,8 +13,11 @@ import { Platform } from 'react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { invalidateBlockSensitiveQueries } from '@/api/blockSensitiveQueries'
+import { queryKeys } from '@/api/queryKeys'
+import { usePlacesCatalogQueries } from '@/screens/tabs/usePlacesCatalogQueries'
+import { getInterestingCategoryCollections } from '@/screens/tabs/PlacesScreen.helpers'
 import { ApiError } from '@/api/clientErrors'
-import { fetchPlacesCatalog } from '@/api/places'
+import { fetchPlacesCatalog, fetchPlacesCatalogCategoryGroups } from '@/api/places'
 import { usePlacesCatalogController } from '@/screens/tabs/usePlacesCatalogController'
 import type { CatalogPlace, PlacesCatalogPage } from '@/utils/placesCatalog'
 
@@ -27,8 +30,11 @@ jest.mock('expo-router', () => ({
 }))
 
 jest.mock('@/api/places', () => ({
+  fetchPlacesCatalogCategoryGroups: jest.fn(async () => ({})),
   fetchPlacesCatalog: jest.fn(),
 }))
+
+const mockedGroups = jest.mocked(fetchPlacesCatalogCategoryGroups)
 
 const mockedFetch = fetchPlacesCatalog as jest.MockedFunction<typeof fetchPlacesCatalog>
 
@@ -78,12 +84,12 @@ let queryClient: QueryClient
 
 // Клиент без своего `retry`: если слой данных потеряет политику повторов, в
 // силу вступит дефолт React Query (три повтора) и набор покраснеет.
-const renderController = () => {
+const renderController = (layout = { isCompact: false, isWide: true, hasMeasuredWidth: true }) => {
   queryClient = new QueryClient()
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
-  return renderHook(() => usePlacesCatalogController({ isCompact: false, isWide: true }), { wrapper })
+  return renderHook(() => usePlacesCatalogController(layout), { wrapper })
 }
 
 // Часы теста поддельные. Ждать опросом здесь нельзя: в jsdom таймер опроса сам
@@ -110,6 +116,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
     jest.useFakeTimers()
     jest.clearAllMocks()
     mockParams = {}
+    mockedGroups.mockReset().mockResolvedValue({})
     ;(Platform as any).OS = 'web'
     mockedFetch.mockImplementation(async (params) => (params.categories?.length ? FILTERED_PAGE : CATALOG_PAGE))
   })
@@ -343,5 +350,131 @@ describe('usePlacesCatalogController — бюджет запросов ката�
 
     expect(mockedFetch).toHaveBeenCalledTimes(2)
     expect(callParams(1)).toEqual({ page: 1, perPage: 20, q: 'зам', sort: 'default' })
+  })
+  it('URL filters commit before the only initial list request, including the debounced q', async () => {
+    mockParams = { q: 'замок', category: 'Замок', country: 'by' }
+    renderController({ isCompact: true, isWide: false, hasMeasuredWidth: true })
+    await tick(399)
+    expect(mockedFetch).not.toHaveBeenCalled()
+    expect(mockedGroups).not.toHaveBeenCalled()
+    await tick(1)
+    await tick(1)
+    expect(callParams(0)).toEqual({ page: 1, perPage: 20, q: 'замок', categories: ['Замок'], country: 'by', sort: 'default' })
+    expect(mockedFetch.mock.calls.every(([p]) => p.q === 'замок' && p.country === 'by')).toBe(true)
+    expect(mockedGroups).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['mobile', { isCompact: true, isWide: false, hasMeasuredWidth: true }, 'web'],
+    ['unknown width', { isCompact: false, isWide: true, hasMeasuredWidth: false }, 'web'],
+    ['native', { isCompact: false, isWide: true, hasMeasuredWidth: true }, 'ios'],
+  ] as const)('does not request aggregate counts on %s', async (_name, layout, platform) => {
+    Platform.OS = platform
+    renderController(layout)
+    await settle()
+    expect(mockedFetch).toHaveBeenCalledTimes(1)
+    expect(mockedGroups).not.toHaveBeenCalled()
+  })
+
+  it('one wide aggregate waits for successful nonplaceholder list and is independent of q', async () => {
+    const list = deferred<PlacesCatalogPage>()
+    const order: string[] = []
+    mockedFetch.mockImplementation(() => { order.push('list'); return list.promise })
+    mockedGroups.mockImplementation(async () => { order.push('groups'); return { nature: 41, history: 7, featured: 52, family: 0 } })
+    const { result } = renderController()
+    await tick(1)
+    expect(order).toEqual(['list'])
+    expect(mockedGroups).not.toHaveBeenCalled()
+    list.resolve(CATALOG_PAGE)
+    await settle()
+    expect(order).toEqual(['list', 'groups'])
+    expect(result.current.collectionCards.map(({ id, count, countReady }) => ({ id, count, countReady }))).toEqual([
+      { id: 'featured', count: 52, countReady: true }, { id: 'history', count: 7, countReady: true },
+      { id: 'nature', count: 41, countReady: true }, { id: 'family', count: 0, countReady: true },
+    ])
+    act(() => result.current.handleQueryChange('озеро'))
+    await settle()
+    expect(mockedGroups).toHaveBeenCalledTimes(1)
+  })
+
+  it('aggregate failure is quiet and leaves honest unknown counts with the loaded list', async () => {
+    mockedGroups.mockRejectedValue(new ApiError(504, 'still working'))
+    const { result } = renderController()
+    await settle()
+    expect(result.current.resultsStatus).toBe('list')
+    expect(result.current.visiblePlaces).toHaveLength(20)
+    expect(result.current.collectionCards.every((card) => !card.countReady)).toBe(true)
+    expect(mockedGroups).toHaveBeenCalledTimes(1)
+  })
+
+})
+
+
+describe('aggregate cache versus selected-list refinement', () => {
+  const collections = getInterestingCategoryCollections()
+  const groups = collections.map(({ id, categories }) => ({ id, categories }))
+  const nature = collections.find(({ id }) => id === 'nature')!
+  type Input = Parameters<typeof usePlacesCatalogQueries>[0]
+  const initial: Input = { enabled: true, showCollections: true, q: undefined, categories: [...nature.categories], country: 'by', sort: 'default', collections }
+  const renderQueries = (input: Input, seed?: (client: QueryClient) => void) => {
+    queryClient = new QueryClient()
+    seed?.(queryClient)
+    const wrapper = ({ children }: { children: React.ReactNode }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    return renderHook((props: Input) => usePlacesCatalogQueries(props), { initialProps: input, wrapper })
+  }
+  beforeEach(() => {
+    jest.useFakeTimers()
+    jest.clearAllMocks()
+    mockedGroups.mockReset().mockResolvedValue({})
+    mockedFetch.mockResolvedValue(FILTERED_PAGE)
+  })
+  afterEach(() => { queryClient?.clear(); jest.useRealTimers() })
+
+  it('partial cache does not suppress first aggregate; late aggregate cannot overwrite current selected count', async () => {
+    const aggregate = deferred<Readonly<Record<string, number>>>()
+    mockedGroups.mockReturnValue(aggregate.promise)
+    const { result } = renderQueries(initial, (client) => client.setQueryData(
+      queryKeys.placesCatalogCollectionCounts({ country: 'by', groups, source: 'list' }), { nature: 1 },
+    ))
+    await settle()
+    expect(mockedGroups).toHaveBeenCalledTimes(1)
+    expect(result.current.collectionCounts?.nature).toBe(7)
+    aggregate.resolve({ nature: 99, history: 40 })
+    await settle()
+    expect(result.current.collectionCounts).toEqual({ nature: 7, history: 40 })
+  })
+
+  it('country and exact groups isolate cached refinements; placeholder list cannot start a new aggregate', async () => {
+    mockedGroups.mockImplementation(async ({ groups }) => Object.fromEntries(groups.map(({ id }) => [id, id === 'nature' ? 99 : 40])))
+    const { result, rerender } = renderQueries(initial)
+    await settle()
+    expect(result.current.collectionCounts?.nature).toBe(7)
+    const next = deferred<PlacesCatalogPage>()
+    mockedFetch.mockReturnValue(next.promise)
+    rerender({ ...initial, country: 'pl' })
+    await tick(1)
+    expect(result.current.placesQuery.isPlaceholderData).toBe(true)
+    expect(result.current.collectionCounts).toBeUndefined()
+    expect(mockedGroups).toHaveBeenCalledTimes(1)
+    next.resolve({ ...FILTERED_PAGE, count: 3 })
+    await settle()
+    expect(mockedGroups).toHaveBeenCalledTimes(2)
+    expect(mockedGroups.mock.calls[1][0]).toMatchObject({ country: 'pl', groups })
+    expect(result.current.collectionCounts?.nature).toBe(3)
+    rerender({ ...initial, country: 'pl', collections: collections.filter(({ id }) => id === 'history'), categories: [] })
+    await settle()
+    expect(mockedGroups).toHaveBeenCalledTimes(3)
+    expect(result.current.collectionCounts).toEqual({ history: 40 })
+    expect(mockedGroups.mock.calls[2][0].groups).toEqual(groups.filter(({ id }) => id === 'history'))
+  })
+
+  it('disabled URL readiness cannot wake successful cached list or cached aggregate', async () => {
+    renderQueries({ ...initial, enabled: false }, (client) => {
+      client.setQueryData(queryKeys.placesCatalogList({ q: undefined, categories: initial.categories, country: 'by', sort: 'default' }), { pages: [FILTERED_PAGE], pageParams: [1] })
+      client.setQueryData(queryKeys.placesCatalogCollectionCounts({ country: 'by', groups, source: 'aggregate' }), { nature: 9 })
+    })
+    await settle()
+    expect(mockedFetch).not.toHaveBeenCalled()
+    expect(mockedGroups).not.toHaveBeenCalled()
   })
 })

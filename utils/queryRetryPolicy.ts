@@ -23,15 +23,29 @@ const HEAVY_READ_RETRY_DELAY_MS = 1500
 
 /** Сервер этот запрос не считает: он не дошёл либо сервер сам отказался от расчёта. */
 export const noServerWorkInFlight = (error: unknown): boolean => {
-  if (isServerStillWorkingAfter(error)) return false
+  const name = (error as { name?: unknown } | null)?.name
+  if (name === 'AbortError' || name === 'TimeoutError') return false
   const status = (error as { status?: unknown } | null)?.status
+  // Structured HTTP status wins over a server's localized/body timeout wording.
   if (typeof status === 'number' && status > 0) return RETRYABLE_STATUSES.has(status)
+  if (isServerStillWorkingAfter(error)) return false
   return isConnectionFailure(error)
 }
 
+/** Read policies keep each owner's previous maximum, never retry ongoing work. */
+export const readRetryAtMost = (maxRetries: number, excludedStatuses: readonly number[] = []) =>
+  (failureCount: number, error: unknown): boolean => {
+    const status = (error as { status?: unknown } | null)?.status
+    return failureCount < maxRetries && !excludedStatuses.includes(Number(status)) && noServerWorkInFlight(error)
+  }
+
+export const readRetryOnce = readRetryAtMost(1)
+export const readRetryTwice = readRetryAtMost(2)
+// The three Strava reads previously excluded 503 explicitly; keep that limit0.
+export const stravaReadRetryOnce = readRetryAtMost(1, [503])
+
 /** Опции `retry`/`retryDelay` запроса тяжёлого чтения: `...heavyReadRetry`. */
 export const heavyReadRetry = {
-  retry: (failureCount: number, error: unknown): boolean =>
-    failureCount < 1 && noServerWorkInFlight(error),
+  retry: readRetryOnce,
   retryDelay: HEAVY_READ_RETRY_DELAY_MS,
 } as const

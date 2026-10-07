@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 // hooks/usePublicTripsApi.ts
 // React Query хуки каталога публичных поездок «Поехали со мной» (Sprint 14).
 // Серверный стейт — только через React Query. Мутации оптимистично двигают
@@ -22,7 +23,7 @@ import {
   type TripApplication,
   type TripNotification,
 } from '@/api/publicTrips';
-import { ApiError, isTimeoutError } from '@/api/client';
+
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
@@ -33,12 +34,6 @@ import {
 
 const STALE_TIME = 5 * 60 * 1000;
 
-const isAuthError = (error: unknown): boolean =>
-  error instanceof ApiError && (error.status === 401 || error.status === 403);
-
-const retry = (failureCount: number, error: unknown): boolean =>
-  !isAuthError(error) && !isTimeoutError(error) && failureCount < 2;
-
 /** Каталог публичных поездок с фильтрами (#411). */
 export function usePublicTrips(filters?: PublicTripsFilters) {
   const normalized = filters ?? {};
@@ -46,7 +41,7 @@ export function usePublicTrips(filters?: PublicTripsFilters) {
     queryKey: queryKeys.publicTrips(normalized as Record<string, unknown>),
     queryFn: () => fetchPublicTrips(filters),
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 
@@ -62,7 +57,7 @@ export function usePublicTrip(tripId: string | number | null | undefined) {
     queryFn: () => fetchPublicTrip(tripId as string | number),
     enabled: tripId != null && tripId !== '',
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
     select: (trip) => ({
       ...trip,
       isOwner: trip.isOwner || (userId != null && String(trip.organizer.id) === String(userId)),
@@ -79,7 +74,7 @@ export function useMyTripApplications() {
     queryFn: fetchMyApplications,
     enabled: isAuthenticated,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 
@@ -91,7 +86,7 @@ export function useTripApplications(tripId: string | number | null | undefined) 
     queryFn: () => fetchTripApplications(tripId as string | number),
     enabled: tripId != null && tripId !== '',
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 
@@ -104,7 +99,7 @@ export function useTripNotifications() {
     queryFn: fetchTripNotifications,
     enabled: isAuthenticated,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 

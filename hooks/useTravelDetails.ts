@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 /**
  * Кастомный хук для управления данными путешествия
  * Изолирует логику загрузки данных от UI-компонентов
@@ -8,7 +9,7 @@ import { onlineManager, useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { normalizeTravelItem } from '@/api/travelsNormalize';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
-import { isTimeoutError } from '@/api/client';
+
 import type { Travel } from '@/types/types';
 import { Platform } from 'react-native';
 import { queryKeys } from '@/queryKeys';
@@ -382,26 +383,11 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     // blocks LCP there. On a client-side SPA navigation there is no preload
     // safety net, and a single transient failure with retry:false turned into a
     // sticky error (staleTime kept it from refetching) that only a full reload
-    // could clear. Retry transient (non-404) failures a couple of times so the
-    // SPA path self-heals; genuine 404s fail fast (slug fallback already ran).
-    retry: !onlineManager.isOnline()
-      ? false
-      : Platform.OS === 'web'
-      ? (failureCount: number, err: unknown) => {
-          if (failureCount >= 2) return false;
-          const status = Number(
-            (err as { status?: unknown } | null)?.status ??
-              (err as { response?: { status?: unknown } } | null)?.response?.status,
-          );
-          if (status === 404) return false;
-          // Таймаут уже отъел 10с; повтор зависшего бэка лишь утраивает
-          // полноэкранный скелет. Connection-блипы (Failed to fetch) — ретраим.
-          if (isTimeoutError(err)) return false;
-          const message = err instanceof Error ? err.message : String(err ?? '');
-          if (/\b404\b|not found|не найден|не существует|удалено/i.test(message)) return false;
-          return true;
-        }
-      : undefined,
+    // could clear. Retry bounded connection/502/503 failures on web; native keeps the
+    // inherited default. Timeout/504/4xx fail fast (slug fallback already ran).
+    ...(!onlineManager.isOnline()
+      ? { retry: false }
+      : Platform.OS === 'web' ? { retry: readRetryTwice } : {}),
     // This query owns a durable local source and must run its queryFn while
     // offline; the function above never touches the network in that state.
     networkMode: 'always',

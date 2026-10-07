@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 // hooks/useTelegramLinkApi.ts
 // React Query хуки привязки Telegram к профилю (Sprint 15 / блок 6, FE-421).
 // Серверный стейт — только через React Query. Все мутации инвалидируют
@@ -14,18 +15,12 @@ import {
   type TelegramLink,
   type UpdateTelegramLinkInput,
 } from '@/api/telegramLink';
-import { ApiError, isTimeoutError } from '@/api/client';
+
 import { queryKeys } from '@/api/queryKeys';
 import { useAuthStore } from '@/stores/authStore';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
 
 const STALE_TIME = 5 * 60 * 1000;
-
-const isAuthError = (error: unknown): boolean =>
-  error instanceof ApiError && (error.status === 401 || error.status === 403);
-
-const retry = (failureCount: number, error: unknown): boolean =>
-  !isAuthError(error) && !isTimeoutError(error) && failureCount < 2;
 
 /** Текущая привязка Telegram (только для авторизованного). */
 export function useMyTelegramLink() {
@@ -36,7 +31,7 @@ export function useMyTelegramLink() {
     queryFn: fetchMyTelegramLink,
     enabled: isAuthenticated,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 

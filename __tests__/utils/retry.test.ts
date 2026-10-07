@@ -8,9 +8,9 @@ describe('retry utility', () => {
       expect(isRetryableError(networkError)).toBe(true);
     });
 
-    it('should identify timeout errors as retryable', () => {
+    it('does not repeat timeout while the server still computes', () => {
       const timeoutError = new Error('Request timeout');
-      expect(isRetryableError(timeoutError)).toBe(true);
+      expect(isRetryableError(timeoutError)).toBe(false);
     });
 
     it('should identify fetch errors as retryable', () => {
@@ -23,9 +23,9 @@ describe('retry utility', () => {
       expect(isRetryableError(clientError)).toBe(false);
     });
 
-    it('should retry 5xx errors', () => {
+    it('does not infer retry from status-bearing message text', () => {
       const serverError = new Error('500 Internal Server Error');
-      expect(isRetryableError(serverError)).toBe(true);
+      expect(isRetryableError(serverError)).toBe(false);
     });
 
     it('should not retry authentication errors', () => {
@@ -65,11 +65,11 @@ describe('retry utility', () => {
     });
 
     it('should respect custom shouldRetry function', async () => {
-      const fn = jest.fn().mockRejectedValue(new Error('custom error'));
+      const fn = jest.fn().mockRejectedValue(new Error('Network request failed'));
       const shouldRetry = jest.fn().mockReturnValue(false);
       
       await expect(retry(fn, { shouldRetry, delay: 10 }))
-        .rejects.toThrow('custom error');
+        .rejects.toThrow('Network request failed');
       
       expect(fn).toHaveBeenCalledTimes(1);
       expect(shouldRetry).toHaveBeenCalledWith(expect.any(Error));
@@ -99,4 +99,44 @@ describe('retry utility', () => {
       expect(fn).toHaveBeenCalledTimes(1);
     });
   });
+});
+
+
+describe('server-work boundary beats caller retry hints', () => {
+  const localized = [
+    'Превышено время ожидания', 'Перавышаны час чакання', 'Перевищено час очікування',
+    'Przekroczono limit czasu', 'Timeout exceeded',
+  ];
+  it.each(localized)('one call for named timeout: %s', async (message) => {
+    const fn = jest.fn().mockRejectedValue(Object.assign(new Error(message), { name: 'TimeoutError' }));
+    await expect(retry(fn, { maxAttempts: 3, delay: 0, shouldRetry: () => true })).rejects.toThrow(message);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+  it.each([400, 401, 403, 404, 408, 429, 500, 504])('one call for structured HTTP %i', async (status) => {
+    const error = Object.assign(new Error('Network timeout status text must not win'), { status });
+    const fn = jest.fn().mockRejectedValue(error);
+    await expect(retry(fn, { delay: 0, shouldRetry: () => true })).rejects.toBe(error);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+  it.each([502, 503])('preserves the old maximum for cancelled/unavailable HTTP %i', async (status) => {
+    const error = Object.assign(new Error('Service unavailable'), { status });
+    const fn = jest.fn().mockRejectedValueOnce(error).mockRejectedValueOnce(error).mockResolvedValue('ready');
+    await expect(retry(fn, { maxAttempts: 3, delay: 0 })).resolves.toBe('ready');
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+});
+
+
+it.each([502, 503])('structured HTTP %i wins over body timeout wording and keeps its retry budget', async (status) => {
+  const error = Object.assign(new Error('Upstream timeout'), { status });
+  const fn = jest.fn().mockRejectedValueOnce(error).mockResolvedValue('ready');
+  await expect(retry(fn, { maxAttempts: 2, delay: 0 })).resolves.toBe('ready');
+  expect(fn).toHaveBeenCalledTimes(2);
+});
+
+it('does not retry a named abort even with a connection-like message', async () => {
+  const error = Object.assign(new Error('Network request failed'), { name: 'AbortError' });
+  const fn = jest.fn().mockRejectedValue(error);
+  await expect(retry(fn, { delay: 0, shouldRetry: () => true })).rejects.toBe(error);
+  expect(fn).toHaveBeenCalledTimes(1);
 });

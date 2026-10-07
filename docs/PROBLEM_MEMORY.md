@@ -1070,6 +1070,19 @@ guard, падающий в CI на попытке обойти этот конт
   `__tests__/utils/reactQueryConfig.test.ts` проверяют таймаут на текстах всех
   пяти локалей; бюджет запросов каталога —
   `__tests__/screens/usePlacesCatalogController.requests.test.tsx`.
+- **Механизм #2224:** 53 read-override используют импортированную ограниченную
+  политику `utils/queryRetryPolicy.ts`; структурированные 502/503 сохраняют
+  прежний максимум, именованный timeout/abort и 504/4xx не повторяются.
+  Общий `utils/retry.ts` применяет тот же запрет до custom `shouldRetry`.
+  Login HTTP error сохраняет прежнее сообщение и добавляет `status` на
+  существующем throw; локализованный текст не становится HTTP-классификатором.
+  Нативное наследование query defaults и retry мутаций не меняются.
+- **Регрессия #2224:** `guard:query-retry-policy` с пустым baseline в
+  `lint`/`check:fast`; `queryReadRetryPolicy.contract.test.tsx` проверяет wiring
+  всех 53 опций и запускает их реальные импортированные policy через TanStack
+  QueryObserver. Дополнительно actual planned-trips hooks, публичный login API
+  и `utils/retry` проверяют число вызовов transport. Это code-level контроль;
+  runtime приёмка на проде остаётся отдельным gate.
 - **Пробел:** остальные запросы с собственным `retry` (часть повторяет таймаут,
   остальные — 504; перечень и способ подсчёта — в `#2224`) и императивный
   `utils/retry.ts`; контроля на форму `retry` в опциях запросов нет. Закрывает
@@ -1091,6 +1104,9 @@ guard, падающий в CI на попытке обойти этот конт
 - **Surface/owner:** frontend — слой данных
   `screens/tabs/usePlacesCatalogQueries.ts`; backend — `travels/views_places.py`
   и `travels/services/place_catalog_cache.py`.
+  Потребители поиска #2235 — `components/trips/planning/useRouteSiteSearch.ts`
+  и `components/trips/planning/TripReportForm.tsx`: тот же `useDebouncedValue`
+  и `PLACES_SEARCH_DEBOUNCE_MS=400`, пустое значение применяется сразу.
 - **Симптомы:** при открытии `/places` несколько параллельных запросов каталога
   с `perPage=1`; запрос на каждый набранный символ поиска; ответы 499 на 15,0 с;
   API не отвечает при одном посетителе страницы.
@@ -1110,11 +1126,16 @@ guard, падающий в CI на попытке обойти этот конт
   `__tests__/screens/usePlacesCatalogController.requests.test.tsx` (открытие,
   выбор подборки, заход по ссылке с категорией, таймаут, обрыв, дозагрузка,
   поиск); контракт — `docs/features/places.md` → «Запросы каталога».
-- **Пробел:** числа на карточках «Интересных подборок» видны только после
-  открытия подборки, пока нет агрегата бэкенда: `#2222`, затем `#2223`. Два
-  других потребителя того же запроса шлют его на каждый набранный символ:
-  `components/trips/planning/useRouteSiteSearch.ts` (паузы ввода нет) и
-  `components/trips/planning/TripReportForm.tsx` (`useDeferredValue`) — `#2235`.
+  Actual RouteBuilder/TripReportForm tests проверяют три изменения текста,
+  399 ms без запроса, один запрос на 400 ms, немедленную очистку и поздний
+  ответ отменённого поиска, который не возвращает очищенные результаты.
+- **Механизм #2223:** один агрегат всех подборок только после успешного списка
+  на измеренной web-ширине ≥760 px; mobile/native его не запрашивают. Scope
+  кэша — страна и точные группы; частичная list-проекция отделена от агрегата,
+  валидное уточнение текущей подборки выигрывает у позднего агрегата.
+- **Пробел приёмки:** source/unit controls #2223/#2235 не заменяют runtime
+  request ledger после выката. Ширины desktop/native в текущем проходе
+  отложены указанием владельца; mobile390 проверяется отдельно в testing.
 - **Решение для новой карточки:** нужен новый показатель каталога на экране —
   сначала проверить, не лежит ли он в ответе списка (тогда это проекция кэша, а
   не запрос); «на подборке нет числа» — `reuse #2223`; новый параллельный

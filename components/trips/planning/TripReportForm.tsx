@@ -5,7 +5,9 @@
 // фото/GPX требуют asset-id, которых фронт пока не умеет создавать, поэтому форма
 // их не собирает (отправляем photoUrls: [] и gpxUrl: null). Если отчёт уже
 // опубликован — показываем read-only карточку вместо формы.
-import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { PLACES_SEARCH_DEBOUNCE_MS } from '@/screens/tabs/PlacesScreen.helpers';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -18,6 +20,7 @@ import type { CatalogPlace } from '@/utils/placesCatalog';
 import { translatePlural, translate as i18nT } from '@/i18n'
 import { formatDate } from '@/i18n/format'
 
+const isBlankQuery = (query: string) => !query.trim();
 
 interface Props {
   trip: PlannedTrip;
@@ -84,7 +87,7 @@ function TripReportForm({ trip }: Props) {
 
   const [summary, setSummary] = useState('');
   const [placeQuery, setPlaceQuery] = useState('');
-  const deferredPlaceQuery = useDeferredValue(placeQuery);
+  const deferredPlaceQuery = useDebouncedValue(placeQuery, PLACES_SEARCH_DEBOUNCE_MS, isBlankQuery);
   const [placeResults, setPlaceResults] = useState<SelectedPlace[]>([]);
   const [placesLoading, setPlacesLoading] = useState(false);
   const [placesError, setPlacesError] = useState<string | null>(null);
@@ -118,6 +121,7 @@ function TripReportForm({ trip }: Props) {
       controller.signal,
     )
       .then((page) => {
+        if (controller.signal.aborted) return;
         setPlaceResults(
           page.places
             .map(toSelectedPlace)
@@ -125,7 +129,7 @@ function TripReportForm({ trip }: Props) {
         );
       })
       .catch((error: unknown) => {
-        if (isAbortError(error)) return;
+        if (controller.signal.aborted || isAbortError(error)) return;
         setPlaceResults([]);
         setPlacesError(i18nT('trips:components.trips.planning.TripReportForm.ne_udalos_zagruzit_mesta_7fc2f242'));
       })

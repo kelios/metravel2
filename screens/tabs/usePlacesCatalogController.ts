@@ -26,14 +26,16 @@ import { usePlacesCatalogQueries } from './usePlacesCatalogQueries'
 type PlacesCatalogControllerInput = {
   isCompact: boolean
   isWide: boolean
+  hasMeasuredWidth: boolean
 }
 
 const isBlankQuery = (value: string) => !value.trim()
 
-export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogControllerInput) {
+export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth }: PlacesCatalogControllerInput) {
   const router = useRouter()
   const params = useLocalSearchParams<{ category?: string; country?: string; q?: string }>()
-  const [query, setQuery] = useState(() => typeof params.q === 'string' ? params.q : '')
+  const [urlParamsApplied, setUrlParamsApplied] = useState(Platform.OS !== 'web')
+  const [query, setQuery] = useState(() => Platform.OS !== 'web' && typeof params.q === 'string' ? params.q : '')
   // В запрос уходит значение после паузы ввода: `useDeferredValue` паузой не
   // был, и каждый набранный символ стоил бэкенду отдельного расчёта (#2184).
   // Очищенный поиск применяется сразу, иначе «Сбросить» слал бы запрос со
@@ -42,10 +44,10 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
   const [categoryQuery, setCategoryQuery] = useState('')
   const deferredCategoryQuery = useDeferredValue(categoryQuery)
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
-    parseCategoryParam(params.category),
+    Platform.OS === 'web' ? [] : parseCategoryParam(params.category),
   )
   const [selectedCountry, setSelectedCountry] = useState<string | null>(() =>
-    typeof params.country === 'string' && params.country.trim() ? params.country.trim() : null,
+    Platform.OS !== 'web' && typeof params.country === 'string' && params.country.trim() ? params.country.trim() : null,
   )
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [countryMenuVisible, setCountryMenuVisible] = useState(false)
@@ -60,6 +62,9 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
   }, [])
 
   const showCollections = Platform.OS === 'web' && !isCompact
+  // The first web frame matches SSG. Wait for the committed URL state and its
+  // debounced search before enabling any list/scope/aggregate request.
+  const queryReady = urlParamsApplied && appliedQuery === query.trim()
   const interestingCategoryCollections = useMemo(getInterestingCategoryCollections, [])
   const { collectionCounts, isScopeLoading, placesQuery, scope } = usePlacesCatalogQueries({
     q: appliedQuery || undefined,
@@ -67,6 +72,8 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
     country: selectedCountry,
     sort: sortMode,
     collections: interestingCategoryCollections,
+    enabled: queryReady,
+    showCollections: showCollections && hasMeasuredWidth,
   })
 
   const visiblePlaces = useMemo(
@@ -114,17 +121,14 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
     setSelectedCategories((current) =>
       isSameCategorySet(current, nextCategories) ? current : nextCategories,
     )
-  }, [params.category])
-  useEffect(() => {
     const nextCountry = typeof params.country === 'string' && params.country.trim()
       ? params.country.trim()
       : null
     setSelectedCountry((current) => (current === nextCountry ? current : nextCountry))
-  }, [params.country])
-  useEffect(() => {
     const nextQuery = typeof params.q === 'string' ? params.q : ''
     setQuery((current) => (current === nextQuery ? current : nextQuery))
-  }, [params.q])
+    setUrlParamsApplied(true)
+  }, [params.category, params.country, params.q])
 
   const loadMorePlaces = useCallback(() => {
     if (placesQuery.hasNextPage && !placesQuery.isFetchingNextPage) void placesQuery.fetchNextPage()
@@ -210,7 +214,10 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
   }, [handleClearCategories, handleQueryChange, handleSelectCountry])
   // Загруженный список остаётся на экране и при сбое фонового обновления или
   // дозагрузки: блок ошибки заменяет его, только когда показать нечего.
-  const resultsStatus: 'loading' | 'error' | 'empty' | 'list' = placesQuery.isLoading
+  const isInitialLoading = !urlParamsApplied || placesQuery.isLoading || (!queryReady && !placesQuery.data)
+  const isResultsRefreshing = !isInitialLoading && (!queryReady || placesQuery.isPlaceholderData || placesQuery.isRefetching)
+  const hasResultCount = placesQuery.data !== undefined && !isInitialLoading && !isResultsRefreshing
+  const resultsStatus: 'loading' | 'error' | 'empty' | 'list' = isInitialLoading
     ? 'loading'
     : visiblePlaces.length > 0
       ? 'list'
@@ -240,7 +247,9 @@ export function usePlacesCatalogController({ isCompact, isWide }: PlacesCatalogC
     hasActiveFilters,
     hasCategorySearch: deferredCategoryQuery.trim().length > 0,
     hasMorePlaces: placesQuery.hasNextPage,
-    isInitialLoading: placesQuery.isLoading,
+    isInitialLoading,
+    isResultsRefreshing,
+    hasResultCount,
     isScopeLoading,
     loadErrorDescription: getCatalogLoadErrorDescription(placesQuery.error),
     loadMoreFailed,

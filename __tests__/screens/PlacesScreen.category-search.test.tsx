@@ -22,6 +22,7 @@ jest.mock('expo-router', () => ({
 
 jest.mock('@/api/places', () => ({
   fetchPlacesCatalog: jest.fn(),
+  fetchPlacesCatalogCategoryGroups: jest.fn(async () => ({})),
 }))
 
 jest.mock('@/components/seo/LazyInstantSEO', () => ({

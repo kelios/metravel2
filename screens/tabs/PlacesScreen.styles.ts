@@ -669,6 +669,7 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     color: colors.textMuted,
     ...DESIGN_TOKENS.typography.scale.bodySmall,
     fontWeight: '500',
+    minHeight: DESIGN_TOKENS.typography.scale.bodySmall.lineHeight,
   },
   resultsHeaderControls: {
     flexDirection: 'row',

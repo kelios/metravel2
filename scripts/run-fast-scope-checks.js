@@ -336,6 +336,9 @@ const main = () => {
       process.exit(bottomChromeGuardStatus)
     }
 
+    const queryRetryGuardStatus = runCommand('npm', ['run', 'guard:query-retry-policy'])
+    if (queryRetryGuardStatus !== 0) process.exit(queryRetryGuardStatus)
+
     const typeDebtGuardStatus = runCommand('npm', ['run', 'guard:type-debt'])
     if (typeDebtGuardStatus !== 0) {
       process.exit(typeDebtGuardStatus)

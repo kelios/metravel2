@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 // hooks/useUserSafety.ts
 // React Query хуки Trust & Safety (Sprint 16, FE-430): причины жалоб, подача жалобы
 // на любой контент (#2133), блокировка/разблокировка. Блок (#2134) — слой кэша, а не две инвалидации:
@@ -18,7 +19,7 @@ import {
   type SubmitReportInput,
 } from '@/api/userSafety'
 import type { UserProfileDto } from '@/api/user'
-import { ApiError, isTimeoutError } from '@/api/client'
+
 import { queryKeys } from '@/api/queryKeys'
 import {
   applyAuthorBlock,
@@ -40,18 +41,12 @@ import { translate as i18nT } from '@/i18n'
 
 const STALE_TIME = 5 * 60 * 1000
 
-const isAuthError = (error: unknown): boolean =>
-  error instanceof ApiError && (error.status === 401 || error.status === 403)
-
-const retry = (failureCount: number, error: unknown): boolean =>
-  !isAuthError(error) && !isTimeoutError(error) && failureCount < 2
-
 export function useReportReasons() {
   return useQuery<ReportReason[]>({
     queryKey: queryKeys.userReportReasons(),
     queryFn: fetchReportReasons,
     staleTime: 60 * 60 * 1000,
-    retry,
+    retry: readRetryTwice,
   })
 }
 
@@ -63,7 +58,7 @@ export function useBlockedUsers(enabled = true) {
     queryFn: fetchBlockedUsers,
     enabled: enabled && authReady && owner !== null,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   })
 }
 

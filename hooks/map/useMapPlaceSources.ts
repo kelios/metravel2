@@ -1,3 +1,4 @@
+import { readRetryOnce } from '@/utils/queryRetryPolicy';
 /**
  * useMapPlaceSources — ленивые материалы физического места (#1571, контракт
  * `docs/features/map.md` → «Один физический объект с несколькими источниками»).
@@ -40,6 +41,6 @@ export const useMapPlaceSources = ({
     queryFn: ({ signal }) => fetchAllMapPlaceSources(placeId as string | number, { signal }),
     enabled: canFetch,
     staleTime: Infinity,
-    retry: 1,
+    retry: readRetryOnce,
   });
 };

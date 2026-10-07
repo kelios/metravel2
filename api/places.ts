@@ -82,3 +82,26 @@ export const fetchPlacesCatalog = async (
   const payload = await safeJsonParse<RawPlacesCatalogResponse>(res, {})
   return mapPlacesCatalogResponse(payload)
 }
+
+export type PlacesCatalogCategoryGroup = { id: string; categories: readonly string[] }
+
+/** Exact server aggregate; missing/invalid counts remain unknown to the UI. */
+export const fetchPlacesCatalogCategoryGroups = async (
+  { country, groups }: { country?: string; groups: readonly PlacesCatalogCategoryGroup[] },
+  signal?: AbortSignal,
+): Promise<Readonly<Record<string, number>>> => {
+  const params = new URLSearchParams()
+  if (country?.trim()) params.set('country', country.trim())
+  for (const group of groups) params.append('group', `${group.id}:${group.categories.join(',')}`)
+  const response = await fetchPublicWithSession(`${PLACES_CATALOG_URL}category-groups/?${params}`, { signal }, PLACES_CATALOG_TIMEOUT_MS)
+  if (!response.ok) throw new ApiError(response.status, `HTTP ${response.status}: ${response.statusText}`)
+  const payload = await safeJsonParse<{ groups?: Array<{ id?: unknown; count?: unknown } | null> }>(response, {})
+  const requested = new Set(groups.map(({ id }) => id))
+  const counts: Record<string, number> = {}
+  for (const group of Array.isArray(payload.groups) ? payload.groups : []) {
+    if (group && typeof group.id === 'string' && requested.has(group.id) && typeof group.count === 'number' && Number.isInteger(group.count) && group.count >= 0) {
+      counts[group.id] = group.count
+    }
+  }
+  return counts
+}

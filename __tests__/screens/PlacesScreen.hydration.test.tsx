@@ -1,3 +1,8 @@
+import { act as domAct, useLayoutEffect } from 'react'
+import { hydrateRoot, type Root } from 'react-dom/client'
+import { renderToString } from 'react-dom/server.node'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { usePlacesCatalogController } from '@/screens/tabs/usePlacesCatalogController'
 import { render } from '@testing-library/react-native'
 import { Platform, StyleSheet } from 'react-native'
 
@@ -17,9 +22,10 @@ const COMPACT_BREAKPOINT = Number(
 )
 
 let mockWidth = 0
+let mockParams: Record<string, string> = {}
 
 jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => mockParams,
   useRouter: () => ({ push: jest.fn(), setParams: jest.fn() }),
   useIsFocused: () => true,
   useFocusEffect: () => undefined,
@@ -30,7 +36,8 @@ jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ width: mockWidth, isPhone: false, isLargePhone: false }),
 }))
 
-jest.mock('@/api/places', () => ({ fetchPlacesCatalog: jest.fn() }))
+jest.mock('@/api/places', () => ({ fetchPlacesCatalogCategoryGroups: jest.fn(async () => ({})),
+  fetchPlacesCatalog: jest.fn() }))
 
 jest.mock('@/components/seo/LazyInstantSEO', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/common/ContributionBanner', () => ({ __esModule: true, default: () => null }))
@@ -74,6 +81,7 @@ describe('PlacesScreen pre-hydration chrome', () => {
     ;(fetchPlacesCatalog as jest.Mock).mockResolvedValue(catalogPage)
     ;(Platform as unknown as { OS: string }).OS = 'web'
     mockWidth = 0
+    mockParams = {}
   })
 
   it('renders both catalog headers while the width is unknown', () => {
@@ -137,8 +145,60 @@ describe('PlacesScreen pre-hydration chrome', () => {
   it('never doubles the header on native', () => {
     ;(Platform as unknown as { OS: string }).OS = 'android'
     mockWidth = 0
+    mockParams = {}
     const { queryByTestId } = renderScreen()
 
     expect(queryByTestId('places-compact-bar')).toBeNull()
+  })
+})
+
+
+describe('Places URL state hydration parity (#2240)', () => {
+  it.each<Record<string, string>>([
+    { category: 'Замок' }, { q: 'замок' }, { country: 'by' },
+    { q: 'замок', category: 'Замок', country: 'by' },
+  ])('hydrates a neutral SSG frame before committing %j', async (params) => {
+    Platform.OS = 'web'
+    jest.useFakeTimers()
+    const requests = jest.mocked(fetchPlacesCatalog)
+    requests.mockReset().mockResolvedValue(catalogPage)
+    const frames: string[] = []
+    const client = new QueryClient()
+    function Probe() {
+      const state = usePlacesCatalogController({ isCompact: true, isWide: false, hasMeasuredWidth: true })
+      const frame = JSON.stringify([state.query, state.selectedCategories, state.selectedCountry, state.activeCategoryTitle, state.isInitialLoading])
+      useLayoutEffect(() => { frames.push(frame) }, [frame])
+      return <span>{frame}</span>
+    }
+    const tree = () => <QueryClientProvider client={client}><Probe /></QueryClientProvider>
+    mockParams = {}
+    const html = renderToString(tree())
+    expect(requests).not.toHaveBeenCalled()
+    mockParams = params
+    const container = document.createElement('div')
+    container.innerHTML = html
+    const neutralText = container.textContent
+    const errors: unknown[] = []
+    let root: Root | undefined
+    try {
+      await domAct(async () => { root = hydrateRoot(container, tree(), { onRecoverableError: (error) => errors.push(error) }) })
+      expect(frames[0]).toBe(neutralText)
+      expect(errors).toEqual([])
+      if (params.q) expect(requests).not.toHaveBeenCalled()
+      await domAct(async () => { await jest.advanceTimersByTimeAsync(400) })
+      await domAct(async () => { await jest.advanceTimersByTimeAsync(1) })
+      expect(requests.mock.calls[0][0]).toMatchObject({
+        ...(params.q ? { q: params.q } : {}),
+        ...(params.category ? { categories: ['Замок'] } : {}),
+        ...(params.country ? { country: params.country } : {}),
+      })
+      expect(requests.mock.calls[0][0].perPage).toBe(20)
+      expect(errors).toEqual([])
+    } finally {
+      await domAct(async () => { root?.unmount() })
+      client.clear()
+      jest.useRealTimers()
+      mockParams = {}
+    }
   })
 })

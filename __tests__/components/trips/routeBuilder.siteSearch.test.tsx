@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render, waitFor } from '@testing-library/react-native'
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
 
 import { fetchPlacesCatalog } from '@/api/places'
 import { fetchTravels } from '@/api/travelsApi'
@@ -421,5 +421,50 @@ describe('RouteBuilder point type binding', () => {
       name: 'Парк Горького',
       placeId: null,
     })
+  })
+})
+
+
+describe('actual RouteBuilder site-search debounce (#2235)', () => {
+  beforeEach(() => jest.useFakeTimers())
+  afterEach(() => jest.useRealTimers())
+  const tick = (ms: number) => act(async () => { await jest.advanceTimersByTimeAsync(ms) })
+  it('three letters produce one places request and one travels request only after400ms; clear sends none', async () => {
+    const screen = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    fireEvent.press(screen.getByTestId('route-builder-add-action'))
+    const input = screen.getByTestId('route-builder-site-search')
+    for (const q of ['Н', 'Не', 'Нес']) { fireEvent.changeText(input, q); await tick(100) }
+    await tick(299)
+    expect(mockedFetchPlacesCatalog).not.toHaveBeenCalled()
+    expect(mockedFetchTravels).not.toHaveBeenCalled()
+    await tick(1)
+    expect(mockedFetchPlacesCatalog).toHaveBeenCalledTimes(1)
+    expect(mockedFetchTravels).toHaveBeenCalledTimes(1)
+    expect(mockedFetchPlacesCatalog.mock.calls[0][0]).toEqual({ page: 1, perPage: 6, q: 'Нес' })
+    expect(mockedFetchTravels.mock.calls[0].slice(0, 4)).toEqual([0, 6, 'Нес', {}])
+    expect(screen.getByTestId('route-builder-site-option-place-42')).toBeTruthy()
+    fireEvent.changeText(input, '')
+    expect(screen.queryByTestId('route-builder-site-option-place-42')).toBeNull()
+    await tick(1000)
+    expect(mockedFetchPlacesCatalog).toHaveBeenCalledTimes(1)
+    expect(mockedFetchTravels).toHaveBeenCalledTimes(1)
+    screen.unmount()
+  })
+  it('clear aborts pending search immediately and a late successful reply cannot restore options', async () => {
+    let resolve!: (page: PlacesCatalogPage) => void
+    mockedFetchPlacesCatalog.mockReturnValue(new Promise((res) => { resolve = res }))
+    const screen = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    fireEvent.press(screen.getByTestId('route-builder-add-action'))
+    const input = screen.getByTestId('route-builder-site-search')
+    fireEvent.changeText(input, 'Несвиж')
+    await tick(400)
+    const signal = mockedFetchPlacesCatalog.mock.calls[0][1]!
+    expect(signal.aborted).toBe(false)
+    fireEvent.changeText(input, '')
+    expect(signal.aborted).toBe(true)
+    await act(async () => { resolve(placesPage); await Promise.resolve() })
+    expect(screen.queryByTestId('route-builder-site-option-place-42')).toBeNull()
+    expect(mockedFetchPlacesCatalog).toHaveBeenCalledTimes(1)
+    screen.unmount()
   })
 })

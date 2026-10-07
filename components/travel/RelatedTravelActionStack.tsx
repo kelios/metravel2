@@ -1,3 +1,4 @@
+import { readRetryOnce } from '@/utils/queryRetryPolicy';
 import { useMemo } from 'react'
 import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
@@ -8,7 +9,6 @@ import FavoriteButton from '@/components/travel/FavoriteButton'
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { normalizeRelatedTravelId, resolveRelatedTravelRef } from '@/utils/relatedTravel'
 import { translate as i18nT } from '@/i18n'
-
 
 type Props = {
   relatedTravelUrl?: string | null
@@ -69,7 +69,7 @@ export default function RelatedTravelActionStack({
     enabled: needsFetch,
     staleTime: 10 * 60 * 1000,
     gcTime: 20 * 60 * 1000,
-    retry: 1,
+    retry: readRetryOnce,
   })
 
   const resolvedTravelId = relatedTravel?.id ?? travelRef?.id

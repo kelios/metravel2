@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Platform, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,7 +13,7 @@ import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { mapProfileRank } from '@/api/user';
-import { ApiError } from '@/api/client';
+
 import { queryKeys } from '@/queryKeys';
 import { webTouchScrollStyle } from '@/utils';
 import { routes } from '@/utils/routes';
@@ -31,7 +32,6 @@ import type { Travel } from '@/types/types';
 import SubscriptionsTabContent from '@/components/subscriptions/SubscriptionsTabContent';
 import { useSubscriptionsData } from '@/hooks/useSubscriptionsData';
 import { translate as i18nT } from '@/i18n'
-
 
 const AUTHOR_TRAVELS_LIMIT = 12;
 
@@ -127,7 +127,7 @@ export default function PublicUserProfileScreen() {
     enabled: !!userId && !isBlockedByMe,
     staleTime: 5 * 60 * 1000,
     placeholderData: keepPreviousData,
-    retry: (fc, err) => !(err instanceof ApiError && (err.status === 401 || err.status === 403)) && fc < 2,
+    retry: readRetryTwice,
   });
 
   const authorTravels = authorTravelsQuery.data?.data ?? [];

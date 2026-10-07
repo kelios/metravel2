@@ -1,7 +1,7 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 import { useMemo } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 
-import { ApiError, isTimeoutError } from '@/api/client'
 import {
   fetchAuthorEngagementDetails,
   type AuthorEngagementItem,
@@ -27,11 +27,7 @@ export function useAuthorEngagementDetails(metric: AuthorEngagementMetric | null
     getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
     enabled: Boolean(metric) && isAuthenticated,
     staleTime: 60 * 1000,
-    retry: (failureCount, error) => {
-      if (error instanceof ApiError && error.status >= 400 && error.status < 500) return false
-      if (isTimeoutError(error)) return false
-      return failureCount < 2
-    },
+    retry: readRetryTwice,
   })
 
   const items: AuthorEngagementItem[] = useMemo(

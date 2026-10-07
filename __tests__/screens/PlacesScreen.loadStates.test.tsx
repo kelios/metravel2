@@ -4,7 +4,8 @@
  * бэкенд, который брошенный запрос всё равно досчитывает.
  */
 import { fireEvent, render, waitFor } from '@testing-library/react-native'
-import { Platform } from 'react-native'
+import { act } from '@testing-library/react-native'
+import { StyleSheet, Platform } from 'react-native'
 import { createQueryWrapper } from '../helpers/testQueryClient'
 import PlacesScreen from '@/screens/tabs/PlacesScreen'
 import { fetchPlacesCatalog } from '@/api/places'
@@ -18,6 +19,7 @@ jest.mock('expo-router', () => ({
 }))
 
 jest.mock('@/api/places', () => ({
+  fetchPlacesCatalogCategoryGroups: jest.fn(async () => ({})),
   fetchPlacesCatalog: jest.fn(),
 }))
 
@@ -108,11 +110,18 @@ describe('PlacesScreen — состояния загрузки каталога 
     expect(await findByText('Не удалось загрузить места')).toBeTruthy()
     expect(getByText(/Сервер не отвечает/)).toBeTruthy()
     expect(mockedFetch).toHaveBeenCalledTimes(1)
+    const meta = await findByTestId('places-results-meta')
+    expect(meta.props.children).toBe('\u00a0')
+    expect(meta.props.numberOfLines).toBe(1)
+    const metaStyle = StyleSheet.flatten(meta.props.style)
+    expect(metaStyle.minHeight).toBe(metaStyle.lineHeight)
 
     fireEvent.press(await findByLabelText('Повторить'))
 
     expect(await findByTestId('places-card-place-1')).toBeTruthy()
     expect(mockedFetch).toHaveBeenCalledTimes(2)
+    expect((await findByTestId('places-results-meta')).props.children).toBe('4 места')
+    expect(StyleSheet.flatten((await findByTestId('places-results-meta')).props.style)).toEqual(metaStyle)
   })
 
   it('сбой дозагрузки: карточки остаются, подвал показывает ошибку и «Повторить»', async () => {
@@ -142,4 +151,28 @@ describe('PlacesScreen — состояния загрузки каталога 
     expect(mockedFetch.mock.calls[2][0]).toMatchObject({ page: 2 })
     await waitFor(() => expect(queryByTestId('places-load-more')).toBeNull())
   })
+})
+
+
+it('loading, legitimate empty success and refreshing keep the same reserved meta line without stale counts', async () => {
+  mockedFetch.mockReset()
+  ;(Platform as any).OS = 'web'
+  jest.useFakeTimers()
+  let resolve!: (page: PlacesCatalogPage) => void
+  mockedFetch.mockReturnValueOnce(new Promise((res) => { resolve = res }))
+  const screen = renderScreen()
+  const initial = screen.getByTestId('places-results-meta')
+  const geometry = StyleSheet.flatten(initial.props.style)
+  expect(initial.props.children).toBe('Загружаем подборку...')
+  try {
+    await act(async () => { resolve({ ...makePage(1, 0), count: 0 }); await jest.advanceTimersByTimeAsync(1) })
+    await act(async () => { await jest.advanceTimersByTimeAsync(1) })
+    expect(screen.getByTestId('places-results-meta').props.children).toBe('0 мест')
+    mockedFetch.mockReturnValue(new Promise(() => undefined))
+    fireEvent.changeText(screen.getAllByLabelText('Найти место')[0], 'замок')
+    expect(screen.getByTestId('places-results-meta').props.children).toBe('Загружаем подборку...')
+    expect(screen.getByTestId('places-results-meta').props.numberOfLines).toBe(1)
+    expect(StyleSheet.flatten(screen.getByTestId('places-results-meta').props.style)).toEqual(geometry)
+    expect(geometry.minHeight).toBe(geometry.lineHeight)
+  } finally { screen.unmount(); jest.useRealTimers() }
 })

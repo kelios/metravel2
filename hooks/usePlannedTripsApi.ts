@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 // hooks/usePlannedTripsApi.ts
 // React Query хуки планирования поездок (Sprint 13 / блок D). Серверный стейт —
 // только React Query. Мутации оптимистично/инвалидируют связанные кэши.
@@ -41,7 +42,7 @@ import {
   type UpdateTripTransportInput,
   type UpdateRouteInput,
 } from '@/api/plannedTrips';
-import { ApiError, isTimeoutError } from '@/api/clientErrors';
+
 import { queryKeys } from '@/api/queryKeys';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { useAuthStore } from '@/stores/authStore';
@@ -52,24 +53,6 @@ import {
 } from '@/utils/tripAnalytics';
 
 const STALE_TIME = 5 * 60 * 1000;
-
-const retry = (failureCount: number, error: unknown): boolean => {
-  if (failureCount >= 2) return false;
-  if (error instanceof ApiError) {
-    // HTTP status wins over message text (e.g. a 408/504 mentioning timeout).
-    return error.status === 0 || error.status === 408 || (error.status >= 500 && error.status < 600);
-  }
-  if (!(error instanceof Error) || error.name === 'AbortError' || isTimeoutError(error)) return false;
-  // Unlike UI offline detection, retry must not classify every Error as network
-  // merely because navigator.onLine is false (normalization can fail too).
-  // fetchWithTimeout preserves the browser's original rejection as a cause.
-  const networkFailure = /failed to fetch|network request failed|network failed/i;
-  return [error, error.cause].some((candidate) => candidate instanceof Error && (
-    networkFailure.test(candidate.message)
-    || (candidate instanceof TypeError
-      && /^(Load failed|NetworkError when attempting to fetch resource\.?)$/i.test(candidate.message))
-  ));
-};
 
 // Пересчёт маршрута на бэке переписывает сводку без высот, поэтому кэш профиля
 // больше не относится к текущему маршруту.
@@ -97,7 +80,7 @@ export function useMyPlannedTrips() {
     queryFn: fetchMyPlannedTrips,
     enabled: isAuthenticated,
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 
@@ -127,7 +110,7 @@ export function usePlannedTrip(tripId: string | number | null | undefined) {
     queryFn: () => fetchPlannedTrip(tripId as string | number),
     enabled: authReady && tripId != null && tripId !== '',
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
     select: selectForCurrentUser,
   });
 }
@@ -138,7 +121,7 @@ export function useCommunityTrips(filters?: CommunityTripsFilters) {
     queryKey: queryKeys.communityTrips(normalized as Record<string, unknown>),
     queryFn: () => fetchCommunityTrips(filters),
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 
@@ -158,7 +141,7 @@ export function useTripRouteElevation(
       tripId != null &&
       tripId !== '',
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 
@@ -183,7 +166,7 @@ export function useRouteTemplates() {
     queryKey: queryKeys.routeTemplates(),
     queryFn: fetchRouteTemplates,
     staleTime: 60 * 60 * 1000,
-    retry,
+    retry: readRetryTwice,
   });
 }
 
@@ -193,7 +176,7 @@ export function useTripSuggestions(tripId: string | number | null | undefined) {
     queryFn: () => fetchTripSuggestions(tripId as string | number),
     enabled: tripId != null && tripId !== '',
     staleTime: STALE_TIME,
-    retry,
+    retry: readRetryTwice,
   });
 }
 

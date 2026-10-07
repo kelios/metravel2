@@ -3,6 +3,8 @@
 // добавления точки маршрута. Вынесено из RouteBuilder.tsx (#1825) дословно:
 // тот же порог длины запроса, тот же AbortController и те же статусы.
 import { useCallback, useEffect, useState } from 'react';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { PLACES_SEARCH_DEBOUNCE_MS } from '@/screens/tabs/PlacesScreen.helpers';
 
 import { fetchPlacesCatalog } from '@/api/places';
 import { fetchTravels } from '@/api/travelsApi';
@@ -19,6 +21,8 @@ import {
 } from '@/components/trips/planning/routeBuilderPoint';
 import { translate as i18nT } from '@/i18n'
 
+const isBlankQuery = (query: string) => !query.trim();
+
 export function useRouteSiteSearch({
   isAddPointOpen,
   newType,
@@ -27,11 +31,12 @@ export function useRouteSiteSearch({
   newType: RoutePointType;
 }) {
   const [siteQuery, setSiteQuery] = useState('');
+  const appliedSiteQuery = useDebouncedValue(siteQuery, PLACES_SEARCH_DEBOUNCE_MS, isBlankQuery);
   const [siteOptions, setSiteOptions] = useState<SiteRouteOption[]>([]);
   const [siteSearchStatus, setSiteSearchStatus] = useState<SiteSearchStatus>('idle');
 
   useEffect(() => {
-    const query = siteQuery.trim();
+    const query = appliedSiteQuery.trim();
     if (!isAddPointOpen || newType !== 'place' || query.length < SITE_SEARCH_MIN_LENGTH) {
       setSiteOptions([]);
       setSiteSearchStatus('idle');
@@ -46,6 +51,7 @@ export function useRouteSiteSearch({
       fetchTravels(0, 6, query, {}, { signal: controller.signal }),
     ])
       .then(([placesPage, travelsPage]) => {
+        if (controller.signal.aborted) return;
         const placeOptions: SiteRouteOption[] = placesPage.places.map((place) => {
           const numericId = parseNumber(place.id);
           return {
@@ -75,13 +81,13 @@ export function useRouteSiteSearch({
         setSiteSearchStatus('ready');
       })
       .catch((error) => {
-        if (error instanceof Error && error.name === 'AbortError') return;
+        if (controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) return;
         setSiteOptions([]);
         setSiteSearchStatus('error');
       });
 
     return () => controller.abort();
-  }, [isAddPointOpen, newType, siteQuery]);
+  }, [isAddPointOpen, newType, appliedSiteQuery]);
 
   // Хвост `handleAddSitePoint`, относящийся к поиску: точку создаёт контейнер,
   // строка запроса и её результаты гасятся здесь — тем же порядком вызовов.

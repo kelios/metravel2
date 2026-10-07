@@ -2,6 +2,9 @@
 // ✅ Утилита для повторных попыток выполнения операций
 
 import { devError } from './logger';
+import { isServerStillWorkingAfter } from '@/api/clientErrors';
+import { noServerWorkInFlight } from '@/utils/queryRetryPolicy';
+import { isConnectionFailure } from '@/utils/networkFailureTag';
 
 export interface RetryOptions {
     maxAttempts?: number;
@@ -43,6 +46,10 @@ export async function retry<T>(
         } catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error));
 
+            if (!noServerWorkInFlight(error)) {
+                throw lastError;
+            }
+
             // Проверяем, нужно ли повторять попытку
             if (shouldRetry && !shouldRetry(lastError)) {
                 throw lastError;
@@ -78,40 +85,12 @@ export async function retry<T>(
  * Проверяет, является ли ошибка сетевой (можно повторить)
  */
 export function isNetworkError(error: Error): boolean {
-    const networkErrorPatterns = [
-        /network/i,
-        /timeout/i,
-        /fetch/i,
-        /ECONNREFUSED/i,
-        /ENOTFOUND/i,
-        /ETIMEDOUT/i,
-        /Failed to fetch/i,
-        /NetworkError/i,
-    ];
-
-    return networkErrorPatterns.some(pattern => pattern.test(error.message));
+    return !isServerStillWorkingAfter(error) && isConnectionFailure(error);
 }
 
 /**
  * Проверяет, является ли ошибка временной (можно повторить)
  */
 export function isRetryableError(error: Error): boolean {
-    // Не повторяем для ошибок валидации или авторизации
-    const nonRetryablePatterns = [
-        /401/i,
-        /403/i,
-        /400/i,
-        /validation/i,
-        /invalid/i,
-        /unauthorized/i,
-        /forbidden/i,
-    ];
-
-    if (nonRetryablePatterns.some(pattern => pattern.test(error.message))) {
-        return false;
-    }
-
-    // Повторяем для сетевых ошибок и 5xx ошибок
-    return isNetworkError(error) || /50\d/i.test(error.message);
+    return noServerWorkInFlight(error);
 }
-

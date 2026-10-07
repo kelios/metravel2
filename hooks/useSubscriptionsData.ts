@@ -1,3 +1,4 @@
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 // hooks/useSubscriptionsData.ts
 // D1: Data-fetching hook extracted from subscriptions.tsx
 
@@ -7,13 +8,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { fetchMySubscriptions, fetchMySubscribers, resolveProfileFullName, unsubscribeFromUser, type UserProfileDto } from '@/api/user';
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries';
-import { ApiError, isTimeoutError } from '@/api/client';
+
 import { queryKeys } from '@/queryKeys';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { confirmAction } from '@/utils/confirmAction';
 import { normalizeTravelPreview, type TravelPreview } from '@/utils/subscriptionsHelpers';
 import { translate as i18nT } from '@/i18n'
-
 
 export type SubscriptionTab = 'subscriptions' | 'subscribers';
 
@@ -62,21 +62,14 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
   const owner = useQueryOwner();
   const queryClient = useQueryClient();
 
-  const retryFn = useCallback(
-    (failureCount: number, error: Error) => {
-      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) return false;
-      if (isTimeoutError(error)) return false;
-      return failureCount < 2;
-    },
-    []
-  );
+
 
   const subscriptionsQuery = useQuery<UserProfileDto[]>({
     queryKey: queryKeys.mySubscriptions(owner),
     queryFn: fetchMySubscriptions,
     enabled: isAuthenticated && enabled,
     staleTime: 5 * 60 * 1000,
-    retry: retryFn,
+    retry: readRetryTwice,
   });
 
   const subscribersQuery = useQuery<UserProfileDto[]>({
@@ -84,7 +77,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
     queryFn: fetchMySubscribers,
     enabled: isAuthenticated && enabled,
     staleTime: 5 * 60 * 1000,
-    retry: retryFn,
+    retry: readRetryTwice,
   });
 
   const subscriptions = useMemo(() => subscriptionsQuery.data ?? [], [subscriptionsQuery.data]);

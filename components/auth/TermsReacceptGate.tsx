@@ -1,3 +1,4 @@
+import { readRetryOnce } from '@/utils/queryRetryPolicy';
 import React, { lazy, Suspense } from 'react';
 import { usePathname } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -27,7 +28,7 @@ export default function TermsReacceptGate() {
     queryFn: fetchTermsAcceptedCurrent,
     enabled: isAuthenticated && Boolean(userId),
     staleTime: 10 * 60 * 1000,
-    retry: 1,
+    retry: readRetryOnce,
   });
 
   if (!isAuthenticated || acceptedCurrent !== false) return null;

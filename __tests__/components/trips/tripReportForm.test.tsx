@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render, waitFor } from '@testing-library/react-native'
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
 import { fetchPlacesCatalog } from '@/api/places'
@@ -114,5 +114,44 @@ describe('TripReportForm places selector', () => {
       summary: 'Поездка прошла отлично, место посетили.',
       visitedPlaceIds: [42],
     })
+  })
+})
+
+
+describe('actual report-form search debounce (#2235)', () => {
+  beforeEach(() => jest.useFakeTimers())
+  afterEach(() => jest.useRealTimers())
+  const tick = (ms: number) => act(async () => { await jest.advanceTimersByTimeAsync(ms) })
+  it('waits400ms after the third letter and clears existing options immediately without a request', async () => {
+    const screen = render(<TripReportForm trip={makeTrip()} />)
+    const input = screen.getByTestId('trip-report-place-search')
+    for (const q of ['Н', 'Не', 'Нес']) { fireEvent.changeText(input, q); await tick(100) }
+    await tick(299)
+    expect(mockedFetchPlacesCatalog).not.toHaveBeenCalled()
+    await tick(1)
+    expect(mockedFetchPlacesCatalog).toHaveBeenCalledTimes(1)
+    expect(mockedFetchPlacesCatalog.mock.calls[0][0]).toEqual({ page: 1, perPage: 8, q: 'Нес' })
+    expect(screen.getByTestId('trip-report-place-option-42')).toBeTruthy()
+    fireEvent.changeText(input, '')
+    expect(screen.queryByTestId('trip-report-place-option-42')).toBeNull()
+    await tick(1000)
+    expect(mockedFetchPlacesCatalog).toHaveBeenCalledTimes(1)
+    expect(mockMutate).not.toHaveBeenCalled()
+    screen.unmount()
+  })
+  it('aborts an in-flight cleared query and ignores its late successful reply', async () => {
+    let resolve!: (page: PlacesCatalogPage) => void
+    mockedFetchPlacesCatalog.mockReturnValue(new Promise((res) => { resolve = res }))
+    const screen = render(<TripReportForm trip={makeTrip()} />)
+    const input = screen.getByTestId('trip-report-place-search')
+    fireEvent.changeText(input, 'Несвиж')
+    await tick(400)
+    const signal = mockedFetchPlacesCatalog.mock.calls[0][1]!
+    fireEvent.changeText(input, '')
+    expect(signal.aborted).toBe(true)
+    await act(async () => { resolve(placesPage); await Promise.resolve() })
+    expect(screen.queryByTestId('trip-report-place-option-42')).toBeNull()
+    expect(mockedFetchPlacesCatalog).toHaveBeenCalledTimes(1)
+    screen.unmount()
   })
 })

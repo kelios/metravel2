@@ -501,6 +501,22 @@ npx serve dist/prod -l 3000 -s
 
 ### Web loading and hydration policy
 
+- URL parameters unknown to the static export must not initialize visible web
+  state on the first client render. Render the same neutral state as static HTML,
+  then commit the parameters after hydration (`useSecretLinkParam`, `/places`).
+  Data requests wait for that committed state, including a debounced search: do
+  not send an unfiltered request before the intended filtered request. Native
+  navigation parameters remain available immediately. The parameterized routes
+  in `e2e/hydration-routes.spec.ts` guard against React #418 (#2240).
+- Read-query retry overrides use the imported bounded policy from
+  `utils/queryRetryPolicy.ts`: `readRetryOnce`, `readRetryTwice`,
+  `stravaReadRetryOnce`, `readRetryAtMost`, or `heavyReadRetry.retry`.
+  `false`/`0` disable retries. Named timeout/abort and HTTP 504/4xx never retry;
+  documented connection failures and structured 502/503 preserve the old
+  maximum (Strava 503 remains excluded). Error message text does not supply an
+  HTTP status. `guard:query-retry-policy`, in `lint` and `check:fast`, rejects
+  numeric positive overrides and predicates/aliases outside the common owner,
+  with an empty exception baseline. Mutation/progress-queue retry is separate.
 - Do not treat Expo/Metro dev-network counts as production truth.
   - `localhost:8081/8082` may show extra `*.bundle?platform=web&dev=true...` requests that do not exist in `dist/prod`.
   - Real request-count, chunk-count, and Lighthouse decisions must be made from `npm run build:web:prod` or from the real production URL.

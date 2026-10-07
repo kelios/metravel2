@@ -23,7 +23,10 @@ jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ width: 1280, isPhone: false, isLargePhone: false }),
 }))
 
-jest.mock('@/api/places', () => ({ fetchPlacesCatalog: jest.fn() }))
+jest.mock('@/api/places', () => ({
+  fetchPlacesCatalog: jest.fn(),
+  fetchPlacesCatalogCategoryGroups: jest.fn(async () => ({})),
+}))
 
 jest.mock('@/components/seo/LazyInstantSEO', () => ({
   __esModule: true,
