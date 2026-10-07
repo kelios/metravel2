@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import type { Travel } from '@/types/types'
 import { TravelDetailsSidebarSection } from '@/components/travel/details/sections/TravelDetailsSidebarSection'
+import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 
 // The section watches the near/popular query state to know when its lists stop
 // being in flight, so it only renders under a query client — as it does in app.
@@ -100,6 +101,12 @@ describe('TravelDetailsSidebarSection', () => {
     )
 
     expect(screen.getByTestId('travel-details-near-loaded')).toBeTruthy()
+    expect(screen.UNSAFE_getByType(TravelDetailsDeferredTransition).props).toMatchObject({
+      testID: 'travel-details-related-navigation-transition',
+      allowEmptyRuntime: true,
+      runtimeFrameReady: true,
+      pending: false,
+    })
     expect(await screen.findByTestId('mock-near-travel-list')).toBeTruthy()
     expect(screen.getByText('Рядом можно посмотреть')).toBeTruthy()
   })

@@ -1,5 +1,5 @@
 import React, { Suspense, useCallback } from 'react'
-import { Platform, Text, View, type LayoutChangeEvent } from 'react-native'
+import { Platform, Text, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { Travel } from '@/types/types'
@@ -14,6 +14,8 @@ import NearTravelList from '@/components/travel/NearTravelList'
 import PopularTravelList from '@/components/travel/PopularTravelList'
 import { getNearbyTravelsSubtitle } from '@/constants/nearby'
 import { translate as i18nT } from '@/i18n'
+import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
+import { METRICS } from '@/constants/layout'
 
 
 const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
@@ -48,6 +50,7 @@ export const TravelDetailsSidebarSection: React.FC<{
 }) => {
   const styles = useTravelDetailsStyles()
   const colors = useThemedColors()
+  const { width } = useWindowDimensions()
   const {
     handleTravelsLoaded,
     hasValidTravelId,
@@ -126,15 +129,25 @@ export const TravelDetailsSidebarSection: React.FC<{
         </View>
       </View>
 
-      {shouldShowNavigationArrows && (
-        <View
-          style={[styles.sectionContainer, styles.navigationArrowsContainer]}
-          accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.navigatsiya_po_pohozhim_marshrutam_cbec0b95')}
-          role="navigation"
-        >
-          <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
-        </View>
-      )}
+      <TravelDetailsDeferredTransition
+        key={travel.id}
+        testID="travel-details-related-navigation-transition"
+        isMobile={width < METRICS.breakpoints.tablet}
+        pending={false}
+        placeholder={null}
+        runtimeFrameReady
+        allowEmptyRuntime
+      >
+        {shouldShowNavigationArrows && (
+          <View
+            style={[styles.sectionContainer, styles.navigationArrowsContainer]}
+            accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsSidebarSection.navigatsiya_po_pohozhim_marshrutam_cbec0b95')}
+            role="navigation"
+          >
+            <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
+          </View>
+        )}
+      </TravelDetailsDeferredTransition>
 
       <View
         ref={anchors.popular}

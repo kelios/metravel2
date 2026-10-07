@@ -107,12 +107,38 @@ type ReserveReleaseAnchor = {
 
 type ReserveReleaseState = 'reserved' | 'released' | 'anchored' | 'clamped'
 
+// Absolute runtimes can contain other measured transitions. Commit all their
+// normal-flow owners before correcting the ORIGINAL visible anchor; a later
+// ancestor observer must not capture a different frame after the first scroll.
+const measuredTransitions = new WeakMap<HTMLElement, () => boolean>()
+
+function measureAncestorTransitions(node: HTMLElement) {
+  let ancestor = node.parentElement
+  while (ancestor) {
+    measuredTransitions.get(ancestor)?.()
+    ancestor = ancestor.parentElement
+  }
+}
+
 function connectedDOMView(ref: View | null): HTMLElement | null {
   const node = ref as unknown as HTMLElement | null
   const view = node?.ownerDocument?.defaultView
   // Native/test-renderer handles and stale/disconnected DOM refs cannot own
   // web geometry. Do not attach an observer or mutate their style as fallback.
   return view && node instanceof view.HTMLElement && node.isConnected ? node : null
+}
+
+function isDrawnWithinOwner(node: HTMLElement, owner: HTMLElement): boolean {
+  const view = node.ownerDocument.defaultView
+  if (!view) return false
+  let frame: HTMLElement | null = node
+  while (frame) {
+    const style = view.getComputedStyle(frame)
+    if (style.opacity === '0' || style.visibility === 'hidden' || style.visibility === 'collapse' || style.display === 'none') return false
+    if (frame === owner) return true
+    frame = frame.parentElement
+  }
+  return false
 }
 
 function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | null {
@@ -126,9 +152,15 @@ function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | nul
     owner = owner.parentElement
   }
   if (!owner || owner.clientHeight <= 0) return null
+  const ownerRect = owner.getBoundingClientRect()
+  const top = Math.max(0, ownerRect.top + owner.clientTop)
+  const bottom = Math.min(view.innerHeight, ownerRect.top + owner.clientTop + owner.clientHeight)
+  const left = Math.max(0, ownerRect.left + owner.clientLeft)
+  const right = Math.min(view.innerWidth, ownerRect.left + owner.clientLeft + owner.clientWidth)
+  if (bottom <= top || right <= left) return null
 
   // The transition sits inside a section wrapper. Walk only within this owner
-  // to the first genuine following flow frame, never to the window/body.
+  // to the first visible following flow frame, never to the window/body.
   let frame: HTMLElement | null = node
   let anchor: HTMLElement | null = null
   while (frame && frame !== owner) {
@@ -137,7 +169,9 @@ function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | nul
       if (sibling instanceof view.HTMLElement) {
         const rect = sibling.getBoundingClientRect()
         const position = view.getComputedStyle(sibling).position
-        if (!/^(absolute|fixed|sticky)$/.test(position) && rect.width > 0 && rect.height > 0) {
+        if (!/^(absolute|fixed|sticky)$/.test(position) && rect.width > 0 && rect.height > 0 &&
+            rect.bottom > top && rect.top < bottom && rect.right > left && rect.left < right &&
+            isDrawnWithinOwner(sibling, owner)) {
           anchor = sibling
           break
         }
@@ -148,13 +182,7 @@ function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | nul
     frame = frame.parentElement
   }
   if (!anchor || !owner.contains(anchor)) return null
-  const ownerRect = owner.getBoundingClientRect()
   const rect = anchor.getBoundingClientRect()
-  const top = Math.max(0, ownerRect.top + owner.clientTop)
-  const bottom = Math.min(view.innerHeight, ownerRect.top + owner.clientTop + owner.clientHeight)
-  const left = Math.max(0, ownerRect.left + owner.clientLeft)
-  const right = Math.min(view.innerWidth, ownerRect.left + owner.clientLeft + owner.clientWidth)
-  if (bottom <= top || right <= left || rect.bottom <= top || rect.top >= bottom || rect.right <= left || rect.left >= right) return null
   return { anchor, owner, beforeTop: rect.top }
 }
 
@@ -177,6 +205,8 @@ type TravelDetailsDeferredTransitionProps = {
   runtimeFrameReady?: boolean
   /** Web sidebar may show its actual loading tree before the full frame settles. */
   runtimeVisibilityReady?: boolean
+  /** Optional sections may measure zero before data arrives or after it clears. */
+  allowEmptyRuntime?: boolean
   testID: string
 }
 
@@ -188,10 +218,12 @@ export function TravelDetailsDeferredTransition({
   reserveHeight,
   runtimeFrameReady: controlledRuntimeFrameReady,
   runtimeVisibilityReady,
+  allowEmptyRuntime = false,
   testID,
 }: TravelDetailsDeferredTransitionProps) {
   const [internalRuntimeFrameReady, setInternalRuntimeFrameReady] = useState(false)
   const [runtimeMeasured, setRuntimeMeasured] = useState(false)
+  const [optionalFlowFallback, setOptionalFlowFallback] = useState(false)
   const runtimeRef = useRef<View>(null)
   const measuredHeightRef = useRef<number | null>(null)
   const observerGenerationRef = useRef(0)
@@ -218,7 +250,12 @@ export function TravelDetailsDeferredTransition({
   // Early visibility needs a pre-paint resize signal. Unsupported observers
   // retain default settle visibility instead of claiming safe early growth.
   const supportsResizeObservation = Platform.OS === 'web' && typeof ResizeObserver !== 'undefined'
-  const wantsRuntimeVisible = !pending && (runtimeFrameReady || (runtimeVisibilityReady === true && supportsResizeObservation))
+  const useOptionalFlowFallback = allowEmptyRuntime && !supportsResizeObservation && optionalFlowFallback
+  const wantsRuntimeVisible = !useOptionalFlowFallback && !pending && (runtimeFrameReady || (runtimeVisibilityReady === true && supportsResizeObservation))
+
+  useLayoutEffect(() => {
+    if (Platform.OS === 'web') setOptionalFlowFallback(allowEmptyRuntime && !supportsResizeObservation)
+  }, [allowEmptyRuntime, supportsResizeObservation])
 
   // Runtime remains absolute at current width even while drawn. Its measured
   // outer border box alone owns the normal-flow height. Capture BEFORE changing
@@ -239,31 +276,39 @@ export function TravelDetailsDeferredTransition({
       if (reserveReleaseState !== 'reserved') setReserveReleaseState('reserved')
       return
     }
-    const commitMeasuredHeight = () => {
-      if (generationRef.current !== generation || !node?.isConnected || !runtime?.isConnected || !node.contains(runtime)) return
+    const measureRuntimeHeight = () => {
+      if (generationRef.current !== generation || !node?.isConnected || !runtime?.isConnected || !node.contains(runtime)) return false
       const { width, height } = runtime.getBoundingClientRect()
-      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return
-      if (measuredHeightRef.current != null && Math.abs(measuredHeightRef.current - height) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX) return
-      const capture = findReserveReleaseAnchor(node)
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height < 0 || (!allowEmptyRuntime && height === 0)) return false
+      if (measuredHeightRef.current != null && Math.abs(measuredHeightRef.current - height) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX) return false
       // This imperative geometry owner deliberately runs within ResizeObserver's
       // pre-paint callback, rather than awaiting RNW onLayout's async UIManager.
       node.style.height = `${height}px`
       measuredHeightRef.current = height
+      setRuntimeMeasured(true)
+      return true
+    }
+    const commitMeasuredHeight = () => {
+      if (!node) return
+      const capture = findReserveReleaseAnchor(node)
+      if (!measureRuntimeHeight()) return
+      measureAncestorTransitions(node)
       const corrected = correctMeasuredAnchor(capture, node)
       if (corrected) {
         revealCorrectionRef.current = revealCorrectionRef.current === 'clamped' ? 'clamped' : corrected
-        if (reserveReleaseState !== 'reserved' && reserveReleaseState !== 'released') setReserveReleaseState(revealCorrectionRef.current)
+        if ((allowEmptyRuntime && reserveHeight == null) || (reserveReleaseState !== 'reserved' && reserveReleaseState !== 'released')) setReserveReleaseState(revealCorrectionRef.current)
       }
-      setRuntimeMeasured(true)
     }
+    if (node) measuredTransitions.set(node, measureRuntimeHeight)
     commitMeasuredHeight()
     const observer = supportsResizeObservation && node && runtime && node.contains(runtime) ? new ResizeObserver(commitMeasuredHeight) : null
     if (runtime) observer?.observe(runtime)
     return () => {
       generationRef.current++
       observer?.disconnect()
+      if (node && measuredTransitions.get(node) === measureRuntimeHeight) measuredTransitions.delete(node)
     }
-  }, [children, reserveReleaseState, runtimeMeasured, supportsResizeObservation, wantsRuntimeVisible])
+  }, [allowEmptyRuntime, children, reserveHeight, reserveReleaseState, runtimeMeasured, supportsResizeObservation, wantsRuntimeVisible])
 
   // Releasing the original reserve is separate from early visibility and every
   // measured growth update. Capture prior to the React style change; correct in
@@ -279,6 +324,7 @@ export function TravelDetailsDeferredTransition({
     if (reserveReleaseState === 'released') {
       const capture = releaseAnchorRef.current
       releaseAnchorRef.current = null
+      if (node) measureAncestorTransitions(node)
       const corrected = node ? correctMeasuredAnchor(capture, node) : null
       if (revealCorrectionRef.current === 'clamped') setReserveReleaseState('clamped')
       else if (corrected) setReserveReleaseState(corrected)
@@ -287,6 +333,10 @@ export function TravelDetailsDeferredTransition({
 
   if (Platform.OS !== 'web') {
     return <>{pending ? placeholder : children}</>
+  }
+
+  if (useOptionalFlowFallback) {
+    return <View ref={transitionRef} testID={testID}>{pending ? placeholder : children}</View>
   }
 
   const runtimeIsVisible = wantsRuntimeVisible && runtimeMeasured
@@ -304,7 +354,7 @@ export function TravelDetailsDeferredTransition({
           ? runtimeFrameReady ? 'runtime' : 'shown-pending'
           : 'measuring-runtime',
       deferredTransitionMobile: String(isMobile),
-      reserveReleaseState: reserveHeight == null ? 'not-reserved' : reserveReleaseState,
+      reserveReleaseState: reserveHeight == null && (!allowEmptyRuntime || reserveReleaseState === 'reserved') ? 'not-reserved' : reserveReleaseState,
     },
   }
 

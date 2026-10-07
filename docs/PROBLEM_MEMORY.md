@@ -3575,6 +3575,8 @@ guard, падающий в CI на попытке обойти этот конт
 
 ### QUEST-ANSWER-GRANULARITY-001 — шаг требует различения, которого игроку никто не дал
 
+- **Приёмка 07.10.2026 (#2278):** `gomel-palace/chapel` 176 переведён на согласованный свободный ответ (`any_text`, min_length 3); свежие GET и mobile UI принимают глину/кирпич/плитку/майолику, пустой и короткий ввод отклоняют. Prod-drift 0, hint-leak fresh 0 / known 1, baseline прежний; остальные поля и шаги сохранены.
+
 - **Инвариант:** принимаемый ответ шага обязан быть отличим от похожих теми
   средствами, которые есть у игрока на месте: сам объект, `task` и `hint`. Если
   подсказка одинаково верна и для принимаемого ответа, и для отклоняемых, шаг
@@ -6043,3 +6045,24 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   #2324 и не повод легализовать таймер записью в RULES.
 - **Правило recurrence:** прежний тайл/SVG-before-CSS shift — reopen #2324;
   иной control/fallback/атрибуция owner — связанный дефект после измерения.
+
+### PARTNER-IFRAME-LOGO-ORIGIN-001 — логотип стороннего iframe отклонён браузером
+
+- **Наблюдение:** 07.10.2026 на `cdb79afbb`, guest mobile390, после принятого
+  ответа `gomel-palace/chapel` переход к optional349 четырежды запросил
+  `https://tripvenue.com/sites/default/files/belkraj/logo.png` с
+  `ERR_BLOCKED_BY_RESPONSE.NotSameOrigin`; console/requestfailed сохранены.
+- **Owner:** встраивание — `components/belkraj/BelkrajWidget.tsx`;
+  содержимое iframe и логотип — сторонний сервис. Точный источник политики
+  (origin/redirect/headers) ещё не установлен. App page/API errors отсутствуют.
+- **Разграничение:** полный optional349, координаты/страна и владельцы
+  widget/routing не менялись восемью согласованными редакционными полями.
+  До правки браузерный baseline логотипа не снят, поэтому прежнее наличие
+  этой внешней ошибки не объявлено доказанным.
+- **Каноническая карточка:** #2340, backlog; all-status Tripvenue/CORP/partner
+  не нашли этой причины. Исторические #1697/#1645/#1371 — другие механизмы.
+- **Контроль:** четыре реальных повторения, visible iframe/logo,
+  headers/redirect chain, screenshots и console/network. Не скрывать отказ
+  очисткой console, mock или ослаблением nginx/security. Внешний источник
+  требует точного owner handoff. Evidence: `content-qa/receipt.json` и
+  `partner-observation-classification.json` в `.codex-temp/publish-20261007/`.

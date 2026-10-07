@@ -6,6 +6,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/__tests__/helpers/testQueryClient'
 import type { Travel } from '@/types/types'
 import { TravelDetailsContentSection } from '@/components/travel/details/sections/TravelDetailsContentSection'
+import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 
 let mockProgressiveShouldLoad = true
 
@@ -130,6 +131,12 @@ describe('TravelDetailsContentSection', () => {
     )
 
     expect(screen.getByTestId('travel-details-description')).toBeTruthy()
+    expect(screen.UNSAFE_getByType(TravelDetailsDeferredTransition).props).toMatchObject({
+      testID: 'travel-details-quest-transition',
+      allowEmptyRuntime: true,
+      runtimeFrameReady: true,
+      pending: false,
+    })
   })
 
   it('opens the forced mobile insight tab', () => {

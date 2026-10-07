@@ -14,6 +14,7 @@ import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
 import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsContentSectionModel'
 import YouTubeSectionSlot from './YouTubeSectionSlot'
 import DeferredQuestForCitySection from './DeferredQuestForCitySection'
+import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 import TravelRegisterCtaSection from './TravelRegisterCtaSection'
 import { translate as i18nT } from '@/i18n'
 import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles'
@@ -103,7 +104,17 @@ export const TravelDetailsContentSection: React.FC<{
 
   return (
     <>
-      <DeferredQuestForCitySection travel={travel} styles={styles} />
+      <TravelDetailsDeferredTransition
+        key={travel.id}
+        testID="travel-details-quest-transition"
+        isMobile={isMobile}
+        pending={false}
+        placeholder={null}
+        runtimeFrameReady
+        allowEmptyRuntime
+      >
+        <DeferredQuestForCitySection travel={travel} styles={styles} />
+      </TravelDetailsDeferredTransition>
 
       {shouldRenderDescriptionSection && (
         <View

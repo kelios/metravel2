@@ -18,21 +18,20 @@ import { TRAVEL_DETAILS_SECTION_RHYTHM } from './travelDetailsSectionRhythm'
 export const createTravelDetailsLayoutStyles = (_colors: ThemedColors) => ({
   webDeferredSection: Platform.select({
     web: {
-      // Defer render/paint for below-the-fold sections without CLS.
-      contentVisibility: 'auto',
+      // The shared visibility gate already defers these sections. Once mounted,
+      // their measured flow height must not switch from an intrinsic guess.
+      contentVisibility: 'visible',
       contain: 'layout style paint',
-      containIntrinsicSize: '720px 480px',
+      containIntrinsicSize: 'none',
     } as any,
     default: {},
   }),
-  // Optional sections (excursions/quests widgets) may resolve to empty. Reserve a
-  // much smaller intrinsic size so an empty result does not leave a tall blank box
-  // and trigger CLS once the real (small or zero) height is known.
+  // Optional sections use the same real geometry, including an empty result.
   webOptionalDeferredSection: Platform.select({
     web: {
-      contentVisibility: 'auto',
+      contentVisibility: 'visible',
       contain: 'layout style paint',
-      containIntrinsicSize: '720px 160px',
+      containIntrinsicSize: 'none',
     } as any,
     default: {},
   }),

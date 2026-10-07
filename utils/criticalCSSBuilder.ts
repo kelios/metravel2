@@ -225,8 +225,6 @@ export function buildCriticalCSS(): string {
     '[data-testid="search-container"]{min-height:100vh;contain:layout style}',
     '[data-testid="travel-card"]{contain:layout style paint;will-change:auto}',
     '[data-testid="travel-details-description"]{content-visibility:auto;contain-intrinsic-size:auto 400px}',
-    '[data-testid="travel-details-map"]{content-visibility:auto;contain-intrinsic-size:auto 500px}',
-    '[data-testid="travel-details-points"]{content-visibility:auto;contain-intrinsic-size:auto 300px}',
     '[data-testid="travel-details-author"]{content-visibility:auto;contain-intrinsic-size:auto 200px}',
     '[data-testid="travel-details-author-mobile"]{content-visibility:auto;contain-intrinsic-size:auto 200px}',
     // #1479: у `travel-details-quick-facts` здесь стоял

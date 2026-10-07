@@ -53,7 +53,9 @@ type FixtureOptions = {
   noScrollOwner?: boolean
   differentOwner?: boolean
   precedingOverlay?: 'fixed' | 'absolute' | 'sticky'
+  precedingOffscreenFlow?: boolean
   runtimeGrowth?: number
+  optional?: boolean
 }
 
 function fixture(options: FixtureOptions = {}) {
@@ -76,6 +78,11 @@ function fixture(options: FixtureOptions = {}) {
     overlay.getBoundingClientRect = () => rect(100, 100)
     owner.insertBefore(overlay, anchor)
   }
+  if (options.precedingOffscreenFlow) {
+    const previous = document.createElement('div')
+    previous.getBoundingClientRect = () => rect(-250, 100)
+    owner.insertBefore(previous, anchor)
+  }
   document.body.append(host)
   let runtimeWidth = 390
   let top = initialTop
@@ -84,7 +91,7 @@ function fixture(options: FixtureOptions = {}) {
   const transition = () => mount.querySelector<HTMLElement>('[data-testid="measured-transition"]')!
   const released = () => !!transition() && transition().style.minHeight !== '100vh'
   const runtimeLayer = () => mount.querySelector<HTMLElement>('[data-testid="measured-transition-runtime"]')
-  const baselineHeight = options.runtimeGrowth == null ? 844 : 873
+  const baselineHeight = options.optional ? 0 : options.runtimeGrowth == null ? 844 : 873
   // Browser flow model follows the actual committed container height and CSS.
   // Absolute child's intrinsic height does not affect its parent's flow height.
   const layoutDelta = () => {
@@ -99,7 +106,7 @@ function fixture(options: FixtureOptions = {}) {
   HTMLElement.prototype.getBoundingClientRect = function () {
     if (this.dataset.testid === 'measured-transition-runtime') {
       const leaf = this.firstElementChild as HTMLElement | null
-      return rect(0, Number.parseFloat(leaf?.style.height || '0'), runtimeWidth)
+      return rect(0, Number.parseFloat(leaf?.style.height || '0') + Number.parseFloat(leaf?.style.marginBottom || '0'), runtimeWidth)
     }
     return originalRect.call(this)
   }
@@ -124,10 +131,10 @@ function fixture(options: FixtureOptions = {}) {
   owner.getBoundingClientRect = () => rect(ownerTop, ownerHeight)
   anchor.getBoundingClientRect = () => rect(anchorTop + initialTop - owner.scrollTop + layoutDelta(), options.anchorHeight ?? 930)
   if (options.disconnectedAfterRelease) Object.defineProperty(anchor, 'isConnected', { configurable: true, get: () => !released() })
-  const render = (ready: boolean, pending = false, child: ReactNode = createElement('div', { 'data-testid': 'actual-runtime-leaf', style: { height: options.runtimeGrowth == null ? 702 : ready ? 873 + options.runtimeGrowth : 873 } }), runtimeVisibilityReady?: boolean) => {
+  const render = (ready: boolean, pending = false, child: ReactNode = options.optional ? null : createElement('div', { 'data-testid': 'actual-runtime-leaf', style: { height: options.runtimeGrowth == null ? 702 : ready ? 873 + options.runtimeGrowth : 873 } }), runtimeVisibilityReady?: boolean) => {
     act(() => {
       root ??= createRoot(mount)
-      root.render(createElement(Transition, { isMobile: true, pending, placeholder: createElement('div', { 'data-testid': 'actual-placeholder-leaf' }), reserveHeight: '100vh', runtimeFrameReady: ready, runtimeVisibilityReady, testID: 'measured-transition', children: child }))
+      root.render(createElement(Transition, { isMobile: true, pending, placeholder: createElement('div', { 'data-testid': 'actual-placeholder-leaf' }), reserveHeight: options.optional ? undefined : '100vh', runtimeFrameReady: options.optional || ready, runtimeVisibilityReady, allowEmptyRuntime: options.optional, testID: 'measured-transition', children: child }))
     })
   }
   render(false)
@@ -185,6 +192,34 @@ it('does not double compensate genuine browser scroll anchoring', () => {
   expect(f.anchor.getBoundingClientRect().top).toBe(before)
   expect(f.transition().dataset.reserveReleaseState).toBe('anchored')
   f.cleanup()
+})
+
+it('preserves a visible following section when an intervening flow frame is already above the viewport', () => {
+  const f = fixture({ precedingOffscreenFlow: true })
+  try {
+    const before = f.anchor.getBoundingClientRect().top
+    f.render(true)
+    expect(f.anchor.getBoundingClientRect().top).toBe(before)
+    expect(f.writes).toEqual([26258])
+  } finally { f.cleanup() }
+})
+
+it.each(['opacity', 'visibility', 'hidden-parent'] as const)('does not compensate an undrawn following frame: %s', hidden => {
+  const f = fixture()
+  try {
+    if (hidden === 'opacity') f.anchor.style.opacity = '0'
+    else if (hidden === 'visibility') f.anchor.style.visibility = 'hidden'
+    else {
+      const parent = document.createElement('div')
+      parent.style.opacity = '0'
+      parent.setAttribute('inert', '')
+      f.anchor.before(parent)
+      parent.append(f.anchor)
+      parent.getBoundingClientRect = () => f.anchor.getBoundingClientRect()
+    }
+    f.render(true)
+    expect(f.writes).toHaveLength(0)
+  } finally { f.cleanup() }
 })
 
 it.each([
@@ -525,10 +560,10 @@ it.each(['native-handle', 'detached-DOM'] as const)('keeps actual renderer%s ref
   } finally { act(() => tree?.unmount()) }
 })
 
-it('keeps native placeholder/children parity without DOM reserve/scroll correction', () => {
+it.each([false, true])('keeps native placeholder/children parity without DOM reserve/scroll correction (optional=%s)', optional => {
   Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' })
   try {
-    const f = fixture()
+    const f = fixture({ optional })
     f.render(false, true)
     expect(f.transition()).toBeNull()
     expect(f.owner.querySelector('[data-testid="actual-placeholder-leaf"]')).not.toBeNull()
@@ -540,5 +575,233 @@ it('keeps native placeholder/children parity without DOM reserve/scroll correcti
     f.cleanup()
   } finally {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
+  }
+})
+
+it.each([
+  ['description', 224, 379],
+  ['popular', 125, 505],
+] as const)('preserves the visible %s across an actual optional insertion and removal before paint', (section, height, anchorTop) => {
+  const f = fixture({ optional: true, initialTop: 600, anchorTop })
+  f.anchor.dataset.testid = `actual-${section}-frame`
+  expect(f.transition().style.height).toBe('0px')
+  expect(f.transition().dataset.deferredTransitionState).toBe('runtime')
+  f.owner.scrollTop = 650
+  f.writes.length = 0
+  const before = f.anchor.getBoundingClientRect().top
+  f.render(true, false, createElement('div', { style: { height, marginBottom: 32 } }))
+  expect(f.transition().style.height).toBe(`${height + 32}px`)
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.owner.scrollTop).toBe(650 + height + 32)
+  f.render(true, false, null)
+  expect(f.transition().style.height).toBe('0px')
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.writes).toEqual([650 + height + 32, 650])
+  f.cleanup()
+})
+
+it.each([false, true])('uses the existing real owner correction for optional growth/shrink (natural anchoring=%s)', naturalAnchor => {
+  const f = fixture({ optional: true, initialTop: 600, naturalAnchor })
+  const before = f.anchor.getBoundingClientRect().top
+  f.render(true, false, createElement('div', { style: { height: 256 } }))
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  f.render(true, false, null)
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.writes).toEqual(naturalAnchor ? [] : [856, 600])
+  f.cleanup()
+})
+
+it.each([{ anchorTop: 900 }, { differentOwner: true }, { noScrollOwner: true }])('does not scroll for an optional frame without a visible same-owner anchor: %j', options => {
+  const f = fixture({ optional: true, initialTop: 600, ...options })
+  f.render(true, false, createElement('div', { style: { height: 256 } }))
+  expect(f.transition().style.height).toBe('256px')
+  expect(f.writes).toHaveLength(0)
+  f.cleanup()
+})
+
+it('exposes an impossible optional shrink as clamped instead of claiming it was anchored', () => {
+  const f = fixture({ optional: true, initialTop: 10 })
+  f.render(true, false, createElement('div', { style: { height: 256 } }))
+  f.owner.scrollTop = 10
+  f.writes.length = 0
+  const before = f.anchor.getBoundingClientRect().top
+  f.render(true, false, null)
+  expect(f.owner.scrollTop).toBe(0)
+  expect(f.anchor.getBoundingClientRect().top).not.toBe(before)
+  expect(f.transition().dataset.reserveReleaseState).toBe('clamped')
+  f.cleanup()
+})
+
+it('fences optional resize callbacks from a previous pending visit', () => {
+  const f = fixture({ optional: true, initialTop: 600 })
+  const callbacks = f.currentCallbacks()
+  const previousLayer = f.transition().querySelector('[data-testid="measured-transition-runtime"]')!
+  f.render(false, true)
+  act(() => { for (const callback of callbacks) callback([{ target: previousLayer } as ResizeObserverEntry], {} as ResizeObserver) })
+  expect(f.transition().style.height).toBe('')
+  expect(f.writes).toHaveLength(0)
+  f.render(true, false, null)
+  expect(f.transition().style.height).toBe('0px')
+  f.cleanup()
+})
+
+it('renders optional content in ordinary flow when pre-paint resize observation is unavailable', () => {
+  Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: undefined })
+  const f = fixture({ optional: true })
+  try {
+    f.render(true, false, createElement('div', { 'data-testid': 'actual-optional-content', style: { height: 256 } }))
+    expect(f.transition().querySelector('[data-testid="actual-optional-content"]')).not.toBeNull()
+    expect(f.transition().querySelector('[data-testid="measured-transition-runtime"]')).toBeNull()
+    expect(f.transition().style.height).toBe('')
+    expect(f.writes).toHaveLength(0)
+    f.render(true, false, null)
+    expect(f.transition().childElementCount).toBe(0)
+  } finally {
+    f.cleanup()
+    Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: MeasuredResizeObserver })
+  }
+})
+
+it('clears a previous measured optional height when resize observation becomes unavailable', () => {
+  const f = fixture({ optional: true })
+  try {
+    f.render(true, false, createElement('div', { style: { height: 256 } }))
+    expect(f.transition().style.height).toBe('256px')
+    const callbacks = f.currentCallbacks()
+    const staleLayer = f.transition().querySelector('[data-testid="measured-transition-runtime"]')!
+    Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: undefined })
+    f.render(true, false, createElement('div', { 'data-testid': 'fallback-optional-content', style: { height: 335 } }))
+    act(() => { for (const callback of callbacks) callback([{ target: staleLayer } as ResizeObserverEntry], {} as ResizeObserver) })
+    expect(f.transition().style.height).toBe('')
+    expect(f.transition().querySelector('[data-testid="fallback-optional-content"]')).not.toBeNull()
+    expect(f.transition().querySelector('[data-testid="measured-transition-runtime"]')).toBeNull()
+  } finally {
+    f.cleanup()
+    Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: MeasuredResizeObserver })
+  }
+})
+
+it('reconciles a signed preceding-frame height change while its following map is visible', () => {
+  const f = fixture({ optional: true, initialTop: 20400, anchorTop: 201.96875 })
+  f.anchor.dataset.testid = 'actual-map-flow-frame'
+  f.render(true, false, createElement('div', { style: { height: 480 } }))
+  const before = f.anchor.getBoundingClientRect().top
+  f.render(true, false, createElement('div', { style: { height: 335 } }))
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.writes).toEqual([20880, 20735])
+  f.cleanup()
+})
+
+it('keeps the optional server markup stable with and without browser resize observation', () => {
+  const { renderToString } = require('react-dom/server.node') as typeof import('react-dom/server')
+  const element = createElement(Transition, {
+    isMobile: true, pending: false, placeholder: null, runtimeFrameReady: true,
+    allowEmptyRuntime: true, testID: 'optional-server-boundary', children: null,
+  })
+  const withObserver = renderToString(element)
+  Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: undefined })
+  try {
+    expect(renderToString(element)).toBe(withObserver)
+  } finally {
+    Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: MeasuredResizeObserver })
+  }
+})
+
+it.each([
+  [false, false, true], [true, false, true],
+  [false, true, true], [true, true, true],
+  [false, false, false], [true, false, false],
+] as const)('preserves the original inner Popular anchor through nested measured parents (outer=%s, natural=%s, settled=%s)', (outer, natural, settled) => {
+  const host = document.createElement('div')
+  const owner = document.createElement('div')
+  const mount = document.createElement('div')
+  const comments = document.createElement('div')
+  owner.style.overflowY = 'auto'
+  owner.append(mount, comments)
+  host.append(owner)
+  document.body.append(host)
+  let top = 600
+  const writes: number[] = []
+  const node = (id: string) => mount.querySelector<HTMLElement>(`[data-testid="${id}"]`)!
+  const height = (id: string) => Math.max(Number.parseFloat(node(id)?.style.height || '0'), Number.parseFloat(node(id)?.style.minHeight || '0'))
+  const flowHeight = () => height(outer ? 'nested-outer' : 'nested-sidebar')
+  Object.defineProperties(owner, {
+    clientHeight: { configurable: true, value: 790 },
+    clientWidth: { configurable: true, value: 390 },
+    scrollHeight: { configurable: true, get: () => 4000 + flowHeight() },
+    scrollTop: { configurable: true, get: () => natural ? 600 + height('nested-navigation') : top, set: value => { top = value; writes.push(top) } },
+  })
+  owner.getBoundingClientRect = () => rect(54, 790)
+  // Popular is inside the absolute sidebar runtime; Comments follows the
+  // sidebar's independent normal-flow height. Each reads actual DOM styles.
+  const originalRect = HTMLElement.prototype.getBoundingClientRect
+  HTMLElement.prototype.getBoundingClientRect = function () {
+    const shift = owner.scrollTop - 600
+    switch (this.dataset.testid) {
+      case 'nested-navigation-runtime': {
+        const leaf = this.firstElementChild as HTMLElement
+        return rect(0, Number.parseFloat(leaf.style.height) + Number.parseFloat(leaf.style.marginBottom || '0'))
+      }
+      case 'nested-sidebar-runtime': return rect(0, 822 + height('nested-navigation'))
+      case 'nested-outer-runtime': return rect(0, height('nested-sidebar'))
+      case 'nested-popular': return rect(505 + height('nested-navigation') - shift, 317)
+      default: return originalRect.call(this)
+    }
+  }
+  comments.getBoundingClientRect = () => rect(50 + flowHeight() - (owner.scrollTop - 600), 930)
+  const root = createRoot(mount)
+  const navigation = createElement(Transition, {
+    isMobile: true, pending: false, placeholder: null, runtimeFrameReady: true,
+    allowEmptyRuntime: true, testID: 'nested-navigation',
+    children: createElement('div', { 'data-testid': 'nested-navigation-content', style: { height: 0 } }),
+  })
+  const sidebar = createElement(Transition, {
+    isMobile: true, pending: false, placeholder: null, runtimeFrameReady: settled, runtimeVisibilityReady: true,
+    reserveHeight: 822, testID: 'nested-sidebar',
+    children: createElement('div', null, navigation, createElement('div', { 'data-testid': 'nested-popular' })),
+  })
+  const resize = (id: string) => {
+    const layer = node(`${id}-runtime`)
+    for (const observer of MeasuredResizeObserver.instances.filter(candidate => candidate.targets.has(layer))) {
+      observer.callback([{ target: layer } as ResizeObserverEntry], observer as unknown as ResizeObserver)
+    }
+  }
+  try {
+    act(() => root.render(outer ? createElement(Transition, {
+      isMobile: true, pending: false, placeholder: null, runtimeFrameReady: settled, runtimeVisibilityReady: true,
+      reserveHeight: 822, testID: 'nested-outer', children: sidebar,
+    }) : sidebar))
+    writes.length = 0
+    const before = node('nested-popular').getBoundingClientRect().top
+    expect(before).toBe(505)
+    expect(comments.getBoundingClientRect().top).toBe(872)
+    act(() => {
+      node('nested-navigation-content').style.height = '125px'
+      node('nested-navigation-content').style.marginBottom = '32px'
+      resize('nested-navigation')
+    })
+    // Ancestor flow must already be current before another ResizeObserver
+    // delivery; otherwise Comments enters view and is compensated a second time.
+    const immediateSidebarHeight = height('nested-sidebar')
+    const immediateOuterHeight = outer ? height('nested-outer') : 979
+    act(() => { resize('nested-sidebar'); if (outer) resize('nested-outer') })
+    expect(node('nested-popular').getBoundingClientRect().top).toBe(before)
+    expect(writes).toEqual(natural ? [] : [757])
+    expect(immediateSidebarHeight).toBe(979)
+    expect(immediateOuterHeight).toBe(979)
+    act(() => {
+      node('nested-navigation-content').style.height = '0px'
+      node('nested-navigation-content').style.marginBottom = '0px'
+      resize('nested-navigation')
+    })
+    expect(height('nested-sidebar')).toBe(822)
+    if (outer) expect(height('nested-outer')).toBe(822)
+    act(() => { resize('nested-sidebar'); if (outer) resize('nested-outer') })
+    expect(node('nested-popular').getBoundingClientRect().top).toBe(before)
+    expect(writes).toEqual(natural ? [] : [757, 600])
+  } finally {
+    act(() => root.unmount())
+    host.remove()
+    HTMLElement.prototype.getBoundingClientRect = originalRect
   }
 })

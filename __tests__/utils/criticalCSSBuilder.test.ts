@@ -359,11 +359,15 @@ describe('buildCriticalCSS: первый экран travel-detail не проп�
     expect(skipped).toEqual(
       expect.arrayContaining([
         '[data-testid="travel-details-description"]',
-        '[data-testid="travel-details-map"]',
-        '[data-testid="travel-details-points"]',
       ]),
     )
     expect(skipped).not.toContain('[data-testid="travel-details-quick-facts"]')
+  })
+
+  it.each(['map', 'points'])('leaves the mounted %s geometry to its deferred section instead of a duplicated critical guess', section => {
+    const rule = declarationsFor(`[data-testid="travel-details-${section}"]`)
+    expect(rule).not.toMatch(/content-visibility/)
+    expect(rule).not.toMatch(/contain-intrinsic-size/)
   })
 })
 
