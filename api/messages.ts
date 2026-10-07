@@ -86,6 +86,7 @@ export interface MessageThread {
     participant_previews?: ParticipantPreview[];
     created_at: string | null;
     last_message_created_at: string | null;
+    last_message_preview?: { text: string; sender_id: number; is_deleted: boolean } | null;
     unread_count: number;
 }
 

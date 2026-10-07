@@ -30,7 +30,90 @@ const NAME_PROBE_THREADS: MessageThread[] = NAME_PROBE_NAMES.map((displayName, i
   unread_count: index === 0 ? 150 : 0,
 }));
 
+// Fixture regression only. Production acceptance uses dedicated e2e-account
+// conversations without these mocks after the reviewed SHA is deployed.
+const PREVIEW_LOCALES = [
+  { locale: 'ru', own: 'Вы', deleted: 'Сообщение удалено' },
+  { locale: 'be', own: 'Вы', deleted: 'Паведамленне выдалена' },
+  { locale: 'uk', own: 'Ви', deleted: 'Повідомлення видалено' },
+  { locale: 'pl', own: 'Ty', deleted: 'Wiadomość usunięta' },
+  { locale: 'en', own: 'You', deleted: 'Message deleted' },
+] as const;
+
 test.describe('Messages — deterministic user flows', () => {
+  for (const width of [320, 390, 1440]) {
+    for (const theme of ['light', 'dark']) {
+      for (const { locale, own, deleted } of PREVIEW_LOCALES) {
+        test(`safe compact previews ${width}px ${theme} ${locale}`, async ({ page }, testInfo) => {
+          await page.setViewportSize({ width, height: 900 });
+          await page.addInitScript(({ locale, theme }) => {
+            window.localStorage.setItem('theme', theme);
+            window.localStorage.setItem('@metravel/locale-preference:v1', JSON.stringify({
+              version: 1, mode: 'explicit', locale,
+            }));
+          }, { locale, theme });
+          const hidden = 'PRIVATE_DELETED_PREVIEW_DO_NOT_RENDER';
+          const previewThreads: MessageThread[] = NAME_PROBE_THREADS.map((thread, index) => ({
+            ...thread,
+            participant_previews: [{ ...thread.participant_previews![0], display_name: index === 1 ? 'Julia Ivanova' : 'Julia Sauran' }],
+            last_message_preview: {
+              text: index === 2 ? hidden : index === 0 ? 'Short route' : 'Meeting by the lake',
+              sender_id: index === 0 ? 1 : thread.participants[1], is_deleted: index === 2,
+            },
+          }));
+          const errors: string[] = [];
+          let messageRequests = 0;
+          page.on('pageerror', (error) => errors.push(error.message));
+          page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+          page.on('request', (request) => {
+            if (new URL(request.url()).pathname === '/api/messages/') messageRequests += 1;
+          });
+          await openAuthenticatedMessages(page, '/messages', { threads: previewThreads });
+          const preview = page.getByTestId('thread-preview-20');
+          const row = page.getByTestId('thread-item-20');
+          await expect(preview).toHaveText(`${own}: Short route`, { timeout: 20_000 });
+          await expect(page.getByTestId('thread-preview-21')).toHaveText('Meeting by the lake');
+          await expect(page.getByTestId('thread-preview-22')).toHaveText(deleted);
+          const before = await row.boundingBox();
+          expect(before).not.toBeNull();
+
+          const long = 'М'.repeat(200);
+          previewThreads[0].last_message_preview!.text = long;
+          await page.reload();
+          await expect(preview).toHaveText(`${own}: ${long}`, { timeout: 20_000 });
+          const after = await row.boundingBox();
+          expect(after).not.toBeNull();
+          expect(Math.abs(after!.height - before!.height)).toBeLessThanOrEqual(1);
+          const geometry = await preview.evaluate((element) => {
+            const style = getComputedStyle(element);
+            const name = element.parentElement!.parentElement!.querySelector('[data-testid="thread-name-20"]')!;
+            return {
+              overflow: style.overflow, ellipsis: style.textOverflow, whiteSpace: style.whiteSpace,
+              scrollWidth: element.scrollWidth, clientWidth: element.clientWidth,
+              top: element.getBoundingClientRect().top, nameBottom: name.getBoundingClientRect().bottom,
+            };
+          });
+          expect(geometry).toMatchObject({ overflow: 'hidden', ellipsis: 'ellipsis', whiteSpace: 'nowrap' });
+          expect(geometry.clientWidth).toBeGreaterThan(0);
+          expect(geometry.scrollWidth).toBeGreaterThan(geometry.clientWidth);
+          expect(geometry.top).toBeGreaterThanOrEqual(geometry.nameBottom - 1);
+          await expect(row.getByRole('button').first()).toHaveAttribute('aria-label', new RegExp(long));
+          await expect(row.getByText('99+', { exact: true })).toBeVisible();
+          await expect(page.getByTestId('thread-time-20')).toBeVisible();
+          await expect(page.getByText(hidden, { exact: true })).toHaveCount(0);
+          expect(await page.locator('[aria-label]').evaluateAll((elements) => elements.map((element) => element.getAttribute('aria-label'))))
+            .not.toEqual(expect.arrayContaining([expect.stringContaining(hidden)]));
+          await assertNoHorizontalScroll(page);
+          expect(messageRequests).toBe(0);
+          expect(errors).toEqual([]);
+          await testInfo.attach(`preview-${width}-${theme}-${locale}`, {
+            body: await page.screenshot(), contentType: 'image/png',
+          });
+        });
+      }
+    }
+  }
+
   test('guest sees the login gate and no private thread list', async ({ page }) => {
     await page.context().clearCookies();
     await page.addInitScript(() => {

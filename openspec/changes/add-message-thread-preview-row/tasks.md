@@ -1,20 +1,20 @@
 ## 1. Preparation and API contract
 
-- [ ] 1.1 Receive a separate explicit apply request for this proposal; verify main/status/task ownership and dependencies #2264/#2265 done.
-- [ ] 1.2 Add optional preview type to MessageThread and test JSON→fetch→hook field preservation without adding a per-thread request.
+- [x] 1.1 Receive a separate explicit apply request for this proposal; verify main/status/task ownership and dependencies #2264/#2265 done.
+- [x] 1.2 Add optional preview type to MessageThread and test JSON→fetch→hook field preservation without adding a per-thread request.
 
 ## 2. Shared row implementation
 
-- [ ] 2.1 Implement own/other/deleted/null/absent preview states; ensure deleted nonempty text is never rendered or announced.
-- [ ] 2.2 Extend the existing second meta line with one-line preview, preserve name-first layout, stable row callbacks, selected/unread/delete and name search.
-- [ ] 2.3 Localize app-owned labels/a11y for RU/BE/UK/PL/EN using reactive translations; preserve API message content unchanged.
+- [x] 2.1 Implement own/other/deleted/null/absent preview states; ensure deleted nonempty text is never rendered or announced.
+- [x] 2.2 Extend the existing second meta line with one-line preview, preserve name-first layout, stable row callbacks, selected/unread/delete and name search.
+- [x] 2.3 Localize app-owned labels/a11y for RU/BE/UK/PL/EN using reactive translations; preserve API message content unchanged.
 
 ## 3. Code-level validation and independent review
 
-- [ ] 3.1 Add Jest coverage for all preview states, similar names, language switch and unchanged adjacent actions; run relevant API/hook/ThreadList tests.
-- [ ] 3.2 Add e2e regression cases for 200-character ellipsis, height delta <= 1 px and no horizontal overflow on 320/390/1440; prepare desktop/mobile screenshots and console/network expectations.
-- [ ] 3.3 Run i18n, scoped eslint, tsc and e2e typecheck through operation gates; record actual pass rather than SKIPPED.
-- [ ] 3.4 Run independent review-and-fix of the complete task diff, reread fixes and rerun relevant code-level checks before testing.
+- [x] 3.1 Add Jest coverage for all preview states, similar names, language switch and unchanged adjacent actions; run relevant API/hook/ThreadList tests.
+- [x] 3.2 Add e2e regression cases for 200-character ellipsis, height delta <= 1 px and no horizontal overflow on 320/390/1440; prepare desktop/mobile screenshots and console/network expectations.
+- [x] 3.3 Run i18n, scoped eslint, tsc and e2e typecheck through operation gates; record actual pass rather than SKIPPED.
+- [x] 3.4 Run independent review-and-fix of the complete task diff, reread fixes and rerun relevant code-level checks before testing.
 
 ## 4. Testing and completion after review
 

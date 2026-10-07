@@ -343,7 +343,7 @@ describe('guard-web-style-channels', () => {
 
   describe('title spreads (#2261)', () => {
     it('flags the #2261 shapes: a cast literal, Platform.select and a ternary spread on a component', () => {
-      const source = tsx(`
+      const source = tsx(`import { View, Pressable } from 'react-native';
         export const Sample = ({ label, open }) => (
           <>
             <Pressable accessibilityLabel={label} {...({ title: label } as any)} />
@@ -370,7 +370,7 @@ describe('guard-web-style-channels', () => {
     })
 
     it('leaves title alone where it is an ordinary field: prop value, DOM element, data object', () => {
-      const source = tsx(`
+      const source = tsx(`import { Text, Pressable } from 'react-native';
         const screen = { title: 'Профиль' }
         const select = Platform.select({ web: { title: 'x' } })
         const helper = (title) => (Platform.OS === 'web' ? ({ title } as any) : {})
@@ -391,8 +391,85 @@ describe('guard-web-style-channels', () => {
     })
 
     it('parses a file that has nothing but a title spread', () => {
-      const source = tsx(`export const A = ({ t }) => (\n  <Pressable\n    {...({\n      title: t,\n    } as any)}\n  />\n)\n`)
-      expect(analyzeSource(source).titleSpreads).toEqual([{ line: 4, target: '<Pressable>' }])
+      const source = tsx(`import { Pressable } from 'react-native';\nexport const A = ({ t }) => (\n  <Pressable\n    {...({\n      title: t,\n    } as any)}\n  />\n)\n`)
+      expect(analyzeSource(source).titleSpreads).toEqual([{ line: 5, target: '<Pressable>' }])
+    })
+  })
+
+  describe('title-spread import provenance and lexical binding (#2284)', () => {
+    const targets = (source: string) => analyzeSource(tsx(source)).titleSpreads.map((site) => site.target)
+
+    it('resolves named aliases, namespaces and immutable captured aliases without external resolution', () => {
+      const source = `
+        import { View as Box, Pressable } from 'react-native-web';
+        import * as RN from 'react-native';
+        const Alias = (Box as any); const Chain = Alias!;
+        const R = RN; const { View: Destructured } = R;
+        const A = () => <><Box {...{title}}/><Pressable {...{title}}/>
+          <RN.View {...{title}}/><RN.Pressable {...{title}}/>
+          <Chain {...{title}}/><R.View {...{title}}/><Destructured {...{title}}/></>;
+        const Captured = Box;
+        const B = ({ Box }) => <><Box {...{title}}/><Captured {...{title}}/></>;
+      `
+      expect(targets(source)).toEqual([
+        '<Box>', '<Pressable>', '<RN.View>', '<RN.Pressable>', '<Chain>',
+        '<R.View>', '<Destructured>', '<Captured>',
+      ])
+      const result = evaluateGuard({ sources: [ROOT_LAYOUT, tsx(source)], debt: {} })
+      expect(result.violations).toHaveLength(8)
+      expect(result.violations.every((site) => site.rule === 'title-spread')).toBe(true)
+      expect(Object.keys(analyzeSource(tsx(source)).titleSpreads[0]).sort()).toEqual(['line', 'target'])
+    })
+
+    it.each([
+      ['custom import', "import { View } from './custom'; const A = () => <View {...{title}}/>;"],
+      ['unbound spelling', 'const A = () => <View {...{title}}/>;'],
+      ['local function', 'function View() {} const A = () => <View {...{title}}/>;'],
+      ['local class', 'class View {} const A = () => <View {...{title}}/>;'],
+      ['local const', 'const View = custom; const A = () => <View {...{title}}/>;'],
+      ['parameter', "import { View } from 'react-native'; function A(View) { return <View {...{title}}/> }"],
+      ['destructured parameter', "import { View } from 'react-native'; const A = ({View}) => <View {...{title}}/>;"],
+      ['nested parameter', "import { View } from 'react-native'; const A = ({item: {View}}) => <View {...{title}}/>;"],
+      ['renamed parameter', "import { View } from 'react-native'; const A = ({x: View}) => <View {...{title}}/>;"],
+      ['local destructuring', "import { View } from 'react-native'; function A() { const {View} = custom; return <View {...{title}}/> }"],
+      ['rest parameter', "import { View } from 'react-native'; const A = ({...View}) => <View {...{title}}/>;"],
+      ['namespace parameter', "import * as RN from 'react-native'; const A = (RN) => <RN.View {...{title}}/>;"],
+      ['destructured namespace', "import * as RN from 'react-native'; const A = ({RN}) => <RN.View {...{title}}/>;"],
+      ['local namespace', "import * as RN from 'react-native'; function A() { const RN = custom; return <RN.View {...{title}}/> }"],
+      ['hoisted function', "import { View } from 'react-native'; function A() { const Alias = View; function View(){} return <Alias {...{title}}/> }"],
+      ['catch binding', "import { View } from 'react-native'; try {} catch(View) { const a = <View {...{title}}/> }"],
+      ['loop binding', "import { View } from 'react-native'; for(const View of items) { const a = <View {...{title}}/> }"],
+      ['block binding', "import { View } from 'react-native'; { const View = custom; const a = <View {...{title}}/> }"],
+      ['function-hoisted var', "import { View } from 'react-native'; function A(){ const Alias = View; var View = custom; return <Alias {...{title}}/> }"],
+      ['type-only import', "import type { View } from 'react-native'; const A = () => <View {...{title}}/>;"],
+      ['type-only specifier', "import { type View } from 'react-native'; const A = () => <View {...{title}}/>;"],
+      ['default import', "import View from 'react-native'; const A = () => <View {...{title}}/>;"],
+      ['mutable alias', "import { View } from 'react-native'; let Alias = View; const A = () => <Alias {...{title}}/>;"],
+      ['unknown wrapper', "import { View } from 'react-native'; const Alias = wrap(View); const A = () => <Alias {...{title}}/>;"],
+      ['alias cycle', 'const A = B; const B = A; const C = () => <A {...{title}}/>;'],
+      ['destructure default', "import * as RN from 'react-native'; const { View = custom } = RN; const A = () => <View {...{title}}/>;"],
+      ['computed destructuring', "import * as RN from 'react-native'; const { ['View']: Box } = RN; const A = () => <Box {...{title}}/>;"],
+      ['DOM/custom fields', 'const A = () => <><div {...{title}}/><button {...{title}}/><Card {...{title}}/><Card options={{title}}/></>;'],
+    ])('allows %s while retaining an independent proven RN target', (_family, source) => {
+      expect(targets(`${source}\nimport { Pressable as Proven } from 'react-native'; const Control = () => <Proven {...{title}}/>;`))
+        .toEqual(['<Proven>'])
+    })
+
+    it('preserves the semantic title prop on RN Button/RefreshControl and ignores type-only namespaces', () => {
+      expect(targets(`
+        import { Button, RefreshControl, Pressable } from 'react-native';
+        import type * as Types from 'react-native';
+        const A = () => <><Button {...{title: 'Save'}}/><RefreshControl {...{title: 'Refresh'}}/>
+          <Types.View {...{title}}/><Pressable {...{title}}/></>;
+      `)).toEqual(['<Pressable>'])
+    })
+
+    it('recognizes outer RN bindings independently of a shadowed scope', () => {
+      expect(targets(`
+        import { View } from 'react-native'; import * as RN from 'react-native-web';
+        const Shadow = ({ View, RN }) => <><View {...{title}}/><RN.View {...{title}}/></>;
+        const Outer = () => <><View {...{title}}/><RN.View {...{title}}/></>;
+      `)).toEqual(['<View>', '<RN.View>'])
     })
   })
 

@@ -7,7 +7,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { webDataSetProps, webTitleRef } from '@/utils/webProps';
-import { translate as i18nT, translatePlural } from '@/i18n';
+import { translatePlural } from '@/i18n';
+import { useTranslation } from '@/i18n/LocaleProvider';
 
 const AVATAR_SIZE = 44;
 const DELETE_ACTION_SIZE = 44;
@@ -28,6 +29,7 @@ interface ThreadRowProps {
     name: string;
     avatarUrl: string | null;
     time: string;
+    preview: string;
     unreadCount: number;
     selected: boolean;
     onSelectThread: (thread: MessageThread) => void;
@@ -53,6 +55,7 @@ function ThreadRow({
     name,
     avatarUrl,
     time,
+    preview,
     unreadCount,
     selected,
     onSelectThread,
@@ -61,12 +64,16 @@ function ThreadRow({
     onConfirmDelete,
     onCancelDelete,
 }: ThreadRowProps) {
+    const { t: i18nT } = useTranslation();
     const colors = useThemedColors();
     const threadId = thread.id;
     const handleSelect = useCallback(() => onSelectThread(thread), [onSelectThread, thread]);
     const handleDelete = useCallback(() => onRequestDelete?.(threadId), [onRequestDelete, threadId]);
     const handleConfirmDelete = useCallback(() => onConfirmDelete(threadId), [onConfirmDelete, threadId]);
     const hasUnread = unreadCount > 0;
+    const threadLabel = hasUnread
+        ? translatePlural('messages:components.messages.ThreadList.dialog_s_value1_value2_neprochitannyh_62b679f3', unreadCount, { value1: name })
+        : i18nT('messages:components.messages.ThreadList.dialog_s_value1_0ed1fb8e', { value1: name });
     const deleteLabel = i18nT('messages:components.messages.ThreadList.udalit_dialog_s_value1_175bc2fd', { value1: name });
     const isWeb = Platform.OS === 'web';
 
@@ -104,9 +111,9 @@ function ThreadRow({
                     delayLongPress={500}
                     accessibilityRole="button"
                     accessibilityLabel={
-                        hasUnread
-                            ? translatePlural('messages:components.messages.ThreadList.dialog_s_value1_value2_neprochitannyh_62b679f3', unreadCount, { value1: name })
-                            : i18nT('messages:components.messages.ThreadList.dialog_s_value1_0ed1fb8e', { value1: name })
+                        preview
+                            ? i18nT('messages:components.messages.ThreadList.previewA11y', { label: threadLabel, preview })
+                            : threadLabel
                     }
                     {...nativeDeleteA11y}
                 >
@@ -129,8 +136,18 @@ function ThreadRow({
                         >
                             {name}
                         </Text>
-                        {(!!time || hasUnread) && (
+                        {(!!preview || !!time || hasUnread) && (
                             <View style={styles.meta}>
+                                {!!preview && (
+                                    <Text
+                                        testID={`thread-preview-${threadId}`}
+                                        style={[styles.preview, { color: colors.textMuted }]}
+                                        numberOfLines={1}
+                                        ellipsizeMode="tail"
+                                    >
+                                        {preview}
+                                    </Text>
+                                )}
                                 <Text
                                     testID={`thread-time-${threadId}`}
                                     style={[styles.time, { color: hasUnread ? colors.primaryText : colors.textMuted }]}
@@ -259,10 +276,16 @@ const styles = StyleSheet.create({
         minHeight: 20,
     },
     time: {
-        flexShrink: 1,
+        flexShrink: 0,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    },
+    preview: {
+        flex: 1,
+        minWidth: 0,
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
     },
     unreadBadge: {
+        flexShrink: 0,
         minWidth: 20,
         height: 20,
         borderRadius: 10,

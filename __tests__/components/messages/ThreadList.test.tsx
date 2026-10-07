@@ -1,8 +1,9 @@
-import { render, fireEvent, waitFor, within } from '@testing-library/react-native';
+import { act, render, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { Alert, Platform, StyleSheet } from 'react-native';
 import ThreadList from '@/components/messages/ThreadList';
 import type { MessageThread } from '@/api/messages';
 import * as imageOptimization from '@/utils/imageOptimization';
+import { i18n } from '@/i18n';
 
 jest.mock('@/utils/imageOptimization', () => ({
     ...jest.requireActual('@/utils/imageOptimization'),
@@ -202,6 +203,104 @@ describe('ThreadList', () => {
     it('includes participant name in accessibility label', () => {
         const { getByLabelText } = render(<ThreadList {...defaultProps} />);
         expect(getByLabelText('Диалог с Иван Петров')).toBeTruthy();
+    });
+
+    describe('safe preview composition (#2266)', () => {
+        const own = { text: 'Маршрут через лес', sender_id: 1, is_deleted: false };
+        const other = { text: 'Встретимся у озера', sender_id: 2, is_deleted: false };
+        const withPreview = (preview: MessageThread['last_message_preview']): MessageThread => ({
+            ...mockThreads[0], unread_count: 150, last_message_preview: preview,
+        });
+
+        it.each([
+            [own, 'Вы: Маршрут через лес'],
+            [other, 'Встретимся у озера'],
+            [{ ...own, is_deleted: true }, 'Сообщение удалено'],
+            [null, 'Нет сообщений'],
+        ])('renders and announces the safe preview state %j', (preview, text) => {
+            const view = render(<ThreadList {...defaultProps} threads={[withPreview(preview)]} />);
+            expect(view.getByTestId('thread-preview-1').props.children).toBe(text);
+            expect(view.getByLabelText(`Диалог с Иван Петров, 150 непрочитанных. ${text}`)).toBeTruthy();
+            if (preview?.is_deleted) {
+                expect(view.queryByText(preview.text)).toBeNull();
+                expect(view.queryByLabelText(new RegExp(preview.text))).toBeNull();
+            }
+        });
+
+        it('keeps old responses usable without claiming the conversation is empty', () => {
+            const view = render(<ThreadList {...defaultProps} threads={[mockThreads[0]]} />);
+            expect(view.queryByTestId('thread-preview-1')).toBeNull();
+            expect(view.queryByText('Нет сообщений')).toBeNull();
+            expect(view.getByLabelText('Диалог с Иван Петров')).toBeTruthy();
+        });
+
+        it.each(['invalid', '0', '-1', '1.5', 'Infinity', null])('keeps API text unchanged for invalid current-user id %s', (currentUserId) => {
+            const text = 'You: & <b>сообщение</b>';
+            const view = render(<ThreadList {...defaultProps} currentUserId={currentUserId} threads={[
+                withPreview({ ...own, text }),
+            ]} />);
+            expect(view.getByTestId('thread-preview-1').props.children).toBe(text);
+        });
+
+        it('distinguishes similar names, searches names only and preserves selection/delete callbacks', () => {
+            const rows = [
+                withPreview(own),
+                { ...mockThreads[1], last_message_preview: other },
+            ];
+            const onSelectThread = jest.fn();
+            const onDeleteThread = jest.fn();
+            const view = render(<ThreadList {...defaultProps} threads={rows}
+                participantNames={new Map([[2, 'Julia Sauran'], [3, 'Julia Ivanova']])}
+                onSelectThread={onSelectThread} onDeleteThread={onDeleteThread} />);
+            expect(view.getByText('Вы: Маршрут через лес')).toBeTruthy();
+            expect(view.getByText('Встретимся у озера')).toBeTruthy();
+            fireEvent.press(view.getByText('Встретимся у озера'));
+            expect(onSelectThread).toHaveBeenCalledWith(rows[1]);
+            fireEvent.changeText(view.getByLabelText('Поиск диалогов'), 'озера');
+            expect(view.queryByTestId('thread-item-2')).toBeNull();
+            fireEvent.changeText(view.getByLabelText('Поиск диалогов'), 'Ivanova');
+            expect(view.queryByTestId('thread-item-1')).toBeNull();
+            expect(view.getByTestId('thread-item-2')).toBeTruthy();
+            fireEvent(view.getByText('Julia Ivanova'), 'longPress');
+            expect(onDeleteThread).not.toHaveBeenCalled();
+        });
+
+        it('gives long text one meta line while preserving a full accessibility label', () => {
+            const text = 'М'.repeat(200);
+            const view = render(<ThreadList {...defaultProps} threads={[withPreview({ ...other, text })]} />);
+            const preview = view.getByTestId('thread-preview-1');
+            expect(preview.props.numberOfLines).toBe(1);
+            expect(preview.props.ellipsizeMode).toBe('tail');
+            expect(StyleSheet.flatten(preview.props.style)).toMatchObject({ flex: 1, minWidth: 0 });
+            expect(view.getByLabelText(`Диалог с Иван Петров, 150 непрочитанных. ${text}`)).toBeTruthy();
+            expect(view.getByText('99+')).toBeTruthy();
+        });
+
+        it('reacts to all five locale changes without new thread data or callback churn', async () => {
+            const props = { ...defaultProps, threads: [
+                withPreview(own),
+                { ...withPreview({ ...own, is_deleted: true }), id: 2 },
+                { ...withPreview(null), id: 3 },
+            ] };
+            const view = render(<ThreadList {...props} />);
+            try {
+                for (const [locale, prefix, deleted, empty] of [
+                    ['ru', 'Вы', 'Сообщение удалено', 'Нет сообщений'],
+                    ['be', 'Вы', 'Паведамленне выдалена', 'Няма паведамленняў'],
+                    ['uk', 'Ви', 'Повідомлення видалено', 'Немає повідомлень'],
+                    ['pl', 'Ty', 'Wiadomość usunięta', 'Brak wiadomości'],
+                    ['en', 'You', 'Message deleted', 'No messages'],
+                ]) {
+                    await act(async () => { await i18n.changeLanguage(locale); });
+                    expect(view.getByTestId('thread-preview-1').props.children).toBe(`${prefix}: ${own.text}`);
+                    expect(view.getByTestId('thread-preview-2').props.children).toBe(deleted);
+                    expect(view.getByTestId('thread-preview-3').props.children).toBe(empty);
+                }
+            } finally {
+                view.unmount();
+                await act(async () => { await i18n.changeLanguage('ru'); });
+            }
+        });
     });
 
     it('announces unread count and caps the visible badge at 99+', () => {

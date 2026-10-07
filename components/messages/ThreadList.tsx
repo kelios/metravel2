@@ -11,7 +11,7 @@ import { confirmAction } from '@/utils/confirmAction';
 import ThreadRow from '@/components/messages/ThreadRow';
 import { formatThreadTimestamp } from '@/components/messages/messageTime';
 import { webTitleRef } from '@/utils/webProps';
-import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 
 
 interface ThreadListProps {
@@ -49,9 +49,11 @@ function ThreadList({
     showSearch,
     hideEmptyStateAction,
 }: ThreadListProps) {
+    const { t: i18nT } = useTranslation();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
-    const currentUserIdNum = currentUserId ? Number(currentUserId) : null;
+    const parsedUserId = currentUserId ? Number(currentUserId) : NaN;
+    const currentUserIdNum = Number.isSafeInteger(parsedUserId) && parsedUserId > 0 ? parsedUserId : null;
     const [search, setSearch] = useState('');
     const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
@@ -77,7 +79,7 @@ function ThreadList({
                 if (confirmed) onDeleteThread(threadId);
             });
         },
-        [onDeleteThread],
+        [onDeleteThread, i18nT],
     );
 
     const handleConfirmDelete = useCallback(
@@ -108,8 +110,19 @@ function ThreadList({
             }
             return i18nT('messages:components.messages.ThreadList.polzovatel_3206a1df');
         },
-        [currentUserIdNum, getOtherParticipantId, participantNames]
+        [currentUserIdNum, getOtherParticipantId, participantNames, i18nT]
     );
+
+    const getPreview = useCallback((thread: MessageThread): string => {
+        const preview = thread.last_message_preview;
+        if (preview === undefined) return '';
+        if (preview === null) return i18nT('messages:components.messages.ThreadList.net_soobscheniy_714b7881');
+        // Deleted/moderated payloads may still contain text; never expose it.
+        if (preview.is_deleted) return i18nT('messages:components.messages.ThreadList.previewDeleted');
+        return currentUserIdNum != null && preview.sender_id === currentUserIdNum
+            ? i18nT('messages:components.messages.ThreadList.previewOwn', { text: preview.text })
+            : preview.text;
+    }, [currentUserIdNum, i18nT]);
 
     const getOtherParticipantAvatar = useCallback(
         (thread: MessageThread): string | null => {
@@ -138,6 +151,7 @@ function ThreadList({
                 name={getOtherParticipantName(item)}
                 avatarUrl={getOtherParticipantAvatar(item)}
                 time={formatThreadTimestamp(item.last_message_created_at)}
+                preview={getPreview(item)}
                 unreadCount={item.unread_count ?? 0}
                 selected={selectedThreadId != null && item.id === selectedThreadId}
                 onSelectThread={onSelectThread}
@@ -147,7 +161,7 @@ function ThreadList({
                 onCancelDelete={handleCancelDelete}
             />
         ),
-        [getOtherParticipantName, getOtherParticipantAvatar, onSelectThread, selectedThreadId, confirmDeleteId, handleConfirmDelete, handleCancelDelete, onDeleteThread, handleDeletePress]
+        [getOtherParticipantName, getOtherParticipantAvatar, getPreview, onSelectThread, selectedThreadId, confirmDeleteId, handleConfirmDelete, handleCancelDelete, onDeleteThread, handleDeletePress]
     );
 
     // Шапка панели (#2267): поиск и главное действие панели — «Новый диалог».

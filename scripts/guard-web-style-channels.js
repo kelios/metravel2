@@ -55,7 +55,8 @@ const ts = require('typescript')
  *     Проверяется любой литерал, а не только аргумент `StyleSheet.create`: ключ
  *     живёт и в фабриках стилей, и в `Platform.select`, и в пропах-спредах;
  *   - `title-spread` — ключ `title` в литерале, который доходит до JSX-спреда на
- *     компоненте (не на DOM-элементе). Литерал — значение пропа (`options={{ title }}`)
+ *     доказанном RN/RNW-примитиве без семантического title, а не на произвольном
+ *     компоненте. Литерал — значение пропа (`options={{ title }}`)
  *     и объект с недоказанным адресатом правило не трогает: `title` — обычное имя
  *     поля. Долгового списка нет: все 16 мест переведены на `webTitleRef` в #2261;
  *   - `inline-animation-keyframes` — ключ `animationKeyframes` в литерале, который
@@ -113,6 +114,14 @@ const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/
 
 const DATA_ATTRIBUTE = /^data-/
 const TITLE_ATTRIBUTE = 'title'
+// Button renders title as its label; RefreshControl consumes a native title.
+// Custom wrappers and mutable aliases have no proven discarded-title contract.
+const DROPPED_TITLE_TARGETS = new Set([
+  'View', 'Text', 'Pressable', 'TouchableOpacity', 'TouchableHighlight',
+  'TouchableWithoutFeedback', 'TouchableNativeFeedback', 'Image', 'ImageBackground',
+  'TextInput', 'ScrollView', 'FlatList', 'SectionList', 'SafeAreaView',
+  'ActivityIndicator', 'KeyboardAvoidingView', 'Modal', 'Switch',
+])
 const STYLESHEET_SPECIFIER = /\.css(?:[?#].*)?$/
 // Селектор вместо имени свойства: `:hover`, `::before`, `&:hover`, `& :focus`.
 const PSEUDO_SELECTOR_KEY = /^&?\s*::?[a-z]/i
@@ -352,6 +361,7 @@ const resolveObjectSink = (objectLiteral, sourceFile) => {
         dom: isIntrinsicTagName(element.tagName),
         target: tagLabel(element, sourceFile),
         spread: true,
+        tagName: element.tagName,
       }
     }
     if (ts.isJsxExpression(parent) && parent.parent && ts.isJsxAttribute(parent.parent)) {
@@ -395,6 +405,82 @@ const stylesheetSpecifierOf = (node) => {
   return null
 }
 
+// Bind only this parsed file, lazily. Import declarations establish provenance;
+// resolving external modules/typings or collecting diagnostics is unnecessary.
+// TypeScript owns lexical scopes (including destructuring and hoisted locals).
+const createTitleTargetResolver = (sourceFile) => {
+  const sourcePath = path.resolve(sourceFile.fileName)
+  const host = {
+    getSourceFile: (name) => path.resolve(name) === sourcePath ? sourceFile : undefined,
+    getDefaultLibFileName: () => '',
+    writeFile: () => {},
+    getCurrentDirectory: () => process.cwd(),
+    getDirectories: () => [],
+    fileExists: (name) => path.resolve(name) === sourcePath,
+    readFile: (name) => path.resolve(name) === sourcePath ? sourceFile.text : undefined,
+    getCanonicalFileName: (name) => name,
+    useCaseSensitiveFileNames: () => true,
+    getNewLine: () => '\n',
+  }
+  const checker = ts.createProgram([sourceFile.fileName], {
+    noResolve: true, noLib: true, allowJs: true, jsx: ts.JsxEmit.Preserve,
+    target: ts.ScriptTarget.Latest,
+  }, host).getTypeChecker()
+  const facts = new Map()
+  const rnImport = (clause) => {
+    const declaration = clause.parent
+    return !clause.isTypeOnly && ts.isImportDeclaration(declaration) &&
+      ts.isStringLiteral(declaration.moduleSpecifier) &&
+      ['react-native', 'react-native-web'].includes(declaration.moduleSpecifier.text)
+  }
+  const isConst = (declaration) => ts.isVariableDeclarationList(declaration.parent) &&
+    Boolean(declaration.parent.flags & ts.NodeFlags.Const)
+
+  const resolveSymbol = (symbol) => {
+    if (!symbol) return null
+    if (facts.has(symbol)) return facts.get(symbol)
+    // A cycle has no established origin. Seed unknown before recursion.
+    facts.set(symbol, null)
+    const declarations = symbol.declarations ?? []
+    if (declarations.length !== 1) return null
+    const declaration = declarations[0]
+    let fact = null
+    if (ts.isImportSpecifier(declaration)) {
+      const clause = declaration.parent.parent
+      const exported = (declaration.propertyName ?? declaration.name).text
+      if (!declaration.isTypeOnly && rnImport(clause) && DROPPED_TITLE_TARGETS.has(exported)) {
+        fact = 'target'
+      }
+    } else if (ts.isNamespaceImport(declaration)) {
+      if (rnImport(declaration.parent)) fact = 'namespace'
+    } else if (ts.isVariableDeclaration(declaration) && isConst(declaration)) {
+      fact = resolveExpression(declaration.initializer)
+    } else if (ts.isBindingElement(declaration) && !declaration.dotDotDotToken && !declaration.initializer) {
+      const pattern = declaration.parent
+      const variable = pattern.parent
+      const key = declaration.propertyName ?? declaration.name
+      if (ts.isObjectBindingPattern(pattern) && ts.isVariableDeclaration(variable) &&
+          isConst(variable) && !ts.isComputedPropertyName(key) &&
+          DROPPED_TITLE_TARGETS.has(propertyNameText(key)) &&
+          resolveExpression(variable.initializer) === 'namespace') {
+        fact = 'target'
+      }
+    }
+    facts.set(symbol, fact)
+    return fact
+  }
+  const resolveExpression = (value) => {
+    const expression = unwrapExpression(value)
+    if (!expression) return null
+    if (ts.isIdentifier(expression)) return resolveSymbol(checker.getSymbolAtLocation(expression))
+    if (ts.isPropertyAccessExpression(expression) &&
+        DROPPED_TITLE_TARGETS.has(expression.name.text) &&
+        resolveExpression(expression.expression) === 'namespace') return 'target'
+    return null
+  }
+  return (tagName) => resolveExpression(tagName) === 'target'
+}
+
 /**
  * Места одного файла: сырые `data-*` (`attributes`), `data-…` внутри `dataSet`
  * (`dataSetKeys`), импорты `.css` (`stylesheets`) и ключи-псевдоклассы
@@ -415,13 +501,16 @@ const analyzeSource = ({ filePath, content }) => {
   const file = normalizePath(filePath)
   const sourceFile = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, scriptKindFor(file))
   const lineOf = (node) => sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1
+  let isTitleTarget
 
   // `title` в литерале, развёрнутом спредом на компонент: `{...({ title } as any)}`,
   // `{...Platform.select({ web: { title } })}`. Литерал — значение пропа
   // (`options={{ title }}`) сюда не попадает: у него `spread` нет.
   const pushTitleSpread = (property) => {
     const sink = resolveObjectSink(property.parent, sourceFile)
-    if (sink.spread && !sink.dom) {
+    if (sink.spread && !sink.dom && sink.tagName) {
+      isTitleTarget ??= createTitleTargetResolver(sourceFile)
+      if (!isTitleTarget(sink.tagName)) return
       result.titleSpreads.push({ line: lineOf(property), target: sink.target })
     }
   }

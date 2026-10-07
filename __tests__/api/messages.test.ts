@@ -49,6 +49,23 @@ describe('Messages API', () => {
     });
 
     describe('fetchMessageThreads', () => {
+        it('retains own/other/deleted/null/absent preview fields from JSON (#2266)', async () => {
+            const base: MessageThread = {
+                id: 1, participants: [1, 2], created_at: null,
+                last_message_created_at: null, unread_count: 0,
+            };
+            const threads: MessageThread[] = [
+                { ...base, last_message_preview: { text: 'Own', sender_id: 1, is_deleted: false } },
+                { ...base, id: 2, last_message_preview: { text: 'Other', sender_id: 2, is_deleted: false } },
+                { ...base, id: 3, last_message_preview: { text: 'Hidden', sender_id: 2, is_deleted: true } },
+                { ...base, id: 4, last_message_preview: null },
+                { ...base, id: 5 },
+            ];
+            mockedFetch.mockResolvedValueOnce(mockResponse(threads));
+            expect(await fetchMessageThreads()).toEqual(threads);
+            expect(mockedFetch).toHaveBeenCalledTimes(1);
+        });
+
         it('should fetch threads list', async () => {
             const mockThreads: MessageThread[] = [
                 {

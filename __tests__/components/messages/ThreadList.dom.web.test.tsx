@@ -145,6 +145,33 @@ describe('thread list in the real React Native Web DOM (#2264, #2267)', () => {
     expect(container.querySelector('[data-thread-row-action]')).toBeNull()
   })
 
+  it('puts safe one-line previews in the existing meta line and never exposes a deleted payload (#2266)', async () => {
+    const hidden = 'PRIVATE_DELETED_PREVIEW_DO_NOT_RENDER';
+    const long = 'М'.repeat(200);
+    await render({ threads: [
+      { ...threads[0], last_message_preview: { text: long, sender_id: 1, is_deleted: false } },
+      { ...threads[1], last_message_preview: { text: hidden, sender_id: 2, is_deleted: true } },
+      { ...threads[2], last_message_preview: null },
+    ] })
+
+    const preview = byTestId('thread-preview-10')!
+    const column = byTestId('thread-name-10')!.parentElement!
+    expect(column.children).toHaveLength(2)
+    expect(column.children[1].contains(preview)).toBe(true)
+    expect(column.children[1].contains(byTestId('thread-time-10'))).toBe(true)
+    expect(preview.textContent).toBe(`Вы: ${long}`)
+    expect(getComputedStyle(preview).textOverflow).toBe('ellipsis')
+    expect(getComputedStyle(preview).whiteSpace).toBe('nowrap')
+    expect(byTestId('thread-item-10')!.querySelector('[role="button"]')!.getAttribute('aria-label'))
+      .toBe(`Диалог с Редакция metravel, 150 непрочитанных. Вы: ${long}`)
+    expect(byTestId('thread-preview-11')!.textContent).toBe('Сообщение удалено')
+    expect(byTestId('thread-preview-12')!.textContent).toBe('Нет сообщений')
+    expect(container.textContent).not.toContain(hidden)
+    expect(container.innerHTML).not.toContain(hidden)
+    expect(Array.from(container.querySelectorAll('[aria-label]')).some((element) => element.getAttribute('aria-label')?.includes(hidden)))
+      .toBe(false)
+  })
+
   it('the stylesheet reveals the button through the same markers the row renders', () => {
     const css = fs.readFileSync(path.join(process.cwd(), 'app/global.css'), 'utf8')
     const block = (selector: string) => {
